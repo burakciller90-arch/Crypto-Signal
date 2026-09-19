@@ -131,3 +131,24 @@ Acceptance evidence:
 - live Daily/Weekly/Monthly/Yearly Open checks PASS
 
 Canonical frontier moves to Phase 1 Slice 5: Binance parity and cross-provider reconciliation.
+
+## 2026-09-19 — Phase 1 Slice 5 accepted: Binance parity
+
+Binance Spot REST and WebSocket adapters now normalize into the same Candle contract used by Bybit.
+REST uses Binance server time to keep exchange source time separate from local ingest time.
+WebSocket preserves event time, native close flag, quote volume and trade count.
+
+Cross-provider reconciliation intentionally does not demand identical exchange prices.
+It verifies the shared UTC grid and reports observed price spread.
+
+Acceptance evidence:
+- 43 tests passed
+- Ruff PASS
+- mypy PASS
+- latest BTCUSDT 15m grid: 20/20 overlap, no provider-only timestamps
+- median absolute close spread ~0.56 bps
+- maximum absolute close spread ~1.88 bps
+- Binance weekly alignment: Monday 00:00 UTC
+- live Binance WS persistence: INSERTED then UPDATED, one canonical row
+
+Canonical frontier moves to Phase 1 Slice 6: restart/recovery and integrated acceptance.

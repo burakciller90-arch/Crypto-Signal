@@ -3,7 +3,7 @@
 Updated: 2026-09-19
 Project: Crypto Signal
 Phase: 1 — Data Truth
-State: SLICE4_AGGREGATION_ACCEPTED
+State: SLICE5_BINANCE_PARITY_ACCEPTED
 REAL_CAPITAL: 0
 
 ## Mechanical identity
@@ -15,20 +15,18 @@ REAL_CAPITAL: 0
 - project root mode: `0700`
 
 ## Accepted Phase 1 evidence
-- Provider-neutral Candle contract is established.
-- Bybit REST and resilient WebSocket ingestion are live-verified.
-- SQLite WAL canonical persistence, gap and freshness checks are live-verified.
-- Closed 15m is the canonical V1 base series.
-- 1h/4h/1D/1W aggregation requires complete 15m buckets; missing data is explicit.
-- Weekly buckets start Monday 00:00 UTC, mechanically reconciled with Bybit native weekly candles.
-- Daily/Weekly/Monthly/Yearly Opens use exact 15m boundary candles and PIT observation gating.
-- Unit/quality gate: 35 tests passed; Ruff PASS; mypy PASS.
-- Live reconciliation:
-  672 x 15m -> 168 x 1h, 42 x 4h, 7 x 1D, 1 x 1W.
-- Every derived candle reconciled exactly with Bybit native OHLCV/turnover.
-- Current periodic-open live probe passed for Daily/Weekly/Monthly/Yearly.
+- Bybit and Binance Spot REST/WebSocket adapters share one provider-neutral Candle contract.
+- Exchange source time remains distinct from local ingest time.
+- SQLite canonical persistence/finalization rules are shared across providers.
+- Gap/freshness checks, deterministic aggregation and PIT-safe periodic opens are established.
+- Binance 1W starts Monday 00:00 UTC, matching the canonical weekly grid.
+- Cross-provider reconciliation compares semantic grid and measures price spread rather than forcing equality.
+- Unit/quality gate: 43 tests passed; Ruff PASS; mypy PASS.
+- Live BTCUSDT 15m cross-provider grid overlap: 20/20; no provider-only timestamps.
+- Live median absolute close spread: ~0.56 bps; maximum: ~1.88 bps.
+- Live Binance WS smoke: first update INSERTED, second UPDATED, canonical row count 1.
 
 ## Canonical next slice
-Phase 1 Slice 5 — Binance Spot REST/WebSocket parity behind the same Candle contract,
-plus cross-provider semantic reconciliation.
-Do not begin methodology engines or V2+ scope.
+Phase 1 Slice 6 — restart/recovery backfill, explicit range completeness,
+bounded dual-feed soak and integrated Phase 1 acceptance.
+Do not begin methodology engines until Phase 1 acceptance passes.
