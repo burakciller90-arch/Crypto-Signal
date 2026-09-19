@@ -3,7 +3,7 @@
 Updated: 2026-09-20
 Project: Crypto Signal
 Phase: PA / SMC / ICT V1
-State: PA_SLICE3_LIQUIDITY_ACCEPTED
+State: PA_SLICE4A_LEVELS_ACCEPTED
 REAL_CAPITAL: 0
 
 ## Mechanical identity
@@ -13,41 +13,35 @@ REAL_CAPITAL: 0
 - git branch: `main`
 - project root mode: `0700`
 
-## Accepted foundations
-- Phase 0 Environment & Constitution
-- Phase 1 Data Truth
-- Shared deterministic swing primitives
-- PA Slice 1 — PIT-safe market structure
-- PA Slice 2 — FVG lifecycle + BPR
-- PA Slice 3 — EQH/EQL liquidity pools + sweep/SFP evidence
+## Accepted PA layers
+- Slice 1 — PIT-safe market structure
+- Slice 2 — FVG lifecycle + BPR
+- Slice 3 — EQH/EQL liquidity pools + sweep/SFP
+- Slice 4A — complete prior-period and explicit-session high/low levels
 
-## PA Slice 3 contract
-- EQH/EQL is derived from adjacent confirmed same-kind alternating swings.
-- V1 equality tolerance is explicit and configurable; default 5 bps.
-- A pool does not exist before the second anchor pivot is confirmed and observed.
-- Pool zone preserves both anchor prices and representative midpoint.
-- EQH sweep requires strict high beyond upper boundary.
-- EQL sweep requires strict low beyond lower boundary.
-- Wick through + close back inside is SFP rejection.
-- Close through the boundary consumes the pool as breakout, not SFP.
-- First qualifying post-formation event consumes the V1 pool.
-- Sweep market time and local observation time remain distinct.
+## Slice 4A contract
+- Closed canonical 15m candles are the only source.
+- Previous Day/Week/Month boundaries are UTC calendar boundaries.
+- Numeric high/low truth is emitted only when every expected 15m candle is present and observed by as-of.
+- Incomplete ranges expose missing open-times and suppress high/low values.
+- Session windows require explicit name + IANA timezone + local start/end.
+- No hidden Asia/London/New York session hours are assumed.
+- Cross-midnight sessions and timezone offsets are resolved deterministically.
+- Session boundaries must resolve to the canonical 15m grid.
 
 ## Acceptance evidence
-- 74 tests PASS.
+- 80 tests PASS.
 - Ruff PASS.
 - mypy PASS.
-- Live Bybit: 900 closed 15m -> 24 pools.
-  - 14 EQH / 10 EQL
-  - 9 SFP / 13 close-through / 2 available
-- Live Binance: 900 closed 15m -> 22 pools.
-  - 10 EQH / 12 EQL
-  - 7 SFP / 11 close-through / 4 available
-- Deterministic repeat equality PASS on both providers.
-- All live events obey pool formation time < event market time <= local observation time.
+- Live Bybit and Binance history: 4,794 closed 15m candles each.
+- Previous Day: 96/96 complete on both providers.
+- Previous Week: 672/672 complete on both providers.
+- Previous Month: 2,976/2,976 complete on both providers.
+- Explicit verification session Europe/Istanbul 09:00-11:00: 8/8 complete on both providers.
+- Deterministic repeat equality PASS.
 
 ## Canonical next frontier
-PA Slice 4 — displacement + reclaim/rejection evidence and deterministic prior-period/session levels.
+PA Slice 4B — displacement evidence + deterministic level reclaim/rejection interactions.
 Then PA integrated result / acceptance gate.
 Do not begin Harmonic/Elliott before PA V1 core gate is complete.
 REAL_CAPITAL remains 0.

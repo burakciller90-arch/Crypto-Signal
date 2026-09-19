@@ -286,3 +286,25 @@ Acceptance evidence:
 - all event timestamps are after pool formation and no later than local observation
 
 Canonical frontier moves to PA Slice 4: displacement/reclaim/rejection and deterministic prior-period/session levels.
+
+## 2026-09-20 — PA Slice 4A accepted: prior-period and explicit-session levels
+
+The PA engine now computes Previous Day/Week/Month high-low evidence from closed canonical 15m truth.
+A numeric high/low is emitted only when the full expected candle grid is present and observed by as-of.
+
+Session ranges are explicitly configured with name, IANA timezone and local start/end.
+The core does not silently invent universal Asia/London/New York hours.
+Cross-midnight windows and timezone offsets are handled deterministically.
+
+Acceptance evidence:
+- 80 tests PASS
+- Ruff PASS
+- mypy PASS
+- Bybit and Binance live source: 4,794 closed 15m candles each
+- Previous Day 96/96 complete
+- Previous Week 672/672 complete
+- Previous Month 2,976/2,976 complete
+- explicit Europe/Istanbul 09:00-11:00 verification session 8/8 complete
+- deterministic repeat equality PASS
+
+Canonical frontier moves to PA Slice 4B: displacement and level reclaim/rejection evidence.
