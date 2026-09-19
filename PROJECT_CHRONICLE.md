@@ -111,3 +111,23 @@ Acceptance evidence:
 - persistence result: INSERTED then UPDATED, canonical row count 1
 
 Canonical frontier moves to Phase 1 Slice 4: deterministic higher-timeframe aggregation and periodic opens.
+
+## 2026-09-19 — Phase 1 Slice 4 accepted: deterministic aggregation and periodic opens
+
+Closed 15m candles are now the canonical V1 base series.
+1h, 4h, 1D and 1W candles are emitted only from complete closed 15m buckets.
+Missing source intervals are reported as incomplete buckets rather than synthesized.
+
+Weekly alignment was mechanically verified as Monday 00:00 UTC.
+Daily/Weekly/Monthly/Yearly Opens are resolved from exact 15m boundary candles,
+with market availability separated from local observation time for PIT correctness.
+
+Acceptance evidence:
+- 35 tests passed
+- Ruff PASS
+- mypy PASS
+- live full-week base set: 672 x 15m
+- exact native reconciliation: 168 x 1h, 42 x 4h, 7 x 1D, 1 x 1W
+- live Daily/Weekly/Monthly/Yearly Open checks PASS
+
+Canonical frontier moves to Phase 1 Slice 5: Binance parity and cross-provider reconciliation.

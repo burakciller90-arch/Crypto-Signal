@@ -17,6 +17,7 @@ class MarketType(StrEnum):
 class DataSource(StrEnum):
     REST = "rest"
     WEBSOCKET = "websocket"
+    AGGREGATED = "aggregated"
 
 
 @dataclass(frozen=True, slots=True)
