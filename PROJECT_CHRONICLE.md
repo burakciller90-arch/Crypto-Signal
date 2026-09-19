@@ -50,3 +50,21 @@ Mechanical acceptance evidence:
 
 Phase 0 is accepted.
 The canonical frontier is now Phase 1 — Data Truth.
+
+## 2026-09-19 — Phase 1 Slice 1 accepted: REST data contract
+
+Bybit V5 Spot was selected as the first canonical adapter behind a provider-neutral Candle contract.
+Binance remains a planned second adapter rather than a product dependency.
+
+The Candle contract preserves Decimal market values, source event time, local ingest time,
+closed/open state, adapter version and stable provider-neutral identity.
+Impossible OHLC/time/volume states are rejected.
+
+Acceptance evidence:
+- 13 tests passed
+- Ruff PASS
+- mypy PASS
+- live Bybit BTCUSDT 15m REST probe: 5 sequential candles, 900000 ms spacing
+- live state: 4 closed candles + 1 current open candle
+
+Canonical frontier moves to Phase 1 Slice 2: persistence/provenance and gap/freshness detection.

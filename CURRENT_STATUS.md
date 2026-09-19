@@ -2,8 +2,8 @@
 
 Updated: 2026-09-19
 Project: Crypto Signal
-Phase: 0 — Environment & Constitution
-State: PHASE0_ACCEPTED
+Phase: 1 — Data Truth
+State: SLICE1_REST_CONTRACT_ACCEPTED
 REAL_CAPITAL: 0
 
 ## Mechanical identity
@@ -14,19 +14,20 @@ REAL_CAPITAL: 0
 - git branch: `main`
 - project root mode: `0700`
 
-## Accepted baseline
-- Dedicated account/home and cross-project isolation verified.
-- Git repository and governing project memory established.
-- User-local uv + managed CPython 3.12.14; repo-local `.venv`.
-- User-local fnm + Node 24.18.0; runtime pins recorded.
-- Dedicated port block 48700-48709 checked free at bootstrap.
-- V1 architecture boundaries and semantic contracts documented.
-- Scientific constitution and V1/V2+ scope firewall documented.
-- pytest, Ruff and mypy baseline installed and executed successfully.
-- 3 bootstrap contract tests passed; Ruff and mypy reported no issues.
+## Phase 0
+Accepted. Isolation, pinned runtimes, architecture/contracts and quality baseline are established.
 
-## Canonical next phase
-Phase 1 — Data Truth.
-First implementation work must establish exchange/data-source truth, candle correctness,
-persistence/provenance, reconnect/gap/freshness handling and periodic opens.
-Do not begin V2+ implementation.
+## Phase 1 accepted evidence
+- Provider-neutral immutable Candle contract exists.
+- Decimal OHLCV rules and impossible-data validation exist.
+- Exchange event timestamp and local ingest timestamp are distinct.
+- V1 timeframe mapping is explicit.
+- Bybit V5 Spot selected as first adapter; Binance remains planned second adapter.
+- Bybit REST kline normalization sorts chronologically and preserves closed/open state.
+- Unit/quality gate: 13 tests passed; Ruff PASS; mypy PASS.
+- Live BTCUSDT 15m REST probe returned five gapless candles.
+- Live probe observed four closed candles and one current open candle as expected.
+
+## Canonical next slice
+Phase 1 Slice 2 — SQLite persistence/provenance + idempotent writes + gap/freshness detection.
+Do not begin methodology engines or V2+ scope.
