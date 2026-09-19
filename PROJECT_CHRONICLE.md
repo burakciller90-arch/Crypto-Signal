@@ -349,3 +349,33 @@ Integrated live evidence:
 
 These values remain descriptive evidence only; no probability, win rate or confluence score is created.
 Canonical frontier moves to Harmonic V1.
+
+## 2026-09-20 — Autonomous continuity control-plane implemented; OS transport gate pending
+
+The user explicitly authorized autonomous 7/24 continuation and bounded Cursor Composer workers for Crypto Signal.
+
+Implemented under UID504 and Crypto-only paths:
+- exact immutable continuation leases with checkpoint SHA256
+- same-task supersession
+- wake queue dedupe and event receipts
+- exact-chat transport design with busy/draft guards
+- no generic idle wake
+- pause/archive and stale-free resume semantics
+- stale worker-state recovery
+- isolated Cursor worktree dispatcher and completion queue
+- Terminal bootstrap helper for exact Safari chat binding
+
+Mechanical evidence:
+- continuity behavior self-test PASS
+- zsh syntax PASS
+- Python compile PASS
+- continuity Ruff PASS
+- cross-project path scan found no Durdurulmaz/Quantum path coupling
+- full repo: 96 tests PASS, Ruff PASS, mypy PASS
+
+Current human gates:
+- macOS denies Terminal -> Safari Apple Events with -1743; Automation settings pane opened for user approval.
+- exact chat is not yet bound and bridge is not yet running.
+- Cursor Agent 2026.09.18-9a7762b installed under UID504, but status is Not logged in.
+
+No autonomous wake is claimed active until a real exact-chat delivery test passes.

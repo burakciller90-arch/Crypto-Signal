@@ -2,8 +2,8 @@
 
 Updated: 2026-09-20
 Project: Crypto Signal
-Phase: PA / SMC / ICT V1
-State: PA_V1_ACCEPTED
+Phase: Harmonic V1 + Autonomous Continuity Bootstrap
+State: CONTINUITY_CONTROL_PLANE_READY_OS_GATE_PENDING
 REAL_CAPITAL: 0
 
 ## Mechanical identity
@@ -17,37 +17,45 @@ REAL_CAPITAL: 0
 - Phase 0 Environment & Constitution
 - Phase 1 Data Truth
 - Shared deterministic swing primitives
-- PA / SMC / ICT V1
+- PA / SMC / ICT V1 — accepted at commit `30b6f2c61d8fc2f0c094b17d89403b0fe4e44f86`
 
-## PA V1 accepted evidence
-- Structure: confirmed PIT-safe swings, HH/LH/EH + HL/LL/EL, BOS, CHOCH/MSB.
-- Imbalances: strict FVG geometry, lifecycle/mitigation/fill, gap-through ambiguity, BPR.
-- Liquidity: explicit-tolerance EQH/EQL pools, SFP rejection vs close-through.
-- Levels: complete Previous Day/Week/Month plus explicit timezone-aware session high/low.
-- Periodic Opens: PIT-safe Daily/Weekly/Monthly/Yearly when boundary candles are available.
-- Displacement: prior-only rolling deterministic threshold model.
-- Level interactions: reclaim/rejection only after explicit level availability.
-- One integrated PA result shares one top-level as-of across all components.
-- Integrated PA creates no probability, win rate, confluence score or execution action.
+## Autonomous continuity
+User has explicitly authorized autonomous 7/24 continuation for Crypto Signal.
 
-## Final PA acceptance gate
-- 96 tests PASS.
-- Ruff PASS.
-- mypy PASS.
-- All individual PA live probes PASS.
-- Integrated live PA gate independently reverified PASS.
-- Bybit integrated sample: 4,794 closed 15m; 848 breaks; 1,138 FVG; 92 BPR; 145 liquidity pools; 57 SFP; 500 displacements; 11 levels; 194 interactions.
-- Binance integrated sample: 4,794 closed 15m; 823 breaks; 1,195 FVG; 104 BPR; 121 liquidity pools; 45 SFP; 506 displacements; 11 levels; 189 interactions.
-- These counts are descriptive evidence, not quality scores or probabilities.
+Implemented and mechanically verified:
+- exact immutable continuation leases with SHA256 checkpoint binding
+- same-task lease supersession
+- at-most-once wake event receipts
+- exact-chat URL binding requirement
+- ChatGPT busy/draft guards
+- no generic idle wake
+- pause archives leases and queued wakes
+- resume never replays archived stale events
+- stale worker-state recovery
+- bounded Cursor worker completion queue
+- Cursor worker isolation policy via separate worktree
+- continuity behavior self-test PASS
+- continuity static/security gate PASS
+- full repo quality remains 96 tests PASS, Ruff PASS, mypy PASS
 
-## Canonical next frontier
-Harmonic V1:
-1. deterministic alternating swing/ZigZag candidate substrate
-2. XABCD candidate enumeration
-3. Gartley / Bat / Butterfly / Crab / Deep Crab ratio contracts
-4. ratio residual + PRZ width + Fib clustering + symmetry where defined
-5. invalidation / target geometry
-6. live deterministic validation
+Not yet activated:
+- Safari Terminal->Safari Automation permission is currently denied by macOS (-1743).
+- exact current chat is therefore not yet bound.
+- continuity bridge is not yet running.
+- Cursor Agent CLI is installed but reports `Not logged in`.
 
-Do not enter Elliott or Confluence before Harmonic V1 acceptance.
-REAL_CAPITAL remains 0.
+## Harmonic frontier
+- ADR 0014 ratio / PRZ / residual / symmetry / invalidation / T1-T2 contract drafted.
+- Harmonic implementation has not yet started.
+- Canonical implementation order:
+  1. XABCD candidate enumeration from PIT-safe alternating swings
+  2. Gartley / Bat / Butterfly / Crab / Deep Crab ratio validation
+  3. residual / PRZ / clustering / symmetry
+  4. invalidation / reaction targets
+  5. unit + Bybit/Binance live deterministic acceptance
+
+## Immediate operational gates
+1. User enables Terminal -> Safari in macOS Privacy & Security -> Automation.
+2. Re-run continuity bootstrap; bind exact chat; prove one real at-most-once self-wake.
+3. Authenticate Cursor Agent CLI and verify an available Composer model before enabling workers.
+4. Continue Harmonic V1 without waiting on routine approvals.
