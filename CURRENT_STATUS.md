@@ -3,7 +3,7 @@
 Updated: 2026-09-20
 Project: Crypto Signal
 Phase: Confluence + Signal Semantics V1
-State: ELLIOTT_V1_ACCEPTED
+State: CONFLUENCE_SLICE1_EVIDENCE_CONTRACTS_ACCEPTED
 REAL_CAPITAL: 0
 
 ## Accepted foundations
@@ -74,14 +74,29 @@ Cursor Agent CLI is installed but remains not logged in; workers are optional an
 A foreign Durdurulmaz wake was reconciled as NOOP for Crypto Signal.
 No Durdurulmaz or Quantum Capital project state was mutated; UID502 is used only as isolated GUI transport.
 
+## Confluence Slice 1 accepted evidence
+- methodology-neutral evidence model added
+- PA current resolved structure maps to CONTEXT evidence only
+- valid Harmonic matches preserve PRZ / invalidation / T1-T2 / residual metrics
+- valid-so-far Elliott counts preserve invalidation / projections / competing-count ambiguity
+- invalid Harmonic/Elliott artifacts are rejected at the adapter boundary
+- neutral PIT invariant: market_available_at <= observed_at <= as_of
+- metrics remain descriptive and unnormalized
+- 133 tests PASS
+- Ruff PASS
+- mypy PASS
+
 ## Canonical next frontier
-Confluence + Signal Semantics V1:
-1. methodology-neutral evidence contracts
-2. PA / Harmonic / Elliott agreement and contradiction mapping
-3. deterministic confluence score kept separate from probability
-4. NO_SIGNAL / NEUTRAL / WATCH / ACTIVE / INVALIDATED states
-5. signal entry / invalidation / targets / evidence summary contracts
-6. deterministic PIT tests and integrated live validation
+Confluence Slice 2:
+1. explicit evidence-selection policy for current/recent evidence
+2. methodology agreement and contradiction matrix
+3. deterministic confluence score with documented bounded components
+4. score remains categorically separate from probability / historical win rate
+5. no Signal state until Slice 2 semantics are mechanically accepted
+
+Then Signal Semantics V1:
+NO_SIGNAL / NEUTRAL / WATCH / ACTIVE / INVALIDATED,
+signal entry/invalidation/targets and immutable freeze-ready contract.
 
 After Confluence + Signal acceptance, activate the immutable live-forward ledger.
 REAL_CAPITAL remains 0.

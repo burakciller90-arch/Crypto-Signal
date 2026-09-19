@@ -474,3 +474,25 @@ Mechanical evidence:
 
 No Durdurulmaz project files/state were mutated. UID502 is used only as GUI transport.
 The first actual post-turn receipt will complete end-to-end acceptance.
+
+## 2026-09-20 — Confluence Slice 1 accepted: methodology-neutral evidence contracts
+
+A neutral evidence contract now adapts independent PA, Harmonic and Elliott outputs
+without changing source-methodology validity.
+
+Accepted semantics:
+- PA emits current resolved market-structure CONTEXT evidence only
+- valid Harmonic matches preserve PRZ, invalidation, targets and descriptive geometry metrics
+- valid-so-far Elliott counts preserve structural invalidation, projections and ambiguity
+- invalid source artifacts cannot enter confluence evidence
+- one neutral PIT invariant enforces market availability <= observation <= analysis as-of
+- evidence metrics remain unnormalized and explicitly non-probabilistic
+
+Mechanical evidence:
+- focused confluence evidence tests: 6 PASS
+- full repository: 133 tests PASS
+- Ruff PASS
+- mypy PASS
+
+Canonical frontier advances to Confluence Slice 2:
+evidence selection, agreement/contradiction matrix and deterministic score semantics.
