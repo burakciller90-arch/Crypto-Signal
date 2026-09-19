@@ -118,3 +118,125 @@ class MethodologyEvidence:
             raise ValueError("ambiguity flags must be unique")
         if len(set(self.contradiction_flags)) != len(self.contradiction_flags):
             raise ValueError("contradiction flags must be unique")
+
+
+class PairRelation(StrEnum):
+    AGREE = "agree"
+    CONTRADICT = "contradict"
+    INTERNAL_AMBIGUITY = "internal_ambiguity"
+    INSUFFICIENT = "insufficient"
+
+
+class ScoreSemantic(StrEnum):
+    AGREEMENT_INDEX_NOT_PROBABILITY = "agreement_index_not_probability"
+
+
+@dataclass(frozen=True, slots=True)
+class MethodologySelection:
+    methodology: MethodologyKind
+    source_count: int
+    selected: tuple[MethodologyEvidence, ...]
+    latest_market_available_at_ms: int | None
+    resolved_direction: EvidenceDirection
+    has_internal_direction_conflict: bool
+
+    def __post_init__(self) -> None:
+        if self.source_count < 0:
+            raise ValueError("source_count must be non-negative")
+        if self.source_count < len(self.selected):
+            raise ValueError("selected count cannot exceed source count")
+        if any(item.methodology is not self.methodology for item in self.selected):
+            raise ValueError("selection cannot mix methodologies")
+        if self.selected:
+            latest = max(item.market_available_at_ms for item in self.selected)
+            if self.latest_market_available_at_ms != latest:
+                raise ValueError("selection latest timestamp does not match selected evidence")
+            if any(
+                item.market_available_at_ms != latest
+                for item in self.selected
+            ):
+                raise ValueError("all selected evidence must share latest market timestamp")
+        elif self.latest_market_available_at_ms is not None:
+            raise ValueError("empty selection cannot have latest market timestamp")
+
+        directional = {
+            item.direction
+            for item in self.selected
+            if item.direction
+            in {EvidenceDirection.BULLISH, EvidenceDirection.BEARISH}
+        }
+        expected_conflict = len(directional) > 1
+        if self.has_internal_direction_conflict != expected_conflict:
+            raise ValueError("internal-direction conflict flag is inconsistent")
+        expected_direction = (
+            next(iter(directional))
+            if len(directional) == 1
+            else EvidenceDirection.UNRESOLVED
+        )
+        if self.resolved_direction is not expected_direction:
+            raise ValueError("resolved direction is inconsistent with selected evidence")
+
+
+@dataclass(frozen=True, slots=True)
+class MethodologyPairRelation:
+    left: MethodologyKind
+    right: MethodologyKind
+    relation: PairRelation
+    left_direction: EvidenceDirection
+    right_direction: EvidenceDirection
+
+    def __post_init__(self) -> None:
+        if self.left is self.right:
+            raise ValueError("pair relation requires distinct methodologies")
+
+
+@dataclass(frozen=True, slots=True)
+class ConfluenceScore:
+    value: Decimal
+    support_method_count: int
+    opposing_method_count: int
+    resolved_method_count: int
+    total_methodology_slots: int
+    semantic: ScoreSemantic = ScoreSemantic.AGREEMENT_INDEX_NOT_PROBABILITY
+
+    def __post_init__(self) -> None:
+        if not Decimal(0) <= self.value <= Decimal(100):
+            raise ValueError("confluence score must be between 0 and 100")
+        if self.total_methodology_slots <= 0:
+            raise ValueError("total methodology slots must be positive")
+        counts = (
+            self.support_method_count,
+            self.opposing_method_count,
+            self.resolved_method_count,
+        )
+        if any(value < 0 for value in counts):
+            raise ValueError("confluence score counts must be non-negative")
+        if self.resolved_method_count > self.total_methodology_slots:
+            raise ValueError("resolved methodology count exceeds total slots")
+        if (
+            self.support_method_count + self.opposing_method_count
+            != self.resolved_method_count
+        ):
+            raise ValueError("support/opposition counts must equal resolved count")
+
+
+@dataclass(frozen=True, slots=True)
+class ConfluenceAnalysisResult:
+    exchange: Exchange
+    market_type: MarketType
+    symbol: str
+    timeframe: str
+    as_of_ms: int
+    selections: tuple[MethodologySelection, ...]
+    pairwise_relations: tuple[MethodologyPairRelation, ...]
+    dominant_direction: EvidenceDirection
+    score: ConfluenceScore
+    flags: tuple[str, ...]
+
+    def __post_init__(self) -> None:
+        expected = set(MethodologyKind)
+        actual = {selection.methodology for selection in self.selections}
+        if actual != expected or len(self.selections) != len(expected):
+            raise ValueError("confluence result must contain exactly one selection per methodology")
+        if len(set(self.flags)) != len(self.flags):
+            raise ValueError("confluence flags must be unique")

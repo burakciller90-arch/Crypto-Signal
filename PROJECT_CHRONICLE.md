@@ -496,3 +496,34 @@ Mechanical evidence:
 
 Canonical frontier advances to Confluence Slice 2:
 evidence selection, agreement/contradiction matrix and deterministic score semantics.
+
+## 2026-09-20 — Confluence Slice 2 accepted: selection, agreement matrix and score
+
+Confluence now applies an explicit latest-market-time selection policy independently per methodology.
+Alternatives at the same timestamp are preserved.
+
+Directional rules:
+- each methodology gets at most one vote
+- internal bullish/bearish disagreement makes that methodology unresolved
+- pairwise relations are AGREE / CONTRADICT / INTERNAL_AMBIGUITY / INSUFFICIENT
+
+V1 confluence score:
+(score support - opposition) / 3 * 100, rounded to 2 decimals.
+The score semantic is explicitly agreement_index_not_probability.
+
+Mechanical evidence:
+- focused agreement tests: 7 PASS
+- combined Confluence focused tests: 13 PASS
+- full repository: 140 tests PASS
+- Ruff PASS
+- mypy PASS
+- Bybit/Binance live 15m smoke PASS
+
+Live smoke on both providers:
+- PA selected bullish context
+- Harmonic had zero valid current evidence
+- Elliott latest endpoint had opposing competing counts and therefore no vote
+- dominant direction bullish from PA only
+- confluence score 33.33 with partial_methodology_coverage and Elliott internal-conflict flags
+
+Canonical frontier advances to Signal Semantics V1.

@@ -3,7 +3,7 @@
 Updated: 2026-09-20
 Project: Crypto Signal
 Phase: Confluence + Signal Semantics V1
-State: CONFLUENCE_SLICE1_EVIDENCE_CONTRACTS_ACCEPTED
+State: CONFLUENCE_SLICE2_AGREEMENT_SCORE_ACCEPTED
 REAL_CAPITAL: 0
 
 ## Accepted foundations
@@ -86,17 +86,29 @@ No Durdurulmaz or Quantum Capital project state was mutated; UID502 is used only
 - Ruff PASS
 - mypy PASS
 
+## Confluence Slice 2 accepted evidence
+- latest-market-time selection per methodology
+- same-timestamp alternatives preserved
+- one directional vote maximum per methodology
+- internal bullish/bearish conflict resolves to UNRESOLVED and casts no vote
+- pairwise AGREE / CONTRADICT / INTERNAL_AMBIGUITY / INSUFFICIENT matrix
+- deterministic score = (support - opposition) / 3 * 100
+- score rounded to 2 decimals and explicitly tagged agreement_index_not_probability
+- 140 tests PASS
+- Ruff PASS
+- mypy PASS
+- live Bybit/Binance confluence smoke PASS
+- live 15m example: PA bullish; Harmonic no valid evidence; Elliott internally conflicting; resulting score 33.33 with partial coverage flag
+
 ## Canonical next frontier
-Confluence Slice 2:
-1. explicit evidence-selection policy for current/recent evidence
-2. methodology agreement and contradiction matrix
-3. deterministic confluence score with documented bounded components
-4. score remains categorically separate from probability / historical win rate
-5. no Signal state until Slice 2 semantics are mechanically accepted
+Signal Semantics V1:
+1. NO_SIGNAL / NEUTRAL / WATCH / ACTIVE / INVALIDATED state machine
+2. deterministic transition rules from confluence + setup geometry
+3. signal direction / entry zone / invalidation / targets contract
+4. evidence snapshot references and methodology agreement summary
+5. explicit calibrated-probability status kept separate from confluence score
+6. freeze-ready identity/version fields
+7. PIT-safe deterministic tests and live smoke
 
-Then Signal Semantics V1:
-NO_SIGNAL / NEUTRAL / WATCH / ACTIVE / INVALIDATED,
-signal entry/invalidation/targets and immutable freeze-ready contract.
-
-After Confluence + Signal acceptance, activate the immutable live-forward ledger.
+After Signal Semantics acceptance, activate the immutable live-forward ledger immediately.
 REAL_CAPITAL remains 0.
