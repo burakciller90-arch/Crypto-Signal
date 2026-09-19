@@ -3,7 +3,7 @@
 Updated: 2026-09-19
 Project: Crypto Signal
 Phase: 0 — Environment & Constitution
-State: ISOLATED_RUNTIME_BASELINE_READY
+State: PHASE0_ACCEPTED
 REAL_CAPITAL: 0
 
 ## Mechanical identity
@@ -14,16 +14,19 @@ REAL_CAPITAL: 0
 - git branch: `main`
 - project root mode: `0700`
 
-## Completed
-- Dedicated account/home and non-admin status verified.
-- Cross-project symlink scan clean.
-- Git repository initialized.
-- READ_FIRST, Constitution, Chronicle, Roadmap and Environment Registry created.
-- User-local uv + managed CPython 3.12.14 installed.
-- Repo-local `.venv` created and Python pin recorded.
-- User-local fnm + Node 24.18.0 installed and Node pin recorded.
+## Accepted baseline
+- Dedicated account/home and cross-project isolation verified.
+- Git repository and governing project memory established.
+- User-local uv + managed CPython 3.12.14; repo-local `.venv`.
+- User-local fnm + Node 24.18.0; runtime pins recorded.
 - Dedicated port block 48700-48709 checked free at bootstrap.
+- V1 architecture boundaries and semantic contracts documented.
+- Scientific constitution and V1/V2+ scope firewall documented.
+- pytest, Ruff and mypy baseline installed and executed successfully.
+- 3 bootstrap contract tests passed; Ruff and mypy reported no issues.
 
-## Next
-Finish Phase 0 architecture contracts and test baseline.
-Then enter Phase 1 Data Truth; do not begin V2+ implementation.
+## Canonical next phase
+Phase 1 — Data Truth.
+First implementation work must establish exchange/data-source truth, candle correctness,
+persistence/provenance, reconnect/gap/freshness handling and periodic opens.
+Do not begin V2+ implementation.

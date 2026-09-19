@@ -36,3 +36,17 @@ Node 24.18.0 was installed for this user and pinned by `.node-version`.
 
 Ports 48700-48709 were mechanically bind-tested as free and reserved by project convention.
 The isolated runtime baseline is now ready; no product code exists yet.
+
+## 2026-09-19 — Phase 0 accepted
+
+Core V1 architecture boundaries and semantic contracts were documented before product implementation.
+A Python quality baseline was established with pytest, Ruff and mypy under the repo-local environment.
+
+Mechanical acceptance evidence:
+- bootstrap contract tests: 3 passed
+- Ruff: all checks passed
+- mypy: no issues found
+- REAL_CAPITAL remains 0
+
+Phase 0 is accepted.
+The canonical frontier is now Phase 1 — Data Truth.
