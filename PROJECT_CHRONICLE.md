@@ -456,3 +456,21 @@ probabilities, win rates or execution authority. High ambiguity is preserved by 
 
 Canonical frontier moves to Confluence + Signal Semantics V1.
 REAL_CAPITAL remains 0.
+
+## 2026-09-20 — Exact-chat local wake relay activated
+
+The previously blocked Safari wake path was replaced with an isolated shared relay design.
+
+Mechanical evidence:
+- exact Crypto chat is bound in runtime state
+- UID502 Safari found exactly one matching Crypto chat tab and JavaScript automation passed
+- shared relay secret and target are mode 600 with explicit UID502 ACL; UID501 read test is denied
+- UID504 continuity bridge runs under com.cryptosignal.continuitybridge with RunAtLoad + KeepAlive
+- UID502 direct launchd Safari relay was rejected after real TCC timeout evidence
+- architecture was corrected: launchd now runs only a health watchdog; the actual relay is started through Terminal so Safari TCC permission is inherited correctly
+- watchdog successfully started the relay; heartbeat is live
+- the relay repeatedly reports CHATGPT_BUSY while the assistant is actively responding, proving exact-tab lookup and busy guard on live Safari
+- one exact Confluence Slice 1 lease is queued and will submit only after the chat becomes idle
+
+No Durdurulmaz project files/state were mutated. UID502 is used only as GUI transport.
+The first actual post-turn receipt will complete end-to-end acceptance.

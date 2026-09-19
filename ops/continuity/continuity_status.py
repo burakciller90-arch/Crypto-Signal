@@ -4,6 +4,7 @@ from pathlib import Path
 
 BASE = Path("/Users/crypto-signal-agent/Crypto-Signal")
 STATE = BASE / "runtime" / "continuity"
+SHARED = Path("/Users/Shared/.crypto-signal-wake-relay")
 
 
 def alive(pid: int) -> bool:
@@ -38,3 +39,12 @@ print(f"WAKE_QUEUE={count(STATE / 'wake' / 'queue', '*.wake')}")
 print(f"ACTIVE_LEASES={count(STATE / 'leases' / 'active', '*.lease')}")
 print(f"DELIVERED_LEASES={count(STATE / 'leases' / 'delivered', '*.lease')}")
 print(f"WAKE_RECEIPTS={count(STATE / 'wake' / 'receipts', '*.state')}")
+print(f"RELAY_SHARED_PAUSED={'YES' if (SHARED / 'user_pause').exists() else 'NO'}")
+print(f"RELAY_QUEUE={count(SHARED / 'queue', '*.wake')}")
+print(f"RELAY_RECEIPTS={count(SHARED / 'receipts', '*.state')}")
+heartbeat = SHARED / "relay_heartbeat"
+if heartbeat.exists():
+    age = max(0, int(__import__("time").time() - heartbeat.stat().st_mtime))
+    print(f"RELAY_HEARTBEAT_AGE_SECONDS={age}")
+else:
+    print("RELAY_HEARTBEAT_AGE_SECONDS=NONE")

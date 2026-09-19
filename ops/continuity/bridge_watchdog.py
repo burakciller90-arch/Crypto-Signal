@@ -10,7 +10,7 @@ from pathlib import Path
 
 BASE = Path("/Users/crypto-signal-agent/Crypto-Signal")
 STATE = BASE / "runtime" / "continuity"
-WAKE_CMD = BASE / "ops" / "continuity" / "wake_chatgpt.sh"
+RELAY_SUBMIT = BASE / "ops" / "continuity" / "relay_submit.py"
 WAKE_ROOT = STATE / "wake"
 QUEUE = WAKE_ROOT / "queue"
 BAD_QUEUE = WAKE_ROOT / "bad"
@@ -49,7 +49,7 @@ def ensure_dirs() -> None:
 
 def run_wake(event_id: str, message: str) -> tuple[int, str]:
     proc = subprocess.run(
-        [str(WAKE_CMD), event_id, message],
+        ["/usr/bin/python3", str(RELAY_SUBMIT), event_id, message, "25"],
         text=True,
         capture_output=True,
         timeout=30,

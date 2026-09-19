@@ -57,14 +57,22 @@ These are structural candidate counts, not uniquely correct Elliott labels,
 probabilities, win rates or execution recommendations.
 
 ## Autonomous continuity
-Control-plane code remains ready but browser transport is not active:
-- Terminal -> Safari Automation still requires user approval.
-- exact Crypto chat is not bound.
-- continuity bridge is not running.
-- Cursor Agent CLI remains installed but not logged in.
+Local wake/lease transport is active at the control-plane level:
+- exact Crypto chat URL is bound in runtime state
+- UID504 continuity bridge runs as a KeepAlive LaunchAgent
+- exact-task immutable lease is active
+- UID504 submits HMAC-authenticated events into a shared relay queue
+- relay secret/target ACL allows only UID504 and UID502
+- UID502 Safari exact-URL probe: one matching tab, JavaScript automation PASS
+- UID502 relay watchdog runs from launchd and starts the actual relay through Terminal to preserve macOS TCC authority
+- live busy-guard evidence repeatedly reports CHATGPT_BUSY while this response is active
+- first post-turn real submission receipt remains the final end-to-end acceptance evidence
+- generic idle wake remains disabled
+
+Cursor Agent CLI is installed but remains not logged in; workers are optional and do not block supervisor development.
 
 A foreign Durdurulmaz wake was reconciled as NOOP for Crypto Signal.
-No Durdurulmaz or Quantum Capital state was mutated.
+No Durdurulmaz or Quantum Capital project state was mutated; UID502 is used only as isolated GUI transport.
 
 ## Canonical next frontier
 Confluence + Signal Semantics V1:

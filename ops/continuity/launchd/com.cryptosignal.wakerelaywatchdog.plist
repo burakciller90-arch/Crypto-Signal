@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>com.cryptosignal.wakerelaywatchdog</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/zsh</string>
+    <string>/Users/Shared/.crypto-signal-wake-relay/relay_watchdog.sh</string>
+  </array>
+  <key>RunAtLoad</key><true/>
+  <key>StartInterval</key><integer>60</integer>
+  <key>StandardOutPath</key><string>/Users/Shared/.crypto-signal-wake-relay/watchdog.out.log</string>
+  <key>StandardErrorPath</key><string>/Users/Shared/.crypto-signal-wake-relay/watchdog.err.log</string>
+</dict>
+</plist>

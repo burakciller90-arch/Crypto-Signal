@@ -39,15 +39,26 @@ On delivery, ChatGPT must reconstruct:
 
 A completed, stale, duplicate or superseded task must be reconciled as NOOP.
 ## Wake transport
-The transport is bound to one exact ChatGPT conversation URL.
+The transport is bound to one exact ChatGPT conversation URL stored only in runtime state.
+
+Because UID504 does not have Safari Apple-Events permission, delivery is split:
+- UID504 continuity bridge owns task/lease semantics and signs relay events.
+- A shared relay queue under /Users/Shared carries only HMAC-authenticated Crypto events.
+- UID502 is used only as a GUI transport identity because its Safari automation permission is already valid.
+- No Durdurulmaz repository, state machine or roadmap is reused or mutated.
+- The relay secret and target URL are protected by explicit ACL so only UID504 and UID502 can read them.
+- A UID502 launchd watchdog checks relay health and, when necessary, opens a Terminal bootstrap. The actual relay process is started from the Terminal chain so macOS TCC permits Safari automation.
+- UID504 continuity bridge runs as a KeepAlive LaunchAgent.
 
 Delivery rules:
+- exact URL match only; Safari window/tab order is never trusted
 - never send while ChatGPT is visibly busy
 - never overwrite a non-empty user draft
 - every event receives a deterministic marker
 - event receipts enforce at-most-once submission intent
 - the receipt is written before the single send-button click
 - conflicting reuse of one event ID with different content is rejected
+- invalid HMAC events are quarantined
 
 The bridge processes only:
 - exact due leases
@@ -90,11 +101,11 @@ After worker completion, ChatGPT supervisor must:
 
 ## Availability boundary
 The local wake transport requires:
-- the crypto-signal-agent GUI session to remain logged in
-- Safari to keep the bound ChatGPT conversation available
-- Terminal to Safari Automation permission
-- Safari JavaScript-from-Apple-Events permission
-- the continuity bridge process to remain running
+- UID504 project session/state to remain available
+- UID502 GUI session and Safari to remain logged in
+- Safari to keep the exact bound ChatGPT conversation available
+- UID502 Terminal/Safari Automation permission and Safari JavaScript-from-Apple-Events permission
+- UID504 continuity bridge LaunchAgent
+- UID502 relay watchdog LaunchAgent
 
-If the GUI session is logged out, browser-based self-wake cannot operate.
-This is an operational constraint, not a project-state loss.
+The watchdog restarts a missing/stale relay through Terminal. A full logout/reboot may temporarily stop delivery until the relevant GUI session returns, but immutable checkpoints and queued events preserve project state.
