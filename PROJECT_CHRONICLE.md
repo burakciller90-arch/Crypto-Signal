@@ -195,3 +195,21 @@ Acceptance evidence:
 - identical input produced identical pivot tuples
 
 Canonical frontier moves to PA / SMC / ICT V1.
+
+## 2026-09-19 — PA Slice 1 accepted: market structure
+
+The first PA/SMC/ICT slice was completed as deterministic structure evidence only.
+Confirmed PIT-safe swings feed HH/LH/EH and HL/LL/EL labels plus close-based BOS and CHOCH/MSB.
+Wick-only penetration is not classified as a structure break in this slice.
+
+Acceptance evidence:
+- 55 tests PASS
+- Ruff PASS
+- mypy PASS
+- Bybit live sample: 700 closed 15m candles -> 187 pivots -> 149 swings -> 117 breaks
+- Bybit: 89 BOS / 28 CHOCH-MSB, current structure bearish
+- Binance live sample: 700 closed 15m candles -> 180 pivots -> 139 swings -> 110 breaks
+- Binance: 80 BOS / 30 CHOCH-MSB, current structure bearish
+- all live breaks obey pivot-confirmation and observation-time ordering
+
+Canonical next slice is PA Slice 2: deterministic FVG lifecycle/mitigation and BPR where valid.
