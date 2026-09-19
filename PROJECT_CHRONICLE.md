@@ -265,3 +265,24 @@ Acceptance evidence:
 - all BPRs in the sampled live history were later traversed
 
 Canonical frontier moves to PA Slice 3: EQH/EQL liquidity pools and sweep/SFP evidence.
+
+## 2026-09-20 — PA Slice 3 accepted: EQH/EQL liquidity and sweep/SFP
+
+Confirmed alternating swings now feed deterministic equal-liquidity pools.
+Equality uses an explicit configurable tolerance; V1 default is 5 bps and is stored in every analysis result.
+
+A pool forms only after the second anchor swing is confirmed.
+The first post-formation strict boundary take consumes the V1 pool:
+- wick through + close back inside -> SFP_REJECTION
+- close through -> CLOSE_THROUGH, not SFP
+
+Acceptance evidence:
+- 74 tests PASS
+- Ruff PASS
+- mypy PASS
+- Bybit 900 closed 15m: 24 pools = 14 EQH / 10 EQL; 9 SFP / 13 close-through / 2 available
+- Binance 900 closed 15m: 22 pools = 10 EQH / 12 EQL; 7 SFP / 11 close-through / 4 available
+- deterministic repeat equality PASS
+- all event timestamps are after pool formation and no later than local observation
+
+Canonical frontier moves to PA Slice 4: displacement/reclaim/rejection and deterministic prior-period/session levels.

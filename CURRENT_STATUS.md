@@ -3,7 +3,7 @@
 Updated: 2026-09-20
 Project: Crypto Signal
 Phase: PA / SMC / ICT V1
-State: PA_SLICE2_FVG_BPR_ACCEPTED
+State: PA_SLICE3_LIQUIDITY_ACCEPTED
 REAL_CAPITAL: 0
 
 ## Mechanical identity
@@ -18,33 +18,36 @@ REAL_CAPITAL: 0
 - Phase 1 Data Truth
 - Shared deterministic swing primitives
 - PA Slice 1 — PIT-safe market structure
-- PA Slice 2 — deterministic FVG lifecycle + BPR
+- PA Slice 2 — FVG lifecycle + BPR
+- PA Slice 3 — EQH/EQL liquidity pools + sweep/SFP evidence
 
-## PA Slice 2 contract
-- Strict three-closed-candle bullish/bearish FVG geometry.
-- FVG does not exist before the third candle closes and is locally observed.
-- Lifecycle is OPEN -> MITIGATED -> FILLED using later candle ranges only.
-- First touch, fill time, observation time and maximum fill fraction are preserved.
-- Entire-bar jumps beyond the far boundary are flagged as gap-through ambiguity rather than invented fills.
-- BPR requires positive price overlap between opposing FVGs.
-- Earlier FVG must not already be filled at/before later FVG creation.
-- BPR lifecycle is OPEN -> MITIGATED -> TRAVERSED.
-- All analysis is bounded by requested as-of and local ingest availability.
+## PA Slice 3 contract
+- EQH/EQL is derived from adjacent confirmed same-kind alternating swings.
+- V1 equality tolerance is explicit and configurable; default 5 bps.
+- A pool does not exist before the second anchor pivot is confirmed and observed.
+- Pool zone preserves both anchor prices and representative midpoint.
+- EQH sweep requires strict high beyond upper boundary.
+- EQL sweep requires strict low beyond lower boundary.
+- Wick through + close back inside is SFP rejection.
+- Close through the boundary consumes the pool as breakout, not SFP.
+- First qualifying post-formation event consumes the V1 pool.
+- Sweep market time and local observation time remain distinct.
 
 ## Acceptance evidence
-- 66 tests PASS.
+- 74 tests PASS.
 - Ruff PASS.
 - mypy PASS.
-- Live Bybit: 900 closed 15m candles -> 189 FVGs -> 6 BPRs.
-- Bybit FVG status: 176 filled / 8 open / 5 mitigated.
-- Live Binance: 900 closed 15m candles -> 211 FVGs -> 7 BPRs.
-- Binance FVG status: 197 filled / 9 open / 5 mitigated.
-- Live deterministic rerun produced identical result tuples for both providers.
-- All live BPRs in the sample were later traversed.
-- No gap-through ambiguity occurred in the live sample.
+- Live Bybit: 900 closed 15m -> 24 pools.
+  - 14 EQH / 10 EQL
+  - 9 SFP / 13 close-through / 2 available
+- Live Binance: 900 closed 15m -> 22 pools.
+  - 10 EQH / 12 EQL
+  - 7 SFP / 11 close-through / 4 available
+- Deterministic repeat equality PASS on both providers.
+- All live events obey pool formation time < event market time <= local observation time.
 
 ## Canonical next frontier
-PA Slice 3 — EQH/EQL liquidity pools + deterministic sweep/SFP evidence.
-Then PA Slice 4 — displacement/reclaim/rejection evidence and integrated PA result.
-Do not enter Harmonic/Elliott before PA V1 core gate is complete.
+PA Slice 4 — displacement + reclaim/rejection evidence and deterministic prior-period/session levels.
+Then PA integrated result / acceptance gate.
+Do not begin Harmonic/Elliott before PA V1 core gate is complete.
 REAL_CAPITAL remains 0.
