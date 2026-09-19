@@ -327,3 +327,25 @@ Acceptance evidence:
 - all interactions respect level market/local availability
 
 Canonical frontier moves to the integrated PA result and PA V1 acceptance gate.
+
+## 2026-09-20 — PA / SMC / ICT V1 accepted
+
+The integrated Price Action engine now combines PIT-safe market structure, FVG/BPR,
+EQH/EQL sweep evidence, complete prior-period/session levels, periodic opens,
+displacement and explicit-level reclaim/rejection under one shared as-of.
+
+Final acceptance:
+- 96 tests PASS
+- Ruff PASS
+- mypy PASS
+- all individual PA live probes PASS
+- integrated PA live gate independently reverified PASS
+
+Integrated live evidence:
+- Bybit 4,794 closed 15m: 848 breaks / 1,138 FVG / 92 BPR / 145 liquidity pools /
+  57 SFP / 500 displacement / 11 reference levels / 194 interactions
+- Binance 4,794 closed 15m: 823 breaks / 1,195 FVG / 104 BPR / 121 liquidity pools /
+  45 SFP / 506 displacement / 11 reference levels / 189 interactions
+
+These values remain descriptive evidence only; no probability, win rate or confluence score is created.
+Canonical frontier moves to Harmonic V1.

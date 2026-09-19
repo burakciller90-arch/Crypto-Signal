@@ -3,7 +3,7 @@
 Updated: 2026-09-20
 Project: Crypto Signal
 Phase: PA / SMC / ICT V1
-State: PA_SLICE4B_DISPLACEMENT_INTERACTIONS_ACCEPTED
+State: PA_V1_ACCEPTED
 REAL_CAPITAL: 0
 
 ## Mechanical identity
@@ -13,36 +13,41 @@ REAL_CAPITAL: 0
 - git branch: `main`
 - project root mode: `0700`
 
-## Accepted PA layers
-- Slice 1 — PIT-safe market structure
-- Slice 2 — FVG lifecycle + BPR
-- Slice 3 — EQH/EQL liquidity pools + sweep/SFP
-- Slice 4A — complete prior-period and explicit-session high/low levels
-- Slice 4B — deterministic displacement + explicit-level reclaim/rejection
+## Accepted foundations
+- Phase 0 Environment & Constitution
+- Phase 1 Data Truth
+- Shared deterministic swing primitives
+- PA / SMC / ICT V1
 
-## Slice 4B contract
-- Displacement thresholds are explicit config, not hidden heuristics.
-- Current candle is never part of its own rolling baseline.
-- Default V1 baseline: 20 bars; body x2.0; range x1.5; body/range >= 0.60.
-- Reclaim/rejection only evaluates explicit ReferenceLevel objects.
-- Reference levels carry market availability and local observation times.
-- Incomplete prior-period/session ranges produce no numeric reference level.
-- Periodic open levels preserve their own PIT availability.
-- Opposing same-candle rejection geometry at an exactly-on-level state is explicit ambiguity.
+## PA V1 accepted evidence
+- Structure: confirmed PIT-safe swings, HH/LH/EH + HL/LL/EL, BOS, CHOCH/MSB.
+- Imbalances: strict FVG geometry, lifecycle/mitigation/fill, gap-through ambiguity, BPR.
+- Liquidity: explicit-tolerance EQH/EQL pools, SFP rejection vs close-through.
+- Levels: complete Previous Day/Week/Month plus explicit timezone-aware session high/low.
+- Periodic Opens: PIT-safe Daily/Weekly/Monthly/Yearly when boundary candles are available.
+- Displacement: prior-only rolling deterministic threshold model.
+- Level interactions: reclaim/rejection only after explicit level availability.
+- One integrated PA result shares one top-level as-of across all components.
+- Integrated PA creates no probability, win rate, confluence score or execution action.
 
-## Acceptance evidence
-- 94 tests PASS.
+## Final PA acceptance gate
+- 96 tests PASS.
 - Ruff PASS.
 - mypy PASS.
-- Live Bybit: 4,794 closed 15m candles; 86 displacement events; 11 reference levels; 194 interactions.
-- Bybit displacement directions: 44 bearish / 42 bullish.
-- Live Binance: 4,794 closed 15m candles; 87 displacement events; 11 reference levels; 189 interactions.
-- Binance displacement directions: 44 bearish / 43 bullish.
-- Deterministic repeat equality PASS for displacement and interactions.
-- All live interaction events occur only after market/local level availability.
+- All individual PA live probes PASS.
+- Integrated live PA gate independently reverified PASS.
+- Bybit integrated sample: 4,794 closed 15m; 848 breaks; 1,138 FVG; 92 BPR; 145 liquidity pools; 57 SFP; 500 displacements; 11 levels; 194 interactions.
+- Binance integrated sample: 4,794 closed 15m; 823 breaks; 1,195 FVG; 104 BPR; 121 liquidity pools; 45 SFP; 506 displacements; 11 levels; 189 interactions.
+- These counts are descriptive evidence, not quality scores or probabilities.
 
 ## Canonical next frontier
-PA integrated result and PA V1 acceptance gate.
-The integrated PA object must combine evidence without converting it into fake probability or a trade order.
-Only after PA acceptance may Harmonic V1 begin.
+Harmonic V1:
+1. deterministic alternating swing/ZigZag candidate substrate
+2. XABCD candidate enumeration
+3. Gartley / Bat / Butterfly / Crab / Deep Crab ratio contracts
+4. ratio residual + PRZ width + Fib clustering + symmetry where defined
+5. invalidation / target geometry
+6. live deterministic validation
+
+Do not enter Elliott or Confluence before Harmonic V1 acceptance.
 REAL_CAPITAL remains 0.
