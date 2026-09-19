@@ -176,3 +176,22 @@ Recovery evidence:
 
 Phase 1 is accepted.
 The canonical frontier is shared deterministic swing/peak/trough primitives before methodology engines.
+
+## 2026-09-19 — Shared deterministic swing primitives accepted
+
+A methodology-neutral pivot/swing layer was implemented after Phase 1 Data Truth.
+Strict fractal pivots require closed, gapless, chronologically aligned candle truth.
+Each pivot records market confirmation time and local observation time, preventing source-candle hindsight.
+
+Outside bars that qualify as both HIGH and LOW are marked as same-bar ambiguity.
+Alternating compression reports ambiguous source indices and keeps more-extreme consecutive same-kind swings.
+
+Acceptance evidence:
+- 51 tests PASS
+- Ruff PASS
+- mypy PASS
+- Bybit live sample: 200 closed candles -> 52 pivots -> 41 alternating swings
+- Binance live sample: 200 closed candles -> 50 pivots -> 39 alternating swings
+- identical input produced identical pivot tuples
+
+Canonical frontier moves to PA / SMC / ICT V1.

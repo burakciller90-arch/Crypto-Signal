@@ -2,8 +2,8 @@
 
 Updated: 2026-09-19
 Project: Crypto Signal
-Phase: 1 — Data Truth
-State: PHASE1_ACCEPTED
+Phase: Shared deterministic primitives
+State: PRIMITIVES_ACCEPTED
 REAL_CAPITAL: 0
 
 ## Mechanical identity
@@ -14,31 +14,30 @@ REAL_CAPITAL: 0
 - git branch: `main`
 - project root mode: `0700`
 
-## Phase 1 accepted
-- Bybit and Binance Spot REST/WebSocket adapters normalize into one provider-neutral Candle contract.
-- Exchange source time and local ingest time remain distinct.
-- Decimal precision, closed/open state, quote volume, trade count and adapter version are preserved.
-- SQLite WAL persistence is idempotent and protects finalized candle truth.
-- Gap/freshness checks and explicit range completeness are implemented.
-- Restart recovery backfill is paginated, grid-validated and never synthesizes missing data.
-- Closed 15m is the canonical base series.
-- 1h/4h/1D/1W are deterministically aggregated from complete 15m buckets.
-- Daily/Weekly/Monthly/Yearly Opens are PIT-safe.
-- Native Bybit higher-timeframe reconciliation passes exactly.
-- Bybit/Binance cross-provider 15m grid reconciliation passes without forcing equal prices.
-- Reconnect paths are tested and public WS live ingestion is verified for both providers.
-- Dual-provider ingestion into one canonical store is verified.
-- Integrated acceptance: 45 tests PASS; Ruff PASS; mypy PASS; all live probes PASS.
+## Accepted foundations
+- Phase 0 Environment & Constitution accepted.
+- Phase 1 Data Truth accepted with Bybit + Binance REST/WS, persistence, recovery and reconciliation.
+- Shared deterministic swing primitives accepted before methodology engines.
 
-## Integrated acceptance evidence
-- Full-week Bybit base: 672 x 15m.
-- Derived/native exact reconciliation: 168 x 1h, 42 x 4h, 7 x 1D, 1 x 1W.
-- Recent Bybit/Binance 15m grid overlap: 20/20.
-- Restart recovery: deliberate 1-candle gap -> 0 on both providers.
-- Second recovery: 30/30 unchanged on both providers.
-- Dual-feed live smoke: five updates from each provider accepted concurrently.
+## Primitive contract
+- Strict fractal HIGH/LOW pivots require closed, gapless, single-semantics candle series.
+- A pivot is not considered available at its source candle.
+- Market confirmation occurs only after configured right-side candles close.
+- Local observation time is tracked separately from market confirmation time.
+- Equal-price plateaus do not silently become pivots.
+- Same-bar HIGH+LOW outside-bar ambiguity is represented explicitly.
+- Alternating compression never merges different symbol/timeframe semantics.
+- Consecutive same-kind pivots retain the more extreme point deterministically.
+
+## Acceptance evidence
+- Unit/quality gate: 51 tests PASS; Ruff PASS; mypy PASS.
+- Live Bybit sample: 200 closed 15m candles -> 52 pivots -> 41 alternating swings.
+- Live Binance sample: 200 closed 15m candles -> 50 pivots -> 39 alternating swings.
+- Repeated detection on identical input produced identical pivot tuples.
+- All pivots satisfy market confirmation <= local observation time.
 
 ## Canonical next frontier
-Shared deterministic primitives — swing/peak/trough geometry used by PA, Harmonic and Elliott.
-Primitive sharing must not merge methodology decision logic.
-Do not begin V2+ scope. REAL_CAPITAL remains 0.
+PA / SMC / ICT V1 engine.
+It must consume deterministic primitives but remain independently testable and return structured evidence,
+not a single bullish/bearish label.
+Do not begin Harmonic/Elliott conclusions inside the PA engine.
