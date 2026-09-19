@@ -232,3 +232,36 @@ Desktop Commander/Cursor are left available only so manual state-first recovery 
 Exact recovery instructions are recorded in `.project/PAUSE_CHECKPOINT.md`.
 Canonical resume frontier: PA Slice 2 — deterministic FVG lifecycle/mitigation, then BPR where valid.
 No new development is authorized while paused.
+
+## 2026-09-20 — Resume after user-requested pause
+
+The user resumed Crypto Signal development.
+UID 504 identity, pause/development checkpoint ancestry, clean working tree and absence of project wake/lease workers were mechanically verified.
+The resume gate passed: 55 tests, Ruff and mypy all PASS.
+
+Development resumes only at PA Slice 2: deterministic FVG lifecycle/mitigation, then BPR where valid.
+
+## 2026-09-20 — PA Slice 2 accepted: FVG lifecycle and BPR
+
+Strict three-candle bullish/bearish Fair Value Gap geometry was implemented with point-in-time creation,
+local observation timestamps and deterministic lifecycle state.
+
+Lifecycle:
+- OPEN -> MITIGATED -> FILLED
+- first touch, fill time and maximum fill fraction are preserved
+- a candle entirely beyond the far boundary does not prove path through the zone and is recorded as gap-through ambiguity
+
+Balanced Price Range detection requires strictly positive overlap between opposing FVGs and rejects
+cases where the earlier FVG had already filled before or at the later FVG creation time.
+
+Acceptance evidence:
+- 66 tests PASS
+- Ruff PASS
+- mypy PASS
+- Bybit: 900 closed 15m -> 189 FVG / 6 BPR
+- Binance: 900 closed 15m -> 211 FVG / 7 BPR
+- deterministic repeat equality PASS on both providers
+- lifecycle/PIT ordering PASS
+- all BPRs in the sampled live history were later traversed
+
+Canonical frontier moves to PA Slice 3: EQH/EQL liquidity pools and sweep/SFP evidence.
