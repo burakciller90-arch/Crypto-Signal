@@ -152,3 +152,27 @@ Acceptance evidence:
 - live Binance WS persistence: INSERTED then UPDATED, one canonical row
 
 Canonical frontier moves to Phase 1 Slice 6: restart/recovery and integrated acceptance.
+
+## 2026-09-19 — Phase 1 Data Truth accepted
+
+The complete Data Truth acceptance chain passed in one integrated run.
+
+Integrated gate:
+- 45 tests PASS
+- Ruff PASS
+- mypy PASS
+- Bybit REST live probe PASS
+- persistence/idempotence live probe PASS
+- Bybit WebSocket live probe PASS
+- full-week deterministic aggregation/native reconciliation PASS
+- Binance REST/WebSocket parity and cross-provider grid reconciliation PASS
+- Bybit + Binance restart recovery PASS
+- bounded concurrent dual-feed ingestion PASS
+
+Recovery evidence:
+- one deliberate historical candle gap was created for each provider
+- REST backfill reduced each gap from 1 to 0
+- the second backfill returned 30/30 unchanged for each provider
+
+Phase 1 is accepted.
+The canonical frontier is shared deterministic swing/peak/trough primitives before methodology engines.
