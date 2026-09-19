@@ -3,7 +3,7 @@
 Updated: 2026-09-20
 Project: Crypto Signal
 Phase: PA / SMC / ICT V1
-State: PA_SLICE4A_LEVELS_ACCEPTED
+State: PA_SLICE4B_DISPLACEMENT_INTERACTIONS_ACCEPTED
 REAL_CAPITAL: 0
 
 ## Mechanical identity
@@ -18,30 +18,31 @@ REAL_CAPITAL: 0
 - Slice 2 — FVG lifecycle + BPR
 - Slice 3 — EQH/EQL liquidity pools + sweep/SFP
 - Slice 4A — complete prior-period and explicit-session high/low levels
+- Slice 4B — deterministic displacement + explicit-level reclaim/rejection
 
-## Slice 4A contract
-- Closed canonical 15m candles are the only source.
-- Previous Day/Week/Month boundaries are UTC calendar boundaries.
-- Numeric high/low truth is emitted only when every expected 15m candle is present and observed by as-of.
-- Incomplete ranges expose missing open-times and suppress high/low values.
-- Session windows require explicit name + IANA timezone + local start/end.
-- No hidden Asia/London/New York session hours are assumed.
-- Cross-midnight sessions and timezone offsets are resolved deterministically.
-- Session boundaries must resolve to the canonical 15m grid.
+## Slice 4B contract
+- Displacement thresholds are explicit config, not hidden heuristics.
+- Current candle is never part of its own rolling baseline.
+- Default V1 baseline: 20 bars; body x2.0; range x1.5; body/range >= 0.60.
+- Reclaim/rejection only evaluates explicit ReferenceLevel objects.
+- Reference levels carry market availability and local observation times.
+- Incomplete prior-period/session ranges produce no numeric reference level.
+- Periodic open levels preserve their own PIT availability.
+- Opposing same-candle rejection geometry at an exactly-on-level state is explicit ambiguity.
 
 ## Acceptance evidence
-- 80 tests PASS.
+- 94 tests PASS.
 - Ruff PASS.
 - mypy PASS.
-- Live Bybit and Binance history: 4,794 closed 15m candles each.
-- Previous Day: 96/96 complete on both providers.
-- Previous Week: 672/672 complete on both providers.
-- Previous Month: 2,976/2,976 complete on both providers.
-- Explicit verification session Europe/Istanbul 09:00-11:00: 8/8 complete on both providers.
-- Deterministic repeat equality PASS.
+- Live Bybit: 4,794 closed 15m candles; 86 displacement events; 11 reference levels; 194 interactions.
+- Bybit displacement directions: 44 bearish / 42 bullish.
+- Live Binance: 4,794 closed 15m candles; 87 displacement events; 11 reference levels; 189 interactions.
+- Binance displacement directions: 44 bearish / 43 bullish.
+- Deterministic repeat equality PASS for displacement and interactions.
+- All live interaction events occur only after market/local level availability.
 
 ## Canonical next frontier
-PA Slice 4B — displacement evidence + deterministic level reclaim/rejection interactions.
-Then PA integrated result / acceptance gate.
-Do not begin Harmonic/Elliott before PA V1 core gate is complete.
+PA integrated result and PA V1 acceptance gate.
+The integrated PA object must combine evidence without converting it into fake probability or a trade order.
+Only after PA acceptance may Harmonic V1 begin.
 REAL_CAPITAL remains 0.

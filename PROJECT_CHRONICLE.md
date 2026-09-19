@@ -308,3 +308,22 @@ Acceptance evidence:
 - deterministic repeat equality PASS
 
 Canonical frontier moves to PA Slice 4B: displacement and level reclaim/rejection evidence.
+
+## 2026-09-20 — PA Slice 4B accepted: displacement and level interactions
+
+Displacement is now explicit deterministic evidence with a prior-only rolling baseline.
+The V1 default configuration is stored in the result rather than hidden in code semantics.
+
+Reclaim/rejection runs only against explicit ReferenceLevel objects carrying market and local availability.
+Incomplete prior-period/session ranges cannot become numeric levels.
+
+Acceptance evidence:
+- 94 tests PASS
+- Ruff PASS
+- mypy PASS
+- Bybit: 4,794 closed 15m; 86 displacement events; 11 levels; 194 interactions
+- Binance: 4,794 closed 15m; 87 displacement events; 11 levels; 189 interactions
+- deterministic repeat equality PASS
+- all interactions respect level market/local availability
+
+Canonical frontier moves to the integrated PA result and PA V1 acceptance gate.
