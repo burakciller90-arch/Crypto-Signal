@@ -3,7 +3,7 @@
 Updated: 2026-09-19
 Project: Crypto Signal
 Phase: PA / SMC / ICT V1
-State: PA_STRUCTURE_SLICE1_ACCEPTED
+State: PAUSED_AFTER_PA_STRUCTURE_SLICE1
 REAL_CAPITAL: 0
 
 ## Mechanical identity
@@ -13,34 +13,32 @@ REAL_CAPITAL: 0
 - git branch: `main`
 - project root mode: `0700`
 
-## Accepted foundations
-- Phase 0 Environment & Constitution: accepted.
-- Phase 1 Data Truth: accepted.
-- Shared deterministic swing primitives: accepted.
-- PA Slice 1 market structure: accepted.
+## Pause state
+- User explicitly requested a break.
+- Project-level wake mechanism: not installed / not active.
+- Project-level continuation lease mechanism: not installed / not active.
+- Crypto Signal continuation worker: none.
+- No autonomous project continuation should occur while paused.
+- Exact resume instructions are in `.project/PAUSE_CHECKPOINT.md`.
 
-## PA Slice 1 contract
-- Confirmed PIT-safe swings are consumed from the shared primitive layer.
-- Swing relations are structured as HH/LH/EH and HL/LL/EL.
-- Structural breaks are close-based; wick-only penetration is not BOS/CHoCH.
-- First/same-direction break is BOS.
-- Opposite-direction break is CHoCH/MSB and flips the current structure regime.
-- A pivot cannot be broken before its own right-side confirmation.
-- Break market time and local observation time remain distinct.
-- Available PIT-safe Daily/Weekly/Monthly/Yearly Opens are attached when source boundary candles are present.
-- Harmonic and Elliott logic are not called by this engine.
+## Last accepted development checkpoint
+`ea58566937b9c2afdb94ea868c2930ad761b0d91`
 
-## Acceptance evidence
+Completed and accepted:
+- Phase 0 Environment & Constitution
+- Phase 1 Data Truth
+- Shared deterministic swing primitives
+- PA Slice 1 — PIT-safe market structure
+
+## Last accepted PA evidence
 - 55 tests PASS.
 - Ruff PASS.
 - mypy PASS.
-- Live Bybit sample: 700 closed 15m candles -> 187 pivots -> 149 labeled swings -> 117 structure breaks.
-- Bybit break mix: 89 BOS / 28 CHOCH-MSB; current structure bearish.
-- Live Binance sample: 700 closed 15m candles -> 180 pivots -> 139 labeled swings -> 110 structure breaks.
-- Binance break mix: 80 BOS / 30 CHOCH-MSB; current structure bearish.
-- All live break events satisfy broken-pivot confirmation <= break time <= local observation time.
+- Bybit live: 187 pivots / 149 swings / 117 breaks; 89 BOS / 28 CHOCH-MSB.
+- Binance live: 180 pivots / 139 swings / 110 breaks; 80 BOS / 30 CHOCH-MSB.
 
-## Canonical next frontier
-PA Slice 2 — deterministic FVG detection, lifecycle/mitigation state, then BPR where overlapping opposing FVG geometry is valid.
-Do not begin the next slice while project pause is requested.
-REAL_CAPITAL remains 0.
+## Resume frontier
+When the user says `Devam edebiliriz`, perform state-first recovery and resume at:
+PA Slice 2 — deterministic FVG detection, lifecycle/mitigation, then BPR where opposing FVG overlap is valid.
+
+Do not begin new development while paused.

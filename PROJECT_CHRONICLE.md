@@ -213,3 +213,22 @@ Acceptance evidence:
 - all live breaks obey pivot-confirmation and observation-time ordering
 
 Canonical next slice is PA Slice 2: deterministic FVG lifecycle/mitigation and BPR where valid.
+
+## 2026-09-19 — User-requested pause after PA Structure Slice 1
+
+Development was paused immediately after the accepted PA market-structure checkpoint
+`ea58566937b9c2afdb94ea868c2930ad761b0d91`.
+
+Mechanical continuation audit found:
+- no project-level wake files/directories
+- no continuation lease files/directories
+- no Crypto Signal wake/lease launchd label
+- no Crypto Signal continuation worker
+
+Therefore there is no autonomous project mechanism to pause further; continuation is already disabled by absence.
+Desktop Commander/Cursor are left available only so manual state-first recovery can occur when the user says
+`Devam edebiliriz`.
+
+Exact recovery instructions are recorded in `.project/PAUSE_CHECKPOINT.md`.
+Canonical resume frontier: PA Slice 2 — deterministic FVG lifecycle/mitigation, then BPR where valid.
+No new development is authorized while paused.
