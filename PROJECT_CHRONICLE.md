@@ -92,3 +92,22 @@ Acceptance evidence:
 - freshness assessment returned fresh
 
 Canonical frontier moves to Phase 1 Slice 3: WebSocket ingestion and reconnect/recovery.
+
+## 2026-09-19 — Phase 1 Slice 3 accepted: live WebSocket ingestion
+
+Bybit V5 Spot kline WebSocket ingestion was implemented behind the provider-neutral Candle contract.
+The client sends Bybit application heartbeat packets, keeps protocol ping/pong enabled,
+and uses the websockets asyncio reconnect iterator with re-subscription on each connection.
+
+A local forced-transient-close test proved reconnect plus re-subscribe behavior.
+A generic CandleIngestor now bridges live events into the canonical persistence rules.
+
+Acceptance evidence:
+- 27 tests passed
+- Ruff PASS
+- mypy PASS
+- local reconnect test observed two subscriptions across two connections
+- live Bybit BTCUSDT 15m smoke received two updates for one current candle
+- persistence result: INSERTED then UPDATED, canonical row count 1
+
+Canonical frontier moves to Phase 1 Slice 4: deterministic higher-timeframe aggregation and periodic opens.
