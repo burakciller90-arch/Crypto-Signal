@@ -2,8 +2,8 @@
 
 Updated: 2026-09-20
 Project: Crypto Signal
-Phase: Harmonic V1 + Autonomous Continuity Bootstrap
-State: CONTINUITY_CONTROL_PLANE_READY_OS_GATE_PENDING
+Phase: Elliott Wave V1
+State: HARMONIC_V1_ACCEPTED
 REAL_CAPITAL: 0
 
 ## Mechanical identity
@@ -17,45 +17,41 @@ REAL_CAPITAL: 0
 - Phase 0 Environment & Constitution
 - Phase 1 Data Truth
 - Shared deterministic swing primitives
-- PA / SMC / ICT V1 — accepted at commit `30b6f2c61d8fc2f0c094b17d89403b0fe4e44f86`
-
+- PA / SMC / ICT V1
+- Harmonic V1
+## Harmonic V1 accepted evidence
+- Deterministic XABCD candidate enumeration.
+- Gartley / Bat / Butterfly / Crab / Deep Crab explicit contracts.
+- Ratio residual, PRZ, Fib clustering, time symmetry, invalidation and T1/T2 geometry.
+- No forced pattern: invalid candidates remain explicit evidence.
+- Nonphysical theoretical projections invalidate geometry and never get clamped into prices.
+- Shared 1W canonical grid repaired to Monday 00:00 UTC across common validators.
+- 117 tests PASS.
+- Ruff PASS.
+- mypy PASS.
+- Bybit long 15m: 4,797 closed / 1,021 candidates / 5,105 evaluations / 0 valid.
+- Binance long 15m: 4,797 closed / 979 candidates / 4,895 evaluations / 0 valid.
+- Multi-timeframe Bybit + Binance smoke PASS for 15m / 1h / 4h / 1D / 1W.
+- Binance 1D smoke produced 1 valid live Harmonic match.
 ## Autonomous continuity
-User has explicitly authorized autonomous 7/24 continuation for Crypto Signal.
+Control-plane code is implemented and committed.
 
-Implemented and mechanically verified:
-- exact immutable continuation leases with SHA256 checkpoint binding
-- same-task lease supersession
-- at-most-once wake event receipts
-- exact-chat URL binding requirement
-- ChatGPT busy/draft guards
-- no generic idle wake
-- pause archives leases and queued wakes
-- resume never replays archived stale events
-- stale worker-state recovery
-- bounded Cursor worker completion queue
-- Cursor worker isolation policy via separate worktree
-- continuity behavior self-test PASS
-- continuity static/security gate PASS
-- full repo quality remains 96 tests PASS, Ruff PASS, mypy PASS
+Still pending one-time human gates:
+- Terminal -> Safari Automation permission is denied by macOS (-1743).
+- exact Crypto chat is not bound; bridge is not running.
+- Cursor Agent CLI is installed but reports Not logged in.
 
-Not yet activated:
-- Safari Terminal->Safari Automation permission is currently denied by macOS (-1743).
-- exact current chat is therefore not yet bound.
-- continuity bridge is not yet running.
-- Cursor Agent CLI is installed but reports `Not logged in`.
+A foreign Durdurulmaz wake was observed in this chat and was treated as stale/foreign NOOP.
+No Durdurulmaz or Quantum Capital state was mutated.
 
-## Harmonic frontier
-- ADR 0014 ratio / PRZ / residual / symmetry / invalidation / T1-T2 contract drafted.
-- Harmonic implementation has not yet started.
-- Canonical implementation order:
-  1. XABCD candidate enumeration from PIT-safe alternating swings
-  2. Gartley / Bat / Butterfly / Crab / Deep Crab ratio validation
-  3. residual / PRZ / clustering / symmetry
-  4. invalidation / reaction targets
-  5. unit + Bybit/Binance live deterministic acceptance
+## Canonical next frontier
+Elliott Wave V1:
+1. explicit impulse and ABC candidate structures
+2. deterministic wave-rule validity contracts
+3. competing candidate counts; never one forced interpretation
+4. invalidation, current-wave and target/projection evidence
+5. ambiguity evidence without fabricated probability
+6. PIT-safe unit and live validation
 
-## Immediate operational gates
-1. User enables Terminal -> Safari in macOS Privacy & Security -> Automation.
-2. Re-run continuity bootstrap; bind exact chat; prove one real at-most-once self-wake.
-3. Authenticate Cursor Agent CLI and verify an available Composer model before enabling workers.
-4. Continue Harmonic V1 without waiting on routine approvals.
+Do not enter Confluence before Elliott V1 acceptance.
+REAL_CAPITAL remains 0.

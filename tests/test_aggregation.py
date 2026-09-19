@@ -4,8 +4,9 @@ from decimal import Decimal
 
 import pytest
 
-from crypto_signal.data.aggregation import aggregate_closed_15m, bucket_open_ms
+from crypto_signal.data.aggregation import aggregate_closed_15m
 from crypto_signal.data.models import Candle, DataSource, Exchange, MarketType
+from crypto_signal.data.timeframes import bucket_open_ms
 
 
 def candle(open_time_ms: int, index: int = 0) -> Candle:

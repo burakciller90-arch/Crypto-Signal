@@ -43,7 +43,7 @@ All leg lengths must be positive.
 - C/AB 0.382-0.886
 - D/BC 1.618-2.618
 - D/XA target 0.886, relative tolerance 3%
-- CD/AB 1.0-1.618
+- CD/AB 1.0-1.27 for the V1 ideal contract
 - invalidation limit: 1.13 XA
 
 ### Butterfly
@@ -59,15 +59,17 @@ All leg lengths must be positive.
 - C/AB 0.382-0.886
 - D/BC 2.618-3.618
 - D/XA target 1.618, relative tolerance 3%
-- CD/AB 1.0-1.618
+- CD/AB must reach at least an equivalent AB=CD completion; it has no hard V1 upper validity bound
+- PRZ AB=CD projection anchors: 1.0, 1.27, 1.618
 - invalidation limit: 2.0 XA
 
 ### Deep Crab
-- B/XA target 0.886, relative tolerance 3%
+- B/XA target 0.886, relative tolerance 5%
 - C/AB 0.382-0.886
-- D/BC 2.24-3.618
+- D/BC 2.0-3.618
 - D/XA target 1.618, relative tolerance 3%
-- CD/AB 1.0-1.618
+- CD/AB must reach at least an equivalent AB=CD completion; it has no hard V1 upper validity bound
+- PRZ AB=CD projection anchors: 1.0, 1.27, 1.618
 - invalidation limit: 2.0 XA
 
 These are explicit V1 ideal contracts. Wider discretionary variants are not silently accepted.
@@ -97,11 +99,21 @@ The result stores:
 
 PRZ width is descriptive geometry, not a probability score.
 
+A mathematically projected completion price may be non-positive for an invalid
+candidate on very large legs. V1 retains that theoretical projection as
+nonphysical evidence, marks geometry invalid, and continues evaluating other
+candidates. It never clamps a negative projection into a tradable price.
+
 ## Ratio residual
 Each candidate stores per-ratio residuals.
 Target ratios use relative error to target.
 Range ratios use zero residual while inside the permitted interval and normalized distance to the nearest boundary outside it.
+Minimum-only ratios use zero residual above the minimum and normalized shortfall below it.
 A valid pattern must satisfy every mandatory constraint.
+
+The 3% tolerance on unsourced exact D targets is an explicit V1 engineering tolerance,
+not a claim that the source defines a universal 3% allowance. Gartley B uses the documented +/-3%
+allowance; Deep Crab B uses the documented +5% neighborhood as a symmetric V1 implementation bound.
 
 ## Symmetry
 AB/CD time symmetry is stored as:

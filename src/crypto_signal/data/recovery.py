@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from crypto_signal.data.adapters.base import MarketDataAdapter
 from crypto_signal.data.models import Candle
 from crypto_signal.data.store import CandleStore, WriteDisposition
-from crypto_signal.data.timeframes import spec
+from crypto_signal.data.timeframes import is_aligned_open, spec
 
 
 @dataclass(frozen=True, slots=True)
@@ -43,7 +43,9 @@ async def backfill_range(
     duration_ms = tf.duration_ms
     if start_open_ms < 0 or end_open_ms < start_open_ms:
         raise ValueError("invalid backfill range")
-    if start_open_ms % duration_ms != 0 or end_open_ms % duration_ms != 0:
+    if not is_aligned_open(start_open_ms, timeframe) or not is_aligned_open(
+        end_open_ms, timeframe
+    ):
         raise ValueError("backfill range must align to the timeframe grid")
     if not 1 <= page_limit <= 1000:
         raise ValueError("page_limit must be between 1 and 1000")
@@ -72,7 +74,7 @@ async def backfill_range(
                 raise ValueError("adapter returned mismatched candle semantics")
             if not current_open_ms <= candle.open_time_ms <= page_last_open_ms:
                 raise ValueError("adapter returned candle outside requested page")
-            if candle.open_time_ms % duration_ms != 0:
+            if not is_aligned_open(candle.open_time_ms, timeframe):
                 raise ValueError("adapter returned off-grid candle")
             if require_closed and not candle.is_closed:
                 raise ValueError("historical recovery received an open candle")

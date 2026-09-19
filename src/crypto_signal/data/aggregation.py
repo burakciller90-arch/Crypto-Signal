@@ -6,11 +6,10 @@ from dataclasses import dataclass
 from decimal import Decimal
 
 from crypto_signal.data.models import Candle, DataSource
-from crypto_signal.data.timeframes import spec
+from crypto_signal.data.timeframes import bucket_open_ms, is_aligned_open, spec
 
 BASE_TIMEFRAME = "15m"
 AGGREGATOR_VERSION = "aggregate-15m/1"
-WEEK_ANCHOR_MS = 4 * 24 * 60 * 60_000  # Monday 1970-01-05 00:00 UTC.
 
 
 @dataclass(frozen=True, slots=True)
@@ -27,13 +26,6 @@ class AggregationResult:
     candles: tuple[Candle, ...]
     incomplete: tuple[IncompleteBucket, ...]
 
-
-def bucket_open_ms(open_time_ms: int, timeframe: str) -> int:
-    target = spec(timeframe)
-    if timeframe == BASE_TIMEFRAME:
-        return open_time_ms
-    anchor_ms = WEEK_ANCHOR_MS if timeframe == "1W" else 0
-    return anchor_ms + ((open_time_ms - anchor_ms) // target.duration_ms) * target.duration_ms
 
 
 def aggregate_closed_15m(
@@ -60,7 +52,7 @@ def aggregate_closed_15m(
             raise ValueError("aggregation cannot mix exchanges or market types")
         if candle.symbol != first.symbol:
             raise ValueError("aggregation cannot mix symbols")
-        if candle.open_time_ms % base.duration_ms != 0:
+        if not is_aligned_open(candle.open_time_ms, BASE_TIMEFRAME):
             raise ValueError("15m candle is off the canonical UTC grid")
 
     by_bucket: dict[int, list[Candle]] = defaultdict(list)

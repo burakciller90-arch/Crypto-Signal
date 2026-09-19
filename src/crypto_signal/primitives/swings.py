@@ -4,7 +4,7 @@ from collections import defaultdict
 from collections.abc import Sequence
 
 from crypto_signal.data.models import Candle
-from crypto_signal.data.timeframes import spec
+from crypto_signal.data.timeframes import is_aligned_open, spec
 from crypto_signal.primitives.models import (
     AlternatingSwingResult,
     ConfirmedPivot,
@@ -30,7 +30,7 @@ def _validate_series(candles: Sequence[Candle]) -> None:
             or candle.timeframe != first.timeframe
         ):
             raise ValueError("swing detection cannot mix candle semantics")
-        if candle.open_time_ms % duration_ms != 0:
+        if not is_aligned_open(candle.open_time_ms, first.timeframe):
             raise ValueError("candle is off the canonical timeframe grid")
         if previous_open is not None and candle.open_time_ms - previous_open != duration_ms:
             raise ValueError("swing detection requires a gapless chronological series")

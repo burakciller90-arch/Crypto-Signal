@@ -8,7 +8,7 @@ from itertools import pairwise
 
 from crypto_signal.data.models import Candle, Exchange, MarketType
 from crypto_signal.data.periodic_opens import PeriodicOpen
-from crypto_signal.data.timeframes import spec
+from crypto_signal.data.timeframes import is_aligned_open, spec
 from crypto_signal.methodologies.price_action.levels import HighLowRangeEvidence
 from crypto_signal.methodologies.price_action.models import StructureDirection
 
@@ -143,7 +143,7 @@ def _validate_candles(candles: Sequence[Candle]) -> None:
             or candle.timeframe != first.timeframe
         ):
             raise ValueError("level interaction analysis cannot mix candle semantics")
-        if candle.open_time_ms % duration_ms != 0:
+        if not is_aligned_open(candle.open_time_ms, first.timeframe):
             raise ValueError("level interaction candle is off canonical timeframe grid")
         if previous_open_ms is not None and candle.open_time_ms - previous_open_ms != duration_ms:
             raise ValueError("level interaction analysis requires gapless chronological candles")

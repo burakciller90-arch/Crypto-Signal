@@ -6,7 +6,7 @@ from decimal import Decimal
 from enum import StrEnum
 
 from crypto_signal.data.models import Candle, Exchange, MarketType
-from crypto_signal.data.timeframes import spec
+from crypto_signal.data.timeframes import is_aligned_open, spec
 
 
 class FVGDirection(StrEnum):
@@ -143,7 +143,7 @@ def _validate_series(candles: Sequence[Candle]) -> None:
             or candle.timeframe != first.timeframe
         ):
             raise ValueError("FVG analysis cannot mix candle semantics")
-        if candle.open_time_ms % duration_ms != 0:
+        if not is_aligned_open(candle.open_time_ms, first.timeframe):
             raise ValueError("FVG candle is off the canonical timeframe grid")
         if candle.close_time_ms != candle.open_time_ms + duration_ms - 1:
             raise ValueError("FVG candle bounds do not match timeframe duration")

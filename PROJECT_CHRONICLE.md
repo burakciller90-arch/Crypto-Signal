@@ -379,3 +379,41 @@ Current human gates:
 - Cursor Agent 2026.09.18-9a7762b installed under UID504, but status is Not logged in.
 
 No autonomous wake is claimed active until a real exact-chat delivery test passes.
+
+## 2026-09-20 — Harmonic V1 accepted; weekly grid bug repaired
+
+Harmonic V1 was completed and mechanically accepted.
+
+Implemented:
+- PIT-safe XABCD candidate enumeration from shared alternating swings
+- Gartley, Bat, Butterfly, Crab and Deep Crab explicit ratio contracts
+- per-ratio residual evidence
+- PRZ projection envelope and clustering width
+- AB/CD time-symmetry evidence
+- pattern-specific invalidation and 38.2% / 61.8% reaction levels
+- explicit valid versus invalid match semantics
+- nonphysical theoretical projections retained as invalid evidence rather than clamped or allowed to crash analysis
+
+During live validation, the original Crab-family CD/AB contract was found mathematically over-constrained and corrected.
+The common 1W grid validator was also found to use an epoch-zero assumption while exchange weekly candles open Monday 00:00 UTC.
+The weekly anchor is now centralized in the shared timeframe contract and reused by aggregation, recovery, swings and PA validators.
+
+Acceptance evidence:
+- full repo pytest: 117 PASS
+- Ruff: PASS
+- mypy: PASS
+- long Bybit 15m: 4,797 closed / 1,021 candidates / 5,105 pattern evaluations / 0 valid
+- long Binance 15m: 4,797 closed / 979 candidates / 4,895 pattern evaluations / 0 valid
+- both long probes deterministic and PIT-safe
+- multi-timeframe live smoke PASS on Bybit and Binance for 15m / 1h / 4h / 1D / 1W
+- Binance 1D smoke produced one valid live Harmonic match
+- weekly nonphysical candidate geometry remained explicit invalid evidence without terminating analysis
+
+Zero valid matches in the long 15m samples is accepted evidence, not a failure; the engine must not manufacture setups.
+
+A Durdurulmaz completion wake was delivered into this chat during the work.
+It was classified as foreign/stale and NOOP for Crypto Signal.
+Only read-only transport evidence was inspected; no Durdurulmaz or Quantum Capital state was changed.
+
+Canonical frontier moves to Elliott Wave V1.
+REAL_CAPITAL remains 0.
