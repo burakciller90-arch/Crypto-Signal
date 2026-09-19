@@ -68,3 +68,27 @@ Acceptance evidence:
 - live state: 4 closed candles + 1 current open candle
 
 Canonical frontier moves to Phase 1 Slice 2: persistence/provenance and gap/freshness detection.
+
+## 2026-09-19 — Repository ignore correction
+
+A post-commit reproducibility audit found that the unanchored `data/` ignore rule also matched
+`src/crypto_signal/data/`. The checkpoint would therefore have depended on ignored local source files.
+The rule was corrected to root-only `/data/`, with `/runtime/` and `/secrets/` similarly anchored.
+The full source package is now tracked and pytest/Ruff/mypy pass against tracked code.
+
+## 2026-09-19 — Phase 1 Slice 2 accepted: persistence and data health
+
+SQLite WAL persistence was added with deterministic candle finalization rules.
+Equivalent duplicate delivery is idempotent; stale open updates are ignored; finalized candles cannot reopen;
+and conflicting finalized payloads raise an explicit conflict rather than silently rewriting truth.
+
+Acceptance evidence:
+- 23 tests passed
+- Ruff PASS
+- mypy PASS
+- live Bybit persistence smoke: 10 INSERTED then 10 UNCHANGED
+- canonical row count remained 10
+- gap detector returned no gaps
+- freshness assessment returned fresh
+
+Canonical frontier moves to Phase 1 Slice 3: WebSocket ingestion and reconnect/recovery.

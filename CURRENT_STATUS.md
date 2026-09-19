@@ -3,7 +3,7 @@
 Updated: 2026-09-19
 Project: Crypto Signal
 Phase: 1 — Data Truth
-State: SLICE1_REST_CONTRACT_ACCEPTED
+State: SLICE2_PERSISTENCE_ACCEPTED
 REAL_CAPITAL: 0
 
 ## Mechanical identity
@@ -14,20 +14,23 @@ REAL_CAPITAL: 0
 - git branch: `main`
 - project root mode: `0700`
 
-## Phase 0
-Accepted. Isolation, pinned runtimes, architecture/contracts and quality baseline are established.
-
-## Phase 1 accepted evidence
+## Accepted Phase 1 evidence
 - Provider-neutral immutable Candle contract exists.
-- Decimal OHLCV rules and impossible-data validation exist.
-- Exchange event timestamp and local ingest timestamp are distinct.
-- V1 timeframe mapping is explicit.
-- Bybit V5 Spot selected as first adapter; Binance remains planned second adapter.
-- Bybit REST kline normalization sorts chronologically and preserves closed/open state.
-- Unit/quality gate: 13 tests passed; Ruff PASS; mypy PASS.
-- Live BTCUSDT 15m REST probe returned five gapless candles.
-- Live probe observed four closed candles and one current open candle as expected.
+- Bybit V5 Spot REST normalization is live-verified.
+- SQLite canonical candle store runs in WAL mode.
+- Decimal values are persisted as text, not float.
+- Duplicate equivalent delivery is idempotent.
+- Newer open candles may update; stale open updates are ignored.
+- Open candles may finalize; finalized candles cannot reopen.
+- Conflicting finalized truth raises an explicit error.
+- Gap detection and freshness assessment are explicit.
+- Unit/quality gate: 23 tests passed; Ruff PASS; mypy PASS.
+- Live persistence probe: 10 inserts, then 10 unchanged, row count 10, no gaps, fresh state.
+
+## Repository integrity correction
+The root runtime ignore rules are anchored as `/data/`, `/runtime/`, `/secrets/`.
+This prevents source package paths such as `src/crypto_signal/data/` from being ignored.
 
 ## Canonical next slice
-Phase 1 Slice 2 — SQLite persistence/provenance + idempotent writes + gap/freshness detection.
+Phase 1 Slice 3 — Bybit WebSocket live candle ingestion + reconnect/backoff + closed-candle persistence.
 Do not begin methodology engines or V2+ scope.
