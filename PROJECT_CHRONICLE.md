@@ -417,3 +417,42 @@ Only read-only transport evidence was inspected; no Durdurulmaz or Quantum Capit
 
 Canonical frontier moves to Elliott Wave V1.
 REAL_CAPITAL remains 0.
+
+## 2026-09-20 — Elliott Wave V1 accepted
+
+Elliott V1 was implemented as a structural candidate engine rather than a forced single count.
+
+Accepted scope:
+- partial impulse counts from Wave 1 through Wave 5
+- standard impulse hard-price rules
+- explicit NOT_APPLICABLE semantics for rules not yet testable
+- truncation evidence without false hard invalidation
+- generic A-B-C endpoint candidates
+- zigzag compatibility without pretending endpoint geometry proves 5-3-5
+- competing counts and ambiguity preservation
+- structural invalidation boundaries
+- Wave 5 equality / 0.618 Wave 1 guidelines
+- C=A correction guideline
+- descriptive rule-support fractions only
+
+Final quality:
+- 127 tests PASS
+- Ruff PASS
+- mypy PASS
+- focused Elliott tests 10/10 PASS
+
+Live evidence:
+- Bybit long 15m: 4,798 closed; 5,110 impulse candidates; 1,020 complete;
+  63 hard-price-rule-valid complete; 33 truncated-valid; 1,022 A-B-C;
+  316 zigzag-compatible; 870 ambiguous end pivots
+- Binance long 15m: 4,798 closed; 4,900 impulse candidates; 978 complete;
+  60 hard-price-rule-valid complete; 28 truncated-valid; 980 A-B-C;
+  304 zigzag-compatible; 828 ambiguous end pivots
+- Bybit and Binance 15m / 1h / 4h / 1D / 1W deterministic smoke PASS
+
+Interpretation:
+These counts are structural compatibility evidence, not uniquely correct Elliott labels,
+probabilities, win rates or execution authority. High ambiguity is preserved by design.
+
+Canonical frontier moves to Confluence + Signal Semantics V1.
+REAL_CAPITAL remains 0.

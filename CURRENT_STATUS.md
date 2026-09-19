@@ -2,16 +2,9 @@
 
 Updated: 2026-09-20
 Project: Crypto Signal
-Phase: Elliott Wave V1
-State: HARMONIC_V1_ACCEPTED
+Phase: Confluence + Signal Semantics V1
+State: ELLIOTT_V1_ACCEPTED
 REAL_CAPITAL: 0
-
-## Mechanical identity
-- macOS account: `crypto-signal-agent`
-- UID: `504`
-- project root: `/Users/crypto-signal-agent/Crypto-Signal`
-- git branch: `main`
-- project root mode: `0700`
 
 ## Accepted foundations
 - Phase 0 Environment & Constitution
@@ -19,39 +12,68 @@ REAL_CAPITAL: 0
 - Shared deterministic swing primitives
 - PA / SMC / ICT V1
 - Harmonic V1
-## Harmonic V1 accepted evidence
-- Deterministic XABCD candidate enumeration.
-- Gartley / Bat / Butterfly / Crab / Deep Crab explicit contracts.
-- Ratio residual, PRZ, Fib clustering, time symmetry, invalidation and T1/T2 geometry.
-- No forced pattern: invalid candidates remain explicit evidence.
-- Nonphysical theoretical projections invalidate geometry and never get clamped into prices.
-- Shared 1W canonical grid repaired to Monday 00:00 UTC across common validators.
-- 117 tests PASS.
-- Ruff PASS.
-- mypy PASS.
-- Bybit long 15m: 4,797 closed / 1,021 candidates / 5,105 evaluations / 0 valid.
-- Binance long 15m: 4,797 closed / 979 candidates / 4,895 evaluations / 0 valid.
-- Multi-timeframe Bybit + Binance smoke PASS for 15m / 1h / 4h / 1D / 1W.
-- Binance 1D smoke produced 1 valid live Harmonic match.
+- Elliott Wave V1
+
+## Elliott V1 accepted evidence
+- partial Wave 1 through Wave 5 structural counts
+- standard impulse hard-rule evidence
+- generic A-B-C endpoint candidates
+- zigzag compatibility without false subdivision certainty
+- competing counts preserved
+- structural invalidation and Fibonacci guideline projections
+- truncation evidence retained
+- rule-support fractions explicitly non-probabilistic
+- 127 tests PASS
+- Ruff PASS
+- mypy PASS
+## Elliott live evidence
+Long 15m Bybit:
+- 4,798 closed candles
+- 5,110 impulse candidates
+- 1,020 completed counts
+- 63 hard-price-rule-valid completed counts
+- 33 valid counts with truncated fifth evidence
+- 1,022 A-B-C candidates
+- 316 zigzag-compatible endpoint geometries
+- 870 ambiguous end pivots with multiple valid competing counts
+
+Long 15m Binance:
+- 4,798 closed candles
+- 4,900 impulse candidates
+- 978 completed counts
+- 60 hard-price-rule-valid completed counts
+- 28 valid counts with truncated fifth evidence
+- 980 A-B-C candidates
+- 304 zigzag-compatible endpoint geometries
+- 828 ambiguous end pivots with multiple valid competing counts
+Multi-timeframe deterministic smoke PASS on both providers for:
+- 15m
+- 1h
+- 4h
+- 1D
+- 1W
+
+These are structural candidate counts, not uniquely correct Elliott labels,
+probabilities, win rates or execution recommendations.
+
 ## Autonomous continuity
-Control-plane code is implemented and committed.
+Control-plane code remains ready but browser transport is not active:
+- Terminal -> Safari Automation still requires user approval.
+- exact Crypto chat is not bound.
+- continuity bridge is not running.
+- Cursor Agent CLI remains installed but not logged in.
 
-Still pending one-time human gates:
-- Terminal -> Safari Automation permission is denied by macOS (-1743).
-- exact Crypto chat is not bound; bridge is not running.
-- Cursor Agent CLI is installed but reports Not logged in.
-
-A foreign Durdurulmaz wake was observed in this chat and was treated as stale/foreign NOOP.
+A foreign Durdurulmaz wake was reconciled as NOOP for Crypto Signal.
 No Durdurulmaz or Quantum Capital state was mutated.
 
 ## Canonical next frontier
-Elliott Wave V1:
-1. explicit impulse and ABC candidate structures
-2. deterministic wave-rule validity contracts
-3. competing candidate counts; never one forced interpretation
-4. invalidation, current-wave and target/projection evidence
-5. ambiguity evidence without fabricated probability
-6. PIT-safe unit and live validation
+Confluence + Signal Semantics V1:
+1. methodology-neutral evidence contracts
+2. PA / Harmonic / Elliott agreement and contradiction mapping
+3. deterministic confluence score kept separate from probability
+4. NO_SIGNAL / NEUTRAL / WATCH / ACTIVE / INVALIDATED states
+5. signal entry / invalidation / targets / evidence summary contracts
+6. deterministic PIT tests and integrated live validation
 
-Do not enter Confluence before Elliott V1 acceptance.
+After Confluence + Signal acceptance, activate the immutable live-forward ledger.
 REAL_CAPITAL remains 0.
