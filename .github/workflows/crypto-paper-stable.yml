@@ -24,7 +24,7 @@ jobs:
           set -euo pipefail
           cmd="$(printf '%s\n' "$ISSUE_BODY" | awk -F: 'tolower($1)=="command" {gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2); print tolower($2); exit}')"
           case "$cmd" in
-            state|deploy)
+            state|deploy|rulesrefresh)
               ;;
             *)
               echo "Unsupported paper command: $cmd"
@@ -54,7 +54,7 @@ jobs:
           tail -40 /Users/crypto-signal-agent/Crypto-Signal/runtime/paper/paper_clock.out.log 2>/dev/null
           echo "=== PAPER DB ==="
           if [ -f "$DB" ]; then
-            "$PAPER/.venv/bin/python" -c 'import sqlite3,sys; p=sys.argv[1]; c=sqlite3.connect("file:"+p+"?mode=ro",uri=True); tables=("paper_fund_creations","paper_decision_intents","paper_simulated_fills","paper_position_cash_mutations","paper_nav_snapshots","paper_replay_index"); [print(t+"="+str(c.execute("SELECT COUNT(*) FROM "+t).fetchone()[0])) for t in tables]; c.close()' "$DB"
+            "$PAPER/.venv/bin/python" -c 'import sqlite3,sys; p=sys.argv[1]; c=sqlite3.connect("file:"+p+"?mode=ro",uri=True); tables=("paper_fund_creations","paper_decision_intents","paper_simulated_fills","paper_position_cash_mutations","paper_nav_snapshots","paper_replay_index"); [print(t+"="+str(c.execute("SELECT COUNT(*) FROM "+t).fetchone()[0])) for t in tables]; exists=c.execute("SELECT 1 FROM sqlite_master WHERE type=\"table\" AND name=\"paper_venue_rule_snapshots\"").fetchone(); print("paper_venue_rule_snapshots="+str(c.execute("SELECT COUNT(*) FROM paper_venue_rule_snapshots").fetchone()[0]) if exists else "paper_venue_rule_snapshots=0"); rows=c.execute("SELECT symbol,observed_at_ms,snapshot_identity FROM paper_venue_rule_snapshots ORDER BY symbol,observed_at_ms DESC").fetchall() if exists else []; seen=set(); [(print("venue_latest_"+str(s)+"="+str(t)+":"+str(i)), seen.add(s)) for s,t,i in rows if s not in seen]; c.close()' "$DB"
           else
             echo "MISSING"
           fi
@@ -162,3 +162,33 @@ jobs:
           trap - EXIT
           rm -f "$BACKUP"
           echo "PAPER_DEPLOY_PASS=YES"
+
+      - name: PAPER RULES REFRESH
+        if: steps.parse.outputs.command == 'rulesrefresh'
+        shell: bash
+        run: |
+          set -euo pipefail
+          REPO="/Users/crypto-signal-agent/Crypto-Signal"
+          PAPER="/Users/crypto-signal-agent/Crypto-Signal-Paper"
+          DB="$REPO/runtime/paper/paper_fund.sqlite3"
+
+          test "$(id -u)" = "504"
+          test -f "$DB"
+          test -x "$PAPER/.venv/bin/python"
+          test -z "$(git -C "$PAPER" status --porcelain)"
+          test -f "$PAPER/ops/refresh_paper_venue_rules.py"
+
+          BEFORE_HEAD="$(git -C "$PAPER" rev-parse HEAD)"
+          PYTHONPATH="$PAPER/src" "$PAPER/.venv/bin/python"             "$PAPER/ops/refresh_paper_venue_rules.py"             --paper-ledger "$DB" | tee /tmp/crypto-paper-venue-rule-refresh.txt
+
+          grep -q 'PAPER_VENUE_RULE_REFRESH_OK symbol=BTCUSDT' /tmp/crypto-paper-venue-rule-refresh.txt
+          grep -q 'PAPER_VENUE_RULE_REFRESH_OK symbol=ETHUSDT' /tmp/crypto-paper-venue-rule-refresh.txt
+          grep -q 'PAPER_VENUE_RULE_REFRESH_OK symbol=SOLUSDT' /tmp/crypto-paper-venue-rule-refresh.txt
+          grep -q 'trade_policy=NOT_ACTIVATED' /tmp/crypto-paper-venue-rule-refresh.txt
+          grep -q 'REAL_CAPITAL=0' /tmp/crypto-paper-venue-rule-refresh.txt
+
+          "$PAPER/.venv/bin/python" -c 'import sqlite3,sys; p=sys.argv[1]; c=sqlite3.connect("file:"+p+"?mode=ro",uri=True); count=lambda t:int(c.execute("SELECT COUNT(*) FROM "+t).fetchone()[0]); assert count("paper_fund_creations")==1; assert count("paper_decision_intents")==0; assert count("paper_simulated_fills")==0; assert count("paper_position_cash_mutations")==0; assert count("paper_nav_snapshots")==0; assert count("paper_replay_index")==1; rows=c.execute("SELECT symbol,COUNT(*) FROM paper_venue_rule_snapshots GROUP BY symbol").fetchall(); d=dict(rows); assert all(d.get(s,0)>=1 for s in ("BTCUSDT","ETHUSDT","SOLUSDT")); c.close(); print("PAPER_VENUE_RULE_CACHE_PASS=YES")' "$DB"
+
+          test "$(git -C "$PAPER" rev-parse HEAD)" = "$BEFORE_HEAD"
+          test -z "$(git -C "$PAPER" status --porcelain)"
+          echo "PAPER_RULES_REFRESH_PASS=YES"
