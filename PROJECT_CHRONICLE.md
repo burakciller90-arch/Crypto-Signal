@@ -1940,3 +1940,12 @@ The cost policy remains explicitly simulated: fee 0.001, spread 0.0005 and slipp
 Final accepted head a5d3be3564f37e5064e488bd7c0525af306128bc passed 419 tests, Ruff, mypy across 93 source files and JavaScript. REAL_CAPITAL=0.
 
 Next: enforce captured maxQty in the authoritative planning path, then add observation-only stable refresh and validate live public rule responses for BTCUSDT/ETHUSDT/SOLUSDT.
+
+
+## 2026-09-20 — authoritative maxQty pretrade hardening accepted
+
+The cached Binance rule snapshot is now carried through an authoritative wrapper into pretrade so LOT_SIZE maxQty is enforced rather than merely archived. A rounded quantity above frozen maxQty fails closed with ABOVE_MAXIMUM_QUANTITY.
+
+Final head 990436122f2bf14fff64b9a3dc2c1acb15014467 passed 421 tests, Ruff, mypy across 93 source files and JavaScript. REAL_CAPITAL remains 0.
+
+Next is observation-only stable venue-rule refresh/cache and live public verification for BTCUSDT/ETHUSDT/SOLUSDT. Stable trade activation remains disabled.

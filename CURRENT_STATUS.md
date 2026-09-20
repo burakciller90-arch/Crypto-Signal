@@ -1162,3 +1162,31 @@ Current frontier:
 - enforce captured Binance maxQty in the authoritative pretrade path;
 - add isolated observation-only stable venue-rule refresh/cache and verify live public BTCUSDT/ETHUSDT/SOLUSDT responses;
 - only after those proofs evaluate a PAPER/STABLE autonomous virtual-trading activation candidate.
+
+
+## 2026-09-20 — authoritative Binance maxQty enforcement accepted
+
+The authoritative venue-bound pretrade path now consumes the exact cached Binance venue-rule snapshot rather than only its reduced execution snapshot.
+
+Accepted behavior:
+- PaperVenueBoundPretrade binds venue-rule snapshot identity + execution snapshot + pretrade identity;
+- authoritative wrapper builds the execution snapshot from that exact cached rule snapshot;
+- frozen Binance maxQty is passed into the conservative pretrade bridge;
+- a step-rounded quantity above maxQty is rejected with ABOVE_MAXIMUM_QUANTITY;
+- quantity is still never rounded upward;
+- legacy caller/test path remains available without claiming authoritative maxQty enforcement;
+- PAPER/STABLE must use the authoritative wrapper when virtual trading is eventually considered.
+
+Acceptance evidence:
+- semantic hardening: a52ab3db4df41388a96b5cabb542e8c9e0d4164e;
+- lint-only head: 990436122f2bf14fff64b9a3dc2c1acb15014467;
+- final regression: 421 tests PASS;
+- Ruff PASS;
+- mypy PASS across 93 source files;
+- JavaScript syntax PASS;
+- REAL_CAPITAL=0.
+
+Current frontier:
+- add observation-only PAPER/STABLE venue-rule refresh/cache for BTCUSDT, ETHUSDT and SOLUSDT using public Binance exchangeInfo only;
+- verify real public responses and immutable cached snapshots while the paper fund remains 100 USDT / zero trades / trade policy not activated;
+- only after that evaluate an isolated virtual-trading activation candidate.
