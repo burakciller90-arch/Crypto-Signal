@@ -123,3 +123,20 @@ jobs:
           echo "WAKE_RC=$rc"
           if [ "$rc" -eq 0 ] || [ "$rc" -eq 2 ]; then exit 0; fi
           exit "$rc"
+
+      - name: Enforce Cursor result
+        if: always()
+        shell: bash
+        env:
+          CURSOR_RC: ${{ steps.dispatch.outputs.cursor_rc }}
+        run: |
+          set -euo pipefail
+          if [ -z "${CURSOR_RC:-}" ]; then
+            echo "CURSOR_RESULT_MISSING"
+            exit 1
+          fi
+          if [ "$CURSOR_RC" != "0" ]; then
+            echo "CURSOR_TASK_FAILED_RC=$CURSOR_RC"
+            exit 1
+          fi
+          echo "CURSOR_TASK_ACCEPTABLE_RC=0"
