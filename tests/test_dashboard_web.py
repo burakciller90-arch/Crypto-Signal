@@ -191,7 +191,7 @@ def test_health_and_static_shell_without_ledger(tmp_path: Path) -> None:
     assert health.status_code == 200
     assert health.json() == {
         "status": "ok",
-        "product_version": "birthday-edition-decision-explanation/1",
+        "product_version": "full-version-live-education/1",
         "real_capital": 0,
         "ledger_present": False,
         "alert_outbox_present": False,
@@ -211,6 +211,31 @@ def test_health_and_static_shell_without_ledger(tmp_path: Path) -> None:
     assert "Canlı · otomatik yenileme" in script.text
     assert "liveStatusChip" in index.text
     assert "lastRefreshChip" in index.text
+    assert "BANA ÖĞRET" in index.text
+    assert "educationCenter" in index.text
+    assert "function renderEducation(data)" in script.text
+    assert not missing.exists()
+
+
+def test_education_api_is_deterministic_and_read_only(tmp_path: Path) -> None:
+    missing = tmp_path / "missing.sqlite3"
+    client = TestClient(create_app(missing))
+
+    catalog = client.get("/api/education")
+    bos = client.get("/api/education/bos")
+    unknown = client.get("/api/education/not-a-real-concept")
+
+    assert catalog.status_code == 200
+    body = catalog.json()
+    assert body["status"] == "ready"
+    assert body["real_capital"] == 0
+    assert len(body["lessons"]) == 10
+    assert [lesson["concept_id"] for lesson in body["lessons"]][0] == "bos"
+    assert bos.status_code == 200
+    assert bos.json()["lesson"]["concept_id"] == "bos"
+    assert "tek başına alım veya satım emri değildir" in bos.json()["lesson"]["beginner_tr"]
+    assert unknown.status_code == 404
+    assert client.post("/api/education").status_code == 405
     assert not missing.exists()
 
 
