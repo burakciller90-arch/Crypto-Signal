@@ -1819,3 +1819,82 @@ Current frontier:
 - continue Stage 9 with the next read-only beginner slice: portfolio exposure and honest Performance Lab presentation over accepted immutable portfolio/performance truth;
 - keep PAPER/STABLE virtual-write activation closed and do not create production trade mutations without the separate production gate.
 
+## 2026-09-21 — Stage 9 portfolio exposure + honest Paper Performance Lab accepted and live
+
+- accepted main / PRODUCT head: 0047bbae075a6fed7f5067d4263bd7cf447c45b4
+- PR #323 merged after isolated UID504 feature-worktree acceptance
+- stale continuation checkpoint 823e58b2eb6a99973c0d6b0d-1789942248-56646.checkpoint was read and SHA256-verified exactly as 8cb66cc0e221b50b2cee2812c7a1b97a4a83e219e06ca39c544350f0417b0049
+- that checkpoint's task dashboard-v2-paper-trade-plan-explainability-v1 was already completed and therefore reconciled as NOOP; it was not replayed
+- current Stage 9 portfolio/performance feature head fe11eabdf35ae46147bc7d9e073a3a4b5fcb2403 passed the isolated UID504 gate:
+  - focused pytest PASS
+  - JavaScript syntax PASS
+  - Ruff PASS
+  - focused mypy PASS
+  - full pytest PASS
+  - full Ruff PASS
+  - full mypy PASS across 102 source files
+  - STAGE9_PORTFOLIO_PERFORMANCE_FULL_TEST_PASS=YES
+- canonical post-merge acceptance:
+  - sync PASS
+  - producttest PASS
+  - fulltest PASS
+- Mission Control advanced to paper_mission_control.v3
+- v3 adds deterministic portfolio_exposure derived only from accepted PaperPortfolioSnapshot truth:
+  - cash/invested NAV fractions are backend-derived
+  - position exposure is bound to immutable mark identity, mark price and closed-candle close time
+  - missing marks fail closed and do not fabricate NAV/exposure ratios
+  - exposure payload participates in Mission Control snapshot identity
+- beginner product surface now separates:
+  - Sanal Portföy · Maruziyet ve nakit dengesi
+  - Paper Performans Laboratuvarı · only closed virtual round trips are scored
+- no closed virtual round trip is displayed as HENÜZ ÖLÇÜLMEDİ, never as fabricated 0% win rate
+- PRODUCT deployment PASS:
+  - previous head de590b15349ed3ac171eface0cb06087243d23da
+  - target head 0047bbae075a6fed7f5067d4263bd7cf447c45b4
+  - health status=ok
+  - read_only=true
+  - REAL_CAPITAL=0
+- post-deploy PRODUCT verification:
+  - HEAD=0047bbae075a6fed7f5067d4263bd7cf447c45b4
+  - health status=ok
+  - read_only=true
+  - REAL_CAPITAL=0
+- PAPER/STABLE remains unchanged at 30b05251af9fc2ac05fd007dbd6ac6d0519c2e58
+- post-deploy paper DB remains pristine:
+  - paper_fund_creations=1
+  - paper_decision_intents=0
+  - paper_simulated_fills=0
+  - paper_position_cash_mutations=0
+  - paper_nav_snapshots=0
+  - paper_replay_index=1
+  - paper_venue_rule_snapshots=3
+  - paper_activation_state=1
+  - paper_processed_events=0
+  - trade_policy=NOT_ACTIVATED
+  - REAL_CAPITAL=0
+- fresh Mission Control snapshot 9cfc86d0038ab60391f183d0a435c485a37d823a8a4fec63729526986d82afa3:
+  - signal_freezes=510
+  - eligible post-activation freezes=6
+  - incomplete pairs=0
+  - processed skips=0
+  - candidates=3
+  - ready_candidates=0
+  - attention_required=NO
+  - BTCUSDT HOLD_CASH / signal_not_active
+  - ETHUSDT HOLD_CASH / signal_not_active
+  - SOLUSDT HOLD_CASH / unsafe_uncertainty
+  - cash=100.00 USDT
+  - positions=0
+  - NAV=100.00 USDT
+  - PnL=0.00
+  - performance=NOT_YET_MEASURED
+  - closed_trades=0
+  - open_trades=0
+  - trade_policy=NOT_ACTIVATED
+  - REAL_CAPITAL=0
+
+Current frontier:
+- treat dashboard-v2-paper-portfolio-exposure-and-performance-lab-v1 as completed after this acceptance and do not replay it;
+- continue the next read-only Stage 9 gift-UX gap: unify Signal/Trade Archive and dedicated System Health evidence so the user can inspect immutable history and operational freshness without confusing signal history with virtual trade history;
+- keep PAPER/STABLE write activation closed and preserve REAL_CAPITAL=0.
+
