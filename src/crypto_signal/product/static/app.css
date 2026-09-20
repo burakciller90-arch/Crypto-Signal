@@ -586,6 +586,54 @@ footer {
 }
 .paper-candidate-main { min-width: 0; }
 .paper-candidate-main .truth-note { margin-top: 5px; }
+.paper-plan-disclosure {
+  margin-top: 9px;
+  border: 1px solid rgba(124,185,255,.14);
+  border-radius: 10px;
+  background: rgba(7,18,28,.36);
+}
+.paper-plan-disclosure summary {
+  cursor: pointer;
+  padding: 9px 10px;
+  color: #b8d5ef;
+  font-size: .72rem;
+  font-weight: 650;
+}
+.paper-plan-body {
+  display: grid;
+  gap: 9px;
+  padding: 10px;
+  border-top: 1px solid rgba(148,163,184,.09);
+}
+.paper-plan-grid {
+  display: grid;
+  grid-template-columns: repeat(3,minmax(0,1fr));
+  gap: 7px;
+}
+.paper-plan-grid > div, .paper-plan-question {
+  padding: 8px;
+  border: 1px solid rgba(148,163,184,.09);
+  border-radius: 8px;
+  background: rgba(255,255,255,.014);
+}
+.paper-plan-grid span, .paper-plan-question span {
+  display: block;
+  color: var(--muted);
+  font-size: .62rem;
+  text-transform: uppercase;
+  letter-spacing: .07em;
+  margin-bottom: 4px;
+}
+.paper-plan-grid strong, .paper-plan-question strong {
+  display: block;
+  font-size: .76rem;
+  line-height: 1.42;
+}
+.paper-plan-trace {
+  color: #7890a5;
+  font-size: .65rem;
+  line-height: 1.5;
+}
 .paper-truth-bar {
   display: flex;
   flex-wrap: wrap;
