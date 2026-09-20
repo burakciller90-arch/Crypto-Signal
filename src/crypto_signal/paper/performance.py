@@ -325,18 +325,18 @@ def project_paper_trade_performance(
             raise PaperTradePerformanceError(
                 "paper fill occurs after performance observation time"
             )
-        mutation = mutation_by_source.get(fill.record_identity)
-        if mutation is None:
+        fill_mutation = mutation_by_source.get(fill.record_identity)
+        if fill_mutation is None:
             raise PaperTradePerformanceError(
                 "simulated fill is missing its accounting mutation"
             )
-        _validate_fill_mutation(fill=fill, mutation=mutation)
+        _validate_fill_mutation(fill=fill, mutation=fill_mutation)
         if fill.action is PaperAction.BUY:
             if fill.symbol in open_entries:
                 raise PaperTradePerformanceError(
                     "pyramided BUY fill sequence is unsupported by performance v1"
                 )
-            open_entries[fill.symbol] = (fill, mutation)
+            open_entries[fill.symbol] = (fill, fill_mutation)
             continue
         if fill.action is PaperAction.EXIT:
             opened = open_entries.pop(fill.symbol, None)
@@ -350,7 +350,7 @@ def project_paper_trade_performance(
                     entry=entry,
                     entry_mutation=entry_mutation,
                     exit_fill=fill,
-                    exit_mutation=mutation,
+                    exit_mutation=fill_mutation,
                 )
             )
             continue
