@@ -105,23 +105,22 @@ jobs:
         if: steps.parse.outputs.command == 'cursorttycheck'
         shell: bash
         run: |
-          set -euo pipefail
+          set +e
           OUT="$HOME/.cursor/crypto-tty-auth-test.txt"
+          PROBE="$HOME/.cursor/crypto-tty-auth-probe.sh"
           rm -f "$OUT"
-          CMD='export PATH="$HOME/.local/bin:$PATH"; agent status > "$HOME/.cursor/crypto-tty-auth-test.txt" 2>&1; exit'
-          /usr/bin/osascript - "$CMD" >/dev/null <<'APPLESCRIPT'
-          on run argv
-            tell application "Terminal"
-              do script (item 1 of argv)
-            end tell
-          end run
-APPLESCRIPT
+          printf '%s\n' '#!/bin/zsh' 'export PATH="$HOME/.local/bin:$PATH"' 'agent status > "$HOME/.cursor/crypto-tty-auth-test.txt" 2>&1' 'exit' > "$PROBE"
+          chmod 700 "$PROBE"
+          /usr/bin/osascript -e 'tell application "Terminal" to do script "/bin/zsh /Users/crypto-signal-agent/.cursor/crypto-tty-auth-probe.sh"' >/dev/null 2>&1
+          osa_rc=$?
+          echo "OSASCRIPT_RC=$osa_rc"
           for i in {1..20}; do
             if [ -s "$OUT" ]; then break; fi
             sleep 1
           done
           echo "=== TTY AGENT STATUS ==="
           if [ -f "$OUT" ]; then cat "$OUT"; else echo "NO_OUTPUT"; fi
+          exit 0
 
       - name: CURSOR AUTH DIAG
         if: steps.parse.outputs.command == 'cursorauthdiag'
