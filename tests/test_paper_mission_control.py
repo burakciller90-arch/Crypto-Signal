@@ -283,7 +283,7 @@ def test_mission_control_v2_exposes_only_structured_plan_lineage() -> None:
             spread_usdt=Decimal("0.20"),
             slippage_usdt=Decimal("0.30"),
             total_cost_usdt=Decimal("0.61"),
-            reference_notional_usdt=Decimal("100"),
+            reference_notional_usdt=Decimal(100),
             fill_notional_usdt=Decimal("100.50"),
         )
 
