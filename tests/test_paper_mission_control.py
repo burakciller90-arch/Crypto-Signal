@@ -66,6 +66,7 @@ def _insert_overview_freeze(
     suffix: str,
     as_of_ms: int,
     frozen_at_ms: int,
+    source_cutoff_open_time_ms: int | None = None,
 ) -> None:
     with sqlite3.connect(path) as connection:
         connection.execute(
@@ -93,7 +94,11 @@ def _insert_overview_freeze(
                 "BTCUSDT",
                 "15m",
                 as_of_ms,
-                max(0, as_of_ms - 1),
+                (
+                    max(0, as_of_ms - 1)
+                    if source_cutoff_open_time_ms is None
+                    else source_cutoff_open_time_ms
+                ),
                 "watch",
                 "bullish",
                 "{}",
@@ -349,6 +354,53 @@ def test_decision_cadence_explains_waiting_provider_pair(tmp_path) -> None:
     assert btc.bybit is None
     assert btc.paired_as_of_ms is None
     assert btc.paired_source_cutoff_open_time_ms is None
+    assert btc.candidate_available is False
+
+
+def test_decision_cadence_accepts_asof_skew_on_shared_market_cutoff(
+    tmp_path,
+) -> None:
+    _, activation = _paper(tmp_path)
+    signal_db = tmp_path / "signals.sqlite3"
+    _init_signal_db(signal_db)
+    shared_cutoff = 120
+    _insert_4h_freeze(
+        signal_db,
+        exchange="binance",
+        suffix="binance-shared",
+        as_of_ms=150,
+        frozen_at_ms=160,
+        source_cutoff_open_time_ms=shared_cutoff,
+    )
+    _insert_4h_freeze(
+        signal_db,
+        exchange="bybit",
+        suffix="bybit-shared",
+        as_of_ms=158,
+        frozen_at_ms=168,
+        source_cutoff_open_time_ms=shared_cutoff,
+    )
+    scan = PaperSignalEventScanResult(
+        scanner_version=PAPER_SIGNAL_EVENT_SCANNER_VERSION,
+        activation_identity=activation.activation_identity,
+        eligible_freeze_count=2,
+        incomplete_pair_count=0,
+        processed_skip_count=0,
+        candidates=(),
+        real_capital=REAL_CAPITAL,
+    )
+
+    readiness = paper_mission_control.read_paper_decision_cadence_readiness(
+        signal_ledger_path=signal_db,
+        activation=activation,
+        scan=scan,
+        observed_at_ms=500,
+    )
+
+    btc = readiness[0]
+    assert btc.status.value == "post_activation_pair"
+    assert btc.paired_as_of_ms == 158
+    assert btc.paired_source_cutoff_open_time_ms == shared_cutoff
     assert btc.candidate_available is False
 
 
