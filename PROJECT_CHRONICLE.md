@@ -1388,3 +1388,23 @@ The read-only Dashboard Market Radar immediately exposed all six contexts.
 No order path was introduced and REAL_CAPITAL remains 0.
 
 Canonical frontier advances to focused ETHUSDT + SOLUSDT 15m/1h/4h acceptance before activation.
+
+## 2026-09-20 — Stage 2 accepted: focused BTC/ETH/SOL production universe
+
+The Birthday Edition live universe is now deliberately small but materially useful:
+BTCUSDT, ETHUSDT and SOLUSDT on Bybit + Binance Spot, each at 15m / 1h / 4h.
+
+ETH/SOL were first proven on isolated real-data acceptance paths:
+12/12 first-pass freezes, 12/12 second-pass ALREADY_FROZEN and 12 lifecycle rows.
+SOL 4h resolved NEUTRAL on both providers, confirming that expansion did not force artificial signal states.
+
+The activation code passed 21 focused tests and 273 full repository tests plus Ruff, mypy, uv lock and diff checks.
+LIVE/STABLE then advanced to 7020413188d633b2b5a9661356c2fe319f256a34.
+
+Production smoke produced 60 total freezes / 60 lifecycle rows and 18 distinct live contexts.
+Dashboard Market Radar immediately exposed all 18.
+A launchd kickstart completed as run 36 with last exit code 0; every owned context was idempotent and stderr was empty.
+
+Coverage expansion is now intentionally paused at three assets and three timeframes.
+The canonical frontier moves to the Turkish-first premium Mission Control requested for the Birthday Edition.
+REAL_CAPITAL remains 0.

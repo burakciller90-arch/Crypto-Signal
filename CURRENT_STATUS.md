@@ -422,26 +422,33 @@ No Durdurulmaz or Quantum Capital project state was mutated; UID502 is used only
 Focused V2+ Birthday Edition governs post-V1 execution.
 
 Accepted and live:
-- Stage 0 canonical multi-timeframe freeze path
-- Stage 1 Slice 1 higher-timeframe runner integration
-- Stage 1 BTCUSDT 15m/1h/4h production activation on Bybit + Binance
+- canonical multi-timeframe freeze path
+- higher-timeframe live-runner integration
+- BTCUSDT 15m/1h/4h on Bybit + Binance
+- ETHUSDT 15m/1h/4h on Bybit + Binance
+- SOLUSDT 15m/1h/4h on Bybit + Binance
 
 LIVE/STABLE code head:
-b9b8ba1662cbdb387c380318d14bba0d40f151a7
+7020413188d633b2b5a9661356c2fe319f256a34
 
-Production evidence after activation:
-- 48 immutable freezes / 48 lifecycle evaluations at initial smoke
-- dashboard Market Radar exposes 6 BTC contexts
-- launchd evidence clock run 34 exited 0 and proved idempotent ownership
+Current live product truth:
+- 3 assets x 3 timeframes x 2 providers = 18 Market Radar contexts
+- initial post-activation ledger check: 60 freezes / 60 lifecycle evaluations
+- automatic evidence clock run 36 completed with exit 0 and idempotent ownership
 - REAL_CAPITAL=0
 
-Immediate Stage 2:
-1. expand the deliberately small universe to ETHUSDT and SOLUSDT
-2. retain Bybit + Binance Spot and 15m/1h/4h only
-3. prove each new symbol/provider/timeframe on isolated real-data acceptance paths first
-4. keep per-symbol higher-timeframe history bounded at 120 / minimum 100
-5. activate production only after exact focused + full gates and live evidence
-6. then move product priority to Turkish premium Mission Control and chart intelligence
+Immediate Stage 3: Turkish premium Mission Control.
+1. redesign information hierarchy around 'şu anda ne önemli?'
+2. Turkish-first navigation, states and explanatory copy
+3. preserve raw scientific semantics underneath presentation
+4. make multi-asset/multi-timeframe context obvious instead of telemetry-like
+5. surface attention candidates, methodology agreement, uncertainty and recent changes
+6. keep advanced technical evidence in drill-down
+7. run product/API/JS/full gates, then deploy PRODUCT/STABLE exact accepted commit
+
+After Stage 3:
+visual chart intelligence -> decision-quality explanations -> useful alerts -> honest performance/learning ->
+limited V2+ intelligence -> gift-ready integrated acceptance.
 
 Birthday Edition scope remains intentionally narrow.
 REAL_CAPITAL remains 0.
