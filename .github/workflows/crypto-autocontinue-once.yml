@@ -1,0 +1,72 @@
+name: Crypto Auto Continue Once
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/crypto-autocontinue-once.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  arm:
+    name: Arm exact continuation on UID504
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 10
+    steps:
+      - name: Sync canonical repo
+        shell: bash
+        env:
+          GH_JOB_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          REPO="/Users/crypto-signal-agent/Crypto-Signal"
+          test "$(id -u)" = "504"
+          test -z "$(git -C "$REPO" status --porcelain)"
+          BASIC="$(printf 'x-access-token:%s' "$GH_JOB_TOKEN" | base64)"
+          git -C "$REPO" -c http.extraheader="AUTHORIZATION: Basic $BASIC" fetch --no-tags origin main
+          git -C "$REPO" merge --ff-only FETCH_HEAD
+          echo "HEAD=$(git -C "$REPO" rev-parse HEAD)"
+
+      - name: Verify continuity code
+        shell: bash
+        run: |
+          set -euo pipefail
+          REPO="/Users/crypto-signal-agent/Crypto-Signal"
+          /usr/bin/python3 -m py_compile             "$REPO/ops/continuity/bridge_watchdog.py"             "$REPO/ops/continuity/arm_exact.py"             "$REPO/ops/continuity/relay_submit.py"
+          grep -q 'CRYPTO_SIGNAL_CONTINUE_EXACT' "$REPO/ops/continuity/bridge_watchdog.py"
+          ! grep -q '@Remote Desktop Commander CRYPTO_SIGNAL_CONTINUE_EXACT' "$REPO/ops/continuity/bridge_watchdog.py"
+
+      - name: Restart continuity bridge
+        shell: bash
+        run: |
+          set -euo pipefail
+          UID_NOW="$(id -u)"
+          LABEL="com.cryptosignal.continuitybridge"
+          launchctl kickstart -k "gui/$UID_NOW/$LABEL"
+          sleep 2
+          launchctl print "gui/$UID_NOW/$LABEL" | egrep 'state =|pid =|last exit code =' | head -30
+
+      - name: Arm current exact frontier
+        shell: bash
+        run: |
+          set -euo pipefail
+          REPO="/Users/crypto-signal-agent/Crypto-Signal"
+          /usr/bin/python3 "$REPO/ops/continuity/arm_exact.py"             dashboard-v2-paper-trade-plan-explainability-v1             10             "Resume Stage 9 read-only paper trade-plan explainability from feature/stage9-plan-explainability; reconcile current Git state first, then integrate, test and deploy only if evidence passes. Keep PAPER/STABLE write activation closed. REAL_CAPITAL=0."
+          echo "=== ACTIVE LEASES ==="
+          find "$REPO/runtime/continuity/leases/active" -maxdepth 1 -type f -print -exec sed -n '1,6p' {} \;
+
+      - name: Observe delivery state
+        shell: bash
+        run: |
+          set +e
+          REPO="/Users/crypto-signal-agent/Crypto-Signal"
+          sleep 20
+          echo "=== ACTIVE ==="
+          find "$REPO/runtime/continuity/leases/active" -maxdepth 1 -type f -print
+          echo "=== DELIVERED RECENT ==="
+          find "$REPO/runtime/continuity/leases/delivered" -maxdepth 1 -type f -mmin -10 -print | tail -20
+          echo "=== BRIDGE LOG ==="
+          tail -40 "$REPO/runtime/continuity/bridge.log" 2>/dev/null || true
+          exit 0
