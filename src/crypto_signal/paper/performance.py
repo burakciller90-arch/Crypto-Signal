@@ -22,7 +22,9 @@ from crypto_signal.paper.ledger import PaperLedgerEntry
 from crypto_signal.paper.models import (
     REAL_CAPITAL,
     PaperAction,
+    PaperPosition,
     PaperSymbol,
+    PositionCashMutationRecord,
     SimulatedFillRecord,
 )
 from crypto_signal.paper.portfolio import read_paper_entries_read_only
@@ -297,7 +299,23 @@ def project_paper_trade_performance(
         for entry in entries
         if isinstance(entry.record, SimulatedFillRecord)
     )
-    open_entries: dict[PaperSymbol, SimulatedFillRecord] = {}
+    mutations = tuple(
+        entry.record
+        for entry in entries
+        if isinstance(entry.record, PositionCashMutationRecord)
+    )
+    mutation_by_source: dict[str, PositionCashMutationRecord] = {}
+    for mutation in mutations:
+        if mutation.source_identity in mutation_by_source:
+            raise PaperTradePerformanceError(
+                "multiple accounting mutations reference one fill"
+            )
+        mutation_by_source[mutation.source_identity] = mutation
+
+    open_entries: dict[
+        PaperSymbol,
+        tuple[SimulatedFillRecord, PositionCashMutationRecord],
+    ] = {}
     closed: list[PaperClosedTradeResult] = []
 
     for fill in fills:
@@ -307,20 +325,34 @@ def project_paper_trade_performance(
             raise PaperTradePerformanceError(
                 "paper fill occurs after performance observation time"
             )
+        mutation = mutation_by_source.get(fill.record_identity)
+        if mutation is None:
+            raise PaperTradePerformanceError(
+                "simulated fill is missing its accounting mutation"
+            )
+        _validate_fill_mutation(fill=fill, mutation=mutation)
         if fill.action is PaperAction.BUY:
             if fill.symbol in open_entries:
                 raise PaperTradePerformanceError(
                     "pyramided BUY fill sequence is unsupported by performance v1"
                 )
-            open_entries[fill.symbol] = fill
+            open_entries[fill.symbol] = (fill, mutation)
             continue
         if fill.action is PaperAction.EXIT:
-            entry = open_entries.pop(fill.symbol, None)
-            if entry is None:
+            opened = open_entries.pop(fill.symbol, None)
+            if opened is None:
                 raise PaperTradePerformanceError(
                     "EXIT fill has no preceding open BUY fill"
                 )
-            closed.append(_close_trade(entry=entry, exit_fill=fill))
+            entry, entry_mutation = opened
+            closed.append(
+                _close_trade(
+                    entry=entry,
+                    entry_mutation=entry_mutation,
+                    exit_fill=fill,
+                    exit_mutation=mutation,
+                )
+            )
             continue
         raise PaperTradePerformanceError(
             f"fill action unsupported by performance v1: {fill.action.value}"
@@ -439,10 +471,61 @@ def project_paper_trade_performance(
     )
 
 
+def _validate_fill_mutation(
+    *,
+    fill: SimulatedFillRecord,
+    mutation: PositionCashMutationRecord,
+) -> None:
+    if mutation.fund_identity != fill.fund_identity:
+        raise PaperTradePerformanceError("fill/mutation fund lineage mismatch")
+    if mutation.source_identity != fill.record_identity:
+        raise PaperTradePerformanceError("mutation does not reference fill identity")
+
+    before = _quantity_held(mutation.positions_before, fill.symbol)
+    after = _quantity_held(mutation.positions_after, fill.symbol)
+    fill_notional = fill.quantity * fill.simulated_fill_price
+    fee = fill.costs.fee_usdt
+    if fill.action is PaperAction.BUY:
+        expected_cash_after = mutation.cash_before_usdt - fill_notional - fee
+        if mutation.cash_after_usdt != expected_cash_after:
+            raise PaperTradePerformanceError("BUY mutation cash does not match fill")
+        if after - before != fill.quantity:
+            raise PaperTradePerformanceError(
+                "BUY mutation position delta does not match fill quantity"
+            )
+        return
+    if fill.action is PaperAction.EXIT:
+        expected_cash_after = mutation.cash_before_usdt + fill_notional - fee
+        if mutation.cash_after_usdt != expected_cash_after:
+            raise PaperTradePerformanceError("EXIT mutation cash does not match fill")
+        if before - after != fill.quantity:
+            raise PaperTradePerformanceError(
+                "EXIT mutation position delta does not match fill quantity"
+            )
+        if after != Decimal(0):
+            raise PaperTradePerformanceError("EXIT mutation must close the symbol")
+        return
+    raise PaperTradePerformanceError(
+        f"fill action unsupported by performance v1: {fill.action.value}"
+    )
+
+
+def _quantity_held(
+    positions: tuple[PaperPosition, ...],
+    symbol: PaperSymbol,
+) -> Decimal:
+    for position in positions:
+        if position.symbol is symbol:
+            return position.quantity
+    return Decimal(0)
+
+
 def _close_trade(
     *,
     entry: SimulatedFillRecord,
+    entry_mutation: PositionCashMutationRecord,
     exit_fill: SimulatedFillRecord,
+    exit_mutation: PositionCashMutationRecord,
 ) -> PaperClosedTradeResult:
     if entry.action is not PaperAction.BUY:
         raise PaperTradePerformanceError("closed trade entry must be BUY")
@@ -457,13 +540,8 @@ def _close_trade(
     if exit_fill.filled_at_ms < entry.filled_at_ms:
         raise PaperTradePerformanceError("EXIT fill predates BUY fill")
 
-    entry_outflow = (
-        entry.quantity * entry.simulated_fill_price + entry.costs.fee_usdt
-    )
-    exit_inflow = (
-        exit_fill.quantity * exit_fill.simulated_fill_price
-        - exit_fill.costs.fee_usdt
-    )
+    entry_outflow = entry_mutation.cash_before_usdt - entry_mutation.cash_after_usdt
+    exit_inflow = exit_mutation.cash_after_usdt - exit_mutation.cash_before_usdt
     if exit_inflow <= Decimal(0):
         raise PaperTradePerformanceError("EXIT cash inflow must be positive")
     pnl = exit_inflow - entry_outflow
