@@ -1611,3 +1611,45 @@ The one-shot workflow was then removed. Canonical repository was synchronized an
 The isolated Cursor worktree was then removed and pruned.
 
 This is a foundation acceptance, not activation of an autonomous trader. REAL_CAPITAL remains 0 and no persistent paper account is yet making decisions. The next paper-fund work must add deterministic state reconstruction, lineage integrity, conservative risk/planning and simulated execution policy before a persistent virtual account can run.
+
+## 2026-09-20 — Stage 6C Slice 2 and contextual evidence UI acceptance
+
+Cursor issue #57 produced the bounded state reconstruction + conservative planning slice in supervisor-57. Cursor completed successfully and reported 15 focused tests PASS. Supervisor did not accept this result on worker status alone.
+
+Fresh review confirmed exact four-file scope and independently reproduced 15 focused test PASS, Ruff PASS and mypy PASS. Semantic review then found two gaps not covered by the original tests.
+
+First, state reconstruction stored decision and fill identities in one generic known-source set. This allowed a malformed simulated fill to point its decision_identity at a prior fill identity. The hardened reconstruction now keeps typed decision lineage, requires each fill to source an earlier DecisionIntentRecord, and requires action/symbol/quantity/reference-price agreement with that decision. Replay sequence, entry identity and typed record-kind consistency were also made explicit.
+
+Second, the BUY risk path subtracted explicit transaction cost budget from projected cash but used pre-cost NAV as the denominator for concentration and gross-exposure checks. Boundary trades could therefore be slightly less conservative than the declared policy. The hardened planner uses projected NAV after cost budget.
+
+Hardening was fail-closed:
+- one patch attempt stopped on a missing anchor before product modification;
+- a second attempt exposed an error in a newly added supervisor test fixture;
+- after fixing only that fixture, the final hardened gate passed 18/18 focused tests, Ruff and mypy.
+
+The four reviewed files were integrated through a one-shot guarded workflow. Feature integration commit:
+0b6bd6cf26b1f73c60c46b1ed1d97c4c68268e37
+
+The one-shot write workflow was removed immediately afterward.
+
+In parallel, the product signal-detail layer gained contextual evidence-linked teaching. Lessons are selected from frozen evidence, the chart exposes a textual level legend, and the detail view now includes an explicit "Neden işlem yapmamalıyız?" counter-case while preserving agreement != probability.
+
+Product-specific gate passed 19 tests plus Ruff/mypy.
+
+The first post-integration full-suite run produced one failure in an older alert-preview raw SQLite-file hash assertion. A bounded temporary-DB diagnostic ran the exact test five times successfully and showed the read-only preview left event truth unchanged and delivery attempts at zero; WAL/main content was unchanged in controlled runs while SQLite -shm coordination bytes changed as expected. The test was changed to compare logical alert-event, delivery-attempt and schema snapshots rather than physical WAL-mode housekeeping bytes.
+
+Final canonical regression:
+- 312 tests PASS,
+- Ruff PASS,
+- mypy PASS across 82 source files,
+- JavaScript syntax PASS.
+
+PRODUCT/STABLE was then advanced with rollback protection to 5d2bd3ae488ce0b579e4ba804be320b50d792943. Health verified:
+- status=ok,
+- product_version=full-version-contextual-evidence/1,
+- REAL_CAPITAL=0,
+- read_only=true.
+
+The supervisor-57 worktree was removed and pruned.
+
+Next Stage 6C frontier is simulated execution + deterministic plan→decision→fill→mutation orchestration. Persistent autonomous paper-account runtime must remain gated behind those correctness tests; no real-capital authority is introduced.
