@@ -24,7 +24,7 @@ jobs:
           set -euo pipefail
           cmd="$(printf '%s\n' "$ISSUE_BODY" | awk -F: 'tolower($1)=="command" {gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2); print tolower($2); exit}')"
           case "$cmd" in
-            status|services|logs|disk|bridgecheck|bridgestate|wakeresume|waketest|cursorcheck|cursorauthdiag|cursorttycheck)
+            status|services|logs|disk|sync|bridgecheck|bridgestate|wakeresume|waketest|cursorcheck|cursorauthdiag|cursorttycheck)
               ;;
             *)
               echo "Unsupported command: $cmd"
@@ -78,6 +78,26 @@ jobs:
           set -euo pipefail
           df -h /
           du -sh /Users/crypto-signal-agent/Crypto-Signal                  /Users/crypto-signal-agent/Crypto-Signal-Live                  /Users/crypto-signal-agent/Crypto-Signal-Product                  /Users/crypto-signal-agent/Crypto-Signal-Alerts                  /Users/crypto-signal-agent/actions-runner-crypto 2>/dev/null || true
+
+      - name: SYNC
+        if: steps.parse.outputs.command == 'sync'
+        shell: bash
+        env:
+          GH_JOB_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          REPO="/Users/crypto-signal-agent/Crypto-Signal"
+          echo "=== BEFORE ==="
+          git -C "$REPO" status --short --branch
+          test -z "$(git -C "$REPO" status --porcelain)"
+          BEFORE="$(git -C "$REPO" rev-parse HEAD)"
+          BASIC="$(printf 'x-access-token:%s' "$GH_JOB_TOKEN" | base64)"
+          git -C "$REPO" -c http.extraheader="AUTHORIZATION: Basic $BASIC" fetch --no-tags origin main
+          git -C "$REPO" merge --ff-only FETCH_HEAD
+          AFTER="$(git -C "$REPO" rev-parse HEAD)"
+          echo "BEFORE=$BEFORE"
+          echo "AFTER=$AFTER"
+          git -C "$REPO" status --short --branch
 
       - name: WAKE RESUME
         if: steps.parse.outputs.command == 'wakeresume'
