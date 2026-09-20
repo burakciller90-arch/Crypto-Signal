@@ -398,14 +398,35 @@ class PaperPortfolioExposurePosition:
 
     symbol: PaperSymbol
     quantity: Decimal
+    mark_price: Decimal | None
+    mark_identity: str | None
+    mark_candle_close_time_ms: int | None
     marked_value_usdt: Decimal | None
     nav_fraction: Decimal | None
 
     def __post_init__(self) -> None:
         if self.quantity <= Decimal(0):
             raise ValueError("portfolio exposure quantity must be positive")
-        if (self.marked_value_usdt is None) != (self.nav_fraction is None):
-            raise ValueError("marked value and NAV fraction must appear together")
+        marked_fields = (
+            self.mark_price,
+            self.mark_identity,
+            self.mark_candle_close_time_ms,
+            self.marked_value_usdt,
+            self.nav_fraction,
+        )
+        if any(value is None for value in marked_fields) and any(
+            value is not None for value in marked_fields
+        ):
+            raise ValueError("position mark/exposure fields must appear together")
+        if self.mark_identity is not None:
+            _require_sha256(self.mark_identity, "portfolio exposure mark identity")
+        if self.mark_price is not None and self.mark_price <= Decimal(0):
+            raise ValueError("portfolio exposure mark price must be positive")
+        if (
+            self.mark_candle_close_time_ms is not None
+            and self.mark_candle_close_time_ms < 0
+        ):
+            raise ValueError("portfolio exposure mark close time cannot be negative")
         if self.marked_value_usdt is not None and self.marked_value_usdt < Decimal(0):
             raise ValueError("marked position value cannot be negative")
         if self.nav_fraction is not None and not (
@@ -658,6 +679,9 @@ def _build_portfolio_exposure(
                 PaperPortfolioExposurePosition(
                     symbol=item.symbol,
                     quantity=item.quantity,
+                    mark_price=None,
+                    mark_identity=None,
+                    mark_candle_close_time_ms=None,
                     marked_value_usdt=None,
                     nav_fraction=None,
                 )
@@ -674,6 +698,11 @@ def _build_portfolio_exposure(
         PaperPortfolioExposurePosition(
             symbol=item.symbol,
             quantity=item.quantity,
+            mark_price=item.mark.price if item.mark is not None else None,
+            mark_identity=item.mark.mark_identity if item.mark is not None else None,
+            mark_candle_close_time_ms=(
+                item.mark.source_candle_close_time_ms if item.mark is not None else None
+            ),
             marked_value_usdt=item.marked_value_usdt,
             nav_fraction=(
                 item.marked_value_usdt / nav
@@ -1085,6 +1114,9 @@ def _portfolio_exposure_payload(
         "nav_usdt": exposure.nav_usdt,
         "positions": [
             {
+                "mark_candle_close_time_ms": item.mark_candle_close_time_ms,
+                "mark_identity": item.mark_identity,
+                "mark_price": item.mark_price,
                 "marked_value_usdt": item.marked_value_usdt,
                 "nav_fraction": item.nav_fraction,
                 "quantity": item.quantity,
