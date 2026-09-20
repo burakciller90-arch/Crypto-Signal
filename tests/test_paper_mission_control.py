@@ -220,6 +220,12 @@ def test_mission_control_composes_cash_only_truth_without_fabricated_success(
     assert first.portfolio.availability is PaperPortfolioAvailability.AVAILABLE
     assert first.portfolio.cash_usdt == first.portfolio.nav_usdt
     assert first.portfolio.positions == ()
+    assert first.portfolio_exposure.availability is PaperPortfolioAvailability.AVAILABLE
+    assert first.portfolio_exposure.cash_usdt == Decimal(100)
+    assert first.portfolio_exposure.nav_usdt == Decimal(100)
+    assert first.portfolio_exposure.cash_fraction == Decimal(1)
+    assert first.portfolio_exposure.invested_fraction == Decimal(0)
+    assert first.portfolio_exposure.positions == ()
     assert first.performance.status is PaperTradePerformanceStatus.NOT_YET_MEASURED
     assert first.performance.closed_trade_count == 0
     assert first.performance.win_rate_fraction is None
@@ -260,10 +266,14 @@ def test_signal_stream_overview_is_point_in_time(tmp_path) -> None:
     assert overview.latest_freeze_age_ms == 400
 
 
-def test_mission_control_v2_exposes_only_structured_plan_lineage() -> None:
+def test_mission_control_v3_exposes_structured_plan_and_exposure_truth() -> None:
     assert paper_mission_control.PAPER_MISSION_CONTROL_VERSION == (
-        "paper_mission_control.v2"
+        "paper_mission_control.v3"
     )
+    snapshot_fields = {
+        item.name for item in fields(paper_mission_control.PaperMissionControlSnapshot)
+    }
+    assert "portfolio_exposure" in snapshot_fields
     candidate_fields = {
         item.name
         for item in fields(paper_mission_control.PaperMissionControlCandidate)

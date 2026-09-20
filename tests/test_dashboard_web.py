@@ -227,6 +227,13 @@ def test_health_and_static_shell_without_ledger(tmp_path: Path) -> None:
     assert "Fee tahmini" in script.text
     assert "Spread tahmini" in script.text
     assert "Slippage tahmini" in script.text
+    assert "function renderPaperPortfolioPerformanceLab(data)" in script.text
+    assert "Henüz kapanmış sanal işlem yok." in script.text
+    assert "Bu nedenle win rate" in script.text
+    assert "Piyasa maruziyeti" in script.text
+    assert "Paper Performans Laboratuvarı" in index.text
+    assert 'id="paperPortfolioExposure"' in index.text
+    assert 'id="paperPerformanceLab"' in index.text
     assert "function renderEducation(data)" in script.text
     assert "function contextualLessonIds(detail)" in script.text
     assert "function renderContextTeaching(detail)" in script.text

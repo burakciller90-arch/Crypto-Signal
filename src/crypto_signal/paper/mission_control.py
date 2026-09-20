@@ -41,6 +41,7 @@ from crypto_signal.paper.performance import (
     read_paper_trade_performance,
 )
 from crypto_signal.paper.portfolio import (
+    PaperPortfolioAvailability,
     PaperPortfolioSnapshot,
     read_paper_portfolio_snapshot,
 )
@@ -56,13 +57,15 @@ __all__ = [
     "PaperMissionControlError",
     "PaperMissionControlSnapshot",
     "PaperPlanCostPreview",
+    "PaperPortfolioExposurePosition",
+    "PaperPortfolioExposureView",
     "PaperSignalStreamOverview",
     "read_paper_decision_cadence_readiness",
     "read_paper_mission_control_snapshot",
     "read_paper_signal_stream_overview",
 ]
 
-PAPER_MISSION_CONTROL_VERSION = "paper_mission_control.v2"
+PAPER_MISSION_CONTROL_VERSION = "paper_mission_control.v3"
 
 
 class PaperMissionControlError(RuntimeError):
@@ -390,6 +393,102 @@ class PaperMissionControlCandidate:
 
 
 @dataclass(frozen=True, slots=True)
+class PaperPortfolioExposurePosition:
+    """Deterministic marked exposure for one virtual paper position."""
+
+    symbol: PaperSymbol
+    quantity: Decimal
+    mark_price: Decimal | None
+    mark_identity: str | None
+    mark_candle_close_time_ms: int | None
+    marked_value_usdt: Decimal | None
+    nav_fraction: Decimal | None
+
+    def __post_init__(self) -> None:
+        if self.quantity <= Decimal(0):
+            raise ValueError("portfolio exposure quantity must be positive")
+        marked_fields = (
+            self.mark_price,
+            self.mark_identity,
+            self.mark_candle_close_time_ms,
+            self.marked_value_usdt,
+            self.nav_fraction,
+        )
+        if any(value is None for value in marked_fields) and any(
+            value is not None for value in marked_fields
+        ):
+            raise ValueError("position mark/exposure fields must appear together")
+        if self.mark_identity is not None:
+            _require_sha256(self.mark_identity, "portfolio exposure mark identity")
+        if self.mark_price is not None and self.mark_price <= Decimal(0):
+            raise ValueError("portfolio exposure mark price must be positive")
+        if (
+            self.mark_candle_close_time_ms is not None
+            and self.mark_candle_close_time_ms < 0
+        ):
+            raise ValueError("portfolio exposure mark close time cannot be negative")
+        if self.marked_value_usdt is not None and self.marked_value_usdt < Decimal(0):
+            raise ValueError("marked position value cannot be negative")
+        if self.nav_fraction is not None and not (
+            Decimal(0) <= self.nav_fraction <= Decimal(1)
+        ):
+            raise ValueError("position NAV fraction must be within [0, 1]")
+
+
+@dataclass(frozen=True, slots=True)
+class PaperPortfolioExposureView:
+    """Read-only allocation view derived only from accepted portfolio truth."""
+
+    availability: PaperPortfolioAvailability
+    cash_usdt: Decimal
+    marked_positions_value_usdt: Decimal | None
+    nav_usdt: Decimal | None
+    cash_fraction: Decimal | None
+    invested_fraction: Decimal | None
+    positions: tuple[PaperPortfolioExposurePosition, ...]
+    real_capital: int = REAL_CAPITAL
+
+    def __post_init__(self) -> None:
+        if self.real_capital != REAL_CAPITAL:
+            raise ValueError("portfolio exposure must remain REAL_CAPITAL=0")
+        if self.cash_usdt < Decimal(0):
+            raise ValueError("portfolio exposure cash cannot be negative")
+        if self.availability is PaperPortfolioAvailability.AVAILABLE:
+            if (
+                self.marked_positions_value_usdt is None
+                or self.nav_usdt is None
+            ):
+                raise ValueError("available exposure requires marked NAV truth")
+            if self.nav_usdt > Decimal(0):
+                if self.cash_fraction is None or self.invested_fraction is None:
+                    raise ValueError("positive NAV requires exposure fractions")
+                if self.cash_fraction + self.invested_fraction != Decimal(1):
+                    raise ValueError("cash and invested fractions must sum to one")
+                position_total = sum(
+                    (
+                        item.nav_fraction
+                        for item in self.positions
+                        if item.nav_fraction is not None
+                    ),
+                    start=Decimal(0),
+                )
+                if position_total != self.invested_fraction:
+                    raise ValueError("position exposure must reconcile to invested share")
+            elif self.cash_fraction is not None or self.invested_fraction is not None:
+                raise ValueError("non-positive NAV cannot carry exposure fractions")
+        elif any(
+            value is not None
+            for value in (
+                self.marked_positions_value_usdt,
+                self.nav_usdt,
+                self.cash_fraction,
+                self.invested_fraction,
+            )
+        ):
+            raise ValueError("missing-mark exposure cannot fabricate portfolio metrics")
+
+
+@dataclass(frozen=True, slots=True)
 class PaperMissionControlSnapshot:
     snapshot_identity: str
     version: str
@@ -406,6 +505,7 @@ class PaperMissionControlSnapshot:
     ready_candidate_count: int
     attention_required: bool
     portfolio: PaperPortfolioSnapshot
+    portfolio_exposure: PaperPortfolioExposureView
     performance: PaperTradePerformanceSnapshot
     trade_policy: str = "NOT_ACTIVATED"
     real_capital: int = REAL_CAPITAL
@@ -460,6 +560,9 @@ class PaperMissionControlSnapshot:
             raise ValueError("attention flag must match ready candidates")
         if self.portfolio.observed_at_ms != self.observed_at_ms:
             raise ValueError("portfolio observation time mismatch")
+        expected_exposure = _build_portfolio_exposure(self.portfolio)
+        if self.portfolio_exposure != expected_exposure:
+            raise ValueError("portfolio exposure must derive exactly from portfolio truth")
         if self.performance.observed_at_ms != self.observed_at_ms:
             raise ValueError("performance observation time mismatch")
         if self.portfolio.fund_identity != self.performance.fund_identity:
@@ -546,6 +649,7 @@ def read_paper_mission_control_snapshot(
         paper_ledger_path=paper_ledger_path,
         observed_at_ms=observed_at_ms,
     )
+    portfolio_exposure = _build_portfolio_exposure(portfolio)
     return _build_snapshot(
         activation=activation,
         signal_stream=signal_stream,
@@ -553,10 +657,73 @@ def read_paper_mission_control_snapshot(
         scan=scan,
         candidates=tuple(candidates),
         portfolio=portfolio,
+        portfolio_exposure=portfolio_exposure,
         performance=performance,
         observed_at_ms=observed_at_ms,
     )
 
+
+
+def _build_portfolio_exposure(
+    portfolio: PaperPortfolioSnapshot,
+) -> PaperPortfolioExposureView:
+    if portfolio.availability is not PaperPortfolioAvailability.AVAILABLE:
+        return PaperPortfolioExposureView(
+            availability=portfolio.availability,
+            cash_usdt=portfolio.cash_usdt,
+            marked_positions_value_usdt=None,
+            nav_usdt=None,
+            cash_fraction=None,
+            invested_fraction=None,
+            positions=tuple(
+                PaperPortfolioExposurePosition(
+                    symbol=item.symbol,
+                    quantity=item.quantity,
+                    mark_price=None,
+                    mark_identity=None,
+                    mark_candle_close_time_ms=None,
+                    marked_value_usdt=None,
+                    nav_fraction=None,
+                )
+                for item in portfolio.positions
+            ),
+            real_capital=REAL_CAPITAL,
+        )
+
+    assert portfolio.marked_positions_value_usdt is not None
+    assert portfolio.nav_usdt is not None
+    nav = portfolio.nav_usdt
+    can_fraction = nav > Decimal(0)
+    positions = tuple(
+        PaperPortfolioExposurePosition(
+            symbol=item.symbol,
+            quantity=item.quantity,
+            mark_price=item.mark.price if item.mark is not None else None,
+            mark_identity=item.mark.mark_identity if item.mark is not None else None,
+            mark_candle_close_time_ms=(
+                item.mark.source_candle_close_time_ms if item.mark is not None else None
+            ),
+            marked_value_usdt=item.marked_value_usdt,
+            nav_fraction=(
+                item.marked_value_usdt / nav
+                if can_fraction and item.marked_value_usdt is not None
+                else None
+            ),
+        )
+        for item in portfolio.positions
+    )
+    return PaperPortfolioExposureView(
+        availability=portfolio.availability,
+        cash_usdt=portfolio.cash_usdt,
+        marked_positions_value_usdt=portfolio.marked_positions_value_usdt,
+        nav_usdt=nav,
+        cash_fraction=portfolio.cash_usdt / nav if can_fraction else None,
+        invested_fraction=(
+            portfolio.marked_positions_value_usdt / nav if can_fraction else None
+        ),
+        positions=positions,
+        real_capital=REAL_CAPITAL,
+    )
 
 
 def _build_plan_cost_preview(
@@ -600,6 +767,7 @@ def _build_snapshot(
     scan: PaperSignalEventScanResult,
     candidates: tuple[PaperMissionControlCandidate, ...],
     portfolio: PaperPortfolioSnapshot,
+    portfolio_exposure: PaperPortfolioExposureView,
     performance: PaperTradePerformanceSnapshot,
     observed_at_ms: int,
 ) -> PaperMissionControlSnapshot:
@@ -621,6 +789,7 @@ def _build_snapshot(
         "incomplete_provider_pairs": scan.incomplete_pair_count,
         "observed_at_ms": observed_at_ms,
         "performance_snapshot_identity": performance.snapshot_identity,
+        "portfolio_exposure": _portfolio_exposure_payload(portfolio_exposure),
         "portfolio_snapshot_identity": portfolio.snapshot_identity,
         "processed_event_skips": scan.processed_skip_count,
         "ready_candidate_count": ready_count,
@@ -644,6 +813,7 @@ def _build_snapshot(
         ready_candidate_count=ready_count,
         attention_required=ready_count > 0,
         portfolio=portfolio,
+        portfolio_exposure=portfolio_exposure,
         performance=performance,
         trade_policy="NOT_ACTIVATED",
         real_capital=REAL_CAPITAL,
@@ -932,6 +1102,31 @@ def _decision_cadence_payload(
     }
 
 
+def _portfolio_exposure_payload(
+    exposure: PaperPortfolioExposureView,
+) -> dict[str, object]:
+    return {
+        "availability": exposure.availability.value,
+        "cash_fraction": exposure.cash_fraction,
+        "cash_usdt": exposure.cash_usdt,
+        "invested_fraction": exposure.invested_fraction,
+        "marked_positions_value_usdt": exposure.marked_positions_value_usdt,
+        "nav_usdt": exposure.nav_usdt,
+        "positions": [
+            {
+                "mark_candle_close_time_ms": item.mark_candle_close_time_ms,
+                "mark_identity": item.mark_identity,
+                "mark_price": item.mark_price,
+                "marked_value_usdt": item.marked_value_usdt,
+                "nav_fraction": item.nav_fraction,
+                "quantity": item.quantity,
+                "symbol": item.symbol.value,
+            }
+            for item in exposure.positions
+        ],
+    }
+
+
 def _candidate_payload(item: PaperMissionControlCandidate) -> dict[str, object]:
     return {
         "candidate_action": item.candidate_action.value,
@@ -1016,6 +1211,9 @@ def _snapshot_payload(
         "incomplete_provider_pairs": snapshot.incomplete_provider_pairs,
         "observed_at_ms": snapshot.observed_at_ms,
         "performance_snapshot_identity": snapshot.performance.snapshot_identity,
+        "portfolio_exposure": _portfolio_exposure_payload(
+            snapshot.portfolio_exposure
+        ),
         "portfolio_snapshot_identity": snapshot.portfolio.snapshot_identity,
         "processed_event_skips": snapshot.processed_event_skips,
         "ready_candidate_count": snapshot.ready_candidate_count,
