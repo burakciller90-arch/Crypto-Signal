@@ -573,3 +573,74 @@ Next Stage 6C frontier:
 - versioned simulated execution-cost policy,
 - connect accepted market decisions to virtual HOLD/BUY/REDUCE/EXIT intents without any real order authority,
 - only after those gates, run a persistent live paper account and expose it read-only in Mission Control.
+
+## 2026-09-20 — Stage 6C Slice 2 accepted: deterministic state reconstruction + conservative planning
+
+Stage 6C Slice 2 is accepted in canonical main.
+
+Accepted files:
+- src/crypto_signal/paper/state.py
+- src/crypto_signal/paper/planning.py
+- tests/test_paper_state.py
+- tests/test_paper_planning.py
+
+Accepted state-reconstruction invariants:
+- read-only reconstruction from immutable PaperFundLedger replay;
+- exactly one fund creation, exact 100.00 USDT initial cash, zero initial positions;
+- strict increasing replay sequence_id;
+- replay entry identity and record kind must match the typed record;
+- every later record must belong to the reconstructed fund;
+- a simulated fill must reference an earlier real DecisionIntentRecord, never another fill;
+- fill action/symbol/quantity/reference price must match its source decision intent;
+- mutation source must be an earlier decision/fill belonging to this fund;
+- cash_before and positions_before must exactly equal prior reconstructed accounting state;
+- negative cash/positions are rejected;
+- latest valid NAV snapshot is tracked separately and must match reconstructed cash/positions;
+- reconstruction never mutates the ledger.
+
+Accepted planning invariants:
+- plan is intent only: no ledger append, no exchange/network/credential surface;
+- allowed outcomes remain HOLD_CASH, BUY, REDUCE, EXIT;
+- default v1 limits: max single-position concentration 25%, minimum cash reserve 20 USDT, max gross exposure 50%;
+- leverage, borrowing, shorting, derivatives and martingale are forbidden;
+- BUY requires sufficient cash including explicit cost budget;
+- REDUCE/EXIT cannot exceed holdings; EXIT closes the complete symbol holding;
+- BUY concentration/gross-exposure checks use projected NAV after transaction-cost budget;
+- missing evidence yields HOLD_CASH or explicit rejection, never fabricated certainty;
+- deterministic plan identity;
+- REAL_CAPITAL=0.
+
+Acceptance evidence:
+- Cursor issue #57 / run 35515447286 completed cursor_rc=0.
+- Initial independent supervisor review: 15 focused tests PASS, Ruff PASS, mypy PASS.
+- Supervisor found and closed two latent gaps before acceptance: fill→fill masquerading as decision lineage; cost budget omitted from projected NAV denominator for boundary risk checks.
+- Hardened gate: 18 focused tests PASS, Ruff PASS, mypy PASS.
+- Guarded exact-scope integration commit: 0b6bd6cf26b1f73c60c46b1ed1d97c4c68268e37.
+- One-shot contents-write integration workflow removed immediately after use.
+- Final canonical full regression after all accepted changes: 312 tests PASS, Ruff PASS, mypy PASS across 82 source files, JavaScript syntax PASS.
+- supervisor-57 worktree removed and pruned.
+
+Scope boundary:
+This still does NOT activate an autonomous persistent paper account. State truth and conservative planning are accepted; simulated execution, plan→decision/fill/mutation orchestration, persistent clock/runtime and read-only portfolio UI remain subsequent gates.
+
+## 2026-09-20 — Stage 6B contextual evidence teaching accepted and live
+
+The signal-detail education layer is now bound to frozen decision evidence rather than showing only a generic catalog.
+
+Accepted behavior:
+- "Bu sinyali bana öğret" selects concepts only from the frozen signal's methodology, geometry or explicit evidence labels;
+- supports contextual BOS, CHoCH, liquidity sweep, FVG, Harmonic/PRZ, Elliott, invalidation, risk/reward and agreement-vs-probability lessons;
+- each contextual lesson explains why it appears for that specific frozen decision;
+- evidence chart now includes a textual legend with kind, label and exact frozen price level;
+- explicit "Neden işlem yapmamalıyız?" counter-case is shown;
+- wording preserves that methodology agreement is not probability and does not force a trade;
+- newer price data is explicitly prevented from rewriting historical frozen evidence.
+
+Acceptance evidence:
+- product gate: 19 tests PASS, Ruff PASS, mypy PASS;
+- final canonical full regression: 312 tests PASS;
+- PRODUCT/STABLE advanced from 14942e191c5ae354f22cb1784eae4a85c0e3a8d6 to 5d2bd3ae488ce0b579e4ba804be320b50d792943 with rollback protection;
+- live /api/health verified status=ok, product_version=full-version-contextual-evidence/1, real_capital=0, read_only=true.
+
+Regression note:
+A prior full-suite run exposed a WAL-sensitive alert-preview test that compared raw SQLite main-file bytes. Bounded diagnostics showed 5/5 exact test repeats PASS, unchanged main/WAL payloads in controlled runs, only expected -shm coordination changes, one event row and zero delivery attempts. The test was corrected to compare logical outbox/schema truth rather than SQLite housekeeping bytes; final full regression then passed.
