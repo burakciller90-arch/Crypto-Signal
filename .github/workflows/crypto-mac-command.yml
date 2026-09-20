@@ -24,7 +24,7 @@ jobs:
           set -euo pipefail
           cmd="$(printf '%s\n' "$ISSUE_BODY" | awk -F: 'tolower($1)=="command" {gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2); print tolower($2); exit}')"
           case "$cmd" in
-            status|services|logs|disk|sync|producttest|fulltest|productstate|productdeploy|paperreview|paperinspect|paperfixlint|paperharden|stateplanreview|stateplaninspect|stateplanharden|cursorreview|cursorreviewtail|cursorcleanup|bridgecheck|bridgestate|wakepause|wakeresume|waketest|cursorcheck|cursorauthdiag|cursorttycheck)
+            status|services|logs|disk|sync|producttest|fulltest|productstate|productdeploy|paperreview|paperinspect|paperfixlint|paperharden|stateplanreview|stateplaninspect|stateplanharden|cursorreview|cursorreviewtail|cursorcleanup|bridgecheck|bridgestate|pausecheck|wakepause|wakeresume|waketest|cursorcheck|cursorauthdiag|cursorttycheck)
               ;;
             *)
               echo "Unsupported command: $cmd"
@@ -875,6 +875,32 @@ jobs:
           git -C "$REPO" worktree prune
           test ! -e "$WT"
           echo "CURSOR_WORKTREE_CLEANED=YES"
+
+      - name: PAUSE CHECK
+        if: steps.parse.outputs.command == 'pausecheck'
+        shell: bash
+        run: |
+          set -euo pipefail
+          LOCAL="/Users/crypto-signal-agent/Crypto-Signal/runtime/continuity"
+          SHARED="/Users/Shared/.crypto-signal-wake-relay"
+          local_pause=NO
+          shared_pause=NO
+          [ -f "$LOCAL/user_pause" ] && local_pause=YES
+          [ -f "$SHARED/user_pause" ] && shared_pause=YES
+          active_leases="$(find "$LOCAL/leases/active" -maxdepth 1 -type f -name '*.lease' 2>/dev/null | wc -l | tr -d ' ')"
+          local_queue="$(find "$LOCAL/wake/queue" -maxdepth 1 -type f -name '*.wake' 2>/dev/null | wc -l | tr -d ' ')"
+          relay_queue="$(find "$SHARED/queue" -maxdepth 1 -type f -name '*.wake' 2>/dev/null | wc -l | tr -d ' ')"
+          echo "LOCAL_PAUSED=$local_pause"
+          echo "SHARED_PAUSED=$shared_pause"
+          echo "ACTIVE_LEASES=$active_leases"
+          echo "LOCAL_WAKE_QUEUE=$local_queue"
+          echo "RELAY_WAKE_QUEUE=$relay_queue"
+          test "$local_pause" = "YES"
+          test "$shared_pause" = "YES"
+          test "$active_leases" = "0"
+          test "$local_queue" = "0"
+          test "$relay_queue" = "0"
+          echo "PAUSE_VERIFIED=YES"
 
       - name: WAKE PAUSE
         if: steps.parse.outputs.command == 'wakepause'
