@@ -341,6 +341,7 @@ function renderPaperTradePlan(item) {
   const plan = pretrade?.plan ?? null;
   const sizing = item.sizing ?? null;
   const execution = bound?.execution_snapshot ?? null;
+  const costs = item.cost_preview ?? null;
   const steps = item.trace?.steps ?? [];
   const gateSummary = steps.length
     ? steps.map((step) => `${human(step.stage)}: ${human(step.state)} · ${human(step.code)}`).join(" → ")
@@ -372,9 +373,9 @@ function renderPaperTradePlan(item) {
           <div><span>Plan sonrası miktar</span><strong>${esc(plan.projected_quantity ?? "0")}</strong></div>
           <div><span>Maks. pozisyon riski</span><strong>${esc(fmtMoney(sizing?.max_position_risk_usdt))}</strong></div>
           <div><span>Konservatif invalidation</span><strong>${esc(sizing?.conservative_invalidation_price ?? "—")}</strong></div>
-          <div><span>Fee varsayımı</span><strong>${esc(fmtRate(execution?.fee_rate))}</strong></div>
-          <div><span>Spread varsayımı</span><strong>${esc(fmtRate(execution?.spread_rate))}</strong></div>
-          <div><span>Slippage varsayımı</span><strong>${esc(fmtRate(execution?.slippage_rate))}</strong></div>
+          <div><span>Fee tahmini</span><strong>${esc(fmtMoney(costs?.fee_usdt))} · ${esc(fmtRate(execution?.fee_rate))}</strong></div>
+          <div><span>Spread tahmini</span><strong>${esc(fmtMoney(costs?.spread_usdt))} · ${esc(fmtRate(execution?.spread_rate))}</strong></div>
+          <div><span>Slippage tahmini</span><strong>${esc(fmtMoney(costs?.slippage_usdt))} · ${esc(fmtRate(execution?.slippage_rate))}</strong></div>
         </div>
         <div class="paper-plan-question"><span>Neden şimdi?</span><strong>Tüm kabul edilmiş dry-run kapıları bu dondurulmuş kanıt için sanal plan seviyesine kadar geçti.</strong></div>
         <div class="paper-plan-question"><span>Fikir ne zaman bozulur?</span><strong>${esc(plan.invalidation_context ?? "Açık invalidation bağlamı yok.")}</strong></div>
