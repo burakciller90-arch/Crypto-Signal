@@ -65,6 +65,27 @@ class PaperLedgerEntry:
     record: PaperRecord
 
 
+@dataclass(frozen=True, slots=True)
+class PaperProcessedEventWrite:
+    event_identity: str
+    activation_identity: str
+    outcome: str
+    payload_json: str
+    processed_at_ms: int
+
+    def __post_init__(self) -> None:
+        for label, value in (
+            ("event_identity", self.event_identity),
+            ("activation_identity", self.activation_identity),
+        ):
+            if len(value) != 64 or any(ch not in "0123456789abcdef" for ch in value):
+                raise ValueError(f"{label} must be SHA256")
+        if not self.outcome.strip() or not self.payload_json.strip():
+            raise ValueError("processed event outcome/payload must be non-empty")
+        if self.processed_at_ms < 0:
+            raise ValueError("processed_at_ms must be non-negative")
+
+
 _TABLE_BY_KIND: dict[PaperRecordKind, str] = {
     PaperRecordKind.FUND_CREATION: "paper_fund_creations",
     PaperRecordKind.DECISION_INTENT: "paper_decision_intents",

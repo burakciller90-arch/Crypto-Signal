@@ -16,6 +16,16 @@ from crypto_signal.confluence.models import (
 )
 from crypto_signal.data.models import Exchange, MarketType
 from crypto_signal.paper import pipeline as paper_pipeline
+from crypto_signal.paper.activation import (
+    PaperActivationError,
+    PaperProcessedEventOutcome,
+    activate_paper_policy,
+    build_processed_event_receipt,
+    commit_planned_pretrade_event,
+    is_paper_event_processed,
+    list_processed_paper_events,
+    record_terminal_no_action,
+)
 from crypto_signal.paper.autonomy import evaluate_autonomy_policy
 from crypto_signal.paper.execution import build_frozen_execution_snapshot
 from crypto_signal.paper.execution_input import (
@@ -322,6 +332,124 @@ def test_mid_bundle_sql_failure_rolls_back_entire_pipeline_write(tmp_path) -> No
 
     assert ledger.replay() == before
     assert len(before) == 1
+
+
+def _activation(ledger, state):
+    return activate_paper_policy(
+        ledger=ledger,
+        state=state,
+        activated_at_ms=AS_OF - 1,
+        baseline_signal_freeze_count=1,
+        baseline_latest_signal_freeze_identity="f" * 64,
+        baseline_latest_frozen_at_ms=AS_OF - 2,
+    )[1]
+
+
+def test_trade_bundle_and_processed_receipt_commit_in_one_transaction(tmp_path) -> None:
+    ledger, state, execution_input, snapshot, pretrade = _prepared_buy(tmp_path)
+    activation = _activation(ledger, state)
+
+    result = commit_planned_pretrade_event(
+        ledger=ledger,
+        state=state,
+        activation=activation,
+        pretrade=pretrade,
+        execution_input=execution_input,
+        execution_snapshot=snapshot,
+    )
+
+    assert result.receipt.outcome is PaperProcessedEventOutcome.COMMITTED_TRADE
+    assert result.receipt.pretrade_identity == pretrade.pretrade_identity
+    assert result.receipt.record_identities == result.pipeline.commit.record_identities
+    assert (
+        result.pipeline.commit.processed_event_identity
+        == result.receipt.event_identity
+    )
+    assert is_paper_event_processed(ledger, result.receipt.event_identity) is True
+    assert list_processed_paper_events(ledger) == (result.receipt,)
+    assert result.pipeline.commit.disposition is PaperLedgerWriteDisposition.INSERTED
+
+    retry = commit_planned_pretrade_event(
+        ledger=ledger,
+        state=state,
+        activation=activation,
+        pretrade=pretrade,
+        execution_input=execution_input,
+        execution_snapshot=snapshot,
+    )
+    assert retry.pipeline.commit.disposition is PaperLedgerWriteDisposition.UNCHANGED
+    assert retry.receipt == result.receipt
+    assert retry.pipeline.commit.record_identities == result.pipeline.commit.record_identities
+    assert list_processed_paper_events(ledger) == (result.receipt,)
+
+
+def test_processed_receipt_insert_failure_rolls_back_trade_bundle(tmp_path) -> None:
+    ledger, state, execution_input, snapshot, pretrade = _prepared_buy(tmp_path)
+    activation = _activation(ledger, state)
+    ledger.initialize()
+    with sqlite3.connect(ledger.path) as connection:
+        connection.execute(
+            """
+            CREATE TRIGGER fail_processed_event_insert
+            BEFORE INSERT ON paper_processed_events
+            BEGIN
+                SELECT RAISE(ABORT, 'processed receipt injected failure');
+            END
+            """
+        )
+    before = ledger.replay()
+
+    with pytest.raises(
+        sqlite3.IntegrityError,
+        match="processed receipt injected failure",
+    ):
+        commit_planned_pretrade_event(
+            ledger=ledger,
+            state=state,
+            activation=activation,
+            pretrade=pretrade,
+            execution_input=execution_input,
+            execution_snapshot=snapshot,
+        )
+
+    assert ledger.replay() == before
+    assert len(before) == 1
+    assert list_processed_paper_events(ledger) == ()
+
+
+def test_terminal_no_action_receipt_blocks_later_trade_for_same_event(tmp_path) -> None:
+    ledger, state, execution_input, snapshot, pretrade = _prepared_buy(tmp_path)
+    activation = _activation(ledger, state)
+    receipt = build_processed_event_receipt(
+        activation=activation,
+        source_freeze_identities=execution_input.source_freeze_identities,
+        symbol=execution_input.symbol,
+        timeframe="4h",
+        signal_as_of_ms=execution_input.signal_as_of_ms,
+        outcome=PaperProcessedEventOutcome.TERMINAL_NO_ACTION,
+        processed_at_ms=PLANNED_AT,
+        terminal_reason="terminal test hold",
+    )
+    record_terminal_no_action(
+        ledger=ledger,
+        state=state,
+        activation=activation,
+        receipt=receipt,
+    )
+    before = ledger.replay()
+
+    with pytest.raises(PaperActivationError, match="identity conflict"):
+        commit_planned_pretrade_event(
+            ledger=ledger,
+            state=state,
+            activation=activation,
+            pretrade=pretrade,
+            execution_input=execution_input,
+            execution_snapshot=snapshot,
+        )
+
+    assert ledger.replay() == before
+    assert list_processed_paper_events(ledger) == (receipt,)
 
 
 def test_pipeline_surface_has_no_network_order_or_runtime_activation_authority() -> None:

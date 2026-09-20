@@ -12,6 +12,7 @@ from crypto_signal.paper.ledger import (
     PaperFundLedger,
     PaperLedgerEntry,
     PaperLedgerWriteDisposition,
+    PaperProcessedEventWrite,
     PaperRecord,
 )
 from crypto_signal.paper.models import REAL_CAPITAL, PaperAction
@@ -41,11 +42,18 @@ class PaperBundleCommitResult:
     disposition: PaperLedgerWriteDisposition
     record_identities: tuple[str, ...]
     state_after: PaperFundState
+    processed_event_identity: str | None = None
     real_capital: int = REAL_CAPITAL
 
     def __post_init__(self) -> None:
         if self.real_capital != REAL_CAPITAL:
             raise ValueError("REAL_CAPITAL must remain 0")
+        if self.processed_event_identity is not None:
+            if len(self.processed_event_identity) != 64 or any(
+                ch not in "0123456789abcdef"
+                for ch in self.processed_event_identity
+            ):
+                raise ValueError("processed_event_identity must be SHA256")
 
 
 def commit_orchestration_bundle(
@@ -53,6 +61,7 @@ def commit_orchestration_bundle(
     ledger: PaperFundLedger,
     state: PaperFundState,
     bundle: PaperOrchestrationBundle,
+    processed_event: PaperProcessedEventWrite | None = None,
 ) -> PaperBundleCommitResult:
     """Persist one accepted orchestration bundle atomically, then re-read state."""
     records = _bundle_records(state=state, bundle=bundle)
@@ -66,10 +75,41 @@ def commit_orchestration_bundle(
                 "supplied paper fund state is stale or does not match ledger replay"
             )
 
-    disposition, replay = ledger._append_records_atomic(
-        records,
-        expected_replayed_record_count=state.replayed_record_count,
-    )
+    if processed_event is None:
+        disposition, replay = ledger._append_records_atomic(
+            records,
+            expected_replayed_record_count=state.replayed_record_count,
+        )
+    else:
+        if bundle.decision.action is PaperAction.HOLD_CASH:
+            raise PaperBundleCommitError(
+                "processed trade event cannot bind a HOLD_CASH bundle"
+            )
+        if processed_event.outcome != "committed_trade":
+            raise PaperBundleCommitError(
+                "trade bundle processed event outcome must be committed_trade"
+            )
+        latest_bundle_time = bundle.decision.decided_at_ms
+        if bundle.fill is not None:
+            latest_bundle_time = max(latest_bundle_time, bundle.fill.filled_at_ms)
+        if bundle.mutation is not None:
+            latest_bundle_time = max(
+                latest_bundle_time,
+                bundle.mutation.mutated_at_ms,
+            )
+        if processed_event.processed_at_ms < latest_bundle_time:
+            raise PaperBundleCommitError(
+                "processed trade event cannot predate committed bundle"
+            )
+        disposition, replay = ledger._append_records_and_processed_event_atomic(
+            records,
+            expected_replayed_record_count=state.replayed_record_count,
+            event_identity=processed_event.event_identity,
+            activation_identity=processed_event.activation_identity,
+            outcome=processed_event.outcome,
+            event_payload_json=processed_event.payload_json,
+            processed_at_ms=processed_event.processed_at_ms,
+        )
     _validate_bundle_replay_order(replay=replay, identities=identities)
 
     state_after = reconstruct_paper_fund_state_from_entries(replay)
@@ -85,6 +125,9 @@ def commit_orchestration_bundle(
         disposition=disposition,
         record_identities=identities,
         state_after=state_after,
+        processed_event_identity=(
+            None if processed_event is None else processed_event.event_identity
+        ),
         real_capital=REAL_CAPITAL,
     )
 

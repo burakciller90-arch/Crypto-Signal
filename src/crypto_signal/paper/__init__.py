@@ -9,8 +9,10 @@ from crypto_signal.paper.activation import (
     PaperActivationState,
     PaperProcessedEventOutcome,
     PaperProcessedEventReceipt,
+    PaperProcessedTradeCommit,
     activate_paper_policy,
     build_processed_event_receipt,
+    commit_planned_pretrade_event,
     is_paper_event_processed,
     list_processed_paper_events,
     load_paper_activation,
@@ -42,6 +44,7 @@ from crypto_signal.paper.ledger import (
     PaperLedgerConflictError,
     PaperLedgerEntry,
     PaperLedgerWriteDisposition,
+    PaperProcessedEventWrite,
     PaperRecordKind,
 )
 from crypto_signal.paper.models import (
@@ -75,6 +78,7 @@ from crypto_signal.paper.pipeline import (
     PaperTradePipelineError,
     PaperTradePipelineResult,
     commit_planned_pretrade,
+    materialize_planned_pretrade,
 )
 from crypto_signal.paper.pretrade import (
     PAPER_PRETRADE_BRIDGE_POLICY_VERSION,
@@ -150,6 +154,8 @@ __all__ = [
     "PaperPretradeStatus",
     "PaperProcessedEventOutcome",
     "PaperProcessedEventReceipt",
+    "PaperProcessedEventWrite",
+    "PaperProcessedTradeCommit",
     "PaperRecordKind",
     "PaperRuntimeError",
     "PaperRuntimeSnapshot",
@@ -168,6 +174,7 @@ __all__ = [
     "build_simulated_fill",
     "commit_orchestration_bundle",
     "commit_planned_pretrade",
+    "commit_planned_pretrade_event",
     "default_conservative_autonomy_policy",
     "ensure_persistent_paper_fund",
     "evaluate_autonomy_policy",
@@ -176,6 +183,7 @@ __all__ = [
     "is_paper_event_processed",
     "list_processed_paper_events",
     "load_paper_activation",
+    "materialize_planned_pretrade",
     "observe_signal_ledger",
     "prepare_paper_trade_plan",
     "record_terminal_no_action",

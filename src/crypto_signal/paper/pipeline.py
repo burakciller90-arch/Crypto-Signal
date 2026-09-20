@@ -32,6 +32,7 @@ __all__ = [
     "PaperTradePipelineError",
     "PaperTradePipelineResult",
     "commit_planned_pretrade",
+    "materialize_planned_pretrade",
 ]
 
 
@@ -76,14 +77,13 @@ class PaperTradePipelineResult:
             raise ValueError("committed state must remain REAL_CAPITAL=0")
 
 
-def commit_planned_pretrade(
+def materialize_planned_pretrade(
     *,
-    ledger: PaperFundLedger,
     state: PaperFundState,
     pretrade: PaperPretradeDecision,
     execution_snapshot: FrozenExecutionSnapshot,
-) -> PaperTradePipelineResult:
-    """Persist one accepted PLANNED pre-trade decision atomically/idempotently."""
+) -> PaperOrchestrationBundle:
+    """Validate and materialize the deterministic trade bundle without writing."""
     _validate_inputs(
         state=state,
         pretrade=pretrade,
@@ -118,11 +118,28 @@ def commit_planned_pretrade(
         )
     if bundle.fill.venue_reference != execution_snapshot.execution_reference:
         raise PaperTradePipelineError("fill is not bound to execution snapshot")
+    return bundle
 
+
+def commit_planned_pretrade(
+    *,
+    ledger: PaperFundLedger,
+    state: PaperFundState,
+    pretrade: PaperPretradeDecision,
+    execution_snapshot: FrozenExecutionSnapshot,
+    processed_event: PaperProcessedEventWrite | None = None,
+) -> PaperTradePipelineResult:
+    """Persist one accepted PLANNED pre-trade decision atomically/idempotently."""
+    bundle = materialize_planned_pretrade(
+        state=state,
+        pretrade=pretrade,
+        execution_snapshot=execution_snapshot,
+    )
     committed = commit_orchestration_bundle(
         ledger=ledger,
         state=state,
         bundle=bundle,
+        processed_event=processed_event,
     )
     return PaperTradePipelineResult(
         pretrade_identity=pretrade.pretrade_identity,

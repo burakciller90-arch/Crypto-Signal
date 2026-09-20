@@ -13,11 +13,23 @@ from dataclasses import dataclass
 from enum import StrEnum
 
 from crypto_signal.ledger.serialization import canonical_json, canonical_sha256
+from crypto_signal.paper.commit import (
+    PaperBundleCommitError,
+    commit_orchestration_bundle,
+)
+from crypto_signal.paper.execution import FrozenExecutionSnapshot
+from crypto_signal.paper.execution_input import FrozenPaperExecutionInput
 from crypto_signal.paper.ledger import (
     PaperFundLedger,
     PaperLedgerConflictError,
     PaperLedgerWriteDisposition,
+    PaperProcessedEventWrite,
 )
+from crypto_signal.paper.pipeline import (
+    PaperTradePipelineResult,
+    materialize_planned_pretrade,
+)
+from crypto_signal.paper.pretrade import PaperPretradeDecision
 from crypto_signal.paper.models import REAL_CAPITAL, PaperSymbol
 from crypto_signal.paper.state import PaperFundState, reconstruct_paper_fund_state
 
@@ -28,9 +40,11 @@ __all__ = [
     "PaperActivationState",
     "PaperProcessedEventOutcome",
     "PaperProcessedEventReceipt",
+    "PaperProcessedTradeCommit",
     "activate_paper_policy",
     "build_processed_event_receipt",
     "compute_activation_identity",
+    "commit_planned_pretrade_event",
     "compute_processed_event_identity",
     "is_paper_event_processed",
     "list_processed_paper_events",
@@ -111,6 +125,28 @@ class PaperActivationState:
 
 
 @dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True)
+class PaperProcessedTradeCommit:
+    receipt: PaperProcessedEventReceipt
+    pipeline: PaperTradePipelineResult
+    real_capital: int = REAL_CAPITAL
+
+    def __post_init__(self) -> None:
+        if self.real_capital != REAL_CAPITAL:
+            raise ValueError("REAL_CAPITAL must remain 0")
+        if self.receipt.outcome is not PaperProcessedEventOutcome.COMMITTED_TRADE:
+            raise ValueError("processed trade result requires COMMITTED_TRADE receipt")
+        if self.receipt.pretrade_identity != self.pipeline.pretrade_identity:
+            raise ValueError("processed trade pretrade identity mismatch")
+        if self.receipt.record_identities != self.pipeline.commit.record_identities:
+            raise ValueError("processed trade record identity mismatch")
+        if (
+            self.pipeline.commit.processed_event_identity
+            != self.receipt.event_identity
+        ):
+            raise ValueError("processed trade event identity mismatch")
+
+
 class PaperProcessedEventReceipt:
     event_identity: str
     activation_identity: str
@@ -329,6 +365,88 @@ def build_processed_event_receipt(
         terminal_reason=terminal_reason,
         pretrade_identity=pretrade_identity,
         record_identities=record_identities,
+        real_capital=REAL_CAPITAL,
+    )
+
+
+def commit_planned_pretrade_event(
+    *,
+    ledger: PaperFundLedger,
+    state: PaperFundState,
+    activation: PaperActivationState,
+    pretrade: PaperPretradeDecision,
+    execution_input: FrozenPaperExecutionInput,
+    execution_snapshot: FrozenExecutionSnapshot,
+) -> PaperProcessedTradeCommit:
+    """Atomically commit trade bundle and COMMITTED_TRADE receipt in one DB tx."""
+    stored = load_paper_activation(ledger)
+    if stored != activation:
+        raise PaperActivationError("supplied activation does not match persistent state")
+    if activation.fund_identity != state.fund_identity:
+        raise PaperActivationError("activation fund identity mismatch")
+    if pretrade.execution_input_identity != execution_input.input_identity:
+        raise PaperActivationError("pretrade execution-input identity mismatch")
+    if pretrade.symbol is not execution_input.symbol:
+        raise PaperActivationError("pretrade execution-input symbol mismatch")
+    if execution_input.signal_as_of_ms < activation.activation_cutoff_ms:
+        raise PaperActivationError(
+            "trade event predates activation watermark and cannot be committed"
+        )
+
+    bundle = materialize_planned_pretrade(
+        state=state,
+        pretrade=pretrade,
+        execution_snapshot=execution_snapshot,
+    )
+    if bundle.fill is None or bundle.mutation is None:
+        raise PaperActivationError("trade event materialization lost fill or mutation")
+    record_identities = (
+        bundle.decision.record_identity,
+        bundle.fill.record_identity,
+        bundle.mutation.record_identity,
+    )
+    plan = pretrade.plan
+    if plan is None:
+        raise PaperActivationError("PLANNED pretrade lost plan")
+    receipt = build_processed_event_receipt(
+        activation=activation,
+        source_freeze_identities=execution_input.source_freeze_identities,
+        symbol=execution_input.symbol,
+        timeframe="4h",
+        signal_as_of_ms=execution_input.signal_as_of_ms,
+        outcome=PaperProcessedEventOutcome.COMMITTED_TRADE,
+        processed_at_ms=plan.planned_at_ms,
+        terminal_reason="atomic paper trade committed",
+        pretrade_identity=pretrade.pretrade_identity,
+        record_identities=record_identities,
+    )
+    event_write = PaperProcessedEventWrite(
+        event_identity=receipt.event_identity,
+        activation_identity=receipt.activation_identity,
+        outcome=receipt.outcome.value,
+        payload_json=canonical_json(receipt),
+        processed_at_ms=receipt.processed_at_ms,
+    )
+    try:
+        committed = commit_orchestration_bundle(
+            ledger=ledger,
+            state=state,
+            bundle=bundle,
+            processed_event=event_write,
+        )
+    except (PaperBundleCommitError, PaperLedgerConflictError) as exc:
+        raise PaperActivationError(str(exc)) from exc
+
+    pipeline = PaperTradePipelineResult(
+        pretrade_identity=pretrade.pretrade_identity,
+        execution_snapshot_identity=execution_snapshot.snapshot_identity,
+        bundle=bundle,
+        commit=committed,
+        real_capital=REAL_CAPITAL,
+    )
+    return PaperProcessedTradeCommit(
+        receipt=receipt,
+        pipeline=pipeline,
         real_capital=REAL_CAPITAL,
     )
 
