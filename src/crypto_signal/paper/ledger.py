@@ -175,6 +175,19 @@ class PaperFundLedger:
                 )
                 """
             )
+            connection.execute(
+                """
+                CREATE TABLE IF NOT EXISTS paper_write_authority_events (
+                    sequence_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    authority_event_identity TEXT NOT NULL UNIQUE,
+                    activation_identity TEXT NOT NULL,
+                    enabled INTEGER NOT NULL CHECK (enabled IN (0, 1)),
+                    previous_event_identity TEXT,
+                    payload_json TEXT NOT NULL,
+                    created_at_ms INTEGER NOT NULL
+                )
+                """
+            )
             self._install_immutability_triggers(connection)
 
     def append_fund_creation(
@@ -378,6 +391,185 @@ class PaperFundLedger:
                 str(row["outcome"]),
                 str(row["payload_json"]),
                 int(row["processed_at_ms"]),
+            )
+            for row in rows
+        )
+
+    def _append_write_authority_event(
+        self,
+        *,
+        authority_event_identity: str,
+        activation_identity: str,
+        enabled: bool,
+        previous_event_identity: str | None,
+        payload_json: str,
+        created_at_ms: int,
+    ) -> PaperLedgerWriteDisposition:
+        if created_at_ms < 0:
+            raise ValueError("authority created_at_ms must be non-negative")
+        if not authority_event_identity or not activation_identity or not payload_json:
+            raise ValueError("authority identity/activation/payload are required")
+        self.initialize()
+        with self._connect() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            activation = connection.execute(
+                """
+                SELECT activation_identity
+                FROM paper_activation_state
+                WHERE singleton = 1
+                """
+            ).fetchone()
+            if activation is None:
+                raise PaperLedgerConflictError(
+                    "write authority requires persistent paper activation state"
+                )
+            if str(activation["activation_identity"]) != activation_identity:
+                raise PaperLedgerConflictError(
+                    "write authority activation identity mismatch"
+                )
+
+            existing = connection.execute(
+                """
+                SELECT
+                    activation_identity,
+                    enabled,
+                    previous_event_identity,
+                    payload_json,
+                    created_at_ms
+                FROM paper_write_authority_events
+                WHERE authority_event_identity = ?
+                """,
+                (authority_event_identity,),
+            ).fetchone()
+            if existing is not None:
+                exact = (
+                    str(existing["activation_identity"]) == activation_identity
+                    and bool(int(existing["enabled"])) is enabled
+                    and (
+                        None
+                        if existing["previous_event_identity"] is None
+                        else str(existing["previous_event_identity"])
+                    )
+                    == previous_event_identity
+                    and str(existing["payload_json"]) == payload_json
+                    and int(existing["created_at_ms"]) == created_at_ms
+                )
+                if exact:
+                    return PaperLedgerWriteDisposition.UNCHANGED
+                raise PaperLedgerConflictError(
+                    "immutable write-authority event identity conflict"
+                )
+
+            latest = connection.execute(
+                """
+                SELECT authority_event_identity, created_at_ms
+                FROM paper_write_authority_events
+                ORDER BY sequence_id DESC
+                LIMIT 1
+                """
+            ).fetchone()
+            latest_identity = (
+                None
+                if latest is None
+                else str(latest["authority_event_identity"])
+            )
+            if previous_event_identity != latest_identity:
+                raise PaperLedgerConflictError(
+                    "write-authority previous-event lineage is stale"
+                )
+            if latest is not None and created_at_ms < int(latest["created_at_ms"]):
+                raise PaperLedgerConflictError(
+                    "write-authority event cannot predate current authority state"
+                )
+
+            connection.execute(
+                """
+                INSERT INTO paper_write_authority_events (
+                    authority_event_identity,
+                    activation_identity,
+                    enabled,
+                    previous_event_identity,
+                    payload_json,
+                    created_at_ms
+                ) VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    authority_event_identity,
+                    activation_identity,
+                    1 if enabled else 0,
+                    previous_event_identity,
+                    payload_json,
+                    created_at_ms,
+                ),
+            )
+        return PaperLedgerWriteDisposition.INSERTED
+
+    def _latest_write_authority_row(
+        self,
+    ) -> tuple[str, str, bool, str | None, str, int] | None:
+        self.initialize()
+        with self._connect() as connection:
+            row = connection.execute(
+                """
+                SELECT
+                    authority_event_identity,
+                    activation_identity,
+                    enabled,
+                    previous_event_identity,
+                    payload_json,
+                    created_at_ms
+                FROM paper_write_authority_events
+                ORDER BY sequence_id DESC
+                LIMIT 1
+                """
+            ).fetchone()
+        if row is None:
+            return None
+        return (
+            str(row["authority_event_identity"]),
+            str(row["activation_identity"]),
+            bool(int(row["enabled"])),
+            (
+                None
+                if row["previous_event_identity"] is None
+                else str(row["previous_event_identity"])
+            ),
+            str(row["payload_json"]),
+            int(row["created_at_ms"]),
+        )
+
+    def _list_write_authority_rows(
+        self,
+    ) -> tuple[tuple[int, str, str, bool, str | None, str, int], ...]:
+        self.initialize()
+        with self._connect() as connection:
+            rows = connection.execute(
+                """
+                SELECT
+                    sequence_id,
+                    authority_event_identity,
+                    activation_identity,
+                    enabled,
+                    previous_event_identity,
+                    payload_json,
+                    created_at_ms
+                FROM paper_write_authority_events
+                ORDER BY sequence_id ASC
+                """
+            ).fetchall()
+        return tuple(
+            (
+                int(row["sequence_id"]),
+                str(row["authority_event_identity"]),
+                str(row["activation_identity"]),
+                bool(int(row["enabled"])),
+                (
+                    None
+                    if row["previous_event_identity"] is None
+                    else str(row["previous_event_identity"])
+                ),
+                str(row["payload_json"]),
+                int(row["created_at_ms"]),
             )
             for row in rows
         )
@@ -787,6 +979,7 @@ class PaperFundLedger:
             "paper_replay_index",
             "paper_activation_state",
             "paper_processed_events",
+            "paper_write_authority_events",
         ]
         for table in tables:
             connection.execute(
