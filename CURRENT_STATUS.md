@@ -1126,3 +1126,39 @@ Current frontier:
 - authoritative frozen Binance spot venue-rule snapshot source/cache for BTCUSDT, ETHUSDT and SOLUSDT;
 - prove rule capture is versioned, immutable, restart-safe and bound to the same execution-input lineage used by pretrade;
 - only then consider an isolated PAPER/STABLE autonomous virtual-trade activation candidate.
+
+
+## 2026-09-20 — Stage 6C authoritative Binance venue-rule source/cache accepted
+
+Accepted source/cache:
+- public Binance Spot GET /api/v3/exchangeInfo is the sole V1 venue-rule source;
+- no API key, account endpoint, credential or real-order path is used;
+- parser fails closed unless requested symbol is exactly present, TRADING, spot-enabled, USDT-quoted and MARKET-capable;
+- freezes canonical source-symbol JSON + SHA256, LOT_SIZE min/max/step, PRICE_FILTER tick size and the stricter minimum across MIN_NOTIONAL/NOTIONAL;
+- append-only PaperVenueRuleStore persists snapshots immutably and deterministically selects the latest snapshot observed no later than the frozen execution input;
+- future venue-rule observations cannot be backdated into an older event;
+- authoritative execution snapshot venue reference binds venue-rule snapshot identity + explicit simulated-cost policy version + exact execution-input identity.
+
+Simulation-cost policy:
+- paper_simulated_cost_policy.v1;
+- fee=0.001, spread=0.0005, slippage=0.0005;
+- these are explicit simulation assumptions, not claims about an account-specific Binance fee tier.
+
+Authority boundary:
+- cache/source does not activate PAPER/STABLE trading;
+- maxQty and tickSize are captured for audit but maxQty enforcement remains the next authoritative pretrade hardening step;
+- REAL_CAPITAL=0.
+
+Acceptance evidence:
+- implementation: f0e4d3e509a00a9f555ebe00f542edd554cb1699;
+- first gate: 419 pytest PASS with lint-only findings;
+- style-only hardening: a5d3be3564f37e5064e488bd7c0525af306128bc;
+- final regression: 419 tests PASS;
+- Ruff PASS;
+- mypy PASS across 93 source files;
+- JavaScript syntax PASS.
+
+Current frontier:
+- enforce captured Binance maxQty in the authoritative pretrade path;
+- add isolated observation-only stable venue-rule refresh/cache and verify live public BTCUSDT/ETHUSDT/SOLUSDT responses;
+- only after those proofs evaluate a PAPER/STABLE autonomous virtual-trading activation candidate.

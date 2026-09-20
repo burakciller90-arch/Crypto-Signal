@@ -1927,3 +1927,16 @@ Final accepted head 53460267178896e3cd3148c12de6dfd83de8e868 passed:
 - REAL_CAPITAL=0.
 
 PAPER/STABLE is still observation-only. The remaining production blocker is authoritative frozen Binance venue-rule/cost snapshot sourcing before any autonomous virtual-trade activation is considered.
+
+
+## 2026-09-20 — authoritative Binance spot venue-rule cache accepted
+
+The paper execution layer now has a real public source for venue rules instead of caller-invented quantity/minimum values. V1 reads Binance Spot /api/v3/exchangeInfo without credentials, freezes the exact symbol payload/hash, LOT_SIZE rules, tick size and minimum notional, and persists immutable rule snapshots.
+
+A deterministic as-of selector prevents a venue-rule observation made after an execution input from being retroactively used for that event. The execution snapshot venue reference also binds the rule snapshot identity and versioned simulated-cost policy before ending in the exact execution-input identity.
+
+The cost policy remains explicitly simulated: fee 0.001, spread 0.0005 and slippage 0.0005. It is not represented as an account-specific Binance fee tier.
+
+Final accepted head a5d3be3564f37e5064e488bd7c0525af306128bc passed 419 tests, Ruff, mypy across 93 source files and JavaScript. REAL_CAPITAL=0.
+
+Next: enforce captured maxQty in the authoritative planning path, then add observation-only stable refresh and validate live public rule responses for BTCUSDT/ETHUSDT/SOLUSDT.
