@@ -43,7 +43,7 @@ def _fund_with_btc_position(tmp_path):
         invalidation_context="test only",
         symbol=PaperSymbol.BTCUSDT,
         quantity=Decimal("0.1"),
-        reference_price=Decimal("100"),
+        reference_price=Decimal(100),
     )
     ledger.append_decision_intent(decision)
     fill = build_simulated_fill(
@@ -53,7 +53,7 @@ def _fund_with_btc_position(tmp_path):
         action=PaperAction.BUY,
         symbol=PaperSymbol.BTCUSDT,
         quantity=Decimal("0.1"),
-        reference_price=Decimal("100"),
+        reference_price=Decimal(100),
         simulated_fill_price=Decimal("100.1"),
         costs=ExecutionCostAssumptions(
             fee_usdt=Decimal("0.01"),
@@ -183,7 +183,7 @@ def test_cash_only_portfolio_has_factual_zero_nav_return_without_marks(tmp_path)
     assert snapshot.marked_positions_value_usdt == Decimal(0)
     assert snapshot.nav_usdt == Decimal("100.00")
     assert snapshot.pnl_usdt == Decimal("0.00")
-    assert snapshot.total_return_fraction == Decimal("0")
+    assert snapshot.total_return_fraction == Decimal(0)
     assert snapshot.decision_count == 0
     assert snapshot.simulated_fill_count == 0
     assert snapshot.replayed_record_count == 1
@@ -223,7 +223,7 @@ def test_marked_portfolio_uses_latest_closed_real_candle_asof_observation(tmp_pa
     assert position.symbol is PaperSymbol.BTCUSDT
     assert position.quantity == Decimal("0.1")
     assert position.mark is not None
-    assert position.mark.price == Decimal("120")
+    assert position.mark.price == Decimal(120)
     assert position.mark.source_candle_close_time_ms == 300
     assert position.mark.price_field == "close"
     assert position.marked_value_usdt == Decimal("12.0")
