@@ -995,3 +995,16 @@ Current frontier:
 - account explicitly for fee/spread/slippage before planner approval;
 - bridge the resulting bounded quantity through paper_risk_policy.v1, execution simulator and atomic bundle commit;
 - persist runtime activation/watermark/processed-event truth before PAPER/STABLE may create any virtual trade.
+
+
+### Position sizing hardening acceptance
+
+The accepted sizing gate was subsequently hardened without changing its policy intent:
+- Decimal risk division now uses explicit ROUND_DOWN;
+- constructed BUY sizing decisions enforce quantity * risk_per_unit <= max_position_risk_usdt;
+- BUY sizing independently refuses pyramiding even if upstream autonomy is bypassed;
+- source SignalDecision lineage is rechecked for exact Binance+Bybit providers, spot market, 4h timeframe and exact autonomy as-of;
+- hardening head: 43f7dce447673772236aff9abeb87d0f001f52c2;
+- final hardening regression: 381 tests PASS, Ruff PASS, mypy PASS across 89 source files, JavaScript PASS.
+
+This SHA supersedes 67746b584006dd0419e4b1a460be1ed2f3637572 as the accepted sizing implementation head.

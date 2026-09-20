@@ -1858,3 +1858,17 @@ Final acceptance:
 - REAL_CAPITAL=0.
 
 Next gate is the venue-rule/cost/planner bridge. PAPER/STABLE remains observation-only; no virtual trade activation has occurred.
+
+
+### 2026-09-20 — position sizing defense-in-depth hardening
+
+A post-acceptance semantic review found two defense-in-depth improvements: Decimal division should explicitly round down, and sizing should independently recheck upstream lineage/pyramiding invariants rather than relying solely on autonomy.
+
+Commit 43f7dce447673772236aff9abeb87d0f001f52c2 added explicit ROUND_DOWN, an internal max-risk product invariant, exact provider/market/timeframe/as-of checks and independent BUY pyramiding refusal.
+
+Whole-repository hardening gate:
+- 381 tests PASS;
+- Ruff PASS;
+- mypy PASS across 89 source files;
+- JavaScript PASS;
+- REAL_CAPITAL=0.
