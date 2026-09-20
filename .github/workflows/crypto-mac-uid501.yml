@@ -3,14 +3,42 @@ name: Crypto Mac UID501 Command
 on:
   issues:
     types: [opened]
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/crypto-mac-uid501.yml"
 
 permissions:
   contents: read
   issues: read
 
 jobs:
+  probe:
+    if: github.event_name == 'push'
+    name: UID501 Bridge Probe
+    runs-on: [self-hosted, crypto-signal, uid501]
+    timeout-minutes: 10
+    steps:
+      - name: Verify UID501 runner
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "=== UID501 BRIDGE PROBE ==="
+          echo "USER=$(whoami)"
+          echo "UID=$(id -u)"
+          echo "GID=$(id -g)"
+          echo "HOME=$HOME"
+          echo "PWD=$PWD"
+          id
+          uname -a
+          echo "RUNNER_NAME=${RUNNER_NAME:-unknown}"
+          echo "RUNNER_OS=${RUNNER_OS:-unknown}"
+          echo "RUNNER_ARCH=${RUNNER_ARCH:-unknown}"
+          test "$(id -u)" = "501"
+          echo "UID501_BRIDGE_PASS=YES"
+
   command:
-    if: github.actor == 'burakciller90-arch' && startsWith(github.event.issue.title, '[MAC501] ')
+    if: github.event_name == 'issues' && github.actor == 'burakciller90-arch' && startsWith(github.event.issue.title, '[MAC501] ')
     name: UID501 Command Bridge
     runs-on: [self-hosted, crypto-signal, uid501]
     timeout-minutes: 20
