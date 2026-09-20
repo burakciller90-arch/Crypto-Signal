@@ -19,9 +19,12 @@ from crypto_signal.data.models import Exchange, MarketType
 from crypto_signal.ledger.serialization import canonical_json
 from crypto_signal.paper import event_scanner as paper_event_scanner
 from crypto_signal.paper.activation import (
+    PAPER_ACTIVATION_SCHEMA_VERSION,
+    PaperActivationState,
     PaperProcessedEventOutcome,
     activate_paper_policy,
     build_processed_event_receipt,
+    compute_activation_identity,
     record_terminal_no_action,
 )
 from crypto_signal.paper.event_scanner import (
@@ -409,21 +412,31 @@ def test_scanner_requires_matching_persistent_activation(tmp_path) -> None:
     ledger, _, activation = _paper_activation(tmp_path)
     signal_db = tmp_path / "signals.sqlite3"
     _init_signal_db(signal_db)
-    mismatched = activation.__class__(
-        activation_identity="f" * 64,
-        schema_version=activation.schema_version,
+    mismatched_activated_at = activation.activated_at_ms + 1
+    mismatched_identity = compute_activation_identity(
+        schema_version=PAPER_ACTIVATION_SCHEMA_VERSION,
         fund_identity=activation.fund_identity,
-        activated_at_ms=activation.activated_at_ms,
-        activation_cutoff_ms=activation.activation_cutoff_ms,
-        baseline_signal_freeze_count=activation.baseline_signal_freeze_count,
-        baseline_latest_signal_freeze_identity=(
-            activation.baseline_latest_signal_freeze_identity
-        ),
-        baseline_latest_frozen_at_ms=activation.baseline_latest_frozen_at_ms,
+        activated_at_ms=mismatched_activated_at,
+        activation_cutoff_ms=mismatched_activated_at,
+        baseline_signal_freeze_count=0,
+        baseline_latest_signal_freeze_identity=None,
+        baseline_latest_frozen_at_ms=None,
+    )
+    mismatched = PaperActivationState(
+        activation_identity=mismatched_identity,
+        schema_version=PAPER_ACTIVATION_SCHEMA_VERSION,
+        fund_identity=activation.fund_identity,
+        activated_at_ms=mismatched_activated_at,
+        activation_cutoff_ms=mismatched_activated_at,
+        baseline_signal_freeze_count=0,
+        baseline_latest_signal_freeze_identity=None,
+        baseline_latest_frozen_at_ms=None,
         real_capital=REAL_CAPITAL,
     )
-    with pytest.raises(ValueError, match="activation identity mismatch"):
-        # Dataclass identity validation itself refuses fabricated activation truth.
+    with pytest.raises(
+        PaperSignalEventScanError,
+        match="persistent activation identity mismatch",
+    ):
         scan_post_activation_signal_events(
             signal_ledger_path=signal_db,
             paper_ledger_path=ledger.path,
