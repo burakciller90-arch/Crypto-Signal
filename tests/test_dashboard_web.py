@@ -213,6 +213,11 @@ def test_health_and_static_shell_without_ledger(tmp_path: Path) -> None:
     assert "lastRefreshChip" in index.text
     assert "BANA ÖĞRET" in index.text
     assert "educationCenter" in index.text
+    assert "SANAL PORTFÖY · KARAR MERKEZİ" in index.text
+    assert "paperMissionControl" in index.text
+    assert "function renderPaperMissionControl(data)" in script.text
+    assert "/api/paper/mission-control" in script.text
+    assert "Sistem kanıt gelmediğinde işlem uydurmaz." in script.text
     assert "function renderEducation(data)" in script.text
     assert "function contextualLessonIds(detail)" in script.text
     assert "function renderContextTeaching(detail)" in script.text
@@ -223,6 +228,26 @@ def test_health_and_static_shell_without_ledger(tmp_path: Path) -> None:
     assert "Grafikte çizilen dondurulmuş kanıt" in script.text
     assert "daha yeni fiyat verisi geçmiş kararı yeniden yazmaz" in script.text
     assert not missing.exists()
+
+
+def test_paper_mission_control_is_unavailable_without_explicit_test_runtime(
+    tmp_path: Path,
+) -> None:
+    signal_path = tmp_path / "signals.sqlite3"
+    seed_ledger(signal_path)
+    client = TestClient(create_app(signal_path))
+
+    response = client.get("/api/paper/mission-control")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "status": "unavailable",
+        "reason": "paper_runtime_not_configured",
+        "trade_policy": "NOT_ACTIVATED",
+        "real_capital": 0,
+        "read_only": True,
+    }
+    assert client.post("/api/paper/mission-control").status_code == 405
 
 
 def test_education_api_is_deterministic_and_read_only(tmp_path: Path) -> None:
@@ -332,6 +357,7 @@ def test_api_has_no_post_command_surface(tmp_path: Path) -> None:
 
     assert client.post("/api/command-center").status_code == 405
     assert client.post("/api/signals").status_code == 405
+    assert client.post("/api/paper/mission-control").status_code == 405
 
 
 def test_invalid_signal_identity_is_rejected_as_bad_request(tmp_path: Path) -> None:
