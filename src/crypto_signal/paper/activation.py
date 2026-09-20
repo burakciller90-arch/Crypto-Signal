@@ -24,6 +24,7 @@ from crypto_signal.paper.execution_input import FrozenPaperExecutionInput
 from crypto_signal.paper.ledger import (
     PaperFundLedger,
     PaperLedgerConflictError,
+    PaperLedgerWriteAuthorityError,
     PaperLedgerWriteDisposition,
     PaperProcessedEventWrite,
 )
@@ -379,6 +380,7 @@ def commit_planned_pretrade_event(
     pretrade: PaperPretradeDecision,
     execution_input: FrozenPaperExecutionInput,
     execution_snapshot: FrozenExecutionSnapshot,
+    required_authority_event_identity: str | None = None,
 ) -> PaperProcessedTradeCommit:
     """Atomically commit trade bundle and COMMITTED_TRADE receipt in one DB tx."""
     stored = load_paper_activation(ledger)
@@ -441,7 +443,10 @@ def commit_planned_pretrade_event(
             state=state,
             bundle=bundle,
             processed_event=event_write,
+            required_authority_event_identity=required_authority_event_identity,
         )
+    except PaperLedgerWriteAuthorityError:
+        raise
     except (PaperBundleCommitError, PaperLedgerConflictError) as exc:
         raise PaperActivationError(str(exc)) from exc
 
@@ -465,6 +470,7 @@ def record_terminal_no_action(
     state: PaperFundState,
     activation: PaperActivationState,
     receipt: PaperProcessedEventReceipt,
+    required_authority_event_identity: str | None = None,
 ) -> PaperLedgerWriteDisposition:
     if receipt.outcome is not PaperProcessedEventOutcome.TERMINAL_NO_ACTION:
         raise PaperActivationError("no-action recorder requires TERMINAL_NO_ACTION")
@@ -482,7 +488,10 @@ def record_terminal_no_action(
             outcome=receipt.outcome.value,
             event_payload_json=canonical_json(receipt),
             processed_at_ms=receipt.processed_at_ms,
+            required_authority_event_identity=required_authority_event_identity,
         )
+    except PaperLedgerWriteAuthorityError:
+        raise
     except PaperLedgerConflictError as exc:
         raise PaperActivationError(str(exc)) from exc
     return disposition

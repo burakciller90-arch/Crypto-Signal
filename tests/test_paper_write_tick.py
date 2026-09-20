@@ -375,6 +375,48 @@ def test_authority_revoked_during_evaluation_blocks_mutation(
     assert reconstruct_paper_fund_state(ledger).replayed_record_count == 1
 
 
+def test_authority_revoked_after_precheck_blocks_terminal_atomic_mutation(
+    tmp_path,
+    monkeypatch,
+) -> None:
+    ledger, activation = _paper(tmp_path, authority_enabled=True)
+    signal_db = tmp_path / "signals.sqlite3"
+    _init_signal_db(signal_db)
+    _insert_provider_pair(signal_db, state=SignalState.WATCH)
+
+    original_record = paper_write_tick.record_terminal_no_action
+
+    def revoke_then_record(**kwargs):
+        append_paper_write_authority_event(
+            ledger=ledger,
+            activation=activation,
+            enabled=False,
+            created_at_ms=1_500,
+            reason="operator revoke after writer precheck",
+        )
+        return original_record(**kwargs)
+
+    monkeypatch.setattr(
+        paper_write_tick,
+        "record_terminal_no_action",
+        revoke_then_record,
+    )
+
+    with pytest.raises(PaperWriteAuthorityError, match="write authority"):
+        run_paper_write_tick(
+            paper_ledger_path=ledger.path,
+            signal_ledger_path=signal_db,
+            candle_cache_path=tmp_path / "missing-candles.sqlite3",
+            evaluated_at_ms=EVALUATED_AT,
+        )
+
+    state = reconstruct_paper_fund_state(ledger)
+    assert _processed_count(ledger.path) == 0
+    assert state.replayed_record_count == 1
+    assert state.cash_usdt == Decimal(100)
+    assert state.positions == ()
+
+
 def test_frozen_watch_pair_records_terminal_no_action_once(tmp_path) -> None:
     ledger, _ = _paper(tmp_path, authority_enabled=True)
     signal_db = tmp_path / "signals.sqlite3"
@@ -425,6 +467,51 @@ def test_waiting_execution_input_remains_retryable_and_unprocessed(tmp_path) -> 
     assert result.event_results[0].disposition is PaperWriteEventDisposition.RETRYABLE
     assert _processed_count(ledger.path) == 0
     assert reconstruct_paper_fund_state(ledger).replayed_record_count == 1
+
+
+def test_authority_revoked_after_precheck_blocks_trade_atomic_mutation(
+    tmp_path,
+    monkeypatch,
+) -> None:
+    ledger, activation = _paper(tmp_path, authority_enabled=True)
+    signal_db = tmp_path / "signals.sqlite3"
+    candle_db = tmp_path / "candles.sqlite3"
+    _init_signal_db(signal_db)
+    _insert_provider_pair(signal_db, state=SignalState.ACTIVE)
+    _init_candle_cache(candle_db, include_execution_candle=True)
+    _append_rules(ledger)
+
+    original_commit = paper_write_tick.commit_planned_pretrade_event
+
+    def revoke_then_commit(**kwargs):
+        append_paper_write_authority_event(
+            ledger=ledger,
+            activation=activation,
+            enabled=False,
+            created_at_ms=1_500,
+            reason="operator revoke after writer precheck",
+        )
+        return original_commit(**kwargs)
+
+    monkeypatch.setattr(
+        paper_write_tick,
+        "commit_planned_pretrade_event",
+        revoke_then_commit,
+    )
+
+    with pytest.raises(PaperWriteAuthorityError, match="write authority"):
+        run_paper_write_tick(
+            paper_ledger_path=ledger.path,
+            signal_ledger_path=signal_db,
+            candle_cache_path=candle_db,
+            evaluated_at_ms=EVALUATED_AT,
+        )
+
+    state = reconstruct_paper_fund_state(ledger)
+    assert _processed_count(ledger.path) == 0
+    assert state.replayed_record_count == 1
+    assert state.cash_usdt == Decimal(100)
+    assert state.positions == ()
 
 
 def test_pretrade_ready_commits_only_simulated_paper_trade_atomically(tmp_path) -> None:

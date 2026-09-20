@@ -31,6 +31,7 @@ from crypto_signal.paper.event_scanner import (
 )
 from crypto_signal.paper.ledger import (
     PaperFundLedger,
+    PaperLedgerWriteAuthorityError,
     PaperLedgerWriteDisposition,
 )
 from crypto_signal.paper.models import REAL_CAPITAL
@@ -211,13 +212,19 @@ def run_paper_write_tick(
             ledger=ledger,
             expected_authority_event_identity=authority.authority_event_identity,
         )
-        disposition = _write_evaluated_event(
-            ledger=ledger,
-            activation=activation,
-            event=event,
-            evaluated=evaluated,
-            processed_at_ms=evaluated_at_ms,
-        )
+        try:
+            disposition = _write_evaluated_event(
+                ledger=ledger,
+                activation=activation,
+                event=event,
+                evaluated=evaluated,
+                processed_at_ms=evaluated_at_ms,
+                required_authority_event_identity=(
+                    authority.authority_event_identity
+                ),
+            )
+        except PaperLedgerWriteAuthorityError as exc:
+            raise PaperWriteAuthorityError(str(exc)) from exc
         results.append(disposition)
 
     return PaperWriteTickResult(
@@ -255,6 +262,7 @@ def _write_evaluated_event(
     event: PaperSignalEventCandidate,
     evaluated: PaperActivationDryRunResult,
     processed_at_ms: int,
+    required_authority_event_identity: str,
 ) -> PaperWriteEventResult:
     if evaluated.event_identity != event.event_identity:
         raise PaperWriteTickError("dry-run/event identity mismatch")
@@ -270,6 +278,9 @@ def _write_evaluated_event(
             pretrade=evaluated.venue_bound_pretrade.pretrade,
             execution_input=evaluated.execution_input,
             execution_snapshot=evaluated.venue_bound_pretrade.execution_snapshot,
+            required_authority_event_identity=(
+                required_authority_event_identity
+            ),
         )
         return PaperWriteEventResult(
             event_identity=event.event_identity,
@@ -306,6 +317,7 @@ def _write_evaluated_event(
         state=state,
         activation=activation,
         receipt=receipt,
+        required_authority_event_identity=required_authority_event_identity,
     )
     if write not in {
         PaperLedgerWriteDisposition.INSERTED,
