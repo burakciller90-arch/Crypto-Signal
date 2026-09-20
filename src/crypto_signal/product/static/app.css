@@ -394,3 +394,49 @@ footer {
 @media (max-width: 620px) {
   .decision-brief-grid { grid-template-columns: 1fr; }
 }
+
+.education-panel { overflow: hidden; }
+.education-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 12px;
+}
+.lesson-card {
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: rgba(255,255,255,.025);
+  overflow: hidden;
+}
+.lesson-card summary {
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 16px;
+}
+.lesson-card summary::-webkit-details-marker { display: none; }
+.lesson-card[open] summary { border-bottom: 1px solid var(--line); }
+.lesson-title { font-weight: 750; letter-spacing: -.01em; }
+.lesson-open-hint {
+  font-size: 11px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.lesson-card[open] .lesson-open-hint { opacity: .45; }
+.lesson-body {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+}
+.lesson-body p {
+  margin: 5px 0 0;
+  color: var(--text-secondary, #c8d0dc);
+  line-height: 1.65;
+}
+.lesson-advanced {
+  padding-top: 12px;
+  border-top: 1px dashed var(--line);
+}
+
