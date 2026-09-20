@@ -1491,3 +1491,28 @@ Current frontier:
 Current frontier:
 - expose a deterministic, structured decision explanation trace from the read-only dry-run path so future product surfaces can show what evidence/rule actually caused HOLD/WAIT/REJECT/READY without fabricated narrative;
 - keep this strictly read-only and do not activate virtual-trade writes until real post-cutoff production evidence traverses the accepted path.
+
+
+## PAPER/STABLE factual decision trace accepted
+- implementation head: 5df7fd6ab2f1c271d85f63132c0572807a5ff3a3
+- deterministic paper_decision_trace.v1 projects each real dry-run candidate through autonomy, execution-input, venue-rule, sizing and pretrade stages
+- each stage is PASSED / BLOCKED / NOT_REACHED / READY with the exact engine reason code and immutable evidence identity where available
+- source_detail is inherited only from accepted engine reason/rejection text; no free-form or fabricated trader narrative is generated
+- HOLD stops downstream stages as NOT_REACHED rather than inventing execution reasoning
+- trace identity is canonical and deterministic
+- dry-run logs emit PAPER_DRY_RUN_TRACE only when a real scanner candidate exists
+- full gate: 448 tests PASS
+- Ruff PASS
+- mypy PASS across 97 source files
+- JavaScript PASS
+- PAPER/STABLE deploy PASS at the exact head
+- deploy production probe observed signal_freezes=402, candidates=0, ready_candidates=0, attention_required=NO
+- paper fund remains 100.00 USDT, positions=0, replay records=1
+- decision/fill/mutation/NAV tables remain zero; activation singleton=1; processed events=0
+- trade_policy=NOT_ACTIVATED
+- REAL_CAPITAL=0
+
+Current frontier:
+- build a strictly read-only paper portfolio/performance projection from immutable paper state plus real cached market marks;
+- expose cash, positions, marked NAV and factual PnL/return availability without fabricating 0% performance when no trades/marks exist;
+- keep Dashboard wiring for the final product pass.
