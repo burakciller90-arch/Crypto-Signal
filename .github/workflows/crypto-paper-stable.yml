@@ -24,7 +24,7 @@ jobs:
           set -euo pipefail
           cmd="$(printf '%s\n' "$ISSUE_BODY" | awk -F: 'tolower($1)=="command" {gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2); print tolower($2); exit}')"
           case "$cmd" in
-            state|deploy|rulesrefresh|activationinit|dryrun|dryrunclockdeploy|portfolio|performance)
+            state|deploy|rulesrefresh|activationinit|dryrun|dryrunclockdeploy|portfolio|performance|missioncontrol)
               ;;
             *)
               echo "Unsupported paper command: $cmd"
@@ -367,6 +367,40 @@ jobs:
           test "$(git -C "$PAPER" rev-parse HEAD)" = "$BEFORE_HEAD"
           test -z "$(git -C "$PAPER" status --porcelain)"
           echo "PAPER_PERFORMANCE_PASS=YES"
+
+      - name: PAPER MISSION CONTROL
+        if: steps.parse.outputs.command == 'missioncontrol'
+        shell: bash
+        run: |
+          set -euo pipefail
+          REPO="/Users/crypto-signal-agent/Crypto-Signal"
+          PAPER="/Users/crypto-signal-agent/Crypto-Signal-Paper"
+          PAPER_DB="$REPO/runtime/paper/paper_fund.sqlite3"
+          SIGNAL_DB="$REPO/runtime/ledger/live_signal_ledger.sqlite3"
+          CANDLE_DB="$REPO/runtime/data/live_base_15m_cache.sqlite3"
+
+          test "$(id -u)" = "504"
+          test -f "$PAPER_DB"
+          test -f "$SIGNAL_DB"
+          test -f "$CANDLE_DB"
+          test -x "$PAPER/.venv/bin/python"
+          test -f "$PAPER/ops/show_paper_mission_control.py"
+          test -z "$(git -C "$PAPER" status --porcelain)"
+
+          BEFORE_HEAD="$(git -C "$PAPER" rev-parse HEAD)"
+          PYTHONPATH="$PAPER/src" "$PAPER/.venv/bin/python" \
+            "$PAPER/ops/show_paper_mission_control.py" \
+            --paper-ledger "$PAPER_DB" \
+            --signal-ledger "$SIGNAL_DB" \
+            --candle-cache "$CANDLE_DB" \
+            --max-candidates 100 | tee /tmp/crypto-paper-mission-control.txt
+
+          grep -q 'PAPER_MISSION_CONTROL_OK' /tmp/crypto-paper-mission-control.txt
+          grep -q 'trade_policy=NOT_ACTIVATED' /tmp/crypto-paper-mission-control.txt
+          grep -q 'REAL_CAPITAL=0' /tmp/crypto-paper-mission-control.txt
+          test "$(git -C "$PAPER" rev-parse HEAD)" = "$BEFORE_HEAD"
+          test -z "$(git -C "$PAPER" status --porcelain)"
+          echo "PAPER_MISSION_CONTROL_PASS=YES"
 
       - name: PAPER DRY-RUN CLOCK DEPLOY
         if: steps.parse.outputs.command == 'dryrunclockdeploy'
