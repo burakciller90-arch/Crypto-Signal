@@ -537,6 +537,10 @@ def evaluate_paper_activation_dry_run(
         activation_cutoff_ms=activation.activation_cutoff_ms,
         mark_prices=mark_prices,
         last_action_at_ms=last_actions,
+        provider_source_cutoff_open_time_ms={
+            Exchange.BINANCE: event.source_cutoff_open_time_ms,
+            Exchange.BYBIT: event.source_cutoff_open_time_ms,
+        },
     )
     if autonomy.candidate_action is PaperAction.HOLD_CASH:
         return _result(
