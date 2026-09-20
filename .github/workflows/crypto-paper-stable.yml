@@ -54,7 +54,7 @@ jobs:
           tail -40 /Users/crypto-signal-agent/Crypto-Signal/runtime/paper/paper_clock.out.log 2>/dev/null
           echo "=== PAPER DB ==="
           if [ -f "$DB" ]; then
-            /usr/bin/python3 -c 'import sqlite3,sys; p=sys.argv[1]; c=sqlite3.connect("file:"+p+"?mode=ro",uri=True); tables=("paper_fund_creations","paper_decision_intents","paper_simulated_fills","paper_position_cash_mutations","paper_nav_snapshots","paper_replay_index"); [print(t+"="+str(c.execute("SELECT COUNT(*) FROM "+t).fetchone()[0])) for t in tables]; c.close()' "$DB"
+            "$PAPER/.venv/bin/python" -c 'import sqlite3,sys; p=sys.argv[1]; c=sqlite3.connect("file:"+p+"?mode=ro",uri=True); tables=("paper_fund_creations","paper_decision_intents","paper_simulated_fills","paper_position_cash_mutations","paper_nav_snapshots","paper_replay_index"); [print(t+"="+str(c.execute("SELECT COUNT(*) FROM "+t).fetchone()[0])) for t in tables]; c.close()' "$DB"
           else
             echo "MISSING"
           fi
