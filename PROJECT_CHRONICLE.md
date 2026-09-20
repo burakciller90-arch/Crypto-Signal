@@ -1435,3 +1435,28 @@ Acceptance evidence:
 
 Next: exact PRODUCT/STABLE deployment, live rendering verification and bounded visual polish,
 then visual chart intelligence.
+
+## 2026-09-20 — Stage 3 Slice 1 accepted: Turkish-first premium Mission Control
+
+The Birthday Edition dashboard was reorganized around user usefulness rather than raw engineering telemetry.
+
+Accepted changes:
+- Turkish-first title, labels, states and explanatory copy
+- top-level counts for monitored contexts, attention-required states, strong methodology agreement and latest evidence
+- grouped Market Radar cards by asset/timeframe while preserving provider-specific evidence rows
+- BTC/ETH/SOL x 15m/1h/4h focus remains explicit
+- uncertainty and agreement-index-not-probability semantics remain visible
+- no execution/order surface added
+
+Quality gate:
+- focused dashboard tests: 21 PASS
+- full repository: 273 PASS
+- Ruff, mypy, uv lock, JavaScript syntax and diff check PASS
+
+Development smoke against the real ledger returned 18 contexts and the expected Turkish markers.
+PRODUCT/STABLE advanced to 4f6394160032ba22c07056651d4052d64618be34.
+Persistent dashboard health returned HTTP 200 with product_version birthday-edition-mission-control-tr/1.
+Final smoke observed 66 immutable freezes.
+
+Canonical frontier advances to Stage 4: visual chart intelligence over frozen evidence only.
+REAL_CAPITAL remains 0.

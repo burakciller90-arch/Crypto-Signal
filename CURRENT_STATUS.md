@@ -421,29 +421,34 @@ No Durdurulmaz or Quantum Capital project state was mutated; UID502 is used only
 ## Canonical next frontier
 Focused V2+ Birthday Edition governs post-V1 execution.
 
-Accepted and live market coverage:
-- BTCUSDT / ETHUSDT / SOLUSDT
-- Bybit + Binance Spot
-- 15m / 1h / 4h
-- 18 provider/symbol/timeframe contexts
-- LIVE/STABLE code head 7020413188d633b2b5a9661356c2fe319f256a34
+Accepted and live:
+- multi-timeframe immutable freeze path
+- focused BTC / ETH / SOL coverage on Bybit + Binance at 15m / 1h / 4h
+- Turkish-first premium Mission Control
+
+PRODUCT/STABLE:
+4f6394160032ba22c07056651d4052d64618be34
+
+LIVE/STABLE:
+7020413188d633b2b5a9661356c2fe319f256a34
+
+Current product truth:
+- 18 live Market Radar contexts
+- final Stage 3 smoke observed 66 immutable freeze records
+- Dashboard read-only health PASS
 - REAL_CAPITAL=0
 
-Stage 3 Slice 1 Turkish premium Mission Control: ACCEPTED in main.
-Product version: birthday-edition-mission-control-tr/1.
-The surface is Turkish-first, prioritizes what matters now, groups provider evidence by symbol/timeframe,
-and preserves provider separation, uncertainty and the agreement-index-not-probability boundary.
-
-Immediate next action:
-1. deploy the exact accepted Stage 3 product commit to PRODUCT/STABLE
-2. verify health/version plus real 18-context rendering
-3. visually review the rendered interface for information density and responsive layout
-4. make only bounded Stage 3 polish changes justified by that review
-5. then advance to Stage 4 visual chart intelligence
+Immediate Stage 4: visual chart intelligence.
+1. expose frozen canonical candle truth through the read-only product model
+2. render a compact candlestick evidence chart in Signal Detail
+3. overlay only evidence with explicit frozen price/time coordinates
+4. show reference/geometry levels only when the frozen bundle actually contains them
+5. preserve methodology ambiguity and provider separation
+6. no synthetic chart data, no inferred levels, no client-side market truth
+7. full API / JS / repository gates before PRODUCT/STABLE advancement
 
 After Stage 4:
-decision-quality explanations -> useful alerts -> honest performance/learning ->
-limited V2+ intelligence -> gift-ready integrated acceptance.
+decision-quality Turkish explanations -> useful alerts -> honest performance/learning -> limited V2+ intelligence ->
+gift-ready integrated acceptance.
 
-Birthday Edition scope remains intentionally narrow.
 REAL_CAPITAL remains 0.
