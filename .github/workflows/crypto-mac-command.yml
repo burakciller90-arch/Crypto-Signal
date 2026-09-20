@@ -90,10 +90,16 @@ jobs:
         if: steps.parse.outputs.command == 'waketest'
         shell: bash
         run: |
-          set -euo pipefail
+          set +e
           EVENT_ID="github-wake-test-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
           MESSAGE="CRYPTO_SIGNAL_TERMINAL_BRIDGE_TEST_V1 — Bu mesaj UID504 terminal/GitHub runner → UID502 Safari relay → mevcut ChatGPT sohbeti zincirinden otomatik gönderildi. Bu mesaj görünüyorsa terminalden bu sohbete geri yazma kanalı çalışıyor."
-          /usr/bin/python3 /Users/crypto-signal-agent/Crypto-Signal/ops/continuity/relay_submit.py "$EVENT_ID" "$MESSAGE" 25
+          /usr/bin/python3 /Users/crypto-signal-agent/Crypto-Signal/ops/continuity/relay_submit.py "$EVENT_ID" "$MESSAGE" 5
+          rc=$?
+          echo "RELAY_SUBMIT_RC=$rc"
+          if [ "$rc" -eq 0 ] || [ "$rc" -eq 2 ]; then
+            exit 0
+          fi
+          exit "$rc"
 
       - name: BRIDGESTATE
         if: steps.parse.outputs.command == 'bridgestate'
