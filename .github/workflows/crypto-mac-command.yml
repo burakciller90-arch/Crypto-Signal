@@ -24,7 +24,7 @@ jobs:
           set -euo pipefail
           cmd="$(printf '%s\n' "$ISSUE_BODY" | awk -F: 'tolower($1)=="command" {gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2); print tolower($2); exit}')"
           case "$cmd" in
-            status|services|logs|disk|bridgecheck)
+            status|services|logs|disk|bridgecheck|bridgestate)
               ;;
             *)
               echo "Unsupported command: $cmd"
@@ -78,6 +78,38 @@ jobs:
           set -euo pipefail
           df -h /
           du -sh /Users/crypto-signal-agent/Crypto-Signal                  /Users/crypto-signal-agent/Crypto-Signal-Live                  /Users/crypto-signal-agent/Crypto-Signal-Product                  /Users/crypto-signal-agent/Crypto-Signal-Alerts                  /Users/crypto-signal-agent/actions-runner-crypto 2>/dev/null || true
+
+      - name: BRIDGESTATE
+        if: steps.parse.outputs.command == 'bridgestate'
+        shell: bash
+        run: |
+          set +e
+          SHARED="/Users/Shared/.crypto-signal-wake-relay"
+          LOCAL="/Users/crypto-signal-agent/Crypto-Signal/runtime/continuity"
+          echo "=== SHARED CURRENT CHAT ==="
+          [ -f "$SHARED/current_chat_url" ] && cat "$SHARED/current_chat_url" || echo "MISSING"
+          echo
+          echo "=== SHARED RELAY STATUS ==="
+          [ -f "$SHARED/relay_status" ] && cat "$SHARED/relay_status" || echo "MISSING"
+          echo
+          echo "=== SHARED HEARTBEAT MTIME ==="
+          stat -f '%Sm %N' -t '%Y-%m-%d %H:%M:%S %z' "$SHARED/relay_heartbeat" 2>&1
+          echo
+          echo "=== LOCAL CURRENT CHAT ==="
+          [ -f "$LOCAL/wake/current_chat_url" ] && cat "$LOCAL/wake/current_chat_url" || echo "MISSING"
+          echo
+          echo "=== USER PAUSE MARKERS ==="
+          find "$LOCAL" -maxdepth 3 -type f \( -name '.user_pause' -o -path '*/wake/paused/*' \) -print 2>/dev/null | tail -20
+          echo
+          echo "=== BRIDGE LOG TAIL ==="
+          tail -60 "$LOCAL/bridge.log" 2>/dev/null
+          echo
+          echo "=== RELAY LOG TAIL ==="
+          tail -60 "$SHARED/relay.log" 2>/dev/null
+          echo
+          echo "=== TRANSPORT LOG TAIL ==="
+          tail -60 "$SHARED/transport.log" 2>/dev/null
+          exit 0
 
       - name: BRIDGECHECK
         if: steps.parse.outputs.command == 'bridgecheck'
