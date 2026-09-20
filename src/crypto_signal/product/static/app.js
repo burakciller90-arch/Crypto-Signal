@@ -85,6 +85,19 @@ function fmtTime(ms) {
   }).format(new Date(Number(ms)));
 }
 
+function fmtAgeMs(value) {
+  if (value === null || value === undefined) return "—";
+  const ms = Math.max(0, Number(value));
+  if (!Number.isFinite(ms)) return "—";
+  const seconds = Math.floor(ms / 1000);
+  if (seconds < 60) return `${seconds} sn`;
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes} dk`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 48) return `${hours} sa`;
+  return `${Math.floor(hours / 24)} gün`;
+}
+
 function human(value) {
   const key = String(value ?? "");
   if (!key) return "—";
@@ -921,6 +934,132 @@ function renderArchive(data) {
   `).join("");
 }
 
+function renderPaperTradeArchive(data) {
+  const root = $("#paperTradeArchive");
+  const tag = $("#paperTradeArchiveTag");
+  if (!root || !tag) return;
+
+  if (data?.status !== "ready" || !data.snapshot) {
+    tag.textContent = "KANIT YOK";
+    root.classList.remove("loading-block");
+    root.innerHTML = `
+      <div class="paper-empty compact">
+        <strong>Sanal işlem arşivi şu anda kullanılamıyor.</strong>
+        <span>Eksik paper kanıtından işlem geçmişi türetilmez.</span>
+      </div>`;
+    return;
+  }
+
+  const snapshot = data.snapshot;
+  const portfolio = snapshot.portfolio ?? {};
+  const exposure = snapshot.portfolio_exposure ?? {};
+  const performance = snapshot.performance ?? {};
+  const closedTrades = performance.closed_trades ?? [];
+  const openPositions = exposure.positions ?? [];
+  const fillCount = Number(portfolio.simulated_fill_count ?? 0);
+  const closedCount = Number(performance.closed_trade_count ?? closedTrades.length);
+  const openCount = Number(performance.open_trade_count ?? openPositions.length);
+
+  tag.textContent = `${fillCount} FILL · ${closedCount} KAPANMIŞ`;
+  root.classList.remove("loading-block");
+
+  if (fillCount === 0 && closedCount === 0 && openCount === 0) {
+    root.innerHTML = `
+      <div class="paper-empty compact">
+        <strong>Henüz sanal işlem kaydı yok.</strong>
+        <span>Bu %0 başarı oranı değildir. Paper write politikası ${esc(snapshot.trade_policy ?? "—")} ve ledger’da fill kanıtı bulunmuyor.</span>
+      </div>`;
+    return;
+  }
+
+  root.innerHTML = `
+    ${openPositions.length ? `
+      <div class="paper-archive-group">
+        <div class="value-label">Açık sanal pozisyonlar · henüz skorlanmaz</div>
+        ${openPositions.map((item) => `
+          <div class="paper-archive-row">
+            <div><strong>${esc(item.symbol)}</strong><span>${esc(item.quantity)} adet</span></div>
+            <div><strong>${esc(fmtMoney(item.marked_value_usdt))}</strong><span>${esc(fmtFractionPercent(item.nav_fraction))} NAV</span></div>
+            <div><span>Mark</span><strong>${esc(item.mark_price ?? "—")} USDT</strong></div>
+          </div>`).join("")}
+      </div>` : ""}
+    <div class="paper-archive-group">
+      <div class="value-label">Kapanmış sanal round-trip kayıtları</div>
+      ${closedTrades.length ? closedTrades.map((trade) => `
+        <details class="paper-trade-row paper-archive-trade">
+          <summary>
+            <span><strong>${esc(trade.symbol)}</strong> · ${esc(human(trade.outcome))}</span>
+            <span>${esc(fmtMoney(trade.net_pnl_usdt))} · ${esc(fmtFractionPercent(trade.return_fraction))}</span>
+          </summary>
+          <div class="paper-trade-detail">
+            <span>Giriş: ${esc(trade.entry_fill_price)} USDT · ${esc(fmtTime(trade.entered_at_ms))}</span>
+            <span>Çıkış: ${esc(trade.exit_fill_price)} USDT · ${esc(fmtTime(trade.exited_at_ms))}</span>
+            <span>Miktar: ${esc(trade.quantity)} · explicit maliyet: ${esc(fmtMoney(trade.explicit_execution_cost_usdt))}</span>
+            <span class="mono">Trade identity: ${esc(trade.trade_identity)}</span>
+          </div>
+        </details>`).join("") : `
+        <div class="paper-empty compact">
+          <strong>Kapanmış sanal işlem yok.</strong>
+          <span>Açık pozisyon varsa performans skoru oluşmadan burada ayrı tutulur.</span>
+        </div>`}
+    </div>`;
+}
+
+function renderSystemHealth(health, command, paperMission) {
+  const root = $("#systemHealth");
+  const tag = $("#systemHealthTag");
+  if (!root || !tag) return;
+
+  const snapshot = paperMission?.snapshot ?? null;
+  const stream = snapshot?.signal_stream ?? {};
+  const productOk = health?.status === "ok"
+    && health?.read_only === true
+    && Number(health?.real_capital) === 0;
+  const ledgerOk = Boolean(health?.ledger_present) && command?.status === "ready";
+  const paperOk = paperMission?.status === "ready"
+    && paperMission?.read_only === true
+    && Number(paperMission?.real_capital) === 0;
+  const authorityClosed = snapshot?.trade_policy === "NOT_ACTIVATED";
+  const overallOk = productOk && ledgerOk && paperOk && authorityClosed;
+
+  tag.textContent = overallOk ? "READ-ONLY · SAĞLIKLI" : "DİKKAT GEREKİYOR";
+  root.classList.remove("loading-block");
+  root.innerHTML = `
+    <article class="system-health-card ${productOk ? "health-ok" : "health-warn"}">
+      <span>Ürün API</span>
+      <strong>${productOk ? "Çalışıyor" : "Kontrol gerekli"}</strong>
+      <small>${esc(health?.product_version ?? "sürüm yok")} · read-only=${esc(health?.read_only)}</small>
+    </article>
+    <article class="system-health-card ${ledgerOk ? "health-ok" : "health-warn"}">
+      <span>Signal ledger</span>
+      <strong>${ledgerOk ? "Bağlı" : "Eksik / okunamıyor"}</strong>
+      <small>${esc(command?.freeze_count ?? 0)} immutable kayıt · son kayıt ${esc(fmtTime(command?.latest_frozen_at_ms))}</small>
+    </article>
+    <article class="system-health-card ${paperOk ? "health-ok" : "health-warn"}">
+      <span>Paper kanıtı</span>
+      <strong>${paperOk ? "Okunabilir" : "Kullanılamıyor"}</strong>
+      <small>${paperOk ? `snapshot ${esc(String(snapshot?.snapshot_identity ?? "").slice(0, 12))}…` : esc(paperMission?.reason ?? "neden yok")}</small>
+    </article>
+    <article class="system-health-card ${authorityClosed ? "health-ok" : "health-warn"}">
+      <span>Write authority</span>
+      <strong>${authorityClosed ? "Kapalı" : esc(snapshot?.trade_policy ?? "bilinmiyor")}</strong>
+      <small>REAL_CAPITAL=${esc(paperMission?.real_capital ?? health?.real_capital ?? "—")}</small>
+    </article>
+    <article class="system-health-card ${health?.alert_outbox_present ? "health-ok" : "health-neutral"}">
+      <span>Alert outbox</span>
+      <strong>${health?.alert_outbox_present ? "Bağlı" : "Bağlı değil"}</strong>
+      <small>Uyarı yüzeyi yalnızca mevcut outbox kanıtını okur.</small>
+    </article>
+    <article class="system-health-card health-neutral">
+      <span>Kanıt tazeliği</span>
+      <strong>${esc(fmtAgeMs(stream.latest_freeze_age_ms))}</strong>
+      <small>Son immutable signal freeze yaşı · otomatik ürün yenileme 15 sn</small>
+    </article>
+    <div class="system-health-note">
+      Sistem Sağlığı burada ürün API’si ve read-only kanıt katmanını ifade eder. Eksik kanıt sağlıklı kabul edilmez; gerçek emir veya sermaye yetkisi açılmaz.
+    </div>`;
+}
+
 function renderEvidenceItem(item) {
   const summaries = item.evidence_summary?.length
     ? item.evidence_summary.map((entry) => `<span class="evidence-badge">${esc(entry)}</span>`).join("")
@@ -1513,6 +1652,8 @@ async function loadAll() {
   $("#healthChip").textContent = health.ledger_present ? "Kanıt deposu bağlı" : "Kanıt deposu yok";
   renderCommandCenter(command);
   renderPaperMissionControl(paperMission);
+  renderPaperTradeArchive(paperMission);
+  renderSystemHealth(health, command, paperMission);
   renderRadar(radar);
   renderArchive(archive);
   renderPerformance(performance);
