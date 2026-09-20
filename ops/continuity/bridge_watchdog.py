@@ -153,7 +153,7 @@ def process_leases() -> None:
         log(f"lease_bad={path.name} reason=checkpoint_hash_mismatch")
         return
     message = (
-        "@Remote Desktop Commander CRYPTO_SIGNAL_CONTINUE_EXACT — "
+        "CRYPTO_SIGNAL_CONTINUE_EXACT — "
         f"task={task} checkpoint={checkpoint} checkpoint_sha256={expected_sha} "
         f"created={created}. Exact lease is a continuation hint only. {POLICY}"
     )
