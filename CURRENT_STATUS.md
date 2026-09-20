@@ -745,3 +745,42 @@ Resume procedure:
 3. inspect fresh canonical Git/worker/continuity state;
 4. treat stale/duplicate wake or lease events as NOOP;
 5. continue only from Stage 6C Slice 4 if fresh state still confirms it is the canonical unfinished frontier.
+
+
+## 2026-09-20 — Stage 6C Slice 4 accepted: atomic/idempotent paper bundle commit
+
+Stage 6C Slice 4 is accepted in canonical main.
+
+Accepted files:
+- src/crypto_signal/paper/ledger.py
+- src/crypto_signal/paper/commit.py
+- src/crypto_signal/paper/__init__.py
+- tests/test_paper_commit.py
+
+Accepted persistence invariants:
+- one accepted trade orchestration bundle is committed as DecisionIntent + SimulatedFill + PositionCashMutation inside one SQLite BEGIN IMMEDIATE transaction;
+- HOLD_CASH commits exactly one DecisionIntent and invents no fill/mutation;
+- all bundle identities absent -> insert the complete bundle;
+- all bundle identities present with exact kind/payload -> idempotent UNCHANGED;
+- any partially existing bundle -> hard conflict before completing missing records;
+- stale replay state is rejected inside the write transaction using the expected immutable replay count;
+- bundle identities are required to remain contiguous in replay order;
+- post-commit state is reconstructed from the exact replay snapshot captured inside the transaction;
+- inserted trade state must exactly match the accepted mutation cash/positions/last-mutation lineage;
+- injected mid-bundle SQLite failure rolls the whole transaction back, leaving no partial decision/fill/mutation;
+- REAL_CAPITAL remains 0 and no exchange/network/credential/order surface was introduced.
+
+Acceptance evidence:
+- first full gate: all 338 pytest cases passed; Ruff found only 4 auto-fixable style findings.
+- lint-only hardening commit: 399709187f7fbfae470708be0dae43c79fb591a6.
+- final canonical full regression: 338 tests PASS.
+- Ruff PASS.
+- mypy PASS across 85 source files.
+- JavaScript syntax PASS.
+- atomic implementation commit: af5a6d45043525f1d7655567b4d1ce22365062ee.
+
+Current Stage 6C frontier:
+- persistent paper-account runtime foundation may now begin because atomicity/replay/crash-safety gate is accepted;
+- first runtime slice must preserve a single durable 100 USDT virtual fund, process immutable signal evidence read-only, use process locking/idempotent restart semantics and keep REAL_CAPITAL=0;
+- no autonomous BUY/REDUCE/EXIT policy may be invented implicitly: decision-to-plan eligibility, frozen execution inputs and virtual allocation policy must be explicit/versioned before the runtime is allowed to trade;
+- read-only Mission Control portfolio/NAV/benchmark activation remains after persistent runtime truth exists.

@@ -1710,3 +1710,31 @@ Accepted prior state remains:
 - Cursor development authority suspended unless explicitly re-enabled by user.
 
 Resume must be state-first via wakeresume, then fresh READ_FIRST/CURRENT_STATUS/Chronicle/Git/continuity inspection. Stale or duplicate events must not replay completed work.
+
+
+## 2026-09-20 — Stage 6C Slice 4: atomic paper-bundle persistence accepted
+
+After the user resumed development in the new ChatGPT conversation, continuity was rebound to the supplied current chat URL and mechanically verified. UID504 canonical Git was fast-forwarded to remote main before development resumed. Cursor development authority remained suspended.
+
+Supervisor implemented the atomic persistence boundary directly:
+- PaperFundLedger gained a private multi-record atomic append primitive;
+- trade bundles persist DecisionIntent, SimulatedFill and PositionCashMutation in one BEGIN IMMEDIATE transaction;
+- exact retries are idempotent UNCHANGED;
+- partially pre-existing bundles fail closed;
+- stale replay count is checked inside the transaction;
+- replay is captured from the same transaction and reconstructed deterministically after commit;
+- HOLD_CASH persists decision only;
+- an injected failure on simulated-fill INSERT proved SQLite rollback removes the earlier decision insert from the same transaction.
+
+The first full repository run passed every pytest case but Ruff rejected four style-only findings (__all__ ordering and Decimal literal style). No behavioral failure occurred. Supervisor applied only the lint corrections.
+
+Final acceptance:
+- 338 tests PASS;
+- Ruff PASS;
+- mypy PASS across 85 source files;
+- JavaScript syntax PASS;
+- REAL_CAPITAL=0;
+- implementation commit af5a6d45043525f1d7655567b4d1ce22365062ee;
+- lint-only acceptance head 399709187f7fbfae470708be0dae43c79fb591a6.
+
+Stage 6C may now advance to the persistent paper-account runtime foundation. That next slice must establish durable virtual-fund lifecycle/locking/restart behavior and read immutable signal evidence without silently inventing a trading/allocation policy or execution venue truth.
