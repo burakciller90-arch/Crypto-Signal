@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Crypto Signal Mission Control</title>
+  <link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+  <div class="ambient ambient-a"></div>
+  <div class="ambient ambient-b"></div>
+
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark">CS</div>
+      <div>
+        <div class="eyebrow">CRYPTO SIGNAL PLATFORM</div>
+        <h1>Mission Control</h1>
+      </div>
+    </div>
+    <div class="truth-strip">
+      <span class="chip chip-safe">REAL_CAPITAL = 0</span>
+      <span class="chip">Evidence first</span>
+      <span class="chip">Confluence ≠ probability</span>
+      <span id="healthChip" class="chip chip-muted">Connecting…</span>
+    </div>
+  </header>
+
+  <main class="shell">
+    <section class="hero">
+      <div>
+        <p class="eyebrow">LIVE / IMMUTABLE EVIDENCE</p>
+        <h2>Know what the system sees.<br>Know why it matters.</h2>
+        <p class="hero-copy">
+          Read-only command center over frozen signal evidence. No execution controls,
+          no fabricated probability, no hidden losses.
+        </p>
+      </div>
+      <div class="hero-status">
+        <div class="status-dot"></div>
+        <div>
+          <div class="small-label">Product lane</div>
+          <strong>Command Center / Read Only</strong>
+        </div>
+      </div>
+    </section>
+
+    <section id="dataNotice" class="notice hidden"></section>
+
+    <section class="metric-grid" aria-label="Command center metrics">
+      <article class="metric-card">
+        <div class="metric-label">Immutable freezes</div>
+        <div id="freezeCount" class="metric-value">—</div>
+        <div class="metric-foot">append-only decisions</div>
+      </article>
+      <article class="metric-card">
+        <div class="metric-label">Latest freeze</div>
+        <div id="latestFreeze" class="metric-value metric-time">—</div>
+        <div class="metric-foot">local observation time</div>
+      </article>
+      <article class="metric-card">
+        <div class="metric-label">State mix</div>
+        <div id="stateMix" class="metric-value metric-compact">—</div>
+        <div class="metric-foot">NO_SIGNAL / WATCH / ACTIVE preserved</div>
+      </article>
+      <article class="metric-card">
+        <div class="metric-label">Direction mix</div>
+        <div id="directionMix" class="metric-value metric-compact">—</div>
+        <div class="metric-foot">descriptive, not a trade instruction</div>
+      </article>
+    </section>
+
+    <section class="two-col">
+      <article class="panel">
+        <div class="panel-head">
+          <div>
+            <p class="eyebrow">MARKET RADAR</p>
+            <h3>Latest frozen context</h3>
+          </div>
+          <span class="panel-tag">per provider</span>
+        </div>
+        <div id="radarList" class="stack loading-block">Loading real ledger…</div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-head">
+          <div>
+            <p class="eyebrow">ASSET COCKPIT</p>
+            <h3 id="assetTitle">Selected asset</h3>
+          </div>
+          <span class="panel-tag">provider-separated</span>
+        </div>
+        <div id="assetCockpit" class="stack loading-block">
+          Waiting for Market Radar…
+        </div>
+      </article>
+    </section>
+
+    <section class="two-col two-col-wide">
+      <article class="panel">
+        <div class="panel-head">
+          <div>
+            <p class="eyebrow">RECENT SIGNALS</p>
+            <h3>Decision-time truth</h3>
+          </div>
+          <span class="panel-tag">immutable</span>
+        </div>
+        <div id="recentSignals" class="signal-list loading-block">Loading real ledger…</div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-head">
+          <div>
+            <p class="eyebrow">PERFORMANCE</p>
+            <h3>Evidence availability</h3>
+          </div>
+          <span class="panel-tag">no silent merging</span>
+        </div>
+        <div id="performance" class="performance-card loading-block">
+          Loading explicit outcome evidence…
+        </div>
+      </article>
+    </section>
+
+    <section class="panel archive-panel">
+      <div class="panel-head">
+        <div>
+          <p class="eyebrow">SIGNAL ARCHIVE</p>
+          <h3>Every frozen decision stays visible</h3>
+        </div>
+        <div class="panel-actions">
+          <span id="archiveCount" class="panel-tag">—</span>
+          <button id="refreshButton" class="ghost-button" type="button">Refresh</button>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Frozen</th>
+              <th>Market</th>
+              <th>State</th>
+              <th>Direction</th>
+              <th>Confluence</th>
+              <th>Probability</th>
+              <th>Setup</th>
+            </tr>
+          </thead>
+          <tbody id="archiveBody">
+            <tr><td colspan="7" class="empty-cell">Loading real ledger…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <dialog id="signalDialog" class="signal-dialog">
+    <div class="dialog-head">
+      <div>
+        <p class="eyebrow">SIGNAL DETAIL</p>
+        <h3 id="dialogTitle">Frozen decision</h3>
+      </div>
+      <button id="closeDialog" class="ghost-button" type="button">Close</button>
+    </div>
+    <div id="dialogBody" class="dialog-body"></div>
+  </dialog>
+
+  <footer>
+    <span>Crypto Signal V1</span>
+    <span>Read-only product lane</span>
+    <span>Historical frequency ≠ calibrated probability</span>
+  </footer>
+
+  <script src="/static/app.js" defer></script>
+</body>
+</html>

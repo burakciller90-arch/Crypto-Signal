@@ -3,7 +3,7 @@
 Updated: 2026-09-20
 Project: Crypto Signal
 Phase: Dashboard V1 / Product Command Center
-State: DASHBOARD_V1_SLICE1_READ_MODEL_ACCEPTED
+State: DASHBOARD_V1_SLICE2_WEB_ACCEPTED
 REAL_CAPITAL: 0
 
 ## Accepted foundations
@@ -203,17 +203,33 @@ No Durdurulmaz or Quantum Capital project state was mutated; UID502 is used only
 - production read-only smoke: 24 immutable WATCH freezes, 2 radar contexts, 0 outcome snapshots, Performance=EMPTY
 - no runtime mock data
 
-## Canonical next frontier
-Dashboard V1 / Product Command Center — Slice 2:
-1. add bounded FastAPI + Uvicorn dependencies
-2. expose read-only JSON API endpoints over accepted DashboardReader
-3. add local health/status endpoint
-4. build static Mission Control shell without Node build chain
-5. render Command Center / Market Radar / Signal Archive first
-6. preserve explicit confluence != probability labels and empty-performance state
-7. no order/execution controls
-8. local smoke on reserved Crypto Signal port range
-9. focused tests and full repo gate
+## Dashboard V1 Slice 2 accepted evidence
+- FastAPI 0.141.1 + Uvicorn 0.53.0 bounded dependencies
+- read-only GET API over accepted DashboardReader
+- /api/health reports REAL_CAPITAL=0, read_only=true and ledger presence
+- static Mission Control shell with no Node build chain
+- Command Center / Market Radar / Asset Cockpit / Signal Archive / Signal Detail / Performance availability rendered from real API data
+- no POST order/command surface
+- empty outcome evidence remains EMPTY, not 0% win rate
+- focused web/read-model gate: 14 tests PASS
+- full repository: 217 tests PASS
+- Ruff PASS
+- mypy PASS
+- JavaScript syntax PASS
+- uv lock PASS
+- local real-ledger smoke on 127.0.0.1:48700 PASS; test server stopped and port returned FREE
 
-LIVE/STABLE forward evidence clock remains isolated on its accepted worktree while Dashboard development proceeds.
+## Canonical next frontier
+Dashboard V1 / Product Command Center — Slice 3:
+1. create isolated PRODUCT/STABLE worktree pinned to accepted Dashboard commit
+2. create product-local virtual environment from accepted lockfile
+3. install com.cryptosignal.dashboard LaunchAgent
+4. bind only to 127.0.0.1:48700
+5. retain read-only production-ledger access
+6. add runtime health/log checks and restart behavior
+7. verify browser/local HTTP smoke from stable lane
+8. keep LIVE/STABLE evidence clock independent
+9. no execution controls
+
+After stable product runtime acceptance, continue richer Signal Detail, Historical Evaluation projections, navigation and visual polish.
 REAL_CAPITAL remains 0.

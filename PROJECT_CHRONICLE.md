@@ -785,3 +785,49 @@ Production read-only smoke:
 Canonical frontier advances to Dashboard V1 Slice 2:
 bounded FastAPI/Uvicorn API plus a static Mission Control shell.
 REAL_CAPITAL remains 0.
+
+## 2026-09-20 — Dashboard V1 Slice 2 accepted: local read-only Mission Control
+
+Dashboard V1 now has a thin FastAPI/Uvicorn web layer over the accepted
+DashboardReader plus a static HTML/CSS/JavaScript Mission Control shell.
+
+Accepted API:
+- GET /api/health
+- GET /api/command-center
+- GET /api/market-radar
+- GET /api/assets/{symbol}/{timeframe}
+- GET /api/signals
+- GET /api/signals/{signal_freeze_identity}
+- GET /api/performance
+
+There is no POST order/command surface.
+
+The shell renders only real API data and visibly preserves:
+- REAL_CAPITAL=0
+- Confluence != probability
+- agreement-index semantics
+- probability_status
+- explicit empty-performance state
+
+Mechanical evidence:
+- Dashboard focused tests: 14 PASS
+- full repository: 217 PASS
+- Ruff PASS
+- mypy PASS
+- JavaScript syntax PASS
+- uv lock PASS
+
+Real production-ledger local smoke on 127.0.0.1:48700:
+- health OK / read_only=true / ledger_present=true
+- Command Center READY with 24 immutable freezes
+- latest cards preserve not_calibrated probability status
+- latest cards preserve agreement_index_not_probability semantic
+- Performance EMPTY with zero outcome snapshots
+- index contains Mission Control, REAL_CAPITAL=0 and Confluence != probability markers
+
+The temporary smoke server was stopped and port 48700 returned FREE.
+
+Canonical frontier advances to Dashboard Slice 3:
+a separate PRODUCT/STABLE worktree and persistent local LaunchAgent runtime.
+LIVE/STABLE evidence clock remains independent.
+REAL_CAPITAL remains 0.
