@@ -175,9 +175,11 @@ class SimulatedExecutionResult:
         if self.action is PaperAction.BUY:
             if self.fill_notional_usdt < self.reference_notional_usdt:
                 raise ValueError("BUY cannot receive beneficial simulated execution")
-        elif self.action in {PaperAction.REDUCE, PaperAction.EXIT}:
-            if self.fill_notional_usdt > self.reference_notional_usdt:
-                raise ValueError("sell-side action cannot receive beneficial execution")
+        elif (
+            self.action in {PaperAction.REDUCE, PaperAction.EXIT}
+            and self.fill_notional_usdt > self.reference_notional_usdt
+        ):
+            raise ValueError("sell-side action cannot receive beneficial execution")
 
 
 def compute_frozen_execution_snapshot_identity(
