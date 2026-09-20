@@ -44,7 +44,7 @@ def _held_state(tmp_path: Path) -> PaperFundState:
         action=PaperAction.BUY,
         symbol=PaperSymbol.BTCUSDT,
         quantity=Decimal("0.001"),
-        reference_price=Decimal("20000"),
+        reference_price=Decimal(20000),
         reason="seed holding",
         invalidation_context="seed only",
     )
@@ -55,8 +55,8 @@ def _held_state(tmp_path: Path) -> PaperFundState:
         action=PaperAction.BUY,
         symbol=PaperSymbol.BTCUSDT,
         quantity=Decimal("0.001"),
-        reference_price=Decimal("20000"),
-        simulated_fill_price=Decimal("20000"),
+        reference_price=Decimal(20000),
+        simulated_fill_price=Decimal(20000),
         costs=ExecutionCostAssumptions(
             fee_usdt=Decimal(0),
             spread_usdt=Decimal(0),
@@ -107,11 +107,11 @@ def _buy_plan(state: PaperFundState, *, budget: str = "0.05"):
         action=PaperAction.BUY,
         symbol=PaperSymbol.BTCUSDT,
         quantity=Decimal("0.001"),
-        reference_price=Decimal("20000"),
+        reference_price=Decimal(20000),
         cost_budget_usdt=Decimal(budget),
         reason="bounded buy",
         invalidation_context="close below frozen structure",
-        mark_prices={PaperSymbol.BTCUSDT: Decimal("20000")},
+        mark_prices={PaperSymbol.BTCUSDT: Decimal(20000)},
     )
 
 
@@ -135,11 +135,11 @@ def test_reject_minimum_quantity_step_and_notional(tmp_path: Path) -> None:
         action=PaperAction.BUY,
         symbol=PaperSymbol.BTCUSDT,
         quantity=Decimal("0.0001"),
-        reference_price=Decimal("20000"),
+        reference_price=Decimal(20000),
         cost_budget_usdt=Decimal("0.10"),
         reason="min probe",
         invalidation_context="probe",
-        mark_prices={PaperSymbol.BTCUSDT: Decimal("20000")},
+        mark_prices={PaperSymbol.BTCUSDT: Decimal(20000)},
     )
     with pytest.raises(PaperExecutionRejectedError, match="minimum quantity"):
         simulate_paper_fill(
@@ -155,11 +155,11 @@ def test_reject_minimum_quantity_step_and_notional(tmp_path: Path) -> None:
         action=PaperAction.BUY,
         symbol=PaperSymbol.BTCUSDT,
         quantity=Decimal("0.00015"),
-        reference_price=Decimal("20000"),
+        reference_price=Decimal(20000),
         cost_budget_usdt=Decimal("0.10"),
         reason="step probe",
         invalidation_context="probe",
-        mark_prices={PaperSymbol.BTCUSDT: Decimal("20000")},
+        mark_prices={PaperSymbol.BTCUSDT: Decimal(20000)},
     )
     with pytest.raises(PaperExecutionRejectedError, match="quantity_step"):
         simulate_paper_fill(
@@ -175,11 +175,11 @@ def test_reject_minimum_quantity_step_and_notional(tmp_path: Path) -> None:
         action=PaperAction.BUY,
         symbol=PaperSymbol.BTCUSDT,
         quantity=Decimal("0.0002"),
-        reference_price=Decimal("20000"),
+        reference_price=Decimal(20000),
         cost_budget_usdt=Decimal("0.10"),
         reason="notional probe",
         invalidation_context="probe",
-        mark_prices={PaperSymbol.BTCUSDT: Decimal("20000")},
+        mark_prices={PaperSymbol.BTCUSDT: Decimal(20000)},
     )
     with pytest.raises(PaperExecutionRejectedError, match="minimum notional"):
         simulate_paper_fill(
@@ -215,7 +215,7 @@ def test_adverse_pricing_and_explicit_cost_accounting(tmp_path: Path) -> None:
         action=PaperAction.REDUCE,
         symbol=PaperSymbol.BTCUSDT,
         quantity=Decimal("0.0004"),
-        reference_price=Decimal("20000"),
+        reference_price=Decimal(20000),
         cost_budget_usdt=Decimal("0.05"),
         reason="bounded reduce",
         invalidation_context="reduce exposure",
