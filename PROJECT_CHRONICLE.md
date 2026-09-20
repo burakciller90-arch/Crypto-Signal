@@ -1792,3 +1792,22 @@ The state diagnostic itself needed two non-product fixes: Python f-string quotin
 - paper_replay_index=1
 
 The stable runtime observes production immutable signal evidence but remains deliberately unable to trade. Next frontier is the explicit/versioned eligibility + allocation + cooldown/per-position-risk/no-trade policy and a frozen execution-input source. REAL_CAPITAL remains 0.
+
+
+## 2026-09-20 — paper_autonomy_policy.v1 accepted
+
+Supervisor deliberately avoided mutating the already-frozen paper_risk_policy.v1 semantics recorded in the persistent fund creation. The missing cooldown/per-position-risk/no-trade layer was added as a separate versioned pure policy.
+
+The accepted V1 policy requires exact 4h Binance+Bybit spot consensus and fails closed on provider mismatch, mixed context, WATCH/NEUTRAL/NO_SIGNAL, stale or pre-activation evidence, unsafe uncertainty, cooldown, missing NAV marks, pyramiding and shorting.
+
+A fresh bullish consensus while flat may emit only a BUY candidate with a maximum risk budget of 1% of marked NAV. A bearish consensus may emit only EXIT when an actual long position already exists. Automatic REDUCE is deliberately disabled.
+
+The policy explicitly carries an activation cutoff so the existing historical signal corpus can never be replayed into retroactive paper trades. Trade candidates remain non-executable and declare that a frozen execution input is still required.
+
+Whole-repository acceptance:
+- first run: all 361 pytest cases passed; only Ruff ordering findings remained;
+- style-only commit c2744497199d77cf451b831248abe68737b6ae8a fixed those findings;
+- final: 361 tests PASS, Ruff PASS, mypy PASS across 87 source files, JavaScript PASS;
+- REAL_CAPITAL=0.
+
+Next gate is frozen execution-input truth. PAPER/STABLE remains observation-only until that gate and subsequent quantity/planner/execution/atomic-commit integration are accepted.

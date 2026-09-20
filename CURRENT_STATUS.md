@@ -859,3 +859,50 @@ Current Stage 6C frontier:
 - policy must add the still-missing cooldown, per-position-risk and no-trade conditions without weakening existing cash reserve/concentration/gross exposure gates;
 - define a frozen execution-input source before any simulated BUY/REDUCE/EXIT can be activated in PAPER/STABLE;
 - until that gate is accepted, PAPER/STABLE remains observation-only and trade_policy=NOT_ACTIVATED.
+
+
+## 2026-09-20 — Stage 6C autonomy policy v1 accepted
+
+The pure paper autonomy eligibility policy is accepted in canonical main.
+
+Policy version:
+- paper_autonomy_policy.v1
+
+Accepted scope:
+- 4h decision cadence only;
+- exact Binance spot + Bybit spot provider set;
+- exact provider agreement on symbol, timeframe, as-of and direction;
+- ACTIVE-only eligibility;
+- each provider must retain >=2 supporting methodologies, 0 opposing methodologies and complete geometry;
+- partial_methodology_coverage is the only uncertainty flag allowed by V1;
+- explicit activation watermark blocks all historical/backfill trades;
+- maximum signal age: 4 hours;
+- per-symbol cooldown: 4 hours;
+- per-position loss budget ceiling: 1% of current marked paper NAV;
+- no pyramiding;
+- no shorting;
+- no automatic REDUCE;
+- missing mark-price truth required for NAV means HOLD_CASH;
+- bullish consensus while flat -> BUY candidate;
+- bearish consensus with an existing long -> EXIT candidate;
+- all other bounded conditions -> HOLD_CASH.
+
+Important boundary:
+- BUY/EXIT is only a non-executable candidate;
+- every trade candidate requires a separate frozen execution input;
+- the policy contains no ledger append, fill simulation, network call, exchange order or credential path;
+- PAPER/STABLE remains trade_policy=NOT_ACTIVATED;
+- REAL_CAPITAL=0.
+
+Acceptance evidence:
+- implementation commit: a73b3ca641694d2cbe2495cf2e1ac1437c04c5bc;
+- lint-only hardening head: c2744497199d77cf451b831248abe68737b6ae8a;
+- 361 tests PASS;
+- Ruff PASS;
+- mypy PASS across 87 source files;
+- JavaScript syntax PASS.
+
+Current frontier:
+- define the frozen execution-input source and exact venue/provider timing rule;
+- then translate autonomy risk budget + frozen entry/invalidation truth into quantity;
+- only after planner + execution simulator + atomic commit gates pass may PAPER/STABLE trading activation be considered.
