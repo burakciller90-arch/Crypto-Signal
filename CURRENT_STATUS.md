@@ -1698,3 +1698,47 @@ Current frontier:
 - do not deploy this slice to PAPER/STABLE, widen the production workflow allowlist, enable virtual write authority, run a write tick, or mutate the production paper ledger without separate explicit production authorization from the user;
 - while that production gate is closed, safe work may continue with read-only review, acceptance planning, documentation and later product/dashboard work that does not bypass the gate.
 
+## MAIN atomic write-authority mutation boundary accepted; overnight continuity rebound
+
+- accepted development main code head: 0d89fb371fff0cbfe23176eddca760db55f0a182
+- PAPER/STABLE remains unchanged at 30b05251af9fc2ac05fd007dbd6ac6d0519c2e58
+- REAL_CAPITAL=0; no credential, broker, exchange-order or network-trading authority was added
+- the remaining write-authority TOCTOU window is closed on main:
+  - the exact required enabled authority identity is now revalidated inside the same SQLite BEGIN IMMEDIATE transaction that persists a terminal processed-event receipt or simulated trade bundle
+  - authority activation lineage is checked inside that transaction
+  - a revoke/replacement committed before the mutation transaction causes fail-closed zero-mutation rejection
+  - if the mutation transaction owns the SQLite write lock first, its commit deterministically precedes a later revoke
+- regression coverage now explicitly revokes authority after the outer writer precheck but immediately before:
+  - terminal HOLD/no-action persistence
+  - simulated trade persistence
+  Both paths prove zero processed-event/trade mutation after revocation.
+- canonical UID504 sync PASS:
+  - BEFORE=741dfa6b8051bb8d606f3d291c3f0bdf5e7e2a1e
+  - AFTER=0d89fb371fff0cbfe23176eddca760db55f0a182
+  - worktree clean on main...origin/main
+- whole-repository gate on the accepted head:
+  - pytest completed 100%
+  - Ruff PASS
+  - mypy PASS across 102 source files
+  - JavaScript PASS
+  - FULL_TEST_PASS=YES
+- production boundary remains closed:
+  - no write-authority event has been created in PAPER/STABLE
+  - production paper workflow still exposes no writeauthority/writetick mutation command
+  - no production processed-event/trade mutation was executed
+
+Overnight continuity state:
+- the canonical wake relay was rebound from the prior conversation to:
+  - https://chatgpt.com/c/6ab046e7-34a4-83eb-96b1-2952e2b9bca6
+- UID502 relay reload completed successfully
+- shared and UID504-local current_chat_url both match that exact URL
+- shared relay status is RUNNING with a live heartbeat and the current target URL
+- UID504 com.cryptosignal.continuitybridge and the self-hosted GitHub runner are active
+- disk has 44 GiB available; the historical ENOSPC condition is not current
+- an allowlisted wakearm command now creates immutable exact-task checkpoints through arm_exact.py; no arbitrary shell surface was introduced
+- the exact continuation task paper-write-authority-atomic-toctou-hardening-v1 was armed and is now complete; any delayed duplicate wake for it must reconcile/NOOP, never replay
+
+Current frontier:
+- keep PAPER/STABLE production write activation closed until the separate production gate is explicitly crossed;
+- continue the roadmap autonomously on safe non-production work;
+- next product-facing slice should expose the already accepted Mission Control, factual decision trace, portfolio and performance evidence through a simple beginner-oriented dashboard without inventing trade success or bypassing the paper gate.
