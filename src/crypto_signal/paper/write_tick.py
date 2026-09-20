@@ -12,6 +12,7 @@ from enum import StrEnum
 from pathlib import Path
 
 from crypto_signal.paper.activation import (
+    PaperActivationState,
     PaperProcessedEventOutcome,
     build_processed_event_receipt,
     commit_planned_pretrade_event,
@@ -24,7 +25,10 @@ from crypto_signal.paper.dry_run import (
     evaluate_paper_activation_dry_run,
     read_paper_activation_read_only,
 )
-from crypto_signal.paper.event_scanner import scan_post_activation_signal_events
+from crypto_signal.paper.event_scanner import (
+    PaperSignalEventCandidate,
+    scan_post_activation_signal_events,
+)
 from crypto_signal.paper.ledger import (
     PaperFundLedger,
     PaperLedgerWriteDisposition,
@@ -227,8 +231,8 @@ def run_paper_write_tick(
 def _write_evaluated_event(
     *,
     ledger: PaperFundLedger,
-    activation,
-    event,
+    activation: PaperActivationState,
+    event: PaperSignalEventCandidate,
     evaluated: PaperActivationDryRunResult,
     processed_at_ms: int,
 ) -> PaperWriteEventResult:
