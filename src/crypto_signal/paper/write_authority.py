@@ -201,29 +201,10 @@ def append_paper_write_authority_event(
 def load_current_paper_write_authority(
     ledger: PaperFundLedger,
 ) -> PaperWriteAuthorityEvent | None:
-    row = ledger._latest_write_authority_row()
-    if row is None:
+    events = list_paper_write_authority_events(ledger)
+    if not events:
         return None
-    (
-        event_identity,
-        activation_identity,
-        enabled,
-        previous_event_identity,
-        payload_json,
-        created_at_ms,
-    ) = row
-    event = _deserialize_authority_event(payload_json)
-    if (
-        event.authority_event_identity != event_identity
-        or event.activation_identity != activation_identity
-        or event.enabled is not enabled
-        or event.previous_event_identity != previous_event_identity
-        or event.created_at_ms != created_at_ms
-    ):
-        raise PaperWriteAuthorityError(
-            "stored write-authority metadata/payload mismatch"
-        )
-    return event
+    return events[-1]
 
 
 def list_paper_write_authority_events(
