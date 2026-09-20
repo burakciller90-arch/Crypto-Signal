@@ -1872,3 +1872,21 @@ Whole-repository hardening gate:
 - mypy PASS across 89 source files;
 - JavaScript PASS;
 - REAL_CAPITAL=0.
+
+
+## 2026-09-20 — paper_pretrade_bridge_policy.v1 accepted
+
+The pre-trade bridge now connects accepted sizing to the existing conservative planner without inventing venue metadata.
+
+It requires an externally frozen execution snapshot cryptographically bound to the accepted frozen execution-input reference. BUY quantity can only round downward; frozen minimum quantity/notional are enforced. EXIT must remain a true full exit and exact venue-step quantity. The bridge derives the exact simulator-compatible fee/spread/slippage budget and passes it into the existing paper_risk_policy.v1 planner.
+
+The first whole-repository gate passed 389 tests, Ruff, mypy across 90 source files and JavaScript. A semantic review then added causal plan-time enforcement plus independent embedded-plan lineage checks.
+
+Final hardening head d58a181ab49da604313efa07d18c877d82ecaaf6 passed:
+- 391 tests;
+- Ruff;
+- mypy across 90 source files;
+- JavaScript;
+- REAL_CAPITAL=0.
+
+The bridge remains pure planning only. PAPER/STABLE is not activated for virtual trading. Next gate is bounded integration through deterministic orchestration and the already-accepted atomic/idempotent ledger commit, followed by persistent activation/processed-event truth and authoritative venue-rule snapshot sourcing.

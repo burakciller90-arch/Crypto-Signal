@@ -1008,3 +1008,43 @@ The accepted sizing gate was subsequently hardened without changing its policy i
 - final hardening regression: 381 tests PASS, Ruff PASS, mypy PASS across 89 source files, JavaScript PASS.
 
 This SHA supersedes 67746b584006dd0419e4b1a460be1ed2f3637572 as the accepted sizing implementation head.
+
+
+## 2026-09-20 — Stage 6C pre-trade planning bridge v1 accepted
+
+Policy version:
+- paper_pretrade_bridge_policy.v1
+
+Accepted boundary:
+- requires an externally frozen execution-rule/cost snapshot; it does not fetch or invent Binance venue metadata;
+- snapshot symbol/policy must match paper state and its venue_reference must exactly bind the accepted frozen execution-input identity;
+- BUY sizing quantity is rounded down only to frozen quantity_step and may never exceed the sizing ceiling;
+- minimum quantity and minimum notional are enforced before planning;
+- EXIT must remain a full exit and must already be an exact frozen venue step; otherwise it rejects instead of leaving silent dust;
+- exact fee/spread/slippage cost budget is derived with the same adverse-price formula used by the accepted execution simulator;
+- existing paper_risk_policy.v1 independently remains authoritative for cash reserve, 25% concentration and 50% gross exposure;
+- plan timestamp cannot predate the frozen execution-input observation;
+- PLANNED results independently recheck embedded plan action, symbol, reference price, quantity and cost-budget lineage;
+- deterministic pretrade identity binds sizing, frozen execution input, frozen execution snapshot and plan/rejection truth.
+
+Authority boundary:
+- no venue metadata fetch;
+- no network/exchange/order/credential path;
+- no fill simulation;
+- no paper-ledger write;
+- PAPER/STABLE remains observation-only / trade_policy=NOT_ACTIVATED;
+- REAL_CAPITAL=0.
+
+Acceptance evidence:
+- implementation: 3de13e8d921d4f546f959b4bc559e81c0cd80cc1;
+- initial whole-repository gate: 389 tests PASS, Ruff PASS, mypy PASS across 90 source files, JavaScript PASS;
+- semantic hardening: d58a181ab49da604313efa07d18c877d82ecaaf6;
+- final hardening regression: 391 tests PASS;
+- Ruff PASS;
+- mypy PASS across 90 source files;
+- JavaScript syntax PASS.
+
+Current frontier:
+- integrate accepted pretrade plan -> deterministic orchestration bundle -> accepted atomic/idempotent commit on a bounded ledger;
+- prove end-to-end lineage and replay behavior without activating PAPER/STABLE;
+- then implement persistent activation watermark / processed-event state and an authoritative frozen venue-rule snapshot source before any autonomous virtual trade is enabled.
