@@ -9,6 +9,12 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from crypto_signal.ledger.serialization import canonicalize
+from crypto_signal.product.education import (
+    EducationLesson,
+    EducationLookupMissing,
+    all_education_lessons,
+    lookup_education_lesson,
+)
 from crypto_signal.product.reader import DashboardReader, DashboardReadError
 
 DEFAULT_LEDGER_PATH = (
@@ -24,11 +30,21 @@ DEFAULT_ALERT_OUTBOX_PATH = (
     / "alert_outbox.sqlite3"
 )
 STATIC_DIR = Path(__file__).with_name("static")
-PRODUCT_VERSION = "birthday-edition-decision-explanation/1"
+PRODUCT_VERSION = "full-version-live-education/1"
 
 
 def _json(value: Any, *, status_code: int = 200) -> JSONResponse:
     return JSONResponse(content=canonicalize(value), status_code=status_code)
+
+
+def _education_payload(lesson: EducationLesson) -> dict[str, object]:
+    return {
+        "concept_id": lesson.concept_id.value,
+        "title_tr": lesson.title_tr,
+        "beginner_tr": lesson.beginner_tr,
+        "why_it_matters_tr": lesson.why_it_matters_tr,
+        "advanced_tr": lesson.advanced_tr,
+    }
 
 
 def create_app(
@@ -158,6 +174,35 @@ def create_app(
             return _json(reader.alert_center(limit=limit))
         except DashboardReadError as exc:
             raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+    @app.get("/api/education")
+    def education_catalog() -> JSONResponse:
+        return _json(
+            {
+                "status": "ready",
+                "real_capital": 0,
+                "lessons": [
+                    _education_payload(lesson)
+                    for lesson in all_education_lessons()
+                ],
+            }
+        )
+
+    @app.get("/api/education/{concept_id}")
+    def education_lesson(concept_id: str) -> JSONResponse:
+        result = lookup_education_lesson(concept_id)
+        if isinstance(result, EducationLookupMissing):
+            raise HTTPException(
+                status_code=404,
+                detail=f"unknown education concept id: {result.requested_id}",
+            )
+        return _json(
+            {
+                "status": "found",
+                "real_capital": 0,
+                "lesson": _education_payload(result.lesson),
+            }
+        )
 
     @app.get("/api/performance")
     def performance() -> JSONResponse:
