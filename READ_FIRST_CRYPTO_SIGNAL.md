@@ -21,6 +21,17 @@ If any local note conflicts with that handoff, the master handoff wins.
 - NO_SIGNAL, AMBIGUOUS and NOT_EVALUABLE are valid.
 - Numeric truth comes from deterministic/statistical evidence, not LLM prose.
 
+## Governing Full Version documents
+The user's 2026-09-20 Full Version direction supersedes the earlier deliberately-limited Birthday Edition scope where they conflict, while preserving every scientific and REAL_CAPITAL boundary.
+
+Before planning new product work, read:
+- `docs/CRYPTO_SIGNAL_FULL_VERSION_WORLD_CLASS_ROADMAP.md` — canonical execution roadmap.
+- `docs/AUTONOMOUS_PAPER_FUND_V1_SPEC.md` — immutable 100 USDT virtual fund contract.
+- `docs/INTELLIGENCE_ALPHA_FACTORY_ARCHITECTURE.md` — multi-engine, regime, learning and challenger/champion rules.
+- `docs/BEGINNER_UX_EVIDENCE_CENTER_SPEC.md` — live refresh, teaching and evidence UX contract.
+
+The project should stay faithful to these documents. Scope may be refined only by preserving their intent and hard invariants; do not silently regress to a narrower historical roadmap.
+
 ## Operating rule
 Read this file, then `CURRENT_STATUS.md`, then the newest `PROJECT_CHRONICLE.md` entry before changing project state.
 
