@@ -23,7 +23,7 @@ from crypto_signal.paper.ledger import (
     PaperLedgerWriteDisposition,
 )
 from crypto_signal.paper.models import INITIAL_CASH_USDT, REAL_CAPITAL
-from crypto_signal.paper.state import reconstruct_paper_fund_state
+from crypto_signal.paper.state import PaperFundState, reconstruct_paper_fund_state
 
 __all__ = [
     "PAPER_ACTIVATION_INIT_VERSION",
@@ -219,7 +219,7 @@ def initialize_paper_activation_watermark(
     )
 
 
-def _require_pristine_fund(state) -> None:
+def _require_pristine_fund(state: PaperFundState) -> None:
     if state.real_capital != REAL_CAPITAL:
         raise PaperActivationInitError("REAL_CAPITAL must remain 0")
     if (
