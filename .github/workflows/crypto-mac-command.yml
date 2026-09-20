@@ -24,7 +24,7 @@ jobs:
           set -euo pipefail
           cmd="$(printf '%s\n' "$ISSUE_BODY" | awk -F: 'tolower($1)=="command" {gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2); print tolower($2); exit}')"
           case "$cmd" in
-            status|services|logs|disk|bridgecheck|bridgestate|wakeresume|waketest|cursorcheck)
+            status|services|logs|disk|bridgecheck|bridgestate|wakeresume|waketest|cursorcheck|cursorauthdiag)
               ;;
             *)
               echo "Unsupported command: $cmd"
@@ -100,6 +100,34 @@ jobs:
             exit 0
           fi
           exit "$rc"
+
+      - name: CURSOR AUTH DIAG
+        if: steps.parse.outputs.command == 'cursorauthdiag'
+        shell: bash
+        run: |
+          set +e
+          export PATH="$HOME/.local/bin:$HOME/.cursor/bin:/opt/homebrew/bin:/usr/local/bin:$PATH"
+          echo "=== IDENTITY/ENV ==="
+          id
+          printf 'HOME=%s\nUSER=%s\nLOGNAME=%s\nSHELL=%s\n' "$HOME" "$USER" "$LOGNAME" "$SHELL"
+          echo "=== AGENT STATUS ==="
+          agent status 2>&1
+          echo "=== LOGIN HELP ==="
+          agent login --help 2>&1 | head -120
+          echo "=== ROOT HELP AUTH LINES ==="
+          agent --help 2>&1 | egrep -i 'auth|api-key|login|token|status|config|sandbox|mode|workspace|worktree' | head -120
+          echo "=== RECENT CURSOR AUTH/CONFIG FILE METADATA ==="
+          for root in "$HOME/.cursor" "$HOME/.config" "$HOME/Library/Application Support/Cursor"; do
+            if [ -d "$root" ]; then
+              echo "--- $root"
+              find "$root" -maxdepth 4 -type f -mmin -60 -print 2>/dev/null | head -120
+            fi
+          done
+          echo "=== USER KEYCHAINS ==="
+          security list-keychains -d user 2>&1
+          echo "=== LOGIN KEYCHAIN INFO ==="
+          security show-keychain-info "$HOME/Library/Keychains/login.keychain-db" 2>&1
+          exit 0
 
       - name: CURSOR CHECK
         if: steps.parse.outputs.command == 'cursorcheck'
