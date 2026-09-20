@@ -1973,3 +1973,19 @@ Fresh [PAPER] STATE confirmed:
 Whole-repository gate for the stable refresh head passed 421 tests, Ruff, mypy across 93 source files and JavaScript.
 
 Next frontier is a read-only production event scanner for new post-activation 4h Binance+Bybit consensus events. It must prove ordering/cutoff/processed-event behavior before any stable virtual trading activation is considered.
+
+
+## 2026-09-20 — production post-activation event scanner accepted
+
+A strict read-only scanner now defines the production event frontier without activating paper trading.
+
+The scanner requires the immutable paper activation singleton, reads both SQLite sources query-only, filters to post-cutoff 4h spot events, pairs exact Binance+Bybit contexts, validates each persisted signal decision against its signal_freezes index row, skips already-processed event identities and orders remaining candidates deterministically.
+
+The first scanner gate exposed one test-fixture construction mistake rather than a scanner defect. The fixture was corrected to use a valid but mismatched activation identity. All 429 behavioral tests then passed; only one Ruff import-order finding remained. Final head fd383be78059039312d586cc5fee491069bb6b8c passed:
+- 429 tests;
+- Ruff;
+- mypy across 94 source files;
+- JavaScript;
+- REAL_CAPITAL=0.
+
+Next frontier is a dry-run composition of scanner -> autonomy -> execution input -> authoritative venue rules -> sizing -> pretrade. It must remain read-only and create no processed receipt or paper mutation.

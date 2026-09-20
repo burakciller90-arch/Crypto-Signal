@@ -1231,3 +1231,43 @@ Current frontier:
 - build a production read-only event scanner that pairs only new post-activation 4h Binance+Bybit signal freezes by symbol/as-of;
 - prove scanner ordering, provider-pair identity, historical-cutoff exclusion and processed-event skipping on fixtures/current ledger without creating trades;
 - then integrate that candidate stream with frozen execution input + cached venue rules as a dry-run activation candidate before any PAPER/STABLE virtual trade policy is enabled.
+
+
+## 2026-09-20 — Stage 6C read-only production signal event scanner accepted
+
+Accepted scanner:
+- paper_signal_event_scanner.v1 opens the immutable signal ledger and paper activation/processed-event tables with SQLite mode=ro + query_only;
+- considers only spot 4h BTCUSDT/ETHUSDT/SOLUSDT freezes from Binance or Bybit;
+- enforces signal as-of >= persistent activation cutoff and frozen_at >= activation timestamp;
+- requires the supplied activation identity to equal the immutable paper activation singleton;
+- groups events by exact (symbol, signal_as_of_ms);
+- emits a candidate only for exactly one Binance + exactly one Bybit freeze;
+- one-sided provider groups remain incomplete and emit nothing;
+- duplicate provider freezes for the same event context fail closed;
+- signal_decision is deserialized from immutable bundle JSON and rechecked against indexed freeze identity/provider/market/symbol/timeframe/as-of/state/direction;
+- processed-event identities already present in paper_processed_events are skipped;
+- candidate provider order is fixed Binance then Bybit;
+- candidate order is deterministic by as-of, symbol and event identity.
+
+Authority boundary:
+- no autonomy evaluation;
+- no candle read;
+- no venue-rule refresh;
+- no simulated execution;
+- no paper-ledger writes;
+- no PAPER/STABLE activation;
+- REAL_CAPITAL=0.
+
+Acceptance evidence:
+- implementation: 4ddca26fa15f7cc90b4a191fe6c7e1717671e435;
+- fixture correction: 2cfd9d0f411b2f548468de8f6e4c03bdd1dd3b8a;
+- lint-only head: fd383be78059039312d586cc5fee491069bb6b8c;
+- final regression: 429 tests PASS;
+- Ruff PASS;
+- mypy PASS across 94 source files;
+- JavaScript syntax PASS.
+
+Current frontier:
+- compose scanner candidate -> accepted autonomy policy -> frozen execution input -> latest cached authoritative venue rules -> sizing -> authoritative pretrade as a strictly read-only/dry-run activation candidate;
+- dry-run must not persist processed events or mutate the paper fund;
+- prove real production ledger behavior before considering any virtual-trade activation.
