@@ -10,8 +10,14 @@ from pathlib import Path
 
 import httpx
 
+from crypto_signal.data.adapters.base import MarketDataAdapter
 from crypto_signal.data.adapters.binance import BinanceSpotAdapter
 from crypto_signal.data.adapters.bybit import BybitSpotAdapter
+from crypto_signal.data.models import Exchange
+from crypto_signal.ledger.coverage import (
+    LiveCoveragePlan,
+    LiveCoverageSourceStrategy,
+)
 from crypto_signal.ledger.live_clock import freeze_live_provider
 from crypto_signal.ledger.store import (
     ImmutableSignalLedger,
@@ -37,20 +43,31 @@ def parse_args() -> argparse.Namespace:
 async def run(db_path: Path) -> int:
     ledger = ImmutableSignalLedger(db_path)
     failures = 0
-    providers = (
-        ("bybit", BybitSpotAdapter()),
-        ("binance", BinanceSpotAdapter()),
-    )
+    plan = LiveCoveragePlan.current_pilot()
+    adapters: dict[Exchange, MarketDataAdapter] = {
+        Exchange.BYBIT: BybitSpotAdapter(),
+        Exchange.BINANCE: BinanceSpotAdapter(),
+    }
 
-    for name, adapter in providers:
+    for context in plan.enabled_contexts:
+        name = context.exchange.value
+        adapter = adapters[context.exchange]
         try:
+            if (
+                context.source_strategy
+                is not LiveCoverageSourceStrategy.DIRECT_CANONICAL_15M
+            ):
+                raise ValueError(
+                    "enabled higher-timeframe live coverage requires "
+                    "canonical aggregation implementation"
+                )
             result = await freeze_live_provider(
                 adapter=adapter,
                 ledger=ledger,
-                symbol="BTCUSDT",
-                timeframe="15m",
-                limit=500,
-                minimum_closed_candles=100,
+                symbol=context.symbol,
+                timeframe=context.timeframe,
+                limit=context.freeze_limit,
+                minimum_closed_candles=context.minimum_closed_candles,
             )
         except (
             LedgerConflictError,
@@ -61,7 +78,8 @@ async def run(db_path: Path) -> int:
         ) as exc:
             failures += 1
             print(
-                f"provider={name} status=ERROR "
+                f"provider={name} symbol={context.symbol} "
+                f"timeframe={context.timeframe} status=ERROR "
                 f"error={type(exc).__name__}:{exc}",
                 file=sys.stderr,
                 flush=True,
@@ -69,7 +87,8 @@ async def run(db_path: Path) -> int:
             continue
 
         print(
-            f"provider={name} status={result.status.value} "
+            f"provider={name} symbol={context.symbol} "
+            f"timeframe={context.timeframe} status={result.status.value} "
             f"cutoff={result.source_cutoff_open_time_ms} "
             f"signal={result.signal_freeze_identity or '-'} "
             f"bundle={result.bundle_identity or '-'} "

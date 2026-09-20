@@ -3,7 +3,7 @@
 Updated: 2026-09-20
 Project: Crypto Signal
 Phase: Post-V1 Production Expansion
-State: V1_INTEGRATED_ACCEPTED
+State: POST_V1_COVERAGE_MATRIX_ACCEPTED
 REAL_CAPITAL: 0
 
 ## Accepted foundations
@@ -389,17 +389,31 @@ No Durdurulmaz or Quantum Capital project state was mutated; UID502 is used only
 - dashboard localhost/read-only/REAL_CAPITAL=0 boundaries verified
 - V1 critical-path platform core is ACCEPTED
 
-## Canonical next frontier
-Post-V1 Production Expansion — untouched-forward coverage:
-1. define a versioned live coverage matrix contract
-2. preserve the accepted BTCUSDT 15m pilot as current stable default
-3. make symbol/timeframe/provider coverage explicit rather than hard-coded
-4. add deterministic scheduling/deduplication tests for multiple contexts
-5. quantify API/load budget before activating broader coverage
-6. expand timeframes first under the existing Data Truth contracts
-7. expand symbols only after coverage/load acceptance
-8. do not mix new coverage evidence with historical claims
-9. keep REAL_CAPITAL=0 and accepted V1 truth boundaries unchanged
+## Post-V1 live coverage matrix accepted evidence
+- hard-coded live provider/symbol/timeframe scope replaced by versioned LiveCoveragePlan
+- current production pilot remains BTCUSDT / 15m / Spot / Bybit + Binance
+- 15m requires DIRECT_CANONICAL_15M
+- 1h/4h/1D/1W require AGGREGATE_CANONICAL_15M
+- direct/native higher-timeframe activation is rejected
+- higher-timeframe candidates exist only as disabled contexts
+- per-run canonical base-15m load budget is explicit
+- 500 weekly target candles would require 336,000 base 15m candles per provider
+- current live runner reads the accepted pilot plan and fails closed on unsupported aggregate contexts
+- focused gate: 10 tests PASS
+- full repository: 262 tests PASS
+- Ruff PASS / mypy PASS / uv lock PASS
+- no production coverage deployment occurred
 
-V2+ research remains behind the production coverage expansion frontier.
+## Canonical next frontier
+Post-V1 canonical higher-timeframe preparation:
+1. build target timeframe candles only from canonical closed 15m
+2. keep incomplete target buckets explicit and non-freezable
+3. preserve aggregated observation/provenance timing
+4. implement bounded paginated base-history acquisition
+5. avoid oversized one-shot REST requests
+6. prove requested target-window completeness deterministically
+7. keep all higher-timeframe coverage contexts disabled in production
+8. run focused/full gates before any activation proposal
+
+V2+ research remains behind production coverage expansion.
 REAL_CAPITAL remains 0.

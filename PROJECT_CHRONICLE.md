@@ -1238,3 +1238,36 @@ gate and fixed before acceptance by moving the live clock from the development
 V1 critical-path platform core is accepted.
 Phase advances to Post-V1 Production Expansion, beginning with an explicit
 untouched-forward coverage matrix rather than immediate scope expansion.
+
+## 2026-09-20 — Post-V1 live coverage matrix accepted
+
+The live evidence runner no longer hard-codes BTCUSDT/15m/provider parameters.
+It now reads an explicit versioned LiveCoveragePlan.
+
+The accepted stable default is intentionally unchanged:
+- BTCUSDT
+- 15m
+- Spot
+- Bybit + Binance
+
+Data Truth is enforced in the coverage contract:
+- 15m may use direct canonical 15m
+- 1h/4h/1D/1W must use deterministic canonical-15m aggregation
+- native higher-timeframe activation is rejected
+
+All higher-timeframe candidates remain disabled.
+
+Load budgeting is explicit. A 500-candle 1W analysis window would require
+336,000 base 15m candles per provider, so naive one-shot REST expansion is
+explicitly rejected as an activation path.
+
+Mechanical evidence:
+- coverage/live-freeze focused tests: 10 PASS
+- full repository: 262 PASS
+- Ruff PASS
+- mypy PASS
+- uv lock PASS
+
+No production coverage change was deployed.
+Canonical frontier advances to canonical higher-timeframe preparation and
+bounded base-history acquisition.
