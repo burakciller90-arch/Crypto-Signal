@@ -644,3 +644,66 @@ Acceptance evidence:
 
 Regression note:
 A prior full-suite run exposed a WAL-sensitive alert-preview test that compared raw SQLite main-file bytes. Bounded diagnostics showed 5/5 exact test repeats PASS, unchanged main/WAL payloads in controlled runs, only expected -shm coordination changes, one event row and zero delivery attempts. The test was corrected to compare logical outbox/schema truth rather than SQLite housekeeping bytes; final full regression then passed.
+
+## 2026-09-20 — Stage 6C Slice 3 accepted: supervisor-direct deterministic execution + orchestration
+
+The user explicitly suspended Cursor as a development worker because repeated independent review/hardening was eroding the expected speed benefit. No new Cursor development tasks should be issued unless the user explicitly re-enables it. Existing Cursor infrastructure may remain dormant for optional future use.
+
+Issue #78 Cursor output was NOT integrated. It was treated only as disposable diagnostic reference, then supervisor-78 was removed and the issue was closed as superseded by supervisor-direct implementation.
+
+Fresh probe of the discarded draft mechanically demonstrated two audit gaps:
+- a plan carrying a risk-policy version different from the fund was accepted;
+- an execution snapshot carrying a policy version different from the fund was accepted;
+- two different frozen snapshot identities with identical fill math could collapse to the same SimulatedFillRecord identity.
+
+Supervisor then implemented Slice 3 directly in canonical main.
+
+Accepted execution foundation:
+- immutable caller-supplied FrozenExecutionSnapshot;
+- snapshot identity covers venue reference, symbol, quantity step, minimum quantity, minimum notional, fee, spread, slippage, execution policy and partial-fill flag;
+- venue values are explicit frozen simulation inputs, never claimed live Binance/Bybit truth;
+- partial fills remain unsupported in v1;
+- Decimal-only execution math;
+- quantity step/minimum quantity/minimum notional gates;
+- adverse BUY and REDUCE/EXIT simulated prices;
+- explicit fee/spread/slippage accounting;
+- cost-budget fail-closed;
+- execution_reference binds the snapshot SHA256 into the resulting fill provenance, preventing rule-distinct snapshots from collapsing to the same fill identity;
+- REAL_CAPITAL=0 and no network/exchange/credential/order surface.
+
+Accepted orchestration foundation:
+- pure state + PaperTradePlan + frozen snapshot -> immutable in-memory record bundle;
+- no ledger/database write;
+- HOLD_CASH -> DecisionIntent only;
+- BUY/REDUCE/EXIT -> DecisionIntent + SimulatedFill + PositionCashMutation;
+- plan fund identity must equal state fund identity;
+- plan risk-policy version must equal fund risk-policy version;
+- execution snapshot policy version must equal fund execution-policy version;
+- decision policy provenance must reconcile with plan;
+- fill is bound to exact frozen snapshot provenance;
+- BUY cash uses actual simulated fill notional + fee;
+- sell cash uses actual simulated fill proceeds - fee;
+- positions reconcile with accepted plan projection;
+- actual realized execution may be better than plan's explicit cost budget but may never be worse;
+- EXIT leaves zero quantity.
+
+Direct implementation files:
+- src/crypto_signal/paper/execution.py
+- src/crypto_signal/paper/orchestration.py
+- tests/test_paper_execution.py
+- tests/test_paper_orchestration.py
+
+Acceptance evidence:
+- initial supervisor full gate found only lint/style issues after all tests passed;
+- lint corrected directly by supervisor;
+- final canonical full regression: 330 tests PASS;
+- Ruff PASS;
+- mypy PASS across 84 source files;
+- JavaScript syntax PASS;
+- REAL_CAPITAL remains 0.
+
+Current Stage 6C frontier:
+- atomic/idempotent append of an accepted orchestration bundle into the immutable ledger;
+- deterministic current-state re-read after append;
+- persistent paper-account clock/runtime only after atomicity/replay/crash-safety gates;
+- read-only portfolio/NAV/benchmark Mission Control view after runtime truth exists.
