@@ -109,7 +109,13 @@ jobs:
           OUT="$HOME/.cursor/crypto-tty-auth-test.txt"
           rm -f "$OUT"
           CMD='export PATH="$HOME/.local/bin:$PATH"; agent status > "$HOME/.cursor/crypto-tty-auth-test.txt" 2>&1; exit'
-          /usr/bin/osascript -e 'tell application "Terminal" to do script "'"$CMD"'"' >/dev/null
+          /usr/bin/osascript - "$CMD" >/dev/null <<'APPLESCRIPT'
+          on run argv
+            tell application "Terminal"
+              do script (item 1 of argv)
+            end tell
+          end run
+APPLESCRIPT
           for i in {1..20}; do
             if [ -s "$OUT" ]; then break; fi
             sleep 1
