@@ -38,7 +38,7 @@ __all__ = [
     "evaluate_autonomy_policy",
 ]
 
-PAPER_AUTONOMY_POLICY_VERSION = "paper_autonomy_policy.v1"
+PAPER_AUTONOMY_POLICY_VERSION = "paper_autonomy_policy.v2"
 DEFAULT_AUTONOMY_DECISION_TIMEFRAME = "4h"
 DEFAULT_AUTONOMY_COOLDOWN_MS = 4 * 60 * 60 * 1000
 DEFAULT_AUTONOMY_MAX_SIGNAL_AGE_MS = 4 * 60 * 60 * 1000
@@ -77,7 +77,7 @@ class PaperAutonomyReason(StrEnum):
 
 @dataclass(frozen=True, slots=True)
 class PaperAutonomyPolicy:
-    """Conservative V1 eligibility/risk policy above the immutable planner."""
+    """Conservative V2 eligibility/risk policy above the immutable planner."""
 
     version: str
     decision_timeframe: str
@@ -120,7 +120,7 @@ class PaperAutonomyPolicy:
             raise ValueError("allowed uncertainty flags must be unique")
         if self.allow_pyramiding or self.allow_shorting or self.allow_automatic_reduce:
             raise ValueError(
-                "paper_autonomy_policy.v1 forbids pyramiding, shorting, "
+                "paper_autonomy_policy.v2 forbids pyramiding, shorting, "
                 "and automatic REDUCE"
             )
 
@@ -157,7 +157,7 @@ class PaperAutonomyDecision:
         if self.cooldown_remaining_ms < 0:
             raise ValueError("cooldown_remaining_ms cannot be negative")
         if self.candidate_action is PaperAction.REDUCE:
-            raise ValueError("automatic REDUCE is not allowed in autonomy policy v1")
+            raise ValueError("automatic REDUCE is not allowed in autonomy policy v2")
         if self.candidate_action in {PaperAction.BUY, PaperAction.EXIT}:
             if self.symbol is None:
                 raise ValueError("trade candidate requires symbol")
@@ -178,7 +178,7 @@ class PaperAutonomyDecision:
 
 
 def default_conservative_autonomy_policy() -> PaperAutonomyPolicy:
-    """Return the explicit conservative paper autonomy policy v1."""
+    """Return the explicit conservative paper autonomy policy v2."""
     return PaperAutonomyPolicy(
         version=PAPER_AUTONOMY_POLICY_VERSION,
         decision_timeframe=DEFAULT_AUTONOMY_DECISION_TIMEFRAME,
@@ -201,6 +201,7 @@ def evaluate_autonomy_policy(
     activation_cutoff_ms: int,
     mark_prices: Mapping[PaperSymbol, Decimal] | None = None,
     last_action_at_ms: Mapping[PaperSymbol, int] | None = None,
+    provider_source_cutoff_open_time_ms: Mapping[Exchange, int] | None = None,
     policy: PaperAutonomyPolicy | None = None,
 ) -> PaperAutonomyDecision:
     """Evaluate frozen signal consensus into a non-executable paper candidate."""
@@ -236,16 +237,32 @@ def evaluate_autonomy_policy(
             reason="required Bybit/Binance provider set is not exact",
         )
 
-    ordered = tuple(provider_map[exchange] for exchange in selected_policy.required_exchanges)
+    ordered = tuple(
+        provider_map[exchange] for exchange in selected_policy.required_exchanges
+    )
     symbols = {signal.symbol for signal in ordered}
     timeframes = {signal.timeframe for signal in ordered}
     as_of_values = {signal.as_of_ms for signal in ordered}
     market_types = {signal.market_type for signal in ordered}
+    cutoff_context_valid = False
+    if provider_source_cutoff_open_time_ms is not None:
+        expected_exchanges = set(selected_policy.required_exchanges)
+        supplied_exchanges = set(provider_source_cutoff_open_time_ms)
+        cutoff_values = tuple(provider_source_cutoff_open_time_ms.values())
+        cutoff_context_valid = (
+            supplied_exchanges == expected_exchanges
+            and all(value >= 0 for value in cutoff_values)
+            and len(set(cutoff_values)) == 1
+        )
     if (
         len(symbols) != 1
         or len(timeframes) != 1
-        or len(as_of_values) != 1
         or market_types != {MarketType.SPOT}
+        or (len(as_of_values) != 1 and not cutoff_context_valid)
+        or (
+            provider_source_cutoff_open_time_ms is not None
+            and not cutoff_context_valid
+        )
     ):
         return _hold_from_signals(
             policy=selected_policy,
@@ -253,7 +270,9 @@ def evaluate_autonomy_policy(
             evaluated_at_ms=evaluated_at_ms,
             activation_cutoff_ms=activation_cutoff_ms,
             reason_code=PaperAutonomyReason.MIXED_SIGNAL_CONTEXT,
-            reason="provider signals do not share one exact spot context",
+            reason=(
+                "provider signals do not share one exact spot market context"
+            ),
         )
 
     raw_symbol = ordered[0].symbol
@@ -269,7 +288,7 @@ def evaluate_autonomy_policy(
             reason="signal symbol is outside the permitted paper universe",
         )
 
-    source_as_of_ms = ordered[0].as_of_ms
+    source_as_of_ms = max(signal.as_of_ms for signal in ordered)
     if ordered[0].timeframe != selected_policy.decision_timeframe:
         return _hold_from_signals(
             policy=selected_policy,
@@ -280,7 +299,7 @@ def evaluate_autonomy_policy(
             reason_code=PaperAutonomyReason.TIMEFRAME_NOT_ELIGIBLE,
             reason="signal timeframe is outside the autonomy decision cadence",
         )
-    if source_as_of_ms < activation_cutoff_ms:
+    if any(signal.as_of_ms < activation_cutoff_ms for signal in ordered):
         return _hold_from_signals(
             policy=selected_policy,
             signals=ordered,
@@ -290,7 +309,7 @@ def evaluate_autonomy_policy(
             reason_code=PaperAutonomyReason.PRE_ACTIVATION_SIGNAL,
             reason="frozen signal predates the explicit paper activation watermark",
         )
-    if source_as_of_ms > evaluated_at_ms:
+    if any(signal.as_of_ms > evaluated_at_ms for signal in ordered):
         return _hold_from_signals(
             policy=selected_policy,
             signals=ordered,
@@ -300,7 +319,10 @@ def evaluate_autonomy_policy(
             reason_code=PaperAutonomyReason.FUTURE_SIGNAL,
             reason="frozen signal as-of is after evaluation time",
         )
-    if evaluated_at_ms - source_as_of_ms > selected_policy.max_signal_age_ms:
+    if any(
+        evaluated_at_ms - signal.as_of_ms > selected_policy.max_signal_age_ms
+        for signal in ordered
+    ):
         return _hold_from_signals(
             policy=selected_policy,
             signals=ordered,
@@ -362,7 +384,7 @@ def evaluate_autonomy_policy(
             activation_cutoff_ms=activation_cutoff_ms,
             symbol=symbol,
             reason_code=PaperAutonomyReason.UNSAFE_UNCERTAINTY,
-            reason="signal carries an uncertainty flag not allowed by autonomy v1",
+            reason="signal carries an uncertainty flag not allowed by autonomy v2",
         )
 
     last_action = (last_action_at_ms or {}).get(symbol)
