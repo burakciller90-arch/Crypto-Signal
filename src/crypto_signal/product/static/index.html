@@ -113,8 +113,34 @@
       <div id="educationCenter" class="education-grid loading-block">Dersler hazırlanıyor…</div>
     </section>
     <section class="panel archive-panel">
-      <div class="panel-head"><div><p class="eyebrow">SİNYAL ARŞİVİ</p><h3>Hiçbir geçmiş karar kaybolmaz</h3></div><div class="panel-actions"><span id="archiveCount" class="panel-tag">—</span><button id="refreshButton" class="ghost-button" type="button">Yenile</button></div></div>
+      <div class="panel-head">
+        <div>
+          <p class="eyebrow">SİNYAL / İŞLEM ARŞİVİ</p>
+          <h3>Geçmiş karar ve sanal işlem kanıtı birbirine karışmaz</h3>
+          <p class="section-copy">Sinyal geçmişi piyasa kararlarını; sanal işlem geçmişi yalnızca paper-ledger kanıtını gösterir.</p>
+        </div>
+        <div class="panel-actions"><span id="archiveCount" class="panel-tag">—</span><button id="refreshButton" class="ghost-button" type="button">Yenile</button></div>
+      </div>
+      <div class="archive-section-head"><div><div class="value-label">Sinyal kayıtları</div><strong>Değiştirilemez piyasa kararları</strong></div><span class="panel-tag">signal ledger</span></div>
       <div class="table-wrap"><table><thead><tr><th>Kaydedildi</th><th>Piyasa</th><th>Durum</th><th>Yön</th><th>Metodoloji uyumu</th><th>Olasılık</th><th>Kurulum</th></tr></thead><tbody id="archiveBody"><tr><td colspan="7" class="empty-cell">Gerçek kayıtlar yükleniyor…</td></tr></tbody></table></div>
+      <div class="paper-trade-archive">
+        <div class="archive-section-head">
+          <div><div class="value-label">Sanal işlem kayıtları</div><strong>Paper fill ve kapanmış round-trip geçmişi</strong></div>
+          <span id="paperTradeArchiveTag" class="panel-tag">yükleniyor…</span>
+        </div>
+        <div id="paperTradeArchive" class="loading-block">Sanal işlem geçmişi yükleniyor…</div>
+      </div>
+    </section>
+    <section class="panel system-health-panel">
+      <div class="panel-head">
+        <div>
+          <p class="eyebrow">SİSTEM SAĞLIĞI</p>
+          <h3>Ürün ve kanıt katmanı şu anda güvenilir mi?</h3>
+          <p class="section-copy">Bu panel yalnızca ürün API’sinin görebildiği read-only runtime kanıtını raporlar; eksik veriyi sağlıklı saymaz.</p>
+        </div>
+        <span id="systemHealthTag" class="panel-tag">kontrol ediliyor…</span>
+      </div>
+      <div id="systemHealth" class="system-health-grid loading-block">Sistem sağlığı okunuyor…</div>
     </section>
   </main>
   <dialog id="signalDialog" class="signal-dialog">
