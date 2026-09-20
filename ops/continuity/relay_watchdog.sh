@@ -6,6 +6,16 @@ HB="$SH/relay_heartbeat"
 PIDFILE="$SH/relay.pid"
 NOW=$(date +%s)
 NEEDS_START=0
+RESTART_REQUEST="$SH/restart_requested"
+
+if [ -f "$RESTART_REQUEST" ]; then
+  if [ -f "$PIDFILE" ]; then
+    PID=$(cat "$PIDFILE" 2>/dev/null || true)
+    if [ -n "$PID" ]; then kill "$PID" >/dev/null 2>&1 || true; fi
+  fi
+  rm -f "$PIDFILE" "$RESTART_REQUEST"
+  NEEDS_START=1
+fi
 
 if [ ! -f "$PIDFILE" ]; then
   NEEDS_START=1
