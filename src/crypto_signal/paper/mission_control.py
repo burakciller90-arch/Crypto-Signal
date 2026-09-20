@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import sqlite3
 from dataclasses import dataclass
+from decimal import Decimal
 from enum import StrEnum
 from pathlib import Path
 
@@ -27,6 +28,7 @@ from crypto_signal.paper.event_scanner import (
     PaperSignalEventScanResult,
     scan_post_activation_signal_events,
 )
+from crypto_signal.paper.execution import simulate_paper_fill
 from crypto_signal.paper.execution_input import FrozenPaperExecutionInput
 from crypto_signal.paper.models import (
     PERMITTED_SYMBOLS,
@@ -51,6 +53,7 @@ __all__ = [
     "PaperDecisionCadenceReadiness",
     "PaperDecisionCadenceStatus",
     "PaperMissionControlCandidate",
+    "PaperPlanCostPreview",
     "PaperMissionControlError",
     "PaperMissionControlSnapshot",
     "PaperSignalStreamOverview",
@@ -221,6 +224,44 @@ class PaperDecisionCadenceReadiness:
 
 
 @dataclass(frozen=True, slots=True)
+class PaperPlanCostPreview:
+    """Read-only exact cost decomposition for an accepted virtual plan."""
+
+    execution_snapshot_identity: str
+    fee_usdt: Decimal
+    spread_usdt: Decimal
+    slippage_usdt: Decimal
+    total_cost_usdt: Decimal
+    reference_notional_usdt: Decimal
+    fill_notional_usdt: Decimal
+    real_capital: int = REAL_CAPITAL
+
+    def __post_init__(self) -> None:
+        if self.real_capital != REAL_CAPITAL:
+            raise ValueError("plan cost preview must remain REAL_CAPITAL=0")
+        _require_sha256(
+            self.execution_snapshot_identity,
+            "plan cost preview execution snapshot",
+        )
+        for label, value in (
+            ("fee_usdt", self.fee_usdt),
+            ("spread_usdt", self.spread_usdt),
+            ("slippage_usdt", self.slippage_usdt),
+            ("total_cost_usdt", self.total_cost_usdt),
+            ("reference_notional_usdt", self.reference_notional_usdt),
+            ("fill_notional_usdt", self.fill_notional_usdt),
+        ):
+            if not isinstance(value, Decimal):
+                raise TypeError(f"{label} must be Decimal")
+            if value < Decimal(0):
+                raise ValueError(f"{label} cannot be negative")
+        if self.total_cost_usdt != (
+            self.fee_usdt + self.spread_usdt + self.slippage_usdt
+        ):
+            raise ValueError("plan cost preview total must equal explicit costs")
+
+
+@dataclass(frozen=True, slots=True)
 class PaperMissionControlCandidate:
     event_identity: str
     symbol: PaperSymbol
@@ -233,6 +274,7 @@ class PaperMissionControlCandidate:
     venue_rule_snapshot_identity: str | None = None
     sizing: PaperPositionSizingDecision | None = None
     venue_bound_pretrade: PaperVenueBoundPretrade | None = None
+    cost_preview: PaperPlanCostPreview | None = None
 
     def __post_init__(self) -> None:
         _require_sha256(self.event_identity, "mission-control event identity")
@@ -329,6 +371,22 @@ class PaperMissionControlCandidate:
                 and plan is not None
             ):
                 raise ValueError("PRETRADE_REJECTED candidate cannot carry a plan")
+
+        if self.terminal_status is PaperActivationDryRunStatus.PRETRADE_READY:
+            if self.cost_preview is None:
+                raise ValueError("PRETRADE_READY candidate requires exact cost preview")
+            assert self.venue_bound_pretrade is not None
+            plan = self.venue_bound_pretrade.pretrade.plan
+            assert plan is not None
+            if (
+                self.cost_preview.execution_snapshot_identity
+                != self.venue_bound_pretrade.execution_snapshot.snapshot_identity
+            ):
+                raise ValueError("candidate/cost-preview execution snapshot mismatch")
+            if self.cost_preview.total_cost_usdt != plan.cost_budget_usdt:
+                raise ValueError("candidate/cost-preview budget mismatch")
+        elif self.cost_preview is not None:
+            raise ValueError("only PRETRADE_READY may carry a plan cost preview")
 
 
 @dataclass(frozen=True, slots=True)
@@ -472,6 +530,10 @@ def read_paper_mission_control_snapshot(
                 venue_rule_snapshot_identity=result.venue_rule_snapshot_identity,
                 sizing=result.sizing,
                 venue_bound_pretrade=result.venue_bound_pretrade,
+                cost_preview=_build_plan_cost_preview(
+                    event_identity=event.event_identity,
+                    bound=result.venue_bound_pretrade,
+                ),
             )
         )
 
@@ -495,6 +557,40 @@ def read_paper_mission_control_snapshot(
         observed_at_ms=observed_at_ms,
     )
 
+
+
+def _build_plan_cost_preview(
+    *,
+    event_identity: str,
+    bound: PaperVenueBoundPretrade | None,
+) -> PaperPlanCostPreview | None:
+    if bound is None or bound.pretrade.plan is None:
+        return None
+    plan = bound.pretrade.plan
+    preview = simulate_paper_fill(
+        plan=plan,
+        snapshot=bound.execution_snapshot,
+        decision_identity=event_identity,
+        filled_at_ms=plan.planned_at_ms,
+    )
+    if preview.costs is None:
+        raise PaperMissionControlError(
+            "trade plan cost preview requires explicit simulator costs"
+        )
+    if preview.total_cost_usdt != plan.cost_budget_usdt:
+        raise PaperMissionControlError(
+            "trade plan cost preview must match accepted cost budget exactly"
+        )
+    return PaperPlanCostPreview(
+        execution_snapshot_identity=bound.execution_snapshot.snapshot_identity,
+        fee_usdt=preview.costs.fee_usdt,
+        spread_usdt=preview.costs.spread_usdt,
+        slippage_usdt=preview.costs.slippage_usdt,
+        total_cost_usdt=preview.total_cost_usdt,
+        reference_notional_usdt=preview.reference_notional_usdt,
+        fill_notional_usdt=preview.fill_notional_usdt,
+        real_capital=REAL_CAPITAL,
+    )
 
 def _build_snapshot(
     *,
@@ -839,6 +935,23 @@ def _decision_cadence_payload(
 def _candidate_payload(item: PaperMissionControlCandidate) -> dict[str, object]:
     return {
         "candidate_action": item.candidate_action.value,
+        "cost_preview": (
+            {
+                "execution_snapshot_identity": (
+                    item.cost_preview.execution_snapshot_identity
+                ),
+                "fee_usdt": item.cost_preview.fee_usdt,
+                "fill_notional_usdt": item.cost_preview.fill_notional_usdt,
+                "reference_notional_usdt": (
+                    item.cost_preview.reference_notional_usdt
+                ),
+                "slippage_usdt": item.cost_preview.slippage_usdt,
+                "spread_usdt": item.cost_preview.spread_usdt,
+                "total_cost_usdt": item.cost_preview.total_cost_usdt,
+            }
+            if item.cost_preview is not None
+            else None
+        ),
         "event_identity": item.event_identity,
         "execution_input_identity": (
             item.execution_input.input_identity
