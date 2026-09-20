@@ -3,7 +3,7 @@
 Updated: 2026-09-20
 Project: Crypto Signal
 Phase: Dashboard V1 / Product Command Center
-State: DASHBOARD_V1_SLICE2_WEB_ACCEPTED
+State: DASHBOARD_V1_SLICE3_STABLE_RUNTIME_ACCEPTED
 REAL_CAPITAL: 0
 
 ## Accepted foundations
@@ -219,17 +219,30 @@ No Durdurulmaz or Quantum Capital project state was mutated; UID502 is used only
 - uv lock PASS
 - local real-ledger smoke on 127.0.0.1:48700 PASS; test server stopped and port returned FREE
 
-## Canonical next frontier
-Dashboard V1 / Product Command Center — Slice 3:
-1. create isolated PRODUCT/STABLE worktree pinned to accepted Dashboard commit
-2. create product-local virtual environment from accepted lockfile
-3. install com.cryptosignal.dashboard LaunchAgent
-4. bind only to 127.0.0.1:48700
-5. retain read-only production-ledger access
-6. add runtime health/log checks and restart behavior
-7. verify browser/local HTTP smoke from stable lane
-8. keep LIVE/STABLE evidence clock independent
-9. no execution controls
+## Dashboard V1 Slice 3 accepted evidence
+- isolated PRODUCT/STABLE worktree at /Users/crypto-signal-agent/Crypto-Signal-Product
+- PRODUCT/STABLE pinned to accepted Dashboard commit b1cd19fdecb80e8793d8b3db584f21de726c460c
+- product-local .venv created from accepted uv.lock
+- FastAPI 0.141.1 / Uvicorn 0.53.0 runtime imports PASS
+- com.cryptosignal.dashboard LaunchAgent installed with RunAtLoad + KeepAlive
+- dashboard binds only to 127.0.0.1:48700
+- production ledger path is consumed read-only through accepted DashboardReader
+- initial runtime health HTTP 200 with ledger_present=true / read_only=true / REAL_CAPITAL=0
+- KeepAlive acceptance: original PID 58609 stopped, replacement PID 59520 started, port rebound and health returned HTTP 200
+- PRODUCT/STABLE is independent from mutable development source
+- LIVE/STABLE evidence clock remains independent
 
-After stable product runtime acceptance, continue richer Signal Detail, Historical Evaluation projections, navigation and visual polish.
+## Canonical next frontier
+Dashboard V1 / Product Command Center — Slice 4:
+1. richer Signal Detail projection from frozen bundle evidence
+2. Historical Evaluation metric projection into Performance
+3. explicit RETROSPECTIVE / WALK_FORWARD / LIVE_UNTOUCHED_FORWARD presentation
+4. provider / symbol / timeframe navigation
+5. clearer uncertainty and methodology agreement presentation
+6. further responsive visual polish
+7. no mock data masquerading as real
+8. no execution controls
+9. focused tests + full repo gate before explicit PRODUCT/STABLE deploy
+
+The currently running PRODUCT/STABLE stays pinned to b1cd19f until Slice 4 is accepted and explicitly deployed.
 REAL_CAPITAL remains 0.

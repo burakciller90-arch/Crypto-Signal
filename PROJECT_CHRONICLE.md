@@ -831,3 +831,37 @@ Canonical frontier advances to Dashboard Slice 3:
 a separate PRODUCT/STABLE worktree and persistent local LaunchAgent runtime.
 LIVE/STABLE evidence clock remains independent.
 REAL_CAPITAL remains 0.
+
+## 2026-09-20 — Dashboard V1 Slice 3 accepted: isolated persistent PRODUCT/STABLE runtime
+
+The accepted local Mission Control web surface is now isolated from the mutable
+development worktree.
+
+PRODUCT/STABLE:
+- /Users/crypto-signal-agent/Crypto-Signal-Product
+- detached clean worktree pinned to b1cd19fdecb80e8793d8b3db584f21de726c460c
+- own .venv created from accepted uv.lock
+- FastAPI 0.141.1 / Uvicorn 0.53.0 import gate PASS
+
+Persistent runtime:
+- LaunchAgent com.cryptosignal.dashboard
+- RunAtLoad + KeepAlive
+- localhost only: 127.0.0.1:48700
+- read-only production ledger path
+- runtime logs isolated under runtime/dashboard
+
+Acceptance:
+- initial PID 58609 served health HTTP 200
+- listener verified on 127.0.0.1:48700 only
+- child PID 58609 was intentionally terminated
+- launchd runs advanced to 2 and replacement PID 59520 appeared
+- after startup, port returned LISTEN and /api/health returned HTTP 200
+- Uvicorn log recorded clean old shutdown and clean replacement startup
+
+LIVE/STABLE forward evidence clock remains a separate worktree/runtime.
+PRODUCT/STABLE does not mutate signal freezes or exchange/data state.
+
+Canonical frontier advances to Dashboard V1 Slice 4:
+richer frozen-evidence detail, Historical Evaluation performance projection,
+explicit evidence-class views, navigation and further visual polish.
+REAL_CAPITAL remains 0.

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>com.cryptosignal.dashboard</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/Users/crypto-signal-agent/Crypto-Signal-Product/.venv/bin/python</string>
+    <string>/Users/crypto-signal-agent/Crypto-Signal-Product/ops/run_dashboard.py</string>
+    <string>--host</string><string>127.0.0.1</string>
+    <string>--port</string><string>48700</string>
+    <string>--ledger</string><string>/Users/crypto-signal-agent/Crypto-Signal/runtime/ledger/live_signal_ledger.sqlite3</string>
+  </array>
+  <key>WorkingDirectory</key><string>/Users/crypto-signal-agent/Crypto-Signal-Product</string>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PYTHONPATH</key><string>/Users/crypto-signal-agent/Crypto-Signal-Product/src</string>
+  </dict>
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><true/>
+  <key>ThrottleInterval</key><integer>5</integer>
+  <key>StandardOutPath</key><string>/Users/crypto-signal-agent/Crypto-Signal/runtime/dashboard/dashboard.out.log</string>
+  <key>StandardErrorPath</key><string>/Users/crypto-signal-agent/Crypto-Signal/runtime/dashboard/dashboard.err.log</string>
+</dict>
+</plist>
