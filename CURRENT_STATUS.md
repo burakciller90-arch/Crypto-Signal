@@ -1588,3 +1588,40 @@ Current frontier:
 - create one strictly read-only paper mission-control snapshot that composes production observation health, portfolio truth and closed-trade performance truth without changing any paper ledger state;
 - this snapshot will become the clean backend contract for the final simple-professional Dashboard pass;
 - virtual-trade writes remain blocked until a real post-cutoff production event traverses the accepted dry-run path and is mechanically reviewed.
+
+
+## PAPER/STABLE unified mission-control truth accepted
+- implementation/stable head: ec685df2c08907b65ee826315cfd874dd2257688
+- paper_mission_control.v1 composes accepted read-only production truth into one deterministic snapshot:
+  - immutable activation/watermark state
+  - point-in-time signal-stream overview
+  - strict post-activation 4h Binance+Bybit scanner counts
+  - factual dry-run decision trace for every current candidate
+  - marked paper portfolio truth
+  - closed-trade performance truth
+- the scanner now accepts an optional observed_at_ms boundary; Mission Control always uses it so future signal freezes cannot leak into an earlier product snapshot
+- full gate: 461 tests PASS
+- Ruff PASS
+- mypy PASS across 100 source files
+- JavaScript PASS
+- PAPER/STABLE deploy PASS with no-trade invariant preserved
+- first live stable mission-control snapshot:
+  - snapshot=0738b9d4203267c1227a97e4ccbbcb0525119228843aad9efc4d318f25abb34e
+  - activation baseline=372 freezes
+  - observed signal freezes=414
+  - latest signal=SOLUSDT / Binance / 15m / WATCH / bearish
+  - eligible post-activation 4h freezes=0
+  - incomplete provider pairs=0
+  - candidates=0 / ready=0 / attention=NO
+  - portfolio=available, cash=100.00, positions=0, NAV=100.00, PnL=0.00, total return=0
+  - performance=not_yet_measured, closed trades=0, open trades=0, win rate unavailable
+  - trade_success=NOT_YET_MEASURED
+  - trade_policy=NOT_ACTIVATED
+  - REAL_CAPITAL=0
+- live evidence-clock logs mechanically confirm 4h production coverage is active for BTCUSDT/ETHUSDT/SOLUSDT on both Binance and Bybit
+- the latest observed 4h source cutoff remained 1789905600000 and was already frozen on both providers; this context predates the paper activation watermark, explaining eligible_freezes=0 without indicating a disabled 4h pipeline
+
+Current frontier:
+- continue read-only production observation for the first post-watermark closed 4h provider pair;
+- make decision-cadence readiness explicit so Mission Control can explain whether it is waiting on a new 4h close, a missing provider pair, or an evaluable event;
+- do not enable virtual-trade writes until a real post-cutoff candidate traverses the accepted dry-run path and is mechanically reviewed.
