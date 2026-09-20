@@ -77,7 +77,10 @@ def main() -> int:
             f"status={cadence.status.value} "
             f"binance_asof={'-' if cadence.binance is None else cadence.binance.signal_as_of_ms} "
             f"bybit_asof={'-' if cadence.bybit is None else cadence.bybit.signal_as_of_ms} "
+            f"binance_cutoff={'-' if cadence.binance is None else cadence.binance.source_cutoff_open_time_ms} "
+            f"bybit_cutoff={'-' if cadence.bybit is None else cadence.bybit.source_cutoff_open_time_ms} "
             f"paired_asof={_render(cadence.paired_as_of_ms)} "
+            f"paired_cutoff={_render(cadence.paired_source_cutoff_open_time_ms)} "
             f"candidate_available={'YES' if cadence.candidate_available else 'NO'} "
             "REAL_CAPITAL=0",
             flush=True,
