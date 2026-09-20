@@ -421,23 +421,27 @@ No Durdurulmaz or Quantum Capital project state was mutated; UID502 is used only
 ## Canonical next frontier
 Focused V2+ Birthday Edition governs post-V1 execution.
 
-Accepted:
+Accepted and live:
 - Stage 0 canonical multi-timeframe freeze path
 - Stage 1 Slice 1 higher-timeframe runner integration
+- Stage 1 BTCUSDT 15m/1h/4h production activation on Bybit + Binance
 
-Latest gate: 273 pytest PASS, Ruff PASS, mypy PASS, uv lock PASS, runner compile PASS, diff check PASS.
-Production current_pilot remains BTCUSDT Spot 15m on Bybit + Binance only.
+LIVE/STABLE code head:
+b9b8ba1662cbdb387c380318d14bba0d40f151a7
 
-Immediate Stage 1 Slice 2:
-1. run isolated live acceptance for BTCUSDT 1h and 4h on Bybit + Binance
-2. use canonical 15m backfill/aggregation only
-3. use separate acceptance ledger/cache; do not pollute production evidence
-4. verify complete history, immutable freeze, provider separation and idempotence
-5. only after live evidence passes, design explicit stable activation as a separate slice
+Production evidence after activation:
+- 48 immutable freezes / 48 lifecycle evaluations at initial smoke
+- dashboard Market Radar exposes 6 BTC contexts
+- launchd evidence clock run 34 exited 0 and proved idempotent ownership
+- REAL_CAPITAL=0
 
-Then continue the focused Birthday Edition roadmap:
-multi-timeframe production truth -> focused BTC/ETH/SOL coverage -> Turkish premium Mission Control ->
-visual chart intelligence -> decision-quality explanations -> useful alerts -> honest performance/learning ->
-limited V2+ intelligence -> gift-ready integrated acceptance.
+Immediate Stage 2:
+1. expand the deliberately small universe to ETHUSDT and SOLUSDT
+2. retain Bybit + Binance Spot and 15m/1h/4h only
+3. prove each new symbol/provider/timeframe on isolated real-data acceptance paths first
+4. keep per-symbol higher-timeframe history bounded at 120 / minimum 100
+5. activate production only after exact focused + full gates and live evidence
+6. then move product priority to Turkish premium Mission Control and chart intelligence
 
+Birthday Edition scope remains intentionally narrow.
 REAL_CAPITAL remains 0.

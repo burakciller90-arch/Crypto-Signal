@@ -1364,3 +1364,27 @@ Acceptance evidence:
 
 Next: isolated real-data BTCUSDT 1h/4h acceptance on both providers before any stable activation.
 REAL_CAPITAL remains 0.
+
+## 2026-09-20 — BTC multi-timeframe production accepted
+
+BTCUSDT production coverage was expanded from the original 15m pilot to 15m + 1h + 4h on both Bybit and Binance.
+The activation followed isolated real-data acceptance rather than enabling candidate contexts directly.
+
+Pre-production live proof:
+- Bybit 1h/4h and Binance 1h/4h first pass FROZEN
+- second pass ALREADY_FROZEN
+- four freeze rows and four lifecycle rows
+- 1,920 cached canonical 15m candles per provider
+
+Activation code gate:
+- 21 focused tests PASS
+- 273 full repository tests PASS
+- Ruff, mypy, uv lock and diff check PASS
+
+LIVE/STABLE advanced to b9b8ba1662cbdb387c380318d14bba0d40f151a7.
+Manual production smoke created the new 1h/4h evidence; subsequent launchd run 34 exited 0
+and returned ALREADY_FROZEN for all six BTC provider/timeframe contexts.
+The read-only Dashboard Market Radar immediately exposed all six contexts.
+No order path was introduced and REAL_CAPITAL remains 0.
+
+Canonical frontier advances to focused ETHUSDT + SOLUSDT 15m/1h/4h acceptance before activation.
