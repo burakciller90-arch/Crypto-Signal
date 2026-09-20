@@ -4,6 +4,14 @@ let navigationContexts = [];
 let selectedEvidenceClass = null;
 let performanceData = null;
 
+const AUTO_REFRESH_MS = 15_000;
+const STALE_AFTER_MS = 45_000;
+let refreshTimer = null;
+let freshnessTimer = null;
+let refreshInFlight = false;
+let lastSuccessfulRefreshAt = null;
+let consecutiveRefreshFailures = 0;
+
 function esc(value) {
   return String(value ?? "")
     .replaceAll("&", "&amp;")
@@ -99,6 +107,86 @@ async function fetchJSON(path) {
     throw new Error(`${path}: HTTP ${response.status} ${body}`);
   }
   return response.json();
+}
+
+function setLiveStatus(state) {
+  const chip = $("#liveStatusChip");
+  if (!chip) return;
+  chip.classList.remove("chip-live", "chip-refreshing", "chip-stale", "chip-error");
+  if (state === "live") {
+    chip.textContent = "Canlı · otomatik yenileme";
+    chip.classList.add("chip-live");
+    return;
+  }
+  if (state === "refreshing") {
+    chip.textContent = "Yeni kanıt kontrol ediliyor…";
+    chip.classList.add("chip-refreshing");
+    return;
+  }
+  if (state === "offline") {
+    chip.textContent = "Çevrimdışı · son kanıt korunuyor";
+    chip.classList.add("chip-stale");
+    return;
+  }
+  if (state === "stale") {
+    chip.textContent = "Veri bağlantısı gecikmiş";
+    chip.classList.add("chip-stale");
+    return;
+  }
+  chip.textContent = "Canlı okuma hatası";
+  chip.classList.add("chip-error");
+}
+
+function updateFreshnessStatus() {
+  const chip = $("#lastRefreshChip");
+  if (!chip) return;
+  if (lastSuccessfulRefreshAt === null) {
+    chip.textContent = "Son yenileme · bekleniyor";
+    return;
+  }
+  const ageMs = Math.max(0, Date.now() - lastSuccessfulRefreshAt);
+  const ageSeconds = Math.floor(ageMs / 1000);
+  chip.textContent = ageSeconds < 5
+    ? "Son yenileme · şimdi"
+    : `Son yenileme · ${ageSeconds} sn önce`;
+  if (!navigator.onLine) {
+    setLiveStatus("offline");
+  } else if (ageMs > STALE_AFTER_MS) {
+    setLiveStatus("stale");
+  }
+}
+
+async function refreshAll() {
+  if (refreshInFlight) return;
+  if (!navigator.onLine) {
+    setLiveStatus("offline");
+    updateFreshnessStatus();
+    return;
+  }
+  refreshInFlight = true;
+  setLiveStatus("refreshing");
+  try {
+    await loadAll();
+    lastSuccessfulRefreshAt = Date.now();
+    consecutiveRefreshFailures = 0;
+    setLiveStatus("live");
+    updateFreshnessStatus();
+  } catch (error) {
+    consecutiveRefreshFailures += 1;
+    setLiveStatus(consecutiveRefreshFailures >= 2 ? "stale" : "error");
+    showError(error);
+  } finally {
+    refreshInFlight = false;
+  }
+}
+
+function startAutoRefresh() {
+  if (refreshTimer !== null) window.clearInterval(refreshTimer);
+  if (freshnessTimer !== null) window.clearInterval(freshnessTimer);
+  refreshTimer = window.setInterval(() => {
+    if (!document.hidden) refreshAll();
+  }, AUTO_REFRESH_MS);
+  freshnessTimer = window.setInterval(updateFreshnessStatus, 5_000);
 }
 
 function showNotice(message) {
@@ -903,7 +991,17 @@ $("#timeframeSelect").addEventListener("change", () => {
 $("#providerSelect").addEventListener("change", () => {
   loadSelectedAsset().then(bindSignalClicks).catch(showError);
 });
-$("#refreshButton").addEventListener("click", () => loadAll().catch(showError));
+$("#refreshButton").addEventListener("click", () => refreshAll());
 $("#closeDialog").addEventListener("click", () => $("#signalDialog").close());
 
-loadAll().catch(showError);
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden) refreshAll();
+});
+window.addEventListener("online", () => refreshAll());
+window.addEventListener("offline", () => {
+  setLiveStatus("offline");
+  updateFreshnessStatus();
+});
+
+startAutoRefresh();
+refreshAll();
