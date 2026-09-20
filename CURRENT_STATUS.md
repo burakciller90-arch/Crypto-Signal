@@ -3,7 +3,7 @@
 Updated: 2026-09-20
 Project: Crypto Signal
 Phase: Confluence + Signal Semantics V1
-State: SIGNAL_SEMANTICS_V1_ACCEPTED
+State: IMMUTABLE_LIVE_LEDGER_ACTIVE
 REAL_CAPITAL: 0
 
 ## Accepted foundations
@@ -133,15 +133,30 @@ No Durdurulmaz or Quantum Capital project state was mutated; UID502 is used only
 - current live 15m decisions on both providers: WATCH bearish, score 33.33
 - lifecycle at decision as-of: NO_NEW_EVIDENCE
 
-## Canonical next frontier
-Immutable Live Ledger activation:
-1. immutable decision freeze bundle
-2. SQLite append-only signal ledger
-3. decision-time confluence/evidence/candle provenance snapshot
-4. duplicate freeze idempotence and conflicting payload rejection
-5. append-only lifecycle event records
-6. untouched-forward activation runbook and acceptance
-7. start live-forward evidence clock immediately after gate
+## Immutable Live Ledger active evidence
+- decision freeze bundle includes SignalDecision, Confluence, selected evidence, raw PA/Harmonic/Elliott and exact consumed closed candles
+- signal freeze identity and broader bundle identity are separate
+- SQLite WAL store is SQL-immutable: UPDATE/DELETE rejected by triggers
+- same signal/source-cutoff equivalent retry is idempotent
+- same source cutoff with different bundle is explicit conflict
+- lifecycle evaluations append only
+- live clock runner is protected by a non-blocking process lock
+- LaunchAgent com.cryptosignal.liveevidenceclock is active with RunAtLoad + 120-second interval
+- pilot scope: BTCUSDT 15m, Bybit Spot + Binance Spot, 500-candle window
+- first production untouched-forward freezes created 2026-09-20 03:29:18-03:29:19 Europe/Istanbul
+- production re-kickstart on same cutoff returned ALREADY_FROZEN for both providers
+- production DB remained exactly 2 freezes + 2 lifecycle evaluations after idempotence check
+- ledger/live-clock acceptance: 170 tests PASS, Ruff PASS, mypy PASS
 
-No outcome/backtest statistics may be merged into untouched-forward evidence.
+## Canonical next frontier
+Outcome + Historical Evaluation V1:
+1. outcome state contract
+2. target/stop ordering and same-candle ambiguity
+3. timeout / cancelled / invalidated / not-evaluable semantics
+4. append-only outcome records bound to immutable signal freezes
+5. evidence-class separation: RETROSPECTIVE / WALK_FORWARD / LIVE_UNTOUCHED_FORWARD
+6. segmented metrics by methodology/setup/symbol/timeframe/direction/confluence bucket
+7. sample-size-aware performance summaries with no probability fabrication
+
+The live evidence clock continues while Outcome development proceeds.
 REAL_CAPITAL remains 0.

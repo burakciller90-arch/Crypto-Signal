@@ -594,3 +594,39 @@ Mechanical evidence:
 Signal Semantics V1 is accepted.
 Canonical frontier moves immediately to Immutable Live Ledger activation.
 REAL_CAPITAL remains 0.
+
+## 2026-09-20 — Immutable Live Ledger activated; untouched-forward clock started
+
+Immutable decision/audit storage and the live evidence clock are now active.
+
+Accepted mechanics:
+- canonical DecisionFreezeBundle hashes the decision, confluence, selected evidence,
+  raw PA/Harmonic/Elliott outputs and exact consumed closed candle snapshots
+- signal freeze identity is distinct from bundle identity
+- SQLite WAL store rejects UPDATE and DELETE via SQL triggers
+- equivalent retries are idempotent
+- same source cutoff with different payload raises conflict
+- lifecycle evaluations append only
+- live runner refuses candle gaps and duplicate source cutoffs
+- launchd runs the one-shot clock every 120 seconds under UID504 with an overlap lock
+
+Acceptance evidence:
+- immutable ledger focused tests: 9 PASS
+- live clock focused tests: 3 PASS
+- pre-activation full repository: 170 PASS
+- Ruff PASS
+- mypy PASS
+- real acceptance DB: first run inserted two provider freezes; second run returned ALREADY_FROZEN
+- production kickstart after activation also returned ALREADY_FROZEN and counts remained unchanged
+
+First production untouched-forward freezes:
+- Bybit: 2026-09-20T00:29:18.775Z / WATCH bearish / score 33.33
+  signal=b15be217623c72c592188315e20f7731f68f3b0fafd76dbb83ce7b70ecefe304
+  bundle=4a977fbdfac5e1f2202eccfb9b74980dab38fab143655a0a93a13cbe96bda1fc
+- Binance: 2026-09-20T00:29:19.955Z / WATCH bearish / score 33.33
+  signal=51e80cf6c98f4a8e0aeb7d8421040f1d16f601cc470544c6f65c97c6c5dd4022
+  bundle=58914695eac84d2bc50e05681f2f8207d7e6bdc2ce0939764544b672901fc9b1
+
+The evidence clock remains active while development continues.
+Canonical frontier moves to Outcome + Historical Evaluation V1.
+REAL_CAPITAL remains 0.
