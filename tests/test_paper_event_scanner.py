@@ -464,3 +464,42 @@ def test_scanner_surface_is_strictly_read_only() -> None:
     )
     assert all(token not in source for token in forbidden)
     assert paper_event_scanner.REAL_CAPITAL == REAL_CAPITAL == 0
+
+
+def test_point_in_time_scan_excludes_future_freezes(tmp_path) -> None:
+    ledger, _, activation = _paper_activation(tmp_path)
+    signal_db = tmp_path / "signals.sqlite3"
+    _init_signal_db(signal_db)
+    for exchange in (Exchange.BINANCE, Exchange.BYBIT):
+        _insert_signal(
+            signal_db,
+            _decision(
+                exchange=exchange,
+                symbol=PaperSymbol.BTCUSDT,
+                as_of_ms=1_100,
+            ),
+            frozen_at_ms=1_110,
+        )
+        _insert_signal(
+            signal_db,
+            _decision(
+                exchange=exchange,
+                symbol=PaperSymbol.ETHUSDT,
+                as_of_ms=1_200,
+            ),
+            frozen_at_ms=1_210,
+        )
+
+    result = scan_post_activation_signal_events(
+        signal_ledger_path=signal_db,
+        paper_ledger_path=ledger.path,
+        activation=activation,
+        observed_at_ms=1_150,
+    )
+
+    assert result.eligible_freeze_count == 2
+    assert result.incomplete_pair_count == 0
+    assert result.processed_skip_count == 0
+    assert len(result.candidates) == 1
+    assert result.candidates[0].symbol is PaperSymbol.BTCUSDT
+    assert result.candidates[0].signal_as_of_ms == 1_100
