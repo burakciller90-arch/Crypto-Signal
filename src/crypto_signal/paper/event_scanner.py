@@ -22,7 +22,7 @@ from crypto_signal.paper.activation import (
     PaperActivationState,
     compute_processed_event_identity,
 )
-from crypto_signal.paper.models import REAL_CAPITAL, PERMITTED_SYMBOLS, PaperSymbol
+from crypto_signal.paper.models import PERMITTED_SYMBOLS, REAL_CAPITAL, PaperSymbol
 from crypto_signal.signals.models import SignalDecision
 
 __all__ = [
