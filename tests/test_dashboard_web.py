@@ -3,11 +3,13 @@ from __future__ import annotations
 import hashlib
 import json
 import sqlite3
+from dataclasses import dataclass
 from pathlib import Path
 
 from fastapi.testclient import TestClient
 
 from crypto_signal.confluence.models import ScoreSemantic
+from crypto_signal.product import web as product_web
 from crypto_signal.product.web import create_app
 from crypto_signal.signals.models import ProbabilityStatus
 
@@ -248,6 +250,74 @@ def test_paper_mission_control_is_unavailable_without_explicit_test_runtime(
         "read_only": True,
     }
     assert client.post("/api/paper/mission-control").status_code == 405
+
+
+@dataclass(frozen=True)
+class _FakePaperMissionSnapshot:
+    snapshot_identity: str
+    observed_at_ms: int
+    trade_policy: str = "NOT_ACTIVATED"
+    real_capital: int = 0
+
+
+def test_paper_mission_control_get_binds_explicit_read_only_runtime(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    signal_path = tmp_path / "signals.sqlite3"
+    paper_path = tmp_path / "paper.sqlite3"
+    candle_path = tmp_path / "candles.sqlite3"
+    seed_ledger(signal_path)
+    paper_path.touch()
+    candle_path.touch()
+    calls: list[dict[str, object]] = []
+
+    def fake_reader(**kwargs):
+        calls.append(kwargs)
+        return _FakePaperMissionSnapshot(
+            snapshot_identity=digest("paper-mission"),
+            observed_at_ms=int(kwargs["observed_at_ms"]),
+        )
+
+    monkeypatch.setattr(
+        product_web,
+        "read_paper_mission_control_snapshot",
+        fake_reader,
+    )
+    client = TestClient(
+        create_app(
+            signal_path,
+            paper_ledger_path=paper_path,
+            candle_cache_path=candle_path,
+        )
+    )
+
+    response = client.get("/api/paper/mission-control?observed_at_ms=1234")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "status": "ready",
+        "snapshot": {
+            "snapshot_identity": digest("paper-mission"),
+            "observed_at_ms": 1234,
+            "trade_policy": "NOT_ACTIVATED",
+            "real_capital": 0,
+        },
+        "trade_policy": "NOT_ACTIVATED",
+        "real_capital": 0,
+        "read_only": True,
+    }
+    assert calls == [
+        {
+            "paper_ledger_path": paper_path,
+            "signal_ledger_path": signal_path,
+            "candle_cache_path": candle_path,
+            "observed_at_ms": 1234,
+            "max_candidates": 100,
+        }
+    ]
+    assert paper_path.stat().st_size == 0
+    assert candle_path.stat().st_size == 0
 
 
 def test_education_api_is_deterministic_and_read_only(tmp_path: Path) -> None:
