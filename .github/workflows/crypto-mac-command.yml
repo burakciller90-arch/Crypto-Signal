@@ -24,7 +24,7 @@ jobs:
           set -euo pipefail
           cmd="$(printf '%s\n' "$ISSUE_BODY" | awk -F: 'tolower($1)=="command" {gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2); print tolower($2); exit}')"
           case "$cmd" in
-            status|services|logs|disk|sync|producttest|fulltest|productstate|productdeploy|cursorreview|cursorreviewtail|cursorcleanup|bridgecheck|bridgestate|wakeresume|waketest|cursorcheck|cursorauthdiag|cursorttycheck)
+            status|services|logs|disk|sync|producttest|fulltest|productstate|productdeploy|paperreview|cursorreview|cursorreviewtail|cursorcleanup|bridgecheck|bridgestate|wakeresume|waketest|cursorcheck|cursorauthdiag|cursorttycheck)
               ;;
             *)
               echo "Unsupported command: $cmd"
@@ -213,6 +213,51 @@ jobs:
           test -z "$(git -C "$PRODUCT" status --porcelain)"
           trap - EXIT
           echo "PRODUCT_DEPLOY_PASS=YES"
+
+      - name: PAPER REVIEW
+        if: steps.parse.outputs.command == 'paperreview'
+        shell: bash
+        env:
+          ISSUE_BODY: ${{ github.event.issue.body }}
+        run: |
+          set -euo pipefail
+          TARGET="$(/usr/bin/python3 - <<'PY'
+          import os, re
+          body = os.environ.get("ISSUE_BODY", "")
+          m = re.search(r"(?im)^target:\s*(supervisor-[0-9]+)\s*$", body)
+          if not m:
+              raise SystemExit("INVALID_PAPER_REVIEW_TARGET")
+          print(m.group(1))
+          PY
+          )"
+          WT="$HOME/.cursor/worktrees/crypto-signal/$TARGET"
+          test -d "$WT"
+          echo "=== WORKTREE STATUS ==="
+          git -C "$WT" status --short --branch
+          ACTUAL="$(git -C "$WT" status --porcelain | LC_ALL=C sort)"
+          EXPECTED="$(printf '?? src/crypto_signal/paper/\n?? tests/test_paper_fund.py\n' | LC_ALL=C sort)"
+          test "$ACTUAL" = "$EXPECTED"
+          echo "=== PACKAGE INIT ==="
+          sed -n '1,260p' "$WT/src/crypto_signal/paper/__init__.py"
+          echo "=== MODELS ==="
+          sed -n '1,520p' "$WT/src/crypto_signal/paper/models.py"
+          echo "=== LEDGER ==="
+          sed -n '1,620p' "$WT/src/crypto_signal/paper/ledger.py"
+          echo "=== TESTS ==="
+          sed -n '1,760p' "$WT/tests/test_paper_fund.py"
+          echo "=== FORBIDDEN SURFACE GREP ==="
+          if grep -REni 'requests|httpx|urllib|websocket|api[_-]?key|secret|credential|launchctl|subprocess|os\.system|real[_ -]?order|place[_ -]?order|leverage|short|martingale'               "$WT/src/crypto_signal/paper" "$WT/tests/test_paper_fund.py"; then
+            echo "REVIEW_NOTE=matched_terms_above"
+          else
+            echo "REVIEW_NOTE=no_forbidden_terms"
+          fi
+          echo "=== FOCUSED TEST ==="
+          PYTHONPATH="$WT/src" /Users/crypto-signal-agent/Crypto-Signal/.venv/bin/python -m pytest -q "$WT/tests/test_paper_fund.py"
+          echo "=== RUFF ==="
+          /Users/crypto-signal-agent/Crypto-Signal/.venv/bin/python -m ruff check "$WT/src/crypto_signal/paper" "$WT/tests/test_paper_fund.py"
+          echo "=== MYPY ==="
+          /Users/crypto-signal-agent/Crypto-Signal/.venv/bin/python -m mypy "$WT/src/crypto_signal/paper"
+          echo "PAPER_REVIEW_PASS=YES"
 
       - name: CURSOR REVIEW
         if: steps.parse.outputs.command == 'cursorreview'
