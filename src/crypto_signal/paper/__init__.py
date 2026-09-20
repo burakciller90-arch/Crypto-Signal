@@ -31,6 +31,13 @@ from crypto_signal.paper.commit import (
     PaperBundleCommitResult,
     commit_orchestration_bundle,
 )
+from crypto_signal.paper.event_scanner import (
+    PAPER_SIGNAL_EVENT_SCANNER_VERSION,
+    PaperSignalEventCandidate,
+    PaperSignalEventScanError,
+    PaperSignalEventScanResult,
+    scan_post_activation_signal_events,
+)
 from crypto_signal.paper.execution_input import (
     PAPER_EXECUTION_INPUT_POLICY_VERSION,
     FrozenPaperExecutionInput,
@@ -133,6 +140,7 @@ __all__ = [
     "PAPER_POSITION_SIZING_POLICY_VERSION",
     "PAPER_PRETRADE_BRIDGE_POLICY_VERSION",
     "PAPER_RISK_POLICY_VERSION",
+    "PAPER_SIGNAL_EVENT_SCANNER_VERSION",
     "PAPER_SIMULATED_COST_POLICY_VERSION",
     "PAPER_VENUE_RULE_SNAPSHOT_SCHEMA_VERSION",
     "PARTIAL_FILLS_SUPPORTED",
@@ -178,6 +186,9 @@ __all__ = [
     "PaperRecordKind",
     "PaperRuntimeError",
     "PaperRuntimeSnapshot",
+    "PaperSignalEventCandidate",
+    "PaperSignalEventScanError",
+    "PaperSignalEventScanResult",
     "PaperSignalLedgerObservation",
     "PaperSimulatedCostPolicy",
     "PaperSymbol",
@@ -216,5 +227,6 @@ __all__ = [
     "prepare_paper_trade_plan",
     "record_terminal_no_action",
     "run_paper_runtime_tick",
+    "scan_post_activation_signal_events",
     "size_paper_candidate",
 ]
