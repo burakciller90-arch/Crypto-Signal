@@ -424,31 +424,32 @@ Focused V2+ Birthday Edition governs post-V1 execution.
 Accepted and live:
 - focused BTC / ETH / SOL coverage on Bybit + Binance at 15m / 1h / 4h
 - Turkish-first premium Mission Control
-- frozen-evidence candlestick chart intelligence in Signal Detail
+- frozen-evidence candlestick chart intelligence
+- deterministic Turkish decision-quality explanations
 
 PRODUCT/STABLE:
-29e70af686b73b3b4650c128397692a2f6d7b4cc
+3bdee842407bf5a172e196929b2f0744a3b2569e
 
 LIVE/STABLE:
 7020413188d633b2b5a9661356c2fe319f256a34
 
 Current product truth:
 - 18 live Market Radar contexts
-- chart uses immutable frozen bundle only
-- latest smoke proved 499 frozen OHLC candles and explicit methodology levels
-- Dashboard read-only health PASS
+- Signal Detail answers neden önemli / ne destekliyor / ne eksik / ne bozabilir
+- explanations use frozen evidence only
+- methodology agreement is never presented as probability
 - REAL_CAPITAL=0
 
-Immediate Stage 5: decision-quality Turkish explanations.
-1. derive concise Turkish explanation only from frozen decision/evidence fields
-2. answer: neden önemli, hangi metodolojiler destekliyor, ne eksik, ne bozabilir
-3. preserve WATCH versus ACTIVE distinction
-4. never convert agreement index into probability
-5. surface provider/timeframe context and uncertainty
-6. keep explanation deterministic and reproducible from immutable evidence
-7. full product/API/JS/repository gates before PRODUCT/STABLE advancement
+Immediate Stage 6: useful Turkish alerts.
+1. preserve conservative eligibility: initial ACTIVE and INVALIDATED transitions; WATCH remains suppressed
+2. Turkish-first notification title/body from immutable AlertEvent truth
+3. include symbol, timeframe, state, direction, methodology agreement and key uncertainty
+4. avoid alert spam and avoid invented probability
+5. retain provider-call idempotency by alert_event_identity
+6. external provider remains disabled until explicit credential/provider choice
+7. full alerts/product/repository gates before ALERTS/STABLE and PRODUCT/STABLE advancement
 
-After Stage 5:
-useful alerts -> honest performance/learning -> limited V2+ intelligence -> gift-ready integrated acceptance.
+After Stage 6:
+honest performance/learning -> limited V2+ intelligence -> gift-ready integrated acceptance.
 
 REAL_CAPITAL remains 0.

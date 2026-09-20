@@ -1489,3 +1489,29 @@ Persistent health returned birthday-edition-chart-intelligence/1, read_only=true
 and 18 live Market Radar contexts.
 
 Canonical frontier advances to Stage 5: deterministic Turkish decision-quality explanations.
+
+## 2026-09-20 — Stage 5 accepted: deterministic Turkish decision-quality explanations
+
+Signal Detail now converts immutable frozen evidence into a concise Turkish decision brief.
+
+The product explicitly answers:
+- why the setup matters now
+- which independent methodologies support the frozen direction
+- which methodologies are unresolved, internally conflicted or opposing
+- which uncertainty flags remain
+- what explicit invalidation can break the idea, when such a price actually exists
+
+WATCH is explicitly described as incomplete relative to ACTIVE.
+No LLM or newer market data participates in the explanation.
+No agreement index is converted into probability and no missing invalidation is fabricated.
+
+Quality gate:
+- focused dashboard tests: 21 PASS
+- full repository: 273 PASS
+- Ruff, mypy, uv lock, JavaScript syntax and diff check PASS
+
+PRODUCT/STABLE advanced to 3bdee842407bf5a172e196929b2f0744a3b2569e.
+Persistent dashboard returned birthday-edition-decision-explanation/1, read_only=true,
+REAL_CAPITAL=0 and 18 live Market Radar contexts.
+
+Canonical frontier advances to Stage 6: useful Turkish alerts while preserving conservative eligibility.
