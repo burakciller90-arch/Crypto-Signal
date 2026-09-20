@@ -2007,3 +2007,16 @@ Final head 3b0c0d78475554a8a9f96bac588fbc4ff5b835a7 passed:
 - REAL_CAPITAL=0.
 
 PAPER/STABLE still has no trading activation. Next is an immutable watermark-initialization operation that captures the current signal-ledger baseline but grants no trade execution authority.
+
+
+## 2026-09-20 — stable activation watermark initialized without trade authority
+
+The persistent production cutoff is now real rather than hypothetical.
+
+paper_activation_init.v1 captures the signal-ledger baseline in one read-only SQLite snapshot and creates the immutable activation singleton only if the paper fund is still pristine. The full code gate passed 439 tests, Ruff, mypy across 96 source files and JavaScript.
+
+PAPER/STABLE was deployed to 6c2f5b9744ddb3fe3eee3793d35d2351c65f1c2c and remained a 100 USDT / zero-position / zero-trade fund. The production activation identity is a9d5ba60fac148099ba69f75d61923e0a26252faba35438ca4a9b204ef151ca4 with cutoff 1789928997447. Its frozen baseline contains 372 signal freezes and ends at ed473d03651b0958cf040cea06929cfe5b805c6a78bcf5c7a9523e9be9cca4da.
+
+The initializer was executed twice in the same gate: first INSERTED, second UNCHANGED with the exact same identity. Fresh PAPER STATE then independently confirmed activation singleton=1, processed events=0, replay index=1 and all trade/NAV tables still zero. trade_policy remains NOT_ACTIVATED and REAL_CAPITAL=0.
+
+Next is an allowlisted stable read-only dry-run command using only post-watermark production candidates. It may report PRETRADE_READY but must not persist any event or virtual trade.

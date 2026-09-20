@@ -1316,3 +1316,43 @@ Current frontier:
 - initialize the immutable PAPER/STABLE activation watermark from the current production signal-ledger baseline while keeping the runtime trade policy disabled;
 - prove activation initialization is idempotent and leaves the 100 USDT fund with zero trades;
 - then deploy the dry-run code to stable and inspect only post-watermark production candidate events.
+
+
+## 2026-09-20 — immutable PAPER/STABLE activation watermark initialized
+
+Accepted initializer:
+- paper_activation_init.v1 requires the pristine virtual fund: one fund-creation replay record, 100 USDT cash, zero positions;
+- production signal baseline is captured from one explicit SQLite read-only transaction;
+- activation singleton is immutable and idempotent;
+- rerun returns UNCHANGED and cannot rebase cutoff/baseline as new freezes arrive;
+- no trade-policy authority is granted.
+
+Code acceptance:
+- implementation: be1c085749b4710befcbc9444872aed17dcbe262;
+- lint-only hardening: 2b573e807aa7cc351ca97e97d1911b937c2f0c6f;
+- type-only hardening: 6c2f5b9744ddb3fe3eee3793d35d2351c65f1c2c;
+- final regression: 439 tests PASS;
+- Ruff PASS;
+- mypy PASS across 96 source files;
+- JavaScript PASS.
+
+Stable deployment and live initialization:
+- PAPER/STABLE deployed to 6c2f5b9744ddb3fe3eee3793d35d2351c65f1c2c;
+- deployment probes: fund=99eebec220597639add97080a243e98715d42e75af6be3f1785721d12da00b80, records=1, cash=100.00, positions=0, trade_policy=NOT_ACTIVATED, REAL_CAPITAL=0;
+- activation identity: a9d5ba60fac148099ba69f75d61923e0a26252faba35438ca4a9b204ef151ca4;
+- activated_at_ms / cutoff_ms: 1789928997447;
+- immutable baseline freeze count: 372;
+- baseline latest freeze: ed473d03651b0958cf040cea06929cfe5b805c6a78bcf5c7a9523e9be9cca4da;
+- baseline latest frozen_at_ms: 1789928205551;
+- first init write=INSERTED; immediate second init write=UNCHANGED with the exact same activation identity;
+- paper activation singleton count=1;
+- paper processed-event count=0;
+- decision/fill/mutation/NAV counts remain zero;
+- replay index remains 1;
+- three authoritative venue-rule snapshots remain present.
+
+Current frontier:
+- expose the accepted scanner + activation dry-run composer as an allowlisted PAPER/STABLE read-only operation;
+- inspect only post-cutoff production events;
+- prove the dry-run does not mutate activation, processed events, fund replay or trade tables;
+- do not enable autonomous virtual-trade writes yet.
