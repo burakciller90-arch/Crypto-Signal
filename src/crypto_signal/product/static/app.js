@@ -51,6 +51,24 @@ const LABELS = {
   entry: "Giriş",
   target: "Hedef",
   invalidation: "Geçersizleşme",
+  hold_cash: "Nakitte Kal",
+  waiting_execution_input: "İşlem girdisi bekleniyor",
+  waiting_venue_rules: "Piyasa kuralları bekleniyor",
+  sizing_rejected: "Boyutlandırma reddedildi",
+  pretrade_rejected: "İşlem planı reddedildi",
+  pretrade_ready: "Sanal işlem planı hazır",
+  signal_not_active: "Sinyal aktif değil",
+  unsafe_uncertainty: "Belirsizlik güvenli sınırı aşıyor",
+  future_signal: "Gelecek kanıtı bekleniyor",
+  cooldown_active: "Bekleme süresi aktif",
+  missing_mark_price: "Güncel değerleme kanıtı eksik",
+  no_4h_evidence: "4 saatlik kanıt yok",
+  waiting_provider_pair: "İkinci sağlayıcı bekleniyor",
+  provider_cutoff_mismatch: "Sağlayıcı kapanışları eşleşmiyor",
+  pre_activation_pair: "Aktivasyon öncesi kanıt",
+  post_activation_pair: "Yeni 4 saatlik çift hazır",
+  not_yet_measured: "Henüz ölçülmedi",
+  available: "Ölçülebilir",
 };
 
 function fmtTime(ms) {
@@ -243,6 +261,147 @@ function renderCommandCenter(data) {
   recent.innerHTML = data.recent_signals?.length
     ? data.recent_signals.map(signalRow).join("")
     : '<div class="performance-empty">Henüz dondurulmuş sinyal kaydı yok.</div>';
+}
+
+function fmtMoney(value) {
+  if (value === null || value === undefined) return "—";
+  const number = Number(value);
+  if (!Number.isFinite(number)) return "—";
+  return `${number.toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 4 })} USDT`;
+}
+
+function paperCadenceExplanation(item) {
+  const messages = {
+    no_4h_evidence: "Henüz iki sağlayıcıdan 4 saatlik kapanış kanıtı yok.",
+    waiting_provider_pair: "Bir sağlayıcı hazır; diğer sağlayıcının aynı piyasa kapanışı bekleniyor.",
+    provider_cutoff_mismatch: "İki sağlayıcının son 4 saatlik piyasa kapanışı aynı değil.",
+    pre_activation_pair: "Eşleşen kanıt var ancak sanal portföy aktivasyonundan önce oluşmuş.",
+    post_activation_pair: item.candidate_available
+      ? "İki sağlayıcı aynı yeni 4 saatlik kapanışı doğruladı; aday değerlendirildi."
+      : "Yeni sağlayıcı çifti var ancak işlenecek güncel aday kalmadı.",
+  };
+  return messages[item.status] ?? human(item.status);
+}
+
+function paperCandidateExplanation(item) {
+  if (item.terminal_status === "pretrade_ready") {
+    return "Kurallar ve risk kontrolleri sanal işlem planına kadar ulaştı. Bu ekran yine de gerçek emir vermez.";
+  }
+  if (item.terminal_status === "hold_cash") {
+    return "Sistem kanıtı gördü ama işlem açmak yerine nakitte kalmayı seçti.";
+  }
+  if (item.terminal_status === "waiting_execution_input") {
+    return "Karar var; güvenli simülasyon için gereken yürütme kanıtı henüz tamamlanmadı.";
+  }
+  if (item.terminal_status === "waiting_venue_rules") {
+    return "Karar var; güncel ve doğrulanmış piyasa kuralı olmadan ilerlemiyor.";
+  }
+  return "Aday güvenlik kapılarından birinde durduruldu.";
+}
+
+function renderPaperMissionControl(data) {
+  const root = $("#paperMissionControl");
+  const tag = $("#paperPolicyTag");
+  if (!root || !tag) return;
+
+  if (data?.status !== "ready" || !data.snapshot) {
+    tag.textContent = "YAZMA KAPALI · SALT OKUNUR";
+    root.classList.remove("loading-block");
+    root.innerHTML = `
+      <div class="paper-empty">
+        <strong>Sanal portföy kanıtı henüz bu runtime'da bağlı değil.</strong>
+        <span>Bu durum gerçek sermaye veya emir yetkisi açmaz. Sistem salt okunur piyasa izlemeye devam eder.</span>
+      </div>`;
+    return;
+  }
+
+  const snapshot = data.snapshot;
+  const portfolio = snapshot.portfolio ?? {};
+  const performance = snapshot.performance ?? {};
+  const candidates = snapshot.candidates ?? [];
+  const cadence = snapshot.decision_cadence ?? [];
+  const positionCount = (portfolio.positions ?? []).length;
+
+  tag.textContent = snapshot.trade_policy === "NOT_ACTIVATED"
+    ? "YAZMA KAPALI · SALT OKUNUR"
+    : esc(snapshot.trade_policy);
+
+  const performanceValue = performance.status === "not_yet_measured"
+    ? "Henüz ölçülmedi"
+    : `Kapanan ${performance.closed_trade_count ?? 0} işlem`;
+  const winRate = performance.win_rate_fraction === null || performance.win_rate_fraction === undefined
+    ? "Win rate yok"
+    : `Win rate %${(Number(performance.win_rate_fraction) * 100).toLocaleString("tr-TR", { maximumFractionDigits: 2 })}`;
+
+  root.classList.remove("loading-block");
+  root.innerHTML = `
+    <div class="paper-summary-grid">
+      <article class="paper-summary-card paper-summary-primary">
+        <div class="value-label">Nakit</div>
+        <strong>${esc(fmtMoney(portfolio.cash_usdt))}</strong>
+        <span>Başlangıç: ${esc(fmtMoney(portfolio.initial_cash_usdt))}</span>
+      </article>
+      <article class="paper-summary-card">
+        <div class="value-label">Sanal portföy değeri</div>
+        <strong>${esc(fmtMoney(portfolio.nav_usdt))}</strong>
+        <span>PnL: ${esc(fmtMoney(portfolio.pnl_usdt))}</span>
+      </article>
+      <article class="paper-summary-card">
+        <div class="value-label">Açık pozisyon</div>
+        <strong>${esc(positionCount)}</strong>
+        <span>${esc(portfolio.simulated_fill_count ?? 0)} simüle fill kaydı</span>
+      </article>
+      <article class="paper-summary-card">
+        <div class="value-label">İşlem performansı</div>
+        <strong>${esc(performanceValue)}</strong>
+        <span>${esc(winRate)}</span>
+      </article>
+    </div>
+
+    <div class="paper-mission-columns">
+      <div class="paper-subpanel">
+        <div class="paper-subpanel-head">
+          <div><div class="value-label">4 saatlik karar ritmi</div><strong>Binance + Bybit birlikte ne durumda?</strong></div>
+          <span class="panel-tag">${esc(snapshot.eligible_post_activation_freezes ?? 0)} uygun kanıt</span>
+        </div>
+        <div class="paper-cadence-list">
+          ${cadence.map((item) => `
+            <div class="paper-cadence-row">
+              <div><strong>${esc(item.symbol)}</strong><div class="row-sub">${esc(paperCadenceExplanation(item))}</div></div>
+              <div class="state-pill ${item.candidate_available ? "state-active" : "state-neutral"}">${esc(human(item.status))}</div>
+            </div>`).join("") || '<div class="truth-note">Karar ritmi kanıtı yok.</div>'}
+        </div>
+      </div>
+
+      <div class="paper-subpanel">
+        <div class="paper-subpanel-head">
+          <div><div class="value-label">Son sanal karar adayları</div><strong>Neden işlem yaptı / yapmadı?</strong></div>
+          <span class="panel-tag">${esc(snapshot.ready_candidate_count ?? 0)} plan hazır</span>
+        </div>
+        <div class="paper-candidate-list">
+          ${candidates.map((item) => `
+            <div class="paper-candidate-row">
+              <div class="paper-candidate-main">
+                <strong>${esc(item.symbol)} · ${esc(human(item.candidate_action))}</strong>
+                <div class="row-sub">${esc(paperCandidateExplanation(item))}</div>
+                <div class="truth-note">Motor gerekçesi: ${esc(human(item.reason_code))}</div>
+              </div>
+              <div class="state-pill ${item.terminal_status === "pretrade_ready" ? "state-active" : "state-neutral"}">${esc(human(item.terminal_status))}</div>
+            </div>`).join("") || `
+            <div class="paper-empty compact">
+              <strong>Yeni işlenecek aday yok.</strong>
+              <span>Sistem kanıt gelmediğinde işlem uydurmaz.</span>
+            </div>`}
+        </div>
+      </div>
+    </div>
+
+    <div class="paper-truth-bar">
+      <span>Gerçek sermaye: <strong>0</strong></span>
+      <span>Politika: <strong>${esc(snapshot.trade_policy)}</strong></span>
+      <span>Hazır aday: <strong>${esc(snapshot.ready_candidate_count ?? 0)}</strong></span>
+      <span>Performans: <strong>${esc(human(performance.status))}</strong></span>
+    </div>`;
 }
 
 function renderRadar(data) {
@@ -1119,7 +1278,7 @@ function renderEducation(data) {
 
 async function loadAll() {
   clearNotice();
-  const [health, command, radar, navigation, archive, performance, alerts, education] = await Promise.all([
+  const [health, command, radar, navigation, archive, performance, alerts, education, paperMission] = await Promise.all([
     fetchJSON("/api/health"),
     fetchJSON("/api/command-center?recent_limit=8"),
     fetchJSON("/api/market-radar"),
@@ -1128,10 +1287,19 @@ async function loadAll() {
     fetchJSON("/api/performance"),
     fetchJSON("/api/alerts?limit=50"),
     educationData ? Promise.resolve(educationData) : fetchJSON("/api/education"),
+    fetchJSON("/api/paper/mission-control").catch((error) => ({
+      status: "unavailable",
+      reason: "paper_mission_control_read_error",
+      detail: error.message,
+      trade_policy: "NOT_ACTIVATED",
+      real_capital: 0,
+      read_only: true,
+    })),
   ]);
 
   $("#healthChip").textContent = health.ledger_present ? "Kanıt deposu bağlı" : "Kanıt deposu yok";
   renderCommandCenter(command);
+  renderPaperMissionControl(paperMission);
   renderRadar(radar);
   renderArchive(archive);
   renderPerformance(performance);
