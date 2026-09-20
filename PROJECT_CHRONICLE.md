@@ -1575,3 +1575,39 @@ Cursor successfully produced the isolated Stage 6B education core; supervisor in
 Next:
 - Stage 6B contextual teaching bound to actual frozen signal evidence,
 - Stage 6C 100 USDT virtual fund domain/ledger foundation in a separate non-overlapping slice.
+
+## 2026-09-20 — Stage 6C Slice 1: 100 USDT immutable paper accounting foundation accepted
+
+Cursor issue #45 produced the first bounded paper-fund package in isolated worktree supervisor-45. The worker returned cursor_rc=0 and its own focused tests passed, but supervisor acceptance intentionally did not trust that result alone.
+
+Fresh supervisor review found:
+1. the new code scope was correctly limited to the paper package plus focused tests;
+2. current repository Ruff rules found nine test-only style violations;
+3. more importantly, the initial NAV snapshot model did not prove that declared NAV equaled cash plus marked holdings.
+
+The slice was therefore NOT accepted as first returned.
+
+Supervisor hardening:
+- applied bounded lint corrections,
+- added an invariant requiring a mark price for every held position,
+- added exact NAV accounting validation: cash + sum(quantity × mark price),
+- added tests rejecting inconsistent NAV and missing marks.
+
+After hardening:
+- 12 focused tests PASS,
+- Ruff PASS,
+- mypy PASS,
+- exact-scope final review PASS.
+
+A one-shot guarded contents-write workflow copied only the four reviewed files into canonical main. Integration commit:
+09d3e68966cf7c4ff41069ae30a6aff97a1d7499
+
+The one-shot workflow was then removed. Canonical repository was synchronized and full regression produced:
+- 294 tests PASS,
+- Ruff PASS,
+- mypy PASS for 80 source files,
+- JavaScript syntax PASS.
+
+The isolated Cursor worktree was then removed and pruned.
+
+This is a foundation acceptance, not activation of an autonomous trader. REAL_CAPITAL remains 0 and no persistent paper account is yet making decisions. The next paper-fund work must add deterministic state reconstruction, lineage integrity, conservative risk/planning and simulated execution policy before a persistent virtual account can run.
