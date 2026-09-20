@@ -12,6 +12,7 @@ from pathlib import Path
 from crypto_signal.paper.dry_run import (
     PaperActivationDryRunError,
     evaluate_paper_activation_dry_run,
+    explain_paper_activation_dry_run,
     read_paper_activation_read_only,
     summarize_paper_activation_dry_runs,
 )
@@ -149,6 +150,21 @@ def main() -> int:
                 f"venue_rules={result.venue_rule_snapshot_identity or '-'} "
                 f"sizing={sizing_status} "
                 f"pretrade={pretrade_status} "
+                "REAL_CAPITAL=0",
+                flush=True,
+            )
+            trace = explain_paper_activation_dry_run(result)
+            rendered_steps = "|".join(
+                f"{step.stage.value}:{step.state.value}:{step.code}"
+                for step in trace.steps
+            )
+            print(
+                "PAPER_DRY_RUN_TRACE "
+                f"trace={trace.trace_identity} "
+                f"event={trace.event_identity} "
+                f"terminal={trace.terminal_status.value} "
+                f"action={trace.candidate_action.value} "
+                f"steps={rendered_steps} "
                 "REAL_CAPITAL=0",
                 flush=True,
             )
