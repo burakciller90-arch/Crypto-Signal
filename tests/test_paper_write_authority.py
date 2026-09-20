@@ -95,14 +95,20 @@ def test_write_authority_sql_rows_reject_update_delete(tmp_path) -> None:
     )
 
     for statement in (
-        "UPDATE paper_write_authority_events SET enabled = 0 "
-        "WHERE authority_event_identity = ?",
-        "DELETE FROM paper_write_authority_events "
-        "WHERE authority_event_identity = ?",
+        (
+            "UPDATE paper_write_authority_events SET enabled = 0 "
+            "WHERE authority_event_identity = ?"
+        ),
+        (
+            "DELETE FROM paper_write_authority_events "
+            "WHERE authority_event_identity = ?"
+        ),
     ):
-        with sqlite3.connect(ledger.path) as connection:
-            with pytest.raises(sqlite3.IntegrityError, match="immutable"):
-                connection.execute(statement, (enabled.authority_event_identity,))
+        with (
+            sqlite3.connect(ledger.path) as connection,
+            pytest.raises(sqlite3.IntegrityError, match="immutable"),
+        ):
+            connection.execute(statement, (enabled.authority_event_identity,))
 
 
 def test_write_authority_surface_has_no_real_order_or_network_authority() -> None:
