@@ -1625,3 +1625,40 @@ Current frontier:
 - continue read-only production observation for the first post-watermark closed 4h provider pair;
 - make decision-cadence readiness explicit so Mission Control can explain whether it is waiting on a new 4h close, a missing provider pair, or an evaluable event;
 - do not enable virtual-trade writes until a real post-cutoff candidate traverses the accepted dry-run path and is mechanically reviewed.
+
+
+## PAPER/STABLE cross-provider market-cutoff pairing accepted
+- accepted/stable head: 30b05251af9fc2ac05fd007dbd6ac6d0519c2e58
+- root cause was mechanically observed in production: Binance and Bybit 4h signals for the same closed market window carry naturally different wall-clock signal_as_of_ms values because each provider is evaluated at its own observation time
+- immutable signal truth was not modified; provider-specific signal_as_of_ms values remain exact
+- the scanner now pairs providers by the ledger's exact source_cutoff_open_time_ms market-event key
+- combined paper event availability time is max(Binance signal_as_of_ms, Bybit signal_as_of_ms), preserving causal availability
+- paper_signal_event_scanner.v2 exposes both provider as-of values plus shared source cutoff
+- paper_autonomy_policy.v2 permits provider as-of skew only when an exact Binance+Bybit shared market cutoff is supplied; otherwise mixed context still fails closed
+- Mission Control cadence now explains market-cutoff readiness rather than requiring artificial wall-clock equality
+- full gate: 467 tests PASS
+- Ruff PASS
+- mypy PASS across 100 source files
+- JavaScript PASS
+- PAPER/STABLE deploy PASS; no-trade invariant preserved
+- live deploy dry-run:
+  - signal_freezes=438
+  - eligible post-activation 4h freezes=6
+  - incomplete pairs=0
+  - candidates=3
+  - BTCUSDT HOLD_CASH / signal_not_active
+  - ETHUSDT HOLD_CASH / signal_not_active
+  - SOLUSDT HOLD_CASH / unsafe_uncertainty
+  - ready_candidates=0 / attention_required=NO
+  - paper_db_unchanged=YES
+  - trade_policy=NOT_ACTIVATED
+  - REAL_CAPITAL=0
+- live Mission Control mechanically proved all three provider pairs share cutoff 1789920000000 while preserving different provider signal_as_of_ms values
+- all three cadence rows are post_activation_pair with candidate_available=YES
+- portfolio remains 100.00 USDT cash, zero positions, NAV 100.00, PnL 0.00
+- closed-trade performance remains NOT_YET_MEASURED
+
+Current frontier:
+- the first genuine post-watermark production events have now traversed and been mechanically reviewed through the accepted read-only dry-run path;
+- design and prove a controlled virtual-paper write authority gate that can process future terminal HOLD and eligible simulated-trade events atomically without creating any real-capital/exchange-order path;
+- keep write authority disabled until the gate itself passes full regression and explicit stable activation invariants.
