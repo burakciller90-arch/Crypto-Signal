@@ -1211,6 +1211,9 @@ def _snapshot_payload(
         "incomplete_provider_pairs": snapshot.incomplete_provider_pairs,
         "observed_at_ms": snapshot.observed_at_ms,
         "performance_snapshot_identity": snapshot.performance.snapshot_identity,
+        "portfolio_exposure": _portfolio_exposure_payload(
+            snapshot.portfolio_exposure
+        ),
         "portfolio_snapshot_identity": snapshot.portfolio.snapshot_identity,
         "processed_event_skips": snapshot.processed_event_skips,
         "ready_candidate_count": snapshot.ready_candidate_count,
