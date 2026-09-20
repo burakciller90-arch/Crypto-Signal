@@ -1949,3 +1949,27 @@ The cached Binance rule snapshot is now carried through an authoritative wrapper
 Final head 990436122f2bf14fff64b9a3dc2c1acb15014467 passed 421 tests, Ruff, mypy across 93 source files and JavaScript. REAL_CAPITAL remains 0.
 
 Next is observation-only stable venue-rule refresh/cache and live public verification for BTCUSDT/ETHUSDT/SOLUSDT. Stable trade activation remains disabled.
+
+
+## 2026-09-20 — observation-only stable venue-rule refresh accepted
+
+The authoritative venue-rule source is now proven in the actual PAPER/STABLE environment without enabling paper trading.
+
+Stable was deployed to cc69002b5b9b3a56414a317c1a71429a5365937d. Deploy probes kept the existing 100 USDT fund unchanged and explicitly passed trade_policy=NOT_ACTIVATED / REAL_CAPITAL=0 plus the zero-trade DB invariant.
+
+The new [PAPER] RULESREFRESH command fetched public Binance Spot exchangeInfo metadata in the stable environment and inserted exactly one immutable snapshot for BTCUSDT, ETHUSDT and SOLUSDT. The refresh then re-ran the paper no-trade invariant.
+
+Fresh [PAPER] STATE confirmed:
+- stable HEAD cc69002b5b9b3a56414a317c1a71429a5365937d;
+- paper_venue_rule_snapshots=3;
+- fund creation=1;
+- decision/fill/mutation/NAV=0;
+- replay index=1;
+- cash=100.00, positions=0;
+- paper clock exit=0;
+- trade_policy=NOT_ACTIVATED;
+- REAL_CAPITAL=0.
+
+Whole-repository gate for the stable refresh head passed 421 tests, Ruff, mypy across 93 source files and JavaScript.
+
+Next frontier is a read-only production event scanner for new post-activation 4h Binance+Bybit consensus events. It must prove ordering/cutoff/processed-event behavior before any stable virtual trading activation is considered.

@@ -1190,3 +1190,44 @@ Current frontier:
 - add observation-only PAPER/STABLE venue-rule refresh/cache for BTCUSDT, ETHUSDT and SOLUSDT using public Binance exchangeInfo only;
 - verify real public responses and immutable cached snapshots while the paper fund remains 100 USDT / zero trades / trade policy not activated;
 - only after that evaluate an isolated virtual-trading activation candidate.
+
+
+## 2026-09-20 — observation-only PAPER/STABLE venue-rule refresh accepted
+
+Stable deployment:
+- PAPER/STABLE worktree deployed to cc69002b5b9b3a56414a317c1a71429a5365937d;
+- paper clock deploy probes returned bootstrap=existing, cash=100.00, positions=0;
+- trade_policy=NOT_ACTIVATED and REAL_CAPITAL=0;
+- deploy no-trade invariant PASS: fund creations=1, decision intents=0, fills=0, mutations=0, NAV snapshots=0, replay index=1.
+
+Live public Binance refresh:
+- [PAPER] RULESREFRESH uses the deployed stable environment and public exchangeInfo only;
+- BTCUSDT snapshot 12e987710b421c37fb04d1e67ebef41a460d0157f469c0347c03db4c7229ff8e:
+  step=0.00001000, minQty=0.00001000, maxQty=9000.00000000, minNotional=5.00000000, tickSize=0.01000000;
+- ETHUSDT snapshot 16c594a024fe234853136be828cd164df7c94c9d67abb126dac02e461bb18a50:
+  step=0.00010000, minQty=0.00010000, maxQty=9000.00000000, minNotional=5.00000000, tickSize=0.01000000;
+- SOLUSDT snapshot e8f6b6e3ad5d2bf55d063522c1d663f0b162f42b61a429dda72ad447d3bff614:
+  step=0.00100000, minQty=0.00100000, maxQty=90000.00000000, minNotional=5.00000000, tickSize=0.01000000;
+- all snapshots bind paper_simulated_cost_policy.v1;
+- refresh workflow rechecked the no-trade invariant after the writes.
+
+Independent state verification:
+- stable HEAD=cc69002b5b9b3a56414a317c1a71429a5365937d;
+- paper clock last exit code=0, interval=120 seconds;
+- paper_venue_rule_snapshots=3;
+- one latest cached snapshot exists for each BTCUSDT/ETHUSDT/SOLUSDT;
+- paper fund remains cash=100.00, positions=0, replay records=1;
+- decision/fill/mutation/NAV counts remain zero;
+- trade_policy remains NOT_ACTIVATED;
+- REAL_CAPITAL=0.
+
+Code gate:
+- cc69002b5b9b3a56414a317c1a71429a5365937d passed 421 tests;
+- Ruff PASS;
+- mypy PASS across 93 source files;
+- JavaScript PASS.
+
+Current frontier:
+- build a production read-only event scanner that pairs only new post-activation 4h Binance+Bybit signal freezes by symbol/as-of;
+- prove scanner ordering, provider-pair identity, historical-cutoff exclusion and processed-event skipping on fixtures/current ledger without creating trades;
+- then integrate that candidate stream with frozen execution input + cached venue rules as a dry-run activation candidate before any PAPER/STABLE virtual trade policy is enabled.
