@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import sqlite3
 from dataclasses import replace
 from decimal import Decimal
 from pathlib import Path
@@ -85,6 +86,67 @@ def event(
     )
 
 
+def _logical_outbox_snapshot(path: Path) -> tuple[tuple[object, ...], ...]:
+    """Compare logical SQLite truth, not WAL/SHM housekeeping bytes."""
+    connection = sqlite3.connect(
+        f"file:{path}?mode=ro",
+        uri=True,
+        timeout=5.0,
+    )
+    connection.execute("PRAGMA query_only=ON")
+    try:
+        events = tuple(
+            tuple(row)
+            for row in connection.execute(
+                """
+                SELECT
+                    event_identity,
+                    signal_freeze_identity,
+                    source_kind,
+                    policy_version,
+                    signal_state,
+                    event_json,
+                    appended_at_ms
+                FROM alert_events
+                ORDER BY event_identity
+                """
+            ).fetchall()
+        )
+        attempts = tuple(
+            tuple(row)
+            for row in connection.execute(
+                """
+                SELECT
+                    attempt_identity,
+                    event_identity,
+                    sink_id,
+                    attempt_number,
+                    attempted_at_ms,
+                    status,
+                    receipt,
+                    error_code,
+                    error_message
+                FROM alert_delivery_attempts
+                ORDER BY attempt_identity
+                """
+            ).fetchall()
+        )
+        schema = tuple(
+            tuple(row)
+            for row in connection.execute(
+                """
+                SELECT type, name, tbl_name, sql
+                FROM sqlite_master
+                WHERE name NOT LIKE 'sqlite_%'
+                ORDER BY type, name
+                """
+            ).fetchall()
+        )
+    finally:
+        connection.close()
+    return events + attempts + schema
+
+
 def test_active_notification_is_deterministic_and_not_probability() -> None:
     item = event("active")
 
@@ -159,11 +221,11 @@ def test_preview_outbox_is_read_only_and_does_not_create_attempts(
     outbox = AlertOutbox(path)
     item = event("preview")
     outbox.append_event(item, appended_at_ms=2_000)
-    before = hashlib.sha256(path.read_bytes()).hexdigest()
+    before = _logical_outbox_snapshot(path)
 
     messages = preview_outbox(path)
 
-    after = hashlib.sha256(path.read_bytes()).hexdigest()
+    after = _logical_outbox_snapshot(path)
     assert len(messages) == 1
     assert messages[0] == render_notification(item)
     assert outbox.count_attempts() == 0
