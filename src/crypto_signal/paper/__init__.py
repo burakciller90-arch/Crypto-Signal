@@ -3,6 +3,14 @@
 Simulation only. REAL_CAPITAL remains 0. No real exchange order path.
 """
 
+from crypto_signal.paper.autonomy import (
+    PAPER_AUTONOMY_POLICY_VERSION,
+    PaperAutonomyDecision,
+    PaperAutonomyPolicy,
+    PaperAutonomyReason,
+    default_conservative_autonomy_policy,
+    evaluate_autonomy_policy,
+)
 from crypto_signal.paper.commit import (
     PaperBundleCommitError,
     PaperBundleCommitResult,
@@ -55,6 +63,7 @@ from crypto_signal.paper.runtime import (
 __all__ = [
     "BENCHMARK_IDS",
     "INITIAL_CASH_USDT",
+    "PAPER_AUTONOMY_POLICY_VERSION",
     "PAPER_EXECUTION_POLICY_VERSION",
     "PAPER_FUND_SCHEMA_VERSION",
     "PAPER_RISK_POLICY_VERSION",
@@ -68,6 +77,9 @@ __all__ = [
     "FundCreationRecord",
     "NavSnapshotRecord",
     "PaperAction",
+    "PaperAutonomyDecision",
+    "PaperAutonomyPolicy",
+    "PaperAutonomyReason",
     "PaperBundleCommitError",
     "PaperBundleCommitResult",
     "PaperFundBootstrapStatus",
@@ -84,6 +96,8 @@ __all__ = [
     "PositionCashMutationRecord",
     "SimulatedFillRecord",
     "build_decision_intent",
+    "default_conservative_autonomy_policy",
+    "evaluate_autonomy_policy",
     "build_fund_creation",
     "build_nav_snapshot",
     "build_position_cash_mutation",
