@@ -672,3 +672,64 @@ Stable manual and launchd smoke both returned ALREADY_FROZEN on an already-owned
 
 Canonical frontier advances to Historical Evaluation V1.
 REAL_CAPITAL remains 0.
+
+## 2026-09-20 — Historical Evaluation V1 accepted
+
+Historical Evaluation now summarizes explicit frozen SignalDecision +
+OutcomeEvaluation pairs without rerunning methodology logic.
+
+Accepted evidence firewall:
+- RETROSPECTIVE, WALK_FORWARD and LIVE_UNTOUCHED_FORWARD are mandatory
+  segment dimensions
+- one aggregation call rejects duplicate signal freeze identities rather than
+  choosing one outcome snapshot implicitly
+
+Accepted segmentation:
+- evidence class
+- geometry source methodology
+- setup type
+- exchange / market type / symbol / timeframe
+- signal direction
+- descriptive confluence-score bucket
+- nullable regime label
+- nullable entry reference model
+- target count / labels
+
+Accepted descriptive performance:
+- success fraction = success / (success + FAIL_SL), only when decisive N > 0
+- historical frequency is explicitly not probability
+- SUCCESS_TPn uses the frozen corresponding target reference_rr
+- FAIL_SL = -1R
+- ambiguity, timeout, cancellation, invalidation, not-evaluable and pending
+  outcomes receive no invented shadow R
+- R-evaluable observations are chronologically ordered
+- average, median, cumulative R, min/max R and peak-to-trough max drawdown are deterministic
+
+Sample-size visibility:
+- default decisive threshold = 30
+- promotion_eligible is product visibility policy only, not statistical significance
+
+Mechanical evidence:
+- Historical Evaluation focused tests: 14 PASS
+- full repository: 203 PASS
+- Ruff PASS
+- mypy PASS
+- git diff check PASS
+
+Read-only production inspection at acceptance:
+- 24 untouched-forward immutable freezes
+- 24 WATCH
+- 0 ACTIVE
+- 20 bearish WATCH / 4 bullish WATCH
+
+Therefore no live untouched-forward success fraction or shadow-R performance is
+reported yet. The system does not manufacture one from WATCH observations.
+
+A disk-full interruption during wake delivery was also recovered safely:
+only regenerable Puppeteer/uv/npm caches were removed; source, venv, runtimes,
+immutable production ledger and checkpoints were preserved. The delivered wake
+was reconciled exactly once after space returned.
+
+Canonical frontier advances to Dashboard V1 / Product Command Center Slice 1:
+real-data read model and information architecture before visual expansion.
+REAL_CAPITAL remains 0.

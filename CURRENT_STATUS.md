@@ -2,8 +2,8 @@
 
 Updated: 2026-09-20
 Project: Crypto Signal
-Phase: Historical Evaluation V1
-State: OUTCOME_V1_ACCEPTED
+Phase: Dashboard V1 / Product Command Center
+State: HISTORICAL_EVALUATION_V1_ACCEPTED
 REAL_CAPITAL: 0
 
 ## Accepted foundations
@@ -169,16 +169,33 @@ No Durdurulmaz or Quantum Capital project state was mutated; UID502 is used only
 - main development worktree cannot affect production clock without explicit accepted deploy
 - production DB currently continues append-only forward freezes independently of development
 
-## Canonical next frontier
-Historical Evaluation V1:
-1. evidence-class-preserving evaluated-signal input contract
-2. segmentation by methodology/setup/symbol/timeframe/direction/confluence score bucket
-3. explicit N/success/failure/ambiguous/not-evaluable counts
-4. realized shadow-R only where deterministically defined
-5. cumulative shadow-R and max drawdown over R-evaluable chronological outcomes
-6. sample-size visibility and explicit promotion eligibility policy
-7. no probability inference from historical frequency
-8. retrospective / walk-forward / untouched-forward results never silently merged
+## Historical Evaluation V1 accepted evidence
+- EvaluatedSignal binds one frozen SignalDecision to exactly one verified OutcomeEvaluation snapshot
+- duplicate signal freeze identities are rejected inside one aggregation call
+- evidence class is a mandatory segment dimension and cannot silently merge
+- segment key includes methodology/setup/exchange/market/symbol/timeframe/direction/confluence bucket/regime/entry model/target structure
+- success fraction denominator is explicit: success / (success + FAIL_SL)
+- historical success fraction is descriptive_frequency_not_probability
+- shadow R exists only for SUCCESS_TP1/TP2/TP3 and FAIL_SL
+- FAIL_SL = -1R; success R is read from frozen target reference_rr
+- ambiguous/timeout/cancelled/invalidated/not-evaluable/pending outcomes receive no invented R
+- chronological average/median/cumulative R and max drawdown are deterministic
+- default decisive sample threshold 30 is product visibility policy, not significance
+- focused gate: 14 tests PASS
+- full repository: 203 tests PASS
+- Ruff PASS
+- mypy PASS
+- current production untouched-forward freezes: 24 WATCH / 0 ACTIVE; no live performance statistic is fabricated
 
-The live evidence clock continues in the stable lane while Historical Evaluation development proceeds.
+## Canonical next frontier
+Dashboard V1 / Product Command Center — Slice 1:
+1. inspect current application/runtime constraints and choose the smallest maintainable V1 web surface
+2. define a read-only product read model over immutable ledger/current analysis state
+3. establish information architecture for Command Center, Market Radar, Asset Cockpit, Signal Detail, Signal Archive and Performance
+4. wire real-data provenance/evidence-class/probability-vs-confluence labels into contracts
+5. no mock data may masquerade as real
+6. no exchange order path; REAL_CAPITAL remains 0
+7. focused tests and local smoke before visual expansion
+
+LIVE/STABLE forward evidence clock remains isolated on its accepted worktree while Dashboard development proceeds.
 REAL_CAPITAL remains 0.
