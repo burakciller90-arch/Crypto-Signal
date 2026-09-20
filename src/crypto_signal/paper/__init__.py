@@ -43,6 +43,16 @@ from crypto_signal.paper.models import (
     initial_account_state,
 )
 
+from crypto_signal.paper.runtime import (
+    PaperFundBootstrapStatus,
+    PaperRuntimeError,
+    PaperRuntimeSnapshot,
+    PaperSignalLedgerObservation,
+    ensure_persistent_paper_fund,
+    observe_signal_ledger,
+    run_paper_runtime_tick,
+)
+
 __all__ = [
     "BENCHMARK_IDS",
     "INITIAL_CASH_USDT",
@@ -61,12 +71,16 @@ __all__ = [
     "PaperAction",
     "PaperBundleCommitError",
     "PaperBundleCommitResult",
+    "PaperFundBootstrapStatus",
     "PaperFundLedger",
     "PaperLedgerConflictError",
     "PaperLedgerEntry",
     "PaperLedgerWriteDisposition",
     "PaperPosition",
     "PaperRecordKind",
+    "PaperRuntimeError",
+    "PaperRuntimeSnapshot",
+    "PaperSignalLedgerObservation",
     "PaperSymbol",
     "PositionCashMutationRecord",
     "SimulatedFillRecord",
@@ -76,5 +90,8 @@ __all__ = [
     "build_position_cash_mutation",
     "build_simulated_fill",
     "commit_orchestration_bundle",
+    "ensure_persistent_paper_fund",
     "initial_account_state",
+    "observe_signal_ledger",
+    "run_paper_runtime_tick",
 ]
