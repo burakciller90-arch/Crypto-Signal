@@ -474,7 +474,7 @@ def test_decision_trace_is_factual_and_deterministic(tmp_path) -> None:
     assert first == second
     assert first.event_identity == result.event_identity
     assert first.terminal_status is PaperActivationDryRunStatus.PRETRADE_READY
-    assert first.candidate_action.value == "buy"
+    assert first.candidate_action.value == "BUY"
     assert tuple(step.stage for step in first.steps) == tuple(PaperDecisionTraceStage)
     assert tuple(step.state for step in first.steps) == (
         PaperDecisionTraceStepState.PASSED,
