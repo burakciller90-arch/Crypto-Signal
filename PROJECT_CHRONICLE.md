@@ -940,3 +940,45 @@ Performance.
 
 Dashboard V1 is no longer on the critical path.
 Canonical frontier advances to Alerts V1.
+
+## 2026-09-20 — Alerts V1 Slice 1 accepted: immutable alert/outbox foundation
+
+Alerts now have a deterministic domain model independent from signal truth.
+
+Default V1 notification policy:
+- initial ACTIVE eligible
+- initial WATCH suppressed
+- lifecycle transition to INVALIDATED eligible
+
+The policy is versioned product behavior, not market truth.
+
+Alert identity binds immutable source identities and policy version.
+Equivalent source + policy reproduces the same SHA256 event identity.
+
+A separate append-only alert outbox now stores:
+- alert_events
+- alert_delivery_attempts
+
+Both tables reject UPDATE and DELETE.
+
+Delivery semantics:
+- DELIVERED terminal per sink
+- PERMANENT_FAILURE terminal per sink
+- RETRYABLE_FAILURE remains dispatchable
+- different sinks maintain independent state
+- every provider call receives alert_event_identity as idempotency key
+
+LocalNoopSink proves dispatch/idempotency without external network delivery.
+
+Mechanical evidence:
+- focused Alerts tests: 14 PASS
+- full repository: 234 PASS
+- Ruff PASS
+- mypy PASS
+- JavaScript syntax PASS
+- uv lock PASS
+
+Canonical frontier advances to Alerts V1 Slice 2:
+a read-only Alert Clock over immutable signal/lifecycle evidence, writing only
+to the separate alert outbox and using LocalNoopSink for runtime acceptance.
+REAL_CAPITAL remains 0.

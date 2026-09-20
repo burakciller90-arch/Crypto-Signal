@@ -3,7 +3,7 @@
 Updated: 2026-09-20
 Project: Crypto Signal
 Phase: Alerts V1
-State: DASHBOARD_V1_ACCEPTED
+State: ALERTS_V1_SLICE1_FOUNDATION_ACCEPTED
 REAL_CAPITAL: 0
 
 ## Accepted foundations
@@ -260,17 +260,34 @@ No Durdurulmaz or Quantum Capital project state was mutated; UID502 is used only
 - stable real-ledger navigation/rich-detail/performance smoke PASS
 - Dashboard V1 is accepted and no longer on the critical path
 
-## Canonical next frontier
-Alerts V1:
-1. define immutable alert-event and alert-policy contracts
-2. deterministic alert identity / deduplication
-3. state-transition eligibility without changing signal truth
-4. append-only alert outbox bound to signal freeze/lifecycle evidence
-5. delivery attempts/status separate from immutable signal/outcome evidence
-6. local/no-op sink and provider adapter boundary
-7. retries must be idempotent and must not duplicate user-facing alerts
-8. no order/execution semantics
-9. focused tests + full repo gate
+## Alerts V1 Slice 1 accepted evidence
+- alert policy is explicit/versioned and separate from signal truth
+- default policy: initial ACTIVE eligible, WATCH suppressed, INVALIDATED lifecycle transition eligible
+- alert identity is deterministic over immutable source + policy
+- INITIAL_SIGNAL and LIFECYCLE_TRANSITION source kinds are explicit
+- append-only alert_events + alert_delivery_attempts outbox
+- SQL UPDATE/DELETE rejected by triggers
+- RETRYABLE_FAILURE remains dispatchable; DELIVERED/PERMANENT_FAILURE are terminal per sink
+- provider sink receives alert event identity as idempotency key on every retry
+- LocalNoopSink validates delivery semantics without external notification
+- focused gate: 14 tests PASS
+- full repository: 234 tests PASS
+- Ruff PASS
+- mypy PASS
+- JavaScript syntax PASS
+- uv lock PASS
 
-LIVE/STABLE evidence clock and PRODUCT/STABLE dashboard remain isolated and running while Alerts development proceeds.
+## Canonical next frontier
+Alerts V1 Slice 2 — Alert Clock:
+1. strictly reconstruct immutable signal/lifecycle evidence from the signal ledger
+2. read signal ledger without mutation
+3. materialize eligible AlertEvents into the separate alert outbox
+4. dispatch through LocalNoopSink for runtime acceptance
+5. repeated clock runs must be idempotent
+6. current WATCH-only untouched-forward evidence should create no default initial alert
+7. expose runtime counts/status
+8. no external notification provider yet
+9. no execution semantics
+
+LIVE/STABLE evidence clock and PRODUCT/STABLE dashboard remain isolated and running while Alert Clock development proceeds.
 REAL_CAPITAL remains 0.
