@@ -150,10 +150,13 @@ def scan_post_activation_signal_events(
     signal_ledger_path: Path,
     paper_ledger_path: Path,
     activation: PaperActivationState,
+    observed_at_ms: int | None = None,
 ) -> PaperSignalEventScanResult:
     """Return unprocessed exact Binance+Bybit 4h event pairs after activation."""
     if activation.real_capital != REAL_CAPITAL:
         raise PaperSignalEventScanError("REAL_CAPITAL must remain 0")
+    if observed_at_ms is not None and observed_at_ms < 0:
+        raise PaperSignalEventScanError("observed_at_ms must be non-negative")
     _assert_persistent_activation(
         paper_ledger_path=paper_ledger_path,
         activation=activation,
@@ -162,6 +165,7 @@ def scan_post_activation_signal_events(
     freezes = _read_eligible_freezes(
         signal_ledger_path=signal_ledger_path,
         activation=activation,
+        observed_at_ms=observed_at_ms,
     )
 
     grouped: dict[tuple[PaperSymbol, int], list[_FreezeView]] = {}
@@ -244,6 +248,7 @@ def _read_eligible_freezes(
     *,
     signal_ledger_path: Path,
     activation: PaperActivationState,
+    observed_at_ms: int | None,
 ) -> tuple[_FreezeView, ...]:
     if not signal_ledger_path.exists():
         raise PaperSignalEventScanError("immutable signal ledger does not exist")
@@ -254,6 +259,11 @@ def _read_eligible_freezes(
             connection.execute("PRAGMA query_only=ON")
             _require_table(connection, "signal_freezes", "signal ledger")
             placeholders = ",".join("?" for _ in PERMITTED_SYMBOLS)
+            point_in_time_sql = ""
+            point_in_time_params: tuple[int, ...] = ()
+            if observed_at_ms is not None:
+                point_in_time_sql = " AND as_of_ms <= ? AND frozen_at_ms <= ?"
+                point_in_time_params = (observed_at_ms, observed_at_ms)
             rows = connection.execute(
                 f"""
                 SELECT
@@ -274,6 +284,7 @@ def _read_eligible_freezes(
                   AND symbol IN ({placeholders})
                   AND as_of_ms >= ?
                   AND frozen_at_ms >= ?
+                  {point_in_time_sql}
                 ORDER BY
                     as_of_ms ASC,
                     symbol ASC,
@@ -291,6 +302,7 @@ def _read_eligible_freezes(
                     )),
                     activation.activation_cutoff_ms,
                     activation.activated_at_ms,
+                    *point_in_time_params,
                 ),
             ).fetchall()
     except sqlite3.Error as exc:
