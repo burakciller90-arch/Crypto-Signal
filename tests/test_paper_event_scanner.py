@@ -159,6 +159,7 @@ def _insert_signal(
     *,
     frozen_at_ms: int | None = None,
     indexed_state: str | None = None,
+    source_cutoff_open_time_ms: int | None = None,
 ) -> None:
     frozen = decision.as_of_ms + 10 if frozen_at_ms is None else frozen_at_ms
     with sqlite3.connect(path) as connection:
@@ -187,7 +188,11 @@ def _insert_signal(
                 decision.symbol,
                 decision.timeframe,
                 decision.as_of_ms,
-                decision.as_of_ms - 1,
+                (
+                    decision.as_of_ms - 1
+                    if source_cutoff_open_time_ms is None
+                    else source_cutoff_open_time_ms
+                ),
                 decision.state.value if indexed_state is None else indexed_state,
                 decision.direction.value,
                 canonical_json({"signal_decision": decision}),
@@ -231,6 +236,50 @@ def test_exact_post_activation_provider_pair_becomes_candidate(tmp_path) -> None
         bybit.freeze_identity,
     )
     assert candidate.real_capital == REAL_CAPITAL == 0
+
+
+def test_provider_asof_skew_pairs_on_shared_market_cutoff(tmp_path) -> None:
+    ledger, _, activation = _paper_activation(tmp_path)
+    signal_db = tmp_path / "signals.sqlite3"
+    _init_signal_db(signal_db)
+    binance = _decision(
+        exchange=Exchange.BINANCE,
+        symbol=PaperSymbol.BTCUSDT,
+        as_of_ms=1_100,
+        suffix="binance-skew",
+    )
+    bybit = _decision(
+        exchange=Exchange.BYBIT,
+        symbol=PaperSymbol.BTCUSDT,
+        as_of_ms=1_108,
+        suffix="bybit-skew",
+    )
+    shared_cutoff = 1_000
+    _insert_signal(
+        signal_db,
+        binance,
+        source_cutoff_open_time_ms=shared_cutoff,
+    )
+    _insert_signal(
+        signal_db,
+        bybit,
+        source_cutoff_open_time_ms=shared_cutoff,
+    )
+
+    result = scan_post_activation_signal_events(
+        signal_ledger_path=signal_db,
+        paper_ledger_path=ledger.path,
+        activation=activation,
+    )
+
+    assert result.eligible_freeze_count == 2
+    assert result.incomplete_pair_count == 0
+    assert len(result.candidates) == 1
+    candidate = result.candidates[0]
+    assert candidate.source_cutoff_open_time_ms == shared_cutoff
+    assert candidate.provider_signal_as_of_ms == (1_100, 1_108)
+    assert candidate.signal_as_of_ms == 1_108
+    assert candidate.signals == (binance, bybit)
 
 
 def test_pre_activation_and_incomplete_events_do_not_emit_candidates(tmp_path) -> None:
