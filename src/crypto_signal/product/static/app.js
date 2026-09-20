@@ -350,6 +350,11 @@ function renderAlertCenter(data) {
         <div class="value-label">Delivery</div>
         <div class="delivery-list">${deliveryMarkup(event)}</div>
       </div>
+      <div class="notification-preview">
+        <div class="value-label">Canonical notification preview</div>
+        <div class="row-title">${esc(event.notification_title)}</div>
+        <div class="truth-note">${esc(event.notification_body).replaceAll("\n", "<br>")}</div>
+      </div>
     </div>
   `).join("");
 }

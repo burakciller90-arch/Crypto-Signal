@@ -3,7 +3,7 @@
 Updated: 2026-09-20
 Project: Crypto Signal
 Phase: Alerts V1
-State: ALERTS_V1_SLICE4_ALERT_CENTER_STABLE_DEPLOYED
+State: ALERTS_V1_SLICE5_NOTIFICATION_PRESENTATION_ACCEPTED_PENDING_STABLE_DEPLOY
 REAL_CAPITAL: 0
 
 ## Accepted foundations
@@ -337,17 +337,36 @@ No Durdurulmaz or Quantum Capital project state was mutated; UID502 is used only
 - 502 Safari opened at http://127.0.0.1:48700
 - PRODUCT/STABLE clean after deploy
 
+## Alerts V1 Slice 5 accepted evidence
+- canonical NotificationMessage derived deterministically from immutable AlertEvent
+- ACTIVE and INVALIDATED rendering explicit
+- agreement index always labeled not probability
+- probability status preserved rather than fabricated
+- AlertSink receives canonical NotificationMessage, not raw AlertEvent
+- event identity remains the provider idempotency key
+- non-secret AlertSinkConfiguration supports environment/keychain credential references
+- embedded-secret markers are rejected by configuration validation
+- read-only ops/preview_alerts.py consumes no events and writes no delivery attempts
+- Mission Control Alert Center uses the same canonical title/body renderer
+- focused gate: 34 tests PASS
+- full repository: 255 tests PASS
+- Ruff PASS
+- mypy PASS
+- JavaScript syntax PASS
+- uv lock PASS
+- production preview smoke preserved 0 events / 0 attempts before and after
+
 ## Canonical next frontier
-Alerts V1 Slice 5 — provider-neutral notification presentation and integrated acceptance:
-1. deterministic notification rendering from immutable AlertEvent
-2. render ACTIVE and INVALIDATED sources without inventing probability
-3. explicit destination/sink configuration model with no secrets in source control
-4. preview/dry-run path that never consumes production outbox
-5. provider adapters consume the same rendered semantic contract
-6. preserve alert event identity as idempotency key
-7. complete Alerts V1 integrated acceptance
-8. then advance to V1 Integrated Acceptance
+Alerts V1 stable convergence and integrated acceptance:
+1. commit exact accepted Slice 5 state
+2. advance PRODUCT/STABLE to that commit and restart dashboard
+3. advance ALERTS/STABLE to that commit and verify materializer remains materialize-only
+4. stable smoke Alert Center + notification preview semantics
+5. verify production outbox remains safe while source evidence is WATCH-only
+6. refresh user-facing Safari dashboard
+7. close Alerts V1 integrated acceptance
+8. advance to V1 Integrated Acceptance
 
 External providers remain disabled by default until explicitly configured.
-ALERTS/STABLE, LIVE/STABLE and PRODUCT/STABLE remain isolated.
+LIVE/STABLE remains independent.
 REAL_CAPITAL remains 0.

@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from crypto_signal.alerts.models import DeliveryAttemptStatus
+from crypto_signal.alerts.presentation import render_notification
 from crypto_signal.alerts.store import (
     AlertOutboxConflictError,
     parse_alert_event_json,
@@ -1042,6 +1043,8 @@ class DashboardReader:
                     "alert event row identity mismatch"
                 )
 
+            notification = render_notification(event)
+
             sink_views: list[AlertSinkDeliveryView] = []
             for sink_id, rows in sorted(
                 attempts_by_event[event.event_identity].items(),
@@ -1108,6 +1111,8 @@ class DashboardReader:
                     ),
                     probability_status=event.probability_status,
                     uncertainty_flags=event.uncertainty_flags,
+                    notification_title=notification.title,
+                    notification_body=notification.body,
                     appended_at_ms=int(row["appended_at_ms"]),
                     delivery_states=tuple(sink_views),
                 )

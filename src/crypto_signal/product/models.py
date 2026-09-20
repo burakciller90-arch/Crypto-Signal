@@ -278,6 +278,8 @@ class AlertEventView:
     confluence_score_semantic: ScoreSemantic
     probability_status: ProbabilityStatus
     uncertainty_flags: tuple[str, ...]
+    notification_title: str
+    notification_body: str
     appended_at_ms: int
     delivery_states: tuple[AlertSinkDeliveryView, ...]
 
@@ -288,6 +290,8 @@ class AlertEventView:
             raise ValueError("alert source signal identity must be SHA256")
         if not self.symbol.strip() or not self.timeframe.strip():
             raise ValueError("alert event market identity must be non-empty")
+        if not self.notification_title.strip() or not self.notification_body.strip():
+            raise ValueError("alert notification preview must be non-empty")
         if self.appended_at_ms < self.source_evaluated_as_of_ms:
             raise ValueError("alert append time cannot precede source evidence")
 

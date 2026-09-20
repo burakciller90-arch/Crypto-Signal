@@ -1114,3 +1114,43 @@ The dashboard was opened in Safari on the UID502 user-facing session.
 
 Canonical frontier advances to provider-neutral notification presentation and
 Alerts V1 integrated acceptance. External providers stay disabled by default.
+
+## 2026-09-20 — Alerts V1 Slice 5 accepted: canonical notification presentation
+
+All provider adapters now share one deterministic NotificationMessage rendering
+contract derived from immutable AlertEvent truth.
+
+The renderer explicitly preserves:
+- ACTIVE / INVALIDATED state
+- market identity
+- direction and setup
+- agreement index with not-probability label
+- probability status
+- source kind and UTC as-of
+- uncertainty
+- immutable alert identity
+
+AlertSink now receives NotificationMessage rather than raw AlertEvent.
+The immutable event identity remains the idempotency key for every provider call.
+
+A non-secret AlertSinkConfiguration supports environment/keychain credential
+references and rejects common embedded-secret markers.
+
+ops/preview_alerts.py is a read-only dry-run path. Mission Control Alert Center
+projects the same canonical title/body as future delivery adapters.
+
+Mechanical evidence:
+- Slice 5 focused tests: 34 PASS
+- full repository: 255 PASS
+- Ruff PASS
+- mypy PASS
+- JavaScript syntax PASS
+- uv lock PASS
+
+Production outbox preview smoke:
+- before: 0 events / 0 attempts
+- preview count: 0
+- after: 0 events / 0 attempts
+
+Canonical frontier is stable convergence of PRODUCT/STABLE and ALERTS/STABLE on
+the exact accepted Slice 5 commit, followed by Alerts V1 integrated acceptance.

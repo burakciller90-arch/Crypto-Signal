@@ -4,9 +4,12 @@ from typing import Protocol
 
 from crypto_signal.alerts.models import (
     AlertDeliveryAttempt,
-    AlertEvent,
     DeliveryAttemptStatus,
     DeliveryResult,
+)
+from crypto_signal.alerts.presentation import (
+    NotificationMessage,
+    render_notification,
 )
 from crypto_signal.alerts.store import AlertOutbox
 
@@ -21,7 +24,7 @@ class AlertSink(Protocol):
 
     def deliver(
         self,
-        event: AlertEvent,
+        notification: NotificationMessage,
         *,
         idempotency_key: str,
     ) -> DeliveryResult: ...
@@ -40,13 +43,17 @@ class LocalNoopSink:
 
     def deliver(
         self,
-        event: AlertEvent,
+        notification: NotificationMessage,
         *,
         idempotency_key: str,
     ) -> DeliveryResult:
-        if idempotency_key != event.event_identity:
+        if idempotency_key != notification.event_identity:
             raise ValueError(
                 "alert sink idempotency key must equal event identity"
+            )
+        if notification.idempotency_key != idempotency_key:
+            raise ValueError(
+                "notification and sink idempotency keys must match"
             )
         receipt = self._receipts.setdefault(
             idempotency_key,
@@ -73,9 +80,10 @@ def dispatch_pending(
     attempts: list[AlertDeliveryAttempt] = []
 
     for event in events:
+        notification = render_notification(event)
         try:
             result = sink.deliver(
-                event,
+                notification,
                 idempotency_key=event.event_identity,
             )
         except AlertSinkError:

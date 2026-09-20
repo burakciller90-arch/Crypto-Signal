@@ -14,7 +14,6 @@ from crypto_signal.alerts.delivery import (
     dispatch_pending,
 )
 from crypto_signal.alerts.models import (
-    AlertEvent,
     AlertPolicy,
     AlertSourceKind,
     DeliveryAttemptStatus,
@@ -25,6 +24,7 @@ from crypto_signal.alerts.planner import (
     plan_initial_alert,
     plan_lifecycle_alert,
 )
+from crypto_signal.alerts.presentation import NotificationMessage
 from crypto_signal.alerts.store import (
     AlertOutbox,
     AlertOutboxConflictError,
@@ -405,7 +405,7 @@ class FlakySink:
 
     def deliver(
         self,
-        event: AlertEvent,
+        event: NotificationMessage,
         *,
         idempotency_key: str,
     ) -> DeliveryResult:

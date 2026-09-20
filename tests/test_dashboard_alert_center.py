@@ -245,4 +245,10 @@ def test_alert_center_api_serializes_pending_event(tmp_path: Path) -> None:
     assert body["events"][0]["event_identity"] == event.event_identity
     assert body["events"][0]["source_kind"] == "initial_signal"
     assert body["events"][0]["signal_state"] == "active"
+    assert body["events"][0]["notification_title"] == (
+        "Crypto Signal · ACTIVE · BTCUSDT 15m"
+    )
+    assert "Agreement index: 66.67 (not probability)" in (
+        body["events"][0]["notification_body"]
+    )
     assert body["events"][0]["delivery_states"] == []
