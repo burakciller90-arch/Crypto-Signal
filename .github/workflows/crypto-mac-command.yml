@@ -1,0 +1,80 @@
+name: Crypto Mac Command
+
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  contents: read
+  issues: read
+
+jobs:
+  command:
+    if: github.actor == 'burakciller90-arch' && startsWith(github.event.issue.title, '[MAC] ')
+    name: UID504 Allowlisted Command
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 20
+    steps:
+      - name: Parse allowlisted command
+        id: parse
+        shell: bash
+        env:
+          ISSUE_BODY: ${{ github.event.issue.body }}
+        run: |
+          set -euo pipefail
+          cmd="$(printf '%s\n' "$ISSUE_BODY" | awk -F: 'tolower($1)=="command" {gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2); print tolower($2); exit}')"
+          case "$cmd" in
+            status|services|logs|disk)
+              ;;
+            *)
+              echo "Unsupported command: $cmd"
+              exit 2
+              ;;
+          esac
+          echo "command=$cmd" >> "$GITHUB_OUTPUT"
+
+      - name: STATUS
+        if: steps.parse.outputs.command == 'status'
+        shell: bash
+        run: |
+          set -euo pipefail
+          REPO="/Users/crypto-signal-agent/Crypto-Signal"
+          echo "=== IDENTITY ==="
+          id
+          echo "=== REPO ==="
+          git -C "$REPO" status --short --branch
+          echo "HEAD=$(git -C "$REPO" rev-parse HEAD)"
+          echo "=== DASHBOARD ==="
+          curl -fsS --max-time 5 http://127.0.0.1:48700/api/health
+          echo
+
+      - name: SERVICES
+        if: steps.parse.outputs.command == 'services'
+        shell: bash
+        run: |
+          set +e
+          for svc in com.cryptosignal.dashboard com.cryptosignal.liveevidenceclock com.cryptosignal.alertclock; do
+            echo "=== $svc ==="
+            launchctl print "gui/$(id -u)/$svc" 2>&1 | egrep 'state =|runs =|pid =|last exit code =|run interval =' | head -20
+          done
+          exit 0
+
+      - name: LOGS
+        if: steps.parse.outputs.command == 'logs'
+        shell: bash
+        run: |
+          set +e
+          for f in             /Users/crypto-signal-agent/Crypto-Signal/runtime/dashboard/dashboard.err.log             /Users/crypto-signal-agent/Crypto-Signal/runtime/dashboard/dashboard.out.log             /Users/crypto-signal-agent/Crypto-Signal/runtime/ledger/live_clock.err.log             /Users/crypto-signal-agent/Crypto-Signal/runtime/ledger/live_clock.out.log             /Users/crypto-signal-agent/Crypto-Signal/runtime/alerts/alert_clock.err.log             /Users/crypto-signal-agent/Crypto-Signal/runtime/alerts/alert_clock.out.log
+          do
+            echo "=== $f ==="
+            if [ -f "$f" ]; then tail -80 "$f"; else echo "MISSING"; fi
+          done
+          exit 0
+
+      - name: DISK
+        if: steps.parse.outputs.command == 'disk'
+        shell: bash
+        run: |
+          set -euo pipefail
+          df -h /
+          du -sh /Users/crypto-signal-agent/Crypto-Signal                  /Users/crypto-signal-agent/Crypto-Signal-Live                  /Users/crypto-signal-agent/Crypto-Signal-Product                  /Users/crypto-signal-agent/Crypto-Signal-Alerts                  /Users/crypto-signal-agent/actions-runner-crypto 2>/dev/null || true
