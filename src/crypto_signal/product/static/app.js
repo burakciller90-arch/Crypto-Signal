@@ -901,6 +901,116 @@ function renderEvidenceChart(detail) {
 }
 
 
+function frozenEvidenceSearchText(detail) {
+  const parts = [];
+  (detail.methodologies ?? []).forEach((method) => {
+    parts.push(method.methodology ?? "");
+    (method.selected ?? []).forEach((item) => {
+      parts.push(item.setup_type ?? "", item.evidence_id ?? "");
+      (item.evidence_summary ?? []).forEach((value) => parts.push(value));
+      (item.key_levels ?? []).forEach((level) => parts.push(level.label ?? ""));
+    });
+  });
+  (detail.evidence_summary ?? []).forEach((value) => parts.push(value));
+  return parts.join(" ").toLowerCase();
+}
+
+function contextualLessonIds(detail) {
+  const ids = new Set(["agreement_vs_probability"]);
+  const text = frozenEvidenceSearchText(detail);
+  const methods = detail.methodologies ?? [];
+
+  const hasSelected = (name) => methods.some(
+    (method) => method.methodology === name && (method.selected ?? []).length
+  );
+  const hasInvalidation = Boolean(detail.geometry?.invalidation_price)
+    || methods.some((method) =>
+      (method.selected ?? []).some(
+        (item) => item.invalidation_price !== null && item.invalidation_price !== undefined
+      )
+    );
+
+  if (/(^|[^a-z])bos([^a-z]|$)|break[_ -]?of[_ -]?structure/.test(text)) ids.add("bos");
+  if (/choch|change[_ -]?of[_ -]?character/.test(text)) ids.add("choch");
+  if (/liquidity[_ -]?sweep|likidite[_ -]?süp/.test(text)) ids.add("liquidity_sweep");
+  if (/(^|[^a-z])fvg([^a-z]|$)|fair[_ -]?value[_ -]?gap/.test(text)) ids.add("fvg");
+  if (hasSelected("harmonic")) ids.add("harmonic_prz");
+  if (hasSelected("elliott")) ids.add("elliott_wave");
+  if (hasInvalidation) ids.add("invalidation");
+  if (
+    detail.geometry?.invalidation_price !== null
+    && detail.geometry?.invalidation_price !== undefined
+    && (detail.geometry?.targets ?? []).length
+  ) {
+    ids.add("risk_reward");
+  }
+  return [...ids];
+}
+
+function contextualLessonReason(conceptId, detail) {
+  const score = detail.signal?.confluence_score ?? "—";
+  const reasons = {
+    bos: "Dondurulmuş kanıt alanlarında BOS / break-of-structure etiketi bulundu.",
+    choch: "Dondurulmuş kanıt alanlarında CHoCH / change-of-character etiketi bulundu.",
+    liquidity_sweep: "Dondurulmuş kanıt alanlarında likidite süpürmesi etiketi bulundu.",
+    fvg: "Dondurulmuş kanıt alanlarında FVG / fair-value-gap etiketi bulundu.",
+    harmonic_prz: "Bu kararda seçilmiş Harmonic metodoloji kanıtı var.",
+    elliott_wave: "Bu kararda seçilmiş Elliott metodoloji kanıtı var.",
+    invalidation: "Bu kararda açık bir geçersizleşme seviyesi/koşulu var.",
+    risk_reward: "Bu kararda giriş, geçersizleşme ve hedef geometrisi birlikte mevcut.",
+    agreement_vs_probability: `Kararda metodoloji uyumu ${score} gösteriliyor; bunun olasılık olmadığını ayırmak gerekiyor.`,
+  };
+  return reasons[conceptId] ?? "Bu kavram mevcut dondurulmuş kanıtı anlamaya yardımcı olur.";
+}
+
+function renderContextTeaching(detail) {
+  const lessons = educationData?.lessons ?? [];
+  if (!lessons.length) {
+    return '<div class="truth-note">Bağlamsal ders kataloğu henüz yüklenmedi.</div>';
+  }
+  const byId = new Map(lessons.map((lesson) => [lesson.concept_id, lesson]));
+  const selected = contextualLessonIds(detail)
+    .map((id) => byId.get(id))
+    .filter(Boolean);
+  if (!selected.length) {
+    return '<div class="truth-note">Bu dondurulmuş kanıta özel ek ders eşleşmesi yok.</div>';
+  }
+  return `
+    <div class="context-lesson-list">
+      ${selected.map((lesson) => `
+        <details class="context-lesson">
+          <summary>
+            <span>${esc(lesson.title_tr)}</span>
+            <span class="evidence-linked-tag">kanıta bağlı</span>
+          </summary>
+          <div class="context-lesson-body">
+            <div class="context-reason">${esc(contextualLessonReason(lesson.concept_id, detail))}</div>
+            <p>${esc(lesson.beginner_tr)}</p>
+            <div class="truth-note"><strong>Neden önemli?</strong> ${esc(lesson.why_it_matters_tr)}</div>
+          </div>
+        </details>
+      `).join("")}
+    </div>`;
+}
+
+function renderEvidenceLegend(detail) {
+  const { levels } = frozenChartData(detail);
+  if (!levels.length) {
+    return '<div class="truth-note">Bu kayıtta ayrıca etiketlenmiş fiyat seviyesi yok.</div>';
+  }
+  return `
+    <div class="evidence-legend">
+      ${levels.map((level) => `
+        <div class="evidence-legend-row">
+          <span class="evidence-kind evidence-kind-${esc(level.kind)}">${esc(human(level.kind))}</span>
+          <span class="evidence-legend-label">${esc(level.label)}</span>
+          <strong>${esc(Number(level.price).toLocaleString("tr-TR", { maximumFractionDigits: 8 }))}</strong>
+        </div>
+      `).join("")}
+    </div>
+    <div class="truth-note">Bu seviyeler karar anındaki dondurulmuş kanıttan gelir; daha yeni fiyat verisi geçmiş kararı yeniden yazmaz.</div>`;
+}
+
 async function openSignal(signalId) {
   const detail = await fetchJSON(`/api/signals/${encodeURIComponent(signalId)}`);
   if (detail.status !== "ready" || !detail.signal) {
@@ -935,6 +1045,13 @@ async function openSignal(signalId) {
         <canvas id="evidenceChart" class="evidence-chart" aria-label="Dondurulmuş mum ve kanıt seviyeleri"></canvas>
       </div>
       <div id="evidenceChartMeta" class="truth-note">Grafik hazırlanıyor…</div>
+      <div class="evidence-legend-title">Grafikte çizilen dondurulmuş kanıt</div>
+      ${renderEvidenceLegend(detail)}
+    </div>
+    <div class="detail-item context-teaching">
+      <div class="value-label">Bu sinyali bana öğret</div>
+      <div class="truth-note">Aşağıdaki dersler yalnızca bu dondurulmuş kayıtta bulunan metodoloji, geometri veya açık kanıt etiketlerine göre seçildi.</div>
+      ${renderContextTeaching(detail)}
     </div>
     <div class="detail-item"><div class="value-label">Metodoloji kanıtı</div>${renderMethodologies(detail)}</div>
     <div class="detail-item"><div class="value-label">Uyum matrisi</div>${renderAgreement(detail)}</div>
