@@ -1,0 +1,36 @@
+name: Cursor TTY Auth Test
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/cursor-tty-auth-test.yml"
+
+jobs:
+  test:
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 5
+    steps:
+      - name: Probe Cursor auth via UID504 Terminal
+        shell: bash
+        run: |
+          set +e
+          OUT="$HOME/.cursor/crypto-tty-auth-test.txt"
+          rm -f "$OUT"
+          CMD='export PATH="$HOME/.local/bin:$PATH"; agent status > "$HOME/.cursor/crypto-tty-auth-test.txt" 2>&1; exit'
+          /usr/bin/osascript - "$CMD" >/dev/null <<'APPLESCRIPT'
+          on run argv
+            tell application "Terminal"
+              do script (item 1 of argv)
+            end tell
+          end run
+APPLESCRIPT
+          rc=$?
+          echo "OSASCRIPT_RC=$rc"
+          for i in {1..20}; do
+            if [ -s "$OUT" ]; then break; fi
+            sleep 1
+          done
+          echo "=== TTY AGENT STATUS ==="
+          if [ -f "$OUT" ]; then cat "$OUT"; else echo "NO_OUTPUT"; fi
+          exit 0
