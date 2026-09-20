@@ -133,6 +133,27 @@ class PaperFundLedger:
                 )
                 """
             )
+            connection.execute(
+                """
+                CREATE TABLE IF NOT EXISTS paper_activation_state (
+                    singleton INTEGER PRIMARY KEY CHECK (singleton = 1),
+                    activation_identity TEXT NOT NULL UNIQUE,
+                    payload_json TEXT NOT NULL,
+                    activated_at_ms INTEGER NOT NULL
+                )
+                """
+            )
+            connection.execute(
+                """
+                CREATE TABLE IF NOT EXISTS paper_processed_events (
+                    event_identity TEXT PRIMARY KEY,
+                    activation_identity TEXT NOT NULL,
+                    outcome TEXT NOT NULL,
+                    payload_json TEXT NOT NULL,
+                    processed_at_ms INTEGER NOT NULL
+                )
+                """
+            )
             self._install_immutability_triggers(connection)
 
     def append_fund_creation(
@@ -228,6 +249,290 @@ class PaperFundLedger:
             if entry.record_identity == record_identity:
                 return entry
         return None
+
+    def _put_activation_state(
+        self,
+        *,
+        activation_identity: str,
+        payload_json: str,
+        activated_at_ms: int,
+    ) -> PaperLedgerWriteDisposition:
+        if activated_at_ms < 0:
+            raise ValueError("activated_at_ms must be non-negative")
+        self.initialize()
+        with self._connect() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            existing = connection.execute(
+                """
+                SELECT activation_identity, payload_json, activated_at_ms
+                FROM paper_activation_state
+                WHERE singleton = 1
+                """
+            ).fetchone()
+            if existing is not None:
+                if (
+                    str(existing["activation_identity"]) == activation_identity
+                    and str(existing["payload_json"]) == payload_json
+                    and int(existing["activated_at_ms"]) == activated_at_ms
+                ):
+                    return PaperLedgerWriteDisposition.UNCHANGED
+                raise PaperLedgerConflictError(
+                    "paper activation state is immutable once created"
+                )
+            connection.execute(
+                """
+                INSERT INTO paper_activation_state (
+                    singleton,
+                    activation_identity,
+                    payload_json,
+                    activated_at_ms
+                ) VALUES (1, ?, ?, ?)
+                """,
+                (activation_identity, payload_json, activated_at_ms),
+            )
+        return PaperLedgerWriteDisposition.INSERTED
+
+    def _get_activation_state_row(self) -> tuple[str, str, int] | None:
+        self.initialize()
+        with self._connect() as connection:
+            row = connection.execute(
+                """
+                SELECT activation_identity, payload_json, activated_at_ms
+                FROM paper_activation_state
+                WHERE singleton = 1
+                """
+            ).fetchone()
+        if row is None:
+            return None
+        return (
+            str(row["activation_identity"]),
+            str(row["payload_json"]),
+            int(row["activated_at_ms"]),
+        )
+
+    def _get_processed_event_row(
+        self,
+        event_identity: str,
+    ) -> tuple[str, str, str, int] | None:
+        self.initialize()
+        with self._connect() as connection:
+            row = connection.execute(
+                """
+                SELECT activation_identity, outcome, payload_json, processed_at_ms
+                FROM paper_processed_events
+                WHERE event_identity = ?
+                """,
+                (event_identity,),
+            ).fetchone()
+        if row is None:
+            return None
+        return (
+            str(row["activation_identity"]),
+            str(row["outcome"]),
+            str(row["payload_json"]),
+            int(row["processed_at_ms"]),
+        )
+
+    def _list_processed_event_rows(
+        self,
+    ) -> tuple[tuple[str, str, str, str, int], ...]:
+        self.initialize()
+        with self._connect() as connection:
+            rows = connection.execute(
+                """
+                SELECT
+                    event_identity,
+                    activation_identity,
+                    outcome,
+                    payload_json,
+                    processed_at_ms
+                FROM paper_processed_events
+                ORDER BY processed_at_ms ASC, event_identity ASC
+                """
+            ).fetchall()
+        return tuple(
+            (
+                str(row["event_identity"]),
+                str(row["activation_identity"]),
+                str(row["outcome"]),
+                str(row["payload_json"]),
+                int(row["processed_at_ms"]),
+            )
+            for row in rows
+        )
+
+    def _append_records_and_processed_event_atomic(
+        self,
+        records: Sequence[PaperRecord],
+        *,
+        expected_replayed_record_count: int,
+        event_identity: str,
+        activation_identity: str,
+        outcome: str,
+        event_payload_json: str,
+        processed_at_ms: int,
+    ) -> tuple[PaperLedgerWriteDisposition, tuple[PaperLedgerEntry, ...]]:
+        """Atomically append optional paper records plus one terminal event receipt."""
+        materialized = tuple(records)
+        if expected_replayed_record_count < 0:
+            raise ValueError("expected replayed record count must be non-negative")
+        if processed_at_ms < 0:
+            raise ValueError("processed_at_ms must be non-negative")
+        if not event_identity or not activation_identity or not outcome:
+            raise ValueError("processed event identity/activation/outcome are required")
+
+        identities = tuple(record.record_identity for record in materialized)
+        if len(set(identities)) != len(identities):
+            raise ValueError("atomic paper ledger bundle has duplicate identities")
+        prepared = tuple(
+            (
+                _record_kind(record),
+                record.record_identity,
+                canonical_json(record),
+                _record_appended_at_ms(record),
+            )
+            for record in materialized
+        )
+        if any(appended_at_ms < 0 for _, _, _, appended_at_ms in prepared):
+            raise ValueError("appended_at_ms must be non-negative")
+
+        self.initialize()
+        with self._connect() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            activation = connection.execute(
+                """
+                SELECT activation_identity
+                FROM paper_activation_state
+                WHERE singleton = 1
+                """
+            ).fetchone()
+            if activation is None:
+                raise PaperLedgerConflictError(
+                    "processed event requires persistent paper activation state"
+                )
+            if str(activation["activation_identity"]) != activation_identity:
+                raise PaperLedgerConflictError(
+                    "processed event activation identity mismatch"
+                )
+
+            present_count = 0
+            for kind, record_identity, payload_json, _ in prepared:
+                table = _TABLE_BY_KIND[kind]
+                payload_row = connection.execute(
+                    f"""
+                    SELECT payload_json
+                    FROM {table}
+                    WHERE record_identity = ?
+                    """,
+                    (record_identity,),
+                ).fetchone()
+                index_row = connection.execute(
+                    """
+                    SELECT record_kind
+                    FROM paper_replay_index
+                    WHERE record_identity = ?
+                    """,
+                    (record_identity,),
+                ).fetchone()
+                if payload_row is None and index_row is None:
+                    continue
+                if payload_row is None or index_row is None:
+                    raise PaperLedgerConflictError(
+                        "immutable paper ledger has incomplete existing event record"
+                    )
+                if str(index_row["record_kind"]) != kind.value:
+                    raise PaperLedgerConflictError(
+                        "immutable paper ledger event record kind conflict"
+                    )
+                if str(payload_row["payload_json"]) != payload_json:
+                    raise PaperLedgerConflictError(
+                        "immutable paper ledger event record payload conflict"
+                    )
+                present_count += 1
+
+            event_row = connection.execute(
+                """
+                SELECT activation_identity, outcome, payload_json, processed_at_ms
+                FROM paper_processed_events
+                WHERE event_identity = ?
+                """,
+                (event_identity,),
+            ).fetchone()
+            if event_row is not None:
+                exact_event = (
+                    str(event_row["activation_identity"]) == activation_identity
+                    and str(event_row["outcome"]) == outcome
+                    and str(event_row["payload_json"]) == event_payload_json
+                    and int(event_row["processed_at_ms"]) == processed_at_ms
+                )
+                if exact_event and present_count == len(prepared):
+                    return (
+                        PaperLedgerWriteDisposition.UNCHANGED,
+                        self._replay_with_connection(connection),
+                    )
+                raise PaperLedgerConflictError(
+                    "immutable processed event identity conflict"
+                )
+            if present_count:
+                raise PaperLedgerConflictError(
+                    "paper event transaction rejects partially existing trade records"
+                )
+
+            current_count = int(
+                connection.execute(
+                    "SELECT COUNT(*) AS count FROM paper_replay_index"
+                ).fetchone()["count"]
+            )
+            if current_count != expected_replayed_record_count:
+                raise PaperLedgerConflictError(
+                    "processed event rejected stale paper replay state"
+                )
+
+            for kind, record_identity, payload_json, appended_at_ms in prepared:
+                table = _TABLE_BY_KIND[kind]
+                connection.execute(
+                    f"""
+                    INSERT INTO {table} (
+                        record_identity,
+                        payload_json,
+                        appended_at_ms
+                    ) VALUES (?, ?, ?)
+                    """,
+                    (record_identity, payload_json, appended_at_ms),
+                )
+                connection.execute(
+                    """
+                    INSERT INTO paper_replay_index (
+                        record_kind,
+                        record_identity,
+                        appended_at_ms
+                    ) VALUES (?, ?, ?)
+                    """,
+                    (kind.value, record_identity, appended_at_ms),
+                )
+
+            connection.execute(
+                """
+                INSERT INTO paper_processed_events (
+                    event_identity,
+                    activation_identity,
+                    outcome,
+                    payload_json,
+                    processed_at_ms
+                ) VALUES (?, ?, ?, ?, ?)
+                """,
+                (
+                    event_identity,
+                    activation_identity,
+                    outcome,
+                    event_payload_json,
+                    processed_at_ms,
+                ),
+            )
+            return (
+                PaperLedgerWriteDisposition.INSERTED,
+                self._replay_with_connection(connection),
+            )
 
     def _append_records_atomic(
         self,
@@ -456,7 +761,12 @@ class PaperFundLedger:
 
     @staticmethod
     def _install_immutability_triggers(connection: sqlite3.Connection) -> None:
-        tables = [*_TABLE_BY_KIND.values(), "paper_replay_index"]
+        tables = [
+            *_TABLE_BY_KIND.values(),
+            "paper_replay_index",
+            "paper_activation_state",
+            "paper_processed_events",
+        ]
         for table in tables:
             connection.execute(
                 f"""

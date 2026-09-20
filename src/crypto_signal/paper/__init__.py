@@ -3,6 +3,19 @@
 Simulation only. REAL_CAPITAL remains 0. No real exchange order path.
 """
 
+from crypto_signal.paper.activation import (
+    PAPER_ACTIVATION_SCHEMA_VERSION,
+    PaperActivationError,
+    PaperActivationState,
+    PaperProcessedEventOutcome,
+    PaperProcessedEventReceipt,
+    activate_paper_policy,
+    build_processed_event_receipt,
+    is_paper_event_processed,
+    list_processed_paper_events,
+    load_paper_activation,
+    record_terminal_no_action,
+)
 from crypto_signal.paper.autonomy import (
     PAPER_AUTONOMY_POLICY_VERSION,
     PaperAutonomyDecision,
@@ -92,6 +105,7 @@ from crypto_signal.paper.sizing import (
 __all__ = [
     "BENCHMARK_IDS",
     "INITIAL_CASH_USDT",
+    "PAPER_ACTIVATION_SCHEMA_VERSION",
     "PAPER_AUTONOMY_POLICY_VERSION",
     "PAPER_EXECUTION_INPUT_POLICY_VERSION",
     "PAPER_EXECUTION_POLICY_VERSION",
@@ -110,6 +124,8 @@ __all__ = [
     "FundCreationRecord",
     "NavSnapshotRecord",
     "PaperAction",
+    "PaperActivationError",
+    "PaperActivationState",
     "PaperAutonomyDecision",
     "PaperAutonomyPolicy",
     "PaperAutonomyReason",
@@ -132,6 +148,8 @@ __all__ = [
     "PaperPretradeError",
     "PaperPretradeReason",
     "PaperPretradeStatus",
+    "PaperProcessedEventOutcome",
+    "PaperProcessedEventReceipt",
     "PaperRecordKind",
     "PaperRuntimeError",
     "PaperRuntimeSnapshot",
@@ -141,7 +159,9 @@ __all__ = [
     "PaperTradePipelineResult",
     "PositionCashMutationRecord",
     "SimulatedFillRecord",
+    "activate_paper_policy",
     "build_decision_intent",
+    "build_processed_event_receipt",
     "build_fund_creation",
     "build_nav_snapshot",
     "build_position_cash_mutation",
@@ -153,8 +173,12 @@ __all__ = [
     "evaluate_autonomy_policy",
     "freeze_execution_input_from_cache",
     "initial_account_state",
+    "is_paper_event_processed",
+    "list_processed_paper_events",
+    "load_paper_activation",
     "observe_signal_ledger",
     "prepare_paper_trade_plan",
+    "record_terminal_no_action",
     "run_paper_runtime_tick",
     "size_paper_candidate",
 ]
