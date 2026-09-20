@@ -2101,3 +2101,14 @@ The accepted head d1efcb93b66b1224b1db8762acfd3a65f47dcf62 passed 457 tests, Ruf
 The first production [PAPER] PERFORMANCE probe produced snapshot 76b0b5535bbb00fe0ba3ef0a61b1376c46b5bddd7d7b570034cb90ddd9a34dac with status=not_yet_measured, zero closed/open trades and no fabricated win-rate, PnL, average return, profit-factor or execution-cost aggregate. This is the intended production truth until real paper round trips exist.
 
 Next safe slice is a single read-only paper mission-control snapshot that composes observation health, factual portfolio state and factual closed-trade performance for the future final Dashboard pass. It must not grant paper-trade write authority.
+
+
+## 2026-09-20 — unified PAPER/STABLE mission-control truth accepted
+
+paper_mission_control.v1 now provides one strictly read-only product contract over the accepted paper evidence chain. It composes immutable activation state, a point-in-time signal-stream overview, strict post-activation event scanning, factual dry-run decision traces, marked portfolio state and closed-trade performance. A candidate can therefore eventually be shown as a real sequence of engine gates rather than a fabricated trader monologue.
+
+The scanner was also hardened with an optional observed_at_ms cutoff. Mission Control always supplies this boundary, so freezes created after the requested observation instant cannot enter candidate counts or explanations. The final head ec685df2c08907b65ee826315cfd874dd2257688 passed 461 tests, Ruff, mypy across 100 source files and JavaScript, then deployed successfully to PAPER/STABLE with the no-trade invariant intact.
+
+The first production mission-control snapshot was 0738b9d4203267c1227a97e4ccbbcb0525119228843aad9efc4d318f25abb34e. It observed 414 total signal freezes against activation baseline 372. The latest signal was Binance SOLUSDT 15m WATCH bearish. Strict paper eligibility remained zero: no eligible 4h post-watermark freezes, no incomplete pair, no candidate, no ready attention. The fund remained 100.00 USDT cash, zero positions, NAV 100.00, PnL 0.00 and total-return fraction 0. Closed-trade performance correctly remained NOT_YET_MEASURED with no win rate. trade_policy remained NOT_ACTIVATED and REAL_CAPITAL=0.
+
+A separate live-clock log inspection verified that this zero-candidate state is not caused by missing 4h production coverage. BTCUSDT, ETHUSDT and SOLUSDT 4h contexts are actively executed for both Binance and Bybit and currently return already_frozen at source cutoff 1789905600000. That latest closed 4h context predates the paper activation watermark, so scanner eligibility of zero is mechanically explained. The next safe slice is to expose this decision-cadence readiness directly in Mission Control while waiting for the first genuine post-watermark 4h pair.
