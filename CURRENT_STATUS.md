@@ -3,7 +3,7 @@
 Updated: 2026-09-20
 Project: Crypto Signal
 Phase: Alerts V1
-State: ALERTS_V1_SLICE3_STABLE_MATERIALIZER_ACCEPTED
+State: ALERTS_V1_SLICE4_ALERT_CENTER_ACCEPTED_PENDING_PRODUCT_DEPLOY
 REAL_CAPITAL: 0
 
 ## Accepted foundations
@@ -306,17 +306,32 @@ No Durdurulmaz or Quantum Capital project state was mutated; UID502 is used only
 - installed plist matches versioned plist
 - LIVE/STABLE and PRODUCT/STABLE remain independent
 
-## Canonical next frontier
-Alerts V1 Slice 4 — Alert Center and provider-ready presentation:
-1. read production alert outbox without mutation
-2. expose pending/delivered/retryable/permanent delivery state
-3. integrate Alert Center into Mission Control
-4. preserve immutable alert source identities and signal semantics
-5. explicit EMPTY state while no eligible events exist
-6. no synthetic alert data
-7. define provider configuration contract without committing secrets
-8. no execution controls
-9. focused tests + stable product deploy after acceptance
+## Alerts V1 Slice 4 accepted evidence
+- Mission Control Alert Center reads production alert outbox read-only
+- explicit NO_LEDGER / SCHEMA_UNAVAILABLE / EMPTY / READY states
+- immutable alert identity/source semantics preserved
+- delivery attempts projected independently per sink
+- pending/no-attempt state remains explicit
+- GET /api/alerts added; product API remains read-only
+- product version dashboard-v1-alert-center/1
+- provider secret/idempotency boundary documented in ADR 0026
+- focused gate: 21 tests PASS
+- full repository: 245 tests PASS
+- Ruff PASS
+- mypy PASS
+- JavaScript syntax PASS
+- uv lock PASS
+- real-outbox dev smoke: alert_outbox_present=true / Alert Center EMPTY / 0 events
 
-A real external delivery provider remains a later explicit configuration step.
+## Canonical next frontier
+Alerts V1 Slice 4 stable product deploy:
+1. commit exact accepted Alert Center state
+2. advance PRODUCT/STABLE only to that commit
+3. restart com.cryptosignal.dashboard
+4. verify dashboard-v1-alert-center/1 health and localhost-only listener
+5. verify /api/alerts against production outbox
+6. refresh the user-facing Safari dashboard
+7. then continue user-facing notification presentation without enabling an external provider by default
+
+ALERTS/STABLE materializer, LIVE/STABLE evidence clock and PRODUCT/STABLE remain isolated.
 REAL_CAPITAL remains 0.

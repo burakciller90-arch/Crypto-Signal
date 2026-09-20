@@ -1049,3 +1049,44 @@ real alert cannot be accidentally consumed by a test delivery adapter.
 
 Canonical frontier advances to Alert Center / provider-ready presentation.
 REAL_CAPITAL remains 0.
+
+## 2026-09-20 — Alerts V1 Slice 4 accepted in development: Alert Center
+
+Mission Control now has a read-only Alert Center over the separate production
+alert outbox.
+
+Accepted projection:
+- explicit EMPTY/READY/schema/missing states
+- immutable alert event/source identities
+- signal state/direction/setup and agreement-index semantics
+- delivery state independently per sink
+- pending/no-attempt remains visible instead of being inferred as delivered
+
+Product API adds GET /api/alerts and health reports alert_outbox_present.
+The API remains read-only.
+
+Provider configuration ADR 0026 establishes:
+- external providers disabled by default
+- no secrets in Git/outbox/API/logs/checkpoints
+- stable non-secret sink aliases
+- alert event identity as provider idempotency key
+- production adapters require native or durable adapter-side deduplication
+- no execution semantics
+
+Mechanical evidence:
+- Alert Center focused tests: 21 PASS
+- full repository: 245 PASS
+- Ruff PASS
+- mypy PASS
+- JavaScript syntax PASS
+- uv lock PASS
+
+Real production-outbox dev smoke:
+- dashboard-v1-alert-center/1
+- alert_outbox_present=true
+- Alert Center EMPTY
+- zero events
+- no synthetic rows
+
+Canonical frontier is explicit PRODUCT/STABLE deploy of the accepted Alert
+Center commit.

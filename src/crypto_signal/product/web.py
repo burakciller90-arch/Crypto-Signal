@@ -17,19 +17,42 @@ DEFAULT_LEDGER_PATH = (
     / "ledger"
     / "live_signal_ledger.sqlite3"
 )
+DEFAULT_ALERT_OUTBOX_PATH = (
+    Path("/Users/crypto-signal-agent/Crypto-Signal")
+    / "runtime"
+    / "alerts"
+    / "alert_outbox.sqlite3"
+)
 STATIC_DIR = Path(__file__).with_name("static")
-PRODUCT_VERSION = "dashboard-v1-slice4/1"
+PRODUCT_VERSION = "dashboard-v1-alert-center/1"
 
 
 def _json(value: Any, *, status_code: int = 200) -> JSONResponse:
     return JSONResponse(content=canonicalize(value), status_code=status_code)
 
 
-def create_app(ledger_path: Path | None = None) -> FastAPI:
+def create_app(
+    ledger_path: Path | None = None,
+    alert_outbox_path: Path | None = None,
+) -> FastAPI:
     selected_path = ledger_path or Path(
         os.environ.get("CRYPTO_SIGNAL_LEDGER_PATH", str(DEFAULT_LEDGER_PATH))
     )
-    reader = DashboardReader(selected_path)
+    if alert_outbox_path is not None:
+        selected_alert_path: Path | None = alert_outbox_path
+    elif ledger_path is None:
+        selected_alert_path = Path(
+            os.environ.get(
+                "CRYPTO_SIGNAL_ALERT_OUTBOX_PATH",
+                str(DEFAULT_ALERT_OUTBOX_PATH),
+            )
+        )
+    else:
+        selected_alert_path = None
+    reader = DashboardReader(
+        selected_path,
+        alert_outbox_path=selected_alert_path,
+    )
 
     app = FastAPI(
         title="Crypto Signal Mission Control",
@@ -39,6 +62,7 @@ def create_app(ledger_path: Path | None = None) -> FastAPI:
         openapi_url="/api/openapi.json",
     )
     app.state.ledger_path = selected_path
+    app.state.alert_outbox_path = selected_alert_path
     app.state.reader = reader
 
     app.mount(
@@ -58,6 +82,10 @@ def create_app(ledger_path: Path | None = None) -> FastAPI:
             "product_version": PRODUCT_VERSION,
             "real_capital": 0,
             "ledger_present": selected_path.exists(),
+            "alert_outbox_present": (
+                selected_alert_path is not None
+                and selected_alert_path.exists()
+            ),
             "read_only": True,
         }
 
@@ -121,6 +149,15 @@ def create_app(ledger_path: Path | None = None) -> FastAPI:
             raise HTTPException(status_code=500, detail=str(exc)) from exc
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @app.get("/api/alerts")
+    def alerts(
+        limit: int = Query(default=100, ge=1, le=500),
+    ) -> JSONResponse:
+        try:
+            return _json(reader.alert_center(limit=limit))
+        except DashboardReadError as exc:
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
 
     @app.get("/api/performance")
     def performance() -> JSONResponse:

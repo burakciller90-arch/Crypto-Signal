@@ -300,6 +300,60 @@ function renderPerformance(data) {
     </div>`;
 }
 
+function deliveryMarkup(event) {
+  if (!event.delivery_states?.length) {
+    return '<span class="delivery-pill delivery-pending">pending · no delivery attempt</span>';
+  }
+  return event.delivery_states.map((item) => `
+    <span class="delivery-pill delivery-${esc(item.latest_status)}">
+      ${esc(item.sink_id)} · ${esc(human(item.latest_status))} · attempts ${esc(item.attempts)}
+    </span>
+  `).join("");
+}
+
+function renderAlertCenter(data) {
+  $("#alertCount").textContent = `${data.total_count ?? 0} events`;
+  const root = $("#alertCenter");
+
+  if (data.status === "empty") {
+    root.innerHTML = `
+      <div class="performance-empty">
+        No eligible alert events yet. Under the default policy, WATCH does not notify.
+        ACTIVE creation and INVALIDATED lifecycle transitions are eligible.
+      </div>`;
+    return;
+  }
+  if (data.status !== "ready") {
+    root.innerHTML = `
+      <div class="performance-empty">
+        Alert outbox status: ${esc(human(data.status))}. No alert is inferred.
+      </div>`;
+    return;
+  }
+
+  root.innerHTML = data.events.map((event) => `
+    <div class="alert-row" data-signal-id="${esc(event.signal_freeze_identity)}">
+      <div>
+        <div class="row-title">${esc(event.exchange.toUpperCase())} · ${esc(event.symbol)}</div>
+        <div class="row-sub">${esc(event.timeframe)} · ${esc(human(event.source_kind))} · ${esc(fmtTime(event.appended_at_ms))}</div>
+      </div>
+      <div>
+        <div class="value-label">Signal state</div>
+        <div class="state-pill ${stateClass(event.signal_state)}">${esc(human(event.signal_state))}</div>
+      </div>
+      <div>
+        <div class="value-label">Direction / agreement</div>
+        <div class="value-main ${directionClass(event.direction)}">${esc(human(event.direction))}</div>
+        <div class="row-sub">${esc(event.confluence_score)} · not probability</div>
+      </div>
+      <div>
+        <div class="value-label">Delivery</div>
+        <div class="delivery-list">${deliveryMarkup(event)}</div>
+      </div>
+    </div>
+  `).join("");
+}
+
 function renderArchive(data) {
   $("#archiveCount").textContent = `${data.total_count ?? 0} frozen`;
   const body = $("#archiveBody");
@@ -437,13 +491,14 @@ function showError(error) {
 
 async function loadAll() {
   clearNotice();
-  const [health, command, radar, navigation, archive, performance] = await Promise.all([
+  const [health, command, radar, navigation, archive, performance, alerts] = await Promise.all([
     fetchJSON("/api/health"),
     fetchJSON("/api/command-center?recent_limit=8"),
     fetchJSON("/api/market-radar"),
     fetchJSON("/api/navigation"),
     fetchJSON("/api/signals?limit=50&offset=0"),
     fetchJSON("/api/performance"),
+    fetchJSON("/api/alerts?limit=50"),
   ]);
 
   $("#healthChip").textContent = health.ledger_present ? "Ledger connected" : "Ledger absent";
@@ -451,6 +506,7 @@ async function loadAll() {
   renderRadar(radar);
   renderArchive(archive);
   renderPerformance(performance);
+  renderAlertCenter(alerts);
   configureNavigation(navigation);
   await loadSelectedAsset();
   bindSignalClicks();

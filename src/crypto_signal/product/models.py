@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from decimal import Decimal
 from enum import StrEnum
 
+from crypto_signal.alerts.models import AlertSourceKind, DeliveryAttemptStatus
 from crypto_signal.confluence.models import ScoreSemantic
 from crypto_signal.data.models import Exchange, MarketType
 from crypto_signal.evaluation.models import SegmentMetrics
@@ -232,3 +233,73 @@ class PerformanceAvailabilityView:
     outcome_snapshot_count: int
     evidence_class_counts: tuple[EvidenceClassCount, ...]
     groups: tuple[PerformanceSegmentGroup, ...] = ()
+
+
+@dataclass(frozen=True, slots=True)
+class AlertSinkDeliveryView:
+    sink_id: str
+    attempts: int
+    latest_status: DeliveryAttemptStatus
+    latest_attempted_at_ms: int
+    terminal: bool
+    delivered: bool
+    latest_receipt: str | None
+
+    def __post_init__(self) -> None:
+        if not self.sink_id.strip():
+            raise ValueError("alert delivery sink id must be non-empty")
+        if self.attempts <= 0:
+            raise ValueError("alert delivery attempts must be positive")
+        if self.latest_attempted_at_ms < 0:
+            raise ValueError("alert delivery timestamp must be non-negative")
+        if self.delivered and not self.terminal:
+            raise ValueError("delivered alert sink state must be terminal")
+        if self.delivered and self.latest_status is not DeliveryAttemptStatus.DELIVERED:
+            raise ValueError("delivered alert sink state must have DELIVERED status")
+
+
+@dataclass(frozen=True, slots=True)
+class AlertEventView:
+    event_identity: str
+    source_kind: AlertSourceKind
+    signal_freeze_identity: str
+    lifecycle_evaluation_identity: str | None
+    transition_identity: str | None
+    exchange: Exchange
+    market_type: MarketType
+    symbol: str
+    timeframe: str
+    signal_state: SignalState
+    direction: SignalDirection
+    setup_type: str
+    decision_as_of_ms: int
+    source_evaluated_as_of_ms: int
+    confluence_score: Decimal
+    confluence_score_semantic: ScoreSemantic
+    probability_status: ProbabilityStatus
+    uncertainty_flags: tuple[str, ...]
+    appended_at_ms: int
+    delivery_states: tuple[AlertSinkDeliveryView, ...]
+
+    def __post_init__(self) -> None:
+        if len(self.event_identity) != 64:
+            raise ValueError("alert event identity must be SHA256")
+        if len(self.signal_freeze_identity) != 64:
+            raise ValueError("alert source signal identity must be SHA256")
+        if not self.symbol.strip() or not self.timeframe.strip():
+            raise ValueError("alert event market identity must be non-empty")
+        if self.appended_at_ms < self.source_evaluated_as_of_ms:
+            raise ValueError("alert append time cannot precede source evidence")
+
+
+@dataclass(frozen=True, slots=True)
+class AlertCenterView:
+    status: ProductDataStatus
+    total_count: int
+    events: tuple[AlertEventView, ...]
+
+    def __post_init__(self) -> None:
+        if self.total_count < 0:
+            raise ValueError("alert center total count must be non-negative")
+        if self.total_count < len(self.events):
+            raise ValueError("alert center page cannot exceed total count")

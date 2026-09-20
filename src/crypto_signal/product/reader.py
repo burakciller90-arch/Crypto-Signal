@@ -7,6 +7,11 @@ from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
+from crypto_signal.alerts.models import DeliveryAttemptStatus
+from crypto_signal.alerts.store import (
+    AlertOutboxConflictError,
+    parse_alert_event_json,
+)
 from crypto_signal.confluence.models import ScoreSemantic
 from crypto_signal.data.models import Exchange, MarketType
 from crypto_signal.evaluation.aggregate import aggregate_segments
@@ -19,6 +24,9 @@ from crypto_signal.product.deserialization import (
 )
 from crypto_signal.product.models import (
     AgreementRelationView,
+    AlertCenterView,
+    AlertEventView,
+    AlertSinkDeliveryView,
     AssetCockpitView,
     CommandCenterView,
     EvidenceClassCount,
@@ -48,15 +56,24 @@ class DashboardReadError(ValueError):
 
 
 class DashboardReader:
-    def __init__(self, ledger_path: Path) -> None:
+    def __init__(
+        self,
+        ledger_path: Path,
+        alert_outbox_path: Path | None = None,
+    ) -> None:
         self.ledger_path = ledger_path
+        self.alert_outbox_path = alert_outbox_path
 
-    def _connect(self) -> sqlite3.Connection:
-        uri = f"file:{self.ledger_path}?mode=ro"
+    @staticmethod
+    def _connect_path(path: Path) -> sqlite3.Connection:
+        uri = f"file:{path}?mode=ro"
         connection = sqlite3.connect(uri, uri=True, timeout=5.0)
         connection.row_factory = sqlite3.Row
         connection.execute("PRAGMA query_only=ON")
         return connection
+
+    def _connect(self) -> sqlite3.Connection:
+        return self._connect_path(self.ledger_path)
 
     @staticmethod
     def _table_exists(connection: sqlite3.Connection, table: str) -> bool:
@@ -927,3 +944,177 @@ class DashboardReader:
                 ),
                 groups=tuple(groups),
             )
+
+
+    def alert_center(
+        self,
+        *,
+        limit: int = 100,
+    ) -> AlertCenterView:
+        if limit <= 0:
+            raise ValueError("alert center limit must be positive")
+        path = self.alert_outbox_path
+        if path is None or not path.exists():
+            return AlertCenterView(
+                status=ProductDataStatus.NO_LEDGER,
+                total_count=0,
+                events=(),
+            )
+
+        with self._connect_path(path) as connection:
+            if not self._table_exists(connection, "alert_events"):
+                return AlertCenterView(
+                    status=ProductDataStatus.SCHEMA_UNAVAILABLE,
+                    total_count=0,
+                    events=(),
+                )
+            if not self._table_exists(
+                connection,
+                "alert_delivery_attempts",
+            ):
+                return AlertCenterView(
+                    status=ProductDataStatus.SCHEMA_UNAVAILABLE,
+                    total_count=0,
+                    events=(),
+                )
+
+            total_row = connection.execute(
+                "SELECT COUNT(*) AS count FROM alert_events"
+            ).fetchone()
+            total = 0 if total_row is None else int(total_row["count"])
+            if total == 0:
+                return AlertCenterView(
+                    status=ProductDataStatus.EMPTY,
+                    total_count=0,
+                    events=(),
+                )
+
+            event_rows = tuple(
+                connection.execute(
+                    """
+                    SELECT event_identity, event_json, appended_at_ms
+                    FROM alert_events
+                    ORDER BY appended_at_ms DESC, event_identity DESC
+                    LIMIT ?
+                    """,
+                    (limit,),
+                ).fetchall()
+            )
+            identities = tuple(
+                str(row["event_identity"])
+                for row in event_rows
+            )
+            placeholders = ",".join("?" for _ in identities)
+            attempt_rows = tuple(
+                connection.execute(
+                    f"""
+                    SELECT *
+                    FROM alert_delivery_attempts
+                    WHERE event_identity IN ({placeholders})
+                    ORDER BY
+                        event_identity ASC,
+                        sink_id ASC,
+                        attempt_number ASC
+                    """,
+                    identities,
+                ).fetchall()
+            )
+
+        attempts_by_event: dict[
+            str,
+            dict[str, list[sqlite3.Row]],
+        ] = defaultdict(lambda: defaultdict(list))
+        for row in attempt_rows:
+            attempts_by_event[str(row["event_identity"])][
+                str(row["sink_id"])
+            ].append(row)
+
+        projected: list[AlertEventView] = []
+        for row in event_rows:
+            try:
+                event = parse_alert_event_json(str(row["event_json"]))
+            except AlertOutboxConflictError as exc:
+                raise DashboardReadError(
+                    "alert event cannot be reconstructed"
+                ) from exc
+            if event.event_identity != str(row["event_identity"]):
+                raise DashboardReadError(
+                    "alert event row identity mismatch"
+                )
+
+            sink_views: list[AlertSinkDeliveryView] = []
+            for sink_id, rows in sorted(
+                attempts_by_event[event.event_identity].items(),
+            ):
+                latest = rows[-1]
+                try:
+                    status = DeliveryAttemptStatus(
+                        str(latest["status"])
+                    )
+                except ValueError as exc:
+                    raise DashboardReadError(
+                        "alert attempt has unknown status"
+                    ) from exc
+                sink_views.append(
+                    AlertSinkDeliveryView(
+                        sink_id=sink_id,
+                        attempts=len(rows),
+                        latest_status=status,
+                        latest_attempted_at_ms=int(
+                            latest["attempted_at_ms"]
+                        ),
+                        terminal=status
+                        in {
+                            DeliveryAttemptStatus.DELIVERED,
+                            DeliveryAttemptStatus.PERMANENT_FAILURE,
+                        },
+                        delivered=(
+                            status
+                            is DeliveryAttemptStatus.DELIVERED
+                        ),
+                        latest_receipt=(
+                            None
+                            if latest["receipt"] is None
+                            else str(latest["receipt"])
+                        ),
+                    )
+                )
+
+            projected.append(
+                AlertEventView(
+                    event_identity=event.event_identity,
+                    source_kind=event.source_kind,
+                    signal_freeze_identity=(
+                        event.signal_freeze_identity
+                    ),
+                    lifecycle_evaluation_identity=(
+                        event.lifecycle_evaluation_identity
+                    ),
+                    transition_identity=event.transition_identity,
+                    exchange=event.exchange,
+                    market_type=event.market_type,
+                    symbol=event.symbol,
+                    timeframe=event.timeframe,
+                    signal_state=event.signal_state,
+                    direction=event.direction,
+                    setup_type=event.setup_type,
+                    decision_as_of_ms=event.decision_as_of_ms,
+                    source_evaluated_as_of_ms=(
+                        event.source_evaluated_as_of_ms
+                    ),
+                    confluence_score=event.confluence_score,
+                    confluence_score_semantic=(
+                        event.confluence_score_semantic
+                    ),
+                    probability_status=event.probability_status,
+                    uncertainty_flags=event.uncertainty_flags,
+                    appended_at_ms=int(row["appended_at_ms"]),
+                    delivery_states=tuple(sink_views),
+                )
+            )
+
+        return AlertCenterView(
+            status=ProductDataStatus.READY,
+            total_count=total,
+            events=tuple(projected),
+        )

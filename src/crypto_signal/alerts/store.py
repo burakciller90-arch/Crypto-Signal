@@ -267,7 +267,7 @@ class AlertOutbox:
             ).fetchall()
         return tuple(
             AlertEventRecord(
-                event=_parse_alert_event(str(row["event_json"])),
+                event=parse_alert_event_json(str(row["event_json"])),
                 appended_at_ms=int(row["appended_at_ms"]),
             )
             for row in rows
@@ -302,7 +302,7 @@ class AlertOutbox:
                 (sink_id, limit),
             ).fetchall()
         return tuple(
-            _parse_alert_event(str(row["event_json"]))
+            parse_alert_event_json(str(row["event_json"]))
             for row in rows
         )
 
@@ -417,7 +417,7 @@ class AlertOutbox:
             )
 
 
-def _parse_alert_event(value: str) -> AlertEvent:
+def parse_alert_event_json(value: str) -> AlertEvent:
     try:
         raw = json.loads(value)
     except json.JSONDecodeError as exc:

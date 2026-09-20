@@ -6,7 +6,11 @@ from pathlib import Path
 
 import uvicorn
 
-from crypto_signal.product.web import DEFAULT_LEDGER_PATH, create_app
+from crypto_signal.product.web import (
+    DEFAULT_ALERT_OUTBOX_PATH,
+    DEFAULT_LEDGER_PATH,
+    create_app,
+)
 
 
 def parse_args() -> argparse.Namespace:
@@ -14,6 +18,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=48700)
     parser.add_argument("--ledger", type=Path, default=DEFAULT_LEDGER_PATH)
+    parser.add_argument(
+        "--alert-outbox",
+        type=Path,
+        default=DEFAULT_ALERT_OUTBOX_PATH,
+    )
     return parser.parse_args()
 
 
@@ -21,7 +30,7 @@ def main() -> None:
     args = parse_args()
     if not 1 <= args.port <= 65535:
         raise SystemExit("port must be between 1 and 65535")
-    app = create_app(args.ledger)
+    app = create_app(args.ledger, args.alert_outbox)
     uvicorn.run(
         app,
         host=args.host,
