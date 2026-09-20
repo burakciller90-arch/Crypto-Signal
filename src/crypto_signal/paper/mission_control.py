@@ -286,8 +286,13 @@ class PaperMissionControlCandidate:
         )
         if self.terminal_status is PaperActivationDryRunStatus.HOLD_CASH:
             if any(item is not None for item in downstream):
-                raise ValueError("HOLD_CASH candidate cannot carry downstream plan truth")
-        elif self.terminal_status is PaperActivationDryRunStatus.WAITING_EXECUTION_INPUT:
+                raise ValueError(
+                    "HOLD_CASH candidate cannot carry downstream plan truth"
+                )
+        elif (
+            self.terminal_status
+            is PaperActivationDryRunStatus.WAITING_EXECUTION_INPUT
+        ):
             if any(item is not None for item in downstream):
                 raise ValueError(
                     "waiting-execution-input candidate cannot carry downstream truth"
