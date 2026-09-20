@@ -70,6 +70,19 @@ def main() -> int:
         )
         return 1
 
+    for cadence in snapshot.decision_cadence:
+        print(
+            "PAPER_MISSION_CONTROL_CADENCE "
+            f"symbol={cadence.symbol.value} "
+            f"status={cadence.status.value} "
+            f"binance_asof={'-' if cadence.binance is None else cadence.binance.signal_as_of_ms} "
+            f"bybit_asof={'-' if cadence.bybit is None else cadence.bybit.signal_as_of_ms} "
+            f"paired_asof={_render(cadence.paired_as_of_ms)} "
+            f"candidate_available={'YES' if cadence.candidate_available else 'NO'} "
+            "REAL_CAPITAL=0",
+            flush=True,
+        )
+
     for candidate in snapshot.candidates:
         steps = "|".join(
             f"{step.stage.value}:{step.state.value}:{step.code}"
