@@ -1662,3 +1662,39 @@ Current frontier:
 - the first genuine post-watermark production events have now traversed and been mechanically reviewed through the accepted read-only dry-run path;
 - design and prove a controlled virtual-paper write authority gate that can process future terminal HOLD and eligible simulated-trade events atomically without creating any real-capital/exchange-order path;
 - keep write authority disabled until the gate itself passes full regression and explicit stable activation invariants.
+
+## MAIN virtual-paper write-authority gate hardened; production activation remains closed
+- development main head: 86477fd13aa21bad604de34a9d92dacd5c220632
+- PAPER/STABLE remains: 30b05251af9fc2ac05fd007dbd6ac6d0519c2e58
+- the virtual-paper write-authority/write-tick implementation remains development-only; it has not been deployed to PAPER/STABLE and no production write-authority row has been created
+- the production paper workflow command allowlist still does not expose writeauthority or writetick
+- REAL_CAPITAL=0; no credential, broker, exchange-order or network-trading authority was added
+- safety hardening accepted on main:
+  - current authority now validates the complete append-only authority chain before use; a discontinuous/corrupt lineage fails closed
+  - the writer revalidates the exact enabled authority after read-only candidate evaluation and immediately before each mutation; mid-tick revoke/replacement fails closed with zero processed/trade mutation
+- latest full repository gate after both hardenings:
+  - pytest completed 100%
+  - Ruff PASS
+  - mypy PASS across 102 source files
+  - JavaScript PASS
+  - FULL_TEST_PASS=YES
+- fresh state-first production recovery before these non-production hardenings:
+  - canonical UID504 repo was clean at 320c80ad4cd9990bea2c0011fc9a6f2bf8314549 before sync
+  - PAPER/STABLE head=30b05251af9fc2ac05fd007dbd6ac6d0519c2e58
+  - paper fund creation=1, decision intents=0, simulated fills=0, position/cash mutations=0, NAV snapshots=0, replay index=1, processed events=0
+  - paper clock and read-only dry-run clock last exit code=0
+  - Mission Control snapshot=e271ecc65b51f1fa613378f3e96b1098d874c3eb3b934a4b9268151a83646380
+  - signal freezes=450, eligible 4h freezes=6, complete candidates=3, ready_candidates=0, attention_required=NO
+  - BTCUSDT HOLD_CASH / signal_not_active
+  - ETHUSDT HOLD_CASH / signal_not_active
+  - SOLUSDT HOLD_CASH / unsafe_uncertainty
+  - cash=100.00 USDT, positions=0, NAV=100.00, PnL=0.00
+  - performance=NOT_YET_MEASURED
+  - trade_policy=NOT_ACTIVATED
+  - REAL_CAPITAL=0
+
+Current frontier:
+- the development gate is now materially stronger and full-regression clean;
+- do not deploy this slice to PAPER/STABLE, widen the production workflow allowlist, enable virtual write authority, run a write tick, or mutate the production paper ledger without separate explicit production authorization from the user;
+- while that production gate is closed, safe work may continue with read-only review, acceptance planning, documentation and later product/dashboard work that does not bypass the gate.
+
