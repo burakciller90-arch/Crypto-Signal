@@ -27,6 +27,7 @@ from crypto_signal.paper.event_scanner import (
     PaperSignalEventScanResult,
     scan_post_activation_signal_events,
 )
+from crypto_signal.paper.execution_input import FrozenPaperExecutionInput
 from crypto_signal.paper.models import (
     PERMITTED_SYMBOLS,
     REAL_CAPITAL,
@@ -41,6 +42,8 @@ from crypto_signal.paper.portfolio import (
     PaperPortfolioSnapshot,
     read_paper_portfolio_snapshot,
 )
+from crypto_signal.paper.sizing import PaperPositionSizingDecision
+from crypto_signal.paper.venue_rules import PaperVenueBoundPretrade
 
 __all__ = [
     "PAPER_MISSION_CONTROL_VERSION",
@@ -56,7 +59,7 @@ __all__ = [
     "read_paper_signal_stream_overview",
 ]
 
-PAPER_MISSION_CONTROL_VERSION = "paper_mission_control.v1"
+PAPER_MISSION_CONTROL_VERSION = "paper_mission_control.v2"
 
 
 class PaperMissionControlError(RuntimeError):
@@ -226,6 +229,10 @@ class PaperMissionControlCandidate:
     candidate_action: PaperAction
     reason_code: str
     trace: PaperDecisionTrace
+    execution_input: FrozenPaperExecutionInput | None = None
+    venue_rule_snapshot_identity: str | None = None
+    sizing: PaperPositionSizingDecision | None = None
+    venue_bound_pretrade: PaperVenueBoundPretrade | None = None
 
     def __post_init__(self) -> None:
         _require_sha256(self.event_identity, "mission-control event identity")
@@ -239,6 +246,84 @@ class PaperMissionControlCandidate:
             raise ValueError("candidate/trace terminal status mismatch")
         if self.trace.candidate_action is not self.candidate_action:
             raise ValueError("candidate/trace action mismatch")
+        if self.execution_input is not None:
+            if self.execution_input.real_capital != REAL_CAPITAL:
+                raise ValueError("candidate execution input must remain REAL_CAPITAL=0")
+            if self.execution_input.candidate_action is not self.candidate_action:
+                raise ValueError("candidate/execution-input action mismatch")
+            if self.execution_input.symbol is not self.symbol:
+                raise ValueError("candidate/execution-input symbol mismatch")
+        if self.venue_rule_snapshot_identity is not None:
+            _require_sha256(
+                self.venue_rule_snapshot_identity,
+                "candidate venue-rule snapshot identity",
+            )
+        if self.sizing is not None:
+            if self.sizing.real_capital != REAL_CAPITAL:
+                raise ValueError("candidate sizing must remain REAL_CAPITAL=0")
+            if self.sizing.action is not self.candidate_action:
+                raise ValueError("candidate/sizing action mismatch")
+            if self.sizing.symbol is not self.symbol:
+                raise ValueError("candidate/sizing symbol mismatch")
+        if self.venue_bound_pretrade is not None:
+            if self.venue_bound_pretrade.real_capital != REAL_CAPITAL:
+                raise ValueError("candidate pretrade must remain REAL_CAPITAL=0")
+            if (
+                self.venue_rule_snapshot_identity
+                != self.venue_bound_pretrade.venue_rule_snapshot_identity
+            ):
+                raise ValueError("candidate/pretrade venue-rule identity mismatch")
+            if self.venue_bound_pretrade.pretrade.action is not self.candidate_action:
+                raise ValueError("candidate/pretrade action mismatch")
+            if self.venue_bound_pretrade.pretrade.symbol is not self.symbol:
+                raise ValueError("candidate/pretrade symbol mismatch")
+
+        downstream = (
+            self.execution_input,
+            self.venue_rule_snapshot_identity,
+            self.sizing,
+            self.venue_bound_pretrade,
+        )
+        if self.terminal_status is PaperActivationDryRunStatus.HOLD_CASH:
+            if any(item is not None for item in downstream):
+                raise ValueError("HOLD_CASH candidate cannot carry downstream plan truth")
+        elif self.terminal_status is PaperActivationDryRunStatus.WAITING_EXECUTION_INPUT:
+            if any(item is not None for item in downstream):
+                raise ValueError(
+                    "waiting-execution-input candidate cannot carry downstream truth"
+                )
+        elif self.terminal_status is PaperActivationDryRunStatus.WAITING_VENUE_RULES:
+            if (
+                self.execution_input is None
+                or any(item is not None for item in downstream[1:])
+            ):
+                raise ValueError("waiting-venue-rules candidate has invalid lineage")
+        elif self.terminal_status is PaperActivationDryRunStatus.SIZING_REJECTED:
+            if (
+                self.execution_input is None
+                or self.venue_rule_snapshot_identity is None
+                or self.sizing is None
+                or self.venue_bound_pretrade is not None
+            ):
+                raise ValueError("sizing-rejected candidate has invalid lineage")
+        elif self.terminal_status in {
+            PaperActivationDryRunStatus.PRETRADE_REJECTED,
+            PaperActivationDryRunStatus.PRETRADE_READY,
+        }:
+            if any(item is None for item in downstream):
+                raise ValueError("pretrade candidate requires complete plan lineage")
+            assert self.venue_bound_pretrade is not None
+            plan = self.venue_bound_pretrade.pretrade.plan
+            if (
+                self.terminal_status is PaperActivationDryRunStatus.PRETRADE_READY
+                and plan is None
+            ):
+                raise ValueError("PRETRADE_READY candidate requires a virtual plan")
+            if (
+                self.terminal_status is PaperActivationDryRunStatus.PRETRADE_REJECTED
+                and plan is not None
+            ):
+                raise ValueError("PRETRADE_REJECTED candidate cannot carry a plan")
 
 
 @dataclass(frozen=True, slots=True)
@@ -378,6 +463,10 @@ def read_paper_mission_control_snapshot(
                 candidate_action=result.autonomy.candidate_action,
                 reason_code=result.autonomy.reason_code.value,
                 trace=trace,
+                execution_input=result.execution_input,
+                venue_rule_snapshot_identity=result.venue_rule_snapshot_identity,
+                sizing=result.sizing,
+                venue_bound_pretrade=result.venue_bound_pretrade,
             )
         )
 
@@ -746,11 +835,33 @@ def _candidate_payload(item: PaperMissionControlCandidate) -> dict[str, object]:
     return {
         "candidate_action": item.candidate_action.value,
         "event_identity": item.event_identity,
+        "execution_input_identity": (
+            item.execution_input.input_identity
+            if item.execution_input is not None
+            else None
+        ),
+        "plan_identity": (
+            item.venue_bound_pretrade.pretrade.plan.plan_identity
+            if (
+                item.venue_bound_pretrade is not None
+                and item.venue_bound_pretrade.pretrade.plan is not None
+            )
+            else None
+        ),
+        "pretrade_identity": (
+            item.venue_bound_pretrade.pretrade.pretrade_identity
+            if item.venue_bound_pretrade is not None
+            else None
+        ),
         "reason_code": item.reason_code,
         "signal_as_of_ms": item.signal_as_of_ms,
+        "sizing_identity": (
+            item.sizing.sizing_identity if item.sizing is not None else None
+        ),
         "symbol": item.symbol.value,
         "terminal_status": item.terminal_status.value,
         "trace_identity": item.trace.trace_identity,
+        "venue_rule_snapshot_identity": item.venue_rule_snapshot_identity,
     }
 
 
