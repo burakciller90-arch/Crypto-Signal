@@ -22,7 +22,10 @@ from crypto_signal.paper.activation import (
 from crypto_signal.paper.dry_run import (
     PAPER_ACTIVATION_DRY_RUN_VERSION,
     PaperActivationDryRunStatus,
+    PaperDecisionTraceStage,
+    PaperDecisionTraceStepState,
     evaluate_paper_activation_dry_run,
+    explain_paper_activation_dry_run,
     read_paper_activation_read_only,
     summarize_paper_activation_dry_runs,
 )
@@ -451,3 +454,67 @@ def test_dry_run_surface_contains_no_write_or_commit_authority() -> None:
     )
     assert all(token not in source for token in forbidden)
     assert paper_dry_run.REAL_CAPITAL == REAL_CAPITAL == 0
+
+
+def test_decision_trace_is_factual_and_deterministic(tmp_path) -> None:
+    ledger, _, activation = _paper(tmp_path)
+    _append_rules(ledger)
+    candle_cache = _candle_cache(tmp_path / "candles.sqlite3")
+    result = evaluate_paper_activation_dry_run(
+        event=_event(activation),
+        activation=activation,
+        paper_ledger_path=ledger.path,
+        candle_cache_path=candle_cache,
+        evaluated_at_ms=EVALUATED_AT,
+    )
+
+    first = explain_paper_activation_dry_run(result)
+    second = explain_paper_activation_dry_run(result)
+
+    assert first == second
+    assert first.event_identity == result.event_identity
+    assert first.terminal_status is PaperActivationDryRunStatus.PRETRADE_READY
+    assert first.candidate_action.value == "buy"
+    assert tuple(step.stage for step in first.steps) == tuple(PaperDecisionTraceStage)
+    assert tuple(step.state for step in first.steps) == (
+        PaperDecisionTraceStepState.PASSED,
+        PaperDecisionTraceStepState.PASSED,
+        PaperDecisionTraceStepState.PASSED,
+        PaperDecisionTraceStepState.PASSED,
+        PaperDecisionTraceStepState.READY,
+    )
+    assert first.steps[0].code == result.autonomy.reason_code.value
+    assert first.steps[0].source_detail == result.autonomy.reason
+    assert first.steps[1].evidence_identity == result.execution_input.input_identity
+    assert first.steps[2].evidence_identity == result.venue_rule_snapshot_identity
+    assert first.steps[3].evidence_identity == result.sizing.sizing_identity
+    assert (
+        first.steps[4].evidence_identity
+        == result.venue_bound_pretrade.pretrade.pretrade_identity
+    )
+    assert first.steps[4].code == "planned"
+    assert first.real_capital == REAL_CAPITAL == 0
+
+
+def test_decision_trace_hold_marks_downstream_not_reached(tmp_path) -> None:
+    ledger, _, activation = _paper(tmp_path)
+    _append_rules(ledger)
+    candle_cache = _candle_cache(tmp_path / "candles.sqlite3")
+    result = evaluate_paper_activation_dry_run(
+        event=_event(activation, state=SignalState.WATCH),
+        activation=activation,
+        paper_ledger_path=ledger.path,
+        candle_cache_path=candle_cache,
+        evaluated_at_ms=EVALUATED_AT,
+    )
+
+    trace = explain_paper_activation_dry_run(result)
+
+    assert trace.terminal_status is PaperActivationDryRunStatus.HOLD_CASH
+    assert trace.steps[0].state is PaperDecisionTraceStepState.BLOCKED
+    assert trace.steps[0].code == "signal_not_active"
+    assert all(
+        step.state is PaperDecisionTraceStepState.NOT_REACHED
+        for step in trace.steps[1:]
+    )
+    assert trace.real_capital == REAL_CAPITAL == 0
