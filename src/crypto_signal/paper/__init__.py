@@ -16,6 +16,14 @@ from crypto_signal.paper.commit import (
     PaperBundleCommitResult,
     commit_orchestration_bundle,
 )
+from crypto_signal.paper.execution_input import (
+    PAPER_EXECUTION_INPUT_POLICY_VERSION,
+    FrozenPaperExecutionInput,
+    PaperExecutionInputError,
+    PaperExecutionInputResult,
+    PaperExecutionInputStatus,
+    freeze_execution_input_from_cache,
+)
 from crypto_signal.paper.ledger import (
     PaperFundLedger,
     PaperLedgerConflictError,
@@ -64,6 +72,7 @@ __all__ = [
     "BENCHMARK_IDS",
     "INITIAL_CASH_USDT",
     "PAPER_AUTONOMY_POLICY_VERSION",
+    "PAPER_EXECUTION_INPUT_POLICY_VERSION",
     "PAPER_EXECUTION_POLICY_VERSION",
     "PAPER_FUND_SCHEMA_VERSION",
     "PAPER_RISK_POLICY_VERSION",
@@ -74,6 +83,7 @@ __all__ = [
     "BenchmarkId",
     "DecisionIntentRecord",
     "ExecutionCostAssumptions",
+    "FrozenPaperExecutionInput",
     "FundCreationRecord",
     "NavSnapshotRecord",
     "PaperAction",
@@ -82,6 +92,9 @@ __all__ = [
     "PaperAutonomyReason",
     "PaperBundleCommitError",
     "PaperBundleCommitResult",
+    "PaperExecutionInputError",
+    "PaperExecutionInputResult",
+    "PaperExecutionInputStatus",
     "PaperFundBootstrapStatus",
     "PaperFundLedger",
     "PaperLedgerConflictError",
@@ -104,6 +117,7 @@ __all__ = [
     "default_conservative_autonomy_policy",
     "ensure_persistent_paper_fund",
     "evaluate_autonomy_policy",
+    "freeze_execution_input_from_cache",
     "initial_account_state",
     "observe_signal_ledger",
     "run_paper_runtime_tick",
