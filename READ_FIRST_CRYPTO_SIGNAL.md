@@ -48,3 +48,7 @@ Read this file, then `CURRENT_STATUS.md`, then the newest `PROJECT_CHRONICLE.md`
 - Browser wake transport is bound to one exact ChatGPT conversation URL and uses at-most-once event receipts.
 - Cursor Composer workers run in isolated worktrees. Worker output is evidence only; supervisor independently reviews diff/tests before integration.
 - A worker never gets authority to touch Durdurulmaz, Quantum Capital, credentials, continuity runtime, or REAL_CAPITAL policy.
+
+## Current development authority update — 2026-09-20
+
+Cursor is suspended as a development worker by explicit user direction. Do not create new [CURSOR] WORK / ASK tasks unless the user explicitly re-enables Cursor. Continue implementation directly through the supervisor-controlled GitHub/UID504 path, preserving the same test, review, REAL_CAPITAL=0 and rollback boundaries.
