@@ -2020,3 +2020,16 @@ PAPER/STABLE was deployed to 6c2f5b9744ddb3fe3eee3793d35d2351c65f1c2c and remain
 The initializer was executed twice in the same gate: first INSERTED, second UNCHANGED with the exact same identity. Fresh PAPER STATE then independently confirmed activation singleton=1, processed events=0, replay index=1 and all trade/NAV tables still zero. trade_policy remains NOT_ACTIVATED and REAL_CAPITAL=0.
 
 Next is an allowlisted stable read-only dry-run command using only post-watermark production candidates. It may report PRETRADE_READY but must not persist any event or virtual trade.
+
+
+## 2026-09-20 — first production activation dry-run completed read-only
+
+The accepted dry-run path is now deployed in PAPER/STABLE and proven against the actual production ledgers.
+
+Head 18a36286a4fcfc0df4f522c0f33a03203092456f passed 441 tests, Ruff, mypy across 96 source files and JavaScript, then deployed successfully with the 100 USDT fund unchanged.
+
+The first [PAPER] DRYRUN used activation a9d5ba60fac148099ba69f75d61923e0a26252faba35438ca4a9b204ef151ca4 and cutoff 1789928997447. It found zero eligible post-cutoff freezes and therefore zero candidates. Its before/after paper-DB fingerprint matched exactly, and the independent workflow invariant confirmed zero decision/fill/mutation/NAV records, replay index=1 and processed events=0.
+
+This is a valid production result, not a blocker: the watermark is intentionally fresh, so historical 4h decisions are excluded. PAPER/STABLE trade policy remains NOT_ACTIVATED and REAL_CAPITAL=0.
+
+Next is a separate launchd read-only dry-run observation clock so new post-cutoff 4h provider pairs are evaluated automatically as evidence arrives, without creating paper trades.

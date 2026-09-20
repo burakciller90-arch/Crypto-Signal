@@ -1356,3 +1356,44 @@ Current frontier:
 - inspect only post-cutoff production events;
 - prove the dry-run does not mutate activation, processed events, fund replay or trade tables;
 - do not enable autonomous virtual-trade writes yet.
+
+
+## 2026-09-20 — PAPER/STABLE production read-only activation dry-run accepted
+
+Code gate:
+- stable dry-run operation implementation: 18a36286a4fcfc0df4f522c0f33a03203092456f;
+- 441 tests PASS;
+- Ruff PASS;
+- mypy PASS across 96 source files;
+- JavaScript PASS.
+
+Stable deployment:
+- PAPER/STABLE deployed to 18a36286a4fcfc0df4f522c0f33a03203092456f;
+- deploy probes remained fund=99eebec220597639add97080a243e98715d42e75af6be3f1785721d12da00b80, records=1, cash=100.00, positions=0;
+- trade_policy=NOT_ACTIVATED;
+- REAL_CAPITAL=0;
+- no-trade DB invariant remained PASS.
+
+First production [PAPER] DRYRUN:
+- activation=a9d5ba60fac148099ba69f75d61923e0a26252faba35438ca4a9b204ef151ca4;
+- cutoff_ms=1789928997447;
+- eligible post-cutoff freezes=0;
+- incomplete provider pairs=0;
+- already-processed skips=0;
+- candidates=0;
+- statuses=-;
+- paper_db_unchanged=YES;
+- independent workflow no-trade invariant PASS;
+- processed-event count remains 0.
+
+Interpretation:
+- there was no post-watermark 4h Binance+Bybit paper event yet at the first live dry-run;
+- no historical freeze was replayed across the activation boundary;
+- no dry-run observation mutated paper state;
+- PRETRADE_READY has not yet been observed in production and no virtual trade activation is authorized.
+
+Current frontier:
+- install a separate read-only dry-run observation clock on PAPER/STABLE;
+- the clock may repeatedly scan/evaluate post-watermark events and write only stdout/stderr logs, never paper DB state;
+- prove service/restart behavior while trade_policy remains NOT_ACTIVATED;
+- wait for mechanically observed post-cutoff candidate evidence before considering any virtual-trade write activation.
