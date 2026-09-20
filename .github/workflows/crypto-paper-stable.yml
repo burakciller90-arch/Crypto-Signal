@@ -139,8 +139,8 @@ jobs:
           mkdir -p "$REPO/runtime/paper"
           mkdir -p "$HOME/Library/LaunchAgents"
 
-          "$PAPER/.venv/bin/python" "$PAPER/ops/run_paper_clock.py" --paper-ledger "$PAPER_DB" --signal-ledger "$SIGNAL_DB" | tee /tmp/crypto-paper-probe-1.txt
-          "$PAPER/.venv/bin/python" "$PAPER/ops/run_paper_clock.py" --paper-ledger "$PAPER_DB" --signal-ledger "$SIGNAL_DB" | tee /tmp/crypto-paper-probe-2.txt
+          PYTHONPATH="$PAPER/src" "$PAPER/.venv/bin/python" "$PAPER/ops/run_paper_clock.py" --paper-ledger "$PAPER_DB" --signal-ledger "$SIGNAL_DB" | tee /tmp/crypto-paper-probe-1.txt
+          PYTHONPATH="$PAPER/src" "$PAPER/.venv/bin/python" "$PAPER/ops/run_paper_clock.py" --paper-ledger "$PAPER_DB" --signal-ledger "$SIGNAL_DB" | tee /tmp/crypto-paper-probe-2.txt
           grep -q 'PAPER_CLOCK_OK' /tmp/crypto-paper-probe-1.txt
           grep -q 'bootstrap=existing' /tmp/crypto-paper-probe-2.txt
           grep -q 'trade_policy=NOT_ACTIVATED' /tmp/crypto-paper-probe-2.txt
