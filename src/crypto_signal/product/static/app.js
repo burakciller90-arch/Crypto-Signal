@@ -524,6 +524,98 @@ function renderGeometry(geometry) {
 }
 
 
+function renderDecisionExplanation(detail) {
+  const card = detail.signal;
+  if (!card) return "";
+
+  const methods = detail.methodologies ?? [];
+  const supporting = methods.filter(
+    (method) =>
+      method.resolved_direction === card.direction
+      && !method.has_internal_direction_conflict
+  );
+  const unresolved = methods.filter(
+    (method) =>
+      method.resolved_direction === "unresolved"
+      || method.has_internal_direction_conflict
+  );
+  const opposing = methods.filter(
+    (method) =>
+      ["bullish", "bearish"].includes(method.resolved_direction)
+      && method.resolved_direction !== card.direction
+      && !method.has_internal_direction_conflict
+  );
+
+  const explicitInvalidations = methods
+    .flatMap((method) => method.selected ?? [])
+    .map((item) => item.invalidation_price)
+    .filter((value) => value !== null && value !== undefined);
+
+  const invalidation = detail.geometry?.invalidation_price
+    ?? explicitInvalidations[0]
+    ?? null;
+
+  const stateNote = card.state === "active"
+    ? "Aktif Sinyal: tam sinyal koşulları dondurulmuş kararda karşılanmış."
+    : card.state === "watch"
+      ? "İzleniyor: yapı dikkat çekiyor fakat Aktif Sinyal koşulları henüz tamamlanmış değil."
+      : `${human(card.state)}: sistem bu görünümde işlem kurulumu ilan etmiyor.`;
+
+  const supportText = supporting.length
+    ? supporting.map((method) => human(method.methodology)).join(" + ")
+    : "Yönü bağımsız olarak destekleyen çözümlenmiş metodoloji yok";
+
+  const missingParts = [];
+  if (unresolved.length) {
+    missingParts.push(
+      `çözümlenmemiş/çelişkili: ${unresolved.map((method) => human(method.methodology)).join(", ")}`
+    );
+  }
+  if (opposing.length) {
+    missingParts.push(
+      `karşı yönde: ${opposing.map((method) => human(method.methodology)).join(", ")}`
+    );
+  }
+  if (card.uncertainty_flags?.length) {
+    missingParts.push(card.uncertainty_flags.map(human).join(" · "));
+  }
+
+  return `
+    <div class="decision-brief">
+      <div class="decision-brief-head">
+        <div>
+          <div class="small-label">Karar özeti</div>
+          <div class="decision-brief-title">${esc(stateNote)}</div>
+        </div>
+        <div class="state-pill ${stateClass(card.state)}">${esc(human(card.state))}</div>
+      </div>
+      <div class="decision-brief-grid">
+        <div>
+          <div class="value-label">Neden önemli?</div>
+          <div class="truth-note">
+            ${esc(card.symbol)} · ${esc(card.timeframe)} görünümünde yön
+            <strong class="${directionClass(card.direction)}">${esc(human(card.direction))}</strong>.
+            Metodoloji uyumu ${esc(card.confluence_score)}; bu değer olasılık değildir.
+          </div>
+        </div>
+        <div>
+          <div class="value-label">Ne destekliyor?</div>
+          <div class="truth-note">${esc(supportText)}</div>
+        </div>
+        <div>
+          <div class="value-label">Ne eksik?</div>
+          <div class="truth-note">${esc(missingParts.length ? missingParts.join(" · ") : "Belirgin eksik destek bayrağı yok.")}</div>
+        </div>
+        <div>
+          <div class="value-label">Ne bozabilir?</div>
+          <div class="truth-note">${invalidation === null
+            ? "Tam ve açık bir geçersizleşme fiyatı bu kararda yok; uygulanabilir işlem geometrisi varsayılmaz."
+            : `Açık geçersizleşme seviyesi: ${esc(invalidation)}`}</div>
+        </div>
+      </div>
+    </div>`;
+}
+
 function frozenChartData(detail) {
   if (!detail.bundle_json) return { candles: [], levels: [] };
   let root;
@@ -737,6 +829,7 @@ async function openSignal(signalId) {
       <div class="detail-item"><div class="value-label">Karar zamanı</div><div class="value-main">${esc(fmtTime(card.as_of_ms))}</div></div>
       <div class="detail-item"><div class="value-label">Kaydedildi</div><div class="value-main">${esc(fmtTime(card.frozen_at_ms))}</div></div>
     </div>
+    ${renderDecisionExplanation(detail)}
     <div class="detail-item">
       <div class="value-label">Kanıt / belirsizlik</div>
       <div class="truth-note">${esc(detail.evidence_summary?.length ? detail.evidence_summary.join(" · ") : "kanıt özeti yok")}</div>
