@@ -24,7 +24,7 @@ jobs:
           set -euo pipefail
           cmd="$(printf '%s\n' "$ISSUE_BODY" | awk -F: 'tolower($1)=="command" {gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2); print tolower($2); exit}')"
           case "$cmd" in
-            state|deploy|rulesrefresh|activationinit|dryrun|dryrunclockdeploy|portfolio)
+            state|deploy|rulesrefresh|activationinit|dryrun|dryrunclockdeploy|portfolio|performance)
               ;;
             *)
               echo "Unsupported paper command: $cmd"
@@ -341,6 +341,32 @@ jobs:
           test "$(git -C "$PAPER" rev-parse HEAD)" = "$BEFORE_HEAD"
           test -z "$(git -C "$PAPER" status --porcelain)"
           echo "PAPER_PORTFOLIO_PASS=YES"
+
+      - name: PAPER PERFORMANCE
+        if: steps.parse.outputs.command == 'performance'
+        shell: bash
+        run: |
+          set -euo pipefail
+          REPO="/Users/crypto-signal-agent/Crypto-Signal"
+          PAPER="/Users/crypto-signal-agent/Crypto-Signal-Paper"
+          PAPER_DB="$REPO/runtime/paper/paper_fund.sqlite3"
+
+          test "$(id -u)" = "504"
+          test -f "$PAPER_DB"
+          test -x "$PAPER/.venv/bin/python"
+          test -f "$PAPER/ops/show_paper_performance.py"
+          test -z "$(git -C "$PAPER" status --porcelain)"
+
+          BEFORE_HEAD="$(git -C "$PAPER" rev-parse HEAD)"
+          PYTHONPATH="$PAPER/src" "$PAPER/.venv/bin/python" \
+            "$PAPER/ops/show_paper_performance.py" \
+            --paper-ledger "$PAPER_DB" | tee /tmp/crypto-paper-performance.txt
+
+          grep -q 'PAPER_PERFORMANCE_OK' /tmp/crypto-paper-performance.txt
+          grep -q 'REAL_CAPITAL=0' /tmp/crypto-paper-performance.txt
+          test "$(git -C "$PAPER" rev-parse HEAD)" = "$BEFORE_HEAD"
+          test -z "$(git -C "$PAPER" status --porcelain)"
+          echo "PAPER_PERFORMANCE_PASS=YES"
 
       - name: PAPER DRY-RUN CLOCK DEPLOY
         if: steps.parse.outputs.command == 'dryrunclockdeploy'
