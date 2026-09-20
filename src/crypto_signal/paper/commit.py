@@ -48,12 +48,14 @@ class PaperBundleCommitResult:
     def __post_init__(self) -> None:
         if self.real_capital != REAL_CAPITAL:
             raise ValueError("REAL_CAPITAL must remain 0")
-        if self.processed_event_identity is not None:
-            if len(self.processed_event_identity) != 64 or any(
+        if self.processed_event_identity is not None and (
+            len(self.processed_event_identity) != 64
+            or any(
                 ch not in "0123456789abcdef"
                 for ch in self.processed_event_identity
-            ):
-                raise ValueError("processed_event_identity must be SHA256")
+            )
+        ):
+            raise ValueError("processed_event_identity must be SHA256")
 
 
 def commit_orchestration_bundle(

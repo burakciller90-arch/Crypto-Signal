@@ -15,7 +15,7 @@ from crypto_signal.paper.commit import (
     commit_orchestration_bundle,
 )
 from crypto_signal.paper.execution import FrozenExecutionSnapshot
-from crypto_signal.paper.ledger import PaperFundLedger
+from crypto_signal.paper.ledger import PaperFundLedger, PaperProcessedEventWrite
 from crypto_signal.paper.models import REAL_CAPITAL
 from crypto_signal.paper.orchestration import (
     PaperOrchestrationBundle,

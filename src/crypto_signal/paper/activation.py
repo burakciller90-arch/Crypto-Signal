@@ -27,12 +27,12 @@ from crypto_signal.paper.ledger import (
     PaperLedgerWriteDisposition,
     PaperProcessedEventWrite,
 )
+from crypto_signal.paper.models import REAL_CAPITAL, PaperSymbol
 from crypto_signal.paper.pipeline import (
     PaperTradePipelineResult,
     materialize_planned_pretrade,
 )
 from crypto_signal.paper.pretrade import PaperPretradeDecision
-from crypto_signal.paper.models import REAL_CAPITAL, PaperSymbol
 from crypto_signal.paper.state import PaperFundState, reconstruct_paper_fund_state
 
 __all__ = [
@@ -45,8 +45,8 @@ __all__ = [
     "PaperProcessedTradeCommit",
     "activate_paper_policy",
     "build_processed_event_receipt",
-    "compute_activation_identity",
     "commit_planned_pretrade_event",
+    "compute_activation_identity",
     "compute_processed_event_identity",
     "is_paper_event_processed",
     "list_processed_paper_events",
