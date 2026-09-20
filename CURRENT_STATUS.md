@@ -1550,3 +1550,41 @@ Current frontier:
 - add a deterministic trade-performance measurement layer that can remain NOT_YET_MEASURED until completed simulated round trips exist;
 - when evidence exists, derive closed-trade results from immutable simulated fills/cost lineage without inventing win rates;
 - keep product/dashboard wiring until the backend evidence surfaces are complete.
+
+
+## PAPER/STABLE closed-trade performance truth accepted
+- implementation/stable head: d1efcb93b66b1224b1db8762acfd3a65f47dcf62
+- paper_trade_performance.v1 derives closed-trade truth only from immutable simulated BUY/EXIT fills plus their exact accounting mutations
+- fill/mutation cash and position deltas must reconcile exactly or the performance reader fails closed
+- spread/slippage stay embedded in simulated fill prices; explicit execution costs remain separately auditable and are not double-subtracted from PnL
+- an open BUY without a matching EXIT remains an open trade and cannot manufacture closed-trade success
+- zero completed round trips yields status=not_yet_measured with win_rate/PnL/profit-factor metrics unavailable, not zero
+- when closed evidence exists, the layer computes wins/losses/breakevens, win rate, net/average PnL, average trade return, gross profit/loss, profit factor when defined, best/worst trade and total explicit execution cost
+- deterministic snapshot/trade identities preserve audit lineage
+- full gate: 457 tests PASS
+- Ruff PASS
+- mypy PASS across 99 source files
+- JavaScript PASS
+- PAPER/STABLE deploy PASS with no-trade invariant preserved
+- deploy production evidence:
+  - signal_freezes=408
+  - cash_usdt=100.00
+  - positions=0
+  - replayed records=1
+  - strict post-watermark candidates=0
+  - trade_policy=NOT_ACTIVATED
+  - REAL_CAPITAL=0
+- first live stable performance probe PASS:
+  - status=not_yet_measured
+  - closed_trades=0
+  - open_trades=0
+  - wins=0 / losses=0 / breakevens=0
+  - win_rate_fraction=unavailable
+  - closed PnL / average return / profit factor / execution-cost aggregates=unavailable
+  - trade_success=NOT_YET_MEASURED
+  - REAL_CAPITAL=0
+
+Current frontier:
+- create one strictly read-only paper mission-control snapshot that composes production observation health, portfolio truth and closed-trade performance truth without changing any paper ledger state;
+- this snapshot will become the clean backend contract for the final simple-professional Dashboard pass;
+- virtual-trade writes remain blocked until a real post-cutoff production event traverses the accepted dry-run path and is mechanically reviewed.
