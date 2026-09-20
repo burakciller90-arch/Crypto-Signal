@@ -1909,3 +1909,21 @@ Whole-repository acceptance:
 - REAL_CAPITAL=0.
 
 Next frontier is persistent activation watermark + append-only event claim/resolution truth, followed by authoritative frozen venue-rule sourcing. Stable virtual trading remains disabled.
+
+
+## 2026-09-20 — persistent activation and atomic processed-trade receipt accepted
+
+The paper fund now has crash-safe persistent activation/idempotency truth without enabling stable trading.
+
+Activation is an immutable singleton in the same SQLite file as the paper ledger. V1 cutoff equals activation time, so historical freezes before activation can never be replayed into paper events. Processed events are identified from activation identity + exact source freeze pair + symbol + 4h as-of.
+
+The critical trade path was then tightened so the simulated decision/fill/mutation records and the COMMITTED_TRADE processed receipt share one SQLite transaction. Exact retries are idempotent, stale replay state rejects, and partial commit states are prevented. The final static narrowing requires exactly two provider freeze identities.
+
+Final accepted head 53460267178896e3cd3148c12de6dfd83de8e868 passed:
+- 409 pytest cases;
+- Ruff;
+- mypy across 92 source files;
+- JavaScript;
+- REAL_CAPITAL=0.
+
+PAPER/STABLE is still observation-only. The remaining production blocker is authoritative frozen Binance venue-rule/cost snapshot sourcing before any autonomous virtual-trade activation is considered.

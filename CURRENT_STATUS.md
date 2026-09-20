@@ -1087,3 +1087,42 @@ Current frontier:
 - append-only event claim/resolution truth for restart/replay handling;
 - authoritative frozen Binance venue-rule/cost snapshot source;
 - only after those gates are accepted may PAPER/STABLE autonomous virtual trade activation be considered.
+
+
+## 2026-09-20 — Stage 6C persistent activation + atomic processed-trade receipt accepted
+
+Accepted persistent truth:
+- one immutable paper activation singleton is stored in the same SQLite database as the paper fund ledger;
+- activation cutoff equals activation timestamp in v1 and permanently blocks pre-activation signal events;
+- activation binds fund identity plus the observed signal-ledger baseline count/latest freeze metadata;
+- terminal processed-event identity binds exact activation, Binance+Bybit source freeze pair, symbol, 4h timeframe and signal as-of;
+- terminal no-action receipts are append-only/idempotent and cannot advance from stale paper replay state.
+
+Accepted crash-safe trade receipt:
+- a COMMITTED_TRADE receipt is materialized only from an already-PLANNED pretrade and exact frozen execution input/snapshot lineage;
+- exactly two source signal freeze identities are required;
+- DecisionIntent + SimulatedFill + PositionCashMutation + processed-event receipt commit inside one SQLite transaction;
+- exact retry is idempotent;
+- a crash/SQL failure cannot leave the fund mutated without its processed receipt, or the receipt present without the trade bundle;
+- activation/event tables are immutable against UPDATE/DELETE.
+
+Authority boundary:
+- persistent activation state existing in code does not itself enable PAPER/STABLE trading;
+- no signal selection, venue metadata fetch, credentials, real exchange orders, or REAL_CAPITAL path is introduced;
+- PAPER/STABLE remains trade_policy=NOT_ACTIVATED;
+- REAL_CAPITAL=0.
+
+Acceptance evidence:
+- activation foundation: 850d2139c1486801242d944bd694314acdd02671;
+- atomic trade+receipt integration: 59e9167a85baa738e257c05bf5c132eb83f238fe;
+- dataclass/authority/static hardening: 1ec0f0269121817e5d6faa2c02fb6a9563210fda, b13691eb29c01b61a7385d635573e129bc51a6ad, 72e49e555f7cd956686c467677c621231f74d4e8;
+- exact source-pair narrowing: 53460267178896e3cd3148c12de6dfd83de8e868;
+- final whole-repository regression: 409 tests PASS;
+- Ruff PASS;
+- mypy PASS across 92 source files;
+- JavaScript syntax PASS.
+
+Current frontier:
+- authoritative frozen Binance spot venue-rule snapshot source/cache for BTCUSDT, ETHUSDT and SOLUSDT;
+- prove rule capture is versioned, immutable, restart-safe and bound to the same execution-input lineage used by pretrade;
+- only then consider an isolated PAPER/STABLE autonomous virtual-trade activation candidate.
