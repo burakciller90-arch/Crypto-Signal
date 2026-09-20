@@ -112,8 +112,8 @@ def test_parse_public_binance_rules_freezes_exact_filters_and_cost_policy() -> N
     assert snapshot.symbol is PaperSymbol.BTCUSDT
     assert snapshot.quantity_step == Decimal("0.00001")
     assert snapshot.min_quantity == Decimal("0.00001")
-    assert snapshot.max_quantity == Decimal("9000")
-    assert snapshot.min_notional_usdt == Decimal("5")
+    assert snapshot.max_quantity == Decimal(9000)
+    assert snapshot.min_notional_usdt == Decimal(5)
     assert snapshot.tick_size == Decimal("0.01")
     assert snapshot.cost_policy_version == PAPER_SIMULATED_COST_POLICY_VERSION
     assert snapshot.fee_rate == Decimal("0.001")
@@ -136,7 +136,7 @@ def test_parse_uses_stricter_min_notional_when_both_filter_types_exist() -> None
         symbol=PaperSymbol.BTCUSDT,
         observed_at_ms=15_000,
     )
-    assert snapshot.min_notional_usdt == Decimal("10")
+    assert snapshot.min_notional_usdt == Decimal(10)
 
 
 @pytest.mark.parametrize(

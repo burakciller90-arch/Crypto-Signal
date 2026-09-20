@@ -97,6 +97,14 @@ from crypto_signal.paper.runtime import (
     observe_signal_ledger,
     run_paper_runtime_tick,
 )
+from crypto_signal.paper.sizing import (
+    PAPER_POSITION_SIZING_POLICY_VERSION,
+    PaperPositionSizingDecision,
+    PaperPositionSizingError,
+    PaperPositionSizingReason,
+    PaperPositionSizingStatus,
+    size_paper_candidate,
+)
 from crypto_signal.paper.venue_rules import (
     BINANCE_SPOT_EXCHANGE_INFO_URL,
     PAPER_SIMULATED_COST_POLICY_VERSION,
@@ -109,14 +117,6 @@ from crypto_signal.paper.venue_rules import (
     default_conservative_simulated_cost_policy,
     fetch_binance_spot_venue_rules,
     parse_binance_spot_venue_rules,
-)
-from crypto_signal.paper.sizing import (
-    PAPER_POSITION_SIZING_POLICY_VERSION,
-    PaperPositionSizingDecision,
-    PaperPositionSizingError,
-    PaperPositionSizingReason,
-    PaperPositionSizingStatus,
-    size_paper_candidate,
 )
 
 __all__ = [
@@ -176,8 +176,8 @@ __all__ = [
     "PaperRecordKind",
     "PaperRuntimeError",
     "PaperRuntimeSnapshot",
-    "PaperSimulatedCostPolicy",
     "PaperSignalLedgerObservation",
+    "PaperSimulatedCostPolicy",
     "PaperSymbol",
     "PaperTradePipelineError",
     "PaperTradePipelineResult",
