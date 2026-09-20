@@ -10,8 +10,10 @@ from __future__ import annotations
 
 import sqlite3
 from dataclasses import dataclass
+from enum import StrEnum
 from pathlib import Path
 
+from crypto_signal.data.models import Exchange, MarketType
 from crypto_signal.ledger.serialization import canonical_sha256
 from crypto_signal.paper.activation import PaperActivationState
 from crypto_signal.paper.dry_run import (
@@ -25,7 +27,12 @@ from crypto_signal.paper.event_scanner import (
     PaperSignalEventScanResult,
     scan_post_activation_signal_events,
 )
-from crypto_signal.paper.models import REAL_CAPITAL, PaperAction, PaperSymbol
+from crypto_signal.paper.models import (
+    PERMITTED_SYMBOLS,
+    REAL_CAPITAL,
+    PaperAction,
+    PaperSymbol,
+)
 from crypto_signal.paper.performance import (
     PaperTradePerformanceSnapshot,
     read_paper_trade_performance,
@@ -37,10 +44,14 @@ from crypto_signal.paper.portfolio import (
 
 __all__ = [
     "PAPER_MISSION_CONTROL_VERSION",
+    "PaperDecisionCadenceProviderEvidence",
+    "PaperDecisionCadenceReadiness",
+    "PaperDecisionCadenceStatus",
     "PaperMissionControlCandidate",
     "PaperMissionControlError",
     "PaperMissionControlSnapshot",
     "PaperSignalStreamOverview",
+    "read_paper_decision_cadence_readiness",
     "read_paper_mission_control_snapshot",
     "read_paper_signal_stream_overview",
 ]
@@ -98,6 +109,80 @@ class PaperSignalStreamOverview:
             raise ValueError("signal stream timestamps/age must be non-negative")
 
 
+class PaperDecisionCadenceStatus(StrEnum):
+    NO_4H_EVIDENCE = "no_4h_evidence"
+    WAITING_PROVIDER_PAIR = "waiting_provider_pair"
+    PROVIDER_ASOF_MISMATCH = "provider_asof_mismatch"
+    PRE_ACTIVATION_PAIR = "pre_activation_pair"
+    POST_ACTIVATION_PAIR = "post_activation_pair"
+
+
+@dataclass(frozen=True, slots=True)
+class PaperDecisionCadenceProviderEvidence:
+    exchange: Exchange
+    freeze_identity: str
+    signal_as_of_ms: int
+    frozen_at_ms: int
+    signal_state: str
+    direction: str
+
+    def __post_init__(self) -> None:
+        if self.exchange not in {Exchange.BINANCE, Exchange.BYBIT}:
+            raise ValueError("decision-cadence provider must be Binance or Bybit")
+        _require_sha256(self.freeze_identity, "decision-cadence freeze identity")
+        if min(self.signal_as_of_ms, self.frozen_at_ms) < 0:
+            raise ValueError("decision-cadence timestamps must be non-negative")
+        if self.frozen_at_ms < self.signal_as_of_ms:
+            raise ValueError("decision-cadence freeze cannot predate signal as-of")
+        if not self.signal_state.strip() or not self.direction.strip():
+            raise ValueError("decision-cadence state/direction must be non-empty")
+
+
+@dataclass(frozen=True, slots=True)
+class PaperDecisionCadenceReadiness:
+    symbol: PaperSymbol
+    status: PaperDecisionCadenceStatus
+    binance: PaperDecisionCadenceProviderEvidence | None
+    bybit: PaperDecisionCadenceProviderEvidence | None
+    paired_as_of_ms: int | None
+    candidate_available: bool
+
+    def __post_init__(self) -> None:
+        if self.binance is not None and self.binance.exchange is not Exchange.BINANCE:
+            raise ValueError("binance cadence evidence exchange mismatch")
+        if self.bybit is not None and self.bybit.exchange is not Exchange.BYBIT:
+            raise ValueError("bybit cadence evidence exchange mismatch")
+        if self.status is PaperDecisionCadenceStatus.NO_4H_EVIDENCE:
+            if self.binance is not None or self.bybit is not None:
+                raise ValueError("no-evidence cadence cannot carry provider evidence")
+            if self.paired_as_of_ms is not None or self.candidate_available:
+                raise ValueError("no-evidence cadence cannot carry pair/candidate")
+        elif self.status is PaperDecisionCadenceStatus.WAITING_PROVIDER_PAIR:
+            if (self.binance is None) == (self.bybit is None):
+                raise ValueError("waiting-provider cadence requires exactly one provider")
+            if self.paired_as_of_ms is not None or self.candidate_available:
+                raise ValueError("waiting-provider cadence cannot carry pair/candidate")
+        elif self.status is PaperDecisionCadenceStatus.PROVIDER_ASOF_MISMATCH:
+            if self.binance is None or self.bybit is None:
+                raise ValueError("as-of mismatch requires both providers")
+            if self.binance.signal_as_of_ms == self.bybit.signal_as_of_ms:
+                raise ValueError("as-of mismatch requires different provider as-of values")
+            if self.paired_as_of_ms is not None or self.candidate_available:
+                raise ValueError("as-of mismatch cannot carry exact pair/candidate")
+        else:
+            if self.binance is None or self.bybit is None:
+                raise ValueError("paired cadence requires both providers")
+            if self.binance.signal_as_of_ms != self.bybit.signal_as_of_ms:
+                raise ValueError("paired cadence requires identical provider as-of")
+            if self.paired_as_of_ms != self.binance.signal_as_of_ms:
+                raise ValueError("paired cadence as-of mismatch")
+            if (
+                self.status is PaperDecisionCadenceStatus.PRE_ACTIVATION_PAIR
+                and self.candidate_available
+            ):
+                raise ValueError("pre-activation pair cannot be a paper candidate")
+
+
 @dataclass(frozen=True, slots=True)
 class PaperMissionControlCandidate:
     event_identity: str
@@ -131,6 +216,7 @@ class PaperMissionControlSnapshot:
     activation_cutoff_ms: int
     baseline_signal_freeze_count: int
     signal_stream: PaperSignalStreamOverview
+    decision_cadence: tuple[PaperDecisionCadenceReadiness, ...]
     eligible_post_activation_freezes: int
     incomplete_provider_pairs: int
     processed_event_skips: int
@@ -155,6 +241,13 @@ class PaperMissionControlSnapshot:
             raise ValueError("mission-control timestamps must be non-negative")
         if self.baseline_signal_freeze_count < 0:
             raise ValueError("activation baseline count cannot be negative")
+        expected_symbols = tuple(
+            sorted(PERMITTED_SYMBOLS, key=lambda item: item.value)
+        )
+        if tuple(item.symbol for item in self.decision_cadence) != expected_symbols:
+            raise ValueError(
+                "decision cadence must contain every permitted symbol in order"
+            )
         if min(
             self.eligible_post_activation_freezes,
             self.incomplete_provider_pairs,
@@ -220,6 +313,12 @@ def read_paper_mission_control_snapshot(
         activation=activation,
         observed_at_ms=observed_at_ms,
     )
+    decision_cadence = read_paper_decision_cadence_readiness(
+        signal_ledger_path=signal_ledger_path,
+        activation=activation,
+        scan=scan,
+        observed_at_ms=observed_at_ms,
+    )
     if len(scan.candidates) > max_candidates:
         raise PaperMissionControlError(
             "mission-control candidate count exceeds bounded max_candidates"
@@ -260,6 +359,7 @@ def read_paper_mission_control_snapshot(
     return _build_snapshot(
         activation=activation,
         signal_stream=signal_stream,
+        decision_cadence=decision_cadence,
         scan=scan,
         candidates=tuple(candidates),
         portfolio=portfolio,
@@ -272,6 +372,7 @@ def _build_snapshot(
     *,
     activation: PaperActivationState,
     signal_stream: PaperSignalStreamOverview,
+    decision_cadence: tuple[PaperDecisionCadenceReadiness, ...],
     scan: PaperSignalEventScanResult,
     candidates: tuple[PaperMissionControlCandidate, ...],
     portfolio: PaperPortfolioSnapshot,
@@ -289,6 +390,9 @@ def _build_snapshot(
         "attention_required": ready_count > 0,
         "baseline_signal_freeze_count": activation.baseline_signal_freeze_count,
         "candidates": [_candidate_payload(item) for item in candidates],
+        "decision_cadence": [
+            _decision_cadence_payload(item) for item in decision_cadence
+        ],
         "eligible_post_activation_freezes": scan.eligible_freeze_count,
         "incomplete_provider_pairs": scan.incomplete_pair_count,
         "observed_at_ms": observed_at_ms,
@@ -308,6 +412,7 @@ def _build_snapshot(
         activation_cutoff_ms=activation.activation_cutoff_ms,
         baseline_signal_freeze_count=activation.baseline_signal_freeze_count,
         signal_stream=signal_stream,
+        decision_cadence=decision_cadence,
         eligible_post_activation_freezes=scan.eligible_freeze_count,
         incomplete_provider_pairs=scan.incomplete_pair_count,
         processed_event_skips=scan.processed_skip_count,
@@ -319,6 +424,142 @@ def _build_snapshot(
         trade_policy="NOT_ACTIVATED",
         real_capital=REAL_CAPITAL,
     )
+
+
+def read_paper_decision_cadence_readiness(
+    *,
+    signal_ledger_path: Path,
+    activation: PaperActivationState,
+    scan: PaperSignalEventScanResult,
+    observed_at_ms: int,
+) -> tuple[PaperDecisionCadenceReadiness, ...]:
+    """Explain 4h provider-pair readiness without inventing a candidate."""
+    if observed_at_ms < 0:
+        raise ValueError("observed_at_ms must be non-negative")
+    if scan.activation_identity != activation.activation_identity:
+        raise PaperMissionControlError("cadence scan/activation identity mismatch")
+    if not signal_ledger_path.exists():
+        raise PaperMissionControlError("signal ledger does not exist")
+
+    uri = f"file:{signal_ledger_path.resolve()}?mode=ro"
+    latest: dict[
+        tuple[PaperSymbol, Exchange],
+        PaperDecisionCadenceProviderEvidence,
+    ] = {}
+    try:
+        with sqlite3.connect(uri, uri=True, timeout=5.0) as connection:
+            connection.row_factory = sqlite3.Row
+            connection.execute("PRAGMA query_only=ON")
+            if connection.execute(
+                """
+                SELECT 1 FROM sqlite_master
+                WHERE type = 'table' AND name = 'signal_freezes'
+                """
+            ).fetchone() is None:
+                raise PaperMissionControlError(
+                    "signal ledger missing required table: signal_freezes"
+                )
+            placeholders = ",".join("?" for _ in PERMITTED_SYMBOLS)
+            rows = connection.execute(
+                f"""
+                SELECT
+                    signal_freeze_identity,
+                    exchange,
+                    symbol,
+                    as_of_ms,
+                    frozen_at_ms,
+                    signal_state,
+                    direction
+                FROM signal_freezes
+                WHERE market_type = ?
+                  AND timeframe = ?
+                  AND exchange IN (?, ?)
+                  AND symbol IN ({placeholders})
+                  AND as_of_ms <= ?
+                  AND frozen_at_ms <= ?
+                ORDER BY
+                    symbol ASC,
+                    exchange ASC,
+                    as_of_ms DESC,
+                    frozen_at_ms DESC,
+                    signal_freeze_identity DESC
+                """,
+                (
+                    MarketType.SPOT.value,
+                    "4h",
+                    Exchange.BINANCE.value,
+                    Exchange.BYBIT.value,
+                    *(symbol.value for symbol in sorted(
+                        PERMITTED_SYMBOLS,
+                        key=lambda item: item.value,
+                    )),
+                    observed_at_ms,
+                    observed_at_ms,
+                ),
+            ).fetchall()
+    except sqlite3.Error as exc:
+        raise PaperMissionControlError(
+            f"failed to read 4h decision-cadence readiness: {exc}"
+        ) from exc
+
+    for row in rows:
+        try:
+            symbol = PaperSymbol(str(row["symbol"]))
+            exchange = Exchange(str(row["exchange"]))
+        except ValueError as exc:
+            raise PaperMissionControlError(
+                "decision-cadence index contains unsupported symbol/exchange"
+            ) from exc
+        key = (symbol, exchange)
+        if key in latest:
+            continue
+        latest[key] = PaperDecisionCadenceProviderEvidence(
+            exchange=exchange,
+            freeze_identity=str(row["signal_freeze_identity"]),
+            signal_as_of_ms=int(row["as_of_ms"]),
+            frozen_at_ms=int(row["frozen_at_ms"]),
+            signal_state=str(row["signal_state"]),
+            direction=str(row["direction"]),
+        )
+
+    candidate_keys = {
+        (candidate.symbol, candidate.signal_as_of_ms)
+        for candidate in scan.candidates
+    }
+    result: list[PaperDecisionCadenceReadiness] = []
+    for symbol in sorted(PERMITTED_SYMBOLS, key=lambda item: item.value):
+        binance = latest.get((symbol, Exchange.BINANCE))
+        bybit = latest.get((symbol, Exchange.BYBIT))
+        paired_as_of_ms: int | None = None
+        candidate_available = False
+        if binance is None and bybit is None:
+            status = PaperDecisionCadenceStatus.NO_4H_EVIDENCE
+        elif binance is None or bybit is None:
+            status = PaperDecisionCadenceStatus.WAITING_PROVIDER_PAIR
+        elif binance.signal_as_of_ms != bybit.signal_as_of_ms:
+            status = PaperDecisionCadenceStatus.PROVIDER_ASOF_MISMATCH
+        else:
+            paired_as_of_ms = binance.signal_as_of_ms
+            if (
+                paired_as_of_ms < activation.activation_cutoff_ms
+                or binance.frozen_at_ms < activation.activated_at_ms
+                or bybit.frozen_at_ms < activation.activated_at_ms
+            ):
+                status = PaperDecisionCadenceStatus.PRE_ACTIVATION_PAIR
+            else:
+                status = PaperDecisionCadenceStatus.POST_ACTIVATION_PAIR
+                candidate_available = (symbol, paired_as_of_ms) in candidate_keys
+        result.append(
+            PaperDecisionCadenceReadiness(
+                symbol=symbol,
+                status=status,
+                binance=binance,
+                bybit=bybit,
+                paired_as_of_ms=paired_as_of_ms,
+                candidate_available=candidate_available,
+            )
+        )
+    return tuple(result)
 
 
 def read_paper_signal_stream_overview(
@@ -417,6 +658,33 @@ def _validate_scan_point_in_time(
             )
 
 
+def _decision_cadence_payload(
+    item: PaperDecisionCadenceReadiness,
+) -> dict[str, object]:
+    def provider_payload(
+        provider: PaperDecisionCadenceProviderEvidence | None,
+    ) -> dict[str, object] | None:
+        if provider is None:
+            return None
+        return {
+            "direction": provider.direction,
+            "exchange": provider.exchange.value,
+            "freeze_identity": provider.freeze_identity,
+            "frozen_at_ms": provider.frozen_at_ms,
+            "signal_as_of_ms": provider.signal_as_of_ms,
+            "signal_state": provider.signal_state,
+        }
+
+    return {
+        "binance": provider_payload(item.binance),
+        "bybit": provider_payload(item.bybit),
+        "candidate_available": item.candidate_available,
+        "paired_as_of_ms": item.paired_as_of_ms,
+        "status": item.status.value,
+        "symbol": item.symbol.value,
+    }
+
+
 def _candidate_payload(item: PaperMissionControlCandidate) -> dict[str, object]:
     return {
         "candidate_action": item.candidate_action.value,
@@ -455,6 +723,9 @@ def _snapshot_payload(
         "attention_required": snapshot.attention_required,
         "baseline_signal_freeze_count": snapshot.baseline_signal_freeze_count,
         "candidates": [_candidate_payload(item) for item in snapshot.candidates],
+        "decision_cadence": [
+            _decision_cadence_payload(item) for item in snapshot.decision_cadence
+        ],
         "eligible_post_activation_freezes": snapshot.eligible_post_activation_freezes,
         "incomplete_provider_pairs": snapshot.incomplete_provider_pairs,
         "observed_at_ms": snapshot.observed_at_ms,
