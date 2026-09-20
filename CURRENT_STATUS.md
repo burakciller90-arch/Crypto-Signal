@@ -3,7 +3,7 @@
 Updated: 2026-09-20
 Project: Crypto Signal
 Phase: Confluence + Signal Semantics V1
-State: SIGNAL_SLICE1_CREATION_ACCEPTED
+State: SIGNAL_SEMANTICS_V1_ACCEPTED
 REAL_CAPITAL: 0
 
 ## Accepted foundations
@@ -117,14 +117,31 @@ No Durdurulmaz or Quantum Capital project state was mutated; UID502 is used only
 - live Bybit/Binance signal smoke PASS
 - current live 15m state on both providers: WATCH bullish, confluence score 33.33, no geometry, no fabricated probability
 
-## Canonical next frontier
-Signal Slice 2 lifecycle:
-1. immutable SignalDecision remains unchanged
-2. append-only lifecycle snapshots
-3. INVALIDATED only from post-decision observed candle evidence
-4. invalidation trigger semantics preserved exactly
-5. no retroactive invalidation before decision as-of
-6. deterministic PIT tests and live-safe smoke
+## Signal Slice 2 accepted evidence
+- immutable SignalDecision remains unchanged
+- append-only invalidation transition model
+- only fully post-decision closed/observed candles may invalidate
+- decision-time partial candle is skipped to prevent pre-decision OHLC contamination
+- explicit NO_NEW_EVIDENCE / COMPLETE / INCOMPLETE_GAPS coverage states
+- missing candle opens are explicit and never invented
+- TOUCH_OR_CROSS and CLOSE_AT_OR_BEYOND semantics preserved
+- deterministic transition identity
+- 158 tests PASS
+- Ruff PASS
+- mypy PASS
+- live-safe Bybit/Binance smoke PASS
+- current live 15m decisions on both providers: WATCH bearish, score 33.33
+- lifecycle at decision as-of: NO_NEW_EVIDENCE
 
-After Signal Semantics acceptance, activate the immutable live-forward ledger immediately.
+## Canonical next frontier
+Immutable Live Ledger activation:
+1. immutable decision freeze bundle
+2. SQLite append-only signal ledger
+3. decision-time confluence/evidence/candle provenance snapshot
+4. duplicate freeze idempotence and conflicting payload rejection
+5. append-only lifecycle event records
+6. untouched-forward activation runbook and acceptance
+7. start live-forward evidence clock immediately after gate
+
+No outcome/backtest statistics may be merged into untouched-forward evidence.
 REAL_CAPITAL remains 0.

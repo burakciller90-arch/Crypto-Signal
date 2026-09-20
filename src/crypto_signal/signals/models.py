@@ -186,3 +186,79 @@ class SignalDecision:
             raise ValueError("methodology versions must be unique by methodology")
         if len(set(self.uncertainty_flags)) != len(self.uncertainty_flags):
             raise ValueError("signal uncertainty flags must be unique")
+
+
+class LifecycleEvaluationStatus(StrEnum):
+    NO_NEW_EVIDENCE = "no_new_evidence"
+    COMPLETE = "complete"
+    INCOMPLETE_GAPS = "incomplete_gaps"
+
+
+class LifecycleTransitionReason(StrEnum):
+    INVALIDATION_TOUCH_OR_CROSS = "invalidation_touch_or_cross"
+    INVALIDATION_CLOSE_AT_OR_BEYOND = "invalidation_close_at_or_beyond"
+
+
+@dataclass(frozen=True, slots=True)
+class SignalStateTransition:
+    transition_identity: str
+    signal_freeze_identity: str
+    from_state: SignalState
+    to_state: SignalState
+    reason: LifecycleTransitionReason
+    trigger_candle_identity: tuple[str, str, str, str, int]
+    market_confirmed_at_ms: int
+    observed_at_ms: int
+    evaluated_as_of_ms: int
+    first_trigger_candle_certain: bool
+
+    def __post_init__(self) -> None:
+        if len(self.transition_identity) != 64:
+            raise ValueError("transition identity must be SHA256")
+        try:
+            int(self.transition_identity, 16)
+        except ValueError as exc:
+            raise ValueError("transition identity must be hexadecimal") from exc
+        if len(self.signal_freeze_identity) != 64:
+            raise ValueError("signal freeze identity must be SHA256")
+        if self.from_state not in {SignalState.WATCH, SignalState.ACTIVE}:
+            raise ValueError("only WATCH/ACTIVE may transition to invalidated")
+        if self.to_state is not SignalState.INVALIDATED:
+            raise ValueError("V1 lifecycle transition target must be INVALIDATED")
+        if self.market_confirmed_at_ms < 0 or self.observed_at_ms < 0:
+            raise ValueError("transition timestamps must be non-negative")
+        if self.observed_at_ms < self.market_confirmed_at_ms:
+            raise ValueError("transition cannot be observed before market confirmation")
+        if self.evaluated_as_of_ms < self.observed_at_ms:
+            raise ValueError("transition cannot be observed after evaluation as-of")
+
+
+@dataclass(frozen=True, slots=True)
+class SignalLifecycleEvaluation:
+    signal_freeze_identity: str
+    evaluated_as_of_ms: int
+    current_state: SignalState
+    status: LifecycleEvaluationStatus
+    missing_open_times_ms: tuple[int, ...]
+    skipped_partial_decision_bucket: bool
+    transition: SignalStateTransition | None
+
+    def __post_init__(self) -> None:
+        if len(self.signal_freeze_identity) != 64:
+            raise ValueError("signal freeze identity must be SHA256")
+        if self.evaluated_as_of_ms < 0:
+            raise ValueError("lifecycle evaluation as-of must be non-negative")
+        if tuple(sorted(set(self.missing_open_times_ms))) != self.missing_open_times_ms:
+            raise ValueError("missing open times must be sorted and unique")
+        if self.status is LifecycleEvaluationStatus.INCOMPLETE_GAPS:
+            if not self.missing_open_times_ms:
+                raise ValueError("INCOMPLETE_GAPS requires missing opens")
+        elif self.missing_open_times_ms:
+            raise ValueError("only INCOMPLETE_GAPS may carry missing opens")
+        if self.transition is not None:
+            if self.transition.signal_freeze_identity != self.signal_freeze_identity:
+                raise ValueError("transition signal identity mismatch")
+            if self.transition.evaluated_as_of_ms != self.evaluated_as_of_ms:
+                raise ValueError("transition evaluation as-of mismatch")
+            if self.current_state is not SignalState.INVALIDATED:
+                raise ValueError("transition requires current INVALIDATED state")

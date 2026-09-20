@@ -28,7 +28,7 @@ class EvidenceValidity(StrEnum):
 
 class InvalidationTrigger(StrEnum):
     TOUCH_OR_CROSS = "touch_or_cross"
-    CLOSE_BEYOND = "close_beyond"
+    CLOSE_AT_OR_BEYOND = "close_at_or_beyond"
 
 
 @dataclass(frozen=True, slots=True)

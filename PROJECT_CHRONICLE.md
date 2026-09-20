@@ -565,3 +565,32 @@ Mechanical evidence:
   no geometry because Harmonic has no valid selected setup and Elliott is internally conflicted
 
 Canonical frontier advances to Signal Slice 2 lifecycle and append-only INVALIDATED semantics.
+
+## 2026-09-20 — Signal Semantics V1 accepted
+
+Signal Slice 2 completed the PIT-safe invalidation lifecycle.
+
+Accepted lifecycle rules:
+- SignalDecision is never rewritten
+- WATCH/ACTIVE may append an INVALIDATED transition only
+- only fully post-decision, closed and locally observed candles participate
+- the candle already open at decision time is skipped to avoid pre-decision OHLC contamination
+- expected canonical opens are checked explicitly
+- coverage is NO_NEW_EVIDENCE / COMPLETE / INCOMPLETE_GAPS
+- missing candles are never synthesized
+- TOUCH_OR_CROSS and CLOSE_AT_OR_BEYOND triggers remain source-owned semantics
+- gap before an observed breach allows INVALIDATED but marks first-trigger timing uncertain
+
+Mechanical evidence:
+- focused lifecycle tests: 10 PASS
+- full repository: 158 tests PASS
+- Ruff PASS
+- mypy PASS
+- Bybit/Binance live-safe lifecycle smoke PASS
+- current live 15m decision on both providers at acceptance: WATCH bearish / score 33.33
+- lifecycle at the same decision as-of: NO_NEW_EVIDENCE
+- historical REST ingestion timestamps were not backdated or presented as live-forward evidence
+
+Signal Semantics V1 is accepted.
+Canonical frontier moves immediately to Immutable Live Ledger activation.
+REAL_CAPITAL remains 0.
