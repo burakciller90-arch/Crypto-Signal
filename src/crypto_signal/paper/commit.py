@@ -64,6 +64,7 @@ def commit_orchestration_bundle(
     state: PaperFundState,
     bundle: PaperOrchestrationBundle,
     processed_event: PaperProcessedEventWrite | None = None,
+    required_authority_event_identity: str | None = None,
 ) -> PaperBundleCommitResult:
     """Persist one accepted orchestration bundle atomically, then re-read state."""
     records = _bundle_records(state=state, bundle=bundle)
@@ -78,6 +79,10 @@ def commit_orchestration_bundle(
             )
 
     if processed_event is None:
+        if required_authority_event_identity is not None:
+            raise PaperBundleCommitError(
+                "write authority binding requires processed event"
+            )
         disposition, replay = ledger._append_records_atomic(
             records,
             expected_replayed_record_count=state.replayed_record_count,
@@ -111,6 +116,7 @@ def commit_orchestration_bundle(
             outcome=processed_event.outcome,
             event_payload_json=processed_event.payload_json,
             processed_at_ms=processed_event.processed_at_ms,
+            required_authority_event_identity=required_authority_event_identity,
         )
     _validate_bundle_replay_order(replay=replay, identities=identities)
 
