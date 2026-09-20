@@ -390,6 +390,41 @@ def test_snapshot_must_bind_exact_frozen_execution_input(tmp_path) -> None:
         )
 
 
+def test_plan_time_cannot_predate_frozen_execution_input(tmp_path) -> None:
+    state, execution_input, sizing = _buy_sizing(
+        tmp_path,
+        invalidation=Decimal(90),
+    )
+    snapshot = _snapshot(execution_input)
+
+    with pytest.raises(PaperPretradeError, match="cannot predate"):
+        prepare_paper_trade_plan(
+            state=state,
+            sizing=sizing,
+            execution_input=execution_input,
+            execution_snapshot=snapshot,
+            planned_at_ms=2_000,
+        )
+
+
+def test_planned_decision_rechecks_embedded_plan_lineage(tmp_path) -> None:
+    state, execution_input, sizing = _buy_sizing(
+        tmp_path,
+        invalidation=Decimal(90),
+    )
+    snapshot = _snapshot(execution_input)
+    decision = prepare_paper_trade_plan(
+        state=state,
+        sizing=sizing,
+        execution_input=execution_input,
+        execution_snapshot=snapshot,
+        planned_at_ms=3_000,
+    )
+    assert decision.status is PaperPretradeStatus.PLANNED
+    with pytest.raises(ValueError, match="plan action mismatch"):
+        replace(decision, action=PaperAction.EXIT)
+
+
 def test_pretrade_surface_has_no_network_fill_or_ledger_authority() -> None:
     source = inspect.getsource(paper_pretrade).lower()
     forbidden = (

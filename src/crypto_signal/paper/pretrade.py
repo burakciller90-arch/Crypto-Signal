@@ -109,8 +109,18 @@ class PaperPretradeDecision:
                 raise ValueError("PLANNED status requires positive quantity")
             if self.rejection_detail is not None:
                 raise ValueError("PLANNED status cannot carry rejection detail")
+            if self.raw_quantity is None:
+                raise ValueError("PLANNED status requires raw quantity")
+            if self.planned_quantity > self.raw_quantity:
+                raise ValueError("planned quantity cannot exceed raw sizing quantity")
+            if self.plan.action is not self.action:
+                raise ValueError("paper plan action mismatch")
+            if self.plan.symbol is not self.symbol:
+                raise ValueError("paper plan symbol mismatch")
             if self.plan.quantity != self.planned_quantity:
                 raise ValueError("paper plan quantity mismatch")
+            if self.plan.reference_price != self.reference_price:
+                raise ValueError("paper plan reference price mismatch")
             if self.plan.cost_budget_usdt != self.cost_budget_usdt:
                 raise ValueError("paper plan cost budget mismatch")
         else:
@@ -197,6 +207,10 @@ def prepare_paper_trade_plan(
     )
     if planned_at_ms < 0:
         raise PaperPretradeError("planned_at_ms must be non-negative")
+    if planned_at_ms < execution_input.observed_at_ms:
+        raise PaperPretradeError(
+            "paper plan cannot predate frozen execution-input observation"
+        )
 
     if sizing.status is PaperPositionSizingStatus.REJECTED:
         return _rejected(
