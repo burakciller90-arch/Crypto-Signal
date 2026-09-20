@@ -707,3 +707,41 @@ Current Stage 6C frontier:
 - deterministic current-state re-read after append;
 - persistent paper-account clock/runtime only after atomicity/replay/crash-safety gates;
 - read-only portfolio/NAV/benchmark Mission Control view after runtime truth exists.
+
+## USER PAUSE CHECKPOINT — 2026-09-20 17:57 +03
+
+User explicitly requested a break and asked for wake + lease continuity to be paused while preserving exact resume state.
+
+Mechanical pause evidence:
+- CONTINUITY_PAUSED succeeded.
+- local user_pause marker present.
+- shared relay user_pause marker present.
+- ACTIVE_LEASES=0.
+- LOCAL_WAKE_QUEUE=0.
+- RELAY_WAKE_QUEUE=0.
+- PAUSE_VERIFIED=YES.
+- no active Cursor worker owns the frontier.
+- relay daemon may remain alive, but paused markers prevent continuity/wake processing.
+
+Resume mechanism is already present:
+- allowlisted command: wakeresume
+- implementation: ops/continuity/resume_continuity.py
+- resume semantics: remove local/shared pause markers, state-first rearm required, stale relay replay disabled.
+
+Exact accepted development state before pause:
+- Stage 6C Slice 1 accepted: immutable 100 USDT paper accounting foundation.
+- Stage 6C Slice 2 accepted: deterministic state reconstruction + conservative planning.
+- Stage 6C Slice 3 accepted via supervisor-direct implementation: frozen/versioned simulated execution + pure plan→decision→fill→mutation orchestration.
+- canonical full gate after Slice 3: 330 tests PASS, Ruff PASS, mypy PASS across 84 source files, JavaScript syntax PASS.
+- REAL_CAPITAL=0.
+- Cursor development authority remains suspended unless the user explicitly re-enables it.
+
+Exact next frontier on resume:
+Stage 6C Slice 4 — atomic/idempotent append of an accepted orchestration bundle into the immutable paper ledger, followed by deterministic current-state re-read. Do NOT start persistent paper-account runtime, Mission Control paper portfolio activation, or any later stage before this atomicity/crash-safety gate is accepted.
+
+Resume procedure:
+1. run wakeresume;
+2. read READ_FIRST_CRYPTO_SIGNAL.md + this CURRENT_STATUS checkpoint + newest Chronicle;
+3. inspect fresh canonical Git/worker/continuity state;
+4. treat stale/duplicate wake or lease events as NOOP;
+5. continue only from Stage 6C Slice 4 if fresh state still confirms it is the canonical unfinished frontier.
