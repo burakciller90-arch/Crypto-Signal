@@ -1,0 +1,43 @@
+name: Crypto Exact Checkpoint Read Once
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/crypto-exact-checkpoint-read-once.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    name: Inspect stale wake checkpoint
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 10
+    steps:
+      - name: Inspect exact checkpoint and continuity state
+        shell: bash
+        run: |
+          set -euo pipefail
+          REPO="/Users/crypto-signal-agent/Crypto-Signal"
+          CP="$REPO/runtime/continuity/leases/checkpoints/823e58b2eb6a99973c0d6b0d-1789942248-56646.checkpoint"
+          EXPECTED="8cb66cc0e221b50b2cee2812c7a1b97a4a83e219e06ca39c544350f0417b0049"
+          test "$(id -u)" = "504"
+          test -f "$CP"
+          ACTUAL="$(shasum -a 256 "$CP" | awk '{print $1}')"
+          echo "CHECKPOINT_SHA256=$ACTUAL"
+          test "$ACTUAL" = "$EXPECTED"
+          echo "=== EXACT CHECKPOINT ==="
+          cat "$CP"
+          echo "=== CANONICAL GIT ==="
+          git -C "$REPO" status --short --branch
+          echo "HEAD=$(git -C "$REPO" rev-parse HEAD)"
+          echo "=== ACTIVE LEASES ==="
+          for f in "$REPO"/runtime/continuity/leases/active/*.lease; do
+            [ -e "$f" ] || continue
+            echo "--- $f"
+            sed -n '1,12p' "$f"
+          done
+          echo "=== RECENT DELIVERED LEASES ==="
+          find "$REPO/runtime/continuity/leases/delivered" -maxdepth 1 -type f -mmin -180 -print | tail -20
+          echo "CHECKPOINT_READ_PASS=YES"
