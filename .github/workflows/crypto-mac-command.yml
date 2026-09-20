@@ -24,7 +24,7 @@ jobs:
           set -euo pipefail
           cmd="$(printf '%s\n' "$ISSUE_BODY" | awk -F: 'tolower($1)=="command" {gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2); print tolower($2); exit}')"
           case "$cmd" in
-            status|services|logs|disk|sync|producttest|fulltest|productstate|productdeploy|paperreview|paperinspect|paperfixlint|paperharden|stateplanreview|stateplaninspect|stateplanharden|cursorreview|cursorreviewtail|cursorcleanup|bridgecheck|bridgestate|wakeresume|waketest|cursorcheck|cursorauthdiag|cursorttycheck)
+            status|services|logs|disk|sync|producttest|fulltest|productstate|productdeploy|paperreview|paperinspect|paperfixlint|paperharden|stateplanreview|stateplaninspect|stateplanharden|cursorreview|cursorreviewtail|cursorcleanup|bridgecheck|bridgestate|wakepause|wakeresume|waketest|cursorcheck|cursorauthdiag|cursorttycheck)
               ;;
             *)
               echo "Unsupported command: $cmd"
@@ -875,6 +875,13 @@ jobs:
           git -C "$REPO" worktree prune
           test ! -e "$WT"
           echo "CURSOR_WORKTREE_CLEANED=YES"
+
+      - name: WAKE PAUSE
+        if: steps.parse.outputs.command == 'wakepause'
+        shell: bash
+        run: |
+          set -euo pipefail
+          /usr/bin/python3 /Users/crypto-signal-agent/Crypto-Signal/ops/continuity/pause_continuity.py
 
       - name: WAKE RESUME
         if: steps.parse.outputs.command == 'wakeresume'
