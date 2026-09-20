@@ -28,8 +28,8 @@ __all__ = [
     "PaperWriteAuthorityError",
     "PaperWriteAuthorityEvent",
     "append_paper_write_authority_event",
-    "load_current_paper_write_authority",
     "list_paper_write_authority_events",
+    "load_current_paper_write_authority",
 ]
 
 PAPER_WRITE_AUTHORITY_VERSION = "paper_write_authority.v1"
