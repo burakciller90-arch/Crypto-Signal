@@ -125,7 +125,6 @@ class PaperActivationState:
 
 
 @dataclass(frozen=True, slots=True)
-@dataclass(frozen=True, slots=True)
 class PaperProcessedTradeCommit:
     receipt: PaperProcessedEventReceipt
     pipeline: PaperTradePipelineResult
@@ -147,6 +146,7 @@ class PaperProcessedTradeCommit:
             raise ValueError("processed trade event identity mismatch")
 
 
+@dataclass(frozen=True, slots=True)
 class PaperProcessedEventReceipt:
     event_identity: str
     activation_identity: str
