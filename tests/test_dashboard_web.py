@@ -224,6 +224,9 @@ def test_health_and_static_shell_without_ledger(tmp_path: Path) -> None:
     assert "İşlem planı · neden yok?" in script.text
     assert "Hangi kanıt bunu değiştirebilir?" in script.text
     assert "Toplam maliyet bütçesi" in script.text
+    assert "Fee tahmini" in script.text
+    assert "Spread tahmini" in script.text
+    assert "Slippage tahmini" in script.text
     assert "function renderEducation(data)" in script.text
     assert "function contextualLessonIds(detail)" in script.text
     assert "function renderContextTeaching(detail)" in script.text
