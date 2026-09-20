@@ -24,7 +24,7 @@ jobs:
           set -euo pipefail
           cmd="$(printf '%s\n' "$ISSUE_BODY" | awk -F: 'tolower($1)=="command" {gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2); print tolower($2); exit}')"
           case "$cmd" in
-            status|services|logs|disk|sync|producttest|fulltest|productstate|productdeploy|paperreview|paperinspect|paperfixlint|paperharden|cursorreview|cursorreviewtail|cursorcleanup|bridgecheck|bridgestate|wakeresume|waketest|cursorcheck|cursorauthdiag|cursorttycheck)
+            status|services|logs|disk|sync|producttest|fulltest|productstate|productdeploy|paperreview|paperinspect|paperfixlint|paperharden|stateplanreview|stateplaninspect|cursorreview|cursorreviewtail|cursorcleanup|bridgecheck|bridgestate|wakeresume|waketest|cursorcheck|cursorauthdiag|cursorttycheck)
               ;;
             *)
               echo "Unsupported command: $cmd"
@@ -424,6 +424,82 @@ jobs:
           echo "=== MYPY ==="
           /Users/crypto-signal-agent/Crypto-Signal/.venv/bin/python -m mypy "$WT/src/crypto_signal/paper"
           echo "PAPER_REVIEW_PASS=YES"
+
+      - name: STATE PLAN INSPECT
+        if: steps.parse.outputs.command == 'stateplaninspect'
+        shell: bash
+        env:
+          ISSUE_BODY: ${{ github.event.issue.body }}
+        run: |
+          set -euo pipefail
+          eval "$(/usr/bin/python3 - <<'PY'
+          import os, re, shlex
+          body = os.environ.get("ISSUE_BODY", "")
+          mt = re.search(r"(?im)^target:\s*(supervisor-[0-9]+)\s*$", body)
+          mp = re.search(r"(?im)^part:\s*(state|planning|tests)\s*$", body)
+          if not mt or not mp:
+              raise SystemExit("INVALID_STATE_PLAN_INSPECT_REQUEST")
+          print("TARGET=" + shlex.quote(mt.group(1)))
+          print("PART=" + shlex.quote(mp.group(1)))
+          PY
+          )"
+          WT="$HOME/.cursor/worktrees/crypto-signal/$TARGET"
+          test -d "$WT"
+          case "$PART" in
+            state)
+              sed -n '1,760p' "$WT/src/crypto_signal/paper/state.py"
+              ;;
+            planning)
+              sed -n '1,860p' "$WT/src/crypto_signal/paper/planning.py"
+              ;;
+            tests)
+              echo "=== STATE TESTS ==="
+              sed -n '1,860p' "$WT/tests/test_paper_state.py"
+              echo "=== PLANNING TESTS ==="
+              sed -n '1,980p' "$WT/tests/test_paper_planning.py"
+              ;;
+          esac
+
+      - name: STATE PLAN REVIEW
+        if: steps.parse.outputs.command == 'stateplanreview'
+        shell: bash
+        env:
+          ISSUE_BODY: ${{ github.event.issue.body }}
+        run: |
+          set -euo pipefail
+          TARGET="$(/usr/bin/python3 - <<'PY'
+          import os, re
+          body = os.environ.get("ISSUE_BODY", "")
+          m = re.search(r"(?im)^target:\s*(supervisor-[0-9]+)\s*$", body)
+          if not m:
+              raise SystemExit("INVALID_STATE_PLAN_REVIEW_TARGET")
+          print(m.group(1))
+          PY
+          )"
+          WT="$HOME/.cursor/worktrees/crypto-signal/$TARGET"
+          test -d "$WT"
+          EXPECTED="$(printf '?? src/crypto_signal/paper/planning.py\n?? src/crypto_signal/paper/state.py\n?? tests/test_paper_planning.py\n?? tests/test_paper_state.py\n' | LC_ALL=C sort)"
+          ACTUAL="$(git -C "$WT" status --porcelain | LC_ALL=C sort)"
+          echo "=== EXACT SCOPE ==="
+          printf '%s\n' "$ACTUAL"
+          test "$ACTUAL" = "$EXPECTED"
+          for path in             src/crypto_signal/paper/state.py             src/crypto_signal/paper/planning.py             tests/test_paper_state.py             tests/test_paper_planning.py; do
+            test -f "$WT/$path"
+            test ! -L "$WT/$path"
+          done
+          echo "=== FORBIDDEN SURFACE GREP ==="
+          if grep -REni 'requests|httpx|urllib|websocket|api[_-]?key|api[_-]?secret|credential|launchctl|subprocess|os\.system|place[_ -]?order|submit[_ -]?order|cancel[_ -]?order|leverage|borrow|short|martingale|futures|derivative'               "$WT/src/crypto_signal/paper/state.py"               "$WT/src/crypto_signal/paper/planning.py"               "$WT/tests/test_paper_state.py"               "$WT/tests/test_paper_planning.py"; then
+            echo "REVIEW_NOTE=matched_terms_above"
+          else
+            echo "REVIEW_NOTE=no_forbidden_terms"
+          fi
+          echo "=== FOCUSED TEST ==="
+          PYTHONPATH="$WT/src" /Users/crypto-signal-agent/Crypto-Signal/.venv/bin/python -m pytest -q             "$WT/tests/test_paper_state.py" "$WT/tests/test_paper_planning.py"
+          echo "=== RUFF ==="
+          /Users/crypto-signal-agent/Crypto-Signal/.venv/bin/python -m ruff check             "$WT/src/crypto_signal/paper/state.py" "$WT/src/crypto_signal/paper/planning.py"             "$WT/tests/test_paper_state.py" "$WT/tests/test_paper_planning.py"
+          echo "=== MYPY ==="
+          PYTHONPATH="$WT/src" /Users/crypto-signal-agent/Crypto-Signal/.venv/bin/python -m mypy             "$WT/src/crypto_signal/paper/state.py" "$WT/src/crypto_signal/paper/planning.py"
+          echo "STATE_PLAN_REVIEW_PASS=YES"
 
       - name: CURSOR REVIEW
         if: steps.parse.outputs.command == 'cursorreview'
