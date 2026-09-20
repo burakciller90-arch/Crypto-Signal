@@ -47,6 +47,10 @@ const LABELS = {
   price_action: "Price Action",
   harmonic: "Harmonic",
   elliott: "Elliott",
+  evidence: "Kanıt",
+  entry: "Giriş",
+  target: "Hedef",
+  invalidation: "Geçersizleşme",
 };
 
 function fmtTime(ms) {
@@ -692,8 +696,10 @@ function renderDecisionExplanation(detail) {
           <div class="truth-note">${esc(supportText)}</div>
         </div>
         <div>
-          <div class="value-label">Ne eksik?</div>
-          <div class="truth-note">${esc(missingParts.length ? missingParts.join(" · ") : "Belirgin eksik destek bayrağı yok.")}</div>
+          <div class="value-label">Neden işlem yapmamalıyız?</div>
+          <div class="truth-note">${esc(missingParts.length
+            ? missingParts.join(" · ")
+            : "Belirgin karşı kanıt bayrağı yok; yine de metodoloji uyumu olasılık değildir ve bu tek başına işlem zorunluluğu yaratmaz.")}</div>
         </div>
         <div>
           <div class="value-label">Ne bozabilir?</div>
