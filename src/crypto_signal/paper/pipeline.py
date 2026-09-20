@@ -61,18 +61,19 @@ class PaperTradePipelineResult:
             != self.execution_snapshot_identity
         ):
             raise ValueError("bundle execution snapshot identity mismatch")
-        if self.bundle.decision.record_identity not in self.commit.record_identities:
-            raise ValueError("commit result does not contain bundle decision")
-        if (
-            self.bundle.fill is not None
-            and self.bundle.fill.record_identity not in self.commit.record_identities
-        ):
-            raise ValueError("commit result does not contain bundle fill")
-        if (
-            self.bundle.mutation is not None
-            and self.bundle.mutation.record_identity not in self.commit.record_identities
-        ):
-            raise ValueError("commit result does not contain bundle mutation")
+        if self.bundle.fill is None or self.bundle.mutation is None:
+            raise ValueError("trade pipeline result requires fill and mutation")
+        expected_record_identities = (
+            self.bundle.decision.record_identity,
+            self.bundle.fill.record_identity,
+            self.bundle.mutation.record_identity,
+        )
+        if self.commit.record_identities != expected_record_identities:
+            raise ValueError(
+                "commit result must exactly match decision/fill/mutation order"
+            )
+        if self.commit.state_after.real_capital != REAL_CAPITAL:
+            raise ValueError("committed state must remain REAL_CAPITAL=0")
 
 
 def commit_planned_pretrade(

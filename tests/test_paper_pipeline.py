@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import inspect
+import sqlite3
 from decimal import Decimal
 
 import pytest
@@ -185,9 +186,13 @@ def test_planned_buy_orchestrates_and_commits_atomically(tmp_path) -> None:
     )
 
     assert result.commit.disposition is PaperLedgerWriteDisposition.INSERTED
-    assert len(result.commit.record_identities) == 3
     assert result.bundle.fill is not None
     assert result.bundle.mutation is not None
+    assert result.commit.record_identities == (
+        result.bundle.decision.record_identity,
+        result.bundle.fill.record_identity,
+        result.bundle.mutation.record_identity,
+    )
     assert result.bundle.fill.venue_reference == snapshot.execution_reference
     assert result.commit.state_after.cash_usdt < state.cash_usdt
     assert result.commit.state_after.positions[0].symbol is PaperSymbol.BTCUSDT
@@ -290,6 +295,33 @@ def test_rejected_pretrade_never_reaches_ledger(tmp_path) -> None:
         )
 
     assert ledger.replay() == before
+
+
+def test_mid_bundle_sql_failure_rolls_back_entire_pipeline_write(tmp_path) -> None:
+    ledger, state, _, snapshot, pretrade = _prepared_buy(tmp_path)
+    ledger.initialize()
+    with sqlite3.connect(ledger.path) as connection:
+        connection.execute(
+            """
+            CREATE TRIGGER fail_pipeline_fill_insert
+            BEFORE INSERT ON paper_simulated_fills
+            BEGIN
+                SELECT RAISE(ABORT, 'pipeline injected fill failure');
+            END
+            """
+        )
+    before = ledger.replay()
+
+    with pytest.raises(sqlite3.IntegrityError, match="pipeline injected fill failure"):
+        commit_planned_pretrade(
+            ledger=ledger,
+            state=state,
+            pretrade=pretrade,
+            execution_snapshot=snapshot,
+        )
+
+    assert ledger.replay() == before
+    assert len(before) == 1
 
 
 def test_pipeline_surface_has_no_network_order_or_runtime_activation_authority() -> None:
