@@ -1989,3 +1989,21 @@ The first scanner gate exposed one test-fixture construction mistake rather than
 - REAL_CAPITAL=0.
 
 Next frontier is a dry-run composition of scanner -> autonomy -> execution input -> authoritative venue rules -> sizing -> pretrade. It must remain read-only and create no processed receipt or paper mutation.
+
+
+## 2026-09-20 — read-only activation dry-run composer accepted
+
+The accepted policies can now be composed end-to-end through PRETRADE_READY without writing any paper-trade state.
+
+Dry-run reconstruction bypasses mutating ledger/store initialization and opens paper/candle SQLite inputs query-only. One scanner event flows through autonomy, frozen execution input, as-of cached venue rules, sizing and authoritative pretrade. HOLD/WAIT/REJECT/READY states are explicit and future venue metadata cannot be backdated.
+
+The initial full gate found one malformed WATCH fixture whose agreement counts violated the SignalAgreementSummary model before the dry-run ran. The fixture was corrected only.
+
+Final head 3b0c0d78475554a8a9f96bac588fbc4ff5b835a7 passed:
+- 435 tests;
+- Ruff;
+- mypy across 95 source files;
+- JavaScript;
+- REAL_CAPITAL=0.
+
+PAPER/STABLE still has no trading activation. Next is an immutable watermark-initialization operation that captures the current signal-ledger baseline but grants no trade execution authority.

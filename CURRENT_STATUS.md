@@ -1271,3 +1271,48 @@ Current frontier:
 - compose scanner candidate -> accepted autonomy policy -> frozen execution input -> latest cached authoritative venue rules -> sizing -> authoritative pretrade as a strictly read-only/dry-run activation candidate;
 - dry-run must not persist processed events or mutate the paper fund;
 - prove real production ledger behavior before considering any virtual-trade activation.
+
+
+## 2026-09-20 — Stage 6C read-only activation dry-run composer accepted
+
+Accepted composition:
+- paper_activation_dry_run.v1 takes one unprocessed scanner event and composes only accepted policy layers;
+- paper state, activation identity, processed-event set and trade-decision timestamps are reconstructed from the paper SQLite database with mode=ro + query_only;
+- held-position marks are read from finalized Binance spot 15m candles with mode=ro + query_only;
+- autonomy policy is evaluated first;
+- HOLD_CASH stops the chain immediately;
+- BUY/EXIT candidates use the accepted first-closed-post-signal execution input;
+- venue rules are selected read-only as the latest immutable cached snapshot observed no later than the execution-input observation;
+- sizing and authoritative venue-bound pretrade are evaluated without persistence;
+- future venue snapshots are not backdated.
+
+Dry-run statuses:
+- HOLD_CASH;
+- WAITING_EXECUTION_INPUT;
+- WAITING_VENUE_RULES;
+- SIZING_REJECTED;
+- PRETRADE_REJECTED;
+- PRETRADE_READY.
+
+Authority boundary:
+- PRETRADE_READY is planning evidence only;
+- no processed-event receipt is written;
+- no DecisionIntent/fill/mutation/NAV is committed;
+- no activation state is created/changed;
+- no venue refresh or trade/account endpoint is called;
+- PAPER/STABLE remains trade_policy=NOT_ACTIVATED;
+- REAL_CAPITAL=0.
+
+Acceptance evidence:
+- implementation: 1c19f59fe236de81731f965a5cf694c7459d1299;
+- first full gate exposed one invalid WATCH test fixture before dry-run evaluation;
+- fixture-only correction: 3b0c0d78475554a8a9f96bac588fbc4ff5b835a7;
+- final regression: 435 tests PASS;
+- Ruff PASS;
+- mypy PASS across 95 source files;
+- JavaScript syntax PASS.
+
+Current frontier:
+- initialize the immutable PAPER/STABLE activation watermark from the current production signal-ledger baseline while keeping the runtime trade policy disabled;
+- prove activation initialization is idempotent and leaves the 100 USDT fund with zero trades;
+- then deploy the dry-run code to stable and inspect only post-watermark production candidate events.
