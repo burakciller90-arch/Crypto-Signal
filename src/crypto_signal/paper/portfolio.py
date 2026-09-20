@@ -44,6 +44,7 @@ __all__ = [
     "PaperPortfolioPositionView",
     "PaperPortfolioSnapshot",
     "project_paper_portfolio",
+    "read_paper_entries_read_only",
     "read_paper_portfolio_snapshot",
 ]
 
@@ -272,7 +273,7 @@ def read_paper_portfolio_snapshot(
     """Read immutable paper state and real closed-candle marks without writes."""
     if observed_at_ms < 0:
         raise ValueError("observed_at_ms must be non-negative")
-    entries = _read_paper_entries_read_only(paper_ledger_path)
+    entries = read_paper_entries_read_only(paper_ledger_path)
     state = reconstruct_paper_fund_state_from_entries(entries)
     marks = _read_latest_marks_read_only(
         candle_cache_path=candle_cache_path,
@@ -397,7 +398,7 @@ def project_paper_portfolio(
     )
 
 
-def _read_paper_entries_read_only(path: Path) -> tuple[PaperLedgerEntry, ...]:
+def read_paper_entries_read_only(path: Path) -> tuple[PaperLedgerEntry, ...]:
     if not path.exists():
         raise PaperPortfolioError("paper ledger does not exist")
     uri = f"file:{path.resolve()}?mode=ro"
