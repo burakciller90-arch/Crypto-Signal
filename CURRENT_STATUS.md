@@ -1397,3 +1397,38 @@ Current frontier:
 - the clock may repeatedly scan/evaluate post-watermark events and write only stdout/stderr logs, never paper DB state;
 - prove service/restart behavior while trade_policy remains NOT_ACTIVATED;
 - wait for mechanically observed post-cutoff candidate evidence before considering any virtual-trade write activation.
+
+
+## 2026-09-20 — PAPER/STABLE read-only dry-run observation clock accepted
+
+Accepted runtime behavior:
+- stable worktree HEAD=e85af7e3e9a419e72948f4a9abea542aab0c2f75;
+- separate launchd label com.cryptosignal.paperdryrun;
+- one-shot read-only dry-run interval=120 seconds;
+- service last exit code=0;
+- deploy and explicit DRYRUNCLK workflow both passed;
+- paper DB remains unchanged on dry-run execution;
+- paper fund remains 100.00 USDT, positions=0, replay records=1;
+- activation singleton remains 1;
+- processed-event count remains 0;
+- decision/fill/mutation/NAV counts remain zero;
+- trade_policy=NOT_ACTIVATED;
+- REAL_CAPITAL=0.
+
+Observed production evidence:
+- activation cutoff remains 1789928997447;
+- immutable baseline freeze count=372;
+- later signal ingestion reached at least 384 total freezes;
+- the dry-run scanner still found eligible_freezes=0, incomplete_pairs=0, candidates=0 for its strict post-cutoff 4h Binance+Bybit event rule;
+- therefore no PRETRADE_READY production evidence exists yet and no virtual-trade write authority is enabled.
+
+Code gate:
+- 441 tests PASS;
+- Ruff PASS;
+- mypy PASS across 96 source files;
+- JavaScript PASS.
+
+Current frontier:
+- keep the dry-run clock strictly read-only while new production evidence arrives;
+- harden candidate-observation visibility/log retention so a future post-cutoff event is mechanically obvious without mutating the paper ledger;
+- do not enable autonomous virtual-trade writes until a real post-cutoff event has traversed the accepted dry-run path and its outcome has been inspected.

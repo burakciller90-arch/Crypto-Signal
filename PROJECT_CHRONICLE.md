@@ -2033,3 +2033,14 @@ The first [PAPER] DRYRUN used activation a9d5ba60fac148099ba69f75d61923e0a26252f
 This is a valid production result, not a blocker: the watermark is intentionally fresh, so historical 4h decisions are excluded. PAPER/STABLE trade policy remains NOT_ACTIVATED and REAL_CAPITAL=0.
 
 Next is a separate launchd read-only dry-run observation clock so new post-cutoff 4h provider pairs are evaluated automatically as evidence arrives, without creating paper trades.
+
+
+## 2026-09-20 — read-only dry-run observation clock accepted
+
+A separate PAPER/STABLE launchd clock now executes the accepted activation dry-run every 120 seconds without paper-ledger mutation.
+
+Head e85af7e3e9a419e72948f4a9abea542aab0c2f75 passed 441 tests, Ruff, mypy across 96 source files and JavaScript, then deployed successfully. The dedicated dry-run clock reported last exit code 0 and the deployment/no-trade invariant passed.
+
+Fresh state inspection showed signal ingestion had continued beyond the activation baseline (at least 384 total freezes versus baseline 372), while the strict post-cutoff 4h Binance+Bybit scanner still emitted zero eligible events and zero candidates. The paper DB stayed exactly at one fund-creation replay record, 100 USDT cash, zero positions, zero processed events and zero trade/NAV records.
+
+This is an observation milestone only. trade_policy remains NOT_ACTIVATED and REAL_CAPITAL=0. The next safe work is candidate-observation visibility/retention while waiting for a real post-cutoff dry-run event; virtual-trade writes remain blocked.
