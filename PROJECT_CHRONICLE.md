@@ -1836,3 +1836,25 @@ Final acceptance:
 - REAL_CAPITAL=0.
 
 Next gate is pure conservative position sizing. No runtime trade activation occurred.
+
+
+## 2026-09-20 — paper_position_sizing_policy.v1 accepted
+
+Supervisor accepted the pure position-sizing gate after whole-repository verification.
+
+BUY sizing preserves exact autonomy/execution/signal lineage, requires the frozen execution reference to sit inside both provider entry zones, and uses the lowest provider invalidation as the conservative long invalidation. This maximizes stop distance and minimizes risk-based raw quantity. The output remains explicitly pre-venue and pre-cost.
+
+EXIT sizing returns the complete existing long quantity only; missing holdings reject safely. No shorting or automatic REDUCE was added.
+
+The first full gate passed all 378 pytest cases. Ruff found only import/style findings. A style-only hardening commit changed no sizing semantics.
+
+Final acceptance:
+- implementation 5e1e2cd2b8ee88ed449ceeafd696bff62274dc90;
+- style-only head 67746b584006dd0419e4b1a460be1ed2f3637572;
+- 378 tests PASS;
+- Ruff PASS;
+- mypy PASS across 89 source files;
+- JavaScript PASS;
+- REAL_CAPITAL=0.
+
+Next gate is the venue-rule/cost/planner bridge. PAPER/STABLE remains observation-only; no virtual trade activation has occurred.

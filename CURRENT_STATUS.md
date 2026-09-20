@@ -948,3 +948,50 @@ Current frontier:
 - then existing paper_risk_policy.v1 planner must independently enforce cash reserve, concentration and gross exposure;
 - then frozen execution cost/rule snapshot + simulator + atomic bundle commit integration;
 - PAPER/STABLE activation remains blocked until those gates and persistent activation watermark state are accepted.
+
+
+## 2026-09-20 — Stage 6C conservative position sizing v1 accepted
+
+Policy version:
+- paper_position_sizing_policy.v1
+
+Accepted BUY sizing:
+- consumes only an accepted BUY autonomy candidate, its exact frozen execution input, current reconstructed paper state and the exact frozen SignalDecision lineage;
+- requires both source signals to remain ACTIVE bullish decisions;
+- frozen Binance execution reference must remain inside every provider entry zone;
+- every provider invalidation must remain below the frozen reference;
+- the lowest provider invalidation is selected as the conservative long invalidation because it creates the widest stop distance and therefore the smallest risk-based quantity;
+- risk per unit = frozen reference - conservative invalidation;
+- raw quantity = max-position-risk budget / risk-per-unit using explicit Decimal precision;
+- the sizing result is pre-venue and pre-cost and explicitly requires venue-rule and cost adjustment;
+- deterministic sizing identity binds policy, action, signal lineage, frozen execution input, reference, invalidation, risk budget and raw quantity.
+
+Accepted EXIT sizing:
+- bearish EXIT candidate sizes exactly the existing long position;
+- no existing long -> REJECTED;
+- no short or automatic REDUCE authority is introduced.
+
+Important independent boundaries:
+- sizing does not mutate the paper ledger;
+- sizing performs no network/exchange/order/credential action;
+- sizing does not claim venue quantity-step validity;
+- sizing does not include fee/spread/slippage costs;
+- paper_risk_policy.v1 still independently owns cash reserve, concentration and gross-exposure gates;
+- PAPER/STABLE remains observation-only / trade_policy=NOT_ACTIVATED;
+- REAL_CAPITAL=0.
+
+Acceptance evidence:
+- implementation commit: 5e1e2cd2b8ee88ed449ceeafd696bff62274dc90;
+- first whole-repository gate: all 378 pytest cases PASS; Ruff found only 4 style findings;
+- style-only hardening head: 67746b584006dd0419e4b1a460be1ed2f3637572;
+- final regression: 378 tests PASS;
+- Ruff PASS;
+- mypy PASS across 89 source files;
+- JavaScript syntax PASS.
+
+Current frontier:
+- freeze venue quantity/minimum rules for the Binance paper reference;
+- round sizing quantity down without ever increasing risk;
+- account explicitly for fee/spread/slippage before planner approval;
+- bridge the resulting bounded quantity through paper_risk_policy.v1, execution simulator and atomic bundle commit;
+- persist runtime activation/watermark/processed-event truth before PAPER/STABLE may create any virtual trade.
