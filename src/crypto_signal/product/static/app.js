@@ -71,6 +71,10 @@ const LABELS = {
   post_activation_pair: "Yeni 4 saatlik çift hazır",
   not_yet_measured: "Henüz ölçülmedi",
   available: "Ölçülebilir",
+  missing_marks: "Değerleme kanıtı eksik",
+  win: "Kazanç",
+  loss: "Kayıp",
+  breakeven: "Başa Baş",
 };
 
 function fmtTime(ms) {
@@ -272,6 +276,13 @@ function fmtMoney(value) {
   return `${number.toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 4 })} USDT`;
 }
 
+function fmtFractionPercent(value, maximumFractionDigits = 2) {
+  if (value === null || value === undefined) return "—";
+  const number = Number(value);
+  if (!Number.isFinite(number)) return "—";
+  return `%${(number * 100).toLocaleString("tr-TR", { maximumFractionDigits })}`;
+}
+
 function paperCadenceExplanation(item) {
   const messages = {
     no_4h_evidence: "Henüz iki sağlayıcıdan 4 saatlik kapanış kanıtı yok.",
@@ -386,7 +397,121 @@ function renderPaperTradePlan(item) {
     </details>`;
 }
 
+function renderPaperPortfolioPerformanceLab(data) {
+  const exposureRoot = $("#paperPortfolioExposure");
+  const performanceRoot = $("#paperPerformanceLab");
+  const exposureTag = $("#paperExposureTag");
+  const performanceTag = $("#paperPerformanceTag");
+  if (!exposureRoot || !performanceRoot || !exposureTag || !performanceTag) return;
+
+  if (data?.status !== "ready" || !data.snapshot) {
+    exposureTag.textContent = "KANIT YOK";
+    performanceTag.textContent = "KANIT YOK";
+    exposureRoot.classList.remove("loading-block");
+    performanceRoot.classList.remove("loading-block");
+    exposureRoot.innerHTML = '<div class="paper-empty compact"><strong>Portföy maruziyeti kullanılamıyor.</strong><span>Eksik veriden risk oranı türetilmez.</span></div>';
+    performanceRoot.innerHTML = '<div class="paper-empty compact"><strong>Paper performansı kullanılamıyor.</strong><span>Eksik veriden başarı metriği türetilmez.</span></div>';
+    return;
+  }
+
+  const snapshot = data.snapshot;
+  const portfolio = snapshot.portfolio ?? {};
+  const exposure = snapshot.portfolio_exposure ?? {};
+  const performance = snapshot.performance ?? {};
+  const positions = exposure.positions ?? [];
+
+  exposureRoot.classList.remove("loading-block");
+  if (exposure.availability !== "available") {
+    exposureTag.textContent = "MARK KANITI EKSİK";
+    exposureRoot.innerHTML = `
+      <div class="paper-empty compact">
+        <strong>Maruziyet hesabı bilinçli olarak kapalı.</strong>
+        <span>Açık pozisyonların tümü güvenilir, kapanmış piyasa mumu ile değerlenmeden NAV veya oran uydurulmaz.</span>
+      </div>`;
+  } else {
+    exposureTag.textContent = positions.length ? `${positions.length} POZİSYON` : "TAMAMI NAKİT";
+    const cashWidth = Math.max(0, Math.min(100, Number(exposure.cash_fraction ?? 0) * 100));
+    const investedWidth = Math.max(0, Math.min(100, Number(exposure.invested_fraction ?? 0) * 100));
+    exposureRoot.innerHTML = `
+      <div class="paper-lab-metrics">
+        <div><span>Nakit</span><strong>${esc(fmtMoney(exposure.cash_usdt))}</strong><small>${esc(fmtFractionPercent(exposure.cash_fraction))} NAV</small></div>
+        <div><span>Piyasa maruziyeti</span><strong>${esc(fmtMoney(exposure.marked_positions_value_usdt))}</strong><small>${esc(fmtFractionPercent(exposure.invested_fraction))} NAV</small></div>
+        <div><span>Sanal NAV</span><strong>${esc(fmtMoney(exposure.nav_usdt))}</strong><small>Başlangıç ${esc(fmtMoney(portfolio.initial_cash_usdt))}</small></div>
+        <div><span>Toplam PnL</span><strong>${esc(fmtMoney(portfolio.pnl_usdt))}</strong><small>Getiri ${esc(fmtFractionPercent(portfolio.total_return_fraction))}</small></div>
+      </div>
+      <div class="paper-allocation" aria-label="Sanal portföy dağılımı">
+        <div class="paper-allocation-cash" style="width:${cashWidth}%"></div>
+        <div class="paper-allocation-invested" style="width:${investedWidth}%"></div>
+      </div>
+      <div class="paper-allocation-legend">
+        <span>Nakit · ${esc(fmtFractionPercent(exposure.cash_fraction))}</span>
+        <span>Pozisyonlar · ${esc(fmtFractionPercent(exposure.invested_fraction))}</span>
+      </div>
+      <div class="paper-exposure-list">
+        ${positions.length ? positions.map((item) => `
+          <div class="paper-exposure-row">
+            <div><strong>${esc(item.symbol)}</strong><span>${esc(item.quantity)} adet · mark ${esc(item.mark_price ?? "—")} USDT</span></div>
+            <div><strong>${esc(fmtMoney(item.marked_value_usdt))}</strong><span>${esc(fmtFractionPercent(item.nav_fraction))} NAV</span></div>
+            <div class="paper-evidence-mini">Mark kapanışı · ${esc(fmtTime(item.mark_candle_close_time_ms))}</div>
+          </div>`).join("") : `
+          <div class="paper-empty compact">
+            <strong>Şu anda piyasa maruziyeti yok.</strong>
+            <span>Sanal fon nakitte. Bu tek başına başarı ya da başarısızlık değildir; açık pozisyon olmadığı anlamına gelir.</span>
+          </div>`}
+      </div>`;
+  }
+
+  performanceRoot.classList.remove("loading-block");
+  if (performance.status === "not_yet_measured") {
+    performanceTag.textContent = "HENÜZ ÖLÇÜLMEDİ";
+    performanceRoot.innerHTML = `
+      <div class="paper-performance-empty">
+        <div class="paper-performance-zero">Ölçüm bekleniyor</div>
+        <strong>Henüz kapanmış sanal işlem yok.</strong>
+        <p>Bu nedenle win rate, ortalama işlem getirisi ve profit factor için <em>%0</em> yazmıyoruz. Örneklem oluşmadı.</p>
+      </div>
+      <div class="paper-lab-metrics paper-lab-metrics-compact">
+        <div><span>Kapanmış işlem</span><strong>${esc(performance.closed_trade_count ?? 0)}</strong><small>ölçüme giren round trip</small></div>
+        <div><span>Açık işlem</span><strong>${esc(performance.open_trade_count ?? 0)}</strong><small>henüz skorlanmaz</small></div>
+        <div><span>Win rate</span><strong>—</strong><small>örneklem yok</small></div>
+        <div><span>Profit factor</span><strong>—</strong><small>örneklem yok</small></div>
+      </div>`;
+    return;
+  }
+
+  const closedTrades = performance.closed_trades ?? [];
+  performanceTag.textContent = `${performance.closed_trade_count ?? closedTrades.length} KAPANMIŞ`;
+  performanceRoot.innerHTML = `
+    <div class="paper-lab-metrics">
+      <div><span>Win rate</span><strong>${esc(fmtFractionPercent(performance.win_rate_fraction))}</strong><small>${esc(performance.win_count ?? 0)} kazanç · ${esc(performance.loss_count ?? 0)} kayıp · ${esc(performance.breakeven_count ?? 0)} başa baş</small></div>
+      <div><span>Net kapanmış PnL</span><strong>${esc(fmtMoney(performance.total_closed_trade_net_pnl_usdt))}</strong><small>yalnızca kapanmış işlemler</small></div>
+      <div><span>Ort. işlem getirisi</span><strong>${esc(fmtFractionPercent(performance.average_closed_trade_return_fraction))}</strong><small>net round-trip kanıtı</small></div>
+      <div><span>Profit factor</span><strong>${esc(performance.profit_factor ?? "—")}</strong><small>tanımlı olduğu yerde</small></div>
+      <div><span>En iyi işlem</span><strong>${esc(fmtMoney(performance.best_trade_pnl_usdt))}</strong><small>net PnL</small></div>
+      <div><span>En kötü işlem</span><strong>${esc(fmtMoney(performance.worst_trade_pnl_usdt))}</strong><small>net PnL</small></div>
+      <div><span>Ort. net PnL</span><strong>${esc(fmtMoney(performance.average_closed_trade_net_pnl_usdt))}</strong><small>işlem başına</small></div>
+      <div><span>Execution maliyeti</span><strong>${esc(fmtMoney(performance.total_explicit_execution_cost_usdt))}</strong><small>fee + spread + slippage kanıtı</small></div>
+    </div>
+    <div class="paper-closed-trade-list">
+      ${closedTrades.map((trade) => `
+        <details class="paper-trade-row">
+          <summary>
+            <span><strong>${esc(trade.symbol)}</strong> · ${esc(human(trade.outcome))}</span>
+            <span>${esc(fmtMoney(trade.net_pnl_usdt))} · ${esc(fmtFractionPercent(trade.return_fraction))}</span>
+          </summary>
+          <div class="paper-trade-detail">
+            <span>Giriş: ${esc(trade.entry_fill_price)} USDT · ${esc(fmtTime(trade.entered_at_ms))}</span>
+            <span>Çıkış: ${esc(trade.exit_fill_price)} USDT · ${esc(fmtTime(trade.exited_at_ms))}</span>
+            <span>Miktar: ${esc(trade.quantity)} · explicit maliyet: ${esc(fmtMoney(trade.explicit_execution_cost_usdt))}</span>
+          </div>
+        </details>`).join("") || '<div class="paper-empty compact">Kapanmış işlem detayı yok.</div>'}
+    </div>
+    <div class="truth-note">Bu laboratuvar yalnızca değiştirilemez sanal fill + muhasebe kanıtını ölçer; sinyal güveni veya geçmiş frekans burada işlem başarısı sayılmaz.</div>`;
+}
+
+
 function renderPaperMissionControl(data) {
+  renderPaperPortfolioPerformanceLab(data);
   const root = $("#paperMissionControl");
   const tag = $("#paperPolicyTag");
   if (!root || !tag) return;
