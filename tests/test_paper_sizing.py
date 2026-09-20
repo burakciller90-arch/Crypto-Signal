@@ -144,22 +144,22 @@ def _execution_input(
     *,
     reference_price: Decimal = Decimal(100),
 ) -> FrozenPaperExecutionInput:
-    kwargs = dict(
-        policy_version=PAPER_EXECUTION_INPUT_POLICY_VERSION,
-        candidate_action=action,
-        symbol=PaperSymbol.BTCUSDT,
-        source_freeze_identities=("a" * 64, "b" * 64),
-        signal_as_of_ms=1_000,
-        source_exchange=Exchange.BINANCE,
-        source_market_type=MarketType.SPOT,
-        source_timeframe="15m",
-        source_candle_open_time_ms=1_100,
-        source_candle_close_time_ms=2_000,
-        source_candle_ingested_at_ms=2_001,
-        source_adapter_version="adapter.test.v1",
-        reference_price=reference_price,
-        price_field="open",
-    )
+    kwargs = {
+        "policy_version": PAPER_EXECUTION_INPUT_POLICY_VERSION,
+        "candidate_action": action,
+        "symbol": PaperSymbol.BTCUSDT,
+        "source_freeze_identities": ("a" * 64, "b" * 64),
+        "signal_as_of_ms": 1_000,
+        "source_exchange": Exchange.BINANCE,
+        "source_market_type": MarketType.SPOT,
+        "source_timeframe": "15m",
+        "source_candle_open_time_ms": 1_100,
+        "source_candle_close_time_ms": 2_000,
+        "source_candle_ingested_at_ms": 2_001,
+        "source_adapter_version": "adapter.test.v1",
+        "reference_price": reference_price,
+        "price_field": "open",
+    }
     identity = compute_execution_input_identity(**kwargs)
     return FrozenPaperExecutionInput(
         input_identity=identity,
@@ -289,22 +289,22 @@ def test_exit_without_position_is_rejected(tmp_path) -> None:
 
 def test_execution_input_lineage_mismatch_fails_closed(tmp_path) -> None:
     source = _execution_input(PaperAction.BUY)
-    kwargs = dict(
-        policy_version=source.policy_version,
-        candidate_action=source.candidate_action,
-        symbol=source.symbol,
-        source_freeze_identities=("c" * 64, "d" * 64),
-        signal_as_of_ms=source.signal_as_of_ms,
-        source_exchange=source.source_exchange,
-        source_market_type=source.source_market_type,
-        source_timeframe=source.source_timeframe,
-        source_candle_open_time_ms=source.source_candle_open_time_ms,
-        source_candle_close_time_ms=source.source_candle_close_time_ms,
-        source_candle_ingested_at_ms=source.source_candle_ingested_at_ms,
-        source_adapter_version=source.source_adapter_version,
-        reference_price=source.reference_price,
-        price_field=source.price_field,
-    )
+    kwargs = {
+        "policy_version": source.policy_version,
+        "candidate_action": source.candidate_action,
+        "symbol": source.symbol,
+        "source_freeze_identities": ("c" * 64, "d" * 64),
+        "signal_as_of_ms": source.signal_as_of_ms,
+        "source_exchange": source.source_exchange,
+        "source_market_type": source.source_market_type,
+        "source_timeframe": source.source_timeframe,
+        "source_candle_open_time_ms": source.source_candle_open_time_ms,
+        "source_candle_close_time_ms": source.source_candle_close_time_ms,
+        "source_candle_ingested_at_ms": source.source_candle_ingested_at_ms,
+        "source_adapter_version": source.source_adapter_version,
+        "reference_price": source.reference_price,
+        "price_field": source.price_field,
+    }
     bad = FrozenPaperExecutionInput(
         input_identity=compute_execution_input_identity(**kwargs),
         observed_at_ms=source.observed_at_ms,

@@ -58,14 +58,6 @@ from crypto_signal.paper.models import (
     build_simulated_fill,
     initial_account_state,
 )
-from crypto_signal.paper.sizing import (
-    PAPER_POSITION_SIZING_POLICY_VERSION,
-    PaperPositionSizingDecision,
-    PaperPositionSizingError,
-    PaperPositionSizingReason,
-    PaperPositionSizingStatus,
-    size_paper_candidate,
-)
 from crypto_signal.paper.runtime import (
     PaperFundBootstrapStatus,
     PaperRuntimeError,
@@ -74,6 +66,14 @@ from crypto_signal.paper.runtime import (
     ensure_persistent_paper_fund,
     observe_signal_ledger,
     run_paper_runtime_tick,
+)
+from crypto_signal.paper.sizing import (
+    PAPER_POSITION_SIZING_POLICY_VERSION,
+    PaperPositionSizingDecision,
+    PaperPositionSizingError,
+    PaperPositionSizingReason,
+    PaperPositionSizingStatus,
+    size_paper_candidate,
 )
 
 __all__ = [

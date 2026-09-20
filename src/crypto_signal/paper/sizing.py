@@ -90,9 +90,11 @@ class PaperPositionSizingDecision:
                 raise ValueError(f"{label} must be finite and non-negative")
         if self.reference_price <= Decimal(0):
             raise ValueError("reference_price must be positive")
-        if self.conservative_invalidation_price is not None:
-            if self.conservative_invalidation_price <= Decimal(0):
-                raise ValueError("invalidation price must be positive")
+        if (
+            self.conservative_invalidation_price is not None
+            and self.conservative_invalidation_price <= Decimal(0)
+        ):
+            raise ValueError("invalidation price must be positive")
         if self.status is PaperPositionSizingStatus.SIZED:
             if self.raw_quantity is None or self.raw_quantity <= Decimal(0):
                 raise ValueError("SIZED result requires positive raw_quantity")
