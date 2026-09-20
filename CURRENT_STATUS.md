@@ -524,3 +524,52 @@ The earlier one-shot contents-write integration workflow was removed immediately
 Current frontier:
 - continue Stage 6B with evidence-linked/contextual teaching inside Signal Detail,
 - in parallel begin Stage 6C immutable 100 USDT autonomous paper-fund foundation.
+
+## 2026-09-20 — Stage 6C Slice 1 accepted: immutable 100 USDT paper-fund foundation
+
+Stage 6C Slice 1 is accepted in canonical main as the accounting/domain foundation for the future autonomous virtual portfolio.
+
+Accepted package:
+- src/crypto_signal/paper/__init__.py
+- src/crypto_signal/paper/models.py
+- src/crypto_signal/paper/ledger.py
+- tests/test_paper_fund.py
+
+Accepted invariants:
+- REAL_CAPITAL=0.
+- Initial cash is exactly Decimal("100.00") USDT.
+- Initial positions are empty.
+- Initial permitted symbols are BTCUSDT, ETHUSDT, SOLUSDT.
+- Permitted virtual actions are HOLD_CASH, BUY, REDUCE, EXIT.
+- No leverage, borrowing, shorting, derivatives execution, martingale or real-order surface.
+- Money/quantity truth uses Decimal.
+- Fund creation, decision intent, simulated fill, cash/position mutation and NAV snapshots are immutable typed records.
+- Deterministic canonical SHA256 identities are used.
+- Fee, spread and slippage are explicit.
+- Partial fills are explicitly unsupported in v1 rather than silently approximated.
+- SQLite ledger is caller-path based, append-only, replayable and rejects UPDATE/DELETE via triggers.
+- Exact duplicates are idempotent; divergent payload under an existing deterministic identity fails.
+- Replay preserves append order and survives reopen/restart.
+- NAV snapshot now requires every held position to have a mark price and mathematically enforces NAV = cash + marked position value.
+- Benchmarks are reserved for CASH_100, BTC_BUY_HOLD_100 and BTC_ETH_SOL_EQUAL_WEIGHT_100.
+
+Acceptance evidence:
+- Cursor worker issue #45 completed with cursor_rc=0.
+- Supervisor rejected first acceptance because current Ruff found 9 test-style violations.
+- Supervisor also found and closed a NAV-truth gap before integration.
+- Hardened focused gate: 12 tests PASS, Ruff PASS, mypy PASS.
+- Guarded exact-scope integration commit: 09d3e68966cf7c4ff41069ae30a6aff97a1d7499.
+- One-shot contents-write integration workflow was removed immediately after use.
+- Canonical full regression after integration: 294 tests PASS, Ruff PASS, mypy PASS across 80 source files, JavaScript syntax PASS.
+- Cursor worktree supervisor-45 was removed and pruned after acceptance.
+
+Important scope boundary:
+This slice does NOT yet mean that the virtual 100 USDT account is actively making decisions or running in production. It provides the deterministic immutable accounting foundation only.
+
+Next Stage 6C frontier:
+- reconstruct current paper-fund state from ledger,
+- enforce cross-record lineage/referential integrity,
+- deterministic conservative risk policy and virtual transaction planning,
+- versioned simulated execution-cost policy,
+- connect accepted market decisions to virtual HOLD/BUY/REDUCE/EXIT intents without any real order authority,
+- only after those gates, run a persistent live paper account and expose it read-only in Mission Control.
