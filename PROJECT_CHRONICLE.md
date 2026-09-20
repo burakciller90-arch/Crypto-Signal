@@ -1174,3 +1174,24 @@ accepted. External provider selection remains explicit configuration, not a V1
 core-truth blocker.
 
 Project phase advances to V1 Integrated Acceptance.
+
+## 2026-09-20 — V1 integrated gate closed LIVE/STABLE dependency-isolation gap
+
+Integrated acceptance inspection found that com.cryptosignal.liveevidenceclock
+correctly executed source from Crypto-Signal-Live but still used the mutable
+development worktree's .venv interpreter.
+
+This was treated as a real isolation defect, not waived.
+
+Fix:
+- created Crypto-Signal-Live/.venv from the LIVE/STABLE accepted uv.lock
+- updated the versioned liveevidenceclock plist to use that interpreter
+- reinstalled/rebootstrapped the LaunchAgent
+- installed plist exact-match verified
+- real one-shot launch exited 0
+- live stderr empty
+- existing cutoff returned idempotent already_frozen
+- production ledger remained 34 freezes / 34 lifecycle
+
+LIVE/STABLE source remains pinned at e53c5b29ffc9301fb36c89aa85ddc3677c4e64a1.
+Development dependency changes can no longer implicitly change the live runtime.

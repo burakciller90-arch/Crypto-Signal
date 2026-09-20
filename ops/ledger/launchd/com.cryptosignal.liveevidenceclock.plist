@@ -5,7 +5,7 @@
   <key>Label</key><string>com.cryptosignal.liveevidenceclock</string>
   <key>ProgramArguments</key>
   <array>
-    <string>/Users/crypto-signal-agent/Crypto-Signal/.venv/bin/python</string>
+    <string>/Users/crypto-signal-agent/Crypto-Signal-Live/.venv/bin/python</string>
     <string>/Users/crypto-signal-agent/Crypto-Signal-Live/ops/run_live_evidence_clock.py</string>
   </array>
   <key>WorkingDirectory</key><string>/Users/crypto-signal-agent/Crypto-Signal-Live</string>

@@ -367,6 +367,17 @@ No Durdurulmaz or Quantum Capital project state was mutated; UID502 is used only
 - external providers remain disabled by default
 - Alerts V1 is accepted end-to-end
 
+## V1 integrated runtime isolation finding closed
+- integrated gate found LIVE/STABLE source was isolated but its LaunchAgent still used development .venv
+- dedicated /Users/crypto-signal-agent/Crypto-Signal-Live/.venv was created from LIVE/STABLE accepted uv.lock
+- versioned liveevidenceclock plist now uses Crypto-Signal-Live/.venv/bin/python
+- installed plist matches versioned plist
+- real launchd one-shot exited 0 after migration
+- source ledger remained 34 freezes / 34 lifecycle and current cutoff retries stayed idempotent
+- live clock stderr remained empty
+- LIVE/STABLE source head remains e53c5b29ffc9301fb36c89aa85ddc3677c4e64a1
+- mutable development dependency changes can no longer alter LIVE/STABLE Python environment implicitly
+
 ## Canonical next frontier
 V1 Integrated Acceptance:
 1. inventory all accepted V1 gates and immutable acceptance documents
