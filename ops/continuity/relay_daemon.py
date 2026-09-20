@@ -20,6 +20,7 @@ TARGET_FILE = SHARED / "current_chat_url"
 HEARTBEAT = SHARED / "relay_heartbeat"
 PIDFILE = SHARED / "relay.pid"
 LOG = SHARED / "relay.log"
+STATUS = SHARED / "relay_status"
 RETRY_SECONDS = 2
 
 APPLESCRIPT = r"""
@@ -247,15 +248,30 @@ def main() -> int:
             return 0
 
     target_url = TARGET_FILE.read_text().splitlines()[0].strip()
-    if target_url != "https://chatgpt.com/c/6aaee4b0-3190-83eb-a626-92001b802f24":
-        raise SystemExit("RELAY_TARGET_MISMATCH")
+    if not target_url.startswith("https://chatgpt.com/c/"):
+        raise SystemExit("RELAY_TARGET_INVALID")
     secret = load_secret()
     PIDFILE.write_text(f"{os.getpid()}\n")
     log(f"relay=START pid={os.getpid()} target={target_url}")
     try:
         while True:
+            now = time.time()
             HEARTBEAT.write_text(
-                f"pid={os.getpid()} updated={time.time():.3f}\n"
+                f"pid={os.getpid()} updated={now:.3f}\n"
+            )
+            try:
+                target_url = TARGET_FILE.read_text().splitlines()[0].strip()
+            except (FileNotFoundError, IndexError):
+                target_url = ""
+            if not target_url.startswith("https://chatgpt.com/c/"):
+                log("relay=TARGET_INVALID")
+                time.sleep(RETRY_SECONDS)
+                continue
+            STATUS.write_text(
+                f"state=RUNNING\n"
+                f"pid={os.getpid()}\n"
+                f"heartbeat_epoch={int(now)}\n"
+                f"target_url={target_url}\n"
             )
             if PAUSE.exists():
                 time.sleep(RETRY_SECONDS)
