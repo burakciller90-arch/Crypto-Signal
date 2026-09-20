@@ -1516,3 +1516,37 @@ Current frontier:
 - build a strictly read-only paper portfolio/performance projection from immutable paper state plus real cached market marks;
 - expose cash, positions, marked NAV and factual PnL/return availability without fabricating 0% performance when no trades/marks exist;
 - keep Dashboard wiring for the final product pass.
+
+
+## PAPER/STABLE read-only marked portfolio view accepted
+- implementation/stable head: 5ccc42f2f4e049697794dcd614d1d7f9ac13f87d
+- paper_portfolio_view.v1 reconstructs immutable paper accounting state strictly read-only and marks held positions from the latest fully closed Binance Spot 15m candle available as-of observation time
+- mark evidence carries source candle times, source timestamp, ingestion time, adapter/source metadata and a deterministic identity
+- incomplete held-position marks explicitly produce availability=missing_marks and suppress aggregate NAV/PnL/return rather than estimating
+- zero-position cash-only state truthfully permits NAV and capital return because no market mark is required
+- portfolio snapshot identity is deterministic and canonical
+- full gate: 452 tests PASS
+- Ruff PASS
+- mypy PASS across 98 source files
+- JavaScript PASS
+- PAPER/STABLE deploy PASS with no-trade invariant preserved
+- live stable portfolio probe PASS:
+  - cash_usdt=100.00
+  - positions=0
+  - marked_positions_value_usdt=0
+  - nav_usdt=100.00
+  - pnl_usdt=0.00
+  - total_return_fraction=0
+  - decisions=0
+  - fills=0
+  - nav_records=0
+  - replayed_records=1
+  - trade_success=NOT_YET_MEASURED
+  - REAL_CAPITAL=0
+- signal production remained at 402 freezes during deploy; strict post-watermark candidates remained 0
+- trade_policy=NOT_ACTIVATED
+
+Current frontier:
+- add a deterministic trade-performance measurement layer that can remain NOT_YET_MEASURED until completed simulated round trips exist;
+- when evidence exists, derive closed-trade results from immutable simulated fills/cost lineage without inventing win rates;
+- keep product/dashboard wiring until the backend evidence surfaces are complete.
