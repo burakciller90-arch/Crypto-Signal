@@ -7,7 +7,7 @@ from crypto_signal.data.models import Exchange, MarketType
 from crypto_signal.data.timeframes import spec
 
 BASE_TIMEFRAME = "15m"
-COVERAGE_PLAN_VERSION = "live-coverage-v1/2"
+COVERAGE_PLAN_VERSION = "live-coverage-v1/3"
 SUPPORTED_TARGET_TIMEFRAMES = ("15m", "1h", "4h", "1D", "1W")
 
 
@@ -114,31 +114,32 @@ class LiveCoveragePlan:
     def current_pilot(cls) -> LiveCoveragePlan:
         contexts: list[LiveCoverageContext] = []
         for exchange in (Exchange.BYBIT, Exchange.BINANCE):
-            contexts.append(
-                LiveCoverageContext(
-                    exchange=exchange,
-                    market_type=MarketType.SPOT,
-                    symbol="BTCUSDT",
-                    timeframe="15m",
-                    source_strategy=(
-                        LiveCoverageSourceStrategy.DIRECT_CANONICAL_15M
-                    ),
-                )
-            )
-            for timeframe in ("1h", "4h"):
+            for symbol in ("BTCUSDT", "ETHUSDT", "SOLUSDT"):
                 contexts.append(
                     LiveCoverageContext(
                         exchange=exchange,
                         market_type=MarketType.SPOT,
-                        symbol="BTCUSDT",
-                        timeframe=timeframe,
+                        symbol=symbol,
+                        timeframe="15m",
                         source_strategy=(
-                            LiveCoverageSourceStrategy.AGGREGATE_CANONICAL_15M
+                            LiveCoverageSourceStrategy.DIRECT_CANONICAL_15M
                         ),
-                        freeze_limit=120,
-                        minimum_closed_candles=100,
                     )
                 )
+                for timeframe in ("1h", "4h"):
+                    contexts.append(
+                        LiveCoverageContext(
+                            exchange=exchange,
+                            market_type=MarketType.SPOT,
+                            symbol=symbol,
+                            timeframe=timeframe,
+                            source_strategy=(
+                                LiveCoverageSourceStrategy.AGGREGATE_CANONICAL_15M
+                            ),
+                            freeze_limit=120,
+                            minimum_closed_candles=100,
+                        )
+                    )
         return cls(
             version=COVERAGE_PLAN_VERSION,
             contexts=tuple(contexts),

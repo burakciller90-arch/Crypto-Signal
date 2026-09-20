@@ -12,17 +12,29 @@ from crypto_signal.ledger.coverage import (
 )
 
 
-def test_current_pilot_enables_btc_multi_timeframe_scope() -> None:
+def test_current_pilot_enables_focused_multi_asset_timeframe_scope() -> None:
     plan = LiveCoveragePlan.current_pilot()
 
-    assert plan.version == "live-coverage-v1/2"
+    assert plan.version == "live-coverage-v1/3"
     assert [item.identity for item in plan.enabled_contexts] == [
         ("bybit", "spot", "BTCUSDT", "15m"),
         ("bybit", "spot", "BTCUSDT", "1h"),
         ("bybit", "spot", "BTCUSDT", "4h"),
+        ("bybit", "spot", "ETHUSDT", "15m"),
+        ("bybit", "spot", "ETHUSDT", "1h"),
+        ("bybit", "spot", "ETHUSDT", "4h"),
+        ("bybit", "spot", "SOLUSDT", "15m"),
+        ("bybit", "spot", "SOLUSDT", "1h"),
+        ("bybit", "spot", "SOLUSDT", "4h"),
         ("binance", "spot", "BTCUSDT", "15m"),
         ("binance", "spot", "BTCUSDT", "1h"),
         ("binance", "spot", "BTCUSDT", "4h"),
+        ("binance", "spot", "ETHUSDT", "15m"),
+        ("binance", "spot", "ETHUSDT", "1h"),
+        ("binance", "spot", "ETHUSDT", "4h"),
+        ("binance", "spot", "SOLUSDT", "15m"),
+        ("binance", "spot", "SOLUSDT", "1h"),
+        ("binance", "spot", "SOLUSDT", "4h"),
     ]
     base = [item for item in plan.enabled_contexts if item.timeframe == "15m"]
     higher = [item for item in plan.enabled_contexts if item.timeframe != "15m"]
@@ -38,7 +50,7 @@ def test_current_pilot_enables_btc_multi_timeframe_scope() -> None:
         and item.minimum_closed_candles == 100
         for item in higher
     )
-    assert plan.enabled_base_15m_budget_per_run == 5_800
+    assert plan.enabled_base_15m_budget_per_run == 17_400
 
 def test_higher_timeframe_requires_canonical_15m_aggregation() -> None:
     with pytest.raises(
