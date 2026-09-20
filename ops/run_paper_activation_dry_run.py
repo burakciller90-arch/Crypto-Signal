@@ -37,6 +37,7 @@ _PAPER_TABLES = (
     "paper_activation_state",
     "paper_processed_events",
     "paper_venue_rule_snapshots",
+    "paper_write_authority_events",
 )
 
 
