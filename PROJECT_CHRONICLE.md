@@ -1343,3 +1343,24 @@ Higher-timeframe production was not activated by this slice.
 The next frontier is Birthday Edition Stage 1 Slice 1: integrate accepted higher-timeframe preparation into the
 live runner behind fail-closed coverage and prove BTCUSDT 1h/4h before stable activation.
 REAL_CAPITAL remains 0.
+
+## 2026-09-20 — Stage 1 Slice 1 accepted: higher-timeframe live-runner integration
+
+The post-V1 live runner now has a tested AGGREGATE_CANONICAL_15M runtime path without activating it in production.
+Higher-timeframe contexts discover the latest closed 15m cutoff, prepare exact canonical base history through
+CandleStore/backfill, fail closed on missing truth, aggregate complete buckets and enter freeze_live_candles().
+
+The runtime logic was placed in crypto_signal.ledger.live_coverage rather than importing ops as a test package.
+Production current_pilot remains unchanged at BTCUSDT 15m on Bybit + Binance.
+
+Acceptance evidence:
+- focused higher-timeframe runner/preparation/freeze: 14 PASS
+- full repository: 273 PASS
+- Ruff PASS
+- mypy PASS across 121 source files
+- uv lock PASS
+- runner py_compile PASS
+- git diff check PASS
+
+Next: isolated real-data BTCUSDT 1h/4h acceptance on both providers before any stable activation.
+REAL_CAPITAL remains 0.

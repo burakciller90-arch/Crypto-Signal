@@ -420,26 +420,24 @@ No Durdurulmaz or Quantum Capital project state was mutated; UID502 is used only
 
 ## Canonical next frontier
 Focused V2+ Birthday Edition governs post-V1 execution.
-See:
-- docs/POST_V1_PRODUCT_VISION_BIRTHDAY_EDITION.md
-- ROADMAP_V2_PLUS_BIRTHDAY_EDITION.md
-- docs/POST_V1_CANONICAL_FREEZE_PATH_ACCEPTANCE.md
 
-Stage 0 canonical freeze-path refactor: ACCEPTED.
-Acceptance evidence: 271 pytest PASS, Ruff PASS, mypy PASS, uv lock PASS, git diff check PASS.
+Accepted:
+- Stage 0 canonical multi-timeframe freeze path
+- Stage 1 Slice 1 higher-timeframe runner integration
 
-Immediate Stage 1 Slice 1:
-1. integrate accepted higher-timeframe preparation with the live clock path
-2. keep higher-timeframe coverage fail-closed until tests and explicit activation evidence pass
-3. start with BTCUSDT 1h/4h derived only from canonical closed 15m truth
-4. preserve provider separation and immutable source/provenance semantics
-5. do not fabricate 15m-only period/session level evidence from aggregated candles
-6. run focused and full gates before any stable runtime advancement
+Latest gate: 273 pytest PASS, Ruff PASS, mypy PASS, uv lock PASS, runner compile PASS, diff check PASS.
+Production current_pilot remains BTCUSDT Spot 15m on Bybit + Binance only.
 
-After Stage 1:
-focused BTC/ETH/SOL coverage -> Turkish premium Mission Control -> visual chart intelligence ->
-decision-quality explanations -> useful alerts -> honest performance/learning -> limited V2+ intelligence ->
-gift-ready integrated acceptance.
+Immediate Stage 1 Slice 2:
+1. run isolated live acceptance for BTCUSDT 1h and 4h on Bybit + Binance
+2. use canonical 15m backfill/aggregation only
+3. use separate acceptance ledger/cache; do not pollute production evidence
+4. verify complete history, immutable freeze, provider separation and idempotence
+5. only after live evidence passes, design explicit stable activation as a separate slice
 
-Scope discipline: world-class through focus, not maximum feature count.
+Then continue the focused Birthday Edition roadmap:
+multi-timeframe production truth -> focused BTC/ETH/SOL coverage -> Turkish premium Mission Control ->
+visual chart intelligence -> decision-quality explanations -> useful alerts -> honest performance/learning ->
+limited V2+ intelligence -> gift-ready integrated acceptance.
+
 REAL_CAPITAL remains 0.

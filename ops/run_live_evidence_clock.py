@@ -14,11 +14,11 @@ from crypto_signal.data.adapters.base import MarketDataAdapter
 from crypto_signal.data.adapters.binance import BinanceSpotAdapter
 from crypto_signal.data.adapters.bybit import BybitSpotAdapter
 from crypto_signal.data.models import Exchange
+from crypto_signal.data.store import CandleStore
 from crypto_signal.ledger.coverage import (
     LiveCoveragePlan,
-    LiveCoverageSourceStrategy,
 )
-from crypto_signal.ledger.live_clock import freeze_live_provider
+from crypto_signal.ledger.live_coverage import freeze_coverage_context
 from crypto_signal.ledger.store import (
     ImmutableSignalLedger,
     LedgerConflictError,
@@ -26,6 +26,7 @@ from crypto_signal.ledger.store import (
 
 BASE = Path("/Users/crypto-signal-agent/Crypto-Signal")
 DEFAULT_DB = BASE / "runtime" / "ledger" / "live_signal_ledger.sqlite3"
+DEFAULT_CANDLE_CACHE = BASE / "runtime" / "data" / "live_base_15m_cache.sqlite3"
 LOCK_PATH = BASE / "runtime" / "ledger" / "live_clock.lock"
 
 
@@ -37,37 +38,39 @@ def parse_args() -> argparse.Namespace:
         default=DEFAULT_DB,
         help="immutable ledger SQLite path",
     )
+    parser.add_argument(
+        "--candle-cache",
+        type=Path,
+        default=DEFAULT_CANDLE_CACHE,
+        help="canonical 15m cache used for higher-timeframe preparation",
+    )
     return parser.parse_args()
 
 
-async def run(db_path: Path) -> int:
+async def run(
+    db_path: Path,
+    *,
+    plan: LiveCoveragePlan | None = None,
+    candle_cache_path: Path = DEFAULT_CANDLE_CACHE,
+) -> int:
     ledger = ImmutableSignalLedger(db_path)
+    candle_store = CandleStore(candle_cache_path)
     failures = 0
-    plan = LiveCoveragePlan.current_pilot()
+    selected_plan = LiveCoveragePlan.current_pilot() if plan is None else plan
     adapters: dict[Exchange, MarketDataAdapter] = {
         Exchange.BYBIT: BybitSpotAdapter(),
         Exchange.BINANCE: BinanceSpotAdapter(),
     }
 
-    for context in plan.enabled_contexts:
+    for context in selected_plan.enabled_contexts:
         name = context.exchange.value
         adapter = adapters[context.exchange]
         try:
-            if (
-                context.source_strategy
-                is not LiveCoverageSourceStrategy.DIRECT_CANONICAL_15M
-            ):
-                raise ValueError(
-                    "enabled higher-timeframe live coverage requires "
-                    "canonical aggregation implementation"
-                )
-            result = await freeze_live_provider(
+            result = await freeze_coverage_context(
+                context=context,
                 adapter=adapter,
                 ledger=ledger,
-                symbol=context.symbol,
-                timeframe=context.timeframe,
-                limit=context.freeze_limit,
-                minimum_closed_candles=context.minimum_closed_candles,
+                candle_store=candle_store,
             )
         except (
             LedgerConflictError,
@@ -113,7 +116,12 @@ def main() -> int:
         except BlockingIOError:
             print("LIVE_CLOCK_ALREADY_RUNNING", flush=True)
             return 0
-        return asyncio.run(run(args.db))
+        return asyncio.run(
+            run(
+                args.db,
+                candle_cache_path=args.candle_cache,
+            )
+        )
 
 
 if __name__ == "__main__":
