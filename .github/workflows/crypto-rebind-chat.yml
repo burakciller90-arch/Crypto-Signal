@@ -1,0 +1,61 @@
+name: Rebind Crypto Chat Relay
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/crypto-rebind-chat.yml"
+
+jobs:
+  rebind:
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dynamic relay and bind current chat
+        shell: bash
+        run: |
+          set -euo pipefail
+          TARGET="https://chatgpt.com/c/6aaf8e0e-6eac-83eb-90b6-121c9834908d"
+          SHARED="/Users/Shared/.crypto-signal-wake-relay"
+          LOCAL="/Users/crypto-signal-agent/Crypto-Signal/runtime/continuity/wake"
+          case "$TARGET" in
+            https://chatgpt.com/c/*) ;;
+            *) echo "INVALID_TARGET"; exit 2 ;;
+          esac
+          test -d "$SHARED"
+          printf '%s\n' "$TARGET" > "$SHARED/current_chat_url"
+          mkdir -p "$LOCAL"
+          printf '%s\n' "$TARGET" > "$LOCAL/current_chat_url"
+          cp ops/continuity/relay_daemon.py "$SHARED/relay_daemon.py"
+          cp ops/continuity/relay_watchdog.sh "$SHARED/relay_watchdog.sh"
+          chmod 755 "$SHARED/relay_daemon.py" "$SHARED/relay_watchdog.sh"
+          touch "$SHARED/restart_requested"
+          echo "BINDING_WRITTEN=$TARGET"
+          echo "RESTART_REQUESTED=YES"
+
+      - name: Wait for UID502 relay reload
+        shell: bash
+        run: |
+          set +e
+          SHARED="/Users/Shared/.crypto-signal-wake-relay"
+          TARGET="https://chatgpt.com/c/6aaf8e0e-6eac-83eb-90b6-121c9834908d"
+          for i in $(seq 1 45); do
+            current="$(sed -n 's/^target_url=//p' "$SHARED/relay_status" 2>/dev/null | head -1)"
+            if [ "$current" = "$TARGET" ] && [ ! -f "$SHARED/restart_requested" ]; then
+              echo "RELAY_REBOUND=YES"
+              cat "$SHARED/relay_status"
+              echo "QUEUE:"
+              find "$SHARED/queue" -maxdepth 1 -type f -print 2>/dev/null
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "RELAY_REBOUND=NO"
+          cat "$SHARED/relay_status" 2>/dev/null
+          echo "WATCHDOG ERR:"
+          tail -40 "$SHARED/watchdog.err.log" 2>/dev/null
+          echo "WATCHDOG OUT:"
+          tail -40 "$SHARED/watchdog.out.log" 2>/dev/null
+          exit 1
