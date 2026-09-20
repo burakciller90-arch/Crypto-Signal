@@ -483,6 +483,7 @@ jobs:
 
           WT="$WT" /usr/bin/python3 - <<'PY'
           import os
+          import re
           from pathlib import Path
 
           wt = Path(os.environ["WT"])
@@ -492,119 +493,125 @@ jobs:
           planning_tests = wt / "tests/test_paper_planning.py"
 
           s = state.read_text()
-          s = s.replace(
-              '    known_source_identities: set[str] = set()\n'
-              '    seen_identities: set[str] = {fund_identity}\n',
-              '    decision_by_identity: dict[str, DecisionIntentRecord] = {}\n'
-              '    fill_identities: set[str] = set()\n'
-              '    seen_identities: set[str] = {fund_identity}\n'
-              '    previous_sequence_id = first.sequence_id\n'
-          )
-          loop_anchor = '    for entry in entries[1:]:\n        record = entry.record\n'
-          loop_replacement = '''    for entry in entries[1:]:
-              record = entry.record
-              if entry.sequence_id <= previous_sequence_id:
-                  raise PaperStateReconstructionError(
-                      "replay sequence_id must be strictly increasing"
-                  )
-              previous_sequence_id = entry.sequence_id
-              if entry.record_identity != record.record_identity:
-                  raise PaperStateReconstructionError(
-                      "replay entry identity does not match typed record identity"
-                  )
-              expected_kind = {
-                  FundCreationRecord: PaperRecordKind.FUND_CREATION,
-                  DecisionIntentRecord: PaperRecordKind.DECISION_INTENT,
-                  SimulatedFillRecord: PaperRecordKind.SIMULATED_FILL,
-                  PositionCashMutationRecord: PaperRecordKind.POSITION_CASH_MUTATION,
-                  NavSnapshotRecord: PaperRecordKind.NAV_SNAPSHOT,
-              }.get(type(record))
-              if expected_kind is None or entry.record_kind is not expected_kind:
-                  raise PaperStateReconstructionError(
-                      "replay record kind does not match typed record"
-                  )
-          '''
-          if "replay sequence_id must be strictly increasing" not in s:
-              if loop_anchor not in s:
-                  raise SystemExit("STATE_LOOP_ANCHOR_NOT_FOUND")
-              s = s.replace(loop_anchor, loop_replacement, 1)
+          if "fill source decision is missing, wrong type, or out of order" not in s:
+              region_start = s.find("    known_source_identities: set[str] = set()")
+              region_end = s.find(
+                  "        if isinstance(record, PositionCashMutationRecord):",
+                  region_start,
+              )
+              if region_start < 0 or region_end < 0:
+                  raise SystemExit("STATE_LINEAGE_REGION_NOT_FOUND")
+              replacement = '''    decision_by_identity: dict[str, DecisionIntentRecord] = {}
+              fill_identities: set[str] = set()
+              seen_identities: set[str] = {fund_identity}
+              previous_sequence_id = first.sequence_id
 
-          s = s.replace(
-              '            known_source_identities.add(record.record_identity)\n'
-              '            continue\n\n'
-              '        if isinstance(record, SimulatedFillRecord):\n',
-              '            decision_by_identity[record.record_identity] = record\n'
-              '            continue\n\n'
-              '        if isinstance(record, SimulatedFillRecord):\n',
-              1,
-          )
-          old_fill = '''            if record.decision_identity not in known_source_identities:
+              for entry in entries[1:]:
+                  record = entry.record
+                  if entry.sequence_id <= previous_sequence_id:
                       raise PaperStateReconstructionError(
-                          "fill source decision is missing or out of order for this fund"
+                          "replay sequence_id must be strictly increasing"
                       )
-                  known_source_identities.add(record.record_identity)
-                  continue
-          '''
-          new_fill = '''            source_decision = decision_by_identity.get(record.decision_identity)
-                  if source_decision is None:
+                  previous_sequence_id = entry.sequence_id
+                  if entry.record_identity != record.record_identity:
                       raise PaperStateReconstructionError(
-                          "fill source decision is missing, wrong type, or out of order"
+                          "replay entry identity does not match typed record identity"
                       )
-                  if (
-                      source_decision.action is not record.action
-                      or source_decision.symbol is not record.symbol
-                      or source_decision.quantity != record.quantity
-                      or source_decision.reference_price != record.reference_price
-                  ):
+                  expected_kind = {
+                      FundCreationRecord: PaperRecordKind.FUND_CREATION,
+                      DecisionIntentRecord: PaperRecordKind.DECISION_INTENT,
+                      SimulatedFillRecord: PaperRecordKind.SIMULATED_FILL,
+                      PositionCashMutationRecord: PaperRecordKind.POSITION_CASH_MUTATION,
+                      NavSnapshotRecord: PaperRecordKind.NAV_SNAPSHOT,
+                  }.get(type(record))
+                  if expected_kind is None or entry.record_kind is not expected_kind:
                       raise PaperStateReconstructionError(
-                          "fill does not match its source decision intent"
+                          "replay record kind does not match typed record"
                       )
-                  fill_identities.add(record.record_identity)
-                  continue
-          '''
-          if "wrong type, or out of order" not in s:
-              if old_fill not in s:
-                  raise SystemExit("STATE_FILL_ANCHOR_NOT_FOUND")
-              s = s.replace(old_fill, new_fill, 1)
 
-          s = s.replace(
-              '                    known_source_identities=known_source_identities,\n',
-              '                    known_source_identities=set(decision_by_identity) | fill_identities,\n',
-          )
-          state.write_text(s)
+                  if entry.record_identity in seen_identities:
+                      raise PaperStateReconstructionError(
+                          f"duplicate record identity in replay: {entry.record_identity}"
+                      )
+                  seen_identities.add(entry.record_identity)
+
+                  if isinstance(record, FundCreationRecord):
+                      raise PaperStateReconstructionError(
+                          "exactly one fund creation identity is permitted per reconstructed fund"
+                      )
+
+                  if isinstance(record, DecisionIntentRecord):
+                      if record.fund_identity != fund_identity:
+                          raise PaperStateReconstructionError(
+                              "cross-fund decision lineage rejected"
+                          )
+                      decision_by_identity[record.record_identity] = record
+                      continue
+
+                  if isinstance(record, SimulatedFillRecord):
+                      if record.fund_identity != fund_identity:
+                          raise PaperStateReconstructionError(
+                              "cross-fund fill lineage rejected"
+                          )
+                      source_decision = decision_by_identity.get(record.decision_identity)
+                      if source_decision is None:
+                          raise PaperStateReconstructionError(
+                              "fill source decision is missing, wrong type, or out of order"
+                          )
+                      if (
+                          source_decision.action is not record.action
+                          or source_decision.symbol is not record.symbol
+                          or source_decision.quantity != record.quantity
+                          or source_decision.reference_price != record.reference_price
+                      ):
+                          raise PaperStateReconstructionError(
+                              "fill does not match its source decision intent"
+                          )
+                      fill_identities.add(record.record_identity)
+                      continue
+
+          '''
+              s = s[:region_start] + replacement + s[region_end:]
+              s = s.replace(
+                  "                    known_source_identities=known_source_identities,\n",
+                  "                    known_source_identities=set(decision_by_identity) | fill_identities,\n",
+              )
+              state.write_text(s)
 
           p = planning.read_text()
-          old_nav = '''    nav = _estimate_nav(state=state, mark_prices=mark_prices, buy_symbol=symbol, buy_price=reference_price)
-              projected_qty = holdings + quantity
-          '''
-          new_nav = '''    nav_before_costs = _estimate_nav(
+          if "nav_before_costs" not in p:
+              p, count = re.subn(
+                  r'    nav = _estimate_nav\(state=state, mark_prices=mark_prices, buy_symbol=symbol, buy_price=reference_price\)\n',
+                  '''    nav_before_costs = _estimate_nav(
                   state=state,
                   mark_prices=mark_prices,
                   buy_symbol=symbol,
                   buy_price=reference_price,
               )
               projected_nav = nav_before_costs - cost_budget_usdt
-              projected_qty = holdings + quantity
-          '''
-          if "nav_before_costs" not in p:
-              if old_nav not in p:
+          ''',
+                  p,
+                  count=1,
+              )
+              if count != 1:
                   raise SystemExit("PLANNING_NAV_ANCHOR_NOT_FOUND")
-              p = p.replace(old_nav, new_nav, 1)
-          p = p.replace(
-              '    if nav <= Decimal(0):\n'
-              '        raise PaperPlanRejectedError("NAV must be positive for concentration checks")\n'
-              '    if position_notional / nav > policy.max_position_concentration:\n',
-              '    if projected_nav <= Decimal(0):\n'
-              '        raise PaperPlanRejectedError("projected NAV must be positive for risk checks")\n'
-              '    if position_notional / projected_nav > policy.max_position_concentration:\n',
-              1,
-          )
-          p = p.replace(
-              '    if invested_after / nav > policy.max_gross_exposure_fraction:\n',
-              '    if invested_after / projected_nav > policy.max_gross_exposure_fraction:\n',
-              1,
-          )
-          planning.write_text(p)
+              p = p.replace(
+                  '    if nav <= Decimal(0):\n'
+                  '        raise PaperPlanRejectedError("NAV must be positive for concentration checks")\n'
+                  '    if position_notional / nav > policy.max_position_concentration:\n',
+                  '    if projected_nav <= Decimal(0):\n'
+                  '        raise PaperPlanRejectedError("projected NAV must be positive for risk checks")\n'
+                  '    if position_notional / projected_nav > policy.max_position_concentration:\n',
+                  1,
+              )
+              p = p.replace(
+                  '    if invested_after / nav > policy.max_gross_exposure_fraction:\n',
+                  '    if invested_after / projected_nav > policy.max_gross_exposure_fraction:\n',
+                  1,
+              )
+              if "position_notional / nav" in p or "invested_after / nav" in p:
+                  raise SystemExit("PLANNING_NAV_REPLACEMENT_INCOMPLETE")
+              planning.write_text(p)
 
           st = state_tests.read_text()
           state_marker = "def test_reject_cross_fund_and_source_lineage"
