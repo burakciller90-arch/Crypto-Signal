@@ -1738,3 +1738,30 @@ Final acceptance:
 - lint-only acceptance head 399709187f7fbfae470708be0dae43c79fb591a6.
 
 Stage 6C may now advance to the persistent paper-account runtime foundation. That next slice must establish durable virtual-fund lifecycle/locking/restart behavior and read immutable signal evidence without silently inventing a trading/allocation policy or execution venue truth.
+
+
+## 2026-09-20 — Stage 6C Slice 5: persistent no-trade paper runtime foundation accepted
+
+With Slice 4 atomicity accepted, supervisor implemented the next bounded runtime foundation without activating a trading policy.
+
+The new runtime:
+- creates the 100 USDT virtual fund once and reuses the same fund identity on restart;
+- reads the immutable live signal ledger strictly in SQLite read-only/query-only mode;
+- reports freeze/lifecycle/outcome counts and latest signal metadata;
+- refuses missing/malformed source ledgers before creating paper state;
+- performs no decision-to-trade mapping and explicitly reports trade_policy=NOT_ACTIVATED;
+- has a one-shot CLI runner protected by a non-blocking process lock;
+- contains no exchange/network/credential/order surface.
+
+The first whole-repository gate passed every pytest case; Ruff found only an import-group formatting issue in the package export file. Supervisor changed only that formatting.
+
+Final acceptance:
+- 345 tests PASS;
+- Ruff PASS;
+- mypy PASS across 86 source files;
+- JavaScript syntax PASS;
+- REAL_CAPITAL=0;
+- implementation 635ff70ca8438c6c4c9f28ff67dab5fde7c8299b;
+- lint-only head fe4a05bb78f43a2a6a45f0f478083144bf7adc7b.
+
+Next safe frontier is an isolated PAPER/STABLE deployment of this no-trade clock. Stable runtime must prove one-fund restart/idempotence and production signal-ledger read-only consumption before any virtual trade eligibility policy is introduced.

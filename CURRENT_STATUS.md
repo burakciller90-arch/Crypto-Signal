@@ -784,3 +784,40 @@ Current Stage 6C frontier:
 - first runtime slice must preserve a single durable 100 USDT virtual fund, process immutable signal evidence read-only, use process locking/idempotent restart semantics and keep REAL_CAPITAL=0;
 - no autonomous BUY/REDUCE/EXIT policy may be invented implicitly: decision-to-plan eligibility, frozen execution inputs and virtual allocation policy must be explicit/versioned before the runtime is allowed to trade;
 - read-only Mission Control portfolio/NAV/benchmark activation remains after persistent runtime truth exists.
+
+
+## 2026-09-20 — Stage 6C Slice 5 accepted: persistent paper runtime foundation
+
+Stage 6C Slice 5 is accepted in canonical main.
+
+Accepted files:
+- src/crypto_signal/paper/runtime.py
+- ops/run_paper_clock.py
+- tests/test_paper_runtime.py
+- src/crypto_signal/paper/__init__.py
+
+Accepted runtime-foundation invariants:
+- one persistent virtual fund is created exactly once at 100.00 USDT and subsequent restarts reopen the same fund identity;
+- initial paper-fund creation uses the accepted immutable paper ledger and race-safe replay-count gate;
+- accepted immutable signal ledger is opened with SQLite mode=ro + PRAGMA query_only=ON;
+- signal freezes, lifecycle evaluations and outcome evaluations are observed but never initialized, migrated or mutated by paper runtime;
+- a missing or malformed signal ledger fails before a new paper fund is created;
+- runtime exposes explicit signal-ledger counts/latest frozen signal metadata only;
+- one-shot runner uses a non-blocking process file lock;
+- runtime deliberately exposes trade_policy_activated=false / trade_policy=NOT_ACTIVATED;
+- no BUY/REDUCE/EXIT decision policy, exchange venue lookup, networking, credentials or real-order path is introduced;
+- REAL_CAPITAL remains 0.
+
+Acceptance evidence:
+- first full gate passed all pytest cases and failed only one Ruff import-order finding;
+- lint-only hardening commit: fe4a05bb78f43a2a6a45f0f478083144bf7adc7b;
+- final canonical full regression: 345 tests PASS;
+- Ruff PASS;
+- mypy PASS across 86 source files;
+- JavaScript syntax PASS;
+- runtime implementation commit: 635ff70ca8438c6c4c9f28ff67dab5fde7c8299b.
+
+Current Stage 6C frontier:
+- deploy the accepted no-trade paper clock into an isolated PAPER/STABLE worktree/LaunchAgent and prove restart/idempotent fund reuse against the production immutable signal ledger;
+- only after stable runtime truth is proven, define a separate explicit/versioned decision-to-plan eligibility + virtual allocation policy and frozen execution-input source before permitting simulated BUY/REDUCE/EXIT;
+- Mission Control paper portfolio/NAV/benchmark activation remains after that runtime truth exists.
