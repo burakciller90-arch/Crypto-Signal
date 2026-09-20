@@ -348,10 +348,11 @@ def test_decision_cadence_explains_waiting_provider_pair(tmp_path) -> None:
     assert btc.binance is not None
     assert btc.bybit is None
     assert btc.paired_as_of_ms is None
+    assert btc.paired_source_cutoff_open_time_ms is None
     assert btc.candidate_available is False
 
 
-def test_decision_cadence_explains_provider_asof_mismatch(tmp_path) -> None:
+def test_decision_cadence_explains_provider_cutoff_mismatch(tmp_path) -> None:
     _, activation = _paper(tmp_path)
     signal_db = tmp_path / "signals.sqlite3"
     _init_signal_db(signal_db)
@@ -387,7 +388,7 @@ def test_decision_cadence_explains_provider_asof_mismatch(tmp_path) -> None:
     )
 
     btc = readiness[0]
-    assert btc.status.value == "provider_asof_mismatch"
+    assert btc.status.value == "provider_cutoff_mismatch"
     assert btc.binance is not None
     assert btc.bybit is not None
     assert btc.binance.signal_as_of_ms == 200
