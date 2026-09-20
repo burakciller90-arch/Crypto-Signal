@@ -24,7 +24,7 @@ DEFAULT_ALERT_OUTBOX_PATH = (
     / "alert_outbox.sqlite3"
 )
 STATIC_DIR = Path(__file__).with_name("static")
-PRODUCT_VERSION = "birthday-edition-mission-control-tr/1"
+PRODUCT_VERSION = "birthday-edition-chart-intelligence/1"
 
 
 def _json(value: Any, *, status_code: int = 200) -> JSONResponse:

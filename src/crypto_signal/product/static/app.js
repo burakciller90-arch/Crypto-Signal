@@ -523,6 +523,203 @@ function renderGeometry(geometry) {
     <div class="truth-note">Hedefler: ${geometry.targets.map((target) => `${esc(target.label)}=${esc(target.target_price)} (${esc(target.reference_rr)}R reference)`).join(" · ")}</div>`;
 }
 
+
+function frozenChartData(detail) {
+  if (!detail.bundle_json) return { candles: [], levels: [] };
+  let root;
+  try {
+    root = JSON.parse(detail.bundle_json);
+  } catch {
+    return { candles: [], levels: [] };
+  }
+
+  const candles = (root.candles ?? [])
+    .map((item) => ({
+      openTime: Number(item.open_time_ms),
+      open: Number(item.open),
+      high: Number(item.high),
+      low: Number(item.low),
+      close: Number(item.close),
+    }))
+    .filter((item) =>
+      Number.isFinite(item.openTime)
+      && Number.isFinite(item.open)
+      && Number.isFinite(item.high)
+      && Number.isFinite(item.low)
+      && Number.isFinite(item.close)
+      && item.high >= item.low
+    )
+    .slice(-120);
+
+  const levels = [];
+  (detail.methodologies ?? []).forEach((method) => {
+    (method.selected ?? []).forEach((item) => {
+      (item.key_levels ?? []).forEach((level) => {
+        const price = Number(level.price);
+        if (Number.isFinite(price)) {
+          levels.push({
+            label: `${human(method.methodology)} · ${human(level.label)}`,
+            price,
+            kind: "evidence",
+          });
+        }
+      });
+      const invalidation = Number(item.invalidation_price);
+      if (item.invalidation_price !== null && Number.isFinite(invalidation)) {
+        levels.push({
+          label: `${human(method.methodology)} · geçersizleşme`,
+          price: invalidation,
+          kind: "invalidation",
+        });
+      }
+    });
+  });
+
+  if (detail.geometry) {
+    [
+      ["Giriş alt", detail.geometry.entry_zone_low, "entry"],
+      ["Giriş üst", detail.geometry.entry_zone_high, "entry"],
+      ["Geçersizleşme", detail.geometry.invalidation_price, "invalidation"],
+    ].forEach(([label, raw, kind]) => {
+      const price = Number(raw);
+      if (Number.isFinite(price)) levels.push({ label, price, kind });
+    });
+    (detail.geometry.targets ?? []).forEach((target) => {
+      const price = Number(target.target_price);
+      if (Number.isFinite(price)) {
+        levels.push({ label: `Hedef · ${target.label}`, price, kind: "target" });
+      }
+    });
+  }
+
+  const unique = [];
+  const seen = new Set();
+  levels.forEach((level) => {
+    const key = `${level.label}|${level.price}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      unique.push(level);
+    }
+  });
+  return { candles, levels: unique.slice(0, 12) };
+}
+
+function renderEvidenceChart(detail) {
+  const canvas = $("#evidenceChart");
+  const meta = $("#evidenceChartMeta");
+  if (!canvas || !meta) return;
+
+  const { candles, levels } = frozenChartData(detail);
+  if (!candles.length) {
+    canvas.classList.add("hidden");
+    meta.textContent = "Bu dondurulmuş kayıtta çizilebilir OHLC mum verisi yok.";
+    return;
+  }
+
+  canvas.classList.remove("hidden");
+  const ratio = window.devicePixelRatio || 1;
+  const width = Math.max(640, canvas.clientWidth || 640);
+  const height = 330;
+  canvas.width = Math.floor(width * ratio);
+  canvas.height = Math.floor(height * ratio);
+  canvas.style.height = `${height}px`;
+
+  const ctx = canvas.getContext("2d");
+  ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+
+  const style = getComputedStyle(document.documentElement);
+  const text = style.getPropertyValue("--text").trim() || "#edf5fb";
+  const muted = style.getPropertyValue("--muted").trim() || "#8ea0b3";
+  const accent = style.getPropertyValue("--accent").trim() || "#66e3c4";
+  const danger = style.getPropertyValue("--danger").trim() || "#ff8f8f";
+  const warn = style.getPropertyValue("--warn").trim() || "#f4c95d";
+  const line = "rgba(148,163,184,.13)";
+
+  const pad = { left: 12, right: 84, top: 18, bottom: 30 };
+  const plotW = width - pad.left - pad.right;
+  const plotH = height - pad.top - pad.bottom;
+  const allPrices = candles.flatMap((c) => [c.low, c.high]).concat(levels.map((l) => l.price));
+  let min = Math.min(...allPrices);
+  let max = Math.max(...allPrices);
+  if (max <= min) {
+    max += 1;
+    min -= 1;
+  }
+  const margin = (max - min) * 0.05;
+  min -= margin;
+  max += margin;
+  const y = (price) => pad.top + ((max - price) / (max - min)) * plotH;
+
+  ctx.clearRect(0, 0, width, height);
+  ctx.font = "11px Inter, -apple-system, sans-serif";
+  ctx.textBaseline = "middle";
+
+  for (let i = 0; i <= 4; i += 1) {
+    const price = max - ((max - min) * i) / 4;
+    const yy = y(price);
+    ctx.strokeStyle = line;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(pad.left, yy);
+    ctx.lineTo(width - pad.right, yy);
+    ctx.stroke();
+    ctx.fillStyle = muted;
+    ctx.fillText(price.toLocaleString("tr-TR", { maximumFractionDigits: 2 }), width - pad.right + 8, yy);
+  }
+
+  const step = plotW / candles.length;
+  const bodyW = Math.max(2, Math.min(7, step * 0.62));
+  candles.forEach((candle, index) => {
+    const x = pad.left + step * index + step / 2;
+    const rising = candle.close >= candle.open;
+    const color = rising ? accent : danger;
+    ctx.strokeStyle = color;
+    ctx.fillStyle = color;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(x, y(candle.high));
+    ctx.lineTo(x, y(candle.low));
+    ctx.stroke();
+    const top = y(Math.max(candle.open, candle.close));
+    const bottom = y(Math.min(candle.open, candle.close));
+    ctx.fillRect(x - bodyW / 2, top, bodyW, Math.max(1, bottom - top));
+  });
+
+  levels.forEach((level, index) => {
+    const yy = y(level.price);
+    const color = level.kind === "invalidation"
+      ? danger
+      : level.kind === "target"
+        ? accent
+        : level.kind === "entry"
+          ? warn
+          : "rgba(124,185,255,.9)";
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1;
+    ctx.setLineDash([5, 5]);
+    ctx.beginPath();
+    ctx.moveTo(pad.left, yy);
+    ctx.lineTo(width - pad.right, yy);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    if (index < 6) {
+      ctx.fillStyle = text;
+      ctx.fillText(level.label, pad.left + 6, Math.max(10, yy - 8));
+    }
+  });
+
+  const first = candles[0];
+  const last = candles[candles.length - 1];
+  ctx.fillStyle = muted;
+  ctx.fillText(fmtTime(first.openTime), pad.left, height - 12);
+  const endText = fmtTime(last.openTime);
+  const endWidth = ctx.measureText(endText).width;
+  ctx.fillText(endText, width - pad.right - endWidth, height - 12);
+
+  meta.textContent = `${candles.length} dondurulmuş mum · ${levels.length} açık kanıt seviyesi · yeniden veri çekilmez`;
+}
+
+
 async function openSignal(signalId) {
   const detail = await fetchJSON(`/api/signals/${encodeURIComponent(signalId)}`);
   if (detail.status !== "ready" || !detail.signal) {
@@ -550,6 +747,13 @@ async function openSignal(signalId) {
       <div class="value-main">${esc(detail.candle_count)} mum</div>
       <div class="row-sub">${esc(fmtTime(detail.first_candle_open_time_ms))} → ${esc(fmtTime(detail.last_candle_open_time_ms))}</div>
     </div>
+    <div class="detail-item chart-detail">
+      <div class="value-label">Kanıt grafiği</div>
+      <div class="chart-shell">
+        <canvas id="evidenceChart" class="evidence-chart" aria-label="Dondurulmuş mum ve kanıt seviyeleri"></canvas>
+      </div>
+      <div id="evidenceChartMeta" class="truth-note">Grafik hazırlanıyor…</div>
+    </div>
     <div class="detail-item"><div class="value-label">Metodoloji kanıtı</div>${renderMethodologies(detail)}</div>
     <div class="detail-item"><div class="value-label">Uyum matrisi</div>${renderAgreement(detail)}</div>
     <div class="detail-item"><div class="value-label">Dondurulmuş geometri</div>${renderGeometry(detail.geometry)}</div>
@@ -557,6 +761,7 @@ async function openSignal(signalId) {
     <div class="detail-item"><div class="value-label">Sinyal kimliği</div><div class="mono">${esc(card.signal_freeze_identity)}</div></div>
     <div class="detail-item"><div class="value-label">Kanıt paketi kimliği</div><div class="mono">${esc(card.bundle_identity)}</div></div>`;
   $("#signalDialog").showModal();
+  requestAnimationFrame(() => renderEvidenceChart(detail));
 }
 
 function bindSignalClicks() {

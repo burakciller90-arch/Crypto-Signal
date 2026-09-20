@@ -191,15 +191,19 @@ def test_health_and_static_shell_without_ledger(tmp_path: Path) -> None:
     assert health.status_code == 200
     assert health.json() == {
         "status": "ok",
-        "product_version": "birthday-edition-mission-control-tr/1",
+        "product_version": "birthday-edition-chart-intelligence/1",
         "real_capital": 0,
         "ledger_present": False,
         "alert_outbox_present": False,
         "read_only": True,
     }
     assert index.status_code == 200
+    script = client.get("/static/app.js")
     assert "Piyasa İstihbarat Merkezi" in index.text
     assert "Metodoloji uyumu ≠ olasılık" in index.text
+    assert script.status_code == 200
+    assert "function frozenChartData(detail)" in script.text
+    assert "Dondurulmuş mum ve kanıt seviyeleri" in script.text
     assert not missing.exists()
 
 
