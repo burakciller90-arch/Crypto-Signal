@@ -1460,3 +1460,32 @@ Final smoke observed 66 immutable freezes.
 
 Canonical frontier advances to Stage 4: visual chart intelligence over frozen evidence only.
 REAL_CAPITAL remains 0.
+
+## 2026-09-20 — Stage 4 accepted: frozen-evidence visual chart intelligence
+
+Signal Detail now renders useful candlestick context from the exact immutable decision bundle.
+The chart does not call an exchange or reconstruct newer market truth.
+
+Accepted visuals:
+- latest 120 frozen OHLC candles
+- explicit selected-methodology key levels
+- explicit invalidation prices
+- frozen signal entry/invalidation/targets only when complete geometry exists
+- explicit empty/fail-closed behavior when drawable truth is absent
+
+Quality gate:
+- focused dashboard tests: 21 PASS
+- full repository: 273 PASS
+- Ruff, mypy, uv lock, JavaScript syntax and diff check PASS
+
+Real production-ledger development smoke:
+- 499 valid frozen OHLC candles in the latest tested freeze
+- 120 candles selected for chart display
+- 4 explicit methodology key levels
+- no new market fetch
+
+PRODUCT/STABLE advanced to 29e70af686b73b3b4650c128397692a2f6d7b4cc.
+Persistent health returned birthday-edition-chart-intelligence/1, read_only=true, REAL_CAPITAL=0
+and 18 live Market Radar contexts.
+
+Canonical frontier advances to Stage 5: deterministic Turkish decision-quality explanations.

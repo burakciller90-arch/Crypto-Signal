@@ -422,33 +422,33 @@ No Durdurulmaz or Quantum Capital project state was mutated; UID502 is used only
 Focused V2+ Birthday Edition governs post-V1 execution.
 
 Accepted and live:
-- multi-timeframe immutable freeze path
 - focused BTC / ETH / SOL coverage on Bybit + Binance at 15m / 1h / 4h
 - Turkish-first premium Mission Control
+- frozen-evidence candlestick chart intelligence in Signal Detail
 
 PRODUCT/STABLE:
-4f6394160032ba22c07056651d4052d64618be34
+29e70af686b73b3b4650c128397692a2f6d7b4cc
 
 LIVE/STABLE:
 7020413188d633b2b5a9661356c2fe319f256a34
 
 Current product truth:
 - 18 live Market Radar contexts
-- final Stage 3 smoke observed 66 immutable freeze records
+- chart uses immutable frozen bundle only
+- latest smoke proved 499 frozen OHLC candles and explicit methodology levels
 - Dashboard read-only health PASS
 - REAL_CAPITAL=0
 
-Immediate Stage 4: visual chart intelligence.
-1. expose frozen canonical candle truth through the read-only product model
-2. render a compact candlestick evidence chart in Signal Detail
-3. overlay only evidence with explicit frozen price/time coordinates
-4. show reference/geometry levels only when the frozen bundle actually contains them
-5. preserve methodology ambiguity and provider separation
-6. no synthetic chart data, no inferred levels, no client-side market truth
-7. full API / JS / repository gates before PRODUCT/STABLE advancement
+Immediate Stage 5: decision-quality Turkish explanations.
+1. derive concise Turkish explanation only from frozen decision/evidence fields
+2. answer: neden önemli, hangi metodolojiler destekliyor, ne eksik, ne bozabilir
+3. preserve WATCH versus ACTIVE distinction
+4. never convert agreement index into probability
+5. surface provider/timeframe context and uncertainty
+6. keep explanation deterministic and reproducible from immutable evidence
+7. full product/API/JS/repository gates before PRODUCT/STABLE advancement
 
-After Stage 4:
-decision-quality Turkish explanations -> useful alerts -> honest performance/learning -> limited V2+ intelligence ->
-gift-ready integrated acceptance.
+After Stage 5:
+useful alerts -> honest performance/learning -> limited V2+ intelligence -> gift-ready integrated acceptance.
 
 REAL_CAPITAL remains 0.
