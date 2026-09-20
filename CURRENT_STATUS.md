@@ -3,7 +3,7 @@
 Updated: 2026-09-20
 Project: Crypto Signal
 Phase: Alerts V1
-State: ALERTS_V1_SLICE4_ALERT_CENTER_ACCEPTED_PENDING_PRODUCT_DEPLOY
+State: ALERTS_V1_SLICE4_ALERT_CENTER_STABLE_DEPLOYED
 REAL_CAPITAL: 0
 
 ## Accepted foundations
@@ -323,15 +323,31 @@ No Durdurulmaz or Quantum Capital project state was mutated; UID502 is used only
 - uv lock PASS
 - real-outbox dev smoke: alert_outbox_present=true / Alert Center EMPTY / 0 events
 
-## Canonical next frontier
-Alerts V1 Slice 4 stable product deploy:
-1. commit exact accepted Alert Center state
-2. advance PRODUCT/STABLE only to that commit
-3. restart com.cryptosignal.dashboard
-4. verify dashboard-v1-alert-center/1 health and localhost-only listener
-5. verify /api/alerts against production outbox
-6. refresh the user-facing Safari dashboard
-7. then continue user-facing notification presentation without enabling an external provider by default
+## Alerts V1 Slice 4 stable deployment evidence
+- PRODUCT/STABLE advanced exactly to b719011047d4de2fe2bf3940e6c5daae9a789d7e
+- com.cryptosignal.dashboard restarted successfully
+- listener verified on 127.0.0.1:48700 only
+- stable product_version=dashboard-v1-alert-center/1
+- health read_only=true / alert_outbox_present=true / REAL_CAPITAL=0
+- /api/alerts stable smoke: EMPTY / 0 events
+- Command Center stable smoke: 32 freezes / latest WATCH
+- navigation READY / 2 contexts
+- Performance EMPTY / 0 explicit outcomes
+- rich Signal Detail healthy
+- 502 Safari opened at http://127.0.0.1:48700
+- PRODUCT/STABLE clean after deploy
 
-ALERTS/STABLE materializer, LIVE/STABLE evidence clock and PRODUCT/STABLE remain isolated.
+## Canonical next frontier
+Alerts V1 Slice 5 — provider-neutral notification presentation and integrated acceptance:
+1. deterministic notification rendering from immutable AlertEvent
+2. render ACTIVE and INVALIDATED sources without inventing probability
+3. explicit destination/sink configuration model with no secrets in source control
+4. preview/dry-run path that never consumes production outbox
+5. provider adapters consume the same rendered semantic contract
+6. preserve alert event identity as idempotency key
+7. complete Alerts V1 integrated acceptance
+8. then advance to V1 Integrated Acceptance
+
+External providers remain disabled by default until explicitly configured.
+ALERTS/STABLE, LIVE/STABLE and PRODUCT/STABLE remain isolated.
 REAL_CAPITAL remains 0.

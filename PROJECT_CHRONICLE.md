@@ -1090,3 +1090,27 @@ Real production-outbox dev smoke:
 
 Canonical frontier is explicit PRODUCT/STABLE deploy of the accepted Alert
 Center commit.
+
+## 2026-09-20 — Alert Center explicitly deployed to PRODUCT/STABLE
+
+PRODUCT/STABLE was advanced exactly from 2c2fc99 to
+b719011047d4de2fe2bf3940e6c5daae9a789d7e after Alert Center acceptance.
+
+Stable evidence:
+- com.cryptosignal.dashboard running
+- listener 127.0.0.1:48700 only
+- product_version dashboard-v1-alert-center/1
+- read_only=true
+- alert_outbox_present=true
+- REAL_CAPITAL=0
+- /api/alerts = EMPTY / 0 events
+- Command Center observed 32 freezes, latest WATCH
+- navigation READY with 2 contexts
+- Performance EMPTY / 0 outcome snapshots
+- rich Signal Detail healthy
+- PRODUCT/STABLE clean at exact accepted commit
+
+The dashboard was opened in Safari on the UID502 user-facing session.
+
+Canonical frontier advances to provider-neutral notification presentation and
+Alerts V1 integrated acceptance. External providers stay disabled by default.
