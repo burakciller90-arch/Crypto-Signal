@@ -42,6 +42,7 @@ __all__ = [
     "PaperMissionControlSnapshot",
     "PaperSignalStreamOverview",
     "read_paper_mission_control_snapshot",
+    "read_paper_signal_stream_overview",
 ]
 
 PAPER_MISSION_CONTROL_VERSION = "paper_mission_control.v1"
@@ -209,7 +210,7 @@ def read_paper_mission_control_snapshot(
         raise PaperMissionControlError("REAL_CAPITAL must remain 0")
 
     activation = read_paper_activation_read_only(paper_ledger_path)
-    signal_stream = _read_signal_stream_overview(
+    signal_stream = read_paper_signal_stream_overview(
         signal_ledger_path=signal_ledger_path,
         observed_at_ms=observed_at_ms,
     )
@@ -319,7 +320,7 @@ def _build_snapshot(
     )
 
 
-def _read_signal_stream_overview(
+def read_paper_signal_stream_overview(
     *,
     signal_ledger_path: Path,
     observed_at_ms: int,
