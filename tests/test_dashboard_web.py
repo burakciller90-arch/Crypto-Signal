@@ -191,15 +191,15 @@ def test_health_and_static_shell_without_ledger(tmp_path: Path) -> None:
     assert health.status_code == 200
     assert health.json() == {
         "status": "ok",
-        "product_version": "dashboard-v1-alert-center/1",
+        "product_version": "birthday-edition-mission-control-tr/1",
         "real_capital": 0,
         "ledger_present": False,
         "alert_outbox_present": False,
         "read_only": True,
     }
     assert index.status_code == 200
-    assert "Mission Control" in index.text
-    assert "Confluence ≠ probability" in index.text
+    assert "Piyasa İstihbarat Merkezi" in index.text
+    assert "Metodoloji uyumu ≠ olasılık" in index.text
     assert not missing.exists()
 
 

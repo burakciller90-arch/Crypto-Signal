@@ -421,33 +421,28 @@ No Durdurulmaz or Quantum Capital project state was mutated; UID502 is used only
 ## Canonical next frontier
 Focused V2+ Birthday Edition governs post-V1 execution.
 
-Accepted and live:
-- canonical multi-timeframe freeze path
-- higher-timeframe live-runner integration
-- BTCUSDT 15m/1h/4h on Bybit + Binance
-- ETHUSDT 15m/1h/4h on Bybit + Binance
-- SOLUSDT 15m/1h/4h on Bybit + Binance
-
-LIVE/STABLE code head:
-7020413188d633b2b5a9661356c2fe319f256a34
-
-Current live product truth:
-- 3 assets x 3 timeframes x 2 providers = 18 Market Radar contexts
-- initial post-activation ledger check: 60 freezes / 60 lifecycle evaluations
-- automatic evidence clock run 36 completed with exit 0 and idempotent ownership
+Accepted and live market coverage:
+- BTCUSDT / ETHUSDT / SOLUSDT
+- Bybit + Binance Spot
+- 15m / 1h / 4h
+- 18 provider/symbol/timeframe contexts
+- LIVE/STABLE code head 7020413188d633b2b5a9661356c2fe319f256a34
 - REAL_CAPITAL=0
 
-Immediate Stage 3: Turkish premium Mission Control.
-1. redesign information hierarchy around 'şu anda ne önemli?'
-2. Turkish-first navigation, states and explanatory copy
-3. preserve raw scientific semantics underneath presentation
-4. make multi-asset/multi-timeframe context obvious instead of telemetry-like
-5. surface attention candidates, methodology agreement, uncertainty and recent changes
-6. keep advanced technical evidence in drill-down
-7. run product/API/JS/full gates, then deploy PRODUCT/STABLE exact accepted commit
+Stage 3 Slice 1 Turkish premium Mission Control: ACCEPTED in main.
+Product version: birthday-edition-mission-control-tr/1.
+The surface is Turkish-first, prioritizes what matters now, groups provider evidence by symbol/timeframe,
+and preserves provider separation, uncertainty and the agreement-index-not-probability boundary.
 
-After Stage 3:
-visual chart intelligence -> decision-quality explanations -> useful alerts -> honest performance/learning ->
+Immediate next action:
+1. deploy the exact accepted Stage 3 product commit to PRODUCT/STABLE
+2. verify health/version plus real 18-context rendering
+3. visually review the rendered interface for information density and responsive layout
+4. make only bounded Stage 3 polish changes justified by that review
+5. then advance to Stage 4 visual chart intelligence
+
+After Stage 4:
+decision-quality explanations -> useful alerts -> honest performance/learning ->
 limited V2+ intelligence -> gift-ready integrated acceptance.
 
 Birthday Edition scope remains intentionally narrow.

@@ -1408,3 +1408,30 @@ A launchd kickstart completed as run 36 with last exit code 0; every owned conte
 Coverage expansion is now intentionally paused at three assets and three timeframes.
 The canonical frontier moves to the Turkish-first premium Mission Control requested for the Birthday Edition.
 REAL_CAPITAL remains 0.
+
+## 2026-09-20 — Stage 3 Slice 1 accepted: Turkish-first Mission Control
+
+The product surface has begun its Birthday Edition transformation.
+This is not a translation-only pass: the information hierarchy now leads with what matters in the market
+instead of database telemetry.
+
+The shell is Turkish-first and the top summary shows monitored contexts, attention states,
+strong methodology agreement and latest evidence. Market Radar now groups the 18 provider contexts
+into symbol/timeframe attention cards while keeping Bybit and Binance evidence separately visible.
+Provider disagreement is never collapsed into false consensus.
+
+The attention ordering is explicitly a presentation heuristic, not a probability or price forecast.
+Confluence remains methodology agreement, and empty outcome evidence remains honestly empty.
+No order/execution path was introduced; REAL_CAPITAL remains 0.
+
+Acceptance evidence:
+- 21 focused dashboard tests PASS
+- 273 full repository tests PASS
+- Ruff PASS
+- mypy PASS
+- uv lock PASS
+- Node JavaScript syntax PASS
+- git diff check PASS
+
+Next: exact PRODUCT/STABLE deployment, live rendering verification and bounded visual polish,
+then visual chart intelligence.
