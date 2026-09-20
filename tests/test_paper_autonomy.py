@@ -182,6 +182,38 @@ def test_fresh_bullish_provider_consensus_emits_buy_candidate(tmp_path) -> None:
     assert decision.real_capital == REAL_CAPITAL == 0
 
 
+def test_provider_asof_skew_is_allowed_only_with_shared_market_cutoff(
+    tmp_path,
+) -> None:
+    signals = (
+        _signal(Exchange.BINANCE, as_of_ms=AS_OF),
+        _signal(Exchange.BYBIT, as_of_ms=AS_OF + 8_000),
+    )
+    evaluated_at_ms = AS_OF + 60_000
+
+    without_market_context = evaluate_autonomy_policy(
+        state=_state(tmp_path),
+        signals=signals,
+        evaluated_at_ms=evaluated_at_ms,
+        activation_cutoff_ms=ACTIVATION,
+    )
+    with_market_context = evaluate_autonomy_policy(
+        state=_state(tmp_path / "shared"),
+        signals=signals,
+        evaluated_at_ms=evaluated_at_ms,
+        activation_cutoff_ms=ACTIVATION,
+        provider_source_cutoff_open_time_ms={
+            Exchange.BINANCE: AS_OF - 1,
+            Exchange.BYBIT: AS_OF - 1,
+        },
+    )
+
+    assert without_market_context.reason_code is PaperAutonomyReason.MIXED_SIGNAL_CONTEXT
+    assert with_market_context.candidate_action is PaperAction.BUY
+    assert with_market_context.reason_code is PaperAutonomyReason.BUY_ELIGIBLE
+    assert with_market_context.source_as_of_ms == AS_OF + 8_000
+
+
 def test_watch_signal_holds_cash(tmp_path) -> None:
     decision = evaluate_autonomy_policy(
         state=_state(tmp_path),
