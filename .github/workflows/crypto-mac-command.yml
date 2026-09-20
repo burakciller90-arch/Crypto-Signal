@@ -24,7 +24,7 @@ jobs:
           set -euo pipefail
           cmd="$(printf '%s\n' "$ISSUE_BODY" | awk -F: 'tolower($1)=="command" {gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2); print tolower($2); exit}')"
           case "$cmd" in
-            status|services|logs|disk)
+            status|services|logs|disk|bridgecheck)
               ;;
             *)
               echo "Unsupported command: $cmd"
@@ -78,3 +78,23 @@ jobs:
           set -euo pipefail
           df -h /
           du -sh /Users/crypto-signal-agent/Crypto-Signal                  /Users/crypto-signal-agent/Crypto-Signal-Live                  /Users/crypto-signal-agent/Crypto-Signal-Product                  /Users/crypto-signal-agent/Crypto-Signal-Alerts                  /Users/crypto-signal-agent/actions-runner-crypto 2>/dev/null || true
+
+      - name: BRIDGECHECK
+        if: steps.parse.outputs.command == 'bridgecheck'
+        shell: bash
+        run: |
+          set +e
+          echo "=== SHARED RELAY PATHS ==="
+          for p in             /Users/Shared/.crypto-signal-wake-relay             /Users/Shared/Crypto-Signal-Wake-Bridge             /Users/Shared/Crypto-Signal-Wake-Bridge-Requests             /Users/Shared/.chatgpt-host-gui.lockfile
+          do
+            echo "--- $p"
+            ls -lad "$p" 2>&1
+            if [ -d "$p" ]; then
+              find "$p" -maxdepth 2 -type f -print 2>/dev/null | head -100
+            fi
+          done
+          echo "=== CRYPTO CONTINUITY FILES ==="
+          find /Users/crypto-signal-agent/Crypto-Signal/runtime                /Users/crypto-signal-agent/Crypto-Signal                -maxdepth 4 -type f                \( -iname '*wake*' -o -iname '*lease*' -o -iname '*bridge*' -o -iname '*chat*' \)                -print 2>/dev/null | head -150
+          echo "=== UID504 LAUNCH AGENTS MATCHING BRIDGE/WAKE ==="
+          launchctl print "gui/$(id -u)" 2>/dev/null | egrep -i 'crypto|wake|bridge|chatgpt|lease' | head -120
+          exit 0
