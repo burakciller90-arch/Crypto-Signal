@@ -1,0 +1,125 @@
+name: Crypto Cursor Task
+
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  contents: read
+  issues: read
+
+jobs:
+  cursor:
+    if: github.actor == 'burakciller90-arch' && (github.event.issue.title == '[CURSOR] ASK' || github.event.issue.title == '[CURSOR] WORK')
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 45
+    steps:
+      - name: Prepare task
+        id: prep
+        shell: bash
+        env:
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+          ISSUE_BODY: ${{ github.event.issue.body }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          GH_JOB_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          BASE="$HOME/.cursor/crypto-supervisor/tasks/$ISSUE_NUMBER"
+          mkdir -p "$BASE"
+          PROMPT="$BASE/prompt.txt"
+          MODE_FILE="$BASE/mode.txt"
+          /usr/bin/python3 - <<'PY'
+          import os
+          from pathlib import Path
+          title = os.environ["ISSUE_TITLE"].strip()
+          body = os.environ.get("ISSUE_BODY", "")
+          mode = "ask" if title == "[CURSOR] ASK" else "work"
+          marker = "prompt:"
+          idx = body.lower().find(marker)
+          prompt = body[idx + len(marker):].strip() if idx >= 0 else body.strip()
+          if not prompt:
+              raise SystemExit("EMPTY_CURSOR_PROMPT")
+          if len(prompt) > 16000:
+              raise SystemExit("CURSOR_PROMPT_TOO_LONG")
+          base = Path.home() / ".cursor" / "crypto-supervisor" / "tasks" / os.environ["ISSUE_NUMBER"]
+          base.mkdir(parents=True, exist_ok=True)
+          (base / "prompt.txt").write_text(prompt + "\n")
+          (base / "mode.txt").write_text(mode + "\n")
+          PY
+          REPO="/Users/crypto-signal-agent/Crypto-Signal"
+          test -z "$(git -C "$REPO" status --porcelain)"
+          BASIC="$(printf 'x-access-token:%s' "$GH_JOB_TOKEN" | base64)"
+          git -C "$REPO" -c http.extraheader="AUTHORIZATION: Basic $BASIC" fetch --no-tags origin main
+          git -C "$REPO" merge --ff-only FETCH_HEAD
+          echo "mode=$(cat "$MODE_FILE")" >> "$GITHUB_OUTPUT"
+          echo "base=$BASE" >> "$GITHUB_OUTPUT"
+
+      - name: Dispatch authenticated Cursor task through UID504 Terminal
+        id: dispatch
+        shell: bash
+        env:
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          TASK_MODE: ${{ steps.prep.outputs.mode }}
+          BASE: ${{ steps.prep.outputs.base }}
+        run: |
+          set +e
+          SCRIPT="$BASE/run.sh"
+          OUT="$BASE/out.txt"
+          ERR="$BASE/err.txt"
+          RC="$BASE/rc"
+          META="$BASE/meta.txt"
+          rm -f "$SCRIPT" "$OUT" "$ERR" "$RC" "$META"
+
+          if [ "$TASK_MODE" = "ask" ]; then
+            printf '%s\n'               '#!/bin/zsh'               'export PATH="$HOME/.local/bin:$PATH"'               'BASE="$HOME/.cursor/crypto-supervisor/tasks/'"$ISSUE_NUMBER"'"'               'cd /Users/crypto-signal-agent/Crypto-Signal || exit 90'               'agent -p "$(cat "$BASE/prompt.txt")" --mode=ask --workspace /Users/crypto-signal-agent/Crypto-Signal --output-format text --trust --sandbox enabled > "$BASE/out.txt" 2> "$BASE/err.txt"'               'rc=$?'               'echo "$rc" > "$BASE/rc"'               'printf "mode=ask\nworkspace=/Users/crypto-signal-agent/Crypto-Signal\n" > "$BASE/meta.txt"'               'exit'               > "$SCRIPT"
+          else
+            printf '%s\n'               '#!/bin/zsh'               'export PATH="$HOME/.local/bin:$PATH"'               'BASE="$HOME/.cursor/crypto-supervisor/tasks/'"$ISSUE_NUMBER"'"'               'cd /Users/crypto-signal-agent/Crypto-Signal || exit 90'               'agent -p "$(cat "$BASE/prompt.txt")" --mode=agent --workspace /Users/crypto-signal-agent/Crypto-Signal --worktree "supervisor-'"$ISSUE_NUMBER"'" --worktree-base main --output-format text --trust --sandbox enabled > "$BASE/out.txt" 2> "$BASE/err.txt"'               'rc=$?'               'echo "$rc" > "$BASE/rc"'               'WT="$HOME/.cursor/worktrees/Crypto-Signal/supervisor-'"$ISSUE_NUMBER"'"'               'if [ ! -d "$WT" ]; then WT="$HOME/.cursor/worktrees/crypto-signal/supervisor-'"$ISSUE_NUMBER"'"; fi'               'printf "mode=work\nworkspace=%s\n" "$WT" > "$BASE/meta.txt"'               'exit'               > "$SCRIPT"
+          fi
+
+          chmod 700 "$SCRIPT"
+          /usr/bin/osascript -e 'tell application "Terminal" to do script "/bin/zsh '"$SCRIPT"'"' >/dev/null 2>&1
+          echo "TERMINAL_DISPATCH_RC=$?"
+          for i in {1..2400}; do
+            if [ -f "$RC" ]; then break; fi
+            sleep 1
+          done
+          if [ ! -f "$RC" ]; then
+            echo "CURSOR_TASK_TIMEOUT"
+            exit 124
+          fi
+          CURSOR_RC="$(cat "$RC")"
+          echo "CURSOR_RC=$CURSOR_RC"
+          echo "=== CURSOR OUTPUT ==="
+          sed -n '1,260p' "$OUT" 2>/dev/null || true
+          echo "=== CURSOR STDERR ==="
+          sed -n '1,160p' "$ERR" 2>/dev/null || true
+          echo "=== CURSOR META ==="
+          cat "$META" 2>/dev/null || true
+          if [ "$TASK_MODE" = "work" ]; then
+            WT="$(sed -n 's/^workspace=//p' "$META" | head -1)"
+            echo "=== WORKTREE STATUS ==="
+            git -C "$WT" status --short --branch 2>&1 || true
+            echo "=== WORKTREE DIFF STAT ==="
+            git -C "$WT" diff --stat 2>&1 || true
+            echo "=== WORKTREE DIFF ==="
+            git -C "$WT" diff -- . ':!runtime/**' ':!.env*' 2>&1 | sed -n '1,420p' || true
+          fi
+          echo "cursor_rc=$CURSOR_RC" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Wake supervisor chat
+        if: always()
+        shell: bash
+        env:
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          TASK_MODE: ${{ steps.prep.outputs.mode }}
+          CURSOR_RC: ${{ steps.dispatch.outputs.cursor_rc }}
+        run: |
+          set +e
+          EVENT_ID="cursor-task-${ISSUE_NUMBER}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          MESSAGE="CRYPTO_CURSOR_TASK_COMPLETE_V1 — issue=${ISSUE_NUMBER} mode=${TASK_MODE} cursor_rc=${CURSOR_RC:-unknown} github_run=${GITHUB_RUN_ID}. Fresh state/log/diff review required before any acceptance or next action."
+          /usr/bin/python3 /Users/crypto-signal-agent/Crypto-Signal/ops/continuity/relay_submit.py "$EVENT_ID" "$MESSAGE" 5
+          rc=$?
+          echo "WAKE_RC=$rc"
+          if [ "$rc" -eq 0 ] || [ "$rc" -eq 2 ]; then exit 0; fi
+          exit "$rc"
