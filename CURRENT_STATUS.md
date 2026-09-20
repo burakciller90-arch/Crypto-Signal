@@ -3,7 +3,7 @@
 Updated: 2026-09-20
 Project: Crypto Signal
 Phase: Dashboard V1 / Product Command Center
-State: HISTORICAL_EVALUATION_V1_ACCEPTED
+State: DASHBOARD_V1_SLICE1_READ_MODEL_ACCEPTED
 REAL_CAPITAL: 0
 
 ## Accepted foundations
@@ -187,15 +187,33 @@ No Durdurulmaz or Quantum Capital project state was mutated; UID502 is used only
 - mypy PASS
 - current production untouched-forward freezes: 24 WATCH / 0 ACTIVE; no live performance statistic is fabricated
 
+## Dashboard V1 Slice 1 accepted evidence
+- framework-independent read-only product contracts added
+- DashboardReader uses SQLite mode=ro + PRAGMA query_only=ON
+- no schema initialization/migration occurs in product reader
+- Command Center / Market Radar / Asset Cockpit / Signal Archive / Signal Detail / Performance availability models exist
+- frozen cards expose immutable identities, state/direction/setup, confluence score semantic, probability status and uncertainty
+- signal evidence class is not inferred when freeze-level field is absent
+- performance reads only explicit outcome evidence class
+- missing ledger/schema/data states are explicit
+- focused gate: 8 tests PASS
+- full repository: 211 tests PASS
+- Ruff PASS
+- mypy PASS
+- production read-only smoke: 24 immutable WATCH freezes, 2 radar contexts, 0 outcome snapshots, Performance=EMPTY
+- no runtime mock data
+
 ## Canonical next frontier
-Dashboard V1 / Product Command Center — Slice 1:
-1. inspect current application/runtime constraints and choose the smallest maintainable V1 web surface
-2. define a read-only product read model over immutable ledger/current analysis state
-3. establish information architecture for Command Center, Market Radar, Asset Cockpit, Signal Detail, Signal Archive and Performance
-4. wire real-data provenance/evidence-class/probability-vs-confluence labels into contracts
-5. no mock data may masquerade as real
-6. no exchange order path; REAL_CAPITAL remains 0
-7. focused tests and local smoke before visual expansion
+Dashboard V1 / Product Command Center — Slice 2:
+1. add bounded FastAPI + Uvicorn dependencies
+2. expose read-only JSON API endpoints over accepted DashboardReader
+3. add local health/status endpoint
+4. build static Mission Control shell without Node build chain
+5. render Command Center / Market Radar / Signal Archive first
+6. preserve explicit confluence != probability labels and empty-performance state
+7. no order/execution controls
+8. local smoke on reserved Crypto Signal port range
+9. focused tests and full repo gate
 
 LIVE/STABLE forward evidence clock remains isolated on its accepted worktree while Dashboard development proceeds.
 REAL_CAPITAL remains 0.

@@ -733,3 +733,55 @@ was reconciled exactly once after space returned.
 Canonical frontier advances to Dashboard V1 / Product Command Center Slice 1:
 real-data read model and information architecture before visual expansion.
 REAL_CAPITAL remains 0.
+
+## 2026-09-20 — Dashboard V1 Slice 1 accepted: read-only product model
+
+The Product/Command Center lane now has framework-independent read models over
+immutable ledger evidence.
+
+Accepted read-only boundary:
+- SQLite is opened with mode=ro and PRAGMA query_only=ON
+- product code does not initialize or migrate the production ledger
+- missing ledger/schema/data is represented explicitly
+- runtime mock data is forbidden
+
+Accepted surfaces:
+- Command Center
+- Market Radar
+- Asset Cockpit
+- Signal Archive
+- Signal Detail
+- Performance availability
+
+Signal cards preserve decision truth:
+- immutable identities and market context
+- state/direction/setup
+- confluence score and agreement_index_not_probability semantic
+- probability_status
+- uncertainty flags
+
+The current signal-freeze schema has no separate explicit evidence-class field.
+Dashboard code therefore marks signal evidence class as not explicit instead of
+inferring it from timestamp, file path or runtime lane.
+
+Performance availability reads only explicit outcome_evaluations evidence class.
+An empty outcome table remains EMPTY and does not become a zero win rate.
+
+Mechanical evidence:
+- focused Dashboard tests: 8 PASS
+- full repository: 211 PASS
+- Ruff PASS
+- mypy PASS
+
+Production read-only smoke:
+- Command Center READY
+- 24 immutable freezes
+- WATCH=24
+- bearish=20 / bullish=4
+- Market Radar contexts=2
+- outcome snapshots=0
+- Performance=EMPTY
+
+Canonical frontier advances to Dashboard V1 Slice 2:
+bounded FastAPI/Uvicorn API plus a static Mission Control shell.
+REAL_CAPITAL remains 0.
