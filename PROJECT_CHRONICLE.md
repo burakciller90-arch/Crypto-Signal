@@ -1765,3 +1765,30 @@ Final acceptance:
 - lint-only head fe4a05bb78f43a2a6a45f0f478083144bf7adc7b.
 
 Next safe frontier is an isolated PAPER/STABLE deployment of this no-trade clock. Stable runtime must prove one-fund restart/idempotence and production signal-ledger read-only consumption before any virtual trade eligibility policy is introduced.
+
+
+## 2026-09-20 — isolated PAPER/STABLE runtime became live without activating trading
+
+Supervisor created a dedicated Crypto Paper Stable workflow rather than overloading the general Mac command workflow. The first deployment attempt built the detached worktree and isolated virtualenv successfully but the manual acceptance probe omitted PYTHONPATH and failed at import time. Rollback executed before paper state was created.
+
+The probe was corrected to bind PYTHONPATH to the stable worktree source. Deployment then passed:
+- detached PAPER/STABLE HEAD 69a6e874f25f8c2fbfc74a1ad5ee255a79ed3222;
+- isolated .venv installed from the locked project environment;
+- first paper clock probe created the sole 100.00 USDT virtual fund;
+- second probe returned bootstrap=existing with the exact same fund identity;
+- DB no-trade invariant passed: one fund creation and zero decision/fill/mutation/NAV rows;
+- com.cryptosignal.paperclock loaded with StartInterval=120 seconds and last exit code 0;
+- later fresh state showed runs=3 and the same single-fund/no-trade state.
+
+Stable fund identity:
+99eebec220597639add97080a243e98715d42e75af6be3f1785721d12da00b80
+
+The state diagnostic itself needed two non-product fixes: Python f-string quoting, then switching the DB probe from system Python to the stable runtime. Fresh state after those fixes reported:
+- paper_fund_creations=1
+- paper_decision_intents=0
+- paper_simulated_fills=0
+- paper_position_cash_mutations=0
+- paper_nav_snapshots=0
+- paper_replay_index=1
+
+The stable runtime observes production immutable signal evidence but remains deliberately unable to trade. Next frontier is the explicit/versioned eligibility + allocation + cooldown/per-position-risk/no-trade policy and a frozen execution-input source. REAL_CAPITAL remains 0.

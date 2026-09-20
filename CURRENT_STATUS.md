@@ -821,3 +821,41 @@ Current Stage 6C frontier:
 - deploy the accepted no-trade paper clock into an isolated PAPER/STABLE worktree/LaunchAgent and prove restart/idempotent fund reuse against the production immutable signal ledger;
 - only after stable runtime truth is proven, define a separate explicit/versioned decision-to-plan eligibility + virtual allocation policy and frozen execution-input source before permitting simulated BUY/REDUCE/EXIT;
 - Mission Control paper portfolio/NAV/benchmark activation remains after that runtime truth exists.
+
+
+## 2026-09-20 — PAPER/STABLE no-trade runtime deployed and accepted
+
+The accepted Stage 6C Slice 5 runtime foundation is now deployed in an isolated stable lane.
+
+Stable runtime:
+- worktree: /Users/crypto-signal-agent/Crypto-Signal-Paper
+- stable deployed HEAD: 69a6e874f25f8c2fbfc74a1ad5ee255a79ed3222
+- LaunchAgent: com.cryptosignal.paperclock
+- interval: 120 seconds
+- paper ledger: /Users/crypto-signal-agent/Crypto-Signal/runtime/paper/paper_fund.sqlite3
+- source signal ledger: /Users/crypto-signal-agent/Crypto-Signal/runtime/ledger/live_signal_ledger.sqlite3
+- runtime code/environment: isolated PAPER/STABLE worktree + its own .venv
+- REAL_CAPITAL=0
+- trade policy: NOT_ACTIVATED
+
+Mechanical deployment acceptance:
+- first probe created fund identity 99eebec220597639add97080a243e98715d42e75af6be3f1785721d12da00b80 at exactly 100.00 USDT;
+- immediate second probe reopened the same fund identity with bootstrap=existing;
+- fresh stable state after scheduled service activity still reports the same fund identity, cash=100.00, positions=0 and records=1;
+- LaunchAgent fresh state: runs=3, last exit code=0, run interval=120 seconds;
+- production immutable signal ledger is observed read-only; fresh snapshot saw 312 freezes / 312 lifecycle rows / 0 outcomes and latest state WATCH on SOLUSDT;
+- fresh paper DB counts: fund_creation=1, decision_intents=0, simulated_fills=0, position_cash_mutations=0, nav_snapshots=0, replay_index=1;
+- no virtual trade was created during deployment or restart validation.
+
+Deployment control:
+- PAPER/STABLE uses a separate .github/workflows/crypto-paper-stable.yml allowlisted state/deploy surface;
+- the generic Crypto Mac Command workflow was restored to its prior accepted scope;
+- failed first deployment probe was rolled back before any paper record existed; the only fault was missing PYTHONPATH in a manual probe;
+- subsequent deployment passed after binding probes to PAPER/STABLE src;
+- state DB diagnostics now use the same PAPER/STABLE Python runtime.
+
+Current Stage 6C frontier:
+- define and accept the explicit, versioned decision-to-plan eligibility and virtual allocation policy required by AUTONOMOUS_PAPER_FUND_V1_SPEC;
+- policy must add the still-missing cooldown, per-position-risk and no-trade conditions without weakening existing cash reserve/concentration/gross exposure gates;
+- define a frozen execution-input source before any simulated BUY/REDUCE/EXIT can be activated in PAPER/STABLE;
+- until that gate is accepted, PAPER/STABLE remains observation-only and trade_policy=NOT_ACTIVATED.
