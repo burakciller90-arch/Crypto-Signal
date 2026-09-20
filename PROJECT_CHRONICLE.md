@@ -1680,3 +1680,33 @@ Final full gate:
 - JavaScript syntax PASS.
 
 This slice is accepted as pure execution/orchestration truth only. It still does not run a persistent autonomous paper account. Next work is atomic/idempotent ledger append and crash/replay safety before any continuously running virtual portfolio loop.
+
+## 2026-09-20 — User-requested continuity pause checkpoint
+
+The user requested a break and explicitly asked that wake and lease continuity be paused while preserving exact restart position.
+
+pause_continuity.py was executed through the allowlisted GitHub→UID504 command path. It reported:
+CONTINUITY_PAUSED leases_archived=0 queued_wakes_archived=0 relay_wakes_archived=0 worker_untouched=YES
+
+A separate PAUSECHECK then mechanically verified:
+- LOCAL_PAUSED=YES
+- SHARED_PAUSED=YES
+- ACTIVE_LEASES=0
+- LOCAL_WAKE_QUEUE=0
+- RELAY_WAKE_QUEUE=0
+- PAUSE_VERIFIED=YES
+
+The relay daemon remains allowed to exist as an idle process; pause authority is enforced by local/shared user_pause markers.
+
+No new development work is authorized while this pause remains active.
+
+Exact resume frontier is Stage 6C Slice 4:
+atomic/idempotent append of an accepted in-memory orchestration bundle into the immutable paper ledger, plus deterministic state re-read and crash/replay safety evidence.
+
+Accepted prior state remains:
+- Slices 1–3 accepted,
+- Slice 3 full gate 330 tests PASS,
+- REAL_CAPITAL=0,
+- Cursor development authority suspended unless explicitly re-enabled by user.
+
+Resume must be state-first via wakeresume, then fresh READ_FIRST/CURRENT_STATUS/Chronicle/Git/continuity inspection. Stale or duplicate events must not replay completed work.
