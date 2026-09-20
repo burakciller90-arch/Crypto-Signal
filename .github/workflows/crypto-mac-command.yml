@@ -24,7 +24,7 @@ jobs:
           set -euo pipefail
           cmd="$(printf '%s\n' "$ISSUE_BODY" | awk -F: 'tolower($1)=="command" {gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2); print tolower($2); exit}')"
           case "$cmd" in
-            status|services|logs|disk|sync|producttest|fulltest|productstate|productdeploy|paperreview|paperinspect|paperfixlint|cursorreview|cursorreviewtail|cursorcleanup|bridgecheck|bridgestate|wakeresume|waketest|cursorcheck|cursorauthdiag|cursorttycheck)
+            status|services|logs|disk|sync|producttest|fulltest|productstate|productdeploy|paperreview|paperinspect|paperfixlint|paperharden|cursorreview|cursorreviewtail|cursorcleanup|bridgecheck|bridgestate|wakeresume|waketest|cursorcheck|cursorauthdiag|cursorttycheck)
               ;;
             *)
               echo "Unsupported command: $cmd"
@@ -274,6 +274,111 @@ jobs:
           /Users/crypto-signal-agent/Crypto-Signal/.venv/bin/python -m ruff check "$WT/src/crypto_signal/paper" "$WT/tests/test_paper_fund.py"
           /Users/crypto-signal-agent/Crypto-Signal/.venv/bin/python -m mypy "$WT/src/crypto_signal/paper"
           echo "PAPER_LINT_FIX_PASS=YES"
+
+      - name: PAPER HARDEN
+        if: steps.parse.outputs.command == 'paperharden'
+        shell: bash
+        env:
+          ISSUE_BODY: ${{ github.event.issue.body }}
+        run: |
+          set -euo pipefail
+          TARGET="$(/usr/bin/python3 - <<'PY'
+          import os, re
+          body = os.environ.get("ISSUE_BODY", "")
+          m = re.search(r"(?im)^target:\s*(supervisor-[0-9]+)\s*$", body)
+          if not m:
+              raise SystemExit("INVALID_PAPER_HARDEN_TARGET")
+          print(m.group(1))
+          PY
+          )"
+          WT="$HOME/.cursor/worktrees/crypto-signal/$TARGET"
+          test -d "$WT"
+          EXPECTED="$(printf '?? src/crypto_signal/paper/\n?? tests/test_paper_fund.py\n' | LC_ALL=C sort)"
+          test "$(git -C "$WT" status --porcelain | LC_ALL=C sort)" = "$EXPECTED"
+
+          /Users/crypto-signal-agent/Crypto-Signal/.venv/bin/python -m ruff check --fix "$WT/tests/test_paper_fund.py"
+
+          WT="$WT" /usr/bin/python3 - <<'PY'
+          import os
+          from pathlib import Path
+
+          wt = Path(os.environ["WT"])
+          models = wt / "src/crypto_signal/paper/models.py"
+          tests = wt / "tests/test_paper_fund.py"
+
+          text = models.read_text()
+          anchor = '''            if price <= Decimal(0):
+                      raise ValueError("mark price must be positive")
+                  expected_benchmarks = tuple(
+          '''
+          replacement = '''            if price <= Decimal(0):
+                      raise ValueError("mark price must be positive")
+                  mark_price_by_symbol = dict(self.mark_prices)
+                  missing_mark_symbols = {
+                      position.symbol
+                      for position in self.positions
+                      if position.symbol not in mark_price_by_symbol
+                  }
+                  if missing_mark_symbols:
+                      raise ValueError("every held position requires a mark price")
+                  expected_nav_usdt = self.cash_usdt + sum(
+                      (
+                          position.quantity * mark_price_by_symbol[position.symbol]
+                          for position in self.positions
+                      ),
+                      start=Decimal(0),
+                  )
+                  if self.nav_usdt != expected_nav_usdt:
+                      raise ValueError(
+                          "nav_usdt must equal cash plus marked position value"
+                      )
+                  expected_benchmarks = tuple(
+          '''
+          if "nav_usdt must equal cash plus marked position value" not in text:
+              if anchor not in text:
+                  raise SystemExit("NAV_HARDEN_ANCHOR_NOT_FOUND")
+              text = text.replace(anchor, replacement, 1)
+              models.write_text(text)
+
+          t = tests.read_text()
+          marker = "def test_append_replay_ordering_and_idempotency"
+          new_test = '''def test_nav_snapshot_rejects_inconsistent_or_unmarked_state() -> None:
+              fund = build_fund_creation(created_at_ms=1)
+              with pytest.raises(ValueError, match="cash plus marked position value"):
+                  build_nav_snapshot(
+                      fund_identity=fund.record_identity,
+                      snapshot_at_ms=2,
+                      cash_usdt=Decimal("50.00"),
+                      positions={PaperSymbol.BTCUSDT: Decimal("0.001")},
+                      mark_prices={PaperSymbol.BTCUSDT: Decimal(50000)},
+                      nav_usdt=Decimal("99.99"),
+                  )
+
+              with pytest.raises(ValueError, match="requires a mark price"):
+                  build_nav_snapshot(
+                      fund_identity=fund.record_identity,
+                      snapshot_at_ms=3,
+                      cash_usdt=Decimal("50.00"),
+                      positions={PaperSymbol.BTCUSDT: Decimal("0.001")},
+                      mark_prices={},
+                      nav_usdt=Decimal("50.00"),
+                  )
+
+
+          '''
+          if "test_nav_snapshot_rejects_inconsistent_or_unmarked_state" not in t:
+              if marker not in t:
+                  raise SystemExit("NAV_TEST_ANCHOR_NOT_FOUND")
+              t = t.replace(marker, new_test + marker, 1)
+              tests.write_text(t)
+          PY
+
+          /Users/crypto-signal-agent/Crypto-Signal/.venv/bin/python -m ruff check --fix "$WT/src/crypto_signal/paper" "$WT/tests/test_paper_fund.py"
+          PYTHONPATH="$WT/src" /Users/crypto-signal-agent/Crypto-Signal/.venv/bin/python -m pytest -q "$WT/tests/test_paper_fund.py"
+          /Users/crypto-signal-agent/Crypto-Signal/.venv/bin/python -m ruff check "$WT/src/crypto_signal/paper" "$WT/tests/test_paper_fund.py"
+          /Users/crypto-signal-agent/Crypto-Signal/.venv/bin/python -m mypy "$WT/src/crypto_signal/paper"
+          test "$(git -C "$WT" status --porcelain | LC_ALL=C sort)" = "$EXPECTED"
+          echo "PAPER_HARDEN_PASS=YES"
 
       - name: PAPER REVIEW
         if: steps.parse.outputs.command == 'paperreview'
