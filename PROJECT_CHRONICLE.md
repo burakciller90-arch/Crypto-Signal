@@ -2155,3 +2155,18 @@ UID504 synced exactly to that head. The complete repository gate passed: pytest 
 This remains development acceptance only. PAPER/STABLE is still 30b05251af9fc2ac05fd007dbd6ac6d0519c2e58, production write authority is not enabled, production mutation commands were not added, and no production paper event/trade was written. REAL_CAPITAL remains 0.
 
 With the writer gate hardened but production activation intentionally closed, the next autonomous safe frontier is the beginner-facing dashboard/product pass over the already accepted read-only Mission Control, factual decision trace, marked portfolio and honest performance surfaces.
+
+## 2026-09-21 — beginner virtual trade-plan explainability merged, tested and deployed
+
+Stage 9 moved from a summary-only paper Mission Control into a progressively disclosed virtual-plan experience without widening paper authority. PR #311 merged as de590b15349ed3ac171eface0cb06087243d23da after an isolated UID504 feature-worktree gate passed focused pytest, JavaScript syntax, Ruff, focused mypy, the complete pytest suite, full Ruff and full mypy across 102 source files.
+
+paper_mission_control.v2 now carries only structured accepted downstream lineage from the existing dry-run chain. A PRETRADE_READY candidate must bind its execution input, venue-rule snapshot, sizing result, venue-bound pretrade result and a new exact cost preview. The cost preview is calculated by the existing pure deterministic paper simulator against the already accepted virtual plan and frozen execution snapshot; it fails closed if fee + spread + slippage does not equal total cost or if the total differs from the accepted plan cost budget. No ledger mutation, network trade, credential or exchange-order path is introduced.
+
+The product UI now hides complexity behind an İşlem planı disclosure. When no plan exists it explains why the engine stopped and what evidence could change the decision. When an accepted virtual plan exists it can show action, quantity, reference price, virtual notional, projected cash/quantity, sizing risk, invalidation and explicit fee/spread/slippage in both USDT and simulation-rate form. The financial amounts are backend truth from the deterministic simulator rather than duplicated browser math. Narrow-screen responsive layout was added.
+
+Canonical UID504 sync, producttest and fulltest all passed after merge. PRODUCT then deployed exactly from 45b20084eab0bd38e14f5ca3fd4a8d799e429920 to de590b15349ed3ac171eface0cb06087243d23da. Post-deploy health reported status=ok, read_only=true and REAL_CAPITAL=0 with the dashboard service running on the exact deployed head.
+
+PAPER/STABLE was deliberately not changed and remains 30b05251af9fc2ac05fd007dbd6ac6d0519c2e58. Fresh production state still has one fund creation, zero decision intents, zero simulated fills, zero cash/position mutations, zero NAV snapshots, one replay record, three venue-rule snapshots, one activation state and zero processed events. A fresh Mission Control snapshot ca07228c22903d46f6b626fd2255d3f73e16898d3e035be86d0184036a2a1d16 observed 498 signal freezes and the same three complete post-activation candidates: BTC and ETH HOLD_CASH / signal_not_active, SOL HOLD_CASH / unsafe_uncertainty. ready_candidates=0, attention_required=NO, cash/NAV remain 100.00 USDT, positions remain zero and performance remains NOT_YET_MEASURED. trade_policy remains NOT_ACTIVATED and REAL_CAPITAL=0.
+
+The next safe product frontier is a beginner-facing portfolio exposure and Performance Lab slice over this immutable truth. Empty/no-trade states must remain explicit rather than presenting a zero win rate as measured performance. Production virtual-write activation remains a separate closed gate.
+
