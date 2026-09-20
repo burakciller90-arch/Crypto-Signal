@@ -1,0 +1,57 @@
+name: Crypto Stage9 Branch Test Once
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/crypto-stage9-branch-test-once.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Test Stage9 plan explainability branch
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 30
+    steps:
+      - name: Test feature branch in isolated worktree
+        shell: bash
+        env:
+          GH_JOB_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          REPO="/Users/crypto-signal-agent/Crypto-Signal"
+          PY="$REPO/.venv/bin/python"
+          WT="$RUNNER_TEMP/crypto-stage9-plan-explainability"
+          test "$(id -u)" = "504"
+          test -x "$PY"
+          test -z "$(git -C "$REPO" status --porcelain)"
+          BASIC="$(printf 'x-access-token:%s' "$GH_JOB_TOKEN" | base64)"
+          git -C "$REPO" -c http.extraheader="AUTHORIZATION: Basic $BASIC" fetch --no-tags origin feature/stage9-plan-explainability
+          TARGET="$(git -C "$REPO" rev-parse FETCH_HEAD)"
+          echo "FEATURE_HEAD=$TARGET"
+          rm -rf "$WT"
+          git -C "$REPO" worktree prune
+          git -C "$REPO" worktree add --detach "$WT" "$TARGET"
+          cleanup() {
+            git -C "$REPO" worktree remove --force "$WT" 2>/dev/null || true
+            git -C "$REPO" worktree prune || true
+          }
+          trap cleanup EXIT
+          cd "$WT"
+          echo "=== FOCUSED PYTEST ==="
+          PYTHONPATH="$WT/src" "$PY" -m pytest -q             tests/test_paper_mission_control.py             tests/test_dashboard_web.py
+          echo "=== JAVASCRIPT ==="
+          node --check src/crypto_signal/product/static/app.js
+          echo "=== RUFF ==="
+          "$PY" -m ruff check             src/crypto_signal/paper/mission_control.py             src/crypto_signal/product             tests/test_paper_mission_control.py             tests/test_dashboard_web.py
+          echo "=== MYPY ==="
+          PYTHONPATH="$WT/src" "$PY" -m mypy src/crypto_signal/paper/mission_control.py
+          echo "=== FULL PYTEST ==="
+          PYTHONPATH="$WT/src" "$PY" -m pytest -q
+          echo "=== FULL RUFF ==="
+          "$PY" -m ruff check src tests
+          echo "=== FULL MYPY ==="
+          PYTHONPATH="$WT/src" "$PY" -m mypy src
+          echo "STAGE9_BRANCH_FULL_TEST_PASS=YES"
