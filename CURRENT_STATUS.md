@@ -3,7 +3,7 @@
 Updated: 2026-09-20
 Project: Crypto Signal
 Phase: Alerts V1
-State: ALERTS_V1_SLICE2_ALERT_CLOCK_ACCEPTED
+State: ALERTS_V1_SLICE3_STABLE_MATERIALIZER_ACCEPTED
 REAL_CAPITAL: 0
 
 ## Accepted foundations
@@ -292,17 +292,31 @@ No Durdurulmaz or Quantum Capital project state was mutated; UID502 is used only
 - uv lock PASS
 - production smoke: 30 WATCH freezes + 30 lifecycle evaluations -> 0 eligible / 0 alerts / 0 delivery attempts across repeated runs
 
-## Canonical next frontier
-Alerts V1 Slice 3 — persistent materialize-only runtime:
-1. create isolated ALERTS/STABLE worktree pinned to accepted Alert Clock commit
-2. create alerts-local .venv from accepted lockfile
-3. install com.cryptosignal.alertclock LaunchAgent
-4. RunAtLoad + periodic one-shot materialization
-5. source ledger remains read-only
-6. production alert outbox remains separate
-7. no external dispatch/provider yet
-8. verify repeat-run idempotency and logs
-9. keep LIVE/STABLE and PRODUCT/STABLE independent
+## Alerts V1 Slice 3 accepted evidence
+- isolated ALERTS/STABLE worktree at /Users/crypto-signal-agent/Crypto-Signal-Alerts
+- ALERTS/STABLE pinned to accepted f7108384e11af85e07848197f7733ff0a2e29740
+- alerts-local .venv created from accepted lockfile
+- com.cryptosignal.alertclock LaunchAgent installed
+- RunAtLoad + StartInterval=120s one-shot materialization
+- source signal ledger remains read-only
+- production outbox is runtime/alerts/alert_outbox.sqlite3
+- no --dispatch-local-noop and no external provider in production runtime
+- first launchd run exit 0; repeated stable run idempotent
+- current source: 32 WATCH freezes / 32 lifecycle -> 0 eligible alerts / 0 attempts
+- installed plist matches versioned plist
+- LIVE/STABLE and PRODUCT/STABLE remain independent
 
-After stable Alert Clock acceptance, implement/configure a real user-facing notification adapter with explicit destination configuration and provider-side idempotency.
+## Canonical next frontier
+Alerts V1 Slice 4 — Alert Center and provider-ready presentation:
+1. read production alert outbox without mutation
+2. expose pending/delivered/retryable/permanent delivery state
+3. integrate Alert Center into Mission Control
+4. preserve immutable alert source identities and signal semantics
+5. explicit EMPTY state while no eligible events exist
+6. no synthetic alert data
+7. define provider configuration contract without committing secrets
+8. no execution controls
+9. focused tests + stable product deploy after acceptance
+
+A real external delivery provider remains a later explicit configuration step.
 REAL_CAPITAL remains 0.

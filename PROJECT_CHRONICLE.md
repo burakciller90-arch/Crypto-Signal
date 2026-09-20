@@ -1023,3 +1023,29 @@ This proves default policy does not turn WATCH evidence into notification spam.
 Canonical frontier advances to Alerts V1 Slice 3:
 an isolated ALERTS/STABLE materialize-only LaunchAgent runtime.
 REAL_CAPITAL remains 0.
+
+## 2026-09-20 — Alerts V1 Slice 3 accepted: isolated stable materializer
+
+Alerts now have an isolated stable runtime:
+- /Users/crypto-signal-agent/Crypto-Signal-Alerts
+- detached clean worktree at f7108384e11af85e07848197f7733ff0a2e29740
+- own .venv from accepted uv.lock
+- LaunchAgent com.cryptosignal.alertclock
+- RunAtLoad + 120-second one-shot schedule
+- materialize-only production arguments
+
+The source signal ledger remains read-only.
+Eligible events are written only to the separate production alert outbox.
+
+Runtime acceptance:
+- first launchd run last exit code 0
+- first run: 32 signals / 32 lifecycle / 0 eligible / 0 inserted
+- stable manual rerun reproduced 0 eligible / 0 events / 0 attempts
+- source state remained WATCH=32
+- installed plist matches versioned plist
+
+No no-op or external sink is configured in the production runtime, so a future
+real alert cannot be accidentally consumed by a test delivery adapter.
+
+Canonical frontier advances to Alert Center / provider-ready presentation.
+REAL_CAPITAL remains 0.

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>com.cryptosignal.alertclock</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/Users/crypto-signal-agent/Crypto-Signal-Alerts/.venv/bin/python</string>
+    <string>/Users/crypto-signal-agent/Crypto-Signal-Alerts/ops/run_alert_clock.py</string>
+    <string>--signal-ledger</string>
+    <string>/Users/crypto-signal-agent/Crypto-Signal/runtime/ledger/live_signal_ledger.sqlite3</string>
+    <string>--outbox</string>
+    <string>/Users/crypto-signal-agent/Crypto-Signal/runtime/alerts/alert_outbox.sqlite3</string>
+  </array>
+  <key>WorkingDirectory</key><string>/Users/crypto-signal-agent/Crypto-Signal-Alerts</string>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PYTHONPATH</key><string>/Users/crypto-signal-agent/Crypto-Signal-Alerts/src</string>
+  </dict>
+  <key>RunAtLoad</key><true/>
+  <key>StartInterval</key><integer>120</integer>
+  <key>StandardOutPath</key><string>/Users/crypto-signal-agent/Crypto-Signal/runtime/alerts/alert_clock.out.log</string>
+  <key>StandardErrorPath</key><string>/Users/crypto-signal-agent/Crypto-Signal/runtime/alerts/alert_clock.err.log</string>
+</dict>
+</plist>
