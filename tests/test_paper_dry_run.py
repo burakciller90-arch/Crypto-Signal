@@ -111,7 +111,7 @@ def _signal(exchange: Exchange, *, state: SignalState = SignalState.ACTIVE):
             score_semantic=ScoreSemantic.AGREEMENT_INDEX_NOT_PROBABILITY,
             support_method_count=2 if state is SignalState.ACTIVE else 1,
             opposing_method_count=0,
-            resolved_method_count=2,
+            resolved_method_count=2 if state is SignalState.ACTIVE else 1,
             total_methodology_slots=3,
             pairwise_relations=(),
         ),
