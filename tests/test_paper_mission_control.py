@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import inspect
 import sqlite3
+from dataclasses import fields
 
 from crypto_signal.paper import mission_control as paper_mission_control
 from crypto_signal.paper.activation import activate_paper_policy
@@ -254,6 +255,22 @@ def test_signal_stream_overview_is_point_in_time(tmp_path) -> None:
     assert overview.latest_signal_state == "watch"
     assert overview.latest_direction == "bullish"
     assert overview.latest_freeze_age_ms == 400
+
+
+def test_mission_control_v2_exposes_only_structured_plan_lineage() -> None:
+    assert paper_mission_control.PAPER_MISSION_CONTROL_VERSION == (
+        "paper_mission_control.v2"
+    )
+    candidate_fields = {
+        item.name
+        for item in fields(paper_mission_control.PaperMissionControlCandidate)
+    }
+    assert {
+        "execution_input",
+        "venue_rule_snapshot_identity",
+        "sizing",
+        "venue_bound_pretrade",
+    }.issubset(candidate_fields)
 
 
 def test_mission_control_surface_is_strictly_read_only() -> None:
