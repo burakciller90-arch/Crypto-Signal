@@ -2057,3 +2057,12 @@ The deploy path was hardened so the exact deployed dry-run executable is probed 
 Final head 63f15ead39ec9e2a6171a71ac36e7548f7fb0048 passed 443 tests, Ruff, mypy across 96 source files and JavaScript, then deployed successfully. Fresh PAPER STATE showed ready_candidates=0, attention_required=NO, paper_db_unchanged=YES, activation singleton=1, processed events=0 and all trade/NAV tables zero. Both clocks remain healthy and trade_policy remains NOT_ACTIVATED / REAL_CAPITAL=0.
 
 Next safe work is bounded log-retention hardening while the clock waits for real post-cutoff provider-pair evidence.
+
+
+## 2026-09-20 — bounded PAPER/STABLE dry-run log retention accepted
+
+Head 6f677f158136c0988aaca80d76acd4b36aa9213f bounds the 120-second dry-run observation clock logs without altering paper decision truth. A pure single-backup rotator keeps each dry-run stdout/stderr stream at a 5 MiB threshold with at most one .1 backup, and PAPER STATE reads both the backup and current stdout when locating the newest dry-run summary/attention evidence.
+
+Whole-repository FULLTEST passed, Ruff passed, mypy passed across 97 source files, and the JavaScript gate passed. PAPER/STABLE deployment to the exact head also passed. Fresh stable state showed both paper clocks healthy at 120-second cadence, a successful retention line, candidates=0 / ready_candidates=0 / attention_required=NO, paper_db_unchanged=YES, one activation singleton, zero processed events and zero decision/fill/mutation/NAV records. The virtual fund remains 100 USDT with zero positions. trade_policy remains NOT_ACTIVATED and REAL_CAPITAL=0.
+
+Next safe work is a strictly read-only, structured decision-explanation trace derived from the already accepted scanner/autonomy/execution-input/venue/sizing/pretrade chain. This trace is intended to become the factual source for the future Dashboard “why did the trader do this?” experience; it must never invent thoughts or bypass the evidence lineage.
