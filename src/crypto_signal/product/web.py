@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import time
 from pathlib import Path
 from typing import Any
 
@@ -9,6 +10,10 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from crypto_signal.ledger.serialization import canonicalize
+from crypto_signal.paper.mission_control import (
+    PaperMissionControlError,
+    read_paper_mission_control_snapshot,
+)
 from crypto_signal.product.education import (
     EducationLesson,
     EducationLookupMissing,
@@ -28,6 +33,18 @@ DEFAULT_ALERT_OUTBOX_PATH = (
     / "runtime"
     / "alerts"
     / "alert_outbox.sqlite3"
+)
+DEFAULT_PAPER_LEDGER_PATH = (
+    Path("/Users/crypto-signal-agent/Crypto-Signal")
+    / "runtime"
+    / "paper"
+    / "paper_fund.sqlite3"
+)
+DEFAULT_CANDLE_CACHE_PATH = (
+    Path("/Users/crypto-signal-agent/Crypto-Signal")
+    / "runtime"
+    / "data"
+    / "live_base_15m_cache.sqlite3"
 )
 STATIC_DIR = Path(__file__).with_name("static")
 PRODUCT_VERSION = "full-version-contextual-evidence/1"
@@ -50,6 +67,8 @@ def _education_payload(lesson: EducationLesson) -> dict[str, object]:
 def create_app(
     ledger_path: Path | None = None,
     alert_outbox_path: Path | None = None,
+    paper_ledger_path: Path | None = None,
+    candle_cache_path: Path | None = None,
 ) -> FastAPI:
     selected_path = ledger_path or Path(
         os.environ.get("CRYPTO_SIGNAL_LEDGER_PATH", str(DEFAULT_LEDGER_PATH))
@@ -65,6 +84,31 @@ def create_app(
         )
     else:
         selected_alert_path = None
+
+    if paper_ledger_path is not None:
+        selected_paper_path: Path | None = paper_ledger_path
+    elif ledger_path is None:
+        selected_paper_path = Path(
+            os.environ.get(
+                "CRYPTO_SIGNAL_PAPER_LEDGER_PATH",
+                str(DEFAULT_PAPER_LEDGER_PATH),
+            )
+        )
+    else:
+        selected_paper_path = None
+
+    if candle_cache_path is not None:
+        selected_candle_path: Path | None = candle_cache_path
+    elif ledger_path is None:
+        selected_candle_path = Path(
+            os.environ.get(
+                "CRYPTO_SIGNAL_CANDLE_CACHE_PATH",
+                str(DEFAULT_CANDLE_CACHE_PATH),
+            )
+        )
+    else:
+        selected_candle_path = None
+
     reader = DashboardReader(
         selected_path,
         alert_outbox_path=selected_alert_path,
@@ -79,6 +123,8 @@ def create_app(
     )
     app.state.ledger_path = selected_path
     app.state.alert_outbox_path = selected_alert_path
+    app.state.paper_ledger_path = selected_paper_path
+    app.state.candle_cache_path = selected_candle_path
     app.state.reader = reader
 
     app.mount(
@@ -201,6 +247,59 @@ def create_app(
                 "status": "found",
                 "real_capital": 0,
                 "lesson": _education_payload(result.lesson),
+            }
+        )
+
+    @app.get("/api/paper/mission-control")
+    def paper_mission_control(
+        observed_at_ms: int | None = Query(default=None, ge=0),
+    ) -> JSONResponse:
+        if selected_paper_path is None or selected_candle_path is None:
+            return _json(
+                {
+                    "status": "unavailable",
+                    "reason": "paper_runtime_not_configured",
+                    "trade_policy": "NOT_ACTIVATED",
+                    "real_capital": 0,
+                    "read_only": True,
+                }
+            )
+        if (
+            not selected_path.exists()
+            or not selected_paper_path.exists()
+            or not selected_candle_path.exists()
+        ):
+            return _json(
+                {
+                    "status": "unavailable",
+                    "reason": "paper_runtime_evidence_missing",
+                    "trade_policy": "NOT_ACTIVATED",
+                    "real_capital": 0,
+                    "read_only": True,
+                }
+            )
+        observation = (
+            time.time_ns() // 1_000_000
+            if observed_at_ms is None
+            else observed_at_ms
+        )
+        try:
+            snapshot = read_paper_mission_control_snapshot(
+                paper_ledger_path=selected_paper_path,
+                signal_ledger_path=selected_path,
+                candle_cache_path=selected_candle_path,
+                observed_at_ms=observation,
+                max_candidates=100,
+            )
+        except (PaperMissionControlError, RuntimeError, ValueError) as exc:
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
+        return _json(
+            {
+                "status": "ready",
+                "snapshot": snapshot,
+                "trade_policy": snapshot.trade_policy,
+                "real_capital": snapshot.real_capital,
+                "read_only": True,
             }
         )
 
