@@ -23,9 +23,13 @@ from crypto_signal.methodologies.price_action.interactions import (
     reference_levels_from_range,
 )
 from crypto_signal.methodologies.price_action.levels import (
+    BASE_TIMEFRAME,
     PeriodSessionLevelsResult,
     SessionSpec,
     analyze_period_session_levels,
+)
+from crypto_signal.methodologies.price_action.levels import (
+    METHODOLOGY_VERSION as LEVELS_METHODOLOGY_VERSION,
 )
 from crypto_signal.methodologies.price_action.liquidity import (
     DEFAULT_EQUAL_TOLERANCE_BPS,
@@ -145,11 +149,32 @@ def analyze_price_action(
         equal_tolerance_bps=equal_tolerance_bps,
         as_of_ms=effective_as_of_ms,
     )
-    levels = analyze_period_session_levels(
-        candles,
-        sessions=sessions,
-        as_of_ms=effective_as_of_ms,
-    )
+    first = candles[0]
+    if first.timeframe == BASE_TIMEFRAME:
+        levels = analyze_period_session_levels(
+            candles,
+            sessions=sessions,
+            as_of_ms=effective_as_of_ms,
+        )
+    else:
+        if sessions:
+            raise ValueError(
+                "explicit period/session levels require canonical 15m source candles"
+            )
+        # Higher-timeframe candles may be canonical aggregates, but V1 period/session
+        # levels intentionally require the underlying 15m truth. Until that base
+        # reference source is plumbed into this analysis call, preserve the higher-
+        # timeframe evidence without fabricating coarser level identities.
+        levels = PeriodSessionLevelsResult(
+            exchange=first.exchange,
+            market_type=first.market_type,
+            symbol=first.symbol,
+            timeframe=first.timeframe,
+            as_of_ms=effective_as_of_ms,
+            methodology_version=LEVELS_METHODOLOGY_VERSION,
+            previous_periods=(),
+            sessions=(),
+        )
     displacement = analyze_displacement(
         candles,
         config=displacement_config,
@@ -173,7 +198,6 @@ def analyze_price_action(
     }
     if nested_as_of != {effective_as_of_ms}:
         raise ValueError("integrated PA component as-of drift detected")
-    first = candles[0]
     summary = PriceActionEvidenceSummary(
         current_structure_direction=structure.current_direction,
         structure_break_count=len(structure.structure_breaks),

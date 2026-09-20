@@ -1296,3 +1296,50 @@ Mechanical evidence:
 No higher-timeframe production context was enabled.
 Canonical frontier advances to decoupling immutable analysis/freezing from
 adapter acquisition so prepared canonical candles can later reuse one pipeline.
+
+## 2026-09-20 — Focused V2+ Birthday Edition product direction recorded
+
+The user confirmed that Crypto Signal is intended as a birthday gift for a friend and asked that the project
+finish beyond V1 as a genuinely useful, world-class product without uncontrolled feature expansion.
+
+Product decision:
+- V1 remains accepted technical foundation, not final UX.
+- Turkish-first presentation is now the default product direction.
+- World-class is defined by scientific integrity + monitoring coverage + product usefulness, not feature count.
+- The Birthday Edition should surface what matters now, explain why, preserve uncertainty, make frozen evidence
+  visually inspectable and materially reduce manual chart chasing.
+- Scope is deliberately focused: multi-timeframe truth, a small high-liquidity asset universe, premium Turkish
+  Mission Control, chart intelligence, decision-quality signal explanations, conservative alerts, honest
+  performance and only limited V2+ intelligence that directly improves the product.
+- Broad ML, autonomous trading, Bloomberg-scale breadth and deep microstructure research are deferred.
+- No fabricated probability/win-rate is authorized; REAL_CAPITAL remains 0.
+
+The governing documents are:
+- docs/POST_V1_PRODUCT_VISION_BIRTHDAY_EDITION.md
+- ROADMAP_V2_PLUS_BIRTHDAY_EDITION.md
+
+The immediate engineering frontier is unchanged: complete and accept the in-progress canonical
+freeze_live_candles() refactor before any higher-timeframe production activation.
+
+## 2026-09-20 — Post-V1 canonical freeze path accepted
+
+The pre-pause freeze-path refactor was resumed from the exact SHA-verified frontier and completed.
+freeze_live_candles() is now the canonical decision/bundle/freeze/lifecycle path; provider acquisition delegates to it.
+
+A real higher-timeframe boundary was found by the focused gate: PA period/session levels intentionally require
+canonical 15m source candles. The implementation now preserves aggregated higher-timeframe PA evidence without
+fabricating coarser period/session identities; explicit non-15m session requests fail closed.
+
+Acceptance evidence:
+- focused live freeze: 7 PASS
+- full repository: 271 PASS
+- Ruff PASS
+- mypy PASS across 119 source files
+- uv lock PASS
+- git diff check PASS
+
+Canonical aggregated 1h history can now enter the immutable freeze pipeline.
+Higher-timeframe production was not activated by this slice.
+The next frontier is Birthday Edition Stage 1 Slice 1: integrate accepted higher-timeframe preparation into the
+live runner behind fail-closed coverage and prove BTCUSDT 1h/4h before stable activation.
+REAL_CAPITAL remains 0.

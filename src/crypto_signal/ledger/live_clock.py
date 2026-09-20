@@ -67,35 +67,30 @@ def _closed_observed(
     return eligible
 
 
-async def freeze_live_provider(
+def freeze_live_candles(
     *,
-    adapter: MarketDataAdapter,
+    candles: tuple[Candle, ...],
     ledger: ImmutableSignalLedger,
-    symbol: str = "BTCUSDT",
-    timeframe: str = "15m",
-    limit: int = 500,
     minimum_closed_candles: int = 100,
     now_ms: Callable[[], int] = utc_now_ms,
 ) -> LiveFreezeResult:
-    raw = tuple(
-        await adapter.fetch_candles(
-            symbol=symbol,
-            timeframe=timeframe,
-            limit=limit,
+    if minimum_closed_candles <= 0:
+        raise ValueError(
+            "live freeze minimum closed candle count must be positive"
         )
-    )
+    raw = tuple(candles)
     observed_at_ms = max(
         now_ms(),
         max((candle.ingested_at_ms for candle in raw), default=0),
     )
-    candles = _closed_observed(raw, observed_at_ms=observed_at_ms)
-    if len(candles) < minimum_closed_candles:
+    eligible = _closed_observed(raw, observed_at_ms=observed_at_ms)
+    if len(eligible) < minimum_closed_candles:
         raise ValueError(
             "live freeze has insufficient closed candle history"
         )
 
-    first = candles[0]
-    source_cutoff = candles[-1].open_time_ms
+    first = eligible[0]
+    source_cutoff = eligible[-1].open_time_ms
     if ledger.has_source_cutoff(
         exchange=first.exchange.value,
         market_type=first.market_type.value,
@@ -114,9 +109,9 @@ async def freeze_live_provider(
         )
 
     as_of_ms = max(observed_at_ms, now_ms())
-    price_action = analyze_price_action(candles, as_of_ms=as_of_ms)
-    harmonic = analyze_harmonics(candles, as_of_ms=as_of_ms)
-    elliott = analyze_elliott(candles, as_of_ms=as_of_ms)
+    price_action = analyze_price_action(eligible, as_of_ms=as_of_ms)
+    harmonic = analyze_harmonics(eligible, as_of_ms=as_of_ms)
+    elliott = analyze_elliott(eligible, as_of_ms=as_of_ms)
 
     evidence = []
     pa_item = price_action_structure_evidence(price_action)
@@ -140,7 +135,7 @@ async def freeze_live_provider(
         price_action=price_action,
         harmonic=harmonic,
         elliott=elliott,
-        candles=candles,
+        candles=eligible,
     )
     frozen_at_ms = max(now_ms(), decision.as_of_ms)
     disposition = ledger.freeze(
@@ -168,4 +163,29 @@ async def freeze_live_provider(
         signal_state=decision.state,
         confluence_score=str(confluence.score.value),
         lifecycle_disposition=lifecycle_disposition,
+    )
+
+
+async def freeze_live_provider(
+    *,
+    adapter: MarketDataAdapter,
+    ledger: ImmutableSignalLedger,
+    symbol: str = "BTCUSDT",
+    timeframe: str = "15m",
+    limit: int = 500,
+    minimum_closed_candles: int = 100,
+    now_ms: Callable[[], int] = utc_now_ms,
+) -> LiveFreezeResult:
+    raw = tuple(
+        await adapter.fetch_candles(
+            symbol=symbol,
+            timeframe=timeframe,
+            limit=limit,
+        )
+    )
+    return freeze_live_candles(
+        candles=raw,
+        ledger=ledger,
+        minimum_closed_candles=minimum_closed_candles,
+        now_ms=now_ms,
     )

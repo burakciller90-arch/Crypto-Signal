@@ -5,9 +5,11 @@ from pathlib import Path
 
 import pytest
 
+from crypto_signal.data.aggregation import aggregate_closed_15m
 from crypto_signal.data.models import Candle, DataSource, Exchange, MarketType
 from crypto_signal.ledger.live_clock import (
     LiveFreezeStatus,
+    freeze_live_candles,
     freeze_live_provider,
 )
 from crypto_signal.ledger.store import ImmutableSignalLedger, LedgerWriteDisposition
@@ -185,3 +187,117 @@ def test_live_clock_requires_minimum_history(tmp_path: Path) -> None:
         )
 
     assert ledger.count_freezes() == 0
+
+
+def test_direct_candle_freeze_matches_provider_path_exactly(
+    tmp_path: Path,
+) -> None:
+    items = market_candles()
+    now_value = max(candle.ingested_at_ms for candle in items) + 1_000
+
+    provider_ledger = ImmutableSignalLedger(
+        tmp_path / "provider.sqlite3"
+    )
+    direct_ledger = ImmutableSignalLedger(
+        tmp_path / "direct.sqlite3"
+    )
+
+    provider_result = asyncio.run(
+        freeze_live_provider(
+            adapter=FakeAdapter(items),
+            ledger=provider_ledger,
+            limit=len(items),
+            minimum_closed_candles=100,
+            now_ms=lambda: now_value,
+        )
+    )
+    direct_result = freeze_live_candles(
+        candles=items,
+        ledger=direct_ledger,
+        minimum_closed_candles=100,
+        now_ms=lambda: now_value,
+    )
+
+    assert provider_result == direct_result
+    assert provider_ledger.list_freezes() == direct_ledger.list_freezes()
+    assert (
+        provider_ledger.list_lifecycle_evaluations()
+        == direct_ledger.list_lifecycle_evaluations()
+    )
+
+
+def test_direct_candle_freeze_preserves_source_cutoff_idempotence(
+    tmp_path: Path,
+) -> None:
+    items = market_candles()
+    ledger = ImmutableSignalLedger(tmp_path / "direct.sqlite3")
+    now_value = max(candle.ingested_at_ms for candle in items) + 1_000
+
+    first = freeze_live_candles(
+        candles=items,
+        ledger=ledger,
+        minimum_closed_candles=100,
+        now_ms=lambda: now_value,
+    )
+    second = freeze_live_candles(
+        candles=items,
+        ledger=ledger,
+        minimum_closed_candles=100,
+        now_ms=lambda: now_value + 5_000,
+    )
+
+    assert first.status is LiveFreezeStatus.FROZEN
+    assert second.status is LiveFreezeStatus.ALREADY_FROZEN
+    assert second.source_cutoff_open_time_ms == first.source_cutoff_open_time_ms
+    assert ledger.count_freezes() == 1
+    assert ledger.count_lifecycle_evaluations() == 1
+
+
+def test_direct_candle_freeze_accepts_canonical_aggregated_history(
+    tmp_path: Path,
+) -> None:
+    base = tuple(
+        item
+        for item in market_candles(closed_count=120)
+        if item.is_closed
+    )
+    aggregation = aggregate_closed_15m(
+        base,
+        target_timeframe="1h",
+    )
+    assert aggregation.incomplete == ()
+    assert len(aggregation.candles) == 30
+
+    now_value = max(
+        candle.ingested_at_ms for candle in aggregation.candles
+    ) + 1_000
+    ledger = ImmutableSignalLedger(tmp_path / "aggregated.sqlite3")
+
+    result = freeze_live_candles(
+        candles=aggregation.candles,
+        ledger=ledger,
+        minimum_closed_candles=20,
+        now_ms=lambda: now_value,
+    )
+
+    assert result.status is LiveFreezeStatus.FROZEN
+    freeze = ledger.list_freezes()[0]
+    assert freeze.timeframe == "1h"
+    assert freeze.source_cutoff_open_time_ms == (
+        aggregation.candles[-1].open_time_ms
+    )
+    assert ledger.count_lifecycle_evaluations() == 1
+
+
+def test_direct_candle_freeze_rejects_non_positive_minimum(
+    tmp_path: Path,
+) -> None:
+    with pytest.raises(
+        ValueError,
+        match="minimum closed candle count must be positive",
+    ):
+        freeze_live_candles(
+            candles=market_candles(),
+            ledger=ImmutableSignalLedger(tmp_path / "invalid.sqlite3"),
+            minimum_closed_candles=0,
+        )

@@ -419,14 +419,27 @@ No Durdurulmaz or Quantum Capital project state was mutated; UID502 is used only
 - no production higher-timeframe context activated
 
 ## Canonical next frontier
-Post-V1 canonical freeze-path refactor:
-1. extract freeze_live_candles() from adapter acquisition
-2. preserve exact existing 15m decision/bundle/lifecycle semantics
-3. make freeze_live_provider() delegate after fetching canonical candles
-4. allow prepared aggregated candles to enter the same immutable pipeline later
-5. prove 15m regression equivalence and source-cutoff idempotence
-6. keep higher-timeframe production coverage disabled
-7. full repo gate before activation work
+Focused V2+ Birthday Edition governs post-V1 execution.
+See:
+- docs/POST_V1_PRODUCT_VISION_BIRTHDAY_EDITION.md
+- ROADMAP_V2_PLUS_BIRTHDAY_EDITION.md
+- docs/POST_V1_CANONICAL_FREEZE_PATH_ACCEPTANCE.md
 
-V2+ research remains behind production coverage expansion.
+Stage 0 canonical freeze-path refactor: ACCEPTED.
+Acceptance evidence: 271 pytest PASS, Ruff PASS, mypy PASS, uv lock PASS, git diff check PASS.
+
+Immediate Stage 1 Slice 1:
+1. integrate accepted higher-timeframe preparation with the live clock path
+2. keep higher-timeframe coverage fail-closed until tests and explicit activation evidence pass
+3. start with BTCUSDT 1h/4h derived only from canonical closed 15m truth
+4. preserve provider separation and immutable source/provenance semantics
+5. do not fabricate 15m-only period/session level evidence from aggregated candles
+6. run focused and full gates before any stable runtime advancement
+
+After Stage 1:
+focused BTC/ETH/SOL coverage -> Turkish premium Mission Control -> visual chart intelligence ->
+decision-quality explanations -> useful alerts -> honest performance/learning -> limited V2+ intelligence ->
+gift-ready integrated acceptance.
+
+Scope discipline: world-class through focus, not maximum feature count.
 REAL_CAPITAL remains 0.
