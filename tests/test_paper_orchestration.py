@@ -55,7 +55,7 @@ def _held_state(tmp_path: Path) -> PaperFundState:
         action=PaperAction.BUY,
         symbol=PaperSymbol.BTCUSDT,
         quantity=Decimal("0.001"),
-        reference_price=Decimal("20000"),
+        reference_price=Decimal(20000),
         reason="seed holding",
         invalidation_context="seed only",
     )
@@ -66,8 +66,8 @@ def _held_state(tmp_path: Path) -> PaperFundState:
         action=PaperAction.BUY,
         symbol=PaperSymbol.BTCUSDT,
         quantity=Decimal("0.001"),
-        reference_price=Decimal("20000"),
-        simulated_fill_price=Decimal("20000"),
+        reference_price=Decimal(20000),
+        simulated_fill_price=Decimal(20000),
         costs=ExecutionCostAssumptions(
             fee_usdt=Decimal(0),
             spread_usdt=Decimal(0),
@@ -122,11 +122,11 @@ def _buy_plan(
         action=PaperAction.BUY,
         symbol=PaperSymbol.BTCUSDT,
         quantity=Decimal("0.001"),
-        reference_price=Decimal("20000"),
+        reference_price=Decimal(20000),
         cost_budget_usdt=Decimal(budget),
         reason="bounded buy",
         invalidation_context="close below frozen structure",
-        mark_prices={PaperSymbol.BTCUSDT: Decimal("20000")},
+        mark_prices={PaperSymbol.BTCUSDT: Decimal(20000)},
         risk_policy=risk_policy,
     )
 
@@ -170,7 +170,7 @@ def test_valid_reduce_and_exit_chains(tmp_path: Path) -> None:
         action=PaperAction.REDUCE,
         symbol=PaperSymbol.BTCUSDT,
         quantity=Decimal("0.0004"),
-        reference_price=Decimal("20000"),
+        reference_price=Decimal(20000),
         cost_budget_usdt=Decimal("0.05"),
         reason="reduce exposure",
         invalidation_context="risk reduction",
@@ -191,7 +191,7 @@ def test_valid_reduce_and_exit_chains(tmp_path: Path) -> None:
         action=PaperAction.EXIT,
         symbol=PaperSymbol.BTCUSDT,
         quantity=Decimal("0.001"),
-        reference_price=Decimal("20000"),
+        reference_price=Decimal(20000),
         cost_budget_usdt=Decimal("0.05"),
         reason="close position",
         invalidation_context="exit condition met",
@@ -229,7 +229,7 @@ def test_risk_policy_mismatch_is_rejected(tmp_path: Path) -> None:
     other_policy = PaperRiskPolicy(
         version="paper_risk_policy.probe-other",
         max_position_concentration=Decimal("0.25"),
-        min_cash_reserve_usdt=Decimal("20"),
+        min_cash_reserve_usdt=Decimal(20),
         max_gross_exposure_fraction=Decimal("0.50"),
     )
     plan = _buy_plan(state, risk_policy=other_policy)
