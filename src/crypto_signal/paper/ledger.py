@@ -33,6 +33,10 @@ class PaperLedgerConflictError(ValueError):
     """Raised when a deterministic identity is rebound to different content."""
 
 
+class PaperLedgerWriteAuthorityError(PaperLedgerConflictError):
+    """Raised when an atomic mutation loses its required write authority."""
+
+
 class PaperLedgerWriteDisposition(StrEnum):
     INSERTED = "inserted"
     UNCHANGED = "unchanged"
@@ -584,6 +588,7 @@ class PaperFundLedger:
         outcome: str,
         event_payload_json: str,
         processed_at_ms: int,
+        required_authority_event_identity: str | None = None,
     ) -> tuple[PaperLedgerWriteDisposition, tuple[PaperLedgerEntry, ...]]:
         """Atomically append optional paper records plus one terminal event receipt."""
         materialized = tuple(records)
@@ -593,6 +598,11 @@ class PaperFundLedger:
             raise ValueError("processed_at_ms must be non-negative")
         if not event_identity or not activation_identity or not outcome:
             raise ValueError("processed event identity/activation/outcome are required")
+        if (
+            required_authority_event_identity is not None
+            and not required_authority_event_identity
+        ):
+            raise ValueError("required authority event identity must be non-empty")
 
         identities = tuple(record.record_identity for record in materialized)
         if len(set(identities)) != len(identities):
@@ -627,6 +637,34 @@ class PaperFundLedger:
                 raise PaperLedgerConflictError(
                     "processed event activation identity mismatch"
                 )
+
+            if required_authority_event_identity is not None:
+                authority = connection.execute(
+                    """
+                    SELECT
+                        authority_event_identity,
+                        activation_identity,
+                        enabled
+                    FROM paper_write_authority_events
+                    ORDER BY sequence_id DESC
+                    LIMIT 1
+                    """
+                ).fetchone()
+                if authority is None or not bool(int(authority["enabled"])):
+                    raise PaperLedgerWriteAuthorityError(
+                        "processed event requires enabled current paper write authority"
+                    )
+                if (
+                    str(authority["authority_event_identity"])
+                    != required_authority_event_identity
+                ):
+                    raise PaperLedgerWriteAuthorityError(
+                        "processed event paper write authority identity changed"
+                    )
+                if str(authority["activation_identity"]) != activation_identity:
+                    raise PaperLedgerWriteAuthorityError(
+                        "processed event paper write authority activation mismatch"
+                    )
 
             present_count = 0
             for kind, record_identity, payload_json, _ in prepared:
