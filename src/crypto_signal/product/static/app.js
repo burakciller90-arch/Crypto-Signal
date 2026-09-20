@@ -301,6 +301,90 @@ function paperCandidateExplanation(item) {
   return "Aday güvenlik kapılarından birinde durduruldu.";
 }
 
+function fmtRate(value) {
+  if (value === null || value === undefined) return "—";
+  const number = Number(value);
+  if (!Number.isFinite(number)) return "—";
+  return `%${(number * 100).toLocaleString("tr-TR", { maximumFractionDigits: 4 })}`;
+}
+
+function paperCandidateEvidenceChange(item) {
+  const byReason = {
+    signal_not_active: "Binance ve Bybit aynı yeni 4 saatlik kapanışta gerekli ACTIVE koşullarını birlikte sağlarsa aday yeniden değerlendirilir.",
+    unsafe_uncertainty: "Belirsizlik bayrakları güvenli politika sınırına döner ve iki sağlayıcının kanıtı hâlâ eşleşirse karar yeniden değerlendirilir.",
+    future_signal: "Karar zamanından sonra oluşan geçerli kapalı mum kanıtı gelmeden sistem ilerlemez.",
+    cooldown_active: "Politika bekleme süresi sona erdikten sonra yalnızca yeni ve geçerli kanıtla tekrar değerlendirme yapılır.",
+    missing_mark_price: "Açık pozisyonların güvenilir değerleme fiyatı tamamlanmadan risk hesabı ilerlemez.",
+  };
+  if (byReason[item.reason_code]) return byReason[item.reason_code];
+  if (item.terminal_status === "waiting_execution_input") {
+    return "Karardan sonra ilk uygun, tamamen kapanmış Binance 15m referans mumu oluştuğunda yürütme girdisi yeniden denenir.";
+  }
+  if (item.terminal_status === "waiting_venue_rules") {
+    return "Karar zamanına uygun doğrulanmış venue-rule snapshot bulunursa sonraki güvenlik kapısına geçilebilir.";
+  }
+  if (item.terminal_status === "sizing_rejected") {
+    return "Risk mesafesi, mevcut NAV ve pozisyon durumu boyutlandırma politikasının güvenli sınırlarına girmeden plan kurulmaz.";
+  }
+  if (item.terminal_status === "pretrade_rejected") {
+    return "Miktar, minimum notional, nakit rezervi, yoğunlaşma ve maliyet kapıları birlikte geçilmeden sanal plan hazır sayılmaz.";
+  }
+  if (item.terminal_status === "pretrade_ready") {
+    return "Bu plan yalnızca bu dondurulmuş kanıt seti için geçerlidir; yeni 4 saatlik kanıt, invalidation, fon durumu veya venue kuralı değişirse yeniden hesaplanır.";
+  }
+  return "Yeni dondurulmuş piyasa kanıtı geldiğinde politika zinciri baştan ve deterministik olarak yeniden değerlendirilir.";
+}
+
+function renderPaperTradePlan(item) {
+  const bound = item.venue_bound_pretrade ?? null;
+  const pretrade = bound?.pretrade ?? null;
+  const plan = pretrade?.plan ?? null;
+  const sizing = item.sizing ?? null;
+  const execution = bound?.execution_snapshot ?? null;
+  const steps = item.trace?.steps ?? [];
+  const gateSummary = steps.length
+    ? steps.map((step) => `${human(step.stage)}: ${human(step.state)} · ${human(step.code)}`).join(" → ")
+    : "Karar kapısı ayrıntısı yok.";
+
+  if (!plan) {
+    return `
+      <details class="paper-plan-disclosure">
+        <summary>İşlem planı · neden yok?</summary>
+        <div class="paper-plan-body">
+          <div class="truth-note"><strong>Plan oluşturulmadı.</strong> Sistem eksik veya güvenli olmayan kanıtı sanal işleme çevirmiyor.</div>
+          <div class="paper-plan-question"><span>Hangi kanıt bunu değiştirebilir?</span><strong>${esc(paperCandidateEvidenceChange(item))}</strong></div>
+          <div class="paper-plan-trace">${esc(gateSummary)}</div>
+        </div>
+      </details>`;
+  }
+
+  return `
+    <details class="paper-plan-disclosure">
+      <summary>İşlem planı · rakamları ve riskleri göster</summary>
+      <div class="paper-plan-body">
+        <div class="paper-plan-grid">
+          <div><span>Sistem ne yapmak istiyor?</span><strong>${esc(human(plan.action))} · ${esc(plan.symbol ?? item.symbol)}</strong></div>
+          <div><span>Sanal miktar</span><strong>${esc(plan.quantity ?? "—")}</strong></div>
+          <div><span>Referans fiyat</span><strong>${esc(plan.reference_price ?? "—")} USDT</strong></div>
+          <div><span>Sanal tutar</span><strong>${esc(fmtMoney(plan.virtual_notional_usdt))}</strong></div>
+          <div><span>Toplam maliyet bütçesi</span><strong>${esc(fmtMoney(plan.cost_budget_usdt))}</strong></div>
+          <div><span>Plan sonrası nakit</span><strong>${esc(fmtMoney(plan.projected_cash_usdt))}</strong></div>
+          <div><span>Plan sonrası miktar</span><strong>${esc(plan.projected_quantity ?? "0")}</strong></div>
+          <div><span>Maks. pozisyon riski</span><strong>${esc(fmtMoney(sizing?.max_position_risk_usdt))}</strong></div>
+          <div><span>Konservatif invalidation</span><strong>${esc(sizing?.conservative_invalidation_price ?? "—")}</strong></div>
+          <div><span>Fee varsayımı</span><strong>${esc(fmtRate(execution?.fee_rate))}</strong></div>
+          <div><span>Spread varsayımı</span><strong>${esc(fmtRate(execution?.spread_rate))}</strong></div>
+          <div><span>Slippage varsayımı</span><strong>${esc(fmtRate(execution?.slippage_rate))}</strong></div>
+        </div>
+        <div class="paper-plan-question"><span>Neden şimdi?</span><strong>Tüm kabul edilmiş dry-run kapıları bu dondurulmuş kanıt için sanal plan seviyesine kadar geçti.</strong></div>
+        <div class="paper-plan-question"><span>Fikir ne zaman bozulur?</span><strong>${esc(plan.invalidation_context ?? "Açık invalidation bağlamı yok.")}</strong></div>
+        <div class="paper-plan-question"><span>Hangi kanıt kararı değiştirebilir?</span><strong>${esc(paperCandidateEvidenceChange(item))}</strong></div>
+        <div class="paper-plan-trace">${esc(gateSummary)}</div>
+        <div class="truth-note">Bu yalnızca sanal plan önizlemesidir. Gerçek emir, credential veya gerçek sermaye yetkisi yoktur.</div>
+      </div>
+    </details>`;
+}
+
 function renderPaperMissionControl(data) {
   const root = $("#paperMissionControl");
   const tag = $("#paperPolicyTag");
@@ -387,6 +471,7 @@ function renderPaperMissionControl(data) {
                 <strong>${esc(item.symbol)} · ${esc(human(item.candidate_action))}</strong>
                 <div class="row-sub">${esc(paperCandidateExplanation(item))}</div>
                 <div class="truth-note">Motor gerekçesi: ${esc(human(item.reason_code))}</div>
+                ${renderPaperTradePlan(item)}
               </div>
               <div class="state-pill ${item.terminal_status === "pretrade_ready" ? "state-active" : "state-neutral"}">${esc(human(item.terminal_status))}</div>
             </div>`).join("") || `
