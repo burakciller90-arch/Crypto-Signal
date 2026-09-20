@@ -52,6 +52,8 @@ const LABELS = {
   target: "Hedef",
   invalidation: "Geçersizleşme",
   hold_cash: "Nakitte Kal",
+  buy: "Sanal Alım",
+  exit: "Sanal Çıkış",
   waiting_execution_input: "İşlem girdisi bekleniyor",
   waiting_venue_rules: "Piyasa kuralları bekleniyor",
   sizing_rejected: "Boyutlandırma reddedildi",
