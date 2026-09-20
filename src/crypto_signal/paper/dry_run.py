@@ -86,6 +86,34 @@ class PaperActivationDryRunStatus(StrEnum):
 
 
 @dataclass(frozen=True, slots=True)
+class PaperActivationDryRunObservationSummary:
+    total_events: int
+    status_counts: tuple[tuple[str, int], ...]
+    ready_event_identities: tuple[str, ...]
+    attention_required: bool
+
+    def __post_init__(self) -> None:
+        if self.total_events < 0:
+            raise ValueError("dry-run observation total cannot be negative")
+        if any(count <= 0 for _, count in self.status_counts):
+            raise ValueError("dry-run status counts must be positive")
+        if self.status_counts != tuple(sorted(self.status_counts)):
+            raise ValueError("dry-run status counts must be sorted")
+        if self.ready_event_identities != tuple(sorted(self.ready_event_identities)):
+            raise ValueError("ready event identities must be sorted")
+        if len(set(self.ready_event_identities)) != len(
+            self.ready_event_identities
+        ):
+            raise ValueError("ready event identities must be unique")
+        for identity in self.ready_event_identities:
+            _require_sha256(identity, "ready event identity")
+        if self.attention_required != bool(self.ready_event_identities):
+            raise ValueError("attention flag must match ready event presence")
+        if sum(count for _, count in self.status_counts) != self.total_events:
+            raise ValueError("dry-run status counts must cover all events")
+
+
+@dataclass(frozen=True, slots=True)
 class PaperActivationDryRunResult:
     version: str
     status: PaperActivationDryRunStatus
@@ -225,6 +253,24 @@ def read_paper_activation_read_only(path: Path) -> PaperActivationState:
             "persistent activation timestamp/payload mismatch"
         )
     return activation
+
+
+def summarize_paper_activation_dry_runs(
+    results: tuple[PaperActivationDryRunResult, ...],
+) -> PaperActivationDryRunObservationSummary:
+    status_counts: dict[str, int] = {}
+    ready: list[str] = []
+    for result in results:
+        key = result.status.value
+        status_counts[key] = status_counts.get(key, 0) + 1
+        if result.status is PaperActivationDryRunStatus.PRETRADE_READY:
+            ready.append(result.event_identity)
+    return PaperActivationDryRunObservationSummary(
+        total_events=len(results),
+        status_counts=tuple(sorted(status_counts.items())),
+        ready_event_identities=tuple(sorted(ready)),
+        attention_required=bool(ready),
+    )
 
 
 def evaluate_paper_activation_dry_run(

@@ -57,6 +57,9 @@ jobs:
           echo "=== PAPER DRY-RUN CLOCK LOGS ==="
           tail -20 /Users/crypto-signal-agent/Crypto-Signal/runtime/paper/paper_dry_run_clock.err.log 2>/dev/null
           tail -20 /Users/crypto-signal-agent/Crypto-Signal/runtime/paper/paper_dry_run_clock.out.log 2>/dev/null
+          echo "=== PAPER DRY-RUN OBSERVATION ==="
+          grep 'PAPER_DRY_RUN_OK' /Users/crypto-signal-agent/Crypto-Signal/runtime/paper/paper_dry_run_clock.out.log 2>/dev/null | tail -1
+          grep 'PAPER_DRY_RUN_ATTENTION' /Users/crypto-signal-agent/Crypto-Signal/runtime/paper/paper_dry_run_clock.out.log 2>/dev/null | tail -5
           echo "=== PAPER DB ==="
           if [ -f "$DB" ]; then
             "$PAPER/.venv/bin/python" -c 'import json,sqlite3,sys; p=sys.argv[1]; c=sqlite3.connect("file:"+p+"?mode=ro",uri=True); tables=("paper_fund_creations","paper_decision_intents","paper_simulated_fills","paper_position_cash_mutations","paper_nav_snapshots","paper_replay_index"); [print(t+"="+str(c.execute("SELECT COUNT(*) FROM "+t).fetchone()[0])) for t in tables]; exists=c.execute("SELECT 1 FROM sqlite_master WHERE type=\"table\" AND name=\"paper_venue_rule_snapshots\"").fetchone(); print("paper_venue_rule_snapshots="+str(c.execute("SELECT COUNT(*) FROM paper_venue_rule_snapshots").fetchone()[0]) if exists else "paper_venue_rule_snapshots=0"); rows=c.execute("SELECT symbol,observed_at_ms,snapshot_identity FROM paper_venue_rule_snapshots ORDER BY symbol,observed_at_ms DESC").fetchall() if exists else []; seen=set(); [(print("venue_latest_"+str(s)+"="+str(t)+":"+str(i)), seen.add(s)) for s,t,i in rows if s not in seen]; aexists=c.execute("SELECT 1 FROM sqlite_master WHERE type=\"table\" AND name=\"paper_activation_state\"").fetchone(); arow=c.execute("SELECT activation_identity,payload_json,activated_at_ms FROM paper_activation_state WHERE singleton=1").fetchone() if aexists else None; print("paper_activation_state="+("1" if arow else "0")); print("activation_identity="+str(arow[0])) if arow else None; print("activation_activated_at_ms="+str(arow[2])) if arow else None; print("activation_payload="+str(arow[1])) if arow else None; pexists=c.execute("SELECT 1 FROM sqlite_master WHERE type=\"table\" AND name=\"paper_processed_events\"").fetchone(); print("paper_processed_events="+str(c.execute("SELECT COUNT(*) FROM paper_processed_events").fetchone()[0]) if pexists else "paper_processed_events=0"); c.close()' "$DB"
@@ -193,6 +196,8 @@ jobs:
             egrep 'state =|runs =|pid =|last exit code =|run interval =' /tmp/crypto-paper-dryrun-launchctl.txt | head -30
             grep -q 'PAPER_DRY_RUN_OK' "$REPO/runtime/paper/paper_dry_run_clock.out.log"
             grep -q 'paper_db_unchanged=YES' "$REPO/runtime/paper/paper_dry_run_clock.out.log"
+            grep -q 'ready_candidates=' "$REPO/runtime/paper/paper_dry_run_clock.out.log"
+            grep -q 'attention_required=' "$REPO/runtime/paper/paper_dry_run_clock.out.log"
           fi
 
           test "$(git -C "$PAPER" rev-parse HEAD)" = "$TARGET"
@@ -352,6 +357,8 @@ jobs:
           egrep 'state =|runs =|pid =|last exit code =|run interval =' /tmp/crypto-paper-dryrun-clock.txt | head -30
           grep -q 'PAPER_DRY_RUN_OK' "$REPO/runtime/paper/paper_dry_run_clock.out.log"
           grep -q 'paper_db_unchanged=YES' "$REPO/runtime/paper/paper_dry_run_clock.out.log"
+          grep -q 'ready_candidates=' "$REPO/runtime/paper/paper_dry_run_clock.out.log"
+          grep -q 'attention_required=' "$REPO/runtime/paper/paper_dry_run_clock.out.log"
           grep -q 'trade_policy=NOT_ACTIVATED' "$REPO/runtime/paper/paper_dry_run_clock.out.log"
           grep -q 'REAL_CAPITAL=0' "$REPO/runtime/paper/paper_dry_run_clock.out.log"
 

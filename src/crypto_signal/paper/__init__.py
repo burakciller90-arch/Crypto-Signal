@@ -42,6 +42,7 @@ from crypto_signal.paper.commit import (
 from crypto_signal.paper.dry_run import (
     PAPER_ACTIVATION_DRY_RUN_VERSION,
     PaperActivationDryRunError,
+    PaperActivationDryRunObservationSummary,
     PaperActivationDryRunResult,
     PaperActivationDryRunStatus,
     evaluate_paper_activation_dry_run,
@@ -176,6 +177,7 @@ __all__ = [
     "PaperAction",
     "PaperActivationBaseline",
     "PaperActivationDryRunError",
+    "PaperActivationDryRunObservationSummary",
     "PaperActivationDryRunResult",
     "PaperActivationDryRunStatus",
     "PaperActivationError",
@@ -259,4 +261,5 @@ __all__ = [
     "run_paper_runtime_tick",
     "scan_post_activation_signal_events",
     "size_paper_candidate",
+    "summarize_paper_activation_dry_runs",
 ]

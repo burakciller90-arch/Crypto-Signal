@@ -13,6 +13,7 @@ from crypto_signal.paper.dry_run import (
     PaperActivationDryRunError,
     evaluate_paper_activation_dry_run,
     read_paper_activation_read_only,
+    summarize_paper_activation_dry_runs,
 )
 from crypto_signal.paper.event_scanner import (
     PaperSignalEventScanError,
@@ -112,6 +113,7 @@ def main() -> int:
 
         evaluated_at_ms = time.time_ns() // 1_000_000
         statuses: Counter[str] = Counter()
+        results = []
         for event in scan.candidates:
             result = evaluate_paper_activation_dry_run(
                 event=event,
@@ -121,6 +123,7 @@ def main() -> int:
                 evaluated_at_ms=evaluated_at_ms,
             )
             statuses[result.status.value] += 1
+            results.append(result)
             execution_identity = (
                 "-"
                 if result.execution_input is None
@@ -149,7 +152,19 @@ def main() -> int:
                 "REAL_CAPITAL=0",
                 flush=True,
             )
+            if result.status.value == "pretrade_ready":
+                print(
+                    "PAPER_DRY_RUN_ATTENTION "
+                    f"event={event.event_identity} "
+                    f"symbol={event.symbol.value} "
+                    f"signal_as_of_ms={event.signal_as_of_ms} "
+                    "status=pretrade_ready "
+                    "trade_policy=NOT_ACTIVATED "
+                    "REAL_CAPITAL=0",
+                    flush=True,
+                )
 
+        summary = summarize_paper_activation_dry_runs(tuple(results))
         after = _paper_db_fingerprint(args.paper_ledger)
         if after != before:
             raise PaperStableDryRunError(
@@ -172,6 +187,8 @@ def main() -> int:
             f"candidates={len(scan.candidates)} "
             f"evaluated_at_ms={evaluated_at_ms} "
             f"statuses={rendered_statuses} "
+            f"ready_candidates={len(summary.ready_event_identities)} "
+            f"attention_required={'YES' if summary.attention_required else 'NO'} "
             "paper_db_unchanged=YES "
             "trade_policy=NOT_ACTIVATED "
             "REAL_CAPITAL=0",

@@ -24,6 +24,7 @@ from crypto_signal.paper.dry_run import (
     PaperActivationDryRunStatus,
     evaluate_paper_activation_dry_run,
     read_paper_activation_read_only,
+    summarize_paper_activation_dry_runs,
 )
 from crypto_signal.paper.event_scanner import (
     PAPER_SIGNAL_EVENT_SCANNER_VERSION,
@@ -387,6 +388,44 @@ def test_future_venue_rule_snapshot_is_not_backdated_into_dry_run(tmp_path) -> N
         evaluated_at_ms=EVALUATED_AT,
     )
     assert result.status is PaperActivationDryRunStatus.WAITING_VENUE_RULES
+
+
+def test_dry_run_observation_summary_flags_pretrade_ready(tmp_path) -> None:
+    ledger, _, activation = _paper(tmp_path)
+    _append_rules(ledger)
+    candle_cache = _candle_cache(tmp_path / "candles.sqlite3")
+    ready = evaluate_paper_activation_dry_run(
+        event=_event(activation),
+        activation=activation,
+        paper_ledger_path=ledger.path,
+        candle_cache_path=candle_cache,
+        evaluated_at_ms=EVALUATED_AT,
+    )
+    hold = evaluate_paper_activation_dry_run(
+        event=_event(activation, state=SignalState.WATCH),
+        activation=activation,
+        paper_ledger_path=ledger.path,
+        candle_cache_path=candle_cache,
+        evaluated_at_ms=EVALUATED_AT,
+    )
+
+    summary = summarize_paper_activation_dry_runs((hold, ready))
+
+    assert summary.total_events == 2
+    assert summary.status_counts == (
+        ("hold_cash", 1),
+        ("pretrade_ready", 1),
+    )
+    assert summary.ready_event_identities == (ready.event_identity,)
+    assert summary.attention_required is True
+
+
+def test_empty_dry_run_observation_summary_requires_no_attention() -> None:
+    summary = summarize_paper_activation_dry_runs(())
+    assert summary.total_events == 0
+    assert summary.status_counts == ()
+    assert summary.ready_event_identities == ()
+    assert summary.attention_required is False
 
 
 def test_dry_run_surface_contains_no_write_or_commit_authority() -> None:
