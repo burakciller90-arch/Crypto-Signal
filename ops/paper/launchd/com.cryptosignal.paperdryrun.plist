@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>com.cryptosignal.paperdryrun</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/Users/crypto-signal-agent/Crypto-Signal-Paper/.venv/bin/python</string>
+    <string>/Users/crypto-signal-agent/Crypto-Signal-Paper/ops/run_paper_activation_dry_run.py</string>
+    <string>--paper-ledger</string>
+    <string>/Users/crypto-signal-agent/Crypto-Signal/runtime/paper/paper_fund.sqlite3</string>
+    <string>--signal-ledger</string>
+    <string>/Users/crypto-signal-agent/Crypto-Signal/runtime/ledger/live_signal_ledger.sqlite3</string>
+    <string>--candle-cache</string>
+    <string>/Users/crypto-signal-agent/Crypto-Signal/runtime/data/live_base_15m_cache.sqlite3</string>
+    <string>--max-events</string>
+    <string>100</string>
+  </array>
+  <key>WorkingDirectory</key><string>/Users/crypto-signal-agent/Crypto-Signal-Paper</string>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PYTHONPATH</key><string>/Users/crypto-signal-agent/Crypto-Signal-Paper/src</string>
+  </dict>
+  <key>RunAtLoad</key><true/>
+  <key>StartInterval</key><integer>120</integer>
+  <key>StandardOutPath</key><string>/Users/crypto-signal-agent/Crypto-Signal/runtime/paper/paper_dry_run_clock.out.log</string>
+  <key>StandardErrorPath</key><string>/Users/crypto-signal-agent/Crypto-Signal/runtime/paper/paper_dry_run_clock.err.log</string>
+</dict>
+</plist>
