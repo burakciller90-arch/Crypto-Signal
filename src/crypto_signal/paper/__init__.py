@@ -42,7 +42,6 @@ from crypto_signal.paper.models import (
     build_simulated_fill,
     initial_account_state,
 )
-
 from crypto_signal.paper.runtime import (
     PaperFundBootstrapStatus,
     PaperRuntimeError,
