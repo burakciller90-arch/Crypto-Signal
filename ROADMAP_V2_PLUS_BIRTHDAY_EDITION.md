@@ -1,5 +1,8 @@
 # V2+ BIRTHDAY EDITION — FOCUSED WORLD-CLASS ROADMAP
 
+> **Historical roadmap notice — 2026-09-20**  
+> This document records the focused Birthday Edition plan that led through Stages 0-6. The user has since authorized the broader Full Version vision. For all new execution after the accepted Stage 5/Alerts foundation, the canonical roadmap is `docs/CRYPTO_SIGNAL_FULL_VERSION_WORLD_CLASS_ROADMAP.md`. Scientific invariants and REAL_CAPITAL=0 remain unchanged.
+
 Status: governing post-V1 execution roadmap.
 Created: 2026-09-20.
 Purpose: finish a focused, Turkish-first, gift-ready Crypto Signal product without uncontrolled scope expansion.
