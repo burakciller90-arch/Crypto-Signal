@@ -313,3 +313,84 @@ def test_decision_cadence_explains_pre_activation_pair(tmp_path) -> None:
     assert btc.candidate_available is False
     assert readiness[1].status.value == "no_4h_evidence"
     assert readiness[2].status.value == "no_4h_evidence"
+
+
+def test_decision_cadence_explains_waiting_provider_pair(tmp_path) -> None:
+    _, activation = _paper(tmp_path)
+    signal_db = tmp_path / "signals.sqlite3"
+    _init_signal_db(signal_db)
+    _insert_4h_freeze(
+        signal_db,
+        exchange="binance",
+        suffix="only-binance",
+        as_of_ms=150,
+        frozen_at_ms=160,
+    )
+    scan = PaperSignalEventScanResult(
+        scanner_version=PAPER_SIGNAL_EVENT_SCANNER_VERSION,
+        activation_identity=activation.activation_identity,
+        eligible_freeze_count=1,
+        incomplete_pair_count=1,
+        processed_skip_count=0,
+        candidates=(),
+        real_capital=REAL_CAPITAL,
+    )
+
+    readiness = paper_mission_control.read_paper_decision_cadence_readiness(
+        signal_ledger_path=signal_db,
+        activation=activation,
+        scan=scan,
+        observed_at_ms=500,
+    )
+
+    btc = readiness[0]
+    assert btc.status.value == "waiting_provider_pair"
+    assert btc.binance is not None
+    assert btc.bybit is None
+    assert btc.paired_as_of_ms is None
+    assert btc.candidate_available is False
+
+
+def test_decision_cadence_explains_provider_asof_mismatch(tmp_path) -> None:
+    _, activation = _paper(tmp_path)
+    signal_db = tmp_path / "signals.sqlite3"
+    _init_signal_db(signal_db)
+    _insert_4h_freeze(
+        signal_db,
+        exchange="binance",
+        suffix="binance-newer",
+        as_of_ms=200,
+        frozen_at_ms=210,
+    )
+    _insert_4h_freeze(
+        signal_db,
+        exchange="bybit",
+        suffix="bybit-older",
+        as_of_ms=150,
+        frozen_at_ms=160,
+    )
+    scan = PaperSignalEventScanResult(
+        scanner_version=PAPER_SIGNAL_EVENT_SCANNER_VERSION,
+        activation_identity=activation.activation_identity,
+        eligible_freeze_count=2,
+        incomplete_pair_count=2,
+        processed_skip_count=0,
+        candidates=(),
+        real_capital=REAL_CAPITAL,
+    )
+
+    readiness = paper_mission_control.read_paper_decision_cadence_readiness(
+        signal_ledger_path=signal_db,
+        activation=activation,
+        scan=scan,
+        observed_at_ms=500,
+    )
+
+    btc = readiness[0]
+    assert btc.status.value == "provider_asof_mismatch"
+    assert btc.binance is not None
+    assert btc.bybit is not None
+    assert btc.binance.signal_as_of_ms == 200
+    assert btc.bybit.signal_as_of_ms == 150
+    assert btc.paired_as_of_ms is None
+    assert btc.candidate_available is False
