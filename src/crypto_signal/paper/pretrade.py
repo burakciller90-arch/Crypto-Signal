@@ -55,6 +55,7 @@ class PaperPretradeReason(StrEnum):
     UPSTREAM_SIZING_REJECTED = "upstream_sizing_rejected"
     ROUNDED_TO_ZERO = "rounded_to_zero"
     BELOW_MINIMUM_QUANTITY = "below_minimum_quantity"
+    ABOVE_MAXIMUM_QUANTITY = "above_maximum_quantity"
     BELOW_MINIMUM_NOTIONAL = "below_minimum_notional"
     EXIT_STEP_MISMATCH = "exit_step_mismatch"
     PLANNER_REJECTED = "planner_rejected"
@@ -197,6 +198,7 @@ def prepare_paper_trade_plan(
     execution_snapshot: FrozenExecutionSnapshot,
     planned_at_ms: int,
     mark_prices: Mapping[PaperSymbol, Decimal] | None = None,
+    max_quantity: Decimal | None = None,
 ) -> PaperPretradeDecision:
     """Round conservatively, budget explicit costs and invoke paper planner."""
     _validate_lineage(
@@ -211,6 +213,15 @@ def prepare_paper_trade_plan(
         raise PaperPretradeError(
             "paper plan cannot predate frozen execution-input observation"
         )
+    if max_quantity is not None:
+        if not isinstance(max_quantity, Decimal):
+            raise TypeError("max_quantity must be Decimal")
+        if (
+            max_quantity.is_nan()
+            or max_quantity.is_infinite()
+            or max_quantity <= Decimal(0)
+        ):
+            raise PaperPretradeError("max_quantity must be finite and positive")
 
     if sizing.status is PaperPositionSizingStatus.REJECTED:
         return _rejected(
@@ -252,6 +263,14 @@ def prepare_paper_trade_plan(
 
     if quantity > raw_quantity:
         raise PaperPretradeError("venue rounding must never increase quantity")
+    if max_quantity is not None and quantity > max_quantity:
+        return _rejected(
+            sizing=sizing,
+            execution_input=execution_input,
+            execution_snapshot=execution_snapshot,
+            reason_code=PaperPretradeReason.ABOVE_MAXIMUM_QUANTITY,
+            detail="rounded quantity exceeds frozen maximum quantity",
+        )
     if quantity < execution_snapshot.min_quantity:
         return _rejected(
             sizing=sizing,

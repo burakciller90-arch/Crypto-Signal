@@ -18,6 +18,7 @@ from dataclasses import dataclass
 from decimal import Decimal
 from pathlib import Path
 from typing import Any
+from collections.abc import Mapping
 
 import httpx
 
@@ -36,6 +37,12 @@ from crypto_signal.paper.models import (
     REAL_CAPITAL,
     PaperSymbol,
 )
+from crypto_signal.paper.pretrade import (
+    PaperPretradeDecision,
+    prepare_paper_trade_plan,
+)
+from crypto_signal.paper.sizing import PaperPositionSizingDecision
+from crypto_signal.paper.state import PaperFundState
 
 __all__ = [
     "BINANCE_SPOT_EXCHANGE_INFO_URL",
@@ -47,12 +54,14 @@ __all__ = [
     "REAL_CAPITAL",
     "FrozenBinanceSpotVenueRules",
     "PaperSimulatedCostPolicy",
+    "PaperVenueBoundPretrade",
     "PaperVenueRuleError",
     "PaperVenueRuleStore",
     "build_execution_snapshot_from_venue_rules",
     "default_conservative_simulated_cost_policy",
     "fetch_binance_spot_venue_rules",
     "parse_binance_spot_venue_rules",
+    "prepare_authoritative_paper_trade_plan",
 ]
 
 BINANCE_SPOT_EXCHANGE_INFO_URL = "https://api.binance.com/api/v3/exchangeInfo"
@@ -190,6 +199,32 @@ class FrozenBinanceSpotVenueRules:
         )
         if self.snapshot_identity != expected:
             raise ValueError("venue-rule snapshot identity mismatch")
+
+
+@dataclass(frozen=True, slots=True)
+class PaperVenueBoundPretrade:
+    """Authoritative rule snapshot + execution snapshot + pretrade result."""
+
+    venue_rule_snapshot_identity: str
+    execution_snapshot: FrozenExecutionSnapshot
+    pretrade: PaperPretradeDecision
+    real_capital: int = REAL_CAPITAL
+
+    def __post_init__(self) -> None:
+        if self.real_capital != REAL_CAPITAL:
+            raise ValueError("REAL_CAPITAL must remain 0")
+        _require_sha256(
+            self.venue_rule_snapshot_identity,
+            "venue_rule_snapshot_identity",
+        )
+        marker = f"|rules:{self.venue_rule_snapshot_identity}|"
+        if marker not in self.execution_snapshot.venue_reference:
+            raise ValueError("execution snapshot lost venue-rule identity")
+        if (
+            self.pretrade.execution_snapshot_identity
+            != self.execution_snapshot.snapshot_identity
+        ):
+            raise ValueError("pretrade execution snapshot identity mismatch")
 
 
 class PaperVenueRuleStore:
@@ -545,6 +580,37 @@ def build_execution_snapshot_from_venue_rules(
         spread_rate=venue_rules.spread_rate,
         slippage_rate=venue_rules.slippage_rate,
         policy_version=PAPER_EXECUTION_POLICY_VERSION,
+    )
+
+
+def prepare_authoritative_paper_trade_plan(
+    *,
+    state: PaperFundState,
+    sizing: PaperPositionSizingDecision,
+    execution_input: FrozenPaperExecutionInput,
+    venue_rules: FrozenBinanceSpotVenueRules,
+    planned_at_ms: int,
+    mark_prices: Mapping[PaperSymbol, Decimal] | None = None,
+) -> PaperVenueBoundPretrade:
+    """Prepare paper pretrade using one exact cached authoritative rule snapshot."""
+    execution_snapshot = build_execution_snapshot_from_venue_rules(
+        execution_input=execution_input,
+        venue_rules=venue_rules,
+    )
+    pretrade = prepare_paper_trade_plan(
+        state=state,
+        sizing=sizing,
+        execution_input=execution_input,
+        execution_snapshot=execution_snapshot,
+        planned_at_ms=planned_at_ms,
+        mark_prices=mark_prices,
+        max_quantity=venue_rules.max_quantity,
+    )
+    return PaperVenueBoundPretrade(
+        venue_rule_snapshot_identity=venue_rules.snapshot_identity,
+        execution_snapshot=execution_snapshot,
+        pretrade=pretrade,
+        real_capital=REAL_CAPITAL,
     )
 
 

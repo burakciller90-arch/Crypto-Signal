@@ -17,8 +17,28 @@ from crypto_signal.paper.execution_input import (
     FrozenPaperExecutionInput,
     compute_execution_input_identity,
 )
-from crypto_signal.paper.ledger import PaperLedgerWriteDisposition
-from crypto_signal.paper.models import REAL_CAPITAL, PaperAction, PaperSymbol
+from crypto_signal.paper.ledger import (
+    PaperFundLedger,
+    PaperLedgerWriteDisposition,
+)
+from crypto_signal.paper.models import (
+    REAL_CAPITAL,
+    PaperAction,
+    PaperSymbol,
+    build_fund_creation,
+)
+from crypto_signal.paper.pretrade import (
+    PaperPretradeReason,
+    PaperPretradeStatus,
+)
+from crypto_signal.paper.sizing import (
+    PAPER_POSITION_SIZING_POLICY_VERSION,
+    PaperPositionSizingDecision,
+    PaperPositionSizingReason,
+    PaperPositionSizingStatus,
+    compute_position_sizing_identity,
+)
+from crypto_signal.paper.state import reconstruct_paper_fund_state
 from crypto_signal.paper.venue_rules import (
     PAPER_SIMULATED_COST_POLICY_VERSION,
     PaperVenueRuleError,
@@ -26,6 +46,7 @@ from crypto_signal.paper.venue_rules import (
     build_execution_snapshot_from_venue_rules,
     fetch_binance_spot_venue_rules,
     parse_binance_spot_venue_rules,
+    prepare_authoritative_paper_trade_plan,
 )
 
 SOURCE_IDS = ("a" * 64, "b" * 64)
@@ -37,6 +58,7 @@ def _payload(
     status: str = "TRADING",
     spot: bool = True,
     min_notional: str = "5",
+    max_quantity: str = "9000",
 ):
     return {
         "timezone": "UTC",
@@ -58,7 +80,7 @@ def _payload(
                     {
                         "filterType": "LOT_SIZE",
                         "minQty": "0.00001",
-                        "maxQty": "9000",
+                        "maxQty": max_quantity,
                         "stepSize": "0.00001",
                     },
                     {
@@ -71,6 +93,40 @@ def _payload(
             }
         ],
     }
+
+
+def _state(tmp_path):
+    ledger = PaperFundLedger(tmp_path / "venue_pretrade.sqlite3")
+    ledger.append_fund_creation(build_fund_creation(created_at_ms=1))
+    return reconstruct_paper_fund_state(ledger)
+
+
+def _sizing(
+    execution_input: FrozenPaperExecutionInput,
+    *,
+    raw_quantity: Decimal = Decimal("0.10"),
+) -> PaperPositionSizingDecision:
+    kwargs = {
+        "policy_version": PAPER_POSITION_SIZING_POLICY_VERSION,
+        "status": PaperPositionSizingStatus.SIZED,
+        "reason_code": PaperPositionSizingReason.BUY_RISK_SIZED,
+        "action": PaperAction.BUY,
+        "symbol": PaperSymbol.BTCUSDT,
+        "execution_input_identity": execution_input.input_identity,
+        "source_freeze_identities": SOURCE_IDS,
+        "reference_price": execution_input.reference_price,
+        "conservative_invalidation_price": Decimal(90),
+        "risk_per_unit_usdt": Decimal(10),
+        "max_position_risk_usdt": raw_quantity * Decimal(10),
+        "raw_quantity": raw_quantity,
+        "venue_rule_check_required": True,
+        "cost_adjustment_required": True,
+    }
+    return PaperPositionSizingDecision(
+        sizing_identity=compute_position_sizing_identity(**kwargs),
+        real_capital=REAL_CAPITAL,
+        **kwargs,
+    )
 
 
 def _execution_input(
@@ -281,6 +337,56 @@ def test_future_rules_cannot_be_backdated_into_execution_input() -> None:
             execution_input=execution_input,
             venue_rules=future_rules,
         )
+
+
+def test_authoritative_pretrade_enforces_captured_max_quantity(tmp_path) -> None:
+    execution_input = _execution_input(observed_at_ms=20_000)
+    rules = parse_binance_spot_venue_rules(
+        _payload(max_quantity="0.05"),
+        symbol=PaperSymbol.BTCUSDT,
+        observed_at_ms=19_500,
+    )
+    bound = prepare_authoritative_paper_trade_plan(
+        state=_state(tmp_path),
+        sizing=_sizing(execution_input, raw_quantity=Decimal("0.10")),
+        execution_input=execution_input,
+        venue_rules=rules,
+        planned_at_ms=20_100,
+    )
+
+    assert bound.pretrade.status is PaperPretradeStatus.REJECTED
+    assert (
+        bound.pretrade.reason_code
+        is PaperPretradeReason.ABOVE_MAXIMUM_QUANTITY
+    )
+    assert bound.pretrade.plan is None
+    assert f"|rules:{rules.snapshot_identity}|" in (
+        bound.execution_snapshot.venue_reference
+    )
+
+
+def test_authoritative_pretrade_plans_when_all_frozen_rules_pass(tmp_path) -> None:
+    execution_input = _execution_input(observed_at_ms=20_000)
+    rules = parse_binance_spot_venue_rules(
+        _payload(max_quantity="9000"),
+        symbol=PaperSymbol.BTCUSDT,
+        observed_at_ms=19_500,
+    )
+    bound = prepare_authoritative_paper_trade_plan(
+        state=_state(tmp_path),
+        sizing=_sizing(execution_input),
+        execution_input=execution_input,
+        venue_rules=rules,
+        planned_at_ms=20_100,
+    )
+
+    assert bound.pretrade.status is PaperPretradeStatus.PLANNED
+    assert bound.pretrade.plan is not None
+    assert bound.pretrade.plan.quantity == Decimal("0.10")
+    assert (
+        bound.pretrade.execution_snapshot_identity
+        == bound.execution_snapshot.snapshot_identity
+    )
 
 
 def test_venue_rule_source_has_no_account_credential_or_real_order_authority() -> None:

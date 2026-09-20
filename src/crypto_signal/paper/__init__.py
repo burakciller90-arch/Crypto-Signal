@@ -111,12 +111,14 @@ from crypto_signal.paper.venue_rules import (
     PAPER_VENUE_RULE_SNAPSHOT_SCHEMA_VERSION,
     FrozenBinanceSpotVenueRules,
     PaperSimulatedCostPolicy,
+    PaperVenueBoundPretrade,
     PaperVenueRuleError,
     PaperVenueRuleStore,
     build_execution_snapshot_from_venue_rules,
     default_conservative_simulated_cost_policy,
     fetch_binance_spot_venue_rules,
     parse_binance_spot_venue_rules,
+    prepare_authoritative_paper_trade_plan,
 )
 
 __all__ = [
@@ -178,6 +180,7 @@ __all__ = [
     "PaperRuntimeSnapshot",
     "PaperSignalLedgerObservation",
     "PaperSimulatedCostPolicy",
+    "PaperVenueBoundPretrade",
     "PaperSymbol",
     "PaperTradePipelineError",
     "PaperTradePipelineResult",
@@ -209,6 +212,7 @@ __all__ = [
     "materialize_planned_pretrade",
     "observe_signal_ledger",
     "parse_binance_spot_venue_rules",
+    "prepare_authoritative_paper_trade_plan",
     "prepare_paper_trade_plan",
     "record_terminal_no_action",
     "run_paper_runtime_tick",
