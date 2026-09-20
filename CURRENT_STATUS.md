@@ -3,7 +3,7 @@
 Updated: 2026-09-20
 Project: Crypto Signal
 Phase: Dashboard V1 / Product Command Center
-State: DASHBOARD_V1_SLICE3_STABLE_RUNTIME_ACCEPTED
+State: DASHBOARD_V1_SLICE4_ACCEPTED_PENDING_STABLE_DEPLOY
 REAL_CAPITAL: 0
 
 ## Accepted foundations
@@ -232,17 +232,33 @@ No Durdurulmaz or Quantum Capital project state was mutated; UID502 is used only
 - PRODUCT/STABLE is independent from mutable development source
 - LIVE/STABLE evidence clock remains independent
 
-## Canonical next frontier
-Dashboard V1 / Product Command Center — Slice 4:
-1. richer Signal Detail projection from frozen bundle evidence
-2. Historical Evaluation metric projection into Performance
-3. explicit RETROSPECTIVE / WALK_FORWARD / LIVE_UNTOUCHED_FORWARD presentation
-4. provider / symbol / timeframe navigation
-5. clearer uncertainty and methodology agreement presentation
-6. further responsive visual polish
-7. no mock data masquerading as real
-8. no execution controls
-9. focused tests + full repo gate before explicit PRODUCT/STABLE deploy
+## Dashboard V1 Slice 4 accepted evidence
+- rich Signal Detail now projects frozen methodology selections, ambiguity/contradiction flags, pairwise agreement, geometry and candle coverage
+- persisted SignalDecision / OutcomeEvaluation JSON is reconstructed strictly and fail-closed
+- Performance reuses accepted Historical Evaluation aggregate_segments() rather than a UI-specific formula
+- latest outcome snapshot per signal is selected within explicit evidence-class + holding-horizon groups
+- RETROSPECTIVE / WALK_FORWARD / LIVE_UNTOUCHED_FORWARD remain separate
+- holding horizons remain separate
+- symbol / timeframe / provider navigation added
+- combined Slice 4 focused gate: 17 tests PASS
+- full repository: 220 tests PASS
+- Ruff PASS
+- mypy PASS
+- JavaScript syntax PASS
+- uv lock PASS
+- real-ledger development smoke on 127.0.0.1:48701 PASS
+- smoke observed 30 immutable freezes, 2 navigation contexts and Performance=EMPTY with zero outcome snapshots
+- temporary development server stopped after smoke
 
-The currently running PRODUCT/STABLE stays pinned to b1cd19f until Slice 4 is accepted and explicitly deployed.
+## Canonical next frontier
+Dashboard V1 integrated acceptance:
+1. commit Slice 4 exact accepted state
+2. explicitly advance PRODUCT/STABLE to that accepted commit
+3. restart com.cryptosignal.dashboard
+4. verify localhost-only listener, product_version=dashboard-v1-slice4/1 and read_only=true
+5. verify real navigation / rich detail / empty-performance behavior on stable lane
+6. close Dashboard V1 acceptance if all mandatory surfaces remain healthy
+7. advance to Alerts V1
+
+LIVE/STABLE evidence clock remains independent.
 REAL_CAPITAL remains 0.

@@ -7,15 +7,20 @@ from pathlib import Path
 
 import pytest
 
-from crypto_signal.confluence.models import ScoreSemantic
+from crypto_signal.confluence.models import (
+    ScoreSemantic,
+)
 from crypto_signal.data.models import Exchange
-from crypto_signal.outcomes.models import EvidenceClass
 from crypto_signal.product.models import (
     ProductDataStatus,
     SignalEvidenceClassStatus,
 )
 from crypto_signal.product.reader import DashboardReader, DashboardReadError
-from crypto_signal.signals.models import ProbabilityStatus, SignalDirection, SignalState
+from crypto_signal.signals.models import (
+    ProbabilityStatus,
+    SignalDirection,
+    SignalState,
+)
 
 
 def digest(seed: str) -> str:
@@ -52,21 +57,110 @@ def bundle_json(
     score: str,
     flags: tuple[str, ...] = (),
 ) -> str:
+    evidence_id = "pa:test"
+    selected = {
+        "ambiguity_flags": [],
+        "as_of_ms": 1_000,
+        "contradiction_flags": [],
+        "direction": direction,
+        "entry_zone": None,
+        "evidence_id": evidence_id,
+        "evidence_summary": ["current_structure=" + direction],
+        "exchange": "bybit",
+        "invalidation_price": None,
+        "invalidation_trigger": None,
+        "key_levels": [{"label": "structure", "price": "100"}],
+        "market_available_at_ms": 900,
+        "market_type": "spot",
+        "methodology": "price_action",
+        "methodology_version": "price-action-v1/1",
+        "metrics": [{"name": "distance", "unit": "bps", "value": "5"}],
+        "observed_at_ms": 950,
+        "setup_type": "market_structure",
+        "symbol": "BTCUSDT",
+        "targets": [],
+        "timeframe": "15m",
+        "validity": "context",
+    }
     return json.dumps(
         {
             "schema_version": "decision-freeze-v1/1",
+            "source_cutoff_open_time_ms": 900,
+            "candles": [
+                {
+                    "open_time_ms": 0,
+                    "close_time_ms": 899,
+                    "open": "100",
+                    "high": "101",
+                    "low": "99",
+                    "close": "100",
+                },
+                {
+                    "open_time_ms": 900,
+                    "close_time_ms": 1799,
+                    "open": "100",
+                    "high": "102",
+                    "low": "99",
+                    "close": "101",
+                },
+            ],
+            "confluence": {
+                "selections": [
+                    {
+                        "methodology": "price_action",
+                        "source_count": 1,
+                        "selected": [selected],
+                        "latest_market_available_at_ms": 900,
+                        "resolved_direction": direction,
+                        "has_internal_direction_conflict": False,
+                    },
+                    {
+                        "methodology": "harmonic",
+                        "source_count": 0,
+                        "selected": [],
+                        "latest_market_available_at_ms": None,
+                        "resolved_direction": "unresolved",
+                        "has_internal_direction_conflict": False,
+                    },
+                    {
+                        "methodology": "elliott",
+                        "source_count": 0,
+                        "selected": [],
+                        "latest_market_available_at_ms": None,
+                        "resolved_direction": "unresolved",
+                        "has_internal_direction_conflict": False,
+                    },
+                ]
+            },
             "signal_decision": {
                 "state": state,
                 "direction": direction,
                 "setup_type": setup_type,
+                "geometry": None,
                 "agreement": {
                     "confluence_score": score,
                     "score_semantic": (
                         ScoreSemantic.AGREEMENT_INDEX_NOT_PROBABILITY.value
                     ),
+                    "support_method_count": 1,
+                    "opposing_method_count": 0,
+                    "resolved_method_count": 1,
+                    "total_methodology_slots": 3,
+                    "pairwise_relations": [
+                        {
+                            "left": "price_action",
+                            "right": "harmonic",
+                            "relation": "insufficient",
+                            "left_direction": direction,
+                            "right_direction": "unresolved",
+                        }
+                    ],
                 },
                 "probability_status": ProbabilityStatus.NOT_CALIBRATED.value,
                 "uncertainty_flags": list(flags),
+                "evidence_summary": [
+                    f"price_action:market_structure:{direction}:context"
+                ],
             },
         },
         sort_keys=True,
@@ -297,37 +391,32 @@ def test_performance_reports_schema_unavailable_without_mutation(
     assert tables == {"signal_freezes"}
 
 
-def test_performance_counts_only_explicit_evidence_classes(tmp_path: Path) -> None:
+def test_performance_empty_with_full_outcome_schema(tmp_path: Path) -> None:
     path = tmp_path / "ledger.sqlite3"
     create_signal_schema(path)
     with sqlite3.connect(path) as connection:
         connection.execute(
             """
             CREATE TABLE outcome_evaluations (
-                evidence_class TEXT NOT NULL
+                outcome_identity TEXT PRIMARY KEY,
+                signal_freeze_identity TEXT NOT NULL,
+                evidence_class TEXT NOT NULL,
+                evaluated_as_of_ms INTEGER NOT NULL,
+                resolution_status TEXT NOT NULL,
+                outcome_state TEXT,
+                max_holding_bars INTEGER NOT NULL,
+                outcome_json TEXT NOT NULL,
+                appended_at_ms INTEGER NOT NULL
             )
             """
-        )
-        connection.executemany(
-            "INSERT INTO outcome_evaluations (evidence_class) VALUES (?)",
-            [
-                (EvidenceClass.RETROSPECTIVE.value,),
-                (EvidenceClass.RETROSPECTIVE.value,),
-                (EvidenceClass.LIVE_UNTOUCHED_FORWARD.value,),
-            ],
         )
 
     view = DashboardReader(path).performance_availability()
 
-    assert view.status is ProductDataStatus.READY
-    assert view.outcome_snapshot_count == 3
-    assert {
-        item.evidence_class: item.count
-        for item in view.evidence_class_counts
-    } == {
-        EvidenceClass.RETROSPECTIVE: 2,
-        EvidenceClass.LIVE_UNTOUCHED_FORWARD: 1,
-    }
+    assert view.status is ProductDataStatus.EMPTY
+    assert view.outcome_snapshot_count == 0
+    assert view.evidence_class_counts == ()
+    assert view.groups == ()
 
 
 def test_malformed_bundle_fails_closed(tmp_path: Path) -> None:

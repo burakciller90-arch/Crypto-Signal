@@ -865,3 +865,51 @@ Canonical frontier advances to Dashboard V1 Slice 4:
 richer frozen-evidence detail, Historical Evaluation performance projection,
 explicit evidence-class views, navigation and further visual polish.
 REAL_CAPITAL remains 0.
+
+## 2026-09-20 — Dashboard V1 Slice 4 accepted in development
+
+Slice 4 extends Mission Control with richer immutable evidence rather than new
+signal truth.
+
+Accepted rich detail:
+- methodology source/selected counts and resolved direction
+- selected evidence summaries, ambiguity/contradiction flags, key levels and metrics
+- pairwise methodology relations
+- frozen geometry only when it really exists
+- candle coverage and uncertainty visibility
+
+Accepted Performance projection:
+- persisted SignalDecision and OutcomeEvaluation are strictly reconstructed
+- accepted Historical Evaluation aggregate_segments() remains the sole metric engine
+- newest snapshot per signal is selected inside evidence-class + holding-horizon groups
+- evidence classes and holding horizons never silently merge
+- historical success fraction remains descriptive frequency, not probability
+
+Accepted navigation:
+- real ledger contexts grouped by exchange/market/symbol/timeframe
+- symbol/timeframe/provider selection without cross-provider synthesis
+
+Mechanical evidence:
+- Slice 4 data gate: 11 PASS
+- Slice 4 combined focused gate: 17 PASS
+- full repository: 220 PASS
+- Ruff PASS
+- mypy PASS
+- JavaScript syntax PASS
+- uv lock PASS
+
+Real-ledger development smoke on 127.0.0.1:48701:
+- product_version dashboard-v1-slice4/1
+- read_only=true
+- freeze count 30
+- navigation contexts 2
+- Performance EMPTY / zero explicit outcome snapshots
+- latest rich detail: PA 1/1 bullish, Harmonic 0/0 unresolved,
+  Elliott 195 source / 2 selected bullish, 3 pairwise relations,
+  no complete signal geometry, 499 frozen candles
+
+No live performance claim was fabricated from the empty outcome set.
+
+Canonical frontier is explicit PRODUCT/STABLE deployment of the accepted
+Slice 4 commit followed by Dashboard V1 integrated acceptance.
+REAL_CAPITAL remains 0.

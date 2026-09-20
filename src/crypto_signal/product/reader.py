@@ -2,26 +2,43 @@ from __future__ import annotations
 
 import json
 import sqlite3
-from collections import Counter
+from collections import Counter, defaultdict
 from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
 from crypto_signal.confluence.models import ScoreSemantic
 from crypto_signal.data.models import Exchange, MarketType
+from crypto_signal.evaluation.aggregate import aggregate_segments
+from crypto_signal.evaluation.models import EvaluatedSignal
 from crypto_signal.outcomes.models import EvidenceClass
+from crypto_signal.product.deserialization import (
+    ProductDeserializationError,
+    parse_outcome_evaluation,
+    parse_signal_decision,
+)
 from crypto_signal.product.models import (
+    AgreementRelationView,
     AssetCockpitView,
     CommandCenterView,
     EvidenceClassCount,
+    EvidenceKeyLevelView,
+    EvidenceMetricView,
     FrozenSignalCard,
+    GeometryTargetView,
     MarketRadarItem,
     MarketRadarView,
+    MethodologySelectionView,
+    NavigationContext,
+    NavigationView,
     PerformanceAvailabilityView,
+    PerformanceSegmentGroup,
     ProductDataStatus,
+    SelectedEvidenceView,
     SignalArchiveView,
     SignalDetailView,
     SignalEvidenceClassStatus,
+    SignalGeometryView,
 )
 from crypto_signal.signals.models import ProbabilityStatus, SignalDirection, SignalState
 
@@ -78,12 +95,25 @@ class DashboardReader:
             raise DashboardReadError(f"{label} must be an integer")
         return value
 
-    def _card_from_row(self, row: sqlite3.Row) -> FrozenSignalCard:
+    @classmethod
+    def _optional_decimal(cls, value: Any, label: str) -> Decimal | None:
+        if value is None:
+            return None
+        try:
+            return Decimal(cls._require_str(value, label))
+        except Exception as exc:
+            raise DashboardReadError(f"{label} must be decimal text") from exc
+
+    @classmethod
+    def _bundle_root(cls, row: sqlite3.Row) -> dict[str, Any]:
         try:
             payload = json.loads(str(row["bundle_json"]))
         except json.JSONDecodeError as exc:
             raise DashboardReadError("bundle_json is not valid JSON") from exc
-        root = self._require_mapping(payload, "bundle_json")
+        return cls._require_mapping(payload, "bundle_json")
+
+    def _card_from_row(self, row: sqlite3.Row) -> FrozenSignalCard:
+        root = self._bundle_root(row)
         signal = self._require_mapping(root.get("signal_decision"), "signal_decision")
         agreement = self._require_mapping(signal.get("agreement"), "signal agreement")
         flags = self._require_list(signal.get("uncertainty_flags"), "uncertainty_flags")
@@ -195,8 +225,8 @@ class DashboardReader:
                     direction_counts=(),
                     recent_signals=(),
                 )
-            all_rows = self._signal_rows(connection)
-            if not all_rows:
+            rows = self._signal_rows(connection)
+            if not rows:
                 return CommandCenterView(
                     status=ProductDataStatus.EMPTY,
                     freeze_count=0,
@@ -205,7 +235,7 @@ class DashboardReader:
                     direction_counts=(),
                     recent_signals=(),
                 )
-            cards = tuple(self._card_from_row(row) for row in all_rows)
+            cards = tuple(self._card_from_row(row) for row in rows)
             states = Counter(card.state for card in cards)
             directions = Counter(card.direction for card in cards)
             return CommandCenterView(
@@ -239,13 +269,15 @@ class DashboardReader:
             ] = {}
             for row in rows:
                 card = self._card_from_row(row)
-                key = (
-                    card.exchange,
-                    card.market_type,
-                    card.symbol,
-                    card.timeframe,
+                latest.setdefault(
+                    (
+                        card.exchange,
+                        card.market_type,
+                        card.symbol,
+                        card.timeframe,
+                    ),
+                    card,
                 )
-                latest.setdefault(key, card)
             items = tuple(
                 MarketRadarItem(
                     exchange=key[0],
@@ -265,6 +297,69 @@ class DashboardReader:
                 )
             )
             return MarketRadarView(status=ProductDataStatus.READY, items=items)
+
+    def navigation(self) -> NavigationView:
+        if not self.ledger_path.exists():
+            return NavigationView(status=ProductDataStatus.NO_LEDGER, contexts=())
+        with self._connect() as connection:
+            if not self._table_exists(connection, "signal_freezes"):
+                return NavigationView(
+                    status=ProductDataStatus.SCHEMA_UNAVAILABLE,
+                    contexts=(),
+                )
+            rows = tuple(
+                connection.execute(
+                    """
+                    SELECT exchange, market_type, symbol, timeframe,
+                           COUNT(*) AS freeze_count,
+                           MAX(frozen_at_ms) AS latest_frozen_at_ms
+                    FROM signal_freezes
+                    GROUP BY exchange, market_type, symbol, timeframe
+                    ORDER BY symbol, timeframe, exchange, market_type
+                    """
+                ).fetchall()
+            )
+            if not rows:
+                return NavigationView(status=ProductDataStatus.EMPTY, contexts=())
+            try:
+                contexts = tuple(
+                    NavigationContext(
+                        exchange=Exchange(
+                            self._require_str(row["exchange"], "navigation exchange")
+                        ),
+                        market_type=MarketType(
+                            self._require_str(
+                                row["market_type"],
+                                "navigation market type",
+                            )
+                        ),
+                        symbol=self._require_str(
+                            row["symbol"],
+                            "navigation symbol",
+                        ),
+                        timeframe=self._require_str(
+                            row["timeframe"],
+                            "navigation timeframe",
+                        ),
+                        freeze_count=self._require_int(
+                            row["freeze_count"],
+                            "navigation freeze count",
+                        ),
+                        latest_frozen_at_ms=self._require_int(
+                            row["latest_frozen_at_ms"],
+                            "navigation latest frozen at",
+                        ),
+                    )
+                    for row in rows
+                )
+            except ValueError as exc:
+                raise DashboardReadError(
+                    "navigation context is semantically invalid"
+                ) from exc
+            return NavigationView(
+                status=ProductDataStatus.READY,
+                contexts=contexts,
+            )
 
     def asset_cockpit(
         self,
@@ -378,6 +473,282 @@ class DashboardReader:
                 signals=cards,
             )
 
+    def _selected_evidence_view(self, value: Any) -> SelectedEvidenceView:
+        item = self._require_mapping(value, "selected evidence")
+        key_levels = tuple(
+            EvidenceKeyLevelView(
+                label=self._require_str(level.get("label"), "key level label"),
+                price=Decimal(
+                    self._require_str(level.get("price"), "key level price")
+                ),
+            )
+            for raw_level in self._require_list(
+                item.get("key_levels"),
+                "selected evidence key levels",
+            )
+            for level in [self._require_mapping(raw_level, "key level")]
+        )
+        metrics = tuple(
+            EvidenceMetricView(
+                name=self._require_str(metric.get("name"), "metric name"),
+                value=Decimal(
+                    self._require_str(metric.get("value"), "metric value")
+                ),
+                unit=self._require_str(metric.get("unit"), "metric unit"),
+            )
+            for raw_metric in self._require_list(
+                item.get("metrics"),
+                "selected evidence metrics",
+            )
+            for metric in [self._require_mapping(raw_metric, "metric")]
+        )
+        return SelectedEvidenceView(
+            evidence_id=self._require_str(
+                item.get("evidence_id"),
+                "selected evidence id",
+            ),
+            methodology=self._require_str(
+                item.get("methodology"),
+                "selected evidence methodology",
+            ),
+            setup_type=self._require_str(
+                item.get("setup_type"),
+                "selected evidence setup type",
+            ),
+            direction=self._require_str(
+                item.get("direction"),
+                "selected evidence direction",
+            ),
+            validity=self._require_str(
+                item.get("validity"),
+                "selected evidence validity",
+            ),
+            market_available_at_ms=self._require_int(
+                item.get("market_available_at_ms"),
+                "selected evidence market time",
+            ),
+            observed_at_ms=self._require_int(
+                item.get("observed_at_ms"),
+                "selected evidence observed time",
+            ),
+            evidence_summary=tuple(
+                self._require_str(summary, "evidence summary")
+                for summary in self._require_list(
+                    item.get("evidence_summary"),
+                    "evidence summary",
+                )
+            ),
+            ambiguity_flags=tuple(
+                self._require_str(flag, "ambiguity flag")
+                for flag in self._require_list(
+                    item.get("ambiguity_flags"),
+                    "ambiguity flags",
+                )
+            ),
+            contradiction_flags=tuple(
+                self._require_str(flag, "contradiction flag")
+                for flag in self._require_list(
+                    item.get("contradiction_flags"),
+                    "contradiction flags",
+                )
+            ),
+            key_levels=key_levels,
+            metrics=metrics,
+            invalidation_price=self._optional_decimal(
+                item.get("invalidation_price"),
+                "selected evidence invalidation price",
+            ),
+            invalidation_trigger=(
+                None
+                if item.get("invalidation_trigger") is None
+                else self._require_str(
+                    item.get("invalidation_trigger"),
+                    "selected evidence invalidation trigger",
+                )
+            ),
+        )
+
+    def _rich_detail(
+        self,
+        row: sqlite3.Row,
+    ) -> SignalDetailView:
+        root = self._bundle_root(row)
+        signal = self._require_mapping(root.get("signal_decision"), "signal_decision")
+        confluence = self._require_mapping(root.get("confluence"), "confluence")
+        agreement = self._require_mapping(signal.get("agreement"), "signal agreement")
+        selections = tuple(
+            MethodologySelectionView(
+                methodology=self._require_str(
+                    selection.get("methodology"),
+                    "selection methodology",
+                ),
+                source_count=self._require_int(
+                    selection.get("source_count"),
+                    "selection source count",
+                ),
+                selected_count=len(
+                    self._require_list(
+                        selection.get("selected"),
+                        "selection selected evidence",
+                    )
+                ),
+                latest_market_available_at_ms=(
+                    None
+                    if selection.get("latest_market_available_at_ms") is None
+                    else self._require_int(
+                        selection.get("latest_market_available_at_ms"),
+                        "selection latest market time",
+                    )
+                ),
+                resolved_direction=self._require_str(
+                    selection.get("resolved_direction"),
+                    "selection resolved direction",
+                ),
+                has_internal_direction_conflict=bool(
+                    selection.get("has_internal_direction_conflict")
+                ),
+                selected=tuple(
+                    self._selected_evidence_view(item)
+                    for item in self._require_list(
+                        selection.get("selected"),
+                        "selection selected evidence",
+                    )
+                ),
+            )
+            for raw_selection in self._require_list(
+                confluence.get("selections"),
+                "confluence selections",
+            )
+            for selection in [
+                self._require_mapping(raw_selection, "confluence selection")
+            ]
+        )
+        pairwise = tuple(
+            AgreementRelationView(
+                left=self._require_str(item.get("left"), "pair left"),
+                right=self._require_str(item.get("right"), "pair right"),
+                relation=self._require_str(item.get("relation"), "pair relation"),
+                left_direction=self._require_str(
+                    item.get("left_direction"),
+                    "pair left direction",
+                ),
+                right_direction=self._require_str(
+                    item.get("right_direction"),
+                    "pair right direction",
+                ),
+            )
+            for raw_item in self._require_list(
+                agreement.get("pairwise_relations"),
+                "pairwise relations",
+            )
+            for item in [self._require_mapping(raw_item, "pair relation")]
+        )
+
+        geometry_raw = signal.get("geometry")
+        geometry: SignalGeometryView | None = None
+        if geometry_raw is not None:
+            geometry_map = self._require_mapping(geometry_raw, "signal geometry")
+            zone = self._require_mapping(
+                geometry_map.get("entry_zone"),
+                "signal geometry entry zone",
+            )
+            geometry = SignalGeometryView(
+                source_evidence_id=self._require_str(
+                    geometry_map.get("source_evidence_id"),
+                    "geometry source evidence id",
+                ),
+                source_methodology=self._require_str(
+                    geometry_map.get("source_methodology"),
+                    "geometry source methodology",
+                ),
+                entry_zone_low=Decimal(
+                    self._require_str(zone.get("low"), "entry zone low")
+                ),
+                entry_zone_high=Decimal(
+                    self._require_str(zone.get("high"), "entry zone high")
+                ),
+                entry_reference_price=Decimal(
+                    self._require_str(
+                        geometry_map.get("entry_reference_price"),
+                        "entry reference price",
+                    )
+                ),
+                entry_reference_model=self._require_str(
+                    geometry_map.get("entry_reference_model"),
+                    "entry reference model",
+                ),
+                invalidation_price=Decimal(
+                    self._require_str(
+                        geometry_map.get("invalidation_price"),
+                        "geometry invalidation price",
+                    )
+                ),
+                invalidation_trigger=self._require_str(
+                    geometry_map.get("invalidation_trigger"),
+                    "geometry invalidation trigger",
+                ),
+                targets=tuple(
+                    GeometryTargetView(
+                        label=self._require_str(
+                            target.get("label"),
+                            "geometry target label",
+                        ),
+                        target_price=Decimal(
+                            self._require_str(
+                                target.get("target_price"),
+                                "geometry target price",
+                            )
+                        ),
+                        reference_rr=Decimal(
+                            self._require_str(
+                                target.get("reference_rr"),
+                                "geometry target reference rr",
+                            )
+                        ),
+                    )
+                    for raw_target in self._require_list(
+                        geometry_map.get("targets"),
+                        "geometry targets",
+                    )
+                    for target in [
+                        self._require_mapping(raw_target, "geometry target")
+                    ]
+                ),
+            )
+
+        candles = self._require_list(root.get("candles"), "frozen candles")
+        candle_opens = tuple(
+            self._require_int(
+                self._require_mapping(candle, "frozen candle").get(
+                    "open_time_ms"
+                ),
+                "frozen candle open time",
+            )
+            for candle in candles
+        )
+        return SignalDetailView(
+            status=ProductDataStatus.READY,
+            signal=self._card_from_row(row),
+            bundle_json=str(row["bundle_json"]),
+            methodologies=selections,
+            pairwise_relations=pairwise,
+            geometry=geometry,
+            evidence_summary=tuple(
+                self._require_str(item, "signal evidence summary")
+                for item in self._require_list(
+                    signal.get("evidence_summary"),
+                    "signal evidence summary",
+                )
+            ),
+            candle_count=len(candles),
+            first_candle_open_time_ms=(
+                None if not candle_opens else min(candle_opens)
+            ),
+            last_candle_open_time_ms=(
+                None if not candle_opens else max(candle_opens)
+            ),
+        )
+
     def signal_detail(self, signal_freeze_identity: str) -> SignalDetailView:
         if len(signal_freeze_identity) != 64:
             raise ValueError("signal freeze identity must be SHA256")
@@ -407,11 +778,7 @@ class DashboardReader:
                     signal=None,
                     bundle_json=None,
                 )
-            return SignalDetailView(
-                status=ProductDataStatus.READY,
-                signal=self._card_from_row(row),
-                bundle_json=str(row["bundle_json"]),
-            )
+            return self._rich_detail(row)
 
     def performance_availability(self) -> PerformanceAvailabilityView:
         if not self.ledger_path.exists():
@@ -430,15 +797,33 @@ class DashboardReader:
             rows = tuple(
                 connection.execute(
                     """
-                    SELECT evidence_class, COUNT(*) AS count
-                    FROM outcome_evaluations
-                    GROUP BY evidence_class
-                    ORDER BY evidence_class ASC
+                    SELECT
+                        o.*,
+                        s.bundle_json AS signal_bundle_json
+                    FROM outcome_evaluations AS o
+                    JOIN signal_freezes AS s
+                      ON s.signal_freeze_identity = o.signal_freeze_identity
+                    ORDER BY
+                        o.evidence_class ASC,
+                        o.max_holding_bars ASC,
+                        o.signal_freeze_identity ASC,
+                        o.evaluated_as_of_ms DESC,
+                        o.outcome_identity DESC
                     """
                 ).fetchall()
             )
-            counts: list[EvidenceClassCount] = []
-            total = 0
+            if not rows:
+                return PerformanceAvailabilityView(
+                    status=ProductDataStatus.EMPTY,
+                    outcome_snapshot_count=0,
+                    evidence_class_counts=(),
+                )
+
+            class_counter: Counter[EvidenceClass] = Counter()
+            grouped_rows: dict[
+                tuple[EvidenceClass, int],
+                list[sqlite3.Row],
+            ] = defaultdict(list)
             for row in rows:
                 try:
                     evidence_class = EvidenceClass(str(row["evidence_class"]))
@@ -446,20 +831,99 @@ class DashboardReader:
                     raise DashboardReadError(
                         "outcome_evaluations contains unknown evidence class"
                     ) from exc
-                count = int(row["count"])
-                total += count
-                counts.append(
+                max_holding_bars = int(row["max_holding_bars"])
+                if max_holding_bars <= 0:
+                    raise DashboardReadError(
+                        "outcome_evaluations contains invalid holding horizon"
+                    )
+                class_counter[evidence_class] += 1
+                grouped_rows[(evidence_class, max_holding_bars)].append(row)
+
+            groups: list[PerformanceSegmentGroup] = []
+            for (evidence_class, max_holding_bars), group_rows in sorted(
+                grouped_rows.items(),
+                key=lambda item: (
+                    item[0][0].value,
+                    item[0][1],
+                ),
+            ):
+                latest_by_signal: dict[str, sqlite3.Row] = {}
+                for row in group_rows:
+                    signal_identity = str(row["signal_freeze_identity"])
+                    latest_by_signal.setdefault(signal_identity, row)
+
+                evaluated: list[EvaluatedSignal] = []
+                for row in latest_by_signal.values():
+                    try:
+                        signal_root = self._require_mapping(
+                            json.loads(str(row["signal_bundle_json"])),
+                            "signal bundle",
+                        )
+                        decision = parse_signal_decision(
+                            signal_root.get("signal_decision")
+                        )
+                        outcome = parse_outcome_evaluation(
+                            json.loads(str(row["outcome_json"]))
+                        )
+                    except (
+                        json.JSONDecodeError,
+                        ProductDeserializationError,
+                    ) as exc:
+                        raise DashboardReadError(
+                            "performance snapshot cannot be reconstructed"
+                        ) from exc
+                    if decision.freeze_identity != str(
+                        row["signal_freeze_identity"]
+                    ):
+                        raise DashboardReadError(
+                            "performance signal identity mismatch"
+                        )
+                    if outcome.outcome_identity != str(row["outcome_identity"]):
+                        raise DashboardReadError(
+                            "performance outcome identity mismatch"
+                        )
+                    if outcome.evidence_class is not evidence_class:
+                        raise DashboardReadError(
+                            "performance evidence-class mismatch"
+                        )
+                    if outcome.max_holding_bars != max_holding_bars:
+                        raise DashboardReadError(
+                            "performance holding-horizon mismatch"
+                        )
+                    evaluated.append(
+                        EvaluatedSignal(
+                            decision=decision,
+                            outcome=outcome,
+                        )
+                    )
+                try:
+                    segments = aggregate_segments(evaluated)
+                except ValueError as exc:
+                    raise DashboardReadError(
+                        "historical evaluation projection failed"
+                    ) from exc
+                groups.append(
+                    PerformanceSegmentGroup(
+                        evidence_class=evidence_class,
+                        max_holding_bars=max_holding_bars,
+                        stored_snapshot_count=len(group_rows),
+                        selected_latest_signal_count=len(latest_by_signal),
+                        segments=segments,
+                    )
+                )
+
+            return PerformanceAvailabilityView(
+                status=ProductDataStatus.READY,
+                outcome_snapshot_count=len(rows),
+                evidence_class_counts=tuple(
                     EvidenceClassCount(
                         evidence_class=evidence_class,
                         count=count,
                     )
-                )
-            return PerformanceAvailabilityView(
-                status=(
-                    ProductDataStatus.EMPTY
-                    if total == 0
-                    else ProductDataStatus.READY
+                    for evidence_class, count in sorted(
+                        class_counter.items(),
+                        key=lambda item: item[0].value,
+                    )
                 ),
-                outcome_snapshot_count=total,
-                evidence_class_counts=tuple(counts),
+                groups=tuple(groups),
             )

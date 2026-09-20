@@ -40,25 +40,108 @@ def seed_ledger(path: Path) -> str:
         connection.execute(
             """
             CREATE TABLE outcome_evaluations (
-                evidence_class TEXT NOT NULL
+                outcome_identity TEXT PRIMARY KEY,
+                signal_freeze_identity TEXT NOT NULL,
+                evidence_class TEXT NOT NULL,
+                evaluated_as_of_ms INTEGER NOT NULL,
+                resolution_status TEXT NOT NULL,
+                outcome_state TEXT,
+                max_holding_bars INTEGER NOT NULL,
+                outcome_json TEXT NOT NULL,
+                appended_at_ms INTEGER NOT NULL
             )
             """
         )
+        selected = {
+            "ambiguity_flags": [],
+            "as_of_ms": 1_000,
+            "contradiction_flags": [],
+            "direction": "bullish",
+            "entry_zone": None,
+            "evidence_id": "pa:test",
+            "evidence_summary": ["current_structure=bullish"],
+            "exchange": "bybit",
+            "invalidation_price": None,
+            "invalidation_trigger": None,
+            "key_levels": [{"label": "structure", "price": "100"}],
+            "market_available_at_ms": 900,
+            "market_type": "spot",
+            "methodology": "price_action",
+            "methodology_version": "price-action-v1/1",
+            "metrics": [{"name": "distance", "unit": "bps", "value": "5"}],
+            "observed_at_ms": 950,
+            "setup_type": "market_structure",
+            "symbol": "BTCUSDT",
+            "targets": [],
+            "timeframe": "15m",
+            "validity": "context",
+        }
         payload = json.dumps(
             {
+                "schema_version": "decision-freeze-v1/1",
+                "source_cutoff_open_time_ms": 900,
+                "candles": [
+                    {"open_time_ms": 0},
+                    {"open_time_ms": 900},
+                ],
+                "confluence": {
+                    "selections": [
+                        {
+                            "methodology": "price_action",
+                            "source_count": 1,
+                            "selected": [selected],
+                            "latest_market_available_at_ms": 900,
+                            "resolved_direction": "bullish",
+                            "has_internal_direction_conflict": False,
+                        },
+                        {
+                            "methodology": "harmonic",
+                            "source_count": 0,
+                            "selected": [],
+                            "latest_market_available_at_ms": None,
+                            "resolved_direction": "unresolved",
+                            "has_internal_direction_conflict": False,
+                        },
+                        {
+                            "methodology": "elliott",
+                            "source_count": 0,
+                            "selected": [],
+                            "latest_market_available_at_ms": None,
+                            "resolved_direction": "unresolved",
+                            "has_internal_direction_conflict": False,
+                        },
+                    ]
+                },
                 "signal_decision": {
                     "state": "watch",
                     "direction": "bullish",
                     "setup_type": "confluence_watch",
+                    "geometry": None,
                     "agreement": {
                         "confluence_score": "33.33",
                         "score_semantic": (
                             ScoreSemantic.AGREEMENT_INDEX_NOT_PROBABILITY.value
                         ),
+                        "support_method_count": 1,
+                        "opposing_method_count": 0,
+                        "resolved_method_count": 1,
+                        "total_methodology_slots": 3,
+                        "pairwise_relations": [
+                            {
+                                "left": "price_action",
+                                "right": "harmonic",
+                                "relation": "insufficient",
+                                "left_direction": "bullish",
+                                "right_direction": "unresolved",
+                            }
+                        ],
                     },
                     "probability_status": ProbabilityStatus.NOT_CALIBRATED.value,
                     "uncertainty_flags": ["partial_methodology_coverage"],
-                }
+                    "evidence_summary": [
+                        "price_action:market_structure:bullish:context"
+                    ],
+                },
             },
             sort_keys=True,
             separators=(",", ":"),
@@ -108,7 +191,7 @@ def test_health_and_static_shell_without_ledger(tmp_path: Path) -> None:
     assert health.status_code == 200
     assert health.json() == {
         "status": "ok",
-        "product_version": "dashboard-v1-slice2/1",
+        "product_version": "dashboard-v1-slice4/1",
         "real_capital": 0,
         "ledger_present": False,
         "read_only": True,
@@ -151,6 +234,7 @@ def test_read_only_api_surfaces_share_same_frozen_signal(tmp_path: Path) -> None
     asset = client.get("/api/assets/BTCUSDT/15m")
     archive = client.get("/api/signals?limit=10&offset=0")
     detail = client.get(f"/api/signals/{signal_id}")
+    navigation = client.get("/api/navigation")
 
     assert radar.status_code == 200
     assert radar.json()["items"][0]["latest"]["signal_freeze_identity"] == signal_id
@@ -159,7 +243,25 @@ def test_read_only_api_surfaces_share_same_frozen_signal(tmp_path: Path) -> None
     assert archive.status_code == 200
     assert archive.json()["signals"][0]["signal_freeze_identity"] == signal_id
     assert detail.status_code == 200
-    assert detail.json()["signal"]["signal_freeze_identity"] == signal_id
+    detail_body = detail.json()
+    assert detail_body["signal"]["signal_freeze_identity"] == signal_id
+    assert detail_body["candle_count"] == 2
+    assert len(detail_body["methodologies"]) == 3
+    assert len(detail_body["pairwise_relations"]) == 1
+    assert detail_body["geometry"] is None
+    assert navigation.status_code == 200
+    nav_body = navigation.json()
+    assert nav_body["status"] == "ready"
+    assert nav_body["contexts"] == [
+        {
+            "exchange": "bybit",
+            "market_type": "spot",
+            "symbol": "BTCUSDT",
+            "timeframe": "15m",
+            "freeze_count": 1,
+            "latest_frozen_at_ms": 1100,
+        }
+    ]
 
 
 def test_empty_performance_is_not_zero_win_rate(tmp_path: Path) -> None:
@@ -174,6 +276,7 @@ def test_empty_performance_is_not_zero_win_rate(tmp_path: Path) -> None:
         "status": "empty",
         "outcome_snapshot_count": 0,
         "evidence_class_counts": [],
+        "groups": [],
     }
 
 

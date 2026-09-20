@@ -6,6 +6,7 @@ from enum import StrEnum
 
 from crypto_signal.confluence.models import ScoreSemantic
 from crypto_signal.data.models import Exchange, MarketType
+from crypto_signal.evaluation.models import SegmentMetrics
 from crypto_signal.outcomes.models import EvidenceClass
 from crypto_signal.signals.models import ProbabilityStatus, SignalDirection, SignalState
 
@@ -19,6 +20,110 @@ class ProductDataStatus(StrEnum):
 
 class SignalEvidenceClassStatus(StrEnum):
     NOT_EXPLICIT_AT_FREEZE_LEVEL = "not_explicit_at_freeze_level"
+
+
+@dataclass(frozen=True, slots=True)
+class EvidenceKeyLevelView:
+    label: str
+    price: Decimal
+
+
+@dataclass(frozen=True, slots=True)
+class EvidenceMetricView:
+    name: str
+    value: Decimal
+    unit: str
+
+
+@dataclass(frozen=True, slots=True)
+class SelectedEvidenceView:
+    evidence_id: str
+    methodology: str
+    setup_type: str
+    direction: str
+    validity: str
+    market_available_at_ms: int
+    observed_at_ms: int
+    evidence_summary: tuple[str, ...]
+    ambiguity_flags: tuple[str, ...]
+    contradiction_flags: tuple[str, ...]
+    key_levels: tuple[EvidenceKeyLevelView, ...]
+    metrics: tuple[EvidenceMetricView, ...]
+    invalidation_price: Decimal | None
+    invalidation_trigger: str | None
+
+
+@dataclass(frozen=True, slots=True)
+class MethodologySelectionView:
+    methodology: str
+    source_count: int
+    selected_count: int
+    latest_market_available_at_ms: int | None
+    resolved_direction: str
+    has_internal_direction_conflict: bool
+    selected: tuple[SelectedEvidenceView, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class AgreementRelationView:
+    left: str
+    right: str
+    relation: str
+    left_direction: str
+    right_direction: str
+
+
+@dataclass(frozen=True, slots=True)
+class GeometryTargetView:
+    label: str
+    target_price: Decimal
+    reference_rr: Decimal
+
+
+@dataclass(frozen=True, slots=True)
+class SignalGeometryView:
+    source_evidence_id: str
+    source_methodology: str
+    entry_zone_low: Decimal
+    entry_zone_high: Decimal
+    entry_reference_price: Decimal
+    entry_reference_model: str
+    invalidation_price: Decimal
+    invalidation_trigger: str
+    targets: tuple[GeometryTargetView, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class NavigationContext:
+    exchange: Exchange
+    market_type: MarketType
+    symbol: str
+    timeframe: str
+    freeze_count: int
+    latest_frozen_at_ms: int
+
+
+@dataclass(frozen=True, slots=True)
+class NavigationView:
+    status: ProductDataStatus
+    contexts: tuple[NavigationContext, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class PerformanceSegmentGroup:
+    evidence_class: EvidenceClass
+    max_holding_bars: int
+    stored_snapshot_count: int
+    selected_latest_signal_count: int
+    segments: tuple[SegmentMetrics, ...]
+
+    def __post_init__(self) -> None:
+        if self.max_holding_bars <= 0:
+            raise ValueError("performance holding horizon must be positive")
+        if self.stored_snapshot_count < 0 or self.selected_latest_signal_count < 0:
+            raise ValueError("performance snapshot counts must be non-negative")
+        if self.selected_latest_signal_count > self.stored_snapshot_count:
+            raise ValueError("selected signal count cannot exceed stored snapshots")
 
 
 @dataclass(frozen=True, slots=True)
@@ -102,6 +207,13 @@ class SignalDetailView:
     status: ProductDataStatus
     signal: FrozenSignalCard | None
     bundle_json: str | None
+    methodologies: tuple[MethodologySelectionView, ...] = ()
+    pairwise_relations: tuple[AgreementRelationView, ...] = ()
+    geometry: SignalGeometryView | None = None
+    evidence_summary: tuple[str, ...] = ()
+    candle_count: int = 0
+    first_candle_open_time_ms: int | None = None
+    last_candle_open_time_ms: int | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -119,3 +231,4 @@ class PerformanceAvailabilityView:
     status: ProductDataStatus
     outcome_snapshot_count: int
     evidence_class_counts: tuple[EvidenceClassCount, ...]
+    groups: tuple[PerformanceSegmentGroup, ...] = ()

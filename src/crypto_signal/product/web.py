@@ -18,7 +18,7 @@ DEFAULT_LEDGER_PATH = (
     / "live_signal_ledger.sqlite3"
 )
 STATIC_DIR = Path(__file__).with_name("static")
-PRODUCT_VERSION = "dashboard-v1-slice2/1"
+PRODUCT_VERSION = "dashboard-v1-slice4/1"
 
 
 def _json(value: Any, *, status_code: int = 200) -> JSONResponse:
@@ -74,6 +74,13 @@ def create_app(ledger_path: Path | None = None) -> FastAPI:
     def market_radar() -> JSONResponse:
         try:
             return _json(reader.market_radar())
+        except DashboardReadError as exc:
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+    @app.get("/api/navigation")
+    def navigation() -> JSONResponse:
+        try:
+            return _json(reader.navigation())
         except DashboardReadError as exc:
             raise HTTPException(status_code=500, detail=str(exc)) from exc
 

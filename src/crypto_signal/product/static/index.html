@@ -90,8 +90,22 @@
           </div>
           <span class="panel-tag">provider-separated</span>
         </div>
+        <div class="navigation-row" aria-label="Market navigation">
+          <label>
+            <span>Symbol</span>
+            <select id="symbolSelect"><option>Loading…</option></select>
+          </label>
+          <label>
+            <span>Timeframe</span>
+            <select id="timeframeSelect"><option>Loading…</option></select>
+          </label>
+          <label>
+            <span>Provider</span>
+            <select id="providerSelect"><option value="all">All providers</option></select>
+          </label>
+        </div>
         <div id="assetCockpit" class="stack loading-block">
-          Waiting for Market Radar…
+          Waiting for navigation…
         </div>
       </article>
     </section>
@@ -116,6 +130,7 @@
           </div>
           <span class="panel-tag">no silent merging</span>
         </div>
+        <div id="performanceTabs" class="evidence-tabs hidden"></div>
         <div id="performance" class="performance-card loading-block">
           Loading explicit outcome evidence…
         </div>
