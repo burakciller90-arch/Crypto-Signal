@@ -218,6 +218,7 @@ def read_paper_mission_control_snapshot(
         signal_ledger_path=signal_ledger_path,
         paper_ledger_path=paper_ledger_path,
         activation=activation,
+        observed_at_ms=observed_at_ms,
     )
     if len(scan.candidates) > max_candidates:
         raise PaperMissionControlError(
