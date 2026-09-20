@@ -2088,3 +2088,16 @@ The implementation passed 452 tests, Ruff, mypy across 98 source files and the J
 The first production portfolio truth snapshot was snapshot 14457ea66b2213850c53a6be23d672b7854173eeb9fec57ac5b30ba367e7da95: 100.00 USDT cash, zero positions, marked position value 0, NAV 100.00, PnL 0.00, total-return fraction 0, zero decisions/fills/NAV records and one replay record. This is factual capital state, not a success claim; trade_success is explicitly NOT_YET_MEASURED. REAL_CAPITAL remains 0 and trade_policy remains NOT_ACTIVATED.
 
 Next safe slice is a closed-trade performance layer that remains unavailable until immutable simulated round-trip evidence exists, then computes success metrics from that evidence rather than from narrative or signal confidence.
+
+
+## 2026-09-20 — closed-trade performance truth accepted and deployed
+
+paper_trade_performance.v1 now measures virtual-fund trade success only from immutable simulated BUY/EXIT fills and their exact position/cash mutations. Every fill must have one matching accounting mutation whose cash and quantity deltas reconcile to the recorded simulated fill; mismatches fail closed. Spread and slippage remain embedded in the simulated fill prices, while explicit costs remain separately visible for audit so PnL is not charged twice.
+
+The contract deliberately separates capital state from trading success. A cash-only portfolio can truthfully report 100 USDT NAV and 0 capital return, but no completed BUY->EXIT round trip means trade performance remains NOT_YET_MEASURED. An open BUY also remains unscored until an immutable EXIT exists. When completed evidence exists, the reader deterministically exposes win/loss/breakeven counts, win rate, closed net and average PnL, average trade return, gross profit/loss, profit factor when mathematically defined, best/worst trade and explicit execution-cost totals.
+
+The accepted head d1efcb93b66b1224b1db8762acfd3a65f47dcf62 passed 457 tests, Ruff, mypy across 99 source files and the JavaScript gate, then deployed successfully to PAPER/STABLE. Deploy evidence still showed a pristine 100.00 USDT fund with zero positions, one replay record, no trade/NAV records, 408 production signal freezes, zero strict post-watermark candidates, trade_policy=NOT_ACTIVATED and REAL_CAPITAL=0.
+
+The first production [PAPER] PERFORMANCE probe produced snapshot 76b0b5535bbb00fe0ba3ef0a61b1376c46b5bddd7d7b570034cb90ddd9a34dac with status=not_yet_measured, zero closed/open trades and no fabricated win-rate, PnL, average return, profit-factor or execution-cost aggregate. This is the intended production truth until real paper round trips exist.
+
+Next safe slice is a single read-only paper mission-control snapshot that composes observation health, factual portfolio state and factual closed-trade performance for the future final Dashboard pass. It must not grant paper-trade write authority.
