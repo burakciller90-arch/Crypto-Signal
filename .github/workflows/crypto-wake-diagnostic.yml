@@ -1,0 +1,33 @@
+name: Crypto Wake Diagnostic
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/crypto-wake-diagnostic.yml"
+
+jobs:
+  diagnose:
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 5
+    steps:
+      - name: Inspect relay state
+        shell: bash
+        run: |
+          set +e
+          SHARED="/Users/Shared/.crypto-signal-wake-relay"
+          echo "=== TARGET ==="
+          cat "$SHARED/current_chat_url" 2>&1
+          echo "=== STATUS ==="
+          cat "$SHARED/relay_status" 2>&1
+          echo "=== QUEUE ==="
+          find "$SHARED/queue" -maxdepth 1 -type f -print 2>/dev/null
+          echo "=== RECEIPTS (latest) ==="
+          ls -lt "$SHARED/receipts" 2>/dev/null | head -20
+          echo "=== RELAY LOG (latest) ==="
+          tail -120 "$SHARED/relay.log" 2>/dev/null
+          echo "=== TRANSPORT LOG (latest) ==="
+          tail -120 "$SHARED/transport.log" 2>/dev/null
+          echo "=== LOCAL RELAY SUBMIT QUEUE ==="
+          find /Users/crypto-signal-agent/Crypto-Signal/runtime/continuity -maxdepth 3 -type f -name '*.wake' -print 2>/dev/null
+          exit 0
