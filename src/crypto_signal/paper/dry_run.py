@@ -7,6 +7,7 @@ NAV record, venue snapshot, or activation row. REAL_CAPITAL remains 0.
 
 from __future__ import annotations
 
+import json
 import sqlite3
 from dataclasses import dataclass
 from decimal import Decimal
@@ -58,6 +59,7 @@ __all__ = [
     "PaperActivationDryRunResult",
     "PaperActivationDryRunStatus",
     "evaluate_paper_activation_dry_run",
+    "read_paper_activation_read_only",
 ]
 
 PAPER_ACTIVATION_DRY_RUN_VERSION = "paper_activation_dry_run.v1"
@@ -163,6 +165,66 @@ class PaperActivationDryRunResult:
                 and planned
             ):
                 raise ValueError("PRETRADE_REJECTED cannot carry planned pretrade")
+
+
+def read_paper_activation_read_only(path: Path) -> PaperActivationState:
+    """Load the immutable activation singleton without initializing or mutating DB."""
+    if not path.exists():
+        raise PaperActivationDryRunError("paper ledger does not exist")
+    uri = f"file:{path.resolve()}?mode=ro"
+    try:
+        with sqlite3.connect(uri, uri=True, timeout=5.0) as connection:
+            connection.row_factory = sqlite3.Row
+            connection.execute("PRAGMA query_only=ON")
+            _require_table(connection, "paper_activation_state", "paper ledger")
+            row = connection.execute(
+                """
+                SELECT activation_identity, payload_json, activated_at_ms
+                FROM paper_activation_state
+                WHERE singleton = 1
+                """
+            ).fetchone()
+    except sqlite3.Error as exc:
+        raise PaperActivationDryRunError(
+            f"failed to read paper activation: {exc}"
+        ) from exc
+    if row is None:
+        raise PaperActivationDryRunError("paper activation is not initialized")
+
+    try:
+        raw = json.loads(str(row["payload_json"]))
+        activation = PaperActivationState(
+            activation_identity=str(raw["activation_identity"]),
+            schema_version=str(raw["schema_version"]),
+            fund_identity=str(raw["fund_identity"]),
+            activated_at_ms=int(raw["activated_at_ms"]),
+            activation_cutoff_ms=int(raw["activation_cutoff_ms"]),
+            baseline_signal_freeze_count=int(raw["baseline_signal_freeze_count"]),
+            baseline_latest_signal_freeze_identity=(
+                None
+                if raw["baseline_latest_signal_freeze_identity"] is None
+                else str(raw["baseline_latest_signal_freeze_identity"])
+            ),
+            baseline_latest_frozen_at_ms=(
+                None
+                if raw["baseline_latest_frozen_at_ms"] is None
+                else int(raw["baseline_latest_frozen_at_ms"])
+            ),
+            real_capital=int(raw["real_capital"]),
+        )
+    except (KeyError, TypeError, ValueError, json.JSONDecodeError) as exc:
+        raise PaperActivationDryRunError(
+            "persistent paper activation payload is invalid"
+        ) from exc
+    if activation.activation_identity != str(row["activation_identity"]):
+        raise PaperActivationDryRunError(
+            "persistent activation identity/payload mismatch"
+        )
+    if activation.activated_at_ms != int(row["activated_at_ms"]):
+        raise PaperActivationDryRunError(
+            "persistent activation timestamp/payload mismatch"
+        )
+    return activation
 
 
 def evaluate_paper_activation_dry_run(

@@ -23,6 +23,7 @@ from crypto_signal.paper.dry_run import (
     PAPER_ACTIVATION_DRY_RUN_VERSION,
     PaperActivationDryRunStatus,
     evaluate_paper_activation_dry_run,
+    read_paper_activation_read_only,
 )
 from crypto_signal.paper.event_scanner import (
     PAPER_SIGNAL_EVENT_SCANNER_VERSION,
@@ -261,6 +262,35 @@ def _append_rules(ledger: PaperFundLedger, *, observed_at_ms: int = 1_500):
     )
     PaperVenueRuleStore(ledger.path).append(snapshot)
     return snapshot
+
+
+def test_read_only_activation_loader_returns_exact_persistent_state(tmp_path) -> None:
+    ledger, _, activation = _paper(tmp_path)
+    before = tuple(
+        (entry.record_identity, entry.payload_json)
+        for entry in ledger.replay()
+    )
+
+    loaded = read_paper_activation_read_only(ledger.path)
+
+    after = tuple(
+        (entry.record_identity, entry.payload_json)
+        for entry in ledger.replay()
+    )
+    assert loaded == activation
+    assert before == after
+
+
+def test_read_only_activation_loader_rejects_missing_singleton(tmp_path) -> None:
+    ledger = PaperFundLedger(tmp_path / "paper.sqlite3")
+    ledger.append_fund_creation(build_fund_creation(created_at_ms=1))
+
+    try:
+        read_paper_activation_read_only(ledger.path)
+    except paper_dry_run.PaperActivationDryRunError as exc:
+        assert "not initialized" in str(exc)
+    else:
+        raise AssertionError("missing activation must fail closed")
 
 
 def test_dry_run_reaches_pretrade_ready_without_mutating_paper_ledger(tmp_path) -> None:

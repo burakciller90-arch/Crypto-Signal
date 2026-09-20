@@ -45,6 +45,7 @@ from crypto_signal.paper.dry_run import (
     PaperActivationDryRunResult,
     PaperActivationDryRunStatus,
     evaluate_paper_activation_dry_run,
+    read_paper_activation_read_only,
 )
 from crypto_signal.paper.event_scanner import (
     PAPER_SIGNAL_EVENT_SCANNER_VERSION,
@@ -252,6 +253,7 @@ __all__ = [
     "prepare_authoritative_paper_trade_plan",
     "prepare_paper_trade_plan",
     "read_latest_binance_spot_venue_rules",
+    "read_paper_activation_read_only",
     "read_signal_activation_baseline",
     "record_terminal_no_action",
     "run_paper_runtime_tick",

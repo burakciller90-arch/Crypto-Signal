@@ -24,7 +24,7 @@ jobs:
           set -euo pipefail
           cmd="$(printf '%s\n' "$ISSUE_BODY" | awk -F: 'tolower($1)=="command" {gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2); print tolower($2); exit}')"
           case "$cmd" in
-            state|deploy|rulesrefresh|activationinit)
+            state|deploy|rulesrefresh|activationinit|dryrun)
               ;;
             *)
               echo "Unsupported paper command: $cmd"
@@ -229,3 +229,36 @@ jobs:
           test "$(git -C "$PAPER" rev-parse HEAD)" = "$BEFORE_HEAD"
           test -z "$(git -C "$PAPER" status --porcelain)"
           echo "PAPER_ACTIVATION_INIT_PASS=YES"
+
+      - name: PAPER READ-ONLY DRY RUN
+        if: steps.parse.outputs.command == 'dryrun'
+        shell: bash
+        run: |
+          set -euo pipefail
+          REPO="/Users/crypto-signal-agent/Crypto-Signal"
+          PAPER="/Users/crypto-signal-agent/Crypto-Signal-Paper"
+          PAPER_DB="$REPO/runtime/paper/paper_fund.sqlite3"
+          SIGNAL_DB="$REPO/runtime/ledger/live_signal_ledger.sqlite3"
+          CANDLE_DB="$REPO/runtime/data/live_base_15m_cache.sqlite3"
+
+          test "$(id -u)" = "504"
+          test -f "$PAPER_DB"
+          test -f "$SIGNAL_DB"
+          test -f "$CANDLE_DB"
+          test -x "$PAPER/.venv/bin/python"
+          test -f "$PAPER/ops/run_paper_activation_dry_run.py"
+          test -z "$(git -C "$PAPER" status --porcelain)"
+
+          BEFORE_HEAD="$(git -C "$PAPER" rev-parse HEAD)"
+          PYTHONPATH="$PAPER/src" "$PAPER/.venv/bin/python"             "$PAPER/ops/run_paper_activation_dry_run.py"             --paper-ledger "$PAPER_DB"             --signal-ledger "$SIGNAL_DB"             --candle-cache "$CANDLE_DB"             --max-events 100 | tee /tmp/crypto-paper-dry-run.txt
+
+          grep -q 'PAPER_DRY_RUN_OK' /tmp/crypto-paper-dry-run.txt
+          grep -q 'paper_db_unchanged=YES' /tmp/crypto-paper-dry-run.txt
+          grep -q 'trade_policy=NOT_ACTIVATED' /tmp/crypto-paper-dry-run.txt
+          grep -q 'REAL_CAPITAL=0' /tmp/crypto-paper-dry-run.txt
+
+          "$PAPER/.venv/bin/python" -c 'import sqlite3,sys; p=sys.argv[1]; c=sqlite3.connect("file:"+p+"?mode=ro",uri=True); count=lambda t:int(c.execute("SELECT COUNT(*) FROM "+t).fetchone()[0]); assert count("paper_fund_creations")==1; assert count("paper_decision_intents")==0; assert count("paper_simulated_fills")==0; assert count("paper_position_cash_mutations")==0; assert count("paper_nav_snapshots")==0; assert count("paper_replay_index")==1; assert count("paper_activation_state")==1; assert count("paper_processed_events")==0; c.close(); print("PAPER_DRY_RUN_NO_TRADE_INVARIANT=YES")' "$PAPER_DB"
+
+          test "$(git -C "$PAPER" rev-parse HEAD)" = "$BEFORE_HEAD"
+          test -z "$(git -C "$PAPER" status --porcelain)"
+          echo "PAPER_DRY_RUN_PASS=YES"
