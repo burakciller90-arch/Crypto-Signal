@@ -234,6 +234,16 @@ def test_health_and_static_shell_without_ledger(tmp_path: Path) -> None:
     assert "Paper Performans Laboratuvarı" in index.text
     assert 'id="paperPortfolioExposure"' in index.text
     assert 'id="paperPerformanceLab"' in index.text
+    assert "SİNYAL / İŞLEM ARŞİVİ" in index.text
+    assert 'id="paperTradeArchive"' in index.text
+    assert "function renderPaperTradeArchive(data)" in script.text
+    assert "Henüz sanal işlem kaydı yok." in script.text
+    assert "Bu %0 başarı oranı değildir." in script.text
+    assert "SİSTEM SAĞLIĞI" in index.text
+    assert 'id="systemHealth"' in index.text
+    assert "function renderSystemHealth(health, command, paperMission)" in script.text
+    assert "READ-ONLY · SAĞLIKLI" in script.text
+    assert "REAL_CAPITAL=" in script.text
     assert "function renderEducation(data)" in script.text
     assert "function contextualLessonIds(detail)" in script.text
     assert "function renderContextTeaching(detail)" in script.text
