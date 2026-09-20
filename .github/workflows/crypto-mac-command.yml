@@ -24,7 +24,7 @@ jobs:
           set -euo pipefail
           cmd="$(printf '%s\n' "$ISSUE_BODY" | awk -F: 'tolower($1)=="command" {gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2); print tolower($2); exit}')"
           case "$cmd" in
-            status|services|logs|disk|sync|producttest|fulltest|productstate|productdeploy|paperreview|paperinspect|paperfixlint|paperharden|stateplanreview|stateplaninspect|stateplanharden|execreview|execinspect|cursorreview|cursorreviewtail|cursorcleanup|bridgecheck|bridgestate|wakeresume|waketest|cursorcheck|cursorauthdiag|cursorttycheck)
+            status|services|logs|disk|sync|producttest|fulltest|productstate|productdeploy|paperreview|paperinspect|paperfixlint|paperharden|stateplanreview|stateplaninspect|stateplanharden|execreview|execinspect|execprobe|cursorreview|cursorreviewtail|cursorcleanup|bridgecheck|bridgestate|wakeresume|waketest|cursorcheck|cursorauthdiag|cursorttycheck)
               ;;
             *)
               echo "Unsupported command: $cmd"
@@ -831,6 +831,119 @@ jobs:
               sed -n '1,1300p' "$WT/tests/test_paper_orchestration.py"
               ;;
           esac
+
+      - name: EXECUTION PROBE
+        if: steps.parse.outputs.command == 'execprobe'
+        shell: bash
+        env:
+          ISSUE_BODY: ${{ github.event.issue.body }}
+        run: |
+          set -euo pipefail
+          TARGET="$(/usr/bin/python3 - <<'PY'
+          import os, re
+          body = os.environ.get("ISSUE_BODY", "")
+          m = re.search(r"(?im)^target:\s*(supervisor-[0-9]+)\s*$", body)
+          if not m:
+              raise SystemExit("INVALID_EXEC_PROBE_TARGET")
+          print(m.group(1))
+          PY
+          )"
+          WT="$HOME/.cursor/worktrees/crypto-signal/$TARGET"
+          test -d "$WT"
+          PYTHONPATH="$WT/src" /Users/crypto-signal-agent/Crypto-Signal/.venv/bin/python - <<'PY'
+          from decimal import Decimal
+          from pathlib import Path
+          import tempfile
+
+          from crypto_signal.paper.execution import build_frozen_execution_snapshot, simulate_paper_fill
+          from crypto_signal.paper.ledger import PaperFundLedger
+          from crypto_signal.paper.models import PaperAction, PaperSymbol, build_fund_creation
+          from crypto_signal.paper.orchestration import orchestrate_paper_plan
+          from crypto_signal.paper.planning import PaperRiskPolicy, plan_paper_trade
+          from crypto_signal.paper.state import reconstruct_paper_fund_state
+
+          with tempfile.TemporaryDirectory() as td:
+              ledger = PaperFundLedger(Path(td) / "fund.sqlite3")
+              fund = build_fund_creation(created_at_ms=100)
+              ledger.append_fund_creation(fund)
+              state = reconstruct_paper_fund_state(ledger)
+              policy = PaperRiskPolicy(
+                  version="probe-risk-policy/other",
+                  max_position_concentration=Decimal("0.25"),
+                  min_cash_reserve_usdt=Decimal("20"),
+                  max_gross_exposure_fraction=Decimal("0.50"),
+              )
+              plan = plan_paper_trade(
+                  state=state,
+                  planned_at_ms=200,
+                  action=PaperAction.BUY,
+                  symbol=PaperSymbol.BTCUSDT,
+                  quantity=Decimal("0.001"),
+                  reference_price=Decimal("20000"),
+                  cost_budget_usdt=Decimal("1"),
+                  reason="probe",
+                  invalidation_context="probe invalidation",
+                  mark_prices={},
+                  risk_policy=policy,
+              )
+              snap_a = build_frozen_execution_snapshot(
+                  venue_reference="probe-venue",
+                  symbol=PaperSymbol.BTCUSDT,
+                  quantity_step=Decimal("0.0001"),
+                  min_quantity=Decimal("0.0001"),
+                  min_notional_usdt=Decimal("5"),
+                  fee_rate=Decimal("0.001"),
+                  spread_rate=Decimal("0.0005"),
+                  slippage_rate=Decimal("0.0005"),
+              )
+              snap_b = build_frozen_execution_snapshot(
+                  venue_reference="probe-venue",
+                  symbol=PaperSymbol.BTCUSDT,
+                  quantity_step=Decimal("0.0001"),
+                  min_quantity=Decimal("0.0001"),
+                  min_notional_usdt=Decimal("10"),
+                  fee_rate=Decimal("0.001"),
+                  spread_rate=Decimal("0.0005"),
+                  slippage_rate=Decimal("0.0005"),
+              )
+              snap_other_policy = build_frozen_execution_snapshot(
+                  venue_reference="probe-venue",
+                  symbol=PaperSymbol.BTCUSDT,
+                  quantity_step=Decimal("0.0001"),
+                  min_quantity=Decimal("0.0001"),
+                  min_notional_usdt=Decimal("5"),
+                  fee_rate=Decimal("0.001"),
+                  spread_rate=Decimal("0.0005"),
+                  slippage_rate=Decimal("0.0005"),
+                  policy_version="probe-execution-policy/other",
+              )
+              bundle = orchestrate_paper_plan(state=state, plan=plan, snapshot=snap_a)
+              print("STATE_RISK_POLICY_VERSION=", state.risk_policy_version)
+              print("PLAN_RISK_POLICY_VERSION=", plan.risk_policy_version)
+              print("DECISION_RISK_POLICY_VERSION=", bundle.decision.risk_policy_version)
+              print("RISK_MISMATCH_ACCEPTED=", plan.risk_policy_version != state.risk_policy_version)
+              other = orchestrate_paper_plan(state=state, plan=plan, snapshot=snap_other_policy)
+              print("STATE_EXEC_POLICY_VERSION=", state.execution_policy_version)
+              print("SNAP_EXEC_POLICY_VERSION=", snap_other_policy.policy_version)
+              print("EXEC_MISMATCH_ACCEPTED=", other.fill is not None)
+              a = simulate_paper_fill(
+                  plan=plan,
+                  snapshot=snap_a,
+                  decision_identity=bundle.decision.record_identity,
+                  filled_at_ms=200,
+              )
+              b = simulate_paper_fill(
+                  plan=plan,
+                  snapshot=snap_b,
+                  decision_identity=bundle.decision.record_identity,
+                  filled_at_ms=200,
+              )
+              assert a.fill is not None and b.fill is not None
+              print("SNAPSHOT_IDENTITIES_DIFFER=", snap_a.snapshot_identity != snap_b.snapshot_identity)
+              print("FILL_IDENTITIES_EQUAL=", a.fill.record_identity == b.fill.record_identity)
+              print("FILL_A_VENUE_REF=", a.fill.venue_reference)
+              print("FILL_B_VENUE_REF=", b.fill.venue_reference)
+          PY
 
       - name: EXECUTION REVIEW
         if: steps.parse.outputs.command == 'execreview'
