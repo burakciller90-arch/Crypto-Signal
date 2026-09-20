@@ -24,7 +24,7 @@ jobs:
           set -euo pipefail
           cmd="$(printf '%s\n' "$ISSUE_BODY" | awk -F: 'tolower($1)=="command" {gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2); print tolower($2); exit}')"
           case "$cmd" in
-            status|services|logs|disk|sync|cursorcleanup|bridgecheck|bridgestate|wakeresume|waketest|cursorcheck|cursorauthdiag|cursorttycheck)
+            status|services|logs|disk|sync|producttest|cursorcleanup|bridgecheck|bridgestate|wakeresume|waketest|cursorcheck|cursorauthdiag|cursorttycheck)
               ;;
             *)
               echo "Unsupported command: $cmd"
@@ -98,6 +98,20 @@ jobs:
           echo "BEFORE=$BEFORE"
           echo "AFTER=$AFTER"
           git -C "$REPO" status --short --branch
+
+      - name: PRODUCT TEST
+        if: steps.parse.outputs.command == 'producttest'
+        shell: bash
+        run: |
+          set -euo pipefail
+          REPO="/Users/crypto-signal-agent/Crypto-Signal"
+          cd "$REPO"
+          echo "=== DASHBOARD TESTS ==="
+          ./.venv/bin/python -m pytest -q tests/test_dashboard_web.py tests/test_dashboard_alert_center.py
+          echo "=== JAVASCRIPT SYNTAX ==="
+          node --check src/crypto_signal/product/static/app.js
+          echo "=== RUFF ==="
+          ./.venv/bin/python -m ruff check src/crypto_signal/product tests/test_dashboard_web.py tests/test_dashboard_alert_center.py
 
       - name: CURSOR CLEANUP
         if: steps.parse.outputs.command == 'cursorcleanup'
