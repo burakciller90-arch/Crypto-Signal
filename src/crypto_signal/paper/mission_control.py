@@ -112,7 +112,7 @@ class PaperSignalStreamOverview:
 class PaperDecisionCadenceStatus(StrEnum):
     NO_4H_EVIDENCE = "no_4h_evidence"
     WAITING_PROVIDER_PAIR = "waiting_provider_pair"
-    PROVIDER_ASOF_MISMATCH = "provider_asof_mismatch"
+    PROVIDER_CUTOFF_MISMATCH = "provider_cutoff_mismatch"
     PRE_ACTIVATION_PAIR = "pre_activation_pair"
     POST_ACTIVATION_PAIR = "post_activation_pair"
 
@@ -122,6 +122,7 @@ class PaperDecisionCadenceProviderEvidence:
     exchange: Exchange
     freeze_identity: str
     signal_as_of_ms: int
+    source_cutoff_open_time_ms: int
     frozen_at_ms: int
     signal_state: str
     direction: str
@@ -130,7 +131,11 @@ class PaperDecisionCadenceProviderEvidence:
         if self.exchange not in {Exchange.BINANCE, Exchange.BYBIT}:
             raise ValueError("decision-cadence provider must be Binance or Bybit")
         _require_sha256(self.freeze_identity, "decision-cadence freeze identity")
-        if min(self.signal_as_of_ms, self.frozen_at_ms) < 0:
+        if min(
+            self.signal_as_of_ms,
+            self.source_cutoff_open_time_ms,
+            self.frozen_at_ms,
+        ) < 0:
             raise ValueError("decision-cadence timestamps must be non-negative")
         if self.frozen_at_ms < self.signal_as_of_ms:
             raise ValueError("decision-cadence freeze cannot predate signal as-of")
@@ -145,6 +150,7 @@ class PaperDecisionCadenceReadiness:
     binance: PaperDecisionCadenceProviderEvidence | None
     bybit: PaperDecisionCadenceProviderEvidence | None
     paired_as_of_ms: int | None
+    paired_source_cutoff_open_time_ms: int | None
     candidate_available: bool
 
     def __post_init__(self) -> None:
@@ -155,27 +161,55 @@ class PaperDecisionCadenceReadiness:
         if self.status is PaperDecisionCadenceStatus.NO_4H_EVIDENCE:
             if self.binance is not None or self.bybit is not None:
                 raise ValueError("no-evidence cadence cannot carry provider evidence")
-            if self.paired_as_of_ms is not None or self.candidate_available:
+            if (
+                self.paired_as_of_ms is not None
+                or self.paired_source_cutoff_open_time_ms is not None
+                or self.candidate_available
+            ):
                 raise ValueError("no-evidence cadence cannot carry pair/candidate")
         elif self.status is PaperDecisionCadenceStatus.WAITING_PROVIDER_PAIR:
             if (self.binance is None) == (self.bybit is None):
                 raise ValueError("waiting-provider cadence requires exactly one provider")
-            if self.paired_as_of_ms is not None or self.candidate_available:
+            if (
+                self.paired_as_of_ms is not None
+                or self.paired_source_cutoff_open_time_ms is not None
+                or self.candidate_available
+            ):
                 raise ValueError("waiting-provider cadence cannot carry pair/candidate")
-        elif self.status is PaperDecisionCadenceStatus.PROVIDER_ASOF_MISMATCH:
+        elif self.status is PaperDecisionCadenceStatus.PROVIDER_CUTOFF_MISMATCH:
             if self.binance is None or self.bybit is None:
-                raise ValueError("as-of mismatch requires both providers")
-            if self.binance.signal_as_of_ms == self.bybit.signal_as_of_ms:
-                raise ValueError("as-of mismatch requires different provider as-of values")
-            if self.paired_as_of_ms is not None or self.candidate_available:
-                raise ValueError("as-of mismatch cannot carry exact pair/candidate")
+                raise ValueError("cutoff mismatch requires both providers")
+            if (
+                self.binance.source_cutoff_open_time_ms
+                == self.bybit.source_cutoff_open_time_ms
+            ):
+                raise ValueError(
+                    "cutoff mismatch requires different provider market cutoffs"
+                )
+            if (
+                self.paired_as_of_ms is not None
+                or self.paired_source_cutoff_open_time_ms is not None
+                or self.candidate_available
+            ):
+                raise ValueError("cutoff mismatch cannot carry exact pair/candidate")
         else:
             if self.binance is None or self.bybit is None:
                 raise ValueError("paired cadence requires both providers")
-            if self.binance.signal_as_of_ms != self.bybit.signal_as_of_ms:
-                raise ValueError("paired cadence requires identical provider as-of")
-            if self.paired_as_of_ms != self.binance.signal_as_of_ms:
-                raise ValueError("paired cadence as-of mismatch")
+            if (
+                self.binance.source_cutoff_open_time_ms
+                != self.bybit.source_cutoff_open_time_ms
+            ):
+                raise ValueError("paired cadence requires identical market cutoff")
+            if self.paired_as_of_ms != max(
+                self.binance.signal_as_of_ms,
+                self.bybit.signal_as_of_ms,
+            ):
+                raise ValueError("paired cadence availability as-of mismatch")
+            if (
+                self.paired_source_cutoff_open_time_ms
+                != self.binance.source_cutoff_open_time_ms
+            ):
+                raise ValueError("paired cadence market cutoff mismatch")
             if (
                 self.status is PaperDecisionCadenceStatus.PRE_ACTIVATION_PAIR
                 and self.candidate_available
@@ -467,6 +501,7 @@ def read_paper_decision_cadence_readiness(
                     exchange,
                     symbol,
                     as_of_ms,
+                    source_cutoff_open_time_ms,
                     frozen_at_ms,
                     signal_state,
                     direction
@@ -517,13 +552,14 @@ def read_paper_decision_cadence_readiness(
             exchange=exchange,
             freeze_identity=str(row["signal_freeze_identity"]),
             signal_as_of_ms=int(row["as_of_ms"]),
+            source_cutoff_open_time_ms=int(row["source_cutoff_open_time_ms"]),
             frozen_at_ms=int(row["frozen_at_ms"]),
             signal_state=str(row["signal_state"]),
             direction=str(row["direction"]),
         )
 
     candidate_keys = {
-        (candidate.symbol, candidate.signal_as_of_ms)
+        (candidate.symbol, candidate.source_cutoff_open_time_ms)
         for candidate in scan.candidates
     }
     result: list[PaperDecisionCadenceReadiness] = []
@@ -531,24 +567,38 @@ def read_paper_decision_cadence_readiness(
         binance = latest.get((symbol, Exchange.BINANCE))
         bybit = latest.get((symbol, Exchange.BYBIT))
         paired_as_of_ms: int | None = None
+        paired_source_cutoff_open_time_ms: int | None = None
         candidate_available = False
         if binance is None and bybit is None:
             status = PaperDecisionCadenceStatus.NO_4H_EVIDENCE
         elif binance is None or bybit is None:
             status = PaperDecisionCadenceStatus.WAITING_PROVIDER_PAIR
-        elif binance.signal_as_of_ms != bybit.signal_as_of_ms:
-            status = PaperDecisionCadenceStatus.PROVIDER_ASOF_MISMATCH
+        elif (
+            binance.source_cutoff_open_time_ms
+            != bybit.source_cutoff_open_time_ms
+        ):
+            status = PaperDecisionCadenceStatus.PROVIDER_CUTOFF_MISMATCH
         else:
-            paired_as_of_ms = binance.signal_as_of_ms
+            paired_as_of_ms = max(
+                binance.signal_as_of_ms,
+                bybit.signal_as_of_ms,
+            )
+            paired_source_cutoff_open_time_ms = (
+                binance.source_cutoff_open_time_ms
+            )
             if (
-                paired_as_of_ms < activation.activation_cutoff_ms
+                binance.signal_as_of_ms < activation.activation_cutoff_ms
+                or bybit.signal_as_of_ms < activation.activation_cutoff_ms
                 or binance.frozen_at_ms < activation.activated_at_ms
                 or bybit.frozen_at_ms < activation.activated_at_ms
             ):
                 status = PaperDecisionCadenceStatus.PRE_ACTIVATION_PAIR
             else:
                 status = PaperDecisionCadenceStatus.POST_ACTIVATION_PAIR
-                candidate_available = (symbol, paired_as_of_ms) in candidate_keys
+                candidate_available = (
+                    symbol,
+                    paired_source_cutoff_open_time_ms,
+                ) in candidate_keys
         result.append(
             PaperDecisionCadenceReadiness(
                 symbol=symbol,
@@ -556,6 +606,9 @@ def read_paper_decision_cadence_readiness(
                 binance=binance,
                 bybit=bybit,
                 paired_as_of_ms=paired_as_of_ms,
+                paired_source_cutoff_open_time_ms=(
+                    paired_source_cutoff_open_time_ms
+                ),
                 candidate_available=candidate_available,
             )
         )
@@ -672,6 +725,7 @@ def _decision_cadence_payload(
             "freeze_identity": provider.freeze_identity,
             "frozen_at_ms": provider.frozen_at_ms,
             "signal_as_of_ms": provider.signal_as_of_ms,
+            "source_cutoff_open_time_ms": provider.source_cutoff_open_time_ms,
             "signal_state": provider.signal_state,
         }
 
@@ -680,6 +734,9 @@ def _decision_cadence_payload(
         "bybit": provider_payload(item.bybit),
         "candidate_available": item.candidate_available,
         "paired_as_of_ms": item.paired_as_of_ms,
+        "paired_source_cutoff_open_time_ms": (
+            item.paired_source_cutoff_open_time_ms
+        ),
         "status": item.status.value,
         "symbol": item.symbol.value,
     }
