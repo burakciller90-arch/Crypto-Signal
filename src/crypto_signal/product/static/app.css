@@ -634,6 +634,10 @@ footer {
   font-size: .65rem;
   line-height: 1.5;
 }
+
+@media (max-width: 760px) {
+  .paper-plan-grid { grid-template-columns: 1fr; }
+}
 .paper-truth-bar {
   display: flex;
   flex-wrap: wrap;
