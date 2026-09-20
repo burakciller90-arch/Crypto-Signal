@@ -206,6 +206,11 @@ def test_health_and_static_shell_without_ledger(tmp_path: Path) -> None:
     assert "function renderDecisionExplanation(detail)" in script.text
     assert "Dondurulmuş mum ve kanıt seviyeleri" in script.text
     assert "Neden önemli?" in script.text
+    assert "const AUTO_REFRESH_MS = 15_000" in script.text
+    assert 'document.addEventListener("visibilitychange"' in script.text
+    assert "Canlı · otomatik yenileme" in script.text
+    assert "liveStatusChip" in index.text
+    assert "lastRefreshChip" in index.text
     assert not missing.exists()
 
 
