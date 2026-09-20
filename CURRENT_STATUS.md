@@ -1898,3 +1898,77 @@ Current frontier:
 - continue the next read-only Stage 9 gift-UX gap: unify Signal/Trade Archive and dedicated System Health evidence so the user can inspect immutable history and operational freshness without confusing signal history with virtual trade history;
 - keep PAPER/STABLE write activation closed and preserve REAL_CAPITAL=0.
 
+## 2026-09-21 — Stage 9 Signal/Trade Archive + System Health accepted and live
+
+- accepted main / PRODUCT head: 38327ee46f7d9ae7c97e019bf13391084cb0b9d5
+- PR #337 merged after isolated UID504 branch acceptance
+- isolated feature head a6e48128d850368be573c8021ed839a80932a03f passed:
+  - focused pytest PASS
+  - JavaScript syntax PASS
+  - Ruff PASS
+  - focused mypy PASS
+  - full pytest PASS
+  - full Ruff PASS
+  - full mypy PASS across 102 source files
+  - STAGE9_ARCHIVE_HEALTH_FULL_TEST_PASS=YES
+- canonical post-merge acceptance:
+  - sync PASS
+  - producttest PASS
+  - fulltest PASS
+- Gift Edition archive now explicitly separates:
+  - immutable signal-ledger history
+  - virtual paper-trade history from Mission Control / paper performance truth
+- no virtual fill evidence is shown as “Henüz sanal işlem kaydı yok”; this is explicitly not a 0% win-rate claim
+- open paper positions, if present, stay separate from scored closed round trips
+- dedicated System Health now reports only observable read-only product truth:
+  - product API status/read_only/REAL_CAPITAL
+  - signal-ledger presence and immutable record freshness
+  - paper Mission Control availability
+  - production paper write-authority state
+  - alert outbox presence
+  - latest immutable signal-freeze age
+- missing evidence is not silently labeled healthy
+- no new mutation endpoint, broker credential path or exchange-order authority was added
+- PRODUCT deploy PASS:
+  - previous head 0047bbae075a6fed7f5067d4263bd7cf447c45b4
+  - target head 38327ee46f7d9ae7c97e019bf13391084cb0b9d5
+  - health status=ok
+  - read_only=true
+  - REAL_CAPITAL=0
+- post-deploy PRODUCT exact HEAD=38327ee46f7d9ae7c97e019bf13391084cb0b9d5
+- PAPER/STABLE remains 30b05251af9fc2ac05fd007dbd6ac6d0519c2e58
+- post-deploy paper DB remains:
+  - paper_fund_creations=1
+  - paper_decision_intents=0
+  - paper_simulated_fills=0
+  - paper_position_cash_mutations=0
+  - paper_nav_snapshots=0
+  - paper_replay_index=1
+  - paper_venue_rule_snapshots=3
+  - paper_activation_state=1
+  - paper_processed_events=0
+- fresh Mission Control snapshot 8da165c4e08fa5fda52ee8e3813688dbc59edbeb233c32e1754933ae87cafb85:
+  - signal_freezes=510
+  - eligible post-activation freezes=6
+  - incomplete pairs=0
+  - processed skips=0
+  - candidates=3
+  - ready_candidates=0
+  - attention_required=NO
+  - BTCUSDT HOLD_CASH / signal_not_active
+  - ETHUSDT HOLD_CASH / signal_not_active
+  - SOLUSDT HOLD_CASH / unsafe_uncertainty
+  - cash=100.00 USDT
+  - positions=0
+  - NAV=100.00 USDT
+  - PnL=0.00
+  - performance=NOT_YET_MEASURED
+  - trade_policy=NOT_ACTIVATED
+  - REAL_CAPITAL=0
+
+Current frontier:
+- Stage 9 product-facing Gift Edition surfaces are materially complete at the current accepted scope;
+- rotate dashboard-v2-signal-trade-archive-and-system-health-v1 as completed and do not replay it;
+- begin Stage 10 Full Integrated Acceptance as a read-only acceptance program over existing stable runtimes and evidence;
+- do not cross the separate PAPER/STABLE write-activation gate; REAL_CAPITAL remains 0.
+
