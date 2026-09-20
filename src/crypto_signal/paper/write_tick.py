@@ -207,6 +207,10 @@ def run_paper_write_tick(
             candle_cache_path=candle_cache_path,
             evaluated_at_ms=evaluated_at_ms,
         )
+        _require_same_enabled_authority(
+            ledger=ledger,
+            expected_authority_event_identity=authority.authority_event_identity,
+        )
         disposition = _write_evaluated_event(
             ledger=ledger,
             activation=activation,
@@ -226,6 +230,22 @@ def run_paper_write_tick(
         processed_skip_count=scan.processed_skip_count,
         real_capital=REAL_CAPITAL,
     )
+
+
+def _require_same_enabled_authority(
+    *,
+    ledger: PaperFundLedger,
+    expected_authority_event_identity: str,
+) -> None:
+    current = load_current_paper_write_authority(ledger)
+    if current is None or not current.enabled:
+        raise PaperWriteAuthorityError(
+            "paper write authority was revoked before event mutation"
+        )
+    if current.authority_event_identity != expected_authority_event_identity:
+        raise PaperWriteAuthorityError(
+            "paper write authority changed before event mutation"
+        )
 
 
 def _write_evaluated_event(
