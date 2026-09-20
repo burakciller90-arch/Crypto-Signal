@@ -30,7 +30,7 @@ DEFAULT_ALERT_OUTBOX_PATH = (
     / "alert_outbox.sqlite3"
 )
 STATIC_DIR = Path(__file__).with_name("static")
-PRODUCT_VERSION = "full-version-live-education/1"
+PRODUCT_VERSION = "full-version-contextual-evidence/1"
 
 
 def _json(value: Any, *, status_code: int = 200) -> JSONResponse:
