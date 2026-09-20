@@ -114,6 +114,7 @@ def _insert_4h_freeze(
     suffix: str,
     as_of_ms: int,
     frozen_at_ms: int,
+    source_cutoff_open_time_ms: int | None = None,
 ) -> None:
     with sqlite3.connect(path) as connection:
         connection.execute(
@@ -141,7 +142,11 @@ def _insert_4h_freeze(
                 "BTCUSDT",
                 "4h",
                 as_of_ms,
-                max(0, as_of_ms - 1),
+                (
+                    max(0, as_of_ms - 1)
+                    if source_cutoff_open_time_ms is None
+                    else source_cutoff_open_time_ms
+                ),
                 "watch",
                 "bullish",
                 "{}",
