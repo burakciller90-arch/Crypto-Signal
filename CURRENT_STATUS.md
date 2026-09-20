@@ -906,3 +906,45 @@ Current frontier:
 - define the frozen execution-input source and exact venue/provider timing rule;
 - then translate autonomy risk budget + frozen entry/invalidation truth into quantity;
 - only after planner + execution simulator + atomic commit gates pass may PAPER/STABLE trading activation be considered.
+
+
+## 2026-09-20 — Stage 6C frozen execution-input policy v1 accepted
+
+Policy version:
+- paper_execution_input_policy.v1
+
+Accepted reference-price rule:
+- reference exchange: Binance spot;
+- source timeframe: canonical 15m base candles;
+- cache access: SQLite mode=ro + PRAGMA query_only=ON;
+- eligible source: first fully closed and already-ingested candle whose open_time_ms is strictly greater than autonomy signal as_of_ms;
+- reference price: source candle OPEN;
+- a candle beginning at or before signal as-of is never eligible;
+- missing future closed candle returns WAITING_FOR_NEXT_CLOSED_CANDLE instead of fabricated price.
+
+Audit binding:
+- frozen input identity binds BUY/EXIT candidate, permitted symbol, both autonomy source freeze identities, signal as-of, source exchange/market/timeframe, source candle open/close/ingest times, adapter version, OPEN price and policy version;
+- venue_reference can carry that frozen input identity into later simulated execution.
+
+Authority boundary:
+- reference price is not a fill;
+- module does not choose quantity;
+- module does not mutate candle cache or paper ledger;
+- module has no network/exchange/order/credential path;
+- PAPER/STABLE remains trade_policy=NOT_ACTIVATED;
+- REAL_CAPITAL=0.
+
+Acceptance evidence:
+- implementation commit: 52cc3912df339edbe0cd7e774f42041803f9264f;
+- type-narrowing hardening head: b7ac5896407cd6b8b38fe407cb7dce14bd70b417;
+- first gate: 370 pytest PASS + Ruff PASS, one mypy narrowing finding;
+- final gate: 370 tests PASS;
+- Ruff PASS;
+- mypy PASS across 88 source files;
+- JavaScript syntax PASS.
+
+Current frontier:
+- conservative position sizing from autonomy max-position-risk budget + frozen Binance reference + signal invalidation geometry;
+- then existing paper_risk_policy.v1 planner must independently enforce cash reserve, concentration and gross exposure;
+- then frozen execution cost/rule snapshot + simulator + atomic bundle commit integration;
+- PAPER/STABLE activation remains blocked until those gates and persistent activation watermark state are accepted.

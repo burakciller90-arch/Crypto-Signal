@@ -1811,3 +1811,28 @@ Whole-repository acceptance:
 - REAL_CAPITAL=0.
 
 Next gate is frozen execution-input truth. PAPER/STABLE remains observation-only until that gate and subsequent quantity/planner/execution/atomic-commit integration are accepted.
+
+
+## 2026-09-20 — paper_execution_input_policy.v1 accepted
+
+Supervisor added a deterministic read-only execution-reference layer without granting trade authority.
+
+The policy selects the first fully closed Binance spot 15m candle that begins strictly after the accepted autonomy signal as-of and freezes that candle's OPEN as reference price. Strictly-after timing prevents using a candle that began before the signal existed. If that future candle is not yet finalized/ingested, the policy returns WAITING rather than fabricating price truth.
+
+The source candle cache is opened mode=ro + query_only. The frozen identity binds signal lineage, candle timing, adapter version and reference price. Bybit remains signal-consensus evidence only; Binance is the explicit V1 paper execution reference venue.
+
+First repository gate:
+- all 370 pytest cases PASS;
+- Ruff PASS;
+- mypy found one static Optional narrowing issue after candidate validation.
+
+A source-only narrowing fix added local non-None bindings without changing execution semantics.
+
+Final acceptance:
+- 370 tests PASS;
+- Ruff PASS;
+- mypy PASS across 88 source files;
+- JavaScript PASS;
+- REAL_CAPITAL=0.
+
+Next gate is pure conservative position sizing. No runtime trade activation occurred.
