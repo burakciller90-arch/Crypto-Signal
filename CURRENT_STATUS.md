@@ -1469,3 +1469,25 @@ Current frontier:
 - continue strictly read-only production observation until a real post-cutoff provider-pair event appears;
 - harden dry-run log retention so 120-second observation does not create unbounded local log growth;
 - autonomous virtual-trade writes remain blocked until real post-cutoff dry-run evidence is observed and reviewed.
+
+
+## PAPER/STABLE bounded dry-run log retention accepted
+- implementation head: 6f677f158136c0988aaca80d76acd4b36aa9213f
+- whole-repository FULLTEST PASS
+- Ruff PASS
+- mypy PASS across 97 source files
+- JavaScript gate PASS
+- PAPER/STABLE deploy PASS at the exact implementation head
+- dry-run stdout/stderr are bounded independently at 5 MiB with at most one .1 backup each
+- stable observation still reports candidates=0, ready_candidates=0, attention_required=NO
+- dry-run paper DB fingerprint remains unchanged
+- paper fund remains 100.00 USDT with zero positions
+- decision/fill/mutation/NAV tables remain zero
+- activation singleton remains 1 and processed-event count remains 0
+- paper clock and dry-run clock both report last exit code 0 with 120-second intervals
+- trade_policy=NOT_ACTIVATED
+- REAL_CAPITAL=0
+
+Current frontier:
+- expose a deterministic, structured decision explanation trace from the read-only dry-run path so future product surfaces can show what evidence/rule actually caused HOLD/WAIT/REJECT/READY without fabricated narrative;
+- keep this strictly read-only and do not activate virtual-trade writes until real post-cutoff production evidence traverses the accepted path.
