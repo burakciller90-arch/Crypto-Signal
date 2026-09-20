@@ -1,0 +1,42 @@
+name: Cursor Readonly Smoke
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/cursor-readonly-smoke.yml"
+
+jobs:
+  smoke:
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 10
+    steps:
+      - name: Run authenticated Cursor Ask through UID504 Terminal
+        shell: bash
+        run: |
+          set +e
+          BASE="$HOME/.cursor/crypto-terminal-smoke"
+          PROMPT="$BASE.prompt.txt"
+          SCRIPT="$BASE.sh"
+          OUT="$BASE.out.txt"
+          ERR="$BASE.err.txt"
+          RC="$BASE.rc"
+          rm -f "$PROMPT" "$SCRIPT" "$OUT" "$ERR" "$RC"
+          printf '%s\n'             'READ-ONLY SMOKE TEST. Do not modify, create, delete, move, commit, push, or restart anything.'             'Inspect the Crypto Signal workspace only enough to prove you can read the project.'             'Report: (1) project purpose in 2-4 sentences, (2) current git branch and HEAD if visible, (3) important top-level project areas, (4) the next product frontier documented in the repository if discoverable.'             'Do not expose secrets or environment variables. End with the exact marker CURSOR_SMOKE_OK.'             > "$PROMPT"
+          printf '%s\n'             '#!/bin/zsh'             'export PATH="$HOME/.local/bin:$PATH"'             'cd /Users/crypto-signal-agent/Crypto-Signal || exit 90'             'agent -p "$(cat "$HOME/.cursor/crypto-terminal-smoke.prompt.txt")" --mode=ask --workspace /Users/crypto-signal-agent/Crypto-Signal --output-format text --trust --sandbox enabled > "$HOME/.cursor/crypto-terminal-smoke.out.txt" 2> "$HOME/.cursor/crypto-terminal-smoke.err.txt"'             'echo $? > "$HOME/.cursor/crypto-terminal-smoke.rc"'             'exit'             > "$SCRIPT"
+          chmod 700 "$SCRIPT"
+          /usr/bin/osascript -e 'tell application "Terminal" to do script "/bin/zsh /Users/crypto-signal-agent/.cursor/crypto-terminal-smoke.sh"' >/dev/null 2>&1
+          echo "TERMINAL_DISPATCH_RC=$?"
+          for i in {1..180}; do
+            if [ -f "$RC" ]; then break; fi
+            sleep 1
+          done
+          echo "=== CURSOR RC ==="
+          if [ -f "$RC" ]; then cat "$RC"; else echo "TIMEOUT"; fi
+          echo "=== CURSOR OUTPUT ==="
+          if [ -f "$OUT" ]; then sed -n '1,220p' "$OUT"; else echo "NO_OUTPUT"; fi
+          echo "=== CURSOR STDERR ==="
+          if [ -f "$ERR" ]; then sed -n '1,120p' "$ERR"; else echo "NO_STDERR"; fi
+          if [ ! -f "$RC" ]; then exit 1; fi
+          test "$(cat "$RC")" = "0"
+          grep -q 'CURSOR_SMOKE_OK' "$OUT"
