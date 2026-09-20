@@ -982,3 +982,44 @@ Canonical frontier advances to Alerts V1 Slice 2:
 a read-only Alert Clock over immutable signal/lifecycle evidence, writing only
 to the separate alert outbox and using LocalNoopSink for runtime acceptance.
 REAL_CAPITAL remains 0.
+
+## 2026-09-20 — Alerts V1 Slice 2 accepted: read-only Alert Clock
+
+Alert Clock now materializes notification events from immutable signal/lifecycle
+evidence without mutating the signal ledger.
+
+Persisted evidence parsing was centralized in crypto_signal.ledger.deserialization
+so Dashboard and Alerts reconstruct the same stored SignalDecision/Outcome/
+Lifecycle objects through one strict implementation.
+
+Alert Clock source boundary:
+- SQLite mode=ro
+- PRAGMA query_only=ON
+- no source schema initialization or migration
+- source identity/row mismatches fail closed
+
+Default runtime is materialize-only.
+LocalNoopSink remains explicit acceptance-only behavior.
+
+Mechanical evidence:
+- shared-parser/Alert Clock focused tests: 38 PASS
+- full repository: 241 PASS
+- Ruff PASS
+- mypy PASS
+- JavaScript syntax PASS
+- uv lock PASS
+
+Real production-ledger acceptance smoke:
+- 30 signal freezes
+- 30 lifecycle evaluations
+- WATCH=30
+- three repeated runs
+- eligible alerts=0
+- outbox events=0
+- delivery attempts=0
+
+This proves default policy does not turn WATCH evidence into notification spam.
+
+Canonical frontier advances to Alerts V1 Slice 3:
+an isolated ALERTS/STABLE materialize-only LaunchAgent runtime.
+REAL_CAPITAL remains 0.

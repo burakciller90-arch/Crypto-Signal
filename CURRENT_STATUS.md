@@ -3,7 +3,7 @@
 Updated: 2026-09-20
 Project: Crypto Signal
 Phase: Alerts V1
-State: ALERTS_V1_SLICE1_FOUNDATION_ACCEPTED
+State: ALERTS_V1_SLICE2_ALERT_CLOCK_ACCEPTED
 REAL_CAPITAL: 0
 
 ## Accepted foundations
@@ -277,17 +277,32 @@ No Durdurulmaz or Quantum Capital project state was mutated; UID502 is used only
 - JavaScript syntax PASS
 - uv lock PASS
 
-## Canonical next frontier
-Alerts V1 Slice 2 — Alert Clock:
-1. strictly reconstruct immutable signal/lifecycle evidence from the signal ledger
-2. read signal ledger without mutation
-3. materialize eligible AlertEvents into the separate alert outbox
-4. dispatch through LocalNoopSink for runtime acceptance
-5. repeated clock runs must be idempotent
-6. current WATCH-only untouched-forward evidence should create no default initial alert
-7. expose runtime counts/status
-8. no external notification provider yet
-9. no execution semantics
+## Alerts V1 Slice 2 accepted evidence
+- persisted SignalDecision/Outcome/Lifecycle reconstruction moved to shared ledger deserialization
+- Alert Clock opens source signal ledger mode=ro + PRAGMA query_only=ON
+- source ledger is never initialized/migrated by Alerts
+- default runtime is materialize-only; LocalNoop dispatch is explicit acceptance-only option
+- eligible events append idempotently into separate alert outbox
+- malformed source evidence and identity mismatches fail closed
+- focused shared-parser/clock gate: 38 tests PASS
+- full repository: 241 tests PASS
+- Ruff PASS
+- mypy PASS
+- JavaScript syntax PASS
+- uv lock PASS
+- production smoke: 30 WATCH freezes + 30 lifecycle evaluations -> 0 eligible / 0 alerts / 0 delivery attempts across repeated runs
 
-LIVE/STABLE evidence clock and PRODUCT/STABLE dashboard remain isolated and running while Alert Clock development proceeds.
+## Canonical next frontier
+Alerts V1 Slice 3 — persistent materialize-only runtime:
+1. create isolated ALERTS/STABLE worktree pinned to accepted Alert Clock commit
+2. create alerts-local .venv from accepted lockfile
+3. install com.cryptosignal.alertclock LaunchAgent
+4. RunAtLoad + periodic one-shot materialization
+5. source ledger remains read-only
+6. production alert outbox remains separate
+7. no external dispatch/provider yet
+8. verify repeat-run idempotency and logs
+9. keep LIVE/STABLE and PRODUCT/STABLE independent
+
+After stable Alert Clock acceptance, implement/configure a real user-facing notification adapter with explicit destination configuration and provider-side idempotency.
 REAL_CAPITAL remains 0.
