@@ -24,7 +24,7 @@ jobs:
           set -euo pipefail
           cmd="$(printf '%s\n' "$ISSUE_BODY" | awk -F: 'tolower($1)=="command" {gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2); print tolower($2); exit}')"
           case "$cmd" in
-            status|services|logs|disk|bridgecheck|bridgestate|wakeresume|waketest|cursorcheck|cursorauthdiag)
+            status|services|logs|disk|bridgecheck|bridgestate|wakeresume|waketest|cursorcheck|cursorauthdiag|cursorttycheck)
               ;;
             *)
               echo "Unsupported command: $cmd"
@@ -100,6 +100,22 @@ jobs:
             exit 0
           fi
           exit "$rc"
+
+      - name: CURSOR TTY CHECK
+        if: steps.parse.outputs.command == 'cursorttycheck'
+        shell: bash
+        run: |
+          set -euo pipefail
+          OUT="$HOME/.cursor/crypto-tty-auth-test.txt"
+          rm -f "$OUT"
+          CMD='export PATH="$HOME/.local/bin:$PATH"; agent status > "$HOME/.cursor/crypto-tty-auth-test.txt" 2>&1; exit'
+          /usr/bin/osascript -e 'tell application "Terminal" to do script "'"$CMD"'"' >/dev/null
+          for i in {1..20}; do
+            if [ -s "$OUT" ]; then break; fi
+            sleep 1
+          done
+          echo "=== TTY AGENT STATUS ==="
+          if [ -f "$OUT" ]; then cat "$OUT"; else echo "NO_OUTPUT"; fi
 
       - name: CURSOR AUTH DIAG
         if: steps.parse.outputs.command == 'cursorauthdiag'
