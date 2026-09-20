@@ -58,6 +58,14 @@ from crypto_signal.paper.models import (
     build_simulated_fill,
     initial_account_state,
 )
+from crypto_signal.paper.pretrade import (
+    PAPER_PRETRADE_BRIDGE_POLICY_VERSION,
+    PaperPretradeDecision,
+    PaperPretradeError,
+    PaperPretradeReason,
+    PaperPretradeStatus,
+    prepare_paper_trade_plan,
+)
 from crypto_signal.paper.runtime import (
     PaperFundBootstrapStatus,
     PaperRuntimeError,
@@ -84,6 +92,7 @@ __all__ = [
     "PAPER_EXECUTION_POLICY_VERSION",
     "PAPER_FUND_SCHEMA_VERSION",
     "PAPER_POSITION_SIZING_POLICY_VERSION",
+    "PAPER_PRETRADE_BRIDGE_POLICY_VERSION",
     "PAPER_RISK_POLICY_VERSION",
     "PARTIAL_FILLS_SUPPORTED",
     "PERMITTED_ACTIONS",
@@ -114,6 +123,10 @@ __all__ = [
     "PaperPositionSizingError",
     "PaperPositionSizingReason",
     "PaperPositionSizingStatus",
+    "PaperPretradeDecision",
+    "PaperPretradeError",
+    "PaperPretradeReason",
+    "PaperPretradeStatus",
     "PaperRecordKind",
     "PaperRuntimeError",
     "PaperRuntimeSnapshot",
@@ -133,6 +146,7 @@ __all__ = [
     "freeze_execution_input_from_cache",
     "initial_account_state",
     "observe_signal_ledger",
+    "prepare_paper_trade_plan",
     "run_paper_runtime_tick",
     "size_paper_candidate",
 ]
