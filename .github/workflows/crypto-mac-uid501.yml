@@ -1,0 +1,91 @@
+name: Crypto Mac UID501 Command
+
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  contents: read
+  issues: read
+
+jobs:
+  command:
+    if: github.actor == 'burakciller90-arch' && startsWith(github.event.issue.title, '[MAC501] ')
+    name: UID501 Command Bridge
+    runs-on: [self-hosted, crypto-signal, uid501]
+    timeout-minutes: 20
+    steps:
+      - name: Parse command
+        id: parse
+        shell: bash
+        env:
+          ISSUE_BODY: ${{ github.event.issue.body }}
+        run: |
+          set -euo pipefail
+          cmd="$(printf '%s\n' "$ISSUE_BODY" | awk -F: 'tolower($1)=="command" {gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2); print tolower($2); exit}')"
+          case "$cmd" in
+            status|repo|services|disk)
+              ;;
+            *)
+              echo "Unsupported command: $cmd"
+              exit 2
+              ;;
+          esac
+          echo "command=$cmd" >> "$GITHUB_OUTPUT"
+
+      - name: STATUS
+        if: steps.parse.outputs.command == 'status'
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "=== UID501 BRIDGE STATUS ==="
+          echo "USER=$(whoami)"
+          echo "UID=$(id -u)"
+          echo "GID=$(id -g)"
+          echo "HOME=$HOME"
+          echo "PWD=$PWD"
+          id
+          uname -a
+          echo "RUNNER_NAME=${RUNNER_NAME:-unknown}"
+          echo "RUNNER_OS=${RUNNER_OS:-unknown}"
+          echo "RUNNER_ARCH=${RUNNER_ARCH:-unknown}"
+          test "$(id -u)" = "501"
+          echo "UID501_BRIDGE_PASS=YES"
+
+      - name: REPO
+        if: steps.parse.outputs.command == 'repo'
+        shell: bash
+        run: |
+          set +e
+          echo "=== HOME ==="
+          ls -la "$HOME" | head -120
+          echo "=== CRYPTO SIGNAL REPOS ==="
+          for repo in             "$HOME/Crypto-Signal"             "/Users/crypto-signal-agent/Crypto-Signal"             "/Users/crypto-signal-agent/Crypto-Signal-Paper"             "/Users/crypto-signal-agent/Crypto-Signal-Product"
+          do
+            echo "--- $repo"
+            if [ -d "$repo/.git" ]; then
+              git -C "$repo" status --short --branch
+              git -C "$repo" rev-parse HEAD
+            else
+              echo "NOT_A_GIT_REPO_OR_NOT_ACCESSIBLE"
+            fi
+          done
+          exit 0
+
+      - name: SERVICES
+        if: steps.parse.outputs.command == 'services'
+        shell: bash
+        run: |
+          set +e
+          echo "=== GUI SERVICES UID501 ==="
+          launchctl print "gui/$(id -u)" 2>&1 | egrep 'com\.cryptosignal|state =|pid =' | head -200
+          exit 0
+
+      - name: DISK
+        if: steps.parse.outputs.command == 'disk'
+        shell: bash
+        run: |
+          set -euo pipefail
+          df -h /
+          echo "=== HOME SIZE ==="
+          du -sh "$HOME" 2>/dev/null || true
