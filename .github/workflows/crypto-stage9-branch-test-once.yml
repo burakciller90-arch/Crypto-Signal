@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   test:
-    name: Test Stage9 plan explainability branch
+    name: Test Stage9 portfolio performance lab branch
     runs-on: [self-hosted, crypto-signal, uid504]
     timeout-minutes: 30
     steps:
@@ -23,12 +23,12 @@ jobs:
           set -euo pipefail
           REPO="/Users/crypto-signal-agent/Crypto-Signal"
           PY="$REPO/.venv/bin/python"
-          WT="$RUNNER_TEMP/crypto-stage9-plan-explainability"
+          WT="$RUNNER_TEMP/crypto-stage9-portfolio-performance-lab"
           test "$(id -u)" = "504"
           test -x "$PY"
           test -z "$(git -C "$REPO" status --porcelain)"
           BASIC="$(printf 'x-access-token:%s' "$GH_JOB_TOKEN" | base64)"
-          git -C "$REPO" -c http.extraheader="AUTHORIZATION: Basic $BASIC" fetch --no-tags origin feature/stage9-plan-explainability
+          git -C "$REPO" -c http.extraheader="AUTHORIZATION: Basic $BASIC" fetch --no-tags origin feature/stage9-portfolio-performance-lab
           TARGET="$(git -C "$REPO" rev-parse FETCH_HEAD)"
           echo "FEATURE_HEAD=$TARGET"
           rm -rf "$WT"
@@ -54,4 +54,4 @@ jobs:
           "$PY" -m ruff check src tests
           echo "=== FULL MYPY ==="
           PYTHONPATH="$WT/src" "$PY" -m mypy src
-          echo "STAGE9_BRANCH_FULL_TEST_PASS=YES"
+          echo "STAGE9_PORTFOLIO_PERFORMANCE_FULL_TEST_PASS=YES"
