@@ -1742,3 +1742,80 @@ Current frontier:
 - keep PAPER/STABLE production write activation closed until the separate production gate is explicitly crossed;
 - continue the roadmap autonomously on safe non-production work;
 - next product-facing slice should expose the already accepted Mission Control, factual decision trace, portfolio and performance evidence through a simple beginner-oriented dashboard without inventing trade success or bypassing the paper gate.
+
+## 2026-09-21 — Stage 9 beginner paper trade-plan explainability accepted and live
+
+- accepted main / PRODUCT head: de590b15349ed3ac171eface0cb06087243d23da
+- PR #311 merged after isolated UID504 feature-worktree acceptance
+- pre-merge branch gate:
+  - focused pytest PASS (17 tests)
+  - JavaScript syntax PASS
+  - Ruff PASS
+  - focused mypy PASS
+  - full pytest PASS
+  - full Ruff PASS
+  - full mypy PASS across 102 source files
+  - STAGE9_BRANCH_FULL_TEST_PASS=YES
+- canonical post-merge gates:
+  - sync PASS
+  - producttest PASS
+  - fulltest PASS
+- PRODUCT deployment PASS from 45b20084eab0bd38e14f5ca3fd4a8d799e429920 to de590b15349ed3ac171eface0cb06087243d23da
+- post-deploy PRODUCT verification:
+  - exact HEAD=de590b15349ed3ac171eface0cb06087243d23da
+  - dashboard service running
+  - health status=ok
+  - read_only=true
+  - REAL_CAPITAL=0
+- Mission Control is now paper_mission_control.v2 and exposes only accepted structured downstream lineage
+- PRETRADE_READY plans carry an exact read-only cost preview derived through the existing deterministic paper simulator:
+  - fee_usdt
+  - spread_usdt
+  - slippage_usdt
+  - total_cost_usdt
+  - reference/fill notional
+- the beginner product surface uses progressive disclosure and explains:
+  - what the virtual plan wants to do
+  - virtual quantity/notional
+  - remaining projected cash
+  - sizing risk/invalidation
+  - fee/spread/slippage as both USDT estimates and explicit simulation rates
+  - why a plan exists or does not exist
+  - what evidence can change the decision
+- no financial execution math is invented in JavaScript; cost amounts come from the accepted deterministic simulator
+- responsive plan disclosure added for narrow screens
+- PAPER/STABLE remains unchanged at 30b05251af9fc2ac05fd007dbd6ac6d0519c2e58
+- fresh PAPER state after PRODUCT deploy:
+  - paper_fund_creations=1
+  - paper_decision_intents=0
+  - paper_simulated_fills=0
+  - paper_position_cash_mutations=0
+  - paper_nav_snapshots=0
+  - paper_replay_index=1
+  - paper_venue_rule_snapshots=3
+  - paper_activation_state=1
+  - paper_processed_events=0
+  - trade_policy=NOT_ACTIVATED
+  - REAL_CAPITAL=0
+- fresh Mission Control snapshot ca07228c22903d46f6b626fd2255d3f73e16898d3e035be86d0184036a2a1d16:
+  - signal_freezes=498
+  - eligible post-activation freezes=6
+  - incomplete pairs=0
+  - candidates=3
+  - ready_candidates=0
+  - attention_required=NO
+  - BTCUSDT HOLD_CASH / signal_not_active
+  - ETHUSDT HOLD_CASH / signal_not_active
+  - SOLUSDT HOLD_CASH / unsafe_uncertainty
+  - cash=100.00 USDT
+  - positions=0
+  - NAV=100.00 USDT
+  - performance=NOT_YET_MEASURED
+  - trade_policy=NOT_ACTIVATED
+  - REAL_CAPITAL=0
+
+Current frontier:
+- treat any delayed dashboard-v2-paper-trade-plan-explainability-v1 wake as completed/stale and reconcile/NOOP it;
+- continue Stage 9 with the next read-only beginner slice: portfolio exposure and honest Performance Lab presentation over accepted immutable portfolio/performance truth;
+- keep PAPER/STABLE virtual-write activation closed and do not create production trade mutations without the separate production gate.
+
