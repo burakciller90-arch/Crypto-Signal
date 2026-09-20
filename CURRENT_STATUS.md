@@ -485,3 +485,42 @@ Immediate frontier: Stage 6A live Mission Control / automatic refresh, followed 
 
 REAL_CAPITAL remains 0.
 
+## 2026-09-20 — Full Version Sprint 1 accepted and deployed
+
+Stage 6A live Mission Control slice:
+- automatic dashboard refresh every 15 seconds,
+- freshness age and 45-second stale threshold,
+- online/offline/stale/error UI states,
+- immediate refresh when the tab becomes visible,
+- concurrent refresh suppression,
+- selected market navigation preserved by existing state-aware navigation logic.
+
+Stage 6B education foundation:
+- deterministic Turkish education catalog,
+- 10 canonical concepts: BOS, CHoCH, liquidity sweep, FVG, Harmonic/PRZ, Elliott Wave, invalidation, risk/reward, methodology agreement vs probability, paper trading,
+- typed explicit lookup/missing behavior,
+- no LLM or fabricated probability,
+- read-only /api/education and /api/education/{concept_id},
+- visible "Bana Öğret" beginner teaching center with beginner, why-it-matters and advanced layers.
+
+Mechanical evidence:
+- focused product gate: 19 tests PASS after lint correction,
+- full repository gate: 281 tests PASS,
+- Ruff PASS,
+- mypy PASS across 77 source files,
+- JavaScript syntax PASS.
+
+PRODUCT/STABLE:
+- advanced from 3bdee842407bf5a172e196929b2f0744a3b2569e to 6f29d38be18924c34a80cfd1071eeb5a4a8f242a for Stage 6A,
+- then advanced to 14942e191c5ae354f22cb1784eae4a85c0e3a8d6 for the visible Stage 6B foundation,
+- rollback-safe deploy gate used,
+- post-restart health PASS,
+- product_version=full-version-live-education/1,
+- read_only=true,
+- REAL_CAPITAL=0.
+
+The earlier one-shot contents-write integration workflow was removed immediately after use.
+
+Current frontier:
+- continue Stage 6B with evidence-linked/contextual teaching inside Signal Detail,
+- in parallel begin Stage 6C immutable 100 USDT autonomous paper-fund foundation.
