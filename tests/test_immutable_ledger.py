@@ -28,6 +28,11 @@ from crypto_signal.ledger.store import (
 from crypto_signal.methodologies.elliott.analysis import analyze_elliott
 from crypto_signal.methodologies.harmonic.analysis import analyze_harmonics
 from crypto_signal.methodologies.price_action.analysis import analyze_price_action
+from crypto_signal.outcomes.evaluator import (
+    compute_outcome_identity,
+    evaluate_outcome,
+)
+from crypto_signal.outcomes.models import EvidenceClass
 from crypto_signal.signals.lifecycle import evaluate_signal_lifecycle
 from crypto_signal.signals.models import (
     LifecycleEvaluationStatus,
@@ -338,3 +343,146 @@ def test_lifecycle_table_is_sql_immutable(tmp_path: Path) -> None:
             )
         with pytest.raises(sqlite3.IntegrityError, match="immutable ledger"):
             connection.execute("DELETE FROM lifecycle_evaluations")
+
+
+def test_outcome_evaluation_append_is_idempotent(tmp_path: Path) -> None:
+    bundle = build_bundle(candles())
+    ledger = ImmutableSignalLedger(tmp_path / "ledger.sqlite3")
+    ledger.freeze(
+        bundle,
+        frozen_at_ms=bundle.signal_decision.as_of_ms + 1_000,
+    )
+    evaluation = evaluate_outcome(
+        bundle.signal_decision,
+        bundle.candles,
+        as_of_ms=bundle.signal_decision.as_of_ms,
+        evidence_class=EvidenceClass.LIVE_UNTOUCHED_FORWARD,
+        max_holding_bars=4,
+    )
+
+    first = ledger.append_outcome_evaluation(
+        evaluation,
+        appended_at_ms=evaluation.evaluated_as_of_ms + 1_000,
+    )
+    second = ledger.append_outcome_evaluation(
+        evaluation,
+        appended_at_ms=evaluation.evaluated_as_of_ms + 2_000,
+    )
+
+    assert first is LedgerWriteDisposition.INSERTED
+    assert second is LedgerWriteDisposition.UNCHANGED
+    assert ledger.count_outcome_evaluations() == 1
+    records = ledger.list_outcome_evaluations(
+        bundle.signal_decision.freeze_identity
+    )
+    assert len(records) == 1
+    assert records[0].outcome_identity == evaluation.outcome_identity
+    assert records[0].evidence_class == EvidenceClass.LIVE_UNTOUCHED_FORWARD.value
+
+
+def test_outcome_requires_known_parent_and_one_payload_per_horizon(
+    tmp_path: Path,
+) -> None:
+    bundle = build_bundle(candles())
+    ledger = ImmutableSignalLedger(tmp_path / "ledger.sqlite3")
+    evaluation = evaluate_outcome(
+        bundle.signal_decision,
+        bundle.candles,
+        as_of_ms=bundle.signal_decision.as_of_ms,
+        evidence_class=EvidenceClass.LIVE_UNTOUCHED_FORWARD,
+        max_holding_bars=4,
+    )
+    unknown = replace(
+        evaluation,
+        signal_freeze_identity="e" * 64,
+    )
+    unknown = replace(
+        unknown,
+        outcome_identity=compute_outcome_identity(unknown),
+    )
+
+    with pytest.raises(LedgerConflictError, match="unknown signal freeze"):
+        ledger.append_outcome_evaluation(
+            unknown,
+            appended_at_ms=unknown.evaluated_as_of_ms + 1_000,
+        )
+
+    ledger.freeze(
+        bundle,
+        frozen_at_ms=bundle.signal_decision.as_of_ms + 1_000,
+    )
+    ledger.append_outcome_evaluation(
+        evaluation,
+        appended_at_ms=evaluation.evaluated_as_of_ms + 1_000,
+    )
+
+    conflicting = replace(
+        evaluation,
+        skipped_partial_decision_bucket=(
+            not evaluation.skipped_partial_decision_bucket
+        ),
+    )
+    conflicting = replace(
+        conflicting,
+        outcome_identity=compute_outcome_identity(conflicting),
+    )
+    with pytest.raises(
+        LedgerConflictError,
+        match="immutable outcome evaluation conflict",
+    ):
+        ledger.append_outcome_evaluation(
+            conflicting,
+            appended_at_ms=conflicting.evaluated_as_of_ms + 2_000,
+        )
+
+
+def test_outcome_identity_tampering_is_rejected(tmp_path: Path) -> None:
+    bundle = build_bundle(candles())
+    ledger = ImmutableSignalLedger(tmp_path / "ledger.sqlite3")
+    ledger.freeze(
+        bundle,
+        frozen_at_ms=bundle.signal_decision.as_of_ms + 1_000,
+    )
+    evaluation = evaluate_outcome(
+        bundle.signal_decision,
+        bundle.candles,
+        as_of_ms=bundle.signal_decision.as_of_ms,
+        evidence_class=EvidenceClass.RETROSPECTIVE,
+        max_holding_bars=4,
+    )
+    tampered = replace(evaluation, outcome_identity="0" * 64)
+
+    with pytest.raises(ValueError, match="identity mismatch"):
+        ledger.append_outcome_evaluation(
+            tampered,
+            appended_at_ms=tampered.evaluated_as_of_ms + 1_000,
+        )
+
+
+def test_outcome_table_is_sql_immutable(tmp_path: Path) -> None:
+    bundle = build_bundle(candles())
+    path = tmp_path / "ledger.sqlite3"
+    ledger = ImmutableSignalLedger(path)
+    ledger.freeze(
+        bundle,
+        frozen_at_ms=bundle.signal_decision.as_of_ms + 1_000,
+    )
+    evaluation = evaluate_outcome(
+        bundle.signal_decision,
+        bundle.candles,
+        as_of_ms=bundle.signal_decision.as_of_ms,
+        evidence_class=EvidenceClass.WALK_FORWARD,
+        max_holding_bars=4,
+    )
+    ledger.append_outcome_evaluation(
+        evaluation,
+        appended_at_ms=evaluation.evaluated_as_of_ms + 1_000,
+    )
+
+    with sqlite3.connect(path) as connection:
+        with pytest.raises(sqlite3.IntegrityError, match="immutable ledger"):
+            connection.execute(
+                "UPDATE outcome_evaluations SET resolution_status = 'resolved'"
+            )
+        with pytest.raises(sqlite3.IntegrityError, match="immutable ledger"):
+            connection.execute("DELETE FROM outcome_evaluations")

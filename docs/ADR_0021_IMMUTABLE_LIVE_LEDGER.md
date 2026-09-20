@@ -98,6 +98,7 @@ Required database behavior:
 - foreign keys ON
 - immutable signal_freezes table
 - immutable lifecycle_evaluations table
+- immutable outcome_evaluations table
 - SQL triggers reject UPDATE and DELETE on ledger tables
 - idempotent equivalent insertion returns UNCHANGED
 - identity/context collision with different payload raises explicit conflict
@@ -130,6 +131,23 @@ They may represent:
 
 Equivalent re-delivery is idempotent.
 Conflicting reuse of an evaluation identity is rejected.
+
+## Outcome evaluation table
+Outcome snapshots append with:
+- deterministic outcome identity
+- parent signal freeze identity
+- explicit evidence class
+- evaluated as-of
+- resolution status and optional outcome state
+- max holding-bars policy
+- canonical outcome JSON
+- insertion time
+
+The unique decision point is:
+signal freeze + evidence class + evaluated as-of + max holding bars.
+
+Equivalent retry is UNCHANGED.
+Different content at the same decision point is an immutable conflict.
 
 ## Forward evidence rule
 A record is untouched-forward only when it is frozen during real operation

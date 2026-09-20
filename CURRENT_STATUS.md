@@ -2,8 +2,8 @@
 
 Updated: 2026-09-20
 Project: Crypto Signal
-Phase: Confluence + Signal Semantics V1
-State: IMMUTABLE_LIVE_LEDGER_ACTIVE
+Phase: Historical Evaluation V1
+State: OUTCOME_V1_ACCEPTED
 REAL_CAPITAL: 0
 
 ## Accepted foundations
@@ -148,15 +148,37 @@ No Durdurulmaz or Quantum Capital project state was mutated; UID502 is used only
 - production DB remained exactly 2 freezes + 2 lifecycle evaluations after idempotence check
 - ledger/live-clock acceptance: 170 tests PASS, Ruff PASS, mypy PASS
 
-## Canonical next frontier
-Outcome + Historical Evaluation V1:
-1. outcome state contract
-2. target/stop ordering and same-candle ambiguity
-3. timeout / cancelled / invalidated / not-evaluable semantics
-4. append-only outcome records bound to immutable signal freezes
-5. evidence-class separation: RETROSPECTIVE / WALK_FORWARD / LIVE_UNTOUCHED_FORWARD
-6. segmented metrics by methodology/setup/symbol/timeframe/direction/confluence bucket
-7. sample-size-aware performance summaries with no probability fabrication
+## Outcome V1 accepted evidence
+- explicit outcome vocabulary: SUCCESS_TP1/TP2/TP3, FAIL_SL, AMBIGUOUS, TIMEOUT, CANCELLED, INVALIDATED, NOT_EVALUABLE
+- snapshot resolution is separate: PENDING / RESOLVED / NOT_EVALUABLE
+- evidence class is explicit: RETROSPECTIVE / WALK_FORWARD / LIVE_UNTOUCHED_FORWARD
+- shadow entry reference is zone midpoint and is explicitly not execution
+- decision-time partial candle is excluded
+- same-candle entry/stop, entry/target, and stop/new-target are AMBIGUOUS without lower-resolution evidence
+- gaps are explicit and are never synthesized
+- immutable outcome_evaluations table with parent freeze enforcement, idempotence, conflict detection, and SQL UPDATE/DELETE rejection
+- Outcome behavior tests: 15 PASS
+- Outcome + ledger focused gate: 28 PASS
+- full repository: 189 tests PASS
+- Ruff PASS
+- mypy PASS
 
-The live evidence clock continues while Outcome development proceeds.
+## LIVE/STABLE isolation
+- production clock runs only from /Users/crypto-signal-agent/Crypto-Signal-Live
+- live worktree is pinned to accepted commit e53c5b29ffc9301fb36c89aa85ddc3677c4e64a1
+- main development worktree cannot affect production clock without explicit accepted deploy
+- production DB currently continues append-only forward freezes independently of development
+
+## Canonical next frontier
+Historical Evaluation V1:
+1. evidence-class-preserving evaluated-signal input contract
+2. segmentation by methodology/setup/symbol/timeframe/direction/confluence score bucket
+3. explicit N/success/failure/ambiguous/not-evaluable counts
+4. realized shadow-R only where deterministically defined
+5. cumulative shadow-R and max drawdown over R-evaluable chronological outcomes
+6. sample-size visibility and explicit promotion eligibility policy
+7. no probability inference from historical frequency
+8. retrospective / walk-forward / untouched-forward results never silently merged
+
+The live evidence clock continues in the stable lane while Historical Evaluation development proceeds.
 REAL_CAPITAL remains 0.

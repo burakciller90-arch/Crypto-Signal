@@ -12,6 +12,8 @@ from crypto_signal.ledger.bundle import (
     verify_bundle_identity,
 )
 from crypto_signal.ledger.serialization import canonical_json, sha256_text
+from crypto_signal.outcomes.evaluator import verify_outcome_identity
+from crypto_signal.outcomes.models import OutcomeEvaluation
 from crypto_signal.signals.models import SignalLifecycleEvaluation
 
 
@@ -51,6 +53,19 @@ class LifecycleRecord:
     evaluation_json: str
 
 
+@dataclass(frozen=True, slots=True)
+class OutcomeRecord:
+    outcome_identity: str
+    signal_freeze_identity: str
+    evidence_class: str
+    evaluated_as_of_ms: int
+    resolution_status: str
+    outcome_state: str | None
+    max_holding_bars: int
+    appended_at_ms: int
+    outcome_json: str
+
+
 def lifecycle_evaluation_json(
     evaluation: SignalLifecycleEvaluation,
 ) -> str:
@@ -61,6 +76,10 @@ def lifecycle_evaluation_identity(
     evaluation: SignalLifecycleEvaluation,
 ) -> str:
     return sha256_text(lifecycle_evaluation_json(evaluation))
+
+
+def outcome_evaluation_json(evaluation: OutcomeEvaluation) -> str:
+    return canonical_json(evaluation)
 
 
 class ImmutableSignalLedger:
@@ -109,6 +128,29 @@ class ImmutableSignalLedger:
                     evaluation_json TEXT NOT NULL,
                     appended_at_ms INTEGER NOT NULL,
                     UNIQUE (signal_freeze_identity, evaluated_as_of_ms),
+                    FOREIGN KEY (signal_freeze_identity)
+                        REFERENCES signal_freezes(signal_freeze_identity)
+                )
+                """
+            )
+            connection.execute(
+                """
+                CREATE TABLE IF NOT EXISTS outcome_evaluations (
+                    outcome_identity TEXT PRIMARY KEY,
+                    signal_freeze_identity TEXT NOT NULL,
+                    evidence_class TEXT NOT NULL,
+                    evaluated_as_of_ms INTEGER NOT NULL,
+                    resolution_status TEXT NOT NULL,
+                    outcome_state TEXT,
+                    max_holding_bars INTEGER NOT NULL,
+                    outcome_json TEXT NOT NULL,
+                    appended_at_ms INTEGER NOT NULL,
+                    UNIQUE (
+                        signal_freeze_identity,
+                        evidence_class,
+                        evaluated_as_of_ms,
+                        max_holding_bars
+                    ),
                     FOREIGN KEY (signal_freeze_identity)
                         REFERENCES signal_freezes(signal_freeze_identity)
                 )
@@ -274,6 +316,104 @@ class ImmutableSignalLedger:
             )
         return LedgerWriteDisposition.INSERTED
 
+    def append_outcome_evaluation(
+        self,
+        evaluation: OutcomeEvaluation,
+        *,
+        appended_at_ms: int | None = None,
+    ) -> LedgerWriteDisposition:
+        verify_outcome_identity(evaluation)
+        canonical_outcome = outcome_evaluation_json(evaluation)
+        inserted_at = (
+            int(time.time() * 1000)
+            if appended_at_ms is None
+            else appended_at_ms
+        )
+        if inserted_at < evaluation.evaluated_as_of_ms:
+            raise ValueError(
+                "outcome append time cannot precede evaluation as-of"
+            )
+
+        self.initialize()
+        with self._connect() as connection:
+            connection.execute("PRAGMA foreign_keys=ON")
+            connection.execute("BEGIN IMMEDIATE")
+            parent = connection.execute(
+                """
+                SELECT signal_freeze_identity
+                FROM signal_freezes
+                WHERE signal_freeze_identity = ?
+                """,
+                (evaluation.signal_freeze_identity,),
+            ).fetchone()
+            if parent is None:
+                raise LedgerConflictError(
+                    "outcome evaluation references unknown signal freeze"
+                )
+
+            existing = connection.execute(
+                """
+                SELECT * FROM outcome_evaluations
+                WHERE outcome_identity = ?
+                   OR (
+                        signal_freeze_identity = ?
+                        AND evidence_class = ?
+                        AND evaluated_as_of_ms = ?
+                        AND max_holding_bars = ?
+                   )
+                LIMIT 1
+                """,
+                (
+                    evaluation.outcome_identity,
+                    evaluation.signal_freeze_identity,
+                    evaluation.evidence_class.value,
+                    evaluation.evaluated_as_of_ms,
+                    evaluation.max_holding_bars,
+                ),
+            ).fetchone()
+            if existing is not None:
+                record = self._row_to_outcome(existing)
+                if (
+                    record.outcome_identity == evaluation.outcome_identity
+                    and record.outcome_json == canonical_outcome
+                ):
+                    return LedgerWriteDisposition.UNCHANGED
+                raise LedgerConflictError(
+                    "immutable outcome evaluation conflict"
+                )
+
+            connection.execute(
+                """
+                INSERT INTO outcome_evaluations (
+                    outcome_identity,
+                    signal_freeze_identity,
+                    evidence_class,
+                    evaluated_as_of_ms,
+                    resolution_status,
+                    outcome_state,
+                    max_holding_bars,
+                    outcome_json,
+                    appended_at_ms
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    evaluation.outcome_identity,
+                    evaluation.signal_freeze_identity,
+                    evaluation.evidence_class.value,
+                    evaluation.evaluated_as_of_ms,
+                    evaluation.resolution_status.value,
+                    (
+                        None
+                        if evaluation.outcome_state is None
+                        else evaluation.outcome_state.value
+                    ),
+                    evaluation.max_holding_bars,
+                    canonical_outcome,
+                    inserted_at,
+                ),
+            )
+        return LedgerWriteDisposition.INSERTED
+
     def has_source_cutoff(
         self,
         *,
@@ -356,6 +496,30 @@ class ImmutableSignalLedger:
                 ).fetchall()
         return tuple(self._row_to_lifecycle(row) for row in rows)
 
+    def list_outcome_evaluations(
+        self,
+        signal_freeze_identity: str | None = None,
+    ) -> tuple[OutcomeRecord, ...]:
+        self.initialize()
+        with self._connect() as connection:
+            if signal_freeze_identity is None:
+                rows = connection.execute(
+                    """
+                    SELECT * FROM outcome_evaluations
+                    ORDER BY appended_at_ms ASC, outcome_identity ASC
+                    """
+                ).fetchall()
+            else:
+                rows = connection.execute(
+                    """
+                    SELECT * FROM outcome_evaluations
+                    WHERE signal_freeze_identity = ?
+                    ORDER BY appended_at_ms ASC, outcome_identity ASC
+                    """,
+                    (signal_freeze_identity,),
+                ).fetchall()
+        return tuple(self._row_to_outcome(row) for row in rows)
+
     def count_freezes(self) -> int:
         self.initialize()
         with self._connect() as connection:
@@ -372,6 +536,14 @@ class ImmutableSignalLedger:
             ).fetchone()
         return 0 if row is None else int(row["count"])
 
+    def count_outcome_evaluations(self) -> int:
+        self.initialize()
+        with self._connect() as connection:
+            row = connection.execute(
+                "SELECT COUNT(*) AS count FROM outcome_evaluations"
+            ).fetchone()
+        return 0 if row is None else int(row["count"])
+
     def _connect(self) -> sqlite3.Connection:
         connection = sqlite3.connect(self.path, timeout=5.0)
         connection.row_factory = sqlite3.Row
@@ -381,7 +553,11 @@ class ImmutableSignalLedger:
     def _install_immutability_triggers(
         connection: sqlite3.Connection,
     ) -> None:
-        for table in ("signal_freezes", "lifecycle_evaluations"):
+        for table in (
+            "signal_freezes",
+            "lifecycle_evaluations",
+            "outcome_evaluations",
+        ):
             connection.execute(
                 f"""
                 CREATE TRIGGER IF NOT EXISTS {table}_reject_update
@@ -461,4 +637,22 @@ class ImmutableSignalLedger:
             status=str(row["status"]),
             appended_at_ms=int(row["appended_at_ms"]),
             evaluation_json=str(row["evaluation_json"]),
+        )
+
+    @staticmethod
+    def _row_to_outcome(row: sqlite3.Row) -> OutcomeRecord:
+        return OutcomeRecord(
+            outcome_identity=str(row["outcome_identity"]),
+            signal_freeze_identity=str(row["signal_freeze_identity"]),
+            evidence_class=str(row["evidence_class"]),
+            evaluated_as_of_ms=int(row["evaluated_as_of_ms"]),
+            resolution_status=str(row["resolution_status"]),
+            outcome_state=(
+                None
+                if row["outcome_state"] is None
+                else str(row["outcome_state"])
+            ),
+            max_holding_bars=int(row["max_holding_bars"]),
+            appended_at_ms=int(row["appended_at_ms"]),
+            outcome_json=str(row["outcome_json"]),
         )

@@ -630,3 +630,45 @@ First production untouched-forward freezes:
 The evidence clock remains active while development continues.
 Canonical frontier moves to Outcome + Historical Evaluation V1.
 REAL_CAPITAL remains 0.
+
+## 2026-09-20 — Outcome V1 accepted; LIVE/STABLE lane isolated
+
+Outcome V1 now evaluates ACTIVE shadow signals without guessing intrabar order.
+
+Accepted semantics:
+- outcome vocabulary remains SUCCESS_TP1/TP2/TP3, FAIL_SL, AMBIGUOUS,
+  TIMEOUT, CANCELLED, INVALIDATED and NOT_EVALUABLE
+- PENDING / RESOLVED / NOT_EVALUABLE is a separate snapshot-resolution axis
+- evidence class is explicit and never inferred from dates
+- entry uses the frozen zone midpoint only as a shadow reference, not an execution fill
+- decision-time partial candle is excluded
+- entry+stop, entry+target and stop+new-target in one candle are AMBIGUOUS
+- only the contiguous observed prefix before a gap is used for event ordering
+- missing candles are never synthesized
+- timeout requires complete configured horizon coverage
+- evidence class participates in deterministic outcome identity
+
+Immutable ledger integration:
+- append-only outcome_evaluations table added
+- parent signal freeze is mandatory
+- equivalent retry is UNCHANGED
+- same signal/evidence-class/as-of/horizon with differing payload is conflict
+- SQL UPDATE/DELETE is rejected by immutability triggers
+
+Mechanical evidence:
+- Outcome behavior tests: 15 PASS
+- Outcome + ledger focused gate: 28 PASS
+- full repository: 189 PASS
+- Ruff PASS
+- mypy PASS
+
+A production isolation risk was also corrected:
+the live evidence clock no longer imports the mutable development working tree.
+A clean detached LIVE/STABLE worktree was created at
+/Users/crypto-signal-agent/Crypto-Signal-Live and pinned to
+e53c5b29ffc9301fb36c89aa85ddc3677c4e64a1.
+The installed LaunchAgent now executes the stable worktree only.
+Stable manual and launchd smoke both returned ALREADY_FROZEN on an already-owned cutoff.
+
+Canonical frontier advances to Historical Evaluation V1.
+REAL_CAPITAL remains 0.

@@ -5,15 +5,13 @@
   <key>Label</key><string>com.cryptosignal.liveevidenceclock</string>
   <key>ProgramArguments</key>
   <array>
-    <string>/Users/crypto-signal-agent/.local/bin/uv</string>
-    <string>run</string>
-    <string>python</string>
-    <string>/Users/crypto-signal-agent/Crypto-Signal/ops/run_live_evidence_clock.py</string>
+    <string>/Users/crypto-signal-agent/Crypto-Signal/.venv/bin/python</string>
+    <string>/Users/crypto-signal-agent/Crypto-Signal-Live/ops/run_live_evidence_clock.py</string>
   </array>
-  <key>WorkingDirectory</key><string>/Users/crypto-signal-agent/Crypto-Signal</string>
+  <key>WorkingDirectory</key><string>/Users/crypto-signal-agent/Crypto-Signal-Live</string>
   <key>EnvironmentVariables</key>
   <dict>
-    <key>PYTHONPATH</key><string>/Users/crypto-signal-agent/Crypto-Signal/src</string>
+    <key>PYTHONPATH</key><string>/Users/crypto-signal-agent/Crypto-Signal-Live/src</string>
   </dict>
   <key>RunAtLoad</key><true/>
   <key>StartInterval</key><integer>120</integer>
