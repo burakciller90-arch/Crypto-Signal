@@ -24,7 +24,7 @@ jobs:
           set -euo pipefail
           cmd="$(printf '%s\n' "$ISSUE_BODY" | awk -F: 'tolower($1)=="command" {gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2); print tolower($2); exit}')"
           case "$cmd" in
-            status|services|logs|disk|sync|producttest|fulltest|productstate|productdeploy|paperreview|paperinspect|paperfixlint|paperharden|stateplanreview|stateplaninspect|stateplanharden|cursorreview|cursorreviewtail|cursorcleanup|bridgecheck|bridgestate|pausecheck|wakepause|wakeresume|waketest|cursorcheck|cursorauthdiag|cursorttycheck)
+            status|services|logs|disk|sync|producttest|fulltest|productstate|productdeploy|paperreview|paperinspect|paperfixlint|paperharden|stateplanreview|stateplaninspect|stateplanharden|cursorreview|cursorreviewtail|cursorcleanup|bridgecheck|bridgestate|pausecheck|wakepause|wakeresume|wakearm|waketest|cursorcheck|cursorauthdiag|cursorttycheck)
               ;;
             *)
               echo "Unsupported command: $cmd"
@@ -915,6 +915,34 @@ jobs:
         run: |
           set -euo pipefail
           /usr/bin/python3 /Users/crypto-signal-agent/Crypto-Signal/ops/continuity/resume_continuity.py
+
+      - name: WAKE ARM
+        if: steps.parse.outputs.command == 'wakearm'
+        shell: bash
+        env:
+          ISSUE_BODY: ${{ github.event.issue.body }}
+        run: |
+          set -euo pipefail
+          field() {
+            printf '%s\n' "$ISSUE_BODY" | awk -v want="$1" '
+              {
+                p = index($0, ":")
+                if (p == 0) next
+                key = substr($0, 1, p - 1)
+                val = substr($0, p + 1)
+                gsub(/^[[:space:]]+|[[:space:]]+$/, "", key)
+                gsub(/^[[:space:]]+|[[:space:]]+$/, "", val)
+                if (tolower(key) == want) { print val; exit }
+              }'
+          }
+          task="$(field task)"
+          delay="$(field delay)"
+          note="$(field note)"
+          [[ "$task" =~ ^[A-Za-z0-9._:-]{1,160}$ ]] || { echo "INVALID_TASK"; exit 64; }
+          [[ "$delay" =~ ^[0-9]+$ ]] || { echo "INVALID_DELAY"; exit 64; }
+          [ "$delay" -ge 10 ] && [ "$delay" -le 86400 ] || { echo "DELAY_OUT_OF_RANGE"; exit 64; }
+          [ "${#note}" -le 500 ] || { echo "NOTE_TOO_LONG"; exit 64; }
+          /usr/bin/python3 /Users/crypto-signal-agent/Crypto-Signal/ops/continuity/arm_exact.py "$task" "$delay" "$note"
 
       - name: WAKE TEST
         if: steps.parse.outputs.command == 'waketest'
