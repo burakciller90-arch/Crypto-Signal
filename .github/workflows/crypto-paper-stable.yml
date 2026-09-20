@@ -58,8 +58,9 @@ jobs:
           tail -20 /Users/crypto-signal-agent/Crypto-Signal/runtime/paper/paper_dry_run_clock.err.log 2>/dev/null
           tail -20 /Users/crypto-signal-agent/Crypto-Signal/runtime/paper/paper_dry_run_clock.out.log 2>/dev/null
           echo "=== PAPER DRY-RUN OBSERVATION ==="
-          grep 'PAPER_DRY_RUN_OK' /Users/crypto-signal-agent/Crypto-Signal/runtime/paper/paper_dry_run_clock.out.log 2>/dev/null | tail -1
-          grep 'PAPER_DRY_RUN_ATTENTION' /Users/crypto-signal-agent/Crypto-Signal/runtime/paper/paper_dry_run_clock.out.log 2>/dev/null | tail -5
+          cat /Users/crypto-signal-agent/Crypto-Signal/runtime/paper/paper_dry_run_clock.out.log.1 /Users/crypto-signal-agent/Crypto-Signal/runtime/paper/paper_dry_run_clock.out.log 2>/dev/null | grep 'PAPER_DRY_RUN_OK' | tail -1
+          cat /Users/crypto-signal-agent/Crypto-Signal/runtime/paper/paper_dry_run_clock.out.log.1 /Users/crypto-signal-agent/Crypto-Signal/runtime/paper/paper_dry_run_clock.out.log 2>/dev/null | grep 'PAPER_DRY_RUN_ATTENTION' | tail -5
+          tail -1 /Users/crypto-signal-agent/Crypto-Signal/runtime/paper/paper_dry_run_clock.out.log 2>/dev/null | grep 'PAPER_DRY_RUN_LOG_RETENTION' || true
           echo "=== PAPER DB ==="
           if [ -f "$DB" ]; then
             "$PAPER/.venv/bin/python" -c 'import json,sqlite3,sys; p=sys.argv[1]; c=sqlite3.connect("file:"+p+"?mode=ro",uri=True); tables=("paper_fund_creations","paper_decision_intents","paper_simulated_fills","paper_position_cash_mutations","paper_nav_snapshots","paper_replay_index"); [print(t+"="+str(c.execute("SELECT COUNT(*) FROM "+t).fetchone()[0])) for t in tables]; exists=c.execute("SELECT 1 FROM sqlite_master WHERE type=\"table\" AND name=\"paper_venue_rule_snapshots\"").fetchone(); print("paper_venue_rule_snapshots="+str(c.execute("SELECT COUNT(*) FROM paper_venue_rule_snapshots").fetchone()[0]) if exists else "paper_venue_rule_snapshots=0"); rows=c.execute("SELECT symbol,observed_at_ms,snapshot_identity FROM paper_venue_rule_snapshots ORDER BY symbol,observed_at_ms DESC").fetchall() if exists else []; seen=set(); [(print("venue_latest_"+str(s)+"="+str(t)+":"+str(i)), seen.add(s)) for s,t,i in rows if s not in seen]; aexists=c.execute("SELECT 1 FROM sqlite_master WHERE type=\"table\" AND name=\"paper_activation_state\"").fetchone(); arow=c.execute("SELECT activation_identity,payload_json,activated_at_ms FROM paper_activation_state WHERE singleton=1").fetchone() if aexists else None; print("paper_activation_state="+("1" if arow else "0")); print("activation_identity="+str(arow[0])) if arow else None; print("activation_activated_at_ms="+str(arow[2])) if arow else None; print("activation_payload="+str(arow[1])) if arow else None; pexists=c.execute("SELECT 1 FROM sqlite_master WHERE type=\"table\" AND name=\"paper_processed_events\"").fetchone(); print("paper_processed_events="+str(c.execute("SELECT COUNT(*) FROM paper_processed_events").fetchone()[0]) if pexists else "paper_processed_events=0"); c.close()' "$DB"
@@ -195,6 +196,7 @@ jobs:
 
           if [ "$DRY_HAD_PLIST" = "1" ]; then
             test -f "$PAPER/ops/paper/launchd/$DRY_LABEL.plist"
+            test -f "$PAPER/ops/run_paper_dry_run_clock.py"
             cp "$PAPER/ops/paper/launchd/$DRY_LABEL.plist" "$DRY_PLIST_DEST"
             plutil -lint "$DRY_PLIST_DEST"
             launchctl bootstrap "gui/$UID_NOW" "$DRY_PLIST_DEST"
@@ -328,6 +330,7 @@ jobs:
           test "$UID_NOW" = "504"
           test -f "$DB"
           test -f "$PLIST_SRC"
+          test -f "$PAPER/ops/run_paper_dry_run_clock.py"
           test -x "$PAPER/.venv/bin/python"
           test -z "$(git -C "$PAPER" status --porcelain)"
           test "$(git -C "$PAPER" rev-parse HEAD)" = "$GITHUB_SHA"
