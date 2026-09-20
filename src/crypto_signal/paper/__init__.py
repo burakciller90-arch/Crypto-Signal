@@ -58,6 +58,11 @@ from crypto_signal.paper.models import (
     build_simulated_fill,
     initial_account_state,
 )
+from crypto_signal.paper.pipeline import (
+    PaperTradePipelineError,
+    PaperTradePipelineResult,
+    commit_planned_pretrade,
+)
 from crypto_signal.paper.pretrade import (
     PAPER_PRETRADE_BRIDGE_POLICY_VERSION,
     PaperPretradeDecision,
@@ -132,6 +137,8 @@ __all__ = [
     "PaperRuntimeSnapshot",
     "PaperSignalLedgerObservation",
     "PaperSymbol",
+    "PaperTradePipelineError",
+    "PaperTradePipelineResult",
     "PositionCashMutationRecord",
     "SimulatedFillRecord",
     "build_decision_intent",
@@ -140,6 +147,7 @@ __all__ = [
     "build_position_cash_mutation",
     "build_simulated_fill",
     "commit_orchestration_bundle",
+    "commit_planned_pretrade",
     "default_conservative_autonomy_policy",
     "ensure_persistent_paper_fund",
     "evaluate_autonomy_policy",
