@@ -24,7 +24,7 @@ jobs:
           set -euo pipefail
           cmd="$(printf '%s\n' "$ISSUE_BODY" | awk -F: 'tolower($1)=="command" {gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2); print tolower($2); exit}')"
           case "$cmd" in
-            status|services|logs|disk|sync|producttest|cursorcleanup|bridgecheck|bridgestate|wakeresume|waketest|cursorcheck|cursorauthdiag|cursorttycheck)
+            status|services|logs|disk|sync|producttest|cursorreview|cursorcleanup|bridgecheck|bridgestate|wakeresume|waketest|cursorcheck|cursorauthdiag|cursorttycheck)
               ;;
             *)
               echo "Unsupported command: $cmd"
@@ -112,6 +112,36 @@ jobs:
           node --check src/crypto_signal/product/static/app.js
           echo "=== RUFF ==="
           ./.venv/bin/python -m ruff check src/crypto_signal/product tests/test_dashboard_web.py tests/test_dashboard_alert_center.py
+
+      - name: CURSOR REVIEW
+        if: steps.parse.outputs.command == 'cursorreview'
+        shell: bash
+        env:
+          ISSUE_BODY: ${{ github.event.issue.body }}
+        run: |
+          set -euo pipefail
+          TARGET="$(/usr/bin/python3 - <<'PY'
+          import os, re
+          body = os.environ.get("ISSUE_BODY", "")
+          m = re.search(r"(?im)^target:\s*(supervisor-[0-9]+)\s*$", body)
+          if not m:
+              raise SystemExit("INVALID_CURSOR_REVIEW_TARGET")
+          print(m.group(1))
+          PY
+          )"
+          WT="$HOME/.cursor/worktrees/crypto-signal/$TARGET"
+          test -d "$WT"
+          echo "=== WORKTREE STATUS ==="
+          git -C "$WT" status --short --branch
+          echo "=== EDUCATION MODULE ==="
+          sed -n '1,260p' "$WT/src/crypto_signal/product/education.py"
+          echo "=== EDUCATION TESTS ==="
+          sed -n '1,320p' "$WT/tests/test_product_education.py"
+          echo "=== FOCUSED TEST ==="
+          PYTHONPATH="$WT/src" /Users/crypto-signal-agent/Crypto-Signal/.venv/bin/python -m pytest -q "$WT/tests/test_product_education.py"
+          echo "=== RUFF ==="
+          /Users/crypto-signal-agent/Crypto-Signal/.venv/bin/python -m ruff check "$WT/src/crypto_signal/product/education.py" "$WT/tests/test_product_education.py"
+          echo "CURSOR_REVIEW_PASS=YES"
 
       - name: CURSOR CLEANUP
         if: steps.parse.outputs.command == 'cursorcleanup'
