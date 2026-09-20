@@ -191,7 +191,7 @@ def test_health_and_static_shell_without_ledger(tmp_path: Path) -> None:
     assert health.status_code == 200
     assert health.json() == {
         "status": "ok",
-        "product_version": "full-version-live-education/1",
+        "product_version": "full-version-contextual-evidence/1",
         "real_capital": 0,
         "ledger_present": False,
         "alert_outbox_present": False,
@@ -214,6 +214,12 @@ def test_health_and_static_shell_without_ledger(tmp_path: Path) -> None:
     assert "BANA ÖĞRET" in index.text
     assert "educationCenter" in index.text
     assert "function renderEducation(data)" in script.text
+    assert "function contextualLessonIds(detail)" in script.text
+    assert "function renderContextTeaching(detail)" in script.text
+    assert "function renderEvidenceLegend(detail)" in script.text
+    assert "Bu sinyali bana öğret" in script.text
+    assert "Grafikte çizilen dondurulmuş kanıt" in script.text
+    assert "daha yeni fiyat verisi geçmiş kararı yeniden yazmaz" in script.text
     assert not missing.exists()
 
 
