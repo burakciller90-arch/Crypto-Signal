@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from dataclasses import dataclass
-from decimal import Decimal, ROUND_DOWN
+from decimal import ROUND_DOWN, Decimal
 from enum import StrEnum
 
 from crypto_signal.data.models import Exchange, MarketType
@@ -26,8 +26,8 @@ __all__ = [
     "DEFAULT_ALLOWED_UNCERTAINTY_FLAGS",
     "DEFAULT_AUTONOMY_COOLDOWN_MS",
     "DEFAULT_AUTONOMY_DECISION_TIMEFRAME",
-    "DEFAULT_AUTONOMY_MAX_SIGNAL_AGE_MS",
     "DEFAULT_AUTONOMY_MAX_POSITION_RISK_FRACTION",
+    "DEFAULT_AUTONOMY_MAX_SIGNAL_AGE_MS",
     "DEFAULT_AUTONOMY_REQUIRED_EXCHANGES",
     "PAPER_AUTONOMY_POLICY_VERSION",
     "REAL_CAPITAL",
