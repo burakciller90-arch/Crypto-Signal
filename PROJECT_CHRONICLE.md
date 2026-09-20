@@ -2044,3 +2044,16 @@ Head e85af7e3e9a419e72948f4a9abea542aab0c2f75 passed 441 tests, Ruff, mypy acros
 Fresh state inspection showed signal ingestion had continued beyond the activation baseline (at least 384 total freezes versus baseline 372), while the strict post-cutoff 4h Binance+Bybit scanner still emitted zero eligible events and zero candidates. The paper DB stayed exactly at one fund-creation replay record, 100 USDT cash, zero positions, zero processed events and zero trade/NAV records.
 
 This is an observation milestone only. trade_policy remains NOT_ACTIVATED and REAL_CAPITAL=0. The next safe work is candidate-observation visibility/retention while waiting for a real post-cutoff dry-run event; virtual-trade writes remain blocked.
+
+
+## 2026-09-20 — dry-run candidate attention and deploy-race hardening accepted
+
+The read-only observation clock can now make a future PRETRADE_READY candidate mechanically obvious without granting paper-trade authority. A deterministic summary exposes status counts, ready candidate identities and an attention flag; stable logs emit PAPER_DRY_RUN_ATTENTION only for PRETRADE_READY evidence.
+
+The first stable deployment of this change exposed an operational timing race: launchd was still executing the fresh one-shot when the deploy workflow searched stdout for the new fields. The workflow failed safely and its rollback restored the prior accepted stable head with the 100 USDT zero-trade fund unchanged.
+
+The deploy path was hardened so the exact deployed dry-run executable is probed synchronously before launchd bootstrap. The same pattern now protects the dedicated dry-run-clock deployment. Rollback backup names were also corrected to use the process PID.
+
+Final head 63f15ead39ec9e2a6171a71ac36e7548f7fb0048 passed 443 tests, Ruff, mypy across 96 source files and JavaScript, then deployed successfully. Fresh PAPER STATE showed ready_candidates=0, attention_required=NO, paper_db_unchanged=YES, activation singleton=1, processed events=0 and all trade/NAV tables zero. Both clocks remain healthy and trade_policy remains NOT_ACTIVATED / REAL_CAPITAL=0.
+
+Next safe work is bounded log-retention hardening while the clock waits for real post-cutoff provider-pair evidence.

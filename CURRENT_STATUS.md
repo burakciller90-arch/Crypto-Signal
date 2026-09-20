@@ -1432,3 +1432,40 @@ Current frontier:
 - keep the dry-run clock strictly read-only while new production evidence arrives;
 - harden candidate-observation visibility/log retention so a future post-cutoff event is mechanically obvious without mutating the paper ledger;
 - do not enable autonomous virtual-trade writes until a real post-cutoff event has traversed the accepted dry-run path and its outcome has been inspected.
+
+
+## 2026-09-20 — PAPER/STABLE dry-run candidate attention + deploy race hardening accepted
+
+Accepted candidate visibility:
+- pure dry-run observation summary counts all evaluated statuses deterministically;
+- PRETRADE_READY identities are sorted and exposed explicitly;
+- stable output includes ready_candidates=<count> and attention_required=YES|NO;
+- each PRETRADE_READY event would emit a PAPER_DRY_RUN_ATTENTION evidence line;
+- attention evidence still carries trade_policy=NOT_ACTIVATED and REAL_CAPITAL=0;
+- PAPER STATE exposes the latest dry-run summary and recent attention lines.
+
+Deploy hardening:
+- first deploy attempt of 290ceb051fc13536cafac09d3efb5d66770b30a2 safely failed and auto-rolled back because launchd was still running when the workflow looked for newly emitted fields;
+- rollback independently restored stable HEAD=e85af7e3e9a419e72948f4a9abea542aab0c2f75 with all no-trade invariants intact;
+- 63f15ead39ec9e2a6171a71ac36e7548f7fb0048 removes this timing assumption by running the exact deployed dry-run script as a deterministic read-only probe before launchd bootstrap;
+- dedicated dryrunclockdeploy uses the same probe;
+- plist rollback backup filenames now use $$ rather than a literal trailing dollar sign.
+
+Final acceptance:
+- 443 tests PASS;
+- Ruff PASS;
+- mypy PASS across 96 source files;
+- JavaScript PASS;
+- PAPER/STABLE deploy to 63f15ead39ec9e2a6171a71ac36e7548f7fb0048 PASS;
+- manual deploy dry-run probe: candidates=0, ready_candidates=0, attention_required=NO, paper_db_unchanged=YES;
+- paper clock and dry-run clock last exit code=0, interval=120 seconds;
+- paper fund remains 100.00 USDT, positions=0, replay index=1;
+- activation singleton=1, processed events=0;
+- decision/fill/mutation/NAV counts remain zero;
+- trade_policy=NOT_ACTIVATED;
+- REAL_CAPITAL=0.
+
+Current frontier:
+- continue strictly read-only production observation until a real post-cutoff provider-pair event appears;
+- harden dry-run log retention so 120-second observation does not create unbounded local log growth;
+- autonomous virtual-trade writes remain blocked until real post-cutoff dry-run evidence is observed and reviewed.
