@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import inspect
 import sqlite3
-from decimal import Decimal
 
 import pytest
 
