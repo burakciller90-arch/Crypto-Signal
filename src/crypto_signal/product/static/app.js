@@ -3,6 +3,7 @@ const $ = (selector) => document.querySelector(selector);
 let navigationContexts = [];
 let selectedEvidenceClass = null;
 let performanceData = null;
+let educationData = null;
 
 const AUTO_REFRESH_MS = 15_000;
 const STALE_AFTER_MS = 45_000;
@@ -957,9 +958,45 @@ function showError(error) {
   $("#healthChip").textContent = "Okuma hatası";
 }
 
+function renderEducation(data) {
+  educationData = data;
+  const root = $("#educationCenter");
+  const lessons = data?.status === "ready" ? (data.lessons ?? []) : [];
+  $("#educationCount").textContent = lessons.length ? `${lessons.length} kısa ders` : "Ders yok";
+  if (!lessons.length) {
+    root.innerHTML = '<div class="performance-empty">Eğitim kataloğu şu anda kullanılamıyor.</div>';
+    return;
+  }
+  root.classList.remove("loading-block");
+  root.innerHTML = lessons.map((lesson) => `
+    <details class="lesson-card">
+      <summary>
+        <span class="lesson-title">${esc(lesson.title_tr)}</span>
+        <span class="lesson-open-hint">Aç ve öğren</span>
+      </summary>
+      <div class="lesson-body">
+        <div>
+          <div class="value-label">Bu nedir?</div>
+          <p>${esc(lesson.beginner_tr)}</p>
+        </div>
+        <div>
+          <div class="value-label">Neden önemli?</div>
+          <p>${esc(lesson.why_it_matters_tr)}</p>
+        </div>
+        ${lesson.advanced_tr ? `
+          <div class="lesson-advanced">
+            <div class="value-label">Biraz daha derin</div>
+            <p>${esc(lesson.advanced_tr)}</p>
+          </div>
+        ` : ""}
+      </div>
+    </details>
+  `).join("");
+}
+
 async function loadAll() {
   clearNotice();
-  const [health, command, radar, navigation, archive, performance, alerts] = await Promise.all([
+  const [health, command, radar, navigation, archive, performance, alerts, education] = await Promise.all([
     fetchJSON("/api/health"),
     fetchJSON("/api/command-center?recent_limit=8"),
     fetchJSON("/api/market-radar"),
@@ -967,6 +1004,7 @@ async function loadAll() {
     fetchJSON("/api/signals?limit=50&offset=0"),
     fetchJSON("/api/performance"),
     fetchJSON("/api/alerts?limit=50"),
+    educationData ? Promise.resolve(educationData) : fetchJSON("/api/education"),
   ]);
 
   $("#healthChip").textContent = health.ledger_present ? "Kanıt deposu bağlı" : "Kanıt deposu yok";
@@ -975,6 +1013,7 @@ async function loadAll() {
   renderArchive(archive);
   renderPerformance(performance);
   renderAlertCenter(alerts);
+  renderEducation(education);
   configureNavigation(navigation);
   await loadSelectedAsset();
   bindSignalClicks();
