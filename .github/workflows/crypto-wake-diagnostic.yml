@@ -18,6 +18,9 @@ jobs:
           SHARED="/Users/Shared/.crypto-signal-wake-relay"
           echo "=== TARGET ==="
           cat "$SHARED/current_chat_url" 2>&1
+          echo "=== RELAY PROCESS OWNER ==="
+          pid="$(sed -n 's/^pid=//p' "$SHARED/relay_status" | head -1)"
+          if [ -n "$pid" ]; then ps -o user=,uid=,pid=,ppid=,command= -p "$pid" 2>&1; fi
           echo "=== STATUS ==="
           cat "$SHARED/relay_status" 2>&1
           echo "=== QUEUE ==="
