@@ -6,6 +6,8 @@ import hashlib
 import sqlite3
 from decimal import Decimal
 
+import pytest
+
 from crypto_signal.confluence.models import (
     InvalidationTrigger,
     MethodologyKind,
@@ -14,6 +16,7 @@ from crypto_signal.confluence.models import (
 )
 from crypto_signal.data.models import Exchange, MarketType
 from crypto_signal.ledger.serialization import canonical_json
+from crypto_signal.paper import write_tick as paper_write_tick
 from crypto_signal.paper.activation import activate_paper_policy
 from crypto_signal.paper.ledger import PaperFundLedger
 from crypto_signal.paper.models import (
@@ -26,7 +29,10 @@ from crypto_signal.paper.venue_rules import (
     PaperVenueRuleStore,
     parse_binance_spot_venue_rules,
 )
-from crypto_signal.paper.write_authority import append_paper_write_authority_event
+from crypto_signal.paper.write_authority import (
+    PaperWriteAuthorityError,
+    append_paper_write_authority_event,
+)
 from crypto_signal.paper.write_tick import (
     PaperWriteEventDisposition,
     run_paper_write_tick,
@@ -326,6 +332,45 @@ def test_disabled_write_authority_is_strict_noop(tmp_path) -> None:
     assert result.authority_enabled is False
     assert result.scanned_candidate_count == 0
     assert result.event_results == ()
+    assert _processed_count(ledger.path) == 0
+    assert reconstruct_paper_fund_state(ledger).replayed_record_count == 1
+
+
+def test_authority_revoked_during_evaluation_blocks_mutation(
+    tmp_path,
+    monkeypatch,
+) -> None:
+    ledger, activation = _paper(tmp_path, authority_enabled=True)
+    signal_db = tmp_path / "signals.sqlite3"
+    _init_signal_db(signal_db)
+    _insert_provider_pair(signal_db, state=SignalState.WATCH)
+
+    original_evaluate = paper_write_tick.evaluate_paper_activation_dry_run
+
+    def revoke_then_evaluate(**kwargs):
+        append_paper_write_authority_event(
+            ledger=ledger,
+            activation=activation,
+            enabled=False,
+            created_at_ms=1_500,
+            reason="operator revoke during evaluation",
+        )
+        return original_evaluate(**kwargs)
+
+    monkeypatch.setattr(
+        paper_write_tick,
+        "evaluate_paper_activation_dry_run",
+        revoke_then_evaluate,
+    )
+
+    with pytest.raises(PaperWriteAuthorityError, match="revoked"):
+        paper_write_tick.run_paper_write_tick(
+            paper_ledger_path=ledger.path,
+            signal_ledger_path=signal_db,
+            candle_cache_path=tmp_path / "missing-candles.sqlite3",
+            evaluated_at_ms=EVALUATED_AT,
+        )
+
     assert _processed_count(ledger.path) == 0
     assert reconstruct_paper_fund_state(ledger).replayed_record_count == 1
 
