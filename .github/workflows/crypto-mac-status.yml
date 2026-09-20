@@ -1,0 +1,56 @@
+name: Crypto Mac Status
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/crypto-mac-status.yml"
+
+jobs:
+  status:
+    name: UID504 Crypto Signal Status
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 10
+    steps:
+      - name: Identity and host
+        shell: bash
+        run: |
+          set -u
+          echo "=== IDENTITY ==="
+          id
+          whoami
+          uname -a
+
+      - name: Canonical repository state
+        shell: bash
+        run: |
+          set -u
+          REPO="/Users/crypto-signal-agent/Crypto-Signal"
+          echo "=== REPOSITORY ==="
+          git -C "$REPO" status --short --branch
+          echo "HEAD=$(git -C "$REPO" rev-parse HEAD)"
+          echo "BRANCH=$(git -C "$REPO" branch --show-current)"
+
+      - name: Dashboard health
+        shell: bash
+        run: |
+          set +e
+          echo "=== DASHBOARD HEALTH ==="
+          curl -fsS --max-time 5 http://127.0.0.1:48700/health
+          rc=$?
+          echo
+          echo "CURL_RC=$rc"
+          exit 0
+
+      - name: Crypto services snapshot
+        shell: bash
+        run: |
+          set +e
+          echo "=== SERVICES ==="
+          launchctl print "gui/$(id -u)/com.cryptosignal.dashboard" 2>&1 | head -80
+          echo "---"
+          launchctl print "gui/$(id -u)/com.cryptosignal.liveevidenceclock" 2>&1 | head -80
+          echo "---"
+          launchctl print "gui/$(id -u)/com.cryptosignal.alertclock" 2>&1 | head -80
+          exit 0
