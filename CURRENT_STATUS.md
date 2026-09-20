@@ -1048,3 +1048,42 @@ Current frontier:
 - integrate accepted pretrade plan -> deterministic orchestration bundle -> accepted atomic/idempotent commit on a bounded ledger;
 - prove end-to-end lineage and replay behavior without activating PAPER/STABLE;
 - then implement persistent activation watermark / processed-event state and an authoritative frozen venue-rule snapshot source before any autonomous virtual trade is enabled.
+
+
+## 2026-09-20 — Stage 6C pretrade-to-atomic-commit pipeline accepted
+
+Accepted integration:
+- accepts only PLANNED pretrade decisions;
+- verifies exact fund, action, symbol, quantity, reference, frozen execution-input and frozen execution-snapshot lineage;
+- deterministic orchestration must produce DecisionIntent + SimulatedFill + PositionCashMutation for a trade;
+- exact committed record tuple must equal the exact orchestration bundle tuple;
+- fill venue provenance must bind the exact execution snapshot;
+- persistence uses the accepted atomic/idempotent paper ledger boundary;
+- exact retry from the original pre-commit state is UNCHANGED;
+- stale state rejects before write;
+- mismatched snapshot rejects before write;
+- REJECTED pretrade never reaches the ledger;
+- injected mid-bundle simulated-fill INSERT failure rolls the entire pipeline write back.
+
+Authority boundary:
+- no signal selection;
+- no candle or venue metadata fetch;
+- no stable runtime activation;
+- no network/exchange/order/credential path;
+- PAPER/STABLE remains trade_policy=NOT_ACTIVATED;
+- REAL_CAPITAL=0.
+
+Acceptance evidence:
+- implementation: cbffeb3e764e94ebc1ee516527140baabda04654;
+- style-only head: ae7acc4d1fff43a411ec93945421db059a8433c5;
+- integrity hardening head: bc57c01c072cff277725fe3493564a201c6ad13e;
+- final regression: 398 tests PASS;
+- Ruff PASS;
+- mypy PASS across 91 source files;
+- JavaScript syntax PASS.
+
+Current frontier:
+- persistent runtime activation watermark and deterministic provider-pair event identity;
+- append-only event claim/resolution truth for restart/replay handling;
+- authoritative frozen Binance venue-rule/cost snapshot source;
+- only after those gates are accepted may PAPER/STABLE autonomous virtual trade activation be considered.

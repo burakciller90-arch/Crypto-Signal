@@ -1890,3 +1890,22 @@ Final hardening head d58a181ab49da604313efa07d18c877d82ecaaf6 passed:
 - REAL_CAPITAL=0.
 
 The bridge remains pure planning only. PAPER/STABLE is not activated for virtual trading. Next gate is bounded integration through deterministic orchestration and the already-accepted atomic/idempotent ledger commit, followed by persistent activation/processed-event truth and authoritative venue-rule snapshot sourcing.
+
+
+## 2026-09-20 — accepted pretrade-to-atomic-commit pipeline
+
+The accepted pretrade plan is now connected end-to-end to deterministic simulated execution and the existing atomic paper ledger boundary, without activating PAPER/STABLE trading.
+
+Pipeline proofs include exact record-tuple binding, first-write INSERTED, exact retry UNCHANGED, stale-state rejection, snapshot-lineage rejection and an injected simulated-fill SQLite failure proving complete rollback at pipeline level.
+
+Final accepted head:
+bc57c01c072cff277725fe3493564a201c6ad13e
+
+Whole-repository acceptance:
+- 398 tests PASS;
+- Ruff PASS;
+- mypy PASS across 91 source files;
+- JavaScript PASS;
+- REAL_CAPITAL=0.
+
+Next frontier is persistent activation watermark + append-only event claim/resolution truth, followed by authoritative frozen venue-rule sourcing. Stable virtual trading remains disabled.
