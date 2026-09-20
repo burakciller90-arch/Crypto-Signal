@@ -709,6 +709,13 @@ jobs:
               state_tests.write_text(st)
 
           pt = planning_tests.read_text()
+          pt = pt.replace(
+              "def test_buy_concentration_uses_projected_nav_after_costs(tmp_path: Path) -> None:\n"
+              "    state = _pristine_state(tmp_path)\n",
+              "def test_buy_concentration_uses_projected_nav_after_costs(tmp_path: Path) -> None:\n"
+              "    state, _fund = _pristine_state(tmp_path)\n",
+          )
+          planning_tests.write_text(pt)
           planning_marker = "def test_missing_evidence_holds_cash"
           new_planning_test = '''def test_buy_concentration_uses_projected_nav_after_costs(tmp_path: Path) -> None:
               state = _pristine_state(tmp_path)
