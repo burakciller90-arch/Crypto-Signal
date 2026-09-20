@@ -189,6 +189,10 @@ def freeze_execution_input_from_cache(
     observed_at_ms: int,
 ) -> PaperExecutionInputResult:
     _validate_candidate(autonomy_decision)
+    symbol = autonomy_decision.symbol
+    source_as_of_ms = autonomy_decision.source_as_of_ms
+    if symbol is None or source_as_of_ms is None:
+        raise PaperExecutionInputError("invalid autonomy trade candidate")
     if observed_at_ms < autonomy_decision.evaluated_at_ms:
         raise PaperExecutionInputError(
             "execution input observation cannot predate autonomy evaluation"
@@ -235,9 +239,9 @@ def freeze_execution_input_from_cache(
                 (
                     _EXECUTION_REFERENCE_EXCHANGE.value,
                     _EXECUTION_REFERENCE_MARKET_TYPE.value,
-                    autonomy_decision.symbol.value,
+                    symbol.value,
                     _EXECUTION_REFERENCE_TIMEFRAME,
-                    autonomy_decision.source_as_of_ms,
+                    source_as_of_ms,
                     observed_at_ms,
                     observed_at_ms,
                     observed_at_ms,
