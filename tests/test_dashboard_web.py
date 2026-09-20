@@ -218,6 +218,8 @@ def test_health_and_static_shell_without_ledger(tmp_path: Path) -> None:
     assert "function renderContextTeaching(detail)" in script.text
     assert "function renderEvidenceLegend(detail)" in script.text
     assert "Bu sinyali bana öğret" in script.text
+    assert "Neden işlem yapmamalıyız?" in script.text
+    assert "uyumu olasılık değildir" in script.text
     assert "Grafikte çizilen dondurulmuş kanıt" in script.text
     assert "daha yeni fiyat verisi geçmiş kararı yeniden yazmaz" in script.text
     assert not missing.exists()
