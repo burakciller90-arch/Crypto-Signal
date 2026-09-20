@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>com.cryptosignal.liveevidenceclock</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/Users/crypto-signal-agent/.local/bin/uv</string>
+    <string>run</string>
+    <string>python</string>
+    <string>/Users/crypto-signal-agent/Crypto-Signal/ops/run_live_evidence_clock.py</string>
+  </array>
+  <key>WorkingDirectory</key><string>/Users/crypto-signal-agent/Crypto-Signal</string>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PYTHONPATH</key><string>/Users/crypto-signal-agent/Crypto-Signal/src</string>
+  </dict>
+  <key>RunAtLoad</key><true/>
+  <key>StartInterval</key><integer>120</integer>
+  <key>StandardOutPath</key><string>/Users/crypto-signal-agent/Crypto-Signal/runtime/ledger/live_clock.out.log</string>
+  <key>StandardErrorPath</key><string>/Users/crypto-signal-agent/Crypto-Signal/runtime/ledger/live_clock.err.log</string>
+</dict>
+</plist>
