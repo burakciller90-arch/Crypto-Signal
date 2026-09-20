@@ -913,3 +913,30 @@ No live performance claim was fabricated from the empty outcome set.
 Canonical frontier is explicit PRODUCT/STABLE deployment of the accepted
 Slice 4 commit followed by Dashboard V1 integrated acceptance.
 REAL_CAPITAL remains 0.
+
+## 2026-09-20 — Dashboard V1 integrated acceptance and stable deploy
+
+Dashboard V1 is now accepted as a persistent read-only Mission Control.
+
+PRODUCT/STABLE was explicitly advanced from b1cd19f to
+2c2fc99e58d543bbf77060bb134c49b332720280 only after Slice 4 acceptance.
+
+Stable deployment evidence:
+- com.cryptosignal.dashboard state running
+- PRODUCT/STABLE clean at exact accepted commit
+- listener only on 127.0.0.1:48700
+- /api/health HTTP 200
+- product_version dashboard-v1-slice4/1
+- read_only=true
+- REAL_CAPITAL=0
+- navigation READY with 2 real contexts
+- 30 immutable freezes observed during stable smoke
+- Performance EMPTY with zero explicit outcome snapshots
+- rich PA/Harmonic/Elliott detail and pairwise evidence projection healthy
+
+Mandatory V1 product surfaces are all present:
+Command Center, Market Radar, Asset Cockpit, Signal Detail, Signal Archive and
+Performance.
+
+Dashboard V1 is no longer on the critical path.
+Canonical frontier advances to Alerts V1.

@@ -2,8 +2,8 @@
 
 Updated: 2026-09-20
 Project: Crypto Signal
-Phase: Dashboard V1 / Product Command Center
-State: DASHBOARD_V1_SLICE4_ACCEPTED_PENDING_STABLE_DEPLOY
+Phase: Alerts V1
+State: DASHBOARD_V1_ACCEPTED
 REAL_CAPITAL: 0
 
 ## Accepted foundations
@@ -250,15 +250,27 @@ No Durdurulmaz or Quantum Capital project state was mutated; UID502 is used only
 - smoke observed 30 immutable freezes, 2 navigation contexts and Performance=EMPTY with zero outcome snapshots
 - temporary development server stopped after smoke
 
-## Canonical next frontier
-Dashboard V1 integrated acceptance:
-1. commit Slice 4 exact accepted state
-2. explicitly advance PRODUCT/STABLE to that accepted commit
-3. restart com.cryptosignal.dashboard
-4. verify localhost-only listener, product_version=dashboard-v1-slice4/1 and read_only=true
-5. verify real navigation / rich detail / empty-performance behavior on stable lane
-6. close Dashboard V1 acceptance if all mandatory surfaces remain healthy
-7. advance to Alerts V1
+## Dashboard V1 integrated acceptance
+- all mandatory V1 surfaces are present: Command Center, Market Radar, Asset Cockpit, Signal Detail, Signal Archive and Performance
+- latest full development gate: 220 tests PASS / Ruff PASS / mypy PASS / JS syntax PASS / uv lock PASS
+- PRODUCT/STABLE explicitly advanced to 2c2fc99e58d543bbf77060bb134c49b332720280
+- stable product_version=dashboard-v1-slice4/1
+- localhost-only 127.0.0.1:48700 listener verified
+- stable health HTTP 200 / read_only=true / REAL_CAPITAL=0
+- stable real-ledger navigation/rich-detail/performance smoke PASS
+- Dashboard V1 is accepted and no longer on the critical path
 
-LIVE/STABLE evidence clock remains independent.
+## Canonical next frontier
+Alerts V1:
+1. define immutable alert-event and alert-policy contracts
+2. deterministic alert identity / deduplication
+3. state-transition eligibility without changing signal truth
+4. append-only alert outbox bound to signal freeze/lifecycle evidence
+5. delivery attempts/status separate from immutable signal/outcome evidence
+6. local/no-op sink and provider adapter boundary
+7. retries must be idempotent and must not duplicate user-facing alerts
+8. no order/execution semantics
+9. focused tests + full repo gate
+
+LIVE/STABLE evidence clock and PRODUCT/STABLE dashboard remain isolated and running while Alerts development proceeds.
 REAL_CAPITAL remains 0.
