@@ -1653,3 +1653,30 @@ PRODUCT/STABLE was then advanced with rollback protection to 5d2bd3ae488ce0b579e
 The supervisor-57 worktree was removed and pruned.
 
 Next Stage 6C frontier is simulated execution + deterministic plan→decision→fill→mutation orchestration. Persistent autonomous paper-account runtime must remain gated behind those correctness tests; no real-capital authority is introduced.
+
+## 2026-09-20 — Cursor development suspended; Slice 3 rebuilt directly by supervisor
+
+The user observed that using Cursor and then independently reviewing every result was reducing rather than improving delivery speed. Operational decision: Cursor is suspended as a development worker. Do not issue new Cursor coding tasks unless the user explicitly re-enables it.
+
+The already-completed Cursor #78 worktree was not accepted or integrated. Before disposal, a bounded provenance probe confirmed three audit weaknesses: plan risk policy could differ from fund policy, execution policy could differ from fund policy, and rule-distinct frozen snapshots could produce identical fill identities when their immediate price/cost outcome matched.
+
+The worktree was then removed and #78 closed as superseded.
+
+Supervisor implemented Stage 6C Slice 3 directly on canonical main:
+- deterministic frozen execution snapshot;
+- snapshot-bound fill provenance;
+- adverse full-fill simulation;
+- explicit Decimal fee/spread/slippage accounting;
+- venue-rule minimum/step checks;
+- policy-bound pure plan→decision→fill→mutation orchestration;
+- no database write, network, exchange or credential surface.
+
+The first whole-repository gate passed pytest but Ruff found 20 fixable Decimal-literal style findings and one SIM102 simplification. Supervisor corrected them directly.
+
+Final full gate:
+- 330 tests PASS,
+- Ruff PASS,
+- mypy PASS on 84 source files,
+- JavaScript syntax PASS.
+
+This slice is accepted as pure execution/orchestration truth only. It still does not run a persistent autonomous paper account. Next work is atomic/idempotent ledger append and crash/replay safety before any continuously running virtual portfolio loop.
