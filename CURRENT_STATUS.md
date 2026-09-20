@@ -2,8 +2,8 @@
 
 Updated: 2026-09-20
 Project: Crypto Signal
-Phase: Alerts V1
-State: ALERTS_V1_SLICE5_NOTIFICATION_PRESENTATION_ACCEPTED_PENDING_STABLE_DEPLOY
+Phase: V1 Integrated Acceptance
+State: ALERTS_V1_ACCEPTED
 REAL_CAPITAL: 0
 
 ## Accepted foundations
@@ -356,17 +356,28 @@ No Durdurulmaz or Quantum Capital project state was mutated; UID502 is used only
 - uv lock PASS
 - production preview smoke preserved 0 events / 0 attempts before and after
 
-## Canonical next frontier
-Alerts V1 stable convergence and integrated acceptance:
-1. commit exact accepted Slice 5 state
-2. advance PRODUCT/STABLE to that commit and restart dashboard
-3. advance ALERTS/STABLE to that commit and verify materializer remains materialize-only
-4. stable smoke Alert Center + notification preview semantics
-5. verify production outbox remains safe while source evidence is WATCH-only
-6. refresh user-facing Safari dashboard
-7. close Alerts V1 integrated acceptance
-8. advance to V1 Integrated Acceptance
+## Alerts V1 integrated acceptance
+- PRODUCT/STABLE and ALERTS/STABLE converged on exact accepted 1d8c8757fb825c8934229b454db49bf800f2b5cf
+- dashboard stable health PASS / read_only=true / alert_outbox_present=true
+- Alert Clock stable materializer exit 0 across repeated runs
+- latest observed source 34 signals / 34 lifecycle
+- default WATCH suppression produced 0 eligible / 0 event / 0 attempt
+- canonical NotificationMessage is shared by Mission Control preview and provider boundary
+- stable preview is read-only and consumed nothing
+- external providers remain disabled by default
+- Alerts V1 is accepted end-to-end
 
-External providers remain disabled by default until explicitly configured.
-LIVE/STABLE remains independent.
+## Canonical next frontier
+V1 Integrated Acceptance:
+1. inventory all accepted V1 gates and immutable acceptance documents
+2. create one deterministic integrated acceptance verifier
+3. verify Data Truth + primitives + PA/Harmonic/Elliott + Confluence/Signal
+4. verify immutable ledger/lifecycle/outcome/evaluation
+5. verify Dashboard + Alert Center + Alert Clock
+6. verify LIVE/STABLE / PRODUCT/STABLE / ALERTS/STABLE isolation
+7. verify localhost/read-only/REAL_CAPITAL=0 boundaries
+8. run full repository and live/stable smoke gates
+9. publish V1 integrated acceptance only if all mandatory gates pass
+
+External provider configuration is optional and does not change signal truth.
 REAL_CAPITAL remains 0.

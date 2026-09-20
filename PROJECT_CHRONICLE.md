@@ -1154,3 +1154,23 @@ Production outbox preview smoke:
 
 Canonical frontier is stable convergence of PRODUCT/STABLE and ALERTS/STABLE on
 the exact accepted Slice 5 commit, followed by Alerts V1 integrated acceptance.
+
+## 2026-09-20 — Alerts V1 integrated acceptance
+
+Alerts V1 is accepted end-to-end.
+
+Stable convergence:
+- PRODUCT/STABLE = 1d8c8757fb825c8934229b454db49bf800f2b5cf
+- ALERTS/STABLE = 1d8c8757fb825c8934229b454db49bf800f2b5cf
+- PRODUCT/STABLE dashboard healthy/read-only on localhost
+- ALERTS/STABLE materializer remains one-shot materialize-only
+- latest Alert Clock source observation: 34 signals / 34 lifecycle
+- default WATCH policy generated 0 eligible alerts
+- production alert outbox stayed at 0 events / 0 attempts
+- read-only preview consumed nothing
+
+Canonical notification semantics, provider idempotency and secret boundaries are
+accepted. External provider selection remains explicit configuration, not a V1
+core-truth blocker.
+
+Project phase advances to V1 Integrated Acceptance.
