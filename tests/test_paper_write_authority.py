@@ -7,6 +7,7 @@ import sqlite3
 
 import pytest
 
+from crypto_signal.ledger.serialization import canonical_json
 from crypto_signal.paper import write_authority as paper_write_authority
 from crypto_signal.paper.activation import activate_paper_policy
 from crypto_signal.paper.ledger import (
@@ -16,7 +17,10 @@ from crypto_signal.paper.ledger import (
 from crypto_signal.paper.models import REAL_CAPITAL, build_fund_creation
 from crypto_signal.paper.state import reconstruct_paper_fund_state
 from crypto_signal.paper.write_authority import (
+    PaperWriteAuthorityError,
+    PaperWriteAuthorityEvent,
     append_paper_write_authority_event,
+    compute_paper_write_authority_identity,
     list_paper_write_authority_events,
     load_current_paper_write_authority,
 )
@@ -109,6 +113,67 @@ def test_write_authority_sql_rows_reject_update_delete(tmp_path) -> None:
             pytest.raises(sqlite3.IntegrityError, match="immutable"),
         ):
             connection.execute(statement, (enabled.authority_event_identity,))
+
+
+def test_load_current_authority_rejects_discontinuous_chain(tmp_path) -> None:
+    ledger, activation = _activated_ledger(tmp_path)
+    _, enabled = append_paper_write_authority_event(
+        ledger=ledger,
+        activation=activation,
+        enabled=True,
+        created_at_ms=200,
+        reason="reviewed production evidence",
+        reviewed_event_identities=("a" * 64,),
+        reviewed_trace_identities=("b" * 64,),
+    )
+
+    fake_previous = "c" * 64
+    corrupt_identity = compute_paper_write_authority_identity(
+        version=paper_write_authority.PAPER_WRITE_AUTHORITY_VERSION,
+        activation_identity=activation.activation_identity,
+        enabled=False,
+        created_at_ms=300,
+        previous_event_identity=fake_previous,
+        reason="corrupt authority lineage",
+        reviewed_event_identities=(),
+        reviewed_trace_identities=(),
+    )
+    corrupt = PaperWriteAuthorityEvent(
+        authority_event_identity=corrupt_identity,
+        version=paper_write_authority.PAPER_WRITE_AUTHORITY_VERSION,
+        activation_identity=activation.activation_identity,
+        enabled=False,
+        created_at_ms=300,
+        previous_event_identity=fake_previous,
+        reason="corrupt authority lineage",
+        reviewed_event_identities=(),
+        reviewed_trace_identities=(),
+    )
+    with sqlite3.connect(ledger.path) as connection:
+        connection.execute(
+            """
+            INSERT INTO paper_write_authority_events (
+                authority_event_identity,
+                activation_identity,
+                enabled,
+                previous_event_identity,
+                payload_json,
+                created_at_ms
+            ) VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            (
+                corrupt.authority_event_identity,
+                corrupt.activation_identity,
+                0,
+                corrupt.previous_event_identity,
+                canonical_json(corrupt),
+                corrupt.created_at_ms,
+            ),
+        )
+
+    assert enabled.authority_event_identity != fake_previous
+    with pytest.raises(PaperWriteAuthorityError, match="discontinuous"):
+        load_current_paper_write_authority(ledger)
 
 
 def test_write_authority_surface_has_no_real_order_or_network_authority() -> None:
