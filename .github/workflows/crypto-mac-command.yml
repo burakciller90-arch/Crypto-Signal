@@ -307,13 +307,9 @@ jobs:
           tests = wt / "tests/test_paper_fund.py"
 
           text = models.read_text()
-          anchor = '''            if price <= Decimal(0):
-                      raise ValueError("mark price must be positive")
-                  expected_benchmarks = tuple(
-          '''
-          replacement = '''            if price <= Decimal(0):
-                      raise ValueError("mark price must be positive")
-                  mark_price_by_symbol = dict(self.mark_prices)
+          nav_marker = "class NavSnapshotRecord:"
+          benchmark_marker = "        expected_benchmarks = tuple("
+          nav_hardening = '''        mark_price_by_symbol = dict(self.mark_prices)
                   missing_mark_symbols = {
                       position.symbol
                       for position in self.positions
@@ -332,12 +328,16 @@ jobs:
                       raise ValueError(
                           "nav_usdt must equal cash plus marked position value"
                       )
-                  expected_benchmarks = tuple(
+          
           '''
           if "nav_usdt must equal cash plus marked position value" not in text:
-              if anchor not in text:
-                  raise SystemExit("NAV_HARDEN_ANCHOR_NOT_FOUND")
-              text = text.replace(anchor, replacement, 1)
+              nav_start = text.find(nav_marker)
+              if nav_start < 0:
+                  raise SystemExit("NAV_CLASS_NOT_FOUND")
+              insert_at = text.find(benchmark_marker, nav_start)
+              if insert_at < 0:
+                  raise SystemExit("NAV_BENCHMARK_ANCHOR_NOT_FOUND")
+              text = text[:insert_at] + nav_hardening + text[insert_at:]
               models.write_text(text)
 
           t = tests.read_text()
