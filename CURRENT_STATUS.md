@@ -3,7 +3,7 @@
 Updated: 2026-09-20
 Project: Crypto Signal
 Phase: Post-V1 Production Expansion
-State: POST_V1_COVERAGE_MATRIX_ACCEPTED
+State: POST_V1_HIGHER_TF_PREPARATION_ACCEPTED
 REAL_CAPITAL: 0
 
 ## Accepted foundations
@@ -404,16 +404,29 @@ No Durdurulmaz or Quantum Capital project state was mutated; UID502 is used only
 - Ruff PASS / mypy PASS / uv lock PASS
 - no production coverage deployment occurred
 
+## Post-V1 higher-timeframe preparation accepted evidence
+- target windows are derived from fully completed target buckets only
+- required canonical 15m range is computed exactly
+- local CandleStore cache is checked before network acquisition
+- only missing contiguous 15m ranges are fetched
+- accepted backfill_range() provides bounded <=1000 pagination
+- complete cache causes zero new API calls
+- missing base opens and incomplete aggregate buckets remain explicit
+- higher-timeframe candles are produced only by aggregate_closed_15m()
+- focused gate: 11 tests PASS
+- full repository: 267 tests PASS
+- Ruff PASS / mypy PASS / uv lock PASS
+- no production higher-timeframe context activated
+
 ## Canonical next frontier
-Post-V1 canonical higher-timeframe preparation:
-1. build target timeframe candles only from canonical closed 15m
-2. keep incomplete target buckets explicit and non-freezable
-3. preserve aggregated observation/provenance timing
-4. implement bounded paginated base-history acquisition
-5. avoid oversized one-shot REST requests
-6. prove requested target-window completeness deterministically
-7. keep all higher-timeframe coverage contexts disabled in production
-8. run focused/full gates before any activation proposal
+Post-V1 canonical freeze-path refactor:
+1. extract freeze_live_candles() from adapter acquisition
+2. preserve exact existing 15m decision/bundle/lifecycle semantics
+3. make freeze_live_provider() delegate after fetching canonical candles
+4. allow prepared aggregated candles to enter the same immutable pipeline later
+5. prove 15m regression equivalence and source-cutoff idempotence
+6. keep higher-timeframe production coverage disabled
+7. full repo gate before activation work
 
 V2+ research remains behind production coverage expansion.
 REAL_CAPITAL remains 0.

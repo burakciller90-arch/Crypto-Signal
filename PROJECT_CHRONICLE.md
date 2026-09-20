@@ -1271,3 +1271,28 @@ Mechanical evidence:
 No production coverage change was deployed.
 Canonical frontier advances to canonical higher-timeframe preparation and
 bounded base-history acquisition.
+
+## 2026-09-20 — Post-V1 canonical higher-timeframe preparation accepted
+
+Higher-timeframe live evidence preparation now uses only canonical closed 15m
+truth.
+
+The preparation path:
+- derives the exact completed target window from the latest 15m source cutoff
+- checks local CandleStore cache first
+- groups only missing base opens into contiguous ranges
+- reuses accepted backfill_range() pagination
+- performs zero API calls when the cache is complete
+- aggregates only through aggregate_closed_15m()
+- reports missing base opens and incomplete target buckets explicitly
+
+Mechanical evidence:
+- focused preparation/aggregation/recovery gate: 11 PASS
+- full repository: 267 PASS
+- Ruff PASS
+- mypy PASS
+- uv lock PASS
+
+No higher-timeframe production context was enabled.
+Canonical frontier advances to decoupling immutable analysis/freezing from
+adapter acquisition so prepared canonical candles can later reuse one pipeline.
