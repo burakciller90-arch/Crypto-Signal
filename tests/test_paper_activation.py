@@ -197,7 +197,7 @@ def test_activation_and_event_tables_are_immutable(tmp_path) -> None:
             )
 
 
-def test_activation_surface_has_no_trade_network_or_runtime_authority() -> None:
+def test_activation_surface_has_no_network_real_order_or_runtime_authority() -> None:
     source = inspect.getsource(paper_activation).lower()
     forbidden = (
         "import requests",
@@ -210,8 +210,8 @@ def test_activation_surface_has_no_trade_network_or_runtime_authority() -> None:
         "api_key",
         "api_secret",
         "ccxt",
-        "simulate_paper_fill",
-        "commit_planned_pretrade",
+        "simulate_paper_fill(",
+        "commit_planned_pretrade(",
         "run_paper_runtime_tick",
         "launchctl",
         "subprocess",

@@ -3,7 +3,9 @@
 Activation state and processed-event receipts live in the same SQLite database
 as the virtual paper ledger. They are immutable and insert-only. This module
 does not activate PAPER/STABLE by itself and contains no signal selection,
-network, exchange, credential, fill, or real-order authority.
+network, exchange, credential, or real-order authority. It may compose only
+already-accepted virtual simulation/atomic-ledger boundaries so a processed
+trade receipt and its simulated paper mutation share one transaction.
 """
 
 from __future__ import annotations
