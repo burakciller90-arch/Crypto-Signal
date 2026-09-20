@@ -1546,3 +1546,32 @@ docs/BEGINNER_UX_EVIDENCE_CENTER_SPEC.md
 
 Canonical next engineering frontier is Stage 6A: automatic live Mission Control refresh with explicit freshness/connection semantics. Stage 6B and Stage 6C follow without weakening scientific gates.
 
+## 2026-09-20 — Full Version Sprint 1: live refresh + beginner education reaches PRODUCT/STABLE
+
+The first execution sprint under the governing Full Version roadmap completed successfully.
+
+Accepted Stage 6A behavior:
+- Mission Control no longer depends on routine manual F5; it performs bounded automatic refresh,
+- freshness and stale/offline state are visible,
+- decision truth still comes from closed/frozen evidence and was not weakened.
+
+Accepted Stage 6B foundation:
+- deterministic Turkish "Bana Öğret" lesson catalog integrated,
+- education API is GET-only/read-only,
+- beginner lessons explicitly distinguish methodology agreement from probability,
+- paper-trading lesson states REAL_CAPITAL=0 and explains the fully virtual 100 USDT direction,
+- UI exposes progressive-disclosure lesson cards rather than cluttering the primary dashboard.
+
+Acceptance evidence:
+- focused product gate PASS (19 tests plus JavaScript/Ruff/mypy),
+- full repository gate PASS (281 tests; Ruff; mypy 77 source files; JavaScript),
+- PRODUCT/STABLE exact SHA 14942e191c5ae354f22cb1784eae4a85c0e3a8d6,
+- health status ok with product_version full-version-live-education/1,
+- real_capital=0 and read_only=true.
+
+Parallel-development lesson:
+Cursor successfully produced the isolated Stage 6B education core; supervisor independently reviewed content, exact worktree scope, tests, Ruff and mypy before guarded integration. Cursor worktree was then cleaned. Cursor remains optional acceleration rather than acceptance authority.
+
+Next:
+- Stage 6B contextual teaching bound to actual frozen signal evidence,
+- Stage 6C 100 USDT virtual fund domain/ledger foundation in a separate non-overlapping slice.
