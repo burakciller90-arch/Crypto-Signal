@@ -15,6 +15,7 @@ from enum import StrEnum
 from pathlib import Path
 
 from crypto_signal.data.models import Exchange, MarketType
+from crypto_signal.ledger.serialization import canonical_sha256
 from crypto_signal.paper.activation import PaperActivationState
 from crypto_signal.paper.autonomy import (
     PaperAutonomyDecision,
@@ -54,15 +55,22 @@ from crypto_signal.paper.venue_rules import (
 
 __all__ = [
     "PAPER_ACTIVATION_DRY_RUN_VERSION",
+    "PAPER_DECISION_TRACE_VERSION",
     "REAL_CAPITAL",
     "PaperActivationDryRunError",
     "PaperActivationDryRunResult",
     "PaperActivationDryRunStatus",
+    "PaperDecisionTrace",
+    "PaperDecisionTraceStage",
+    "PaperDecisionTraceStep",
+    "PaperDecisionTraceStepState",
     "evaluate_paper_activation_dry_run",
+    "explain_paper_activation_dry_run",
     "read_paper_activation_read_only",
 ]
 
 PAPER_ACTIVATION_DRY_RUN_VERSION = "paper_activation_dry_run.v1"
+PAPER_DECISION_TRACE_VERSION = "paper_decision_trace.v1"
 _TABLE_BY_KIND = {
     PaperRecordKind.FUND_CREATION: "paper_fund_creations",
     PaperRecordKind.DECISION_INTENT: "paper_decision_intents",
@@ -83,6 +91,80 @@ class PaperActivationDryRunStatus(StrEnum):
     SIZING_REJECTED = "sizing_rejected"
     PRETRADE_REJECTED = "pretrade_rejected"
     PRETRADE_READY = "pretrade_ready"
+
+
+class PaperDecisionTraceStage(StrEnum):
+    AUTONOMY = "autonomy"
+    EXECUTION_INPUT = "execution_input"
+    VENUE_RULES = "venue_rules"
+    SIZING = "sizing"
+    PRETRADE = "pretrade"
+
+
+class PaperDecisionTraceStepState(StrEnum):
+    PASSED = "passed"
+    BLOCKED = "blocked"
+    NOT_REACHED = "not_reached"
+    READY = "ready"
+
+
+@dataclass(frozen=True, slots=True)
+class PaperDecisionTraceStep:
+    stage: PaperDecisionTraceStage
+    state: PaperDecisionTraceStepState
+    code: str
+    source_detail: str | None = None
+    evidence_identity: str | None = None
+
+    def __post_init__(self) -> None:
+        if not self.code.strip():
+            raise ValueError("decision trace step code must be non-empty")
+        if self.source_detail is not None and not self.source_detail.strip():
+            raise ValueError("decision trace source_detail must be non-empty when set")
+        if self.evidence_identity is not None:
+            _require_sha256(self.evidence_identity, "decision trace evidence identity")
+
+
+@dataclass(frozen=True, slots=True)
+class PaperDecisionTrace:
+    trace_identity: str
+    version: str
+    event_identity: str
+    terminal_status: PaperActivationDryRunStatus
+    candidate_action: PaperAction
+    steps: tuple[PaperDecisionTraceStep, ...]
+    real_capital: int = REAL_CAPITAL
+
+    def __post_init__(self) -> None:
+        if self.version != PAPER_DECISION_TRACE_VERSION:
+            raise ValueError("unsupported paper decision trace version")
+        if self.real_capital != REAL_CAPITAL:
+            raise ValueError("REAL_CAPITAL must remain 0")
+        _require_sha256(self.trace_identity, "decision trace identity")
+        _require_sha256(self.event_identity, "event_identity")
+        expected_stages = tuple(PaperDecisionTraceStage)
+        if tuple(step.stage for step in self.steps) != expected_stages:
+            raise ValueError("decision trace must contain every stage exactly once")
+        expected = canonical_sha256(
+            {
+                "candidate_action": self.candidate_action.value,
+                "event_identity": self.event_identity,
+                "steps": [
+                    {
+                        "code": step.code,
+                        "evidence_identity": step.evidence_identity,
+                        "source_detail": step.source_detail,
+                        "stage": step.stage.value,
+                        "state": step.state.value,
+                    }
+                    for step in self.steps
+                ],
+                "terminal_status": self.terminal_status.value,
+                "version": self.version,
+            }
+        )
+        if self.trace_identity != expected:
+            raise ValueError("decision trace identity mismatch")
 
 
 @dataclass(frozen=True, slots=True)
@@ -193,6 +275,155 @@ class PaperActivationDryRunResult:
                 and planned
             ):
                 raise ValueError("PRETRADE_REJECTED cannot carry planned pretrade")
+
+
+def explain_paper_activation_dry_run(
+    result: PaperActivationDryRunResult,
+) -> PaperDecisionTrace:
+    """Project one dry-run result into a deterministic factual decision trace."""
+    steps: list[PaperDecisionTraceStep] = []
+    autonomy_passed = result.autonomy.candidate_action is not PaperAction.HOLD_CASH
+    steps.append(
+        PaperDecisionTraceStep(
+            stage=PaperDecisionTraceStage.AUTONOMY,
+            state=(
+                PaperDecisionTraceStepState.PASSED
+                if autonomy_passed
+                else PaperDecisionTraceStepState.BLOCKED
+            ),
+            code=result.autonomy.reason_code.value,
+            source_detail=result.autonomy.reason,
+        )
+    )
+
+    if result.execution_input is not None:
+        steps.append(
+            PaperDecisionTraceStep(
+                stage=PaperDecisionTraceStage.EXECUTION_INPUT,
+                state=PaperDecisionTraceStepState.PASSED,
+                code="frozen",
+                evidence_identity=result.execution_input.input_identity,
+            )
+        )
+    elif result.status is PaperActivationDryRunStatus.WAITING_EXECUTION_INPUT:
+        steps.append(
+            PaperDecisionTraceStep(
+                stage=PaperDecisionTraceStage.EXECUTION_INPUT,
+                state=PaperDecisionTraceStepState.BLOCKED,
+                code=PaperExecutionInputStatus.WAITING_FOR_NEXT_CLOSED_CANDLE.value,
+            )
+        )
+    else:
+        steps.append(
+            PaperDecisionTraceStep(
+                stage=PaperDecisionTraceStage.EXECUTION_INPUT,
+                state=PaperDecisionTraceStepState.NOT_REACHED,
+                code="upstream_not_trade_candidate",
+            )
+        )
+
+    if result.venue_rule_snapshot_identity is not None:
+        steps.append(
+            PaperDecisionTraceStep(
+                stage=PaperDecisionTraceStage.VENUE_RULES,
+                state=PaperDecisionTraceStepState.PASSED,
+                code="authoritative_snapshot_selected",
+                evidence_identity=result.venue_rule_snapshot_identity,
+            )
+        )
+    elif result.status is PaperActivationDryRunStatus.WAITING_VENUE_RULES:
+        steps.append(
+            PaperDecisionTraceStep(
+                stage=PaperDecisionTraceStage.VENUE_RULES,
+                state=PaperDecisionTraceStepState.BLOCKED,
+                code="no_authoritative_snapshot_asof_execution_input",
+            )
+        )
+    else:
+        steps.append(
+            PaperDecisionTraceStep(
+                stage=PaperDecisionTraceStage.VENUE_RULES,
+                state=PaperDecisionTraceStepState.NOT_REACHED,
+                code="upstream_not_ready",
+            )
+        )
+
+    if result.sizing is not None:
+        sizing_blocked = result.sizing.status is PaperPositionSizingStatus.REJECTED
+        steps.append(
+            PaperDecisionTraceStep(
+                stage=PaperDecisionTraceStage.SIZING,
+                state=(
+                    PaperDecisionTraceStepState.BLOCKED
+                    if sizing_blocked
+                    else PaperDecisionTraceStepState.PASSED
+                ),
+                code=result.sizing.reason_code.value,
+                evidence_identity=result.sizing.sizing_identity,
+            )
+        )
+    else:
+        steps.append(
+            PaperDecisionTraceStep(
+                stage=PaperDecisionTraceStage.SIZING,
+                state=PaperDecisionTraceStepState.NOT_REACHED,
+                code="upstream_not_ready",
+            )
+        )
+
+    if result.venue_bound_pretrade is not None:
+        pretrade = result.venue_bound_pretrade.pretrade
+        ready = result.status is PaperActivationDryRunStatus.PRETRADE_READY
+        steps.append(
+            PaperDecisionTraceStep(
+                stage=PaperDecisionTraceStage.PRETRADE,
+                state=(
+                    PaperDecisionTraceStepState.READY
+                    if ready
+                    else PaperDecisionTraceStepState.BLOCKED
+                ),
+                code=pretrade.reason_code.value,
+                source_detail=pretrade.rejection_detail,
+                evidence_identity=pretrade.pretrade_identity,
+            )
+        )
+    else:
+        steps.append(
+            PaperDecisionTraceStep(
+                stage=PaperDecisionTraceStage.PRETRADE,
+                state=PaperDecisionTraceStepState.NOT_REACHED,
+                code="upstream_not_ready",
+            )
+        )
+
+    steps_tuple = tuple(steps)
+    identity = canonical_sha256(
+        {
+            "candidate_action": result.autonomy.candidate_action.value,
+            "event_identity": result.event_identity,
+            "steps": [
+                {
+                    "code": step.code,
+                    "evidence_identity": step.evidence_identity,
+                    "source_detail": step.source_detail,
+                    "stage": step.stage.value,
+                    "state": step.state.value,
+                }
+                for step in steps_tuple
+            ],
+            "terminal_status": result.status.value,
+            "version": PAPER_DECISION_TRACE_VERSION,
+        }
+    )
+    return PaperDecisionTrace(
+        trace_identity=identity,
+        version=PAPER_DECISION_TRACE_VERSION,
+        event_identity=result.event_identity,
+        terminal_status=result.status,
+        candidate_action=result.autonomy.candidate_action,
+        steps=steps_tuple,
+        real_capital=REAL_CAPITAL,
+    )
 
 
 def read_paper_activation_read_only(path: Path) -> PaperActivationState:
