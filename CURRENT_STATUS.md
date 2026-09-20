@@ -2,8 +2,8 @@
 
 Updated: 2026-09-20
 Project: Crypto Signal
-Phase: V1 Integrated Acceptance
-State: ALERTS_V1_ACCEPTED
+Phase: Post-V1 Production Expansion
+State: V1_INTEGRATED_ACCEPTED
 REAL_CAPITAL: 0
 
 ## Accepted foundations
@@ -378,17 +378,28 @@ No Durdurulmaz or Quantum Capital project state was mutated; UID502 is used only
 - LIVE/STABLE source head remains e53c5b29ffc9301fb36c89aa85ddc3677c4e64a1
 - mutable development dependency changes can no longer alter LIVE/STABLE Python environment implicitly
 
-## Canonical next frontier
-V1 Integrated Acceptance:
-1. inventory all accepted V1 gates and immutable acceptance documents
-2. create one deterministic integrated acceptance verifier
-3. verify Data Truth + primitives + PA/Harmonic/Elliott + Confluence/Signal
-4. verify immutable ledger/lifecycle/outcome/evaluation
-5. verify Dashboard + Alert Center + Alert Clock
-6. verify LIVE/STABLE / PRODUCT/STABLE / ALERTS/STABLE isolation
-7. verify localhost/read-only/REAL_CAPITAL=0 boundaries
-8. run full repository and live/stable smoke gates
-9. publish V1 integrated acceptance only if all mandatory gates pass
+## V1 integrated acceptance
+- docs/V1_INTEGRATED_ACCEPTANCE.md published
+- ops/verify_v1_integrated.py production verifier PASS
+- final integrated counts: 34 freezes / 34 lifecycle / 0 outcomes / 0 alert events / 0 alert attempts
+- final repository gate: 255 tests PASS / Ruff PASS / mypy PASS / JS syntax PASS / uv lock PASS
+- live PA/Harmonic/Elliott/Confluence/Signal/Lifecycle verifiers all exited 0
+- LIVE/STABLE dedicated .venv isolation defect found and closed before acceptance
+- PRODUCT/STABLE / ALERTS/STABLE accepted runtime heads verified
+- dashboard localhost/read-only/REAL_CAPITAL=0 boundaries verified
+- V1 critical-path platform core is ACCEPTED
 
-External provider configuration is optional and does not change signal truth.
+## Canonical next frontier
+Post-V1 Production Expansion — untouched-forward coverage:
+1. define a versioned live coverage matrix contract
+2. preserve the accepted BTCUSDT 15m pilot as current stable default
+3. make symbol/timeframe/provider coverage explicit rather than hard-coded
+4. add deterministic scheduling/deduplication tests for multiple contexts
+5. quantify API/load budget before activating broader coverage
+6. expand timeframes first under the existing Data Truth contracts
+7. expand symbols only after coverage/load acceptance
+8. do not mix new coverage evidence with historical claims
+9. keep REAL_CAPITAL=0 and accepted V1 truth boundaries unchanged
+
+V2+ research remains behind the production coverage expansion frontier.
 REAL_CAPITAL remains 0.

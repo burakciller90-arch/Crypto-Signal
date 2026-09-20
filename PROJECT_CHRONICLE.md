@@ -1195,3 +1195,46 @@ Fix:
 
 LIVE/STABLE source remains pinned at e53c5b29ffc9301fb36c89aa85ddc3677c4e64a1.
 Development dependency changes can no longer implicitly change the live runtime.
+
+## 2026-09-20 — V1 Integrated Acceptance PASS
+
+The complete V1 critical path passed final integrated acceptance.
+
+Final production verifier:
+- ops/verify_v1_integrated.py
+- V1_INTEGRATED_ACCEPTANCE=PASS
+
+Final integrated counts:
+- 34 immutable signal freezes
+- 34 lifecycle evaluations
+- 0 outcome evaluations
+- 0 alert events
+- 0 alert delivery attempts
+
+Final repository gate:
+- 255 tests PASS
+- Ruff PASS
+- mypy PASS
+- JavaScript syntax PASS
+- uv lock PASS
+- all three runtime plist lints PASS
+
+Final live methodology gates:
+- Price Action integrated PASS
+- Harmonic PASS
+- Elliott PASS
+- Confluence PASS
+- Signal Semantics PASS
+- Lifecycle PASS
+
+Current live evidence was not forced into a trade:
+PA bearish + Elliott bullish + Harmonic unresolved produced unresolved
+confluence and a NEUTRAL signal with score 0.
+
+A real LIVE/STABLE dependency-isolation defect was discovered during the final
+gate and fixed before acceptance by moving the live clock from the development
+.venv to a dedicated Crypto-Signal-Live/.venv.
+
+V1 critical-path platform core is accepted.
+Phase advances to Post-V1 Production Expansion, beginning with an explicit
+untouched-forward coverage matrix rather than immediate scope expansion.
