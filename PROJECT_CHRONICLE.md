@@ -2077,3 +2077,14 @@ The first full gate exposed only one test expectation typo (the real PaperAction
 PAPER/STABLE then deployed successfully to 5df7fd6ab2f1c271d85f63132c0572807a5ff3a3. The production probe saw 402 signal freezes but still no strict post-watermark 4h Binance+Bybit candidate, so no PAPER_DRY_RUN_TRACE line was fabricated. The fund remains 100.00 USDT, zero positions and zero decision/fill/mutation/NAV records; activation singleton remains one; processed events remain zero; trade_policy=NOT_ACTIVATED and REAL_CAPITAL=0.
 
 Next safe slice is a read-only portfolio/performance projection over immutable paper state and real cached market marks. This becomes the factual backend for a future simple-professional portfolio Dashboard while virtual-trade activation remains gated on real production evidence.
+
+
+## 2026-09-20 — marked paper portfolio truth accepted and deployed
+
+paper_portfolio_view.v1 now provides the factual backend for the future Dashboard portfolio. It reconstructs the immutable virtual-fund ledger through SQLite mode=ro/query_only and marks every held position only from an actually cached, fully closed Binance Spot 15m candle that existed by the requested observation time. Each mark carries deterministic source-candle evidence. If any held symbol lacks a valid mark, aggregate NAV/PnL/return are deliberately unavailable instead of estimated.
+
+The implementation passed 452 tests, Ruff, mypy across 98 source files and the JavaScript gate. PAPER/STABLE deployed successfully to 5ccc42f2f4e049697794dcd614d1d7f9ac13f87d with the existing no-trade invariant intact.
+
+The first production portfolio truth snapshot was snapshot 14457ea66b2213850c53a6be23d672b7854173eeb9fec57ac5b30ba367e7da95: 100.00 USDT cash, zero positions, marked position value 0, NAV 100.00, PnL 0.00, total-return fraction 0, zero decisions/fills/NAV records and one replay record. This is factual capital state, not a success claim; trade_success is explicitly NOT_YET_MEASURED. REAL_CAPITAL remains 0 and trade_policy remains NOT_ACTIVATED.
+
+Next safe slice is a closed-trade performance layer that remains unavailable until immutable simulated round-trip evidence exists, then computes success metrics from that evidence rather than from narrative or signal confidence.
