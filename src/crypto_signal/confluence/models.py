@@ -26,6 +26,11 @@ class EvidenceValidity(StrEnum):
     VALID = "valid"
 
 
+class InvalidationTrigger(StrEnum):
+    TOUCH_OR_CROSS = "touch_or_cross"
+    CLOSE_BEYOND = "close_beyond"
+
+
 @dataclass(frozen=True, slots=True)
 class PriceZone:
     low: Decimal
@@ -80,6 +85,7 @@ class MethodologyEvidence:
     observed_at_ms: int
     entry_zone: PriceZone | None
     invalidation_price: Decimal | None
+    invalidation_trigger: InvalidationTrigger | None
     targets: tuple[NamedPrice, ...]
     key_levels: tuple[NamedPrice, ...]
     metrics: tuple[EvidenceMetric, ...]
@@ -108,6 +114,10 @@ class MethodologyEvidence:
             raise ValueError("evidence cannot be observed after as_of")
         if self.invalidation_price is not None and self.invalidation_price <= 0:
             raise ValueError("invalidation price must be positive")
+        if (self.invalidation_price is None) != (self.invalidation_trigger is None):
+            raise ValueError(
+                "invalidation price and trigger must either both exist or both be absent"
+            )
         if len({target.label for target in self.targets}) != len(self.targets):
             raise ValueError("target labels must be unique")
         if len({level.label for level in self.key_levels}) != len(self.key_levels):

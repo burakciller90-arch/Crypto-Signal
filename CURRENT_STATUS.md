@@ -3,7 +3,7 @@
 Updated: 2026-09-20
 Project: Crypto Signal
 Phase: Confluence + Signal Semantics V1
-State: CONFLUENCE_SLICE2_AGREEMENT_SCORE_ACCEPTED
+State: SIGNAL_SLICE1_CREATION_ACCEPTED
 REAL_CAPITAL: 0
 
 ## Accepted foundations
@@ -100,15 +100,31 @@ No Durdurulmaz or Quantum Capital project state was mutated; UID502 is used only
 - live Bybit/Binance confluence smoke PASS
 - live 15m example: PA bullish; Harmonic no valid evidence; Elliott internally conflicting; resulting score 33.33 with partial coverage flag
 
+## Signal Slice 1 accepted evidence
+- freeze-ready SignalDecision model
+- initial states: NO_SIGNAL / NEUTRAL / WATCH / ACTIVE
+- ACTIVE requires 2+ independent supporting methodologies, zero opposing votes and exactly one complete geometry source
+- WATCH preserves one complete geometry when available but does not activate without independent support
+- multiple complete geometry candidates are not silently ranked
+- entry midpoint used only as descriptive R/R reference, not execution assumption
+- invalidation trigger is preserved from source evidence
+- probability status = NOT_CALIBRATED
+- historical analogue status = NOT_EVALUATED
+- deterministic SHA256 freeze identity
+- 148 tests PASS
+- Ruff PASS
+- mypy PASS
+- live Bybit/Binance signal smoke PASS
+- current live 15m state on both providers: WATCH bullish, confluence score 33.33, no geometry, no fabricated probability
+
 ## Canonical next frontier
-Signal Semantics V1:
-1. NO_SIGNAL / NEUTRAL / WATCH / ACTIVE / INVALIDATED state machine
-2. deterministic transition rules from confluence + setup geometry
-3. signal direction / entry zone / invalidation / targets contract
-4. evidence snapshot references and methodology agreement summary
-5. explicit calibrated-probability status kept separate from confluence score
-6. freeze-ready identity/version fields
-7. PIT-safe deterministic tests and live smoke
+Signal Slice 2 lifecycle:
+1. immutable SignalDecision remains unchanged
+2. append-only lifecycle snapshots
+3. INVALIDATED only from post-decision observed candle evidence
+4. invalidation trigger semantics preserved exactly
+5. no retroactive invalidation before decision as-of
+6. deterministic PIT tests and live-safe smoke
 
 After Signal Semantics acceptance, activate the immutable live-forward ledger immediately.
 REAL_CAPITAL remains 0.

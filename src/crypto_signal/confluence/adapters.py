@@ -8,6 +8,7 @@ from crypto_signal.confluence.models import (
     EvidenceDirection,
     EvidenceMetric,
     EvidenceValidity,
+    InvalidationTrigger,
     MethodologyEvidence,
     MethodologyKind,
     NamedPrice,
@@ -84,6 +85,7 @@ def price_action_structure_evidence(
         observed_at_ms=latest_break.observed_at_ms,
         entry_zone=None,
         invalidation_price=None,
+        invalidation_trigger=None,
         targets=(),
         key_levels=(
             NamedPrice("broken_structure_level", latest_break.level_price),
@@ -140,6 +142,7 @@ def harmonic_match_evidence(
         observed_at_ms=candidate.observed_at_ms,
         entry_zone=PriceZone(match.prz_low, match.prz_high),
         invalidation_price=match.invalidation_price,
+        invalidation_trigger=InvalidationTrigger.TOUCH_OR_CROSS,
         targets=(
             NamedPrice("target_1", match.target_1_price),
             NamedPrice("target_2", match.target_2_price),
@@ -249,6 +252,7 @@ def elliott_impulse_evidence(
         observed_at_ms=candidate.observed_at_ms,
         entry_zone=None,
         invalidation_price=candidate.structural_invalidation_price,
+        invalidation_trigger=InvalidationTrigger.TOUCH_OR_CROSS,
         targets=tuple(
             NamedPrice(projection.name, projection.price)
             for projection in candidate.projections

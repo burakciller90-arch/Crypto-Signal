@@ -527,3 +527,41 @@ Live smoke on both providers:
 - confluence score 33.33 with partial_methodology_coverage and Elliott internal-conflict flags
 
 Canonical frontier advances to Signal Semantics V1.
+
+## 2026-09-20 — Signal Slice 1 accepted: freeze-ready creation semantics
+
+Signal creation now converts one ConfluenceAnalysisResult into one immutable-style
+SignalDecision with deterministic state and freeze identity.
+
+Initial decision states:
+- NO_SIGNAL
+- NEUTRAL
+- WATCH
+- ACTIVE
+
+ACTIVE requires at least two independent supporting methodology votes, zero
+opposition and exactly one complete geometry source. The rule is expressed in
+methodology counts rather than an arbitrary score threshold.
+
+Geometry is atomic: entry zone, invalidation trigger and targets come from one
+MethodologyEvidence item. Cross-method geometry splicing is forbidden.
+
+Expected R/R uses only the entry-zone midpoint as a descriptive reference and is
+explicitly marked not execution.
+
+Scientific separation:
+- confluence score remains agreement_index_not_probability
+- probability status is NOT_CALIBRATED
+- historical analogue status is NOT_EVALUATED
+- no numeric probability is fabricated
+
+Mechanical evidence:
+- focused signal/confluence tests: 21 PASS
+- full repository: 148 tests PASS
+- Ruff PASS
+- mypy PASS
+- Bybit/Binance live signal smoke PASS
+- both live 15m examples currently resolve to WATCH bullish / score 33.33 /
+  no geometry because Harmonic has no valid selected setup and Elliott is internally conflicted
+
+Canonical frontier advances to Signal Slice 2 lifecycle and append-only INVALIDATED semantics.

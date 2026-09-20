@@ -42,6 +42,7 @@ def evidence(
         observed_at_ms=market_time + 1,
         entry_zone=None,
         invalidation_price=None,
+        invalidation_trigger=None,
         targets=(),
         key_levels=(),
         metrics=(),
