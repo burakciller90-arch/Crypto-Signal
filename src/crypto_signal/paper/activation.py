@@ -410,9 +410,15 @@ def commit_planned_pretrade_event(
     plan = pretrade.plan
     if plan is None:
         raise PaperActivationError("PLANNED pretrade lost plan")
+    source_freeze_identities = execution_input.source_freeze_identities
+    if len(source_freeze_identities) != 2:
+        raise PaperActivationError(
+            "trade event requires exactly two source freeze identities"
+        )
+    source_pair = (source_freeze_identities[0], source_freeze_identities[1])
     receipt = build_processed_event_receipt(
         activation=activation,
-        source_freeze_identities=execution_input.source_freeze_identities,
+        source_freeze_identities=source_pair,
         symbol=execution_input.symbol,
         timeframe="4h",
         signal_as_of_ms=execution_input.signal_as_of_ms,
