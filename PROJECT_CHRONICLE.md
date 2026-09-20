@@ -1515,3 +1515,34 @@ Persistent dashboard returned birthday-edition-decision-explanation/1, read_only
 REAL_CAPITAL=0 and 18 live Market Radar contexts.
 
 Canonical frontier advances to Stage 6: useful Turkish alerts while preserving conservative eligibility.
+
+
+## 2026-09-20 — Full Version gift vision becomes canonical roadmap
+
+The user requested that Crypto Signal be completed as the full version rather than stopped at the earlier focused Birthday Edition. The product is still a gift for a close friend, but the full target now includes an explainable autonomous paper portfolio, beginner education, richer independent analysis engines, disciplined learning and research-driven strategy discovery.
+
+Recorded product decisions:
+- initial autonomous paper capital is exactly 100 USDT and remains fully virtual,
+- REAL_CAPITAL=0 and no real exchange-order authority remains a hard boundary,
+- paper performance must include fees, spread/slippage and benchmark comparison,
+- cash/no-trade is a valid professional decision,
+- the UI must auto-refresh and explicitly show connection/staleness state,
+- Signal Detail must show frozen chart evidence, rationale, counter-case, invalidation and beginner lessons,
+- PA/SMC/ICT, Harmonic and Elliott are the core, not the ceiling,
+- future engines may include trend/momentum, mean-reversion, breakout/volatility, derivatives, order-flow/microstructure, on-chain/network, bounded sentiment/attention and cross-market context,
+- a deterministic regime engine and meta-decision layer must prevent naive vote-counting and duplicated evidence,
+- an Alpha Factory may generate new challenger strategies, but no challenger may self-deploy or self-promote,
+- promotion requires leakage audit, transaction-cost stress, out-of-sample, walk-forward and untouched-forward paper evidence,
+- calibrated probabilities remain forbidden until a separate sufficient-sample calibration design is accepted,
+- Cursor is optional acceleration; it may work concurrently only on isolated, non-overlapping slices and never owns acceptance authority.
+
+The canonical roadmap is now:
+docs/CRYPTO_SIGNAL_FULL_VERSION_WORLD_CLASS_ROADMAP.md
+
+Supporting contracts:
+docs/AUTONOMOUS_PAPER_FUND_V1_SPEC.md
+docs/INTELLIGENCE_ALPHA_FACTORY_ARCHITECTURE.md
+docs/BEGINNER_UX_EVIDENCE_CENTER_SPEC.md
+
+Canonical next engineering frontier is Stage 6A: automatic live Mission Control refresh with explicit freshness/connection semantics. Stage 6B and Stage 6C follow without weakening scientific gates.
+
