@@ -2184,3 +2184,15 @@ PAPER/STABLE remained untouched at 30b05251af9fc2ac05fd007dbd6ac6d0519c2e58. Fre
 
 The next safe Stage 9 product frontier is to finish the history/operations side of the Gift Edition: clearly separate immutable signal history from virtual-trade history and expose dedicated System Health / freshness evidence. This remains read-only and does not cross the production paper-write gate.
 
+## 2026-09-21 — Signal/Trade Archive and System Health complete the current Stage 9 product pass
+
+The final identified Stage 9 history/operations gap was completed without introducing a new backend mutation surface. The product now presents SİNYAL / İŞLEM ARŞİVİ as two explicitly different evidence domains: signal history remains immutable market-decision truth from the signal ledger, while virtual-trade history is rendered only from existing Mission Control paper portfolio/performance truth. No fill evidence produces an explicit “Henüz sanal işlem kaydı yok” state rather than a fabricated 0% trading result. Open virtual positions, if they later exist, remain unscored and separate from completed BUY→EXIT round trips.
+
+A dedicated SİSTEM SAĞLIĞI surface was added using only already exposed read-only product truth. It reports the product API read-only/REAL_CAPITAL state, signal-ledger availability, paper Mission Control availability, production paper write-policy closure, alert outbox presence and immutable signal-freeze age. Missing evidence is surfaced as attention rather than silently declared healthy. It does not inspect or control launchd, does not grant authority and does not expose any new order or credential path.
+
+Feature head a6e48128d850368be573c8021ed839a80932a03f passed the isolated UID504 focused/full pytest, JavaScript, Ruff and mypy gate. PR #337 merged as 38327ee46f7d9ae7c97e019bf13391084cb0b9d5. Canonical UID504 sync, producttest and fulltest all passed. PRODUCT then deployed exactly from 0047bbae075a6fed7f5067d4263bd7cf447c45b4 to 38327ee46f7d9ae7c97e019bf13391084cb0b9d5; post-deploy health remained status=ok, read_only=true and REAL_CAPITAL=0.
+
+PAPER/STABLE remained unchanged at 30b05251af9fc2ac05fd007dbd6ac6d0519c2e58. Paper DB counts still show one fund creation and zero decision intents, simulated fills, position/cash mutations, NAV snapshots or processed events. Fresh Mission Control snapshot 8da165c4e08fa5fda52ee8e3813688dbc59edbeb233c32e1754933ae87cafb85 observed 510 signal freezes, the same three HOLD_CASH candidates, zero ready candidates, 100.00 USDT cash, zero positions and NOT_YET_MEASURED paper performance. trade_policy remains NOT_ACTIVATED and REAL_CAPITAL=0.
+
+With the current Stage 9 product-facing surfaces materially complete, the next safe frontier is Stage 10 Full Integrated Acceptance: a read-only acceptance program across repository gates, stable runtime health/recovery, auto-refresh/staleness, deterministic paper reconstruction/cost semantics, no-leakage and UI/evidence consistency. The separate production paper-write activation boundary remains closed.
+
