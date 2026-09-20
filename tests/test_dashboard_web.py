@@ -230,7 +230,7 @@ def test_education_api_is_deterministic_and_read_only(tmp_path: Path) -> None:
     assert body["status"] == "ready"
     assert body["real_capital"] == 0
     assert len(body["lessons"]) == 10
-    assert [lesson["concept_id"] for lesson in body["lessons"]][0] == "bos"
+    assert next(lesson["concept_id"] for lesson in body["lessons"]) == "bos"
     assert bos.status_code == 200
     assert bos.json()["lesson"]["concept_id"] == "bos"
     assert "tek başına alım veya satım emri değildir" in bos.json()["lesson"]["beginner_tr"]
