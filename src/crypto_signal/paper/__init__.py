@@ -3,6 +3,11 @@
 Simulation only. REAL_CAPITAL remains 0. No real exchange order path.
 """
 
+from crypto_signal.paper.commit import (
+    PaperBundleCommitError,
+    PaperBundleCommitResult,
+    commit_orchestration_bundle,
+)
 from crypto_signal.paper.ledger import (
     PaperFundLedger,
     PaperLedgerConflictError,
@@ -54,6 +59,8 @@ __all__ = [
     "FundCreationRecord",
     "NavSnapshotRecord",
     "PaperAction",
+    "PaperBundleCommitError",
+    "PaperBundleCommitResult",
     "PaperFundLedger",
     "PaperLedgerConflictError",
     "PaperLedgerEntry",
@@ -64,6 +71,7 @@ __all__ = [
     "PositionCashMutationRecord",
     "SimulatedFillRecord",
     "build_decision_intent",
+    "commit_orchestration_bundle",
     "build_fund_creation",
     "build_nav_snapshot",
     "build_position_cash_mutation",

@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from collections.abc import Sequence
 from dataclasses import dataclass
 from decimal import Decimal
 from enum import StrEnum
@@ -71,6 +72,34 @@ _TABLE_BY_KIND: dict[PaperRecordKind, str] = {
     PaperRecordKind.POSITION_CASH_MUTATION: "paper_position_cash_mutations",
     PaperRecordKind.NAV_SNAPSHOT: "paper_nav_snapshots",
 }
+
+
+def _record_kind(record: PaperRecord) -> PaperRecordKind:
+    if isinstance(record, FundCreationRecord):
+        return PaperRecordKind.FUND_CREATION
+    if isinstance(record, DecisionIntentRecord):
+        return PaperRecordKind.DECISION_INTENT
+    if isinstance(record, SimulatedFillRecord):
+        return PaperRecordKind.SIMULATED_FILL
+    if isinstance(record, PositionCashMutationRecord):
+        return PaperRecordKind.POSITION_CASH_MUTATION
+    if isinstance(record, NavSnapshotRecord):
+        return PaperRecordKind.NAV_SNAPSHOT
+    raise TypeError(f"unsupported paper record type: {type(record)!r}")
+
+
+def _record_appended_at_ms(record: PaperRecord) -> int:
+    if isinstance(record, FundCreationRecord):
+        return record.created_at_ms
+    if isinstance(record, DecisionIntentRecord):
+        return record.decided_at_ms
+    if isinstance(record, SimulatedFillRecord):
+        return record.filled_at_ms
+    if isinstance(record, PositionCashMutationRecord):
+        return record.mutated_at_ms
+    if isinstance(record, NavSnapshotRecord):
+        return record.snapshot_at_ms
+    raise TypeError(f"unsupported paper record type: {type(record)!r}")
 
 
 class PaperFundLedger:
@@ -185,41 +214,7 @@ class PaperFundLedger:
         """Return all paper-fund records in append order."""
         self.initialize()
         with self._connect() as connection:
-            index_rows = connection.execute(
-                """
-                SELECT sequence_id, record_kind, record_identity, appended_at_ms
-                FROM paper_replay_index
-                ORDER BY sequence_id ASC
-                """
-            ).fetchall()
-            entries: list[PaperLedgerEntry] = []
-            for row in index_rows:
-                kind = PaperRecordKind(str(row["record_kind"]))
-                table = _TABLE_BY_KIND[kind]
-                payload_row = connection.execute(
-                    f"""
-                    SELECT payload_json
-                    FROM {table}
-                    WHERE record_identity = ?
-                    """,
-                    (str(row["record_identity"]),),
-                ).fetchone()
-                if payload_row is None:
-                    raise RuntimeError(
-                        f"missing payload for paper record {row['record_identity']}"
-                    )
-                payload_json = str(payload_row["payload_json"])
-                entries.append(
-                    PaperLedgerEntry(
-                        sequence_id=int(row["sequence_id"]),
-                        record_kind=kind,
-                        record_identity=str(row["record_identity"]),
-                        appended_at_ms=int(row["appended_at_ms"]),
-                        payload_json=payload_json,
-                        record=deserialize_paper_record(kind, payload_json),
-                    )
-                )
-        return tuple(entries)
+            return self._replay_with_connection(connection)
 
     def list_fund_creations(self) -> tuple[FundCreationRecord, ...]:
         return tuple(
@@ -233,6 +228,162 @@ class PaperFundLedger:
             if entry.record_identity == record_identity:
                 return entry
         return None
+
+    def _append_records_atomic(
+        self,
+        records: Sequence[PaperRecord],
+        *,
+        expected_replayed_record_count: int,
+    ) -> tuple[PaperLedgerWriteDisposition, tuple[PaperLedgerEntry, ...]]:
+        """Atomically append an exact record bundle or leave the ledger unchanged."""
+        materialized = tuple(records)
+        if not materialized:
+            raise ValueError("atomic paper ledger append requires at least one record")
+        if expected_replayed_record_count < 0:
+            raise ValueError("expected replayed record count must be non-negative")
+
+        identities = tuple(record.record_identity for record in materialized)
+        if len(set(identities)) != len(identities):
+            raise ValueError("atomic paper ledger bundle has duplicate identities")
+
+        prepared = tuple(
+            (
+                _record_kind(record),
+                record.record_identity,
+                canonical_json(record),
+                _record_appended_at_ms(record),
+            )
+            for record in materialized
+        )
+        if any(appended_at_ms < 0 for _, _, _, appended_at_ms in prepared):
+            raise ValueError("appended_at_ms must be non-negative")
+
+        self.initialize()
+        with self._connect() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            present_count = 0
+            for kind, record_identity, payload_json, _ in prepared:
+                table = _TABLE_BY_KIND[kind]
+                payload_row = connection.execute(
+                    f"""
+                    SELECT payload_json
+                    FROM {table}
+                    WHERE record_identity = ?
+                    """,
+                    (record_identity,),
+                ).fetchone()
+                index_row = connection.execute(
+                    """
+                    SELECT record_kind
+                    FROM paper_replay_index
+                    WHERE record_identity = ?
+                    """,
+                    (record_identity,),
+                ).fetchone()
+
+                if payload_row is None and index_row is None:
+                    continue
+                if payload_row is None or index_row is None:
+                    raise PaperLedgerConflictError(
+                        "immutable paper ledger has incomplete existing bundle record"
+                    )
+                if str(index_row["record_kind"]) != kind.value:
+                    raise PaperLedgerConflictError(
+                        "immutable paper ledger identity already indexed under another kind"
+                    )
+                if str(payload_row["payload_json"]) != payload_json:
+                    raise PaperLedgerConflictError(
+                        f"immutable paper ledger conflict for {kind.value} identity"
+                    )
+                present_count += 1
+
+            if present_count == len(prepared):
+                return (
+                    PaperLedgerWriteDisposition.UNCHANGED,
+                    self._replay_with_connection(connection),
+                )
+            if present_count:
+                raise PaperLedgerConflictError(
+                    "immutable paper ledger rejects a partially existing bundle"
+                )
+
+            current_count = int(
+                connection.execute(
+                    "SELECT COUNT(*) AS count FROM paper_replay_index"
+                ).fetchone()["count"]
+            )
+            if current_count != expected_replayed_record_count:
+                raise PaperLedgerConflictError(
+                    "immutable paper ledger rejected stale replay state"
+                )
+
+            for kind, record_identity, payload_json, appended_at_ms in prepared:
+                table = _TABLE_BY_KIND[kind]
+                connection.execute(
+                    f"""
+                    INSERT INTO {table} (
+                        record_identity,
+                        payload_json,
+                        appended_at_ms
+                    ) VALUES (?, ?, ?)
+                    """,
+                    (record_identity, payload_json, appended_at_ms),
+                )
+                connection.execute(
+                    """
+                    INSERT INTO paper_replay_index (
+                        record_kind,
+                        record_identity,
+                        appended_at_ms
+                    ) VALUES (?, ?, ?)
+                    """,
+                    (kind.value, record_identity, appended_at_ms),
+                )
+
+            return (
+                PaperLedgerWriteDisposition.INSERTED,
+                self._replay_with_connection(connection),
+            )
+
+    def _replay_with_connection(
+        self,
+        connection: sqlite3.Connection,
+    ) -> tuple[PaperLedgerEntry, ...]:
+        index_rows = connection.execute(
+            """
+            SELECT sequence_id, record_kind, record_identity, appended_at_ms
+            FROM paper_replay_index
+            ORDER BY sequence_id ASC
+            """
+        ).fetchall()
+        entries: list[PaperLedgerEntry] = []
+        for row in index_rows:
+            kind = PaperRecordKind(str(row["record_kind"]))
+            table = _TABLE_BY_KIND[kind]
+            payload_row = connection.execute(
+                f"""
+                SELECT payload_json
+                FROM {table}
+                WHERE record_identity = ?
+                """,
+                (str(row["record_identity"]),),
+            ).fetchone()
+            if payload_row is None:
+                raise RuntimeError(
+                    f"missing payload for paper record {row['record_identity']}"
+                )
+            payload_json = str(payload_row["payload_json"])
+            entries.append(
+                PaperLedgerEntry(
+                    sequence_id=int(row["sequence_id"]),
+                    record_kind=kind,
+                    record_identity=str(row["record_identity"]),
+                    appended_at_ms=int(row["appended_at_ms"]),
+                    payload_json=payload_json,
+                    record=deserialize_paper_record(kind, payload_json),
+                )
+            )
+        return tuple(entries)
 
     def _append(
         self,
