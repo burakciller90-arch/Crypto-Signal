@@ -173,7 +173,15 @@ jobs:
           grep -q 'trade_policy=NOT_ACTIVATED' /tmp/crypto-paper-probe-2.txt
           grep -q 'REAL_CAPITAL=0' /tmp/crypto-paper-probe-2.txt
 
-          "$PAPER/.venv/bin/python" -c 'import sqlite3,sys; p=sys.argv[1]; c=sqlite3.connect("file:"+p+"?mode=ro",uri=True); count=lambda t:int(c.execute("SELECT COUNT(*) FROM "+t).fetchone()[0]); assert count("paper_fund_creations")==1; assert count("paper_decision_intents")==0; assert count("paper_simulated_fills")==0; assert count("paper_position_cash_mutations")==0; assert count("paper_nav_snapshots")==0; assert count("paper_replay_index")==1; c.close(); print("PAPER_DB_NO_TRADE_INVARIANT=YES")' "$PAPER_DB"
+          PYTHONPATH="$PAPER/src" "$PAPER/.venv/bin/python"             "$PAPER/ops/run_paper_activation_dry_run.py"             --paper-ledger "$PAPER_DB"             --signal-ledger "$SIGNAL_DB"             --candle-cache "$REPO/runtime/data/live_base_15m_cache.sqlite3"             --max-events 100 | tee /tmp/crypto-paper-dryrun-deploy-probe.txt
+          grep -q 'PAPER_DRY_RUN_OK' /tmp/crypto-paper-dryrun-deploy-probe.txt
+          grep -q 'paper_db_unchanged=YES' /tmp/crypto-paper-dryrun-deploy-probe.txt
+          grep -q 'ready_candidates=' /tmp/crypto-paper-dryrun-deploy-probe.txt
+          grep -q 'attention_required=' /tmp/crypto-paper-dryrun-deploy-probe.txt
+          grep -q 'trade_policy=NOT_ACTIVATED' /tmp/crypto-paper-dryrun-deploy-probe.txt
+          grep -q 'REAL_CAPITAL=0' /tmp/crypto-paper-dryrun-deploy-probe.txt
+
+          "$PAPER/.venv/bin/python" -c 'import sqlite3,sys; p=sys.argv[1]; c=sqlite3.connect("file:"+p+"?mode=ro",uri=True); count=lambda t:int(c.execute("SELECT COUNT(*) FROM "+t).fetchone()[0]); assert count("paper_fund_creations")==1; assert count("paper_decision_intents")==0; assert count("paper_simulated_fills")==0; assert count("paper_position_cash_mutations")==0; assert count("paper_nav_snapshots")==0; assert count("paper_replay_index")==1; assert count("paper_activation_state")==1; assert count("paper_processed_events")==0; c.close(); print("PAPER_DB_NO_TRADE_INVARIANT=YES")' "$PAPER_DB"
 
           cp "$PAPER/ops/paper/launchd/$LABEL.plist" "$PLIST_DEST"
           plutil -lint "$PLIST_DEST"
@@ -194,10 +202,6 @@ jobs:
             sleep 2
             launchctl print "gui/$UID_NOW/$DRY_LABEL" >/tmp/crypto-paper-dryrun-launchctl.txt
             egrep 'state =|runs =|pid =|last exit code =|run interval =' /tmp/crypto-paper-dryrun-launchctl.txt | head -30
-            grep -q 'PAPER_DRY_RUN_OK' "$REPO/runtime/paper/paper_dry_run_clock.out.log"
-            grep -q 'paper_db_unchanged=YES' "$REPO/runtime/paper/paper_dry_run_clock.out.log"
-            grep -q 'ready_candidates=' "$REPO/runtime/paper/paper_dry_run_clock.out.log"
-            grep -q 'attention_required=' "$REPO/runtime/paper/paper_dry_run_clock.out.log"
           fi
 
           test "$(git -C "$PAPER" rev-parse HEAD)" = "$TARGET"
@@ -328,6 +332,14 @@ jobs:
           test -z "$(git -C "$PAPER" status --porcelain)"
           test "$(git -C "$PAPER" rev-parse HEAD)" = "$GITHUB_SHA"
 
+          PYTHONPATH="$PAPER/src" "$PAPER/.venv/bin/python"             "$PAPER/ops/run_paper_activation_dry_run.py"             --paper-ledger "$DB"             --signal-ledger "$REPO/runtime/ledger/live_signal_ledger.sqlite3"             --candle-cache "$REPO/runtime/data/live_base_15m_cache.sqlite3"             --max-events 100 | tee /tmp/crypto-paper-dryrun-clock-probe.txt
+          grep -q 'PAPER_DRY_RUN_OK' /tmp/crypto-paper-dryrun-clock-probe.txt
+          grep -q 'paper_db_unchanged=YES' /tmp/crypto-paper-dryrun-clock-probe.txt
+          grep -q 'ready_candidates=' /tmp/crypto-paper-dryrun-clock-probe.txt
+          grep -q 'attention_required=' /tmp/crypto-paper-dryrun-clock-probe.txt
+          grep -q 'trade_policy=NOT_ACTIVATED' /tmp/crypto-paper-dryrun-clock-probe.txt
+          grep -q 'REAL_CAPITAL=0' /tmp/crypto-paper-dryrun-clock-probe.txt
+
           if [ -f "$PLIST_DEST" ]; then
             HAD_PLIST=1
             cp "$PLIST_DEST" "$BACKUP"
@@ -355,12 +367,6 @@ jobs:
 
           launchctl print "gui/$UID_NOW/$LABEL" >/tmp/crypto-paper-dryrun-clock.txt
           egrep 'state =|runs =|pid =|last exit code =|run interval =' /tmp/crypto-paper-dryrun-clock.txt | head -30
-          grep -q 'PAPER_DRY_RUN_OK' "$REPO/runtime/paper/paper_dry_run_clock.out.log"
-          grep -q 'paper_db_unchanged=YES' "$REPO/runtime/paper/paper_dry_run_clock.out.log"
-          grep -q 'ready_candidates=' "$REPO/runtime/paper/paper_dry_run_clock.out.log"
-          grep -q 'attention_required=' "$REPO/runtime/paper/paper_dry_run_clock.out.log"
-          grep -q 'trade_policy=NOT_ACTIVATED' "$REPO/runtime/paper/paper_dry_run_clock.out.log"
-          grep -q 'REAL_CAPITAL=0' "$REPO/runtime/paper/paper_dry_run_clock.out.log"
 
           "$PAPER/.venv/bin/python" -c 'import sqlite3,sys; p=sys.argv[1]; c=sqlite3.connect("file:"+p+"?mode=ro",uri=True); count=lambda t:int(c.execute("SELECT COUNT(*) FROM "+t).fetchone()[0]); assert count("paper_fund_creations")==1; assert count("paper_decision_intents")==0; assert count("paper_simulated_fills")==0; assert count("paper_position_cash_mutations")==0; assert count("paper_nav_snapshots")==0; assert count("paper_replay_index")==1; assert count("paper_activation_state")==1; assert count("paper_processed_events")==0; c.close(); print("PAPER_DRYRUN_CLOCK_NO_TRADE_INVARIANT=YES")' "$DB"
 
