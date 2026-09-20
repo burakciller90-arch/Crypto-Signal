@@ -8,6 +8,10 @@ import sqlite3
 
 from crypto_signal.paper import mission_control as paper_mission_control
 from crypto_signal.paper.activation import activate_paper_policy
+from crypto_signal.paper.event_scanner import (
+    PAPER_SIGNAL_EVENT_SCANNER_VERSION,
+    PaperSignalEventScanResult,
+)
 from crypto_signal.paper.ledger import PaperFundLedger
 from crypto_signal.paper.models import REAL_CAPITAL, build_fund_creation
 from crypto_signal.paper.performance import PaperTradePerformanceStatus
@@ -98,6 +102,49 @@ def _insert_overview_freeze(
         )
 
 
+def _insert_4h_freeze(
+    path,
+    *,
+    exchange: str,
+    suffix: str,
+    as_of_ms: int,
+    frozen_at_ms: int,
+) -> None:
+    with sqlite3.connect(path) as connection:
+        connection.execute(
+            """
+            INSERT INTO signal_freezes (
+                bundle_identity,
+                signal_freeze_identity,
+                exchange,
+                market_type,
+                symbol,
+                timeframe,
+                as_of_ms,
+                source_cutoff_open_time_ms,
+                signal_state,
+                direction,
+                bundle_json,
+                frozen_at_ms
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                _sha(f"bundle:4h:{exchange}:{suffix}"),
+                _sha(f"freeze:4h:{exchange}:{suffix}"),
+                exchange,
+                "spot",
+                "BTCUSDT",
+                "4h",
+                as_of_ms,
+                max(0, as_of_ms - 1),
+                "watch",
+                "bullish",
+                "{}",
+                frozen_at_ms,
+            ),
+        )
+
+
 def _paper_counts(path) -> tuple[int, ...]:
     with sqlite3.connect(f"file:{path.resolve()}?mode=ro", uri=True) as connection:
         return tuple(
@@ -142,6 +189,14 @@ def test_mission_control_composes_cash_only_truth_without_fabricated_success(
     assert first.activation_identity == activation.activation_identity
     assert first.activation_cutoff_ms == activation.activation_cutoff_ms
     assert first.signal_stream.total_freeze_count == 0
+    assert tuple(
+        (item.symbol.value, item.status.value)
+        for item in first.decision_cadence
+    ) == (
+        ("BTCUSDT", "no_4h_evidence"),
+        ("ETHUSDT", "no_4h_evidence"),
+        ("SOLUSDT", "no_4h_evidence"),
+    )
     assert first.eligible_post_activation_freezes == 0
     assert first.incomplete_provider_pairs == 0
     assert first.processed_event_skips == 0
@@ -210,3 +265,51 @@ def test_mission_control_surface_is_strictly_read_only() -> None:
     )
     assert all(token not in source for token in forbidden)
     assert paper_mission_control.REAL_CAPITAL == REAL_CAPITAL == 0
+
+
+def test_decision_cadence_explains_pre_activation_pair(tmp_path) -> None:
+    _, activation = _paper(tmp_path)
+    signal_db = tmp_path / "signals.sqlite3"
+    _init_signal_db(signal_db)
+    _insert_4h_freeze(
+        signal_db,
+        exchange="binance",
+        suffix="past",
+        as_of_ms=90,
+        frozen_at_ms=95,
+    )
+    _insert_4h_freeze(
+        signal_db,
+        exchange="bybit",
+        suffix="past",
+        as_of_ms=90,
+        frozen_at_ms=96,
+    )
+    scan = PaperSignalEventScanResult(
+        scanner_version=PAPER_SIGNAL_EVENT_SCANNER_VERSION,
+        activation_identity=activation.activation_identity,
+        eligible_freeze_count=0,
+        incomplete_pair_count=0,
+        processed_skip_count=0,
+        candidates=(),
+        real_capital=REAL_CAPITAL,
+    )
+
+    readiness = paper_mission_control.read_paper_decision_cadence_readiness(
+        signal_ledger_path=signal_db,
+        activation=activation,
+        scan=scan,
+        observed_at_ms=500,
+    )
+
+    btc = readiness[0]
+    assert btc.symbol.value == "BTCUSDT"
+    assert btc.status.value == "pre_activation_pair"
+    assert btc.binance is not None
+    assert btc.bybit is not None
+    assert btc.binance.signal_as_of_ms == 90
+    assert btc.bybit.signal_as_of_ms == 90
+    assert btc.paired_as_of_ms == 90
+    assert btc.candidate_available is False
+    assert readiness[1].status.value == "no_4h_evidence"
+    assert readiness[2].status.value == "no_4h_evidence"
