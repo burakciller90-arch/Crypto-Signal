@@ -31,6 +31,13 @@ from crypto_signal.paper.commit import (
     PaperBundleCommitResult,
     commit_orchestration_bundle,
 )
+from crypto_signal.paper.dry_run import (
+    PAPER_ACTIVATION_DRY_RUN_VERSION,
+    PaperActivationDryRunError,
+    PaperActivationDryRunResult,
+    PaperActivationDryRunStatus,
+    evaluate_paper_activation_dry_run,
+)
 from crypto_signal.paper.event_scanner import (
     PAPER_SIGNAL_EVENT_SCANNER_VERSION,
     PaperSignalEventCandidate,
@@ -126,12 +133,14 @@ from crypto_signal.paper.venue_rules import (
     fetch_binance_spot_venue_rules,
     parse_binance_spot_venue_rules,
     prepare_authoritative_paper_trade_plan,
+    read_latest_binance_spot_venue_rules,
 )
 
 __all__ = [
     "BENCHMARK_IDS",
     "BINANCE_SPOT_EXCHANGE_INFO_URL",
     "INITIAL_CASH_USDT",
+    "PAPER_ACTIVATION_DRY_RUN_VERSION",
     "PAPER_ACTIVATION_SCHEMA_VERSION",
     "PAPER_AUTONOMY_POLICY_VERSION",
     "PAPER_EXECUTION_INPUT_POLICY_VERSION",
@@ -155,6 +164,9 @@ __all__ = [
     "FundCreationRecord",
     "NavSnapshotRecord",
     "PaperAction",
+    "PaperActivationDryRunError",
+    "PaperActivationDryRunResult",
+    "PaperActivationDryRunStatus",
     "PaperActivationError",
     "PaperActivationState",
     "PaperAutonomyDecision",
@@ -214,6 +226,7 @@ __all__ = [
     "default_conservative_simulated_cost_policy",
     "ensure_persistent_paper_fund",
     "evaluate_autonomy_policy",
+    "evaluate_paper_activation_dry_run",
     "fetch_binance_spot_venue_rules",
     "freeze_execution_input_from_cache",
     "initial_account_state",
@@ -225,6 +238,7 @@ __all__ = [
     "parse_binance_spot_venue_rules",
     "prepare_authoritative_paper_trade_plan",
     "prepare_paper_trade_plan",
+    "read_latest_binance_spot_venue_rules",
     "record_terminal_no_action",
     "run_paper_runtime_tick",
     "scan_post_activation_signal_events",

@@ -62,6 +62,7 @@ __all__ = [
     "fetch_binance_spot_venue_rules",
     "parse_binance_spot_venue_rules",
     "prepare_authoritative_paper_trade_plan",
+    "read_latest_binance_spot_venue_rules",
 ]
 
 BINANCE_SPOT_EXCHANGE_INFO_URL = "https://api.binance.com/api/v3/exchangeInfo"
@@ -612,6 +613,48 @@ def prepare_authoritative_paper_trade_plan(
         pretrade=pretrade,
         real_capital=REAL_CAPITAL,
     )
+
+
+def read_latest_binance_spot_venue_rules(
+    *,
+    path: Path,
+    symbol: PaperSymbol,
+    observed_at_ms: int,
+) -> FrozenBinanceSpotVenueRules | None:
+    """Read the latest cached rule snapshot at/before a time without initialization."""
+    if observed_at_ms < 0:
+        raise ValueError("observed_at_ms must be non-negative")
+    if not path.exists():
+        raise PaperVenueRuleError("paper venue-rule cache does not exist")
+    uri = f"file:{path.resolve()}?mode=ro"
+    try:
+        with sqlite3.connect(uri, uri=True, timeout=5.0) as connection:
+            connection.row_factory = sqlite3.Row
+            connection.execute("PRAGMA query_only=ON")
+            table = connection.execute(
+                """
+                SELECT 1
+                FROM sqlite_master
+                WHERE type = 'table' AND name = 'paper_venue_rule_snapshots'
+                """
+            ).fetchone()
+            if table is None:
+                return None
+            row = connection.execute(
+                """
+                SELECT payload_json
+                FROM paper_venue_rule_snapshots
+                WHERE symbol = ? AND observed_at_ms <= ?
+                ORDER BY observed_at_ms DESC, snapshot_identity DESC
+                LIMIT 1
+                """,
+                (symbol.value, observed_at_ms),
+            ).fetchone()
+    except sqlite3.Error as exc:
+        raise PaperVenueRuleError(
+            f"failed to read paper venue-rule cache: {exc}"
+        ) from exc
+    return None if row is None else _deserialize_snapshot(str(row["payload_json"]))
 
 
 def _deserialize_snapshot(payload_json: str) -> FrozenBinanceSpotVenueRules:
