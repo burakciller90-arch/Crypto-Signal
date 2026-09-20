@@ -2140,3 +2140,18 @@ The final development head for these two hardenings is 86477fd13aa21bad604de34a9
 
 This is development acceptance only. PAPER/STABLE was not deployed, the paper workflow still exposes no writeauthority/writetick command, no authority row was written to production, and no virtual trade or processed-event mutation was executed. Separate explicit user production authorization remains required before crossing that boundary.
 
+## 2026-09-21 — atomic paper authority TOCTOU closed and terminal continuity rebound
+
+The Crypto-Signal terminal continuation path was rebound to the current ChatGPT conversation before overnight autonomous work. The repository rebind workflow replaced the stale chat target with https://chatgpt.com/c/6ab046e7-34a4-83eb-96b1-2952e2b9bca6. UID504 completed the rebind and UID502 relay reload. A later bridge-state probe mechanically confirmed the same URL in both shared and local target files, relay state RUNNING with current heartbeat, the UID504 continuity bridge active, and the self-hosted runner enabled. Disk inspection showed 44 GiB free, so the historical no-space failure is no longer current.
+
+The allowlisted Mac command workflow gained a narrowly validated wakearm command. It accepts only a bounded task identifier, a 10..86400 second delay and a bounded note, then delegates to the existing arm_exact.py/continuation_arm.sh path. It does not expose arbitrary shell. An exact immutable checkpoint was successfully armed for paper-write-authority-atomic-toctou-hardening-v1. Delayed or duplicate wakes remain state-first hints only and must NOOP when their task is already complete or superseded.
+
+The development-only virtual-paper writer then received its final known authority-race hardening. Earlier code re-read the complete append-only authority chain after evaluation and immediately before mutation, but a narrow gap still existed between that recheck and opening the SQLite mutation transaction. Main now threads the required authority-event identity through the writer, activation and commit layers into the atomic ledger boundary. Once BEGIN IMMEDIATE is acquired, the transaction verifies that the latest authority exists, is still enabled, has the exact expected identity and matches the activation before any processed-event or simulated-trade mutation is permitted.
+
+Two regressions revoke authority after the outer precheck but directly before terminal-no-action and simulated-trade persistence. Both paths fail closed and leave processed-event count, replay count, cash and positions unchanged. PR #294 was squash-merged as 0d89fb371fff0cbfe23176eddca760db55f0a182.
+
+UID504 synced exactly to that head. The complete repository gate passed: pytest reached 100%, Ruff passed, mypy reported no issues across 102 source files, JavaScript passed and FULL_TEST_PASS=YES.
+
+This remains development acceptance only. PAPER/STABLE is still 30b05251af9fc2ac05fd007dbd6ac6d0519c2e58, production write authority is not enabled, production mutation commands were not added, and no production paper event/trade was written. REAL_CAPITAL remains 0.
+
+With the writer gate hardened but production activation intentionally closed, the next autonomous safe frontier is the beginner-facing dashboard/product pass over the already accepted read-only Mission Control, factual decision trace, marked portfolio and honest performance surfaces.
