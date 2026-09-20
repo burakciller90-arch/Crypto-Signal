@@ -6,6 +6,9 @@ import hashlib
 import inspect
 import sqlite3
 from dataclasses import fields
+from decimal import Decimal
+
+import pytest
 
 from crypto_signal.paper import mission_control as paper_mission_control
 from crypto_signal.paper.activation import activate_paper_policy
@@ -270,7 +273,19 @@ def test_mission_control_v2_exposes_only_structured_plan_lineage() -> None:
         "venue_rule_snapshot_identity",
         "sizing",
         "venue_bound_pretrade",
+        "cost_preview",
     }.issubset(candidate_fields)
+
+    with pytest.raises(ValueError, match="total must equal explicit costs"):
+        paper_mission_control.PaperPlanCostPreview(
+            execution_snapshot_identity=_sha("execution-snapshot"),
+            fee_usdt=Decimal("0.10"),
+            spread_usdt=Decimal("0.20"),
+            slippage_usdt=Decimal("0.30"),
+            total_cost_usdt=Decimal("0.61"),
+            reference_notional_usdt=Decimal("100"),
+            fill_notional_usdt=Decimal("100.50"),
+        )
 
 
 def test_mission_control_surface_is_strictly_read_only() -> None:
