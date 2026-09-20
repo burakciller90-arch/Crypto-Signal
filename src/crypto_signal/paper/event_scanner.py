@@ -34,7 +34,7 @@ __all__ = [
     "scan_post_activation_signal_events",
 ]
 
-PAPER_SIGNAL_EVENT_SCANNER_VERSION = "paper_signal_event_scanner.v1"
+PAPER_SIGNAL_EVENT_SCANNER_VERSION = "paper_signal_event_scanner.v2"
 _REQUIRED_TIMEFRAME = "4h"
 _REQUIRED_MARKET_TYPE = MarketType.SPOT
 _PROVIDER_ORDER = (Exchange.BINANCE, Exchange.BYBIT)
@@ -52,6 +52,8 @@ class PaperSignalEventCandidate:
     symbol: PaperSymbol
     timeframe: str
     signal_as_of_ms: int
+    source_cutoff_open_time_ms: int
+    provider_signal_as_of_ms: tuple[int, int]
     source_freeze_identities: tuple[str, str]
     source_frozen_at_ms: tuple[int, int]
     signals: tuple[SignalDecision, SignalDecision]
@@ -66,14 +68,27 @@ class PaperSignalEventCandidate:
         _require_sha256(self.activation_identity, "activation_identity")
         if self.timeframe != _REQUIRED_TIMEFRAME:
             raise ValueError("paper event candidate must be 4h")
-        if self.signal_as_of_ms < 0:
-            raise ValueError("signal_as_of_ms must be non-negative")
+        if self.signal_as_of_ms < 0 or self.source_cutoff_open_time_ms < 0:
+            raise ValueError("paper event timestamps must be non-negative")
+        if any(value < 0 for value in self.provider_signal_as_of_ms):
+            raise ValueError("provider signal as-of values must be non-negative")
+        if self.signal_as_of_ms != max(self.provider_signal_as_of_ms):
+            raise ValueError(
+                "paper event signal_as_of_ms must be the latest provider as-of"
+            )
         if len(set(self.source_freeze_identities)) != 2:
             raise ValueError("candidate requires two unique freeze identities")
         for identity in self.source_freeze_identities:
             _require_sha256(identity, "source freeze identity")
-        if any(value < self.signal_as_of_ms for value in self.source_frozen_at_ms):
-            raise ValueError("source freeze cannot predate signal as-of")
+        if any(
+            frozen_at_ms < provider_as_of_ms
+            for frozen_at_ms, provider_as_of_ms in zip(
+                self.source_frozen_at_ms,
+                self.provider_signal_as_of_ms,
+                strict=True,
+            )
+        ):
+            raise ValueError("source freeze cannot predate provider signal as-of")
         exchanges = tuple(signal.exchange for signal in self.signals)
         if exchanges != _PROVIDER_ORDER:
             raise ValueError("candidate provider order must be Binance then Bybit")
@@ -86,8 +101,10 @@ class PaperSignalEventCandidate:
                 raise ValueError("candidate signal symbol mismatch")
             if signal.timeframe != self.timeframe:
                 raise ValueError("candidate signal timeframe mismatch")
-            if signal.as_of_ms != self.signal_as_of_ms:
-                raise ValueError("candidate signal as-of mismatch")
+            if signal.as_of_ms != self.provider_signal_as_of_ms[index]:
+                raise ValueError("candidate provider signal as-of mismatch")
+            if signal.as_of_ms > self.signal_as_of_ms:
+                raise ValueError("provider signal cannot postdate event availability")
         expected = compute_processed_event_identity(
             activation_identity=self.activation_identity,
             source_freeze_identities=self.source_freeze_identities,
@@ -141,6 +158,7 @@ class _FreezeView:
     exchange: Exchange
     symbol: PaperSymbol
     as_of_ms: int
+    source_cutoff_open_time_ms: int
     frozen_at_ms: int
     decision: SignalDecision
 
@@ -170,16 +188,19 @@ def scan_post_activation_signal_events(
 
     grouped: dict[tuple[PaperSymbol, int], list[_FreezeView]] = {}
     for item in freezes:
-        grouped.setdefault((item.symbol, item.as_of_ms), []).append(item)
+        grouped.setdefault(
+            (item.symbol, item.source_cutoff_open_time_ms),
+            [],
+        ).append(item)
 
     candidates: list[PaperSignalEventCandidate] = []
     incomplete = 0
     skipped_processed = 0
-    for symbol, as_of_ms in sorted(
+    for symbol, source_cutoff_open_time_ms in sorted(
         grouped,
         key=lambda key: (key[1], key[0].value),
     ):
-        items = grouped[(symbol, as_of_ms)]
+        items = grouped[(symbol, source_cutoff_open_time_ms)]
         by_exchange: dict[Exchange, _FreezeView] = {}
         for item in items:
             if item.exchange in by_exchange:
@@ -195,12 +216,14 @@ def scan_post_activation_signal_events(
         binance = by_exchange[Exchange.BINANCE]
         bybit = by_exchange[Exchange.BYBIT]
         source_ids = (binance.freeze_identity, bybit.freeze_identity)
+        provider_signal_as_of_ms = (binance.as_of_ms, bybit.as_of_ms)
+        signal_as_of_ms = max(provider_signal_as_of_ms)
         event_identity = compute_processed_event_identity(
             activation_identity=activation.activation_identity,
             source_freeze_identities=source_ids,
             symbol=symbol,
             timeframe=_REQUIRED_TIMEFRAME,
-            signal_as_of_ms=as_of_ms,
+            signal_as_of_ms=signal_as_of_ms,
         )
         if event_identity in processed:
             skipped_processed += 1
@@ -212,7 +235,9 @@ def scan_post_activation_signal_events(
                 activation_identity=activation.activation_identity,
                 symbol=symbol,
                 timeframe=_REQUIRED_TIMEFRAME,
-                signal_as_of_ms=as_of_ms,
+                signal_as_of_ms=signal_as_of_ms,
+                source_cutoff_open_time_ms=source_cutoff_open_time_ms,
+                provider_signal_as_of_ms=provider_signal_as_of_ms,
                 source_freeze_identities=source_ids,
                 source_frozen_at_ms=(
                     binance.frozen_at_ms,
@@ -273,6 +298,7 @@ def _read_eligible_freezes(
                     symbol,
                     timeframe,
                     as_of_ms,
+                    source_cutoff_open_time_ms,
                     frozen_at_ms,
                     signal_state,
                     direction,
@@ -335,6 +361,7 @@ def _read_eligible_freezes(
 
         freeze_identity = str(row["signal_freeze_identity"])
         as_of_ms = int(row["as_of_ms"])
+        source_cutoff_open_time_ms = int(row["source_cutoff_open_time_ms"])
         frozen_at_ms = int(row["frozen_at_ms"])
         indexed_state = str(row["signal_state"])
         indexed_direction = str(row["direction"])
@@ -361,6 +388,7 @@ def _read_eligible_freezes(
                 exchange=exchange,
                 symbol=symbol,
                 as_of_ms=as_of_ms,
+                source_cutoff_open_time_ms=source_cutoff_open_time_ms,
                 frozen_at_ms=frozen_at_ms,
                 decision=decision,
             )
