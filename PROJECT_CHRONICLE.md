@@ -2066,3 +2066,14 @@ Head 6f677f158136c0988aaca80d76acd4b36aa9213f bounds the 120-second dry-run obse
 Whole-repository FULLTEST passed, Ruff passed, mypy passed across 97 source files, and the JavaScript gate passed. PAPER/STABLE deployment to the exact head also passed. Fresh stable state showed both paper clocks healthy at 120-second cadence, a successful retention line, candidates=0 / ready_candidates=0 / attention_required=NO, paper_db_unchanged=YES, one activation singleton, zero processed events and zero decision/fill/mutation/NAV records. The virtual fund remains 100 USDT with zero positions. trade_policy remains NOT_ACTIVATED and REAL_CAPITAL=0.
 
 Next safe work is a strictly read-only, structured decision-explanation trace derived from the already accepted scanner/autonomy/execution-input/venue/sizing/pretrade chain. This trace is intended to become the factual source for the future Dashboard “why did the trader do this?” experience; it must never invent thoughts or bypass the evidence lineage.
+
+
+## 2026-09-20 — factual paper decision trace accepted and deployed
+
+The read-only production path now has a deterministic explanation contract intended for the future Dashboard “what did the trader see and why did it act?” surface. paper_decision_trace.v1 projects every real dry-run candidate through the accepted autonomy, execution-input, venue-rule, sizing and pretrade chain. Each stage is explicitly PASSED, BLOCKED, NOT_REACHED or READY and carries the engine’s actual reason code plus immutable evidence identity where one exists. It does not generate free-form trader thoughts.
+
+The first full gate exposed only one test expectation typo (the real PaperAction enum is BUY, not lowercase buy). After correcting the test contract, the complete suite passed: 448 tests, Ruff, mypy across 97 source files and JavaScript.
+
+PAPER/STABLE then deployed successfully to 5df7fd6ab2f1c271d85f63132c0572807a5ff3a3. The production probe saw 402 signal freezes but still no strict post-watermark 4h Binance+Bybit candidate, so no PAPER_DRY_RUN_TRACE line was fabricated. The fund remains 100.00 USDT, zero positions and zero decision/fill/mutation/NAV records; activation singleton remains one; processed events remain zero; trade_policy=NOT_ACTIVATED and REAL_CAPITAL=0.
+
+Next safe slice is a read-only portfolio/performance projection over immutable paper state and real cached market marks. This becomes the factual backend for a future simple-professional portfolio Dashboard while virtual-trade activation remains gated on real production evidence.
