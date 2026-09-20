@@ -24,7 +24,7 @@ jobs:
           set -euo pipefail
           cmd="$(printf '%s\n' "$ISSUE_BODY" | awk -F: 'tolower($1)=="command" {gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2); print tolower($2); exit}')"
           case "$cmd" in
-            status|services|logs|disk|bridgecheck|bridgestate)
+            status|services|logs|disk|bridgecheck|bridgestate|wakeresume|waketest)
               ;;
             *)
               echo "Unsupported command: $cmd"
@@ -78,6 +78,22 @@ jobs:
           set -euo pipefail
           df -h /
           du -sh /Users/crypto-signal-agent/Crypto-Signal                  /Users/crypto-signal-agent/Crypto-Signal-Live                  /Users/crypto-signal-agent/Crypto-Signal-Product                  /Users/crypto-signal-agent/Crypto-Signal-Alerts                  /Users/crypto-signal-agent/actions-runner-crypto 2>/dev/null || true
+
+      - name: WAKE RESUME
+        if: steps.parse.outputs.command == 'wakeresume'
+        shell: bash
+        run: |
+          set -euo pipefail
+          /usr/bin/python3 /Users/crypto-signal-agent/Crypto-Signal/ops/continuity/resume_continuity.py
+
+      - name: WAKE TEST
+        if: steps.parse.outputs.command == 'waketest'
+        shell: bash
+        run: |
+          set -euo pipefail
+          EVENT_ID="github-wake-test-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          MESSAGE="CRYPTO_SIGNAL_TERMINAL_BRIDGE_TEST_V1 — Bu mesaj UID504 terminal/GitHub runner → UID502 Safari relay → mevcut ChatGPT sohbeti zincirinden otomatik gönderildi. Bu mesaj görünüyorsa terminalden bu sohbete geri yazma kanalı çalışıyor."
+          /usr/bin/python3 /Users/crypto-signal-agent/Crypto-Signal/ops/continuity/relay_submit.py "$EVENT_ID" "$MESSAGE" 25
 
       - name: BRIDGESTATE
         if: steps.parse.outputs.command == 'bridgestate'
