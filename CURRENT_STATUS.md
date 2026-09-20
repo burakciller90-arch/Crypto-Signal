@@ -453,3 +453,35 @@ After Stage 6:
 honest performance/learning -> limited V2+ intelligence -> gift-ready integrated acceptance.
 
 REAL_CAPITAL remains 0.
+
+## 2026-09-20 — Full Version / World-Class roadmap authorized
+
+The user expanded the target from the focused Birthday Edition to the complete gift-quality version and asked that the project remain faithful to this direction.
+
+New governing documents:
+- docs/CRYPTO_SIGNAL_FULL_VERSION_WORLD_CLASS_ROADMAP.md
+- docs/AUTONOMOUS_PAPER_FUND_V1_SPEC.md
+- docs/INTELLIGENCE_ALPHA_FACTORY_ARCHITECTURE.md
+- docs/BEGINNER_UX_EVIDENCE_CENTER_SPEC.md
+
+Major authorized future capabilities:
+- automatic live dashboard refresh; no routine manual F5,
+- beginner-first "Bana Öğret" explanations tied to frozen chart evidence,
+- fully virtual 100 USDT autonomous paper fund with immutable fills/costs/NAV and benchmarks,
+- clear virtual purchase plans explaining amount, risk, fee/spread/slippage, invalidation, rationale and counter-case,
+- expansion beyond PA/SMC/ICT + Harmonic + Elliott into regime, trend/momentum, mean-reversion, breakout/volatility, derivatives, order-flow, on-chain and bounded contextual engines behind separate evidence gates,
+- regime-aware meta-decision and risk engines,
+- Alpha Factory / champion-challenger research with walk-forward/out-of-sample/untouched-forward gates,
+- interpretable learning memory; failures remain visible,
+- no automatic self-promotion or uncontrolled self-modification,
+- no probability claim without accepted calibration evidence.
+
+Execution policy:
+- Cursor is an optional acceleration worker, never a blocking dependency.
+- Supervisor may advance independent slices directly while Cursor works in an isolated non-overlapping worktree.
+- Worker outputs require fresh state/diff/test review before integration.
+
+Immediate frontier: Stage 6A live Mission Control / automatic refresh, followed by Stage 6B evidence-teaching foundation and Stage 6C immutable 100 USDT paper fund.
+
+REAL_CAPITAL remains 0.
+
