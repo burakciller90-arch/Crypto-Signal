@@ -8,9 +8,10 @@ pre-cost quantity. No ledger mutation, exchange/network access or fill.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from decimal import Decimal, localcontext
+from decimal import ROUND_DOWN, Decimal, localcontext
 from enum import StrEnum
 
+from crypto_signal.data.models import Exchange, MarketType
 from crypto_signal.ledger.serialization import canonical_sha256
 from crypto_signal.paper.autonomy import PaperAutonomyDecision
 from crypto_signal.paper.execution_input import FrozenPaperExecutionInput
@@ -108,6 +109,12 @@ class PaperPositionSizingDecision:
                     raise ValueError("BUY sizing requires positive risk per unit")
                 if self.max_position_risk_usdt <= Decimal(0):
                     raise ValueError("BUY sizing requires positive max risk")
+                if (
+                    self.raw_quantity is None
+                    or self.raw_quantity * self.risk_per_unit_usdt
+                    > self.max_position_risk_usdt
+                ):
+                    raise ValueError("BUY sizing exceeds max position risk")
         else:
             if self.conservative_invalidation_price is not None:
                 raise ValueError("EXIT sizing must not carry invalidation price")
@@ -271,6 +278,7 @@ def size_paper_candidate(
     risk_per_unit = reference - conservative_invalidation
     with localcontext() as context:
         context.prec = _CALCULATION_PRECISION
+        context.rounding = ROUND_DOWN
         raw_quantity = autonomy_decision.max_position_risk_usdt / risk_per_unit
 
     return _decision(
@@ -328,13 +336,26 @@ def _validate_lineage(
         if autonomy_decision.candidate_action is PaperAction.BUY
         else SignalDirection.BEARISH
     )
+    if {signal.exchange for signal in signals} != {Exchange.BINANCE, Exchange.BYBIT}:
+        raise PaperPositionSizingError("source signal provider lineage mismatch")
     for signal in signals:
+        if signal.market_type is not MarketType.SPOT:
+            raise PaperPositionSizingError("source signal market lineage mismatch")
+        if signal.timeframe != "4h":
+            raise PaperPositionSizingError("source signal timeframe lineage mismatch")
+        if signal.as_of_ms != autonomy_decision.source_as_of_ms:
+            raise PaperPositionSizingError("source signal as-of lineage mismatch")
         if signal.state is not SignalState.ACTIVE:
             raise PaperPositionSizingError("source signal is not ACTIVE")
         if signal.direction is not expected_direction:
             raise PaperPositionSizingError("source signal direction lineage mismatch")
         if signal.symbol != autonomy_decision.symbol.value:
             raise PaperPositionSizingError("source signal symbol lineage mismatch")
+    if (
+        autonomy_decision.candidate_action is PaperAction.BUY
+        and _held_quantity(state=state, symbol=autonomy_decision.symbol) > Decimal(0)
+    ):
+        raise PaperPositionSizingError("BUY sizing forbids pyramiding")
 
 
 def _held_quantity(*, state: PaperFundState, symbol: PaperSymbol) -> Decimal:

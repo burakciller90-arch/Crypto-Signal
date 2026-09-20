@@ -341,6 +341,56 @@ def test_sizing_identity_is_deterministic(tmp_path) -> None:
     assert len(first.sizing_identity) == 64
 
 
+def test_repeating_risk_division_never_exceeds_budget(tmp_path) -> None:
+    signals = (
+        _signal(
+            Exchange.BINANCE,
+            direction=SignalDirection.BULLISH,
+            invalidation=Decimal(94),
+        ),
+        _signal(
+            Exchange.BYBIT,
+            direction=SignalDirection.BULLISH,
+            invalidation=Decimal(94),
+        ),
+    )
+    decision = size_paper_candidate(
+        state=_state(tmp_path),
+        autonomy_decision=_autonomy(PaperAction.BUY),
+        execution_input=_execution_input(PaperAction.BUY),
+        signals=signals,
+    )
+    assert decision.status is PaperPositionSizingStatus.SIZED
+    assert decision.raw_quantity is not None
+    assert decision.raw_quantity * decision.risk_per_unit_usdt <= Decimal("1.00")
+
+
+def test_buy_sizing_refuses_pyramiding_even_if_upstream_is_bypassed(tmp_path) -> None:
+    state = replace(
+        _state(tmp_path),
+        cash_usdt=Decimal(80),
+        positions=(PaperPosition(PaperSymbol.BTCUSDT, Decimal("0.1")),),
+    )
+    with pytest.raises(PaperPositionSizingError, match="pyramiding"):
+        size_paper_candidate(
+            state=state,
+            autonomy_decision=_autonomy(PaperAction.BUY),
+            execution_input=_execution_input(PaperAction.BUY),
+            signals=_bullish(),
+        )
+
+
+def test_source_signal_as_of_mismatch_fails_closed(tmp_path) -> None:
+    bad = replace(_bullish()[1], as_of_ms=999)
+    with pytest.raises(PaperPositionSizingError, match="as-of"):
+        size_paper_candidate(
+            state=_state(tmp_path),
+            autonomy_decision=_autonomy(PaperAction.BUY),
+            execution_input=_execution_input(PaperAction.BUY),
+            signals=(_bullish()[0], bad),
+        )
+
+
 def test_sizing_surface_has_no_network_order_or_ledger_authority() -> None:
     source = inspect.getsource(paper_sizing).lower()
     forbidden = (
