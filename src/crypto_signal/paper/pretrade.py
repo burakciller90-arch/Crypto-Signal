@@ -353,7 +353,15 @@ def _validate_lineage(
         raise PaperPretradeError("execution snapshot symbol mismatch")
     if execution_snapshot.policy_version != state.execution_policy_version:
         raise PaperPretradeError("execution snapshot policy mismatch")
-    if execution_snapshot.venue_reference != execution_input.venue_reference:
+    legacy_reference = execution_input.venue_reference
+    authoritative_prefix = "binance_spot_exchange_info.v1|rules:"
+    is_legacy = execution_snapshot.venue_reference == legacy_reference
+    is_authoritative = (
+        execution_snapshot.venue_reference.startswith(authoritative_prefix)
+        and "|cost:" in execution_snapshot.venue_reference
+        and execution_snapshot.venue_reference.endswith(legacy_reference)
+    )
+    if not (is_legacy or is_authoritative):
         raise PaperPretradeError(
             "execution snapshot is not bound to frozen execution input"
         )
