@@ -25,22 +25,29 @@ jobs:
           set -euo pipefail
           STATE="/Users/crypto-signal-agent/Crypto-Signal/runtime/continuity"
           LAST="$STATE/recurring_wake_last_local_attempt"
-          NOW="$(date +%s)"
-          LAST_EPOCH="0"
 
-          if [ -f "$LAST" ]; then
-            LAST_EPOCH="$(sed -n 's/^epoch=//p' "$LAST" | head -1)"
-          fi
-
-          if [[ "$LAST_EPOCH" =~ ^[0-9]+$ ]] && [ "$LAST_EPOCH" -gt 0 ]; then
-            AGE="$((NOW - LAST_EPOCH))"
-            echo "LOCAL_WAKE_AGE_SECONDS=$AGE"
-            if [ "$AGE" -ge 0 ] && [ "$AGE" -le 600 ]; then
-              echo "LOCAL_30M_TIMER_RECENT=YES"
-              echo "GITHUB_FALLBACK_SKIPPED=YES"
-              exit 0
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            NOW="$(date +%s)"
+            LAST_EPOCH="0"
+            if [ -f "$LAST" ]; then
+              LAST_EPOCH="$(sed -n 's/^epoch=//p' "$LAST" | head -1)"
             fi
-          fi
+            if [[ "$LAST_EPOCH" =~ ^[0-9]+$ ]] && [ "$LAST_EPOCH" -gt 0 ]; then
+              AGE="$((NOW - LAST_EPOCH))"
+              echo "LOCAL_WAKE_AGE_SECONDS=$AGE"
+              if [ "$AGE" -ge 0 ] && [ "$AGE" -le 600 ]; then
+                echo "LOCAL_30M_TIMER_RECENT=YES"
+                echo "GITHUB_FALLBACK_SKIPPED=YES"
+                exit 0
+              fi
+            fi
 
-          /usr/bin/python3 "$GITHUB_WORKSPACE/ops/continuity/recurring_wake.py"
-          echo "GITHUB_FALLBACK_WAKE_ATTEMPTED=YES"
+            # No explicit event id: recurring_wake derives the same deterministic
+            # half-hour slot id used by launchd, so late local delivery deduplicates.
+            /usr/bin/python3 "$GITHUB_WORKSPACE/ops/continuity/recurring_wake.py"
+            echo "GITHUB_FALLBACK_WAKE_ATTEMPTED=YES"
+          else
+            EVENT_ID="crypto-30m-continuity-manual:${GITHUB_RUN_ID}:${GITHUB_RUN_ATTEMPT}"
+            /usr/bin/python3 "$GITHUB_WORKSPACE/ops/continuity/recurring_wake.py" "$EVENT_ID"
+            echo "MANUAL_30M_WAKE_ATTEMPTED=YES"
+          fi
