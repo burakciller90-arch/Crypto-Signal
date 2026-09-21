@@ -23,5 +23,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          EVENT_ID="crypto-30m-continuity:${GITHUB_RUN_ID}:${GITHUB_RUN_ATTEMPT}"
-          /usr/bin/python3 "$GITHUB_WORKSPACE/ops/continuity/recurring_wake.py" "$EVENT_ID"
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            /usr/bin/python3 "$GITHUB_WORKSPACE/ops/continuity/recurring_wake.py"
+          else
+            EVENT_ID="crypto-30m-continuity-manual:${GITHUB_RUN_ID}:${GITHUB_RUN_ATTEMPT}"
+            /usr/bin/python3 "$GITHUB_WORKSPACE/ops/continuity/recurring_wake.py" "$EVENT_ID"
+          fi
