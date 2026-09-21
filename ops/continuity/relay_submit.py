@@ -6,6 +6,7 @@ import hmac
 import os
 import sys
 import time
+from datetime import datetime
 from pathlib import Path
 
 BASE = Path("/Users/crypto-signal-agent/Crypto-Signal")
@@ -16,10 +17,18 @@ RECEIPTS = SHARED / "receipts"
 PAUSE = SHARED / "user_pause"
 LOCAL_PAUSE = STATE / "user_pause"
 SECRET_FILE = STATE / "relay_secret"
+AUTONOMOUS_PREFIX = "CRYPTO_SIGNAL_AUTONOMOUS_CONTINUE_V1"
 
 
 def event_key(event_id: str) -> str:
     return hashlib.sha256(event_id.encode()).hexdigest()
+
+
+def scheduled_slot_event_id() -> str:
+    now = datetime.now().astimezone()
+    slot_minute = 0 if now.minute < 30 else 30
+    slot = now.replace(minute=slot_minute, second=0, microsecond=0)
+    return f"crypto-30m-continuity:{slot:%Y%m%dT%H%M%z}"
 
 
 def marker_for(event_id: str) -> str:
@@ -62,6 +71,10 @@ def main() -> int:
     if not event_id or not message:
         print("EMPTY_EVENT_OR_MESSAGE", file=sys.stderr)
         return 64
+    if message.startswith(AUTONOMOUS_PREFIX):
+        supplied_event_id = event_id
+        event_id = scheduled_slot_event_id()
+        print(f"AUTONOMOUS_EVENT_CANONICALIZED={supplied_event_id}->{event_id}")
     if LOCAL_PAUSE.exists() or PAUSE.exists():
         print("RELAY_SUBMIT_PAUSED")
         return 2
