@@ -1,3 +1,5 @@
+"""Deterministic research-only cost/slippage stress over accepted ML evidence."""
+
 from __future__ import annotations
 
 from collections.abc import Sequence
