@@ -52,7 +52,7 @@ jobs:
           set -euo pipefail
           cmd="$(printf '%s\n' "$ISSUE_BODY" | awk -F: 'tolower($1)=="command" {gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2); print tolower($2); exit}')"
           case "$cmd" in
-            status|repo|services|disk|externaldisk|hostdiag|audiorestart|audioadminrestart|loadtree|loadtree2|bginventory|bgsafecheck|cryptomigrationdiag)
+            status|repo|services|disk|externaldisk|hostdiag|audiorestart|audioadminrestart|loadtree|loadtree2|bginventory|bgsafecheck|cryptomigrationdiag|cryptomigrationdiag2)
               ;;
             *)
               echo "Unsupported command: $cmd"
@@ -144,6 +144,31 @@ jobs:
           echo "EXTERNAL_DISK_READ_ONLY_PASS=YES"
 
 
+
+
+      - name: CRYPTO MIGRATION DIAG 2
+        if: steps.parse.outputs.command == 'cryptomigrationdiag2'
+        shell: bash
+        run: |
+          set +e
+          echo "=== UID504 MIGRATION SHELLS ==="
+          /bin/ps -axo pid=,ppid=,user=,%cpu=,%mem=,etime=,state=,command= | /usr/bin/grep -E '[a]ctions-runner-crypto/_work/_temp/.*\.sh'
+          for p in $(/bin/ps -axo pid=,ppid=,user=,command= | /usr/bin/awk '$3=="crypto-signal-agent" && $0 ~ /actions-runner-crypto\/_work\/_temp\/.*\.sh/ {print $1}'); do
+            echo "--- shell=$p"
+            /bin/ps -p "$p" -o pid=,ppid=,user=,%cpu=,%mem=,etime=,state=,command=
+            c1="$(/usr/bin/pgrep -P "$p" | /usr/bin/paste -sd ' ' - || true)"
+            echo "CHILDREN=$c1"
+            for q in $c1; do
+              /bin/ps -p "$q" -o pid=,ppid=,user=,%cpu=,%mem=,etime=,state=,command=
+              c2="$(/usr/bin/pgrep -P "$q" | /usr/bin/paste -sd ' ' - || true)"
+              echo "GRANDCHILDREN_OF_$q=$c2"
+              for r in $c2; do /bin/ps -p "$r" -o pid=,ppid=,user=,%cpu=,%mem=,etime=,state=,command=; done
+            done
+          done
+          echo "=== DISKUTIL PROCS ==="
+          /bin/ps -axo pid=,ppid=,user=,%cpu=,%mem=,etime=,state=,command= | /usr/bin/grep -E '[d]iskutil|[g]it status|[r]sync' | /usr/bin/head -100
+          echo "CRYPTO_MIGRATION_DIAG2_PASS=YES"
+          exit 0
 
       - name: CRYPTO MIGRATION DIAG
         if: steps.parse.outputs.command == 'cryptomigrationdiag'
