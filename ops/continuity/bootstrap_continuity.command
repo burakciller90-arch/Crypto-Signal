@@ -1,7 +1,7 @@
 #!/bin/zsh
 set -u
 
-BASE="/Users/crypto-signal-agent/Crypto-Signal"
+BASE="/Volumes/Crypto-504/Crypto-Signal/Development"
 STATE="$BASE/runtime/continuity"
 WAKE="$STATE/wake"
 TARGET="$WAKE/current_chat_url"

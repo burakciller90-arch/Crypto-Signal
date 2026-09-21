@@ -23,7 +23,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          STATE="/Users/crypto-signal-agent/Crypto-Signal/runtime/continuity"
+          STATE="/Volumes/Crypto-504/Crypto-Signal/Development/runtime/continuity"
           LAST="$STATE/recurring_wake_last_local_attempt"
 
           if [ "${{ github.event_name }}" = "schedule" ]; then

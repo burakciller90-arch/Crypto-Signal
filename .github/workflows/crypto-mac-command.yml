@@ -24,7 +24,7 @@ jobs:
           set -euo pipefail
           cmd="$(printf '%s\n' "$ISSUE_BODY" | awk -F: 'tolower($1)=="command" {gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2); print tolower($2); exit}')"
           case "$cmd" in
-            status|services|logs|disk|sync|producttest|fulltest|productstate|productdeploy|paperreview|paperinspect|paperfixlint|paperharden|stateplanreview|stateplaninspect|stateplanharden|cursorreview|cursorreviewtail|cursorcleanup|bridgecheck|bridgestate|pausecheck|wakepause|wakeresume|wakearm|waketest|wakeheartbeat|chatbusyprobe|cursorcheck|cursorauthdiag|cursorttycheck|alertclockstate|alertclockpause|alertclockresume|migrationinspect|migrationinventory|ssddashboarddiag|ssddashboardwrappertest|ssdtcclaunchtest|ssdbackgroundteststart|ssdbackgroundtestcheck|ssdleftover)
+            status|services|logs|disk|sync|producttest|fulltest|productstate|productdeploy|paperreview|paperinspect|paperfixlint|paperharden|stateplanreview|stateplaninspect|stateplanharden|cursorreview|cursorreviewtail|cursorcleanup|bridgecheck|bridgestate|pausecheck|wakepause|wakeresume|wakearm|waketest|wakeheartbeat|chatbusyprobe|cursorcheck|cursorauthdiag|cursorttycheck|alertclockstate|alertclockpause|alertclockresume|migrationinspect|migrationinventory|ssddashboarddiag|ssddashboardwrappertest|ssdtcclaunchtest|ssdbackgroundteststart|ssdbackgroundtestcheck|ssdleftover|runnerpersistinstall|runnerpersistdiag|runnercutoverdiag|dashboardstart504|runnerterminalwatchdoginstall)
               ;;
             *)
               echo "Unsupported command: $cmd"
@@ -976,7 +976,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          TARGET="https://chatgpt.com/c/6ab0debd-49a8-83eb-8b33-a7ce2ef826d0"
+          TARGET="$(cat /Users/Shared/.crypto-signal-wake-relay/current_chat_url 2>/dev/null || true)"
+          case "$TARGET" in
+            https://chatgpt.com/c/*) ;;
+            *) echo "CHAT_TARGET_UNBOUND"; exit 66 ;;
+          esac
           /usr/bin/osascript - "$TARGET" <<'APPLESCRIPT'
           on run argv
             set targetUrl to item 1 of argv
@@ -1167,7 +1171,7 @@ jobs:
           (
             unset RUNNER_TRACKING_ID
             export PYTHONPATH="$ROOT/Product/src"
-            nohup "$ROOT/Product/.venv/bin/python" "$ROOT/Product/ops/run_dashboard.py"               --host 127.0.0.1 --port 48704               --ledger "$ROOT/Development/runtime/ledger/live_signal_ledger.sqlite3"               >"$ROOT/background-test.out" 2>"$ROOT/background-test.err" < /dev/null &
+            nohup "$ROOT/Product/.venv/bin/python" "$ROOT/Product/ops/run_dashboard.py"               --host 127.0.0.1 --port 48704               --ledger "$ROOT/Development/runtime/ledger/live_signal_ledger.sqlite3"               --alert-outbox "$ROOT/Development/runtime/alerts/alert_outbox.sqlite3"               --paper-ledger "$ROOT/Development/runtime/paper/paper_fund.sqlite3"               --candle-cache "$ROOT/Development/runtime/data/live_base_15m_cache.sqlite3"               >"$ROOT/background-test.out" 2>"$ROOT/background-test.err" < /dev/null &
             echo $! > "$ROOT/background-test.pid"
           )
           sleep 4
@@ -1189,6 +1193,77 @@ jobs:
           curl -fsS --max-time 3 http://127.0.0.1:48704/api/health
           echo
           echo "SSD_BACKGROUND_TEST_SURVIVED=YES"
+
+      - name: DASHBOARD START UID504
+        if: steps.parse.outputs.command == 'dashboardstart504'
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          PRODUCT="$ROOT/Product"
+          DEV="$ROOT/Development"
+          LOG="$ROOT/ServiceLogs"
+          URL="http://127.0.0.1:48700"
+          HEALTH="$URL/api/health"
+          PIDFILE="$ROOT/dashboard.pid"
+
+          test "$(id -u)" = "504"
+          test -x "$PRODUCT/.venv/bin/python"
+          test -f "$PRODUCT/ops/run_dashboard.py"
+          test -f "$DEV/runtime/ledger/live_signal_ledger.sqlite3"
+          mkdir -p "$LOG"
+
+          if curl -fsS --max-time 3 "$HEALTH" > "$ROOT/dashboard-health.json" 2>/dev/null; then
+            echo "DASHBOARD_ALREADY_HEALTHY=YES"
+          else
+            old="$(cat "$PIDFILE" 2>/dev/null || true)"
+            if [ -n "$old" ] && kill -0 "$old" >/dev/null 2>&1; then
+              if ps -p "$old" -o command= | grep -q 'run_dashboard.py.*48700'; then
+                kill "$old" >/dev/null 2>&1 || true
+                sleep 1
+              fi
+            fi
+            rm -f "$PIDFILE"
+            (
+              unset RUNNER_TRACKING_ID
+              export PYTHONPATH="$PRODUCT/src"
+              nohup "$PRODUCT/.venv/bin/python" "$PRODUCT/ops/run_dashboard.py"                 --host 127.0.0.1                 --port 48700                 --ledger "$DEV/runtime/ledger/live_signal_ledger.sqlite3"                 --alert-outbox "$DEV/runtime/alerts/alert_outbox.sqlite3"                 --paper-ledger "$DEV/runtime/paper/paper_fund.sqlite3"                 --candle-cache "$DEV/runtime/data/live_base_15m_cache.sqlite3"                 >"$LOG/dashboard-48700.out.log"                 2>"$LOG/dashboard-48700.err.log"                 < /dev/null &
+              echo $! > "$PIDFILE"
+            )
+          fi
+
+          ok=0
+          for i in {1..30}; do
+            if curl -fsS --max-time 3 "$HEALTH" > "$ROOT/dashboard-health.json" 2>/dev/null; then
+              ok=1
+              break
+            fi
+            sleep 1
+          done
+
+          if [ "$ok" != "1" ]; then
+            echo "DASHBOARD_48700_HEALTH_FAIL"
+            tail -120 "$LOG/dashboard-48700.err.log" 2>/dev/null || true
+            exit 70
+          fi
+
+          echo "=== HEALTH ==="
+          cat "$ROOT/dashboard-health.json"
+          echo
+          pid="$(cat "$PIDFILE" 2>/dev/null || true)"
+          if [ -n "$pid" ]; then
+            ps -p "$pid" -o pid=,ppid=,user=,%cpu=,%mem=,etime=,command= || true
+          fi
+
+          test_pid="$(cat "$ROOT/background-test.pid" 2>/dev/null || true)"
+          if [ -n "$test_pid" ] && kill -0 "$test_pid" >/dev/null 2>&1; then
+            kill "$test_pid" >/dev/null 2>&1 || true
+            echo "BACKGROUND_48704_TEST_STOPPED=$test_pid"
+          fi
+
+          /usr/bin/open "$URL/"
+          echo "CRYPTO_DASHBOARD_UID504_OPENED=YES"
+          echo "CRYPTO_DASHBOARD_UID504_HEALTH_PASS=YES"
 
       - name: SSD TCC LAUNCH TEST
         if: steps.parse.outputs.command == 'ssdtcclaunchtest'
@@ -1260,7 +1335,7 @@ jobs:
             <array>
               <string>/bin/bash</string>
               <string>-lc</string>
-              <string>exec env PYTHONPATH='$ROOT/Product/src' '$ROOT/Product/.venv/bin/python' '$ROOT/Product/ops/run_dashboard.py' --host 127.0.0.1 --port 48702 --ledger '$ROOT/Development/runtime/ledger/live_signal_ledger.sqlite3'</string>
+              <string>exec env PYTHONPATH='$ROOT/Product/src' '$ROOT/Product/.venv/bin/python' '$ROOT/Product/ops/run_dashboard.py' --host 127.0.0.1 --port 48702 --ledger '$ROOT/Development/runtime/ledger/live_signal_ledger.sqlite3' --alert-outbox '$ROOT/Development/runtime/alerts/alert_outbox.sqlite3' --paper-ledger '$ROOT/Development/runtime/paper/paper_fund.sqlite3' --candle-cache '$ROOT/Development/runtime/data/live_base_15m_cache.sqlite3'</string>
             </array>
             <key>RunAtLoad</key><true/>
             <key>StandardOutPath</key><string>$OUT</string>
@@ -1334,6 +1409,386 @@ jobs:
           echo "=== SSD RUNNER ==="; ls -ld "$ROOT/Runner" 2>/dev/null; du -sh "$ROOT/Runner" 2>/dev/null
           echo "RUNNER_CUTOVER_DIAG_PASS=YES"
           exit 0
+
+      - name: RUNNER PERSIST INSTALL
+        if: steps.parse.outputs.command == 'runnerpersistinstall'
+        shell: bash
+        run: |
+          set -euo pipefail
+          LOCAL_ROOT="$HOME/Library/Application Support/CryptoSignalRunner"
+          LOCAL_LOG="$HOME/Library/Logs/CryptoSignalRunner"
+          START_CMD="$LOCAL_ROOT/start-ssd-runner.command"
+          WATCHDOG="$LOCAL_ROOT/watchdog.sh"
+          LABEL="com.cryptosignal.github-runner-ssd"
+          PLIST="$HOME/Library/LaunchAgents/$LABEL.plist"
+          TARGET="gui/$(id -u)/$LABEL"
+
+          test "$(id -u)" = "504"
+          mkdir -p "$LOCAL_ROOT" "$LOCAL_LOG" "$HOME/Library/LaunchAgents"
+
+          cat > "$START_CMD" <<'SH'
+          #!/bin/bash
+          set -u
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          RUNNER="$ROOT/Runner"
+          LOCAL_LOG="$HOME/Library/Logs/CryptoSignalRunner"
+          mkdir -p "$LOCAL_LOG"
+          echo "$(date '+%Y-%m-%d %H:%M:%S %z') TERMINAL_START" >> "$LOCAL_LOG/bootstrap.log"
+
+          if /bin/ps -axo command= 2>/dev/null             | /usr/bin/grep -F '/Volumes/Crypto-504/Crypto-Signal/Runner/bin/Runner.Listener run --startuptype service'             | /usr/bin/grep -v grep >/dev/null 2>&1; then
+            echo "$(date '+%Y-%m-%d %H:%M:%S %z') RUNNER_ALREADY_ALIVE=YES" >> "$LOCAL_LOG/bootstrap.log"
+            exit 0
+          fi
+
+          ready=0
+          for _ in {1..60}; do
+            if [ -x "$RUNNER/runsvc.sh" ]; then
+              ready=1
+              break
+            fi
+            /bin/sleep 1
+          done
+          if [ "$ready" != "1" ]; then
+            echo "$(date '+%Y-%m-%d %H:%M:%S %z') SSD_RUNNER_NOT_READY=YES" >> "$LOCAL_LOG/bootstrap.log"
+            exit 0
+          fi
+
+          cd "$RUNNER" || exit 75
+          unset RUNNER_TRACKING_ID
+          export HOME="/Users/crypto-signal-agent"
+          export ACTIONS_RUNNER_SVC=1
+          echo "$(date '+%Y-%m-%d %H:%M:%S %z') STARTING_SSD_RUNNER=YES" >> "$LOCAL_LOG/bootstrap.log"
+          /usr/bin/nohup ./runsvc.sh >>"$LOCAL_LOG/runner.out.log" 2>>"$LOCAL_LOG/runner.err.log" </dev/null &
+          pid=$!
+          echo "$pid" > "$LOCAL_ROOT/runner.pid"
+          /bin/sleep 5
+          if /bin/kill -0 "$pid" >/dev/null 2>&1; then
+            echo "$(date '+%Y-%m-%d %H:%M:%S %z') SSD_RUNNER_PROCESS_ALIVE=$pid" >> "$LOCAL_LOG/bootstrap.log"
+          else
+            echo "$(date '+%Y-%m-%d %H:%M:%S %z') SSD_RUNNER_PROCESS_DIED=$pid" >> "$LOCAL_LOG/bootstrap.log"
+          fi
+          exit 0
+          SH
+          chmod 700 "$START_CMD"
+
+          cat > "$WATCHDOG" <<'SH'
+          #!/bin/bash
+          set -u
+          LOCAL_ROOT="$HOME/Library/Application Support/CryptoSignalRunner"
+          LOCAL_LOG="$HOME/Library/Logs/CryptoSignalRunner"
+          START_CMD="$LOCAL_ROOT/start-ssd-runner.command"
+          MARKER="$LOCAL_ROOT/last-terminal-bootstrap"
+          mkdir -p "$LOCAL_LOG"
+
+          if /bin/ps -axo command= 2>/dev/null             | /usr/bin/grep -F '/Volumes/Crypto-504/Crypto-Signal/Runner/bin/Runner.Listener run --startuptype service'             | /usr/bin/grep -v grep >/dev/null 2>&1; then
+            exit 0
+          fi
+
+          now="$(/bin/date +%s)"
+          last=0
+          if [ -f "$MARKER" ]; then
+            last="$(/usr/bin/stat -f %m "$MARKER" 2>/dev/null || echo 0)"
+          fi
+          if [ $((now-last)) -lt 600 ]; then
+            exit 0
+          fi
+
+          /usr/bin/touch "$MARKER"
+          echo "$(date '+%Y-%m-%d %H:%M:%S %z') WATCHDOG_OPEN_TERMINAL=YES" >> "$LOCAL_LOG/watchdog.log"
+          /usr/bin/open -g -a Terminal "$START_CMD"
+          exit 0
+          SH
+          chmod 700 "$WATCHDOG"
+
+          cat > "$PLIST" <<PLIST
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>Label</key>
+            <string>$LABEL</string>
+            <key>ProgramArguments</key>
+            <array>
+              <string>/bin/bash</string>
+              <string>$WATCHDOG</string>
+            </array>
+            <key>RunAtLoad</key>
+            <true/>
+            <key>StartInterval</key>
+            <integer>60</integer>
+            <key>ProcessType</key>
+            <string>Background</string>
+            <key>StandardOutPath</key>
+            <string>$LOCAL_LOG/watchdog-launchagent.out.log</string>
+            <key>StandardErrorPath</key>
+            <string>$LOCAL_LOG/watchdog-launchagent.err.log</string>
+          </dict>
+          </plist>
+          PLIST
+
+          chmod 644 "$PLIST"
+          plutil -lint "$PLIST"
+          launchctl bootout "$TARGET" >/dev/null 2>&1 || true
+          launchctl bootstrap "gui/$(id -u)" "$PLIST"
+          sleep 3
+
+          echo "=== WATCHDOG STATE ==="
+          launchctl print "$TARGET" 2>&1 | egrep 'state =|runs =|last exit code =|program =|path =|run interval =' | head -100 || true
+
+          before="$(wc -l < "$LOCAL_LOG/bootstrap.log" 2>/dev/null || echo 0)"
+          /usr/bin/open -g -a Terminal "$START_CMD"
+          sleep 5
+          after="$(wc -l < "$LOCAL_LOG/bootstrap.log" 2>/dev/null || echo 0)"
+
+          echo "=== TERMINAL BOOTSTRAP PROBE ==="
+          echo "BOOTSTRAP_LINES_BEFORE=$before"
+          echo "BOOTSTRAP_LINES_AFTER=$after"
+          tail -40 "$LOCAL_LOG/bootstrap.log" 2>/dev/null || true
+          test "$after" -gt "$before"
+          tail -20 "$LOCAL_LOG/bootstrap.log" | grep -q 'RUNNER_ALREADY_ALIVE=YES'
+
+          echo "=== CURRENT SSD RUNNER ==="
+          ps -axo pid=,ppid=,user=,etime=,command=             | grep -E '[V]olumes/Crypto-504/Crypto-Signal/Runner/(runsvc.sh|bin/Runner.Listener)'             | head -40
+          ps -axo command= \
+            | grep -F '/Volumes/Crypto-504/Crypto-Signal/Runner/bin/Runner.Listener run --startuptype service' \
+            | grep -v grep >/dev/null
+
+          echo "CRYPTO_UID504_SSD_RUNNER_TERMINAL_WATCHDOG_PASS=YES"
+
+      - name: RUNNER PERSIST DIAG
+        if: steps.parse.outputs.command == 'runnerpersistdiag'
+        shell: bash
+        run: |
+          set +e
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          LABEL="com.cryptosignal.github-runner-ssd"
+          TARGET="gui/$(id -u)/$LABEL"
+          LOCAL_ROOT="$HOME/Library/Application Support/CryptoSignalRunner"
+          LOCAL_LOG="$HOME/Library/Logs/CryptoSignalRunner"
+          echo "=== ID ==="; id
+          echo "=== CONSOLE ==="; /usr/bin/stat -f 'owner=%Su uid=%u' /dev/console
+          echo "=== PERSIST PLIST ==="
+          plutil -p "$HOME/Library/LaunchAgents/$LABEL.plist" 2>&1
+          echo "=== PERSIST STATE ==="
+          launchctl print "$TARGET" 2>&1 | head -220
+          echo "=== LOCAL BOOTSTRAP ==="
+          ls -la "$LOCAL_ROOT" 2>&1
+          sed -n '1,220p' "$LOCAL_ROOT/runner-ssd-bootstrap.sh" 2>&1
+          echo "=== LOCAL LOGS ==="
+          for p in "$LOCAL_LOG"/*.log; do
+            [ -e "$p" ] || continue
+            echo "--- $p"
+            tail -120 "$p" 2>&1
+          done
+          echo "=== RUNNER PROCESSES ==="
+          ps -axo pid=,ppid=,user=,etime=,state=,command=             | grep -E '[V]olumes/Crypto-504/Crypto-Signal/Runner/(runsvc.sh|bin/Runner.Listener|bin/Runner.Worker)'             | head -120
+          echo "RUNNER_PERSIST_DIAG_DONE=YES"
+          exit 0
+
+      - name: DASHBOARD OPEN UID504
+        if: steps.parse.outputs.command == 'dashboardopen504'
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          PRODUCT="$ROOT/Product"
+          LEDGER="$ROOT/Development/runtime/ledger/live_signal_ledger.sqlite3"
+          LOG="$ROOT/ServiceLogs"
+          PIDFILE="$ROOT/dashboard-manual-504.pid"
+          URL="http://127.0.0.1:48700"
+          HEALTH="$URL/api/health"
+
+          test "$(id -u)" = "504"
+          test -x "$PRODUCT/.venv/bin/python"
+          test -f "$PRODUCT/ops/run_dashboard.py"
+          test -f "$LEDGER"
+          mkdir -p "$LOG"
+
+          if curl -fsS --max-time 3 "$HEALTH" > /tmp/crypto-dashboard-health-504.json 2>/dev/null; then
+            echo "DASHBOARD_ALREADY_HEALTHY=YES"
+          else
+            echo "DASHBOARD_ALREADY_HEALTHY=NO"
+            if /usr/sbin/lsof -nP -iTCP:48700 -sTCP:LISTEN >/tmp/crypto-port48700.txt 2>/dev/null; then
+              cat /tmp/crypto-port48700.txt
+              echo "PORT_48700_OCCUPIED_WHILE_HEALTH_FAILED"
+              exit 81
+            fi
+
+            (
+              unset RUNNER_TRACKING_ID
+              export PYTHONPATH="$PRODUCT/src"
+              /usr/bin/nohup "$PRODUCT/.venv/bin/python" "$PRODUCT/ops/run_dashboard.py" \
+                --host 127.0.0.1 --port 48700 --ledger "$LEDGER" \
+                --alert-outbox "$ROOT/Development/runtime/alerts/alert_outbox.sqlite3" \
+                --paper-ledger "$ROOT/Development/runtime/paper/paper_fund.sqlite3" \
+                --candle-cache "$ROOT/Development/runtime/data/live_base_15m_cache.sqlite3" \
+                >>"$LOG/dashboard-manual-504.out.log" \
+                2>>"$LOG/dashboard-manual-504.err.log" </dev/null &
+              echo $! > "$PIDFILE"
+            )
+
+            ok=0
+            for _ in {1..30}; do
+              if curl -fsS --max-time 3 "$HEALTH" > /tmp/crypto-dashboard-health-504.json 2>/dev/null; then
+                ok=1
+                break
+              fi
+              sleep 1
+            done
+            if [ "$ok" != "1" ]; then
+              echo "=== DASHBOARD ERR ==="
+              tail -160 "$LOG/dashboard-manual-504.err.log" 2>/dev/null || true
+              echo "=== DASHBOARD OUT ==="
+              tail -160 "$LOG/dashboard-manual-504.out.log" 2>/dev/null || true
+              exit 82
+            fi
+          fi
+
+          echo "=== HEALTH ==="
+          cat /tmp/crypto-dashboard-health-504.json
+          echo
+          /usr/bin/python3 - <<'PY'
+          import json
+          from pathlib import Path
+          data=json.loads(Path("/tmp/crypto-dashboard-health-504.json").read_text())
+          assert data.get("status") == "ok"
+          assert data.get("real_capital") == 0
+          assert data.get("read_only") is True
+          print("DASHBOARD_SAFETY_CONTRACT_PASS=YES")
+          PY
+
+          echo "=== PROCESS ==="
+          ps -axo pid=,ppid=,user=,etime=,command= \
+            | grep -E '[C]rypto-504/Crypto-Signal/Product/.*run_dashboard.py' \
+            | head -40 || true
+
+          /usr/bin/open "$URL/"
+          echo "CRYPTO_DASHBOARD_OPENED_UID504=YES"
+          echo "CRYPTO_DASHBOARD_HEALTH_UID504=PASS"
+
+      - name: RUNNER TERMINAL WATCHDOG INSTALL
+        if: steps.parse.outputs.command == 'runnerterminalwatchdoginstall'
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          LOCAL_ROOT="$HOME/Library/Application Support/CryptoSignalRunner"
+          LOCAL_LOG="$HOME/Library/Logs/CryptoSignalRunner"
+          START="$LOCAL_ROOT/start-ssd-runner.command"
+          WATCH="$LOCAL_ROOT/runner-terminal-watchdog.sh"
+          LABEL="com.cryptosignal.github-runner-terminal-watchdog"
+          PLIST="$HOME/Library/LaunchAgents/$LABEL.plist"
+          TARGET="gui/$(id -u)/$LABEL"
+          OLD_LABEL="com.cryptosignal.github-runner-ssd"
+          OLD_TARGET="gui/$(id -u)/$OLD_LABEL"
+
+          test "$(id -u)" = "504"
+          mkdir -p "$LOCAL_ROOT" "$LOCAL_LOG" "$HOME/Library/LaunchAgents"
+
+          cat > "$START" <<'SH'
+          #!/bin/bash
+          set -u
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          RUNNER="$ROOT/Runner"
+          LOG="$ROOT/RunnerLogs"
+          LOCAL_LOG="$HOME/Library/Logs/CryptoSignalRunner"
+          mkdir -p "$LOCAL_LOG"
+
+          if /bin/ps -axo command= 2>/dev/null             | /usr/bin/grep -F '/Volumes/Crypto-504/Crypto-Signal/Runner/bin/Runner.Listener run --startuptype service'             | /usr/bin/grep -v grep >/dev/null 2>&1; then
+            printf '%s RUNNER_ALREADY_ALIVE=YES\n' "$(date '+%Y-%m-%d %H:%M:%S %z')" >>"$LOCAL_LOG/terminal-watchdog.log"
+            exit 0
+          fi
+
+          if [ ! -x "$RUNNER/runsvc.sh" ]; then
+            printf '%s SSD_RUNNER_NOT_READY=YES\n' "$(date '+%Y-%m-%d %H:%M:%S %z')" >>"$LOCAL_LOG/terminal-watchdog.err.log"
+            exit 75
+          fi
+
+          mkdir -p "$LOG"
+          cd "$RUNNER" || exit 75
+          unset RUNNER_TRACKING_ID
+          export HOME="/Users/crypto-signal-agent"
+          export ACTIONS_RUNNER_SVC=1
+          nohup ./runsvc.sh             >>"$LOG/terminal-watchdog-runner.out.log"             2>>"$LOG/terminal-watchdog-runner.err.log"             </dev/null &
+          pid=$!
+          echo "$pid" > "$ROOT/ssd-runner-terminal-watchdog.pid"
+          printf '%s STARTED_RUNSVC_PID=%s\n' "$(date '+%Y-%m-%d %H:%M:%S %z')" "$pid" >>"$LOCAL_LOG/terminal-watchdog.log"
+          sleep 5
+          exit 0
+          SH
+          chmod 700 "$START"
+
+          cat > "$WATCH" <<'SH'
+          #!/bin/bash
+          set -u
+          LOCAL_ROOT="$HOME/Library/Application Support/CryptoSignalRunner"
+          LOCAL_LOG="$HOME/Library/Logs/CryptoSignalRunner"
+          START="$LOCAL_ROOT/start-ssd-runner.command"
+          LOCK="$LOCAL_ROOT/terminal-watchdog.lock"
+          mkdir -p "$LOCAL_LOG"
+
+          if /bin/ps -axo command= 2>/dev/null             | /usr/bin/grep -F '/Volumes/Crypto-504/Crypto-Signal/Runner/bin/Runner.Listener run --startuptype service'             | /usr/bin/grep -v grep >/dev/null 2>&1; then
+            exit 0
+          fi
+
+          if [ -f "$LOCK" ]; then
+            now="$(date +%s)"
+            then="$(stat -f %m "$LOCK" 2>/dev/null || echo 0)"
+            if [ $((now-then)) -lt 90 ]; then
+              exit 0
+            fi
+          fi
+
+          date > "$LOCK"
+          printf '%s REQUESTING_TERMINAL_START=YES\n' "$(date '+%Y-%m-%d %H:%M:%S %z')" >>"$LOCAL_LOG/terminal-watchdog.log"
+          /usr/bin/open -gj -a Terminal "$START"
+          sleep 12
+          rm -f "$LOCK"
+          exit 0
+          SH
+          chmod 700 "$WATCH"
+
+          cat > "$PLIST" <<PLIST
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>Label</key>
+            <string>$LABEL</string>
+            <key>ProgramArguments</key>
+            <array>
+              <string>/bin/bash</string>
+              <string>$WATCH</string>
+            </array>
+            <key>RunAtLoad</key>
+            <true/>
+            <key>StartInterval</key>
+            <integer>30</integer>
+            <key>ProcessType</key>
+            <string>Background</string>
+            <key>StandardOutPath</key>
+            <string>$LOCAL_LOG/terminal-watchdog-launchagent.out.log</string>
+            <key>StandardErrorPath</key>
+            <string>$LOCAL_LOG/terminal-watchdog-launchagent.err.log</string>
+          </dict>
+          </plist>
+          PLIST
+
+          chmod 644 "$PLIST"
+          plutil -lint "$PLIST"
+
+          launchctl bootout "$OLD_TARGET" >/dev/null 2>&1 || true
+          launchctl bootout "$TARGET" >/dev/null 2>&1 || true
+          launchctl bootstrap "gui/$(id -u)" "$PLIST"
+          sleep 3
+
+          echo "=== TERMINAL WATCHDOG ==="
+          launchctl print "$TARGET" 2>&1 | egrep 'state =|runs =|last exit code =|run interval =|program =|path =' | head -100 || true
+          echo "=== CURRENT SSD LISTENER ==="
+          ps -axo pid=,ppid=,user=,etime=,command=             | grep -E '[V]olumes/Crypto-504/Crypto-Signal/Runner/(runsvc.sh|bin/Runner.Listener)'             | head -40
+          launchctl print "$TARGET" >/dev/null
+          ps -axo command=             | grep -F '/Volumes/Crypto-504/Crypto-Signal/Runner/bin/Runner.Listener run --startuptype service'             | grep -v grep >/dev/null
+          echo "CRYPTO_UID504_TERMINAL_WATCHDOG_INSTALLED=YES"
 
       - name: MIGRATION INVENTORY
         if: steps.parse.outputs.command == 'migrationinventory'

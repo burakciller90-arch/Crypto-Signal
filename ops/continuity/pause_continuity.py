@@ -3,7 +3,7 @@ import shutil
 import time
 from pathlib import Path
 
-BASE = Path("/Users/crypto-signal-agent/Crypto-Signal")
+BASE = Path("/Volumes/Crypto-504/Crypto-Signal/Development")
 STATE = BASE / "runtime" / "continuity"
 PAUSE = STATE / "user_pause"
 LEASE_ACTIVE = STATE / "leases" / "active"

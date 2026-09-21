@@ -2920,3 +2920,16 @@ Current true roadmap frontier:
 - no promotion/champion mutation/production import/deploy path;
 - RL remains closed;
 - REAL_CAPITAL=0.
+
+
+## 2026-09-21 — Project completion execution roadmap recorded
+
+- authoritative execution plan recorded at `docs/PROJECT_COMPLETION_EXECUTION_ROADMAP.md`;
+- M0 SSD/runtime stabilization is complete unless contradictory evidence appears;
+- remaining completion milestones are:
+  - M1 Stage 8.5 Alpha Factory scientific closure,
+  - M2 Stage 8.75 Learning Memory + Intelligence Center/meta-policy visibility,
+  - M3 operational hardening + Full Version Integrated Acceptance v2;
+- current exact bounded frontier remains `stage8.5-bounded-ml-cost-stress-v1`;
+- existing accepted Stage 8/Stage 9/Stage 10 work must not be replayed;
+- REAL_CAPITAL=0 and all real-money/order authority remain closed.

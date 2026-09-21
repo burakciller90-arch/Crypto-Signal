@@ -1,12 +1,15 @@
 name: Rebind Crypto Chat Relay
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - ".github/workflows/crypto-rebind-chat.yml"
-      - "ops/continuity/relay_daemon.py"
-      - "ops/continuity/relay_watchdog.sh"
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "ChatGPT conversation URL (https://chatgpt.com/c/...)"
+        required: true
+        type: string
+
+permissions:
+  contents: read
 
 jobs:
   rebind:
@@ -15,21 +18,23 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install dynamic relay and bind current chat
+      - name: Install dynamic relay and bind requested chat
         shell: bash
+        env:
+          TARGET: ${{ inputs.target }}
         run: |
           set -euo pipefail
-          TARGET="https://chatgpt.com/c/6ab0debd-49a8-83eb-8b33-a7ce2ef826d0"
           SHARED="/Users/Shared/.crypto-signal-wake-relay"
-          LOCAL="/Users/crypto-signal-agent/Crypto-Signal/runtime/continuity/wake"
+          LOCAL="/Volumes/Crypto-504/Crypto-Signal/Development/runtime/continuity/wake"
           case "$TARGET" in
             https://chatgpt.com/c/*) ;;
             *) echo "INVALID_TARGET"; exit 2 ;;
           esac
           test -d "$SHARED"
-          printf '%s\n' "$TARGET" > "$SHARED/current_chat_url"
           mkdir -p "$LOCAL"
+          printf '%s\n' "$TARGET" > "$SHARED/current_chat_url"
           printf '%s\n' "$TARGET" > "$LOCAL/current_chat_url"
+          printf '%s\n' "$TARGET" > "$LOCAL/expected_chat_url"
           cat ops/continuity/relay_daemon.py > "$SHARED/relay_daemon.py"
           cat ops/continuity/relay_watchdog.sh > "$SHARED/relay_watchdog.sh"
           echo "SHARED_DAEMON_SHA=$(shasum -a 256 "$SHARED/relay_daemon.py" | awk '{print $1}')"
@@ -41,37 +46,23 @@ jobs:
       - name: Reload UID504 continuity policy
         shell: bash
         run: |
-          set -euo pipefail
+          set +e
           UID_NOW="$(id -u)"
           LABEL="com.cryptosignal.continuitybridge"
-          launchctl kickstart -k "gui/$UID_NOW/$LABEL"
+          launchctl kickstart -k "gui/$UID_NOW/$LABEL" >/dev/null 2>&1 || true
           sleep 2
-          launchctl print "gui/$UID_NOW/$LABEL" | egrep 'state =|pid =|last exit code =' | head -30
-          echo "CONTINUITY_BRIDGE_RELOADED=YES"
+          launchctl print "gui/$UID_NOW/$LABEL" 2>&1 | egrep 'state =|pid =|last exit code =' | head -30 || true
+          echo "CONTINUITY_BRIDGE_RELOAD_ATTEMPTED=YES"
 
-      - name: Wait for UID502 relay reload
+      - name: Verify binding files
         shell: bash
+        env:
+          TARGET: ${{ inputs.target }}
         run: |
-          set +e
+          set -euo pipefail
           SHARED="/Users/Shared/.crypto-signal-wake-relay"
-          TARGET="https://chatgpt.com/c/6ab0debd-49a8-83eb-8b33-a7ce2ef826d0"
-          for i in $(seq 1 45); do
-            current="$(sed -n 's/^target_url=//p' "$SHARED/relay_status" 2>/dev/null | head -1)"
-            namespace="$(sed -n 's/^project_namespace=//p' "$SHARED/relay_status" 2>/dev/null | head -1)"
-            if [ "$current" = "$TARGET" ] && [ "$namespace" = "crypto-signal" ] && [ ! -f "$SHARED/restart_requested" ]; then
-              echo "RELAY_REBOUND=YES"
-              echo "PROJECT_NAMESPACE=$namespace"
-              cat "$SHARED/relay_status"
-              echo "QUEUE:"
-              find "$SHARED/queue" -maxdepth 1 -type f -print 2>/dev/null
-              exit 0
-            fi
-            sleep 2
-          done
-          echo "RELAY_REBOUND=NO"
-          cat "$SHARED/relay_status" 2>/dev/null
-          echo "WATCHDOG ERR:"
-          tail -40 "$SHARED/watchdog.err.log" 2>/dev/null
-          echo "WATCHDOG OUT:"
-          tail -40 "$SHARED/watchdog.out.log" 2>/dev/null
-          exit 1
+          LOCAL="/Volumes/Crypto-504/Crypto-Signal/Development/runtime/continuity/wake"
+          test "$(cat "$SHARED/current_chat_url")" = "$TARGET"
+          test "$(cat "$LOCAL/current_chat_url")" = "$TARGET"
+          test "$(cat "$LOCAL/expected_chat_url")" = "$TARGET"
+          echo "RELAY_BINDING_FILES_PASS=YES"

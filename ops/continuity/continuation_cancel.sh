@@ -1,7 +1,7 @@
 #!/bin/zsh
 set -eu
 
-BASE="/Users/crypto-signal-agent/Crypto-Signal"
+BASE="/Volumes/Crypto-504/Crypto-Signal/Development"
 ROOT="$BASE/runtime/continuity/leases"
 ACTIVE="$ROOT/active"
 CANCELED="$ROOT/canceled"

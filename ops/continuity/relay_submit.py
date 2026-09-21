@@ -9,7 +9,7 @@ import time
 from datetime import datetime
 from pathlib import Path
 
-BASE = Path("/Users/crypto-signal-agent/Crypto-Signal")
+BASE = Path("/Volumes/Crypto-504/Crypto-Signal/Development")
 STATE = BASE / "runtime" / "continuity"
 SHARED = Path("/Users/Shared/.crypto-signal-wake-relay")
 QUEUE = SHARED / "queue"

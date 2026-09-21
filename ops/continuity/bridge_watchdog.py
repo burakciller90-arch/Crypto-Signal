@@ -8,7 +8,7 @@ import subprocess
 import time
 from pathlib import Path
 
-BASE = Path("/Users/crypto-signal-agent/Crypto-Signal")
+BASE = Path("/Volumes/Crypto-504/Crypto-Signal/Development")
 STATE = BASE / "runtime" / "continuity"
 RELAY_SUBMIT = BASE / "ops" / "continuity" / "relay_submit.py"
 WAKE_ROOT = STATE / "wake"
