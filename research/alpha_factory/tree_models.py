@@ -509,12 +509,12 @@ def evaluate_tree_challenger(
 
     ordered_features = tuple(sorted(features, key=lambda item: item.feature_id))
     _validate_tree_feature_specs(ordered_features)
+    _validate_challenger_features(challenger, ordered_features)
     ordered_observations = _validate_observation_partition(
         partition,
         observations,
         ordered_features,
     )
-    _validate_challenger_features(challenger, ordered_features)
 
     taken = tuple(
         item
