@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 from pathlib import Path
 
-BASE = Path("/Users/crypto-signal-agent/Crypto-Signal")
+BASE = Path("/Volumes/Crypto-504/Crypto-Signal/Development")
 LOCAL_PAUSE = BASE / "runtime" / "continuity" / "user_pause"
 SHARED_PAUSE = Path("/Users/Shared/.crypto-signal-wake-relay/user_pause")
 
