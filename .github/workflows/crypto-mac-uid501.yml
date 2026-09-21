@@ -218,6 +218,30 @@ jobs:
           echo "CRYPTO_MIGRATION_DIAG_PASS=YES"
           exit 0
 
+
+      - name: CRYPTO RUNNER TREE
+        if: steps.parse.outputs.command == 'cryptorunnertree'
+        shell: bash
+        run: |
+          set +e
+          echo "=== CRYPTO UID504 RUNNER ==="
+          /bin/ps -axo pid=,ppid=,user=,%cpu=,%mem=,etime=,state=,command= | /usr/bin/grep -E '[a]ctions-runner-crypto/(bin/Runner\.(Listener|Worker)|runsvc\.sh)|[R]unner.Worker spawnclient' | /usr/bin/head -120
+          echo "=== CHILD TREE ==="
+          for p in $(/usr/bin/pgrep -f '/Users/crypto-signal-agent/actions-runner-crypto/bin/Runner.(Listener|Worker)' 2>/dev/null); do
+            echo "--- pid=$p"
+            /bin/ps -p "$p" -o pid=,ppid=,user=,%cpu=,%mem=,etime=,state=,command=
+            for c in $(/usr/bin/pgrep -P "$p" 2>/dev/null); do
+              /bin/ps -p "$c" -o pid=,ppid=,user=,%cpu=,%mem=,etime=,state=,command=
+              for g in $(/usr/bin/pgrep -P "$c" 2>/dev/null); do
+                /bin/ps -p "$g" -o pid=,ppid=,user=,%cpu=,%mem=,etime=,state=,command=
+              done
+            done
+          done
+          echo "=== LOAD ==="
+          /usr/sbin/sysctl -n vm.loadavg
+          echo "CRYPTO_RUNNER_TREE_PASS=YES"
+          exit 0
+
       - name: HOST DIAG
         if: steps.parse.outputs.command == 'hostdiag'
         shell: bash
