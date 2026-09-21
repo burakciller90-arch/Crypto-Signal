@@ -2872,3 +2872,51 @@ Current true roadmap frontier:
 - no automatic model/hyperparameter winner, self-promotion, champion mutation, production import or deploy path;
 - RL remains closed;
 - REAL_CAPITAL=0.
+
+## 2026-09-21 — Stage 8.5 bounded ML walk-forward evaluation v1 ACCEPTED
+
+- accepted main head: `be518224d110089b99349b61b1fcac4c0e28e7c5`
+- PR #554 merged deterministic bounded ML walk-forward evaluation evidence.
+- accepted research surface:
+  - `research/alpha_factory/ml_walk_forward.py`
+  - `tests/test_alpha_factory_ml_walk_forward.py`
+- walk-forward boundary:
+  - 2..6 deterministic folds
+  - every fold binds immutable TRAIN and OUT_OF_SAMPLE partitions
+  - every fold refits the accepted single ML baseline before OOS evaluation
+  - training cutoff cannot move backward
+  - evaluation windows must be chronological and non-overlapping
+  - TRAIN must end before its fold evaluation window begins
+  - training outcomes must be available by the TRAIN cutoff
+  - exact per-fold evidence identities are preserved
+- evaluation remains descriptive:
+  - explicit gross/cost/net-R semantics preserved per fold
+  - no aggregate winner selection
+  - no automatic model/hyperparameter selection
+  - no calibrated-probability claim
+  - untouched-forward remains closed
+- isolation remains research-only:
+  - no production product/paper/confluence/signal import
+  - no broker/order/auth/network execution authority
+  - no filesystem-write/subprocess surface
+  - no self-promotion/champion mutation/deploy API
+  - RL remains closed
+  - REAL_CAPITAL=0
+- authoritative Alpha Factory research gate PASS: run `35642311862`.
+- authoritative production Stage10 full regression PASS: run `35642457378`:
+  - full pytest PASS
+  - Ruff PASS
+  - mypy PASS across 126 production source files
+  - PRODUCT_FRESHNESS_CONTRACT_PASS=YES
+  - STAGE10_HOSTED_FULL_GATE_PASS=YES
+
+Current true roadmap frontier:
+- `stage8.5-bounded-ml-cost-stress-v1`;
+- apply deterministic bounded transaction-cost/slippage stress to accepted ML OOS/walk-forward selections;
+- preserve original gross/cost/net evidence and immutable stress identities;
+- no refitting or model selection from stressed results;
+- no calibrated-probability claim;
+- untouched-forward remains closed;
+- no promotion/champion mutation/production import/deploy path;
+- RL remains closed;
+- REAL_CAPITAL=0.
