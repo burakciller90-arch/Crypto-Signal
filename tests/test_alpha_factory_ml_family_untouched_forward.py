@@ -388,9 +388,15 @@ def test_forward_rejects_incomplete_outcome_availability() -> None:
     folds, references, expansion, cost_stress, robustness = _accepted_chain()
     forward = _forward_partition()
     observations = list(_observations(forward))
-    observations[-1] = replace(
-        observations[-1],
+    original = observations[-1]
+    observations[-1] = build_cluster_research_observation(
+        partition_identity=original.partition_identity,
+        source_evidence_identity=original.source_evidence_identity,
+        decision_as_of_ms=original.decision_as_of_ms,
         outcome_available_at_ms=forward.end_ms + 1,
+        feature_readings=original.feature_readings,
+        gross_outcome_r=original.gross_outcome_r,
+        explicit_cost_r=original.explicit_cost_r,
     )
     with pytest.raises(ValueError, match="not yet evaluable"):
         run_ml_family_untouched_forward_paper(
@@ -406,31 +412,28 @@ def test_forward_rejects_incomplete_outcome_availability() -> None:
         )
 
 
-def test_forward_rejects_future_feature_evidence() -> None:
-    folds, references, expansion, cost_stress, robustness = _accepted_chain()
+def test_foundation_rejects_future_feature_evidence_before_forward_run() -> None:
     forward = _forward_partition()
-    observations = list(_observations(forward))
-    first = observations[0]
-    bad_readings = list(first.feature_readings)
-    bad_readings[0] = replace(
-        bad_readings[0],
+    first = _observations(forward)[0]
+    regime = _features()[0]
+    late = build_cluster_feature_reading(
+        feature=regime,
+        value="risk_off",
         available_at_ms=first.decision_as_of_ms + 1,
     )
-    observations[0] = replace(
-        first,
-        feature_readings=tuple(bad_readings),
-    )
-    with pytest.raises(ValueError, match="arrives after decision"):
-        run_ml_family_untouched_forward_paper(
-            _features(),
-            folds,
-            references,
-            expansion,
-            cost_stress,
-            robustness,
-            forward,
-            tuple(observations),
-            regime_feature_id="regime_state",
+    readings = (late,) + first.feature_readings[1:]
+    with pytest.raises(
+        ValueError,
+        match="feature evidence is unavailable at decision as-of",
+    ):
+        build_cluster_research_observation(
+            partition_identity=first.partition_identity,
+            source_evidence_identity=first.source_evidence_identity,
+            decision_as_of_ms=first.decision_as_of_ms,
+            outcome_available_at_ms=first.outcome_available_at_ms,
+            feature_readings=readings,
+            gross_outcome_r=first.gross_outcome_r,
+            explicit_cost_r=first.explicit_cost_r,
         )
 
 
