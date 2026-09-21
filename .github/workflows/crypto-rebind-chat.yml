@@ -17,7 +17,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          TARGET="https://chatgpt.com/c/6ab046e7-34a4-83eb-96b1-2952e2b9bca6"
+          TARGET="https://chatgpt.com/c/6ab0debd-49a8-83eb-8b33-a7ce2ef826d0"
           SHARED="/Users/Shared/.crypto-signal-wake-relay"
           LOCAL="/Users/crypto-signal-agent/Crypto-Signal/runtime/continuity/wake"
           case "$TARGET" in
@@ -41,7 +41,7 @@ jobs:
         run: |
           set +e
           SHARED="/Users/Shared/.crypto-signal-wake-relay"
-          TARGET="https://chatgpt.com/c/6ab046e7-34a4-83eb-96b1-2952e2b9bca6"
+          TARGET="https://chatgpt.com/c/6ab0debd-49a8-83eb-8b33-a7ce2ef826d0"
           for i in $(seq 1 45); do
             current="$(sed -n 's/^target_url=//p' "$SHARED/relay_status" 2>/dev/null | head -1)"
             if [ "$current" = "$TARGET" ] && [ ! -f "$SHARED/restart_requested" ]; then

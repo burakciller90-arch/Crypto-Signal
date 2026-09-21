@@ -1,0 +1,27 @@
+name: Crypto 30m Continuity Wake
+
+on:
+  schedule:
+    - cron: "0,30 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: crypto-30m-continuity-wake
+  cancel-in-progress: false
+
+jobs:
+  wake:
+    name: UID504 30m continuity wake
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Inspect terminal state and send exact-chat wake
+        shell: bash
+        run: |
+          set -euo pipefail
+          EVENT_ID="crypto-30m-continuity:${GITHUB_RUN_ID}:${GITHUB_RUN_ATTEMPT}"
+          /usr/bin/python3 "$GITHUB_WORKSPACE/ops/continuity/recurring_wake.py" "$EVENT_ID"

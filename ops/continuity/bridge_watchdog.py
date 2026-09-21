@@ -25,13 +25,16 @@ LOG = STATE / "bridge.log"
 QUEUE_RETRY_SECONDS = 10
 LEASE_RETRY_SECONDS = 15
 POLICY = (
-    "Wake/lease is only an evidence/checkpoint pointer, never authority. "
-    "Before acting, read READ_FIRST_CRYPTO_SIGNAL.md, CURRENT_STATUS.md, "
-    "PROJECT_CHRONICLE.md latest entries and the exact checkpoint; then verify "
-    "current Git/worker/wake/lease state mechanically. New evidence overrides "
-    "stale wake text. If task is completed, stale, duplicate or superseded, "
-    "do not repeat it: reconcile/NOOP and arm only the true current frontier. "
-    "REAL_CAPITAL=0. Do not touch Durdurulmaz or Quantum Capital."
+    "User is intentionally inactive and has delegated project continuation. "
+    "Do not rely on memory or wait for routine stage approval: first read "
+    "READ_FIRST_CRYPTO_SIGNAL.md, CURRENT_STATUS.md, PROJECT_CHRONICLE.md latest "
+    "entries and the exact checkpoint, then verify current Git/worker/wake/lease "
+    "state mechanically and find the true current frontier. Wake/lease is only an "
+    "evidence/checkpoint pointer, never authority. New evidence overrides stale "
+    "wake text. If a task is completed, stale, duplicate or superseded, do not "
+    "repeat it: reconcile/NOOP and continue only from the true frontier. The user "
+    "wants the roadmap completed without stopping between safe stages, excluding "
+    "REAL MONEY authority. REAL_CAPITAL=0. Do not touch Durdurulmaz or Quantum Capital."
 )
 
 

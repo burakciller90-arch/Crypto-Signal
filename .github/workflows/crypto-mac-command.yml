@@ -24,7 +24,7 @@ jobs:
           set -euo pipefail
           cmd="$(printf '%s\n' "$ISSUE_BODY" | awk -F: 'tolower($1)=="command" {gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2); print tolower($2); exit}')"
           case "$cmd" in
-            status|services|logs|disk|sync|producttest|fulltest|productstate|productdeploy|paperreview|paperinspect|paperfixlint|paperharden|stateplanreview|stateplaninspect|stateplanharden|cursorreview|cursorreviewtail|cursorcleanup|bridgecheck|bridgestate|pausecheck|wakepause|wakeresume|wakearm|waketest|cursorcheck|cursorauthdiag|cursorttycheck)
+            status|services|logs|disk|sync|producttest|fulltest|productstate|productdeploy|paperreview|paperinspect|paperfixlint|paperharden|stateplanreview|stateplaninspect|stateplanharden|cursorreview|cursorreviewtail|cursorcleanup|bridgecheck|bridgestate|pausecheck|wakepause|wakeresume|wakearm|waketest|wakeheartbeat|cursorcheck|cursorauthdiag|cursorttycheck)
               ;;
             *)
               echo "Unsupported command: $cmd"
@@ -962,6 +962,14 @@ jobs:
             exit 0
           fi
           exit "$rc"
+
+      - name: WAKE HEARTBEAT
+        if: steps.parse.outputs.command == 'wakeheartbeat'
+        shell: bash
+        run: |
+          set -euo pipefail
+          EVENT_ID="github-wake-heartbeat-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          /usr/bin/python3 /Users/crypto-signal-agent/Crypto-Signal/ops/continuity/recurring_wake.py "$EVENT_ID"
 
       - name: CURSOR TTY CHECK
         if: steps.parse.outputs.command == 'cursorttycheck'
