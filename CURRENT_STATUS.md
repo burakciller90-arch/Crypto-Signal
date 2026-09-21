@@ -1972,3 +1972,40 @@ Current frontier:
 - begin Stage 10 Full Integrated Acceptance as a read-only acceptance program over existing stable runtimes and evidence;
 - do not cross the separate PAPER/STABLE write-activation gate; REAL_CAPITAL remains 0.
 
+## 2026-09-21 — Stage 10 code gate accepted; canonical runtime gate pending
+
+- Stage 10 integrated acceptance foundation merged via PR #351.
+- same-start benchmark gap is closed in code:
+  - 100 USDT cash
+  - 100 USDT BTC buy-and-hold
+  - BTC/ETH/SOL equal-weight
+  - common start = immutable paper activation cutoff
+  - PIT-safe fully closed Binance Spot 15m marks only
+  - missing marks fail closed
+  - backend paper-relative return
+  - Mission Control v4 identity binding
+- deterministic freshness/stale contract is executable:
+  - refresh cadence 15s
+  - stale threshold 45s
+  - pending/live/stale/offline semantics
+  - Node contract PASS
+- Stage10 product safety contract proves:
+  - product OpenAPI GET-only in test
+  - no exchange order/credential endpoint
+  - paper stable command allowlist has no writeauthority/writetick
+  - current Research Lab remains isolated by absence from production product/paper paths
+  - REAL_CAPITAL=0
+- latest hosted feature full gate PASS:
+  - full pytest PASS
+  - Ruff PASS
+  - mypy PASS across 104 source files
+  - PRODUCT_FRESHNESS_CONTRACT_PASS=YES
+  - STAGE10_HOSTED_FULL_GATE_PASS=YES
+- hosted merged-main gate also PASS at ca18c24c88d17bd3b79ff91386037fe017d805cb before acceptance-doc-only commits.
+- canonical UID504 sync/producttest/fulltest jobs are currently queued, not failed.
+- direct Remote Desktop Commander devices remain offline at last recheck.
+- final acceptance remains RUNTIME_PENDING per docs/STAGE10_FULL_INTEGRATED_ACCEPTANCE.md.
+- do not tag Stage 10 until UID504 exact PRODUCT deploy + Stage10 runtime acceptance returns STAGE10_RUNTIME_ACCEPTANCE=PASS.
+- PAPER/STABLE write activation remains closed.
+- REAL_CAPITAL=0.
+
