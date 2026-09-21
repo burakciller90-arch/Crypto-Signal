@@ -184,16 +184,23 @@ function updateFreshnessStatus() {
   if (!chip) return;
   if (lastSuccessfulRefreshAt === null) {
     chip.textContent = "Son yenileme · bekleniyor";
-    return;
+  } else {
+    const ageMs = Math.max(0, Date.now() - lastSuccessfulRefreshAt);
+    const ageSeconds = Math.floor(ageMs / 1000);
+    chip.textContent = ageSeconds < 5
+      ? "Son yenileme · şimdi"
+      : `Son yenileme · ${ageSeconds} sn önce`;
   }
-  const ageMs = Math.max(0, Date.now() - lastSuccessfulRefreshAt);
-  const ageSeconds = Math.floor(ageMs / 1000);
-  chip.textContent = ageSeconds < 5
-    ? "Son yenileme · şimdi"
-    : `Son yenileme · ${ageSeconds} sn önce`;
-  if (!navigator.onLine) {
+
+  const freshness = CryptoSignalFreshness.classifyRefreshFreshness({
+    online: navigator.onLine,
+    lastSuccessfulRefreshAt,
+    nowMs: Date.now(),
+    staleAfterMs: STALE_AFTER_MS,
+  });
+  if (freshness === "offline") {
     setLiveStatus("offline");
-  } else if (ageMs > STALE_AFTER_MS) {
+  } else if (freshness === "stale") {
     setLiveStatus("stale");
   }
 }
@@ -410,6 +417,70 @@ function renderPaperTradePlan(item) {
     </details>`;
 }
 
+function paperBenchmarkLabel(kind) {
+  const labels = {
+    cash_100_usdt: "100 USDT nakit",
+    btc_buy_hold_100_usdt: "100 USDT BTC al-tut",
+    btc_eth_sol_equal_weight_100_usdt: "BTC / ETH / SOL eşit ağırlık",
+  };
+  return labels[kind] ?? human(kind);
+}
+
+function renderPaperBenchmarks(snapshot) {
+  const results = snapshot?.benchmarks?.results ?? [];
+  const comparisons = new Map(
+    (snapshot?.benchmark_comparisons ?? []).map((item) => [item.kind, item])
+  );
+  if (!results.length) {
+    return `
+      <div class="paper-benchmark-block">
+        <div class="value-label">Aynı başlangıç benchmarkları</div>
+        <div class="paper-empty compact">
+          <strong>Benchmark kanıtı yok.</strong>
+          <span>Eksik karşılaştırmadan göreli performans türetilmez.</span>
+        </div>
+      </div>`;
+  }
+
+  return `
+    <div class="paper-benchmark-block">
+      <div class="paper-benchmark-head">
+        <div>
+          <div class="value-label">Aynı başlangıç benchmarkları</div>
+          <strong>Paper fon aynı anda pasif kalsaydı ne olurdu?</strong>
+        </div>
+        <span>${esc(fmtTime(snapshot.benchmarks.start_at_ms))} başlangıç</span>
+      </div>
+      <div class="paper-benchmark-list">
+        ${results.map((item) => {
+          const comparison = comparisons.get(item.kind) ?? {};
+          const available = item.availability === "available";
+          return `
+            <div class="paper-benchmark-row">
+              <div>
+                <strong>${esc(paperBenchmarkLabel(item.kind))}</strong>
+                <span>${available ? "PIT-safe kapalı mum referansı" : "Mark kanıtı eksik"}</span>
+              </div>
+              <div>
+                <span>Benchmark NAV</span>
+                <strong>${available ? esc(fmtMoney(item.nav_usdt)) : "—"}</strong>
+              </div>
+              <div>
+                <span>Benchmark getirisi</span>
+                <strong>${available ? esc(fmtFractionPercent(item.total_return_fraction)) : "—"}</strong>
+              </div>
+              <div>
+                <span>Paper göreli getiri</span>
+                <strong>${comparison.relative_return_fraction === null || comparison.relative_return_fraction === undefined
+                  ? "—"
+                  : esc(fmtFractionPercent(comparison.relative_return_fraction))}</strong>
+              </div>
+            </div>`;
+        }).join("")}
+      </div>
+      <div class="truth-note">Benchmarklar aynı aktivasyon başlangıcından hesaplanan frictionless referanslardır; gerçek emir veya execution sonucu değildir.</div>
+    </div>`;
+}
 function renderPaperPortfolioPerformanceLab(data) {
   const exposureRoot = $("#paperPortfolioExposure");
   const performanceRoot = $("#paperPerformanceLab");
@@ -488,7 +559,8 @@ function renderPaperPortfolioPerformanceLab(data) {
         <div><span>Açık işlem</span><strong>${esc(performance.open_trade_count ?? 0)}</strong><small>henüz skorlanmaz</small></div>
         <div><span>Win rate</span><strong>—</strong><small>örneklem yok</small></div>
         <div><span>Profit factor</span><strong>—</strong><small>örneklem yok</small></div>
-      </div>`;
+      </div>
+      ${renderPaperBenchmarks(snapshot)}`;
     return;
   }
 
@@ -519,6 +591,7 @@ function renderPaperPortfolioPerformanceLab(data) {
           </div>
         </details>`).join("") || '<div class="paper-empty compact">Kapanmış işlem detayı yok.</div>'}
     </div>
+    ${renderPaperBenchmarks(snapshot)}
     <div class="truth-note">Bu laboratuvar yalnızca değiştirilemez sanal fill + muhasebe kanıtını ölçer; sinyal güveni veya geçmiş frekans burada işlem başarısı sayılmaz.</div>`;
 }
 

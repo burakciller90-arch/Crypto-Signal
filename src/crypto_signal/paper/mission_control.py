@@ -17,6 +17,12 @@ from pathlib import Path
 from crypto_signal.data.models import Exchange, MarketType
 from crypto_signal.ledger.serialization import canonical_sha256
 from crypto_signal.paper.activation import PaperActivationState
+from crypto_signal.paper.benchmarks import (
+    PaperBenchmarkComparison,
+    PaperBenchmarkSnapshot,
+    compare_paper_return_to_benchmarks,
+    read_paper_benchmark_snapshot,
+)
 from crypto_signal.paper.dry_run import (
     PaperActivationDryRunStatus,
     PaperDecisionTrace,
@@ -65,7 +71,7 @@ __all__ = [
     "read_paper_signal_stream_overview",
 ]
 
-PAPER_MISSION_CONTROL_VERSION = "paper_mission_control.v3"
+PAPER_MISSION_CONTROL_VERSION = "paper_mission_control.v4"
 
 
 class PaperMissionControlError(RuntimeError):
@@ -507,6 +513,8 @@ class PaperMissionControlSnapshot:
     portfolio: PaperPortfolioSnapshot
     portfolio_exposure: PaperPortfolioExposureView
     performance: PaperTradePerformanceSnapshot
+    benchmarks: PaperBenchmarkSnapshot
+    benchmark_comparisons: tuple[PaperBenchmarkComparison, ...]
     trade_policy: str = "NOT_ACTIVATED"
     real_capital: int = REAL_CAPITAL
 
@@ -567,6 +575,20 @@ class PaperMissionControlSnapshot:
             raise ValueError("performance observation time mismatch")
         if self.portfolio.fund_identity != self.performance.fund_identity:
             raise ValueError("portfolio/performance fund mismatch")
+        if self.benchmarks.start_at_ms != self.activation_cutoff_ms:
+            raise ValueError("benchmark start must equal activation cutoff")
+        if self.benchmarks.observed_at_ms != self.observed_at_ms:
+            raise ValueError("benchmark observation time mismatch")
+        if self.benchmarks.real_capital != REAL_CAPITAL:
+            raise ValueError("benchmarks must remain REAL_CAPITAL=0")
+        expected_comparisons = compare_paper_return_to_benchmarks(
+            self.benchmarks,
+            paper_total_return_fraction=self.portfolio.total_return_fraction,
+        )
+        if self.benchmark_comparisons != expected_comparisons:
+            raise ValueError(
+                "benchmark comparisons must derive exactly from paper/benchmark truth"
+            )
         if self.snapshot_identity != canonical_sha256(_snapshot_payload(self)):
             raise ValueError("mission-control snapshot identity mismatch")
 
@@ -649,6 +671,15 @@ def read_paper_mission_control_snapshot(
         paper_ledger_path=paper_ledger_path,
         observed_at_ms=observed_at_ms,
     )
+    benchmarks = read_paper_benchmark_snapshot(
+        candle_cache_path=candle_cache_path,
+        start_at_ms=activation.activation_cutoff_ms,
+        observed_at_ms=observed_at_ms,
+    )
+    benchmark_comparisons = compare_paper_return_to_benchmarks(
+        benchmarks,
+        paper_total_return_fraction=portfolio.total_return_fraction,
+    )
     portfolio_exposure = _build_portfolio_exposure(portfolio)
     return _build_snapshot(
         activation=activation,
@@ -659,6 +690,8 @@ def read_paper_mission_control_snapshot(
         portfolio=portfolio,
         portfolio_exposure=portfolio_exposure,
         performance=performance,
+        benchmarks=benchmarks,
+        benchmark_comparisons=benchmark_comparisons,
         observed_at_ms=observed_at_ms,
     )
 
@@ -769,6 +802,8 @@ def _build_snapshot(
     portfolio: PaperPortfolioSnapshot,
     portfolio_exposure: PaperPortfolioExposureView,
     performance: PaperTradePerformanceSnapshot,
+    benchmarks: PaperBenchmarkSnapshot,
+    benchmark_comparisons: tuple[PaperBenchmarkComparison, ...],
     observed_at_ms: int,
 ) -> PaperMissionControlSnapshot:
     ready_count = sum(
@@ -781,6 +816,10 @@ def _build_snapshot(
         "activation_identity": activation.activation_identity,
         "attention_required": ready_count > 0,
         "baseline_signal_freeze_count": activation.baseline_signal_freeze_count,
+        "benchmark_comparisons": [
+            _benchmark_comparison_payload(item) for item in benchmark_comparisons
+        ],
+        "benchmark_snapshot_identity": benchmarks.snapshot_identity,
         "candidates": [_candidate_payload(item) for item in candidates],
         "decision_cadence": [
             _decision_cadence_payload(item) for item in decision_cadence
@@ -815,6 +854,8 @@ def _build_snapshot(
         portfolio=portfolio,
         portfolio_exposure=portfolio_exposure,
         performance=performance,
+        benchmarks=benchmarks,
+        benchmark_comparisons=benchmark_comparisons,
         trade_policy="NOT_ACTIVATED",
         real_capital=REAL_CAPITAL,
     )
@@ -1195,6 +1236,18 @@ def _signal_stream_payload(
     }
 
 
+def _benchmark_comparison_payload(
+    item: PaperBenchmarkComparison,
+) -> dict[str, object]:
+    return {
+        "availability": item.availability.value,
+        "benchmark_total_return_fraction": item.benchmark_total_return_fraction,
+        "kind": item.kind.value,
+        "paper_total_return_fraction": item.paper_total_return_fraction,
+        "relative_return_fraction": item.relative_return_fraction,
+    }
+
+
 def _snapshot_payload(
     snapshot: PaperMissionControlSnapshot,
 ) -> dict[str, object]:
@@ -1203,6 +1256,11 @@ def _snapshot_payload(
         "activation_identity": snapshot.activation_identity,
         "attention_required": snapshot.attention_required,
         "baseline_signal_freeze_count": snapshot.baseline_signal_freeze_count,
+        "benchmark_comparisons": [
+            _benchmark_comparison_payload(item)
+            for item in snapshot.benchmark_comparisons
+        ],
+        "benchmark_snapshot_identity": snapshot.benchmarks.snapshot_identity,
         "candidates": [_candidate_payload(item) for item in snapshot.candidates],
         "decision_cadence": [
             _decision_cadence_payload(item) for item in snapshot.decision_cadence

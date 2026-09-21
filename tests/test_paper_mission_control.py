@@ -266,14 +266,16 @@ def test_signal_stream_overview_is_point_in_time(tmp_path) -> None:
     assert overview.latest_freeze_age_ms == 400
 
 
-def test_mission_control_v3_exposes_structured_plan_and_exposure_truth() -> None:
+def test_mission_control_v4_exposes_plan_exposure_and_benchmark_truth() -> None:
     assert paper_mission_control.PAPER_MISSION_CONTROL_VERSION == (
-        "paper_mission_control.v3"
+        "paper_mission_control.v4"
     )
     snapshot_fields = {
         item.name for item in fields(paper_mission_control.PaperMissionControlSnapshot)
     }
     assert "portfolio_exposure" in snapshot_fields
+    assert "benchmarks" in snapshot_fields
+    assert "benchmark_comparisons" in snapshot_fields
     candidate_fields = {
         item.name
         for item in fields(paper_mission_control.PaperMissionControlCandidate)

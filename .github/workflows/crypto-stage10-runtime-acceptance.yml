@@ -1,0 +1,97 @@
+name: Crypto Stage10 Runtime Acceptance
+
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  contents: read
+  issues: read
+
+jobs:
+  acceptance:
+    if: github.actor == 'burakciller90-arch' && github.event.issue.title == '[STAGE10] Integrated runtime acceptance'
+    name: UID504 Stage10 Runtime Acceptance
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 30
+    steps:
+      - name: Verify stable runtimes and restart recovery
+        shell: bash
+        run: |
+          set -euo pipefail
+          REPO="/Users/crypto-signal-agent/Crypto-Signal"
+          LIVE="/Users/crypto-signal-agent/Crypto-Signal-Live"
+          PRODUCT="/Users/crypto-signal-agent/Crypto-Signal-Product"
+          ALERTS="/Users/crypto-signal-agent/Crypto-Signal-Alerts"
+          PAPER="/Users/crypto-signal-agent/Crypto-Signal-Paper"
+          PAPER_DB="$REPO/runtime/paper/paper_fund.sqlite3"
+          UID_NOW="$(id -u)"
+
+          test "$UID_NOW" = "504"
+          test "$(git -C "$REPO" rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$(git -C "$PRODUCT" rev-parse HEAD)" = "$GITHUB_SHA"
+          for path in "$REPO" "$LIVE" "$PRODUCT" "$ALERTS" "$PAPER"; do
+            test -z "$(git -C "$path" status --porcelain)"
+          done
+
+          echo "=== STABLE HEADS ==="
+          echo "DEV=$(git -C "$REPO" rev-parse HEAD)"
+          echo "LIVE=$(git -C "$LIVE" rev-parse HEAD)"
+          echo "PRODUCT=$(git -C "$PRODUCT" rev-parse HEAD)"
+          echo "ALERTS=$(git -C "$ALERTS" rev-parse HEAD)"
+          echo "PAPER=$(git -C "$PAPER" rev-parse HEAD)"
+
+          echo "=== LAUNCHD PRESENCE ==="
+          for svc in             com.cryptosignal.dashboard             com.cryptosignal.liveevidenceclock             com.cryptosignal.alertclock             com.cryptosignal.paperclock             com.cryptosignal.paperdryrun
+          do
+            launchctl print "gui/$UID_NOW/$svc" >"/tmp/stage10-$svc.txt"
+            egrep 'state =|runs =|pid =|last exit code =|run interval =' "/tmp/stage10-$svc.txt" | head -20
+          done
+
+          cmp "$PRODUCT/ops/product/launchd/com.cryptosignal.dashboard.plist"             "$HOME/Library/LaunchAgents/com.cryptosignal.dashboard.plist"
+          cmp "$PAPER/ops/paper/launchd/com.cryptosignal.paperclock.plist"             "$HOME/Library/LaunchAgents/com.cryptosignal.paperclock.plist"
+          cmp "$PAPER/ops/paper/launchd/com.cryptosignal.paperdryrun.plist"             "$HOME/Library/LaunchAgents/com.cryptosignal.paperdryrun.plist"
+
+          echo "=== PRODUCT RESTART ==="
+          launchctl kickstart -k "gui/$UID_NOW/com.cryptosignal.dashboard"
+          ok=0
+          for i in {1..30}; do
+            if curl -fsS --max-time 3 http://127.0.0.1:48700/api/health               > /tmp/stage10-product-health.json 2>/dev/null; then
+              ok=1
+              break
+            fi
+            sleep 1
+          done
+          test "$ok" = "1"
+          cat /tmp/stage10-product-health.json
+          /usr/bin/python3 - <<'PY'
+          import json
+          from pathlib import Path
+          data=json.loads(Path("/tmp/stage10-product-health.json").read_text())
+          assert data["status"] == "ok"
+          assert data["read_only"] is True
+          assert data["real_capital"] == 0
+          assert data["ledger_present"] is True
+          PY
+          echo "STAGE10_PRODUCT_RESTART_PASS=YES"
+
+          echo "=== PAPER CLOCK RESTART ==="
+          launchctl kickstart -k "gui/$UID_NOW/com.cryptosignal.paperclock"
+          launchctl kickstart -k "gui/$UID_NOW/com.cryptosignal.paperdryrun"
+          sleep 3
+          grep -q 'PAPER_CLOCK_OK' "$REPO/runtime/paper/paper_clock.out.log"
+          grep -q 'PAPER_DRY_RUN_OK' "$REPO/runtime/paper/paper_dry_run_clock.out.log"
+          "$PAPER/.venv/bin/python" -c 'import sqlite3,sys; c=sqlite3.connect("file:"+sys.argv[1]+"?mode=ro",uri=True); count=lambda t:int(c.execute("SELECT COUNT(*) FROM "+t).fetchone()[0]); assert count("paper_fund_creations")==1; assert count("paper_decision_intents")==0; assert count("paper_simulated_fills")==0; assert count("paper_position_cash_mutations")==0; assert count("paper_nav_snapshots")==0; assert count("paper_activation_state")==1; assert count("paper_processed_events")==0; c.close(); print("STAGE10_PAPER_RESTART_NO_WRITE_PASS=YES")' "$PAPER_DB"
+
+          echo "=== LIVE RECOVERY SOAK ==="
+          cd "$REPO"
+          PYTHONPATH="$REPO/src" "$REPO/.venv/bin/python"             "$REPO/ops/verify_recovery_soak.py"
+          echo "STAGE10_LIVE_RECOVERY_PASS=YES"
+
+          echo "=== READ-ONLY ENDURANCE ==="
+          PYTHONPATH="$REPO/src" "$REPO/.venv/bin/python"             "$REPO/ops/verify_stage10_integrated.py"             --cycles 20             --pause-seconds 0.05
+
+          echo "=== FRESHNESS CONTRACT ==="
+          node "$REPO/tests/js/test_product_freshness.js"
+
+          echo "STAGE10_RUNTIME_ACCEPTANCE=PASS"
