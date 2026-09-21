@@ -5,15 +5,16 @@ BASE="/Volumes/Crypto-504/Crypto-Signal/Development"
 STATE="$BASE/runtime/continuity"
 ROOT="$STATE/leases"
 PAUSE_FILE="$STATE/user_pause"
+SHARED_PAUSE_FILE="/Users/Shared/.crypto-signal-wake-relay/user_pause"
 ACTIVE="$ROOT/active"
 CANCELED="$ROOT/canceled"
 CHECKPOINTS="$ROOT/checkpoints"
 
 mkdir -p "$ACTIVE" "$CANCELED" "$CHECKPOINTS"
-[ -f "$PAUSE_FILE" ] && {
-  echo "CONTINUATION_ARM_PAUSED:$PAUSE_FILE" >&2
+if [ -f "$PAUSE_FILE" ] || [ -f "$SHARED_PAUSE_FILE" ]; then
+  echo "CONTINUATION_ARM_PAUSED local=$PAUSE_FILE shared=$SHARED_PAUSE_FILE" >&2
   exit 77
-}
+fi
 
 [ "$#" -eq 3 ] || {
   echo "USAGE: continuation_arm.sh task_id delay_seconds checkpoint_source" >&2
