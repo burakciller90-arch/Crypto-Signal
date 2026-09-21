@@ -1,0 +1,34 @@
+name: KIOXIA SSD Strict Access Check
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/kioxia-ssd-strict-access.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: [self-hosted, crypto-signal, uid501]
+    timeout-minutes: 5
+    steps:
+      - name: Strict read-only KIOXIA access
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(id -u)" = "501"
+          test -d /Volumes/KIOXIA
+          echo "=== ROOT ==="
+          /bin/ls -la /Volumes/KIOXIA
+          echo "=== COUNTS ==="
+          FILES="$(/usr/bin/find /Volumes/KIOXIA -type f | /usr/bin/wc -l | /usr/bin/tr -d ' ')"
+          DIRS="$(/usr/bin/find /Volumes/KIOXIA -mindepth 1 -type d | /usr/bin/wc -l | /usr/bin/tr -d ' ')"
+          USED="$(/usr/bin/du -sk /Volumes/KIOXIA | /usr/bin/awk '{print $1}')"
+          echo "FILES=$FILES"
+          echo "DIRS=$DIRS"
+          echo "USED_KB=$USED"
+          echo "=== OPEN FILES ==="
+          /usr/sbin/lsof +D /Volumes/KIOXIA 2>/dev/null | /usr/bin/head -100 || true
+          echo "KIOXIA_STRICT_ACCESS_PASS=YES"
