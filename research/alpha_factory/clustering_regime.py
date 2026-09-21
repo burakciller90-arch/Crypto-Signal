@@ -611,12 +611,12 @@ def evaluate_cluster_model(
 
     ordered_features = tuple(sorted(features, key=lambda item: item.feature_id))
     _validate_feature_specs(ordered_features)
+    _validate_model_features(model, ordered_features)
     ordered_observations = _validate_observation_partition(
         partition,
         observations,
         ordered_features,
     )
-    _validate_model_features(model, ordered_features)
 
     grouped: list[list[ClusterResearchObservation]] = [
         [] for _ in range(model.cluster_count)
