@@ -2450,3 +2450,17 @@ VALIDATION/OOS evaluation compares each interaction context with both component 
 Branch research gate `35590336391` and production regression gate `35590447669` passed. PR #465 merged as `35914060d4a4dd985ca9a0966588356b891a55f1`. Merged-main research gate `35590709106` and Stage10 hosted gate `35590709184` passed. UID504 canonical sync issue #466 / run `35590843763` and fulltest issue #467 / run `35590906985` completed acceptance with `FULL_TEST_PASS=YES`.
 
 The next bounded Alpha Factory frontier is evolutionary search. It must remain deterministic, tightly budgeted, TRAIN-only for search, VALIDATION/OOS descriptive for evaluation, untouched-forward closed, explicit about multiple-testing risk and incapable of automatic promotion or production deployment.
+
+
+## 2026-09-21 — Full Version completion roadmap authorized and recorded
+
+The user authorized immediate continuation of the previously agreed project-completion roadmap. The canonical plan is now `docs/PROJECT_COMPLETION_EXECUTION_ROADMAP.md`.
+
+Execution order:
+1. finish Stage 8.5 scientific gates beginning with bounded ML cost stress;
+2. complete Stage 8.75 Learning Memory;
+3. expose accepted intelligence/research evidence through a read-only Intelligence Center and separately tested meta-weighting policy;
+4. harden SSD/runtime/continuity recovery;
+5. run Full Version Integrated Acceptance v2 and freeze final release documentation.
+
+Historical Stage 10 evidence remains immutable. No completed slice is replayed. REAL_CAPITAL=0.
