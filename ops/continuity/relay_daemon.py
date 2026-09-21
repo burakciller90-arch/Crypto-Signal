@@ -18,16 +18,15 @@ BAD = SHARED / "bad"
 PAUSE = SHARED / "user_pause"
 SECRET_FILE = SHARED / "relay_secret"
 TARGET_FILE = SHARED / "current_chat_url"
+EXPECTED_TARGET = "https://chatgpt.com/c/6ab0debd-49a8-83eb-8b33-a7ce2ef826d0"
 HEARTBEAT = SHARED / "relay_heartbeat"
 PIDFILE = SHARED / "relay.pid"
 LOG = SHARED / "relay.log"
 STATUS = SHARED / "relay_status"
 AUTONOMOUS_STATE = SHARED / "autonomous_wake_state"
 AUTONOMOUS_PREFIX = "CRYPTO_SIGNAL_AUTONOMOUS_CONTINUE_V1"
-AUTONOMOUS_TTL_SECONDS = 20 * 60
-AUTONOMOUS_COOLDOWN_SECONDS = 20 * 60
+AUTONOMOUS_TTL_SECONDS = 15 * 60
 RETRY_SECONDS = 2
-AUTONOMOUS_PREFIX = "CRYPTO_SIGNAL_AUTONOMOUS_CONTINUE_V1"
 TARGET_OPEN_RETRY_SECONDS = 60
 _last_target_open_attempt = 0.0
 
@@ -87,9 +86,9 @@ def sha(value: str) -> str:
 
 def scheduled_slot_event_id() -> str:
     now = datetime.now().astimezone()
-    slot_minute = 0 if now.minute < 30 else 30
+    slot_minute = (now.minute // 20) * 20
     slot = now.replace(minute=slot_minute, second=0, microsecond=0)
-    return f"crypto-30m-continuity:{slot:%Y%m%dT%H%M%z}"
+    return f"crypto-20m-continuity:{slot:%Y%m%dT%H%M%z}"
 
 
 def marker_for(event_id: str) -> str:
@@ -135,20 +134,6 @@ def receipt_sha(path: Path) -> str | None:
 
 def is_autonomous_wake(message: str) -> bool:
     return message.startswith(AUTONOMOUS_PREFIX)
-
-
-def read_last_autonomous_delivery_epoch() -> float | None:
-    try:
-        lines = AUTONOMOUS_STATE.read_text().splitlines()
-    except FileNotFoundError:
-        return None
-    for line in lines:
-        if line.startswith("last_delivered_epoch="):
-            try:
-                return float(line.split("=", 1)[1])
-            except ValueError:
-                return None
-    return None
 
 
 def record_autonomous_delivery(event_id: str, delivered_epoch: float) -> None:
@@ -430,7 +415,7 @@ def main() -> int:
             return 0
 
     target_url = TARGET_FILE.read_text().splitlines()[0].strip()
-    if not target_url.startswith("https://chatgpt.com/c/"):
+    if target_url != EXPECTED_TARGET:
         raise SystemExit("RELAY_TARGET_INVALID")
     secret = load_secret()
     PIDFILE.write_text(f"{os.getpid()}\n")
@@ -445,8 +430,11 @@ def main() -> int:
                 target_url = TARGET_FILE.read_text().splitlines()[0].strip()
             except (FileNotFoundError, IndexError):
                 target_url = ""
-            if not target_url.startswith("https://chatgpt.com/c/"):
-                log("relay=TARGET_INVALID")
+            if target_url != EXPECTED_TARGET:
+                log(
+                    "relay=TARGET_MISMATCH "
+                    f"expected={EXPECTED_TARGET} observed={target_url or 'MISSING'}"
+                )
                 time.sleep(RETRY_SECONDS)
                 continue
             STATUS.write_text(
@@ -492,26 +480,6 @@ def main() -> int:
                         f"event={sha(event_id)[:16]} "
                         f"status=STALE_AUTONOMOUS_DROPPED "
                         f"age_seconds={int(queue_age)}"
-                    )
-                    continue
-
-                last_delivery = read_last_autonomous_delivery_epoch()
-                if (
-                    last_delivery is not None
-                    and now - last_delivery < AUTONOMOUS_COOLDOWN_SECONDS
-                ):
-                    message_sha = expected_wire_sha(event_id, message)
-                    write_receipt(
-                        RECEIPTS / f"{sha(event_id)}.state",
-                        "SEMANTIC_DUPLICATE_DROPPED",
-                        event_id,
-                        message_sha,
-                    )
-                    path.unlink(missing_ok=True)
-                    log(
-                        f"event={sha(event_id)[:16]} "
-                        "status=SEMANTIC_DUPLICATE_DROPPED "
-                        f"cooldown_age_seconds={int(now - last_delivery)}"
                     )
                     continue
 
