@@ -91,8 +91,9 @@ Accepted main: `ef56069e2021ea0c2d8d16e93bc4e6610b8d994a`.
 - immutable evidence identities and chronology;
 - descriptive evaluation only.
 
-### R6 — Robustness / promotion dossier closure — CURRENT FRONTIER
-Canonical task: `stage8.5-ml-promotion-dossier-closure-v1`.
+### R6 — Robustness / promotion dossier closure — ACCEPTED
+Accepted main: `8ac2072c712051c3db53be8418d852747c7d66d8`.
+Milestone M1 / Stage 8.5 scientific closure is COMPLETE.
 Each challenger must close the full promotion evidence boundary:
 1. data-contract/leakage audit;
 2. deterministic/reproducible generation;
@@ -110,7 +111,8 @@ There is no self-promotion, champion-write or deploy API.
 
 ## M2 — Stage 8.75 Learning Memory + product visibility
 
-### R7 — Versioned Learning Memory
+### R7 — Versioned Learning Memory — CURRENT FRONTIER
+Canonical task: `stage8.75-learning-memory-v1`.
 Persist success and failure equally by:
 - method;
 - asset;
@@ -222,4 +224,4 @@ Freeze:
 Crypto Signal Full Version is complete when M1, M2 and M3 are accepted with mechanical evidence and authoritative documentation, while REAL_CAPITAL remains 0 and all real-money/order authority stays closed.
 
 Immediate next execution target:
-`stage8.5-ml-promotion-dossier-closure-v1`.
+`stage8.75-learning-memory-v1`.

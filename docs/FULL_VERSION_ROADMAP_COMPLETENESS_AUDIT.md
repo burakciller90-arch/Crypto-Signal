@@ -194,24 +194,34 @@ no refit, feature/threshold change, retrospective optimization or family
 selection. Branch/merged research gates, Stage10 regression and UID504
 sync/fulltest all passed.
 
+## Stage 8.5 promotion dossier / M1 — ACCEPTED
+
+The Stage 8.5 machine evidence chain is **ACCEPTED** at
+`8ac2072c712051c3db53be8418d852747c7d66d8`.
+
+PR #619 hardened forward-evidence maturity and PR #621 exact-binds the accepted
+walk-forward, family expansion, cost-stress, robustness and evaluated
+untouched-forward chain into one immutable dossier. Machine evidence stops at
+`READY_FOR_SUPERVISOR_REVIEW`; explicit supervisor evidence stops at
+`SUPERVISOR_ACCEPTED_FOR_MANUAL_PROMOTION`. Neither state provides champion
+write, deploy or production authority.
+
+Milestone M1 / Stage 8.5 scientific closure is **COMPLETE**.
+
 ## Canonical next frontier
 
-The next bounded roadmap slice is:
-
-`stage8.5-ml-promotion-dossier-closure-v1`
+`stage8.75-learning-memory-v1`
 
 Requirements:
 
-- bind immutable identities for data-contract/leakage, reproducibility,
-  transaction-cost stress, in-sample sanity, OOS, walk-forward,
-  untouched-forward and robustness/ablation evidence;
-- no missing required machine evidence may be silently treated as complete;
-- machine evidence alone may reach only `READY_FOR_SUPERVISOR_REVIEW`;
-- explicit supervisor evidence may reach only
-  `SUPERVISOR_ACCEPTED_FOR_MANUAL_PROMOTION`;
-- no PROMOTED state;
-- no champion mutation, production import, deploy or order authority;
-- no automatic family/model winner selection;
+- immutable, versioned learning-memory records;
+- preserve successes, failures, abstentions and no-evidence states equally;
+- bind method/family, asset, timeframe, regime, version and uncertainty;
+- preserve redundancy/overlap relationships;
+- preserve before-vs-after model/policy lineage without silently changing either;
+- deterministic identities and reproducible summaries;
+- Learning Memory is evidence, not authority;
+- zero automatic production weighting, champion mutation or deploy authority;
 - REAL_CAPITAL=0.
 
 ## Safety boundary

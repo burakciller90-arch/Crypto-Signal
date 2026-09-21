@@ -3133,3 +3133,41 @@ Current true roadmap frontier:
 - there is no PROMOTED state, champion mutation or deploy path;
 - no automatic family/winner selection;
 - REAL_CAPITAL=0.
+
+
+## 2026-09-21 — Stage 8.5 ML promotion dossier closure ACCEPTED / M1 COMPLETE
+
+- accepted main head: `8ac2072c712051c3db53be8418d852747c7d66d8`;
+- maturity hardening PR #619 is part of the accepted evidence boundary:
+  - forward snapshot freezes before the declared window,
+  - explicit NOT_YET_EVALUABLE / NO_EVIDENCE / EVALUATED states,
+  - immature or incomplete forward evidence cannot publish partial performance;
+- PR #621 merged the immutable ML promotion-evidence dossier on top of that maturity-aware forward contract;
+- dossier recomputes and exact-binds:
+  - walk-forward evidence,
+  - two-family expansion,
+  - two-family transaction-cost stress,
+  - two-family robustness/ablation,
+  - evaluated untouched-forward evidence;
+- data-contract, leakage, reproducibility, in-sample, OOS, walk-forward, cost-stress, untouched-forward and robustness identities are immutable and bound into one machine-evidence identity;
+- machine-complete evidence stops at `READY_FOR_SUPERVISOR_REVIEW`;
+- explicit supervisor evidence can only reach `SUPERVISOR_ACCEPTED_FOR_MANUAL_PROMOTION`;
+- there is no PROMOTED state, champion-write API, deploy API or production authority;
+- branch Alpha Factory research gate PASS after reconciliation with #619: run `35657307837`;
+- merged-main Alpha Factory research gate PASS: run `35657392112`;
+- merged-main Stage10 hosted full regression PASS: run `35657392034`;
+- UID504 SSD current-head sync verification PASS: issue #624 / run `35657501058`;
+- UID504 fulltest PASS: issue #626 / run `35657574764`;
+- RL remains optional and closed;
+- PAPER/STABLE write activation remains closed;
+- REAL_CAPITAL=0.
+
+Milestone M1 — Stage 8.5 Alpha Factory scientific closure: **COMPLETE**.
+
+Current true roadmap frontier:
+- `stage8.75-learning-memory-v1`;
+- implement versioned immutable learning memory that retains favorable and unfavorable evidence equally;
+- key evidence by method/family, asset, timeframe, regime, version and uncertainty;
+- capture redundancy/overlap and before-vs-after policy/model relationships;
+- Learning Memory is evidence only and has zero production weighting/write authority;
+- no silent policy/model mutation, no auto-promotion and REAL_CAPITAL=0.

@@ -2519,3 +2519,13 @@ The accepted evaluator freezes both model families from the latest accepted chro
 
 The next safe frontier is `stage8.5-ml-promotion-dossier-closure-v1`.
 RL remains optional/closed. REAL_CAPITAL=0.
+
+## 2026-09-21 — Stage 8.5 promotion dossier accepted; M1 complete
+
+Maturity follow-up PR #619 first hardened untouched-forward semantics so evidence is frozen before its declared window and incomplete forward periods resolve explicitly to NOT_YET_EVALUABLE / NO_EVIDENCE rather than leaking partial performance.
+
+PR #621 then merged the machine-complete ML promotion dossier at `8ac2072c712051c3db53be8418d852747c7d66d8`. The reconciled branch research gate `35657307837`, merged research gate `35657392112`, Stage10 hosted regression `35657392034`, UID504 current-head sync issue #624 / run `35657501058` and UID504 fulltest issue #626 / run `35657574764` all passed.
+
+Machine evidence can reach only READY_FOR_SUPERVISOR_REVIEW. Explicit supervisor evidence can reach only SUPERVISOR_ACCEPTED_FOR_MANUAL_PROMOTION. Neither state grants champion-write, deploy, production or real-capital authority.
+
+Stage 8.5 / Milestone M1 is complete. The canonical next frontier is `stage8.75-learning-memory-v1`.
