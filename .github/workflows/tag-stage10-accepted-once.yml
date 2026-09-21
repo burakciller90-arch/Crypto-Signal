@@ -1,0 +1,36 @@
+name: Tag Stage10 Accepted Once
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/tag-stage10-accepted-once.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  tag:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Tag exact runtime-accepted code
+        shell: bash
+        env:
+          ACCEPTED_SHA: 8ca23e612ba36b4ebcb0c3cb41a166d78add5cff
+          TAG_NAME: stage10-accepted-20260921
+        run: |
+          set -euo pipefail
+          git cat-file -e "$ACCEPTED_SHA^{commit}"
+          if git rev-parse -q --verify "refs/tags/$TAG_NAME" >/dev/null; then
+            test "$(git rev-list -n 1 "$TAG_NAME")" = "$ACCEPTED_SHA"
+            echo "STAGE10_TAG_ALREADY_CORRECT=YES"
+            exit 0
+          fi
+          git config user.name "crypto-signal-automation"
+          git config user.email "crypto-signal-automation@users.noreply.github.com"
+          git tag -a "$TAG_NAME" "$ACCEPTED_SHA"             -m "Stage 10 Full Integrated Acceptance PASS — REAL_CAPITAL=0"
+          git push origin "refs/tags/$TAG_NAME"
+          echo "STAGE10_TAG_PASS=YES tag=$TAG_NAME sha=$ACCEPTED_SHA"
