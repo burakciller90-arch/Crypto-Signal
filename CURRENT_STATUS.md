@@ -2142,3 +2142,40 @@ Current true roadmap frontier:
 - keep all Stage 8 engines observation-only until a separately accepted versioned weighting/meta policy exists;
 - do not begin Alpha Factory or self-learning before the bounded Stage 8 engine sequence is accepted.
 
+## 2026-09-21 — Stage 8 mean reversion v1 ACCEPTED
+
+- accepted main head: `4e6d25df7f6aa2f36bf4ee86dba5c9023dd055d4`
+- PR #406 merged the third bounded Stage 8 intelligence engine.
+- accepted scope:
+  - deterministic robust-median mean-reversion evidence
+  - signed / absolute center deviation
+  - bounded 0..1 range-position evidence
+  - short-horizon snapback / extension / stalled phase
+  - stretched-high / stretched-low / neutral / mixed / unresolved labels
+  - explicit insufficient-history / candle-gap / mixed uncertainty
+  - immutable analysis and frozen evidence identities
+  - PIT-safe closed-candle filtering
+  - observation-only / zero-production-contribution isolation
+- hosted full repository gate PASS:
+  - pytest 100%
+  - Ruff PASS
+  - mypy PASS across 108 source files
+  - PRODUCT_FRESHNESS_CONTRACT_PASS=YES
+- UID504 canonical sync PASS.
+- UID504 canonical fulltest PASS:
+  - pytest 100%
+  - Ruff PASS
+  - mypy PASS across 107 source files
+  - PRODUCT_FRESHNESS_CONTRACT_PASS=YES
+  - FULL_TEST_PASS=YES
+- no production weighting change.
+- Alpha Factory / Learning Memory remain closed.
+- PAPER/STABLE write activation remains closed.
+- REAL_CAPITAL=0.
+
+Current true roadmap frontier:
+- `stage8-breakout-volatility-v1`
+- add one deterministic PIT-safe breakout/volatility evidence engine behind an isolated gate;
+- keep all Stage 8 engines observation-only until a separately accepted versioned weighting/meta policy exists;
+- do not begin Alpha Factory or self-learning before the bounded Stage 8 engine sequence is accepted.
+
