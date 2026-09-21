@@ -2009,3 +2009,52 @@ Current frontier:
 - PAPER/STABLE write activation remains closed.
 - REAL_CAPITAL=0.
 
+## 2026-09-21 — Stage 10 Full Integrated Acceptance PASS
+
+- Stage 10 final accepted code / PRODUCT head: `8ca23e612ba36b4ebcb0c3cb41a166d78add5cff`.
+- Final runtime workflow `Crypto Stage10 Runtime Acceptance`:
+  - run `35566415433`
+  - job `106229013172`
+  - conclusion: SUCCESS
+  - `STAGE10_RUNTIME_ACCEPTANCE=PASS`
+- canonical/runtime stable heads observed:
+  - DEV=`8ca23e612ba36b4ebcb0c3cb41a166d78add5cff`
+  - PRODUCT=`8ca23e612ba36b4ebcb0c3cb41a166d78add5cff`
+  - LIVE=`7020413188d633b2b5a9661356c2fe319f256a34`
+  - ALERTS=`1d8c8757fb825c8934229b454db49bf800f2b5cf`
+  - PAPER=`30b05251af9fc2ac05fd007dbd6ac6d0519c2e58`
+- accepted runtime subgates:
+  - `STAGE10_PRODUCT_RESTART_PASS=YES`
+  - `STAGE10_PAPER_RESTART_NO_WRITE_PASS=YES`
+  - `STAGE10_LIVE_RECOVERY_PASS=YES`
+  - 20-cycle read-only PRODUCT endurance PASS
+  - `PRODUCT_FRESHNESS_CONTRACT_PASS=YES`
+- accepted PRODUCT:
+  - health status=ok
+  - read_only=true
+  - REAL_CAPITAL=0
+  - Mission Control=`paper_mission_control.v4`
+  - benchmark snapshot=`066204f6753dfd6e09ca03b88ed5e1990d75471f1fa66b1ea42a0557fcd881aa`
+- paper DB remained unchanged through endurance:
+  - fund_creations=1
+  - decision_intents=0
+  - simulated_fills=0
+  - position_cash_mutations=0
+  - nav_snapshots=0
+  - replay_index=1
+  - activation_state=1
+  - processed_events=0
+- PAPER/STABLE write gate remains closed:
+  - trade_policy=NOT_ACTIVATED
+  - no writeauthority/writetick command exposed
+  - no virtual trade write occurred
+  - REAL_CAPITAL=0
+- Stage 10 acceptance doc is now `ACCEPTED / PASS`.
+- prior `RUNTIME_PENDING` entries are historical and superseded by this entry.
+- Stage10 exact continuation task `stage10-full-integrated-acceptance-v1` is completed and must NOOP if replayed.
+
+Next-state rule:
+- do not reopen completed Stage 10 work without new contradictory evidence;
+- perform a whole-roadmap completeness audit before declaring the entire Full Version finished;
+- production paper-write activation remains a separate explicit authorization boundary.
+
