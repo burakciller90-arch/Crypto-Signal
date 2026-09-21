@@ -79,7 +79,7 @@ jobs:
           raw = subprocess.check_output(["diskutil", "info", "-plist", disk])
           info = plistlib.loads(raw)
           assert info.get("DeviceIdentifier") == "disk4", info
-          assert info.get("Whole") is True, info
+          assert info.get("WholeDisk") is True, info
           assert info.get("Internal") is False, info
           size = int(info.get("TotalSize", 0))
           assert 900_000_000_000 <= size <= 1_100_000_000_000, size
