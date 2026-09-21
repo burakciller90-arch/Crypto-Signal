@@ -8,7 +8,9 @@ import uvicorn
 
 from crypto_signal.product.web import (
     DEFAULT_ALERT_OUTBOX_PATH,
+    DEFAULT_CANDLE_CACHE_PATH,
     DEFAULT_LEDGER_PATH,
+    DEFAULT_PAPER_LEDGER_PATH,
     create_app,
 )
 
@@ -23,6 +25,16 @@ def parse_args() -> argparse.Namespace:
         type=Path,
         default=DEFAULT_ALERT_OUTBOX_PATH,
     )
+    parser.add_argument(
+        "--paper-ledger",
+        type=Path,
+        default=DEFAULT_PAPER_LEDGER_PATH,
+    )
+    parser.add_argument(
+        "--candle-cache",
+        type=Path,
+        default=DEFAULT_CANDLE_CACHE_PATH,
+    )
     return parser.parse_args()
 
 
@@ -30,7 +42,12 @@ def main() -> None:
     args = parse_args()
     if not 1 <= args.port <= 65535:
         raise SystemExit("port must be between 1 and 65535")
-    app = create_app(args.ledger, args.alert_outbox)
+    app = create_app(
+        args.ledger,
+        args.alert_outbox,
+        paper_ledger_path=args.paper_ledger,
+        candle_cache_path=args.candle_cache,
+    )
     uvicorn.run(
         app,
         host=args.host,
