@@ -976,7 +976,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          TARGET="https://chatgpt.com/c/6ab0debd-49a8-83eb-8b33-a7ce2ef826d0"
+          TARGET="$(cat /Users/Shared/.crypto-signal-wake-relay/current_chat_url 2>/dev/null || true)"
+          case "$TARGET" in
+            https://chatgpt.com/c/*) ;;
+            *) echo "CHAT_TARGET_UNBOUND"; exit 66 ;;
+          esac
           /usr/bin/osascript - "$TARGET" <<'APPLESCRIPT'
           on run argv
             set targetUrl to item 1 of argv
