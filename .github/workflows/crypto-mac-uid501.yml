@@ -52,7 +52,7 @@ jobs:
           set -euo pipefail
           cmd="$(printf '%s\n' "$ISSUE_BODY" | awk -F: 'tolower($1)=="command" {gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2); print tolower($2); exit}')"
           case "$cmd" in
-            status|repo|services|disk|externaldisk|hostdiag|audiorestart|audioadminrestart|loadtree|loadtree2|bginventory)
+            status|repo|services|disk|externaldisk|hostdiag|audiorestart|audioadminrestart|loadtree|loadtree2|bginventory|bgsafecheck)
               ;;
             *)
               echo "Unsupported command: $cmd"
@@ -297,4 +297,36 @@ jobs:
           done | /usr/bin/sort
 
           echo "BACKGROUND_INVENTORY_PASS=YES"
+          exit 0
+
+
+      - name: BACKGROUND SAFE CHECK
+        if: steps.parse.outputs.command == 'bgsafecheck'
+        shell: bash
+        run: |
+          set +e
+          echo "=== CONSOLE / LOGIN SESSIONS ==="
+          /usr/bin/stat -f 'CONSOLE_OWNER=%Su CONSOLE_UID=%u' /dev/console
+          /usr/bin/who
+
+          echo "=== DURDURULMAZ PAUSE / ACTIVE STATE ==="
+          for p in             "/Users/Shared/.durdurulmaz-wake-relay/user_pause"             "/Users/durdurulamaz-agent/Durdurulmaz-Supervisor/.user_pause"             "/Users/durdurulamaz-agent/Durdurulmaz-Supervisor/.continuity_paused"             "/Users/durdurulamaz-agent/Durdurulmaz-Supervisor/.active_task"; do
+            if [ -e "$p" ]; then echo "PRESENT $p"; else echo "ABSENT $p"; fi
+          done
+          /usr/bin/find "/Users/durdurulamaz-agent/Durdurulmaz-Supervisor/.continuation_leases/active" -maxdepth 1 -type f -print 2>/dev/null | /usr/bin/head -50
+
+          echo "=== TARGET LAUNCHAGENT DETAILS ==="
+          for p in             "/Users/burakciller/Library/LaunchAgents/com.durdurulmaz.ssd-permission-probe.plist"             "/Users/burakciller/Library/LaunchAgents/com.durdurulmaz.natural-forward-runtime-v6.plist"             "/Users/burakciller/Library/LaunchAgents/com.durdurulmaz.operations.sidecar.plist"             "/Users/burakciller/Library/LaunchAgents/com.durdurulmaz.scientific.p9econ001.plist"; do
+            echo "--- $p"
+            /usr/bin/stat -f '%Sm %z bytes' -t '%Y-%m-%d %H:%M:%S %z' "$p" 2>/dev/null || true
+            /usr/bin/plutil -p "$p" 2>/dev/null || true
+          done
+
+          echo "=== UID502 SAFARI / WEBKIT ==="
+          /bin/ps -axo pid=,ppid=,user=,%cpu=,%mem=,etime=,state=,command= | /usr/bin/grep -E '^ *[0-9]+ +[0-9]+ +durdurulamaz-agent .*Safari|^ *[0-9]+ +[0-9]+ +durdurulamaz-agent .*WebKit' | /usr/bin/head -120
+
+          echo "=== CORE AUDIO NOW ==="
+          /bin/ps -axo pid=,user=,%cpu=,%mem=,etime=,command= | /usr/bin/grep '[c]oreaudiod'
+
+          echo "BACKGROUND_SAFE_CHECK_PASS=YES"
           exit 0
