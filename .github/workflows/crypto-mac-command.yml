@@ -170,8 +170,11 @@ jobs:
           print(m.group(1))
           PY
           )"
-          REPO="/Volumes/Crypto-504/Crypto-Signal/Development"
-          PRODUCT="/Volumes/Crypto-504/Crypto-Signal/Product"
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          REPO="$ROOT/Development"
+          PRODUCT="$ROOT/Product"
+          SUP_PID_FILE="$ROOT/ssd-service-supervisor.pid"
+          DASH_PID_FILE="$ROOT/dashboard.pid"
           UID_NOW="$(id -u)"
           LABEL="com.cryptosignal.dashboard"
           test "$UID_NOW" = "504"
@@ -186,17 +189,49 @@ jobs:
           echo "PREVIOUS=$PREVIOUS"
           echo "TARGET=$TARGET"
 
+          restart_dashboard() {
+            if launchctl print "gui/$UID_NOW/$LABEL" >/dev/null 2>&1; then
+              echo "DASHBOARD_RESTART_MODE=launchctl"
+              launchctl kickstart -k "gui/$UID_NOW/$LABEL"
+              return 0
+            fi
+
+            local sup=""
+            local old_dash=""
+            local new_dash=""
+            sup="$(cat "$SUP_PID_FILE" 2>/dev/null || true)"
+            test -n "$sup"
+            kill -0 "$sup" >/dev/null 2>&1
+            ps -p "$sup" -o command= | grep -F "$ROOT/ssd-service-supervisor.sh" >/dev/null
+            old_dash="$(cat "$DASH_PID_FILE" 2>/dev/null || true)"
+            echo "DASHBOARD_RESTART_MODE=ssd-supervisor SUP=$sup OLD_DASH=$old_dash"
+            if [ -n "$old_dash" ] && kill -0 "$old_dash" >/dev/null 2>&1; then
+              kill "$old_dash"
+            fi
+            for i in {1..45}; do
+              new_dash="$(cat "$DASH_PID_FILE" 2>/dev/null || true)"
+              if [ -n "$new_dash" ] && [ "$new_dash" != "$old_dash" ] && kill -0 "$new_dash" >/dev/null 2>&1; then
+                echo "NEW_DASH=$new_dash"
+                return 0
+              fi
+              sleep 1
+            done
+            echo "SSD_SUPERVISOR_DASHBOARD_RESTART_TIMEOUT=YES"
+            return 1
+          }
+
           rollback() {
             echo "ROLLBACK_TO=$PREVIOUS"
-            git -C "$PRODUCT" checkout --detach "$PREVIOUS"
-            launchctl kickstart -k "gui/$UID_NOW/$LABEL" || true
+            git -C "$PRODUCT" checkout --detach "$PREVIOUS" || true
+            restart_dashboard || true
+            curl -fsS --max-time 5 http://127.0.0.1:48700/api/health || true
           }
           trap 'rc=$?; if [ "$rc" -ne 0 ]; then rollback; fi; exit "$rc"' EXIT
 
           git -C "$PRODUCT" checkout --detach "$TARGET"
-          launchctl kickstart -k "gui/$UID_NOW/$LABEL"
+          restart_dashboard
           ok=0
-          for i in {1..30}; do
+          for i in {1..45}; do
             if curl -fsS --max-time 3 http://127.0.0.1:48700/api/health > /tmp/crypto-product-health.json 2>/dev/null; then
               ok=1
               break
@@ -212,7 +247,26 @@ jobs:
           assert data.get("status") == "ok"
           assert data.get("real_capital") == 0
           assert data.get("read_only") is True
+          assert data.get("ledger_present") is True
+          assert data.get("alert_outbox_present") is True
           PY
+
+          curl -fsS --max-time 5 http://127.0.0.1:48700/api/intelligence-center > /tmp/crypto-intelligence-center.json
+          /usr/bin/python3 - <<'PY'
+          import json
+          from pathlib import Path
+          data=json.loads(Path("/tmp/crypto-intelligence-center.json").read_text())
+          assert data.get("status") == "ready"
+          assert data.get("real_capital") == 0
+          assert data.get("read_only") is True
+          assert data.get("production_active_engine_count") == 0
+          assert int(data.get("accepted_engine_count", 0)) >= 20
+          assert data.get("probability_status") == "not_calibrated"
+          PY
+          curl -fsS --max-time 5 http://127.0.0.1:48700/ > /tmp/crypto-product-index.html
+          grep -F "İSTİHBARAT LABORATUVARI" /tmp/crypto-product-index.html >/dev/null
+          echo "INTELLIGENCE_CENTER_LIVE_PASS=YES"
+
           test "$(git -C "$PRODUCT" rev-parse HEAD)" = "$TARGET"
           test -z "$(git -C "$PRODUCT" status --porcelain)"
           trap - EXIT
