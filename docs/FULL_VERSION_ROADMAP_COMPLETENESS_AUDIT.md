@@ -85,8 +85,12 @@ challenger slice is **ACCEPTED** at
 clustering/regime slice is **ACCEPTED** at
 `4b8014e7f26a288e7cecb3806d46877ddb4174cc`. The bounded feature-interaction
 slice is **ACCEPTED** at `35914060d4a4dd985ca9a0966588356b891a55f1`.
-Remaining Stage 8.5 work is bounded evolutionary challenger research, followed
-only later by carefully bounded ML/RL research.
+Bounded evolutionary search is **ACCEPTED** at
+`7e32c5a689d88298e258e674bc0508c9021f2552`. The first bounded deterministic
+ML research foundation is **ACCEPTED** at
+`c445022b4a41aa3b9961768f41c3614f6dca115a`. Remaining Stage 8.5 work must
+continue through bounded evaluation/robustness evidence before any broader ML
+search, while RL remains separately closed.
 
 Required promotion boundary remains:
 
@@ -123,28 +127,30 @@ only through a separately tested policy.
 
 The next bounded roadmap slice is:
 
-`stage8.5-bounded-ml-research-foundation-v1`
+`stage8.5-bounded-ml-walk-forward-evaluation-v1`
 
-Evolutionary search is accepted. The next slice is deliberately a foundation,
-not an open-ended model competition.
+The first deterministic single-family ML baseline is accepted. The next slice
+adds evaluation discipline, not model breadth.
 
 Requirements:
 
 - implementation remains under isolated `research/alpha_factory`,
-- immutable feature, partition, training-config and model identities,
-- one deterministic hard-bounded baseline model family only,
-- TRAIN is fit-only,
-- VALIDATION/OOS remain descriptive evaluation only,
+- use only the accepted deterministic categorical-count baseline family,
+- deterministic rolling fit/evaluation folds with immutable fold identities,
+- every fold trains only on evidence available before its evaluation window,
+- VALIDATION/OOS-style outputs remain descriptive evidence only,
+- explicit transaction-cost/slippage accounting remains part of every fold,
+- aggregate evidence must preserve per-fold identities rather than selecting a winner,
 - untouched-forward remains closed,
-- explicit transaction-cost/slippage accounting remains part of evaluation,
 - no automatic hyperparameter/model winner selection,
 - no calibrated-probability claim,
 - no production product/paper/confluence/signal import,
 - no self-promotion, champion mutation or deploy path,
 - RL remains closed until a later separately accepted slice.
 
-A favorable model score cannot satisfy the promotion gate by itself. Walk-forward,
-untouched-forward and supervisor evidence remain missing until genuinely produced.
+A favorable walk-forward result cannot satisfy the promotion gate by itself.
+Untouched-forward, robustness/ablation and explicit supervisor acceptance remain
+separate missing evidence until genuinely produced.
 
 `REAL_CAPITAL=0`.
 
