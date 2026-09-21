@@ -229,6 +229,14 @@ def test_mission_control_composes_cash_only_truth_without_fabricated_success(
     assert first.performance.status is PaperTradePerformanceStatus.NOT_YET_MEASURED
     assert first.performance.closed_trade_count == 0
     assert first.performance.win_rate_fraction is None
+    assert first.performance.window.measurement_start_at_ms == (
+        activation.activation_cutoff_ms
+    )
+    assert first.performance.window.observed_at_ms == 500
+    assert first.performance.window.duration_ms == 400
+    assert first.performance.window.turnover_fraction == Decimal(0)
+    assert first.performance.window.cash_time_fraction == Decimal(1)
+    assert first.performance.window.invested_time_fraction == Decimal(0)
     assert first.trade_policy == "NOT_ACTIVATED"
     assert first.real_capital == REAL_CAPITAL == 0
 
