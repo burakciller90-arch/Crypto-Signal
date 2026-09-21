@@ -1,0 +1,29 @@
+name: KIOXIA TCC Denial Diagnostic
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/kioxia-tcc-denial-diagnostic.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: [self-hosted, crypto-signal, uid501]
+    timeout-minutes: 5
+    steps:
+      - name: Diagnose removable-volume TCC denial
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(id -u)" = "501"
+          echo "=== TRIGGER ==="
+          /bin/ls -la /Volumes/KIOXIA >/tmp/kioxia-ls.out 2>/tmp/kioxia-ls.err || true
+          /bin/cat /tmp/kioxia-ls.err || true
+          echo "=== PROCESS CHAIN ==="
+          /bin/ps -axo uid=,pid=,ppid=,command= | /usr/bin/grep -E 'actions-runner-crypto-signal-501|Runner\.(Listener|Worker)|runsvc\.sh' | /usr/bin/grep -v grep || true
+          echo "=== TCC LOG LAST 3M ==="
+          /usr/bin/log show --last 3m --style compact --predicate 'process == "tccd" OR subsystem == "com.apple.TCC"' 2>/dev/null             | /usr/bin/grep -i -E 'removable|systempolicy|runner|bash|kioxia|deny|denied|auth|responsible|client'             | /usr/bin/tail -300 || true
+          echo "KIOXIA_TCC_DIAGNOSTIC_PASS=YES"
