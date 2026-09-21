@@ -224,11 +224,10 @@ def project_paper_benchmarks(
 ) -> PaperBenchmarkSnapshot:
     if start_at_ms < 0 or observed_at_ms < start_at_ms:
         raise ValueError("benchmark time bounds are invalid")
-    for mark in (*start_marks.values(), *end_marks.values()):
-        if mark.candle_close_time_ms > (
-            start_at_ms if mark in start_marks.values() else observed_at_ms
-        ):
-            raise ValueError("benchmark mark closes after its point in time")
+    if any(mark.candle_close_time_ms > start_at_ms for mark in start_marks.values()):
+        raise ValueError("benchmark start mark closes after start time")
+    if any(mark.candle_close_time_ms > observed_at_ms for mark in end_marks.values()):
+        raise ValueError("benchmark end mark closes after observation time")
 
     cash = PaperBenchmarkResult(
         kind=PaperBenchmarkKind.CASH,
@@ -416,26 +415,33 @@ def _read_marks_at(
 
 
 def _build_mark(*, symbol: PaperSymbol, row: sqlite3.Row) -> PaperBenchmarkMark:
-    draft = {
-        "adapter_version": str(row["adapter_version"]),
-        "candle_close_time_ms": int(row["close_time_ms"]),
-        "candle_open_time_ms": int(row["open_time_ms"]),
-        "ingested_at_ms": int(row["ingested_at_ms"]),
-        "price": Decimal(str(row["close"])),
-        "source": str(row["source"]),
-        "source_timestamp_ms": int(row["source_timestamp_ms"]),
+    adapter_version = str(row["adapter_version"])
+    candle_close_time_ms = int(row["close_time_ms"])
+    candle_open_time_ms = int(row["open_time_ms"])
+    ingested_at_ms = int(row["ingested_at_ms"])
+    price = Decimal(str(row["close"]))
+    source = str(row["source"])
+    source_timestamp_ms = int(row["source_timestamp_ms"])
+    payload = {
+        "adapter_version": adapter_version,
+        "candle_close_time_ms": candle_close_time_ms,
+        "candle_open_time_ms": candle_open_time_ms,
+        "ingested_at_ms": ingested_at_ms,
+        "price": price,
+        "source": source,
+        "source_timestamp_ms": source_timestamp_ms,
         "symbol": symbol.value,
     }
     return PaperBenchmarkMark(
-        mark_identity=canonical_sha256(draft),
+        mark_identity=canonical_sha256(payload),
         symbol=symbol,
-        price=draft["price"],
-        candle_open_time_ms=draft["candle_open_time_ms"],
-        candle_close_time_ms=draft["candle_close_time_ms"],
-        ingested_at_ms=draft["ingested_at_ms"],
-        source_timestamp_ms=draft["source_timestamp_ms"],
-        source=draft["source"],
-        adapter_version=draft["adapter_version"],
+        price=price,
+        candle_open_time_ms=candle_open_time_ms,
+        candle_close_time_ms=candle_close_time_ms,
+        ingested_at_ms=ingested_at_ms,
+        source_timestamp_ms=source_timestamp_ms,
+        source=source,
+        adapter_version=adapter_version,
     )
 
 
