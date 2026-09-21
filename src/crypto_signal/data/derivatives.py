@@ -50,9 +50,11 @@ class DerivativesObservation:
         if (self.mark_price is None) != (self.index_price is None):
             raise ValueError("mark_price and index_price must appear together")
         if self.mark_price is not None:
+            index_price = self.index_price
+            assert index_price is not None
             _require_finite(self.mark_price, "mark_price")
-            _require_finite(self.index_price, "index_price")
-            if self.mark_price <= Decimal(0) or self.index_price <= Decimal(0):
+            _require_finite(index_price, "index_price")
+            if self.mark_price <= Decimal(0) or index_price <= Decimal(0):
                 raise ValueError("derivatives mark/index prices must be positive")
         if self.funding_interval_hours is not None and self.funding_interval_hours <= 0:
             raise ValueError("funding interval must be positive")
