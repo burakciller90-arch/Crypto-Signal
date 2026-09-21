@@ -1,0 +1,174 @@
+name: KIOXIA SSD Migration
+
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  contents: read
+  issues: read
+
+jobs:
+  ssd:
+    if: github.actor == 'burakciller90-arch' && startsWith(github.event.issue.title, '[SSD] ')
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Parse allowlisted SSD command
+        id: parse
+        shell: bash
+        env:
+          ISSUE_BODY: ${{ github.event.issue.body }}
+        run: |
+          set -euo pipefail
+          cmd="$(printf '%s\n' "$ISSUE_BODY" | awk -F: 'tolower($1)=="command" {gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2); print tolower($2); exit}')"
+          case "$cmd" in
+            inspect|prepare|verify|speed)
+              ;;
+            *)
+              echo "Unsupported SSD command: $cmd"
+              exit 2
+              ;;
+          esac
+          echo "command=$cmd" >> "$GITHUB_OUTPUT"
+
+      - name: Inspect KIOXIA target
+        if: steps.parse.outputs.command == 'inspect'
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "=== IDENTITY ==="
+          id
+          groups
+          echo "=== WHOLE DISK ==="
+          diskutil info /dev/disk4
+          echo "=== CURRENT DATA PARTITION ==="
+          diskutil info /dev/disk4s2 || true
+          echo "=== DISK LIST ==="
+          diskutil list /dev/disk4
+          echo "=== MOUNT CONTENT ==="
+          MOUNT="$(diskutil info /dev/disk4s2 2>/dev/null | awk -F: '/Mount Point/ {sub(/^[[:space:]]+/, "", $2); print $2; exit}')"
+          if [ -n "$MOUNT" ] && [ "$MOUNT" != "Not mounted" ] && [ -d "$MOUNT" ]; then
+            echo "MOUNT=$MOUNT"
+            du -sh "$MOUNT" 2>/dev/null || true
+            find "$MOUNT" -maxdepth 2 -mindepth 1 -print 2>/dev/null | head -200 || true
+            echo "=== OPEN FILES ==="
+            lsof +D "$MOUNT" 2>/dev/null | head -100 || true
+          else
+            echo "MOUNT=NOT_MOUNTED"
+          fi
+          echo "SSD_INSPECT_PASS=YES"
+
+      - name: Prepare KIOXIA as APFS
+        if: steps.parse.outputs.command == 'prepare'
+        shell: bash
+        run: |
+          set -euo pipefail
+          DISK="/dev/disk4"
+          EXPECTED_NAME="KIOXIA"
+          TARGET_NAME="AI_PROJECTS"
+
+          echo "=== PRE-FLIGHT HARD GUARDS ==="
+          /usr/bin/python3 - <<'PY'
+          import plistlib
+          import subprocess
+
+          disk = "/dev/disk4"
+          raw = subprocess.check_output(["diskutil", "info", "-plist", disk])
+          info = plistlib.loads(raw)
+          assert info.get("DeviceIdentifier") == "disk4", info
+          assert info.get("Whole") is True, info
+          assert info.get("Internal") is False, info
+          size = int(info.get("TotalSize", 0))
+          assert 900_000_000_000 <= size <= 1_100_000_000_000, size
+
+          raw2 = subprocess.check_output(["diskutil", "info", "-plist", "/dev/disk4s2"])
+          part = plistlib.loads(raw2)
+          assert part.get("DeviceIdentifier") == "disk4s2", part
+          assert part.get("VolumeName") == "KIOXIA", part
+          print("SSD_PREPARE_GUARDS_PASS=YES")
+          print(f"TARGET_SIZE={size}")
+          print(f"CURRENT_VOLUME={part.get('VolumeName')}")
+          PY
+
+          MOUNT="$(diskutil info /dev/disk4s2 | awk -F: '/Mount Point/ {sub(/^[[:space:]]+/, "", $2); print $2; exit}')"
+          if [ -n "$MOUNT" ] && [ "$MOUNT" != "Not mounted" ] && [ -d "$MOUNT" ]; then
+            echo "=== PRE-ERASE CONTENT CHECK ==="
+            du -sh "$MOUNT" 2>/dev/null || true
+            find "$MOUNT" -maxdepth 2 -mindepth 1 -print 2>/dev/null | head -200 || true
+            if lsof +D "$MOUNT" >/tmp/kioxia-open-files.txt 2>/dev/null; then
+              if [ -s /tmp/kioxia-open-files.txt ]; then
+                cat /tmp/kioxia-open-files.txt
+                echo "SSD_PREPARE_BLOCKED_OPEN_FILES=YES"
+                exit 31
+              fi
+            fi
+          fi
+
+          echo "=== ERASE /DEV/DISK4 AS GUID + APFS ==="
+          diskutil eraseDisk APFS "$TARGET_NAME" GPT "$DISK"
+
+          echo "=== POST-ERASE VERIFY ==="
+          diskutil list "$DISK"
+          diskutil info "/Volumes/$TARGET_NAME"
+          /usr/bin/python3 - <<'PY'
+          import plistlib
+          import subprocess
+
+          raw = subprocess.check_output(
+              ["diskutil", "info", "-plist", "/Volumes/AI_PROJECTS"]
+          )
+          info = plistlib.loads(raw)
+          assert info.get("VolumeName") == "AI_PROJECTS", info
+          fs = str(info.get("FilesystemType", "")).lower()
+          assert "apfs" in fs, info
+          assert info.get("Internal") is False, info
+          print("SSD_APFS_VERIFY_PASS=YES")
+          PY
+
+          echo "=== MULTI-USER PROJECT LAYOUT ==="
+          diskutil disableOwnership "/Volumes/$TARGET_NAME" || true
+          mkdir -p             "/Volumes/$TARGET_NAME/Projects"             "/Volumes/$TARGET_NAME/Data"             "/Volumes/$TARGET_NAME/Archives"             "/Volumes/$TARGET_NAME/Backups"             "/Volumes/$TARGET_NAME/Caches"             "/Volumes/$TARGET_NAME/.migration"
+          chmod 775             "/Volumes/$TARGET_NAME/Projects"             "/Volumes/$TARGET_NAME/Data"             "/Volumes/$TARGET_NAME/Archives"             "/Volumes/$TARGET_NAME/Backups"             "/Volumes/$TARGET_NAME/Caches"
+          echo "=== ROOT LAYOUT ==="
+          ls -la "/Volumes/$TARGET_NAME"
+          echo "SSD_PREPARE_PASS=YES"
+
+      - name: Verify prepared SSD
+        if: steps.parse.outputs.command == 'verify'
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -d /Volumes/AI_PROJECTS
+          diskutil info /Volumes/AI_PROJECTS
+          diskutil list /dev/disk4
+          for d in Projects Data Archives Backups Caches .migration; do
+            test -d "/Volumes/AI_PROJECTS/$d"
+          done
+          touch /Volumes/AI_PROJECTS/.migration/uid504-write-test
+          rm /Volumes/AI_PROJECTS/.migration/uid504-write-test
+          echo "SSD_VERIFY_PASS=YES"
+
+      - name: Sequential SSD smoke speed
+        if: steps.parse.outputs.command == 'speed'
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -d /Volumes/AI_PROJECTS/.migration
+          FILE=/Volumes/AI_PROJECTS/.migration/speed-smoke.bin
+          rm -f "$FILE"
+          echo "=== WRITE 2 GiB ==="
+          START="$(date +%s)"
+          dd if=/dev/zero of="$FILE" bs=8m count=256 conv=sync 2>&1
+          sync
+          END="$(date +%s)"
+          echo "WRITE_SECONDS=$((END-START))"
+          echo "=== READ 2 GiB ==="
+          START="$(date +%s)"
+          dd if="$FILE" of=/dev/null bs=8m 2>&1
+          END="$(date +%s)"
+          echo "READ_SECONDS=$((END-START))"
+          rm -f "$FILE"
+          echo "SSD_SPEED_SMOKE_PASS=YES"
