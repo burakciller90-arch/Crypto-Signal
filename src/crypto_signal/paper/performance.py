@@ -206,6 +206,9 @@ class PaperTradePerformanceSnapshot:
     best_trade_pnl_usdt: Decimal | None
     worst_trade_pnl_usdt: Decimal | None
     total_explicit_execution_cost_usdt: Decimal | None
+    expectancy_usdt_per_closed_trade: Decimal | None
+    expectancy_return_fraction_per_closed_trade: Decimal | None
+    window: PaperPerformanceWindowMetrics
     real_capital: int = REAL_CAPITAL
 
     def __post_init__(self) -> None:
@@ -217,6 +220,10 @@ class PaperTradePerformanceSnapshot:
             raise ValueError("REAL_CAPITAL must remain 0")
         if self.observed_at_ms < 0:
             raise ValueError("performance observation time must be non-negative")
+        if self.window.observed_at_ms != self.observed_at_ms:
+            raise ValueError("performance window observation mismatch")
+        if self.window.real_capital != REAL_CAPITAL:
+            raise ValueError("performance window must remain REAL_CAPITAL=0")
         if self.closed_trade_count != len(self.closed_trades):
             raise ValueError("closed_trade_count mismatch")
         if self.open_trade_count != len(self.open_trade_symbols):
@@ -240,6 +247,8 @@ class PaperTradePerformanceSnapshot:
             self.best_trade_pnl_usdt,
             self.worst_trade_pnl_usdt,
             self.total_explicit_execution_cost_usdt,
+            self.expectancy_usdt_per_closed_trade,
+            self.expectancy_return_fraction_per_closed_trade,
         )
         if self.status is PaperTradePerformanceStatus.NOT_YET_MEASURED:
             if self.closed_trade_count != 0:
@@ -322,6 +331,16 @@ class PaperTradePerformanceSnapshot:
             )
             if self.total_explicit_execution_cost_usdt != total_cost:
                 raise ValueError("total execution cost mismatch")
+            if (
+                self.expectancy_usdt_per_closed_trade
+                != self.average_closed_trade_net_pnl_usdt
+            ):
+                raise ValueError("observed expectancy PnL mismatch")
+            if (
+                self.expectancy_return_fraction_per_closed_trade
+                != self.average_closed_trade_return_fraction
+            ):
+                raise ValueError("observed expectancy return mismatch")
 
         if self.snapshot_identity != canonical_sha256(_snapshot_payload(self)):
             raise ValueError("performance snapshot identity mismatch")
