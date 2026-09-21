@@ -274,7 +274,7 @@ def test_metric_accounting_and_identity_tampering_fail_closed() -> None:
             method_id="bad",
             version="v1",
             outcome=LearningOutcomeState.FAILURE,
-            gross=Decimal("1"),
+            gross=Decimal(1),
             cost=Decimal("0.2"),
             net=Decimal("0.9"),
         )
