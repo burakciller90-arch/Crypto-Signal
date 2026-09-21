@@ -1,0 +1,48 @@
+name: Grant UID501 Crypto SSD Root Access Via Admin
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/grant-uid501-crypto-ssd-root-access-via-admin.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  grant:
+    runs-on: [self-hosted, crypto-signal, uid501]
+    timeout-minutes: 10
+    steps:
+      - name: Grant and verify Crypto-504 root ACL with one local admin authorization
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(id -u)" = "501"
+          V="/Volumes/Crypto-504"
+          test -d "$V"
+          ACL="user:burakciller allow list,search,readattr,readextattr,readsecurity,add_file,add_subdirectory,delete_child,writeattr,writeextattr,file_inherit,directory_inherit"
+          CMD="/bin/chmod +a \"$ACL\" \"$V\""
+          echo "REQUESTING_LOCAL_MACOS_ADMIN_AUTH=YES"
+          /usr/bin/osascript - "$CMD" <<'APPLESCRIPT'
+          on run argv
+            set adminCommand to item 1 of argv
+            do shell script adminCommand with administrator privileges
+          end run
+          APPLESCRIPT
+          echo "=== ACL AFTER ==="
+          /bin/ls -ldeO@ "$V"
+          python3 - <<'PY'
+          import os
+          p="/Volumes/Crypto-504"
+          print(f"ACCESS_AFTER R={os.access(p, os.R_OK)} W={os.access(p, os.W_OK)} X={os.access(p, os.X_OK)}")
+          assert os.access(p, os.R_OK)
+          assert os.access(p, os.W_OK)
+          assert os.access(p, os.X_OK)
+          PY
+          PROBE="$V/.uid501_acl_probe_$$"
+          printf 'uid501 crypto root acl probe\n' > "$PROBE"
+          test -f "$PROBE"
+          rm -f "$PROBE"
+          test ! -e "$PROBE"
+          echo "CRYPTO_UID501_ROOT_ACCESS_VIA_ADMIN=PASS"
