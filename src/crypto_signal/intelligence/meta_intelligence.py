@@ -341,13 +341,13 @@ class MetaShadowSnapshot:
             raise ValueError("meta contributions must exactly match observations")
         if self.signed_balance is not None and abs(self.signed_balance) > Decimal(1):
             raise ValueError("meta signed balance must remain inside [-1,1]")
-        for value in (
+        for weight_value in (
             self.total_effective_weight,
             self.bullish_weight,
             self.bearish_weight,
             self.neutral_weight,
         ):
-            if value < Decimal(0) or value > Decimal(1):
+            if weight_value < Decimal(0) or weight_value > Decimal(1):
                 raise ValueError("meta snapshot weights must remain inside [0,1]")
         if self.total_effective_weight > Decimal(1):
             raise ValueError("meta total effective weight exceeds global bound")
@@ -641,7 +641,7 @@ def evaluate_meta_intelligence(
         neutral = Decimal(0)
         for item in ordered:
             identity = item.observation_identity
-            group = group_by_engine.get(item.source_engine_id)
+            current_group = group_by_engine.get(item.source_engine_id)
             if item.state is not MetaEvidenceState.OBSERVED:
                 contribution = MetaContribution(
                     observation_identity=identity,
@@ -652,7 +652,9 @@ def evaluate_meta_intelligence(
                     group_adjusted_weight=Decimal(0),
                     effective_weight=Decimal(0),
                     signed_contribution=Decimal(0),
-                    correlation_group_id=None if group is None else group.group_id,
+                    correlation_group_id=(
+                        None if current_group is None else current_group.group_id
+                    ),
                 )
                 contributions.append(contribution)
                 continue
@@ -677,7 +679,9 @@ def evaluate_meta_intelligence(
                     group_adjusted_weight=group_adjusted[identity],
                     effective_weight=effective,
                     signed_contribution=signed,
-                    correlation_group_id=None if group is None else group.group_id,
+                    correlation_group_id=(
+                        None if current_group is None else current_group.group_id
+                    ),
                 )
             )
 
