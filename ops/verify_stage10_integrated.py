@@ -180,7 +180,10 @@ def _verify_paper_mission(payload: dict[str, Any]) -> None:
     turnover = Decimal(str(window.get("turnover_fraction")))
     if turnover < Decimal(0):
         raise RuntimeError("performance turnover cannot be negative")
-    duration_ms = int(window.get("duration_ms"))
+    duration_raw = window.get("duration_ms")
+    if not isinstance(duration_raw, int):
+        raise TypeError("performance window duration missing")
+    duration_ms = duration_raw
     cash_fraction_raw = window.get("cash_time_fraction")
     invested_fraction_raw = window.get("invested_time_fraction")
     if duration_ms > 0:
