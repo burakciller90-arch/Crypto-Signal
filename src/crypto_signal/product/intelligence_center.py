@@ -457,6 +457,8 @@ def _validate_snapshot(
     if row is None:
         return None
     identity, built_at_ms, raw_payload = row
+    if not isinstance(built_at_ms, int) or isinstance(built_at_ms, bool):
+        raise TypeError("learning snapshot built_at_ms invalid")
     payload = _load_object(raw_payload)
     if str(identity) != canonical_sha256(payload):
         raise ValueError("learning snapshot identity mismatch")
@@ -470,7 +472,7 @@ def _validate_snapshot(
         raise ValueError("learning snapshot REAL_CAPITAL must remain 0")
     return {
         "snapshot_identity": str(identity),
-        "built_at_ms": int(built_at_ms),
+        "built_at_ms": built_at_ms,
         "parent_snapshot_identity": payload.get("parent_snapshot_identity"),
         "record_count": len(payload.get("record_identities", [])),
         "relation_count": len(payload.get("redundancy_link_identities", [])),
