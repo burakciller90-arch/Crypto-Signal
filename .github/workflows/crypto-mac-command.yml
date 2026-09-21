@@ -24,7 +24,7 @@ jobs:
           set -euo pipefail
           cmd="$(printf '%s\n' "$ISSUE_BODY" | awk -F: 'tolower($1)=="command" {gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2); print tolower($2); exit}')"
           case "$cmd" in
-            status|services|logs|disk|sync|producttest|fulltest|productstate|productdeploy|paperreview|paperinspect|paperfixlint|paperharden|stateplanreview|stateplaninspect|stateplanharden|cursorreview|cursorreviewtail|cursorcleanup|bridgecheck|bridgestate|pausecheck|wakepause|wakeresume|wakearm|waketest|wakeheartbeat|chatbusyprobe|cursorcheck|cursorauthdiag|cursorttycheck|alertclockstate|alertclockpause|alertclockresume|migrationinspect|migrationinventory|ssddashboarddiag|ssddashboardwrappertest|ssdtcclaunchtest|ssdbackgroundteststart|ssdbackgroundtestcheck|ssdleftover|runnerpersistinstall)
+            status|services|logs|disk|sync|producttest|fulltest|productstate|productdeploy|paperreview|paperinspect|paperfixlint|paperharden|stateplanreview|stateplaninspect|stateplanharden|cursorreview|cursorreviewtail|cursorcleanup|bridgecheck|bridgestate|pausecheck|wakepause|wakeresume|wakearm|waketest|wakeheartbeat|chatbusyprobe|cursorcheck|cursorauthdiag|cursorttycheck|alertclockstate|alertclockpause|alertclockresume|migrationinspect|migrationinventory|ssddashboarddiag|ssddashboardwrappertest|ssdtcclaunchtest|ssdbackgroundteststart|ssdbackgroundtestcheck|ssdleftover|runnerpersistinstall|runnerpersistdiag|runnercutoverdiag)
               ;;
             *)
               echo "Unsupported command: $cmd"
@@ -1414,6 +1414,35 @@ jobs:
           ps -axo pid=,ppid=,user=,etime=,command= | grep -E '[V]olumes/Crypto-504/Crypto-Signal/Runner/(runsvc.sh|bin/Runner.Listener)' | head -40
           pgrep -f '/Volumes/Crypto-504/Crypto-Signal/Runner/bin/Runner.Listener run --startuptype service' >/dev/null
           echo "CRYPTO_UID504_SSD_RUNNER_PERSISTENCE_INSTALLED=YES"
+
+      - name: RUNNER PERSIST DIAG
+        if: steps.parse.outputs.command == 'runnerpersistdiag'
+        shell: bash
+        run: |
+          set +e
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          LABEL="com.cryptosignal.github-runner-ssd"
+          TARGET="gui/$(id -u)/$LABEL"
+          echo "=== ID ==="; id
+          echo "=== CONSOLE ==="; /usr/bin/stat -f 'owner=%Su uid=%u' /dev/console
+          echo "=== PERSIST PLIST ==="
+          plutil -p "$HOME/Library/LaunchAgents/$LABEL.plist" 2>&1
+          echo "=== PERSIST STATE ==="
+          launchctl print "$TARGET" 2>&1 | head -220
+          echo "=== PERSIST OUT ==="
+          tail -160 "$ROOT/RunnerLogs/persistent-launchagent.out.log" 2>&1
+          echo "=== PERSIST ERR ==="
+          tail -160 "$ROOT/RunnerLogs/persistent-launchagent.err.log" 2>&1
+          echo "=== WRAPPER ==="
+          sed -n '1,220p' "$ROOT/Runner/runner-persist-wrapper.sh" 2>&1
+          echo "=== EXISTING OFFICIAL RUNNER PLIST ==="
+          plutil -p "$HOME/Library/LaunchAgents/actions.runner.burakciller90-arch-Crypto-Signal.crypto-signal-uid504.plist" 2>&1
+          echo "=== OFFICIAL RUNNER STATE ==="
+          launchctl print "gui/$(id -u)/actions.runner.burakciller90-arch-Crypto-Signal.crypto-signal-uid504" 2>&1 | head -220
+          echo "=== RUNNER PROCESSES ==="
+          ps -axo pid=,ppid=,user=,etime=,state=,command= | grep -E '[V]olumes/Crypto-504/Crypto-Signal/Runner/(runsvc.sh|bin/Runner.Listener|bin/Runner.Worker)' | head -120
+          echo "RUNNER_PERSIST_DIAG_DONE=YES"
+          exit 0
 
       - name: MIGRATION INVENTORY
         if: steps.parse.outputs.command == 'migrationinventory'
