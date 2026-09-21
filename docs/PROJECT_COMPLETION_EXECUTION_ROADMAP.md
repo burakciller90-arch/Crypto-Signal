@@ -164,14 +164,16 @@ The accepted policy is shadow/read-only, correlation-safe, contradiction/abstent
 - no probability label without accepted calibration evidence;
 - shadow/read-only validation before any production contribution change.
 
-### R10 — Gift Edition final polish — CURRENT FRONTIER
-Canonical task: `stage9-gift-edition-final-polish-v1`.
+### R10 — Gift Edition final polish — ACCEPTED LIVE
+Accepted live Product/main: `f15cbafd9f4359d385eca097a6a2635bf815ded1`.
+Beginner-first simple/detailed UX, KISACA brief, quick navigation and progressive disclosure are live with existing evidence/product semantics preserved.
 Keep the first screen simple and beginner-friendly.
 Integrate the new intelligence/research visibility through progressive disclosure rather than adding dashboard clutter.
 
 ## M3 — Operational hardening and Full Version final acceptance
 
-### R11 — SSD/runtime recovery hardening
+### R11 — SSD/runtime recovery hardening — CURRENT FRONTIER
+Canonical task: `stage11-ssd-runtime-recovery-hardening-v1`.
 Test:
 - Mac reboot;
 - logout/login;
@@ -230,4 +232,4 @@ Freeze:
 Crypto Signal Full Version is complete when M1, M2 and M3 are accepted with mechanical evidence and authoritative documentation, while REAL_CAPITAL remains 0 and all real-money/order authority stays closed.
 
 Immediate next execution target:
-`stage9-gift-edition-final-polish-v1`.
+`stage11-ssd-runtime-recovery-hardening-v1`.

@@ -250,22 +250,36 @@ contribution remains 0.
 Branch full gate, merged Stage10 regression, UID504 sync and UID504 fulltest all
 passed. REAL_CAPITAL=0.
 
+## R10 Gift Edition final polish — ACCEPTED LIVE
+
+Gift Edition final polish is **ACCEPTED LIVE** at
+`f15cbafd9f4359d385eca097a6a2635bf815ded1`.
+
+The first screen now defaults to a beginner-first simple mode with a concise
+evidence-grounded status brief, persistent simple/detailed view preference and
+quick navigation. Dense research/performance/archive/health surfaces use
+progressive disclosure. Accepted shadow meta-intelligence remains explicitly
+research-only with production contribution 0.
+
+Branch full gate, merged-main Stage10, UID504 sync/product/full tests and
+rollback-safe live Product deployment all passed. The SSD supervisor remained
+runtime owner and the deployed shell was mechanically verified. REAL_CAPITAL=0.
+
 ## Canonical next frontier
 
-`stage9-gift-edition-final-polish-v1`
+`stage11-ssd-runtime-recovery-hardening-v1`
 
 Requirements:
 
-- preserve the beginner-first first screen and current accepted functionality;
-- expose deeper intelligence only through progressive disclosure;
-- make Research Lab and meta-intelligence status understandable without implying
-  calibrated probability or production authority;
-- improve navigation, hierarchy, concise explanations and responsive behavior;
-- preserve evidence freshness/source/missing-state semantics;
-- preserve paper Mission Control, portfolio/performance, education, archive,
-  alerts and system health;
-- no order/broker/real-capital authority;
-- REAL_CAPITAL=0.
+- prove dashboard child recovery under the active SSD supervisor;
+- prove supervisor/process PID reconciliation and stale PID cleanup;
+- prove runner-watchdog recovery without duplicating runners;
+- verify SQLite integrity/WAL behavior on bounded copies or read-only checks;
+- verify disk-space and log-growth/rotation policy;
+- verify backup/restore through bounded non-destructive artifacts;
+- verify missing SSD/runtime dependencies fail closed and never fall back to removed Macintosh project paths;
+- test reboot/logout/SSD-remount semantics first through deterministic simulation; physical disruption requires a separately proven recoverable control path;
+- preserve current Product health and REAL_CAPITAL=0.
 
 ## Safety boundary
 

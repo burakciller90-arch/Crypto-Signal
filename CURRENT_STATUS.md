@@ -3269,3 +3269,38 @@ Current true roadmap frontier:
 - preserve auto-refresh, evidence truth, paper Mission Control, archive, education and system health behavior;
 - no real-money/order authority;
 - REAL_CAPITAL=0.
+
+
+## 2026-09-22 — R10 Gift Edition final polish ACCEPTED LIVE
+
+- accepted live Product/main head: `f15cbafd9f4359d385eca097a6a2635bf815ded1`;
+- PR #655 merged the beginner-first Gift Edition final polish;
+- default product view is simple/beginner-first with an evidence-grounded `KISACA` brief;
+- simple/detailed view mode is user-toggleable and the preference is retained locally;
+- quick navigation opens advanced sections only when requested;
+- dense paper performance, Research Lab, archive and system-health surfaces remain available through progressive disclosure rather than first-screen clutter;
+- accepted R9 shadow meta-intelligence is visible only as research/shadow context with production contribution 0;
+- auto-refresh, paper Mission Control, asset navigation, signal detail, education, alerts, archive and health behavior remain intact;
+- branch full gate PASS: run `35663860538`;
+- merged-main Stage10 hosted full regression PASS: run `35664027776`;
+- UID504 SSD sync PASS: issue #656 / run `35664123449`;
+- UID504 product test PASS: issue #657 / run `35664178866`;
+- UID504 fulltest PASS with `FULL_TEST_PASS=YES`: issue #658 / run `35664230493`;
+- rollback-safe live Product deploy PASS: issue #659 / run `35664303200`;
+- live Product moved from `07972c4ce59a09da61339f9a131067c84a317cc7` to `f15cbafd9f4359d385eca097a6a2635bf815ded1`;
+- SSD supervisor remained runtime owner: supervisor PID 74402; dashboard child restarted `90752 -> 94596`;
+- live health PASS: status=ok, ledger present, alert outbox present, read-only=true, REAL_CAPITAL=0;
+- live Intelligence Center shell PASS with `INTELLIGENCE_CENTER_LIVE_PASS=YES`;
+- live Gift Edition shell PASS with `GIFT_EDITION_POLISH_LIVE_PASS=YES`;
+- post-deploy Product state PASS: issue #660 / run `35664485174`, Product HEAD exact and health clean;
+- continuity reconciliation PASS: issue #661 / run `35664490660`, local/shared pause YES, active leases=0, local/relay wake queues=0;
+- no broker/order/real-capital authority was introduced;
+- REAL_CAPITAL=0.
+
+Current true roadmap frontier:
+- `stage11-ssd-runtime-recovery-hardening-v1`;
+- verify supervisor/dashboard/runner recovery, stale PID cleanup, DB integrity/WAL handling, disk/log behavior, backup/restore and fail-closed missing-runtime behavior;
+- use non-destructive recovery simulations first; do not sever the control channel merely to prove reboot/unmount recovery;
+- physical reboot/logout/SSD-remount acceptance must only be attempted through a separately proven recoverable path;
+- no fallback to removed internal Macintosh project paths;
+- REAL_CAPITAL=0.

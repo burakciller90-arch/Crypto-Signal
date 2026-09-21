@@ -2561,3 +2561,16 @@ The output is a bounded signed weighted balance with semantic `signed_weighted_b
 The full branch gate passed in `35662870858`; merged-main Stage10 passed in `35663035623`; UID504 sync issue #651 / run `35663128059` and UID504 fulltest issue #653 / run `35663190430` completed acceptance with `FULL_TEST_PASS=YES`.
 
 R9 is accepted. The next frontier is `stage9-gift-edition-final-polish-v1`: beginner-first final polish and progressive-disclosure integration without changing REAL_CAPITAL=0 or research/production authority boundaries.
+
+## 2026-09-22 — R10 Gift Edition final polish accepted live
+
+PR #655 merged at `f15cbafd9f4359d385eca097a6a2635bf815ded1`. The product now defaults to a beginner-first simple view with an evidence-grounded KISACA brief, a persistent simple/detailed toggle, and quick navigation that opens advanced surfaces only when requested. Existing Mission Control, market radar, asset/signal detail, education, alerts, archive, auto-refresh and system-health behavior remains available.
+
+The branch full gate passed in `35663860538`; merged-main Stage10 passed in `35664027776`; UID504 sync/product/full tests passed through issues #656/#657/#658, with `FULL_TEST_PASS=YES`.
+
+Issue #659 / run `35664303200` deployed Product from `07972c4ce59a09da61339f9a131067c84a317cc7` to `f15cbafd9f4359d385eca097a6a2635bf815ded1`. SSD supervisor PID 74402 stayed authoritative and replaced dashboard child 90752 with 94596. Live health, Intelligence Center and Gift Edition shell markers all passed. Post-deploy issue #660 confirmed the exact Product head and clean health.
+
+Continuity issue #661 confirmed the user pause remains intact with zero active leases and zero queued wakes.
+
+R10 is accepted live. The next roadmap frontier is `stage11-ssd-runtime-recovery-hardening-v1`.
+REAL_CAPITAL=0.
