@@ -1,8 +1,9 @@
-name: Crypto Stage10 Hosted Branch Gate
+name: Crypto Stage10 Hosted Gate
 
 on:
   push:
     branches:
+      - main
       - feature/stage10-integrated-acceptance
 
 permissions:
