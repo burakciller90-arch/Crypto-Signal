@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import time
-from collections.abc import Callable
 import xml.etree.ElementTree as ET
+from collections.abc import Callable
 from datetime import UTC, date, datetime
 from decimal import Decimal
 
