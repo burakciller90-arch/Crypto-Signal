@@ -1,0 +1,201 @@
+name: Crypto SSD Finalize
+
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  contents: read
+  issues: read
+
+jobs:
+  finalize:
+    if: github.actor == 'burakciller90-arch' && github.event.issue.title == '[CRYPTOSSD] FINALIZE'
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 30
+    steps:
+      - name: Start SSD supervisor, verify, remove internal project payload
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(id -u)" = "504"
+
+          HOME_ROOT="/Users/crypto-signal-agent"
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          DEV="$ROOT/Development"
+          LIVE="$ROOT/Live"
+          PRODUCT="$ROOT/Product"
+          ALERTS="$ROOT/Alerts"
+          PAPER="$ROOT/Paper"
+          SUP="$ROOT/ssd-service-supervisor.sh"
+          SUP_PID="$ROOT/ssd-service-supervisor.pid"
+          LOGDIR="$ROOT/ServiceLogs"
+
+          echo "=== TARGET GUARDS ==="
+          test -d "$DEV" && test -d "$LIVE" && test -d "$PRODUCT" && test -d "$ALERTS" && test -d "$PAPER"
+          test -z "$(git -C "$DEV" status --porcelain)"
+          for db in             "$DEV/runtime/ledger/live_signal_ledger.sqlite3"             "$DEV/runtime/alerts/alert_outbox.sqlite3"             "$DEV/runtime/paper/paper_fund.sqlite3"; do
+            if [ -f "$db" ]; then
+              out="$(/usr/bin/sqlite3 "$db" 'PRAGMA integrity_check;')"
+              echo "$db => $out"
+              test "$out" = "ok"
+            fi
+          done
+
+          mkdir -p "$LOGDIR"
+
+          echo "=== STOP BROKEN/LEGACY CRYPTO LAUNCHAGENTS ==="
+          for label in             com.cryptosignal.dashboard             com.cryptosignal.liveevidenceclock             com.cryptosignal.alertclock             com.cryptosignal.paperclock             com.cryptosignal.paperdryrun             com.cryptosignal.continuitybridge             com.cryptosignal.autowake20m; do
+            launchctl bootout "gui/504/$label" >/dev/null 2>&1 || true
+            launchctl disable "gui/504/$label" >/dev/null 2>&1 || true
+          done
+
+          old_test="$(cat "$ROOT/background-test.pid" 2>/dev/null || true)"
+          if [ -n "$old_test" ]; then kill "$old_test" >/dev/null 2>&1 || true; fi
+          rm -f "$ROOT/background-test.pid"
+
+          echo "=== WRITE SSD SUPERVISOR ==="
+          cat > "$SUP" <<'SUPERVISOR'
+          #!/bin/bash
+          set -u
+          unset RUNNER_TRACKING_ID
+
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          DEV="$ROOT/Development"
+          LIVE="$ROOT/Live"
+          PRODUCT="$ROOT/Product"
+          ALERTS="$ROOT/Alerts"
+          PAPER="$ROOT/Paper"
+          LOGDIR="$ROOT/ServiceLogs"
+          mkdir -p "$LOGDIR"
+          exec >>"$LOGDIR/supervisor.log" 2>&1
+
+          echo "$(date '+%Y-%m-%d %H:%M:%S %z') supervisor_start pid=$$"
+
+          dashboard_pid_file="$ROOT/dashboard.pid"
+
+          start_dashboard() {
+            local pid=""
+            if [ -f "$dashboard_pid_file" ]; then
+              pid="$(cat "$dashboard_pid_file" 2>/dev/null || true)"
+            fi
+            if [ -n "$pid" ] && kill -0 "$pid" >/dev/null 2>&1; then
+              return 0
+            fi
+            (
+              unset RUNNER_TRACKING_ID
+              export PYTHONPATH="$PRODUCT/src"
+              cd "$PRODUCT"
+              exec "$PRODUCT/.venv/bin/python" "$PRODUCT/ops/run_dashboard.py"                 --host 127.0.0.1 --port 48700                 --ledger "$DEV/runtime/ledger/live_signal_ledger.sqlite3"
+            ) >>"$LOGDIR/dashboard.out.log" 2>>"$LOGDIR/dashboard.err.log" < /dev/null &
+            echo $! > "$dashboard_pid_file"
+            echo "$(date '+%Y-%m-%d %H:%M:%S %z') dashboard_started pid=$!"
+          }
+
+          run_once() {
+            local name="$1"
+            local workdir="$2"
+            local py="$3"
+            local script="$4"
+            shift 4
+            (
+              unset RUNNER_TRACKING_ID
+              export PYTHONPATH="$workdir/src"
+              cd "$workdir"
+              "$py" "$script" "$@"
+            ) >>"$LOGDIR/$name.out.log" 2>>"$LOGDIR/$name.err.log" ||               echo "$(date '+%Y-%m-%d %H:%M:%S %z') $name rc=$?"
+          }
+
+          last_live=0
+          last_alert=0
+          last_paper=0
+          last_dry=0
+
+          while true; do
+            start_dashboard
+            now="$(date +%s)"
+
+            if [ $((now-last_live)) -ge 120 ]; then
+              run_once live "$LIVE" "$LIVE/.venv/bin/python" "$LIVE/ops/run_live_evidence_clock.py"
+              last_live="$now"
+            fi
+
+            if [ $((now-last_alert)) -ge 120 ]; then
+              run_once alert "$ALERTS" "$ALERTS/.venv/bin/python" "$ALERTS/ops/run_alert_clock.py"                 --signal-ledger "$DEV/runtime/ledger/live_signal_ledger.sqlite3"                 --outbox "$DEV/runtime/alerts/alert_outbox.sqlite3"
+              last_alert="$now"
+            fi
+
+            if [ $((now-last_paper)) -ge 120 ]; then
+              run_once paper "$PAPER" "$PAPER/.venv/bin/python" "$PAPER/ops/run_paper_clock.py"                 --paper-ledger "$DEV/runtime/paper/paper_fund.sqlite3"                 --signal-ledger "$DEV/runtime/ledger/live_signal_ledger.sqlite3"
+              last_paper="$now"
+            fi
+
+            if [ $((now-last_dry)) -ge 120 ]; then
+              run_once paperdry "$PAPER" "$PAPER/.venv/bin/python" "$PAPER/ops/run_paper_dry_run_clock.py"
+              last_dry="$now"
+            fi
+
+            sleep 10
+          done
+          SUPERVISOR
+          chmod 700 "$SUP"
+
+          echo "=== START DETACHED SSD SUPERVISOR ==="
+          old_sup="$(cat "$SUP_PID" 2>/dev/null || true)"
+          if [ -n "$old_sup" ]; then kill "$old_sup" >/dev/null 2>&1 || true; fi
+          (
+            unset RUNNER_TRACKING_ID
+            nohup "$SUP" >"$LOGDIR/supervisor-bootstrap.out" 2>"$LOGDIR/supervisor-bootstrap.err" < /dev/null &
+            echo $! > "$SUP_PID"
+          )
+
+          ok=0
+          for i in {1..40}; do
+            sup="$(cat "$SUP_PID" 2>/dev/null || true)"
+            if [ -n "$sup" ] && kill -0 "$sup" >/dev/null 2>&1 &&                curl -fsS --max-time 3 http://127.0.0.1:48700/api/health > "$ROOT/finalize-health.json" 2>/dev/null; then
+              ok=1
+              break
+            fi
+            sleep 1
+          done
+          test "$ok" = "1"
+          cat "$ROOT/finalize-health.json"
+          ROOT="$ROOT" /usr/bin/python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          data=json.loads((Path(os.environ["ROOT"])/"finalize-health.json").read_text())
+          assert data["status"] == "ok"
+          assert data["real_capital"] == 0
+          assert data["read_only"] is True
+          print("SSD_SUPERVISOR_HEALTH_PASS=YES")
+          PY
+
+          sup="$(cat "$SUP_PID")"
+          ps -p "$sup" -o pid=,ppid=,user=,%cpu=,%mem=,etime=,command=
+          dash="$(cat "$ROOT/dashboard.pid")"
+          ps -p "$dash" -o pid=,ppid=,user=,%cpu=,%mem=,etime=,command=
+          case "$(ps -p "$dash" -o command=)" in
+            /Volumes/Crypto-504/*) ;;
+            *) echo "DASHBOARD_NOT_ON_SSD"; exit 61 ;;
+          esac
+
+          echo "=== REMOVE INTERNAL CRYPTO PROJECT PAYLOAD ==="
+          rm -rf             "$HOME_ROOT/Crypto-Signal"             "$HOME_ROOT/Crypto-Signal-Live"             "$HOME_ROOT/Crypto-Signal-Product"             "$HOME_ROOT/Crypto-Signal-Alerts"             "$HOME_ROOT/Crypto-Signal-Paper"             "$HOME_ROOT/Library/Application Support/CryptoSignal"
+
+          find "$HOME_ROOT/Library/LaunchAgents" -maxdepth 1 -type f -name 'com.cryptosignal*.plist.pre-ssd' -delete 2>/dev/null || true
+
+          for p in             "$HOME_ROOT/Crypto-Signal"             "$HOME_ROOT/Crypto-Signal-Live"             "$HOME_ROOT/Crypto-Signal-Product"             "$HOME_ROOT/Crypto-Signal-Alerts"             "$HOME_ROOT/Crypto-Signal-Paper"             "$HOME_ROOT/Library/Application Support/CryptoSignal"; do
+            test ! -e "$p"
+            echo "REMOVED=$p"
+          done
+
+          echo "=== POST-DELETE HEALTH ==="
+          curl -fsS --max-time 5 http://127.0.0.1:48700/api/health
+          echo
+
+          echo "=== SPACE ==="
+          df -h /
+          df -h /Volumes/Crypto-504
+          du -sh "$ROOT"
+
+          echo "CRYPTO_SSD_PAYLOAD_FINALIZE_PASS=YES"
