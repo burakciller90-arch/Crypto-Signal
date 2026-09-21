@@ -191,13 +191,11 @@ jobs:
           for worker in 62228 51245; do
             echo "--- worker=$worker"
             ps -p "$worker" -o pid=,ppid=,user=,%cpu=,%mem=,etime=,state=,command=
-            C1="$(pgrep -P "$worker" | tr '
-' ' ' || true)"
+            C1="$(pgrep -P "$worker" | paste -sd ' ' - || true)"
             echo "CHILDREN=$C1"
             for p in $C1; do
               ps -p "$p" -o pid=,ppid=,user=,%cpu=,%mem=,etime=,state=,command=
-              C2="$(pgrep -P "$p" | tr '
-' ' ' || true)"
+              C2="$(pgrep -P "$p" | paste -sd ' ' - || true)"
               echo "GRANDCHILDREN_OF_$p=$C2"
               for q in $C2; do
                 ps -p "$q" -o pid=,ppid=,user=,%cpu=,%mem=,etime=,state=,command=
@@ -205,7 +203,7 @@ jobs:
             done
           done
           echo "=== DURABLE SUPERVISOR ==="
-          /bin/ps -axo pid=,ppid=,user=,%cpu=,%mem=,etime=,state=,command= | /usr/bin/grep -E '[n]atural_forward_durable_day_supervisor\.py|[p]9_natural_forward_runtime_entrypoint\.py'
+          ps -axo pid=,ppid=,user=,%cpu=,%mem=,etime=,state=,command= | grep -E '[n]atural_forward_durable_day_supervisor\.py|[p]9_natural_forward_runtime_entrypoint\.py'
           echo "=== LOAD ==="
           /usr/sbin/sysctl -n vm.loadavg
           echo "LOAD_TREE_2_PASS=YES"
