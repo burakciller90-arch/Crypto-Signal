@@ -311,15 +311,15 @@ def _metrics(
     closes = tuple(candle.close for candle in candles)
     signed_displacement = (closes[-1] - closes[0]) / closes[0] * _BPS
     absolute_displacement = abs(signed_displacement)
-    path = sum(
-        (
-            abs(right - left) / left * _BPS
-            for left, right in pairwise(closes)
-        ),
+
+    raw_displacement = abs(closes[-1] - closes[0])
+    raw_path = sum(
+        (abs(right - left) for left, right in pairwise(closes)),
         start=Decimal(0),
     )
+    path = raw_path / closes[0] * _BPS
     efficiency = (
-        Decimal(0) if path == Decimal(0) else absolute_displacement / path
+        Decimal(0) if raw_path == Decimal(0) else raw_displacement / raw_path
     )
 
     ranges = tuple(
