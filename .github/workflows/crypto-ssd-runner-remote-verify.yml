@@ -1,0 +1,40 @@
+name: Crypto SSD Runner Remote Verify
+
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  contents: read
+  issues: read
+
+jobs:
+  verify:
+    if: github.actor == 'burakciller90-arch' && github.event.issue.title == '[CRYPTOSSD] RUNNER-REMOTE-VERIFY'
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 10
+    steps:
+      - name: Prove job is executing from SSD runner
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          echo "GITHUB_WORKSPACE=$GITHUB_WORKSPACE"
+          echo "RUNNER_TEMP=$RUNNER_TEMP"
+          case "$GITHUB_WORKSPACE" in
+            /Volumes/Crypto-504/Crypto-Signal/Runner/_work/*) ;;
+            *) echo "WORKSPACE_NOT_ON_SSD"; exit 31 ;;
+          esac
+          ps -axo pid=,ppid=,user=,command= | grep -E '[R]unner\.(Listener|Worker)' | head -80
+          ps -axo command= | grep -q '/Volumes/Crypto-504/Crypto-Signal/Runner/bin/Runner.Listener'
+          curl -fsS --max-time 5 http://127.0.0.1:48700/api/health | tee "$ROOT/runner-remote-health.json"
+          /usr/bin/python3 - <<'PY'
+          import json
+          from pathlib import Path
+          d=json.loads(Path("/Volumes/Crypto-504/Crypto-Signal/runner-remote-health.json").read_text())
+          assert d["status"]=="ok"
+          assert d["real_capital"]==0
+          assert d["read_only"] is True
+          PY
+          touch "$ROOT/RUNNER_REMOTE_VERIFIED"
+          echo "RUNNER_REMOTE_VERIFY_PASS=YES"
