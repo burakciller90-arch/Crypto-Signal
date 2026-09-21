@@ -50,8 +50,8 @@ The current repository and runtime evidence support these accepted areas:
 The governing roadmap explicitly requires the following engines to be introduced
 one at a time behind isolated gates:
 
-1. deterministic regime labeling,
-2. trend/momentum,
+1. deterministic regime labeling — **ACCEPTED** at `4cdfbd134597a8329fb90d08eed5643161cd4926`,
+2. trend/momentum — **NEXT FRONTIER**,
 3. mean reversion,
 4. breakout/volatility,
 5. bounded derivatives context,
@@ -113,19 +113,20 @@ only through a separately tested policy.
 
 The next bounded roadmap slice is:
 
-`stage8-regime-labeling-v1`
+`stage8-trend-momentum-v1`
 
-Scope:
+The regime-labeling prerequisite is accepted. The next slice must add a deterministic
+trend/momentum evidence engine with:
 
-- deterministic regime taxonomy and versioned model,
 - point-in-time-safe inputs only,
-- immutable/frozen regime evidence,
+- immutable/frozen evidence,
 - explicit uncertainty / unresolved state,
 - independent tests,
+- no change to production confluence weights,
 - no change to production paper write authority,
-- no self-learning or automatic production weighting yet.
+- no self-learning or automatic promotion.
 
-Only after this first engine is accepted should the next Stage 8 engine begin.
+Only after this engine is accepted should mean-reversion work begin.
 
 ## Safety boundary
 
