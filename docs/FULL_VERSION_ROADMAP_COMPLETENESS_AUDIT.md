@@ -134,28 +134,41 @@ model or changes predictions, and provides no winner-selection or production
 authority. Branch and merged-main research gates, merged-main Stage10
 regression, UID504 sync and UID504 fulltest all passed.
 
+## Stage 8.5 bounded ML robustness/ablation — ACCEPTED
+
+Bounded deterministic ML robustness/ablation evidence is **ACCEPTED** at
+`a385d7789af11aa7b124e5c52eb4731c868df615`.
+
+It binds the accepted cost-stress chain, ablates every accepted feature exactly
+once without refitting, records changed-prediction sensitivity, describes fold
+sensitivity, and preserves explicit regime OBSERVED / NO_EVIDENCE states.
+Branch and merged-main research gates, merged-main Stage10 regression, UID504
+sync and UID504 fulltest all passed.
+
 ## Canonical next frontier
 
 The next bounded roadmap slice is:
 
-`stage8.5-bounded-ml-robustness-ablation-v1`
+`stage8.5-bounded-ml-model-family-expansion-v1`
 
 Requirements:
 
 - remain under isolated `research/alpha_factory`,
-- consume only accepted deterministic ML baseline/walk-forward/cost-stress evidence,
-- introduce deterministic, predeclared feature/fold/regime sensitivity and ablation checks,
-- retain both favorable and unfavorable robustness evidence,
-- use immutable configuration/result identities,
-- do not refit/select a model from robustness results,
-- do not introduce automatic model/hyperparameter winner selection,
-- do not claim calibrated probability,
+- introduce only a small predeclared deterministic model-family set,
+- retain the accepted categorical-count baseline as a reference family,
+- TRAIN remains fit-only; VALIDATION/OOS remain descriptive evaluation-only,
+- use immutable family/config/model/prediction/evaluation identities,
+- preserve explicit gross/cost/net-R semantics,
+- make multiple-testing/backtest-overfitting state explicit,
+- no uncontrolled hyperparameter search,
+- no automatic family/model/hyperparameter winner selection,
+- no calibrated-probability claim without separate accepted calibration evidence,
 - untouched-forward remains closed,
 - no production product/paper/confluence/signal import,
 - no self-promotion, champion mutation or deploy path,
 - RL remains closed until a later separately accepted slice.
 
-A favorable robustness result cannot promote a challenger. Untouched-forward
+A favorable model-family result cannot promote a challenger. Untouched-forward
 paper evaluation and explicit supervisor acceptance remain separate gates.
 
 `REAL_CAPITAL=0`.

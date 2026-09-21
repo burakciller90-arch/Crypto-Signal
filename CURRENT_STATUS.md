@@ -2967,3 +2967,39 @@ Current true roadmap frontier:
 - untouched-forward remains closed;
 - no self-promotion, champion mutation, production import or deploy path;
 - RL remains closed.
+
+
+## 2026-09-21 — Stage 8.5 bounded ML robustness/ablation v1 ACCEPTED
+
+- accepted main head: `a385d7789af11aa7b124e5c52eb4731c868df615`;
+- PR #597 merged deterministic research-only robustness evidence;
+- accepted research surface:
+  - `research/alpha_factory/ml_robustness_ablation.py`
+  - `tests/test_alpha_factory_ml_robustness_ablation.py`
+- exact accepted cost-stress evidence is rebound and verified before robustness analysis;
+- every accepted feature is ablated exactly once without model refit;
+- changed-prediction sensitivity is explicit;
+- fold sensitivity is descriptive and cannot select a fold/model;
+- regime slices preserve both OBSERVED and NO_EVIDENCE states;
+- accepted prediction evidence is never mutated;
+- no automatic feature/regime/fold/model winner selection;
+- untouched-forward remains closed;
+- no production/paper/confluence/signal import or deploy authority;
+- branch Alpha Factory research gate PASS: run `35652573551`;
+- merged-main Alpha Factory research gate PASS: run `35652689680`;
+- merged-main Stage10 hosted full regression PASS: run `35652689690`;
+- UID504 SSD sync PASS: issue #598 / run `35652799628`;
+- UID504 fulltest PASS: issue #599 / run `35652858439`;
+- PAPER/STABLE write activation remains closed;
+- REAL_CAPITAL=0.
+
+Current true roadmap frontier:
+- `stage8.5-bounded-ml-model-family-expansion-v1`;
+- add only a small predeclared deterministic model-family set under isolated research;
+- preserve TRAIN-only fitting and descriptive VALIDATION/OOS evaluation;
+- explicit multiple-testing/backtest-overfitting state;
+- no uncontrolled hyperparameter search and no automatic family/winner selection;
+- all challenger families must retain immutable config/model/evaluation identities and explicit cost semantics;
+- untouched-forward remains closed;
+- no self-promotion, champion mutation, production import or deploy path;
+- RL remains closed.

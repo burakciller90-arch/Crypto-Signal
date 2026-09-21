@@ -2473,3 +2473,12 @@ Cost stress preserves accepted ML evidence and changes only deterministic cost a
 
 The canonical next safe research frontier is `stage8.5-bounded-ml-robustness-ablation-v1`.
 Untouched-forward and RL remain closed. REAL_CAPITAL=0.
+
+## 2026-09-21 — Bounded ML robustness/ablation v1 accepted
+
+PR #597 merged at `a385d7789af11aa7b124e5c52eb4731c868df615`.
+Branch research gate, merged-main research gate, Stage10 hosted regression, UID504 sync and UID504 fulltest all passed.
+The accepted slice binds the prior cost-stress evidence, performs one-at-a-time feature ablation without refitting, records fold sensitivity and preserves explicit regime NO_EVIDENCE states. It cannot select a winner or mutate accepted predictions.
+
+The canonical next safe research frontier is `stage8.5-bounded-ml-model-family-expansion-v1`.
+RL and untouched-forward remain closed. REAL_CAPITAL=0.

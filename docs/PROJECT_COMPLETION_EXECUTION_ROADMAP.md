@@ -48,8 +48,8 @@ Acceptance:
 - UID504 sync + fulltest PASS;
 - authoritative docs/frontier closure.
 
-### R2 — ML robustness / ablation evidence — CURRENT FRONTIER
-Canonical task: `stage8.5-bounded-ml-robustness-ablation-v1`.
+### R2 — ML robustness / ablation evidence — ACCEPTED
+Accepted main: `a385d7789af11aa7b124e5c52eb4731c868df615`.
 - feature ablation and sensitivity checks;
 - fold/regime/asset/timeframe stability evidence where supported;
 - redundancy/correlation checks;
@@ -57,7 +57,8 @@ Canonical task: `stage8.5-bounded-ml-robustness-ablation-v1`.
 - deterministic identities and reproducibility;
 - no automatic winner selection or promotion.
 
-### R3 — Carefully bounded broader ML research
+### R3 — Carefully bounded broader ML research — CURRENT FRONTIER
+Canonical task: `stage8.5-bounded-ml-model-family-expansion-v1`.
 Only after R1/R2 close:
 - predeclared finite hypothesis/model family;
 - multiple-testing/backtest-overfitting controls;
@@ -206,4 +207,4 @@ Freeze:
 Crypto Signal Full Version is complete when M1, M2 and M3 are accepted with mechanical evidence and authoritative documentation, while REAL_CAPITAL remains 0 and all real-money/order authority stays closed.
 
 Immediate next execution target:
-`stage8.5-bounded-ml-robustness-ablation-v1`.
+`stage8.5-bounded-ml-model-family-expansion-v1`.
