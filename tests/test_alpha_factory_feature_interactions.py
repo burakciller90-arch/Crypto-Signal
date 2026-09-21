@@ -355,7 +355,7 @@ def test_hypothesis_identity_tampering_fails_closed() -> None:
     with pytest.raises(ValueError, match="interaction hypothesis identity mismatch"):
         replace(
             hypothesis,
-            training_support_count=hypothesis.training_support_count + 1,
+            training_partition_identity=_sha("other-training-partition"),
         )
 
 
