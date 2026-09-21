@@ -38,7 +38,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          REPO="/Users/crypto-signal-agent/Crypto-Signal"
+          REPO="/Volumes/Crypto-504/Crypto-Signal/Development"
           echo "=== IDENTITY ==="
           id
           echo "=== REPO ==="
@@ -64,7 +64,7 @@ jobs:
         shell: bash
         run: |
           set +e
-          for f in             /Users/crypto-signal-agent/Crypto-Signal/runtime/dashboard/dashboard.err.log             /Users/crypto-signal-agent/Crypto-Signal/runtime/dashboard/dashboard.out.log             /Users/crypto-signal-agent/Crypto-Signal/runtime/ledger/live_clock.err.log             /Users/crypto-signal-agent/Crypto-Signal/runtime/ledger/live_clock.out.log             /Users/crypto-signal-agent/Crypto-Signal/runtime/alerts/alert_clock.err.log             /Users/crypto-signal-agent/Crypto-Signal/runtime/alerts/alert_clock.out.log
+          for f in             /Volumes/Crypto-504/Crypto-Signal/Development/runtime/dashboard/dashboard.err.log             /Volumes/Crypto-504/Crypto-Signal/Development/runtime/dashboard/dashboard.out.log             /Volumes/Crypto-504/Crypto-Signal/Development/runtime/ledger/live_clock.err.log             /Volumes/Crypto-504/Crypto-Signal/Development/runtime/ledger/live_clock.out.log             /Volumes/Crypto-504/Crypto-Signal/Development/runtime/alerts/alert_clock.err.log             /Volumes/Crypto-504/Crypto-Signal/Development/runtime/alerts/alert_clock.out.log
           do
             echo "=== $f ==="
             if [ -f "$f" ]; then tail -80 "$f"; else echo "MISSING"; fi
@@ -77,7 +77,7 @@ jobs:
         run: |
           set -euo pipefail
           df -h /
-          du -sh /Users/crypto-signal-agent/Crypto-Signal                  /Users/crypto-signal-agent/Crypto-Signal-Live                  /Users/crypto-signal-agent/Crypto-Signal-Product                  /Users/crypto-signal-agent/Crypto-Signal-Alerts                  /Users/crypto-signal-agent/actions-runner-crypto 2>/dev/null || true
+          du -sh /Volumes/Crypto-504/Crypto-Signal/Development                  /Volumes/Crypto-504/Crypto-Signal/Live                  /Volumes/Crypto-504/Crypto-Signal/Product                  /Volumes/Crypto-504/Crypto-Signal/Alerts                  /Users/crypto-signal-agent/actions-runner-crypto 2>/dev/null || true
 
       - name: SYNC
         if: steps.parse.outputs.command == 'sync'
@@ -86,7 +86,7 @@ jobs:
           GH_JOB_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          REPO="/Users/crypto-signal-agent/Crypto-Signal"
+          REPO="/Volumes/Crypto-504/Crypto-Signal/Development"
           echo "=== BEFORE ==="
           git -C "$REPO" status --short --branch
           test -z "$(git -C "$REPO" status --porcelain)"
@@ -104,7 +104,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          REPO="/Users/crypto-signal-agent/Crypto-Signal"
+          REPO="/Volumes/Crypto-504/Crypto-Signal/Development"
           cd "$REPO"
           echo "=== DASHBOARD TESTS ==="
           ./.venv/bin/python -m pytest -q tests/test_dashboard_web.py tests/test_dashboard_alert_center.py tests/test_product_education.py
@@ -122,7 +122,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          REPO="/Users/crypto-signal-agent/Crypto-Signal"
+          REPO="/Volumes/Crypto-504/Crypto-Signal/Development"
           cd "$REPO"
           test -z "$(git status --porcelain)"
           echo "=== PYTEST ==="
@@ -142,7 +142,7 @@ jobs:
         shell: bash
         run: |
           set +e
-          PRODUCT="/Users/crypto-signal-agent/Crypto-Signal-Product"
+          PRODUCT="/Volumes/Crypto-504/Crypto-Signal/Product"
           echo "=== PRODUCT GIT ==="
           git -C "$PRODUCT" status --short --branch
           echo "HEAD=$(git -C "$PRODUCT" rev-parse HEAD 2>/dev/null)"
@@ -170,8 +170,8 @@ jobs:
           print(m.group(1))
           PY
           )"
-          REPO="/Users/crypto-signal-agent/Crypto-Signal"
-          PRODUCT="/Users/crypto-signal-agent/Crypto-Signal-Product"
+          REPO="/Volumes/Crypto-504/Crypto-Signal/Development"
+          PRODUCT="/Volumes/Crypto-504/Crypto-Signal/Product"
           UID_NOW="$(id -u)"
           LABEL="com.cryptosignal.dashboard"
           test "$UID_NOW" = "504"
@@ -271,12 +271,12 @@ jobs:
           BEFORE="$(git -C "$WT" status --porcelain | LC_ALL=C sort)"
           EXPECTED="$(printf '?? src/crypto_signal/paper/\n?? tests/test_paper_fund.py\n' | LC_ALL=C sort)"
           test "$BEFORE" = "$EXPECTED"
-          /Users/crypto-signal-agent/Crypto-Signal/.venv/bin/python -m ruff check --fix "$WT/tests/test_paper_fund.py"
+          /Volumes/Crypto-504/Crypto-Signal/Development/.venv/bin/python -m ruff check --fix "$WT/tests/test_paper_fund.py"
           AFTER="$(git -C "$WT" status --porcelain | LC_ALL=C sort)"
           test "$AFTER" = "$EXPECTED"
-          PYTHONPATH="$WT/src" /Users/crypto-signal-agent/Crypto-Signal/.venv/bin/python -m pytest -q "$WT/tests/test_paper_fund.py"
-          /Users/crypto-signal-agent/Crypto-Signal/.venv/bin/python -m ruff check "$WT/src/crypto_signal/paper" "$WT/tests/test_paper_fund.py"
-          /Users/crypto-signal-agent/Crypto-Signal/.venv/bin/python -m mypy "$WT/src/crypto_signal/paper"
+          PYTHONPATH="$WT/src" /Volumes/Crypto-504/Crypto-Signal/Development/.venv/bin/python -m pytest -q "$WT/tests/test_paper_fund.py"
+          /Volumes/Crypto-504/Crypto-Signal/Development/.venv/bin/python -m ruff check "$WT/src/crypto_signal/paper" "$WT/tests/test_paper_fund.py"
+          /Volumes/Crypto-504/Crypto-Signal/Development/.venv/bin/python -m mypy "$WT/src/crypto_signal/paper"
           echo "PAPER_LINT_FIX_PASS=YES"
 
       - name: PAPER HARDEN
@@ -300,7 +300,7 @@ jobs:
           EXPECTED="$(printf '?? src/crypto_signal/paper/\n?? tests/test_paper_fund.py\n' | LC_ALL=C sort)"
           test "$(git -C "$WT" status --porcelain | LC_ALL=C sort)" = "$EXPECTED"
 
-          /Users/crypto-signal-agent/Crypto-Signal/.venv/bin/python -m ruff check --fix "$WT/tests/test_paper_fund.py"
+          /Volumes/Crypto-504/Crypto-Signal/Development/.venv/bin/python -m ruff check --fix "$WT/tests/test_paper_fund.py"
 
           WT="$WT" /usr/bin/python3 - <<'PY'
           import os
@@ -377,10 +377,10 @@ jobs:
               tests.write_text(t)
           PY
 
-          /Users/crypto-signal-agent/Crypto-Signal/.venv/bin/python -m ruff check --fix "$WT/src/crypto_signal/paper" "$WT/tests/test_paper_fund.py"
-          PYTHONPATH="$WT/src" /Users/crypto-signal-agent/Crypto-Signal/.venv/bin/python -m pytest -q "$WT/tests/test_paper_fund.py"
-          /Users/crypto-signal-agent/Crypto-Signal/.venv/bin/python -m ruff check "$WT/src/crypto_signal/paper" "$WT/tests/test_paper_fund.py"
-          /Users/crypto-signal-agent/Crypto-Signal/.venv/bin/python -m mypy "$WT/src/crypto_signal/paper"
+          /Volumes/Crypto-504/Crypto-Signal/Development/.venv/bin/python -m ruff check --fix "$WT/src/crypto_signal/paper" "$WT/tests/test_paper_fund.py"
+          PYTHONPATH="$WT/src" /Volumes/Crypto-504/Crypto-Signal/Development/.venv/bin/python -m pytest -q "$WT/tests/test_paper_fund.py"
+          /Volumes/Crypto-504/Crypto-Signal/Development/.venv/bin/python -m ruff check "$WT/src/crypto_signal/paper" "$WT/tests/test_paper_fund.py"
+          /Volumes/Crypto-504/Crypto-Signal/Development/.venv/bin/python -m mypy "$WT/src/crypto_signal/paper"
           test "$(git -C "$WT" status --porcelain | LC_ALL=C sort)" = "$EXPECTED"
           echo "PAPER_HARDEN_PASS=YES"
 
@@ -422,11 +422,11 @@ jobs:
             echo "REVIEW_NOTE=no_forbidden_terms"
           fi
           echo "=== FOCUSED TEST ==="
-          PYTHONPATH="$WT/src" /Users/crypto-signal-agent/Crypto-Signal/.venv/bin/python -m pytest -q "$WT/tests/test_paper_fund.py"
+          PYTHONPATH="$WT/src" /Volumes/Crypto-504/Crypto-Signal/Development/.venv/bin/python -m pytest -q "$WT/tests/test_paper_fund.py"
           echo "=== RUFF ==="
-          /Users/crypto-signal-agent/Crypto-Signal/.venv/bin/python -m ruff check "$WT/src/crypto_signal/paper" "$WT/tests/test_paper_fund.py"
+          /Volumes/Crypto-504/Crypto-Signal/Development/.venv/bin/python -m ruff check "$WT/src/crypto_signal/paper" "$WT/tests/test_paper_fund.py"
           echo "=== MYPY ==="
-          /Users/crypto-signal-agent/Crypto-Signal/.venv/bin/python -m mypy "$WT/src/crypto_signal/paper"
+          /Volumes/Crypto-504/Crypto-Signal/Development/.venv/bin/python -m mypy "$WT/src/crypto_signal/paper"
           echo "PAPER_REVIEW_PASS=YES"
 
       - name: STATE PLAN INSPECT
@@ -753,10 +753,10 @@ jobs:
               planning_tests.write_text(pt)
           PY
 
-          /Users/crypto-signal-agent/Crypto-Signal/.venv/bin/python -m ruff check --fix             "$WT/src/crypto_signal/paper/state.py" "$WT/src/crypto_signal/paper/planning.py"             "$WT/tests/test_paper_state.py" "$WT/tests/test_paper_planning.py"
-          PYTHONPATH="$WT/src" /Users/crypto-signal-agent/Crypto-Signal/.venv/bin/python -m pytest -q             "$WT/tests/test_paper_state.py" "$WT/tests/test_paper_planning.py"
-          /Users/crypto-signal-agent/Crypto-Signal/.venv/bin/python -m ruff check             "$WT/src/crypto_signal/paper/state.py" "$WT/src/crypto_signal/paper/planning.py"             "$WT/tests/test_paper_state.py" "$WT/tests/test_paper_planning.py"
-          PYTHONPATH="$WT/src" /Users/crypto-signal-agent/Crypto-Signal/.venv/bin/python -m mypy             "$WT/src/crypto_signal/paper/state.py" "$WT/src/crypto_signal/paper/planning.py"
+          /Volumes/Crypto-504/Crypto-Signal/Development/.venv/bin/python -m ruff check --fix             "$WT/src/crypto_signal/paper/state.py" "$WT/src/crypto_signal/paper/planning.py"             "$WT/tests/test_paper_state.py" "$WT/tests/test_paper_planning.py"
+          PYTHONPATH="$WT/src" /Volumes/Crypto-504/Crypto-Signal/Development/.venv/bin/python -m pytest -q             "$WT/tests/test_paper_state.py" "$WT/tests/test_paper_planning.py"
+          /Volumes/Crypto-504/Crypto-Signal/Development/.venv/bin/python -m ruff check             "$WT/src/crypto_signal/paper/state.py" "$WT/src/crypto_signal/paper/planning.py"             "$WT/tests/test_paper_state.py" "$WT/tests/test_paper_planning.py"
+          PYTHONPATH="$WT/src" /Volumes/Crypto-504/Crypto-Signal/Development/.venv/bin/python -m mypy             "$WT/src/crypto_signal/paper/state.py" "$WT/src/crypto_signal/paper/planning.py"
           test "$(git -C "$WT" status --porcelain | LC_ALL=C sort)" = "$EXPECTED"
           echo "STATE_PLAN_HARDEN_PASS=YES"
 
@@ -794,11 +794,11 @@ jobs:
             echo "REVIEW_NOTE=no_forbidden_terms"
           fi
           echo "=== FOCUSED TEST ==="
-          PYTHONPATH="$WT/src" /Users/crypto-signal-agent/Crypto-Signal/.venv/bin/python -m pytest -q             "$WT/tests/test_paper_state.py" "$WT/tests/test_paper_planning.py"
+          PYTHONPATH="$WT/src" /Volumes/Crypto-504/Crypto-Signal/Development/.venv/bin/python -m pytest -q             "$WT/tests/test_paper_state.py" "$WT/tests/test_paper_planning.py"
           echo "=== RUFF ==="
-          /Users/crypto-signal-agent/Crypto-Signal/.venv/bin/python -m ruff check             "$WT/src/crypto_signal/paper/state.py" "$WT/src/crypto_signal/paper/planning.py"             "$WT/tests/test_paper_state.py" "$WT/tests/test_paper_planning.py"
+          /Volumes/Crypto-504/Crypto-Signal/Development/.venv/bin/python -m ruff check             "$WT/src/crypto_signal/paper/state.py" "$WT/src/crypto_signal/paper/planning.py"             "$WT/tests/test_paper_state.py" "$WT/tests/test_paper_planning.py"
           echo "=== MYPY ==="
-          PYTHONPATH="$WT/src" /Users/crypto-signal-agent/Crypto-Signal/.venv/bin/python -m mypy             "$WT/src/crypto_signal/paper/state.py" "$WT/src/crypto_signal/paper/planning.py"
+          PYTHONPATH="$WT/src" /Volumes/Crypto-504/Crypto-Signal/Development/.venv/bin/python -m mypy             "$WT/src/crypto_signal/paper/state.py" "$WT/src/crypto_signal/paper/planning.py"
           echo "STATE_PLAN_REVIEW_PASS=YES"
 
       - name: CURSOR REVIEW
@@ -826,9 +826,9 @@ jobs:
           echo "=== EDUCATION TESTS ==="
           sed -n '1,320p' "$WT/tests/test_product_education.py"
           echo "=== FOCUSED TEST ==="
-          PYTHONPATH="$WT/src" /Users/crypto-signal-agent/Crypto-Signal/.venv/bin/python -m pytest -q "$WT/tests/test_product_education.py"
+          PYTHONPATH="$WT/src" /Volumes/Crypto-504/Crypto-Signal/Development/.venv/bin/python -m pytest -q "$WT/tests/test_product_education.py"
           echo "=== RUFF ==="
-          /Users/crypto-signal-agent/Crypto-Signal/.venv/bin/python -m ruff check "$WT/src/crypto_signal/product/education.py" "$WT/tests/test_product_education.py"
+          /Volumes/Crypto-504/Crypto-Signal/Development/.venv/bin/python -m ruff check "$WT/src/crypto_signal/product/education.py" "$WT/tests/test_product_education.py"
           echo "CURSOR_REVIEW_PASS=YES"
 
       - name: CURSOR REVIEW TAIL
@@ -870,7 +870,7 @@ jobs:
           print(m.group(1))
           PY
           )"
-          REPO="/Users/crypto-signal-agent/Crypto-Signal"
+          REPO="/Volumes/Crypto-504/Crypto-Signal/Development"
           WT="$HOME/.cursor/worktrees/crypto-signal/$TARGET"
           echo "TARGET=$TARGET"
           if [ -d "$WT" ]; then
@@ -885,7 +885,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          LOCAL="/Users/crypto-signal-agent/Crypto-Signal/runtime/continuity"
+          LOCAL="/Volumes/Crypto-504/Crypto-Signal/Development/runtime/continuity"
           SHARED="/Users/Shared/.crypto-signal-wake-relay"
           local_pause=NO
           shared_pause=NO
@@ -911,14 +911,14 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          /usr/bin/python3 /Users/crypto-signal-agent/Crypto-Signal/ops/continuity/pause_continuity.py
+          /usr/bin/python3 /Volumes/Crypto-504/Crypto-Signal/Development/ops/continuity/pause_continuity.py
 
       - name: WAKE RESUME
         if: steps.parse.outputs.command == 'wakeresume'
         shell: bash
         run: |
           set -euo pipefail
-          /usr/bin/python3 /Users/crypto-signal-agent/Crypto-Signal/ops/continuity/resume_continuity.py
+          /usr/bin/python3 /Volumes/Crypto-504/Crypto-Signal/Development/ops/continuity/resume_continuity.py
 
       - name: WAKE ARM
         if: steps.parse.outputs.command == 'wakearm'
@@ -946,7 +946,7 @@ jobs:
           [[ "$delay" =~ ^[0-9]+$ ]] || { echo "INVALID_DELAY"; exit 64; }
           [ "$delay" -ge 10 ] && [ "$delay" -le 86400 ] || { echo "DELAY_OUT_OF_RANGE"; exit 64; }
           [ "${#note}" -le 500 ] || { echo "NOTE_TOO_LONG"; exit 64; }
-          /usr/bin/python3 /Users/crypto-signal-agent/Crypto-Signal/ops/continuity/arm_exact.py "$task" "$delay" "$note"
+          /usr/bin/python3 /Volumes/Crypto-504/Crypto-Signal/Development/ops/continuity/arm_exact.py "$task" "$delay" "$note"
 
       - name: WAKE TEST
         if: steps.parse.outputs.command == 'waketest'
@@ -955,7 +955,7 @@ jobs:
           set +e
           EVENT_ID="github-wake-test-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
           MESSAGE="CRYPTO_SIGNAL_TERMINAL_BRIDGE_TEST_V1 — Bu mesaj UID504 terminal/GitHub runner → UID502 Safari relay → mevcut ChatGPT sohbeti zincirinden otomatik gönderildi. Bu mesaj görünüyorsa terminalden bu sohbete geri yazma kanalı çalışıyor."
-          /usr/bin/python3 /Users/crypto-signal-agent/Crypto-Signal/ops/continuity/relay_submit.py "$EVENT_ID" "$MESSAGE" 5
+          /usr/bin/python3 /Volumes/Crypto-504/Crypto-Signal/Development/ops/continuity/relay_submit.py "$EVENT_ID" "$MESSAGE" 5
           rc=$?
           echo "RELAY_SUBMIT_RC=$rc"
           if [ "$rc" -eq 0 ] || [ "$rc" -eq 2 ]; then
@@ -969,7 +969,7 @@ jobs:
         run: |
           set -euo pipefail
           EVENT_ID="github-wake-heartbeat-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
-          /usr/bin/python3 /Users/crypto-signal-agent/Crypto-Signal/ops/continuity/recurring_wake.py "$EVENT_ID"
+          /usr/bin/python3 /Volumes/Crypto-504/Crypto-Signal/Development/ops/continuity/recurring_wake.py "$EVENT_ID"
 
       - name: CHAT BUSY PROBE
         if: steps.parse.outputs.command == 'chatbusyprobe'
@@ -1069,7 +1069,7 @@ jobs:
         run: |
           set +e
           SHARED="/Users/Shared/.crypto-signal-wake-relay"
-          LOCAL="/Users/crypto-signal-agent/Crypto-Signal/runtime/continuity"
+          LOCAL="/Volumes/Crypto-504/Crypto-Signal/Development/runtime/continuity"
           echo "=== SHARED CURRENT CHAT ==="
           [ -f "$SHARED/current_chat_url" ] && cat "$SHARED/current_chat_url" || echo "MISSING"
           echo
@@ -1110,7 +1110,7 @@ jobs:
             fi
           done
           echo "=== CRYPTO CONTINUITY FILES ==="
-          find /Users/crypto-signal-agent/Crypto-Signal/runtime                /Users/crypto-signal-agent/Crypto-Signal                -maxdepth 4 -type f                \( -iname '*wake*' -o -iname '*lease*' -o -iname '*bridge*' -o -iname '*chat*' \)                -print 2>/dev/null | head -150
+          find /Volumes/Crypto-504/Crypto-Signal/Development/runtime                /Volumes/Crypto-504/Crypto-Signal/Development                -maxdepth 4 -type f                \( -iname '*wake*' -o -iname '*lease*' -o -iname '*bridge*' -o -iname '*chat*' \)                -print 2>/dev/null | head -150
           echo "=== UID504 LAUNCH AGENTS MATCHING BRIDGE/WAKE ==="
           launchctl print "gui/$(id -u)" 2>/dev/null | egrep -i 'crypto|wake|bridge|chatgpt|lease' | head -120
           exit 0
@@ -1311,7 +1311,7 @@ jobs:
           echo "=== ID ==="
           id
           echo "=== SOURCE DIRS ==="
-          for p in             /Users/crypto-signal-agent/Crypto-Signal             /Users/crypto-signal-agent/Crypto-Signal-Live             /Users/crypto-signal-agent/Crypto-Signal-Product             /Users/crypto-signal-agent/Crypto-Signal-Alerts             /Users/crypto-signal-agent/actions-runner-crypto; do
+          for p in             /Volumes/Crypto-504/Crypto-Signal/Development             /Volumes/Crypto-504/Crypto-Signal/Live             /Volumes/Crypto-504/Crypto-Signal/Product             /Volumes/Crypto-504/Crypto-Signal/Alerts             /Users/crypto-signal-agent/actions-runner-crypto; do
             echo "--- $p"
             if [ -e "$p" ]; then
               ls -ld "$p"
@@ -1335,7 +1335,7 @@ jobs:
           echo "=== RUNNER SERVICE ==="
           find "$HOME/Library/LaunchAgents" -maxdepth 1 -type f -name '*actions.runner*crypto*' -print -exec plutil -p {} \; 2>/dev/null || true
           echo "=== HARD-CODED CRYPTO PATHS ==="
-          grep -RIl --exclude='*.log' '/Users/crypto-signal-agent/Crypto-Signal' "$HOME/Library/LaunchAgents" 2>/dev/null || true
+          grep -RIl --exclude='*.log' '/Volumes/Crypto-504/Crypto-Signal/Development' "$HOME/Library/LaunchAgents" 2>/dev/null || true
           echo "MIGRATION_INSPECT_PASS=YES"
 
       - name: ALERT CLOCK STATE
@@ -1356,7 +1356,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test -f "/Users/crypto-signal-agent/Crypto-Signal/runtime/continuity/user_pause"
+          test -f "/Volumes/Crypto-504/Crypto-Signal/Development/runtime/continuity/user_pause"
           test -f "/Users/Shared/.crypto-signal-wake-relay/user_pause"
           LABEL="com.cryptosignal.alertclock"
           TARGET="gui/$(id -u)/$LABEL"
