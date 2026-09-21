@@ -4,6 +4,7 @@ let navigationContexts = [];
 let selectedEvidenceClass = null;
 let performanceData = null;
 let educationData = null;
+let currentViewMode = "simple";
 
 const AUTO_REFRESH_MS = 15_000;
 const STALE_AFTER_MS = 45_000;
@@ -122,6 +123,56 @@ function human(value) {
   const key = String(value ?? "");
   if (!key) return "—";
   return LABELS[key] ?? key.replaceAll("_", " ");
+}
+
+
+function setViewMode(mode, { persist = true } = {}) {
+  currentViewMode = mode === "detailed" ? "detailed" : "simple";
+  document.body.dataset.viewMode = currentViewMode;
+  const toggle = $("#viewModeToggle");
+  const label = $("#viewModeLabel");
+  if (toggle) {
+    const detailed = currentViewMode === "detailed";
+    toggle.textContent = detailed ? "Sade görünüme dön" : "Tüm detayları göster";
+    toggle.setAttribute("aria-pressed", String(detailed));
+  }
+  if (label) {
+    label.textContent = currentViewMode === "detailed"
+      ? "Tüm detaylar açık"
+      : "Sade görünüm";
+  }
+  if (persist) {
+    try {
+      window.localStorage.setItem("crypto-signal-view-mode", currentViewMode);
+    } catch (_) {
+      // Storage availability must not affect the read-only product.
+    }
+  }
+}
+
+function restoreViewMode() {
+  let stored = null;
+  try {
+    stored = window.localStorage.getItem("crypto-signal-view-mode");
+  } catch (_) {
+    stored = null;
+  }
+  setViewMode(stored === "detailed" ? "detailed" : "simple", { persist: false });
+}
+
+function bindQuickNavigation() {
+  document.querySelectorAll("#quickNav [data-target]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const target = document.getElementById(button.dataset.target);
+      if (!target) return;
+      if (target.hasAttribute("data-advanced-section") && currentViewMode !== "detailed") {
+        setViewMode("detailed");
+      }
+      window.requestAnimationFrame(() => {
+        target.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+    });
+  });
 }
 
 function stateClass(state) {
@@ -1691,10 +1742,95 @@ function showError(error) {
   $("#healthChip").textContent = "Okuma hatası";
 }
 
+function renderBeginnerBrief(command, radar, paperMission, intelligence) {
+  const root = $("#beginnerBrief");
+  if (!root) return;
+
+  const radarItems = radar?.status === "ready" ? (radar.items ?? []) : [];
+  const attentionItems = radarItems.filter(
+    (item) => ["watch", "active"].includes(item?.latest?.state)
+  );
+  const activeItems = attentionItems.filter((item) => item?.latest?.state === "active");
+  const paperReady = paperMission?.status === "ready" && Boolean(paperMission?.snapshot);
+  const snapshot = paperReady ? paperMission.snapshot : null;
+  const portfolio = snapshot?.portfolio ?? {};
+  const candidateCount = Number(snapshot?.ready_candidate_count ?? 0);
+  const researchReady = intelligence?.status === "ready";
+  const acceptedResearch = Number(intelligence?.accepted_engine_count ?? 0);
+  const activeResearch = Number(intelligence?.production_active_engine_count ?? 0);
+
+  let marketHeadline = "Piyasa kanıtı bekleniyor";
+  let marketCopy = "Eksik veriden aciliyet veya yön uydurulmaz.";
+  if (radar?.status === "ready") {
+    if (activeItems.length) {
+      marketHeadline = `${activeItems.length} aktif sinyal bağlamı`;
+      marketCopy = `${attentionItems.length} bağlam dikkat gerektiriyor. Ayrıntıda sağlayıcı farkları ve belirsizlik korunuyor.`;
+    } else if (attentionItems.length) {
+      marketHeadline = `${attentionItems.length} bağlam izleniyor`;
+      marketCopy = "Aktif sinyal yok; sistem izlenen yapıları ayrı tutuyor.";
+    } else {
+      marketHeadline = "Acil sinyal görünmüyor";
+      marketCopy = `${radarItems.length} piyasa bağlamı izleniyor; sinyal yokluğu da geçerli bir sonuçtur.`;
+    }
+  }
+
+  let paperHeadline = "Sanal portföy kanıtı bağlı değil";
+  let paperCopy = "Bu durum gerçek sermaye veya emir yetkisi açmaz.";
+  if (paperReady) {
+    const nav = fmtMoney(portfolio.nav_usdt);
+    paperHeadline = candidateCount > 0
+      ? `${candidateCount} sanal plan hazır`
+      : "Sanal portföy temkinli";
+    paperCopy = `Portföy değeri ${nav}. Politika: ${human(snapshot.trade_policy)}. Gerçek sermaye 0.`;
+  }
+
+  const researchHeadline = researchReady
+    ? `${acceptedResearch} accepted araştırma yüzeyi`
+    : "Araştırma özeti kullanılamıyor";
+  const researchCopy = researchReady
+    ? `Üretimde aktif research katkısı ${activeResearch}. Shadow meta-intelligence ve diğer araştırma katmanları olasılık veya emir yetkisi değildir.`
+    : "Eksik araştırma runtime verisi üretim kararı gibi gösterilmez.";
+
+  root.classList.remove("loading-block");
+  root.innerHTML = `
+    <article class="brief-card brief-market">
+      <span>1 · Piyasada ne oluyor?</span>
+      <strong>${esc(marketHeadline)}</strong>
+      <p>${esc(marketCopy)}</p>
+      <button type="button" data-brief-target="radarSection">Piyasa Radarına git</button>
+    </article>
+    <article class="brief-card brief-paper">
+      <span>2 · Sanal portföy ne yapıyor?</span>
+      <strong>${esc(paperHeadline)}</strong>
+      <p>${esc(paperCopy)}</p>
+      <button type="button" data-brief-target="paperMissionSection">Sanal portföyü aç</button>
+    </article>
+    <article class="brief-card brief-research">
+      <span>3 · Araştırma üretime etki ediyor mu?</span>
+      <strong>${esc(researchHeadline)}</strong>
+      <p>${esc(researchCopy)}</p>
+      <button type="button" data-brief-target="intelligenceSection">Araştırma detayını aç</button>
+    </article>`;
+
+  root.querySelectorAll("[data-brief-target]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const target = document.getElementById(button.dataset.briefTarget);
+      if (!target) return;
+      if (target.hasAttribute("data-advanced-section") && currentViewMode !== "detailed") {
+        setViewMode("detailed");
+      }
+      window.requestAnimationFrame(() => {
+        target.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+    });
+  });
+}
+
 function intelligenceGroupLabel(group) {
   if (group === "market_intelligence") return "Piyasa İstihbarat Motorları";
   if (group === "alpha_factory") return "Alpha Factory / Bilimsel Gate'ler";
   if (group === "learning_memory") return "Learning Memory";
+  if (group === "meta_intelligence") return "Meta Intelligence · Shadow Policy";
   return human(group);
 }
 
@@ -1787,7 +1923,7 @@ function renderIntelligenceCenter(data) {
       <small>uyum / frekans ≠ kalibre olasılık</small>
     </article>`;
 
-  const order = ["market_intelligence", "alpha_factory", "learning_memory"];
+  const order = ["market_intelligence", "meta_intelligence", "alpha_factory", "learning_memory"];
   const groups = order.map((group) => ({
     group,
     items: engines.filter((item) => item.group === group),
@@ -1913,6 +2049,7 @@ async function loadAll() {
   renderPerformance(performance);
   renderAlertCenter(alerts);
   renderIntelligenceCenter(intelligence);
+  renderBeginnerBrief(command, radar, paperMission, intelligence);
   renderEducation(education);
   configureNavigation(navigation);
   await loadSelectedAsset();
@@ -1932,6 +2069,12 @@ $("#providerSelect").addEventListener("change", () => {
 });
 $("#refreshButton").addEventListener("click", () => refreshAll());
 $("#closeDialog").addEventListener("click", () => $("#signalDialog").close());
+$("#viewModeToggle").addEventListener("click", () => {
+  setViewMode(currentViewMode === "simple" ? "detailed" : "simple");
+});
+
+restoreViewMode();
+bindQuickNavigation();
 
 document.addEventListener("visibilitychange", () => {
   if (!document.hidden) refreshAll();
