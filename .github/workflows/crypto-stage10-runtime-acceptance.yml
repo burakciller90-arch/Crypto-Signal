@@ -89,7 +89,10 @@ jobs:
           echo "STAGE10_LIVE_RECOVERY_PASS=YES"
 
           echo "=== READ-ONLY ENDURANCE ==="
-          PYTHONPATH="$REPO/src" "$REPO/.venv/bin/python"             "$REPO/ops/verify_stage10_integrated.py"             --cycles 20             --pause-seconds 0.05
+          PYTHONPATH="$REPO/src" "$REPO/.venv/bin/python" \
+            "$REPO/ops/verify_stage10_integrated.py" \
+            --cycles 20 \
+            --pause-seconds 1.0
 
           echo "=== FRESHNESS CONTRACT ==="
           node "$REPO/tests/js/test_product_freshness.js"
