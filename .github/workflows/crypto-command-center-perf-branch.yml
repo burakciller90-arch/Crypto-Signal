@@ -1,0 +1,66 @@
+name: Crypto Command Center Perf Branch
+
+on:
+  push:
+    branches:
+      - fix/stage10-command-center-read-performance
+    paths:
+      - ".github/workflows/crypto-command-center-perf-branch.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    name: UID504 live command-center latency
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Probe branch against live read-only ledger
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(id -u)" = "504"
+          PY="/Users/crypto-signal-agent/Crypto-Signal/.venv/bin/python"
+          test -x "$PY"
+          test -f "/Users/crypto-signal-agent/Crypto-Signal/runtime/ledger/live_signal_ledger.sqlite3"
+          PYTHONPATH="$GITHUB_WORKSPACE/src" "$PY" - <<'PY'
+          from time import perf_counter
+          from fastapi.testclient import TestClient
+          from crypto_signal.product.web import create_app
+
+          client = TestClient(create_app())
+          elapsed = []
+          freeze_counts = []
+          for index in range(5):
+              started = perf_counter()
+              response = client.get("/api/command-center?recent_limit=8")
+              duration = perf_counter() - started
+              if response.status_code != 200:
+                  raise RuntimeError(
+                      f"command-center HTTP {response.status_code}: {response.text}"
+                  )
+              payload = response.json()
+              elapsed.append(duration)
+              freeze_counts.append(int(payload["freeze_count"]))
+              print(
+                  "COMMAND_CENTER_LATENCY "
+                  f"sample={index + 1} "
+                  f"seconds={duration:.6f} "
+                  f"freeze_count={payload['freeze_count']} "
+                  f"recent={len(payload['recent_signals'])}"
+              )
+          if any(count <= 0 for count in freeze_counts):
+              raise RuntimeError("live command-center returned no frozen evidence")
+          worst = max(elapsed)
+          if worst >= 3.0:
+              raise RuntimeError(
+                  f"command-center latency regression: worst={worst:.6f}s"
+              )
+          print(
+              "COMMAND_CENTER_LIVE_PERF_PASS=YES "
+              f"worst_seconds={worst:.6f} "
+              f"mean_seconds={sum(elapsed) / len(elapsed):.6f}"
+          )
+          PY
