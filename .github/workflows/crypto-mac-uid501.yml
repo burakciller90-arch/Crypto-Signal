@@ -52,7 +52,7 @@ jobs:
           set -euo pipefail
           cmd="$(printf '%s\n' "$ISSUE_BODY" | awk -F: 'tolower($1)=="command" {gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2); print tolower($2); exit}')"
           case "$cmd" in
-            status|repo|services|disk|hostdiag|audiorestart|loadtree)
+            status|repo|services|disk|hostdiag|audiorestart|loadtree|loadtree2)
               ;;
             *)
               echo "Unsupported command: $cmd"
@@ -179,4 +179,34 @@ jobs:
           echo "=== TOP CPU ==="
           /bin/ps -axo pid=,ppid=,user=,%cpu=,%mem=,etime=,state=,command= | /usr/bin/sort -k4 -nr | /usr/bin/head -45
           echo "LOAD_TREE_PASS=YES"
+          exit 0
+
+
+      - name: LOAD TREE 2
+        if: steps.parse.outputs.command == 'loadtree2'
+        shell: bash
+        run: |
+          set +e
+          echo "=== RUNNER DESCENDANTS ==="
+          for worker in 62228 51245; do
+            echo "--- worker=$worker"
+            ps -p "$worker" -o pid=,ppid=,user=,%cpu=,%mem=,etime=,state=,command=
+            C1="$(pgrep -P "$worker" | tr '
+' ' ' || true)"
+            echo "CHILDREN=$C1"
+            for p in $C1; do
+              ps -p "$p" -o pid=,ppid=,user=,%cpu=,%mem=,etime=,state=,command=
+              C2="$(pgrep -P "$p" | tr '
+' ' ' || true)"
+              echo "GRANDCHILDREN_OF_$p=$C2"
+              for q in $C2; do
+                ps -p "$q" -o pid=,ppid=,user=,%cpu=,%mem=,etime=,state=,command=
+              done
+            done
+          done
+          echo "=== DURABLE SUPERVISOR ==="
+          /bin/ps -axo pid=,ppid=,user=,%cpu=,%mem=,etime=,state=,command= | /usr/bin/grep -E '[n]atural_forward_durable_day_supervisor\.py|[p]9_natural_forward_runtime_entrypoint\.py'
+          echo "=== LOAD ==="
+          /usr/sbin/sysctl -n vm.loadavg
+          echo "LOAD_TREE_2_PASS=YES"
           exit 0
