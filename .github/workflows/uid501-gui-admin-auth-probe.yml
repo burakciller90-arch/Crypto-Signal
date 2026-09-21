@@ -1,0 +1,26 @@
+name: UID501 GUI Admin Authorization Probe
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/uid501-gui-admin-auth-probe.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: [self-hosted, crypto-signal, uid501]
+    timeout-minutes: 10
+    steps:
+      - name: Request local macOS admin authorization safely
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(id -u)" = "501"
+          echo "GUI_AUTH_PROBE_REQUESTED=YES"
+          RESULT="$(/usr/bin/osascript -e 'do shell script "/usr/bin/id -u" with administrator privileges')"
+          echo "GUI_AUTH_RESULT=$RESULT"
+          test "$RESULT" = "0"
+          echo "UID501_GUI_ADMIN_AUTH_PROBE_PASS=YES"
