@@ -52,7 +52,7 @@ jobs:
           set -euo pipefail
           cmd="$(printf '%s\n' "$ISSUE_BODY" | awk -F: 'tolower($1)=="command" {gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2); print tolower($2); exit}')"
           case "$cmd" in
-            status|repo|services|disk|externaldisk|hostdiag|audiorestart|audioadminrestart|loadtree|loadtree2|bginventory|bgsafecheck|cryptomigrationdiag|cryptomigrationdiag2|cryptodashboarddiag|cryptorunnertree|cryptorunnercutoverdiag|cryptossdrunnerps|uidsudo|uid504runneradminstart)
+            status|repo|services|disk|externaldisk|hostdiag|audiorestart|audioadminrestart|loadtree|loadtree2|bginventory|bgsafecheck|cryptomigrationdiag|cryptomigrationdiag2|cryptodashboarddiag|cryptorunnertree|cryptorunnercutoverdiag|cryptossdrunnerps|uidsudo|uid504runneradminstart|uid504runnerguiadminstart)
               ;;
             *)
               echo "Unsupported command: $cmd"
@@ -341,6 +341,45 @@ jobs:
           /bin/ps -axo command= | /usr/bin/grep -q '/Volumes/Crypto-504/Crypto-Signal/Runner/bin/Runner.Listener'
           rm -f "$SCRIPT"
           echo "UID504_SSD_RUNNER_ADMIN_START_PASS=YES"
+
+
+      - name: UID504 RUNNER GUI ADMIN START
+        if: steps.parse.outputs.command == 'uid504runnerguiadminstart'
+        shell: bash
+        run: |
+          set -euo pipefail
+          SCRIPT="/tmp/crypto-ssd-runner-gui-admin-start.sh"
+          cat > "$SCRIPT" <<'SH'
+          #!/bin/bash
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          DST="$ROOT/Runner"
+          LOG="$ROOT/RunnerLogs"
+          test -d "$DST"
+          test -x "$DST/runsvc.sh"
+          mkdir -p "$LOG"
+          cd "$DST"
+          export HOME="/Users/crypto-signal-agent"
+          unset RUNNER_TRACKING_ID
+          /usr/bin/nohup ./runsvc.sh >>"$LOG/gui-admin-runner.out.log" 2>>"$LOG/gui-admin-runner.err.log" < /dev/null &
+          pid=$!
+          echo "$pid" > "$ROOT/ssd-runner-gui-admin.pid"
+          sleep 5
+          kill -0 "$pid"
+          echo "GUI_ADMIN_SSD_RUNNER_PROCESS_ALIVE=$pid"
+          SH
+          chmod 700 "$SCRIPT"
+
+          echo "=== GUI DOMAIN ==="
+          /bin/launchctl print gui/501 >/dev/null
+          CMD='do shell script "/usr/bin/sudo -u crypto-signal-agent /bin/bash /tmp/crypto-ssd-runner-gui-admin-start.sh" with administrator privileges'
+          /bin/launchctl asuser 501 /usr/bin/osascript -e "$CMD"
+
+          sleep 5
+          /bin/ps -axo pid=,ppid=,user=,%cpu=,%mem=,etime=,state=,command= | /usr/bin/grep -E '/Volumes/Crypto-504/Crypto-Signal/Runner/bin/Runner.Listener|/Volumes/Crypto-504/Crypto-Signal/Runner/runsvc.sh' | /usr/bin/head -80
+          /bin/ps -axo command= | /usr/bin/grep -q '/Volumes/Crypto-504/Crypto-Signal/Runner/bin/Runner.Listener'
+          rm -f "$SCRIPT"
+          echo "UID504_SSD_RUNNER_GUI_ADMIN_START_PASS=YES"
 
       - name: HOST DIAG
         if: steps.parse.outputs.command == 'hostdiag'
