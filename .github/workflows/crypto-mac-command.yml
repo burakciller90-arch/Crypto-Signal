@@ -24,7 +24,7 @@ jobs:
           set -euo pipefail
           cmd="$(printf '%s\n' "$ISSUE_BODY" | awk -F: 'tolower($1)=="command" {gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2); print tolower($2); exit}')"
           case "$cmd" in
-            status|services|logs|disk|sync|producttest|fulltest|productstate|productdeploy|paperreview|paperinspect|paperfixlint|paperharden|stateplanreview|stateplaninspect|stateplanharden|cursorreview|cursorreviewtail|cursorcleanup|bridgecheck|bridgestate|pausecheck|wakepause|wakeresume|wakearm|waketest|wakeheartbeat|chatbusyprobe|cursorcheck|cursorauthdiag|cursorttycheck|alertclockstate|alertclockpause|alertclockresume|migrationinspect|migrationinventory)
+            status|services|logs|disk|sync|producttest|fulltest|productstate|productdeploy|paperreview|paperinspect|paperfixlint|paperharden|stateplanreview|stateplaninspect|stateplanharden|cursorreview|cursorreviewtail|cursorcleanup|bridgecheck|bridgestate|pausecheck|wakepause|wakeresume|wakearm|waketest|wakeheartbeat|chatbusyprobe|cursorcheck|cursorauthdiag|cursorttycheck|alertclockstate|alertclockpause|alertclockresume|migrationinspect|migrationinventory|ssddashboarddiag)
               ;;
             *)
               echo "Unsupported command: $cmd"
@@ -1117,6 +1117,30 @@ jobs:
 
 
 
+
+
+      - name: SSD DASHBOARD DIAG UID504
+        if: steps.parse.outputs.command == 'ssddashboarddiag'
+        shell: bash
+        run: |
+          set +e
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          echo "=== ID ==="
+          id
+          echo "=== DASHBOARD PLIST ==="
+          plutil -p "$HOME/Library/LaunchAgents/com.cryptosignal.dashboard.plist" 2>&1
+          echo "=== DASHBOARD LAUNCHD ==="
+          launchctl print "gui/$(id -u)/com.cryptosignal.dashboard" 2>&1 | head -220
+          echo "=== ERR ==="
+          tail -200 "$ROOT/Development/runtime/dashboard/dashboard.err.log" 2>&1
+          echo "=== OUT ==="
+          tail -200 "$ROOT/Development/runtime/dashboard/dashboard.out.log" 2>&1
+          echo "=== PRODUCT ==="
+          ls -l "$ROOT/Product/.venv/bin/python" "$ROOT/Product/ops/run_dashboard.py"
+          echo "=== DIRECT HEALTH COMMAND SMOKE ==="
+          PYTHONPATH="$ROOT/Product/src" "$ROOT/Product/.venv/bin/python" "$ROOT/Product/ops/run_dashboard.py" --help 2>&1 | head -120
+          echo "SSD_DASHBOARD_DIAG_PASS=YES"
+          exit 0
 
       - name: MIGRATION INVENTORY
         if: steps.parse.outputs.command == 'migrationinventory'
