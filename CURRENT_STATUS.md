@@ -3199,3 +3199,41 @@ Current true roadmap frontier:
 - research-only evidence must never imply production authority or calibrated probability;
 - existing accepted Stage10 product/runtime behavior must remain regression-clean;
 - REAL_CAPITAL=0.
+
+
+## 2026-09-22 — Stage 8.75 Intelligence Center / Research Lab ACCEPTED
+
+- accepted live Product/main head: `07972c4ce59a09da61339f9a131067c84a317cc7`;
+- product implementation PR #633 merged the read-only Intelligence Center / Research Lab;
+- accepted Stage 8 / Stage 8.5 / Learning Memory capabilities are exposed through progressive disclosure without executing research engines inside the product layer;
+- every research surface carries what/why/source/freshness/runtime-evidence state and explicit production contribution;
+- missing runtime research evidence remains explicit rather than being fabricated;
+- Learning Memory is optional read-only SQLite evidence and cannot gain production authority through the dashboard;
+- probability remains `not_calibrated`;
+- production-active research engine count remains 0;
+- branch full gate PASS: run `35660308609`;
+- merged-main Stage10 hosted full regression PASS after product merge: run `35660498337`;
+- UID504 SSD sync/product/full acceptance after product merge: issues #634/#635/#636, runs `35660597583` / `35660657689` / `35660708630`;
+- SSD-supervisor-aware rollback-safe Product deployment PR #639 merged at the accepted live head;
+- exact merged-head Stage10 hosted gate PASS: run `35661486700`;
+- exact merged-head UID504 sync/product/fulltest PASS: issues #643/#644/#645, runs `35661578027` / `35661632593` / `35661688423`;
+- live Product deploy PASS: issue #646 / run `35661750761`;
+- live deploy mechanically changed Product from `8ca23e612ba36b4ebcb0c3cb41a166d78add5cff` to `07972c4ce59a09da61339f9a131067c84a317cc7`;
+- active SSD supervisor stayed in place and restarted dashboard child `74411 -> 90752`;
+- live health PASS: ledger present, alert outbox present, read-only=true, REAL_CAPITAL=0;
+- live Intelligence Center API + HTML shell PASS with `INTELLIGENCE_CENTER_LIVE_PASS=YES`;
+- post-deploy Product state PASS: issue #647 / run `35661839941`, Product HEAD exact and health clean;
+- continuity reconciliation remains paused and empty: local/shared pause YES, active leases=0, local/relay wake queues=0;
+- no research weighting, automatic promotion, champion-write, broker/order, deploy-from-research or real-capital authority was introduced;
+- REAL_CAPITAL=0.
+
+Current true roadmap frontier:
+- `stage9-meta-intelligence-shadow-policy-v1`;
+- create a versioned read-only/shadow meta-intelligence policy over accepted evidence only;
+- prevent double-counting correlated/redundant evidence;
+- preserve contradiction, abstention, missing/no-evidence and uncertainty as first-class states;
+- allow regime-aware weights only through explicit immutable policy inputs;
+- do not emit probability labels without separately accepted calibration evidence;
+- first acceptance is shadow/read-only with production contribution remaining 0;
+- no automatic champion/promotion/deploy/order authority;
+- REAL_CAPITAL=0.

@@ -127,8 +127,9 @@ Persist success and failure equally by:
 Learning Memory is evidence, not authority.
 Any production weighting effect requires a separately tested and accepted policy.
 
-### R8 — Intelligence Center / Research Lab dashboard — CURRENT FRONTIER
-Canonical task: `stage8.75-intelligence-center-readonly-v1`.
+### R8 — Intelligence Center / Research Lab dashboard — ACCEPTED LIVE
+Accepted live Product/main: `07972c4ce59a09da61339f9a131067c84a317cc7`.
+The read-only Research Lab exposes accepted Stage 8 / 8.5 / Learning Memory evidence with progressive disclosure and zero production contribution.
 Expose existing accepted Stage 8 and Stage 8.5 evidence read-only:
 - regime;
 - trend/momentum;
@@ -154,7 +155,8 @@ Each surface should answer:
 
 Research-only surfaces must never imply production authority.
 
-### R9 — Meta-intelligence / weighting policy
+### R9 — Meta-intelligence / weighting policy — CURRENT FRONTIER
+Canonical task: `stage9-meta-intelligence-shadow-policy-v1`.
 - prevent double-counting correlated evidence;
 - contradiction and abstention are first-class;
 - regime-aware weighting only through accepted versioned policy;
@@ -226,4 +228,4 @@ Freeze:
 Crypto Signal Full Version is complete when M1, M2 and M3 are accepted with mechanical evidence and authoritative documentation, while REAL_CAPITAL remains 0 and all real-money/order authority stays closed.
 
 Immediate next execution target:
-`stage8.75-intelligence-center-readonly-v1`.
+`stage9-meta-intelligence-shadow-policy-v1`.

@@ -220,19 +220,36 @@ and persists deterministic snapshots without production weighting or promotion
 authority. Branch/merged research gates, Stage10 regression, UID504 sync and
 UID504 fulltest all passed.
 
+## Stage 8.75 Intelligence Center / Research Lab — ACCEPTED LIVE
+
+The read-only Intelligence Center / Research Lab is **ACCEPTED LIVE** at
+`07972c4ce59a09da61339f9a131067c84a317cc7`.
+
+It exposes accepted Stage 8 / Stage 8.5 / Learning Memory capabilities through
+progressive disclosure without importing or executing research engines in the
+product authority path. Missing evidence remains explicit. Research surfaces
+show source/freshness/runtime state and production contribution, which remains 0.
+Probability remains uncalibrated.
+
+Branch/merged Stage10, UID504 product/full tests and live Product deployment all
+passed. The SSD supervisor is the live dashboard owner; deployment is rollback-
+safe and requires healthy ledger/alert bindings plus the live Intelligence
+Center API and shell. REAL_CAPITAL=0.
+
 ## Canonical next frontier
 
-`stage8.75-intelligence-center-readonly-v1`
+`stage9-meta-intelligence-shadow-policy-v1`
 
 Requirements:
 
-- expose accepted Stage 8 / Stage 8.5 / Learning Memory evidence read-only;
-- show what each engine says, why it matters, source/evidence identity and freshness;
-- preserve explicit missing, contradictory, abstention and not-yet-evaluable states;
-- label research-only surfaces as zero production contribution unless a separately accepted policy says otherwise;
-- no calibrated-probability claim without accepted calibration evidence;
-- preserve progressive disclosure so the beginner first screen does not become cluttered;
-- no production-weight mutation, promotion, deploy or real-capital authority;
+- consume accepted/versioned evidence identities only;
+- represent redundancy/correlation groups so related evidence is not double-counted;
+- preserve contradiction, abstention, missing/no-evidence and uncertainty as first-class inputs;
+- support regime-aware weights only through an explicit immutable policy version;
+- output descriptive/shadow meta evidence, not calibrated probability;
+- prove deterministic results, permutation invariance and bounded contribution;
+- production contribution must remain 0 during this frontier;
+- no automatic promotion/champion mutation/deploy/order authority;
 - REAL_CAPITAL=0.
 
 ## Safety boundary

@@ -2539,3 +2539,15 @@ Learning Memory persists favorable, unfavorable, abstention, no-evidence and not
 
 The canonical next frontier is `stage8.75-intelligence-center-readonly-v1`: expose accepted research/intelligence evidence through a read-only Intelligence Center / Research Lab while keeping the beginner first screen simple and preserving Stage10 behavior.
 REAL_CAPITAL=0.
+
+## 2026-09-22 — Stage 8.75 Intelligence Center / Research Lab accepted live
+
+PR #633 added the read-only product projection for accepted Stage 8 / Stage 8.5 / Learning Memory evidence. Research engines are not executed by the product; the UI exposes accepted capability contracts plus optional Learning Memory evidence with progressive disclosure, explicit missing/runtime states, source/freshness metadata and production contribution labels.
+
+The product branch full gate passed in run `35660308609`; merged-main Stage10 passed in `35660498337`; UID504 SSD sync/product/full acceptance passed through issues #634/#635/#636.
+
+The live deployment path then had to be reconciled with the post-migration runtime owner. PR #639 made `productdeploy` SSD-supervisor-aware with rollback, exact-current-main targeting and live health/Intelligence Center shell checks. Exact merged-head Stage10 passed in `35661486700`; UID504 sync/product/fulltest passed in issues #643/#644/#645.
+
+Issue #646 / run `35661750761` deployed Product from `8ca23e612ba36b4ebcb0c3cb41a166d78add5cff` to `07972c4ce59a09da61339f9a131067c84a317cc7`. The active SSD supervisor remained owner and replaced dashboard child PID 74411 with 90752. Health required ledger + alert bindings, read-only=true and REAL_CAPITAL=0. The same deployment required the live `/api/intelligence-center` contract plus the Intelligence Lab HTML shell and emitted `INTELLIGENCE_CENTER_LIVE_PASS=YES`. Post-deploy Product state issue #647 confirmed the exact Product head and clean health.
+
+R8 is accepted and live. The next frontier is `stage9-meta-intelligence-shadow-policy-v1`: correlation/redundancy-safe, contradiction/abstention-aware, regime-aware only through an immutable versioned policy, and shadow/read-only with production contribution 0.
