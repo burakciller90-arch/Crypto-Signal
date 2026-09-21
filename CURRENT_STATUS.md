@@ -2823,3 +2823,52 @@ Current true roadmap frontier:
 - RL remains closed until a later separately accepted slice;
 - Stage 8.75 Learning Memory remains after the bounded Stage 8.5 research sequence;
 - REAL_CAPITAL=0.
+
+## 2026-09-21 — Stage 8.5 bounded ML research foundation v1 ACCEPTED
+
+- accepted main head: `c445022b4a41aa3b9961768f41c3614f6dca115a`
+- PR #552 merged the first bounded deterministic ML research foundation.
+- accepted research surface:
+  - `research/alpha_factory/ml_baseline.py`
+  - `tests/test_alpha_factory_ml_baseline.py`
+- model boundary:
+  - exactly one deterministic categorical-count baseline family
+  - immutable training-config / feature / partition / model / prediction / evaluation identities
+  - no ambient randomness
+  - no model search
+  - no automatic hyperparameter or winner selection
+  - no calibrated-probability claim
+- leakage / evaluation boundary:
+  - TRAIN is fit-only
+  - VALIDATION/OOS are descriptive evaluation-only
+  - untouched-forward remains closed
+  - training outcomes must be available by the end of the TRAIN partition
+  - exact evidence coverage is required
+  - explicit gross/cost/net-R accounting is preserved
+- isolation boundary:
+  - no production product/paper/confluence/signal import
+  - no network/broker/order/auth execution surface
+  - no filesystem-write/subprocess surface
+  - no promotion/champion mutation/deploy API
+  - RL remains closed
+  - REAL_CAPITAL=0
+- authoritative Alpha Factory research gate PASS: run `35641249035`.
+- authoritative production Stage10 full regression PASS: run `35641518161`:
+  - full pytest PASS
+  - Ruff PASS
+  - mypy PASS across 126 production source files
+  - PRODUCT_FRESHNESS_CONTRACT_PASS=YES
+  - STAGE10_HOSTED_FULL_GATE_PASS=YES
+- PAPER/STABLE write activation remains closed.
+- no production weighting/deployment authority added.
+
+Current true roadmap frontier:
+- `stage8.5-bounded-ml-walk-forward-evaluation-v1`;
+- remain entirely inside isolated `research/alpha_factory`;
+- add deterministic rolling fit/evaluation windows for the accepted single ML baseline family;
+- each fold must train only on evidence available before its evaluation window;
+- evaluation evidence is descriptive only and must preserve explicit transaction-cost/slippage semantics;
+- untouched-forward remains closed;
+- no automatic model/hyperparameter winner, self-promotion, champion mutation, production import or deploy path;
+- RL remains closed;
+- REAL_CAPITAL=0.
