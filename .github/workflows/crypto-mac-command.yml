@@ -1313,6 +1313,28 @@ jobs:
           echo "SSD_DASHBOARD_DIAG_PASS=YES"
           exit 0
 
+
+      - name: RUNNER CUTOVER DIAG
+        if: steps.parse.outputs.command == 'runnercutoverdiag'
+        shell: bash
+        run: |
+          set +e
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          HOME_ROOT="/Users/crypto-signal-agent"
+          LABEL="actions.runner.burakciller90-arch-Crypto-Signal.crypto-signal-uid504"
+          echo "=== ID ==="; id
+          echo "=== MARKERS ==="; ls -l "$ROOT"/RUNNER_CUTOVER_* 2>/dev/null
+          echo "=== CUTOVER LOG ==="; tail -120 "$ROOT/runner-cutover.log" 2>/dev/null
+          echo "=== HELPER LOGS ==="; tail -120 "$ROOT/runner-helper.launchd.out.log" 2>/dev/null; tail -120 "$ROOT/runner-helper.launchd.err.log" 2>/dev/null
+          echo "=== HELPER PLIST ==="; plutil -p "$HOME_ROOT/Library/LaunchAgents/com.cryptosignal.runnercutover.helper.plist" 2>/dev/null
+          echo "=== RUNNER PLIST ==="; plutil -p "$HOME_ROOT/Library/LaunchAgents/$LABEL.plist" 2>/dev/null
+          echo "=== HELPER LAUNCHCTL ==="; launchctl print "gui/504/com.cryptosignal.runnercutover.helper" 2>&1 | head -160
+          echo "=== RUNNER LAUNCHCTL ==="; launchctl print "gui/504/$LABEL" 2>&1 | head -180
+          echo "=== INTERNAL ==="; if [ -e "$HOME_ROOT/actions-runner-crypto" ]; then du -sh "$HOME_ROOT/actions-runner-crypto"; else echo ABSENT; fi
+          echo "=== SSD RUNNER ==="; ls -ld "$ROOT/Runner" 2>/dev/null; du -sh "$ROOT/Runner" 2>/dev/null
+          echo "RUNNER_CUTOVER_DIAG_PASS=YES"
+          exit 0
+
       - name: MIGRATION INVENTORY
         if: steps.parse.outputs.command == 'migrationinventory'
         shell: bash
