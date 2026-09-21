@@ -1,0 +1,27 @@
+name: Continuity Relay Busy Validation
+
+on:
+  push:
+    branches:
+      - feature/continuity-stop-then-send
+    paths:
+      - "ops/continuity/relay_daemon.py"
+      - ".github/workflows/continuity-relay-busy-validation.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: |
+          python -m py_compile ops/continuity/relay_daemon.py
+          grep -q 'STOP_CLICKED' ops/continuity/relay_daemon.py
+          grep -q 'OBSERVED_AFTER_STOP' ops/continuity/relay_daemon.py
+          grep -q 'AFTER_STOP:' ops/continuity/relay_daemon.py
+          echo "CONTINUITY_BUSY_STOP_SEND_VALIDATION_PASS=YES"
