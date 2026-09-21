@@ -21,6 +21,10 @@ HEARTBEAT = SHARED / "relay_heartbeat"
 PIDFILE = SHARED / "relay.pid"
 LOG = SHARED / "relay.log"
 STATUS = SHARED / "relay_status"
+AUTONOMOUS_STATE = SHARED / "autonomous_wake_state"
+AUTONOMOUS_PREFIX = "CRYPTO_SIGNAL_AUTONOMOUS_CONTINUE_V1"
+AUTONOMOUS_TTL_SECONDS = 20 * 60
+AUTONOMOUS_COOLDOWN_SECONDS = 20 * 60
 RETRY_SECONDS = 2
 TARGET_OPEN_RETRY_SECONDS = 60
 _last_target_open_attempt = 0.0
@@ -118,6 +122,35 @@ def receipt_sha(path: Path) -> str | None:
         if line.startswith("message_sha256="):
             return line.split("=", 1)[1]
     return ""
+
+
+def is_autonomous_wake(message: str) -> bool:
+    return message.startswith(AUTONOMOUS_PREFIX)
+
+
+def read_last_autonomous_delivery_epoch() -> float | None:
+    try:
+        lines = AUTONOMOUS_STATE.read_text().splitlines()
+    except FileNotFoundError:
+        return None
+    for line in lines:
+        if line.startswith("last_delivered_epoch="):
+            try:
+                return float(line.split("=", 1)[1])
+            except ValueError:
+                return None
+    return None
+
+
+def record_autonomous_delivery(event_id: str, delivered_epoch: float) -> None:
+    tmp = AUTONOMOUS_STATE.with_suffix(f".{os.getpid()}.tmp")
+    tmp.write_text(
+        f"last_delivered_epoch={delivered_epoch:.3f}\n"
+        f"event_id={event_id}\n"
+        f"event_key={sha(event_id)}\n"
+    )
+    os.chmod(tmp, 0o600)
+    tmp.replace(AUTONOMOUS_STATE)
 
 
 def run_js(target_url: str, js: str) -> str:
@@ -423,9 +456,50 @@ def main() -> int:
                 log(f"event={path.name} status=BAD reason={type(exc).__name__}:{exc}")
                 continue
 
+            autonomous = is_autonomous_wake(message)
+            if autonomous:
+                queue_age = max(0.0, now - path.stat().st_mtime)
+                if queue_age > AUTONOMOUS_TTL_SECONDS:
+                    message_sha = expected_wire_sha(event_id, message)
+                    write_receipt(
+                        RECEIPTS / f"{sha(event_id)}.state",
+                        "STALE_AUTONOMOUS_DROPPED",
+                        event_id,
+                        message_sha,
+                    )
+                    path.unlink(missing_ok=True)
+                    log(
+                        f"event={sha(event_id)[:16]} "
+                        f"status=STALE_AUTONOMOUS_DROPPED "
+                        f"age_seconds={int(queue_age)}"
+                    )
+                    continue
+
+                last_delivery = read_last_autonomous_delivery_epoch()
+                if (
+                    last_delivery is not None
+                    and now - last_delivery < AUTONOMOUS_COOLDOWN_SECONDS
+                ):
+                    message_sha = expected_wire_sha(event_id, message)
+                    write_receipt(
+                        RECEIPTS / f"{sha(event_id)}.state",
+                        "SEMANTIC_DUPLICATE_DROPPED",
+                        event_id,
+                        message_sha,
+                    )
+                    path.unlink(missing_ok=True)
+                    log(
+                        f"event={sha(event_id)[:16]} "
+                        "status=SEMANTIC_DUPLICATE_DROPPED "
+                        f"cooldown_age_seconds={int(now - last_delivery)}"
+                    )
+                    continue
+
             ok, status = deliver(event_id, message, target_url)
             log(f"event={sha(event_id)[:16]} status={status}")
             if ok:
+                if autonomous and status != "ALREADY_RECEIPTED":
+                    record_autonomous_delivery(event_id, time.time())
                 path.unlink(missing_ok=True)
             else:
                 time.sleep(RETRY_SECONDS)
