@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import time
-from datetime import date, datetime, timedelta, timezone
+from datetime import UTC, date, datetime, timedelta
 from typing import cast
 from urllib.parse import quote
 
@@ -39,7 +39,7 @@ class WikimediaBitcoinPageviewsAdapter:
         if not 10 <= days <= 30:
             raise ValueError("Wikimedia pageview days must be between 10 and 30")
 
-        today_utc = datetime.now(timezone.utc).date()
+        today_utc = datetime.now(UTC).date()
         latest_complete_date = today_utc - timedelta(days=1)
         selected_end = (
             today_utc - timedelta(days=2) if end_date is None else end_date
@@ -95,7 +95,7 @@ class WikimediaBitcoinPageviewsAdapter:
                 raise ValueError("Wikimedia pageview timestamp must be YYYYMMDD00")
             try:
                 day_start = datetime.strptime(timestamp, "%Y%m%d%H").replace(
-                    tzinfo=timezone.utc
+                    tzinfo=UTC
                 )
             except ValueError as exc:
                 raise ValueError("invalid Wikimedia pageview timestamp") from exc
