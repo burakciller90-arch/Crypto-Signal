@@ -7,7 +7,7 @@ import time
 from datetime import datetime
 from pathlib import Path
 
-BASE = Path("/Users/crypto-signal-agent/Crypto-Signal")
+BASE = Path("/Volumes/Crypto-504/Crypto-Signal/Development")
 STATE = BASE / "runtime" / "continuity"
 LOCAL_CHAT = STATE / "wake" / "current_chat_url"
 LOCAL_PAUSE = STATE / "user_pause"
