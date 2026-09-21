@@ -36,6 +36,17 @@ jobs:
           echo "BINDING_WRITTEN=$TARGET"
           echo "RESTART_REQUESTED=YES"
 
+      - name: Reload UID504 continuity policy
+        shell: bash
+        run: |
+          set -euo pipefail
+          UID_NOW="$(id -u)"
+          LABEL="com.cryptosignal.continuitybridge"
+          launchctl kickstart -k "gui/$UID_NOW/$LABEL"
+          sleep 2
+          launchctl print "gui/$UID_NOW/$LABEL" | egrep 'state =|pid =|last exit code =' | head -30
+          echo "CONTINUITY_BRIDGE_RELOADED=YES"
+
       - name: Wait for UID502 relay reload
         shell: bash
         run: |
