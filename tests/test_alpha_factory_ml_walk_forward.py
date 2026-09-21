@@ -16,7 +16,6 @@ from research.alpha_factory.foundation import (
     PartitionRole,
     build_research_partition,
 )
-from research.alpha_factory.ml_baseline import build_ml_training_config
 from research.alpha_factory.ml_walk_forward import (
     MLWalkForwardSemantic,
     build_ml_walk_forward_fold,
@@ -347,12 +346,10 @@ def test_walk_forward_rejects_late_training_outcome() -> None:
         run_ml_walk_forward(_features(), (bad_first, second))
 
 
-def test_walk_forward_requires_matching_immutable_config() -> None:
-    first, second = _folds()
-    config = build_ml_training_config()
-    tampered = replace(first, config_identity=_sha("other-config"))
+def test_walk_forward_fold_config_identity_is_immutable() -> None:
+    first, _ = _folds()
     with pytest.raises(ValueError, match="fold identity mismatch"):
-        run_ml_walk_forward(_features(), (tampered, second), config=config)
+        replace(first, config_identity=_sha("other-config"))
 
 
 def test_walk_forward_preserves_explicit_cost_accounting_per_fold() -> None:
