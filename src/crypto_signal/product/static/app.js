@@ -502,6 +502,7 @@ function renderPaperPortfolioPerformanceLab(data) {
   const portfolio = snapshot.portfolio ?? {};
   const exposure = snapshot.portfolio_exposure ?? {};
   const performance = snapshot.performance ?? {};
+  const performanceWindow = performance.window ?? {};
   const positions = exposure.positions ?? [];
 
   exposureRoot.classList.remove("loading-block");
@@ -557,7 +558,9 @@ function renderPaperPortfolioPerformanceLab(data) {
       <div class="paper-lab-metrics paper-lab-metrics-compact">
         <div><span>Kapanmış işlem</span><strong>${esc(performance.closed_trade_count ?? 0)}</strong><small>ölçüme giren round trip</small></div>
         <div><span>Açık işlem</span><strong>${esc(performance.open_trade_count ?? 0)}</strong><small>henüz skorlanmaz</small></div>
-        <div><span>Win rate</span><strong>—</strong><small>örneklem yok</small></div>
+        <div><span>Turnover</span><strong>${esc(fmtFractionPercent(performanceWindow.turnover_fraction))}</strong><small>işlem gören notional / 100 USDT</small></div>
+        <div><span>Nakitte geçen zaman</span><strong>${esc(fmtFractionPercent(performanceWindow.cash_time_fraction))}</strong><small>aktivasyondan beri</small></div>
+        <div><span>Observed expectancy</span><strong>—</strong><small>kapanmış işlem örneklemi yok</small></div>
         <div><span>Profit factor</span><strong>—</strong><small>örneklem yok</small></div>
       </div>
       ${renderPaperBenchmarks(snapshot)}`;
@@ -574,7 +577,10 @@ function renderPaperPortfolioPerformanceLab(data) {
       <div><span>Profit factor</span><strong>${esc(performance.profit_factor ?? "—")}</strong><small>tanımlı olduğu yerde</small></div>
       <div><span>En iyi işlem</span><strong>${esc(fmtMoney(performance.best_trade_pnl_usdt))}</strong><small>net PnL</small></div>
       <div><span>En kötü işlem</span><strong>${esc(fmtMoney(performance.worst_trade_pnl_usdt))}</strong><small>net PnL</small></div>
-      <div><span>Ort. net PnL</span><strong>${esc(fmtMoney(performance.average_closed_trade_net_pnl_usdt))}</strong><small>işlem başına</small></div>
+      <div><span>Observed expectancy</span><strong>${esc(fmtMoney(performance.expectancy_usdt_per_closed_trade))}</strong><small>kapanmış işlem başına net PnL ortalaması</small></div>
+      <div><span>Turnover</span><strong>${esc(fmtFractionPercent(performanceWindow.turnover_fraction))}</strong><small>işlem gören notional / 100 USDT</small></div>
+      <div><span>Nakitte geçen zaman</span><strong>${esc(fmtFractionPercent(performanceWindow.cash_time_fraction))}</strong><small>aktivasyondan gözlem anına</small></div>
+      <div><span>Piyasada geçen zaman</span><strong>${esc(fmtFractionPercent(performanceWindow.invested_time_fraction))}</strong><small>açık pozisyon taşınan süre</small></div>
       <div><span>Execution maliyeti</span><strong>${esc(fmtMoney(performance.total_explicit_execution_cost_usdt))}</strong><small>fee + spread + slippage kanıtı</small></div>
     </div>
     <div class="paper-closed-trade-list">
