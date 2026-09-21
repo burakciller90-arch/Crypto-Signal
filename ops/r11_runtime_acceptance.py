@@ -30,7 +30,12 @@ def _health() -> dict[str, Any]:
         "http://127.0.0.1:48700/api/health",
         timeout=5,
     ) as response:
-        payload = json.loads(response.read().decode("utf-8"))
+        decoded: object = json.loads(response.read().decode("utf-8"))
+    if not isinstance(decoded, dict):
+        raise RuntimeError("dashboard health payload must be a JSON object")
+    payload: dict[str, Any] = {
+        str(key): value for key, value in decoded.items()
+    }
     if payload.get("status") != "ok":
         raise RuntimeError("dashboard health status is not ok")
     if payload.get("real_capital") != 0:
