@@ -2334,3 +2334,19 @@ Production isolation/ablation remains explicit: the engine is not imported by st
 
 The next roadmap item is on-chain/network. As with derivatives and microstructure, implementation must begin with a source-quality/PIT contract rather than with invented metrics.
 
+
+## 2026-09-21 — seventh Stage 8 engine accepted: Bitcoin on-chain / network v1
+
+The on-chain roadmap item began with a source-quality gate rather than invented wallet or exchange-flow metrics. Public Blockstream Esplora Bitcoin mainnet data was accepted for a deliberately bounded network-activity contract: tip height plus immutable block records carrying hash linkage, height, header/median timestamps, transaction count, size, weight and difficulty. The adapter uses public GET only, requires no credentials and has no exchange-order relationship.
+
+The normalized observation is explicitly an `ingestion_time_snapshot`. This avoids pretending that a historical block event was available to the system before the snapshot was actually observed. The engine consumes a bounded contiguous block window, compares average block cadence with Bitcoin's 600-second target, measures average block-weight utilization and emits high-activity, low-activity, normal, mixed or unresolved context. It deliberately does not claim wallet sentiment, exchange inflow/outflow, active-address, MVRV, realized-cap, NVT or whale evidence because those datasets are outside the accepted source contract.
+
+Fail-closed tests cover stale snapshots, insufficient history, broken chain linkage, no safe observation at a historical as-of, duplicate observation identity, tampered analysis/freeze identity and future-observation historical freeze invariance. Production isolation tests prove zero contribution to stable confluence, signal, ledger, product or paper decision paths.
+
+The first hosted branch gate passed pytest and stopped only on Ruff SIM102 plus two RUF007 successive-pair findings. After minimal non-semantic cleanup, the next gate passed pytest/Ruff and exposed only two mypy bare-tuple type-argument findings. Explicit `BitcoinBlockRecord` tuple typing corrected those without runtime behavior changes. Final branch full gate run `35574092588` passed. The temporary branch-only workflow trigger was then removed, leaving a six-file PR diff.
+
+PR #418 merged as `589dd427c4f75641c1598e02afc103b238f74cd9`. Merged-main hosted gate run `35574241266` passed. UID504 canonical sync passed through issue #419 / run `35574326183`, then canonical fulltest passed through issue #420 / run `35574361953` with Ruff PASS, mypy PASS across 117 source files and `FULL_TEST_PASS=YES`.
+
+No PRODUCT deploy or production weighting was performed. PAPER/STABLE write activation remains closed, Alpha Factory and Learning Memory remain closed, no real exchange authority exists and `REAL_CAPITAL=0`.
+
+The next bounded Stage 8 frontier is `stage8-bounded-sentiment-attention-v1`. It must begin with a source-quality gate. Public popularity or sentiment scores are not accepted merely by name; the source must be reproducible and time-addressable with explicit PIT or ingestion-time semantics, otherwise the slice must be deferred rather than fabricated.

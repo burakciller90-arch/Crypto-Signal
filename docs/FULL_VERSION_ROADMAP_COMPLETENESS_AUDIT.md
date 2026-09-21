@@ -13,12 +13,11 @@ The runtime-accepted Stage 10 code is tagged
 `stage10-accepted-20260921` and resolves to commit
 `8ca23e612ba36b4ebcb0c3cb41a166d78add5cff`.
 
-The remaining material roadmap gap is the intelligence/research/learning sequence
-defined in Stage 8, Stage 8.5 and Stage 8.75. The repository currently contains
-the governing architecture
-`docs/INTELLIGENCE_ALPHA_FACTORY_ARCHITECTURE.md`, but no accepted implementation
-tree for those expansion engines / Alpha Factory / Learning Memory was found in
-the current main inventory.
+The remaining material roadmap gap is the unfinished bounded Stage 8 sequence
+(sentiment/attention and cross-market context), followed by Stage 8.5 Alpha Factory
+and Stage 8.75 Learning Memory. The governing architecture remains
+`docs/INTELLIGENCE_ALPHA_FACTORY_ARCHITECTURE.md`; accepted Stage 8 engines stay
+observation-only until a separately accepted integration/meta policy exists.
 
 This audit prevents Stage 10 success from being misrepresented as completion of
 roadmap stages that were intentionally outside the accepted Stage 10 runtime
@@ -56,8 +55,8 @@ one at a time behind isolated gates:
 4. breakout/volatility — **ACCEPTED** at `f44157fa2b8a3788b85608a872eb8fa8fde7d5b3`,
 5. bounded derivatives context — **ACCEPTED** at `011f2c4c7be2bd00410c5a0f3f578e20bd84c891`,
 6. order-flow/microstructure if data quality supports it — **ACCEPTED** at `f0b27d41980714ffc42fe394ed3a3485acc6d5fe`,
-7. on-chain/network — **NEXT FRONTIER / SOURCE-QUALITY GATE**,
-8. bounded sentiment/attention,
+7. on-chain/network — **ACCEPTED** at `589dd427c4f75641c1598e02afc103b238f74cd9`,
+8. bounded sentiment/attention — **NEXT FRONTIER / SOURCE-QUALITY GATE**,
 9. cross-market context.
 
 Every engine must have:
@@ -113,15 +112,15 @@ only through a separately tested policy.
 
 The next bounded roadmap slice is:
 
-`stage8-onchain-network-v1`
+`stage8-bounded-sentiment-attention-v1`
 
-Regime labeling, trend/momentum, mean reversion, breakout/volatility, bounded derivatives context and order-flow/microstructure are accepted.
+Regime labeling, trend/momentum, mean reversion, breakout/volatility, bounded derivatives context, order-flow/microstructure and on-chain/network are accepted.
 
-Before implementing on-chain/network intelligence, the repository must pass a source-quality gate. The slice may proceed only with a real public network/on-chain source that provides enough immutable event identity and timing to support PIT-safe freezes. Exchange candles or derivatives data must not be relabeled as on-chain evidence.
+Before implementing sentiment/attention intelligence, the repository must pass a source-quality gate. A source must be public or otherwise explicitly governed, reproducible, time-addressable, bounded and either point-in-time safe or explicit about ingestion-time availability.
 
-If the source-quality gate passes, the engine still requires deterministic source semantics, PIT safety, frozen evidence, independent tests, bounded metric semantics, contribution/ablation evidence and explicit missing/stale/insufficient-data uncertainty. It remains observation-only until a separately accepted integration policy exists.
+A named metric such as Fear & Greed, a social score or popularity rank is not accepted merely because it is easy to fetch. Source construction, timestamp semantics and historical availability must be mechanically defensible. If those semantics cannot be supported, record explicit deferral rather than fabricating sentiment evidence and advance to cross-market context.
 
-If a trustworthy source contract cannot be supported without credentials or ambiguous timing, record explicit deferral and advance to bounded sentiment/attention rather than fabricating network metrics.
+Any accepted sentiment/attention engine remains observation-only until a separately accepted integration/meta policy exists.
 
 ## Safety boundary
 

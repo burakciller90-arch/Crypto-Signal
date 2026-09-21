@@ -2318,3 +2318,51 @@ Current true roadmap frontier:
 - if source quality is insufficient, explicitly defer rather than fabricate;
 - keep all Stage 8 engines observation-only until a separately accepted versioned weighting/meta policy exists.
 
+
+## 2026-09-21 — Stage 8 on-chain / network v1 ACCEPTED
+
+- accepted main head: `589dd427c4f75641c1598e02afc103b238f74cd9`
+- PR #418 merged the seventh bounded Stage 8 intelligence engine.
+- source-quality gate passed with public Blockstream Esplora Bitcoin mainnet data:
+  - public GET only
+  - `/blocks/tip/height`
+  - `/blocks/{height}`
+  - no API key, auth header, credential, POST/order surface or exchange authority
+- accepted normalized evidence scope:
+  - immutable Bitcoin block record identity
+  - block hash / previous-block hash / height
+  - header timestamp and median time
+  - transaction count, size, weight and difficulty
+  - bounded block-window observation with explicit `ingestion_time_snapshot` semantics
+- accepted engine scope:
+  - bounded average block cadence versus the 600-second Bitcoin target
+  - bounded average block-weight utilization
+  - high-activity / low-activity / normal / mixed / unresolved labels
+  - stale snapshot / insufficient history / non-contiguous chain / unavailable-at-as-of uncertainty
+  - deterministic analysis and freeze identities
+  - future/late observation exclusion from historical as-of evidence
+  - observation-only / zero-production-contribution isolation
+- first hosted branch gate: pytest 100%, then Ruff-only SIM102 + two RUF007 findings.
+- second hosted branch gate: pytest + Ruff PASS, then mypy-only bare-tuple typing findings.
+- both were corrected without changing engine semantics.
+- final hosted branch full gate PASS: run `35574092588`.
+- PR #418 clean final diff: 3 source/data files + 3 test files.
+- hosted merged-main gate PASS: run `35574241266`.
+- UID504 canonical sync PASS: issue #419 / run `35574326183`.
+- UID504 canonical fulltest PASS: issue #420 / run `35574361953`:
+  - pytest 100%
+  - Ruff PASS
+  - mypy PASS across 117 source files
+  - FULL_TEST_PASS=YES
+- no PRODUCT deploy required because the engine is observation-only.
+- no production weighting change.
+- Alpha Factory / Learning Memory remain closed.
+- PAPER/STABLE write activation remains closed.
+- REAL_CAPITAL=0.
+
+Current true roadmap frontier:
+- `stage8-bounded-sentiment-attention-v1` source-quality gate first;
+- use only public/reproducible/time-addressable evidence with explicit PIT or ingestion-time semantics;
+- do not adopt a Fear & Greed/social score merely because it exists;
+- if source semantics cannot be proven, explicitly defer rather than fabricate;
+- keep all Stage 8 engines observation-only until a separately accepted versioned weighting/meta policy exists.
