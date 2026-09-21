@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   test:
-    name: Test Stage10 integrated acceptance branch
+    name: Test Stage10 benchmark integration branch
     runs-on: [self-hosted, crypto-signal, uid504]
     timeout-minutes: 30
     steps:
@@ -41,9 +41,11 @@ jobs:
           trap cleanup EXIT
           cd "$WT"
           echo "=== STAGE10 FOCUSED PYTEST ==="
-          PYTHONPATH="$WT/src" "$PY" -m pytest -q tests/test_paper_benchmarks.py
+          PYTHONPATH="$WT/src" "$PY" -m pytest -q             tests/test_paper_benchmarks.py             tests/test_paper_mission_control.py             tests/test_dashboard_web.py
+          echo "=== STAGE10 JAVASCRIPT ==="
+          node --check src/crypto_signal/product/static/app.js
           echo "=== STAGE10 FOCUSED RUFF ==="
-          "$PY" -m ruff check src/crypto_signal/paper/benchmarks.py tests/test_paper_benchmarks.py
+          "$PY" -m ruff check             src/crypto_signal/paper/benchmarks.py             src/crypto_signal/paper/mission_control.py             src/crypto_signal/product             tests/test_paper_benchmarks.py             tests/test_paper_mission_control.py             tests/test_dashboard_web.py
           echo "=== STAGE10 FOCUSED MYPY ==="
-          PYTHONPATH="$WT/src" "$PY" -m mypy src/crypto_signal/paper/benchmarks.py
-          echo "STAGE10_BENCHMARK_FOCUSED_PASS=YES"
+          PYTHONPATH="$WT/src" "$PY" -m mypy             src/crypto_signal/paper/benchmarks.py             src/crypto_signal/paper/mission_control.py
+          echo "STAGE10_BENCHMARK_INTEGRATION_PASS=YES"
