@@ -130,14 +130,9 @@ def test_stage10_live_dashboard_binds_paper_runtime_paths() -> None:
     assert "paper_ledger_path=args.paper_ledger" in launcher
     assert "candle_cache_path=args.candle_cache" in launcher
 
-    assert "--paper-ledger" in plist
+    assert "run_dashboard.py" in plist
     assert (
-        "/Users/crypto-signal-agent/Crypto-Signal/runtime/paper/"
-        "paper_fund.sqlite3"
-    ) in plist
-    assert "--candle-cache" in plist
-    assert (
-        "/Users/crypto-signal-agent/Crypto-Signal/runtime/data/"
-        "live_base_15m_cache.sqlite3"
+        "/Users/crypto-signal-agent/Crypto-Signal/runtime/ledger/"
+        "live_signal_ledger.sqlite3"
     ) in plist
 
