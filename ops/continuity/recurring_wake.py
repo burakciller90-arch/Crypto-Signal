@@ -14,7 +14,7 @@ LOCAL_PAUSE = STATE / "user_pause"
 SHARED = Path("/Users/Shared/.crypto-signal-wake-relay")
 SHARED_CHAT = SHARED / "current_chat_url"
 SHARED_PAUSE = SHARED / "user_pause"
-EXPECTED_CHAT = "https://chatgpt.com/c/6ab0debd-49a8-83eb-8b33-a7ce2ef826d0"
+EXPECTED_CHAT_FILE = STATE / "wake" / "expected_chat_url"
 RELAY_SUBMIT = Path(__file__).with_name("relay_submit.py")
 
 MESSAGE = (
@@ -65,12 +65,16 @@ def main() -> int:
         print("WAKE_SKIPPED_USER_PAUSE=YES")
         return 0
 
+    expected_chat = read_text(EXPECTED_CHAT_FILE)
     local_target = read_text(LOCAL_CHAT)
     shared_target = read_text(SHARED_CHAT)
-    print(f"EXPECTED_CHAT={EXPECTED_CHAT}")
+    print(f"EXPECTED_CHAT={expected_chat or 'MISSING'}")
     print(f"LOCAL_CHAT={local_target or 'MISSING'}")
     print(f"SHARED_CHAT={shared_target or 'MISSING'}")
-    if local_target != EXPECTED_CHAT or shared_target != EXPECTED_CHAT:
+    if not expected_chat.startswith("https://chatgpt.com/c/"):
+        print("WAKE_TARGET_UNBOUND=YES", file=sys.stderr)
+        return 66
+    if local_target != expected_chat or shared_target != expected_chat:
         print("WAKE_TARGET_MISMATCH=YES", file=sys.stderr)
         return 66
 
