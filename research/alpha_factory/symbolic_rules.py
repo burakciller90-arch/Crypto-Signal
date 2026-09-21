@@ -9,7 +9,6 @@ from statistics import median
 
 from crypto_signal.ledger.serialization import canonical_sha256
 from research.alpha_factory.foundation import (
-    ALPHA_FACTORY_SCHEMA_VERSION,
     ChallengerDefinition,
     PartitionRole,
     ResearchPartition,
