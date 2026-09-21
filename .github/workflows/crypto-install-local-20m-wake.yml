@@ -6,6 +6,7 @@ on:
     paths:
       - "ops/continuity/recurring_wake.py"
       - "ops/continuity/relay_submit.py"
+      - "ops/continuity/continuity_contracts.py"
       - "ops/continuity/launchd/com.cryptosignal.autowake20m.plist"
       - ".github/workflows/crypto-install-local-20m-wake.yml"
       - ".github/workflows/crypto-20m-continuity-wake.yml"
@@ -32,14 +33,16 @@ jobs:
           LABEL="com.cryptosignal.autowake20m"
           PLIST="$AGENTS/$LABEL.plist"
 
-          mkdir -p "$INSTALL" "$AGENTS"             /Users/crypto-signal-agent/Crypto-Signal/runtime/continuity
+          STATE="/Volumes/Crypto-504/Crypto-Signal/Development/runtime/continuity"
+          mkdir -p "$INSTALL" "$AGENTS" "$STATE"
 
           install -m 700 ops/continuity/recurring_wake.py "$INSTALL/recurring_wake.py"
           install -m 700 ops/continuity/relay_submit.py "$INSTALL/relay_submit.py"
+          install -m 600 ops/continuity/continuity_contracts.py "$INSTALL/continuity_contracts.py"
           install -m 600             ops/continuity/launchd/com.cryptosignal.autowake20m.plist             "$PLIST"
 
           /usr/bin/plutil -lint "$PLIST"
-          /usr/bin/python3 -m py_compile             "$INSTALL/recurring_wake.py"             "$INSTALL/relay_submit.py"
+          /usr/bin/python3 -m py_compile             "$INSTALL/recurring_wake.py"             "$INSTALL/relay_submit.py"             "$INSTALL/continuity_contracts.py"
 
           for old in             com.cryptosignal.autowake30m             com.cryptosignal.continuity30m; do
             launchctl bootout "$DOMAIN/$old" 2>/dev/null || true
