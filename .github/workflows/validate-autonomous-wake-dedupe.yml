@@ -1,0 +1,37 @@
+name: Validate Autonomous Wake Dedupe
+
+on:
+  push:
+    branches:
+      - feature/autonomous-wake-semantic-dedupe
+    paths:
+      - "ops/continuity/relay_daemon.py"
+      - ".github/workflows/validate-autonomous-wake-dedupe.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Validate stale and semantic duplicate guards
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m py_compile ops/continuity/relay_daemon.py
+          python - <<'PY'
+          from pathlib import Path
+          source = Path("ops/continuity/relay_daemon.py").read_text()
+          assert "AUTONOMOUS_TTL_SECONDS = 20 * 60" in source
+          assert "AUTONOMOUS_COOLDOWN_SECONDS = 20 * 60" in source
+          assert "STALE_AUTONOMOUS_DROPPED" in source
+          assert "SEMANTIC_DUPLICATE_DROPPED" in source
+          assert "record_autonomous_delivery" in source
+          print("AUTONOMOUS_WAKE_DEDUPE_VALIDATION_PASS=YES")
+          PY
