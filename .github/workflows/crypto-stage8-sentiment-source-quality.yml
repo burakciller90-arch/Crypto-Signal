@@ -1,0 +1,94 @@
+name: Crypto Stage8 Sentiment Source Quality
+
+on:
+  push:
+    branches:
+      - feature/stage8-bounded-sentiment-attention-v1
+
+permissions:
+  contents: read
+
+jobs:
+  source-quality:
+    name: Public sentiment and attention source quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Probe public sources
+        shell: bash
+        run: |
+          python - <<'PY'
+          from __future__ import annotations
+
+          import json
+          import urllib.request
+          from datetime import datetime, timedelta, timezone
+
+          USER_AGENT = "Crypto-Signal-SourceQuality/1.0 (public research; github.com/burakciller90-arch/Crypto-Signal)"
+
+          def get_json(url: str) -> dict:
+              request = urllib.request.Request(
+                  url,
+                  headers={
+                      "User-Agent": USER_AGENT,
+                      "Accept": "application/json",
+                  },
+                  method="GET",
+              )
+              with urllib.request.urlopen(request, timeout=20) as response:
+                  assert response.status == 200, response.status
+                  return json.loads(response.read().decode("utf-8"))
+
+          fear = get_json("https://api.alternative.me/fng/?limit=5&format=json")
+          assert fear.get("metadata", {}).get("error") is None
+          rows = fear.get("data")
+          assert isinstance(rows, list) and len(rows) >= 3
+          allowed = {"Extreme Fear", "Fear", "Neutral", "Greed", "Extreme Greed"}
+          for row in rows:
+              value = int(row["value"])
+              timestamp = int(row["timestamp"])
+              classification = row["value_classification"]
+              assert 0 <= value <= 100
+              assert timestamp > 0
+              assert classification in allowed
+          assert "time_until_update" in rows[0]
+          print(
+              "ALTERNATIVE_FNG_SOURCE_QUALITY_PASS=YES",
+              "latest_timestamp=" + str(rows[0]["timestamp"]),
+              "latest_value=" + str(rows[0]["value"]),
+              "latest_classification=" + str(rows[0]["value_classification"]),
+          )
+
+          today = datetime.now(timezone.utc).date()
+          end = today - timedelta(days=2)
+          start = end - timedelta(days=13)
+          start_s = start.strftime("%Y%m%d")
+          end_s = end.strftime("%Y%m%d")
+          wiki_url = (
+              "https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/"
+              "en.wikipedia.org/all-access/user/Bitcoin/daily/"
+              f"{start_s}/{end_s}"
+          )
+          pageviews = get_json(wiki_url)
+          items = pageviews.get("items")
+          assert isinstance(items, list) and len(items) >= 10
+          timestamps: list[str] = []
+          for item in items:
+              assert item["article"] == "Bitcoin"
+              assert item["granularity"] == "daily"
+              assert item["access"] == "all-access"
+              assert item["agent"] == "user"
+              timestamp = str(item["timestamp"])
+              assert len(timestamp) == 10 and timestamp.endswith("00")
+              assert int(item["views"]) >= 0
+              timestamps.append(timestamp)
+          assert timestamps == sorted(timestamps)
+          assert len(timestamps) == len(set(timestamps))
+          print(
+              "WIKIMEDIA_BITCOIN_PAGEVIEWS_SOURCE_QUALITY_PASS=YES",
+              "rows=" + str(len(items)),
+              "first_timestamp=" + timestamps[0],
+              "last_timestamp=" + timestamps[-1],
+          )
+          print("STAGE8_SENTIMENT_ATTENTION_SOURCE_QUALITY_PASS=YES")
+          PY
