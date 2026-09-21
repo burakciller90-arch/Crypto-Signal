@@ -670,6 +670,7 @@ def read_paper_mission_control_snapshot(
     performance = read_paper_trade_performance(
         paper_ledger_path=paper_ledger_path,
         observed_at_ms=observed_at_ms,
+        measurement_start_at_ms=activation.activation_cutoff_ms,
     )
     benchmarks = read_paper_benchmark_snapshot(
         candle_cache_path=candle_cache_path,
