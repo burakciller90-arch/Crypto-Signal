@@ -212,14 +212,46 @@ class DashboardReader:
             clauses.append("timeframe = ?")
             params.append(timeframe)
 
-        query = "SELECT * FROM signal_freezes"
+        where_sql = ""
         if clauses:
-            query += " WHERE " + " AND ".join(clauses)
-        query += " ORDER BY frozen_at_ms DESC, bundle_identity DESC"
-        if limit is not None:
-            query += " LIMIT ? OFFSET ?"
-            params.extend((limit, offset))
-        return tuple(connection.execute(query, params).fetchall())
+            where_sql = " WHERE " + " AND ".join(clauses)
+
+        if limit is None:
+            query = (
+                "SELECT * FROM signal_freezes"
+                + where_sql
+                + " ORDER BY frozen_at_ms DESC, bundle_identity DESC"
+            )
+            return tuple(connection.execute(query, params).fetchall())
+
+        key_query = (
+            "SELECT bundle_identity FROM signal_freezes"
+            + where_sql
+            + " ORDER BY frozen_at_ms DESC, bundle_identity DESC"
+            + " LIMIT ? OFFSET ?"
+        )
+        key_params = [*params, limit, offset]
+        key_rows = tuple(connection.execute(key_query, key_params).fetchall())
+        rows: list[sqlite3.Row] = []
+        for key_row in key_rows:
+            identity = self._require_str(
+                key_row["bundle_identity"],
+                "signal row bundle identity",
+            )
+            row = connection.execute(
+                """
+                SELECT *
+                FROM signal_freezes
+                WHERE bundle_identity = ?
+                """,
+                (identity,),
+            ).fetchone()
+            if row is None:
+                raise DashboardReadError(
+                    "signal row disappeared during immutable read"
+                )
+            rows.append(row)
+        return tuple(rows)
 
     def command_center(self, *, recent_limit: int = 8) -> CommandCenterView:
         if recent_limit <= 0:
