@@ -14,14 +14,41 @@ concurrency:
 
 jobs:
   wake:
-    name: UID504 30m continuity wake
+    name: UID504 30m continuity fallback wake
     runs-on: [self-hosted, crypto-signal, uid504]
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
-      - name: Inspect terminal state and send exact-chat wake
+
+      - name: Send fallback when local half-hour timer is stale
         shell: bash
         run: |
           set -euo pipefail
-          EVENT_ID="crypto-30m-continuity:${GITHUB_RUN_ID}:${GITHUB_RUN_ATTEMPT}"
-          /usr/bin/python3 "$GITHUB_WORKSPACE/ops/continuity/recurring_wake.py" "$EVENT_ID"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            EVENT_ID="crypto-30m-continuity-manual:${GITHUB_RUN_ID}:${GITHUB_RUN_ATTEMPT}"
+            /usr/bin/python3 "$GITHUB_WORKSPACE/ops/continuity/recurring_wake.py" "$EVENT_ID"
+            echo "MANUAL_30M_WAKE_ATTEMPTED=YES"
+            exit 0
+          fi
+
+          STATE="/Users/crypto-signal-agent/Crypto-Signal/runtime/continuity"
+          LAST="$STATE/recurring_wake_last_local_attempt"
+          NOW="$(date +%s)"
+          LAST_EPOCH="0"
+          if [ -f "$LAST" ]; then
+            LAST_EPOCH="$(sed -n 's/^epoch=//p' "$LAST" | head -1)"
+          fi
+
+          if [[ "$LAST_EPOCH" =~ ^[0-9]+$ ]] && [ "$LAST_EPOCH" -gt 0 ]; then
+            AGE="$((NOW - LAST_EPOCH))"
+            echo "LOCAL_WAKE_AGE_SECONDS=$AGE"
+            if [ "$AGE" -ge 0 ] && [ "$AGE" -le 600 ]; then
+              echo "LOCAL_30M_TIMER_RECENT=YES"
+              echo "GITHUB_FALLBACK_SKIPPED=YES"
+              exit 0
+            fi
+          fi
+
+          # Same deterministic half-hour event identity as launchd.
+          /usr/bin/python3 "$GITHUB_WORKSPACE/ops/continuity/recurring_wake.py" --scheduled-slot
+          echo "GITHUB_FALLBACK_WAKE_ATTEMPTED=YES"
