@@ -202,6 +202,15 @@ _ACCEPTED_ENGINES: tuple[dict[str, object], ...] = (
         "why_it_matters_tr": "Makine kanıtının otomatik biçimde üretim yetkisine dönüşmesini engeller.",
     },
     {
+        "engine_id": "meta_intelligence_shadow",
+        "group": "meta_intelligence",
+        "title_tr": "Meta Intelligence · Shadow Policy",
+        "engine_version": "meta-intelligence-shadow-v1/1",
+        "source_module": "src/crypto_signal/intelligence/meta_intelligence.py",
+        "what_it_says_tr": "Korele ve redundant kanıtı çift saymadan, explicit rejim ağırlıklarıyla salt okunur gölge denge üretir.",
+        "why_it_matters_tr": "Çelişki, abstention ve eksik kanıtı saklar; signed balance olasılık değildir ve production contribution daima 0 kalır.",
+    },
+    {
         "engine_id": "learning_memory",
         "group": "learning_memory",
         "title_tr": "Learning Memory",
