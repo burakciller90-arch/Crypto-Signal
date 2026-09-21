@@ -82,10 +82,12 @@ jobs:
           root = ET.fromstring(get_bytes(treasury_url))
           parsed_treasury: list[tuple[date, float]] = []
           for entry in root.iter():
+              if entry.tag.rsplit("}", 1)[-1] != "entry":
+                  continue
               values: dict[str, str] = {}
-              for child in entry:
-                  local = child.tag.rsplit("}", 1)[-1]
-                  text = (child.text or "").strip()
+              for node in entry.iter():
+                  local = node.tag.rsplit("}", 1)[-1]
+                  text = (node.text or "").strip()
                   if text:
                       values[local] = text
               raw_day = values.get("NEW_DATE")
