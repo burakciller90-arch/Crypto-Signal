@@ -1,0 +1,261 @@
+name: Crypto SSD Finalize V2
+
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  contents: read
+  issues: read
+
+jobs:
+  finalize:
+    if: github.actor == 'burakciller90-arch' && github.event.issue.title == '[CRYPTOSSD] FINALIZE-V2'
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 30
+    steps:
+      - name: Reconcile final runtime, start SSD-safe clocks, remove last internal payload
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(id -u)" = "504"
+
+          HOME_ROOT="/Users/crypto-signal-agent"
+          INTERNAL="$HOME_ROOT/Crypto-Signal"
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          DEV="$ROOT/Development"
+          LIVE="$ROOT/Live"
+          PRODUCT="$ROOT/Product"
+          ALERTS="$ROOT/Alerts"
+          PAPER="$ROOT/Paper"
+          LOGDIR="$ROOT/ServiceLogs"
+          WRAPPER="$ROOT/ssd-clock-wrapper.py"
+          SUP="$ROOT/ssd-service-supervisor.sh"
+          SUP_PID="$ROOT/ssd-service-supervisor.pid"
+
+          test -d "$DEV"
+          test -d "$LIVE"
+          test -d "$PRODUCT"
+          test -d "$ALERTS"
+          test -d "$PAPER"
+          mkdir -p "$LOGDIR"
+
+          echo "=== STOP OLD SSD SUPERVISOR / CLOCKS ==="
+          old_sup="$(cat "$SUP_PID" 2>/dev/null || true)"
+          if [ -n "$old_sup" ]; then kill "$old_sup" >/dev/null 2>&1 || true; fi
+          old_dash="$(cat "$ROOT/dashboard.pid" 2>/dev/null || true)"
+          if [ -n "$old_dash" ]; then kill "$old_dash" >/dev/null 2>&1 || true; fi
+          for pat in             "$ROOT/Live/.venv/bin/python.*run_live_evidence_clock.py"             "$ROOT/Alerts/.venv/bin/python.*run_alert_clock.py"             "$ROOT/Paper/.venv/bin/python.*run_paper_clock.py"             "$ROOT/Paper/.venv/bin/python.*run_paper_dry_run_clock.py"; do
+            for pid in $(pgrep -f "$pat" 2>/dev/null || true); do
+              kill "$pid" >/dev/null 2>&1 || true
+            done
+          done
+          sleep 3
+
+          echo "=== RECONCILE LAST INTERNAL LIVE RUNTIME ==="
+          if [ -d "$INTERNAL/runtime" ]; then
+            if [ -f "$INTERNAL/runtime/ledger/live_signal_ledger.sqlite3" ]; then
+              echo "INTERNAL_LEDGER_BEFORE=$(/usr/bin/sqlite3 "$INTERNAL/runtime/ledger/live_signal_ledger.sqlite3" 'SELECT count(*) FROM signal_freezes;' 2>/dev/null || echo unknown)"
+              /usr/bin/sqlite3 "$INTERNAL/runtime/ledger/live_signal_ledger.sqlite3" 'PRAGMA wal_checkpoint(TRUNCATE);'
+              test "$(/usr/bin/sqlite3 "$INTERNAL/runtime/ledger/live_signal_ledger.sqlite3" 'PRAGMA integrity_check;')" = "ok"
+              cp -p "$INTERNAL/runtime/ledger/live_signal_ledger.sqlite3" "$DEV/runtime/ledger/live_signal_ledger.sqlite3"
+              rm -f "$DEV/runtime/ledger/live_signal_ledger.sqlite3-wal" "$DEV/runtime/ledger/live_signal_ledger.sqlite3-shm"
+            fi
+            if [ -f "$INTERNAL/runtime/data/live_base_15m_cache.sqlite3" ]; then
+              /usr/bin/sqlite3 "$INTERNAL/runtime/data/live_base_15m_cache.sqlite3" 'PRAGMA wal_checkpoint(TRUNCATE);' >/dev/null 2>&1 || true
+              test "$(/usr/bin/sqlite3 "$INTERNAL/runtime/data/live_base_15m_cache.sqlite3" 'PRAGMA integrity_check;')" = "ok"
+              mkdir -p "$DEV/runtime/data"
+              cp -p "$INTERNAL/runtime/data/live_base_15m_cache.sqlite3" "$DEV/runtime/data/live_base_15m_cache.sqlite3"
+              rm -f "$DEV/runtime/data/live_base_15m_cache.sqlite3-wal" "$DEV/runtime/data/live_base_15m_cache.sqlite3-shm"
+            fi
+          fi
+          test "$(/usr/bin/sqlite3 "$DEV/runtime/ledger/live_signal_ledger.sqlite3" 'PRAGMA integrity_check;')" = "ok"
+          echo "SSD_LEDGER_AFTER=$(/usr/bin/sqlite3 "$DEV/runtime/ledger/live_signal_ledger.sqlite3" 'SELECT count(*) FROM signal_freezes;' 2>/dev/null || echo unknown)"
+
+          echo "=== WRITE RELOCATABLE CLOCK WRAPPER ==="
+          cat > "$WRAPPER" <<'PY'
+          #!/usr/bin/env python3
+          from __future__ import annotations
+          import importlib.util
+          import os
+          import sys
+          from pathlib import Path
+
+          ROOT = Path("/Volumes/Crypto-504/Crypto-Signal")
+          DEV = ROOT / "Development"
+          LIVE = ROOT / "Live"
+          ALERTS = ROOT / "Alerts"
+          PAPER = ROOT / "Paper"
+
+          def load(path: Path, name: str):
+              spec = importlib.util.spec_from_file_location(name, path)
+              if spec is None or spec.loader is None:
+                  raise RuntimeError(f"cannot load {path}")
+              module = importlib.util.module_from_spec(spec)
+              spec.loader.exec_module(module)
+              return module
+
+          kind = sys.argv[1]
+          if kind == "live":
+              m = load(LIVE / "ops/run_live_evidence_clock.py", "crypto_ssd_live")
+              m.LOCK_PATH = DEV / "runtime/ledger/live_clock.lock"
+              sys.argv = [
+                  str(LIVE / "ops/run_live_evidence_clock.py"),
+                  "--db", str(DEV / "runtime/ledger/live_signal_ledger.sqlite3"),
+                  "--candle-cache", str(DEV / "runtime/data/live_base_15m_cache.sqlite3"),
+              ]
+              raise SystemExit(m.main())
+          if kind == "alert":
+              m = load(ALERTS / "ops/run_alert_clock.py", "crypto_ssd_alert")
+              m.LOCK_PATH = DEV / "runtime/alerts/alert_clock.lock"
+              sys.argv = [
+                  str(ALERTS / "ops/run_alert_clock.py"),
+                  "--signal-ledger", str(DEV / "runtime/ledger/live_signal_ledger.sqlite3"),
+                  "--outbox", str(DEV / "runtime/alerts/alert_outbox.sqlite3"),
+              ]
+              raise SystemExit(m.main())
+          if kind == "paper":
+              m = load(PAPER / "ops/run_paper_clock.py", "crypto_ssd_paper")
+              m.LOCK_PATH = DEV / "runtime/paper/paper_clock.lock"
+              sys.argv = [
+                  str(PAPER / "ops/run_paper_clock.py"),
+                  "--paper-ledger", str(DEV / "runtime/paper/paper_fund.sqlite3"),
+                  "--signal-ledger", str(DEV / "runtime/ledger/live_signal_ledger.sqlite3"),
+              ]
+              raise SystemExit(m.main())
+          if kind == "dry":
+              m = load(PAPER / "ops/run_paper_dry_run_clock.py", "crypto_ssd_dry")
+              runtime = DEV / "runtime/paper"
+              m.BASE = DEV
+              m.PAPER = PAPER
+              m.RUNTIME = runtime
+              m.OUT_LOG = runtime / "paper_dry_run_clock.out.log"
+              m.ERR_LOG = runtime / "paper_dry_run_clock.err.log"
+              raise SystemExit(m.main())
+          raise SystemExit(f"unknown kind: {kind}")
+          PY
+          chmod 700 "$WRAPPER"
+
+          echo "=== WRITE SSD SUPERVISOR V2 ==="
+          cat > "$SUP" <<'SUPERVISOR'
+          #!/bin/bash
+          set -u
+          unset RUNNER_TRACKING_ID
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          DEV="$ROOT/Development"
+          LIVE="$ROOT/Live"
+          PRODUCT="$ROOT/Product"
+          ALERTS="$ROOT/Alerts"
+          PAPER="$ROOT/Paper"
+          WRAPPER="$ROOT/ssd-clock-wrapper.py"
+          LOGDIR="$ROOT/ServiceLogs"
+          mkdir -p "$LOGDIR"
+          exec >>"$LOGDIR/supervisor.log" 2>&1
+          echo "$(date '+%Y-%m-%d %H:%M:%S %z') supervisor_v2_start pid=$$"
+
+          start_dashboard() {
+            local pid=""
+            [ -f "$ROOT/dashboard.pid" ] && pid="$(cat "$ROOT/dashboard.pid" 2>/dev/null || true)"
+            if [ -n "$pid" ] && kill -0 "$pid" >/dev/null 2>&1; then return 0; fi
+            (
+              unset RUNNER_TRACKING_ID
+              export PYTHONPATH="$PRODUCT/src"
+              cd "$PRODUCT"
+              exec "$PRODUCT/.venv/bin/python" "$PRODUCT/ops/run_dashboard.py"                 --host 127.0.0.1 --port 48700                 --ledger "$DEV/runtime/ledger/live_signal_ledger.sqlite3"                 --alert-outbox "$DEV/runtime/alerts/alert_outbox.sqlite3"                 --paper-ledger "$DEV/runtime/paper/paper_fund.sqlite3"                 --candle-cache "$DEV/runtime/data/live_base_15m_cache.sqlite3"
+            ) >>"$LOGDIR/dashboard.out.log" 2>>"$LOGDIR/dashboard.err.log" < /dev/null &
+            echo $! > "$ROOT/dashboard.pid"
+          }
+
+          run_clock() {
+            local kind="$1"
+            local py="$2"
+            local src="$3"
+            (
+              unset RUNNER_TRACKING_ID
+              export PYTHONPATH="$src"
+              exec "$py" "$WRAPPER" "$kind"
+            ) >>"$LOGDIR/$kind.out.log" 2>>"$LOGDIR/$kind.err.log" < /dev/null &
+          }
+
+          last=0
+          while true; do
+            start_dashboard
+            now="$(date +%s)"
+            if [ $((now-last)) -ge 120 ]; then
+              run_clock live "$LIVE/.venv/bin/python" "$LIVE/src"
+              run_clock alert "$ALERTS/.venv/bin/python" "$ALERTS/src"
+              run_clock paper "$PAPER/.venv/bin/python" "$PAPER/src"
+              run_clock dry "$PAPER/.venv/bin/python" "$PAPER/src"
+              last="$now"
+            fi
+            sleep 10
+          done
+          SUPERVISOR
+          chmod 700 "$SUP"
+
+          echo "=== START SUPERVISOR V2 ==="
+          (
+            unset RUNNER_TRACKING_ID
+            nohup "$SUP" >"$LOGDIR/supervisor-bootstrap.out" 2>"$LOGDIR/supervisor-bootstrap.err" < /dev/null &
+            echo $! > "$SUP_PID"
+          )
+
+          ok=0
+          for i in {1..45}; do
+            sup="$(cat "$SUP_PID" 2>/dev/null || true)"
+            if [ -n "$sup" ] && kill -0 "$sup" >/dev/null 2>&1 &&               curl -fsS --max-time 3 http://127.0.0.1:48700/api/health > "$ROOT/finalize-v2-health.json" 2>/dev/null; then
+              ok=1
+              break
+            fi
+            sleep 1
+          done
+          test "$ok" = "1"
+          cat "$ROOT/finalize-v2-health.json"
+          ROOT="$ROOT" /usr/bin/python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          data=json.loads((Path(os.environ["ROOT"])/"finalize-v2-health.json").read_text())
+          assert data["status"] == "ok"
+          assert data["real_capital"] == 0
+          assert data["read_only"] is True
+          print("SSD_V2_HEALTH_PASS=YES")
+          PY
+
+          echo "=== WAIT FOR INITIAL CLOCKS ==="
+          sleep 12
+          tail -80 "$LOGDIR/live.err.log" 2>/dev/null || true
+          tail -80 "$LOGDIR/live.out.log" 2>/dev/null || true
+          tail -80 "$LOGDIR/alert.err.log" 2>/dev/null || true
+          tail -80 "$LOGDIR/paper.err.log" 2>/dev/null || true
+
+          echo "=== ASSERT NO INTERNAL WRITERS / RECREATION ==="
+          writers="$(/usr/sbin/lsof +D "$INTERNAL" 2>/dev/null | tail -n +2 || true)"
+          if [ -n "$writers" ]; then
+            printf '%s\n' "$writers"
+            echo "INTERNAL_WRITER_REMAINS=YES"
+            exit 71
+          fi
+
+          echo "=== DELETE LAST INTERNAL PROJECT DIRECTORY ==="
+          rm -rf "$INTERNAL"
+          sleep 5
+          test ! -e "$INTERNAL"
+
+          echo "=== VERIFY NO PROJECT PAYLOAD ON INTERNAL ==="
+          for p in             "$HOME_ROOT/Crypto-Signal"             "$HOME_ROOT/Crypto-Signal-Live"             "$HOME_ROOT/Crypto-Signal-Product"             "$HOME_ROOT/Crypto-Signal-Alerts"             "$HOME_ROOT/Crypto-Signal-Paper"             "$HOME_ROOT/Library/Application Support/CryptoSignal"; do
+            test ! -e "$p"
+            echo "ABSENT=$p"
+          done
+
+          echo "=== POST DELETE HEALTH ==="
+          curl -fsS --max-time 5 http://127.0.0.1:48700/api/health
+          echo
+          test "$(/usr/bin/sqlite3 "$DEV/runtime/ledger/live_signal_ledger.sqlite3" 'PRAGMA integrity_check;')" = "ok"
+
+          echo "=== STORAGE ==="
+          df -h /
+          df -h /Volumes/Crypto-504
+          du -sh "$ROOT"
+          du -sh "$HOME_ROOT/actions-runner-crypto"
+
+          echo "CRYPTO_SSD_FINALIZE_V2_PASS=YES"
