@@ -1203,3 +1203,203 @@ footer {
   .intelligence-card summary,
   .memory-record summary { flex-direction: column; }
 }
+
+
+/* Gift Edition final polish: beginner-first progressive disclosure */
+body[data-view-mode="simple"] [data-advanced-section] {
+  display: none;
+}
+.gift-controls {
+  position: sticky;
+  top: 88px;
+  z-index: 12;
+  display: grid;
+  gap: 10px;
+  margin-bottom: 14px;
+  padding: 12px 14px;
+  border: 1px solid rgba(124,185,255,.16);
+  border-radius: 14px;
+  background: rgba(8,19,29,.88);
+  backdrop-filter: blur(16px);
+  box-shadow: 0 12px 32px rgba(0,0,0,.18);
+}
+.view-mode-copy {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+}
+.view-mode-copy .eyebrow {
+  margin-bottom: 4px;
+}
+.view-mode-copy strong,
+.view-mode-copy span {
+  display: block;
+}
+.view-mode-copy strong {
+  font-size: .9rem;
+}
+.view-mode-copy span {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: .68rem;
+  line-height: 1.45;
+}
+.view-mode-toggle {
+  flex: 0 0 auto;
+  border-color: rgba(124,185,255,.26);
+}
+.quick-nav {
+  display: flex;
+  gap: 7px;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  padding-bottom: 2px;
+}
+.quick-nav button,
+.brief-card button {
+  border: 1px solid rgba(148,163,184,.12);
+  background: rgba(255,255,255,.022);
+  color: #b8c9da;
+  border-radius: 999px;
+  padding: 7px 10px;
+  font: inherit;
+  font-size: .68rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.quick-nav button:hover,
+.quick-nav button:focus-visible,
+.brief-card button:hover,
+.brief-card button:focus-visible {
+  border-color: rgba(124,185,255,.42);
+  color: var(--text);
+  outline: none;
+}
+.beginner-brief {
+  margin-bottom: 14px;
+  padding: 20px;
+  border: 1px solid rgba(102,227,196,.18);
+  border-radius: 16px;
+  background:
+    radial-gradient(circle at 12% 0%, rgba(102,227,196,.07), transparent 32%),
+    linear-gradient(180deg, rgba(16,29,41,.9), rgba(9,20,30,.92));
+  box-shadow: var(--shadow);
+}
+.beginner-brief-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: flex-start;
+  margin-bottom: 14px;
+}
+.beginner-brief-grid {
+  display: grid;
+  grid-template-columns: repeat(3,minmax(0,1fr));
+  gap: 10px;
+}
+.brief-card {
+  min-width: 0;
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  min-height: 160px;
+  padding: 15px;
+  border: 1px solid rgba(148,163,184,.1);
+  border-radius: 13px;
+  background: rgba(255,255,255,.015);
+}
+.brief-card > span {
+  color: var(--muted);
+  font-size: .64rem;
+  text-transform: uppercase;
+  letter-spacing: .07em;
+}
+.brief-card > strong {
+  font-size: 1rem;
+  line-height: 1.35;
+}
+.brief-card > p {
+  min-height: 44px;
+  margin: 0;
+  color: #91a5b7;
+  font-size: .72rem;
+  line-height: 1.55;
+}
+.brief-card button {
+  justify-self: start;
+  margin-top: auto;
+}
+.brief-market {
+  border-color: rgba(124,185,255,.15);
+}
+.brief-paper {
+  border-color: rgba(102,227,196,.15);
+}
+.brief-research {
+  border-color: rgba(156,122,255,.16);
+}
+body[data-view-mode="simple"] .hero {
+  min-height: 230px;
+  padding-bottom: 30px;
+}
+body[data-view-mode="simple"] .metric-card {
+  min-height: 118px;
+}
+body[data-view-mode="simple"] .shell {
+  padding-top: 38px;
+}
+[data-advanced-section] {
+  scroll-margin-top: 178px;
+}
+#paperMissionSection,
+#radarSection,
+#assetSection,
+#educationSection {
+  scroll-margin-top: 178px;
+}
+
+@media (max-width: 980px) {
+  .gift-controls {
+    top: 126px;
+  }
+  .beginner-brief-grid {
+    grid-template-columns: 1fr;
+  }
+  .brief-card {
+    min-height: auto;
+  }
+  [data-advanced-section],
+  #paperMissionSection,
+  #radarSection,
+  #assetSection,
+  #educationSection {
+    scroll-margin-top: 218px;
+  }
+}
+@media (max-width: 760px) {
+  .gift-controls {
+    position: static;
+  }
+  .view-mode-copy,
+  .beginner-brief-head {
+    flex-direction: column;
+  }
+  .view-mode-toggle {
+    width: 100%;
+  }
+  .quick-nav {
+    margin-inline: -2px;
+  }
+  body[data-view-mode="simple"] .hero {
+    min-height: auto;
+    padding-bottom: 22px;
+  }
+  [data-advanced-section],
+  #paperMissionSection,
+  #radarSection,
+  #assetSection,
+  #educationSection {
+    scroll-margin-top: 24px;
+  }
+}
