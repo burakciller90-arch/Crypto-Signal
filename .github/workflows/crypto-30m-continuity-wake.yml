@@ -10,6 +10,9 @@ on:
     paths:
       - ".github/workflows/crypto-30m-continuity-wake.yml"
       - "ops/continuity/recurring_wake.py"
+      - "ops/continuity/bridge_watchdog.py"
+      - ".github/workflows/crypto-rebind-chat.yml"
+      - ".github/workflows/crypto-mac-command.yml"
 
 permissions:
   contents: read
@@ -31,10 +34,13 @@ jobs:
           python-version: '3.12'
       - name: Validate continuity wake code
         run: |
-          python -m py_compile ops/continuity/recurring_wake.py
+          python -m py_compile             ops/continuity/recurring_wake.py             ops/continuity/bridge_watchdog.py
           grep -q 'CRYPTO_SIGNAL_AUTONOMOUS_CONTINUE_V1' ops/continuity/recurring_wake.py
           grep -q 'REAL_CAPITAL=0' ops/continuity/recurring_wake.py
           grep -q '6ab0debd-49a8-83eb-8b33-a7ce2ef826d0' ops/continuity/recurring_wake.py
+          grep -q 'delegated project continuation' ops/continuity/bridge_watchdog.py
+          grep -q 'wakeheartbeat' .github/workflows/crypto-mac-command.yml
+          test "$(grep -c '6ab0debd-49a8-83eb-8b33-a7ce2ef826d0' .github/workflows/crypto-rebind-chat.yml)" = "2"
           echo "CRYPTO_30M_WAKE_VALIDATION_PASS=YES"
 
   wake:
