@@ -24,7 +24,7 @@ jobs:
           set -euo pipefail
           cmd="$(printf '%s\n' "$ISSUE_BODY" | awk -F: 'tolower($1)=="command" {gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2); print tolower($2); exit}')"
           case "$cmd" in
-            status|services|logs|disk|sync|producttest|fulltest|productstate|productdeploy|paperreview|paperinspect|paperfixlint|paperharden|stateplanreview|stateplaninspect|stateplanharden|cursorreview|cursorreviewtail|cursorcleanup|bridgecheck|bridgestate|pausecheck|wakepause|wakeresume|wakearm|waketest|wakeheartbeat|chatbusyprobe|cursorcheck|cursorauthdiag|cursorttycheck|alertclockstate|alertclockpause|alertclockresume|migrationinspect|migrationinventory|ssddashboarddiag|ssddashboardwrappertest|ssdtcclaunchtest|ssdbackgroundteststart|ssdbackgroundtestcheck)
+            status|services|logs|disk|sync|producttest|fulltest|productstate|productdeploy|paperreview|paperinspect|paperfixlint|paperharden|stateplanreview|stateplaninspect|stateplanharden|cursorreview|cursorreviewtail|cursorcleanup|bridgecheck|bridgestate|pausecheck|wakepause|wakeresume|wakearm|waketest|wakeheartbeat|chatbusyprobe|cursorcheck|cursorauthdiag|cursorttycheck|alertclockstate|alertclockpause|alertclockresume|migrationinspect|migrationinventory|ssddashboarddiag|ssddashboardwrappertest|ssdtcclaunchtest|ssdbackgroundteststart|ssdbackgroundtestcheck|ssdleftover)
               ;;
             *)
               echo "Unsupported command: $cmd"
@@ -1121,6 +1121,38 @@ jobs:
 
 
 
+
+
+      - name: SSD LEFTOVER INSPECT
+        if: steps.parse.outputs.command == 'ssdleftover'
+        shell: bash
+        run: |
+          set +e
+          HOME_ROOT="/Users/crypto-signal-agent"
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          echo "=== INTERNAL TOP LEVEL ==="
+          for p in             "$HOME_ROOT/Crypto-Signal"             "$HOME_ROOT/Crypto-Signal-Live"             "$HOME_ROOT/Crypto-Signal-Product"             "$HOME_ROOT/Crypto-Signal-Alerts"             "$HOME_ROOT/Crypto-Signal-Paper"             "$HOME_ROOT/Library/Application Support/CryptoSignal"; do
+            echo "--- $p"
+            if [ -e "$p" ]; then
+              ls -lad "$p"
+              du -sh "$p" 2>/dev/null || true
+              find "$p" -maxdepth 3 -mindepth 1 -print 2>/dev/null | head -300
+            else
+              echo ABSENT
+            fi
+          done
+          echo "=== SSD SUPERVISOR ==="
+          sup="$(cat "$ROOT/ssd-service-supervisor.pid" 2>/dev/null || true)"
+          dash="$(cat "$ROOT/dashboard.pid" 2>/dev/null || true)"
+          echo "SUP=$sup DASH=$dash"
+          [ -n "$sup" ] && ps -p "$sup" -o pid=,ppid=,user=,%cpu=,%mem=,etime=,command=
+          [ -n "$dash" ] && ps -p "$dash" -o pid=,ppid=,user=,%cpu=,%mem=,etime=,command=
+          curl -fsS --max-time 5 http://127.0.0.1:48700/api/health || true
+          echo
+          echo "=== WRITERS TO INTERNAL CRYPTO ==="
+          /usr/sbin/lsof +D "$HOME_ROOT/Crypto-Signal" 2>/dev/null | head -200 || true
+          echo "SSD_LEFTOVER_INSPECT_PASS=YES"
+          exit 0
 
       - name: SSD BACKGROUND TEST START
         if: steps.parse.outputs.command == 'ssdbackgroundteststart'
