@@ -1,0 +1,90 @@
+name: Crypto SSD Verify
+
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  contents: read
+  issues: read
+
+jobs:
+  verify:
+    if: github.actor == 'burakciller90-arch' && github.event.issue.title == '[CRYPTOSSD] VERIFY'
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 20
+    steps:
+      - name: Verify full SSD cutover and internal removal
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(id -u)" = "504"
+
+          HOME_ROOT="/Users/crypto-signal-agent"
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          LABEL="actions.runner.burakciller90-arch-Crypto-Signal.crypto-signal-uid504"
+
+          echo "=== RUNNER ==="
+          launchctl print "gui/504/$LABEL" | grep -E 'state =|pid =|path =|program =|runsvc.sh' | head -80 || true
+          launchctl print "gui/504/$LABEL" | grep -q "$ROOT/Runner/runsvc.sh"
+
+          echo "=== INTERNAL PROJECT PATHS MUST BE ABSENT ==="
+          for p in             "$HOME_ROOT/Crypto-Signal"             "$HOME_ROOT/Crypto-Signal-Live"             "$HOME_ROOT/Crypto-Signal-Product"             "$HOME_ROOT/Crypto-Signal-Alerts"             "$HOME_ROOT/Crypto-Signal-Paper"             "$HOME_ROOT/actions-runner-crypto"             "$HOME_ROOT/Library/Application Support/CryptoSignal"; do
+            if [ -e "$p" ]; then
+              echo "INTERNAL_LEFTOVER=$p"
+              exit 51
+            fi
+            echo "ABSENT=$p"
+          done
+
+          echo "=== SSD PROJECT PATHS ==="
+          for p in Development Live Product Alerts Paper Runner ApplicationSupport/CryptoSignal RunnerLogs; do
+            test -e "$ROOT/$p"
+            ls -ld "$ROOT/$p"
+          done
+
+          echo "=== GIT ==="
+          git -C "$ROOT/Development" status --short --branch
+          git -C "$ROOT/Development" rev-parse HEAD
+          test -z "$(git -C "$ROOT/Development" status --porcelain)"
+          for wt in Live Product Alerts Paper; do
+            git -C "$ROOT/$wt" status --short --branch
+            git -C "$ROOT/$wt" rev-parse HEAD
+          done
+
+          echo "=== SQLITE ==="
+          for db in             "$ROOT/Development/runtime/ledger/live_signal_ledger.sqlite3"             "$ROOT/Development/runtime/alerts/alert_outbox.sqlite3"             "$ROOT/Development/runtime/paper/paper_fund.sqlite3"; do
+            if [ -f "$db" ]; then
+              out="$(/usr/bin/sqlite3 "$db" 'PRAGMA integrity_check;')"
+              echo "$db => $out"
+              test "$out" = "ok"
+            fi
+          done
+
+          echo "=== DASHBOARD ==="
+          /usr/bin/curl -fsS --max-time 5 http://127.0.0.1:48700/api/health | tee "$ROOT/verify-health.json"
+          ROOT="$ROOT" /usr/bin/python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          data=json.loads((Path(os.environ["ROOT"])/"verify-health.json").read_text())
+          assert data["status"] == "ok"
+          assert data["real_capital"] == 0
+          assert data["read_only"] is True
+          PY
+
+          echo "=== PLISTS MUST NOT REFERENCE INTERNAL PROJECT PATHS ==="
+          if grep -RIl '/Users/crypto-signal-agent/Crypto-Signal' "$HOME_ROOT/Library/LaunchAgents" 2>/dev/null; then
+            echo "STALE_PROJECT_PATH_IN_LAUNCHAGENT=YES"
+            exit 52
+          fi
+          if grep -Il '/Users/crypto-signal-agent/actions-runner-crypto' "$HOME_ROOT/Library/LaunchAgents"/*.plist 2>/dev/null; then
+            echo "STALE_RUNNER_PATH_IN_LAUNCHAGENT=YES"
+            exit 53
+          fi
+
+          echo "=== SPACE ==="
+          df -h /
+          df -h /Volumes/Crypto-504
+          du -sh "$ROOT"
+          test -f "$ROOT/RUNNER_CUTOVER_PASS"
+          echo "CRYPTO_SSD_FULL_VERIFY_PASS=YES"
