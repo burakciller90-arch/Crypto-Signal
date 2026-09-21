@@ -621,14 +621,33 @@ def _context(
 ) -> tuple[Exchange, MarketType, str]:
     if not orderbooks and not trades:
         raise ValueError("microstructure analysis requires source evidence")
-    first = orderbooks[0] if orderbooks else trades[0]
-    expected = (first.exchange, first.market_type, first.symbol)
-    for item in (*orderbooks, *trades):
+    if orderbooks:
+        first_book = orderbooks[0]
+        expected = (
+            first_book.exchange,
+            first_book.market_type,
+            first_book.symbol,
+        )
+    else:
+        first_trade = trades[0]
+        expected = (
+            first_trade.exchange,
+            first_trade.market_type,
+            first_trade.symbol,
+        )
+    for book in orderbooks:
         _require_same_context(
             *expected,
-            item.exchange,
-            item.market_type,
-            item.symbol,
+            book.exchange,
+            book.market_type,
+            book.symbol,
+        )
+    for trade in trades:
+        _require_same_context(
+            *expected,
+            trade.exchange,
+            trade.market_type,
+            trade.symbol,
         )
     return expected
 
