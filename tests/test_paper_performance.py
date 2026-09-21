@@ -149,11 +149,6 @@ def test_no_closed_trades_is_not_yet_measured_not_zero_win_rate(tmp_path) -> Non
     assert snapshot.closed_trades == ()
     assert snapshot.win_rate_fraction is None
     assert snapshot.total_closed_trade_net_pnl_usdt is None
-    assert snapshot.window.gross_traded_notional_usdt == Decimal("10.01")
-    assert snapshot.window.turnover_fraction == Decimal("0.1001")
-    assert snapshot.window.cash_time_ms == 100
-    assert snapshot.window.cash_time_fraction == Decimal(100) / Decimal(499)
-    assert snapshot.window.invested_time_fraction == Decimal(399) / Decimal(499)
     assert snapshot.average_closed_trade_net_pnl_usdt is None
     assert snapshot.profit_factor is None
     assert snapshot.total_explicit_execution_cost_usdt is None
@@ -185,6 +180,11 @@ def test_open_trade_does_not_invent_closed_trade_success(tmp_path) -> None:
     assert snapshot.open_trade_symbols == (PaperSymbol.BTCUSDT,)
     assert snapshot.win_rate_fraction is None
     assert snapshot.total_closed_trade_net_pnl_usdt is None
+    assert snapshot.window.gross_traded_notional_usdt == Decimal("10.01")
+    assert snapshot.window.turnover_fraction == Decimal("0.1001")
+    assert snapshot.window.cash_time_ms == 100
+    assert snapshot.window.cash_time_fraction == Decimal(100) / Decimal(499)
+    assert snapshot.window.invested_time_fraction == Decimal(399) / Decimal(499)
 
 
 def test_closed_trade_performance_uses_accounting_cash_lineage(tmp_path) -> None:
