@@ -245,17 +245,16 @@ def build_regime_evidence_freeze(
     analysis = analyze_regime(candles, as_of_ms=as_of_ms, config=config)
     eligible = _eligible_candles(candles, as_of_ms=as_of_ms)
     consumed = tuple(eligible[-analysis.consumed_bar_count :])
-    draft = RegimeEvidenceFreeze(
-        freeze_identity="0" * 64,
+    payload = {
+        "schema_version": REGIME_FREEZE_SCHEMA_VERSION,
+        "analysis": analysis,
+        "candles": consumed,
+    }
+    return RegimeEvidenceFreeze(
+        freeze_identity=canonical_sha256(payload),
         schema_version=REGIME_FREEZE_SCHEMA_VERSION,
         analysis=analysis,
         candles=consumed,
-    )
-    return RegimeEvidenceFreeze(
-        freeze_identity=canonical_sha256(_freeze_payload(draft)),
-        schema_version=draft.schema_version,
-        analysis=draft.analysis,
-        candles=draft.candles,
     )
 
 
