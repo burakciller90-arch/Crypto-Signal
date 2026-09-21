@@ -18,6 +18,7 @@ from crypto_signal.paper.models import (
     build_simulated_fill,
 )
 from crypto_signal.paper.performance import (
+    PAPER_TRADE_PERFORMANCE_VERSION,
     PaperTradeOutcome,
     PaperTradePerformanceError,
     PaperTradePerformanceStatus,
@@ -139,15 +140,33 @@ def test_no_closed_trades_is_not_yet_measured_not_zero_win_rate(tmp_path) -> Non
         observed_at_ms=500,
     )
 
+    assert snapshot.version == PAPER_TRADE_PERFORMANCE_VERSION == (
+        "paper_trade_performance.v2"
+    )
     assert snapshot.status is PaperTradePerformanceStatus.NOT_YET_MEASURED
     assert snapshot.closed_trade_count == 0
     assert snapshot.open_trade_count == 0
     assert snapshot.closed_trades == ()
     assert snapshot.win_rate_fraction is None
     assert snapshot.total_closed_trade_net_pnl_usdt is None
+    assert snapshot.window.gross_traded_notional_usdt == Decimal("10.01")
+    assert snapshot.window.turnover_fraction == Decimal("0.1001")
+    assert snapshot.window.cash_time_ms == 100
+    assert snapshot.window.cash_time_fraction == Decimal(100) / Decimal(499)
+    assert snapshot.window.invested_time_fraction == Decimal(399) / Decimal(499)
     assert snapshot.average_closed_trade_net_pnl_usdt is None
     assert snapshot.profit_factor is None
     assert snapshot.total_explicit_execution_cost_usdt is None
+    assert snapshot.expectancy_usdt_per_closed_trade is None
+    assert snapshot.expectancy_return_fraction_per_closed_trade is None
+    assert snapshot.window.measurement_start_at_ms == 1
+    assert snapshot.window.observed_at_ms == 500
+    assert snapshot.window.duration_ms == 499
+    assert snapshot.window.gross_traded_notional_usdt == Decimal(0)
+    assert snapshot.window.turnover_fraction == Decimal(0)
+    assert snapshot.window.cash_time_ms == 499
+    assert snapshot.window.cash_time_fraction == Decimal(1)
+    assert snapshot.window.invested_time_fraction == Decimal(0)
     assert snapshot.real_capital == REAL_CAPITAL == 0
 
 
@@ -203,6 +222,13 @@ def test_closed_trade_performance_uses_accounting_cash_lineage(tmp_path) -> None
     assert snapshot.best_trade_pnl_usdt == expected_pnl
     assert snapshot.worst_trade_pnl_usdt == expected_pnl
     assert snapshot.total_explicit_execution_cost_usdt == expected_cost
+    assert snapshot.expectancy_usdt_per_closed_trade == expected_pnl
+    assert snapshot.expectancy_return_fraction_per_closed_trade == expected_return
+    assert snapshot.window.gross_traded_notional_usdt == Decimal("21.998")
+    assert snapshot.window.turnover_fraction == Decimal("0.21998")
+    assert snapshot.window.cash_time_ms == 399
+    assert snapshot.window.cash_time_fraction == Decimal(399) / Decimal(499)
+    assert snapshot.window.invested_time_fraction == Decimal(100) / Decimal(499)
 
     trade = snapshot.closed_trades[0]
     assert trade.entry_fill_identity == buy_fill_identity
@@ -308,3 +334,35 @@ def test_accounting_mutation_that_disagrees_with_fill_fails_closed(tmp_path) -> 
             paper_ledger_path=ledger.path,
             observed_at_ms=500,
         )
+
+def test_activation_aligned_window_rejects_preexisting_fill(tmp_path) -> None:
+    ledger, fund_identity = _fund(tmp_path)
+    _append_buy(ledger, fund_identity, decided_at_ms=100)
+
+    with pytest.raises(
+        PaperTradePerformanceError,
+        match="cannot start after existing simulated fills",
+    ):
+        read_paper_trade_performance(
+            paper_ledger_path=ledger.path,
+            observed_at_ms=500,
+            measurement_start_at_ms=150,
+        )
+
+
+def test_activation_aligned_cash_only_window_is_exact(tmp_path) -> None:
+    ledger, _ = _fund(tmp_path)
+
+    snapshot = read_paper_trade_performance(
+        paper_ledger_path=ledger.path,
+        observed_at_ms=500,
+        measurement_start_at_ms=100,
+    )
+
+    assert snapshot.window.measurement_start_at_ms == 100
+    assert snapshot.window.duration_ms == 400
+    assert snapshot.window.cash_time_ms == 400
+    assert snapshot.window.cash_time_fraction == Decimal(1)
+    assert snapshot.window.invested_time_fraction == Decimal(0)
+    assert snapshot.window.turnover_fraction == Decimal(0)
+
