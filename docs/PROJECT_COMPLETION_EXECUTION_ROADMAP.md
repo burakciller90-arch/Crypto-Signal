@@ -172,8 +172,9 @@ Integrate the new intelligence/research visibility through progressive disclosur
 
 ## M3 — Operational hardening and Full Version final acceptance
 
-### R11 — SSD/runtime recovery hardening — CURRENT FRONTIER
-Canonical task: `stage11-ssd-runtime-recovery-hardening-v1`.
+### R11 — SSD/runtime recovery hardening — ACCEPTED (bounded non-disruptive scope)
+Accepted main: `2b16c21e8e2fb4a7cfbb16228edbf13534cc1651`.
+SSD-only watchdog, fail-closed missing mount, bounded DB backup/restore, log bounds, dashboard/supervisor recovery and real runner recovery are mechanically accepted. Physical reboot/logout/SSD detach remain explicit human-impact acceptance items and are not falsely claimed as tested.
 Test:
 - Mac reboot;
 - logout/login;
@@ -189,7 +190,8 @@ Test:
 
 No fallback to removed internal Macintosh project paths is allowed.
 
-### R12 — Continuity hardening
+### R12 — Continuity hardening — CURRENT FRONTIER
+Canonical task: `stage12-continuity-hardening-v1`.
 - explicit current-chat binding;
 - pause/resume semantics;
 - empty/stale queue handling;
@@ -232,4 +234,4 @@ Freeze:
 Crypto Signal Full Version is complete when M1, M2 and M3 are accepted with mechanical evidence and authoritative documentation, while REAL_CAPITAL remains 0 and all real-money/order authority stays closed.
 
 Immediate next execution target:
-`stage11-ssd-runtime-recovery-hardening-v1`.
+`stage12-continuity-hardening-v1`.

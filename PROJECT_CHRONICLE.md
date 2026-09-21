@@ -2574,3 +2574,16 @@ Continuity issue #661 confirmed the user pause remains intact with zero active l
 
 R10 is accepted live. The next roadmap frontier is `stage11-ssd-runtime-recovery-hardening-v1`.
 REAL_CAPITAL=0.
+
+## 2026-09-22 — R11 SSD/runtime recovery hardening accepted in bounded non-disruptive scope
+
+PR #670 merged at `2b16c21e8e2fb4a7cfbb16228edbf13534cc1651`. Branch gate `35666857077` and merged-main Stage10 `35667016896` passed.
+
+The UID504 recovery acceptance proved the SSD-only runtime watchdog, missing-SSD fail-closed behavior, absence of legacy internal runtime payloads, healthy read-only dashboard bindings, WAL-aware backup/restore for all four canonical SQLite databases, disk headroom, bounded log rotation, dashboard child recovery, SSD supervisor recovery and real runner-listener replacement. Runtime recovery changed dashboard PID 94596 to 98255 and supervisor PID 74402 to 98296. The separate runner recovery changed listener 65458 to 99399.
+
+Final UID504 status, runner diagnostic, Product health and fulltest passed in issues #678/#679/#680/#681; the fulltest emitted `FULL_TEST_PASS=YES`.
+
+Physical reboot/logout and physical SSD detach/remount were intentionally not executed autonomously because they can sever the live user/control session. They remain explicit human-impact acceptance/runbook items and are not claimed as tested.
+
+R11 bounded operational hardening is accepted. The canonical next safe frontier is `stage12-continuity-hardening-v1`.
+REAL_CAPITAL=0.

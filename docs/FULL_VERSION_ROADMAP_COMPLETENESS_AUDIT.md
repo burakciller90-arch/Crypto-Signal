@@ -265,21 +265,38 @@ Branch full gate, merged-main Stage10, UID504 sync/product/full tests and
 rollback-safe live Product deployment all passed. The SSD supervisor remained
 runtime owner and the deployed shell was mechanically verified. REAL_CAPITAL=0.
 
+## R11 SSD/runtime recovery hardening — ACCEPTED (bounded non-disruptive scope)
+
+R11 is **ACCEPTED** at `2b16c21e8e2fb4a7cfbb16228edbf13534cc1651`
+for the mechanically testable, non-destructive recovery scope.
+
+Accepted evidence includes SSD-only watchdog bootstrap, missing-mount fail-closed
+semantics, legacy-path absence, four-database WAL-aware backup/restore proof,
+disk headroom, bounded log growth, dashboard child recovery, supervisor
+recovery, real runner-listener recovery, post-recovery health and exact-head
+UID504 fulltest.
+
+Physical Mac reboot/logout and physical SSD detach/remount were not performed
+autonomously because doing so can sever the active user/control session. They
+remain explicit human-impact acceptance/runbook items and are not represented
+as completed evidence.
+
 ## Canonical next frontier
 
-`stage11-ssd-runtime-recovery-hardening-v1`
+`stage12-continuity-hardening-v1`
 
 Requirements:
 
-- prove dashboard child recovery under the active SSD supervisor;
-- prove supervisor/process PID reconciliation and stale PID cleanup;
-- prove runner-watchdog recovery without duplicating runners;
-- verify SQLite integrity/WAL behavior on bounded copies or read-only checks;
-- verify disk-space and log-growth/rotation policy;
-- verify backup/restore through bounded non-destructive artifacts;
-- verify missing SSD/runtime dependencies fail closed and never fall back to removed Macintosh project paths;
-- test reboot/logout/SSD-remount semantics first through deterministic simulation; physical disruption requires a separately proven recoverable control path;
-- preserve current Product health and REAL_CAPITAL=0.
+- exact current-chat binding with no silent fallback to a historical chat;
+- user pause must dominate all wake/lease mechanisms;
+- pause archives/supersedes active leases and queued wakes safely;
+- resume must be state-first and create only one fresh continuation owner;
+- delivered/stale/superseded wake events must NOOP rather than replay work;
+- empty queues must be valid and non-error states;
+- at-most-once receipts and duplicate-slot suppression must be deterministic;
+- relay/project identity must prevent Crypto Signal from consuming or emitting another project's continuation state;
+- tests must not unpause the user's current paused state merely to exercise logic;
+- REAL_CAPITAL=0.
 
 ## Safety boundary
 

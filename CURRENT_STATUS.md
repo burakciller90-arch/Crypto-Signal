@@ -3304,3 +3304,36 @@ Current true roadmap frontier:
 - physical reboot/logout/SSD-remount acceptance must only be attempted through a separately proven recoverable path;
 - no fallback to removed internal Macintosh project paths;
 - REAL_CAPITAL=0.
+
+
+## 2026-09-22 — R11 SSD/runtime recovery hardening ACCEPTED (bounded non-disruptive scope)
+
+- accepted main head: `2b16c21e8e2fb4a7cfbb16228edbf13534cc1651`;
+- PR #670 merged the SSD-only recovery control plane and recovery acceptance workflow;
+- full R11 branch gate PASS: run `35666857077`;
+- merged-main Stage10 hosted regression PASS: run `35667016896`;
+- runtime acceptance synchronized UID504 Development to the exact merged head and emitted `R11_DEVELOPMENT_SYNC_PASS=YES`;
+- runtime watchdog bootstrap PASS and missing-SSD simulation fails closed with exit 75 / `SSD_RUNTIME_NOT_READY=YES`;
+- no fallback to removed internal Macintosh project/runtime paths is permitted or observed;
+- live runtime audit PASS before and after recovery with health status=ok, ledger present, alert outbox present, read-only=true, REAL_CAPITAL=0;
+- signal ledger, alert outbox, paper ledger and candle cache each passed WAL-aware bounded backup/restore proof with matching page counts;
+- disk headroom PASS with ~945 GB free during acceptance;
+- bounded log rotation PASS: 262144-byte test log reduced to <=32768 bytes;
+- dashboard child recovery PASS: PID `94596 -> 98255`;
+- SSD supervisor recovery PASS: PID `74402 -> 98296`;
+- real runner-listener two-phase recovery PASS: arm run `35667284551`, verify run `35667407430`, listener `65458 -> 99399`;
+- post-recovery UID504 status PASS: issue #678 / run `35667853437`, Development exact main and dashboard health clean;
+- post-recovery runner persistence diagnostic PASS: issue #679 / run `35667856157`, listener 99399 alive on SSD path and no legacy internal runner payload observed;
+- post-recovery Product health PASS: issue #680 / run `35667859721`, Product remains accepted R10 live head `f15cbafd9f4359d385eca097a6a2635bf815ded1`, health clean;
+- exact-head UID504 fulltest PASS with `FULL_TEST_PASS=YES`: issue #681 / run `35667866216`;
+- continuity remained paused/empty during acceptance: local/shared pause YES, active leases=0, local/relay wake queues=0;
+- physical Mac reboot, logout/login interruption and physical SSD detach/remount were NOT executed autonomously because they can sever the active user/control session; they remain explicit human-impact acceptance items for the final integrated acceptance/runbook rather than being falsely claimed as tested;
+- REAL_CAPITAL=0.
+
+Current true roadmap frontier:
+- `stage12-continuity-hardening-v1`;
+- prove exact current-chat binding, project isolation, pause/resume transaction semantics, empty/stale queue handling and duplicate/stale wake NOOP;
+- preserve at-most-once receipts and superseding lease behavior;
+- keep user pause authoritative and do not resume wakes merely to test continuity;
+- no cross-project relay contamination;
+- REAL_CAPITAL=0.
