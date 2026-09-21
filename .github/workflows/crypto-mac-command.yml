@@ -24,7 +24,7 @@ jobs:
           set -euo pipefail
           cmd="$(printf '%s\n' "$ISSUE_BODY" | awk -F: 'tolower($1)=="command" {gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2); print tolower($2); exit}')"
           case "$cmd" in
-            status|services|logs|disk|sync|producttest|fulltest|productstate|productdeploy|paperreview|paperinspect|paperfixlint|paperharden|stateplanreview|stateplaninspect|stateplanharden|cursorreview|cursorreviewtail|cursorcleanup|bridgecheck|bridgestate|pausecheck|wakepause|wakeresume|wakearm|waketest|wakeheartbeat|chatbusyprobe|cursorcheck|cursorauthdiag|cursorttycheck|alertclockstate|alertclockpause|alertclockresume|migrationinspect|migrationinventory|ssddashboarddiag)
+            status|services|logs|disk|sync|producttest|fulltest|productstate|productdeploy|paperreview|paperinspect|paperfixlint|paperharden|stateplanreview|stateplaninspect|stateplanharden|cursorreview|cursorreviewtail|cursorcleanup|bridgecheck|bridgestate|pausecheck|wakepause|wakeresume|wakearm|waketest|wakeheartbeat|chatbusyprobe|cursorcheck|cursorauthdiag|cursorttycheck|alertclockstate|alertclockpause|alertclockresume|migrationinspect|migrationinventory|ssddashboarddiag|ssddashboardwrappertest)
               ;;
             *)
               echo "Unsupported command: $cmd"
@@ -1118,6 +1118,60 @@ jobs:
 
 
 
+
+
+      - name: SSD DASHBOARD WRAPPER TEST
+        if: steps.parse.outputs.command == 'ssddashboardwrappertest'
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          UID_NOW="$(id -u)"
+          TEST_LABEL="com.cryptosignal.dashboard.ssdtest"
+          TEST_PLIST="$HOME/Library/LaunchAgents/$TEST_LABEL.plist"
+          OUT="/tmp/crypto-ssd-dashboard-test.out"
+          ERR="/tmp/crypto-ssd-dashboard-test.err"
+          rm -f "$OUT" "$ERR"
+          launchctl bootout "gui/$UID_NOW/$TEST_LABEL" >/dev/null 2>&1 || true
+          cat > "$TEST_PLIST" <<PLIST
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>Label</key><string>$TEST_LABEL</string>
+            <key>ProgramArguments</key>
+            <array>
+              <string>/bin/bash</string>
+              <string>-lc</string>
+              <string>exec env PYTHONPATH='$ROOT/Product/src' '$ROOT/Product/.venv/bin/python' '$ROOT/Product/ops/run_dashboard.py' --host 127.0.0.1 --port 48702 --ledger '$ROOT/Development/runtime/ledger/live_signal_ledger.sqlite3'</string>
+            </array>
+            <key>RunAtLoad</key><true/>
+            <key>StandardOutPath</key><string>$OUT</string>
+            <key>StandardErrorPath</key><string>$ERR</string>
+          </dict>
+          </plist>
+          PLIST
+          plutil -lint "$TEST_PLIST"
+          launchctl bootstrap "gui/$UID_NOW" "$TEST_PLIST"
+          ok=0
+          for i in {1..25}; do
+            if curl -fsS --max-time 2 http://127.0.0.1:48702/api/health > /tmp/crypto-ssd-dashboard-test-health.json 2>/dev/null; then
+              ok=1
+              break
+            fi
+            sleep 1
+          done
+          echo "=== TEST LAUNCHD ==="
+          launchctl print "gui/$UID_NOW/$TEST_LABEL" 2>&1 | head -120 || true
+          echo "=== TEST ERR ==="
+          cat "$ERR" 2>/dev/null || true
+          echo "=== TEST OUT ==="
+          cat "$OUT" 2>/dev/null || true
+          test "$ok" = "1"
+          cat /tmp/crypto-ssd-dashboard-test-health.json
+          launchctl bootout "gui/$UID_NOW/$TEST_LABEL" >/dev/null 2>&1 || true
+          rm -f "$TEST_PLIST"
+          echo "SSD_DASHBOARD_WRAPPER_TEST_PASS=YES"
 
       - name: SSD DASHBOARD DIAG UID504
         if: steps.parse.outputs.command == 'ssddashboarddiag'
