@@ -2216,3 +2216,51 @@ Current true roadmap frontier:
 - missing source data must remain unavailable/unresolved rather than fabricated;
 - keep all Stage 8 engines observation-only until a separately accepted versioned weighting/meta policy exists.
 
+## 2026-09-21 — Stage 8 bounded derivatives context v1 ACCEPTED
+
+- accepted main head: `011f2c4c7be2bd00410c5a0f3f578e20bd84c891`
+- PR #412 merged the fifth bounded Stage 8 intelligence engine.
+- accepted source/data scope:
+  - public Bybit v5 linear-perpetual market endpoints only
+  - normalized funding-rate observations
+  - normalized open-interest history/current context
+  - mark/index basis evidence only when both real values exist
+  - explicit event/source/ingestion timestamps and adapter identity
+  - no API key, auth header, credential or order endpoint
+- accepted engine scope:
+  - positive/negative extreme funding state
+  - rising/falling/stable open-interest state
+  - premium/discount/neutral basis state
+  - crowded-long / crowded-short / leverage-buildup / deleveraging / balanced / mixed / unresolved labels
+  - explicit stale / missing-component / incomplete-alignment uncertainty
+  - immutable observation, analysis and freeze identities
+  - PIT-safe exclusion of future or late-ingested evidence
+  - observation-only / zero-production-contribution isolation
+- first hosted gate attempt correctly failed only on Ruff C409; no product/test regression was present.
+- Ruff issue fixed without changing engine semantics.
+- hosted branch full repository gate PASS.
+- hosted merged-main gate PASS:
+  - pytest 100%
+  - Ruff PASS
+  - mypy PASS across 112 source files
+  - PRODUCT_FRESHNESS_CONTRACT_PASS=YES
+  - STAGE10_HOSTED_FULL_GATE_PASS=YES
+- UID504 canonical sync PASS.
+- UID504 canonical fulltest PASS:
+  - pytest 100%
+  - Ruff PASS
+  - mypy PASS across 111 source files
+  - PRODUCT_FRESHNESS_CONTRACT_PASS=YES
+  - FULL_TEST_PASS=YES
+- no PRODUCT deploy required because this engine is observation-only and not wired into the stable product/confluence path.
+- no production weighting change.
+- Alpha Factory / Learning Memory remain closed.
+- PAPER/STABLE write activation remains closed.
+- REAL_CAPITAL=0.
+
+Current true roadmap frontier:
+- `stage8-order-flow-microstructure-v1` data-quality/source gate first;
+- implement only if a real PIT-safe microstructure source is supportable;
+- if the source/data-quality gate fails, record explicit deferral rather than fabricating order-flow from candles;
+- keep all Stage 8 engines observation-only until a separately accepted versioned weighting/meta policy exists.
+
