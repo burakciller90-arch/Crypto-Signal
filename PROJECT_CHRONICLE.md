@@ -2551,3 +2551,13 @@ The live deployment path then had to be reconciled with the post-migration runti
 Issue #646 / run `35661750761` deployed Product from `8ca23e612ba36b4ebcb0c3cb41a166d78add5cff` to `07972c4ce59a09da61339f9a131067c84a317cc7`. The active SSD supervisor remained owner and replaced dashboard child PID 74411 with 90752. Health required ledger + alert bindings, read-only=true and REAL_CAPITAL=0. The same deployment required the live `/api/intelligence-center` contract plus the Intelligence Lab HTML shell and emitted `INTELLIGENCE_CENTER_LIVE_PASS=YES`. Post-deploy Product state issue #647 confirmed the exact Product head and clean health.
 
 R8 is accepted and live. The next frontier is `stage9-meta-intelligence-shadow-policy-v1`: correlation/redundancy-safe, contradiction/abstention-aware, regime-aware only through an immutable versioned policy, and shadow/read-only with production contribution 0.
+
+## 2026-09-22 — Stage 9 shadow meta-intelligence policy accepted
+
+PR #649 merged the first versioned meta-intelligence policy at `40046000467b281d1a8c0890d28b426719b3112c`. The policy is shadow-only: it accepts explicit regime/version weight rules, caps correlated/redundant evidence, fails closed when correlated relations are not represented by policy, and keeps contradiction, abstention, NO_EVIDENCE and NOT_EVALUABLE as first-class evidence states.
+
+The output is a bounded signed weighted balance with semantic `signed_weighted_balance_not_probability`; probability status remains `not_calibrated`. There is no production contribution, champion mutation, automatic promotion, deploy or order authority.
+
+The full branch gate passed in `35662870858`; merged-main Stage10 passed in `35663035623`; UID504 sync issue #651 / run `35663128059` and UID504 fulltest issue #653 / run `35663190430` completed acceptance with `FULL_TEST_PASS=YES`.
+
+R9 is accepted. The next frontier is `stage9-gift-edition-final-polish-v1`: beginner-first final polish and progressive-disclosure integration without changing REAL_CAPITAL=0 or research/production authority boundaries.

@@ -155,15 +155,17 @@ Each surface should answer:
 
 Research-only surfaces must never imply production authority.
 
-### R9 — Meta-intelligence / weighting policy — CURRENT FRONTIER
-Canonical task: `stage9-meta-intelligence-shadow-policy-v1`.
+### R9 — Meta-intelligence / weighting policy — ACCEPTED
+Accepted main: `40046000467b281d1a8c0890d28b426719b3112c`.
+The accepted policy is shadow/read-only, correlation-safe, contradiction/abstention-aware and regime-versioned with production contribution 0.
 - prevent double-counting correlated evidence;
 - contradiction and abstention are first-class;
 - regime-aware weighting only through accepted versioned policy;
 - no probability label without accepted calibration evidence;
 - shadow/read-only validation before any production contribution change.
 
-### R10 — Gift Edition final polish
+### R10 — Gift Edition final polish — CURRENT FRONTIER
+Canonical task: `stage9-gift-edition-final-polish-v1`.
 Keep the first screen simple and beginner-friendly.
 Integrate the new intelligence/research visibility through progressive disclosure rather than adding dashboard clutter.
 
@@ -228,4 +230,4 @@ Freeze:
 Crypto Signal Full Version is complete when M1, M2 and M3 are accepted with mechanical evidence and authoritative documentation, while REAL_CAPITAL remains 0 and all real-money/order authority stays closed.
 
 Immediate next execution target:
-`stage9-meta-intelligence-shadow-policy-v1`.
+`stage9-gift-edition-final-polish-v1`.

@@ -236,20 +236,35 @@ passed. The SSD supervisor is the live dashboard owner; deployment is rollback-
 safe and requires healthy ledger/alert bindings plus the live Intelligence
 Center API and shell. REAL_CAPITAL=0.
 
+## Stage 9 Meta-intelligence / weighting policy — ACCEPTED
+
+The deterministic shadow meta-intelligence policy is **ACCEPTED** at
+`40046000467b281d1a8c0890d28b426719b3112c`.
+
+It requires explicit versioned regime weights, bounds correlated/redundant
+evidence, fails closed when correlation policy is incomplete, and preserves
+contradiction, abstention, NO_EVIDENCE and NOT_EVALUABLE states. Its signed
+balance is descriptive and explicitly not a probability. Production
+contribution remains 0.
+
+Branch full gate, merged Stage10 regression, UID504 sync and UID504 fulltest all
+passed. REAL_CAPITAL=0.
+
 ## Canonical next frontier
 
-`stage9-meta-intelligence-shadow-policy-v1`
+`stage9-gift-edition-final-polish-v1`
 
 Requirements:
 
-- consume accepted/versioned evidence identities only;
-- represent redundancy/correlation groups so related evidence is not double-counted;
-- preserve contradiction, abstention, missing/no-evidence and uncertainty as first-class inputs;
-- support regime-aware weights only through an explicit immutable policy version;
-- output descriptive/shadow meta evidence, not calibrated probability;
-- prove deterministic results, permutation invariance and bounded contribution;
-- production contribution must remain 0 during this frontier;
-- no automatic promotion/champion mutation/deploy/order authority;
+- preserve the beginner-first first screen and current accepted functionality;
+- expose deeper intelligence only through progressive disclosure;
+- make Research Lab and meta-intelligence status understandable without implying
+  calibrated probability or production authority;
+- improve navigation, hierarchy, concise explanations and responsive behavior;
+- preserve evidence freshness/source/missing-state semantics;
+- preserve paper Mission Control, portfolio/performance, education, archive,
+  alerts and system health;
+- no order/broker/real-capital authority;
 - REAL_CAPITAL=0.
 
 ## Safety boundary

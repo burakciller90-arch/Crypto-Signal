@@ -3237,3 +3237,35 @@ Current true roadmap frontier:
 - first acceptance is shadow/read-only with production contribution remaining 0;
 - no automatic champion/promotion/deploy/order authority;
 - REAL_CAPITAL=0.
+
+
+## 2026-09-22 — Stage 9 Meta-intelligence / weighting policy ACCEPTED
+
+- accepted main head: `40046000467b281d1a8c0890d28b426719b3112c`;
+- PR #649 merged a deterministic shadow-only meta-intelligence policy;
+- weight policy identity is immutable/versioned;
+- regime-aware weights require explicit policy rules; missing observed-engine rules fail closed;
+- correlated/redundant evidence is bounded by explicit correlation groups and caps;
+- uncovered REDUNDANT / OVERLAPPING relations fail closed instead of being double-counted;
+- contradiction, abstention, NO_EVIDENCE and NOT_EVALUABLE are first-class states;
+- evaluation is deterministic and permutation-invariant;
+- the signed weighted balance is bounded and explicitly labeled `signed_weighted_balance_not_probability`;
+- probability status remains `not_calibrated`;
+- production contribution remains 0; shadow_only=true;
+- no production authority, automatic promotion, champion mutation, deploy or broker/order authority exists;
+- branch full gate PASS: run `35662870858`;
+- merged-main Stage10 hosted full regression PASS: run `35663035623`;
+- UID504 SSD sync PASS: issue #651 / run `35663128059`;
+- UID504 fulltest PASS with `FULL_TEST_PASS=YES`: issue #653 / run `35663190430`;
+- live Product remains the accepted R8 UI head `07972c4ce59a09da61339f9a131067c84a317cc7`; R9 introduces no production/UI behavior change requiring deploy;
+- REAL_CAPITAL=0.
+
+Current true roadmap frontier:
+- `stage9-gift-edition-final-polish-v1`;
+- keep the first screen simple and beginner-friendly;
+- integrate accepted intelligence visibility through progressive disclosure rather than clutter;
+- improve navigation, visual hierarchy, explanation consistency and beginner wording;
+- make the Research Lab/meta-intelligence status understandable without implying probability or production authority;
+- preserve auto-refresh, evidence truth, paper Mission Control, archive, education and system health behavior;
+- no real-money/order authority;
+- REAL_CAPITAL=0.
