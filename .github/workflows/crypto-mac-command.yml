@@ -24,7 +24,7 @@ jobs:
           set -euo pipefail
           cmd="$(printf '%s\n' "$ISSUE_BODY" | awk -F: 'tolower($1)=="command" {gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2); print tolower($2); exit}')"
           case "$cmd" in
-            status|services|logs|disk|sync|producttest|fulltest|productstate|productdeploy|paperreview|paperinspect|paperfixlint|paperharden|stateplanreview|stateplaninspect|stateplanharden|cursorreview|cursorreviewtail|cursorcleanup|bridgecheck|bridgestate|pausecheck|wakepause|wakeresume|wakearm|waketest|wakeheartbeat|chatbusyprobe|cursorcheck|cursorauthdiag|cursorttycheck|alertclockstate|alertclockpause|alertclockresume|migrationinspect|migrationinventory|ssddashboarddiag|ssddashboardwrappertest)
+            status|services|logs|disk|sync|producttest|fulltest|productstate|productdeploy|paperreview|paperinspect|paperfixlint|paperharden|stateplanreview|stateplaninspect|stateplanharden|cursorreview|cursorreviewtail|cursorcleanup|bridgecheck|bridgestate|pausecheck|wakepause|wakeresume|wakearm|waketest|wakeheartbeat|chatbusyprobe|cursorcheck|cursorauthdiag|cursorttycheck|alertclockstate|alertclockpause|alertclockresume|migrationinspect|migrationinventory|ssddashboarddiag|ssddashboardwrappertest|ssdtcclaunchtest)
               ;;
             *)
               echo "Unsupported command: $cmd"
@@ -1119,6 +1119,54 @@ jobs:
 
 
 
+
+
+      - name: SSD TCC LAUNCH TEST
+        if: steps.parse.outputs.command == 'ssdtcclaunchtest'
+        shell: bash
+        run: |
+          set -euo pipefail
+          UID_NOW="$(id -u)"
+          LABEL="com.cryptosignal.ssdtcctest"
+          PLIST="$HOME/Library/LaunchAgents/$LABEL.plist"
+          OUT="/tmp/crypto-ssd-tcc-test.out"
+          ERR="/tmp/crypto-ssd-tcc-test.err"
+          rm -f "$OUT" "$ERR"
+          launchctl bootout "gui/$UID_NOW/$LABEL" >/dev/null 2>&1 || true
+          cat > "$PLIST" <<'PLIST'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>Label</key><string>com.cryptosignal.ssdtcctest</string>
+            <key>ProgramArguments</key>
+            <array>
+              <string>/usr/bin/python3</string>
+              <string>-c</string>
+              <string>from pathlib import Path; p=Path('/Volumes/Crypto-504/Crypto-Signal/Development/pyproject.toml'); print(p.exists()); print(len(p.read_bytes())); print('SYSTEM_PYTHON_SSD_READ_PASS=YES')</string>
+            </array>
+            <key>RunAtLoad</key><true/>
+            <key>StandardOutPath</key><string>/tmp/crypto-ssd-tcc-test.out</string>
+            <key>StandardErrorPath</key><string>/tmp/crypto-ssd-tcc-test.err</string>
+          </dict>
+          </plist>
+          PLIST
+          plutil -lint "$PLIST"
+          launchctl bootstrap "gui/$UID_NOW" "$PLIST"
+          sleep 4
+          echo "=== STATE ==="
+          launchctl print "gui/$UID_NOW/$LABEL" 2>&1 | head -120 || true
+          echo "=== OUT ==="
+          cat "$OUT" 2>/dev/null || true
+          echo "=== ERR ==="
+          cat "$ERR" 2>/dev/null || true
+          if grep -q 'SYSTEM_PYTHON_SSD_READ_PASS=YES' "$OUT"; then
+            echo "SSD_TCC_SYSTEM_PYTHON_PASS=YES"
+          else
+            echo "SSD_TCC_SYSTEM_PYTHON_PASS=NO"
+          fi
+          launchctl bootout "gui/$UID_NOW/$LABEL" >/dev/null 2>&1 || true
+          rm -f "$PLIST"
 
       - name: SSD DASHBOARD WRAPPER TEST
         if: steps.parse.outputs.command == 'ssddashboardwrappertest'
