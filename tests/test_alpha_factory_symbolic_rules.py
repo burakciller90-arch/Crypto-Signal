@@ -185,7 +185,10 @@ def test_feature_and_generated_identity_tampering_fail_closed() -> None:
         replace(feature, feature_version="v2")
 
     challenger = _target_challenger()
-    with pytest.raises(ValueError, match="identity mismatch"):
+    with pytest.raises(
+        ValueError,
+        match="unsupported symbolic-rule engine",
+    ):
         replace(
             challenger,
             engine_version="alpha-factory-symbolic-rule-v1/999",
