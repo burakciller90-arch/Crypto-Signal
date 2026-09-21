@@ -166,7 +166,42 @@ def deliver(event_id: str, message: str, target_url: str) -> tuple[bool, str]:
     if state == "OBSERVED":
         write_receipt(receipt, "OBSERVED", event_id, message_sha)
         return True, "OBSERVED"
-    if state in {"CHATGPT_BUSY", "DRAFT_BUSY", "NO_EDITOR", "TARGET_NOT_FOUND"}:
+    if state == "CHATGPT_BUSY":
+        stop_js = (
+            "(()=>{const stop=[...document.querySelectorAll('button[data-testid=\\\"stop-button\\\"]')]"
+            ".find(x=>{const s=getComputedStyle(x),r=x.getBoundingClientRect();"
+            "return x.isConnected&&!x.disabled&&s.display!=='none'&&s.visibility!=='hidden'"
+            "&&Number(s.opacity||1)>0&&r.width>1&&r.height>1&&x.getClientRects().length>0;});"
+            "if(!stop)return 'STOP_NOT_FOUND';stop.click();return 'STOP_CLICKED';})()"
+        )
+        stopped = run_js(target_url, stop_js)
+        if stopped != "STOP_CLICKED":
+            return False, stopped
+        ready_js = (
+            "(()=>{const marker=" + marker_json + ";"
+            "const users=[...document.querySelectorAll('[data-message-author-role=\\\"user\\\"]')];"
+            "if(users.slice(-100).some(x=>(x.innerText||'').includes(marker)))return 'OBSERVED';"
+            "const stop=[...document.querySelectorAll('button[data-testid=\\\"stop-button\\\"]')]"
+            ".find(x=>{const s=getComputedStyle(x),r=x.getBoundingClientRect();"
+            "return x.isConnected&&!x.disabled&&s.display!=='none'&&s.visibility!=='hidden'"
+            "&&Number(s.opacity||1)>0&&r.width>1&&r.height>1&&x.getClientRects().length>0;});"
+            "if(stop)return 'STILL_BUSY';"
+            "const e=document.querySelector('#prompt-textarea');if(!e)return 'NO_EDITOR';"
+            "const draft=(e.innerText||'').trim();"
+            "if(draft.includes(marker))return 'PREPARED';"
+            "if(draft)return 'DRAFT_BUSY';return 'READY';})()"
+        )
+        for _ in range(40):
+            time.sleep(0.25)
+            state = run_js(target_url, ready_js)
+            if state in {"READY", "PREPARED", "OBSERVED", "DRAFT_BUSY"}:
+                break
+        if state == "OBSERVED":
+            write_receipt(receipt, "OBSERVED", event_id, message_sha)
+            return True, "OBSERVED_AFTER_STOP"
+        if state not in {"READY", "PREPARED"}:
+            return False, f"AFTER_STOP:{state}"
+    if state in {"DRAFT_BUSY", "NO_EDITOR", "TARGET_NOT_FOUND"}:
         return False, state
     if state.startswith(("OSASCRIPT_ERROR:", "JAVASCRIPT_ERROR:")):
         return False, state
