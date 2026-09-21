@@ -57,14 +57,26 @@ Accepted main: `a385d7789af11aa7b124e5c52eb4731c868df615`.
 - deterministic identities and reproducibility;
 - no automatic winner selection or promotion.
 
-### R3 — Carefully bounded broader ML research — CURRENT FRONTIER
-Canonical task: `stage8.5-bounded-ml-model-family-expansion-v1`.
+### R3 — Carefully bounded broader ML research — ACCEPTED
+Accepted main: `3672f44b1e30be9f916f54882fe0650054e4c567`.
+Canonical two-family expansion passed branch/merged research, Stage10 regression and UID504 fulltest.
 Only after R1/R2 close:
 - predeclared finite hypothesis/model family;
 - multiple-testing/backtest-overfitting controls;
 - deterministic train/validation/OOS semantics;
 - no uncontrolled hyperparameter search;
 - no production authority.
+
+### R3A — Two-family transaction-cost/slippage stress — CURRENT FRONTIER
+Canonical task: `stage8.5-bounded-ml-family-cost-stress-v1`.
+- apply the fixed accepted stress grid to both families;
+- no refit/prediction changes/family selection;
+- keep untouched-forward and RL closed.
+
+### R3B — Two-family robustness / ablation closure
+- run family-specific feature/fold/regime robustness after family cost-stress;
+- retain failures and instability explicitly;
+- no automatic family winner selection.
 
 ### R4 — RL architecture decision / optional bounded RL research
 RL remains closed until separately justified and accepted.
@@ -207,4 +219,4 @@ Freeze:
 Crypto Signal Full Version is complete when M1, M2 and M3 are accepted with mechanical evidence and authoritative documentation, while REAL_CAPITAL remains 0 and all real-money/order authority stays closed.
 
 Immediate next execution target:
-`stage8.5-bounded-ml-model-family-expansion-v1`.
+`stage8.5-bounded-ml-family-cost-stress-v1`.

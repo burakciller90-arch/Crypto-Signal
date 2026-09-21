@@ -145,31 +145,43 @@ sensitivity, and preserves explicit regime OBSERVED / NO_EVIDENCE states.
 Branch and merged-main research gates, merged-main Stage10 regression, UID504
 sync and UID504 fulltest all passed.
 
+## Stage 8.5 bounded ML two-family expansion — ACCEPTED
+
+Bounded deterministic two-family ML expansion is **ACCEPTED** at
+`3672f44b1e30be9f916f54882fe0650054e4c567`.
+
+The accepted categorical-count model remains the exact reference family and one
+deterministic categorical sign-vote challenger is added. Training is TRAIN-only;
+comparison is descriptive over OOS walk-forward evidence; multiple-testing state
+is explicit; there is no automatic winner/model/hyperparameter selection.
+Branch/merged-main research gates, merged-main Stage10 regression, UID504
+current-head verification and UID504 fulltest all passed.
+
 ## Canonical next frontier
 
 The next bounded roadmap slice is:
 
-`stage8.5-bounded-ml-model-family-expansion-v1`
+`stage8.5-bounded-ml-family-cost-stress-v1`
 
 Requirements:
 
 - remain under isolated `research/alpha_factory`,
-- introduce only a small predeclared deterministic model-family set,
-- retain the accepted categorical-count baseline as a reference family,
-- TRAIN remains fit-only; VALIDATION/OOS remain descriptive evaluation-only,
-- use immutable family/config/model/prediction/evaluation identities,
-- preserve explicit gross/cost/net-R semantics,
-- make multiple-testing/backtest-overfitting state explicit,
-- no uncontrolled hyperparameter search,
-- no automatic family/model/hyperparameter winner selection,
-- no calibrated-probability claim without separate accepted calibration evidence,
+- consume only accepted two-family OOS/walk-forward evidence,
+- apply the accepted immutable 1.0x / 1.5x / 2.0x transaction-cost grid,
+- preserve each family/model/evaluation identity,
+- preserve original gross/cost/net-R and derive stressed cost/net-R exactly,
+- no model refit,
+- no prediction changes,
+- no automatic family/scenario/model winner selection,
+- no calibrated-probability claim,
 - untouched-forward remains closed,
 - no production product/paper/confluence/signal import,
 - no self-promotion, champion mutation or deploy path,
-- RL remains closed until a later separately accepted slice.
+- RL remains closed.
 
-A favorable model-family result cannot promote a challenger. Untouched-forward
-paper evaluation and explicit supervisor acceptance remain separate gates.
+A favorable stressed family result cannot promote or select a challenger.
+Family robustness/ablation, untouched-forward paper evidence and supervisor
+acceptance remain separate later gates.
 
 `REAL_CAPITAL=0`.
 

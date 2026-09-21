@@ -3003,3 +3003,36 @@ Current true roadmap frontier:
 - untouched-forward remains closed;
 - no self-promotion, champion mutation, production import or deploy path;
 - RL remains closed.
+
+
+## 2026-09-21 — Stage 8.5 bounded ML model-family expansion v1 ACCEPTED
+
+- accepted main head: `3672f44b1e30be9f916f54882fe0650054e4c567`;
+- PR #600 merged exactly two deterministic families:
+  - accepted categorical-count reference,
+  - categorical sign-vote challenger;
+- challenger fitting remains TRAIN-only;
+- comparison uses OOS descriptive evidence across accepted walk-forward folds;
+- reference family is rebound exactly rather than replaced/refit;
+- explicit bounded multiple-testing state;
+- no automatic family/model/hyperparameter winner selection;
+- no calibrated-probability claim;
+- untouched-forward remains closed;
+- RL remains closed;
+- no production/paper/confluence/signal import or deploy authority;
+- branch Alpha Factory research gate PASS: run `35653269811`;
+- merged-main Alpha Factory research gate PASS: run `35653397807`;
+- merged-main Stage10 hosted full regression PASS: run `35653397928`;
+- UID504 SSD sync/current-head verification PASS: issue #603 / run `35653582321`;
+- UID504 fulltest PASS: issue #604 / run `35653674757`;
+- PAPER/STABLE write activation remains closed;
+- REAL_CAPITAL=0.
+
+Current true roadmap frontier:
+- `stage8.5-bounded-ml-family-cost-stress-v1`;
+- apply the accepted deterministic cost-stress grid to both accepted model families' OOS/walk-forward selections;
+- preserve family/model/evaluation identities, original gross/cost/net evidence and exact stressed net-R;
+- no refit, no prediction changes and no family/scenario winner selection;
+- untouched-forward remains closed;
+- no promotion/champion mutation/production import/deploy path;
+- RL remains closed.

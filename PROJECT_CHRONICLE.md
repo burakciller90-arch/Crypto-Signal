@@ -2482,3 +2482,12 @@ The accepted slice binds the prior cost-stress evidence, performs one-at-a-time 
 
 The canonical next safe research frontier is `stage8.5-bounded-ml-model-family-expansion-v1`.
 RL and untouched-forward remain closed. REAL_CAPITAL=0.
+
+## 2026-09-21 — Bounded two-family ML expansion v1 accepted
+
+PR #600 merged at `3672f44b1e30be9f916f54882fe0650054e4c567`.
+Branch research, merged-main research, Stage10 regression, UID504 sync/current-head verification and UID504 fulltest all passed.
+The accepted research set is exactly two deterministic families and cannot select a winner.
+
+The next safe frontier is `stage8.5-bounded-ml-family-cost-stress-v1`: apply the same immutable deterministic transaction-cost/slippage stress discipline to both families before any untouched-forward or RL opening.
+REAL_CAPITAL=0.
