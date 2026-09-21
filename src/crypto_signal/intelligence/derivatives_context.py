@@ -90,8 +90,8 @@ class DerivativesContextMetrics:
     def __post_init__(self) -> None:
         if self.observation_count <= 0:
             raise ValueError("derivatives metrics require observations")
-        if not 1 <= self.available_component_count <= 3:
-            raise ValueError("available component count must be inside [1,3]")
+        if not 0 <= self.available_component_count <= 3:
+            raise ValueError("available component count must be inside [0,3]")
         for label, value in (
             ("latest_funding_rate", self.latest_funding_rate),
             ("funding_rate_bps", self.funding_rate_bps),
