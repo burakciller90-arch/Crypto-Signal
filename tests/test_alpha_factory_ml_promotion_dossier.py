@@ -25,7 +25,8 @@ from research.alpha_factory.ml_family_robustness_ablation import (
     run_ml_family_robustness_ablation,
 )
 from research.alpha_factory.ml_family_untouched_forward import (
-    run_ml_family_untouched_forward_paper,
+    build_ml_family_untouched_forward_freeze,
+    evaluate_ml_family_untouched_forward_paper,
 )
 from research.alpha_factory.ml_promotion_dossier import (
     MLSupervisorDecision,
@@ -178,16 +179,34 @@ def _chain():
         "forward",
     )
     forward_observations = _observations(forward_partition)
-    forward = run_ml_family_untouched_forward_paper(
+    frozen_snapshot = build_ml_family_untouched_forward_freeze(
         _features(),
         folds,
         references,
         expansion,
         cost,
         robustness,
-        forward_partition,
-        forward_observations,
         regime_feature_id="regime_state",
+        created_at_ms=2999,
+        window_start_ms=3000,
+        window_end_ms=4000,
+    )
+    evaluated_forward = evaluate_ml_family_untouched_forward_paper(
+        frozen_snapshot,
+        _features(),
+        references[-1][0],
+        expansion[0][-1][0],
+        as_of_ms=4000,
+        untouched_partition=forward_partition,
+        untouched_observations=forward_observations,
+    )
+    forward = (
+        evaluated_forward[0],
+        evaluated_forward[1],
+        evaluated_forward[2],
+        evaluated_forward[3],
+        frozen_snapshot,
+        evaluated_forward[4],
     )
     return (
         folds,
@@ -305,29 +324,27 @@ def test_forward_evidence_cannot_reuse_historical_source_identity() -> None:
         evidence_identities=ids,
     )
     forward_observations = _observations(forward_partition)
-    forward = run_ml_family_untouched_forward_paper(
+    frozen_snapshot = build_ml_family_untouched_forward_freeze(
         _features(),
         folds,
         walk[0],
         expansion,
         cost,
         robustness,
-        forward_partition,
-        forward_observations,
         regime_feature_id="regime_state",
+        created_at_ms=2999,
+        window_start_ms=3000,
+        window_end_ms=4000,
     )
-    with pytest.raises(ValueError, match="reuses historical evidence"):
-        build_ml_promotion_dossier(
+    with pytest.raises(ValueError, match="overlaps prior research evidence"):
+        evaluate_ml_family_untouched_forward_paper(
+            frozen_snapshot,
             _features(),
-            folds,
-            walk,
-            expansion,
-            cost,
-            robustness,
-            forward_partition,
-            forward_observations,
-            forward,
-            regime_feature_id="regime_state",
+            walk[0][-1][0],
+            expansion[0][-1][0],
+            as_of_ms=4000,
+            untouched_partition=forward_partition,
+            untouched_observations=forward_observations,
         )
 
 
