@@ -837,11 +837,9 @@ def _max_drawdown(values: tuple[Decimal, ...]) -> Decimal:
     max_drawdown = Decimal(0)
     for value in values:
         equity += value
-        if equity > peak:
-            peak = equity
+        peak = max(peak, equity)
         drawdown = peak - equity
-        if drawdown > max_drawdown:
-            max_drawdown = drawdown
+        max_drawdown = max(max_drawdown, drawdown)
     return max_drawdown
 
 
