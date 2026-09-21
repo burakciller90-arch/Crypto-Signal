@@ -358,11 +358,14 @@ def _validate_context(
     sentiment_snapshots: Sequence[FearGreedSnapshot],
     attention_observations: Sequence[PageviewWindowObservation],
 ) -> None:
-    for item in sentiment_snapshots:
-        if item.scope is not SentimentScope.BITCOIN:
+    for sentiment_item in sentiment_snapshots:
+        if sentiment_item.scope is not SentimentScope.BITCOIN:
             raise ValueError("sentiment-attention v1 supports Bitcoin sentiment only")
-    for item in attention_observations:
-        if (item.project, item.article) != ("en.wikipedia.org", "Bitcoin"):
+    for attention_item in attention_observations:
+        if (
+            attention_item.project,
+            attention_item.article,
+        ) != ("en.wikipedia.org", "Bitcoin"):
             raise ValueError(
                 "sentiment-attention v1 supports English Bitcoin pageviews only"
             )
