@@ -20,7 +20,6 @@ from research.alpha_factory.ml_family_cost_stress import (
     run_ml_family_cost_stress,
 )
 from research.alpha_factory.ml_family_expansion import (
-    MLExpandedFamily,
     run_ml_family_expansion,
 )
 from research.alpha_factory.ml_family_robustness_ablation import (
@@ -271,7 +270,7 @@ def test_forward_freeze_is_deterministic_and_predates_window() -> None:
 
 
 def test_forward_before_window_close_is_explicit_not_yet_evaluable() -> None:
-    folds, references, expansion, _, _, snapshot = _freeze()
+    _, references, expansion, _, _, snapshot = _freeze()
     reference_model = references[-1][0]
     challenger_model = expansion[0][-1][0]
 
