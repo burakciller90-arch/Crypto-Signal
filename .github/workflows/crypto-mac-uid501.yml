@@ -52,7 +52,7 @@ jobs:
           set -euo pipefail
           cmd="$(printf '%s\n' "$ISSUE_BODY" | awk -F: 'tolower($1)=="command" {gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2); print tolower($2); exit}')"
           case "$cmd" in
-            status|repo|services|disk|externaldisk|hostdiag|audiorestart|audioadminrestart|loadtree|loadtree2|bginventory|bgsafecheck|cryptomigrationdiag|cryptomigrationdiag2|cryptodashboarddiag|cryptorunnertree|cryptorunnercutoverdiag)
+            status|repo|services|disk|externaldisk|hostdiag|audiorestart|audioadminrestart|loadtree|loadtree2|bginventory|bgsafecheck|cryptomigrationdiag|cryptomigrationdiag2|cryptodashboarddiag|cryptorunnertree|cryptorunnercutoverdiag|cryptossdrunnerps)
               ;;
             *)
               echo "Unsupported command: $cmd"
@@ -273,6 +273,21 @@ jobs:
           /bin/ls -ld "$ROOT/Runner" 2>/dev/null
           /usr/bin/du -sh "$ROOT/Runner" 2>/dev/null
           echo "CRYPTO_RUNNER_CUTOVER_DIAG_PASS=YES"
+          exit 0
+
+
+      - name: CRYPTO SSD RUNNER PS
+        if: steps.parse.outputs.command == 'cryptossdrunnerps'
+        shell: bash
+        run: |
+          set +e
+          echo "=== SSD RUNNER PROCESSES ==="
+          /bin/ps -axo pid=,ppid=,user=,%cpu=,%mem=,etime=,state=,command= | /usr/bin/grep -E '/Volumes/Crypto-504/Crypto-Signal/Runner|[R]unner\.(Listener|Worker)' | /usr/bin/head -200
+          echo "=== INTERNAL RUNNER PROCESSES ==="
+          /bin/ps -axo pid=,ppid=,user=,%cpu=,%mem=,etime=,state=,command= | /usr/bin/grep -E '/Users/crypto-signal-agent/actions-runner-crypto' | /usr/bin/head -120
+          echo "=== UID504 PROCESSES ON SSD ==="
+          /bin/ps -axo pid=,ppid=,user=,%cpu=,%mem=,etime=,state=,command= | /usr/bin/awk '$3=="crypto-signal-agent" && $0 ~ /\/Volumes\/Crypto-504/ {print}'
+          echo "CRYPTO_SSD_RUNNER_PS_PASS=YES"
           exit 0
 
       - name: HOST DIAG
