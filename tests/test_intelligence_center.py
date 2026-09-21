@@ -89,12 +89,19 @@ def test_accepted_catalog_is_read_only_and_zero_contribution() -> None:
         "market_intelligence",
         "alpha_factory",
         "learning_memory",
+        "meta_intelligence",
     }
     assert all(item["acceptance_status"] == "accepted_research_only" for item in catalog)
     assert all(item["production_contribution"] == 0 for item in catalog)
     assert all(item["production_authority"] is False for item in catalog)
     assert all(item["probability_status"] == "not_calibrated" for item in catalog)
     assert all(item["read_only"] is True for item in catalog)
+    meta = next(item for item in catalog if item["engine_id"] == "meta_intelligence_shadow")
+    assert meta["group"] == "meta_intelligence"
+    assert meta["engine_version"] == "meta-intelligence-shadow-v1/1"
+    assert meta["source_module"] == "src/crypto_signal/intelligence/meta_intelligence.py"
+    assert meta["production_contribution"] == 0
+    assert meta["production_authority"] is False
 
 
 def test_intelligence_center_without_runtime_memory_is_explicit() -> None:
