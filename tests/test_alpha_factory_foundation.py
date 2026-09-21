@@ -6,7 +6,7 @@ from dataclasses import replace
 
 import pytest
 
-import research.alpha_factory.foundation as foundation
+from research.alpha_factory import foundation
 from research.alpha_factory.foundation import (
     REAL_CAPITAL,
     LeakageAuditStatus,
