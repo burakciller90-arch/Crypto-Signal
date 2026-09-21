@@ -43,7 +43,7 @@ jobs:
           mkdir -p "$RLOG"
 
           echo "=== FINAL RUNNER COPY ==="
-          /usr/bin/rsync -aE --delete --exclude '_work' "$SRC/" "$DST/"
+          /usr/bin/rsync -aE --delete --exclude '_work' --exclude '_diag' "$SRC/" "$DST/"
           test -x "$DST/runsvc.sh"
 
           cp -p "$PLIST" "$BACKUP"
