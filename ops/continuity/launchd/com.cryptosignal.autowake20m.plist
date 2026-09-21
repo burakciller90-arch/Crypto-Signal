@@ -20,8 +20,8 @@
   <key>ThrottleInterval</key>
   <integer>20</integer>
   <key>StandardOutPath</key>
-  <string>/Users/crypto-signal-agent/Crypto-Signal/runtime/continuity/autowake20m.out.log</string>
+  <string>/Volumes/Crypto-504/Crypto-Signal/Development/runtime/continuity/autowake20m.out.log</string>
   <key>StandardErrorPath</key>
-  <string>/Users/crypto-signal-agent/Crypto-Signal/runtime/continuity/autowake20m.err.log</string>
+  <string>/Volumes/Crypto-504/Crypto-Signal/Development/runtime/continuity/autowake20m.err.log</string>
 </dict>
 </plist>
