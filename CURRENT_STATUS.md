@@ -2643,3 +2643,76 @@ Current true roadmap frontier:
 - bounded cluster-count/search budget and explicit no-automatic-selection / multiple-testing status;
 - no self-promotion, champion mutation, production import or deploy path;
 - feature-interaction search, evolutionary search and later ML/RL remain closed.
+
+## 2026-09-21 — Stage 8.5 bounded clustering/regime challenger v1 ACCEPTED
+
+- accepted main head: `4b8014e7f26a288e7cecb3806d46877ddb4174cc`
+- PR #462 merged deterministic bounded categorical clustering/regime research.
+- accepted research surface:
+  - `research/alpha_factory/clustering_regime.py`
+  - `tests/test_alpha_factory_clustering_regime.py`
+  - production `src/crypto_signal` remains free of research-lab code
+- bounded clustering search:
+  - max 6 explicit versioned categorical features
+  - max 8 allowed values per feature
+  - cluster-count search bounded to 2..4
+  - max 8 deterministic update iterations
+  - explicit minimum cluster size
+  - deterministic farthest-first initialization and categorical mode updates
+- unresolved states are explicit:
+  - insufficient unique patterns
+  - small cluster
+  - not converged
+  - unresolved fits do not expose accepted prototypes
+- leakage / overfitting controls:
+  - fit identity binds feature snapshots only
+  - changing outcomes does not alter fitted model identity
+  - fitting is TRAIN-only
+  - OOS is forbidden in fit
+  - untouched-forward is forbidden
+  - `BOUNDED_CLUSTER_COUNT_NO_AUTOMATIC_SELECTION`
+  - `automatic_selection=False`
+  - no winner/promotion/champion-write/deploy API
+- evaluation semantics:
+  - validation/OOS only
+  - exact partition evidence coverage required
+  - fixed prototypes assign holdout observations
+  - per-cluster gross/cost/net-R summaries are descriptive only
+  - semantic is `DESCRIPTIVE_REGIME_NET_R_NOT_PROBABILITY`
+  - cluster indexes are not trade direction or calibrated probability
+- isolation scan:
+  - no network/broker/order/auth surface
+  - no filesystem-write/subprocess surface
+  - no production product/paper/confluence/signal import
+  - no promotion API
+- branch research gate PASS: run `35589332911`:
+  - Alpha Factory tests PASS
+  - Ruff PASS
+  - mypy PASS across 6 research source files
+  - ALPHA_FACTORY_RESEARCH_GATE_PASS=YES
+- branch production regression gate PASS: run `35589392425`:
+  - Ruff PASS
+  - mypy PASS across 126 production source files
+  - PRODUCT_FRESHNESS_CONTRACT_PASS=YES
+  - STAGE10_HOSTED_FULL_GATE_PASS=YES
+- merged-main research gate PASS: run `35589607597`.
+- merged-main Stage10 hosted gate PASS: run `35589607580`.
+- UID504 canonical sync PASS: issue #463 / run `35589724517`.
+- UID504 canonical fulltest PASS: issue #464 / run `35589787472`:
+  - Ruff PASS
+  - mypy PASS across 125 production source files
+  - PRODUCT_FRESHNESS_CONTRACT_PASS=YES
+  - FULL_TEST_PASS=YES
+- no production weighting/deployment authority added.
+- PAPER/STABLE write activation remains closed.
+- REAL_CAPITAL=0.
+
+Current true roadmap frontier:
+- `stage8.5-feature-interaction-search-v1`;
+- remain entirely inside isolated `research/alpha_factory`;
+- deterministic bounded interaction hypotheses only;
+- explicit feature/version/partition identities and search budget;
+- generation uses TRAIN only; validation/OOS descriptive evaluation only; untouched-forward closed;
+- multiple-testing/backtest-overfitting state explicit; no automatic winner selection;
+- no self-promotion, champion mutation, production import or deploy path;
+- evolutionary search and later bounded ML/RL remain closed.

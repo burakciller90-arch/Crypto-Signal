@@ -81,9 +81,11 @@ metadata and a non-self-promoting supervisor gate outside the production package
 The deterministic symbolic challenger slice is **ACCEPTED** at
 `47c1ecdd31b1ffe490611abcf40f5d309c45663a`. The bounded shallow-tree
 challenger slice is **ACCEPTED** at
-`8ee89f4ee8de581bfacec1f7e62613ec96be065c`. Remaining Stage 8.5 work is
-bounded clustering/regime, feature-interaction and evolutionary challenger
-research, followed only later by carefully bounded ML/RL research.
+`8ee89f4ee8de581bfacec1f7e62613ec96be065c`. The bounded
+clustering/regime slice is **ACCEPTED** at
+`4b8014e7f26a288e7cecb3806d46877ddb4174cc`. Remaining Stage 8.5 work is
+feature-interaction and evolutionary challenger research, followed only later by
+carefully bounded ML/RL research.
 
 Required promotion boundary remains:
 
@@ -120,25 +122,25 @@ only through a separately tested policy.
 
 The next bounded roadmap slice is:
 
-`stage8.5-clustering-regime-challenger-v1`
+`stage8.5-feature-interaction-search-v1`
 
-The Alpha Factory foundation, deterministic symbolic challenger and bounded shallow-tree challenger slices are accepted. The next slice may add deterministic bounded clustering/regime challenger research only.
+The Alpha Factory foundation plus symbolic, shallow-tree and clustering/regime challenger slices are accepted. The next slice may add deterministic bounded feature-interaction hypothesis research only.
 
 Requirements:
 
 - implementation remains under isolated `research/alpha_factory`,
-- feature identities, versions, transforms and partition identities are explicit and immutable,
-- clustering configuration and cluster-count search budget are hard-bounded and reproducible,
-- fitting/discovery uses train data only,
+- feature identities/versions and partition identities are explicit and immutable,
+- interaction order and hypothesis count are hard-bounded and reproducible,
+- generation/hypothesis discovery uses TRAIN only,
 - validation and OOS are descriptive evaluation only,
 - untouched-forward remains closed,
-- empty/small/unstable clusters fail closed or remain unresolved rather than being force-labelled,
-- multiple-testing/backtest-overfitting state is explicit and no automatic cluster/model selection is allowed,
-- cluster/regime labels are descriptive research context, not calibrated probabilities or trade authority,
+- explicit transaction-cost/slippage context remains part of evaluation,
+- multiple-testing/backtest-overfitting state is explicit and no automatic interaction/winner selection is allowed,
+- interaction scores are descriptive research evidence, not calibrated probabilities or production authority,
 - no self-promotion, champion mutation, production import or deploy path is permitted,
-- feature-interaction search, evolutionary search and ML/RL remain closed until later slices.
+- evolutionary search and ML/RL remain closed until later slices.
 
-A favorable cluster/regime score cannot satisfy the promotion gate by itself. Missing walk-forward, untouched-forward or supervisor evidence remains missing until genuinely produced.
+A favorable interaction score cannot satisfy the promotion gate by itself. Missing walk-forward, untouched-forward or supervisor evidence remains missing until genuinely produced.
 
 `REAL_CAPITAL=0`.
 

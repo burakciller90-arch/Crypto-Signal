@@ -2424,3 +2424,17 @@ Tree leaf actions are derived only from training observations after explicit cos
 The final branch research gate passed in run `35588316131`, and the separate production Stage10 regression gate passed in run `35588388450`. Isolation checks found no network, broker/order/auth, filesystem-write, subprocess, production import, promotion or deploy surface. PR #458 merged as `8ee89f4ee8de581bfacec1f7e62613ec96be065c`. Merged-main research run `35588564542` and Stage10 hosted run `35588564536` passed. UID504 canonical sync issue #460 / run `35588671936` and fulltest issue #461 / run `35588723374` then completed acceptance with `FULL_TEST_PASS=YES`.
 
 The next bounded Alpha Factory frontier is deterministic clustering/regime challenger research. It must preserve train-only discovery, validation/OOS descriptive evaluation, untouched-forward closure, explicit multiple-testing controls, no automatic selection and no production authority.
+
+## 2026-09-21 — Stage 8.5 bounded clustering/regime challenger v1 accepted
+
+The third Alpha Factory challenger slice adds deterministic categorical clustering/regime discovery while preserving the research authority boundary. It lives entirely under `research/alpha_factory` and adds no production package surface.
+
+Clustering is deliberately bounded: at most six explicit versioned categorical features, eight values per feature, cluster counts from two through four, eight update iterations and an explicit minimum cluster size. Initialization is deterministic farthest-first over unique feature vectors; updates use deterministic categorical modes with stable tie-breaking.
+
+The fit is unsupervised with respect to outcomes. A dedicated feature-snapshot identity excludes gross/cost/outcome values, and tests prove that reversing all training outcomes does not alter the fitted model, fit attempts or search manifest. TRAIN is the only fit partition. OOS is explicitly excluded from fit, and untouched-forward is unavailable.
+
+The search manifest records `BOUNDED_CLUSTER_COUNT_NO_AUTOMATIC_SELECTION` and `automatic_selection=False`. Insufficient unique patterns, small clusters or non-convergence remain explicit unresolved fit attempts rather than being force-labelled or silently merged. Validation/OOS evaluation assigns observations to fixed accepted prototypes and emits descriptive per-cluster gross, explicit-cost and net-R summaries under `DESCRIPTIVE_REGIME_NET_R_NOT_PROBABILITY`.
+
+Branch research gate `35589332911` and separate production regression gate `35589392425` passed. PR #462 merged as `4b8014e7f26a288e7cecb3806d46877ddb4174cc`. Merged-main research run `35589607597` and Stage10 hosted run `35589607580` passed. UID504 canonical sync issue #463 / run `35589724517` and fulltest issue #464 / run `35589787472` completed acceptance with `FULL_TEST_PASS=YES`.
+
+The next Alpha Factory frontier is deterministic bounded feature-interaction search. It must remain train-only for hypothesis generation, validation/OOS descriptive for evaluation, untouched-forward closed, multiple-testing controlled and incapable of self-promotion or production deployment.
