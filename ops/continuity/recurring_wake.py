@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import subprocess
 import sys
+import time
 from datetime import datetime
 from pathlib import Path
 
@@ -50,8 +51,15 @@ def scheduled_slot_event_id() -> str:
 
 
 def main() -> int:
-    event_id = sys.argv[1] if len(sys.argv) >= 2 else scheduled_slot_event_id()
+    local_slot_invocation = len(sys.argv) < 2
+    event_id = sys.argv[1] if not local_slot_invocation else scheduled_slot_event_id()
     print(f"WAKE_EVENT_ID={event_id}")
+    if local_slot_invocation:
+        marker = STATE / "recurring_wake_last_local_attempt"
+        marker.write_text(
+            f"epoch={int(time.time())}\n"
+            f"event_id={event_id}\n"
+        )
 
     if LOCAL_PAUSE.exists() or SHARED_PAUSE.exists():
         print("WAKE_SKIPPED_USER_PAUSE=YES")
