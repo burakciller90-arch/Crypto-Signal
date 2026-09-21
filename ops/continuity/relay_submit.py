@@ -26,9 +26,9 @@ def event_key(event_id: str) -> str:
 
 def scheduled_slot_event_id() -> str:
     now = datetime.now().astimezone()
-    slot_minute = 0 if now.minute < 30 else 30
+    slot_minute = (now.minute // 20) * 20
     slot = now.replace(minute=slot_minute, second=0, microsecond=0)
-    return f"crypto-30m-continuity:{slot:%Y%m%dT%H%M%z}"
+    return f"crypto-20m-continuity:{slot:%Y%m%dT%H%M%z}"
 
 
 def marker_for(event_id: str) -> str:
