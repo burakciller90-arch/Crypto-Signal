@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - feature/stage10-integrated-acceptance
+      - feature/stage8-cross-market-context-v1-clean
 
 permissions:
   contents: read
