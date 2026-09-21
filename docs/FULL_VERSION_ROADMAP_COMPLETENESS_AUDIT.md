@@ -51,8 +51,8 @@ The governing roadmap explicitly requires the following engines to be introduced
 one at a time behind isolated gates:
 
 1. deterministic regime labeling — **ACCEPTED** at `4cdfbd134597a8329fb90d08eed5643161cd4926`,
-2. trend/momentum — **NEXT FRONTIER**,
-3. mean reversion,
+2. trend/momentum — **ACCEPTED** at `f8b525e355a7fb587e9c0913965326a67630576a`,
+3. mean reversion — **NEXT FRONTIER**,
 4. breakout/volatility,
 5. bounded derivatives context,
 6. order-flow/microstructure if data quality supports it,
@@ -113,20 +113,20 @@ only through a separately tested policy.
 
 The next bounded roadmap slice is:
 
-`stage8-trend-momentum-v1`
+`stage8-mean-reversion-v1`
 
-The regime-labeling prerequisite is accepted. The next slice must add a deterministic
-trend/momentum evidence engine with:
+Regime labeling and trend/momentum are accepted. The next slice must add a deterministic
+mean-reversion evidence engine with:
 
 - point-in-time-safe inputs only,
 - immutable/frozen evidence,
-- explicit uncertainty / unresolved state,
-- independent tests,
+- explicit stretched/neutral/unresolved states,
+- independent tests and bounded metric semantics,
 - no change to production confluence weights,
 - no change to production paper write authority,
 - no self-learning or automatic promotion.
 
-Only after this engine is accepted should mean-reversion work begin.
+Only after this engine is accepted should breakout/volatility work begin.
 
 ## Safety boundary
 
