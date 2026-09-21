@@ -2464,3 +2464,12 @@ Execution order:
 5. run Full Version Integrated Acceptance v2 and freeze final release documentation.
 
 Historical Stage 10 evidence remains immutable. No completed slice is replayed. REAL_CAPITAL=0.
+
+## 2026-09-21 — Bounded ML cost-stress v1 accepted
+
+PR #580 merged at `97af8105a8c5408bfbe2b19bd64d97bbbf384e17`.
+Branch research gate, merged-main research gate, Stage10 hosted regression, UID504 sync and UID504 fulltest all passed.
+Cost stress preserves accepted ML evidence and changes only deterministic cost assumptions; it cannot refit models, alter predictions, select a winner, promote a challenger or gain production authority.
+
+The canonical next safe research frontier is `stage8.5-bounded-ml-robustness-ablation-v1`.
+Untouched-forward and RL remain closed. REAL_CAPITAL=0.

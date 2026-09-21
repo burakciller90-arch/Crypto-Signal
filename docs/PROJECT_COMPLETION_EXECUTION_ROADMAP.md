@@ -25,8 +25,9 @@ This milestone is operationally complete. Reopen only on contradictory mechanica
 
 ## M1 — Stage 8.5 Alpha Factory scientific closure
 
-### R1 — Bounded ML transaction-cost/slippage stress
-Canonical frontier: `stage8.5-bounded-ml-cost-stress-v1`.
+### R1 — Bounded ML transaction-cost/slippage stress — ACCEPTED
+Accepted main: `97af8105a8c5408bfbe2b19bd64d97bbbf384e17`.
+Canonical evidence chain: branch research PASS → merged-main research PASS → Stage10 regression PASS → UID504 sync/fulltest PASS.
 
 Requirements:
 - operate only on accepted deterministic ML OOS/walk-forward evidence;
@@ -47,7 +48,8 @@ Acceptance:
 - UID504 sync + fulltest PASS;
 - authoritative docs/frontier closure.
 
-### R2 — ML robustness / ablation evidence
+### R2 — ML robustness / ablation evidence — CURRENT FRONTIER
+Canonical task: `stage8.5-bounded-ml-robustness-ablation-v1`.
 - feature ablation and sensitivity checks;
 - fold/regime/asset/timeframe stability evidence where supported;
 - redundancy/correlation checks;
@@ -204,4 +206,4 @@ Freeze:
 Crypto Signal Full Version is complete when M1, M2 and M3 are accepted with mechanical evidence and authoritative documentation, while REAL_CAPITAL remains 0 and all real-money/order authority stays closed.
 
 Immediate next execution target:
-`stage8.5-bounded-ml-cost-stress-v1`.
+`stage8.5-bounded-ml-robustness-ablation-v1`.

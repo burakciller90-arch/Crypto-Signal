@@ -123,34 +123,40 @@ layer that records both success and failure by:
 Learning Memory is evidence, not authority. It may influence future weighting
 only through a separately tested policy.
 
+## Stage 8.5 bounded ML cost-stress — ACCEPTED
+
+Bounded deterministic ML transaction-cost/slippage stress is **ACCEPTED** at
+`97af8105a8c5408bfbe2b19bd64d97bbbf384e17`.
+
+It uses the fixed 1.0x / 1.5x / 2.0x cost multiplier grid over accepted
+OOS/walk-forward evidence, preserves gross/cost/net evidence, never refits a
+model or changes predictions, and provides no winner-selection or production
+authority. Branch and merged-main research gates, merged-main Stage10
+regression, UID504 sync and UID504 fulltest all passed.
+
 ## Canonical next frontier
 
 The next bounded roadmap slice is:
 
-`stage8.5-bounded-ml-cost-stress-v1`
-
-The deterministic single-family ML baseline and bounded walk-forward evaluation
-are accepted. The next slice closes transaction-cost/slippage stress evidence
-before any broader model search.
+`stage8.5-bounded-ml-robustness-ablation-v1`
 
 Requirements:
 
-- implementation remains under isolated `research/alpha_factory`,
-- stress only the accepted ML OOS/walk-forward selections,
-- use a small immutable deterministic multiplier grid,
-- preserve original gross/cost/net-R evidence and derive stressed net-R exactly,
-- every stress scenario and result must have an immutable identity,
-- stressed evidence must not refit a model or change predictions,
-- no automatic scenario/model winner selection,
-- no calibrated-probability claim,
+- remain under isolated `research/alpha_factory`,
+- consume only accepted deterministic ML baseline/walk-forward/cost-stress evidence,
+- introduce deterministic, predeclared feature/fold/regime sensitivity and ablation checks,
+- retain both favorable and unfavorable robustness evidence,
+- use immutable configuration/result identities,
+- do not refit/select a model from robustness results,
+- do not introduce automatic model/hyperparameter winner selection,
+- do not claim calibrated probability,
 - untouched-forward remains closed,
 - no production product/paper/confluence/signal import,
 - no self-promotion, champion mutation or deploy path,
 - RL remains closed until a later separately accepted slice.
 
-A favorable stressed result cannot satisfy the promotion gate by itself.
-Untouched-forward, robustness/ablation and explicit supervisor acceptance remain
-separate missing evidence until genuinely produced.
+A favorable robustness result cannot promote a challenger. Untouched-forward
+paper evaluation and explicit supervisor acceptance remain separate gates.
 
 `REAL_CAPITAL=0`.
 

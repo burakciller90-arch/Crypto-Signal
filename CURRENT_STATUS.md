@@ -2933,3 +2933,37 @@ Current true roadmap frontier:
 - current exact bounded frontier remains `stage8.5-bounded-ml-cost-stress-v1`;
 - existing accepted Stage 8/Stage 9/Stage 10 work must not be replayed;
 - REAL_CAPITAL=0 and all real-money/order authority remain closed.
+
+
+## 2026-09-21 — Stage 8.5 bounded ML cost-stress v1 ACCEPTED
+
+- accepted main head: `97af8105a8c5408bfbe2b19bd64d97bbbf384e17`
+- PR #580 merged deterministic bounded ML transaction-cost/slippage stress evidence.
+- accepted research surface:
+  - `research/alpha_factory/ml_cost_stress.py`
+  - `tests/test_alpha_factory_ml_cost_stress.py`
+- fixed deterministic stress grid: 1.0x / 1.5x / 2.0x;
+- original gross-R, cost-R and net-R evidence is preserved;
+- stressed cost/net-R is derived exactly without model refit or prediction changes;
+- immutable config/scenario/fold/run identities;
+- no automatic stress/model winner selection;
+- no calibrated-probability claim;
+- untouched-forward remains closed;
+- no production/paper/confluence/signal import or deploy authority;
+- branch Alpha Factory research gate PASS: run `35651455697`;
+- merged-main Alpha Factory research gate PASS: run `35651544170`;
+- merged-main Stage10 hosted full regression PASS: run `35651544052`;
+- UID504 SSD sync PASS: issue #595 / run `35651648765`;
+- UID504 fulltest PASS: issue #596 / run `35651708382`;
+- PAPER/STABLE write activation remains closed;
+- REAL_CAPITAL=0.
+
+Current true roadmap frontier:
+- `stage8.5-bounded-ml-robustness-ablation-v1`;
+- remain entirely inside isolated `research/alpha_factory`;
+- measure deterministic feature/fold/regime sensitivity and explicit ablation evidence without model/winner selection;
+- retain failure and instability evidence rather than filtering it away;
+- preserve immutable identities and accepted cost semantics;
+- untouched-forward remains closed;
+- no self-promotion, champion mutation, production import or deploy path;
+- RL remains closed.
