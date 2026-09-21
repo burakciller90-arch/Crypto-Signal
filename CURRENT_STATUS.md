@@ -2073,3 +2073,40 @@ Next-state rule:
 - PAPER/STABLE write activation remains closed.
 - REAL_CAPITAL=0.
 
+## 2026-09-21 — Stage 8 regime labeling v1 ACCEPTED
+
+- accepted main head: `4cdfbd134597a8329fb90d08eed5643161cd4926`
+- PR #400 merged the first bounded Stage 8 intelligence engine.
+- accepted scope:
+  - deterministic regime taxonomy: trend_up / trend_down / range / transition / unresolved
+  - separate volatility state: compressed / normal / expanded / unresolved
+  - PIT-safe closed-candle eligibility using close_time, source_timestamp and ingested_at boundaries
+  - explicit insufficient-history / candle-gap / mixed-directional uncertainty
+  - immutable analysis identity and frozen consumed-candle evidence identity
+  - observation-only isolation from production confluence and paper execution
+- an initial hosted gate failure exposed an invalid efficiency metric normalization.
+- efficiency was corrected to:
+  - raw absolute first-to-last displacement / raw absolute path length
+  - path_length_bps normalized consistently to the first close
+  - mathematical efficiency bound remains [0,1]
+- independent acceptance:
+  - hosted full repository gate PASS
+  - pytest 100%
+  - Ruff PASS
+  - mypy PASS across 106 source files on branch
+  - PRODUCT freshness contract PASS
+  - UID504 canonical sync PASS
+  - UID504 canonical fulltest PASS
+  - canonical mypy PASS across 105 source files
+  - FULL_TEST_PASS=YES
+- production confluence weights were not changed.
+- Alpha Factory / Learning Memory were not opened.
+- PAPER/STABLE write gate remains closed.
+- REAL_CAPITAL=0.
+
+Current true roadmap frontier:
+- `stage8-trend-momentum-v1`
+- add one deterministic PIT-safe trend/momentum evidence engine behind an isolated gate;
+- keep regime evidence observation-only until a separately accepted versioned weighting/meta policy exists;
+- do not begin Alpha Factory or self-learning before the bounded Stage 8 engine sequence is accepted.
+
