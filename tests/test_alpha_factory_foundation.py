@@ -6,8 +6,8 @@ from dataclasses import replace
 
 import pytest
 
-import crypto_signal.research.foundation as foundation
-from crypto_signal.research.foundation import (
+import research.alpha_factory.foundation as foundation
+from research.alpha_factory.foundation import (
     REAL_CAPITAL,
     LeakageAuditStatus,
     PartitionRole,
