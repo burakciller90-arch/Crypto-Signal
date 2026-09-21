@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import asyncio
-from datetime import date, timedelta
+from datetime import UTC, date, datetime, timedelta
 
 import httpx
 import pytest
@@ -190,6 +190,6 @@ def test_wikimedia_adapter_rejects_unbounded_or_incomplete_date_requests() -> No
         asyncio.run(
             adapter.fetch_daily_window(
                 days=10,
-                end_date=date.today() + timedelta(days=1),
+                end_date=datetime.now(UTC).date() + timedelta(days=1),
             )
         )
