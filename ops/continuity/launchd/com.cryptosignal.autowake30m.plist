@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.cryptosignal.autowake30m</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/usr/bin/python3</string>
+    <string>/Users/crypto-signal-agent/Library/Application Support/CryptoSignal/continuity/recurring_wake.py</string>
+    <string>--scheduled-slot</string>
+  </array>
+
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>CRYPTO_WAKE_LOCAL_TIMER</key>
+    <string>1</string>
+  </dict>
+
+  <key>StartCalendarInterval</key>
+  <array>
+    <dict><key>Minute</key><integer>0</integer></dict>
+    <dict><key>Minute</key><integer>30</integer></dict>
+  </array>
+
+  <key>ProcessType</key>
+  <string>Background</string>
+  <key>ThrottleInterval</key>
+  <integer>30</integer>
+
+  <key>StandardOutPath</key>
+  <string>/Users/crypto-signal-agent/Crypto-Signal/runtime/continuity/autowake30m.out.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/crypto-signal-agent/Crypto-Signal/runtime/continuity/autowake30m.err.log</string>
+</dict>
+</plist>
