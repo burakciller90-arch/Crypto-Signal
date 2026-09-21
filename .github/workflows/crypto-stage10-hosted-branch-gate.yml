@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - feature/stage10-integrated-acceptance
+      - feature/stage10-performance-completeness
 
 permissions:
   contents: read
