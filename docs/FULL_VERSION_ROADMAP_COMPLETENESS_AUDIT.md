@@ -54,8 +54,8 @@ one at a time behind isolated gates:
 2. trend/momentum — **ACCEPTED** at `f8b525e355a7fb587e9c0913965326a67630576a`,
 3. mean reversion — **ACCEPTED** at `4e6d25df7f6aa2f36bf4ee86dba5c9023dd055d4`,
 4. breakout/volatility — **ACCEPTED** at `f44157fa2b8a3788b85608a872eb8fa8fde7d5b3`,
-5. bounded derivatives context — **NEXT FRONTIER**,
-6. order-flow/microstructure if data quality supports it,
+5. bounded derivatives context — **ACCEPTED** at `011f2c4c7be2bd00410c5a0f3f578e20bd84c891`,
+6. order-flow/microstructure if data quality supports it — **NEXT FRONTIER / DATA-QUALITY GATE**,
 7. on-chain/network,
 8. bounded sentiment/attention,
 9. cross-market context.
@@ -69,9 +69,9 @@ Every engine must have:
 - contribution/ablation evidence,
 - explicit uncertainty.
 
-At audit time, repository-path inventory found the Stage 8+ governing document but
-did not find accepted implementation modules for these expansion engines. They
-must therefore remain **NOT YET ACCEPTED**, not silently inferred from Stage 10.
+The audit is updated incrementally as each isolated engine passes its own gates.
+Unaccepted later engines remain **NOT YET ACCEPTED**, not silently inferred from
+Stage 10 or from neighboring Stage 8 engines.
 
 ## Remaining Stage 8.5 — Alpha Factory
 
@@ -113,20 +113,25 @@ only through a separately tested policy.
 
 The next bounded roadmap slice is:
 
-`stage8-bounded-derivatives-context-v1`
+`stage8-order-flow-microstructure-v1`
 
-Regime labeling, trend/momentum, mean reversion and breakout/volatility are accepted. The next slice must add a bounded derivatives context contract + analyzer with:
+Regime labeling, trend/momentum, mean reversion, breakout/volatility and bounded derivatives context are accepted.
 
-- explicit point-in-time observation timestamps and source identity,
-- funding / open-interest / basis context only when actual observations exist,
-- immutable/frozen evidence and explicit missing-data uncertainty,
-- independent tests and bounded metric semantics,
-- no fabricated derivatives values when no data source is available,
-- no change to production confluence weights,
-- no change to production paper write authority,
+Before implementing order-flow/microstructure, the repository must pass a source/data-quality gate. The slice may proceed only if there is a real, PIT-safe public observation contract capable of preserving event/source/ingestion time and immutable source identity. Candidate evidence may include bounded trade-flow or order-book/microstructure observations, but values must never be fabricated from OHLC candles merely to satisfy the roadmap.
+
+If the data-quality gate passes, the engine still requires:
+- deterministic source contract,
+- PIT safety,
+- frozen evidence,
+- independent tests,
+- bounded metric semantics,
+- contribution/ablation evidence,
+- explicit missing/stale/insufficient-data uncertainty,
+- no production confluence weight change,
+- no production paper-write authority,
 - no self-learning or automatic promotion.
 
-Only after this engine is accepted should order-flow/microstructure be considered, and only if data quality supports it.
+If the data-quality gate fails, record the engine as explicitly deferred and advance to the next roadmap item rather than creating synthetic microstructure evidence.
 
 ## Safety boundary
 
