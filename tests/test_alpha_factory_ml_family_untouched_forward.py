@@ -20,7 +20,6 @@ from research.alpha_factory.ml_family_cost_stress import (
     run_ml_family_cost_stress,
 )
 from research.alpha_factory.ml_family_expansion import (
-    MLExpandedFamily,
     run_ml_family_expansion,
 )
 from research.alpha_factory.ml_family_robustness_ablation import (
@@ -30,8 +29,9 @@ from research.alpha_factory.ml_family_untouched_forward import (
     MLFrozenModelPolicy,
     MLUntouchedForwardSemantic,
     MLUntouchedForwardStatus,
+    build_ml_family_untouched_forward_freeze,
     build_ml_untouched_forward_config,
-    run_ml_family_untouched_forward_paper,
+    evaluate_ml_family_untouched_forward_paper,
 )
 from research.alpha_factory.ml_walk_forward import (
     build_ml_walk_forward_fold,
@@ -229,58 +229,105 @@ def _forward_partition():
     )
 
 
-def test_untouched_forward_is_deterministic_and_uses_frozen_latest_fold() -> None:
+def _freeze():
     folds, references, expansion, cost_stress, robustness = _accepted_chain()
-    forward = _forward_partition()
-    observations = _observations(forward)
-
-    first = run_ml_family_untouched_forward_paper(
+    snapshot = build_ml_family_untouched_forward_freeze(
         _features(),
         folds,
         references,
         expansion,
         cost_stress,
         robustness,
-        forward,
-        observations,
         regime_feature_id="regime_state",
+        created_at_ms=2999,
+        window_start_ms=3000,
+        window_end_ms=4000,
     )
-    second = run_ml_family_untouched_forward_paper(
-        _features(),
-        folds,
-        references,
-        expansion,
-        cost_stress,
-        robustness,
-        forward,
-        observations,
-        regime_feature_id="regime_state",
-    )
+    return folds, references, expansion, cost_stress, robustness, snapshot
 
-    assert first == second
-    (
-        reference_predictions,
-        challenger_predictions,
-        reference_evaluation,
-        challenger_evaluation,
-        snapshot,
-        manifest,
-    ) = first
 
+def test_forward_freeze_is_deterministic_and_predates_window() -> None:
+    first = _freeze()
+    second = _freeze()
+    assert first[-1] == second[-1]
+
+    folds, references, expansion, _, _, snapshot = first
     assert snapshot.freeze_policy is (
         MLFrozenModelPolicy.LATEST_ACCEPTED_WALK_FORWARD_FOLD
     )
+    assert snapshot.created_at_ms == 2999
+    assert snapshot.window_start_ms == 3000
+    assert snapshot.window_end_ms == 4000
     assert snapshot.source_fold_identity == folds[-1].fold_identity
     assert snapshot.source_fold_index == folds[-1].fold_index
     assert snapshot.reference_model_identity == references[-1][0].model_identity
     assert snapshot.challenger_model_identity == expansion[0][-1][0].model_identity
     assert snapshot.model_refit_performed is False
     assert snapshot.family_selection_performed is False
+    assert snapshot.feature_change_performed is False
+    assert snapshot.threshold_change_performed is False
+    assert snapshot.real_capital == 0
+
+
+def test_forward_before_window_close_is_explicit_not_yet_evaluable() -> None:
+    _, references, expansion, _, _, snapshot = _freeze()
+    reference_model = references[-1][0]
+    challenger_model = expansion[0][-1][0]
+
+    result = evaluate_ml_family_untouched_forward_paper(
+        snapshot,
+        _features(),
+        reference_model,
+        challenger_model,
+        as_of_ms=3500,
+    )
+    ref_predictions, challenger_predictions, ref_eval, challenger_eval, manifest = result
+
+    assert ref_predictions == ()
+    assert challenger_predictions == ()
+    assert ref_eval.status is MLUntouchedForwardStatus.NOT_YET_EVALUABLE
+    assert challenger_eval.status is MLUntouchedForwardStatus.NOT_YET_EVALUABLE
+    assert manifest.status is MLUntouchedForwardStatus.NOT_YET_EVALUABLE
+    assert manifest.untouched_forward_used is False
+    assert manifest.production_authority is False
+    assert manifest.real_capital == 0
+
+
+def test_closed_window_without_partition_is_explicit_no_evidence() -> None:
+    _, references, expansion, _, _, snapshot = _freeze()
+    result = evaluate_ml_family_untouched_forward_paper(
+        snapshot,
+        _features(),
+        references[-1][0],
+        expansion[0][-1][0],
+        as_of_ms=4000,
+    )
+
+    assert result[2].status is MLUntouchedForwardStatus.NO_EVIDENCE
+    assert result[3].status is MLUntouchedForwardStatus.NO_EVIDENCE
+    assert result[4].status is MLUntouchedForwardStatus.NO_EVIDENCE
+    assert result[4].untouched_forward_used is False
+
+
+def test_complete_forward_evidence_is_descriptive_and_no_selection() -> None:
+    _, references, expansion, _, _, snapshot = _freeze()
+    forward = _forward_partition()
+    result = evaluate_ml_family_untouched_forward_paper(
+        snapshot,
+        _features(),
+        references[-1][0],
+        expansion[0][-1][0],
+        as_of_ms=4000,
+        untouched_partition=forward,
+        untouched_observations=_observations(forward),
+    )
+    reference_predictions, challenger_predictions, ref_eval, challenger_eval, manifest = result
 
     assert len(reference_predictions) == forward.row_count
     assert len(challenger_predictions) == forward.row_count
-    assert reference_evaluation.partition_identity == forward.partition_identity
-    assert challenger_evaluation.partition_identity == forward.partition_identity
+    assert ref_eval.status is MLUntouchedForwardStatus.EVALUATED
+    assert challenger_eval.status is MLUntouchedForwardStatus.EVALUATED
+    assert manifest.status is MLUntouchedForwardStatus.EVALUATED
     assert manifest.semantic is (
         MLUntouchedForwardSemantic.DESCRIPTIVE_FORWARD_PAPER_NOT_SELECTION
     )
@@ -294,34 +341,7 @@ def test_untouched_forward_is_deterministic_and_uses_frozen_latest_fold() -> Non
     assert manifest.production_authority is False
     assert manifest.real_capital == 0
 
-
-def test_forward_evidence_preserves_both_families_and_explicit_costs() -> None:
-    folds, references, expansion, cost_stress, robustness = _accepted_chain()
-    forward = _forward_partition()
-    observations = _observations(forward)
-    result = run_ml_family_untouched_forward_paper(
-        _features(),
-        folds,
-        references,
-        expansion,
-        cost_stress,
-        robustness,
-        forward,
-        observations,
-        regime_feature_id="regime_state",
-    )
-    reference_eval, challenger_eval = result[2], result[3]
-
-    assert reference_eval.family is MLExpandedFamily.CATEGORICAL_COUNT_REFERENCE
-    assert challenger_eval.family is MLExpandedFamily.CATEGORICAL_SIGN_VOTE
-    for evaluation in (reference_eval, challenger_eval):
-        assert evaluation.status in {
-            MLUntouchedForwardStatus.OBSERVED,
-            MLUntouchedForwardStatus.OBSERVED_NO_SELECTION,
-        }
-        assert evaluation.model_refit_performed is False
-        assert evaluation.feature_change_performed is False
-        assert evaluation.threshold_change_performed is False
+    for evaluation in (ref_eval, challenger_eval):
         if evaluation.positive_prediction_count:
             assert evaluation.gross_r_total is not None
             assert evaluation.explicit_cost_r_total is not None
@@ -332,60 +352,8 @@ def test_forward_evidence_preserves_both_families_and_explicit_costs() -> None:
             )
 
 
-def test_forward_partition_must_start_after_last_oos_window() -> None:
-    folds, references, expansion, cost_stress, robustness = _accepted_chain()
-    overlapping = _partition(
-        PartitionRole.UNTOUCHED_FORWARD,
-        start_ms=2500,
-        end_ms=3500,
-        prefix="overlap-forward",
-    )
-    with pytest.raises(
-        ValueError,
-        match="after accepted OOS evidence closes",
-    ):
-        run_ml_family_untouched_forward_paper(
-            _features(),
-            folds,
-            references,
-            expansion,
-            cost_stress,
-            robustness,
-            overlapping,
-            _observations(overlapping),
-            regime_feature_id="regime_state",
-        )
-
-
-def test_forward_requires_exact_accepted_robustness_evidence() -> None:
-    folds, references, expansion, cost_stress, robustness = _accepted_chain()
-    forward = _forward_partition()
-    bad_robustness = (
-        robustness[0],
-        robustness[1],
-        tuple(reversed(robustness[2])),
-        robustness[3],
-        robustness[4],
-    )
-    with pytest.raises(
-        ValueError,
-        match="exact accepted family robustness evidence",
-    ):
-        run_ml_family_untouched_forward_paper(
-            _features(),
-            folds,
-            references,
-            expansion,
-            cost_stress,
-            bad_robustness,
-            forward,
-            _observations(forward),
-            regime_feature_id="regime_state",
-        )
-
-
-def test_forward_rejects_incomplete_outcome_availability() -> None:
-    folds, references, expansion, cost_stress, robustness = _accepted_chain()
+def test_incomplete_outcome_is_not_yet_evaluable_not_an_error() -> None:
+    _, references, expansion, _, _, snapshot = _freeze()
     forward = _forward_partition()
     observations = list(_observations(forward))
     original = observations[-1]
@@ -398,18 +366,63 @@ def test_forward_rejects_incomplete_outcome_availability() -> None:
         gross_outcome_r=original.gross_outcome_r,
         explicit_cost_r=original.explicit_cost_r,
     )
-    with pytest.raises(ValueError, match="not yet evaluable"):
-        run_ml_family_untouched_forward_paper(
+
+    result = evaluate_ml_family_untouched_forward_paper(
+        snapshot,
+        _features(),
+        references[-1][0],
+        expansion[0][-1][0],
+        as_of_ms=4000,
+        untouched_partition=forward,
+        untouched_observations=tuple(observations),
+    )
+    assert result[0] == ()
+    assert result[1] == ()
+    assert result[2].status is MLUntouchedForwardStatus.NOT_YET_EVALUABLE
+    assert result[3].status is MLUntouchedForwardStatus.NOT_YET_EVALUABLE
+    assert result[4].status is MLUntouchedForwardStatus.NOT_YET_EVALUABLE
+    assert result[4].untouched_forward_used is False
+
+
+def test_forward_partition_must_match_frozen_window_and_dataset() -> None:
+    _, references, expansion, _, _, snapshot = _freeze()
+    overlapping = _partition(
+        PartitionRole.UNTOUCHED_FORWARD,
+        start_ms=2500,
+        end_ms=3500,
+        prefix="overlap-forward",
+    )
+    with pytest.raises(ValueError):
+        evaluate_ml_family_untouched_forward_paper(
+            snapshot,
+            _features(),
+            references[-1][0],
+            expansion[0][-1][0],
+            as_of_ms=4000,
+            untouched_partition=overlapping,
+            untouched_observations=_observations(overlapping),
+        )
+
+
+def test_freeze_rejects_future_or_mutated_contract() -> None:
+    folds, references, expansion, cost_stress, robustness = _accepted_chain()
+    with pytest.raises(ValueError, match="predate"):
+        build_ml_family_untouched_forward_freeze(
             _features(),
             folds,
             references,
             expansion,
             cost_stress,
             robustness,
-            forward,
-            tuple(observations),
             regime_feature_id="regime_state",
+            created_at_ms=3000,
+            window_start_ms=3000,
+            window_end_ms=4000,
         )
+
+    config = build_ml_untouched_forward_config()
+    with pytest.raises(ValueError, match="cannot select, refit or optimize"):
+        replace(config, model_refit_allowed=True)
 
 
 def test_foundation_rejects_future_feature_evidence_before_forward_run() -> None:
@@ -437,29 +450,17 @@ def test_foundation_rejects_future_feature_evidence_before_forward_run() -> None
         )
 
 
-def test_forward_config_and_manifest_fail_closed_on_selection_or_refit() -> None:
-    config = build_ml_untouched_forward_config()
-    assert config.automatic_family_selection is False
-    assert config.automatic_threshold_selection is False
-    assert config.feature_change_allowed is False
-    assert config.model_refit_allowed is False
-    assert config.retrospective_optimization_allowed is False
-
-    with pytest.raises(ValueError, match="cannot select, refit or optimize"):
-        replace(config, model_refit_allowed=True)
-
-    folds, references, expansion, cost_stress, robustness = _accepted_chain()
+def test_forward_manifest_fails_closed_on_winner_selection() -> None:
+    _, references, expansion, _, _, snapshot = _freeze()
     forward = _forward_partition()
-    result = run_ml_family_untouched_forward_paper(
+    result = evaluate_ml_family_untouched_forward_paper(
+        snapshot,
         _features(),
-        folds,
-        references,
-        expansion,
-        cost_stress,
-        robustness,
-        forward,
-        _observations(forward),
-        regime_feature_id="regime_state",
+        references[-1][0],
+        expansion[0][-1][0],
+        as_of_ms=4000,
+        untouched_partition=forward,
+        untouched_observations=_observations(forward),
     )
     with pytest.raises(ValueError, match="cannot select, optimize"):
         replace(result[-1], aggregate_winner_selection=True)
