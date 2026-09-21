@@ -61,7 +61,7 @@ class CboeVixDailyAdapter:
             raw_close = (row.get("CLOSE") or row.get("Close") or "").strip()
             if not raw_date or not raw_close:
                 continue
-            day = datetime.strptime(raw_date, "%m/%d/%Y").date()
+            day = datetime.strptime(raw_date + " +0000", "%m/%d/%Y %z").date()
             if end_date is not None and day > end_date:
                 continue
             parsed.append((day, Decimal(raw_close)))

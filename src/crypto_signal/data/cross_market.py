@@ -40,7 +40,7 @@ class CrossMarketDailyRecord:
         elif self.series is CrossMarketSeries.US_TREASURY_10Y_YIELD:
             if self.unit is not CrossMarketUnit.PERCENT:
                 raise ValueError("Treasury yield records require percent units")
-            if not Decimal("-20") < self.value < Decimal("100"):
+            if not Decimal(-20) < self.value < Decimal(100):
                 raise ValueError("Treasury 10Y yield is outside bounded range")
         if self.record_identity != canonical_sha256(cross_market_record_payload(self)):
             raise ValueError("cross-market record identity mismatch")

@@ -49,7 +49,7 @@ def test_cross_market_record_bounds_and_units_fail_closed() -> None:
     with pytest.raises(ValueError, match="positive"):
         _record(
             10,
-            value=Decimal("0"),
+            value=Decimal(0),
         )
 
     with pytest.raises(ValueError, match="percent"):
@@ -57,7 +57,7 @@ def test_cross_market_record_bounds_and_units_fail_closed() -> None:
             10,
             series=CrossMarketSeries.US_TREASURY_10Y_YIELD,
             unit=CrossMarketUnit.INDEX_POINTS,
-            value=Decimal("5"),
+            value=Decimal(5),
         )
 
     with pytest.raises(ValueError, match="bounded"):
@@ -65,7 +65,7 @@ def test_cross_market_record_bounds_and_units_fail_closed() -> None:
             10,
             series=CrossMarketSeries.US_TREASURY_10Y_YIELD,
             unit=CrossMarketUnit.PERCENT,
-            value=Decimal("100"),
+            value=Decimal(100),
         )
 
 

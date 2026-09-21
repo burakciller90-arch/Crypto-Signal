@@ -69,11 +69,11 @@ def _macro_observation(
 def _vix(
     *,
     values: tuple[Decimal, ...] = (
-        Decimal("20"),
-        Decimal("19"),
-        Decimal("18"),
-        Decimal("17"),
-        Decimal("16"),
+        Decimal(20),
+        Decimal(19),
+        Decimal(18),
+        Decimal(17),
+        Decimal(16),
     ),
     days: tuple[int, ...] = _DAYS,
     observed_at_ms: int = _AS_OF_MS,
@@ -123,11 +123,11 @@ def _btc_candle(
         open_time_ms=day * _DAY_MS,
         close_time_ms=(day + 1) * _DAY_MS - 1,
         open=open_price,
-        high=close + Decimal("1"),
-        low=open_price - Decimal("1"),
+        high=close + Decimal(1),
+        low=open_price - Decimal(1),
         close=close,
-        volume=Decimal("10"),
-        quote_volume=Decimal("1000"),
+        volume=Decimal(10),
+        quote_volume=Decimal(1000),
         trade_count=None,
         is_closed=True,
         source=DataSource.REST,
@@ -139,11 +139,11 @@ def _btc_candle(
 
 def _btc_rising() -> tuple[Candle, ...]:
     closes = (
-        Decimal("100"),
-        Decimal("101"),
-        Decimal("102"),
-        Decimal("103"),
-        Decimal("105"),
+        Decimal(100),
+        Decimal(101),
+        Decimal(102),
+        Decimal(103),
+        Decimal(105),
     )
     return tuple(
         _btc_candle(day, close)
@@ -177,9 +177,9 @@ def test_relief_alignment_is_deterministic_and_frozen() -> None:
     assert first.analysis.vix_direction is VixDirection.FALLING
     assert first.analysis.rates_direction is RatesDirection.RISING
     assert first.analysis.metrics is not None
-    assert first.analysis.metrics.btc_return_pct == Decimal("5")
-    assert first.analysis.metrics.vix_change_pct == Decimal("-20")
-    assert first.analysis.metrics.treasury_10y_change_bps == Decimal("20")
+    assert first.analysis.metrics.btc_return_pct == Decimal(5)
+    assert first.analysis.metrics.vix_change_pct == Decimal(-20)
+    assert first.analysis.metrics.treasury_10y_change_bps == Decimal(20)
     assert first.analysis.metrics.common_session_count == 5
     assert first.analysis.uncertainty_flags == ()
     assert len(first.freeze_identity) == 64
@@ -191,22 +191,22 @@ def test_stress_and_same_direction_labels_are_descriptive_only() -> None:
         for day, close in zip(
             _DAYS,
             (
-                Decimal("100"),
-                Decimal("99"),
-                Decimal("98"),
-                Decimal("97"),
-                Decimal("95"),
+                Decimal(100),
+                Decimal(99),
+                Decimal(98),
+                Decimal(97),
+                Decimal(95),
             ),
             strict=True,
         )
     )
     rising_vix = _vix(
         values=(
-            Decimal("16"),
-            Decimal("17"),
-            Decimal("18"),
-            Decimal("19"),
-            Decimal("20"),
+            Decimal(16),
+            Decimal(17),
+            Decimal(18),
+            Decimal(19),
+            Decimal(20),
         )
     )
     stress = analyze_cross_market_context(
@@ -259,10 +259,10 @@ def test_missing_or_stale_macro_evidence_is_unresolved() -> None:
 def test_incomplete_macro_or_btc_alignment_fails_closed() -> None:
     short_vix = _vix(
         values=(
-            Decimal("20"),
-            Decimal("19"),
-            Decimal("18"),
-            Decimal("17"),
+            Decimal(20),
+            Decimal(19),
+            Decimal(18),
+            Decimal(17),
         ),
         days=(191, 192, 193, 194),
     )
@@ -300,11 +300,11 @@ def test_future_ingestion_cannot_change_historical_freeze() -> None:
     )
     future_vix = _vix(
         values=(
-            Decimal("40"),
-            Decimal("42"),
-            Decimal("44"),
-            Decimal("46"),
-            Decimal("48"),
+            Decimal(40),
+            Decimal(42),
+            Decimal(44),
+            Decimal(46),
+            Decimal(48),
         ),
         observed_at_ms=_AS_OF_MS + 10_000,
     )
@@ -321,7 +321,7 @@ def test_future_ingestion_cannot_change_historical_freeze() -> None:
     future_btc = tuple(
         _btc_candle(
             day,
-            Decimal("200") + Decimal(offset),
+            Decimal(200) + Decimal(offset),
             available_at_ms=_AS_OF_MS + 10_000,
         )
         for offset, day in enumerate(_DAYS)
@@ -372,7 +372,7 @@ def test_wrong_macro_or_btc_context_is_rejected() -> None:
         )
 
     bad_symbol = tuple(
-        _btc_candle(day, Decimal("100"), symbol="ETHUSDT")
+        _btc_candle(day, Decimal(100), symbol="ETHUSDT")
         for day in _DAYS
     )
     with pytest.raises(ValueError, match="BTCUSDT"):

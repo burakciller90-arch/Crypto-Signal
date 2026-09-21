@@ -104,11 +104,11 @@ def _local_name(tag: str) -> str:
 
 def _parse_day(raw: str) -> date:
     parsers = (
-        lambda: datetime.fromisoformat(raw.replace("Z", "+00:00")).date(),
-        lambda: datetime.strptime(raw, "%m/%d/%Y").date(),
-        lambda: datetime.strptime(raw, "%m-%d-%Y").date(),
-        lambda: datetime.strptime(raw, "%d-%b-%y").date(),
-        lambda: datetime.strptime(raw, "%Y-%m-%d").date(),
+        lambda: datetime.fromisoformat(raw).date(),
+        lambda: datetime.strptime(raw + " +0000", "%m/%d/%Y %z").date(),
+        lambda: datetime.strptime(raw + " +0000", "%m-%d-%Y %z").date(),
+        lambda: datetime.strptime(raw + " +0000", "%d-%b-%y %z").date(),
+        lambda: datetime.strptime(raw + " +0000", "%Y-%m-%d %z").date(),
     )
     for parser in parsers:
         try:

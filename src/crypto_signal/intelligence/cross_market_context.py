@@ -52,8 +52,8 @@ class CrossMarketConfig:
     max_observation_ingest_age_ms: int = 36 * 60 * 60_000
     max_macro_source_lag_ms: int = 5 * _DAY_MS
     btc_move_threshold_pct: Decimal = Decimal("1.5")
-    vix_move_threshold_pct: Decimal = Decimal("8")
-    treasury_move_threshold_bps: Decimal = Decimal("10")
+    vix_move_threshold_pct: Decimal = Decimal(8)
+    treasury_move_threshold_bps: Decimal = Decimal(10)
 
     def __post_init__(self) -> None:
         if not 3 <= self.common_sessions <= 20:
