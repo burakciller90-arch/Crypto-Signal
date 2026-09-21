@@ -32,7 +32,7 @@ def _health() -> dict[str, Any]:
     ) as response:
         decoded: object = json.loads(response.read().decode("utf-8"))
     if not isinstance(decoded, dict):
-        raise RuntimeError("dashboard health payload must be a JSON object")
+        raise TypeError("dashboard health payload must be a JSON object")
     payload: dict[str, Any] = {
         str(key): value for key, value in decoded.items()
     }
