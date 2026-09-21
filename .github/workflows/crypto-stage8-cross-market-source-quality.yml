@@ -98,6 +98,12 @@ jobs:
               yield_10y = float(raw_10y)
               assert 0 <= yield_10y < 100
               parsed_treasury.append((day, yield_10y))
+          print(
+              "TREASURY_10Y_DIAGNOSTIC",
+              f"rows={len(parsed_treasury)}",
+              f"first={min(parsed_treasury)[0].isoformat() if parsed_treasury else 'NONE'}",
+              f"last={max(parsed_treasury)[0].isoformat() if parsed_treasury else 'NONE'}",
+          )
           assert len(parsed_treasury) >= 10
           parsed_treasury.sort(key=lambda item: item[0])
           treasury_day, treasury_10y = parsed_treasury[-1]
