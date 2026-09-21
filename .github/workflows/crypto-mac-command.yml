@@ -1474,7 +1474,9 @@ jobs:
 
           echo "=== CURRENT SSD RUNNER ==="
           ps -axo pid=,ppid=,user=,etime=,command=             | grep -E '[V]olumes/Crypto-504/Crypto-Signal/Runner/(runsvc.sh|bin/Runner.Listener)'             | head -40
-          pgrep -f '/Volumes/Crypto-504/Crypto-Signal/Runner/bin/Runner.Listener run --startuptype service' >/dev/null
+          ps -axo command= \
+            | grep -F '/Volumes/Crypto-504/Crypto-Signal/Runner/bin/Runner.Listener run --startuptype service' \
+            | grep -v grep >/dev/null
 
           echo "CRYPTO_UID504_SSD_RUNNER_TERMINAL_WATCHDOG_PASS=YES"
 
