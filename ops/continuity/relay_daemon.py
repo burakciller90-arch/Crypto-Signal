@@ -93,6 +93,13 @@ def sha(value: str) -> str:
     return event_key(value)
 
 
+def scheduled_slot_event_id() -> str:
+    now = datetime.now().astimezone()
+    slot_minute = (now.minute // 20) * 20
+    slot = now.replace(minute=slot_minute, second=0, microsecond=0)
+    return f"crypto-20m-continuity:{slot:%Y%m%dT%H%M%z}"
+
+
 def log(message: str) -> None:
     stamp = time.strftime("%Y-%m-%d %H:%M:%S %z")
     with LOG.open("a") as handle:
