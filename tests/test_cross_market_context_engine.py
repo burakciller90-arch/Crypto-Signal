@@ -237,7 +237,10 @@ def test_missing_or_stale_macro_evidence_is_unresolved() -> None:
         (_treasury(),),
         as_of_ms=_AS_OF_MS,
     )
-    stale_vix = _vix(observed_at_ms=_AS_OF_MS - 37 * 60 * 60_000)
+    stale_vix = _vix(
+        days=(188, 189, 190, 191, 192),
+        observed_at_ms=_AS_OF_MS - 2 * _DAY_MS,
+    )
     stale = analyze_cross_market_context(
         _btc_rising(),
         (stale_vix,),
