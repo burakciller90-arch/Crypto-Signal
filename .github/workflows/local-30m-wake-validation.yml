@@ -39,13 +39,18 @@ jobs:
           assert args[0] == "/bin/zsh"
           assert args[1].endswith("/recurring_wake_launchd.sh")
 
+          wake = Path("ops/continuity/recurring_wake.py").read_text()
+          assert "scheduled_slot_event_id" in wake
+          assert "crypto-30m-continuity:" in wake
+
           wrapper = Path("ops/continuity/recurring_wake_launchd.sh").read_text()
-          assert "crypto-local-30m:$STAMP" in wrapper
           assert "recurring_wake_last_local_attempt" in wrapper
+          assert 'recurring_wake.py"' in wrapper
+          assert "EVENT_ID=" not in wrapper
 
           fallback = Path(".github/workflows/crypto-30m-continuity-wake.yml").read_text()
           assert "GITHUB_FALLBACK_SKIPPED=YES" in fallback
-          assert "crypto-github-fallback-30m:" in fallback
+          assert "EVENT_ID=" not in fallback
           assert "AGE" in fallback and "600" in fallback
 
           installer = Path(".github/workflows/crypto-install-local-30m-wake.yml").read_text()
