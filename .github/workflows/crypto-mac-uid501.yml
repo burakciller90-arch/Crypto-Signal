@@ -52,7 +52,7 @@ jobs:
           set -euo pipefail
           cmd="$(printf '%s\n' "$ISSUE_BODY" | awk -F: 'tolower($1)=="command" {gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2); print tolower($2); exit}')"
           case "$cmd" in
-            status|repo|services|disk|externaldisk|hostdiag|audiorestart|audioadminrestart|loadtree|loadtree2|bginventory|bgsafecheck|cryptomigrationdiag|cryptomigrationdiag2|cryptodashboarddiag|cryptorunnertree|cryptorunnercutoverdiag|cryptossdrunnerps|uidsudo|uid504runneradminstart|uid504runnerguiadminstart|cryptofinalaudit|cryptofinaladmincleanup|cryptofinalterminalcleanup)
+            status|repo|services|disk|externaldisk|hostdiag|audiorestart|audioadminrestart|loadtree|loadtree2|bginventory|bgsafecheck|cryptomigrationdiag|cryptomigrationdiag2|cryptodashboarddiag|cryptorunnertree|cryptorunnercutoverdiag|cryptossdrunnerps|uidsudo|uid504runneradminstart|uid504runnerguiadminstart|cryptofinalaudit|cryptofinaladmincleanup|cryptofinalterminalcleanup|crypto504grant501)
               ;;
             *)
               echo "Unsupported command: $cmd"
@@ -543,6 +543,81 @@ jobs:
           chmod 700 "$SCRIPT"
           /usr/bin/open -a Terminal "$SCRIPT"
           echo "TERMINAL_CLEANUP_LAUNCHED=YES"
+
+
+      - name: GRANT UID501 ACCESS TO CRYPTO504
+        if: steps.parse.outputs.command == 'crypto504grant501'
+        shell: bash
+        run: |
+          set -euo pipefail
+          SCRIPT="/Users/burakciller/Desktop/Grant-501-Crypto504-Access.command"
+          PASS="/tmp/crypto504-uid501-access-pass"
+          FAIL="/tmp/crypto504-uid501-access-fail"
+          rm -f "$PASS" "$FAIL"
+
+          cat > "$SCRIPT" <<'SH'
+          #!/bin/bash
+          set -euo pipefail
+
+          VOL="/Volumes/Crypto-504"
+          TARGET="/Volumes/Crypto-504/Crypto-Signal"
+          PASS="/tmp/crypto504-uid501-access-pass"
+          FAIL="/tmp/crypto504-uid501-access-fail"
+
+          on_fail() {
+            rc=$?
+            date > "$FAIL"
+            echo
+            echo "UID501 ACL islemi basarisiz oldu (rc=$rc)."
+            exit "$rc"
+          }
+          trap on_fail ERR
+
+          echo "Crypto-504 -> UID501 ACL yetkisi aciliyor."
+          echo "Sahiplik crypto-signal-agent olarak korunacak."
+          echo
+          sudo -v
+
+          sudo /usr/bin/test -d "$VOL"
+          sudo /usr/bin/test -d "$TARGET"
+
+          echo "Mevcut 501 ACL kayitlari temizleniyor..."
+          sudo /usr/bin/chmod -R -a "burakciller allow read,write,execute,delete" "$VOL" 2>/dev/null || true
+
+          echo "Volume ve mevcut tum alt icerige 501 read/write/execute/delete ACL veriliyor..."
+          sudo /usr/bin/chmod -R +a "burakciller allow read,write,execute,delete" "$VOL"
+
+          echo "Volume kokune kalici inheritance ACL ekleniyor..."
+          sudo /usr/bin/chmod +a "burakciller allow read,write,execute,delete,file_inherit,directory_inherit" "$VOL"
+
+          echo "=== ACL ROOT ==="
+          /bin/ls -lde "$VOL"
+          /bin/ls -lde "$TARGET"
+
+          echo "=== UID501 ACCESS TEST ==="
+          /usr/bin/test -r "$TARGET/Development"
+          /usr/bin/test -x "$TARGET/Development"
+          /usr/bin/test -w "$TARGET/Development"
+          /usr/bin/test -r "$TARGET/Product"
+          /usr/bin/test -x "$TARGET/Product"
+          /usr/bin/test -w "$TARGET/Product"
+          /usr/bin/test -r "$TARGET/Runner"
+          /usr/bin/test -x "$TARGET/Runner"
+          /usr/bin/test -w "$TARGET/Runner"
+
+          probe="$VOL/.uid501_acl_probe_$"
+          /usr/bin/touch "$probe"
+          /bin/rm -f "$probe"
+
+          echo "UID501_CRYPTO504_READ_WRITE_PASS=YES"
+          date > "$PASS"
+          echo
+          echo "Tamamlandi. Bu pencereyi kapatabilirsin."
+          SH
+
+          chmod 700 "$SCRIPT"
+          /usr/bin/open -a Terminal "$SCRIPT"
+          echo "CRYPTO504_UID501_ACL_TERMINAL_LAUNCHED=YES"
 
       - name: HOST DIAG
         if: steps.parse.outputs.command == 'hostdiag'
