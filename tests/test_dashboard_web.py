@@ -259,6 +259,19 @@ def test_health_and_static_shell_without_ledger(tmp_path: Path) -> None:
     assert "/api/intelligence-center" in script.text
     assert "Production contribution" in script.text
     assert "accepted research ≠ production authority" in script.text
+    assert "KISACA" in index.text
+    assert 'id="beginnerBrief"' in index.text
+    assert 'id="viewModeToggle"' in index.text
+    assert 'id="quickNav"' in index.text
+    assert 'data-view-mode="simple"' in index.text
+    assert "data-advanced-section" in index.text
+    assert "function renderBeginnerBrief" in script.text
+    assert "function setViewMode" in script.text
+    assert "function restoreViewMode" in script.text
+    assert "function bindQuickNavigation" in script.text
+    assert "Tüm detayları göster" in script.text
+    assert "Sade görünüme dön" in script.text
+    assert "meta_intelligence" in script.text
     assert "READ-ONLY · SAĞLIKLI" in script.text
     assert "REAL_CAPITAL=" in script.text
     assert "function renderEducation(data)" in script.text
