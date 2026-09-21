@@ -2310,3 +2310,15 @@ Factory promotion or learning-memory authority was introduced.
 The next bounded Stage 8 frontier is
 `stage8-bounded-derivatives-context-v1`.
 
+## 2026-09-21 — fifth Stage 8 engine accepted: bounded derivatives context
+
+PR #412 merged `crypto_signal.intelligence.derivatives_context` together with a real public Bybit linear-perpetual observation source. The data contract records event time, source time, ingestion time, exchange/instrument/symbol identity and only real funding, open-interest and mark/index measurements. Missing measurements remain unavailable; mark/index must appear together; the adapter uses public GET endpoints and carries no credential or order authority.
+
+The bounded analyzer derives funding, open-interest and basis states and combines them into crowded-long, crowded-short, leverage-buildup, deleveraging, balanced, mixed or unresolved context. Stale observations, insufficient components and incomplete alignment are explicit uncertainty rather than inferred values. Late-ingested or future evidence cannot alter a historical freeze. Observation, analysis and consumed-evidence freezes are SHA-bound.
+
+The first hosted full gate usefully failed on one Ruff C409 expression after pytest had already passed 100%. The correction changed only tuple construction syntax. The next hosted full gate passed, PR #412 merged as `011f2c4c7be2bd00410c5a0f3f578e20bd84c891`, the merged-main hosted gate passed with mypy across 112 source files, and UID504 canonical sync/fulltest then passed with mypy across 111 source files and `FULL_TEST_PASS=YES`.
+
+Ablation/isolation tests and the final diff confirm no production confluence weighting or paper execution path imports the engine. No API key/auth/order surface was added. PAPER/STABLE write activation remains closed and `REAL_CAPITAL=0`.
+
+The next Stage 8 item is order-flow/microstructure, but the roadmap makes this conditional on data quality. Therefore the next action is a source/data-quality inventory, not immediate feature coding. If no real PIT-safe microstructure source can be supported, the item must be explicitly deferred instead of synthesized from OHLC candles.
+
