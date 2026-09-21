@@ -73,7 +73,7 @@ Accepted main: `8659ef2b69aed8d9eedb3037235e0fcab186437f`.
 - no refit/prediction changes/family selection;
 - keep untouched-forward and RL closed.
 
-### R3B — Two-family robustness / ablation closure — CURRENT FRONTIER
+### R3B — Two-family robustness / ablation closure — ACCEPTED
 Canonical task: `stage8.5-bounded-ml-family-robustness-ablation-v1`.
 - run family-specific feature/fold/regime robustness after family cost-stress;
 - retain failures and instability explicitly;
@@ -83,15 +83,16 @@ Canonical task: `stage8.5-bounded-ml-family-robustness-ablation-v1`.
 RL remains optional and closed for now. It is not a prerequisite for finishing the current deterministic promotion-evidence chain.
 If opened later, it must be research-only, deterministic/bounded where possible, with no order/broker authority.
 
-### R5 — Untouched-forward paper evidence — CURRENT FRONTIER
-Canonical task: `stage8.5-bounded-ml-family-untouched-forward-paper-v1`.
+### R5 — Untouched-forward paper evidence — ACCEPTED
+Accepted main: `ef56069e2021ea0c2d8d16e93bc4e6610b8d994a`.
 - open untouched-forward only after prior scientific gates close;
 - no retrospective refit on forward observations;
 - preserve both favorable and unfavorable outcomes;
 - immutable evidence identities and chronology;
 - descriptive evaluation only.
 
-### R6 — Robustness / promotion dossier closure
+### R6 — Robustness / promotion dossier closure — CURRENT FRONTIER
+Canonical task: `stage8.5-ml-promotion-dossier-closure-v1`.
 Each challenger must close the full promotion evidence boundary:
 1. data-contract/leakage audit;
 2. deterministic/reproducible generation;
@@ -221,4 +222,4 @@ Freeze:
 Crypto Signal Full Version is complete when M1, M2 and M3 are accepted with mechanical evidence and authoritative documentation, while REAL_CAPITAL remains 0 and all real-money/order authority stays closed.
 
 Immediate next execution target:
-`stage8.5-bounded-ml-family-untouched-forward-paper-v1`.
+`stage8.5-ml-promotion-dossier-closure-v1`.

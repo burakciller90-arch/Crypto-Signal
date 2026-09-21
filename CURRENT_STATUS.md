@@ -3102,3 +3102,34 @@ Current true roadmap frontier:
 - no self-promotion, champion mutation, production import or deploy path;
 - RL remains closed because it is optional and not required for this promotion-evidence chain;
 - REAL_CAPITAL=0.
+
+
+## 2026-09-21 — Stage 8.5 bounded two-family untouched-forward paper v1 ACCEPTED
+
+- accepted main head: `ef56069e2021ea0c2d8d16e93bc4e6610b8d994a`;
+- PR #615 merged deterministic frozen-model untouched-forward paper evidence;
+- exact accepted family expansion + family cost-stress + family robustness evidence is rebound before forward evaluation;
+- frozen model policy is chronological: latest accepted walk-forward fold, never performance-selected;
+- untouched-forward partition must begin after accepted OOS evidence closes;
+- exact partition coverage, PIT feature availability and complete outcome availability are enforced;
+- original frozen model/config identities are preserved;
+- no refit, feature changes, threshold changes, retrospective optimization or family winner selection;
+- favorable/unfavorable outcomes and explicit gross/cost/net-R are retained;
+- branch Alpha Factory research gate PASS: run `35655955166`;
+- merged-main Alpha Factory research gate PASS: run `35656061577`;
+- merged-main Stage10 hosted full regression PASS: run `35656061522`;
+- UID504 SSD sync PASS: issue #616 / run `35656165229`;
+- UID504 fulltest PASS: issue #617 / run `35656220474`;
+- RL remains closed and optional;
+- no production/paper/confluence/signal import or deploy authority;
+- PAPER/STABLE write activation remains closed;
+- REAL_CAPITAL=0.
+
+Current true roadmap frontier:
+- `stage8.5-ml-promotion-dossier-closure-v1`;
+- bind all accepted evidence classes into one immutable dossier;
+- machine evidence may only reach READY_FOR_SUPERVISOR_REVIEW;
+- explicit supervisor evidence may only reach SUPERVISOR_ACCEPTED_FOR_MANUAL_PROMOTION;
+- there is no PROMOTED state, champion mutation or deploy path;
+- no automatic family/winner selection;
+- REAL_CAPITAL=0.

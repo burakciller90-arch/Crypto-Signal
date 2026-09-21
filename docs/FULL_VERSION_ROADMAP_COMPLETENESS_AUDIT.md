@@ -182,35 +182,37 @@ evidence. There is no automatic family/feature/fold/regime/model selection.
 Branch/merged-main research gates, merged-main Stage10 regression, UID504
 current-head verification and UID504 fulltest all passed.
 
+## Stage 8.5 two-family untouched-forward paper — ACCEPTED
+
+Frozen two-family untouched-forward paper evidence is **ACCEPTED** at
+`ef56069e2021ea0c2d8d16e93bc4e6610b8d994a`.
+
+The evaluator consumes the exact accepted two-family expansion/cost-stress/
+robustness chain, freezes the latest accepted chronological walk-forward models,
+requires the forward partition to start after accepted OOS closes, and permits
+no refit, feature/threshold change, retrospective optimization or family
+selection. Branch/merged research gates, Stage10 regression and UID504
+sync/fulltest all passed.
+
 ## Canonical next frontier
 
 The next bounded roadmap slice is:
 
-`stage8.5-bounded-ml-family-untouched-forward-paper-v1`
+`stage8.5-ml-promotion-dossier-closure-v1`
 
 Requirements:
 
-- remain under isolated `research/alpha_factory`,
-- use a predeclared `UNTOUCHED_FORWARD` partition only after the accepted
-  train/OOS/cost-stress/robustness chain,
-- freeze accepted family/model/config identities before forward evaluation,
-- do not refit a model after forward observations become available,
-- do not alter features, thresholds, family set or selection policy from forward results,
-- preserve exact chronology and point-in-time availability,
-- preserve original gross/cost/net-R semantics,
-- retain favorable, unfavorable and no-evidence/not-evaluable outcomes,
-- evaluation is descriptive evidence only,
-- no automatic family/model/scenario winner selection,
-- no calibrated-probability claim,
-- no production product/paper/confluence/signal import,
-- no self-promotion, champion mutation or deploy path,
-- RL remains closed and optional.
-
-A favorable untouched-forward result cannot promote or select a challenger.
-Promotion dossier assembly and explicit supervisor acceptance remain separate
-later gates.
-
-`REAL_CAPITAL=0`.
+- bind immutable identities for data-contract/leakage, reproducibility,
+  transaction-cost stress, in-sample sanity, OOS, walk-forward,
+  untouched-forward and robustness/ablation evidence;
+- no missing required machine evidence may be silently treated as complete;
+- machine evidence alone may reach only `READY_FOR_SUPERVISOR_REVIEW`;
+- explicit supervisor evidence may reach only
+  `SUPERVISOR_ACCEPTED_FOR_MANUAL_PROMOTION`;
+- no PROMOTED state;
+- no champion mutation, production import, deploy or order authority;
+- no automatic family/model winner selection;
+- REAL_CAPITAL=0.
 
 ## Safety boundary
 

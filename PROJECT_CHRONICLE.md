@@ -2510,3 +2510,12 @@ The accepted slice binds the exact family expansion and family cost-stress evide
 
 The next safe frontier is `stage8.5-bounded-ml-family-untouched-forward-paper-v1`.
 This opens only a predeclared untouched-forward research partition with all accepted model/config identities frozen before evaluation. No retrospective refit or family selection is allowed. RL remains closed and optional. REAL_CAPITAL=0.
+
+## 2026-09-21 — Two-family untouched-forward paper v1 accepted
+
+PR #615 merged at `ef56069e2021ea0c2d8d16e93bc4e6610b8d994a`.
+Branch research, merged-main research, Stage10 regression, UID504 sync and UID504 fulltest all passed.
+The accepted evaluator freezes both model families from the latest accepted chronological walk-forward fold before the forward partition and forbids any retrospective refit, feature/threshold change or family selection.
+
+The next safe frontier is `stage8.5-ml-promotion-dossier-closure-v1`.
+RL remains optional/closed. REAL_CAPITAL=0.
