@@ -2,12 +2,12 @@ from __future__ import annotations
 
 import argparse
 import json
-from pathlib import Path
 import shutil
 import subprocess
 import tempfile
-from typing import Any
 import urllib.request
+from pathlib import Path
+from typing import Any
 
 from crypto_signal.runtime_recovery import backup_and_restore_sqlite
 
