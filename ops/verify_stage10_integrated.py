@@ -50,7 +50,7 @@ def _get_json(base_url: str, path: str) -> dict[str, Any]:
             raise RuntimeError(f"{path} returned HTTP {response.status}")
         payload = json.loads(response.read().decode("utf-8"))
     if not isinstance(payload, dict):
-        raise RuntimeError(f"{path} did not return a JSON object")
+        raise TypeError(f"{path} did not return a JSON object")
     return payload
 
 
@@ -91,7 +91,7 @@ def _verify_openapi(base_url: str) -> None:
         if not str(path).startswith("/api/"):
             continue
         if not isinstance(operations, dict):
-            raise RuntimeError(f"invalid OpenAPI operations for {path}")
+            raise TypeError(f"invalid OpenAPI operations for {path}")
         methods = {str(method).lower() for method in operations}
         if methods != {"get"}:
             raise RuntimeError(
@@ -135,7 +135,7 @@ def _verify_paper_mission(payload: dict[str, Any]) -> None:
 
     snapshot = payload.get("snapshot")
     if not isinstance(snapshot, dict):
-        raise RuntimeError("paper Mission Control snapshot missing")
+        raise TypeError("paper Mission Control snapshot missing")
     if snapshot.get("version") != "paper_mission_control.v4":
         raise RuntimeError("paper Mission Control v4 is not deployed")
     if snapshot.get("real_capital") != 0:
@@ -145,10 +145,10 @@ def _verify_paper_mission(payload: dict[str, Any]) -> None:
 
     benchmarks = snapshot.get("benchmarks")
     if not isinstance(benchmarks, dict):
-        raise RuntimeError("benchmark snapshot missing")
+        raise TypeError("benchmark snapshot missing")
     results = benchmarks.get("results")
     if not isinstance(results, list):
-        raise RuntimeError("benchmark results missing")
+        raise TypeError("benchmark results missing")
     kinds = tuple(item.get("kind") for item in results if isinstance(item, dict))
     if kinds != EXPECTED_BENCHMARKS:
         raise RuntimeError(f"benchmark coverage mismatch: {kinds!r}")
