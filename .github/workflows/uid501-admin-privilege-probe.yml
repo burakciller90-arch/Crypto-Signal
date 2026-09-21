@@ -1,0 +1,37 @@
+name: UID501 Admin Privilege Probe
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/uid501-admin-privilege-probe.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: [self-hosted, crypto-signal, uid501]
+    timeout-minutes: 5
+    steps:
+      - name: Probe noninteractive admin privilege
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(id -u)" = "501"
+          echo "=== IDENTITY ==="
+          id
+          echo "=== ADMIN GROUP ==="
+          /usr/bin/dsmemberutil checkmembership -U "$(whoami)" -G admin || true
+          echo "=== SUDO NONINTERACTIVE ==="
+          set +e
+          /usr/bin/sudo -n /usr/bin/true
+          RC=$?
+          set -e
+          echo "SUDO_N_TRUE_RC=$RC"
+          if [ "$RC" -eq 0 ]; then
+            echo "SUDO_NONINTERACTIVE=YES"
+          else
+            echo "SUDO_NONINTERACTIVE=NO"
+          fi
+          echo "UID501_ADMIN_PRIVILEGE_PROBE_PASS=YES"
