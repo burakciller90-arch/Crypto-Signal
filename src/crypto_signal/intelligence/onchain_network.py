@@ -6,7 +6,11 @@ from decimal import Decimal
 from enum import StrEnum
 from itertools import pairwise
 
-from crypto_signal.data.onchain import BitcoinBlockWindowObservation, BitcoinNetwork
+from crypto_signal.data.onchain import (
+    BitcoinBlockRecord,
+    BitcoinBlockWindowObservation,
+    BitcoinNetwork,
+)
 from crypto_signal.ledger.serialization import canonical_sha256
 
 ONCHAIN_NETWORK_ENGINE_VERSION = "bitcoin-onchain-network-v1/1"
@@ -337,7 +341,7 @@ def build_onchain_network_evidence_freeze(
 
 
 def _derive_metrics(
-    blocks: tuple,
+    blocks: tuple[BitcoinBlockRecord, ...],
     *,
     header_span_ms: int,
 ) -> OnchainNetworkMetrics:
@@ -393,7 +397,7 @@ def _utilization(
     return BlockUtilizationState.NORMAL
 
 
-def _is_contiguous_chain(blocks: tuple) -> bool:
+def _is_contiguous_chain(blocks: tuple[BitcoinBlockRecord, ...]) -> bool:
     return all(
         newer.height == older.height + 1
         and newer.previous_block_hash == older.block_hash
