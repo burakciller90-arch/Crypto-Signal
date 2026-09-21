@@ -4,9 +4,10 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from decimal import Decimal
 from enum import StrEnum
+from itertools import pairwise
 from statistics import median
 
-from crypto_signal.data.health import CandleGap, detect_gaps
+from crypto_signal.data.health import detect_gaps
 from crypto_signal.data.models import Candle, Exchange, MarketType
 from crypto_signal.ledger.serialization import canonical_sha256
 
@@ -142,6 +143,8 @@ class RegimeAnalysis:
                 raise ValueError("unresolved regime requires unresolved volatility")
         elif self.metrics is None:
             raise ValueError("resolved regime requires deterministic metrics")
+        if self.evidence_identity != canonical_sha256(_analysis_payload(self)):
+            raise ValueError("regime evidence identity mismatch")
 
 
 @dataclass(frozen=True, slots=True)
@@ -312,7 +315,7 @@ def _metrics(
     path = sum(
         (
             abs(right - left) / left * _BPS
-            for left, right in zip(closes, closes[1:], strict=True)
+            for left, right in pairwise(closes)
         ),
         start=Decimal(0),
     )
@@ -386,6 +389,25 @@ def _volatility_state(
     if metrics.volatility_ratio <= config.volatility_compressed_ratio:
         return VolatilityState.COMPRESSED
     return VolatilityState.NORMAL
+
+
+def _analysis_payload(analysis: RegimeAnalysis) -> dict[str, object]:
+    return {
+        "engine_version": analysis.engine_version,
+        "exchange": analysis.exchange,
+        "market_type": analysis.market_type,
+        "symbol": analysis.symbol,
+        "timeframe": analysis.timeframe,
+        "as_of_ms": analysis.as_of_ms,
+        "market_available_at_ms": analysis.market_available_at_ms,
+        "observed_at_ms": analysis.observed_at_ms,
+        "source_cutoff_open_time_ms": analysis.source_cutoff_open_time_ms,
+        "consumed_bar_count": analysis.consumed_bar_count,
+        "label": analysis.label,
+        "volatility": analysis.volatility,
+        "metrics": analysis.metrics,
+        "uncertainty_flags": analysis.uncertainty_flags,
+    }
 
 
 def _freeze_payload(freeze: RegimeEvidenceFreeze) -> dict[str, object]:
