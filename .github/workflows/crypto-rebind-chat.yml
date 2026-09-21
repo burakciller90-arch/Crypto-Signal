@@ -57,8 +57,10 @@ jobs:
           TARGET="https://chatgpt.com/c/6ab0debd-49a8-83eb-8b33-a7ce2ef826d0"
           for i in $(seq 1 45); do
             current="$(sed -n 's/^target_url=//p' "$SHARED/relay_status" 2>/dev/null | head -1)"
-            if [ "$current" = "$TARGET" ] && [ ! -f "$SHARED/restart_requested" ]; then
+            namespace="$(sed -n 's/^project_namespace=//p' "$SHARED/relay_status" 2>/dev/null | head -1)"
+            if [ "$current" = "$TARGET" ] && [ "$namespace" = "crypto-signal" ] && [ ! -f "$SHARED/restart_requested" ]; then
               echo "RELAY_REBOUND=YES"
+              echo "PROJECT_NAMESPACE=$namespace"
               cat "$SHARED/relay_status"
               echo "QUEUE:"
               find "$SHARED/queue" -maxdepth 1 -type f -print 2>/dev/null

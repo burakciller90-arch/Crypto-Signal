@@ -11,6 +11,8 @@ import time
 from datetime import datetime
 from pathlib import Path
 
+PROJECT_NAMESPACE = "crypto-signal"
+EXPECTED_TARGET_URL = "https://chatgpt.com/c/6ab0debd-49a8-83eb-8b33-a7ce2ef826d0"
 SHARED = Path("/Users/Shared/.crypto-signal-wake-relay")
 QUEUE = SHARED / "queue"
 RECEIPTS = SHARED / "receipts"
@@ -24,10 +26,9 @@ LOG = SHARED / "relay.log"
 STATUS = SHARED / "relay_status"
 AUTONOMOUS_STATE = SHARED / "autonomous_wake_state"
 AUTONOMOUS_PREFIX = "CRYPTO_SIGNAL_AUTONOMOUS_CONTINUE_V1"
-AUTONOMOUS_TTL_SECONDS = 20 * 60
-AUTONOMOUS_COOLDOWN_SECONDS = 20 * 60
+AUTONOMOUS_TTL_SECONDS = 15 * 60
+AUTONOMOUS_COOLDOWN_SECONDS = 10 * 60
 RETRY_SECONDS = 2
-AUTONOMOUS_PREFIX = "CRYPTO_SIGNAL_AUTONOMOUS_CONTINUE_V1"
 TARGET_OPEN_RETRY_SECONDS = 60
 _last_target_open_attempt = 0.0
 
@@ -87,9 +88,9 @@ def sha(value: str) -> str:
 
 def scheduled_slot_event_id() -> str:
     now = datetime.now().astimezone()
-    slot_minute = 0 if now.minute < 30 else 30
+    slot_minute = (now.minute // 20) * 20
     slot = now.replace(minute=slot_minute, second=0, microsecond=0)
-    return f"crypto-30m-continuity:{slot:%Y%m%dT%H%M%z}"
+    return f"crypto-20m-continuity:{slot:%Y%m%dT%H%M%z}"
 
 
 def marker_for(event_id: str) -> str:
@@ -430,8 +431,8 @@ def main() -> int:
             return 0
 
     target_url = TARGET_FILE.read_text().splitlines()[0].strip()
-    if not target_url.startswith("https://chatgpt.com/c/"):
-        raise SystemExit("RELAY_TARGET_INVALID")
+    if target_url != EXPECTED_TARGET_URL:
+        raise SystemExit("RELAY_TARGET_ISOLATION_VIOLATION")
     secret = load_secret()
     PIDFILE.write_text(f"{os.getpid()}\n")
     log(f"relay=START pid={os.getpid()} target={target_url}")
@@ -445,12 +446,16 @@ def main() -> int:
                 target_url = TARGET_FILE.read_text().splitlines()[0].strip()
             except (FileNotFoundError, IndexError):
                 target_url = ""
-            if not target_url.startswith("https://chatgpt.com/c/"):
-                log("relay=TARGET_INVALID")
+            if target_url != EXPECTED_TARGET_URL:
+                log(
+                    "relay=TARGET_ISOLATION_VIOLATION "
+                    f"expected={EXPECTED_TARGET_URL} actual={target_url or 'MISSING'}"
+                )
                 time.sleep(RETRY_SECONDS)
                 continue
             STATUS.write_text(
                 f"state=RUNNING\n"
+                f"project_namespace={PROJECT_NAMESPACE}\n"
                 f"pid={os.getpid()}\n"
                 f"heartbeat_epoch={int(now)}\n"
                 f"target_url={target_url}\n"

@@ -1,0 +1,58 @@
+name: Install Crypto Local 20m Wake
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "ops/continuity/recurring_wake.py"
+      - "ops/continuity/relay_submit.py"
+      - "ops/continuity/launchd/com.cryptosignal.autowake20m.plist"
+      - ".github/workflows/crypto-install-local-20m-wake.yml"
+      - ".github/workflows/crypto-20m-continuity-wake.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  install:
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install exact :00/:20/:40 Crypto timer
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(id -u)" = "504"
+
+          INSTALL="$HOME/Library/Application Support/CryptoSignal/continuity20m"
+          AGENTS="$HOME/Library/LaunchAgents"
+          DOMAIN="gui/$(id -u)"
+          LABEL="com.cryptosignal.autowake20m"
+          PLIST="$AGENTS/$LABEL.plist"
+
+          mkdir -p "$INSTALL" "$AGENTS"             /Users/crypto-signal-agent/Crypto-Signal/runtime/continuity
+
+          install -m 700 ops/continuity/recurring_wake.py "$INSTALL/recurring_wake.py"
+          install -m 700 ops/continuity/relay_submit.py "$INSTALL/relay_submit.py"
+          install -m 600             ops/continuity/launchd/com.cryptosignal.autowake20m.plist             "$PLIST"
+
+          /usr/bin/plutil -lint "$PLIST"
+          /usr/bin/python3 -m py_compile             "$INSTALL/recurring_wake.py"             "$INSTALL/relay_submit.py"
+
+          for old in             com.cryptosignal.autowake30m             com.cryptosignal.continuity30m; do
+            launchctl bootout "$DOMAIN/$old" 2>/dev/null || true
+            rm -f "$AGENTS/$old.plist"
+          done
+
+          launchctl bootout "$DOMAIN/$LABEL" 2>/dev/null || true
+          launchctl bootstrap "$DOMAIN" "$PLIST"
+          launchctl enable "$DOMAIN/$LABEL"
+
+          echo "=== INSTALLED TIMER ==="
+          launchctl print "$DOMAIN/$LABEL" |             egrep 'state =|last exit code =|program =|arguments =|stdout path =|stderr path =' |             head -100
+
+          echo "=== TIMER SCHEDULE ==="
+          /usr/libexec/PlistBuddy -c "Print :StartCalendarInterval" "$PLIST"
+          echo "LOCAL_20M_WAKE_INSTALL_PASS=YES"
