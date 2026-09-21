@@ -22,6 +22,9 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -e .
           python -m pip install "pytest>=8.4" "ruff>=0.13" "mypy>=1.18"
+      - name: Ruff import diagnostic
+        run: |
+          python -m ruff check --select I --fix --diff ops/r11_runtime_acceptance.py || true
       - name: Full branch gate
         run: |
           python -m pytest -q
