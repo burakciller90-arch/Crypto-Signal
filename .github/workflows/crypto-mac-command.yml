@@ -1167,7 +1167,7 @@ jobs:
           (
             unset RUNNER_TRACKING_ID
             export PYTHONPATH="$ROOT/Product/src"
-            nohup "$ROOT/Product/.venv/bin/python" "$ROOT/Product/ops/run_dashboard.py"               --host 127.0.0.1 --port 48704               --ledger "$ROOT/Development/runtime/ledger/live_signal_ledger.sqlite3"               >"$ROOT/background-test.out" 2>"$ROOT/background-test.err" < /dev/null &
+            nohup "$ROOT/Product/.venv/bin/python" "$ROOT/Product/ops/run_dashboard.py"               --host 127.0.0.1 --port 48704               --ledger "$ROOT/Development/runtime/ledger/live_signal_ledger.sqlite3"               --alert-outbox "$ROOT/Development/runtime/alerts/alert_outbox.sqlite3"               --paper-ledger "$ROOT/Development/runtime/paper/paper_fund.sqlite3"               --candle-cache "$ROOT/Development/runtime/data/live_base_15m_cache.sqlite3"               >"$ROOT/background-test.out" 2>"$ROOT/background-test.err" < /dev/null &
             echo $! > "$ROOT/background-test.pid"
           )
           sleep 4
@@ -1223,7 +1223,7 @@ jobs:
             (
               unset RUNNER_TRACKING_ID
               export PYTHONPATH="$PRODUCT/src"
-              nohup "$PRODUCT/.venv/bin/python" "$PRODUCT/ops/run_dashboard.py"                 --host 127.0.0.1                 --port 48700                 --ledger "$DEV/runtime/ledger/live_signal_ledger.sqlite3"                 >"$LOG/dashboard-48700.out.log"                 2>"$LOG/dashboard-48700.err.log"                 < /dev/null &
+              nohup "$PRODUCT/.venv/bin/python" "$PRODUCT/ops/run_dashboard.py"                 --host 127.0.0.1                 --port 48700                 --ledger "$DEV/runtime/ledger/live_signal_ledger.sqlite3"                 --alert-outbox "$DEV/runtime/alerts/alert_outbox.sqlite3"                 --paper-ledger "$DEV/runtime/paper/paper_fund.sqlite3"                 --candle-cache "$DEV/runtime/data/live_base_15m_cache.sqlite3"                 >"$LOG/dashboard-48700.out.log"                 2>"$LOG/dashboard-48700.err.log"                 < /dev/null &
               echo $! > "$PIDFILE"
             )
           fi
@@ -1331,7 +1331,7 @@ jobs:
             <array>
               <string>/bin/bash</string>
               <string>-lc</string>
-              <string>exec env PYTHONPATH='$ROOT/Product/src' '$ROOT/Product/.venv/bin/python' '$ROOT/Product/ops/run_dashboard.py' --host 127.0.0.1 --port 48702 --ledger '$ROOT/Development/runtime/ledger/live_signal_ledger.sqlite3'</string>
+              <string>exec env PYTHONPATH='$ROOT/Product/src' '$ROOT/Product/.venv/bin/python' '$ROOT/Product/ops/run_dashboard.py' --host 127.0.0.1 --port 48702 --ledger '$ROOT/Development/runtime/ledger/live_signal_ledger.sqlite3' --alert-outbox '$ROOT/Development/runtime/alerts/alert_outbox.sqlite3' --paper-ledger '$ROOT/Development/runtime/paper/paper_fund.sqlite3' --candle-cache '$ROOT/Development/runtime/data/live_base_15m_cache.sqlite3'</string>
             </array>
             <key>RunAtLoad</key><true/>
             <key>StandardOutPath</key><string>$OUT</string>
@@ -1615,6 +1615,9 @@ jobs:
               export PYTHONPATH="$PRODUCT/src"
               /usr/bin/nohup "$PRODUCT/.venv/bin/python" "$PRODUCT/ops/run_dashboard.py" \
                 --host 127.0.0.1 --port 48700 --ledger "$LEDGER" \
+                --alert-outbox "$ROOT/Development/runtime/alerts/alert_outbox.sqlite3" \
+                --paper-ledger "$ROOT/Development/runtime/paper/paper_fund.sqlite3" \
+                --candle-cache "$ROOT/Development/runtime/data/live_base_15m_cache.sqlite3" \
                 >>"$LOG/dashboard-manual-504.out.log" \
                 2>>"$LOG/dashboard-manual-504.err.log" </dev/null &
               echo $! > "$PIDFILE"
