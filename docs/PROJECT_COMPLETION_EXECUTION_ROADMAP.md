@@ -111,8 +111,9 @@ There is no self-promotion, champion-write or deploy API.
 
 ## M2 — Stage 8.75 Learning Memory + product visibility
 
-### R7 — Versioned Learning Memory — CURRENT FRONTIER
-Canonical task: `stage8.75-learning-memory-v1`.
+### R7 — Versioned Learning Memory — ACCEPTED
+Accepted main: `35a018d9740aaf34096f2c69fb8b8e4f2ab10795`.
+Branch/merged research, Stage10 regression and UID504 fulltest all passed.
 Persist success and failure equally by:
 - method;
 - asset;
@@ -126,7 +127,8 @@ Persist success and failure equally by:
 Learning Memory is evidence, not authority.
 Any production weighting effect requires a separately tested and accepted policy.
 
-### R8 — Intelligence Center / Research Lab dashboard
+### R8 — Intelligence Center / Research Lab dashboard — CURRENT FRONTIER
+Canonical task: `stage8.75-intelligence-center-readonly-v1`.
 Expose existing accepted Stage 8 and Stage 8.5 evidence read-only:
 - regime;
 - trend/momentum;
@@ -224,4 +226,4 @@ Freeze:
 Crypto Signal Full Version is complete when M1, M2 and M3 are accepted with mechanical evidence and authoritative documentation, while REAL_CAPITAL remains 0 and all real-money/order authority stays closed.
 
 Immediate next execution target:
-`stage8.75-learning-memory-v1`.
+`stage8.75-intelligence-center-readonly-v1`.

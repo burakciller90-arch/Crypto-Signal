@@ -2529,3 +2529,13 @@ PR #621 then merged the machine-complete ML promotion dossier at `8ac2072c712051
 Machine evidence can reach only READY_FOR_SUPERVISOR_REVIEW. Explicit supervisor evidence can reach only SUPERVISOR_ACCEPTED_FOR_MANUAL_PROMOTION. Neither state grants champion-write, deploy, production or real-capital authority.
 
 Stage 8.5 / Milestone M1 is complete. The canonical next frontier is `stage8.75-learning-memory-v1`.
+
+## 2026-09-22 — Stage 8.75 Learning Memory v1 accepted
+
+PR #628 merged immutable Learning Memory at `35a018d9740aaf34096f2c69fb8b8e4f2ab10795`.
+Branch research gate `35658544275`, merged-main research gate `35658649016`, Stage10 hosted regression `35658648921`, UID504 sync issue #629 / run `35658743397`, and UID504 fulltest issue #630 / run `35658804686` all passed. The UID504 fulltest emitted `FULL_TEST_PASS=YES`.
+
+Learning Memory persists favorable, unfavorable, abstention, no-evidence and not-yet-evaluable states equally, with uncertainty, redundancy/overlap relations and lineage. It is append-only evidence only: production contribution is zero and no weighting/promotion/champion/deploy authority is introduced.
+
+The canonical next frontier is `stage8.75-intelligence-center-readonly-v1`: expose accepted research/intelligence evidence through a read-only Intelligence Center / Research Lab while keeping the beginner first screen simple and preserving Stage10 behavior.
+REAL_CAPITAL=0.

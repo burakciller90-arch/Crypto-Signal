@@ -3171,3 +3171,31 @@ Current true roadmap frontier:
 - capture redundancy/overlap and before-vs-after policy/model relationships;
 - Learning Memory is evidence only and has zero production weighting/write authority;
 - no silent policy/model mutation, no auto-promotion and REAL_CAPITAL=0.
+
+
+## 2026-09-22 — Stage 8.75 Learning Memory v1 ACCEPTED
+
+- accepted main head: `35a018d9740aaf34096f2c69fb8b8e4f2ab10795`;
+- PR #628 merged immutable append-only Learning Memory evidence;
+- records retain SUCCESS / FAILURE / MIXED / ABSTENTION / NO_EVIDENCE / NOT_YET_EVALUABLE states without winner filtering;
+- evidence is keyed by method/version, asset, timeframe and regime, with explicit uncertainty evidence;
+- redundancy/overlap/complementary/contradictory relationships and before-vs-after lineage are versioned and identity-bound;
+- SQLite persistence is append-only with identity-collision protection and restart readability;
+- snapshots/summaries are deterministic and descriptive;
+- production contribution remains 0 and there is no production weighting, automatic promotion, champion-write or deploy authority;
+- branch Alpha Factory research gate PASS: run `35658544275`;
+- merged-main Alpha Factory research gate PASS: run `35658649016`;
+- merged-main Stage10 hosted full regression PASS: run `35658648921`;
+- UID504 SSD sync PASS: issue #629 / run `35658743397`;
+- UID504 fulltest PASS with `FULL_TEST_PASS=YES`: issue #630 / run `35658804686`;
+- continuity reconciliation PASS: local/shared pause preserved, active leases=0, local/relay wake queues=0;
+- REAL_CAPITAL=0.
+
+Current true roadmap frontier:
+- `stage8.75-intelligence-center-readonly-v1`;
+- expose accepted Stage 8 / Stage 8.5 / Learning Memory evidence through a read-only Intelligence Center / Research Lab;
+- preserve progressive disclosure and beginner-friendly first-screen UX;
+- every research surface must show evidence/source/freshness/missing-or-contradictory state and whether production contribution is zero or active;
+- research-only evidence must never imply production authority or calibrated probability;
+- existing accepted Stage10 product/runtime behavior must remain regression-clean;
+- REAL_CAPITAL=0.

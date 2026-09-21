@@ -208,20 +208,31 @@ write, deploy or production authority.
 
 Milestone M1 / Stage 8.5 scientific closure is **COMPLETE**.
 
+## Stage 8.75 Learning Memory — ACCEPTED
+
+Versioned append-only Learning Memory is **ACCEPTED** at
+`35a018d9740aaf34096f2c69fb8b8e4f2ab10795`.
+
+It preserves success, failure, mixed, abstention, NO_EVIDENCE and
+NOT_YET_EVALUABLE evidence equally; binds method/version, asset, timeframe,
+regime, uncertainty, redundancy/overlap relations and before-vs-after lineage;
+and persists deterministic snapshots without production weighting or promotion
+authority. Branch/merged research gates, Stage10 regression, UID504 sync and
+UID504 fulltest all passed.
+
 ## Canonical next frontier
 
-`stage8.75-learning-memory-v1`
+`stage8.75-intelligence-center-readonly-v1`
 
 Requirements:
 
-- immutable, versioned learning-memory records;
-- preserve successes, failures, abstentions and no-evidence states equally;
-- bind method/family, asset, timeframe, regime, version and uncertainty;
-- preserve redundancy/overlap relationships;
-- preserve before-vs-after model/policy lineage without silently changing either;
-- deterministic identities and reproducible summaries;
-- Learning Memory is evidence, not authority;
-- zero automatic production weighting, champion mutation or deploy authority;
+- expose accepted Stage 8 / Stage 8.5 / Learning Memory evidence read-only;
+- show what each engine says, why it matters, source/evidence identity and freshness;
+- preserve explicit missing, contradictory, abstention and not-yet-evaluable states;
+- label research-only surfaces as zero production contribution unless a separately accepted policy says otherwise;
+- no calibrated-probability claim without accepted calibration evidence;
+- preserve progressive disclosure so the beginner first screen does not become cluttered;
+- no production-weight mutation, promotion, deploy or real-capital authority;
 - REAL_CAPITAL=0.
 
 ## Safety boundary
