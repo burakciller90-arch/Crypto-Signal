@@ -52,7 +52,7 @@ jobs:
           set -euo pipefail
           cmd="$(printf '%s\n' "$ISSUE_BODY" | awk -F: 'tolower($1)=="command" {gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2); print tolower($2); exit}')"
           case "$cmd" in
-            status|repo|services|disk|hostdiag|audiorestart|audioadminrestart|loadtree|loadtree2)
+            status|repo|services|disk|externaldisk|hostdiag|audiorestart|audioadminrestart|loadtree|loadtree2)
               ;;
             *)
               echo "Unsupported command: $cmd"
@@ -117,6 +117,31 @@ jobs:
           df -h /
           echo "=== HOME SIZE ==="
           du -sh "$HOME" 2>/dev/null || true
+
+
+      - name: EXTERNAL DISK READ ONLY
+        if: steps.parse.outputs.command == 'externaldisk'
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "=== DISK4 IDENTITY ==="
+          diskutil info /dev/disk4
+          echo "=== DISK4 LAYOUT ==="
+          diskutil list /dev/disk4
+          echo "=== APFS ==="
+          diskutil apfs list
+          echo "=== EXPECTED PROJECT VOLUMES ==="
+          for v in Admin-501 Durdurulmaz-502 Quantum-503 Crypto-504 AI_PROJECTS KIOXIA; do
+            echo "--- $v"
+            if [ -e "/Volumes/$v" ]; then
+              diskutil info "/Volumes/$v" || true
+              ls -lad "/Volumes/$v" || true
+              du -sh "/Volumes/$v" 2>/dev/null || true
+            else
+              echo "NOT_MOUNTED_OR_ABSENT"
+            fi
+          done
+          echo "EXTERNAL_DISK_READ_ONLY_PASS=YES"
 
 
       - name: HOST DIAG
