@@ -11,7 +11,6 @@ from typing import Any
 
 from crypto_signal.runtime_recovery import backup_and_restore_sqlite
 
-
 DEFAULT_ROOT = Path("/Volumes/Crypto-504/Crypto-Signal")
 LEGACY_HOME = Path("/Users/crypto-signal-agent")
 
