@@ -1,0 +1,220 @@
+name: Crypto SSD Cutover Phase 1
+
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  contents: read
+  issues: read
+
+jobs:
+  migrate:
+    if: github.actor == 'burakciller90-arch' && github.event.issue.title == '[CRYPTOSSD] MIGRATE'
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 90
+    steps:
+      - name: Copy, verify, switch services, remove internal project payload
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          UID_NOW="$(id -u)"
+          test "$UID_NOW" = "504"
+
+          VOL="/Volumes/Crypto-504"
+          ROOT="$VOL/Crypto-Signal"
+          HOME_ROOT="/Users/crypto-signal-agent"
+
+          DEV_SRC="$HOME_ROOT/Crypto-Signal"
+          LIVE_SRC="$HOME_ROOT/Crypto-Signal-Live"
+          PRODUCT_SRC="$HOME_ROOT/Crypto-Signal-Product"
+          ALERTS_SRC="$HOME_ROOT/Crypto-Signal-Alerts"
+          PAPER_SRC="$HOME_ROOT/Crypto-Signal-Paper"
+          RUNNER_SRC="$HOME_ROOT/actions-runner-crypto"
+          APPSUP_SRC="$HOME_ROOT/Library/Application Support/CryptoSignal"
+
+          DEV="$ROOT/Development"
+          LIVE="$ROOT/Live"
+          PRODUCT="$ROOT/Product"
+          ALERTS="$ROOT/Alerts"
+          PAPER="$ROOT/Paper"
+          RUNNER="$ROOT/Runner"
+          APPSUP="$ROOT/ApplicationSupport/CryptoSignal"
+          RLOG="$ROOT/RunnerLogs"
+
+          echo "=== HARD GUARDS ==="
+          test -d "$VOL"
+          test ! -L "$VOL"
+          diskutil info "$VOL" | grep -q 'File System Personality:   APFS'
+          diskutil info "$VOL" | grep -q 'Owners:                    Enabled'
+          test -w "$VOL"
+          for p in "$DEV_SRC" "$LIVE_SRC" "$PRODUCT_SRC" "$ALERTS_SRC" "$PAPER_SRC" "$RUNNER_SRC"; do
+            test -d "$p"
+            test ! -L "$p"
+          done
+          test -z "$(git -C "$DEV_SRC" status --porcelain)"
+          SOURCE_HEAD="$(git -C "$DEV_SRC" rev-parse HEAD)"
+          echo "SOURCE_HEAD=$SOURCE_HEAD"
+
+          mkdir -p "$ROOT" "$DEV" "$LIVE" "$PRODUCT" "$ALERTS" "$PAPER" "$RUNNER" "$APPSUP" "$RLOG"
+          chmod 700 "$ROOT"
+
+          copy_tree() {
+            src="$1"
+            dst="$2"
+            echo "=== COPY $src -> $dst ==="
+            /usr/bin/rsync -aE --delete --exclude '.DS_Store' "$src/" "$dst/"
+          }
+
+          echo "=== INITIAL ONLINE COPY ==="
+          copy_tree "$DEV_SRC" "$DEV"
+          copy_tree "$LIVE_SRC" "$LIVE"
+          copy_tree "$PRODUCT_SRC" "$PRODUCT"
+          copy_tree "$ALERTS_SRC" "$ALERTS"
+          copy_tree "$PAPER_SRC" "$PAPER"
+          /usr/bin/rsync -aE --delete --exclude '_work' "$RUNNER_SRC/" "$RUNNER/"
+          if [ -d "$APPSUP_SRC" ]; then
+            /usr/bin/rsync -aE --delete "$APPSUP_SRC/" "$APPSUP/"
+          fi
+
+          echo "=== STOP CRYPTO SERVICES EXCEPT RUNNER ==="
+          for label in             com.cryptosignal.dashboard             com.cryptosignal.liveevidenceclock             com.cryptosignal.alertclock             com.cryptosignal.paperclock             com.cryptosignal.paperdryrun             com.cryptosignal.continuitybridge             com.cryptosignal.autowake20m; do
+            launchctl bootout "gui/$UID_NOW/$label" >/dev/null 2>&1 || true
+          done
+          sleep 3
+
+          echo "=== FINAL QUIESCED COPY ==="
+          copy_tree "$DEV_SRC" "$DEV"
+          copy_tree "$LIVE_SRC" "$LIVE"
+          copy_tree "$PRODUCT_SRC" "$PRODUCT"
+          copy_tree "$ALERTS_SRC" "$ALERTS"
+          copy_tree "$PAPER_SRC" "$PAPER"
+          if [ -d "$APPSUP_SRC" ]; then
+            /usr/bin/rsync -aE --delete "$APPSUP_SRC/" "$APPSUP/"
+          fi
+
+          echo "=== REPAIR LINKED WORKTREES ==="
+          git -C "$DEV" worktree repair "$LIVE" "$PRODUCT" "$ALERTS" "$PAPER"
+          test "$(git -C "$DEV" rev-parse HEAD)" = "$SOURCE_HEAD"
+          test -z "$(git -C "$DEV" status --porcelain)"
+          for wt in "$LIVE" "$PRODUCT" "$ALERTS" "$PAPER"; do
+            git -C "$wt" rev-parse HEAD
+            git -C "$wt" status --short --branch
+          done
+
+          echo "=== SQLITE INTEGRITY ==="
+          for db in             "$DEV/runtime/ledger/live_signal_ledger.sqlite3"             "$DEV/runtime/alerts/alert_outbox.sqlite3"             "$DEV/runtime/paper/paper_fund.sqlite3"; do
+            if [ -f "$db" ]; then
+              out="$(/usr/bin/sqlite3 "$db" 'PRAGMA integrity_check;')"
+              echo "$db => $out"
+              test "$out" = "ok"
+            fi
+          done
+
+          echo "=== TARGET RUNTIME IMPORTS ==="
+          "$PRODUCT/.venv/bin/python" -c 'import fastapi,uvicorn; print("PRODUCT_IMPORT_PASS=YES")'
+          "$LIVE/.venv/bin/python" -c 'import sqlite3; print("LIVE_PYTHON_PASS=YES")'
+          "$PAPER/.venv/bin/python" -c 'import sqlite3; print("PAPER_PYTHON_PASS=YES")'
+
+          echo "=== REWRITE CRYPTO LAUNCHAGENTS TO SSD ==="
+          ROOT="$ROOT" HOME_ROOT="$HOME_ROOT" /usr/bin/python3 - <<'PY'
+          import os
+          import plistlib
+          from pathlib import Path
+
+          home = Path(os.environ["HOME_ROOT"])
+          root = Path(os.environ["ROOT"])
+          la = home / "Library" / "LaunchAgents"
+          mapping = [
+              (str(home / "Crypto-Signal-Product"), str(root / "Product")),
+              (str(home / "Crypto-Signal-Alerts"), str(root / "Alerts")),
+              (str(home / "Crypto-Signal-Paper"), str(root / "Paper")),
+              (str(home / "Crypto-Signal-Live"), str(root / "Live")),
+              (str(home / "Crypto-Signal"), str(root / "Development")),
+              (str(home / "Library" / "Application Support" / "CryptoSignal"), str(root / "ApplicationSupport" / "CryptoSignal")),
+          ]
+          for plist_path in sorted(la.glob("com.cryptosignal*.plist")):
+              with plist_path.open("rb") as fh:
+                  data = plistlib.load(fh)
+              def rewrite(obj):
+                  if isinstance(obj, str):
+                      for old, new in mapping:
+                          obj = obj.replace(old, new)
+                      return obj
+                  if isinstance(obj, list):
+                      return [rewrite(x) for x in obj]
+                  if isinstance(obj, dict):
+                      return {k: rewrite(v) for k, v in obj.items()}
+                  return obj
+              new_data = rewrite(data)
+              backup = plist_path.with_suffix(plist_path.suffix + ".pre-ssd")
+              if not backup.exists():
+                  backup.write_bytes(plist_path.read_bytes())
+              with plist_path.open("wb") as fh:
+                  plistlib.dump(new_data, fh, fmt=plistlib.FMT_XML, sort_keys=False)
+              print(f"REWROTE={plist_path}")
+          PY
+
+          for p in "$HOME_ROOT"/Library/LaunchAgents/com.cryptosignal*.plist; do
+            [ -f "$p" ] || continue
+            plutil -lint "$p"
+            if grep -q '/Users/crypto-signal-agent/Crypto-Signal' "$p"; then
+              echo "STALE_INTERNAL_PATH=$p"
+              exit 41
+            fi
+          done
+
+          echo "=== RESTART SSD-BACKED SERVICES ==="
+          for plist in             "$HOME_ROOT/Library/LaunchAgents/com.cryptosignal.dashboard.plist"             "$HOME_ROOT/Library/LaunchAgents/com.cryptosignal.liveevidenceclock.plist"             "$HOME_ROOT/Library/LaunchAgents/com.cryptosignal.alertclock.plist"             "$HOME_ROOT/Library/LaunchAgents/com.cryptosignal.paperclock.plist"             "$HOME_ROOT/Library/LaunchAgents/com.cryptosignal.paperdryrun.plist"             "$HOME_ROOT/Library/LaunchAgents/com.cryptosignal.continuitybridge.plist"             "$HOME_ROOT/Library/LaunchAgents/com.cryptosignal.autowake20m.plist"; do
+            [ -f "$plist" ] || continue
+            launchctl bootstrap "gui/$UID_NOW" "$plist" >/dev/null 2>&1 || true
+          done
+          launchctl kickstart -k "gui/$UID_NOW/com.cryptosignal.dashboard"
+          launchctl kickstart -k "gui/$UID_NOW/com.cryptosignal.liveevidenceclock" || true
+
+          echo "=== DASHBOARD HEALTH ==="
+          ok=0
+          for i in {1..40}; do
+            if /usr/bin/curl -fsS --max-time 3 http://127.0.0.1:48700/api/health > "$ROOT/dashboard-health.json" 2>/dev/null; then
+              ok=1
+              break
+            fi
+            sleep 1
+          done
+          test "$ok" = "1"
+          cat "$ROOT/dashboard-health.json"
+          ROOT="$ROOT" /usr/bin/python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          p = Path(os.environ["ROOT"]) / "dashboard-health.json"
+          data = json.loads(p.read_text())
+          assert data["status"] == "ok"
+          assert data["real_capital"] == 0
+          assert data["read_only"] is True
+          print("DASHBOARD_SSD_HEALTH_PASS=YES")
+          PY
+
+          echo "=== ACTIVE PROCESS PATHS ==="
+          /bin/ps -axo pid=,user=,command= | grep -E '[C]rypto-Signal/(Development|Live|Product|Alerts|Paper)' || true
+
+          echo "=== DELETE INTERNAL PROJECT PAYLOAD ==="
+          rm -rf "$DEV_SRC" "$LIVE_SRC" "$PRODUCT_SRC" "$ALERTS_SRC" "$PAPER_SRC"
+          if [ -d "$APPSUP_SRC" ]; then
+            rm -rf "$APPSUP_SRC"
+          fi
+
+          for p in "$DEV_SRC" "$LIVE_SRC" "$PRODUCT_SRC" "$ALERTS_SRC" "$PAPER_SRC"; do
+            test ! -e "$p"
+          done
+          test -d "$DEV"
+          test -d "$LIVE"
+          test -d "$PRODUCT"
+          test -d "$ALERTS"
+          test -d "$PAPER"
+
+          echo "=== INTERNAL DISK AFTER PAYLOAD REMOVAL ==="
+          df -h /
+          echo "=== SSD USAGE ==="
+          du -sh "$ROOT"
+          echo "CRYPTO_SSD_PHASE1_PASS=YES"
