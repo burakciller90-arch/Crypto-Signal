@@ -5,6 +5,11 @@ BASE="/Volumes/Crypto-504/Crypto-Signal/Development"
 STATE="$BASE/runtime/continuity"
 WAKE="$STATE/wake"
 TARGET="$WAKE/current_chat_url"
+EXPECTED="$WAKE/expected_chat_url"
+SHARED="/Users/Shared/.crypto-signal-wake-relay"
+SHARED_TARGET="$SHARED/current_chat_url"
+SHARED_EXPECTED="$SHARED/expected_chat_url"
+SHARED_NAMESPACE="$SHARED/project_namespace"
 BRIDGE="$BASE/ops/continuity/bridge_watchdog.py"
 PIDFILE="$STATE/bridge.pid"
 
@@ -48,9 +53,23 @@ case "$URL" in
     ;;
 esac
 
-printf '%s\n' "$URL" > "$TARGET"
-chmod 600 "$TARGET"
-echo "Bound exact chat URL."
+mkdir -p "$SHARED"
+write_atomic() {
+  destination="$1"
+  mode="$2"
+  value="$3"
+  tmp="$destination.$"
+  printf '%s\n' "$value" > "$tmp"
+  chmod "$mode" "$tmp"
+  mv "$tmp" "$destination"
+}
+
+write_atomic "$TARGET" 600 "$URL"
+write_atomic "$EXPECTED" 600 "$URL"
+write_atomic "$SHARED_TARGET" 660 "$URL"
+write_atomic "$SHARED_EXPECTED" 660 "$URL"
+write_atomic "$SHARED_NAMESPACE" 660 "crypto-signal"
+echo "Bound exact chat URL to local/shared current+expected state."
 JS_RESULT=$(/usr/bin/osascript - "$URL" <<'APPLESCRIPT'
 on run argv
   set targetUrl to item 1 of argv
