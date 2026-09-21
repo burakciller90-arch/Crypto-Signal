@@ -172,7 +172,10 @@ def _verify_health(payload: dict[str, Any]) -> None:
 
 def _verify_paper_mission(payload: dict[str, Any]) -> None:
     if payload.get("status") != "ready":
-        raise RuntimeError("paper Mission Control is not ready")
+        raise RuntimeError(
+            "paper Mission Control is not ready: "
+            f"status={payload.get('status')!r} reason={payload.get('reason')!r}"
+        )
     if payload.get("read_only") is not True:
         raise RuntimeError("paper Mission Control is not read-only")
     if payload.get("real_capital") != 0:
