@@ -52,7 +52,7 @@ jobs:
           set -euo pipefail
           cmd="$(printf '%s\n' "$ISSUE_BODY" | awk -F: 'tolower($1)=="command" {gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2); print tolower($2); exit}')"
           case "$cmd" in
-            status|repo|services|disk|externaldisk|hostdiag|audiorestart|audioadminrestart|loadtree|loadtree2|bginventory|bgsafecheck|cryptomigrationdiag|cryptomigrationdiag2)
+            status|repo|services|disk|externaldisk|hostdiag|audiorestart|audioadminrestart|loadtree|loadtree2|bginventory|bgsafecheck|cryptomigrationdiag|cryptomigrationdiag2|cryptodashboarddiag)
               ;;
             *)
               echo "Unsupported command: $cmd"
@@ -145,6 +145,29 @@ jobs:
 
 
 
+
+
+      - name: CRYPTO DASHBOARD SSD DIAG
+        if: steps.parse.outputs.command == 'cryptodashboarddiag'
+        shell: bash
+        run: |
+          set +e
+          echo "=== DASHBOARD LAUNCHD ==="
+          /bin/launchctl print gui/504/com.cryptosignal.dashboard 2>&1 | /usr/bin/head -220
+          echo "=== DASHBOARD PLIST ==="
+          /usr/bin/plutil -p /Users/crypto-signal-agent/Library/LaunchAgents/com.cryptosignal.dashboard.plist 2>&1
+          echo "=== SSD DASHBOARD ERR ==="
+          /usr/bin/tail -160 /Volumes/Crypto-504/Crypto-Signal/Development/runtime/dashboard/dashboard.err.log 2>&1
+          echo "=== SSD DASHBOARD OUT ==="
+          /usr/bin/tail -160 /Volumes/Crypto-504/Crypto-Signal/Development/runtime/dashboard/dashboard.out.log 2>&1
+          echo "=== SSD PRODUCT PATHS ==="
+          /bin/ls -l /Volumes/Crypto-504/Crypto-Signal/Product/.venv/bin/python
+          /bin/ls -l /Volumes/Crypto-504/Crypto-Signal/Product/ops/run_dashboard.py
+          echo "=== DIRECT IMPORT / HELP ==="
+          /Volumes/Crypto-504/Crypto-Signal/Product/.venv/bin/python -c 'import sys,fastapi,uvicorn; print(sys.executable); print("IMPORT_OK")' 2>&1
+          PYTHONPATH=/Volumes/Crypto-504/Crypto-Signal/Product/src /Volumes/Crypto-504/Crypto-Signal/Product/.venv/bin/python /Volumes/Crypto-504/Crypto-Signal/Product/ops/run_dashboard.py --help 2>&1 | /usr/bin/head -100
+          echo "CRYPTO_DASHBOARD_DIAG_PASS=YES"
+          exit 0
 
       - name: CRYPTO MIGRATION DIAG 2
         if: steps.parse.outputs.command == 'cryptomigrationdiag2'
