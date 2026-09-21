@@ -1,0 +1,40 @@
+name: Crypto UID501 Runner Identity Probe
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/crypto-uid501-runner-identity-probe.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: [self-hosted, crypto-signal, uid501]
+    timeout-minutes: 5
+    steps:
+      - name: Resolve crypto UID501 runner identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(id -u)" = "501"
+          echo "=== RUNNER ENV ==="
+          echo "RUNNER_NAME=${RUNNER_NAME:-}"
+          echo "HOME=$HOME"
+          echo "=== PROCESSES ==="
+          /bin/ps -axo uid=,pid=,ppid=,lstart=,etime=,command= | /usr/bin/grep 'actions-runner-crypto-signal-501' | /usr/bin/grep -v grep || true
+          echo "=== MATCHING LAUNCHAGENT ==="
+          MATCHES=0
+          for p in "$HOME"/Library/LaunchAgents/*.plist; do
+            [ -f "$p" ] || continue
+            if /usr/bin/grep -q '/Users/burakciller/actions-runner-crypto-signal-501/runsvc.sh' "$p" 2>/dev/null; then
+              MATCHES=$((MATCHES+1))
+              echo "PLIST=$p"
+              echo "LABEL=$(/usr/libexec/PlistBuddy -c 'Print :Label' "$p")"
+              echo "PROGRAM=$(/usr/libexec/PlistBuddy -c 'Print :ProgramArguments:0' "$p" 2>/dev/null || true)"
+            fi
+          done
+          echo "MATCHES=$MATCHES"
+          test "$MATCHES" = "1"
+          echo "CRYPTO_UID501_RUNNER_IDENTITY_PASS=YES"
