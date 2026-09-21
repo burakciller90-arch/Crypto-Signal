@@ -268,17 +268,16 @@ class MetaContribution:
                 raise ValueError(f"{label} cannot be negative")
         if abs(self.signed_contribution) > self.effective_weight:
             raise ValueError("meta signed contribution exceeds effective weight")
-        if self.state is not MetaEvidenceState.OBSERVED:
-            if any(
-                value != Decimal(0)
-                for value in (
-                    self.base_weight,
-                    self.group_adjusted_weight,
-                    self.effective_weight,
-                    self.signed_contribution,
-                )
-            ):
-                raise ValueError("non-observed evidence cannot contribute")
+        if self.state is not MetaEvidenceState.OBSERVED and any(
+            value != Decimal(0)
+            for value in (
+                self.base_weight,
+                self.group_adjusted_weight,
+                self.effective_weight,
+                self.signed_contribution,
+            )
+        ):
+            raise ValueError("non-observed evidence cannot contribute")
         if self.direction is MetaDirection.NEUTRAL and self.signed_contribution != 0:
             raise ValueError("neutral evidence cannot have signed contribution")
 
