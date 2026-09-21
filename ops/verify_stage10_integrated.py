@@ -6,6 +6,7 @@ import sqlite3
 import time
 import urllib.request
 from dataclasses import dataclass
+from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
@@ -165,6 +166,35 @@ def _verify_paper_mission(payload: dict[str, Any]) -> None:
     )
     if comparison_kinds != EXPECTED_BENCHMARKS:
         raise RuntimeError("benchmark comparison coverage mismatch")
+
+    performance = snapshot.get("performance")
+    if not isinstance(performance, dict):
+        raise TypeError("paper performance snapshot missing")
+    window = performance.get("window")
+    if not isinstance(window, dict):
+        raise TypeError("paper performance window missing")
+    if window.get("measurement_start_at_ms") != snapshot.get("activation_cutoff_ms"):
+        raise RuntimeError("performance window does not start at activation cutoff")
+    if window.get("observed_at_ms") != snapshot.get("observed_at_ms"):
+        raise RuntimeError("performance window observation mismatch")
+    turnover = Decimal(str(window.get("turnover_fraction")))
+    if turnover < Decimal(0):
+        raise RuntimeError("performance turnover cannot be negative")
+    duration_ms = int(window.get("duration_ms"))
+    cash_fraction_raw = window.get("cash_time_fraction")
+    invested_fraction_raw = window.get("invested_time_fraction")
+    if duration_ms > 0:
+        cash_fraction = Decimal(str(cash_fraction_raw))
+        invested_fraction = Decimal(str(invested_fraction_raw))
+        if not (Decimal(0) <= cash_fraction <= Decimal(1)):
+            raise RuntimeError("cash-time fraction outside [0,1]")
+        if cash_fraction + invested_fraction != Decimal(1):
+            raise RuntimeError("cash/invested time fractions do not reconcile")
+    if performance.get("status") == "not_yet_measured":
+        if performance.get("expectancy_usdt_per_closed_trade") is not None:
+            raise RuntimeError("unmeasured performance fabricated expectancy")
+        if performance.get("expectancy_return_fraction_per_closed_trade") is not None:
+            raise RuntimeError("unmeasured performance fabricated return expectancy")
 
 
 def _verify_paper_counts(counts: PaperCounts) -> None:
