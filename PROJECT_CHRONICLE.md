@@ -2366,3 +2366,19 @@ Subsequent continuity/wake hardening changed only operations infrastructure. To 
 Production isolation remains explicit: no stable confluence, signal, paper, product or execution path imports the engine. No credentials or order authority were added. PAPER/STABLE write activation remains closed and `REAL_CAPITAL=0`.
 
 The next and final bounded Stage 8 engine frontier is `stage8-cross-market-context-v1`. As with derivatives, microstructure, on-chain and sentiment, implementation must begin with a source-quality/PIT contract rather than with invented or backfilled context.
+
+## 2026-09-21 — ninth and final bounded Stage 8 engine accepted: cross-market context v1
+
+Cross-market context began with a real source-quality gate rather than inferred macro values. Official Cboe VIX daily close history and the U.S. Treasury Daily Treasury Par Yield Curve XML were accepted as the new macro sources, while the crypto leg deliberately reused the already accepted Bybit BTCUSDT Spot 1D closed-candle contract. The source-quality gate passed in run `35579698371`. Hosted GitHub egress could not reliably reach Bybit during that source probe, so the implementation did not invent a substitute exchange or reinterpret the network policy failure as data-quality evidence.
+
+The normalized macro observations use explicit `ingestion_time_snapshot` semantics. A historical VIX or Treasury row fetched today is therefore not treated as if Crypto Signal had possessed it earlier. The bounded engine aligns only common macro sessions with PIT-safe closed BTC candles and fails closed when observations are stale, source windows lag excessively, common sessions are insufficient or BTC/macro alignment is incomplete.
+
+The engine reports descriptive context only: BTC direction, VIX direction, Treasury 10Y direction and bounded BTC/VIX relief/stress/same-direction/mixed states. It makes no causal claim and emits no calibrated probability. Freeze identities bind the consumed macro observations and BTC candles, and isolation tests prove zero contribution to current stable confluence, product or paper execution paths.
+
+The implementation needed several non-semantic fixture/style/typing corrections during hosted gating. The final full branch gate `35580732320` passed Ruff, mypy across 126 source files, product freshness and the full Stage 10 hosted gate. Temporary source-quality and branch-only gate triggers were removed before PR. PR #444 then merged as `e97bd99a1384880c901b658ddfb1b7dd910ccd40`; merged-main hosted run `35583716762` passed.
+
+Canonical Mac acceptance then passed through UID504 sync issue #445 / run `35583816056` and fulltest issue #446 / run `35583852382`. Final canonical evidence includes Ruff PASS, mypy PASS across 125 source files, `PRODUCT_FRESHNESS_CONTRACT_PASS=YES` and `FULL_TEST_PASS=YES`.
+
+This closes the complete bounded Stage 8 engine sequence. No engine has been granted production weighting merely because it exists. PAPER/STABLE write activation remains closed and `REAL_CAPITAL=0`.
+
+The next frontier is Stage 8.5 Alpha Factory. The first slice is a research foundation, not strategy promotion: isolated experiment/challenger identity, dataset partition identity, leakage-audit state, reproducibility and explicit non-deployment authority must exist before candidate-generation machinery is allowed to matter.

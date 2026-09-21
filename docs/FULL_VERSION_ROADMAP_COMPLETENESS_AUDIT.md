@@ -13,8 +13,8 @@ The runtime-accepted Stage 10 code is tagged
 `stage10-accepted-20260921` and resolves to commit
 `8ca23e612ba36b4ebcb0c3cb41a166d78add5cff`.
 
-The remaining material roadmap gap is the final bounded Stage 8 cross-market
-context engine, followed by Stage 8.5 Alpha Factory and Stage 8.75 Learning Memory. The governing architecture remains
+The bounded Stage 8 engine sequence is complete. The remaining material roadmap
+gaps are Stage 8.5 Alpha Factory and Stage 8.75 Learning Memory. The governing architecture remains
 `docs/INTELLIGENCE_ALPHA_FACTORY_ARCHITECTURE.md`; accepted Stage 8 engines stay
 observation-only until a separately accepted integration/meta policy exists.
 
@@ -56,7 +56,7 @@ one at a time behind isolated gates:
 6. order-flow/microstructure if data quality supports it — **ACCEPTED** at `f0b27d41980714ffc42fe394ed3a3485acc6d5fe`,
 7. on-chain/network — **ACCEPTED** at `589dd427c4f75641c1598e02afc103b238f74cd9`,
 8. bounded sentiment/attention — **ACCEPTED** at `4c3357aeab24f8ce18bb87bf5ea8e91276b43a0f`,
-9. cross-market context — **NEXT FRONTIER / SOURCE-QUALITY GATE**.
+9. cross-market context — **ACCEPTED** at `e97bd99a1384880c901b658ddfb1b7dd910ccd40`.
 
 Every engine must have:
 
@@ -67,9 +67,9 @@ Every engine must have:
 - contribution/ablation evidence,
 - explicit uncertainty.
 
-The audit is updated incrementally as each isolated engine passes its own gates.
-Unaccepted later engines remain **NOT YET ACCEPTED**, not silently inferred from
-Stage 10 or from neighboring Stage 8 engines.
+The bounded Stage 8 engine sequence is now complete. Acceptance of these isolated
+engines does not imply production weighting; integration/meta policy remains a
+separate future authority boundary.
 
 ## Remaining Stage 8.5 — Alpha Factory
 
@@ -111,15 +111,24 @@ only through a separately tested policy.
 
 The next bounded roadmap slice is:
 
-`stage8-cross-market-context-v1`
+`stage8.5-alpha-factory-research-foundation-v1`
 
-Regime labeling, trend/momentum, mean reversion, breakout/volatility, bounded derivatives context, order-flow/microstructure, on-chain/network and bounded sentiment/attention are accepted.
+All nine bounded Stage 8 engines are accepted. Stage 8.5 must now establish an isolated research environment before it generates or evaluates challengers.
 
-Cross-market context must begin with a source-quality gate. The slice may use only real public/reproducible market evidence with defensible symbol identity, event/source timing and point-in-time or explicit ingestion-time availability. Backfilled values must not be silently treated as historically available.
+The first Alpha Factory slice must define:
 
-The engine must remain bounded and observation-only. It should describe contemporaneous context and divergence/co-movement evidence rather than claim causal relationships or calibrated trade probabilities. Missing markets, closed sessions, stale observations and incomplete alignment must remain explicit uncertainty.
+- immutable experiment/challenger identity,
+- immutable dataset/partition identity,
+- explicit train / validation / out-of-sample / untouched-forward partition roles,
+- leakage-audit status and reproducibility metadata,
+- transaction-cost/slippage stress inputs as explicit evaluation context,
+- a promotion state that cannot advance itself,
+- an explicit supervisor-acceptance boundary,
+- hard isolation from production/paper champion writes.
 
-If trustworthy source contracts cannot be supported for a proposed market, that component must be deferred rather than fabricated. Production weighting still requires a separately accepted integration/meta policy.
+Candidate generation should begin with deterministic symbolic-rule research after the foundation is accepted. Tree models, clustering, evolutionary search and later bounded ML/RL remain later research capabilities and must not be introduced by skipping the foundation.
+
+No single backtest, score or experiment may promote a challenger. `REAL_CAPITAL=0`.
 
 ## Safety boundary
 

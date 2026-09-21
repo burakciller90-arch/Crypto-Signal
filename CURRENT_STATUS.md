@@ -2413,3 +2413,50 @@ Current true roadmap frontier:
 - define explicit event/source/ingestion timing and historical availability;
 - do not infer cross-market context from unavailable or backfilled data;
 - remain observation-only until a separately accepted integration/meta policy exists.
+
+## 2026-09-21 — Stage 8 cross-market context v1 ACCEPTED
+
+- accepted main head: `e97bd99a1384880c901b658ddfb1b7dd910ccd40`
+- PR #444 merged the ninth and final bounded Stage 8 intelligence engine.
+- source-quality gate PASS: run `35579698371`.
+- accepted source contracts:
+  - official Cboe VIX daily close history via public GET
+  - official U.S. Treasury Daily Treasury Par Yield Curve XML, bounded to 10Y
+  - already accepted Bybit BTCUSDT Spot 1D closed-candle contract for the crypto leg
+- macro source rows use explicit `ingestion_time_snapshot` availability semantics.
+- hosted Bybit egress restrictions were not reinterpreted as source failure and no substitute endpoint was fabricated.
+- accepted engine scope:
+  - BTC rising / falling / stable context
+  - VIX rising / falling / stable context
+  - U.S. Treasury 10Y rising / falling / stable context
+  - BTC/VIX relief alignment, stress alignment, same-direction, mixed or unresolved labels
+  - explicit stale macro source, stale observation, insufficient common-session and incomplete BTC/macro alignment uncertainty
+  - deterministic analysis/freeze identity
+  - future or late-ingested evidence cannot alter historical freezes
+  - observation-only / zero-production-contribution isolation
+- final hosted branch full gate PASS: run `35580732320`:
+  - Ruff PASS
+  - mypy PASS across 126 source files
+  - PRODUCT_FRESHNESS_CONTRACT_PASS=YES
+  - STAGE10_HOSTED_FULL_GATE_PASS=YES
+- merged-main hosted gate PASS: run `35583716762`.
+- UID504 canonical sync PASS: issue #445 / run `35583816056`.
+- UID504 canonical fulltest PASS: issue #446 / run `35583852382`:
+  - Ruff PASS
+  - mypy PASS across 125 source files
+  - PRODUCT_FRESHNESS_CONTRACT_PASS=YES
+  - FULL_TEST_PASS=YES
+- no PRODUCT deploy required because the engine is observation-only.
+- no production weighting change.
+- PAPER/STABLE write activation remains closed.
+- REAL_CAPITAL=0.
+
+Stage 8 bounded engine sequence is now complete.
+
+Current true roadmap frontier:
+- `stage8.5-alpha-factory-research-foundation-v1`;
+- begin with repository/evaluation-infrastructure inventory and an isolated research contract;
+- define immutable experiment/challenger identity, dataset partition identity and leakage-audit state before any search engine is allowed to generate candidates;
+- challengers cannot write production/paper champion state or self-promote;
+- deterministic/reproducible symbolic-rule research comes before tree/ML/RL search;
+- REAL_CAPITAL=0.
