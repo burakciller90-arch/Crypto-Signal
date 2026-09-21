@@ -2264,3 +2264,57 @@ Current true roadmap frontier:
 - if the source/data-quality gate fails, record explicit deferral rather than fabricating order-flow from candles;
 - keep all Stage 8 engines observation-only until a separately accepted versioned weighting/meta policy exists.
 
+## 2026-09-21 — Stage 8 order-flow / microstructure v1 ACCEPTED
+
+- accepted main head: `f0b27d41980714ffc42fe394ed3a3485acc6d5fe`
+- PR #415 merged the sixth bounded Stage 8 intelligence engine.
+- source/data-quality gate passed with real public Bybit Spot market data:
+  - REST orderbook snapshot with matching-engine event time, source timestamp, response time, update ID and cross sequence
+  - REST recent public trades with exec ID, taker side, price, size, trade time and cross sequence
+  - explicit RPI/block-trade flags
+  - public GET surfaces only; no auth header, credential or order path
+- accepted normalized evidence scope:
+  - immutable orderbook snapshot identity
+  - immutable public trade identity
+  - strict bid/ask ordering and non-crossed-book validation
+  - explicit event/source/response/ingestion timing
+  - RPI/block trades excluded from book-flow inference rather than silently mixed
+- accepted engine scope:
+  - bounded bid-vs-ask depth notional imbalance
+  - bounded taker buy-vs-sell notional imbalance
+  - explicit spread-bps evidence
+  - buy-pressure / sell-pressure / balanced / mixed / unresolved labels
+  - stale-book / stale-trade / insufficient-depth / insufficient-trade uncertainty
+  - PIT-safe exclusion of future and late-ingested evidence
+  - immutable analysis/freeze identity
+  - observation-only / zero-production-contribution isolation
+- first hosted gate: pytest 100%, then Ruff-only test-style failure.
+- second hosted gate: pytest + Ruff PASS, then mypy-only context-union typing failure.
+- both non-semantic issues were corrected without changing engine behavior.
+- final hosted branch full repository gate PASS.
+- hosted merged-main gate PASS:
+  - pytest 100%
+  - Ruff PASS
+  - mypy PASS across 115 source files
+  - PRODUCT_FRESHNESS_CONTRACT_PASS=YES
+  - STAGE10_HOSTED_FULL_GATE_PASS=YES
+- UID504 canonical sync PASS.
+- UID504 canonical fulltest PASS:
+  - pytest 100%
+  - Ruff PASS
+  - mypy PASS across 114 source files
+  - PRODUCT_FRESHNESS_CONTRACT_PASS=YES
+  - FULL_TEST_PASS=YES
+- no PRODUCT deploy required because the engine is observation-only.
+- no production weighting change.
+- Alpha Factory / Learning Memory remain closed.
+- PAPER/STABLE write activation remains closed.
+- REAL_CAPITAL=0.
+
+Current true roadmap frontier:
+- `stage8-onchain-network-v1` source-quality gate first;
+- use only a real public network/on-chain source with immutable event/timing evidence;
+- do not relabel exchange candles/derivatives as on-chain evidence;
+- if source quality is insufficient, explicitly defer rather than fabricate;
+- keep all Stage 8 engines observation-only until a separately accepted versioned weighting/meta policy exists.
+
