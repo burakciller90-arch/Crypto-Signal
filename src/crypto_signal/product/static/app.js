@@ -75,6 +75,26 @@ const LABELS = {
   win: "Kazanç",
   loss: "Kayıp",
   breakeven: "Başa Baş",
+  accepted_research_only: "Accepted · araştırma",
+  accepted_contract: "Accepted sözleşme",
+  not_exposed_as_live_feed: "Canlı feed olarak bağlı değil",
+  accepted_contract_not_live: "Accepted contract · canlı değil",
+  research_zero_contribution: "Araştırma · üretim katkısı 0",
+  not_configured: "Bağlı değil",
+  invalid_evidence: "Kanıt geçersiz",
+  historical_evidence: "Tarihsel kanıt",
+  clock_or_synthetic_evidence: "Saat / sentetik bağlam",
+  no_records: "Kayıt yok",
+  evidence_limited: "Kanıt sınırlı",
+  conflicting_evidence: "Çelişkili kanıt",
+  stable_under_accepted_tests: "Accepted testlerde stabil",
+  not_assessed: "Henüz değerlendirilmedi",
+  mixed: "Karışık",
+  abstention: "Abstention",
+  no_evidence: "Kanıt yok",
+  not_yet_evaluable: "Henüz değerlendirilemez",
+  success: "Başarı",
+  failure: "Başarısızlık",
 };
 
 function fmtTime(ms) {
@@ -1671,6 +1691,154 @@ function showError(error) {
   $("#healthChip").textContent = "Okuma hatası";
 }
 
+function intelligenceGroupLabel(group) {
+  if (group === "market_intelligence") return "Piyasa İstihbarat Motorları";
+  if (group === "alpha_factory") return "Alpha Factory / Bilimsel Gate'ler";
+  if (group === "learning_memory") return "Learning Memory";
+  return human(group);
+}
+
+function renderLearningMemory(memory) {
+  if (!memory || memory.status !== "ready") {
+    return `
+      <div class="intelligence-memory-empty">
+        <strong>Learning Memory runtime kanıtı ${esc(human(memory?.status ?? "not_configured"))}.</strong>
+        <span>${esc(human(memory?.reason ?? "learning_memory_path_not_configured"))}. Accepted araştırma kataloğu görünür; eksik runtime kanıtından sonuç uydurulmaz.</span>
+      </div>`;
+  }
+
+  const records = memory.recent_records ?? [];
+  const outcomes = renderMix(memory.outcome_counts ?? []);
+  const uncertainty = renderMix(memory.uncertainty_counts ?? []);
+  return `
+    <div class="intelligence-memory-head">
+      <div>
+        <div class="value-label">Learning Memory · append-only evidence</div>
+        <strong>${esc(memory.record_count ?? 0)} kayıt · ${esc(memory.relation_count ?? 0)} ilişki · ${esc(memory.lineage_count ?? 0)} lineage</strong>
+      </div>
+      <span class="panel-tag">production contribution = 0</span>
+    </div>
+    <div class="intelligence-memory-metrics">
+      <div><span>Son kanıt</span><strong>${esc(fmtTime(memory.latest_observed_to_ms))}</strong><small>${esc(memory.latest_age_ms === null ? human(memory.freshness_status) : fmtAgeMs(memory.latest_age_ms))}</small></div>
+      <div><span>Outcome dağılımı</span><strong>${esc(outcomes)}</strong><small>başarı ve başarısızlık eşit saklanır</small></div>
+      <div><span>Belirsizlik</span><strong>${esc(uncertainty)}</strong><small>olasılık etiketi değildir</small></div>
+      <div><span>Yetki</span><strong>Salt okunur</strong><small>winner=false · weight change=false</small></div>
+    </div>
+    <div class="intelligence-memory-records">
+      ${records.length ? records.map((record) => `
+        <details class="memory-record">
+          <summary>
+            <span><strong>${esc(record.method_id)}</strong> · ${esc(record.asset)} · ${esc(record.timeframe)}</span>
+            <span class="state-pill state-neutral">${esc(human(record.outcome_state))}</span>
+          </summary>
+          <div class="memory-record-body">
+            <span>Versiyon: <strong>${esc(record.method_version)}</strong></span>
+            <span>Rejim: <strong>${esc(record.regime)}</strong></span>
+            <span>Belirsizlik: <strong>${esc(human(record.uncertainty_state))}</strong></span>
+            <span>Gözlem: <strong>${esc(fmtTime(record.observed_from_ms))} → ${esc(fmtTime(record.observed_to_ms))}</strong></span>
+            <span>Net R: <strong>${esc(record.net_r_total ?? "ölçülmedi")}</strong></span>
+            <span>Production contribution: <strong>0</strong></span>
+            <span class="mono">Evidence: ${esc((record.evidence_identities ?? []).join(" · "))}</span>
+          </div>
+        </details>
+      `).join("") : '<div class="truth-note">Learning Memory bağlı ancak henüz kayıt yok.</div>'}
+    </div>`;
+}
+
+function renderIntelligenceCenter(data) {
+  const root = $("#intelligenceCenter");
+  const summary = $("#intelligenceSummary");
+  const tag = $("#intelligenceCount");
+  if (!root || !summary || !tag) return;
+
+  if (data?.status !== "ready") {
+    tag.textContent = "KANIT YOK";
+    summary.classList.remove("loading-block");
+    root.classList.remove("loading-block");
+    summary.innerHTML = '<div class="performance-empty">İstihbarat kataloğu okunamadı.</div>';
+    root.innerHTML = '<div class="performance-empty">Eksik veriden araştırma sonucu türetilmez.</div>';
+    return;
+  }
+
+  const engines = data.engines ?? [];
+  const memory = data.learning_memory ?? {};
+  tag.textContent = `${engines.length} accepted yüzey`;
+  summary.classList.remove("loading-block");
+  root.classList.remove("loading-block");
+  summary.innerHTML = `
+    <article class="intelligence-summary-card intelligence-summary-primary">
+      <span>Accepted research yüzeyi</span>
+      <strong>${esc(data.accepted_engine_count ?? engines.length)}</strong>
+      <small>Stage 8 / 8.5 + Learning Memory</small>
+    </article>
+    <article class="intelligence-summary-card">
+      <span>Üretimde aktif research katkısı</span>
+      <strong>${esc(data.production_active_engine_count ?? 0)}</strong>
+      <small>accepted research ≠ production authority</small>
+    </article>
+    <article class="intelligence-summary-card">
+      <span>Learning Memory</span>
+      <strong>${esc(human(memory.status))}</strong>
+      <small>${esc(memory.record_count ?? 0)} immutable kayıt</small>
+    </article>
+    <article class="intelligence-summary-card">
+      <span>Olasılık politikası</span>
+      <strong>${esc(human(data.probability_status))}</strong>
+      <small>uyum / frekans ≠ kalibre olasılık</small>
+    </article>`;
+
+  const order = ["market_intelligence", "alpha_factory", "learning_memory"];
+  const groups = order.map((group) => ({
+    group,
+    items: engines.filter((item) => item.group === group),
+  })).filter((entry) => entry.items.length);
+
+  root.innerHTML = `
+    <div class="intelligence-truth-bar">
+      <span><strong>READ-ONLY</strong> · research evidence</span>
+      <span>Production contribution: <strong>0</strong></span>
+      <span>REAL_CAPITAL: <strong>${esc(data.real_capital)}</strong></span>
+      <span>Probability: <strong>${esc(human(data.probability_status))}</strong></span>
+    </div>
+    ${groups.map(({group, items}) => `
+      <div class="intelligence-group">
+        <div class="intelligence-group-head">
+          <div><div class="value-label">${esc(intelligenceGroupLabel(group))}</div><strong>${esc(items.length)} accepted yüzey</strong></div>
+          <span class="panel-tag">araştırma · üretim 0</span>
+        </div>
+        <div class="intelligence-card-grid">
+          ${items.map((item) => `
+            <details class="intelligence-card">
+              <summary>
+                <div>
+                  <strong>${esc(item.title_tr)}</strong>
+                  <span>${esc(item.engine_version)}</span>
+                </div>
+                <span class="state-pill state-neutral">${esc(human(item.acceptance_status))}</span>
+              </summary>
+              <div class="intelligence-card-body">
+                <div><span>Ne diyor?</span><p>${esc(item.what_it_says_tr)}</p></div>
+                <div><span>Neden önemli?</span><p>${esc(item.why_it_matters_tr)}</p></div>
+                <div class="intelligence-facts">
+                  <span>Evidence: <strong>${esc(human(item.evidence_state))}</strong></span>
+                  <span>Runtime: <strong>${esc(human(item.runtime_evidence_status))}</strong></span>
+                  <span>Freshness: <strong>${esc(human(item.freshness_status))}</strong></span>
+                  <span>Production contribution: <strong>${esc(item.production_contribution)}</strong></span>
+                  <span>Production authority: <strong>${esc(item.production_authority)}</strong></span>
+                  <span>Probability: <strong>${esc(human(item.probability_status))}</strong></span>
+                </div>
+                <div class="mono intelligence-source">${esc(item.source_module)}</div>
+              </div>
+            </details>
+          `).join("")}
+        </div>
+      </div>
+    `).join("")}
+    <div class="intelligence-memory-block">
+      ${renderLearningMemory(memory)}
+    </div>`;
+}
+
 function renderEducation(data) {
   educationData = data;
   const root = $("#educationCenter");
@@ -1709,7 +1877,7 @@ function renderEducation(data) {
 
 async function loadAll() {
   clearNotice();
-  const [health, command, radar, navigation, archive, performance, alerts, education, paperMission] = await Promise.all([
+  const [health, command, radar, navigation, archive, performance, alerts, education, paperMission, intelligence] = await Promise.all([
     fetchJSON("/api/health"),
     fetchJSON("/api/command-center?recent_limit=8"),
     fetchJSON("/api/market-radar"),
@@ -1726,6 +1894,13 @@ async function loadAll() {
       real_capital: 0,
       read_only: true,
     })),
+    fetchJSON("/api/intelligence-center").catch((error) => ({
+      status: "unavailable",
+      reason: "intelligence_center_read_error",
+      detail: error.message,
+      real_capital: 0,
+      read_only: true,
+    })),
   ]);
 
   $("#healthChip").textContent = health.ledger_present ? "Kanıt deposu bağlı" : "Kanıt deposu yok";
@@ -1737,6 +1912,7 @@ async function loadAll() {
   renderArchive(archive);
   renderPerformance(performance);
   renderAlertCenter(alerts);
+  renderIntelligenceCenter(intelligence);
   renderEducation(education);
   configureNavigation(navigation);
   await loadSelectedAsset();
