@@ -2366,3 +2366,50 @@ Current true roadmap frontier:
 - do not adopt a Fear & Greed/social score merely because it exists;
 - if source semantics cannot be proven, explicitly defer rather than fabricate;
 - keep all Stage 8 engines observation-only until a separately accepted versioned weighting/meta policy exists.
+
+## 2026-09-21 — Stage 8 bounded sentiment / attention v1 ACCEPTED
+
+- engine merge head: `4c3357aeab24f8ce18bb87bf5ea8e91276b43a0f`
+- PR #421 merged the eighth bounded Stage 8 intelligence engine.
+- source-quality gate passed before implementation:
+  - Alternative.me public Bitcoin Fear & Greed latest snapshot
+  - Wikimedia public Bitcoin per-article daily pageviews
+  - real-endpoint hosted source-quality run `35574804783`
+- accepted source semantics:
+  - Alternative.me value/classification preserved as provider-supplied heuristic sentiment context, not a calibrated probability or independent market truth
+  - Wikimedia daily Bitcoin pageviews treated as bounded attention counts, not price direction
+  - both normalized with explicit `ingestion_time_snapshot` availability semantics
+  - historical provider rows are not backdated into earlier decision times
+  - public GET only; no credentials, auth headers, POST/order surface or exchange authority
+- accepted engine scope:
+  - provider sentiment state: extreme fear / fear / neutral / greed / extreme greed
+  - attention state: elevated / normal / subdued
+  - bounded fear / greed / neutral context labels
+  - explicit unavailable / stale / insufficient-history / zero-baseline uncertainty
+  - deterministic analysis and freeze identities
+  - future or late-ingested evidence cannot alter historical freezes
+  - observation-only / zero-production-contribution isolation
+- first hosted full gate passed pytest and stopped only on four Ruff style findings.
+- second hosted full gate passed pytest/Ruff and stopped only on mypy loop-variable narrowing.
+- all corrections were non-semantic.
+- final hosted branch full gate PASS: run `35575667035`.
+- merged-main hosted gate PASS: run `35575834639`.
+- later continuity infrastructure changes did not alter the engine.
+- latest canonical UID504 sync PASS: issue #429 / run `35578741988`.
+- latest canonical UID504 fulltest PASS: issue #430 / run `35578777010` on `a64a1ec29a62d0994185bb0d568e2042b4ccaf41`:
+  - Ruff PASS
+  - mypy PASS across 121 source files
+  - PRODUCT_FRESHNESS_CONTRACT_PASS=YES
+  - FULL_TEST_PASS=YES
+- no PRODUCT deploy required because the engine is observation-only.
+- no production weighting change.
+- Alpha Factory / Learning Memory remain closed.
+- PAPER/STABLE write activation remains closed.
+- REAL_CAPITAL=0.
+
+Current true roadmap frontier:
+- `stage8-cross-market-context-v1` source-quality gate first;
+- use only real public/reproducible/time-addressable market evidence;
+- define explicit event/source/ingestion timing and historical availability;
+- do not infer cross-market context from unavailable or backfilled data;
+- remain observation-only until a separately accepted integration/meta policy exists.

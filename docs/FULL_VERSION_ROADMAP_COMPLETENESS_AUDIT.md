@@ -13,9 +13,8 @@ The runtime-accepted Stage 10 code is tagged
 `stage10-accepted-20260921` and resolves to commit
 `8ca23e612ba36b4ebcb0c3cb41a166d78add5cff`.
 
-The remaining material roadmap gap is the unfinished bounded Stage 8 sequence
-(sentiment/attention and cross-market context), followed by Stage 8.5 Alpha Factory
-and Stage 8.75 Learning Memory. The governing architecture remains
+The remaining material roadmap gap is the final bounded Stage 8 cross-market
+context engine, followed by Stage 8.5 Alpha Factory and Stage 8.75 Learning Memory. The governing architecture remains
 `docs/INTELLIGENCE_ALPHA_FACTORY_ARCHITECTURE.md`; accepted Stage 8 engines stay
 observation-only until a separately accepted integration/meta policy exists.
 
@@ -56,8 +55,8 @@ one at a time behind isolated gates:
 5. bounded derivatives context — **ACCEPTED** at `011f2c4c7be2bd00410c5a0f3f578e20bd84c891`,
 6. order-flow/microstructure if data quality supports it — **ACCEPTED** at `f0b27d41980714ffc42fe394ed3a3485acc6d5fe`,
 7. on-chain/network — **ACCEPTED** at `589dd427c4f75641c1598e02afc103b238f74cd9`,
-8. bounded sentiment/attention — **NEXT FRONTIER / SOURCE-QUALITY GATE**,
-9. cross-market context.
+8. bounded sentiment/attention — **ACCEPTED** at `4c3357aeab24f8ce18bb87bf5ea8e91276b43a0f`,
+9. cross-market context — **NEXT FRONTIER / SOURCE-QUALITY GATE**.
 
 Every engine must have:
 
@@ -112,15 +111,15 @@ only through a separately tested policy.
 
 The next bounded roadmap slice is:
 
-`stage8-bounded-sentiment-attention-v1`
+`stage8-cross-market-context-v1`
 
-Regime labeling, trend/momentum, mean reversion, breakout/volatility, bounded derivatives context, order-flow/microstructure and on-chain/network are accepted.
+Regime labeling, trend/momentum, mean reversion, breakout/volatility, bounded derivatives context, order-flow/microstructure, on-chain/network and bounded sentiment/attention are accepted.
 
-Before implementing sentiment/attention intelligence, the repository must pass a source-quality gate. A source must be public or otherwise explicitly governed, reproducible, time-addressable, bounded and either point-in-time safe or explicit about ingestion-time availability.
+Cross-market context must begin with a source-quality gate. The slice may use only real public/reproducible market evidence with defensible symbol identity, event/source timing and point-in-time or explicit ingestion-time availability. Backfilled values must not be silently treated as historically available.
 
-A named metric such as Fear & Greed, a social score or popularity rank is not accepted merely because it is easy to fetch. Source construction, timestamp semantics and historical availability must be mechanically defensible. If those semantics cannot be supported, record explicit deferral rather than fabricating sentiment evidence and advance to cross-market context.
+The engine must remain bounded and observation-only. It should describe contemporaneous context and divergence/co-movement evidence rather than claim causal relationships or calibrated trade probabilities. Missing markets, closed sessions, stale observations and incomplete alignment must remain explicit uncertainty.
 
-Any accepted sentiment/attention engine remains observation-only until a separately accepted integration/meta policy exists.
+If trustworthy source contracts cannot be supported for a proposed market, that component must be deferred rather than fabricated. Production weighting still requires a separately accepted integration/meta policy.
 
 ## Safety boundary
 

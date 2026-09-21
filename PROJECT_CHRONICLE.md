@@ -2350,3 +2350,19 @@ PR #418 merged as `589dd427c4f75641c1598e02afc103b238f74cd9`. Merged-main hosted
 No PRODUCT deploy or production weighting was performed. PAPER/STABLE write activation remains closed, Alpha Factory and Learning Memory remain closed, no real exchange authority exists and `REAL_CAPITAL=0`.
 
 The next bounded Stage 8 frontier is `stage8-bounded-sentiment-attention-v1`. It must begin with a source-quality gate. Public popularity or sentiment scores are not accepted merely by name; the source must be reproducible and time-addressable with explicit PIT or ingestion-time semantics, otherwise the slice must be deferred rather than fabricated.
+
+## 2026-09-21 — eighth Stage 8 engine accepted: bounded sentiment / attention v1
+
+The sentiment/attention roadmap item was not allowed to begin with a convenient score. A source-quality gate first separated two different evidence classes. Alternative.me's Bitcoin Fear & Greed API was accepted only as a provider-supplied heuristic sentiment snapshot: its numeric value and named classification are preserved, but the engine does not reinterpret them as a calibrated probability, forecast or independent market truth. Wikimedia's official per-article pageview API was accepted as a bounded attention source for the English Bitcoin article. Pageview growth or decline is treated as attention intensity only, never as bullish or bearish direction.
+
+Both source contracts use explicit `ingestion_time_snapshot` semantics. This is the central PIT rule for the slice: a provider may return a historical timestamp, but the system does not pretend the row was available before the time at which Crypto Signal actually observed it. Late-ingested or future observations therefore cannot alter an earlier evidence freeze.
+
+The real-endpoint source-quality workflow passed in run `35574804783`. The implementation then added two public GET adapters, immutable sentiment/pageview contracts and `crypto_signal.intelligence.sentiment_attention`. The analyzer preserves provider sentiment state separately from attention state, derives only bounded fear/greed/neutral context plus elevated/normal/subdued attention, and fails closed for stale/missing components, insufficient history and zero attention baseline.
+
+The first full hosted gate passed the semantic test suite and exposed only four Ruff findings. After non-semantic style fixes, the second passed pytest/Ruff and exposed only mypy loop-variable narrowing in context validation. That typing issue was fixed without runtime behavior changes. Final branch full gate run `35575667035` passed. PR #421 merged as `4c3357aeab24f8ce18bb87bf5ea8e91276b43a0f`, and merged-main hosted gate `35575834639` passed.
+
+Subsequent continuity/wake hardening changed only operations infrastructure. To close canonical acceptance on the latest main, UID504 sync passed through issue #429 / run `35578741988`, then UID504 fulltest passed through issue #430 / run `35578777010` on `a64a1ec29a62d0994185bb0d568e2042b4ccaf41`. Final evidence includes Ruff PASS, mypy PASS across 121 source files, the product freshness contract and `FULL_TEST_PASS=YES`.
+
+Production isolation remains explicit: no stable confluence, signal, paper, product or execution path imports the engine. No credentials or order authority were added. PAPER/STABLE write activation remains closed and `REAL_CAPITAL=0`.
+
+The next and final bounded Stage 8 engine frontier is `stage8-cross-market-context-v1`. As with derivatives, microstructure, on-chain and sentiment, implementation must begin with a source-quality/PIT contract rather than with invented or backfilled context.
