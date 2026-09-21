@@ -526,15 +526,38 @@ def record_ml_supervisor_acceptance(
         review_version=review_version,
         acceptance_note=acceptance_note,
     )
-    accepted = replace(
-        dossier,
-        dossier_identity="0" * 64,
+    accepted_payload = {
+        "automatic_family_selection": dossier.automatic_family_selection,
+        "automatic_promotion": dossier.automatic_promotion,
+        "blocking_reasons": dossier.blocking_reasons,
+        "champion_write_authority": dossier.champion_write_authority,
+        "deploy_authority": dossier.deploy_authority,
+        "engine_version": dossier.engine_version,
+        "family_set": dossier.family_set,
+        "machine_evidence_identity": dossier.machine_evidence_identity,
+        "production_authority": dossier.production_authority,
+        "real_capital": dossier.real_capital,
+        "schema_version": dossier.schema_version,
+        "semantic": dossier.semantic,
+        "status": PromotionGateStatus.SUPERVISOR_ACCEPTED_FOR_MANUAL_PROMOTION,
+        "supervisor_acceptance_identity": acceptance.acceptance_identity,
+    }
+    accepted = MLPromotionDossier(
+        dossier_identity=canonical_sha256(accepted_payload),
+        schema_version=dossier.schema_version,
+        engine_version=dossier.engine_version,
+        semantic=dossier.semantic,
+        machine_evidence_identity=dossier.machine_evidence_identity,
+        family_set=dossier.family_set,
         status=PromotionGateStatus.SUPERVISOR_ACCEPTED_FOR_MANUAL_PROMOTION,
+        blocking_reasons=dossier.blocking_reasons,
         supervisor_acceptance_identity=acceptance.acceptance_identity,
-    )
-    accepted = replace(
-        accepted,
-        dossier_identity=canonical_sha256(_dossier_payload(accepted)),
+        automatic_family_selection=dossier.automatic_family_selection,
+        automatic_promotion=dossier.automatic_promotion,
+        champion_write_authority=dossier.champion_write_authority,
+        deploy_authority=dossier.deploy_authority,
+        production_authority=dossier.production_authority,
+        real_capital=dossier.real_capital,
     )
     return acceptance, accepted
 
