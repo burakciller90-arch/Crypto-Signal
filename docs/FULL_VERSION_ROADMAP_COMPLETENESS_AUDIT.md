@@ -73,8 +73,13 @@ separate future authority boundary.
 
 ## Remaining Stage 8.5 — Alpha Factory
 
-The architecture exists, but the accepted implementation still needs an isolated
-research environment supporting bounded challenger generation and evaluation.
+The isolated research foundation is **ACCEPTED** at
+`15f79052359a337c3b0457c214de7fe0ade96eb7`. It establishes immutable
+experiment/challenger/partition identities, leakage-audit state, reproducibility
+metadata and a non-self-promoting supervisor gate outside the production package.
+
+Remaining Stage 8.5 work is bounded challenger generation and evaluation inside
+that accepted research authority boundary.
 
 Required promotion boundary remains:
 
@@ -111,24 +116,24 @@ only through a separately tested policy.
 
 The next bounded roadmap slice is:
 
-`stage8.5-alpha-factory-research-foundation-v1`
+`stage8.5-symbolic-rule-challenger-v1`
 
-All nine bounded Stage 8 engines are accepted. Stage 8.5 must now establish an isolated research environment before it generates or evaluates challengers.
+The Alpha Factory research foundation is accepted. The next slice may generate and evaluate deterministic symbolic-rule challengers only.
 
-The first Alpha Factory slice must define:
+Requirements:
 
-- immutable experiment/challenger identity,
-- immutable dataset/partition identity,
-- explicit train / validation / out-of-sample / untouched-forward partition roles,
-- leakage-audit status and reproducibility metadata,
-- transaction-cost/slippage stress inputs as explicit evaluation context,
-- a promotion state that cannot advance itself,
-- an explicit supervisor-acceptance boundary,
-- hard isolation from production/paper champion writes.
+- generation must be deterministic and reproducible,
+- every challenger must use the accepted immutable challenger/experiment contracts,
+- feature references must be explicit and versioned,
+- no future/untouched-forward information may enter generation,
+- evaluation outputs must remain research evidence, not production authority,
+- transaction-cost/slippage context must be explicit,
+- no self-promotion or champion mutation is permitted,
+- tree models, clustering, evolutionary search and ML/RL remain closed.
 
-Candidate generation should begin with deterministic symbolic-rule research after the foundation is accepted. Tree models, clustering, evolutionary search and later bounded ML/RL remain later research capabilities and must not be introduced by skipping the foundation.
+The slice may demonstrate research evaluation mechanics but cannot satisfy the full promotion gate by inventing evidence. Missing walk-forward or untouched-forward evidence must remain missing until genuinely produced.
 
-No single backtest, score or experiment may promote a challenger. `REAL_CAPITAL=0`.
+`REAL_CAPITAL=0`.
 
 ## Safety boundary
 

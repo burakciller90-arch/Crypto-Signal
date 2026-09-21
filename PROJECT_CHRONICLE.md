@@ -2382,3 +2382,17 @@ Canonical Mac acceptance then passed through UID504 sync issue #445 / run `35583
 This closes the complete bounded Stage 8 engine sequence. No engine has been granted production weighting merely because it exists. PAPER/STABLE write activation remains closed and `REAL_CAPITAL=0`.
 
 The next frontier is Stage 8.5 Alpha Factory. The first slice is a research foundation, not strategy promotion: isolated experiment/challenger identity, dataset partition identity, leakage-audit state, reproducibility and explicit non-deployment authority must exist before candidate-generation machinery is allowed to matter.
+
+## 2026-09-21 — Stage 8.5 Alpha Factory foundation accepted
+
+The first Alpha Factory implementation deliberately did not begin by searching for a profitable strategy. It began by establishing the research authority boundary required by the governing architecture.
+
+An initial implementation under `src/crypto_signal/research` correctly failed the existing Stage10 acceptance contract because production code explicitly forbids a research lab inside the production package. The design was corrected rather than weakening that contract. The accepted implementation lives under top-level `research/alpha_factory/`, with its own research-only CI gate. Production Stage10 code does not import it.
+
+The foundation defines immutable identities for research partitions, symbolic-rule challengers, experiment manifests, leakage audits, promotion evidence and promotion assessments. Every experiment requires canonical train, validation, out-of-sample and untouched-forward partitions; chronological overlap and reuse of the same evidence identity across partitions fail closed. Cost-stress context and reproducibility seed are bound into the experiment identity.
+
+Promotion authority is intentionally incomplete by design. Missing data-contract, reproducibility, transaction-cost, in-sample, OOS, walk-forward, untouched-forward or robustness/ablation evidence blocks the gate. Even complete machine evidence can only reach `READY_FOR_SUPERVISOR_REVIEW`. Explicit supervisor evidence changes the assessment only to `SUPERVISOR_ACCEPTED_FOR_MANUAL_PROMOTION`; the foundation contains no PROMOTED state, no champion mutation API and no deploy path.
+
+The dedicated research gate passed on the branch in run `35584720123`, including foundation tests, Ruff and mypy. The full production regression gate passed separately in run `35584720094`. PR #447 merged as `15f79052359a337c3b0457c214de7fe0ade96eb7`. On merged main, research gate `35584871228` and Stage10 hosted gate `35584871231` passed. UID504 canonical sync then passed through issue #448 / run `35584976301`, followed by fulltest issue #449 / run `35585016001` with `FULL_TEST_PASS=YES`.
+
+The next Alpha Factory slice is deterministic symbolic-rule challenger generation/evaluation. It must operate only inside the isolated research environment, bind outputs to the accepted foundation contracts, and remain incapable of altering production/paper champion state. Tree models, clustering, evolutionary search and ML/RL remain later research capabilities.

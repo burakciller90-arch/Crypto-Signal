@@ -2460,3 +2460,56 @@ Current true roadmap frontier:
 - challengers cannot write production/paper champion state or self-promote;
 - deterministic/reproducible symbolic-rule research comes before tree/ML/RL search;
 - REAL_CAPITAL=0.
+
+## 2026-09-21 — Stage 8.5 Alpha Factory research foundation v1 ACCEPTED
+
+- accepted main head: `15f79052359a337c3b0457c214de7fe0ade96eb7`
+- PR #447 established the first Alpha Factory slice outside the production package.
+- isolation boundary:
+  - research code lives under top-level `research/alpha_factory/`
+  - `src/crypto_signal/research` remains absent as required by Stage10 acceptance
+  - production product/paper surfaces do not import the research package
+- accepted foundation contracts:
+  - immutable dataset partition identity
+  - canonical train / validation / out-of-sample / untouched-forward roles
+  - chronological non-overlap and cross-partition evidence-identity leakage rejection
+  - immutable symbolic-rule challenger definition
+  - immutable experiment manifest
+  - explicit cost-stress profile identity
+  - reproducibility seed
+  - immutable leakage audit
+  - immutable promotion-gate evidence and assessment
+- hard authority boundary:
+  - `authority=research_only_no_deploy`
+  - `can_self_promote=False`
+  - `champion_write_authority=False`
+  - complete evidence without supervisor acceptance stops at `READY_FOR_SUPERVISOR_REVIEW`
+  - supervisor evidence yields only `SUPERVISOR_ACCEPTED_FOR_MANUAL_PROMOTION`
+  - no PROMOTED state or champion mutation API exists
+  - REAL_CAPITAL=0
+- dedicated research CI gate added.
+- branch research gate PASS: run `35584720123`.
+- branch full production regression gate PASS: run `35584720094`.
+- merged-main research gate PASS: run `35584871228`:
+  - foundation tests PASS
+  - Ruff PASS
+  - mypy PASS across 3 research source files
+  - ALPHA_FACTORY_RESEARCH_GATE_PASS=YES
+- merged-main Stage10 hosted gate PASS: run `35584871231`.
+- UID504 canonical sync PASS: issue #448 / run `35584976301`.
+- UID504 canonical fulltest PASS: issue #449 / run `35585016001`:
+  - Ruff PASS
+  - mypy PASS across 125 production source files
+  - PRODUCT_FRESHNESS_CONTRACT_PASS=YES
+  - FULL_TEST_PASS=YES
+- PAPER/STABLE write activation remains closed.
+- no production weighting or deployment authority added.
+- REAL_CAPITAL=0.
+
+Current true roadmap frontier:
+- `stage8.5-symbolic-rule-challenger-v1`;
+- generate only deterministic/reproducible symbolic-rule challengers inside the isolated research package;
+- bind every generated challenger to immutable foundation identities;
+- evaluate without production/paper champion writes;
+- do not permit self-promotion;
+- later tree/clustering/evolutionary/ML/RL research remains closed.
