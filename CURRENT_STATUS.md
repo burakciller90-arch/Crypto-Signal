@@ -2774,3 +2774,52 @@ Current true roadmap frontier:
 - multiple-testing/backtest-overfitting state explicit; no automatic winner/promotion;
 - no production import/deploy path;
 - later bounded ML/RL remains closed.
+
+## 2026-09-21 — Stage 8.5 bounded evolutionary search v1 ACCEPTED
+
+- accepted main head: `7e32c5a689d88298e258e674bc0508c9021f2552`
+- PR #468 merged deterministic bounded evolutionary challenger research.
+- accepted research surface:
+  - `research/alpha_factory/evolutionary_search.py`
+  - `tests/test_alpha_factory_evolutionary_search.py`
+- bounded deterministic search:
+  - population size hard-bounded to 4..8
+  - generations hard-bounded to 1..4
+  - explicit deterministic seed and versioned crossover/mutation operator
+  - max 6 explicit versioned categorical features
+  - max 8 values per feature
+  - explicit minimum TRAIN support
+  - deterministic LCG state; no ambient randomness
+- leakage / overfitting controls:
+  - TRAIN is the only search partition
+  - VALIDATION/OOS are descriptive evaluation only
+  - untouched-forward remains closed
+  - `fitness_used_for_reproduction=False`
+  - reversing every TRAIN outcome does not change genome trajectories/final genomes
+  - `BOUNDED_EVOLUTION_NO_AUTOMATIC_WINNER`
+  - `automatic_winner_selection=False`
+  - no winner/promotion/champion-write/deploy API
+- evaluation remains explicit-cost-aware descriptive net-R evidence, not calibrated probability.
+- isolation remains research-only:
+  - no broker/order/auth/network authority
+  - no filesystem-write/subprocess surface
+  - no production product/paper/confluence/signal import
+  - no self-promotion
+  - REAL_CAPITAL=0
+- authoritative branch research gate PASS: run `35591757596`.
+- authoritative production Stage10 regression gate PASS: run `35591890213`.
+- issue #469 and issue #477 were post-merge UID504 sync/final-acceptance operations; no later product/research slice started before the SSD migration.
+- PAPER/STABLE write activation remains closed.
+- no production weighting/deployment authority added.
+- REAL_CAPITAL=0.
+
+Current true roadmap frontier:
+- `stage8.5-bounded-ml-research-foundation-v1`;
+- remain entirely inside isolated `research/alpha_factory`;
+- introduce only immutable deterministic ML research/training contracts and one hard-bounded reproducible baseline family before any model-search breadth;
+- TRAIN is fit-only; VALIDATION/OOS are descriptive evaluation-only; untouched-forward remains closed;
+- feature/partition/config/model identities and cost semantics must be immutable;
+- no automatic hyperparameter winner, self-promotion, champion mutation, production import or deploy path;
+- RL remains closed until a later separately accepted slice;
+- Stage 8.75 Learning Memory remains after the bounded Stage 8.5 research sequence;
+- REAL_CAPITAL=0.
