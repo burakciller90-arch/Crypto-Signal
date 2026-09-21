@@ -1,7 +1,7 @@
 #!/bin/zsh
 set -eu
 
-BASE="/Users/crypto-signal-agent/Crypto-Signal"
+BASE="/Volumes/Crypto-504/Crypto-Signal/Development"
 STATE="$BASE/runtime/continuity"
 WORKERS="$STATE/workers"
 ACTIVE="$WORKERS/active_task"
