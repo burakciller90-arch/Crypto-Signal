@@ -1,0 +1,35 @@
+name: Crypto SSD Runner Internal Cleanup
+
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  contents: read
+  issues: read
+
+jobs:
+  cleanup:
+    if: github.actor == 'burakciller90-arch' && github.event.issue.title == '[CRYPTOSSD] RUNNER-CLEANUP'
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 10
+    steps:
+      - name: Remove verified internal runner copy
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          SRC="/Users/crypto-signal-agent/actions-runner-crypto"
+          test -f "$ROOT/RUNNER_REMOTE_VERIFIED"
+          case "$GITHUB_WORKSPACE" in
+            /Volumes/Crypto-504/Crypto-Signal/Runner/_work/*) ;;
+            *) echo "CLEANUP_NOT_RUNNING_FROM_SSD"; exit 41 ;;
+          esac
+          if [ -e "$SRC" ]; then
+            rm -rf "$SRC"
+          fi
+          test ! -e "$SRC"
+          touch "$ROOT/RUNNER_INTERNAL_REMOVED"
+          df -h /
+          du -sh "$ROOT/Runner"
+          echo "RUNNER_INTERNAL_CLEANUP_PASS=YES"
