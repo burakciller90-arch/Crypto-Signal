@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import importlib.util
 import json
+import sys
 from pathlib import Path
 
 import pytest
@@ -16,6 +17,7 @@ MODULE_PATH = (
 SPEC = importlib.util.spec_from_file_location("continuity_contracts", MODULE_PATH)
 assert SPEC is not None and SPEC.loader is not None
 contracts = importlib.util.module_from_spec(SPEC)
+sys.modules[SPEC.name] = contracts
 SPEC.loader.exec_module(contracts)
 
 
