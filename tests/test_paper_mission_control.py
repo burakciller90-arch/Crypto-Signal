@@ -275,6 +275,7 @@ def test_mission_control_v4_exposes_plan_exposure_and_benchmark_truth() -> None:
     }
     assert "portfolio_exposure" in snapshot_fields
     assert "benchmarks" in snapshot_fields
+    assert "benchmark_comparisons" in snapshot_fields
     candidate_fields = {
         item.name
         for item in fields(paper_mission_control.PaperMissionControlCandidate)
