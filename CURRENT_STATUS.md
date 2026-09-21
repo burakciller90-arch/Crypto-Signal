@@ -2058,3 +2058,18 @@ Next-state rule:
 - perform a whole-roadmap completeness audit before declaring the entire Full Version finished;
 - production paper-write activation remains a separate explicit authorization boundary.
 
+## 2026-09-21 — Whole-roadmap audit after Stage 10 acceptance
+
+- Stage 10 accepted code is permanently tagged:
+  - tag: `stage10-accepted-20260921`
+  - target commit: `8ca23e612ba36b4ebcb0c3cb41a166d78add5cff`
+- `docs/FULL_VERSION_ROADMAP_COMPLETENESS_AUDIT.md` now distinguishes Stage 10 acceptance from completion of the entire Full Version roadmap.
+- repository inventory found the Stage 8+ governing architecture document but no accepted implementation modules for the Stage 8 expansion engines / Stage 8.5 Alpha Factory / Stage 8.75 Learning Memory.
+- therefore the overall Full Version is **not yet complete**, even though Stage 10 itself is PASS.
+- true next bounded roadmap frontier:
+  `stage8-regime-labeling-v1`
+- first Stage 8 slice must add deterministic, PIT-safe, frozen regime evidence with explicit uncertainty and independent acceptance tests.
+- do not begin Alpha Factory/self-learning before the bounded Stage 8 engine gates exist.
+- PAPER/STABLE write activation remains closed.
+- REAL_CAPITAL=0.
+
