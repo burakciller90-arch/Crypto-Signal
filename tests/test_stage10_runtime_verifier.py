@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Self
 
 import pytest
 
@@ -10,7 +10,7 @@ from ops import verify_stage10_integrated as stage10
 class _FakeResponse:
     status = 200
 
-    def __enter__(self) -> "_FakeResponse":
+    def __enter__(self) -> Self:
         return self
 
     def __exit__(self, *args: object) -> None:
