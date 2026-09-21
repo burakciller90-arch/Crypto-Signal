@@ -157,6 +157,33 @@ class PaperBenchmarkResult:
 
 
 @dataclass(frozen=True, slots=True)
+class PaperBenchmarkComparison:
+    kind: PaperBenchmarkKind
+    availability: PaperBenchmarkAvailability
+    paper_total_return_fraction: Decimal | None
+    benchmark_total_return_fraction: Decimal | None
+    relative_return_fraction: Decimal | None
+
+    def __post_init__(self) -> None:
+        if self.availability is PaperBenchmarkAvailability.MISSING_MARKS:
+            if self.benchmark_total_return_fraction is not None:
+                raise ValueError("missing benchmark cannot carry return")
+            if self.relative_return_fraction is not None:
+                raise ValueError("missing benchmark cannot carry relative return")
+            return
+        if self.benchmark_total_return_fraction is None:
+            raise ValueError("available benchmark comparison requires benchmark return")
+        if self.paper_total_return_fraction is None:
+            if self.relative_return_fraction is not None:
+                raise ValueError("missing paper return cannot carry relative return")
+            return
+        if self.relative_return_fraction != (
+            self.paper_total_return_fraction - self.benchmark_total_return_fraction
+        ):
+            raise ValueError("benchmark-relative return mismatch")
+
+
+@dataclass(frozen=True, slots=True)
 class PaperBenchmarkSnapshot:
     snapshot_identity: str
     version: str
@@ -188,6 +215,29 @@ class PaperBenchmarkSnapshot:
             raise ValueError("benchmark result time bounds mismatch")
         if self.snapshot_identity != canonical_sha256(_snapshot_payload(self)):
             raise ValueError("benchmark snapshot identity mismatch")
+
+
+def compare_paper_return_to_benchmarks(
+    snapshot: PaperBenchmarkSnapshot,
+    *,
+    paper_total_return_fraction: Decimal | None,
+) -> tuple[PaperBenchmarkComparison, ...]:
+    """Compare net paper return with each same-start benchmark deterministically."""
+    return tuple(
+        PaperBenchmarkComparison(
+            kind=result.kind,
+            availability=result.availability,
+            paper_total_return_fraction=paper_total_return_fraction,
+            benchmark_total_return_fraction=result.total_return_fraction,
+            relative_return_fraction=(
+                None
+                if paper_total_return_fraction is None
+                or result.total_return_fraction is None
+                else paper_total_return_fraction - result.total_return_fraction
+            ),
+        )
+        for result in snapshot.results
+    )
 
 
 def read_paper_benchmark_snapshot(
