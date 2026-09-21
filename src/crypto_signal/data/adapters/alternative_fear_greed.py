@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import time
-from typing import cast
+from typing import ClassVar, cast
 
 import httpx
 
@@ -21,7 +21,7 @@ class AlternativeFearGreedAdapter:
         "Crypto-Signal/1.0 "
         "(public market intelligence; github.com/burakciller90-arch/Crypto-Signal)"
     )
-    _CLASSIFICATIONS = {
+    _CLASSIFICATIONS: ClassVar[dict[str, SentimentClassification]] = {
         "Extreme Fear": SentimentClassification.EXTREME_FEAR,
         "Fear": SentimentClassification.FEAR,
         "Neutral": SentimentClassification.NEUTRAL,
