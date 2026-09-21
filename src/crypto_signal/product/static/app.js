@@ -184,16 +184,23 @@ function updateFreshnessStatus() {
   if (!chip) return;
   if (lastSuccessfulRefreshAt === null) {
     chip.textContent = "Son yenileme · bekleniyor";
-    return;
+  } else {
+    const ageMs = Math.max(0, Date.now() - lastSuccessfulRefreshAt);
+    const ageSeconds = Math.floor(ageMs / 1000);
+    chip.textContent = ageSeconds < 5
+      ? "Son yenileme · şimdi"
+      : `Son yenileme · ${ageSeconds} sn önce`;
   }
-  const ageMs = Math.max(0, Date.now() - lastSuccessfulRefreshAt);
-  const ageSeconds = Math.floor(ageMs / 1000);
-  chip.textContent = ageSeconds < 5
-    ? "Son yenileme · şimdi"
-    : `Son yenileme · ${ageSeconds} sn önce`;
-  if (!navigator.onLine) {
+
+  const freshness = CryptoSignalFreshness.classifyRefreshFreshness({
+    online: navigator.onLine,
+    lastSuccessfulRefreshAt,
+    nowMs: Date.now(),
+    staleAfterMs: STALE_AFTER_MS,
+  });
+  if (freshness === "offline") {
     setLiveStatus("offline");
-  } else if (ageMs > STALE_AFTER_MS) {
+  } else if (freshness === "stale") {
     setLiveStatus("stale");
   }
 }
