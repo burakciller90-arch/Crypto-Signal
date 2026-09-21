@@ -37,7 +37,7 @@ def _candle(
         high=Decimal(close),
         low=Decimal(close),
         close=Decimal(close),
-        volume=Decimal("1"),
+        volume=Decimal(1),
         quote_volume=Decimal(close),
         trade_count=1,
         is_closed=True,
@@ -143,8 +143,8 @@ def test_benchmark_marks_are_point_in_time_safe(tmp_path: Path) -> None:
     )
 
     btc = snapshot.results[1]
-    assert btc.positions[0].start_mark.price == Decimal("100")
-    assert btc.positions[0].end_mark.price == Decimal("110")
+    assert btc.positions[0].start_mark.price == Decimal(100)
+    assert btc.positions[0].end_mark.price == Decimal(110)
     assert btc.positions[0].end_mark.ingested_at_ms <= 3_600_000
 
 
