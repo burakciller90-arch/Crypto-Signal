@@ -15,7 +15,7 @@ ML_BASELINE_ENGINE_VERSION = "alpha-factory-bounded-ml-baseline-v1/1"
 ML_BASELINE_SCHEMA_VERSION = "alpha-factory-bounded-ml-schema-v1/1"
 MAX_ML_FEATURES = 6
 MAX_VALUES_PER_FEATURE = 8
-POSITIVE_LABEL_THRESHOLD_R = Decimal("0")
+POSITIVE_LABEL_THRESHOLD_R = Decimal(0)
 REAL_CAPITAL = 0
 
 
