@@ -428,7 +428,7 @@ def _validate_record(payload: dict[str, Any]) -> None:
     )
     for key in required_text:
         if not isinstance(payload.get(key), str) or not str(payload[key]).strip():
-            raise ValueError(f"learning record {key} invalid")
+            raise TypeError(f"learning record {key} invalid")
     for key in ("observed_from_ms", "observed_to_ms", "production_contribution", "real_capital"):
         value = payload.get(key)
         if not isinstance(value, int) or isinstance(value, bool):
