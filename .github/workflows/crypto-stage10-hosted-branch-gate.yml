@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - feature/stage10-integrated-acceptance
+      - feature/stage8-bounded-sentiment-attention-v1
 
 permissions:
   contents: read
