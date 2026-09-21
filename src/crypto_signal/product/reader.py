@@ -243,8 +243,22 @@ class DashboardReader:
                     direction_counts=(),
                     recent_signals=(),
                 )
-            rows = self._signal_rows(connection)
-            if not rows:
+
+            summary = connection.execute(
+                """
+                SELECT
+                    COUNT(*) AS freeze_count,
+                    MAX(frozen_at_ms) AS latest_frozen_at_ms
+                FROM signal_freezes
+                """
+            ).fetchone()
+            if summary is None:
+                raise DashboardReadError("command-center summary row missing")
+            freeze_count = self._require_int(
+                summary["freeze_count"],
+                "command-center freeze count",
+            )
+            if freeze_count == 0:
                 return CommandCenterView(
                     status=ProductDataStatus.EMPTY,
                     freeze_count=0,
@@ -253,20 +267,77 @@ class DashboardReader:
                     direction_counts=(),
                     recent_signals=(),
                 )
-            cards = tuple(self._card_from_row(row) for row in rows)
-            states = Counter(card.state for card in cards)
-            directions = Counter(card.direction for card in cards)
+
+            latest_frozen_at_ms = self._require_int(
+                summary["latest_frozen_at_ms"],
+                "command-center latest frozen at",
+            )
+            try:
+                state_counts = tuple(
+                    (
+                        SignalState(
+                            self._require_str(
+                                row["signal_state"],
+                                "command-center signal state",
+                            )
+                        ),
+                        self._require_int(
+                            row["freeze_count"],
+                            "command-center state count",
+                        ),
+                    )
+                    for row in connection.execute(
+                        """
+                        SELECT signal_state, COUNT(*) AS freeze_count
+                        FROM signal_freezes
+                        GROUP BY signal_state
+                        ORDER BY signal_state
+                        """
+                    ).fetchall()
+                )
+                direction_counts = tuple(
+                    (
+                        SignalDirection(
+                            self._require_str(
+                                row["direction"],
+                                "command-center direction",
+                            )
+                        ),
+                        self._require_int(
+                            row["freeze_count"],
+                            "command-center direction count",
+                        ),
+                    )
+                    for row in connection.execute(
+                        """
+                        SELECT direction, COUNT(*) AS freeze_count
+                        FROM signal_freezes
+                        GROUP BY direction
+                        ORDER BY direction
+                        """
+                    ).fetchall()
+                )
+            except ValueError as exc:
+                if isinstance(exc, DashboardReadError):
+                    raise
+                raise DashboardReadError(
+                    "command-center aggregate row is semantically invalid"
+                ) from exc
+
+            recent_rows = self._signal_rows(
+                connection,
+                limit=recent_limit,
+            )
+            recent_cards = tuple(
+                self._card_from_row(row) for row in recent_rows
+            )
             return CommandCenterView(
                 status=ProductDataStatus.READY,
-                freeze_count=len(cards),
-                latest_frozen_at_ms=max(card.frozen_at_ms for card in cards),
-                state_counts=tuple(
-                    sorted(states.items(), key=lambda item: item[0].value)
-                ),
-                direction_counts=tuple(
-                    sorted(directions.items(), key=lambda item: item[0].value)
-                ),
-                recent_signals=cards[:recent_limit],
+                freeze_count=freeze_count,
+                latest_frozen_at_ms=latest_frozen_at_ms,
+                state_counts=state_counts,
+                direction_counts=direction_counts,
+                recent_signals=recent_cards,
             )
 
     def market_radar(self) -> MarketRadarView:
