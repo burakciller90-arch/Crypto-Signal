@@ -47,7 +47,9 @@ from research.alpha_factory.ml_family_untouched_forward import (
     MLUntouchedForwardFamilyEvaluation,
     MLUntouchedForwardManifest,
     MLUntouchedForwardPrediction,
-    run_ml_family_untouched_forward_paper,
+    MLUntouchedForwardStatus,
+    build_ml_family_untouched_forward_freeze,
+    evaluate_ml_family_untouched_forward_paper,
 )
 from research.alpha_factory.ml_walk_forward import (
     MLWalkForwardFold,
@@ -339,22 +341,68 @@ def build_ml_promotion_dossier(
         raise ValueError("promotion dossier requires exact robustness evidence")
     _, _, _, _, robustness_manifest = family_robustness_evidence
 
-    expected_forward = run_ml_family_untouched_forward_paper(
+    (
+        _,
+        _,
+        reference_forward_evaluation,
+        challenger_forward_evaluation,
+        frozen_snapshot,
+        forward_manifest,
+    ) = untouched_forward_evidence
+    if (
+        reference_forward_evaluation.status
+        is not MLUntouchedForwardStatus.EVALUATED
+        or challenger_forward_evaluation.status
+        is not MLUntouchedForwardStatus.EVALUATED
+        or forward_manifest.status
+        is not MLUntouchedForwardStatus.EVALUATED
+        or not forward_manifest.untouched_forward_used
+    ):
+        raise ValueError(
+            "promotion dossier requires evaluated untouched-forward evidence"
+        )
+    if reference_forward_evaluation.as_of_ms != (
+        challenger_forward_evaluation.as_of_ms
+    ):
+        raise ValueError("forward family evaluation as-of mismatch")
+
+    expected_snapshot = build_ml_family_untouched_forward_freeze(
         ordered_features,
         ordered_folds,
         references,
         family_expansion_evidence,
         family_cost_stress_evidence,
         family_robustness_evidence,
-        untouched_partition,
-        untouched_observations,
         regime_feature_id=regime_feature_id,
+        created_at_ms=frozen_snapshot.created_at_ms,
+        window_start_ms=frozen_snapshot.window_start_ms,
+        window_end_ms=frozen_snapshot.window_end_ms,
+    )
+    if expected_snapshot != frozen_snapshot:
+        raise ValueError(
+            "promotion dossier requires exact untouched-forward freeze evidence"
+        )
+    evaluated_forward = evaluate_ml_family_untouched_forward_paper(
+        expected_snapshot,
+        ordered_features,
+        references[-1][0],
+        challengers[-1][0],
+        as_of_ms=reference_forward_evaluation.as_of_ms,
+        untouched_partition=untouched_partition,
+        untouched_observations=untouched_observations,
+    )
+    expected_forward = (
+        evaluated_forward[0],
+        evaluated_forward[1],
+        evaluated_forward[2],
+        evaluated_forward[3],
+        expected_snapshot,
+        evaluated_forward[4],
     )
     if expected_forward != untouched_forward_evidence:
         raise ValueError(
             "promotion dossier requires exact untouched-forward evidence"
         )
-    _, _, _, _, frozen_snapshot, forward_manifest = untouched_forward_evidence
 
     _validate_no_forward_evidence_reuse(ordered_folds, untouched_partition)
 
