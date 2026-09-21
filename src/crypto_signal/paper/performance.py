@@ -20,7 +20,9 @@ from crypto_signal.ledger.serialization import canonical_sha256
 from crypto_signal.paper.execution import total_simulated_cost_usdt
 from crypto_signal.paper.ledger import PaperLedgerEntry
 from crypto_signal.paper.models import (
+    INITIAL_CASH_USDT,
     REAL_CAPITAL,
+    FundCreationRecord,
     PaperAction,
     PaperPosition,
     PaperSymbol,
@@ -33,6 +35,7 @@ from crypto_signal.paper.state import reconstruct_paper_fund_state_from_entries
 __all__ = [
     "PAPER_TRADE_PERFORMANCE_VERSION",
     "PaperClosedTradeResult",
+    "PaperPerformanceWindowMetrics",
     "PaperTradeOutcome",
     "PaperTradePerformanceError",
     "PaperTradePerformanceSnapshot",
@@ -41,7 +44,7 @@ __all__ = [
     "read_paper_trade_performance",
 ]
 
-PAPER_TRADE_PERFORMANCE_VERSION = "paper_trade_performance.v1"
+PAPER_TRADE_PERFORMANCE_VERSION = "paper_trade_performance.v2"
 
 
 class PaperTradePerformanceError(RuntimeError):
@@ -122,6 +125,61 @@ class PaperClosedTradeResult:
             raise ValueError("closed trade outcome does not match PnL")
         if self.trade_identity != canonical_sha256(_closed_trade_payload(self)):
             raise ValueError("closed trade identity mismatch")
+
+
+@dataclass(frozen=True, slots=True)
+class PaperPerformanceWindowMetrics:
+    measurement_start_at_ms: int
+    observed_at_ms: int
+    duration_ms: int
+    gross_traded_notional_usdt: Decimal
+    turnover_fraction: Decimal
+    cash_time_ms: int
+    cash_time_fraction: Decimal | None
+    invested_time_fraction: Decimal | None
+    turnover_denominator_usdt: Decimal = INITIAL_CASH_USDT
+    real_capital: int = REAL_CAPITAL
+
+    def __post_init__(self) -> None:
+        if self.real_capital != REAL_CAPITAL:
+            raise ValueError("REAL_CAPITAL must remain 0")
+        if self.measurement_start_at_ms < 0:
+            raise ValueError("performance measurement start must be non-negative")
+        if self.observed_at_ms < self.measurement_start_at_ms:
+            raise ValueError("performance observation predates measurement start")
+        if self.duration_ms != self.observed_at_ms - self.measurement_start_at_ms:
+            raise ValueError("performance window duration mismatch")
+        if self.cash_time_ms < 0 or self.cash_time_ms > self.duration_ms:
+            raise ValueError("cash time must remain inside the performance window")
+        for label, value in (
+            ("gross_traded_notional_usdt", self.gross_traded_notional_usdt),
+            ("turnover_fraction", self.turnover_fraction),
+            ("turnover_denominator_usdt", self.turnover_denominator_usdt),
+        ):
+            if (
+                not isinstance(value, Decimal)
+                or value.is_nan()
+                or value.is_infinite()
+                or value < Decimal(0)
+            ):
+                raise ValueError(f"{label} must be finite and non-negative")
+        if self.turnover_denominator_usdt != INITIAL_CASH_USDT:
+            raise ValueError("turnover denominator must remain initial 100 USDT")
+        if self.turnover_fraction != (
+            self.gross_traded_notional_usdt / self.turnover_denominator_usdt
+        ):
+            raise ValueError("turnover fraction mismatch")
+        if self.duration_ms == 0:
+            if self.cash_time_fraction is not None:
+                raise ValueError("zero-duration window cannot carry cash-time fraction")
+            if self.invested_time_fraction is not None:
+                raise ValueError("zero-duration window cannot carry invested-time fraction")
+            return
+        expected_cash = Decimal(self.cash_time_ms) / Decimal(self.duration_ms)
+        if self.cash_time_fraction != expected_cash:
+            raise ValueError("cash-time fraction mismatch")
+        if self.invested_time_fraction != Decimal(1) - expected_cash:
+            raise ValueError("invested-time fraction mismatch")
 
 
 @dataclass(frozen=True, slots=True)
