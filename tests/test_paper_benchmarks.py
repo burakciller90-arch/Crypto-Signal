@@ -10,6 +10,7 @@ from crypto_signal.paper.benchmarks import (
     PAPER_BENCHMARK_VERSION,
     PaperBenchmarkAvailability,
     PaperBenchmarkKind,
+    compare_paper_return_to_benchmarks,
     read_paper_benchmark_snapshot,
 )
 from crypto_signal.paper.models import PaperSymbol
@@ -199,3 +200,32 @@ def test_benchmark_reader_is_read_only(tmp_path: Path) -> None:
 
     after = hashlib.sha256(path.read_bytes()).hexdigest()
     assert after == before
+
+def test_benchmark_relative_return_is_backend_deterministic(tmp_path: Path) -> None:
+    path = tmp_path / "candles.sqlite3"
+    _seed_complete_cache(path)
+    snapshot = read_paper_benchmark_snapshot(
+        candle_cache_path=path,
+        start_at_ms=1_800_000,
+        observed_at_ms=3_600_000,
+    )
+
+    comparisons = compare_paper_return_to_benchmarks(
+        snapshot,
+        paper_total_return_fraction=Decimal("0.05"),
+    )
+
+    cash, btc, equal = comparisons
+    assert cash.relative_return_fraction == Decimal("0.05")
+    assert btc.benchmark_total_return_fraction == Decimal("0.10")
+    assert btc.relative_return_fraction == Decimal("-0.05")
+    assert equal.relative_return_fraction == (
+        Decimal("0.05") - snapshot.results[2].total_return_fraction
+    )
+
+    unavailable = compare_paper_return_to_benchmarks(
+        snapshot,
+        paper_total_return_fraction=None,
+    )
+    assert all(item.relative_return_fraction is None for item in unavailable)
+
