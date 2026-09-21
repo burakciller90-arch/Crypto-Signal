@@ -256,7 +256,7 @@ def test_ml_rejects_feature_contract_mismatch() -> None:
 def test_ml_model_identity_tampering_fails_closed() -> None:
     model = fit_ml_baseline(_features(), _parts()[0], _train_observations())
     with pytest.raises(ValueError, match="global mean mismatch"):
-        replace(model, global_mean_net_r=model.global_mean_net_r + Decimal("1"))
+        replace(model, global_mean_net_r=model.global_mean_net_r + Decimal(1))
 
 
 def test_ml_source_has_no_production_or_execution_surface() -> None:
