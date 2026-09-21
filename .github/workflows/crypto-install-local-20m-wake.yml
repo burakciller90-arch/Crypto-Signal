@@ -43,6 +43,7 @@ jobs:
 
           for old in             com.cryptosignal.autowake30m             com.cryptosignal.continuity30m; do
             launchctl bootout "$DOMAIN/$old" 2>/dev/null || true
+            launchctl disable "$DOMAIN/$old" 2>/dev/null || true
             rm -f "$AGENTS/$old.plist"
           done
 
