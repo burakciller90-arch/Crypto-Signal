@@ -80,6 +80,11 @@ jobs:
               "interest-rates/yield.xml"
           )
           root = ET.fromstring(get_bytes(treasury_url))
+          xml_locals = [node.tag.rsplit("}", 1)[-1] for node in root.iter()]
+          print(
+              "TREASURY_XML_TAG_DIAGNOSTIC",
+              ",".join(xml_locals[:80]),
+          )
           parsed_treasury: list[tuple[date, float]] = []
           for entry in root.iter():
               if entry.tag.rsplit("}", 1)[-1] != "entry":
