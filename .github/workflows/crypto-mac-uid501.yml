@@ -52,7 +52,7 @@ jobs:
           set -euo pipefail
           cmd="$(printf '%s\n' "$ISSUE_BODY" | awk -F: 'tolower($1)=="command" {gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2); print tolower($2); exit}')"
           case "$cmd" in
-            status|repo|services|disk)
+            status|repo|services|disk|hostdiag)
               ;;
             *)
               echo "Unsupported command: $cmd"
@@ -117,3 +117,26 @@ jobs:
           df -h /
           echo "=== HOME SIZE ==="
           du -sh "$HOME" 2>/dev/null || true
+
+
+      - name: HOST DIAG
+        if: steps.parse.outputs.command == 'hostdiag'
+        shell: bash
+        run: |
+          set +e
+          echo "=== LOAD ==="
+          /usr/sbin/sysctl -n vm.loadavg
+          echo "=== MEMORY ==="
+          /usr/bin/memory_pressure | /usr/bin/head -40
+          echo "=== TOP CPU ==="
+          /bin/ps -axo pid=,ppid=,user=,%cpu=,%mem=,etime=,state=,command= | /usr/bin/sort -k4 -nr | /usr/bin/head -40
+          echo "=== TARGET PROCESSES ==="
+          /bin/ps -axo pid=,ppid=,user=,%cpu=,%mem=,etime=,state=,command= | /usr/bin/grep -E '[c]oreaudiod|[S]torageManagementService|Storage\.appex|[r]un_alert_clock\.py|[p]9_natural_forward_runtime_entrypoint\.py|[W]indowServer|[W]ebKit\.WebContent|[R]unner\.(Worker|Listener)' | /usr/bin/head -120
+          echo "=== AUDIO LAUNCHD MATCHES ==="
+          /bin/launchctl print system 2>&1 | /usr/bin/grep -i -C 3 'coreaudiod\|audio' | /usr/bin/head -160
+          echo "=== GUI501 RELEVANT ==="
+          /bin/launchctl print gui/501 2>&1 | /usr/bin/grep -E -i -C 2 'cryptosignal|durdurulmaz|Storage|Safari|audio|actions\.runner' | /usr/bin/head -260
+          echo "=== THERMAL ==="
+          /usr/bin/pmset -g therm 2>&1 | /usr/bin/head -80
+          echo "HOST_DIAG_PASS=YES"
+          exit 0
