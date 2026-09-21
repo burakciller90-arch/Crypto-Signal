@@ -103,15 +103,21 @@ def test_success_failure_abstention_and_no_evidence_are_all_retained() -> None:
             version="v1",
             outcome=LearningOutcomeState.NO_EVIDENCE,
         ),
+        _record(
+            method_id="family_e",
+            version="v1",
+            outcome=LearningOutcomeState.NOT_YET_EVALUABLE,
+        ),
     )
     snapshot = build_learning_memory_snapshot(records, built_at_ms=3000)
     summary = summarize_learning_memory(snapshot, records)
 
-    assert len(snapshot.record_identities) == 4
+    assert len(snapshot.record_identities) == 5
     assert dict(summary.outcome_counts) == {
         "abstention": 1,
         "failure": 1,
         "no_evidence": 1,
+        "not_yet_evaluable": 1,
         "success": 1,
     }
     assert summary.winner_selected is False
