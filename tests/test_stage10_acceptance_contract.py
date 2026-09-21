@@ -116,3 +116,28 @@ def test_stage10_beginner_truth_and_freshness_contract_are_wired() -> None:
     assert "Bu %0 başarı oranı değildir." in script
     assert "Gerçek emir, credential veya gerçek sermaye yetkisi yoktur." in script
     assert "frictionless referanslardır" in script
+
+def test_stage10_live_dashboard_binds_paper_runtime_paths() -> None:
+    launcher = (ROOT / "ops/run_dashboard.py").read_text()
+    plist = (
+        ROOT / "ops/product/launchd/com.cryptosignal.dashboard.plist"
+    ).read_text()
+
+    assert "DEFAULT_PAPER_LEDGER_PATH" in launcher
+    assert "DEFAULT_CANDLE_CACHE_PATH" in launcher
+    assert "--paper-ledger" in launcher
+    assert "--candle-cache" in launcher
+    assert "paper_ledger_path=args.paper_ledger" in launcher
+    assert "candle_cache_path=args.candle_cache" in launcher
+
+    assert "--paper-ledger" in plist
+    assert (
+        "/Users/crypto-signal-agent/Crypto-Signal/runtime/paper/"
+        "paper_fund.sqlite3"
+    ) in plist
+    assert "--candle-cache" in plist
+    assert (
+        "/Users/crypto-signal-agent/Crypto-Signal/runtime/data/"
+        "live_base_15m_cache.sqlite3"
+    ) in plist
+
