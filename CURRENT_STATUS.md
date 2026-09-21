@@ -2110,3 +2110,35 @@ Current true roadmap frontier:
 - keep regime evidence observation-only until a separately accepted versioned weighting/meta policy exists;
 - do not begin Alpha Factory or self-learning before the bounded Stage 8 engine sequence is accepted.
 
+## 2026-09-21 — Stage 8 trend/momentum v1 ACCEPTED
+
+- accepted main head: `f8b525e355a7fb587e9c0913965326a67630576a`
+- PR #403 merged the second bounded Stage 8 intelligence engine.
+- accepted scope:
+  - deterministic multi-horizon trend/momentum evidence
+  - short / medium / long return horizons
+  - directional consistency
+  - acceleration / deceleration phase
+  - explicit mixed / unresolved uncertainty
+  - immutable analysis and frozen evidence identities
+  - PIT-safe closed-candle filtering
+  - observation-only isolation from production confluence/paper execution
+- hosted full repository gate PASS on branch and merged main.
+- UID504 canonical sync PASS.
+- UID504 canonical fulltest PASS:
+  - pytest 100%
+  - Ruff PASS
+  - mypy PASS across 106 source files
+  - PRODUCT_FRESHNESS_CONTRACT_PASS=YES
+  - FULL_TEST_PASS=YES
+- no production weighting change.
+- Alpha Factory / Learning Memory remain closed.
+- PAPER/STABLE write activation remains closed.
+- REAL_CAPITAL=0.
+
+Current true roadmap frontier:
+- `stage8-mean-reversion-v1`
+- add one deterministic PIT-safe mean-reversion evidence engine behind an isolated gate;
+- keep all Stage 8 engines observation-only until a separately accepted versioned weighting/meta policy exists;
+- do not begin Alpha Factory or self-learning before the bounded Stage 8 engine sequence is accepted.
+
