@@ -2232,3 +2232,23 @@ After the correction, the hosted full repository gate passed, then PR #400 merge
 
 The next bounded Stage 8 frontier is trend/momentum evidence. It must follow the same discipline: deterministic source contract, PIT-safe inputs, frozen evidence, explicit uncertainty, independent tests and no silent production contribution.
 
+## 2026-09-21 — second Stage 8 engine accepted: trend / momentum
+
+PR #403 merged the bounded `crypto_signal.intelligence.trend_momentum` engine as
+`f8b525e355a7fb587e9c0913965326a67630576a`. The engine is observation-only and
+adds deterministic multi-horizon trend/momentum evidence with short, medium and
+long returns, directional consistency, acceleration/deceleration phase and
+explicit mixed/unresolved uncertainty. Inputs are restricted to point-in-time-safe
+closed candles and accepted evidence is identity-bound/frozen.
+
+The branch passed the hosted full repository gate, then UID504 canonical sync and
+fulltest passed on the merged head. Canonical evidence includes pytest 100%, Ruff
+PASS, mypy PASS across 106 source files, the product freshness contract and
+`FULL_TEST_PASS=YES`.
+
+No production confluence weighting, exchange authority, paper writer activation,
+Alpha Factory promotion or learning-memory authority was introduced.
+`REAL_CAPITAL=0` remains invariant.
+
+The true next bounded Stage 8 frontier is `stage8-mean-reversion-v1`.
+
