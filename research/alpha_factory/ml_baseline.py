@@ -339,18 +339,18 @@ def build_ml_training_config() -> MLTrainingConfig:
     )
 
 
-DEFAULT_ML_TRAINING_CONFIG = build_ml_training_config()
-
 
 def fit_ml_baseline(
     features: Sequence[SymbolicFeatureSpec],
     training_partition: ResearchPartition,
     observations: Sequence[ClusterResearchObservation],
     *,
-    config: MLTrainingConfig = DEFAULT_ML_TRAINING_CONFIG,
+    config: MLTrainingConfig | None = None,
 ) -> tuple[MLBaselineModel, MLTrainingManifest]:
     if training_partition.role is not PartitionRole.TRAIN:
         raise ValueError("ML fitting requires the train partition")
+    if config is None:
+        config = build_ml_training_config()
 
     ordered_features = _validate_feature_specs(features)
     ordered_observations = _validate_observation_partition(
