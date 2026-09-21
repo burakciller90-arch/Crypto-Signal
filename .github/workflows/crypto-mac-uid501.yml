@@ -250,3 +250,51 @@ jobs:
           echo "COREAUDIOD_AFTER_PID=$AFTER_PID"
           ps -p "$AFTER_PID" -o pid=,user=,%cpu=,%mem=,etime=,command=
           echo "AUDIO_ADMIN_RESTART_PASS=YES"
+
+      - name: BACKGROUND INVENTORY
+        if: steps.parse.outputs.command == 'bginventory'
+        shell: bash
+        run: |
+          set +e
+          echo "=== LOAD / MEMORY ==="
+          /usr/sbin/sysctl -n vm.loadavg
+          /usr/bin/memory_pressure | /usr/bin/grep -E 'System-wide memory free percentage' | /usr/bin/head -1
+
+          echo "=== TOP CPU ==="
+          /bin/ps -axo pid=,ppid=,user=,%cpu=,%mem=,etime=,state=,command= | /usr/bin/sort -k4 -nr | /usr/bin/head -70
+
+          echo "=== TOP MEMORY ==="
+          /bin/ps -axo pid=,ppid=,user=,%cpu=,%mem=,etime=,state=,command= | /usr/bin/sort -k5 -nr | /usr/bin/head -50
+
+          echo "=== USER LAUNCHAGENTS 501 ==="
+          /usr/bin/find /Users/burakciller/Library/LaunchAgents -maxdepth 1 -type f -name '*.plist' -print 2>/dev/null | /usr/bin/sort
+
+          echo "=== USER LAUNCHAGENTS 502 ==="
+          /usr/bin/find /Users/durdurulamaz-agent/Library/LaunchAgents -maxdepth 1 -type f -name '*.plist' -print 2>/dev/null | /usr/bin/sort
+
+          echo "=== USER LAUNCHAGENTS 503 ==="
+          /usr/bin/find /Users/quantum-capital-agent/Library/LaunchAgents -maxdepth 1 -type f -name '*.plist' -print 2>/dev/null | /usr/bin/sort
+
+          echo "=== USER LAUNCHAGENTS 504 ==="
+          /usr/bin/find /Users/crypto-signal-agent/Library/LaunchAgents -maxdepth 1 -type f -name '*.plist' -print 2>/dev/null | /usr/bin/sort
+
+          echo "=== LOADED PROJECT / RUNNER SERVICES GUI501 ==="
+          /bin/launchctl print gui/501 2>/dev/null | /usr/bin/grep -E 'com\.(crypto|durdurulmaz|quantum)|actions\.runner|cursor|Storage|Safari' | /usr/bin/head -500
+
+          echo "=== PROJECT PROCESSES ALL USERS ==="
+          /bin/ps -axo pid=,ppid=,user=,%cpu=,%mem=,etime=,state=,command= | /usr/bin/grep -E '[C]rypto-Signal|[D]urdurulmaz|[Q]uantum-Capital|[R]unner\.(Listener|Worker)|[c]ursor-agent|[r]elay_daemon|[b]ridge_watchdog|[r]ecurring_wake|[l]ive-watch|[n]atural_forward' | /usr/bin/head -300
+
+          echo "=== AUDIO HAL PLUGINS ==="
+          /bin/ls -la /Library/Audio/Plug-Ins/HAL 2>/dev/null
+          /bin/ls -la /System/Library/Audio/Plug-Ins/HAL 2>/dev/null
+
+          echo "=== AUDIO PROCESSES ==="
+          /bin/ps -axo pid=,ppid=,user=,%cpu=,%mem=,etime=,state=,command= | /usr/bin/grep -E '[c]oreaudiod|[b]luetoothaudiod|AudioComponent|ParrotAudioPlugin|[a]udio\.DriverHelper' | /usr/bin/head -120
+
+          echo "=== RECENT ONE-SHOT / MIGRATION LAUNCHAGENTS ==="
+          for root in /Users/burakciller /Users/durdurulamaz-agent /Users/quantum-capital-agent /Users/crypto-signal-agent; do
+            /usr/bin/find "$root/Library/LaunchAgents" -maxdepth 1 -type f \( -iname '*once*' -o -iname '*migrat*' -o -iname '*probe*' -o -iname '*restart*' -o -iname '*cutover*' -o -iname '*ssd*' \) -print 2>/dev/null
+          done | /usr/bin/sort
+
+          echo "BACKGROUND_INVENTORY_PASS=YES"
+          exit 0
