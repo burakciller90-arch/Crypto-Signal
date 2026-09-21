@@ -24,7 +24,7 @@ jobs:
           set -euo pipefail
           cmd="$(printf '%s\n' "$ISSUE_BODY" | awk -F: 'tolower($1)=="command" {gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2); print tolower($2); exit}')"
           case "$cmd" in
-            status|services|logs|disk|sync|producttest|fulltest|productstate|productdeploy|paperreview|paperinspect|paperfixlint|paperharden|stateplanreview|stateplaninspect|stateplanharden|cursorreview|cursorreviewtail|cursorcleanup|bridgecheck|bridgestate|pausecheck|wakepause|wakeresume|wakearm|waketest|wakeheartbeat|chatbusyprobe|cursorcheck|cursorauthdiag|cursorttycheck|alertclockstate|alertclockpause|alertclockresume|migrationinspect|migrationinventory|ssddashboarddiag|ssddashboardwrappertest|ssdtcclaunchtest)
+            status|services|logs|disk|sync|producttest|fulltest|productstate|productdeploy|paperreview|paperinspect|paperfixlint|paperharden|stateplanreview|stateplaninspect|stateplanharden|cursorreview|cursorreviewtail|cursorcleanup|bridgecheck|bridgestate|pausecheck|wakepause|wakeresume|wakearm|waketest|wakeheartbeat|chatbusyprobe|cursorcheck|cursorauthdiag|cursorttycheck|alertclockstate|alertclockpause|alertclockresume|migrationinspect|migrationinventory|ssddashboarddiag|ssddashboardwrappertest|ssdtcclaunchtest|ssdbackgroundteststart|ssdbackgroundtestcheck)
               ;;
             *)
               echo "Unsupported command: $cmd"
@@ -1120,6 +1120,43 @@ jobs:
 
 
 
+
+
+      - name: SSD BACKGROUND TEST START
+        if: steps.parse.outputs.command == 'ssdbackgroundteststart'
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          launchctl bootout "gui/$(id -u)/com.cryptosignal.dashboard" >/dev/null 2>&1 || true
+          old="$(cat "$ROOT/background-test.pid" 2>/dev/null || true)"
+          if [ -n "$old" ]; then kill "$old" >/dev/null 2>&1 || true; fi
+          rm -f "$ROOT/background-test.pid" "$ROOT/background-test.out" "$ROOT/background-test.err"
+          (
+            unset RUNNER_TRACKING_ID
+            export PYTHONPATH="$ROOT/Product/src"
+            nohup "$ROOT/Product/.venv/bin/python" "$ROOT/Product/ops/run_dashboard.py"               --host 127.0.0.1 --port 48704               --ledger "$ROOT/Development/runtime/ledger/live_signal_ledger.sqlite3"               >"$ROOT/background-test.out" 2>"$ROOT/background-test.err" < /dev/null &
+            echo $! > "$ROOT/background-test.pid"
+          )
+          sleep 4
+          pid="$(cat "$ROOT/background-test.pid")"
+          kill -0 "$pid"
+          curl -fsS --max-time 3 http://127.0.0.1:48704/api/health
+          echo
+          echo "SSD_BACKGROUND_TEST_STARTED_PID=$pid"
+
+      - name: SSD BACKGROUND TEST CHECK
+        if: steps.parse.outputs.command == 'ssdbackgroundtestcheck'
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          pid="$(cat "$ROOT/background-test.pid")"
+          ps -p "$pid" -o pid=,ppid=,user=,%cpu=,%mem=,etime=,command=
+          kill -0 "$pid"
+          curl -fsS --max-time 3 http://127.0.0.1:48704/api/health
+          echo
+          echo "SSD_BACKGROUND_TEST_SURVIVED=YES"
 
       - name: SSD TCC LAUNCH TEST
         if: steps.parse.outputs.command == 'ssdtcclaunchtest'
