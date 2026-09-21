@@ -2252,3 +2252,29 @@ Alpha Factory promotion or learning-memory authority was introduced.
 
 The true next bounded Stage 8 frontier is `stage8-mean-reversion-v1`.
 
+## 2026-09-21 — third Stage 8 engine accepted: mean reversion
+
+PR #406 merged the bounded `crypto_signal.intelligence.mean_reversion` engine as
+`4e6d25df7f6aa2f36bf4ee86dba5c9023dd055d4`. The engine uses a robust median
+center, signed/absolute price displacement, bounded range-position evidence and a
+short-horizon phase that distinguishes snapback, extension and stalled behavior.
+It emits stretched-high, stretched-low, neutral, mixed or unresolved states and
+does not emit probability claims.
+
+Inputs are restricted to PIT-safe closed candles. Insufficient history and candle
+gaps fail closed, and future candles cannot alter historical evidence freezes.
+Analysis and consumed-candle freezes are independently SHA-bound. A production
+isolation/ablation test proves the engine contributes zero to the current stable
+confluence path until a later separately accepted integration policy exists.
+
+The hosted full repository gate passed with pytest 100%, Ruff PASS, mypy PASS
+across 108 source files and the product freshness contract. After merge, UID504
+canonical sync and fulltest also passed on the exact accepted head, including
+pytest 100%, Ruff, mypy across 107 source files and `FULL_TEST_PASS=YES`.
+
+No production weighting, paper writer activation, exchange authority, Alpha
+Factory promotion or learning-memory authority was introduced.
+`REAL_CAPITAL=0` remains invariant.
+
+The next bounded Stage 8 frontier is `stage8-breakout-volatility-v1`.
+
