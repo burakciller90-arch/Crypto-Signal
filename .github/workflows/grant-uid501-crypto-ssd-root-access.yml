@@ -1,0 +1,26 @@
+name: Grant UID501 Crypto SSD Root Access
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/grant-uid501-crypto-ssd-root-access.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  grant:
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 10
+    steps:
+      - name: Grant burakciller UID501 root access to Crypto-504 volume
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(id -u)" = "504"
+          V="/Volumes/Crypto-504"
+          test -d "$V"
+          /bin/chmod +a "user:burakciller allow list,search,readattr,readextattr,readsecurity,add_file,add_subdirectory,delete_child,writeattr,writeextattr,file_inherit,directory_inherit" "$V"
+          ls -lde "$V"
+          echo "CRYPTO_UID501_ROOT_ACCESS=PASS"
