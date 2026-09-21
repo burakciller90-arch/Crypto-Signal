@@ -2574,3 +2574,72 @@ Current true roadmap frontier:
 - multiple-testing/backtest-overfitting controls must be explicit before any tree candidate can reach supervisor review;
 - no self-promotion, champion mutation, production import or deploy path;
 - clustering/regime discovery, feature-interaction search, evolutionary search and ML/RL remain later slices.
+
+## 2026-09-21 — Stage 8.5 bounded tree challenger v1 ACCEPTED
+
+- accepted main head: `8ee89f4ee8de581bfacec1f7e62613ec96be065c`
+- PR #458 merged the second bounded Alpha Factory challenger engine.
+- accepted research surface:
+  - `research/alpha_factory/tree_models.py`
+  - `tests/test_alpha_factory_tree_models.py`
+  - production `src/crypto_signal` remains free of research-lab code
+- bounded deterministic tree search:
+  - max 4 explicit versioned categorical features
+  - max 4 allowed values per feature
+  - max depth 2
+  - max 128 predeclared structures
+  - explicit minimum leaf count and take threshold
+  - deterministic structure ordering and SHA-bound identities
+- explicit multiple-testing / overfitting control:
+  - `BOUNDED_HYPOTHESIS_SET_NO_AUTOMATIC_SELECTION`
+  - `automatic_selection=False`
+  - OOS is forbidden in generation
+  - untouched-forward is forbidden in generation and evaluation
+  - no winner-selection, promotion, champion-write or deploy API
+- PIT/evaluation semantics:
+  - every feature reading binds feature identity/version/value/availability time
+  - feature evidence must exist by decision as-of
+  - outcome availability cannot predate decision as-of
+  - train partition is generation-only
+  - validation and OOS are evaluation-only
+  - exact partition evidence coverage is required
+  - duplicate/mismatched evidence fails closed
+  - explicit cost R is subtracted before descriptive net-R metrics
+  - evaluation semantic is `DESCRIPTIVE_NET_R_NOT_PROBABILITY`
+- isolation scan:
+  - no network surface
+  - no broker/order/auth surface
+  - no filesystem-write/subprocess surface
+  - no production product/paper/confluence/signal import
+  - no promotion API
+- authoritative branch research gate PASS: run `35588316131`:
+  - Alpha Factory tests PASS
+  - Ruff PASS
+  - mypy PASS across 5 research source files
+  - ALPHA_FACTORY_RESEARCH_GATE_PASS=YES
+- authoritative branch production regression gate PASS: run `35588388450`:
+  - Ruff PASS
+  - mypy PASS across 126 production source files
+  - PRODUCT_FRESHNESS_CONTRACT_PASS=YES
+  - STAGE10_HOSTED_FULL_GATE_PASS=YES
+- merged-main research gate PASS: run `35588564542`.
+- merged-main Stage10 hosted gate PASS: run `35588564536`.
+- UID504 canonical sync PASS: issue #460 / run `35588671936`.
+- UID504 canonical fulltest PASS: issue #461 / run `35588723374`:
+  - Ruff PASS
+  - mypy PASS across 125 production source files
+  - PRODUCT_FRESHNESS_CONTRACT_PASS=YES
+  - FULL_TEST_PASS=YES
+- no production weighting/deployment authority added.
+- PAPER/STABLE write activation remains closed.
+- REAL_CAPITAL=0.
+
+Current true roadmap frontier:
+- `stage8.5-clustering-regime-challenger-v1`;
+- remain entirely inside isolated `research/alpha_factory`;
+- deterministic bounded clustering/regime discovery only;
+- explicit feature/partition identities and reproducible configuration;
+- train-only fit/discovery, validation/OOS descriptive evaluation, untouched-forward closed;
+- bounded cluster-count/search budget and explicit no-automatic-selection / multiple-testing status;
+- no self-promotion, champion mutation, production import or deploy path;
+- feature-interaction search, evolutionary search and later ML/RL remain closed.

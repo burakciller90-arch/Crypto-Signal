@@ -2410,3 +2410,17 @@ Symbolic v1 intentionally refuses untouched-forward evaluation. That partition r
 The branch research gate passed in run `35586872992`. The full production regression gate passed separately in `35586971014`. PR #455 merged as `47c1ecdd31b1ffe490611abcf40f5d309c45663a`; merged-main research run `35587151559` and Stage10 hosted run `35587151607` both passed. UID504 canonical sync issue #456 / run `35587261968` and fulltest issue #457 / run `35587334768` then completed the acceptance chain with `FULL_TEST_PASS=YES`.
 
 The next Alpha Factory slice is bounded tree-based challengers. It must remain research-only, deterministic and shallow; training/evaluation partition roles must remain explicit; multiple-testing/backtest-overfitting controls must be added rather than inferred from a good score; untouched-forward stays closed; no candidate may self-promote.
+
+## 2026-09-21 — Stage 8.5 bounded tree challenger v1 accepted
+
+The second Alpha Factory challenger engine was intentionally implemented as a shallow deterministic categorical tree rather than a general-purpose ML model. It remains entirely under the isolated `research/alpha_factory` package and does not enter the production package.
+
+The accepted search space is hard-bounded: at most four explicit versioned categorical features, four allowed values per feature, depth two, and 128 predeclared structures. Search order is deterministic. The search manifest records a specific multiple-testing boundary, `BOUNDED_HYPOTHESIS_SET_NO_AUTOMATIC_SELECTION`, and states that no automatic winner selection occurs.
+
+Generation is train-only. Validation and out-of-sample partitions can be used only for descriptive evaluation. Untouched-forward is deliberately inaccessible in v1. Every feature reading binds immutable feature identity/version plus availability time, and every research observation must exactly cover the accepted partition evidence set. Future feature availability, duplicate/mismatched evidence, incomplete partition coverage or wrong partition role fail closed.
+
+Tree leaf actions are derived only from training observations after explicit costs. Evaluation separately records gross R, explicit cost R and net R; the semantic remains `DESCRIPTIVE_NET_R_NOT_PROBABILITY`. No favorable tree metric can self-promote a challenger.
+
+The final branch research gate passed in run `35588316131`, and the separate production Stage10 regression gate passed in run `35588388450`. Isolation checks found no network, broker/order/auth, filesystem-write, subprocess, production import, promotion or deploy surface. PR #458 merged as `8ee89f4ee8de581bfacec1f7e62613ec96be065c`. Merged-main research run `35588564542` and Stage10 hosted run `35588564536` passed. UID504 canonical sync issue #460 / run `35588671936` and fulltest issue #461 / run `35588723374` then completed acceptance with `FULL_TEST_PASS=YES`.
+
+The next bounded Alpha Factory frontier is deterministic clustering/regime challenger research. It must preserve train-only discovery, validation/OOS descriptive evaluation, untouched-forward closure, explicit multiple-testing controls, no automatic selection and no production authority.
