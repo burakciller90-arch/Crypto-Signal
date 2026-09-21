@@ -29,21 +29,49 @@ APPLESCRIPT = r"""
 on run argv
   set targetUrl to item 1 of argv
   set js to item 2 of argv
-  tell application "Safari"
-    repeat with w in windows
-      repeat with t in tabs of w
-        try
-          if (URL of t as text) is targetUrl then
-            try
-              return do JavaScript js in t
-            on error errMsg number errNum
-              return "JAVASCRIPT_ERROR:" & errNum & ":" & errMsg
-            end try
-          end if
-        end try
+
+  try
+    tell application "Google Chrome"
+      repeat with w in windows
+        repeat with t in tabs of w
+          try
+            if (URL of t as text) is targetUrl then
+              try
+                return execute t javascript js
+              on error errMsg number errNum
+                return "CHROME_JAVASCRIPT_ERROR:" & errNum & ":" & errMsg
+              end try
+            end if
+          end try
+        end repeat
       end repeat
-    end repeat
-  end tell
+    end tell
+  on error errMsg number errNum
+    if errNum is not -1728 then
+      return "CHROME_AUTOMATION_ERROR:" & errNum & ":" & errMsg
+    end if
+  end try
+
+  try
+    tell application "Safari"
+      repeat with w in windows
+        repeat with t in tabs of w
+          try
+            if (URL of t as text) is targetUrl then
+              try
+                return do JavaScript js in t
+              on error errMsg number errNum
+                return "SAFARI_JAVASCRIPT_ERROR:" & errNum & ":" & errMsg
+              end try
+            end if
+          end try
+        end repeat
+      end repeat
+    end tell
+  on error errMsg number errNum
+    return "SAFARI_AUTOMATION_ERROR:" & errNum & ":" & errMsg
+  end try
+
   return "TARGET_NOT_FOUND"
 end run
 """
@@ -109,7 +137,7 @@ def run_js(target_url: str, js: str) -> str:
     return proc.stdout.strip()
 
 
-def open_target_in_safari(target_url: str) -> str:
+def open_target_in_browser(target_url: str) -> str:
     global _last_target_open_attempt
     now = time.monotonic()
     if now - _last_target_open_attempt < TARGET_OPEN_RETRY_SECONDS:
@@ -118,14 +146,33 @@ def open_target_in_safari(target_url: str) -> str:
     script = r"""
 on run argv
   set targetUrl to item 1 of argv
-  tell application "Safari"
-    if (count of windows) = 0 then
-      make new document with properties {URL:targetUrl}
-    else
-      tell front window to make new tab with properties {URL:targetUrl}
-    end if
-  end tell
-  return "TARGET_OPEN_REQUESTED"
+
+  try
+    tell application "Google Chrome"
+      if (count of windows) = 0 then
+        make new window
+      end if
+      tell front window
+        make new tab with properties {URL:targetUrl}
+      end tell
+      activate
+    end tell
+    return "CHROME_TARGET_OPEN_REQUESTED"
+  on error chromeMsg number chromeNum
+    try
+      tell application "Safari"
+        if (count of windows) = 0 then
+          make new document with properties {URL:targetUrl}
+        else
+          tell front window to make new tab with properties {URL:targetUrl}
+        end if
+        activate
+      end tell
+      return "SAFARI_TARGET_OPEN_REQUESTED_AFTER_CHROME_ERROR:" & chromeNum & ":" & chromeMsg
+    on error safariMsg number safariNum
+      return "TARGET_OPEN_ERROR:" & safariNum & ":" & safariMsg
+    end try
+  end try
 end run
 """
     try:
@@ -201,7 +248,7 @@ def deliver(event_id: str, message: str, target_url: str) -> tuple[bool, str]:
     )
     state = run_js(target_url, state_js)
     if state == "TARGET_NOT_FOUND":
-        return False, open_target_in_safari(target_url)
+        return False, open_target_in_browser(target_url)
     if state == "OBSERVED":
         write_receipt(receipt, "OBSERVED", event_id, message_sha)
         return True, "OBSERVED"
@@ -242,7 +289,15 @@ def deliver(event_id: str, message: str, target_url: str) -> tuple[bool, str]:
             return False, f"AFTER_STOP:{state}"
     if state in {"DRAFT_BUSY", "NO_EDITOR"}:
         return False, state
-    if state.startswith(("OSASCRIPT_ERROR:", "JAVASCRIPT_ERROR:")):
+    if state.startswith(
+        (
+            "OSASCRIPT_ERROR:",
+            "CHROME_JAVASCRIPT_ERROR:",
+            "CHROME_AUTOMATION_ERROR:",
+            "SAFARI_JAVASCRIPT_ERROR:",
+            "SAFARI_AUTOMATION_ERROR:",
+        )
+    ):
         return False, state
 
     if state == "READY":
