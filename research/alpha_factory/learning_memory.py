@@ -927,14 +927,14 @@ def _snapshot_from_json(payload: str) -> LearningMemorySnapshot:
 def _load_object(payload: str) -> dict[str, Any]:
     value = json.loads(payload)
     if not isinstance(value, dict):
-        raise ValueError("Learning Memory payload must be an object")
+        raise TypeError("Learning Memory payload must be an object")
     return value
 
 
 def _string(data: dict[str, Any], key: str) -> str:
     value = data.get(key)
     if not isinstance(value, str):
-        raise ValueError(f"Learning Memory {key} must be string")
+        raise TypeError(f"Learning Memory {key} must be string")
     return value
 
 
@@ -942,21 +942,21 @@ def _optional_string(value: Any) -> str | None:
     if value is None:
         return None
     if not isinstance(value, str):
-        raise ValueError("Learning Memory optional value must be string")
+        raise TypeError("Learning Memory optional value must be string")
     return value
 
 
 def _integer(data: dict[str, Any], key: str) -> int:
     value = data.get(key)
     if not isinstance(value, int) or isinstance(value, bool):
-        raise ValueError(f"Learning Memory {key} must be integer")
+        raise TypeError(f"Learning Memory {key} must be integer")
     return value
 
 
 def _boolean(data: dict[str, Any], key: str) -> bool:
     value = data.get(key)
     if not isinstance(value, bool):
-        raise ValueError(f"Learning Memory {key} must be boolean")
+        raise TypeError(f"Learning Memory {key} must be boolean")
     return value
 
 
@@ -973,7 +973,7 @@ def _optional_decimal(value: Any) -> Decimal | None:
     if value is None:
         return None
     if not isinstance(value, str):
-        raise ValueError("Learning Memory Decimal must be canonical string")
+        raise TypeError("Learning Memory Decimal must be canonical string")
     return Decimal(value)
 
 
