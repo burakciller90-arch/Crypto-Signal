@@ -52,8 +52,8 @@ one at a time behind isolated gates:
 
 1. deterministic regime labeling — **ACCEPTED** at `4cdfbd134597a8329fb90d08eed5643161cd4926`,
 2. trend/momentum — **ACCEPTED** at `f8b525e355a7fb587e9c0913965326a67630576a`,
-3. mean reversion — **NEXT FRONTIER**,
-4. breakout/volatility,
+3. mean reversion — **ACCEPTED** at `4e6d25df7f6aa2f36bf4ee86dba5c9023dd055d4`,
+4. breakout/volatility — **NEXT FRONTIER**,
 5. bounded derivatives context,
 6. order-flow/microstructure if data quality supports it,
 7. on-chain/network,
@@ -113,20 +113,20 @@ only through a separately tested policy.
 
 The next bounded roadmap slice is:
 
-`stage8-mean-reversion-v1`
+`stage8-breakout-volatility-v1`
 
-Regime labeling and trend/momentum are accepted. The next slice must add a deterministic
-mean-reversion evidence engine with:
+Regime labeling, trend/momentum and mean reversion are accepted. The next slice must add a deterministic
+breakout/volatility evidence engine with:
 
 - point-in-time-safe inputs only,
 - immutable/frozen evidence,
-- explicit stretched/neutral/unresolved states,
+- explicit breakout/compression/expansion/unresolved states,
 - independent tests and bounded metric semantics,
 - no change to production confluence weights,
 - no change to production paper write authority,
 - no self-learning or automatic promotion.
 
-Only after this engine is accepted should breakout/volatility work begin.
+Only after this engine is accepted should bounded derivatives context begin.
 
 ## Safety boundary
 
