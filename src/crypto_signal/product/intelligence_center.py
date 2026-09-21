@@ -432,7 +432,7 @@ def _validate_record(payload: dict[str, Any]) -> None:
     for key in ("observed_from_ms", "observed_to_ms", "production_contribution", "real_capital"):
         value = payload.get(key)
         if not isinstance(value, int) or isinstance(value, bool):
-            raise ValueError(f"learning record {key} invalid")
+            raise TypeError(f"learning record {key} invalid")
     if int(payload["observed_to_ms"]) < int(payload["observed_from_ms"]):
         raise ValueError("learning record chronology invalid")
     for key in ("evidence_identities", "uncertainty_evidence_identities"):
@@ -440,7 +440,7 @@ def _validate_record(payload: dict[str, Any]) -> None:
         if not isinstance(values, list) or not all(
             isinstance(item, str) and _is_sha256(item) for item in values
         ):
-            raise ValueError(f"learning record {key} invalid")
+            raise TypeError(f"learning record {key} invalid")
     if int(payload["production_contribution"]) != 0:
         raise ValueError("learning record production contribution must remain 0")
     if payload.get("production_authority") is not False:
