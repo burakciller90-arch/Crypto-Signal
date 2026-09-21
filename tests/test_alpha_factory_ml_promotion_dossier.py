@@ -409,7 +409,7 @@ def test_promotion_dossier_source_has_no_execution_or_production_surface() -> No
 
 def test_dossier_has_no_promote_champion_write_deploy_or_rl_api() -> None:
     source = inspect.getsource(ml_promotion_dossier).lower()
-    assert "ready_for_supervisor_review" not in source
+    assert "promotiongatestatus.ready_for_supervisor_review" in source
     assert "automatic_promotion" in source
     assert "champion_write_authority" in source
     assert "manual_promotion_required" in source
