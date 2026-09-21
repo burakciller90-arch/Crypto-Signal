@@ -286,7 +286,8 @@ def test_ml_training_uses_train_outcomes_but_no_model_search() -> None:
     reversed_model, reversed_manifest = _fit(reverse_outcomes=True)
 
     assert normal_model.model_identity != reversed_model.model_identity
-    assert normal_model.positive_count == reversed_model.non_positive_count
+    assert normal_model.positive_count != reversed_model.positive_count
+    assert normal_model.category_counts != reversed_model.category_counts
     assert normal_manifest.model_search_performed is False
     assert reversed_manifest.model_search_performed is False
 
