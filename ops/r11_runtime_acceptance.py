@@ -7,7 +7,7 @@ import shutil
 import subprocess
 import tempfile
 from typing import Any
-from urllib import request
+import urllib.request
 
 from crypto_signal.runtime_recovery import backup_and_restore_sqlite
 
@@ -27,7 +27,7 @@ def _ps_text() -> str:
 
 
 def _health() -> dict[str, Any]:
-    with request.urlopen(
+    with urllib.request.urlopen(
         "http://127.0.0.1:48700/api/health",
         timeout=5,
     ) as response:
