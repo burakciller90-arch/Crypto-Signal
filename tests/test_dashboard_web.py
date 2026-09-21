@@ -236,6 +236,10 @@ def test_health_and_static_shell_without_ledger(tmp_path: Path) -> None:
     assert "100 USDT BTC al-tut" in script.text
     assert "BTC / ETH / SOL eşit ağırlık" in script.text
     assert "Paper göreli getiri" in script.text
+    assert "Observed expectancy" in script.text
+    assert "Turnover" in script.text
+    assert "Nakitte geçen zaman" in script.text
+    assert "Piyasada geçen zaman" in script.text
     assert "frictionless referanslardır" in script.text
     assert 'id="paperPortfolioExposure"' in index.text
     assert 'id="paperPerformanceLab"' in index.text
