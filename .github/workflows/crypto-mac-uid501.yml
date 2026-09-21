@@ -52,7 +52,7 @@ jobs:
           set -euo pipefail
           cmd="$(printf '%s\n' "$ISSUE_BODY" | awk -F: 'tolower($1)=="command" {gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2); print tolower($2); exit}')"
           case "$cmd" in
-            status|repo|services|disk|externaldisk|hostdiag|audiorestart|audioadminrestart|loadtree|loadtree2|bginventory|bgsafecheck|cryptomigrationdiag|cryptomigrationdiag2|cryptodashboarddiag|cryptorunnertree)
+            status|repo|services|disk|externaldisk|hostdiag|audiorestart|audioadminrestart|loadtree|loadtree2|bginventory|bgsafecheck|cryptomigrationdiag|cryptomigrationdiag2|cryptodashboarddiag|cryptorunnertree|cryptorunnercutoverdiag)
               ;;
             *)
               echo "Unsupported command: $cmd"
@@ -240,6 +240,39 @@ jobs:
           echo "=== LOAD ==="
           /usr/sbin/sysctl -n vm.loadavg
           echo "CRYPTO_RUNNER_TREE_PASS=YES"
+          exit 0
+
+
+      - name: CRYPTO RUNNER CUTOVER DIAG
+        if: steps.parse.outputs.command == 'cryptorunnercutoverdiag'
+        shell: bash
+        run: |
+          set +e
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          HOME_ROOT="/Users/crypto-signal-agent"
+          LABEL="actions.runner.burakciller90-arch-Crypto-Signal.crypto-signal-uid504"
+          echo "=== MARKERS ==="
+          /bin/ls -l "$ROOT"/RUNNER_CUTOVER_* 2>/dev/null
+          echo "=== CUTOVER LOG ==="
+          /usr/bin/tail -120 "$ROOT/runner-cutover.log" 2>/dev/null
+          echo "=== HELPER LOGS ==="
+          /usr/bin/tail -120 "$ROOT/runner-helper.launchd.out.log" 2>/dev/null
+          /usr/bin/tail -120 "$ROOT/runner-helper.launchd.err.log" 2>/dev/null
+          echo "=== RUNNER PLIST ==="
+          /usr/bin/plutil -p "$HOME_ROOT/Library/LaunchAgents/$LABEL.plist" 2>/dev/null
+          echo "=== LAUNCHCTL UID504 ==="
+          /bin/launchctl print "gui/504/$LABEL" 2>&1 | /usr/bin/head -120
+          echo "=== INTERNAL RUNNER ==="
+          if [ -e "$HOME_ROOT/actions-runner-crypto" ]; then
+            /bin/ls -ld "$HOME_ROOT/actions-runner-crypto"
+            /usr/bin/du -sh "$HOME_ROOT/actions-runner-crypto" 2>/dev/null
+          else
+            echo "INTERNAL_RUNNER_ABSENT=YES"
+          fi
+          echo "=== SSD RUNNER ==="
+          /bin/ls -ld "$ROOT/Runner" 2>/dev/null
+          /usr/bin/du -sh "$ROOT/Runner" 2>/dev/null
+          echo "CRYPTO_RUNNER_CUTOVER_DIAG_PASS=YES"
           exit 0
 
       - name: HOST DIAG
