@@ -80,10 +80,11 @@ Canonical task: `stage8.5-bounded-ml-family-robustness-ablation-v1`.
 - no automatic family winner selection.
 
 ### R4 — RL architecture decision / optional bounded RL research
-RL remains closed until separately justified and accepted.
-If opened, it must be research-only, deterministic/bounded where possible, with no order/broker authority.
+RL remains optional and closed for now. It is not a prerequisite for finishing the current deterministic promotion-evidence chain.
+If opened later, it must be research-only, deterministic/bounded where possible, with no order/broker authority.
 
-### R5 — Untouched-forward paper evidence
+### R5 — Untouched-forward paper evidence — CURRENT FRONTIER
+Canonical task: `stage8.5-bounded-ml-family-untouched-forward-paper-v1`.
 - open untouched-forward only after prior scientific gates close;
 - no retrospective refit on forward observations;
 - preserve both favorable and unfavorable outcomes;
@@ -220,4 +221,4 @@ Freeze:
 Crypto Signal Full Version is complete when M1, M2 and M3 are accepted with mechanical evidence and authoritative documentation, while REAL_CAPITAL remains 0 and all real-money/order authority stays closed.
 
 Immediate next execution target:
-`stage8.5-bounded-ml-family-robustness-ablation-v1`.
+`stage8.5-bounded-ml-family-untouched-forward-paper-v1`.

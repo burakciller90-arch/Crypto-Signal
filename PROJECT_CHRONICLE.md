@@ -2501,3 +2501,12 @@ Both accepted families now share the same immutable 1.0x / 1.5x / 2.0x transacti
 
 The next safe frontier is `stage8.5-bounded-ml-family-robustness-ablation-v1`.
 Untouched-forward and RL remain closed. REAL_CAPITAL=0.
+
+## 2026-09-21 — Bounded two-family ML robustness/ablation v1 accepted
+
+PR #609 merged at `86448100df5805a7e9a9b36eef486afe07ee8a99`.
+Branch research, merged-main research, Stage10 regression, UID504 current-head verification and UID504 fulltest all passed.
+The accepted slice binds the exact family expansion and family cost-stress evidence, ablates each feature once per family without refit, preserves fold/regime sensitivity and explicit NO_EVIDENCE state, and cannot select a winner or mutate accepted predictions.
+
+The next safe frontier is `stage8.5-bounded-ml-family-untouched-forward-paper-v1`.
+This opens only a predeclared untouched-forward research partition with all accepted model/config identities frozen before evaluation. No retrospective refit or family selection is allowed. RL remains closed and optional. REAL_CAPITAL=0.

@@ -169,31 +169,46 @@ refit; predictions are not changed; there is no family/scenario winner
 selection. Branch and merged-main research gates, Stage10 regression, UID504
 sync and UID504 fulltest all passed.
 
+## Stage 8.5 bounded two-family ML robustness/ablation — ACCEPTED
+
+Two-family deterministic robustness/ablation evidence is **ACCEPTED** at
+`86448100df5805a7e9a9b36eef486afe07ee8a99`.
+
+It binds the exact accepted two-family expansion and family cost-stress chain,
+ablates every accepted feature exactly once for both families without refitting,
+records changed-prediction sensitivity, preserves fold sensitivity and explicit
+regime OBSERVED / NO_EVIDENCE states, and retains favorable and unfavorable
+evidence. There is no automatic family/feature/fold/regime/model selection.
+Branch/merged-main research gates, merged-main Stage10 regression, UID504
+current-head verification and UID504 fulltest all passed.
+
 ## Canonical next frontier
 
 The next bounded roadmap slice is:
 
-`stage8.5-bounded-ml-family-robustness-ablation-v1`
+`stage8.5-bounded-ml-family-untouched-forward-paper-v1`
 
 Requirements:
 
 - remain under isolated `research/alpha_factory`,
-- consume exact accepted two-family expansion and family cost-stress evidence,
-- ablate each accepted feature exactly once for both families without refit,
-- preserve per-fold changed-prediction sensitivity,
-- preserve regime OBSERVED / NO_EVIDENCE state for both families,
-- retain favorable and unfavorable robustness evidence,
-- bind results to immutable family/model/evaluation identities,
-- no automatic family/feature/fold/regime/model winner selection,
+- use a predeclared `UNTOUCHED_FORWARD` partition only after the accepted
+  train/OOS/cost-stress/robustness chain,
+- freeze accepted family/model/config identities before forward evaluation,
+- do not refit a model after forward observations become available,
+- do not alter features, thresholds, family set or selection policy from forward results,
+- preserve exact chronology and point-in-time availability,
+- preserve original gross/cost/net-R semantics,
+- retain favorable, unfavorable and no-evidence/not-evaluable outcomes,
+- evaluation is descriptive evidence only,
+- no automatic family/model/scenario winner selection,
 - no calibrated-probability claim,
-- untouched-forward remains closed,
 - no production product/paper/confluence/signal import,
 - no self-promotion, champion mutation or deploy path,
-- RL remains closed.
+- RL remains closed and optional.
 
-A favorable robustness result cannot promote or select a challenger.
-Untouched-forward paper evidence and explicit supervisor acceptance remain
-separate later gates.
+A favorable untouched-forward result cannot promote or select a challenger.
+Promotion dossier assembly and explicit supervisor acceptance remain separate
+later gates.
 
 `REAL_CAPITAL=0`.
 

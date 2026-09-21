@@ -3067,3 +3067,38 @@ Current true roadmap frontier:
 - untouched-forward remains closed;
 - no promotion/champion mutation/production import/deploy path;
 - RL remains closed.
+
+
+## 2026-09-21 — Stage 8.5 bounded two-family ML robustness/ablation v1 ACCEPTED
+
+- accepted main head: `86448100df5805a7e9a9b36eef486afe07ee8a99`;
+- PR #609 merged deterministic robustness evidence for both accepted ML families;
+- exact accepted two-family expansion + family cost-stress evidence is rebound before analysis;
+- every accepted feature is ablated exactly once for both families without refit;
+- changed-prediction sensitivity is preserved per fold/family;
+- regime slices preserve OBSERVED / NO_EVIDENCE states for both families;
+- fold sensitivity spans both families;
+- favorable and unfavorable evidence is retained;
+- no automatic family/feature/fold/regime/model winner selection;
+- no calibrated-probability claim;
+- untouched-forward remains closed through this accepted slice;
+- RL remains closed;
+- no production/paper/confluence/signal import or deploy authority;
+- branch Alpha Factory research gate PASS: run `35654857755`;
+- merged-main Alpha Factory research gate PASS: run `35654962957`;
+- merged-main Stage10 hosted full regression PASS: run `35654962890`;
+- UID504 SSD sync/current-head verification PASS: issue #612 / run `35655100357`;
+- UID504 fulltest PASS: issue #614 / run `35655168448`;
+- PAPER/STABLE write activation remains closed;
+- REAL_CAPITAL=0.
+
+Current true roadmap frontier:
+- `stage8.5-bounded-ml-family-untouched-forward-paper-v1`;
+- open only a predeclared untouched-forward research partition after the accepted training/OOS/cost-stress/robustness chain;
+- freeze accepted family/model/config identities before evaluating untouched-forward observations;
+- no refit, feature changes, threshold changes, family selection or retrospective optimization;
+- preserve chronology, gross/cost/net-R, favorable and unfavorable outcomes, and explicit NOT_EVALUABLE / NO_EVIDENCE state where applicable;
+- untouched-forward evaluation remains descriptive evidence only;
+- no self-promotion, champion mutation, production import or deploy path;
+- RL remains closed because it is optional and not required for this promotion-evidence chain;
+- REAL_CAPITAL=0.
