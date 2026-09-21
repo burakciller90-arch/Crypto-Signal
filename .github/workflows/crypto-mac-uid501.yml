@@ -52,7 +52,7 @@ jobs:
           set -euo pipefail
           cmd="$(printf '%s\n' "$ISSUE_BODY" | awk -F: 'tolower($1)=="command" {gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2); print tolower($2); exit}')"
           case "$cmd" in
-            status|repo|services|disk|externaldisk|hostdiag|audiorestart|audioadminrestart|loadtree|loadtree2|bginventory|bgsafecheck|cryptomigrationdiag|cryptomigrationdiag2|cryptodashboarddiag|cryptorunnertree|cryptorunnercutoverdiag|cryptossdrunnerps|uidsudo|uid504runneradminstart|uid504runnerguiadminstart)
+            status|repo|services|disk|externaldisk|hostdiag|audiorestart|audioadminrestart|loadtree|loadtree2|bginventory|bgsafecheck|cryptomigrationdiag|cryptomigrationdiag2|cryptodashboarddiag|cryptorunnertree|cryptorunnercutoverdiag|cryptossdrunnerps|uidsudo|uid504runneradminstart|uid504runnerguiadminstart|cryptofinalaudit)
               ;;
             *)
               echo "Unsupported command: $cmd"
@@ -380,6 +380,40 @@ jobs:
           /bin/ps -axo command= | /usr/bin/grep -q '/Volumes/Crypto-504/Crypto-Signal/Runner/bin/Runner.Listener'
           rm -f "$SCRIPT"
           echo "UID504_SSD_RUNNER_GUI_ADMIN_START_PASS=YES"
+
+
+      - name: CRYPTO FINAL AUDIT
+        if: steps.parse.outputs.command == 'cryptofinalaudit'
+        shell: bash
+        run: |
+          set +e
+          echo "=== UID504 HOME PERMISSIONS ==="
+          /bin/ls -ldOe /Users/crypto-signal-agent 2>&1
+          echo "=== KNOWN INTERNAL CRYPTO PATHS ==="
+          for p in             /Users/crypto-signal-agent/Crypto-Signal             /Users/crypto-signal-agent/Crypto-Signal-Live             /Users/crypto-signal-agent/Crypto-Signal-Product             /Users/crypto-signal-agent/Crypto-Signal-Alerts             /Users/crypto-signal-agent/Crypto-Signal-Paper             /Users/crypto-signal-agent/actions-runner-crypto             "/Users/crypto-signal-agent/Library/Application Support/CryptoSignal"; do
+            if [ -e "$p" ] || [ -L "$p" ]; then
+              echo "PRESENT=$p"
+              /bin/ls -ldOe "$p" 2>&1
+              /usr/bin/du -sh "$p" 2>&1
+            else
+              echo "ABSENT_OR_INACCESSIBLE=$p"
+            fi
+          done
+          echo "=== CRYPTO LAUNCHAGENTS ==="
+          /bin/ls -l /Users/crypto-signal-agent/Library/LaunchAgents/*cryptosignal* /Users/crypto-signal-agent/Library/LaunchAgents/*Crypto-Signal* 2>&1 | /usr/bin/head -160
+          echo "=== CRYPTO LOG DIRS ==="
+          /bin/ls -ld /Users/crypto-signal-agent/Library/Logs/*Crypto-Signal* /Users/crypto-signal-agent/Library/Logs/*cryptosignal* 2>&1 | /usr/bin/head -120
+          echo "=== CRYPTO PROCESSES INTERNAL ==="
+          /bin/ps -axo pid=,ppid=,user=,%cpu=,%mem=,etime=,command= | /usr/bin/grep -E '/Users/crypto-signal-agent/(Crypto-Signal|actions-runner-crypto)|Library/Application Support/CryptoSignal' | /usr/bin/head -160
+          echo "=== CRYPTO PROCESSES SSD ==="
+          /bin/ps -axo pid=,ppid=,user=,%cpu=,%mem=,etime=,command= | /usr/bin/grep -E '/Volumes/Crypto-504/Crypto-Signal' | /usr/bin/head -200
+          echo "=== SSD ROOT ==="
+          /bin/ls -ld /Volumes/Crypto-504 /Volumes/Crypto-504/Crypto-Signal 2>&1
+          /usr/bin/du -sh /Volumes/Crypto-504/Crypto-Signal 2>&1
+          echo "=== SPACE ==="
+          /bin/df -h / /Volumes/Crypto-504
+          echo "CRYPTO_FINAL_AUDIT_PASS=YES"
+          exit 0
 
       - name: HOST DIAG
         if: steps.parse.outputs.command == 'hostdiag'
