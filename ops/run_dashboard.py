@@ -35,6 +35,12 @@ def parse_args() -> argparse.Namespace:
         type=Path,
         default=DEFAULT_CANDLE_CACHE_PATH,
     )
+    parser.add_argument(
+        "--learning-memory",
+        type=Path,
+        default=None,
+        help="optional read-only Learning Memory SQLite path",
+    )
     return parser.parse_args()
 
 
@@ -47,6 +53,7 @@ def main() -> None:
         args.alert_outbox,
         paper_ledger_path=args.paper_ledger,
         candle_cache_path=args.candle_cache,
+        learning_memory_path=args.learning_memory,
     )
     uvicorn.run(
         app,

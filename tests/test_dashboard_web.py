@@ -251,6 +251,14 @@ def test_health_and_static_shell_without_ledger(tmp_path: Path) -> None:
     assert "SİSTEM SAĞLIĞI" in index.text
     assert 'id="systemHealth"' in index.text
     assert "function renderSystemHealth(health, command, paperMission)" in script.text
+    assert "İSTİHBARAT LABORATUVARI" in index.text
+    assert 'id="intelligenceCenter"' in index.text
+    assert 'id="intelligenceSummary"' in index.text
+    assert "function renderIntelligenceCenter(data)" in script.text
+    assert "function renderLearningMemory(memory)" in script.text
+    assert "/api/intelligence-center" in script.text
+    assert "Production contribution" in script.text
+    assert "accepted research ≠ production authority" in script.text
     assert "READ-ONLY · SAĞLIKLI" in script.text
     assert "REAL_CAPITAL=" in script.text
     assert "function renderEducation(data)" in script.text
@@ -461,6 +469,7 @@ def test_api_has_no_post_command_surface(tmp_path: Path) -> None:
     assert client.post("/api/command-center").status_code == 405
     assert client.post("/api/signals").status_code == 405
     assert client.post("/api/paper/mission-control").status_code == 405
+    assert client.post("/api/intelligence-center").status_code == 405
 
 
 def test_invalid_signal_identity_is_rejected_as_bad_request(tmp_path: Path) -> None:
