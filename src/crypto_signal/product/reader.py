@@ -212,14 +212,59 @@ class DashboardReader:
             clauses.append("timeframe = ?")
             params.append(timeframe)
 
-        query = "SELECT * FROM signal_freezes"
+        where_sql = ""
         if clauses:
-            query += " WHERE " + " AND ".join(clauses)
-        query += " ORDER BY frozen_at_ms DESC, bundle_identity DESC"
-        if limit is not None:
-            query += " LIMIT ? OFFSET ?"
-            params.extend((limit, offset))
-        return tuple(connection.execute(query, params).fetchall())
+            where_sql = " WHERE " + " AND ".join(clauses)
+
+        if limit is None:
+            query = (
+                "SELECT * FROM signal_freezes"
+                + where_sql
+                + " ORDER BY frozen_at_ms DESC, bundle_identity DESC"
+            )
+            return tuple(connection.execute(query, params).fetchall())
+
+        key_query = (
+            "SELECT bundle_identity FROM signal_freezes"
+            + where_sql
+            + " ORDER BY frozen_at_ms DESC, bundle_identity DESC"
+            + " LIMIT ? OFFSET ?"
+        )
+        key_params = [*params, limit, offset]
+        key_rows = tuple(connection.execute(key_query, key_params).fetchall())
+        identities = tuple(
+            self._require_str(
+                key_row["bundle_identity"],
+                "signal row bundle identity",
+            )
+            for key_row in key_rows
+        )
+        return self._rows_by_bundle_identities(
+            connection,
+            identities,
+        )
+
+    def _rows_by_bundle_identities(
+        self,
+        connection: sqlite3.Connection,
+        identities: tuple[str, ...],
+    ) -> tuple[sqlite3.Row, ...]:
+        rows: list[sqlite3.Row] = []
+        for identity in identities:
+            row = connection.execute(
+                """
+                SELECT *
+                FROM signal_freezes
+                WHERE bundle_identity = ?
+                """,
+                (identity,),
+            ).fetchone()
+            if row is None:
+                raise DashboardReadError(
+                    "signal row disappeared during immutable read"
+                )
+            rows.append(row)
+        return tuple(rows)
 
     def command_center(self, *, recent_limit: int = 8) -> CommandCenterView:
         if recent_limit <= 0:
@@ -243,8 +288,22 @@ class DashboardReader:
                     direction_counts=(),
                     recent_signals=(),
                 )
-            rows = self._signal_rows(connection)
-            if not rows:
+
+            summary = connection.execute(
+                """
+                SELECT
+                    COUNT(*) AS freeze_count,
+                    MAX(frozen_at_ms) AS latest_frozen_at_ms
+                FROM signal_freezes
+                """
+            ).fetchone()
+            if summary is None:
+                raise DashboardReadError("command-center summary row missing")
+            freeze_count = self._require_int(
+                summary["freeze_count"],
+                "command-center freeze count",
+            )
+            if freeze_count == 0:
                 return CommandCenterView(
                     status=ProductDataStatus.EMPTY,
                     freeze_count=0,
@@ -253,20 +312,77 @@ class DashboardReader:
                     direction_counts=(),
                     recent_signals=(),
                 )
-            cards = tuple(self._card_from_row(row) for row in rows)
-            states = Counter(card.state for card in cards)
-            directions = Counter(card.direction for card in cards)
+
+            latest_frozen_at_ms = self._require_int(
+                summary["latest_frozen_at_ms"],
+                "command-center latest frozen at",
+            )
+            try:
+                state_counts = tuple(
+                    (
+                        SignalState(
+                            self._require_str(
+                                row["signal_state"],
+                                "command-center signal state",
+                            )
+                        ),
+                        self._require_int(
+                            row["freeze_count"],
+                            "command-center state count",
+                        ),
+                    )
+                    for row in connection.execute(
+                        """
+                        SELECT signal_state, COUNT(*) AS freeze_count
+                        FROM signal_freezes
+                        GROUP BY signal_state
+                        ORDER BY signal_state
+                        """
+                    ).fetchall()
+                )
+                direction_counts = tuple(
+                    (
+                        SignalDirection(
+                            self._require_str(
+                                row["direction"],
+                                "command-center direction",
+                            )
+                        ),
+                        self._require_int(
+                            row["freeze_count"],
+                            "command-center direction count",
+                        ),
+                    )
+                    for row in connection.execute(
+                        """
+                        SELECT direction, COUNT(*) AS freeze_count
+                        FROM signal_freezes
+                        GROUP BY direction
+                        ORDER BY direction
+                        """
+                    ).fetchall()
+                )
+            except ValueError as exc:
+                if isinstance(exc, DashboardReadError):
+                    raise
+                raise DashboardReadError(
+                    "command-center aggregate row is semantically invalid"
+                ) from exc
+
+            recent_rows = self._signal_rows(
+                connection,
+                limit=recent_limit,
+            )
+            recent_cards = tuple(
+                self._card_from_row(row) for row in recent_rows
+            )
             return CommandCenterView(
                 status=ProductDataStatus.READY,
-                freeze_count=len(cards),
-                latest_frozen_at_ms=max(card.frozen_at_ms for card in cards),
-                state_counts=tuple(
-                    sorted(states.items(), key=lambda item: item[0].value)
-                ),
-                direction_counts=tuple(
-                    sorted(directions.items(), key=lambda item: item[0].value)
-                ),
-                recent_signals=cards[:recent_limit],
+                freeze_count=freeze_count,
+                latest_frozen_at_ms=latest_frozen_at_ms,
+                state_counts=state_counts,
+                direction_counts=direction_counts,
+                recent_signals=recent_cards,
             )
 
     def market_radar(self) -> MarketRadarView:
@@ -278,39 +394,61 @@ class DashboardReader:
                     status=ProductDataStatus.SCHEMA_UNAVAILABLE,
                     items=(),
                 )
-            rows = self._signal_rows(connection)
-            if not rows:
+            key_rows = tuple(
+                connection.execute(
+                    """
+                    WITH ranked AS (
+                        SELECT
+                            bundle_identity,
+                            ROW_NUMBER() OVER (
+                                PARTITION BY
+                                    exchange,
+                                    market_type,
+                                    symbol,
+                                    timeframe
+                                ORDER BY
+                                    frozen_at_ms DESC,
+                                    bundle_identity DESC
+                            ) AS row_rank
+                        FROM signal_freezes
+                    )
+                    SELECT bundle_identity
+                    FROM ranked
+                    WHERE row_rank = 1
+                    """
+                ).fetchall()
+            )
+            if not key_rows:
                 return MarketRadarView(status=ProductDataStatus.EMPTY, items=())
-            latest: dict[
-                tuple[Exchange, MarketType, str, str],
-                FrozenSignalCard,
-            ] = {}
-            for row in rows:
-                card = self._card_from_row(row)
-                latest.setdefault(
-                    (
-                        card.exchange,
-                        card.market_type,
-                        card.symbol,
-                        card.timeframe,
-                    ),
-                    card,
+            identities = tuple(
+                self._require_str(
+                    row["bundle_identity"],
+                    "market-radar bundle identity",
                 )
+                for row in key_rows
+            )
+            cards = tuple(
+                self._card_from_row(row)
+                for row in self._rows_by_bundle_identities(
+                    connection,
+                    identities,
+                )
+            )
             items = tuple(
                 MarketRadarItem(
-                    exchange=key[0],
-                    market_type=key[1],
-                    symbol=key[2],
-                    timeframe=key[3],
+                    exchange=card.exchange,
+                    market_type=card.market_type,
+                    symbol=card.symbol,
+                    timeframe=card.timeframe,
                     latest=card,
                 )
-                for key, card in sorted(
-                    latest.items(),
+                for card in sorted(
+                    cards,
                     key=lambda item: (
-                        item[0][2],
-                        item[0][3],
-                        item[0][0].value,
-                        item[0][1].value,
+                        item.symbol,
+                        item.timeframe,
+                        item.exchange.value,
+                        item.market_type.value,
                     ),
                 )
             )
@@ -407,12 +545,13 @@ class DashboardReader:
                     latest_by_provider=(),
                     recent_signals=(),
                 )
-            rows = self._signal_rows(
+            recent_rows = self._signal_rows(
                 connection,
                 symbol=symbol,
                 timeframe=timeframe,
+                limit=recent_limit,
             )
-            if not rows:
+            if not recent_rows:
                 return AssetCockpitView(
                     status=ProductDataStatus.EMPTY,
                     symbol=symbol,
@@ -420,28 +559,59 @@ class DashboardReader:
                     latest_by_provider=(),
                     recent_signals=(),
                 )
-            cards = tuple(self._card_from_row(row) for row in rows)
-            provider_latest: dict[
-                tuple[Exchange, MarketType],
-                FrozenSignalCard,
-            ] = {}
-            for card in cards:
-                provider_latest.setdefault((card.exchange, card.market_type), card)
+            recent_cards = tuple(
+                self._card_from_row(row) for row in recent_rows
+            )
+            provider_keys = tuple(
+                connection.execute(
+                    """
+                    WITH ranked AS (
+                        SELECT
+                            bundle_identity,
+                            ROW_NUMBER() OVER (
+                                PARTITION BY exchange, market_type
+                                ORDER BY
+                                    frozen_at_ms DESC,
+                                    bundle_identity DESC
+                            ) AS row_rank
+                        FROM signal_freezes
+                        WHERE symbol = ? AND timeframe = ?
+                    )
+                    SELECT bundle_identity
+                    FROM ranked
+                    WHERE row_rank = 1
+                    """,
+                    (symbol, timeframe),
+                ).fetchall()
+            )
+            provider_identities = tuple(
+                self._require_str(
+                    row["bundle_identity"],
+                    "asset provider bundle identity",
+                )
+                for row in provider_keys
+            )
+            provider_cards = tuple(
+                self._card_from_row(row)
+                for row in self._rows_by_bundle_identities(
+                    connection,
+                    provider_identities,
+                )
+            )
             return AssetCockpitView(
                 status=ProductDataStatus.READY,
                 symbol=symbol,
                 timeframe=timeframe,
                 latest_by_provider=tuple(
-                    card
-                    for _, card in sorted(
-                        provider_latest.items(),
-                        key=lambda item: (
-                            item[0][0].value,
-                            item[0][1].value,
+                    sorted(
+                        provider_cards,
+                        key=lambda card: (
+                            card.exchange.value,
+                            card.market_type.value,
                         ),
                     )
                 ),
-                recent_signals=cards[:recent_limit],
+                recent_signals=recent_cards,
             )
 
     def signal_archive(

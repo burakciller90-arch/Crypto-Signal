@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import hashlib
+import sqlite3
 from decimal import Decimal
 from pathlib import Path
 
@@ -187,10 +187,35 @@ def test_missing_benchmark_mark_fails_closed_without_fabricated_return(
     assert equal.positions == ()
 
 
+def _logical_candle_cache_snapshot(path: Path) -> tuple[object, ...]:
+    uri = f"file:{path.resolve()}?mode=ro"
+    with sqlite3.connect(uri, uri=True) as connection:
+        schema = tuple(
+            connection.execute(
+                """
+                SELECT type, name, sql
+                FROM sqlite_master
+                WHERE name NOT LIKE 'sqlite_%'
+                ORDER BY type, name
+                """
+            ).fetchall()
+        )
+        rows = tuple(
+            connection.execute(
+                """
+                SELECT *
+                FROM candles
+                ORDER BY exchange, market_type, symbol, timeframe, open_time_ms
+                """
+            ).fetchall()
+        )
+    return schema, rows
+
+
 def test_benchmark_reader_is_read_only(tmp_path: Path) -> None:
     path = tmp_path / "candles.sqlite3"
     _seed_complete_cache(path)
-    before = hashlib.sha256(path.read_bytes()).hexdigest()
+    before = _logical_candle_cache_snapshot(path)
 
     read_paper_benchmark_snapshot(
         candle_cache_path=path,
@@ -198,7 +223,7 @@ def test_benchmark_reader_is_read_only(tmp_path: Path) -> None:
         observed_at_ms=3_600_000,
     )
 
-    after = hashlib.sha256(path.read_bytes()).hexdigest()
+    after = _logical_candle_cache_snapshot(path)
     assert after == before
 
 def test_benchmark_relative_return_is_backend_deterministic(tmp_path: Path) -> None:

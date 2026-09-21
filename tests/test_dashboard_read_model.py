@@ -291,6 +291,42 @@ def test_command_center_reads_real_frozen_semantics(tmp_path: Path) -> None:
     )
 
 
+def test_command_center_parses_only_recent_cards(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    path = tmp_path / "ledger.sqlite3"
+    create_signal_schema(path)
+    for index in range(40):
+        insert_signal(
+            path,
+            seed=f"bulk-{index}",
+            frozen_at_ms=1_000 + index,
+            as_of_ms=900 + index,
+            cutoff_ms=800 + index,
+        )
+
+    original = DashboardReader._card_from_row
+    parsed = 0
+
+    def counting_card(
+        self: DashboardReader,
+        row: sqlite3.Row,
+    ):
+        nonlocal parsed
+        parsed += 1
+        return original(self, row)
+
+    monkeypatch.setattr(DashboardReader, "_card_from_row", counting_card)
+
+    view = DashboardReader(path).command_center(recent_limit=3)
+
+    assert view.status is ProductDataStatus.READY
+    assert view.freeze_count == 40
+    assert len(view.recent_signals) == 3
+    assert parsed == 3
+
+
 def test_market_radar_returns_latest_per_provider_context(tmp_path: Path) -> None:
     path = tmp_path / "ledger.sqlite3"
     create_signal_schema(path)
