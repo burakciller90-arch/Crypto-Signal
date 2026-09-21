@@ -1,0 +1,207 @@
+name: Crypto R11 Runtime Recovery
+
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  contents: read
+  issues: read
+
+jobs:
+  recovery:
+    if: github.actor == 'burakciller90-arch' && github.event.issue.title == '[R11] RUNTIME RECOVERY'
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Parse R11 mode
+        id: parse
+        shell: bash
+        env:
+          ISSUE_BODY: ${{ github.event.issue.body }}
+        run: |
+          set -euo pipefail
+          mode="$(printf '%s\n' "$ISSUE_BODY" | awk -F: 'tolower($1)=="mode" {gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2); print tolower($2); exit}')"
+          case "$mode" in
+            runtime|runner-arm|runner-verify) ;;
+            *) echo "Unsupported R11 mode: $mode"; exit 2 ;;
+          esac
+          echo "mode=$mode" >> "$GITHUB_OUTPUT"
+
+      - name: Sync canonical Development for R11
+        if: steps.parse.outputs.mode == 'runtime'
+        shell: bash
+        env:
+          GH_JOB_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          DEV="$ROOT/Development"
+          test "$(id -u)" = "504"
+          test -z "$(git -C "$DEV" status --porcelain)"
+          BASIC="$(printf 'x-access-token:%s' "$GH_JOB_TOKEN" | base64)"
+          git -C "$DEV" -c http.extraheader="AUTHORIZATION: Basic $BASIC" fetch --no-tags origin main
+          test "$(git -C "$DEV" rev-parse origin/main)" = "${{ github.sha }}"
+          git -C "$DEV" merge --ff-only "${{ github.sha }}"
+          test "$(git -C "$DEV" rev-parse HEAD)" = "${{ github.sha }}"
+          echo "R11_DEVELOPMENT_SYNC_PASS=YES"
+
+      - name: Runtime watchdog and recovery acceptance
+        if: steps.parse.outputs.mode == 'runtime'
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          DEV="$ROOT/Development"
+          LOCAL_ROOT="$HOME/Library/Application Support/CryptoSignalRuntime"
+          WATCH_LABEL="com.cryptosignal.runtime-terminal-watchdog"
+          WATCH_TARGET="gui/$(id -u)/$WATCH_LABEL"
+
+          bash "$GITHUB_WORKSPACE/ops/r11/install_runtime_watchdog.sh"
+          launchctl print "$WATCH_TARGET" >/dev/null
+          plutil -p "$HOME/Library/LaunchAgents/$WATCH_LABEL.plist" | grep -F '"RunAtLoad" => true' >/dev/null
+          plutil -p "$HOME/Library/LaunchAgents/$WATCH_LABEL.plist" | grep -F '"StartInterval" => 30' >/dev/null
+          echo "R11_LOGIN_WATCHDOG_BOOTSTRAP_PASS=YES"
+
+          set +e
+          CRYPTO_SIGNAL_ROOT="$ROOT/__r11_missing_mount__" "$LOCAL_ROOT/start-ssd-runtime.command"
+          missing_rc=$?
+          set -e
+          test "$missing_rc" = "75"
+          grep -F 'SSD_RUNTIME_NOT_READY=YES' "$HOME/Library/Logs/CryptoSignalRuntime/runtime-terminal-watchdog.err.log" >/dev/null
+          echo "R11_MISSING_SSD_FAIL_CLOSED_PASS=YES"
+
+          PYTHONPATH="$DEV/src" "$DEV/.venv/bin/python"             "$GITHUB_WORKSPACE/ops/r11_runtime_acceptance.py" --root "$ROOT"
+
+          TEST_LOG_DIR="$ROOT/RecoveryAcceptance"
+          rm -rf "$TEST_LOG_DIR"
+          mkdir -p "$TEST_LOG_DIR"
+          /usr/bin/python3 - <<'PY'
+          from pathlib import Path
+          p=Path("/Volumes/Crypto-504/Crypto-Signal/RecoveryAcceptance/r11-log-rotation-test.log")
+          p.write_bytes((b"old\n"*32768) + (b"new\n"*32768))
+          PY
+          before="$(stat -f %z "$TEST_LOG_DIR/r11-log-rotation-test.log")"
+          PYTHONPATH="$DEV/src" "$DEV/.venv/bin/python" "$DEV/ops/bound_runtime_logs.py"             --log-dir "$TEST_LOG_DIR" --max-bytes 65536 --keep-bytes 32768
+          after="$(stat -f %z "$TEST_LOG_DIR/r11-log-rotation-test.log")"
+          test "$before" -gt 65536
+          test "$after" -le 32768
+          rm -rf "$TEST_LOG_DIR"
+          echo "R11_LOG_ROTATION_PASS=YES before=$before after=$after"
+
+          old_dash="$(cat "$ROOT/dashboard.pid")"
+          kill -0 "$old_dash"
+          kill "$old_dash"
+          for _ in {1..20}; do
+            if ! kill -0 "$old_dash" >/dev/null 2>&1; then break; fi
+            sleep 1
+          done
+          test ! -e "/proc/$old_dash" 2>/dev/null || true
+          stale_dash="$(cat "$ROOT/dashboard.pid" 2>/dev/null || true)"
+          test "$stale_dash" = "$old_dash"
+          new_dash=""
+          for _ in {1..45}; do
+            new_dash="$(cat "$ROOT/dashboard.pid" 2>/dev/null || true)"
+            if [ -n "$new_dash" ] && [ "$new_dash" != "$old_dash" ]                 && kill -0 "$new_dash" >/dev/null 2>&1                 && ps -p "$new_dash" -o command= | grep -F "$ROOT/Product/ops/run_dashboard.py" >/dev/null                 && curl -fsS --max-time 3 http://127.0.0.1:48700/api/health >/dev/null 2>&1; then
+              break
+            fi
+            sleep 1
+          done
+          test -n "$new_dash"
+          test "$new_dash" != "$old_dash"
+          kill -0 "$new_dash"
+          echo "R11_DASHBOARD_RECOVERY_PASS=YES old=$old_dash new=$new_dash"
+
+          old_sup="$(cat "$ROOT/ssd-service-supervisor.pid")"
+          kill -0 "$old_sup"
+          kill "$old_sup"
+          for _ in {1..20}; do
+            if ! kill -0 "$old_sup" >/dev/null 2>&1; then break; fi
+            sleep 1
+          done
+          stale_sup="$(cat "$ROOT/ssd-service-supervisor.pid" 2>/dev/null || true)"
+          test "$stale_sup" = "$old_sup"
+
+          launchctl kickstart -k "$WATCH_TARGET"
+          new_sup=""
+          for _ in {1..90}; do
+            new_sup="$(cat "$ROOT/ssd-service-supervisor.pid" 2>/dev/null || true)"
+            if [ -n "$new_sup" ] && [ "$new_sup" != "$old_sup" ]                 && kill -0 "$new_sup" >/dev/null 2>&1                 && ps -p "$new_sup" -o command= | grep -F "$ROOT/ssd-service-supervisor.sh" >/dev/null                 && curl -fsS --max-time 3 http://127.0.0.1:48700/api/health >/dev/null 2>&1; then
+              break
+            fi
+            sleep 1
+          done
+          test -n "$new_sup"
+          test "$new_sup" != "$old_sup"
+          kill -0 "$new_sup"
+          echo "R11_SUPERVISOR_RECOVERY_PASS=YES old=$old_sup new=$new_sup"
+
+          PYTHONPATH="$DEV/src" "$DEV/.venv/bin/python"             "$GITHUB_WORKSPACE/ops/r11_runtime_acceptance.py" --root "$ROOT"
+
+          curl -fsS --max-time 5 http://127.0.0.1:48700/api/health             | /usr/bin/python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["status"]=="ok"; assert d["real_capital"]==0; assert d["read_only"] is True; assert d["ledger_present"] is True; assert d["alert_outbox_present"] is True'
+
+          echo "R11_RUNTIME_RECOVERY_PASS=YES"
+
+      - name: Arm real runner-listener recovery
+        if: steps.parse.outputs.mode == 'runner-arm'
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          LOCAL_ROOT="$HOME/Library/Application Support/CryptoSignalRunner"
+          LOCAL_LOG="$HOME/Library/Logs/CryptoSignalRunner"
+          LABEL="com.cryptosignal.github-runner-terminal-watchdog"
+          TARGET="gui/$(id -u)/$LABEL"
+          mkdir -p "$LOCAL_ROOT" "$LOCAL_LOG"
+          launchctl print "$TARGET" >/dev/null
+
+          old_listener="$(ps -axo pid=,command=             | awk '/\/Volumes\/Crypto-504\/Crypto-Signal\/Runner\/bin\/Runner.Listener run --startuptype service/ {print $1; exit}')"
+          test -n "$old_listener"
+          kill -0 "$old_listener"
+          printf '%s\n' "$old_listener" > "$LOCAL_ROOT/r11-old-listener.pid"
+
+          helper="/tmp/crypto-r11-kill-listener.sh"
+          cat > "$helper" <<'SH'
+          #!/bin/bash
+          set -u
+          pid="$1"
+          log="$2"
+          sleep 12
+          cmd="$(ps -p "$pid" -o command= 2>/dev/null || true)"
+          if printf '%s' "$cmd" | grep -F '/Volumes/Crypto-504/Crypto-Signal/Runner/bin/Runner.Listener run --startuptype service' >/dev/null 2>&1; then
+            printf '%s R11_KILLING_LISTENER=%s\n' "$(date '+%Y-%m-%d %H:%M:%S %z')" "$pid" >>"$log"
+            kill "$pid"
+          else
+            printf '%s R11_LISTENER_CHANGED_BEFORE_KILL=%s\n' "$(date '+%Y-%m-%d %H:%M:%S %z')" "$pid" >>"$log"
+          fi
+          SH
+          chmod 700 "$helper"
+          unset RUNNER_TRACKING_ID
+          nohup "$helper" "$old_listener" "$LOCAL_LOG/r11-runner-recovery.log"             >>"$LOCAL_LOG/r11-runner-recovery-helper.out.log"             2>>"$LOCAL_LOG/r11-runner-recovery-helper.err.log"             </dev/null &
+          echo $! > "$LOCAL_ROOT/r11-kill-helper.pid"
+          echo "R11_RUNNER_RECOVERY_ARMED=YES old_listener=$old_listener helper=$!"
+
+      - name: Verify real runner-listener recovery
+        if: steps.parse.outputs.mode == 'runner-verify'
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          LOCAL_ROOT="$HOME/Library/Application Support/CryptoSignalRunner"
+          LOCAL_LOG="$HOME/Library/Logs/CryptoSignalRunner"
+          LABEL="com.cryptosignal.github-runner-terminal-watchdog"
+          TARGET="gui/$(id -u)/$LABEL"
+
+          launchctl print "$TARGET" >/dev/null
+          old_listener="$(cat "$LOCAL_ROOT/r11-old-listener.pid")"
+          current_listener="$(ps -axo pid=,command=             | awk '/\/Volumes\/Crypto-504\/Crypto-Signal\/Runner\/bin\/Runner.Listener run --startuptype service/ {print $1; exit}')"
+          test -n "$current_listener"
+          test "$current_listener" != "$old_listener"
+          kill -0 "$current_listener"
+
+          grep -E 'R11_KILLING_LISTENER=|REQUESTING_TERMINAL_START=YES|STARTED_RUNSVC_PID='             "$LOCAL_LOG/r11-runner-recovery.log" "$LOCAL_LOG/terminal-watchdog.log" 2>/dev/null             | tail -80 || true
+          ps -p "$current_listener" -o pid=,ppid=,user=,etime=,command=
+          test -z "$(ps -axo command= | grep -F '/Users/crypto-signal-agent/actions-runner-crypto/' | grep -v grep || true)"
+          echo "R11_RUNNER_RECOVERY_PASS=YES old=$old_listener new=$current_listener"
