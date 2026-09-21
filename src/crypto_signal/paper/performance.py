@@ -406,11 +406,13 @@ def project_paper_trade_performance(
         for entry in entries
         if isinstance(entry.record, PositionCashMutationRecord)
     )
-    if any(fill.filled_at_ms < measurement_start for fill in fills):
-        if measurement_start != creation.created_at_ms:
-            raise PaperTradePerformanceError(
-                "performance window cannot start after existing simulated fills"
-            )
+    if (
+        measurement_start != creation.created_at_ms
+        and any(fill.filled_at_ms < measurement_start for fill in fills)
+    ):
+        raise PaperTradePerformanceError(
+            "performance window cannot start after existing simulated fills"
+        )
     for mutation in mutations:
         if mutation.mutated_at_ms > observed_at_ms:
             raise PaperTradePerformanceError(
