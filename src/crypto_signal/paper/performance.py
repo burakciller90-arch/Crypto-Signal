@@ -350,6 +350,7 @@ def read_paper_trade_performance(
     *,
     paper_ledger_path: Path,
     observed_at_ms: int,
+    measurement_start_at_ms: int | None = None,
 ) -> PaperTradePerformanceSnapshot:
     """Read the immutable paper ledger without writes and score closed trades."""
     entries = read_paper_entries_read_only(paper_ledger_path)
@@ -358,6 +359,7 @@ def read_paper_trade_performance(
         fund_identity=state.fund_identity,
         entries=entries,
         observed_at_ms=observed_at_ms,
+        measurement_start_at_ms=measurement_start_at_ms,
     )
 
 
@@ -366,10 +368,33 @@ def project_paper_trade_performance(
     fund_identity: str,
     entries: tuple[PaperLedgerEntry, ...],
     observed_at_ms: int,
+    measurement_start_at_ms: int | None = None,
 ) -> PaperTradePerformanceSnapshot:
     if observed_at_ms < 0:
         raise ValueError("observed_at_ms must be non-negative")
     _require_sha256(fund_identity, "fund identity")
+
+    creations = tuple(
+        entry.record
+        for entry in entries
+        if isinstance(entry.record, FundCreationRecord)
+    )
+    if len(creations) != 1:
+        raise PaperTradePerformanceError(
+            "performance requires exactly one fund creation record"
+        )
+    creation = creations[0]
+    if creation.record_identity != fund_identity:
+        raise PaperTradePerformanceError("fund creation identity mismatch")
+    measurement_start = (
+        creation.created_at_ms
+        if measurement_start_at_ms is None
+        else measurement_start_at_ms
+    )
+    if measurement_start < creation.created_at_ms:
+        raise ValueError("performance window cannot predate fund creation")
+    if measurement_start > observed_at_ms:
+        raise ValueError("performance window cannot start after observation time")
 
     fills = tuple(
         entry.record
@@ -381,6 +406,24 @@ def project_paper_trade_performance(
         for entry in entries
         if isinstance(entry.record, PositionCashMutationRecord)
     )
+    if any(fill.filled_at_ms < measurement_start for fill in fills):
+        if measurement_start != creation.created_at_ms:
+            raise PaperTradePerformanceError(
+                "performance window cannot start after existing simulated fills"
+            )
+    for mutation in mutations:
+        if mutation.mutated_at_ms > observed_at_ms:
+            raise PaperTradePerformanceError(
+                "paper mutation occurs after performance observation time"
+            )
+
+    window = _build_performance_window(
+        measurement_start_at_ms=measurement_start,
+        observed_at_ms=observed_at_ms,
+        fills=fills,
+        mutations=mutations,
+    )
+
     mutation_by_source: dict[str, PositionCashMutationRecord] = {}
     for mutation in mutations:
         if mutation.source_identity in mutation_by_source:
@@ -506,6 +549,8 @@ def project_paper_trade_performance(
         "breakeven_count": breakeven_count,
         "closed_trades": [_closed_trade_payload(trade) for trade in closed_trades],
         "fund_identity": fund_identity,
+        "expectancy_return_fraction_per_closed_trade": average_return,
+        "expectancy_usdt_per_closed_trade": average_pnl,
         "gross_loss_usdt": gross_loss,
         "gross_profit_usdt": gross_profit,
         "loss_count": loss_count,
@@ -518,6 +563,7 @@ def project_paper_trade_performance(
         "version": PAPER_TRADE_PERFORMANCE_VERSION,
         "win_count": win_count,
         "win_rate_fraction": win_rate,
+        "window": _window_payload(window),
         "worst_trade_pnl_usdt": worst_pnl,
     }
     identity = canonical_sha256(payload)
@@ -544,6 +590,76 @@ def project_paper_trade_performance(
         best_trade_pnl_usdt=best_pnl,
         worst_trade_pnl_usdt=worst_pnl,
         total_explicit_execution_cost_usdt=total_cost,
+        expectancy_usdt_per_closed_trade=average_pnl,
+        expectancy_return_fraction_per_closed_trade=average_return,
+        window=window,
+        real_capital=REAL_CAPITAL,
+    )
+
+
+def _build_performance_window(
+    *,
+    measurement_start_at_ms: int,
+    observed_at_ms: int,
+    fills: tuple[SimulatedFillRecord, ...],
+    mutations: tuple[PositionCashMutationRecord, ...],
+) -> PaperPerformanceWindowMetrics:
+    window_fills = tuple(
+        fill for fill in fills if fill.filled_at_ms >= measurement_start_at_ms
+    )
+    gross_traded_notional = sum(
+        (fill.quantity * fill.simulated_fill_price for fill in window_fills),
+        start=Decimal(0),
+    )
+
+    positions: tuple[PaperPosition, ...] = ()
+    previous_mutation_at_ms: int | None = None
+    for mutation in mutations:
+        if (
+            previous_mutation_at_ms is not None
+            and mutation.mutated_at_ms < previous_mutation_at_ms
+        ):
+            raise PaperTradePerformanceError(
+                "paper mutation timestamps must be non-decreasing"
+            )
+        previous_mutation_at_ms = mutation.mutated_at_ms
+        if mutation.mutated_at_ms <= measurement_start_at_ms:
+            positions = mutation.positions_after
+
+    cash_time_ms = 0
+    cursor_ms = measurement_start_at_ms
+    for mutation in mutations:
+        if mutation.mutated_at_ms <= measurement_start_at_ms:
+            continue
+        if mutation.mutated_at_ms > observed_at_ms:
+            break
+        if not positions:
+            cash_time_ms += mutation.mutated_at_ms - cursor_ms
+        positions = mutation.positions_after
+        cursor_ms = mutation.mutated_at_ms
+
+    if not positions:
+        cash_time_ms += observed_at_ms - cursor_ms
+
+    duration_ms = observed_at_ms - measurement_start_at_ms
+    cash_fraction = (
+        None
+        if duration_ms == 0
+        else Decimal(cash_time_ms) / Decimal(duration_ms)
+    )
+    invested_fraction = (
+        None if cash_fraction is None else Decimal(1) - cash_fraction
+    )
+    return PaperPerformanceWindowMetrics(
+        measurement_start_at_ms=measurement_start_at_ms,
+        observed_at_ms=observed_at_ms,
+        duration_ms=duration_ms,
+        gross_traded_notional_usdt=gross_traded_notional,
+        turnover_fraction=gross_traded_notional / INITIAL_CASH_USDT,
+        cash_time_ms=cash_time_ms,
+        cash_time_fraction=cash_fraction,
+        invested_time_fraction=invested_fraction,
+        turnover_denominator_usdt=INITIAL_CASH_USDT,
         real_capital=REAL_CAPITAL,
     )
 
@@ -690,6 +806,22 @@ def _closed_trade_payload(trade: PaperClosedTradeResult) -> dict[str, object]:
     }
 
 
+def _window_payload(
+    window: PaperPerformanceWindowMetrics,
+) -> dict[str, object]:
+    return {
+        "cash_time_fraction": window.cash_time_fraction,
+        "cash_time_ms": window.cash_time_ms,
+        "duration_ms": window.duration_ms,
+        "gross_traded_notional_usdt": window.gross_traded_notional_usdt,
+        "invested_time_fraction": window.invested_time_fraction,
+        "measurement_start_at_ms": window.measurement_start_at_ms,
+        "observed_at_ms": window.observed_at_ms,
+        "turnover_denominator_usdt": window.turnover_denominator_usdt,
+        "turnover_fraction": window.turnover_fraction,
+    }
+
+
 def _snapshot_payload(
     snapshot: PaperTradePerformanceSnapshot,
 ) -> dict[str, object]:
@@ -706,6 +838,10 @@ def _snapshot_payload(
             _closed_trade_payload(trade) for trade in snapshot.closed_trades
         ],
         "fund_identity": snapshot.fund_identity,
+        "expectancy_return_fraction_per_closed_trade": (
+            snapshot.expectancy_return_fraction_per_closed_trade
+        ),
+        "expectancy_usdt_per_closed_trade": snapshot.expectancy_usdt_per_closed_trade,
         "gross_loss_usdt": snapshot.gross_loss_usdt,
         "gross_profit_usdt": snapshot.gross_profit_usdt,
         "loss_count": snapshot.loss_count,
@@ -722,6 +858,7 @@ def _snapshot_payload(
         "version": snapshot.version,
         "win_count": snapshot.win_count,
         "win_rate_fraction": snapshot.win_rate_fraction,
+        "window": _window_payload(snapshot.window),
         "worst_trade_pnl_usdt": snapshot.worst_trade_pnl_usdt,
     }
 
