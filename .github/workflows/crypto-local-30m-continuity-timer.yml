@@ -8,6 +8,8 @@ on:
       - feature/local-30m-continuity-timer-v2
     paths:
       - "ops/continuity/recurring_wake.py"
+      - "ops/continuity/relay_submit.py"
+      - "ops/continuity/relay_daemon.py"
       - "ops/continuity/launchd/com.cryptosignal.continuity30m.plist"
       - ".github/workflows/crypto-30m-continuity-wake.yml"
       - ".github/workflows/crypto-local-30m-continuity-timer.yml"
@@ -29,7 +31,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python -m py_compile ops/continuity/recurring_wake.py
+          python -m py_compile \
+            ops/continuity/recurring_wake.py \
+            ops/continuity/relay_submit.py \
+            ops/continuity/relay_daemon.py
           python - <<'PY'
           from pathlib import Path
           import plistlib
@@ -48,6 +53,14 @@ jobs:
           assert "scheduled_slot_event_id" in source
           assert "crypto-30m-continuity:" in source
           assert "recurring_wake_last_local_attempt" in source
+
+          submit = Path("ops/continuity/relay_submit.py").read_text()
+          assert "AUTONOMOUS_EVENT_CANONICALIZED" in submit
+          assert "scheduled_slot_event_id" in submit
+
+          daemon = Path("ops/continuity/relay_daemon.py").read_text()
+          assert "STALE_AUTONOMOUS_WAKE" in daemon
+          assert "scheduled_slot_event_id" in daemon
 
           fallback = Path(".github/workflows/crypto-30m-continuity-wake.yml").read_text()
           assert "github.event_name" in fallback
