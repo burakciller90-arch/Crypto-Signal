@@ -25,6 +25,7 @@ jobs:
           import csv
           import io
           import json
+          import urllib.error
           import urllib.parse
           import urllib.request
           import xml.etree.ElementTree as ET
@@ -149,9 +150,25 @@ jobs:
                   "limit": 5,
               }
           )
-          bybit = json.loads(
-              get_bytes(f"https://api.bybit.com/v5/market/kline?{params}")
-          )
+          bybit: dict[str, object] | None = None
+          bybit_host = ""
+          bybit_errors: list[str] = []
+          for host in ("api.bybit.com", "api.bytick.com"):
+              try:
+                  candidate = json.loads(
+                      get_bytes(f"https://{host}/v5/market/kline?{params}")
+                  )
+              except (urllib.error.HTTPError, urllib.error.URLError) as exc:
+                  bybit_errors.append(f"{host}:{exc}")
+                  continue
+              if candidate.get("retCode") == 0:
+                  bybit = candidate
+                  bybit_host = host
+                  break
+              bybit_errors.append(
+                  f"{host}:retCode={candidate.get('retCode')!r}"
+              )
+          assert bybit is not None, bybit_errors
           assert bybit.get("retCode") == 0, bybit
           result = bybit.get("result", {})
           assert result.get("category") == "spot"
@@ -167,6 +184,7 @@ jobs:
                   assert float(value) > 0
           print(
               "BYBIT_BTC_DAILY_SOURCE_QUALITY_PASS=YES",
+              f"host={bybit_host}",
               f"latest_start_ms={starts[0]}",
               f"rows={len(candles)}",
           )
