@@ -6,6 +6,8 @@ import sys
 import time
 from pathlib import Path
 
+from crypto_signal.paper.activation import load_paper_activation
+from crypto_signal.paper.ledger import PaperFundLedger
 from crypto_signal.paper.models import REAL_CAPITAL
 from crypto_signal.paper.performance import (
     PaperTradePerformanceError,
@@ -38,9 +40,13 @@ def main() -> int:
         else args.observed_at_ms
     )
     try:
+        activation = load_paper_activation(PaperFundLedger(args.paper_ledger))
         snapshot = read_paper_trade_performance(
             paper_ledger_path=args.paper_ledger,
             observed_at_ms=observed_at_ms,
+            measurement_start_at_ms=(
+                None if activation is None else activation.activation_cutoff_ms
+            ),
         )
     except (OSError, PaperTradePerformanceError, ValueError) as exc:
         print(
@@ -97,6 +103,13 @@ def main() -> int:
         f"gross_loss_usdt={_render(snapshot.gross_loss_usdt)} "
         f"profit_factor={_render(snapshot.profit_factor)} "
         f"execution_cost_usdt={_render(snapshot.total_explicit_execution_cost_usdt)} "
+        f"expectancy_usdt={_render(snapshot.expectancy_usdt_per_closed_trade)} "
+        f"expectancy_return_fraction={_render(snapshot.expectancy_return_fraction_per_closed_trade)} "
+        f"measurement_start_at_ms={snapshot.window.measurement_start_at_ms} "
+        f"turnover_fraction={snapshot.window.turnover_fraction} "
+        f"gross_traded_notional_usdt={snapshot.window.gross_traded_notional_usdt} "
+        f"cash_time_fraction={_render(snapshot.window.cash_time_fraction)} "
+        f"invested_time_fraction={_render(snapshot.window.invested_time_fraction)} "
         f"trade_success={trade_success} "
         "REAL_CAPITAL=0",
         flush=True,
