@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - feature/stage10-integrated-acceptance
+      - feature/stage8-5-clustering-regime-challenger-v1
 
 permissions:
   contents: read
