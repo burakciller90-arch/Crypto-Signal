@@ -52,7 +52,7 @@ jobs:
           set -euo pipefail
           cmd="$(printf '%s\n' "$ISSUE_BODY" | awk -F: 'tolower($1)=="command" {gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2); print tolower($2); exit}')"
           case "$cmd" in
-            status|repo|services|disk|externaldisk|hostdiag|audiorestart|audioadminrestart|loadtree|loadtree2|bginventory|bgsafecheck|cryptomigrationdiag|cryptomigrationdiag2|cryptodashboarddiag|cryptorunnertree|cryptorunnercutoverdiag|cryptossdrunnerps)
+            status|repo|services|disk|externaldisk|hostdiag|audiorestart|audioadminrestart|loadtree|loadtree2|bginventory|bgsafecheck|cryptomigrationdiag|cryptomigrationdiag2|cryptodashboarddiag|cryptorunnertree|cryptorunnercutoverdiag|cryptossdrunnerps|uidsudo)
               ;;
             *)
               echo "Unsupported command: $cmd"
@@ -288,6 +288,21 @@ jobs:
           echo "=== UID504 PROCESSES ON SSD ==="
           /bin/ps -axo pid=,ppid=,user=,%cpu=,%mem=,etime=,state=,command= | /usr/bin/awk '$3=="crypto-signal-agent" && $0 ~ /\/Volumes\/Crypto-504/ {print}'
           echo "CRYPTO_SSD_RUNNER_PS_PASS=YES"
+          exit 0
+
+
+      - name: UID501 SUDO PROBE
+        if: steps.parse.outputs.command == 'uidsudo'
+        shell: bash
+        run: |
+          set +e
+          echo "=== ID ==="; id
+          /usr/bin/sudo -n -u crypto-signal-agent /usr/bin/id
+          rc=$?
+          echo "SUDO_AS_UID504_RC=$rc"
+          /usr/bin/sudo -n /usr/bin/true
+          echo "SUDO_ROOT_RC=$?"
+          echo "UID501_SUDO_PROBE_PASS=YES"
           exit 0
 
       - name: HOST DIAG
