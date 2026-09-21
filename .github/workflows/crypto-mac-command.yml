@@ -24,7 +24,7 @@ jobs:
           set -euo pipefail
           cmd="$(printf '%s\n' "$ISSUE_BODY" | awk -F: 'tolower($1)=="command" {gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2); print tolower($2); exit}')"
           case "$cmd" in
-            status|services|logs|disk|sync|producttest|fulltest|productstate|productdeploy|paperreview|paperinspect|paperfixlint|paperharden|stateplanreview|stateplaninspect|stateplanharden|cursorreview|cursorreviewtail|cursorcleanup|bridgecheck|bridgestate|pausecheck|wakepause|wakeresume|wakearm|waketest|wakeheartbeat|cursorcheck|cursorauthdiag|cursorttycheck)
+            status|services|logs|disk|sync|producttest|fulltest|productstate|productdeploy|paperreview|paperinspect|paperfixlint|paperharden|stateplanreview|stateplaninspect|stateplanharden|cursorreview|cursorreviewtail|cursorcleanup|bridgecheck|bridgestate|pausecheck|wakepause|wakeresume|wakearm|waketest|wakeheartbeat|chatbusyprobe|cursorcheck|cursorauthdiag|cursorttycheck)
               ;;
             *)
               echo "Unsupported command: $cmd"
@@ -970,6 +970,31 @@ jobs:
           set -euo pipefail
           EVENT_ID="github-wake-heartbeat-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
           /usr/bin/python3 /Users/crypto-signal-agent/Crypto-Signal/ops/continuity/recurring_wake.py "$EVENT_ID"
+
+      - name: CHAT BUSY PROBE
+        if: steps.parse.outputs.command == 'chatbusyprobe'
+        shell: bash
+        run: |
+          set -euo pipefail
+          TARGET="https://chatgpt.com/c/6ab0debd-49a8-83eb-8b33-a7ce2ef826d0"
+          /usr/bin/osascript - "$TARGET" <<'APPLESCRIPT'
+          on run argv
+            set targetUrl to item 1 of argv
+            set js to "(()=>{const vis=x=>{if(!x)return false;const s=getComputedStyle(x),r=x.getBoundingClientRect();return x.isConnected&&!x.disabled&&s.display!=='none'&&s.visibility!=='hidden'&&Number(s.opacity||1)>0&&r.width>1&&r.height>1&&x.getClientRects().length>0};const stop=[...document.querySelectorAll('button[data-testid=\"stop-button\"]')].find(vis);const editor=document.querySelector('#prompt-textarea');const send=[...document.querySelectorAll('button[data-testid=\"send-button\"],button[aria-label*=\"Send\" i],button[type=\"submit\"]')].filter(vis).map(x=>({testid:x.getAttribute('data-testid'),aria:x.getAttribute('aria-label'),type:x.getAttribute('type'),text:(x.innerText||'').trim()}));const buttons=[...document.querySelectorAll('button')].filter(vis).slice(-20).map(x=>({testid:x.getAttribute('data-testid'),aria:x.getAttribute('aria-label'),type:x.getAttribute('type'),text:(x.innerText||'').trim()}));return JSON.stringify({busy:!!stop,editor:!!editor,draft:editor?(editor.innerText||'').trim():'',send,buttons});})()"
+            tell application "Safari"
+              repeat with w in windows
+                repeat with t in tabs of w
+                  try
+                    if (URL of t as text) is targetUrl then
+                      return do JavaScript js in t
+                    end if
+                  end try
+                end repeat
+              end repeat
+            end tell
+            return "TARGET_NOT_FOUND"
+          end run
+          APPLESCRIPT
 
       - name: CURSOR TTY CHECK
         if: steps.parse.outputs.command == 'cursorttycheck'
