@@ -1,0 +1,156 @@
+name: Crypto Local 20m Continuity Timer
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - feature/continuity-20m-isolated-v1
+    paths:
+      - "ops/continuity/recurring_wake.py"
+      - "ops/continuity/relay_submit.py"
+      - "ops/continuity/relay_daemon.py"
+      - "ops/continuity/launchd/com.cryptosignal.continuity20m.plist"
+      - ".github/workflows/crypto-20m-continuity-wake.yml"
+      - ".github/workflows/crypto-local-20m-continuity-timer.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    if: github.ref_name != 'main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Validate 20-minute cadence and project isolation
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m py_compile             ops/continuity/recurring_wake.py             ops/continuity/relay_submit.py             ops/continuity/relay_daemon.py
+
+          python - <<'PY'
+          from pathlib import Path
+          import plistlib
+
+          expected_url = "https://chatgpt.com/c/6ab0debd-49a8-83eb-8b33-a7ce2ef826d0"
+          plist = plistlib.loads(
+              Path(
+                  "ops/continuity/launchd/com.cryptosignal.continuity20m.plist"
+              ).read_bytes()
+          )
+          assert plist["Label"] == "com.cryptosignal.continuity20m"
+          assert plist["StartCalendarInterval"] == [
+              {"Minute": 0},
+              {"Minute": 20},
+              {"Minute": 40},
+          ]
+          assert plist["ProgramArguments"] == [
+              "/usr/bin/python3",
+              "/Users/crypto-signal-agent/Crypto-Signal/ops/continuity/recurring_wake.py",
+          ]
+
+          wake = Path("ops/continuity/recurring_wake.py").read_text()
+          submit = Path("ops/continuity/relay_submit.py").read_text()
+          daemon = Path("ops/continuity/relay_daemon.py").read_text()
+          fallback = Path(
+              ".github/workflows/crypto-20m-continuity-wake.yml"
+          ).read_text()
+
+          for source in (wake, submit, daemon):
+              assert "crypto-20m-continuity:" in source
+              assert "crypto-30m-continuity:" not in source
+
+          assert expected_url in wake
+          assert expected_url in daemon
+          assert 'SHARED = Path("/Users/Shared/.crypto-signal-wake-relay")' in wake
+          assert 'SHARED = Path("/Users/Shared/.crypto-signal-wake-relay")' in submit
+          assert 'SHARED = Path("/Users/Shared/.crypto-signal-wake-relay")' in daemon
+          assert "target_url != EXPECTED_TARGET" in daemon
+
+          combined = "\n".join((wake, submit, daemon, fallback)).lower()
+          assert "durdurulmaz" not in combined
+          assert "quantum" not in combined
+
+          assert 'cron: "0,20,40 * * * *"' in fallback
+          assert "LOCAL_20M_TIMER_RECENT=YES" in fallback
+          assert "GITHUB_FALLBACK_SKIPPED=YES" in fallback
+          print("CRYPTO_20M_ISOLATION_VALIDATION_PASS=YES")
+          PY
+
+  deploy:
+    if: github.ref_name == 'main'
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Sync canonical continuity code
+        shell: bash
+        env:
+          GH_JOB_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          REPO="/Users/crypto-signal-agent/Crypto-Signal"
+          test "$(id -u)" = "504"
+          test -z "$(git -C "$REPO" status --porcelain)"
+          BASIC="$(printf 'x-access-token:%s' "$GH_JOB_TOKEN" | base64)"
+          git -C "$REPO" -c http.extraheader="AUTHORIZATION: Basic $BASIC" fetch --no-tags origin main
+          git -C "$REPO" merge --ff-only FETCH_HEAD
+          test "$(git -C "$REPO" rev-parse HEAD)" = "$GITHUB_SHA"
+          /usr/bin/python3 -m py_compile             "$REPO/ops/continuity/recurring_wake.py"             "$REPO/ops/continuity/relay_submit.py"             "$REPO/ops/continuity/relay_daemon.py"
+          echo "CANONICAL_HEAD=$(git -C "$REPO" rev-parse HEAD)"
+
+      - name: Verify Crypto-only chat binding
+        shell: bash
+        run: |
+          set -euo pipefail
+          EXPECTED="https://chatgpt.com/c/6ab0debd-49a8-83eb-8b33-a7ce2ef826d0"
+          SHARED="/Users/Shared/.crypto-signal-wake-relay/current_chat_url"
+          LOCAL="/Users/crypto-signal-agent/Crypto-Signal/runtime/continuity/wake/current_chat_url"
+          test "$(cat "$SHARED")" = "$EXPECTED"
+          test "$(cat "$LOCAL")" = "$EXPECTED"
+          echo "CRYPTO_EXACT_CHAT_BINDING_PASS=YES"
+
+      - name: Replace 30-minute timer with exact :00/:20/:40 timer
+        shell: bash
+        run: |
+          set -euo pipefail
+          REPO="/Users/crypto-signal-agent/Crypto-Signal"
+          AGENTS="$HOME/Library/LaunchAgents"
+          DOMAIN="gui/$(id -u)"
+
+          OLD_LABEL="com.cryptosignal.continuity30m"
+          OLD_PLIST="$AGENTS/$OLD_LABEL.plist"
+          NEW_LABEL="com.cryptosignal.continuity20m"
+          NEW_SRC="$REPO/ops/continuity/launchd/$NEW_LABEL.plist"
+          NEW_PLIST="$AGENTS/$NEW_LABEL.plist"
+
+          mkdir -p "$AGENTS"
+
+          launchctl bootout "$DOMAIN/$OLD_LABEL" 2>/dev/null || true
+          rm -f "$OLD_PLIST"
+
+          launchctl bootout "$DOMAIN/$NEW_LABEL" 2>/dev/null || true
+          cp "$NEW_SRC" "$NEW_PLIST"
+          chmod 600 "$NEW_PLIST"
+          /usr/bin/plutil -lint "$NEW_PLIST"
+          launchctl bootstrap "$DOMAIN" "$NEW_PLIST"
+          launchctl enable "$DOMAIN/$NEW_LABEL"
+
+          if launchctl print "$DOMAIN/$OLD_LABEL" >/dev/null 2>&1; then
+            echo "OLD_30M_TIMER_STILL_LOADED=YES" >&2
+            exit 1
+          fi
+          test ! -e "$OLD_PLIST"
+
+          echo "=== LOCAL 20M TIMER STATE ==="
+          /usr/libexec/PlistBuddy -c "Print :StartCalendarInterval" "$NEW_PLIST"
+          launchctl print "$DOMAIN/$NEW_LABEL" |             egrep 'state =|last exit code =|program =|Minute|path =|arguments =|stdout path|stderr path' |             head -100
+          echo "OLD_30M_TIMER_REMOVED=YES"
+          echo "LOCAL_20M_CONTINUITY_TIMER_DEPLOY_PASS=YES"
