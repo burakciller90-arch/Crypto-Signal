@@ -265,7 +265,11 @@ jobs:
           PY
           curl -fsS --max-time 5 http://127.0.0.1:48700/ > /tmp/crypto-product-index.html
           grep -F "İSTİHBARAT LABORATUVARI" /tmp/crypto-product-index.html >/dev/null
+          grep -F "KISACA" /tmp/crypto-product-index.html >/dev/null
+          grep -F 'id="viewModeToggle"' /tmp/crypto-product-index.html >/dev/null
+          grep -F 'id="beginnerBrief"' /tmp/crypto-product-index.html >/dev/null
           echo "INTELLIGENCE_CENTER_LIVE_PASS=YES"
+          echo "GIFT_EDITION_POLISH_LIVE_PASS=YES"
 
           test "$(git -C "$PRODUCT" rev-parse HEAD)" = "$TARGET"
           test -z "$(git -C "$PRODUCT" status --porcelain)"
