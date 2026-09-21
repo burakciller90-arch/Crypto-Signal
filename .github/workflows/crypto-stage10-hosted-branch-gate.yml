@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - feature/stage10-integrated-acceptance
+      - fix/stage10-command-center-read-performance
 
 permissions:
   contents: read
