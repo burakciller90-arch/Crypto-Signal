@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - feature/stage10-integrated-acceptance
+      - stage8.5-bounded-ml-walk-forward-v1
 
 permissions:
   contents: read
