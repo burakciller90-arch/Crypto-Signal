@@ -1340,39 +1340,41 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          ROOT="/Volumes/Crypto-504/Crypto-Signal"
-          RUNNER="$ROOT/Runner"
           LOCAL_ROOT="$HOME/Library/Application Support/CryptoSignalRunner"
           LOCAL_LOG="$HOME/Library/Logs/CryptoSignalRunner"
-          WRAPPER="$LOCAL_ROOT/runner-ssd-bootstrap.sh"
+          START_CMD="$LOCAL_ROOT/start-ssd-runner.command"
+          WATCHDOG="$LOCAL_ROOT/watchdog.sh"
           LABEL="com.cryptosignal.github-runner-ssd"
           PLIST="$HOME/Library/LaunchAgents/$LABEL.plist"
           TARGET="gui/$(id -u)/$LABEL"
 
           test "$(id -u)" = "504"
-          test -d "$RUNNER"
-          test -x "$RUNNER/runsvc.sh"
-          test -f "$RUNNER/.runner"
-          test -f "$RUNNER/.credentials"
-          test -f "$RUNNER/.credentials_rsaparams"
           mkdir -p "$LOCAL_ROOT" "$LOCAL_LOG" "$HOME/Library/LaunchAgents"
 
-          cat > "$WRAPPER" <<'SH'
+          cat > "$START_CMD" <<'SH'
           #!/bin/bash
           set -u
           ROOT="/Volumes/Crypto-504/Crypto-Signal"
           RUNNER="$ROOT/Runner"
           LOCAL_LOG="$HOME/Library/Logs/CryptoSignalRunner"
           mkdir -p "$LOCAL_LOG"
-          printf '%s bootstrap pid=%s\n' "$(date '+%Y-%m-%d %H:%M:%S %z')" "$$" >> "$LOCAL_LOG/bootstrap.log"
+          echo "$(date '+%Y-%m-%d %H:%M:%S %z') TERMINAL_START" >> "$LOCAL_LOG/bootstrap.log"
 
           if /bin/ps -axo command= 2>/dev/null             | /usr/bin/grep -F '/Volumes/Crypto-504/Crypto-Signal/Runner/bin/Runner.Listener run --startuptype service'             | /usr/bin/grep -v grep >/dev/null 2>&1; then
-            echo "RUNNER_ALREADY_ALIVE=YES" >> "$LOCAL_LOG/bootstrap.log"
+            echo "$(date '+%Y-%m-%d %H:%M:%S %z') RUNNER_ALREADY_ALIVE=YES" >> "$LOCAL_LOG/bootstrap.log"
             exit 0
           fi
 
-          if [ ! -x "$RUNNER/runsvc.sh" ]; then
-            echo "SSD_RUNNER_NOT_READY=YES" >> "$LOCAL_LOG/bootstrap.log"
+          ready=0
+          for _ in {1..60}; do
+            if [ -x "$RUNNER/runsvc.sh" ]; then
+              ready=1
+              break
+            fi
+            /bin/sleep 1
+          done
+          if [ "$ready" != "1" ]; then
+            echo "$(date '+%Y-%m-%d %H:%M:%S %z') SSD_RUNNER_NOT_READY=YES" >> "$LOCAL_LOG/bootstrap.log"
             exit 0
           fi
 
@@ -1380,10 +1382,48 @@ jobs:
           unset RUNNER_TRACKING_ID
           export HOME="/Users/crypto-signal-agent"
           export ACTIONS_RUNNER_SVC=1
-          echo "STARTING_SSD_RUNNER=YES" >> "$LOCAL_LOG/bootstrap.log"
-          exec ./runsvc.sh >>"$LOCAL_LOG/runner.out.log" 2>>"$LOCAL_LOG/runner.err.log"
+          echo "$(date '+%Y-%m-%d %H:%M:%S %z') STARTING_SSD_RUNNER=YES" >> "$LOCAL_LOG/bootstrap.log"
+          /usr/bin/nohup ./runsvc.sh >>"$LOCAL_LOG/runner.out.log" 2>>"$LOCAL_LOG/runner.err.log" </dev/null &
+          pid=$!
+          echo "$pid" > "$LOCAL_ROOT/runner.pid"
+          /bin/sleep 5
+          if /bin/kill -0 "$pid" >/dev/null 2>&1; then
+            echo "$(date '+%Y-%m-%d %H:%M:%S %z') SSD_RUNNER_PROCESS_ALIVE=$pid" >> "$LOCAL_LOG/bootstrap.log"
+          else
+            echo "$(date '+%Y-%m-%d %H:%M:%S %z') SSD_RUNNER_PROCESS_DIED=$pid" >> "$LOCAL_LOG/bootstrap.log"
+          fi
+          exit 0
           SH
-          chmod 700 "$WRAPPER"
+          chmod 700 "$START_CMD"
+
+          cat > "$WATCHDOG" <<'SH'
+          #!/bin/bash
+          set -u
+          LOCAL_ROOT="$HOME/Library/Application Support/CryptoSignalRunner"
+          LOCAL_LOG="$HOME/Library/Logs/CryptoSignalRunner"
+          START_CMD="$LOCAL_ROOT/start-ssd-runner.command"
+          MARKER="$LOCAL_ROOT/last-terminal-bootstrap"
+          mkdir -p "$LOCAL_LOG"
+
+          if /bin/ps -axo command= 2>/dev/null             | /usr/bin/grep -F '/Volumes/Crypto-504/Crypto-Signal/Runner/bin/Runner.Listener run --startuptype service'             | /usr/bin/grep -v grep >/dev/null 2>&1; then
+            exit 0
+          fi
+
+          now="$(/bin/date +%s)"
+          last=0
+          if [ -f "$MARKER" ]; then
+            last="$(/usr/bin/stat -f %m "$MARKER" 2>/dev/null || echo 0)"
+          fi
+          if [ $((now-last)) -lt 600 ]; then
+            exit 0
+          fi
+
+          /usr/bin/touch "$MARKER"
+          echo "$(date '+%Y-%m-%d %H:%M:%S %z') WATCHDOG_OPEN_TERMINAL=YES" >> "$LOCAL_LOG/watchdog.log"
+          /usr/bin/open -g -a Terminal "$START_CMD"
+          exit 0
+          SH
+          chmod 700 "$WATCHDOG"
 
           cat > "$PLIST" <<PLIST
           <?xml version="1.0" encoding="UTF-8"?>
@@ -1395,40 +1435,48 @@ jobs:
             <key>ProgramArguments</key>
             <array>
               <string>/bin/bash</string>
-              <string>$WRAPPER</string>
+              <string>$WATCHDOG</string>
             </array>
             <key>RunAtLoad</key>
             <true/>
             <key>StartInterval</key>
-            <integer>30</integer>
+            <integer>60</integer>
             <key>ProcessType</key>
             <string>Background</string>
             <key>StandardOutPath</key>
-            <string>$LOCAL_LOG/launchagent.out.log</string>
+            <string>$LOCAL_LOG/watchdog-launchagent.out.log</string>
             <key>StandardErrorPath</key>
-            <string>$LOCAL_LOG/launchagent.err.log</string>
+            <string>$LOCAL_LOG/watchdog-launchagent.err.log</string>
           </dict>
           </plist>
           PLIST
 
           chmod 644 "$PLIST"
           plutil -lint "$PLIST"
-
           launchctl bootout "$TARGET" >/dev/null 2>&1 || true
           launchctl bootstrap "gui/$(id -u)" "$PLIST"
           sleep 3
 
-          echo "=== LOCAL BOOTSTRAP ==="
-          ls -l "$WRAPPER" "$PLIST"
-          echo "=== PERSISTENT RUNNER AGENT ==="
+          echo "=== WATCHDOG STATE ==="
           launchctl print "$TARGET" 2>&1 | egrep 'state =|runs =|last exit code =|program =|path =|run interval =' | head -100 || true
-          echo "=== BOOTSTRAP LOG ==="
-          tail -80 "$LOCAL_LOG/bootstrap.log" 2>/dev/null || true
+
+          before="$(wc -l < "$LOCAL_LOG/bootstrap.log" 2>/dev/null || echo 0)"
+          /usr/bin/open -g -a Terminal "$START_CMD"
+          sleep 5
+          after="$(wc -l < "$LOCAL_LOG/bootstrap.log" 2>/dev/null || echo 0)"
+
+          echo "=== TERMINAL BOOTSTRAP PROBE ==="
+          echo "BOOTSTRAP_LINES_BEFORE=$before"
+          echo "BOOTSTRAP_LINES_AFTER=$after"
+          tail -40 "$LOCAL_LOG/bootstrap.log" 2>/dev/null || true
+          test "$after" -gt "$before"
+          tail -20 "$LOCAL_LOG/bootstrap.log" | grep -q 'RUNNER_ALREADY_ALIVE=YES'
+
           echo "=== CURRENT SSD RUNNER ==="
           ps -axo pid=,ppid=,user=,etime=,command=             | grep -E '[V]olumes/Crypto-504/Crypto-Signal/Runner/(runsvc.sh|bin/Runner.Listener)'             | head -40
           pgrep -f '/Volumes/Crypto-504/Crypto-Signal/Runner/bin/Runner.Listener run --startuptype service' >/dev/null
-          launchctl print "$TARGET" 2>&1 | grep -q 'last exit code = 0'
-          echo "CRYPTO_UID504_SSD_RUNNER_LOCAL_SHIM_PERSISTENCE_PASS=YES"
+
+          echo "CRYPTO_UID504_SSD_RUNNER_TERMINAL_WATCHDOG_PASS=YES"
 
       - name: RUNNER PERSIST DIAG
         if: steps.parse.outputs.command == 'runnerpersistdiag'
