@@ -22,6 +22,8 @@ PIDFILE = SHARED / "relay.pid"
 LOG = SHARED / "relay.log"
 STATUS = SHARED / "relay_status"
 RETRY_SECONDS = 2
+TARGET_OPEN_RETRY_SECONDS = 60
+_last_target_open_attempt = 0.0
 
 APPLESCRIPT = r"""
 on run argv
@@ -107,6 +109,41 @@ def run_js(target_url: str, js: str) -> str:
     return proc.stdout.strip()
 
 
+def open_target_in_safari(target_url: str) -> str:
+    global _last_target_open_attempt
+    now = time.monotonic()
+    if now - _last_target_open_attempt < TARGET_OPEN_RETRY_SECONDS:
+        return "TARGET_OPEN_THROTTLED"
+    _last_target_open_attempt = now
+    script = r"""
+on run argv
+  set targetUrl to item 1 of argv
+  tell application "Safari"
+    if (count of windows) = 0 then
+      make new document with properties {URL:targetUrl}
+    else
+      tell front window to make new tab with properties {URL:targetUrl}
+    end if
+  end tell
+  return "TARGET_OPEN_REQUESTED"
+end run
+"""
+    try:
+        proc = subprocess.run(
+            ["/usr/bin/osascript", "-", target_url],
+            input=script,
+            text=True,
+            capture_output=True,
+            timeout=10,
+            check=False,
+        )
+    except subprocess.TimeoutExpired:
+        return "TARGET_OPEN_TIMEOUT"
+    if proc.returncode != 0:
+        return f"TARGET_OPEN_ERROR:{proc.returncode}:{proc.stderr.strip()}"
+    return proc.stdout.strip()
+
+
 def read_event(path: Path) -> tuple[str, str, str]:
     lines = path.read_text().splitlines()
     if len(lines) < 8:
@@ -163,6 +200,8 @@ def deliver(event_id: str, message: str, target_url: str) -> tuple[bool, str]:
         "if(draft)return 'DRAFT_BUSY';return 'READY';})()"
     )
     state = run_js(target_url, state_js)
+    if state == "TARGET_NOT_FOUND":
+        return False, open_target_in_safari(target_url)
     if state == "OBSERVED":
         write_receipt(receipt, "OBSERVED", event_id, message_sha)
         return True, "OBSERVED"
@@ -201,7 +240,7 @@ def deliver(event_id: str, message: str, target_url: str) -> tuple[bool, str]:
             return True, "OBSERVED_AFTER_STOP"
         if state not in {"READY", "PREPARED"}:
             return False, f"AFTER_STOP:{state}"
-    if state in {"DRAFT_BUSY", "NO_EDITOR", "TARGET_NOT_FOUND"}:
+    if state in {"DRAFT_BUSY", "NO_EDITOR"}:
         return False, state
     if state.startswith(("OSASCRIPT_ERROR:", "JAVASCRIPT_ERROR:")):
         return False, state
