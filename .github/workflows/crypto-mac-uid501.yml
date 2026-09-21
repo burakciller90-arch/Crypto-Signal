@@ -52,7 +52,7 @@ jobs:
           set -euo pipefail
           cmd="$(printf '%s\n' "$ISSUE_BODY" | awk -F: 'tolower($1)=="command" {gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2); print tolower($2); exit}')"
           case "$cmd" in
-            status|repo|services|disk|externaldisk|hostdiag|audiorestart|audioadminrestart|loadtree|loadtree2|bginventory|bgsafecheck|cryptomigrationdiag|cryptomigrationdiag2|cryptodashboarddiag|cryptorunnertree|cryptorunnercutoverdiag|cryptossdrunnerps|uidsudo|uid504runneradminstart|uid504runnerguiadminstart|cryptofinalaudit|cryptofinaladmincleanup)
+            status|repo|services|disk|externaldisk|hostdiag|audiorestart|audioadminrestart|loadtree|loadtree2|bginventory|bgsafecheck|cryptomigrationdiag|cryptomigrationdiag2|cryptodashboarddiag|cryptorunnertree|cryptorunnercutoverdiag|cryptossdrunnerps|uidsudo|uid504runneradminstart|uid504runnerguiadminstart|cryptofinalaudit|cryptofinaladmincleanup|cryptofinalterminalcleanup)
               ;;
             *)
               echo "Unsupported command: $cmd"
@@ -480,6 +480,69 @@ jobs:
           /usr/bin/osascript -e "$CMD"
           /bin/cat "$RESULT"
           /bin/rm -f "$SCRIPT" "$RESULT"
+
+
+      - name: CRYPTO FINAL TERMINAL CLEANUP
+        if: steps.parse.outputs.command == 'cryptofinalterminalcleanup'
+        shell: bash
+        run: |
+          set -euo pipefail
+          SCRIPT="/Users/burakciller/Desktop/Crypto-Final-Cleanup.command"
+          MARKER="/tmp/crypto-final-terminal-cleanup-pass"
+          FAIL="/tmp/crypto-final-terminal-cleanup-fail"
+          rm -f "$MARKER" "$FAIL"
+          cat > "$SCRIPT" <<'SH'
+          #!/bin/bash
+          set -euo pipefail
+          HOME504="/Users/crypto-signal-agent"
+          SSD="/Volumes/Crypto-504/Crypto-Signal"
+          MARKER="/tmp/crypto-final-terminal-cleanup-pass"
+          FAIL="/tmp/crypto-final-terminal-cleanup-fail"
+
+          cleanup_fail() {
+            rc=$?
+            echo "CLEANUP_FAILED rc=$rc"
+            date > "$FAIL"
+            echo
+            echo "Bu pencereyi kapatmadan ChatGPT'ye geri dönebilirsin."
+            exit "$rc"
+          }
+          trap cleanup_fail ERR
+
+          echo "Crypto Signal son Macintosh temizligi"
+          echo "SSD proje cekirdegi kontrol ediliyor..."
+          sudo /usr/bin/test -d "$SSD/Development"
+          sudo /usr/bin/test -d "$SSD/Live"
+          sudo /usr/bin/test -d "$SSD/Product"
+          sudo /usr/bin/test -d "$SSD/Alerts"
+          sudo /usr/bin/test -d "$SSD/Paper"
+          sudo /usr/bin/test -d "$SSD/Runner"
+          echo "SSD_CORE_DIRS_PRESENT=YES"
+
+          echo "Internal Crypto artiklari siliniyor..."
+          sudo /bin/rm -rf             "$HOME504/Crypto-Signal"             "$HOME504/Crypto-Signal-Live"             "$HOME504/Crypto-Signal-Product"             "$HOME504/Crypto-Signal-Alerts"             "$HOME504/Crypto-Signal-Paper"             "$HOME504/actions-runner-crypto"             "$HOME504/Library/Application Support/CryptoSignal"
+
+          sudo /usr/bin/find "$HOME504/Library/LaunchAgents" -maxdepth 1 -type f \(             -name 'com.cryptosignal*.plist*' -o             -name 'actions.runner.*Crypto-Signal*.plist*'           \) -delete 2>/dev/null || true
+
+          sudo /usr/bin/find "$HOME504/Library/Logs" -maxdepth 1 \(             -name '*Crypto-Signal*' -o -name '*cryptosignal*'           \) -exec /bin/rm -rf {} + 2>/dev/null || true
+
+          sudo /usr/bin/test ! -e "$HOME504/actions-runner-crypto"
+          sudo /usr/bin/test ! -e "$HOME504/Crypto-Signal"
+          sudo /usr/bin/test ! -e "$HOME504/Crypto-Signal-Live"
+          sudo /usr/bin/test ! -e "$HOME504/Crypto-Signal-Product"
+          sudo /usr/bin/test ! -e "$HOME504/Crypto-Signal-Alerts"
+          sudo /usr/bin/test ! -e "$HOME504/Crypto-Signal-Paper"
+
+          echo "=== DISK ==="
+          /bin/df -h / /Volumes/Crypto-504
+          date > "$MARKER"
+          echo "CRYPTO_FINAL_TERMINAL_CLEANUP_PASS=YES"
+          echo
+          echo "Crypto Signal Macintosh temizligi tamamlandi. Bu pencereyi kapatabilirsin."
+          SH
+          chmod 700 "$SCRIPT"
+          /usr/bin/open -a Terminal "$SCRIPT"
+          echo "TERMINAL_CLEANUP_LAUNCHED=YES"
 
       - name: HOST DIAG
         if: steps.parse.outputs.command == 'hostdiag'
