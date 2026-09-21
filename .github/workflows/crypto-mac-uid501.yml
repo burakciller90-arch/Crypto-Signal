@@ -52,7 +52,7 @@ jobs:
           set -euo pipefail
           cmd="$(printf '%s\n' "$ISSUE_BODY" | awk -F: 'tolower($1)=="command" {gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2); print tolower($2); exit}')"
           case "$cmd" in
-            status|repo|services|disk|externaldisk|hostdiag|audiorestart|audioadminrestart|loadtree|loadtree2|bginventory|bgsafecheck)
+            status|repo|services|disk|externaldisk|hostdiag|audiorestart|audioadminrestart|loadtree|loadtree2|bginventory|bgsafecheck|cryptomigrationdiag)
               ;;
             *)
               echo "Unsupported command: $cmd"
@@ -143,6 +143,32 @@ jobs:
           done
           echo "EXTERNAL_DISK_READ_ONLY_PASS=YES"
 
+
+
+      - name: CRYPTO MIGRATION DIAG
+        if: steps.parse.outputs.command == 'cryptomigrationdiag'
+        shell: bash
+        run: |
+          set +e
+          echo "=== UID504 RUNNER / MIGRATION TREE ==="
+          /bin/ps -axo pid=,ppid=,user=,%cpu=,%mem=,etime=,state=,command= | /usr/bin/grep -E '[R]unner.Worker|crypto-ssd-cutover|d3d48ab6-f93f-49b5-a00a-67898bc4d116|[r]sync|[g]it .*worktree|[s]qlite3|[c]url .*48700|[s]leep' | /usr/bin/head -240
+          echo "=== TARGET TREE ==="
+          for p in             /Volumes/Crypto-504/Crypto-Signal             /Volumes/Crypto-504/Crypto-Signal/Development             /Volumes/Crypto-504/Crypto-Signal/Live             /Volumes/Crypto-504/Crypto-Signal/Product             /Volumes/Crypto-504/Crypto-Signal/Alerts             /Volumes/Crypto-504/Crypto-Signal/Paper             /Volumes/Crypto-504/Crypto-Signal/Runner; do
+            echo "--- $p"
+            [ -e "$p" ] && /usr/bin/du -sh "$p" 2>/dev/null || echo MISSING
+          done
+          echo "=== INTERNAL SOURCES ==="
+          for p in             /Users/crypto-signal-agent/Crypto-Signal             /Users/crypto-signal-agent/Crypto-Signal-Live             /Users/crypto-signal-agent/Crypto-Signal-Product             /Users/crypto-signal-agent/Crypto-Signal-Alerts             /Users/crypto-signal-agent/Crypto-Signal-Paper             /Users/crypto-signal-agent/actions-runner-crypto; do
+            if [ -e "$p" ]; then echo "PRESENT $p"; else echo "ABSENT $p"; fi
+          done
+          echo "=== SSD HEALTH FILE ==="
+          /bin/ls -l /Volumes/Crypto-504/Crypto-Signal/dashboard-health.json 2>/dev/null
+          /bin/cat /Volumes/Crypto-504/Crypto-Signal/dashboard-health.json 2>/dev/null
+          echo
+          echo "=== UID504 CRYPTO SERVICES ==="
+          /bin/launchctl print gui/504 2>/dev/null | /usr/bin/grep -E 'com\.cryptosignal|actions\.runner.*Crypto-Signal' | /usr/bin/head -120
+          echo "CRYPTO_MIGRATION_DIAG_PASS=YES"
+          exit 0
 
       - name: HOST DIAG
         if: steps.parse.outputs.command == 'hostdiag'
