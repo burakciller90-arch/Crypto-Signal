@@ -52,7 +52,7 @@ jobs:
           set -euo pipefail
           cmd="$(printf '%s\n' "$ISSUE_BODY" | awk -F: 'tolower($1)=="command" {gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2); print tolower($2); exit}')"
           case "$cmd" in
-            status|repo|services|disk|externaldisk|hostdiag|audiorestart|audioadminrestart|loadtree|loadtree2|bginventory|bgsafecheck|cryptomigrationdiag|cryptomigrationdiag2|cryptodashboarddiag)
+            status|repo|services|disk|externaldisk|hostdiag|audiorestart|audioadminrestart|loadtree|loadtree2|bginventory|bgsafecheck|cryptomigrationdiag|cryptomigrationdiag2|cryptodashboarddiag|cryptorunnertree)
               ;;
             *)
               echo "Unsupported command: $cmd"
