@@ -2196,3 +2196,25 @@ PAPER/STABLE remained unchanged at 30b05251af9fc2ac05fd007dbd6ac6d0519c2e58. Pap
 
 With the current Stage 9 product-facing surfaces materially complete, the next safe frontier is Stage 10 Full Integrated Acceptance: a read-only acceptance program across repository gates, stable runtime health/recovery, auto-refresh/staleness, deterministic paper reconstruction/cost semantics, no-leakage and UI/evidence consistency. The separate production paper-write activation boundary remains closed.
 
+## 2026-09-21 — Stage 10 Full Integrated Acceptance closed PASS
+
+Stage 10 is now mechanically accepted at code/PRODUCT head `8ca23e612ba36b4ebcb0c3cb41a166d78add5cff`. The final acceptance was not inferred from static tests alone: it followed several runtime failures that exposed and closed real integration defects.
+
+The first Stage 10 endurance attempt exposed read-surface latency on the live PRODUCT API. Subsequent bounded-read/scaling work removed unbounded expensive reads while preserving immutable evidence semantics. A later runtime attempt then passed PRODUCT restart, paper-clock restart/no-write and live recovery soak but reported live PRODUCT Mission Control as unavailable. State-first diagnosis showed that the launchd dashboard invoked `run_dashboard.py --ledger ...`; because `create_app` deliberately treats an explicitly supplied signal ledger as a custom/test runtime unless paper/candle sources are also explicit, the PRODUCT process had no paper ledger or candle cache configured. PAPER/STABLE Mission Control itself remained healthy throughout.
+
+PR #386 closed that integration gap without changing PAPER/STABLE or its write boundary. `ops/run_dashboard.py` now supplies the existing default read-only paper ledger and candle cache to `create_app` even when launchd provides the signal ledger. The installed launchd plist contract was intentionally left unchanged, so normal PRODUCT checkout + service restart was sufficient. The feature branch passed the hosted full gate, then main synchronized and passed canonical UID504 producttest/fulltest before exact PRODUCT deployment.
+
+The final Stage 10 runtime acceptance was GitHub Actions run `35566415433`, job `106229013172`, on exact head `8ca23e612ba36b4ebcb0c3cb41a166d78add5cff`. It completed successfully and emitted:
+- `STAGE10_PRODUCT_RESTART_PASS=YES`
+- `STAGE10_PAPER_RESTART_NO_WRITE_PASS=YES`
+- `STAGE10_LIVE_RECOVERY_PASS=YES`
+- `STAGE10_RUNTIME_ACCEPTANCE_PASS=YES`
+- `PRODUCT_FRESHNESS_CONTRACT_PASS=YES`
+- `STAGE10_RUNTIME_ACCEPTANCE=PASS`
+
+The real endurance gate executed 20 read-only PRODUCT cycles, observed `paper_mission_control.v4`, and bound the accepted benchmark snapshot `066204f6753dfd6e09ca03b88ed5e1990d75471f1fa66b1ea42a0557fcd881aa`. Runtime stable heads were DEV/PRODUCT `8ca23e612ba36b4ebcb0c3cb41a166d78add5cff`, LIVE `7020413188d633b2b5a9661356c2fe319f256a34`, ALERTS `1d8c8757fb825c8934229b454db49bf800f2b5cf`, and PAPER `30b05251af9fc2ac05fd007dbd6ac6d0519c2e58`.
+
+Most importantly, the paper database stayed unchanged across the runtime acceptance: one fund creation, zero decision intents, zero simulated fills, zero position/cash mutations, zero NAV snapshots, one replay record, one activation singleton and zero processed events. The production virtual-paper write policy is still `NOT_ACTIVATED`, no writer command is exposed through PAPER/STABLE, no real exchange authority exists and `REAL_CAPITAL=0`.
+
+This closes Stage 10 itself. It does not by itself assert that every aspirational Full Version roadmap stage outside the Stage 10 acceptance matrix has been implemented. The next safe action is a whole-roadmap completeness audit, especially the Stage 8 / 8.5 / 8.75 intelligence, Alpha Factory and Learning Memory scopes, before declaring the overall project finished.
+
