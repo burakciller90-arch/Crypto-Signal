@@ -1,0 +1,147 @@
+name: Crypto SSD Cutover Phase 2 Runner
+
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  contents: read
+  issues: read
+
+jobs:
+  runner:
+    if: github.actor == 'burakciller90-arch' && github.event.issue.title == '[CRYPTOSSD] RUNNER'
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 20
+    steps:
+      - name: Prepare delayed runner cutover
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          UID_NOW="$(id -u)"
+          test "$UID_NOW" = "504"
+
+          HOME_ROOT="/Users/crypto-signal-agent"
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          SRC="$HOME_ROOT/actions-runner-crypto"
+          DST="$ROOT/Runner"
+          RLOG="$ROOT/RunnerLogs"
+          LABEL="actions.runner.burakciller90-arch-Crypto-Signal.crypto-signal-uid504"
+          PLIST="$HOME_ROOT/Library/LaunchAgents/$LABEL.plist"
+          BACKUP="$ROOT/$LABEL.plist.pre-ssd"
+          HELPER="$ROOT/runner-cutover-helper.sh"
+          HELPER_PLIST="$HOME_ROOT/Library/LaunchAgents/com.cryptosignal.runnercutover.helper.plist"
+
+          echo "=== GUARDS ==="
+          test -d "$SRC"
+          test -d "$ROOT/Development"
+          test -d "$DST"
+          test -f "$PLIST"
+          test -f "$DST/runsvc.sh"
+          test -w "$ROOT"
+          mkdir -p "$RLOG"
+
+          echo "=== FINAL RUNNER COPY ==="
+          /usr/bin/rsync -aE --delete --exclude '_work' "$SRC/" "$DST/"
+          test -x "$DST/runsvc.sh"
+
+          cp -p "$PLIST" "$BACKUP"
+
+          echo "=== REWRITE RUNNER PLIST ==="
+          PLIST="$PLIST" DST="$DST" RLOG="$RLOG" /usr/bin/python3 - <<'PY'
+          import os
+          import plistlib
+          from pathlib import Path
+
+          p = Path(os.environ["PLIST"])
+          dst = os.environ["DST"]
+          rlog = os.environ["RLOG"]
+          with p.open("rb") as fh:
+              data = plistlib.load(fh)
+          data["ProgramArguments"] = [f"{dst}/runsvc.sh"]
+          data["WorkingDirectory"] = dst
+          data["StandardErrorPath"] = f"{rlog}/stderr.log"
+          data["StandardOutPath"] = f"{rlog}/stdout.log"
+          with p.open("wb") as fh:
+              plistlib.dump(data, fh, fmt=plistlib.FMT_XML, sort_keys=False)
+          PY
+          plutil -lint "$PLIST"
+          grep -q "$DST/runsvc.sh" "$PLIST"
+
+          echo "=== INSTALL SELF-HEALING HELPER ==="
+          cat > "$HELPER" <<'SH'
+          #!/bin/bash
+          set -u
+          UID_NOW=504
+          HOME_ROOT="/Users/crypto-signal-agent"
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          SRC="$HOME_ROOT/actions-runner-crypto"
+          DST="$ROOT/Runner"
+          LABEL="actions.runner.burakciller90-arch-Crypto-Signal.crypto-signal-uid504"
+          PLIST="$HOME_ROOT/Library/LaunchAgents/$LABEL.plist"
+          BACKUP="$ROOT/$LABEL.plist.pre-ssd"
+          LOG="$ROOT/runner-cutover.log"
+          HELPER_PLIST="$HOME_ROOT/Library/LaunchAgents/com.cryptosignal.runnercutover.helper.plist"
+
+          exec >>"$LOG" 2>&1
+          echo "$(date '+%Y-%m-%d %H:%M:%S %z') helper_start"
+          sleep 15
+
+          launchctl bootout "gui/$UID_NOW/$LABEL" >/dev/null 2>&1 || true
+          sleep 3
+
+          if launchctl bootstrap "gui/$UID_NOW" "$PLIST"; then
+            sleep 12
+            if launchctl print "gui/$UID_NOW/$LABEL" 2>/dev/null | grep -q "$DST/runsvc.sh"; then
+              echo "$(date '+%Y-%m-%d %H:%M:%S %z') ssd_runner_active"
+              rm -rf "$SRC"
+              if [ ! -e "$SRC" ]; then
+                echo "RUNNER_INTERNAL_REMOVED=YES"
+                touch "$ROOT/RUNNER_CUTOVER_PASS"
+              else
+                echo "RUNNER_INTERNAL_REMOVAL_FAILED=YES"
+              fi
+              rm -f "$HELPER_PLIST"
+              exit 0
+            fi
+          fi
+
+          echo "$(date '+%Y-%m-%d %H:%M:%S %z') ssd_runner_failed_rollback"
+          launchctl bootout "gui/$UID_NOW/$LABEL" >/dev/null 2>&1 || true
+          cp -p "$BACKUP" "$PLIST"
+          launchctl bootstrap "gui/$UID_NOW" "$PLIST" >/dev/null 2>&1 || true
+          touch "$ROOT/RUNNER_CUTOVER_ROLLBACK"
+          rm -f "$HELPER_PLIST"
+          exit 1
+          SH
+          chmod 700 "$HELPER"
+
+          cat > "$HELPER_PLIST" <<PLIST
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>Label</key>
+            <string>com.cryptosignal.runnercutover.helper</string>
+            <key>ProgramArguments</key>
+            <array>
+              <string>/bin/bash</string>
+              <string>$HELPER</string>
+            </array>
+            <key>RunAtLoad</key>
+            <true/>
+            <key>StandardOutPath</key>
+            <string>$ROOT/runner-helper.launchd.out.log</string>
+            <key>StandardErrorPath</key>
+            <string>$ROOT/runner-helper.launchd.err.log</string>
+          </dict>
+          </plist>
+          PLIST
+          plutil -lint "$HELPER_PLIST"
+
+          launchctl bootout "gui/$UID_NOW/com.cryptosignal.runnercutover.helper" >/dev/null 2>&1 || true
+          launchctl bootstrap "gui/$UID_NOW" "$HELPER_PLIST"
+
+          echo "RUNNER_CUTOVER_HELPER_ARMED=YES"
+          echo "The current job should finish before the helper restarts the runner."
