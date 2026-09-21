@@ -1,7 +1,7 @@
 #!/bin/zsh
 set -eu
 
-BASE="/Users/crypto-signal-agent/Crypto-Signal"
+BASE="/Volumes/Crypto-504/Crypto-Signal/Development"
 STATE="$BASE/runtime/continuity"
 PAUSE_FILE="$STATE/user_pause"
 
