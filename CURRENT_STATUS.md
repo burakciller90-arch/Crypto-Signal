@@ -2716,3 +2716,61 @@ Current true roadmap frontier:
 - multiple-testing/backtest-overfitting state explicit; no automatic winner selection;
 - no self-promotion, champion mutation, production import or deploy path;
 - evolutionary search and later bounded ML/RL remain closed.
+
+## 2026-09-21 — Stage 8.5 bounded feature-interaction search v1 ACCEPTED
+
+- accepted main head: `35914060d4a4dd985ca9a0966588356b891a55f1`
+- PR #465 merged deterministic outcome-independent pairwise interaction research.
+- accepted research surface:
+  - `research/alpha_factory/feature_interactions.py`
+  - `tests/test_alpha_factory_feature_interactions.py`
+- bounded hypothesis search:
+  - max 6 explicit versioned categorical features
+  - interaction order fixed at 2
+  - max 8 values per feature
+  - max 256 hypotheses
+  - explicit minimum TRAIN support
+  - deterministic canonical ordering and SHA-bound identities
+- leakage / multiple-testing controls:
+  - TRAIN only for hypothesis generation
+  - generation uses feature snapshots/support only, not outcomes
+  - reversing all TRAIN outcomes leaves generated hypotheses/search manifest unchanged
+  - OOS excluded from generation
+  - untouched-forward closed
+  - `BOUNDED_INTERACTION_SET_NO_AUTOMATIC_SELECTION`
+  - `automatic_selection=False`
+  - no winner/promotion/champion-write/deploy API
+- evaluation semantics:
+  - VALIDATION/OOS only
+  - exact partition evidence coverage required
+  - interaction metric compared with both single-feature marginals
+  - explicit gross/cost/net-R accounting
+  - semantic is descriptive increment, not causal inference or probability
+- isolation scan:
+  - no network/broker/order/auth surface
+  - no filesystem-write/subprocess surface
+  - no production product/paper/confluence/signal import
+  - no promotion API
+- branch research gate PASS: run `35590336391`.
+- branch production regression gate PASS: run `35590447669`.
+- merged-main research gate PASS: run `35590709106`.
+- merged-main Stage10 hosted gate PASS: run `35590709184`.
+- UID504 canonical sync PASS: issue #466 / run `35590843763`.
+- UID504 canonical fulltest PASS: issue #467 / run `35590906985`:
+  - Ruff PASS
+  - mypy PASS across 125 production source files
+  - PRODUCT_FRESHNESS_CONTRACT_PASS=YES
+  - FULL_TEST_PASS=YES
+- no production weighting/deployment authority added.
+- PAPER/STABLE write activation remains closed.
+- REAL_CAPITAL=0.
+
+Current true roadmap frontier:
+- `stage8.5-evolutionary-search-v1`;
+- remain inside isolated `research/alpha_factory`;
+- deterministic bounded population/generation/mutation search only;
+- immutable feature/partition/config identities and explicit seed;
+- TRAIN-only search/fitting; VALIDATION/OOS descriptive evaluation only; untouched-forward closed;
+- multiple-testing/backtest-overfitting state explicit; no automatic winner/promotion;
+- no production import/deploy path;
+- later bounded ML/RL remains closed.

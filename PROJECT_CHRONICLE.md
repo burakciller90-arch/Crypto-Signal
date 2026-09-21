@@ -2438,3 +2438,15 @@ The search manifest records `BOUNDED_CLUSTER_COUNT_NO_AUTOMATIC_SELECTION` and `
 Branch research gate `35589332911` and separate production regression gate `35589392425` passed. PR #462 merged as `4b8014e7f26a288e7cecb3806d46877ddb4174cc`. Merged-main research run `35589607597` and Stage10 hosted run `35589607580` passed. UID504 canonical sync issue #463 / run `35589724517` and fulltest issue #464 / run `35589787472` completed acceptance with `FULL_TEST_PASS=YES`.
 
 The next Alpha Factory frontier is deterministic bounded feature-interaction search. It must remain train-only for hypothesis generation, validation/OOS descriptive for evaluation, untouched-forward closed, multiple-testing controlled and incapable of self-promotion or production deployment.
+
+## 2026-09-21 — Stage 8.5 bounded feature-interaction search v1 accepted
+
+The fourth Alpha Factory challenger slice adds deterministic pairwise categorical interaction hypotheses without introducing a general-purpose optimizer. Generation uses TRAIN feature snapshots and support counts only; outcomes are deliberately excluded from hypothesis identity. Tests reverse every TRAIN outcome and confirm that the generated hypotheses and manifest do not change.
+
+The search is hard-bounded to six versioned categorical features, pairwise order, eight values per feature, 256 hypotheses and explicit minimum support. The manifest records `BOUNDED_INTERACTION_SET_NO_AUTOMATIC_SELECTION` and `automatic_selection=False`. OOS and untouched-forward cannot influence generation.
+
+VALIDATION/OOS evaluation compares each interaction context with both component marginals and reports a descriptive increment versus the stronger marginal, together with explicit gross/cost/net-R accounting. The semantic explicitly disclaims causality and probability. Untouched-forward remains closed and no winner/promotion/deploy API exists.
+
+Branch research gate `35590336391` and production regression gate `35590447669` passed. PR #465 merged as `35914060d4a4dd985ca9a0966588356b891a55f1`. Merged-main research gate `35590709106` and Stage10 hosted gate `35590709184` passed. UID504 canonical sync issue #466 / run `35590843763` and fulltest issue #467 / run `35590906985` completed acceptance with `FULL_TEST_PASS=YES`.
+
+The next bounded Alpha Factory frontier is evolutionary search. It must remain deterministic, tightly budgeted, TRAIN-only for search, VALIDATION/OOS descriptive for evaluation, untouched-forward closed, explicit about multiple-testing risk and incapable of automatic promotion or production deployment.

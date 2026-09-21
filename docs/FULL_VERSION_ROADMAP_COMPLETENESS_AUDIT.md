@@ -83,9 +83,10 @@ The deterministic symbolic challenger slice is **ACCEPTED** at
 challenger slice is **ACCEPTED** at
 `8ee89f4ee8de581bfacec1f7e62613ec96be065c`. The bounded
 clustering/regime slice is **ACCEPTED** at
-`4b8014e7f26a288e7cecb3806d46877ddb4174cc`. Remaining Stage 8.5 work is
-feature-interaction and evolutionary challenger research, followed only later by
-carefully bounded ML/RL research.
+`4b8014e7f26a288e7cecb3806d46877ddb4174cc`. The bounded feature-interaction
+slice is **ACCEPTED** at `35914060d4a4dd985ca9a0966588356b891a55f1`.
+Remaining Stage 8.5 work is bounded evolutionary challenger research, followed
+only later by carefully bounded ML/RL research.
 
 Required promotion boundary remains:
 
@@ -122,25 +123,25 @@ only through a separately tested policy.
 
 The next bounded roadmap slice is:
 
-`stage8.5-feature-interaction-search-v1`
+`stage8.5-evolutionary-search-v1`
 
-The Alpha Factory foundation plus symbolic, shallow-tree and clustering/regime challenger slices are accepted. The next slice may add deterministic bounded feature-interaction hypothesis research only.
+The Alpha Factory foundation plus symbolic, shallow-tree, clustering/regime and feature-interaction slices are accepted. The next slice may add bounded deterministic evolutionary challenger research only.
 
 Requirements:
 
 - implementation remains under isolated `research/alpha_factory`,
-- feature identities/versions and partition identities are explicit and immutable,
-- interaction order and hypothesis count are hard-bounded and reproducible,
-- generation/hypothesis discovery uses TRAIN only,
-- validation and OOS are descriptive evaluation only,
+- population size, generation count, mutation/crossover operators and search budget are hard-bounded and versioned,
+- all randomization is replaced by explicit deterministic seed/state and immutable identities,
+- search/fitting uses TRAIN only,
+- VALIDATION and OOS remain descriptive evaluation only,
 - untouched-forward remains closed,
-- explicit transaction-cost/slippage context remains part of evaluation,
-- multiple-testing/backtest-overfitting state is explicit and no automatic interaction/winner selection is allowed,
-- interaction scores are descriptive research evidence, not calibrated probabilities or production authority,
+- explicit transaction-cost/slippage accounting remains part of evaluation,
+- multiple-testing/backtest-overfitting state is explicit and no automatic winner selection is allowed,
+- fitness is descriptive research evidence, not probability or production authority,
 - no self-promotion, champion mutation, production import or deploy path is permitted,
-- evolutionary search and ML/RL remain closed until later slices.
+- ML/RL remains closed until a later separately accepted slice.
 
-A favorable interaction score cannot satisfy the promotion gate by itself. Missing walk-forward, untouched-forward or supervisor evidence remains missing until genuinely produced.
+A favorable evolutionary fitness score cannot satisfy the promotion gate by itself. Missing walk-forward, untouched-forward or supervisor evidence remains missing until genuinely produced.
 
 `REAL_CAPITAL=0`.
 
