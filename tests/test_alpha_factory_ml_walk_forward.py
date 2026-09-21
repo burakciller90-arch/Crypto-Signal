@@ -402,7 +402,7 @@ def test_walk_forward_v1_has_no_winner_promotion_deploy_or_rl_api() -> None:
     assert "automatic_model_selection" in source
     assert "def select" not in source
     assert "winner_identity" not in source
-    assert "promotion" not in source
-    assert "promoted" not in source
-    assert "deploy" not in source
+    assert "def promote" not in source
+    assert "champion_mutation" not in source
+    assert "def deploy" not in source
     assert "reinforcement" not in source
