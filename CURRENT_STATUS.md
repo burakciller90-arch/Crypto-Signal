@@ -2179,3 +2179,40 @@ Current true roadmap frontier:
 - keep all Stage 8 engines observation-only until a separately accepted versioned weighting/meta policy exists;
 - do not begin Alpha Factory or self-learning before the bounded Stage 8 engine sequence is accepted.
 
+## 2026-09-21 — Stage 8 breakout/volatility v1 ACCEPTED
+
+- accepted main head: `f44157fa2b8a3788b85608a872eb8fa8fde7d5b3`
+- PR #409 merged the fourth bounded Stage 8 intelligence engine.
+- accepted scope:
+  - prior-closed-bar reference high / low breakout evidence
+  - explicit breakout buffer and probe-up / probe-down states
+  - current-range vs prior-baseline volatility ratio
+  - compressed / normal / expanded volatility state
+  - zero-baseline-range fail-closed uncertainty
+  - immutable analysis and frozen evidence identities
+  - PIT-safe closed-candle filtering
+  - observation-only / zero-production-contribution isolation
+- hosted full repository gate PASS:
+  - pytest 100%
+  - Ruff PASS
+  - mypy PASS across 109 source files
+  - PRODUCT_FRESHNESS_CONTRACT_PASS=YES
+- UID504 canonical sync PASS.
+- UID504 canonical fulltest PASS:
+  - pytest 100%
+  - Ruff PASS
+  - mypy PASS across 108 source files
+  - PRODUCT_FRESHNESS_CONTRACT_PASS=YES
+  - FULL_TEST_PASS=YES
+- no production weighting change.
+- Alpha Factory / Learning Memory remain closed.
+- PAPER/STABLE write activation remains closed.
+- REAL_CAPITAL=0.
+
+Current true roadmap frontier:
+- `stage8-bounded-derivatives-context-v1`
+- repository inventory currently has no accepted funding/open-interest/perpetual data source;
+- next slice must therefore establish the explicit PIT-safe derivatives observation/source contract and bounded analyzer together;
+- missing source data must remain unavailable/unresolved rather than fabricated;
+- keep all Stage 8 engines observation-only until a separately accepted versioned weighting/meta policy exists.
+
