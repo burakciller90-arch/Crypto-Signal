@@ -24,7 +24,7 @@ jobs:
           set -euo pipefail
           cmd="$(printf '%s\n' "$ISSUE_BODY" | awk -F: 'tolower($1)=="command" {gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2); print tolower($2); exit}')"
           case "$cmd" in
-            status|services|logs|disk|sync|producttest|fulltest|productstate|productdeploy|paperreview|paperinspect|paperfixlint|paperharden|stateplanreview|stateplaninspect|stateplanharden|cursorreview|cursorreviewtail|cursorcleanup|bridgecheck|bridgestate|pausecheck|wakepause|wakeresume|wakearm|waketest|wakeheartbeat|chatbusyprobe|cursorcheck|cursorauthdiag|cursorttycheck|alertclockstate|alertclockpause|alertclockresume)
+            status|services|logs|disk|sync|producttest|fulltest|productstate|productdeploy|paperreview|paperinspect|paperfixlint|paperharden|stateplanreview|stateplaninspect|stateplanharden|cursorreview|cursorreviewtail|cursorcleanup|bridgecheck|bridgestate|pausecheck|wakepause|wakeresume|wakearm|waketest|wakeheartbeat|chatbusyprobe|cursorcheck|cursorauthdiag|cursorttycheck|alertclockstate|alertclockpause|alertclockresume|migrationinspect)
               ;;
             *)
               echo "Unsupported command: $cmd"
@@ -1115,6 +1115,42 @@ jobs:
           launchctl print "gui/$(id -u)" 2>/dev/null | egrep -i 'crypto|wake|bridge|chatgpt|lease' | head -120
           exit 0
 
+
+
+      - name: MIGRATION INSPECT
+        if: steps.parse.outputs.command == 'migrationinspect'
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "=== ID ==="
+          id
+          echo "=== SOURCE DIRS ==="
+          for p in             /Users/crypto-signal-agent/Crypto-Signal             /Users/crypto-signal-agent/Crypto-Signal-Live             /Users/crypto-signal-agent/Crypto-Signal-Product             /Users/crypto-signal-agent/Crypto-Signal-Alerts             /Users/crypto-signal-agent/actions-runner-crypto; do
+            echo "--- $p"
+            if [ -e "$p" ]; then
+              ls -ld "$p"
+              du -sh "$p" 2>/dev/null || true
+              if [ -d "$p/.git" ]; then
+                git -C "$p" status --short --branch || true
+                git -C "$p" rev-parse HEAD || true
+              fi
+            else
+              echo "MISSING"
+            fi
+          done
+          echo "=== TARGET ==="
+          diskutil info /Volumes/Crypto-504
+          ls -la /Volumes/Crypto-504
+          echo "=== LAUNCH AGENTS ==="
+          for plist in             "$HOME/Library/LaunchAgents/com.cryptosignal.dashboard.plist"             "$HOME/Library/LaunchAgents/com.cryptosignal.liveevidenceclock.plist"             "$HOME/Library/LaunchAgents/com.cryptosignal.alertclock.plist"; do
+            echo "--- $plist"
+            if [ -f "$plist" ]; then plutil -p "$plist"; else echo "MISSING"; fi
+          done
+          echo "=== RUNNER SERVICE ==="
+          find "$HOME/Library/LaunchAgents" -maxdepth 1 -type f -name '*actions.runner*crypto*' -print -exec plutil -p {} \; 2>/dev/null || true
+          echo "=== HARD-CODED CRYPTO PATHS ==="
+          grep -RIl --exclude='*.log' '/Users/crypto-signal-agent/Crypto-Signal' "$HOME/Library/LaunchAgents" 2>/dev/null || true
+          echo "MIGRATION_INSPECT_PASS=YES"
 
       - name: ALERT CLOCK STATE
         if: steps.parse.outputs.command == 'alertclockstate'
