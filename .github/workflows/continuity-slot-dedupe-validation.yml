@@ -1,0 +1,54 @@
+name: Continuity Slot Dedupe Validation
+
+on:
+  push:
+    branches:
+      - feature/continuity-slot-dedupe-hardening
+    paths:
+      - "ops/continuity/relay_submit.py"
+      - "ops/continuity/relay_daemon.py"
+      - ".github/workflows/continuity-slot-dedupe-validation.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Validate half-hour slot dedupe contract
+        run: |
+          python -m py_compile             ops/continuity/relay_submit.py             ops/continuity/relay_daemon.py
+          python - <<'PY'
+          import importlib.util
+          from pathlib import Path
+
+          def load(path, name):
+              spec = importlib.util.spec_from_file_location(name, path)
+              module = importlib.util.module_from_spec(spec)
+              assert spec.loader is not None
+              spec.loader.exec_module(module)
+              return module
+
+          submit = load("ops/continuity/relay_submit.py", "relay_submit")
+          daemon = load("ops/continuity/relay_daemon.py", "relay_daemon")
+
+          submit_id = submit.scheduled_slot_event_id()
+          daemon_id = daemon.scheduled_slot_event_id()
+          assert submit_id == daemon_id
+          assert submit_id.startswith("crypto-30m-continuity:")
+          assert len(submit_id) > len("crypto-30m-continuity:")
+
+          submit_source = Path("ops/continuity/relay_submit.py").read_text()
+          daemon_source = Path("ops/continuity/relay_daemon.py").read_text()
+          assert "AUTONOMOUS_EVENT_CANONICALIZED" in submit_source
+          assert "STALE_AUTONOMOUS_WAKE" in daemon_source
+          assert "message.startswith(AUTONOMOUS_PREFIX)" in submit_source
+          assert "message.startswith(AUTONOMOUS_PREFIX)" in daemon_source
+
+          print("CONTINUITY_SLOT_DEDUPE_VALIDATION_PASS=YES")
+          PY
