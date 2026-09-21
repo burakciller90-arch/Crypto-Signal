@@ -6,7 +6,7 @@
   <title>Crypto Signal · Piyasa İstihbarat Merkezi</title>
   <link rel="stylesheet" href="/static/app.css">
 </head>
-<body>
+<body data-view-mode="simple">
   <div class="ambient ambient-a"></div><div class="ambient ambient-b"></div>
   <header class="topbar">
     <div class="brand"><div class="brand-mark">CS</div><div><div class="eyebrow">CRYPTO SIGNAL</div><h1>Piyasa İstihbarat Merkezi</h1></div></div>
@@ -35,7 +35,35 @@
       <article class="metric-card"><div class="metric-label">Güçlü uyum</div><div id="strongAgreementCount" class="metric-value">—</div><div class="metric-foot">uyum endeksi ≥ 66.67 · olasılık değildir</div></article>
       <article class="metric-card"><div class="metric-label">Son kanıt</div><div id="latestFreeze" class="metric-value metric-time">—</div><div class="metric-foot"><span id="freezeCount">—</span> değiştirilemez karar kaydı</div></article>
     </section>
-    <section class="panel paper-mission-panel">
+    <section class="gift-controls" aria-label="Görünüm ve hızlı gezinme">
+      <div class="view-mode-copy">
+        <div>
+          <p class="eyebrow">GIFT EDITION · SADE BAŞLANGIÇ</p>
+          <strong id="viewModeLabel">Sade görünüm</strong>
+          <span>Önce önemli olanı gör; derin kanıt ve araştırma panellerini istediğinde aç.</span>
+        </div>
+        <button id="viewModeToggle" class="ghost-button view-mode-toggle" type="button" aria-pressed="false">Tüm detayları göster</button>
+      </div>
+      <nav id="quickNav" class="quick-nav" aria-label="Hızlı gezinme">
+        <button type="button" data-target="paperMissionSection">Sanal Portföy</button>
+        <button type="button" data-target="radarSection">Piyasa Radarı</button>
+        <button type="button" data-target="assetSection">Varlık Merkezi</button>
+        <button type="button" data-target="intelligenceSection">İstihbarat</button>
+        <button type="button" data-target="educationSection">Bana Öğret</button>
+        <button type="button" data-target="systemHealthSection">Sistem Sağlığı</button>
+      </nav>
+    </section>
+    <section class="beginner-brief" aria-label="Kısa durum özeti">
+      <div class="beginner-brief-head">
+        <div>
+          <p class="eyebrow">KISACA</p>
+          <h3>Şu an bilmen gereken üç şey</h3>
+        </div>
+        <span class="panel-tag">basit dil · gerçek kanıt</span>
+      </div>
+      <div id="beginnerBrief" class="beginner-brief-grid loading-block">Kısa özet hazırlanıyor…</div>
+    </section>
+    <section id="paperMissionSection" class="panel paper-mission-panel">
       <div class="panel-head">
         <div>
           <p class="eyebrow">SANAL PORTFÖY · KARAR MERKEZİ</p>
@@ -46,7 +74,7 @@
       </div>
       <div id="paperMissionControl" class="paper-mission-grid loading-block">Sanal portföy kanıtı yükleniyor…</div>
     </section>
-    <section class="panel paper-lab-panel">
+    <section id="paperLabSection" class="panel paper-lab-panel" data-advanced-section>
       <div class="panel-head">
         <div>
           <p class="eyebrow">SANAL PORTFÖY · RİSK VE SONUÇ</p>
@@ -72,11 +100,11 @@
         </article>
       </div>
     </section>
-    <section class="panel priority-panel">
+    <section id="radarSection" class="panel priority-panel">
       <div class="panel-head"><div><p class="eyebrow">PİYASA RADARI</p><h3>Şu anda dikkat etmeye değer yapılar</h3><p class="section-copy">Aynı varlık ve zaman dilimindeki Bybit/Binance kanıtı tek kartta; sağlayıcı farkları gizlenmez.</p></div><span class="panel-tag">odaklı piyasa görünümü</span></div>
       <div id="radarList" class="attention-grid loading-block">Gerçek piyasa kanıtı yükleniyor…</div>
     </section>
-    <section class="two-col">
+    <section id="assetSection" class="two-col">
       <article class="panel">
         <div class="panel-head"><div><p class="eyebrow">VARLIK MERKEZİ</p><h3 id="assetTitle">Seçili varlık</h3></div><span class="panel-tag">sağlayıcılar ayrı tutulur</span></div>
         <div class="navigation-row" aria-label="Piyasa seçimi">
@@ -91,7 +119,7 @@
         <div id="recentSignals" class="signal-list loading-block">Kanıt geçmişi yükleniyor…</div>
       </article>
     </section>
-    <section class="two-col two-col-wide">
+    <section id="performanceSection" class="two-col two-col-wide" data-advanced-section>
       <article class="panel">
         <div class="panel-head"><div><p class="eyebrow">PERFORMANS</p><h3>Sistemin gerçekten bildiği şey</h3></div><span class="panel-tag">örneklem görünür</span></div>
         <div id="performanceTabs" class="evidence-tabs hidden"></div><div id="performance" class="performance-card loading-block">Sonuç kanıtı yükleniyor…</div>
@@ -101,7 +129,7 @@
         <div id="alertCenter" class="stack loading-block">Uyarı kayıtları yükleniyor…</div>
       </article>
     </section>
-    <section class="panel intelligence-center-panel" id="intelligenceSection">
+    <section class="panel intelligence-center-panel" id="intelligenceSection" data-advanced-section>
       <div class="panel-head">
         <div>
           <p class="eyebrow">İSTİHBARAT LABORATUVARI</p>
@@ -124,7 +152,7 @@
       </div>
       <div id="educationCenter" class="education-grid loading-block">Dersler hazırlanıyor…</div>
     </section>
-    <section class="panel archive-panel">
+    <section id="archiveSection" class="panel archive-panel" data-advanced-section>
       <div class="panel-head">
         <div>
           <p class="eyebrow">SİNYAL / İŞLEM ARŞİVİ</p>
@@ -143,7 +171,7 @@
         <div id="paperTradeArchive" class="loading-block">Sanal işlem geçmişi yükleniyor…</div>
       </div>
     </section>
-    <section class="panel system-health-panel">
+    <section id="systemHealthSection" class="panel system-health-panel" data-advanced-section>
       <div class="panel-head">
         <div>
           <p class="eyebrow">SİSTEM SAĞLIĞI</p>
