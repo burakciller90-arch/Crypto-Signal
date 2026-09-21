@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import time
+from collections.abc import Callable
 import xml.etree.ElementTree as ET
 from datetime import UTC, date, datetime
 from decimal import Decimal
@@ -103,7 +104,7 @@ def _local_name(tag: str) -> str:
 
 
 def _parse_day(raw: str) -> date:
-    parsers = (
+    parsers: tuple[Callable[[], date], ...] = (
         lambda: datetime.fromisoformat(raw).date(),
         lambda: datetime.strptime(raw + " +0000", "%m/%d/%Y %z").date(),
         lambda: datetime.strptime(raw + " +0000", "%m-%d-%Y %z").date(),
