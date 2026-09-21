@@ -6,12 +6,12 @@
   <key>ProgramArguments</key>
   <array>
     <string>/usr/bin/python3</string>
-    <string>/Users/crypto-signal-agent/Crypto-Signal/ops/continuity/bridge_watchdog.py</string>
+    <string>/Volumes/Crypto-504/Crypto-Signal/Development/ops/continuity/bridge_watchdog.py</string>
   </array>
   <key>RunAtLoad</key><true/>
   <key>KeepAlive</key><true/>
   <key>ThrottleInterval</key><integer>5</integer>
-  <key>StandardOutPath</key><string>/Users/crypto-signal-agent/Crypto-Signal/runtime/continuity/bridge.launchd.out.log</string>
-  <key>StandardErrorPath</key><string>/Users/crypto-signal-agent/Crypto-Signal/runtime/continuity/bridge.launchd.err.log</string>
+  <key>StandardOutPath</key><string>/Volumes/Crypto-504/Crypto-Signal/Development/runtime/continuity/bridge.launchd.out.log</string>
+  <key>StandardErrorPath</key><string>/Volumes/Crypto-504/Crypto-Signal/Development/runtime/continuity/bridge.launchd.err.log</string>
 </dict>
 </plist>

@@ -5,14 +5,15 @@ BASE="/Volumes/Crypto-504/Crypto-Signal/Development"
 STATE="$BASE/runtime/continuity"
 WAKE_ROOT="$STATE/wake"
 PAUSE_FILE="$STATE/user_pause"
+SHARED_PAUSE_FILE="/Users/Shared/.crypto-signal-wake-relay/user_pause"
 QUEUE="$WAKE_ROOT/queue"
 RECEIPTS="$WAKE_ROOT/receipts"
 
 mkdir -p "$QUEUE" "$RECEIPTS"
-[ -f "$PAUSE_FILE" ] && {
-  echo "WAKE_ENQUEUE_PAUSED:$PAUSE_FILE"
+if [ -f "$PAUSE_FILE" ] || [ -f "$SHARED_PAUSE_FILE" ]; then
+  echo "WAKE_ENQUEUE_PAUSED local=$PAUSE_FILE shared=$SHARED_PAUSE_FILE"
   exit 0
-}
+fi
 
 [ "$#" -ge 2 ] || {
   echo "USAGE: wake_enqueue.sh event_id message [task role output rc finished]" >&2

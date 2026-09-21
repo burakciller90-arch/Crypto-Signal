@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
-import hashlib
-import hmac
 import json
 import os
 import shutil
@@ -11,8 +9,16 @@ import time
 from datetime import datetime
 from pathlib import Path
 
-PROJECT_NAMESPACE = "crypto-signal"
-EXPECTED_TARGET_URL = "https://chatgpt.com/c/6ab0debd-49a8-83eb-8b33-a7ce2ef826d0"
+from continuity_contracts import (
+    PROJECT_NAMESPACE,
+    RELAY_PROTOCOL,
+    decode_relay_event,
+    event_key,
+    expected_wire_sha,
+    marker_for,
+    require_chat_url,
+)
+
 SHARED = Path("/Users/Shared/.crypto-signal-wake-relay")
 QUEUE = SHARED / "queue"
 RECEIPTS = SHARED / "receipts"
@@ -20,6 +26,7 @@ BAD = SHARED / "bad"
 PAUSE = SHARED / "user_pause"
 SECRET_FILE = SHARED / "relay_secret"
 TARGET_FILE = SHARED / "current_chat_url"
+EXPECTED_TARGET_FILE = SHARED / "expected_chat_url"
 HEARTBEAT = SHARED / "relay_heartbeat"
 PIDFILE = SHARED / "relay.pid"
 LOG = SHARED / "relay.log"
@@ -83,7 +90,7 @@ on run argv
 end run
 """
 def sha(value: str) -> str:
-    return hashlib.sha256(value.encode()).hexdigest()
+    return event_key(value)
 
 
 def scheduled_slot_event_id() -> str:
@@ -91,20 +98,6 @@ def scheduled_slot_event_id() -> str:
     slot_minute = (now.minute // 20) * 20
     slot = now.replace(minute=slot_minute, second=0, microsecond=0)
     return f"crypto-20m-continuity:{slot:%Y%m%dT%H%M%z}"
-
-
-def marker_for(event_id: str) -> str:
-    return f"[#cryptowake:{sha(event_id)[:16]}]"
-
-
-def expected_wire_sha(event_id: str, message: str) -> str:
-    wire = f"{message} {marker_for(event_id)}"
-    return sha(wire)
-
-
-def signature(secret: bytes, event_id: str, message: str) -> str:
-    payload = f"{event_id}\n{message}".encode()
-    return hmac.new(secret, payload, hashlib.sha256).hexdigest()
 
 
 def log(message: str) -> None:
@@ -234,29 +227,27 @@ end run
     return proc.stdout.strip()
 
 
-def read_event(path: Path) -> tuple[str, str, str]:
-    lines = path.read_text().splitlines()
-    if len(lines) < 8:
-        raise ValueError("relay queue item has fewer than 8 lines")
-    event_id = lines[0].strip()
-    supplied_sig = lines[6].strip()
-    message = lines[7].strip()
-    if not event_id or not supplied_sig or not message:
-        raise ValueError("relay queue item has missing required fields")
-    return event_id, supplied_sig, message
-
-
 def load_secret() -> bytes:
     secret = SECRET_FILE.read_text().strip().encode()
     if len(secret) < 32:
         raise ValueError("relay secret is invalid")
     return secret
+
+
 def validate_event(path: Path, secret: bytes) -> tuple[str, str]:
-    event_id, supplied_sig, message = read_event(path)
-    expected_sig = signature(secret, event_id, message)
-    if not hmac.compare_digest(supplied_sig, expected_sig):
-        raise ValueError("relay event HMAC mismatch")
-    return event_id, message
+    event = decode_relay_event(path.read_text(), secret=secret)
+    return event.event_id, event.message
+
+
+def read_shared_binding() -> str:
+    try:
+        current = require_chat_url(TARGET_FILE.read_text().strip())
+        expected = require_chat_url(EXPECTED_TARGET_FILE.read_text().strip())
+    except (FileNotFoundError, ValueError) as exc:
+        raise ValueError("relay shared exact-chat binding is invalid") from exc
+    if current != expected:
+        raise ValueError("relay shared exact-chat binding mismatch")
+    return current
 
 
 def deliver(event_id: str, message: str, target_url: str) -> tuple[bool, str]:
@@ -307,40 +298,7 @@ def deliver(event_id: str, message: str, target_url: str) -> tuple[bool, str]:
         write_receipt(receipt, "OBSERVED", event_id, message_sha)
         return True, "OBSERVED"
     if state == "CHATGPT_BUSY":
-        stop_js = (
-            "(()=>{const stop=[...document.querySelectorAll('button[data-testid=\\\"stop-button\\\"]')]"
-            ".find(x=>{const s=getComputedStyle(x),r=x.getBoundingClientRect();"
-            "return x.isConnected&&!x.disabled&&s.display!=='none'&&s.visibility!=='hidden'"
-            "&&Number(s.opacity||1)>0&&r.width>1&&r.height>1&&x.getClientRects().length>0;});"
-            "if(!stop)return 'STOP_NOT_FOUND';stop.click();return 'STOP_CLICKED';})()"
-        )
-        stopped = run_js(target_url, stop_js)
-        if stopped != "STOP_CLICKED":
-            return False, stopped
-        ready_js = (
-            "(()=>{const marker=" + marker_json + ";"
-            "const users=[...document.querySelectorAll('[data-message-author-role=\\\"user\\\"]')];"
-            "if(users.slice(-100).some(x=>(x.innerText||'').includes(marker)))return 'OBSERVED';"
-            "const stop=[...document.querySelectorAll('button[data-testid=\\\"stop-button\\\"]')]"
-            ".find(x=>{const s=getComputedStyle(x),r=x.getBoundingClientRect();"
-            "return x.isConnected&&!x.disabled&&s.display!=='none'&&s.visibility!=='hidden'"
-            "&&Number(s.opacity||1)>0&&r.width>1&&r.height>1&&x.getClientRects().length>0;});"
-            "if(stop)return 'STILL_BUSY';"
-            "const e=document.querySelector('#prompt-textarea');if(!e)return 'NO_EDITOR';"
-            "const draft=(e.innerText||'').trim();"
-            "if(draft.includes(marker))return 'PREPARED';"
-            "if(draft)return 'DRAFT_BUSY';return 'READY';})()"
-        )
-        for _ in range(40):
-            time.sleep(0.25)
-            state = run_js(target_url, ready_js)
-            if state in {"READY", "PREPARED", "OBSERVED", "DRAFT_BUSY"}:
-                break
-        if state == "OBSERVED":
-            write_receipt(receipt, "OBSERVED", event_id, message_sha)
-            return True, "OBSERVED_AFTER_STOP"
-        if state not in {"READY", "PREPARED"}:
-            return False, f"AFTER_STOP:{state}"
+        return False, "CHATGPT_BUSY"
     if state in {"DRAFT_BUSY", "NO_EDITOR"}:
         return False, state
     if state.startswith(
@@ -430,9 +388,10 @@ def main() -> int:
             print(f"RELAY_ALREADY_RUNNING:{old_pid}")
             return 0
 
-    target_url = TARGET_FILE.read_text().splitlines()[0].strip()
-    if target_url != EXPECTED_TARGET_URL:
-        raise SystemExit("RELAY_TARGET_ISOLATION_VIOLATION")
+    try:
+        target_url = read_shared_binding()
+    except ValueError as exc:
+        raise SystemExit(f"RELAY_TARGET_ISOLATION_VIOLATION:{exc}") from exc
     secret = load_secret()
     PIDFILE.write_text(f"{os.getpid()}\n")
     log(f"relay=START pid={os.getpid()} target={target_url}")
@@ -443,18 +402,14 @@ def main() -> int:
                 f"pid={os.getpid()} updated={now:.3f}\n"
             )
             try:
-                target_url = TARGET_FILE.read_text().splitlines()[0].strip()
-            except (FileNotFoundError, IndexError):
-                target_url = ""
-            if target_url != EXPECTED_TARGET_URL:
-                log(
-                    "relay=TARGET_ISOLATION_VIOLATION "
-                    f"expected={EXPECTED_TARGET_URL} actual={target_url or 'MISSING'}"
-                )
+                target_url = read_shared_binding()
+            except ValueError as exc:
+                log(f"relay=TARGET_ISOLATION_VIOLATION reason={exc}")
                 time.sleep(RETRY_SECONDS)
                 continue
             STATUS.write_text(
                 f"state=RUNNING\n"
+                f"relay_protocol={RELAY_PROTOCOL}\n"
                 f"project_namespace={PROJECT_NAMESPACE}\n"
                 f"pid={os.getpid()}\n"
                 f"heartbeat_epoch={int(now)}\n"

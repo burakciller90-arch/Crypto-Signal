@@ -32,5 +32,5 @@ jobs:
           echo "=== TRANSPORT LOG (latest) ==="
           tail -120 "$SHARED/transport.log" 2>/dev/null
           echo "=== LOCAL RELAY SUBMIT QUEUE ==="
-          find /Users/crypto-signal-agent/Crypto-Signal/runtime/continuity -maxdepth 3 -type f -name '*.wake' -print 2>/dev/null
+          find /Volumes/Crypto-504/Crypto-Signal/Development/runtime/continuity -maxdepth 3 -type f -name '*.wake' -print 2>/dev/null
           exit 0

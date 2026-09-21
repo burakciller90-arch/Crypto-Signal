@@ -9,12 +9,19 @@ import sys
 import time
 from pathlib import Path
 
+from continuity_contracts import require_exact_binding
+
 BASE = Path("/Volumes/Crypto-504/Crypto-Signal/Development")
 STATE = BASE / "runtime" / "continuity"
 WAKE = STATE / "wake"
 TARGET_FILE = WAKE / "current_chat_url"
+EXPECTED_FILE = WAKE / "expected_chat_url"
 RECEIPTS = WAKE / "receipts"
 PAUSE_FILE = STATE / "user_pause"
+SHARED = Path("/Users/Shared/.crypto-signal-wake-relay")
+SHARED_PAUSE_FILE = SHARED / "user_pause"
+SHARED_TARGET_FILE = SHARED / "current_chat_url"
+SHARED_EXPECTED_FILE = SHARED / "expected_chat_url"
 LOG = WAKE / "transport.log"
 
 
@@ -87,21 +94,32 @@ def run_js(target_url: str, js: str) -> str:
         return f"OSASCRIPT_ERROR:{proc.returncode}:{proc.stderr.strip()}"
     return proc.stdout.strip()
 def main() -> int:
-    if PAUSE_FILE.exists():
-        print(f"WAKE_TRANSPORT_PAUSED:{PAUSE_FILE}")
+    if PAUSE_FILE.exists() or SHARED_PAUSE_FILE.exists():
+        print(
+            "WAKE_TRANSPORT_PAUSED "
+            f"local={PAUSE_FILE} shared={SHARED_PAUSE_FILE}"
+        )
         return 0
     if len(sys.argv) != 3:
         print("USAGE: wake_chatgpt.py event_id message", file=sys.stderr)
         return 64
 
     event_id, message = sys.argv[1], sys.argv[2]
+    def read(path: Path) -> str:
+        try:
+            return path.read_text().strip()
+        except FileNotFoundError:
+            return ""
+
     try:
-        target_url = TARGET_FILE.read_text().splitlines()[0].strip()
-    except (FileNotFoundError, IndexError):
-        print("TARGET_URL_UNBOUND")
-        return 2
-    if not target_url.startswith("https://chatgpt.com/c/"):
-        print("TARGET_URL_INVALID")
+        target_url = require_exact_binding(
+            expected=read(EXPECTED_FILE),
+            local_current=read(TARGET_FILE),
+            shared_current=read(SHARED_TARGET_FILE),
+            shared_expected=read(SHARED_EXPECTED_FILE),
+        )
+    except ValueError as exc:
+        print(f"TARGET_URL_BINDING_INVALID:{exc}")
         return 2
 
     RECEIPTS.mkdir(parents=True, exist_ok=True)

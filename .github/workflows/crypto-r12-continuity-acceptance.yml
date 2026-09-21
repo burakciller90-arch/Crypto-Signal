@@ -1,0 +1,230 @@
+name: Crypto R12 Continuity Acceptance
+
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  contents: read
+  issues: read
+
+jobs:
+  acceptance:
+    if: github.actor == 'burakciller90-arch' && github.event.issue.title == '[R12] CONTINUITY ACCEPTANCE'
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Sync canonical Development for R12
+        shell: bash
+        env:
+          GH_JOB_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          DEV="$ROOT/Development"
+          test "$(id -u)" = "504"
+          test -z "$(git -C "$DEV" status --porcelain)"
+          BASIC="$(printf 'x-access-token:%s' "$GH_JOB_TOKEN" | base64)"
+          git -C "$DEV" -c http.extraheader="AUTHORIZATION: Basic $BASIC" fetch --no-tags origin main
+          test "$(git -C "$DEV" rev-parse origin/main)" = "${{ github.sha }}"
+          git -C "$DEV" merge --ff-only "${{ github.sha }}"
+          test "$(git -C "$DEV" rev-parse HEAD)" = "${{ github.sha }}"
+          echo "R12_DEVELOPMENT_SYNC_PASS=YES"
+
+      - name: Prove paused exact-binding preconditions
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          DEV="$ROOT/Development"
+          STATE="$DEV/runtime/continuity"
+          WAKE="$STATE/wake"
+          SHARED="/Users/Shared/.crypto-signal-wake-relay"
+
+          test -f "$STATE/user_pause"
+          test -f "$SHARED/user_pause"
+          test "$(find "$STATE/leases/active" -maxdepth 1 -type f -name '*.lease' 2>/dev/null | wc -l | tr -d ' ')" = "0"
+          test "$(find "$WAKE/queue" -maxdepth 1 -type f -name '*.wake' 2>/dev/null | wc -l | tr -d ' ')" = "0"
+          test "$(find "$SHARED/queue" -maxdepth 1 -type f -name '*.wake' 2>/dev/null | wc -l | tr -d ' ')" = "0"
+
+          LOCAL_CURRENT="$(cat "$WAKE/current_chat_url")"
+          SHARED_CURRENT="$(cat "$SHARED/current_chat_url")"
+          test "$LOCAL_CURRENT" = "$SHARED_CURRENT"
+
+          /usr/bin/python3 - "$LOCAL_CURRENT" "$GITHUB_WORKSPACE/ops/continuity/continuity_contracts.py" <<'PY'
+          import importlib.util
+          import sys
+          from pathlib import Path
+          url, module_path = sys.argv[1:]
+          spec = importlib.util.spec_from_file_location("continuity_contracts", Path(module_path))
+          assert spec is not None and spec.loader is not None
+          module = importlib.util.module_from_spec(spec)
+          sys.modules[spec.name] = module
+          spec.loader.exec_module(module)
+          assert module.require_chat_url(url) == url
+          PY
+
+          write_atomic() {
+            destination="$1"
+            mode="$2"
+            value="$3"
+            tmp="$destination.r12.$$"
+            printf '%s\n' "$value" > "$tmp"
+            chmod "$mode" "$tmp"
+            mv "$tmp" "$destination"
+          }
+          write_atomic "$WAKE/expected_chat_url" 600 "$LOCAL_CURRENT"
+          write_atomic "$SHARED/expected_chat_url" 660 "$LOCAL_CURRENT"
+          write_atomic "$SHARED/project_namespace" 660 "crypto-signal"
+
+          /usr/bin/python3 - "$WAKE/expected_chat_url" "$WAKE/current_chat_url" "$SHARED/current_chat_url" "$SHARED/expected_chat_url" "$GITHUB_WORKSPACE/ops/continuity/continuity_contracts.py" <<'PY'
+          import importlib.util
+          import sys
+          from pathlib import Path
+          *files, module_path = sys.argv[1:]
+          spec = importlib.util.spec_from_file_location("continuity_contracts", Path(module_path))
+          assert spec is not None and spec.loader is not None
+          module = importlib.util.module_from_spec(spec)
+          sys.modules[spec.name] = module
+          spec.loader.exec_module(module)
+          values = [Path(item).read_text().strip() for item in files]
+          bound = module.require_exact_binding(
+              expected=values[0],
+              local_current=values[1],
+              shared_current=values[2],
+              shared_expected=values[3],
+          )
+          print(f"R12_EXACT_CHAT_BINDING_PASS=YES target={bound}")
+          PY
+
+          /usr/bin/python3 "$DEV/ops/continuity/resume_continuity.py" --dry-run | tee /tmp/r12-resume-dry-run.log
+          grep -F 'CONTINUITY_RESUME_DRY_RUN_PASS=YES' /tmp/r12-resume-dry-run.log >/dev/null
+          test -f "$STATE/user_pause"
+          test -f "$SHARED/user_pause"
+          echo "R12_PAUSED_PRECONDITIONS_PASS=YES"
+
+      - name: Install relay v2 and SSD continuity runtime while paused
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          DEV="$ROOT/Development"
+          STATE="$DEV/runtime/continuity"
+          SHARED="/Users/Shared/.crypto-signal-wake-relay"
+          INSTALL="$HOME/Library/Application Support/CryptoSignal/continuity20m"
+          AGENTS="$HOME/Library/LaunchAgents"
+          DOMAIN="gui/$(id -u)"
+          BRIDGE_LABEL="com.cryptosignal.continuitybridge"
+          BRIDGE_PLIST="$AGENTS/$BRIDGE_LABEL.plist"
+
+          test -f "$STATE/user_pause"
+          test -f "$SHARED/user_pause"
+          mkdir -p "$INSTALL" "$AGENTS"
+
+          install -m 700 "$GITHUB_WORKSPACE/ops/continuity/recurring_wake.py" "$INSTALL/recurring_wake.py"
+          install -m 700 "$GITHUB_WORKSPACE/ops/continuity/relay_submit.py" "$INSTALL/relay_submit.py"
+          install -m 600 "$GITHUB_WORKSPACE/ops/continuity/continuity_contracts.py" "$INSTALL/continuity_contracts.py"
+
+          test -w "$SHARED"
+          install -m 660 "$GITHUB_WORKSPACE/ops/continuity/relay_daemon.py" "$SHARED/relay_daemon.py"
+          install -m 660 "$GITHUB_WORKSPACE/ops/continuity/continuity_contracts.py" "$SHARED/continuity_contracts.py"
+
+          install -m 600 "$GITHUB_WORKSPACE/ops/continuity/launchd/com.cryptosignal.continuitybridge.plist" "$BRIDGE_PLIST"
+          plutil -lint "$BRIDGE_PLIST"
+          launchctl bootout "$DOMAIN/$BRIDGE_LABEL" >/dev/null 2>&1 || true
+          launchctl bootstrap "$DOMAIN" "$BRIDGE_PLIST"
+          launchctl enable "$DOMAIN/$BRIDGE_LABEL"
+          launchctl print "$DOMAIN/$BRIDGE_LABEL" >/dev/null
+
+          OLD_RELAY_PID="$(sed -n 's/^pid=//p' "$SHARED/relay_status" 2>/dev/null | head -1)"
+          : > "$SHARED/restart_requested"
+          ok=0
+          for _ in {1..90}; do
+            NEW_RELAY_PID="$(sed -n 's/^pid=//p' "$SHARED/relay_status" 2>/dev/null | head -1)"
+            PROTOCOL="$(sed -n 's/^relay_protocol=//p' "$SHARED/relay_status" 2>/dev/null | head -1)"
+            NAMESPACE="$(sed -n 's/^project_namespace=//p' "$SHARED/relay_status" 2>/dev/null | head -1)"
+            if [ -n "$NEW_RELAY_PID" ] && [ "$NEW_RELAY_PID" != "$OLD_RELAY_PID" ]                && [ "$PROTOCOL" = "crypto-relay-v2" ]                && [ "$NAMESPACE" = "crypto-signal" ]; then
+              ok=1
+              break
+            fi
+            sleep 2
+          done
+          test "$ok" = "1"
+          TARGET="$(sed -n 's/^target_url=//p' "$SHARED/relay_status" | head -1)"
+          test "$TARGET" = "$(cat "$SHARED/expected_chat_url")"
+          NOW="$(date +%s)"
+          HB_MTIME="$(stat -f %m "$SHARED/relay_heartbeat")"
+          AGE="$((NOW-HB_MTIME))"
+          test "$AGE" -ge 0
+          test "$AGE" -le 30
+          echo "R12_RELAY_V2_RUNTIME_PASS=YES old=$OLD_RELAY_PID new=$NEW_RELAY_PID heartbeat_age=$AGE"
+
+      - name: Prove pause-dominant NOOP semantics
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          DEV="$ROOT/Development"
+          STATE="$DEV/runtime/continuity"
+          SHARED="/Users/Shared/.crypto-signal-wake-relay"
+          LOCAL_BEFORE="$(find "$STATE/wake/queue" -maxdepth 1 -type f -name '*.wake' 2>/dev/null | wc -l | tr -d ' ')"
+          SHARED_BEFORE="$(find "$SHARED/queue" -maxdepth 1 -type f -name '*.wake' 2>/dev/null | wc -l | tr -d ' ')"
+          LEASE_BEFORE="$(find "$STATE/leases/active" -maxdepth 1 -type f -name '*.lease' 2>/dev/null | wc -l | tr -d ' ')"
+
+          set +e
+          /usr/bin/python3 "$DEV/ops/continuity/relay_submit.py" "r12-paused-relay-test" "R12 paused relay test" 0             > /tmp/r12-relay-submit.log 2>&1
+          RELAY_RC=$?
+          set -e
+          test "$RELAY_RC" = "2"
+          grep -F 'RELAY_SUBMIT_PAUSED' /tmp/r12-relay-submit.log >/dev/null
+
+          CHECKPOINT="/tmp/r12-continuity-checkpoint.txt"
+          printf 'R12 paused lease test\n' > "$CHECKPOINT"
+          set +e
+          "$DEV/ops/continuity/continuation_arm.sh" "r12-paused-test" 60 "$CHECKPOINT"             > /tmp/r12-arm.log 2>&1
+          ARM_RC=$?
+          set -e
+          test "$ARM_RC" = "77"
+          grep -F 'CONTINUATION_ARM_PAUSED' /tmp/r12-arm.log >/dev/null
+
+          "$DEV/ops/continuity/wake_enqueue.sh" "r12-paused-local-queue" "R12 paused local queue test"             > /tmp/r12-enqueue.log 2>&1
+          grep -F 'WAKE_ENQUEUE_PAUSED' /tmp/r12-enqueue.log >/dev/null
+
+          /usr/bin/python3 "$DEV/ops/continuity/recurring_wake.py" "r12-paused-fallback"             > /tmp/r12-recurring.log 2>&1
+          grep -F 'WAKE_SKIPPED_USER_PAUSE=YES' /tmp/r12-recurring.log >/dev/null
+
+          /usr/bin/python3 "$DEV/ops/continuity/wake_chatgpt.py" "r12-paused-direct" "R12 paused direct test"             > /tmp/r12-direct.log 2>&1
+          grep -F 'WAKE_TRANSPORT_PAUSED' /tmp/r12-direct.log >/dev/null
+
+          test -f "$STATE/user_pause"
+          test -f "$SHARED/user_pause"
+          test "$(find "$STATE/wake/queue" -maxdepth 1 -type f -name '*.wake' 2>/dev/null | wc -l | tr -d ' ')" = "$LOCAL_BEFORE"
+          test "$(find "$SHARED/queue" -maxdepth 1 -type f -name '*.wake' 2>/dev/null | wc -l | tr -d ' ')" = "$SHARED_BEFORE"
+          test "$(find "$STATE/leases/active" -maxdepth 1 -type f -name '*.lease' 2>/dev/null | wc -l | tr -d ' ')" = "$LEASE_BEFORE"
+          echo "R12_PAUSE_DOMINANCE_PASS=YES"
+
+      - name: Final continuity state
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          DEV="$ROOT/Development"
+          STATE="$DEV/runtime/continuity"
+          SHARED="/Users/Shared/.crypto-signal-wake-relay"
+
+          /usr/bin/python3 "$DEV/ops/continuity/continuity_status.py" | tee /tmp/r12-continuity-status.log
+          grep -F 'PAUSED=YES' /tmp/r12-continuity-status.log >/dev/null
+          grep -F 'ACTIVE_LEASES=0' /tmp/r12-continuity-status.log >/dev/null
+          grep -F 'WAKE_QUEUE=0' /tmp/r12-continuity-status.log >/dev/null
+          grep -F 'RELAY_SHARED_PAUSED=YES' /tmp/r12-continuity-status.log >/dev/null
+          grep -F 'RELAY_QUEUE=0' /tmp/r12-continuity-status.log >/dev/null
+
+          grep -F 'relay_protocol=crypto-relay-v2' "$SHARED/relay_status" >/dev/null
+          grep -F 'project_namespace=crypto-signal' "$SHARED/relay_status" >/dev/null
+          test "$(cat "$STATE/wake/current_chat_url")" = "$(cat "$STATE/wake/expected_chat_url")"
+          test "$(cat "$STATE/wake/current_chat_url")" = "$(cat "$SHARED/current_chat_url")"
+          test "$(cat "$STATE/wake/current_chat_url")" = "$(cat "$SHARED/expected_chat_url")"
+          test "$(cat "$SHARED/project_namespace")" = "crypto-signal"
+          echo "R12_CONTINUITY_ACCEPTANCE_PASS=YES"
