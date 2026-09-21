@@ -1,13 +1,21 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
-import hashlib
-import hmac
 import os
 import sys
 import time
 from datetime import datetime
 from pathlib import Path
+
+from continuity_contracts import (
+    PROJECT_NAMESPACE,
+    RELAY_PROTOCOL,
+    decode_relay_event,
+    encode_relay_event,
+    event_key,
+    expected_wire_sha,
+    require_exact_binding,
+)
 
 BASE = Path("/Volumes/Crypto-504/Crypto-Signal/Development")
 STATE = BASE / "runtime" / "continuity"
@@ -16,33 +24,14 @@ QUEUE = SHARED / "queue"
 RECEIPTS = SHARED / "receipts"
 PAUSE = SHARED / "user_pause"
 LOCAL_PAUSE = STATE / "user_pause"
+LOCAL_CURRENT = STATE / "wake" / "current_chat_url"
+LOCAL_EXPECTED = STATE / "wake" / "expected_chat_url"
+SHARED_CURRENT = SHARED / "current_chat_url"
+SHARED_EXPECTED = SHARED / "expected_chat_url"
 SECRET_FILE = STATE / "relay_secret"
 AUTONOMOUS_PREFIX = "CRYPTO_SIGNAL_AUTONOMOUS_CONTINUE_V1"
 
 
-def event_key(event_id: str) -> str:
-    return hashlib.sha256(event_id.encode()).hexdigest()
-
-
-def scheduled_slot_event_id() -> str:
-    now = datetime.now().astimezone()
-    slot_minute = (now.minute // 20) * 20
-    slot = now.replace(minute=slot_minute, second=0, microsecond=0)
-    return f"crypto-20m-continuity:{slot:%Y%m%dT%H%M%z}"
-
-
-def marker_for(event_id: str) -> str:
-    return f"[#cryptowake:{event_key(event_id)[:16]}]"
-
-
-def expected_wire_sha(event_id: str, message: str) -> str:
-    wire = f"{message} {marker_for(event_id)}"
-    return hashlib.sha256(wire.encode()).hexdigest()
-
-
-def signature(secret: bytes, event_id: str, message: str) -> str:
-    payload = f"{event_id}\n{message}".encode()
-    return hmac.new(secret, payload, hashlib.sha256).hexdigest()
 def receipt_sha(path: Path) -> str | None:
     if not path.exists():
         return None
@@ -52,12 +41,18 @@ def receipt_sha(path: Path) -> str | None:
     return ""
 
 
-def queue_matches(path: Path, event_id: str, message: str) -> bool:
+def queue_matches(
+    path: Path,
+    event_id: str,
+    message: str,
+    *,
+    secret: bytes,
+) -> bool:
     try:
-        lines = path.read_text().splitlines()
-    except (OSError, UnicodeError):
+        event = decode_relay_event(path.read_text(), secret=secret)
+    except (OSError, UnicodeError, ValueError):
         return False
-    return len(lines) >= 8 and lines[0] == event_id and lines[7] == message
+    return event.event_id == event_id and event.message == message
 
 
 def main() -> int:
@@ -79,6 +74,26 @@ def main() -> int:
         print("RELAY_SUBMIT_PAUSED")
         return 2
 
+    def read(path: Path) -> str:
+        try:
+            return path.read_text().strip()
+        except FileNotFoundError:
+            return ""
+
+    try:
+        bound_target = require_exact_binding(
+            expected=read(LOCAL_EXPECTED),
+            local_current=read(LOCAL_CURRENT),
+            shared_current=read(SHARED_CURRENT),
+            shared_expected=read(SHARED_EXPECTED),
+        )
+    except ValueError as exc:
+        print(f"RELAY_BINDING_INVALID:{exc}", file=sys.stderr)
+        return 66
+    print(f"RELAY_PROTOCOL={RELAY_PROTOCOL}")
+    print(f"PROJECT_NAMESPACE={PROJECT_NAMESPACE}")
+    print(f"BOUND_TARGET={bound_target}")
+
     secret = SECRET_FILE.read_text().strip().encode()
     if len(secret) < 32:
         print("RELAY_SECRET_INVALID", file=sys.stderr)
@@ -98,24 +113,22 @@ def main() -> int:
 
     QUEUE.mkdir(parents=True, exist_ok=True)
     if queue_path.exists():
-        if not queue_matches(queue_path, event_id, message):
+        if not queue_matches(
+            queue_path,
+            event_id,
+            message,
+            secret=secret,
+        ):
             print("EVENT_ID_MESSAGE_CONFLICT")
             return 65
     else:
-        sig = signature(secret, event_id, message)
         tmp = QUEUE / f".{key}.{os.getpid()}.tmp"
-        content = "\n".join(
-            (
-                event_id,
-                "",
-                "",
-                "",
-                "",
-                time.strftime("%Y-%m-%d %H:%M:%S %z"),
-                sig,
-                message,
-            )
-        ) + "\n"
+        content = encode_relay_event(
+            secret=secret,
+            event_id=event_id,
+            message=message,
+            created=time.strftime("%Y-%m-%d %H:%M:%S %z"),
+        )
         tmp.write_text(content)
         os.chmod(tmp, 0o660)
         tmp.replace(queue_path)
