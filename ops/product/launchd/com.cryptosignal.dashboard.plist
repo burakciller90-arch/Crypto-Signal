@@ -10,6 +10,8 @@
     <string>--host</string><string>127.0.0.1</string>
     <string>--port</string><string>48700</string>
     <string>--ledger</string><string>/Users/crypto-signal-agent/Crypto-Signal/runtime/ledger/live_signal_ledger.sqlite3</string>
+    <string>--paper-ledger</string><string>/Users/crypto-signal-agent/Crypto-Signal/runtime/paper/paper_fund.sqlite3</string>
+    <string>--candle-cache</string><string>/Users/crypto-signal-agent/Crypto-Signal/runtime/data/live_base_15m_cache.sqlite3</string>
   </array>
   <key>WorkingDirectory</key><string>/Users/crypto-signal-agent/Crypto-Signal-Product</string>
   <key>EnvironmentVariables</key>
