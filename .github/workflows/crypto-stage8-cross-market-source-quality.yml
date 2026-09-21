@@ -90,6 +90,7 @@ jobs:
               candidates = (
                   lambda: datetime.fromisoformat(raw.replace("Z", "+00:00")).date(),
                   lambda: datetime.strptime(raw, "%m/%d/%Y").date(),
+                  lambda: datetime.strptime(raw, "%m-%d-%Y").date(),
                   lambda: datetime.strptime(raw, "%d-%b-%y").date(),
                   lambda: datetime.strptime(raw, "%Y-%m-%d").date(),
               )
