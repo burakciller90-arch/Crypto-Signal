@@ -20,6 +20,7 @@ from crypto_signal.product.education import (
     all_education_lessons,
     lookup_education_lesson,
 )
+from crypto_signal.product.intelligence_center import build_intelligence_center_payload
 from crypto_signal.product.reader import DashboardReader, DashboardReadError
 
 DEFAULT_LEDGER_PATH = (
@@ -69,6 +70,7 @@ def create_app(
     alert_outbox_path: Path | None = None,
     paper_ledger_path: Path | None = None,
     candle_cache_path: Path | None = None,
+    learning_memory_path: Path | None = None,
 ) -> FastAPI:
     selected_path = ledger_path or Path(
         os.environ.get("CRYPTO_SIGNAL_LEDGER_PATH", str(DEFAULT_LEDGER_PATH))
@@ -109,6 +111,12 @@ def create_app(
     else:
         selected_candle_path = None
 
+    selected_learning_memory_path = learning_memory_path
+    if selected_learning_memory_path is None:
+        learning_memory_env = os.environ.get("CRYPTO_SIGNAL_LEARNING_MEMORY_PATH")
+        if learning_memory_env:
+            selected_learning_memory_path = Path(learning_memory_env)
+
     reader = DashboardReader(
         selected_path,
         alert_outbox_path=selected_alert_path,
@@ -125,6 +133,7 @@ def create_app(
     app.state.alert_outbox_path = selected_alert_path
     app.state.paper_ledger_path = selected_paper_path
     app.state.candle_cache_path = selected_candle_path
+    app.state.learning_memory_path = selected_learning_memory_path
     app.state.reader = reader
 
     app.mount(
@@ -302,6 +311,25 @@ def create_app(
                 "read_only": True,
             }
         )
+
+    @app.get("/api/intelligence-center")
+    def intelligence_center(
+        observed_at_ms: int | None = Query(default=None, ge=0),
+    ) -> JSONResponse:
+        observation = (
+            time.time_ns() // 1_000_000
+            if observed_at_ms is None
+            else observed_at_ms
+        )
+        try:
+            return _json(
+                build_intelligence_center_payload(
+                    selected_learning_memory_path,
+                    observed_at_ms=observation,
+                )
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     @app.get("/api/performance")
     def performance() -> JSONResponse:
