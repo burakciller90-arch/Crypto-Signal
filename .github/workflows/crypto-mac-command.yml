@@ -24,7 +24,7 @@ jobs:
           set -euo pipefail
           cmd="$(printf '%s\n' "$ISSUE_BODY" | awk -F: 'tolower($1)=="command" {gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2); print tolower($2); exit}')"
           case "$cmd" in
-            status|services|logs|disk|sync|producttest|fulltest|productstate|productdeploy|paperreview|paperinspect|paperfixlint|paperharden|stateplanreview|stateplaninspect|stateplanharden|cursorreview|cursorreviewtail|cursorcleanup|bridgecheck|bridgestate|pausecheck|wakepause|wakeresume|wakearm|waketest|wakeheartbeat|chatbusyprobe|cursorcheck|cursorauthdiag|cursorttycheck|alertclockstate|alertclockpause|alertclockresume|migrationinspect|migrationinventory|ssddashboarddiag|ssddashboardwrappertest|ssdtcclaunchtest|ssdbackgroundteststart|ssdbackgroundtestcheck|ssdleftover|runnerpersistinstall|runnerpersistdiag|runnercutoverdiag)
+            status|services|logs|disk|sync|producttest|fulltest|productstate|productdeploy|paperreview|paperinspect|paperfixlint|paperharden|stateplanreview|stateplaninspect|stateplanharden|cursorreview|cursorreviewtail|cursorcleanup|bridgecheck|bridgestate|pausecheck|wakepause|wakeresume|wakearm|waketest|wakeheartbeat|chatbusyprobe|cursorcheck|cursorauthdiag|cursorttycheck|alertclockstate|alertclockpause|alertclockresume|migrationinspect|migrationinventory|ssddashboarddiag|ssddashboardwrappertest|ssdtcclaunchtest|ssdbackgroundteststart|ssdbackgroundtestcheck|ssdleftover|runnerpersistinstall|runnerpersistdiag|runnercutoverdiag|dashboardstart504)
               ;;
             *)
               echo "Unsupported command: $cmd"
@@ -1189,6 +1189,77 @@ jobs:
           curl -fsS --max-time 3 http://127.0.0.1:48704/api/health
           echo
           echo "SSD_BACKGROUND_TEST_SURVIVED=YES"
+
+      - name: DASHBOARD START UID504
+        if: steps.parse.outputs.command == 'dashboardstart504'
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          PRODUCT="$ROOT/Product"
+          DEV="$ROOT/Development"
+          LOG="$ROOT/ServiceLogs"
+          URL="http://127.0.0.1:48700"
+          HEALTH="$URL/api/health"
+          PIDFILE="$ROOT/dashboard.pid"
+
+          test "$(id -u)" = "504"
+          test -x "$PRODUCT/.venv/bin/python"
+          test -f "$PRODUCT/ops/run_dashboard.py"
+          test -f "$DEV/runtime/ledger/live_signal_ledger.sqlite3"
+          mkdir -p "$LOG"
+
+          if curl -fsS --max-time 3 "$HEALTH" > "$ROOT/dashboard-health.json" 2>/dev/null; then
+            echo "DASHBOARD_ALREADY_HEALTHY=YES"
+          else
+            old="$(cat "$PIDFILE" 2>/dev/null || true)"
+            if [ -n "$old" ] && kill -0 "$old" >/dev/null 2>&1; then
+              if ps -p "$old" -o command= | grep -q 'run_dashboard.py.*48700'; then
+                kill "$old" >/dev/null 2>&1 || true
+                sleep 1
+              fi
+            fi
+            rm -f "$PIDFILE"
+            (
+              unset RUNNER_TRACKING_ID
+              export PYTHONPATH="$PRODUCT/src"
+              nohup "$PRODUCT/.venv/bin/python" "$PRODUCT/ops/run_dashboard.py"                 --host 127.0.0.1                 --port 48700                 --ledger "$DEV/runtime/ledger/live_signal_ledger.sqlite3"                 >"$LOG/dashboard-48700.out.log"                 2>"$LOG/dashboard-48700.err.log"                 < /dev/null &
+              echo $! > "$PIDFILE"
+            )
+          fi
+
+          ok=0
+          for i in {1..30}; do
+            if curl -fsS --max-time 3 "$HEALTH" > "$ROOT/dashboard-health.json" 2>/dev/null; then
+              ok=1
+              break
+            fi
+            sleep 1
+          done
+
+          if [ "$ok" != "1" ]; then
+            echo "DASHBOARD_48700_HEALTH_FAIL"
+            tail -120 "$LOG/dashboard-48700.err.log" 2>/dev/null || true
+            exit 70
+          fi
+
+          echo "=== HEALTH ==="
+          cat "$ROOT/dashboard-health.json"
+          echo
+          pid="$(cat "$PIDFILE" 2>/dev/null || true)"
+          if [ -n "$pid" ]; then
+            ps -p "$pid" -o pid=,ppid=,user=,%cpu=,%mem=,etime=,command= || true
+          fi
+
+          test_pid="$(cat "$ROOT/background-test.pid" 2>/dev/null || true)"
+          if [ -n "$test_pid" ] && kill -0 "$test_pid" >/dev/null 2>&1; then
+            kill "$test_pid" >/dev/null 2>&1 || true
+            echo "BACKGROUND_48704_TEST_STOPPED=$test_pid"
+          fi
+
+          /usr/bin/open "$URL/"
+          echo "CRYPTO_DASHBOARD_UID504_OPENED=YES"
+          echo "CRYPTO_DASHBOARD_UID504_HEALTH_PASS=YES"
 
       - name: SSD TCC LAUNCH TEST
         if: steps.parse.outputs.command == 'ssdtcclaunchtest'
