@@ -26,12 +26,12 @@ def _book(**overrides):
         "update_id": 10,
         "sequence": 20,
         "bids": (
-            OrderBookLevel(price=Decimal("100"), size=Decimal(2)),
-            OrderBookLevel(price=Decimal("99"), size=Decimal(1)),
+            OrderBookLevel(price=Decimal(100), size=Decimal(2)),
+            OrderBookLevel(price=Decimal(99), size=Decimal(1)),
         ),
         "asks": (
-            OrderBookLevel(price=Decimal("101"), size=Decimal(1)),
-            OrderBookLevel(price=Decimal("102"), size=Decimal(2)),
+            OrderBookLevel(price=Decimal(101), size=Decimal(1)),
+            OrderBookLevel(price=Decimal(102), size=Decimal(2)),
         ),
         "source": DataSource.REST,
         "adapter_version": "test/1",
@@ -126,7 +126,7 @@ def test_public_trade_rejects_invalid_measurements_or_time() -> None:
         _trade(price=Decimal(0))
 
     with pytest.raises(ValueError, match="size must be finite and positive"):
-        _trade(size=Decimal("-1"))
+        _trade(size=Decimal(-1))
 
     with pytest.raises(ValueError, match="cannot postdate"):
         _trade(event_at_ms=2_000, source_timestamp_ms=1_000)
