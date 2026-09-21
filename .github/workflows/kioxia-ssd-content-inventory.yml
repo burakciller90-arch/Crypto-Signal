@@ -1,0 +1,36 @@
+name: KIOXIA SSD Content Inventory
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/kioxia-ssd-content-inventory.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: [self-hosted, crypto-signal, uid501]
+    timeout-minutes: 5
+    steps:
+      - name: Inventory KIOXIA contents read-only
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(id -u)" = "501"
+          V="/Volumes/KIOXIA"
+          test -d "$V"
+          echo "=== ROOT LIST ==="
+          /bin/ls -la "$V"
+          echo "=== TOP LEVEL SIZE ==="
+          /usr/bin/du -sk "$V"/* "$V"/.[!.]* "$V"/..?* 2>/dev/null | /usr/bin/sort -nr | /usr/bin/head -100 || true
+          echo "=== PATHS DEPTH 3 ==="
+          /usr/bin/find "$V" -mindepth 1 -maxdepth 3 -print | /usr/bin/sort | /usr/bin/head -300
+          echo "=== FILE TYPES TOP ==="
+          /usr/bin/find "$V" -type f -maxdepth 3 -print0 | /usr/bin/xargs -0 /usr/bin/file 2>/dev/null | /usr/bin/head -200 || true
+          echo "=== COUNTS ==="
+          echo "FILES=$(/usr/bin/find "$V" -type f | /usr/bin/wc -l | /usr/bin/tr -d ' ')"
+          echo "DIRS=$(/usr/bin/find "$V" -mindepth 1 -type d | /usr/bin/wc -l | /usr/bin/tr -d ' ')"
+          echo "USED_KB=$(/usr/bin/du -sk "$V" | /usr/bin/awk '{print $1}')"
+          echo "KIOXIA_CONTENT_INVENTORY_PASS=YES"
