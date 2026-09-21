@@ -212,5 +212,5 @@ def test_product_projection_does_not_import_or_execute_research_engines() -> Non
     assert "import research" not in source
     assert "place_order" not in source
     assert "submit_order" not in source
-    assert "production_contribution": 0" in source
+    assert '"production_contribution": 0' in source
     assert intelligence_center.REAL_CAPITAL == 0
