@@ -24,7 +24,7 @@ jobs:
           set -euo pipefail
           cmd="$(printf '%s\n' "$ISSUE_BODY" | awk -F: 'tolower($1)=="command" {gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2); print tolower($2); exit}')"
           case "$cmd" in
-            status|services|logs|disk|sync|producttest|fulltest|productstate|productdeploy|paperreview|paperinspect|paperfixlint|paperharden|stateplanreview|stateplaninspect|stateplanharden|cursorreview|cursorreviewtail|cursorcleanup|bridgecheck|bridgestate|pausecheck|wakepause|wakeresume|wakearm|waketest|wakeheartbeat|chatbusyprobe|cursorcheck|cursorauthdiag|cursorttycheck|alertclockstate|alertclockpause|alertclockresume|migrationinspect|migrationinventory|ssddashboarddiag|ssddashboardwrappertest|ssdtcclaunchtest|ssdbackgroundteststart|ssdbackgroundtestcheck|ssdleftover|runnerpersistinstall|runnerpersistdiag|runnercutoverdiag|dashboardstart504)
+            status|services|logs|disk|sync|producttest|fulltest|productstate|productdeploy|paperreview|paperinspect|paperfixlint|paperharden|stateplanreview|stateplaninspect|stateplanharden|cursorreview|cursorreviewtail|cursorcleanup|bridgecheck|bridgestate|pausecheck|wakepause|wakeresume|wakearm|waketest|wakeheartbeat|chatbusyprobe|cursorcheck|cursorauthdiag|cursorttycheck|alertclockstate|alertclockpause|alertclockresume|migrationinspect|migrationinventory|ssddashboarddiag|ssddashboardwrappertest|ssdtcclaunchtest|ssdbackgroundteststart|ssdbackgroundtestcheck|ssdleftover|runnerpersistinstall|runnerpersistdiag|runnercutoverdiag|dashboardstart504|runnerterminalwatchdoginstall)
               ;;
             *)
               echo "Unsupported command: $cmd"
@@ -1658,6 +1658,130 @@ jobs:
           /usr/bin/open "$URL/"
           echo "CRYPTO_DASHBOARD_OPENED_UID504=YES"
           echo "CRYPTO_DASHBOARD_HEALTH_UID504=PASS"
+
+      - name: RUNNER TERMINAL WATCHDOG INSTALL
+        if: steps.parse.outputs.command == 'runnerterminalwatchdoginstall'
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          LOCAL_ROOT="$HOME/Library/Application Support/CryptoSignalRunner"
+          LOCAL_LOG="$HOME/Library/Logs/CryptoSignalRunner"
+          START="$LOCAL_ROOT/start-ssd-runner.command"
+          WATCH="$LOCAL_ROOT/runner-terminal-watchdog.sh"
+          LABEL="com.cryptosignal.github-runner-terminal-watchdog"
+          PLIST="$HOME/Library/LaunchAgents/$LABEL.plist"
+          TARGET="gui/$(id -u)/$LABEL"
+          OLD_LABEL="com.cryptosignal.github-runner-ssd"
+          OLD_TARGET="gui/$(id -u)/$OLD_LABEL"
+
+          test "$(id -u)" = "504"
+          mkdir -p "$LOCAL_ROOT" "$LOCAL_LOG" "$HOME/Library/LaunchAgents"
+
+          cat > "$START" <<'SH'
+          #!/bin/bash
+          set -u
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          RUNNER="$ROOT/Runner"
+          LOG="$ROOT/RunnerLogs"
+          LOCAL_LOG="$HOME/Library/Logs/CryptoSignalRunner"
+          mkdir -p "$LOCAL_LOG"
+
+          if /bin/ps -axo command= 2>/dev/null             | /usr/bin/grep -F '/Volumes/Crypto-504/Crypto-Signal/Runner/bin/Runner.Listener run --startuptype service'             | /usr/bin/grep -v grep >/dev/null 2>&1; then
+            printf '%s RUNNER_ALREADY_ALIVE=YES\n' "$(date '+%Y-%m-%d %H:%M:%S %z')" >>"$LOCAL_LOG/terminal-watchdog.log"
+            exit 0
+          fi
+
+          if [ ! -x "$RUNNER/runsvc.sh" ]; then
+            printf '%s SSD_RUNNER_NOT_READY=YES\n' "$(date '+%Y-%m-%d %H:%M:%S %z')" >>"$LOCAL_LOG/terminal-watchdog.err.log"
+            exit 75
+          fi
+
+          mkdir -p "$LOG"
+          cd "$RUNNER" || exit 75
+          unset RUNNER_TRACKING_ID
+          export HOME="/Users/crypto-signal-agent"
+          export ACTIONS_RUNNER_SVC=1
+          nohup ./runsvc.sh             >>"$LOG/terminal-watchdog-runner.out.log"             2>>"$LOG/terminal-watchdog-runner.err.log"             </dev/null &
+          pid=$!
+          echo "$pid" > "$ROOT/ssd-runner-terminal-watchdog.pid"
+          printf '%s STARTED_RUNSVC_PID=%s\n' "$(date '+%Y-%m-%d %H:%M:%S %z')" "$pid" >>"$LOCAL_LOG/terminal-watchdog.log"
+          sleep 5
+          exit 0
+          SH
+          chmod 700 "$START"
+
+          cat > "$WATCH" <<'SH'
+          #!/bin/bash
+          set -u
+          LOCAL_ROOT="$HOME/Library/Application Support/CryptoSignalRunner"
+          LOCAL_LOG="$HOME/Library/Logs/CryptoSignalRunner"
+          START="$LOCAL_ROOT/start-ssd-runner.command"
+          LOCK="$LOCAL_ROOT/terminal-watchdog.lock"
+          mkdir -p "$LOCAL_LOG"
+
+          if /bin/ps -axo command= 2>/dev/null             | /usr/bin/grep -F '/Volumes/Crypto-504/Crypto-Signal/Runner/bin/Runner.Listener run --startuptype service'             | /usr/bin/grep -v grep >/dev/null 2>&1; then
+            exit 0
+          fi
+
+          if [ -f "$LOCK" ]; then
+            now="$(date +%s)"
+            then="$(stat -f %m "$LOCK" 2>/dev/null || echo 0)"
+            if [ $((now-then)) -lt 90 ]; then
+              exit 0
+            fi
+          fi
+
+          date > "$LOCK"
+          printf '%s REQUESTING_TERMINAL_START=YES\n' "$(date '+%Y-%m-%d %H:%M:%S %z')" >>"$LOCAL_LOG/terminal-watchdog.log"
+          /usr/bin/open -gj -a Terminal "$START"
+          sleep 12
+          rm -f "$LOCK"
+          exit 0
+          SH
+          chmod 700 "$WATCH"
+
+          cat > "$PLIST" <<PLIST
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>Label</key>
+            <string>$LABEL</string>
+            <key>ProgramArguments</key>
+            <array>
+              <string>/bin/bash</string>
+              <string>$WATCH</string>
+            </array>
+            <key>RunAtLoad</key>
+            <true/>
+            <key>StartInterval</key>
+            <integer>30</integer>
+            <key>ProcessType</key>
+            <string>Background</string>
+            <key>StandardOutPath</key>
+            <string>$LOCAL_LOG/terminal-watchdog-launchagent.out.log</string>
+            <key>StandardErrorPath</key>
+            <string>$LOCAL_LOG/terminal-watchdog-launchagent.err.log</string>
+          </dict>
+          </plist>
+          PLIST
+
+          chmod 644 "$PLIST"
+          plutil -lint "$PLIST"
+
+          launchctl bootout "$OLD_TARGET" >/dev/null 2>&1 || true
+          launchctl bootout "$TARGET" >/dev/null 2>&1 || true
+          launchctl bootstrap "gui/$(id -u)" "$PLIST"
+          sleep 3
+
+          echo "=== TERMINAL WATCHDOG ==="
+          launchctl print "$TARGET" 2>&1 | egrep 'state =|runs =|last exit code =|run interval =|program =|path =' | head -100 || true
+          echo "=== CURRENT SSD LISTENER ==="
+          ps -axo pid=,ppid=,user=,etime=,command=             | grep -E '[V]olumes/Crypto-504/Crypto-Signal/Runner/(runsvc.sh|bin/Runner.Listener)'             | head -40
+          launchctl print "$TARGET" >/dev/null
+          ps -axo command=             | grep -F '/Volumes/Crypto-504/Crypto-Signal/Runner/bin/Runner.Listener run --startuptype service'             | grep -v grep >/dev/null
+          echo "CRYPTO_UID504_TERMINAL_WATCHDOG_INSTALLED=YES"
 
       - name: MIGRATION INVENTORY
         if: steps.parse.outputs.command == 'migrationinventory'
