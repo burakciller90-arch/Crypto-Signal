@@ -2278,3 +2278,35 @@ Factory promotion or learning-memory authority was introduced.
 
 The next bounded Stage 8 frontier is `stage8-breakout-volatility-v1`.
 
+## 2026-09-21 — fourth Stage 8 engine accepted: breakout / volatility
+
+PR #409 merged the bounded `crypto_signal.intelligence.breakout_volatility`
+engine as `f44157fa2b8a3788b85608a872eb8fa8fde7d5b3`. The engine deliberately derives
+breakout references only from prior PIT-safe closed bars, excluding the current
+bar from the reference threshold. It distinguishes confirmed up/down breakouts,
+buffer probes and inside-range behavior. Volatility is measured separately as
+current closed-bar range versus a prior closed-bar baseline, with compressed,
+normal and expanded states.
+
+Zero baseline range fails closed rather than being mislabeled as compression.
+Insufficient history, candle gaps and future evidence remain explicit uncertainty.
+Analysis and consumed-candle freezes are SHA-bound and production isolation tests
+prove zero contribution to the stable confluence path.
+
+The hosted full repository gate passed with pytest 100%, Ruff PASS, mypy PASS
+across 109 source files and the product freshness contract. UID504 canonical sync
+and fulltest then passed on the merged head, including pytest 100%, Ruff, mypy
+across 108 source files and `FULL_TEST_PASS=YES`.
+
+A fresh repository inventory before the next slice found no accepted funding,
+open-interest, perpetual or basis data layer. Therefore bounded derivatives
+context must start by defining a real PIT-safe observation/source contract; no
+derivatives values may be invented merely to satisfy the roadmap.
+
+No production weighting, paper writer activation, exchange authority, Alpha
+Factory promotion or learning-memory authority was introduced.
+`REAL_CAPITAL=0` remains invariant.
+
+The next bounded Stage 8 frontier is
+`stage8-bounded-derivatives-context-v1`.
+
