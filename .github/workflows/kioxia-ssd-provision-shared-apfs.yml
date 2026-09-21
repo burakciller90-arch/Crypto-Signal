@@ -1,0 +1,87 @@
+name: KIOXIA SSD Provision Shared APFS
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/kioxia-ssd-provision-shared-apfs.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  provision:
+    runs-on: [self-hosted, crypto-signal, uid501]
+    timeout-minutes: 15
+    steps:
+      - name: Verify exact KIOXIA target and provision APFS
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(id -u)" = "501"
+
+          DISK="/dev/disk4"
+          CURRENT="/Volumes/KIOXIA"
+
+          echo "=== PRECHECK IDENTITY ==="
+          INFO="$(/usr/sbin/diskutil info "$DISK")"
+          printf '%s\n' "$INFO"
+
+          printf '%s\n' "$INFO" | /usr/bin/grep -Fq "Device Identifier:        disk4"
+          printf '%s\n' "$INFO" | /usr/bin/grep -Fq "Whole:                    Yes"
+          printf '%s\n' "$INFO" | /usr/bin/grep -Fq "Device Location:          External"
+          printf '%s\n' "$INFO" | /usr/bin/grep -Fq "Protocol:                 USB"
+          printf '%s\n' "$INFO" | /usr/bin/grep -Eq 'Disk Size:.*1\.0 TB'
+
+          PART_INFO="$(/usr/sbin/diskutil info /dev/disk4s2)"
+          printf '%s\n' "$PART_INFO"
+          printf '%s\n' "$PART_INFO" | /usr/bin/grep -Fq "Volume Name:              KIOXIA"
+          printf '%s\n' "$PART_INFO" | /usr/bin/grep -Eq 'File System Personality:.*ExFAT'
+
+          test -d "$CURRENT"
+
+          echo "=== PRECHECK CONTENT ==="
+          ROOT_ITEMS="$(/usr/bin/find "$CURRENT" -mindepth 1 -maxdepth 1 -print | /usr/bin/sort)"
+          printf '%s\n' "$ROOT_ITEMS"
+
+          # Only macOS metadata is allowed before destructive erase.
+          while IFS= read -r p; do
+            [ -n "$p" ] || continue
+            b="$(basename "$p")"
+            case "$b" in
+              .Spotlight-V100|.fseventsd) ;;
+              *) echo "UNEXPECTED_USER_CONTENT=$p"; exit 70 ;;
+            esac
+          done <<< "$ROOT_ITEMS"
+
+          echo "DESTRUCTIVE_TARGET_CONFIRMED=YES"
+          echo "DESTRUCTIVE_USER_APPROVAL=YES"
+
+          echo "=== ERASE DISK TO APFS/GPT ==="
+          /usr/sbin/diskutil eraseDisk APFS "Admin-501" GPT "$DISK"
+
+          echo "=== DISCOVER APFS CONTAINER ==="
+          CONTAINER="$(/usr/sbin/diskutil apfs list | /usr/bin/awk '
+            /APFS Container Reference:/ {c=$4}
+            /Physical Store disk4s2/ {print c; exit}
+          ')"
+          test -n "$CONTAINER"
+          echo "APFS_CONTAINER=$CONTAINER"
+
+          echo "=== ADD PROJECT VOLUMES ==="
+          /usr/sbin/diskutil apfs addVolume "$CONTAINER" APFS "Durdurulmaz-502"
+          /usr/sbin/diskutil apfs addVolume "$CONTAINER" APFS "Quantum-503"
+          /usr/sbin/diskutil apfs addVolume "$CONTAINER" APFS "Crypto-504"
+
+          echo "=== FINAL DISK LIST ==="
+          /usr/sbin/diskutil list "$DISK"
+          echo "=== FINAL APFS LIST ==="
+          /usr/sbin/diskutil apfs list "$CONTAINER"
+
+          echo "=== REQUIRED VOLUMES ==="
+          for v in Admin-501 Durdurulmaz-502 Quantum-503 Crypto-504; do
+            test -d "/Volumes/$v"
+            /usr/sbin/diskutil info "/Volumes/$v" | /usr/bin/grep -E 'Device Identifier|Volume Name|Mount Point|File System Personality|Type \(Bundle\)|Disk Size|Volume Free Space|Protocol|Device Location'
+          done
+
+          echo "KIOXIA_SHARED_APFS_PROVISION_PASS=YES"
