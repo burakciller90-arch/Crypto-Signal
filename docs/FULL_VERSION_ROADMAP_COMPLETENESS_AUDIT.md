@@ -53,8 +53,8 @@ one at a time behind isolated gates:
 1. deterministic regime labeling — **ACCEPTED** at `4cdfbd134597a8329fb90d08eed5643161cd4926`,
 2. trend/momentum — **ACCEPTED** at `f8b525e355a7fb587e9c0913965326a67630576a`,
 3. mean reversion — **ACCEPTED** at `4e6d25df7f6aa2f36bf4ee86dba5c9023dd055d4`,
-4. breakout/volatility — **NEXT FRONTIER**,
-5. bounded derivatives context,
+4. breakout/volatility — **ACCEPTED** at `f44157fa2b8a3788b85608a872eb8fa8fde7d5b3`,
+5. bounded derivatives context — **NEXT FRONTIER**,
 6. order-flow/microstructure if data quality supports it,
 7. on-chain/network,
 8. bounded sentiment/attention,
@@ -113,20 +113,20 @@ only through a separately tested policy.
 
 The next bounded roadmap slice is:
 
-`stage8-breakout-volatility-v1`
+`stage8-bounded-derivatives-context-v1`
 
-Regime labeling, trend/momentum and mean reversion are accepted. The next slice must add a deterministic
-breakout/volatility evidence engine with:
+Regime labeling, trend/momentum, mean reversion and breakout/volatility are accepted. The next slice must add a bounded derivatives context contract + analyzer with:
 
-- point-in-time-safe inputs only,
-- immutable/frozen evidence,
-- explicit breakout/compression/expansion/unresolved states,
+- explicit point-in-time observation timestamps and source identity,
+- funding / open-interest / basis context only when actual observations exist,
+- immutable/frozen evidence and explicit missing-data uncertainty,
 - independent tests and bounded metric semantics,
+- no fabricated derivatives values when no data source is available,
 - no change to production confluence weights,
 - no change to production paper write authority,
 - no self-learning or automatic promotion.
 
-Only after this engine is accepted should bounded derivatives context begin.
+Only after this engine is accepted should order-flow/microstructure be considered, and only if data quality supports it.
 
 ## Safety boundary
 
