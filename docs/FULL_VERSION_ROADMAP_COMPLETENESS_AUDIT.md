@@ -123,25 +123,28 @@ only through a separately tested policy.
 
 The next bounded roadmap slice is:
 
-`stage8.5-evolutionary-search-v1`
+`stage8.5-bounded-ml-research-foundation-v1`
 
-The Alpha Factory foundation plus symbolic, shallow-tree, clustering/regime and feature-interaction slices are accepted. The next slice may add bounded deterministic evolutionary challenger research only.
+Evolutionary search is accepted. The next slice is deliberately a foundation,
+not an open-ended model competition.
 
 Requirements:
 
 - implementation remains under isolated `research/alpha_factory`,
-- population size, generation count, mutation/crossover operators and search budget are hard-bounded and versioned,
-- all randomization is replaced by explicit deterministic seed/state and immutable identities,
-- search/fitting uses TRAIN only,
-- VALIDATION and OOS remain descriptive evaluation only,
+- immutable feature, partition, training-config and model identities,
+- one deterministic hard-bounded baseline model family only,
+- TRAIN is fit-only,
+- VALIDATION/OOS remain descriptive evaluation only,
 - untouched-forward remains closed,
 - explicit transaction-cost/slippage accounting remains part of evaluation,
-- multiple-testing/backtest-overfitting state is explicit and no automatic winner selection is allowed,
-- fitness is descriptive research evidence, not probability or production authority,
-- no self-promotion, champion mutation, production import or deploy path is permitted,
-- ML/RL remains closed until a later separately accepted slice.
+- no automatic hyperparameter/model winner selection,
+- no calibrated-probability claim,
+- no production product/paper/confluence/signal import,
+- no self-promotion, champion mutation or deploy path,
+- RL remains closed until a later separately accepted slice.
 
-A favorable evolutionary fitness score cannot satisfy the promotion gate by itself. Missing walk-forward, untouched-forward or supervisor evidence remains missing until genuinely produced.
+A favorable model score cannot satisfy the promotion gate by itself. Walk-forward,
+untouched-forward and supervisor evidence remain missing until genuinely produced.
 
 `REAL_CAPITAL=0`.
 
