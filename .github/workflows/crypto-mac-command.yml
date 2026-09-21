@@ -1581,6 +1581,84 @@ jobs:
           echo "RUNNER_PERSIST_DIAG_DONE=YES"
           exit 0
 
+      - name: DASHBOARD OPEN UID504
+        if: steps.parse.outputs.command == 'dashboardopen504'
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          PRODUCT="$ROOT/Product"
+          LEDGER="$ROOT/Development/runtime/ledger/live_signal_ledger.sqlite3"
+          LOG="$ROOT/ServiceLogs"
+          PIDFILE="$ROOT/dashboard-manual-504.pid"
+          URL="http://127.0.0.1:48700"
+          HEALTH="$URL/api/health"
+
+          test "$(id -u)" = "504"
+          test -x "$PRODUCT/.venv/bin/python"
+          test -f "$PRODUCT/ops/run_dashboard.py"
+          test -f "$LEDGER"
+          mkdir -p "$LOG"
+
+          if curl -fsS --max-time 3 "$HEALTH" > /tmp/crypto-dashboard-health-504.json 2>/dev/null; then
+            echo "DASHBOARD_ALREADY_HEALTHY=YES"
+          else
+            echo "DASHBOARD_ALREADY_HEALTHY=NO"
+            if /usr/sbin/lsof -nP -iTCP:48700 -sTCP:LISTEN >/tmp/crypto-port48700.txt 2>/dev/null; then
+              cat /tmp/crypto-port48700.txt
+              echo "PORT_48700_OCCUPIED_WHILE_HEALTH_FAILED"
+              exit 81
+            fi
+
+            (
+              unset RUNNER_TRACKING_ID
+              export PYTHONPATH="$PRODUCT/src"
+              /usr/bin/nohup "$PRODUCT/.venv/bin/python" "$PRODUCT/ops/run_dashboard.py" \
+                --host 127.0.0.1 --port 48700 --ledger "$LEDGER" \
+                >>"$LOG/dashboard-manual-504.out.log" \
+                2>>"$LOG/dashboard-manual-504.err.log" </dev/null &
+              echo $! > "$PIDFILE"
+            )
+
+            ok=0
+            for _ in {1..30}; do
+              if curl -fsS --max-time 3 "$HEALTH" > /tmp/crypto-dashboard-health-504.json 2>/dev/null; then
+                ok=1
+                break
+              fi
+              sleep 1
+            done
+            if [ "$ok" != "1" ]; then
+              echo "=== DASHBOARD ERR ==="
+              tail -160 "$LOG/dashboard-manual-504.err.log" 2>/dev/null || true
+              echo "=== DASHBOARD OUT ==="
+              tail -160 "$LOG/dashboard-manual-504.out.log" 2>/dev/null || true
+              exit 82
+            fi
+          fi
+
+          echo "=== HEALTH ==="
+          cat /tmp/crypto-dashboard-health-504.json
+          echo
+          /usr/bin/python3 - <<'PY'
+          import json
+          from pathlib import Path
+          data=json.loads(Path("/tmp/crypto-dashboard-health-504.json").read_text())
+          assert data.get("status") == "ok"
+          assert data.get("real_capital") == 0
+          assert data.get("read_only") is True
+          print("DASHBOARD_SAFETY_CONTRACT_PASS=YES")
+          PY
+
+          echo "=== PROCESS ==="
+          ps -axo pid=,ppid=,user=,etime=,command= \
+            | grep -E '[C]rypto-504/Crypto-Signal/Product/.*run_dashboard.py' \
+            | head -40 || true
+
+          /usr/bin/open "$URL/"
+          echo "CRYPTO_DASHBOARD_OPENED_UID504=YES"
+          echo "CRYPTO_DASHBOARD_HEALTH_UID504=PASS"
+
       - name: MIGRATION INVENTORY
         if: steps.parse.outputs.command == 'migrationinventory'
         shell: bash
