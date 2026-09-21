@@ -2513,3 +2513,64 @@ Current true roadmap frontier:
 - evaluate without production/paper champion writes;
 - do not permit self-promotion;
 - later tree/clustering/evolutionary/ML/RL research remains closed.
+
+## 2026-09-21 — Stage 8.5 deterministic symbolic challenger v1 ACCEPTED
+
+- accepted main head: `47c1ecdd31b1ffe490611abcf40f5d309c45663a`
+- PR #455 merged the first bounded challenger-generation/evaluation engine inside the isolated Alpha Factory.
+- accepted research surface:
+  - top-level `research/alpha_factory/symbolic_rules.py`
+  - production `src/crypto_signal` remains free of a research lab
+  - research CI now gates all `tests/test_alpha_factory_*.py`
+- bounded symbolic search:
+  - max 8 explicit versioned features
+  - max 8 allowed categorical values per feature
+  - max 2 predicates per challenger
+  - max 256 generated challengers
+  - deterministic canonical ordering and SHA-bound identities
+- accepted PIT/evaluation semantics:
+  - feature evidence must be available at or before decision as-of
+  - outcomes cannot be available before decision as-of
+  - observations must belong to exactly one accepted research partition
+  - evaluation must cover the exact partition evidence set
+  - duplicate source evidence and duplicate research observation identities fail closed
+  - explicit research cost R is subtracted from gross R before descriptive metrics
+  - evaluation semantic is `DESCRIPTIVE_NET_R_NOT_PROBABILITY`
+  - untouched-forward evaluation is explicitly closed in symbolic v1
+- authority boundary:
+  - research evidence only
+  - no network/broker/order/filesystem-write/subprocess surface
+  - no production product/paper/confluence/signal import
+  - no self-promotion or champion mutation
+  - REAL_CAPITAL=0
+- authoritative branch research gate PASS: run `35586872992`:
+  - Alpha Factory tests PASS
+  - Ruff PASS
+  - mypy PASS across 4 research source files
+  - ALPHA_FACTORY_RESEARCH_GATE_PASS=YES
+- authoritative branch full production regression gate PASS: run `35586971014`:
+  - Ruff PASS
+  - mypy PASS across 126 production source files
+  - PRODUCT_FRESHNESS_CONTRACT_PASS=YES
+  - STAGE10_HOSTED_FULL_GATE_PASS=YES
+- merged-main research gate PASS: run `35587151559`.
+- merged-main Stage10 hosted gate PASS: run `35587151607`.
+- UID504 canonical sync PASS: issue #456 / run `35587261968`.
+- UID504 canonical fulltest PASS: issue #457 / run `35587334768`:
+  - Ruff PASS
+  - mypy PASS across 125 production source files
+  - PRODUCT_FRESHNESS_CONTRACT_PASS=YES
+  - FULL_TEST_PASS=YES
+- PAPER/STABLE write activation remains closed.
+- no production weighting or deployment authority added.
+- REAL_CAPITAL=0.
+
+Current true roadmap frontier:
+- `stage8.5-tree-model-challenger-v1`;
+- remain entirely inside the isolated Alpha Factory research package;
+- use deterministic/reproducible shallow tree candidates with an explicit bounded search space;
+- feature identities and partition identities remain immutable inputs;
+- training may use train/validation only; out-of-sample remains evaluation-only; untouched-forward remains closed;
+- multiple-testing/backtest-overfitting controls must be explicit before any tree candidate can reach supervisor review;
+- no self-promotion, champion mutation, production import or deploy path;
+- clustering/regime discovery, feature-interaction search, evolutionary search and ML/RL remain later slices.

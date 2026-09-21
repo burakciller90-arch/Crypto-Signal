@@ -78,8 +78,10 @@ The isolated research foundation is **ACCEPTED** at
 experiment/challenger/partition identities, leakage-audit state, reproducibility
 metadata and a non-self-promoting supervisor gate outside the production package.
 
-Remaining Stage 8.5 work is bounded challenger generation and evaluation inside
-that accepted research authority boundary.
+The deterministic symbolic challenger slice is **ACCEPTED** at
+`47c1ecdd31b1ffe490611abcf40f5d309c45663a`. Remaining Stage 8.5 work is
+bounded tree-based, clustering/regime, feature-interaction and evolutionary
+challenger research, followed only later by carefully bounded ML/RL research.
 
 Required promotion boundary remains:
 
@@ -116,22 +118,25 @@ only through a separately tested policy.
 
 The next bounded roadmap slice is:
 
-`stage8.5-symbolic-rule-challenger-v1`
+`stage8.5-tree-model-challenger-v1`
 
-The Alpha Factory research foundation is accepted. The next slice may generate and evaluate deterministic symbolic-rule challengers only.
+The Alpha Factory research foundation and deterministic symbolic challenger slice are accepted. The next slice may add shallow deterministic tree-based challengers only.
 
 Requirements:
 
-- generation must be deterministic and reproducible,
-- every challenger must use the accepted immutable challenger/experiment contracts,
-- feature references must be explicit and versioned,
-- no future/untouched-forward information may enter generation,
-- evaluation outputs must remain research evidence, not production authority,
-- transaction-cost/slippage context must be explicit,
-- no self-promotion or champion mutation is permitted,
-- tree models, clustering, evolutionary search and ML/RL remain closed.
+- implementation remains under the isolated top-level `research/alpha_factory` package,
+- tree search space, feature set, depth and split criteria are explicitly bounded and versioned,
+- generation/training is reproducible from immutable experiment and partition identities,
+- train and validation roles remain distinct,
+- out-of-sample remains evaluation-only,
+- untouched-forward remains closed,
+- transaction-cost/slippage context remains explicit,
+- multiple-testing/backtest-overfitting controls are explicit and evidence-bound,
+- outputs remain descriptive research evidence rather than calibrated probabilities or production authority,
+- no self-promotion, champion mutation, production import or deploy path is permitted,
+- clustering/regime discovery, feature-interaction search, evolutionary search and ML/RL remain closed until later slices.
 
-The slice may demonstrate research evaluation mechanics but cannot satisfy the full promotion gate by inventing evidence. Missing walk-forward or untouched-forward evidence must remain missing until genuinely produced.
+A favorable tree score cannot satisfy the promotion gate by itself. Missing walk-forward, untouched-forward or supervisor evidence must remain missing until genuinely produced.
 
 `REAL_CAPITAL=0`.
 

@@ -2396,3 +2396,17 @@ Promotion authority is intentionally incomplete by design. Missing data-contract
 The dedicated research gate passed on the branch in run `35584720123`, including foundation tests, Ruff and mypy. The full production regression gate passed separately in run `35584720094`. PR #447 merged as `15f79052359a337c3b0457c214de7fe0ade96eb7`. On merged main, research gate `35584871228` and Stage10 hosted gate `35584871231` passed. UID504 canonical sync then passed through issue #448 / run `35584976301`, followed by fulltest issue #449 / run `35585016001` with `FULL_TEST_PASS=YES`.
 
 The next Alpha Factory slice is deterministic symbolic-rule challenger generation/evaluation. It must operate only inside the isolated research environment, bind outputs to the accepted foundation contracts, and remain incapable of altering production/paper champion state. Tree models, clustering, evolutionary search and ML/RL remain later research capabilities.
+
+## 2026-09-21 — Stage 8.5 deterministic symbolic challenger v1 accepted
+
+After the Alpha Factory research foundation was accepted, the first challenger engine was deliberately kept symbolic, bounded and fully reproducible. The implementation lives only in the isolated top-level research package and does not create a production research namespace.
+
+The symbolic engine defines immutable versioned feature specifications, canonical predicates, generated challenger identities and research observations. Search breadth is hard-bounded to eight features, eight allowed values per feature, two predicates per challenger and 256 challengers. Generation order is deterministic, so identical inputs produce identical challenger identities.
+
+Evaluation is descriptive rather than predictive authority. Feature evidence must exist by the decision as-of time; outcome availability cannot predate the decision; every observation must bind to the exact research partition and source evidence identity; duplicate or incomplete partition evidence fails closed. Gross R and explicit cost R are stored separately and net R is derived mechanically. The evaluation semantic explicitly states that net-R statistics are descriptive and are not probabilities.
+
+Symbolic v1 intentionally refuses untouched-forward evaluation. That partition remains reserved for a later genuine forward-paper gate. The engine has no network, broker/order, filesystem-write, subprocess or production import surface and cannot mutate a champion or deploy itself.
+
+The branch research gate passed in run `35586872992`. The full production regression gate passed separately in `35586971014`. PR #455 merged as `47c1ecdd31b1ffe490611abcf40f5d309c45663a`; merged-main research run `35587151559` and Stage10 hosted run `35587151607` both passed. UID504 canonical sync issue #456 / run `35587261968` and fulltest issue #457 / run `35587334768` then completed the acceptance chain with `FULL_TEST_PASS=YES`.
+
+The next Alpha Factory slice is bounded tree-based challengers. It must remain research-only, deterministic and shallow; training/evaluation partition roles must remain explicit; multiple-testing/backtest-overfitting controls must be added rather than inferred from a good score; untouched-forward stays closed; no candidate may self-promote.
