@@ -8,6 +8,7 @@ import os
 import shutil
 import subprocess
 import time
+from datetime import datetime
 from pathlib import Path
 
 SHARED = Path("/Users/Shared/.crypto-signal-wake-relay")
@@ -22,6 +23,7 @@ PIDFILE = SHARED / "relay.pid"
 LOG = SHARED / "relay.log"
 STATUS = SHARED / "relay_status"
 RETRY_SECONDS = 2
+AUTONOMOUS_PREFIX = "CRYPTO_SIGNAL_AUTONOMOUS_CONTINUE_V1"
 TARGET_OPEN_RETRY_SECONDS = 60
 _last_target_open_attempt = 0.0
 
@@ -77,6 +79,13 @@ end run
 """
 def sha(value: str) -> str:
     return hashlib.sha256(value.encode()).hexdigest()
+
+
+def scheduled_slot_event_id() -> str:
+    now = datetime.now().astimezone()
+    slot_minute = 0 if now.minute < 30 else 30
+    slot = now.replace(minute=slot_minute, second=0, microsecond=0)
+    return f"crypto-30m-continuity:{slot:%Y%m%dT%H%M%z}"
 
 
 def marker_for(event_id: str) -> str:
@@ -228,6 +237,17 @@ def deliver(event_id: str, message: str, target_url: str) -> tuple[bool, str]:
         if bound_sha and bound_sha != message_sha:
             return False, "EVENT_ID_MESSAGE_CONFLICT"
         return True, "ALREADY_RECEIPTED"
+
+    if message.startswith(AUTONOMOUS_PREFIX):
+        canonical_event_id = scheduled_slot_event_id()
+        if event_id != canonical_event_id:
+            write_receipt(
+                receipt,
+                "STALE_AUTONOMOUS_WAKE",
+                event_id,
+                message_sha,
+            )
+            return True, f"STALE_AUTONOMOUS_WAKE:{canonical_event_id}"
 
     marker_json = json.dumps(marker)
     message_json = json.dumps(wire_message)
