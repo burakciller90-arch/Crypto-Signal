@@ -1,4 +1,4 @@
-name: Crypto Command Center Perf Branch
+name: Crypto Read Surface Perf Branch
 
 on:
   push:
@@ -12,102 +12,66 @@ permissions:
 
 jobs:
   probe:
-    name: UID504 live command-center profile
+    name: UID504 live read-surface latency
     runs-on: [self-hosted, crypto-signal, uid504]
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
-      - name: Profile branch against live read-only ledger
+      - name: Probe branch against live read-only runtime
         shell: bash
         run: |
           set -euo pipefail
           test "$(id -u)" = "504"
           PY="/Users/crypto-signal-agent/Crypto-Signal/.venv/bin/python"
-          DB="/Users/crypto-signal-agent/Crypto-Signal/runtime/ledger/live_signal_ledger.sqlite3"
           test -x "$PY"
-          test -f "$DB"
           PYTHONPATH="$GITHUB_WORKSPACE/src" "$PY" - <<'PY'
-          import sqlite3
-          from pathlib import Path
           from time import perf_counter
 
-          from crypto_signal.product.reader import DashboardReader
+          from fastapi.testclient import TestClient
 
-          db = Path(
-              "/Users/crypto-signal-agent/Crypto-Signal/runtime/ledger/"
-              "live_signal_ledger.sqlite3"
+          from crypto_signal.product.web import create_app
+
+          client = TestClient(create_app())
+          endpoints = (
+              ("/api/health", 3.0),
+              ("/api/command-center?recent_limit=8", 3.0),
+              ("/api/market-radar", 3.0),
+              ("/api/navigation", 3.0),
+              ("/api/signals?limit=20&offset=0", 3.0),
+              ("/api/performance", 8.0),
+              ("/api/alerts?limit=20", 3.0),
+              ("/api/education", 3.0),
+              ("/api/paper/mission-control", 8.0),
           )
 
-          def timed(label, fn):
-              started = perf_counter()
-              value = fn()
-              elapsed = perf_counter() - started
-              print(f"PROFILE {label} seconds={elapsed:.6f}")
-              return value, elapsed
-
-          uri = f"file:{db.resolve()}?mode=ro"
-          with sqlite3.connect(uri, uri=True, timeout=5.0) as connection:
-              connection.row_factory = sqlite3.Row
-              connection.execute("PRAGMA query_only=ON")
+          for path, threshold in endpoints:
+              samples = []
+              for sample in range(2):
+                  started = perf_counter()
+                  response = client.get(path)
+                  duration = perf_counter() - started
+                  if response.status_code != 200:
+                      raise RuntimeError(
+                          f"{path} HTTP {response.status_code}: {response.text}"
+                      )
+                  samples.append(duration)
+                  print(
+                      "READ_SURFACE_LATENCY "
+                      f"path={path} "
+                      f"sample={sample + 1} "
+                      f"seconds={duration:.6f}"
+                  )
+              worst = max(samples)
+              if worst >= threshold:
+                  raise RuntimeError(
+                      f"{path} latency regression: "
+                      f"worst={worst:.6f}s threshold={threshold:.1f}s"
+                  )
               print(
-                  "INDEXES",
-                  [
-                      tuple(row)
-                      for row in connection.execute(
-                          "PRAGMA index_list(signal_freezes)"
-                      ).fetchall()
-                  ],
-              )
-              timed(
-                  "summary",
-                  lambda: connection.execute(
-                      "SELECT COUNT(*), MAX(frozen_at_ms) FROM signal_freezes"
-                  ).fetchone(),
-              )
-              timed(
-                  "state_group",
-                  lambda: connection.execute(
-                      "SELECT signal_state, COUNT(*) "
-                      "FROM signal_freezes GROUP BY signal_state"
-                  ).fetchall(),
-              )
-              timed(
-                  "keys_order_limit",
-                  lambda: connection.execute(
-                      "SELECT bundle_identity, frozen_at_ms "
-                      "FROM signal_freezes "
-                      "ORDER BY frozen_at_ms DESC, bundle_identity DESC LIMIT 8"
-                  ).fetchall(),
-              )
-              rows, select_all_elapsed = timed(
-                  "select_all_order_limit",
-                  lambda: connection.execute(
-                      "SELECT * FROM signal_freezes "
-                      "ORDER BY frozen_at_ms DESC, bundle_identity DESC LIMIT 8"
-                  ).fetchall(),
-              )
-              print(
-                  "PROFILE select_all_rows",
-                  len(rows),
-                  "bundle_bytes",
-                  sum(len(str(row["bundle_json"])) for row in rows),
+                  "READ_SURFACE_PASS "
+                  f"path={path} "
+                  f"worst_seconds={worst:.6f}"
               )
 
-          reader = DashboardReader(db)
-          for index in range(3):
-              view, elapsed = timed(
-                  f"reader_command_center_{index + 1}",
-                  lambda: reader.command_center(recent_limit=8),
-              )
-              print(
-                  "PROFILE reader_result",
-                  f"freeze_count={view.freeze_count}",
-                  f"recent={len(view.recent_signals)}",
-                  f"seconds={elapsed:.6f}",
-              )
-
-          print(
-              "COMMAND_CENTER_LIVE_PROFILE_PASS=YES "
-              f"select_all_seconds={select_all_elapsed:.6f}"
-          )
+          print("LIVE_READ_SURFACE_PERF_PASS=YES")
           PY
