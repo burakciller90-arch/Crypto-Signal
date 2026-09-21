@@ -55,8 +55,8 @@ one at a time behind isolated gates:
 3. mean reversion — **ACCEPTED** at `4e6d25df7f6aa2f36bf4ee86dba5c9023dd055d4`,
 4. breakout/volatility — **ACCEPTED** at `f44157fa2b8a3788b85608a872eb8fa8fde7d5b3`,
 5. bounded derivatives context — **ACCEPTED** at `011f2c4c7be2bd00410c5a0f3f578e20bd84c891`,
-6. order-flow/microstructure if data quality supports it — **NEXT FRONTIER / DATA-QUALITY GATE**,
-7. on-chain/network,
+6. order-flow/microstructure if data quality supports it — **ACCEPTED** at `f0b27d41980714ffc42fe394ed3a3485acc6d5fe`,
+7. on-chain/network — **NEXT FRONTIER / SOURCE-QUALITY GATE**,
 8. bounded sentiment/attention,
 9. cross-market context.
 
@@ -113,25 +113,15 @@ only through a separately tested policy.
 
 The next bounded roadmap slice is:
 
-`stage8-order-flow-microstructure-v1`
+`stage8-onchain-network-v1`
 
-Regime labeling, trend/momentum, mean reversion, breakout/volatility and bounded derivatives context are accepted.
+Regime labeling, trend/momentum, mean reversion, breakout/volatility, bounded derivatives context and order-flow/microstructure are accepted.
 
-Before implementing order-flow/microstructure, the repository must pass a source/data-quality gate. The slice may proceed only if there is a real, PIT-safe public observation contract capable of preserving event/source/ingestion time and immutable source identity. Candidate evidence may include bounded trade-flow or order-book/microstructure observations, but values must never be fabricated from OHLC candles merely to satisfy the roadmap.
+Before implementing on-chain/network intelligence, the repository must pass a source-quality gate. The slice may proceed only with a real public network/on-chain source that provides enough immutable event identity and timing to support PIT-safe freezes. Exchange candles or derivatives data must not be relabeled as on-chain evidence.
 
-If the data-quality gate passes, the engine still requires:
-- deterministic source contract,
-- PIT safety,
-- frozen evidence,
-- independent tests,
-- bounded metric semantics,
-- contribution/ablation evidence,
-- explicit missing/stale/insufficient-data uncertainty,
-- no production confluence weight change,
-- no production paper-write authority,
-- no self-learning or automatic promotion.
+If the source-quality gate passes, the engine still requires deterministic source semantics, PIT safety, frozen evidence, independent tests, bounded metric semantics, contribution/ablation evidence and explicit missing/stale/insufficient-data uncertainty. It remains observation-only until a separately accepted integration policy exists.
 
-If the data-quality gate fails, record the engine as explicitly deferred and advance to the next roadmap item rather than creating synthetic microstructure evidence.
+If a trustworthy source contract cannot be supported without credentials or ambiguous timing, record explicit deferral and advance to bounded sentiment/attention rather than fabricating network metrics.
 
 ## Safety boundary
 
