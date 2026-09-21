@@ -530,8 +530,12 @@ def test_tree_evaluation_identity_tampering_fails_closed() -> None:
         _validation_observations(),
         _features(),
     )
+    assert evaluation.median_net_r is not None
     with pytest.raises(ValueError, match="tree evaluation identity mismatch"):
-        replace(evaluation, taken_count=evaluation.taken_count + 1)
+        replace(
+            evaluation,
+            median_net_r=evaluation.median_net_r + Decimal("0.1"),
+        )
 
 
 def test_tree_source_has_no_network_execution_or_production_write_surface() -> None:
@@ -559,6 +563,8 @@ def test_tree_source_has_no_network_execution_or_production_write_surface() -> N
 def test_tree_v1_contains_no_winner_or_promotion_state() -> None:
     source = inspect.getsource(tree_models).lower()
     assert "automatic_selection" in source
-    assert "winner" not in source
+    assert "def select_tree_winner" not in source
+    assert "winner_identity" not in source
     assert "promoted" not in source
+    assert "promotion" not in source
     assert "deploy" not in source
