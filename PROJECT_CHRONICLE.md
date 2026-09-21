@@ -2322,3 +2322,15 @@ Ablation/isolation tests and the final diff confirm no production confluence wei
 
 The next Stage 8 item is order-flow/microstructure, but the roadmap makes this conditional on data quality. Therefore the next action is a source/data-quality inventory, not immediate feature coding. If no real PIT-safe microstructure source can be supported, the item must be explicitly deferred instead of synthesized from OHLC candles.
 
+## 2026-09-21 — sixth Stage 8 engine accepted: order-flow / microstructure
+
+The roadmap's conditional microstructure gate was not treated as automatic. Repository inventory showed only candle adapters, so current official public exchange documentation was checked before implementation. Bybit Spot provides public orderbook snapshots with matching-engine creation time, source generation time, update ID and cross sequence, while public recent trades provide exec ID, taker side, price, size, trade time, RPI/block flags and sequence. That evidence was sufficient for a bounded PIT-safe observation contract without credentials or order authority.
+
+PR #415 added immutable orderbook/public-trade models, a public Bybit Spot adapter and `crypto_signal.intelligence.order_flow_microstructure`. The analyzer uses bounded top-depth notional imbalance plus taker buy/sell notional imbalance and explicit spread evidence. It emits buy-pressure, sell-pressure, balanced, mixed or unresolved context. RPI and block trades are preserved as evidence but excluded from ordinary book-flow inference because those executions do not cleanly correspond to the visible public book. Future or late-ingested evidence cannot alter a historical freeze.
+
+The first hosted gate passed pytest but found five Ruff-only Decimal style issues in tests. The second passed pytest/Ruff and found a mypy union-typing issue in context validation. Both were corrected without semantic changes. The third hosted full gate passed. PR #415 merged as `f0b27d41980714ffc42fe394ed3a3485acc6d5fe`; merged-main hosted gate then passed with mypy across 115 source files, and UID504 canonical sync/fulltest passed with mypy across 114 source files and `FULL_TEST_PASS=YES`.
+
+Production isolation/ablation remains explicit: the engine is not imported by stable confluence, signal-ledger, product or paper execution paths. No credentials or order endpoint were added. PAPER/STABLE write activation remains closed and `REAL_CAPITAL=0`.
+
+The next roadmap item is on-chain/network. As with derivatives and microstructure, implementation must begin with a source-quality/PIT contract rather than with invented metrics.
+
