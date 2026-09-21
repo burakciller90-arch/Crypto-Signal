@@ -290,8 +290,17 @@ def build_research_partition(
     evidence_identities: tuple[str, ...],
 ) -> ResearchPartition:
     normalized_evidence = tuple(sorted(set(evidence_identities)))
-    draft = ResearchPartition(
-        partition_identity="0" * 64,
+    payload = {
+        "dataset_identity": dataset_identity,
+        "end_ms": end_ms,
+        "evidence_identities": normalized_evidence,
+        "role": role,
+        "row_count": row_count,
+        "schema_version": ALPHA_FACTORY_SCHEMA_VERSION,
+        "start_ms": start_ms,
+    }
+    return ResearchPartition(
+        partition_identity=canonical_sha256(payload),
         schema_version=ALPHA_FACTORY_SCHEMA_VERSION,
         dataset_identity=dataset_identity,
         role=role,
@@ -299,16 +308,6 @@ def build_research_partition(
         end_ms=end_ms,
         row_count=row_count,
         evidence_identities=normalized_evidence,
-    )
-    return ResearchPartition(
-        partition_identity=canonical_sha256(_partition_payload(draft)),
-        schema_version=draft.schema_version,
-        dataset_identity=draft.dataset_identity,
-        role=draft.role,
-        start_ms=draft.start_ms,
-        end_ms=draft.end_ms,
-        row_count=draft.row_count,
-        evidence_identities=draft.evidence_identities,
     )
 
 
@@ -320,25 +319,25 @@ def build_challenger_definition(
     rule_definition: str,
     feature_ids: tuple[str, ...],
 ) -> ChallengerDefinition:
-    draft = ChallengerDefinition(
-        challenger_identity="0" * 64,
+    normalized_features = tuple(sorted(set(feature_ids)))
+    payload = {
+        "feature_ids": normalized_features,
+        "generator_kind": ResearchGeneratorKind.SYMBOLIC_RULE,
+        "hypothesis": hypothesis,
+        "name": name,
+        "rule_definition": rule_definition,
+        "schema_version": ALPHA_FACTORY_SCHEMA_VERSION,
+        "version": version,
+    }
+    return ChallengerDefinition(
+        challenger_identity=canonical_sha256(payload),
         schema_version=ALPHA_FACTORY_SCHEMA_VERSION,
         name=name,
         version=version,
         hypothesis=hypothesis,
         generator_kind=ResearchGeneratorKind.SYMBOLIC_RULE,
         rule_definition=rule_definition,
-        feature_ids=tuple(sorted(set(feature_ids))),
-    )
-    return ChallengerDefinition(
-        challenger_identity=canonical_sha256(_challenger_payload(draft)),
-        schema_version=draft.schema_version,
-        name=draft.name,
-        version=draft.version,
-        hypothesis=draft.hypothesis,
-        generator_kind=draft.generator_kind,
-        rule_definition=draft.rule_definition,
-        feature_ids=draft.feature_ids,
+        feature_ids=normalized_features,
     )
 
 
@@ -351,12 +350,31 @@ def build_research_experiment(
     reproducibility_seed: int,
 ) -> ResearchExperimentManifest:
     by_role = {item.role: item for item in partitions}
-    if set(by_role) != set(_PARTITION_ORDER) or len(partitions) != len(_PARTITION_ORDER):
+    if (
+        set(by_role) != set(_PARTITION_ORDER)
+        or len(partitions) != len(_PARTITION_ORDER)
+    ):
         raise ValueError("experiment requires exactly one partition for each role")
     ordered = tuple(by_role[role] for role in _PARTITION_ORDER)
     dataset_identity = ordered[0].dataset_identity
-    draft = ResearchExperimentManifest(
-        experiment_identity="0" * 64,
+    payload = {
+        "authority": RESEARCH_AUTHORITY,
+        "can_self_promote": False,
+        "challenger_identity": challenger.challenger_identity,
+        "champion_write_authority": False,
+        "cost_stress_profile_identity": cost_stress_profile_identity,
+        "dataset_identity": dataset_identity,
+        "evaluation_policy_version": evaluation_policy_version,
+        "foundation_version": ALPHA_FACTORY_FOUNDATION_VERSION,
+        "partition_identities": tuple(
+            item.partition_identity for item in ordered
+        ),
+        "real_capital": REAL_CAPITAL,
+        "reproducibility_seed": reproducibility_seed,
+        "schema_version": ALPHA_FACTORY_SCHEMA_VERSION,
+    }
+    return ResearchExperimentManifest(
+        experiment_identity=canonical_sha256(payload),
         foundation_version=ALPHA_FACTORY_FOUNDATION_VERSION,
         schema_version=ALPHA_FACTORY_SCHEMA_VERSION,
         challenger_identity=challenger.challenger_identity,
@@ -365,17 +383,6 @@ def build_research_experiment(
         evaluation_policy_version=evaluation_policy_version,
         cost_stress_profile_identity=cost_stress_profile_identity,
         reproducibility_seed=reproducibility_seed,
-    )
-    return ResearchExperimentManifest(
-        experiment_identity=canonical_sha256(_experiment_payload(draft)),
-        foundation_version=draft.foundation_version,
-        schema_version=draft.schema_version,
-        challenger_identity=draft.challenger_identity,
-        dataset_identity=draft.dataset_identity,
-        partitions=draft.partitions,
-        evaluation_policy_version=draft.evaluation_policy_version,
-        cost_stress_profile_identity=draft.cost_stress_profile_identity,
-        reproducibility_seed=draft.reproducibility_seed,
     )
 
 
@@ -388,23 +395,22 @@ def build_leakage_audit(
     auditor_version: str,
 ) -> LeakageAudit:
     normalized_findings = tuple(sorted(set(findings)))
-    draft = LeakageAudit(
-        audit_identity="0" * 64,
+    payload = {
+        "audited_at_ms": audited_at_ms,
+        "auditor_version": auditor_version,
+        "experiment_identity": experiment_identity,
+        "findings": normalized_findings,
+        "schema_version": ALPHA_FACTORY_SCHEMA_VERSION,
+        "status": status,
+    }
+    return LeakageAudit(
+        audit_identity=canonical_sha256(payload),
         schema_version=ALPHA_FACTORY_SCHEMA_VERSION,
         experiment_identity=experiment_identity,
         audited_at_ms=audited_at_ms,
         status=status,
         findings=normalized_findings,
         auditor_version=auditor_version,
-    )
-    return LeakageAudit(
-        audit_identity=canonical_sha256(_leakage_audit_payload(draft)),
-        schema_version=draft.schema_version,
-        experiment_identity=draft.experiment_identity,
-        audited_at_ms=draft.audited_at_ms,
-        status=draft.status,
-        findings=draft.findings,
-        auditor_version=draft.auditor_version,
     )
 
 
@@ -421,8 +427,21 @@ def build_promotion_gate_evidence(
     robustness_ablation_identity: str | None = None,
     supervisor_acceptance_identity: str | None = None,
 ) -> PromotionGateEvidence:
-    draft = PromotionGateEvidence(
-        evidence_identity="0" * 64,
+    payload = {
+        "data_contract_audit_identity": data_contract_audit_identity,
+        "experiment_identity": experiment_identity,
+        "in_sample_sanity_identity": in_sample_sanity_identity,
+        "out_of_sample_identity": out_of_sample_identity,
+        "reproducibility_identity": reproducibility_identity,
+        "robustness_ablation_identity": robustness_ablation_identity,
+        "schema_version": ALPHA_FACTORY_SCHEMA_VERSION,
+        "supervisor_acceptance_identity": supervisor_acceptance_identity,
+        "transaction_cost_stress_identity": transaction_cost_stress_identity,
+        "untouched_forward_identity": untouched_forward_identity,
+        "walk_forward_identity": walk_forward_identity,
+    }
+    return PromotionGateEvidence(
+        evidence_identity=canonical_sha256(payload),
         schema_version=ALPHA_FACTORY_SCHEMA_VERSION,
         experiment_identity=experiment_identity,
         data_contract_audit_identity=data_contract_audit_identity,
@@ -435,21 +454,6 @@ def build_promotion_gate_evidence(
         robustness_ablation_identity=robustness_ablation_identity,
         supervisor_acceptance_identity=supervisor_acceptance_identity,
     )
-    return PromotionGateEvidence(
-        evidence_identity=canonical_sha256(_promotion_evidence_payload(draft)),
-        schema_version=draft.schema_version,
-        experiment_identity=draft.experiment_identity,
-        data_contract_audit_identity=draft.data_contract_audit_identity,
-        reproducibility_identity=draft.reproducibility_identity,
-        transaction_cost_stress_identity=draft.transaction_cost_stress_identity,
-        in_sample_sanity_identity=draft.in_sample_sanity_identity,
-        out_of_sample_identity=draft.out_of_sample_identity,
-        walk_forward_identity=draft.walk_forward_identity,
-        untouched_forward_identity=draft.untouched_forward_identity,
-        robustness_ablation_identity=draft.robustness_ablation_identity,
-        supervisor_acceptance_identity=draft.supervisor_acceptance_identity,
-    )
-
 
 def assess_promotion_gate(
     *,
