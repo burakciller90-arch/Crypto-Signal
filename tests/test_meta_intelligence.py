@@ -74,7 +74,7 @@ def test_policy_identity_is_canonical_and_shadow_only() -> None:
         correlation_groups=(
             MetaCorrelationGroup(
                 group_id="directional",
-                engine_ids=("trend", "breakout"),
+                engine_ids=("breakout", "trend"),
                 max_total_weight=Decimal("0.8"),
             ),
         ),
