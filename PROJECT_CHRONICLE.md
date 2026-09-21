@@ -2491,3 +2491,13 @@ The accepted research set is exactly two deterministic families and cannot selec
 
 The next safe frontier is `stage8.5-bounded-ml-family-cost-stress-v1`: apply the same immutable deterministic transaction-cost/slippage stress discipline to both families before any untouched-forward or RL opening.
 REAL_CAPITAL=0.
+
+
+## 2026-09-21 — Two-family ML cost-stress v1 accepted
+
+PR #605 merged at `8659ef2b69aed8d9eedb3037235e0fcab186437f`.
+Branch research, merged-main research, Stage10 regression, UID504 sync and UID504 fulltest all passed.
+Both accepted families now share the same immutable 1.0x / 1.5x / 2.0x transaction-cost stress contract without refit, prediction mutation or winner selection.
+
+The next safe frontier is `stage8.5-bounded-ml-family-robustness-ablation-v1`.
+Untouched-forward and RL remain closed. REAL_CAPITAL=0.

@@ -67,13 +67,14 @@ Only after R1/R2 close:
 - no uncontrolled hyperparameter search;
 - no production authority.
 
-### R3A — Two-family transaction-cost/slippage stress — CURRENT FRONTIER
-Canonical task: `stage8.5-bounded-ml-family-cost-stress-v1`.
+### R3A — Two-family transaction-cost/slippage stress — ACCEPTED
+Accepted main: `8659ef2b69aed8d9eedb3037235e0fcab186437f`.
 - apply the fixed accepted stress grid to both families;
 - no refit/prediction changes/family selection;
 - keep untouched-forward and RL closed.
 
-### R3B — Two-family robustness / ablation closure
+### R3B — Two-family robustness / ablation closure — CURRENT FRONTIER
+Canonical task: `stage8.5-bounded-ml-family-robustness-ablation-v1`.
 - run family-specific feature/fold/regime robustness after family cost-stress;
 - retain failures and instability explicitly;
 - no automatic family winner selection.
@@ -219,4 +220,4 @@ Freeze:
 Crypto Signal Full Version is complete when M1, M2 and M3 are accepted with mechanical evidence and authoritative documentation, while REAL_CAPITAL remains 0 and all real-money/order authority stays closed.
 
 Immediate next execution target:
-`stage8.5-bounded-ml-family-cost-stress-v1`.
+`stage8.5-bounded-ml-family-robustness-ablation-v1`.

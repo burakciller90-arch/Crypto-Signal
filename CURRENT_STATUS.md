@@ -3036,3 +3036,34 @@ Current true roadmap frontier:
 - untouched-forward remains closed;
 - no promotion/champion mutation/production import/deploy path;
 - RL remains closed.
+
+
+## 2026-09-21 — Stage 8.5 bounded two-family ML cost-stress v1 ACCEPTED
+
+- accepted main head: `8659ef2b69aed8d9eedb3037235e0fcab186437f`;
+- PR #605 merged deterministic cost/slippage stress across both accepted ML families;
+- fixed 1.0x / 1.5x / 2.0x stress grid;
+- family/model/evaluation identities remain bound to accepted OOS/walk-forward evidence;
+- original gross/cost/net-R is preserved and stressed net-R is derived exactly;
+- no model refit, no prediction changes and no family/scenario/model winner selection;
+- untouched-forward remains closed;
+- RL remains closed;
+- no production/paper/confluence/signal import or deploy authority;
+- branch Alpha Factory research gate PASS: run `35654101050`;
+- merged-main Alpha Factory research gate PASS: run `35654201691`;
+- merged-main Stage10 hosted full regression PASS: run `35654201791`;
+- UID504 SSD sync PASS: issue #606 / run `35654302154`;
+- UID504 fulltest PASS: issue #607 / run `35654366246`;
+- PAPER/STABLE write activation remains closed;
+- REAL_CAPITAL=0.
+
+Current true roadmap frontier:
+- `stage8.5-bounded-ml-family-robustness-ablation-v1`;
+- bind exact accepted two-family expansion + family cost-stress evidence;
+- run deterministic one-at-a-time feature ablation for both families without refit;
+- preserve fold/regime sensitivity and explicit no-evidence states;
+- retain favorable and unfavorable evidence;
+- no automatic family/feature/fold/regime/model winner selection;
+- untouched-forward remains closed;
+- no promotion/champion mutation/production import/deploy path;
+- RL remains closed.

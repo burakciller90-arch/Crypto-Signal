@@ -157,31 +157,43 @@ is explicit; there is no automatic winner/model/hyperparameter selection.
 Branch/merged-main research gates, merged-main Stage10 regression, UID504
 current-head verification and UID504 fulltest all passed.
 
+## Stage 8.5 bounded two-family ML cost-stress — ACCEPTED
+
+Two-family deterministic transaction-cost/slippage stress is **ACCEPTED** at
+`8659ef2b69aed8d9eedb3037235e0fcab186437f`.
+
+Both accepted families are stressed on the same immutable 1.0x / 1.5x / 2.0x
+grid over accepted OOS/walk-forward selections. Family/model/evaluation
+identities and original gross/cost/net-R evidence are preserved; models are not
+refit; predictions are not changed; there is no family/scenario winner
+selection. Branch and merged-main research gates, Stage10 regression, UID504
+sync and UID504 fulltest all passed.
+
 ## Canonical next frontier
 
 The next bounded roadmap slice is:
 
-`stage8.5-bounded-ml-family-cost-stress-v1`
+`stage8.5-bounded-ml-family-robustness-ablation-v1`
 
 Requirements:
 
 - remain under isolated `research/alpha_factory`,
-- consume only accepted two-family OOS/walk-forward evidence,
-- apply the accepted immutable 1.0x / 1.5x / 2.0x transaction-cost grid,
-- preserve each family/model/evaluation identity,
-- preserve original gross/cost/net-R and derive stressed cost/net-R exactly,
-- no model refit,
-- no prediction changes,
-- no automatic family/scenario/model winner selection,
+- consume exact accepted two-family expansion and family cost-stress evidence,
+- ablate each accepted feature exactly once for both families without refit,
+- preserve per-fold changed-prediction sensitivity,
+- preserve regime OBSERVED / NO_EVIDENCE state for both families,
+- retain favorable and unfavorable robustness evidence,
+- bind results to immutable family/model/evaluation identities,
+- no automatic family/feature/fold/regime/model winner selection,
 - no calibrated-probability claim,
 - untouched-forward remains closed,
 - no production product/paper/confluence/signal import,
 - no self-promotion, champion mutation or deploy path,
 - RL remains closed.
 
-A favorable stressed family result cannot promote or select a challenger.
-Family robustness/ablation, untouched-forward paper evidence and supervisor
-acceptance remain separate later gates.
+A favorable robustness result cannot promote or select a challenger.
+Untouched-forward paper evidence and explicit supervisor acceptance remain
+separate later gates.
 
 `REAL_CAPITAL=0`.
 
