@@ -32,7 +32,7 @@ class LearningOutcomeState(StrEnum):
     MIXED = "mixed"
     ABSTENTION = "abstention"
     NO_EVIDENCE = "no_evidence"
-    NOT_EVALUABLE = "not_evaluable"
+    NOT_YET_EVALUABLE = "not_yet_evaluable"
 
 
 class LearningUncertaintyState(StrEnum):
