@@ -2218,3 +2218,17 @@ Most importantly, the paper database stayed unchanged across the runtime accepta
 
 This closes Stage 10 itself. It does not by itself assert that every aspirational Full Version roadmap stage outside the Stage 10 acceptance matrix has been implemented. The next safe action is a whole-roadmap completeness audit, especially the Stage 8 / 8.5 / 8.75 intelligence, Alpha Factory and Learning Memory scopes, before declaring the overall project finished.
 
+## 2026-09-21 — first Stage 8 engine accepted: deterministic regime labeling
+
+The whole-roadmap audit correctly prevented Stage 10 product acceptance from being mistaken for completion of Stage 8/8.5/8.75. The first bounded Stage 8 frontier, regime labeling, is now accepted at main head `4cdfbd134597a8329fb90d08eed5643161cd4926`.
+
+The new `crypto_signal.intelligence.regime` engine is deliberately observation-only. It consumes one homogeneous candle context, sorts by market open time, rejects duplicate opens, and admits only candles that are closed and whose close/source/ingestion timestamps are all available at the requested as-of time. It produces explicit unresolved states for insufficient history or candle gaps instead of interpolating or inventing evidence.
+
+Resolved evidence carries deterministic directional displacement, path length, efficiency, baseline/recent range and volatility ratio. Labels are trend_up, trend_down, range or transition, with compressed/normal/expanded volatility tracked separately. Analysis and frozen consumed-candle bundles are independently SHA-bound. Tests also prove that future evidence cannot change a historical freeze and that the new intelligence module is not imported into production confluence/signal-ledger decision surfaces.
+
+The first hosted acceptance run failed usefully: stepwise returns had been normalized by each local price while endpoint displacement was normalized by the first price, allowing the derived efficiency ratio to exceed its theoretical upper bound on a monotonic trend. The metric was corrected to raw first-to-last displacement divided by raw path length, with path_length_bps normalized to the same first-price base. This preserves directional/displacement semantics while enforcing the triangle-inequality bound [0,1].
+
+After the correction, the hosted full repository gate passed, then PR #400 merged and UID504 canonical sync/fulltest passed on the exact accepted main head. No production weighting, broker path, paper write authority, Alpha Factory promotion or learning authority was introduced. REAL_CAPITAL remains 0.
+
+The next bounded Stage 8 frontier is trend/momentum evidence. It must follow the same discipline: deterministic source contract, PIT-safe inputs, frozen evidence, explicit uncertainty, independent tests and no silent production contribution.
+
