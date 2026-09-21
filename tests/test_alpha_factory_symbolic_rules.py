@@ -270,7 +270,7 @@ def test_evaluation_requires_exact_partition_evidence_coverage() -> None:
             ("trend_state", "rising"),
             ("volatility_state", "normal"),
         ),
-        gross_outcome_r=Decimal("1"),
+        gross_outcome_r=Decimal(1),
         explicit_cost_r=Decimal("0.1"),
     )
     with pytest.raises(ValueError, match="outside partition"):
@@ -291,7 +291,7 @@ def test_feature_availability_is_point_in_time_safe() -> None:
             feature_available_at_ms=151,
             outcome_available_at_ms=200,
             feature_values=(("trend_state", "rising"),),
-            gross_outcome_r=Decimal("1"),
+            gross_outcome_r=Decimal(1),
             explicit_cost_r=Decimal("0.1"),
         )
 
