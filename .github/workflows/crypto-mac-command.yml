@@ -24,7 +24,7 @@ jobs:
           set -euo pipefail
           cmd="$(printf '%s\n' "$ISSUE_BODY" | awk -F: 'tolower($1)=="command" {gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2); print tolower($2); exit}')"
           case "$cmd" in
-            status|services|logs|disk|sync|producttest|fulltest|productstate|productdeploy|paperreview|paperinspect|paperfixlint|paperharden|stateplanreview|stateplaninspect|stateplanharden|cursorreview|cursorreviewtail|cursorcleanup|bridgecheck|bridgestate|pausecheck|wakepause|wakeresume|wakearm|waketest|wakeheartbeat|chatbusyprobe|cursorcheck|cursorauthdiag|cursorttycheck|alertclockstate|alertclockpause|alertclockresume|migrationinspect|migrationinventory|ssddashboarddiag|ssddashboardwrappertest|ssdtcclaunchtest|ssdbackgroundteststart|ssdbackgroundtestcheck|ssdleftover)
+            status|services|logs|disk|sync|producttest|fulltest|productstate|productdeploy|paperreview|paperinspect|paperfixlint|paperharden|stateplanreview|stateplaninspect|stateplanharden|cursorreview|cursorreviewtail|cursorcleanup|bridgecheck|bridgestate|pausecheck|wakepause|wakeresume|wakearm|waketest|wakeheartbeat|chatbusyprobe|cursorcheck|cursorauthdiag|cursorttycheck|alertclockstate|alertclockpause|alertclockresume|migrationinspect|migrationinventory|ssddashboarddiag|ssddashboardwrappertest|ssdtcclaunchtest|ssdbackgroundteststart|ssdbackgroundtestcheck|ssdleftover|runnerpersistinstall)
               ;;
             *)
               echo "Unsupported command: $cmd"
@@ -1334,6 +1334,86 @@ jobs:
           echo "=== SSD RUNNER ==="; ls -ld "$ROOT/Runner" 2>/dev/null; du -sh "$ROOT/Runner" 2>/dev/null
           echo "RUNNER_CUTOVER_DIAG_PASS=YES"
           exit 0
+
+      - name: RUNNER PERSIST INSTALL
+        if: steps.parse.outputs.command == 'runnerpersistinstall'
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          RUNNER="$ROOT/Runner"
+          LOG="$ROOT/RunnerLogs"
+          WRAPPER="$RUNNER/runner-persist-wrapper.sh"
+          LABEL="com.cryptosignal.github-runner-ssd"
+          PLIST="$HOME/Library/LaunchAgents/$LABEL.plist"
+          TARGET="gui/$(id -u)/$LABEL"
+
+          test "$(id -u)" = "504"
+          test -d "$RUNNER"
+          test -x "$RUNNER/runsvc.sh"
+          test -f "$RUNNER/.runner"
+          test -f "$RUNNER/.credentials"
+          test -f "$RUNNER/.credentials_rsaparams"
+          mkdir -p "$LOG" "$HOME/Library/LaunchAgents"
+
+          cat > "$WRAPPER" <<'SH'
+          #!/bin/bash
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          RUNNER="$ROOT/Runner"
+          LOG="$ROOT/RunnerLogs"
+          mkdir -p "$LOG"
+
+          if /usr/bin/pgrep -f '/Volumes/Crypto-504/Crypto-Signal/Runner/bin/Runner.Listener run --startuptype service' >/dev/null 2>&1; then
+            exit 0
+          fi
+
+          cd "$RUNNER"
+          unset RUNNER_TRACKING_ID
+          export HOME="/Users/crypto-signal-agent"
+          exec ./runsvc.sh >>"$LOG/persistent-runner.out.log" 2>>"$LOG/persistent-runner.err.log"
+          SH
+          chmod 700 "$WRAPPER"
+
+          cat > "$PLIST" <<PLIST
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>Label</key>
+            <string>$LABEL</string>
+            <key>ProgramArguments</key>
+            <array>
+              <string>/bin/bash</string>
+              <string>$WRAPPER</string>
+            </array>
+            <key>RunAtLoad</key>
+            <true/>
+            <key>StartInterval</key>
+            <integer>30</integer>
+            <key>ProcessType</key>
+            <string>Background</string>
+            <key>StandardOutPath</key>
+            <string>$LOG/persistent-launchagent.out.log</string>
+            <key>StandardErrorPath</key>
+            <string>$LOG/persistent-launchagent.err.log</string>
+          </dict>
+          </plist>
+          PLIST
+
+          chmod 644 "$PLIST"
+          plutil -lint "$PLIST"
+
+          launchctl bootout "$TARGET" >/dev/null 2>&1 || true
+          launchctl bootstrap "gui/$(id -u)" "$PLIST"
+          sleep 2
+
+          echo "=== PERSISTENT RUNNER AGENT ==="
+          launchctl print "$TARGET" 2>&1 | egrep 'state =|runs =|last exit code =|program =|path =' | head -80 || true
+          echo "=== CURRENT SSD RUNNER ==="
+          ps -axo pid=,ppid=,user=,etime=,command= | grep -E '[V]olumes/Crypto-504/Crypto-Signal/Runner/(runsvc.sh|bin/Runner.Listener)' | head -40
+          pgrep -f '/Volumes/Crypto-504/Crypto-Signal/Runner/bin/Runner.Listener run --startuptype service' >/dev/null
+          echo "CRYPTO_UID504_SSD_RUNNER_PERSISTENCE_INSTALLED=YES"
 
       - name: MIGRATION INVENTORY
         if: steps.parse.outputs.command == 'migrationinventory'
