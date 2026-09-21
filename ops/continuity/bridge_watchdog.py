@@ -19,6 +19,7 @@ LEASE_ACTIVE = LEASE_ROOT / "active"
 LEASE_DELIVERED = LEASE_ROOT / "delivered"
 LEASE_BAD = LEASE_ROOT / "bad"
 PAUSE_FILE = STATE / "user_pause"
+SHARED_PAUSE_FILE = Path("/Users/Shared/.crypto-signal-wake-relay/user_pause")
 ACTIVE_TASK = STATE / "workers" / "active_task"
 PIDFILE = STATE / "bridge.pid"
 LOG = STATE / "bridge.log"
@@ -195,7 +196,7 @@ def main() -> int:
     log(f"bridge=START pid={os.getpid()}")
     try:
         while True:
-            if PAUSE_FILE.exists():
+            if PAUSE_FILE.exists() or SHARED_PAUSE_FILE.exists():
                 time.sleep(2)
                 continue
             try:
