@@ -4,6 +4,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from decimal import Decimal
 from enum import StrEnum
+from itertools import pairwise
 
 from crypto_signal.data.onchain import BitcoinBlockWindowObservation, BitcoinNetwork
 from crypto_signal.ledger.serialization import canonical_sha256
@@ -131,9 +132,11 @@ class OnchainNetworkAnalysis:
             raise ValueError("unsupported on-chain engine version")
         if self.as_of_ms < 0:
             raise ValueError("on-chain as_of_ms must be non-negative")
-        if self.observed_at_ms is not None:
-            if not 0 <= self.observed_at_ms <= self.as_of_ms:
-                raise ValueError("on-chain observation must be available by as-of")
+        if (
+            self.observed_at_ms is not None
+            and not 0 <= self.observed_at_ms <= self.as_of_ms
+        ):
+            raise ValueError("on-chain observation must be available by as-of")
         if (self.tip_height is None) != (self.tip_hash is None):
             raise ValueError("on-chain tip height/hash must appear together")
         if self.tip_height is not None and self.tip_height < 0:
@@ -275,7 +278,7 @@ def build_onchain_network_evidence_freeze(
 
     if any(
         newer.header_timestamp_ms <= older.header_timestamp_ms
-        for newer, older in zip(blocks, blocks[1:], strict=False)
+        for newer, older in pairwise(blocks)
     ):
         flags.append("non_monotonic_block_header_timestamps")
 
@@ -394,7 +397,7 @@ def _is_contiguous_chain(blocks: tuple) -> bool:
     return all(
         newer.height == older.height + 1
         and newer.previous_block_hash == older.block_hash
-        for newer, older in zip(blocks, blocks[1:], strict=False)
+        for newer, older in pairwise(blocks)
     )
 
 
