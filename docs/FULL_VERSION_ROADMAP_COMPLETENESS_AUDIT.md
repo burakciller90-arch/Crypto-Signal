@@ -127,28 +127,28 @@ only through a separately tested policy.
 
 The next bounded roadmap slice is:
 
-`stage8.5-bounded-ml-walk-forward-evaluation-v1`
+`stage8.5-bounded-ml-cost-stress-v1`
 
-The first deterministic single-family ML baseline is accepted. The next slice
-adds evaluation discipline, not model breadth.
+The deterministic single-family ML baseline and bounded walk-forward evaluation
+are accepted. The next slice closes transaction-cost/slippage stress evidence
+before any broader model search.
 
 Requirements:
 
 - implementation remains under isolated `research/alpha_factory`,
-- use only the accepted deterministic categorical-count baseline family,
-- deterministic rolling fit/evaluation folds with immutable fold identities,
-- every fold trains only on evidence available before its evaluation window,
-- VALIDATION/OOS-style outputs remain descriptive evidence only,
-- explicit transaction-cost/slippage accounting remains part of every fold,
-- aggregate evidence must preserve per-fold identities rather than selecting a winner,
-- untouched-forward remains closed,
-- no automatic hyperparameter/model winner selection,
+- stress only the accepted ML OOS/walk-forward selections,
+- use a small immutable deterministic multiplier grid,
+- preserve original gross/cost/net-R evidence and derive stressed net-R exactly,
+- every stress scenario and result must have an immutable identity,
+- stressed evidence must not refit a model or change predictions,
+- no automatic scenario/model winner selection,
 - no calibrated-probability claim,
+- untouched-forward remains closed,
 - no production product/paper/confluence/signal import,
 - no self-promotion, champion mutation or deploy path,
 - RL remains closed until a later separately accepted slice.
 
-A favorable walk-forward result cannot satisfy the promotion gate by itself.
+A favorable stressed result cannot satisfy the promotion gate by itself.
 Untouched-forward, robustness/ablation and explicit supervisor acceptance remain
 separate missing evidence until genuinely produced.
 
