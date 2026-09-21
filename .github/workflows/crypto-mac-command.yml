@@ -24,7 +24,7 @@ jobs:
           set -euo pipefail
           cmd="$(printf '%s\n' "$ISSUE_BODY" | awk -F: 'tolower($1)=="command" {gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2); print tolower($2); exit}')"
           case "$cmd" in
-            status|services|logs|disk|sync|producttest|fulltest|productstate|productdeploy|paperreview|paperinspect|paperfixlint|paperharden|stateplanreview|stateplaninspect|stateplanharden|cursorreview|cursorreviewtail|cursorcleanup|bridgecheck|bridgestate|pausecheck|wakepause|wakeresume|wakearm|waketest|wakeheartbeat|chatbusyprobe|cursorcheck|cursorauthdiag|cursorttycheck|alertclockstate|alertclockpause|alertclockresume|migrationinspect)
+            status|services|logs|disk|sync|producttest|fulltest|productstate|productdeploy|paperreview|paperinspect|paperfixlint|paperharden|stateplanreview|stateplaninspect|stateplanharden|cursorreview|cursorreviewtail|cursorcleanup|bridgecheck|bridgestate|pausecheck|wakepause|wakeresume|wakearm|waketest|wakeheartbeat|chatbusyprobe|cursorcheck|cursorauthdiag|cursorttycheck|alertclockstate|alertclockpause|alertclockresume|migrationinspect|migrationinventory)
               ;;
             *)
               echo "Unsupported command: $cmd"
@@ -1116,6 +1116,29 @@ jobs:
           exit 0
 
 
+
+
+      - name: MIGRATION INVENTORY
+        if: steps.parse.outputs.command == 'migrationinventory'
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "=== HOME CRYPTO PATHS ==="
+          find "$HOME" -maxdepth 2 \( -iname 'Crypto-Signal*' -o -iname '*cryptosignal*' -o -iname 'actions-runner-crypto*' \) -print 2>/dev/null | sort
+          echo "=== HOME TOP LEVEL SIZES ==="
+          for p in "$HOME"/Crypto-Signal* "$HOME"/actions-runner-crypto*; do
+            [ -e "$p" ] || continue
+            du -sh "$p" 2>/dev/null || true
+          done
+          echo "=== LAUNCH AGENT CRYPTO PLISTS ==="
+          for p in "$HOME"/Library/LaunchAgents/*crypto* "$HOME"/Library/LaunchAgents/*Crypto*; do
+            [ -e "$p" ] || continue
+            echo "--- $p"
+            plutil -p "$p" || true
+          done
+          echo "=== LAUNCHD CRYPTO SERVICES ==="
+          launchctl print "gui/$(id -u)" 2>/dev/null | grep -E 'com\.cryptosignal|actions\.runner.*Crypto-Signal' | head -200 || true
+          echo "MIGRATION_INVENTORY_PASS=YES"
 
       - name: MIGRATION INSPECT
         if: steps.parse.outputs.command == 'migrationinspect'
