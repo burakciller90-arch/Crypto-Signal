@@ -686,16 +686,15 @@ def _training_metric(
 def _build_genome(
     predicates: tuple[EvolutionPredicate, EvolutionPredicate],
 ) -> EvolutionGenome:
-    ordered = tuple(
-        sorted(
-            predicates,
-            key=lambda item: (
-                item.feature_id,
-                item.feature_version,
-                item.expected_value,
-            ),
-        )
+    ordered_items = sorted(
+        predicates,
+        key=lambda item: (
+            item.feature_id,
+            item.feature_version,
+            item.expected_value,
+        ),
     )
+    ordered = (ordered_items[0], ordered_items[1])
     payload = {
         "operator_version": EVOLUTION_OPERATOR_VERSION,
         "predicate_identities": tuple(
