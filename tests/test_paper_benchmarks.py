@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import sqlite3
 from decimal import Decimal
 from pathlib import Path
 
