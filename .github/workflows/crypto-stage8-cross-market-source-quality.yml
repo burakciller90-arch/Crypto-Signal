@@ -86,20 +86,34 @@ jobs:
               ",".join(xml_locals[:80]),
           )
           parsed_treasury: list[tuple[date, float]] = []
-          for entry in root.iter():
-              if entry.tag.rsplit("}", 1)[-1] != "entry":
+          def parse_treasury_day(raw: str) -> date:
+              candidates = (
+                  lambda: datetime.fromisoformat(raw.replace("Z", "+00:00")).date(),
+                  lambda: datetime.strptime(raw, "%m/%d/%Y").date(),
+                  lambda: datetime.strptime(raw, "%d-%b-%y").date(),
+                  lambda: datetime.strptime(raw, "%Y-%m-%d").date(),
+              )
+              for parser in candidates:
+                  try:
+                      return parser()
+                  except ValueError:
+                      pass
+              raise ValueError(f"unsupported Treasury date: {raw!r}")
+
+          for group in root.iter():
+              if group.tag.rsplit("}", 1)[-1] != "G_NEW_DATE":
                   continue
               values: dict[str, str] = {}
-              for node in entry.iter():
+              for node in group.iter():
                   local = node.tag.rsplit("}", 1)[-1]
                   text = (node.text or "").strip()
                   if text:
                       values[local] = text
-              raw_day = values.get("NEW_DATE")
+              raw_day = values.get("NEW_DATE") or values.get("BID_CURVE_DATE")
               raw_10y = values.get("BC_10YEAR")
               if not raw_day or not raw_10y:
                   continue
-              day = datetime.fromisoformat(raw_day.replace("Z", "+00:00")).date()
+              day = parse_treasury_day(raw_day)
               yield_10y = float(raw_10y)
               assert 0 <= yield_10y < 100
               parsed_treasury.append((day, yield_10y))
