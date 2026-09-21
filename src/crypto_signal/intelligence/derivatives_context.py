@@ -240,7 +240,7 @@ def analyze_derivatives_context(
                 open_interest_state=open_interest_state,
                 basis_state=basis_state,
             )
-            uncertainty = tuple((*flags, *label_flags))
+            uncertainty = (*flags, *label_flags)
 
     payload = {
         "engine_version": DERIVATIVES_CONTEXT_ENGINE_VERSION,
