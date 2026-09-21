@@ -1,8 +1,11 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+import os
 import subprocess
 import sys
+import time
+from datetime import datetime
 from pathlib import Path
 
 BASE = Path("/Users/crypto-signal-agent/Crypto-Signal")
@@ -41,12 +44,28 @@ def git(*args: str) -> str:
     ).strip()
 
 
+def scheduled_slot_event_id() -> str:
+    now = datetime.now().astimezone()
+    slot_minute = 0 if now.minute < 30 else 30
+    slot = now.replace(minute=slot_minute, second=0, microsecond=0)
+    return f"crypto-30m-continuity:{slot:%Y%m%dT%H%M%z}"
+
+
 def main() -> int:
-    event_id = (
-        sys.argv[1]
-        if len(sys.argv) >= 2
-        else "crypto-30m-continuity-wake-manual"
-    )
+    if len(sys.argv) >= 2 and sys.argv[1] == "--scheduled-slot":
+        event_id = scheduled_slot_event_id()
+    elif len(sys.argv) >= 2:
+        event_id = sys.argv[1]
+    else:
+        event_id = "crypto-30m-continuity-wake-manual"
+
+    print(f"WAKE_EVENT_ID={event_id}")
+    if os.environ.get("CRYPTO_WAKE_LOCAL_TIMER") == "1":
+        marker = STATE / "recurring_wake_last_local_attempt"
+        marker.write_text(
+            f"epoch={int(time.time())}\n"
+            f"event_id={event_id}\n"
+        )
 
     if LOCAL_PAUSE.exists() or SHARED_PAUSE.exists():
         print("WAKE_SKIPPED_USER_PAUSE=YES")
