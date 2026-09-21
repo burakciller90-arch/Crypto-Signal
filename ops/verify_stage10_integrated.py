@@ -4,6 +4,7 @@ import argparse
 import json
 import sqlite3
 import time
+import urllib.error
 import urllib.request
 from dataclasses import dataclass
 from decimal import Decimal
@@ -40,19 +41,64 @@ class PaperCounts:
     processed_events: int
 
 
-def _get_json(base_url: str, path: str) -> dict[str, Any]:
-    request = urllib.request.Request(
-        f"{base_url.rstrip('/')}{path}",
-        headers={"Cache-Control": "no-store"},
-        method="GET",
-    )
-    with urllib.request.urlopen(request, timeout=5) as response:
-        if response.status != 200:
-            raise RuntimeError(f"{path} returned HTTP {response.status}")
-        payload = json.loads(response.read().decode("utf-8"))
-    if not isinstance(payload, dict):
-        raise TypeError(f"{path} did not return a JSON object")
-    return payload
+def _get_json(
+    base_url: str,
+    path: str,
+    *,
+    timeout_seconds: float = 12.0,
+    attempts: int = 3,
+    retry_delay_seconds: float = 0.25,
+) -> dict[str, Any]:
+    if timeout_seconds <= 0:
+        raise ValueError("timeout_seconds must be positive")
+    if attempts <= 0:
+        raise ValueError("attempts must be positive")
+    if retry_delay_seconds < 0:
+        raise ValueError("retry_delay_seconds cannot be negative")
+
+    url = f"{base_url.rstrip('/')}{path}"
+    last_error: Exception | None = None
+    for attempt in range(1, attempts + 1):
+        request = urllib.request.Request(
+            url,
+            headers={"Cache-Control": "no-store"},
+            method="GET",
+        )
+        try:
+            with urllib.request.urlopen(
+                request,
+                timeout=timeout_seconds,
+            ) as response:
+                if response.status != 200:
+                    raise RuntimeError(
+                        f"{path} returned HTTP {response.status}"
+                    )
+                payload = json.loads(response.read().decode("utf-8"))
+            if not isinstance(payload, dict):
+                raise TypeError(f"{path} did not return a JSON object")
+            return payload
+        except (
+            TimeoutError,
+            urllib.error.URLError,
+        ) as exc:
+            last_error = exc
+            if attempt == attempts:
+                break
+            print(
+                "STAGE10_RUNTIME_GET_RETRY "
+                f"path={path} "
+                f"attempt={attempt}/{attempts} "
+                f"error={type(exc).__name__}",
+                flush=True,
+            )
+            if retry_delay_seconds:
+                time.sleep(retry_delay_seconds)
+
+    assert last_error is not None
+    raise RuntimeError(
+        f"{path} failed after {attempts} attempts: "
+        f"{type(last_error).__name__}: {last_error}"
+    ) from last_error
 
 
 def _table_count(connection: sqlite3.Connection, table: str) -> int:
