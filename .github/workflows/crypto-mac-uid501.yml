@@ -52,7 +52,7 @@ jobs:
           set -euo pipefail
           cmd="$(printf '%s\n' "$ISSUE_BODY" | awk -F: 'tolower($1)=="command" {gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2); print tolower($2); exit}')"
           case "$cmd" in
-            status|repo|services|disk|hostdiag|audiorestart)
+            status|repo|services|disk|hostdiag|audiorestart|loadtree)
               ;;
             *)
               echo "Unsupported command: $cmd"
@@ -160,3 +160,23 @@ jobs:
           test "$AFTER_PID" != "$BEFORE_PID"
           ps -p "$AFTER_PID" -o pid=,user=,%cpu=,%mem=,etime=,command=
           echo "AUDIO_RESTART_PASS=YES"
+
+
+      - name: LOAD TREE
+        if: steps.parse.outputs.command == 'loadtree'
+        shell: bash
+        run: |
+          set +e
+          echo "=== LOAD ==="
+          /usr/sbin/sysctl -n vm.loadavg
+          echo "=== MIGRATION / HASH / COPY PROCESSES ==="
+          /bin/ps -axo pid=,ppid=,user=,%cpu=,%mem=,etime=,state=,command= | /usr/bin/grep -E '[r]sync|[d]itto|[s]hasum|[f]ind .*Durdurulmaz|[r]m -rf|durdurulmaz-(move-staging|ssd-complete)|_temp/.*\.sh' | /usr/bin/head -220
+          echo "=== DURDURULMAZ RUNNER TREES ==="
+          for root in 8550 94505; do
+            echo "--- root=$root"
+            /bin/ps -axo pid=,ppid=,user=,%cpu=,%mem=,etime=,state=,command= | /usr/bin/awk -v r="$root" '$2==r || $1==r {print}'
+          done
+          echo "=== TOP CPU ==="
+          /bin/ps -axo pid=,ppid=,user=,%cpu=,%mem=,etime=,state=,command= | /usr/bin/sort -k4 -nr | /usr/bin/head -45
+          echo "LOAD_TREE_PASS=YES"
+          exit 0
