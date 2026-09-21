@@ -1,0 +1,87 @@
+name: Crypto SSD Runner Detached Cutover
+
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  contents: read
+  issues: read
+
+jobs:
+  cutover:
+    if: github.actor == 'burakciller90-arch' && github.event.issue.title == '[CRYPTOSSD] RUNNER-DETACHED'
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 15
+    steps:
+      - name: Arm detached SSD runner
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(id -u)" = "504"
+          HOME_ROOT="/Users/crypto-signal-agent"
+          SRC="$HOME_ROOT/actions-runner-crypto"
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          DST="$ROOT/Runner"
+          LOG="$ROOT/RunnerLogs"
+          LABEL="actions.runner.burakciller90-arch-Crypto-Signal.crypto-signal-uid504"
+          PLIST="$HOME_ROOT/Library/LaunchAgents/$LABEL.plist"
+          HELPER="$ROOT/runner-detached-cutover.sh"
+
+          test -d "$SRC"
+          test -d "$DST"
+          mkdir -p "$LOG"
+          /usr/bin/rsync -aE --delete --exclude '_work' --exclude '_diag' "$SRC/" "$DST/"
+          test -f "$DST/.runner"
+          test -f "$DST/.credentials"
+          test -x "$DST/runsvc.sh"
+
+          PLIST="$PLIST" DST="$DST" LOG="$LOG" /usr/bin/python3 - <<'PY'
+          import os, plistlib
+          from pathlib import Path
+          p=Path(os.environ["PLIST"])
+          with p.open("rb") as f: d=plistlib.load(f)
+          d["ProgramArguments"]=[os.environ["DST"]+"/runsvc.sh"]
+          d["WorkingDirectory"]=os.environ["DST"]
+          d["StandardOutPath"]=os.environ["LOG"]+"/launchd.stdout.log"
+          d["StandardErrorPath"]=os.environ["LOG"]+"/launchd.stderr.log"
+          with p.open("wb") as f: plistlib.dump(d,f,fmt=plistlib.FMT_XML,sort_keys=False)
+          PY
+          plutil -lint "$PLIST"
+
+          cat > "$HELPER" <<'SH'
+          #!/bin/bash
+          set -u
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          DST="$ROOT/Runner"
+          LOG="$ROOT/RunnerLogs"
+          LABEL="actions.runner.burakciller90-arch-Crypto-Signal.crypto-signal-uid504"
+          exec >>"$LOG/detached-cutover.log" 2>&1
+          echo "$(date '+%Y-%m-%d %H:%M:%S %z') helper_start pid=$$"
+          sleep 15
+          echo "$(date '+%Y-%m-%d %H:%M:%S %z') bootout_old_runner"
+          /bin/launchctl bootout "gui/504/$LABEL" >/dev/null 2>&1 || true
+          sleep 4
+          echo "$(date '+%Y-%m-%d %H:%M:%S %z') start_ssd_runner"
+          cd "$DST" || exit 21
+          unset RUNNER_TRACKING_ID
+          /usr/bin/nohup ./runsvc.sh >>"$LOG/detached-runner.out.log" 2>>"$LOG/detached-runner.err.log" < /dev/null &
+          echo $! > "$ROOT/ssd-runner.pid"
+          sleep 8
+          pid="$(cat "$ROOT/ssd-runner.pid" 2>/dev/null || true)"
+          if [ -n "$pid" ] && kill -0 "$pid" >/dev/null 2>&1; then
+            echo "$(date '+%Y-%m-%d %H:%M:%S %z') ssd_runner_process_alive pid=$pid"
+            touch "$ROOT/SSD_RUNNER_PROCESS_ALIVE"
+            exit 0
+          fi
+          echo "$(date '+%Y-%m-%d %H:%M:%S %z') ssd_runner_process_failed"
+          exit 22
+          SH
+          chmod 700 "$HELPER"
+
+          (
+            unset RUNNER_TRACKING_ID
+            /usr/bin/nohup /bin/bash "$HELPER" >"$LOG/detached-helper.bootstrap.out" 2>"$LOG/detached-helper.bootstrap.err" < /dev/null &
+            echo $! > "$ROOT/runner-detached-helper.pid"
+          )
+          echo "RUNNER_DETACHED_CUTOVER_ARMED=YES"
