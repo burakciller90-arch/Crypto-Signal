@@ -2,7 +2,7 @@ from pathlib import Path
 import plistlib
 
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = pathlib.Path(__file__).resolve().parents[1]
 
 
 def test_market_tape_launchagent_is_ssd_only_and_keepalive() -> None:
