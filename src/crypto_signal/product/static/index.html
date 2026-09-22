@@ -3,110 +3,112 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Crypto Signal · Piyasa İstihbarat Merkezi</title>
+  <title>Crypto Signal · Market Intelligence</title>
   <link rel="stylesheet" href="/static/app.css">
 </head>
-<body data-view-mode="simple">
+<body data-view-mode="simple" data-workspace="overview">
   <div class="ambient ambient-a"></div><div class="ambient ambient-b"></div>
+
   <header class="topbar">
-    <div class="brand"><div class="brand-mark">CS</div><div><div class="eyebrow">CRYPTO SIGNAL</div><h1>Piyasa İstihbarat Merkezi</h1></div></div>
-    <div class="truth-strip">
-      <span class="chip chip-safe">SİMÜLASYON · GERÇEK SERMAYE YOK</span>
-      <span class="chip">Kanıt öncelikli</span>
-      <span class="chip">Metodoloji uyumu ≠ olasılık</span>
+    <div class="brand">
+      <div class="brand-mark">CS</div>
+      <div><div class="eyebrow">CRYPTO SIGNAL</div><h1>Market Intelligence</h1></div>
+    </div>
+    <div class="topbar-status" aria-label="Canlı sistem durumu">
       <span id="liveStatusChip" class="chip chip-refreshing">Canlı bağlantı hazırlanıyor…</span>
       <span id="lastRefreshChip" class="chip chip-muted">Son yenileme · bekleniyor</span>
       <span id="healthChip" class="chip chip-muted">Bağlanıyor…</span>
     </div>
   </header>
+
+  <aside class="app-sidebar" aria-label="Ana navigasyon">
+    <div class="sidebar-truth">
+      <span class="sidebar-kicker">PAPER-FIRST</span>
+      <strong>REAL CAPITAL · 0</strong>
+      <small>Simülasyon · gerçek emir yok</small>
+    </div>
+    <nav id="workspaceNav" class="workspace-nav">
+      <button type="button" data-workspace-route="overview" aria-current="page"><span>01</span>Overview</button>
+      <button type="button" data-workspace-route="markets"><span>02</span>Markets</button>
+      <button type="button" data-workspace-route="signals"><span>03</span>Signals</button>
+      <button type="button" data-workspace-route="portfolio"><span>04</span>Paper Portfolio</button>
+      <button type="button" data-workspace-route="intelligence"><span>05</span>Intelligence</button>
+      <button type="button" data-workspace-route="performance"><span>06</span>Performance</button>
+      <button type="button" data-workspace-route="archive"><span>07</span>Archive</button>
+      <button type="button" data-workspace-route="learn"><span>08</span>Learn</button>
+      <button type="button" data-workspace-route="system"><span>09</span>System</button>
+    </nav>
+    <div class="sidebar-foot">
+      <span>Evidence-first</span>
+      <span>Immutable archive</span>
+      <span>v1.1 development</span>
+    </div>
+  </aside>
+
   <main class="shell">
-    <section class="hero hero-premium">
+    <section class="workspace-toolbar" aria-label="Çalışma alanı başlığı">
+      <div>
+        <p class="eyebrow" id="workspaceEyebrow">MISSION CONTROL</p>
+        <h2 class="workspace-title" id="workspaceTitle">Overview</h2>
+        <p id="workspaceSubtitle" class="workspace-subtitle">Piyasanın, paper portföyün ve sistem sağlığının tek bakışta özeti.</p>
+      </div>
+      <div class="workspace-actions">
+        <div class="view-mode-copy compact">
+          <div><span class="small-label">Bilgi derinliği</span><strong id="viewModeLabel">Sade görünüm</strong></div>
+          <button id="viewModeToggle" class="ghost-button view-mode-toggle" type="button" aria-pressed="false">Tüm detayları göster</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="dataNotice" class="notice hidden"></section>
+
+    <section id="overviewHero" class="hero hero-premium workspace-section" data-workspaces="overview">
       <div>
         <p class="eyebrow">CANLI · DEĞİŞTİRİLEMEZ KANIT</p>
         <h2>Piyasada şu anda<br><span class="hero-accent">ne önemli?</span></h2>
-        <p class="hero-copy">BTC, ETH ve SOL için 15 dakika, 1 saat ve 4 saat görünümünü iki bağımsız sağlayıcıdan izler. Price Action, Harmonic ve Elliott görüşlerini birleştirir; emin olmadığı yerde bunu açıkça söyler.</p>
+        <p class="hero-copy">BTC, ETH ve SOL için çoklu zaman dilimi bağlamını iki bağımsız sağlayıcıdan izler. Kanıtları birleştirir; çelişkiyi, eksikliği ve geçersizleşmeyi saklamaz.</p>
       </div>
-      <div class="hero-status"><div class="status-dot"></div><div><div class="small-label">Çalışma modu</div><strong>Salt okunur · Kanıt tabanlı</strong></div></div>
+      <div class="hero-status"><div class="status-dot"></div><div><div class="small-label">Çalışma modu</div><strong>Paper-first · Kanıt tabanlı</strong></div></div>
     </section>
-    <section id="dataNotice" class="notice hidden"></section>
-    <section class="metric-grid" aria-label="Piyasa özeti">
-      <article class="metric-card metric-primary"><div class="metric-label">İzlenen bağlam</div><div id="contextCount" class="metric-value">—</div><div class="metric-foot">varlık × zaman dilimi × sağlayıcı</div></article>
-      <article class="metric-card"><div class="metric-label">Dikkat gerektiren</div><div id="attentionCount" class="metric-value">—</div><div class="metric-foot">İzleniyor veya Aktif Sinyal durumları</div></article>
-      <article class="metric-card"><div class="metric-label">Güçlü uyum</div><div id="strongAgreementCount" class="metric-value">—</div><div class="metric-foot">uyum endeksi ≥ 66.67 · olasılık değildir</div></article>
-      <article class="metric-card"><div class="metric-label">Son kanıt</div><div id="latestFreeze" class="metric-value metric-time">—</div><div class="metric-foot"><span id="freezeCount">—</span> değiştirilemez karar kaydı</div></article>
+
+    <section id="overviewMetrics" class="metric-grid workspace-section" data-workspaces="overview" aria-label="Piyasa özeti">
+      <article class="metric-card metric-primary interactive-surface"><div class="metric-label">İzlenen bağlam</div><div id="contextCount" class="metric-value">—</div><div class="metric-foot">varlık × zaman dilimi × sağlayıcı</div></article>
+      <article class="metric-card interactive-surface"><div class="metric-label">Dikkat gerektiren</div><div id="attentionCount" class="metric-value">—</div><div class="metric-foot">İzleniyor veya Aktif Sinyal</div></article>
+      <article class="metric-card interactive-surface"><div class="metric-label">Güçlü uyum</div><div id="strongAgreementCount" class="metric-value">—</div><div class="metric-foot">uyum endeksi ≥ 66.67</div></article>
+      <article class="metric-card interactive-surface"><div class="metric-label">Son kanıt</div><div id="latestFreeze" class="metric-value metric-time">—</div><div class="metric-foot"><span id="freezeCount">—</span> immutable karar</div></article>
     </section>
-    <section class="gift-controls" aria-label="Görünüm ve hızlı gezinme">
-      <div class="view-mode-copy">
-        <div>
-          <p class="eyebrow">GIFT EDITION · SADE BAŞLANGIÇ</p>
-          <strong id="viewModeLabel">Sade görünüm</strong>
-          <span>Önce önemli olanı gör; derin kanıt ve araştırma panellerini istediğinde aç.</span>
-        </div>
-        <button id="viewModeToggle" class="ghost-button view-mode-toggle" type="button" aria-pressed="false">Tüm detayları göster</button>
-      </div>
-      <nav id="quickNav" class="quick-nav" aria-label="Hızlı gezinme">
-        <button type="button" data-target="paperMissionSection">Sanal Portföy</button>
-        <button type="button" data-target="radarSection">Piyasa Radarı</button>
-        <button type="button" data-target="assetSection">Varlık Merkezi</button>
-        <button type="button" data-target="intelligenceSection">İstihbarat</button>
-        <button type="button" data-target="educationSection">Bana Öğret</button>
-        <button type="button" data-target="systemHealthSection">Sistem Sağlığı</button>
-      </nav>
-    </section>
-    <section class="beginner-brief" aria-label="Kısa durum özeti">
+
+    <section id="beginnerBriefSection" class="beginner-brief workspace-section" data-workspaces="overview" aria-label="Kısa durum özeti">
       <div class="beginner-brief-head">
-        <div>
-          <p class="eyebrow">KISACA</p>
-          <h3>Şu an bilmen gereken üç şey</h3>
-        </div>
+        <div><p class="eyebrow">KISACA</p><h3>Şu an bilmen gereken üç şey</h3></div>
         <span class="panel-tag">basit dil · gerçek kanıt</span>
       </div>
       <div id="beginnerBrief" class="beginner-brief-grid loading-block">Kısa özet hazırlanıyor…</div>
     </section>
-    <section id="paperMissionSection" class="panel paper-mission-panel">
+
+    <section id="paperMissionSection" class="panel paper-mission-panel workspace-section" data-workspaces="overview,portfolio">
       <div class="panel-head">
         <div>
           <p class="eyebrow">SANAL PORTFÖY · KARAR MERKEZİ</p>
           <h3>100 USDT simülasyon şu anda ne yapıyor?</h3>
-          <p class="section-copy">Yalnızca değiştirilemez paper-ledger ve gerçek piyasa kanıtı gösterilir. HOLD bir başarısızlık değil; sistemin kanıt yetersizken nakitte kalma kararıdır.</p>
+          <p class="section-copy">Immutable paper-ledger, karar adayları ve gerçek piyasa kanıtı birlikte okunur. İşlem yoksa nedeni açıkça görünür.</p>
         </div>
         <span id="paperPolicyTag" class="panel-tag">Politika okunuyor…</span>
       </div>
       <div id="paperMissionControl" class="paper-mission-grid loading-block">Sanal portföy kanıtı yükleniyor…</div>
     </section>
-    <section id="paperLabSection" class="panel paper-lab-panel" data-advanced-section>
+
+    <section id="radarSection" class="panel priority-panel workspace-section" data-workspaces="overview,markets">
       <div class="panel-head">
-        <div>
-          <p class="eyebrow">SANAL PORTFÖY · RİSK VE SONUÇ</p>
-          <h3>Param nerede, ne kadar riskte ve sistem gerçekten ne başardı?</h3>
-          <p class="section-copy">Portföy maruziyeti ile sanal işlem performansı ayrı gösterilir. İşlem örneklemi yoksa başarı oranı uydurulmaz.</p>
-        </div>
-        <span class="panel-tag">değiştirilemez paper kanıtı</span>
+        <div><p class="eyebrow">PİYASA RADARI</p><h3>Şu anda dikkat etmeye değer yapılar</h3><p class="section-copy">Bybit ve Binance aynı bağlamda yan yana; sağlayıcı ayrışması gizlenmez.</p></div>
+        <span class="panel-tag">canlı odak</span>
       </div>
-      <div class="paper-lab-grid">
-        <article class="paper-lab-card">
-          <div class="paper-subpanel-head">
-            <div><div class="value-label">Sanal Portföy</div><strong>Maruziyet ve nakit dengesi</strong></div>
-            <span id="paperExposureTag" class="panel-tag">yükleniyor…</span>
-          </div>
-          <div id="paperPortfolioExposure" class="loading-block">Portföy maruziyeti yükleniyor…</div>
-        </article>
-        <article class="paper-lab-card">
-          <div class="paper-subpanel-head">
-            <div><div class="value-label">Paper Performans Laboratuvarı</div><strong>Yalnızca kapanmış sanal işlemler ölçülür</strong></div>
-            <span id="paperPerformanceTag" class="panel-tag">yükleniyor…</span>
-          </div>
-          <div id="paperPerformanceLab" class="loading-block">Paper performansı yükleniyor…</div>
-        </article>
-      </div>
-    </section>
-    <section id="radarSection" class="panel priority-panel">
-      <div class="panel-head"><div><p class="eyebrow">PİYASA RADARI</p><h3>Şu anda dikkat etmeye değer yapılar</h3><p class="section-copy">Aynı varlık ve zaman dilimindeki Bybit/Binance kanıtı tek kartta; sağlayıcı farkları gizlenmez.</p></div><span class="panel-tag">odaklı piyasa görünümü</span></div>
       <div id="radarList" class="attention-grid loading-block">Gerçek piyasa kanıtı yükleniyor…</div>
     </section>
-    <section id="assetSection" class="two-col">
+
+    <section id="assetSection" class="workspace-section" data-workspaces="markets">
       <article class="panel">
-        <div class="panel-head"><div><p class="eyebrow">VARLIK MERKEZİ</p><h3 id="assetTitle">Seçili varlık</h3></div><span class="panel-tag">sağlayıcılar ayrı tutulur</span></div>
+        <div class="panel-head"><div><p class="eyebrow">VARLIK MERKEZİ</p><h3 id="assetTitle">Seçili varlık</h3></div><span class="panel-tag">provider evidence</span></div>
         <div class="navigation-row" aria-label="Piyasa seçimi">
           <label><span>Varlık</span><select id="symbolSelect"><option>Yükleniyor…</option></select></label>
           <label><span>Zaman dilimi</span><select id="timeframeSelect"><option>Yükleniyor…</option></select></label>
@@ -114,80 +116,97 @@
         </div>
         <div id="assetCockpit" class="stack loading-block">Seçim bekleniyor…</div>
       </article>
-      <article class="panel">
-        <div class="panel-head"><div><p class="eyebrow">SON KARARLAR</p><h3>Karar anındaki gerçek</h3></div><span class="panel-tag">değiştirilemez</span></div>
-        <div id="recentSignals" class="signal-list loading-block">Kanıt geçmişi yükleniyor…</div>
-      </article>
     </section>
-    <section id="performanceSection" class="two-col two-col-wide" data-advanced-section>
-      <article class="panel">
-        <div class="panel-head"><div><p class="eyebrow">PERFORMANS</p><h3>Sistemin gerçekten bildiği şey</h3></div><span class="panel-tag">örneklem görünür</span></div>
-        <div id="performanceTabs" class="evidence-tabs hidden"></div><div id="performance" class="performance-card loading-block">Sonuç kanıtı yükleniyor…</div>
-      </article>
-      <article class="panel alert-center-panel">
-        <div class="panel-head"><div><p class="eyebrow">UYARILAR</p><h3>Gerçekten bildirmeye değer olaylar</h3></div><span id="alertCount" class="panel-tag">—</span></div>
-        <div id="alertCenter" class="stack loading-block">Uyarı kayıtları yükleniyor…</div>
-      </article>
+
+    <section id="signalsSection" class="panel workspace-section" data-workspaces="signals">
+      <div class="panel-head">
+        <div><p class="eyebrow">SİNYAL MASASI</p><h3>Son kararlar ve kanıtları</h3><p class="section-copy">Her satır dondurulmuş karar anına açılır; sonradan gelen veri geçmiş kararı yeniden yazmaz.</p></div>
+        <span class="panel-tag">immutable</span>
+      </div>
+      <div id="recentSignals" class="signal-list loading-block">Kanıt geçmişi yükleniyor…</div>
     </section>
-    <section class="panel intelligence-center-panel" id="intelligenceSection" data-advanced-section>
+
+    <section id="paperLabSection" class="panel paper-lab-panel workspace-section" data-workspaces="portfolio" data-advanced-section>
       <div class="panel-head">
         <div>
-          <p class="eyebrow">İSTİHBARAT LABORATUVARI</p>
-          <h3>Arka planda hangi araştırma motorları var, ne biliyorlar?</h3>
-          <p class="section-copy">Accepted Stage 8 / Stage 8.5 araştırma katmanları burada salt okunur görünür. Araştırma kanıtı üretim sinyaline otomatik katkı sağlamaz; eksik runtime evidence açıkça eksik olarak gösterilir.</p>
+          <p class="eyebrow">SANAL PORTFÖY · RİSK VE SONUÇ</p>
+          <h3>Maruziyet, nakit, performans ve öğrenme kanıtı</h3>
+          <p class="section-copy">Portföy maruziyeti ile kapanmış sanal işlem performansı ayrı ölçülür.</p>
+        </div>
+        <span class="panel-tag">paper evidence</span>
+      </div>
+      <div class="paper-lab-grid">
+        <article class="paper-lab-card interactive-surface">
+          <div class="paper-subpanel-head"><div><div class="value-label">Sanal Portföy</div><strong>Maruziyet ve nakit dengesi</strong></div><span id="paperExposureTag" class="panel-tag">yükleniyor…</span></div>
+          <div id="paperPortfolioExposure" class="loading-block">Portföy maruziyeti yükleniyor…</div>
+        </article>
+        <article class="paper-lab-card interactive-surface">
+          <div class="paper-subpanel-head"><div><div class="value-label">Performance Lab</div><strong>Kapanmış paper işlemler</strong></div><span id="paperPerformanceTag" class="panel-tag">yükleniyor…</span></div>
+          <div id="paperPerformanceLab" class="loading-block">Paper performansı yükleniyor…</div>
+        </article>
+      </div>
+    </section>
+
+    <section id="intelligenceSection" class="panel intelligence-center-panel workspace-section" data-workspaces="intelligence" data-advanced-section>
+      <div class="panel-head">
+        <div>
+          <p class="eyebrow">INTELLIGENCE LAB</p>
+          <h3>Arka plandaki sistem ne görüyor?</h3>
+          <p class="section-copy">Research motorları, Learning Memory, çelişkiler ve freshness tek yüzeyde; research authority ile product authority açıkça ayrılır.</p>
         </div>
         <span id="intelligenceCount" class="panel-tag">yükleniyor…</span>
       </div>
       <div id="intelligenceSummary" class="intelligence-summary-grid loading-block">İstihbarat özeti yükleniyor…</div>
       <div id="intelligenceCenter" class="intelligence-center loading-block">Araştırma kanıtı okunuyor…</div>
     </section>
-    <section class="panel education-panel" id="educationSection">
+
+    <section id="performanceSection" class="two-col two-col-wide workspace-section" data-workspaces="performance" data-advanced-section>
+      <article class="panel">
+        <div class="panel-head"><div><p class="eyebrow">PERFORMANS</p><h3>Ölçülmüş sonuçlar</h3></div><span class="panel-tag">örneklem görünür</span></div>
+        <div id="performanceTabs" class="evidence-tabs hidden"></div><div id="performance" class="performance-card loading-block">Sonuç kanıtı yükleniyor…</div>
+      </article>
+      <article class="panel alert-center-panel">
+        <div class="panel-head"><div><p class="eyebrow">UYARILAR</p><h3>Olay akışı</h3></div><span id="alertCount" class="panel-tag">—</span></div>
+        <div id="alertCenter" class="stack loading-block">Uyarı kayıtları yükleniyor…</div>
+      </article>
+    </section>
+
+    <section id="archiveSection" class="panel archive-panel workspace-section" data-workspaces="archive" data-advanced-section>
       <div class="panel-head">
-        <div>
-          <p class="eyebrow">BANA ÖĞRET</p>
-          <h3>Grafikte gördüğün şeyi gerçekten anla</h3>
-          <p class="section-copy">Kripto bilmen gerekmiyor. Kavramları basit Türkçe ile öğren; istersen ayrıntıyı aç.</p>
-        </div>
+        <div><p class="eyebrow">IMMUTABLE ARCHIVE</p><h3>Ne zaman ne söyledik, sonra ne oldu?</h3><p class="section-copy">Sinyal geçmişi ve sanal işlem geçmişi aynı yerde fakat farklı kanıt sınıfları olarak sunulur.</p></div>
+        <div class="panel-actions"><span id="archiveCount" class="panel-tag">—</span><button id="refreshButton" class="ghost-button" type="button">Yenile</button></div>
+      </div>
+      <div class="archive-section-head"><div><div class="value-label">Sinyal kayıtları</div><strong>Değiştirilemez piyasa kararları</strong></div><span class="panel-tag">signal ledger</span></div>
+      <div class="table-wrap"><table><thead><tr><th>Kaydedildi</th><th>Piyasa</th><th>Durum</th><th>Yön</th><th>Uyum</th><th>Olasılık</th><th>Kurulum</th></tr></thead><tbody id="archiveBody"><tr><td colspan="7" class="empty-cell">Gerçek kayıtlar yükleniyor…</td></tr></tbody></table></div>
+      <div class="paper-trade-archive">
+        <div class="archive-section-head"><div><div class="value-label">Sanal işlem kayıtları</div><strong>Paper fill ve round-trip geçmişi</strong></div><span id="paperTradeArchiveTag" class="panel-tag">yükleniyor…</span></div>
+        <div id="paperTradeArchive" class="loading-block">Sanal işlem geçmişi yükleniyor…</div>
+      </div>
+    </section>
+
+    <section id="educationSection" class="panel education-panel workspace-section" data-workspaces="learn">
+      <div class="panel-head">
+        <div><p class="eyebrow">BANA ÖĞRET</p><h3>Grafikte gördüğün şeyi gerçekten anla</h3><p class="section-copy">Kavramlar kısa başlar; ileri detay isteğe bağlı açılır.</p></div>
         <span id="educationCount" class="panel-tag">—</span>
       </div>
       <div id="educationCenter" class="education-grid loading-block">Dersler hazırlanıyor…</div>
     </section>
-    <section id="archiveSection" class="panel archive-panel" data-advanced-section>
+
+    <section id="systemHealthSection" class="panel system-health-panel workspace-section" data-workspaces="system" data-advanced-section>
       <div class="panel-head">
-        <div>
-          <p class="eyebrow">SİNYAL / İŞLEM ARŞİVİ</p>
-          <h3>Geçmiş karar ve sanal işlem kanıtı birbirine karışmaz</h3>
-          <p class="section-copy">Sinyal geçmişi piyasa kararlarını; sanal işlem geçmişi yalnızca paper-ledger kanıtını gösterir.</p>
-        </div>
-        <div class="panel-actions"><span id="archiveCount" class="panel-tag">—</span><button id="refreshButton" class="ghost-button" type="button">Yenile</button></div>
-      </div>
-      <div class="archive-section-head"><div><div class="value-label">Sinyal kayıtları</div><strong>Değiştirilemez piyasa kararları</strong></div><span class="panel-tag">signal ledger</span></div>
-      <div class="table-wrap"><table><thead><tr><th>Kaydedildi</th><th>Piyasa</th><th>Durum</th><th>Yön</th><th>Metodoloji uyumu</th><th>Olasılık</th><th>Kurulum</th></tr></thead><tbody id="archiveBody"><tr><td colspan="7" class="empty-cell">Gerçek kayıtlar yükleniyor…</td></tr></tbody></table></div>
-      <div class="paper-trade-archive">
-        <div class="archive-section-head">
-          <div><div class="value-label">Sanal işlem kayıtları</div><strong>Paper fill ve kapanmış round-trip geçmişi</strong></div>
-          <span id="paperTradeArchiveTag" class="panel-tag">yükleniyor…</span>
-        </div>
-        <div id="paperTradeArchive" class="loading-block">Sanal işlem geçmişi yükleniyor…</div>
-      </div>
-    </section>
-    <section id="systemHealthSection" class="panel system-health-panel" data-advanced-section>
-      <div class="panel-head">
-        <div>
-          <p class="eyebrow">SİSTEM SAĞLIĞI</p>
-          <h3>Ürün ve kanıt katmanı şu anda güvenilir mi?</h3>
-          <p class="section-copy">Bu panel yalnızca ürün API’sinin görebildiği read-only runtime kanıtını raporlar; eksik veriyi sağlıklı saymaz.</p>
-        </div>
+        <div><p class="eyebrow">SYSTEM HEALTH</p><h3>Ürün, veri ve kanıt katmanı güvenilir mi?</h3><p class="section-copy">HTTP erişilebilirliği ile veri tazeliği aynı şey değildir; ikisi ayrı raporlanır.</p></div>
         <span id="systemHealthTag" class="panel-tag">kontrol ediliyor…</span>
       </div>
       <div id="systemHealth" class="system-health-grid loading-block">Sistem sağlığı okunuyor…</div>
     </section>
   </main>
+
   <dialog id="signalDialog" class="signal-dialog">
     <div class="dialog-head"><div><p class="eyebrow">SİNYAL DETAYI</p><h3 id="dialogTitle">Dondurulmuş karar</h3></div><button id="closeDialog" class="ghost-button" type="button">Kapat</button></div>
     <div id="dialogBody" class="dialog-body"></div>
   </dialog>
-  <footer><span>Crypto Signal · Full Version Gift Edition</span><span>Salt okunur analiz ürünü</span><span>Geçmiş frekans ≠ kalibre edilmiş olasılık</span></footer>
+
+  <footer><span>Crypto Signal · v1.1 development</span><span>REAL_CAPITAL=0</span><span>Evidence first · probability only after calibration</span></footer>
   <script src="/static/freshness.js" defer></script>
   <script src="/static/app.js" defer></script>
 </body>
