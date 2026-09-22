@@ -2793,3 +2793,35 @@ archived wakes/leases must never be replayed.
 
 The post-04:00 market-data incident remains CLOSED/RECOVERED and is not conflated with
 the runner incident. REAL_CAPITAL=0.
+
+
+## 2026-09-22 — R15 exact-listener reconciliation; live recovery remains human-gated
+
+The apparent multi-listener state during one-shot recovery was traced to a diagnostic
+bug, not confirmed duplicate UID504 runners. The matcher searched the whole process
+command line for the listener string, so its own `awk -v needle=...Runner.Listener`
+process could be counted as a listener. Direct process snapshots continued to show the
+real SSD listener PID 99399, ancestry
+`runsvc.sh -> RunnerService.js -> Runner.Listener`, with no UID504 Runner.Worker.
+
+The permanent R15 watchdog and one-shot recovery matcher were changed to exact command
+matching. Hosted gates passed:
+- `35722280704` hang hardening;
+- `35723794736` ancestry-aware service-tree;
+- `35724067645` two-minute idle-spin;
+- `35724497074` exact-listener/self-match regression.
+
+Latest live recovery run `35724439198` waited for local administrator authorization
+and timed out. It made no runner mutation. Live recovery and physical SSD
+detach/remount acceptance remain human-gated. REAL_CAPITAL=0.
+
+## 2026-09-22 — continuity state reconciled while UID504 runner is unhealthy
+
+UID501 read-only continuity run `35724768336` found the shared relay RUNNING with
+`crypto-relay-v2`, namespace `crypto-signal`, exact target binding and zero shared
+wake files. The shared `user_pause` marker is still present. The UID504
+`bridge_watchdog.py` and shared `relay_daemon.py` processes are alive.
+
+UID501 cannot read the local SSD continuity tree, so a visible local lease count of
+zero is not treated as authoritative. Pause remains dominant; no new wake/lease was
+armed and continuity was not unpaused.
