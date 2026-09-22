@@ -60,19 +60,21 @@ def test_relay_is_namespace_bound_and_stops_only_exact_locked_wake() -> None:
 
 
 
-def test_rolling_timer_requires_final_receipt_and_relay_recovers_submitting() -> None:
+def test_rolling_timer_requires_observed_receipt_and_relay_recovers_submitting() -> None:
     rolling = _read("ops/continuity/interval_wake_daemon.py")
     submit = _read("ops/continuity/relay_submit.py")
     daemon = _read("ops/continuity/relay_daemon.py")
 
-    assert "FINAL_RECEIPT_STATES" in rolling
-    assert '"SUBMITTED_UNCONFIRMED"' in rolling
+    assert 'FINAL_RECEIPT_STATES = {"OBSERVED"}' in rolling
+    assert '"SUBMITTED_UNCONFIRMED"' not in rolling
     assert "final_receipt(pending)" in rolling
     assert 'state["next_due_epoch"] = receipt_epoch + INTERVAL_SECONDS' in rolling
-    assert "final_receipt_sha" in submit
-    assert 'status == "SUBMITTING"' in submit
-    assert "receipt_info" in daemon
-    assert 'receipt_status == "SUBMITTING"' in daemon
+    assert "observed_only=message == LOCKED_WAKE_MESSAGE" in submit
+    assert 'status != "OBSERVED"' in submit
+    assert "baseline_exact_count" in daemon
+    assert 'receipt_status == "OBSERVED"' in daemon
+    assert "OBSERVED_RECOVERED" in daemon
+    assert "AWAITING_EXACT_OBSERVATION" in daemon
     assert "receipt.unlink(missing_ok=True)" in daemon
 
 
@@ -113,6 +115,8 @@ def test_binding_writers_and_installers_use_ssd_canonical_state() -> None:
     assert "GITHUB_20M_ROLE=watchdog-fallback" in installer
     assert "ROLLING_WAKE_IMMEDIATE_RECEIPT_PASS=YES" in installer
     assert 'cron: "*/5 * * * *"' in fallback
+    assert 'if [ "${{ github.event_name }}" = "schedule" ]; then' not in fallback
+    assert 'if [ "${{ github.event_name }}" = "schedule" ]; then'.replace("\\", "") in fallback
     assert "GITHUB_WATCHDOG_TIMER_HEALTHY=YES" in fallback
     assert "GITHUB_WATCHDOG_TIMER_RESTARTED=YES" in fallback
     assert "GITHUB_EMERGENCY_FALLBACK_WAKE_ATTEMPTED=YES" in fallback
