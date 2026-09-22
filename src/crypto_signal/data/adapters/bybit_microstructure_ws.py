@@ -25,6 +25,42 @@ from crypto_signal.data.models import DataSource, Exchange, MarketType
 MicrostructureStreamEvent = OrderBookSnapshot | PublicTradeObservation
 
 
+@dataclass(frozen=True, slots=True)
+class BybitMicrostructureWireEvent:
+    symbol: str
+    channel: str
+    event_kind: str
+    source_timestamp_ms: int
+    event_at_ms: int
+    ingested_at_ms: int
+    sequence: int
+    update_id: int
+    raw_payload: dict[str, object]
+    orderbook: OrderBookSnapshot | None = None
+    trades: tuple[PublicTradeObservation, ...] = ()
+
+    def __post_init__(self) -> None:
+        _require_symbol(self.symbol)
+        if not self.channel.strip():
+            raise ValueError("Bybit wire-event channel must be non-empty")
+        if not self.event_kind.strip():
+            raise ValueError("Bybit wire-event kind must be non-empty")
+        if min(
+            self.source_timestamp_ms,
+            self.event_at_ms,
+            self.ingested_at_ms,
+            self.sequence,
+            self.update_id,
+        ) < 0:
+            raise ValueError("Bybit wire-event numeric fields must be non-negative")
+        if self.event_at_ms > self.source_timestamp_ms:
+            raise ValueError("Bybit wire event cannot postdate source timestamp")
+        if self.orderbook is None and not self.trades:
+            raise ValueError("Bybit wire event must contain normalized evidence")
+        if self.orderbook is not None and self.trades:
+            raise ValueError("Bybit wire event cannot mix book and trades")
+
+
 @dataclass(slots=True)
 class BybitSpotOrderBookState:
     symbol: str
@@ -225,6 +261,21 @@ class BybitSpotMicrostructureStream:
         symbols: tuple[str, ...],
         depth: int = 50,
     ) -> AsyncGenerator[MicrostructureStreamEvent, None]:
+        async for wire_event in self.stream_wire_events(
+            symbols=symbols,
+            depth=depth,
+        ):
+            if wire_event.orderbook is not None:
+                yield wire_event.orderbook
+            for trade in wire_event.trades:
+                yield trade
+
+    async def stream_wire_events(
+        self,
+        *,
+        symbols: tuple[str, ...],
+        depth: int = 50,
+    ) -> AsyncGenerator[BybitMicrostructureWireEvent, None]:
         normalized_symbols = _normalize_symbols(symbols)
         if depth not in {1, 50, 200, 1000}:
             raise ValueError("Bybit spot orderbook depth must be one of 1,50,200,1000")
@@ -259,6 +310,7 @@ class BybitSpotMicrostructureStream:
                     if topic is None:
                         continue
                     topic_text = str(topic)
+                    ingested_at_ms = time.time_ns() // 1_000_000
 
                     if topic_text.startswith("orderbook."):
                         symbol = _topic_symbol(
@@ -266,7 +318,26 @@ class BybitSpotMicrostructureStream:
                             prefix=f"orderbook.{depth}.",
                             allowed=normalized_symbols,
                         )
-                        yield states[symbol].apply_payload(payload)
+                        data = cast(dict[str, object], payload["data"])
+                        message_type = str(payload.get("type", ""))
+                        snapshot = states[symbol].apply_payload(
+                            payload,
+                            ingested_at_ms=ingested_at_ms,
+                        )
+                        yield BybitMicrostructureWireEvent(
+                            symbol=symbol,
+                            channel=f"orderbook.{depth}",
+                            event_kind=message_type,
+                            source_timestamp_ms=int(
+                                cast(int | str, payload["ts"])
+                            ),
+                            event_at_ms=int(cast(int | str, payload["cts"])),
+                            ingested_at_ms=ingested_at_ms,
+                            sequence=int(cast(int | str, data["seq"])),
+                            update_id=int(cast(int | str, data["u"])),
+                            raw_payload=payload,
+                            orderbook=snapshot,
+                        )
                         continue
 
                     if topic_text.startswith("publicTrade."):
@@ -275,15 +346,37 @@ class BybitSpotMicrostructureStream:
                             prefix="publicTrade.",
                             allowed=normalized_symbols,
                         )
-                        for trade in parse_bybit_public_trade_payload(
+                        trades = parse_bybit_public_trade_payload(
                             payload,
                             expected_symbol=symbol,
                             adapter_version=self.ADAPTER_VERSION,
-                        ):
-                            yield trade
+                            ingested_at_ms=ingested_at_ms,
+                        )
+                        if not trades:
+                            raise ValueError(
+                                "Bybit public-trade payload must contain trades"
+                            )
+                        yield BybitMicrostructureWireEvent(
+                            symbol=symbol,
+                            channel="publicTrade",
+                            event_kind="trade_batch",
+                            source_timestamp_ms=int(
+                                cast(int | str, payload["ts"])
+                            ),
+                            event_at_ms=max(
+                                trade.event_at_ms for trade in trades
+                            ),
+                            ingested_at_ms=ingested_at_ms,
+                            sequence=max(trade.sequence for trade in trades),
+                            update_id=0,
+                            raw_payload=payload,
+                            trades=trades,
+                        )
                         continue
 
-                    raise ValueError(f"unexpected Bybit microstructure topic: {topic_text!r}")
+                    raise ValueError(
+                        f"unexpected Bybit microstructure topic: {topic_text!r}"
+                    )
             except ConnectionClosed:
                 continue
             finally:
