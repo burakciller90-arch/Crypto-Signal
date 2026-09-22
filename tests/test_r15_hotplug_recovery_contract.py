@@ -109,9 +109,9 @@ def test_r15_orphan_parent_detection_is_exact_and_cwd_bound() -> None:
     assert './externals/node20/bin/node ./bin/RunnerService.js' in text
     assert '/bin/bash ./runsvc.sh' in text
     assert 'service_cwd="$(process_cwd "$service")"' in text
-    assert '[ "$service_cwd" = "$RUNNER" ]' in text
+    assert 'runner_process_origin_ok "$service"' in text
     assert 'wrapper_cwd="$(process_cwd "$wrapper")"' in text
-    assert '[ "$wrapper_cwd" = "$RUNNER" ]' in text
+    assert 'runner_process_origin_ok "$wrapper"' in text
     assert "crypto-signal-agent" in text
 
 
