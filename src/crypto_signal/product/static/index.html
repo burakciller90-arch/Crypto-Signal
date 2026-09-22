@@ -318,17 +318,54 @@
           <div class="section-heading">
             <div>
               <span class="section-index">06 / PERFORMANCE</span>
-              <h2 id="performanceTitle">Performance & Trust</h2>
-              <p>Backtest, walk-forward ve untouched-forward evidence ayrı tutulur. Boş örneklem başarı gibi gösterilmez.</p>
+              <h2 id="performanceTitle">PERFORMANCE & TRUST CENTER</h2>
+              <p>Forecast outcome, paper track record ve probability calibration ayrı kanıt sınıflarıdır. Tek bir “güven skoru” altında birleştirilmez.</p>
             </div>
             <span class="module-tag">TRUTH FIRST</span>
           </div>
 
-          <div class="performance-layout">
-            <article class="command-module">
+          <div id="trustOverview" class="trust-overview loading-block">Trust yüzeyi hazırlanıyor…</div>
+
+          <div class="trust-center-grid">
+            <article class="command-module trust-forecast-module">
+              <div class="module-head">
+                <div>
+                  <span class="micro-label">FORECAST EVIDENCE</span>
+                  <h3>Outcome & forward evidence</h3>
+                </div>
+                <span id="trustForecastTag" class="module-tag">yükleniyor…</span>
+              </div>
               <div id="performanceTabs" class="evidence-tabs hidden"></div>
               <div id="performance" class="performance-card loading-block">Sonuç kanıtı yükleniyor…</div>
             </article>
+
+            <article class="command-module trust-paper-module">
+              <div class="module-head">
+                <div>
+                  <span class="micro-label">PAPER TRACK RECORD</span>
+                  <h3>Immutable işlem performansı</h3>
+                </div>
+                <span id="trustPaperTag" class="module-tag">yükleniyor…</span>
+              </div>
+              <div id="trustPaperPerformance" class="loading-block">Paper performans kanıtı yükleniyor…</div>
+            </article>
+          </div>
+
+          <div class="trust-center-grid trust-center-secondary">
+            <article class="command-module trust-calibration-module">
+              <div class="module-head">
+                <div>
+                  <span class="micro-label">PROBABILITY CALIBRATION</span>
+                  <h3>Olasılık güveni</h3>
+                </div>
+                <span class="module-tag module-tag-amber">NOT CALIBRATED</span>
+              </div>
+              <div id="trustCalibration" class="trust-calibration-card">
+                <strong>Yüzde olasılık henüz yayınlanmaz.</strong>
+                <p>Metodoloji uyumu, geçmiş başarı frekansı ve paper win rate olasılık değildir. R19 kalibrasyon kabul edilmeden Brier / reliability metriği burada üretilmez.</p>
+              </div>
+            </article>
+
             <article class="command-module">
               <div class="module-head">
                 <div><span class="micro-label">ALERT CENTER</span><h3>Gerçekten bilmen gerekenler</h3></div>
