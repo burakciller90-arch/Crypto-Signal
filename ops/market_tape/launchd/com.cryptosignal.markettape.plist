@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.cryptosignal.markettape</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/Volumes/Crypto-504/Crypto-Signal/MarketTape/.venv/bin/python</string>
+    <string>/Volumes/Crypto-504/Crypto-Signal/MarketTape/ops/run_market_tape_runtime.py</string>
+  </array>
+
+  <key>WorkingDirectory</key>
+  <string>/Volumes/Crypto-504/Crypto-Signal/MarketTape</string>
+
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PYTHONPATH</key>
+    <string>/Volumes/Crypto-504/Crypto-Signal/MarketTape/src</string>
+  </dict>
+
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <true/>
+  <key>ThrottleInterval</key>
+  <integer>30</integer>
+  <key>ProcessType</key>
+  <string>Background</string>
+
+  <key>StandardOutPath</key>
+  <string>/Volumes/Crypto-504/Crypto-Signal/ServiceLogs/market-tape.out.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Volumes/Crypto-504/Crypto-Signal/ServiceLogs/market-tape.err.log</string>
+</dict>
+</plist>
