@@ -4,10 +4,23 @@ Updated: 2026-09-22
 Project: Crypto Signal
 Baseline: crypto-signal-full-version-v1.0.0 (immutable)
 Active post-v1.0 program: v1.1 world-class product + market intelligence
-State: DATA_FRESHNESS_RECOVERED / R15_OPERATIONAL_ACCEPTANCE_CLOSED / CONTINUITY_PAUSED / PARALLEL_V1_1_DEVELOPMENT_ACTIVE
+State: DATA_FRESHNESS_RECOVERED / R15_OPERATIONAL_ACCEPTANCE_CLOSED / LOCKED_20M_CONTINUITY_ACTIVE / PARALLEL_V1_1_DEVELOPMENT_ACTIVE
 REAL_CAPITAL: 0
 
 ## Active v1.1 frontier — read before historical sections
+
+## Locked 20-minute continuity — ACTIVE
+
+- Exact ChatGPT URL: `https://chatgpt.com/c/6ab2c3c1-30c8-83ed-b1ad-2aa35cc891c9`.
+- Schedule: minute 00/20/40 via the existing GitHub self-hosted fallback because UID504 LaunchAgent bootstrap remains unavailable with rc=5.
+- Approved wake text explicitly requires READ_FIRST, CURRENT_STATUS, Chronicle and `docs/V1_1_LOCKED_MASTER_ROADMAP_20260922.md` plus current Git/worker/wake/lease reconciliation.
+- Local/shared pause latches: NO at 2026-09-22 reconciliation.
+- Active exact leases: 0; local wake queue: 0; shared relay queue: 0.
+- Relay heartbeat was fresh and exact target binding matched all current state.
+- Busy-stop live test: exact wake interrupted the active ChatGPT response and arrived in this chat; relay log recorded `OBSERVED_AFTER_CLICK`.
+- Post-hash-fix final test: run `35770956851` PASS with `RELAY_RECEIPTED`, `RELAY_SUBMIT_RC=0`, `CRYPTO_LOCKED_20M_WAKE_PASS=YES`.
+- Periodic wake is a state-first continuation pointer, not production authority. REAL_CAPITAL=0.
+
 
 **LOCKED roadmap contract:** `docs/V1_1_LOCKED_MASTER_ROADMAP_20260922.md`.
 
@@ -43,12 +56,12 @@ Runtime evidence:
 - Hosted final-tree gate `35747330090` passed. After temporary gate cleanup, exact current PR head `40c66677f78b15e08b0c82ea8a75ca51c1633bf0` passed independent exact-head full regression in run `35747566530`. PR #715 was then squash-merged to `main` as `97eafdcb9810134f8d7b7a4c62a1546d2554e4dc` with exactly three intended files.
 - R15 is the single recovery owner; legacy runner watchdog/service owners remain disabled while their plist files are retained for rollback.
 - UID501 -> UID504 passwordless project-maintenance bridge is active and independently verified after clearing the sudo timestamp. UID501 can execute as `crypto-signal-agent` without a password; passwordless root remains denied.
-- Continuity is currently **PAUSED** by user contract. No continuity resume was performed during R15 recovery.
+- Continuity is now **ACTIVE** under the user-locked 20-minute exact-chat wake contract. This supersedes the earlier paused state; task-specific leases remain state pointers only.
 - M2 Liquidity Dynamics Slice 1 is accepted in draft PR #762. The Market Tape storage prerequisite is also operationally live through draft PR #763: 24h hot SQLite + 2h grace, hourly verified Parquet/Zstd cold archive, 25 GiB hot cap, 600 GiB cold cap and 250 GiB free-space reserve.
 - Real canonical benchmark measured 7.84x combined SQLite -> Parquet/Zstd compression on the current sample; theoretical 10x-20x ratios are not treated as project facts.
 - Market Tape runtime ownership is single-owner: existing R11 Terminal/TCC-authorized `ssd-service-supervisor.sh` -> Market Tape supervisor -> Hot/Cold runtime. The standalone removable-volume LaunchAgent path is intentionally disabled/fail-closed because macOS TCC blocked it.
 - Final live heartbeat acceptance run `35762628805` PASS and final read-only acceptance `35762906784` PASS: one SSD supervisor, one Market Tape supervisor, one runtime, fresh 30s heartbeats, advancing raw rows, SQLite quick checks, dashboard health `status=ok`, `read_only=true`, REAL_CAPITAL=0.
-- Continuity remains **PAUSED** by user contract. Completed/stale R15 and Market Tape diagnostics must not be replayed.
+- Continuity is **ACTIVE** under the locked 20-minute exact-chat wake contract. Completed/stale R15 and Market Tape diagnostics must not be replayed.
 
 Product architecture:
 - Track A: world-class UI/UX.
