@@ -1,0 +1,31 @@
+name: Crypto R15 Watchdog Launchctl Read Only Diagnostic
+
+on:
+  push:
+    branches:
+      - r15-ssd-hotplug-recovery-v1
+    paths:
+      - ".github/workflows/crypto-r15-watchdog-launchctl-readonly.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    name: Diagnose watchdog launchctl state
+    runs-on: [self-hosted, crypto-signal, uid501]
+    timeout-minutes: 10
+    steps:
+      - name: Inspect watchdog state
+        shell: bash
+        run: |
+          set +e
+          echo "=== PLIST ==="
+          sudo -n -H -u crypto-signal-agent /bin/ls -lOe "/Users/crypto-signal-agent/Library/LaunchAgents/com.cryptosignal.ssd-hotplug-recovery.plist"
+          sudo -n -H -u crypto-signal-agent /usr/bin/plutil -lint "/Users/crypto-signal-agent/Library/LaunchAgents/com.cryptosignal.ssd-hotplug-recovery.plist"
+          echo "=== PRINT ==="
+          sudo -n -H -u crypto-signal-agent /bin/launchctl print "gui/504/com.cryptosignal.ssd-hotplug-recovery" 2>&1
+          echo "PRINT_RC=$?"
+          echo "=== PRINT DISABLED ==="
+          sudo -n -H -u crypto-signal-agent /bin/launchctl print-disabled gui/504 2>&1 | /usr/bin/grep -E 'cryptosignal|Crypto-Signal' || true
+          echo "R15_WATCHDOG_LAUNCHCTL_DIAG_DONE=YES"
