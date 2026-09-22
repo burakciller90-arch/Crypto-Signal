@@ -3074,3 +3074,23 @@ performed. Live activation remains a later gated roadmap step.
 
 Phase 1 foundation is closed. Safe development advances to Market Tape v2 / M2
 Liquidity 2.0 / GALACTECH Product work in parallel. REAL_CAPITAL=0.
+
+
+---
+
+## 2026-09-22 — 20-MINUTE WAKE TEXT REAFFIRMED / NON-DISABLE CONTRACT
+
+The user clarified that the previously stated “continuity task closed” wording meant only that setup/testing was complete and must never be interpreted as disabling the actual wake loop.
+
+Current contract:
+- cadence remains every 20 minutes;
+- exact current ChatGPT binding remains unchanged;
+- continuity remains ACTIVE;
+- the loop must not be disabled, paused, replaced or weakened unless the user explicitly requests pause/stop;
+- exact wake text is now:
+
+> Kullanıcı aktif değil ve projeyi tamamlaman için sana bıraktı; HAFIZANA GÜVENME! READ_FIRST, CURRENT_STATUS, Chronicle ve docs/V1_1_LOCKED_MASTER_ROADMAP_20260922.md dosyasını oku; gerçek Git/worker/wake/lease state’ini kontrol et, gerçek frontier’ı bul. Tamamlanmış/stale/duplicate işi tekrarlama. Kullanıcı REAL MONEY hariç roadmap’in bitmesini istiyor; güvenli aşamalar arasında onay bekleme ve devam et. Ve bir sonraki ajan için yaptığın her işi her güncellemeyi GitHub üzerine kayıt et. Bu mesaj döngüsünü bozamazsın.
+
+The message additionally requires every material action/update to be recorded in GitHub so the next agent can recover state without relying on memory.
+
+REAL_CAPITAL remains 0 by the locked roadmap and project safety constitution even though the exact visible wake text now delegates that safety fact to READ_FIRST/CURRENT_STATUS/locked-roadmap reconciliation.
