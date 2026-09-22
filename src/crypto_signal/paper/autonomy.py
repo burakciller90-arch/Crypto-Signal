@@ -29,16 +29,19 @@ __all__ = [
     "DEFAULT_AUTONOMY_MAX_POSITION_RISK_FRACTION",
     "DEFAULT_AUTONOMY_MAX_SIGNAL_AGE_MS",
     "DEFAULT_AUTONOMY_REQUIRED_EXCHANGES",
+    "PAPER_ACTIVE_LEARNING_AUTONOMY_POLICY_VERSION",
     "PAPER_AUTONOMY_POLICY_VERSION",
     "REAL_CAPITAL",
     "PaperAutonomyDecision",
     "PaperAutonomyPolicy",
     "PaperAutonomyReason",
+    "default_active_learning_autonomy_policy",
     "default_conservative_autonomy_policy",
     "evaluate_autonomy_policy",
 ]
 
 PAPER_AUTONOMY_POLICY_VERSION = "paper_autonomy_policy.v2"
+PAPER_ACTIVE_LEARNING_AUTONOMY_POLICY_VERSION = "paper_autonomy_policy.active_learning.v1"
 DEFAULT_AUTONOMY_DECISION_TIMEFRAME = "4h"
 DEFAULT_AUTONOMY_COOLDOWN_MS = 4 * 60 * 60 * 1000
 DEFAULT_AUTONOMY_MAX_SIGNAL_AGE_MS = 4 * 60 * 60 * 1000
@@ -48,6 +51,11 @@ DEFAULT_AUTONOMY_REQUIRED_EXCHANGES = (
     Exchange.BYBIT,
 )
 DEFAULT_ALLOWED_UNCERTAINTY_FLAGS = ("partial_methodology_coverage",)
+_ACTIVE_LEARNING_DECISION_TIMEFRAME = "1h"
+_ACTIVE_LEARNING_COOLDOWN_MS = 60 * 60 * 1000
+_ACTIVE_LEARNING_MAX_SIGNAL_AGE_MS = 2 * 60 * 60 * 1000
+_ACTIVE_LEARNING_MAX_POSITION_RISK_FRACTION = Decimal("0.02")
+_ACTIVE_LEARNING_EXPLORATION_RISK_FRACTION = Decimal("0.005")
 _RISK_BUDGET_QUANTUM = Decimal("0.01")
 
 
@@ -56,6 +64,8 @@ class PaperAutonomyReason(StrEnum):
 
     BUY_ELIGIBLE = "buy_eligible"
     EXIT_ELIGIBLE = "exit_eligible"
+    EXPLORATION_BUY_ELIGIBLE = "exploration_buy_eligible"
+    EXPLORATION_EXIT_ELIGIBLE = "exploration_exit_eligible"
     NO_SIGNALS = "no_signals"
     PROVIDER_SET_MISMATCH = "provider_set_mismatch"
     MIXED_SIGNAL_CONTEXT = "mixed_signal_context"
@@ -86,6 +96,8 @@ class PaperAutonomyPolicy:
     cooldown_ms: int
     max_signal_age_ms: int
     allowed_uncertainty_flags: tuple[str, ...]
+    allow_watch_exploration: bool = False
+    exploration_position_risk_fraction: Decimal = Decimal(0)
     allow_pyramiding: bool = False
     allow_shorting: bool = False
     allow_automatic_reduce: bool = False
@@ -118,6 +130,20 @@ class PaperAutonomyPolicy:
             self.allowed_uncertainty_flags
         ):
             raise ValueError("allowed uncertainty flags must be unique")
+        if not isinstance(self.exploration_position_risk_fraction, Decimal):
+            raise TypeError("exploration_position_risk_fraction must be Decimal")
+        if (
+            self.exploration_position_risk_fraction.is_nan()
+            or self.exploration_position_risk_fraction.is_infinite()
+            or self.exploration_position_risk_fraction < Decimal(0)
+        ):
+            raise ValueError("exploration risk fraction must be finite and non-negative")
+        if self.exploration_position_risk_fraction > self.max_position_risk_fraction:
+            raise ValueError("exploration risk cannot exceed policy max position risk")
+        if self.allow_watch_exploration and self.exploration_position_risk_fraction <= Decimal(0):
+            raise ValueError("watch exploration requires positive exploration risk")
+        if not self.allow_watch_exploration and self.exploration_position_risk_fraction != Decimal(0):
+            raise ValueError("exploration risk requires watch exploration mode")
         if self.allow_pyramiding or self.allow_shorting or self.allow_automatic_reduce:
             raise ValueError(
                 "paper_autonomy_policy.v2 forbids pyramiding, shorting, "
@@ -187,6 +213,26 @@ def default_conservative_autonomy_policy() -> PaperAutonomyPolicy:
         cooldown_ms=DEFAULT_AUTONOMY_COOLDOWN_MS,
         max_signal_age_ms=DEFAULT_AUTONOMY_MAX_SIGNAL_AGE_MS,
         allowed_uncertainty_flags=DEFAULT_ALLOWED_UNCERTAINTY_FLAGS,
+        allow_watch_exploration=False,
+        exploration_position_risk_fraction=Decimal(0),
+        allow_pyramiding=False,
+        allow_shorting=False,
+        allow_automatic_reduce=False,
+    )
+
+
+def default_active_learning_autonomy_policy() -> PaperAutonomyPolicy:
+    """Return the bounded 1h paper-learning policy; real capital remains zero."""
+    return PaperAutonomyPolicy(
+        version=PAPER_ACTIVE_LEARNING_AUTONOMY_POLICY_VERSION,
+        decision_timeframe=_ACTIVE_LEARNING_DECISION_TIMEFRAME,
+        required_exchanges=DEFAULT_AUTONOMY_REQUIRED_EXCHANGES,
+        max_position_risk_fraction=_ACTIVE_LEARNING_MAX_POSITION_RISK_FRACTION,
+        cooldown_ms=_ACTIVE_LEARNING_COOLDOWN_MS,
+        max_signal_age_ms=_ACTIVE_LEARNING_MAX_SIGNAL_AGE_MS,
+        allowed_uncertainty_flags=DEFAULT_ALLOWED_UNCERTAINTY_FLAGS,
+        allow_watch_exploration=True,
+        exploration_position_risk_fraction=_ACTIVE_LEARNING_EXPLORATION_RISK_FRACTION,
         allow_pyramiding=False,
         allow_shorting=False,
         allow_automatic_reduce=False,
@@ -333,16 +379,28 @@ def evaluate_autonomy_policy(
             reason="frozen signal exceeded the policy freshness window",
         )
 
-    if any(signal.state is not SignalState.ACTIVE for signal in ordered):
-        return _hold_from_signals(
-            policy=selected_policy,
-            signals=ordered,
-            evaluated_at_ms=evaluated_at_ms,
-            activation_cutoff_ms=activation_cutoff_ms,
-            symbol=symbol,
-            reason_code=PaperAutonomyReason.SIGNAL_NOT_ACTIVE,
-            reason="all required providers must be ACTIVE",
+    states = {signal.state for signal in ordered}
+    exploration_mode = False
+    if states != {SignalState.ACTIVE}:
+        exploration_eligible_states = (
+            selected_policy.allow_watch_exploration
+            and states.issubset({SignalState.ACTIVE, SignalState.WATCH})
+            and SignalState.ACTIVE in states
         )
+        if not exploration_eligible_states:
+            return _hold_from_signals(
+                policy=selected_policy,
+                signals=ordered,
+                evaluated_at_ms=evaluated_at_ms,
+                activation_cutoff_ms=activation_cutoff_ms,
+                symbol=symbol,
+                reason_code=PaperAutonomyReason.SIGNAL_NOT_ACTIVE,
+                reason=(
+                    "required providers are not eligible for the selected "
+                    "policy lane"
+                ),
+            )
+        exploration_mode = True
 
     directions = {signal.direction for signal in ordered}
     if len(directions) != 1:
@@ -356,9 +414,10 @@ def evaluate_autonomy_policy(
             reason="required providers disagree on signal direction",
         )
 
+    minimum_support = 1 if exploration_mode else 2
     if any(
         signal.geometry is None
-        or signal.agreement.support_method_count < 2
+        or signal.agreement.support_method_count < minimum_support
         or signal.agreement.opposing_method_count != 0
         for signal in ordered
     ):
@@ -369,7 +428,10 @@ def evaluate_autonomy_policy(
             activation_cutoff_ms=activation_cutoff_ms,
             symbol=symbol,
             reason_code=PaperAutonomyReason.ACTIVE_CONTRACT_MISMATCH,
-            reason="ACTIVE signal does not satisfy the independent-support contract",
+            reason=(
+                "signal set does not satisfy the selected policy lane "
+                "support contract"
+            ),
         )
 
     allowed_flags = set(selected_policy.allowed_uncertainty_flags)
@@ -438,9 +500,15 @@ def evaluate_autonomy_policy(
                 reason_code=PaperAutonomyReason.MISSING_MARK_PRICE,
                 reason="NAV cannot be reconstructed from current paper positions",
             )
-        risk_budget = (
-            nav * selected_policy.max_position_risk_fraction
-        ).quantize(_RISK_BUDGET_QUANTUM, rounding=ROUND_DOWN)
+        risk_fraction = (
+            selected_policy.exploration_position_risk_fraction
+            if exploration_mode
+            else selected_policy.max_position_risk_fraction
+        )
+        risk_budget = (nav * risk_fraction).quantize(
+            _RISK_BUDGET_QUANTUM,
+            rounding=ROUND_DOWN,
+        )
         if risk_budget <= Decimal(0):
             return _hold_from_signals(
                 policy=selected_policy,
@@ -461,10 +529,19 @@ def evaluate_autonomy_policy(
                 signal.freeze_identity for signal in ordered
             ),
             source_as_of_ms=source_as_of_ms,
-            reason_code=PaperAutonomyReason.BUY_ELIGIBLE,
+            reason_code=(
+                PaperAutonomyReason.EXPLORATION_BUY_ELIGIBLE
+                if exploration_mode
+                else PaperAutonomyReason.BUY_ELIGIBLE
+            ),
             reason=(
-                "fresh ACTIVE bullish Bybit/Binance consensus passed the "
-                "autonomy eligibility and cooldown gates"
+                "fresh same-direction 1h ACTIVE/WATCH provider pair passed "
+                "bounded exploration gates"
+                if exploration_mode
+                else (
+                    "fresh ACTIVE bullish Bybit/Binance consensus passed the "
+                    "autonomy eligibility and cooldown gates"
+                )
             ),
             max_position_risk_usdt=risk_budget,
             execution_input_required=True,
@@ -492,10 +569,19 @@ def evaluate_autonomy_policy(
                 signal.freeze_identity for signal in ordered
             ),
             source_as_of_ms=source_as_of_ms,
-            reason_code=PaperAutonomyReason.EXIT_ELIGIBLE,
+            reason_code=(
+                PaperAutonomyReason.EXPLORATION_EXIT_ELIGIBLE
+                if exploration_mode
+                else PaperAutonomyReason.EXIT_ELIGIBLE
+            ),
             reason=(
-                "fresh ACTIVE bearish Bybit/Binance consensus may close the "
-                "existing long position"
+                "fresh same-direction 1h ACTIVE/WATCH provider pair may close "
+                "the existing paper long"
+                if exploration_mode
+                else (
+                    "fresh ACTIVE bearish Bybit/Binance consensus may close the "
+                    "existing long position"
+                )
             ),
             max_position_risk_usdt=Decimal(0),
             execution_input_required=True,
