@@ -49,6 +49,7 @@ DEFAULT_CANDLE_CACHE_PATH = (
 )
 STATIC_DIR = Path(__file__).with_name("static")
 PRODUCT_VERSION = "full-version-contextual-evidence/1"
+LIVE_DATA_STALE_AFTER_MS = 45 * 60 * 1000
 
 
 def _json(value: Any, *, status_code: int = 200) -> JSONResponse:
@@ -148,6 +149,27 @@ def create_app(
 
     @app.get("/api/health")
     def health() -> dict[str, object]:
+        latest_signal_frozen_at_ms: int | None = None
+        signal_data_age_ms: int | None = None
+        data_freshness_status = "unavailable"
+
+        if selected_path.exists():
+            try:
+                command = reader.command_center(recent_limit=1)
+                latest_signal_frozen_at_ms = command.latest_frozen_at_ms
+                if latest_signal_frozen_at_ms is None:
+                    data_freshness_status = "empty"
+                else:
+                    now_ms = time.time_ns() // 1_000_000
+                    signal_data_age_ms = max(0, now_ms - latest_signal_frozen_at_ms)
+                    data_freshness_status = (
+                        "fresh"
+                        if signal_data_age_ms <= LIVE_DATA_STALE_AFTER_MS
+                        else "stale"
+                    )
+            except DashboardReadError:
+                data_freshness_status = "invalid"
+
         return {
             "status": "ok",
             "product_version": PRODUCT_VERSION,
@@ -158,6 +180,10 @@ def create_app(
                 and selected_alert_path.exists()
             ),
             "read_only": True,
+            "latest_signal_frozen_at_ms": latest_signal_frozen_at_ms,
+            "signal_data_age_ms": signal_data_age_ms,
+            "data_freshness_status": data_freshness_status,
+            "data_stale_after_ms": LIVE_DATA_STALE_AFTER_MS,
         }
 
     @app.get("/api/command-center")
