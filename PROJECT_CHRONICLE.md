@@ -2759,3 +2759,37 @@ recovery owner. Do not create a duplicate recovery while it is in progress.
 The recovery contract remains fail-closed: exactly one SSD listener, zero SSD Workers,
 three >=90% CPU samples on the same PID, identity recheck before TERM/KILL, exactly one
 new listener afterward, then queue/health/freshness verification. REAL_CAPITAL=0.
+
+
+## 2026-09-22 — R15 + continuity state-first reconciliation after transient listener multiplicity
+
+State was rebuilt from READ_FIRST, CURRENT_STATUS, Chronicle, GitHub Actions and fresh
+UID501 host evidence rather than prior chat memory.
+
+R15 hosted branch hardening is current through:
+- aged idle-spin gate `35724089582` PASS;
+- exact self-match-safe listener gate `35724497074` PASS.
+
+The live UID504 runner is still a separate open incident. Fresh process forensics at
+~15:03 +0300 showed exactly one canonical SSD listener PID 99399, no UID504
+Runner.Worker, ~97% CPU and ~12h40 elapsed. Exact ancestry was:
+`/bin/bash ./runsvc.sh` PID 65421 -> `./externals/node20/bin/node ./bin/RunnerService.js`
+PID 65425 -> canonical SSD `Runner.Listener` PID 99399. Earlier transient listeners
+88601/88615 were no longer present. UID504 allowlisted job `35721769431` remained
+queued, therefore process existence is not treated as health.
+
+All previous one-shot live recovery runs are completed failures and are stale as
+continuation owners. They either failed before mutation or fail-closed on ambiguous
+listener multiplicity. No active recovery owner remains.
+
+Continuity was also rechecked read-only. Shared relay is RUNNING, namespace
+`crypto-signal`, bound to the expected ChatGPT URL, shared wake queue=0. The shared
+`user_pause` latch still exists with `user_pause_epoch=1790006250`; according to
+`pause_continuity.py` / `resume_continuity.py`, its presence means continuity remains
+PAUSED. The UID501 account cannot read the local SSD continuity tree, so local lease
+counts reported through inaccessible paths are not treated as authoritative. Resume
+must remove both local/shared pause latches state-first and create a fresh exact re-arm;
+archived wakes/leases must never be replayed.
+
+The post-04:00 market-data incident remains CLOSED/RECOVERED and is not conflated with
+the runner incident. REAL_CAPITAL=0.
