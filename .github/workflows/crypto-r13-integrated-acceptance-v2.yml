@@ -35,9 +35,11 @@ jobs:
           test "$(git -C "$DEV" rev-parse origin/main)" = "${{ github.sha }}"
           git -C "$DEV" merge --ff-only "${{ github.sha }}"
           test "$(git -C "$DEV" rev-parse HEAD)" = "${{ github.sha }}"
-          test "$(git -C "$PRODUCT" rev-parse HEAD)" = "f15cbafd9f4359d385eca097a6a2635bf815ded1"
+          PRODUCT_HEAD="$(git -C "$PRODUCT" rev-parse HEAD)"
+          git -C "$DEV" diff --quiet "$PRODUCT_HEAD" "${{ github.sha }}" -- \
+            src/crypto_signal/product ops/run_dashboard.py
           echo "R13_EXACT_MAIN_DEVELOPMENT_PASS=YES"
-          echo "R13_ACCEPTED_PRODUCT_HEAD_PASS=YES"
+          echo "R13_PRODUCT_CODE_PARITY_PASS=YES product_head=$PRODUCT_HEAD"
 
       - name: Full repository and static authority gate
         shell: bash
@@ -46,8 +48,8 @@ jobs:
           DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
           cd "$DEV"
           ./.venv/bin/python -m pytest -q
-          ./.venv/bin/python -m ruff check src tests
-          ./.venv/bin/python -m mypy src
+          ./.venv/bin/python -m ruff check src tests ops/verify_stage10_integrated.py ops/r13_integrated_acceptance.py
+          ./.venv/bin/python -m mypy src ops/verify_stage10_integrated.py ops/r13_integrated_acceptance.py
           node --check src/crypto_signal/product/static/freshness.js
           node --check src/crypto_signal/product/static/app.js
           node tests/js/test_product_freshness.js
@@ -105,6 +107,18 @@ jobs:
           grep -F 'KISACA' "$INDEX" >/dev/null
           grep -F 'İSTİHBARAT LABORATUVARI' "$INDEX" >/dev/null
           echo "R13_LIVE_PRODUCT_GIFT_RESEARCH_TRUTH_PASS=YES"
+
+      - name: Canonical live integrated runtime verifier
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
+          PYTHONPATH="$DEV/src" "$DEV/.venv/bin/python" \
+            "$DEV/ops/r13_integrated_acceptance.py" \
+            --root "/Volumes/Crypto-504/Crypto-Signal" \
+            | tee /tmp/r13-integrated-runtime.log
+          grep -F 'R13_INTEGRATED_RUNTIME_VERIFIER_PASS=YES' /tmp/r13-integrated-runtime.log >/dev/null
+          echo "R13_CANONICAL_RUNTIME_VERIFIER_PASS=YES"
 
       - name: Read-only auto-refresh endurance and stale semantics
         shell: bash
