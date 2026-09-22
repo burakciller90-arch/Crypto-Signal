@@ -137,6 +137,20 @@ process_cwd() {
     | /usr/bin/head -1
 }
 
+runner_process_origin_ok() {
+  local pid="$1"
+  local cwd=""
+  cwd="$(process_cwd "$pid")"
+  if [ "$cwd" = "$RUNNER" ]; then
+    return 0
+  fi
+  if [ "$cwd" = "cwd|rtd info error: No such file or directory" ]; then
+    log "RUNNER_ORPHAN_STALE_CWD_ACCEPTED=YES pid=$pid"
+    return 0
+  fi
+  return 1
+}
+
 runner_orphan_service_pids() {
   local service=""
   local wrapper=""
@@ -160,7 +174,7 @@ runner_orphan_service_pids() {
     | while read -r service; do
         [ -n "$service" ] || continue
         service_cwd="$(process_cwd "$service")"
-        [ "$service_cwd" = "$RUNNER" ] || continue
+        runner_process_origin_ok "$service" || continue
 
         wrapper="$(/bin/ps -p "$service" -o ppid= 2>/dev/null | /usr/bin/tr -d ' ')"
         [ -n "$wrapper" ] || continue
@@ -173,7 +187,7 @@ runner_orphan_service_pids() {
         [ "$wrapper_user" = "crypto-signal-agent" ] || continue
 
         wrapper_cwd="$(process_cwd "$wrapper")"
-        [ "$wrapper_cwd" = "$RUNNER" ] || continue
+        runner_process_origin_ok "$wrapper" || continue
 
         printf '%s\n' "$service"
       done
@@ -202,7 +216,7 @@ stop_orphan_runner_parent_tree() {
     return 1
   }
   cwd="$(process_cwd "$service")"
-  [ "$cwd" = "$RUNNER" ] || {
+  runner_process_origin_ok "$service" || {
     err "RUNNER_ORPHAN_STOP_ABORT=SERVICE_CWD_CHANGED service=$service cwd=$cwd"
     return 1
   }
@@ -213,7 +227,7 @@ stop_orphan_runner_parent_tree() {
     return 1
   }
   cwd="$(process_cwd "$wrapper")"
-  [ "$cwd" = "$RUNNER" ] || {
+  runner_process_origin_ok "$wrapper" || {
     err "RUNNER_ORPHAN_STOP_ABORT=WRAPPER_CWD_CHANGED wrapper=$wrapper cwd=$cwd"
     return 1
   }
@@ -244,7 +258,7 @@ stop_orphan_runner_parent_tree() {
     command="$(/bin/ps -p "$service" -o command= 2>/dev/null || true)"
     cwd="$(process_cwd "$service")"
     [ "$command" = "./externals/node20/bin/node ./bin/RunnerService.js" ] || return 1
-    [ "$cwd" = "$RUNNER" ] || return 1
+    runner_process_origin_ok "$service" || return 1
     /bin/kill -9 "$service" >/dev/null 2>&1 || true
   fi
 
@@ -252,7 +266,7 @@ stop_orphan_runner_parent_tree() {
     command="$(/bin/ps -p "$wrapper" -o command= 2>/dev/null || true)"
     cwd="$(process_cwd "$wrapper")"
     [ "$command" = "/bin/bash ./runsvc.sh" ] || return 1
-    [ "$cwd" = "$RUNNER" ] || return 1
+    runner_process_origin_ok "$wrapper" || return 1
     /bin/kill -9 "$wrapper" >/dev/null 2>&1 || true
   fi
 
