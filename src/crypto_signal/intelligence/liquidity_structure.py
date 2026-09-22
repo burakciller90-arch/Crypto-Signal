@@ -61,24 +61,24 @@ class LiquidityStructureConfig:
             raise ValueError("rapid withdrawal lifetime must be positive")
         if self.hidden_liquidity_min_replenishment_cycles < 1:
             raise ValueError("hidden-liquidity replenishment cycles must be positive")
-        for label, value, inclusive_zero in (
-            ("persistent_presence_fraction", self.persistent_presence_fraction, False),
-            ("rapid_withdrawal_min_fraction", self.rapid_withdrawal_min_fraction, False),
+        for label, value in (
+            ("persistent_presence_fraction", self.persistent_presence_fraction),
+            ("rapid_withdrawal_min_fraction", self.rapid_withdrawal_min_fraction),
             (
                 "hidden_liquidity_min_replenishment_fraction",
                 self.hidden_liquidity_min_replenishment_fraction,
-                False,
             ),
         ):
-            _require_finite(value, label)
-            lower_ok = value > Decimal(0) if not inclusive_zero else value >= Decimal(0)
-            if not lower_ok or value > Decimal(1):
+            if value.is_nan() or value.is_infinite():
+                raise ValueError(f"{label} must be finite")
+            if not Decimal(0) < value <= Decimal(1):
                 raise ValueError(f"{label} must be inside (0,1]")
         for label, value in (
             ("material_notional_multiple", self.material_notional_multiple),
             ("approach_bps", self.approach_bps),
         ):
-            _require_finite(value, label)
+            if value.is_nan() or value.is_infinite():
+                raise ValueError(f"{label} must be finite")
             if value <= Decimal(0):
                 raise ValueError(f"{label} must be positive")
 
