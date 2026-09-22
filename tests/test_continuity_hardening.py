@@ -9,17 +9,22 @@ def _read(path: str) -> str:
     return (ROOT / path).read_text()
 
 
-def test_fallback_is_exact_owner_only_and_pause_dominant() -> None:
+def test_locked_20m_fallback_is_state_first_and_pause_dominant() -> None:
     recurring = _read("ops/continuity/recurring_wake.py")
     bridge = _read("ops/continuity/bridge_watchdog.py")
     arm = _read("ops/continuity/continuation_arm.sh")
     enqueue = _read("ops/continuity/wake_enqueue.sh")
     resume = _read("ops/continuity/resume_continuity.py")
 
-    assert "WAKE_SKIPPED_NO_EXACT_CONTINUATION_OWNER=YES" in recurring
-    assert "WAKE_SKIPPED_ACTIVE_WORKER_OWNER=YES" in recurring
-    assert "WAKE_FAIL_MULTIPLE_CONTINUATION_OWNERS=YES" in recurring
-    assert "CRYPTO_SIGNAL_CONTINUE_EXACT" in recurring
+    assert "WAKE_MESSAGE =" in recurring
+    assert "HAFIZANA GÜVENME" in recurring
+    assert "docs/V1_1_LOCKED_MASTER_ROADMAP_20260922.md" in recurring
+    assert "crypto-20m-locked-roadmap:" in recurring
+    assert "CRYPTO_LOCKED_20M_WAKE_PASS=YES" in recurring
+    assert "WAKE_SKIPPED_USER_PAUSE=YES" in recurring
+    assert "WAKE_SKIPPED_NO_EXACT_CONTINUATION_OWNER=YES" not in recurring
+    assert "WAKE_SKIPPED_ACTIVE_WORKER_OWNER=YES" not in recurring
+    assert "WAKE_FAIL_MULTIPLE_CONTINUATION_OWNERS=YES" not in recurring
     assert "CRYPTO_SIGNAL_AUTONOMOUS_CONTINUE_V1" not in recurring
     assert 'SHARED_PAUSE_FILE = Path("/Users/Shared/.crypto-signal-wake-relay/user_pause")' in bridge
     assert 'SHARED_PAUSE_FILE="/Users/Shared/.crypto-signal-wake-relay/user_pause"' in arm
@@ -29,7 +34,7 @@ def test_fallback_is_exact_owner_only_and_pause_dominant() -> None:
     assert "ARCHIVED_STALE_REPLAY=NO" in resume
 
 
-def test_relay_is_namespace_bound_and_never_stops_busy_chat() -> None:
+def test_relay_is_namespace_bound_and_stops_only_exact_locked_wake() -> None:
     submit = _read("ops/continuity/relay_submit.py")
     daemon = _read("ops/continuity/relay_daemon.py")
     direct = _read("ops/continuity/wake_chatgpt.py")
@@ -41,8 +46,11 @@ def test_relay_is_namespace_bound_and_never_stops_busy_chat() -> None:
     assert "decode_relay_event" in daemon
     assert 'EXPECTED_TARGET_FILE = SHARED / "expected_chat_url"' in daemon
     assert "EXPECTED_TARGET_URL" not in daemon
+    assert "LOCKED_WAKE_MESSAGE =" in daemon
+    assert "exact_locked_wake = message == LOCKED_WAKE_MESSAGE" in daemon
+    assert 'if not exact_locked_wake:' in daemon
     assert 'return False, "CHATGPT_BUSY"' in daemon
-    assert "STOP_CLICKED" not in daemon
+    assert "STOP_CLICKED" in daemon
     assert "project_namespace={PROJECT_NAMESPACE}" in daemon
     assert "relay_protocol={RELAY_PROTOCOL}" in daemon
     assert "require_exact_binding" in direct
