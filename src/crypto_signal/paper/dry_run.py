@@ -19,6 +19,7 @@ from crypto_signal.ledger.serialization import canonical_sha256
 from crypto_signal.paper.activation import PaperActivationState
 from crypto_signal.paper.autonomy import (
     PaperAutonomyDecision,
+    PaperAutonomyPolicy,
     evaluate_autonomy_policy,
 )
 from crypto_signal.paper.event_scanner import PaperSignalEventCandidate
@@ -511,6 +512,7 @@ def evaluate_paper_activation_dry_run(
     paper_ledger_path: Path,
     candle_cache_path: Path,
     evaluated_at_ms: int,
+    autonomy_policy: PaperAutonomyPolicy | None = None,
 ) -> PaperActivationDryRunResult:
     """Evaluate one unprocessed scanner event through pretrade without writes."""
     if event.real_capital != REAL_CAPITAL or activation.real_capital != REAL_CAPITAL:
@@ -541,6 +543,7 @@ def evaluate_paper_activation_dry_run(
             Exchange.BINANCE: event.source_cutoff_open_time_ms,
             Exchange.BYBIT: event.source_cutoff_open_time_ms,
         },
+        policy=autonomy_policy,
     )
     if autonomy.candidate_action is PaperAction.HOLD_CASH:
         return _result(
