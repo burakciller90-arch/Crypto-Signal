@@ -9,6 +9,44 @@ REAL_CAPITAL: 0
 
 ## Active v1.1 frontier — read before historical sections
 
+### M2 LIQUIDITY INTELLIGENCE 2.0 — SLICE 4 OBSERVED LIQUIDATION HEATMAP ACCEPTED / STACKED
+
+- PR #789 on `v1.1-liquidation-heatmap-v2-slice4` is accepted on top of accepted M2 Slice 3.
+- Authoritative hosted acceptance run `35779834837` PASS.
+- Focused M2 tests/Ruff/mypy PASS; full repository pytest/Ruff/mypy/JS/freshness PASS.
+- Adds immutable liquidation observations, explicit feed-coverage evidence, deterministic Bybit all-liquidation normalization and a PIT-safe observed bankruptcy-price heatmap.
+- Provider semantics are explicit: Bybit `S=Buy` means a **long position was liquidated**; `S=Sell` means a **short position was liquidated**.
+- A zero-event heatmap is measurable only when coverage proves the full requested window was observed.
+- `estimated_leverage_concentration_status=NOT_ESTIMATED`.
+- `liquidation_risk_zone_status=NOT_ESTIMATED`.
+- Observed liquidation history is not presented as future liquidation risk, exact retail stops, actor intent or manipulation.
+- No live liquidation collector or production Market Tape mutation was activated.
+- REAL_CAPITAL=0.
+
+Current M2 safe-development frontier:
+- wire the accepted liquidation evidence model into a bounded public-linear feed collector and Market Tape v2 persistence/replay path;
+- hosted/replay acceptance first;
+- any live production collector activation remains a separate human-impact/production gate;
+- after M2 persistence/live-readiness closeout, advance the primary Intelligence rail to M3 Order Flow & Absorption 2.0.
+
+### GALACTECH CAPITAL CENTER — SLICE 1 MERGED TO MAIN
+
+- PR #788 hosted acceptance run `35778976263` PASS.
+- PR #788 squash-merged to main as `53acc7decda9f4b5bf7b6588a1687a7178e925d1`.
+- Product now separates:
+  - Epoch 1 immutable legacy history at **100 USDT**;
+  - Epoch 2 accepted current program contract at **1,000 USDT**;
+  - the paper runtime ledger actually configured on the Product process.
+- Epoch 2 vault architecture is visible as **Core 600 / Tactical 300 / Opportunity Reserve 100 USDT**.
+- Runtime binding is not treated as proof that Epoch 2 is activated.
+- Existing runtime NAV/PnL/positions remain separate from the Epoch 2 program contract.
+- No Epoch 2 ledger was created, no paper cutover occurred and no production UI deploy occurred.
+- REAL_CAPITAL=0.
+
+Current Product frontier:
+- GALACTECH Market Workspace v2 provider-truth slice is in development from current main;
+- then Archive -> Performance/Trust -> Learn/System refinement under the locked Product path.
+
 ### M2 LIQUIDITY INTELLIGENCE 2.0 — SLICE 2 ACCEPTED / STACKED
 
 - PR #777 on `v1.1-liquidity-structure-v2-slice2` is accepted on top of accepted M2 Slice 1.
