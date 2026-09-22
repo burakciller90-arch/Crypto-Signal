@@ -9,6 +9,16 @@ REAL_CAPITAL: 0
 
 ## Active v1.1 frontier — read before historical sections
 
+### EXECUTION TOOLING — CURSOR / COMPOSER DISABLED
+
+- User reaffirmed on 2026-09-23: **do not assign project work to Cursor workers or Cursor Composer**.
+- Reason recorded by user: repeated errors and slower project delivery.
+- No new `[CURSOR] WORK` / `[CURSOR] ASK` tasks, Composer jobs or `supervisor-*` Cursor worktrees.
+- Historical Cursor output is non-authoritative audit evidence only and must not be resumed.
+- Active safe-development path: direct supervisor implementation through GitHub branches/PRs, hosted acceptance gates and narrowly scoped UID504 read-only/runtime verification when needed.
+- Cursor may be inspected read-only only for stale-state reconciliation.
+- REAL_CAPITAL=0.
+
 
 ### EXECUTION TOOLING — CURSOR WORKERS / COMPOSER DISABLED BY USER
 
