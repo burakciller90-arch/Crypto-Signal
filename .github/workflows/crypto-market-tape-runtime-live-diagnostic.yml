@@ -40,8 +40,23 @@ jobs:
           echo "=== SERVICE LOG DIR ==="
           sudo -n -H -u "$USER504" /bin/ls -la "$ROOT/ServiceLogs" 2>&1 | /usr/bin/tail -80 || true
 
-          echo "=== LAUNCHCTL ==="
-          sudo -n -H -u "$USER504" /bin/launchctl print "gui/504/$LABEL" 2>&1 |             /usr/bin/egrep 'state =|pid =|runs =|last exit code =|program =|path =|throttle|spawn' |             /usr/bin/head -120 || true
+          echo "=== EXACT PATHS ==="
+          sudo -n -H -u "$USER504" /bin/ls -ldeO             "$ROOT" "$ROOT/Development" "$ROOT/Development/.venv"             "$ROOT/Development/.venv/bin"             "$ROOT/Development/.venv/bin/python"             "$STABLE" "$STABLE/ops" "$STABLE/ops/run_market_tape_runtime.py"             "$ROOT/ServiceLogs" 2>&1 || true
+          sudo -n -H -u "$USER504" /usr/bin/readlink "$ROOT/Development/.venv/bin/python" 2>&1 || true
+          sudo -n -H -u "$USER504" /usr/bin/file "$ROOT/Development/.venv/bin/python" 2>&1 || true
+
+          echo "=== EXACT PYTHON PROBE ==="
+          sudo -n -H -u "$USER504" /usr/bin/env             HOME=/Users/crypto-signal-agent             PYTHONPATH="$STABLE/src"             "$ROOT/Development/.venv/bin/python"             "$STABLE/ops/run_market_tape_runtime.py" --help 2>&1 || true
+
+          echo "=== PLIST LINT ==="
+          sudo -n -H -u "$USER504" /usr/bin/plutil -lint             "/Users/crypto-signal-agent/Library/LaunchAgents/$LABEL.plist" 2>&1 || true
+
+          echo "=== LAUNCHCTL FULL ==="
+          sudo -n -H -u "$USER504" /bin/launchctl print "gui/504/$LABEL" 2>&1 | /usr/bin/head -260 || true
+          sudo -n -H -u "$USER504" /bin/launchctl print-disabled "gui/504" 2>&1 | /usr/bin/grep -F "$LABEL" || true
+
+          echo "=== LAUNCHD LOG ==="
+          /usr/bin/log show --last 8m --style compact             --predicate 'process == "launchd" AND eventMessage CONTAINS "com.cryptosignal.markettape"'             2>&1 | /usr/bin/tail -120 || true
 
           echo "=== PROCESSES ==="
           /bin/ps -axo pid=,ppid=,user=,etime=,%cpu=,%mem=,command= |             /usr/bin/grep '[r]un_market_tape_runtime.py' || true
