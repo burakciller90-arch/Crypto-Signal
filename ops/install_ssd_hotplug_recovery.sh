@@ -523,7 +523,7 @@ start_runner() {
   local orphan_count=0
   local orphan_service=""
   orphan_services="$(runner_orphan_service_pids)"
-  orphan_count="$(printf '%s\n' "$orphan_services" | count_lines)"
+  orphan_count="$(printf '%s\n' "$orphan_services" | /usr/bin/awk 'NF {n++} END {print n+0}')"
   if [ "$orphan_count" -gt 1 ]; then
     err "RUNNER_ORPHAN_STOP_ABORT=AMBIGUOUS services=$orphan_services"
     return 1
