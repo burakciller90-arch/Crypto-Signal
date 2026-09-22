@@ -20,8 +20,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          rm -rf /tmp/crypto-hotcold-bench /tmp/crypto-hotcold-venv
-          mkdir -p /tmp/crypto-hotcold-bench
+          sudo -n -H -u crypto-signal-agent /bin/rm -rf /tmp/crypto-hotcold-bench /tmp/crypto-hotcold-venv || true
+          sudo -n -H -u crypto-signal-agent /bin/mkdir -p /tmp/crypto-hotcold-bench
           sudo -n -H -u crypto-signal-agent /Users/crypto-signal-agent/.local/bin/uv venv             --python 3.12 /tmp/crypto-hotcold-venv
           sudo -n -H -u crypto-signal-agent /Users/crypto-signal-agent/.local/bin/uv pip install             --python /tmp/crypto-hotcold-venv/bin/python             "pyarrow>=18,<23" "zstandard>=0.23,<1"
 
