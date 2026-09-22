@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import AsyncIterable
+from collections.abc import AsyncGenerator, AsyncIterable
 from dataclasses import dataclass
 
 from crypto_signal.data.adapters.bybit_microstructure_ws import (
@@ -56,55 +56,60 @@ async def persist_bybit_wire_stream(
     trades_unchanged = 0
     last_orderbook_bucket: dict[str, int] = {}
 
-    async for event in events:
-        raw_disposition, _ = raw_store.append(
-            exchange=Exchange.BYBIT,
-            channel=event.channel,
-            symbol=event.symbol,
-            event_kind=event.event_kind,
-            source_timestamp_ms=event.source_timestamp_ms,
-            event_at_ms=event.event_at_ms,
-            ingested_at_ms=event.ingested_at_ms,
-            sequence=event.sequence,
-            update_id=event.update_id,
-            payload=event.raw_payload,
-        )
-        if raw_disposition is RawMarketTapeWriteDisposition.INSERTED:
-            raw_inserted += 1
-        else:
-            raw_unchanged += 1
-
-        if event.orderbook is not None:
-            bucket = event.event_at_ms // orderbook_snapshot_interval_ms
-            previous_bucket = last_orderbook_bucket.get(event.symbol)
-            persist_snapshot = (
-                event.event_kind == "snapshot"
-                or previous_bucket is None
-                or bucket > previous_bucket
+    iterator = events.__aiter__()
+    try:
+        async for event in iterator:
+            raw_disposition, _ = raw_store.append(
+                exchange=Exchange.BYBIT,
+                channel=event.channel,
+                symbol=event.symbol,
+                event_kind=event.event_kind,
+                source_timestamp_ms=event.source_timestamp_ms,
+                event_at_ms=event.event_at_ms,
+                ingested_at_ms=event.ingested_at_ms,
+                sequence=event.sequence,
+                update_id=event.update_id,
+                payload=event.raw_payload,
             )
-            if persist_snapshot:
-                disposition = store.append_orderbook(event.orderbook)
-                if disposition is MarketTapeWriteDisposition.INSERTED:
-                    orderbooks_inserted += 1
-                else:
-                    orderbooks_unchanged += 1
-                last_orderbook_bucket[event.symbol] = max(
-                    bucket,
-                    previous_bucket if previous_bucket is not None else bucket,
+            if raw_disposition is RawMarketTapeWriteDisposition.INSERTED:
+                raw_inserted += 1
+            else:
+                raw_unchanged += 1
+
+            if event.orderbook is not None:
+                bucket = event.event_at_ms // orderbook_snapshot_interval_ms
+                previous_bucket = last_orderbook_bucket.get(event.symbol)
+                persist_snapshot = (
+                    event.event_kind == "snapshot"
+                    or previous_bucket is None
+                    or bucket > previous_bucket
                 )
-            else:
-                orderbooks_skipped_by_cadence += 1
+                if persist_snapshot:
+                    disposition = store.append_orderbook(event.orderbook)
+                    if disposition is MarketTapeWriteDisposition.INSERTED:
+                        orderbooks_inserted += 1
+                    else:
+                        orderbooks_unchanged += 1
+                    last_orderbook_bucket[event.symbol] = max(
+                        bucket,
+                        previous_bucket if previous_bucket is not None else bucket,
+                    )
+                else:
+                    orderbooks_skipped_by_cadence += 1
 
-        for trade in event.trades:
-            disposition = store.append_trade(trade)
-            if disposition is MarketTapeWriteDisposition.INSERTED:
-                trades_inserted += 1
-            else:
-                trades_unchanged += 1
+            for trade in event.trades:
+                disposition = store.append_trade(trade)
+                if disposition is MarketTapeWriteDisposition.INSERTED:
+                    trades_inserted += 1
+                else:
+                    trades_unchanged += 1
 
-        observed_messages += 1
-        if max_messages is not None and observed_messages >= max_messages:
-            break
+            observed_messages += 1
+            if max_messages is not None and observed_messages >= max_messages:
+                break
+    finally:
+        if isinstance(iterator, AsyncGenerator):
+            await iterator.aclose()
 
     return MarketTapeWireCollectionResult(
         observed_messages=observed_messages,
