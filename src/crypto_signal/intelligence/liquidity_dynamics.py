@@ -5,7 +5,6 @@ from dataclasses import dataclass
 from decimal import Decimal
 from enum import StrEnum
 from itertools import pairwise
-from itertools import pairwise
 
 from crypto_signal.data.microstructure import OrderBookLevel, OrderBookSnapshot
 from crypto_signal.data.models import Exchange, MarketType
