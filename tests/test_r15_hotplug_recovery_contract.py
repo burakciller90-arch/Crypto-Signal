@@ -36,8 +36,10 @@ def test_r15_hotplug_recovery_is_transition_aware() -> None:
 def test_r15_runner_hang_detection_is_bounded() -> None:
     text = SCRIPT.read_text(encoding="utf-8")
     assert 'RUNNER_HANG_CPU_MIN=50' in text
+    assert 'RUNNER_HANG_MIN_AGE_SECONDS=600' in text
     assert 'RUNNER_HANG_STREAK_LIMIT=6' in text
     assert 'runner_worker_alive' in text
+    assert 'runner_elapsed_seconds' in text
     assert 'if runner_worker_alive; then' in text
     assert 'reset_runner_hang_state' in text
     assert 'RUNNER_HANG_DETECTED=YES' in text
