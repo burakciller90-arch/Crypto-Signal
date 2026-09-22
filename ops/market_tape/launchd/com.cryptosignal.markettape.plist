@@ -7,18 +7,9 @@
 
   <key>ProgramArguments</key>
   <array>
-    <string>/Volumes/Crypto-504/Crypto-Signal/Development/.venv/bin/python</string>
-    <string>/Volumes/Crypto-504/Crypto-Signal/MarketTape/ops/run_market_tape_runtime.py</string>
+    <string>/bin/bash</string>
+    <string>/Volumes/Crypto-504/Crypto-Signal/MarketTape/ops/market_tape/run_market_tape_launchd.sh</string>
   </array>
-
-  <key>WorkingDirectory</key>
-  <string>/Volumes/Crypto-504/Crypto-Signal/MarketTape</string>
-
-  <key>EnvironmentVariables</key>
-  <dict>
-    <key>PYTHONPATH</key>
-    <string>/Volumes/Crypto-504/Crypto-Signal/MarketTape/src</string>
-  </dict>
 
   <key>RunAtLoad</key>
   <true/>
