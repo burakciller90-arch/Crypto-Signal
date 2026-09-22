@@ -2,7 +2,7 @@ name: Crypto 20m Continuity Wake
 
 on:
   schedule:
-    - cron: "0,20,40 * * * *"
+    - cron: "*/5 * * * *"
   workflow_dispatch:
 
 permissions:
@@ -14,38 +14,86 @@ concurrency:
 
 jobs:
   wake:
-    name: UID504 20m continuity fallback wake
+    name: UID504 rolling-20m watchdog and emergency fallback
     runs-on: [self-hosted, crypto-signal, uid504]
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
-      - name: Send fallback only when local timer is stale
+      - name: Heal local rolling timer or send emergency fallback
         shell: bash
         run: |
           set -euo pipefail
+          INSTALL="$HOME/Library/Application Support/CryptoSignal/continuity20m"
+          RUNTIME="$INSTALL/runtime"
+          TIMER="$INSTALL/interval_wake_daemon.py"
+          PIDFILE="$RUNTIME/rolling_wake.pid"
+          STATUS="$RUNTIME/rolling_wake_status"
+          HEARTBEAT="$RUNTIME/rolling_wake_heartbeat"
           STATE="/Volumes/Crypto-504/Crypto-Signal/Development/runtime/continuity"
-          LAST="$STATE/recurring_wake_last_local_attempt"
+          SHARED="/Users/Shared/.crypto-signal-wake-relay"
 
-          if [ "${{ github.event_name }}" = "schedule" ]; then
-            NOW="$(date +%s)"
-            LAST_EPOCH="0"
-            if [ -f "$LAST" ]; then
-              LAST_EPOCH="$(sed -n 's/^epoch=//p' "$LAST" | head -1)"
+          if [ "\${{ github.event_name }}" = "schedule" ]; then
+            if [ -f "$STATE/user_pause" ] || [ -f "$SHARED/user_pause" ]; then
+              echo "GITHUB_WATCHDOG_USER_PAUSED=YES"
+              exit 0
             fi
-            if [[ "$LAST_EPOCH" =~ ^[0-9]+$ ]] && [ "$LAST_EPOCH" -gt 0 ]; then
-              AGE="$((NOW - LAST_EPOCH))"
-              echo "LOCAL_WAKE_AGE_SECONDS=$AGE"
-              if [ "$AGE" -ge 0 ] && [ "$AGE" -le 600 ]; then
-                echo "LOCAL_20M_TIMER_RECENT=YES"
-                echo "GITHUB_FALLBACK_SKIPPED=YES"
-                exit 0
+
+            NOW="$(date +%s)"
+            PID="$(cat "$PIDFILE" 2>/dev/null || true)"
+            HB="$(cat "$HEARTBEAT" 2>/dev/null || true)"
+            TIMER_STATE="$(sed -n 's/^state=//p' "$STATUS" 2>/dev/null | head -1)"
+            INTERVAL="$(sed -n 's/^interval_seconds=//p' "$STATUS" 2>/dev/null | head -1)"
+            HEALTHY=0
+            if [ -n "$PID" ] && kill -0 "$PID" >/dev/null 2>&1 \
+              && [[ "$HB" =~ ^[0-9]+$ ]] && [ "$INTERVAL" = "1200" ]; then
+              AGE="$((NOW-HB))"
+              echo "ROLLING_TIMER_HEARTBEAT_AGE_SECONDS=$AGE"
+              if [ "$AGE" -ge 0 ] && [ "$AGE" -le 30 ] \
+                && [[ "$TIMER_STATE" =~ ^(RUNNING|RETRYING|WAITING_FOR_RUNTIME|PAUSED)$ ]]; then
+                HEALTHY=1
               fi
             fi
+            if [ "$HEALTHY" = "1" ]; then
+              echo "GITHUB_WATCHDOG_TIMER_HEALTHY=YES"
+              echo "GITHUB_FALLBACK_SKIPPED=YES"
+              exit 0
+            fi
 
-            /usr/bin/python3 "$GITHUB_WORKSPACE/ops/continuity/recurring_wake.py"
-            echo "GITHUB_FALLBACK_WAKE_ATTEMPTED=YES"
+            echo "GITHUB_WATCHDOG_TIMER_HEALTHY=NO"
+            if [ -f "$TIMER" ]; then
+              if [ -n "$PID" ] && kill -0 "$PID" >/dev/null 2>&1; then
+                TIMER_UID="$(ps -p "$PID" -o uid= 2>/dev/null | tr -d ' ' || true)"
+                TIMER_CMD="$(ps -p "$PID" -o command= 2>/dev/null || true)"
+                if [ "$TIMER_UID" = "504" ] && printf '%s' "$TIMER_CMD" | grep -F "$TIMER" >/dev/null; then
+                  kill "$PID" >/dev/null 2>&1 || true
+                  for _ in {1..20}; do
+                    kill -0 "$PID" >/dev/null 2>&1 || break
+                    sleep 0.25
+                  done
+                fi
+              fi
+              rm -f "$PIDFILE"
+              (
+                unset RUNNER_TRACKING_ID
+                exec /usr/bin/python3 "$TIMER"
+              ) >>"$RUNTIME/rolling_wake.out.log" 2>>"$RUNTIME/rolling_wake.err.log" </dev/null &
+              for _ in {1..15}; do
+                NEW_PID="$(cat "$PIDFILE" 2>/dev/null || true)"
+                NEW_HB="$(cat "$HEARTBEAT" 2>/dev/null || true)"
+                if [ -n "$NEW_PID" ] && kill -0 "$NEW_PID" >/dev/null 2>&1 \
+                  && [[ "$NEW_HB" =~ ^[0-9]+$ ]] && [ "$(( $(date +%s) - NEW_HB ))" -le 30 ]; then
+                  echo "GITHUB_WATCHDOG_TIMER_RESTARTED=YES pid=$NEW_PID"
+                  exit 0
+                fi
+                sleep 1
+              done
+            fi
+
+            EVENT_ID="crypto-20m-emergency:\${GITHUB_RUN_ID}:\${GITHUB_RUN_ATTEMPT}"
+            /usr/bin/python3 "$GITHUB_WORKSPACE/ops/continuity/recurring_wake.py" "$EVENT_ID"
+            echo "GITHUB_EMERGENCY_FALLBACK_WAKE_ATTEMPTED=YES"
           else
-            EVENT_ID="crypto-20m-continuity-manual:${GITHUB_RUN_ID}:${GITHUB_RUN_ATTEMPT}"
+            EVENT_ID="crypto-20m-continuity-manual:\${GITHUB_RUN_ID}:\${GITHUB_RUN_ATTEMPT}"
             /usr/bin/python3 "$GITHUB_WORKSPACE/ops/continuity/recurring_wake.py" "$EVENT_ID"
             echo "MANUAL_20M_WAKE_ATTEMPTED=YES"
           fi
