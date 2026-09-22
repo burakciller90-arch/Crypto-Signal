@@ -4,7 +4,7 @@ Updated: 2026-09-22
 Project: Crypto Signal
 Baseline: crypto-signal-full-version-v1.0.0 (immutable)
 Active post-v1.0 program: v1.1 world-class product + market intelligence
-State: DATA_FRESHNESS_RECOVERED / R15_RUNNER_RECOVERY_BLOCKED / PARALLEL_V1_1_DEVELOPMENT_ACTIVE
+State: DATA_FRESHNESS_RECOVERED / R15_LIVE_RUNNER_HANG_OPEN / CONTINUITY_PAUSED / PARALLEL_V1_1_DEVELOPMENT_ACTIVE
 REAL_CAPITAL: 0
 
 ## Active v1.1 frontier — read before historical sections
@@ -24,9 +24,12 @@ Runtime evidence:
 - Dashboard health returned status=ok, ledger_present=true, read_only=true and REAL_CAPITAL=0.
 - SSD supervisor/dashboard processes are present.
 - **Separate remaining R15 blocker:** UID504 SSD GitHub `Runner.Listener` was rechecked at 14:26:28 +0300 at 100% CPU, state RN, ~12h elapsed. Process existence is not accepted as runner health.
-- Hang-aware R15 branch hardening full gate PASS: run `35722280704`.
-- Exactly one live recovery owner is active: `Crypto UID501 R15 Runner Recovery 20260922`, run `35722829376`. It performs exact listener identity checks, requires zero Worker processes, takes three high-CPU samples, then restarts only the verified stuck runner after explicit local admin authorization. Do not create a duplicate recovery while this run is active.
-- UID501 filesystem access to the existing Crypto-504 tree is still blocked until the owner-preserving ACL command is authorized; this remains useful for direct DB/log forensics but is no longer required to prove the 04:00 data cut recovered.
+- R15 hosted hardening now includes ancestry-aware service-tree verification, aged idle-spin detection and exact self-match-safe listener detection. Latest hosted PASS: exact-listener gate run `35724497074`; aged idle-spin gate `35724089582` also passed.
+- Live runner remains unresolved: at 2026-09-22 ~15:03 +0300 the canonical SSD listener was again exactly one PID `99399`, ~97% CPU, ~12h40 elapsed, no UID504 Runner.Worker, ancestry `runsvc.sh 65421 -> RunnerService.js 65425 -> Runner.Listener 99399`.
+- UID504 allowlisted diagnostic run `35721769431` remains queued, so process presence is still not accepted as runner health.
+- Previous one-shot recovery runs are completed/failed and are **not active owners**. They either failed before mutation or fail-closed on transient listener multiplicity.
+- Continuity is currently **PAUSED** by contract: shared `user_pause` exists with `user_pause_epoch=1790006250`; relay is RUNNING on namespace `crypto-signal`, bound to the expected chat, and shared wake queue is 0. Local SSD continuity tree remains unreadable from UID501, so exact local lease counts require UID504/ACL access.
+- UID501 filesystem access to the existing Crypto-504 tree is still blocked until the owner-preserving ACL command is authorized; this remains useful for direct DB/log and continuity forensics but is no longer required to prove the 04:00 data cut recovered.
 
 Product architecture:
 - Track A: world-class UI/UX.
