@@ -298,23 +298,37 @@ detached UID504 bridge. This limitation is explicit rather than hidden.
 Branch/hotfix gates, merged Stage10, canonical R12 runtime acceptance and UID504
 exact-head fulltest all passed. REAL_CAPITAL=0.
 
+## R13 Full Version Integrated Acceptance v2 — ACCEPTED
+
+R13 is **ACCEPTED** at
+`f95efc358ac396e50d0bfdb920b0187706cd2af2`.
+
+Canonical run `35672790463` passed exact-main/Development consistency,
+Product-code parity, full repository gates, SSD runtime/recovery evidence, live
+Gift Edition/Research Lab truth, canonical runtime verification, 30-cycle
+refresh/stale semantics, paper reconstruction/cost/slippage/benchmark evidence,
+PIT/leakage boundaries, beginner evidence consistency, Research Lab isolation
+and paused continuity.
+
+REAL_CAPITAL=0 and exchange-order/credential authority remain closed. Physical
+reboot/logout/SSD detach-remount remain explicit human-impact items and were not
+falsely claimed as tested.
+
 ## Canonical next frontier
 
-`stage13-full-version-integrated-acceptance-v2`
+`stage14-final-release-documentation-v1`
 
 Requirements:
 
-- full repository gate and exact-main/Development consistency;
-- stable live Product health and accepted Gift Edition shell;
-- accepted R11 runtime recovery evidence plus current runtime health;
-- auto-refresh and stale/freshness semantics;
-- paper-ledger reconstruction and deterministic fee/spread/slippage accounting;
-- leakage/PIT checks and benchmark correctness;
-- beginner usability and explanation/evidence consistency;
-- Research Lab / shadow meta-intelligence isolation;
-- SSD-only path/freshness checks with no legacy internal fallback;
-- REAL_CAPITAL=0 and no exchange-order / credential authority;
-- physical reboot/logout/SSD detach remain explicit human-impact items unless separately performed; do not fabricate PASS.
+- freeze the final accepted repository commit with
+  `crypto-signal-full-version-v1.0.0`;
+- include final release manifest, operator runbook, dashboard recovery guide,
+  SSD backup/recovery guide and known authority gates;
+- require exact current main before tag creation;
+- refuse tag drift and force-push;
+- create/verify the GitHub Release from the immutable tag;
+- preserve all R13 authority and human-impact boundaries;
+- REAL_CAPITAL=0.
 
 ## Safety boundary
 
