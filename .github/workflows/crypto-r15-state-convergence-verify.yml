@@ -1,0 +1,57 @@
+name: Crypto R15 State Convergence Verify
+
+on:
+  push:
+    branches:
+      - r15-ssd-hotplug-recovery-v1
+    paths:
+      - ".github/workflows/crypto-r15-state-convergence-verify.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: [self-hosted, crypto-signal, uid501]
+    timeout-minutes: 10
+    steps:
+      - name: Wait one watchdog window
+        run: sleep 30
+      - name: Verify state and health through UID504 bridge
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          LOCAL="/Users/crypto-signal-agent/Library/Application Support/CryptoSignalRecovery"
+
+          echo "=== UID504 STATE ==="
+          state="$(sudo -n -H -u crypto-signal-agent /bin/cat "$LOCAL/ssd-state")"
+          echo "STATE=$state"
+
+          echo "=== HOTPLUG LAUNCHAGENT ==="
+          sudo -n -H -u crypto-signal-agent /bin/launchctl print gui/504/com.cryptosignal.ssd-hotplug-recovery 2>&1 | head -160 || true
+
+          echo "=== HEALTH ==="
+          curl -fsS --max-time 5 http://127.0.0.1:48700/api/health | tee /tmp/r15-state-health.json
+
+          echo "=== SQLITE ==="
+          for db in             "$ROOT/Development/runtime/ledger/live_signal_ledger.sqlite3"             "$ROOT/Development/runtime/data/live_base_15m_cache.sqlite3"             "$ROOT/Development/runtime/paper/paper_fund.sqlite3"             "$ROOT/Development/runtime/alerts/alert_outbox.sqlite3"
+          do
+            result="$(sqlite3 "$db" 'PRAGMA quick_check;')"
+            echo "$db $result"
+            test "$result" = "ok"
+          done
+
+          echo "=== LATEST RECOVERY LOG ==="
+          sudo -n -H -u crypto-signal-agent /usr/bin/tail -80 "/Users/crypto-signal-agent/Library/Logs/CryptoSignalRecovery/hotplug-watchdog.log"
+          sudo -n -H -u crypto-signal-agent /usr/bin/tail -80 "/Users/crypto-signal-agent/Library/Logs/CryptoSignalRecovery/hotplug-watchdog.err.log" || true
+
+          test "$state" = "ready"
+          python3 - <<'PY'
+          import json
+          data=json.load(open("/tmp/r15-state-health.json"))
+          assert data.get("status") == "ok"
+          assert data.get("real_capital") == 0
+          assert data.get("read_only") is True
+          PY
+          echo "R15_STATE_CONVERGENCE_PASS=YES"
