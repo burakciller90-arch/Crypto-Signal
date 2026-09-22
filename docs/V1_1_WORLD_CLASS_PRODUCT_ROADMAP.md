@@ -1,6 +1,7 @@
 # Crypto Signal v1.1 — World-Class Product & Market Intelligence Roadmap
 
 Status: **implementation roadmap**
+Governing detail: **`docs/V1_1_MASTER_EXECUTION_ROADMAP.md`**
 Baseline: **Full Version v1.0.0 frozen**
 Baseline tag: `crypto-signal-full-version-v1.0.0`
 Safety invariant: **REAL_CAPITAL=0**
@@ -330,6 +331,42 @@ The system must never say an exact future path is guaranteed.
 
 Archive must show the original forecast text, issuance time and later outcome
 side by side.
+
+## 7.5 — Live Intelligence Feed / Decision Proof
+
+User concept name: **Proof-of-Thought**.
+
+Implementation contract: do **not** expose or fabricate private chain-of-thought.
+Persist and show only the evidence that legitimately explains a market decision:
+
+- timestamped decision/forecast event;
+- condition/trigger;
+- horizon;
+- target zone;
+- invalidation;
+- supporting evidence;
+- contradictory evidence;
+- stale/missing evidence;
+- exact model/policy versions;
+- frozen chart/microstructure evidence references;
+- canonical/shadow/research authority;
+- later immutable outcome resolution.
+
+The user experience is a social-feed-like **Intelligence Timeline** with two explanation
+layers:
+
+1. **Simple Turkish:** concise market-mechanics explanation for a non-expert.
+2. **Technical evidence:** CVD/order flow/liquidity/derivatives/geometry/regime details,
+   exact timestamps and evidence identities.
+
+Both layers must derive from the same structured evidence. The simple layer may reduce
+jargon but may never strengthen certainty.
+
+Forecast cards preserve original text forever. Later results are appended beside the
+original statement rather than rewriting it.
+
+This feed is the bridge between Market Intelligence, Forecast Stream, Paper Portfolio,
+Archive and Learn.
 
 ## 8. R21 — Canonical Paper Fund + Shadow Lab
 
