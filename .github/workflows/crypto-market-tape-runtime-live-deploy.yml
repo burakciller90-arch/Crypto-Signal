@@ -29,7 +29,7 @@ jobs:
           printf '%s\n' "$GITHUB_SHA" >"$STAGE/BUILD_COMMIT"
           (
             cd "$STAGE"
-            shasum -a 256               ops/run_market_tape_runtime.py               ops/install_market_tape_runtime.sh               ops/market_tape/launchd/com.cryptosignal.markettape.plist               src/crypto_signal/data/market_tape_runtime.py               src/crypto_signal/data/market_tape_retention.py               src/crypto_signal/data/market_tape_wire_collection.py               > BUILD_SHA256SUMS
+            shasum -a 256               ops/run_market_tape_runtime.py               ops/install_market_tape_runtime.sh               ops/market_tape/run_market_tape_launchd.sh               ops/market_tape/launchd/com.cryptosignal.markettape.plist               src/crypto_signal/data/market_tape_runtime.py               src/crypto_signal/data/market_tape_retention.py               src/crypto_signal/data/market_tape_wire_collection.py               > BUILD_SHA256SUMS
           )
           chmod -R a+rX "$STAGE"
           echo "STAGE_BUILD_COMMIT=$GITHUB_SHA"
@@ -54,6 +54,7 @@ jobs:
           test -d "$STAGE/src/crypto_signal"
           test -f "$STAGE/ops/run_market_tape_runtime.py"
           test -f "$STAGE/ops/install_market_tape_runtime.sh"
+          test -f "$STAGE/ops/market_tape/run_market_tape_launchd.sh"
 
           rm -rf "$NEXT"
           mkdir -p "$NEXT"
@@ -117,26 +118,26 @@ jobs:
           DOMAIN="gui/$(id -u)"
 
           echo "=== LAUNCHD ==="
-          launchctl print "$DOMAIN/$LABEL" | egrep 'state =|pid =|runs =|last exit code =|program =|path =' | head -120
+          launchctl print "$DOMAIN/$LABEL" 2>&1 | egrep 'state =|pid =|runs =|last exit code =|program =|path =' | head -120 || true
 
           expected_script="$ROOT/MarketTape/ops/run_market_tape_runtime.py"
-          count="$(ps -axo user=,command= | awk -v user="crypto-signal-agent" -v script="$expected_script" '$1==user && index($0,script)>0 {n++} END{print n+0}')"
-          echo "MARKET_TAPE_RUNTIME_PROCESS_COUNT=$count"
-          test "$count" = "1"
-
           before="$(sqlite3 "$RAW" 'SELECT COUNT(*) FROM raw_market_events;')"
           echo "RAW_ROWS_ACCEPTANCE_BEFORE=$before"
 
           ready=0
-          for _ in {1..75}; do
-            test -s "$STATUS" || { sleep 1; continue; }
-            state="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("state",""))' "$STATUS")"
-            updated="$(python3 -c 'import json,sys; print(int(json.load(open(sys.argv[1])).get("updated_at_epoch",0)))' "$STATUS")"
-            now="$(date +%s)"
-            age=$((now-updated))
-            if [ "$age" -ge 0 ] && [ "$age" -le 90 ] && { [ "$state" = "collecting_chunk" ] || [ "$state" = "collecting" ]; }; then
+          count=0
+          after="$before"
+          for _ in {1..90}; do
+            count="$(ps -axo user=,command= | awk -v user="crypto-signal-agent" -v script="$expected_script" '$1==user && index($0,script)>0 {n++} END{print n+0}')"
+            if [ "$count" = "1" ] && [ -s "$STATUS" ]; then
+              state="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("state",""))' "$STATUS")"
+              updated="$(python3 -c 'import json,sys; print(int(json.load(open(sys.argv[1])).get("updated_at_epoch",0)))' "$STATUS")"
+              now="$(date +%s)"
+              age=$((now-updated))
               after="$(sqlite3 "$RAW" 'SELECT COUNT(*) FROM raw_market_events;')"
-              if [ "$after" -gt "$before" ]; then
+              if [ "$age" -ge 0 ] && [ "$age" -le 90 ] \
+                && { [ "$state" = "collecting_chunk" ] || [ "$state" = "collecting" ]; } \
+                && [ "$after" -gt "$before" ]; then
                 ready=1
                 break
               fi
@@ -144,8 +145,9 @@ jobs:
             sleep 1
           done
 
-          after="$(sqlite3 "$RAW" 'SELECT COUNT(*) FROM raw_market_events;')"
+          echo "MARKET_TAPE_RUNTIME_PROCESS_COUNT=$count"
           echo "RAW_ROWS_ACCEPTANCE_AFTER=$after"
+          test "$count" = "1"
           test "$ready" = "1"
           test "$after" -gt "$before"
 
