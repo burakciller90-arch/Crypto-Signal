@@ -107,6 +107,8 @@ def test_binding_writers_and_installers_use_ssd_canonical_state() -> None:
     assert "WAITING_FOR_RUNTIME" in rolling
     assert "RETRY_SECONDS = 5" in rolling
     assert "interval_wake_daemon.py" in installer
+    assert '".github/workflows/crypto-20m-continuity-wake.yml"' not in installer
+    assert '".github/workflows/crypto-install-local-20m-wake.yml"' not in installer
     assert "--reset" in installer
     assert "LEGACY_CALENDAR_TIMERS_DISABLED=YES" in installer
     assert "LOCAL_20M_WAKE_MODE=rolling-daemon" in installer
