@@ -2825,3 +2825,47 @@ wake files. The shared `user_pause` marker is still present. The UID504
 UID501 cannot read the local SSD continuity tree, so a visible local lease count of
 zero is not treated as authoritative. Pause remains dominant; no new wake/lease was
 armed and continuity was not unpaused.
+
+## 2026-09-22 — R15 physical SSD recovery accepted; runtime blocker closed
+
+A real physical KIOXIA SSD detach/remount acceptance was completed for Crypto Signal.
+
+Detach evidence:
+- /dev/disk4 and /Volumes/Crypto-504 became absent;
+- dashboard health became unreachable, preventing stale SSD evidence from being served;
+- watchdog recorded SSD_STATE=MISSING;
+- the canonical Runner.Listener disappeared;
+- an orphan parent tree survived detach: /bin/bash ./runsvc.sh PID 65421 -> RunnerService.js PID 65425.
+
+The physical test exposed a real edge case: the surviving parent tree retained relative commands while its former SSD cwd became a revoked "No such file or directory" reference. R15 was hardened to recognize that detach-stale origin only when exact UID504 ownership, exact wrapper/service commands, zero active Worker, zero Listener and unambiguous ancestry all agree. Ambiguous cases remain fail-closed.
+
+Live recovery evidence:
+- RUNNER_ORPHAN_PARENT_DETECTED=YES service=65425;
+- RUNNER_ORPHAN_PARENT_STOP_REQUESTED wrapper=65421 service=65425;
+- RUNNER_ORPHAN_PARENT_STOP_PASS=YES wrapper=65421 service=65425 forced=YES;
+- canonical recovery converged to one healthy UID504 Listener;
+- idempotent watchdog live acceptance run 35746415162 passed with Listener PID 44162 unchanged across two installer reloads;
+- UID504 truth verification run 35746575186 passed with ssd-state=ready, dashboard status=ok, read_only=true and REAL_CAPITAL=0;
+- ledger, candle cache, paper fund and alert outbox SQLite PRAGMA quick_check all returned ok.
+
+Privilege boundary:
+- a persistent UID501 -> UID504 project-maintenance sudo bridge was installed;
+- independent verification after sudo timestamp invalidation proved UID504 NOPASSWD access works;
+- passwordless root remains denied;
+- this removes repeated password prompts for Crypto Signal maintenance without granting unrestricted root.
+
+Final repository acceptance:
+- hosted full regression run 35747330090 PASS;
+- temporary diagnostic/acceptance workflows were removed;
+- PR #715 final tree SHA returned exactly to 3a25bbcb9a5849951ec71960c3a78c653f257d02;
+- PR #715 final diff is exactly:
+  - .github/workflows/crypto-r15-hotplug-recovery.yml
+  - ops/install_ssd_hotplug_recovery.sh
+  - tests/test_r15_hotplug_recovery_contract.py
+
+R15 operational acceptance is CLOSED.
+The v1.0.0 baseline remains immutable and PR #715 is not merged as part of this operational closure.
+Continuity remains PAUSED by user contract.
+Canonical development frontier returns to M2 Liquidity Dynamics on top of the accepted Market Tape / microstructure foundation.
+REAL_CAPITAL remains 0.
+
