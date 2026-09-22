@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import AsyncIterable
 from dataclasses import dataclass
 from typing import Protocol
 
@@ -103,4 +104,61 @@ async def collect_bybit_market_tape_snapshot(
             item is MarketTapeWriteDisposition.UNCHANGED
             for item in derivative_results
         ),
+    )
+
+
+@dataclass(frozen=True, slots=True)
+class MarketTapeStreamCollectionResult:
+    observed_events: int
+    orderbooks_inserted: int
+    orderbooks_unchanged: int
+    trades_inserted: int
+    trades_unchanged: int
+
+    @property
+    def inserted_total(self) -> int:
+        return self.orderbooks_inserted + self.trades_inserted
+
+
+async def persist_market_tape_stream(
+    *,
+    store: MarketTapeStore,
+    events: AsyncIterable[OrderBookSnapshot | PublicTradeObservation],
+    max_events: int | None = None,
+) -> MarketTapeStreamCollectionResult:
+    if max_events is not None and max_events <= 0:
+        raise ValueError("market tape max_events must be positive when provided")
+
+    observed_events = 0
+    orderbooks_inserted = 0
+    orderbooks_unchanged = 0
+    trades_inserted = 0
+    trades_unchanged = 0
+
+    async for event in events:
+        if isinstance(event, OrderBookSnapshot):
+            disposition = store.append_orderbook(event)
+            if disposition is MarketTapeWriteDisposition.INSERTED:
+                orderbooks_inserted += 1
+            else:
+                orderbooks_unchanged += 1
+        elif isinstance(event, PublicTradeObservation):
+            disposition = store.append_trade(event)
+            if disposition is MarketTapeWriteDisposition.INSERTED:
+                trades_inserted += 1
+            else:
+                trades_unchanged += 1
+        else:
+            raise TypeError("unsupported Market Tape stream event")
+
+        observed_events += 1
+        if max_events is not None and observed_events >= max_events:
+            break
+
+    return MarketTapeStreamCollectionResult(
+        observed_events=observed_events,
+        orderbooks_inserted=orderbooks_inserted,
+        orderbooks_unchanged=orderbooks_unchanged,
+        trades_inserted=trades_inserted,
+        trades_unchanged=trades_unchanged,
     )
