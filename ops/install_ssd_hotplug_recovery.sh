@@ -32,6 +32,9 @@ RUNNER="$ROOT/Runner"
 LOCAL_ROOT="$HOME/Library/Application Support/CryptoSignalRecovery"
 LOCAL_LOG="$HOME/Library/Logs/CryptoSignalRecovery"
 STATE_FILE="$LOCAL_ROOT/ssd-state"
+RUNNER_HANG_FILE="$LOCAL_ROOT/runner-hang-state"
+RUNNER_HANG_CPU_MIN=90
+RUNNER_HANG_STREAK_LIMIT=3
 LOCK_DIR="$LOCAL_ROOT/watchdog.lock"
 LOG="$LOCAL_LOG/hotplug-watchdog.log"
 ERR="$LOCAL_LOG/hotplug-watchdog.err.log"
@@ -97,8 +100,73 @@ supervisor_alive() {
   /bin/ps -axo command= 2>/dev/null     | /usr/bin/grep -F "$ROOT/ssd-service-supervisor.sh"     | /usr/bin/grep -v grep >/dev/null 2>&1
 }
 
+runner_listener_pid() {
+  /bin/ps -axo pid=,command= 2>/dev/null \
+    | /usr/bin/awk -v needle="$RUNNER/bin/Runner.Listener run --startuptype service" \
+        'index($0, needle) {print $1; exit}'
+}
+
 runner_alive() {
-  /bin/ps -axo command= 2>/dev/null     | /usr/bin/grep -F "$RUNNER/bin/Runner.Listener run --startuptype service"     | /usr/bin/grep -v grep >/dev/null 2>&1
+  [ -n "$(runner_listener_pid)" ]
+}
+
+runner_worker_alive() {
+  /bin/ps -axo command= 2>/dev/null \
+    | /usr/bin/grep -F "$RUNNER/bin/Runner.Worker" \
+    | /usr/bin/grep -v grep >/dev/null 2>&1
+}
+
+reset_runner_hang_state() {
+  printf 'pid=\nstreak=0\n' >"$RUNNER_HANG_FILE"
+}
+
+runner_hang_detected() {
+  local pid=""
+  local cpu_raw=""
+  local cpu_int=0
+  local previous_pid=""
+  local previous_streak=0
+  local streak=0
+
+  pid="$(runner_listener_pid)"
+  if [ -z "$pid" ]; then
+    reset_runner_hang_state
+    return 1
+  fi
+
+  if runner_worker_alive; then
+    reset_runner_hang_state
+    return 1
+  fi
+
+  cpu_raw="$(/bin/ps -p "$pid" -o %cpu= 2>/dev/null | /usr/bin/tr -d ' ' || true)"
+  cpu_int="$(/usr/bin/awk -v value="${cpu_raw:-0}" 'BEGIN {printf "%d\n", value + 0}')"
+
+  if [ -f "$RUNNER_HANG_FILE" ]; then
+    previous_pid="$(/usr/bin/sed -n 's/^pid=//p' "$RUNNER_HANG_FILE" | /usr/bin/head -1)"
+    previous_streak="$(/usr/bin/sed -n 's/^streak=//p' "$RUNNER_HANG_FILE" | /usr/bin/head -1)"
+  fi
+  case "$previous_streak" in
+    ''|*[!0-9]*) previous_streak=0 ;;
+  esac
+
+  if [ "$cpu_int" -ge "$RUNNER_HANG_CPU_MIN" ]; then
+    if [ "$previous_pid" = "$pid" ]; then
+      streak=$((previous_streak + 1))
+    else
+      streak=1
+    fi
+  else
+    streak=0
+  fi
+
+  printf 'pid=%s\nstreak=%s\ncpu=%s\n' "$pid" "$streak" "$cpu_int" >"$RUNNER_HANG_FILE"
+
+  if [ "$streak" -ge "$RUNNER_HANG_STREAK_LIMIT" ]; then
+    log "RUNNER_HANG_DETECTED=YES pid=$pid cpu=$cpu_int streak=$streak worker=NO"
+    return 0
+  fi
+  return 1
 }
 
 dashboard_healthy() {
@@ -143,7 +211,12 @@ start_runner() {
   local force_restart="$1"
 
   if [ "$force_restart" != "YES" ] && runner_alive; then
-    return 0
+    if runner_hang_detected; then
+      force_restart="YES"
+      log "RUNNER_HANG_RECOVERY_REQUESTED=YES"
+    else
+      return 0
+    fi
   fi
 
   if [ "$force_restart" = "YES" ]; then
@@ -166,6 +239,7 @@ start_runner() {
     nohup ./runsvc.sh       >>"$ROOT/RunnerLogs/hotplug-runner.out.log"       2>>"$ROOT/RunnerLogs/hotplug-runner.err.log"       </dev/null &
     echo $! >"$ROOT/ssd-runner-hotplug.pid"
   )
+  reset_runner_hang_state
   log "RUNNER_RESTART_REQUESTED=YES force=$force_restart"
   return 0
 }
