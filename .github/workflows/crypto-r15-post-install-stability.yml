@@ -1,0 +1,93 @@
+name: Crypto R15 Post Install Stability
+
+on:
+  push:
+    branches:
+      - r15-ssd-hotplug-recovery-v1
+    paths:
+      - ".github/workflows/crypto-r15-post-install-stability.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: R15 post-install UID504 stability
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 10
+    steps:
+      - name: Verify watchdog stability across cycles
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          LOCAL="$HOME/Library/Application Support/CryptoSignalRecovery"
+          LABEL="com.cryptosignal.ssd-hotplug-recovery"
+          TARGET="gui/$(id -u)/$LABEL"
+          EXPECTED="$ROOT/Runner/bin/Runner.Listener run --startuptype service"
+
+          listener_pids() {
+            ps -axo pid=,command= | awk -v expected="$EXPECTED" '
+              {
+                pid=$1
+                sub(/^[[:space:]]*[0-9]+[[:space:]]+/, "", $0)
+                if ($0 == expected) print pid
+              }'
+          }
+
+          echo "=== OWNER ==="
+          launchctl print "$TARGET" | egrep 'state =|runs =|last exit code =|run interval =|path =' | head -100
+
+          for legacy in             com.cryptosignal.github-runner-terminal-watchdog             com.cryptosignal.github-runner-ssd             actions.runner.burakciller90-arch-Crypto-Signal.crypto-signal-uid504
+          do
+            if launchctl print "gui/$(id -u)/$legacy" >/dev/null 2>&1; then
+              echo "LEGACY_STILL_LOADED=$legacy"
+              exit 41
+            fi
+          done
+
+          before="$(listener_pids)"
+          before_count="$(printf '%s\n' "$before" | awk 'NF{n++} END{print n+0}')"
+          echo "BEFORE_LISTENER_COUNT=$before_count"
+          echo "BEFORE_LISTENER_PID=$before"
+          test "$before_count" = "1"
+
+          echo "=== BEFORE PROCESS TREE ==="
+          listener="$before"
+          service="$(ps -p "$listener" -o ppid= | tr -d ' ')"
+          wrapper="$(ps -p "$service" -o ppid= | tr -d ' ')"
+          ps -p "$wrapper","$service","$listener" -o pid=,ppid=,user=,%cpu=,%mem=,etime=,state=,command=
+          test "$(ps -p "$listener" -o user= | tr -d ' ')" = "crypto-signal-agent"
+          test "$(ps -p "$service" -o command=)" = "./externals/node20/bin/node ./bin/RunnerService.js"
+          test "$(ps -p "$wrapper" -o command=)" = "/bin/bash ./runsvc.sh"
+
+          echo "=== ACTIVE WORKER ==="
+          ps -axo pid=,ppid=,user=,%cpu=,%mem=,etime=,state=,command=             | grep -F "$ROOT/Runner/bin/Runner.Worker" | grep -v grep || true
+
+          echo "=== R15 STATE/LOG BEFORE ==="
+          cat "$LOCAL/ssd-state" 2>/dev/null || true
+          cat "$LOCAL/runner-hang-state" 2>/dev/null || true
+          tail -80 "$HOME/Library/Logs/CryptoSignalRecovery/hotplug-watchdog.log" 2>/dev/null || true
+          tail -80 "$HOME/Library/Logs/CryptoSignalRecovery/hotplug-watchdog.err.log" 2>/dev/null || true
+
+          sleep 65
+
+          after="$(listener_pids)"
+          after_count="$(printf '%s\n' "$after" | awk 'NF{n++} END{print n+0}')"
+          echo "AFTER_LISTENER_COUNT=$after_count"
+          echo "AFTER_LISTENER_PID=$after"
+          test "$after_count" = "1"
+          test "$after" = "$before"
+
+          echo "=== HEALTH ==="
+          curl -fsS --max-time 5 http://127.0.0.1:48700/api/health
+          echo
+
+          echo "=== R15 STATE/LOG AFTER ==="
+          cat "$LOCAL/ssd-state" 2>/dev/null || true
+          cat "$LOCAL/runner-hang-state" 2>/dev/null || true
+          tail -80 "$HOME/Library/Logs/CryptoSignalRecovery/hotplug-watchdog.log" 2>/dev/null || true
+          tail -80 "$HOME/Library/Logs/CryptoSignalRecovery/hotplug-watchdog.err.log" 2>/dev/null || true
+
+          echo "R15_POST_INSTALL_STABILITY_PASS=YES"
+          echo "REAL_CAPITAL=0"
