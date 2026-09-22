@@ -1,5 +1,7 @@
 name: Crypto R15 Live Bridge Install
 
+# retry: deterministic orphan candidate count
+
 on:
   push:
     branches:
