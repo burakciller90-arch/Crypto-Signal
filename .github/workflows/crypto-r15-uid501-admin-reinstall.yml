@@ -37,7 +37,7 @@ jobs:
           SH
           chmod 700 /tmp/crypto-r15-admin-wrapper.sh
           CMD='do shell script "/bin/bash /tmp/crypto-r15-admin-wrapper.sh" with administrator privileges'
-          /bin/launchctl asuser 501 /usr/bin/osascript -e "$CMD"
+          /usr/bin/osascript -e "$CMD"
       - name: Verify UID504 recovery
         shell: bash
         run: |
