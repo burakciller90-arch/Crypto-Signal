@@ -3094,3 +3094,98 @@ Current contract:
 The message additionally requires every material action/update to be recorded in GitHub so the next agent can recover state without relying on memory.
 
 REAL_CAPITAL remains 0 by the locked roadmap and project safety constitution even though the exact visible wake text now delegates that safety fact to READ_FIRST/CURRENT_STATUS/locked-roadmap reconciliation.
+
+
+---
+
+## 2026-09-22 — M2 LIQUIDITY STRUCTURE SLICE 2 ACCEPTED
+
+M2 advanced beyond the already accepted temporal Liquidity Dynamics Slice 1 without
+rewriting that engine.
+
+Accepted Slice 2:
+- persistent bid/ask liquidity level evidence;
+- per-level presence fraction and survival;
+- appearance/cancellation notional and velocity;
+- depletion/replenishment and refresh cycles;
+- same-side materiality;
+- bounded persistent-liquidity-pool candidates;
+- bounded spoofing candidates;
+- bounded hidden-liquidity candidates.
+
+Scientific boundary:
+- candidate labels are observation-only and do not prove actor intent or manipulation;
+- hidden-liquidity candidates require later M3 trade-flow confirmation;
+- late/future-ingested snapshots cannot rewrite historical evidence freezes;
+- stale/insufficient/gapped/depth-deficient evidence fails closed;
+- no production weighting or trade authority was added.
+
+Acceptance evidence:
+- PR #777;
+- authoritative hosted run `35775951219` PASS;
+- focused M2 pytest/Ruff/mypy PASS;
+- full repository pytest/Ruff/mypy/JS/freshness PASS;
+- temporary hosted workflow removed after PASS;
+- final intended PR diff contains only the Slice 2 spec, engine and tests.
+
+PR #777 remains stacked on accepted M2 Slice 1 and was not force-merged into main.
+REAL_CAPITAL=0.
+
+
+---
+
+## 2026-09-22 — GALACTECH COMMAND CENTER SLICE 1 ACCEPTED AND MERGED
+
+The locked from-scratch Product rebuild began from clean current main rather than
+continuing the diverged legacy UI branch.
+
+Accepted product structure:
+- GALACTECH // CRYPTO SIGNAL brand shell;
+- left command rail;
+- COMMAND / MARKETS / INTELLIGENCE / CAPITAL / ARCHIVE / PERFORMANCE / LEARN / SYSTEM;
+- sparse situation strip;
+- Live Intelligence Feed;
+- Critical Radar;
+- Market Workspace;
+- full-screen Evidence Room shell;
+- deep-space semantic design system;
+- responsive and reduced-motion behavior.
+
+Truth/compatibility boundary:
+- existing read-only backend/API semantics preserved;
+- existing JS evidence hooks preserved;
+- no fake LIVE/latency/probability/whale/spoofing truth added;
+- exact visible `SİMÜLASYON · GERÇEK SERMAYE YOK` contract preserved;
+- no production UI deployment/cutover performed.
+
+Acceptance evidence:
+- PR #778;
+- authoritative hosted run `35775974132` PASS;
+- focused Product pytest/Ruff/mypy/JS/freshness PASS;
+- full repository regression PASS;
+- temporary hosted workflow removed after PASS;
+- final diff limited to Product HTML/CSS/JS plus dashboard contract tests;
+- squash merge to main: `9a6c65ee24dc00a5855d5792e013a53cb869e2de`.
+
+Legacy diverged PR #722 is superseded by this clean line and must not be used as the next
+frontend development base. REAL_CAPITAL=0.
+
+
+---
+
+## 2026-09-22 — CONTINUITY STATE-FIRST RECONCILIATION
+
+Read-only self-hosted reconcile run `35776041344` observed:
+- shared relay state = RUNNING;
+- relay PID = 24847;
+- fresh heartbeat at the reconcile point;
+- exact current ChatGPT target URL matched the locked conversation;
+- historical archived pause evidence exists, but no conclusion of active pause is drawn from
+  that archive path.
+
+Worker probe run `35776042781` confirmed the Cursor app and UID504 Cursor CLI are present.
+That probe does not prove an active worker, so worker activity is not inferred from tool
+installation. A separate read-only status reconcile was issued as GitHub issue #781.
+
+The user-reaffirmed 20-minute continuity loop remains ACTIVE and must not be disabled
+without an explicit pause/stop instruction. REAL_CAPITAL=0.
