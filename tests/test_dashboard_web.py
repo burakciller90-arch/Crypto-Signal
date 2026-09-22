@@ -292,6 +292,18 @@ def test_health_and_static_shell_without_ledger(tmp_path: Path) -> None:
     assert "frictionless referanslardır" in script.text
     assert 'id="paperPortfolioExposure"' in index.text
     assert 'id="paperPerformanceLab"' in index.text
+    assert "PERFORMANCE & TRUST CENTER" in index.text
+    assert 'id="trustOverview"' in index.text
+    assert 'id="trustPaperPerformance"' in index.text
+    assert 'id="trustCalibration"' in index.text
+    assert "FORECAST EVIDENCE" in index.text
+    assert "PAPER TRACK RECORD" in index.text
+    assert "PROBABILITY CALIBRATION" in index.text
+    assert "NOT CALIBRATED" in index.text
+    assert "function renderTrustOverview(performance, paperMission)" in script.text
+    assert "Win rate = %0 değildir." in script.text
+    assert "R19 kabul edilmeden yüzde olasılık yok" in script.text
+    assert "Forecast hit-rate veya confluence burada paper başarı metriği sayılmaz." in script.text
     assert "ARCHIVE / PROOF WALL" in index.text
     assert "IMMUTABLE DECISION ARCHIVE" in index.text
     assert 'id="archiveProofWall"' in index.text
