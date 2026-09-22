@@ -1,0 +1,53 @@
+name: Crypto Market Tape Runtime Live Diagnostic
+
+on:
+  push:
+    branches:
+      - v1.1-market-tape-runtime-v1
+    paths:
+      - ".github/workflows/crypto-market-tape-runtime-live-diagnostic.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    name: Read-only Market Tape live diagnostic
+    runs-on: [self-hosted, crypto-signal, uid501]
+    timeout-minutes: 10
+    steps:
+      - name: Inspect runtime as UID504
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo -k
+          USER504="crypto-signal-agent"
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          STABLE="$ROOT/MarketTape"
+          DIR="$ROOT/Development/runtime/market_tape"
+          LABEL="com.cryptosignal.markettape"
+
+          echo "=== DEPLOY MARKERS ==="
+          sudo -n -H -u "$USER504" /bin/cat "$STABLE/.deployed_git_commit" 2>&1 || true
+          sudo -n -H -u "$USER504" /bin/cat "$STABLE/.deployed_git_tree" 2>&1 || true
+
+          echo "=== LAUNCHCTL ==="
+          sudo -n -H -u "$USER504" /bin/launchctl print "gui/504/$LABEL" 2>&1 |             /usr/bin/egrep 'state =|pid =|runs =|last exit code =|program =|path =|throttle|spawn' |             /usr/bin/head -120 || true
+
+          echo "=== PROCESSES ==="
+          /bin/ps -axo pid=,ppid=,user=,etime=,%cpu=,%mem=,command= |             /usr/bin/grep '[r]un_market_tape_runtime.py' || true
+
+          echo "=== STATUS ==="
+          sudo -n -H -u "$USER504" /bin/ls -lT "$DIR/runtime_status.json" 2>&1 || true
+          sudo -n -H -u "$USER504" /bin/cat "$DIR/runtime_status.json" 2>&1 || true
+
+          echo "=== ROWS/CHECKS ==="
+          sudo -n -H -u "$USER504" /usr/bin/sqlite3 "$DIR/raw_market_tape.sqlite3"             'SELECT COUNT(*),MIN(event_at_ms),MAX(event_at_ms) FROM raw_market_events;' 2>&1 || true
+          sudo -n -H -u "$USER504" /usr/bin/sqlite3 "$DIR/market_tape.sqlite3"             'SELECT COUNT(*) FROM market_tape_orderbooks; SELECT COUNT(*) FROM market_tape_trades; PRAGMA quick_check;' 2>&1 || true
+
+          echo "=== STDOUT ==="
+          sudo -n -H -u "$USER504" /usr/bin/tail -80 "$ROOT/ServiceLogs/market-tape.out.log" 2>&1 || true
+          echo "=== STDERR ==="
+          sudo -n -H -u "$USER504" /usr/bin/tail -120 "$ROOT/ServiceLogs/market-tape.err.log" 2>&1 || true
+
+          echo "MARKET_TAPE_LIVE_DIAGNOSTIC_DONE=YES"
