@@ -1,0 +1,142 @@
+name: Crypto Observed Wake Runtime Acceptance TEMP
+
+on:
+  push:
+    branches: [diag/observed-wake-runtime-acceptance-20260922]
+    paths:
+      - ".github/workflows/crypto-observed-wake-runtime-acceptance-temp.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  readonly:
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Read-only observed wake runtime acceptance
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(id -u)" = "504"
+
+          INSTALL="$HOME/Library/Application Support/CryptoSignal/continuity20m"
+          RUNTIME="$INSTALL/runtime"
+          SHARED="/Users/Shared/.crypto-signal-wake-relay"
+          STATE="/Volumes/Crypto-504/Crypto-Signal/Development/runtime/continuity"
+          EXPECTED_URL="https://chatgpt.com/c/6ab2c3c1-30c8-83ed-b1ad-2aa35cc891c9"
+
+          STATUS="$RUNTIME/rolling_wake_status"
+          PIDFILE="$RUNTIME/rolling_wake.pid"
+          HEARTBEAT="$RUNTIME/rolling_wake_heartbeat"
+
+          test -s "$STATUS"
+          test -s "$PIDFILE"
+          test -s "$HEARTBEAT"
+
+          echo "=== ROLLING STATUS ==="
+          cat "$STATUS"
+
+          PID="$(cat "$PIDFILE")"
+          test -n "$PID"
+          kill -0 "$PID"
+          TIMER_UID="$(ps -p "$PID" -o uid= | tr -d ' ')"
+          TIMER_CMD="$(ps -p "$PID" -o command=)"
+          test "$TIMER_UID" = "504"
+          printf '%s' "$TIMER_CMD" | grep -F "$INSTALL/interval_wake_daemon.py" >/dev/null
+          echo "ROLLING_PID=$PID"
+          echo "ROLLING_UID=$TIMER_UID"
+          echo "ROLLING_CMD=$TIMER_CMD"
+
+          NOW="$(date +%s)"
+          HB="$(cat "$HEARTBEAT")"
+          [[ "$HB" =~ ^[0-9]+$ ]]
+          HB_AGE="$((NOW-HB))"
+          test "$HB_AGE" -ge 0
+          test "$HB_AGE" -le 15
+          echo "ROLLING_HEARTBEAT_AGE_SECONDS=$HB_AGE"
+
+          get_status() {
+            sed -n "s/^$1=//p" "$STATUS" | head -1
+          }
+
+          TIMER_STATE="$(get_status state)"
+          INTERVAL="$(get_status interval_seconds)"
+          LAST_EVENT="$(get_status last_event_id)"
+          LAST_RECEIPT="$(get_status last_receipt_epoch)"
+          NEXT_DUE="$(get_status next_due_epoch)"
+          FAILURE_COUNT="$(get_status failure_count)"
+          PENDING="$(get_status pending_event_id)"
+
+          [[ "$TIMER_STATE" =~ ^(RUNNING|RETRYING)$ ]]
+          test "$INTERVAL" = "1200"
+          [[ "$LAST_RECEIPT" =~ ^[0-9]+$ ]]
+          [[ "$NEXT_DUE" =~ ^[0-9]+$ ]]
+          test "$LAST_RECEIPT" -gt 0
+          test "$NEXT_DUE" -gt "$LAST_RECEIPT"
+          DELTA="$((NEXT_DUE-LAST_RECEIPT))"
+          test "$DELTA" = "1200"
+          test "$FAILURE_COUNT" = "0"
+          test -n "$LAST_EVENT"
+          echo "ROLLING_LAST_EVENT=$LAST_EVENT"
+          echo "ROLLING_LAST_RECEIPT_EPOCH=$LAST_RECEIPT"
+          echo "ROLLING_NEXT_DUE_EPOCH=$NEXT_DUE"
+          echo "ROLLING_NEXT_DUE_DELTA_SECONDS=$DELTA"
+          echo "ROLLING_PENDING_EVENT=$PENDING"
+
+          EVENT_KEY="$(
+            INSTALL="$INSTALL" LAST_EVENT="$LAST_EVENT" /usr/bin/python3 - <<'PY'
+          import os
+          import sys
+          sys.path.insert(0, os.environ["INSTALL"])
+          from continuity_contracts import event_key
+          print(event_key(os.environ["LAST_EVENT"]))
+          PY
+          )"
+          RECEIPT="$SHARED/receipts/$EVENT_KEY.state"
+          test -s "$RECEIPT"
+          echo "=== LAST EVENT RECEIPT ==="
+          cat "$RECEIPT"
+          grep -Fx 'status=OBSERVED' "$RECEIPT" >/dev/null
+          grep -F 'baseline_exact_count=' "$RECEIPT" >/dev/null
+          grep -F 'submitted_epoch=' "$RECEIPT" >/dev/null
+          echo "LAST_WAKE_RECEIPT_OBSERVED_PASS=YES"
+
+          for f in             "$STATE/wake/current_chat_url"             "$STATE/wake/expected_chat_url"             "$SHARED/current_chat_url"             "$SHARED/expected_chat_url"; do
+            test "$(cat "$f")" = "$EXPECTED_URL"
+          done
+          echo "EXACT_CHAT_BINDING_PASS=YES"
+
+          test ! -e "$STATE/user_pause"
+          test ! -e "$SHARED/user_pause"
+          echo "CONTINUITY_USER_PAUSE_ABSENT=YES"
+
+          test -s "$SHARED/relay_status"
+          echo "=== RELAY STATUS ==="
+          cat "$SHARED/relay_status"
+          grep -Fx 'state=RUNNING' "$SHARED/relay_status" >/dev/null
+          grep -Fx "target_url=$EXPECTED_URL" "$SHARED/relay_status" >/dev/null
+          echo "RELAY_RUNTIME_PASS=YES"
+
+          cmp -s "$GITHUB_WORKSPACE/ops/continuity/interval_wake_daemon.py" "$INSTALL/interval_wake_daemon.py"
+          cmp -s "$GITHUB_WORKSPACE/ops/continuity/recurring_wake.py" "$INSTALL/recurring_wake.py"
+          cmp -s "$GITHUB_WORKSPACE/ops/continuity/relay_submit.py" "$INSTALL/relay_submit.py"
+          cmp -s "$GITHUB_WORKSPACE/ops/continuity/relay_daemon.py" "$SHARED/relay_daemon.py"
+          grep -F 'FINAL_RECEIPT_STATES = {"OBSERVED"}' "$INSTALL/interval_wake_daemon.py" >/dev/null
+          grep -F 'require_observed=exact_locked_wake' "$INSTALL/relay_submit.py" >/dev/null
+          grep -F 'baseline_exact_count' "$SHARED/relay_daemon.py" >/dev/null
+          echo "INSTALLED_CONTINUITY_HASH_PARITY_PASS=YES"
+
+          for old in             com.cryptosignal.autowake20m             com.cryptosignal.autowake30m             com.cryptosignal.continuity30m; do
+            test ! -e "$HOME/Library/LaunchAgents/$old.plist"
+          done
+          echo "LEGACY_CALENDAR_PLISTS_ABSENT=YES"
+
+          QUEUE_COUNT="$(find "$SHARED/queue" -type f -name '*.wake' 2>/dev/null | wc -l | tr -d ' ')"
+          [[ "$QUEUE_COUNT" =~ ^[0-9]+$ ]]
+          test "$QUEUE_COUNT" -le 1
+          echo "RELAY_QUEUE_COUNT=$QUEUE_COUNT"
+
+          echo "OBSERVED_ROLLING_20M_RUNTIME_ACCEPTANCE_PASS=YES"
