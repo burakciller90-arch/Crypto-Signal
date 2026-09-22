@@ -1,0 +1,27 @@
+name: Crypto R12 Runtime Compat Branch Gate
+
+on:
+  push:
+    branches:
+      - fix/r12-runtime-python39-launchd-v1
+
+permissions:
+  contents: read
+
+jobs:
+  python39:
+    name: R12 macOS Python 3.9 compatibility
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.9'
+      - name: Validate continuity runtime
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install "pytest>=8.4"
+          python -m py_compile ops/continuity/*.py
+          python -m pytest -q tests/test_continuity_contracts.py tests/test_continuity_hardening.py
+          echo "R12_PYTHON39_RUNTIME_COMPAT_PASS=YES"
