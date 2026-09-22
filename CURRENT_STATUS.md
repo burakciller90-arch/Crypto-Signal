@@ -172,9 +172,25 @@ Current M2 safe-development frontier:
 - No production UI deployment/cutover occurred.
 - REAL_CAPITAL=0.
 
+### GALACTECH PERFORMANCE & TRUST CENTER — MERGED TO MAIN
+
+- PR #808 authoritative hosted run `35786643559` PASS.
+- Focused Product/Performance/Paper pytest, Ruff, Product mypy and JS/freshness PASS.
+- Full repository pytest/Ruff/mypy/JS/freshness PASS.
+- PR #808 squash-merged to main as `1486ec914ea0a89cbc47ce13eb5e1a4219d7eed7`.
+- Trust Center keeps separate:
+  - forecast outcome evidence by evidence class and holding horizon;
+  - paper track record from immutable simulated fills/accounting;
+  - probability calibration.
+- Empty paper sample is explicitly not shown as 0% win rate.
+- Calibration remains `NOT CALIBRATED`; no Brier/reliability value is invented before R19 acceptance.
+- No single synthetic "confidence/trust score" merges incompatible evidence classes.
+- No production UI deployment/cutover occurred.
+- REAL_CAPITAL=0.
+
 Current Product frontier:
-- GALACTECH Performance & Trust Center;
-- then Learn/System refinement -> accessibility/performance polish -> production UI cutover gate.
+- GALACTECH Learn/System refinement;
+- then accessibility/performance polish -> production UI cutover gate.
 
 ### M2 LIQUIDITY INTELLIGENCE 2.0 — SLICE 2 ACCEPTED / STACKED
 
