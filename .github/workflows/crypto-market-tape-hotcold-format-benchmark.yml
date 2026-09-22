@@ -183,5 +183,5 @@ jobs:
         if: always()
         shell: bash
         run: |
-          ls -lh /tmp/crypto-hotcold-bench || true
-          rm -rf /tmp/crypto-hotcold-bench /tmp/crypto-hotcold-venv
+          sudo -n -H -u crypto-signal-agent /bin/ls -lh /tmp/crypto-hotcold-bench || true
+          sudo -n -H -u crypto-signal-agent /bin/rm -rf /tmp/crypto-hotcold-bench /tmp/crypto-hotcold-venv || true
