@@ -21,7 +21,7 @@ LOCKED_SUCCESS_STATE = SHARED / "locked_wake_success"
 RELAY_SUBMIT = Path(__file__).with_name("relay_submit.py")
 
 LOCKED_WAKE_INTERVAL_SECONDS = 20 * 60
-WAKE_MESSAGE = "Kullanıcı aktif değil ve projeyi tamamlaman için sana bıraktı; HAFIZANA GÜVENME! READ_FIRST, CURRENT_STATUS, Chronicle ve docs/V1_1_LOCKED_MASTER_ROADMAP_20260922.md dosyasını oku; gerçek Git/worker/wake/lease state’ini kontrol et, gerçek frontier’ı bul. Tamamlanmış/stale/duplicate işi tekrarlama. Kullanıcı REAL MONEY hariç roadmap’in bitmesini istiyor; güvenli aşamalar arasında onay bekleme ve devam et. Ve bir sonraki ajan için yaptığın her işi her güncellemeyi GitHub üzerine kayıt et. Bu mesaj döngüsünü bozamazsın."
+WAKE_MESSAGE = "Kullanıcı aktif değil ve projeyi tamamlaman için sana bıraktı; HAFIZANA GÜVENME! READ_FIRST, CURRENT_STATUS, Chronicle ve docs/V1_1_LOCKED_MASTER_ROADMAP_20260922.md dosyasını oku; gerçek Git/worker/wake/lease state’ini kontrol et, gerçek frontier’ı bul. Tamamlanmış/stale/duplicate işi tekrarlama. Kullanıcı REAL MONEY hariç roadmap’in bitmesini istiyor; güvenli aşamalar arasında onay bekleme ve devam et. REAL_CAPITAL=0. Bir sonraki ajan için yaptığın her işi ve her güncellemeyi GitHub üzerine kaydet. Bu 20 dakikalık mesaj döngüsünü bozamazsın."
 
 
 def read_text(path: Path) -> str:
