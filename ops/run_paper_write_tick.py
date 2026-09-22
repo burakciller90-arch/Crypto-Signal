@@ -28,6 +28,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--signal-ledger", type=Path, default=DEFAULT_SIGNAL_LEDGER)
     parser.add_argument("--candle-cache", type=Path, default=DEFAULT_CANDLE_CACHE)
     parser.add_argument("--max-events", type=int, default=10)
+    parser.add_argument(
+        "--active-learning",
+        action="store_true",
+        help="also process the bounded 1h exploration lane",
+    )
     return parser.parse_args()
 
 
@@ -50,6 +55,7 @@ def main() -> int:
                 candle_cache_path=args.candle_cache,
                 evaluated_at_ms=time.time_ns() // 1_000_000,
                 max_events=args.max_events,
+                include_active_learning=args.active_learning,
             )
             for event in result.event_results:
                 print(
@@ -70,6 +76,7 @@ def main() -> int:
                 "PAPER_WRITE_TICK_OK "
                 f"authority={'-' if result.authority_event_identity is None else result.authority_event_identity} "
                 f"enabled={'YES' if result.authority_enabled else 'NO'} "
+                f"active_learning={'YES' if args.active_learning else 'NO'} "
                 f"candidates={result.scanned_candidate_count} "
                 f"processed_skips={result.processed_skip_count} "
                 f"terminal_no_action={result.terminal_no_action_count} "
