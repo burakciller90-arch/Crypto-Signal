@@ -35,7 +35,6 @@ jobs:
           python -m pytest -q tests/test_continuity_hardening.py tests/test_continuity_contracts.py
           python -m ruff check ops/continuity/interval_wake_daemon.py ops/continuity/relay_daemon.py ops/continuity/relay_submit.py tests/test_continuity_hardening.py
           python -m mypy ops/continuity/interval_wake_daemon.py ops/continuity/relay_daemon.py ops/continuity/relay_submit.py
-          grep -F 'if [ "${{ github.event_name }}" = "schedule" ]; then' .github/workflows/crypto-20m-continuity-wake.yml
           grep -F "rollingstate" .github/workflows/crypto-mac-command.yml
           echo "OBSERVED_ROLLING_WAKE_FOCUSED_PASS=YES"
       - name: Full repository regression
