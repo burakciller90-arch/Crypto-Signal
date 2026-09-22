@@ -1084,3 +1084,24 @@ A new agent must:
 - never enable REAL_CAPITAL.
 
 When uncertain, choose the bounded action that preserves evidence and reversibility.
+
+
+### Continuity / wake / lease state — 2026-09-22
+
+Read-only UID501 reconciliation run `35724768336` observed:
+
+- shared relay RUNNING;
+- protocol `crypto-relay-v2`;
+- project namespace `crypto-signal`;
+- exact expected target chat bound;
+- shared wake queue = 0;
+- shared `user_pause` PRESENT;
+- UID504 `bridge_watchdog.py` alive;
+- shared `relay_daemon.py` alive;
+- UID501 cannot read the local SSD continuity directory.
+
+Therefore local active-lease counts reported from UID501 are **not authoritative**.
+The shared pause marker is authoritative enough to preserve pause-dominant behavior:
+do not arm a lease, enqueue a wake or unpause continuity until a fresh explicit resume
+action is authorized. Current-turn development may continue because the user supplied
+a continuation message, but continuity transport state itself remains paused.
