@@ -1,5 +1,8 @@
 # V2+ BIRTHDAY EDITION — FOCUSED WORLD-CLASS ROADMAP
 
+> **Post-v1.0 notice (2026-09-22):** This document is retained as accepted historical/product context for v1.0. New v1.1+ execution is governed by `docs/V1_1_MASTER_EXECUTION_ROADMAP.md`. Do not use an older stage order here to override the current R15 -> parallel UI/Market Tape -> Decision Proof/Forecast -> Canonical Fund/Shadow Lab program.
+
+
 > **Historical roadmap notice — 2026-09-20**  
 > This document records the focused Birthday Edition plan that led through Stages 0-6. The user has since authorized the broader Full Version vision. For all new execution after the accepted Stage 5/Alerts foundation, the canonical roadmap is `docs/CRYPTO_SIGNAL_FULL_VERSION_WORLD_CLASS_ROADMAP.md`. Scientific invariants and REAL_CAPITAL=0 remain unchanged.
 
