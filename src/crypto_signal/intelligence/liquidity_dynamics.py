@@ -4,8 +4,9 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from decimal import Decimal
 from enum import StrEnum
+from itertools import pairwise
 
-from crypto_signal.data.microstructure import OrderBookSnapshot
+from crypto_signal.data.microstructure import OrderBookLevel, OrderBookSnapshot
 from crypto_signal.data.models import Exchange, MarketType
 from crypto_signal.ledger.serialization import canonical_sha256
 
@@ -168,9 +169,13 @@ class LiquidityDynamicsAnalysis:
             raise ValueError("liquidity analysis cannot observe future evidence")
         if self.source_window_start_ms > self.as_of_ms:
             raise ValueError("liquidity source window starts after as-of")
-        if self.source_window_end_ms is not None:
-            if not self.source_window_start_ms <= self.source_window_end_ms <= self.as_of_ms:
-                raise ValueError("liquidity source window end outside PIT bounds")
+        if (
+            self.source_window_end_ms is not None
+            and not self.source_window_start_ms
+            <= self.source_window_end_ms
+            <= self.as_of_ms
+        ):
+            raise ValueError("liquidity source window end outside PIT bounds")
         if self.consumed_snapshot_count < 0:
             raise ValueError("liquidity snapshot count cannot be negative")
         if self.latest_snapshot_age_ms is not None and self.latest_snapshot_age_ms < 0:
@@ -351,7 +356,7 @@ def _analyze_selected(
         flags.append("insufficient_orderbook_depth")
     if any(
         right.event_at_ms - left.event_at_ms > config.max_snapshot_gap_ms
-        for left, right in zip(snapshots, snapshots[1:], strict=False)
+        for left, right in pairwise(snapshots)
     ):
         flags.append("snapshot_gap_exceeds_limit")
     if snapshots[-1].event_at_ms <= snapshots[0].event_at_ms:
@@ -498,7 +503,7 @@ def _derive_metrics(
     bid_persistent = 0
     ask_persistent = 0
 
-    for previous, current in zip(snapshots, snapshots[1:], strict=False):
+    for previous, current in pairwise(snapshots):
         bid_added, bid_removed = _visible_depth_change(
             previous.bids,
             current.bids,
@@ -576,26 +581,26 @@ def _derive_metrics(
 
 
 def _depth_notional(
-    levels: Sequence[object],
+    levels: Sequence[OrderBookLevel],
     depth_levels: int,
 ) -> Decimal:
     return sum(
-        (getattr(level, "notional") for level in levels[:depth_levels]),
+        (level.notional for level in levels[:depth_levels]),
         start=Decimal(0),
     )
 
 
 def _visible_depth_change(
-    previous_levels: Sequence[object],
-    current_levels: Sequence[object],
+    previous_levels: Sequence[OrderBookLevel],
+    current_levels: Sequence[OrderBookLevel],
     depth_levels: int,
 ) -> tuple[Decimal, Decimal]:
     previous = {
-        getattr(level, "price"): getattr(level, "notional")
+        level.price: level.notional
         for level in previous_levels[:depth_levels]
     }
     current = {
-        getattr(level, "price"): getattr(level, "notional")
+        level.price: level.notional
         for level in current_levels[:depth_levels]
     }
     added = Decimal(0)
@@ -610,15 +615,15 @@ def _visible_depth_change(
 
 
 def _best_level_change(
-    previous_levels: Sequence[object],
-    current_levels: Sequence[object],
+    previous_levels: Sequence[OrderBookLevel],
+    current_levels: Sequence[OrderBookLevel],
     depth_levels: int,
 ) -> tuple[Decimal, Decimal]:
     previous_best = previous_levels[0]
-    previous_price = getattr(previous_best, "price")
-    previous_notional = getattr(previous_best, "notional")
+    previous_price = previous_best.price
+    previous_notional = previous_best.notional
     current = {
-        getattr(level, "price"): getattr(level, "notional")
+        level.price: level.notional
         for level in current_levels[:depth_levels]
     }
     delta = current.get(previous_price, Decimal(0)) - previous_notional
