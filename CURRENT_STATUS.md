@@ -24,6 +24,29 @@ REAL_CAPITAL: 0
 - PR #777 remains stacked on M2 Slice 1 rather than being forced directly into main.
 - REAL_CAPITAL=0.
 
+### M2 LIQUIDITY INTELLIGENCE 2.0 — SLICE 3 SWEEP ENGINE ACCEPTED / STACKED
+
+- PR #784 on `v1.1-liquidity-sweep-v2-slice3` is accepted on top of accepted M2 Slice 2.
+- Authoritative hosted acceptance run `35778012284` PASS.
+- Focused M2 tests/Ruff/mypy PASS; full repository pytest/Ruff/mypy/JS/freshness PASS.
+- Sweep candidate requires all of:
+  - accepted persistent-liquidity-pool evidence;
+  - material visible-depth depletion;
+  - book-eligible public-trade aggressor flow;
+  - qualified price displacement through the pool;
+  - follow-through after the first qualified displacement.
+- Recovery/reclaim is measured separately and is not itself a required candidate condition.
+- Block/RPI trades do not create book-sweep corroboration.
+- Future or late-ingested snapshots/trades cannot rewrite a historical freeze.
+- `LIQUIDITY_SWEEP_CANDIDATE` remains bounded evidence, not proof of a stop hunt, manipulation, market maker, institution or actor intent.
+- PR #784 remains stacked; no production weighting/trading authority was added.
+- REAL_CAPITAL=0.
+
+Current M2 frontier after Slice 3:
+- distinct Liquidation Heatmap / liquidation-risk context where reliable data supports it;
+- then close M2 acceptance before advancing the primary intelligence path to M3 Order Flow & Absorption 2.0.
+
+
 ### GALACTECH COMMAND CENTER — SLICE 1 MERGED TO MAIN
 
 - PR #778 accepted and squash-merged to `main` as `9a6c65ee24dc00a5855d5792e013a53cb869e2de`.
@@ -89,15 +112,22 @@ Current safe parallel frontier after these acceptances:
 - No production deployment was performed.
 - REAL_CAPITAL=0.
 
-### CONTINUITY / WORKER RECONCILIATION — 2026-09-22 22:47 +0300
 
-- Read-only bridge run `35776041344` PASS.
-- Shared relay reported `state=RUNNING`, PID `24847`, fresh heartbeat and exact target URL `https://chatgpt.com/c/6ab2c3c1-30c8-83ed-b1ad-2aa35cc891c9`.
-- The visible `wake/paused/...user-pause...` path is historical archived evidence, not an active user-pause latch.
-- Worker probe run `35776042781` confirmed Cursor app/CLI availability but did not itself prove an active development worker; do not infer worker activity from installation presence.
-- A separate read-only status reconcile was issued as #781 to avoid guessing.
-- The locked 20-minute wake loop remains ACTIVE and must not be disabled without explicit user pause.
+### CONTINUITY / WORKER RECONCILIATION — 2026-09-22 23:05 +0300
+
+- Latest locked 20-minute wake run `35777702281` PASS with exact current chat binding, `RELAY_RECEIPTED`, `RELAY_SUBMIT_RC=0` and `CRYPTO_LOCKED_20M_WAKE_PASS=YES`.
+- Read-only `bridgestate` run `35777877265` observed shared relay `state=RUNNING`, PID `24847`, fresh heartbeat and exact current-chat target.
+- `pausecheck` run `35777881829` returned non-zero only because that command verifies the paused state; measured truth is:
+  - `LOCAL_PAUSED=NO`;
+  - `SHARED_PAUSED=NO`;
+  - `ACTIVE_LEASES=0`;
+  - `LOCAL_WAKE_QUEUE=0`;
+  - `RELAY_WAKE_QUEUE=0`.
+- Therefore continuity is ACTIVE, not paused, with no active continuation leases or queued wake backlog at the measured point.
+- `cursorcheck` run `35777888493` confirmed Cursor CLI version `2026.09.18-9a7762b` is installed and authenticated; it does not report active worker count, so no active-worker claim is inferred from that command.
+- The wake loop must remain ACTIVE unless the user explicitly pauses/stops it.
 - REAL_CAPITAL=0.
+
 
 ### PAPER FUND EPOCH 2 FOUNDATION — ACCEPTED
 
