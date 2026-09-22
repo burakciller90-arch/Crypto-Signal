@@ -211,6 +211,20 @@ def _run_cold_archive() -> dict[str, object]:
     return {str(key): value for key, value in payload.items()}
 
 
+def _archive_int(payload: dict[str, object], key: str) -> int:
+    value = payload.get(key, 0)
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise TypeError(f"cold archive {key} must be an integer")
+    return value
+
+
+def _archive_partition_count(payload: dict[str, object]) -> int:
+    value = payload.get("partitions", [])
+    if not isinstance(value, list):
+        raise TypeError("cold archive partitions must be a list")
+    return len(value)
+
+
 def _guard_or_none(
     *,
     policy: MarketTapeHotColdPolicy,
@@ -328,12 +342,8 @@ def main() -> int:
                         {
                             "state": "guarded_after_archive",
                             "decision": guard.value,
-                            "archived_rows": int(
-                                archive.get("archived_rows", 0)
-                            ),
-                            "pruned_rows": int(
-                                archive.get("pruned_rows", 0)
-                            ),
+                            "archived_rows": _archive_int(archive, "archived_rows"),
+                            "pruned_rows": _archive_int(archive, "pruned_rows"),
                             **post_archive,
                         }
                     )
@@ -348,11 +358,9 @@ def main() -> int:
                         "cycle": cycles + 1,
                         "process_pid": os.getpid(),
                         "target_messages": args.chunk_messages,
-                        "archived_rows": int(archive.get("archived_rows", 0)),
-                        "pruned_rows": int(archive.get("pruned_rows", 0)),
-                        "archived_partitions": len(
-                            archive.get("partitions", [])
-                        ),
+                        "archived_rows": _archive_int(archive, "archived_rows"),
+                        "pruned_rows": _archive_int(archive, "pruned_rows"),
+                        "archived_partitions": _archive_partition_count(archive),
                         **post_archive,
                     }
                 )
@@ -408,11 +416,9 @@ def main() -> int:
                         ),
                         "trades_inserted": result.trades_inserted,
                         "trades_unchanged": result.trades_unchanged,
-                        "archived_rows": int(archive.get("archived_rows", 0)),
-                        "pruned_rows": int(archive.get("pruned_rows", 0)),
-                        "archived_partitions": len(
-                            archive.get("partitions", [])
-                        ),
+                        "archived_rows": _archive_int(archive, "archived_rows"),
+                        "pruned_rows": _archive_int(archive, "pruned_rows"),
+                        "archived_partitions": _archive_partition_count(archive),
                         **post_collect,
                     }
                 )
