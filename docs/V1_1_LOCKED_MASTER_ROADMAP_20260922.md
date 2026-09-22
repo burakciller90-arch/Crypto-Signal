@@ -968,3 +968,14 @@ A fresh agent must:
 8. preserve REAL_CAPITAL=0 and every scientific invariant above.
 
 **Do not replace this roadmap with an older chat summary or stale branch note.**
+
+
+## 31. Execution tooling addendum — no Cursor worker/composer
+
+User-authorized process update (2026-09-22):
+
+- New work must **not** be delegated to Cursor workers, Cursor composer, or `supervisor-*` Cursor worktrees.
+- That path is disabled because prior use produced repeated errors and slowed project completion.
+- The preferred safe-development path is direct GitHub branch/PR implementation, hosted acceptance gates, and narrowly scoped self-hosted runtime verification where needed.
+- Cursor tooling may be inspected only for stale-state detection; stale work is reconciled/NOOPed rather than resumed.
+- This changes execution mechanics only; it does not alter any locked product/scientific scope, REAL_CAPITAL=0, or production/human-impact authority boundaries.
