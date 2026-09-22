@@ -1,0 +1,39 @@
+name: Crypto R15 Runner Service Correct Diagnostic
+
+on:
+  push:
+    branches:
+      - r15-ssd-hotplug-recovery-v1
+    paths:
+      - ".github/workflows/crypto-r15-runner-service-correct-diagnostic.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    name: Diagnose correct R15 runner service
+    runs-on: [self-hosted, crypto-signal, uid501]
+    timeout-minutes: 10
+    steps:
+      - name: Inspect correct service and logs
+        shell: bash
+        run: |
+          set +e
+          echo "=== SERVICE ==="
+          sudo -n -H -u crypto-signal-agent /bin/launchctl print gui/504/com.cryptosignal.github-runner-r15-service 2>&1 | /usr/bin/head -220
+          echo "=== SERVICE PLIST ==="
+          sudo -n -H -u crypto-signal-agent /bin/cat "/Users/crypto-signal-agent/Library/LaunchAgents/com.cryptosignal.github-runner-r15-service.plist" 2>&1
+          echo "=== BOOTSTRAP ==="
+          sudo -n -H -u crypto-signal-agent /bin/cat "/Users/crypto-signal-agent/Library/Application Support/CryptoSignalRecovery/runner-service-bootstrap.sh" 2>&1
+          echo "=== LAUNCHAGENT OUT ==="
+          sudo -n -H -u crypto-signal-agent /usr/bin/tail -160 "/Users/crypto-signal-agent/Library/Logs/CryptoSignalRecovery/runner-service-launchagent.out.log" 2>&1
+          echo "=== LAUNCHAGENT ERR ==="
+          sudo -n -H -u crypto-signal-agent /usr/bin/tail -160 "/Users/crypto-signal-agent/Library/Logs/CryptoSignalRecovery/runner-service-launchagent.err.log" 2>&1
+          echo "=== RUNNER OUT ==="
+          sudo -n -H -u crypto-signal-agent /usr/bin/tail -180 "/Volumes/Crypto-504/Crypto-Signal/RunnerLogs/r15-runner-service.out.log" 2>&1
+          echo "=== RUNNER ERR ==="
+          sudo -n -H -u crypto-signal-agent /usr/bin/tail -180 "/Volumes/Crypto-504/Crypto-Signal/RunnerLogs/r15-runner-service.err.log" 2>&1
+          echo "=== LISTENER ==="
+          /bin/ps -axo pid=,ppid=,user=,%cpu=,%mem=,etime=,state=,command= | /usr/bin/grep -F "/Volumes/Crypto-504/Crypto-Signal/Runner/bin/Runner.Listener" | /usr/bin/grep -v grep || true
+          echo "R15_RUNNER_SERVICE_CORRECT_DIAGNOSTIC_DONE=YES"
