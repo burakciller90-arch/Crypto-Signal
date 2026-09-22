@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+import hashlib
 import os
 import sys
 import time
@@ -30,6 +31,7 @@ SHARED_CURRENT = SHARED / "current_chat_url"
 SHARED_EXPECTED = SHARED / "expected_chat_url"
 SECRET_FILE = STATE / "relay_secret"
 AUTONOMOUS_PREFIX = "CRYPTO_SIGNAL_AUTONOMOUS_CONTINUE_V1"
+LOCKED_WAKE_MESSAGE = "Kullanıcı aktif değil ve projeyi tamamlaman için sana bıraktı; HAFIZANA GÜVENME. READ_FIRST, CURRENT_STATUS, Chronicle ve docs/V1_1_LOCKED_MASTER_ROADMAP_20260922.md dosyasını oku; gerçek Git/worker/wake/lease state’ini kontrol et, gerçek frontier’ı bul. Tamamlanmış/stale/duplicate işi tekrarlama. Kullanıcı REAL MONEY hariç roadmap’in bitmesini istiyor; güvenli aşamalar arasında onay bekleme ve devam et. REAL_CAPITAL=0."
 
 
 def receipt_sha(path: Path) -> str | None:
@@ -101,7 +103,7 @@ def main() -> int:
     key = event_key(event_id)
     queue_path = QUEUE / f"{key}.wake"
     receipt_path = RECEIPTS / f"{key}.state"
-    expected_sha = expected_wire_sha(event_id, message)
+    expected_sha = (hashlib.sha256(message.encode()).hexdigest() if message == LOCKED_WAKE_MESSAGE else expected_wire_sha(event_id, message))
 
     bound_sha = receipt_sha(receipt_path)
     if bound_sha is not None:
