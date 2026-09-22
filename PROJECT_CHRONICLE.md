@@ -2663,3 +2663,33 @@ supervisor processes remain present. The post-04:00 data interruption is not dec
 fixed until canonical ledger/candle freshness advances mechanically. UID501 currently
 receives Permission denied on the existing Crypto-504 project tree; the existing
 owner-preserving ACL grant flow has been launched for user authorization.
+
+
+## 2026-09-22 — post-04:00 market-data freshness mechanically recovered; runner hang remains separate
+
+A temporary diagnostic branch `diag-uid501-live-freshness-20260922` was created from
+the immutable v1.0.0 main baseline solely to read the live localhost dashboard API on
+the UID501 self-hosted runner without requiring SSD filesystem authority.
+
+Diagnostic run `35721395160` passed. At 14:25:51 +0300:
+- `/api/health`: status=ok, product_version=full-version-contextual-evidence/1,
+  ledger_present=true, alert_outbox_present=true, read_only=true, REAL_CAPITAL=0.
+- `/api/command-center`: 294 immutable freezes.
+- newest freeze: 2026-09-22 14:15:18.574 +0300.
+- BTC/ETH/SOL 15m contexts on both Binance and Bybit were fresh around 14:15.
+- 1h contexts on both providers were fresh around 14:01.
+- 4h contexts were consistent with their lower update cadence.
+
+Therefore the specific “data stopped after 04:00” incident is **closed**. The live
+market-evidence/freeze path is advancing again.
+
+This does **not** close R15. UID501 process recheck issue #730 showed the SSD UID504
+`Runner.Listener` PID 99399 at 100% CPU, state RN, ~12h elapsed at 14:26:28 +0300.
+The dashboard and SSD supervisor remained healthy. Runner progress/hang recovery is
+therefore a separate remaining R15 operational blocker and must not be conflated with
+market-data freshness.
+
+UID501 direct filesystem access to the existing Crypto-504 tree remains permission
+blocked until the prepared owner-preserving ACL grant is authorized. Direct DB/log
+access is desirable for forensics but was not required for the freshness conclusion
+because the live product API reads the immutable canonical ledger read-only.
