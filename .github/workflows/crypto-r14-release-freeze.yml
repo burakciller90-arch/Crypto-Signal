@@ -1,0 +1,119 @@
+name: Crypto R14 Full Version Release Freeze
+
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  contents: write
+  issues: read
+
+jobs:
+  freeze:
+    if: github.actor == 'burakciller90-arch' && github.event.issue.title == '[R14] FREEZE FULL VERSION RELEASE'
+    name: Freeze Full Version v1.0.0
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ github.token }}
+      RELEASE_TAG: crypto-signal-full-version-v1.0.0
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Parse exact target
+        id: target
+        shell: bash
+        env:
+          ISSUE_BODY: ${{ github.event.issue.body }}
+        run: |
+          set -euo pipefail
+          TARGET="$(python3 - <<'PY'
+          import os
+          import re
+
+          body = os.environ.get("ISSUE_BODY", "")
+          match = re.search(r"(?im)^target:\s*([0-9a-f]{40})\s*$", body)
+          if not match:
+              raise SystemExit("INVALID_R14_RELEASE_TARGET")
+          print(match.group(1))
+          PY
+          )"
+          echo "target=$TARGET" >> "$GITHUB_OUTPUT"
+          echo "R14_RELEASE_TARGET=$TARGET"
+
+      - name: Verify target is exact current main
+        shell: bash
+        env:
+          TARGET: ${{ steps.target.outputs.target }}
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin main
+          ORIGIN_MAIN="$(git rev-parse origin/main)"
+          test "$TARGET" = "$ORIGIN_MAIN"
+          git cat-file -e "$TARGET^{commit}"
+          test -f docs/FINAL_RELEASE_MANIFEST_V1.md
+          test -f docs/OPERATOR_RUNBOOK_FULL_VERSION_V1.md
+          test -f docs/DASHBOARD_OPEN_RECOVERY_GUIDE_V1.md
+          test -f docs/SSD_RECOVERY_BACKUP_GUIDE_V1.md
+          test -f docs/KNOWN_AUTHORITY_GATES_V1.md
+          echo "R14_EXACT_MAIN_RELEASE_TARGET_PASS=YES"
+
+      - name: Create or verify immutable annotated tag
+        shell: bash
+        env:
+          TARGET: ${{ steps.target.outputs.target }}
+        run: |
+          set -euo pipefail
+          git fetch --tags origin
+          if git rev-parse -q --verify "refs/tags/$RELEASE_TAG" >/dev/null 2>&1; then
+            EXISTING_TARGET="$(git rev-list -n 1 "$RELEASE_TAG")"
+            test "$EXISTING_TARGET" = "$TARGET"
+            echo "R14_RELEASE_TAG_ALREADY_PRESENT_SAME_TARGET=YES"
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git tag -a "$RELEASE_TAG" "$TARGET" -m "Crypto Signal Full Version v1.0.0 — REAL_CAPITAL=0"
+            git push origin "refs/tags/$RELEASE_TAG"
+            echo "R14_RELEASE_TAG_CREATED=YES"
+          fi
+          git fetch --tags origin
+          test "$(git rev-list -n 1 "$RELEASE_TAG")" = "$TARGET"
+          echo "R14_RELEASE_TAG_TARGET_PASS=YES tag=$RELEASE_TAG target=$TARGET"
+
+      - name: Create or verify GitHub Release
+        shell: bash
+        env:
+          TARGET: ${{ steps.target.outputs.target }}
+        run: |
+          set -euo pipefail
+          if gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "R14_GITHUB_RELEASE_ALREADY_PRESENT=YES"
+          else
+            gh release create "$RELEASE_TAG"               --repo "$GITHUB_REPOSITORY"               --title "Crypto Signal Full Version v1.0.0"               --notes-file docs/FINAL_RELEASE_MANIFEST_V1.md
+            echo "R14_GITHUB_RELEASE_CREATED=YES"
+          fi
+          RELEASE_JSON="$(gh release view "$RELEASE_TAG"             --repo "$GITHUB_REPOSITORY"             --json tagName,isDraft,isPrerelease)"
+          python3 - "$RELEASE_JSON" <<'PY'
+          import json
+          import sys
+
+          data = json.loads(sys.argv[1])
+          assert data["tagName"] == "crypto-signal-full-version-v1.0.0"
+          assert data["isDraft"] is False
+          assert data["isPrerelease"] is False
+          PY
+          test "$(git rev-list -n 1 "$RELEASE_TAG")" = "$TARGET"
+          echo "R14_GITHUB_RELEASE_VERIFY_PASS=YES"
+
+      - name: Final release declaration
+        shell: bash
+        env:
+          TARGET: ${{ steps.target.outputs.target }}
+        run: |
+          set -euo pipefail
+          echo "R14_REAL_CAPITAL_ZERO=YES"
+          echo "R14_RELEASE_TAG=$RELEASE_TAG"
+          echo "R14_RELEASE_TARGET=$TARGET"
+          echo "R14_FULL_VERSION_RELEASE_FREEZE_PASS=YES"
