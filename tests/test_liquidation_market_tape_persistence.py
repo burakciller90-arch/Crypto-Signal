@@ -16,6 +16,7 @@ from crypto_signal.data.market_tape import (
     MarketTapeStore,
     MarketTapeWriteDisposition,
 )
+from crypto_signal.data.market_tape_collection import persist_liquidation_batch
 from crypto_signal.data.models import DataSource, Exchange
 
 
@@ -316,3 +317,157 @@ def test_zero_event_replay_is_supported_only_by_persisted_coverage(tmp_path) -> 
             coverage_identity=future_coverage.coverage_identity,
             as_of_ms=4_000,
         )
+
+
+def test_liquidation_batch_persists_coverage_last_and_is_idempotent(tmp_path) -> None:
+    store = MarketTapeStore(tmp_path / "market_tape.sqlite3")
+    coverage = _coverage(observed_at_ms=2_000)
+    events = (
+        _event(
+            event_at_ms=1_400,
+            source_timestamp_ms=1_410,
+            ingested_at_ms=1_420,
+            source_row_index=2,
+            side=LiquidatedPositionSide.SHORT,
+        ),
+        _event(
+            event_at_ms=1_300,
+            source_timestamp_ms=1_310,
+            ingested_at_ms=1_320,
+            source_row_index=1,
+        ),
+    )
+
+    first = persist_liquidation_batch(
+        store=store,
+        events=events,
+        coverage=coverage,
+    )
+    second = persist_liquidation_batch(
+        store=store,
+        events=events,
+        coverage=coverage,
+    )
+
+    assert first.observed_events == 2
+    assert first.liquidation_inserted == 2
+    assert first.liquidation_unchanged == 0
+    assert first.coverage_disposition is MarketTapeWriteDisposition.INSERTED
+    assert first.inserted_total == 3
+
+    assert second.observed_events == 2
+    assert second.liquidation_inserted == 0
+    assert second.liquidation_unchanged == 2
+    assert second.coverage_disposition is MarketTapeWriteDisposition.UNCHANGED
+    assert second.inserted_total == 0
+
+    replay = store.liquidation_replay(
+        coverage_identity=coverage.coverage_identity,
+        as_of_ms=2_000,
+    )
+    assert replay.events == tuple(sorted(
+        events,
+        key=lambda item: (
+            item.event_at_ms,
+            item.source_timestamp_ms,
+            item.source_row_index,
+            item.liquidation_identity,
+        ),
+    ))
+
+
+@pytest.mark.parametrize(
+    ("event", "expected_message"),
+    [
+        (
+            _event(
+                event_at_ms=900,
+                source_timestamp_ms=910,
+                ingested_at_ms=920,
+                source_row_index=1,
+            ),
+            "outside coverage window",
+        ),
+        (
+            _event(
+                event_at_ms=1_500,
+                source_timestamp_ms=1_510,
+                ingested_at_ms=2_100,
+                source_row_index=2,
+            ),
+            "not observable by coverage timestamp",
+        ),
+    ],
+)
+def test_liquidation_batch_rejects_invalid_window_evidence_before_coverage_write(
+    tmp_path,
+    event,
+    expected_message: str,
+) -> None:
+    store = MarketTapeStore(tmp_path / "market_tape.sqlite3")
+    coverage = _coverage(observed_at_ms=2_000)
+
+    with pytest.raises(ValueError, match=expected_message):
+        persist_liquidation_batch(
+            store=store,
+            events=(event,),
+            coverage=coverage,
+        )
+
+    assert store.recent_liquidation_coverage(
+        exchange=Exchange.BYBIT,
+        instrument_type=DerivativesInstrumentType.LINEAR_PERPETUAL,
+        symbol="BTCUSDT",
+    ) == ()
+
+
+def test_liquidation_batch_rejects_context_mismatch_before_any_write(tmp_path) -> None:
+    store = MarketTapeStore(tmp_path / "market_tape.sqlite3")
+    coverage = _coverage(observed_at_ms=2_000)
+    wrong_symbol = build_liquidation_observation(
+        exchange=Exchange.BYBIT,
+        instrument_type=DerivativesInstrumentType.LINEAR_PERPETUAL,
+        symbol="ETHUSDT",
+        liquidated_position_side=LiquidatedPositionSide.LONG,
+        size=Decimal("1"),
+        bankruptcy_price=Decimal("100"),
+        event_at_ms=1_500,
+        source_timestamp_ms=1_510,
+        ingested_at_ms=1_520,
+        source_row_index=1,
+        source=DataSource.WEBSOCKET,
+        adapter_version="bybit-liquidation-test/1",
+    )
+
+    with pytest.raises(ValueError, match="context mismatch"):
+        persist_liquidation_batch(
+            store=store,
+            events=(wrong_symbol,),
+            coverage=coverage,
+        )
+
+    counts = store.counts()
+    assert counts.liquidations == 0
+    assert counts.liquidation_coverage == 0
+
+
+def test_empty_liquidation_batch_can_publish_observed_zero_event_coverage(
+    tmp_path,
+) -> None:
+    store = MarketTapeStore(tmp_path / "market_tape.sqlite3")
+    coverage = _coverage(observed_at_ms=2_000)
+
+    result = persist_liquidation_batch(
+        store=store,
+        events=(),
+        coverage=coverage,
+    )
+
+    assert result.observed_events == 0
+    assert result.liquidation_inserted == 0
+    assert result.coverage_disposition is MarketTapeWriteDisposition.INSERTED
+    replay = store.liquidation_replay(
+        coverage_identity=coverage.coverage_identity,
+        as_of_ms=2_000,
+    )
+    assert replay.events == ()
