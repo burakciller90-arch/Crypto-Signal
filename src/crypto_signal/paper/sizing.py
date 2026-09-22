@@ -338,15 +338,24 @@ def _validate_lineage(
     )
     if {signal.exchange for signal in signals} != {Exchange.BINANCE, Exchange.BYBIT}:
         raise PaperPositionSizingError("source signal provider lineage mismatch")
+    signal_timeframes = {signal.timeframe for signal in signals}
+    if len(signal_timeframes) != 1 or not signal_timeframes.issubset({"1h", "4h"}):
+        raise PaperPositionSizingError("source signal timeframe lineage mismatch")
     for signal in signals:
         if signal.market_type is not MarketType.SPOT:
             raise PaperPositionSizingError("source signal market lineage mismatch")
-        if signal.timeframe != "4h":
-            raise PaperPositionSizingError("source signal timeframe lineage mismatch")
         if signal.as_of_ms != autonomy_decision.source_as_of_ms:
             raise PaperPositionSizingError("source signal as-of lineage mismatch")
-        if signal.state is not SignalState.ACTIVE:
-            raise PaperPositionSizingError("source signal is not ACTIVE")
+        if signal.state not in {SignalState.ACTIVE, SignalState.WATCH}:
+            raise PaperPositionSizingError("source signal state is not paper-eligible")
+        if (
+            signal.state is SignalState.WATCH
+            and autonomy_decision.reason_code.value
+            not in {"exploration_buy_eligible", "exploration_exit_eligible"}
+        ):
+            raise PaperPositionSizingError(
+                "WATCH source signal requires exploration autonomy lineage"
+            )
         if signal.direction is not expected_direction:
             raise PaperPositionSizingError("source signal direction lineage mismatch")
         if signal.symbol != autonomy_decision.symbol.value:
