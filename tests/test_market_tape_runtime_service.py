@@ -15,20 +15,15 @@ def test_market_tape_launchagent_is_ssd_only_and_keepalive() -> None:
     assert payload["RunAtLoad"] is True
     assert payload["KeepAlive"] is True
     assert payload["ThrottleInterval"] == 30
-    assert payload["WorkingDirectory"] == (
-        "/Volumes/Crypto-504/Crypto-Signal/MarketTape"
-    )
+    assert "WorkingDirectory" not in payload
     arguments = payload["ProgramArguments"]
     assert arguments == [
-        "/Volumes/Crypto-504/Crypto-Signal/Development/.venv/bin/python",
+        "/bin/bash",
         (
             "/Volumes/Crypto-504/Crypto-Signal/MarketTape/"
-            "ops/run_market_tape_runtime.py"
+            "ops/market_tape/run_market_tape_launchd.sh"
         ),
     ]
-    assert payload["EnvironmentVariables"]["PYTHONPATH"] == (
-        "/Volumes/Crypto-504/Crypto-Signal/MarketTape/src"
-    )
     assert payload["StandardOutPath"].startswith("/Volumes/Crypto-504/")
     assert payload["StandardErrorPath"].startswith("/Volumes/Crypto-504/")
 
@@ -40,6 +35,7 @@ def test_market_tape_installer_preserves_uid504_boundary() -> None:
     assert 'ROOT="/Volumes/Crypto-504/Crypto-Signal"' in source
     assert 'STABLE="$ROOT/MarketTape"' in source
     assert "com.cryptosignal.markettape" in source
+    assert "run_market_tape_launchd.sh" in source
     assert "launchctl bootstrap" in source
     assert "REAL_CAPITAL=0" in source
 
@@ -52,3 +48,16 @@ def test_market_tape_runtime_has_no_internal_disk_data_fallback() -> None:
     assert "Development/runtime/market_tape" in source
     assert "/Users/" not in source
     assert "REAL_CAPITAL=0" in source
+
+def test_market_tape_launchd_wrapper_is_uid504_and_ssd_bound() -> None:
+    source = (
+        ROOT / "ops/market_tape/run_market_tape_launchd.sh"
+    ).read_text()
+
+    assert 'ROOT="/Volumes/Crypto-504/Crypto-Signal"' in source
+    assert 'PYTHON="$ROOT/Development/.venv/bin/python"' in source
+    assert 'RUNTIME="$STABLE/ops/run_market_tape_runtime.py"' in source
+    assert 'if [ "$(id -u)" != "504" ]' in source
+    assert 'export PYTHONPATH="$STABLE/src"' in source
+    assert 'exec "$PYTHON" "$RUNTIME"' in source
+
