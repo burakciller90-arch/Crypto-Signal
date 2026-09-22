@@ -217,3 +217,29 @@ async def test_wire_collection_rejects_non_positive_cadence(tmp_path) -> None:
             events=_wire_events(),
             orderbook_snapshot_interval_ms=0,
         )
+
+@pytest.mark.asyncio
+async def test_bounded_wire_collection_closes_async_generator(tmp_path) -> None:
+    store = MarketTapeStore(tmp_path / "market_tape.sqlite3")
+    raw_store = RawMarketTapeStore(tmp_path / "raw_market_tape.sqlite3")
+    closed = False
+
+    async def closable_events() -> AsyncIterator[BybitMicrostructureWireEvent]:
+        nonlocal closed
+        try:
+            async for event in _wire_events():
+                yield event
+        finally:
+            closed = True
+
+    result = await persist_bybit_wire_stream(
+        store=store,
+        raw_store=raw_store,
+        events=closable_events(),
+        orderbook_snapshot_interval_ms=1_000,
+        max_messages=2,
+    )
+
+    assert result.observed_messages == 2
+    assert closed is True
+
