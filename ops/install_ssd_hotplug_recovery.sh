@@ -33,7 +33,8 @@ LOCAL_ROOT="$HOME/Library/Application Support/CryptoSignalRecovery"
 LOCAL_LOG="$HOME/Library/Logs/CryptoSignalRecovery"
 STATE_FILE="$LOCAL_ROOT/ssd-state"
 RUNNER_HANG_FILE="$LOCAL_ROOT/runner-hang-state"
-RUNNER_HANG_CPU_MIN=90
+RUNNER_HANG_CPU_MIN=50
+RUNNER_HANG_MIN_AGE_SECONDS=600
 RUNNER_HANG_STREAK_LIMIT=3
 LOCK_DIR="$LOCAL_ROOT/watchdog.lock"
 LOG="$LOCAL_LOG/hotplug-watchdog.log"
@@ -217,6 +218,30 @@ reset_runner_hang_state() {
   printf 'pid=\nstreak=0\n' >"$RUNNER_HANG_FILE"
 }
 
+runner_elapsed_seconds() {
+  local pid="$1"
+  local elapsed=""
+  elapsed="$(/bin/ps -p "$pid" -o etime= 2>/dev/null | /usr/bin/tr -d ' ' || true)"
+  [ -n "$elapsed" ] || {
+    printf '0\n'
+    return 0
+  }
+  /usr/bin/awk -v value="$elapsed" '
+    BEGIN {
+      n = split(value, part, /[-:]/)
+      if (n == 4) {
+        print (part[1] * 86400) + (part[2] * 3600) + (part[3] * 60) + part[4]
+      } else if (n == 3) {
+        print (part[1] * 3600) + (part[2] * 60) + part[3]
+      } else if (n == 2) {
+        print (part[1] * 60) + part[2]
+      } else {
+        print 0
+      }
+    }
+  '
+}
+
 runner_hang_detected() {
   local pid=""
   local cpu_raw=""
@@ -224,6 +249,7 @@ runner_hang_detected() {
   local previous_pid=""
   local previous_streak=0
   local streak=0
+  local age_seconds=0
 
   pid="$(runner_listener_pid)"
   if [ -z "$pid" ]; then
@@ -232,6 +258,12 @@ runner_hang_detected() {
   fi
 
   if runner_worker_alive; then
+    reset_runner_hang_state
+    return 1
+  fi
+
+  age_seconds="$(runner_elapsed_seconds "$pid")"
+  if [ "$age_seconds" -lt "$RUNNER_HANG_MIN_AGE_SECONDS" ]; then
     reset_runner_hang_state
     return 1
   fi
@@ -260,7 +292,7 @@ runner_hang_detected() {
   printf 'pid=%s\nstreak=%s\ncpu=%s\n' "$pid" "$streak" "$cpu_int" >"$RUNNER_HANG_FILE"
 
   if [ "$streak" -ge "$RUNNER_HANG_STREAK_LIMIT" ]; then
-    log "RUNNER_HANG_DETECTED=YES pid=$pid cpu=$cpu_int streak=$streak worker=NO"
+    log "RUNNER_HANG_DETECTED=YES pid=$pid cpu=$cpu_int age_seconds=$age_seconds streak=$streak worker=NO"
     return 0
   fi
   return 1
