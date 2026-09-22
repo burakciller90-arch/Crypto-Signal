@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from decimal import Decimal
 from enum import StrEnum
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from crypto_signal.data.derivatives import (
     DerivativesInstrumentType,
@@ -470,15 +470,18 @@ class MarketTapeStore:
         self.initialize()
         clauses = [f"{field} = ?" for field in fields]
         with self._connect() as connection:
-            return connection.execute(
-                f"""
-                SELECT *
-                FROM {table}
-                WHERE {" AND ".join(clauses)}
-                LIMIT 1
-                """,
-                tuple(fields.values()),
-            ).fetchone()
+            return cast(
+                sqlite3.Row | None,
+                connection.execute(
+                    f"""
+                    SELECT *
+                    FROM {table}
+                    WHERE {" AND ".join(clauses)}
+                    LIMIT 1
+                    """,
+                    tuple(fields.values()),
+                ).fetchone(),
+            )
 
     def _recent_rows(
         self,
