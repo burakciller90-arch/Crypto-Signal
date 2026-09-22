@@ -1,0 +1,333 @@
+name: Crypto Market Tape HotCold Live Acceptance
+
+on:
+  push:
+    branches:
+      - v1.1-market-tape-hotcold-v1
+    paths:
+      - ".github/workflows/crypto-market-tape-hotcold-live-acceptance.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  accept:
+    name: Accept Hot SQLite Cold Parquet on UID504 and cut over
+    runs-on: [self-hosted, crypto-signal, uid501]
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Stage exact HotCold bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+          STAGE="/tmp/crypto-market-tape-hotcold-live-stage"
+          rm -rf "$STAGE"
+          mkdir -p "$STAGE"
+          cp -R src ops "$STAGE/"
+          printf '%s\n' "$GITHUB_SHA" >"$STAGE/BUILD_COMMIT"
+          (
+            cd "$STAGE"
+            find src ops -type f -print0 | sort -z | xargs -0 shasum -a 256 > BUILD_SHA256SUMS
+          )
+          chmod -R a+rX "$STAGE"
+          echo "HOTCOLD_STAGE_SHA=$GITHUB_SHA"
+          test -s "$STAGE/BUILD_SHA256SUMS"
+
+      - name: Pause any prior collector and atomically prepare stable bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo -k
+          test "$(sudo -n -H -u crypto-signal-agent /usr/bin/id -u)" = "504"
+          sudo -n -H -u crypto-signal-agent /usr/bin/env \
+            SOURCE_STAGE=/tmp/crypto-market-tape-hotcold-live-stage \
+            HOME=/Users/crypto-signal-agent \
+            /bin/bash <<'SH'
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          STAGE="$SOURCE_STAGE"
+          NEXT="$ROOT/MarketTape.next"
+          STABLE="$ROOT/MarketTape"
+          PREVIOUS="$ROOT/MarketTape.previous"
+          LABEL="com.cryptosignal.markettape"
+          DOMAIN="gui/$(id -u)"
+          RUNTIME="$ROOT/MarketTape/ops/run_market_tape_runtime.py"
+
+          test -d "$ROOT"
+          test -x "$ROOT/Development/.venv/bin/python"
+
+          launchctl disable "$DOMAIN/$LABEL" >/dev/null 2>&1 || true
+          launchctl bootout "$DOMAIN/$LABEL" >/dev/null 2>&1 || true
+          sleep 2
+
+          count="$(ps -axo user=,command= | awk -v user="crypto-signal-agent" -v script="$RUNTIME" '$1==user && index($0,script)>0 {n++} END{print n+0}')"
+          echo "MARKET_TAPE_PREPARE_PROCESS_COUNT=$count"
+          test "$count" = "0"
+
+          TAPE="$ROOT/Development/runtime/market_tape"
+          test "$(sqlite3 "$TAPE/raw_market_tape.sqlite3" 'PRAGMA quick_check;')" = "ok"
+          test "$(sqlite3 "$TAPE/market_tape.sqlite3" 'PRAGMA quick_check;')" = "ok"
+          echo "RAW_ROWS_PREPARE=$(sqlite3 "$TAPE/raw_market_tape.sqlite3" 'SELECT COUNT(*) FROM raw_market_events;')"
+          echo "HOT_BYTES_PREPARE=$(du -sk "$TAPE" | awk '{print $1*1024}')"
+          df -h "$ROOT"
+
+          rm -rf "$NEXT"
+          mkdir -p "$NEXT"
+          cp -R "$STAGE/src" "$NEXT/"
+          cp -R "$STAGE/ops" "$NEXT/"
+          cp "$STAGE/BUILD_COMMIT" "$NEXT/BUILD_COMMIT"
+          cp "$STAGE/BUILD_SHA256SUMS" "$NEXT/BUILD_SHA256SUMS"
+          (
+            cd "$NEXT"
+            shasum -a 256 -c BUILD_SHA256SUMS >/dev/null
+          )
+
+          rm -rf "$PREVIOUS"
+          if [ -d "$STABLE" ]; then
+            mv "$STABLE" "$PREVIOUS"
+          fi
+          mv "$NEXT" "$STABLE"
+
+          if ! MARKET_TAPE_INSTALL_NO_START=1 /bin/bash "$STABLE/ops/install_market_tape_runtime.sh"; then
+            rm -rf "$STABLE"
+            if [ -d "$PREVIOUS" ]; then
+              mv "$PREVIOUS" "$STABLE"
+            fi
+            echo "HOTCOLD_PREPARE_FAILED_SERVICE_REMAINS_DISABLED=YES" >&2
+            exit 71
+          fi
+
+          test "$(cat "$STABLE/BUILD_COMMIT")" = "$GITHUB_SHA"
+          test "$("$ROOT/RuntimeEnvs/market-tape-cold/bin/python" -c 'import pyarrow; print(pyarrow.__version__)')" = "22.0.0"
+          echo "HOTCOLD_STABLE_PREPARE_PASS=YES"
+          echo "REAL_CAPITAL=0"
+          SH
+
+      - name: Exercise real SSD Parquet archive with isolated old partition
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo -n -H -u crypto-signal-agent /usr/bin/env \
+            ACCEPT_RUN_ID="$GITHUB_RUN_ID" \
+            HOME=/Users/crypto-signal-agent \
+            /bin/bash <<'SH'
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          STABLE="$ROOT/MarketTape"
+          MAIN_PY="$ROOT/Development/.venv/bin/python"
+          COLD_PY="$ROOT/RuntimeEnvs/market-tape-cold/bin/python"
+          ACCEPT="$ROOT/Acceptance/hotcold-$ACCEPT_RUN_ID"
+          HOT="$ACCEPT/hot"
+          COLD="$ACCEPT/cold"
+
+          rm -rf "$ACCEPT"
+          mkdir -p "$HOT" "$COLD"
+
+          PYTHONPATH="$STABLE/src" "$MAIN_PY" - "$HOT" <<'PY'
+          import hashlib
+          import sqlite3
+          import sys
+          import time
+          from pathlib import Path
+          from crypto_signal.data.market_tape import MarketTapeStore
+          from crypto_signal.data.raw_market_tape import RawMarketTapeStore
+
+          hot=Path(sys.argv[1])
+          normalized=hot/"market_tape.sqlite3"
+          raw=hot/"raw_market_tape.sqlite3"
+          MarketTapeStore(normalized).initialize()
+          RawMarketTapeStore(raw).initialize()
+          hour=60*60*1000
+          start=((time.time_ns()//1_000_000 - 30*hour)//hour)*hour
+          event=start+10_000
+          raw_id=hashlib.sha256(b"uid504-hotcold-raw").hexdigest()
+          book_id=hashlib.sha256(b"uid504-hotcold-book").hexdigest()
+          trade_id=hashlib.sha256(b"uid504-hotcold-trade").hexdigest()
+          with sqlite3.connect(raw) as con:
+              con.execute("""
+                INSERT INTO raw_market_events(
+                  event_identity,exchange,channel,symbol,event_kind,
+                  source_timestamp_ms,event_at_ms,ingested_at_ms,
+                  sequence,update_id,payload_json
+                ) VALUES (?, 'bybit','orderbook.50.BTCUSDT','BTCUSDT',
+                  'delta',?,?,?,?,?,?)
+              """,(raw_id,event+2,event,event+3,1,1,'{"topic":"orderbook.50.BTCUSDT","type":"delta"}'))
+          with sqlite3.connect(normalized) as con:
+              con.execute("""
+                INSERT INTO market_tape_orderbooks(
+                  snapshot_identity,exchange,market_type,symbol,event_at_ms,
+                  source_timestamp_ms,ingested_at_ms,update_id,sequence,
+                  source,adapter_version,payload_json
+                ) VALUES (?, 'bybit','spot','BTCUSDT',?,?,?,1,1,
+                  'websocket','acceptance/1','{"kind":"orderbook"}')
+              """,(book_id,event,event+2,event+3))
+              con.execute("""
+                INSERT INTO market_tape_trades(
+                  trade_identity,exchange,market_type,symbol,event_at_ms,
+                  source_timestamp_ms,ingested_at_ms,exec_id,sequence,
+                  aggressor_side,source,adapter_version,payload_json
+                ) VALUES (?, 'bybit','spot','BTCUSDT',?,?,?,'accept-exec',
+                  1,'buy','websocket','acceptance/1','{"kind":"trade"}')
+              """,(trade_id,event+1,event+2,event+3))
+          print(f"SYNTHETIC_PARTITION_START_MS={start}")
+          PY
+
+          PYTHONPATH="$STABLE/src" "$COLD_PY"             "$STABLE/ops/market_tape/archive_hot_to_parquet.py"             --hot-dir "$HOT" --cold-dir "$COLD" | tee "$ACCEPT/archive.out"
+
+          grep -q 'MARKET_TAPE_COLD_ARCHIVE_PASS=YES' "$ACCEPT/archive.out"
+          test "$(sqlite3 "$HOT/raw_market_tape.sqlite3" 'SELECT COUNT(*) FROM raw_market_events;')" = "0"
+          test "$(sqlite3 "$HOT/market_tape.sqlite3" 'SELECT COUNT(*) FROM market_tape_orderbooks;')" = "0"
+          test "$(sqlite3 "$HOT/market_tape.sqlite3" 'SELECT COUNT(*) FROM market_tape_trades;')" = "0"
+          test "$(sqlite3 "$HOT/raw_market_tape.sqlite3" 'PRAGMA quick_check;')" = "ok"
+          test "$(sqlite3 "$HOT/market_tape.sqlite3" 'PRAGMA quick_check;')" = "ok"
+
+          PYTHONPATH="$STABLE/src" "$COLD_PY" - "$COLD" <<'PY'
+          import sys
+          from pathlib import Path
+          from crypto_signal.data.market_tape_cold_archive import verify_cold_partition
+
+          root=Path(sys.argv[1])
+          manifests=list(root.rglob("manifest.json"))
+          assert len(manifests)==1, manifests
+          payload=verify_cold_partition(manifests[0].parent)
+          tables=payload["tables"]
+          assert tables["raw"]["rows"] == 1
+          assert tables["orderbooks"]["rows"] == 1
+          assert tables["trades"]["rows"] == 1
+          print(f"UID504_COLD_PARTITION_VERIFY_PASS={payload['partition_id']}")
+          PY
+
+          rm -rf "$ACCEPT"
+          echo "UID504_HOTCOLD_SYNTHETIC_ACCEPTANCE_PASS=YES"
+          echo "REAL_CAPITAL=0"
+          SH
+
+      - name: Run one bounded canonical Bybit chunk
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo -n -H -u crypto-signal-agent /usr/bin/env \
+            HOME=/Users/crypto-signal-agent \
+            /bin/bash <<'SH'
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          STABLE="$ROOT/MarketTape"
+          TAPE="$ROOT/Development/runtime/market_tape"
+          RAW="$TAPE/raw_market_tape.sqlite3"
+          DB="$TAPE/market_tape.sqlite3"
+          PY="$ROOT/Development/.venv/bin/python"
+
+          before="$(sqlite3 "$RAW" 'SELECT COUNT(*) FROM raw_market_events;')"
+          echo "RAW_ROWS_BOUNDED_BEFORE=$before"
+
+          set +e
+          PYTHONPATH="$STABLE/src" "$PY" "$STABLE/ops/run_market_tape_runtime.py"             --max-cycles 1 --chunk-messages 2000             >"$TAPE/hotcold-bounded.out.log"             2>"$TAPE/hotcold-bounded.err.log"
+          rc=$?
+          set -e
+          cat "$TAPE/hotcold-bounded.out.log"
+          cat "$TAPE/hotcold-bounded.err.log" >&2 || true
+          echo "BOUNDED_RUNTIME_RC=$rc"
+          test "$rc" = "0"
+
+          after="$(sqlite3 "$RAW" 'SELECT COUNT(*) FROM raw_market_events;')"
+          echo "RAW_ROWS_BOUNDED_AFTER=$after"
+          test "$after" -gt "$before"
+          test "$(sqlite3 "$RAW" 'PRAGMA quick_check;')" = "ok"
+          test "$(sqlite3 "$DB" 'PRAGMA quick_check;')" = "ok"
+
+          python3 - "$TAPE/runtime_status.json" <<'PY'
+          import json,sys
+          data=json.load(open(sys.argv[1]))
+          assert data["state"] == "collecting"
+          assert data["real_capital"] == 0
+          assert int(data["hot_bytes"]) >= 0
+          assert int(data["cold_bytes"]) >= 0
+          assert int(data["free_bytes"]) > 250 * 1024**3
+          assert data["capacity_decision"] == "collect"
+          PY
+          echo "UID504_HOTCOLD_BOUNDED_LIVE_PASS=YES"
+          echo "REAL_CAPITAL=0"
+          SH
+
+      - name: Final 24x7 cutover and acceptance
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo -n -H -u crypto-signal-agent /usr/bin/env \
+            HOME=/Users/crypto-signal-agent \
+            /bin/bash <<'SH'
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          STABLE="$ROOT/MarketTape"
+          TAPE="$ROOT/Development/runtime/market_tape"
+          RAW="$TAPE/raw_market_tape.sqlite3"
+          DB="$TAPE/market_tape.sqlite3"
+          STATUS="$TAPE/runtime_status.json"
+          LABEL="com.cryptosignal.markettape"
+          DOMAIN="gui/$(id -u)"
+          SCRIPT="$STABLE/ops/run_market_tape_runtime.py"
+
+          before="$(sqlite3 "$RAW" 'SELECT COUNT(*) FROM raw_market_events;')"
+          /bin/bash "$STABLE/ops/install_market_tape_runtime.sh"
+
+          ready=0
+          count=0
+          after="$before"
+          for _ in {1..100}; do
+            count="$(ps -axo user=,command= | awk -v user="crypto-signal-agent" -v script="$SCRIPT" '$1==user && index($0,script)>0 {n++} END{print n+0}')"
+            if [ "$count" = "1" ] && [ -s "$STATUS" ]; then
+              after="$(sqlite3 "$RAW" 'SELECT COUNT(*) FROM raw_market_events;')"
+              state="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("state",""))' "$STATUS")"
+              updated="$(python3 -c 'import json,sys; print(int(json.load(open(sys.argv[1])).get("updated_at_epoch",0)))' "$STATUS")"
+              now="$(date +%s)"
+              age=$((now-updated))
+              if [ "$after" -gt "$before" ] && [ "$age" -ge 0 ] && [ "$age" -le 90 ]                 && { [ "$state" = "collecting_chunk" ] || [ "$state" = "collecting" ]; }; then
+                ready=1
+                break
+              fi
+            fi
+            sleep 1
+          done
+
+          echo "MARKET_TAPE_HOTCOLD_RUNTIME_PROCESS_COUNT=$count"
+          echo "RAW_ROWS_24X7_BEFORE=$before"
+          echo "RAW_ROWS_24X7_AFTER=$after"
+          launchctl print "$DOMAIN/$LABEL" 2>&1 | egrep 'state =|pid =|runs =|last exit code =|program =|path =' | head -120 || true
+          cat "$STATUS"
+
+          if [ "$ready" != "1" ] || [ "$count" != "1" ]; then
+            launchctl disable "$DOMAIN/$LABEL" >/dev/null 2>&1 || true
+            launchctl bootout "$DOMAIN/$LABEL" >/dev/null 2>&1 || true
+            echo "HOTCOLD_FINAL_ACCEPTANCE_FAILED_SERVICE_DISABLED=YES" >&2
+            exit 72
+          fi
+
+          python3 - "$STATUS" <<'PY'
+          import json,sys,time
+          data=json.load(open(sys.argv[1]))
+          assert data["state"] in {"collecting_chunk","collecting"}
+          assert data["real_capital"] == 0
+          assert int(data["free_bytes"]) > 250 * 1024**3
+          assert int(data["hot_bytes"]) < 25 * 1024**3
+          assert int(data["cold_bytes"]) < 600 * 1024**3
+          assert data["capacity_decision"] == "collect"
+          assert int(time.time()) - int(data["updated_at_epoch"]) <= 90
+          PY
+          test "$(sqlite3 "$RAW" 'PRAGMA quick_check;')" = "ok"
+          test "$(sqlite3 "$DB" 'PRAGMA quick_check;')" = "ok"
+          test "$(cat "$STABLE/BUILD_COMMIT")" = "$GITHUB_SHA"
+          test "$("$ROOT/RuntimeEnvs/market-tape-cold/bin/python" -c 'import pyarrow; print(pyarrow.__version__)')" = "22.0.0"
+
+          echo "MARKET_TAPE_HOTCOLD_24X7_CUTOVER_PASS=YES"
+          echo "REAL_CAPITAL=0"
+          SH
+
+      - name: Cleanup transient stage
+        if: always()
+        shell: bash
+        run: |
+          rm -rf /tmp/crypto-market-tape-hotcold-live-stage
