@@ -47,12 +47,19 @@ Read this file, then `CURRENT_STATUS.md`, then the newest `PROJECT_CHRONICLE.md`
 - A delivered/stale/completed/superseded wake must NOOP/reconcile, never replay completed work.
 - User pause archives active leases and queued wakes; resume requires state-first recovery and a fresh exact re-arm.
 - Browser wake transport is bound to one exact ChatGPT conversation URL and uses at-most-once event receipts.
-- Cursor Composer workers run in isolated worktrees. Worker output is evidence only; supervisor independently reviews diff/tests before integration.
-- A worker never gets authority to touch Durdurulmaz, Quantum Capital, credentials, continuity runtime, or REAL_CAPITAL policy.
+- **Cursor workers / Cursor Composer are not an active development path. Do not delegate coding, review, planning, or continuation tasks to them.**
+- Historical Cursor tasks/worktrees are audit evidence only; stale items must be reconciled/NOOPed, never resumed as authority.
 
-## Current development authority update — 2026-09-20
+## Current development authority update — reaffirmed 2026-09-23
 
-Cursor is suspended as a development worker by explicit user direction. Do not create new [CURSOR] WORK / ASK tasks unless the user explicitly re-enables Cursor. Continue implementation directly through the supervisor-controlled GitHub/UID504 path, preserving the same test, review, REAL_CAPITAL=0 and rollback boundaries.
+Cursor workers / Cursor Composer are **disabled for project development by explicit user direction**. Prior use produced repeated errors, duplicated effort and slower delivery.
+
+- Do not create new `[CURSOR] WORK`, `[CURSOR] ASK`, Composer jobs, or `supervisor-*` Cursor worktrees.
+- Do not use Cursor as an automatic fallback when direct implementation encounters a problem.
+- Do not resume historical Cursor tasks; treat them as stale/superseded unless the user explicitly reverses this rule in a future message.
+- Cursor tooling may be inspected read-only only when necessary to reconcile stale state.
+- Continue safe development directly through the supervisor-controlled GitHub + hosted-gate + narrow UID504 verification path.
+- Preserve all test/review, rollback, scientific-truth and `REAL_CAPITAL=0` boundaries.
 
 
 ## Final Full Version release package
