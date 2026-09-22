@@ -14,10 +14,7 @@ STATE_FILE="$LOCAL_ROOT/ssd-state"
 LABEL="com.cryptosignal.ssd-hotplug-recovery"
 PLIST="$HOME/Library/LaunchAgents/$LABEL.plist"
 TARGET="gui/$(id -u)/$LABEL"
-RUNNER_SERVICE_LABEL="com.cryptosignal.github-runner-r15-service"
-RUNNER_SERVICE_BOOTSTRAP="$LOCAL_ROOT/runner-service-bootstrap.sh"
-RUNNER_SERVICE_PLIST="$HOME/Library/LaunchAgents/$RUNNER_SERVICE_LABEL.plist"
-RUNNER_SERVICE_TARGET="gui/$(id -u)/$RUNNER_SERVICE_LABEL"
+RUNNER_TERMINAL_START="$LOCAL_ROOT/start-ssd-runner.command"
 LEGACY_RUNNER_LABELS=(
   "com.cryptosignal.github-runner-terminal-watchdog"
   "com.cryptosignal.github-runner-ssd"
@@ -48,8 +45,8 @@ RUNNER_HANG_STREAK_LIMIT=6
 LOCK_DIR="$LOCAL_ROOT/watchdog.lock"
 LOG="$LOCAL_LOG/hotplug-watchdog.log"
 ERR="$LOCAL_LOG/hotplug-watchdog.err.log"
-RUNNER_SERVICE_LABEL="com.cryptosignal.github-runner-r15-service"
-RUNNER_SERVICE_TARGET="gui/$(id -u)/$RUNNER_SERVICE_LABEL"
+RUNNER_TERMINAL_START="$LOCAL_ROOT/start-ssd-runner.command"
+RUNNER_TERMINAL_LOCK="$LOCAL_ROOT/terminal-start.lock"
 
 mkdir -p "$LOCAL_ROOT" "$LOCAL_LOG"
 
@@ -505,6 +502,33 @@ start_supervisor() {
   return 0
 }
 
+request_terminal_runner_start() {
+  local now=0
+  local then=0
+
+  if [ ! -x "$RUNNER_TERMINAL_START" ]; then
+    err "RUNNER_TERMINAL_START_ABORT=COMMAND_NOT_READY path=$RUNNER_TERMINAL_START"
+    return 1
+  fi
+
+  if [ -f "$RUNNER_TERMINAL_LOCK" ]; then
+    now="$(date +%s)"
+    then="$(stat -f %m "$RUNNER_TERMINAL_LOCK" 2>/dev/null || echo 0)"
+    if [ $((now-then)) -lt 90 ]; then
+      log "RUNNER_TERMINAL_START_SUPPRESSED=LOCK_ACTIVE"
+      return 0
+    fi
+  fi
+
+  date >"$RUNNER_TERMINAL_LOCK"
+  log "RUNNER_TERMINAL_START_REQUESTED=YES"
+  if ! /usr/bin/open -gj -a Terminal "$RUNNER_TERMINAL_START" >>"$LOCAL_LOG/terminal-open.out.log" 2>>"$LOCAL_LOG/terminal-open.err.log"; then
+    err "RUNNER_TERMINAL_START_REQUESTED=NO"
+    return 1
+  fi
+  return 0
+}
+
 start_runner() {
   local force_restart="$1"
 
@@ -540,18 +564,10 @@ start_runner() {
     stop_orphan_runner_parent_tree "$orphan_service" || return 1
   fi
 
-  if ! /bin/launchctl print "$RUNNER_SERVICE_TARGET" >/dev/null 2>&1; then
-    err "RUNNER_SERVICE_START_ABORT=LAUNCHAGENT_NOT_LOADED target=$RUNNER_SERVICE_TARGET"
-    return 1
-  fi
-
-  if ! /bin/launchctl kickstart -k "$RUNNER_SERVICE_TARGET" >/dev/null 2>>"$ERR"; then
-    err "RUNNER_SERVICE_KICKSTART_PASS=NO target=$RUNNER_SERVICE_TARGET"
-    return 1
-  fi
+  request_terminal_runner_start || return 1
 
   reset_runner_hang_state
-  log "RUNNER_SERVICE_KICKSTART_PASS=YES force=$force_restart target=$RUNNER_SERVICE_TARGET"
+  log "RUNNER_RESTART_REQUESTED=YES force=$force_restart transport=terminal"
   return 0
 }
 
@@ -595,53 +611,55 @@ exit 0
 WATCH
 chmod 700 "$WATCHDOG"
 
-cat > "$RUNNER_SERVICE_BOOTSTRAP" <<'RUNNERSVC'
+cat > "$RUNNER_TERMINAL_START" <<'RUNNERTERM'
 #!/bin/bash
-set -euo pipefail
+set -u
 
 ROOT="/Volumes/Crypto-504/Crypto-Signal"
 RUNNER="$ROOT/Runner"
 LOG="$ROOT/RunnerLogs"
+LOCAL_ROOT="$HOME/Library/Application Support/CryptoSignalRecovery"
+LOCAL_LOG="$HOME/Library/Logs/CryptoSignalRecovery"
+EXPECTED="$RUNNER/bin/Runner.Listener run --startuptype service"
 
-if ! /sbin/mount | /usr/bin/grep -F " on /Volumes/Crypto-504 " >/dev/null 2>&1; then
+mkdir -p "$LOCAL_ROOT" "$LOCAL_LOG"
+
+listener_count="$(/bin/ps -axo command= 2>/dev/null | /usr/bin/awk -v expected="$EXPECTED" '$0 == expected {n++} END {print n+0}')"
+if [ "$listener_count" -gt 0 ]; then
+  printf '%s RUNNER_ALREADY_ALIVE=YES count=%s\n' "$(date '+%Y-%m-%d %H:%M:%S %z')" "$listener_count" >>"$LOCAL_LOG/terminal-runner.log"
+  rm -f "$LOCAL_ROOT/terminal-start.lock"
+  exit 0
+fi
+
+if /bin/ps -axo command= 2>/dev/null | /usr/bin/grep -F "$RUNNER/bin/Runner.Worker" | /usr/bin/grep -v grep >/dev/null 2>&1; then
+  printf '%s RUNNER_TERMINAL_START_ABORT=ACTIVE_WORKER\n' "$(date '+%Y-%m-%d %H:%M:%S %z')" >>"$LOCAL_LOG/terminal-runner.err.log"
+  rm -f "$LOCAL_ROOT/terminal-start.lock"
+  exit 1
+fi
+
+if [ ! -x "$RUNNER/runsvc.sh" ]; then
+  printf '%s SSD_RUNNER_NOT_READY=YES\n' "$(date '+%Y-%m-%d %H:%M:%S %z')" >>"$LOCAL_LOG/terminal-runner.err.log"
+  rm -f "$LOCAL_ROOT/terminal-start.lock"
   exit 75
 fi
 
-test -x "$RUNNER/runsvc.sh"
 mkdir -p "$LOG"
-cd "$RUNNER"
+cd "$RUNNER" || exit 75
 unset RUNNER_TRACKING_ID
 export HOME="/Users/crypto-signal-agent"
 export ACTIONS_RUNNER_SVC=1
-exec ./runsvc.sh >>"$LOG/r15-runner-service.out.log" 2>>"$LOG/r15-runner-service.err.log"
-RUNNERSVC
-chmod 700 "$RUNNER_SERVICE_BOOTSTRAP"
-
-cat > "$RUNNER_SERVICE_PLIST" <<PLIST
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-  <key>Label</key>
-  <string>$RUNNER_SERVICE_LABEL</string>
-  <key>ProgramArguments</key>
-  <array>
-    <string>/bin/bash</string>
-    <string>$RUNNER_SERVICE_BOOTSTRAP</string>
-  </array>
-  <key>ProcessType</key>
-  <string>Background</string>
-  <key>ThrottleInterval</key>
-  <integer>10</integer>
-  <key>StandardOutPath</key>
-  <string>$LOCAL_LOG/runner-service-launchagent.out.log</string>
-  <key>StandardErrorPath</key>
-  <string>$LOCAL_LOG/runner-service-launchagent.err.log</string>
-</dict>
-</plist>
-PLIST
-chmod 644 "$RUNNER_SERVICE_PLIST"
-/usr/bin/plutil -lint "$RUNNER_SERVICE_PLIST"
+nohup ./runsvc.sh \
+  >>"$LOG/r15-terminal-runner.out.log" \
+  2>>"$LOG/r15-terminal-runner.err.log" \
+  </dev/null &
+pid=$!
+echo "$pid" >"$LOCAL_ROOT/runner-terminal.pid"
+printf '%s STARTED_RUNSVC_PID=%s\n' "$(date '+%Y-%m-%d %H:%M:%S %z')" "$pid" >>"$LOCAL_LOG/terminal-runner.log"
+rm -f "$LOCAL_ROOT/terminal-start.lock"
+sleep 5
+exit 0
+RUNNERTERM
+chmod 700 "$RUNNER_TERMINAL_START"
 
 cat > "$PLIST" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
@@ -688,10 +706,6 @@ for legacy_label in "${LEGACY_RUNNER_LABELS[@]}"; do
   /bin/launchctl bootout "$legacy_target" >/dev/null 2>&1 || true
 done
 
-/bin/launchctl bootout "$RUNNER_SERVICE_TARGET" >/dev/null 2>&1 || true
-/bin/launchctl enable "$RUNNER_SERVICE_TARGET" >/dev/null 2>&1 || true
-/bin/launchctl bootstrap "gui/$(id -u)" "$RUNNER_SERVICE_PLIST"
-
 /bin/launchctl bootout "$TARGET" >/dev/null 2>&1 || true
 /bin/launchctl enable "$TARGET" >/dev/null 2>&1 || true
 /bin/launchctl bootstrap "gui/$(id -u)" "$PLIST"
@@ -700,6 +714,6 @@ done
 
 echo "R15_SSD_HOTPLUG_RECOVERY_INSTALLED=YES"
 echo "R15_SSD_HOTPLUG_RECOVERY_SINGLE_OWNER=YES"
-echo "R15_SSD_HOTPLUG_RECOVERY_RUNNER_LAUNCHD_SERVICE=YES"
+echo "R15_SSD_HOTPLUG_RECOVERY_RUNNER_TERMINAL_TRANSPORT=YES"
 echo "R15_SSD_HOTPLUG_RECOVERY_REAL_CAPITAL=0"
 echo "R15_SSD_HOTPLUG_RECOVERY_NO_INTERNAL_RUNTIME_FALLBACK=YES"
