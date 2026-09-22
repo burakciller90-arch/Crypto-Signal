@@ -442,7 +442,7 @@ class MarketTapeStore:
             payload_json=canonical_json(observation),
             columns=(
                 "liquidation_identity",
-                "semantic_identity",
+                "provider_identity",
                 "exchange",
                 "instrument_type",
                 "symbol",
@@ -457,7 +457,7 @@ class MarketTapeStore:
             ),
             values=(
                 observation.liquidation_identity,
-                semantic_identity,
+                provider_identity,
                 observation.exchange.value,
                 observation.instrument_type.value,
                 observation.symbol,
