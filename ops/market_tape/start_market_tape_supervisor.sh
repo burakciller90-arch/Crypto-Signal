@@ -38,13 +38,14 @@ if [ -s "$PID_FILE" ]; then
 fi
 
 unset RUNNER_TRACKING_ID || true
-"$PYTHON" "$SUPERVISOR" --daemonize
+nohup "$PYTHON" "$SUPERVISOR" >>"$LOG" 2>&1 </dev/null &
+launcher_pid=$!
 
 for _ in {1..20}; do
   if [ -s "$PID_FILE" ]; then
     supervisor_pid="$(cat "$PID_FILE")"
     if kill -0 "$supervisor_pid" 2>/dev/null; then
-      echo "MARKET_TAPE_SUPERVISOR_START_PASS=YES pid=$supervisor_pid"
+      echo "MARKET_TAPE_SUPERVISOR_START_PASS=YES pid=$supervisor_pid launcher_pid=$launcher_pid"
       echo "REAL_CAPITAL=0"
       exit 0
     fi
