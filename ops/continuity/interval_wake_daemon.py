@@ -7,6 +7,7 @@ import sys
 import time
 import uuid
 from pathlib import Path
+from typing import TypedDict, cast
 
 from continuity_contracts import event_key
 
@@ -35,6 +36,45 @@ FINAL_RECEIPT_STATES = {
 }
 
 
+class RollingWakeState(TypedDict):
+    generation: str
+    sequence: int
+    next_due_epoch: float
+    pending_event_id: str
+    last_event_id: str
+    last_attempt_epoch: float
+    last_receipt_epoch: float
+    failure_count: int
+
+
+def _coerce_int(value: object, default: int = 0) -> int:
+    if isinstance(value, bool):
+        return default
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float):
+        return int(value)
+    if isinstance(value, str):
+        try:
+            return int(value)
+        except ValueError:
+            return default
+    return default
+
+
+def _coerce_float(value: object, default: float = 0.0) -> float:
+    if isinstance(value, bool):
+        return default
+    if isinstance(value, (int, float)):
+        return float(value)
+    if isinstance(value, str):
+        try:
+            return float(value)
+        except ValueError:
+            return default
+    return default
+
+
 def atomic_write(path: Path, content: str, mode: int = 0o600) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_name(f".{path.name}.{os.getpid()}.tmp")
@@ -57,49 +97,41 @@ def pid_alive(pid: int) -> bool:
     return True
 
 
-def load_state(*, reset: bool) -> dict[str, object]:
+def load_state(*, reset: bool) -> RollingWakeState:
     if reset:
         STATE_FILE.unlink(missing_ok=True)
     try:
-        value = json.loads(STATE_FILE.read_text())
+        raw: object = json.loads(STATE_FILE.read_text())
     except FileNotFoundError:
-        value = {}
+        raw = {}
     except (OSError, UnicodeError, json.JSONDecodeError):
         bad = STATE_FILE.with_name(f"{STATE_FILE.name}.bad.{int(time.time())}")
         try:
             STATE_FILE.replace(bad)
         except OSError:
             pass
-        value = {}
+        raw = {}
 
-    if not isinstance(value, dict):
-        value = {}
+    value = cast(dict[str, object], raw) if isinstance(raw, dict) else {}
     generation = str(value.get("generation") or uuid.uuid4().hex[:16])
-    try:
-        sequence = max(0, int(value.get("sequence", 0)))
-    except (TypeError, ValueError):
-        sequence = 0
-    try:
-        next_due_epoch = float(value.get("next_due_epoch", 0.0))
-    except (TypeError, ValueError):
-        next_due_epoch = 0.0
+    sequence = max(0, _coerce_int(value.get("sequence"), 0))
+    next_due_epoch = _coerce_float(value.get("next_due_epoch"), 0.0)
     if next_due_epoch <= 0:
         next_due_epoch = time.time()
 
-    pending = str(value.get("pending_event_id") or "")
     return {
         "generation": generation,
         "sequence": sequence,
         "next_due_epoch": next_due_epoch,
-        "pending_event_id": pending,
+        "pending_event_id": str(value.get("pending_event_id") or ""),
         "last_event_id": str(value.get("last_event_id") or ""),
-        "last_attempt_epoch": float(value.get("last_attempt_epoch", 0.0) or 0.0),
-        "last_receipt_epoch": float(value.get("last_receipt_epoch", 0.0) or 0.0),
-        "failure_count": int(value.get("failure_count", 0) or 0),
+        "last_attempt_epoch": _coerce_float(value.get("last_attempt_epoch"), 0.0),
+        "last_receipt_epoch": _coerce_float(value.get("last_receipt_epoch"), 0.0),
+        "failure_count": max(0, _coerce_int(value.get("failure_count"), 0)),
     }
 
 
-def save_state(state: dict[str, object]) -> None:
+def save_state(state: RollingWakeState) -> None:
     atomic_write(
         STATE_FILE,
         json.dumps(state, sort_keys=True, separators=(",", ":")) + "\n",
@@ -132,13 +164,13 @@ def prerequisites_ready() -> bool:
 
 
 def write_runtime_status(
-    state: dict[str, object],
+    state: RollingWakeState,
     *,
     runtime_state: str,
     detail: str,
 ) -> None:
     now = time.time()
-    next_due = float(state["next_due_epoch"])
+    next_due = state["next_due_epoch"]
     pending = str(state["pending_event_id"])
     countdown = max(0, round(next_due - now)) if not pending else 0
     content = (
@@ -150,8 +182,8 @@ def write_runtime_status(
         f"sequence={state['sequence']}\n"
         f"pending_event_id={pending}\n"
         f"last_event_id={state['last_event_id']}\n"
-        f"last_attempt_epoch={int(float(state['last_attempt_epoch']))}\n"
-        f"last_receipt_epoch={int(float(state['last_receipt_epoch']))}\n"
+        f"last_attempt_epoch={int(state['last_attempt_epoch'])}\n"
+        f"last_receipt_epoch={int(state['last_receipt_epoch'])}\n"
         f"next_due_epoch={int(next_due)}\n"
         f"next_due_in_seconds={countdown}\n"
         f"failure_count={state['failure_count']}\n"
@@ -176,8 +208,8 @@ def run_wake(event_id: str) -> tuple[int, str]:
     return proc.returncode, output
 
 
-def next_event(state: dict[str, object]) -> str:
-    sequence = int(state["sequence"]) + 1
+def next_event(state: RollingWakeState) -> str:
+    sequence = state["sequence"] + 1
     state["sequence"] = sequence
     event_id = f"crypto-20m-rolling:{state['generation']}:{sequence}"
     state["pending_event_id"] = event_id
@@ -234,7 +266,7 @@ def main() -> int:
 
                 pending = str(state["pending_event_id"])
                 now = time.time()
-                if not pending and now >= float(state["next_due_epoch"]):
+                if not pending and now >= state["next_due_epoch"]:
                     pending = next_event(state)
                     log(f"event_due={pending}")
 
@@ -249,7 +281,7 @@ def main() -> int:
                         save_state(state)
                         log(
                             f"event_receipted={pending} "
-                            f"next_due_epoch={int(float(state['next_due_epoch']))}"
+                            f"next_due_epoch={int(state['next_due_epoch'])}"
                         )
                         write_runtime_status(
                             state,
@@ -273,7 +305,7 @@ def main() -> int:
                         save_state(state)
                         log(
                             f"event_receipted={pending} rc={rc} "
-                            f"next_due_epoch={int(float(state['next_due_epoch']))} "
+                            f"next_due_epoch={int(state['next_due_epoch'])} "
                             f"result={output}"
                         )
                         write_runtime_status(
@@ -284,7 +316,7 @@ def main() -> int:
                         time.sleep(LOOP_SECONDS)
                         continue
 
-                    state["failure_count"] = int(state["failure_count"]) + 1
+                    state["failure_count"] += 1
                     save_state(state)
                     log(
                         f"event_retry={pending} rc={rc} "
@@ -305,7 +337,7 @@ def main() -> int:
                 )
                 sleep_for = min(
                     LOOP_SECONDS,
-                    max(0.2, float(state["next_due_epoch"]) - time.time()),
+                    max(0.2, state["next_due_epoch"] - time.time()),
                 )
                 time.sleep(sleep_for)
             except (OSError, UnicodeError, ValueError, subprocess.SubprocessError) as exc:
