@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 from dataclasses import dataclass
-from decimal import Decimal, ROUND_FLOOR
+from decimal import ROUND_FLOOR, Decimal
 from enum import StrEnum
 
 from crypto_signal.evaluation.aggregate import confluence_score_bucket
@@ -526,7 +526,7 @@ def build_score_bucket_calibrations(
     minimum_class_n: int = 5,
     minimum_bucket_train_n: int = 10,
     max_expected_calibration_error: Decimal = Decimal("0.12"),
-    minimum_brier_skill: Decimal = Decimal("0"),
+    minimum_brier_skill: Decimal = Decimal(0),
 ) -> tuple[CalibrationReport, ...]:
     if not model_version.strip():
         raise ValueError("calibration model version must be non-empty")
