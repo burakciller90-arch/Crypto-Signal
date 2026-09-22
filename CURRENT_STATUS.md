@@ -50,6 +50,28 @@ Current safe parallel frontier after these acceptances:
 - Phase 2 Market Tape v2 evidence-time-machine extensions may proceed in parallel;
 - do not replay M2 Slice 1, M2 Slice 2 or GALACTECH Slice 1.
 
+### GALACTECH EVIDENCE ROOM — SLICE 2 MERGED TO MAIN
+
+- PR #783 accepted and squash-merged to `main` as `17b65a313957c7535cc60fff1cd6877a49b90ce1`.
+- Authoritative hosted run `35777062633` PASS.
+- Focused Product gate PASS; full repository regression PASS; Ruff/mypy/JS/freshness PASS.
+- Evidence Room now presents the same immutable signal-detail evidence through a stronger proof hierarchy:
+  - Decision State;
+  - Truth Status;
+  - Issuance;
+  - Integrity fingerprints;
+  - Why This State?;
+  - Frozen Market Proof;
+  - Support / Contradiction / Uncertainty;
+  - Method Engines;
+  - Agreement Matrix;
+  - Frozen Geometry;
+  - Learn From This Snapshot.
+- No M2/order-flow/latency/probability evidence is fabricated when backend data is absent.
+- NOT CALIBRATED and immutable signal/bundle identities remain explicit.
+- No production UI deployment/cutover was performed.
+- REAL_CAPITAL=0.
+
 ### EXACT-MAIN REGRESSION AFTER GALACTECH — HOSTED PASS / LOCAL DEVELOPMENT STALE
 
 - Current main acceptance base: `5c4dd5b17dcddb344a3892f78d8f26c8ac314dce`.
