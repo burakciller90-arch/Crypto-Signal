@@ -3371,3 +3371,30 @@ Current true roadmap frontier:
 - reuse already accepted R10/R11/R12 evidence where the physical/destructive test is intentionally human-gated; do not falsely claim reboot/logout/physical SSD detach;
 - require exact main/Development consistency and live Product health;
 - REAL_CAPITAL=0 and no exchange order endpoint/credential authority.
+
+
+## 2026-09-22 — R13 Full Version Integrated Acceptance v2 ACCEPTED
+
+- accepted main head: `f95efc358ac396e50d0bfdb920b0187706cd2af2`;
+- canonical R13 run `35672790463` PASS;
+- exact main/SSD Development consistency PASS;
+- live Product code parity PASS against accepted Gift Edition Product head `f15cbafd9f4359d385eca097a6a2635bf815ded1`;
+- full repository pytest/Ruff/mypy/JS gate PASS;
+- R11 SSD runtime/backup/recovery audit PASS;
+- live Gift Edition + Research Lab truth PASS;
+- canonical integrated runtime verifier PASS with 22 accepted research engines, production research contribution 0, paper trade policy NOT_ACTIVATED and REAL_CAPITAL=0;
+- 30-cycle auto-refresh endurance + stale/freshness contract PASS;
+- paper reconstruction, deterministic fee/spread/slippage and benchmark proof PASS;
+- leakage/PIT scientific boundary PASS;
+- beginner evidence consistency + Research Lab isolation PASS;
+- continuity remained paused and isolated; post-run pausecheck issue #705 / run `35672982217` confirmed local/shared pause YES, active leases 0 and both wake queues 0;
+- no exchange order endpoint/credential authority;
+- physical reboot/logout/SSD detach were NOT executed and remain explicit human-impact items;
+- REAL_CAPITAL=0.
+
+Current true roadmap frontier:
+- `stage14-final-release-documentation-v1`;
+- freeze final release package, operator/recovery documentation and exact-main immutable release tag;
+- reserved tag: `crypto-signal-full-version-v1.0.0`;
+- R14 completes only when the release-freeze workflow verifies exact current main and emits `R14_FULL_VERSION_RELEASE_FREEZE_PASS=YES`;
+- REAL_CAPITAL=0.
