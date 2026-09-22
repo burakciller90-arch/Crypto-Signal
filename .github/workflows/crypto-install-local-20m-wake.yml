@@ -4,11 +4,11 @@ on:
   push:
     branches: [main]
     paths:
+      - "ops/continuity/interval_wake_daemon.py"
       - "ops/continuity/recurring_wake.py"
       - "ops/continuity/relay_submit.py"
       - "ops/continuity/relay_daemon.py"
       - "ops/continuity/continuity_contracts.py"
-      - "ops/continuity/launchd/com.cryptosignal.autowake20m.plist"
       - ".github/workflows/crypto-install-local-20m-wake.yml"
       - ".github/workflows/crypto-20m-continuity-wake.yml"
   workflow_dispatch:
@@ -22,29 +22,29 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
-      - name: Install exact :00/:20/:40 Crypto timer
+      - name: Install receipt-bound rolling 1200s Crypto timer
         shell: bash
         run: |
           set -euo pipefail
           test "$(id -u)" = "504"
 
           INSTALL="$HOME/Library/Application Support/CryptoSignal/continuity20m"
+          RUNTIME="$INSTALL/runtime"
           AGENTS="$HOME/Library/LaunchAgents"
           DOMAIN="user/$(id -u)"
-          LABEL="com.cryptosignal.autowake20m"
-          PLIST="$AGENTS/$LABEL.plist"
 
           STATE="/Volumes/Crypto-504/Crypto-Signal/Development/runtime/continuity"
           SHARED="/Users/Shared/.crypto-signal-wake-relay"
           LOCKED_CURRENT_CHAT="https://chatgpt.com/c/6ab2c3c1-30c8-83ed-b1ad-2aa35cc891c9"
-          mkdir -p "$INSTALL" "$AGENTS" "$STATE" "$STATE/wake" "$SHARED"
 
+          mkdir -p "$INSTALL" "$RUNTIME" "$AGENTS" "$STATE" "$STATE/wake" "$SHARED"
+
+          install -m 700 ops/continuity/interval_wake_daemon.py "$INSTALL/interval_wake_daemon.py"
           install -m 700 ops/continuity/recurring_wake.py "$INSTALL/recurring_wake.py"
           install -m 700 ops/continuity/relay_submit.py "$INSTALL/relay_submit.py"
           install -m 600 ops/continuity/continuity_contracts.py "$INSTALL/continuity_contracts.py"
           install -m 660 ops/continuity/relay_daemon.py "$SHARED/relay_daemon.py"
           install -m 660 ops/continuity/continuity_contracts.py "$SHARED/continuity_contracts.py"
-          install -m 600             ops/continuity/launchd/com.cryptosignal.autowake20m.plist             "$PLIST"
 
           printf '%s\n' "$LOCKED_CURRENT_CHAT" > "$STATE/wake/current_chat_url"
           printf '%s\n' "$LOCKED_CURRENT_CHAT" > "$STATE/wake/expected_chat_url"
@@ -54,53 +54,104 @@ jobs:
           touch "$SHARED/restart_requested"
           echo "EXACT_CHAT_BOUND=$LOCKED_CURRENT_CHAT"
 
-          /usr/bin/plutil -lint "$PLIST"
-          /usr/bin/python3 -m py_compile             "$INSTALL/recurring_wake.py"             "$INSTALL/relay_submit.py"             "$INSTALL/continuity_contracts.py"
+          /usr/bin/python3 -m py_compile \
+            "$INSTALL/interval_wake_daemon.py" \
+            "$INSTALL/recurring_wake.py" \
+            "$INSTALL/relay_submit.py" \
+            "$INSTALL/continuity_contracts.py" \
+            "$SHARED/relay_daemon.py"
 
-          for old in             com.cryptosignal.autowake30m             com.cryptosignal.continuity30m; do
+          for old in \
+            com.cryptosignal.autowake20m \
+            com.cryptosignal.autowake30m \
+            com.cryptosignal.continuity30m; do
             launchctl bootout "$DOMAIN/$old" 2>/dev/null || true
             launchctl disable "$DOMAIN/$old" 2>/dev/null || true
             rm -f "$AGENTS/$old.plist"
           done
+          echo "LEGACY_CALENDAR_TIMERS_DISABLED=YES"
 
-          launchctl bootout "$DOMAIN/$LABEL" 2>/dev/null || true
-          set +e
-          launchctl bootstrap "$DOMAIN" "$PLIST"
-          BOOTSTRAP_RC=$?
-          set -e
+          PIDFILE="$RUNTIME/rolling_wake.pid"
+          OLD_PID="$(cat "$PIDFILE" 2>/dev/null || true)"
+          if [ -n "$OLD_PID" ] && kill -0 "$OLD_PID" >/dev/null 2>&1; then
+            OLD_UID="$(ps -p "$OLD_PID" -o uid= 2>/dev/null | tr -d ' ' || true)"
+            OLD_CMD="$(ps -p "$OLD_PID" -o command= 2>/dev/null || true)"
+            if [ "$OLD_UID" != "504" ] || ! printf '%s' "$OLD_CMD" | grep -F "$INSTALL/interval_wake_daemon.py" >/dev/null; then
+              echo "ROLLING_TIMER_OLD_PID_OWNERSHIP_MISMATCH pid=$OLD_PID uid=$OLD_UID cmd=$OLD_CMD" >&2
+              exit 71
+            fi
+            kill "$OLD_PID"
+            for _ in {1..40}; do
+              kill -0 "$OLD_PID" >/dev/null 2>&1 || break
+              sleep 0.25
+            done
+            if kill -0 "$OLD_PID" >/dev/null 2>&1; then
+              echo "ROLLING_TIMER_OLD_PID_DID_NOT_EXIT=$OLD_PID" >&2
+              exit 72
+            fi
+          fi
+          rm -f "$PIDFILE"
 
-          echo "=== TIMER SCHEDULE ==="
-          /usr/libexec/PlistBuddy -c "Print :StartCalendarInterval" "$PLIST"
+          START_EPOCH="$(date +%s)"
+          (
+            unset RUNNER_TRACKING_ID
+            exec /usr/bin/python3 "$INSTALL/interval_wake_daemon.py" --reset
+          ) >>"$RUNTIME/rolling_wake.out.log" 2>>"$RUNTIME/rolling_wake.err.log" </dev/null &
 
-          if [ "$BOOTSTRAP_RC" = "0" ]; then
-            launchctl enable "$DOMAIN/$LABEL"
-            echo "=== INSTALLED TIMER ==="
-            launchctl print "$DOMAIN/$LABEL" |               egrep 'state =|last exit code =|program =|arguments =' |               head -100
-
-            MARKER="$STATE/recurring_wake_last_local_attempt"
-            rm -f "$MARKER"
-            launchctl kickstart -k "$DOMAIN/$LABEL"
-            ok=0
-            for _ in {1..15}; do
-              if [ -s "$MARKER" ]; then
+          ok=0
+          for _ in {1..60}; do
+            NEW_PID="$(cat "$PIDFILE" 2>/dev/null || true)"
+            STATUS="$RUNTIME/rolling_wake_status"
+            HEARTBEAT="$RUNTIME/rolling_wake_heartbeat"
+            if [ -n "$NEW_PID" ] && kill -0 "$NEW_PID" >/dev/null 2>&1 \
+              && [ -s "$STATUS" ] && [ -s "$HEARTBEAT" ]; then
+              TIMER_UID="$(ps -p "$NEW_PID" -o uid= 2>/dev/null | tr -d ' ' || true)"
+              TIMER_CMD="$(ps -p "$NEW_PID" -o command= 2>/dev/null || true)"
+              INTERVAL="$(sed -n 's/^interval_seconds=//p' "$STATUS" | head -1)"
+              TIMER_STATE="$(sed -n 's/^state=//p' "$STATUS" | head -1)"
+              if [ "$TIMER_UID" = "504" ] \
+                && printf '%s' "$TIMER_CMD" | grep -F "$INSTALL/interval_wake_daemon.py" >/dev/null \
+                && [ "$INTERVAL" = "1200" ] \
+                && [[ "$TIMER_STATE" =~ ^(RUNNING|RETRYING|WAITING_FOR_RUNTIME)$ ]]; then
                 ok=1
                 break
               fi
-              sleep 1
-            done
-            test "$ok" = "1"
-            grep -F 'trigger_event_id=' "$MARKER" >/dev/null
-            echo "LOCAL_20M_WAKE_MODE=launchd"
-            echo "LOCAL_20M_WAKE_RUNTIME_PASS=YES"
-          else
-            echo "LOCAL_20M_LAUNCHD_UNAVAILABLE=YES rc=$BOOTSTRAP_RC"
-            launchctl bootout "$DOMAIN/$LABEL" 2>/dev/null || true
-            FALLBACK="$GITHUB_WORKSPACE/.github/workflows/crypto-20m-continuity-wake.yml"
-            test -f "$FALLBACK"
-            grep -F 'cron: "0,20,40 * * * *"' "$FALLBACK" >/dev/null
-            grep -F 'runs-on: [self-hosted, crypto-signal, uid504]' "$FALLBACK" >/dev/null
-            grep -F 'recurring_wake.py' "$FALLBACK" >/dev/null
-            echo "LOCAL_20M_WAKE_MODE=github-fallback"
-            echo "LOCAL_20M_WAKE_FALLBACK_PASS=YES"
+            fi
+            sleep 1
+          done
+          test "$ok" = "1"
+
+          echo "=== ROLLING TIMER STATUS ==="
+          cat "$RUNTIME/rolling_wake_status"
+          echo "ROLLING_20M_TIMER_RUNTIME_PASS=YES"
+
+          immediate=0
+          for _ in {1..90}; do
+            LAST_RECEIPT="$(sed -n 's/^last_receipt_epoch=//p' "$RUNTIME/rolling_wake_status" 2>/dev/null | head -1)"
+            PENDING="$(sed -n 's/^pending_event_id=//p' "$RUNTIME/rolling_wake_status" 2>/dev/null | head -1)"
+            TIMER_STATE="$(sed -n 's/^state=//p' "$RUNTIME/rolling_wake_status" 2>/dev/null | head -1)"
+            if [[ "$LAST_RECEIPT" =~ ^[0-9]+$ ]] && [ "$LAST_RECEIPT" -ge "$START_EPOCH" ]; then
+              immediate=1
+              echo "ROLLING_WAKE_IMMEDIATE_RECEIPT_PASS=YES"
+              break
+            fi
+            if [ "$TIMER_STATE" = "RETRYING" ] && [ -n "$PENDING" ]; then
+              echo "ROLLING_WAKE_IMMEDIATE_RETRY_ACTIVE=YES event=$PENDING"
+            fi
+            sleep 1
+          done
+
+          if [ "$immediate" != "1" ]; then
+            PENDING="$(sed -n 's/^pending_event_id=//p' "$RUNTIME/rolling_wake_status" 2>/dev/null | head -1)"
+            test -n "$PENDING"
+            echo "ROLLING_WAKE_IMMEDIATE_PENDING_RETRY=YES event=$PENDING"
           fi
+
+          FALLBACK="$GITHUB_WORKSPACE/.github/workflows/crypto-20m-continuity-wake.yml"
+          grep -F 'cron: "*/5 * * * *"' "$FALLBACK" >/dev/null
+          grep -F 'interval_wake_daemon.py' "$FALLBACK" >/dev/null
+          grep -F 'GITHUB_WATCHDOG_TIMER_HEALTHY=YES' "$FALLBACK" >/dev/null
+
+          echo "LOCAL_20M_WAKE_MODE=rolling-daemon"
+          echo "GITHUB_20M_ROLE=watchdog-fallback"
           echo "LOCAL_20M_WAKE_INSTALL_PASS=YES"
