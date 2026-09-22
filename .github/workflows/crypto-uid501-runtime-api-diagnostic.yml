@@ -1,0 +1,62 @@
+name: Crypto UID501 Runtime API Diagnostic
+
+on:
+  push:
+    branches:
+      - diag-uid501-runtime-api-20260922
+
+permissions:
+  contents: read
+
+jobs:
+  diag:
+    runs-on: [self-hosted, crypto-signal, uid501]
+    timeout-minutes: 5
+    steps:
+      - name: Read local Crypto Signal APIs
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE="http://127.0.0.1:48700"
+          TMP="$(mktemp -d)"
+          trap 'rm -rf "$TMP"' EXIT
+
+          echo "=== HEALTH ==="
+          curl -fsS --max-time 5 "$BASE/api/health" | tee "$TMP/health.json"
+          echo
+
+          echo "=== COMMAND CENTER SUMMARY ==="
+          curl -fsS --max-time 5 "$BASE/api/command-center?recent_limit=8" > "$TMP/command.json"
+          python3 - "$TMP/command.json" <<'PY'
+          import json, sys
+          x=json.load(open(sys.argv[1]))
+          keys=["as_of_ms","latest_frozen_at_ms","total_signal_freezes","signal_count","context_count"]
+          print({k:x.get(k) for k in keys if k in x})
+          recent=x.get("recent_signals") or x.get("recent") or []
+          for row in recent[:8]:
+              print({
+                  "symbol": row.get("symbol"),
+                  "timeframe": row.get("timeframe"),
+                  "state": row.get("state"),
+                  "direction": row.get("direction"),
+                  "as_of_ms": row.get("as_of_ms"),
+                  "frozen_at_ms": row.get("frozen_at_ms"),
+                  "freeze_identity": row.get("freeze_identity"),
+              })
+          PY
+
+          echo "=== PAPER MISSION SUMMARY ==="
+          curl -fsS --max-time 5 "$BASE/api/paper/mission-control" > "$TMP/paper.json"
+          python3 - "$TMP/paper.json" <<'PY'
+          import json, sys
+          x=json.load(open(sys.argv[1]))
+          snap=x.get("snapshot") if isinstance(x.get("snapshot"),dict) else x
+          keep=["status","trade_policy","real_capital","observed_at_ms","candidate_count","committed_trade_count"]
+          print({k:snap.get(k) for k in keep if k in snap})
+          portfolio=snap.get("portfolio") or {}
+          print("portfolio", {k:portfolio.get(k) for k in ["cash_usdt","nav_usdt","gross_exposure_usdt","position_count"] if k in portfolio})
+          PY
+
+          echo "=== PROCESSES ==="
+          ps -axo pid=,ppid=,user=,%cpu=,%mem=,etime=,state=,command=             | grep -E '[V]olumes/Crypto-504/Crypto-Signal/(ssd-service-supervisor\.sh|Runner/bin/Runner\.Listener|Product/.+run_dashboard\.py)'             || true
+          echo "UID501_RUNTIME_API_DIAG_PASS=YES"
