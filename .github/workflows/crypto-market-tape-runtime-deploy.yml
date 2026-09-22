@@ -1,0 +1,112 @@
+name: Crypto Market Tape Runtime Deploy
+
+on:
+  push:
+    branches:
+      - v1.1-market-tape-runtime-v1
+    paths:
+      - ".github/workflows/crypto-market-tape-runtime-deploy.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy Market Tape stable runtime on SSD
+    runs-on: [self-hosted, crypto-signal, uid501]
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify immutable deployment target
+        shell: bash
+        run: |
+          set -euo pipefail
+          TARGET_SHA="5eeb010676c63a21b796320d849a6d68b950cf7d"
+          TARGET_TREE="a454c219705ae04554e860054eb8c15d46873bd6"
+          test "$(git show -s --format=%T "$TARGET_SHA")" = "$TARGET_TREE"
+          echo "DEPLOY_TARGET_SHA=$TARGET_SHA"
+          echo "DEPLOY_TARGET_TREE=$TARGET_TREE"
+
+      - name: Materialize isolated SSD stable runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          TARGET_SHA="5eeb010676c63a21b796320d849a6d68b950cf7d"
+          TARGET_TREE="a454c219705ae04554e860054eb8c15d46873bd6"
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          STABLE="$ROOT/MarketTape"
+          DEV="$ROOT/Development"
+          USER504="crypto-signal-agent"
+
+          sudo -k
+          test "$(sudo -n -H -u "$USER504" /usr/bin/id -u)" = "504"
+
+          if sudo -n -H -u "$USER504" test -e "$STABLE"; then
+            existing="$(sudo -n -H -u "$USER504" /bin/cat "$STABLE/.deployed_git_commit" 2>/dev/null || true)"
+            if [ "$existing" != "$TARGET_SHA" ]; then
+              echo "MARKET_TAPE_DEPLOY_ERROR=STABLE_EXISTS_DIFFERENT_COMMIT existing=$existing" >&2
+              exit 20
+            fi
+          else
+            sudo -n -H -u "$USER504" /bin/mkdir -p "$STABLE"
+            git archive "$TARGET_SHA" | sudo -n -H -u "$USER504" /usr/bin/tar -x -C "$STABLE"
+            printf '%s\n' "$TARGET_SHA" | sudo -n -H -u "$USER504" /usr/bin/tee "$STABLE/.deployed_git_commit" >/dev/null
+            printf '%s\n' "$TARGET_TREE" | sudo -n -H -u "$USER504" /usr/bin/tee "$STABLE/.deployed_git_tree" >/dev/null
+          fi
+
+          test "$(sudo -n -H -u "$USER504" /bin/cat "$STABLE/.deployed_git_commit")" = "$TARGET_SHA"
+          test "$(sudo -n -H -u "$USER504" /bin/cat "$STABLE/.deployed_git_tree")" = "$TARGET_TREE"
+
+          UV="/Users/crypto-signal-agent/.local/bin/uv"
+          test -x "$UV"
+          sudo -n -H -u "$USER504" /usr/bin/env             HOME=/Users/crypto-signal-agent             PATH="/Users/crypto-signal-agent/.local/bin:/usr/bin:/bin:/usr/sbin:/sbin"             "$UV" sync --frozen --project "$STABLE"
+
+          sudo -n -H -u "$USER504" /usr/bin/env             PYTHONPATH="$STABLE/src"             "$STABLE/.venv/bin/python" -c             "import crypto_signal; import crypto_signal.data.market_tape_retention"
+
+          echo "MARKET_TAPE_STABLE_MATERIALIZE_PASS=YES"
+          echo "REAL_CAPITAL=0"
+
+      - name: Install and live-accept LaunchAgent
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          STABLE="$ROOT/MarketTape"
+          DIR="$ROOT/Development/runtime/market_tape"
+          RAW="$DIR/raw_market_tape.sqlite3"
+          DB="$DIR/market_tape.sqlite3"
+          LABEL="com.cryptosignal.markettape"
+          USER504="crypto-signal-agent"
+
+          before="$(sudo -n -H -u "$USER504" /usr/bin/sqlite3 "$RAW" 'SELECT COUNT(*) FROM raw_market_events;')"
+          echo "RAW_ROWS_BEFORE_DEPLOY=$before"
+
+          sudo -n -H -u "$USER504" /bin/bash "$STABLE/ops/install_market_tape_runtime.sh"
+
+          sleep 4
+          sudo -n -H -u "$USER504" /bin/launchctl print "gui/504/$LABEL" |             /usr/bin/egrep 'state =|pid =|runs =|last exit code =|program =|path =' |             /usr/bin/head -80
+
+          status="$DIR/runtime_status.json"
+          test -s "$status"
+          echo "=== STATUS ==="
+          sudo -n -H -u "$USER504" /bin/cat "$status"
+          sudo -n -H -u "$USER504" /usr/bin/grep -q '"state":"collecting_chunk"' "$status"
+          sudo -n -H -u "$USER504" /usr/bin/grep -q '"real_capital":0' "$status"
+
+          pids="$(/bin/ps -axo pid=,user=,command= | /usr/bin/awk -v needle="$STABLE/ops/run_market_tape_runtime.py" '$2=="crypto-signal-agent" && index($0,needle){print $1}')"
+          count="$(printf '%s\n' "$pids" | /usr/bin/awk 'NF{n++} END{print n+0}')"
+          echo "MARKET_TAPE_RUNTIME_PID_COUNT=$count PIDS=$(echo "$pids" | tr '\n' ',')"
+          test "$count" -eq 1
+
+          sleep 20
+          after="$(sudo -n -H -u "$USER504" /usr/bin/sqlite3 "$RAW" 'SELECT COUNT(*) FROM raw_market_events;')"
+          echo "RAW_ROWS_AFTER_DEPLOY=$after"
+          test "$after" -gt "$before"
+
+          test "$(sudo -n -H -u "$USER504" /usr/bin/sqlite3 "$DB" 'PRAGMA quick_check;')" = "ok"
+          test "$(sudo -n -H -u "$USER504" /usr/bin/sqlite3 "$RAW" 'PRAGMA quick_check;')" = "ok"
+          echo "MARKET_TAPE_RUNTIME_LIVE_DEPLOY_PASS=YES"
+          echo "REAL_CAPITAL=0"
