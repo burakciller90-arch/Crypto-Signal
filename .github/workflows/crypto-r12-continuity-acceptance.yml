@@ -115,7 +115,7 @@ jobs:
           SHARED="/Users/Shared/.crypto-signal-wake-relay"
           INSTALL="$HOME/Library/Application Support/CryptoSignal/continuity20m"
           AGENTS="$HOME/Library/LaunchAgents"
-          DOMAIN="gui/$(id -u)"
+          DOMAIN="user/$(id -u)"
           BRIDGE_LABEL="com.cryptosignal.continuitybridge"
           BRIDGE_PLIST="$AGENTS/$BRIDGE_LABEL.plist"
 
