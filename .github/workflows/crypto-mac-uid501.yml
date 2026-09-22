@@ -806,6 +806,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          test "$(id -u)" = "501"
+
+          /usr/bin/sudo -n -H -u crypto-signal-agent /usr/bin/env HOME=/Users/crypto-signal-agent /bin/bash <<'SH'
+          set -euo pipefail
           ROOT="/Volumes/Crypto-504/Crypto-Signal"
           COLD="$ROOT/MarketTapeCold"
           HOT="$ROOT/Development/runtime/market_tape"
@@ -816,7 +820,7 @@ jobs:
           STATUS="$HOT/runtime_status.json"
           SUP_STATUS="$HOT/supervisor_status.json"
 
-          test "$(id -u)" = "501"
+          echo "=== READONLY PRECONDITIONS ==="
           test -d "$ROOT"
           test -d "$COLD"
           test -x "$PY"
@@ -825,27 +829,28 @@ jobs:
           test -f "$STATUS"
           test -f "$SUP_STATUS"
           test -f "$STABLE/BUILD_COMMIT"
+          echo "BUILD_COMMIT=$(cat "$STABLE/BUILD_COMMIT")"
 
           echo "=== COLD MANIFEST INVENTORY ==="
-          mapfile -t manifests < <(/usr/bin/find "$COLD" -type f -name manifest.json -print | /usr/bin/sort)
-          echo "COLD_MANIFEST_COUNT=${#manifests[@]}"
-          if [ "${#manifests[@]}" -eq 0 ]; then
+          manifests="$(/usr/bin/find "$COLD" -type f -name manifest.json -print | /usr/bin/sort)"
+          count="$(printf '%s\n' "$manifests" | /usr/bin/awk 'NF{n++} END{print n+0}')"
+          echo "COLD_MANIFEST_COUNT=$count"
+          if [ "$count" -eq 0 ]; then
             echo "FIRST_REAL_COLD_PARTITION_PRESENT=NO"
             exit 70
           fi
-          first="${manifests[0]}"
-          last_index=$((${#manifests[@]} - 1))
-          last="${manifests[$last_index]}"
+          first="$(printf '%s\n' "$manifests" | /usr/bin/awk 'NF{print; exit}')"
+          last="$(printf '%s\n' "$manifests" | /usr/bin/awk 'NF{x=$0} END{print x}')"
           echo "FIRST_MANIFEST=$first"
           echo "LATEST_MANIFEST=$last"
 
           echo "=== PARTIAL DIRECTORY CHECK ==="
-          partial_count="$(/usr/bin/find "$COLD" -type d -name '.*.partial-*' -print | /usr/bin/tee /tmp/crypto-cold-partials.txt | /usr/bin/wc -l | /usr/bin/tr -d ' ')"
+          partial_count="$(/usr/bin/find "$COLD" -type d -name '.*.partial-*' -print | /usr/bin/wc -l | /usr/bin/tr -d ' ')"
           echo "COLD_PARTIAL_DIRECTORY_COUNT=$partial_count"
           test "$partial_count" = "0"
 
           echo "=== VERIFY EARLIEST + LATEST PARTITIONS ==="
-          /usr/bin/sudo -n -H -u crypto-signal-agent /usr/bin/env             HOME=/Users/crypto-signal-agent             PYTHONPATH="$STABLE/src"             COLD_FIRST="$first"             COLD_LAST="$last"             RAW_DB="$RAW"             NORM_DB="$NORM"             STATUS_JSON="$STATUS"             SUP_STATUS_JSON="$SUP_STATUS"             "$PY" - <<'PY'
+          /usr/bin/env             PYTHONPATH="$STABLE/src"             COLD_FIRST="$first"             COLD_LAST="$last"             RAW_DB="$RAW"             NORM_DB="$NORM"             STATUS_JSON="$STATUS"             SUP_STATUS_JSON="$SUP_STATUS"             "$PY" - <<'PY'
           from __future__ import annotations
           import json
           import os
@@ -923,16 +928,11 @@ jobs:
           assert supervisor["state"] == "running"
           assert supervisor["real_capital"] == 0
           assert now - int(supervisor["updated_at_epoch"]) <= 120
-
           print("FIRST_REAL_COLD_PARTITION_VERIFY_PASS=YES")
           print("REAL_CAPITAL=0")
           PY
 
           echo "=== CURRENT TOPOLOGY ==="
-          /usr/bin/sudo -n -H -u crypto-signal-agent /bin/bash <<'SH'
-          set -euo pipefail
-          ROOT="/Volumes/Crypto-504/Crypto-Signal"
-          STABLE="$ROOT/MarketTape"
           TOP_SCRIPT="$ROOT/ssd-service-supervisor.sh"
           MT_SUP="$STABLE/ops/market_tape/run_market_tape_supervisor.py"
           MT_RUNTIME="$STABLE/ops/run_market_tape_runtime.py"
@@ -945,7 +945,6 @@ jobs:
           test "$top_count" = "1"
           test "$sup_count" = "1"
           test "$run_count" = "1"
-          SH
 
           echo "=== DASHBOARD SAFETY ==="
           /usr/bin/curl -fsS --max-time 5 http://127.0.0.1:48700/api/health |             /usr/bin/python3 -c 'import json,sys; d=json.load(sys.stdin); print(d); assert d["status"]=="ok"; assert d["real_capital"]==0; assert d["read_only"] is True'
@@ -955,3 +954,4 @@ jobs:
           /usr/bin/du -sh "$HOT" "$COLD" 2>/dev/null || true
           echo "COLD_ARCHIVE_READONLY_PASS=YES"
           echo "REAL_CAPITAL=0"
+          SH
