@@ -9,6 +9,18 @@ REAL_CAPITAL: 0
 
 ## Active v1.1 frontier — read before historical sections
 
+**LOCKED roadmap contract:** `docs/V1_1_LOCKED_MASTER_ROADMAP_20260922.md`.
+
+User-approved changes now governing new work:
+- Paper Fund Epoch 1 (100 USDT) remains immutable legacy history; **Epoch 2 starts separately at 1,000 USDT** after its spec/migration acceptance.
+- Program execution is **three parallel rails: Intelligence / Capital-Science / Product**.
+- Current frontend is not the final visual target; Product is a **from-scratch GALACTECH // CRYPTO SIGNAL rebuild**.
+- Intelligence expands through Liquidity 2.0 (including liquidation-map + bounded spoofing/iceberg candidates), Order Flow/Absorption 2.0, Derivatives 2.0, On-chain/Event/NLP, then Confluence 2.0.
+- Smart Capital Allocator research starts at Core 600 / Tactical 300 / Reserve 100 USDT.
+- R19 calibration is mandatory before user-visible probability and before Kelly sizing research can be eligible for canonical promotion.
+- Safe development autonomy remains; new production/human-impact mutations stay explicitly gated.
+
+
 Governing roadmap: `docs/V1_1_MASTER_EXECUTION_ROADMAP.md`.
 
 Current development map:
@@ -42,7 +54,7 @@ Product architecture:
 - Track A: world-class UI/UX.
 - Track B: Market Tape -> Liquidity -> Order Flow/Absorption -> Derivatives -> On-chain/Event Risk.
 - Bridge: Forecast Stream + Live Intelligence Feed / **Decision Proof** + frozen evidence archive.
-- Canonical 100 USDT fund and Shadow Lab are strictly separated.
+- Canonical paper history and Shadow Lab are strictly separated. Epoch 1 (100 USDT) is immutable legacy history; accepted Epoch 2 begins separately at 1,000 USDT.
 - v1.1 begins with fixed 20/25/25/15/15 research priors; adaptive weighting is deferred to v2 evidence gates.
 - “Proof-of-Thought” is a user concept name only. The implementation records auditable evidence/decision rationale and never exposes or fabricates private chain-of-thought.
 
