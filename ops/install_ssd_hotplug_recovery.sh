@@ -130,6 +130,142 @@ runner_worker_alive() {
     | /usr/bin/grep -v grep >/dev/null 2>&1
 }
 
+process_cwd() {
+  local pid="$1"
+  /usr/sbin/lsof -a -p "$pid" -d cwd -Fn 2>/dev/null \
+    | /usr/bin/sed -n 's/^n//p' \
+    | /usr/bin/head -1
+}
+
+runner_orphan_service_pids() {
+  local service=""
+  local wrapper=""
+  local command=""
+  local service_user=""
+  local wrapper_user=""
+  local service_cwd=""
+  local wrapper_cwd=""
+
+  /bin/ps -axo pid=,user=,command= 2>/dev/null \
+    | /usr/bin/awk -v expected="./externals/node20/bin/node ./bin/RunnerService.js" -v expected_user="crypto-signal-agent" '
+        {
+          pid=$1
+          user=$2
+          sub(/^[[:space:]]*[0-9]+[[:space:]]+[^[:space:]]+[[:space:]]+/, "", $0)
+          if (user == expected_user && $0 == expected) {
+            print pid
+          }
+        }
+      ' \
+    | while read -r service; do
+        [ -n "$service" ] || continue
+        service_cwd="$(process_cwd "$service")"
+        [ "$service_cwd" = "$RUNNER" ] || continue
+
+        wrapper="$(/bin/ps -p "$service" -o ppid= 2>/dev/null | /usr/bin/tr -d ' ')"
+        [ -n "$wrapper" ] || continue
+        command="$(/bin/ps -p "$wrapper" -o command= 2>/dev/null || true)"
+        [ "$command" = "/bin/bash ./runsvc.sh" ] || continue
+
+        service_user="$(/bin/ps -p "$service" -o user= 2>/dev/null | /usr/bin/tr -d ' ')"
+        wrapper_user="$(/bin/ps -p "$wrapper" -o user= 2>/dev/null | /usr/bin/tr -d ' ')"
+        [ "$service_user" = "crypto-signal-agent" ] || continue
+        [ "$wrapper_user" = "crypto-signal-agent" ] || continue
+
+        wrapper_cwd="$(process_cwd "$wrapper")"
+        [ "$wrapper_cwd" = "$RUNNER" ] || continue
+
+        printf '%s\n' "$service"
+      done
+}
+
+stop_orphan_runner_parent_tree() {
+  local service="$1"
+  local wrapper=""
+  local command=""
+  local cwd=""
+
+  if runner_worker_alive; then
+    err "RUNNER_ORPHAN_STOP_ABORT=ACTIVE_WORKER"
+    return 1
+  fi
+
+  wrapper="$(/bin/ps -p "$service" -o ppid= 2>/dev/null | /usr/bin/tr -d ' ')"
+  [ -n "$wrapper" ] || {
+    err "RUNNER_ORPHAN_STOP_ABORT=MISSING_WRAPPER service=$service"
+    return 1
+  }
+
+  command="$(/bin/ps -p "$service" -o command= 2>/dev/null || true)"
+  [ "$command" = "./externals/node20/bin/node ./bin/RunnerService.js" ] || {
+    err "RUNNER_ORPHAN_STOP_ABORT=SERVICE_COMMAND_CHANGED service=$service"
+    return 1
+  }
+  cwd="$(process_cwd "$service")"
+  [ "$cwd" = "$RUNNER" ] || {
+    err "RUNNER_ORPHAN_STOP_ABORT=SERVICE_CWD_CHANGED service=$service cwd=$cwd"
+    return 1
+  }
+
+  command="$(/bin/ps -p "$wrapper" -o command= 2>/dev/null || true)"
+  [ "$command" = "/bin/bash ./runsvc.sh" ] || {
+    err "RUNNER_ORPHAN_STOP_ABORT=WRAPPER_COMMAND_CHANGED wrapper=$wrapper"
+    return 1
+  }
+  cwd="$(process_cwd "$wrapper")"
+  [ "$cwd" = "$RUNNER" ] || {
+    err "RUNNER_ORPHAN_STOP_ABORT=WRAPPER_CWD_CHANGED wrapper=$wrapper cwd=$cwd"
+    return 1
+  }
+
+  [ "$(/bin/ps -p "$service" -o user= 2>/dev/null | /usr/bin/tr -d ' ')" = "crypto-signal-agent" ] || return 1
+  [ "$(/bin/ps -p "$wrapper" -o user= 2>/dev/null | /usr/bin/tr -d ' ')" = "crypto-signal-agent" ] || return 1
+
+  log "RUNNER_ORPHAN_PARENT_STOP_REQUESTED wrapper=$wrapper service=$service"
+
+  /bin/kill "$wrapper" >/dev/null 2>&1 || true
+  /bin/kill "$service" >/dev/null 2>&1 || true
+
+  for _ in {1..15}; do
+    if ! /bin/kill -0 "$service" >/dev/null 2>&1 \
+      && ! /bin/kill -0 "$wrapper" >/dev/null 2>&1; then
+      log "RUNNER_ORPHAN_PARENT_STOP_PASS=YES wrapper=$wrapper service=$service"
+      return 0
+    fi
+    /bin/sleep 1
+  done
+
+  if runner_worker_alive; then
+    err "RUNNER_ORPHAN_FORCE_ABORT=WORKER_APPEARED"
+    return 1
+  fi
+
+  if /bin/kill -0 "$service" >/dev/null 2>&1; then
+    command="$(/bin/ps -p "$service" -o command= 2>/dev/null || true)"
+    cwd="$(process_cwd "$service")"
+    [ "$command" = "./externals/node20/bin/node ./bin/RunnerService.js" ] || return 1
+    [ "$cwd" = "$RUNNER" ] || return 1
+    /bin/kill -9 "$service" >/dev/null 2>&1 || true
+  fi
+
+  if /bin/kill -0 "$wrapper" >/dev/null 2>&1; then
+    command="$(/bin/ps -p "$wrapper" -o command= 2>/dev/null || true)"
+    cwd="$(process_cwd "$wrapper")"
+    [ "$command" = "/bin/bash ./runsvc.sh" ] || return 1
+    [ "$cwd" = "$RUNNER" ] || return 1
+    /bin/kill -9 "$wrapper" >/dev/null 2>&1 || true
+  fi
+
+  /bin/sleep 2
+  if /bin/kill -0 "$service" >/dev/null 2>&1 || /bin/kill -0 "$wrapper" >/dev/null 2>&1; then
+    err "RUNNER_ORPHAN_PARENT_STOP_PASS=NO wrapper=$wrapper service=$service"
+    return 1
+  fi
+
+  log "RUNNER_ORPHAN_PARENT_STOP_PASS=YES wrapper=$wrapper service=$service forced=YES"
+  return 0
+}
+
 runner_service_tree() {
   local listener=""
   local service=""
@@ -367,6 +503,21 @@ start_runner() {
 
   if runner_alive; then
     return 0
+  fi
+
+  local orphan_services=""
+  local orphan_count=0
+  local orphan_service=""
+  orphan_services="$(runner_orphan_service_pids)"
+  orphan_count="$(printf '%s\n' "$orphan_services" | count_lines)"
+  if [ "$orphan_count" -gt 1 ]; then
+    err "RUNNER_ORPHAN_STOP_ABORT=AMBIGUOUS services=$orphan_services"
+    return 1
+  fi
+  if [ "$orphan_count" -eq 1 ]; then
+    orphan_service="$(printf '%s\n' "$orphan_services" | /usr/bin/head -1)"
+    log "RUNNER_ORPHAN_PARENT_DETECTED=YES service=$orphan_service"
+    stop_orphan_runner_parent_tree "$orphan_service" || return 1
   fi
 
   mkdir -p "$ROOT/RunnerLogs"
