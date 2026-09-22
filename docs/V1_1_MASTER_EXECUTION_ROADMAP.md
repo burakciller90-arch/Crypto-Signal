@@ -1030,8 +1030,9 @@ Baseline:
 
 Open development:
 
-- **PR #715** — R15 SSD hot-plug recovery; hosted PASS; live physical/runtime
-  acceptance still incomplete.
+- **PR #715** — R15 SSD hot-plug + hung-runner recovery; hosted safety hardening PASS
+  through exact-listener run `35724497074`; live runner recovery and physical
+  detach/remount acceptance still incomplete.
 - **PR #722** — world-class workspace shell + truthful freshness; draft.
 - **PR #723** — untouched-forward calibrated probability foundation; hosted PASS; draft.
 - **PR #726** — append-only Market Tape foundation; hosted full gate PASS
@@ -1047,13 +1048,18 @@ Runtime status:
 
 - The specific post-04:00 market-data/freeze interruption is mechanically **RECOVERED**
   by UID501 localhost diagnostic run `35721395160`.
-- UID504 SSD runner has separately shown long-running near-100% CPU listener behavior.
+- UID504 SSD runner is a separate open incident: latest read-only forensics showed one
+  canonical listener PID `99399`, no Worker, exact service ancestry, ~97% CPU and
+  ~12h40 elapsed while UID504 work remained queued.
 - Process existence does not prove runner health.
-- Hosted hang-aware R15 hardening gate passed in run `35722280704`.
-- Exactly one live recovery owner exists: `Crypto UID501 R15 Runner Recovery 20260922`
-  run `35722829376`; it requires explicit local administrator authorization and must
-  not be duplicated while active.
+- Hosted R15 safety hardening passed through exact-listener run `35724497074`
+  (with aged idle-spin run `35724089582` also PASS).
+- No live recovery workflow is currently active. Old one-shot attempts are stale and
+  must not be replayed.
 - Physical SSD detach/remount acceptance remains pending after runner recovery.
+- Continuity transport is alive but user-pause latch remains present; shared wake queue
+  is zero. Resume requires state-first removal of pause latches and a fresh exact
+  continuation re-arm, never replay of archived wakes/leases.
 
 ---
 
