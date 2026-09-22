@@ -22,7 +22,6 @@ from crypto_signal.data.microstructure import (
 )
 from crypto_signal.data.models import DataSource, Exchange, MarketType
 
-
 MicrostructureStreamEvent = OrderBookSnapshot | PublicTradeObservation
 
 
@@ -333,5 +332,5 @@ def _json_object(message: str | bytes) -> dict[str, object]:
         message = message.decode("utf-8")
     payload = json.loads(message)
     if not isinstance(payload, dict):
-        raise ValueError("Bybit WebSocket payload must be an object")
+        raise TypeError("Bybit WebSocket payload must be an object")
     return cast(dict[str, object], payload)
