@@ -49,7 +49,10 @@ def _get_text(base_url: str, path: str = "/") -> str:
     with urllib.request.urlopen(request, timeout=10) as response:
         if response.status != 200:
             raise RuntimeError(f"{path} returned HTTP {response.status}")
-        return response.read().decode("utf-8")
+        body = response.read()
+    if not isinstance(body, bytes):
+        raise TypeError(f"{path} did not return bytes")
+    return body.decode("utf-8")
 
 
 def verify_openapi(spec: dict[str, Any]) -> None:
