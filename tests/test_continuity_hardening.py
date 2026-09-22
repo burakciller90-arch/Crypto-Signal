@@ -60,20 +60,39 @@ def test_relay_is_namespace_bound_and_stops_only_exact_locked_wake() -> None:
 
 
 
-def test_rolling_timer_requires_final_receipt_and_relay_recovers_submitting() -> None:
+def test_rolling_timer_requires_observed_receipt_and_relay_recovers_submitting() -> None:
     rolling = _read("ops/continuity/interval_wake_daemon.py")
     submit = _read("ops/continuity/relay_submit.py")
     daemon = _read("ops/continuity/relay_daemon.py")
+    recurring = _read("ops/continuity/recurring_wake.py")
 
-    assert "FINAL_RECEIPT_STATES" in rolling
-    assert '"SUBMITTED_UNCONFIRMED"' in rolling
+    assert 'FINAL_RECEIPT_STATES = {"OBSERVED"}' in rolling
+    assert '"SUBMITTED_UNCONFIRMED"' not in rolling
+    assert '"SUBMITTED"' not in rolling.split("FINAL_RECEIPT_STATES", 1)[1].split("\n\n", 1)[0]
     assert "final_receipt(pending)" in rolling
     assert 'state["next_due_epoch"] = receipt_epoch + INTERVAL_SECONDS' in rolling
-    assert "final_receipt_sha" in submit
-    assert 'status == "SUBMITTING"' in submit
-    assert "receipt_info" in daemon
+
+    assert "require_observed: bool" in submit
+    assert 'if require_observed and status != "OBSERVED":' in submit
+    assert "exact_locked_wake = message == LOCKED_WAKE_MESSAGE" in submit
+
+    assert "baseline_exact_count" in daemon
+    assert "submitted_epoch" in daemon
+    assert "exact_message_count" in daemon
+    assert "click_visible_retry" in daemon
+    assert "wait_for_exact_observation" in daemon
     assert 'receipt_status == "SUBMITTING"' in daemon
-    assert "receipt.unlink(missing_ok=True)" in daemon
+    assert "WAITING_FOR_EXACT_OBSERVATION" in daemon
+    assert "OBSERVED_AFTER_RETRY" in daemon
+    assert 'write_receipt(\n                receipt,\n                "OBSERVED"' in daemon
+    locked_branch = daemon.split("if exact_locked_wake:", 1)[1]
+    exact_send_branch = locked_branch.split("check_js = (", 1)[0]
+    assert '"SUBMITTED"' not in exact_send_branch
+    assert '"SUBMITTED_UNCONFIRMED"' not in exact_send_branch
+    assert "SUBMITTED_EDITOR_CLEARED" in daemon  # generic/non-locked relay path only
+
+    assert "CRYPTO_LOCKED_20M_WAKE_PENDING_OBSERVATION=YES" in recurring
+    assert "proc.returncode in {0, 2}" not in recurring
 
 
 

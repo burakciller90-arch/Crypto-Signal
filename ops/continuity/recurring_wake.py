@@ -75,9 +75,12 @@ def main() -> int:
     if proc.stderr:
         print(proc.stderr.strip(), file=sys.stderr)
     print(f"RELAY_SUBMIT_RC={proc.returncode}")
-    if proc.returncode in {0, 2}:
+    if proc.returncode == 0:
         print("CRYPTO_LOCKED_20M_WAKE_PASS=YES")
         return 0
+    if proc.returncode == 2:
+        print("CRYPTO_LOCKED_20M_WAKE_PENDING_OBSERVATION=YES")
+        return 2
     return proc.returncode
 
 
