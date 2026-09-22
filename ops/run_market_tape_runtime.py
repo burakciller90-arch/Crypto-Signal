@@ -7,6 +7,7 @@ import json
 import os
 import signal
 import sqlite3
+import subprocess
 import sys
 import time
 from pathlib import Path
@@ -15,19 +16,12 @@ from crypto_signal.data.adapters.bybit_microstructure_ws import (
     BybitSpotMicrostructureStream,
 )
 from crypto_signal.data.market_tape import MarketTapeStore
-from crypto_signal.data.market_tape_retention import (
-    DEFAULT_MARKET_TAPE_RETENTION_POLICY,
-    MarketTapeRetentionPolicy,
-    active_generation_bytes,
-    enforce_generation_retention,
-    list_sealed_generations,
-    reclaim_for_capacity,
-    seal_active_generation,
-)
-from crypto_signal.data.market_tape_runtime import (
-    DEFAULT_MARKET_TAPE_CAPACITY_POLICY,
-    MarketTapeCapacityPolicy,
-    measure_market_tape_capacity,
+from crypto_signal.data.market_tape_hotcold import (
+    DEFAULT_MARKET_TAPE_HOTCOLD_POLICY,
+    MarketTapeHotColdDecision,
+    MarketTapeHotColdPolicy,
+    evaluate_archive_headroom,
+    measure_hotcold_capacity,
 )
 from crypto_signal.data.market_tape_wire_collection import (
     MarketTapeWireCollectionResult,
@@ -37,7 +31,11 @@ from crypto_signal.data.raw_market_tape import RawMarketTapeStore
 
 ROOT = Path("/Volumes/Crypto-504/Crypto-Signal")
 VOLUME = Path("/Volumes/Crypto-504")
+STABLE = ROOT / "MarketTape"
 TAPE_DIR = ROOT / "Development/runtime/market_tape"
+COLD_DIR = ROOT / "MarketTapeCold"
+COLD_PYTHON = ROOT / "RuntimeEnvs/market-tape-cold/bin/python"
+COLD_ARCHIVER = STABLE / "ops/market_tape/archive_hot_to_parquet.py"
 DB = TAPE_DIR / "market_tape.sqlite3"
 RAW_DB = TAPE_DIR / "raw_market_tape.sqlite3"
 LOCK = TAPE_DIR / "market_tape_stream.lock"
@@ -54,11 +52,7 @@ def parse_args() -> argparse.Namespace:
         type=int,
         default=1_000,
     )
-    parser.add_argument(
-        "--chunk-messages",
-        type=int,
-        default=DEFAULT_MARKET_TAPE_CAPACITY_POLICY.chunk_messages,
-    )
+    parser.add_argument("--chunk-messages", type=int, default=100_000)
     parser.add_argument(
         "--max-cycles",
         type=int,
@@ -124,6 +118,12 @@ def _validate_args(args: argparse.Namespace) -> tuple[str, ...]:
     if args.max_cycles < 0:
         raise ValueError("max cycles cannot be negative")
 
+    for required in (STABLE / "src/crypto_signal", COLD_PYTHON, COLD_ARCHIVER):
+        if not required.exists():
+            raise RuntimeError(f"Market Tape runtime dependency missing: {required}")
+    if not os.access(COLD_PYTHON, os.X_OK):
+        raise RuntimeError("Market Tape cold archive Python is not executable")
+
     symbols = tuple(dict.fromkeys(str(value).upper() for value in args.symbols))
     if not symbols or any(not value for value in symbols):
         raise ValueError("Market Tape runtime symbols must be non-empty")
@@ -138,6 +138,109 @@ def _install_signal_handlers() -> None:
     signal.signal(signal.SIGINT, stop)
 
 
+def _capacity_payload(
+    *,
+    policy: MarketTapeHotColdPolicy,
+) -> tuple[dict[str, object], MarketTapeHotColdDecision]:
+    snapshot = measure_hotcold_capacity(
+        hot_dir=TAPE_DIR,
+        cold_dir=COLD_DIR,
+        volume_path=VOLUME,
+        policy=policy,
+    )
+    return (
+        {
+            "hot_bytes": snapshot.hot_bytes,
+            "cold_bytes": snapshot.cold_bytes,
+            "tape_bytes": snapshot.hot_bytes + snapshot.cold_bytes,
+            "free_bytes": snapshot.free_bytes,
+            "capacity_decision": snapshot.decision.value,
+        },
+        snapshot.decision,
+    )
+
+
+def _run_cold_archive() -> dict[str, object]:
+    environment = os.environ.copy()
+    environment.update(
+        {
+            "HOME": "/Users/crypto-signal-agent",
+            "PYTHONPATH": str(STABLE / "src"),
+        }
+    )
+    completed = subprocess.run(
+        [
+            str(COLD_PYTHON),
+            str(COLD_ARCHIVER),
+            "--hot-dir",
+            str(TAPE_DIR),
+            "--cold-dir",
+            str(COLD_DIR),
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=600,
+        env=environment,
+    )
+    if completed.stdout:
+        print(completed.stdout, end="", flush=True)
+    if completed.stderr:
+        print(completed.stderr, end="", file=sys.stderr, flush=True)
+    if completed.returncode != 0:
+        raise RuntimeError(
+            f"cold archive process failed with rc={completed.returncode}"
+        )
+
+    prefix = "MARKET_TAPE_COLD_ARCHIVE_RESULT="
+    line = next(
+        (
+            value
+            for value in completed.stdout.splitlines()
+            if value.startswith(prefix)
+        ),
+        None,
+    )
+    if line is None:
+        raise RuntimeError("cold archive result marker missing")
+    payload = json.loads(line.removeprefix(prefix))
+    if not isinstance(payload, dict):
+        raise TypeError("cold archive result must be a JSON object")
+    if int(payload.get("real_capital", -1)) != 0:
+        raise ValueError("cold archive real-capital boundary mismatch")
+    return {str(key): value for key, value in payload.items()}
+
+
+def _guard_or_none(
+    *,
+    policy: MarketTapeHotColdPolicy,
+) -> tuple[dict[str, object], MarketTapeHotColdDecision | None]:
+    snapshot = measure_hotcold_capacity(
+        hot_dir=TAPE_DIR,
+        cold_dir=COLD_DIR,
+        volume_path=VOLUME,
+        policy=policy,
+    )
+    payload: dict[str, object] = {
+        "hot_bytes": snapshot.hot_bytes,
+        "cold_bytes": snapshot.cold_bytes,
+        "tape_bytes": snapshot.hot_bytes + snapshot.cold_bytes,
+        "free_bytes": snapshot.free_bytes,
+        "capacity_decision": snapshot.decision.value,
+    }
+    if not snapshot.can_collect:
+        return payload, snapshot.decision
+
+    archive_decision = evaluate_archive_headroom(
+        snapshot=snapshot,
+        policy=policy,
+    )
+    payload["archive_headroom_decision"] = archive_decision.value
+    if archive_decision is not MarketTapeHotColdDecision.COLLECT:
+        return payload, archive_decision
+    return payload, None
+
+
 def main() -> int:
     args = parse_args()
     _install_signal_handlers()
@@ -145,22 +248,16 @@ def main() -> int:
     try:
         symbols = _validate_args(args)
     except (RuntimeError, ValueError) as exc:
-        print(f"MARKET_TAPE_RUNTIME_STARTUP_BLOCKED error={exc}", file=sys.stderr)
+        print(
+            f"MARKET_TAPE_RUNTIME_STARTUP_BLOCKED error={exc}",
+            file=sys.stderr,
+        )
         return 75
 
-    capacity_policy = MarketTapeCapacityPolicy(
-        max_tape_bytes=DEFAULT_MARKET_TAPE_CAPACITY_POLICY.max_tape_bytes,
-        min_free_bytes=DEFAULT_MARKET_TAPE_CAPACITY_POLICY.min_free_bytes,
-        chunk_messages=args.chunk_messages,
-        guard_sleep_seconds=(
-            DEFAULT_MARKET_TAPE_CAPACITY_POLICY.guard_sleep_seconds
-        ),
-    )
-    retention_policy: MarketTapeRetentionPolicy = (
-        DEFAULT_MARKET_TAPE_RETENTION_POLICY
-    )
-
+    policy = DEFAULT_MARKET_TAPE_HOTCOLD_POLICY
     TAPE_DIR.mkdir(parents=True, exist_ok=True)
+    COLD_DIR.mkdir(parents=True, exist_ok=True)
+
     with LOCK.open("a+") as lock_handle:
         try:
             fcntl.flock(
@@ -174,64 +271,75 @@ def main() -> int:
         cycles = 0
         try:
             while True:
-                removed_by_count = enforce_generation_retention(
-                    market_tape_dir=TAPE_DIR,
-                    policy=retention_policy,
-                )
-
-                active_bytes = active_generation_bytes(TAPE_DIR)
-                sealed_id: str | None = None
-                if (
-                    active_bytes
-                    >= retention_policy.active_generation_max_bytes
-                ):
-                    sealed = seal_active_generation(market_tape_dir=TAPE_DIR)
-                    sealed_id = sealed.generation_id
-                    removed_by_count = (
-                        *removed_by_count,
-                        *enforce_generation_retention(
-                            market_tape_dir=TAPE_DIR,
-                            policy=retention_policy,
-                        ),
-                    )
-
-                capacity, removed_for_capacity = reclaim_for_capacity(
-                    market_tape_dir=TAPE_DIR,
-                    volume_path=VOLUME,
-                    capacity_policy=capacity_policy,
-                    retention_policy=retention_policy,
-                )
-                if not capacity.can_collect:
+                capacity, guard = _guard_or_none(policy=policy)
+                if guard is not None:
                     _write_status(
                         {
                             "state": "guarded",
-                            "decision": capacity.decision.value,
-                            "tape_bytes": capacity.tape_bytes,
-                            "free_bytes": capacity.free_bytes,
-                            "active_generation_bytes": active_generation_bytes(
-                                TAPE_DIR
-                            ),
-                            "sealed_generations": len(
-                                list_sealed_generations(TAPE_DIR)
-                            ),
-                            "sealed_generation": sealed_id,
-                            "removed_generations": [
-                                *removed_by_count,
-                                *removed_for_capacity,
-                            ],
+                            "decision": guard.value,
+                            **capacity,
                         }
                     )
                     print(
                         "MARKET_TAPE_RUNTIME_GUARDED "
-                        f"decision={capacity.decision.value} "
-                        f"tape_bytes={capacity.tape_bytes} "
-                        f"free_bytes={capacity.free_bytes} "
+                        f"decision={guard.value} "
+                        f"hot_bytes={capacity['hot_bytes']} "
+                        f"cold_bytes={capacity['cold_bytes']} "
+                        f"free_bytes={capacity['free_bytes']} "
                         "REAL_CAPITAL=0",
                         flush=True,
                     )
                     if args.max_cycles:
                         return 3
-                    time.sleep(capacity_policy.guard_sleep_seconds)
+                    time.sleep(300)
+                    continue
+
+                try:
+                    archive = _run_cold_archive()
+                except (
+                    json.JSONDecodeError,
+                    OSError,
+                    subprocess.SubprocessError,
+                    TypeError,
+                    ValueError,
+                    RuntimeError,
+                ) as exc:
+                    _write_status(
+                        {
+                            "state": "archive_error",
+                            "error": f"{type(exc).__name__}:{exc}",
+                            **capacity,
+                        }
+                    )
+                    print(
+                        "MARKET_TAPE_RUNTIME_ARCHIVE_ERROR "
+                        f"error={type(exc).__name__}:{exc} REAL_CAPITAL=0",
+                        file=sys.stderr,
+                        flush=True,
+                    )
+                    if args.max_cycles:
+                        return 6
+                    time.sleep(300)
+                    continue
+
+                post_archive, guard = _guard_or_none(policy=policy)
+                if guard is not None:
+                    _write_status(
+                        {
+                            "state": "guarded_after_archive",
+                            "decision": guard.value,
+                            "archived_rows": int(
+                                archive.get("archived_rows", 0)
+                            ),
+                            "pruned_rows": int(
+                                archive.get("pruned_rows", 0)
+                            ),
+                            **post_archive,
+                        }
+                    )
+                    if args.max_cycles:
+                        return 3
+                    time.sleep(300)
                     continue
 
                 _write_status(
@@ -239,20 +347,13 @@ def main() -> int:
                         "state": "collecting_chunk",
                         "cycle": cycles + 1,
                         "process_pid": os.getpid(),
-                        "target_messages": capacity_policy.chunk_messages,
-                        "tape_bytes": capacity.tape_bytes,
-                        "free_bytes": capacity.free_bytes,
-                        "active_generation_bytes": active_generation_bytes(
-                            TAPE_DIR
+                        "target_messages": args.chunk_messages,
+                        "archived_rows": int(archive.get("archived_rows", 0)),
+                        "pruned_rows": int(archive.get("pruned_rows", 0)),
+                        "archived_partitions": len(
+                            archive.get("partitions", [])
                         ),
-                        "sealed_generations": len(
-                            list_sealed_generations(TAPE_DIR)
-                        ),
-                        "sealed_generation": sealed_id,
-                        "removed_generations": [
-                            *removed_by_count,
-                            *removed_for_capacity,
-                        ],
+                        **post_archive,
                     }
                 )
 
@@ -264,7 +365,7 @@ def main() -> int:
                             snapshot_interval_ms=(
                                 args.orderbook_snapshot_interval_ms
                             ),
-                            chunk_messages=capacity_policy.chunk_messages,
+                            chunk_messages=args.chunk_messages,
                         )
                     )
                 except (OSError, sqlite3.Error, TimeoutError, ValueError) as exc:
@@ -272,6 +373,7 @@ def main() -> int:
                         {
                             "state": "retryable_error",
                             "error": f"{type(exc).__name__}:{exc}",
+                            **post_archive,
                         }
                     )
                     print(
@@ -286,15 +388,15 @@ def main() -> int:
                     continue
 
                 cycles += 1
-                post_capacity = measure_market_tape_capacity(
-                    market_tape_dir=TAPE_DIR,
-                    volume_path=VOLUME,
-                    policy=capacity_policy,
+                post_collect, decision = _capacity_payload(policy=policy)
+                state = (
+                    "collecting"
+                    if decision is MarketTapeHotColdDecision.COLLECT
+                    else "guarded_after_chunk"
                 )
-                sealed_count = len(list_sealed_generations(TAPE_DIR))
                 _write_status(
                     {
-                        "state": "collecting",
+                        "state": state,
                         "cycle": cycles,
                         "observed_messages": result.observed_messages,
                         "raw_inserted": result.raw_inserted,
@@ -306,18 +408,12 @@ def main() -> int:
                         ),
                         "trades_inserted": result.trades_inserted,
                         "trades_unchanged": result.trades_unchanged,
-                        "tape_bytes": post_capacity.tape_bytes,
-                        "free_bytes": post_capacity.free_bytes,
-                        "capacity_decision": post_capacity.decision.value,
-                        "active_generation_bytes": active_generation_bytes(
-                            TAPE_DIR
+                        "archived_rows": int(archive.get("archived_rows", 0)),
+                        "pruned_rows": int(archive.get("pruned_rows", 0)),
+                        "archived_partitions": len(
+                            archive.get("partitions", [])
                         ),
-                        "sealed_generations": sealed_count,
-                        "sealed_generation": sealed_id,
-                        "removed_generations": [
-                            *removed_by_count,
-                            *removed_for_capacity,
-                        ],
+                        **post_collect,
                     }
                 )
                 print(
@@ -327,24 +423,34 @@ def main() -> int:
                     f"raw_inserted={result.raw_inserted} "
                     f"orderbooks_inserted={result.orderbooks_inserted} "
                     f"trades_inserted={result.trades_inserted} "
-                    f"tape_bytes={post_capacity.tape_bytes} "
-                    f"free_bytes={post_capacity.free_bytes} "
-                    f"sealed={sealed_count} "
+                    f"archived_rows={archive.get('archived_rows', 0)} "
+                    f"hot_bytes={post_collect['hot_bytes']} "
+                    f"cold_bytes={post_collect['cold_bytes']} "
+                    f"free_bytes={post_collect['free_bytes']} "
+                    f"decision={decision.value} "
                     "REAL_CAPITAL=0",
                     flush=True,
                 )
 
+                if decision is not MarketTapeHotColdDecision.COLLECT:
+                    if args.max_cycles:
+                        return 3
+                    time.sleep(300)
+                    continue
                 if args.max_cycles and cycles >= args.max_cycles:
                     return 0
         except KeyboardInterrupt:
-            _write_status({"state": "stopped"})
+            capacity, _decision = _capacity_payload(policy=policy)
+            _write_status({"state": "stopped", **capacity})
             print("MARKET_TAPE_RUNTIME_STOPPED REAL_CAPITAL=0", flush=True)
             return 0
         except RuntimeError as exc:
+            capacity, _decision = _capacity_payload(policy=policy)
             _write_status(
                 {
                     "state": "integrity_error",
                     "error": f"{type(exc).__name__}:{exc}",
+                    **capacity,
                 }
             )
             print(
