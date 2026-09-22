@@ -113,7 +113,7 @@ def _wait_or_stop(seconds: int) -> None:
 
 
 def main() -> int:
-    global _child
+    global _child, _stop_requested
 
     if os.getuid() != 504:
         print(
