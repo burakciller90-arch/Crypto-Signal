@@ -31,6 +31,7 @@ def test_market_tape_supervisor_launcher_detaches_from_runner_cleanup() -> None:
     assert "unset RUNNER_TRACKING_ID" in source
     assert 'nohup "$PYTHON" "$SUPERVISOR"' in source
     assert 'PID_FILE="$CONTROL/market-tape-supervisor.pid"' in source
+    assert 'LOG="$LOG_DIR/market-tape-supervisor.log"' in source
     assert "REAL_CAPITAL=0" in source
 
 
