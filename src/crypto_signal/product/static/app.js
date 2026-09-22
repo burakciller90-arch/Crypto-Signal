@@ -1123,6 +1123,91 @@ function renderPerformanceGroup(group) {
   }).join("");
 }
 
+function renderTrustOverview(performance, paperMission) {
+  const root = $("#trustOverview");
+  const forecastTag = $("#trustForecastTag");
+  const paperTag = $("#trustPaperTag");
+  const paperRoot = $("#trustPaperPerformance");
+  if (!root || !forecastTag || !paperTag || !paperRoot) return;
+
+  const evidenceCounts = performance?.evidence_class_counts ?? [];
+  const outcomeSnapshots = Number(performance?.outcome_snapshot_count ?? 0);
+  const paper = paperMission?.status === "ready" && paperMission.snapshot
+    ? (paperMission.snapshot.performance ?? null)
+    : null;
+  const paperStatus = paper?.status ?? "unavailable";
+  const closedTrades = Number(paper?.closed_trade_count ?? 0);
+
+  root.classList.remove("loading-block");
+  root.innerHTML = `
+    <div class="trust-overview-card">
+      <span>Outcome snapshots</span>
+      <strong>${esc(outcomeSnapshots)}</strong>
+      <small>immutable evaluation rows</small>
+    </div>
+    <div class="trust-overview-card">
+      <span>Evidence classes</span>
+      <strong>${esc(evidenceCounts.length)}</strong>
+      <small>retrospective / walk-forward / untouched-forward ayrı</small>
+    </div>
+    <div class="trust-overview-card trust-overview-warning">
+      <span>Probability calibration</span>
+      <strong>NOT CALIBRATED</strong>
+      <small>R19 kabul edilmeden yüzde olasılık yok</small>
+    </div>
+    <div class="trust-overview-card">
+      <span>Paper closed trades</span>
+      <strong>${esc(closedTrades)}</strong>
+      <small>${paperStatus === "available" ? "ölçülebilir track record" : "örneklem henüz oluşmamış olabilir"}</small>
+    </div>`;
+
+  forecastTag.textContent = performance?.status === "ready"
+    ? `${outcomeSnapshots} OUTCOME SNAPSHOT`
+    : human(performance?.status ?? "unavailable");
+
+  paperRoot.classList.remove("loading-block");
+  if (!paper) {
+    paperTag.textContent = "KANIT YOK";
+    paperRoot.innerHTML = `
+      <div class="performance-empty">
+        Paper runtime performansı bu Product sürecine bağlı değil. Eksik veriden win rate, expectancy veya profit factor türetilmez.
+      </div>`;
+    return;
+  }
+
+  if (paper.status === "not_yet_measured") {
+    paperTag.textContent = "HENÜZ ÖLÇÜLMEDİ";
+    paperRoot.innerHTML = `
+      <div class="trust-paper-empty">
+        <strong>Kapanmış işlem örneklemi henüz yok.</strong>
+        <p>Win rate = %0 değildir. Expectancy ve profit factor da ölçülmediği için boş bırakılır.</p>
+      </div>
+      <div class="trust-metric-grid">
+        <div><span>Kapanmış</span><strong>${esc(paper.closed_trade_count ?? 0)}</strong></div>
+        <div><span>Açık</span><strong>${esc(paper.open_trade_count ?? 0)}</strong></div>
+        <div><span>Win rate</span><strong>—</strong></div>
+        <div><span>Expectancy</span><strong>—</strong></div>
+        <div><span>Profit factor</span><strong>—</strong></div>
+        <div><span>Execution maliyeti</span><strong>—</strong></div>
+      </div>`;
+    return;
+  }
+
+  paperTag.textContent = `${paper.closed_trade_count ?? 0} KAPANMIŞ`;
+  const window = paper.window ?? {};
+  paperRoot.innerHTML = `
+    <div class="trust-metric-grid">
+      <div><span>Win rate</span><strong>${esc(fmtFractionPercent(paper.win_rate_fraction))}</strong></div>
+      <div><span>Observed expectancy</span><strong>${esc(fmtMoney(paper.expectancy_usdt_per_closed_trade))}</strong></div>
+      <div><span>Profit factor</span><strong>${esc(paper.profit_factor ?? "—")}</strong></div>
+      <div><span>Net kapanmış PnL</span><strong>${esc(fmtMoney(paper.total_closed_trade_net_pnl_usdt))}</strong></div>
+      <div><span>Execution maliyeti</span><strong>${esc(fmtMoney(paper.total_explicit_execution_cost_usdt))}</strong></div>
+      <div><span>Turnover</span><strong>${esc(fmtFractionPercent(window.turnover_fraction))}</strong></div>
+    </div>
+    <div class="truth-note">Bu blok yalnız immutable simulated fill + muhasebe lineage’ını ölçer. Forecast hit-rate veya confluence burada paper başarı metriği sayılmaz.</div>`;
+}
+
+
 function renderPerformance(data) {
   performanceData = data;
   const root = $("#performance");
@@ -2474,6 +2559,7 @@ async function loadAll() {
   renderSystemHealth(health, command, paperMission);
   renderRadar(radar);
   renderProofWall(proofWall);
+  renderTrustOverview(performance, paperMission);
   renderPerformance(performance);
   renderAlertCenter(alerts);
   renderIntelligenceCenter(intelligence);
