@@ -234,6 +234,28 @@ def main() -> int:
                     time.sleep(capacity_policy.guard_sleep_seconds)
                     continue
 
+                _write_status(
+                    {
+                        "state": "collecting_chunk",
+                        "cycle": cycles + 1,
+                        "process_pid": os.getpid(),
+                        "target_messages": capacity_policy.chunk_messages,
+                        "tape_bytes": capacity.tape_bytes,
+                        "free_bytes": capacity.free_bytes,
+                        "active_generation_bytes": active_generation_bytes(
+                            TAPE_DIR
+                        ),
+                        "sealed_generations": len(
+                            list_sealed_generations(TAPE_DIR)
+                        ),
+                        "sealed_generation": sealed_id,
+                        "removed_generations": [
+                            *removed_by_count,
+                            *removed_for_capacity,
+                        ],
+                    }
+                )
+
                 try:
                     result = asyncio.run(
                         _collect_chunk(
