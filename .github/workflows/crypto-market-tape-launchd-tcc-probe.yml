@@ -1,0 +1,106 @@
+name: Crypto Market Tape Launchd TCC Probe
+
+on:
+  push:
+    branches:
+      - v1.1-market-tape-hotcold-v1
+    paths:
+      - ".github/workflows/crypto-market-tape-launchd-tcc-probe.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    name: Probe launchd internal-bootstrap access to Crypto-504
+    runs-on: [self-hosted, crypto-signal, uid501]
+    timeout-minutes: 8
+    steps:
+      - name: Run bounded TCC access probe as UID504 LaunchAgent
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo -n -H -u crypto-signal-agent /usr/bin/env HOME=/Users/crypto-signal-agent /bin/bash <<'SH'
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          LABEL="com.cryptosignal.markettape.tccprobe"
+          DOMAIN="gui/$(id -u)"
+          SCRIPT="/tmp/$LABEL.sh"
+          PLIST="/tmp/$LABEL.plist"
+          OUT="/tmp/$LABEL.out.log"
+          ERR="/tmp/$LABEL.err.log"
+          ACCEPT="$ROOT/Acceptance/launchd-tcc-probe"
+
+          launchctl bootout "$DOMAIN/$LABEL" >/dev/null 2>&1 || true
+          rm -f "$SCRIPT" "$PLIST" "$OUT" "$ERR"
+
+          cat >"$SCRIPT" <<'PROBE'
+          #!/bin/bash
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          ACCEPT="$ROOT/Acceptance/launchd-tcc-probe"
+          echo "PROBE_UID=$(id -u)"
+          echo "PROBE_BEGIN=YES"
+          test -r "$ROOT/MarketTape/BUILD_COMMIT"
+          commit="$(cat "$ROOT/MarketTape/BUILD_COMMIT")"
+          echo "SSD_READ_PASS=$commit"
+          mkdir -p "$ACCEPT"
+          printf '%s\n' "$commit" >"$ACCEPT/from-launchd.txt"
+          test -s "$ACCEPT/from-launchd.txt"
+          echo "SSD_WRITE_PASS=YES"
+          PY_TARGET="$(readlink "$ROOT/Development/.venv/bin/python")"
+          test -x "$PY_TARGET"
+          "$PY_TARGET" - "$ROOT/MarketTape/BUILD_COMMIT" <<'PY'
+          import pathlib,sys
+          value=pathlib.Path(sys.argv[1]).read_text().strip()
+          assert len(value)==40
+          print("INTERNAL_PYTHON_SSD_READ_PASS=YES")
+          PY
+          rm -rf "$ACCEPT"
+          echo "PROBE_PASS=YES"
+          PROBE
+          chmod 700 "$SCRIPT"
+
+          cat >"$PLIST" <<PLIST
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>Label</key><string>$LABEL</string>
+            <key>ProgramArguments</key>
+            <array><string>/bin/bash</string><string>$SCRIPT</string></array>
+            <key>RunAtLoad</key><true/>
+            <key>KeepAlive</key><false/>
+            <key>StandardOutPath</key><string>$OUT</string>
+            <key>StandardErrorPath</key><string>$ERR</string>
+          </dict>
+          </plist>
+          PLIST
+          plutil -lint "$PLIST"
+
+          launchctl bootstrap "$DOMAIN" "$PLIST"
+          launchctl kickstart -k "$DOMAIN/$LABEL" >/dev/null 2>&1 || true
+
+          for _ in {1..20}; do
+            grep -q 'PROBE_PASS=YES' "$OUT" 2>/dev/null && break
+            sleep 1
+          done
+
+          echo "=== PROBE LAUNCHD ==="
+          launchctl print "$DOMAIN/$LABEL" 2>&1 | egrep 'state =|pid =|runs =|last exit code =|program =|path =' | head -120 || true
+          echo "=== PROBE STDOUT ==="
+          cat "$OUT" 2>/dev/null || true
+          echo "=== PROBE STDERR ==="
+          cat "$ERR" 2>/dev/null || true
+
+          ok=0
+          grep -q 'PROBE_PASS=YES' "$OUT" 2>/dev/null && ok=1
+
+          launchctl bootout "$DOMAIN/$LABEL" >/dev/null 2>&1 || true
+          rm -f "$SCRIPT" "$PLIST"
+          rm -rf "$ACCEPT"
+
+          test "$ok" = "1"
+          echo "LAUNCHD_INTERNAL_BOOTSTRAP_SSD_ACCESS_PASS=YES"
+          echo "REAL_CAPITAL=0"
+          SH
