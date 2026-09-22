@@ -58,9 +58,16 @@ jobs:
                   if not rows:
                       continue
                   path=Path(td)/spec.filename
+                  before=_canonical_rows_sha256(rows)
+                  before_repr=repr(rows)
                   _write_parquet(path,rows)
+                  after=_canonical_rows_sha256(rows)
                   restored=_read_parquet(path)
                   print("TABLE",spec.key,"RESTORED",repr(restored))
+                  print("SOURCE_BEFORE_REPR",spec.key,before_repr)
+                  print("SOURCE_BEFORE_DIGEST",spec.key,before)
+                  print("SOURCE_AFTER_DIGEST",spec.key,after)
+                  print("SOURCE_MUTATED",spec.key,before != after)
                   print("SOURCE_DIGEST",spec.key,_canonical_rows_sha256(rows))
                   print("RESTORED_DIGEST",spec.key,_canonical_rows_sha256(restored))
                   print("EQUAL",spec.key,rows==restored)
