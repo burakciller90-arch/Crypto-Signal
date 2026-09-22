@@ -1,0 +1,64 @@
+name: Crypto Rolling 20m Continuity TEMP
+
+on:
+  push:
+    branches: [fix/continuity-rolling-20m-daemon]
+    paths:
+      - ".github/workflows/crypto-rolling-20m-continuity-temp.yml"
+      - ".github/workflows/crypto-install-local-20m-wake.yml"
+      - ".github/workflows/crypto-20m-continuity-wake.yml"
+      - "ops/continuity/**"
+      - "tests/test_continuity_hardening.py"
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+          python -m pip install "pytest>=8.4" "pytest-asyncio>=1.2" "ruff>=0.13" "mypy>=1.18"
+      - name: Rolling continuity focused gate
+        run: |
+          python -m py_compile \
+            ops/continuity/interval_wake_daemon.py \
+            ops/continuity/recurring_wake.py \
+            ops/continuity/relay_submit.py \
+            ops/continuity/relay_daemon.py \
+            ops/continuity/continuity_contracts.py
+          python -m pytest -q tests/test_continuity_hardening.py tests/test_continuity_contracts.py
+          python -m ruff check \
+            ops/continuity/interval_wake_daemon.py \
+            ops/continuity/recurring_wake.py \
+            ops/continuity/relay_submit.py \
+            ops/continuity/relay_daemon.py \
+            ops/continuity/continuity_contracts.py \
+            tests/test_continuity_hardening.py
+          python -m mypy \
+            ops/continuity/interval_wake_daemon.py \
+            ops/continuity/recurring_wake.py \
+            ops/continuity/relay_submit.py \
+            ops/continuity/relay_daemon.py \
+            ops/continuity/continuity_contracts.py
+          grep -F 'cron: "*/5 * * * *"' .github/workflows/crypto-20m-continuity-wake.yml
+          grep -F 'LOCAL_20M_WAKE_MODE=rolling-daemon' .github/workflows/crypto-install-local-20m-wake.yml
+          grep -F 'INTERVAL_SECONDS = 20 * 60' ops/continuity/interval_wake_daemon.py
+          echo "ROLLING_20M_CONTINUITY_FOCUSED_PASS=YES"
+      - name: Full repository regression
+        run: |
+          python -m pytest -q
+          python -m ruff check src tests ops/verify_stage10_integrated.py
+          python -m mypy src ops/verify_stage10_integrated.py
+          node --check src/crypto_signal/product/static/freshness.js
+          node --check src/crypto_signal/product/static/app.js
+          node tests/js/test_product_freshness.js
+          echo "ROLLING_20M_CONTINUITY_FULL_PASS=YES"
