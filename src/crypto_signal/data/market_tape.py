@@ -12,6 +12,11 @@ from crypto_signal.data.derivatives import (
     DerivativesInstrumentType,
     DerivativesObservation,
 )
+from crypto_signal.data.liquidations import (
+    LiquidatedPositionSide,
+    LiquidationFeedCoverage,
+    LiquidationObservation,
+)
 from crypto_signal.data.microstructure import (
     AggressorSide,
     OrderBookLevel,
@@ -36,16 +41,32 @@ class MarketTapeCounts:
     orderbooks: int
     trades: int
     derivatives: int
+    liquidations: int
+    liquidation_coverage: int
 
     @property
     def total(self) -> int:
-        return self.orderbooks + self.trades + self.derivatives
+        return (
+            self.orderbooks
+            + self.trades
+            + self.derivatives
+            + self.liquidations
+            + self.liquidation_coverage
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class MarketTapeLiquidationReplay:
+    coverage: LiquidationFeedCoverage
+    events: tuple[LiquidationObservation, ...]
+    as_of_ms: int
 
 
 class MarketTapeStore:
     """Append-only SQLite persistence for normalized market-intelligence evidence."""
 
-    SCHEMA_VERSION = "market-tape-schema-v1/1"
+    SCHEMA_VERSION = "market-tape-schema-v1/2"
+    LEGACY_SCHEMA_VERSIONS = frozenset({"market-tape-schema-v1/1"})
 
     def __init__(self, path: Path) -> None:
         self.path = path
@@ -63,13 +84,6 @@ class MarketTapeStore:
                 )
                 """
             )
-            connection.execute(
-                """
-                INSERT OR IGNORE INTO market_tape_meta(key, value)
-                VALUES ('schema_version', ?)
-                """,
-                (self.SCHEMA_VERSION,),
-            )
             row = connection.execute(
                 """
                 SELECT value
@@ -77,10 +91,24 @@ class MarketTapeStore:
                 WHERE key = 'schema_version'
                 """
             ).fetchone()
-            if row is None or str(row["value"]) != self.SCHEMA_VERSION:
-                raise MarketTapeConflictError(
-                    "market tape schema version mismatch"
+            if row is None:
+                previous_schema_version = self.SCHEMA_VERSION
+                connection.execute(
+                    """
+                    INSERT INTO market_tape_meta(key, value)
+                    VALUES ('schema_version', ?)
+                    """,
+                    (self.SCHEMA_VERSION,),
                 )
+            else:
+                previous_schema_version = str(row["value"])
+                if (
+                    previous_schema_version != self.SCHEMA_VERSION
+                    and previous_schema_version not in self.LEGACY_SCHEMA_VERSIONS
+                ):
+                    raise MarketTapeConflictError(
+                        "market tape schema version mismatch"
+                    )
 
             connection.execute(
                 """
@@ -166,6 +194,71 @@ class MarketTapeStore:
                 )
                 """
             )
+
+            connection.execute(
+                """
+                CREATE TABLE IF NOT EXISTS market_tape_liquidations (
+                    liquidation_identity TEXT PRIMARY KEY,
+                    semantic_identity TEXT NOT NULL UNIQUE,
+                    exchange TEXT NOT NULL,
+                    instrument_type TEXT NOT NULL,
+                    symbol TEXT NOT NULL,
+                    event_at_ms INTEGER NOT NULL,
+                    source_timestamp_ms INTEGER NOT NULL,
+                    ingested_at_ms INTEGER NOT NULL,
+                    source_row_index INTEGER NOT NULL,
+                    liquidated_position_side TEXT NOT NULL,
+                    source TEXT NOT NULL,
+                    adapter_version TEXT NOT NULL,
+                    payload_json TEXT NOT NULL
+                )
+                """
+            )
+            connection.execute(
+                """
+                CREATE INDEX IF NOT EXISTS idx_market_tape_liquidations_context
+                ON market_tape_liquidations(
+                    exchange, instrument_type, symbol, event_at_ms
+                )
+                """
+            )
+            connection.execute(
+                """
+                CREATE TABLE IF NOT EXISTS market_tape_liquidation_coverage (
+                    coverage_identity TEXT PRIMARY KEY,
+                    exchange TEXT NOT NULL,
+                    instrument_type TEXT NOT NULL,
+                    symbol TEXT NOT NULL,
+                    coverage_start_ms INTEGER NOT NULL,
+                    coverage_end_ms INTEGER NOT NULL,
+                    observed_at_ms INTEGER NOT NULL,
+                    source TEXT NOT NULL,
+                    adapter_version TEXT NOT NULL,
+                    payload_json TEXT NOT NULL
+                )
+                """
+            )
+            connection.execute(
+                """
+                CREATE INDEX IF NOT EXISTS idx_market_tape_liquidation_coverage_context
+                ON market_tape_liquidation_coverage(
+                    exchange,
+                    instrument_type,
+                    symbol,
+                    coverage_end_ms,
+                    coverage_start_ms
+                )
+                """
+            )
+            if previous_schema_version != self.SCHEMA_VERSION:
+                connection.execute(
+                    """
+                    UPDATE market_tape_meta
+                    SET value = ?
+                    WHERE key = 'schema_version'
+                    """,
+                    (self.SCHEMA_VERSION,),
+                )
 
     def append_orderbook(
         self,
@@ -324,6 +417,104 @@ class MarketTapeStore:
             ),
         )
 
+    def append_liquidation(
+        self,
+        observation: LiquidationObservation,
+    ) -> MarketTapeWriteDisposition:
+        semantic_identity = _liquidation_semantic_identity(observation)
+        duplicate = self._find_by_fields(
+            table="market_tape_liquidations",
+            fields={"semantic_identity": semantic_identity},
+        )
+        if duplicate is not None:
+            return MarketTapeWriteDisposition.UNCHANGED
+        return self._append(
+            table="market_tape_liquidations",
+            identity_column="liquidation_identity",
+            identity=observation.liquidation_identity,
+            payload_json=canonical_json(observation),
+            columns=(
+                "liquidation_identity",
+                "semantic_identity",
+                "exchange",
+                "instrument_type",
+                "symbol",
+                "event_at_ms",
+                "source_timestamp_ms",
+                "ingested_at_ms",
+                "source_row_index",
+                "liquidated_position_side",
+                "source",
+                "adapter_version",
+                "payload_json",
+            ),
+            values=(
+                observation.liquidation_identity,
+                semantic_identity,
+                observation.exchange.value,
+                observation.instrument_type.value,
+                observation.symbol,
+                observation.event_at_ms,
+                observation.source_timestamp_ms,
+                observation.ingested_at_ms,
+                observation.source_row_index,
+                observation.liquidated_position_side.value,
+                observation.source.value,
+                observation.adapter_version,
+                canonical_json(observation),
+            ),
+        )
+
+    def append_liquidation_coverage(
+        self,
+        coverage: LiquidationFeedCoverage,
+    ) -> MarketTapeWriteDisposition:
+        duplicate = self._find_by_fields(
+            table="market_tape_liquidation_coverage",
+            fields={"coverage_identity": coverage.coverage_identity},
+        )
+        if duplicate is not None:
+            existing = _liquidation_coverage_from_payload(
+                str(duplicate["payload_json"])
+            )
+            if _liquidation_coverage_truth(existing) != _liquidation_coverage_truth(
+                coverage
+            ):
+                raise MarketTapeConflictError(
+                    "liquidation coverage identity conflicts with coverage truth"
+                )
+            return MarketTapeWriteDisposition.UNCHANGED
+        return self._append(
+            table="market_tape_liquidation_coverage",
+            identity_column="coverage_identity",
+            identity=coverage.coverage_identity,
+            payload_json=canonical_json(coverage),
+            columns=(
+                "coverage_identity",
+                "exchange",
+                "instrument_type",
+                "symbol",
+                "coverage_start_ms",
+                "coverage_end_ms",
+                "observed_at_ms",
+                "source",
+                "adapter_version",
+                "payload_json",
+            ),
+            values=(
+                coverage.coverage_identity,
+                coverage.exchange.value,
+                coverage.instrument_type.value,
+                coverage.symbol,
+                coverage.coverage_start_ms,
+                coverage.coverage_end_ms,
+                coverage.observed_at_ms,
+                coverage.source.value,
+                coverage.adapter_version,
+                canonical_json(coverage),
+            ),
+        )
+
     def append_microstructure_snapshot(
         self,
         snapshot: OrderBookSnapshot,
@@ -343,6 +534,14 @@ class MarketTapeStore:
                     connection,
                     "market_tape_derivatives",
                 ),
+                liquidations=self._count_table(
+                    connection,
+                    "market_tape_liquidations",
+                ),
+                liquidation_coverage=self._count_table(
+                    connection,
+                    "market_tape_liquidation_coverage",
+                ),
             )
 
     def latest_event_at_ms(self) -> int | None:
@@ -357,6 +556,8 @@ class MarketTapeStore:
                     SELECT event_at_ms FROM market_tape_trades
                     UNION ALL
                     SELECT event_at_ms FROM market_tape_derivatives
+                    UNION ALL
+                    SELECT event_at_ms FROM market_tape_liquidations
                 )
                 """
             ).fetchone()
@@ -414,6 +615,123 @@ class MarketTapeStore:
             instrument_type=instrument_type.value,
         )
         return tuple(_derivatives_from_payload(row["payload_json"]) for row in rows)
+
+    def recent_liquidations(
+        self,
+        *,
+        exchange: Exchange,
+        instrument_type: DerivativesInstrumentType,
+        symbol: str,
+        limit: int = 1000,
+    ) -> tuple[LiquidationObservation, ...]:
+        rows = self._recent_rows(
+            table="market_tape_liquidations",
+            exchange=exchange.value,
+            symbol=symbol,
+            limit=limit,
+            instrument_type=instrument_type.value,
+        )
+        return tuple(_liquidation_from_payload(row["payload_json"]) for row in rows)
+
+    def recent_liquidation_coverage(
+        self,
+        *,
+        exchange: Exchange,
+        instrument_type: DerivativesInstrumentType,
+        symbol: str,
+        limit: int = 100,
+    ) -> tuple[LiquidationFeedCoverage, ...]:
+        if limit <= 0:
+            raise ValueError("market tape read limit must be positive")
+        self.initialize()
+        with self._connect() as connection:
+            rows = connection.execute(
+                """
+                SELECT payload_json
+                FROM market_tape_liquidation_coverage
+                WHERE exchange = ?
+                  AND instrument_type = ?
+                  AND symbol = ?
+                ORDER BY coverage_end_ms DESC, coverage_start_ms DESC, rowid DESC
+                LIMIT ?
+                """,
+                (exchange.value, instrument_type.value, symbol, limit),
+            ).fetchall()
+        return tuple(
+            reversed(
+                tuple(
+                    _liquidation_coverage_from_payload(row["payload_json"])
+                    for row in rows
+                )
+            )
+        )
+
+    def liquidation_replay(
+        self,
+        *,
+        coverage_identity: str,
+        as_of_ms: int,
+    ) -> MarketTapeLiquidationReplay:
+        if as_of_ms < 0:
+            raise ValueError("liquidation replay as_of_ms must be non-negative")
+        self.initialize()
+        with self._connect() as connection:
+            coverage_row = connection.execute(
+                """
+                SELECT payload_json
+                FROM market_tape_liquidation_coverage
+                WHERE coverage_identity = ?
+                """,
+                (coverage_identity,),
+            ).fetchone()
+            if coverage_row is None:
+                raise MarketTapeConflictError(
+                    "liquidation replay coverage is not persisted"
+                )
+            coverage = _liquidation_coverage_from_payload(
+                str(coverage_row["payload_json"])
+            )
+            if coverage.observed_at_ms > as_of_ms:
+                raise MarketTapeConflictError(
+                    "liquidation replay coverage is future evidence"
+                )
+            rows = connection.execute(
+                """
+                SELECT payload_json
+                FROM market_tape_liquidations
+                WHERE exchange = ?
+                  AND instrument_type = ?
+                  AND symbol = ?
+                  AND event_at_ms >= ?
+                  AND event_at_ms <= ?
+                  AND event_at_ms <= ?
+                  AND source_timestamp_ms <= ?
+                  AND ingested_at_ms <= ?
+                ORDER BY
+                    event_at_ms ASC,
+                    source_timestamp_ms ASC,
+                    source_row_index ASC,
+                    liquidation_identity ASC
+                """,
+                (
+                    coverage.exchange.value,
+                    coverage.instrument_type.value,
+                    coverage.symbol,
+                    coverage.coverage_start_ms,
+                    coverage.coverage_end_ms,
+                    as_of_ms,
+                    as_of_ms,
+                    as_of_ms,
+                ),
+            ).fetchall()
+        return MarketTapeLiquidationReplay(
+            coverage=coverage,
+            events=tuple(
+                _liquidation_from_payload(row["payload_json"])
+                for row in rows
+            ),
+            as_of_ms=as_of_ms,
+        )
 
     def quick_check(self) -> bool:
         self.initialize()
@@ -578,6 +896,40 @@ def _derivatives_semantic_identity(
     )
 
 
+def _liquidation_semantic_identity(
+    observation: LiquidationObservation,
+) -> str:
+    return canonical_sha256(
+        {
+            "exchange": observation.exchange,
+            "instrument_type": observation.instrument_type,
+            "symbol": observation.symbol,
+            "liquidated_position_side": observation.liquidated_position_side,
+            "size": observation.size,
+            "bankruptcy_price": observation.bankruptcy_price,
+            "event_at_ms": observation.event_at_ms,
+            "source_timestamp_ms": observation.source_timestamp_ms,
+            "source_row_index": observation.source_row_index,
+            "source": observation.source,
+            "adapter_version": observation.adapter_version,
+        }
+    )
+
+
+def _liquidation_coverage_truth(
+    coverage: LiquidationFeedCoverage,
+) -> dict[str, object]:
+    return {
+        "exchange": coverage.exchange,
+        "instrument_type": coverage.instrument_type,
+        "symbol": coverage.symbol,
+        "coverage_start_ms": coverage.coverage_start_ms,
+        "coverage_end_ms": coverage.coverage_end_ms,
+        "source": coverage.source,
+        "adapter_version": coverage.adapter_version,
+    }
+
+
 def _orderbook_from_payload(payload_json: str) -> OrderBookSnapshot:
     payload = _json_object(payload_json)
     return OrderBookSnapshot(
@@ -640,6 +992,44 @@ def _derivatives_from_payload(payload_json: str) -> DerivativesObservation:
         source=DataSource(str(payload["source"])),
         source_timestamp_ms=int(payload["source_timestamp_ms"]),
         ingested_at_ms=int(payload["ingested_at_ms"]),
+        adapter_version=str(payload["adapter_version"]),
+    )
+
+
+def _liquidation_from_payload(payload_json: str) -> LiquidationObservation:
+    payload = _json_object(payload_json)
+    return LiquidationObservation(
+        liquidation_identity=str(payload["liquidation_identity"]),
+        exchange=Exchange(str(payload["exchange"])),
+        instrument_type=DerivativesInstrumentType(str(payload["instrument_type"])),
+        symbol=str(payload["symbol"]),
+        liquidated_position_side=LiquidatedPositionSide(
+            str(payload["liquidated_position_side"])
+        ),
+        size=Decimal(str(payload["size"])),
+        bankruptcy_price=Decimal(str(payload["bankruptcy_price"])),
+        event_at_ms=int(payload["event_at_ms"]),
+        source_timestamp_ms=int(payload["source_timestamp_ms"]),
+        ingested_at_ms=int(payload["ingested_at_ms"]),
+        source_row_index=int(payload["source_row_index"]),
+        source=DataSource(str(payload["source"])),
+        adapter_version=str(payload["adapter_version"]),
+    )
+
+
+def _liquidation_coverage_from_payload(
+    payload_json: str,
+) -> LiquidationFeedCoverage:
+    payload = _json_object(payload_json)
+    return LiquidationFeedCoverage(
+        coverage_identity=str(payload["coverage_identity"]),
+        exchange=Exchange(str(payload["exchange"])),
+        instrument_type=DerivativesInstrumentType(str(payload["instrument_type"])),
+        symbol=str(payload["symbol"]),
+        coverage_start_ms=int(payload["coverage_start_ms"]),
+        coverage_end_ms=int(payload["coverage_end_ms"]),
+        observed_at_ms=int(payload["observed_at_ms"]),
+        source=DataSource(str(payload["source"])),
         adapter_version=str(payload["adapter_version"]),
     )
 
