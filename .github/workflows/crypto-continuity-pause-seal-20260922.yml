@@ -1,0 +1,53 @@
+name: Crypto Continuity Pause Seal 20260922
+
+on:
+  push:
+    branches:
+      - pause-crypto-continuity-20260922
+    paths:
+      - ".github/workflows/crypto-continuity-pause-seal-20260922.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  pause:
+    runs-on: [self-hosted, crypto-signal, uid501]
+    timeout-minutes: 5
+    steps:
+      - name: Seal shared pause and archive relay queue
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(id -u)" = "501"
+          SHARED="/Users/Shared/.crypto-signal-wake-relay"
+          PAUSE="$SHARED/user_pause"
+          QUEUE="$SHARED/queue"
+          PAUSED="$SHARED/paused"
+          mkdir -p "$QUEUE" "$PAUSED"
+          stamp="$(date +%s)"
+          printf 'user_pause_epoch=%s\n' "$stamp" > "$PAUSE"
+          chmod 0660 "$PAUSE" || true
+
+          moved=0
+          shopt -s nullglob
+          for f in "$QUEUE"/*.wake; do
+            mv "$f" "$PAUSED/$(basename "$f").user-pause.$stamp"
+            moved=$((moved + 1))
+          done
+          shopt -u nullglob
+
+          test -f "$PAUSE"
+          queue_count="$(find "$QUEUE" -maxdepth 1 -type f -name '*.wake' | wc -l | tr -d ' ')"
+          test "$queue_count" = "0"
+
+          echo "SHARED_PAUSE_PRESENT=YES"
+          echo "SHARED_WAKE_QUEUE=0"
+          echo "SHARED_WAKES_ARCHIVED=$moved"
+          echo "WAKE_DELIVERY_BLOCKED_BY_SHARED_PAUSE=YES"
+          echo "LEASE_DELIVERY_BLOCKED_BY_SHARED_PAUSE=YES"
+          echo "WORKER_UNTOUCHED=YES"
+          echo "REAL_CAPITAL=0"
+
+          echo "=== CONTINUITY PROCESSES ==="
+          /bin/ps -axo pid=,ppid=,user=,%cpu=,%mem=,etime=,state=,command=             | /usr/bin/grep -E '[b]ridge_watchdog.py|[r]elay_daemon.py|[r]ecurring_wake.py'             | /usr/bin/head -120 || true
