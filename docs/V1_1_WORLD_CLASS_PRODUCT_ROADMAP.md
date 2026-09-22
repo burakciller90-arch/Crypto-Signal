@@ -470,6 +470,59 @@ Acceptance includes:
 - probability calibration truth checks;
 - REAL_CAPITAL=0.
 
+## Deferred v2 frontier — advanced context and execution intelligence
+
+These ideas are intentionally **not** added to the v1.1 critical path. They are
+recorded now so the architecture can preserve the right extension points without
+delaying time-to-market.
+
+### V2-A — Cross-Asset & Correlation Engine
+
+Potential inputs include:
+
+- BTC dominance / stablecoin-dominance context where reliable data exists;
+- Nasdaq / broad risk-asset context;
+- DXY;
+- US Treasury yield context;
+- rolling and regime-conditioned cross-asset relationships.
+
+No fixed rule such as "DXY up => reject BTC long" is accepted as universal truth.
+Cross-asset evidence must be measured, timestamped and evaluated forward. Historical
+correlation is allowed to weaken, invert or disappear.
+
+### V2-B — Execution & Market-Impact Simulation
+
+Extend the paper execution model beyond static fee/spread/slippage assumptions:
+
+- executable depth at decision time;
+- size-dependent expected slippage;
+- shallow-book rejection;
+- partial-fill simulation where scientifically useful;
+- latency sensitivity;
+- expected implementation shortfall;
+- market-impact-aware trade viability.
+
+A strong signal may still be classified as **NO_TRADE_LIQUIDITY** when realistic
+execution cost destroys the expected edge.
+
+### V2-C — Adaptive Regime-Switching Strategy Weights
+
+v1.1 deliberately starts from fixed, interpretable research priors. A later
+regime-aware policy may alter emphasis by detected market state, for example:
+
+- trend regime;
+- range / auction regime;
+- high-volatility / panic regime;
+- transition / uncertain regime.
+
+Any adaptive weighting must beat the fixed-prior baseline under chronological
+walk-forward evaluation, remain stable across relevant regimes and preserve full
+explainability of which policy version was active at decision time.
+
+The existing Regime research engine should be reused rather than replaced. v2 work
+is a promotion/evaluation problem, not permission to create an unrelated second
+regime system.
+
 ## 12. Release sequencing
 
 v1.0.0 stays immutable.
