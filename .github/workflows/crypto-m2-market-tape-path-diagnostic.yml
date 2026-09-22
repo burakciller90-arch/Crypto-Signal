@@ -1,0 +1,39 @@
+name: Crypto M2 Market Tape Path Diagnostic
+
+on:
+  push:
+    branches:
+      - v1.1-liquidity-dynamics-v1
+    paths:
+      - ".github/workflows/crypto-m2-market-tape-path-diagnostic.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    name: Read-only Market Tape path inventory
+    runs-on: [self-hosted, crypto-signal, uid501]
+    timeout-minutes: 10
+    steps:
+      - name: Inspect canonical SSD paths as UID504
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo -k
+          test "$(sudo -n -H -u crypto-signal-agent /usr/bin/id -u)" = "504"
+          sudo -n -H -u crypto-signal-agent /bin/bash <<'SH'
+          set +e
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          echo "=== MOUNT ==="
+          /sbin/mount | /usr/bin/grep -F " on /Volumes/Crypto-504 " || true
+          echo "=== ROOT ==="
+          /bin/ls -ld "$ROOT" "$ROOT/Development" "$ROOT/Development/runtime" 2>&1 || true
+          echo "=== MARKET_TAPE DIR ==="
+          /bin/ls -la "$ROOT/Development/runtime/market_tape" 2>&1 || true
+          echo "=== SQLITE CANDIDATES ==="
+          /usr/bin/find "$ROOT" -type f \( -name '*market*tape*.sqlite3' -o -name '*market*tape*.db' \) -print 2>/dev/null | /usr/bin/head -100
+          echo "=== RUNTIME SQLITE TOP ==="
+          /usr/bin/find "$ROOT/Development/runtime" -maxdepth 4 -type f -name '*.sqlite3' -print 2>/dev/null | /usr/bin/sort | /usr/bin/head -200
+          echo "M2_MARKET_TAPE_PATH_DIAG_DONE=YES"
+          SH
