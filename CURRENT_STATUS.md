@@ -1,9 +1,9 @@
 # CURRENT STATUS
 
-Updated: 2026-09-20
+Updated: 2026-09-22
 Project: Crypto Signal
-Phase: Post-V1 Production Expansion
-State: POST_V1_HIGHER_TF_PREPARATION_ACCEPTED
+Phase: Full Version Final Release
+State: R14_RELEASE_CANDIDATE
 REAL_CAPITAL: 0
 
 ## Accepted foundations
