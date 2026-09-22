@@ -44,11 +44,25 @@ jobs:
           note() { printf '%s %s\n' "$(stamp)" "$*" | tee -a "$LOG"; }
 
           listener_pids() {
-            /bin/ps -axo pid=,command=               | /usr/bin/awk -v needle="$RUNNER/bin/Runner.Listener run --startuptype service"                   'index($0, needle) {print $1}'
+            /bin/ps -axo pid=,command= \
+              | /usr/bin/awk -v expected="$RUNNER/bin/Runner.Listener run --startuptype service" '
+                  {
+                    pid=$1
+                    sub(/^[[:space:]]*[0-9]+[[:space:]]+/, "", $0)
+                    if ($0 == expected) print pid
+                  }
+                '
           }
 
           worker_pids() {
-            /bin/ps -axo pid=,command=               | /usr/bin/awk -v needle="$RUNNER/bin/Runner.Worker"                   'index($0, needle) {print $1}'
+            /bin/ps -axo pid=,command= \
+              | /usr/bin/awk -v prefix="$RUNNER/bin/Runner.Worker" '
+                  {
+                    pid=$1
+                    sub(/^[[:space:]]*[0-9]+[[:space:]]+/, "", $0)
+                    if (index($0, prefix) == 1) print pid
+                  }
+                '
           }
 
           runsvc_pids() {
