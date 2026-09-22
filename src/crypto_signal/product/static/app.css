@@ -327,7 +327,182 @@ td { padding: 11px 10px; border-bottom: 1px solid rgba(145,176,201,.08); color: 
 .evidence-room::backdrop { background: rgba(0,0,0,.72); backdrop-filter: blur(8px); }
 .evidence-room-head { position: sticky; top: 0; z-index: 4; display: flex; justify-content: space-between; align-items: center; gap: 18px; padding: 18px 20px; border-bottom: 1px solid var(--line); background: rgba(7,11,16,.94); }
 .evidence-room-head h2 { margin: 5px 0 0; }
-.dialog-body { padding: 20px; }
+.dialog-body { padding: 0; }
+.evidence-room-grid {
+  display: grid;
+  grid-template-columns: 260px minmax(0,1fr);
+  min-height: min(780px, calc(100vh - 115px));
+}
+.evidence-room-rail {
+  position: sticky;
+  top: 0;
+  align-self: start;
+  min-height: 100%;
+  padding: 18px 16px;
+  border-right: 1px solid var(--line);
+  background:
+    linear-gradient(180deg, rgba(85,230,255,.045), transparent 18rem),
+    rgba(5,9,14,.72);
+}
+.evidence-room-state {
+  padding: 16px;
+  border: 1px solid rgba(85,230,255,.19);
+  border-radius: 13px;
+  background: linear-gradient(145deg, rgba(85,230,255,.07), rgba(255,255,255,.012));
+}
+.evidence-room-state-main {
+  display: block;
+  margin: 8px 0 4px;
+  font: 800 1.35rem ui-monospace, monospace;
+  letter-spacing: -.03em;
+}
+.evidence-room-state > span {
+  color: var(--muted);
+  font-size: .72rem;
+}
+.evidence-room-rail-block {
+  margin-top: 12px;
+  padding: 13px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: rgba(255,255,255,.012);
+}
+.evidence-room-fact {
+  display: grid;
+  gap: 3px;
+  margin-top: 10px;
+}
+.evidence-room-fact span {
+  color: var(--muted);
+  font-size: .63rem;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+.evidence-room-fact strong {
+  color: var(--text);
+  font-size: .76rem;
+  line-height: 1.35;
+}
+.evidence-room-integrity {
+  display: grid;
+  gap: 6px;
+}
+.evidence-room-integrity > span {
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: .62rem;
+}
+.evidence-room-integrity code {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #b7c7d4;
+  font-size: .66rem;
+}
+.evidence-room-seal {
+  margin-top: 9px;
+  padding: 8px;
+  border: 1px solid rgba(94,242,160,.22);
+  border-radius: 8px;
+  color: var(--emerald);
+  background: var(--emerald-soft);
+  font: 800 .61rem ui-monospace, monospace;
+  letter-spacing: .1em;
+  text-align: center;
+}
+.evidence-room-main {
+  min-width: 0;
+  padding: 18px;
+  display: grid;
+  gap: 12px;
+}
+.evidence-room-section {
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  background: linear-gradient(180deg, rgba(255,255,255,.018), rgba(255,255,255,.008));
+}
+.evidence-room-thesis {
+  border-color: rgba(85,230,255,.18);
+  background: linear-gradient(135deg, rgba(85,230,255,.05), rgba(255,255,255,.01));
+}
+.evidence-room-section-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+.evidence-room-section-head h3 {
+  margin: 5px 0 0;
+  font-size: .98rem;
+}
+.evidence-room-chart-shell {
+  margin-top: 0;
+  min-height: 340px;
+}
+.evidence-room-candle-range {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 10px;
+  align-items: center;
+  margin-top: 10px;
+  color: var(--muted);
+  font: .63rem ui-monospace, monospace;
+}
+.evidence-room-candle-range span:nth-child(2) {
+  color: var(--cyan);
+  padding: 4px 7px;
+  border: 1px solid rgba(85,230,255,.18);
+  border-radius: 999px;
+}
+.evidence-room-candle-range span:last-child { text-align: right; }
+.evidence-room-truth-grid {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr .7fr;
+  gap: 8px;
+}
+.evidence-room-truth-card {
+  min-width: 0;
+  padding: 11px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: rgba(255,255,255,.012);
+}
+.evidence-room-truth-card > span {
+  color: var(--muted);
+  font-size: .62rem;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+.evidence-room-truth-card p {
+  margin: 7px 0 0;
+  font-size: .75rem;
+  line-height: 1.5;
+}
+.evidence-room-split {
+  display: grid;
+  grid-template-columns: 1.15fr .85fr;
+  gap: 12px;
+}
+.evidence-room-identities {
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: rgba(255,255,255,.01);
+}
+.evidence-room-identities summary {
+  cursor: pointer;
+  padding: 12px 14px;
+  color: var(--muted);
+  font-size: .7rem;
+}
+.evidence-room-identities[open] summary {
+  border-bottom: 1px solid var(--line);
+  color: var(--text);
+}
+.evidence-room-identities .detail-item {
+  margin: 10px 12px;
+}
 .methodology-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 9px; }
 .methodology-head { display: flex; justify-content: space-between; gap: 9px; margin-bottom: 8px; }
 .agreement-list, .evidence-badges, .provider-proof-list, .delivery-list { display: grid; gap: 7px; }
@@ -376,6 +551,17 @@ body[data-view-mode="simple"] [data-advanced-section] { display: none; }
   .situation-cell:nth-child(2) { border-right: 0; }
   .situation-cell:nth-child(-n+2) { border-bottom: 1px solid var(--line); }
   .market-controls, .capital-grid, .performance-layout, .paper-mission-columns { grid-template-columns: 1fr; }
+  .evidence-room-grid { grid-template-columns: 1fr; }
+  .evidence-room-rail {
+    position: static;
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+    display: grid;
+    grid-template-columns: repeat(2,minmax(0,1fr));
+    gap: 10px;
+  }
+  .evidence-room-rail-block { margin-top: 0; }
+  .evidence-room-split { grid-template-columns: 1fr; }
   .product-footer { margin-left: 0; }
 }
 
@@ -383,7 +569,8 @@ body[data-view-mode="simple"] [data-advanced-section] { display: none; }
   .command-hero h1 { font-size: 2.55rem; }
   .situation-strip, .beginner-brief-grid, .intelligence-summary-grid, .paper-summary-grid,
   .education-grid, .methodology-grid, .paper-plan-grid, .paper-lab-metrics, .detail-grid,
-  .performance-grid, .decision-brief-grid, .context-lesson-list {
+  .performance-grid, .decision-brief-grid, .context-lesson-list,
+  .evidence-room-truth-grid, .evidence-room-rail {
     grid-template-columns: 1fr;
   }
   .situation-cell { border-right: 0; border-bottom: 1px solid var(--line); }

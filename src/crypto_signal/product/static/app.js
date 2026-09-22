@@ -1681,6 +1681,161 @@ function renderEvidenceLegend(detail) {
     <div class="truth-note">Bu seviyeler karar anındaki dondurulmuş kanıttan gelir; daha yeni fiyat verisi geçmiş kararı yeniden yazmaz.</div>`;
 }
 
+function renderEvidenceRoom(detail) {
+  const card = detail.signal;
+  const evidenceSummary = detail.evidence_summary?.length
+    ? detail.evidence_summary.join(" · ")
+    : "kanıt özeti yok";
+  const uncertaintySummary = card.uncertainty_flags?.length
+    ? card.uncertainty_flags.join(" · ")
+    : "ek belirsizlik bayrağı yok";
+  const probabilityTruth = card.probability_status === "not_calibrated"
+    ? "Yüzde olasılık gösterilmez; kalibrasyon kabul edilmedi."
+    : `Olasılık durumu: ${human(card.probability_status)}`;
+  const freezeId = String(card.signal_freeze_identity ?? "");
+  const bundleId = String(card.bundle_identity ?? "");
+
+  return `
+    <div class="evidence-room-grid">
+      <aside class="evidence-room-rail" aria-label="Karar özeti ve kanıt kimliği">
+        <section class="evidence-room-state">
+          <div class="micro-label">DECISION STATE</div>
+          <strong class="evidence-room-state-main ${directionClass(card.direction)}">${esc(human(card.state))}</strong>
+          <span>${esc(human(card.direction))}</span>
+        </section>
+
+        <section class="evidence-room-rail-block">
+          <div class="micro-label">TRUTH STATUS</div>
+          <div class="evidence-room-fact">
+            <span>Metodoloji uyumu</span>
+            <strong>${esc(card.confluence_score)}</strong>
+          </div>
+          <div class="evidence-room-fact">
+            <span>Semantik</span>
+            <strong>${esc(human(card.confluence_score_semantic))}</strong>
+          </div>
+          <div class="evidence-room-fact">
+            <span>Olasılık</span>
+            <strong>${esc(human(card.probability_status))}</strong>
+          </div>
+          <p class="truth-note">${esc(probabilityTruth)}</p>
+        </section>
+
+        <section class="evidence-room-rail-block">
+          <div class="micro-label">ISSUANCE</div>
+          <div class="evidence-room-fact"><span>Karar zamanı</span><strong>${esc(fmtTime(card.as_of_ms))}</strong></div>
+          <div class="evidence-room-fact"><span>Donduruldu</span><strong>${esc(fmtTime(card.frozen_at_ms))}</strong></div>
+          <div class="evidence-room-fact"><span>Mum kapsamı</span><strong>${esc(detail.candle_count)} mum</strong></div>
+        </section>
+
+        <section class="evidence-room-rail-block evidence-room-integrity">
+          <div class="micro-label">INTEGRITY</div>
+          <span>Signal freeze</span>
+          <code title="${esc(freezeId)}">${esc(freezeId.slice(0, 16))}…</code>
+          <span>Evidence bundle</span>
+          <code title="${esc(bundleId)}">${esc(bundleId.slice(0, 16))}…</code>
+          <div class="evidence-room-seal">IMMUTABLE SNAPSHOT</div>
+        </section>
+      </aside>
+
+      <section class="evidence-room-main">
+        <div class="evidence-room-section evidence-room-thesis">
+          <div class="evidence-room-section-head">
+            <div>
+              <div class="micro-label">WHY THIS STATE?</div>
+              <h3>Kararın gerekçesi</h3>
+            </div>
+            <span class="module-tag">evidence first</span>
+          </div>
+          ${renderDecisionExplanation(detail)}
+        </div>
+
+        <div class="evidence-room-section chart-detail">
+          <div class="evidence-room-section-head">
+            <div>
+              <div class="micro-label">FROZEN MARKET PROOF</div>
+              <h3>Karar anındaki grafik</h3>
+            </div>
+            <span class="module-tag">PIT SNAPSHOT</span>
+          </div>
+          <div class="chart-shell evidence-room-chart-shell">
+            <canvas id="evidenceChart" class="evidence-chart" aria-label="Dondurulmuş mum ve kanıt seviyeleri"></canvas>
+          </div>
+          <div id="evidenceChartMeta" class="truth-note">Grafik hazırlanıyor…</div>
+          <div class="evidence-legend-title">Grafikte çizilen dondurulmuş kanıt</div>
+          ${renderEvidenceLegend(detail)}
+          <div class="evidence-room-candle-range">
+            <span>${esc(fmtTime(detail.first_candle_open_time_ms))}</span>
+            <span>${esc(detail.candle_count)} mum</span>
+            <span>${esc(fmtTime(detail.last_candle_open_time_ms))}</span>
+          </div>
+        </div>
+
+        <div class="evidence-room-section">
+          <div class="evidence-room-section-head">
+            <div>
+              <div class="micro-label">SUPPORT / CONTRADICTION / UNCERTAINTY</div>
+              <h3>Kanıtın dengesi</h3>
+            </div>
+          </div>
+          <div class="evidence-room-truth-grid">
+            <div class="evidence-room-truth-card">
+              <span>Kanıt özeti</span>
+              <p>${esc(evidenceSummary)}</p>
+            </div>
+            <div class="evidence-room-truth-card">
+              <span>Belirsizlik</span>
+              <p>${esc(uncertaintySummary)}</p>
+            </div>
+            <div class="evidence-room-truth-card">
+              <span>Kanıt sınıfı</span>
+              <p>${esc(human(card.evidence_class_status))}</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="evidence-room-split">
+          <div class="evidence-room-section">
+            <div class="evidence-room-section-head">
+              <div><div class="micro-label">METHOD ENGINES</div><h3>Metodoloji kanıtı</h3></div>
+            </div>
+            ${renderMethodologies(detail)}
+          </div>
+          <div class="evidence-room-section">
+            <div class="evidence-room-section-head">
+              <div><div class="micro-label">AGREEMENT MATRIX</div><h3>Uyum ve çelişki</h3></div>
+            </div>
+            ${renderAgreement(detail)}
+          </div>
+        </div>
+
+        <div class="evidence-room-section">
+          <div class="evidence-room-section-head">
+            <div><div class="micro-label">FROZEN GEOMETRY</div><h3>Kurulum geometrisi</h3></div>
+          </div>
+          ${renderGeometry(detail.geometry)}
+        </div>
+
+        <div class="evidence-room-section context-teaching">
+          <div class="evidence-room-section-head">
+            <div>
+              <div class="micro-label">LEARN FROM THIS SNAPSHOT</div>
+              <h3>Bu sinyali bana öğret</h3>
+            </div>
+          </div>
+          <div class="truth-note">Aşağıdaki dersler yalnızca bu dondurulmuş kayıtta bulunan metodoloji, geometri veya açık kanıt etiketlerine göre seçildi.</div>
+          ${renderContextTeaching(detail)}
+        </div>
+
+        <details class="evidence-room-identities">
+          <summary>Kanıt kimliklerini göster</summary>
+          <div class="detail-item"><div class="value-label">Sinyal kimliği</div><div class="mono">${esc(freezeId)}</div></div>
+          <div class="detail-item"><div class="value-label">Kanıt paketi kimliği</div><div class="mono">${esc(bundleId)}</div></div>
+        </details>
+      </section>
+    </div>`;
+}
+
 async function openSignal(signalId) {
   const detail = await fetchJSON(`/api/signals/${encodeURIComponent(signalId)}`);
   if (detail.status !== "ready" || !detail.signal) {
@@ -1689,46 +1844,7 @@ async function openSignal(signalId) {
   }
   const card = detail.signal;
   $("#dialogTitle").textContent = `${card.exchange.toUpperCase()} · ${card.symbol} · ${card.timeframe}`;
-  $("#dialogBody").innerHTML = `
-    <div class="detail-grid">
-      <div class="detail-item"><div class="value-label">Durum</div><div class="value-main">${esc(human(card.state))}</div></div>
-      <div class="detail-item"><div class="value-label">Yön</div><div class="value-main ${directionClass(card.direction)}">${esc(human(card.direction))}</div></div>
-      <div class="detail-item"><div class="value-label">Metodoloji uyumu</div><div class="value-main">${esc(card.confluence_score)}</div><div class="row-sub">${esc(card.confluence_score_semantic)}</div></div>
-      <div class="detail-item"><div class="value-label">Olasılık</div><div class="value-main">${esc(human(card.probability_status))}</div></div>
-      <div class="detail-item"><div class="value-label">Karar zamanı</div><div class="value-main">${esc(fmtTime(card.as_of_ms))}</div></div>
-      <div class="detail-item"><div class="value-label">Kaydedildi</div><div class="value-main">${esc(fmtTime(card.frozen_at_ms))}</div></div>
-    </div>
-    ${renderDecisionExplanation(detail)}
-    <div class="detail-item">
-      <div class="value-label">Kanıt / belirsizlik</div>
-      <div class="truth-note">${esc(detail.evidence_summary?.length ? detail.evidence_summary.join(" · ") : "kanıt özeti yok")}</div>
-      <div class="truth-note">${esc(card.uncertainty_flags?.length ? card.uncertainty_flags.join(" · ") : "ek belirsizlik bayrağı yok")}</div>
-    </div>
-    <div class="detail-item">
-      <div class="value-label">Dondurulmuş mum kapsamı</div>
-      <div class="value-main">${esc(detail.candle_count)} mum</div>
-      <div class="row-sub">${esc(fmtTime(detail.first_candle_open_time_ms))} → ${esc(fmtTime(detail.last_candle_open_time_ms))}</div>
-    </div>
-    <div class="detail-item chart-detail">
-      <div class="value-label">Kanıt grafiği</div>
-      <div class="chart-shell">
-        <canvas id="evidenceChart" class="evidence-chart" aria-label="Dondurulmuş mum ve kanıt seviyeleri"></canvas>
-      </div>
-      <div id="evidenceChartMeta" class="truth-note">Grafik hazırlanıyor…</div>
-      <div class="evidence-legend-title">Grafikte çizilen dondurulmuş kanıt</div>
-      ${renderEvidenceLegend(detail)}
-    </div>
-    <div class="detail-item context-teaching">
-      <div class="value-label">Bu sinyali bana öğret</div>
-      <div class="truth-note">Aşağıdaki dersler yalnızca bu dondurulmuş kayıtta bulunan metodoloji, geometri veya açık kanıt etiketlerine göre seçildi.</div>
-      ${renderContextTeaching(detail)}
-    </div>
-    <div class="detail-item"><div class="value-label">Metodoloji kanıtı</div>${renderMethodologies(detail)}</div>
-    <div class="detail-item"><div class="value-label">Uyum matrisi</div>${renderAgreement(detail)}</div>
-    <div class="detail-item"><div class="value-label">Dondurulmuş geometri</div>${renderGeometry(detail.geometry)}</div>
-    <div class="detail-item"><div class="value-label">Kanıt sınıfı durumu</div><div class="value-main">${esc(human(card.evidence_class_status))}</div></div>
-    <div class="detail-item"><div class="value-label">Sinyal kimliği</div><div class="mono">${esc(card.signal_freeze_identity)}</div></div>
-    <div class="detail-item"><div class="value-label">Kanıt paketi kimliği</div><div class="mono">${esc(card.bundle_identity)}</div></div>`;
+  $("#dialogBody").innerHTML = renderEvidenceRoom(detail);
   $("#signalDialog").showModal();
   requestAnimationFrame(() => renderEvidenceChart(detail));
 }
