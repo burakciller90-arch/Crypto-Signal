@@ -387,3 +387,31 @@ Anything else is deferred.
 7. Stage 9/10: full gift UX and integrated acceptance.
 
 Do not skip scientific gates to move faster. Move faster by parallelizing independent slices, not by weakening evidence.
+
+
+## Full Version completion record — 2026-09-22
+
+The implementation and integrated-acceptance roadmap is mechanically complete
+through R13.
+
+Canonical R13 accepted main:
+`f95efc358ac396e50d0bfdb920b0187706cd2af2`.
+
+Canonical R13 evidence:
+issue #704 / run `35672790463`, result PASS.
+
+The final release/documentation frontier is R14. Its reserved immutable release
+identity is `crypto-signal-full-version-v1.0.0`. Full Version v1.0.0 becomes
+final only when the R14 release-freeze workflow re-verifies exact UID504
+Development state, Product-code parity, live read-only safety, paused continuity
+and the release-documentation contract, then binds that tag to the exact current
+main commit.
+
+Intentional boundaries remain closed:
+- REAL_CAPITAL=0;
+- no exchange-order or credential authority;
+- paper policy may remain NOT_ACTIVATED;
+- research/meta production contribution remains 0;
+- calibrated probability is not claimed;
+- model/challenger promotion remains gated;
+- physical reboot/logout/SSD detach-remount remain human-impact UNTESTED items.
