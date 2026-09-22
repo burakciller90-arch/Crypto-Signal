@@ -43,6 +43,9 @@ from crypto_signal.product.models import (
     PerformanceAvailabilityView,
     PerformanceSegmentGroup,
     ProductDataStatus,
+    ProofWallItem,
+    ProofWallOutcomeView,
+    ProofWallView,
     SelectedEvidenceView,
     SignalArchiveView,
     SignalDetailView,
@@ -659,6 +662,159 @@ class DashboardReader:
                 offset=offset,
                 limit=limit,
                 signals=cards,
+            )
+
+    def proof_wall(
+        self,
+        *,
+        limit: int = 100,
+        offset: int = 0,
+    ) -> ProofWallView:
+        if limit <= 0 or offset < 0:
+            raise ValueError(
+                "proof-wall limit must be positive and offset non-negative"
+            )
+        if not self.ledger_path.exists():
+            return ProofWallView(
+                status=ProductDataStatus.NO_LEDGER,
+                total_count=0,
+                offset=offset,
+                limit=limit,
+                outcome_schema_available=False,
+                items=(),
+            )
+
+        with self._connect() as connection:
+            if not self._table_exists(connection, "signal_freezes"):
+                return ProofWallView(
+                    status=ProductDataStatus.SCHEMA_UNAVAILABLE,
+                    total_count=0,
+                    offset=offset,
+                    limit=limit,
+                    outcome_schema_available=False,
+                    items=(),
+                )
+
+            total_row = connection.execute(
+                "SELECT COUNT(*) AS count FROM signal_freezes"
+            ).fetchone()
+            total = 0 if total_row is None else int(total_row["count"])
+            outcome_schema_available = self._table_exists(
+                connection,
+                "outcome_evaluations",
+            )
+
+            if outcome_schema_available:
+                rows = tuple(
+                    connection.execute(
+                        """
+                        WITH ranked_outcomes AS (
+                            SELECT
+                                *,
+                                ROW_NUMBER() OVER (
+                                    PARTITION BY signal_freeze_identity
+                                    ORDER BY
+                                        evaluated_as_of_ms DESC,
+                                        appended_at_ms DESC,
+                                        outcome_identity DESC
+                                ) AS row_rank
+                            FROM outcome_evaluations
+                        )
+                        SELECT
+                            s.*,
+                            o.outcome_identity AS proof_outcome_identity,
+                            o.outcome_json AS proof_outcome_json
+                        FROM signal_freezes AS s
+                        LEFT JOIN ranked_outcomes AS o
+                          ON o.signal_freeze_identity = s.signal_freeze_identity
+                         AND o.row_rank = 1
+                        ORDER BY
+                            s.frozen_at_ms DESC,
+                            s.signal_freeze_identity DESC
+                        LIMIT ? OFFSET ?
+                        """,
+                        (limit, offset),
+                    ).fetchall()
+                )
+            else:
+                rows = self._signal_rows(
+                    connection,
+                    limit=limit,
+                    offset=offset,
+                )
+
+            items: list[ProofWallItem] = []
+            for row in rows:
+                latest_outcome: ProofWallOutcomeView | None = None
+                if (
+                    outcome_schema_available
+                    and row["proof_outcome_json"] is not None
+                ):
+                    try:
+                        outcome = parse_outcome_evaluation(
+                            json.loads(str(row["proof_outcome_json"]))
+                        )
+                    except (
+                        json.JSONDecodeError,
+                        ProductDeserializationError,
+                    ) as exc:
+                        raise DashboardReadError(
+                            "proof-wall outcome cannot be reconstructed"
+                        ) from exc
+
+                    if outcome.outcome_identity != str(
+                        row["proof_outcome_identity"]
+                    ):
+                        raise DashboardReadError(
+                            "proof-wall outcome identity mismatch"
+                        )
+                    if outcome.signal_freeze_identity != str(
+                        row["signal_freeze_identity"]
+                    ):
+                        raise DashboardReadError(
+                            "proof-wall signal/outcome identity mismatch"
+                        )
+
+                    latest_outcome = ProofWallOutcomeView(
+                        outcome_identity=outcome.outcome_identity,
+                        evidence_class=outcome.evidence_class,
+                        evaluated_as_of_ms=outcome.evaluated_as_of_ms,
+                        resolution_status=outcome.resolution_status,
+                        outcome_state=outcome.outcome_state,
+                        coverage_status=outcome.coverage_status,
+                        max_holding_bars=outcome.max_holding_bars,
+                        entry_observed=outcome.entry_observed,
+                        highest_target_index=outcome.highest_target_index,
+                        ambiguity_reason=(
+                            None
+                            if outcome.ambiguity_reason is None
+                            else outcome.ambiguity_reason.value
+                        ),
+                        not_evaluable_reason=(
+                            None
+                            if outcome.not_evaluable_reason is None
+                            else outcome.not_evaluable_reason.value
+                        ),
+                    )
+
+                items.append(
+                    ProofWallItem(
+                        signal=self._card_from_row(row),
+                        latest_outcome=latest_outcome,
+                    )
+                )
+
+            return ProofWallView(
+                status=(
+                    ProductDataStatus.EMPTY
+                    if total == 0
+                    else ProductDataStatus.READY
+                ),
+                total_count=total,
+                offset=offset,
+                limit=limit,
+                outcome_schema_available=outcome_schema_available,
+                items=tuple(items),
             )
 
     def _selected_evidence_view(self, value: Any) -> SelectedEvidenceView:
