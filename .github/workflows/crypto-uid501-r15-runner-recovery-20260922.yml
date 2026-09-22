@@ -170,7 +170,7 @@ jobs:
           echo "REAL_CAPITAL=0"
           SH
 
-          chmod 700 "$SCRIPT"
+          chmod 755 "$SCRIPT"
 
           LAUNCHER="$HOME/Desktop/Crypto-R15-Runner-Recovery.command"
           PASS="/tmp/crypto-r15-runner-recover.pass"
@@ -194,7 +194,7 @@ jobs:
           echo
 
           sudo -v
-          sudo -u crypto-signal-agent /bin/bash /tmp/crypto-r15-runner-recover.sh | tee "$RESULT"
+          sudo -u crypto-signal-agent /bin/bash /tmp/crypto-r15-runner-recover.sh 2>&1 | tee "$RESULT"
 
           grep -F "R15_RUNNER_RECOVERY_PASS=YES" "$RESULT"
           grep -F "REAL_CAPITAL=0" "$RESULT"
