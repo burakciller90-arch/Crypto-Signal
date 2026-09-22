@@ -215,20 +215,24 @@ def test_liquidation_provider_event_replay_is_idempotent_and_conflicts_fail_clos
     assert store.latest_event_at_ms() == 1_500
 
 
-def test_liquidation_coverage_reobservation_does_not_rewrite_first_evidence(
+def test_liquidation_coverage_reobservation_appends_new_immutable_evidence(
     tmp_path,
 ) -> None:
     store = MarketTapeStore(tmp_path / "market_tape.sqlite3")
     first = _coverage(observed_at_ms=2_000)
     later = _coverage(observed_at_ms=2_500)
 
-    assert first.coverage_identity == later.coverage_identity
+    assert first.coverage_identity != later.coverage_identity
     assert (
         store.append_liquidation_coverage(first)
         is MarketTapeWriteDisposition.INSERTED
     )
     assert (
         store.append_liquidation_coverage(later)
+        is MarketTapeWriteDisposition.INSERTED
+    )
+    assert (
+        store.append_liquidation_coverage(first)
         is MarketTapeWriteDisposition.UNCHANGED
     )
 
@@ -237,10 +241,10 @@ def test_liquidation_coverage_reobservation_does_not_rewrite_first_evidence(
         instrument_type=DerivativesInstrumentType.LINEAR_PERPETUAL,
         symbol="BTCUSDT",
     )
-    assert persisted == (first,)
+    assert persisted == (first, later)
     counts = store.counts()
-    assert counts.liquidation_coverage == 1
-    assert counts.total == 1
+    assert counts.liquidation_coverage == 2
+    assert counts.total == 2
 
 
 def test_liquidation_replay_is_pit_safe_and_excludes_late_ingest(tmp_path) -> None:
