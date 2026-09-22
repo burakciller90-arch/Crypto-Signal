@@ -18,12 +18,17 @@ class EducationConceptId(StrEnum):
     BOS = "bos"
     CHOCH = "choch"
     LIQUIDITY_SWEEP = "liquidity_sweep"
+    CVD = "cvd"
+    ABSORPTION = "absorption"
+    LIQUIDATION_HEATMAP = "liquidation_heatmap"
     FVG = "fvg"
     HARMONIC_PRZ = "harmonic_prz"
     ELLIOTT_WAVE = "elliott_wave"
     INVALIDATION = "invalidation"
     RISK_REWARD = "risk_reward"
     AGREEMENT_VS_PROBABILITY = "agreement_vs_probability"
+    CALIBRATION = "calibration"
+    ABSTAIN = "abstain"
     PAPER_TRADING = "paper_trading"
 
 
@@ -140,21 +145,80 @@ _LESSON_CATALOG: Final[tuple[EducationLesson, ...]] = (
     ),
     _lesson(
         EducationConceptId.LIQUIDITY_SWEEP,
-        title_tr="Likidite Süpürmesi",
+        title_tr="Likidite Süpürmesi Adayı",
         beginner_tr=(
-            "Likidite süpürmesi, fiyatın kısa süreyle bariz zirve/dip "
-            "seviyelerini aşıp birçok kişinin stop emrini tetiklemesi, sonra "
-            "geri dönmesidir. Bu, 'tuzak' gibi görünebilir; ama sistem bunu "
-            "kazanç vaadi olarak sunmaz."
+            "Likidite süpürmesi adayı, fiyatın kalıcı bir likidite bölgesiyle "
+            "etkileşirken görünür derinliğin azalması, agresif işlem akışının "
+            "aynı yönde yoğunlaşması ve fiyatın bölgenin ötesine taşınması gibi "
+            "birden fazla kanıtın birlikte görülmesidir. Bu gözlem, stop avı "
+            "veya manipülasyonun kanıtlandığı anlamına gelmez."
         ),
         why_it_matters_tr=(
-            "Neden ani bir kırılımın hemen ardından fiyatın geri gelebileceğini "
-            "anlamayı kolaylaştırır."
+            "Sadece bir seviyeye dokunmayı 'süpürme' sanmak yerine, kırılımın "
+            "gerçek piyasa akışıyla desteklenip desteklenmediğini ayırmayı öğretir."
         ),
         advanced_tr=(
-            "Süpürme, eşit dip/zirve havuzları veya bariz stop kümeleri "
-            "üzerinde aranır. Kanıt yoksa sistem uydurmaz; eksik veriyi "
-            "sessizce doldurmaz."
+            "Kabul edilmiş M2 modeli; kalıcı havuz, görünür derinlik tükenmesi, "
+            "book-eligible agresif işlem akışı, yeterli displacement ve "
+            "follow-through kanıtını birlikte ister. Recovery ayrıca ölçülür. "
+            "Aday etiketi aktör niyeti, stop kümeleri veya manipülasyon ispatı değildir."
+        ),
+    ),
+    _lesson(
+        EducationConceptId.CVD,
+        title_tr="CVD — Kümülatif Hacim Deltası",
+        beginner_tr=(
+            "CVD, agresif alış hacmi ile agresif satış hacmi arasındaki farkın "
+            "zaman içinde birikimli görünümüdür. Fiyat yükselirken CVD zayıfsa "
+            "veya fiyat düşerken CVD güçlüyse aradaki uyumsuzluk ayrıca incelenebilir. "
+            "CVD tek başına yön emri değildir."
+        ),
+        why_it_matters_tr=(
+            "Grafikteki fiyat hareketinin gerçekten agresif alış veya satış "
+            "akışıyla desteklenip desteklenmediğini anlamaya yardım eder."
+        ),
+        advanced_tr=(
+            "CVD yalnızca güvenilir aggressor-side trade evidence üzerinden "
+            "hesaplanmalıdır. Block/RPI gibi book akışını temsil etmeyen kayıtlar "
+            "ayrıştırılır; veri boşluğu varsa sistem süreklilik uydurmaz."
+        ),
+    ),
+    _lesson(
+        EducationConceptId.ABSORPTION,
+        title_tr="Absorption — Akışın Emilmesi",
+        beginner_tr=(
+            "Absorption, güçlü agresif alış veya satış gelmesine rağmen fiyatın "
+            "beklenen kadar ilerlememesi ve karşı taraftaki likiditenin tekrar "
+            "dolması gibi bir davranıştır. Bu, bir tarafın akışı karşıladığına "
+            "dair aday kanıttır; otomatik alım veya satım sinyali değildir."
+        ),
+        why_it_matters_tr=(
+            "Yüksek işlem hacminin neden her zaman aynı büyüklükte fiyat "
+            "hareketi üretmediğini görmeyi sağlar."
+        ),
+        advanced_tr=(
+            "M3 katmanı aggressive flow, fiyat non-response, order-book "
+            "replenishment ve zaman sırasını birlikte donduracaktır. Tek bir "
+            "yüksek hacim baskısı absorption diye etiketlenmez."
+        ),
+    ),
+    _lesson(
+        EducationConceptId.LIQUIDATION_HEATMAP,
+        title_tr="Liquidation Heatmap — Gözlenen Tasfiyeler",
+        beginner_tr=(
+            "Liquidation heatmap, borsanın gerçekten bildirdiği zorunlu pozisyon "
+            "kapanışlarını fiyat bölgelerinde toplar. Bu harita geçmişte gözlenen "
+            "tasfiyeleri gösterir; gelecekte nerede kesin tasfiye olacağını veya "
+            "insanların stoplarının nerede olduğunu söylemez."
+        ),
+        why_it_matters_tr=(
+            "Kaldıraçlı pozisyonların hangi bölgelerde zorla kapandığını "
+            "görmeye yardım ederken tahmin ile gözlemi birbirinden ayırır."
+        ),
+        advanced_tr=(
+            "Observed liquidation, estimated leverage concentration ve future "
+            "liquidation-risk zone ayrı kavramlardır. İlk katman provider event "
+            "kanıtıdır; diğerleri ayrıca model ve kabul kanıtı gerektirir."
         ),
     ),
     _lesson(
@@ -268,12 +332,49 @@ _LESSON_CATALOG: Final[tuple[EducationLesson, ...]] = (
         ),
     ),
     _lesson(
+        EducationConceptId.CALIBRATION,
+        title_tr="Kalibrasyon — Olasılık Ne Zaman Gerçektir?",
+        beginner_tr=(
+            "Kalibrasyon, sistemin söylediği olasılıkların uzun vadede gerçek "
+            "sonuç sıklıklarıyla uyumlu olup olmadığını ölçer. Geçmiş başarı "
+            "oranı veya metodoloji uyumu tek başına kalibre edilmiş olasılık değildir."
+        ),
+        why_it_matters_tr=(
+            "Bir sayının yalnız etkileyici görünmesini değil, gerçekten ölçülmüş "
+            "bir olasılık anlamı taşıyıp taşımadığını ayırır."
+        ),
+        advanced_tr=(
+            "R19 kabulü outcome tanımı, horizon, chronology-safe fit, untouched "
+            "holdout/forward kanıtı, örneklem sınıfları, Brier ve reliability "
+            "ölçümleri ister. Bu kanıt yoksa durum NOT CALIBRATED kalır."
+        ),
+    ),
+    _lesson(
+        EducationConceptId.ABSTAIN,
+        title_tr="ABSTAIN — İşlem Yapmamak da Karardır",
+        beginner_tr=(
+            "ABSTAIN, sistemin veri kalitesi, çelişki, event riski veya kanıt "
+            "yetersizliği nedeniyle işlem fikri üretmemeyi seçmesidir. Nakit "
+            "kalmak başarısızlık değil, belirsizlik karşısında geçerli bir karardır."
+        ),
+        why_it_matters_tr=(
+            "Her piyasa anında zorla sinyal üretmenin profesyonel olmadığını ve "
+            "bazı durumlarda beklemenin daha dürüst olduğunu öğretir."
+        ),
+        advanced_tr=(
+            "ABSTAIN, WATCH, CONFLICT, EVENT_BLOCK ve DEGRADED_DATA ayrı "
+            "durumlardır. Bu durumlar track record'dan silinmez ve performansı "
+            "daha iyi göstermek için geriye dönük değiştirilemez."
+        ),
+    ),
+    _lesson(
         EducationConceptId.PAPER_TRADING,
         title_tr="Kâğıt / Sanal İşlem",
         beginner_tr=(
             "Bu platformda REAL_CAPITAL=0'dır: gerçek borsa emri yoktur. "
-            "Kâğıt (paper) işlem, 100 USDT'lik tamamen sanal bir portföy ile "
-            "kararları ölçer. Nakit tutmak da geçerli bir profesyonel "
+            "Epoch 1, 100 USDT ile başlayan değiştirilemez legacy geçmişidir; "
+            "Epoch 2 ise 1.000 USDT'lik yeni canonical paper programı için "
+            "kabul edilmiş sözleşmedir. Nakit tutmak da geçerli bir profesyonel "
             "pozisyondur."
         ),
         why_it_matters_tr=(
@@ -281,9 +382,10 @@ _LESSON_CATALOG: Final[tuple[EducationLesson, ...]] = (
             "sistemin kendini ölçmesini sağlar."
         ),
         advanced_tr=(
+            "Epoch 1 geçmişi 1.000 USDT'ye ölçeklenmez veya yeniden yazılmaz. "
             "Her sanal işlem karar kimliği, referans fiyat, simüle dolum, "
             "ücret/spread/kayma, nakit ve pozisyon sonucu ile kayda geçer. "
-            "Martingale, kayıp kovalama veya gizli kaldıraç yoktur."
+            "Martingale, borçlanma veya gizli kaldıraç yoktur."
         ),
     ),
 )
