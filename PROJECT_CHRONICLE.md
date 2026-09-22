@@ -2984,3 +2984,36 @@ Next locked frontier:
 4. continue M2 Liquidity 2.0 and the new frontend rebuild in parallel.
 
 Do not replay R15 / HotCold / M2 Slice 1 accepted work.
+
+
+---
+
+## 2026-09-22 — LOCKED 20-MINUTE WAKE ACTIVATED AND BUSY-STOP ACCEPTED
+
+The user explicitly re-enabled continuity for this exact Crypto Signal conversation and replaced the prior exact-lease-only cadence with one fixed 20-minute state-first wake.
+
+Exact target:
+- `https://chatgpt.com/c/6ab2c3c1-30c8-83ed-b1ad-2aa35cc891c9`
+
+The approved wake text instructs the next ChatGPT turn to distrust memory, read READ_FIRST, CURRENT_STATUS, Chronicle and `docs/V1_1_LOCKED_MASTER_ROADMAP_20260922.md`, reconcile real Git/worker/wake/lease state, skip stale/duplicate work and continue the REAL_CAPITAL=0 roadmap without routine approval stops.
+
+Implementation facts:
+- existing :00/:20/:40 continuity infrastructure reused;
+- UID504 LaunchAgent bootstrap again returned rc=5, so the accepted cadence owner is the existing GitHub self-hosted 20-minute fallback;
+- exact local/shared chat binding was rewritten to the current conversation;
+- active pause latches were removed by explicit user resume intent;
+- the periodic wake no longer requires an active exact lease;
+- exact locked wake delivery is intentionally marker-free in the visible message;
+- internal event IDs/receipts still provide at-most-once semantics;
+- for this exact locked wake only, a visible ChatGPT Stop control is clicked when busy, then the relay waits for READY and sends the wake.
+
+Acceptance evidence:
+- first busy live test interrupted the active response and delivered the exact wake into this chat; relay log recorded `OBSERVED_AFTER_CLICK`;
+- the first workflow exposed a receipt-hash mismatch because marker-free delivery and marker-aware submit hashes differed;
+- commit `eb5b268324cb50a30a18e6329d00143c5603fcd2` aligned the submit hash contract;
+- installer run `35770755291` PASS;
+- final busy-stop test run `35770956851` PASS with `RELAY_RECEIPTED`, `RELAY_SUBMIT_RC=0` and `CRYPTO_LOCKED_20M_WAKE_PASS=YES`;
+- bridge state showed relay protocol v2, fresh heartbeat and exact target URL;
+- reconciliation observed local/shared pause NO, active leases 0, local queue 0, shared queue 0.
+
+Continuity is ACTIVE. A future explicit user pause remains authoritative. REAL_CAPITAL=0.
