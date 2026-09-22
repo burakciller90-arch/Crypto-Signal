@@ -204,3 +204,17 @@ def test_r15_terminal_transport_preserves_ssd_execution_boundary() -> None:
     assert 'R15_SSD_HOTPLUG_RECOVERY_RUNNER_TERMINAL_TRANSPORT=YES' in text
     assert '/Users/crypto-signal-agent/Crypto-Signal' not in text
 
+def test_r15_watchdog_launchagent_reload_is_bounded_and_idempotent() -> None:
+    text = SCRIPT.read_text(encoding="utf-8")
+    assert "reload_main_launchagent()" in text
+    start = text.index("reload_main_launchagent()")
+    end = text.index("\nreload_main_launchagent", start)
+    block = text[start:end]
+    assert 'launchctl print "$TARGET"' in block
+    assert 'launchctl bootout "$TARGET"' in block
+    assert "for attempt in {1..10}; do" in block
+    assert "for attempt in {1..8}; do" in block
+    assert 'launchctl bootstrap "$domain" "$PLIST"' in block
+    assert 'R15_HOTPLUG_INSTALL_ERROR=WATCHDOG_BOOTSTRAP_FAILED' in block
+    assert block.index('launchctl bootout "$TARGET"') < block.index('launchctl bootstrap "$domain" "$PLIST"')
+
