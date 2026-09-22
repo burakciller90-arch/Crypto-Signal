@@ -1,0 +1,45 @@
+name: Crypto M2 Liquidation Heatmap Slice4 TEMP
+
+on:
+  push:
+    branches: [v1.1-liquidation-heatmap-v2-slice4]
+    paths:
+      - ".github/workflows/crypto-m2-liquidation-heatmap-slice4-temp.yml"
+      - "src/crypto_signal/data/liquidations.py"
+      - "src/crypto_signal/data/adapters/bybit_liquidations.py"
+      - "src/crypto_signal/intelligence/liquidation_heatmap.py"
+      - "tests/test_liquidation_heatmap_engine.py"
+      - "docs/M2_LIQUIDATION_HEATMAP_SLICE4.md"
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+          python -m pip install "pytest>=8.4" "pytest-asyncio>=1.2" "ruff>=0.13" "mypy>=1.18"
+      - name: M2 Slice4 focused
+        run: |
+          python -m pytest -q tests/test_liquidation_heatmap_engine.py tests/test_liquidity_sweep_engine.py tests/test_liquidity_structure_engine.py tests/test_liquidity_dynamics_engine.py
+          python -m ruff check src/crypto_signal/data/liquidations.py src/crypto_signal/data/adapters/bybit_liquidations.py src/crypto_signal/intelligence/liquidation_heatmap.py tests/test_liquidation_heatmap_engine.py
+          python -m mypy src/crypto_signal/data/liquidations.py src/crypto_signal/data/adapters/bybit_liquidations.py src/crypto_signal/intelligence/liquidation_heatmap.py
+          echo "M2_LIQUIDATION_HEATMAP_SLICE4_FOCUSED_PASS=YES"
+      - name: Full repository regression
+        run: |
+          python -m pytest -q
+          python -m ruff check src tests ops/verify_stage10_integrated.py
+          python -m mypy src ops/verify_stage10_integrated.py
+          node --check src/crypto_signal/product/static/freshness.js
+          node --check src/crypto_signal/product/static/app.js
+          node tests/js/test_product_freshness.js
+          echo "M2_LIQUIDATION_HEATMAP_SLICE4_FULL_PASS=YES"
