@@ -1018,12 +1018,17 @@ Experimental:
 - Do not merge it into canonical fund behavior.
 - Reframe useful exploration concepts under Shadow Lab.
 
-Runtime blocker:
+Runtime status:
 
-- UID504 SSD runner has shown long-running near-100% CPU listener behavior.
-- Dashboard/supervisor process existence does not prove data freshness.
-- Exact post-04:00 signal/candle advancement must be mechanically verified once UID501
-  tree permission or UID504 diagnostic access is available.
+- The specific post-04:00 market-data/freeze interruption is mechanically **RECOVERED**
+  by UID501 localhost diagnostic run `35721395160`.
+- UID504 SSD runner has separately shown long-running near-100% CPU listener behavior.
+- Process existence does not prove runner health.
+- Hosted hang-aware R15 hardening gate passed in run `35722280704`.
+- Exactly one live recovery owner exists: `Crypto UID501 R15 Runner Recovery 20260922`
+  run `35722829376`; it requires explicit local administrator authorization and must
+  not be duplicated while active.
+- Physical SSD detach/remount acceptance remains pending after runner recovery.
 
 ---
 
