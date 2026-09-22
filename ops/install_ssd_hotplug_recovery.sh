@@ -707,11 +707,53 @@ for legacy_label in "${LEGACY_RUNNER_LABELS[@]}"; do
   /bin/launchctl bootout "$legacy_target" >/dev/null 2>&1 || true
 done
 
-/bin/launchctl bootout "$TARGET" >/dev/null 2>&1 || true
-/bin/launchctl enable "$TARGET" >/dev/null 2>&1 || true
-/bin/launchctl bootstrap "gui/$(id -u)" "$PLIST"
-/bin/sleep 2
-/bin/launchctl print "$TARGET" >/dev/null
+reload_main_launchagent() {
+  local domain="gui/$(id -u)"
+  local loaded="NO"
+  local attempt=0
+
+  if /bin/launchctl print "$TARGET" >/dev/null 2>&1; then
+    /bin/launchctl bootout "$TARGET" >/dev/null 2>&1 || true
+    for attempt in {1..10}; do
+      if ! /bin/launchctl print "$TARGET" >/dev/null 2>&1; then
+        break
+      fi
+      /bin/sleep 1
+    done
+  fi
+
+  /bin/launchctl enable "$TARGET" >/dev/null 2>&1 || true
+
+  for attempt in {1..8}; do
+    if /bin/launchctl print "$TARGET" >/dev/null 2>&1; then
+      loaded="YES"
+      break
+    fi
+
+    if /bin/launchctl bootstrap "$domain" "$PLIST" \
+      >>"$LOCAL_LOG/install-launchctl.out.log" \
+      2>>"$LOCAL_LOG/install-launchctl.err.log"; then
+      loaded="YES"
+      break
+    fi
+
+    if /bin/launchctl print "$TARGET" >/dev/null 2>&1; then
+      loaded="YES"
+      break
+    fi
+    /bin/sleep 1
+  done
+
+  if [ "$loaded" != "YES" ]; then
+    echo "R15_HOTPLUG_INSTALL_ERROR=WATCHDOG_BOOTSTRAP_FAILED target=$TARGET" >&2
+    /usr/bin/tail -40 "$LOCAL_LOG/install-launchctl.err.log" >&2 2>/dev/null || true
+    return 1
+  fi
+
+  /bin/launchctl print "$TARGET" >/dev/null
+}
+
+reload_main_launchagent
 
 echo "R15_SSD_HOTPLUG_RECOVERY_INSTALLED=YES"
 echo "R15_SSD_HOTPLUG_RECOVERY_SINGLE_OWNER=YES"
