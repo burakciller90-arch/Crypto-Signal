@@ -271,12 +271,22 @@ jobs:
           CONTROL="/Users/crypto-signal-agent/.crypto-signal-runtime"
           PID_FILE="$CONTROL/market-tape-supervisor.pid"
           ENABLE_FILE="$CONTROL/market-tape.enabled"
-          TERMINAL_START="$STABLE/ops/market_tape/start_market_tape_supervisor.sh"
+          TERMINAL_DIR="$HOME/Library/Application Support/CryptoSignalRuntime"
+          TERMINAL_START="$TERMINAL_DIR/start-market-tape-probe.command"
           LABEL="com.cryptosignal.markettape"
           DOMAIN="gui/$(id -u)"
           RUNTIME_SCRIPT="$STABLE/ops/run_market_tape_runtime.py"
 
           rm -f "$ENABLE_FILE"
+          mkdir -p "$TERMINAL_DIR"
+          cat >"$TERMINAL_START" <<'CMD'
+          #!/bin/bash
+          set -u
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          exec /bin/bash "$ROOT/MarketTape/ops/market_tape/start_market_tape_supervisor.sh"
+          CMD
+          chmod 700 "$TERMINAL_START"
+          trap 'rm -f "$TERMINAL_START"' EXIT
           launchctl disable "$DOMAIN/$LABEL" >/dev/null 2>&1 || true
           launchctl bootout "$DOMAIN/$LABEL" >/dev/null 2>&1 || true
           /bin/bash "$STABLE/ops/market_tape/stop_market_tape_supervisor.sh" || true
@@ -325,6 +335,8 @@ jobs:
             sleep 1
           done
           test ! -s "$PID_FILE"
+          rm -f "$TERMINAL_START"
+          trap - EXIT
           echo "MARKET_TAPE_TERMINAL_TCC_PROBE_PASS=YES"
           echo "REAL_CAPITAL=0"
           SH
