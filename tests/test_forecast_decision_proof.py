@@ -56,7 +56,6 @@ from crypto_signal.signals.models import (
 )
 from crypto_signal.signals.semantics import build_signal_decision
 
-
 BASE_MS = 900_000
 START_MS = int(datetime(2026, 9, 1, tzinfo=UTC).timestamp() * 1000)
 
