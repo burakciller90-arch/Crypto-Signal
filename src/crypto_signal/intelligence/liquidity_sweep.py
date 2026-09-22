@@ -60,7 +60,7 @@ class LiquiditySweepConfig:
     structure_config: LiquidityStructureConfig = DEFAULT_LIQUIDITY_STRUCTURE_CONFIG
 
     def __post_init__(self) -> None:
-        for label, value in (
+        for label, int_value in (
             ("lookback_ms", self.lookback_ms),
             ("minimum_orderbook_snapshots", self.minimum_orderbook_snapshots),
             ("minimum_public_trades", self.minimum_public_trades),
@@ -69,9 +69,9 @@ class LiquiditySweepConfig:
             ("max_snapshot_gap_ms", self.max_snapshot_gap_ms),
             ("minimum_follow_through_trades", self.minimum_follow_through_trades),
         ):
-            if value <= 0:
+            if int_value <= 0:
                 raise ValueError(f"{label} must be positive")
-        for label, value in (
+        for label, decimal_value in (
             ("pool_touch_tolerance_bps", self.pool_touch_tolerance_bps),
             (
                 "max_pool_interaction_distance_bps",
@@ -80,7 +80,11 @@ class LiquiditySweepConfig:
             ("minimum_displacement_bps", self.minimum_displacement_bps),
             ("recovery_tolerance_bps", self.recovery_tolerance_bps),
         ):
-            if value.is_nan() or value.is_infinite() or value <= Decimal(0):
+            if (
+                decimal_value.is_nan()
+                or decimal_value.is_infinite()
+                or decimal_value <= Decimal(0)
+            ):
                 raise ValueError(f"{label} must be a positive finite Decimal")
         if (
             self.max_pool_interaction_distance_bps
@@ -89,16 +93,16 @@ class LiquiditySweepConfig:
             raise ValueError(
                 "max_pool_interaction_distance_bps must exceed touch tolerance"
             )
-        for label, value in (
+        for label, fraction_value in (
             (
                 "minimum_depth_depletion_fraction",
                 self.minimum_depth_depletion_fraction,
             ),
             ("minimum_aggressor_share", self.minimum_aggressor_share),
         ):
-            if value.is_nan() or value.is_infinite():
+            if fraction_value.is_nan() or fraction_value.is_infinite():
                 raise ValueError(f"{label} must be finite")
-            if not Decimal(0) < value <= Decimal(1):
+            if not Decimal(0) < fraction_value <= Decimal(1):
                 raise ValueError(f"{label} must be inside (0,1]")
 
 
