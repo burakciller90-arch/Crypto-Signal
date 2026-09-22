@@ -8,6 +8,7 @@ from crypto_signal.data.market_tape_hotcold import (
     MarketTapeHotColdDecision,
     MarketTapeHotColdPolicy,
     archive_before_ms,
+    evaluate_archive_headroom,
     evaluate_hotcold_capacity,
     measure_hotcold_capacity,
 )
@@ -112,3 +113,51 @@ def test_measurement_separates_hot_and_cold_bytes(tmp_path: Path) -> None:
 def test_hotcold_policy_validation(kwargs: dict[str, int]) -> None:
     with pytest.raises(ValueError):
         _policy(**kwargs)
+
+
+def test_archive_headroom_is_more_conservative_than_current_capacity() -> None:
+    policy = _policy(
+        hot_emergency_max_bytes=100,
+        cold_max_bytes=1_000,
+        min_free_bytes=250,
+    )
+    current = evaluate_hotcold_capacity(
+        hot_bytes=100,
+        cold_bytes=850,
+        free_bytes=351,
+        policy=policy,
+    )
+    assert current.decision is MarketTapeHotColdDecision.HOT_CAP_REACHED
+
+    synthetic_collectable = type(current)(
+        hot_bytes=99,
+        cold_bytes=850,
+        free_bytes=351,
+        decision=MarketTapeHotColdDecision.COLLECT,
+    )
+    assert (
+        evaluate_archive_headroom(
+            snapshot=synthetic_collectable,
+            policy=policy,
+        )
+        is MarketTapeHotColdDecision.FREE_SPACE_RESERVE_REACHED
+    )
+
+
+def test_archive_headroom_blocks_cold_cap_before_duplicate_write() -> None:
+    policy = _policy(
+        hot_emergency_max_bytes=1_000,
+        cold_max_bytes=1_000,
+        min_free_bytes=1,
+    )
+    snapshot = evaluate_hotcold_capacity(
+        hot_bytes=100,
+        cold_bytes=901,
+        free_bytes=10_000,
+        policy=policy,
+    )
+    assert snapshot.can_collect is True
+    assert (
+        evaluate_archive_headroom(snapshot=snapshot, policy=policy)
+        is MarketTapeHotColdDecision.COLD_CAP_REACHED
+    )
