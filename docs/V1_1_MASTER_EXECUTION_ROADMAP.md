@@ -206,20 +206,32 @@ Preconditions:
    `/Volumes/Crypto-504/Crypto-Signal/Runner/bin/Runner.Listener run --startuptype service`.
 2. Require **exactly one** matching listener.
 3. Require **zero** matching SSD `Runner.Worker` processes.
-4. Sample the **same PID** at least three times.
-5. Current bounded operational threshold: each sample remains at or above **90% CPU**.
-6. Abort immediately if a Worker appears, PID/command identity changes, CPU normalizes,
-   or multiple listeners are present.
+4. Require the listener to be at least **600 seconds old** so a newly starting runner is
+   never classified as hung.
+5. Sample the **same PID** for **6 consecutive watchdog cycles**.
+6. Current bounded idle-spin threshold: each accepted sample is at or above **50% CPU**.
+   With the 20-second watchdog cadence this requires roughly two minutes of sustained
+   abnormal idle CPU after the minimum-age gate.
+7. Verify the exact ancestry:
+   `/bin/bash ./runsvc.sh -> RunnerService.js -> canonical SSD Runner.Listener`.
+8. Abort immediately if a Worker appears, PID/command identity changes, CPU normalizes,
+   ancestry is ambiguous, or multiple listeners are present.
 
 Recovery sequence:
 
-1. TERM only the exact verified listener PID.
-2. Wait a bounded interval.
-3. If the same exact listener remains and no Worker appeared, KILL only that PID.
-4. If no listener remains, terminate only stale SSD `runsvc.sh` parents.
-5. Start one SSD runner as `crypto-signal-agent`.
-6. Require exactly one new listener PID, different from the old PID.
-7. Fail closed on duplicate listeners.
+1. Stop the **verified parent service tree**, not merely the Listener:
+   wrapper `./runsvc.sh`, then `RunnerService.js`, then the exact Listener.
+2. Wait a bounded interval for graceful exit.
+3. Before any forced kill, re-check identities and require Worker absence.
+4. Force-kill only members of that already-verified old service tree if they remain.
+5. Start exactly one SSD runner as `crypto-signal-agent`.
+6. Require exactly one new listener and a different listener PID from the old tree.
+7. Fail closed on duplicate listeners, changed ancestry or any Worker race.
+
+Hosted proof for this current contract:
+- runner-tree full gate: `35723794736` PASS;
+- aged idle-spin full gate: `35724089582` PASS;
+- full pytest, Ruff, mypy and product freshness contract all passed.
 
 Post-recovery acceptance:
 
@@ -230,10 +242,13 @@ Post-recovery acceptance:
 - live signal/freeze timestamps continue advancing;
 - no internal-Mac runtime fallback appears.
 
-For the current incident, exactly one recovery owner already exists:
-`Crypto UID501 R15 Runner Recovery 20260922` (run `35722829376`).
-It opens a local Terminal and requires explicit macOS administrator authorization.
-Do **not** launch another recovery while that workflow is active.
+For the current incident, recovery ownership must remain single-owner. The earlier
+PID-only attempts failed closed and did not mutate the runner. A newer recovery run
+may exist while this document is being read; reconcile live GitHub Actions state before
+starting anything. Do **not** launch a second recovery while any
+`Crypto UID501 R15 Runner Recovery 20260922` run is queued or in progress. Only the
+ancestry-aware hosted-PASS recovery contract above is acceptable for the next live
+attempt.
 
 UID501 filesystem access to the existing Crypto-504 tree is still useful for direct DB
 and log forensics, but it is no longer required to prove that the 04:00 market-data
