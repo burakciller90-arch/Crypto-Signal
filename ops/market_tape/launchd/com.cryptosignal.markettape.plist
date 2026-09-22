@@ -7,7 +7,7 @@
 
   <key>ProgramArguments</key>
   <array>
-    <string>/Volumes/Crypto-504/Crypto-Signal/MarketTape/.venv/bin/python</string>
+    <string>/Volumes/Crypto-504/Crypto-Signal/Development/.venv/bin/python</string>
     <string>/Volumes/Crypto-504/Crypto-Signal/MarketTape/ops/run_market_tape_runtime.py</string>
   </array>
 
