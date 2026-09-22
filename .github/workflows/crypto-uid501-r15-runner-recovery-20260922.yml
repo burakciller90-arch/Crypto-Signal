@@ -171,18 +171,78 @@ jobs:
           SH
 
           chmod 700 "$SCRIPT"
-          echo "REQUESTING_MACOS_ADMIN_AUTH=YES"
-          CMD='do shell script "/usr/bin/sudo -u crypto-signal-agent /bin/bash /tmp/crypto-r15-runner-recover.sh > /tmp/crypto-r15-runner-recover.result 2>&1" with administrator privileges'
-          /usr/bin/osascript -e "$CMD"
+
+          LAUNCHER="$HOME/Desktop/Crypto-R15-Runner-Recovery.command"
+          PASS="/tmp/crypto-r15-runner-recover.pass"
+          FAIL="/tmp/crypto-r15-runner-recover.fail"
+          rm -f "$PASS" "$FAIL" "$RESULT"
+
+          cat > "$LAUNCHER" <<'SH'
+          #!/bin/bash
+          set -euo pipefail
+
+          RESULT="/tmp/crypto-r15-runner-recover.result"
+          PASS="/tmp/crypto-r15-runner-recover.pass"
+          FAIL="/tmp/crypto-r15-runner-recover.fail"
+          rm -f "$PASS" "$FAIL" "$RESULT"
+
+          trap 'rc=$?; printf "rc=%s\\n" "$rc" >"$FAIL"; echo; echo "Recovery durdu. Bu pencereyi acik birakabilirsin."; exit "$rc"' ERR
+
+          echo "Crypto Signal UID504 runner recovery"
+          echo "Sadece exact stuck SSD runner kimligi dogrulanirsa islem yapilir."
+          echo "macOS yonetici parolani girmen istenecek."
+          echo
+
+          sudo -v
+          sudo -u crypto-signal-agent /bin/bash /tmp/crypto-r15-runner-recover.sh | tee "$RESULT"
+
+          grep -F "R15_RUNNER_RECOVERY_PASS=YES" "$RESULT"
+          grep -F "REAL_CAPITAL=0" "$RESULT"
+          date >"$PASS"
+
+          echo
+          echo "R15 runner recovery tamamlandi. Bu pencereyi kapatabilirsin."
+          SH
+
+          chmod 700 "$LAUNCHER"
+          /usr/bin/open -a Terminal "$LAUNCHER"
+          echo "R15_RUNNER_RECOVERY_TERMINAL_LAUNCHED=YES"
+
+          outcome=""
+          for _ in $(/usr/bin/jot 120); do
+            if [ -f "$PASS" ]; then
+              outcome="PASS"
+              break
+            fi
+            if [ -f "$FAIL" ]; then
+              outcome="FAIL"
+              break
+            fi
+            /bin/sleep 2
+          done
+
+          if [ "$outcome" != "PASS" ]; then
+            echo "R15_RUNNER_RECOVERY_OUTCOME=${outcome:-TIMEOUT}"
+            [ -f "$FAIL" ] && cat "$FAIL" || true
+            [ -f "$RESULT" ] && cat "$RESULT" || true
+            exit 41
+          fi
 
           cat "$RESULT"
           grep -F "R15_RUNNER_RECOVERY_PASS=YES" "$RESULT"
           grep -F "REAL_CAPITAL=0" "$RESULT"
 
           echo "=== POST PROCESS SNAPSHOT ==="
-          /bin/ps -axo pid=,ppid=,user=,%cpu=,%mem=,etime=,state=,command=             | /usr/bin/grep -E '/Volumes/Crypto-504/Crypto-Signal/Runner/bin/Runner.Listener|/Volumes/Crypto-504/Crypto-Signal/Runner/bin/Runner.Worker'             | /usr/bin/grep -v grep             | /usr/bin/head -80
+          /bin/ps -axo pid=,ppid=,user=,%cpu=,%mem=,etime=,state=,command= \
+            | /usr/bin/grep -E '/Volumes/Crypto-504/Crypto-Signal/Runner/bin/Runner.Listener|/Volumes/Crypto-504/Crypto-Signal/Runner/bin/Runner.Worker' \
+            | /usr/bin/grep -v grep \
+            | /usr/bin/head -80
 
-          LISTENER_COUNT="$(/bin/ps -axo command=             | /usr/bin/grep -F '/Volumes/Crypto-504/Crypto-Signal/Runner/bin/Runner.Listener run --startuptype service'             | /usr/bin/grep -v grep             | /usr/bin/wc -l             | /usr/bin/tr -d ' ')"
+          LISTENER_COUNT="$(/bin/ps -axo command= \
+            | /usr/bin/grep -F '/Volumes/Crypto-504/Crypto-Signal/Runner/bin/Runner.Listener run --startuptype service' \
+            | /usr/bin/grep -v grep \
+            | /usr/bin/wc -l \
+            | /usr/bin/tr -d ' ')"
           test "$LISTENER_COUNT" = "1"
 
           echo "=== LIVE HEALTH AFTER RUNNER RECOVERY ==="
@@ -191,5 +251,5 @@ jobs:
           /usr/bin/curl -fsS --max-time 12 'http://127.0.0.1:48700/api/command-center?recent_limit=1'
           echo
 
-          rm -f "$SCRIPT" "$RESULT"
+          rm -f "$SCRIPT" "$RESULT" "$PASS" "$FAIL"
           echo "UID501_R15_RUNNER_RECOVERY_WORKFLOW_PASS=YES"
