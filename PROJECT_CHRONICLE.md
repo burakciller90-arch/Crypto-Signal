@@ -2622,3 +2622,365 @@ NOT EXECUTED human-impact operations rather than fabricating PASS.
 
 R14 is now the sole frontier: final release/documentation freeze with reserved
 tag `crypto-signal-full-version-v1.0.0`.
+
+
+## 2026-09-22 — v1.1 master roadmap / Decision Proof / parallel Market Tape program recorded
+
+Post-v1.0 development is now governed by `docs/V1_1_MASTER_EXECUTION_ROADMAP.md`.
+The roadmap is written as an agent-handoff execution contract rather than a feature
+wish list.
+
+Key decisions:
+- v1.0.0 remains immutable and REAL_CAPITAL=0.
+- R15 SSD/runtime recovery remains the production prerequisite; process liveness is
+  not accepted as data freshness.
+- Customer UI and Market Tape/data collection run in parallel after R15 safety.
+- Existing Order Flow/Microstructure and Derivatives Context engines are reused rather
+  than duplicated.
+- v1.1 begins with fixed 20/25/25/15/15 research priors; adaptive regime/meta weighting
+  is deferred until later forward evidence beats the fixed baseline without leakage.
+- Canonical 100 USDT paper performance is strictly separated from Shadow Lab research.
+- The unfinished `v1.1-paper-active-learning-v1` branch is not canonical authority.
+- Cross-Asset/Correlation, execution market-impact simulation and adaptive regime
+  weighting are preserved as v2 frontier, not v1.1 scope creep.
+
+The user’s “Proof-of-Thought” idea is accepted as a product direction but implemented
+as **Live Intelligence Feed / Decision Proof**. The system records externally auditable
+facts: decision state, forecast trigger/horizon/target/invalidation, supporting and
+contradicting evidence, missing/stale evidence, exact versions/identities, frozen
+chart/microstructure references, simple/technical explanations, canonical/shadow
+authority and later immutable outcome resolution. Private chain-of-thought is neither
+stored nor fabricated. Original forecasts are never rewritten after the result.
+
+Market Tape foundation draft PR #726 now provides append-only persistence for
+order-book snapshots, public trades and derivatives observations, including
+replay-safe semantic dedupe, WAL/quick_check and canonical SSD collector defaults.
+Hosted full gate run `35718669274` passed.
+
+The live runtime remains blocked from R15 acceptance because the UID504 SSD
+`Runner.Listener` has been observed long-lived at near-100% CPU while dashboard and
+supervisor processes remain present. The post-04:00 data interruption is not declared
+fixed until canonical ledger/candle freshness advances mechanically. UID501 currently
+receives Permission denied on the existing Crypto-504 project tree; the existing
+owner-preserving ACL grant flow has been launched for user authorization.
+
+
+## 2026-09-22 — post-04:00 market-data freshness mechanically recovered; runner hang remains separate
+
+A temporary diagnostic branch `diag-uid501-live-freshness-20260922` was created from
+the immutable v1.0.0 main baseline solely to read the live localhost dashboard API on
+the UID501 self-hosted runner without requiring SSD filesystem authority.
+
+Diagnostic run `35721395160` passed. At 14:25:51 +0300:
+- `/api/health`: status=ok, product_version=full-version-contextual-evidence/1,
+  ledger_present=true, alert_outbox_present=true, read_only=true, REAL_CAPITAL=0.
+- `/api/command-center`: 294 immutable freezes.
+- newest freeze: 2026-09-22 14:15:18.574 +0300.
+- BTC/ETH/SOL 15m contexts on both Binance and Bybit were fresh around 14:15.
+- 1h contexts on both providers were fresh around 14:01.
+- 4h contexts were consistent with their lower update cadence.
+
+Therefore the specific “data stopped after 04:00” incident is **closed**. The live
+market-evidence/freeze path is advancing again.
+
+This does **not** close R15. UID501 process recheck issue #730 showed the SSD UID504
+`Runner.Listener` PID 99399 at 100% CPU, state RN, ~12h elapsed at 14:26:28 +0300.
+The dashboard and SSD supervisor remained healthy. Runner progress/hang recovery is
+therefore a separate remaining R15 operational blocker and must not be conflated with
+market-data freshness.
+
+UID501 direct filesystem access to the existing Crypto-504 tree remains permission
+blocked until the prepared owner-preserving ACL grant is authorized. Direct DB/log
+access is desirable for forensics but was not required for the freshness conclusion
+because the live product API reads the immutable canonical ledger read-only.
+
+
+## 2026-09-22 — post-04:00 freshness blocker re-confirmed
+
+A fresh UID501 migration diagnostic could see the running SSD dashboard process but
+reported the entire `/Volumes/Crypto-504/Crypto-Signal` tree as inaccessible/MISSING
+from UID501. The owner-preserving UID501 ACL authorization flow had been launched but
+was not yet applied.
+
+A new UID504 allowlisted log diagnostic (issue #731, `command: logs`) entered
+**queued** state instead of executing. This is independent evidence that the UID504
+self-hosted runner was still unable to accept fresh work while its long-lived
+Runner.Listener had previously been observed near 100% CPU.
+
+Result: the “04:00 data cut” is **not declared fixed**. Closure requires direct
+post-cutoff advancement evidence from the canonical ledger, 15m candle cache and
+health/freshness surface after either UID501 access is authorized or the UID504 runner
+is safely recovered.
+
+
+## 2026-09-22 — post-04:00 market-data freshness incident mechanically closed
+
+The earlier freshness blocker was re-evaluated using direct live evidence rather than
+process state. UID501 localhost diagnostic workflow run `35721395160` completed
+successfully at ~14:25 Türkiye time.
+
+Observed production evidence:
+- dashboard health status=ok;
+- ledger_present=true;
+- read_only=true;
+- REAL_CAPITAL=0;
+- immutable freeze_count=294;
+- latest frozen evidence=2026-09-22 14:15:18.574 +03:00;
+- BTC/ETH/SOL 15m on Binance and Bybit fresh around 14:15;
+- BTC/ETH/SOL 1h fresh around 14:01.
+
+Conclusion: the specific data/freeze interruption that had appeared stuck after 04:00
+is **RECOVERED**. Do not reopen that incident based only on the hung GitHub runner.
+
+A separate R15 blocker remains: UID504 SSD `Runner.Listener` has been observed
+long-running near/at 100% CPU and new UID504 diagnostic work can remain queued.
+Dashboard/supervisor and market-data pipeline can remain healthy while the GitHub
+runner is unhealthy. Runner hang detection/recovery and physical SSD detach/remount
+acceptance therefore remain open.
+
+
+## 2026-09-22 — R15 runner-hang recovery owner and permission retry
+
+Hosted R15 hang-aware recovery hardening passed full gate in run
+`35722280704`. The live UID504 SSD listener was independently rechecked through
+UID501 at ~14:45 +0300: exact SSD listener PID 99399 remained the only UID504
+listener, ~94–96% CPU, >12h elapsed, with no UID504 SSD Runner.Worker present.
+
+A single-owner live recovery workflow
+`Crypto UID501 R15 Runner Recovery 20260922` was used. Its first admin-authorized
+attempt failed before touching the runner with rc=126 because the temporary recovery
+script was created mode 0700 by UID501 and then invoked as UID504. This was a transport
+permission error, not a runner mutation.
+
+The one-shot workflow was corrected to make that non-secret temporary script readable
+by UID504 and to capture stderr. Retry run `35723287820` became the sole active
+recovery owner. Do not create a duplicate recovery while it is in progress.
+
+The recovery contract remains fail-closed: exactly one SSD listener, zero SSD Workers,
+three >=90% CPU samples on the same PID, identity recheck before TERM/KILL, exactly one
+new listener afterward, then queue/health/freshness verification. REAL_CAPITAL=0.
+
+
+## 2026-09-22 — R15 + continuity state-first reconciliation after transient listener multiplicity
+
+State was rebuilt from READ_FIRST, CURRENT_STATUS, Chronicle, GitHub Actions and fresh
+UID501 host evidence rather than prior chat memory.
+
+R15 hosted branch hardening is current through:
+- aged idle-spin gate `35724089582` PASS;
+- exact self-match-safe listener gate `35724497074` PASS.
+
+The live UID504 runner is still a separate open incident. Fresh process forensics at
+~15:03 +0300 showed exactly one canonical SSD listener PID 99399, no UID504
+Runner.Worker, ~97% CPU and ~12h40 elapsed. Exact ancestry was:
+`/bin/bash ./runsvc.sh` PID 65421 -> `./externals/node20/bin/node ./bin/RunnerService.js`
+PID 65425 -> canonical SSD `Runner.Listener` PID 99399. Earlier transient listeners
+88601/88615 were no longer present. UID504 allowlisted job `35721769431` remained
+queued, therefore process existence is not treated as health.
+
+All previous one-shot live recovery runs are completed failures and are stale as
+continuation owners. They either failed before mutation or fail-closed on ambiguous
+listener multiplicity. No active recovery owner remains.
+
+Continuity was also rechecked read-only. Shared relay is RUNNING, namespace
+`crypto-signal`, bound to the expected ChatGPT URL, shared wake queue=0. The shared
+`user_pause` latch still exists with `user_pause_epoch=1790006250`; according to
+`pause_continuity.py` / `resume_continuity.py`, its presence means continuity remains
+PAUSED. The UID501 account cannot read the local SSD continuity tree, so local lease
+counts reported through inaccessible paths are not treated as authoritative. Resume
+must remove both local/shared pause latches state-first and create a fresh exact re-arm;
+archived wakes/leases must never be replayed.
+
+The post-04:00 market-data incident remains CLOSED/RECOVERED and is not conflated with
+the runner incident. REAL_CAPITAL=0.
+
+
+## 2026-09-22 — R15 exact-listener reconciliation; live recovery remains human-gated
+
+The apparent multi-listener state during one-shot recovery was traced to a diagnostic
+bug, not confirmed duplicate UID504 runners. The matcher searched the whole process
+command line for the listener string, so its own `awk -v needle=...Runner.Listener`
+process could be counted as a listener. Direct process snapshots continued to show the
+real SSD listener PID 99399, ancestry
+`runsvc.sh -> RunnerService.js -> Runner.Listener`, with no UID504 Runner.Worker.
+
+The permanent R15 watchdog and one-shot recovery matcher were changed to exact command
+matching. Hosted gates passed:
+- `35722280704` hang hardening;
+- `35723794736` ancestry-aware service-tree;
+- `35724067645` two-minute idle-spin;
+- `35724497074` exact-listener/self-match regression.
+
+Latest live recovery run `35724439198` waited for local administrator authorization
+and timed out. It made no runner mutation. Live recovery and physical SSD
+detach/remount acceptance remain human-gated. REAL_CAPITAL=0.
+
+## 2026-09-22 — continuity state reconciled while UID504 runner is unhealthy
+
+UID501 read-only continuity run `35724768336` found the shared relay RUNNING with
+`crypto-relay-v2`, namespace `crypto-signal`, exact target binding and zero shared
+wake files. The shared `user_pause` marker is still present. The UID504
+`bridge_watchdog.py` and shared `relay_daemon.py` processes are alive.
+
+UID501 cannot read the local SSD continuity tree, so a visible local lease count of
+zero is not treated as authoritative. Pause remains dominant; no new wake/lease was
+armed and continuity was not unpaused.
+
+## 2026-09-22 — R15 physical SSD recovery accepted; runtime blocker closed
+
+A real physical KIOXIA SSD detach/remount acceptance was completed for Crypto Signal.
+
+Detach evidence:
+- /dev/disk4 and /Volumes/Crypto-504 became absent;
+- dashboard health became unreachable, preventing stale SSD evidence from being served;
+- watchdog recorded SSD_STATE=MISSING;
+- the canonical Runner.Listener disappeared;
+- an orphan parent tree survived detach: /bin/bash ./runsvc.sh PID 65421 -> RunnerService.js PID 65425.
+
+The physical test exposed a real edge case: the surviving parent tree retained relative commands while its former SSD cwd became a revoked "No such file or directory" reference. R15 was hardened to recognize that detach-stale origin only when exact UID504 ownership, exact wrapper/service commands, zero active Worker, zero Listener and unambiguous ancestry all agree. Ambiguous cases remain fail-closed.
+
+Live recovery evidence:
+- RUNNER_ORPHAN_PARENT_DETECTED=YES service=65425;
+- RUNNER_ORPHAN_PARENT_STOP_REQUESTED wrapper=65421 service=65425;
+- RUNNER_ORPHAN_PARENT_STOP_PASS=YES wrapper=65421 service=65425 forced=YES;
+- canonical recovery converged to one healthy UID504 Listener;
+- idempotent watchdog live acceptance run 35746415162 passed with Listener PID 44162 unchanged across two installer reloads;
+- UID504 truth verification run 35746575186 passed with ssd-state=ready, dashboard status=ok, read_only=true and REAL_CAPITAL=0;
+- ledger, candle cache, paper fund and alert outbox SQLite PRAGMA quick_check all returned ok.
+
+Privilege boundary:
+- a persistent UID501 -> UID504 project-maintenance sudo bridge was installed;
+- independent verification after sudo timestamp invalidation proved UID504 NOPASSWD access works;
+- passwordless root remains denied;
+- this removes repeated password prompts for Crypto Signal maintenance without granting unrestricted root.
+
+Final repository acceptance:
+- hosted full regression run 35747330090 PASS;
+- temporary diagnostic/acceptance workflows were removed;
+- PR #715 final tree SHA returned exactly to 3a25bbcb9a5849951ec71960c3a78c653f257d02;
+- PR #715 final diff is exactly:
+  - .github/workflows/crypto-r15-hotplug-recovery.yml
+  - ops/install_ssd_hotplug_recovery.sh
+  - tests/test_r15_hotplug_recovery_contract.py
+
+R15 operational acceptance is CLOSED.
+The v1.0.0 baseline remains immutable and PR #715 is not merged as part of this operational closure.
+Continuity remains PAUSED by user contract.
+Canonical development frontier returns to M2 Liquidity Dynamics on top of the accepted Market Tape / microstructure foundation.
+REAL_CAPITAL remains 0.
+
+## 2026-09-22 — R15 final merge reconciliation; operational closure preserved
+
+R15 operational acceptance had already closed after the real physical KIOXIA SSD detach/remount exercise, orphan-parent cleanup, healthy UID504 runner recovery, dashboard/API validation and four canonical SQLite `PRAGMA quick_check=ok` results.
+
+Final repository reconciliation then completed:
+- PR #715 current head `40c66677f78b15e08b0c82ea8a75ca51c1633bf0` was mechanically confirmed mergeable and non-draft;
+- the PR diff was reduced back to exactly three intended files:
+  - `.github/workflows/crypto-r15-hotplug-recovery.yml`;
+  - `ops/install_ssd_hotplug_recovery.sh`;
+  - `tests/test_r15_hotplug_recovery_contract.py`;
+- independent exact-head full regression run `35747566530` PASSed against that exact head SHA;
+- PR #715 was squash-merged to `main` as `97eafdcb9810134f8d7b7a4c62a1546d2554e4dc`.
+
+The immutable release tag `crypto-signal-full-version-v1.0.0` is unchanged. R15 operational/runtime closure therefore remains complete while the post-v1.0 development program continues separately.
+
+Continuity remains PAUSED by user contract. REAL_CAPITAL=0.
+
+Canonical development frontier remains **M2 Liquidity Dynamics** on top of the accepted raw Market Tape / microstructure foundation. Completed/stale R15 diagnostics must not be replayed.
+
+## 2026-09-22 — Market Tape Hot/Cold runtime operationally accepted
+
+The Market Tape runtime was redesigned after canonical capacity measurement showed that
+unbounded SQLite was not an acceptable long-term archive.
+
+Measured evidence:
+- 5,000 raw wire messages arrived in 71 seconds during the bounded sample;
+- the two SQLite stores grew by ~4.74 MB during that sample;
+- a real canonical 6,500-row benchmark measured 7.84x combined SQLite ->
+  Parquet/Zstd compression with exact row-count and canonical SHA256 round-trip;
+- raw Parquet/Zstd measured 6.60x vs raw SQLite;
+- theoretical 10x-20x compression claims are not treated as project facts.
+
+Accepted storage model:
+- Hot SQLite target window: 24h;
+- late-arrival grace: 2h;
+- immutable hourly UTC Parquet/Zstd cold partitions;
+- each partition carries row counts, canonical row digests and Parquet file hashes;
+- hot rows are deleted only after write + readback + digest verification;
+- late rows absent from an immutable partition fail closed;
+- 25 GiB hot emergency cap;
+- 600 GiB cold cap;
+- 250 GiB minimum SSD free-space reserve;
+- proprietary cold history is not automatically deleted to create space;
+- raw wire evidence remains message-lossless; normalized order-book cadence remains 1s.
+
+macOS TCC evidence proved that a standalone LaunchAgent cannot be the removable-volume
+owner. Direct launchd attempts produced EX_CONFIG/Operation not permitted before the
+Hot/Cold runtime could own the SSD reliably. The accepted single-owner topology is:
+
+R11 Terminal/TCC-authorized ssd-service-supervisor.sh
+  -> Market Tape supervisor
+  -> Hot/Cold runtime
+
+The standalone Market Tape LaunchAgent remains intentionally disabled/fail-closed.
+A user-home enable latch gates Market Tape recovery.
+
+Operational acceptance:
+- hosted heartbeat gates 35762297669 and 35762322030 PASS;
+- live R11/TCC heartbeat acceptance 35762628805 PASS;
+- final independent read-only acceptance 35762906784 PASS;
+- one SSD supervisor / one Market Tape supervisor / one Market Tape runtime;
+- runtime and supervisor 30s heartbeats are fresh;
+- raw rows advance while the process tree stays single-owner;
+- both canonical SQLite stores pass quick_check with bounded busy timeout;
+- dashboard health remains status=ok / read_only=true / REAL_CAPITAL=0;
+- accepted live build marker: 355ccfacbcd0b860efeb3c09486b707940106b1f.
+
+Draft PR #763 contains the permanent Hot/Cold code. Its final product code is identical
+to the accepted live build; later branch commits only removed temporary acceptance
+workflows.
+
+M2 Liquidity Dynamics Slice 1 remains draft PR #762 and is no longer blocked by the
+absence of persistent Market Tape history infrastructure.
+
+Continuity remains PAUSED by user contract. REAL_CAPITAL=0.
+
+
+
+---
+
+## 2026-09-22 — USER-LOCKED v1.1 MASTER ROADMAP / EPOCH 2 / FRONTEND REBUILD
+
+User explicitly locked the new post-v1.0 roadmap and requested continuous safe development.
+
+Canonical roadmap:
+- `docs/V1_1_LOCKED_MASTER_ROADMAP_20260922.md`
+
+Locked changes:
+- v1.0.0 remains immutable and REAL_CAPITAL=0.
+- Paper Fund Epoch 1 remains immutable legacy history at 100 USDT.
+- Paper Fund Epoch 2 is a separate canonical history starting at **1,000 USDT** after its spec/migration acceptance gate.
+- Initial Smart Capital Allocator research policy: **Core 600 / Tactical 300 / Opportunity Reserve 100 USDT**.
+- Program now runs on **three parallel rails: Intelligence / Capital-Science / Product**.
+- Intelligence expansion: Liquidity 2.0 -> Order Flow/Absorption 2.0 -> Derivatives 2.0 -> On-chain/Event/NLP -> Confluence 2.0 -> calibrated Forecast/Decision Proof.
+- M2 adds liquidation-risk mapping and bounded spoofing/iceberg candidate semantics; no unsupported actor-intent attribution.
+- R19 calibration remains mandatory before user-visible probability and before Kelly sizing research can become canonical-eligible.
+- Existing frontend is not the final visual target. Product rail is a **from-scratch GALACTECH // CRYPTO SIGNAL rebuild**.
+- Product IA: COMMAND / MARKETS / INTELLIGENCE / CAPITAL / ARCHIVE / PERFORMANCE / LEARN / SYSTEM.
+- Visual thesis: **Bloomberg precision x cinematic sci-fi**, restrained semantic neon, truthful live/freshness, zero meaningless motion.
+- Shadow/research never mutates canonical NAV/PnL/history.
+- Safe development continues without unnecessary approval stops; new production/human-impact mutations remain separately gated.
+
+Routing files updated to point new agents to the locked roadmap:
+- READ_FIRST_CRYPTO_SIGNAL.md
+- CURRENT_STATUS.md
+- docs/V1_1_MASTER_EXECUTION_ROADMAP.md
+- docs/V1_1_WORLD_CLASS_PRODUCT_ROADMAP.md
+
+Next locked frontier:
+1. mechanically reconcile live state;
+2. read-only verify first real Cold Archive partition if present;
+3. define/implement Paper Fund Epoch 2 without rewriting Epoch 1;
+4. continue M2 Liquidity 2.0 and the new frontend rebuild in parallel.
+
+Do not replay R15 / HotCold / M2 Slice 1 accepted work.
