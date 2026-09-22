@@ -268,7 +268,22 @@ def verify_ssd_runtime(root: Path) -> None:
         raise RuntimeError("SSD self-hosted runner listener missing")
 
     legacy_paths = (
-        Path("/Users/crypto-signal-agent/Crypto-Signal"),
+        Path(
+            "/Users/crypto-signal-agent/Crypto-Signal/runtime/ledger/"
+            "live_signal_ledger.sqlite3"
+        ),
+        Path(
+            "/Users/crypto-signal-agent/Crypto-Signal/runtime/data/"
+            "live_base_15m_cache.sqlite3"
+        ),
+        Path(
+            "/Users/crypto-signal-agent/Crypto-Signal/runtime/alerts/"
+            "alert_outbox.sqlite3"
+        ),
+        Path(
+            "/Users/crypto-signal-agent/Crypto-Signal/runtime/paper/"
+            "paper_fund.sqlite3"
+        ),
         Path("/Users/crypto-signal-agent/Crypto-Signal-Live"),
         Path("/Users/crypto-signal-agent/Crypto-Signal-Product"),
         Path("/Users/crypto-signal-agent/Crypto-Signal-Alerts"),
@@ -276,7 +291,20 @@ def verify_ssd_runtime(root: Path) -> None:
     )
     present = [str(path) for path in legacy_paths if path.exists()]
     if present:
-        raise RuntimeError(f"legacy internal runtime paths present: {present}")
+        raise RuntimeError(f"legacy runtime payload present: {present}")
+
+    legacy_process_needles = (
+        "/Users/crypto-signal-agent/actions-runner-crypto/",
+        "/Users/crypto-signal-agent/Crypto-Signal-Product/",
+        "/Users/crypto-signal-agent/Crypto-Signal-Live/",
+        "/Users/crypto-signal-agent/Crypto-Signal-Alerts/",
+        "/Users/crypto-signal-agent/Crypto-Signal-Paper/",
+    )
+    active_legacy = [
+        needle for needle in legacy_process_needles if needle in runner_output
+    ]
+    if active_legacy:
+        raise RuntimeError(f"legacy runtime process path active: {active_legacy}")
 
 
 def run(*, root: Path, base_url: str) -> None:

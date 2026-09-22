@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import inspect
+
 import pytest
 
 from ops import r13_integrated_acceptance as r13
@@ -88,3 +90,16 @@ def test_paper_mission_requires_closed_write_gate() -> None:
     payload["trade_policy"] = "ACTIVE"
     with pytest.raises(RuntimeError, match="write gate"):
         r13.verify_paper_mission(payload)
+
+
+def test_r13_legacy_runtime_guard_matches_accepted_r11_payload_semantics() -> None:
+    source = inspect.getsource(r13.verify_ssd_runtime)
+
+    assert 'Path("/Users/crypto-signal-agent/Crypto-Signal")' not in source
+    assert "live_signal_ledger.sqlite3" in source
+    assert "live_base_15m_cache.sqlite3" in source
+    assert "alert_outbox.sqlite3" in source
+    assert "paper_fund.sqlite3" in source
+    assert "Crypto-Signal-Live" in source
+    assert "Crypto-Signal-Product" in source
+    assert "legacy runtime process path active" in source
