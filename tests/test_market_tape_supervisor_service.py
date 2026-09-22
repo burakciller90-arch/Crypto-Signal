@@ -55,3 +55,14 @@ def test_market_tape_supervisor_has_single_top_level_recovery_owner() -> None:
     assert "start_market_tape_supervisor.sh" in ssd_supervisor
     assert 'MARKET_TAPE_INSTALL_ENABLE_LAUNCHD:-0' in installer
     assert "MARKET_TAPE_LAUNCHAGENT_DISABLED_BY_DEFAULT=YES" in installer
+
+
+def test_market_tape_supervisor_heartbeats_while_child_is_alive() -> None:
+    source = (
+        ROOT / "ops/market_tape/run_market_tape_supervisor.py"
+    ).read_text()
+
+    assert "SUPERVISOR_HEARTBEAT_SECONDS = 30" in source
+    assert "last_heartbeat = time.monotonic()" in source
+    assert ">= SUPERVISOR_HEARTBEAT_SECONDS" in source
+    assert '"heartbeat": True' in source
