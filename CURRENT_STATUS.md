@@ -9,6 +9,31 @@ REAL_CAPITAL: 0
 
 ## Active v1.1 frontier — read before historical sections
 
+### CONTINUITY — OBSERVED-RECEIPT HARDENING LIVE-VERIFIED
+
+- Current main hardening commit: `26ea9a9579987eb48eb02cf596cdfe1946ee7010`.
+- Locked wake success now requires the exact user message to be **observed in the conversation**; editor-clear / transport submission alone is not a final receipt.
+- Read-only UID504 runtime parity run `35783887055` PASS after the hardening:
+  - installed `interval_wake_daemon.py` SHA == current-main source SHA;
+  - installed `recurring_wake.py` SHA == current-main source SHA;
+  - installed `relay_submit.py` SHA == current-main source SHA;
+  - shared `relay_daemon.py` SHA == current-main source SHA;
+  - rolling daemon PID `45986`, state `RUNNING`, interval `1200` seconds;
+  - rolling heartbeat age = 1 second at the read point;
+  - `last_receipt_epoch=1790110683`;
+  - `next_due_epoch=1790111883`;
+  - exact receipt-to-next-due delta = **1200 seconds**;
+  - no pending event;
+  - local/shared pause = NO;
+  - local/shared wake queues = 0;
+  - latest receipts are `status=OBSERVED`;
+  - exact current/expected chat binding matches `https://chatgpt.com/c/6ab2c3c1-30c8-83ed-b1ad-2aa35cc891c9`.
+- Relay log contains successful `OBSERVED_AFTER_CLICK` deliveries after busy/timeout recovery; a timeout/editor-clear event no longer advances the rolling counter without later observation.
+- The SSD Development checkout itself remains behind main (`eb5b268...`) at this read point, but the installed continuity runtime files are exact-current-main and were independently hash-verified.
+- Temporary diagnostic workflow removed after PASS.
+- Do not weaken observed-only receipt semantics or reset the timer unless explicitly required by continuity recovery.
+- REAL_CAPITAL=0.
+
 ### CONTINUITY — RECEIPT-BOUND ROLLING 20-MINUTE WAKE ACCEPTED
 
 - User requirement: the locked current-chat wake must run on a **rolling 20-minute counter**, not on wall-clock `:00/:20/:40`, and must remain active unless the user explicitly stops/pauses it.
