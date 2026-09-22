@@ -9,8 +9,6 @@ on:
       - "ops/continuity/relay_submit.py"
       - "ops/continuity/relay_daemon.py"
       - "ops/continuity/continuity_contracts.py"
-      - ".github/workflows/crypto-install-local-20m-wake.yml"
-      - ".github/workflows/crypto-20m-continuity-wake.yml"
   workflow_dispatch:
 
 permissions:
