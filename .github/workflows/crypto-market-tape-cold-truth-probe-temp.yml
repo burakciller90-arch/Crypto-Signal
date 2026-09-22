@@ -1,0 +1,148 @@
+name: Crypto Market Tape Cold Truth Probe TEMP
+
+on:
+  push:
+    branches: [v1.1-market-tape-hotcold-v1]
+    paths:
+      - ".github/workflows/crypto-market-tape-cold-truth-probe-temp.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: crypto-market-tape-cold-truth-probe-temp
+  cancel-in-progress: false
+
+jobs:
+  readonly:
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Read-only first real Cold Archive truth
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(id -u)" = "504"
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          DEV="$ROOT/Development"
+          HOT="$DEV/runtime/market_tape"
+          COLD="$ROOT/MarketTapeCold"
+          COLD_PY="$ROOT/RuntimeEnvs/market-tape-cold/bin/python"
+          STATUS="$HOT/runtime_status.json"
+
+          test -d "$ROOT"
+          test -d "$HOT"
+          test -x "$COLD_PY"
+          test -f "$HOT/raw_market_tape.sqlite3"
+          test -f "$HOT/market_tape.sqlite3"
+
+          echo "=== RUNTIME STATUS ==="
+          if [ -f "$STATUS" ]; then cat "$STATUS"; else echo "RUNTIME_STATUS_MISSING"; fi
+          echo
+
+          echo "=== CAPACITY ==="
+          df -Pk "$ROOT"
+          du -sk "$HOT" "$COLD" 2>/dev/null || true
+
+          export PYTHONPATH="$GITHUB_WORKSPACE/src"
+          "$COLD_PY" - "$HOT" "$COLD" "$STATUS" <<'PY'
+          import json
+          import sqlite3
+          import sys
+          import time
+          from pathlib import Path
+
+          from crypto_signal.data.market_tape_cold_archive import verify_cold_partition
+          from crypto_signal.data.market_tape_hotcold import (
+              DEFAULT_MARKET_TAPE_HOTCOLD_POLICY,
+              archive_before_ms,
+              measure_hotcold_capacity,
+              evaluate_archive_headroom,
+          )
+
+          hot = Path(sys.argv[1])
+          cold = Path(sys.argv[2])
+          status_path = Path(sys.argv[3])
+          root = Path("/Volumes/Crypto-504")
+
+          def ro_query(db: Path, sql: str):
+              con = sqlite3.connect(f"file:{db}?mode=ro", uri=True, timeout=10.0)
+              try:
+                  con.execute("PRAGMA query_only=ON")
+                  qc = con.execute("PRAGMA quick_check").fetchone()
+                  if qc is None or str(qc[0]) != "ok":
+                      raise SystemExit(f"QUICK_CHECK_FAIL={db}:{qc}")
+                  return con.execute(sql).fetchone()
+              finally:
+                  con.close()
+
+          raw = hot / "raw_market_tape.sqlite3"
+          norm = hot / "market_tape.sqlite3"
+          raw_span = ro_query(raw, "SELECT COUNT(*), MIN(event_at_ms), MAX(event_at_ms) FROM raw_market_events")
+          ob_span = ro_query(norm, "SELECT COUNT(*), MIN(event_at_ms), MAX(event_at_ms) FROM market_tape_orderbooks")
+          tr_span = ro_query(norm, "SELECT COUNT(*), MIN(event_at_ms), MAX(event_at_ms) FROM market_tape_trades")
+          der_span = ro_query(norm, "SELECT COUNT(*), MIN(event_at_ms), MAX(event_at_ms) FROM market_tape_derivatives")
+
+          now_ms = int(time.time() * 1000)
+          cutoff = archive_before_ms(now_ms=now_ms)
+          print("HOT_RAW_SPAN=", raw_span)
+          print("HOT_ORDERBOOK_SPAN=", ob_span)
+          print("HOT_TRADE_SPAN=", tr_span)
+          print("HOT_DERIVATIVES_SPAN=", der_span)
+          print("NOW_MS=", now_ms)
+          print("ARCHIVE_BEFORE_MS=", cutoff)
+
+          snap = measure_hotcold_capacity(
+              hot_dir=hot,
+              cold_dir=cold,
+              volume_path=root,
+          )
+          headroom = evaluate_archive_headroom(snapshot=snap)
+          print("HOT_BYTES=", snap.hot_bytes)
+          print("COLD_BYTES=", snap.cold_bytes)
+          print("SSD_FREE_BYTES=", snap.free_bytes)
+          print("CAPACITY_DECISION=", snap.decision.value)
+          print("ARCHIVE_HEADROOM_DECISION=", headroom.value)
+          if snap.decision.value != "collect" or headroom.value != "collect":
+              raise SystemExit("COLD_TRUTH_CAPACITY_GUARD_FAIL")
+
+          manifests = sorted(cold.glob("year=*/month=*/day=*/hour=*/manifest.json"))
+          print("REAL_COLD_MANIFESTS=", len(manifests))
+          if not manifests:
+              oldest = [x for x in (raw_span[1], ob_span[1], tr_span[1], der_span[1]) if x is not None]
+              oldest_ms = min(oldest) if oldest else None
+              print("NO_REAL_COLD_PARTITION_YET=YES")
+              print("OLDEST_HOT_EVENT_MS=", oldest_ms)
+              print("OLDEST_EVENT_ELIGIBLE=", bool(oldest_ms is not None and oldest_ms < cutoff))
+              if oldest_ms is not None and oldest_ms < cutoff:
+                  raise SystemExit("ELIGIBLE_HOT_DATA_EXISTS_WITHOUT_COLD_PARTITION")
+          else:
+              total_rows = 0
+              for i, manifest in enumerate(manifests):
+                  partition = manifest.parent
+                  payload = verify_cold_partition(partition)
+                  rows = sum(int(meta["rows"]) for meta in payload["tables"].values())
+                  total_rows += rows
+                  print(
+                      "COLD_PARTITION_VERIFIED=",
+                      i,
+                      payload["partition_id"],
+                      payload["window_start_ms"],
+                      payload["window_end_ms"],
+                      rows,
+                      partition,
+                  )
+              print("COLD_TOTAL_VERIFIED_ROWS=", total_rows)
+              print("FIRST_REAL_COLD_PARTITION_PASS=YES")
+
+          if status_path.is_file():
+              status = json.loads(status_path.read_text())
+              if int(status.get("real_capital", -1)) != 0:
+                  raise SystemExit("REAL_CAPITAL_NONZERO")
+              print("RUNTIME_STATUS_REAL_CAPITAL_ZERO=YES")
+
+          print("HOT_SQLITE_QUICK_CHECK_PASS=YES")
+          print("MARKET_TAPE_COLD_TRUTH_READONLY_PASS=YES")
+          PY
