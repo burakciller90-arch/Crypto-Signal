@@ -18,7 +18,10 @@ from crypto_signal.paper.activation import (
     commit_planned_pretrade_event,
     record_terminal_no_action,
 )
-from crypto_signal.paper.autonomy import PaperAutonomyReason
+from crypto_signal.paper.autonomy import (
+    PaperAutonomyReason,
+    default_active_learning_autonomy_policy,
+)
 from crypto_signal.paper.dry_run import (
     PaperActivationDryRunResult,
     PaperActivationDryRunStatus,
@@ -158,6 +161,7 @@ def run_paper_write_tick(
     candle_cache_path: Path,
     evaluated_at_ms: int,
     max_events: int = 10,
+    include_active_learning: bool = False,
 ) -> PaperWriteTickResult:
     """Evaluate and atomically persist bounded virtual-paper event outcomes."""
     if REAL_CAPITAL != 0:
@@ -188,25 +192,57 @@ def run_paper_write_tick(
         raise PaperWriteAuthorityError(
             "write authority does not match current paper activation"
         )
-    scan = scan_post_activation_signal_events(
-        signal_ledger_path=signal_ledger_path,
-        paper_ledger_path=paper_ledger_path,
-        activation=activation,
-        observed_at_ms=evaluated_at_ms,
+    scans = [
+        scan_post_activation_signal_events(
+            signal_ledger_path=signal_ledger_path,
+            paper_ledger_path=paper_ledger_path,
+            activation=activation,
+            observed_at_ms=evaluated_at_ms,
+            timeframe="4h",
+        )
+    ]
+    active_learning_policy = (
+        default_active_learning_autonomy_policy()
+        if include_active_learning
+        else None
     )
-    if len(scan.candidates) > max_events:
-        raise PaperWriteTickError(
-            "write tick candidate count exceeds bounded max_events"
+    if active_learning_policy is not None:
+        scans.append(
+            scan_post_activation_signal_events(
+                signal_ledger_path=signal_ledger_path,
+                paper_ledger_path=paper_ledger_path,
+                activation=activation,
+                observed_at_ms=evaluated_at_ms,
+                timeframe=active_learning_policy.decision_timeframe,
+            )
         )
 
+    candidates = tuple(
+        sorted(
+            (candidate for scan in scans for candidate in scan.candidates),
+            key=lambda item: (
+                item.signal_as_of_ms,
+                item.timeframe,
+                item.symbol.value,
+                item.event_identity,
+            ),
+        )
+    )
+    selected_candidates = candidates[:max_events]
+
     results: list[PaperWriteEventResult] = []
-    for event in scan.candidates:
+    for event in selected_candidates:
         evaluated = evaluate_paper_activation_dry_run(
             event=event,
             activation=activation,
             paper_ledger_path=paper_ledger_path,
             candle_cache_path=candle_cache_path,
             evaluated_at_ms=evaluated_at_ms,
+            autonomy_policy=(
+                active_learning_policy
+                if event.timeframe == "1h"
+                else None
+            ),
         )
         _require_same_enabled_authority(
             ledger=ledger,
@@ -232,9 +268,9 @@ def run_paper_write_tick(
         authority_event_identity=authority.authority_event_identity,
         authority_enabled=True,
         evaluated_at_ms=evaluated_at_ms,
-        scanned_candidate_count=len(scan.candidates),
+        scanned_candidate_count=len(candidates),
         event_results=tuple(results),
-        processed_skip_count=scan.processed_skip_count,
+        processed_skip_count=sum(scan.processed_skip_count for scan in scans),
         real_capital=REAL_CAPITAL,
     )
 
