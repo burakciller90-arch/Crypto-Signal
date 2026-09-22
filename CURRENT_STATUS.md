@@ -2,9 +2,39 @@
 
 Updated: 2026-09-22
 Project: Crypto Signal
-Phase: Full Version Final Release
-State: R14_RELEASE_CANDIDATE
+Baseline: crypto-signal-full-version-v1.0.0 (immutable)
+Active post-v1.0 program: v1.1 world-class product + market intelligence
+State: R15_RUNTIME_RECOVERY_BLOCKED_LIVE / PARALLEL_V1_1_DEVELOPMENT_ACTIVE
 REAL_CAPITAL: 0
+
+## Active v1.1 frontier — read before historical sections
+
+Governing roadmap: `docs/V1_1_MASTER_EXECUTION_ROADMAP.md`.
+
+Current development map:
+- PR #715 — R15 SSD hot-plug recovery. Hosted gate passed. Live acceptance is still incomplete.
+- PR #722 — world-class workspace shell + truthful freshness. Draft.
+- PR #723 — untouched-forward calibrated probability foundation. Hosted gate passed. Draft.
+- PR #726 — append-only Market Tape foundation. Hosted full gate run `35718669274` passed. Draft.
+- Experimental branch `v1.1-paper-active-learning-v1` is unaccepted and must not mutate canonical paper semantics; useful ideas belong in Shadow Lab.
+
+Runtime evidence:
+- SSD supervisor/dashboard processes are present.
+- UID504 SSD GitHub runner has shown long-running near-100% CPU `Runner.Listener` behavior.
+- Therefore process existence is not accepted as proof of live-data progress.
+- The “04:00 data cut” is **not yet declared fixed**. It must be closed by direct freshness evidence from the canonical ledger/candle cache/API after UID501 tree access or equivalent UID504 diagnostics are available.
+- UID501 diagnostic access to the existing Crypto-504 tree is currently blocked by filesystem permissions; a prepared ACL command preserves UID504 ownership while granting UID501 access.
+
+Product architecture:
+- Track A: world-class UI/UX.
+- Track B: Market Tape -> Liquidity -> Order Flow/Absorption -> Derivatives -> On-chain/Event Risk.
+- Bridge: Forecast Stream + Live Intelligence Feed / **Decision Proof** + frozen evidence archive.
+- Canonical 100 USDT fund and Shadow Lab are strictly separated.
+- v1.1 begins with fixed 20/25/25/15/15 research priors; adaptive weighting is deferred to v2 evidence gates.
+- “Proof-of-Thought” is a user concept name only. The implementation records auditable evidence/decision rationale and never exposes or fabricates private chain-of-thought.
+
+The remainder of this file preserves accepted v1.0 development history and evidence.
+
 
 ## Accepted foundations
 - Phase 0 Environment & Constitution
