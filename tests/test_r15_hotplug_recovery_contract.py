@@ -155,3 +155,12 @@ def test_r15_orphan_stop_revalidates_origin_before_force_kill() -> None:
     assert block.count("runner_process_origin_ok") >= 4
     assert 'RUNNER_ORPHAN_FORCE_ABORT=WORKER_APPEARED' in block
 
+def test_r15_orphan_candidate_count_is_self_contained() -> None:
+    text = SCRIPT.read_text(encoding="utf-8")
+    start = text.index("start_runner() {")
+    end = text.index('mount_transition="NO"', start)
+    block = text[start:end]
+    assert "count_lines" not in block
+    assert "/usr/bin/awk 'NF {n++} END {print n+0}'" in block
+    assert 'RUNNER_ORPHAN_STOP_ABORT=AMBIGUOUS' in block
+
