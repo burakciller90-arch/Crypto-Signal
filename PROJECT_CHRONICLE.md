@@ -3754,3 +3754,30 @@ Explicitly not activated:
 Next bounded M2 frontier is Liquidation Hot/Cold archive integration and replay acceptance
 in development, followed by M2 closeout and M3 Order Flow / Absorption 2.0.
 REAL_CAPITAL=0.
+
+
+---
+
+## 2026-09-22 — GALACTECH LEARN / SYSTEM REFINEMENT ACCEPTED AND MERGED
+
+The Product rail advanced through the locked Learn/System refinement slice.
+
+Acceptance evidence:
+- PR #810;
+- authoritative hosted run `35788289419`;
+- focused Product pytest PASS;
+- Ruff PASS;
+- Product mypy PASS;
+- Product JavaScript syntax/freshness PASS;
+- full repository pytest/Ruff/mypy/JS/freshness PASS;
+- temporary hosted workflow removed after PASS;
+- squash merge `12754691921cce4ccbd1148e215c45b854dc5df2`.
+
+The initial gate failure was not a Product defect: the temporary workflow had accidentally
+sent `app.js` to Ruff, which parsed JavaScript as Python. The corrected gate keeps
+Python under Ruff/mypy and JavaScript under Node syntax/freshness checks.
+
+No production UI deploy/cutover occurred. REAL_CAPITAL=0.
+
+The remaining Product development frontier is accessibility/responsive/reduced-motion/
+performance polish, followed by the separately authorized production UI cutover gate.
