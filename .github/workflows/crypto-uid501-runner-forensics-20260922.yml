@@ -27,8 +27,14 @@ jobs:
           echo "=== ALL UID504 RUNNER-LIKE PROCESSES ==="
           /bin/ps -axo pid=,ppid=,user=,%cpu=,%mem=,etime=,state=,lstart=,command=             | /usr/bin/awk '$3=="crypto-signal-agent" && ($0 ~ /Runner\.Listener/ || $0 ~ /Runner\.Worker/ || $0 ~ /runsvc\.sh/ || $0 ~ /RunnerService/ || $0 ~ /Crypto-504\/Crypto-Signal\/Runner/) {print}'
 
-          echo "=== PARENT 65425 DETAILS ==="
-          /bin/ps -p 65425 -o pid=,ppid=,user=,%cpu=,%mem=,etime=,state=,lstart=,command= || true
+          echo "=== SERVICE ANCESTRY DETAILS ==="
+          /bin/ps -p 65405,65421,65425,99399 -o pid=,ppid=,user=,%cpu=,%mem=,etime=,state=,lstart=,command= || true
+
+          echo "=== SERVICE CWD EVIDENCE ==="
+          for pid in 65405 65421 65425 99399; do
+            echo "--- pid=$pid ---"
+            /usr/sbin/lsof -a -p "$pid" -d cwd 2>/dev/null || true
+          done
 
           echo "=== CHILDREN OF 65425 ==="
           /usr/bin/pgrep -P 65425 | while read -r pid; do
