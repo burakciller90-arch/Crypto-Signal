@@ -134,9 +134,54 @@ jobs:
           install -m 600 "$GITHUB_WORKSPACE/ops/continuity/launchd/com.cryptosignal.continuitybridge.plist" "$BRIDGE_PLIST"
           plutil -lint "$BRIDGE_PLIST"
           launchctl bootout "$DOMAIN/$BRIDGE_LABEL" >/dev/null 2>&1 || true
+          set +e
           launchctl bootstrap "$DOMAIN" "$BRIDGE_PLIST"
-          launchctl enable "$DOMAIN/$BRIDGE_LABEL"
-          launchctl print "$DOMAIN/$BRIDGE_LABEL" >/dev/null
+          BRIDGE_BOOTSTRAP_RC=$?
+          set -e
+
+          BRIDGE_MODE="launchd"
+          if [ "$BRIDGE_BOOTSTRAP_RC" = "0" ]; then
+            launchctl enable "$DOMAIN/$BRIDGE_LABEL"
+            launchctl print "$DOMAIN/$BRIDGE_LABEL" >/dev/null
+          else
+            BRIDGE_MODE="detached"
+            echo "R12_BRIDGE_LAUNCHD_UNAVAILABLE=YES rc=$BRIDGE_BOOTSTRAP_RC"
+            launchctl bootout "$DOMAIN/$BRIDGE_LABEL" >/dev/null 2>&1 || true
+
+            OLD_BRIDGE_PID="$(cat "$STATE/bridge.pid" 2>/dev/null || true)"
+            if [ -n "$OLD_BRIDGE_PID" ] && kill -0 "$OLD_BRIDGE_PID" >/dev/null 2>&1; then
+              OLD_BRIDGE_UID="$(ps -p "$OLD_BRIDGE_PID" -o uid= 2>/dev/null | tr -d ' ' || true)"
+              OLD_BRIDGE_CMD="$(ps -p "$OLD_BRIDGE_PID" -o command= 2>/dev/null || true)"
+              if [ "$OLD_BRIDGE_UID" = "504" ] && printf '%s' "$OLD_BRIDGE_CMD" | grep -F "$DEV/ops/continuity/bridge_watchdog.py" >/dev/null; then
+                kill "$OLD_BRIDGE_PID" >/dev/null 2>&1 || true
+                for _ in {1..20}; do
+                  kill -0 "$OLD_BRIDGE_PID" >/dev/null 2>&1 || break
+                  sleep 0.25
+                done
+              fi
+            fi
+            rm -f "$STATE/bridge.pid"
+            (
+              unset RUNNER_TRACKING_ID
+              exec /usr/bin/python3 "$DEV/ops/continuity/bridge_watchdog.py"
+            ) >>"$STATE/bridge.runtime.out.log" 2>>"$STATE/bridge.runtime.err.log" </dev/null &
+
+            bridge_ok=0
+            for _ in {1..30}; do
+              BRIDGE_PID="$(cat "$STATE/bridge.pid" 2>/dev/null || true)"
+              if [ -n "$BRIDGE_PID" ] && kill -0 "$BRIDGE_PID" >/dev/null 2>&1; then
+                BRIDGE_UID="$(ps -p "$BRIDGE_PID" -o uid= 2>/dev/null | tr -d ' ' || true)"
+                BRIDGE_CMD="$(ps -p "$BRIDGE_PID" -o command= 2>/dev/null || true)"
+                if [ "$BRIDGE_UID" = "504" ] && printf '%s' "$BRIDGE_CMD" | grep -F "$DEV/ops/continuity/bridge_watchdog.py" >/dev/null; then
+                  bridge_ok=1
+                  break
+                fi
+              fi
+              sleep 1
+            done
+            test "$bridge_ok" = "1"
+          fi
+          echo "R12_BRIDGE_RUNTIME_PASS=YES mode=$BRIDGE_MODE"
 
           OLD_RELAY_PID="$(sed -n 's/^pid=//p' "$SHARED/relay_status" 2>/dev/null | head -1)"
           : > "$SHARED/restart_requested"
@@ -159,6 +204,8 @@ jobs:
           AGE="$((NOW-HB_MTIME))"
           test "$AGE" -ge 0
           test "$AGE" -le 30
+          RELAY_UID="$(ps -p "$NEW_RELAY_PID" -o uid= 2>/dev/null | tr -d ' ' || true)"
+          echo "R12_SHARED_GUI_TRANSPORT_OWNER_UID=$RELAY_UID"
           echo "R12_RELAY_V2_RUNTIME_PASS=YES old=$OLD_RELAY_PID new=$NEW_RELAY_PID heartbeat_age=$AGE"
 
       - name: Prove pause-dominant NOOP semantics
