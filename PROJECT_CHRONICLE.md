@@ -3644,3 +3644,40 @@ No Cursor worker/composer was used. No production deployment occurred.
 REAL_CAPITAL=0.
 
 Current Product frontier is GALACTECH Performance & Trust Center.
+
+
+---
+
+## 2026-09-22 — M2 LIQUIDATION MARKET TAPE SLICE 5 ACCEPTED / STACKED
+
+Observed liquidation evidence now has an accepted normalized persistence and PIT replay
+contract without activating a live collector.
+
+Accepted Market Tape additions:
+- additive schema migration to `market-tape-schema-v1/2`;
+- immutable normalized liquidation rows;
+- immutable feed-coverage rows;
+- provider-event dedupe that ignores local ingest/parser-version churn;
+- fail-closed conflict semantics;
+- coverage-last batch publication;
+- deterministic exact-coverage PIT replay;
+- future/late evidence exclusion;
+- explicit support for an observed zero-event interval only when matching coverage exists.
+
+Acceptance evidence:
+- PR #804;
+- authoritative hosted run `35785800585`;
+- focused liquidation/Market Tape tests PASS;
+- Ruff PASS;
+- focused mypy PASS;
+- full repository pytest/Ruff/mypy/JS/freshness PASS;
+- temporary hosted workflow removed after PASS.
+
+Still not activated:
+- Bybit `allLiquidation` live public-linear collector;
+- live SSD Market Tape mutation;
+- liquidation Hot/Cold Parquet archive.
+
+Next bounded M2 frontier is disabled-by-default collector + Hot/Cold archive integration,
+followed by M2 closeout and M3 Order Flow / Absorption 2.0. Production activation remains
+a separate human-impact gate. REAL_CAPITAL=0.
