@@ -35,7 +35,8 @@ __all__ = [
 ]
 
 PAPER_SIGNAL_EVENT_SCANNER_VERSION = "paper_signal_event_scanner.v2"
-_DEFAULT_TIMEFRAME = "4h"\n_SUPPORTED_TIMEFRAMES = frozenset({"1h", "4h"})
+_DEFAULT_TIMEFRAME = "4h"
+_SUPPORTED_TIMEFRAMES = frozenset({"1h", "4h"})
 _REQUIRED_MARKET_TYPE = MarketType.SPOT
 _PROVIDER_ORDER = (Exchange.BINANCE, Exchange.BYBIT)
 
@@ -66,8 +67,8 @@ class PaperSignalEventCandidate:
             raise ValueError("unsupported paper signal event scanner version")
         _require_sha256(self.event_identity, "event_identity")
         _require_sha256(self.activation_identity, "activation_identity")
-        if self.timeframe != _REQUIRED_TIMEFRAME:
-            raise ValueError("paper event candidate must be 4h")
+        if self.timeframe not in _SUPPORTED_TIMEFRAMES:
+            raise ValueError("unsupported paper event candidate timeframe")
         if self.signal_as_of_ms < 0 or self.source_cutoff_open_time_ms < 0:
             raise ValueError("paper event timestamps must be non-negative")
         if any(value < 0 for value in self.provider_signal_as_of_ms):
