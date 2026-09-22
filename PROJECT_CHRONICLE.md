@@ -2888,3 +2888,60 @@ Continuity remains PAUSED by user contract. REAL_CAPITAL=0.
 
 Canonical development frontier remains **M2 Liquidity Dynamics** on top of the accepted raw Market Tape / microstructure foundation. Completed/stale R15 diagnostics must not be replayed.
 
+## 2026-09-22 — Market Tape Hot/Cold runtime operationally accepted
+
+The Market Tape runtime was redesigned after canonical capacity measurement showed that
+unbounded SQLite was not an acceptable long-term archive.
+
+Measured evidence:
+- 5,000 raw wire messages arrived in 71 seconds during the bounded sample;
+- the two SQLite stores grew by ~4.74 MB during that sample;
+- a real canonical 6,500-row benchmark measured 7.84x combined SQLite ->
+  Parquet/Zstd compression with exact row-count and canonical SHA256 round-trip;
+- raw Parquet/Zstd measured 6.60x vs raw SQLite;
+- theoretical 10x-20x compression claims are not treated as project facts.
+
+Accepted storage model:
+- Hot SQLite target window: 24h;
+- late-arrival grace: 2h;
+- immutable hourly UTC Parquet/Zstd cold partitions;
+- each partition carries row counts, canonical row digests and Parquet file hashes;
+- hot rows are deleted only after write + readback + digest verification;
+- late rows absent from an immutable partition fail closed;
+- 25 GiB hot emergency cap;
+- 600 GiB cold cap;
+- 250 GiB minimum SSD free-space reserve;
+- proprietary cold history is not automatically deleted to create space;
+- raw wire evidence remains message-lossless; normalized order-book cadence remains 1s.
+
+macOS TCC evidence proved that a standalone LaunchAgent cannot be the removable-volume
+owner. Direct launchd attempts produced EX_CONFIG/Operation not permitted before the
+Hot/Cold runtime could own the SSD reliably. The accepted single-owner topology is:
+
+R11 Terminal/TCC-authorized ssd-service-supervisor.sh
+  -> Market Tape supervisor
+  -> Hot/Cold runtime
+
+The standalone Market Tape LaunchAgent remains intentionally disabled/fail-closed.
+A user-home enable latch gates Market Tape recovery.
+
+Operational acceptance:
+- hosted heartbeat gates 35762297669 and 35762322030 PASS;
+- live R11/TCC heartbeat acceptance 35762628805 PASS;
+- final independent read-only acceptance 35762906784 PASS;
+- one SSD supervisor / one Market Tape supervisor / one Market Tape runtime;
+- runtime and supervisor 30s heartbeats are fresh;
+- raw rows advance while the process tree stays single-owner;
+- both canonical SQLite stores pass quick_check with bounded busy timeout;
+- dashboard health remains status=ok / read_only=true / REAL_CAPITAL=0;
+- accepted live build marker: 355ccfacbcd0b860efeb3c09486b707940106b1f.
+
+Draft PR #763 contains the permanent Hot/Cold code. Its final product code is identical
+to the accepted live build; later branch commits only removed temporary acceptance
+workflows.
+
+M2 Liquidity Dynamics Slice 1 remains draft PR #762 and is no longer blocked by the
+absence of persistent Market Tape history infrastructure.
+
+Continuity remains PAUSED by user contract. REAL_CAPITAL=0.
+
