@@ -16,6 +16,9 @@ def test_r13_integrated_acceptance_is_ssd_canonical_and_read_only() -> None:
     assert "/Users/crypto-signal-agent/Crypto-Signal/" not in workflow
     assert "r11_runtime_acceptance.py" in workflow
     assert "verify_stage10_integrated.py" in workflow
+    assert "r13_integrated_acceptance.py" in workflow
+    assert "R13_CANONICAL_RUNTIME_VERIFIER_PASS=YES" in workflow
+    assert "R13_PRODUCT_CODE_PARITY_PASS=YES" in workflow
     assert "tests/js/test_product_freshness.js" in workflow
     assert "tests/test_paper_state.py" in workflow
     assert "tests/test_paper_execution.py" in workflow
@@ -71,3 +74,15 @@ def test_r13_requires_live_gift_research_and_paused_continuity() -> None:
     assert "WAKE_QUEUE=0" in workflow
     assert "RELAY_SHARED_PAUSED=YES" in workflow
     assert "RELAY_QUEUE=0" in workflow
+
+
+def test_r13_has_exactly_one_issue_triggered_canonical_acceptance() -> None:
+    workflows = tuple((ROOT / ".github/workflows").glob("*.yml"))
+    marker = "[R13] FULL VERSION INTEGRATED ACCEPTANCE V2"
+    owners = [
+        path.name
+        for path in workflows
+        if marker in path.read_text()
+    ]
+
+    assert owners == ["crypto-r13-integrated-acceptance-v2.yml"]
