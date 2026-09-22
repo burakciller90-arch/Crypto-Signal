@@ -199,9 +199,11 @@ Exact-chat binding, pause dominance, empty queue/lease behavior, namespace isola
 - duplicate/stale wake NOOP behavior;
 - no cross-project relay contamination.
 
-### R13 — Full Version Integrated Acceptance v2 — CURRENT FRONTIER
-Canonical task: `stage13-full-version-integrated-acceptance-v2`.
-Before calling the project complete:
+### R13 — Full Version Integrated Acceptance v2 — ACCEPTED
+Accepted main: `f95efc358ac396e50d0bfdb920b0187706cd2af2`.
+Canonical run: `35672790463` PASS.
+Integrated code/runtime/Product/research/paper/PIT/freshness/continuity/authority acceptance is complete. Physical reboot/logout/SSD detach remain explicit human-impact items.
+Accepted evidence included:
 - full repository gate PASS;
 - stable runtime deployment;
 - restart/recovery PASS;
@@ -218,7 +220,9 @@ Before calling the project complete:
 - REAL_CAPITAL=0 verified;
 - no exchange order endpoint/credential authority exposed.
 
-### R14 — Final release/documentation package
+### R14 — Final release/documentation package — CURRENT FRONTIER
+Canonical task: `stage14-final-release-documentation-v1`.
+Reserved immutable release tag: `crypto-signal-full-version-v1.0.0`.
 Freeze:
 - final accepted commit/tag;
 - READ_FIRST;
@@ -236,4 +240,4 @@ Freeze:
 Crypto Signal Full Version is complete when M1, M2 and M3 are accepted with mechanical evidence and authoritative documentation, while REAL_CAPITAL remains 0 and all real-money/order authority stays closed.
 
 Immediate next execution target:
-`stage13-full-version-integrated-acceptance-v2`.
+`stage14-final-release-documentation-v1`.
