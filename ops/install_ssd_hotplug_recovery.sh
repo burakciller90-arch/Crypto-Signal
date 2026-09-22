@@ -14,6 +14,11 @@ STATE_FILE="$LOCAL_ROOT/ssd-state"
 LABEL="com.cryptosignal.ssd-hotplug-recovery"
 PLIST="$HOME/Library/LaunchAgents/$LABEL.plist"
 TARGET="gui/$(id -u)/$LABEL"
+LEGACY_RUNNER_LABELS=(
+  "com.cryptosignal.github-runner-terminal-watchdog"
+  "com.cryptosignal.github-runner-ssd"
+  "actions.runner.burakciller90-arch-Crypto-Signal.crypto-signal-uid504"
+)
 
 if [ "$(id -u)" != "504" ]; then
   echo "R15_HOTPLUG_INSTALL_ERROR=UID_MUST_BE_504" >&2
@@ -455,11 +460,21 @@ else
   printf 'missing\n' >"$STATE_FILE"
 fi
 
+# R15 becomes the single runner recovery owner. Legacy watchdogs/services are
+# disabled but their plist files are intentionally retained for reversible rollback.
+for legacy_label in "${LEGACY_RUNNER_LABELS[@]}"; do
+  legacy_target="gui/$(id -u)/$legacy_label"
+  /bin/launchctl disable "$legacy_target" >/dev/null 2>&1 || true
+  /bin/launchctl bootout "$legacy_target" >/dev/null 2>&1 || true
+done
+
 /bin/launchctl bootout "$TARGET" >/dev/null 2>&1 || true
+/bin/launchctl enable "$TARGET" >/dev/null 2>&1 || true
 /bin/launchctl bootstrap "gui/$(id -u)" "$PLIST"
 /bin/sleep 2
 /bin/launchctl print "$TARGET" >/dev/null
 
 echo "R15_SSD_HOTPLUG_RECOVERY_INSTALLED=YES"
+echo "R15_SSD_HOTPLUG_RECOVERY_SINGLE_OWNER=YES"
 echo "R15_SSD_HOTPLUG_RECOVERY_REAL_CAPITAL=0"
 echo "R15_SSD_HOTPLUG_RECOVERY_NO_INTERNAL_RUNTIME_FALLBACK=YES"
