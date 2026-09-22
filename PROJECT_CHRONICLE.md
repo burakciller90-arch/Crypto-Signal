@@ -3462,3 +3462,32 @@ that the 20-minute loop remains active unless explicitly stopped plus `REAL_CAPI
 was added.
 
 REAL_CAPITAL=0.
+
+
+---
+
+## 2026-09-22 — OBSERVED-RECEIPT ROLLING WAKE RUNTIME VERIFIED
+
+After the rolling 20-minute cadence and watchdog hotfixes, a final delivery-truth gap was
+closed: the exact locked wake is no longer considered delivered merely because the editor
+clears or transport submission returns. A final receipt for this wake requires the exact
+user message to be observed in the ChatGPT conversation.
+
+Current main hardening commit:
+- `26ea9a9579987eb48eb02cf596cdfe1946ee7010`.
+
+Read-only UID504 parity run `35783887055` PASS proved:
+- installed interval daemon, recurring wake, relay submit and shared relay daemon hashes all
+  match current main;
+- rolling daemon is RUNNING at 1200 seconds with fresh heartbeat;
+- last receipt -> next due delta is exactly 1200 seconds;
+- no pending event, no pause latch, no queue backlog;
+- current/expected chat binding is exact;
+- latest relay receipts are OBSERVED;
+- installed relay contract requires observed-only final receipt for the locked wake.
+
+The Development checkout itself was still behind main at this read point, but that does not
+invalidate continuity runtime parity because the installed continuity files were independently
+hash-verified against the exact current-main workflow checkout.
+
+Temporary diagnostic workflow was removed after PASS. REAL_CAPITAL=0.
