@@ -164,3 +164,40 @@ def test_r15_orphan_candidate_count_is_self_contained() -> None:
     assert "/usr/bin/awk 'NF {n++} END {print n+0}'" in block
     assert 'RUNNER_ORPHAN_STOP_ABORT=AMBIGUOUS' in block
 
+def test_r15_runner_restart_uses_launchd_service_not_nohup() -> None:
+    text = SCRIPT.read_text(encoding="utf-8")
+    assert 'com.cryptosignal.github-runner-r15-service' in text
+    assert 'runner-service-bootstrap.sh' in text
+    assert 'RUNNER_SERVICE_PLIST' in text
+    assert 'RUNNER_SERVICE_TARGET' in text
+    assert 'exec ./runsvc.sh >>"$LOG/r15-runner-service.out.log"' in text
+
+    start = text.index("start_runner() {")
+    end = text.index('mount_transition="NO"', start)
+    block = text[start:end]
+    assert 'nohup ./runsvc.sh' not in block
+    assert 'launchctl kickstart -k "$RUNNER_SERVICE_TARGET"' in block
+    assert 'RUNNER_SERVICE_START_ABORT=LAUNCHAGENT_NOT_LOADED' in block
+    assert 'RUNNER_SERVICE_KICKSTART_PASS=YES' in block
+
+
+def test_r15_runner_launchagent_is_loaded_but_not_keepalive() -> None:
+    text = SCRIPT.read_text(encoding="utf-8")
+    assert 'cat > "$RUNNER_SERVICE_PLIST" <<PLIST' in text
+    service_start = text.index('cat > "$RUNNER_SERVICE_PLIST" <<PLIST')
+    main_start = text.index('cat > "$PLIST" <<PLIST', service_start)
+    service_block = text[service_start:main_start]
+    assert '<string>Background</string>' in service_block
+    assert '<key>ThrottleInterval</key>' in service_block
+    assert '<key>KeepAlive</key>' not in service_block
+    assert '<key>RunAtLoad</key>' not in service_block
+    assert '/bin/launchctl bootstrap "gui/$(id -u)" "$RUNNER_SERVICE_PLIST"' in text
+
+
+def test_r15_runner_launchd_service_preserves_ssd_execution_boundary() -> None:
+    text = SCRIPT.read_text(encoding="utf-8")
+    assert 'ROOT="/Volumes/Crypto-504/Crypto-Signal"' in text
+    assert 'RUNNER="$ROOT/Runner"' in text
+    assert 'test -x "$RUNNER/runsvc.sh"' in text
+    assert 'R15_SSD_HOTPLUG_RECOVERY_RUNNER_LAUNCHD_SERVICE=YES' in text
+
