@@ -115,3 +115,13 @@ must be reused rather than duplicated.
 - The user explicitly requires this rolling wake loop to remain ACTIVE during autonomous completion. Only an explicit user pause/stop may suspend it.
 - Wake/lease remains a state-first continuation pointer, never production authority. `REAL_CAPITAL=0`.
 
+
+
+## Execution tooling rule — Cursor workers/composer disabled by user (2026-09-22)
+
+- Do **not** assign new project work to Cursor workers, Cursor composer, or supervisor worktrees.
+- The user observed repeated errors and slower delivery from that path and explicitly disabled it.
+- Safe development should proceed through direct GitHub branch/PR work, hosted gates, and narrowly scoped read-only/self-hosted runtime diagnostics when needed.
+- `cursorcheck` or equivalent may be used only to detect stale/accidental worker state; it is **not** authority to create or resume Cursor work.
+- If a stale Cursor worktree/process is ever found, reconcile it as stale evidence first; do not resume it automatically.
+- Preserve REAL_CAPITAL=0 and all normal production/human-impact gates.
