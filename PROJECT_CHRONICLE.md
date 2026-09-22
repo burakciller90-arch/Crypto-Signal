@@ -2711,3 +2711,29 @@ Result: the “04:00 data cut” is **not declared fixed**. Closure requires dir
 post-cutoff advancement evidence from the canonical ledger, 15m candle cache and
 health/freshness surface after either UID501 access is authorized or the UID504 runner
 is safely recovered.
+
+
+## 2026-09-22 — post-04:00 market-data freshness incident mechanically closed
+
+The earlier freshness blocker was re-evaluated using direct live evidence rather than
+process state. UID501 localhost diagnostic workflow run `35721395160` completed
+successfully at ~14:25 Türkiye time.
+
+Observed production evidence:
+- dashboard health status=ok;
+- ledger_present=true;
+- read_only=true;
+- REAL_CAPITAL=0;
+- immutable freeze_count=294;
+- latest frozen evidence=2026-09-22 14:15:18.574 +03:00;
+- BTC/ETH/SOL 15m on Binance and Bybit fresh around 14:15;
+- BTC/ETH/SOL 1h fresh around 14:01.
+
+Conclusion: the specific data/freeze interruption that had appeared stuck after 04:00
+is **RECOVERED**. Do not reopen that incident based only on the hung GitHub runner.
+
+A separate R15 blocker remains: UID504 SSD `Runner.Listener` has been observed
+long-running near/at 100% CPU and new UID504 diagnostic work can remain queued.
+Dashboard/supervisor and market-data pipeline can remain healthy while the GitHub
+runner is unhealthy. Runner hang detection/recovery and physical SSD detach/remount
+acceptance therefore remain open.
