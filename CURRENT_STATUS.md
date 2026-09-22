@@ -212,6 +212,23 @@ Current Product frontier:
 - GALACTECH Learn/System refinement;
 - then accessibility/performance polish -> production UI cutover gate.
 
+### GALACTECH LEARN / SYSTEM REFINEMENT — MERGED TO MAIN
+
+- PR #810 authoritative hosted run `35788289419` PASS.
+- Focused Product tests + Ruff + Product mypy + JS/freshness PASS.
+- Full repository pytest/Ruff/mypy/JS/freshness PASS.
+- First failed run was only a temporary gate bug: Ruff was incorrectly pointed at `app.js`; JavaScript remained validated by Node.
+- PR #810 squash-merged to main as `12754691921cce4ccbd1148e215c45b854dc5df2`.
+- Learn/System truth surfaces were refined without inventing market evidence or production state.
+- No production UI deployment/cutover occurred.
+- REAL_CAPITAL=0.
+
+Current Product frontier:
+- accessibility / responsive / reduced-motion / performance polish;
+- then separately gated production UI cutover acceptance.
+- Do not reopen already accepted Command Center / Evidence Room / Capital / Markets / Archive / Performance / Learn-System slices absent invalidating evidence.
+
+
 ### M2 LIQUIDITY INTELLIGENCE 2.0 — SLICE 2 ACCEPTED / STACKED
 
 - PR #777 on `v1.1-liquidity-structure-v2-slice2` is accepted on top of accepted M2 Slice 1.
