@@ -1559,7 +1559,7 @@ function renderSystemHealth(health, command, paperMission) {
   const authorityClosed = snapshot?.trade_policy === "NOT_ACTIVATED";
   const overallOk = productOk && ledgerOk && paperOk && authorityClosed;
 
-  tag.textContent = overallOk ? "READ-ONLY · SAĞLIKLI" : "DİKKAT GEREKİYOR";
+  tag.textContent = overallOk ? "READ-ONLY · ÜRÜN YÜZEYİ SAĞLIKLI" : "DİKKAT GEREKİYOR";
   root.classList.remove("loading-block");
   root.innerHTML = `
     <article class="system-health-card ${productOk ? "health-ok" : "health-warn"}">
@@ -1592,8 +1592,28 @@ function renderSystemHealth(health, command, paperMission) {
       <strong>${esc(fmtAgeMs(stream.latest_freeze_age_ms))}</strong>
       <small>Son immutable signal freeze yaşı · otomatik ürün yenileme 15 sn</small>
     </article>
+    <article class="system-health-card health-unexposed">
+      <span>Market Tape</span>
+      <strong>NOT EXPOSED</strong>
+      <small>Product /api/health bu runtime katmanını henüz raporlamıyor.</small>
+    </article>
+    <article class="system-health-card health-unexposed">
+      <span>Cold Archive</span>
+      <strong>NOT EXPOSED</strong>
+      <small>Parquet/Zstd archive sağlık kanıtı Product payload'a henüz bağlı değil.</small>
+    </article>
+    <article class="system-health-card health-unexposed">
+      <span>Event Feed</span>
+      <strong>NOT EXPOSED</strong>
+      <small>Event-risk feed Product sağlık kontratında henüz görünür değil.</small>
+    </article>
+    <article class="system-health-card health-unexposed">
+      <span>Measured latency</span>
+      <strong>NOT MEASURED</strong>
+      <small>Ölçülmeyen latency değeri uydurulmaz.</small>
+    </article>
     <div class="system-health-note">
-      Sistem Sağlığı burada ürün API’si ve read-only kanıt katmanını ifade eder. Eksik kanıt sağlıklı kabul edilmez; gerçek emir veya sermaye yetkisi açılmaz.
+      Üstteki sağlık etiketi yalnız Product'ın gerçekten ölçebildiği read-only yüzeyleri kapsar. NOT EXPOSED veya NOT MEASURED altyapı sağlıklı varsayılmaz; gerçek emir veya sermaye yetkisi açılmaz.
     </div>`;
 }
 

@@ -19,12 +19,17 @@ REQUIRED_IDS = (
     EducationConceptId.BOS,
     EducationConceptId.CHOCH,
     EducationConceptId.LIQUIDITY_SWEEP,
+    EducationConceptId.CVD,
+    EducationConceptId.ABSORPTION,
+    EducationConceptId.LIQUIDATION_HEATMAP,
     EducationConceptId.FVG,
     EducationConceptId.HARMONIC_PRZ,
     EducationConceptId.ELLIOTT_WAVE,
     EducationConceptId.INVALIDATION,
     EducationConceptId.RISK_REWARD,
     EducationConceptId.AGREEMENT_VS_PROBABILITY,
+    EducationConceptId.CALIBRATION,
+    EducationConceptId.ABSTAIN,
     EducationConceptId.PAPER_TRADING,
 )
 
@@ -67,6 +72,39 @@ def test_agreement_is_not_probability_rule() -> None:
     assert "probability" in advanced or "ProbabilityStatus" in (lesson.advanced_tr or "")
 
 
+def test_liquidity_sweep_is_bounded_candidate_not_stop_hunt_proof() -> None:
+    lesson = require_education_lesson(EducationConceptId.LIQUIDITY_SWEEP)
+    text = " ".join(
+        part
+        for part in (lesson.beginner_tr, lesson.why_it_matters_tr, lesson.advanced_tr)
+        if part is not None
+    ).lower()
+
+    assert "aday" in text
+    assert "manipülasyon" in text
+    assert "kanıtlandığı anlamına gelmez" in text or "ispatı değildir" in text
+    assert "görünür derinlik" in text
+    assert "agresif" in text
+    assert "displacement" in text
+
+
+def test_new_microstructure_and_trust_lessons_preserve_boundaries() -> None:
+    cvd = require_education_lesson(EducationConceptId.CVD)
+    absorption = require_education_lesson(EducationConceptId.ABSORPTION)
+    liquidation = require_education_lesson(EducationConceptId.LIQUIDATION_HEATMAP)
+    calibration = require_education_lesson(EducationConceptId.CALIBRATION)
+    abstain = require_education_lesson(EducationConceptId.ABSTAIN)
+
+    assert "tek başına yön emri değildir" in cvd.beginner_tr
+    assert "otomatik alım veya satım sinyali değildir" in absorption.beginner_tr
+    assert "gelecekte" in liquidation.beginner_tr
+    assert "stoplarının nerede olduğunu söylemez" in liquidation.beginner_tr
+    assert "kalibre edilmiş olasılık değildir" in calibration.beginner_tr
+    assert "NOT CALIBRATED" in (calibration.advanced_tr or "")
+    assert "işlem fikri üretmemeyi" in abstain.beginner_tr
+    assert "track record'dan silinmez" in (abstain.advanced_tr or "")
+
+
 def test_paper_trading_states_real_capital_zero() -> None:
     lesson = require_education_lesson(EducationConceptId.PAPER_TRADING)
     text = " ".join(
@@ -78,6 +116,11 @@ def test_paper_trading_states_real_capital_zero() -> None:
     assert "REAL_CAPITAL=0" in text
     assert "sanal" in text.lower() or "paper" in text.lower() or "kâğıt" in text.lower()
     assert "gerçek borsa emri yoktur" in lesson.beginner_tr.lower() or "gerçek borsa emri yoktur" in text
+    assert "Epoch 1" in text
+    assert "100 USDT" in text
+    assert "Epoch 2" in text
+    assert "1.000 USDT" in text
+    assert "ölçeklenmez" in text
 
 
 def test_deterministic_lookup_by_canonical_id() -> None:

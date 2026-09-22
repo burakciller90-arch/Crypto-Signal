@@ -339,7 +339,13 @@ select:focus { border-color: rgba(85,230,255,.45); }
 .intelligence-card-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 9px; }
 .intelligence-card { border: 1px solid var(--line); border-radius: 11px; padding: 13px; background: rgba(255,255,255,.015); }
 .intelligence-card-body, .intelligence-facts, .intelligence-memory-records { display: grid; gap: 7px; margin-top: 8px; }
-.intelligence-source, .intelligence-truth-bar, .truth-note, .system-health-note { color: var(--muted); font-size: .69rem; }
+.intelligence-source, .intelligence-truth-bar, .truth-note, .health-unexposed {
+  border-color: rgba(255,191,94,.16);
+  background: linear-gradient(145deg, rgba(255,191,94,.035), rgba(255,255,255,.008));
+}
+.health-unexposed strong { color: var(--amber); }
+
+.system-health-note { color: var(--muted); font-size: .69rem; }
 .intelligence-memory-block { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); }
 .intelligence-memory-head { display: flex; justify-content: space-between; gap: 10px; }
 .intelligence-memory-metrics { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 7px; }

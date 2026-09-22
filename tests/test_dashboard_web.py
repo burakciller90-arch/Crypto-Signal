@@ -342,7 +342,13 @@ def test_health_and_static_shell_without_ledger(tmp_path: Path) -> None:
     assert "Tüm detayları göster" in script.text
     assert "Sade görünüme dön" in script.text
     assert "meta_intelligence" in script.text
-    assert "READ-ONLY · SAĞLIKLI" in script.text
+    assert "READ-ONLY · ÜRÜN YÜZEYİ SAĞLIKLI" in script.text
+    assert "Market Tape" in script.text
+    assert "Cold Archive" in script.text
+    assert "Event Feed" in script.text
+    assert "NOT EXPOSED" in script.text
+    assert "NOT MEASURED" in script.text
+    assert "Ölçülmeyen latency değeri uydurulmaz." in script.text
     assert "REAL_CAPITAL=" in script.text
     assert "function renderEducation(data)" in script.text
     assert "function contextualLessonIds(detail)" in script.text
@@ -525,11 +531,19 @@ def test_education_api_is_deterministic_and_read_only(tmp_path: Path) -> None:
     body = catalog.json()
     assert body["status"] == "ready"
     assert body["real_capital"] == 0
-    assert len(body["lessons"]) == 10
+    assert len(body["lessons"]) == 15
     assert next(lesson["concept_id"] for lesson in body["lessons"]) == "bos"
     assert bos.status_code == 200
     assert bos.json()["lesson"]["concept_id"] == "bos"
     assert "tek başına alım veya satım emri değildir" in bos.json()["lesson"]["beginner_tr"]
+    sweep = client.get("/api/education/liquidity_sweep").json()["lesson"]
+    assert "stop avı" in sweep["beginner_tr"]
+    assert "kanıtlandığı anlamına gelmez" in sweep["beginner_tr"]
+    calibration = client.get("/api/education/calibration").json()["lesson"]
+    assert "kalibre edilmiş olasılık değildir" in calibration["beginner_tr"]
+    paper = client.get("/api/education/paper_trading").json()["lesson"]
+    assert "Epoch 1" in paper["beginner_tr"]
+    assert "Epoch 2" in paper["beginner_tr"]
     assert unknown.status_code == 404
     assert client.post("/api/education").status_code == 405
     assert not missing.exists()
