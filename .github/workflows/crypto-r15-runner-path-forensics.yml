@@ -1,0 +1,46 @@
+name: Crypto R15 Runner Path Forensics
+
+on:
+  push:
+    branches: [r15-ssd-hotplug-recovery-v1]
+    paths: [".github/workflows/crypto-r15-runner-path-forensics.yml"]
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: [self-hosted, crypto-signal, uid501]
+    timeout-minutes: 10
+    steps:
+      - name: Inspect runner paths as UID504
+        shell: bash
+        run: |
+          set -euo pipefail
+          /usr/bin/sudo -n -H -u crypto-signal-agent /bin/bash <<'SH'
+          set +e
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          RUNNER="$ROOT/Runner"
+          LOG="$ROOT/RunnerLogs"
+          echo "=== ID ==="; id
+          echo "=== PATH PERMISSIONS ==="
+          ls -ldOe /Volumes/Crypto-504 "$ROOT" "$RUNNER" "$LOG" 2>&1
+          echo "ROOT_WRITABLE=$([ -w "$ROOT" ] && echo YES || echo NO)"
+          echo "RUNNER_WRITABLE=$([ -w "$RUNNER" ] && echo YES || echo NO)"
+          echo "RUNNERLOGS_WRITABLE=$([ -w "$LOG" ] && echo YES || echo NO)"
+          echo "RUNSVC_EXECUTABLE=$([ -x "$RUNNER/runsvc.sh" ] && echo YES || echo NO)"
+          echo "=== RUNNER TOP ==="
+          ls -laOe "$RUNNER" 2>&1 | head -160
+          echo "=== CONFIG FILES ==="
+          for f in .runner .credentials .credentials_rsaparams .service .env; do
+            echo "--- $RUNNER/$f"
+            ls -lOe "$RUNNER/$f" 2>&1
+          done
+          echo "=== RUNSVC ==="
+          ls -lOe "$RUNNER/runsvc.sh" "$RUNNER/bin/Runner.Listener" "$RUNNER/bin/Runner.Worker" 2>&1
+          echo "=== DISK ==="
+          df -h "$ROOT" 2>&1
+          echo "=== RUNNER LOG CANDIDATES ==="
+          find "$ROOT" -maxdepth 2 -type f \( -iname '*runner*.log' -o -iname '*runner*.out*' -o -iname '*runner*.err*' \) -print 2>/dev/null | head -120
+          echo "R15_RUNNER_PATH_FORENSICS_DONE=YES"
+          SH
