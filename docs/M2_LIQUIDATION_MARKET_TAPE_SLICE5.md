@@ -82,8 +82,10 @@ Stores immutable `LiquidationFeedCoverage` evidence separately from event rows.
 Coverage proves that an interval was actually observed. It does not estimate future
 liquidation zones, leverage concentration, retail stops or actor intent.
 
-Repeated observation of the same coverage identity is idempotent. The first persisted
-coverage evidence is not rewritten by a later observation timestamp.
+Re-appending the exact same coverage object is idempotent. A later observation of the
+same interval carries a different coverage identity because `observed_at_ms` is part of
+the immutable evidence identity; it is appended as new evidence and never rewrites the
+earlier observation.
 
 ## Coverage-last batch boundary
 
