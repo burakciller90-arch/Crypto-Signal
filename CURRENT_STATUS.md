@@ -9,6 +9,57 @@ REAL_CAPITAL: 0
 
 ## Active v1.1 frontier — read before historical sections
 
+### M2 LIQUIDITY INTELLIGENCE 2.0 — SLICE 2 ACCEPTED / STACKED
+
+- PR #777 on `v1.1-liquidity-structure-v2-slice2` is accepted on top of accepted M2 Slice 1.
+- Authoritative hosted acceptance run `35775951219` PASS.
+- Focused M2 pytest/Ruff/mypy PASS; full repository pytest/Ruff/mypy/JS/freshness PASS.
+- Final intended diff is exactly:
+  - `docs/M2_LIQUIDITY_STRUCTURE_SLICE2.md`;
+  - `src/crypto_signal/intelligence/liquidity_structure.py`;
+  - `tests/test_liquidity_structure_engine.py`.
+- Adds PIT-safe persistent liquidity pools, per-level presence/survival, appearance/cancellation velocity, depletion/replenishment, bounded `spoofing_candidate` and bounded `hidden_liquidity_candidate`.
+- Candidate labels are not proof of actor intent/manipulation; hidden-liquidity interpretation explicitly requires later trade-flow confirmation.
+- Future/late-ingested order-book evidence cannot rewrite historical freezes; degraded inputs fail closed.
+- PR #777 remains stacked on M2 Slice 1 rather than being forced directly into main.
+- REAL_CAPITAL=0.
+
+### GALACTECH COMMAND CENTER — SLICE 1 MERGED TO MAIN
+
+- PR #778 accepted and squash-merged to `main` as `9a6c65ee24dc00a5855d5792e013a53cb869e2de`.
+- Authoritative hosted acceptance run `35775974132` PASS.
+- Focused Product pytest/Ruff/mypy/JS/freshness PASS; full repository regression PASS.
+- Replaces the previous long-dashboard visual shell with the locked GALACTECH information architecture:
+  - COMMAND;
+  - MARKETS;
+  - INTELLIGENCE;
+  - CAPITAL;
+  - ARCHIVE;
+  - PERFORMANCE;
+  - LEARN;
+  - SYSTEM.
+- Adds left command rail, sparse situation strip, Live Intelligence Feed, Critical Radar, Market Workspace and full-screen Evidence Room shell.
+- Existing read-only backend/API and evidence DOM hooks remain intact.
+- Exact safety text `SİMÜLASYON · GERÇEK SERMAYE YOK` remains visible; REAL_CAPITAL=0.
+- No production UI deployment/cutover has been performed.
+- Diverged legacy product PR #722 is superseded by #778 and must not be used as the next frontend base.
+
+Current safe parallel frontier after these acceptances:
+- M2 Liquidity 2.0 next bounded slice: sweep/shallow-book evidence and remaining liquidity semantics before M3;
+- Product next bounded slice: Evidence Room depth and asset workspace refinement on current main;
+- Phase 2 Market Tape v2 evidence-time-machine extensions may proceed in parallel;
+- do not replay M2 Slice 1, M2 Slice 2 or GALACTECH Slice 1.
+
+### CONTINUITY / WORKER RECONCILIATION — 2026-09-22 22:47 +0300
+
+- Read-only bridge run `35776041344` PASS.
+- Shared relay reported `state=RUNNING`, PID `24847`, fresh heartbeat and exact target URL `https://chatgpt.com/c/6ab2c3c1-30c8-83ed-b1ad-2aa35cc891c9`.
+- The visible `wake/paused/...user-pause...` path is historical archived evidence, not an active user-pause latch.
+- Worker probe run `35776042781` confirmed Cursor app/CLI availability but did not itself prove an active development worker; do not infer worker activity from installation presence.
+- A separate read-only status reconcile was issued as #781 to avoid guessing.
+- The locked 20-minute wake loop remains ACTIVE and must not be disabled without explicit user pause.
+- REAL_CAPITAL=0.
+
 ### PAPER FUND EPOCH 2 FOUNDATION — ACCEPTED
 
 - PR #774 merged to `main` as `c4b8cfe10fb6aaddf534438950e334b40c3c302f`.
