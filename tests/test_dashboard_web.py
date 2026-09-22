@@ -205,6 +205,17 @@ def test_health_and_static_shell_without_ledger(tmp_path: Path) -> None:
     assert "Metodoloji uyumu ≠ olasılık" in index.text
     assert "GALACTECH // CRYPTO SIGNAL" in index.text
     assert 'data-ui-version="galactech-command-center-v1"' in index.text
+    assert 'aria-current="page"' in index.text
+    assert 'aria-live="polite"' in index.text
+    assert 'aria-labelledby="dialogTitle"' in index.text
+    assert "function prefersReducedMotion()" in script.text
+    assert "function scrollToWorkspaceTarget(target)" in script.text
+    assert "function setActiveQuickNavigation(buttons, activeButton)" in script.text
+    assert 'type="button" class="signal-row"' in script.text
+    assert 'lastDialogTrigger.focus({ preventScroll: true })' in script.text
+    assert "content-visibility: auto" in style.text
+    assert "contain-intrinsic-size: 900px" in style.text
+    assert ":focus-visible" in style.text
     for section in (
         "COMMAND",
         "MARKETS",
