@@ -1,0 +1,171 @@
+name: Crypto Market Tape HotCold Heartbeat Live
+
+on:
+  push:
+    branches:
+      - v1.1-market-tape-hotcold-v1
+    paths:
+      - ".github/workflows/crypto-market-tape-hotcold-heartbeat-live.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy and accept HotCold heartbeat on UID504
+    runs-on: [self-hosted, crypto-signal, uid501]
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Stage exact heartbeat bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+          STAGE="/tmp/crypto-market-tape-heartbeat-stage"
+          rm -rf "$STAGE"
+          mkdir -p "$STAGE"
+          cp -R src ops "$STAGE/"
+          printf '%s\n' "$GITHUB_SHA" >"$STAGE/BUILD_COMMIT"
+          (
+            cd "$STAGE"
+            find src ops -type f -print0 | sort -z | xargs -0 shasum -a 256 >BUILD_SHA256SUMS
+          )
+          chmod -R a+rX "$STAGE"
+
+      - name: Atomic stable update and recovery
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo -k
+          sudo -n -H -u crypto-signal-agent /usr/bin/env \
+            SOURCE_STAGE=/tmp/crypto-market-tape-heartbeat-stage \
+            EXPECTED_SHA="$GITHUB_SHA" \
+            HOME=/Users/crypto-signal-agent \
+            /bin/bash <<'SH'
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          STAGE="$SOURCE_STAGE"
+          STABLE="$ROOT/MarketTape"
+          NEXT="$ROOT/MarketTape.next"
+          PREVIOUS="$ROOT/MarketTape.previous"
+          CONTROL="$HOME/.crypto-signal-runtime"
+          ENABLE="$CONTROL/market-tape.enabled"
+          PID_FILE="$CONTROL/market-tape-supervisor.pid"
+          RUNTIME_SCRIPT="$STABLE/ops/run_market_tape_runtime.py"
+          TAPE="$ROOT/Development/runtime/market_tape"
+          RAW="$TAPE/raw_market_tape.sqlite3"
+          DB="$TAPE/market_tape.sqlite3"
+
+          test -f "$ENABLE"
+          old_sup="$(cat "$PID_FILE")"
+          kill -0 "$old_sup"
+          before="$(sqlite3 "$RAW" 'SELECT COUNT(*) FROM raw_market_events;')"
+          echo "HEARTBEAT_DEPLOY_OLD_SUPERVISOR=$old_sup"
+          echo "HEARTBEAT_DEPLOY_RAW_BEFORE=$before"
+
+          /bin/bash "$STABLE/ops/market_tape/stop_market_tape_supervisor.sh"
+          test ! -s "$PID_FILE"
+
+          rm -rf "$NEXT"
+          mkdir -p "$NEXT"
+          cp -R "$STAGE/src" "$NEXT/"
+          cp -R "$STAGE/ops" "$NEXT/"
+          cp "$STAGE/BUILD_COMMIT" "$NEXT/BUILD_COMMIT"
+          cp "$STAGE/BUILD_SHA256SUMS" "$NEXT/BUILD_SHA256SUMS"
+          (
+            cd "$NEXT"
+            shasum -a 256 -c BUILD_SHA256SUMS >/dev/null
+          )
+
+          rm -rf "$PREVIOUS"
+          mv "$STABLE" "$PREVIOUS"
+          mv "$NEXT" "$STABLE"
+
+          /bin/bash "$STABLE/ops/install_market_tape_runtime.sh"
+          test -f "$ENABLE"
+          test "$(cat "$STABLE/BUILD_COMMIT")" = "$EXPECTED_SHA"
+
+          ready=0
+          new_sup=""
+          runtime_count=0
+          for _ in {1..80}; do
+            new_sup="$(cat "$PID_FILE" 2>/dev/null || true)"
+            runtime_count="$(ps -axo user=,command= | awk -v user="crypto-signal-agent" -v script="$RUNTIME_SCRIPT" '$1==user && index($0,script)>0 {n++} END{print n+0}')"
+            if [ -n "$new_sup" ] && [ "$new_sup" != "$old_sup" ] \
+              && kill -0 "$new_sup" 2>/dev/null \
+              && [ "$runtime_count" = "1" ] \
+              && [ -s "$TAPE/runtime_status.json" ] \
+              && [ -s "$TAPE/supervisor_status.json" ]; then
+              ready=1
+              break
+            fi
+            sleep 1
+          done
+
+          if [ "$ready" != "1" ]; then
+            rm -f "$ENABLE"
+            /bin/bash "$STABLE/ops/market_tape/stop_market_tape_supervisor.sh" || true
+            echo "HEARTBEAT_DEPLOY_FAILED_DISABLED=YES" >&2
+            exit 72
+          fi
+
+          runtime_ts1="$(python3 -c 'import json; print(int(json.load(open("'"$TAPE/runtime_status.json"'"))["updated_at_epoch"]))')"
+          supervisor_ts1="$(python3 -c 'import json; print(int(json.load(open("'"$TAPE/supervisor_status.json"'"))["updated_at_epoch"]))')"
+          runtime_pid1="$(python3 -c 'import json; print(int(json.load(open("'"$TAPE/runtime_status.json"'")).get("process_pid",0)))')"
+          child_pid1="$(python3 -c 'import json; print(int(json.load(open("'"$TAPE/supervisor_status.json"'"))["child_pid"]))')"
+          echo "HEARTBEAT_RUNTIME_TS1=$runtime_ts1 PID=$runtime_pid1"
+          echo "HEARTBEAT_SUPERVISOR_TS1=$supervisor_ts1 CHILD=$child_pid1"
+
+          sleep 38
+
+          runtime_ts2="$(python3 -c 'import json; print(int(json.load(open("'"$TAPE/runtime_status.json"'"))["updated_at_epoch"]))')"
+          supervisor_ts2="$(python3 -c 'import json; print(int(json.load(open("'"$TAPE/supervisor_status.json"'"))["updated_at_epoch"]))')"
+          runtime_pid2="$(python3 -c 'import json; print(int(json.load(open("'"$TAPE/runtime_status.json"'")).get("process_pid",0)))')"
+          child_pid2="$(python3 -c 'import json; print(int(json.load(open("'"$TAPE/supervisor_status.json"'"))["child_pid"]))')"
+          after="$(sqlite3 "$RAW" 'SELECT COUNT(*) FROM raw_market_events;')"
+
+          echo "HEARTBEAT_RUNTIME_TS2=$runtime_ts2 PID=$runtime_pid2"
+          echo "HEARTBEAT_SUPERVISOR_TS2=$supervisor_ts2 CHILD=$child_pid2"
+          echo "HEARTBEAT_DEPLOY_NEW_SUPERVISOR=$new_sup"
+          echo "HEARTBEAT_DEPLOY_RAW_AFTER=$after"
+
+          test "$runtime_ts2" -gt "$runtime_ts1"
+          test "$supervisor_ts2" -gt "$supervisor_ts1"
+          test "$runtime_pid2" = "$runtime_pid1"
+          test "$child_pid2" = "$child_pid1"
+          test "$after" -gt "$before"
+          test "$(sqlite3 "$RAW" 'PRAGMA quick_check;')" = "ok"
+          test "$(sqlite3 "$DB" 'PRAGMA quick_check;')" = "ok"
+
+          python3 - "$TAPE/runtime_status.json" "$TAPE/supervisor_status.json" <<'PY'
+          import json,sys,time
+          runtime=json.load(open(sys.argv[1]))
+          supervisor=json.load(open(sys.argv[2]))
+          print("HEARTBEAT_RUNTIME_STATUS",json.dumps(runtime,sort_keys=True))
+          print("HEARTBEAT_SUPERVISOR_STATUS",json.dumps(supervisor,sort_keys=True))
+          assert runtime["state"] in {"collecting_chunk","collecting"}
+          assert runtime["real_capital"] == 0
+          assert runtime.get("heartbeat") is True
+          assert int(time.time()) - int(runtime["updated_at_epoch"]) <= 45
+          assert supervisor["state"] == "running"
+          assert supervisor["real_capital"] == 0
+          assert supervisor.get("heartbeat") is True
+          assert int(time.time()) - int(supervisor["updated_at_epoch"]) <= 45
+          assert int(runtime["free_bytes"]) > 250 * 1024**3
+          assert int(runtime["hot_bytes"]) < 25 * 1024**3
+          assert int(runtime["cold_bytes"]) < 600 * 1024**3
+          assert runtime["capacity_decision"] == "collect"
+          PY
+
+          curl -fsS --max-time 5 http://127.0.0.1:48700/api/health \
+            | python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["status"]=="ok"; assert d["real_capital"]==0; assert d["read_only"] is True'
+
+          echo "MARKET_TAPE_HOTCOLD_HEARTBEAT_LIVE_PASS=YES"
+          echo "REAL_CAPITAL=0"
+          SH
+
+      - name: Cleanup stage
+        if: always()
+        shell: bash
+        run: rm -rf /tmp/crypto-market-tape-heartbeat-stage
