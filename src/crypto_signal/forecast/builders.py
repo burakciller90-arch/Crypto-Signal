@@ -428,15 +428,16 @@ def _technical_explanation(
     contradiction_flags: tuple[str, ...],
     uncertainty_flags: tuple[str, ...],
 ) -> str:
-    probability = (
-        "probability=NOT_CALIBRATED"
-        if forecast.calibrated_probability is None
-        else (
+    if forecast.calibrated_probability is None:
+        probability = "probability=NOT_CALIBRATED"
+    else:
+        assert forecast.probability_semantic is not None
+        assert forecast.probability_model_version is not None
+        probability = (
             f"probability={_decimal_text(forecast.calibrated_probability)} "
             f"semantic={forecast.probability_semantic.value} "
             f"model={forecast.probability_model_version}"
         )
-    )
     return (
         f"signal={forecast.signal_state.value}/{forecast.direction.value}; "
         f"confluence={_decimal_text(forecast.confluence_score)} "
