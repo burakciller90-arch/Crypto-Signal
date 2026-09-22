@@ -12,11 +12,18 @@ from crypto_signal.data.adapters.bybit_microstructure_ws import (
     BybitSpotMicrostructureStream,
 )
 from crypto_signal.data.market_tape import MarketTapeStore
-from crypto_signal.data.market_tape_collection import persist_market_tape_stream
+from crypto_signal.data.market_tape_wire_collection import (
+    persist_bybit_wire_stream,
+)
+from crypto_signal.data.raw_market_tape import RawMarketTapeStore
 
 DEFAULT_DB = Path(
     "/Volumes/Crypto-504/Crypto-Signal/Development/runtime/"
     "market_tape/market_tape.sqlite3"
+)
+DEFAULT_RAW_DB = Path(
+    "/Volumes/Crypto-504/Crypto-Signal/Development/runtime/"
+    "market_tape/raw_market_tape.sqlite3"
 )
 DEFAULT_LOCK = Path(
     "/Volumes/Crypto-504/Crypto-Signal/Development/runtime/"
@@ -28,6 +35,7 @@ DEFAULT_SYMBOLS = ("BTCUSDT", "ETHUSDT", "SOLUSDT")
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--db", type=Path, default=DEFAULT_DB)
+    parser.add_argument("--raw-db", type=Path, default=DEFAULT_RAW_DB)
     parser.add_argument("--lock-path", type=Path, default=DEFAULT_LOCK)
     parser.add_argument(
         "--symbols",
@@ -36,22 +44,30 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--depth", type=int, default=50)
     parser.add_argument(
+        "--orderbook-snapshot-interval-ms",
+        type=int,
+        default=1_000,
+    )
+    parser.add_argument(
         "--max-events",
         type=int,
         default=0,
-        help="0 means run continuously",
+        help="0 means run continuously; otherwise bounds wire messages",
     )
     return parser.parse_args()
 
 
 async def run(args: argparse.Namespace) -> int:
-    if not str(args.db).startswith("/Volumes/Crypto-504/"):
-        print(
-            "MARKET_TAPE_STREAM_ERROR=NON_CANONICAL_DB_PATH",
-            file=sys.stderr,
-            flush=True,
-        )
-        return 2
+    for label, path in (("db", args.db), ("raw_db", args.raw_db)):
+        if not str(path).startswith("/Volumes/Crypto-504/"):
+            print(
+                "MARKET_TAPE_STREAM_ERROR=NON_CANONICAL_DB_PATH "
+                f"field={label}",
+                file=sys.stderr,
+                flush=True,
+            )
+            return 2
+
     if args.max_events < 0:
         print(
             "MARKET_TAPE_STREAM_ERROR=NEGATIVE_MAX_EVENTS",
@@ -59,10 +75,26 @@ async def run(args: argparse.Namespace) -> int:
             flush=True,
         )
         return 2
+    if args.orderbook_snapshot_interval_ms <= 0:
+        print(
+            "MARKET_TAPE_STREAM_ERROR=INVALID_SNAPSHOT_INTERVAL",
+            file=sys.stderr,
+            flush=True,
+        )
+        return 2
 
-    symbols = tuple(str(value).upper() for value in args.symbols)
+    symbols = tuple(dict.fromkeys(str(value).upper() for value in args.symbols))
+    if not symbols or any(not symbol for symbol in symbols):
+        print(
+            "MARKET_TAPE_STREAM_ERROR=INVALID_SYMBOLS",
+            file=sys.stderr,
+            flush=True,
+        )
+        return 2
+
     store = MarketTapeStore(args.db)
-    if not store.quick_check():
+    raw_store = RawMarketTapeStore(args.raw_db)
+    if not store.quick_check() or not raw_store.quick_check():
         print(
             "MARKET_TAPE_STREAM_ERROR=SQLITE_QUICK_CHECK_FAIL",
             file=sys.stderr,
@@ -72,13 +104,17 @@ async def run(args: argparse.Namespace) -> int:
 
     stream = BybitSpotMicrostructureStream()
     try:
-        result = await persist_market_tape_stream(
+        result = await persist_bybit_wire_stream(
             store=store,
-            events=stream.stream_events(
+            raw_store=raw_store,
+            events=stream.stream_wire_events(
                 symbols=symbols,
                 depth=args.depth,
             ),
-            max_events=(None if args.max_events == 0 else args.max_events),
+            orderbook_snapshot_interval_ms=(
+                args.orderbook_snapshot_interval_ms
+            ),
+            max_messages=(None if args.max_events == 0 else args.max_events),
         )
     except (OSError, sqlite3.Error, ValueError) as exc:
         print(
@@ -92,14 +128,20 @@ async def run(args: argparse.Namespace) -> int:
     counts = store.counts()
     print(
         "MARKET_TAPE_STREAM_COMPLETE "
-        f"observed_events={result.observed_events} "
+        f"observed_messages={result.observed_messages} "
+        f"raw_inserted={result.raw_inserted} "
+        f"raw_unchanged={result.raw_unchanged} "
         f"orderbooks_inserted={result.orderbooks_inserted} "
         f"orderbooks_unchanged={result.orderbooks_unchanged} "
+        f"orderbooks_skipped_by_cadence={result.orderbooks_skipped_by_cadence} "
         f"trades_inserted={result.trades_inserted} "
         f"trades_unchanged={result.trades_unchanged} "
-        f"total_rows={counts.total} "
+        f"normalized_total_rows={counts.total} "
+        f"raw_total_rows={raw_store.count()} "
         f"latest_event_at_ms={store.latest_event_at_ms() or '-'} "
-        f"quick_check={'YES' if store.quick_check() else 'NO'} "
+        f"raw_latest_event_at_ms={raw_store.latest_event_at_ms() or '-'} "
+        f"normalized_quick_check={'YES' if store.quick_check() else 'NO'} "
+        f"raw_quick_check={'YES' if raw_store.quick_check() else 'NO'} "
         "REAL_CAPITAL=0",
         flush=True,
     )
