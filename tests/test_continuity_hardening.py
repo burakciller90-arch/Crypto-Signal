@@ -85,6 +85,10 @@ def test_rolling_timer_requires_observed_receipt_and_relay_recovers_submitting()
     assert "WAITING_FOR_EXACT_OBSERVATION" in daemon
     assert "OBSERVED_AFTER_RETRY" in daemon
     assert 'write_receipt(\n                receipt,\n                "OBSERVED"' in daemon
+    locked_branch = daemon.split("if exact_locked_wake:", 1)[1]
+    exact_send_branch = locked_branch.split("check_js = (", 1)[0]
+    assert '"SUBMITTED"' not in exact_send_branch
+    assert '"SUBMITTED_UNCONFIRMED"' not in exact_send_branch
     assert "SUBMITTED_EDITOR_CLEARED" in daemon  # generic/non-locked relay path only
 
     assert "CRYPTO_LOCKED_20M_WAKE_PENDING_OBSERVATION=YES" in recurring
