@@ -27,9 +27,18 @@ jobs:
           DIR="$ROOT/Development/runtime/market_tape"
           LABEL="com.cryptosignal.markettape"
 
+          echo "=== STABLE ROOT ==="
+          sudo -n -H -u "$USER504" /bin/ls -la "$STABLE" 2>&1 || true
+          sudo -n -H -u "$USER504" /bin/ls -la "$STABLE/.venv/bin" 2>&1 | /usr/bin/head -80 || true
+          sudo -n -H -u "$USER504" /bin/ls -l "$STABLE/.venv/bin/python" "$STABLE/ops/run_market_tape_runtime.py" 2>&1 || true
           echo "=== DEPLOY MARKERS ==="
           sudo -n -H -u "$USER504" /bin/cat "$STABLE/.deployed_git_commit" 2>&1 || true
           sudo -n -H -u "$USER504" /bin/cat "$STABLE/.deployed_git_tree" 2>&1 || true
+          echo "=== INSTALLED PLIST ==="
+          sudo -n -H -u "$USER504" /bin/ls -l "/Users/crypto-signal-agent/Library/LaunchAgents/$LABEL.plist" 2>&1 || true
+          sudo -n -H -u "$USER504" /usr/bin/plutil -p "/Users/crypto-signal-agent/Library/LaunchAgents/$LABEL.plist" 2>&1 || true
+          echo "=== SERVICE LOG DIR ==="
+          sudo -n -H -u "$USER504" /bin/ls -la "$ROOT/ServiceLogs" 2>&1 | /usr/bin/tail -80 || true
 
           echo "=== LAUNCHCTL ==="
           sudo -n -H -u "$USER504" /bin/launchctl print "gui/504/$LABEL" 2>&1 |             /usr/bin/egrep 'state =|pid =|runs =|last exit code =|program =|path =|throttle|spawn' |             /usr/bin/head -120 || true
