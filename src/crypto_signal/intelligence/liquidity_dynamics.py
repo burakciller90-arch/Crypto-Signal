@@ -26,6 +26,14 @@ class LiquiditySourceQuality(StrEnum):
     UNAVAILABLE = "unavailable"
 
 
+class LiquidityTakeCandidate(StrEnum):
+    NONE = "none"
+    BID_SIDE = "bid_side_liquidity_take_candidate"
+    ASK_SIDE = "ask_side_liquidity_take_candidate"
+    BOTH_SIDES = "both_sides_liquidity_take_candidate"
+    UNAVAILABLE = "unavailable"
+
+
 @dataclass(frozen=True, slots=True)
 class LiquidityDynamicsConfig:
     depth_levels: int = 10
@@ -33,6 +41,7 @@ class LiquidityDynamicsConfig:
     minimum_snapshots: int = 3
     max_snapshot_age_ms: int = 30_000
     max_snapshot_gap_ms: int = 30_000
+    liquidity_take_depth_drop_fraction: Decimal = Decimal("0.10")
 
     def __post_init__(self) -> None:
         if self.depth_levels <= 0:
@@ -45,6 +54,16 @@ class LiquidityDynamicsConfig:
             raise ValueError("liquidity max_snapshot_age_ms must be positive")
         if self.max_snapshot_gap_ms <= 0:
             raise ValueError("liquidity max_snapshot_gap_ms must be positive")
+        if (
+            self.liquidity_take_depth_drop_fraction.is_nan()
+            or self.liquidity_take_depth_drop_fraction.is_infinite()
+            or not Decimal(0)
+            < self.liquidity_take_depth_drop_fraction
+            < Decimal(1)
+        ):
+            raise ValueError(
+                "liquidity_take_depth_drop_fraction must be finite inside (0,1)"
+            )
 
 
 DEFAULT_LIQUIDITY_DYNAMICS_CONFIG = LiquidityDynamicsConfig()
@@ -154,6 +173,7 @@ class LiquidityDynamicsAnalysis:
     latest_snapshot_age_ms: int | None
     source_quality: LiquiditySourceQuality
     status: LiquidityDynamicsStatus
+    liquidity_take_candidate: LiquidityTakeCandidate
     metrics: LiquidityDynamicsMetrics | None
     uncertainty_flags: tuple[str, ...]
 
@@ -193,6 +213,8 @@ class LiquidityDynamicsAnalysis:
                 raise ValueError("measured liquidity dynamics require metrics")
             if self.source_quality is not LiquiditySourceQuality.GOOD:
                 raise ValueError("measured liquidity dynamics require good source quality")
+            if self.liquidity_take_candidate is LiquidityTakeCandidate.UNAVAILABLE:
+                raise ValueError("measured liquidity dynamics require candidate state")
         else:
             if self.metrics is not None:
                 raise ValueError("unresolved liquidity dynamics cannot carry metrics")
@@ -200,6 +222,10 @@ class LiquidityDynamicsAnalysis:
                 raise ValueError("unresolved liquidity dynamics require uncertainty")
             if self.source_quality is LiquiditySourceQuality.GOOD:
                 raise ValueError("unresolved liquidity dynamics cannot claim good quality")
+            if self.liquidity_take_candidate is not LiquidityTakeCandidate.UNAVAILABLE:
+                raise ValueError(
+                    "unresolved liquidity dynamics cannot claim liquidity take candidate"
+                )
         if self.evidence_identity != canonical_sha256(_analysis_payload(self)):
             raise ValueError("liquidity evidence identity mismatch")
 
@@ -375,6 +401,15 @@ def _analyze_selected(
         )
 
     metrics = _derive_metrics(snapshots=snapshots, depth_levels=config.depth_levels)
+    liquidity_take_candidate = _liquidity_take_candidate(
+        snapshots=snapshots,
+        metrics=metrics,
+        config=config,
+    )
+    uncertainty_flags: tuple[str, ...] = ()
+    if liquidity_take_candidate is not LiquidityTakeCandidate.NONE:
+        uncertainty_flags = ("liquidity_take_candidate_not_causal_attribution",)
+
     payload = {
         "as_of_ms": as_of_ms,
         "consumed_snapshot_count": len(snapshots),
@@ -383,6 +418,7 @@ def _analyze_selected(
         "first_snapshot_identity": snapshots[0].snapshot_identity,
         "last_snapshot_identity": snapshots[-1].snapshot_identity,
         "latest_snapshot_age_ms": latest_age,
+        "liquidity_take_candidate": liquidity_take_candidate,
         "market_type": market_type,
         "metrics": _metrics_payload(metrics),
         "observed_at_ms": max(item.ingested_at_ms for item in snapshots),
@@ -409,8 +445,9 @@ def _analyze_selected(
         latest_snapshot_age_ms=latest_age,
         source_quality=LiquiditySourceQuality.GOOD,
         status=LiquidityDynamicsStatus.MEASURED,
+        liquidity_take_candidate=liquidity_take_candidate,
         metrics=metrics,
-        uncertainty_flags=(),
+        uncertainty_flags=uncertainty_flags,
     )
 
 
@@ -441,6 +478,7 @@ def _unresolved(
         "latest_snapshot_age_ms": (
             None if latest is None else as_of_ms - latest.event_at_ms
         ),
+        "liquidity_take_candidate": LiquidityTakeCandidate.UNAVAILABLE,
         "market_type": market_type,
         "metrics": None,
         "observed_at_ms": observed_at_ms,
@@ -471,6 +509,7 @@ def _unresolved(
         ),
         source_quality=source_quality,
         status=LiquidityDynamicsStatus.UNRESOLVED,
+        liquidity_take_candidate=LiquidityTakeCandidate.UNAVAILABLE,
         metrics=None,
         uncertainty_flags=flags,
     )
@@ -634,6 +673,48 @@ def _best_level_change(
     return Decimal(0), Decimal(0)
 
 
+def _liquidity_take_candidate(
+    *,
+    snapshots: tuple[OrderBookSnapshot, ...],
+    metrics: LiquidityDynamicsMetrics,
+    config: LiquidityDynamicsConfig,
+) -> LiquidityTakeCandidate:
+    first = snapshots[0]
+    last = snapshots[-1]
+
+    bid_depth_drop_fraction = max(
+        Decimal(0),
+        (metrics.first_bid_depth_notional - metrics.last_bid_depth_notional)
+        / metrics.first_bid_depth_notional,
+    )
+    ask_depth_drop_fraction = max(
+        Decimal(0),
+        (metrics.first_ask_depth_notional - metrics.last_ask_depth_notional)
+        / metrics.first_ask_depth_notional,
+    )
+
+    bid_side = (
+        last.bids[0].price < first.bids[0].price
+        and metrics.best_bid_depletion_notional > Decimal(0)
+        and metrics.gross_bid_removed_notional > metrics.gross_bid_added_notional
+        and bid_depth_drop_fraction >= config.liquidity_take_depth_drop_fraction
+    )
+    ask_side = (
+        last.asks[0].price > first.asks[0].price
+        and metrics.best_ask_depletion_notional > Decimal(0)
+        and metrics.gross_ask_removed_notional > metrics.gross_ask_added_notional
+        and ask_depth_drop_fraction >= config.liquidity_take_depth_drop_fraction
+    )
+
+    if bid_side and ask_side:
+        return LiquidityTakeCandidate.BOTH_SIDES
+    if bid_side:
+        return LiquidityTakeCandidate.BID_SIDE
+    if ask_side:
+        return LiquidityTakeCandidate.ASK_SIDE
+    return LiquidityTakeCandidate.NONE
+
+
 def _context(
     snapshots: tuple[OrderBookSnapshot, ...],
 ) -> tuple[Exchange, MarketType, str]:
@@ -686,6 +767,7 @@ def _analysis_payload(
         "first_snapshot_identity": analysis.first_snapshot_identity,
         "last_snapshot_identity": analysis.last_snapshot_identity,
         "latest_snapshot_age_ms": analysis.latest_snapshot_age_ms,
+        "liquidity_take_candidate": analysis.liquidity_take_candidate,
         "market_type": analysis.market_type,
         "metrics": (
             None if analysis.metrics is None else _metrics_payload(analysis.metrics)
