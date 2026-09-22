@@ -52,3 +52,27 @@ def test_r15_runner_hang_recovery_never_uses_process_existence_alone() -> None:
     assert 'runner_hang_detected' in block
     assert 'force_restart="YES"' in block
     assert 'runner_worker_alive' in text
+
+
+
+def test_r15_runner_restart_verifies_service_ancestry() -> None:
+    text = SCRIPT.read_text(encoding="utf-8")
+    assert 'runner_service_tree()' in text
+    assert 'stop_runner_service_tree()' in text
+    assert 'RunnerService.js' in text
+    assert '/bin/bash ./runsvc.sh' in text
+    assert 'RUNNER_TREE_STOP_ABORT=ACTIVE_WORKER' in text
+    assert 'RUNNER_TREE_STOP_ABORT=UNVERIFIED_ANCESTRY' in text
+    assert 'RUNNER_TREE_STOP_PASS=YES' in text
+
+
+def test_r15_runner_restart_stops_parent_tree_before_new_start() -> None:
+    text = SCRIPT.read_text(encoding="utf-8")
+    start = text.index('start_runner() {')
+    end = text.index('mount_transition="NO"', start)
+    block = text[start:end]
+    stop_index = block.index('stop_runner_service_tree')
+    start_index = block.index('nohup ./runsvc.sh')
+    assert stop_index < start_index
+    assert 'runner_worker_alive' in text
+    assert 'crypto-signal-agent' in text
