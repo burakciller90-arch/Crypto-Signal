@@ -21,58 +21,49 @@ jobs:
           python-version: '3.12'
       - run: |
           python -m pip install -e .
-          python -m pip install pyarrow==22.0.0
-      - name: Compare SQLite and Parquet row semantics
+          python -m pip install pytest pyarrow==22.0.0
+      - name: Compare exact failing fixture
         run: |
           python - <<'PY'
-          import hashlib
-          import sqlite3
+          import runpy
           import tempfile
           from pathlib import Path
 
-          from crypto_signal.data.raw_market_tape import RawMarketTapeStore
           from crypto_signal.data.market_tape_cold_archive import (
-              _canonical_row_bytes,
+              _TABLE_SPECS,
+              _canonical_rows_sha256,
               _read_parquet,
-              _read_rows,
+              _read_partition_rows,
               _write_parquet,
           )
 
+          ns=runpy.run_path("tests/test_market_tape_cold_archive.py")
+          insert=ns["_insert_partition"]
+          hour=ns["HOUR_MS"]
+
           with tempfile.TemporaryDirectory() as td:
-              root=Path(td)
-              db=root/"raw.sqlite3"
-              RawMarketTapeStore(db).initialize()
-              identity=hashlib.sha256(b"diag").hexdigest()
-              with sqlite3.connect(db) as con:
-                  con.execute(
-                      """
-                      INSERT INTO raw_market_events(
-                        event_identity,exchange,channel,symbol,event_kind,
-                        source_timestamp_ms,event_at_ms,ingested_at_ms,
-                        sequence,update_id,payload_json
-                      ) VALUES (?, 'bybit', 'orderbook.50.BTCUSDT',
-                        'BTCUSDT','delta',10002,10000,10003,1,1,
-                        '{"topic":"orderbook.50.BTCUSDT","type":"delta"}')
-                      """,
-                      (identity,),
-                  )
-              columns=(
-                "event_identity","exchange","channel","symbol","event_kind",
-                "source_timestamp_ms","event_at_ms","ingested_at_ms",
-                "sequence","update_id","payload_json",
+              hot=Path(td)/"hot"
+              hot.mkdir()
+              insert(hot,start_ms=10*hour,label="old")
+              insert(hot,start_ms=20*hour,label="fresh")
+              rows_by_key=_read_partition_rows(
+                  normalized_db=hot/"market_tape.sqlite3",
+                  raw_db=hot/"raw_market_tape.sqlite3",
+                  start_ms=10*hour,
+                  end_ms=11*hour,
               )
-              source=_read_rows(
-                  db=db, table="raw_market_events", columns=columns,
-                  start_ms=0, end_ms=20000, identity_column="event_identity",
-              )
-              path=root/"raw.parquet"
-              _write_parquet(path, source)
-              restored=_read_parquet(path)
-              print("SOURCE_REPR=",repr(source))
-              print("RESTORED_REPR=",repr(restored))
-              print("SOURCE_BYTES=",_canonical_row_bytes(source[0]))
-              print("RESTORED_BYTES=",_canonical_row_bytes(restored[0]))
-              print("SOURCE_TYPES=",{k:type(v).__name__ for k,v in source[0].items()})
-              print("RESTORED_TYPES=",{k:type(v).__name__ for k,v in restored[0].items()})
-              print("EQUAL=",source==restored)
+              for spec in _TABLE_SPECS:
+                  rows=rows_by_key[spec.key]
+                  print("TABLE",spec.key,"SOURCE",repr(rows))
+                  if not rows:
+                      continue
+                  path=Path(td)/spec.filename
+                  _write_parquet(path,rows)
+                  restored=_read_parquet(path)
+                  print("TABLE",spec.key,"RESTORED",repr(restored))
+                  print("SOURCE_DIGEST",spec.key,_canonical_rows_sha256(rows))
+                  print("RESTORED_DIGEST",spec.key,_canonical_rows_sha256(restored))
+                  print("EQUAL",spec.key,rows==restored)
+                  print("SOURCE_TYPES",spec.key,[{k:type(v).__name__ for k,v in row.items()} for row in rows])
+                  print("RESTORED_TYPES",spec.key,[{k:type(v).__name__ for k,v in row.items()} for row in restored])
           PY
