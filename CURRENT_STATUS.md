@@ -52,6 +52,7 @@ This is not a blocker for safe parallel development. Re-check the first real par
 - Busy-stop live test: exact wake interrupted the active ChatGPT response and arrived in this chat; relay log recorded `OBSERVED_AFTER_CLICK`.
 - Post-hash-fix final test: run `35770956851` PASS with `RELAY_RECEIPTED`, `RELAY_SUBMIT_RC=0`, `CRYPTO_LOCKED_20M_WAKE_PASS=YES`.
 - Periodic wake is a state-first continuation pointer, not production authority. REAL_CAPITAL=0.
+- The user reaffirmed that the 20-minute loop must stay ACTIVE unless they explicitly request a pause/stop. Every material action/update must be recorded in GitHub for the next agent.
 
 
 **LOCKED roadmap contract:** `docs/V1_1_LOCKED_MASTER_ROADMAP_20260922.md`.
