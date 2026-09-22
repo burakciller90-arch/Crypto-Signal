@@ -34,7 +34,11 @@ AUTONOMOUS_PREFIX = "CRYPTO_SIGNAL_AUTONOMOUS_CONTINUE_V1"
 LOCKED_WAKE_MESSAGE = "Kullanıcı aktif değil ve projeyi tamamlaman için sana bıraktı; HAFIZANA GÜVENME! READ_FIRST, CURRENT_STATUS, Chronicle ve docs/V1_1_LOCKED_MASTER_ROADMAP_20260922.md dosyasını oku; gerçek Git/worker/wake/lease state’ini kontrol et, gerçek frontier’ı bul. Tamamlanmış/stale/duplicate işi tekrarlama. Kullanıcı REAL MONEY hariç roadmap’in bitmesini istiyor; güvenli aşamalar arasında onay bekleme ve devam et. Ve bir sonraki ajan için yaptığın her işi her güncellemeyi GitHub üzerine kayıt et. Bu 20 dakikalık mesaj döngüsünü kullanıcı açıkça durdurmadıkça bozamazsın. REAL_CAPITAL=0."
 
 
-def final_receipt_sha(path: Path) -> str | None:
+def final_receipt_sha(
+    path: Path,
+    *,
+    observed_only: bool = False,
+) -> str | None:
     if not path.exists():
         return None
     status = ""
@@ -45,6 +49,8 @@ def final_receipt_sha(path: Path) -> str | None:
         elif line.startswith("message_sha256="):
             message_sha = line.split("=", 1)[1]
     if not status or status == "SUBMITTING":
+        return None
+    if observed_only and status != "OBSERVED":
         return None
     return message_sha
 
@@ -118,7 +124,10 @@ def main() -> int:
     receipt_path = RECEIPTS / f"{key}.state"
     expected_sha = (hashlib.sha256(message.encode()).hexdigest() if message == LOCKED_WAKE_MESSAGE else expected_wire_sha(event_id, message))
 
-    bound_sha = final_receipt_sha(receipt_path)
+    bound_sha = final_receipt_sha(
+            receipt_path,
+            observed_only=message == LOCKED_WAKE_MESSAGE,
+        )
     if bound_sha is not None:
         if bound_sha and bound_sha != expected_sha:
             print("EVENT_ID_MESSAGE_CONFLICT")
@@ -150,7 +159,10 @@ def main() -> int:
 
     deadline = time.monotonic() + wait_seconds
     while time.monotonic() < deadline:
-        bound_sha = final_receipt_sha(receipt_path)
+        bound_sha = final_receipt_sha(
+            receipt_path,
+            observed_only=message == LOCKED_WAKE_MESSAGE,
+        )
         if bound_sha is not None:
             if bound_sha and bound_sha != expected_sha:
                 print("EVENT_ID_MESSAGE_CONFLICT")
