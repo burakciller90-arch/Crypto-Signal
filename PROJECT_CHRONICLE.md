@@ -3491,3 +3491,46 @@ invalidate continuity runtime parity because the installed continuity files were
 hash-verified against the exact current-main workflow checkout.
 
 Temporary diagnostic workflow was removed after PASS. REAL_CAPITAL=0.
+
+
+---
+
+## 2026-09-23 — ROLLING WAKE OBSERVABILITY / FINAL READ-ONLY STATE PROBE
+
+The already accepted OBSERVED-only rolling wake remained live while a read-only diagnostic
+surface was added for future state-first recovery.
+
+PR #800 added the allowlisted `rollingstate` command. It does not send a wake, reset the
+timer, change pause state, kill/restart processes or deploy Product/runtime source.
+
+Hosted acceptance:
+- run `35784028984` PASS;
+- focused continuity observability tests/Ruff PASS;
+- full repository pytest/Ruff/mypy/JS/freshness PASS;
+- temporary hosted workflow removed;
+- squash merge `e56426165c0f5604d6b4d0ed17f9d63d7f69435b`.
+
+No `Install Crypto Local 20m Wake` run was triggered after this workflow-only merge, so
+the existing rolling countdown was not reset.
+
+Live UID504 read-only run `35784266069` PASS:
+- rolling PID `45986` alive;
+- state `RUNNING`;
+- interval = `1200` seconds;
+- heartbeat age = 2 seconds;
+- generation `4bc50caa43074cf2`, sequence = 1;
+- pending event = empty;
+- last receipt epoch = `1790110683`;
+- next due epoch = `1790111883`;
+- exact receipt-to-next-due delta = `1200` seconds;
+- failure_count = 0;
+- local pause = NO;
+- shared pause = NO;
+- relay state = RUNNING;
+- relay target = exact locked ChatGPT conversation.
+
+READ_FIRST and CURRENT_STATUS were updated to remove the stale wall-clock `:00/:20/:40`
+authority description. The only current cadence authority is the local receipt-bound rolling
+timer, backed by the 5-minute GitHub health watchdog/self-heal path.
+
+The loop remains ACTIVE unless the user explicitly pauses/stops it. REAL_CAPITAL=0.
