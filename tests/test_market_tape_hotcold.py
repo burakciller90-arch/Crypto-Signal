@@ -132,7 +132,7 @@ def test_archive_headroom_is_more_conservative_than_current_capacity() -> None:
     synthetic_collectable = type(current)(
         hot_bytes=99,
         cold_bytes=850,
-        free_bytes=351,
+        free_bytes=349,
         decision=MarketTapeHotColdDecision.COLLECT,
     )
     assert (
