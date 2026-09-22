@@ -157,9 +157,24 @@ Current M2 safe-development frontier:
 - No production UI deployment/cutover was performed.
 - REAL_CAPITAL=0.
 
+### GALACTECH ARCHIVE / PROOF WALL — MERGED TO MAIN
+
+- PR #803 authoritative hosted run `35785491337` PASS.
+- Focused Proof Wall/Web pytest/Ruff/Product-mypy/JS/freshness PASS; full repository pytest/Ruff/mypy/JS/freshness PASS.
+- PR #803 squash-merged to main as `691bb14d7c2bb399383293001b8cbb4ec019d201`.
+- Archive now preserves each immutable issuance freeze beside a separate latest stored outcome snapshot when one exists.
+- Outcome evidence class and max holding horizon remain explicit.
+- Missing outcome stays `UNRESOLVED`; missing outcome schema remains explicit.
+- Winners / losers / expired / invalidated / ambiguous / not-evaluable / unresolved remain distinct.
+- Paper Transaction Tape remains separate from signal/outcome history.
+- Evidence Room still opens from the immutable signal identity.
+- No Cursor worker/composer was used.
+- No production UI deployment/cutover occurred.
+- REAL_CAPITAL=0.
+
 Current Product frontier:
-- GALACTECH Archive / Proof Wall;
-- then Performance/Trust -> Learn/System refinement under the locked Product path.
+- GALACTECH Performance & Trust Center;
+- then Learn/System refinement -> accessibility/performance polish -> production UI cutover gate.
 
 ### M2 LIQUIDITY INTELLIGENCE 2.0 — SLICE 2 ACCEPTED / STACKED
 
