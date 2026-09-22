@@ -113,6 +113,11 @@ def test_binding_writers_and_installers_use_ssd_canonical_state() -> None:
     assert "GITHUB_20M_ROLE=watchdog-fallback" in installer
     assert "ROLLING_WAKE_IMMEDIATE_RECEIPT_PASS=YES" in installer
     assert 'cron: "*/5 * * * *"' in fallback
+    assert 'if [ "${{ github.event_name }}" = "schedule" ]; then' in fallback
+    assert '\\${{ github.event_name }}' not in fallback
+    assert 'crypto-20m-emergency:${GITHUB_RUN_ID}:${GITHUB_RUN_ATTEMPT}' in fallback
+    assert 'crypto-20m-continuity-manual:${GITHUB_RUN_ID}:${GITHUB_RUN_ATTEMPT}' in fallback
+    assert '\\${GITHUB_RUN_ID}' not in fallback
     assert "GITHUB_WATCHDOG_TIMER_HEALTHY=YES" in fallback
     assert "GITHUB_WATCHDOG_TIMER_RESTARTED=YES" in fallback
     assert "GITHUB_EMERGENCY_FALLBACK_WAKE_ATTEMPTED=YES" in fallback
