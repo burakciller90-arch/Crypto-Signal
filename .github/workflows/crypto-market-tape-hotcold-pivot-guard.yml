@@ -1,0 +1,68 @@
+name: Crypto Market Tape HotCold Pivot Guard
+
+on:
+  push:
+    branches:
+      - v1.1-market-tape-runtime-v1
+    paths:
+      - ".github/workflows/crypto-market-tape-hotcold-pivot-guard.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  guard:
+    name: Pause SQLite-only collector and probe cold-storage capabilities
+    runs-on: [self-hosted, crypto-signal, uid501]
+    timeout-minutes: 12
+    steps:
+      - name: Stop Market Tape LaunchAgent without deleting data
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo -k
+          sudo -n -H -u crypto-signal-agent /bin/bash <<'SH'
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          LABEL="com.cryptosignal.markettape"
+          DOMAIN="gui/$(id -u)"
+          launchctl disable "$DOMAIN/$LABEL" >/dev/null 2>&1 || true
+          launchctl bootout "$DOMAIN/$LABEL" >/dev/null 2>&1 || true
+          sleep 2
+          count="$(ps -axo user=,command= | awk -v user="crypto-signal-agent" -v script="$ROOT/MarketTape/ops/run_market_tape_runtime.py" '$1==user && index($0,script)>0 {n++} END{print n+0}')"
+          echo "MARKET_TAPE_RUNTIME_PROCESS_COUNT_AFTER_PAUSE=$count"
+          test "$count" = "0"
+          echo "MARKET_TAPE_SQLITE_ONLY_COLLECTOR_PAUSED=YES"
+          echo "REAL_CAPITAL=0"
+          SH
+
+      - name: Probe cold-storage capabilities and current footprint
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo -n -H -u crypto-signal-agent /bin/bash <<'SH'
+          set +e
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          PY="$ROOT/Development/.venv/bin/python"
+          DIR="$ROOT/Development/runtime/market_tape"
+          echo "=== COMMANDS ==="
+          command -v zstd || true
+          command -v parquet-tools || true
+          command -v duckdb || true
+          echo "=== PYTHON IMPORTS ==="
+          "$PY" - <<'PY'
+          import importlib.util
+          for name in ("pyarrow", "zstandard", "duckdb", "pandas"):
+              print(f"PY_MODULE {name}={importlib.util.find_spec(name) is not None}")
+          PY
+          echo "=== UV ==="
+          /Users/crypto-signal-agent/.local/bin/uv --version 2>&1 || true
+          echo "=== FOOTPRINT ==="
+          ls -lah "$DIR" 2>&1 || true
+          du -sh "$DIR" 2>&1 || true
+          df -h "$ROOT" 2>&1 || true
+          echo "=== COUNTS ==="
+          sqlite3 "$DIR/raw_market_tape.sqlite3" 'SELECT COUNT(*),MIN(event_at_ms),MAX(event_at_ms) FROM raw_market_events;' 2>&1 || true
+          sqlite3 "$DIR/market_tape.sqlite3" 'SELECT COUNT(*) FROM market_tape_orderbooks; SELECT COUNT(*) FROM market_tape_trades; PRAGMA quick_check;' 2>&1 || true
+          echo "MARKET_TAPE_HOTCOLD_CAPABILITY_PROBE_DONE=YES"
+          SH
