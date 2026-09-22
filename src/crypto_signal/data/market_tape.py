@@ -199,7 +199,7 @@ class MarketTapeStore:
                 """
                 CREATE TABLE IF NOT EXISTS market_tape_liquidations (
                     liquidation_identity TEXT PRIMARY KEY,
-                    semantic_identity TEXT NOT NULL UNIQUE,
+                    provider_identity TEXT NOT NULL UNIQUE,
                     exchange TEXT NOT NULL,
                     instrument_type TEXT NOT NULL,
                     symbol TEXT NOT NULL,
@@ -391,7 +391,7 @@ class MarketTapeStore:
             payload_json=canonical_json(observation),
             columns=(
                 "observation_identity",
-                "semantic_identity",
+                "provider_identity",
                 "exchange",
                 "instrument_type",
                 "symbol",
@@ -404,7 +404,7 @@ class MarketTapeStore:
             ),
             values=(
                 observation.observation_identity,
-                semantic_identity,
+                provider_identity,
                 observation.exchange.value,
                 observation.instrument_type.value,
                 observation.symbol,
@@ -421,12 +421,19 @@ class MarketTapeStore:
         self,
         observation: LiquidationObservation,
     ) -> MarketTapeWriteDisposition:
-        semantic_identity = _liquidation_semantic_identity(observation)
+        provider_identity = _liquidation_provider_identity(observation)
         duplicate = self._find_by_fields(
             table="market_tape_liquidations",
-            fields={"semantic_identity": semantic_identity},
+            fields={"provider_identity": provider_identity},
         )
         if duplicate is not None:
+            existing = _liquidation_from_payload(str(duplicate["payload_json"]))
+            if _liquidation_market_truth(existing) != _liquidation_market_truth(
+                observation
+            ):
+                raise MarketTapeConflictError(
+                    "liquidation provider identity conflicts with market truth"
+                )
             return MarketTapeWriteDisposition.UNCHANGED
         return self._append(
             table="market_tape_liquidations",
@@ -896,7 +903,7 @@ def _derivatives_semantic_identity(
     )
 
 
-def _liquidation_semantic_identity(
+def _liquidation_provider_identity(
     observation: LiquidationObservation,
 ) -> str:
     return canonical_sha256(
@@ -904,16 +911,27 @@ def _liquidation_semantic_identity(
             "exchange": observation.exchange,
             "instrument_type": observation.instrument_type,
             "symbol": observation.symbol,
-            "liquidated_position_side": observation.liquidated_position_side,
-            "size": observation.size,
-            "bankruptcy_price": observation.bankruptcy_price,
             "event_at_ms": observation.event_at_ms,
             "source_timestamp_ms": observation.source_timestamp_ms,
             "source_row_index": observation.source_row_index,
-            "source": observation.source,
-            "adapter_version": observation.adapter_version,
         }
     )
+
+
+def _liquidation_market_truth(
+    observation: LiquidationObservation,
+) -> dict[str, object]:
+    return {
+        "exchange": observation.exchange,
+        "instrument_type": observation.instrument_type,
+        "symbol": observation.symbol,
+        "liquidated_position_side": observation.liquidated_position_side,
+        "size": observation.size,
+        "bankruptcy_price": observation.bankruptcy_price,
+        "event_at_ms": observation.event_at_ms,
+        "source_timestamp_ms": observation.source_timestamp_ms,
+        "source_row_index": observation.source_row_index,
+    }
 
 
 def _liquidation_coverage_truth(
