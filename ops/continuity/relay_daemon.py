@@ -119,13 +119,19 @@ def write_receipt(path: Path, status: str, event_id: str, message_sha: str) -> N
     )
     os.chmod(tmp, 0o600)
     tmp.replace(path)
-def receipt_sha(path: Path) -> str | None:
+def receipt_info(path: Path) -> tuple[str, str] | None:
     if not path.exists():
         return None
+    status = ""
+    message_sha = ""
     for line in path.read_text().splitlines():
-        if line.startswith("message_sha256="):
-            return line.split("=", 1)[1]
-    return ""
+        if line.startswith("status="):
+            status = line.split("=", 1)[1]
+        elif line.startswith("message_sha256="):
+            message_sha = line.split("=", 1)[1]
+    if not status:
+        return None
+    return status, message_sha
 
 
 def is_autonomous_wake(message: str) -> bool:
@@ -259,11 +265,15 @@ def deliver(event_id: str, message: str, target_url: str) -> tuple[bool, str]:
     message_sha = sha(wire_message)
     receipt = RECEIPTS / f"{key}.state"
 
-    bound_sha = receipt_sha(receipt)
-    if bound_sha is not None:
+    receipt_state = receipt_info(receipt)
+    if receipt_state is not None:
+        receipt_status, bound_sha = receipt_state
         if bound_sha and bound_sha != message_sha:
             return False, "EVENT_ID_MESSAGE_CONFLICT"
-        return True, "ALREADY_RECEIPTED"
+        if receipt_status == "SUBMITTING":
+            receipt.unlink(missing_ok=True)
+        else:
+            return True, "ALREADY_RECEIPTED"
 
     if message.startswith(AUTONOMOUS_PREFIX):
         canonical_event_id = scheduled_slot_event_id()
