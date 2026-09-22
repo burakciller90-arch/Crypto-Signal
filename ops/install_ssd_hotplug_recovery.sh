@@ -116,6 +116,103 @@ runner_worker_alive() {
     | /usr/bin/grep -v grep >/dev/null 2>&1
 }
 
+runner_service_tree() {
+  local listener=""
+  local service=""
+  local wrapper=""
+  local command=""
+
+  listener="$(runner_listener_pid)"
+  [ -n "$listener" ] || return 1
+
+  service="$(/bin/ps -p "$listener" -o ppid= 2>/dev/null | /usr/bin/tr -d ' ')"
+  [ -n "$service" ] || return 1
+  command="$(/bin/ps -p "$service" -o command= 2>/dev/null || true)"
+  [ "$command" = "./externals/node20/bin/node ./bin/RunnerService.js" ] || return 1
+
+  wrapper="$(/bin/ps -p "$service" -o ppid= 2>/dev/null | /usr/bin/tr -d ' ')"
+  [ -n "$wrapper" ] || return 1
+  command="$(/bin/ps -p "$wrapper" -o command= 2>/dev/null || true)"
+  [ "$command" = "/bin/bash ./runsvc.sh" ] || return 1
+
+  for pid in "$listener" "$service" "$wrapper"; do
+    [ "$(/bin/ps -p "$pid" -o user= 2>/dev/null | /usr/bin/tr -d ' ')" = "crypto-signal-agent" ] || return 1
+  done
+
+  printf '%s %s %s\n' "$wrapper" "$service" "$listener"
+}
+
+stop_runner_service_tree() {
+  local tree=""
+  local wrapper=""
+  local service=""
+  local listener=""
+  local pid=""
+  local command=""
+
+  if runner_worker_alive; then
+    err "RUNNER_TREE_STOP_ABORT=ACTIVE_WORKER"
+    return 1
+  fi
+
+  tree="$(runner_service_tree || true)"
+  if [ -z "$tree" ]; then
+    err "RUNNER_TREE_STOP_ABORT=UNVERIFIED_ANCESTRY"
+    return 1
+  fi
+  read -r wrapper service listener <<<"$tree"
+
+  log "RUNNER_TREE_STOP_REQUESTED wrapper=$wrapper service=$service listener=$listener"
+
+  /bin/kill "$wrapper" >/dev/null 2>&1 || true
+  /bin/kill "$service" >/dev/null 2>&1 || true
+  /bin/kill "$listener" >/dev/null 2>&1 || true
+
+  for _ in {1..15}; do
+    if ! /bin/kill -0 "$listener" >/dev/null 2>&1 \
+      && ! /bin/kill -0 "$service" >/dev/null 2>&1 \
+      && ! /bin/kill -0 "$wrapper" >/dev/null 2>&1; then
+      log "RUNNER_TREE_STOP_PASS=YES wrapper=$wrapper service=$service listener=$listener"
+      return 0
+    fi
+    /bin/sleep 1
+  done
+
+  if runner_worker_alive; then
+    err "RUNNER_TREE_FORCE_ABORT=WORKER_APPEARED"
+    return 1
+  fi
+
+  for pid in "$listener" "$service" "$wrapper"; do
+    if /bin/kill -0 "$pid" >/dev/null 2>&1; then
+      command="$(/bin/ps -p "$pid" -o command= 2>/dev/null || true)"
+      case "$pid" in
+        "$listener")
+          printf '%s' "$command" | /usr/bin/grep -F "$RUNNER/bin/Runner.Listener run --startuptype service" >/dev/null || return 1
+          ;;
+        "$service")
+          [ "$command" = "./externals/node20/bin/node ./bin/RunnerService.js" ] || return 1
+          ;;
+        "$wrapper")
+          [ "$command" = "/bin/bash ./runsvc.sh" ] || return 1
+          ;;
+      esac
+      /bin/kill -9 "$pid" >/dev/null 2>&1 || true
+    fi
+  done
+  /bin/sleep 2
+
+  if /bin/kill -0 "$listener" >/dev/null 2>&1 \
+    || /bin/kill -0 "$service" >/dev/null 2>&1 \
+    || /bin/kill -0 "$wrapper" >/dev/null 2>&1; then
+    err "RUNNER_TREE_STOP_PASS=NO wrapper=$wrapper service=$service listener=$listener"
+    return 1
+  fi
+
+  log "RUNNER_TREE_STOP_PASS=YES wrapper=$wrapper service=$service listener=$listener forced=YES"
+  return 0
+}
+
 reset_runner_hang_state() {
   printf 'pid=\nstreak=0\n' >"$RUNNER_HANG_FILE"
 }
@@ -219,11 +316,8 @@ start_runner() {
     fi
   fi
 
-  if [ "$force_restart" = "YES" ]; then
-    /bin/ps -axo pid=,command= 2>/dev/null       | /usr/bin/grep -F "$RUNNER/"       | /usr/bin/grep -E 'runsvc\.sh|Runner\.Listener|Runner\.Worker'       | /usr/bin/grep -v grep       | while read -r pid _rest; do
-          [ -n "$pid" ] && /bin/kill "$pid" >/dev/null 2>&1 || true
-        done
-    /bin/sleep 2
+  if [ "$force_restart" = "YES" ] && runner_alive; then
+    stop_runner_service_tree || return 1
   fi
 
   if runner_alive; then
