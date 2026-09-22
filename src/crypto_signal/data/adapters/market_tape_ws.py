@@ -231,7 +231,7 @@ def _json_message(message: str | bytes) -> dict[str, object]:
         message = message.decode("utf-8")
     parsed = json.loads(message)
     if not isinstance(parsed, dict):
-        raise ValueError("market WebSocket message must be a JSON object")
+        raise TypeError("market WebSocket message must be a JSON object")
     return cast(dict[str, object], parsed)
 
 
@@ -246,7 +246,7 @@ def _require_upper_symbol(symbol: str) -> None:
 
 def _validate_depth_rows(value: object, label: str) -> None:
     if not isinstance(value, list):
-        raise ValueError(f"{label} must be a list")
+        raise TypeError(f"{label} must be a list")
     for row in value:
         if not isinstance(row, list) or len(row) < 2:
             raise ValueError(f"{label} row is incomplete")
