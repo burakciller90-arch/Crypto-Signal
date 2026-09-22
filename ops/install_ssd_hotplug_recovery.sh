@@ -19,6 +19,7 @@ LEGACY_RUNNER_LABELS=(
   "com.cryptosignal.github-runner-terminal-watchdog"
   "com.cryptosignal.github-runner-ssd"
   "actions.runner.burakciller90-arch-Crypto-Signal.crypto-signal-uid504"
+  "com.cryptosignal.github-runner-r15-service"
 )
 
 if [ "$(id -u)" != "504" ]; then
