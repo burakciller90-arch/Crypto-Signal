@@ -10,7 +10,6 @@ CONTROL="/Users/crypto-signal-agent/.crypto-signal-runtime"
 PID_FILE="$CONTROL/market-tape-supervisor.pid"
 STOP_FILE="$CONTROL/market-tape-supervisor.stop"
 LOG_DIR="/Users/crypto-signal-agent/Library/Logs/CryptoSignal"
-LOG="$LOG_DIR/market-tape-supervisor.log"
 
 if [ "$(id -u)" != "$UID_EXPECTED" ]; then
   echo "MARKET_TAPE_SUPERVISOR_START_ERROR=UID_MISMATCH expected=$UID_EXPECTED actual=$(id -u)" >&2
@@ -39,24 +38,20 @@ if [ -s "$PID_FILE" ]; then
 fi
 
 unset RUNNER_TRACKING_ID || true
-nohup "$PYTHON" "$SUPERVISOR" >>"$LOG" 2>&1 </dev/null &
-launcher_pid=$!
+"$PYTHON" "$SUPERVISOR" --daemonize
 
 for _ in {1..20}; do
   if [ -s "$PID_FILE" ]; then
     supervisor_pid="$(cat "$PID_FILE")"
     if kill -0 "$supervisor_pid" 2>/dev/null; then
-      echo "MARKET_TAPE_SUPERVISOR_START_PASS=YES pid=$supervisor_pid launcher_pid=$launcher_pid"
+      echo "MARKET_TAPE_SUPERVISOR_START_PASS=YES pid=$supervisor_pid"
       echo "REAL_CAPITAL=0"
       exit 0
     fi
-  fi
-  if ! kill -0 "$launcher_pid" 2>/dev/null; then
-    break
   fi
   sleep 1
 done
 
 echo "MARKET_TAPE_SUPERVISOR_START_ERROR=PROCESS_DID_NOT_STABILIZE" >&2
-tail -80 "$LOG" >&2 || true
+tail -80 "$LOG_DIR/market-tape-supervisor.log" >&2 || true
 exit 76
