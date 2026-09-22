@@ -52,7 +52,7 @@ jobs:
           set -euo pipefail
           cmd="$(printf '%s\n' "$ISSUE_BODY" | awk -F: 'tolower($1)=="command" {gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2); print tolower($2); exit}')"
           case "$cmd" in
-            status|repo|services|disk|externaldisk|hostdiag|audiorestart|audioadminrestart|loadtree|loadtree2|bginventory|bgsafecheck|cryptomigrationdiag|cryptomigrationdiag2|cryptodashboarddiag|cryptorunnertree|cryptorunnercutoverdiag|cryptossdrunnerps|uidsudo|uid504runneradminstart|uid504runnerguiadminstart|cryptofinalaudit|cryptofinaladmincleanup|cryptofinalterminalcleanup|crypto504grant501)
+            status|repo|services|disk|externaldisk|hostdiag|audiorestart|audioadminrestart|loadtree|loadtree2|bginventory|bgsafecheck|cryptomigrationdiag|cryptomigrationdiag2|cryptodashboarddiag|cryptorunnertree|cryptorunnercutoverdiag|cryptossdrunnerps|uidsudo|uid504runneradminstart|uid504runnerguiadminstart|cryptofinalaudit|cryptofinaladmincleanup|cryptofinalterminalcleanup|crypto504grant501|coldarchivecheck)
               ;;
             *)
               echo "Unsupported command: $cmd"
@@ -800,3 +800,158 @@ jobs:
 
           echo "BACKGROUND_SAFE_CHECK_PASS=YES"
           exit 0
+
+      - name: COLD ARCHIVE READONLY
+        if: steps.parse.outputs.command == 'coldarchivecheck'
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          COLD="$ROOT/MarketTapeCold"
+          HOT="$ROOT/Development/runtime/market_tape"
+          STABLE="$ROOT/MarketTape"
+          PY="$ROOT/RuntimeEnvs/market-tape-cold/bin/python"
+          RAW="$HOT/raw_market_tape.sqlite3"
+          NORM="$HOT/market_tape.sqlite3"
+          STATUS="$HOT/runtime_status.json"
+          SUP_STATUS="$HOT/supervisor_status.json"
+
+          test "$(id -u)" = "501"
+          test -d "$ROOT"
+          test -d "$COLD"
+          test -x "$PY"
+          test -f "$RAW"
+          test -f "$NORM"
+          test -f "$STATUS"
+          test -f "$SUP_STATUS"
+          test -f "$STABLE/BUILD_COMMIT"
+
+          echo "=== COLD MANIFEST INVENTORY ==="
+          mapfile -t manifests < <(/usr/bin/find "$COLD" -type f -name manifest.json -print | /usr/bin/sort)
+          echo "COLD_MANIFEST_COUNT=${#manifests[@]}"
+          if [ "${#manifests[@]}" -eq 0 ]; then
+            echo "FIRST_REAL_COLD_PARTITION_PRESENT=NO"
+            exit 70
+          fi
+          first="${manifests[0]}"
+          last_index=$((${#manifests[@]} - 1))
+          last="${manifests[$last_index]}"
+          echo "FIRST_MANIFEST=$first"
+          echo "LATEST_MANIFEST=$last"
+
+          echo "=== PARTIAL DIRECTORY CHECK ==="
+          partial_count="$(/usr/bin/find "$COLD" -type d -name '.*.partial-*' -print | /usr/bin/tee /tmp/crypto-cold-partials.txt | /usr/bin/wc -l | /usr/bin/tr -d ' ')"
+          echo "COLD_PARTIAL_DIRECTORY_COUNT=$partial_count"
+          test "$partial_count" = "0"
+
+          echo "=== VERIFY EARLIEST + LATEST PARTITIONS ==="
+          /usr/bin/sudo -n -H -u crypto-signal-agent /usr/bin/env             HOME=/Users/crypto-signal-agent             PYTHONPATH="$STABLE/src"             COLD_FIRST="$first"             COLD_LAST="$last"             RAW_DB="$RAW"             NORM_DB="$NORM"             STATUS_JSON="$STATUS"             SUP_STATUS_JSON="$SUP_STATUS"             "$PY" - <<'PY'
+          from __future__ import annotations
+          import json
+          import os
+          import sqlite3
+          import time
+          from pathlib import Path
+
+          from crypto_signal.data.market_tape_cold_archive import verify_cold_partition
+
+          first_manifest = Path(os.environ["COLD_FIRST"])
+          last_manifest = Path(os.environ["COLD_LAST"])
+          raw_db = Path(os.environ["RAW_DB"])
+          norm_db = Path(os.environ["NORM_DB"])
+
+          def verify(label: str, manifest_path: Path) -> dict:
+              partition = manifest_path.parent
+              payload = verify_cold_partition(partition)
+              rows = {
+                  key: int(meta["rows"])
+                  for key, meta in payload["tables"].items()
+              }
+              total = sum(rows.values())
+              print(
+                  f"{label}_PARTITION_ID={payload['partition_id']} "
+                  f"WINDOW_START_MS={payload['window_start_ms']} "
+                  f"WINDOW_END_MS={payload['window_end_ms']} "
+                  f"TOTAL_ROWS={total} TABLE_ROWS={json.dumps(rows, sort_keys=True)}"
+              )
+              assert total > 0
+              return payload
+
+          first = verify("FIRST", first_manifest)
+          if last_manifest != first_manifest:
+              verify("LATEST", last_manifest)
+
+          def ro_count(db: Path, table: str, start_ms: int, end_ms: int) -> int:
+              con = sqlite3.connect(f"file:{db}?mode=ro", uri=True, timeout=10.0)
+              try:
+                  con.execute("PRAGMA query_only=ON")
+                  check = con.execute("PRAGMA quick_check").fetchone()
+                  assert check and str(check[0]) == "ok"
+                  return int(
+                      con.execute(
+                          f"SELECT COUNT(*) FROM {table} WHERE event_at_ms >= ? AND event_at_ms < ?",
+                          (start_ms, end_ms),
+                      ).fetchone()[0]
+                  )
+              finally:
+                  con.close()
+
+          start = int(first["window_start_ms"])
+          end = int(first["window_end_ms"])
+          hot_counts = {
+              "raw": ro_count(raw_db, "raw_market_events", start, end),
+              "orderbooks": ro_count(norm_db, "market_tape_orderbooks", start, end),
+              "trades": ro_count(norm_db, "market_tape_trades", start, end),
+              "derivatives": ro_count(norm_db, "market_tape_derivatives", start, end),
+          }
+          print("FIRST_PARTITION_HOT_REMAINDER=" + json.dumps(hot_counts, sort_keys=True))
+          assert sum(hot_counts.values()) == 0
+
+          runtime = json.loads(Path(os.environ["STATUS_JSON"]).read_text())
+          supervisor = json.loads(Path(os.environ["SUP_STATUS_JSON"]).read_text())
+          now = int(time.time())
+          print("RUNTIME_STATUS=" + json.dumps(runtime, sort_keys=True))
+          print("SUPERVISOR_STATUS=" + json.dumps(supervisor, sort_keys=True))
+          assert runtime["state"] in {"collecting_chunk", "collecting"}
+          assert runtime["real_capital"] == 0
+          assert runtime["capacity_decision"] == "collect"
+          assert int(runtime["cold_bytes"]) > 0
+          assert int(runtime["hot_bytes"]) < 25 * 1024**3
+          assert int(runtime["cold_bytes"]) < 600 * 1024**3
+          assert int(runtime["free_bytes"]) > 250 * 1024**3
+          assert now - int(runtime["updated_at_epoch"]) <= 120
+          assert supervisor["state"] == "running"
+          assert supervisor["real_capital"] == 0
+          assert now - int(supervisor["updated_at_epoch"]) <= 120
+
+          print("FIRST_REAL_COLD_PARTITION_VERIFY_PASS=YES")
+          print("REAL_CAPITAL=0")
+          PY
+
+          echo "=== CURRENT TOPOLOGY ==="
+          /usr/bin/sudo -n -H -u crypto-signal-agent /bin/bash <<'SH'
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          STABLE="$ROOT/MarketTape"
+          TOP_SCRIPT="$ROOT/ssd-service-supervisor.sh"
+          MT_SUP="$STABLE/ops/market_tape/run_market_tape_supervisor.py"
+          MT_RUNTIME="$STABLE/ops/run_market_tape_runtime.py"
+          top_count="$(ps -axo user=,command= | awk -v u="crypto-signal-agent" -v n="$TOP_SCRIPT" '$1==u && index($0,n)>0 {c++} END{print c+0}')"
+          sup_count="$(ps -axo user=,command= | awk -v u="crypto-signal-agent" -v n="$MT_SUP" '$1==u && index($0,n)>0 {c++} END{print c+0}')"
+          run_count="$(ps -axo user=,command= | awk -v u="crypto-signal-agent" -v n="$MT_RUNTIME" '$1==u && index($0,n)>0 {c++} END{print c+0}')"
+          echo "SSD_SUPERVISOR_COUNT=$top_count"
+          echo "MARKET_TAPE_SUPERVISOR_COUNT=$sup_count"
+          echo "MARKET_TAPE_RUNTIME_COUNT=$run_count"
+          test "$top_count" = "1"
+          test "$sup_count" = "1"
+          test "$run_count" = "1"
+          SH
+
+          echo "=== DASHBOARD SAFETY ==="
+          /usr/bin/curl -fsS --max-time 5 http://127.0.0.1:48700/api/health |             /usr/bin/python3 -c 'import json,sys; d=json.load(sys.stdin); print(d); assert d["status"]=="ok"; assert d["real_capital"]==0; assert d["read_only"] is True'
+
+          echo "=== CAPACITY ==="
+          /bin/df -h "$ROOT"
+          /usr/bin/du -sh "$HOT" "$COLD" 2>/dev/null || true
+          echo "COLD_ARCHIVE_READONLY_PASS=YES"
+          echo "REAL_CAPITAL=0"
