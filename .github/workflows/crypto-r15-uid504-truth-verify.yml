@@ -1,0 +1,53 @@
+name: Crypto R15 UID504 Truth Verify
+
+on:
+  push:
+    branches:
+      - r15-ssd-hotplug-recovery-v1
+    paths:
+      - ".github/workflows/crypto-r15-uid504-truth-verify.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: [self-hosted, crypto-signal, uid501]
+    timeout-minutes: 10
+    steps:
+      - name: UID504 state launchd health sqlite
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          LOCAL="/Users/crypto-signal-agent/Library/Application Support/CryptoSignalRecovery"
+
+          echo "=== UID504 ID ==="
+          sudo -n -H -u crypto-signal-agent /usr/bin/id
+
+          echo "=== STATE ==="
+          sudo -n -H -u crypto-signal-agent /bin/cat "$LOCAL/ssd-state" || true
+
+          echo "=== HOTPLUG LAUNCHAGENT ==="
+          sudo -n -H -u crypto-signal-agent /bin/launchctl print gui/504/com.cryptosignal.ssd-hotplug-recovery 2>&1 | head -220 || true
+
+          echo "=== HEALTH ==="
+          sudo -n -H -u crypto-signal-agent /usr/bin/curl -fsS --max-time 5 http://127.0.0.1:48700/api/health || true
+          echo
+
+          echo "=== SQLITE AS UID504 ==="
+          for db in             "$ROOT/Development/runtime/ledger/live_signal_ledger.sqlite3"             "$ROOT/Development/runtime/data/live_base_15m_cache.sqlite3"             "$ROOT/Development/runtime/paper/paper_fund.sqlite3"             "$ROOT/Development/runtime/alerts/alert_outbox.sqlite3"
+          do
+            echo "--- $db"
+            sudo -n -H -u crypto-signal-agent /usr/bin/sqlite3 "$db" 'PRAGMA quick_check;' || true
+          done
+
+          echo "=== WATCHDOG FILES ==="
+          sudo -n -H -u crypto-signal-agent /bin/ls -l "$LOCAL/hotplug-watchdog.sh" "$LOCAL/ssd-state" || true
+
+          echo "=== WATCHDOG LOG TAIL ==="
+          sudo -n -H -u crypto-signal-agent /usr/bin/tail -120 "/Users/crypto-signal-agent/Library/Logs/CryptoSignalRecovery/hotplug-watchdog.log" || true
+          echo "=== WATCHDOG ERR TAIL ==="
+          sudo -n -H -u crypto-signal-agent /usr/bin/tail -120 "/Users/crypto-signal-agent/Library/Logs/CryptoSignalRecovery/hotplug-watchdog.err.log" || true
+
+          echo "R15_UID504_TRUTH_VERIFY_DONE=YES"
