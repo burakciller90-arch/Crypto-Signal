@@ -1,0 +1,54 @@
+name: Crypto R15 Startup Permission Probe
+
+on:
+  push:
+    branches:
+      - r15-ssd-hotplug-recovery-v1
+    paths:
+      - ".github/workflows/crypto-r15-startup-permission-probe.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    name: Probe UID504 startup filesystem and launchagent stderr
+    runs-on: [self-hosted, crypto-signal, uid501]
+    timeout-minutes: 10
+    steps:
+      - name: Inspect as UID504
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo -n -H -u crypto-signal-agent /bin/bash <<'SH'
+          set +e
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          RUNNER="$ROOT/Runner"
+          LOGS="$ROOT/RunnerLogs"
+          LOCALLOG="$HOME/Library/Logs/CryptoSignalRecovery"
+
+          echo "=== PATH OWNERSHIP ==="
+          ls -ldOe "/Volumes/Crypto-504" "$ROOT" "$RUNNER" "$LOGS" 2>&1
+
+          echo "=== WRITABILITY ==="
+          for p in "/Volumes/Crypto-504" "$ROOT" "$RUNNER" "$LOGS"; do
+            if [ -w "$p" ]; then echo "WRITABLE=YES path=$p"; else echo "WRITABLE=NO path=$p"; fi
+          done
+
+          echo "=== RUNSVC ==="
+          ls -lOe "$RUNNER/runsvc.sh" 2>&1
+          test -x "$RUNNER/runsvc.sh"; echo "RUNSVC_EXEC_RC=$?"
+
+          echo "=== LAUNCHAGENT STDERR ==="
+          tail -260 "$LOCALLOG/launchagent.err.log" 2>&1
+
+          echo "=== LAUNCHAGENT STDOUT ==="
+          tail -120 "$LOCALLOG/launchagent.out.log" 2>&1
+
+          echo "=== HOTPLUG WATCHDOG ERR ==="
+          tail -200 "$LOCALLOG/hotplug-watchdog.err.log" 2>&1
+
+          echo "=== ROOT LISTING ==="
+          ls -la "$ROOT" 2>&1 | head -120
+          echo "R15_STARTUP_PERMISSION_PROBE_DONE=YES"
+          SH
