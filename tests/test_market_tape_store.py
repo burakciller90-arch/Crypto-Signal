@@ -182,3 +182,88 @@ def test_market_tape_read_limit_is_bounded(tmp_path) -> None:
         limit=2,
     )
     assert tuple(item.exec_id for item in recent) == ("trade-3", "trade-4")
+
+
+def test_market_tape_deduplicates_same_exchange_trade_seen_later(tmp_path) -> None:
+    store = MarketTapeStore(tmp_path / "market_tape.sqlite3")
+    first = build_public_trade_observation(
+        exchange=Exchange.BYBIT,
+        market_type=MarketType.SPOT,
+        symbol="BTCUSDT",
+        exec_id="stable-exec",
+        sequence=99,
+        aggressor_side=AggressorSide.BUY,
+        price=Decimal("100.5"),
+        size=Decimal("0.25"),
+        event_at_ms=10_000,
+        source_timestamp_ms=10_010,
+        ingested_at_ms=10_020,
+        is_block_trade=False,
+        is_rpi_trade=False,
+        source=DataSource.REST,
+        adapter_version="test-trade/1",
+    )
+    later_poll = build_public_trade_observation(
+        exchange=Exchange.BYBIT,
+        market_type=MarketType.SPOT,
+        symbol="BTCUSDT",
+        exec_id="stable-exec",
+        sequence=99,
+        aggressor_side=AggressorSide.BUY,
+        price=Decimal("100.5"),
+        size=Decimal("0.25"),
+        event_at_ms=10_000,
+        source_timestamp_ms=10_110,
+        ingested_at_ms=10_120,
+        is_block_trade=False,
+        is_rpi_trade=False,
+        source=DataSource.REST,
+        adapter_version="test-trade/1",
+    )
+
+    assert first.trade_identity != later_poll.trade_identity
+    assert store.append_trade(first) is MarketTapeWriteDisposition.INSERTED
+    assert store.append_trade(later_poll) is MarketTapeWriteDisposition.UNCHANGED
+    assert store.counts().trades == 1
+
+
+def test_market_tape_deduplicates_replayed_historical_oi_row(tmp_path) -> None:
+    store = MarketTapeStore(tmp_path / "market_tape.sqlite3")
+    first = build_derivatives_observation(
+        exchange=Exchange.BYBIT,
+        instrument_type=DerivativesInstrumentType.LINEAR_PERPETUAL,
+        symbol="BTCUSDT",
+        event_at_ms=20_000,
+        funding_rate=None,
+        open_interest=Decimal("1234"),
+        mark_price=None,
+        index_price=None,
+        funding_interval_hours=None,
+        source=DataSource.REST,
+        source_timestamp_ms=20_100,
+        ingested_at_ms=20_110,
+        adapter_version="test-derivatives/1",
+    )
+    later_poll = build_derivatives_observation(
+        exchange=Exchange.BYBIT,
+        instrument_type=DerivativesInstrumentType.LINEAR_PERPETUAL,
+        symbol="BTCUSDT",
+        event_at_ms=20_000,
+        funding_rate=None,
+        open_interest=Decimal("1234"),
+        mark_price=None,
+        index_price=None,
+        funding_interval_hours=None,
+        source=DataSource.REST,
+        source_timestamp_ms=20_500,
+        ingested_at_ms=20_510,
+        adapter_version="test-derivatives/1",
+    )
+
+    assert first.observation_identity != later_poll.observation_identity
+    assert store.append_derivatives(first) is MarketTapeWriteDisposition.INSERTED
+    assert (
+        store.append_derivatives(later_poll)
+        is MarketTapeWriteDisposition.UNCHANGED
+    )
+    assert store.counts().derivatives == 1
