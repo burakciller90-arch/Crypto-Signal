@@ -3781,3 +3781,48 @@ No production UI deploy/cutover occurred. REAL_CAPITAL=0.
 
 The remaining Product development frontier is accessibility/responsive/reduced-motion/
 performance polish, followed by the separately authorized production UI cutover gate.
+
+
+---
+
+## 2026-09-22 — M2 LIQUIDATION HOT/COLD SLICE 6B ACCEPTED / STACKED
+
+The disabled-by-default liquidation stack is now integrated with the accepted Hot SQLite
+-> Cold Parquet/Zstd architecture in development only.
+
+Accepted cold archive contract:
+- new partitions use `market-tape-cold-parquet-v1/2`;
+- `liquidations.parquet` persists observed liquidation events;
+- `liquidation_coverage.parquet` persists exact feed-coverage evidence;
+- liquidation events partition by `event_at_ms`;
+- coverage partitions by `coverage_end_ms`;
+- legacy v1/1 partitions remain verifiable and immutable;
+- late liquidation evidence absent from a legacy immutable partition fails closed before
+  any hot prune;
+- verified Parquet write/readback/row digest/file SHA/manifest still precedes hot prune.
+
+Accepted cold PIT replay:
+- exact persisted `coverage_identity`;
+- explicit `as_of_ms`;
+- future coverage rejected;
+- cross-hour event composition;
+- same exchange/instrument/symbol context;
+- event/source/ingest cutoff enforcement;
+- deterministic event order;
+- zero-event replay only with persisted coverage.
+
+Acceptance evidence:
+- PR #813;
+- authoritative hosted run `35789322789`;
+- focused Hot/Cold + liquidation tests PASS;
+- real PyArrow 22.0.0 exercised Parquet paths;
+- Ruff PASS;
+- focused mypy PASS;
+- full repository pytest/Ruff/mypy/JS/freshness PASS;
+- temporary workflow removed after PASS.
+
+No production collector activation, live SSD Market Tape mutation, launchd/supervisor change
+or production deployment occurred. REAL_CAPITAL=0.
+
+Next: consolidate all accepted M2 slices onto current main, run integrated hosted acceptance,
+then advance to M3 Order Flow / Absorption 2.0.
