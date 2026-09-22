@@ -35,7 +35,7 @@ __all__ = [
 ]
 
 PAPER_SIGNAL_EVENT_SCANNER_VERSION = "paper_signal_event_scanner.v2"
-_REQUIRED_TIMEFRAME = "4h"
+_DEFAULT_TIMEFRAME = "4h"\n_SUPPORTED_TIMEFRAMES = frozenset({"1h", "4h"})
 _REQUIRED_MARKET_TYPE = MarketType.SPOT
 _PROVIDER_ORDER = (Exchange.BINANCE, Exchange.BYBIT)
 
@@ -222,7 +222,7 @@ def scan_post_activation_signal_events(
             activation_identity=activation.activation_identity,
             source_freeze_identities=source_ids,
             symbol=symbol,
-            timeframe=_REQUIRED_TIMEFRAME,
+            timeframe=timeframe,
             signal_as_of_ms=signal_as_of_ms,
         )
         if event_identity in processed:
@@ -234,7 +234,7 @@ def scan_post_activation_signal_events(
                 scanner_version=PAPER_SIGNAL_EVENT_SCANNER_VERSION,
                 activation_identity=activation.activation_identity,
                 symbol=symbol,
-                timeframe=_REQUIRED_TIMEFRAME,
+                timeframe=timeframe,
                 signal_as_of_ms=signal_as_of_ms,
                 source_cutoff_open_time_ms=source_cutoff_open_time_ms,
                 provider_signal_as_of_ms=provider_signal_as_of_ms,
@@ -319,7 +319,7 @@ def _read_eligible_freezes(
                 """,
                 (
                     _REQUIRED_MARKET_TYPE.value,
-                    _REQUIRED_TIMEFRAME,
+                    timeframe,
                     Exchange.BINANCE.value,
                     Exchange.BYBIT.value,
                     *(symbol.value for symbol in sorted(
@@ -370,7 +370,7 @@ def _read_eligible_freezes(
             or decision.exchange is not exchange
             or decision.market_type is not _REQUIRED_MARKET_TYPE
             or decision.symbol != symbol.value
-            or decision.timeframe != _REQUIRED_TIMEFRAME
+            or decision.timeframe != timeframe
             or decision.as_of_ms != as_of_ms
             or decision.state.value != indexed_state
             or decision.direction.value != indexed_direction
