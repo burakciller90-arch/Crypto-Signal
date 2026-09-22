@@ -103,6 +103,7 @@ p { color: var(--muted); line-height: 1.65; }
   margin-top: auto; padding: 18px 20px 22px; border-top: 1px solid var(--line);
 }
 .rail-safety .mono { margin: 8px 0 6px; color: var(--emerald); font-size: .69rem; }
+.simulation-truth { margin-top: 8px; color: var(--emerald); font-size: .62rem; font-weight: 800; letter-spacing: .08em; line-height: 1.35; }
 .rail-safety p { margin: 0; font-size: .68rem; line-height: 1.45; }
 .safety-beacon { font-size: .64rem; letter-spacing: .13em; color: var(--emerald); font-weight: 800; }
 .safety-beacon span, .pulse-dot {
