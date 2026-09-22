@@ -1,5 +1,22 @@
 # Crypto Signal v1.1+ — MASTER EXECUTION ROADMAP
 
+> ## LOCKED ROADMAP OVERRIDE — 2026-09-22
+>
+> The user-approved canonical post-v1.0 product contract is now
+> **`docs/V1_1_LOCKED_MASTER_ROADMAP_20260922.md`**.
+> New agents must read that file before using the historical execution detail below.
+> It supersedes conflicting older v1.1 scope, specifically:
+> - Paper Fund Epoch 1 remains immutable at 100 USDT; **Epoch 2 starts separately at 1,000 USDT**;
+> - execution is now **three parallel rails: Intelligence / Capital-Science / Product**;
+> - the existing frontend is not the target; the Product rail is a **from-scratch GALACTECH // CRYPTO SIGNAL rebuild**;
+> - M2–M5 are expanded with liquidation-map, bounded spoofing/iceberg candidates, deeper order-flow/derivatives, PIT wallet cohorts and Event/NLP risk;
+> - Smart Capital Allocator begins as a 600/300/100 Core/Tactical/Reserve research policy;
+> - R19 calibration remains mandatory before user-visible probability or Kelly-based sizing;
+> - safe development may continue autonomously, but new production/human-impact mutations remain separately gated.
+>
+> Historical R15/M1/M2 evidence retained below is still valuable, but stale "current" statements must be reconciled against `CURRENT_STATUS.md` and live mechanical state.
+>
+
 Status: **governing post-v1.0 execution plan**
 Updated: **2026-09-22**
 Baseline release: **crypto-signal-full-version-v1.0.0**
