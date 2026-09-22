@@ -1,5 +1,8 @@
 # Crypto Signal — Project Completion Execution Roadmap
 
+> **Active post-v1.0 development:** read `docs/V1_1_MASTER_EXECUTION_ROADMAP.md` before planning or changing v1.1+ state. It is the governing agent-handoff plan for R15 runtime recovery, parallel UI/Market Tape work, Decision Proof / Live Intelligence Feed, Canonical Fund vs Shadow Lab, calibration, acceptance and v2 deferrals.
+
+
 Status: authoritative execution roadmap for completing the Full Version while preserving existing accepted evidence.
 
 Date established: 2026-09-21
