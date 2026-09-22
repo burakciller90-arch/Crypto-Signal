@@ -140,31 +140,31 @@ def test_temporal_liquidity_metrics_are_deterministic_and_frozen() -> None:
     assert metrics.transition_count == 2
     assert metrics.duration_ms == 2_000
 
-    assert metrics.first_bid_depth_notional == Decimal("299")
-    assert metrics.last_bid_depth_notional == Decimal("296")
-    assert metrics.first_ask_depth_notional == Decimal("203")
+    assert metrics.first_bid_depth_notional == Decimal(299)
+    assert metrics.last_bid_depth_notional == Decimal(296)
+    assert metrics.first_ask_depth_notional == Decimal(203)
     assert metrics.last_ask_depth_notional == Decimal("253.5")
 
-    assert metrics.gross_bid_added_notional == Decimal("296")
-    assert metrics.gross_bid_removed_notional == Decimal("299")
-    assert metrics.gross_ask_added_notional == Decimal("306")
+    assert metrics.gross_bid_added_notional == Decimal(296)
+    assert metrics.gross_bid_removed_notional == Decimal(299)
+    assert metrics.gross_ask_added_notional == Decimal(306)
     assert metrics.gross_ask_removed_notional == Decimal("255.5")
-    assert metrics.net_bid_depth_change_notional == Decimal("-3")
+    assert metrics.net_bid_depth_change_notional == Decimal(-3)
     assert metrics.net_ask_depth_change_notional == Decimal("50.5")
 
-    assert metrics.bid_added_notional_per_second == Decimal("148")
+    assert metrics.bid_added_notional_per_second == Decimal(148)
     assert metrics.bid_removed_notional_per_second == Decimal("149.5")
-    assert metrics.ask_added_notional_per_second == Decimal("153")
+    assert metrics.ask_added_notional_per_second == Decimal(153)
     assert metrics.ask_removed_notional_per_second == Decimal("127.75")
     assert metrics.bid_depth_change_notional_per_second == Decimal("-1.5")
     assert metrics.ask_depth_change_notional_per_second == Decimal("25.25")
 
-    assert metrics.best_bid_depletion_notional == Decimal("200")
-    assert metrics.best_bid_replenishment_notional == Decimal("100")
+    assert metrics.best_bid_depletion_notional == Decimal(200)
+    assert metrics.best_bid_replenishment_notional == Decimal(100)
     assert metrics.best_ask_depletion_notional == Decimal("50.5")
-    assert metrics.best_ask_replenishment_notional == Decimal("101")
-    assert metrics.best_bid_price_persistence_fraction == Decimal("1")
-    assert metrics.best_ask_price_persistence_fraction == Decimal("1")
+    assert metrics.best_ask_replenishment_notional == Decimal(101)
+    assert metrics.best_bid_price_persistence_fraction == Decimal(1)
+    assert metrics.best_ask_price_persistence_fraction == Decimal(1)
     assert len(first.analysis.evidence_identity) == 64
     assert len(first.freeze_identity) == 64
 
@@ -241,20 +241,20 @@ def test_future_or_late_ingested_snapshot_cannot_rewrite_historical_freeze() -> 
                 _book(
                     event_at_ms=8_000,
                     sequence=1,
-                    bids=(OrderBookLevel(price=Decimal("100"), size=Decimal("1")),),
-                    asks=(OrderBookLevel(price=Decimal("101"), size=Decimal("1")),),
+                    bids=(OrderBookLevel(price=Decimal(100), size=Decimal(1)),),
+                    asks=(OrderBookLevel(price=Decimal(101), size=Decimal(1)),),
                 ),
                 _book(
                     event_at_ms=9_000,
                     sequence=2,
-                    bids=(OrderBookLevel(price=Decimal("100"), size=Decimal("1")),),
-                    asks=(OrderBookLevel(price=Decimal("101"), size=Decimal("1")),),
+                    bids=(OrderBookLevel(price=Decimal(100), size=Decimal(1)),),
+                    asks=(OrderBookLevel(price=Decimal(101), size=Decimal(1)),),
                 ),
                 _book(
                     event_at_ms=10_000,
                     sequence=3,
-                    bids=(OrderBookLevel(price=Decimal("100"), size=Decimal("1")),),
-                    asks=(OrderBookLevel(price=Decimal("101"), size=Decimal("1")),),
+                    bids=(OrderBookLevel(price=Decimal(100), size=Decimal(1)),),
+                    asks=(OrderBookLevel(price=Decimal(101), size=Decimal(1)),),
                 ),
             ),
             10_050,
