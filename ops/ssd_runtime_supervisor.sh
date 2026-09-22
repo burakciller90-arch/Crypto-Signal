@@ -10,6 +10,13 @@ ALERTS="$ROOT/Alerts"
 PAPER="$ROOT/Paper"
 WRAPPER="$ROOT/ssd-clock-wrapper.py"
 LOGDIR="$ROOT/ServiceLogs"
+MARKET_TAPE="$ROOT/MarketTape"
+MARKET_TAPE_START="$MARKET_TAPE/ops/market_tape/start_market_tape_supervisor.sh"
+MARKET_TAPE_SUPERVISOR="$MARKET_TAPE/ops/market_tape/run_market_tape_supervisor.py"
+MARKET_TAPE_RUNTIME="$MARKET_TAPE/ops/run_market_tape_runtime.py"
+MARKET_TAPE_COLD_PYTHON="$ROOT/RuntimeEnvs/market-tape-cold/bin/python"
+MARKET_TAPE_CONTROL="/Users/crypto-signal-agent/.crypto-signal-runtime"
+MARKET_TAPE_PIDFILE="$MARKET_TAPE_CONTROL/market-tape-supervisor.pid"
 
 for required in "$DEV" "$LIVE" "$PRODUCT" "$ALERTS" "$PAPER"; do
   if [ ! -d "$required" ]; then
@@ -75,6 +82,57 @@ start_dashboard() {
   echo "$(date '+%Y-%m-%d %H:%M:%S %z') dashboard_started pid=$pid"
 }
 
+market_tape_supervisor_pid_is_expected() {
+  local pid="$1"
+  [ -n "$pid" ] || return 1
+  kill -0 "$pid" >/dev/null 2>&1 || return 1
+  ps -p "$pid" -o user=,command= 2>/dev/null \
+    | grep -F "crypto-signal-agent" \
+    | grep -F "$MARKET_TAPE_SUPERVISOR" >/dev/null 2>&1
+}
+
+ensure_market_tape_supervisor() {
+  local pid=""
+  if [ -f "$MARKET_TAPE_PIDFILE" ]; then
+    pid="$(cat "$MARKET_TAPE_PIDFILE" 2>/dev/null || true)"
+  fi
+  if market_tape_supervisor_pid_is_expected "$pid"; then
+    return 0
+  fi
+
+  if [ -n "$pid" ]; then
+    echo "$(date '+%Y-%m-%d %H:%M:%S %z') stale_market_tape_supervisor_pid=$pid"
+  fi
+
+  for required in \
+    "$MARKET_TAPE" \
+    "$MARKET_TAPE_START" \
+    "$MARKET_TAPE_SUPERVISOR" \
+    "$MARKET_TAPE_RUNTIME" \
+    "$MARKET_TAPE_COLD_PYTHON"; do
+    if [ ! -e "$required" ]; then
+      echo "$(date '+%Y-%m-%d %H:%M:%S %z') market_tape_not_ready path=$required"
+      return 0
+    fi
+  done
+
+  mkdir -p "$MARKET_TAPE_CONTROL"
+  chmod 700 "$MARKET_TAPE_CONTROL"
+
+  if /bin/bash "$MARKET_TAPE_START" \
+      >>"$LOGDIR/market-tape-bootstrap.out.log" \
+      2>>"$LOGDIR/market-tape-bootstrap.err.log"; then
+    pid="$(cat "$MARKET_TAPE_PIDFILE" 2>/dev/null || true)"
+    if market_tape_supervisor_pid_is_expected "$pid"; then
+      echo "$(date '+%Y-%m-%d %H:%M:%S %z') market_tape_supervisor_ready pid=$pid"
+      return 0
+    fi
+  fi
+
+  echo "$(date '+%Y-%m-%d %H:%M:%S %z') market_tape_supervisor_start_failed"
+  return 0
+}
+
 run_clock() {
   local kind="$1"
   local py="$2"
@@ -106,9 +164,15 @@ trap shutdown TERM INT
 
 last_clock=0
 last_rotation=0
+last_market_tape=0
 while true; do
   start_dashboard
   now="$(date +%s)"
+
+  if [ $((now-last_market_tape)) -ge 30 ]; then
+    ensure_market_tape_supervisor
+    last_market_tape="$now"
+  fi
 
   if [ $((now-last_clock)) -ge 120 ]; then
     run_clock live "$LIVE/.venv/bin/python" "$LIVE/src"
