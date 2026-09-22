@@ -3189,3 +3189,35 @@ installation. A separate read-only status reconcile was issued as GitHub issue #
 
 The user-reaffirmed 20-minute continuity loop remains ACTIVE and must not be disabled
 without an explicit pause/stop instruction. REAL_CAPITAL=0.
+
+
+---
+
+## 2026-09-22 — POST-GALACTECH EXACT-MAIN HOSTED ACCEPTANCE PASS
+
+After GALACTECH Slice 1 and the v1.1 status/chronicle updates were merged, a UID504
+`fulltest` run (`35776400606`) failed. The failure was reconciled before changing code.
+
+The self-hosted log used stale local Development test assertions from older continuity and
+R14 contracts. Current GitHub main tests were inspected directly and already encode the
+user's current locked 20-minute continuity behavior and v1.1 active status.
+
+To avoid mutating the SSD Development checkout without separate production/human-impact
+authority, an isolated hosted branch was created from exact main
+`5c4dd5b17dcddb344a3892f78d8f26c8ac314dce`.
+
+Authoritative hosted acceptance:
+- run `35776532744`;
+- full pytest PASS;
+- Ruff PASS;
+- mypy PASS across 130 source files;
+- Product JS syntax PASS;
+- Product freshness contract PASS;
+- `EXACT_MAIN_HOSTED_ACCEPTANCE_PASS=YES`.
+
+Conclusion:
+- GitHub main is regression-clean at the accepted SHA;
+- UID504 Development is behind main and requires a later explicitly authorized parity/sync
+  action before any live/runtime acceptance that depends on deployed source parity;
+- no automatic sync/deploy was performed;
+- REAL_CAPITAL=0.
