@@ -9,6 +9,61 @@ REAL_CAPITAL: 0
 
 ## Active v1.1 frontier — read before historical sections
 
+### CONTINUITY — RECEIPT-BOUND ROLLING 20-MINUTE WAKE ACCEPTED
+
+- User requirement: the locked current-chat wake must run on a **rolling 20-minute counter**, not on wall-clock `:00/:20/:40`, and must remain active unless the user explicitly stops/pauses it.
+- Locked wake text structure remains materially unchanged; it now explicitly says the **20 dakikalık mesaj döngüsü** must not be broken unless the user explicitly stops it, and retains `REAL_CAPITAL=0`.
+- PR #791 squash-merged as `0a2a3d26cd282f46574b3c6771d25c411254ff6a`.
+- Authoritative hosted acceptance run `35782108785` PASS:
+  - focused continuity tests PASS;
+  - Ruff PASS;
+  - focused mypy PASS;
+  - full repository pytest/Ruff/mypy PASS;
+  - Product JS/freshness PASS.
+- Runtime owner is now UID504 local `interval_wake_daemon.py`:
+  - `INTERVAL_SECONDS=1200`;
+  - install/reset creates one immediate first event;
+  - the next 20-minute deadline is derived from a **final relay receipt**, not merely an attempt;
+  - failed delivery keeps the same pending event and retries;
+  - `SUBMITTING` is not a final receipt and is crash-recoverable;
+  - pause remains dominant;
+  - SSD/runtime absence waits fail-closed.
+- Self-hosted installer run `35782299633` PASS:
+  - exact chat bound to `https://chatgpt.com/c/6ab2c3c1-30c8-83ed-b1ad-2aa35cc891c9`;
+  - legacy calendar timers disabled;
+  - rolling runtime started;
+  - first event initially entered bounded retry and then reached `ROLLING_WAKE_IMMEDIATE_RECEIPT_PASS=YES`;
+  - `LOCAL_20M_WAKE_MODE=rolling-daemon`;
+  - `GITHUB_20M_ROLE=watchdog-fallback`.
+- A post-install defect was then found mechanically: the first 5-minute scheduled watchdog run `35782321633` had an escaped GitHub event expression and incorrectly entered the manual-wake path. This run is **not** evidence of the final watchdog behavior.
+- PR #793 hotfix squash-merged as `00fdc120d4f42adffaf03adfb07bf5d5108dd8e9`:
+  - scheduled event context now evaluates correctly;
+  - GitHub run-id shell variables expand correctly;
+  - regression tests forbid the escaped forms;
+  - workflow-only edits no longer auto-trigger the installer, so watchdog edits do not reset the rolling timer.
+- Hotfix focused acceptance run `35782951665` PASS.
+- Hotfix did **not** create a new installer run; therefore the live rolling counter was not reset a second time.
+- Read-only bridgestate run `35783207928` observed:
+  - shared current chat = exact locked chat;
+  - local current chat = exact locked chat;
+  - relay `state=RUNNING`;
+  - relay target URL = exact locked chat;
+  - relay heartbeat fresh at 23:53:41 +0300.
+- First corrected scheduled watchdog run `35783370818` PASS with actual output:
+  - `ROLLING_TIMER_HEARTBEAT_AGE_SECONDS=1`;
+  - `GITHUB_WATCHDOG_TIMER_HEALTHY=YES`;
+  - `GITHUB_FALLBACK_SKIPPED=YES`;
+  - no actual wake-attempt marker.
+- Therefore cadence authority is:
+  1. local rolling 1200-second timer;
+  2. receipt-bound retry semantics;
+  3. GitHub 5-minute watchdog/self-heal only;
+  4. emergency direct fallback only if the local timer cannot be healed.
+- Do not restore GitHub schedule as the primary 20-minute cadence owner.
+- Do not restore legacy launchd calendar wake timers.
+- Do not reset/reinstall the rolling timer merely because the watchdog YAML changes.
+- REAL_CAPITAL=0.
+
 ### M2 LIQUIDITY INTELLIGENCE 2.0 — SLICE 4 OBSERVED LIQUIDATION HEATMAP ACCEPTED / STACKED
 
 - PR #789 on `v1.1-liquidation-heatmap-v2-slice4` is accepted on top of accepted M2 Slice 3.
