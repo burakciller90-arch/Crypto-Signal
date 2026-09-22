@@ -110,6 +110,18 @@ def evaluate_hotcold_capacity(
     )
 
 
+def evaluate_archive_headroom(
+    *,
+    snapshot: MarketTapeHotColdSnapshot,
+    policy: MarketTapeHotColdPolicy = DEFAULT_MARKET_TAPE_HOTCOLD_POLICY,
+) -> MarketTapeHotColdDecision:
+    if snapshot.free_bytes - snapshot.hot_bytes <= policy.min_free_bytes:
+        return MarketTapeHotColdDecision.FREE_SPACE_RESERVE_REACHED
+    if snapshot.cold_bytes + snapshot.hot_bytes >= policy.cold_max_bytes:
+        return MarketTapeHotColdDecision.COLD_CAP_REACHED
+    return MarketTapeHotColdDecision.COLLECT
+
+
 def measure_hotcold_capacity(
     *,
     hot_dir: Path,
