@@ -52,3 +52,27 @@ Read this file, then `CURRENT_STATUS.md`, then the newest `PROJECT_CHRONICLE.md`
 ## Current development authority update — 2026-09-20
 
 Cursor is suspended as a development worker by explicit user direction. Do not create new [CURSOR] WORK / ASK tasks unless the user explicitly re-enables Cursor. Continue implementation directly through the supervisor-controlled GitHub/UID504 path, preserving the same test, review, REAL_CAPITAL=0 and rollback boundaries.
+
+
+## Final Full Version release package
+
+R13 Full Version Integrated Acceptance v2 passed on
+`f95efc358ac396e50d0bfdb920b0187706cd2af2` (run `35672790463`).
+
+R14 is the final release/documentation frontier. Before calling the repository
+complete, read and preserve:
+
+- `docs/FINAL_RELEASE_MANIFEST_V1.md`;
+- `docs/OPERATOR_RUNBOOK_FULL_VERSION_V1.md`;
+- `docs/DASHBOARD_OPEN_RECOVERY_GUIDE_V1.md`;
+- `docs/SSD_RECOVERY_BACKUP_GUIDE_V1.md`;
+- `docs/KNOWN_AUTHORITY_GATES_V1.md`.
+
+The canonical release tag is reserved as
+`crypto-signal-full-version-v1.0.0`. R14 is complete only after the
+exact-main release-freeze workflow emits
+`R14_FULL_VERSION_RELEASE_FREEZE_PASS=YES`.
+
+Physical reboot/logout/SSD detach-remount remain explicit human-impact items
+unless separately performed. REAL_CAPITAL=0 and real exchange order/credential
+authority remain closed.
