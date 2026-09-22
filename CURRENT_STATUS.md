@@ -2,9 +2,64 @@
 
 Updated: 2026-09-22
 Project: Crypto Signal
-Phase: Full Version Final Release
-State: R14_RELEASE_CANDIDATE
+Baseline: crypto-signal-full-version-v1.0.0 (immutable)
+Active post-v1.0 program: v1.1 world-class product + market intelligence
+State: DATA_FRESHNESS_RECOVERED / R15_OPERATIONAL_ACCEPTANCE_CLOSED / CONTINUITY_PAUSED / PARALLEL_V1_1_DEVELOPMENT_ACTIVE
 REAL_CAPITAL: 0
+
+## Active v1.1 frontier — read before historical sections
+
+**LOCKED roadmap contract:** `docs/V1_1_LOCKED_MASTER_ROADMAP_20260922.md`.
+
+User-approved changes now governing new work:
+- Paper Fund Epoch 1 (100 USDT) remains immutable legacy history; **Epoch 2 starts separately at 1,000 USDT** after its spec/migration acceptance.
+- Program execution is **three parallel rails: Intelligence / Capital-Science / Product**.
+- Current frontend is not the final visual target; Product is a **from-scratch GALACTECH // CRYPTO SIGNAL rebuild**.
+- Intelligence expands through Liquidity 2.0 (including liquidation-map + bounded spoofing/iceberg candidates), Order Flow/Absorption 2.0, Derivatives 2.0, On-chain/Event/NLP, then Confluence 2.0.
+- Smart Capital Allocator research starts at Core 600 / Tactical 300 / Reserve 100 USDT.
+- R19 calibration is mandatory before user-visible probability and before Kelly sizing research can be eligible for canonical promotion.
+- Safe development autonomy remains; new production/human-impact mutations stay explicitly gated.
+
+
+Governing roadmap: `docs/V1_1_MASTER_EXECUTION_ROADMAP.md`.
+
+Current development map:
+- PR #715 — R15 SSD hot-plug recovery is CLOSED and merged to `main` as squash commit `97eafdcb9810134f8d7b7a4c62a1546d2554e4dc`. Physical detach/remount, orphan-parent recovery, single-owner runner recovery, idempotent watchdog reload and final exact-head regression are accepted. The immutable v1.0.0 release tag remains unchanged.
+- PR #722 — world-class workspace shell + truthful freshness. Draft.
+- PR #723 — untouched-forward calibrated probability foundation. Hosted gate passed. Draft.
+- PR #726 — append-only Market Tape foundation. Hosted full gate run `35718669274` passed. Draft.
+- PR #740 — order-flow / absorption evidence foundation remains open.
+- PR #741 — raw microstructure wire-history preservation remains open and is the accepted data base for M2.
+- PR #762 — M2 Liquidity Dynamics Slice 1. Draft. PIT-safe temporal visible-book dynamics, deterministic evidence/freeze identities and bounded liquidity-take-candidate semantics are hosted/live/persisted-replay accepted.
+- PR #763 — Market Tape Hot/Cold runtime. Draft. Hot SQLite + immutable verified Parquet/Zstd cold archive is operationally live on UID504 under the existing R11 Terminal/TCC recovery owner.
+- Experimental branch `v1.1-paper-active-learning-v1` is unaccepted and must not mutate canonical paper semantics; useful ideas belong in Shadow Lab.
+
+Runtime evidence:
+- **04:00 data-staleness incident is closed.** UID501 localhost diagnostics verified fresh BTC/ETH/SOL 15m and 1h contexts, dashboard health status=ok, ledger_present=true, read_only=true and REAL_CAPITAL=0.
+- **R15 physical SSD detach/remount acceptance is closed.** During the real KIOXIA detach, /dev/disk4 and /Volumes/Crypto-504 disappeared and the dashboard health endpoint became unreachable, so stale SSD evidence was not served.
+- On remount, watchdog evidence recorded SSD_STATE=REMOUNTED. The detach-exposed orphan tree `runsvc.sh PID 65421 -> RunnerService.js PID 65425` was later identified with exact UID/command ancestry plus detach-stale cwd evidence, then stopped with RUNNER_ORPHAN_PARENT_STOP_PASS=YES.
+- Canonical UID504 runner recovery converged to one healthy Listener. Idempotent live acceptance run `35746415162` preserved Listener PID `44162` across two installer reloads while SSD state remained `ready`.
+- UID504 truth verification run `35746575186` passed: uid=504, ssd-state=ready, dashboard status=ok, read_only=true, REAL_CAPITAL=0, and ledger/cache/paper/alert SQLite PRAGMA quick_check all returned ok.
+- Hosted final-tree gate `35747330090` passed. After temporary gate cleanup, exact current PR head `40c66677f78b15e08b0c82ea8a75ca51c1633bf0` passed independent exact-head full regression in run `35747566530`. PR #715 was then squash-merged to `main` as `97eafdcb9810134f8d7b7a4c62a1546d2554e4dc` with exactly three intended files.
+- R15 is the single recovery owner; legacy runner watchdog/service owners remain disabled while their plist files are retained for rollback.
+- UID501 -> UID504 passwordless project-maintenance bridge is active and independently verified after clearing the sudo timestamp. UID501 can execute as `crypto-signal-agent` without a password; passwordless root remains denied.
+- Continuity is currently **PAUSED** by user contract. No continuity resume was performed during R15 recovery.
+- M2 Liquidity Dynamics Slice 1 is accepted in draft PR #762. The Market Tape storage prerequisite is also operationally live through draft PR #763: 24h hot SQLite + 2h grace, hourly verified Parquet/Zstd cold archive, 25 GiB hot cap, 600 GiB cold cap and 250 GiB free-space reserve.
+- Real canonical benchmark measured 7.84x combined SQLite -> Parquet/Zstd compression on the current sample; theoretical 10x-20x ratios are not treated as project facts.
+- Market Tape runtime ownership is single-owner: existing R11 Terminal/TCC-authorized `ssd-service-supervisor.sh` -> Market Tape supervisor -> Hot/Cold runtime. The standalone removable-volume LaunchAgent path is intentionally disabled/fail-closed because macOS TCC blocked it.
+- Final live heartbeat acceptance run `35762628805` PASS and final read-only acceptance `35762906784` PASS: one SSD supervisor, one Market Tape supervisor, one runtime, fresh 30s heartbeats, advancing raw rows, SQLite quick checks, dashboard health `status=ok`, `read_only=true`, REAL_CAPITAL=0.
+- Continuity remains **PAUSED** by user contract. Completed/stale R15 and Market Tape diagnostics must not be replayed.
+
+Product architecture:
+- Track A: world-class UI/UX.
+- Track B: Market Tape -> Liquidity -> Order Flow/Absorption -> Derivatives -> On-chain/Event Risk.
+- Bridge: Forecast Stream + Live Intelligence Feed / **Decision Proof** + frozen evidence archive.
+- Canonical paper history and Shadow Lab are strictly separated. Epoch 1 (100 USDT) is immutable legacy history; accepted Epoch 2 begins separately at 1,000 USDT.
+- v1.1 begins with fixed 20/25/25/15/15 research priors; adaptive weighting is deferred to v2 evidence gates.
+- “Proof-of-Thought” is a user concept name only. The implementation records auditable evidence/decision rationale and never exposes or fabricates private chain-of-thought.
+
+The remainder of this file preserves accepted v1.0 development history and evidence.
+
 
 ## Accepted foundations
 - Phase 0 Environment & Constitution
