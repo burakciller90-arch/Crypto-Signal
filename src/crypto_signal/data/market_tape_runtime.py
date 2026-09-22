@@ -16,8 +16,8 @@ class MarketTapeCapacityDecision(StrEnum):
 
 @dataclass(frozen=True, slots=True)
 class MarketTapeCapacityPolicy:
-    max_tape_bytes: int = 100 * _GIB
-    min_free_bytes: int = 200 * _GIB
+    max_tape_bytes: int = 300 * _GIB
+    min_free_bytes: int = 250 * _GIB
     chunk_messages: int = 100_000
     guard_sleep_seconds: int = 300
 
@@ -97,6 +97,6 @@ def _directory_file_bytes(path: Path) -> int:
         raise ValueError("Market Tape runtime path must be a directory")
     return sum(
         item.stat().st_size
-        for item in path.iterdir()
+        for item in path.rglob("*")
         if item.is_file()
     )
