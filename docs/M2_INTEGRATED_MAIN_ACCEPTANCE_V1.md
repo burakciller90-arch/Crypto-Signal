@@ -70,6 +70,15 @@ The branch is acceptable only if all of the following pass on the exact integrat
 Hosted PASS is development acceptance only. It does not activate the production
 liquidation collector and does not deploy the integrated source to UID504 runtime.
 
+### CLI metadata note
+
+The accepted stacked source stores `ops/run_market_tape_snapshot.py` and
+`ops/run_market_tape_stream.py` with Git mode `100644` despite their Python
+shebangs. Current integration preserves accepted source metadata rather than silently
+changing packaging. Focused Ruff therefore targets library/test Python; the ops runners
+remain covered by focused mypy and repository pytest. Full-repository Ruff uses the
+existing canonical main scope.
+
 ## After PASS
 
 - merge the clean integration PR into current `main`;
