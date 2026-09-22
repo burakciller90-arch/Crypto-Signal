@@ -3589,3 +3589,24 @@ New execution rule:
 
 This is a workflow/governance change only. Product scope, scientific constraints,
 REAL_CAPITAL=0, and production/human-impact gates remain unchanged.
+
+
+---
+
+## 2026-09-23 — CURSOR / COMPOSER DEVELOPMENT PATH REAFFIRMED DISABLED
+
+The user explicitly reaffirmed the project execution rule after observing that previous
+Cursor worker / Composer assignments produced repeated errors and slowed delivery.
+
+Current authority:
+- do not assign coding, review, planning or continuation work to Cursor workers/Composer;
+- do not create new `[CURSOR] WORK` / `[CURSOR] ASK` tasks;
+- do not create or resume `supervisor-*` Cursor worktrees;
+- historical Cursor output remains audit evidence only and is non-authoritative;
+- stale Cursor tasks are reconciled/NOOPed rather than resumed;
+- direct supervisor-controlled GitHub implementation + hosted acceptance + narrow UID504
+  verification remains the active development path.
+
+Historical open issue #18 `[CURSOR] ASK` was closed as not-planned/superseded.
+This execution-policy change does not alter roadmap scope, scientific invariants,
+production/human-impact gates, or REAL_CAPITAL=0.
