@@ -150,6 +150,31 @@ Current M2 safe-development frontier after Slice 6A:
 - Production collector activation remains a separate human-impact gate.
 
 
+### M2 LIQUIDATION HOT/COLD — SLICE 6B ACCEPTED / STACKED
+
+- PR #813 on `v1.1-liquidation-hotcold-v2-slice6b` is accepted on top of accepted Collector Slice 6A.
+- Authoritative hosted acceptance run `35789322789` PASS.
+- Focused Hot/Cold + liquidation tests PASS with real PyArrow 22.0.0.
+- Ruff + focused mypy PASS.
+- Full repository pytest/Ruff/mypy/JS/freshness PASS.
+- Cold archive advances to `market-tape-cold-parquet-v1/2` for new partitions.
+- New cold evidence files:
+  - `liquidations.parquet`;
+  - `liquidation_coverage.parquet`.
+- Legacy cold v1/1 partitions remain verifiable and immutable.
+- Liquidation events partition by `event_at_ms`; coverage partitions by `coverage_end_ms`.
+- A late liquidation/coverage row that is absent from an immutable legacy partition fails closed before hot prune.
+- Cold liquidation replay preserves exact `coverage_identity + as_of_ms` semantics, composes cross-hour events and supports proven zero-event intervals only when persisted coverage exists.
+- Production collector remains disabled; no live SSD Market Tape mutation, supervisor change or production deployment occurred.
+- REAL_CAPITAL=0.
+
+Current M2 frontier:
+- consolidate all accepted M2 slices onto current main in one clean integration branch;
+- run integrated M2 + full repository hosted acceptance;
+- only after that close M2 and start M3 Order Flow / Absorption 2.0.
+- Production liquidation collector activation remains a separate explicit human-impact gate.
+
+
 ### GALACTECH CAPITAL CENTER — SLICE 1 MERGED TO MAIN
 
 - PR #788 hosted acceptance run `35778976263` PASS.
