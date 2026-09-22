@@ -57,6 +57,24 @@ def test_relay_is_namespace_bound_and_stops_only_exact_locked_wake() -> None:
     assert "SHARED_PAUSE_FILE" in direct
 
 
+
+def test_rolling_timer_requires_final_receipt_and_relay_recovers_submitting() -> None:
+    rolling = _read("ops/continuity/interval_wake_daemon.py")
+    submit = _read("ops/continuity/relay_submit.py")
+    daemon = _read("ops/continuity/relay_daemon.py")
+
+    assert "FINAL_RECEIPT_STATES" in rolling
+    assert '"SUBMITTED_UNCONFIRMED"' in rolling
+    assert "final_receipt(pending)" in rolling
+    assert 'state["next_due_epoch"] = receipt_epoch + INTERVAL_SECONDS' in rolling
+    assert "final_receipt_sha" in submit
+    assert 'status == "SUBMITTING"' in submit
+    assert "receipt_info" in daemon
+    assert 'receipt_status == "SUBMITTING"' in daemon
+    assert "receipt.unlink(missing_ok=True)" in daemon
+
+
+
 def test_binding_writers_and_installers_use_ssd_canonical_state() -> None:
     bootstrap = _read("ops/continuity/bootstrap_continuity.command")
     contracts = _read("ops/continuity/continuity_contracts.py")
@@ -72,6 +90,8 @@ def test_binding_writers_and_installers_use_ssd_canonical_state() -> None:
     assert 'SHARED_EXPECTED="$SHARED/expected_chat_url"' in bootstrap
     assert 'EXPECTED="$WAKE/expected_chat_url"' in bootstrap
     assert '"crypto-signal"' in bootstrap
+    rolling = _read("ops/continuity/interval_wake_daemon.py")
+    fallback = _read(".github/workflows/crypto-20m-continuity-wake.yml")
     assert "continuity_contracts.py" in installer
     assert 'DOMAIN="user/$(id -u)"' in installer
     assert 'DOMAIN="gui/$(id -u)"' not in installer
@@ -79,11 +99,21 @@ def test_binding_writers_and_installers_use_ssd_canonical_state() -> None:
     assert 'DOMAIN="user/$(id -u)"' in acceptance
     assert 'DOMAIN="gui/$(id -u)"' not in acceptance
     assert "slots=True" not in contracts
-    assert 'launchctl kickstart -k "$DOMAIN/$LABEL"' in installer
-    assert "LOCAL_20M_LAUNCHD_UNAVAILABLE=YES" in installer
-    assert "LOCAL_20M_WAKE_MODE=github-fallback" in installer
-    assert "LOCAL_20M_WAKE_FALLBACK_PASS=YES" in installer
-    assert "recurring_wake_last_local_attempt" in installer
+    assert "INTERVAL_SECONDS = 20 * 60" in rolling
+    assert "pending_event_id" in rolling
+    assert "receipt_confirmed_countdown_reset" in rolling
+    assert "WAITING_FOR_RUNTIME" in rolling
+    assert "RETRY_SECONDS = 5" in rolling
+    assert "interval_wake_daemon.py" in installer
+    assert "--reset" in installer
+    assert "LEGACY_CALENDAR_TIMERS_DISABLED=YES" in installer
+    assert "LOCAL_20M_WAKE_MODE=rolling-daemon" in installer
+    assert "GITHUB_20M_ROLE=watchdog-fallback" in installer
+    assert "ROLLING_WAKE_IMMEDIATE_RECEIPT_PASS=YES" in installer
+    assert 'cron: "*/5 * * * *"' in fallback
+    assert "GITHUB_WATCHDOG_TIMER_HEALTHY=YES" in fallback
+    assert "GITHUB_WATCHDOG_TIMER_RESTARTED=YES" in fallback
+    assert "GITHUB_EMERGENCY_FALLBACK_WAKE_ATTEMPTED=YES" in fallback
     assert "R12_BRIDGE_LAUNCHD_UNAVAILABLE=YES" in acceptance
     assert 'BRIDGE_MODE="detached"' in acceptance
     assert "RUNNER_TRACKING_ID" in acceptance
