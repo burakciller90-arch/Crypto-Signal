@@ -116,6 +116,71 @@ jobs:
           echo "MINIMAL_ENV_WRAPPER_SMOKE_PASS=YES"
           SH
 
+      - name: Test same production label with tmp stdio only
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo -n -H -u crypto-signal-agent /usr/bin/env HOME=/Users/crypto-signal-agent /bin/bash <<'SH'
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          STABLE="$ROOT/MarketTape"
+          TAPE="$ROOT/Development/runtime/market_tape"
+          LABEL="com.cryptosignal.markettape"
+          DOMAIN="gui/$(id -u)"
+          SOURCE="$HOME/Library/LaunchAgents/$LABEL.plist"
+          TEMP="/tmp/$LABEL.tmp-stdio.plist"
+          OUT="/tmp/$LABEL.out.log"
+          ERR="/tmp/$LABEL.err.log"
+          SCRIPT="$STABLE/ops/run_market_tape_runtime.py"
+
+          launchctl disable "$DOMAIN/$LABEL" >/dev/null 2>&1 || true
+          launchctl bootout "$DOMAIN/$LABEL" >/dev/null 2>&1 || true
+          rm -f "$TEMP" "$OUT" "$ERR"
+          cp "$SOURCE" "$TEMP"
+          /usr/libexec/PlistBuddy -c "Set :StandardOutPath $OUT" "$TEMP"
+          /usr/libexec/PlistBuddy -c "Set :StandardErrorPath $ERR" "$TEMP"
+          plutil -lint "$TEMP"
+
+          before="$(sqlite3 "$TAPE/raw_market_tape.sqlite3" 'SELECT COUNT(*) FROM raw_market_events;')"
+          launchctl enable "$DOMAIN/$LABEL"
+          launchctl bootstrap "$DOMAIN" "$TEMP"
+          launchctl kickstart -k "$DOMAIN/$LABEL"
+
+          started=0
+          count=0
+          after="$before"
+          for _ in {1..25}; do
+            count="$(ps -axo user=,command= | awk -v user="crypto-signal-agent" -v script="$SCRIPT" '$1==user && index($0,script)>0 {n++} END{print n+0}')"
+            after="$(sqlite3 "$TAPE/raw_market_tape.sqlite3" 'SELECT COUNT(*) FROM raw_market_events;')"
+            if [ "$count" = "1" ] && [ "$after" -gt "$before" ]; then
+              started=1
+              break
+            fi
+            sleep 1
+          done
+
+          echo "TMP_STDIO_PROCESS_COUNT=$count"
+          echo "TMP_STDIO_RAW_BEFORE=$before"
+          echo "TMP_STDIO_RAW_AFTER=$after"
+          echo "=== TMP STDIO LAUNCHD ==="
+          launchctl print "$DOMAIN/$LABEL" 2>&1 | egrep 'state =|pid =|runs =|last exit code =|program =|path =' | head -120 || true
+          echo "=== TMP STDOUT ==="
+          cat "$OUT" 2>/dev/null || true
+          echo "=== TMP STDERR ==="
+          cat "$ERR" 2>/dev/null || true
+
+          launchctl disable "$DOMAIN/$LABEL" >/dev/null 2>&1 || true
+          launchctl bootout "$DOMAIN/$LABEL" >/dev/null 2>&1 || true
+          rm -f "$TEMP"
+
+          test "$started" = "1"
+          test "$count" = "1"
+          test "$after" -gt "$before"
+          test "$(sqlite3 "$TAPE/raw_market_tape.sqlite3" 'PRAGMA quick_check;')" = "ok"
+          test "$(sqlite3 "$TAPE/market_tape.sqlite3" 'PRAGMA quick_check;')" = "ok"
+          echo "TMP_STDIO_LAUNCHD_PASS=YES"
+          SH
+
       - name: Confirm production label remains disabled
         if: always()
         shell: bash
