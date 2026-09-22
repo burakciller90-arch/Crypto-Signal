@@ -148,6 +148,8 @@ def test_ssd_supervisor_recovers_market_tape_through_terminal_tcc_tree() -> None
     assert 'MARKET_TAPE="$ROOT/MarketTape"' in source
     assert 'MARKET_TAPE_START="$MARKET_TAPE/ops/market_tape/start_market_tape_supervisor.sh"' in source
     assert 'MARKET_TAPE_PIDFILE="$MARKET_TAPE_CONTROL/market-tape-supervisor.pid"' in source
+    assert 'MARKET_TAPE_ENABLE_FILE="$MARKET_TAPE_CONTROL/market-tape.enabled"' in source
+    assert '[ ! -f "$MARKET_TAPE_ENABLE_FILE" ]' in source
     assert "market_tape_supervisor_pid_is_expected" in source
     assert "ensure_market_tape_supervisor" in source
     assert "[ $((now-last_market_tape)) -ge 30 ]" in source
