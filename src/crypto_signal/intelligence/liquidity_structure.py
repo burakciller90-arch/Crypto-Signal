@@ -712,15 +712,22 @@ def _persistent_pools(
         appearance_events, disappearance_events, replenishment_events = (
             _level_event_counts(values)
         )
+        first_seen_ms = snapshots[present_indices[0]].event_at_ms
+        last_seen_ms = snapshots[present_indices[-1]].event_at_ms
+        mean_notional = (
+            sum(present_values, start=Decimal(0))
+            / Decimal(len(present_values))
+        )
+        max_notional = max(present_values)
+        latest_notional = values[-1]
         payload = {
             "appearance_events": appearance_events,
             "disappearance_events": disappearance_events,
-            "first_seen_ms": snapshots[present_indices[0]].event_at_ms,
-            "last_seen_ms": snapshots[present_indices[-1]].event_at_ms,
-            "latest_notional": values[-1],
-            "max_notional": max(present_values),
-            "mean_notional": sum(present_values, start=Decimal(0))
-            / Decimal(len(present_values)),
+            "first_seen_ms": first_seen_ms,
+            "last_seen_ms": last_seen_ms,
+            "latest_notional": latest_notional,
+            "max_notional": max_notional,
+            "mean_notional": mean_notional,
             "presence_fraction": presence_fraction,
             "price": price,
             "replenishment_events": replenishment_events,
@@ -733,14 +740,14 @@ def _persistent_pools(
                 pool_identity=canonical_sha256(payload),
                 side=side,
                 price=price,
-                first_seen_ms=snapshots[present_indices[0]].event_at_ms,
-                last_seen_ms=snapshots[present_indices[-1]].event_at_ms,
+                first_seen_ms=first_seen_ms,
+                last_seen_ms=last_seen_ms,
                 snapshots_present=len(present_indices),
                 total_snapshots=len(maps),
                 presence_fraction=presence_fraction,
-                mean_notional=payload["mean_notional"],
-                max_notional=payload["max_notional"],
-                latest_notional=values[-1],
+                mean_notional=mean_notional,
+                max_notional=max_notional,
+                latest_notional=latest_notional,
                 appearance_events=appearance_events,
                 disappearance_events=disappearance_events,
                 replenishment_events=replenishment_events,
