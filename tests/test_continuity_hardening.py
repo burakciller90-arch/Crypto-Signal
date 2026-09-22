@@ -51,16 +51,27 @@ def test_relay_is_namespace_bound_and_never_stops_busy_chat() -> None:
 
 def test_binding_writers_and_installers_use_ssd_canonical_state() -> None:
     bootstrap = _read("ops/continuity/bootstrap_continuity.command")
+    contracts = _read("ops/continuity/continuity_contracts.py")
     installer = _read(".github/workflows/crypto-install-local-20m-wake.yml")
     diagnostic = _read(".github/workflows/crypto-wake-diagnostic.yml")
     plist = _read(
         "ops/continuity/launchd/com.cryptosignal.continuitybridge.plist"
+    )
+    timer_plist = _read(
+        "ops/continuity/launchd/com.cryptosignal.autowake20m.plist"
     )
 
     assert 'SHARED_EXPECTED="$SHARED/expected_chat_url"' in bootstrap
     assert 'EXPECTED="$WAKE/expected_chat_url"' in bootstrap
     assert '"crypto-signal"' in bootstrap
     assert "continuity_contracts.py" in installer
+    assert "slots=True" not in contracts
+    assert 'launchctl kickstart -k "$DOMAIN/$LABEL"' in installer
+    assert "recurring_wake_last_local_attempt" in installer
+    assert "StandardOutPath" not in timer_plist
+    assert "StandardErrorPath" not in timer_plist
+    assert "StandardOutPath" not in plist
+    assert "StandardErrorPath" not in plist
 
     legacy = "/Users/crypto-signal-agent/Crypto-Signal/"
     assert legacy not in installer
