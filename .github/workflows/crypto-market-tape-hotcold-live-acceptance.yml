@@ -45,6 +45,7 @@ jobs:
           test "$(sudo -n -H -u crypto-signal-agent /usr/bin/id -u)" = "504"
           sudo -n -H -u crypto-signal-agent /usr/bin/env \
             SOURCE_STAGE=/tmp/crypto-market-tape-hotcold-live-stage \
+            EXPECTED_SHA="$GITHUB_SHA" \
             HOME=/Users/crypto-signal-agent \
             /bin/bash <<'SH'
           set -euo pipefail
@@ -101,7 +102,7 @@ jobs:
             exit 71
           fi
 
-          test "$(cat "$STABLE/BUILD_COMMIT")" = "$GITHUB_SHA"
+          test "$(cat "$STABLE/BUILD_COMMIT")" = "$EXPECTED_SHA"
           test "$("$ROOT/RuntimeEnvs/market-tape-cold/bin/python" -c 'import pyarrow; print(pyarrow.__version__)')" = "22.0.0"
           echo "HOTCOLD_STABLE_PREPARE_PASS=YES"
           echo "REAL_CAPITAL=0"
@@ -258,6 +259,7 @@ jobs:
         run: |
           set -euo pipefail
           sudo -n -H -u crypto-signal-agent /usr/bin/env \
+            EXPECTED_SHA="$GITHUB_SHA" \
             HOME=/Users/crypto-signal-agent \
             /bin/bash <<'SH'
           set -euo pipefail
@@ -319,7 +321,7 @@ jobs:
           PY
           test "$(sqlite3 "$RAW" 'PRAGMA quick_check;')" = "ok"
           test "$(sqlite3 "$DB" 'PRAGMA quick_check;')" = "ok"
-          test "$(cat "$STABLE/BUILD_COMMIT")" = "$GITHUB_SHA"
+          test "$(cat "$STABLE/BUILD_COMMIT")" = "$EXPECTED_SHA"
           test "$("$ROOT/RuntimeEnvs/market-tape-cold/bin/python" -c 'import pyarrow; print(pyarrow.__version__)')" = "22.0.0"
 
           echo "MARKET_TAPE_HOTCOLD_24X7_CUTOVER_PASS=YES"
