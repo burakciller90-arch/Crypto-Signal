@@ -1,0 +1,133 @@
+name: Crypto M2 Liquidity Live Replay Smoke
+
+on:
+  push:
+    branches:
+      - v1.1-liquidity-dynamics-v1
+    paths:
+      - ".github/workflows/crypto-m2-liquidity-live-replay.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    name: M2 liquidity read-only SSD replay
+    runs-on: [self-hosted, crypto-signal, uid501]
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Prepare read-only branch source
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/crypto-m2-liquidity-smoke
+          mkdir -p /tmp/crypto-m2-liquidity-smoke
+          cp -R src /tmp/crypto-m2-liquidity-smoke/
+          chmod -R a+rX /tmp/crypto-m2-liquidity-smoke
+
+      - name: Replay canonical SSD Market Tape as UID504
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo -k
+          test "$(sudo -n -H -u crypto-signal-agent /usr/bin/id -u)" = "504"
+          sudo -n -H -u crypto-signal-agent /usr/bin/env \
+            PYTHONPATH=/tmp/crypto-m2-liquidity-smoke/src \
+            /Volumes/Crypto-504/Crypto-Signal/Development/.venv/bin/python - <<'PY'
+          import sqlite3
+          from pathlib import Path
+
+          from crypto_signal.data.market_tape import _orderbook_from_payload
+          from crypto_signal.intelligence.liquidity_dynamics import (
+              LiquidityDynamicsConfig,
+              LiquidityDynamicsStatus,
+              build_liquidity_dynamics_evidence_freeze,
+          )
+
+          db = Path(
+              "/Volumes/Crypto-504/Crypto-Signal/Development/runtime/"
+              "market_tape/market_tape.sqlite3"
+          )
+          uri = f"file:{db}?mode=ro"
+          connection = sqlite3.connect(uri, uri=True, timeout=5.0)
+          connection.execute("PRAGMA query_only=ON")
+          quick = connection.execute("PRAGMA quick_check").fetchone()
+          assert quick is not None and str(quick[0]) == "ok"
+
+          total = connection.execute(
+              "SELECT COUNT(*) FROM market_tape_orderbooks"
+          ).fetchone()[0]
+          print(f"MARKET_TAPE_ORDERBOOK_ROWS={total}")
+
+          for symbol in ("BTCUSDT", "ETHUSDT", "SOLUSDT"):
+              rows = connection.execute(
+                  """
+                  SELECT payload_json
+                  FROM market_tape_orderbooks
+                  WHERE exchange = 'bybit'
+                    AND market_type = 'spot'
+                    AND symbol = ?
+                  ORDER BY event_at_ms DESC, rowid DESC
+                  LIMIT 60
+                  """,
+                  (symbol,),
+              ).fetchall()
+              books = tuple(
+                  reversed(tuple(_orderbook_from_payload(str(row[0])) for row in rows))
+              )
+              assert len(books) >= 3, (symbol, len(books))
+              as_of_ms = max(
+                  max(
+                      item.event_at_ms,
+                      item.source_timestamp_ms,
+                      item.response_time_ms,
+                      item.ingested_at_ms,
+                  )
+                  for item in books
+              )
+              freeze = build_liquidity_dynamics_evidence_freeze(
+                  books,
+                  as_of_ms=as_of_ms,
+                  config=LiquidityDynamicsConfig(
+                      depth_levels=10,
+                      lookback_ms=300_000,
+                      minimum_snapshots=3,
+                      max_snapshot_age_ms=30_000,
+                      max_snapshot_gap_ms=120_000,
+                  ),
+              )
+              analysis = freeze.analysis
+              print(
+                  "M2_LIQUIDITY_REPLAY "
+                  f"symbol={symbol} "
+                  f"status={analysis.status.value} "
+                  f"quality={analysis.source_quality.value} "
+                  f"snapshots={analysis.consumed_snapshot_count} "
+                  f"latest_age_ms={analysis.latest_snapshot_age_ms} "
+                  f"flags={','.join(analysis.uncertainty_flags) or '-'} "
+                  f"evidence={analysis.evidence_identity}"
+              )
+              assert analysis.status is LiquidityDynamicsStatus.MEASURED
+              assert analysis.metrics is not None
+              print(
+                  "M2_LIQUIDITY_METRICS "
+                  f"symbol={symbol} "
+                  f"bid_added={analysis.metrics.gross_bid_added_notional} "
+                  f"bid_removed={analysis.metrics.gross_bid_removed_notional} "
+                  f"ask_added={analysis.metrics.gross_ask_added_notional} "
+                  f"ask_removed={analysis.metrics.gross_ask_removed_notional} "
+                  f"bid_persistence={analysis.metrics.best_bid_price_persistence_fraction} "
+                  f"ask_persistence={analysis.metrics.best_ask_price_persistence_fraction}"
+              )
+
+          connection.close()
+          print("M2_LIQUIDITY_LIVE_REPLAY_PASS=YES")
+          print("REAL_CAPITAL=0")
+          PY
+
+      - name: Cleanup
+        if: always()
+        shell: bash
+        run: rm -rf /tmp/crypto-m2-liquidity-smoke
