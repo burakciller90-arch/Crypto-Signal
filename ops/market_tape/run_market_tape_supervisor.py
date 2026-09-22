@@ -26,11 +26,6 @@ CONTROL_DIR = Path("/Users/crypto-signal-agent/.crypto-signal-runtime")
 LOCK = CONTROL_DIR / "market-tape-supervisor.lock"
 PID_FILE = CONTROL_DIR / "market-tape-supervisor.pid"
 STOP_FILE = CONTROL_DIR / "market-tape-supervisor.stop"
-DAEMON_LOG = (
-    Path("/Users/crypto-signal-agent/Library/Logs/CryptoSignal")
-    / "market-tape-supervisor.log"
-)
-
 RESTART_DELAY_SECONDS = 30
 
 _stop_requested = False
@@ -114,57 +109,6 @@ def _wait_or_stop(seconds: int) -> None:
     deadline = time.monotonic() + seconds
     while not _stop_requested and time.monotonic() < deadline:
         time.sleep(1)
-
-
-def _daemonize() -> bool:
-    os.environ.pop("RUNNER_TRACKING_ID", None)
-
-    first_pid = os.fork()
-    if first_pid > 0:
-        return True
-
-    os.setsid()
-
-    second_pid = os.fork()
-    if second_pid > 0:
-        os._exit(0)
-
-    os.chdir("/")
-    os.umask(0o077)
-
-    DAEMON_LOG.parent.mkdir(parents=True, exist_ok=True)
-    stdin_fd = os.open("/dev/null", os.O_RDONLY)
-    log_fd = os.open(
-        DAEMON_LOG,
-        os.O_WRONLY | os.O_CREAT | os.O_APPEND,
-        0o600,
-    )
-    try:
-        os.dup2(stdin_fd, 0)
-        os.dup2(log_fd, 1)
-        os.dup2(log_fd, 2)
-    finally:
-        if stdin_fd > 2:
-            os.close(stdin_fd)
-        if log_fd > 2:
-            os.close(log_fd)
-
-    return False
-
-
-def _entrypoint() -> int:
-    arguments = sys.argv[1:]
-    if arguments:
-        if arguments != ["--daemonize"]:
-            print(
-                "MARKET_TAPE_SUPERVISOR_ERROR=UNSUPPORTED_ARGUMENTS",
-                file=sys.stderr,
-                flush=True,
-            )
-            return 64
-        if _daemonize():
-            return 0
-    return main()
 
 
 def main() -> int:
@@ -328,4 +272,4 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(_entrypoint())
+    raise SystemExit(main())
