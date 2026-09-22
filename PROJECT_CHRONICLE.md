@@ -3681,3 +3681,42 @@ Still not activated:
 Next bounded M2 frontier is disabled-by-default collector + Hot/Cold archive integration,
 followed by M2 closeout and M3 Order Flow / Absorption 2.0. Production activation remains
 a separate human-impact gate. REAL_CAPITAL=0.
+
+
+---
+
+## 2026-09-22 — GALACTECH PERFORMANCE & TRUST CENTER ACCEPTED / MERGED
+
+The Product rail advanced from Archive / Proof Wall to the locked Performance & Trust
+Center without collapsing incompatible evidence families into one score.
+
+Accepted truth separation:
+- forecast outcomes remain segmented by evidence class and holding horizon;
+- paper track record is derived only from immutable simulated fills and accounting lineage;
+- probability calibration remains a separate scientific surface;
+- an empty paper sample is not displayed as 0% win rate;
+- R19 is still required before publishing calibrated probability, Brier or reliability
+  metrics.
+
+Accepted Product hierarchy:
+- Trust overview;
+- Forecast Evidence;
+- Paper Track Record;
+- Probability Calibration;
+- Alert Center.
+
+Acceptance evidence:
+- PR #808;
+- authoritative hosted run `35786643559`;
+- focused Product/Performance/Paper tests PASS;
+- Ruff PASS;
+- Product mypy PASS;
+- Product JS/freshness PASS;
+- full repository pytest/Ruff/mypy/JS/freshness PASS;
+- temporary hosted workflow removed after PASS;
+- squash merge `1486ec914ea0a89cbc47ce13eb5e1a4219d7eed7`.
+
+No production UI deployment/cutover occurred. REAL_CAPITAL=0.
+
+Current Product frontier is Learn/System refinement, then accessibility/performance polish
+and the separately gated production UI cutover.
