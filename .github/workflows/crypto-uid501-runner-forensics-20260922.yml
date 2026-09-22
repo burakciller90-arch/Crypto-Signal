@@ -1,0 +1,52 @@
+name: Crypto UID501 Runner Forensics 20260922
+
+on:
+  push:
+    branches:
+      - diag-uid501-runner-forensics-20260922
+    paths:
+      - ".github/workflows/crypto-uid501-runner-forensics-20260922.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: [self-hosted, crypto-signal, uid501]
+    timeout-minutes: 5
+    steps:
+      - name: Read-only UID504 SSD runner process forensics
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(id -u)" = "501"
+
+          echo "=== TARGET PIDS ==="
+          /bin/ps -p 99399,65425,86923 -o pid=,ppid=,user=,%cpu=,%mem=,etime=,state=,lstart=,command= || true
+
+          echo "=== ALL UID504 RUNNER-LIKE PROCESSES ==="
+          /bin/ps -axo pid=,ppid=,user=,%cpu=,%mem=,etime=,state=,lstart=,command=             | /usr/bin/awk '$3=="crypto-signal-agent" && ($0 ~ /Runner\.Listener/ || $0 ~ /Runner\.Worker/ || $0 ~ /runsvc\.sh/ || $0 ~ /RunnerService/ || $0 ~ /Crypto-504\/Crypto-Signal\/Runner/) {print}'
+
+          echo "=== PARENT 65425 DETAILS ==="
+          /bin/ps -p 65425 -o pid=,ppid=,user=,%cpu=,%mem=,etime=,state=,lstart=,command= || true
+
+          echo "=== CHILDREN OF 65425 ==="
+          /usr/bin/pgrep -P 65425 | while read -r pid; do
+            /bin/ps -p "$pid" -o pid=,ppid=,user=,%cpu=,%mem=,etime=,state=,lstart=,command=
+          done || true
+
+          echo "=== SSD RUNNER PIDFILES ==="
+          for f in             /Volumes/Crypto-504/Crypto-Signal/ssd-runner-manual.pid             /Volumes/Crypto-504/Crypto-Signal/ssd-runner-hotplug.pid             /Volumes/Crypto-504/Crypto-Signal/ssd-runner-r15-recovery.pid; do
+            if [ -r "$f" ]; then
+              printf '%s=' "$f"
+              cat "$f"
+            else
+              echo "$f=UNREADABLE_OR_ABSENT"
+            fi
+          done
+
+          echo "=== LISTENER COUNT SNAPSHOT ==="
+          /bin/ps -axo pid=,ppid=,user=,%cpu=,%mem=,etime=,state=,command=             | /usr/bin/grep -F '/Volumes/Crypto-504/Crypto-Signal/Runner/bin/Runner.Listener run --startuptype service'             | /usr/bin/grep -v grep || true
+
+          echo "UID501_RUNNER_FORENSICS_PASS=YES"
+          echo "REAL_CAPITAL=0"
