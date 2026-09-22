@@ -20,7 +20,7 @@ def test_market_tape_launchagent_is_ssd_only_and_keepalive() -> None:
     )
     arguments = payload["ProgramArguments"]
     assert arguments == [
-        "/Volumes/Crypto-504/Crypto-Signal/MarketTape/.venv/bin/python",
+        "/Volumes/Crypto-504/Crypto-Signal/Development/.venv/bin/python",
         (
             "/Volumes/Crypto-504/Crypto-Signal/MarketTape/"
             "ops/run_market_tape_runtime.py"
