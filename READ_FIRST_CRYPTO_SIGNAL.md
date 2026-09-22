@@ -98,16 +98,20 @@ collection in parallel after R15 safety. Research engines already present in the
 must be reused rather than duplicated.
 
 
-## Locked 20-minute wake update — 2026-09-22
+## Locked rolling 20-minute wake authority — 2026-09-22
 
 - Exact chat binding: `https://chatgpt.com/c/6ab2c3c1-30c8-83ed-b1ad-2aa35cc891c9`.
-- Cadence: every 20 minutes at minute 00/20/40.
-- Canonical local LaunchAgent bootstrap remains unavailable from the UID504 runner context (rc=5); the accepted cadence owner is the existing GitHub self-hosted 20-minute fallback.
-- Local/shared user-pause latches are currently absent: continuity is ACTIVE.
-- Active exact leases: 0 at reconciliation; local/shared relay queues: 0.
-- When the exact locked wake fires while ChatGPT is responding, the relay is authorized to click the visible Stop control, wait for the editor to become ready, then submit the approved wake text.
-- The locked wake text is sent without an extra visible marker; at-most-once delivery is maintained by internal event IDs/receipts.
-- Busy-stop evidence: relay recorded `OBSERVED_AFTER_CLICK` during the first live test; final post-fix test run `35770956851` returned `RELAY_SUBMIT_RC=0` and `CRYPTO_LOCKED_20M_WAKE_PASS=YES`.
-- A future explicit user pause remains authoritative and must suspend periodic wake delivery until the user resumes it.
-- The user reaffirmed on 2026-09-22 that this 20-minute wake loop must remain ACTIVE during autonomous project completion. Do not disable, pause, replace, or silently weaken it unless the user explicitly asks to pause/stop it. The approved wake text also requires every material action/update to be recorded in GitHub for the next agent.
+- **Primary cadence is NOT wall-clock `:00/:20/:40`.** UID504 local `interval_wake_daemon.py` owns a receipt-bound rolling interval of exactly **1200 seconds**.
+- On an explicit install/reset, one immediate wake event is created. Thereafter the next deadline is derived from the prior **OBSERVED** exact-message receipt + 1200 seconds.
+- For the locked wake, editor-clear / transport submit / `SUBMITTED` / `SUBMITTED_UNCONFIRMED` are not final delivery truth. The exact user message must be observed in the conversation before the countdown advances.
+- If ChatGPT is busy, the exact locked wake may click the visible Stop control, wait for the editor to become ready, then submit the approved wake text. If idle, it submits directly.
+- A visible ChatGPT Retry/Try Again condition is handled as the same pending event. Failed/unobserved delivery does not advance the counter; the same event remains pending/retries.
+- GitHub `Crypto 20m Continuity Wake` runs every 5 minutes only as **watchdog/self-heal**. When the local timer is healthy it must emit `GITHUB_WATCHDOG_TIMER_HEALTHY=YES` + `GITHUB_FALLBACK_SKIPPED=YES` and send no chat wake.
+- Legacy launchd/calendar cadence is disabled; do not restore it as the primary owner.
+- Current strict-delivery main hardening commit: `26ea9a9579987eb48eb02cf596cdfe1946ee7010`.
+- Live UID504 parity acceptance run `35783887055` PASS: installed continuity hashes matched current main, timer RUNNING at 1200s, fresh heartbeat, receipt-to-next-due delta exactly 1200s, no pending event/pause/queue backlog, exact chat binding, latest receipts OBSERVED.
+- Read-only `rollingstate` was added in PR #800 / merge `e56426165c0f5604d6b4d0ed17f9d63d7f69435b`. Live run `35784266069` PASS observed PID `45986` alive, state RUNNING, interval 1200, heartbeat age 2s, failure_count 0, no pending event, local/shared pause NO, and exact relay target.
+- PR #800 was workflow-only observability; it triggered no installer run and therefore did **not** reset the rolling countdown.
+- The user explicitly requires this rolling wake loop to remain ACTIVE during autonomous completion. Only an explicit user pause/stop may suspend it.
+- Wake/lease remains a state-first continuation pointer, never production authority. `REAL_CAPITAL=0`.
 
