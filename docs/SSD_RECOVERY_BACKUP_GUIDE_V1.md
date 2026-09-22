@@ -6,6 +6,8 @@ This guide covers the accepted non-destructive SSD/runtime recovery model for
 Crypto Signal. It does not claim physical reboot/logout/SSD detach tests that
 were intentionally not performed autonomously.
 
+Safety invariant: `REAL_CAPITAL=0`. Recovery work never grants exchange-order or credential authority.
+
 Canonical root:
 
 `/Volumes/Crypto-504/Crypto-Signal`
