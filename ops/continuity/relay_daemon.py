@@ -35,7 +35,7 @@ AUTONOMOUS_STATE = SHARED / "autonomous_wake_state"
 AUTONOMOUS_PREFIX = "CRYPTO_SIGNAL_AUTONOMOUS_CONTINUE_V1"
 AUTONOMOUS_TTL_SECONDS = 15 * 60
 AUTONOMOUS_COOLDOWN_SECONDS = 10 * 60
-LOCKED_WAKE_MESSAGE = "Kullanıcı aktif değil ve projeyi tamamlaman için sana bıraktı; HAFIZANA GÜVENME! READ_FIRST, CURRENT_STATUS, Chronicle ve docs/V1_1_LOCKED_MASTER_ROADMAP_20260922.md dosyasını oku; gerçek Git/worker/wake/lease state’ini kontrol et, gerçek frontier’ı bul. Tamamlanmış/stale/duplicate işi tekrarlama. Kullanıcı REAL MONEY hariç roadmap’in bitmesini istiyor; güvenli aşamalar arasında onay bekleme ve devam et. Ve bir sonraki ajan için yaptığın her işi her güncellemeyi GitHub üzerine kayıt et. Bu mesaj döngüsünü bozamazsın."
+LOCKED_WAKE_MESSAGE = "Kullanıcı aktif değil ve projeyi tamamlaman için sana bıraktı; HAFIZANA GÜVENME! READ_FIRST, CURRENT_STATUS, Chronicle ve docs/V1_1_LOCKED_MASTER_ROADMAP_20260922.md dosyasını oku; gerçek Git/worker/wake/lease state’ini kontrol et, gerçek frontier’ı bul. Tamamlanmış/stale/duplicate işi tekrarlama. Kullanıcı REAL MONEY hariç roadmap’in bitmesini istiyor; güvenli aşamalar arasında onay bekleme ve devam et. Ve bir sonraki ajan için yaptığın her işi her güncellemeyi GitHub üzerine kayıt et. Bu 20 dakikalık mesaj döngüsünü kullanıcı açıkça durdurmadıkça bozamazsın. REAL_CAPITAL=0."
 RETRY_SECONDS = 2
 TARGET_OPEN_RETRY_SECONDS = 60
 _last_target_open_attempt = 0.0
@@ -119,13 +119,19 @@ def write_receipt(path: Path, status: str, event_id: str, message_sha: str) -> N
     )
     os.chmod(tmp, 0o600)
     tmp.replace(path)
-def receipt_sha(path: Path) -> str | None:
+def receipt_info(path: Path) -> tuple[str, str] | None:
     if not path.exists():
         return None
+    status = ""
+    message_sha = ""
     for line in path.read_text().splitlines():
-        if line.startswith("message_sha256="):
-            return line.split("=", 1)[1]
-    return ""
+        if line.startswith("status="):
+            status = line.split("=", 1)[1]
+        elif line.startswith("message_sha256="):
+            message_sha = line.split("=", 1)[1]
+    if not status:
+        return None
+    return status, message_sha
 
 
 def is_autonomous_wake(message: str) -> bool:
@@ -259,11 +265,15 @@ def deliver(event_id: str, message: str, target_url: str) -> tuple[bool, str]:
     message_sha = sha(wire_message)
     receipt = RECEIPTS / f"{key}.state"
 
-    bound_sha = receipt_sha(receipt)
-    if bound_sha is not None:
+    receipt_state = receipt_info(receipt)
+    if receipt_state is not None:
+        receipt_status, bound_sha = receipt_state
         if bound_sha and bound_sha != message_sha:
             return False, "EVENT_ID_MESSAGE_CONFLICT"
-        return True, "ALREADY_RECEIPTED"
+        if receipt_status == "SUBMITTING":
+            receipt.unlink(missing_ok=True)
+        else:
+            return True, "ALREADY_RECEIPTED"
 
     if message.startswith(AUTONOMOUS_PREFIX):
         canonical_event_id = scheduled_slot_event_id()
