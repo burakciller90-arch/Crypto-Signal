@@ -190,6 +190,16 @@ path.
 
 Never start a second UID504 runner merely because a GitHub job is queued.
 
+Current live process ancestry was mechanically observed as:
+
+`-zsh -> /bin/bash ./runsvc.sh -> ./externals/node20/bin/node ./bin/RunnerService.js -> /Volumes/Crypto-504/Crypto-Signal/Runner/bin/Runner.Listener`
+
+This matters because the wrapper/service processes use **relative commands**. A recovery
+implementation that searches only for `$RUNNER/` in process command lines can find the
+Listener but miss `./runsvc.sh` and `RunnerService.js`. Killing only the Listener may
+therefore allow the parent service to respawn it. Recovery must verify and stop the
+exact ancestry tree before starting a new runner.
+
 Preconditions:
 
 1. Match the exact SSD listener command:
