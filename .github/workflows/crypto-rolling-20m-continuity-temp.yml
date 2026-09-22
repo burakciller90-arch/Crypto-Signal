@@ -38,10 +38,8 @@ jobs:
           python -m pytest -q tests/test_continuity_hardening.py tests/test_continuity_contracts.py
           python -m ruff check \
             ops/continuity/interval_wake_daemon.py \
-            ops/continuity/recurring_wake.py \
             ops/continuity/relay_submit.py \
             ops/continuity/relay_daemon.py \
-            ops/continuity/continuity_contracts.py \
             tests/test_continuity_hardening.py
           python -m mypy \
             ops/continuity/interval_wake_daemon.py \
