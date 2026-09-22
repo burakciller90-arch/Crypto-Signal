@@ -72,7 +72,15 @@ def test_binding_writers_and_installers_use_ssd_canonical_state() -> None:
     assert 'DOMAIN="gui/$(id -u)"' not in acceptance
     assert "slots=True" not in contracts
     assert 'launchctl kickstart -k "$DOMAIN/$LABEL"' in installer
+    assert "LOCAL_20M_LAUNCHD_UNAVAILABLE=YES" in installer
+    assert "LOCAL_20M_WAKE_MODE=github-fallback" in installer
+    assert "LOCAL_20M_WAKE_FALLBACK_PASS=YES" in installer
     assert "recurring_wake_last_local_attempt" in installer
+    assert "R12_BRIDGE_LAUNCHD_UNAVAILABLE=YES" in acceptance
+    assert 'BRIDGE_MODE="detached"' in acceptance
+    assert "RUNNER_TRACKING_ID" in acceptance
+    assert "R12_BRIDGE_RUNTIME_PASS=YES" in acceptance
+    assert "R12_SHARED_GUI_TRANSPORT_OWNER_UID=" in acceptance
     assert "StandardOutPath" not in timer_plist
     assert "StandardErrorPath" not in timer_plist
     assert "StandardOutPath" not in plist
