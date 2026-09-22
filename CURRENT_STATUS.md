@@ -4,7 +4,7 @@ Updated: 2026-09-22
 Project: Crypto Signal
 Baseline: crypto-signal-full-version-v1.0.0 (immutable)
 Active post-v1.0 program: v1.1 world-class product + market intelligence
-State: R15_RUNTIME_RECOVERY_BLOCKED_LIVE / PARALLEL_V1_1_DEVELOPMENT_ACTIVE
+State: DATA_FRESHNESS_RECOVERED / R15_RUNNER_RECOVERY_BLOCKED / PARALLEL_V1_1_DEVELOPMENT_ACTIVE
 REAL_CAPITAL: 0
 
 ## Active v1.1 frontier — read before historical sections
@@ -19,11 +19,12 @@ Current development map:
 - Experimental branch `v1.1-paper-active-learning-v1` is unaccepted and must not mutate canonical paper semantics; useful ideas belong in Shadow Lab.
 
 Runtime evidence:
+- **04:00 data-staleness incident is closed.** A UID501 localhost API diagnostic at 2026-09-22 14:25:51 +0300 read the live immutable ledger through the dashboard and found 294 freezes with latest freeze 14:15:18 +0300.
+- Binance and Bybit BTC/ETH/SOL 15m contexts were all fresh around 14:15; 1h contexts were fresh around 14:01.
+- Dashboard health returned status=ok, ledger_present=true, read_only=true and REAL_CAPITAL=0.
 - SSD supervisor/dashboard processes are present.
-- UID504 SSD GitHub runner has shown long-running near-100% CPU `Runner.Listener` behavior.
-- Therefore process existence is not accepted as proof of live-data progress.
-- The “04:00 data cut” is **not yet declared fixed**. It must be closed by direct freshness evidence from the canonical ledger/candle cache/API after UID501 tree access or equivalent UID504 diagnostics are available.
-- UID501 diagnostic access to the existing Crypto-504 tree is currently blocked by filesystem permissions; a prepared ACL command preserves UID504 ownership while granting UID501 access.
+- **Separate remaining R15 blocker:** UID504 SSD GitHub `Runner.Listener` was rechecked at 14:26:28 +0300 at 100% CPU, state RN, ~12h elapsed. Process existence is not accepted as runner health.
+- UID501 filesystem access to the existing Crypto-504 tree is still blocked until the owner-preserving ACL command is authorized; this is useful for direct DB/log forensics but is no longer required to prove the 04:00 data cut recovered.
 
 Product architecture:
 - Track A: world-class UI/UX.
