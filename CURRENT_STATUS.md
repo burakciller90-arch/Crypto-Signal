@@ -9,6 +9,20 @@ REAL_CAPITAL: 0
 
 ## Active v1.1 frontier — read before historical sections
 
+### FIRST REAL COLD PARTITION — NOT DUE (read-only verified)
+
+UID501 -> UID504 narrow-bridge read-only acceptance run `35771736782` passed the due-state contract:
+- deployed Market Tape build: `355ccfacbcd0b860efeb3c09486b707940106b1f`;
+- cold manifest count: 0;
+- oldest hot Market Tape event age: **3.358 hours**;
+- archive cutoff: `1790010000000` ms;
+- rows eligible before cutoff: **0** across raw/orderbook/trades/derivatives;
+- therefore no real 26h+ partition is expected yet: `FIRST_REAL_COLD_PARTITION_NOT_DUE=YES`;
+- REAL_CAPITAL=0.
+
+This is not a blocker for safe parallel development. Re-check the first real partition after data age crosses the 26h retention+grace boundary; do not force archive/prune.
+
+
 ## Locked 20-minute continuity — ACTIVE
 
 - Exact ChatGPT URL: `https://chatgpt.com/c/6ab2c3c1-30c8-83ed-b1ad-2aa35cc891c9`.
