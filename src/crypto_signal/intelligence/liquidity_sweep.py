@@ -16,6 +16,7 @@ from crypto_signal.intelligence.liquidity_dynamics import LiquiditySourceQuality
 from crypto_signal.intelligence.liquidity_structure import (
     DEFAULT_LIQUIDITY_STRUCTURE_CONFIG,
     LiquidityLevelCandidate,
+    LiquidityLevelEvidence,
     LiquiditySide,
     LiquidityStructureConfig,
     LiquidityStructureStatus,
@@ -620,7 +621,7 @@ def _analyze_selected(
 
 def _evaluate_pool(
     *,
-    level,
+    level: LiquidityLevelEvidence,
     trades: tuple[PublicTradeObservation, ...],
     config: LiquiditySweepConfig,
 ) -> LiquiditySweepCandidate | None:
@@ -683,10 +684,27 @@ def _evaluate_pool(
             for index, item in enumerate(interaction)
             if item.price == extreme_price
         )
-        follow_through = sum(
-            1
-            for item in interaction[extreme_index + 1 :]
-            if item.aggressor_side is AggressorSide.SELL and item.price < pool
+        displacement_threshold = pool * (
+            Decimal(1) - config.minimum_displacement_bps / _BPS
+        )
+        displacement_index = next(
+            (
+                index
+                for index, item in enumerate(interaction)
+                if item.aggressor_side is AggressorSide.SELL
+                and item.price <= displacement_threshold
+            ),
+            None,
+        )
+        follow_through = (
+            0
+            if displacement_index is None
+            else sum(
+                1
+                for item in interaction[displacement_index + 1 :]
+                if item.aggressor_side is AggressorSide.SELL
+                and item.price < pool
+            )
         )
         recovery_threshold = pool * (
             Decimal(1) - config.recovery_tolerance_bps / _BPS
@@ -710,10 +728,27 @@ def _evaluate_pool(
             for index, item in enumerate(interaction)
             if item.price == extreme_price
         )
-        follow_through = sum(
-            1
-            for item in interaction[extreme_index + 1 :]
-            if item.aggressor_side is AggressorSide.BUY and item.price > pool
+        displacement_threshold = pool * (
+            Decimal(1) + config.minimum_displacement_bps / _BPS
+        )
+        displacement_index = next(
+            (
+                index
+                for index, item in enumerate(interaction)
+                if item.aggressor_side is AggressorSide.BUY
+                and item.price >= displacement_threshold
+            ),
+            None,
+        )
+        follow_through = (
+            0
+            if displacement_index is None
+            else sum(
+                1
+                for item in interaction[displacement_index + 1 :]
+                if item.aggressor_side is AggressorSide.BUY
+                and item.price > pool
+            )
         )
         recovery_threshold = pool * (
             Decimal(1) + config.recovery_tolerance_bps / _BPS
