@@ -214,6 +214,34 @@ Current M2 frontier after Slice 3:
 - then close M2 acceptance before advancing the primary intelligence path to M3 Order Flow & Absorption 2.0.
 
 
+### M2 LIQUIDITY INTELLIGENCE 2.0 — SLICE 5 LIQUIDATION MARKET TAPE ACCEPTED / STACKED
+
+- PR #804 on `v1.1-liquidation-market-tape-v2-slice5` is accepted on top of accepted Liquidation Heatmap Slice 4.
+- Authoritative hosted acceptance run `35785800585` PASS.
+- Focused liquidation/Market Tape pytest/Ruff/mypy PASS; full repository pytest/Ruff/mypy/JS/freshness PASS.
+- Normalized Market Tape advances additively to `market-tape-schema-v1/2`.
+- Accepted persistence:
+  - immutable liquidation rows;
+  - immutable liquidation feed-coverage rows;
+  - provider-event dedupe/conflict fail-closed;
+  - coverage-last batch boundary;
+  - exact coverage-identity PIT replay;
+  - future/late evidence exclusion;
+  - empty event batch proves observed zero only when matching feed coverage is persisted.
+- Temp hosted workflow removed after PASS.
+- Still intentionally NOT activated:
+  - Bybit `allLiquidation` live collector;
+  - live SSD Market Tape mutation;
+  - Hot/Cold Parquet liquidation archive.
+- PR #804 remains stacked; no production weighting/trading authority was added.
+- REAL_CAPITAL=0.
+
+Current M2 frontier after Slice 5:
+- disabled-by-default liquidation collector wiring + Hot/Cold archive integration in development only;
+- then M2 closeout and advance primary intelligence path to M3 Order Flow & Absorption 2.0;
+- production/live collector activation remains separately human-gated.
+
+
 ### GALACTECH COMMAND CENTER — SLICE 1 MERGED TO MAIN
 
 - PR #778 accepted and squash-merged to `main` as `9a6c65ee24dc00a5855d5792e013a53cb869e2de`.
