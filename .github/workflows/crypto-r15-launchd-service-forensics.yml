@@ -1,0 +1,47 @@
+name: Crypto R15 Launchd Service Forensics
+
+on:
+  push:
+    branches: [r15-ssd-hotplug-recovery-v1]
+    paths: [".github/workflows/crypto-r15-launchd-service-forensics.yml"]
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: [self-hosted, crypto-signal, uid501]
+    timeout-minutes: 10
+    steps:
+      - name: Inspect R15 launchd runner service
+        shell: bash
+        run: |
+          set -euo pipefail
+          /usr/bin/sudo -n -H -u crypto-signal-agent /bin/bash <<'SH'
+          set +e
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          LOCAL="$HOME/Library/Application Support/CryptoSignalRecovery"
+          LOGDIR="$HOME/Library/Logs/CryptoSignalRecovery"
+          LABEL="com.cryptosignal.github-runner-r15-service"
+          echo "=== SERVICE LAUNCHCTL ==="
+          launchctl print "gui/504/$LABEL" 2>&1 | head -220
+          echo "=== SERVICE PLIST ==="
+          plutil -p "$HOME/Library/LaunchAgents/$LABEL.plist" 2>&1
+          echo "=== SERVICE BOOTSTRAP ==="
+          sed -n '1,220p' "$LOCAL/runner-service-bootstrap.sh" 2>&1
+          echo "=== LOCAL SERVICE OUT ==="
+          tail -160 "$LOGDIR/runner-service-launchagent.out.log" 2>&1
+          echo "=== LOCAL SERVICE ERR ==="
+          tail -160 "$LOGDIR/runner-service-launchagent.err.log" 2>&1
+          echo "=== SSD SERVICE OUT ==="
+          tail -220 "$ROOT/RunnerLogs/r15-runner-service.out.log" 2>&1
+          echo "=== SSD SERVICE ERR ==="
+          tail -220 "$ROOT/RunnerLogs/r15-runner-service.err.log" 2>&1
+          echo "=== RUNNER PROCS ==="
+          ps -axo pid=,ppid=,user=,%cpu=,%mem=,etime=,state=,command= | awk '$3=="crypto-signal-agent" && ($0 ~ /RunnerService\.js/ || $0 ~ /Runner\.Listener/ || $0 ~ /Runner\.Worker/ || $0 ~ /\.\/runsvc\.sh/ || $0 ~ /runner-service-bootstrap/) {print}'
+          echo "=== WATCHDOG STATE ==="
+          cat "$LOCAL/ssd-state" 2>&1
+          echo "=== WATCHDOG ERR ==="
+          tail -160 "$LOGDIR/hotplug-watchdog.err.log" 2>&1
+          echo "R15_LAUNCHD_SERVICE_FORENSICS_DONE=YES"
+          SH
