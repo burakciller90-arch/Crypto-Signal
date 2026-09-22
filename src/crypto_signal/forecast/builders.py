@@ -4,7 +4,17 @@ from dataclasses import replace
 from decimal import Decimal
 
 from crypto_signal.confluence.models import EvidenceDirection
-from crypto_signal.evaluation.calibration import CalibratedProbability
+from crypto_signal.evaluation.calibration import (
+    CalibratedProbability,
+    ProbabilitySemantic,
+)
+from crypto_signal.forecast.models import (
+    ConditionalForecast,
+    DecisionProof,
+    DecisionProofAuthority,
+    ForecastResolution,
+    ForecastTriggerKind,
+)
 from crypto_signal.ledger.bundle import (
     DecisionFreezeBundle,
     verify_bundle_identity,
@@ -13,15 +23,6 @@ from crypto_signal.ledger.serialization import canonical_sha256
 from crypto_signal.outcomes.evaluator import verify_outcome_identity
 from crypto_signal.outcomes.models import OutcomeEvaluation
 from crypto_signal.signals.models import SignalDirection, SignalState
-
-from crypto_signal.forecast.models import (
-    ConditionalForecast,
-    DecisionProof,
-    DecisionProofAuthority,
-    ForecastResolution,
-    ForecastTriggerKind,
-)
-
 
 FORECAST_VERSION = "conditional-forecast-v1/1"
 PROOF_VERSION = "decision-proof-v1/1"
@@ -109,18 +110,17 @@ def build_conditional_forecast(
     if horizon_bars <= 0:
         raise ValueError("forecast horizon must be positive")
 
-    probability_values: dict[str, object | None] = {
-        "calibrated_probability": None,
-        "probability_semantic": None,
-        "probability_model_version": None,
-        "probability_train_n": None,
-        "probability_holdout_n": None,
-        "probability_brier_score": None,
-        "probability_brier_skill_score": None,
-        "probability_expected_calibration_error": None,
-        "probability_trained_through_as_of_ms": None,
-        "probability_evaluated_through_as_of_ms": None,
-    }
+    probability_value: Decimal | None = None
+    probability_semantic: ProbabilitySemantic | None = None
+    probability_model_version: str | None = None
+    probability_train_n: int | None = None
+    probability_holdout_n: int | None = None
+    probability_brier_score: Decimal | None = None
+    probability_brier_skill_score: Decimal | None = None
+    probability_expected_calibration_error: Decimal | None = None
+    probability_trained_through_as_of_ms: int | None = None
+    probability_evaluated_through_as_of_ms: int | None = None
+
     if calibrated_probability is not None:
         if decision.state is not SignalState.ACTIVE:
             raise ValueError("calibrated probability may attach only to ACTIVE signal")
@@ -137,24 +137,22 @@ def build_conditional_forecast(
             raise ValueError("probability training cutoff postdates frozen signal")
         if calibrated_probability.evaluated_through_as_of_ms > decision.as_of_ms:
             raise ValueError("probability evaluation cutoff postdates frozen signal")
-        probability_values = {
-            "calibrated_probability": calibrated_probability.probability,
-            "probability_semantic": calibrated_probability.semantic,
-            "probability_model_version": calibrated_probability.model_version,
-            "probability_train_n": calibrated_probability.train_n,
-            "probability_holdout_n": calibrated_probability.holdout_n,
-            "probability_brier_score": calibrated_probability.brier_score,
-            "probability_brier_skill_score": calibrated_probability.brier_skill_score,
-            "probability_expected_calibration_error": (
-                calibrated_probability.expected_calibration_error
-            ),
-            "probability_trained_through_as_of_ms": (
-                calibrated_probability.trained_through_as_of_ms
-            ),
-            "probability_evaluated_through_as_of_ms": (
-                calibrated_probability.evaluated_through_as_of_ms
-            ),
-        }
+        probability_value = calibrated_probability.probability
+        probability_semantic = calibrated_probability.semantic
+        probability_model_version = calibrated_probability.model_version
+        probability_train_n = calibrated_probability.train_n
+        probability_holdout_n = calibrated_probability.holdout_n
+        probability_brier_score = calibrated_probability.brier_score
+        probability_brier_skill_score = calibrated_probability.brier_skill_score
+        probability_expected_calibration_error = (
+            calibrated_probability.expected_calibration_error
+        )
+        probability_trained_through_as_of_ms = (
+            calibrated_probability.trained_through_as_of_ms
+        )
+        probability_evaluated_through_as_of_ms = (
+            calibrated_probability.evaluated_through_as_of_ms
+        )
 
     draft = ConditionalForecast(
         forecast_identity="0" * 64,
@@ -179,8 +177,23 @@ def build_conditional_forecast(
         horizon_bars=horizon_bars,
         confluence_score=decision.agreement.confluence_score,
         confluence_semantic=decision.agreement.score_semantic,
+        calibrated_probability=probability_value,
+        probability_semantic=probability_semantic,
+        probability_model_version=probability_model_version,
+        probability_train_n=probability_train_n,
+        probability_holdout_n=probability_holdout_n,
+        probability_brier_score=probability_brier_score,
+        probability_brier_skill_score=probability_brier_skill_score,
+        probability_expected_calibration_error=(
+            probability_expected_calibration_error
+        ),
+        probability_trained_through_as_of_ms=(
+            probability_trained_through_as_of_ms
+        ),
+        probability_evaluated_through_as_of_ms=(
+            probability_evaluated_through_as_of_ms
+        ),
         uncertainty_flags=decision.uncertainty_flags,
-        **probability_values,
     )
     forecast = replace(
         draft,
