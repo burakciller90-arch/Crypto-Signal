@@ -427,7 +427,7 @@ def _analyze_selected(
         "source_window_start_ms": source_window_start_ms,
         "status": LiquidityDynamicsStatus.MEASURED,
         "symbol": symbol,
-        "uncertainty_flags": (),
+        "uncertainty_flags": uncertainty_flags,
     }
     return LiquidityDynamicsAnalysis(
         evidence_identity=canonical_sha256(payload),
