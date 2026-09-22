@@ -17,6 +17,7 @@ MARKET_TAPE_RUNTIME="$MARKET_TAPE/ops/run_market_tape_runtime.py"
 MARKET_TAPE_COLD_PYTHON="$ROOT/RuntimeEnvs/market-tape-cold/bin/python"
 MARKET_TAPE_CONTROL="/Users/crypto-signal-agent/.crypto-signal-runtime"
 MARKET_TAPE_PIDFILE="$MARKET_TAPE_CONTROL/market-tape-supervisor.pid"
+MARKET_TAPE_ENABLE_FILE="$MARKET_TAPE_CONTROL/market-tape.enabled"
 
 for required in "$DEV" "$LIVE" "$PRODUCT" "$ALERTS" "$PAPER"; do
   if [ ! -d "$required" ]; then
@@ -93,6 +94,9 @@ market_tape_supervisor_pid_is_expected() {
 
 ensure_market_tape_supervisor() {
   local pid=""
+  if [ ! -f "$MARKET_TAPE_ENABLE_FILE" ]; then
+    return 0
+  fi
   if [ -f "$MARKET_TAPE_PIDFILE" ]; then
     pid="$(cat "$MARKET_TAPE_PIDFILE" 2>/dev/null || true)"
   fi
