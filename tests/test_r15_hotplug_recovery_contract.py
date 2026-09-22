@@ -101,3 +101,37 @@ def test_r15_recovery_retires_legacy_runner_owners_before_bootstrap() -> None:
     bootstrap = text.index('/bin/launchctl bootstrap "gui/$(id -u)" "$PLIST"')
     assert legacy < bootstrap
 
+def test_r15_orphan_parent_detection_is_exact_and_cwd_bound() -> None:
+    text = SCRIPT.read_text(encoding="utf-8")
+    assert "process_cwd()" in text
+    assert "runner_orphan_service_pids()" in text
+    assert "/usr/sbin/lsof -a -p" in text
+    assert './externals/node20/bin/node ./bin/RunnerService.js' in text
+    assert '/bin/bash ./runsvc.sh' in text
+    assert 'service_cwd="$(process_cwd "$service")"' in text
+    assert '[ "$service_cwd" = "$RUNNER" ]' in text
+    assert 'wrapper_cwd="$(process_cwd "$wrapper")"' in text
+    assert '[ "$wrapper_cwd" = "$RUNNER" ]' in text
+    assert "crypto-signal-agent" in text
+
+
+def test_r15_orphan_parent_recovery_is_fail_closed() -> None:
+    text = SCRIPT.read_text(encoding="utf-8")
+    assert "stop_orphan_runner_parent_tree()" in text
+    assert 'RUNNER_ORPHAN_STOP_ABORT=ACTIVE_WORKER' in text
+    assert 'RUNNER_ORPHAN_STOP_ABORT=AMBIGUOUS' in text
+    assert 'RUNNER_ORPHAN_PARENT_DETECTED=YES' in text
+    assert 'RUNNER_ORPHAN_PARENT_STOP_PASS=YES' in text
+    assert 'RUNNER_ORPHAN_FORCE_ABORT=WORKER_APPEARED' in text
+
+
+def test_r15_orphan_parent_is_stopped_before_new_runner_start() -> None:
+    text = SCRIPT.read_text(encoding="utf-8")
+    start = text.index("start_runner() {")
+    end = text.index('mount_transition="NO"', start)
+    block = text[start:end]
+    orphan_index = block.index("runner_orphan_service_pids")
+    stop_index = block.index("stop_orphan_runner_parent_tree")
+    launch_index = block.index("nohup ./runsvc.sh")
+    assert orphan_index < stop_index < launch_index
+
