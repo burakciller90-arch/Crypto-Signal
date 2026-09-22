@@ -94,6 +94,7 @@ def test_r15_recovery_retires_legacy_runner_owners_before_bootstrap() -> None:
     assert "com.cryptosignal.github-runner-terminal-watchdog" in text
     assert "com.cryptosignal.github-runner-ssd" in text
     assert "actions.runner.burakciller90-arch-Crypto-Signal.crypto-signal-uid504" in text
+    assert "com.cryptosignal.github-runner-r15-service" in text
     assert 'launchctl disable "$legacy_target"' in text
     assert 'launchctl bootout "$legacy_target"' in text
     assert 'R15_SSD_HOTPLUG_RECOVERY_SINGLE_OWNER=YES' in text
