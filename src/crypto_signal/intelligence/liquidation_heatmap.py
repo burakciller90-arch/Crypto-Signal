@@ -192,12 +192,16 @@ class LiquidationHeatmapAnalysis:
                 raise ValueError("measured liquidation heatmap requires side notional")
             if self.observed_state is ObservedLiquidationState.UNAVAILABLE:
                 raise ValueError("measured liquidation heatmap cannot be unavailable")
-            if self.observed_state is ObservedLiquidationState.NONE_OBSERVED:
-                if self.consumed_event_count != 0 or self.bins:
-                    raise ValueError("none-observed heatmap cannot carry events/bins")
-            if self.observed_state is ObservedLiquidationState.OBSERVED:
-                if self.consumed_event_count <= 0 or not self.bins:
-                    raise ValueError("observed heatmap requires events and bins")
+            if (
+                self.observed_state is ObservedLiquidationState.NONE_OBSERVED
+                and (self.consumed_event_count != 0 or self.bins)
+            ):
+                raise ValueError("none-observed heatmap cannot carry events/bins")
+            if (
+                self.observed_state is ObservedLiquidationState.OBSERVED
+                and (self.consumed_event_count <= 0 or not self.bins)
+            ):
+                raise ValueError("observed heatmap requires events and bins")
         else:
             if self.source_quality is LiquidationSourceQuality.GOOD:
                 raise ValueError("unresolved liquidation heatmap cannot claim good quality")
