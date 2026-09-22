@@ -2622,3 +2622,44 @@ NOT EXECUTED human-impact operations rather than fabricating PASS.
 
 R14 is now the sole frontier: final release/documentation freeze with reserved
 tag `crypto-signal-full-version-v1.0.0`.
+
+
+## 2026-09-22 — v1.1 master roadmap / Decision Proof / parallel Market Tape program recorded
+
+Post-v1.0 development is now governed by `docs/V1_1_MASTER_EXECUTION_ROADMAP.md`.
+The roadmap is written as an agent-handoff execution contract rather than a feature
+wish list.
+
+Key decisions:
+- v1.0.0 remains immutable and REAL_CAPITAL=0.
+- R15 SSD/runtime recovery remains the production prerequisite; process liveness is
+  not accepted as data freshness.
+- Customer UI and Market Tape/data collection run in parallel after R15 safety.
+- Existing Order Flow/Microstructure and Derivatives Context engines are reused rather
+  than duplicated.
+- v1.1 begins with fixed 20/25/25/15/15 research priors; adaptive regime/meta weighting
+  is deferred until later forward evidence beats the fixed baseline without leakage.
+- Canonical 100 USDT paper performance is strictly separated from Shadow Lab research.
+- The unfinished `v1.1-paper-active-learning-v1` branch is not canonical authority.
+- Cross-Asset/Correlation, execution market-impact simulation and adaptive regime
+  weighting are preserved as v2 frontier, not v1.1 scope creep.
+
+The user’s “Proof-of-Thought” idea is accepted as a product direction but implemented
+as **Live Intelligence Feed / Decision Proof**. The system records externally auditable
+facts: decision state, forecast trigger/horizon/target/invalidation, supporting and
+contradicting evidence, missing/stale evidence, exact versions/identities, frozen
+chart/microstructure references, simple/technical explanations, canonical/shadow
+authority and later immutable outcome resolution. Private chain-of-thought is neither
+stored nor fabricated. Original forecasts are never rewritten after the result.
+
+Market Tape foundation draft PR #726 now provides append-only persistence for
+order-book snapshots, public trades and derivatives observations, including
+replay-safe semantic dedupe, WAL/quick_check and canonical SSD collector defaults.
+Hosted full gate run `35718669274` passed.
+
+The live runtime remains blocked from R15 acceptance because the UID504 SSD
+`Runner.Listener` has been observed long-lived at near-100% CPU while dashboard and
+supervisor processes remain present. The post-04:00 data interruption is not declared
+fixed until canonical ledger/candle freshness advances mechanically. UID501 currently
+receives Permission denied on the existing Crypto-504 project tree; the existing
+owner-preserving ACL grant flow has been launched for user authorization.
