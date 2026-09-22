@@ -610,7 +610,7 @@ def _write_parquet(path: Path, rows: list[dict[str, object]]) -> None:
 
 def _read_parquet(path: Path) -> list[dict[str, object]]:
     _pa, pq = _pyarrow_modules()
-    rows = pq.read_table(path).to_pylist()
+    rows = pq.ParquetFile(path).read().to_pylist()
     if not isinstance(rows, list):
         raise TypeError("Parquet reader returned non-list rows")
     return [
