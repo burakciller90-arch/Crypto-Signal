@@ -190,15 +190,17 @@ Test:
 
 No fallback to removed internal Macintosh project paths is allowed.
 
-### R12 — Continuity hardening — CURRENT FRONTIER
-Canonical task: `stage12-continuity-hardening-v1`.
+### R12 — Continuity hardening — ACCEPTED
+Accepted main: `2105a39436a53dc1f888649d7b88508dffe97472`.
+Exact-chat binding, pause dominance, empty queue/lease behavior, namespace isolation and relay-v2 continuity passed canonical runtime acceptance. UID504 launchd bootstrap remains unavailable and is honestly replaced by GitHub 20m fallback plus a verified detached UID504 bridge.
 - explicit current-chat binding;
 - pause/resume semantics;
 - empty/stale queue handling;
 - duplicate/stale wake NOOP behavior;
 - no cross-project relay contamination.
 
-### R13 — Full Version Integrated Acceptance v2
+### R13 — Full Version Integrated Acceptance v2 — CURRENT FRONTIER
+Canonical task: `stage13-full-version-integrated-acceptance-v2`.
 Before calling the project complete:
 - full repository gate PASS;
 - stable runtime deployment;
@@ -234,4 +236,4 @@ Freeze:
 Crypto Signal Full Version is complete when M1, M2 and M3 are accepted with mechanical evidence and authoritative documentation, while REAL_CAPITAL remains 0 and all real-money/order authority stays closed.
 
 Immediate next execution target:
-`stage12-continuity-hardening-v1`.
+`stage13-full-version-integrated-acceptance-v2`.

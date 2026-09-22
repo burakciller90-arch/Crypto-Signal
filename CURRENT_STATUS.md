@@ -3337,3 +3337,37 @@ Current true roadmap frontier:
 - keep user pause authoritative and do not resume wakes merely to test continuity;
 - no cross-project relay contamination;
 - REAL_CAPITAL=0.
+
+
+## 2026-09-22 — R12 Continuity hardening ACCEPTED
+
+- accepted main head: `2105a39436a53dc1f888649d7b88508dffe97472`;
+- base Stage12 hardening PR #685 merged exact-chat, pause-dominant, namespace/HMAC and stale/duplicate NOOP contracts;
+- branch full gate PASS: run `35669239056`;
+- macOS Python 3.9 / launchd runtime compatibility PR #687 merged; branch gate PASS `35670112796`;
+- UID504 user-domain launchd attempt PR #688 merged; branch gate PASS `35670379756`;
+- launchd-optional/fallback PR #690 merged after both gui/504 and user/504 bootstrap proved unavailable from the self-hosted runner context; branch gate PASS `35670818641`;
+- exact-head local 20m installer PASS: run `35670952726`;
+- local launchd bootstrap still returns rc=5 and is explicitly recorded as unavailable; accepted local cadence owner is the canonical self-hosted GitHub `:00/:20/:40` fallback, not a falsely claimed launchd timer;
+- exact-head Stage10 hosted regression PASS: run `35670952717`;
+- canonical R12 acceptance PASS: issue #691 / run `35671040667`;
+- acceptance exact-chat binding PASS to the four-way local/shared current+expected binding;
+- resume dry-run PASS while preserving user pause;
+- local/shared pause remained YES; active leases=0; local wake queue=0; relay wake queue=0;
+- continuity bridge launchd bootstrap also proved unavailable (rc=5), so acceptance started a verified detached UID504 bridge with `RUNNER_TRACKING_ID` removed;
+- detached bridge runtime PASS, final bridge PID alive and owned by UID504;
+- relay protocol v2 PASS with project namespace `crypto-signal`, exact target binding and fresh heartbeat;
+- shared GUI relay transport was observed under UID502 only as the GUI transport boundary; Crypto project state/runtime authority remains UID504 and namespace-bound;
+- paused relay submit / lease arm / wake enqueue / recurring fallback / direct wake paths all NOOPed without changing queues or pause state;
+- final continuity state PASS with `R12_CONTINUITY_ACCEPTANCE_PASS=YES`;
+- exact-head UID504 fulltest PASS with `FULL_TEST_PASS=YES`: issue #696 / run `35671240105`;
+- no cross-project relay namespace was accepted;
+- no real-money, broker/order or production authority was introduced;
+- REAL_CAPITAL=0.
+
+Current true roadmap frontier:
+- `stage13-full-version-integrated-acceptance-v2`;
+- run one canonical integrated acceptance over code, live Product, SSD runtime, paper ledger, costs/slippage, PIT/leakage, Research Lab isolation, beginner UX, freshness/stale semantics and authority boundaries;
+- reuse already accepted R10/R11/R12 evidence where the physical/destructive test is intentionally human-gated; do not falsely claim reboot/logout/physical SSD detach;
+- require exact main/Development consistency and live Product health;
+- REAL_CAPITAL=0 and no exchange order endpoint/credential authority.

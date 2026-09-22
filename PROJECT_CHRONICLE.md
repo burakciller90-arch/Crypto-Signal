@@ -2587,3 +2587,16 @@ Physical reboot/logout and physical SSD detach/remount were intentionally not ex
 
 R11 bounded operational hardening is accepted. The canonical next safe frontier is `stage12-continuity-hardening-v1`.
 REAL_CAPITAL=0.
+
+## 2026-09-22 — R12 continuity hardening accepted
+
+Stage12 PR #685 established exact-chat, pause/resume, queue/lease, at-most-once and namespace isolation contracts. Runtime acceptance then exposed macOS-specific constraints rather than hiding them: /usr/bin/python3 is 3.9, and launchctl bootstrap from the UID504 self-hosted runner returns rc=5 in both gui/user domains.
+
+PRs #687 and #688 fixed Python/plist/domain assumptions; PR #690 made launchd explicitly optional. On accepted main `2105a39436a53dc1f888649d7b88508dffe97472`, installer run `35670952726` passed in canonical GitHub :00/:20/:40 fallback mode and Stage10 run `35670952717` passed.
+
+Canonical issue #691 / run `35671040667` then passed all R12 acceptance steps without unpausing the user. Exact current/expected local/shared chat binding matched; resume dry-run preserved pause; active leases and both wake queues were zero. Because bridge launchd bootstrap was unavailable, a detached UID504 bridge was started with RUNNER_TRACKING_ID removed and mechanically verified. Relay v2 restarted with crypto-signal namespace, exact target and fresh heartbeat. The GUI transport owner was UID502, but only across the shared namespace-bound transport boundary; Crypto runtime/project authority remained UID504.
+
+Every paused submission path NOOPed without queue/lease mutation. Final continuity state emitted R12_CONTINUITY_ACCEPTANCE_PASS=YES. UID504 exact-head fulltest issue #696 / run `35671240105` emitted FULL_TEST_PASS=YES.
+
+R12 is accepted. The next frontier is `stage13-full-version-integrated-acceptance-v2`.
+REAL_CAPITAL=0.

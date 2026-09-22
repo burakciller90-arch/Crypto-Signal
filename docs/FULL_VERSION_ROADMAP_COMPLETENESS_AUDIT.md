@@ -281,22 +281,40 @@ autonomously because doing so can sever the active user/control session. They
 remain explicit human-impact acceptance/runbook items and are not represented
 as completed evidence.
 
+## R12 Continuity hardening — ACCEPTED
+
+R12 is **ACCEPTED** at
+`2105a39436a53dc1f888649d7b88508dffe97472`.
+
+Exact four-way chat binding, pause-dominant resume/arm/enqueue/submit/direct paths,
+empty queue/lease semantics, namespace isolation and relay-v2 transport all
+passed canonical runtime acceptance. User pause remained active throughout.
+
+macOS launchd bootstrap is not claimed as working from the UID504 self-hosted
+runner: both local 20m timer and bridge bootstrap returned rc=5. The accepted
+runtime therefore uses the canonical GitHub :00/:20/:40 fallback plus a verified
+detached UID504 bridge. This limitation is explicit rather than hidden.
+
+Branch/hotfix gates, merged Stage10, canonical R12 runtime acceptance and UID504
+exact-head fulltest all passed. REAL_CAPITAL=0.
+
 ## Canonical next frontier
 
-`stage12-continuity-hardening-v1`
+`stage13-full-version-integrated-acceptance-v2`
 
 Requirements:
 
-- exact current-chat binding with no silent fallback to a historical chat;
-- user pause must dominate all wake/lease mechanisms;
-- pause archives/supersedes active leases and queued wakes safely;
-- resume must be state-first and create only one fresh continuation owner;
-- delivered/stale/superseded wake events must NOOP rather than replay work;
-- empty queues must be valid and non-error states;
-- at-most-once receipts and duplicate-slot suppression must be deterministic;
-- relay/project identity must prevent Crypto Signal from consuming or emitting another project's continuation state;
-- tests must not unpause the user's current paused state merely to exercise logic;
-- REAL_CAPITAL=0.
+- full repository gate and exact-main/Development consistency;
+- stable live Product health and accepted Gift Edition shell;
+- accepted R11 runtime recovery evidence plus current runtime health;
+- auto-refresh and stale/freshness semantics;
+- paper-ledger reconstruction and deterministic fee/spread/slippage accounting;
+- leakage/PIT checks and benchmark correctness;
+- beginner usability and explanation/evidence consistency;
+- Research Lab / shadow meta-intelligence isolation;
+- SSD-only path/freshness checks with no legacy internal fallback;
+- REAL_CAPITAL=0 and no exchange-order / credential authority;
+- physical reboot/logout/SSD detach remain explicit human-impact items unless separately performed; do not fabricate PASS.
 
 ## Safety boundary
 
