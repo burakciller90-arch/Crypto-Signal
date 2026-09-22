@@ -109,3 +109,5 @@ must be reused rather than duplicated.
 - The locked wake text is sent without an extra visible marker; at-most-once delivery is maintained by internal event IDs/receipts.
 - Busy-stop evidence: relay recorded `OBSERVED_AFTER_CLICK` during the first live test; final post-fix test run `35770956851` returned `RELAY_SUBMIT_RC=0` and `CRYPTO_LOCKED_20M_WAKE_PASS=YES`.
 - A future explicit user pause remains authoritative and must suspend periodic wake delivery until the user resumes it.
+- The user reaffirmed on 2026-09-22 that this 20-minute wake loop must remain ACTIVE during autonomous project completion. Do not disable, pause, replace, or silently weaken it unless the user explicitly asks to pause/stop it. The approved wake text also requires every material action/update to be recorded in GitHub for the next agent.
+
