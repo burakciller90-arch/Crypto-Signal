@@ -30,6 +30,7 @@ from crypto_signal.data.market_tape_runtime import (
     measure_market_tape_capacity,
 )
 from crypto_signal.data.market_tape_wire_collection import (
+    MarketTapeWireCollectionResult,
     persist_bybit_wire_stream,
 )
 from crypto_signal.data.raw_market_tape import RawMarketTapeStore
@@ -73,7 +74,7 @@ async def _collect_chunk(
     depth: int,
     snapshot_interval_ms: int,
     chunk_messages: int,
-):
+) -> MarketTapeWireCollectionResult:
     store = MarketTapeStore(DB)
     raw_store = RawMarketTapeStore(RAW_DB)
     if not store.quick_check() or not raw_store.quick_check():
