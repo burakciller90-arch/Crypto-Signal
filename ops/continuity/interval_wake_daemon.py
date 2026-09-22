@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 from __future__ import annotations
 
 import json
@@ -141,7 +140,7 @@ def write_runtime_status(
     now = time.time()
     next_due = float(state["next_due_epoch"])
     pending = str(state["pending_event_id"])
-    countdown = max(0, int(round(next_due - now))) if not pending else 0
+    countdown = max(0, round(next_due - now)) if not pending else 0
     content = (
         f"state={runtime_state}\n"
         f"pid={os.getpid()}\n"
