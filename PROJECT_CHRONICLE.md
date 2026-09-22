@@ -3017,3 +3017,24 @@ Acceptance evidence:
 - reconciliation observed local/shared pause NO, active leases 0, local queue 0, shared queue 0.
 
 Continuity is ACTIVE. A future explicit user pause remains authoritative. REAL_CAPITAL=0.
+
+
+---
+
+## 2026-09-22 — FIRST REAL COLD PARTITION DUE-STATE ACCEPTED
+
+Phase 0 performed a read-only UID501 -> UID504 narrow-bridge check without forcing archive or pruning hot data.
+
+Acceptance run: `35771736782`.
+
+Evidence:
+- deployed Market Tape build `355ccfacbcd0b860efeb3c09486b707940106b1f`;
+- `COLD_MANIFEST_COUNT=0`;
+- oldest observed real Market Tape event age = **3.358h**;
+- computed archive cutoff = `1790010000000` ms;
+- eligible hot rows before cutoff = **0**;
+- `FIRST_REAL_COLD_PARTITION_NOT_DUE=YES`;
+- `COLD_ARCHIVE_READONLY_NOT_DUE_PASS=YES`;
+- REAL_CAPITAL=0.
+
+Conclusion: absence of a cold manifest is currently expected, not an archive failure. No production mutation was performed. The first real partition remains a future read-only acceptance item once the 26h hot-retention + grace threshold is actually crossed. Development proceeds in parallel.
