@@ -6,21 +6,25 @@ Safety invariant: **REAL_CAPITAL=0**
 
 ## Executive result
 
-**Stage 10 Full Integrated Acceptance is PASS, but the entire Full Version roadmap
-is not yet complete.**
+**R13 Full Version Integrated Acceptance v2 is PASS.**
 
-The runtime-accepted Stage 10 code is tagged
-`stage10-accepted-20260921` and resolves to commit
-`8ca23e612ba36b4ebcb0c3cb41a166d78add5cff`.
+The canonical accepted main is
+`f95efc358ac396e50d0bfdb920b0187706cd2af2`; canonical R13 issue #704 /
+run `35672790463` passed the complete integrated matrix: repository/static
+gates, SSD/runtime recovery audit, live Gift Edition and Research Lab truth,
+30-cycle endurance/stale semantics, paper reconstruction/cost/slippage/benchmarks,
+leakage/PIT, beginner/evidence consistency, continuity isolation and final
+authority boundaries.
 
-The bounded Stage 8 engine sequence is complete. The remaining material roadmap
-gaps are Stage 8.5 Alpha Factory and Stage 8.75 Learning Memory. The governing architecture remains
-`docs/INTELLIGENCE_ALPHA_FACTORY_ARCHITECTURE.md`; accepted Stage 8 engines stay
-observation-only until a separately accepted integration/meta policy exists.
+The implementation roadmap is therefore mechanically complete through R13.
+The only remaining roadmap action is **R14 release/documentation freeze**:
+finalize the authoritative documentation package and bind the immutable tag
+`crypto-signal-full-version-v1.0.0` to the exact accepted release commit.
 
-This audit prevents Stage 10 success from being misrepresented as completion of
-roadmap stages that were intentionally outside the accepted Stage 10 runtime
-matrix.
+Physical reboot/logout and physical SSD detach/remount remain explicit
+human-impact UNTESTED items; they are not silently promoted to PASS.
+
+`REAL_CAPITAL=0`; no exchange-order or credential authority is exposed.
 
 ## Accepted / materially complete areas
 
@@ -298,23 +302,37 @@ detached UID504 bridge. This limitation is explicit rather than hidden.
 Branch/hotfix gates, merged Stage10, canonical R12 runtime acceptance and UID504
 exact-head fulltest all passed. REAL_CAPITAL=0.
 
+## R13 Full Version Integrated Acceptance v2 — ACCEPTED
+
+R13 is **ACCEPTED** at
+`f95efc358ac396e50d0bfdb920b0187706cd2af2`.
+
+Canonical run `35672790463` passed exact-main/Development consistency,
+Product-code parity, full repository gates, SSD runtime/recovery evidence, live
+Gift Edition/Research Lab truth, canonical runtime verification, 30-cycle
+refresh/stale semantics, paper reconstruction/cost/slippage/benchmark evidence,
+PIT/leakage boundaries, beginner evidence consistency, Research Lab isolation
+and paused continuity.
+
+REAL_CAPITAL=0 and exchange-order/credential authority remain closed. Physical
+reboot/logout/SSD detach-remount remain explicit human-impact items and were not
+falsely claimed as tested.
+
 ## Canonical next frontier
 
-`stage13-full-version-integrated-acceptance-v2`
+`stage14-final-release-documentation-v1`
 
 Requirements:
 
-- full repository gate and exact-main/Development consistency;
-- stable live Product health and accepted Gift Edition shell;
-- accepted R11 runtime recovery evidence plus current runtime health;
-- auto-refresh and stale/freshness semantics;
-- paper-ledger reconstruction and deterministic fee/spread/slippage accounting;
-- leakage/PIT checks and benchmark correctness;
-- beginner usability and explanation/evidence consistency;
-- Research Lab / shadow meta-intelligence isolation;
-- SSD-only path/freshness checks with no legacy internal fallback;
-- REAL_CAPITAL=0 and no exchange-order / credential authority;
-- physical reboot/logout/SSD detach remain explicit human-impact items unless separately performed; do not fabricate PASS.
+- freeze the final accepted repository commit with
+  `crypto-signal-full-version-v1.0.0`;
+- include final release manifest, operator runbook, dashboard recovery guide,
+  SSD backup/recovery guide and known authority gates;
+- require exact current main before tag creation;
+- refuse tag drift and force-push;
+- create/verify the GitHub Release from the immutable tag;
+- preserve all R13 authority and human-impact boundaries;
+- REAL_CAPITAL=0.
 
 ## Safety boundary
 

@@ -2600,3 +2600,25 @@ Every paused submission path NOOPed without queue/lease mutation. Final continui
 
 R12 is accepted. The next frontier is `stage13-full-version-integrated-acceptance-v2`.
 REAL_CAPITAL=0.
+
+
+## 2026-09-22 — R13 Full Version Integrated Acceptance v2 accepted
+
+The canonical R13 retry passed at main
+`f95efc358ac396e50d0bfdb920b0187706cd2af2` in run `35672790463`.
+
+Every integrated acceptance step passed: exact main/Development, Product-code
+parity, full repository/static authority, current SSD runtime/recovery audit,
+live Gift Edition/Research Lab truth, canonical runtime verifier, 30-cycle
+refresh/stale semantics, paper reconstruction/cost/slippage/benchmark evidence,
+leakage/PIT, beginner evidence consistency, Research Lab isolation and paused
+continuity. The final declaration emitted
+`R13_FULL_VERSION_INTEGRATED_ACCEPTANCE_V2=PASS`,
+`R13_REAL_CAPITAL_ZERO_PASS=YES` and
+`R13_NO_EXCHANGE_ORDER_CREDENTIAL_AUTHORITY_PASS=YES`.
+
+The accepted verifier explicitly records physical reboot/logout/SSD detach as
+NOT EXECUTED human-impact operations rather than fabricating PASS.
+
+R14 is now the sole frontier: final release/documentation freeze with reserved
+tag `crypto-signal-full-version-v1.0.0`.

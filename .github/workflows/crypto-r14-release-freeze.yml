@@ -1,0 +1,170 @@
+name: Crypto R14 Full Version Release Freeze
+
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  contents: write
+  issues: read
+
+jobs:
+  freeze:
+    if: github.actor == 'burakciller90-arch' && github.event.issue.title == '[R14] FREEZE FULL VERSION RELEASE'
+    name: Freeze Full Version v1.0.0
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 20
+    env:
+      GH_TOKEN: ${{ github.token }}
+      RELEASE_TAG: crypto-signal-full-version-v1.0.0
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Parse exact target
+        id: target
+        shell: bash
+        env:
+          ISSUE_BODY: ${{ github.event.issue.body }}
+        run: |
+          set -euo pipefail
+          TARGET="$(python3 - <<'PY'
+          import os
+          import re
+
+          body = os.environ.get("ISSUE_BODY", "")
+          match = re.search(r"(?im)^target:\s*([0-9a-f]{40})\s*$", body)
+          if not match:
+              raise SystemExit("INVALID_R14_RELEASE_TARGET")
+          print(match.group(1))
+          PY
+          )"
+          echo "target=$TARGET" >> "$GITHUB_OUTPUT"
+          echo "R14_RELEASE_TARGET=$TARGET"
+
+      - name: Verify exact current main and UID504 Development
+        shell: bash
+        env:
+          TARGET: ${{ steps.target.outputs.target }}
+          GH_JOB_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          DEV="$ROOT/Development"
+          PRODUCT="$ROOT/Product"
+          test "$(id -u)" = "504"
+          test -z "$(git -C "$DEV" status --porcelain)"
+          test -z "$(git -C "$PRODUCT" status --porcelain)"
+          BASIC="$(printf 'x-access-token:%s' "$GH_JOB_TOKEN" | base64)"
+          git -C "$DEV" -c http.extraheader="AUTHORIZATION: Basic $BASIC" fetch --no-tags origin main
+          ORIGIN_MAIN="$(git -C "$DEV" rev-parse origin/main)"
+          test "$TARGET" = "$ORIGIN_MAIN"
+          git -C "$DEV" merge --ff-only "$TARGET"
+          test "$(git -C "$DEV" rev-parse HEAD)" = "$TARGET"
+          PRODUCT_HEAD="$(git -C "$PRODUCT" rev-parse HEAD)"
+          git -C "$DEV" diff --quiet "$PRODUCT_HEAD" "$TARGET" -- \
+            src/crypto_signal/product ops/run_dashboard.py
+          echo "R14_EXACT_MAIN_DEVELOPMENT_PASS=YES"
+          echo "R14_PRODUCT_CODE_PARITY_PASS=YES product_head=$PRODUCT_HEAD"
+
+      - name: Verify final release documentation contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
+          cd "$DEV"
+          ./.venv/bin/python -m pytest -q tests/test_r14_release_package.py
+          echo "R14_RELEASE_DOCUMENTATION_CONTRACT_PASS=YES"
+
+      - name: Verify live safety and paused continuity
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
+          curl -fsS --max-time 5 http://127.0.0.1:48700/api/health \
+            | /usr/bin/python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["status"]=="ok"; assert d["read_only"] is True; assert d["real_capital"]==0; assert d["ledger_present"] is True; assert d["alert_outbox_present"] is True'
+          curl -fsS --max-time 5 http://127.0.0.1:48700/api/intelligence-center \
+            | /usr/bin/python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["status"]=="ready"; assert d["read_only"] is True; assert d["real_capital"]==0; assert d["production_active_engine_count"]==0; assert d["probability_status"]=="not_calibrated"'
+          /usr/bin/python3 "$DEV/ops/continuity/continuity_status.py" > /tmp/r14-continuity.log
+          grep -F 'PAUSED=YES' /tmp/r14-continuity.log >/dev/null
+          grep -F 'ACTIVE_LEASES=0' /tmp/r14-continuity.log >/dev/null
+          grep -F 'WAKE_QUEUE=0' /tmp/r14-continuity.log >/dev/null
+          grep -F 'RELAY_SHARED_PAUSED=YES' /tmp/r14-continuity.log >/dev/null
+          grep -F 'RELAY_QUEUE=0' /tmp/r14-continuity.log >/dev/null
+          echo "R14_LIVE_SAFETY_CONTINUITY_PASS=YES"
+          echo "REAL_CAPITAL=0"
+
+      - name: Verify target package exists
+        shell: bash
+        env:
+          TARGET: ${{ steps.target.outputs.target }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$TARGET"
+          test -f docs/FINAL_RELEASE_MANIFEST_V1.md
+          test -f docs/OPERATOR_RUNBOOK_FULL_VERSION_V1.md
+          test -f docs/DASHBOARD_OPEN_RECOVERY_GUIDE_V1.md
+          test -f docs/SSD_RECOVERY_BACKUP_GUIDE_V1.md
+          test -f docs/KNOWN_AUTHORITY_GATES_V1.md
+          echo "R14_EXACT_MAIN_RELEASE_TARGET_PASS=YES"
+
+      - name: Create or verify immutable annotated tag
+        shell: bash
+        env:
+          TARGET: ${{ steps.target.outputs.target }}
+        run: |
+          set -euo pipefail
+          git fetch --tags origin
+          if git rev-parse -q --verify "refs/tags/$RELEASE_TAG" >/dev/null 2>&1; then
+            EXISTING_TARGET="$(git rev-list -n 1 "$RELEASE_TAG")"
+            test "$EXISTING_TARGET" = "$TARGET"
+            echo "R14_RELEASE_TAG_ALREADY_PRESENT_SAME_TARGET=YES"
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git tag -a "$RELEASE_TAG" "$TARGET" -m "Crypto Signal Full Version v1.0.0 — REAL_CAPITAL=0"
+            git push origin "refs/tags/$RELEASE_TAG"
+            echo "R14_RELEASE_TAG_CREATED=YES"
+          fi
+          git fetch --tags origin
+          test "$(git rev-list -n 1 "$RELEASE_TAG")" = "$TARGET"
+          echo "R14_RELEASE_TAG_TARGET_PASS=YES tag=$RELEASE_TAG target=$TARGET"
+
+      - name: Create or verify GitHub Release
+        shell: bash
+        run: |
+          set -euo pipefail
+          if gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "R14_GITHUB_RELEASE_ALREADY_PRESENT=YES"
+          else
+            gh release create "$RELEASE_TAG" \
+              --repo "$GITHUB_REPOSITORY" \
+              --title "Crypto Signal Full Version v1.0.0" \
+              --notes-file docs/FINAL_RELEASE_MANIFEST_V1.md
+            echo "R14_GITHUB_RELEASE_CREATED=YES"
+          fi
+          RELEASE_JSON="$(gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --json tagName,isDraft,isPrerelease)"
+          python3 - "$RELEASE_JSON" <<'PY'
+          import json
+          import sys
+
+          data = json.loads(sys.argv[1])
+          assert data["tagName"] == "crypto-signal-full-version-v1.0.0"
+          assert data["isDraft"] is False
+          assert data["isPrerelease"] is False
+          PY
+          echo "R14_GITHUB_RELEASE_VERIFY_PASS=YES"
+
+      - name: Final release declaration
+        shell: bash
+        env:
+          TARGET: ${{ steps.target.outputs.target }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-list -n 1 "$RELEASE_TAG")" = "$TARGET"
+          echo "R14_REAL_CAPITAL_ZERO=YES"
+          echo "R14_RELEASE_TAG=$RELEASE_TAG"
+          echo "R14_RELEASE_TARGET=$TARGET"
+          echo "R14_FULL_VERSION_RELEASE_FREEZE_PASS=YES"
+          echo "CRYPTO_SIGNAL_FULL_VERSION_COMPLETE=YES"
