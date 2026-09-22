@@ -6,15 +6,15 @@ from decimal import Decimal
 from enum import StrEnum
 from itertools import pairwise
 
-from crypto_signal.data.microstructure import OrderBookLevel, OrderBookSnapshot
+from crypto_signal.data.microstructure import OrderBookSnapshot
 from crypto_signal.data.models import Exchange, MarketType
 from crypto_signal.intelligence.liquidity_dynamics import LiquiditySourceQuality
 from crypto_signal.ledger.serialization import canonical_sha256
 
 LIQUIDITY_STRUCTURE_ENGINE_VERSION = "liquidity-structure-v2-slice2/1"
 LIQUIDITY_STRUCTURE_FREEZE_SCHEMA_VERSION = "liquidity-structure-freeze-v1/1"
-_BPS = Decimal("10000")
-_ONE_SECOND_MS = Decimal("1000")
+_BPS = Decimal(10000)
+_ONE_SECOND_MS = Decimal(1000)
 
 
 class LiquidityStructureStatus(StrEnum):
@@ -42,7 +42,7 @@ class LiquidityStructureConfig:
     max_snapshot_gap_ms: int = 30_000
     persistent_presence_fraction: Decimal = Decimal("0.60")
     material_notional_multiple: Decimal = Decimal("1.50")
-    approach_bps: Decimal = Decimal("10")
+    approach_bps: Decimal = Decimal(10)
     rapid_withdrawal_max_lifetime_ms: int = 30_000
     rapid_withdrawal_min_fraction: Decimal = Decimal("0.80")
     hidden_liquidity_min_replenishment_cycles: int = 2
