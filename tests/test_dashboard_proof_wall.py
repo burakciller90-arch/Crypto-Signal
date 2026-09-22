@@ -9,7 +9,7 @@ import pytest
 
 from crypto_signal.confluence.models import ScoreSemantic
 from crypto_signal.product.models import ProductDataStatus
-from crypto_signal.product.reader import DashboardReadError, DashboardReader
+from crypto_signal.product.reader import DashboardReader, DashboardReadError
 from crypto_signal.signals.models import ProbabilityStatus
 
 
