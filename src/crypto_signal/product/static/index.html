@@ -24,7 +24,7 @@
       </div>
 
       <nav id="quickNav" class="rail-nav" aria-label="Ürün bölümleri">
-        <button class="rail-nav-item is-active" type="button" data-target="commandSection">
+        <button class="rail-nav-item is-active" type="button" data-target="commandSection" aria-current="page">
           <span class="nav-index">01</span><span>COMMAND</span>
         </button>
         <button class="rail-nav-item" type="button" data-target="assetSection">
@@ -64,7 +64,7 @@
           <span class="micro-label">MARKET INTELLIGENCE OPERATING SYSTEM</span>
           <strong>Piyasa İstihbarat Merkezi</strong>
         </div>
-        <div class="global-truth" aria-label="Canlı sistem durumu">
+        <div class="global-truth" aria-label="Canlı sistem durumu" role="status" aria-live="polite" aria-atomic="false">
           <span id="liveStatusChip" class="status-chip status-chip-live">Canlı bağlantı hazırlanıyor…</span>
           <span id="lastRefreshChip" class="status-chip status-chip-muted">Son yenileme · bekleniyor</span>
           <span id="healthChip" class="status-chip status-chip-muted">Bağlanıyor…</span>
@@ -98,7 +98,7 @@
             </div>
           </div>
 
-          <section id="dataNotice" class="notice hidden" role="status"></section>
+          <section id="dataNotice" class="notice hidden" role="status" aria-live="polite" aria-atomic="true"></section>
 
           <div class="situation-strip" aria-label="Piyasa özeti">
             <article class="situation-cell situation-primary">
@@ -403,13 +403,13 @@
     </div>
   </div>
 
-  <dialog id="signalDialog" class="evidence-room">
+  <dialog id="signalDialog" class="evidence-room" aria-labelledby="dialogTitle">
     <div class="evidence-room-head">
       <div>
         <span class="micro-label">EVIDENCE ROOM / FROZEN DECISION</span>
         <h2 id="dialogTitle">Dondurulmuş karar</h2>
       </div>
-      <button id="closeDialog" class="outline-button" type="button">Kapat</button>
+      <button id="closeDialog" class="outline-button" type="button" autofocus>Kapat</button>
     </div>
     <div id="dialogBody" class="dialog-body"></div>
   </dialog>
