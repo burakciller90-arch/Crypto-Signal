@@ -56,15 +56,15 @@ def _evaluated(
     geometry = SignalGeometry(
         source_evidence_id=f"evidence-{seed}",
         source_methodology=MethodologyKind.PRICE_ACTION,
-        entry_zone=PriceZone(Decimal("100"), Decimal("102")),
-        entry_reference_price=Decimal("101"),
+        entry_zone=PriceZone(Decimal(100), Decimal(102)),
+        entry_reference_price=Decimal(101),
         entry_reference_model=EntryReferenceModel.ZONE_MIDPOINT_REFERENCE_NOT_EXECUTION,
-        invalidation_price=Decimal("95"),
+        invalidation_price=Decimal(95),
         invalidation_trigger=InvalidationTrigger.TOUCH_OR_CROSS,
         targets=(
             RiskRewardTarget(
                 label="target_1",
-                target_price=Decimal("108"),
+                target_price=Decimal(108),
                 reference_rr=Decimal("1.4"),
             ),
         ),
@@ -140,7 +140,7 @@ def _patterned_items(
     train_cut = 84
     for index in range(total):
         high = index % 2 == 0
-        score = Decimal("85") if high else Decimal("20")
+        score = Decimal(85) if high else Decimal(20)
         phase_index = index // 2
         if index < train_cut:
             success = phase_index % 5 != 0 if high else phase_index % 5 == 0
@@ -205,7 +205,7 @@ def test_calibration_does_not_promote_small_or_retrospective_samples() -> None:
         _evaluated(
             f"small-{index}",
             success=index % 2 == 0,
-            score=Decimal("85"),
+            score=Decimal(85),
             as_of_ms=1_000 + index * 10_000,
         )
         for index in range(40)
@@ -214,7 +214,7 @@ def test_calibration_does_not_promote_small_or_retrospective_samples() -> None:
         _evaluated(
             f"retro-{index}",
             success=index % 2 == 0,
-            score=Decimal("85"),
+            score=Decimal(85),
             as_of_ms=1_000 + index * 10_000,
             evidence_class=EvidenceClass.RETROSPECTIVE,
         )
