@@ -5,6 +5,10 @@ from dataclasses import dataclass
 from typing import Protocol
 
 from crypto_signal.data.derivatives import DerivativesObservation
+from crypto_signal.data.liquidations import (
+    LiquidationFeedCoverage,
+    LiquidationObservation,
+)
 from crypto_signal.data.market_tape import (
     MarketTapeStore,
     MarketTapeWriteDisposition,
@@ -104,6 +108,84 @@ async def collect_bybit_market_tape_snapshot(
             item is MarketTapeWriteDisposition.UNCHANGED
             for item in derivative_results
         ),
+    )
+
+
+@dataclass(frozen=True, slots=True)
+class MarketTapeLiquidationCollectionResult:
+    observed_events: int
+    liquidation_inserted: int
+    liquidation_unchanged: int
+    coverage_disposition: MarketTapeWriteDisposition
+
+    @property
+    def inserted_total(self) -> int:
+        return (
+            self.liquidation_inserted
+            + (
+                1
+                if self.coverage_disposition
+                is MarketTapeWriteDisposition.INSERTED
+                else 0
+            )
+        )
+
+
+def persist_liquidation_batch(
+    *,
+    store: MarketTapeStore,
+    events: tuple[LiquidationObservation, ...],
+    coverage: LiquidationFeedCoverage,
+) -> MarketTapeLiquidationCollectionResult:
+    ordered = tuple(
+        sorted(
+            events,
+            key=lambda item: (
+                item.event_at_ms,
+                item.source_timestamp_ms,
+                item.source_row_index,
+                item.liquidation_identity,
+            ),
+        )
+    )
+    for event in ordered:
+        if (
+            event.exchange is not coverage.exchange
+            or event.instrument_type is not coverage.instrument_type
+            or event.symbol != coverage.symbol
+        ):
+            raise ValueError("liquidation batch context mismatch")
+        if not (
+            coverage.coverage_start_ms
+            <= event.event_at_ms
+            <= coverage.coverage_end_ms
+        ):
+            raise ValueError("liquidation event falls outside coverage window")
+        if max(
+            event.event_at_ms,
+            event.source_timestamp_ms,
+            event.ingested_at_ms,
+        ) > coverage.observed_at_ms:
+            raise ValueError(
+                "liquidation event is not observable by coverage timestamp"
+            )
+
+    dispositions = tuple(
+        store.append_liquidation(event)
+        for event in ordered
+    )
+    coverage_disposition = store.append_liquidation_coverage(coverage)
+    return MarketTapeLiquidationCollectionResult(
+        observed_events=len(ordered),
+        liquidation_inserted=sum(
+            item is MarketTapeWriteDisposition.INSERTED
+            for item in dispositions
+        ),
+        liquidation_unchanged=sum(
+            item is MarketTapeWriteDisposition.UNCHANGED
+            for item in dispositions
+        ),
+        coverage_disposition=coverage_disposition,
     )
 
 
