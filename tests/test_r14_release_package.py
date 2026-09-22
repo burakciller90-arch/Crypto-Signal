@@ -57,3 +57,34 @@ def test_operator_docs_do_not_claim_human_impact_recovery_was_executed() -> None
         assert "physical" in text.lower()
         assert "reboot" in text.lower()
         assert "SSD detach" in text or "SSD detach/remount" in text
+
+
+def test_root_release_docs_are_not_stale_bootstrap_state() -> None:
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    env = (ROOT / "ENVIRONMENT_REGISTRY.md").read_text(encoding="utf-8")
+    status = (ROOT / "CURRENT_STATUS.md").read_text(encoding="utf-8")
+    audit = (
+        ROOT / "docs" / "FULL_VERSION_ROADMAP_COMPLETENESS_AUDIT.md"
+    ).read_text(encoding="utf-8")
+
+    assert "Phase 0 bootstrap. No product code yet." not in readme
+    assert "/Volumes/Crypto-504/Crypto-Signal" in readme
+    assert "/Volumes/Crypto-504/Crypto-Signal" in env
+    assert "State: R14_RELEASE_CANDIDATE" in status
+    assert "R13 Full Version Integrated Acceptance v2 is PASS" in audit
+    assert "Stage 8.5 Alpha Factory and Stage 8.75 Learning Memory" not in audit
+
+
+def test_release_freeze_rechecks_uid504_runtime_before_tag() -> None:
+    workflow = (
+        ROOT / ".github" / "workflows" / "crypto-r14-release-freeze.yml"
+    ).read_text(encoding="utf-8")
+
+    assert "runs-on: [self-hosted, crypto-signal, uid504]" in workflow
+    assert "R14_EXACT_MAIN_DEVELOPMENT_PASS=YES" in workflow
+    assert "R14_PRODUCT_CODE_PARITY_PASS=YES" in workflow
+    assert "R14_RELEASE_DOCUMENTATION_CONTRACT_PASS=YES" in workflow
+    assert "R14_LIVE_SAFETY_CONTINUITY_PASS=YES" in workflow
+    assert "CRYPTO_SIGNAL_FULL_VERSION_COMPLETE=YES" in workflow
+    assert "productdeploy" not in workflow
+    assert "wakeresume" not in workflow.lower()
