@@ -583,6 +583,7 @@ def deliver(event_id: str, message: str, target_url: str) -> tuple[bool, str]:
         return False, sent
 
     if exact_locked_wake:
+        assert baseline_exact_count is not None
         observed, observation_state = wait_for_exact_observation(
             target_url=target_url,
             wire_message=wire_message,
