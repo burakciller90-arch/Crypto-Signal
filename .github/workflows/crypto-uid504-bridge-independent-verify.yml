@@ -1,0 +1,42 @@
+name: Crypto UID504 Bridge Independent Verify
+
+on:
+  push:
+    branches:
+      - r15-ssd-hotplug-recovery-v1
+    paths:
+      - ".github/workflows/crypto-uid504-bridge-independent-verify.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Verify UID504 bridge after clearing sudo timestamp
+    runs-on: [self-hosted, crypto-signal, uid501]
+    timeout-minutes: 10
+    steps:
+      - name: Clear sudo timestamp and verify privilege boundaries
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "=== CLEAR SUDO TIMESTAMP ==="
+          /usr/bin/sudo -k
+
+          echo "=== UID504 MUST WORK WITHOUT PASSWORD ==="
+          /usr/bin/sudo -n -H -u crypto-signal-agent /usr/bin/id
+          uid="$("/usr/bin/sudo" -n -H -u crypto-signal-agent /usr/bin/id -u)"
+          echo "UID504_RESULT=$uid"
+          test "$uid" = "504"
+
+          echo "=== ROOT MUST NOT WORK WITHOUT PASSWORD ==="
+          set +e
+          /usr/bin/sudo -n /usr/bin/true
+          root_rc=$?
+          set -e
+          echo "ROOT_NOPASSWD_RC=$root_rc"
+          test "$root_rc" -ne 0
+
+          echo "UID501_TO_UID504_NOPASSWD_PASS=YES"
+          echo "ROOT_REMAINS_PASSWORD_PROTECTED=YES"
+          echo "CRYPTO_UID504_BRIDGE_BOUNDARY_PASS=YES"
