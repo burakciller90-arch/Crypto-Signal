@@ -223,6 +223,17 @@ def test_health_and_static_shell_without_ledger(tmp_path: Path) -> None:
     assert script.status_code == 200
     assert "function frozenChartData(detail)" in script.text
     assert "function renderDecisionExplanation(detail)" in script.text
+    assert "function renderEvidenceRoom(detail)" in script.text
+    assert "DECISION STATE" in script.text
+    assert "TRUTH STATUS" in script.text
+    assert "IMMUTABLE SNAPSHOT" in script.text
+    assert "WHY THIS STATE?" in script.text
+    assert "FROZEN MARKET PROOF" in script.text
+    assert "SUPPORT / CONTRADICTION / UNCERTAINTY" in script.text
+    assert "METHOD ENGINES" in script.text
+    assert "AGREEMENT MATRIX" in script.text
+    assert "FROZEN GEOMETRY" in script.text
+    assert "LEARN FROM THIS SNAPSHOT" in script.text
     assert "Dondurulmuş mum ve kanıt seviyeleri" in script.text
     assert "Neden önemli?" in script.text
     assert "const AUTO_REFRESH_MS = 15_000" in script.text
