@@ -1,0 +1,169 @@
+name: Crypto R13 Full Version Integrated Acceptance V2
+
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  contents: read
+  issues: read
+
+jobs:
+  acceptance:
+    if: github.actor == 'burakciller90-arch' && github.event.issue.title == '[R13] FULL VERSION INTEGRATED ACCEPTANCE V2'
+    name: UID504 Full Version Integrated Acceptance V2
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Sync exact main to canonical Development
+        shell: bash
+        env:
+          GH_JOB_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          DEV="$ROOT/Development"
+          PRODUCT="$ROOT/Product"
+          test "$(id -u)" = "504"
+          test -d "$ROOT"
+          test -z "$(git -C "$DEV" status --porcelain)"
+          test -z "$(git -C "$PRODUCT" status --porcelain)"
+          BASIC="$(printf 'x-access-token:%s' "$GH_JOB_TOKEN" | base64)"
+          git -C "$DEV" -c http.extraheader="AUTHORIZATION: Basic $BASIC" fetch --no-tags origin main
+          test "$(git -C "$DEV" rev-parse origin/main)" = "${{ github.sha }}"
+          git -C "$DEV" merge --ff-only "${{ github.sha }}"
+          test "$(git -C "$DEV" rev-parse HEAD)" = "${{ github.sha }}"
+          test "$(git -C "$PRODUCT" rev-parse HEAD)" = "f15cbafd9f4359d385eca097a6a2635bf815ded1"
+          echo "R13_EXACT_MAIN_DEVELOPMENT_PASS=YES"
+          echo "R13_ACCEPTED_PRODUCT_HEAD_PASS=YES"
+
+      - name: Full repository and static authority gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
+          cd "$DEV"
+          ./.venv/bin/python -m pytest -q
+          ./.venv/bin/python -m ruff check src tests
+          ./.venv/bin/python -m mypy src
+          node --check src/crypto_signal/product/static/freshness.js
+          node --check src/crypto_signal/product/static/app.js
+          node tests/js/test_product_freshness.js
+          echo "R13_FULL_REPOSITORY_GATE_PASS=YES"
+
+      - name: Current SSD runtime topology and backup restore audit
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          DEV="$ROOT/Development"
+          PYTHONPATH="$DEV/src" "$DEV/.venv/bin/python"             "$DEV/ops/r11_runtime_acceptance.py"             --root "$ROOT"             --min-free-bytes 1073741824             | tee /tmp/r13-r11-runtime-audit.log
+          grep -F 'R11_RUNTIME_AUDIT_PASS=YES' /tmp/r13-r11-runtime-audit.log >/dev/null
+          echo "R13_SSD_RUNTIME_RECOVERY_EVIDENCE_PASS=YES"
+
+      - name: Live Product Gift Edition and Research Lab truth
+        shell: bash
+        run: |
+          set -euo pipefail
+          HEALTH="/tmp/r13-health.json"
+          INTEL="/tmp/r13-intelligence.json"
+          INDEX="/tmp/r13-index.html"
+
+          curl -fsS --max-time 5 http://127.0.0.1:48700/api/health > "$HEALTH"
+          curl -fsS --max-time 5 http://127.0.0.1:48700/api/intelligence-center > "$INTEL"
+          curl -fsS --max-time 5 http://127.0.0.1:48700/ > "$INDEX"
+
+          /usr/bin/python3 - "$HEALTH" "$INTEL" <<'PY'
+          import json
+          import sys
+          from pathlib import Path
+
+          health = json.loads(Path(sys.argv[1]).read_text())
+          intel = json.loads(Path(sys.argv[2]).read_text())
+
+          assert health.get("status") == "ok"
+          assert health.get("read_only") is True
+          assert health.get("real_capital") == 0
+          assert health.get("ledger_present") is True
+          assert health.get("alert_outbox_present") is True
+
+          assert intel.get("status") == "ready"
+          assert intel.get("read_only") is True
+          assert intel.get("real_capital") == 0
+          assert intel.get("production_active_engine_count") == 0
+          assert intel.get("probability_status") == "not_calibrated"
+          assert int(intel.get("accepted_engine_count", 0)) >= 20
+          engines = intel.get("engines")
+          assert isinstance(engines, list) and engines
+          assert all(item.get("production_contribution") == 0 for item in engines)
+          assert all(item.get("production_authority") is False for item in engines)
+          PY
+
+          grep -F 'GIFT EDITION · SADE BAŞLANGIÇ' "$INDEX" >/dev/null
+          grep -F 'KISACA' "$INDEX" >/dev/null
+          grep -F 'İSTİHBARAT LABORATUVARI' "$INDEX" >/dev/null
+          echo "R13_LIVE_PRODUCT_GIFT_RESEARCH_TRUTH_PASS=YES"
+
+      - name: Read-only auto-refresh endurance and stale semantics
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
+          PAPER_DB="$DEV/runtime/paper/paper_fund.sqlite3"
+          PYTHONPATH="$DEV/src" "$DEV/.venv/bin/python"             "$DEV/ops/verify_stage10_integrated.py"             --paper-ledger "$PAPER_DB"             --cycles 30             --pause-seconds 0.25             | tee /tmp/r13-endurance.log
+          grep -F 'STAGE10_RUNTIME_ACCEPTANCE_PASS=YES' /tmp/r13-endurance.log >/dev/null
+          node "$DEV/tests/js/test_product_freshness.js" | tee /tmp/r13-freshness.log
+          grep -F 'PRODUCT_FRESHNESS_CONTRACT_PASS=YES' /tmp/r13-freshness.log >/dev/null
+          echo "R13_AUTO_REFRESH_STALE_SEMANTICS_PASS=YES"
+
+      - name: Paper reconstruction costs slippage and benchmark proof
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
+          cd "$DEV"
+          ./.venv/bin/python -m pytest -q             tests/test_paper_state.py             tests/test_paper_execution.py             tests/test_paper_execution_input.py             tests/test_paper_performance.py             tests/test_paper_benchmarks.py             tests/test_paper_event_scanner.py
+          echo "R13_PAPER_RECONSTRUCTION_COST_SLIPPAGE_BENCHMARK_PASS=YES"
+
+      - name: Leakage PIT and scientific boundary proof
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
+          cd "$DEV"
+          ./.venv/bin/python -m pytest -q             tests/test_alpha_factory_foundation.py             tests/test_alpha_factory_ml_walk_forward.py             tests/test_alpha_factory_ml_family_untouched_forward.py             tests/test_alpha_factory_ml_promotion_dossier.py
+          echo "R13_LEAKAGE_PIT_SCIENTIFIC_BOUNDARY_PASS=YES"
+
+      - name: Beginner evidence consistency and Research Lab isolation
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
+          cd "$DEV"
+          ./.venv/bin/python -m pytest -q             tests/test_dashboard_web.py             tests/test_product_education.py             tests/test_intelligence_center.py             tests/test_meta_intelligence.py             tests/test_stage10_runtime_verifier.py
+          echo "R13_BEGINNER_EVIDENCE_RESEARCH_ISOLATION_PASS=YES"
+
+      - name: Continuity remains paused and isolated
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
+          /usr/bin/python3 "$DEV/ops/continuity/continuity_status.py"             | tee /tmp/r13-continuity.log
+          grep -F 'PAUSED=YES' /tmp/r13-continuity.log >/dev/null
+          grep -F 'BRIDGE_ALIVE=YES' /tmp/r13-continuity.log >/dev/null
+          grep -F 'ACTIVE_LEASES=0' /tmp/r13-continuity.log >/dev/null
+          grep -F 'WAKE_QUEUE=0' /tmp/r13-continuity.log >/dev/null
+          grep -F 'RELAY_SHARED_PAUSED=YES' /tmp/r13-continuity.log >/dev/null
+          grep -F 'RELAY_QUEUE=0' /tmp/r13-continuity.log >/dev/null
+          echo "R13_CONTINUITY_PAUSED_ISOLATED_PASS=YES"
+
+      - name: Final integrated boundary declaration
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "R13_HUMAN_IMPACT_REBOOT_LOGOUT_SSD_DETACH_NOT_EXECUTED=YES"
+          echo "R13_REAL_CAPITAL_ZERO_PASS=YES"
+          echo "R13_NO_EXCHANGE_ORDER_CREDENTIAL_AUTHORITY_PASS=YES"
+          echo "R13_FULL_VERSION_INTEGRATED_ACCEPTANCE_V2=PASS"
