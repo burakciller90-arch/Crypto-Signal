@@ -107,31 +107,52 @@ def log(message: str) -> None:
         handle.write(f"{stamp} {message}\n")
 
 
-def write_receipt(path: Path, status: str, event_id: str, message_sha: str) -> None:
+def write_receipt(
+    path: Path,
+    status: str,
+    event_id: str,
+    message_sha: str,
+    *,
+    baseline_exact_count: int | None = None,
+) -> None:
     tmp = path.with_suffix(path.suffix + f".{os.getpid()}.tmp")
     stamp = time.strftime("%Y-%m-%d %H:%M:%S %z")
+    baseline_line = (
+        ""
+        if baseline_exact_count is None
+        else f"baseline_exact_count={baseline_exact_count}\n"
+    )
     tmp.write_text(
         f"status={status}\n"
         f"event_id={event_id}\n"
         f"event_key={sha(event_id)}\n"
         f"message_sha256={message_sha}\n"
+        f"{baseline_line}"
         f"updated={stamp}\n"
     )
     os.chmod(tmp, 0o600)
     tmp.replace(path)
-def receipt_info(path: Path) -> tuple[str, str] | None:
+
+
+def receipt_info(path: Path) -> tuple[str, str, int | None] | None:
     if not path.exists():
         return None
     status = ""
     message_sha = ""
+    baseline_exact_count: int | None = None
     for line in path.read_text().splitlines():
         if line.startswith("status="):
             status = line.split("=", 1)[1]
         elif line.startswith("message_sha256="):
             message_sha = line.split("=", 1)[1]
+        elif line.startswith("baseline_exact_count="):
+            try:
+                baseline_exact_count = int(line.split("=", 1)[1])
+            except ValueError:
+                baseline_exact_count = None
     if not status:
         return None
-    return status, message_sha
+    return status, message_sha, baseline_exact_count
 
 
 def is_autonomous_wake(message: str) -> bool:
@@ -264,13 +285,53 @@ def deliver(event_id: str, message: str, target_url: str) -> tuple[bool, str]:
     wire_message = message if exact_locked_wake else f"{message} {marker}"
     message_sha = sha(wire_message)
     receipt = RECEIPTS / f"{key}.state"
+    message_json = json.dumps(wire_message)
+
+    def exact_message_count() -> int | None:
+        if not exact_locked_wake:
+            return None
+        count_js = (
+            "(()=>{const msg=" + message_json + ";"
+            "const users=[...document.querySelectorAll('[data-message-author-role=\\\"user\\\"]')];"
+            "return String(users.filter(x=>(x.innerText||'').trim()===msg).length);})()"
+        )
+        raw_count = run_js(target_url, count_js)
+        try:
+            return int(raw_count)
+        except ValueError:
+            return None
 
     receipt_state = receipt_info(receipt)
     if receipt_state is not None:
-        receipt_status, bound_sha = receipt_state
+        receipt_status, bound_sha, stored_baseline = receipt_state
         if bound_sha and bound_sha != message_sha:
             return False, "EVENT_ID_MESSAGE_CONFLICT"
-        if receipt_status == "SUBMITTING":
+        if exact_locked_wake:
+            if receipt_status == "OBSERVED":
+                return True, "ALREADY_RECEIPTED"
+            if receipt_status in {
+                "SUBMITTING",
+                "SUBMITTED",
+                "SUBMITTED_UNCONFIRMED",
+            }:
+                current_count = exact_message_count()
+                if (
+                    stored_baseline is not None
+                    and current_count is not None
+                    and current_count > stored_baseline
+                ):
+                    write_receipt(
+                        receipt,
+                        "OBSERVED",
+                        event_id,
+                        message_sha,
+                        baseline_exact_count=stored_baseline,
+                    )
+                    return True, "OBSERVED_RECOVERED"
+                receipt.unlink(missing_ok=True)
+            else:
+                return True, "ALREADY_RECEIPTED"
+        elif receipt_status == "SUBMITTING":
             receipt.unlink(missing_ok=True)
         else:
             return True, "ALREADY_RECEIPTED"
@@ -287,20 +348,11 @@ def deliver(event_id: str, message: str, target_url: str) -> tuple[bool, str]:
             return True, f"STALE_AUTONOMOUS_WAKE:{canonical_event_id}"
 
     marker_json = json.dumps(marker)
-    message_json = json.dumps(wire_message)
 
     baseline_exact_count = 0
     if exact_locked_wake:
-        count_js = (
-            "(()=>{const msg=" + message_json + ";"
-            "const users=[...document.querySelectorAll('[data-message-author-role=\\\"user\\\"]')];"
-            "return String(users.filter(x=>(x.innerText||'').trim()===msg).length);})()"
-        )
-        raw_count = run_js(target_url, count_js)
-        try:
-            baseline_exact_count = int(raw_count)
-        except ValueError:
-            baseline_exact_count = 0
+        observed_count = exact_message_count()
+        baseline_exact_count = 0 if observed_count is None else observed_count
 
         state_js = (
             "(()=>{const msg=" + message_json + ";"
@@ -409,7 +461,15 @@ def deliver(event_id: str, message: str, target_url: str) -> tuple[bool, str]:
         if filled != "FILLED":
             return False, filled
 
-    write_receipt(receipt, "SUBMITTING", event_id, message_sha)
+    write_receipt(
+        receipt,
+        "SUBMITTING",
+        event_id,
+        message_sha,
+        baseline_exact_count=(
+            baseline_exact_count if exact_locked_wake else None
+        ),
+    )
 
     if exact_locked_wake:
         send_js = (
@@ -464,14 +524,30 @@ def deliver(event_id: str, message: str, target_url: str) -> tuple[bool, str]:
         time.sleep(0.5)
         check = run_js(target_url, check_js)
         if check == "OBSERVED":
-            write_receipt(receipt, "OBSERVED", event_id, message_sha)
+            write_receipt(
+                receipt,
+                "OBSERVED",
+                event_id,
+                message_sha,
+                baseline_exact_count=(
+                    baseline_exact_count if exact_locked_wake else None
+                ),
+            )
             return True, "OBSERVED_AFTER_CLICK"
+        if exact_locked_wake and check in {
+            "EDITOR_CLEARED",
+            "DRAFT_CHANGED",
+        }:
+            continue
         if check == "EDITOR_CLEARED":
             write_receipt(receipt, "SUBMITTED", event_id, message_sha)
             return True, "SUBMITTED_EDITOR_CLEARED"
         if check == "DRAFT_CHANGED":
             write_receipt(receipt, "SUBMITTED_UNCONFIRMED", event_id, message_sha)
             return True, "SUBMITTED_DRAFT_CHANGED"
+
+    if exact_locked_wake:
+        return False, "AWAITING_EXACT_OBSERVATION"
 
     write_receipt(receipt, "SUBMITTED_UNCONFIRMED", event_id, message_sha)
     return True, "SUBMITTED_UNCONFIRMED_TIMEOUT"
