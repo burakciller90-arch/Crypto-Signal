@@ -14,7 +14,6 @@ from crypto_signal.data.market_tape import MarketTapeStore
 from crypto_signal.data.market_tape_wire_collection import persist_bybit_wire_stream
 from crypto_signal.data.raw_market_tape import RawMarketTapeStore
 
-
 ADAPTER_VERSION = BybitSpotMicrostructureStream.ADAPTER_VERSION
 
 
