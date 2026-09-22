@@ -5,7 +5,6 @@ import hashlib
 import os
 import sys
 import time
-from datetime import datetime
 from pathlib import Path
 
 from continuity_contracts import (
@@ -33,14 +32,25 @@ SECRET_FILE = STATE / "relay_secret"
 AUTONOMOUS_PREFIX = "CRYPTO_SIGNAL_AUTONOMOUS_CONTINUE_V1"
 LOCKED_WAKE_MESSAGE = "Kullanıcı aktif değil ve projeyi tamamlaman için sana bıraktı; HAFIZANA GÜVENME! READ_FIRST, CURRENT_STATUS, Chronicle ve docs/V1_1_LOCKED_MASTER_ROADMAP_20260922.md dosyasını oku; gerçek Git/worker/wake/lease state’ini kontrol et, gerçek frontier’ı bul. Tamamlanmış/stale/duplicate işi tekrarlama. Kullanıcı REAL MONEY hariç roadmap’in bitmesini istiyor; güvenli aşamalar arasında onay bekleme ve devam et. Ve bir sonraki ajan için yaptığın her işi her güncellemeyi GitHub üzerine kayıt et. Bu mesaj döngüsünü bozamazsın."
 
+TERMINAL_RECEIPT_STATUSES = {
+    "OBSERVED",
+    "RECENT_LOCKED_DUPLICATE_DROPPED",
+    "STALE_AUTONOMOUS_DROPPED",
+    "SEMANTIC_DUPLICATE_DROPPED",
+}
 
-def receipt_sha(path: Path) -> str | None:
+
+def receipt_fields(path: Path) -> tuple[str, str] | None:
     if not path.exists():
         return None
+    status = ""
+    message_sha = ""
     for line in path.read_text().splitlines():
-        if line.startswith("message_sha256="):
-            return line.split("=", 1)[1]
-    return ""
+        if line.startswith("status="):
+            status = line.split("=", 1)[1]
+        elif line.startswith("message_sha256="):
+            message_sha = line.split("=", 1)[1]
+    return status, message_sha
 
 
 def queue_matches(
@@ -62,16 +72,12 @@ def main() -> int:
         print("USAGE: relay_submit.py event_id message [wait_seconds]", file=sys.stderr)
         return 64
 
-    event_id = sys.argv[1]
+    event_id = sys.argv[1].strip()
     message = " ".join(sys.argv[2].splitlines()).strip()
     wait_seconds = float(sys.argv[3]) if len(sys.argv) == 4 else 25.0
     if not event_id or not message:
         print("EMPTY_EVENT_OR_MESSAGE", file=sys.stderr)
         return 64
-    if message.startswith(AUTONOMOUS_PREFIX):
-        supplied_event_id = event_id
-        event_id = scheduled_slot_event_id()
-        print(f"AUTONOMOUS_EVENT_CANONICALIZED={supplied_event_id}->{event_id}")
     if LOCAL_PAUSE.exists() or PAUSE.exists():
         print("RELAY_SUBMIT_PAUSED")
         return 2
@@ -100,18 +106,26 @@ def main() -> int:
     if len(secret) < 32:
         print("RELAY_SECRET_INVALID", file=sys.stderr)
         return 78
+
     key = event_key(event_id)
     queue_path = QUEUE / f"{key}.wake"
     receipt_path = RECEIPTS / f"{key}.state"
-    expected_sha = (hashlib.sha256(message.encode()).hexdigest() if message == LOCKED_WAKE_MESSAGE else expected_wire_sha(event_id, message))
+    expected_sha = (
+        hashlib.sha256(message.encode()).hexdigest()
+        if message == LOCKED_WAKE_MESSAGE
+        else expected_wire_sha(event_id, message)
+    )
 
-    bound_sha = receipt_sha(receipt_path)
-    if bound_sha is not None:
+    existing = receipt_fields(receipt_path)
+    if existing is not None:
+        status, bound_sha = existing
         if bound_sha and bound_sha != expected_sha:
             print("EVENT_ID_MESSAGE_CONFLICT")
             return 65
-        print("ALREADY_RECEIPTED")
-        return 0
+        if status in TERMINAL_RECEIPT_STATUSES:
+            print(f"ALREADY_RECEIPTED status={status}")
+            return 0
+        print(f"NONTERMINAL_RECEIPT_IGNORED status={status or 'UNKNOWN'}")
 
     QUEUE.mkdir(parents=True, exist_ok=True)
     if queue_path.exists():
@@ -137,17 +151,22 @@ def main() -> int:
 
     deadline = time.monotonic() + wait_seconds
     while time.monotonic() < deadline:
-        bound_sha = receipt_sha(receipt_path)
-        if bound_sha is not None:
+        existing = receipt_fields(receipt_path)
+        if existing is not None:
+            status, bound_sha = existing
             if bound_sha and bound_sha != expected_sha:
                 print("EVENT_ID_MESSAGE_CONFLICT")
                 return 65
-            print("RELAY_RECEIPTED")
-            return 0
+            if status in TERMINAL_RECEIPT_STATUSES:
+                print(f"RELAY_RECEIPTED status={status}")
+                return 0
+        if LOCAL_PAUSE.exists() or PAUSE.exists():
+            print("RELAY_SUBMIT_PAUSED_DURING_WAIT")
+            return 2
         time.sleep(0.25)
 
-    print("RELAY_RECEIPT_TIMEOUT")
-    return 2
+    print("RELAY_RECEIPT_TIMEOUT", file=sys.stderr)
+    return 75
 
 
 if __name__ == "__main__":
