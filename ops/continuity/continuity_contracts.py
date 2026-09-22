@@ -16,7 +16,7 @@ PROJECT_NAMESPACE = "crypto-signal"
 RELAY_PROTOCOL = "crypto-relay-v2"
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True)
 class RelayEvent:
     protocol: str
     project_namespace: str
