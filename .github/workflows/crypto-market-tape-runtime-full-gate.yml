@@ -6,6 +6,16 @@ on:
       - v1.1-market-tape-runtime-v1
     paths:
       - ".github/workflows/crypto-market-tape-runtime-full-gate.yml"
+      - "src/crypto_signal/data/market_tape_runtime.py"
+      - "src/crypto_signal/data/market_tape_retention.py"
+      - "src/crypto_signal/data/market_tape_wire_collection.py"
+      - "ops/run_market_tape_runtime.py"
+      - "ops/install_market_tape_runtime.sh"
+      - "ops/market_tape/launchd/com.cryptosignal.markettape.plist"
+      - "tests/test_market_tape_runtime.py"
+      - "tests/test_market_tape_retention.py"
+      - "tests/test_market_tape_runtime_service.py"
+      - "tests/test_market_tape_wire_collection.py"
 
 permissions:
   contents: read
