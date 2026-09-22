@@ -103,8 +103,16 @@ supervisor_alive() {
 
 runner_listener_pid() {
   /bin/ps -axo pid=,command= 2>/dev/null \
-    | /usr/bin/awk -v needle="$RUNNER/bin/Runner.Listener run --startuptype service" \
-        'index($0, needle) {print $1; exit}'
+    | /usr/bin/awk -v expected="$RUNNER/bin/Runner.Listener run --startuptype service" '
+        {
+          pid=$1
+          sub(/^[[:space:]]*[0-9]+[[:space:]]+/, "", $0)
+          if ($0 == expected) {
+            print pid
+            exit
+          }
+        }
+      '
 }
 
 runner_alive() {
