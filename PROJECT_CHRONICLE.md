@@ -3534,3 +3534,36 @@ authority description. The only current cadence authority is the local receipt-b
 timer, backed by the 5-minute GitHub health watchdog/self-heal path.
 
 The loop remains ACTIVE unless the user explicitly pauses/stops it. REAL_CAPITAL=0.
+
+
+---
+
+## 2026-09-22 — GALACTECH MARKET WORKSPACE PROVIDER-TRUTH SLICE ACCEPTED / MERGED
+
+The Product rail advanced from Capital Center into a provider-truth Market Workspace.
+
+State-first recovery first found PR #790 nine commits behind current main. The branch changed
+only Product JS/CSS, dashboard contract tests and its temporary hosted gate; no overlapping
+Product source mutations existed on current main. The exact Product diff was therefore
+reapplied onto current main before acceptance.
+
+Accepted behavior:
+- provider decisions remain separate rather than collapsed into one synthetic truth;
+- provider agreement/disagreement is explicit;
+- frozen decisions are not presented as current-price prediction;
+- recent per-asset decision tape links to immutable Evidence Room identities;
+- LIQ / FLOW / DERIV / ONCHAIN remain visibly NOT WIRED until backend evidence exists;
+- confluence remains separate from probability.
+
+Acceptance evidence:
+- PR #790;
+- authoritative hosted run `35784339520`;
+- focused Product pytest/Ruff/mypy/JS/freshness PASS;
+- full repository pytest/Ruff/mypy/JS/freshness PASS;
+- temporary hosted workflow removed after PASS;
+- squash merge `380f1f9a4dc57713ea65aeb7ba13130c171e9369`.
+
+No production UI deployment occurred. REAL_CAPITAL=0.
+
+Current Product frontier is Archive / Proof Wall, followed by Performance/Trust and
+Learn/System refinement.
