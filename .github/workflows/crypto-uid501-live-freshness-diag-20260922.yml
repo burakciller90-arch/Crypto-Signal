@@ -1,0 +1,91 @@
+name: Crypto UID501 Live Freshness Diagnostic 20260922
+
+on:
+  push:
+    branches:
+      - diag-uid501-live-freshness-20260922
+    paths:
+      - ".github/workflows/crypto-uid501-live-freshness-diag-20260922.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  freshness:
+    runs-on: [self-hosted, crypto-signal, uid501]
+    timeout-minutes: 5
+    steps:
+      - name: Read live localhost API without SSD filesystem authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "=== CLOCK ==="
+          date '+LOCAL=%Y-%m-%d %H:%M:%S %z'
+          date -u '+UTC=%Y-%m-%d %H:%M:%S UTC'
+
+          echo "=== HEALTH ==="
+          curl -fsS --max-time 8 http://127.0.0.1:48700/api/health | tee /tmp/crypto-health-20260922.json
+          echo
+
+          echo "=== COMMAND CENTER ==="
+          curl -fsS --max-time 12 'http://127.0.0.1:48700/api/command-center?recent_limit=8' | tee /tmp/crypto-command-center-20260922.json
+          echo
+
+          echo "=== NAVIGATION ==="
+          curl -fsS --max-time 12 http://127.0.0.1:48700/api/navigation | tee /tmp/crypto-navigation-20260922.json
+          echo
+
+          echo "=== NORMALIZED FRESHNESS ==="
+          python3 - <<'PY'
+          import json
+          from datetime import datetime, timezone
+
+          def iso(ms):
+              if ms is None:
+                  return "NONE"
+              return datetime.fromtimestamp(ms/1000, tz=timezone.utc).isoformat()
+
+          with open("/tmp/crypto-command-center-20260922.json") as f:
+              cc=json.load(f)
+          with open("/tmp/crypto-navigation-20260922.json") as f:
+              nav=json.load(f)
+
+          print("CC_STATUS=", cc.get("status"))
+          print("FREEZE_COUNT=", cc.get("freeze_count"))
+          latest=cc.get("latest_frozen_at_ms")
+          print("LATEST_FROZEN_AT_MS=", latest)
+          print("LATEST_FROZEN_AT_UTC=", iso(latest))
+
+          recent=cc.get("recent_signals") or []
+          print("RECENT_SIGNAL_COUNT=", len(recent))
+          for idx,item in enumerate(recent[:8]):
+              print(
+                  "RECENT",
+                  idx,
+                  "exchange=", item.get("exchange"),
+                  "symbol=", item.get("symbol"),
+                  "timeframe=", item.get("timeframe"),
+                  "state=", item.get("state"),
+                  "as_of_ms=", item.get("as_of_ms"),
+                  "as_of_utc=", iso(item.get("as_of_ms")),
+                  "frozen_at_ms=", item.get("frozen_at_ms"),
+                  "frozen_at_utc=", iso(item.get("frozen_at_ms")),
+                  "source_cutoff_open_time_ms=", item.get("source_cutoff_open_time_ms"),
+                  "source_cutoff_utc=", iso(item.get("source_cutoff_open_time_ms")),
+              )
+
+          print("NAV_STATUS=", nav.get("status"))
+          for ctx in nav.get("contexts") or []:
+              ms=ctx.get("latest_frozen_at_ms")
+              print(
+                  "CTX",
+                  ctx.get("exchange"),
+                  ctx.get("symbol"),
+                  ctx.get("timeframe"),
+                  "freeze_count=",ctx.get("freeze_count"),
+                  "latest_frozen_at_ms=",ms,
+                  "latest_frozen_at_utc=",iso(ms),
+              )
+          PY
+
+          echo "UID501_LIVE_FRESHNESS_DIAG_PASS=YES"
