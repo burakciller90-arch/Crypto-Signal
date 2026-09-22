@@ -24,7 +24,7 @@ jobs:
           set -euo pipefail
           cmd="$(printf '%s\n' "$ISSUE_BODY" | awk -F: 'tolower($1)=="command" {gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2); print tolower($2); exit}')"
           case "$cmd" in
-            status|services|logs|disk|sync|producttest|fulltest|productstate|productdeploy|paperreview|paperinspect|paperfixlint|paperharden|stateplanreview|stateplaninspect|stateplanharden|cursorreview|cursorreviewtail|cursorcleanup|bridgecheck|bridgestate|pausecheck|wakepause|wakeresume|wakearm|waketest|wakeheartbeat|chatbusyprobe|cursorcheck|cursorauthdiag|cursorttycheck|alertclockstate|alertclockpause|alertclockresume|migrationinspect|migrationinventory|ssddashboarddiag|ssddashboardwrappertest|ssdtcclaunchtest|ssdbackgroundteststart|ssdbackgroundtestcheck|ssdleftover|runnerpersistinstall|runnerpersistdiag|runnercutoverdiag|dashboardstart504|runnerterminalwatchdoginstall)
+            status|services|logs|disk|sync|producttest|fulltest|productstate|productdeploy|paperreview|paperinspect|paperfixlint|paperharden|stateplanreview|stateplaninspect|stateplanharden|cursorreview|cursorreviewtail|cursorcleanup|bridgecheck|bridgestate|rollingstate|pausecheck|wakepause|wakeresume|wakearm|waketest|wakeheartbeat|chatbusyprobe|cursorcheck|cursorauthdiag|cursorttycheck|alertclockstate|alertclockpause|alertclockresume|migrationinspect|migrationinventory|ssddashboarddiag|ssddashboardwrappertest|ssdtcclaunchtest|ssdbackgroundteststart|ssdbackgroundtestcheck|ssdleftover|runnerpersistinstall|runnerpersistdiag|runnercutoverdiag|dashboardstart504|runnerterminalwatchdoginstall)
               ;;
             *)
               echo "Unsupported command: $cmd"
@@ -47,6 +47,65 @@ jobs:
           echo "=== DASHBOARD ==="
           curl -fsS --max-time 5 http://127.0.0.1:48700/api/health
           echo
+
+      - name: ROLLING WAKE STATE
+        if: steps.parse.outputs.command == 'rollingstate'
+        shell: bash
+        run: |
+          set -euo pipefail
+          INSTALL="$HOME/Library/Application Support/CryptoSignal/continuity20m"
+          RUNTIME="$INSTALL/runtime"
+          SHARED="/Users/Shared/.crypto-signal-wake-relay"
+          LOCAL_STATE="/Volumes/Crypto-504/Crypto-Signal/Development/runtime/continuity"
+          PIDFILE="$RUNTIME/rolling_wake.pid"
+          STATUS_FILE="$RUNTIME/rolling_wake_status"
+          STATE_FILE="$RUNTIME/rolling_wake_state.json"
+          HEARTBEAT_FILE="$RUNTIME/rolling_wake_heartbeat"
+
+          echo "=== ROLLING TIMER PROCESS ==="
+          PID="$(cat "$PIDFILE" 2>/dev/null || true)"
+          echo "ROLLING_PID=$PID"
+          if [ -n "$PID" ] && kill -0 "$PID" >/dev/null 2>&1; then
+            echo "ROLLING_PID_ALIVE=YES"
+            ps -p "$PID" -o pid=,ppid=,uid=,etime=,command=
+          else
+            echo "ROLLING_PID_ALIVE=NO"
+          fi
+
+          echo "=== ROLLING TIMER STATUS ==="
+          if [ -f "$STATUS_FILE" ]; then
+            cat "$STATUS_FILE"
+          else
+            echo "ROLLING_STATUS_MISSING=YES"
+          fi
+
+          echo "=== ROLLING TIMER STATE JSON ==="
+          if [ -f "$STATE_FILE" ]; then
+            cat "$STATE_FILE"
+          else
+            echo "ROLLING_STATE_MISSING=YES"
+          fi
+
+          NOW="$(date +%s)"
+          HB="$(cat "$HEARTBEAT_FILE" 2>/dev/null || true)"
+          if [[ "$HB" =~ ^[0-9]+$ ]]; then
+            echo "ROLLING_HEARTBEAT_AGE_SECONDS=$((NOW-HB))"
+          else
+            echo "ROLLING_HEARTBEAT_MISSING=YES"
+          fi
+
+          echo "=== PAUSE AUTHORITY ==="
+          [ -f "$LOCAL_STATE/user_pause" ] && echo "LOCAL_PAUSED=YES" || echo "LOCAL_PAUSED=NO"
+          [ -f "$SHARED/user_pause" ] && echo "SHARED_PAUSED=YES" || echo "SHARED_PAUSED=NO"
+
+          echo "=== RELAY ==="
+          if [ -f "$SHARED/relay_status" ]; then
+            cat "$SHARED/relay_status"
+          else
+            echo "RELAY_STATUS_MISSING=YES"
+          fi
+
+          echo "ROLLING_STATE_READONLY_PASS=YES"
 
       - name: SERVICES
         if: steps.parse.outputs.command == 'services'
