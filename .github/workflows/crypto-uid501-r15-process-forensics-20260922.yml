@@ -24,22 +24,9 @@ jobs:
           /bin/ps -axo pid=,ppid=,user=,%cpu=,%mem=,lstart=,etime=,state=,command=             | /usr/bin/awk '$3=="crypto-signal-agent" && ($0 ~ /Crypto-Signal\/Runner/ || $0 ~ /runsvc\.sh/ || $0 ~ /Runner\.(Listener|Worker)/) {print}'
           echo
           echo "=== TARGET PID CHAINS ==="
-          for pid in 99399 86923; do
-            if /bin/kill -0 "$pid" >/dev/null 2>&1; then
-              echo "--- target=$pid"
-              current="$pid"
-              for _ in 1 2 3 4 5 6; do
-                [ -n "$current" ] || break
-                /bin/ps -p "$current" -o pid=,ppid=,user=,%cpu=,%mem=,lstart=,etime=,state=,command=
-                next="$(/bin/ps -p "$current" -o ppid= 2>/dev/null | /usr/bin/tr -d ' ')"
-                [ -n "$next" ] || break
-                [ "$next" = "0" ] && break
-                [ "$next" = "$current" ] && break
-                current="$next"
-              done
-            else
-              echo "--- target=$pid ABSENT"
-            fi
+          for pid in 99399 86923 65425 65421 65405; do
+            echo "--- target=$pid"
+            /bin/ps -p "$pid" -o pid=,ppid=,user=,%cpu=,%mem=,lstart=,etime=,state=,command= 2>/dev/null || echo "ABSENT"
           done
           echo
           echo "=== ALL UID504 RUNNER LISTENERS ==="
@@ -51,8 +38,13 @@ jobs:
           echo "=== CHILDREN OF LIVE UID504 LISTENERS ==="
           for p in $(/bin/ps -axo pid=,user=,command= | /usr/bin/awk '$2=="crypto-signal-agent" && $0 ~ /Runner\.Listener run --startuptype service/ {print $1}'); do
             echo "--- listener=$p"
-            /usr/bin/pgrep -P "$p" 2>/dev/null | while read -r c; do
-              /bin/ps -p "$c" -o pid=,ppid=,user=,%cpu=,%mem=,lstart=,etime=,state=,command=
-            done
+            children="$(/usr/bin/pgrep -P "$p" 2>/dev/null || true)"
+            if [ -z "$children" ]; then
+              echo "NO_CHILDREN"
+            else
+              for child in $children; do
+                /bin/ps -p "$child" -o pid=,ppid=,user=,%cpu=,%mem=,lstart=,etime=,state=,command=
+              done
+            fi
           done
           echo "UID501_R15_PROCESS_FORENSICS_PASS=YES"
