@@ -1,5 +1,8 @@
 # CRYPTO SIGNAL — FULL VERSION / WORLD-CLASS ROADMAP
 
+> **Post-v1.0 notice (2026-09-22):** This document is retained as accepted historical/product context for v1.0. New v1.1+ execution is governed by `docs/V1_1_MASTER_EXECUTION_ROADMAP.md`. Do not use an older stage order here to override the current R15 -> parallel UI/Market Tape -> Decision Proof/Forecast -> Canonical Fund/Shadow Lab program.
+
+
 Status: governing full-version execution roadmap.
 Created: 2026-09-20.
 Product goal: deliver a Turkish-first, explainable, evidence-driven crypto intelligence platform as a meaningful gift.
