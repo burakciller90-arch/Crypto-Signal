@@ -1,0 +1,66 @@
+name: Crypto UID501 Continuity State 20260922
+
+on:
+  push:
+    branches:
+      - diag-uid501-continuity-state-20260922
+    paths:
+      - ".github/workflows/crypto-uid501-continuity-state-20260922.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: [self-hosted, crypto-signal, uid501]
+    timeout-minutes: 5
+    steps:
+      - name: Read-only continuity state
+        shell: bash
+        run: |
+          set +e
+          test "$(id -u)" = "501"
+          SHARED="/Users/Shared/.crypto-signal-wake-relay"
+          LOCAL="/Volumes/Crypto-504/Crypto-Signal/Development/runtime/continuity"
+
+          echo "=== SHARED RELAY ==="
+          for f in user_pause current_chat_url expected_chat_url project_namespace relay_status relay_heartbeat; do
+            p="$SHARED/$f"
+            if [ -e "$p" ]; then
+              echo "PRESENT=$p"
+              /bin/ls -l "$p" 2>/dev/null
+              case "$f" in
+                current_chat_url|expected_chat_url|project_namespace|relay_status)
+                  /bin/cat "$p" 2>/dev/null
+                  ;;
+              esac
+            else
+              echo "ABSENT=$p"
+            fi
+          done
+
+          echo "SHARED_QUEUE_COUNT=$(/usr/bin/find "$SHARED/queue" -maxdepth 1 -type f -name '*.wake' 2>/dev/null | /usr/bin/wc -l | /usr/bin/tr -d ' ')"
+          echo "SHARED_RECEIPTS_RECENT="
+          /bin/ls -lt "$SHARED/receipts" 2>/dev/null | /usr/bin/head -20
+
+          echo "=== LOCAL CONTINUITY ACCESS ==="
+          if [ -r "$LOCAL" ]; then
+            echo "LOCAL_CONTINUITY_READABLE=YES"
+          else
+            echo "LOCAL_CONTINUITY_READABLE=NO"
+          fi
+          for f in user_pause wake/current_chat_url wake/expected_chat_url; do
+            p="$LOCAL/$f"
+            if [ -e "$p" ]; then
+              echo "PRESENT=$p"
+              /bin/cat "$p" 2>/dev/null || true
+            else
+              echo "ABSENT_OR_INACCESSIBLE=$p"
+            fi
+          done
+          echo "ACTIVE_LEASES_VISIBLE=$(/usr/bin/find "$LOCAL/leases/active" -maxdepth 1 -type f -name '*.lease' 2>/dev/null | /usr/bin/wc -l | /usr/bin/tr -d ' ')"
+          echo "LOCAL_WAKE_QUEUE_VISIBLE=$(/usr/bin/find "$LOCAL/wake/queue" -maxdepth 1 -type f -name '*.wake' 2>/dev/null | /usr/bin/wc -l | /usr/bin/tr -d ' ')"
+
+          echo "=== CONTINUITY PROCESSES ==="
+          /bin/ps -axo pid=,ppid=,user=,%cpu=,%mem=,etime=,state=,command=             | /usr/bin/grep -E '[c]rypto_signal.*(relay|wake|continuity)|[b]ridge_watchdog.py|[r]elay_daemon.py|[r]ecurring_wake.py'             | /usr/bin/head -120
+          echo "UID501_CONTINUITY_STATE_PASS=YES"
