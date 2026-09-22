@@ -23,14 +23,13 @@ from crypto_signal.data.market_tape import (
     MarketTapeConflictError,
     MarketTapeLiquidationReplay,
 )
-from crypto_signal.data.models import DataSource, Exchange
-
 from crypto_signal.data.market_tape_hotcold import (
     DEFAULT_MARKET_TAPE_HOTCOLD_POLICY,
     MarketTapeHotColdPolicy,
     archive_before_ms,
     directory_file_bytes,
 )
+from crypto_signal.data.models import DataSource, Exchange
 
 COLD_ARCHIVE_SCHEMA_VERSION = "market-tape-cold-parquet-v1/2"
 LEGACY_COLD_ARCHIVE_SCHEMA_VERSIONS = frozenset({"market-tape-cold-parquet-v1/1"})
@@ -454,9 +453,13 @@ def _assert_hot_rows_are_archive_subset(
         if not hot_rows:
             continue
         meta = tables.get(spec.key)
-        if not isinstance(meta, dict):
+        if meta is None:
             raise ValueError(
                 f"late hot rows absent from legacy cold archive: {spec.key}"
+            )
+        if not isinstance(meta, dict):
+            raise TypeError(
+                f"cold archive table metadata must be an object: {spec.key}"
             )
         if int(meta["rows"]) == 0:
             raise ValueError(
