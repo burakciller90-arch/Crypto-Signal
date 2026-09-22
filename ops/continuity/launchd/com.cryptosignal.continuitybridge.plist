@@ -11,7 +11,5 @@
   <key>RunAtLoad</key><true/>
   <key>KeepAlive</key><true/>
   <key>ThrottleInterval</key><integer>5</integer>
-  <key>StandardOutPath</key><string>/Volumes/Crypto-504/Crypto-Signal/Development/runtime/continuity/bridge.launchd.out.log</string>
-  <key>StandardErrorPath</key><string>/Volumes/Crypto-504/Crypto-Signal/Development/runtime/continuity/bridge.launchd.err.log</string>
 </dict>
 </plist>
