@@ -70,22 +70,17 @@ mkdir -p "$HOME/Library/LaunchAgents" "$ROOT/ServiceLogs"
 cp "$PLIST_SOURCE" "$PLIST_TARGET"
 chmod 600 "$PLIST_TARGET"
 
-if [ "${MARKET_TAPE_INSTALL_ENABLE_LAUNCHD:-0}" != "1" ]; then
-  /bin/launchctl disable "$DOMAIN/$LABEL" >/dev/null 2>&1 || true
-  /bin/launchctl bootout "$DOMAIN/$LABEL" >/dev/null 2>&1 || true
-  echo "MARKET_TAPE_LAUNCHAGENT_DISABLED_BY_DEFAULT=YES"
-  echo "MARKET_TAPE_LAUNCHAGENT_PREPARE_ONLY_PASS=YES"
-else
-  /bin/launchctl disable "$DOMAIN/$LABEL" >/dev/null 2>&1 || true
-  /bin/launchctl bootout "$DOMAIN/$LABEL" >/dev/null 2>&1 || true
-  /bin/launchctl enable "$DOMAIN/$LABEL"
-  /bin/launchctl bootstrap "$DOMAIN" "$PLIST_TARGET"
-  /bin/launchctl kickstart -k "$DOMAIN/$LABEL"
+/bin/launchctl disable "$DOMAIN/$LABEL" >/dev/null 2>&1 || true
+/bin/launchctl bootout "$DOMAIN/$LABEL" >/dev/null 2>&1 || true
 
-  sleep 3
-  /bin/launchctl print "$DOMAIN/$LABEL" >/dev/null
-  echo "MARKET_TAPE_LAUNCHAGENT_INSTALL_PASS=YES"
+if [ "${MARKET_TAPE_INSTALL_ENABLE_LAUNCHD:-0}" = "1" ]; then
+  echo "MARKET_TAPE_INSTALL_ERROR=DIRECT_LAUNCHD_TCC_UNSUPPORTED" >&2
+  echo "MARKET_TAPE_LAUNCHAGENT_DISABLED_BY_TCC_POLICY=YES" >&2
+  exit 78
 fi
+
+echo "MARKET_TAPE_LAUNCHAGENT_DISABLED_BY_DEFAULT=YES"
+echo "MARKET_TAPE_LAUNCHAGENT_PREPARE_ONLY_PASS=YES"
 echo "LABEL=$LABEL"
 echo "STABLE_ROOT=$STABLE"
 echo "REAL_CAPITAL=0"
