@@ -65,7 +65,7 @@ def _config(**overrides):
         "max_snapshot_gap_ms": 2_000,
         "persistent_presence_fraction": Decimal("0.60"),
         "material_notional_multiple": Decimal("1.50"),
-        "approach_bps": Decimal("100"),
+        "approach_bps": Decimal(100),
         "rapid_withdrawal_max_lifetime_ms": 5_000,
         "rapid_withdrawal_min_fraction": Decimal("0.80"),
         "hidden_liquidity_min_replenishment_cycles": 2,
@@ -168,9 +168,9 @@ def test_rapid_material_withdrawal_is_only_spoofing_candidate() -> None:
     result = analyze_liquidity_structure(
         books,
         as_of_ms=12_050,
-        config=_config(approach_bps=Decimal("150")),
+        config=_config(approach_bps=Decimal(150)),
     )
-    ask105 = next(item for item in result.ask_levels if item.price == Decimal("105"))
+    ask105 = next(item for item in result.ask_levels if item.price == Decimal(105))
     assert LiquidityLevelCandidate.SPOOFING in ask105.candidates
     assert ask105.last_notional == Decimal(0)
     assert ask105.disappearance_count >= 1
@@ -333,7 +333,8 @@ def test_candidate_semantics_do_not_assert_proven_manipulation_or_actor() -> Non
     )
     path = source.__file__
     assert path is not None
-    text = open(path, encoding="utf-8").read().lower()
+    with open(path, encoding="utf-8") as handle:
+        text = handle.read().lower()
     assert "market maker manipulation proven" not in text
     assert "institutional actor confirmed" not in text
     assert "guaranteed spoofing" not in text
