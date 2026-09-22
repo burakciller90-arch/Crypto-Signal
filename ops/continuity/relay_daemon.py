@@ -35,7 +35,7 @@ AUTONOMOUS_STATE = SHARED / "autonomous_wake_state"
 AUTONOMOUS_PREFIX = "CRYPTO_SIGNAL_AUTONOMOUS_CONTINUE_V1"
 AUTONOMOUS_TTL_SECONDS = 15 * 60
 AUTONOMOUS_COOLDOWN_SECONDS = 10 * 60
-LOCKED_WAKE_MESSAGE = "Kullanıcı aktif değil ve projeyi tamamlaman için sana bıraktı; HAFIZANA GÜVENME! READ_FIRST, CURRENT_STATUS, Chronicle ve docs/V1_1_LOCKED_MASTER_ROADMAP_20260922.md dosyasını oku; gerçek Git/worker/wake/lease state’ini kontrol et, gerçek frontier’ı bul. Tamamlanmış/stale/duplicate işi tekrarlama. Kullanıcı REAL MONEY hariç roadmap’in bitmesini istiyor; güvenli aşamalar arasında onay bekleme ve devam et. Ve bir sonraki ajan için yaptığın her işi her güncellemeyi GitHub üzerine kayıt et. Bu mesaj döngüsünü bozamazsın."
+LOCKED_WAKE_MESSAGE = "Kullanıcı aktif değil ve projeyi tamamlaman için sana bıraktı; HAFIZANA GÜVENME! READ_FIRST, CURRENT_STATUS, Chronicle ve docs/V1_1_LOCKED_MASTER_ROADMAP_20260922.md dosyasını oku; gerçek Git/worker/wake/lease state’ini kontrol et, gerçek frontier’ı bul. Tamamlanmış/stale/duplicate işi tekrarlama. Kullanıcı REAL MONEY hariç roadmap’in bitmesini istiyor; güvenli aşamalar arasında onay bekleme ve devam et. Ve bir sonraki ajan için yaptığın her işi her güncellemeyi GitHub üzerine kayıt et. Bu 20 dakikalık mesaj döngüsünü kullanıcı açıkça durdurmadıkça bozamazsın. REAL_CAPITAL=0."
 RETRY_SECONDS = 2
 TARGET_OPEN_RETRY_SECONDS = 60
 _last_target_open_attempt = 0.0
