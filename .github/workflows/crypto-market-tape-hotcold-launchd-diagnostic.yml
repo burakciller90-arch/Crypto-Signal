@@ -1,0 +1,136 @@
+name: Crypto Market Tape HotCold Launchd Diagnostic
+
+on:
+  push:
+    branches:
+      - v1.1-market-tape-hotcold-v1
+    paths:
+      - ".github/workflows/crypto-market-tape-hotcold-launchd-diagnostic.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    name: Diagnose UID504 launchd EX_CONFIG without leaving collector running
+    runs-on: [self-hosted, crypto-signal, uid501]
+    timeout-minutes: 12
+    steps:
+      - name: Inspect disabled service and logs
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo -n -H -u crypto-signal-agent /usr/bin/env HOME=/Users/crypto-signal-agent /bin/bash <<'SH'
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          STABLE="$ROOT/MarketTape"
+          LABEL="com.cryptosignal.markettape"
+          DOMAIN="gui/$(id -u)"
+          PLIST="$HOME/Library/LaunchAgents/$LABEL.plist"
+
+          launchctl disable "$DOMAIN/$LABEL" >/dev/null 2>&1 || true
+          launchctl bootout "$DOMAIN/$LABEL" >/dev/null 2>&1 || true
+          sleep 2
+
+          echo "=== PROCESS COUNT ==="
+          count="$(ps -axo user=,command= | awk -v user="crypto-signal-agent" -v script="$STABLE/ops/run_market_tape_runtime.py" '$1==user && index($0,script)>0 {n++} END{print n+0}')"
+          echo "PROCESS_COUNT=$count"
+          test "$count" = "0"
+
+          echo "=== PATH PERMISSIONS ==="
+          ls -ld "$ROOT" "$STABLE" "$STABLE/ops" "$STABLE/ops/market_tape" "$ROOT/ServiceLogs" "$ROOT/RuntimeEnvs/market-tape-cold" || true
+          ls -l "$STABLE/ops/run_market_tape_runtime.py" "$STABLE/ops/market_tape/run_market_tape_launchd.sh" "$ROOT/Development/.venv/bin/python" "$ROOT/RuntimeEnvs/market-tape-cold/bin/python" || true
+
+          echo "=== PLIST ==="
+          plutil -lint "$PLIST"
+          plutil -p "$PLIST"
+
+          echo "=== DISABLED STATE ==="
+          launchctl print-disabled "$DOMAIN" | grep -A2 -B2 "$LABEL" || true
+
+          echo "=== SERVICE STDOUT TAIL ==="
+          tail -120 "$ROOT/ServiceLogs/market-tape.out.log" 2>/dev/null || true
+          echo "=== SERVICE STDERR TAIL ==="
+          tail -200 "$ROOT/ServiceLogs/market-tape.err.log" 2>/dev/null || true
+
+          echo "=== WRAPPER SYNTAX ==="
+          /bin/bash -n "$STABLE/ops/market_tape/run_market_tape_launchd.sh"
+          echo "WRAPPER_SYNTAX_PASS=YES"
+          SH
+
+      - name: Smoke exact wrapper under launchd-like minimal environment
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo -n -H -u crypto-signal-agent /usr/bin/env HOME=/Users/crypto-signal-agent /bin/bash <<'SH'
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          STABLE="$ROOT/MarketTape"
+          TAPE="$ROOT/Development/runtime/market_tape"
+          WRAPPER="$STABLE/ops/market_tape/run_market_tape_launchd.sh"
+          OUT="$TAPE/launchd-like-smoke.out.log"
+          ERR="$TAPE/launchd-like-smoke.err.log"
+
+          rm -f "$OUT" "$ERR"
+          before="$(sqlite3 "$TAPE/raw_market_tape.sqlite3" 'SELECT COUNT(*) FROM raw_market_events;')"
+
+          /usr/bin/env -i \
+            HOME=/Users/crypto-signal-agent \
+            PATH=/usr/bin:/bin:/usr/sbin:/sbin \
+            TMPDIR=/tmp \
+            /bin/bash "$WRAPPER" >"$OUT" 2>"$ERR" &
+          pid=$!
+          echo "MINIMAL_ENV_WRAPPER_PID=$pid"
+          sleep 12
+
+          alive=0
+          if kill -0 "$pid" 2>/dev/null; then
+            echo "MINIMAL_ENV_WRAPPER_ALIVE_AFTER_12S=YES"
+            alive=1
+            kill -TERM "$pid" 2>/dev/null || true
+            for _ in {1..20}; do
+              kill -0 "$pid" 2>/dev/null || break
+              sleep 1
+            done
+            kill -KILL "$pid" 2>/dev/null || true
+            wait "$pid" 2>/dev/null || true
+          else
+            set +e
+            wait "$pid"
+            rc=$?
+            set -e
+            echo "MINIMAL_ENV_WRAPPER_EARLY_EXIT_RC=$rc"
+          fi
+
+          after="$(sqlite3 "$TAPE/raw_market_tape.sqlite3" 'SELECT COUNT(*) FROM raw_market_events;')"
+          echo "MINIMAL_ENV_RAW_BEFORE=$before"
+          echo "MINIMAL_ENV_RAW_AFTER=$after"
+          echo "=== MINIMAL STDOUT ==="
+          cat "$OUT" || true
+          echo "=== MINIMAL STDERR ==="
+          cat "$ERR" || true
+          test "$alive" = "1"
+          test "$after" -gt "$before"
+          test "$(sqlite3 "$TAPE/raw_market_tape.sqlite3" 'PRAGMA quick_check;')" = "ok"
+          test "$(sqlite3 "$TAPE/market_tape.sqlite3" 'PRAGMA quick_check;')" = "ok"
+          echo "MINIMAL_ENV_WRAPPER_SMOKE_PASS=YES"
+          SH
+
+      - name: Confirm production label remains disabled
+        if: always()
+        shell: bash
+        run: |
+          sudo -n -H -u crypto-signal-agent /usr/bin/env HOME=/Users/crypto-signal-agent /bin/bash <<'SH'
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          STABLE="$ROOT/MarketTape"
+          LABEL="com.cryptosignal.markettape"
+          DOMAIN="gui/$(id -u)"
+          launchctl disable "$DOMAIN/$LABEL" >/dev/null 2>&1 || true
+          launchctl bootout "$DOMAIN/$LABEL" >/dev/null 2>&1 || true
+          sleep 2
+          count="$(ps -axo user=,command= | awk -v user="crypto-signal-agent" -v script="$STABLE/ops/run_market_tape_runtime.py" '$1==user && index($0,script)>0 {n++} END{print n+0}')"
+          echo "FINAL_DISABLED_PROCESS_COUNT=$count"
+          test "$count" = "0"
+          echo "LAUNCHD_DIAGNOSTIC_SAFE_END=YES"
+          echo "REAL_CAPITAL=0"
+          SH
