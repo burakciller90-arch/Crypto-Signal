@@ -3221,3 +3221,40 @@ Conclusion:
   action before any live/runtime acceptance that depends on deployed source parity;
 - no automatic sync/deploy was performed;
 - REAL_CAPITAL=0.
+
+
+---
+
+## 2026-09-22 — GALACTECH EVIDENCE ROOM SLICE 2 ACCEPTED AND MERGED
+
+The Product rail advanced from the accepted Command Center shell into a dedicated proof
+workspace without inventing any new market evidence.
+
+Evidence Room Slice 2 now organizes existing immutable signal-detail truth into:
+- Decision State;
+- Truth Status;
+- Issuance;
+- Integrity fingerprints;
+- Why This State?;
+- Frozen Market Proof;
+- Support / Contradiction / Uncertainty;
+- Method Engines;
+- Agreement Matrix;
+- Frozen Geometry;
+- Learn From This Snapshot.
+
+The slice preserves the existing frozen chart, methodology, agreement, geometry,
+education and signal/bundle identity contracts. It does not display M2/order-flow data,
+latency or probability unless those facts are actually supplied by accepted backend
+evidence. NOT CALIBRATED remains explicit.
+
+Acceptance evidence:
+- PR #783;
+- authoritative hosted run `35777062633`;
+- focused Product gate PASS;
+- full repository regression PASS;
+- Ruff/mypy/JS/freshness PASS;
+- temporary workflow removed after PASS;
+- squash merge to main `17b65a313957c7535cc60fff1cd6877a49b90ce1`.
+
+No production deployment/cutover occurred. REAL_CAPITAL=0.
