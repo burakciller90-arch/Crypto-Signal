@@ -1,0 +1,25 @@
+name: Crypto Raw Journal Ruff Diff
+
+on:
+  push:
+    branches:
+      - v1.1-market-tape-raw-journal-v1
+    paths:
+      - ".github/workflows/crypto-raw-journal-ruff-diff.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  diff:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install "ruff>=0.13"
+      - name: Exact Ruff diff
+        run: |
+          python -m ruff check --fix tests/test_market_tape_wire_collection.py || true
+          git diff -- tests/test_market_tape_wire_collection.py
