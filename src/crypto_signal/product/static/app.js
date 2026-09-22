@@ -964,6 +964,39 @@ async function loadSelectedAsset() {
   renderAsset(asset, provider);
 }
 
+function marketProviderConsensus(cards) {
+  if (!cards.length) return "Sağlayıcı kanıtı yok";
+  if (cards.length === 1) return "Tek sağlayıcı görünümü";
+  const directions = new Set(cards.map((card) => card.direction));
+  const states = new Set(cards.map((card) => card.state));
+  if (directions.size === 1 && states.size === 1) {
+    return "Sağlayıcılar aynı yön ve karar durumunda";
+  }
+  if (directions.size === 1) {
+    return "Yön aynı · karar durumu ayrışıyor";
+  }
+  return "Sağlayıcılar yön konusunda ayrışıyor";
+}
+
+function marketLayerAccessMarkup() {
+  const layers = [
+    ["PA", "EVIDENCE ROOM", "Dondurulmuş metodoloji kanıtı karar detayında."],
+    ["LIQ", "NOT WIRED", "M2 research kabulü asset API'ye henüz bağlanmadı."],
+    ["FLOW", "NOT WIRED", "M3 tamamlanmadan flow overlay gösterilmez."],
+    ["DERIV", "NOT WIRED", "Derivatives evidence asset API'ye henüz bağlanmadı."],
+    ["ONCHAIN", "NOT WIRED", "On-chain evidence bu asset view'da mevcut değil."],
+  ];
+  return `
+    <div class="market-layer-access">
+      ${layers.map(([name, status, note]) => `
+        <div class="market-layer-chip ${status === "NOT WIRED" ? "is-unavailable" : "is-available"}" title="${esc(note)}">
+          <strong>${esc(name)}</strong>
+          <span>${esc(status)}</span>
+        </div>
+      `).join("")}
+    </div>`;
+}
+
 function renderAsset(data, provider = "all") {
   $("#assetTitle").textContent = `${data.symbol} · ${data.timeframe}`;
   const root = $("#assetCockpit");
@@ -971,28 +1004,79 @@ function renderAsset(data, provider = "all") {
     root.innerHTML = `<div class="performance-empty">Varlık Merkezi: ${esc(human(data.status))}.</div>`;
     return;
   }
-  const cards = provider === "all"
-    ? data.latest_by_provider
-    : data.latest_by_provider.filter((card) => card.exchange === provider);
 
-  root.innerHTML = cards.length
-    ? cards.map((card) => `
-      <div class="asset-row" data-signal-id="${esc(card.signal_freeze_identity)}">
-        <div>
-          <div class="value-label">Sağlayıcı</div>
-          <div class="row-title">${esc(card.exchange.toUpperCase())}</div>
-        </div>
-        <div>
-          <div class="value-label">Karar durumu</div>
-          <div class="state-pill ${stateClass(card.state)}">${esc(human(card.state))}</div>
-        </div>
-        <div>
-          <div class="value-label">Metodoloji uyumu</div>
-          <div class="value-main">${esc(card.confluence_score)}</div>
-          <div class="row-sub">${esc(card.probability_status)}</div>
-        </div>
+  const allCards = data.latest_by_provider ?? [];
+  const cards = provider === "all"
+    ? allCards
+    : allCards.filter((card) => card.exchange === provider);
+  const recent = (data.recent_signals ?? []).filter(
+    (card) => provider === "all" || card.exchange === provider
+  );
+  const latestFrozenAt = cards.length
+    ? Math.max(...cards.map((card) => Number(card.frozen_at_ms ?? 0)))
+    : null;
+
+  root.innerHTML = cards.length ? `
+    <div class="market-workspace-head">
+      <div>
+        <div class="micro-label">PROVIDER TRUTH / FROZEN DECISIONS</div>
+        <strong>${esc(marketProviderConsensus(cards))}</strong>
+        <span>${cards.length} sağlayıcı · son freeze ${esc(fmtTime(latestFrozenAt))}</span>
       </div>
-    `).join("")
+      <div class="market-workspace-truth">
+        <span>Confluence ≠ probability</span>
+        <span>Frozen ≠ current price prediction</span>
+      </div>
+    </div>
+
+    <div class="market-provider-grid">
+      ${cards.map((card) => `
+        <article class="market-provider-card">
+          <div class="market-provider-head">
+            <div>
+              <span class="micro-label">PROVIDER</span>
+              <strong>${esc(card.exchange.toUpperCase())}</strong>
+            </div>
+            <span class="state-pill ${stateClass(card.state)}">${esc(human(card.state))}</span>
+          </div>
+          <div class="market-provider-direction ${directionClass(card.direction)}">${esc(human(card.direction))}</div>
+          <div class="market-provider-metrics">
+            <div><span>Uyum</span><strong>${esc(card.confluence_score)}</strong></div>
+            <div><span>Olasılık</span><strong>${esc(human(card.probability_status))}</strong></div>
+            <div><span>Kurulum</span><strong>${esc(human(card.setup_type))}</strong></div>
+          </div>
+          <div class="market-provider-time">Freeze · ${esc(fmtTime(card.frozen_at_ms))}</div>
+          <button class="market-proof-open" type="button" data-signal-id="${esc(card.signal_freeze_identity)}">EVIDENCE ROOM AÇ</button>
+        </article>
+      `).join("")}
+    </div>
+
+    <div class="market-layer-panel">
+      <div class="market-layer-copy">
+        <div class="micro-label">LAYER ACCESS</div>
+        <strong>Bağlı olmayan intelligence katmanı aktifmiş gibi çizilmez.</strong>
+        <p>Katmanlar backend evidence contract'ı geldikçe açılır. Bu slice yalnız frozen decision truth gösterir.</p>
+      </div>
+      ${marketLayerAccessMarkup()}
+    </div>
+
+    <div class="market-decision-tape">
+      <div class="market-tape-head">
+        <div><span class="micro-label">RECENT DECISION TAPE</span><strong>Bu varlıkta son dondurulmuş kararlar</strong></div>
+        <span class="module-tag">${recent.length} kayıt</span>
+      </div>
+      <div class="market-tape-list">
+        ${recent.slice(0, 12).map((card) => `
+          <button class="market-tape-row" type="button" data-signal-id="${esc(card.signal_freeze_identity)}">
+            <span>${esc(fmtTime(card.frozen_at_ms))}</span>
+            <strong>${esc(card.exchange.toUpperCase())}</strong>
+            <span class="${directionClass(card.direction)}">${esc(human(card.direction))}</span>
+            <span class="state-pill ${stateClass(card.state)}">${esc(human(card.state))}</span>
+            <span>${esc(card.confluence_score)}</span>
+          </button>
+        `).join("") || '<div class="truth-note">Yakın karar kaydı yok.</div>'}
+      </div>
+    </div>`
     : '<div class="performance-empty">Seçili sağlayıcı için dondurulmuş karar yok.</div>';
 }
 

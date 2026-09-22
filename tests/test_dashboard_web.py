@@ -220,6 +220,18 @@ def test_health_and_static_shell_without_ledger(tmp_path: Path) -> None:
     assert "REAL_CAPITAL=0" in index.text
     assert "LIVE INTELLIGENCE FEED" in index.text
     assert "CRITICAL RADAR" in index.text
+    assert "Market Workspace" in index.text
+    assert "function marketProviderConsensus(cards)" in script.text
+    assert "function marketLayerAccessMarkup()" in script.text
+    assert "PROVIDER TRUTH / FROZEN DECISIONS" in script.text
+    assert "RECENT DECISION TAPE" in script.text
+    assert "EVIDENCE ROOM AÇ" in script.text
+    assert "LIQ" in script.text
+    assert "FLOW" in script.text
+    assert "DERIV" in script.text
+    assert "ONCHAIN" in script.text
+    assert "NOT WIRED" in script.text
+    assert "Confluence ≠ probability" in script.text
     assert script.status_code == 200
     assert "function frozenChartData(detail)" in script.text
     assert "function renderDecisionExplanation(detail)" in script.text
