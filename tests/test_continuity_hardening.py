@@ -65,6 +65,11 @@ def test_binding_writers_and_installers_use_ssd_canonical_state() -> None:
     assert 'EXPECTED="$WAKE/expected_chat_url"' in bootstrap
     assert '"crypto-signal"' in bootstrap
     assert "continuity_contracts.py" in installer
+    assert 'DOMAIN="user/$(id -u)"' in installer
+    assert 'DOMAIN="gui/$(id -u)"' not in installer
+    acceptance = _read(".github/workflows/crypto-r12-continuity-acceptance.yml")
+    assert 'DOMAIN="user/$(id -u)"' in acceptance
+    assert 'DOMAIN="gui/$(id -u)"' not in acceptance
     assert "slots=True" not in contracts
     assert 'launchctl kickstart -k "$DOMAIN/$LABEL"' in installer
     assert "recurring_wake_last_local_attempt" in installer

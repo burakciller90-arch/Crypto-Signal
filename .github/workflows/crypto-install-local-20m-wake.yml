@@ -29,7 +29,7 @@ jobs:
 
           INSTALL="$HOME/Library/Application Support/CryptoSignal/continuity20m"
           AGENTS="$HOME/Library/LaunchAgents"
-          DOMAIN="gui/$(id -u)"
+          DOMAIN="user/$(id -u)"
           LABEL="com.cryptosignal.autowake20m"
           PLIST="$AGENTS/$LABEL.plist"
 
