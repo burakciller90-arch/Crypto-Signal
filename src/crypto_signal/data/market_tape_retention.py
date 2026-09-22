@@ -257,7 +257,7 @@ def _generation_from_manifest(path: Path) -> SealedMarketTapeGeneration:
         raise ValueError(f"sealed Market Tape manifest missing: {path.name}")
     payload = json.loads(manifest_path.read_text())
     if not isinstance(payload, dict):
-        raise ValueError("sealed Market Tape manifest must be an object")
+        raise TypeError("sealed Market Tape manifest must be an object")
     if payload.get("schema_version") != "market-tape-sealed-generation-v1/1":
         raise ValueError("unsupported sealed Market Tape manifest schema")
     if payload.get("generation_id") != path.name:
@@ -415,5 +415,5 @@ def _write_manifest_atomic(path: Path, payload: dict[str, Any]) -> None:
 
 def _mapping(value: object) -> dict[str, Any]:
     if not isinstance(value, dict):
-        raise ValueError("sealed Market Tape manifest field must be an object")
+        raise TypeError("sealed Market Tape manifest field must be an object")
     return value
