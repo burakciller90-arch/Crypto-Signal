@@ -25,7 +25,9 @@ If any local note conflicts with that handoff, the master handoff wins.
 The user's 2026-09-20 Full Version direction supersedes the earlier deliberately-limited Birthday Edition scope where they conflict, while preserving every scientific and REAL_CAPITAL boundary.
 
 Before planning new product work, read:
-- `docs/CRYPTO_SIGNAL_FULL_VERSION_WORLD_CLASS_ROADMAP.md` — canonical execution roadmap.
+- `docs/V1_1_MASTER_EXECUTION_ROADMAP.md` — **current governing post-v1.0 / v1.1+ execution roadmap**, including R15 runtime recovery, parallel UI + Market Tape tracks, Live Intelligence Feed / Decision Proof, Canonical Fund vs Shadow Lab, calibration, acceptance and v2 deferrals.
+- `docs/V1_1_WORLD_CLASS_PRODUCT_ROADMAP.md` — condensed v1.1 product roadmap.
+- `docs/CRYPTO_SIGNAL_FULL_VERSION_WORLD_CLASS_ROADMAP.md` — accepted Full Version/v1.0 architectural history and foundations.
 - `docs/AUTONOMOUS_PAPER_FUND_V1_SPEC.md` — immutable 100 USDT virtual fund contract.
 - `docs/INTELLIGENCE_ALPHA_FACTORY_ARCHITECTURE.md` — multi-engine, regime, learning and challenger/champion rules.
 - `docs/BEGINNER_UX_EVIDENCE_CENTER_SPEC.md` — live refresh, teaching and evidence UX contract.
@@ -76,3 +78,22 @@ exact-main release-freeze workflow emits
 Physical reboot/logout/SSD detach-remount remain explicit human-impact items
 unless separately performed. REAL_CAPITAL=0 and real exchange order/credential
 authority remain closed.
+
+
+## Post-v1.0 authority update — 2026-09-22
+
+The immutable `crypto-signal-full-version-v1.0.0` release remains the accepted baseline.
+
+For **new post-v1.0 development**, `docs/V1_1_MASTER_EXECUTION_ROADMAP.md` is the
+governing execution plan on the v1.1 development line. A fresh agent must use it to
+avoid three common regressions:
+
+- do not treat UI process health as proof that market data is fresh;
+- do not mix Shadow Lab exploration into the canonical 100 USDT paper track record;
+- do not expose or fabricate private chain-of-thought under the “Proof-of-Thought”
+  idea. Implement **Decision Proof**: immutable evidence, forecast, decision state,
+  concise rationale, frozen snapshot and later outcome.
+
+The current v1.1 program intentionally runs customer UI and Market Tape/data
+collection in parallel after R15 safety. Research engines already present in the repo
+must be reused rather than duplicated.
