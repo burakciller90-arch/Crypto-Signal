@@ -292,7 +292,16 @@ def test_health_and_static_shell_without_ledger(tmp_path: Path) -> None:
     assert "frictionless referanslardır" in script.text
     assert 'id="paperPortfolioExposure"' in index.text
     assert 'id="paperPerformanceLab"' in index.text
-    assert "SİNYAL / İŞLEM ARŞİVİ" in index.text
+    assert "ARCHIVE / PROOF WALL" in index.text
+    assert "IMMUTABLE DECISION ARCHIVE" in index.text
+    assert 'id="archiveProofWall"' in index.text
+    assert 'id="proofWallFilters"' in index.text
+    assert "Issuance snapshot ↔ later outcome" in index.text
+    assert "function proofOutcomeCategory(item)" in script.text
+    assert "function renderProofWall(data)" in script.text
+    assert "ISSUANCE SNAPSHOT" in script.text
+    assert "LATER · OUTCOME SNAPSHOT" in script.text
+    assert "/api/archive/proof-wall?limit=100&offset=0" in script.text
     assert 'id="paperTradeArchive"' in index.text
     assert "function renderPaperTradeArchive(data)" in script.text
     assert "Henüz sanal işlem kaydı yok." in script.text
@@ -333,6 +342,26 @@ def test_health_and_static_shell_without_ledger(tmp_path: Path) -> None:
     assert "Grafikte çizilen dondurulmuş kanıt" in script.text
     assert "daha yeni fiyat verisi geçmiş kararı yeniden yazmaz" in script.text
     assert not missing.exists()
+
+
+def test_archive_proof_wall_api_keeps_issuance_without_inventing_outcome(
+    tmp_path: Path,
+) -> None:
+    signal_path = tmp_path / "signals.sqlite3"
+    signal_id = seed_ledger(signal_path)
+    client = TestClient(create_app(signal_path))
+
+    response = client.get("/api/archive/proof-wall?limit=10&offset=0")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "ready"
+    assert body["total_count"] == 1
+    assert body["outcome_schema_available"] is True
+    assert len(body["items"]) == 1
+    assert body["items"][0]["signal"]["signal_freeze_identity"] == signal_id
+    assert body["items"][0]["latest_outcome"] is None
+    assert client.post("/api/archive/proof-wall").status_code == 405
 
 
 def test_paper_epoch_contract_keeps_legacy_and_epoch2_separate(
