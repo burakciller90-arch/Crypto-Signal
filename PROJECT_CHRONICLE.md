@@ -3610,3 +3610,37 @@ Current authority:
 Historical open issue #18 `[CURSOR] ASK` was closed as not-planned/superseded.
 This execution-policy change does not alter roadmap scope, scientific invariants,
 production/human-impact gates, or REAL_CAPITAL=0.
+
+
+---
+
+## 2026-09-22 — GALACTECH ARCHIVE / PROOF WALL ACCEPTED / MERGED
+
+The Product rail advanced from Market Workspace into the locked Archive / Proof Wall.
+
+Accepted read model:
+- every immutable signal issuance remains visible;
+- the latest stored outcome snapshot, when present, is attached as separate later evidence;
+- outcome evidence class and holding horizon remain explicit;
+- absent outcome remains unresolved rather than inferred;
+- absent outcome schema remains explicit;
+- malformed outcome evidence fails closed.
+
+Accepted Product semantics:
+- winners, losers, expired, invalidated, ambiguous, not-evaluable and unresolved remain distinct;
+- issuance and later outcome are shown side by side;
+- Evidence Room links preserve the original immutable signal identity;
+- paper Transaction Tape remains a different surface.
+
+Acceptance evidence:
+- PR #803;
+- authoritative hosted run `35785491337`;
+- focused Proof Wall/Web pytest, Ruff, Product mypy and JS/freshness PASS;
+- full repository pytest/Ruff/mypy/JS/freshness PASS;
+- temporary hosted workflow removed after PASS;
+- squash merge `691bb14d7c2bb399383293001b8cbb4ec019d201`.
+
+No Cursor worker/composer was used. No production deployment occurred.
+REAL_CAPITAL=0.
+
+Current Product frontier is GALACTECH Performance & Trust Center.
