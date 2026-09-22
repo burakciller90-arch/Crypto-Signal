@@ -1,5 +1,8 @@
 # Crypto Signal
 
+> **Active post-v1.0 development:** read `docs/V1_1_MASTER_EXECUTION_ROADMAP.md` before planning or changing v1.1+ state. It is the governing agent-handoff plan for R15 runtime recovery, parallel UI/Market Tape work, Decision Proof / Live Intelligence Feed, Canonical Fund vs Shadow Lab, calibration, acceptance and v2 deferrals.
+
+
 Crypto Signal Full Version is a Turkish-first, explainable, evidence-driven
 crypto intelligence platform. It combines immutable signal history, beginner
 education, a 100 USDT virtual paper-fund domain, honest performance/benchmark
