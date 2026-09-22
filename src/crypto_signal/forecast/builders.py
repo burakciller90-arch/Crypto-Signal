@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import replace
 from decimal import Decimal
 
 from crypto_signal.confluence.models import EvidenceDirection
@@ -181,13 +182,11 @@ def build_conditional_forecast(
         uncertainty_flags=decision.uncertainty_flags,
         **probability_values,
     )
-    forecast = ConditionalForecast(
-        **{
-            **draft.__dict__,
-            "forecast_identity": canonical_sha256(
-                conditional_forecast_payload(draft)
-            ),
-        }
+    forecast = replace(
+        draft,
+        forecast_identity=canonical_sha256(
+            conditional_forecast_payload(draft)
+        ),
     )
     verify_forecast_identity(forecast)
     return forecast
@@ -295,11 +294,9 @@ def build_decision_proof(
         technical_explanation=technical,
         snapshot_refs=refs,
     )
-    proof = DecisionProof(
-        **{
-            **draft.__dict__,
-            "proof_identity": canonical_sha256(decision_proof_payload(draft)),
-        }
+    proof = replace(
+        draft,
+        proof_identity=canonical_sha256(decision_proof_payload(draft)),
     )
     verify_decision_proof_identity(proof)
     return proof
@@ -357,13 +354,11 @@ def build_forecast_resolution(
         outcome_state=outcome.outcome_state,
         horizon_bars=outcome.max_holding_bars,
     )
-    resolution = ForecastResolution(
-        **{
-            **draft.__dict__,
-            "resolution_identity": canonical_sha256(
-                forecast_resolution_payload(draft)
-            ),
-        }
+    resolution = replace(
+        draft,
+        resolution_identity=canonical_sha256(
+            forecast_resolution_payload(draft)
+        ),
     )
     verify_forecast_resolution_identity(resolution)
     return resolution
