@@ -19,7 +19,6 @@ from crypto_signal.data.microstructure import (
 )
 from crypto_signal.data.models import DataSource
 
-
 ADAPTER_VERSION = BybitSpotMicrostructureStream.ADAPTER_VERSION
 
 
