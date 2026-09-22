@@ -118,7 +118,7 @@ def test_persistent_pool_and_rates_are_deterministic_and_frozen() -> None:
     assert len(first.analysis.evidence_identity) == 64
     assert len(first.freeze_identity) == 64
 
-    bid100 = next(item for item in first.analysis.bid_levels if item.price == Decimal("100"))
+    bid100 = next(item for item in first.analysis.bid_levels if item.price == Decimal(100))
     assert bid100.side is LiquiditySide.BID
     assert bid100.presence_fraction == Decimal(1)
     assert bid100.survival_ms == 4_000
@@ -195,7 +195,7 @@ def test_repeated_depletion_and_refresh_is_hidden_liquidity_candidate_only() -> 
         as_of_ms=12_050,
         config=_config(),
     )
-    bid100 = next(item for item in result.bid_levels if item.price == Decimal("100"))
+    bid100 = next(item for item in result.bid_levels if item.price == Decimal(100))
     assert bid100.replenishment_cycles == 2
     assert bid100.replenishment_notional > Decimal(0)
     assert LiquidityLevelCandidate.HIDDEN_LIQUIDITY in bid100.candidates
