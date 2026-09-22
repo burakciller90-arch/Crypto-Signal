@@ -3386,3 +3386,79 @@ Acceptance:
 No live public-linear collector was activated and no production Market Tape mutation was
 performed. The next safe M2 frontier is feed collection + Market Tape v2 persistence/replay
 wiring, with production activation separately gated. REAL_CAPITAL=0.
+
+
+---
+
+## 2026-09-22 — Receipt-bound rolling 20-minute continuity wake accepted
+
+A user-observed failure exposed that GitHub scheduled workflows could not be treated as an
+exact 20-minute counter: an expected 23:20 wake arrived several minutes late.
+
+The continuity architecture was therefore changed from wall-clock/calendar ownership to a
+receipt-bound local rolling timer.
+
+Accepted primary behavior:
+- UID504 local `interval_wake_daemon.py` owns cadence;
+- interval = exactly 1200 seconds;
+- install/reset produces an immediate first event;
+- cadence advances only after a final relay receipt;
+- a timeout/failure does not advance the counter;
+- the same pending event retries until final receipt;
+- `SUBMITTING` is explicitly non-final and recoverable after relay crash;
+- user pause dominates;
+- missing SSD/runtime waits fail-closed.
+
+The existing relay busy behavior remains unchanged:
+- busy ChatGPT -> exact locked wake may Stop the active response -> wait for editor ready -> submit;
+- idle ChatGPT -> direct submit.
+
+Hosted acceptance:
+- PR #791;
+- authoritative run `35782108785` PASS;
+- focused continuity tests/Ruff/mypy PASS;
+- full repository regression PASS;
+- merge `0a2a3d26cd282f46574b3c6771d25c411254ff6a`.
+
+Runtime installation:
+- self-hosted UID504 installer run `35782299633` PASS;
+- exact current chat binding restored;
+- legacy calendar timers disabled;
+- rolling daemon started;
+- immediate event first entered bounded retry, then reached
+  `ROLLING_WAKE_IMMEDIATE_RECEIPT_PASS=YES`.
+
+A second defect was found during the required live watchdog verification:
+the first 5-minute scheduled watchdog run `35782321633` used an accidentally escaped
+GitHub event expression, so a scheduled event entered the manual-wake branch.
+
+This was not accepted as final behavior.
+
+Hotfix:
+- PR #793;
+- GitHub event context interpolation corrected;
+- shell run-id expansion corrected;
+- regression assertions added against escaped forms;
+- installer push filters narrowed so workflow-only watchdog edits do not reset the live
+  20-minute rolling counter;
+- focused hotfix run `35782951665` PASS;
+- merge `00fdc120d4f42adffaf03adfb07bf5d5108dd8e9`.
+
+Post-hotfix live evidence:
+- no second installer run occurred;
+- bridgestate run `35783207928` observed exact shared/local chat binding, relay RUNNING,
+  correct target URL and fresh heartbeat;
+- corrected scheduled watchdog run `35783370818` observed heartbeat age = 1 second and
+  emitted exactly:
+  - `GITHUB_WATCHDOG_TIMER_HEALTHY=YES`;
+  - `GITHUB_FALLBACK_SKIPPED=YES`;
+- no actual wake-attempt output was emitted by that healthy scheduled watchdog.
+
+Final authority model:
+local rolling timer -> receipt-bound retry -> GitHub watchdog/self-heal -> emergency fallback.
+
+The wake text structure was intentionally preserved; only the user-requested clarification
+that the 20-minute loop remains active unless explicitly stopped plus `REAL_CAPITAL=0`
+was added.
+
+REAL_CAPITAL=0.
