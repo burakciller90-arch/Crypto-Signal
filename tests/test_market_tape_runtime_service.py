@@ -40,6 +40,8 @@ def test_market_tape_installer_preserves_uid504_boundary() -> None:
     assert 'RuntimeEnvs/market-tape-cold' in source
     assert 'PYARROW_VERSION="22.0.0"' in source
     assert "launchctl bootstrap" in source
+    assert "MARKET_TAPE_INSTALL_NO_START" in source
+    assert "MARKET_TAPE_LAUNCHAGENT_PREPARE_ONLY_PASS=YES" in source
     assert "REAL_CAPITAL=0" in source
 
 
