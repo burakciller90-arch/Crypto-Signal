@@ -78,3 +78,13 @@ def test_r15_runner_restart_stops_parent_tree_before_new_start() -> None:
     assert stop_index < start_index
     assert 'runner_worker_alive' in text
     assert 'crypto-signal-agent' in text
+
+
+def test_r15_listener_detection_is_exact_and_self_match_safe() -> None:
+    text = SCRIPT.read_text(encoding="utf-8")
+    start = text.index("runner_listener_pid() {")
+    end = text.index("runner_alive() {", start)
+    block = text[start:end]
+    assert 'expected="$RUNNER/bin/Runner.Listener run --startuptype service"' in block
+    assert "if ($0 == expected)" in block
+    assert "index($0, needle)" not in block
