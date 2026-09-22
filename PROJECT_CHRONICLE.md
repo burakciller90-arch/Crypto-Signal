@@ -2945,3 +2945,42 @@ absence of persistent Market Tape history infrastructure.
 
 Continuity remains PAUSED by user contract. REAL_CAPITAL=0.
 
+
+
+---
+
+## 2026-09-22 — USER-LOCKED v1.1 MASTER ROADMAP / EPOCH 2 / FRONTEND REBUILD
+
+User explicitly locked the new post-v1.0 roadmap and requested continuous safe development.
+
+Canonical roadmap:
+- `docs/V1_1_LOCKED_MASTER_ROADMAP_20260922.md`
+
+Locked changes:
+- v1.0.0 remains immutable and REAL_CAPITAL=0.
+- Paper Fund Epoch 1 remains immutable legacy history at 100 USDT.
+- Paper Fund Epoch 2 is a separate canonical history starting at **1,000 USDT** after its spec/migration acceptance gate.
+- Initial Smart Capital Allocator research policy: **Core 600 / Tactical 300 / Opportunity Reserve 100 USDT**.
+- Program now runs on **three parallel rails: Intelligence / Capital-Science / Product**.
+- Intelligence expansion: Liquidity 2.0 -> Order Flow/Absorption 2.0 -> Derivatives 2.0 -> On-chain/Event/NLP -> Confluence 2.0 -> calibrated Forecast/Decision Proof.
+- M2 adds liquidation-risk mapping and bounded spoofing/iceberg candidate semantics; no unsupported actor-intent attribution.
+- R19 calibration remains mandatory before user-visible probability and before Kelly sizing research can become canonical-eligible.
+- Existing frontend is not the final visual target. Product rail is a **from-scratch GALACTECH // CRYPTO SIGNAL rebuild**.
+- Product IA: COMMAND / MARKETS / INTELLIGENCE / CAPITAL / ARCHIVE / PERFORMANCE / LEARN / SYSTEM.
+- Visual thesis: **Bloomberg precision x cinematic sci-fi**, restrained semantic neon, truthful live/freshness, zero meaningless motion.
+- Shadow/research never mutates canonical NAV/PnL/history.
+- Safe development continues without unnecessary approval stops; new production/human-impact mutations remain separately gated.
+
+Routing files updated to point new agents to the locked roadmap:
+- READ_FIRST_CRYPTO_SIGNAL.md
+- CURRENT_STATUS.md
+- docs/V1_1_MASTER_EXECUTION_ROADMAP.md
+- docs/V1_1_WORLD_CLASS_PRODUCT_ROADMAP.md
+
+Next locked frontier:
+1. mechanically reconcile live state;
+2. read-only verify first real Cold Archive partition if present;
+3. define/implement Paper Fund Epoch 2 without rewriting Epoch 1;
+4. continue M2 Liquidity 2.0 and the new frontend rebuild in parallel.
+
+Do not replay R15 / HotCold / M2 Slice 1 accepted work.
