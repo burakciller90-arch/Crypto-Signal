@@ -1,0 +1,53 @@
+name: Crypto R15 Direct UID504 Terminal Recovery
+
+on:
+  push:
+    branches: [r15-ssd-hotplug-recovery-v1]
+    paths: [".github/workflows/crypto-r15-direct-terminal-recovery.yml"]
+
+permissions:
+  contents: read
+
+jobs:
+  recover:
+    runs-on: [self-hosted, crypto-signal, uid501]
+    timeout-minutes: 8
+    steps:
+      - name: Request proven Terminal transport as UID504
+        shell: bash
+        run: |
+          set -euo pipefail
+          START="/Users/crypto-signal-agent/Library/Application Support/CryptoSignalRecovery/start-ssd-runner.command"
+          test "$(sudo -n -H -u crypto-signal-agent /usr/bin/id -u)" = "504"
+          sudo -n -H -u crypto-signal-agent /usr/bin/test -x "$START"
+          echo "REQUESTING_DIRECT_UID504_TERMINAL_START=YES"
+          sudo -n -H -u crypto-signal-agent /usr/bin/open -gj -a Terminal "$START"
+          echo "DIRECT_UID504_OPEN_RC=0"
+
+      - name: Wait for UID504 listener and emit evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          EXPECTED="$ROOT/Runner/bin/Runner.Listener run --startuptype service"
+          LLOG="/Users/crypto-signal-agent/Library/Logs/CryptoSignalRecovery"
+          ok=0
+          for _ in {1..60}; do
+            count="$(ps -axo command= | awk -v expected="$EXPECTED" '$0 == expected {n++} END{print n+0}')"
+            if [ "$count" = "1" ]; then ok=1; break; fi
+            sleep 1
+          done
+
+          echo "=== EXACT LISTENER ==="
+          ps -axo pid=,ppid=,user=,%cpu=,%mem=,etime=,state=,command= | grep -F "$EXPECTED" | grep -v grep || true
+          echo "=== TERMINAL RUNNER LOG ==="
+          sudo -n -H -u crypto-signal-agent /usr/bin/tail -100 "$LLOG/terminal-runner.log" 2>&1 || true
+          echo "=== TERMINAL RUNNER ERR ==="
+          sudo -n -H -u crypto-signal-agent /usr/bin/tail -100 "$LLOG/terminal-runner.err.log" 2>&1 || true
+          echo "=== SSD RUNNER OUT ==="
+          sudo -n -H -u crypto-signal-agent /usr/bin/tail -100 "$ROOT/RunnerLogs/r15-terminal-runner.out.log" 2>&1 || true
+          echo "=== SSD RUNNER ERR ==="
+          sudo -n -H -u crypto-signal-agent /usr/bin/tail -100 "$ROOT/RunnerLogs/r15-terminal-runner.err.log" 2>&1 || true
+          echo "DIRECT_TERMINAL_RECOVERY_READY=$ok"
+          test "$ok" = "1"
+          echo "R15_DIRECT_UID504_TERMINAL_RECOVERY_PASS=YES"
