@@ -1,5 +1,5 @@
-import plistlib
 from pathlib import Path
+import plistlib
 
 
 ROOT = Path(__file__).resolve().parents[1]
