@@ -1,0 +1,195 @@
+name: Crypto UID501 R15 Runner Recovery 20260922
+
+on:
+  push:
+    branches:
+      - diag-uid501-r15-runner-recovery-20260922
+    paths:
+      - ".github/workflows/crypto-uid501-r15-runner-recovery-20260922.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  recover:
+    runs-on: [self-hosted, crypto-signal, uid501]
+    timeout-minutes: 10
+    steps:
+      - name: Recover exact stuck UID504 SSD runner with local admin authorization
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(id -u)" = "501"
+
+          SCRIPT="/tmp/crypto-r15-runner-recover.sh"
+          RESULT="/tmp/crypto-r15-runner-recover.result"
+          rm -f "$SCRIPT" "$RESULT"
+
+          cat > "$SCRIPT" <<'SH'
+          #!/bin/bash
+          set -euo pipefail
+
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          RUNNER="$ROOT/Runner"
+          LOG="$ROOT/RunnerLogs/r15-manual-recovery.log"
+          CPU_MIN=90
+
+          test "$(id -u)" = "504"
+          test -d "$ROOT"
+          test -x "$RUNNER/runsvc.sh"
+          test -x "$RUNNER/bin/Runner.Listener"
+          mkdir -p "$ROOT/RunnerLogs"
+
+          stamp() { date '+%Y-%m-%d %H:%M:%S %z'; }
+          note() { printf '%s %s\n' "$(stamp)" "$*" | tee -a "$LOG"; }
+
+          listener_pids() {
+            /bin/ps -axo pid=,command=               | /usr/bin/awk -v needle="$RUNNER/bin/Runner.Listener run --startuptype service"                   'index($0, needle) {print $1}'
+          }
+
+          worker_pids() {
+            /bin/ps -axo pid=,command=               | /usr/bin/awk -v needle="$RUNNER/bin/Runner.Worker"                   'index($0, needle) {print $1}'
+          }
+
+          runsvc_pids() {
+            /bin/ps -axo pid=,command=               | /usr/bin/awk -v needle="$RUNNER/runsvc.sh"                   'index($0, needle) {print $1}'
+          }
+
+          count_lines() {
+            /usr/bin/awk 'NF {n++} END {print n+0}'
+          }
+
+          listeners="$(listener_pids)"
+          listener_count="$(printf '%s\n' "$listeners" | count_lines)"
+          note "PRECHECK listener_count=$listener_count listeners=$listeners"
+          if [ "$listener_count" -ne 1 ]; then
+            note "ABORT expected_exactly_one_listener"
+            exit 31
+          fi
+
+          workers="$(worker_pids)"
+          if [ -n "$workers" ]; then
+            note "ABORT active_runner_worker=$workers"
+            exit 32
+          fi
+
+          old_pid="$(printf '%s\n' "$listeners" | /usr/bin/head -1)"
+          for sample in 1 2 3; do
+            cmd="$(/bin/ps -p "$old_pid" -o command= 2>/dev/null || true)"
+            printf '%s' "$cmd" | /usr/bin/grep -F "$RUNNER/bin/Runner.Listener run --startuptype service" >/dev/null
+            workers="$(worker_pids)"
+            if [ -n "$workers" ]; then
+              note "ABORT worker_appeared_during_sample=$workers"
+              exit 33
+            fi
+            cpu_raw="$(/bin/ps -p "$old_pid" -o %cpu= 2>/dev/null | /usr/bin/tr -d ' ' || true)"
+            cpu_int="$(/usr/bin/awk -v value="${cpu_raw:-0}" 'BEGIN {printf "%d\n", value + 0}')"
+            note "CPU_SAMPLE sample=$sample pid=$old_pid cpu=$cpu_int"
+            if [ "$cpu_int" -lt "$CPU_MIN" ]; then
+              note "ABORT cpu_below_threshold pid=$old_pid cpu=$cpu_int"
+              exit 34
+            fi
+            /bin/sleep 3
+          done
+
+          note "TERM_STUCK_LISTENER pid=$old_pid"
+          /bin/kill "$old_pid"
+
+          for _ in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15; do
+            if ! /bin/kill -0 "$old_pid" >/dev/null 2>&1; then
+              break
+            fi
+            /bin/sleep 1
+          done
+
+          if /bin/kill -0 "$old_pid" >/dev/null 2>&1; then
+            cmd="$(/bin/ps -p "$old_pid" -o command= 2>/dev/null || true)"
+            printf '%s' "$cmd" | /usr/bin/grep -F "$RUNNER/bin/Runner.Listener run --startuptype service" >/dev/null
+            workers="$(worker_pids)"
+            if [ -n "$workers" ]; then
+              note "ABORT worker_appeared_before_force_kill=$workers"
+              exit 35
+            fi
+            note "KILL_STUCK_LISTENER pid=$old_pid"
+            /bin/kill -9 "$old_pid"
+            /bin/sleep 2
+          fi
+
+          /bin/sleep 5
+          listeners="$(listener_pids)"
+          listener_count="$(printf '%s\n' "$listeners" | count_lines)"
+
+          if [ "$listener_count" -eq 0 ]; then
+            parents="$(runsvc_pids)"
+            for pid in $parents; do
+              note "TERM_STALE_RUNSVC pid=$pid"
+              /bin/kill "$pid" >/dev/null 2>&1 || true
+            done
+            /bin/sleep 2
+
+            note "START_SSD_RUNNER"
+            (
+              cd "$RUNNER"
+              unset RUNNER_TRACKING_ID
+              export HOME="/Users/crypto-signal-agent"
+              export ACTIONS_RUNNER_SVC=1
+              /usr/bin/nohup ./runsvc.sh                 >>"$ROOT/RunnerLogs/r15-recovery-runner.out.log"                 2>>"$ROOT/RunnerLogs/r15-recovery-runner.err.log"                 </dev/null &
+              echo $! >"$ROOT/ssd-runner-r15-recovery.pid"
+            )
+          elif [ "$listener_count" -eq 1 ]; then
+            new_pid="$(printf '%s\n' "$listeners" | /usr/bin/head -1)"
+            if [ "$new_pid" = "$old_pid" ]; then
+              note "ABORT old_listener_survived pid=$old_pid"
+              exit 36
+            fi
+            note "RUNSVC_AUTO_RECOVERED listener=$new_pid"
+          else
+            note "ABORT duplicate_listeners_after_term listeners=$listeners"
+            exit 37
+          fi
+
+          new_pid=""
+          for _ in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30; do
+            listeners="$(listener_pids)"
+            listener_count="$(printf '%s\n' "$listeners" | count_lines)"
+            if [ "$listener_count" -eq 1 ]; then
+              new_pid="$(printf '%s\n' "$listeners" | /usr/bin/head -1)"
+              break
+            fi
+            if [ "$listener_count" -gt 1 ]; then
+              note "ABORT duplicate_listeners_during_start listeners=$listeners"
+              exit 38
+            fi
+            /bin/sleep 1
+          done
+
+          test -n "$new_pid"
+          test "$new_pid" != "$old_pid"
+          note "R15_RUNNER_RECOVERY_PASS=YES old=$old_pid new=$new_pid"
+          echo "R15_RUNNER_RECOVERY_PASS=YES old=$old_pid new=$new_pid"
+          echo "REAL_CAPITAL=0"
+          SH
+
+          chmod 700 "$SCRIPT"
+          echo "REQUESTING_MACOS_ADMIN_AUTH=YES"
+          CMD='do shell script "/usr/bin/sudo -u crypto-signal-agent /bin/bash /tmp/crypto-r15-runner-recover.sh > /tmp/crypto-r15-runner-recover.result 2>&1" with administrator privileges'
+          /bin/launchctl asuser 501 /usr/bin/osascript -e "$CMD"
+
+          cat "$RESULT"
+          grep -F "R15_RUNNER_RECOVERY_PASS=YES" "$RESULT"
+          grep -F "REAL_CAPITAL=0" "$RESULT"
+
+          echo "=== POST PROCESS SNAPSHOT ==="
+          /bin/ps -axo pid=,ppid=,user=,%cpu=,%mem=,etime=,state=,command=             | /usr/bin/grep -E '/Volumes/Crypto-504/Crypto-Signal/Runner/bin/Runner.Listener|/Volumes/Crypto-504/Crypto-Signal/Runner/bin/Runner.Worker'             | /usr/bin/grep -v grep             | /usr/bin/head -80
+
+          LISTENER_COUNT="$(/bin/ps -axo command=             | /usr/bin/grep -F '/Volumes/Crypto-504/Crypto-Signal/Runner/bin/Runner.Listener run --startuptype service'             | /usr/bin/grep -v grep             | /usr/bin/wc -l             | /usr/bin/tr -d ' ')"
+          test "$LISTENER_COUNT" = "1"
+
+          echo "=== LIVE HEALTH AFTER RUNNER RECOVERY ==="
+          /usr/bin/curl -fsS --max-time 8 http://127.0.0.1:48700/api/health
+          echo
+          /usr/bin/curl -fsS --max-time 12 'http://127.0.0.1:48700/api/command-center?recent_limit=1'
+          echo
+
+          rm -f "$SCRIPT" "$RESULT"
+          echo "UID501_R15_RUNNER_RECOVERY_WORKFLOW_PASS=YES"
