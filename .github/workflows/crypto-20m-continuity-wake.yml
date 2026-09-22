@@ -32,7 +32,7 @@ jobs:
           STATE="/Volumes/Crypto-504/Crypto-Signal/Development/runtime/continuity"
           SHARED="/Users/Shared/.crypto-signal-wake-relay"
 
-          if [ "\${{ github.event_name }}" = "schedule" ]; then
+          if [ "${{ github.event_name }}" = "schedule" ]; then
             if [ -f "$STATE/user_pause" ] || [ -f "$SHARED/user_pause" ]; then
               echo "GITHUB_WATCHDOG_USER_PAUSED=YES"
               exit 0
@@ -89,11 +89,11 @@ jobs:
               done
             fi
 
-            EVENT_ID="crypto-20m-emergency:\${GITHUB_RUN_ID}:\${GITHUB_RUN_ATTEMPT}"
+            EVENT_ID="crypto-20m-emergency:${GITHUB_RUN_ID}:${GITHUB_RUN_ATTEMPT}"
             /usr/bin/python3 "$GITHUB_WORKSPACE/ops/continuity/recurring_wake.py" "$EVENT_ID"
             echo "GITHUB_EMERGENCY_FALLBACK_WAKE_ATTEMPTED=YES"
           else
-            EVENT_ID="crypto-20m-continuity-manual:\${GITHUB_RUN_ID}:\${GITHUB_RUN_ATTEMPT}"
+            EVENT_ID="crypto-20m-continuity-manual:${GITHUB_RUN_ID}:${GITHUB_RUN_ATTEMPT}"
             /usr/bin/python3 "$GITHUB_WORKSPACE/ops/continuity/recurring_wake.py" "$EVENT_ID"
             echo "MANUAL_20M_WAKE_ATTEMPTED=YES"
           fi
