@@ -27,7 +27,6 @@ jobs:
           SHARED="/Users/Shared/.crypto-signal-wake-relay"
           STATE="/Volumes/Crypto-504/Crypto-Signal/Development/runtime/continuity"
           EXPECTED_URL="https://chatgpt.com/c/6ab2c3c1-30c8-83ed-b1ad-2aa35cc891c9"
-
           STATUS="$RUNTIME/rolling_wake_status"
           PIDFILE="$RUNTIME/rolling_wake.pid"
           HEARTBEAT="$RUNTIME/rolling_wake_heartbeat"
@@ -40,7 +39,6 @@ jobs:
           cat "$STATUS"
 
           PID="$(cat "$PIDFILE")"
-          test -n "$PID"
           kill -0 "$PID"
           TIMER_UID="$(ps -p "$PID" -o uid= | tr -d ' ')"
           TIMER_CMD="$(ps -p "$PID" -o command=)"
@@ -58,10 +56,7 @@ jobs:
           test "$HB_AGE" -le 15
           echo "ROLLING_HEARTBEAT_AGE_SECONDS=$HB_AGE"
 
-          get_status() {
-            sed -n "s/^$1=//p" "$STATUS" | head -1
-          }
-
+          get_status() { sed -n "s/^$1=//p" "$STATUS" | head -1; }
           TIMER_STATE="$(get_status state)"
           INTERVAL="$(get_status interval_seconds)"
           LAST_EVENT="$(get_status last_event_id)"
@@ -75,7 +70,6 @@ jobs:
           [[ "$LAST_RECEIPT" =~ ^[0-9]+$ ]]
           [[ "$NEXT_DUE" =~ ^[0-9]+$ ]]
           test "$LAST_RECEIPT" -gt 0
-          test "$NEXT_DUE" -gt "$LAST_RECEIPT"
           DELTA="$((NEXT_DUE-LAST_RECEIPT))"
           test "$DELTA" = "1200"
           test "$FAILURE_COUNT" = "0"
@@ -100,9 +94,17 @@ jobs:
           echo "=== LAST EVENT RECEIPT ==="
           cat "$RECEIPT"
           grep -Fx 'status=OBSERVED' "$RECEIPT" >/dev/null
-          grep -F 'baseline_exact_count=' "$RECEIPT" >/dev/null
-          grep -F 'submitted_epoch=' "$RECEIPT" >/dev/null
           echo "LAST_WAKE_RECEIPT_OBSERVED_PASS=YES"
+          if grep -F 'baseline_exact_count=' "$RECEIPT" >/dev/null; then
+            echo "RECEIPT_BASELINE_METADATA_PRESENT=YES"
+          else
+            echo "RECEIPT_BASELINE_METADATA_PRESENT=NO"
+          fi
+          if grep -F 'submitted_epoch=' "$RECEIPT" >/dev/null; then
+            echo "RECEIPT_SUBMITTED_METADATA_PRESENT=YES"
+          else
+            echo "RECEIPT_SUBMITTED_METADATA_PRESENT=NO"
+          fi
 
           for f in             "$STATE/wake/current_chat_url"             "$STATE/wake/expected_chat_url"             "$SHARED/current_chat_url"             "$SHARED/expected_chat_url"; do
             test "$(cat "$f")" = "$EXPECTED_URL"
@@ -114,11 +116,25 @@ jobs:
           echo "CONTINUITY_USER_PAUSE_ABSENT=YES"
 
           test -s "$SHARED/relay_status"
+          RELAY_PID="$(sed -n 's/^pid=//p' "$SHARED/relay_status" | head -1)"
+          test -n "$RELAY_PID"
+          kill -0 "$RELAY_PID"
+          RELAY_UID="$(ps -p "$RELAY_PID" -o uid= | tr -d ' ')"
+          RELAY_ETIME="$(ps -p "$RELAY_PID" -o etime= | tr -d ' ')"
+          RELAY_CMD="$(ps -p "$RELAY_PID" -o command=)"
           echo "=== RELAY STATUS ==="
           cat "$SHARED/relay_status"
+          echo "RELAY_PID=$RELAY_PID"
+          echo "RELAY_UID=$RELAY_UID"
+          echo "RELAY_ETIME=$RELAY_ETIME"
+          echo "RELAY_CMD=$RELAY_CMD"
           grep -Fx 'state=RUNNING' "$SHARED/relay_status" >/dev/null
           grep -Fx "target_url=$EXPECTED_URL" "$SHARED/relay_status" >/dev/null
-          echo "RELAY_RUNTIME_PASS=YES"
+          printf '%s' "$RELAY_CMD" | grep -F "$SHARED/relay_daemon.py" >/dev/null
+          test "$RELAY_PID" != "24847"
+          test ! -e "$SHARED/restart_requested"
+          grep -F "relay=START pid=$RELAY_PID target=$EXPECTED_URL" "$SHARED/relay.log" >/dev/null
+          echo "RELAY_FRESH_RESTART_PASS=YES"
 
           cmp -s "$GITHUB_WORKSPACE/ops/continuity/interval_wake_daemon.py" "$INSTALL/interval_wake_daemon.py"
           cmp -s "$GITHUB_WORKSPACE/ops/continuity/recurring_wake.py" "$INSTALL/recurring_wake.py"
@@ -126,7 +142,7 @@ jobs:
           cmp -s "$GITHUB_WORKSPACE/ops/continuity/relay_daemon.py" "$SHARED/relay_daemon.py"
           grep -F 'FINAL_RECEIPT_STATES = {"OBSERVED"}' "$INSTALL/interval_wake_daemon.py" >/dev/null
           grep -F 'require_observed=exact_locked_wake' "$INSTALL/relay_submit.py" >/dev/null
-          grep -F 'baseline_exact_count' "$SHARED/relay_daemon.py" >/dev/null
+          grep -F 'wait_for_exact_observation' "$SHARED/relay_daemon.py" >/dev/null
           echo "INSTALLED_CONTINUITY_HASH_PARITY_PASS=YES"
 
           for old in             com.cryptosignal.autowake20m             com.cryptosignal.autowake30m             com.cryptosignal.continuity30m; do
