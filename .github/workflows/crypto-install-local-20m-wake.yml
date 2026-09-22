@@ -36,6 +36,8 @@ jobs:
           LOCKED_CURRENT_CHAT="https://chatgpt.com/c/6ab2c3c1-30c8-83ed-b1ad-2aa35cc891c9"
 
           mkdir -p "$INSTALL" "$RUNTIME" "$AGENTS" "$STATE" "$STATE/wake" "$SHARED"
+          OLD_RELAY_PID="$(cat "$SHARED/relay.pid" 2>/dev/null || true)"
+          echo "RELAY_RELOAD_OLD_PID=$OLD_RELAY_PID"
 
           install -m 700 ops/continuity/interval_wake_daemon.py "$INSTALL/interval_wake_daemon.py"
           install -m 700 ops/continuity/recurring_wake.py "$INSTALL/recurring_wake.py"
@@ -68,6 +70,38 @@ jobs:
             rm -f "$AGENTS/$old.plist"
           done
           echo "LEGACY_CALENDAR_TIMERS_DISABLED=YES"
+
+          relay_ready=0
+          NEW_RELAY_PID=""
+          for _ in {1..120}; do
+            if [ ! -e "$SHARED/restart_requested" ] && [ -s "$SHARED/relay_status" ]; then
+              NEW_RELAY_PID="$(sed -n 's/^pid=//p' "$SHARED/relay_status" | head -1)"
+              RELAY_STATE="$(sed -n 's/^state=//p' "$SHARED/relay_status" | head -1)"
+              RELAY_TARGET="$(sed -n 's/^target_url=//p' "$SHARED/relay_status" | head -1)"
+              RELAY_HEARTBEAT="$(sed -n 's/^heartbeat_epoch=//p' "$SHARED/relay_status" | head -1)"
+              RELAY_UID="$(ps -p "$NEW_RELAY_PID" -o uid= 2>/dev/null | tr -d ' ' || true)"
+              RELAY_CMD="$(ps -p "$NEW_RELAY_PID" -o command= 2>/dev/null || true)"
+              NOW_EPOCH="$(date +%s)"
+              if [[ "$RELAY_HEARTBEAT" =~ ^[0-9]+$ ]]; then
+                RELAY_HEARTBEAT_AGE="$((NOW_EPOCH-RELAY_HEARTBEAT))"
+              else
+                RELAY_HEARTBEAT_AGE=999999
+              fi
+
+              if [ -n "$NEW_RELAY_PID" ]                 && { [ -z "$OLD_RELAY_PID" ] || [ "$NEW_RELAY_PID" != "$OLD_RELAY_PID" ]; }                 && [ -n "$RELAY_UID" ]                 && printf '%s' "$RELAY_CMD" | grep -F "$SHARED/relay_daemon.py" >/dev/null                 && [ "$RELAY_STATE" = "RUNNING" ]                 && [ "$RELAY_TARGET" = "$LOCKED_CURRENT_CHAT" ]                 && [ "$RELAY_HEARTBEAT_AGE" -ge 0 ]                 && [ "$RELAY_HEARTBEAT_AGE" -le 15 ]                 && grep -F "relay=START pid=$NEW_RELAY_PID target=$LOCKED_CURRENT_CHAT" "$SHARED/relay.log" >/dev/null; then
+                relay_ready=1
+                break
+              fi
+            fi
+            sleep 1
+          done
+
+          if [ "$relay_ready" != "1" ]; then
+            echo "RELAY_RELOAD_BARRIER_FAIL old_pid=$OLD_RELAY_PID new_pid=$NEW_RELAY_PID" >&2
+            exit 73
+          fi
+          echo "RELAY_RELOAD_NEW_PID=$NEW_RELAY_PID"
+          echo "RELAY_RELOAD_READY=YES"
 
           PIDFILE="$RUNTIME/rolling_wake.pid"
           OLD_PID="$(cat "$PIDFILE" 2>/dev/null || true)"
