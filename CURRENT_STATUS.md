@@ -50,6 +50,23 @@ Current safe parallel frontier after these acceptances:
 - Phase 2 Market Tape v2 evidence-time-machine extensions may proceed in parallel;
 - do not replay M2 Slice 1, M2 Slice 2 or GALACTECH Slice 1.
 
+### EXACT-MAIN REGRESSION AFTER GALACTECH — HOSTED PASS / LOCAL DEVELOPMENT STALE
+
+- Current main acceptance base: `5c4dd5b17dcddb344a3892f78d8f26c8ac314dce`.
+- Isolated hosted run `35776532744` PASS:
+  - full pytest PASS;
+  - Ruff PASS;
+  - mypy PASS across 130 source files;
+  - Product JS syntax PASS;
+  - Product freshness contract PASS;
+  - `EXACT_MAIN_HOSTED_ACCEPTANCE_PASS=YES`.
+- Self-hosted UID504 run `35776400606` failed against stale local `Development` test content that still expected superseded continuity/R14 assertions.
+- GitHub main test files were mechanically verified to already contain the current locked continuity and v1.1 semantics.
+- Therefore the self-hosted failure is a **Development checkout parity issue**, not a current-main regression.
+- The SSD Development checkout was **not auto-synced**, because mutating runtime-adjacent production source requires a separate human-impact/production approval decision.
+- No production deployment was performed.
+- REAL_CAPITAL=0.
+
 ### CONTINUITY / WORKER RECONCILIATION — 2026-09-22 22:47 +0300
 
 - Read-only bridge run `35776041344` PASS.
