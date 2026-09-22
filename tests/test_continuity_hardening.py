@@ -60,20 +60,31 @@ def test_relay_is_namespace_bound_and_stops_only_exact_locked_wake() -> None:
 
 
 
-def test_rolling_timer_requires_final_receipt_and_relay_recovers_submitting() -> None:
+def test_rolling_timer_requires_observed_receipt_and_relay_recovers_submitting() -> None:
     rolling = _read("ops/continuity/interval_wake_daemon.py")
     submit = _read("ops/continuity/relay_submit.py")
     daemon = _read("ops/continuity/relay_daemon.py")
 
-    assert "FINAL_RECEIPT_STATES" in rolling
-    assert '"SUBMITTED_UNCONFIRMED"' in rolling
+    assert 'FINAL_RECEIPT_STATES = {"OBSERVED"}' in rolling
+    assert '"SUBMITTED_UNCONFIRMED"' not in rolling
     assert "final_receipt(pending)" in rolling
     assert 'state["next_due_epoch"] = receipt_epoch + INTERVAL_SECONDS' in rolling
-    assert "final_receipt_sha" in submit
-    assert 'status == "SUBMITTING"' in submit
-    assert "receipt_info" in daemon
-    assert 'receipt_status == "SUBMITTING"' in daemon
+    assert "observed_only=message == LOCKED_WAKE_MESSAGE" in submit
+    assert 'status != "OBSERVED"' in submit
+    assert "baseline_exact_count" in daemon
+    assert 'receipt_status == "OBSERVED"' in daemon
+    assert "OBSERVED_RECOVERED" in daemon
+    assert "AWAITING_EXACT_OBSERVATION" in daemon
     assert "receipt.unlink(missing_ok=True)" in daemon
+
+
+def test_mac_command_exposes_readonly_rollingstate() -> None:
+    command = _read(".github/workflows/crypto-mac-command.yml")
+
+    assert "rollingstate" in command
+    assert "ROLLING_PID_ALIVE=" in command
+    assert "ROLLING_HEARTBEAT_AGE_SECONDS=" in command
+    assert "ROLLING_STATE_READONLY_PASS=YES" in command
 
 
 
