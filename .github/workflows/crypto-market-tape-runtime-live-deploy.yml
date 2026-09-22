@@ -1,0 +1,188 @@
+name: Crypto Market Tape Runtime Live Deploy
+
+on:
+  push:
+    branches:
+      - v1.1-market-tape-runtime-v1
+    paths:
+      - ".github/workflows/crypto-market-tape-runtime-live-deploy.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy and accept Market Tape runtime on UID504
+    runs-on: [self-hosted, crypto-signal, uid501]
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Prepare exact stable bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+          STAGE="/tmp/crypto-market-tape-live-stage"
+          rm -rf "$STAGE"
+          mkdir -p "$STAGE"
+          cp -R src ops "$STAGE/"
+          printf '%s\n' "$GITHUB_SHA" >"$STAGE/BUILD_COMMIT"
+          (
+            cd "$STAGE"
+            shasum -a 256               ops/run_market_tape_runtime.py               ops/install_market_tape_runtime.sh               ops/market_tape/launchd/com.cryptosignal.markettape.plist               src/crypto_signal/data/market_tape_runtime.py               src/crypto_signal/data/market_tape_retention.py               src/crypto_signal/data/market_tape_wire_collection.py               > BUILD_SHA256SUMS
+          )
+          chmod -R a+rX "$STAGE"
+          echo "STAGE_BUILD_COMMIT=$GITHUB_SHA"
+          cat "$STAGE/BUILD_SHA256SUMS"
+
+      - name: Atomically install stable bundle and LaunchAgent as UID504
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo -k
+          test "$(sudo -n -H -u crypto-signal-agent /usr/bin/id -u)" = "504"
+          sudo -n -H -u crypto-signal-agent /usr/bin/env             SOURCE_STAGE=/tmp/crypto-market-tape-live-stage             HOME=/Users/crypto-signal-agent             /bin/bash <<'SH'
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          STAGE="$SOURCE_STAGE"
+          NEXT="$ROOT/MarketTape.next"
+          STABLE="$ROOT/MarketTape"
+          PREVIOUS="$ROOT/MarketTape.previous"
+
+          test -d "$ROOT"
+          test -x "$ROOT/Development/.venv/bin/python"
+          test -d "$STAGE/src/crypto_signal"
+          test -f "$STAGE/ops/run_market_tape_runtime.py"
+          test -f "$STAGE/ops/install_market_tape_runtime.sh"
+
+          rm -rf "$NEXT"
+          mkdir -p "$NEXT"
+          cp -R "$STAGE/src" "$NEXT/"
+          cp -R "$STAGE/ops" "$NEXT/"
+          cp "$STAGE/BUILD_COMMIT" "$NEXT/BUILD_COMMIT"
+          cp "$STAGE/BUILD_SHA256SUMS" "$NEXT/BUILD_SHA256SUMS"
+
+          (
+            cd "$NEXT"
+            shasum -a 256 -c BUILD_SHA256SUMS
+          )
+
+          PYTHONPATH="$NEXT/src"             "$ROOT/Development/.venv/bin/python" - <<'PY'
+          import crypto_signal
+          from crypto_signal.data.market_tape_runtime import (
+              DEFAULT_MARKET_TAPE_CAPACITY_POLICY,
+          )
+          from crypto_signal.data.market_tape_retention import (
+              DEFAULT_MARKET_TAPE_RETENTION_POLICY,
+          )
+          assert DEFAULT_MARKET_TAPE_CAPACITY_POLICY.max_tape_bytes == 300 * 1024**3
+          assert DEFAULT_MARKET_TAPE_CAPACITY_POLICY.min_free_bytes == 250 * 1024**3
+          assert DEFAULT_MARKET_TAPE_RETENTION_POLICY.active_generation_max_bytes == 25 * 1024**3
+          assert DEFAULT_MARKET_TAPE_RETENTION_POLICY.max_sealed_generations == 10
+          print("MARKET_TAPE_STABLE_IMPORT_PRECHECK_PASS=YES")
+          PY
+
+          rm -rf "$PREVIOUS"
+          if [ -d "$STABLE" ]; then
+            mv "$STABLE" "$PREVIOUS"
+          fi
+          mv "$NEXT" "$STABLE"
+
+          if ! /bin/bash "$STABLE/ops/install_market_tape_runtime.sh"; then
+            /bin/launchctl bootout "gui/$(id -u)/com.cryptosignal.markettape" >/dev/null 2>&1 || true
+            rm -rf "$STABLE"
+            if [ -d "$PREVIOUS" ]; then
+              mv "$PREVIOUS" "$STABLE"
+              /bin/bash "$STABLE/ops/install_market_tape_runtime.sh" || true
+            fi
+            exit 71
+          fi
+
+          echo "MARKET_TAPE_STABLE_DEPLOY_PASS=YES"
+          cat "$STABLE/BUILD_COMMIT"
+          SH
+
+      - name: Verify live collection and safety boundaries
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo -n -H -u crypto-signal-agent /bin/bash <<'SH'
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          TAPE="$ROOT/Development/runtime/market_tape"
+          DB="$TAPE/market_tape.sqlite3"
+          RAW="$TAPE/raw_market_tape.sqlite3"
+          STATUS="$TAPE/runtime_status.json"
+          LABEL="com.cryptosignal.markettape"
+          DOMAIN="gui/$(id -u)"
+
+          echo "=== LAUNCHD ==="
+          launchctl print "$DOMAIN/$LABEL" | egrep 'state =|pid =|runs =|last exit code =|program =|path =' | head -120
+
+          expected_script="$ROOT/MarketTape/ops/run_market_tape_runtime.py"
+          count="$(ps -axo user=,command= | awk -v user="crypto-signal-agent" -v script="$expected_script" '$1==user && index($0,script)>0 {n++} END{print n+0}')"
+          echo "MARKET_TAPE_RUNTIME_PROCESS_COUNT=$count"
+          test "$count" = "1"
+
+          before="$(sqlite3 "$RAW" 'SELECT COUNT(*) FROM raw_market_events;')"
+          echo "RAW_ROWS_ACCEPTANCE_BEFORE=$before"
+
+          ready=0
+          for _ in {1..75}; do
+            test -s "$STATUS" || { sleep 1; continue; }
+            state="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("state",""))' "$STATUS")"
+            updated="$(python3 -c 'import json,sys; print(int(json.load(open(sys.argv[1])).get("updated_at_epoch",0)))' "$STATUS")"
+            now="$(date +%s)"
+            age=$((now-updated))
+            if [ "$age" -ge 0 ] && [ "$age" -le 90 ] && { [ "$state" = "collecting_chunk" ] || [ "$state" = "collecting" ]; }; then
+              after="$(sqlite3 "$RAW" 'SELECT COUNT(*) FROM raw_market_events;')"
+              if [ "$after" -gt "$before" ]; then
+                ready=1
+                break
+              fi
+            fi
+            sleep 1
+          done
+
+          after="$(sqlite3 "$RAW" 'SELECT COUNT(*) FROM raw_market_events;')"
+          echo "RAW_ROWS_ACCEPTANCE_AFTER=$after"
+          test "$ready" = "1"
+          test "$after" -gt "$before"
+
+          echo "=== STATUS ==="
+          cat "$STATUS"
+          python3 - "$STATUS" <<'PY'
+          import json, sys, time
+          data=json.load(open(sys.argv[1]))
+          assert data["state"] in {"collecting_chunk","collecting"}
+          assert data["real_capital"] == 0
+          assert int(data["free_bytes"]) > 250 * 1024**3
+          assert int(data["tape_bytes"]) < 300 * 1024**3
+          assert int(time.time()) - int(data["updated_at_epoch"]) <= 90
+          PY
+
+          echo "=== SQLITE ==="
+          test "$(sqlite3 "$DB" 'PRAGMA quick_check;')" = "ok"
+          test "$(sqlite3 "$RAW" 'PRAGMA quick_check;')" = "ok"
+          echo "NORMALIZED_QUICK_CHECK=ok"
+          echo "RAW_QUICK_CHECK=ok"
+
+          echo "=== OTHER RUNTIME HEALTH ==="
+          curl -fsS --max-time 5 http://127.0.0.1:48700/api/health > /tmp/market-tape-dashboard-health.json
+          cat /tmp/market-tape-dashboard-health.json
+          python3 - <<'PY'
+          import json
+          data=json.load(open("/tmp/market-tape-dashboard-health.json"))
+          assert data.get("status") == "ok"
+          assert data.get("real_capital") == 0
+          assert data.get("read_only") is True
+          PY
+
+          echo "MARKET_TAPE_RUNTIME_LIVE_ACCEPTANCE_PASS=YES"
+          echo "REAL_CAPITAL=0"
+          SH
+
+      - name: Cleanup temporary stage
+        if: always()
+        shell: bash
+        run: rm -rf /tmp/crypto-market-tape-live-stage /tmp/market-tape-dashboard-health.json
