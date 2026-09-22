@@ -123,9 +123,22 @@ Current M2 safe-development frontier:
 - No Epoch 2 ledger was created, no paper cutover occurred and no production UI deploy occurred.
 - REAL_CAPITAL=0.
 
+### GALACTECH MARKET WORKSPACE — PROVIDER-TRUTH SLICE MERGED TO MAIN
+
+- PR #790 authoritative hosted run `35784339520` PASS after rebasing onto then-current main.
+- Focused Product pytest/Ruff/mypy/JS/freshness PASS; full repository pytest/Ruff/mypy/JS/freshness PASS.
+- PR #790 squash-merged to main as `380f1f9a4dc57713ea65aeb7ba13130c171e9369`.
+- Market Workspace now exposes provider decisions separately, including explicit provider agreement/disagreement.
+- Frozen decisions are labeled as frozen decision truth, not current-price prediction.
+- Recent per-asset decision tape links to immutable Evidence Room identities.
+- LIQ / FLOW / DERIV / ONCHAIN layers remain explicitly `NOT WIRED` until their backend evidence contracts are actually connected.
+- Confluence remains separate from probability; unavailable intelligence is not fabricated.
+- No production UI deployment/cutover was performed.
+- REAL_CAPITAL=0.
+
 Current Product frontier:
-- GALACTECH Market Workspace v2 provider-truth slice is in development from current main;
-- then Archive -> Performance/Trust -> Learn/System refinement under the locked Product path.
+- GALACTECH Archive / Proof Wall;
+- then Performance/Trust -> Learn/System refinement under the locked Product path.
 
 ### M2 LIQUIDITY INTELLIGENCE 2.0 — SLICE 2 ACCEPTED / STACKED
 
