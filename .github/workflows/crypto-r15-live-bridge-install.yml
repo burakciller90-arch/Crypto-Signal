@@ -1,0 +1,107 @@
+name: Crypto R15 Live Bridge Install
+
+on:
+  push:
+    branches:
+      - r15-ssd-hotplug-recovery-v1
+    paths:
+      - ".github/workflows/crypto-r15-live-bridge-install.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  install:
+    name: Install current R15 through UID504 bridge
+    runs-on: [self-hosted, crypto-signal, uid501]
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install current R15 as UID504
+        shell: bash
+        run: |
+          set -euo pipefail
+          SRC="$GITHUB_WORKSPACE/ops/install_ssd_hotplug_recovery.sh"
+          TMP="/tmp/crypto-r15-live-current.sh"
+          cp "$SRC" "$TMP"
+          chmod 755 "$TMP"
+          bash -n "$TMP"
+          echo "INSTALLER_SHA256=$(shasum -a 256 "$TMP" | awk '{print $1}')"
+          sudo -k
+          test "$(sudo -n -H -u crypto-signal-agent /usr/bin/id -u)" = "504"
+          sudo -n -H -u crypto-signal-agent /usr/bin/env HOME=/Users/crypto-signal-agent /bin/bash "$TMP"
+          rm -f "$TMP"
+
+      - name: Wait for canonical recovery
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          EXPECTED="$ROOT/Runner/bin/Runner.Listener run --startuptype service"
+          ok=0
+          for _ in {1..120}; do
+            count="$(ps -axo command= | awk -v expected="$EXPECTED" '$0 == expected {n++} END {print n+0}')"
+            old_service="$(ps -p 65425 -o command= 2>/dev/null || true)"
+            old_wrapper="$(ps -p 65421 -o command= 2>/dev/null || true)"
+            if [ "$count" = "1" ]               && [ -z "$old_service" ]               && [ -z "$old_wrapper" ]               && curl -fsS --max-time 3 http://127.0.0.1:48700/api/health >/tmp/r15-live-health.json 2>/dev/null; then
+              ok=1
+              break
+            fi
+            sleep 1
+          done
+          echo "RECOVERY_READY=$ok"
+          test "$ok" = "1"
+
+      - name: Verify runner tree health and SQLite
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          EXPECTED="$ROOT/Runner/bin/Runner.Listener run --startuptype service"
+
+          echo "=== OLD ORPHAN PIDS ==="
+          if ps -p 65421 -o pid=,ppid=,user=,%cpu=,etime=,command= 2>/dev/null; then exit 41; fi
+          if ps -p 65425 -o pid=,ppid=,user=,%cpu=,etime=,command= 2>/dev/null; then exit 42; fi
+          echo "OLD_ORPHAN_TREE_ABSENT=YES"
+
+          echo "=== EXACT LISTENER ==="
+          listener_pids="$(ps -axo pid=,command= | awk -v expected="$EXPECTED" '{pid=$1; sub(/^[[:space:]]*[0-9]+[[:space:]]+/, "", $0); if ($0 == expected) print pid}')"
+          listener_count="$(printf '%s\n' "$listener_pids" | awk 'NF{n++} END{print n+0}')"
+          echo "LISTENER_COUNT=$listener_count"
+          echo "LISTENER_PID=$listener_pids"
+          test "$listener_count" = "1"
+
+          listener="$listener_pids"
+          service="$(ps -p "$listener" -o ppid= | tr -d ' ')"
+          wrapper="$(ps -p "$service" -o ppid= | tr -d ' ')"
+          echo "=== CANONICAL TREE ==="
+          ps -p "$wrapper","$service","$listener" -o pid=,ppid=,user=,%cpu=,%mem=,etime=,state=,command=
+          test "$(ps -p "$listener" -o user= | tr -d ' ')" = "crypto-signal-agent"
+          test "$(ps -p "$service" -o command=)" = "./externals/node20/bin/node ./bin/RunnerService.js"
+          test "$(ps -p "$wrapper" -o command=)" = "/bin/bash ./runsvc.sh"
+
+          echo "=== HEALTH ==="
+          cat /tmp/r15-live-health.json
+          python3 - <<'PY'
+          import json
+          data=json.load(open("/tmp/r15-live-health.json"))
+          assert data.get("status") == "ok"
+          assert data.get("real_capital") == 0
+          assert data.get("read_only") is True
+          PY
+
+          echo "=== SQLITE ==="
+          for db in             "$ROOT/Development/runtime/ledger/live_signal_ledger.sqlite3"             "$ROOT/Development/runtime/data/live_base_15m_cache.sqlite3"             "$ROOT/Development/runtime/paper/paper_fund.sqlite3"             "$ROOT/Development/runtime/alerts/alert_outbox.sqlite3"
+          do
+            result="$(sqlite3 "$db" 'PRAGMA quick_check;')"
+            echo "$db $result"
+            test "$result" = "ok"
+          done
+
+          echo "=== R15 LOG TAIL ==="
+          sudo -n -H -u crypto-signal-agent /usr/bin/tail -120 "/Users/crypto-signal-agent/Library/Logs/CryptoSignalRecovery/hotplug-watchdog.log" || true
+          sudo -n -H -u crypto-signal-agent /usr/bin/tail -120 "/Users/crypto-signal-agent/Library/Logs/CryptoSignalRecovery/hotplug-watchdog.err.log" || true
+
+          echo "R15_LIVE_BRIDGE_INSTALL_PASS=YES"
+          echo "REAL_CAPITAL=0"
