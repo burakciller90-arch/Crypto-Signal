@@ -236,5 +236,5 @@ def _topic_symbol(
 def _json_object(raw_message: str | bytes) -> dict[str, object]:
     payload = json.loads(raw_message)
     if not isinstance(payload, dict):
-        raise ValueError("Bybit liquidation websocket payload must be an object")
+        raise TypeError("Bybit liquidation websocket payload must be an object")
     return cast(dict[str, object], payload)
