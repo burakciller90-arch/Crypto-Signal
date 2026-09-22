@@ -19,7 +19,7 @@ if [ ! -d "$ROOT" ] || [ ! -d "$STABLE" ]; then
   exit 3
 fi
 
-for required in   "$STABLE/.venv/bin/python"   "$STABLE/ops/run_market_tape_runtime.py"   "$PLIST_SOURCE"; do
+for required in   "$ROOT/Development/.venv/bin/python"   "$STABLE/src/crypto_signal"   "$STABLE/ops/run_market_tape_runtime.py"   "$PLIST_SOURCE"; do
   if [ ! -e "$required" ]; then
     echo "MARKET_TAPE_INSTALL_ERROR=REQUIRED_FILE_MISSING path=$required" >&2
     exit 4
