@@ -70,16 +70,21 @@ mkdir -p "$HOME/Library/LaunchAgents" "$ROOT/ServiceLogs"
 cp "$PLIST_SOURCE" "$PLIST_TARGET"
 chmod 600 "$PLIST_TARGET"
 
-/bin/launchctl disable "$DOMAIN/$LABEL" >/dev/null 2>&1 || true
-/bin/launchctl bootout "$DOMAIN/$LABEL" >/dev/null 2>&1 || true
-/bin/launchctl enable "$DOMAIN/$LABEL"
-/bin/launchctl bootstrap "$DOMAIN" "$PLIST_TARGET"
-/bin/launchctl kickstart -k "$DOMAIN/$LABEL"
+if [ "${MARKET_TAPE_INSTALL_NO_START:-0}" = "1" ]; then
+  /bin/launchctl disable "$DOMAIN/$LABEL" >/dev/null 2>&1 || true
+  /bin/launchctl bootout "$DOMAIN/$LABEL" >/dev/null 2>&1 || true
+  echo "MARKET_TAPE_LAUNCHAGENT_PREPARE_ONLY_PASS=YES"
+else
+  /bin/launchctl disable "$DOMAIN/$LABEL" >/dev/null 2>&1 || true
+  /bin/launchctl bootout "$DOMAIN/$LABEL" >/dev/null 2>&1 || true
+  /bin/launchctl enable "$DOMAIN/$LABEL"
+  /bin/launchctl bootstrap "$DOMAIN" "$PLIST_TARGET"
+  /bin/launchctl kickstart -k "$DOMAIN/$LABEL"
 
-sleep 3
-/bin/launchctl print "$DOMAIN/$LABEL" >/dev/null
-
-echo "MARKET_TAPE_LAUNCHAGENT_INSTALL_PASS=YES"
+  sleep 3
+  /bin/launchctl print "$DOMAIN/$LABEL" >/dev/null
+  echo "MARKET_TAPE_LAUNCHAGENT_INSTALL_PASS=YES"
+fi
 echo "LABEL=$LABEL"
 echo "STABLE_ROOT=$STABLE"
 echo "REAL_CAPITAL=0"
