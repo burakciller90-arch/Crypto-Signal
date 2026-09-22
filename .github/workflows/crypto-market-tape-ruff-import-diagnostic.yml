@@ -1,0 +1,27 @@
+name: Crypto Market Tape Ruff Import Diagnostic
+
+on:
+  push:
+    branches:
+      - v1.1-market-tape-runtime-v1
+    paths:
+      - ".github/workflows/crypto-market-tape-ruff-import-diagnostic.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install "ruff>=0.13"
+      - name: Show exact Ruff import fix
+        run: |
+          python -m ruff check tests/test_market_tape_runtime_service.py --fix
+          sed -n '1,12p' tests/test_market_tape_runtime_service.py
+          echo RUFF_IMPORT_DIAG_PASS=YES
