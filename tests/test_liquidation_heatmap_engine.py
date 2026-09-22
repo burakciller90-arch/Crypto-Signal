@@ -32,7 +32,6 @@ from crypto_signal.intelligence.liquidation_heatmap import (
     build_liquidation_heatmap_evidence_freeze,
 )
 
-
 AS_OF = 1_000_000
 WINDOW_MS = 60_000
 
@@ -140,8 +139,8 @@ def test_bybit_all_liquidation_parser_preserves_provider_side_semantics() -> Non
     assert len(observations) == 2
     assert observations[0].liquidated_position_side is LiquidatedPositionSide.LONG
     assert observations[1].liquidated_position_side is LiquidatedPositionSide.SHORT
-    assert observations[0].bankruptcy_notional == Decimal("200")
-    assert observations[1].bankruptcy_notional == Decimal("303")
+    assert observations[0].bankruptcy_notional == Decimal(200)
+    assert observations[1].bankruptcy_notional == Decimal(303)
     assert observations[0].liquidation_identity != observations[1].liquidation_identity
     assert all(len(item.liquidation_identity) == 64 for item in observations)
 
@@ -201,21 +200,21 @@ def test_observed_liquidations_are_binned_without_future_risk_estimation() -> No
     assert result.status is LiquidationHeatmapStatus.MEASURED
     assert result.source_quality is LiquidationSourceQuality.GOOD
     assert result.observed_state is ObservedLiquidationState.OBSERVED
-    assert result.reference_mark_price == Decimal("100")
+    assert result.reference_mark_price == Decimal(100)
     assert result.consumed_event_count == 3
     assert len(result.bins) == 2
     assert result.observed_cluster_count == 1
 
     below = result.bins[0]
     above = result.bins[1]
-    assert below.lower_distance_bps == Decimal("-50")
-    assert below.upper_distance_bps == Decimal("0")
+    assert below.lower_distance_bps == Decimal(-50)
+    assert below.upper_distance_bps == Decimal(0)
     assert below.event_count == 2
     assert below.long_liquidation_count == 2
     assert below.short_liquidation_count == 0
     assert below.observed_cluster is True
-    assert above.lower_distance_bps == Decimal("100")
-    assert above.upper_distance_bps == Decimal("150")
+    assert above.lower_distance_bps == Decimal(100)
+    assert above.upper_distance_bps == Decimal(150)
     assert above.event_count == 1
     assert above.short_liquidation_count == 1
 
