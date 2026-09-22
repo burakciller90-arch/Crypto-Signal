@@ -96,6 +96,18 @@ def test_rolling_timer_requires_observed_receipt_and_relay_recovers_submitting()
 
 
 
+def test_mac_command_exposes_readonly_rolling_wake_state() -> None:
+    command = _read(".github/workflows/crypto-mac-command.yml")
+
+    assert "bridgestate|rollingstate|pausecheck" in command
+    assert "steps.parse.outputs.command == 'rollingstate'" in command
+    assert "ROLLING_PID_ALIVE=YES" in command
+    assert "ROLLING_HEARTBEAT_AGE_SECONDS=" in command
+    assert "ROLLING_STATE_READONLY_PASS=YES" in command
+    assert "rolling_wake_status" in command
+    assert "rolling_wake_state.json" in command
+
+
 def test_binding_writers_and_installers_use_ssd_canonical_state() -> None:
     bootstrap = _read("ops/continuity/bootstrap_continuity.command")
     contracts = _read("ops/continuity/continuity_contracts.py")
