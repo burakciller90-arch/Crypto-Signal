@@ -49,6 +49,13 @@ def final_receipt_sha(path: Path) -> str | None:
     return message_sha
 
 
+def scheduled_slot_event_id() -> str:
+    now = datetime.now().astimezone()
+    slot_minute = (now.minute // 20) * 20
+    slot = now.replace(minute=slot_minute, second=0, microsecond=0)
+    return f"crypto-20m-continuity:{slot:%Y%m%dT%H%M%z}"
+
+
 def queue_matches(
     path: Path,
     event_id: str,
