@@ -24,7 +24,9 @@ Runtime evidence:
 - Dashboard health returned status=ok, ledger_present=true, read_only=true and REAL_CAPITAL=0.
 - SSD supervisor/dashboard processes are present.
 - **Separate remaining R15 blocker:** UID504 SSD GitHub `Runner.Listener` was rechecked at 14:26:28 +0300 at 100% CPU, state RN, ~12h elapsed. Process existence is not accepted as runner health.
-- UID501 filesystem access to the existing Crypto-504 tree is still blocked until the owner-preserving ACL command is authorized; this is useful for direct DB/log forensics but is no longer required to prove the 04:00 data cut recovered.
+- Hang-aware R15 branch hardening full gate PASS: run `35722280704`.
+- Exactly one live recovery owner is active: `Crypto UID501 R15 Runner Recovery 20260922`, run `35722829376`. It performs exact listener identity checks, requires zero Worker processes, takes three high-CPU samples, then restarts only the verified stuck runner after explicit local admin authorization. Do not create a duplicate recovery while this run is active.
+- UID501 filesystem access to the existing Crypto-504 tree is still blocked until the owner-preserving ACL command is authorized; this remains useful for direct DB/log forensics but is no longer required to prove the 04:00 data cut recovered.
 
 Product architecture:
 - Track A: world-class UI/UX.
