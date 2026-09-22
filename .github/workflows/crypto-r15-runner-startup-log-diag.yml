@@ -1,0 +1,42 @@
+name: Crypto R15 Runner Startup Log Diagnostic
+
+on:
+  push:
+    branches:
+      - r15-ssd-hotplug-recovery-v1
+    paths:
+      - ".github/workflows/crypto-r15-runner-startup-log-diag.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    name: Diagnose UID504 runner startup after orphan cleanup
+    runs-on: [self-hosted, crypto-signal, uid501]
+    timeout-minutes: 10
+    steps:
+      - name: Read runner startup state through UID504 bridge
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          echo "=== UID504 RUNNER PROCESSES ==="
+          ps -axo pid=,ppid=,user=,%cpu=,%mem=,etime=,state=,command=             | awk '$3=="crypto-signal-agent" && ($0 ~ /RunnerService\.js/ || $0 ~ /Runner\.Listener/ || $0 ~ /Runner\.Worker/ || $0 ~ /\.\/runsvc\.sh/ || $0 ~ /Crypto-504\/Crypto-Signal\/Runner/) {print}' || true
+          echo "=== HOTPLUG PID FILE ==="
+          sudo -n -H -u crypto-signal-agent /bin/cat "$ROOT/ssd-runner-hotplug.pid" 2>&1 || true
+          echo "=== HOTPLUG RUNNER OUT ==="
+          sudo -n -H -u crypto-signal-agent /usr/bin/tail -240 "$ROOT/RunnerLogs/hotplug-runner.out.log" 2>&1 || true
+          echo "=== HOTPLUG RUNNER ERR ==="
+          sudo -n -H -u crypto-signal-agent /usr/bin/tail -240 "$ROOT/RunnerLogs/hotplug-runner.err.log" 2>&1 || true
+          echo "=== RUNNER DIAG FILES ==="
+          sudo -n -H -u crypto-signal-agent /bin/ls -lt "$ROOT/Runner/_diag" 2>&1 | head -40 || true
+          echo "=== NEWEST RUNNER DIAG ==="
+          newest="$(sudo -n -H -u crypto-signal-agent /bin/ls -t "$ROOT/Runner/_diag"/Runner_*.log 2>/dev/null | head -1 || true)"
+          echo "NEWEST_DIAG=$newest"
+          if [ -n "$newest" ]; then
+            sudo -n -H -u crypto-signal-agent /usr/bin/tail -260 "$newest" 2>&1 || true
+          fi
+          echo "=== R15 STATE ==="
+          sudo -n -H -u crypto-signal-agent /bin/cat "/Users/crypto-signal-agent/Library/Application Support/CryptoSignalRecovery/ssd-state" 2>&1 || true
+          echo "R15_RUNNER_STARTUP_LOG_DIAG_DONE=YES"
