@@ -1,0 +1,118 @@
+name: Crypto Market Tape Launchd Stdio Diagnostic
+
+on:
+  push:
+    branches:
+      - v1.1-market-tape-hotcold-v1
+    paths:
+      - ".github/workflows/crypto-market-tape-launchd-stdio-diagnostic.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    name: Isolate UID504 launchd stdio path behavior
+    runs-on: [self-hosted, crypto-signal, uid501]
+    timeout-minutes: 10
+    steps:
+      - name: Probe launchd with home and SSD log paths
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo -k
+          sudo -n -H -u crypto-signal-agent /usr/bin/env \
+            HOME=/Users/crypto-signal-agent \
+            /bin/bash <<'SH'
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          LABEL="com.cryptosignal.markettape.probe"
+          DOMAIN="gui/$(id -u)"
+          AGENT="$HOME/Library/LaunchAgents/$LABEL.plist"
+          PROBE_DIR="$ROOT/RuntimeProbes"
+          PROBE_SCRIPT="$PROBE_DIR/launchd-probe.sh"
+          HOME_LOG_DIR="$HOME/Library/Logs/Crypto-Signal"
+          SSD_LOG_DIR="$ROOT/ServiceLogs"
+
+          launchctl bootout "$DOMAIN/$LABEL" >/dev/null 2>&1 || true
+          launchctl enable "$DOMAIN/$LABEL" >/dev/null 2>&1 || true
+          rm -f "$AGENT"
+          rm -rf "$PROBE_DIR"
+          mkdir -p "$PROBE_DIR" "$HOME_LOG_DIR" "$SSD_LOG_DIR"
+
+          cat >"$PROBE_SCRIPT" <<'EOS'
+          #!/bin/bash
+          set -euo pipefail
+          echo "LAUNCHD_PROBE_STDOUT pid=$$ uid=$(id -u)"
+          echo "LAUNCHD_PROBE_STDERR pid=$$ uid=$(id -u)" >&2
+          printf '%s\n' "LAUNCHD_PROBE_MARKER pid=$$ uid=$(id -u)" > /Volumes/Crypto-504/Crypto-Signal/RuntimeProbes/marker.txt
+          EOS
+          chmod 755 "$PROBE_SCRIPT"
+
+          run_variant() {
+            name="$1"
+            out="$2"
+            err="$3"
+            rm -f "$out" "$err" "$PROBE_DIR/marker.txt"
+            cat >"$AGENT" <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>Label</key><string>$LABEL</string>
+            <key>ProgramArguments</key>
+            <array>
+              <string>/bin/bash</string>
+              <string>$PROBE_SCRIPT</string>
+            </array>
+            <key>RunAtLoad</key><true/>
+            <key>StandardOutPath</key><string>$out</string>
+            <key>StandardErrorPath</key><string>$err</string>
+          </dict>
+          </plist>
+          EOF
+            chmod 600 "$AGENT"
+            plutil -lint "$AGENT"
+            launchctl bootout "$DOMAIN/$LABEL" >/dev/null 2>&1 || true
+            launchctl bootstrap "$DOMAIN" "$AGENT"
+            launchctl kickstart -k "$DOMAIN/$LABEL" >/dev/null 2>&1 || true
+            sleep 3
+            echo "=== VARIANT $name ==="
+            launchctl print "$DOMAIN/$LABEL" 2>&1 | egrep 'state =|pid =|runs =|last exit code =|program =|stdout path =|stderr path =' | head -80 || true
+            if [ -f "$PROBE_DIR/marker.txt" ]; then
+              echo "PROBE_${name}_MARKER=YES"
+              cat "$PROBE_DIR/marker.txt"
+            else
+              echo "PROBE_${name}_MARKER=NO"
+            fi
+            if [ -f "$out" ]; then
+              echo "PROBE_${name}_STDOUT=YES"
+              cat "$out" || true
+            else
+              echo "PROBE_${name}_STDOUT=NO"
+            fi
+            if [ -f "$err" ]; then
+              echo "PROBE_${name}_STDERR=YES"
+              cat "$err" || true
+            else
+              echo "PROBE_${name}_STDERR=NO"
+            fi
+            launchctl bootout "$DOMAIN/$LABEL" >/dev/null 2>&1 || true
+          }
+
+          run_variant HOME "$HOME_LOG_DIR/market-tape-probe.out.log" "$HOME_LOG_DIR/market-tape-probe.err.log"
+          run_variant SSD "$SSD_LOG_DIR/market-tape-probe.out.log" "$SSD_LOG_DIR/market-tape-probe.err.log"
+
+          echo "=== LAUNCHD RECENT ==="
+          /usr/bin/log show --last 5m --style compact \
+            --predicate 'process == "launchd" AND eventMessage CONTAINS "com.cryptosignal.markettape.probe"' \
+            2>&1 | tail -100 || true
+
+          launchctl bootout "$DOMAIN/$LABEL" >/dev/null 2>&1 || true
+          rm -f "$AGENT"
+          rm -rf "$PROBE_DIR"
+          rm -f "$HOME_LOG_DIR/market-tape-probe.out.log" "$HOME_LOG_DIR/market-tape-probe.err.log"
+          rm -f "$SSD_LOG_DIR/market-tape-probe.out.log" "$SSD_LOG_DIR/market-tape-probe.err.log"
+          echo "LAUNCHD_STDIO_DIAGNOSTIC_DONE=YES"
+          echo "REAL_CAPITAL=0"
+          SH
