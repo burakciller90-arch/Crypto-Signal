@@ -9,6 +9,24 @@ REAL_CAPITAL: 0
 
 ## Active v1.1 frontier — read before historical sections
 
+### PAPER FUND EPOCH 2 FOUNDATION — ACCEPTED
+
+- PR #774 merged to `main` as `c4b8cfe10fb6aaddf534438950e334b40c3c302f`.
+- Epoch 1 remains immutable legacy history at **100.00 USDT** in the existing `paper_fund.sqlite3`; legacy Stage 6C creation semantics were not rewritten.
+- Epoch 2 is a separate current paper-program contract at **1,000.00 USDT** with separate future ledger filename `paper_fund_epoch2.sqlite3`.
+- Initial research vault envelope is exactly **Core 600 / Tactical 300 / Opportunity Reserve 100 USDT**.
+- Epoch contracts fail closed on non-zero REAL_CAPITAL, leverage, borrowing, martingale, invalid ledger filenames, duplicate vaults, or allocation sums that do not equal starting cash.
+- Focused + full hosted acceptance run `35772586282` PASS.
+- Exact merged-main full regression run `35772983198` PASS.
+- **No live Epoch 2 ledger was created and no paper production cutover occurred.** That remains a later activation gate.
+- REAL_CAPITAL=0.
+
+Current safe development frontier after this acceptance:
+- Phase 2 Market Tape v2 evidence-time-machine extensions;
+- M2 Liquidity Intelligence 2.0 development on the accepted Slice 1 foundation;
+- from-scratch GALACTECH product rebuild in parallel;
+- do not replay Phase 0 / R15 / HotCold / M2 Slice 1 / Epoch 2 foundation work.
+
 ### FIRST REAL COLD PARTITION — NOT DUE (read-only verified)
 
 UID501 -> UID504 narrow-bridge read-only acceptance run `35771736782` passed the due-state contract:
