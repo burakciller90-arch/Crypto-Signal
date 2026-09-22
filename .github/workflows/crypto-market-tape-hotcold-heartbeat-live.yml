@@ -60,12 +60,13 @@ jobs:
           test -f "$ENABLE"
           old_sup="$(cat "$PID_FILE")"
           kill -0 "$old_sup"
-          before="$(sqlite3 "$RAW" 'SELECT COUNT(*) FROM raw_market_events;')"
           echo "HEARTBEAT_DEPLOY_OLD_SUPERVISOR=$old_sup"
-          echo "HEARTBEAT_DEPLOY_RAW_BEFORE=$before"
 
           /bin/bash "$STABLE/ops/market_tape/stop_market_tape_supervisor.sh"
           test ! -s "$PID_FILE"
+
+          before="$(sqlite3 -cmd '.timeout 5000' "$RAW" 'SELECT COUNT(*) FROM raw_market_events;')"
+          echo "HEARTBEAT_DEPLOY_RAW_BEFORE=$before"
 
           rm -rf "$NEXT"
           mkdir -p "$NEXT"
@@ -123,7 +124,7 @@ jobs:
           supervisor_ts2="$(python3 -c 'import json; print(int(json.load(open("'"$TAPE/supervisor_status.json"'"))["updated_at_epoch"]))')"
           runtime_pid2="$(python3 -c 'import json; print(int(json.load(open("'"$TAPE/runtime_status.json"'")).get("process_pid",0)))')"
           child_pid2="$(python3 -c 'import json; print(int(json.load(open("'"$TAPE/supervisor_status.json"'"))["child_pid"]))')"
-          after="$(sqlite3 "$RAW" 'SELECT COUNT(*) FROM raw_market_events;')"
+          after="$(sqlite3 -cmd '.timeout 5000' "$RAW" 'SELECT COUNT(*) FROM raw_market_events;')"
 
           echo "HEARTBEAT_RUNTIME_TS2=$runtime_ts2 PID=$runtime_pid2"
           echo "HEARTBEAT_SUPERVISOR_TS2=$supervisor_ts2 CHILD=$child_pid2"
@@ -135,8 +136,8 @@ jobs:
           test "$runtime_pid2" = "$runtime_pid1"
           test "$child_pid2" = "$child_pid1"
           test "$after" -gt "$before"
-          test "$(sqlite3 "$RAW" 'PRAGMA quick_check;')" = "ok"
-          test "$(sqlite3 "$DB" 'PRAGMA quick_check;')" = "ok"
+          test "$(sqlite3 -cmd '.timeout 5000' "$RAW" 'PRAGMA quick_check;')" = "ok"
+          test "$(sqlite3 -cmd '.timeout 5000' "$DB" 'PRAGMA quick_check;')" = "ok"
 
           python3 - "$TAPE/runtime_status.json" "$TAPE/supervisor_status.json" <<'PY'
           import json,sys,time
