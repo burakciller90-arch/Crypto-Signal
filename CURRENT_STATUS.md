@@ -130,6 +130,26 @@ Current M2 safe-development frontier:
 - any live production collector activation remains a separate human-impact/production gate;
 - after M2 persistence/live-readiness closeout, advance the primary Intelligence rail to M3 Order Flow & Absorption 2.0.
 
+### M2 LIQUIDATION COLLECTOR — SLICE 6A ACCEPTED / STACKED / DISABLED BY DEFAULT
+
+- PR #809 on `v1.1-liquidation-collector-hotcold-v2-slice6` is accepted on top of accepted liquidation Market Tape Slice 5.
+- Authoritative hosted acceptance run `35787484016` PASS.
+- Focused collector/liquidation tests + Ruff + focused mypy PASS.
+- Full repository pytest/Ruff/mypy/JS/freshness PASS.
+- Adds bounded Bybit public-linear liquidation WebSocket collection plumbing and normalized wire collection helpers needed for live-readiness.
+- Collector remains **disabled by default**.
+- No production WebSocket activation occurred.
+- No live Market Tape mutation or Hot/Cold production archive mutation occurred.
+- No Cursor worker/composer was used.
+- REAL_CAPITAL=0.
+
+Current M2 safe-development frontier after Slice 6A:
+- complete Liquidation Hot/Cold archive integration and replay acceptance in development;
+- close M2 live-readiness without activating production;
+- then advance the primary Intelligence rail to M3 Order Flow / Absorption 2.0.
+- Production collector activation remains a separate human-impact gate.
+
+
 ### GALACTECH CAPITAL CENTER — SLICE 1 MERGED TO MAIN
 
 - PR #788 hosted acceptance run `35778976263` PASS.
