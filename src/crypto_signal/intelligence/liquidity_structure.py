@@ -673,7 +673,7 @@ def _unresolved(
 ) -> LiquidityStructureAnalysis:
     latest = snapshots[-1] if snapshots else None
     observed_at_ms = max((item.ingested_at_ms for item in snapshots), default=0)
-    payload = {
+    payload: dict[str, object] = {
         "as_of_ms": as_of_ms,
         "ask_appearance_notional_per_second": None,
         "ask_cancellation_notional_per_second": None,
