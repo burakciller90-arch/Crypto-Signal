@@ -12,7 +12,7 @@ REAL_CAPITAL: 0
 Governing roadmap: `docs/V1_1_MASTER_EXECUTION_ROADMAP.md`.
 
 Current development map:
-- PR #715 — R15 SSD hot-plug recovery. Physical detach/remount, orphan-parent recovery, single-owner runner recovery, idempotent watchdog reload and final hosted regression are operationally accepted. PR remains unmerged because v1.0.0 baseline is immutable.
+- PR #715 — R15 SSD hot-plug recovery is CLOSED and merged to `main` as squash commit `97eafdcb9810134f8d7b7a4c62a1546d2554e4dc`. Physical detach/remount, orphan-parent recovery, single-owner runner recovery, idempotent watchdog reload and final exact-head regression are accepted. The immutable v1.0.0 release tag remains unchanged.
 - PR #722 — world-class workspace shell + truthful freshness. Draft.
 - PR #723 — untouched-forward calibrated probability foundation. Hosted gate passed. Draft.
 - PR #726 — append-only Market Tape foundation. Hosted full gate run `35718669274` passed. Draft.
@@ -26,7 +26,7 @@ Runtime evidence:
 - On remount, watchdog evidence recorded SSD_STATE=REMOUNTED. The detach-exposed orphan tree `runsvc.sh PID 65421 -> RunnerService.js PID 65425` was later identified with exact UID/command ancestry plus detach-stale cwd evidence, then stopped with RUNNER_ORPHAN_PARENT_STOP_PASS=YES.
 - Canonical UID504 runner recovery converged to one healthy Listener. Idempotent live acceptance run `35746415162` preserved Listener PID `44162` across two installer reloads while SSD state remained `ready`.
 - UID504 truth verification run `35746575186` passed: uid=504, ssd-state=ready, dashboard status=ok, read_only=true, REAL_CAPITAL=0, and ledger/cache/paper/alert SQLite PRAGMA quick_check all returned ok.
-- Final hosted full regression run `35747330090` passed. The temporary gate workflow was removed and the final PR tree returned exactly to tree SHA `3a25bbcb9a5849951ec71960c3a78c653f257d02`; PR #715 is again exactly three intended files.
+- Hosted final-tree gate `35747330090` passed. After temporary gate cleanup, exact current PR head `40c66677f78b15e08b0c82ea8a75ca51c1633bf0` passed independent exact-head full regression in run `35747566530`. PR #715 was then squash-merged to `main` as `97eafdcb9810134f8d7b7a4c62a1546d2554e4dc` with exactly three intended files.
 - R15 is the single recovery owner; legacy runner watchdog/service owners remain disabled while their plist files are retained for rollback.
 - UID501 -> UID504 passwordless project-maintenance bridge is active and independently verified after clearing the sudo timestamp. UID501 can execute as `crypto-signal-agent` without a password; passwordless root remains denied.
 - Continuity is currently **PAUSED** by user contract. No continuity resume was performed during R15 recovery.
