@@ -198,6 +198,10 @@ def test_health_and_static_shell_without_ledger(tmp_path: Path) -> None:
         "ledger_present": False,
         "alert_outbox_present": False,
         "read_only": True,
+        "latest_signal_frozen_at_ms": None,
+        "signal_data_age_ms": None,
+        "data_freshness_status": "unavailable",
+        "data_stale_after_ms": 2_700_000,
     }
     assert index.status_code == 200
     script = client.get("/static/app.js")
@@ -262,13 +266,19 @@ def test_health_and_static_shell_without_ledger(tmp_path: Path) -> None:
     assert "KISACA" in index.text
     assert 'id="beginnerBrief"' in index.text
     assert 'id="viewModeToggle"' in index.text
-    assert 'id="quickNav"' in index.text
+    assert 'id="workspaceNav"' in index.text
+    assert 'data-workspace-route="overview"' in index.text
+    assert 'data-workspace-route="intelligence"' in index.text
     assert 'data-view-mode="simple"' in index.text
     assert "data-advanced-section" in index.text
     assert "function renderBeginnerBrief" in script.text
     assert "function setViewMode" in script.text
     assert "function restoreViewMode" in script.text
     assert "function bindQuickNavigation" in script.text
+    assert "function setWorkspace" in script.text
+    assert "function bindWorkspaceNavigation" in script.text
+    assert "latest_signal_frozen_at_ms" in script.text
+    assert "data_freshness_status" in script.text
     assert "Tüm detayları göster" in script.text
     assert "Sade görünüme dön" in script.text
     assert "meta_intelligence" in script.text
