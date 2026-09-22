@@ -3038,3 +3038,39 @@ Evidence:
 - REAL_CAPITAL=0.
 
 Conclusion: absence of a cold manifest is currently expected, not an archive failure. No production mutation was performed. The first real partition remains a future read-only acceptance item once the 26h hot-retention + grace threshold is actually crossed. Development proceeds in parallel.
+
+
+---
+
+## 2026-09-22 — PAPER FUND EPOCH 2 FOUNDATION ACCEPTED
+
+The locked Phase 1 capital transition was implemented without rewriting any historical
+100 USDT paper evidence.
+
+Accepted structure:
+- Epoch 1 = immutable legacy 100.00 USDT history;
+- existing Epoch 1 ledger = `paper_fund.sqlite3`;
+- Epoch 2 = separate current program contract at 1,000.00 USDT;
+- future Epoch 2 ledger = `paper_fund_epoch2.sqlite3`;
+- predecessor relationship is explicit;
+- initial research vault plan = Core 600 / Tactical 300 / Opportunity Reserve 100;
+- REAL_CAPITAL=0;
+- leverage, borrowing and martingale are forbidden in the canonical v1.1 epoch contract.
+
+The legacy `INITIAL_CASH_USDT=100.00`, `FundCreationRecord`, benchmark identities and
+existing ledger were deliberately left unchanged so historical replay remains exact.
+No 100->1,000 scaling or restatement of old NAV/PnL/positions was performed.
+
+Development evidence:
+- draft PR #774 isolated the Epoch 2 registry/spec/tests;
+- hosted focused + full regression run `35772586282` PASS;
+- temporary hosted workflow removed after acceptance;
+- final PR diff contained exactly four intended files;
+- PR #774 squash-merged as `c4b8cfe10fb6aaddf534438950e334b40c3c302f`;
+- exact merged-main Stage10 full gate `35772983198` PASS.
+
+No live `paper_fund_epoch2.sqlite3` was created and no production paper cutover was
+performed. Live activation remains a later gated roadmap step.
+
+Phase 1 foundation is closed. Safe development advances to Market Tape v2 / M2
+Liquidity 2.0 / GALACTECH Product work in parallel. REAL_CAPITAL=0.
