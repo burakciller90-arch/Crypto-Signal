@@ -82,3 +82,14 @@ def test_market_tape_runtime_archives_before_collecting_and_never_prunes_cold() 
     assert "RuntimeEnvs/market-tape-cold/bin/python" in source
     assert "enforce_generation_retention" not in source
     assert "reclaim_for_capacity" not in source
+
+
+def test_market_tape_runtime_heartbeats_during_long_chunks() -> None:
+    source = (ROOT / "ops/run_market_tape_runtime.py").read_text()
+
+    assert "RUNTIME_HEARTBEAT_SECONDS = 30" in source
+    assert "async def _collection_heartbeat(" in source
+    assert "heartbeat_task = asyncio.create_task(" in source
+    assert '"heartbeat": True' in source
+    assert "heartbeat_task.cancel()" in source
+    assert "except asyncio.CancelledError:" in source
