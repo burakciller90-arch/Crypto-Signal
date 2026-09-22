@@ -74,7 +74,7 @@ def test_r15_runner_restart_stops_parent_tree_before_new_start() -> None:
     end = text.index('mount_transition="NO"', start)
     block = text[start:end]
     stop_index = block.index('stop_runner_service_tree')
-    start_index = block.index('launchctl kickstart -k "$RUNNER_SERVICE_TARGET"')
+    start_index = block.index('request_terminal_runner_start')
     assert stop_index < start_index
     assert 'runner_worker_alive' in text
     assert 'crypto-signal-agent' in text
@@ -132,7 +132,7 @@ def test_r15_orphan_parent_is_stopped_before_new_runner_start() -> None:
     block = text[start:end]
     orphan_index = block.index("runner_orphan_service_pids")
     stop_index = block.index("stop_orphan_runner_parent_tree")
-    launch_index = block.index('launchctl kickstart -k "$RUNNER_SERVICE_TARGET"')
+    launch_index = block.index('request_terminal_runner_start')
     assert orphan_index < stop_index < launch_index
 
 def test_r15_orphan_origin_accepts_only_canonical_or_exact_detach_stale_cwd() -> None:
@@ -164,40 +164,42 @@ def test_r15_orphan_candidate_count_is_self_contained() -> None:
     assert "/usr/bin/awk 'NF {n++} END {print n+0}'" in block
     assert 'RUNNER_ORPHAN_STOP_ABORT=AMBIGUOUS' in block
 
-def test_r15_runner_restart_uses_launchd_service_not_nohup() -> None:
+def test_r15_runner_restart_uses_health_aware_terminal_transport() -> None:
     text = SCRIPT.read_text(encoding="utf-8")
-    assert 'com.cryptosignal.github-runner-r15-service' in text
-    assert 'runner-service-bootstrap.sh' in text
-    assert 'RUNNER_SERVICE_PLIST' in text
-    assert 'RUNNER_SERVICE_TARGET' in text
-    assert 'exec ./runsvc.sh >>"$LOG/r15-runner-service.out.log"' in text
+    assert 'RUNNER_TERMINAL_START="$LOCAL_ROOT/start-ssd-runner.command"' in text
+    assert 'request_terminal_runner_start()' in text
+    assert '/usr/bin/open -gj -a Terminal "$RUNNER_TERMINAL_START"' in text
+    assert 'RUNNER_TERMINAL_START_SUPPRESSED=LOCK_ACTIVE' in text
+    assert 'RUNNER_TERMINAL_START_REQUESTED=YES' in text
+    assert 'R15_SSD_HOTPLUG_RECOVERY_RUNNER_TERMINAL_TRANSPORT=YES' in text
 
     start = text.index("start_runner() {")
     end = text.index('mount_transition="NO"', start)
     block = text[start:end]
-    assert 'nohup ./runsvc.sh' not in block
-    assert 'launchctl kickstart -k "$RUNNER_SERVICE_TARGET"' in block
-    assert 'RUNNER_SERVICE_START_ABORT=LAUNCHAGENT_NOT_LOADED' in block
-    assert 'RUNNER_SERVICE_KICKSTART_PASS=YES' in block
+    assert 'request_terminal_runner_start' in block
+    assert 'launchctl kickstart -k "$RUNNER_SERVICE_TARGET"' not in block
 
 
-def test_r15_runner_launchagent_is_loaded_but_not_keepalive() -> None:
+def test_r15_terminal_transport_command_is_bounded_and_idempotent() -> None:
     text = SCRIPT.read_text(encoding="utf-8")
-    assert 'cat > "$RUNNER_SERVICE_PLIST" <<PLIST' in text
-    service_start = text.index('cat > "$RUNNER_SERVICE_PLIST" <<PLIST')
-    main_start = text.index('cat > "$PLIST" <<PLIST', service_start)
-    service_block = text[service_start:main_start]
-    assert '<string>Background</string>' in service_block
-    assert '<key>ThrottleInterval</key>' in service_block
-    assert '<key>KeepAlive</key>' not in service_block
-    assert '<key>RunAtLoad</key>' not in service_block
-    assert '/bin/launchctl bootstrap "gui/$(id -u)" "$RUNNER_SERVICE_PLIST"' in text
+    assert 'cat > "$RUNNER_TERMINAL_START" <<\'RUNNERTERM\'' in text
+    terminal_start = text.index('cat > "$RUNNER_TERMINAL_START" <<\'RUNNERTERM\'')
+    plist_start = text.index('cat > "$PLIST" <<PLIST', terminal_start)
+    block = text[terminal_start:plist_start]
+    assert 'Runner.Listener run --startuptype service' in block
+    assert 'RUNNER_ALREADY_ALIVE=YES' in block
+    assert 'RUNNER_TERMINAL_START_ABORT=ACTIVE_WORKER' in block
+    assert 'SSD_RUNNER_NOT_READY=YES' in block
+    assert 'nohup ./runsvc.sh' in block
+    assert 'terminal-start.lock' in text
 
 
-def test_r15_runner_launchd_service_preserves_ssd_execution_boundary() -> None:
+def test_r15_terminal_transport_preserves_ssd_execution_boundary() -> None:
     text = SCRIPT.read_text(encoding="utf-8")
     assert 'ROOT="/Volumes/Crypto-504/Crypto-Signal"' in text
     assert 'RUNNER="$ROOT/Runner"' in text
-    assert 'test -x "$RUNNER/runsvc.sh"' in text
-    assert 'R15_SSD_HOTPLUG_RECOVERY_RUNNER_LAUNCHD_SERVICE=YES' in text
+    assert 'if [ ! -x "$RUNNER/runsvc.sh" ]; then' in text
+    assert 'cd "$RUNNER" || exit 75' in text
+    assert 'R15_SSD_HOTPLUG_RECOVERY_RUNNER_TERMINAL_TRANSPORT=YES' in text
+    assert '/Users/crypto-signal-agent/Crypto-Signal' not in text
 
