@@ -1,0 +1,51 @@
+name: Crypto R15 Detached State Observation
+
+on:
+  push:
+    branches:
+      - r15-ssd-hotplug-recovery-v1
+    paths:
+      - ".github/workflows/crypto-r15-detached-state-observation.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  observe:
+    name: Observe detached state from UID501
+    runs-on: [self-hosted, crypto-signal, uid501]
+    timeout-minutes: 10
+    steps:
+      - name: Observe detached R15 state
+        shell: bash
+        run: |
+          set +e
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          LOCAL="/Users/crypto-signal-agent/Library/Application Support/CryptoSignalRecovery"
+          LABEL="com.cryptosignal.ssd-hotplug-recovery"
+
+          echo "=== MOUNT ==="
+          /sbin/mount | /usr/bin/grep -F " on /Volumes/Crypto-504 " || echo "CRYPTO504_MOUNT_ABSENT=YES"
+
+          echo "=== DEVICE ==="
+          /usr/sbin/diskutil info /dev/disk4 2>&1 || true
+
+          echo "=== R15 STATE FILE ==="
+          /bin/cat "$LOCAL/ssd-state" 2>&1 || true
+
+          echo "=== R15 LAUNCHAGENT ==="
+          /bin/launchctl print "gui/504/$LABEL" 2>&1 | /usr/bin/head -140
+
+          echo "=== R15 LOG ==="
+          /usr/bin/tail -120 "/Users/crypto-signal-agent/Library/Logs/CryptoSignalRecovery/hotplug-watchdog.log" 2>&1 || true
+          /usr/bin/tail -120 "/Users/crypto-signal-agent/Library/Logs/CryptoSignalRecovery/hotplug-watchdog.err.log" 2>&1 || true
+
+          echo "=== UID504 SSD PROCESSES ==="
+          /bin/ps -axo pid=,ppid=,user=,%cpu=,%mem=,etime=,state=,command=             | /usr/bin/awk '$3=="crypto-signal-agent" && $0 ~ /\/Volumes\/Crypto-504/ {print}'
+
+          echo "=== DASHBOARD HEALTH ==="
+          /usr/bin/curl -fsS --max-time 5 http://127.0.0.1:48700/api/health 2>&1
+          echo
+          echo "CURL_RC=$?"
+
+          echo "R15_DETACHED_STATE_OBSERVATION_DONE=YES"
