@@ -1,0 +1,39 @@
+name: Crypto R15 Exact Listener Branch Gate
+
+on:
+  push:
+    branches:
+      - r15-ssd-hotplug-recovery-v1
+    paths:
+      - "ops/install_ssd_hotplug_recovery.sh"
+      - "tests/test_r15_hotplug_recovery_contract.py"
+      - ".github/workflows/crypto-r15-exact-listener-gate.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  gate:
+    name: R15 exact-listener full gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+          python -m pip install "pytest>=8.4" "pytest-asyncio>=1.1" "ruff>=0.13" "mypy>=1.18"
+      - name: Full gate
+        run: |
+          bash -n ops/install_ssd_hotplug_recovery.sh
+          python -m pytest -q
+          python -m ruff check src tests ops/verify_stage10_integrated.py
+          python -m mypy src ops/verify_stage10_integrated.py
+          node --check src/crypto_signal/product/static/freshness.js
+          node --check src/crypto_signal/product/static/app.js
+          node tests/js/test_product_freshness.js
+          echo "R15_EXACT_LISTENER_HOSTED_FULL_GATE_PASS=YES"
