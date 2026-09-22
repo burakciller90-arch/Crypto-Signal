@@ -19,6 +19,8 @@ def test_locked_20m_fallback_is_state_first_and_pause_dominant() -> None:
     assert "WAKE_MESSAGE =" in recurring
     assert "HAFIZANA GÜVENME" in recurring
     assert "docs/V1_1_LOCKED_MASTER_ROADMAP_20260922.md" in recurring
+    assert "kullanıcı açıkça durdurmadıkça" in recurring
+    assert "REAL_CAPITAL=0" in recurring
     assert "crypto-20m-locked-roadmap:" in recurring
     assert "CRYPTO_LOCKED_20M_WAKE_PASS=YES" in recurring
     assert "WAKE_SKIPPED_USER_PAUSE=YES" in recurring
