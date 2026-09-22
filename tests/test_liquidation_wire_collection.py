@@ -7,8 +7,8 @@ import pytest
 
 from crypto_signal.data.adapters.bybit_liquidation_ws import (
     BYBIT_LINEAR_PUBLIC_WS_URL,
-    BybitLiquidationWireBatch,
     BybitLinearLiquidationStream,
+    BybitLiquidationWireBatch,
     build_bybit_liquidation_wire_batch,
     bybit_liquidation_subscription,
 )
