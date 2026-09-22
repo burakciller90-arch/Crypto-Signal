@@ -9,6 +9,17 @@ REAL_CAPITAL: 0
 
 ## Active v1.1 frontier — read before historical sections
 
+
+### EXECUTION TOOLING — CURSOR WORKERS / COMPOSER DISABLED BY USER
+
+- User explicitly disabled new Cursor worker / Cursor composer assignments after repeated errors and delivery slowdown.
+- No new `supervisor-*` Cursor worktree or Cursor agent task may be created for Crypto Signal.
+- Development authority is direct GitHub branch/PR work + hosted CI gates; self-hosted Mac actions remain for bounded diagnostics/runtime verification only.
+- Cursor-related commands may be used only as read-only stale-state detection when necessary.
+- Do not resume historical Cursor tasks or treat their old worktrees as current frontier.
+- REAL_CAPITAL=0.
+
+
 ### CONTINUITY — OBSERVED-RECEIPT HARDENING LIVE-VERIFIED
 
 - Current main hardening commit: `26ea9a9579987eb48eb02cf596cdfe1946ee7010`.
