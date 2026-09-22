@@ -30,7 +30,7 @@ jobs:
               echo "PRESENT=$p"
               /bin/ls -l "$p" 2>/dev/null
               case "$f" in
-                current_chat_url|expected_chat_url|project_namespace|relay_status)
+                user_pause|current_chat_url|expected_chat_url|project_namespace|relay_status)
                   /bin/cat "$p" 2>/dev/null
                   ;;
               esac
