@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from dataclasses import dataclass
-from decimal import Decimal
+from decimal import ROUND_FLOOR, Decimal
 from enum import StrEnum
 
 from crypto_signal.data.derivatives import DerivativesObservation
@@ -503,7 +503,11 @@ def _build_bins(
             / reference_mark_price
             * _BPS
         )
-        bin_index = int(distance_bps // config.bin_width_bps)
+        bin_index = int(
+            (distance_bps / config.bin_width_bps).to_integral_value(
+                rounding=ROUND_FLOOR
+            )
+        )
         grouped.setdefault(bin_index, []).append(event)
 
     result: list[ObservedLiquidationBin] = []
