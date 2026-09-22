@@ -35,6 +35,7 @@ AUTONOMOUS_STATE = SHARED / "autonomous_wake_state"
 AUTONOMOUS_PREFIX = "CRYPTO_SIGNAL_AUTONOMOUS_CONTINUE_V1"
 AUTONOMOUS_TTL_SECONDS = 15 * 60
 AUTONOMOUS_COOLDOWN_SECONDS = 10 * 60
+LOCKED_WAKE_MESSAGE = "Kullanıcı aktif değil ve projeyi tamamlaman için sana bıraktı; HAFIZANA GÜVENME. READ_FIRST, CURRENT_STATUS, Chronicle ve docs/V1_1_LOCKED_MASTER_ROADMAP_20260922.md dosyasını oku; gerçek Git/worker/wake/lease state’ini kontrol et, gerçek frontier’ı bul. Tamamlanmış/stale/duplicate işi tekrarlama. Kullanıcı REAL MONEY hariç roadmap’in bitmesini istiyor; güvenli aşamalar arasında onay bekleme ve devam et. REAL_CAPITAL=0."
 RETRY_SECONDS = 2
 TARGET_OPEN_RETRY_SECONDS = 60
 _last_target_open_attempt = 0.0
@@ -252,8 +253,9 @@ def read_shared_binding() -> str:
 
 def deliver(event_id: str, message: str, target_url: str) -> tuple[bool, str]:
     key = sha(event_id)
+    exact_locked_wake = message == LOCKED_WAKE_MESSAGE
     marker = marker_for(event_id)
-    wire_message = f"{message} {marker}"
+    wire_message = message if exact_locked_wake else f"{message} {marker}"
     message_sha = sha(wire_message)
     receipt = RECEIPTS / f"{key}.state"
 
@@ -276,29 +278,91 @@ def deliver(event_id: str, message: str, target_url: str) -> tuple[bool, str]:
 
     marker_json = json.dumps(marker)
     message_json = json.dumps(wire_message)
-    state_js = (
-        "(()=>{const marker=" + marker_json + ";"
-        "const users=[...document.querySelectorAll('[data-message-author-role=\"user\"]')];"
-        "if(users.slice(-100).some(x=>(x.innerText||'').includes(marker)))return 'OBSERVED';"
-        "const stop=[...document.querySelectorAll('button[data-testid=\"stop-button\"]')]"
-        ".find(x=>{const s=getComputedStyle(x),r=x.getBoundingClientRect();"
-        "return x.isConnected&&!x.disabled&&s.display!=='none'&&s.visibility!=='hidden'"
-        "&&Number(s.opacity||1)>0&&r.width>1&&r.height>1&&x.getClientRects().length>0;});"
-        "if(stop)return 'CHATGPT_BUSY';"
-        "const e=document.querySelector('#prompt-textarea');"
-        "if(!e)return 'NO_EDITOR';"
-        "const draft=(e.innerText||'').trim();"
-        "if(draft.includes(marker))return 'PREPARED';"
-        "if(draft)return 'DRAFT_BUSY';return 'READY';})()"
-    )
+
+    baseline_exact_count = 0
+    if exact_locked_wake:
+        count_js = (
+            "(()=>{const msg=" + message_json + ";"
+            "const users=[...document.querySelectorAll('[data-message-author-role=\\\"user\\\"]')];"
+            "return String(users.filter(x=>(x.innerText||'').trim()===msg).length);})()"
+        )
+        raw_count = run_js(target_url, count_js)
+        try:
+            baseline_exact_count = int(raw_count)
+        except ValueError:
+            baseline_exact_count = 0
+
+        state_js = (
+            "(()=>{const msg=" + message_json + ";"
+            "const stop=[...document.querySelectorAll('button[data-testid=\\\"stop-button\\\"]')]"
+            ".find(x=>{const s=getComputedStyle(x),r=x.getBoundingClientRect();"
+            "return x.isConnected&&!x.disabled&&s.display!=='none'&&s.visibility!=='hidden'"
+            "&&Number(s.opacity||1)>0&&r.width>1&&r.height>1&&x.getClientRects().length>0;});"
+            "if(stop)return 'CHATGPT_BUSY';"
+            "const e=document.querySelector('#prompt-textarea');"
+            "if(!e)return 'NO_EDITOR';"
+            "const draft=(e.innerText||'').trim();"
+            "if(draft===msg)return 'PREPARED';"
+            "if(draft)return 'DRAFT_BUSY';return 'READY';})()"
+        )
+    else:
+        state_js = (
+            "(()=>{const marker=" + marker_json + ";"
+            "const users=[...document.querySelectorAll('[data-message-author-role=\\\"user\\\"]')];"
+            "if(users.slice(-100).some(x=>(x.innerText||'').includes(marker)))return 'OBSERVED';"
+            "const stop=[...document.querySelectorAll('button[data-testid=\\\"stop-button\\\"]')]"
+            ".find(x=>{const s=getComputedStyle(x),r=x.getBoundingClientRect();"
+            "return x.isConnected&&!x.disabled&&s.display!=='none'&&s.visibility!=='hidden'"
+            "&&Number(s.opacity||1)>0&&r.width>1&&r.height>1&&x.getClientRects().length>0;});"
+            "if(stop)return 'CHATGPT_BUSY';"
+            "const e=document.querySelector('#prompt-textarea');"
+            "if(!e)return 'NO_EDITOR';"
+            "const draft=(e.innerText||'').trim();"
+            "if(draft.includes(marker))return 'PREPARED';"
+            "if(draft)return 'DRAFT_BUSY';return 'READY';})()"
+        )
+
     state = run_js(target_url, state_js)
     if state == "TARGET_NOT_FOUND":
         return False, open_target_in_browser(target_url)
     if state == "OBSERVED":
         write_receipt(receipt, "OBSERVED", event_id, message_sha)
         return True, "OBSERVED"
+
     if state == "CHATGPT_BUSY":
-        return False, "CHATGPT_BUSY"
+        if not exact_locked_wake:
+            return False, "CHATGPT_BUSY"
+        stop_js = (
+            "(()=>{const stop=[...document.querySelectorAll('button[data-testid=\\\"stop-button\\\"]')]"
+            ".find(x=>{const s=getComputedStyle(x),r=x.getBoundingClientRect();"
+            "return x.isConnected&&!x.disabled&&s.display!=='none'&&s.visibility!=='hidden'"
+            "&&Number(s.opacity||1)>0&&r.width>1&&r.height>1&&x.getClientRects().length>0;});"
+            "if(!stop)return 'STOP_NOT_FOUND';stop.click();return 'STOP_CLICKED';})()"
+        )
+        stopped = run_js(target_url, stop_js)
+        if stopped != "STOP_CLICKED":
+            return False, stopped
+
+        ready_js = (
+            "(()=>{const msg=" + message_json + ";"
+            "const stop=[...document.querySelectorAll('button[data-testid=\\\"stop-button\\\"]')]"
+            ".find(x=>{const s=getComputedStyle(x),r=x.getBoundingClientRect();"
+            "return x.isConnected&&!x.disabled&&s.display!=='none'&&s.visibility!=='hidden'"
+            "&&Number(s.opacity||1)>0&&r.width>1&&r.height>1&&x.getClientRects().length>0;});"
+            "if(stop)return 'STILL_BUSY';"
+            "const e=document.querySelector('#prompt-textarea');if(!e)return 'NO_EDITOR';"
+            "const draft=(e.innerText||'').trim();"
+            "if(draft===msg)return 'PREPARED';"
+            "if(draft)return 'DRAFT_BUSY';return 'READY';})()"
+        )
+        for _ in range(40):
+            time.sleep(0.25)
+            state = run_js(target_url, ready_js)
+            if state in {"READY", "PREPARED", "DRAFT_BUSY"}:
+                break
+        if state not in {"READY", "PREPARED"}:
+            return False, f"AFTER_STOP:{state}"
+
     if state in {"DRAFT_BUSY", "NO_EDITOR"}:
         return False, state
     if state.startswith(
@@ -313,28 +377,49 @@ def deliver(event_id: str, message: str, target_url: str) -> tuple[bool, str]:
         return False, state
 
     if state == "READY":
-        fill_js = (
-            "(()=>{const msg=" + message_json + ";const marker=" + marker_json + ";"
-            "const e=document.querySelector('#prompt-textarea');if(!e)return 'NO_EDITOR';"
-            "const cur=(e.innerText||'').trim();if(cur.includes(marker))return 'FILLED';"
-            "if(cur)return 'DRAFT_BUSY';e.focus();"
-            "const ok=document.execCommand('insertText',false,msg);"
-            "return ok&&((e.innerText||'').includes(marker))?'FILLED':'FILL_FAILED';})()"
-        )
+        if exact_locked_wake:
+            fill_js = (
+                "(()=>{const msg=" + message_json + ";"
+                "const e=document.querySelector('#prompt-textarea');if(!e)return 'NO_EDITOR';"
+                "const cur=(e.innerText||'').trim();if(cur===msg)return 'FILLED';"
+                "if(cur)return 'DRAFT_BUSY';e.focus();"
+                "const ok=document.execCommand('insertText',false,msg);"
+                "return ok&&((e.innerText||'').trim()===msg)?'FILLED':'FILL_FAILED';})()"
+            )
+        else:
+            fill_js = (
+                "(()=>{const msg=" + message_json + ";const marker=" + marker_json + ";"
+                "const e=document.querySelector('#prompt-textarea');if(!e)return 'NO_EDITOR';"
+                "const cur=(e.innerText||'').trim();if(cur.includes(marker))return 'FILLED';"
+                "if(cur)return 'DRAFT_BUSY';e.focus();"
+                "const ok=document.execCommand('insertText',false,msg);"
+                "return ok&&((e.innerText||'').includes(marker))?'FILLED':'FILL_FAILED';})()"
+            )
         filled = run_js(target_url, fill_js)
         if filled != "FILLED":
             return False, filled
 
     write_receipt(receipt, "SUBMITTING", event_id, message_sha)
-    send_js = (
-        "(()=>{const marker=" + marker_json + ";"
-        "const users=[...document.querySelectorAll('[data-message-author-role=\"user\"]')];"
-        "if(users.slice(-100).some(x=>(x.innerText||'').includes(marker)))return 'ALREADY_SENT';"
-        "const e=document.querySelector('#prompt-textarea');if(!e)return 'NO_EDITOR';"
-        "const draft=(e.innerText||'').trim();if(!draft.includes(marker))return 'DRAFT_CHANGED';"
-        "const b=document.querySelector('button[data-testid=\"send-button\"]');"
-        "if(!b||b.disabled)return 'NO_SEND';b.click();return 'CLICKED';})()"
-    )
+
+    if exact_locked_wake:
+        send_js = (
+            "(()=>{const msg=" + message_json + ";"
+            "const e=document.querySelector('#prompt-textarea');if(!e)return 'NO_EDITOR';"
+            "const draft=(e.innerText||'').trim();if(draft!==msg)return 'DRAFT_CHANGED';"
+            "const b=document.querySelector('button[data-testid=\\\"send-button\\\"]');"
+            "if(!b||b.disabled)return 'NO_SEND';b.click();return 'CLICKED';})()"
+        )
+    else:
+        send_js = (
+            "(()=>{const marker=" + marker_json + ";"
+            "const users=[...document.querySelectorAll('[data-message-author-role=\\\"user\\\"]')];"
+            "if(users.slice(-100).some(x=>(x.innerText||'').includes(marker)))return 'ALREADY_SENT';"
+            "const e=document.querySelector('#prompt-textarea');if(!e)return 'NO_EDITOR';"
+            "const draft=(e.innerText||'').trim();if(!draft.includes(marker))return 'DRAFT_CHANGED';"
+            "const b=document.querySelector('button[data-testid=\\\"send-button\\\"]');"
+            "if(!b||b.disabled)return 'NO_SEND';b.click();return 'CLICKED';})()"
+        )
+
     sent = run_js(target_url, send_js)
     if sent == "ALREADY_SENT":
         write_receipt(receipt, "OBSERVED", event_id, message_sha)
@@ -343,15 +428,28 @@ def deliver(event_id: str, message: str, target_url: str) -> tuple[bool, str]:
         receipt.unlink(missing_ok=True)
         return False, sent
 
-    check_js = (
-        "(()=>{const marker=" + marker_json + ";"
-        "const users=[...document.querySelectorAll('[data-message-author-role=\"user\"]')];"
-        "if(users.slice(-100).some(x=>(x.innerText||'').includes(marker)))return 'OBSERVED';"
-        "const e=document.querySelector('#prompt-textarea');if(!e)return 'NO_EDITOR';"
-        "const draft=(e.innerText||'').trim();"
-        "if(draft.includes(marker))return 'DRAFT_PRESENT';"
-        "if(draft==='')return 'EDITOR_CLEARED';return 'DRAFT_CHANGED';})()"
-    )
+    if exact_locked_wake:
+        check_js = (
+            "(()=>{const msg=" + message_json + ";"
+            "const users=[...document.querySelectorAll('[data-message-author-role=\\\"user\\\"]')];"
+            "const count=users.filter(x=>(x.innerText||'').trim()===msg).length;"
+            "const e=document.querySelector('#prompt-textarea');if(!e)return 'NO_EDITOR:'+count;"
+            "const draft=(e.innerText||'').trim();"
+            "if(count>" + str(baseline_exact_count) + ")return 'OBSERVED';"
+            "if(draft===msg)return 'DRAFT_PRESENT';"
+            "if(draft==='')return 'EDITOR_CLEARED';return 'DRAFT_CHANGED';})()"
+        )
+    else:
+        check_js = (
+            "(()=>{const marker=" + marker_json + ";"
+            "const users=[...document.querySelectorAll('[data-message-author-role=\\\"user\\\"]')];"
+            "if(users.slice(-100).some(x=>(x.innerText||'').includes(marker)))return 'OBSERVED';"
+            "const e=document.querySelector('#prompt-textarea');if(!e)return 'NO_EDITOR';"
+            "const draft=(e.innerText||'').trim();"
+            "if(draft.includes(marker))return 'DRAFT_PRESENT';"
+            "if(draft==='')return 'EDITOR_CLEARED';return 'DRAFT_CHANGED';})()"
+        )
+
     for _ in range(20):
         time.sleep(0.5)
         check = run_js(target_url, check_js)
@@ -367,6 +465,8 @@ def deliver(event_id: str, message: str, target_url: str) -> tuple[bool, str]:
 
     write_receipt(receipt, "SUBMITTED_UNCONFIRMED", event_id, message_sha)
     return True, "SUBMITTED_UNCONFIRMED_TIMEOUT"
+
+
 def pid_alive(pid: int) -> bool:
     try:
         os.kill(pid, 0)
