@@ -39,8 +39,9 @@ def test_market_tape_installer_preserves_uid504_boundary() -> None:
     assert "archive_hot_to_parquet.py" in source
     assert 'RuntimeEnvs/market-tape-cold' in source
     assert 'PYARROW_VERSION="22.0.0"' in source
-    assert "launchctl bootstrap" in source
+    assert "launchctl bootstrap" not in source
     assert "MARKET_TAPE_INSTALL_ENABLE_LAUNCHD" in source
+    assert "DIRECT_LAUNCHD_TCC_UNSUPPORTED" in source
     assert "MARKET_TAPE_LAUNCHAGENT_DISABLED_BY_DEFAULT=YES" in source
     assert "MARKET_TAPE_LAUNCHAGENT_PREPARE_ONLY_PASS=YES" in source
     assert "REAL_CAPITAL=0" in source
