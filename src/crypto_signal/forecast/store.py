@@ -7,9 +7,9 @@ from enum import StrEnum
 from pathlib import Path
 
 from crypto_signal.forecast.builders import (
+    conditional_forecast_payload,
     decision_proof_payload,
     forecast_resolution_payload,
-    conditional_forecast_payload,
     verify_decision_proof_identity,
     verify_forecast_identity,
     verify_forecast_resolution_identity,
