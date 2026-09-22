@@ -99,8 +99,9 @@ def test_r15_recovery_retires_legacy_runner_owners_before_bootstrap() -> None:
     assert 'launchctl bootout "$legacy_target"' in text
     assert 'R15_SSD_HOTPLUG_RECOVERY_SINGLE_OWNER=YES' in text
     legacy = text.index('for legacy_label in "${LEGACY_RUNNER_LABELS[@]}"')
-    bootstrap = text.index('/bin/launchctl bootstrap "gui/$(id -u)" "$PLIST"')
-    assert legacy < bootstrap
+    bootstrap = text.index('launchctl bootstrap "$domain" "$PLIST"')
+    reload_call = text.index("\nreload_main_launchagent", bootstrap)
+    assert legacy < bootstrap < reload_call
 
 def test_r15_orphan_parent_detection_is_exact_and_cwd_bound() -> None:
     text = SCRIPT.read_text(encoding="utf-8")
