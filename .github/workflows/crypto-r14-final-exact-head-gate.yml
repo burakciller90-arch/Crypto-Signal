@@ -1,0 +1,34 @@
+name: Crypto R14 Final Exact-Head Gate
+
+on:
+  push:
+    branches:
+      - stage14-final-release-documentation-v1
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: R14 final exact-head full gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+          python -m pip install "pytest>=8.4" "ruff>=0.13" "mypy>=1.18"
+      - name: Full final R14 gate
+        run: |
+          python -m pytest -q
+          python -m ruff check src tests ops/verify_stage10_integrated.py ops/r13_integrated_acceptance.py
+          python -m mypy src ops/verify_stage10_integrated.py ops/r13_integrated_acceptance.py
+          node --check src/crypto_signal/product/static/freshness.js
+          node --check src/crypto_signal/product/static/app.js
+          node tests/js/test_product_freshness.js
+          echo "R14_FINAL_EXACT_HEAD_GATE_PASS=YES"
