@@ -49,7 +49,8 @@ def test_market_tape_runtime_has_no_internal_disk_data_fallback() -> None:
     assert 'ROOT = Path("/Volumes/Crypto-504/Crypto-Signal")' in source
     assert 'VOLUME = Path("/Volumes/Crypto-504")' in source
     assert "Development/runtime/market_tape" in source
-    assert "/Users/" not in source
+    assert 'COLD_DIR = ROOT / "MarketTapeCold"' in source
+    assert 'COLD_PYTHON = ROOT / "RuntimeEnvs/market-tape-cold/bin/python"' in source
     assert "REAL_CAPITAL=0" in source
 
 def test_market_tape_launchd_wrapper_is_uid504_and_ssd_bound() -> None:
