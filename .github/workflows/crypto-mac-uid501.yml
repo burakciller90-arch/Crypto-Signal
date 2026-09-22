@@ -837,7 +837,82 @@ jobs:
           echo "COLD_MANIFEST_COUNT=$count"
           if [ "$count" -eq 0 ]; then
             echo "FIRST_REAL_COLD_PARTITION_PRESENT=NO"
-            exit 70
+            /usr/bin/env \
+              PYTHONPATH="$STABLE/src" \
+              RAW_DB="$RAW" \
+              NORM_DB="$NORM" \
+              STATUS_JSON="$STATUS" \
+              SUP_STATUS_JSON="$SUP_STATUS" \
+              "$PY" - <<'PY'
+          import json
+          import os
+          import sqlite3
+          import time
+          from pathlib import Path
+
+          from crypto_signal.data.market_tape_hotcold import archive_before_ms
+
+          raw_db = Path(os.environ["RAW_DB"])
+          norm_db = Path(os.environ["NORM_DB"])
+          now_ms = time.time_ns() // 1_000_000
+          cutoff = archive_before_ms(now_ms=now_ms)
+
+          def bounds(db: Path, table: str) -> tuple[int | None, int | None, int]:
+              con = sqlite3.connect(f"file:{db}?mode=ro", uri=True, timeout=10.0)
+              try:
+                  con.execute("PRAGMA query_only=ON")
+                  check = con.execute("PRAGMA quick_check").fetchone()
+                  assert check and str(check[0]) == "ok"
+                  lo, hi, eligible = con.execute(
+                      f"SELECT MIN(event_at_ms), MAX(event_at_ms), "
+                      f"SUM(CASE WHEN event_at_ms < ? THEN 1 ELSE 0 END) FROM {table}",
+                      (cutoff,),
+                  ).fetchone()
+                  return (
+                      None if lo is None else int(lo),
+                      None if hi is None else int(hi),
+                      int(eligible or 0),
+                  )
+              finally:
+                  con.close()
+
+          observed = {
+              "raw": bounds(raw_db, "raw_market_events"),
+              "orderbooks": bounds(norm_db, "market_tape_orderbooks"),
+              "trades": bounds(norm_db, "market_tape_trades"),
+              "derivatives": bounds(norm_db, "market_tape_derivatives"),
+          }
+          eligible_total = sum(item[2] for item in observed.values())
+          oldest = min(item[0] for item in observed.values() if item[0] is not None)
+          age_hours = (now_ms - oldest) / 3_600_000
+          print("ARCHIVE_BEFORE_MS=" + str(cutoff))
+          print("HOT_EVENT_BOUNDS=" + json.dumps(observed, sort_keys=True))
+          print(f"OLDEST_HOT_EVENT_AGE_HOURS={age_hours:.3f}")
+          print("ELIGIBLE_ROWS_BEFORE_CUTOFF=" + str(eligible_total))
+
+          runtime = json.loads(Path(os.environ["STATUS_JSON"]).read_text())
+          supervisor = json.loads(Path(os.environ["SUP_STATUS_JSON"]).read_text())
+          now = int(time.time())
+          assert runtime["real_capital"] == 0
+          assert runtime["capacity_decision"] == "collect"
+          assert int(runtime["cold_bytes"]) == 0
+          assert int(runtime["hot_bytes"]) < 25 * 1024**3
+          assert int(runtime["free_bytes"]) > 250 * 1024**3
+          assert now - int(runtime["updated_at_epoch"]) <= 120
+          assert supervisor["state"] == "running"
+          assert supervisor["real_capital"] == 0
+          assert now - int(supervisor["updated_at_epoch"]) <= 120
+
+          if eligible_total:
+              raise SystemExit(
+                  "COLD_ARCHIVE_MISSING_WITH_ELIGIBLE_ROWS="
+                  + str(eligible_total)
+              )
+          print("FIRST_REAL_COLD_PARTITION_NOT_DUE=YES")
+          print("REAL_CAPITAL=0")
+          PY
+            echo "COLD_ARCHIVE_READONLY_NOT_DUE_PASS=YES"
+            exit 0
           fi
           first="$(printf '%s\n' "$manifests" | /usr/bin/awk 'NF{print; exit}')"
           last="$(printf '%s\n' "$manifests" | /usr/bin/awk 'NF{x=$0} END{print x}')"
