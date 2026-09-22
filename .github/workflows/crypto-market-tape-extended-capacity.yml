@@ -1,0 +1,72 @@
+name: Crypto Market Tape Extended Capacity Sample
+
+on:
+  push:
+    branches:
+      - v1.1-liquidity-dynamics-v1
+    paths:
+      - ".github/workflows/crypto-market-tape-extended-capacity.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  sample:
+    name: Bounded 5000-event Market Tape capacity sample
+    runs-on: [self-hosted, crypto-signal, uid501]
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Prepare accepted source
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/crypto-market-tape-capacity
+          mkdir -p /tmp/crypto-market-tape-capacity
+          cp -R src ops /tmp/crypto-market-tape-capacity/
+          chmod -R a+rX /tmp/crypto-market-tape-capacity
+
+      - name: Sample and measure as UID504
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo -k
+          sudo -n -H -u crypto-signal-agent /bin/bash <<'SH'
+          set -euo pipefail
+          DIR="/Volumes/Crypto-504/Crypto-Signal/Development/runtime/market_tape"
+          DB="$DIR/market_tape.sqlite3"
+          RAW="$DIR/raw_market_tape.sqlite3"
+          before_db="$(stat -f %z "$DB")"
+          before_raw="$(stat -f %z "$RAW")"
+          before_rows="$(sqlite3 "$RAW" 'SELECT COUNT(*) FROM raw_market_events;')"
+          before_min="$(date +%s)"
+          echo "BEFORE db_bytes=$before_db raw_bytes=$before_raw raw_rows=$before_rows epoch=$before_min"
+          PYTHONPATH=/tmp/crypto-market-tape-capacity/src \
+            /Volumes/Crypto-504/Crypto-Signal/Development/.venv/bin/python \
+            /tmp/crypto-market-tape-capacity/ops/run_market_tape_stream.py \
+            --max-events 5000 --depth 50 --orderbook-snapshot-interval-ms 1000
+          after_min="$(date +%s)"
+          after_db="$(stat -f %z "$DB")"
+          after_raw="$(stat -f %z "$RAW")"
+          after_rows="$(sqlite3 "$RAW" 'SELECT COUNT(*) FROM raw_market_events;')"
+          echo "AFTER db_bytes=$after_db raw_bytes=$after_raw raw_rows=$after_rows epoch=$after_min"
+          echo "DELTA db_bytes=$((after_db-before_db)) raw_bytes=$((after_raw-before_raw)) raw_rows=$((after_rows-before_rows)) wall_seconds=$((after_min-before_min))"
+          echo "WINDOW"
+          sqlite3 "$RAW" "SELECT COUNT(*), MIN(event_at_ms), MAX(event_at_ms), MIN(ingested_at_ms), MAX(ingested_at_ms) FROM raw_market_events;"
+          echo "COUNTS"
+          sqlite3 "$DB" "SELECT COUNT(*) FROM market_tape_orderbooks;"
+          sqlite3 "$DB" "SELECT COUNT(*) FROM market_tape_trades;"
+          echo "CHECKS"
+          sqlite3 "$DB" 'PRAGMA quick_check;'
+          sqlite3 "$RAW" 'PRAGMA quick_check;'
+          echo "DISK"
+          df -k /Volumes/Crypto-504
+          echo "MARKET_TAPE_EXTENDED_CAPACITY_SAMPLE_PASS=YES"
+          echo "REAL_CAPITAL=0"
+          SH
+
+      - name: Cleanup
+        if: always()
+        shell: bash
+        run: rm -rf /tmp/crypto-market-tape-capacity
