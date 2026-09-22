@@ -3720,3 +3720,37 @@ No production UI deployment/cutover occurred. REAL_CAPITAL=0.
 
 Current Product frontier is Learn/System refinement, then accessibility/performance polish
 and the separately gated production UI cutover.
+
+
+---
+
+## 2026-09-22 — M2 LIQUIDATION COLLECTOR SLICE 6A ACCEPTED / STACKED
+
+The accepted observed-liquidation model and Market Tape persistence path now have a
+disabled-by-default collector/readiness layer.
+
+Accepted development capabilities:
+- Bybit public-linear liquidation WebSocket collection plumbing;
+- normalized liquidation wire collection;
+- deterministic development runner contract;
+- fail-closed parser/shape semantics;
+- no production activation by default.
+
+Acceptance evidence:
+- PR #809;
+- authoritative hosted run `35787484016`;
+- focused collector/liquidation tests PASS;
+- Ruff PASS;
+- focused mypy PASS;
+- full repository pytest/Ruff/mypy/JS/freshness PASS;
+- temporary hosted workflow removed after PASS.
+
+Explicitly not activated:
+- live production liquidation WebSocket collector;
+- live Market Tape mutation;
+- Hot/Cold production liquidation archive;
+- any trading authority.
+
+Next bounded M2 frontier is Liquidation Hot/Cold archive integration and replay acceptance
+in development, followed by M2 closeout and M3 Order Flow / Absorption 2.0.
+REAL_CAPITAL=0.
