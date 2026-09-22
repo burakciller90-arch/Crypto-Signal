@@ -284,7 +284,13 @@ def _checkpoint_and_verify(path: Path) -> None:
         row = connection.execute("PRAGMA quick_check").fetchone()
         if row is None or str(row[0]) != "ok":
             raise ValueError(f"Market Tape quick_check failed before seal: {path}")
-        connection.execute("PRAGMA wal_checkpoint(TRUNCATE)").fetchone()
+        checkpoint = connection.execute(
+            "PRAGMA wal_checkpoint(TRUNCATE)"
+        ).fetchone()
+        if checkpoint is None or int(checkpoint[0]) != 0:
+            raise ValueError(
+                f"Market Tape WAL checkpoint remained busy before seal: {path}"
+            )
         row = connection.execute("PRAGMA quick_check").fetchone()
         if row is None or str(row[0]) != "ok":
             raise ValueError(f"Market Tape quick_check failed after checkpoint: {path}")
@@ -293,15 +299,17 @@ def _checkpoint_and_verify(path: Path) -> None:
 
 
 def _require_no_live_wal(path: Path) -> None:
-    for suffix in _TRANSIENT_SUFFIXES:
-        transient = Path(f"{path}{suffix}")
-        if not transient.exists():
-            continue
-        if transient.stat().st_size:
+    wal = Path(f"{path}-wal")
+    if wal.exists():
+        if wal.stat().st_size:
             raise ValueError(
-                f"Market Tape transient file still active during seal: {transient}"
+                f"Market Tape WAL still contains frames during seal: {wal}"
             )
-        transient.unlink()
+        wal.unlink()
+
+    shm = Path(f"{path}-shm")
+    if shm.exists():
+        shm.unlink()
 
 
 def _database_metadata(path: Path, *, raw: bool) -> dict[str, Any]:
