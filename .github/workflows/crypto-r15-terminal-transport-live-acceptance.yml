@@ -1,0 +1,115 @@
+name: Crypto R15 Terminal Transport Live Acceptance
+
+on:
+  push:
+    branches:
+      - r15-ssd-hotplug-recovery-v1
+    paths:
+      - ".github/workflows/crypto-r15-terminal-transport-live-acceptance.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  accept:
+    name: Accept physical-remount Terminal transport
+    runs-on: [self-hosted, crypto-signal, uid501]
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: r15-ssd-hotplug-recovery-v1
+          fetch-depth: 1
+
+      - name: Install exact current R15 as UID504
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "CHECKED_OUT_SHA=$(git rev-parse HEAD)"
+          bash -n ops/install_ssd_hotplug_recovery.sh
+          test "$(/usr/bin/sudo -n -H -u crypto-signal-agent /usr/bin/id -u)" = "504"
+          /usr/bin/sudo -n -H -u crypto-signal-agent /usr/bin/env HOME=/Users/crypto-signal-agent /bin/bash ops/install_ssd_hotplug_recovery.sh
+          echo "R15_TERMINAL_TRANSPORT_INSTALL_PASS=YES"
+
+      - name: Force bounded watchdog cycle
+        shell: bash
+        run: |
+          set -euo pipefail
+          /usr/bin/sudo -n -H -u crypto-signal-agent /bin/bash <<'SH'
+          set -euo pipefail
+          WATCH="$HOME/Library/Application Support/CryptoSignalRecovery/hotplug-watchdog.sh"
+          test -x "$WATCH"
+          /bin/bash "$WATCH" || true
+          echo "R15_WATCHDOG_CYCLE_REQUESTED=YES"
+          SH
+
+      - name: Accept recovered runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          EXPECTED="$ROOT/Runner/bin/Runner.Listener run --startuptype service"
+          ok=0
+
+          for _ in {1..150}; do
+            listener_count="$(ps -axo command= | awk -v expected="$EXPECTED" '$0 == expected {n++} END{print n+0}')"
+            if [ "$listener_count" = "1" ]               && ! kill -0 65421 2>/dev/null               && ! kill -0 65425 2>/dev/null               && curl -fsS --max-time 3 http://127.0.0.1:48700/api/health >/tmp/r15-terminal-accept-health.json 2>/dev/null; then
+              ok=1
+              break
+            fi
+            sleep 1
+          done
+
+          echo "RECOVERY_READY=$ok"
+          test "$ok" = "1"
+
+          echo "=== EXACT LISTENER ==="
+          listener="$(ps -axo pid=,command= | awk -v expected="$EXPECTED" '{pid=$1; sub(/^[[:space:]]*[0-9]+[[:space:]]+/, "", $0); if ($0 == expected) print pid}')"
+          listener_count="$(printf '%s\n' "$listener" | awk 'NF{n++} END{print n+0}')"
+          echo "LISTENER_COUNT=$listener_count"
+          echo "LISTENER_PID=$listener"
+          test "$listener_count" = "1"
+
+          service="$(ps -p "$listener" -o ppid= | tr -d ' ')"
+          wrapper="$(ps -p "$service" -o ppid= | tr -d ' ')"
+          echo "=== CANONICAL TREE ==="
+          ps -p "$wrapper","$service","$listener" -o pid=,ppid=,user=,%cpu=,%mem=,etime=,state=,command=
+          test "$(ps -p "$listener" -o user= | tr -d ' ')" = "crypto-signal-agent"
+          test "$(ps -p "$service" -o command=)" = "./externals/node20/bin/node ./bin/RunnerService.js"
+          test "$(ps -p "$wrapper" -o command=)" = "/bin/bash ./runsvc.sh"
+
+          echo "=== OLD ORPHAN ==="
+          ! kill -0 65421 2>/dev/null
+          ! kill -0 65425 2>/dev/null
+          echo "OLD_ORPHAN_TREE_ABSENT=YES"
+
+          echo "=== TRANSPORT LOG ==="
+          /usr/bin/sudo -n -H -u crypto-signal-agent /usr/bin/tail -160 "/Users/crypto-signal-agent/Library/Logs/CryptoSignalRecovery/hotplug-watchdog.log" || true
+          /usr/bin/sudo -n -H -u crypto-signal-agent /usr/bin/tail -160 "/Users/crypto-signal-agent/Library/Logs/CryptoSignalRecovery/terminal-runner.log" || true
+          /usr/bin/sudo -n -H -u crypto-signal-agent /usr/bin/tail -160 "/Users/crypto-signal-agent/Library/Logs/CryptoSignalRecovery/terminal-runner.err.log" || true
+
+          echo "=== R15 STATE ==="
+          state="$(/usr/bin/sudo -n -H -u crypto-signal-agent /bin/cat "/Users/crypto-signal-agent/Library/Application Support/CryptoSignalRecovery/ssd-state")"
+          echo "SSD_STATE=$state"
+          test "$state" = "ready"
+
+          echo "=== HEALTH ==="
+          cat /tmp/r15-terminal-accept-health.json
+          python3 - <<'PY'
+          import json
+          data=json.load(open("/tmp/r15-terminal-accept-health.json"))
+          assert data.get("status") == "ok"
+          assert data.get("real_capital") == 0
+          assert data.get("read_only") is True
+          PY
+
+          echo "=== SQLITE ==="
+          for db in             "$ROOT/Development/runtime/ledger/live_signal_ledger.sqlite3"             "$ROOT/Development/runtime/data/live_base_15m_cache.sqlite3"             "$ROOT/Development/runtime/paper/paper_fund.sqlite3"             "$ROOT/Development/runtime/alerts/alert_outbox.sqlite3"
+          do
+            result="$(/usr/bin/sudo -n -H -u crypto-signal-agent /usr/bin/sqlite3 "$db" 'PRAGMA quick_check;')"
+            echo "$db $result"
+            test "$result" = "ok"
+          done
+
+          echo "R15_PHYSICAL_REMOUNT_TERMINAL_ACCEPTANCE_PASS=YES"
+          echo "REAL_CAPITAL=0"
