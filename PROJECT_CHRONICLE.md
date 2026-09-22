@@ -3567,3 +3567,25 @@ No production UI deployment occurred. REAL_CAPITAL=0.
 
 Current Product frontier is Archive / Proof Wall, followed by Performance/Trust and
 Learn/System refinement.
+
+
+---
+
+## 2026-09-22 — Cursor worker/composer execution path disabled by user
+
+The user explicitly disabled assigning new Crypto Signal work to Cursor workers / Cursor composer.
+
+Reason:
+- prior delegated Cursor work repeatedly produced errors;
+- the extra worker/composer path slowed delivery rather than accelerating it.
+
+New execution rule:
+- direct GitHub branch/PR implementation is the default development path;
+- hosted CI gates remain the normal acceptance path;
+- self-hosted Mac workflows are used only for bounded diagnostics/runtime verification when needed;
+- Cursor commands may be used only to detect stale/accidental state;
+- no new `supervisor-*` Cursor worktree/task is created;
+- historical Cursor tasks are not resumed automatically.
+
+This is a workflow/governance change only. Product scope, scientific constraints,
+REAL_CAPITAL=0, and production/human-impact gates remain unchanged.
