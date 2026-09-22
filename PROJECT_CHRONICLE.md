@@ -3258,3 +3258,64 @@ Acceptance evidence:
 - squash merge to main `17b65a313957c7535cc60fff1cd6877a49b90ce1`.
 
 No production deployment/cutover occurred. REAL_CAPITAL=0.
+
+
+---
+
+## 2026-09-22 — M2 LIQUIDITY SWEEP SLICE 3 ACCEPTED / STACKED
+
+The M2 intelligence rail advanced from persistent-liquidity structure into bounded sweep
+evidence without using the invalid shortcut "level touched => stop hunt".
+
+Accepted candidate requirements:
+- persistent-liquidity-pool evidence from accepted Slice 2;
+- material visible-depth depletion;
+- book-eligible public-trade aggressor flow;
+- qualified displacement through the pool;
+- follow-through after first qualified displacement.
+
+Recovery/reclaim is measured separately. Block and RPI trades do not create book-sweep
+corroboration.
+
+PIT/scientific boundary:
+- future or late-ingested snapshots/trades cannot rewrite a historical freeze;
+- stale, insufficient or gapped evidence fails closed;
+- candidate state is not proof of stop hunting, manipulation, market-maker action,
+  institutional action or actor intent;
+- no production weighting or trade authority was introduced.
+
+Acceptance evidence:
+- PR #784;
+- authoritative hosted run `35778012284`;
+- focused M2 tests PASS;
+- Ruff PASS;
+- focused mypy PASS;
+- full repository pytest/Ruff/mypy/JS/freshness PASS;
+- temporary hosted workflow removed after PASS.
+
+PR #784 remains stacked on accepted M2 Slice 2. REAL_CAPITAL=0.
+
+Next M2 bounded frontier is a distinct Liquidation Heatmap / liquidation-risk context layer
+where reliable source data supports it, followed by overall M2 closeout before M3.
+
+
+---
+
+## 2026-09-22 — CONTINUITY RECONCILIATION AT 23:05 +0300
+
+Current mechanical continuity truth:
+- locked 20-minute wake run `35777702281` PASS and relay receipt confirmed;
+- relay RUNNING on exact current chat under read-only `bridgestate` run `35777877265`;
+- local pause = NO;
+- shared pause = NO;
+- active leases = 0;
+- local wake queue = 0;
+- relay wake queue = 0.
+
+The `pausecheck` workflow run `35777881829` returned failure because the command itself
+asserts a paused state; its printed measurements prove the current state is ACTIVE, which
+is the user-authorized state.
+
+`cursorcheck` run `35777888493` confirms Cursor CLI installation/authentication but does
+not expose active worker count. No worker-activity claim is inferred from that limited
+probe. REAL_CAPITAL=0.
