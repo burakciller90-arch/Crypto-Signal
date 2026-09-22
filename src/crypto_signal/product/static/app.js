@@ -161,13 +161,16 @@ function restoreViewMode() {
 }
 
 function bindQuickNavigation() {
-  document.querySelectorAll("#quickNav [data-target]").forEach((button) => {
+  const buttons = [...document.querySelectorAll("#quickNav [data-target]")];
+  buttons.forEach((button) => {
     button.addEventListener("click", () => {
       const target = document.getElementById(button.dataset.target);
       if (!target) return;
       if (target.hasAttribute("data-advanced-section") && currentViewMode !== "detailed") {
         setViewMode("detailed");
       }
+      buttons.forEach((item) => item.classList.remove("is-active"));
+      button.classList.add("is-active");
       window.requestAnimationFrame(() => {
         target.scrollIntoView({ behavior: "smooth", block: "start" });
       });
