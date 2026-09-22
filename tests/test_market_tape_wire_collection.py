@@ -11,9 +11,7 @@ from crypto_signal.data.adapters.bybit_microstructure_ws import (
     parse_bybit_public_trade_payload,
 )
 from crypto_signal.data.market_tape import MarketTapeStore
-from crypto_signal.data.market_tape_wire_collection import (
-    persist_bybit_wire_stream,
-)
+from crypto_signal.data.market_tape_wire_collection import persist_bybit_wire_stream
 from crypto_signal.data.raw_market_tape import RawMarketTapeStore
 
 
