@@ -26,6 +26,22 @@ def test_r14_release_documents_exist_and_preserve_hard_boundaries() -> None:
     assert "physical Mac reboot/logout" in manifest
 
 
+def test_r14_root_release_surfaces_match_canonical_ssd_state() -> None:
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    registry = (ROOT / "ENVIRONMENT_REGISTRY.md").read_text(encoding="utf-8")
+
+    for text in (readme, registry):
+        assert "REAL_CAPITAL=0" in text
+        assert "/Volumes/Crypto-504/Crypto-Signal" in text
+        assert "crypto-signal-full-version-v1.0.0" in text
+
+    assert "R13 Full Version Integrated Acceptance v2 is **PASS**" in readme
+    assert "f95efc358ac396e50d0bfdb920b0187706cd2af2" in readme
+    assert "Runtime owner: `crypto-signal-agent` / observed UID504" in readme
+    assert "self-hosted runner: `crypto-signal-uid504`" in registry
+    assert "There is no accepted fallback" in registry
+
+
 def test_r14_release_freeze_is_exact_main_idempotent_and_never_force_pushes() -> None:
     path = ROOT / ".github" / "workflows" / "crypto-r14-release-freeze.yml"
     text = path.read_text(encoding="utf-8")
