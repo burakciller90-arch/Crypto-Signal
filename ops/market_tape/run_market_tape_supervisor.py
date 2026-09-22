@@ -27,6 +27,7 @@ LOCK = CONTROL_DIR / "market-tape-supervisor.lock"
 PID_FILE = CONTROL_DIR / "market-tape-supervisor.pid"
 STOP_FILE = CONTROL_DIR / "market-tape-supervisor.stop"
 RESTART_DELAY_SECONDS = 30
+SUPERVISOR_HEARTBEAT_SECONDS = 30
 
 _stop_requested = False
 _child: subprocess.Popen[bytes] | None = None
@@ -209,12 +210,28 @@ def main() -> int:
                         flush=True,
                     )
 
+                    last_heartbeat = time.monotonic()
                     while (
                         child.poll() is None
                         and not _stop_requested
                         and not STOP_FILE.exists()
                     ):
                         time.sleep(1)
+                        if (
+                            time.monotonic() - last_heartbeat
+                            >= SUPERVISOR_HEARTBEAT_SECONDS
+                        ):
+                            _write_status(
+                                {
+                                    "state": "running",
+                                    "child_pid": child.pid,
+                                    "restart_count": restart_count,
+                                    "last_child_exit_code": last_exit_code,
+                                    "build_commit": _build_commit(),
+                                    "heartbeat": True,
+                                }
+                            )
+                            last_heartbeat = time.monotonic()
 
                     if _stop_requested or STOP_FILE.exists():
                         _stop_requested = True
