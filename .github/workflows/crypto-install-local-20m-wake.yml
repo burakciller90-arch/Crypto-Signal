@@ -51,27 +51,43 @@ jobs:
           done
 
           launchctl bootout "$DOMAIN/$LABEL" 2>/dev/null || true
+          set +e
           launchctl bootstrap "$DOMAIN" "$PLIST"
-          launchctl enable "$DOMAIN/$LABEL"
-
-          echo "=== INSTALLED TIMER ==="
-          launchctl print "$DOMAIN/$LABEL" |             egrep 'state =|last exit code =|program =|arguments =' |             head -100
+          BOOTSTRAP_RC=$?
+          set -e
 
           echo "=== TIMER SCHEDULE ==="
           /usr/libexec/PlistBuddy -c "Print :StartCalendarInterval" "$PLIST"
 
-          MARKER="$STATE/recurring_wake_last_local_attempt"
-          rm -f "$MARKER"
-          launchctl kickstart -k "$DOMAIN/$LABEL"
-          ok=0
-          for _ in {1..15}; do
-            if [ -s "$MARKER" ]; then
-              ok=1
-              break
-            fi
-            sleep 1
-          done
-          test "$ok" = "1"
-          grep -F 'trigger_event_id=' "$MARKER" >/dev/null
-          echo "LOCAL_20M_WAKE_RUNTIME_PASS=YES"
+          if [ "$BOOTSTRAP_RC" = "0" ]; then
+            launchctl enable "$DOMAIN/$LABEL"
+            echo "=== INSTALLED TIMER ==="
+            launchctl print "$DOMAIN/$LABEL" |               egrep 'state =|last exit code =|program =|arguments =' |               head -100
+
+            MARKER="$STATE/recurring_wake_last_local_attempt"
+            rm -f "$MARKER"
+            launchctl kickstart -k "$DOMAIN/$LABEL"
+            ok=0
+            for _ in {1..15}; do
+              if [ -s "$MARKER" ]; then
+                ok=1
+                break
+              fi
+              sleep 1
+            done
+            test "$ok" = "1"
+            grep -F 'trigger_event_id=' "$MARKER" >/dev/null
+            echo "LOCAL_20M_WAKE_MODE=launchd"
+            echo "LOCAL_20M_WAKE_RUNTIME_PASS=YES"
+          else
+            echo "LOCAL_20M_LAUNCHD_UNAVAILABLE=YES rc=$BOOTSTRAP_RC"
+            launchctl bootout "$DOMAIN/$LABEL" 2>/dev/null || true
+            FALLBACK="$GITHUB_WORKSPACE/.github/workflows/crypto-20m-continuity-wake.yml"
+            test -f "$FALLBACK"
+            grep -F 'cron: "0,20,40 * * * *"' "$FALLBACK" >/dev/null
+            grep -F 'runs-on: [self-hosted, crypto-signal, uid504]' "$FALLBACK" >/dev/null
+            grep -F 'recurring_wake.py' "$FALLBACK" >/dev/null
+            echo "LOCAL_20M_WAKE_MODE=github-fallback"
+            echo "LOCAL_20M_WAKE_FALLBACK_PASS=YES"
+          fi
           echo "LOCAL_20M_WAKE_INSTALL_PASS=YES"
