@@ -10,6 +10,12 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from crypto_signal.ledger.serialization import canonicalize
+from crypto_signal.paper.epochs import (
+    EPOCH_1_SPEC,
+    EPOCH_2_LEDGER_FILENAME,
+    PaperFundEpochSpec,
+    current_paper_epoch_spec,
+)
 from crypto_signal.paper.mission_control import (
     PaperMissionControlError,
     read_paper_mission_control_snapshot,
@@ -62,6 +68,30 @@ def _education_payload(lesson: EducationLesson) -> dict[str, object]:
         "beginner_tr": lesson.beginner_tr,
         "why_it_matters_tr": lesson.why_it_matters_tr,
         "advanced_tr": lesson.advanced_tr,
+    }
+
+
+def _paper_epoch_payload(epoch: PaperFundEpochSpec) -> dict[str, object]:
+    return {
+        "epoch_id": epoch.epoch_id,
+        "epoch_identity": epoch.epoch_identity,
+        "status": epoch.status.value,
+        "starting_cash_usdt": epoch.starting_cash_usdt,
+        "ledger_filename": epoch.ledger_filename,
+        "predecessor_epoch_id": epoch.predecessor_epoch_id,
+        "canonical_for_new_activity": epoch.canonical_for_new_activity,
+        "vault_allocations": [
+            {
+                "vault_id": item.vault_id.value,
+                "starting_cash_usdt": item.starting_cash_usdt,
+            }
+            for item in epoch.vault_allocations
+        ],
+        "real_capital": epoch.real_capital,
+        "leverage_allowed": epoch.leverage_allowed,
+        "borrowing_allowed": epoch.borrowing_allowed,
+        "martingale_allowed": epoch.martingale_allowed,
+        "schema_version": epoch.schema_version,
     }
 
 
@@ -256,6 +286,37 @@ def create_app(
                 "status": "found",
                 "real_capital": 0,
                 "lesson": _education_payload(result.lesson),
+            }
+        )
+
+    @app.get("/api/paper/epoch-contract")
+    def paper_epoch_contract() -> JSONResponse:
+        current_epoch = current_paper_epoch_spec()
+        configured_name = (
+            None if selected_paper_path is None else selected_paper_path.name
+        )
+        epoch2_name_matches = configured_name == EPOCH_2_LEDGER_FILENAME
+        return _json(
+            {
+                "status": "ready",
+                "legacy_epoch": _paper_epoch_payload(EPOCH_1_SPEC),
+                "current_program": _paper_epoch_payload(current_epoch),
+                "runtime_binding": {
+                    "configured": selected_paper_path is not None,
+                    "ledger_filename": configured_name,
+                    "ledger_present": (
+                        selected_paper_path is not None
+                        and selected_paper_path.exists()
+                    ),
+                    "matches_current_epoch_ledger_filename": epoch2_name_matches,
+                    "activation_status": (
+                        "EPOCH2_PATH_CONFIGURED_UNVERIFIED"
+                        if epoch2_name_matches
+                        else "EPOCH2_NOT_ACTIVE_ON_THIS_RUNTIME"
+                    ),
+                },
+                "read_only": True,
+                "real_capital": 0,
             }
         )
 

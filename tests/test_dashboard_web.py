@@ -243,8 +243,17 @@ def test_health_and_static_shell_without_ledger(tmp_path: Path) -> None:
     assert "lastRefreshChip" in index.text
     assert "BANA ÖĞRET" in index.text
     assert "educationCenter" in index.text
+    assert "CAPITAL CENTER" in index.text
     assert "SANAL PORTFÖY · KARAR MERKEZİ" in index.text
+    assert 'id="capitalProgramContract"' in index.text
+    assert "PAPER FUND / PROGRAM CONTRACT" in index.text
     assert "paperMissionControl" in index.text
+    assert "function renderCapitalProgramContract(data)" in script.text
+    assert "CURRENT PROGRAM / EPOCH 2" in script.text
+    assert "VAULT ARCHITECTURE" in script.text
+    assert "AUTHORITY BOUNDARY" in script.text
+    assert "Epoch 1 · immutable legacy" in script.text
+    assert "/api/paper/epoch-contract" in script.text
     assert "function renderPaperMissionControl(data)" in script.text
     assert "/api/paper/mission-control" in script.text
     assert "Sistem kanıt gelmediğinde işlem uydurmaz." in script.text
@@ -312,6 +321,55 @@ def test_health_and_static_shell_without_ledger(tmp_path: Path) -> None:
     assert "Grafikte çizilen dondurulmuş kanıt" in script.text
     assert "daha yeni fiyat verisi geçmiş kararı yeniden yazmaz" in script.text
     assert not missing.exists()
+
+
+def test_paper_epoch_contract_keeps_legacy_and_epoch2_separate(
+    tmp_path: Path,
+) -> None:
+    signal_path = tmp_path / "signals.sqlite3"
+    seed_ledger(signal_path)
+    client = TestClient(create_app(signal_path))
+
+    response = client.get("/api/paper/epoch-contract")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "ready"
+    assert body["real_capital"] == 0
+    assert body["read_only"] is True
+
+    legacy = body["legacy_epoch"]
+    current = body["current_program"]
+    binding = body["runtime_binding"]
+
+    assert legacy["epoch_id"] == "paper-epoch-1-legacy-100-usdt"
+    assert legacy["starting_cash_usdt"] == "100.00"
+    assert legacy["ledger_filename"] == "paper_fund.sqlite3"
+    assert legacy["canonical_for_new_activity"] is False
+
+    assert current["epoch_id"] == "paper-epoch-2-current-1000-usdt"
+    assert current["starting_cash_usdt"] == "1000.00"
+    assert current["ledger_filename"] == "paper_fund_epoch2.sqlite3"
+    assert current["predecessor_epoch_id"] == legacy["epoch_id"]
+    assert current["canonical_for_new_activity"] is True
+    assert current["real_capital"] == 0
+    assert current["leverage_allowed"] is False
+    assert current["borrowing_allowed"] is False
+    assert current["martingale_allowed"] is False
+    assert current["vault_allocations"] == [
+        {"vault_id": "CORE", "starting_cash_usdt": "600.00"},
+        {"vault_id": "TACTICAL", "starting_cash_usdt": "300.00"},
+        {"vault_id": "OPPORTUNITY_RESERVE", "starting_cash_usdt": "100.00"},
+    ]
+
+    assert binding == {
+        "configured": False,
+        "ledger_filename": None,
+        "ledger_present": False,
+        "matches_current_epoch_ledger_filename": False,
+        "activation_status": "EPOCH2_NOT_ACTIVE_ON_THIS_RUNTIME",
+    }
+    assert client.post("/api/paper/epoch-contract").status_code == 405
 
 
 def test_paper_mission_control_is_unavailable_without_explicit_test_runtime(

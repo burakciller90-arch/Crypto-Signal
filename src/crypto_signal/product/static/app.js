@@ -632,7 +632,7 @@ function renderPaperPortfolioPerformanceLab(data) {
       <div class="paper-lab-metrics paper-lab-metrics-compact">
         <div><span>Kapanmış işlem</span><strong>${esc(performance.closed_trade_count ?? 0)}</strong><small>ölçüme giren round trip</small></div>
         <div><span>Açık işlem</span><strong>${esc(performance.open_trade_count ?? 0)}</strong><small>henüz skorlanmaz</small></div>
-        <div><span>Turnover</span><strong>${esc(fmtFractionPercent(performanceWindow.turnover_fraction))}</strong><small>işlem gören notional / 100 USDT</small></div>
+        <div><span>Turnover</span><strong>${esc(fmtFractionPercent(performanceWindow.turnover_fraction))}</strong><small>işlem gören notional / başlangıç NAV</small></div>
         <div><span>Nakitte geçen zaman</span><strong>${esc(fmtFractionPercent(performanceWindow.cash_time_fraction))}</strong><small>aktivasyondan beri</small></div>
         <div><span>Observed expectancy</span><strong>—</strong><small>kapanmış işlem örneklemi yok</small></div>
         <div><span>Profit factor</span><strong>—</strong><small>örneklem yok</small></div>
@@ -673,6 +673,77 @@ function renderPaperPortfolioPerformanceLab(data) {
     </div>
     ${renderPaperBenchmarks(snapshot)}
     <div class="truth-note">Bu laboratuvar yalnızca değiştirilemez sanal fill + muhasebe kanıtını ölçer; sinyal güveni veya geçmiş frekans burada işlem başarısı sayılmaz.</div>`;
+}
+
+
+function renderCapitalProgramContract(data) {
+  const root = $("#capitalProgramContract");
+  if (!root) return;
+
+  if (data?.status !== "ready" || !data.current_program) {
+    root.classList.remove("loading-block");
+    root.innerHTML = '<div class="paper-empty">Epoch program sözleşmesi kullanılamıyor. Eksik bilgi aktif sermaye gibi gösterilmez.</div>';
+    return;
+  }
+
+  const current = data.current_program;
+  const legacy = data.legacy_epoch ?? {};
+  const binding = data.runtime_binding ?? {};
+  const vaults = current.vault_allocations ?? [];
+  const total = Number(current.starting_cash_usdt ?? 0);
+  const runtimeState = binding.activation_status === "EPOCH2_PATH_CONFIGURED_UNVERIFIED"
+    ? "Epoch 2 yolu bağlı · aktivasyon doğrulanmadı"
+    : "Epoch 2 bu runtime’da aktif değil";
+
+  root.classList.remove("loading-block");
+  root.innerHTML = `
+    <div class="capital-program-grid">
+      <section class="capital-program-hero">
+        <div class="micro-label">CURRENT PROGRAM / EPOCH 2</div>
+        <div class="capital-program-value">${esc(fmtMoney(current.starting_cash_usdt))}</div>
+        <strong>Yeni canonical paper programı</strong>
+        <p>Bu tutar kabul edilmiş program sözleşmesidir; aşağıdaki runtime panelindeki mevcut ledger bakiyesiyle aynı şey değildir.</p>
+        <div class="capital-runtime-state">${esc(runtimeState)}</div>
+      </section>
+
+      <section class="capital-vault-map">
+        <div class="micro-label">VAULT ARCHITECTURE</div>
+        <div class="capital-vault-bar" aria-label="Epoch 2 başlangıç sanal sermaye dağılımı">
+          ${vaults.map((vault) => {
+            const amount = Number(vault.starting_cash_usdt ?? 0);
+            const width = total > 0 ? (amount / total) * 100 : 0;
+            return `<span class="capital-vault-segment capital-vault-${esc(String(vault.vault_id).toLowerCase())}" style="width:${width}%"></span>`;
+          }).join("")}
+        </div>
+        <div class="capital-vault-cards">
+          ${vaults.map((vault) => `
+            <div class="capital-vault-card">
+              <span>${esc(human(vault.vault_id))}</span>
+              <strong>${esc(fmtMoney(vault.starting_cash_usdt))}</strong>
+            </div>
+          `).join("")}
+        </div>
+      </section>
+
+      <section class="capital-boundary-panel">
+        <div class="micro-label">AUTHORITY BOUNDARY</div>
+        <div class="capital-boundary-row"><span>Gerçek sermaye</span><strong>${esc(data.real_capital)}</strong></div>
+        <div class="capital-boundary-row"><span>Kaldıraç</span><strong>${current.leverage_allowed ? "AÇIK" : "KAPALI"}</strong></div>
+        <div class="capital-boundary-row"><span>Borçlanma</span><strong>${current.borrowing_allowed ? "AÇIK" : "KAPALI"}</strong></div>
+        <div class="capital-boundary-row"><span>Martingale</span><strong>${current.martingale_allowed ? "AÇIK" : "KAPALI"}</strong></div>
+        <div class="capital-boundary-row"><span>Runtime ledger</span><strong>${esc(binding.ledger_filename ?? "bağlı değil")}</strong></div>
+      </section>
+    </div>
+
+    <div class="capital-epoch-lineage">
+      <span>Epoch 1 · immutable legacy</span>
+      <strong>${esc(fmtMoney(legacy.starting_cash_usdt))}</strong>
+      <span aria-hidden="true">→</span>
+      <span>Epoch 2 · current contract</span>
+      <strong>${esc(fmtMoney(current.starting_cash_usdt))}</strong>
+      <span class="module-tag">${esc(human(binding.activation_status ?? "unknown"))}</span>
+    </div>
+    <div class="truth-note">Epoch 1 geçmişi ölçeklenmez veya yeniden yazılmaz. Epoch 2 için ayrı ledger kimliği: ${esc(current.ledger_filename)}.</div>`;
 }
 
 
@@ -2132,7 +2203,7 @@ function renderEducation(data) {
 
 async function loadAll() {
   clearNotice();
-  const [health, command, radar, navigation, archive, performance, alerts, education, paperMission, intelligence] = await Promise.all([
+  const [health, command, radar, navigation, archive, performance, alerts, education, capitalProgram, paperMission, intelligence] = await Promise.all([
     fetchJSON("/api/health"),
     fetchJSON("/api/command-center?recent_limit=8"),
     fetchJSON("/api/market-radar"),
@@ -2141,6 +2212,13 @@ async function loadAll() {
     fetchJSON("/api/performance"),
     fetchJSON("/api/alerts?limit=50"),
     educationData ? Promise.resolve(educationData) : fetchJSON("/api/education"),
+    fetchJSON("/api/paper/epoch-contract").catch((error) => ({
+      status: "unavailable",
+      reason: "paper_epoch_contract_read_error",
+      detail: error.message,
+      real_capital: 0,
+      read_only: true,
+    })),
     fetchJSON("/api/paper/mission-control").catch((error) => ({
       status: "unavailable",
       reason: "paper_mission_control_read_error",
@@ -2160,6 +2238,7 @@ async function loadAll() {
 
   $("#healthChip").textContent = health.ledger_present ? "Kanıt deposu bağlı" : "Kanıt deposu yok";
   renderCommandCenter(command);
+  renderCapitalProgramContract(capitalProgram);
   renderPaperMissionControl(paperMission);
   renderPaperTradeArchive(paperMission);
   renderSystemHealth(health, command, paperMission);
