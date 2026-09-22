@@ -242,6 +242,16 @@ def create_app(
         except DashboardReadError as exc:
             raise HTTPException(status_code=500, detail=str(exc)) from exc
 
+    @app.get("/api/archive/proof-wall")
+    def archive_proof_wall(
+        limit: int = Query(default=100, ge=1, le=500),
+        offset: int = Query(default=0, ge=0),
+    ) -> JSONResponse:
+        try:
+            return _json(reader.proof_wall(limit=limit, offset=offset))
+        except DashboardReadError as exc:
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
+
     @app.get("/api/signals/{signal_freeze_identity}")
     def signal_detail(signal_freeze_identity: str) -> JSONResponse:
         try:

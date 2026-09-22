@@ -271,8 +271,8 @@
           <div class="section-heading">
             <div>
               <span class="section-index">05 / ARCHIVE</span>
-              <h2 id="archiveTitle">SİNYAL / İŞLEM ARŞİVİ</h2>
-              <p>Orijinal forecast ve karar snapshot’ı sonradan gelen outcome ile yan yana yaşar; geçmiş yeniden yazılmaz.</p>
+              <h2 id="archiveTitle">ARCHIVE / PROOF WALL</h2>
+              <p>Her dondurulmuş karar issuance anındaki haliyle korunur; daha sonra gelen outcome ayrı bir kanıt katmanı olarak yanına eklenir.</p>
             </div>
             <div class="section-actions">
               <span id="archiveCount" class="module-tag">—</span>
@@ -280,22 +280,34 @@
             </div>
           </div>
 
-          <article class="command-module archive-module">
+          <article class="command-module proof-wall-module">
             <div class="archive-section-head">
-              <div><span class="micro-label">SIGNAL LEDGER</span><strong>Değiştirilemez piyasa kararları</strong></div>
-              <span class="module-tag">immutable</span>
+              <div>
+                <span class="micro-label">IMMUTABLE DECISION ARCHIVE</span>
+                <strong>Issuance snapshot ↔ later outcome</strong>
+              </div>
+              <span id="proofOutcomeSchemaTag" class="module-tag">outcome kontrol ediliyor…</span>
             </div>
-            <div class="table-wrap">
-              <table>
-                <thead><tr><th>Kaydedildi</th><th>Piyasa</th><th>Durum</th><th>Yön</th><th>Metodoloji uyumu</th><th>Olasılık</th><th>Kurulum</th></tr></thead>
-                <tbody id="archiveBody"><tr><td colspan="7" class="empty-cell">Gerçek kayıtlar yükleniyor…</td></tr></tbody>
-              </table>
+
+            <div id="proofWallSummary" class="proof-wall-summary loading-block">Outcome dağılımı yükleniyor…</div>
+
+            <div id="proofWallFilters" class="proof-wall-filters" aria-label="Archive outcome filtreleri">
+              <button type="button" class="is-active" data-proof-filter="all">Tümü</button>
+              <button type="button" data-proof-filter="winner">Winners</button>
+              <button type="button" data-proof-filter="loser">Losers</button>
+              <button type="button" data-proof-filter="expired">Expired</button>
+              <button type="button" data-proof-filter="invalidated">Invalidated</button>
+              <button type="button" data-proof-filter="ambiguous">Ambiguous</button>
+              <button type="button" data-proof-filter="not_evaluable">Abstain / Not evaluable</button>
+              <button type="button" data-proof-filter="unresolved">Unresolved</button>
             </div>
+
+            <div id="archiveProofWall" class="proof-wall-grid loading-block">Değiştirilemez karar kanıtları yükleniyor…</div>
           </article>
 
           <article class="command-module">
             <div class="archive-section-head">
-              <div><span class="micro-label">TRANSACTION TAPE</span><strong>Sanal işlem geçmişi</strong></div>
+              <div><span class="micro-label">TRANSACTION TAPE</span><strong>Sanal işlem geçmişi · karar arşivinden ayrı</strong></div>
               <span id="paperTradeArchiveTag" class="module-tag">yükleniyor…</span>
             </div>
             <div id="paperTradeArchive" class="loading-block">Sanal işlem geçmişi yükleniyor…</div>

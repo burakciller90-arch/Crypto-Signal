@@ -5,6 +5,8 @@ let selectedEvidenceClass = null;
 let performanceData = null;
 let educationData = null;
 let currentViewMode = "simple";
+let proofWallFilter = "all";
+let proofWallData = null;
 
 const AUTO_REFRESH_MS = 15_000;
 const STALE_AFTER_MS = 45_000;
@@ -96,6 +98,19 @@ const LABELS = {
   not_yet_evaluable: "Henüz değerlendirilemez",
   success: "Başarı",
   failure: "Başarısızlık",
+  success_tp1: "TP1 Başarı",
+  success_tp2: "TP2 Başarı",
+  success_tp3: "TP3 Başarı",
+  fail_sl: "Stop / Kayıp",
+  ambiguous: "Belirsiz",
+  timeout: "Süre Doldu",
+  cancelled: "İptal",
+  not_evaluable: "Değerlendirilemez",
+  pending: "Bekliyor",
+  resolved: "Çözüldü",
+  complete: "Tam kapsama",
+  incomplete_gaps: "Eksik veri aralıkları",
+  no_new_evidence: "Yeni kanıt yok",
 };
 
 function fmtTime(ms) {
@@ -1222,24 +1237,153 @@ function renderAlertCenter(data) {
   `).join("");
 }
 
-function renderArchive(data) {
-  $("#archiveCount").textContent = `${data.total_count ?? 0} kayıt`;
-  const body = $("#archiveBody");
-  if (!data.signals?.length) {
-    body.innerHTML = '<tr><td colspan="7" class="empty-cell">Henüz değiştirilemez sinyal kaydı yok.</td></tr>';
+function proofOutcomeCategory(item) {
+  const outcome = item?.latest_outcome ?? null;
+  if (!outcome || outcome.resolution_status === "pending") return "unresolved";
+  if (["success_tp1", "success_tp2", "success_tp3"].includes(outcome.outcome_state)) return "winner";
+  if (outcome.outcome_state === "fail_sl") return "loser";
+  if (outcome.outcome_state === "timeout") return "expired";
+  if (outcome.outcome_state === "invalidated") return "invalidated";
+  if (outcome.outcome_state === "ambiguous") return "ambiguous";
+  if (outcome.outcome_state === "not_evaluable") return "not_evaluable";
+  if (outcome.outcome_state === "cancelled") return "cancelled";
+  return "unresolved";
+}
+
+function proofCategoryLabel(category) {
+  return {
+    winner: "WINNER",
+    loser: "LOSER",
+    expired: "EXPIRED",
+    invalidated: "INVALIDATED",
+    ambiguous: "AMBIGUOUS",
+    not_evaluable: "ABSTAIN / NOT EVALUABLE",
+    cancelled: "CANCELLED",
+    unresolved: "UNRESOLVED",
+  }[category] ?? "UNRESOLVED";
+}
+
+function renderProofWall(data) {
+  proofWallData = data;
+  const root = $("#archiveProofWall");
+  const summary = $("#proofWallSummary");
+  const schemaTag = $("#proofOutcomeSchemaTag");
+  const items = data?.items ?? [];
+
+  $("#archiveCount").textContent = `${data?.total_count ?? 0} immutable karar`;
+  schemaTag.textContent = data?.outcome_schema_available
+    ? "OUTCOME LEDGER BAĞLI"
+    : "OUTCOME ŞEMASI YOK";
+
+  if (data?.status !== "ready" || !items.length) {
+    summary.classList.remove("loading-block");
+    summary.innerHTML = '<div class="performance-empty">Proof Wall için immutable signal freeze bulunmuyor. Boş arşiv başarı veya başarısızlık değildir.</div>';
+    root.classList.remove("loading-block");
+    root.innerHTML = "";
     return;
   }
-  body.innerHTML = data.signals.map((card) => `
-    <tr data-signal-id="${esc(card.signal_freeze_identity)}">
-      <td>${esc(fmtTime(card.frozen_at_ms))}</td>
-      <td><strong>${esc(card.exchange.toUpperCase())}</strong> · ${esc(card.symbol)} · ${esc(card.timeframe)}</td>
-      <td><span class="state-pill ${stateClass(card.state)}">${esc(human(card.state))}</span></td>
-      <td class="${directionClass(card.direction)}">${esc(human(card.direction))}</td>
-      <td>${esc(card.confluence_score)}<div class="row-sub">uyum endeksi</div></td>
-      <td>${esc(human(card.probability_status))}</td>
-      <td>${esc(human(card.setup_type))}</td>
-    </tr>
+
+  const counts = items.reduce((acc, item) => {
+    const category = proofOutcomeCategory(item);
+    acc[category] = (acc[category] ?? 0) + 1;
+    return acc;
+  }, {});
+
+  summary.classList.remove("loading-block");
+  summary.innerHTML = [
+    ["winner", "Winners"],
+    ["loser", "Losers"],
+    ["expired", "Expired"],
+    ["invalidated", "Invalidated"],
+    ["ambiguous", "Ambiguous"],
+    ["not_evaluable", "Abstain / N.E."],
+    ["unresolved", "Unresolved"],
+  ].map(([key, label]) => `
+    <div class="proof-summary-cell">
+      <span>${esc(label)}</span>
+      <strong>${esc(counts[key] ?? 0)}</strong>
+    </div>
   `).join("");
+
+  document.querySelectorAll("#proofWallFilters [data-proof-filter]").forEach((button) => {
+    button.classList.toggle("is-active", button.dataset.proofFilter === proofWallFilter);
+    button.onclick = () => {
+      proofWallFilter = button.dataset.proofFilter;
+      renderProofWall(proofWallData);
+      bindSignalClicks();
+    };
+  });
+
+  const visible = proofWallFilter === "all"
+    ? items
+    : items.filter((item) => proofOutcomeCategory(item) === proofWallFilter);
+
+  root.classList.remove("loading-block");
+  if (!visible.length) {
+    root.innerHTML = '<div class="performance-empty">Bu filtre için kayıt yok. Yokluk başka bir outcome kategorisi gibi yorumlanmaz.</div>';
+    return;
+  }
+
+  root.innerHTML = visible.map((item) => {
+    const card = item.signal;
+    const outcome = item.latest_outcome;
+    const category = proofOutcomeCategory(item);
+    return `
+      <article class="proof-wall-card proof-${esc(category)}">
+        <div class="proof-wall-card-head">
+          <div>
+            <span class="micro-label">ISSUANCE SNAPSHOT</span>
+            <strong>${esc(card.exchange.toUpperCase())} · ${esc(card.symbol)} · ${esc(card.timeframe)}</strong>
+          </div>
+          <span class="proof-outcome-badge proof-${esc(category)}">${esc(proofCategoryLabel(category))}</span>
+        </div>
+
+        <div class="proof-wall-split">
+          <section class="proof-issuance-panel">
+            <span class="proof-panel-label">THEN · DONDURULMUŞ KARAR</span>
+            <div class="proof-main-state">
+              <span class="state-pill ${stateClass(card.state)}">${esc(human(card.state))}</span>
+              <strong class="${directionClass(card.direction)}">${esc(human(card.direction))}</strong>
+            </div>
+            <div class="proof-facts">
+              <div><span>Issued</span><strong>${esc(fmtTime(card.frozen_at_ms))}</strong></div>
+              <div><span>Setup</span><strong>${esc(human(card.setup_type))}</strong></div>
+              <div><span>Confluence</span><strong>${esc(card.confluence_score)} · probability değil</strong></div>
+              <div><span>Probability</span><strong>${esc(human(card.probability_status))}</strong></div>
+            </div>
+          </section>
+
+          <section class="proof-outcome-panel">
+            <span class="proof-panel-label">LATER · OUTCOME SNAPSHOT</span>
+            ${outcome ? `
+              <div class="proof-main-state">
+                <span class="state-pill">${esc(human(outcome.resolution_status))}</span>
+                <strong>${esc(human(outcome.outcome_state ?? "unresolved"))}</strong>
+              </div>
+              <div class="proof-facts">
+                <div><span>Evaluated</span><strong>${esc(fmtTime(outcome.evaluated_as_of_ms))}</strong></div>
+                <div><span>Evidence class</span><strong>${esc(human(outcome.evidence_class))}</strong></div>
+                <div><span>Horizon</span><strong>${esc(outcome.max_holding_bars)} bar</strong></div>
+                <div><span>Coverage</span><strong>${esc(human(outcome.coverage_status))}</strong></div>
+              </div>
+              ${outcome.not_evaluable_reason ? `<div class="truth-note">Neden değerlendirilemedi: ${esc(human(outcome.not_evaluable_reason))}</div>` : ""}
+              ${outcome.ambiguity_reason ? `<div class="truth-note">Belirsizlik nedeni: ${esc(human(outcome.ambiguity_reason))}</div>` : ""}
+            ` : `
+              <div class="proof-no-outcome">
+                <strong>Outcome snapshot yok.</strong>
+                <span>${data.outcome_schema_available ? "Bu kayıt henüz outcome ile eşleşmemiş." : "Outcome şeması bu ledger’da mevcut değil."}</span>
+              </div>
+            `}
+          </section>
+        </div>
+
+        <div class="proof-wall-footer">
+          <span class="mono">freeze ${esc(card.signal_freeze_identity.slice(0, 12))}…</span>
+          ${outcome ? `<span class="mono">outcome ${esc(outcome.outcome_identity.slice(0, 12))}…</span>` : "<span>Outcome kimliği yok</span>"}
+          <button type="button" class="market-proof-open" data-signal-id="${esc(card.signal_freeze_identity)}">EVIDENCE ROOM AÇ</button>
+        </div>
+      </article>`;
+  }).join("");
 }
 
 function renderPaperTradeArchive(data) {
@@ -2006,6 +2150,8 @@ async function openSignal(signalId) {
 
 function bindSignalClicks() {
   document.querySelectorAll("[data-signal-id]").forEach((node) => {
+    if (node.dataset.signalBound === "1") return;
+    node.dataset.signalBound = "1";
     node.addEventListener("click", () => openSignal(node.dataset.signalId).catch(showError));
   });
 }
@@ -2287,12 +2433,12 @@ function renderEducation(data) {
 
 async function loadAll() {
   clearNotice();
-  const [health, command, radar, navigation, archive, performance, alerts, education, capitalProgram, paperMission, intelligence] = await Promise.all([
+  const [health, command, radar, navigation, proofWall, performance, alerts, education, capitalProgram, paperMission, intelligence] = await Promise.all([
     fetchJSON("/api/health"),
     fetchJSON("/api/command-center?recent_limit=8"),
     fetchJSON("/api/market-radar"),
     fetchJSON("/api/navigation"),
-    fetchJSON("/api/signals?limit=50&offset=0"),
+    fetchJSON("/api/archive/proof-wall?limit=100&offset=0"),
     fetchJSON("/api/performance"),
     fetchJSON("/api/alerts?limit=50"),
     educationData ? Promise.resolve(educationData) : fetchJSON("/api/education"),
@@ -2327,7 +2473,7 @@ async function loadAll() {
   renderPaperTradeArchive(paperMission);
   renderSystemHealth(health, command, paperMission);
   renderRadar(radar);
-  renderArchive(archive);
+  renderProofWall(proofWall);
   renderPerformance(performance);
   renderAlertCenter(alerts);
   renderIntelligenceCenter(intelligence);

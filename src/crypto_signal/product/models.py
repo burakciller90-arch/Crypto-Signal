@@ -8,7 +8,12 @@ from crypto_signal.alerts.models import AlertSourceKind, DeliveryAttemptStatus
 from crypto_signal.confluence.models import ScoreSemantic
 from crypto_signal.data.models import Exchange, MarketType
 from crypto_signal.evaluation.models import SegmentMetrics
-from crypto_signal.outcomes.models import EvidenceClass
+from crypto_signal.outcomes.models import (
+    EvidenceClass,
+    OutcomeCoverageStatus,
+    OutcomeResolutionStatus,
+    OutcomeState,
+)
 from crypto_signal.signals.models import ProbabilityStatus, SignalDirection, SignalState
 
 
@@ -201,6 +206,53 @@ class SignalArchiveView:
     offset: int
     limit: int
     signals: tuple[FrozenSignalCard, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class ProofWallOutcomeView:
+    outcome_identity: str
+    evidence_class: EvidenceClass
+    evaluated_as_of_ms: int
+    resolution_status: OutcomeResolutionStatus
+    outcome_state: OutcomeState | None
+    coverage_status: OutcomeCoverageStatus
+    max_holding_bars: int
+    entry_observed: bool
+    highest_target_index: int
+    ambiguity_reason: str | None
+    not_evaluable_reason: str | None
+
+    def __post_init__(self) -> None:
+        if len(self.outcome_identity) != 64:
+            raise ValueError("proof-wall outcome identity must be SHA256")
+        if self.evaluated_as_of_ms < 0:
+            raise ValueError("proof-wall evaluation time must be non-negative")
+        if self.max_holding_bars <= 0:
+            raise ValueError("proof-wall holding horizon must be positive")
+        if not 0 <= self.highest_target_index <= 3:
+            raise ValueError("proof-wall target index must be between 0 and 3")
+
+
+@dataclass(frozen=True, slots=True)
+class ProofWallItem:
+    signal: FrozenSignalCard
+    latest_outcome: ProofWallOutcomeView | None
+
+
+@dataclass(frozen=True, slots=True)
+class ProofWallView:
+    status: ProductDataStatus
+    total_count: int
+    offset: int
+    limit: int
+    outcome_schema_available: bool
+    items: tuple[ProofWallItem, ...]
+
+    def __post_init__(self) -> None:
+        if self.total_count < 0 or self.offset < 0 or self.limit <= 0:
+            raise ValueError("proof-wall paging fields are invalid")
+        if len(self.items) > self.limit:
+            raise ValueError("proof-wall page exceeds requested limit")
 
 
 @dataclass(frozen=True, slots=True)
