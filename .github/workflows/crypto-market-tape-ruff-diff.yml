@@ -1,0 +1,29 @@
+name: Crypto Market Tape Ruff Diff
+
+on:
+  push:
+    branches:
+      - v1.1-market-tape-stream-v1
+    paths:
+      - ".github/workflows/crypto-market-tape-ruff-diff.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  diff:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install "ruff>=0.13"
+      - name: Show exact Ruff fix diff
+        shell: bash
+        run: |
+          set +e
+          python -m ruff check --fix src/crypto_signal/data/adapters/bybit_microstructure_ws.py tests/test_bybit_microstructure_ws.py
+          git diff -- src/crypto_signal/data/adapters/bybit_microstructure_ws.py tests/test_bybit_microstructure_ws.py
+          exit 0
