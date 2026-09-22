@@ -147,6 +147,8 @@ let freshnessTimer = null;
 let refreshInFlight = false;
 let lastSuccessfulRefreshAt = null;
 let consecutiveRefreshFailures = 0;
+let latestEvidenceAt = null;
+let latestEvidenceFreshness = "pending";
 
 function esc(value) {
   return String(value ?? "")
@@ -387,25 +389,27 @@ function setLiveStatus(state) {
 function updateFreshnessStatus() {
   const chip = $("#lastRefreshChip");
   if (!chip) return;
-  if (lastSuccessfulRefreshAt === null) {
-    chip.textContent = "Son yenileme · bekleniyor";
+
+  if (latestEvidenceAt !== null) {
+    const evidenceAgeMs = Math.max(0, Date.now() - Number(latestEvidenceAt));
+    chip.textContent = `Son kanıt · ${fmtAgeMs(evidenceAgeMs)} önce`;
+  } else if (lastSuccessfulRefreshAt === null) {
+    chip.textContent = "Son kanıt · bekleniyor";
   } else {
-    const ageMs = Math.max(0, Date.now() - lastSuccessfulRefreshAt);
-    const ageSeconds = Math.floor(ageMs / 1000);
-    chip.textContent = ageSeconds < 5
-      ? "Son yenileme · şimdi"
-      : `Son yenileme · ${ageSeconds} sn önce`;
+    chip.textContent = "Son kanıt · veri yok";
   }
 
-  const freshness = CryptoSignalFreshness.classifyRefreshFreshness({
+  const transportFreshness = CryptoSignalFreshness.classifyRefreshFreshness({
     online: navigator.onLine,
     lastSuccessfulRefreshAt,
     nowMs: Date.now(),
     staleAfterMs: STALE_AFTER_MS,
   });
-  if (freshness === "offline") {
+  if (transportFreshness === "offline") {
     setLiveStatus("offline");
-  } else if (freshness === "stale") {
+  } else if (latestEvidenceFreshness === "stale") {
+    setLiveStatus("stale");
+  } else if (transportFreshness === "stale") {
     setLiveStatus("stale");
   }
 }
@@ -423,7 +427,7 @@ async function refreshAll() {
     await loadAll();
     lastSuccessfulRefreshAt = Date.now();
     consecutiveRefreshFailures = 0;
-    setLiveStatus("live");
+    setLiveStatus(latestEvidenceFreshness === "stale" ? "stale" : "live");
     updateFreshnessStatus();
   } catch (error) {
     consecutiveRefreshFailures += 1;
@@ -2172,7 +2176,19 @@ async function loadAll() {
     })),
   ]);
 
+  latestEvidenceAt = health.latest_signal_frozen_at_ms ?? null;
+  latestEvidenceFreshness = health.data_freshness_status ?? "unknown";
   $("#healthChip").textContent = health.ledger_present ? "Kanıt deposu bağlı" : "Kanıt deposu yok";
+
+  if (health.data_freshness_status === "stale") {
+    const frozenAt = health.latest_signal_frozen_at_ms === null
+      ? "bilinmeyen zaman"
+      : fmtTime(health.latest_signal_frozen_at_ms);
+    showNotice(`Canlı ürün erişilebilir, ancak piyasa kanıtı güncel değil. Son kanıt: ${frozenAt} · yaş: ${fmtAgeMs(health.signal_data_age_ms)}. Runtime recovery kontrol edilmeli.`);
+  } else if (health.data_freshness_status === "invalid") {
+    showNotice("Piyasa kanıtı okunamadı. HTTP erişilebilirliği canlı veri kanıtı olarak kabul edilmiyor.");
+  }
+
   renderCommandCenter(command);
   renderPaperMissionControl(paperMission);
   renderPaperTradeArchive(paperMission);
