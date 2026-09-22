@@ -17,7 +17,9 @@ Current development map:
 - PR #723 — untouched-forward calibrated probability foundation. Hosted gate passed. Draft.
 - PR #726 — append-only Market Tape foundation. Hosted full gate run `35718669274` passed. Draft.
 - PR #740 — order-flow / absorption evidence foundation remains open.
-- PR #741 — raw microstructure wire-history preservation remains open; this is the accepted data base for the next M2 Liquidity Dynamics slice.
+- PR #741 — raw microstructure wire-history preservation remains open and is the accepted data base for M2.
+- PR #762 — M2 Liquidity Dynamics Slice 1. Draft. PIT-safe temporal visible-book dynamics, deterministic evidence/freeze identities and bounded liquidity-take-candidate semantics are hosted/live/persisted-replay accepted.
+- PR #763 — Market Tape Hot/Cold runtime. Draft. Hot SQLite + immutable verified Parquet/Zstd cold archive is operationally live on UID504 under the existing R11 Terminal/TCC recovery owner.
 - Experimental branch `v1.1-paper-active-learning-v1` is unaccepted and must not mutate canonical paper semantics; useful ideas belong in Shadow Lab.
 
 Runtime evidence:
@@ -30,7 +32,11 @@ Runtime evidence:
 - R15 is the single recovery owner; legacy runner watchdog/service owners remain disabled while their plist files are retained for rollback.
 - UID501 -> UID504 passwordless project-maintenance bridge is active and independently verified after clearing the sudo timestamp. UID501 can execute as `crypto-signal-agent` without a password; passwordless root remains denied.
 - Continuity is currently **PAUSED** by user contract. No continuity resume was performed during R15 recovery.
-- Canonical development frontier after R15 reconciliation is **M2 Liquidity Dynamics** on top of the accepted raw Market Tape / microstructure foundation. Completed/stale R15 diagnostics must not be replayed.
+- M2 Liquidity Dynamics Slice 1 is accepted in draft PR #762. The Market Tape storage prerequisite is also operationally live through draft PR #763: 24h hot SQLite + 2h grace, hourly verified Parquet/Zstd cold archive, 25 GiB hot cap, 600 GiB cold cap and 250 GiB free-space reserve.
+- Real canonical benchmark measured 7.84x combined SQLite -> Parquet/Zstd compression on the current sample; theoretical 10x-20x ratios are not treated as project facts.
+- Market Tape runtime ownership is single-owner: existing R11 Terminal/TCC-authorized `ssd-service-supervisor.sh` -> Market Tape supervisor -> Hot/Cold runtime. The standalone removable-volume LaunchAgent path is intentionally disabled/fail-closed because macOS TCC blocked it.
+- Final live heartbeat acceptance run `35762628805` PASS and final read-only acceptance `35762906784` PASS: one SSD supervisor, one Market Tape supervisor, one runtime, fresh 30s heartbeats, advancing raw rows, SQLite quick checks, dashboard health `status=ok`, `read_only=true`, REAL_CAPITAL=0.
+- Continuity remains **PAUSED** by user contract. Completed/stale R15 and Market Tape diagnostics must not be replayed.
 
 Product architecture:
 - Track A: world-class UI/UX.
