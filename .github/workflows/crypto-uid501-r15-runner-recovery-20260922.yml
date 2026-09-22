@@ -32,7 +32,7 @@ jobs:
           ROOT="/Volumes/Crypto-504/Crypto-Signal"
           RUNNER="$ROOT/Runner"
           LOG="$ROOT/RunnerLogs/r15-manual-recovery.log"
-          CPU_MIN=90
+          EXPECTED_PID=99399
 
           test "$(id -u)" = "504"
           test -d "$ROOT"
@@ -74,6 +74,11 @@ jobs:
           fi
 
           old_pid="$(printf '%s\n' "$listeners" | /usr/bin/head -1)"
+          if [ "$old_pid" != "$EXPECTED_PID" ]; then
+            note "ABORT unexpected_listener_pid expected=$EXPECTED_PID actual=$old_pid"
+            exit 39
+          fi
+
           for sample in 1 2 3; do
             cmd="$(/bin/ps -p "$old_pid" -o command= 2>/dev/null || true)"
             printf '%s' "$cmd" | /usr/bin/grep -F "$RUNNER/bin/Runner.Listener run --startuptype service" >/dev/null
@@ -85,8 +90,9 @@ jobs:
             cpu_raw="$(/bin/ps -p "$old_pid" -o %cpu= 2>/dev/null | /usr/bin/tr -d ' ' || true)"
             cpu_int="$(/usr/bin/awk -v value="${cpu_raw:-0}" 'BEGIN {printf "%d\n", value + 0}')"
             note "CPU_SAMPLE sample=$sample pid=$old_pid cpu=$cpu_int"
-            if [ "$cpu_int" -lt "$CPU_MIN" ]; then
-              note "ABORT cpu_below_threshold pid=$old_pid cpu=$cpu_int"
+            current_pid="$(listener_pids | /usr/bin/head -1)"
+            if [ "$current_pid" != "$EXPECTED_PID" ]; then
+              note "ABORT listener_pid_changed expected=$EXPECTED_PID actual=$current_pid"
               exit 34
             fi
             /bin/sleep 3
@@ -189,7 +195,7 @@ jobs:
           trap 'rc=$?; printf "rc=%s\\n" "$rc" >"$FAIL"; echo; echo "Recovery durdu. Bu pencereyi acik birakabilirsin."; exit "$rc"' ERR
 
           echo "Crypto Signal UID504 runner recovery"
-          echo "Sadece exact stuck SSD runner kimligi dogrulanirsa islem yapilir."
+          echo "Sadece exact stuck SSD runner PID 99399 ve Worker yoklugu dogrulanirsa islem yapilir."
           echo "macOS yonetici parolani girmen istenecek."
           echo
 
