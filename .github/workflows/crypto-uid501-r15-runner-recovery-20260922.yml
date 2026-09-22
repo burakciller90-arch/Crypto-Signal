@@ -173,7 +173,7 @@ jobs:
           chmod 700 "$SCRIPT"
           echo "REQUESTING_MACOS_ADMIN_AUTH=YES"
           CMD='do shell script "/usr/bin/sudo -u crypto-signal-agent /bin/bash /tmp/crypto-r15-runner-recover.sh > /tmp/crypto-r15-runner-recover.result 2>&1" with administrator privileges'
-          /bin/launchctl asuser 501 /usr/bin/osascript -e "$CMD"
+          /usr/bin/osascript -e "$CMD"
 
           cat "$RESULT"
           grep -F "R15_RUNNER_RECOVERY_PASS=YES" "$RESULT"
