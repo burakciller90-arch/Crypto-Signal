@@ -88,3 +88,16 @@ def test_r15_listener_detection_is_exact_and_self_match_safe() -> None:
     assert 'expected="$RUNNER/bin/Runner.Listener run --startuptype service"' in block
     assert "if ($0 == expected)" in block
     assert "index($0, needle)" not in block
+
+def test_r15_recovery_retires_legacy_runner_owners_before_bootstrap() -> None:
+    text = SCRIPT.read_text(encoding="utf-8")
+    assert "com.cryptosignal.github-runner-terminal-watchdog" in text
+    assert "com.cryptosignal.github-runner-ssd" in text
+    assert "actions.runner.burakciller90-arch-Crypto-Signal.crypto-signal-uid504" in text
+    assert 'launchctl disable "$legacy_target"' in text
+    assert 'launchctl bootout "$legacy_target"' in text
+    assert 'R15_SSD_HOTPLUG_RECOVERY_SINGLE_OWNER=YES' in text
+    legacy = text.index('for legacy_label in "${LEGACY_RUNNER_LABELS[@]}"')
+    bootstrap = text.index('/bin/launchctl bootstrap "gui/$(id -u)" "$PLIST"')
+    assert legacy < bootstrap
+
