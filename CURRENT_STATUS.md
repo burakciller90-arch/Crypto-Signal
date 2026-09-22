@@ -279,18 +279,32 @@ UID501 -> UID504 narrow-bridge read-only acceptance run `35771736782` passed the
 This is not a blocker for safe parallel development. Re-check the first real partition after data age crosses the 26h retention+grace boundary; do not force archive/prune.
 
 
-## Locked 20-minute continuity — ACTIVE
+## Locked rolling 20-minute continuity — ACTIVE / CURRENT AUTHORITY
 
-- Exact ChatGPT URL: `https://chatgpt.com/c/6ab2c3c1-30c8-83ed-b1ad-2aa35cc891c9`.
-- Schedule: minute 00/20/40 via the existing GitHub self-hosted fallback because UID504 LaunchAgent bootstrap remains unavailable with rc=5.
-- Approved wake text explicitly requires READ_FIRST, CURRENT_STATUS, Chronicle and `docs/V1_1_LOCKED_MASTER_ROADMAP_20260922.md` plus current Git/worker/wake/lease reconciliation.
-- Local/shared pause latches: NO at 2026-09-22 reconciliation.
-- Active exact leases: 0; local wake queue: 0; shared relay queue: 0.
-- Relay heartbeat was fresh and exact target binding matched all current state.
-- Busy-stop live test: exact wake interrupted the active ChatGPT response and arrived in this chat; relay log recorded `OBSERVED_AFTER_CLICK`.
-- Post-hash-fix final test: run `35770956851` PASS with `RELAY_RECEIPTED`, `RELAY_SUBMIT_RC=0`, `CRYPTO_LOCKED_20M_WAKE_PASS=YES`.
-- Periodic wake is a state-first continuation pointer, not production authority. REAL_CAPITAL=0.
-- The user reaffirmed that the 20-minute loop must stay ACTIVE unless they explicitly request a pause/stop. Every material action/update must be recorded in GitHub for the next agent.
+- This section supersedes the former `:00/:20/:40` GitHub-primary description.
+- Exact ChatGPT URL: `https://chatgpt.com/c/6ab2c3c1-30c8-83eb-b1ad-2aa35cc891c9`.
+- Primary cadence owner: UID504 local rolling daemon, exactly **1200 seconds after the last OBSERVED wake receipt**.
+- Exact locked wake delivery is final only when the exact user message is observed in the conversation. Timeout/editor-clear alone cannot advance the counter.
+- Busy ChatGPT: Stop -> editor ready -> exact wake -> observed receipt. Idle ChatGPT: direct exact wake -> observed receipt.
+- GitHub 5-minute schedule is watchdog/self-heal only; healthy timer = NOOP/no chat wake.
+- Strict-delivery hardening: `26ea9a9579987eb48eb02cf596cdfe1946ee7010`.
+- Runtime parity run `35783887055` PASS.
+- Read-only observability PR #800 merged as `e56426165c0f5604d6b4d0ed17f9d63d7f69435b`; no installer/reset followed that workflow-only merge.
+- Final read-only `rollingstate` run `35784266069` PASS:
+  - PID `45986` alive;
+  - state `RUNNING`;
+  - interval `1200`;
+  - heartbeat age = 2 seconds;
+  - generation `4bc50caa43074cf2`, sequence 1;
+  - pending event empty;
+  - last receipt `1790110683`;
+  - next due `1790111883`;
+  - exact delta = **1200 seconds**;
+  - failure_count = 0;
+  - local/shared pause = NO;
+  - relay RUNNING and bound to exact current chat.
+- User pause/stop is the only authority to intentionally suspend this loop.
+- REAL_CAPITAL=0.
 
 
 **LOCKED roadmap contract:** `docs/V1_1_LOCKED_MASTER_ROADMAP_20260922.md`.
