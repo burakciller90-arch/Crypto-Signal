@@ -1,0 +1,29 @@
+name: Crypto R15 Orphan Runner Parent Diagnostic
+
+on:
+  push:
+    branches:
+      - r15-ssd-hotplug-recovery-v1
+    paths:
+      - ".github/workflows/crypto-r15-orphan-parent-diagnostic.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    name: Diagnose UID504 orphan runner parents
+    runs-on: [self-hosted, crypto-signal, uid501]
+    timeout-minutes: 10
+    steps:
+      - name: Inspect UID504 runner ancestry read-only
+        shell: bash
+        run: |
+          set +e
+          echo "=== ALL UID504 RUNNER-LIKE PROCESSES ==="
+          ps -axo pid=,ppid=,user=,%cpu=,%mem=,etime=,state=,command=             | awk '$3=="crypto-signal-agent" && ($0 ~ /RunnerService\.js/ || $0 ~ /Runner\.Listener/ || $0 ~ /Runner\.Worker/ || $0 ~ /\.\/runsvc\.sh/ || $0 ~ /Crypto-504\/Crypto-Signal\/Runner/) {print}'
+
+          echo "=== ALL RELATIVE RUNSVC ==="
+          ps -axo pid=,ppid=,user=,%cpu=,%mem=,etime=,state=,command=             | grep -E '[.]\/runsvc\.sh|RunnerService\.js|Runner\.Listener|Runner\.Worker'             | head -200
+
+          echo "R15_ORPHAN_PARENT_DIAG_DONE=YES"
