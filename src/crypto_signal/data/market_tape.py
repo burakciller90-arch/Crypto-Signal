@@ -19,7 +19,7 @@ from crypto_signal.data.microstructure import (
     PublicTradeObservation,
 )
 from crypto_signal.data.models import DataSource, Exchange, MarketType
-from crypto_signal.ledger.serialization import canonical_json
+from crypto_signal.ledger.serialization import canonical_json, canonical_sha256
 
 
 class MarketTapeConflictError(ValueError):
@@ -145,6 +145,7 @@ class MarketTapeStore:
                 """
                 CREATE TABLE IF NOT EXISTS market_tape_derivatives (
                     observation_identity TEXT PRIMARY KEY,
+                    semantic_identity TEXT NOT NULL UNIQUE,
                     exchange TEXT NOT NULL,
                     instrument_type TEXT NOT NULL,
                     symbol TEXT NOT NULL,
@@ -170,6 +171,23 @@ class MarketTapeStore:
         self,
         snapshot: OrderBookSnapshot,
     ) -> MarketTapeWriteDisposition:
+        duplicate = self._find_by_fields(
+            table="market_tape_orderbooks",
+            fields={
+                "exchange": snapshot.exchange.value,
+                "market_type": snapshot.market_type.value,
+                "symbol": snapshot.symbol,
+                "update_id": snapshot.update_id,
+                "sequence": snapshot.sequence,
+            },
+        )
+        if duplicate is not None:
+            existing = _orderbook_from_payload(str(duplicate["payload_json"]))
+            if _orderbook_market_truth(existing) != _orderbook_market_truth(snapshot):
+                raise MarketTapeConflictError(
+                    "orderbook exchange update identity conflicts with market truth"
+                )
+            return MarketTapeWriteDisposition.UNCHANGED
         return self._append(
             table="market_tape_orderbooks",
             identity_column="snapshot_identity",
@@ -209,6 +227,22 @@ class MarketTapeStore:
         self,
         trade: PublicTradeObservation,
     ) -> MarketTapeWriteDisposition:
+        duplicate = self._find_by_fields(
+            table="market_tape_trades",
+            fields={
+                "exchange": trade.exchange.value,
+                "market_type": trade.market_type.value,
+                "symbol": trade.symbol,
+                "exec_id": trade.exec_id,
+            },
+        )
+        if duplicate is not None:
+            existing = _trade_from_payload(str(duplicate["payload_json"]))
+            if _trade_market_truth(existing) != _trade_market_truth(trade):
+                raise MarketTapeConflictError(
+                    "public trade exec identity conflicts with market truth"
+                )
+            return MarketTapeWriteDisposition.UNCHANGED
         return self._append(
             table="market_tape_trades",
             identity_column="trade_identity",
@@ -250,6 +284,13 @@ class MarketTapeStore:
         self,
         observation: DerivativesObservation,
     ) -> MarketTapeWriteDisposition:
+        semantic_identity = _derivatives_semantic_identity(observation)
+        duplicate = self._find_by_fields(
+            table="market_tape_derivatives",
+            fields={"semantic_identity": semantic_identity},
+        )
+        if duplicate is not None:
+            return MarketTapeWriteDisposition.UNCHANGED
         return self._append(
             table="market_tape_derivatives",
             identity_column="observation_identity",
@@ -257,6 +298,7 @@ class MarketTapeStore:
             payload_json=canonical_json(observation),
             columns=(
                 "observation_identity",
+                "semantic_identity",
                 "exchange",
                 "instrument_type",
                 "symbol",
@@ -269,6 +311,7 @@ class MarketTapeStore:
             ),
             values=(
                 observation.observation_identity,
+                semantic_identity,
                 observation.exchange.value,
                 observation.instrument_type.value,
                 observation.symbol,
@@ -416,6 +459,27 @@ class MarketTapeStore:
             )
             return MarketTapeWriteDisposition.INSERTED
 
+    def _find_by_fields(
+        self,
+        *,
+        table: str,
+        fields: dict[str, object],
+    ) -> sqlite3.Row | None:
+        if not fields:
+            raise ValueError("market tape lookup fields cannot be empty")
+        self.initialize()
+        clauses = [f"{field} = ?" for field in fields]
+        with self._connect() as connection:
+            return connection.execute(
+                f"""
+                SELECT *
+                FROM {table}
+                WHERE {" AND ".join(clauses)}
+                LIMIT 1
+                """,
+                tuple(fields.values()),
+            ).fetchone()
+
     def _recent_rows(
         self,
         *,
@@ -462,6 +526,53 @@ class MarketTapeStore:
             f"SELECT COUNT(*) AS count FROM {table}"
         ).fetchone()
         return 0 if row is None else int(row["count"])
+
+
+def _orderbook_market_truth(snapshot: OrderBookSnapshot) -> dict[str, object]:
+    return {
+        "exchange": snapshot.exchange,
+        "market_type": snapshot.market_type,
+        "symbol": snapshot.symbol,
+        "event_at_ms": snapshot.event_at_ms,
+        "update_id": snapshot.update_id,
+        "sequence": snapshot.sequence,
+        "bids": snapshot.bids,
+        "asks": snapshot.asks,
+    }
+
+
+def _trade_market_truth(trade: PublicTradeObservation) -> dict[str, object]:
+    return {
+        "exchange": trade.exchange,
+        "market_type": trade.market_type,
+        "symbol": trade.symbol,
+        "exec_id": trade.exec_id,
+        "sequence": trade.sequence,
+        "aggressor_side": trade.aggressor_side,
+        "price": trade.price,
+        "size": trade.size,
+        "event_at_ms": trade.event_at_ms,
+        "is_block_trade": trade.is_block_trade,
+        "is_rpi_trade": trade.is_rpi_trade,
+    }
+
+
+def _derivatives_semantic_identity(
+    observation: DerivativesObservation,
+) -> str:
+    return canonical_sha256(
+        {
+            "exchange": observation.exchange,
+            "instrument_type": observation.instrument_type,
+            "symbol": observation.symbol,
+            "event_at_ms": observation.event_at_ms,
+            "funding_rate": observation.funding_rate,
+            "open_interest": observation.open_interest,
+            "mark_price": observation.mark_price,
+            "index_price": observation.index_price,
+            "funding_interval_hours": observation.funding_interval_hours,
+        }
+    )
 
 
 def _orderbook_from_payload(payload_json: str) -> OrderBookSnapshot:
