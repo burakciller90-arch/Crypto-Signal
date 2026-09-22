@@ -3319,3 +3319,70 @@ is the user-authorized state.
 `cursorcheck` run `35777888493` confirms Cursor CLI installation/authentication but does
 not expose active worker count. No worker-activity claim is inferred from that limited
 probe. REAL_CAPITAL=0.
+
+
+---
+
+## 2026-09-22 — GALACTECH CAPITAL CENTER SLICE 1 ACCEPTED / MERGED
+
+The Product rail advanced from Command Center + Evidence Room to the locked Capital Center
+without pretending the new 1,000 USDT program is already the active runtime ledger.
+
+Accepted truth model:
+- Epoch 1 = immutable legacy 100 USDT history;
+- Epoch 2 = accepted current paper-program contract at 1,000 USDT;
+- Core / Tactical / Opportunity Reserve = 600 / 300 / 100 USDT;
+- actual configured paper runtime ledger = separate evidence surface.
+
+A new read-only `/api/paper/epoch-contract` surface exposes versioned epoch identity,
+capital boundaries and runtime ledger binding without creating an Epoch 2 ledger or
+claiming activation.
+
+Acceptance evidence:
+- PR #788;
+- hosted run `35778976263` PASS;
+- focused Product/Paper Epoch tests PASS;
+- full repository regression PASS;
+- Ruff/mypy/JS/freshness PASS;
+- squash merge `53acc7decda9f4b5bf7b6588a1687a7178e925d1`.
+
+No Epoch 2 ledger creation, cutover or production UI deployment occurred. REAL_CAPITAL=0.
+
+
+---
+
+## 2026-09-22 — M2 OBSERVED LIQUIDATION HEATMAP SLICE 4 ACCEPTED / STACKED
+
+M2 now includes a distinct observed-liquidation heatmap without converting historical
+liquidation events into unsupported future liquidation forecasts.
+
+Accepted evidence model:
+- immutable normalized liquidation observations;
+- explicit feed-coverage evidence;
+- frozen mark reference;
+- observed liquidation bins by bankruptcy-price distance from mark;
+- long/short event counts and observed bankruptcy notional;
+- bounded observed-cluster flag.
+
+Provider semantics:
+- Bybit all-liquidation `S=Buy` => liquidated LONG position;
+- `S=Sell` => liquidated SHORT position.
+
+Scientific boundary:
+- zero observed events is only measurable under complete feed coverage;
+- future/late evidence cannot rewrite the historical freeze;
+- incomplete coverage or stale mark fails closed;
+- estimated leverage concentration remains NOT_ESTIMATED;
+- future liquidation-risk zone remains NOT_ESTIMATED;
+- no exact retail-stop, cascade, institution or actor-intent claim is produced.
+
+Acceptance:
+- PR #789;
+- authoritative run `35779834837` PASS;
+- focused M2 tests/Ruff/mypy PASS;
+- full repository pytest/Ruff/mypy/JS/freshness PASS;
+- temporary hosted workflow removed after PASS.
+
+No live public-linear collector was activated and no production Market Tape mutation was
+performed. The next safe M2 frontier is feed collection + Market Tape v2 persistence/replay
+wiring, with production activation separately gated. REAL_CAPITAL=0.
