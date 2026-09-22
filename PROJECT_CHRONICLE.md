@@ -2737,3 +2737,25 @@ long-running near/at 100% CPU and new UID504 diagnostic work can remain queued.
 Dashboard/supervisor and market-data pipeline can remain healthy while the GitHub
 runner is unhealthy. Runner hang detection/recovery and physical SSD detach/remount
 acceptance therefore remain open.
+
+
+## 2026-09-22 — R15 runner-hang recovery owner and permission retry
+
+Hosted R15 hang-aware recovery hardening passed full gate in run
+`35722280704`. The live UID504 SSD listener was independently rechecked through
+UID501 at ~14:45 +0300: exact SSD listener PID 99399 remained the only UID504
+listener, ~94–96% CPU, >12h elapsed, with no UID504 SSD Runner.Worker present.
+
+A single-owner live recovery workflow
+`Crypto UID501 R15 Runner Recovery 20260922` was used. Its first admin-authorized
+attempt failed before touching the runner with rc=126 because the temporary recovery
+script was created mode 0700 by UID501 and then invoked as UID504. This was a transport
+permission error, not a runner mutation.
+
+The one-shot workflow was corrected to make that non-secret temporary script readable
+by UID504 and to capture stderr. Retry run `35723287820` became the sole active
+recovery owner. Do not create a duplicate recovery while it is in progress.
+
+The recovery contract remains fail-closed: exactly one SSD listener, zero SSD Workers,
+three >=90% CPU samples on the same PID, identity recheck before TERM/KILL, exactly one
+new listener afterward, then queue/health/freshness verification. REAL_CAPITAL=0.
