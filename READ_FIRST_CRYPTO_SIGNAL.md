@@ -24,7 +24,8 @@ If any local note conflicts with that handoff, the master handoff wins.
 ## Governing Full Version documents
 The user's 2026-09-20 Full Version direction supersedes the earlier deliberately-limited Birthday Edition scope where they conflict, while preserving every scientific and REAL_CAPITAL boundary.
 
-Before planning new product work, read:
+Before planning new product work, read **in this order**:
+- `docs/V1_1_LOCKED_MASTER_ROADMAP_20260922.md` — **LOCKED user-approved v1.1 governing product contract (2026-09-22)**. It supersedes older v1.1 scope where conflicting, including the new 1,000 USDT Paper Fund Epoch 2, three parallel execution rails, and the from-scratch GALACTECH frontend rebuild.
 - `docs/V1_1_MASTER_EXECUTION_ROADMAP.md` — **current governing post-v1.0 / v1.1+ execution roadmap**, including R15 runtime recovery, parallel UI + Market Tape tracks, Live Intelligence Feed / Decision Proof, Canonical Fund vs Shadow Lab, calibration, acceptance and v2 deferrals.
 - `docs/V1_1_WORLD_CLASS_PRODUCT_ROADMAP.md` — condensed v1.1 product roadmap.
 - `docs/CRYPTO_SIGNAL_FULL_VERSION_WORLD_CLASS_ROADMAP.md` — accepted Full Version/v1.0 architectural history and foundations.
@@ -89,7 +90,7 @@ governing execution plan on the v1.1 development line. A fresh agent must use it
 avoid three common regressions:
 
 - do not treat UI process health as proof that market data is fresh;
-- do not mix Shadow Lab exploration into the canonical 100 USDT paper track record;
+- do not mix Shadow Lab exploration into canonical paper history; Epoch 1 (100 USDT) is immutable legacy history and Epoch 2 begins separately at 1,000 USDT after its acceptance gate;
 - do not expose or fabricate private chain-of-thought under the “Proof-of-Thought”
   idea. Implement **Decision Proof**: immutable evidence, forecast, decision state,
   concise rationale, frozen snapshot and later outcome.
