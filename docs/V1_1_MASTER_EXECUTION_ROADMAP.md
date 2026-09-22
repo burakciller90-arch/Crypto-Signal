@@ -186,6 +186,45 @@ and safe recovery plus physical detach/remount acceptance. Do not restart or dup
 the runner blindly; identify the exact listener and use an identity-checked recovery
 path.
 
+### Runner-hang recovery runbook
+
+Never start a second UID504 runner merely because a GitHub job is queued.
+
+Preconditions:
+
+1. Match the exact SSD listener command:
+   `/Volumes/Crypto-504/Crypto-Signal/Runner/bin/Runner.Listener run --startuptype service`.
+2. Require **exactly one** matching listener.
+3. Require **zero** matching SSD `Runner.Worker` processes.
+4. Sample the **same PID** at least three times.
+5. Current bounded operational threshold: each sample remains at or above **90% CPU**.
+6. Abort immediately if a Worker appears, PID/command identity changes, CPU normalizes,
+   or multiple listeners are present.
+
+Recovery sequence:
+
+1. TERM only the exact verified listener PID.
+2. Wait a bounded interval.
+3. If the same exact listener remains and no Worker appeared, KILL only that PID.
+4. If no listener remains, terminate only stale SSD `runsvc.sh` parents.
+5. Start one SSD runner as `crypto-signal-agent`.
+6. Require exactly one new listener PID, different from the old PID.
+7. Fail closed on duplicate listeners.
+
+Post-recovery acceptance:
+
+- exactly one SSD listener;
+- queued UID504 jobs begin draining;
+- dashboard remains healthy/read-only with REAL_CAPITAL=0;
+- SQLite integrity checks pass;
+- live signal/freeze timestamps continue advancing;
+- no internal-Mac runtime fallback appears.
+
+For the current incident, exactly one recovery owner already exists:
+`Crypto UID501 R15 Runner Recovery 20260922` (run `35722829376`).
+It opens a local Terminal and requires explicit macOS administrator authorization.
+Do **not** launch another recovery while that workflow is active.
+
 UID501 filesystem access to the existing Crypto-504 tree is still useful for direct DB
 and log forensics, but it is no longer required to prove that the 04:00 market-data
 cut itself recovered because the live read-only API provided direct immutable-ledger
