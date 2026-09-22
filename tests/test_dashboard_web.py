@@ -203,6 +203,23 @@ def test_health_and_static_shell_without_ledger(tmp_path: Path) -> None:
     script = client.get("/static/app.js")
     assert "Piyasa İstihbarat Merkezi" in index.text
     assert "Metodoloji uyumu ≠ olasılık" in index.text
+    assert "GALACTECH // CRYPTO SIGNAL" in index.text
+    assert 'data-ui-version="galactech-command-center-v1"' in index.text
+    for section in (
+        "COMMAND",
+        "MARKETS",
+        "INTELLIGENCE",
+        "CAPITAL",
+        "ARCHIVE",
+        "PERFORMANCE",
+        "LEARN",
+        "SYSTEM",
+    ):
+        assert f">{section}<" in index.text
+    assert "EVIDENCE ROOM / FROZEN DECISION" in index.text
+    assert "REAL_CAPITAL=0" in index.text
+    assert "LIVE INTELLIGENCE FEED" in index.text
+    assert "CRITICAL RADAR" in index.text
     assert script.status_code == 200
     assert "function frozenChartData(detail)" in script.text
     assert "function renderDecisionExplanation(detail)" in script.text
