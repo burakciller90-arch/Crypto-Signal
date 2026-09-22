@@ -1,0 +1,32 @@
+name: Crypto R15 Terminal Runner Pattern Forensics
+
+on:
+  push:
+    branches: [r15-ssd-hotplug-recovery-v1]
+    paths: [".github/workflows/crypto-r15-terminal-runner-pattern-forensics.yml"]
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: [self-hosted, crypto-signal, uid501]
+    timeout-minutes: 10
+    steps:
+      - name: Read proven Terminal runner bootstrap pattern
+        shell: bash
+        run: |
+          set -euo pipefail
+          /usr/bin/sudo -n -H -u crypto-signal-agent /bin/bash <<'SH'
+          set +e
+          BASE="$HOME/Library/Application Support/CryptoSignalRunner"
+          echo "=== TERMINAL WATCHDOG ==="
+          sed -n '1,260p' "$BASE/runner-terminal-watchdog.sh" 2>&1
+          echo "=== START COMMAND ==="
+          sed -n '1,300p' "$BASE/start-ssd-runner.command" 2>&1
+          echo "=== OLD WATCHDOG ==="
+          sed -n '1,240p' "$BASE/watchdog.sh" 2>&1
+          echo "=== PLIST ==="
+          plutil -p "$HOME/Library/LaunchAgents/com.cryptosignal.github-runner-terminal-watchdog.plist" 2>&1
+          echo "R15_TERMINAL_RUNNER_PATTERN_FORENSICS_DONE=YES"
+          SH
