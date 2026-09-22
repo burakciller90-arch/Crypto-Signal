@@ -14,6 +14,10 @@ STATE_FILE="$LOCAL_ROOT/ssd-state"
 LABEL="com.cryptosignal.ssd-hotplug-recovery"
 PLIST="$HOME/Library/LaunchAgents/$LABEL.plist"
 TARGET="gui/$(id -u)/$LABEL"
+RUNNER_SERVICE_LABEL="com.cryptosignal.github-runner-r15-service"
+RUNNER_SERVICE_BOOTSTRAP="$LOCAL_ROOT/runner-service-bootstrap.sh"
+RUNNER_SERVICE_PLIST="$HOME/Library/LaunchAgents/$RUNNER_SERVICE_LABEL.plist"
+RUNNER_SERVICE_TARGET="gui/$(id -u)/$RUNNER_SERVICE_LABEL"
 LEGACY_RUNNER_LABELS=(
   "com.cryptosignal.github-runner-terminal-watchdog"
   "com.cryptosignal.github-runner-ssd"
@@ -44,6 +48,8 @@ RUNNER_HANG_STREAK_LIMIT=6
 LOCK_DIR="$LOCAL_ROOT/watchdog.lock"
 LOG="$LOCAL_LOG/hotplug-watchdog.log"
 ERR="$LOCAL_LOG/hotplug-watchdog.err.log"
+RUNNER_SERVICE_LABEL="com.cryptosignal.github-runner-r15-service"
+RUNNER_SERVICE_TARGET="gui/$(id -u)/$RUNNER_SERVICE_LABEL"
 
 mkdir -p "$LOCAL_ROOT" "$LOCAL_LOG"
 
@@ -534,17 +540,18 @@ start_runner() {
     stop_orphan_runner_parent_tree "$orphan_service" || return 1
   fi
 
-  mkdir -p "$ROOT/RunnerLogs"
-  (
-    cd "$RUNNER" || exit 75
-    unset RUNNER_TRACKING_ID
-    export HOME="/Users/crypto-signal-agent"
-    export ACTIONS_RUNNER_SVC=1
-    nohup ./runsvc.sh       >>"$ROOT/RunnerLogs/hotplug-runner.out.log"       2>>"$ROOT/RunnerLogs/hotplug-runner.err.log"       </dev/null &
-    echo $! >"$ROOT/ssd-runner-hotplug.pid"
-  )
+  if ! /bin/launchctl print "$RUNNER_SERVICE_TARGET" >/dev/null 2>&1; then
+    err "RUNNER_SERVICE_START_ABORT=LAUNCHAGENT_NOT_LOADED target=$RUNNER_SERVICE_TARGET"
+    return 1
+  fi
+
+  if ! /bin/launchctl kickstart -k "$RUNNER_SERVICE_TARGET" >/dev/null 2>>"$ERR"; then
+    err "RUNNER_SERVICE_KICKSTART_PASS=NO target=$RUNNER_SERVICE_TARGET"
+    return 1
+  fi
+
   reset_runner_hang_state
-  log "RUNNER_RESTART_REQUESTED=YES force=$force_restart"
+  log "RUNNER_SERVICE_KICKSTART_PASS=YES force=$force_restart target=$RUNNER_SERVICE_TARGET"
   return 0
 }
 
@@ -587,6 +594,54 @@ fi
 exit 0
 WATCH
 chmod 700 "$WATCHDOG"
+
+cat > "$RUNNER_SERVICE_BOOTSTRAP" <<'RUNNERSVC'
+#!/bin/bash
+set -euo pipefail
+
+ROOT="/Volumes/Crypto-504/Crypto-Signal"
+RUNNER="$ROOT/Runner"
+LOG="$ROOT/RunnerLogs"
+
+if ! /sbin/mount | /usr/bin/grep -F " on /Volumes/Crypto-504 " >/dev/null 2>&1; then
+  exit 75
+fi
+
+test -x "$RUNNER/runsvc.sh"
+mkdir -p "$LOG"
+cd "$RUNNER"
+unset RUNNER_TRACKING_ID
+export HOME="/Users/crypto-signal-agent"
+export ACTIONS_RUNNER_SVC=1
+exec ./runsvc.sh >>"$LOG/r15-runner-service.out.log" 2>>"$LOG/r15-runner-service.err.log"
+RUNNERSVC
+chmod 700 "$RUNNER_SERVICE_BOOTSTRAP"
+
+cat > "$RUNNER_SERVICE_PLIST" <<PLIST
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>$RUNNER_SERVICE_LABEL</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>$RUNNER_SERVICE_BOOTSTRAP</string>
+  </array>
+  <key>ProcessType</key>
+  <string>Background</string>
+  <key>ThrottleInterval</key>
+  <integer>10</integer>
+  <key>StandardOutPath</key>
+  <string>$LOCAL_LOG/runner-service-launchagent.out.log</string>
+  <key>StandardErrorPath</key>
+  <string>$LOCAL_LOG/runner-service-launchagent.err.log</string>
+</dict>
+</plist>
+PLIST
+chmod 644 "$RUNNER_SERVICE_PLIST"
+/usr/bin/plutil -lint "$RUNNER_SERVICE_PLIST"
 
 cat > "$PLIST" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
@@ -633,6 +688,10 @@ for legacy_label in "${LEGACY_RUNNER_LABELS[@]}"; do
   /bin/launchctl bootout "$legacy_target" >/dev/null 2>&1 || true
 done
 
+/bin/launchctl bootout "$RUNNER_SERVICE_TARGET" >/dev/null 2>&1 || true
+/bin/launchctl enable "$RUNNER_SERVICE_TARGET" >/dev/null 2>&1 || true
+/bin/launchctl bootstrap "gui/$(id -u)" "$RUNNER_SERVICE_PLIST"
+
 /bin/launchctl bootout "$TARGET" >/dev/null 2>&1 || true
 /bin/launchctl enable "$TARGET" >/dev/null 2>&1 || true
 /bin/launchctl bootstrap "gui/$(id -u)" "$PLIST"
@@ -641,5 +700,6 @@ done
 
 echo "R15_SSD_HOTPLUG_RECOVERY_INSTALLED=YES"
 echo "R15_SSD_HOTPLUG_RECOVERY_SINGLE_OWNER=YES"
+echo "R15_SSD_HOTPLUG_RECOVERY_RUNNER_LAUNCHD_SERVICE=YES"
 echo "R15_SSD_HOTPLUG_RECOVERY_REAL_CAPITAL=0"
 echo "R15_SSD_HOTPLUG_RECOVERY_NO_INTERNAL_RUNTIME_FALLBACK=YES"
