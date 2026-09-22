@@ -107,31 +107,110 @@ def log(message: str) -> None:
         handle.write(f"{stamp} {message}\n")
 
 
-def write_receipt(path: Path, status: str, event_id: str, message_sha: str) -> None:
+def write_receipt(
+    path: Path,
+    status: str,
+    event_id: str,
+    message_sha: str,
+    *,
+    baseline_exact_count: int | None = None,
+    submitted_epoch: float | None = None,
+) -> None:
     tmp = path.with_suffix(path.suffix + f".{os.getpid()}.tmp")
     stamp = time.strftime("%Y-%m-%d %H:%M:%S %z")
-    tmp.write_text(
-        f"status={status}\n"
-        f"event_id={event_id}\n"
-        f"event_key={sha(event_id)}\n"
-        f"message_sha256={message_sha}\n"
-        f"updated={stamp}\n"
-    )
+    lines = [
+        f"status={status}",
+        f"event_id={event_id}",
+        f"event_key={sha(event_id)}",
+        f"message_sha256={message_sha}",
+        f"updated={stamp}",
+    ]
+    if baseline_exact_count is not None:
+        lines.append(f"baseline_exact_count={baseline_exact_count}")
+    if submitted_epoch is not None:
+        lines.append(f"submitted_epoch={submitted_epoch:.3f}")
+    tmp.write_text("\n".join(lines) + "\n")
     os.chmod(tmp, 0o600)
     tmp.replace(path)
-def receipt_info(path: Path) -> tuple[str, str] | None:
+
+
+def receipt_info(
+    path: Path,
+) -> tuple[str, str, int | None, float | None] | None:
     if not path.exists():
         return None
     status = ""
     message_sha = ""
+    baseline_exact_count: int | None = None
+    submitted_epoch: float | None = None
     for line in path.read_text().splitlines():
         if line.startswith("status="):
             status = line.split("=", 1)[1]
         elif line.startswith("message_sha256="):
             message_sha = line.split("=", 1)[1]
+        elif line.startswith("baseline_exact_count="):
+            try:
+                baseline_exact_count = int(line.split("=", 1)[1])
+            except ValueError:
+                baseline_exact_count = None
+        elif line.startswith("submitted_epoch="):
+            try:
+                submitted_epoch = float(line.split("=", 1)[1])
+            except ValueError:
+                submitted_epoch = None
     if not status:
         return None
-    return status, message_sha
+    return status, message_sha, baseline_exact_count, submitted_epoch
+
+
+def exact_message_count(target_url: str, wire_message: str) -> int | None:
+    message_json = json.dumps(wire_message)
+    count_js = (
+        "(()=>{const msg=" + message_json + ";"
+        "const users=[...document.querySelectorAll('[data-message-author-role=\\\"user\\\"]')];"
+        "return String(users.filter(x=>(x.innerText||'').trim()===msg).length);})()"
+    )
+    raw = run_js(target_url, count_js)
+    try:
+        return int(raw)
+    except ValueError:
+        return None
+
+
+def click_visible_retry(target_url: str) -> str:
+    retry_js = (
+        "(()=>{"
+        "const labels=new Set(['yeniden dene','retry','try again']);"
+        "const b=[...document.querySelectorAll('button')].find(x=>{"
+        "const s=getComputedStyle(x),r=x.getBoundingClientRect();"
+        "const t=(x.innerText||x.textContent||'').trim().toLocaleLowerCase('tr');"
+        "return labels.has(t)&&x.isConnected&&!x.disabled&&s.display!=='none'"
+        "&&s.visibility!=='hidden'&&Number(s.opacity||1)>0"
+        "&&r.width>1&&r.height>1&&x.getClientRects().length>0;});"
+        "if(!b)return 'RETRY_NOT_FOUND';b.click();return 'RETRY_CLICKED';})()"
+    )
+    return run_js(target_url, retry_js)
+
+
+def wait_for_exact_observation(
+    *,
+    target_url: str,
+    wire_message: str,
+    baseline_exact_count: int,
+    polls: int = 60,
+    allow_retry: bool = True,
+) -> tuple[bool, str]:
+    retried = False
+    for _ in range(polls):
+        time.sleep(0.5)
+        current = exact_message_count(target_url, wire_message)
+        if current is not None and current > baseline_exact_count:
+            return True, "OBSERVED"
+        if allow_retry and not retried:
+            retry_state = click_visible_retry(target_url)
+            if retry_state == "RETRY_CLICKED":
+                retried = True
+    return False, "AWAITING_EXACT_OBSERVATION"
 
 
 def is_autonomous_wake(message: str) -> bool:
@@ -264,13 +343,75 @@ def deliver(event_id: str, message: str, target_url: str) -> tuple[bool, str]:
     wire_message = message if exact_locked_wake else f"{message} {marker}"
     message_sha = sha(wire_message)
     receipt = RECEIPTS / f"{key}.state"
+    marker_json = json.dumps(marker)
+    message_json = json.dumps(wire_message)
 
+    persisted_baseline: int | None = None
+    submitted_epoch: float | None = None
     receipt_state = receipt_info(receipt)
     if receipt_state is not None:
-        receipt_status, bound_sha = receipt_state
+        receipt_status, bound_sha, persisted_baseline, submitted_epoch = receipt_state
         if bound_sha and bound_sha != message_sha:
             return False, "EVENT_ID_MESSAGE_CONFLICT"
-        if receipt_status == "SUBMITTING":
+
+        if exact_locked_wake:
+            if receipt_status == "OBSERVED":
+                return True, "ALREADY_RECEIPTED"
+            if receipt_status == "SUBMITTING":
+                if persisted_baseline is None:
+                    return False, "LOCKED_SUBMITTING_BASELINE_MISSING"
+                current = exact_message_count(target_url, wire_message)
+                if current is not None and current > persisted_baseline:
+                    write_receipt(
+                        receipt,
+                        "OBSERVED",
+                        event_id,
+                        message_sha,
+                        baseline_exact_count=persisted_baseline,
+                        submitted_epoch=submitted_epoch,
+                    )
+                    return True, "OBSERVED_AFTER_PENDING_SUBMIT"
+
+                retry_state = click_visible_retry(target_url)
+                if retry_state == "RETRY_CLICKED":
+                    submitted_epoch = time.time()
+                    write_receipt(
+                        receipt,
+                        "SUBMITTING",
+                        event_id,
+                        message_sha,
+                        baseline_exact_count=persisted_baseline,
+                        submitted_epoch=submitted_epoch,
+                    )
+                    observed, observation_state = wait_for_exact_observation(
+                        target_url=target_url,
+                        wire_message=wire_message,
+                        baseline_exact_count=persisted_baseline,
+                        allow_retry=False,
+                    )
+                    if observed:
+                        write_receipt(
+                            receipt,
+                            "OBSERVED",
+                            event_id,
+                            message_sha,
+                            baseline_exact_count=persisted_baseline,
+                            submitted_epoch=submitted_epoch,
+                        )
+                        return True, "OBSERVED_AFTER_RETRY"
+                    return False, observation_state
+
+                if submitted_epoch is None or time.time() - submitted_epoch < 90:
+                    return False, "WAITING_FOR_EXACT_OBSERVATION"
+                # After 90s with no observed message and no visible Retry control,
+                # permit a bounded same-event resend. The persisted baseline remains
+                # unchanged so any late first delivery is still detected.
+            else:
+                # Legacy non-observed receipts are never final for the exact locked wake.
+                receipt.unlink(missing_ok=True)
+                persisted_baseline = None
+                submitted_epoch = None
+        elif receipt_status == "SUBMITTING":
             receipt.unlink(missing_ok=True)
         else:
             return True, "ALREADY_RECEIPTED"
@@ -286,22 +427,13 @@ def deliver(event_id: str, message: str, target_url: str) -> tuple[bool, str]:
             )
             return True, f"STALE_AUTONOMOUS_WAKE:{canonical_event_id}"
 
-    marker_json = json.dumps(marker)
-    message_json = json.dumps(wire_message)
+    baseline_exact_count = persisted_baseline
+    if exact_locked_wake and baseline_exact_count is None:
+        baseline_exact_count = exact_message_count(target_url, wire_message)
+        if baseline_exact_count is None:
+            return False, "EXACT_MESSAGE_COUNT_UNAVAILABLE"
 
-    baseline_exact_count = 0
     if exact_locked_wake:
-        count_js = (
-            "(()=>{const msg=" + message_json + ";"
-            "const users=[...document.querySelectorAll('[data-message-author-role=\\\"user\\\"]')];"
-            "return String(users.filter(x=>(x.innerText||'').trim()===msg).length);})()"
-        )
-        raw_count = run_js(target_url, count_js)
-        try:
-            baseline_exact_count = int(raw_count)
-        except ValueError:
-            baseline_exact_count = 0
-
         state_js = (
             "(()=>{const msg=" + message_json + ";"
             "const stop=[...document.querySelectorAll('button[data-testid=\\\"stop-button\\\"]')]"
@@ -409,7 +541,19 @@ def deliver(event_id: str, message: str, target_url: str) -> tuple[bool, str]:
         if filled != "FILLED":
             return False, filled
 
-    write_receipt(receipt, "SUBMITTING", event_id, message_sha)
+    if exact_locked_wake:
+        assert baseline_exact_count is not None
+        submitted_epoch = time.time()
+        write_receipt(
+            receipt,
+            "SUBMITTING",
+            event_id,
+            message_sha,
+            baseline_exact_count=baseline_exact_count,
+            submitted_epoch=submitted_epoch,
+        )
+    else:
+        write_receipt(receipt, "SUBMITTING", event_id, message_sha)
 
     if exact_locked_wake:
         send_js = (
@@ -439,27 +583,32 @@ def deliver(event_id: str, message: str, target_url: str) -> tuple[bool, str]:
         return False, sent
 
     if exact_locked_wake:
-        check_js = (
-            "(()=>{const msg=" + message_json + ";"
-            "const users=[...document.querySelectorAll('[data-message-author-role=\\\"user\\\"]')];"
-            "const count=users.filter(x=>(x.innerText||'').trim()===msg).length;"
-            "const e=document.querySelector('#prompt-textarea');if(!e)return 'NO_EDITOR:'+count;"
-            "const draft=(e.innerText||'').trim();"
-            "if(count>" + str(baseline_exact_count) + ")return 'OBSERVED';"
-            "if(draft===msg)return 'DRAFT_PRESENT';"
-            "if(draft==='')return 'EDITOR_CLEARED';return 'DRAFT_CHANGED';})()"
+        observed, observation_state = wait_for_exact_observation(
+            target_url=target_url,
+            wire_message=wire_message,
+            baseline_exact_count=baseline_exact_count,
         )
-    else:
-        check_js = (
-            "(()=>{const marker=" + marker_json + ";"
-            "const users=[...document.querySelectorAll('[data-message-author-role=\\\"user\\\"]')];"
-            "if(users.slice(-100).some(x=>(x.innerText||'').includes(marker)))return 'OBSERVED';"
-            "const e=document.querySelector('#prompt-textarea');if(!e)return 'NO_EDITOR';"
-            "const draft=(e.innerText||'').trim();"
-            "if(draft.includes(marker))return 'DRAFT_PRESENT';"
-            "if(draft==='')return 'EDITOR_CLEARED';return 'DRAFT_CHANGED';})()"
-        )
+        if observed:
+            write_receipt(
+                receipt,
+                "OBSERVED",
+                event_id,
+                message_sha,
+                baseline_exact_count=baseline_exact_count,
+                submitted_epoch=submitted_epoch,
+            )
+            return True, "OBSERVED_AFTER_CLICK"
+        return False, observation_state
 
+    check_js = (
+        "(()=>{const marker=" + marker_json + ";"
+        "const users=[...document.querySelectorAll('[data-message-author-role=\\\"user\\\"]')];"
+        "if(users.slice(-100).some(x=>(x.innerText||'').includes(marker)))return 'OBSERVED';"
+        "const e=document.querySelector('#prompt-textarea');if(!e)return 'NO_EDITOR';"
+        "const draft=(e.innerText||'').trim();"
+        "if(draft.includes(marker))return 'DRAFT_PRESENT';"
+        "if(draft==='')return 'EDITOR_CLEARED';return 'DRAFT_CHANGED';})()"
+    )
     for _ in range(20):
         time.sleep(0.5)
         check = run_js(target_url, check_js)
