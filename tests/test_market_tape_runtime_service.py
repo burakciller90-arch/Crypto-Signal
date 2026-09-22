@@ -1,7 +1,6 @@
 import pathlib
 import plistlib
 
-
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 
 
