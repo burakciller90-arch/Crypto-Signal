@@ -6,6 +6,7 @@ on:
     paths:
       - "ops/continuity/recurring_wake.py"
       - "ops/continuity/relay_submit.py"
+      - "ops/continuity/relay_daemon.py"
       - "ops/continuity/continuity_contracts.py"
       - "ops/continuity/launchd/com.cryptosignal.autowake20m.plist"
       - ".github/workflows/crypto-install-local-20m-wake.yml"
@@ -34,12 +35,24 @@ jobs:
           PLIST="$AGENTS/$LABEL.plist"
 
           STATE="/Volumes/Crypto-504/Crypto-Signal/Development/runtime/continuity"
-          mkdir -p "$INSTALL" "$AGENTS" "$STATE"
+          SHARED="/Users/Shared/.crypto-signal-wake-relay"
+          LOCKED_CURRENT_CHAT="https://chatgpt.com/c/6ab2c3c1-30c8-83ed-b1ad-2aa35cc891c9"
+          mkdir -p "$INSTALL" "$AGENTS" "$STATE" "$STATE/wake" "$SHARED"
 
           install -m 700 ops/continuity/recurring_wake.py "$INSTALL/recurring_wake.py"
           install -m 700 ops/continuity/relay_submit.py "$INSTALL/relay_submit.py"
           install -m 600 ops/continuity/continuity_contracts.py "$INSTALL/continuity_contracts.py"
+          install -m 660 ops/continuity/relay_daemon.py "$SHARED/relay_daemon.py"
+          install -m 660 ops/continuity/continuity_contracts.py "$SHARED/continuity_contracts.py"
           install -m 600             ops/continuity/launchd/com.cryptosignal.autowake20m.plist             "$PLIST"
+
+          printf '%s\n' "$LOCKED_CURRENT_CHAT" > "$STATE/wake/current_chat_url"
+          printf '%s\n' "$LOCKED_CURRENT_CHAT" > "$STATE/wake/expected_chat_url"
+          printf '%s\n' "$LOCKED_CURRENT_CHAT" > "$SHARED/current_chat_url"
+          printf '%s\n' "$LOCKED_CURRENT_CHAT" > "$SHARED/expected_chat_url"
+          rm -f "$STATE/user_pause" "$SHARED/user_pause"
+          touch "$SHARED/restart_requested"
+          echo "EXACT_CHAT_BOUND=$LOCKED_CURRENT_CHAT"
 
           /usr/bin/plutil -lint "$PLIST"
           /usr/bin/python3 -m py_compile             "$INSTALL/recurring_wake.py"             "$INSTALL/relay_submit.py"             "$INSTALL/continuity_contracts.py"
