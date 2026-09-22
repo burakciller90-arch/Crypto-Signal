@@ -32,7 +32,7 @@ jobs:
           STATE="/Volumes/Crypto-504/Crypto-Signal/Development/runtime/continuity"
           SHARED="/Users/Shared/.crypto-signal-wake-relay"
 
-          if [ "\${{ github.event_name }}" = "schedule" ]; then
+          if [ "${{ github.event_name }}" = "schedule" ]; then
             if [ -f "$STATE/user_pause" ] || [ -f "$SHARED/user_pause" ]; then
               echo "GITHUB_WATCHDOG_USER_PAUSED=YES"
               exit 0
