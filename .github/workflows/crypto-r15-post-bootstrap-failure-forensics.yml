@@ -1,0 +1,37 @@
+name: Crypto R15 Post Bootstrap Failure Forensics
+
+on:
+  push:
+    branches: [r15-ssd-hotplug-recovery-v1]
+    paths: [".github/workflows/crypto-r15-post-bootstrap-failure-forensics.yml"]
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: [self-hosted, crypto-signal, uid501]
+    timeout-minutes: 10
+    steps:
+      - name: Inspect UID504 launchd and installed scripts
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo -n -H -u crypto-signal-agent /bin/bash <<'SH'
+          set +e
+          LOCAL="$HOME/Library/Application Support/CryptoSignalRecovery"
+          echo "=== MAIN R15 LAUNCHAGENT ==="
+          launchctl print "gui/504/com.cryptosignal.ssd-hotplug-recovery" 2>&1 | head -180
+          echo "=== EXPERIMENTAL SERVICE ==="
+          launchctl print "gui/504/com.cryptosignal.github-runner-r15-service" 2>&1 | head -180
+          echo "=== DISABLED MAP ==="
+          launchctl print-disabled "gui/504" 2>&1 | grep -E 'cryptosignal|Crypto-Signal' | head -120
+          echo "=== INSTALLED WATCHDOG MARKERS ==="
+          grep -nE 'RUNNER_TERMINAL_START|request_terminal_runner_start|open -gj -a Terminal|transport=terminal|RUNNER_SERVICE_' "$LOCAL/hotplug-watchdog.sh" 2>&1
+          echo "=== TERMINAL START COMMAND ==="
+          ls -lOe "$LOCAL/start-ssd-runner.command" 2>&1
+          sed -n '1,220p' "$LOCAL/start-ssd-runner.command" 2>&1
+          echo "=== MAIN PLIST ==="
+          plutil -p "$HOME/Library/LaunchAgents/com.cryptosignal.ssd-hotplug-recovery.plist" 2>&1
+          echo "R15_POST_BOOTSTRAP_FAILURE_FORENSICS_DONE=YES"
+          SH
