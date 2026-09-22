@@ -159,25 +159,37 @@ Acceptance:
 - latest candle/signal evidence advances after recovery;
 - REAL_CAPITAL=0.
 
-### Current 2026-09-22 blocker
+### Current 2026-09-22 runtime evidence
 
-The UID504 SSD runner has been observed as a long-lived `Runner.Listener` consuming
-~98% CPU while dashboard/supervisor processes remain alive. Therefore R15 is **not
-accepted live** merely because processes exist.
+The earlier “04:00 data cut” has now been mechanically rechecked **without relying on
+process existence**.
 
-UID501 currently lacks permission to read the existing
-`/Volumes/Crypto-504/Crypto-Signal` tree. A prepared ACL command grants UID501
-access without changing the UID504 owner. Once applied, verify:
+At 2026-09-22 14:25:51 +0300, a temporary UID501 read-only localhost API diagnostic
+reported:
 
-- ledger newest freeze timestamp;
-- 15m candle-cache newest close/open timestamp;
-- dashboard /api/health freshness fields;
-- alert/paper clock freshness where relevant;
-- runner CPU/state/progress;
-- SQLite quick_check.
+- dashboard health: `status=ok`, `ledger_present=true`, `read_only=true`,
+  `REAL_CAPITAL=0`;
+- immutable signal freeze count: **294**;
+- latest freeze: **2026-09-22 14:15:18 +0300**;
+- Binance and Bybit BTC/ETH/SOL 15m contexts all had fresh ~14:15 freezes;
+- 1h contexts had fresh ~14:01 freezes;
+- therefore the market-data/freeze pipeline is **no longer stuck at 04:00**.
 
-Do not declare the “04:00 data cut” fixed until timestamps advance beyond the stale
-cutoff under the live canonical runtime.
+This closes the specific data-staleness incident.
+
+A separate R15 blocker remains: the UID504 SSD GitHub runner
+`Runner.Listener` was rechecked at 14:26:28 +0300 and remained at **100% CPU**,
+state `RN`, with ~12 hours elapsed. Dashboard and SSD supervisor remained healthy.
+
+Therefore R15 is still not fully accepted. The remaining work is runner hang detection
+and safe recovery plus physical detach/remount acceptance. Do not restart or duplicate
+the runner blindly; identify the exact listener and use an identity-checked recovery
+path.
+
+UID501 filesystem access to the existing Crypto-504 tree is still useful for direct DB
+and log forensics, but it is no longer required to prove that the 04:00 market-data
+cut itself recovered because the live read-only API provided direct immutable-ledger
+timestamps.
 
 ---
 
