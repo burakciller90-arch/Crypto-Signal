@@ -1,0 +1,120 @@
+name: Crypto Market Tape HotCold Final Readonly
+
+on:
+  push:
+    branches:
+      - v1.1-market-tape-hotcold-v1
+    paths:
+      - ".github/workflows/crypto-market-tape-hotcold-final-readonly.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Final read-only HotCold runtime acceptance
+    runs-on: [self-hosted, crypto-signal, uid501]
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify deployed product and live topology
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          STABLE="$ROOT/MarketTape"
+          TAPE="$ROOT/Development/runtime/market_tape"
+          CONTROL="/Users/crypto-signal-agent/.crypto-signal-runtime"
+          ACCEPTED_BUILD="355ccfacbcd0b860efeb3c09486b707940106b1f"
+
+          expected_root_supervisor="$(shasum -a 256 ops/ssd_runtime_supervisor.sh | awk '{print $1}')"
+          actual_root_supervisor="$(sudo -n -H -u crypto-signal-agent shasum -a 256 "$ROOT/ssd-service-supervisor.sh" | awk '{print $1}')"
+          echo "ROOT_SUPERVISOR_SHA_EXPECTED=$expected_root_supervisor"
+          echo "ROOT_SUPERVISOR_SHA_ACTUAL=$actual_root_supervisor"
+          test "$actual_root_supervisor" = "$expected_root_supervisor"
+
+          for rel in             src/crypto_signal/data/market_tape_hotcold.py             src/crypto_signal/data/market_tape_cold_archive.py             ops/run_market_tape_runtime.py             ops/market_tape/archive_hot_to_parquet.py             ops/market_tape/run_market_tape_supervisor.py             ops/market_tape/start_market_tape_supervisor.sh             ops/market_tape/stop_market_tape_supervisor.sh             ops/install_market_tape_runtime.sh             ops/ssd_runtime_supervisor.sh; do
+            expected="$(shasum -a 256 "$rel" | awk '{print $1}')"
+            actual="$(sudo -n -H -u crypto-signal-agent shasum -a 256 "$STABLE/$rel" | awk '{print $1}')"
+            echo "DEPLOY_HASH $rel expected=$expected actual=$actual"
+            test "$actual" = "$expected"
+          done
+
+          sudo -n -H -u crypto-signal-agent /usr/bin/env             ACCEPTED_BUILD="$ACCEPTED_BUILD"             HOME=/Users/crypto-signal-agent             /bin/bash <<'SH'
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          STABLE="$ROOT/MarketTape"
+          TAPE="$ROOT/Development/runtime/market_tape"
+          RAW="$TAPE/raw_market_tape.sqlite3"
+          DB="$TAPE/market_tape.sqlite3"
+          STATUS="$TAPE/runtime_status.json"
+          SUP_STATUS="$TAPE/supervisor_status.json"
+          CONTROL="$HOME/.crypto-signal-runtime"
+          ENABLE="$CONTROL/market-tape.enabled"
+          MT_PID_FILE="$CONTROL/market-tape-supervisor.pid"
+          TOP_PID_FILE="$ROOT/ssd-service-supervisor.pid"
+          TOP_SCRIPT="$ROOT/ssd-service-supervisor.sh"
+          MT_SUP="$STABLE/ops/market_tape/run_market_tape_supervisor.py"
+          MT_RUNTIME="$STABLE/ops/run_market_tape_runtime.py"
+
+          test -f "$ENABLE"
+          test "$(cat "$STABLE/BUILD_COMMIT")" = "$ACCEPTED_BUILD"
+
+          top="$(cat "$TOP_PID_FILE")"
+          mt_sup="$(cat "$MT_PID_FILE")"
+          kill -0 "$top"
+          kill -0 "$mt_sup"
+          ps -p "$top" -o command= | grep -F "$TOP_SCRIPT" >/dev/null
+          ps -p "$mt_sup" -o command= | grep -F "$MT_SUP" >/dev/null
+
+          top_count="$(ps -axo user=,command= | awk -v user="crypto-signal-agent" -v needle="$TOP_SCRIPT" '$1==user && index($0,needle)>0 {n++} END{print n+0}')"
+          sup_count="$(ps -axo user=,command= | awk -v user="crypto-signal-agent" -v needle="$MT_SUP" '$1==user && index($0,needle)>0 {n++} END{print n+0}')"
+          runtime_count="$(ps -axo user=,command= | awk -v user="crypto-signal-agent" -v needle="$MT_RUNTIME" '$1==user && index($0,needle)>0 {n++} END{print n+0}')"
+          echo "SSD_SUPERVISOR_COUNT=$top_count PID=$top"
+          echo "MARKET_TAPE_SUPERVISOR_COUNT=$sup_count PID=$mt_sup"
+          echo "MARKET_TAPE_RUNTIME_COUNT=$runtime_count"
+          test "$top_count" = "1"
+          test "$sup_count" = "1"
+          test "$runtime_count" = "1"
+
+          before="$(sqlite3 -cmd '.timeout 5000' "$RAW" 'SELECT COUNT(*) FROM raw_market_events;')"
+          sleep 10
+          after="$(sqlite3 -cmd '.timeout 5000' "$RAW" 'SELECT COUNT(*) FROM raw_market_events;')"
+          echo "RAW_ROWS_FINAL_BEFORE=$before"
+          echo "RAW_ROWS_FINAL_AFTER=$after"
+          test "$after" -gt "$before"
+
+          test "$(sqlite3 -cmd '.timeout 5000' "$RAW" 'PRAGMA quick_check;')" = "ok"
+          test "$(sqlite3 -cmd '.timeout 5000' "$DB" 'PRAGMA quick_check;')" = "ok"
+
+          python3 - "$STATUS" "$SUP_STATUS" <<'PY'
+          import json,sys,time
+          runtime=json.load(open(sys.argv[1]))
+          supervisor=json.load(open(sys.argv[2]))
+          print("FINAL_RUNTIME_STATUS", json.dumps(runtime, sort_keys=True))
+          print("FINAL_SUPERVISOR_STATUS", json.dumps(supervisor, sort_keys=True))
+          assert runtime["state"] in {"collecting_chunk","collecting"}
+          assert runtime["real_capital"] == 0
+          assert runtime["capacity_decision"] == "collect"
+          assert runtime.get("heartbeat") is True
+          assert int(runtime["hot_bytes"]) < 25 * 1024**3
+          assert int(runtime["cold_bytes"]) < 600 * 1024**3
+          assert int(runtime["free_bytes"]) > 250 * 1024**3
+          assert int(time.time()) - int(runtime["updated_at_epoch"]) <= 90
+          assert supervisor["state"] == "running"
+          assert supervisor["real_capital"] == 0
+          assert supervisor.get("heartbeat") is True
+          assert int(supervisor["child_pid"]) > 0
+          assert int(time.time()) - int(supervisor["updated_at_epoch"]) <= 90
+          PY
+
+          test "$(launchctl print-disabled "gui/$(id -u)" | grep -c '"com.cryptosignal.markettape" => disabled')" -ge 1
+          test "$("$ROOT/RuntimeEnvs/market-tape-cold/bin/python" -c 'import pyarrow; print(pyarrow.__version__)')" = "22.0.0"
+          df -h "$ROOT"
+
+          curl -fsS --max-time 5 http://127.0.0.1:48700/api/health             | python3 -c 'import json,sys; d=json.load(sys.stdin); print("DASHBOARD_HEALTH",d); assert d["status"]=="ok"; assert d["real_capital"]==0; assert d["read_only"] is True'
+
+          echo "MARKET_TAPE_HOTCOLD_FINAL_READONLY_PASS=YES"
+          echo "REAL_CAPITAL=0"
+          SH
