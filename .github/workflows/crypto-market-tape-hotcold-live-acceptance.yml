@@ -93,7 +93,7 @@ jobs:
           fi
           mv "$NEXT" "$STABLE"
 
-          if ! MARKET_TAPE_INSTALL_NO_START=1 /bin/bash "$STABLE/ops/install_market_tape_runtime.sh"; then
+          if ! /bin/bash "$STABLE/ops/install_market_tape_runtime.sh"; then
             rm -rf "$STABLE"
             if [ -d "$PREVIOUS" ]; then
               mv "$PREVIOUS" "$STABLE"
@@ -254,7 +254,7 @@ jobs:
           echo "REAL_CAPITAL=0"
           SH
 
-      - name: Final 24x7 cutover and acceptance
+      - name: Start detached UID504 supervisor and accept live collection
         shell: bash
         run: |
           set -euo pipefail
@@ -269,25 +269,44 @@ jobs:
           RAW="$TAPE/raw_market_tape.sqlite3"
           DB="$TAPE/market_tape.sqlite3"
           STATUS="$TAPE/runtime_status.json"
+          SUP_STATUS="$TAPE/supervisor_status.json"
+          CONTROL="/Users/crypto-signal-agent/.crypto-signal-runtime"
+          PID_FILE="$CONTROL/market-tape-supervisor.pid"
           LABEL="com.cryptosignal.markettape"
           DOMAIN="gui/$(id -u)"
-          SCRIPT="$STABLE/ops/run_market_tape_runtime.py"
+          RUNTIME_SCRIPT="$STABLE/ops/run_market_tape_runtime.py"
+
+          launchctl disable "$DOMAIN/$LABEL" >/dev/null 2>&1 || true
+          launchctl bootout "$DOMAIN/$LABEL" >/dev/null 2>&1 || true
+          /bin/bash "$STABLE/ops/market_tape/stop_market_tape_supervisor.sh" || true
 
           before="$(sqlite3 "$RAW" 'SELECT COUNT(*) FROM raw_market_events;')"
-          /bin/bash "$STABLE/ops/install_market_tape_runtime.sh"
+          echo "RAW_ROWS_SUPERVISOR_BEFORE=$before"
+
+          /bin/bash "$STABLE/ops/market_tape/start_market_tape_supervisor.sh"
 
           ready=0
-          count=0
+          runtime_count=0
           after="$before"
+          supervisor_pid=""
+          child_pid=""
           for _ in {1..100}; do
-            count="$(ps -axo user=,command= | awk -v user="crypto-signal-agent" -v script="$SCRIPT" '$1==user && index($0,script)>0 {n++} END{print n+0}')"
-            if [ "$count" = "1" ] && [ -s "$STATUS" ]; then
-              after="$(sqlite3 "$RAW" 'SELECT COUNT(*) FROM raw_market_events;')"
+            if [ -s "$PID_FILE" ]; then
+              supervisor_pid="$(cat "$PID_FILE")"
+            fi
+            runtime_count="$(ps -axo user=,command= | awk -v user="crypto-signal-agent" -v script="$RUNTIME_SCRIPT" '$1==user && index($0,script)>0 {n++} END{print n+0}')"
+            after="$(sqlite3 "$RAW" 'SELECT COUNT(*) FROM raw_market_events;')"
+            if [ -n "$supervisor_pid" ] && kill -0 "$supervisor_pid" 2>/dev/null \
+              && [ "$runtime_count" = "1" ] && [ -s "$STATUS" ] && [ -s "$SUP_STATUS" ]; then
               state="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("state",""))' "$STATUS")"
               updated="$(python3 -c 'import json,sys; print(int(json.load(open(sys.argv[1])).get("updated_at_epoch",0)))' "$STATUS")"
+              sup_state="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("state",""))' "$SUP_STATUS")"
+              child_pid="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("child_pid",""))' "$SUP_STATUS")"
               now="$(date +%s)"
               age=$((now-updated))
-              if [ "$after" -gt "$before" ] && [ "$age" -ge 0 ] && [ "$age" -le 90 ]                 && { [ "$state" = "collecting_chunk" ] || [ "$state" = "collecting" ]; }; then
+              if [ "$after" -gt "$before" ] && [ "$age" -ge 0 ] && [ "$age" -le 90 ] \
+                && [ "$sup_state" = "running" ] \
+                && { [ "$state" = "collecting_chunk" ] || [ "$state" = "collecting" ]; }; then
                 ready=1
                 break
               fi
@@ -295,36 +314,48 @@ jobs:
             sleep 1
           done
 
-          echo "MARKET_TAPE_HOTCOLD_RUNTIME_PROCESS_COUNT=$count"
-          echo "RAW_ROWS_24X7_BEFORE=$before"
-          echo "RAW_ROWS_24X7_AFTER=$after"
-          launchctl print "$DOMAIN/$LABEL" 2>&1 | egrep 'state =|pid =|runs =|last exit code =|program =|path =' | head -120 || true
+          echo "MARKET_TAPE_SUPERVISOR_PID=$supervisor_pid"
+          echo "MARKET_TAPE_SUPERVISOR_CHILD_PID=$child_pid"
+          echo "MARKET_TAPE_RUNTIME_PROCESS_COUNT=$runtime_count"
+          echo "RAW_ROWS_SUPERVISOR_AFTER=$after"
+          cat "$SUP_STATUS"
           cat "$STATUS"
 
-          if [ "$ready" != "1" ] || [ "$count" != "1" ]; then
-            launchctl disable "$DOMAIN/$LABEL" >/dev/null 2>&1 || true
-            launchctl bootout "$DOMAIN/$LABEL" >/dev/null 2>&1 || true
-            echo "HOTCOLD_FINAL_ACCEPTANCE_FAILED_SERVICE_DISABLED=YES" >&2
+          if [ "$ready" != "1" ] || [ "$runtime_count" != "1" ]; then
+            /bin/bash "$STABLE/ops/market_tape/stop_market_tape_supervisor.sh" || true
+            echo "HOTCOLD_SUPERVISOR_ACCEPTANCE_FAILED_STOPPED=YES" >&2
             exit 72
           fi
 
-          python3 - "$STATUS" <<'PY'
+          python3 - "$STATUS" "$SUP_STATUS" <<'PY'
           import json,sys,time
-          data=json.load(open(sys.argv[1]))
-          assert data["state"] in {"collecting_chunk","collecting"}
-          assert data["real_capital"] == 0
-          assert int(data["free_bytes"]) > 250 * 1024**3
-          assert int(data["hot_bytes"]) < 25 * 1024**3
-          assert int(data["cold_bytes"]) < 600 * 1024**3
-          assert data["capacity_decision"] == "collect"
-          assert int(time.time()) - int(data["updated_at_epoch"]) <= 90
+          runtime=json.load(open(sys.argv[1]))
+          supervisor=json.load(open(sys.argv[2]))
+          assert runtime["state"] in {"collecting_chunk","collecting"}
+          assert runtime["real_capital"] == 0
+          assert int(runtime["free_bytes"]) > 250 * 1024**3
+          assert int(runtime["hot_bytes"]) < 25 * 1024**3
+          assert int(runtime["cold_bytes"]) < 600 * 1024**3
+          assert runtime["capacity_decision"] == "collect"
+          assert int(time.time()) - int(runtime["updated_at_epoch"]) <= 90
+          assert supervisor["state"] == "running"
+          assert supervisor["real_capital"] == 0
+          assert int(supervisor["child_pid"]) > 0
           PY
+
           test "$(sqlite3 "$RAW" 'PRAGMA quick_check;')" = "ok"
           test "$(sqlite3 "$DB" 'PRAGMA quick_check;')" = "ok"
           test "$(cat "$STABLE/BUILD_COMMIT")" = "$EXPECTED_SHA"
           test "$("$ROOT/RuntimeEnvs/market-tape-cold/bin/python" -c 'import pyarrow; print(pyarrow.__version__)')" = "22.0.0"
+          test "$(launchctl print-disabled "$DOMAIN" | grep -c '"com.cryptosignal.markettape" => disabled')" -ge 1
 
-          echo "MARKET_TAPE_HOTCOLD_24X7_CUTOVER_PASS=YES"
+          if ps eww -p "$supervisor_pid" 2>/dev/null | grep -q 'RUNNER_TRACKING_ID='; then
+            echo "HOTCOLD_SUPERVISOR_TRACKING_ID_LEAK=YES" >&2
+            /bin/bash "$STABLE/ops/market_tape/stop_market_tape_supervisor.sh" || true
+            exit 73
+          fi
+
+          echo "MARKET_TAPE_HOTCOLD_DETACHED_START_PASS=YES"
           echo "REAL_CAPITAL=0"
           SH
 
