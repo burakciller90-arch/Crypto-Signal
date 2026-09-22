@@ -14,9 +14,6 @@ def test_market_tape_supervisor_is_uid504_ssd_data_bound() -> None:
     assert 'Path("/Users/crypto-signal-agent/.crypto-signal-runtime")' in source
     assert "os.getuid() != 504" in source
     assert "fcntl.LOCK_EX | fcntl.LOCK_NB" in source
-    assert "os.fork()" in source
-    assert "os.setsid()" in source
-    assert 'os.environ.pop("RUNNER_TRACKING_ID", None)' in source
     assert 'environment.pop("RUNNER_TRACKING_ID", None)' in source
     assert 'str(PYTHON), str(RUNTIME)' in source
     assert 'ROOT / "ServiceLogs/market-tape-supervisor-runtime.out.log"' in source
@@ -32,8 +29,7 @@ def test_market_tape_supervisor_launcher_detaches_from_runner_cleanup() -> None:
     assert 'UID_EXPECTED="504"' in source
     assert 'ROOT="/Volumes/Crypto-504/Crypto-Signal"' in source
     assert "unset RUNNER_TRACKING_ID" in source
-    assert '"$PYTHON" "$SUPERVISOR" --daemonize' in source
-    assert "nohup " not in source
+    assert 'nohup "$PYTHON" "$SUPERVISOR"' in source
     assert 'PID_FILE="$CONTROL/market-tape-supervisor.pid"' in source
     assert "REAL_CAPITAL=0" in source
 
