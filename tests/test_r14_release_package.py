@@ -86,7 +86,9 @@ def test_root_release_docs_are_not_stale_bootstrap_state() -> None:
     assert "Phase 0 bootstrap. No product code yet." not in readme
     assert "/Volumes/Crypto-504/Crypto-Signal" in readme
     assert "/Volumes/Crypto-504/Crypto-Signal" in env
-    assert "State: R14_RELEASE_CANDIDATE" in status
+    assert "Baseline: crypto-signal-full-version-v1.0.0 (immutable)" in status
+    assert "LOCKED_20M_CONTINUITY_ACTIVE" in status
+    assert "docs/V1_1_LOCKED_MASTER_ROADMAP_20260922.md" in status
     assert "R13 Full Version Integrated Acceptance v2 is PASS" in audit
     assert "Stage 8.5 Alpha Factory and Stage 8.75 Learning Memory" not in audit
 
