@@ -1,0 +1,762 @@
+#!/bin/bash
+set -euo pipefail
+
+# Installs a tiny internal-disk bootstrap that owns no market/runtime data.
+# It only detects /Volumes/Crypto-504 availability transitions and restarts
+# the canonical SSD supervisor / GitHub runner from their SSD paths.
+# There is deliberately no internal-Mac runtime fallback.
+
+ROOT="/Volumes/Crypto-504/Crypto-Signal"
+LOCAL_ROOT="$HOME/Library/Application Support/CryptoSignalRecovery"
+LOCAL_LOG="$HOME/Library/Logs/CryptoSignalRecovery"
+WATCHDOG="$LOCAL_ROOT/hotplug-watchdog.sh"
+STATE_FILE="$LOCAL_ROOT/ssd-state"
+LABEL="com.cryptosignal.ssd-hotplug-recovery"
+PLIST="$HOME/Library/LaunchAgents/$LABEL.plist"
+TARGET="gui/$(id -u)/$LABEL"
+RUNNER_TERMINAL_START="$LOCAL_ROOT/start-ssd-runner.command"
+LEGACY_RUNNER_LABELS=(
+  "com.cryptosignal.github-runner-terminal-watchdog"
+  "com.cryptosignal.github-runner-ssd"
+  "actions.runner.burakciller90-arch-Crypto-Signal.crypto-signal-uid504"
+  "com.cryptosignal.github-runner-r15-service"
+)
+
+if [ "$(id -u)" != "504" ]; then
+  echo "R15_HOTPLUG_INSTALL_ERROR=UID_MUST_BE_504" >&2
+  exit 2
+fi
+
+mkdir -p "$LOCAL_ROOT" "$LOCAL_LOG" "$HOME/Library/LaunchAgents"
+
+cat > "$WATCHDOG" <<'WATCH'
+#!/bin/bash
+set -u
+
+ROOT="/Volumes/Crypto-504/Crypto-Signal"
+DEV="$ROOT/Development"
+RUNNER="$ROOT/Runner"
+LOCAL_ROOT="$HOME/Library/Application Support/CryptoSignalRecovery"
+LOCAL_LOG="$HOME/Library/Logs/CryptoSignalRecovery"
+STATE_FILE="$LOCAL_ROOT/ssd-state"
+RUNNER_HANG_FILE="$LOCAL_ROOT/runner-hang-state"
+RUNNER_HANG_CPU_MIN=50
+RUNNER_HANG_MIN_AGE_SECONDS=600
+RUNNER_HANG_STREAK_LIMIT=6
+LOCK_DIR="$LOCAL_ROOT/watchdog.lock"
+LOG="$LOCAL_LOG/hotplug-watchdog.log"
+ERR="$LOCAL_LOG/hotplug-watchdog.err.log"
+RUNNER_TERMINAL_START="$LOCAL_ROOT/start-ssd-runner.command"
+RUNNER_TERMINAL_LOCK="$LOCAL_ROOT/terminal-start.lock"
+
+mkdir -p "$LOCAL_ROOT" "$LOCAL_LOG"
+
+stamp() {
+  date '+%Y-%m-%d %H:%M:%S %z'
+}
+
+log() {
+  printf '%s %s\n' "$(stamp)" "$*" >>"$LOG"
+}
+
+err() {
+  printf '%s %s\n' "$(stamp)" "$*" >>"$ERR"
+}
+
+if ! mkdir "$LOCK_DIR" 2>/dev/null; then
+  exit 0
+fi
+trap 'rmdir "$LOCK_DIR" >/dev/null 2>&1 || true' EXIT
+
+previous="$(cat "$STATE_FILE" 2>/dev/null || echo unknown)"
+
+if ! /sbin/mount | /usr/bin/grep -F " on /Volumes/Crypto-504 " >/dev/null 2>&1; then
+  if [ "$previous" != "missing" ]; then
+    log "SSD_STATE=MISSING"
+  fi
+  printf 'missing\n' >"$STATE_FILE"
+  exit 0
+fi
+
+required=(
+  "$ROOT/ssd-service-supervisor.sh"
+  "$RUNNER/runsvc.sh"
+  "$RUNNER/bin/Runner.Listener"
+  "$DEV/runtime/ledger/live_signal_ledger.sqlite3"
+  "$DEV/runtime/data/live_base_15m_cache.sqlite3"
+  "$DEV/runtime/paper/paper_fund.sqlite3"
+)
+for path in "${required[@]}"; do
+  if [ ! -e "$path" ]; then
+    err "SSD_STATE=PRESENT_BUT_INCOMPLETE missing=$path"
+    printf 'retry\n' >"$STATE_FILE"
+    exit 0
+  fi
+done
+
+quick_check() {
+  local db="$1"
+  [ -f "$db" ] || return 0
+  local result
+  result="$(/usr/bin/sqlite3 "$db" 'PRAGMA quick_check;' 2>>"$ERR" || true)"
+  if [ "$result" != "ok" ]; then
+    err "SQLITE_QUICK_CHECK_FAIL db=$db result=$result"
+    return 1
+  fi
+  return 0
+}
+
+supervisor_alive() {
+  /bin/ps -axo command= 2>/dev/null     | /usr/bin/grep -F "$ROOT/ssd-service-supervisor.sh"     | /usr/bin/grep -v grep >/dev/null 2>&1
+}
+
+runner_listener_pid() {
+  /bin/ps -axo pid=,command= 2>/dev/null \
+    | /usr/bin/awk -v expected="$RUNNER/bin/Runner.Listener run --startuptype service" '
+        {
+          pid=$1
+          sub(/^[[:space:]]*[0-9]+[[:space:]]+/, "", $0)
+          if ($0 == expected) {
+            print pid
+            exit
+          }
+        }
+      '
+}
+
+runner_alive() {
+  [ -n "$(runner_listener_pid)" ]
+}
+
+runner_worker_alive() {
+  /bin/ps -axo command= 2>/dev/null \
+    | /usr/bin/grep -F "$RUNNER/bin/Runner.Worker" \
+    | /usr/bin/grep -v grep >/dev/null 2>&1
+}
+
+process_cwd() {
+  local pid="$1"
+  /usr/sbin/lsof -a -p "$pid" -d cwd -Fn 2>/dev/null \
+    | /usr/bin/sed -n 's/^n//p' \
+    | /usr/bin/head -1
+}
+
+runner_process_origin_ok() {
+  local pid="$1"
+  local cwd=""
+  cwd="$(process_cwd "$pid")"
+  if [ "$cwd" = "$RUNNER" ]; then
+    return 0
+  fi
+  if [ "$cwd" = "cwd|rtd info error: No such file or directory" ]; then
+    log "RUNNER_ORPHAN_STALE_CWD_ACCEPTED=YES pid=$pid"
+    return 0
+  fi
+  return 1
+}
+
+runner_orphan_service_pids() {
+  local service=""
+  local wrapper=""
+  local command=""
+  local service_user=""
+  local wrapper_user=""
+  local service_cwd=""
+  local wrapper_cwd=""
+
+  /bin/ps -axo pid=,user=,command= 2>/dev/null \
+    | /usr/bin/awk -v expected="./externals/node20/bin/node ./bin/RunnerService.js" -v expected_user="crypto-signal-agent" '
+        {
+          pid=$1
+          user=$2
+          sub(/^[[:space:]]*[0-9]+[[:space:]]+[^[:space:]]+[[:space:]]+/, "", $0)
+          if (user == expected_user && $0 == expected) {
+            print pid
+          }
+        }
+      ' \
+    | while read -r service; do
+        [ -n "$service" ] || continue
+        service_cwd="$(process_cwd "$service")"
+        runner_process_origin_ok "$service" || continue
+
+        wrapper="$(/bin/ps -p "$service" -o ppid= 2>/dev/null | /usr/bin/tr -d ' ')"
+        [ -n "$wrapper" ] || continue
+        command="$(/bin/ps -p "$wrapper" -o command= 2>/dev/null || true)"
+        [ "$command" = "/bin/bash ./runsvc.sh" ] || continue
+
+        service_user="$(/bin/ps -p "$service" -o user= 2>/dev/null | /usr/bin/tr -d ' ')"
+        wrapper_user="$(/bin/ps -p "$wrapper" -o user= 2>/dev/null | /usr/bin/tr -d ' ')"
+        [ "$service_user" = "crypto-signal-agent" ] || continue
+        [ "$wrapper_user" = "crypto-signal-agent" ] || continue
+
+        wrapper_cwd="$(process_cwd "$wrapper")"
+        runner_process_origin_ok "$wrapper" || continue
+
+        printf '%s\n' "$service"
+      done
+}
+
+stop_orphan_runner_parent_tree() {
+  local service="$1"
+  local wrapper=""
+  local command=""
+  local cwd=""
+
+  if runner_worker_alive; then
+    err "RUNNER_ORPHAN_STOP_ABORT=ACTIVE_WORKER"
+    return 1
+  fi
+
+  wrapper="$(/bin/ps -p "$service" -o ppid= 2>/dev/null | /usr/bin/tr -d ' ')"
+  [ -n "$wrapper" ] || {
+    err "RUNNER_ORPHAN_STOP_ABORT=MISSING_WRAPPER service=$service"
+    return 1
+  }
+
+  command="$(/bin/ps -p "$service" -o command= 2>/dev/null || true)"
+  [ "$command" = "./externals/node20/bin/node ./bin/RunnerService.js" ] || {
+    err "RUNNER_ORPHAN_STOP_ABORT=SERVICE_COMMAND_CHANGED service=$service"
+    return 1
+  }
+  cwd="$(process_cwd "$service")"
+  runner_process_origin_ok "$service" || {
+    err "RUNNER_ORPHAN_STOP_ABORT=SERVICE_CWD_CHANGED service=$service cwd=$cwd"
+    return 1
+  }
+
+  command="$(/bin/ps -p "$wrapper" -o command= 2>/dev/null || true)"
+  [ "$command" = "/bin/bash ./runsvc.sh" ] || {
+    err "RUNNER_ORPHAN_STOP_ABORT=WRAPPER_COMMAND_CHANGED wrapper=$wrapper"
+    return 1
+  }
+  cwd="$(process_cwd "$wrapper")"
+  runner_process_origin_ok "$wrapper" || {
+    err "RUNNER_ORPHAN_STOP_ABORT=WRAPPER_CWD_CHANGED wrapper=$wrapper cwd=$cwd"
+    return 1
+  }
+
+  [ "$(/bin/ps -p "$service" -o user= 2>/dev/null | /usr/bin/tr -d ' ')" = "crypto-signal-agent" ] || return 1
+  [ "$(/bin/ps -p "$wrapper" -o user= 2>/dev/null | /usr/bin/tr -d ' ')" = "crypto-signal-agent" ] || return 1
+
+  log "RUNNER_ORPHAN_PARENT_STOP_REQUESTED wrapper=$wrapper service=$service"
+
+  /bin/kill "$wrapper" >/dev/null 2>&1 || true
+  /bin/kill "$service" >/dev/null 2>&1 || true
+
+  for _ in {1..15}; do
+    if ! /bin/kill -0 "$service" >/dev/null 2>&1 \
+      && ! /bin/kill -0 "$wrapper" >/dev/null 2>&1; then
+      log "RUNNER_ORPHAN_PARENT_STOP_PASS=YES wrapper=$wrapper service=$service"
+      return 0
+    fi
+    /bin/sleep 1
+  done
+
+  if runner_worker_alive; then
+    err "RUNNER_ORPHAN_FORCE_ABORT=WORKER_APPEARED"
+    return 1
+  fi
+
+  if /bin/kill -0 "$service" >/dev/null 2>&1; then
+    command="$(/bin/ps -p "$service" -o command= 2>/dev/null || true)"
+    cwd="$(process_cwd "$service")"
+    [ "$command" = "./externals/node20/bin/node ./bin/RunnerService.js" ] || return 1
+    runner_process_origin_ok "$service" || return 1
+    /bin/kill -9 "$service" >/dev/null 2>&1 || true
+  fi
+
+  if /bin/kill -0 "$wrapper" >/dev/null 2>&1; then
+    command="$(/bin/ps -p "$wrapper" -o command= 2>/dev/null || true)"
+    cwd="$(process_cwd "$wrapper")"
+    [ "$command" = "/bin/bash ./runsvc.sh" ] || return 1
+    runner_process_origin_ok "$wrapper" || return 1
+    /bin/kill -9 "$wrapper" >/dev/null 2>&1 || true
+  fi
+
+  /bin/sleep 2
+  if /bin/kill -0 "$service" >/dev/null 2>&1 || /bin/kill -0 "$wrapper" >/dev/null 2>&1; then
+    err "RUNNER_ORPHAN_PARENT_STOP_PASS=NO wrapper=$wrapper service=$service"
+    return 1
+  fi
+
+  log "RUNNER_ORPHAN_PARENT_STOP_PASS=YES wrapper=$wrapper service=$service forced=YES"
+  return 0
+}
+
+runner_service_tree() {
+  local listener=""
+  local service=""
+  local wrapper=""
+  local command=""
+
+  listener="$(runner_listener_pid)"
+  [ -n "$listener" ] || return 1
+
+  service="$(/bin/ps -p "$listener" -o ppid= 2>/dev/null | /usr/bin/tr -d ' ')"
+  [ -n "$service" ] || return 1
+  command="$(/bin/ps -p "$service" -o command= 2>/dev/null || true)"
+  [ "$command" = "./externals/node20/bin/node ./bin/RunnerService.js" ] || return 1
+
+  wrapper="$(/bin/ps -p "$service" -o ppid= 2>/dev/null | /usr/bin/tr -d ' ')"
+  [ -n "$wrapper" ] || return 1
+  command="$(/bin/ps -p "$wrapper" -o command= 2>/dev/null || true)"
+  [ "$command" = "/bin/bash ./runsvc.sh" ] || return 1
+
+  for pid in "$listener" "$service" "$wrapper"; do
+    [ "$(/bin/ps -p "$pid" -o user= 2>/dev/null | /usr/bin/tr -d ' ')" = "crypto-signal-agent" ] || return 1
+  done
+
+  printf '%s %s %s\n' "$wrapper" "$service" "$listener"
+}
+
+stop_runner_service_tree() {
+  local tree=""
+  local wrapper=""
+  local service=""
+  local listener=""
+  local pid=""
+  local command=""
+
+  if runner_worker_alive; then
+    err "RUNNER_TREE_STOP_ABORT=ACTIVE_WORKER"
+    return 1
+  fi
+
+  tree="$(runner_service_tree || true)"
+  if [ -z "$tree" ]; then
+    err "RUNNER_TREE_STOP_ABORT=UNVERIFIED_ANCESTRY"
+    return 1
+  fi
+  read -r wrapper service listener <<<"$tree"
+
+  log "RUNNER_TREE_STOP_REQUESTED wrapper=$wrapper service=$service listener=$listener"
+
+  /bin/kill "$wrapper" >/dev/null 2>&1 || true
+  /bin/kill "$service" >/dev/null 2>&1 || true
+  /bin/kill "$listener" >/dev/null 2>&1 || true
+
+  for _ in {1..15}; do
+    if ! /bin/kill -0 "$listener" >/dev/null 2>&1 \
+      && ! /bin/kill -0 "$service" >/dev/null 2>&1 \
+      && ! /bin/kill -0 "$wrapper" >/dev/null 2>&1; then
+      log "RUNNER_TREE_STOP_PASS=YES wrapper=$wrapper service=$service listener=$listener"
+      return 0
+    fi
+    /bin/sleep 1
+  done
+
+  if runner_worker_alive; then
+    err "RUNNER_TREE_FORCE_ABORT=WORKER_APPEARED"
+    return 1
+  fi
+
+  for pid in "$listener" "$service" "$wrapper"; do
+    if /bin/kill -0 "$pid" >/dev/null 2>&1; then
+      command="$(/bin/ps -p "$pid" -o command= 2>/dev/null || true)"
+      case "$pid" in
+        "$listener")
+          printf '%s' "$command" | /usr/bin/grep -F "$RUNNER/bin/Runner.Listener run --startuptype service" >/dev/null || return 1
+          ;;
+        "$service")
+          [ "$command" = "./externals/node20/bin/node ./bin/RunnerService.js" ] || return 1
+          ;;
+        "$wrapper")
+          [ "$command" = "/bin/bash ./runsvc.sh" ] || return 1
+          ;;
+      esac
+      /bin/kill -9 "$pid" >/dev/null 2>&1 || true
+    fi
+  done
+  /bin/sleep 2
+
+  if /bin/kill -0 "$listener" >/dev/null 2>&1 \
+    || /bin/kill -0 "$service" >/dev/null 2>&1 \
+    || /bin/kill -0 "$wrapper" >/dev/null 2>&1; then
+    err "RUNNER_TREE_STOP_PASS=NO wrapper=$wrapper service=$service listener=$listener"
+    return 1
+  fi
+
+  log "RUNNER_TREE_STOP_PASS=YES wrapper=$wrapper service=$service listener=$listener forced=YES"
+  return 0
+}
+
+reset_runner_hang_state() {
+  printf 'pid=\nstreak=0\n' >"$RUNNER_HANG_FILE"
+}
+
+runner_elapsed_seconds() {
+  local pid="$1"
+  local elapsed=""
+  elapsed="$(/bin/ps -p "$pid" -o etime= 2>/dev/null | /usr/bin/tr -d ' ' || true)"
+  [ -n "$elapsed" ] || {
+    printf '0\n'
+    return 0
+  }
+  /usr/bin/awk -v value="$elapsed" '
+    BEGIN {
+      n = split(value, part, /[-:]/)
+      if (n == 4) {
+        print (part[1] * 86400) + (part[2] * 3600) + (part[3] * 60) + part[4]
+      } else if (n == 3) {
+        print (part[1] * 3600) + (part[2] * 60) + part[3]
+      } else if (n == 2) {
+        print (part[1] * 60) + part[2]
+      } else {
+        print 0
+      }
+    }
+  '
+}
+
+runner_hang_detected() {
+  local pid=""
+  local cpu_raw=""
+  local cpu_int=0
+  local previous_pid=""
+  local previous_streak=0
+  local streak=0
+  local age_seconds=0
+
+  pid="$(runner_listener_pid)"
+  if [ -z "$pid" ]; then
+    reset_runner_hang_state
+    return 1
+  fi
+
+  if runner_worker_alive; then
+    reset_runner_hang_state
+    return 1
+  fi
+
+  age_seconds="$(runner_elapsed_seconds "$pid")"
+  if [ "$age_seconds" -lt "$RUNNER_HANG_MIN_AGE_SECONDS" ]; then
+    reset_runner_hang_state
+    return 1
+  fi
+
+  cpu_raw="$(/bin/ps -p "$pid" -o %cpu= 2>/dev/null | /usr/bin/tr -d ' ' || true)"
+  cpu_int="$(/usr/bin/awk -v value="${cpu_raw:-0}" 'BEGIN {printf "%d\n", value + 0}')"
+
+  if [ -f "$RUNNER_HANG_FILE" ]; then
+    previous_pid="$(/usr/bin/sed -n 's/^pid=//p' "$RUNNER_HANG_FILE" | /usr/bin/head -1)"
+    previous_streak="$(/usr/bin/sed -n 's/^streak=//p' "$RUNNER_HANG_FILE" | /usr/bin/head -1)"
+  fi
+  case "$previous_streak" in
+    ''|*[!0-9]*) previous_streak=0 ;;
+  esac
+
+  if [ "$cpu_int" -ge "$RUNNER_HANG_CPU_MIN" ]; then
+    if [ "$previous_pid" = "$pid" ]; then
+      streak=$((previous_streak + 1))
+    else
+      streak=1
+    fi
+  else
+    streak=0
+  fi
+
+  printf 'pid=%s\nstreak=%s\ncpu=%s\n' "$pid" "$streak" "$cpu_int" >"$RUNNER_HANG_FILE"
+
+  if [ "$streak" -ge "$RUNNER_HANG_STREAK_LIMIT" ]; then
+    log "RUNNER_HANG_DETECTED=YES pid=$pid cpu=$cpu_int age_seconds=$age_seconds streak=$streak worker=NO"
+    return 0
+  fi
+  return 1
+}
+
+dashboard_healthy() {
+  /usr/bin/curl -fsS --max-time 3 http://127.0.0.1:48700/api/health     >/dev/null 2>&1
+}
+
+stop_pidfile_process() {
+  local pidfile="$1"
+  local expected="$2"
+  local pid=""
+  pid="$(cat "$pidfile" 2>/dev/null || true)"
+  [ -n "$pid" ] || return 0
+  if /bin/kill -0 "$pid" >/dev/null 2>&1     && /bin/ps -p "$pid" -o command= 2>/dev/null | /usr/bin/grep -F "$expected" >/dev/null 2>&1; then
+    /bin/kill "$pid" >/dev/null 2>&1 || true
+    /bin/sleep 1
+  fi
+}
+
+start_supervisor() {
+  if supervisor_alive && dashboard_healthy; then
+    return 0
+  fi
+
+  quick_check "$DEV/runtime/ledger/live_signal_ledger.sqlite3" || return 1
+  quick_check "$DEV/runtime/data/live_base_15m_cache.sqlite3" || return 1
+  quick_check "$DEV/runtime/paper/paper_fund.sqlite3" || return 1
+  quick_check "$DEV/runtime/alerts/alert_outbox.sqlite3" || return 1
+
+  stop_pidfile_process "$ROOT/dashboard.pid" "run_dashboard.py"
+  stop_pidfile_process "$ROOT/ssd-service-supervisor.pid" "$ROOT/ssd-service-supervisor.sh"
+
+  (
+    unset RUNNER_TRACKING_ID
+    nohup "$ROOT/ssd-service-supervisor.sh"       >>"$ROOT/ServiceLogs/hotplug-supervisor-bootstrap.out.log"       2>>"$ROOT/ServiceLogs/hotplug-supervisor-bootstrap.err.log"       </dev/null &
+    echo $! >"$ROOT/ssd-service-supervisor.pid"
+  )
+  log "SUPERVISOR_RESTART_REQUESTED=YES"
+  return 0
+}
+
+request_terminal_runner_start() {
+  local now=0
+  local then=0
+
+  if [ ! -x "$RUNNER_TERMINAL_START" ]; then
+    err "RUNNER_TERMINAL_START_ABORT=COMMAND_NOT_READY path=$RUNNER_TERMINAL_START"
+    return 1
+  fi
+
+  if [ -f "$RUNNER_TERMINAL_LOCK" ]; then
+    now="$(date +%s)"
+    then="$(stat -f %m "$RUNNER_TERMINAL_LOCK" 2>/dev/null || echo 0)"
+    if [ $((now-then)) -lt 90 ]; then
+      log "RUNNER_TERMINAL_START_SUPPRESSED=LOCK_ACTIVE"
+      return 0
+    fi
+  fi
+
+  date >"$RUNNER_TERMINAL_LOCK"
+  log "RUNNER_TERMINAL_START_REQUESTED=YES"
+  if ! /usr/bin/open -gj -a Terminal "$RUNNER_TERMINAL_START" >>"$LOCAL_LOG/terminal-open.out.log" 2>>"$LOCAL_LOG/terminal-open.err.log"; then
+    err "RUNNER_TERMINAL_START_REQUESTED=NO"
+    return 1
+  fi
+  return 0
+}
+
+start_runner() {
+  local force_restart="$1"
+
+  if [ "$force_restart" != "YES" ] && runner_alive; then
+    if runner_hang_detected; then
+      force_restart="YES"
+      log "RUNNER_HANG_RECOVERY_REQUESTED=YES"
+    else
+      return 0
+    fi
+  fi
+
+  if [ "$force_restart" = "YES" ] && runner_alive; then
+    stop_runner_service_tree || return 1
+  fi
+
+  if runner_alive; then
+    return 0
+  fi
+
+  local orphan_services=""
+  local orphan_count=0
+  local orphan_service=""
+  orphan_services="$(runner_orphan_service_pids)"
+  orphan_count="$(printf '%s\n' "$orphan_services" | /usr/bin/awk 'NF {n++} END {print n+0}')"
+  if [ "$orphan_count" -gt 1 ]; then
+    err "RUNNER_ORPHAN_STOP_ABORT=AMBIGUOUS services=$orphan_services"
+    return 1
+  fi
+  if [ "$orphan_count" -eq 1 ]; then
+    orphan_service="$(printf '%s\n' "$orphan_services" | /usr/bin/head -1)"
+    log "RUNNER_ORPHAN_PARENT_DETECTED=YES service=$orphan_service"
+    stop_orphan_runner_parent_tree "$orphan_service" || return 1
+  fi
+
+  request_terminal_runner_start || return 1
+
+  reset_runner_hang_state
+  log "RUNNER_RESTART_REQUESTED=YES force=$force_restart transport=terminal"
+  return 0
+}
+
+mount_transition="NO"
+if [ "$previous" = "missing" ]; then
+  mount_transition="YES"
+  log "SSD_STATE=REMOUNTED"
+elif [ "$previous" = "unknown" ]; then
+  log "SSD_STATE=PRESENT_INITIAL"
+fi
+
+start_supervisor || {
+  printf 'retry\n' >"$STATE_FILE"
+  exit 0
+}
+start_runner "$mount_transition" || {
+  printf 'retry\n' >"$STATE_FILE"
+  exit 0
+}
+
+ok=0
+for _ in {1..45}; do
+  if supervisor_alive && runner_alive && dashboard_healthy; then
+    ok=1
+    break
+  fi
+  /bin/sleep 1
+done
+
+if [ "$ok" = "1" ]; then
+  printf 'ready\n' >"$STATE_FILE"
+  if [ "$previous" != "ready" ]; then
+    log "SSD_HOTPLUG_RECOVERY_PASS=YES"
+  fi
+else
+  printf 'retry\n' >"$STATE_FILE"
+  err "SSD_HOTPLUG_RECOVERY_PASS=NO supervisor=$(supervisor_alive && echo YES || echo NO) runner=$(runner_alive && echo YES || echo NO) dashboard=$(dashboard_healthy && echo YES || echo NO)"
+fi
+
+exit 0
+WATCH
+chmod 700 "$WATCHDOG"
+
+cat > "$RUNNER_TERMINAL_START" <<'RUNNERTERM'
+#!/bin/bash
+set -u
+
+ROOT="/Volumes/Crypto-504/Crypto-Signal"
+RUNNER="$ROOT/Runner"
+LOG="$ROOT/RunnerLogs"
+LOCAL_ROOT="$HOME/Library/Application Support/CryptoSignalRecovery"
+LOCAL_LOG="$HOME/Library/Logs/CryptoSignalRecovery"
+EXPECTED="$RUNNER/bin/Runner.Listener run --startuptype service"
+
+mkdir -p "$LOCAL_ROOT" "$LOCAL_LOG"
+
+listener_count="$(/bin/ps -axo command= 2>/dev/null | /usr/bin/awk -v expected="$EXPECTED" '$0 == expected {n++} END {print n+0}')"
+if [ "$listener_count" -gt 0 ]; then
+  printf '%s RUNNER_ALREADY_ALIVE=YES count=%s\n' "$(date '+%Y-%m-%d %H:%M:%S %z')" "$listener_count" >>"$LOCAL_LOG/terminal-runner.log"
+  rm -f "$LOCAL_ROOT/terminal-start.lock"
+  exit 0
+fi
+
+if /bin/ps -axo command= 2>/dev/null | /usr/bin/grep -F "$RUNNER/bin/Runner.Worker" | /usr/bin/grep -v grep >/dev/null 2>&1; then
+  printf '%s RUNNER_TERMINAL_START_ABORT=ACTIVE_WORKER\n' "$(date '+%Y-%m-%d %H:%M:%S %z')" >>"$LOCAL_LOG/terminal-runner.err.log"
+  rm -f "$LOCAL_ROOT/terminal-start.lock"
+  exit 1
+fi
+
+if [ ! -x "$RUNNER/runsvc.sh" ]; then
+  printf '%s SSD_RUNNER_NOT_READY=YES\n' "$(date '+%Y-%m-%d %H:%M:%S %z')" >>"$LOCAL_LOG/terminal-runner.err.log"
+  rm -f "$LOCAL_ROOT/terminal-start.lock"
+  exit 75
+fi
+
+mkdir -p "$LOG"
+cd "$RUNNER" || exit 75
+unset RUNNER_TRACKING_ID
+export HOME="/Users/crypto-signal-agent"
+export ACTIONS_RUNNER_SVC=1
+nohup ./runsvc.sh \
+  >>"$LOG/r15-terminal-runner.out.log" \
+  2>>"$LOG/r15-terminal-runner.err.log" \
+  </dev/null &
+pid=$!
+echo "$pid" >"$LOCAL_ROOT/runner-terminal.pid"
+printf '%s STARTED_RUNSVC_PID=%s\n' "$(date '+%Y-%m-%d %H:%M:%S %z')" "$pid" >>"$LOCAL_LOG/terminal-runner.log"
+rm -f "$LOCAL_ROOT/terminal-start.lock"
+sleep 5
+exit 0
+RUNNERTERM
+chmod 700 "$RUNNER_TERMINAL_START"
+
+cat > "$PLIST" <<PLIST
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>$LABEL</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>$WATCHDOG</string>
+  </array>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>StartInterval</key>
+  <integer>20</integer>
+  <key>ProcessType</key>
+  <string>Background</string>
+  <key>StandardOutPath</key>
+  <string>$LOCAL_LOG/launchagent.out.log</string>
+  <key>StandardErrorPath</key>
+  <string>$LOCAL_LOG/launchagent.err.log</string>
+</dict>
+</plist>
+PLIST
+chmod 644 "$PLIST"
+/usr/bin/plutil -lint "$PLIST"
+
+# Do not manufacture a mount transition during installation. If the canonical
+# processes are currently healthy we mark ready; otherwise the watchdog will
+# repair only the missing plane on its first cycle.
+if /sbin/mount | /usr/bin/grep -F " on /Volumes/Crypto-504 " >/dev/null 2>&1; then
+  printf 'unknown\n' >"$STATE_FILE"
+else
+  printf 'missing\n' >"$STATE_FILE"
+fi
+
+# R15 becomes the single runner recovery owner. Legacy watchdogs/services are
+# disabled but their plist files are intentionally retained for reversible rollback.
+for legacy_label in "${LEGACY_RUNNER_LABELS[@]}"; do
+  legacy_target="gui/$(id -u)/$legacy_label"
+  /bin/launchctl disable "$legacy_target" >/dev/null 2>&1 || true
+  /bin/launchctl bootout "$legacy_target" >/dev/null 2>&1 || true
+done
+
+reload_main_launchagent() {
+  local domain="gui/$(id -u)"
+  local loaded="NO"
+  local attempt=0
+
+  if /bin/launchctl print "$TARGET" >/dev/null 2>&1; then
+    /bin/launchctl bootout "$TARGET" >/dev/null 2>&1 || true
+    for attempt in {1..10}; do
+      if ! /bin/launchctl print "$TARGET" >/dev/null 2>&1; then
+        break
+      fi
+      /bin/sleep 1
+    done
+  fi
+
+  /bin/launchctl enable "$TARGET" >/dev/null 2>&1 || true
+
+  for attempt in {1..8}; do
+    if /bin/launchctl print "$TARGET" >/dev/null 2>&1; then
+      loaded="YES"
+      break
+    fi
+
+    if /bin/launchctl bootstrap "$domain" "$PLIST" \
+      >>"$LOCAL_LOG/install-launchctl.out.log" \
+      2>>"$LOCAL_LOG/install-launchctl.err.log"; then
+      loaded="YES"
+      break
+    fi
+
+    if /bin/launchctl print "$TARGET" >/dev/null 2>&1; then
+      loaded="YES"
+      break
+    fi
+    /bin/sleep 1
+  done
+
+  if [ "$loaded" != "YES" ]; then
+    echo "R15_HOTPLUG_INSTALL_ERROR=WATCHDOG_BOOTSTRAP_FAILED target=$TARGET" >&2
+    /usr/bin/tail -40 "$LOCAL_LOG/install-launchctl.err.log" >&2 2>/dev/null || true
+    return 1
+  fi
+
+  /bin/launchctl print "$TARGET" >/dev/null
+}
+
+reload_main_launchagent
+
+echo "R15_SSD_HOTPLUG_RECOVERY_INSTALLED=YES"
+echo "R15_SSD_HOTPLUG_RECOVERY_SINGLE_OWNER=YES"
+echo "R15_SSD_HOTPLUG_RECOVERY_RUNNER_TERMINAL_TRANSPORT=YES"
+echo "R15_SSD_HOTPLUG_RECOVERY_REAL_CAPITAL=0"
+echo "R15_SSD_HOTPLUG_RECOVERY_NO_INTERNAL_RUNTIME_FALLBACK=YES"
