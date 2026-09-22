@@ -2693,3 +2693,21 @@ UID501 direct filesystem access to the existing Crypto-504 tree remains permissi
 blocked until the prepared owner-preserving ACL grant is authorized. Direct DB/log
 access is desirable for forensics but was not required for the freshness conclusion
 because the live product API reads the immutable canonical ledger read-only.
+
+
+## 2026-09-22 — post-04:00 freshness blocker re-confirmed
+
+A fresh UID501 migration diagnostic could see the running SSD dashboard process but
+reported the entire `/Volumes/Crypto-504/Crypto-Signal` tree as inaccessible/MISSING
+from UID501. The owner-preserving UID501 ACL authorization flow had been launched but
+was not yet applied.
+
+A new UID504 allowlisted log diagnostic (issue #731, `command: logs`) entered
+**queued** state instead of executing. This is independent evidence that the UID504
+self-hosted runner was still unable to accept fresh work while its long-lived
+Runner.Listener had previously been observed near 100% CPU.
+
+Result: the “04:00 data cut” is **not declared fixed**. Closure requires direct
+post-cutoff advancement evidence from the canonical ledger, 15m candle cache and
+health/freshness surface after either UID501 access is authorized or the UID504 runner
+is safely recovered.
