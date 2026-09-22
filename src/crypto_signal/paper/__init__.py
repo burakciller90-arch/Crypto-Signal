@@ -55,6 +55,21 @@ from crypto_signal.paper.event_scanner import (
     PaperSignalEventScanResult,
     scan_post_activation_signal_events,
 )
+from crypto_signal.paper.epochs import (
+    PAPER_EPOCH1_ID,
+    PAPER_EPOCH2_CAPITAL_POLICY_VERSION,
+    PAPER_EPOCH2_ID,
+    PAPER_EPOCH2_STARTING_NAV_USDT,
+    PAPER_EPOCH_SCHEMA_VERSION,
+    PaperCapitalVault,
+    PaperEpochActivationStatus,
+    PaperEpochTransitionPlan,
+    PaperEpochTransitionSemantic,
+    PaperFundEpochSpec,
+    PaperVaultAllocation,
+    build_epoch2_spec,
+    build_epoch2_transition_plan,
+)
 from crypto_signal.paper.execution_input import (
     PAPER_EXECUTION_INPUT_POLICY_VERSION,
     FrozenPaperExecutionInput,
@@ -147,6 +162,19 @@ from crypto_signal.paper.venue_rules import (
 )
 
 __all__ = [
+    "build_epoch2_transition_plan",
+    "build_epoch2_spec",
+    "PaperVaultAllocation",
+    "PaperFundEpochSpec",
+    "PaperEpochTransitionSemantic",
+    "PaperEpochTransitionPlan",
+    "PaperEpochActivationStatus",
+    "PaperCapitalVault",
+    "PAPER_EPOCH_SCHEMA_VERSION",
+    "PAPER_EPOCH2_STARTING_NAV_USDT",
+    "PAPER_EPOCH2_ID",
+    "PAPER_EPOCH2_CAPITAL_POLICY_VERSION",
+    "PAPER_EPOCH1_ID",
     "BENCHMARK_IDS",
     "BINANCE_SPOT_EXCHANGE_INFO_URL",
     "INITIAL_CASH_USDT",
