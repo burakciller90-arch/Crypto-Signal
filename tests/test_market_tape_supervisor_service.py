@@ -48,3 +48,13 @@ def test_market_tape_supervisor_stop_is_bounded_and_explicit() -> None:
     assert 'kill -TERM "$pid"' in source
     assert 'kill -KILL "$pid"' in source
     assert "REAL_CAPITAL=0" in source
+
+
+def test_market_tape_supervisor_has_single_top_level_recovery_owner() -> None:
+    ssd_supervisor = (ROOT / "ops/ssd_runtime_supervisor.sh").read_text()
+    installer = (ROOT / "ops/install_market_tape_runtime.sh").read_text()
+
+    assert "ensure_market_tape_supervisor" in ssd_supervisor
+    assert "start_market_tape_supervisor.sh" in ssd_supervisor
+    assert 'MARKET_TAPE_INSTALL_ENABLE_LAUNCHD:-0' in installer
+    assert "MARKET_TAPE_LAUNCHAGENT_DISABLED_BY_DEFAULT=YES" in installer
