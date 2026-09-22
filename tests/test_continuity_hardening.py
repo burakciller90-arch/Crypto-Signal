@@ -145,6 +145,16 @@ def test_binding_writers_and_installers_use_ssd_canonical_state() -> None:
     assert "LOCAL_20M_WAKE_MODE=rolling-daemon" in installer
     assert "GITHUB_20M_ROLE=watchdog-fallback" in installer
     assert "ROLLING_WAKE_IMMEDIATE_RECEIPT_PASS=YES" in installer
+    assert "RELAY_RELOAD_OLD_PID=" in installer
+    assert "RELAY_RELOAD_NEW_PID=" in installer
+    assert "RELAY_RELOAD_READY=YES" in installer
+    assert "RELAY_RELOAD_BARRIER_FAIL" in installer
+    assert 'test ! -e "$SHARED/restart_requested"' not in installer
+    assert 'if [ ! -e "$SHARED/restart_requested" ]' in installer
+    assert 'grep -F "relay=START pid=$NEW_RELAY_PID target=$LOCKED_CURRENT_CHAT"' in installer
+    assert installer.index("RELAY_RELOAD_READY=YES") < installer.index(
+        'PIDFILE="$RUNTIME/rolling_wake.pid"'
+    )
     assert 'cron: "*/5 * * * *"' in fallback
     assert 'if [ "${{ github.event_name }}" = "schedule" ]; then' in fallback
     assert '\\${{ github.event_name }}' not in fallback
