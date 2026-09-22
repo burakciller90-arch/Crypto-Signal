@@ -74,7 +74,7 @@ def test_r15_runner_restart_stops_parent_tree_before_new_start() -> None:
     end = text.index('mount_transition="NO"', start)
     block = text[start:end]
     stop_index = block.index('stop_runner_service_tree')
-    start_index = block.index('nohup ./runsvc.sh')
+    start_index = block.index('launchctl kickstart -k "$RUNNER_SERVICE_TARGET"')
     assert stop_index < start_index
     assert 'runner_worker_alive' in text
     assert 'crypto-signal-agent' in text
@@ -132,7 +132,7 @@ def test_r15_orphan_parent_is_stopped_before_new_runner_start() -> None:
     block = text[start:end]
     orphan_index = block.index("runner_orphan_service_pids")
     stop_index = block.index("stop_orphan_runner_parent_tree")
-    launch_index = block.index("nohup ./runsvc.sh")
+    launch_index = block.index('launchctl kickstart -k "$RUNNER_SERVICE_TARGET"')
     assert orphan_index < stop_index < launch_index
 
 def test_r15_orphan_origin_accepts_only_canonical_or_exact_detach_stale_cwd() -> None:
