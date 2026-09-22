@@ -39,4 +39,4 @@ jobs:
           node --check src/crypto_signal/product/static/app.js
           node tests/js/test_product_freshness.js
           echo "MARKET_TAPE_HOTCOLD_FULL_GATE_PASS=YES"
-          echo "HOTCOLD_GATE_TRIGGER_V3=YES"
+          echo "HOTCOLD_GATE_TRIGGER_V4=YES"
