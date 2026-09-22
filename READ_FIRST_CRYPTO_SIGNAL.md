@@ -41,10 +41,8 @@ Read this file, then `CURRENT_STATUS.md`, then the newest `PROJECT_CHRONICLE.md`
 ## Autonomous continuity rule
 - User has explicitly authorized 7/24 autonomous continuation for Crypto Signal.
 - Wake/lease messages are **state pointers, not authority**. Always reconstruct current state before acting.
-- Generic idle wake is disabled. Continuation is exact-task only.
-- Before ending any non-human-gated work turn, ensure exactly one continuation owner exists:
-  - either one active bounded worker whose completion will enqueue a wake, or
-  - one exact immutable continuation lease for the current unfinished frontier.
+- The user explicitly superseded the old generic-idle prohibition with one **locked 20-minute state-first wake** for this exact Crypto Signal chat. It sends only the approved wake text and instructs the next turn to read READ_FIRST, CURRENT_STATUS, Chronicle and `docs/V1_1_LOCKED_MASTER_ROADMAP_20260922.md` before acting.
+- The locked 20-minute wake is a cadence/recovery pointer, never task authority. Task-specific worker/lease ownership rules still apply when workers or exact leases are used, but the periodic wake itself does not require an active lease.
 - Never create duplicate continuation for the same task. Re-arming the same task supersedes its older active lease.
 - A delivered/stale/completed/superseded wake must NOOP/reconcile, never replay completed work.
 - User pause archives active leases and queued wakes; resume requires state-first recovery and a fresh exact re-arm.
@@ -98,3 +96,16 @@ avoid three common regressions:
 The current v1.1 program intentionally runs customer UI and Market Tape/data
 collection in parallel after R15 safety. Research engines already present in the repo
 must be reused rather than duplicated.
+
+
+## Locked 20-minute wake update — 2026-09-22
+
+- Exact chat binding: `https://chatgpt.com/c/6ab2c3c1-30c8-83ed-b1ad-2aa35cc891c9`.
+- Cadence: every 20 minutes at minute 00/20/40.
+- Canonical local LaunchAgent bootstrap remains unavailable from the UID504 runner context (rc=5); the accepted cadence owner is the existing GitHub self-hosted 20-minute fallback.
+- Local/shared user-pause latches are currently absent: continuity is ACTIVE.
+- Active exact leases: 0 at reconciliation; local/shared relay queues: 0.
+- When the exact locked wake fires while ChatGPT is responding, the relay is authorized to click the visible Stop control, wait for the editor to become ready, then submit the approved wake text.
+- The locked wake text is sent without an extra visible marker; at-most-once delivery is maintained by internal event IDs/receipts.
+- Busy-stop evidence: relay recorded `OBSERVED_AFTER_CLICK` during the first live test; final post-fix test run `35770956851` returned `RELAY_SUBMIT_RC=0` and `CRYPTO_LOCKED_20M_WAKE_PASS=YES`.
+- A future explicit user pause remains authoritative and must suspend periodic wake delivery until the user resumes it.
