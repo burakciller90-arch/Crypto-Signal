@@ -1,0 +1,51 @@
+name: Crypto R15 SSD Hotplug Recovery
+
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  contents: read
+
+jobs:
+  install:
+    if: github.event.issue.title == '[R15] INSTALL SSD HOTPLUG RECOVERY'
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install mount-aware recovery bootstrap
+        run: |
+          set -euo pipefail
+          test "$(id -u)" = "504"
+          bash ops/install_ssd_hotplug_recovery.sh
+
+  check:
+    if: github.event.issue.title == '[R15] CHECK SSD HOTPLUG RECOVERY'
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 10
+    steps:
+      - name: Inspect recovery state
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          LOCAL="$HOME/Library/Application Support/CryptoSignalRecovery"
+          LABEL="com.cryptosignal.ssd-hotplug-recovery"
+          echo "=== MOUNT ==="
+          /sbin/mount | grep -F " on /Volumes/Crypto-504 "
+          echo "=== STATE ==="
+          cat "$LOCAL/ssd-state"
+          echo "=== LAUNCHAGENT ==="
+          launchctl print "gui/$(id -u)/$LABEL" | egrep 'state =|runs =|last exit code =|run interval =|program =|path =' | head -80
+          echo "=== CANONICAL PROCESSES ==="
+          ps -axo pid=,ppid=,user=,etime=,command= | grep -E '[V]olumes/Crypto-504/Crypto-Signal/(ssd-service-supervisor\.sh|Runner/(runsvc\.sh|bin/Runner\.Listener|bin/Runner\.Worker))' | head -100
+          echo "=== HEALTH ==="
+          curl -fsS --max-time 5 http://127.0.0.1:48700/api/health
+          echo
+          echo "=== SQLITE ==="
+          for db in             "$ROOT/Development/runtime/ledger/live_signal_ledger.sqlite3"             "$ROOT/Development/runtime/data/live_base_15m_cache.sqlite3"             "$ROOT/Development/runtime/paper/paper_fund.sqlite3"             "$ROOT/Development/runtime/alerts/alert_outbox.sqlite3"; do
+            printf '%s ' "$db"
+            sqlite3 "$db" 'PRAGMA quick_check;'
+          done
+          echo "R15_SSD_HOTPLUG_RECOVERY_CHECK_PASS=YES"
+          echo "REAL_CAPITAL=0"
