@@ -70,9 +70,10 @@ mkdir -p "$HOME/Library/LaunchAgents" "$ROOT/ServiceLogs"
 cp "$PLIST_SOURCE" "$PLIST_TARGET"
 chmod 600 "$PLIST_TARGET"
 
-if [ "${MARKET_TAPE_INSTALL_NO_START:-0}" = "1" ]; then
+if [ "${MARKET_TAPE_INSTALL_ENABLE_LAUNCHD:-0}" != "1" ]; then
   /bin/launchctl disable "$DOMAIN/$LABEL" >/dev/null 2>&1 || true
   /bin/launchctl bootout "$DOMAIN/$LABEL" >/dev/null 2>&1 || true
+  echo "MARKET_TAPE_LAUNCHAGENT_DISABLED_BY_DEFAULT=YES"
   echo "MARKET_TAPE_LAUNCHAGENT_PREPARE_ONLY_PASS=YES"
 else
   /bin/launchctl disable "$DOMAIN/$LABEL" >/dev/null 2>&1 || true
