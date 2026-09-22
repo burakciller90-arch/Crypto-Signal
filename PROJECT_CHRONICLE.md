@@ -2869,3 +2869,22 @@ Continuity remains PAUSED by user contract.
 Canonical development frontier returns to M2 Liquidity Dynamics on top of the accepted Market Tape / microstructure foundation.
 REAL_CAPITAL remains 0.
 
+## 2026-09-22 — R15 final merge reconciliation; operational closure preserved
+
+R15 operational acceptance had already closed after the real physical KIOXIA SSD detach/remount exercise, orphan-parent cleanup, healthy UID504 runner recovery, dashboard/API validation and four canonical SQLite `PRAGMA quick_check=ok` results.
+
+Final repository reconciliation then completed:
+- PR #715 current head `40c66677f78b15e08b0c82ea8a75ca51c1633bf0` was mechanically confirmed mergeable and non-draft;
+- the PR diff was reduced back to exactly three intended files:
+  - `.github/workflows/crypto-r15-hotplug-recovery.yml`;
+  - `ops/install_ssd_hotplug_recovery.sh`;
+  - `tests/test_r15_hotplug_recovery_contract.py`;
+- independent exact-head full regression run `35747566530` PASSed against that exact head SHA;
+- PR #715 was squash-merged to `main` as `97eafdcb9810134f8d7b7a4c62a1546d2554e4dc`.
+
+The immutable release tag `crypto-signal-full-version-v1.0.0` is unchanged. R15 operational/runtime closure therefore remains complete while the post-v1.0 development program continues separately.
+
+Continuity remains PAUSED by user contract. REAL_CAPITAL=0.
+
+Canonical development frontier remains **M2 Liquidity Dynamics** on top of the accepted raw Market Tape / microstructure foundation. Completed/stale R15 diagnostics must not be replayed.
+
