@@ -135,3 +135,23 @@ def test_r15_orphan_parent_is_stopped_before_new_runner_start() -> None:
     launch_index = block.index("nohup ./runsvc.sh")
     assert orphan_index < stop_index < launch_index
 
+def test_r15_orphan_origin_accepts_only_canonical_or_exact_detach_stale_cwd() -> None:
+    text = SCRIPT.read_text(encoding="utf-8")
+    assert "runner_process_origin_ok()" in text
+    assert '[ "$cwd" = "$RUNNER" ]' in text
+    assert '[ "$cwd" = "cwd|rtd info error: No such file or directory" ]' in text
+    assert 'RUNNER_ORPHAN_STALE_CWD_ACCEPTED=YES' in text
+    block_start = text.index("runner_process_origin_ok()")
+    block_end = text.index("runner_orphan_service_pids()", block_start)
+    block = text[block_start:block_end]
+    assert "return 1" in block
+
+
+def test_r15_orphan_stop_revalidates_origin_before_force_kill() -> None:
+    text = SCRIPT.read_text(encoding="utf-8")
+    start = text.index("stop_orphan_runner_parent_tree()")
+    end = text.index("runner_service_tree()", start)
+    block = text[start:end]
+    assert block.count("runner_process_origin_ok") >= 4
+    assert 'RUNNER_ORPHAN_FORCE_ABORT=WORKER_APPEARED' in block
+
