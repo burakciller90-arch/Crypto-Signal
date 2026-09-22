@@ -41,6 +41,7 @@ RAW_DB = TAPE_DIR / "raw_market_tape.sqlite3"
 LOCK = TAPE_DIR / "market_tape_stream.lock"
 STATUS = TAPE_DIR / "runtime_status.json"
 DEFAULT_SYMBOLS = ("BTCUSDT", "ETHUSDT", "SOLUSDT")
+RUNTIME_HEARTBEAT_SECONDS = 30
 
 
 def parse_args() -> argparse.Namespace:
@@ -62,12 +63,28 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+async def _collection_heartbeat(
+    payload: dict[str, object],
+) -> None:
+    while True:
+        await asyncio.sleep(RUNTIME_HEARTBEAT_SECONDS)
+        _write_status(
+            {
+                **payload,
+                "state": "collecting_chunk",
+                "process_pid": os.getpid(),
+                "heartbeat": True,
+            }
+        )
+
+
 async def _collect_chunk(
     *,
     symbols: tuple[str, ...],
     depth: int,
     snapshot_interval_ms: int,
     chunk_messages: int,
+    heartbeat_payload: dict[str, object],
 ) -> MarketTapeWireCollectionResult:
     store = MarketTapeStore(DB)
     raw_store = RawMarketTapeStore(RAW_DB)
@@ -75,13 +92,23 @@ async def _collect_chunk(
         raise RuntimeError("Market Tape quick_check failed before collection")
 
     stream = BybitSpotMicrostructureStream()
-    result = await persist_bybit_wire_stream(
-        store=store,
-        raw_store=raw_store,
-        events=stream.stream_wire_events(symbols=symbols, depth=depth),
-        orderbook_snapshot_interval_ms=snapshot_interval_ms,
-        max_messages=chunk_messages,
+    heartbeat_task = asyncio.create_task(
+        _collection_heartbeat(heartbeat_payload)
     )
+    try:
+        result = await persist_bybit_wire_stream(
+            store=store,
+            raw_store=raw_store,
+            events=stream.stream_wire_events(symbols=symbols, depth=depth),
+            orderbook_snapshot_interval_ms=snapshot_interval_ms,
+            max_messages=chunk_messages,
+        )
+    finally:
+        heartbeat_task.cancel()
+        try:
+            await heartbeat_task
+        except asyncio.CancelledError:
+            pass
 
     if not store.quick_check() or not raw_store.quick_check():
         raise RuntimeError("Market Tape quick_check failed after collection")
@@ -374,6 +401,22 @@ def main() -> int:
                                 args.orderbook_snapshot_interval_ms
                             ),
                             chunk_messages=args.chunk_messages,
+                            heartbeat_payload={
+                                "cycle": cycles + 1,
+                                "target_messages": args.chunk_messages,
+                                "archived_rows": _archive_int(
+                                    archive,
+                                    "archived_rows",
+                                ),
+                                "pruned_rows": _archive_int(
+                                    archive,
+                                    "pruned_rows",
+                                ),
+                                "archived_partitions": (
+                                    _archive_partition_count(archive)
+                                ),
+                                **post_archive,
+                            },
                         )
                     )
                 except (OSError, sqlite3.Error, TimeoutError, ValueError) as exc:
