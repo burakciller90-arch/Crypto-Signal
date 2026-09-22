@@ -17,6 +17,7 @@ from crypto_signal.intelligence.liquidity_dynamics import (
     LiquidityDynamicsConfig,
     LiquidityDynamicsStatus,
     LiquiditySourceQuality,
+    LiquidityTakeCandidate,
     analyze_liquidity_dynamics,
     build_liquidity_dynamics_evidence_freeze,
 )
@@ -130,6 +131,7 @@ def test_temporal_liquidity_metrics_are_deterministic_and_frozen() -> None:
     assert first.analysis.latest_snapshot_age_ms == 50
     assert first.analysis.first_snapshot_identity == books[0].snapshot_identity
     assert first.analysis.last_snapshot_identity == books[-1].snapshot_identity
+    assert first.analysis.liquidity_take_candidate is LiquidityTakeCandidate.NONE
     assert first.analysis.uncertainty_flags == ()
     assert first.snapshots == books
 
@@ -167,6 +169,83 @@ def test_temporal_liquidity_metrics_are_deterministic_and_frozen() -> None:
     assert metrics.best_ask_price_persistence_fraction == Decimal(1)
     assert len(first.analysis.evidence_identity) == 64
     assert len(first.freeze_identity) == 64
+
+
+def test_bid_side_liquidity_take_candidate_is_bounded_and_non_causal() -> None:
+    books = (
+        _book(
+            event_at_ms=8_000,
+            sequence=1,
+            bids=_levels("100", "5", "99", "5"),
+            asks=_levels("101", "5", "102", "5"),
+        ),
+        _book(
+            event_at_ms=9_000,
+            sequence=2,
+            bids=_levels("100", "1", "99", "5"),
+            asks=_levels("101", "5", "102", "5"),
+        ),
+        _book(
+            event_at_ms=10_000,
+            sequence=3,
+            bids=_levels("99", "2", "98", "1"),
+            asks=_levels("101", "5", "102", "5"),
+        ),
+    )
+
+    result = analyze_liquidity_dynamics(
+        books,
+        as_of_ms=10_050,
+        config=_config(liquidity_take_depth_drop_fraction=Decimal("0.10")),
+    )
+
+    assert result.status is LiquidityDynamicsStatus.MEASURED
+    assert (
+        result.liquidity_take_candidate
+        is LiquidityTakeCandidate.BID_SIDE
+    )
+    assert result.metrics is not None
+    assert result.metrics.best_bid_depletion_notional > Decimal(0)
+    assert (
+        result.metrics.gross_bid_removed_notional
+        > result.metrics.gross_bid_added_notional
+    )
+    assert result.uncertainty_flags == (
+        "liquidity_take_candidate_not_causal_attribution",
+    )
+
+
+def test_price_move_without_material_depth_drop_is_not_liquidity_take_candidate() -> None:
+    books = (
+        _book(
+            event_at_ms=8_000,
+            sequence=1,
+            bids=_levels("100", "1", "99", "1"),
+            asks=_levels("101", "1", "102", "1"),
+        ),
+        _book(
+            event_at_ms=9_000,
+            sequence=2,
+            bids=_levels("100", "0.9", "99", "1.1"),
+            asks=_levels("101", "1", "102", "1"),
+        ),
+        _book(
+            event_at_ms=10_000,
+            sequence=3,
+            bids=_levels("99.9", "1", "99", "1"),
+            asks=_levels("101", "1", "102", "1"),
+        ),
+    )
+
+    result = analyze_liquidity_dynamics(
+        books,
+        as_of_ms=10_050,
+        config=_config(liquidity_take_depth_drop_fraction=Decimal("0.25")),
+    )
+
+    assert result.status is LiquidityDynamicsStatus.MEASURED
+    assert result.liquidity_take_candidate is LiquidityTakeCandidate.NONE
+    assert result.uncertainty_flags == ()
 
 
 def test_future_or_late_ingested_snapshot_cannot_rewrite_historical_freeze() -> None:
@@ -278,6 +357,7 @@ def test_degraded_source_is_unresolved_without_fabricated_metrics(
     assert result.status is LiquidityDynamicsStatus.UNRESOLVED
     assert result.source_quality is LiquiditySourceQuality.DEGRADED
     assert result.metrics is None
+    assert result.liquidity_take_candidate is LiquidityTakeCandidate.UNAVAILABLE
     assert expected_flag in result.uncertainty_flags
 
 
@@ -298,6 +378,7 @@ def test_no_safe_snapshot_is_unavailable_and_pit_bounded() -> None:
     assert result.status is LiquidityDynamicsStatus.UNRESOLVED
     assert result.source_quality is LiquiditySourceQuality.UNAVAILABLE
     assert result.metrics is None
+    assert result.liquidity_take_candidate is LiquidityTakeCandidate.UNAVAILABLE
     assert result.consumed_snapshot_count == 0
     assert result.source_window_end_ms is None
     assert result.first_snapshot_identity is None
