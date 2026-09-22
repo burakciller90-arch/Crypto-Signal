@@ -62,9 +62,11 @@ class RawMarketEvent:
             raise ValueError("raw market event adapter_version must be non-empty")
         if (self.first_sequence is None) != (self.last_sequence is None):
             raise ValueError("raw market event sequence range must be both set or both absent")
-        if self.first_sequence is not None:
-            if self.first_sequence < 0 or cast(int, self.last_sequence) < self.first_sequence:
-                raise ValueError("raw market event sequence range is invalid")
+        if self.first_sequence is not None and (
+            self.first_sequence < 0
+            or cast(int, self.last_sequence) < self.first_sequence
+        ):
+            raise ValueError("raw market event sequence range is invalid")
         payload = _json_object(self.payload_json)
         if canonical_json(payload) != self.payload_json:
             raise ValueError("raw market event payload_json must be canonical")
