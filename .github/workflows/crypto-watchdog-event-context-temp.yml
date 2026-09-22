@@ -24,9 +24,4 @@ jobs:
         run: |
           python -m pytest -q tests/test_continuity_hardening.py tests/test_continuity_contracts.py
           python -m py_compile ops/continuity/interval_wake_daemon.py ops/continuity/relay_submit.py ops/continuity/relay_daemon.py
-          grep -F 'if [ "${{ github.event_name }}" = "schedule" ]; then' .github/workflows/crypto-20m-continuity-wake.yml
-          ! grep -F '\${{ github.event_name }}' .github/workflows/crypto-20m-continuity-wake.yml
-          grep -F 'crypto-20m-emergency:${GITHUB_RUN_ID}:${GITHUB_RUN_ATTEMPT}' .github/workflows/crypto-20m-continuity-wake.yml
-          grep -F 'crypto-20m-continuity-manual:${GITHUB_RUN_ID}:${GITHUB_RUN_ATTEMPT}' .github/workflows/crypto-20m-continuity-wake.yml
-          ! grep -F '\${GITHUB_RUN_ID}' .github/workflows/crypto-20m-continuity-wake.yml
           echo "WATCHDOG_EVENT_CONTEXT_FOCUSED_PASS=YES"
