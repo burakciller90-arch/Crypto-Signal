@@ -10,6 +10,7 @@ CONTROL="/Users/crypto-signal-agent/.crypto-signal-runtime"
 PID_FILE="$CONTROL/market-tape-supervisor.pid"
 STOP_FILE="$CONTROL/market-tape-supervisor.stop"
 LOG_DIR="/Users/crypto-signal-agent/Library/Logs/CryptoSignal"
+LOG="$LOG_DIR/market-tape-supervisor.log"
 
 if [ "$(id -u)" != "$UID_EXPECTED" ]; then
   echo "MARKET_TAPE_SUPERVISOR_START_ERROR=UID_MISMATCH expected=$UID_EXPECTED actual=$(id -u)" >&2
