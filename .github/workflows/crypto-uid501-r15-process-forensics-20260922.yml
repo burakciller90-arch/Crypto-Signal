@@ -1,0 +1,58 @@
+name: Crypto UID501 R15 Process Forensics 20260922
+
+on:
+  push:
+    branches:
+      - diag-uid501-r15-process-forensics-20260922
+    paths:
+      - ".github/workflows/crypto-uid501-r15-process-forensics-20260922.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: [self-hosted, crypto-signal, uid501]
+    timeout-minutes: 5
+    steps:
+      - name: Read-only SSD runner process forensics
+        shell: bash
+        run: |
+          set -u
+          test "$(id -u)" = "501"
+          echo "=== UID504 SSD RUNNER PROCESSES ==="
+          /bin/ps -axo pid=,ppid=,user=,%cpu=,%mem=,lstart=,etime=,state=,command=             | /usr/bin/awk '$3=="crypto-signal-agent" && ($0 ~ /Crypto-Signal\/Runner/ || $0 ~ /runsvc\.sh/ || $0 ~ /Runner\.(Listener|Worker)/) {print}'
+          echo
+          echo "=== TARGET PID CHAINS ==="
+          for pid in 99399 86923; do
+            if /bin/kill -0 "$pid" >/dev/null 2>&1; then
+              echo "--- target=$pid"
+              current="$pid"
+              for _ in 1 2 3 4 5 6; do
+                [ -n "$current" ] || break
+                /bin/ps -p "$current" -o pid=,ppid=,user=,%cpu=,%mem=,lstart=,etime=,state=,command=
+                next="$(/bin/ps -p "$current" -o ppid= 2>/dev/null | /usr/bin/tr -d ' ')"
+                [ -n "$next" ] || break
+                [ "$next" = "0" ] && break
+                [ "$next" = "$current" ] && break
+                current="$next"
+              done
+            else
+              echo "--- target=$pid ABSENT"
+            fi
+          done
+          echo
+          echo "=== ALL UID504 RUNNER LISTENERS ==="
+          /bin/ps -axo pid=,ppid=,user=,%cpu=,%mem=,lstart=,etime=,state=,command=             | /usr/bin/awk '$3=="crypto-signal-agent" && $0 ~ /Runner\.Listener run --startuptype service/ {print}'
+          echo
+          echo "=== ALL UID504 RUNNER WORKERS ==="
+          /bin/ps -axo pid=,ppid=,user=,%cpu=,%mem=,lstart=,etime=,state=,command=             | /usr/bin/awk '$3=="crypto-signal-agent" && $0 ~ /Runner\.Worker/ {print}'
+          echo
+          echo "=== CHILDREN OF LIVE UID504 LISTENERS ==="
+          for p in $(/bin/ps -axo pid=,user=,command= | /usr/bin/awk '$2=="crypto-signal-agent" && $0 ~ /Runner\.Listener run --startuptype service/ {print $1}'); do
+            echo "--- listener=$p"
+            /usr/bin/pgrep -P "$p" 2>/dev/null | while read -r c; do
+              /bin/ps -p "$c" -o pid=,ppid=,user=,%cpu=,%mem=,lstart=,etime=,state=,command=
+            done
+          done
+          echo "UID501_R15_PROCESS_FORENSICS_PASS=YES"
