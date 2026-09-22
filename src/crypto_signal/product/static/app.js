@@ -5,6 +5,140 @@ let selectedEvidenceClass = null;
 let performanceData = null;
 let educationData = null;
 let currentViewMode = "simple";
+let currentWorkspace = "overview";
+
+const WORKSPACES = Object.freeze({
+  overview: {
+    eyebrow: "MISSION CONTROL",
+    title: "Overview",
+    subtitle: "Piyasanın, paper portföyün ve sistem sağlığının tek bakışta özeti.",
+  },
+  markets: {
+    eyebrow: "MARKET MAP",
+    title: "Markets",
+    subtitle: "Varlık, zaman dilimi ve sağlayıcı bazında canlı kanıtı incele.",
+  },
+  signals: {
+    eyebrow: "SIGNAL DESK",
+    title: "Signals",
+    subtitle: "Son kararları, yönü, kanıt uyumunu ve dondurulmuş ispatı aç.",
+  },
+  portfolio: {
+    eyebrow: "PAPER CAPITAL",
+    title: "Paper Portfolio",
+    subtitle: "100 USDT sanal sermayenin karar, maruziyet ve performans kanıtı.",
+  },
+  intelligence: {
+    eyebrow: "RESEARCH SYSTEM",
+    title: "Intelligence",
+    subtitle: "Arka plandaki motorların ne gördüğünü, ne bilmediğini ve authority sınırını incele.",
+  },
+  performance: {
+    eyebrow: "MEASUREMENT",
+    title: "Performance",
+    subtitle: "Ölçülmüş sonuçları, örneklem büyüklüğünü ve uyarı akışını gör.",
+  },
+  archive: {
+    eyebrow: "PROOF HISTORY",
+    title: "Archive",
+    subtitle: "Geçmiş karar ve paper işlemleri zaman damgası ve immutable kimlikle doğrula.",
+  },
+  learn: {
+    eyebrow: "LEARNING",
+    title: "Learn",
+    subtitle: "Grafikte ve kanıtta gördüğün kavramları kısa başlayıp derinleşerek öğren.",
+  },
+  system: {
+    eyebrow: "OPERATIONS",
+    title: "System",
+    subtitle: "Ürün erişilebilirliği, veri kanıtı ve authority durumunu ayrı ayrı kontrol et.",
+  },
+});
+
+const TARGET_WORKSPACE = Object.freeze({
+  radarSection: "markets",
+  assetSection: "markets",
+  signalsSection: "signals",
+  paperMissionSection: "portfolio",
+  paperLabSection: "portfolio",
+  intelligenceSection: "intelligence",
+  performanceSection: "performance",
+  archiveSection: "archive",
+  educationSection: "learn",
+  systemHealthSection: "system",
+});
+
+function setWorkspace(route, { persist = true, updateHash = false } = {}) {
+  const next = Object.prototype.hasOwnProperty.call(WORKSPACES, route) ? route : "overview";
+  currentWorkspace = next;
+  document.body.dataset.workspace = next;
+
+  document.querySelectorAll(".workspace-section").forEach((section) => {
+    const allowed = String(section.dataset.workspaces ?? "")
+      .split(",")
+      .map((value) => value.trim())
+      .filter(Boolean);
+    const active = allowed.includes(next);
+    section.hidden = !active;
+    section.classList.toggle("workspace-active", active);
+  });
+
+  document.querySelectorAll("[data-workspace-route]").forEach((button) => {
+    const active = button.dataset.workspaceRoute === next;
+    button.classList.toggle("active", active);
+    if (active) button.setAttribute("aria-current", "page");
+    else button.removeAttribute("aria-current");
+  });
+
+  const meta = WORKSPACES[next];
+  const eyebrow = $("#workspaceEyebrow");
+  const title = $("#workspaceTitle");
+  const subtitle = $("#workspaceSubtitle");
+  if (eyebrow) eyebrow.textContent = meta.eyebrow;
+  if (title) title.textContent = meta.title;
+  if (subtitle) subtitle.textContent = meta.subtitle;
+
+  if (persist) {
+    try {
+      window.localStorage.setItem("crypto-signal-workspace", next);
+    } catch (_) {
+      // Navigation remains functional when storage is unavailable.
+    }
+  }
+  if (updateHash && window.location.hash !== `#${next}`) {
+    window.history.pushState({ workspace: next }, "", `#${next}`);
+  }
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function restoreWorkspace() {
+  const hashRoute = window.location.hash.replace(/^#/, "");
+  let stored = null;
+  try {
+    stored = window.localStorage.getItem("crypto-signal-workspace");
+  } catch (_) {
+    stored = null;
+  }
+  const candidate = Object.prototype.hasOwnProperty.call(WORKSPACES, hashRoute)
+    ? hashRoute
+    : stored;
+  setWorkspace(candidate ?? "overview", { persist: false, updateHash: false });
+}
+
+function bindWorkspaceNavigation() {
+  document.querySelectorAll("[data-workspace-route]").forEach((button) => {
+    button.addEventListener("click", () => {
+      setWorkspace(button.dataset.workspaceRoute, { updateHash: true });
+    });
+  });
+}
+
+function openWorkspaceForTarget(targetId) {
+  const route = TARGET_WORKSPACE[targetId];
+  if (!route) return false;
+  setWorkspace(route, { updateHash: true });
+  return true;
+}
 
 const AUTO_REFRESH_MS = 15_000;
 const STALE_AFTER_MS = 45_000;
@@ -1814,11 +1948,10 @@ function renderBeginnerBrief(command, radar, paperMission, intelligence) {
 
   root.querySelectorAll("[data-brief-target]").forEach((button) => {
     button.addEventListener("click", () => {
-      const target = document.getElementById(button.dataset.briefTarget);
+      const targetId = button.dataset.briefTarget;
+      if (!openWorkspaceForTarget(targetId)) return;
+      const target = document.getElementById(targetId);
       if (!target) return;
-      if (target.hasAttribute("data-advanced-section") && currentViewMode !== "detailed") {
-        setViewMode("detailed");
-      }
       window.requestAnimationFrame(() => {
         target.scrollIntoView({ behavior: "smooth", block: "start" });
       });
@@ -2074,7 +2207,14 @@ $("#viewModeToggle").addEventListener("click", () => {
 });
 
 restoreViewMode();
+restoreWorkspace();
+bindWorkspaceNavigation();
 bindQuickNavigation();
+
+window.addEventListener("popstate", () => {
+  const route = window.location.hash.replace(/^#/, "");
+  setWorkspace(route, { persist: true, updateHash: false });
+});
 
 document.addEventListener("visibilitychange", () => {
   if (!document.hidden) refreshAll();
