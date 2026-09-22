@@ -1,0 +1,69 @@
+name: Crypto R15 Live Single Owner Install
+
+on:
+  push:
+    branches:
+      - r15-ssd-hotplug-recovery-v1
+    paths:
+      - ".github/workflows/crypto-r15-live-single-owner-install.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  install:
+    name: Install R15 single-owner recovery on UID504
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install and verify
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(id -u)" = "504"
+          bash ops/install_ssd_hotplug_recovery.sh
+
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          LABEL="com.cryptosignal.ssd-hotplug-recovery"
+          TARGET="gui/$(id -u)/$LABEL"
+
+          echo "=== R15 OWNER ==="
+          launchctl print "$TARGET" | egrep 'state =|runs =|last exit code =|run interval =|program =|path =' | head -100
+
+          echo "=== LEGACY OWNERS ==="
+          for legacy in             com.cryptosignal.github-runner-terminal-watchdog             com.cryptosignal.github-runner-ssd             actions.runner.burakciller90-arch-Crypto-Signal.crypto-signal-uid504
+          do
+            if launchctl print "gui/$(id -u)/$legacy" >/dev/null 2>&1; then
+              echo "LEGACY_STILL_LOADED=$legacy"
+              exit 41
+            fi
+            echo "LEGACY_UNLOADED=$legacy"
+          done
+
+          echo "=== EXACT LISTENER ==="
+          listener_count="$(ps -axo command= | awk -v expected="$ROOT/Runner/bin/Runner.Listener run --startuptype service" '$0 == expected {n++} END {print n+0}')"
+          echo "LISTENER_COUNT=$listener_count"
+          test "$listener_count" = "1"
+          ps -axo pid=,ppid=,user=,%cpu=,%mem=,etime=,state=,command=             | grep -F "$ROOT/Runner/bin/Runner.Listener run --startuptype service"             | grep -v grep
+
+          echo "=== HEALTH ==="
+          curl -fsS --max-time 5 http://127.0.0.1:48700/api/health | tee /tmp/r15-health.json
+          python3 - <<'PY'
+          import json
+          data=json.load(open("/tmp/r15-health.json"))
+          assert data.get("status") == "ok"
+          assert data.get("real_capital") == 0
+          assert data.get("read_only") is True
+          PY
+
+          echo "=== SQLITE ==="
+          for db in             "$ROOT/Development/runtime/ledger/live_signal_ledger.sqlite3"             "$ROOT/Development/runtime/data/live_base_15m_cache.sqlite3"             "$ROOT/Development/runtime/paper/paper_fund.sqlite3"             "$ROOT/Development/runtime/alerts/alert_outbox.sqlite3"
+          do
+            result="$(sqlite3 "$db" 'PRAGMA quick_check;')"
+            echo "$db $result"
+            test "$result" = "ok"
+          done
+
+          echo "R15_LIVE_SINGLE_OWNER_INSTALL_PASS=YES"
+          echo "REAL_CAPITAL=0"
