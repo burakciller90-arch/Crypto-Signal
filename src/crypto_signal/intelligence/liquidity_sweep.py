@@ -480,12 +480,16 @@ def _analyze_selected(
         flags.append("public_trade_unavailable_at_as_of")
     elif len(trades) < config.minimum_public_trades:
         flags.append("insufficient_public_trades")
-    if latest_snapshot is not None:
-        if as_of_ms - latest_snapshot.event_at_ms > config.max_snapshot_age_ms:
-            flags.append("stale_latest_orderbook")
-    if latest_trade is not None:
-        if as_of_ms - latest_trade.event_at_ms > config.max_trade_age_ms:
-            flags.append("stale_latest_public_trade")
+    if (
+        latest_snapshot is not None
+        and as_of_ms - latest_snapshot.event_at_ms > config.max_snapshot_age_ms
+    ):
+        flags.append("stale_latest_orderbook")
+    if (
+        latest_trade is not None
+        and as_of_ms - latest_trade.event_at_ms > config.max_trade_age_ms
+    ):
+        flags.append("stale_latest_public_trade")
     if any(
         right.event_at_ms - left.event_at_ms > config.max_snapshot_gap_ms
         for left, right in pairwise(snapshots)
