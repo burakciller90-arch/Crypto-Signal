@@ -1,5 +1,14 @@
 # Crypto Signal v1.1 — World-Class Product & Market Intelligence Roadmap
 
+> ## LOCKED PRODUCT UPDATE — 2026-09-22
+>
+> Governing authority is now **`docs/V1_1_LOCKED_MASTER_ROADMAP_20260922.md`**. The older condensed plan below remains useful history, but conflicting scope is superseded.
+>
+> Locked changes: **1,000 USDT Paper Fund Epoch 2**, 600/300/100 Core/Tactical/Reserve research allocation, three parallel rails, expanded M2–M5 intelligence, R19-before-Kelly probability discipline, and a complete **GALACTECH // CRYPTO SIGNAL** frontend rebuild using the COMMAND / MARKETS / INTELLIGENCE / CAPITAL / ARCHIVE / PERFORMANCE / LEARN / SYSTEM information architecture.
+>
+> Visual target: **Bloomberg precision × cinematic sci-fi**. No fake live/latency/probability/whale/spoofing certainty. Motion is reserved for real state change.
+>
+
 Status: **implementation roadmap**
 Governing detail: **`docs/V1_1_MASTER_EXECUTION_ROADMAP.md`**
 Baseline: **Full Version v1.0.0 frozen**
