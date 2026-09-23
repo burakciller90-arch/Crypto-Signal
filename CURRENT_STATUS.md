@@ -10,6 +10,35 @@ REAL_CAPITAL: 0
 ## Active v1.1 frontier — read before historical sections
 
 
+### 2026-09-23 11:13 +0300 — M5 EXCHANGE FLOW SLICE 1 ACCEPTED
+
+- PR **#889** accepted provider-neutral PIT-safe exchange-flow evidence.
+- Authoritative hosted branch run `35835438611` PASS:
+  - focused exchange-flow + accepted on-chain pytest PASS;
+  - focused Ruff/mypy PASS;
+  - full repository pytest/Ruff/mypy/JS/freshness PASS.
+- Final PR diff contained exactly:
+  - `src/crypto_signal/data/exchange_flows.py`;
+  - `src/crypto_signal/intelligence/exchange_flow.py`;
+  - `tests/test_exchange_flow_engine.py`;
+  - `docs/M5_EXCHANGE_FLOW_SLICE1.md`.
+- PR #889 squash-merged to main as `ba7954232f09b51d5328691368b0d37176e605d7`.
+- Exact-main Stage10 run `35835815531` SUCCESS.
+- Accepted evidence:
+  - inflow/outflow/netflow/gross flow;
+  - duration-normalized flow rates;
+  - PIT-window flow percentile ranks;
+  - netflow-rate velocity;
+  - bounded INFLOW_ANOMALY / OUTFLOW_ANOMALY / BALANCED / MIXED / UNRESOLVED.
+- No live provider/API/credential collector was activated.
+- Exchange-flow context is not price direction and does not identify actor intent.
+- Current M5 frontier: **PIT Wallet Cohort Registry / admission-time freeze**, then bounded cohort forward measurement.
+- CONTINUITY_PAUSED_BY_USER remains dominant; wake/lease must not be re-armed.
+- Cursor workers/composer remain disabled.
+- REAL_CAPITAL=0.
+
+
+
 ### 2026-09-23 10:55 +0300 — M4 DERIVATIVES INTELLIGENCE 2.0 SLICE 2 ACCEPTED / CONTINUITY PAUSE PRESERVED
 
 - User's explicit wake/lease pause remains dominant while safe project development continues.
