@@ -10,6 +10,25 @@ REAL_CAPITAL: 0
 ## Active v1.1 frontier — read before historical sections
 
 
+### 2026-09-23 17:52 +0300 — GALACTECH PERFORMANCE & TRUST ACCEPTED
+
+- PR **#929** accepted the locked GALACTECH Performance & Trust customer surface.
+- Exact-head hosted run `35877052643` SUCCESS at `fd01daa8fff708b01b3f37fca209507f258fd168`.
+- PR #929 squash-merged as `44acdc788e1501a4bbf00f54d518d129e70feab5`.
+- Exact-main Stage10 run `35877257649` SUCCESS.
+- Retrospective / walk-forward / live untouched-forward outcome evidence remains explicitly separated.
+- Historical decisive success fraction is labelled descriptive frequency, never calibrated probability.
+- Canonical R21 Epoch 2 NAV/PnL/drawdown/turnover/cost/expectancy/vault comparison is shown from the same immutable accounting source as Capital Center.
+- Empty history remains NOT MEASURED rather than 0%.
+- Brier/reliability are explicitly NOT EXPOSED without a persisted R20/R19 product adapter.
+- Sharpe/Sortino and Event Block counterfactual effectiveness remain NOT YET MEASURED.
+- Setup/methodology segments are not silently relabelled as forecast-version comparison.
+- No execution authority. REAL_CAPITAL=0.
+- Current locked frontier: **Product rail — Learn / System**.
+- Latest UID504 continuity watchdog still reports `GITHUB_WATCHDOG_USER_PAUSED=YES`; pause markers remain untouched.
+
+
+
 ### 2026-09-23 17:43 +0300 — GALACTECH ARCHIVE / PROOF WALL ACCEPTED
 
 - PR **#928** accepted the locked GALACTECH Archive / Proof Wall.
