@@ -397,7 +397,11 @@ def _merge_family(
             sorted(
                 set(
                     (
-                        *base.uncertainty_flags,
+                        *(
+                            base.uncertainty_flags
+                            if base.state is MetaEvidenceState.OBSERVED
+                            else ()
+                        ),
                         "rich_context_not_trade_authority",
                     )
                 )
@@ -431,7 +435,12 @@ def _merge_proof(
         *((base.freshness_0_1,) if base.freshness_0_1 is not None else ()),
         *added_freshness,
     )
-    summaries = tuple(sorted(set((*base.summary_codes, *added_summaries))))
+    base_summaries = (
+        base.summary_codes
+        if base.availability is ProofEvidenceAvailability.AVAILABLE
+        else ()
+    )
+    summaries = tuple(sorted(set((*base_summaries, *added_summaries))))
     return build_decision_proof_evidence_slice(
         domain=base.domain,
         availability=ProofEvidenceAvailability.AVAILABLE,
