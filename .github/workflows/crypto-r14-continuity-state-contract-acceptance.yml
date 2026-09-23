@@ -1,0 +1,41 @@
+name: Crypto R14 Continuity State Contract Acceptance (Temporary)
+
+on:
+  push:
+    branches:
+      - fix/r14-continuity-paused-status-contract-v1
+    paths:
+      - "tests/test_r14_release_package.py"
+      - ".github/workflows/crypto-r14-continuity-state-contract-acceptance.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  hosted:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+          python -m pip install "pytest>=8.4" "pytest-asyncio>=1.2" "ruff>=0.13" "mypy>=1.18" "pyarrow==22.0.0"
+      - name: Focused R14 contract
+        run: |
+          python -m pytest -q tests/test_r14_release_package.py
+          python -m ruff check tests/test_r14_release_package.py
+          echo "R14_CONTINUITY_STATE_CONTRACT_FOCUSED_PASS=YES"
+      - name: Full repository acceptance
+        run: |
+          python -m pytest -q
+          python -m ruff check src tests ops/verify_stage10_integrated.py
+          python -m mypy src ops/verify_stage10_integrated.py
+          node --check src/crypto_signal/product/static/freshness.js
+          node --check src/crypto_signal/product/static/app.js
+          node tests/js/test_product_freshness.js
+          echo "R14_CONTINUITY_STATE_CONTRACT_FULL_PASS=YES"
