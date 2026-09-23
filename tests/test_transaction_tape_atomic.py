@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pytest
 from test_decision_proof_live_feed import ISSUED_AT, _forecast, _slices
+from test_transaction_tape import _sizing
 
 from crypto_signal.ledger.serialization import canonical_sha256
 from crypto_signal.paper.epoch2_accounting import (
@@ -18,10 +19,14 @@ from crypto_signal.paper.epoch2_accounting import (
 from crypto_signal.paper.epochs import EPOCH_1_SPEC, EPOCH_2_SPEC, PaperVaultId
 from crypto_signal.paper.ledger import PaperFundLedger
 from crypto_signal.paper.models import (
+    ExecutionCostAssumptions,
     PaperAction,
     PaperPosition,
     PaperSymbol,
+    build_decision_intent,
     build_fund_creation,
+    build_position_cash_mutation,
+    build_simulated_fill,
 )
 from crypto_signal.paper.transaction_tape import build_tape_fill, build_tape_intent
 from crypto_signal.paper.transaction_tape_atomic import (
@@ -52,19 +57,53 @@ def _trade_bundle(tmp_path: Path):
     epoch2_path, before = _initial_state(tmp_path)
     forecast = _forecast()
     proof = build_decision_proof_snapshot(forecast, _slices(forecast))
+    sizing_assessment, sizing_result = _sizing()
+    decision = build_decision_intent(
+        fund_identity=before.activation.activation_identity,
+        decided_at_ms=ISSUED_AT + 100,
+        action=PaperAction.BUY,
+        symbol=PaperSymbol.BTCUSDT,
+        quantity=Decimal(1),
+        reference_price=Decimal(100),
+        reason="R22 canonical paper buy",
+        invalidation_context="exact forecast invalidation",
+    )
     intent = build_tape_intent(
         before.activation,
         vault_id=PaperVaultId.CORE,
         action=PaperAction.BUY,
-        decided_at_ms=ISSUED_AT + 100,
-        policy_identity=_sha("canonical-paper-policy"),
-        sizing_decision_identity=_sha("canonical-sizing-decision"),
+        decided_at_ms=decision.decided_at_ms,
         reason_codes=("forecast_active",),
         forecast=forecast,
         proof=proof,
+        sizing_assessment=sizing_assessment,
+        sizing_result=sizing_result,
+        decision=decision,
+    )
+    source_fill = build_simulated_fill(
+        fund_identity=before.activation.activation_identity,
+        decision_identity=decision.record_identity,
+        filled_at_ms=ISSUED_AT + 200,
+        action=PaperAction.BUY,
         symbol=PaperSymbol.BTCUSDT,
         quantity=Decimal(1),
         reference_price=Decimal(100),
+        simulated_fill_price=Decimal(101),
+        costs=ExecutionCostAssumptions(
+            fee_usdt=Decimal(1),
+            spread_usdt=Decimal("0.4"),
+            slippage_usdt=Decimal("0.6"),
+        ),
+        venue_reference="r22-atomic-test-venue",
+    )
+    mutation = build_position_cash_mutation(
+        fund_identity=before.activation.activation_identity,
+        source_identity=source_fill.record_identity,
+        mutated_at_ms=ISSUED_AT + 210,
+        cash_before_usdt=Decimal(600),
+        cash_after_usdt=Decimal(498),
+        positions_before=(),
+        positions_after=(PaperPosition(PaperSymbol.BTCUSDT, Decimal(1)),),
     )
     mark = _sha("atomic-mark")
     snapshot_at = ISSUED_AT + 300
@@ -88,7 +127,12 @@ def _trade_bundle(tmp_path: Path):
         loss_count=0,
         breakeven_count=0,
         outcome_distribution=(),
-        source_record_identities=(intent.intent_identity, mark),
+        source_record_identities=(
+            intent.intent_identity,
+            source_fill.record_identity,
+            mutation.record_identity,
+            mark,
+        ),
         previous=by_vault[PaperVaultId.CORE],
     )
 
@@ -128,11 +172,8 @@ def _trade_bundle(tmp_path: Path):
         intent,
         by_vault[PaperVaultId.CORE],
         core,
-        filled_at_ms=ISSUED_AT + 200,
-        simulated_fill_price=Decimal(101),
-        fee_usdt=Decimal(1),
-        spread_usdt=Decimal("0.4"),
-        slippage_usdt=Decimal("0.6"),
+        fill=source_fill,
+        mutation=mutation,
         mark_evidence_identity=mark,
     )
     bundle = build_epoch2_accounting_bundle(
@@ -145,7 +186,9 @@ def _trade_bundle(tmp_path: Path):
     return epoch2_path, before, intent, fill, after_vaults, parent, bundle
 
 
-def test_r22_atomic_bundle_commits_tape_and_r21_accounting_together(tmp_path: Path) -> None:
+def test_r22_atomic_bundle_commits_tape_and_r21_accounting_together(
+    tmp_path: Path,
+) -> None:
     epoch2_path, before, intent, fill, after_vaults, parent, bundle = _trade_bundle(
         tmp_path
     )
@@ -266,14 +309,16 @@ def test_r22_bundle_refuses_hidden_non_target_vault_mutation(tmp_path: Path) -> 
         )
 
 
-def test_r22_hold_cash_is_append_only_without_r21_capital_mutation(tmp_path: Path) -> None:
+def test_r22_hold_cash_is_append_only_without_r21_capital_mutation(
+    tmp_path: Path,
+) -> None:
     epoch2_path, before = _initial_state(tmp_path)
     hold = build_tape_intent(
         before.activation,
         vault_id=PaperVaultId.OPPORTUNITY_RESERVE,
         action=PaperAction.HOLD_CASH,
         decided_at_ms=ISSUED_AT + 50,
-        policy_identity=_sha("hold-cash-policy"),
+        hold_policy_identity=_sha("hold-cash-policy"),
         reason_codes=("event_risk_wait",),
     )
     tape = R22Epoch2AtomicTape(epoch2_path)
@@ -299,15 +344,21 @@ def test_r22_audit_tables_are_update_delete_immutable(tmp_path: Path) -> None:
         vault_id=PaperVaultId.CORE,
         action=PaperAction.HOLD_CASH,
         decided_at_ms=ISSUED_AT + 50,
-        policy_identity=_sha("hold-policy"),
+        hold_policy_identity=_sha("hold-policy"),
         reason_codes=("no_trade",),
     )
     tape = R22Epoch2AtomicTape(epoch2_path)
     assert tape.append_hold_decision(hold)
     with sqlite3.connect(epoch2_path) as connection:
-        with pytest.raises(sqlite3.DatabaseError, match="immutable R22 Epoch2 audit tape"):
+        with pytest.raises(
+            sqlite3.DatabaseError,
+            match="immutable R22 Epoch2 audit tape",
+        ):
             connection.execute(
                 "UPDATE r22_epoch2_intents SET vault_id = 'TACTICAL'"
             )
-        with pytest.raises(sqlite3.DatabaseError, match="immutable R22 Epoch2 audit tape"):
+        with pytest.raises(
+            sqlite3.DatabaseError,
+            match="immutable R22 Epoch2 audit tape",
+        ):
             connection.execute("DELETE FROM r22_epoch2_intents")
