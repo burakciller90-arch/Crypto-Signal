@@ -10,6 +10,23 @@ REAL_CAPITAL: 0
 ## Active v1.1 frontier — read before historical sections
 
 
+### 2026-09-23 17:16 +0300 — GALACTECH CAPITAL CENTER ACCEPTED
+
+- PR **#926** accepted canonical Epoch 2 Capital Center.
+- Exact-head hosted run `35872519583` SUCCESS at `0848e52599a55a13acb22a003af653d716f24d3a`.
+- PR #926 squash-merged as `4755fa390f1b5aa1ad144cf6867de4eb29b56d21`.
+- Exact-main Stage10 run `35872879217` SUCCESS.
+- Capital Center reads the accepted R21 Epoch 2 SQLite ledger strictly read-only (`mode=ro`, `query_only=ON`) without read-side initialization.
+- Canonical 1,000 USDT NAV/PnL/drawdown/cost/turnover truth and Core/Tactical/Opportunity Reserve vault state are exposed from exact snapshots.
+- Command Paper NAV now uses the same canonical R21 consolidated snapshot; legacy Epoch 1 mission-control NAV is not substituted.
+- The 600/300/100 split is labelled accepted Epoch 2 constitution, not AI inference/recommendation.
+- Missing/incomplete runtime evidence fails closed; empty history remains NOT YET MEASURED rather than 0% success.
+- No leverage, borrowing, martingale, execution or real-capital authority.
+- Current locked frontier: **Product rail — Markets workspace**.
+- UID504 wake pause remains authoritative and untouched. REAL_CAPITAL=0.
+
+
+
 ### 2026-09-23 17:02 +0300 — GALACTECH COMMAND + EVIDENCE ROOM ACCEPTED
 
 - PR **#925** accepted GALACTECH Command Center drill-down + Evidence Room.
