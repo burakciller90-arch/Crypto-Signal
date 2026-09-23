@@ -10,6 +10,20 @@ REAL_CAPITAL: 0
 ## Active v1.1 frontier — read before historical sections
 
 
+### 2026-09-23 04:49 +0300 — ROLLING WAKE RECOVERED / WATCHDOG HEALTH FIX LIVE
+
+- The 04:37 UID504 read-only snapshot (run 35807023713) found one pending rolling event `crypto-20m-rolling:4bc50caa43074cf2:7`, `RETRYING`, failure_count 60, no pause. GitHub watchdog run 35807194134 failed on exact receipt timeout.
+- The **same pending event** was subsequently `OBSERVED` at **04:43:34 +0300**, without a generation reset.
+- Run `35807770689` at 04:47:58: rolling PID 37328 alive, state `RUNNING`, interval `1200`, pending empty, failure_count 0, last_receipt_epoch `1790127814`, next_due_epoch `1790129014` (**05:03:34 +0300**, exactly 1200 seconds). Both user-pause latches absent.
+- Bridge run `35807805762` at 04:48:31: relay PID 38052 RUNNING on the exact locked ChatGPT conversation; relay log observed the pending event at 04:43:34 following repeated `WAITING_FOR_EXACT_OBSERVATION` states.
+- Previously hosted-accepted delivery-health PR **#859** (run `35802247387`, focused + full PASS) was merged to main as `9e35933ec7a9d34a2b6a48c6406d47b1bea09925`. It distinguishes a live timer from an observed message, classifies prolonged pending as `STALLED`, and suppresses duplicate fallback while a pending identity remains. This workflow-only merge did **not** reinstall or reset UID504 timer/relay.
+- First scheduled watchdog on the merged main: run `35807848451` at 04:49 PASS with heartbeat age 2 seconds, `GITHUB_WATCHDOG_DELIVERY_STATE=HEALTHY`, `GITHUB_FALLBACK_SKIPPED=YES`.
+- Issue **#856 remains OPEN** for root-cause hardening: a 30-second heartbeat check may regard a legitimate blocking send (up to 60 seconds) as stale. Avoid killing an exact in-flight pending owner or generating a second event. A proposed in-flight guard has **not** yet been implemented/tested.
+- Do not reset generation, send a separate manual wake, revive calendar timers, or confuse GitHub watchdog PASS with a guarantee under ChatGPT/network outages. Preserve REAL_CAPITAL=0 and user-pause authority.
+- Existing product frontier: M3 temporal price/CVD divergence and bounded absorption. No Cursor worker/composer. Production cutovers remain separately gated.
+
+
+
 ### 2026-09-23 03:30 +0300 — MECHANICAL RECONCILIATION
 
 - GALACTECH Product PR #819 is merged to main as `b8858083ed1d7b35980d5ee9a3b68db49dbe4f37`. Exact merged-main Stage10 run `35802326758` PASS. Development source only; **no production UI cutover**.
