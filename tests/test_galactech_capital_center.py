@@ -49,7 +49,7 @@ def test_galactech_capital_center_uses_canonical_epoch2_accounting_only(
     html = preview.text
     js = script.text
     css = style.text
-    assert 'data-ui-version="galactech-v1.1-performance"' in html
+    assert 'data-ui-version="galactech-v1.1-learn-system"' in html
     assert "Canonical Epoch 2 accounting" in html
     assert 'epoch2State: "/api/paper/epoch2-state"' in js
     assert "function renderVaultCard(vault)" in js
