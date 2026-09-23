@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import sqlite3
-from dataclasses import replace
 from decimal import Decimal
 
 import pytest
@@ -395,7 +394,25 @@ def test_atomic_issuance_bundle_rolls_back_all_rows_on_final_insert_failure(
 
 def test_unified_runtime_fails_closed_on_market_context_mismatch(tmp_path) -> None:
     family = list(_family_evidence())
-    family[-1] = replace(family[-1], as_of_ms=AS_OF - 1)
+    original = family[-1]
+    family[-1] = build_confluence_family_evidence(
+        family=original.family,
+        asset=original.asset,
+        timeframe=original.timeframe,
+        regime=original.regime,
+        as_of_ms=AS_OF - 1,
+        state=original.state,
+        direction=original.direction,
+        directional_strength_0_1=original.directional_strength_0_1,
+        evidence_quality_0_1=original.evidence_quality_0_1,
+        freshness_0_1=original.freshness_0_1,
+        market_available_at_ms=AS_OF - 21,
+        observed_at_ms=AS_OF - 11,
+        source_engine_ids=original.source_engine_ids,
+        source_evidence_identities=original.source_evidence_identities,
+        material_conflict_identities=original.material_conflict_identities,
+        uncertainty_flags=original.uncertainty_flags,
+    )
 
     with pytest.raises(ValueError, match="family evidence context mismatch"):
         issue_unified_decision(
