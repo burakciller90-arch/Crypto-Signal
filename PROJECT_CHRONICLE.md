@@ -4197,3 +4197,40 @@ capital sizing or trade authority. No live wallet provider was activated. REAL_C
 
 Next M5 frontier: bounded temporal large-transfer clustering, then Event Risk + NLP.
 Wake/lease remains paused by explicit user instruction.
+
+
+---
+
+## 2026-09-23 — 11:31 M5 SMART MONEY / ON-CHAIN 2.0 CORE CLOSED
+
+Large-transfer Slice 3 completed the locked M5 core evidence families.
+
+Acceptance:
+- PR #891;
+- latest hardened hosted run `35837387694` focused + full PASS;
+- squash merge `3b71b119dacd4db130b08adf9faf2cb9301e5fdb`;
+- exact-main Stage10 run `35837582752` SUCCESS.
+
+The final large-transfer engine uses consumed-window size percentile normalization,
+provider-declared source/destination roles and repeated relationship count/share thresholds.
+A one-off large transfer remains isolated context rather than a whale/insider/price-direction
+claim. A NORMAL state is reachable when sufficient history exists, no repeated relationship
+qualifies and the latest event is below the configured tail threshold.
+
+PIT hardening:
+- future/late observations are filtered before source-context and duplicate validation;
+- future wrong-context or duplicate-provider records cannot rewrite a historical freeze;
+- eligible context mismatches and duplicate provider IDs still fail closed.
+
+Combined M5 core:
+1. existing Bitcoin network activity evidence;
+2. provider-neutral exchange-flow anomaly/netflow/velocity evidence;
+3. PIT wallet-cohort admission with forward-only measurement;
+4. bounded temporal large-transfer relationship clustering.
+
+No live on-chain/wallet provider credentials or collectors were activated. No actor identity,
+insider/institution label, calibrated probability, capital sizing or trade authority was added.
+REAL_CAPITAL=0.
+
+Next locked intelligence frontier: Event Risk + NLP Intelligence. User wake/lease pause
+remains authoritative and untouched.
