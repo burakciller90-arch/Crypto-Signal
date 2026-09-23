@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from collections.abc import Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
@@ -582,12 +584,18 @@ class ImmutableDecisionEvidenceLedger:
             for row in rows
         )
 
-    def _connect_rw(self) -> sqlite3.Connection:
+    @contextmanager
+    def _connect_rw(self) -> Iterator[sqlite3.Connection]:
         connection = sqlite3.connect(self.path, timeout=5.0)
         connection.row_factory = sqlite3.Row
-        return connection
+        try:
+            with connection:
+                yield connection
+        finally:
+            connection.close()
 
-    def _connect_ro(self) -> sqlite3.Connection:
+    @contextmanager
+    def _connect_ro(self) -> Iterator[sqlite3.Connection]:
         if not self.path.is_file():
             raise FileNotFoundError(self.path)
         uri = f"{self.path.resolve().as_uri()}?mode=ro"
@@ -595,7 +603,10 @@ class ImmutableDecisionEvidenceLedger:
         connection.row_factory = sqlite3.Row
         connection.execute("PRAGMA query_only=ON")
         connection.execute("PRAGMA foreign_keys=ON")
-        return connection
+        try:
+            yield connection
+        finally:
+            connection.close()
 
     @staticmethod
     def _require_schema(connection: sqlite3.Connection) -> None:
