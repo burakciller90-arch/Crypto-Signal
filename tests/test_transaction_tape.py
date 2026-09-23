@@ -322,7 +322,7 @@ def test_r22_rejects_untraced_fill_mutation_or_execution_costs() -> None:
         ),
         venue_reference="r22-test-venue",
     )
-    with pytest.raises(ValueError, match="lacks exact"):
+    with pytest.raises(ValueError, match="sourced from exact"):
         build_tape_fill(
             intent,
             before,
@@ -499,7 +499,9 @@ def test_r22_hold_cash_has_no_fill_and_no_fabricated_trade_lineage() -> None:
 def test_r22_isolated_tape_is_immutable_idempotent_and_hash_checked(
     tmp_path: Path,
 ) -> None:
-    *_, intent, _, _, _, fill = _buy()[7:]
+    data = _buy()
+    intent = data[7]
+    fill = data[11]
     path = tmp_path / "isolated_r22_development.sqlite3"
     tape = R22DevelopmentTape(path)
     assert tape.append_intent(intent)
