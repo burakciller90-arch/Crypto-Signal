@@ -13,6 +13,7 @@ const API = Object.freeze({
   performance: "/api/performance",
   decisionStatus: "/api/decision-evidence/status",
   shadowRail: "/api/shadow-decision-rail/status",
+  shadowCycle: "/api/shadow-cycle-manifest/status?limit=20",
   liveFeed: "/api/intelligence-feed?limit=100",
   decisionProof: (identity) => `/api/decision-proof/${encodeURIComponent(identity)}`,
   assetCockpit: (symbol, timeframe) =>
@@ -49,6 +50,7 @@ const state = {
   performance: null,
   decisionStatus: null,
   shadowRail: null,
+  shadowCycle: null,
   liveFeed: null,
   marketLayer: "PA",
   marketSelection: null,
@@ -1141,27 +1143,45 @@ function renderEpoch() {
 function renderShadowDecisionRail() {
   const target = byId("shadowRailOverview");
   if (!target) return;
-  const data = state.shadowRail || {};
-  const snapshot = data.snapshot || {};
-  const ready = data.status === "ready";
-  const replayVerified =
-    snapshot.quick_check_ok === true && snapshot.read_only_verified === true;
-  const lastRecords = Array.isArray(snapshot.last_record_identities)
-    ? snapshot.last_record_identities
-    : [];
 
-  if (!ready) {
+  const journalData = state.shadowRail || {};
+  const journalSnapshot = journalData.snapshot || {};
+  const cycleData = state.shadowCycle || {};
+  const cycleSnapshot = cycleData.snapshot || {};
+  const journalReady = journalData.status === "ready";
+  const cycleReady = cycleData.status === "ready";
+  const journalIntegrity =
+    journalSnapshot.quick_check_ok === true &&
+    journalSnapshot.read_only_verified === true;
+  const cycleIntegrity =
+    cycleSnapshot.quick_check_ok === true &&
+    cycleSnapshot.read_only_verified === true;
+  const lastJournalRecords = Array.isArray(journalSnapshot.last_record_identities)
+    ? journalSnapshot.last_record_identities
+    : [];
+  const latestCycles = Array.isArray(cycleData.latest)
+    ? cycleData.latest
+    : [];
+  const latestCycle = latestCycles[0] || null;
+
+  if (!journalReady && !cycleReady) {
     target.innerHTML = `
       <article class="panel capital-unavailable">
         <span class="eyebrow">SHADOW DECISION RAIL</span>
         <h2>Runtime shadow evidence unavailable</h2>
-        <p>${escapeHtml(text(data.reason, "shadow decision rail not exposed"))}</p>
+        <p>${escapeHtml(text(
+          journalData.reason || cycleData.reason,
+          "shadow decision rail not exposed"
+        ))}</p>
         <div class="truth-table">
           <div class="truth-row"><span>Semantic</span><strong>SHADOW / RESEARCH ONLY</strong></div>
+          <div class="truth-row"><span>Capital Science lineage</span><strong>NOT PERSISTED</strong></div>
+          <div class="truth-row"><span>Sizing lineage</span><strong>NOT PERSISTED</strong></div>
+          <div class="truth-row"><span>Restart/replay observation</span><strong>NOT PERSISTED</strong></div>
           <div class="truth-row"><span>Canonical Epoch 2 mutation</span><strong>DISABLED</strong></div>
           <div class="truth-row"><span>Production authority</span><strong>DISABLED</strong></div>
         </div>
-        <p>Unavailable shadow evidence is not interpreted as a trade, fill, or canonical paper mutation.</p>
+        <p>Missing shadow runtime evidence is never upgraded from hosted acceptance.</p>
       </article>`;
     return;
   }
@@ -1171,28 +1191,58 @@ function renderShadowDecisionRail() {
       <div class="panel-head">
         <div>
           <span class="eyebrow">SHADOW DECISION RAIL / READ ONLY</span>
-          <h2>${escapeHtml(snapshot.record_count ?? 0)} journaled previews</h2>
+          <h2>${escapeHtml(journalSnapshot.record_count ?? 0)} previews ·
+            ${escapeHtml(cycleSnapshot.record_count ?? 0)} cycle manifests</h2>
         </div>
-        <span class="truth-chip ${replayVerified ? "truth-chip-ready" : "truth-chip-muted"}">
-          ${replayVerified ? "REPLAY · VERIFIED" : "REPLAY · UNVERIFIED"}
+        <span class="truth-chip ${cycleIntegrity ? "truth-chip-ready" : "truth-chip-muted"}">
+          ${cycleIntegrity ? "LINEAGE · VERIFIED" : "LINEAGE · NOT PERSISTED"}
         </span>
       </div>
+
       <div class="truth-table">
-        <div class="truth-row"><span>Journal</span><strong>${escapeHtml(data.journal_filename || "configured")}</strong></div>
-        <div class="truth-row"><span>SQLite quick_check</span><strong>${snapshot.quick_check_ok === true ? "PASS" : "UNVERIFIED"}</strong></div>
-        <div class="truth-row"><span>Read-only replay</span><strong>${snapshot.read_only_verified === true ? "VERIFIED" : "UNVERIFIED"}</strong></div>
+        <div class="truth-row"><span>Preview journal</span><strong>${
+          journalIntegrity ? "INTEGRITY VERIFIED" : "NOT PERSISTED"
+        }</strong></div>
+        <div class="truth-row"><span>Cycle manifest</span><strong>${
+          cycleIntegrity ? "INTEGRITY VERIFIED" : "NOT PERSISTED"
+        }</strong></div>
+        <div class="truth-row"><span>Capital Science lineage</span><strong>${
+          escapeHtml(cycleData.capital_science_lineage || "NOT PERSISTED")
+        }</strong></div>
+        <div class="truth-row"><span>Sizing lineage</span><strong>${
+          escapeHtml(cycleData.sizing_lineage || "NOT PERSISTED")
+        }</strong></div>
+        <div class="truth-row"><span>Restart/replay observation</span><strong>${
+          escapeHtml(cycleData.restart_replay_observation || "NOT PERSISTED")
+        }</strong></div>
         <div class="truth-row"><span>Canonical Epoch 2 mutation</span><strong class="safe-text">DISABLED</strong></div>
         <div class="truth-row"><span>Production authority</span><strong class="safe-text">DISABLED</strong></div>
         <div class="truth-row"><span>REAL CAPITAL</span><strong class="safe-text">DISABLED</strong></div>
       </div>
-      <div class="feed-item-meta">
-        ${lastRecords.length
-          ? lastRecords.map((item) =>
-              `<span>${escapeHtml(item?.[0] || "UNKNOWN")} <code>${escapeHtml(shortIdentity(item?.[1]))}</code></span>`
-            ).join("")
-          : "<span>No shadow preview has been journaled.</span>"}
-      </div>
-      <p>Reviewed preview evidence only · not a fill, not canonical NAV mutation, not live trading.</p>
+
+      ${latestCycle ? `
+        <div class="proof-metric-strip">
+          <div class="proof-metric"><span>FORECAST</span><strong>${escapeHtml(shortIdentity(latestCycle.forecast_identity))}</strong></div>
+          <div class="proof-metric"><span>CAPITAL</span><strong>${escapeHtml(shortIdentity(latestCycle.capital_bridge_identity))}</strong></div>
+          <div class="proof-metric"><span>SIZING</span><strong>${escapeHtml(shortIdentity(latestCycle.sizing_bridge_identity))}</strong></div>
+          <div class="proof-metric"><span>PREVIEW</span><strong>${escapeHtml(shortIdentity(latestCycle.preview_identity))}</strong></div>
+        </div>
+        <code>${escapeHtml(latestCycle.manifest_identity || "NO MANIFEST ID")}</code>
+      ` : `
+        <div class="feed-item-meta">
+          ${lastJournalRecords.length
+            ? lastJournalRecords.map((item) =>
+                `<span>${escapeHtml(item?.[0] || "UNKNOWN")} <code>${escapeHtml(shortIdentity(item?.[1]))}</code></span>`
+              ).join("")
+            : "<span>No shadow cycle manifest has been persisted.</span>"}
+        </div>
+      `}
+
+      <p>
+        Persisted lineage proves which forecast/proof/capital/sizing/review/preview
+        identities belonged to the same shadow cycle. It does not prove a deployed
+        restart replay until a separate replay observation exists.
+      </p>
     </article>`;
 }
 
@@ -1986,6 +2036,7 @@ function renderSystem() {
   const education = state.education || {};
   const decisionStatus = state.decisionStatus || {};
   const shadowRail = state.shadowRail || {};
+  const shadowCycle = state.shadowCycle || {};
   const liveFeed = state.liveFeed || {};
 
   const apiReady = health.status === "ok";
@@ -2004,6 +2055,8 @@ function renderSystem() {
   const feedCount = Array.isArray(liveFeed.events) ? liveFeed.events.length : 0;
   const shadowRailReady = shadowRail.status === "ready";
   const shadowRailSnapshot = shadowRail.snapshot || {};
+  const shadowCycleReady = shadowCycle.status === "ready";
+  const shadowCycleSnapshot = shadowCycle.snapshot || {};
 
   setSystemValue("systemApi", apiReady ? "READY" : "UNAVAILABLE", apiReady ? "positive" : "risk");
   setSystemValue("systemLedger", ledgerPresent ? "PRESENT" : "NOT PRESENT", ledgerPresent ? "positive" : "watch");
@@ -2033,6 +2086,13 @@ function renderSystem() {
       : "NOT EXPOSED",
     shadowRailReady ? "positive" : "watch"
   );
+  setSystemValue(
+    "systemShadowCycle",
+    shadowCycleReady
+      ? `${shadowCycleSnapshot.record_count ?? 0} MANIFESTS`
+      : "NOT EXPOSED",
+    shadowCycleReady ? "positive" : "watch"
+  );
 
   const shadowRailNote = byId("systemShadowRailNote");
   if (shadowRailNote) {
@@ -2041,6 +2101,15 @@ function renderSystem() {
           ? "read-only replay verified · no canonical writes"
           : "runtime journal present · replay unverified")
       : text(shadowRail.reason, "shadow journal runtime evidence unavailable");
+  }
+
+  const shadowCycleNote = byId("systemShadowCycleNote");
+  if (shadowCycleNote) {
+    shadowCycleNote.textContent = shadowCycleReady
+      ? (shadowCycleSnapshot.read_only_verified === true
+          ? "capital + sizing lineage persisted · replay observation separate"
+          : "manifest present · integrity unverified")
+      : text(shadowCycle.reason, "shadow cycle manifest runtime evidence unavailable");
   }
 
   const epochNote = byId("systemEpoch2Note");
@@ -2368,6 +2437,7 @@ async function runBoot() {
     loadEndpoint("performance", API.performance),
     loadEndpoint("decisionStatus", API.decisionStatus),
     loadEndpoint("shadowRail", API.shadowRail),
+    loadEndpoint("shadowCycle", API.shadowCycle),
     loadEndpoint("liveFeed", API.liveFeed),
   ]);
 
@@ -2412,6 +2482,7 @@ async function refreshRuntime(reason = "timer") {
       loadEndpoint("performance", API.performance),
       loadEndpoint("decisionStatus", API.decisionStatus),
       loadEndpoint("shadowRail", API.shadowRail),
+      loadEndpoint("shadowCycle", API.shadowCycle),
       loadEndpoint("liveFeed", API.liveFeed),
     ]);
     if (results[0].ok) applyHealthTruth(results[0].data);
