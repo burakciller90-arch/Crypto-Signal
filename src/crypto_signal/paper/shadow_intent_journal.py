@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from contextlib import closing
 from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
@@ -127,7 +128,7 @@ class R25ShadowIntentJournal:
 
     def initialize(self) -> None:
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        with sqlite3.connect(self.path) as db:
+        with closing(sqlite3.connect(self.path)) as db, db:
             existing = {
                 str(row[0])
                 for row in db.execute(
@@ -206,7 +207,7 @@ class R25ShadowIntentJournal:
             raise ValueError("shadow journal preview payload identity mismatch")
 
         vault_id = preview.intent.vault_id
-        with sqlite3.connect(self.path) as db:
+        with closing(sqlite3.connect(self.path)) as db:
             db.execute("BEGIN IMMEDIATE")
             existing = db.execute(
                 f"""SELECT record_identity, vault_id, event_at_ms,
@@ -225,6 +226,7 @@ class R25ShadowIntentJournal:
                     or str(existing[4]) != payload_json
                 ):
                     raise ValueError("shadow journal preview identity conflict")
+                db.commit()
                 return ShadowIntentAppendResult(
                     disposition=ShadowIntentAppendDisposition.IDEMPOTENT,
                     record=record,
@@ -271,6 +273,7 @@ class R25ShadowIntentJournal:
                     record.real_capital,
                 ),
             )
+            db.commit()
         return ShadowIntentAppendResult(
             disposition=ShadowIntentAppendDisposition.INSERTED,
             record=record,
@@ -280,7 +283,7 @@ class R25ShadowIntentJournal:
         if not self.path.is_file():
             raise ValueError("shadow intent journal missing")
         uri = f"{self.path.resolve().as_uri()}?mode=ro"
-        with sqlite3.connect(uri, uri=True) as db:
+        with closing(sqlite3.connect(uri, uri=True)) as db:
             unexpected = {
                 str(row[0])
                 for row in db.execute(
