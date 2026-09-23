@@ -96,6 +96,23 @@ def test_rolling_timer_requires_observed_receipt_and_relay_recovers_submitting()
 
 
 
+def test_rolling_timer_keeps_heartbeat_live_during_blocking_submit() -> None:
+    rolling = _read("ops/continuity/interval_wake_daemon.py")
+
+    assert "from threading import Thread" in rolling
+    assert "def run_wake(" in rolling
+    assert "state: RollingWakeState" in rolling
+    assert 'detail="attempt_in_flight"' in rolling
+    assert "while worker.is_alive():" in rolling
+    assert "worker.join(timeout=LOOP_SECONDS)" in rolling
+    assert "write_runtime_status(" in rolling
+    assert "timeout=60" in rolling
+    assert "rc, output = run_wake(pending, state)" in rolling
+    assert rolling.index('detail="attempt_in_flight"') < rolling.index(
+        "rc, output = run_wake(pending, state)"
+    )
+
+
 def test_mac_command_exposes_readonly_rolling_wake_state() -> None:
     command = _read(".github/workflows/crypto-mac-command.yml")
 
