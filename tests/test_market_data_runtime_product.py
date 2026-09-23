@@ -530,7 +530,10 @@ def test_galactech_system_binds_market_data_truth_without_online_claim(
     assert '"systemMarketTape"' in js
     assert '"systemColdArchive"' in js
     assert "ONLINE NOT ASSERTED" in js
-    assert "process NOT MEASURED" in js
+    assert "collection_process_status" in js
+    assert "HEARTBEAT_FRESH" in js
+    assert "heartbeat age" in js
+    assert "ingestion age" in js
     assert "canonical-row replay NOT MEASURED" in js
     assert 'loadEndpoint("marketTapeStatus", API.marketTapeStatus)' in js
     assert 'loadEndpoint("coldArchiveStatus", API.coldArchiveStatus)' in js
