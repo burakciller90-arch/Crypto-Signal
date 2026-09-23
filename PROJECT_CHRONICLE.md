@@ -4511,3 +4511,34 @@ Accepted semantics:
 
 Phase 10 decision-contract exit is satisfied. Next frontier is Phase 11 Position Sizing
 Intelligence. User wake/lease pause remains authoritative.
+
+
+---
+
+## 2026-09-23 — 13:20 PHASE 11 POSITION SIZING INTELLIGENCE ACCEPTED
+
+PR #910 completed the locked Phase 11 sizing research infrastructure.
+
+Acceptance:
+- branch hosted run `35847933771` focused + full PASS;
+- Alpha Factory reconciliation gate `35847899769` SUCCESS;
+- squash merge `d54589f45ba189350d9e3277d3643f7f3eef9d09`;
+- exact-main Stage10 `35848135767` SUCCESS.
+
+A parallel duplicate sizing implementation appeared during development and was removed
+before acceptance. The final branch contained one authoritative implementation only.
+
+Accepted semantics:
+- fixed-fractional is a shadow research baseline;
+- full/half/quarter Kelly require exact R19 CALIBRATED probability evidence;
+- correlation, drawdown, volatility, liquidity and transaction-cost gates are explicit;
+- allocator HOLD_CASH blocks all sizing;
+- non-positive calibrated expected edge blocks all methods;
+- martingale remains forbidden;
+- no automatic method selection;
+- no canonical notional;
+- no ledger/network/exchange/runtime mutation;
+- REAL_CAPITAL=0.
+
+Phase 11 infrastructure exit is satisfied. Next frontier is Phase 12 market-neutral /
+arbitrage research, shadow-only. User wake/lease pause remains authoritative.
