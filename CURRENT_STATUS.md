@@ -4,10 +4,49 @@ Updated: 2026-09-23
 Project: Crypto Signal
 Baseline: crypto-signal-full-version-v1.0.0 (immutable)
 Active post-v1.0 program: v1.1 world-class product + market intelligence
-State: DATA_FRESHNESS_RECOVERED / R15_OPERATIONAL_ACCEPTANCE_CLOSED / LOCKED_20M_CONTINUITY_ACTIVE / PARALLEL_V1_1_DEVELOPMENT_ACTIVE
+State: DATA_FRESHNESS_RECOVERED / R15_OPERATIONAL_ACCEPTANCE_CLOSED / CONTINUITY_PAUSED_BY_USER / PARALLEL_V1_1_DEVELOPMENT_ACTIVE
 REAL_CAPITAL: 0
 
 ## Active v1.1 frontier — read before historical sections
+
+
+### 2026-09-23 10:55 +0300 — M4 DERIVATIVES INTELLIGENCE 2.0 SLICE 2 ACCEPTED / CONTINUITY PAUSE PRESERVED
+
+- User's explicit wake/lease pause remains dominant while safe project development continues.
+- Fresh UID504 read-only reconciliation at 10:49 +0300:
+  - LOCAL_PAUSED=YES;
+  - SHARED_PAUSED=YES;
+  - ACTIVE_LEASES=0;
+  - LOCAL_WAKE_QUEUE=0;
+  - RELAY_WAKE_QUEUE=0;
+  - rolling timer PID alive but state=PAUSED;
+  - pending_event_id empty.
+- Do not re-arm or replay wake/lease unless the user explicitly asks to resume it.
+- PR **#887** accepted bounded M4 crowding context.
+- Authoritative hosted branch run `35834066926` PASS on exact code/test/doc tree:
+  - focused M4 pytest/Ruff/mypy PASS;
+  - full repository pytest/Ruff/mypy/JS/freshness PASS.
+- Temporary hosted workflow was removed after PASS; final PR diff contained only:
+  - `src/crypto_signal/intelligence/derivatives_crowding.py`;
+  - `tests/test_derivatives_crowding_engine.py`;
+  - `docs/M4_DERIVATIVES_CROWDING_SLICE2.md`.
+- PR #887 squash-merged to main as `ee555919116b2625f678dc78b4ea20046acce874`.
+- Exact-main Stage10 run `35834224420` SUCCESS.
+- Accepted context states:
+  - LONG_CROWDING;
+  - SHORT_CROWDING;
+  - bounded SQUEEZE_RISK;
+  - DELEVERAGING;
+  - BALANCED;
+  - MIXED;
+  - fail-closed UNRESOLVED.
+- Observed liquidations remain historical evidence, not future liquidation-zone estimates.
+- Crowding/squeeze context is not probability, position sizing or a trading command.
+- Source-dependent predicted funding / cross-venue extensions remain unclaimed until separately accepted source evidence exists.
+- Current primary intelligence frontier: **M5 Smart Money / On-chain 2.0**, followed by Event Risk + NLP.
+- Cursor workers/composer remain disabled by user.
+- REAL_CAPITAL=0; no production cutover.
+
 
 
 ### 2026-09-23 06:06 +0300 — M4 DERIVATIVES INTELLIGENCE 2.0 SLICE 1 ACCEPTED
