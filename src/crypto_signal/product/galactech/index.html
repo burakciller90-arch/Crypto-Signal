@@ -8,7 +8,7 @@
   <title>GALACTECH // CRYPTO SIGNAL</title>
   <link rel="stylesheet" href="/galactech-static/app.css">
 </head>
-<body data-ui-version="galactech-v1.1-foundation">
+<body data-ui-version="galactech-v1.1-command-evidence">
   <a class="skip-link" href="#mainContent">Ana içeriğe geç</a>
 
   <div id="coldBoot" class="cold-boot" role="status" aria-live="polite" aria-atomic="true">
@@ -317,6 +317,27 @@
           </div>
         </section>
       </main>
+
+      <dialog id="evidenceDialog" class="evidence-room" aria-labelledby="evidenceDialogTitle">
+        <div class="evidence-room-shell">
+          <header class="evidence-room-head">
+            <div>
+              <span class="eyebrow">EVIDENCE ROOM / FROZEN DECISION</span>
+              <h2 id="evidenceDialogTitle">Immutable Decision Proof</h2>
+              <p id="evidenceDialogSubtitle">Issuance-time evidence only.</p>
+            </div>
+            <button id="closeEvidenceDialog" class="dialog-close" type="button" autofocus>
+              KAPAT
+            </button>
+          </header>
+          <div id="evidenceDialogBody" class="evidence-room-body" aria-live="polite">
+            <div class="empty-state">
+              <strong>Evidence seçimi bekleniyor.</strong>
+              <p>Bir immutable forecast açıldığında yalnız kabul edilmiş freeze kanıtı gösterilir.</p>
+            </div>
+          </div>
+        </div>
+      </dialog>
 
       <footer class="footer">
         <span>GALACTECH // CRYPTO SIGNAL</span>
