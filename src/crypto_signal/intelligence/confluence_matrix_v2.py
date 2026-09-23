@@ -145,12 +145,12 @@ class ConfluenceFamilyEvidence:
             raise ValueError("unsupported M6 family evidence schema")
         if self.engine_version != M6_CONFLUENCE_ENGINE_VERSION:
             raise ValueError("unsupported M6 family evidence engine")
-        for value, label in (
+        for text_value, label in (
             (self.asset, "M6 family asset"),
             (self.timeframe, "M6 family timeframe"),
             (self.regime, "M6 family regime"),
         ):
-            _require_text(value, label)
+            _require_text(text_value, label)
         if self.as_of_ms < 0:
             raise ValueError("M6 family as_of_ms must be non-negative")
         _require_text_tuple(self.source_engine_ids, "M6 source engine")
@@ -186,9 +186,9 @@ class ConfluenceFamilyEvidence:
                 raise ValueError("measured M6 family evidence requires source evidence")
             if any(value is None for value in measures):
                 raise ValueError("measured M6 family evidence requires quality measures")
-            for value in measures:
-                assert value is not None
-                _require_unit_interval(value, "M6 family measure")
+            for measure_value in measures:
+                assert measure_value is not None
+                _require_unit_interval(measure_value, "M6 family measure")
             if self.state is MetaEvidenceState.OBSERVED and self.direction is None:
                 raise ValueError("observed M6 family evidence requires direction")
             if self.state is MetaEvidenceState.ABSTAIN and self.direction is not None:
@@ -262,12 +262,12 @@ class ConfluenceMatrixSnapshot:
     def __post_init__(self) -> None:
         _require_sha256(self.snapshot_identity, "M6 snapshot identity")
         _require_sha256(self.policy_identity, "M6 snapshot policy identity")
-        for value, label in (
+        for text_value, label in (
             (self.asset, "M6 snapshot asset"),
             (self.timeframe, "M6 snapshot timeframe"),
             (self.regime, "M6 snapshot regime"),
         ):
-            _require_text(value, label)
+            _require_text(text_value, label)
         if self.engine_version != M6_CONFLUENCE_ENGINE_VERSION:
             raise ValueError("unsupported M6 snapshot engine")
         if self.as_of_ms < 0:
@@ -289,16 +289,19 @@ class ConfluenceMatrixSnapshot:
             sorted(ConfluenceFamily, key=lambda item: item.value)
         ):
             raise ValueError("M6 contributions must be canonical by family")
-        for value in (
+        for score_value in (
             self.support_score_0_100,
             self.opposition_score_0_100,
             self.evidence_coverage_0_100,
         ):
-            if value < 0 or value > 100:
+            if score_value < 0 or score_value > 100:
                 raise ValueError("M6 matrix score must be inside [0,100]")
-        for value in (self.evidence_quality_0_1, self.freshness_0_1):
-            if value is not None:
-                _require_unit_interval(value, "M6 aggregate quality/freshness")
+        for quality_value in (self.evidence_quality_0_1, self.freshness_0_1):
+            if quality_value is not None:
+                _require_unit_interval(
+                    quality_value,
+                    "M6 aggregate quality/freshness",
+                )
         _require_identity_tuple(
             self.material_conflict_identities,
             "M6 snapshot material conflict",
