@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from contextlib import closing
 from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
@@ -156,7 +157,7 @@ class R25ShadowCycleManifest:
 
     def initialize(self) -> None:
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        with sqlite3.connect(self.path) as db:
+        with closing(sqlite3.connect(self.path)) as db, db:
             existing = {
                 str(row[0])
                 for row in db.execute(
@@ -242,7 +243,7 @@ class R25ShadowCycleManifest:
         self.initialize()
         _validate_cycle(cycle)
 
-        with sqlite3.connect(self.path) as db:
+        with closing(sqlite3.connect(self.path)) as db:
             db.execute("BEGIN IMMEDIATE")
             existing = db.execute(
                 f"""SELECT manifest_identity, cycle_identity, forecast_identity,
@@ -264,6 +265,7 @@ class R25ShadowCycleManifest:
                 )
                 if record != expected:
                     raise ValueError("shadow cycle identity conflict")
+                db.commit()
                 return ShadowCycleManifestAppendResult(
                     disposition=ShadowCycleManifestDisposition.IDEMPOTENT,
                     record=record,
@@ -327,6 +329,7 @@ class R25ShadowCycleManifest:
                     record.real_capital,
                 ),
             )
+            db.commit()
         return ShadowCycleManifestAppendResult(
             disposition=ShadowCycleManifestDisposition.INSERTED,
             record=record,
@@ -341,7 +344,7 @@ class R25ShadowCycleManifest:
             raise ValueError("shadow cycle manifest limit must be inside 1..500")
         self.verify_read_only()
         uri = f"{self.path.resolve().as_uri()}?mode=ro"
-        with sqlite3.connect(uri, uri=True) as db:
+        with closing(sqlite3.connect(uri, uri=True)) as db:
             rows = db.execute(
                 f"""SELECT manifest_identity, cycle_identity, forecast_identity,
                 proof_identity, capital_bridge_identity, sizing_bridge_identity,
@@ -361,7 +364,7 @@ class R25ShadowCycleManifest:
         if not self.path.is_file():
             raise ValueError("shadow cycle manifest missing")
         uri = f"{self.path.resolve().as_uri()}?mode=ro"
-        with sqlite3.connect(uri, uri=True) as db:
+        with closing(sqlite3.connect(uri, uri=True)) as db:
             unexpected = {
                 str(row[0])
                 for row in db.execute(
