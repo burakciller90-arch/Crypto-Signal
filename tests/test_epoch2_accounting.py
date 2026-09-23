@@ -120,15 +120,15 @@ def test_epoch2_accounting_tracks_vault_and_consolidated_truth(tmp_path) -> None
         activation,
         vault_id=PaperVaultId.CORE,
         snapshot_at_ms=2_000,
-        cash_usdt=Decimal("500"),
-        positions=(PaperPosition(PaperSymbol.BTCUSDT, Decimal("1")),),
-        marked_exposure_usdt=Decimal("110"),
-        realized_pnl_usdt=Decimal("5"),
-        unrealized_pnl_usdt=Decimal("5"),
-        fee_usdt=Decimal("1"),
+        cash_usdt=Decimal(500),
+        positions=(PaperPosition(PaperSymbol.BTCUSDT, Decimal(1)),),
+        marked_exposure_usdt=Decimal(110),
+        realized_pnl_usdt=Decimal(5),
+        unrealized_pnl_usdt=Decimal(5),
+        fee_usdt=Decimal(1),
         spread_usdt=Decimal("0.5"),
         slippage_usdt=Decimal("0.5"),
-        turnover_notional_usdt=Decimal("200"),
+        turnover_notional_usdt=Decimal(200),
         closed_trade_count=1,
         win_count=1,
         loss_count=0,
@@ -141,15 +141,15 @@ def test_epoch2_accounting_tracks_vault_and_consolidated_truth(tmp_path) -> None
         activation,
         vault_id=PaperVaultId.TACTICAL,
         snapshot_at_ms=2_000,
-        cash_usdt=Decimal("250"),
-        positions=(PaperPosition(PaperSymbol.ETHUSDT, Decimal("1")),),
-        marked_exposure_usdt=Decimal("45"),
-        realized_pnl_usdt=Decimal("-3"),
-        unrealized_pnl_usdt=Decimal("-2"),
+        cash_usdt=Decimal(250),
+        positions=(PaperPosition(PaperSymbol.ETHUSDT, Decimal(1)),),
+        marked_exposure_usdt=Decimal(45),
+        realized_pnl_usdt=Decimal(-3),
+        unrealized_pnl_usdt=Decimal(-2),
         fee_usdt=Decimal("0.4"),
         spread_usdt=Decimal("0.3"),
         slippage_usdt=Decimal("0.3"),
-        turnover_notional_usdt=Decimal("100"),
+        turnover_notional_usdt=Decimal(100),
         closed_trade_count=1,
         win_count=0,
         loss_count=1,
@@ -162,7 +162,7 @@ def test_epoch2_accounting_tracks_vault_and_consolidated_truth(tmp_path) -> None
         activation,
         vault_id=PaperVaultId.OPPORTUNITY_RESERVE,
         snapshot_at_ms=2_000,
-        cash_usdt=Decimal("100"),
+        cash_usdt=Decimal(100),
         positions=(),
         marked_exposure_usdt=Decimal(0),
         realized_pnl_usdt=Decimal(0),
@@ -189,22 +189,22 @@ def test_epoch2_accounting_tracks_vault_and_consolidated_truth(tmp_path) -> None
     )
     assert ledger.append_consolidated_snapshot(parent) is True
 
-    assert parent.cash_usdt == Decimal("850")
-    assert parent.marked_exposure_usdt == Decimal("155")
-    assert parent.nav_usdt == Decimal("1005")
-    assert parent.realized_pnl_usdt == Decimal("2")
-    assert parent.unrealized_pnl_usdt == Decimal("3")
-    assert parent.high_water_nav_usdt == Decimal("1005")
+    assert parent.cash_usdt == Decimal(850)
+    assert parent.marked_exposure_usdt == Decimal(155)
+    assert parent.nav_usdt == Decimal(1005)
+    assert parent.realized_pnl_usdt == Decimal(2)
+    assert parent.unrealized_pnl_usdt == Decimal(3)
+    assert parent.high_water_nav_usdt == Decimal(1005)
     assert parent.drawdown_fraction == 0
     assert parent.fee_usdt == Decimal("1.4")
     assert parent.spread_usdt == Decimal("0.8")
     assert parent.slippage_usdt == Decimal("0.8")
-    assert parent.turnover_notional_usdt == Decimal("300")
+    assert parent.turnover_notional_usdt == Decimal(300)
     assert parent.turnover_fraction == Decimal("0.3")
     assert parent.closed_trade_count == 2
     assert parent.win_count == 1
     assert parent.loss_count == 1
-    assert parent.expectancy_usdt_per_closed_trade == Decimal("1")
+    assert parent.expectancy_usdt_per_closed_trade == Decimal(1)
     assert parent.outcome_distribution == (("LOSS", 1), ("WIN", 1))
     assert parent.metrics_status is Epoch2MetricsStatus.AVAILABLE
 
@@ -290,8 +290,8 @@ def test_parent_high_water_uses_parent_history_not_sum_of_vault_peaks(tmp_path) 
         previous=initial.consolidated_snapshot,
     )
     ledger.append_consolidated_snapshot(peak)
-    assert peak.nav_usdt == Decimal("1005")
-    assert peak.high_water_nav_usdt == Decimal("1005")
+    assert peak.nav_usdt == Decimal(1005)
+    assert peak.high_water_nav_usdt == Decimal(1005)
 
     second_by_vault = {item.vault_id: item for item in (core_up, tactical_down, reserve_flat)}
 
@@ -347,8 +347,8 @@ def test_parent_high_water_uses_parent_history_not_sum_of_vault_peaks(tmp_path) 
     )
     ledger.append_consolidated_snapshot(drawdown)
 
-    assert drawdown.nav_usdt == Decimal("980")
-    assert drawdown.high_water_nav_usdt == Decimal("1005")
+    assert drawdown.nav_usdt == Decimal(980)
+    assert drawdown.high_water_nav_usdt == Decimal(1005)
     assert drawdown.drawdown_fraction == Decimal(25) / Decimal(1005)
     assert ledger.read_state().consolidated_snapshot == drawdown
 
@@ -367,7 +367,7 @@ def test_stale_snapshot_lineage_backfill_and_same_timestamp_forks_fail_closed(tm
         activation,
         vault_id=PaperVaultId.CORE,
         snapshot_at_ms=2_000,
-        cash_usdt=Decimal("600"),
+        cash_usdt=Decimal(600),
         positions=(),
         marked_exposure_usdt=Decimal(0),
         realized_pnl_usdt=Decimal(0),
@@ -390,7 +390,7 @@ def test_stale_snapshot_lineage_backfill_and_same_timestamp_forks_fail_closed(tm
         activation,
         vault_id=PaperVaultId.CORE,
         snapshot_at_ms=2_500,
-        cash_usdt=Decimal("600"),
+        cash_usdt=Decimal(600),
         positions=(),
         marked_exposure_usdt=Decimal(0),
         realized_pnl_usdt=Decimal(0),
