@@ -6,9 +6,10 @@ from enum import StrEnum
 
 from crypto_signal.ledger.serialization import canonical_sha256
 from research.alpha_factory.foundation import (
-    PromotionGateAssessment,
-    PromotionGateStatus,
     RESEARCH_AUTHORITY,
+    PromotionGateAssessment,
+    PromotionGateEvidence,
+    PromotionGateStatus,
     ResearchExperimentManifest,
 )
 
@@ -34,6 +35,9 @@ class ShadowResearchFamily(StrEnum):
 class ShadowReviewState(StrEnum):
     BLOCKED = "blocked"
     READY_FOR_EXPLICIT_REVIEW = "ready_for_explicit_review"
+    SUPERVISOR_ACCEPTED_FOR_MANUAL_PROMOTION_REVIEW = (
+        "supervisor_accepted_for_manual_promotion_review"
+    )
 
 
 @dataclass(frozen=True, slots=True)
@@ -62,9 +66,10 @@ class ShadowVariant:
     hypothesis: str
     experiment_identity: str
     parameter_identity: str
-    untouched_forward_identity: str
-    robustness_identity: str
-    cost_stress_identity: str
+    untouched_forward_identity: str | None
+    robustness_identity: str | None
+    cost_stress_identity: str | None
+    promotion_evidence_identity: str
     promotion_assessment_identity: str
     review_state: ShadowReviewState
     metrics: tuple[ShadowMetric, ...]
@@ -80,12 +85,17 @@ class ShadowVariant:
         for identity, label in (
             (self.experiment_identity, "shadow experiment identity"),
             (self.parameter_identity, "shadow parameter identity"),
-            (self.untouched_forward_identity, "shadow untouched-forward identity"),
-            (self.robustness_identity, "shadow robustness identity"),
-            (self.cost_stress_identity, "shadow cost-stress identity"),
+            (self.promotion_evidence_identity, "shadow promotion evidence identity"),
             (self.promotion_assessment_identity, "shadow promotion assessment identity"),
         ):
             _require_sha256(identity, label)
+        for identity, label in (
+            (self.untouched_forward_identity, "shadow untouched-forward identity"),
+            (self.robustness_identity, "shadow robustness identity"),
+            (self.cost_stress_identity, "shadow cost-stress identity"),
+        ):
+            if identity is not None:
+                _require_sha256(identity, label)
         if self.schema_version != SHADOW_LAB_V2_SCHEMA_VERSION:
             raise ValueError("unsupported Shadow Lab v2 schema")
         if self.engine_version != SHADOW_LAB_V2_ENGINE_VERSION:
@@ -98,6 +108,17 @@ class ShadowVariant:
             _require_text(value, label)
         if not self.metrics:
             raise ValueError("shadow variant requires descriptive metrics")
+        if self.review_state is not ShadowReviewState.BLOCKED and any(
+            identity is None
+            for identity in (
+                self.untouched_forward_identity,
+                self.robustness_identity,
+                self.cost_stress_identity,
+            )
+        ):
+            raise ValueError(
+                "review-ready Shadow Lab evidence requires forward/robustness/cost lineage"
+            )
         names = tuple(item.name for item in self.metrics)
         if names != tuple(sorted(set(names))):
             raise ValueError("shadow metrics must be unique and sorted by name")
@@ -191,21 +212,34 @@ def build_shadow_variant(
     hypothesis: str,
     experiment: ResearchExperimentManifest,
     parameter_identity: str,
-    untouched_forward_identity: str,
-    robustness_identity: str,
-    cost_stress_identity: str,
+    promotion_evidence: PromotionGateEvidence,
     promotion_assessment: PromotionGateAssessment,
     metrics: tuple[ShadowMetric, ...],
 ) -> ShadowVariant:
     if experiment.authority != RESEARCH_AUTHORITY:
         raise ValueError("Shadow Lab requires research-only Alpha Factory experiment")
+    if promotion_evidence.experiment_identity != experiment.experiment_identity:
+        raise ValueError("shadow promotion evidence/experiment mismatch")
     if promotion_assessment.experiment_identity != experiment.experiment_identity:
         raise ValueError("shadow promotion assessment/experiment mismatch")
-    review_state = (
-        ShadowReviewState.BLOCKED
-        if promotion_assessment.status is PromotionGateStatus.BLOCKED
-        else ShadowReviewState.READY_FOR_EXPLICIT_REVIEW
-    )
+    if (
+        promotion_assessment.promotion_evidence_identity
+        != promotion_evidence.evidence_identity
+    ):
+        raise ValueError("shadow assessment does not bind supplied promotion evidence")
+
+    if promotion_assessment.status is PromotionGateStatus.BLOCKED:
+        review_state = ShadowReviewState.BLOCKED
+    elif promotion_assessment.status is PromotionGateStatus.READY_FOR_SUPERVISOR_REVIEW:
+        review_state = ShadowReviewState.READY_FOR_EXPLICIT_REVIEW
+    else:
+        review_state = (
+            ShadowReviewState.SUPERVISOR_ACCEPTED_FOR_MANUAL_PROMOTION_REVIEW
+        )
+
+    untouched_forward_identity = promotion_evidence.untouched_forward_identity
+    robustness_identity = promotion_evidence.robustness_ablation_identity
+    cost_stress_identity = promotion_evidence.transaction_cost_stress_identity
     ordered_metrics = tuple(sorted(metrics, key=lambda item: item.name))
     payload = {
         "authority": SHADOW_AUTHORITY,
@@ -222,6 +256,7 @@ def build_shadow_variant(
         "parameter_identity": parameter_identity,
         "policy_version": policy_version,
         "production_authority": False,
+        "promotion_evidence_identity": promotion_evidence.evidence_identity,
         "promotion_assessment_identity": promotion_assessment.assessment_identity,
         "real_capital": REAL_CAPITAL,
         "review_state": review_state,
@@ -242,6 +277,7 @@ def build_shadow_variant(
         untouched_forward_identity=untouched_forward_identity,
         robustness_identity=robustness_identity,
         cost_stress_identity=cost_stress_identity,
+        promotion_evidence_identity=promotion_evidence.evidence_identity,
         promotion_assessment_identity=promotion_assessment.assessment_identity,
         review_state=review_state,
         metrics=ordered_metrics,
@@ -320,6 +356,7 @@ def _variant_payload(variant: ShadowVariant) -> dict[str, object]:
         "parameter_identity": variant.parameter_identity,
         "policy_version": variant.policy_version,
         "production_authority": variant.production_authority,
+        "promotion_evidence_identity": variant.promotion_evidence_identity,
         "promotion_assessment_identity": variant.promotion_assessment_identity,
         "real_capital": variant.real_capital,
         "review_state": variant.review_state,
