@@ -65,6 +65,74 @@ def test_collector_runtime_persists_start_restart_and_heartbeat(tmp_path) -> Non
         assert db.execute("SELECT COUNT(*) FROM collector_heartbeats").fetchone()[0] == 1
 
 
+def test_collector_process_heartbeat_can_precede_first_ingestion(
+    tmp_path,
+) -> None:
+    store = MarketTapeCollectorRuntimeStore(tmp_path / "collector.sqlite3")
+    instance = build_collector_instance(
+        provider="bybit",
+        source="market_tape_stream",
+        symbols=("BTCUSDT",),
+        started_at_ms=1_000,
+        process_id=101,
+        runtime_nonce="boot-a",
+    )
+    store.append_instance(instance)
+
+    heartbeat = build_collector_heartbeat(
+        instance_identity=instance.instance_identity,
+        sequence_no=1,
+        observed_at_ms=1_050,
+        last_successful_ingestion_ms=None,
+        observed_messages_total=0,
+        normalized_rows_total=0,
+        raw_rows_total=0,
+    )
+    store.append_heartbeat(heartbeat)
+
+    assert store.latest_heartbeat(instance.instance_identity) == heartbeat
+    assert heartbeat.last_successful_ingestion_ms is None
+
+
+def test_collector_ingestion_evidence_cannot_disappear_after_observation(
+    tmp_path,
+) -> None:
+    store = MarketTapeCollectorRuntimeStore(tmp_path / "collector.sqlite3")
+    instance = build_collector_instance(
+        provider="bybit",
+        source="market_tape_stream",
+        symbols=("BTCUSDT",),
+        started_at_ms=1_000,
+        process_id=101,
+        runtime_nonce="boot-a",
+    )
+    store.append_instance(instance)
+    store.append_heartbeat(
+        build_collector_heartbeat(
+            instance_identity=instance.instance_identity,
+            sequence_no=1,
+            observed_at_ms=1_100,
+            last_successful_ingestion_ms=1_090,
+            observed_messages_total=1,
+            normalized_rows_total=1,
+            raw_rows_total=1,
+        )
+    )
+
+    with pytest.raises(ValueError, match="cannot disappear"):
+        store.append_heartbeat(
+            build_collector_heartbeat(
+                instance_identity=instance.instance_identity,
+                sequence_no=2,
+                observed_at_ms=1_200,
+                last_successful_ingestion_ms=None,
+                observed_messages_total=1,
+                normalized_rows_total=1,
+                raw_rows_total=1,
+            )
+        )
+
+
 def test_collector_heartbeat_fails_closed_on_regression_and_unknown_parent(
     tmp_path,
 ) -> None:
