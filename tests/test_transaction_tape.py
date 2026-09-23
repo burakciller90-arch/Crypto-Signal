@@ -5,6 +5,7 @@ from dataclasses import replace
 from decimal import Decimal
 
 import pytest
+from test_decision_proof_live_feed import ISSUED_AT, _forecast, _slices
 
 from crypto_signal.ledger.serialization import canonical_sha256
 from crypto_signal.paper.epoch2_accounting import (
@@ -20,7 +21,6 @@ from crypto_signal.paper.transaction_tape import (
     build_tape_intent,
 )
 from crypto_signal.product.decision_proof import build_decision_proof_snapshot
-from test_decision_proof_live_feed import ISSUED_AT, _forecast, _slices
 
 
 def _sha(seed: str) -> str:
@@ -39,7 +39,7 @@ def _context():
 
 
 def _buy():
-    activation, before, forecast, proof = _context()
+    activation, _, forecast, proof = _context()
     intent = build_tape_intent(
         activation,
         vault_id=PaperVaultId.CORE,
@@ -51,23 +51,23 @@ def _buy():
         forecast=forecast,
         proof=proof,
         symbol=PaperSymbol.BTCUSDT,
-        quantity=Decimal("1"),
-        reference_price=Decimal("100"),
+        quantity=Decimal(1),
+        reference_price=Decimal(100),
     )
     mark = _sha("mark-after-buy")
     after = build_epoch2_vault_accounting_snapshot(
         activation,
         vault_id=PaperVaultId.CORE,
         snapshot_at_ms=ISSUED_AT + 300,
-        cash_usdt=Decimal("498"),
-        positions=(PaperPosition(PaperSymbol.BTCUSDT, Decimal("1")),),
-        marked_exposure_usdt=Decimal("100"),
-        realized_pnl_usdt=Decimal("0"),
-        unrealized_pnl_usdt=Decimal("-2"),
-        fee_usdt=Decimal("1"),
+        cash_usdt=Decimal(498),
+        positions=(PaperPosition(PaperSymbol.BTCUSDT, Decimal(1)),),
+        marked_exposure_usdt=Decimal(100),
+        realized_pnl_usdt=Decimal(0),
+        unrealized_pnl_usdt=Decimal(-2),
+        fee_usdt=Decimal(1),
         spread_usdt=Decimal("0.4"),
         slippage_usdt=Decimal("0.6"),
-        turnover_notional_usdt=Decimal("101"),
+        turnover_notional_usdt=Decimal(101),
         closed_trade_count=0,
         win_count=0,
         loss_count=0,
@@ -79,8 +79,8 @@ def _buy():
     fill = build_tape_fill(
         intent, before, after,
         filled_at_ms=ISSUED_AT + 200,
-        simulated_fill_price=Decimal("101"),
-        fee_usdt=Decimal("1"),
+        simulated_fill_price=Decimal(101),
+        fee_usdt=Decimal(1),
         spread_usdt=Decimal("0.4"),
         slippage_usdt=Decimal("0.6"),
         mark_evidence_identity=mark,
@@ -94,31 +94,31 @@ def test_r22_exact_forecast_proof_to_r21_cash_position_nav_lineage() -> None:
     assert fill.intent_identity == intent.intent_identity
     assert fill.before_snapshot_identity == before.snapshot_identity
     assert fill.after_snapshot_identity == after.snapshot_identity
-    assert fill.cash_before_usdt == Decimal("600")
-    assert fill.cash_after_usdt == Decimal("498")
-    assert fill.nav_before_usdt == Decimal("600")
-    assert fill.nav_after_usdt == Decimal("598")
-    assert fill.unrealized_pnl_delta_usdt == Decimal("-2")
-    assert fill.notional_usdt == Decimal("101")
-    assert fill.spread_usdt + fill.slippage_usdt == Decimal("1")
+    assert fill.cash_before_usdt == Decimal(600)
+    assert fill.cash_after_usdt == Decimal(498)
+    assert fill.nav_before_usdt == Decimal(600)
+    assert fill.nav_after_usdt == Decimal(598)
+    assert fill.unrealized_pnl_delta_usdt == Decimal(-2)
+    assert fill.notional_usdt == Decimal(101)
+    assert fill.spread_usdt + fill.slippage_usdt == Decimal(1)
     assert fill.real_capital == 0 and not fill.production_authority
     assert intent.real_capital == 0 and not intent.production_authority
 
 
 def test_r22_forecast_and_proof_are_exact_not_user_claimed() -> None:
     activation, before, forecast, proof = _context()
-    args = dict(
-        vault_id=PaperVaultId.CORE,
-        action=PaperAction.BUY,
-        decided_at_ms=ISSUED_AT + 100,
-        policy_identity=_sha("policy"),
-        sizing_decision_identity=_sha("sizing"),
-        reason_codes=("active",),
-        forecast=forecast,
-        symbol=PaperSymbol.BTCUSDT,
-        quantity=Decimal(1),
-        reference_price=Decimal(100),
-    )
+    args = {
+        "vault_id": PaperVaultId.CORE,
+        "action": PaperAction.BUY,
+        "decided_at_ms": ISSUED_AT + 100,
+        "policy_identity": _sha("policy"),
+        "sizing_decision_identity": _sha("sizing"),
+        "reason_codes": ("active",),
+        "forecast": forecast,
+        "symbol": PaperSymbol.BTCUSDT,
+        "quantity": Decimal(1),
+        "reference_price": Decimal(100),
+    }
     other_forecast = _forecast(calibrated=True)
     other_proof = build_decision_proof_snapshot(other_forecast, _slices(other_forecast))
     with pytest.raises(ValueError, match="lineage mismatch"):
@@ -135,17 +135,17 @@ def test_r22_forecast_and_proof_are_exact_not_user_claimed() -> None:
 
 
 def test_r22_rejects_nonreconciling_cash_cost_position_or_missing_mark() -> None:
-    activation, before, forecast, proof, intent, after, _ = _buy()
+    activation, before, _, _, intent, after, _ = _buy()
     with pytest.raises(ValueError, match="cash movement"):
         bad = build_epoch2_vault_accounting_snapshot(
             activation,
             vault_id=PaperVaultId.CORE,
             snapshot_at_ms=after.snapshot_at_ms,
-            cash_usdt=Decimal("497"),
+            cash_usdt=Decimal(497),
             positions=after.positions,
-            marked_exposure_usdt=Decimal("100"),
+            marked_exposure_usdt=Decimal(100),
             realized_pnl_usdt=Decimal(0),
-            unrealized_pnl_usdt=Decimal("-3"),
+            unrealized_pnl_usdt=Decimal(-3),
             fee_usdt=Decimal(1),
             spread_usdt=Decimal("0.4"),
             slippage_usdt=Decimal("0.6"),
@@ -190,7 +190,7 @@ def test_r22_rejects_nonreconciling_cash_cost_position_or_missing_mark() -> None
 
 
 def test_r22_sell_requires_outcome_and_reconciles_realized_nav() -> None:
-    activation, before, forecast, proof, buy_intent, after_buy, buy_fill = _buy()
+    activation, _, forecast, proof, buy_intent, after_buy, buy_fill = _buy()
     sale = build_tape_intent(
         activation,
         vault_id=PaperVaultId.CORE,
