@@ -442,7 +442,7 @@ class R22Epoch2AtomicTape:
                 raise ValueError("R22 audit bundle not found")
             decoded = json.loads(str(row[0]))
             if not isinstance(decoded, dict):
-                raise ValueError("R22 stored bundle payload must be an object")
+                raise TypeError("R22 stored bundle payload must be an object")
             raw = cast(dict[str, object], decoded)
             if raw.get("bundle_identity") != bundle_identity:
                 raise ValueError("R22 stored bundle identity field mismatch")
