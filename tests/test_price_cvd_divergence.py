@@ -20,11 +20,11 @@ from crypto_signal.intelligence.price_cvd_divergence import (
 from crypto_signal.intelligence.temporal_order_flow import TemporalFlowConfig
 
 
-def _book(seq: int, at_ms: int, bid: str, *, ingest: int | None = None):
+def _book(seq: int, at_ms: int, bid: str, *, ingest: int | None = None, symbol: str = "BTCUSDT"):
     return build_orderbook_snapshot(
         exchange=Exchange.BYBIT,
         market_type=MarketType.SPOT,
-        symbol="BTCUSDT",
+        symbol=symbol,
         event_at_ms=at_ms,
         source_timestamp_ms=at_ms + 1,
         response_time_ms=at_ms + 2,
@@ -149,7 +149,7 @@ def test_duplicate_and_mixed_market_context_fail_closed():
     books = _books()
     with pytest.raises(ValueError, match="duplicate divergence book identity"):
         _freeze((*books, books[0]))
-    eth_book = replace(books[0], symbol="ETHUSDT")
+    eth_book = _book(100, 10500, "100", symbol="ETHUSDT")
     with pytest.raises(ValueError, match="mixed divergence market context"):
         _freeze((*books, eth_book))
 
