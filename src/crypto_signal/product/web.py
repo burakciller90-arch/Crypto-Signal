@@ -25,6 +25,9 @@ from crypto_signal.paper.mission_control import (
     PaperMissionControlError,
     read_paper_mission_control_snapshot,
 )
+from crypto_signal.paper.runtime_replay_observation import (
+    R25RuntimeReplayObservationLedger,
+)
 from crypto_signal.paper.shadow_cycle_manifest import R25ShadowCycleManifest
 from crypto_signal.paper.shadow_intent_journal import R25ShadowIntentJournal
 from crypto_signal.product.education import (
@@ -126,6 +129,7 @@ def create_app(
     decision_evidence_path: Path | None = None,
     shadow_intent_journal_path: Path | None = None,
     shadow_cycle_manifest_path: Path | None = None,
+    runtime_replay_observation_path: Path | None = None,
 ) -> FastAPI:
     selected_path = ledger_path or Path(
         os.environ.get("CRYPTO_SIGNAL_LEDGER_PATH", str(DEFAULT_LEDGER_PATH))
@@ -214,6 +218,20 @@ def create_app(
     else:
         selected_shadow_cycle_path = None
 
+    if runtime_replay_observation_path is not None:
+        selected_replay_observation_path: Path | None = (
+            runtime_replay_observation_path
+        )
+    elif ledger_path is None:
+        replay_observation_env = os.environ.get(
+            "CRYPTO_SIGNAL_RUNTIME_REPLAY_OBSERVATION_PATH"
+        )
+        selected_replay_observation_path = (
+            None if not replay_observation_env else Path(replay_observation_env)
+        )
+    else:
+        selected_replay_observation_path = None
+
     selected_learning_memory_path = learning_memory_path
     if selected_learning_memory_path is None:
         learning_memory_env = os.environ.get("CRYPTO_SIGNAL_LEARNING_MEMORY_PATH")
@@ -241,6 +259,7 @@ def create_app(
     app.state.decision_evidence_path = selected_decision_path
     app.state.shadow_intent_journal_path = selected_shadow_intent_path
     app.state.shadow_cycle_manifest_path = selected_shadow_cycle_path
+    app.state.runtime_replay_observation_path = selected_replay_observation_path
     app.state.reader = reader
 
     app.mount(
@@ -611,6 +630,123 @@ def create_app(
                 "journal_record_referenced": True,
                 "journal_runtime_verified_here": False,
                 "semantic": "EXACT_PERSISTED_CYCLE_IDENTITY_ONLY",
+                "canonical_epoch2_mutation": False,
+                "production_authority": False,
+                "read_only": True,
+                "real_capital": 0,
+            }
+        )
+
+    @app.get("/api/runtime-replay-observation/status")
+    def runtime_replay_observation_status() -> JSONResponse:
+        if selected_replay_observation_path is None:
+            return _json(
+                {
+                    "status": "unavailable",
+                    "reason": "runtime_replay_observation_not_configured",
+                    "semantic": "RUNTIME_RESTART_REPLAY_OBSERVATION_ONLY",
+                    "restart_replay_observation": "NOT_PERSISTED",
+                    "canonical_epoch2_mutation": False,
+                    "production_authority": False,
+                    "read_only": True,
+                    "real_capital": 0,
+                }
+            )
+        if not selected_replay_observation_path.exists():
+            return _json(
+                {
+                    "status": "unavailable",
+                    "reason": "runtime_replay_observation_evidence_missing",
+                    "observation_filename": selected_replay_observation_path.name,
+                    "semantic": "RUNTIME_RESTART_REPLAY_OBSERVATION_ONLY",
+                    "restart_replay_observation": "NOT_PERSISTED",
+                    "canonical_epoch2_mutation": False,
+                    "production_authority": False,
+                    "read_only": True,
+                    "real_capital": 0,
+                }
+            )
+        try:
+            snapshot = R25RuntimeReplayObservationLedger(
+                selected_replay_observation_path
+            ).verify_read_only()
+        except ValueError as exc:
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
+        persisted = snapshot.record_count > 0
+        return _json(
+            {
+                "status": "ready" if persisted else "empty",
+                "snapshot": snapshot,
+                "observation_filename": selected_replay_observation_path.name,
+                "semantic": "RUNTIME_RESTART_REPLAY_OBSERVATION_ONLY",
+                "restart_replay_observation": (
+                    "VERIFIED" if persisted else "NOT_PERSISTED"
+                ),
+                "canonical_epoch2_mutation": False,
+                "production_authority": False,
+                "read_only": True,
+                "real_capital": 0,
+            }
+        )
+
+    @app.get(
+        "/api/runtime-replay-observation/forecast/{forecast_identity}"
+    )
+    def runtime_replay_observation_for_forecast(
+        forecast_identity: str,
+    ) -> JSONResponse:
+        if not _is_lower_sha256(forecast_identity):
+            raise HTTPException(
+                status_code=400,
+                detail="forecast_identity must be lowercase SHA256",
+            )
+        if selected_replay_observation_path is None:
+            return _json(
+                {
+                    "status": "unavailable",
+                    "reason": "runtime_replay_observation_not_configured",
+                    "forecast_identity": forecast_identity,
+                    "semantic": "EXACT_RUNTIME_REPLAY_IDENTITY_ONLY",
+                    "read_only": True,
+                    "real_capital": 0,
+                }
+            )
+        if not selected_replay_observation_path.exists():
+            return _json(
+                {
+                    "status": "unavailable",
+                    "reason": "runtime_replay_observation_evidence_missing",
+                    "forecast_identity": forecast_identity,
+                    "observation_filename": selected_replay_observation_path.name,
+                    "semantic": "EXACT_RUNTIME_REPLAY_IDENTITY_ONLY",
+                    "read_only": True,
+                    "real_capital": 0,
+                }
+            )
+        try:
+            observation = R25RuntimeReplayObservationLedger(
+                selected_replay_observation_path
+            ).read_latest_for_forecast(forecast_identity)
+        except ValueError as exc:
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
+        if observation is None:
+            return _json(
+                {
+                    "status": "empty",
+                    "reason": "no_exact_runtime_replay_observation_for_forecast",
+                    "forecast_identity": forecast_identity,
+                    "semantic": "EXACT_RUNTIME_REPLAY_IDENTITY_ONLY",
+                    "read_only": True,
+                    "real_capital": 0,
+                }
+            )
+        return _json(
+            {
+                "status": "ready",
+                "forecast_identity": forecast_identity,
+                "observation": observation,
+                "restart_replay_observation": "VERIFIED",
+                "semantic": "EXACT_RUNTIME_REPLAY_IDENTITY_ONLY",
                 "canonical_epoch2_mutation": False,
                 "production_authority": False,
                 "read_only": True,
