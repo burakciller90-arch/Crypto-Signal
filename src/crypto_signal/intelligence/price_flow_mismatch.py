@@ -369,16 +369,16 @@ def _analyze(
             > config.max_trade_to_candle_gap_ms
         ):
             flags.append("stale_last_intervening_trade")
-        if eligible and (
-            eligible[0].event_at_ms - first_candle.open_time_ms
-            > config.max_trade_to_candle_gap_ms
-        ):
-            flags.append("first_anchor_trade_coverage_gap")
         relevant = tuple(
             item
             for item in eligible
             if first_candle.open_time_ms <= item.event_at_ms <= last_candle.close_time_ms
         )
+        if relevant and (
+            relevant[0].event_at_ms - first_candle.open_time_ms
+            > config.max_trade_to_candle_gap_ms
+        ):
+            flags.append("first_anchor_trade_coverage_gap")
         if any(
             later.event_at_ms - earlier.event_at_ms
             > config.max_intervening_trade_gap_ms
@@ -456,6 +456,9 @@ def _analyze(
         )
     if not flags:
         flags.append("unresolved_price_flow")
+    observed_at_ms = max(
+        (flow.analysis.observed_at_ms, *(item.ingested_at_ms for item in candles))
+    )
     payload: dict[str, object] = {
         "as_of_ms": as_of_ms,
         "config_identity": config.identity,
@@ -470,10 +473,7 @@ def _analyze(
         "last_candle_identity": None if not candles else _candle_identity(candles[-1]),
         "market_type": market_type,
         "metrics": None if metrics is None else _metrics_payload(metrics),
-        "observed_at_ms": max(
-            flow.analysis.observed_at_ms,
-            *(candle.ingested_at_ms for candle in candles),
-        ),
+        "observed_at_ms": observed_at_ms,
         "state": state,
         "status": status,
         "symbol": symbol,
@@ -489,7 +489,7 @@ def _analyze(
         symbol=symbol,
         timeframe=timeframe,
         as_of_ms=as_of_ms,
-        observed_at_ms=payload["observed_at_ms"],  # type: ignore[arg-type]
+        observed_at_ms=observed_at_ms,
         flow_evidence_identity=flow.analysis.evidence_identity,
         flow_freeze_identity=flow.freeze_identity,
         first_candle_identity=None if not candles else _candle_identity(candles[0]),
