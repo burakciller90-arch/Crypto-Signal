@@ -12,6 +12,7 @@ const API = Object.freeze({
   intelligence: "/api/intelligence-center",
   performance: "/api/performance",
   decisionStatus: "/api/decision-evidence/status",
+  shadowRail: "/api/shadow-decision-rail/status",
   liveFeed: "/api/intelligence-feed?limit=100",
   decisionProof: (identity) => `/api/decision-proof/${encodeURIComponent(identity)}`,
   assetCockpit: (symbol, timeframe) =>
@@ -47,6 +48,7 @@ const state = {
   intelligence: null,
   performance: null,
   decisionStatus: null,
+  shadowRail: null,
   liveFeed: null,
   marketLayer: "PA",
   marketSelection: null,
@@ -1136,6 +1138,64 @@ function renderEpoch() {
     </article>`;
 }
 
+function renderShadowDecisionRail() {
+  const target = byId("shadowRailOverview");
+  if (!target) return;
+  const data = state.shadowRail || {};
+  const snapshot = data.snapshot || {};
+  const ready = data.status === "ready";
+  const replayVerified =
+    snapshot.quick_check_ok === true && snapshot.read_only_verified === true;
+  const lastRecords = Array.isArray(snapshot.last_record_identities)
+    ? snapshot.last_record_identities
+    : [];
+
+  if (!ready) {
+    target.innerHTML = `
+      <article class="panel capital-unavailable">
+        <span class="eyebrow">SHADOW DECISION RAIL</span>
+        <h2>Runtime shadow evidence unavailable</h2>
+        <p>${escapeHtml(text(data.reason, "shadow decision rail not exposed"))}</p>
+        <div class="truth-table">
+          <div class="truth-row"><span>Semantic</span><strong>SHADOW / RESEARCH ONLY</strong></div>
+          <div class="truth-row"><span>Canonical Epoch 2 mutation</span><strong>DISABLED</strong></div>
+          <div class="truth-row"><span>Production authority</span><strong>DISABLED</strong></div>
+        </div>
+        <p>Unavailable shadow evidence is not interpreted as a trade, fill, or canonical paper mutation.</p>
+      </article>`;
+    return;
+  }
+
+  target.innerHTML = `
+    <article class="panel">
+      <div class="panel-head">
+        <div>
+          <span class="eyebrow">SHADOW DECISION RAIL / READ ONLY</span>
+          <h2>${escapeHtml(snapshot.record_count ?? 0)} journaled previews</h2>
+        </div>
+        <span class="truth-chip ${replayVerified ? "truth-chip-ready" : "truth-chip-muted"}">
+          ${replayVerified ? "REPLAY · VERIFIED" : "REPLAY · UNVERIFIED"}
+        </span>
+      </div>
+      <div class="truth-table">
+        <div class="truth-row"><span>Journal</span><strong>${escapeHtml(data.journal_filename || "configured")}</strong></div>
+        <div class="truth-row"><span>SQLite quick_check</span><strong>${snapshot.quick_check_ok === true ? "PASS" : "UNVERIFIED"}</strong></div>
+        <div class="truth-row"><span>Read-only replay</span><strong>${snapshot.read_only_verified === true ? "VERIFIED" : "UNVERIFIED"}</strong></div>
+        <div class="truth-row"><span>Canonical Epoch 2 mutation</span><strong class="safe-text">DISABLED</strong></div>
+        <div class="truth-row"><span>Production authority</span><strong class="safe-text">DISABLED</strong></div>
+        <div class="truth-row"><span>REAL CAPITAL</span><strong class="safe-text">DISABLED</strong></div>
+      </div>
+      <div class="feed-item-meta">
+        ${lastRecords.length
+          ? lastRecords.map((item) =>
+              `<span>${escapeHtml(item?.[0] || "UNKNOWN")} <code>${escapeHtml(shortIdentity(item?.[1]))}</code></span>`
+            ).join("")
+          : "<span>No shadow preview has been journaled.</span>"}
+      </div>
+      <p>Reviewed preview evidence only · not a fill, not canonical NAV mutation, not live trading.</p>
+    </article>`;
+}
+
 function renderPaper() {
   const data = state.epoch2State || {};
   const navNode = byId("metricPaperNav");
@@ -1925,6 +1985,7 @@ function renderSystem() {
   const performance = state.performance || {};
   const education = state.education || {};
   const decisionStatus = state.decisionStatus || {};
+  const shadowRail = state.shadowRail || {};
   const liveFeed = state.liveFeed || {};
 
   const apiReady = health.status === "ok";
@@ -1941,6 +2002,8 @@ function renderSystem() {
   const decisionSnapshot = decisionStatus.snapshot || {};
   const feedReady = liveFeed.status === "ready" || liveFeed.status === "empty";
   const feedCount = Array.isArray(liveFeed.events) ? liveFeed.events.length : 0;
+  const shadowRailReady = shadowRail.status === "ready";
+  const shadowRailSnapshot = shadowRail.snapshot || {};
 
   setSystemValue("systemApi", apiReady ? "READY" : "UNAVAILABLE", apiReady ? "positive" : "risk");
   setSystemValue("systemLedger", ledgerPresent ? "PRESENT" : "NOT PRESENT", ledgerPresent ? "positive" : "watch");
@@ -1963,6 +2026,22 @@ function renderSystem() {
     feedReady ? `${feedCount} LOADED` : "NOT EXPOSED",
     feedReady ? "positive" : "watch"
   );
+  setSystemValue(
+    "systemShadowRail",
+    shadowRailReady
+      ? `${shadowRailSnapshot.record_count ?? 0} PREVIEWS`
+      : "NOT EXPOSED",
+    shadowRailReady ? "positive" : "watch"
+  );
+
+  const shadowRailNote = byId("systemShadowRailNote");
+  if (shadowRailNote) {
+    shadowRailNote.textContent = shadowRailReady
+      ? (shadowRailSnapshot.read_only_verified === true
+          ? "read-only replay verified · no canonical writes"
+          : "runtime journal present · replay unverified")
+      : text(shadowRail.reason, "shadow journal runtime evidence unavailable");
+  }
 
   const epochNote = byId("systemEpoch2Note");
   if (epochNote) {
@@ -2227,6 +2306,7 @@ function renderAll() {
   renderMarketWorkspace();
   renderMarketTruth();
   renderEpoch();
+  renderShadowDecisionRail();
   renderPaper();
   renderArchive();
   renderPerformance();
@@ -2287,6 +2367,7 @@ async function runBoot() {
     loadEndpoint("intelligence", API.intelligence),
     loadEndpoint("performance", API.performance),
     loadEndpoint("decisionStatus", API.decisionStatus),
+    loadEndpoint("shadowRail", API.shadowRail),
     loadEndpoint("liveFeed", API.liveFeed),
   ]);
 
@@ -2330,6 +2411,7 @@ async function refreshRuntime(reason = "timer") {
       loadEndpoint("archive", API.archive),
       loadEndpoint("performance", API.performance),
       loadEndpoint("decisionStatus", API.decisionStatus),
+      loadEndpoint("shadowRail", API.shadowRail),
       loadEndpoint("liveFeed", API.liveFeed),
     ]);
     if (results[0].ok) applyHealthTruth(results[0].data);

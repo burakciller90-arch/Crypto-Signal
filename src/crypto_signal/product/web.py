@@ -25,6 +25,7 @@ from crypto_signal.paper.mission_control import (
     PaperMissionControlError,
     read_paper_mission_control_snapshot,
 )
+from crypto_signal.paper.shadow_intent_journal import R25ShadowIntentJournal
 from crypto_signal.product.education import (
     EducationLesson,
     EducationLookupMissing,
@@ -118,6 +119,7 @@ def create_app(
     learning_memory_path: Path | None = None,
     epoch2_ledger_path: Path | None = None,
     decision_evidence_path: Path | None = None,
+    shadow_intent_journal_path: Path | None = None,
 ) -> FastAPI:
     selected_path = ledger_path or Path(
         os.environ.get("CRYPTO_SIGNAL_LEDGER_PATH", str(DEFAULT_LEDGER_PATH))
@@ -182,6 +184,18 @@ def create_app(
     else:
         selected_decision_path = None
 
+    if shadow_intent_journal_path is not None:
+        selected_shadow_intent_path: Path | None = shadow_intent_journal_path
+    elif ledger_path is None:
+        shadow_intent_env = os.environ.get(
+            "CRYPTO_SIGNAL_SHADOW_INTENT_JOURNAL_PATH"
+        )
+        selected_shadow_intent_path = (
+            None if not shadow_intent_env else Path(shadow_intent_env)
+        )
+    else:
+        selected_shadow_intent_path = None
+
     selected_learning_memory_path = learning_memory_path
     if selected_learning_memory_path is None:
         learning_memory_env = os.environ.get("CRYPTO_SIGNAL_LEARNING_MEMORY_PATH")
@@ -207,6 +221,7 @@ def create_app(
     app.state.candle_cache_path = selected_candle_path
     app.state.learning_memory_path = selected_learning_memory_path
     app.state.decision_evidence_path = selected_decision_path
+    app.state.shadow_intent_journal_path = selected_shadow_intent_path
     app.state.reader = reader
 
     app.mount(
@@ -405,6 +420,52 @@ def create_app(
             {
                 "status": "ready",
                 "snapshot": snapshot,
+                "read_only": True,
+                "real_capital": 0,
+            }
+        )
+
+    @app.get("/api/shadow-decision-rail/status")
+    def shadow_decision_rail_status() -> JSONResponse:
+        if selected_shadow_intent_path is None:
+            return _json(
+                {
+                    "status": "unavailable",
+                    "reason": "shadow_intent_journal_runtime_not_configured",
+                    "semantic": "SHADOW_RESEARCH_ONLY",
+                    "canonical_epoch2_mutation": False,
+                    "production_authority": False,
+                    "read_only": True,
+                    "real_capital": 0,
+                }
+            )
+        if not selected_shadow_intent_path.exists():
+            return _json(
+                {
+                    "status": "unavailable",
+                    "reason": "shadow_intent_journal_evidence_missing",
+                    "journal_filename": selected_shadow_intent_path.name,
+                    "semantic": "SHADOW_RESEARCH_ONLY",
+                    "canonical_epoch2_mutation": False,
+                    "production_authority": False,
+                    "read_only": True,
+                    "real_capital": 0,
+                }
+            )
+        try:
+            snapshot = R25ShadowIntentJournal(
+                selected_shadow_intent_path
+            ).verify_read_only()
+        except ValueError as exc:
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
+        return _json(
+            {
+                "status": "ready",
+                "snapshot": snapshot,
+                "journal_filename": selected_shadow_intent_path.name,
+                "semantic": "SHADOW_RESEARCH_ONLY",
+                "canonical_epoch2_mutation": False,
+                "production_authority": False,
                 "read_only": True,
                 "real_capital": 0,
             }
