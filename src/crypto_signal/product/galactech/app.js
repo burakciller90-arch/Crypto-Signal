@@ -7,7 +7,7 @@ const API = Object.freeze({
   epoch: "/api/paper/epoch-contract",
   paper: "/api/paper/mission-control",
   epoch2State: "/api/paper/epoch2-state",
-  archive: "/api/archive/proof-wall?limit=60&offset=0",
+  archive: "/api/archive/proof-wall?limit=500&offset=0",
   education: "/api/education",
   intelligence: "/api/intelligence-center",
   assetCockpit: (symbol, timeframe) =>
@@ -975,62 +975,209 @@ function renderPaper() {
 }
 function proofCategory(item) {
   const outcome = item?.latest_outcome;
-  if (!outcome) return "unresolved";
-  const value = text(
-    outcome.outcome_state ?? outcome.state ?? outcome.resolution_status,
-    ""
-  ).toLowerCase();
-  if (value.includes("success") || value.includes("hit_target")) return "winner";
-  if (value.includes("fail_sl")) return "loser";
-  if (value.includes("expired") || value.includes("timeout")) return "expired";
-  if (value.includes("invalid")) return "invalidated";
-  if (value.includes("ambiguous")) return "ambiguous";
-  if (value.includes("not_evaluable") || value.includes("cancel")) return "not_evaluable";
+  if (!outcome) {
+    const signalState = text(item?.signal?.state, "").toLowerCase();
+    if (["no_signal", "neutral"].includes(signalState)) return "not_evaluable";
+    return "unresolved";
+  }
+
+  const outcomeState = text(outcome.outcome_state, "").toLowerCase();
+  const resolution = text(outcome.resolution_status, "").toLowerCase();
+  if (outcomeState.startsWith("success_tp")) return "winner";
+  if (outcomeState === "fail_sl") return "loser";
+  if (outcomeState === "timeout") return "expired";
+  if (outcomeState === "invalidated") return "invalidated";
+  if (outcomeState === "ambiguous") return "ambiguous";
+  if (
+    outcomeState === "not_evaluable" ||
+    outcomeState === "cancelled" ||
+    resolution === "not_evaluable"
+  ) {
+    return "not_evaluable";
+  }
   return "unresolved";
+}
+
+function archiveCategoryLabel(category) {
+  const labels = {
+    winner: "WINNER",
+    loser: "LOSER",
+    expired: "EXPIRED",
+    invalidated: "INVALIDATED",
+    ambiguous: "AMBIGUOUS",
+    not_evaluable: "ABSTAIN / N-E",
+    unresolved: "UNRESOLVED",
+  };
+  return labels[category] || upper(category);
+}
+
+function archiveCategoryClass(category) {
+  if (category === "winner") return "archive-status archive-status-winner";
+  if (["loser", "invalidated"].includes(category)) {
+    return "archive-status archive-status-risk";
+  }
+  if (["expired", "ambiguous", "not_evaluable"].includes(category)) {
+    return "archive-status archive-status-caution";
+  }
+  return "archive-status archive-status-neutral";
+}
+
+function archiveReason(outcome) {
+  if (!outcome) return "No later outcome snapshot yet.";
+  if (outcome.ambiguity_reason) return `ambiguity · ${outcome.ambiguity_reason}`;
+  if (outcome.not_evaluable_reason) return `not evaluable · ${outcome.not_evaluable_reason}`;
+  if (outcome.outcome_state === "cancelled") return "cancelled";
+  return "";
+}
+
+function updateArchiveSummary(allRows, visibleRows) {
+  const total = Number(state.archive?.total_count ?? allRows.length);
+  const resolved = allRows.filter((item) => item.latest_outcome).length;
+  const unresolved = allRows.length - resolved;
+
+  if (byId("archiveTotal")) byId("archiveTotal").textContent = String(total);
+  if (byId("archiveResolved")) byId("archiveResolved").textContent = String(resolved);
+  if (byId("archiveUnresolved")) byId("archiveUnresolved").textContent = String(unresolved);
+  if (byId("archiveVisible")) byId("archiveVisible").textContent = String(visibleRows.length);
+
+  const schemaTag = byId("archiveSchemaTag");
+  if (schemaTag) {
+    schemaTag.textContent = state.archive?.outcome_schema_available
+      ? "OUTCOME SCHEMA · AVAILABLE"
+      : "OUTCOME SCHEMA · NOT AVAILABLE";
+  }
+
+  const counts = {
+    all: allRows.length,
+    winner: 0,
+    loser: 0,
+    expired: 0,
+    invalidated: 0,
+    ambiguous: 0,
+    not_evaluable: 0,
+    unresolved: 0,
+  };
+  allRows.forEach((item) => {
+    const category = proofCategory(item);
+    counts[category] = (counts[category] || 0) + 1;
+  });
+  Object.entries(counts).forEach(([category, count]) => {
+    const node = document.querySelector(`[data-filter-count="${category}"]`);
+    if (node) node.textContent = String(count);
+  });
+}
+
+function archiveItemMarkup(item) {
+  const signal = item?.signal || {};
+  const outcome = item?.latest_outcome || null;
+  const category = proofCategory(item);
+  const reason = archiveReason(outcome);
+  const probability = upper(signal.probability_status, "NOT_CALIBRATED");
+  const confluenceSemantic =
+    signal.confluence_score_semantic || "agreement_index_not_probability";
+
+  return `
+    <button class="archive-proof-trigger" type="button"
+      data-evidence-id="${escapeHtml(signal.signal_freeze_identity)}"
+      aria-label="${escapeHtml(signal.symbol || "UNKNOWN")} ${escapeHtml(signal.timeframe || "")}
+        issuance snapshot ve Evidence Room aç">
+      <article class="archive-proof-card">
+        <header class="archive-proof-head">
+          <div>
+            <span class="eyebrow">IMMUTABLE PROOF</span>
+            <h2>${escapeHtml(signal.symbol || "UNKNOWN")} · ${escapeHtml(signal.timeframe || "—")}</h2>
+          </div>
+          <span class="${archiveCategoryClass(category)}">${escapeHtml(archiveCategoryLabel(category))}</span>
+        </header>
+
+        <div class="archive-snapshot-pair">
+          <section class="archive-snapshot archive-snapshot-issuance">
+            <div class="archive-snapshot-title">
+              <span>01</span>
+              <strong>ISSUANCE SNAPSHOT</strong>
+            </div>
+            <div class="archive-signal-line">
+              <strong class="${stateClass(signal.state)}">${escapeHtml(upper(signal.state))}</strong>
+              <span class="${stateClass(signal.direction)}">${escapeHtml(upper(signal.direction))}</span>
+            </div>
+            <dl class="archive-kv">
+              <div><dt>provider</dt><dd>${escapeHtml(upper(signal.exchange))} · ${escapeHtml(upper(signal.market_type))}</dd></div>
+              <div><dt>setup</dt><dd>${escapeHtml(signal.setup_type || "UNAVAILABLE")}</dd></div>
+              <div><dt>agreement</dt><dd>${escapeHtml(signal.confluence_score)} · not probability</dd></div>
+              <div><dt>probability</dt><dd>${escapeHtml(probability)}</dd></div>
+              <div><dt>issued</dt><dd>${escapeHtml(formatTime(signal.frozen_at_ms))}</dd></div>
+              <div><dt>source cutoff</dt><dd>${escapeHtml(formatTime(signal.source_cutoff_open_time_ms))}</dd></div>
+            </dl>
+            <p class="archive-semantic-note">${escapeHtml(confluenceSemantic)}</p>
+            <code>${escapeHtml(signal.signal_freeze_identity || "NO FREEZE ID")}</code>
+          </section>
+
+          <div class="archive-link-line" aria-hidden="true">
+            <span>→</span>
+            <small>append only</small>
+          </div>
+
+          <section class="archive-snapshot archive-snapshot-outcome">
+            <div class="archive-snapshot-title">
+              <span>02</span>
+              <strong>LATER · OUTCOME SNAPSHOT</strong>
+            </div>
+            ${outcome ? `
+              <div class="archive-outcome-line">
+                <strong class="${archiveCategoryClass(category)}">${escapeHtml(upper(outcome.outcome_state || outcome.resolution_status))}</strong>
+                <span>${escapeHtml(upper(outcome.evidence_class, "UNLABELLED"))}</span>
+              </div>
+              <dl class="archive-kv">
+                <div><dt>resolution</dt><dd>${escapeHtml(upper(outcome.resolution_status))}</dd></div>
+                <div><dt>coverage</dt><dd>${escapeHtml(upper(outcome.coverage_status))}</dd></div>
+                <div><dt>evaluated</dt><dd>${escapeHtml(formatTime(outcome.evaluated_as_of_ms))}</dd></div>
+                <div><dt>horizon</dt><dd>${escapeHtml(outcome.max_holding_bars)} bars</dd></div>
+                <div><dt>entry observed</dt><dd>${outcome.entry_observed ? "YES" : "NO"}</dd></div>
+                <div><dt>highest target</dt><dd>${escapeHtml(outcome.highest_target_index ?? 0)}</dd></div>
+              </dl>
+              ${reason ? `<p class="archive-outcome-reason">${escapeHtml(reason)}</p>` : ""}
+              <code>${escapeHtml(outcome.outcome_identity || "NO OUTCOME ID")}</code>
+            ` : `
+              <div class="archive-unresolved">
+                <strong>NO LATER OUTCOME YET</strong>
+                <p>Issuance remains visible. Missing outcome is not rewritten as failure, success or 0% performance.</p>
+              </div>
+            `}
+          </section>
+        </div>
+
+        <footer class="archive-proof-foot">
+          <span>Freeze stays immutable after outcome.</span>
+          <span class="evidence-open-cue">Open frozen Evidence Room →</span>
+        </footer>
+      </article>
+    </button>`;
 }
 
 function renderArchive() {
   const target = byId("archiveWall");
   if (!target || !state.archive) return;
-  let rows = Array.isArray(state.archive.items) ? state.archive.items : [];
-  rows = rows.filter((item) => signalMatchesAsset(item.signal || {}));
-  if (state.proofFilter !== "all") {
-    rows = rows.filter((item) => proofCategory(item) === state.proofFilter);
-  }
 
-  if (!rows.length) {
-    target.className = "proof-grid empty-state";
+  const loaded = Array.isArray(state.archive.items) ? state.archive.items : [];
+  const assetRows = loaded.filter((item) => signalMatchesAsset(item.signal || {}));
+  const visibleRows = state.proofFilter === "all"
+    ? assetRows
+    : assetRows.filter((item) => proofCategory(item) === state.proofFilter);
+
+  updateArchiveSummary(assetRows, visibleRows);
+
+  if (!visibleRows.length) {
+    target.className = "archive-proof-wall empty-state";
     target.innerHTML =
-      "<strong>Bu filtre için proof kaydı yok.</strong>" +
-      "<p>Boş arşiv sonucu performans iddiası değildir.</p>";
+      "<strong>Bu filtre için immutable proof kaydı yok.</strong>" +
+      "<p>Boş filtre sonucu başarı, başarısızlık veya risksizlik iddiası değildir.</p>";
     return;
   }
 
-  target.className = "proof-grid";
-  target.innerHTML = rows.map((item) => {
-    const signal = item.signal || {};
-    const category = proofCategory(item);
-    const outcome = item.latest_outcome || {};
-    return `
-      <button class="evidence-trigger" type="button"
-        data-evidence-id="${escapeHtml(signal.signal_freeze_identity)}"
-        aria-label="${escapeHtml(signal.symbol || "UNKNOWN")} archive evidence aç">
-        <article class="proof-card">
-          <div class="proof-card-head">
-            <strong>${escapeHtml(signal.symbol || "UNKNOWN")} · ${escapeHtml(signal.timeframe || "—")}</strong>
-            <span class="${stateClass(category)}">${escapeHtml(upper(category))}</span>
-          </div>
-          <div class="feed-item-meta">
-            <span>issued ${escapeHtml(formatTime(signal.frozen_at_ms || signal.as_of_ms))}</span>
-            <span>${escapeHtml(upper(signal.state))}</span>
-            <span>outcome ${escapeHtml(outcome.outcome_state || outcome.state || "UNRESOLVED")}</span>
-            <code>${escapeHtml(shortIdentity(signal.signal_freeze_identity))}</code>
-            <span class="evidence-open-cue">Frozen proof →</span>
-          </div>
-        </article>
-      </button>`;
-  }).join("");
+  target.className = "archive-proof-wall";
+  target.innerHTML = visibleRows.map(archiveItemMarkup).join("");
 }
+
 
 function proofBadgeClass(value) {
   const normalized = text(value, "").toLowerCase();

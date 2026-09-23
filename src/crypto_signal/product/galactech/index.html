@@ -8,7 +8,7 @@
   <title>GALACTECH // CRYPTO SIGNAL</title>
   <link rel="stylesheet" href="/galactech-static/app.css">
 </head>
-<body data-ui-version="galactech-v1.1-markets">
+<body data-ui-version="galactech-v1.1-archive">
   <a class="skip-link" href="#mainContent">Ana içeriğe geç</a>
 
   <div id="coldBoot" class="cold-boot" role="status" aria-live="polite" aria-atomic="true">
@@ -319,21 +319,60 @@
             <div>
               <span class="page-code">05 / ARCHIVE</span>
               <h1 id="archiveTitle">Archive / Proof Wall</h1>
-              <p>Issuance snapshot geriye dönük değiştirilmez; outcome yanına eklenir.</p>
+              <p>Issuance snapshot geriye dönük değiştirilmez; later outcome yalnız yanına eklenir.</p>
             </div>
+            <span id="archiveSchemaTag" class="tag">OUTCOME SCHEMA · VERIFYING</span>
           </div>
-          <div class="filter-row" role="group" aria-label="Arşiv filtreleri">
-            <button type="button" class="filter-button is-active" data-filter="all">ALL</button>
-            <button type="button" class="filter-button" data-filter="winner">WINNERS</button>
-            <button type="button" class="filter-button" data-filter="loser">LOSERS</button>
-            <button type="button" class="filter-button" data-filter="expired">EXPIRED</button>
-            <button type="button" class="filter-button" data-filter="invalidated">INVALIDATED</button>
-            <button type="button" class="filter-button" data-filter="ambiguous">AMBIGUOUS</button>
-            <button type="button" class="filter-button" data-filter="not_evaluable">ABSTAIN / N-E</button>
+
+          <div id="archiveSummary" class="archive-summary-grid" aria-label="Arşiv özeti">
+            <article class="metric-card">
+              <span>TOTAL IMMUTABLE</span>
+              <strong id="archiveTotal">—</strong>
+              <small>issuance freezes</small>
+            </article>
+            <article class="metric-card">
+              <span>RESOLVED</span>
+              <strong id="archiveResolved">—</strong>
+              <small>loaded page · latest outcome present</small>
+            </article>
+            <article class="metric-card">
+              <span>UNRESOLVED</span>
+              <strong id="archiveUnresolved">—</strong>
+              <small>loaded page · no later outcome yet</small>
+            </article>
+            <article class="metric-card">
+              <span>VISIBLE</span>
+              <strong id="archiveVisible">—</strong>
+              <small>loaded page · current filter</small>
+            </article>
           </div>
-          <div id="archiveWall" class="proof-grid empty-state">
+
+          <div class="filter-row archive-filter-row" role="group" aria-label="Arşiv filtreleri">
+            <button type="button" class="filter-button is-active" data-filter="all">ALL <span data-filter-count="all">—</span></button>
+            <button type="button" class="filter-button" data-filter="winner">WINNERS <span data-filter-count="winner">—</span></button>
+            <button type="button" class="filter-button" data-filter="loser">LOSERS <span data-filter-count="loser">—</span></button>
+            <button type="button" class="filter-button" data-filter="expired">EXPIRED <span data-filter-count="expired">—</span></button>
+            <button type="button" class="filter-button" data-filter="invalidated">INVALIDATED <span data-filter-count="invalidated">—</span></button>
+            <button type="button" class="filter-button" data-filter="ambiguous">AMBIGUOUS <span data-filter-count="ambiguous">—</span></button>
+            <button type="button" class="filter-button" data-filter="not_evaluable">ABSTAIN / N-E <span data-filter-count="not_evaluable">—</span></button>
+            <button type="button" class="filter-button" data-filter="unresolved">UNRESOLVED <span data-filter-count="unresolved">—</span></button>
+          </div>
+
+          <article class="panel archive-contract">
+            <div>
+              <span class="eyebrow">PROOF CONTRACT</span>
+              <strong>ISSUANCE SNAPSHOT ↔ LATER OUTCOME SNAPSHOT</strong>
+            </div>
+            <div class="system-strip-values">
+              <span>losses stay visible</span>
+              <span>evidence class stays explicit</span>
+              <span>unresolved ≠ failure</span>
+            </div>
+          </article>
+
+          <div id="archiveWall" class="archive-proof-wall empty-state">
             <strong>Proof Wall evidence bekleniyor.</strong>
-            <p>Winner ve loser aynı archive truth yüzeyinde tutulur.</p>
+            <p>Winner, loser, unresolved ve not-evaluable aynı immutable truth yüzeyinde tutulur.</p>
           </div>
         </section>
 
