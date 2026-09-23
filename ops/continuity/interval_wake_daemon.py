@@ -7,6 +7,7 @@ import sys
 import time
 import uuid
 from pathlib import Path
+from threading import Thread
 from typing import TypedDict, cast
 
 from continuity_contracts import event_key
@@ -189,19 +190,53 @@ def write_runtime_status(
     atomic_write(HEARTBEAT_FILE, f"{int(now)}\n")
 
 
-def run_wake(event_id: str) -> tuple[int, str]:
-    try:
-        proc = subprocess.run(
-            ["/usr/bin/python3", str(RECURRING_WAKE), event_id],
-            text=True,
-            capture_output=True,
-            timeout=60,
-            check=False,
+def run_wake(
+    event_id: str,
+    state: RollingWakeState,
+) -> tuple[int, str]:
+    result: list[tuple[int, str]] = []
+
+    def _submit() -> None:
+        try:
+            proc = subprocess.run(
+                ["/usr/bin/python3", str(RECURRING_WAKE), event_id],
+                text=True,
+                capture_output=True,
+                timeout=60,
+                check=False,
+            )
+        except subprocess.TimeoutExpired:
+            result.append((124, "RECURRING_WAKE_TIMEOUT"))
+            return
+        except (OSError, subprocess.SubprocessError) as exc:
+            result.append(
+                (
+                    125,
+                    f"RECURRING_WAKE_ERROR:{type(exc).__name__}:{exc}",
+                )
+            )
+            return
+        output = (proc.stdout + proc.stderr).strip().replace("\n", " | ")
+        result.append((proc.returncode, output))
+
+    worker = Thread(
+        target=_submit,
+        name=f"rolling-wake-submit-{state['sequence']}",
+        daemon=True,
+    )
+    worker.start()
+
+    while worker.is_alive():
+        write_runtime_status(
+            state,
+            runtime_state="RETRYING",
+            detail="attempt_in_flight",
         )
-    except subprocess.TimeoutExpired:
-        return 124, "RECURRING_WAKE_TIMEOUT"
-    output = (proc.stdout + proc.stderr).strip().replace("\n", " | ")
-    return proc.returncode, output
+        worker.join(timeout=LOOP_SECONDS)
+
+    if not result:
+        return 125, "RECURRING_WAKE_THREAD_NO_RESULT"
+    return result[0]
 
 
 def next_event(state: RollingWakeState) -> str:
@@ -290,7 +325,12 @@ def main() -> int:
                     attempt_epoch = time.time()
                     state["last_attempt_epoch"] = attempt_epoch
                     save_state(state)
-                    rc, output = run_wake(pending)
+                    write_runtime_status(
+                        state,
+                        runtime_state="RETRYING",
+                        detail="attempt_in_flight",
+                    )
+                    rc, output = run_wake(pending, state)
                     if final_receipt(pending):
                         receipt_epoch = time.time()
                         state["last_event_id"] = pending
