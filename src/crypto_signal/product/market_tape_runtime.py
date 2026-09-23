@@ -20,6 +20,20 @@ _ACCEPTED_MARKET_TAPE_SCHEMAS = frozenset(
 _ACCEPTED_COLD_SCHEMAS = frozenset(
     {"market-tape-cold-parquet-v1/1", "market-tape-cold-parquet-v1/2"}
 )
+_COLD_TABLE_FILENAMES = {
+    "raw": "raw.parquet",
+    "orderbooks": "orderbooks.parquet",
+    "trades": "trades.parquet",
+    "derivatives": "derivatives.parquet",
+    "liquidations": "liquidations.parquet",
+    "liquidation_coverage": "liquidation_coverage.parquet",
+}
+_COLD_SCHEMA_KEYS = {
+    "market-tape-cold-parquet-v1/1": frozenset(
+        {"raw", "orderbooks", "trades", "derivatives"}
+    ),
+    "market-tape-cold-parquet-v1/2": frozenset(_COLD_TABLE_FILENAMES),
+}
 _CORE_TABLES = (
     ("orderbooks", "market_tape_orderbooks", "event_at_ms"),
     ("trades", "market_tape_trades", "event_at_ms"),
@@ -353,6 +367,9 @@ def _parse_cold_manifest(path: Path) -> _ColdManifest:
     tables = raw.get("tables")
     if not isinstance(tables, dict) or not tables:
         raise TypeError("Cold Archive table manifest missing")
+    expected_keys = _COLD_SCHEMA_KEYS[schema_version]
+    if frozenset(tables) != expected_keys:
+        raise ValueError("Cold Archive table keys do not match schema")
 
     rows = 0
     file_bytes = 0
@@ -368,6 +385,9 @@ def _parse_cold_manifest(path: Path) -> _ColdManifest:
             continue
         if not isinstance(filename, str) or not filename:
             raise TypeError("Cold Archive filename missing")
+        expected_filename = _COLD_TABLE_FILENAMES[key]
+        if filename != expected_filename:
+            raise ValueError(f"Cold Archive filename mismatch: {key}")
         expected_hash = value.get("file_sha256")
         if not isinstance(expected_hash, str) or not _is_sha256(expected_hash):
             raise ValueError("Cold Archive file SHA256 missing")
@@ -389,8 +409,8 @@ def _verify_cold_manifest_files(partition_dir: Path) -> None:
     tables = raw.get("tables")
     if not isinstance(tables, dict):
         raise TypeError("Cold Archive table manifest missing")
-    for value in tables.values():
-        if not isinstance(value, dict):
+    for key, value in tables.items():
+        if not isinstance(key, str) or not isinstance(value, dict):
             raise TypeError("Cold Archive table metadata invalid")
         rows = _required_non_negative_int(value, "rows")
         if rows == 0:
@@ -400,6 +420,8 @@ def _verify_cold_manifest_files(partition_dir: Path) -> None:
         expected_bytes = _required_non_negative_int(value, "bytes")
         if not isinstance(filename, str):
             raise TypeError("Cold Archive filename invalid")
+        if filename != _COLD_TABLE_FILENAMES[key]:
+            raise ValueError(f"Cold Archive filename mismatch: {key}")
         if not isinstance(expected_hash, str) or not _is_sha256(expected_hash):
             raise ValueError("Cold Archive file SHA256 invalid")
         file_path = partition_dir / filename
