@@ -11,6 +11,7 @@ import json
 import sqlite3
 from dataclasses import dataclass, fields
 from decimal import Decimal
+from enum import StrEnum
 from pathlib import Path
 
 from crypto_signal.forecast_stream import ImmutableForecast
@@ -35,8 +36,16 @@ from crypto_signal.paper.position_sizing_intelligence import (
 )
 from crypto_signal.product.decision_proof import DecisionProofSnapshot
 
-R22_SCHEMA_VERSION = "r22-transaction-decision-tape-v1/2"
-R22_ENGINE_VERSION = "r22-transaction-decision-tape-v1/2"
+R22_SCHEMA_VERSION = "r22-transaction-decision-tape-v1/3"
+R22_ENGINE_VERSION = "r22-transaction-decision-tape-v1/3"
+
+
+class R22FinancialOutcome(StrEnum):
+    OPEN = "OPEN"
+    PARTIAL_REDUCTION = "PARTIAL_REDUCTION"
+    CLOSED_WIN = "CLOSED_WIN"
+    CLOSED_LOSS = "CLOSED_LOSS"
+    CLOSED_BREAKEVEN = "CLOSED_BREAKEVEN"
 
 
 def _sha(value: str | None, label: str, *, optional: bool = False) -> None:
@@ -160,6 +169,7 @@ class PaperTapeFill:
     vault_id: PaperVaultId
     action: PaperAction
     symbol: PaperSymbol
+    financial_outcome: R22FinancialOutcome
     source_fill_identity: str
     mutation_identity: str
     filled_at_ms: int
@@ -209,6 +219,21 @@ class PaperTapeFill:
             raise TypeError("R22 fill requires valid vault and symbol")
         if self.action not in (PaperAction.BUY, PaperAction.REDUCE, PaperAction.EXIT):
             raise ValueError("HOLD_CASH cannot create a fill")
+        if not isinstance(self.financial_outcome, R22FinancialOutcome):
+            raise TypeError("R22 fill financial outcome must be R22FinancialOutcome")
+        expected_outcome = (
+            R22FinancialOutcome.OPEN
+            if self.action is PaperAction.BUY
+            else R22FinancialOutcome.PARTIAL_REDUCTION
+            if self.action is PaperAction.REDUCE
+            else R22FinancialOutcome.CLOSED_WIN
+            if self.realized_pnl_delta_usdt > 0
+            else R22FinancialOutcome.CLOSED_LOSS
+            if self.realized_pnl_delta_usdt < 0
+            else R22FinancialOutcome.CLOSED_BREAKEVEN
+        )
+        if self.financial_outcome is not expected_outcome:
+            raise ValueError("R22 financial outcome does not match action/PnL")
         if min(self.filled_at_ms, self.mutated_at_ms, self.snapshot_at_ms) < 0:
             raise ValueError("R22 fill times cannot be negative")
         if not (self.filled_at_ms <= self.mutated_at_ms <= self.snapshot_at_ms):
@@ -485,12 +510,24 @@ def build_tape_fill(
     if after.nav_usdt - before.nav_usdt != realized_delta + unrealized_delta:
         raise ValueError("R22 NAV delta cannot hide unexplained PnL")
 
+    financial_outcome = (
+        R22FinancialOutcome.OPEN
+        if intent.action is PaperAction.BUY
+        else R22FinancialOutcome.PARTIAL_REDUCTION
+        if intent.action is PaperAction.REDUCE
+        else R22FinancialOutcome.CLOSED_WIN
+        if realized_delta > 0
+        else R22FinancialOutcome.CLOSED_LOSS
+        if realized_delta < 0
+        else R22FinancialOutcome.CLOSED_BREAKEVEN
+    )
     payload: dict[str, object] = {
         "intent_identity": intent.intent_identity,
         "activation_identity": intent.activation_identity,
         "vault_id": intent.vault_id,
         "action": intent.action,
         "symbol": intent.symbol,
+        "financial_outcome": financial_outcome,
         "source_fill_identity": fill.record_identity,
         "mutation_identity": mutation.record_identity,
         "filled_at_ms": fill.filled_at_ms,
