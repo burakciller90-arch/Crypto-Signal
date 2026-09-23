@@ -329,7 +329,7 @@ def test_identity_tampering_and_winner_selection_fail_closed() -> None:
             observation_identity="f" * 64,
         )
     with pytest.raises(ValueError, match="result identity mismatch"):
-        replace(results[0], activation_count=results[0].activation_count + 1)
+        replace(results[0], mean_net_r=Decimal("0.9999"))
     with pytest.raises(ValueError, match="cannot select, promote, calibrate or deploy"):
         replace(manifest, threshold_winner=Decimal(80))
 
