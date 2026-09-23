@@ -160,12 +160,6 @@ async def run(args: argparse.Namespace) -> int:
     def emit_heartbeat() -> None:
         nonlocal heartbeat_sequence
         observed_at_ms = time.time_ns() // 1_000_000
-        safe_ingestion_ms = last_ingestion_ms
-        if (
-            safe_ingestion_ms is not None
-            and safe_ingestion_ms > observed_at_ms
-        ):
-            safe_ingestion_ms = observed_at_ms
         heartbeat_sequence += 1
         counts = store.counts()
         runtime_store.append_heartbeat(
@@ -173,7 +167,7 @@ async def run(args: argparse.Namespace) -> int:
                 instance_identity=instance.instance_identity,
                 sequence_no=heartbeat_sequence,
                 observed_at_ms=observed_at_ms,
-                last_successful_ingestion_ms=safe_ingestion_ms,
+                last_successful_ingestion_ms=last_ingestion_ms,
                 observed_messages_total=last_observed_messages,
                 normalized_rows_total=counts.total,
                 raw_rows_total=raw_store.count(),
@@ -221,8 +215,6 @@ async def run(args: argparse.Namespace) -> int:
         )
         emit_heartbeat()
     except (OSError, sqlite3.Error, ValueError) as exc:
-        heartbeat_stop.set()
-        await heartbeat_task
         print(
             "MARKET_TAPE_STREAM_ERROR "
             f"error={type(exc).__name__}:{exc}",
