@@ -216,11 +216,11 @@ def build_event_risk_evidence_freeze(
         item for item in relevant if item.source_quality is EventSourceQuality.UNVERIFIED
     )
     if unverified:
-        flags = (
+        degraded_event_flags = (
             "unverified_event_source_in_active_horizon",
             "event_risk_requires_verified_calendar_evidence",
         )
-        nearest = min(
+        nearest_unverified = min(
             unverified,
             key=lambda item: (
                 abs(item.scheduled_at_ms - as_of_ms),
@@ -233,13 +233,13 @@ def build_event_risk_evidence_freeze(
             state=EventRiskState.DEGRADED_DATA,
             events=relevant,
             coverage=coverage,
-            nearest=nearest,
-            flags=flags,
+            nearest=nearest_unverified,
+            flags=degraded_event_flags,
         )
         return _freeze(analysis, coverage, relevant)
 
-    state, nearest = _state(relevant, as_of_ms=as_of_ms, config=config)
-    flags: tuple[str, ...] = (
+    state, nearest_event = _state(relevant, as_of_ms=as_of_ms, config=config)
+    policy_flags: tuple[str, ...] = (
         "event_window_is_versioned_research_policy_not_universal_law",
         "event_risk_is_context_or_veto_not_directional_signal",
     )
@@ -249,8 +249,8 @@ def build_event_risk_evidence_freeze(
         state=state,
         events=relevant,
         coverage=coverage,
-        nearest=nearest,
-        flags=flags,
+        nearest=nearest_event,
+        flags=policy_flags,
     )
     return _freeze(analysis, coverage, relevant)
 
