@@ -10,6 +10,24 @@ REAL_CAPITAL: 0
 ## Active v1.1 frontier — read before historical sections
 
 
+### 2026-09-23 16:24 +0300 — PHASE 18 R23 EXPLAINABLE INTELLIGENCE ACCEPTED
+
+- PR **#922** accepted deterministic SIMPLE + PRO views over the same immutable R20.5 Decision Proof.
+- Exact-head hosted run `35866576141` SUCCESS at `c4b54fe6adde71d19b98fb0fbb1a4df1e77bbf53`.
+- PR #922 squash-merged as `fa579820fcfc96f41a900f5215933df50eca2c10`.
+- Exact-main Stage10 run `35866741951` SUCCESS.
+- SIMPLE and PRO bind the same evidence slice identity, availability and verdict; SIMPLE cannot upgrade missing/unsupported/contradictory evidence.
+- PRO exposes roadmap technical components (order-book imbalance, liquidity/liquidations, CVD/delta/absorption, OI/funding/basis, event risk, PA/methodology) together with exact evidence IDs, source quality, timestamps, freshness and summary codes when available.
+- Missing numeric measurements remain explicitly missing; R23 does not infer numbers from evidence IDs.
+- Confluence remains methodology evidence rather than probability.
+- Probability text is NOT_CALIBRATED unless exact calibrated probability exists in the proof.
+- No private chain-of-thought, ledger mutation, order authority or real capital.
+- **Phase 18 exit is satisfied.**
+- Current locked frontier: **Phase 19 — R24 Performance & Trust Center**.
+- CONTINUITY_PAUSED_BY_USER remains dominant. REAL_CAPITAL=0.
+
+
+
 ### 2026-09-23 16:16 +0300 — PHASE 17 R22 TRANSACTION & DECISION TAPE ACCEPTED
 
 - PR **#921** accepted the locked Phase 17 immutable paper-capital audit contract.
