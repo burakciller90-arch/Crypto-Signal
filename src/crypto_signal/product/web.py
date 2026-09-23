@@ -521,7 +521,7 @@ def create_app(
                     "semantic": "SHADOW_RESEARCH_ONLY",
                     "capital_science_lineage": "NOT_PERSISTED",
                     "sizing_lineage": "NOT_PERSISTED",
-                    "restart_replay_observation": "NOT_PERSISTED",
+                    "restart_replay_observation": "NOT_MEASURED",
                     "canonical_epoch2_mutation": False,
                     "production_authority": False,
                     "read_only": True,
@@ -537,7 +537,7 @@ def create_app(
                     "semantic": "SHADOW_RESEARCH_ONLY",
                     "capital_science_lineage": "NOT_PERSISTED",
                     "sizing_lineage": "NOT_PERSISTED",
-                    "restart_replay_observation": "NOT_PERSISTED",
+                    "restart_replay_observation": "NOT_MEASURED",
                     "canonical_epoch2_mutation": False,
                     "production_authority": False,
                     "read_only": True,
@@ -564,7 +564,7 @@ def create_app(
                 "sizing_lineage": (
                     "PERSISTED" if persisted else "NOT_PERSISTED"
                 ),
-                "restart_replay_observation": "NOT_PERSISTED",
+                "restart_replay_observation": "NOT_MEASURED",
                 "canonical_epoch2_mutation": False,
                 "production_authority": False,
                 "read_only": True,
@@ -645,7 +645,7 @@ def create_app(
                     "status": "unavailable",
                     "reason": "runtime_replay_observation_not_configured",
                     "semantic": "RUNTIME_RESTART_REPLAY_OBSERVATION_ONLY",
-                    "restart_replay_observation": "NOT_PERSISTED",
+                    "restart_replay_observation": "NOT_MEASURED",
                     "canonical_epoch2_mutation": False,
                     "production_authority": False,
                     "read_only": True,
@@ -659,7 +659,7 @@ def create_app(
                     "reason": "runtime_replay_observation_evidence_missing",
                     "observation_filename": selected_replay_observation_path.name,
                     "semantic": "RUNTIME_RESTART_REPLAY_OBSERVATION_ONLY",
-                    "restart_replay_observation": "NOT_PERSISTED",
+                    "restart_replay_observation": "NOT_MEASURED",
                     "canonical_epoch2_mutation": False,
                     "production_authority": False,
                     "read_only": True,
@@ -680,7 +680,7 @@ def create_app(
                 "observation_filename": selected_replay_observation_path.name,
                 "semantic": "RUNTIME_RESTART_REPLAY_OBSERVATION_ONLY",
                 "restart_replay_observation": (
-                    "VERIFIED" if persisted else "NOT_PERSISTED"
+                    "VERIFIED" if persisted else "NOT_MEASURED"
                 ),
                 "canonical_epoch2_mutation": False,
                 "production_authority": False,
@@ -706,6 +706,7 @@ def create_app(
                     "status": "unavailable",
                     "reason": "runtime_replay_observation_not_configured",
                     "forecast_identity": forecast_identity,
+                    "restart_replay_observation": "NOT_MEASURED",
                     "semantic": "EXACT_RUNTIME_REPLAY_IDENTITY_ONLY",
                     "read_only": True,
                     "real_capital": 0,
@@ -718,6 +719,7 @@ def create_app(
                     "reason": "runtime_replay_observation_evidence_missing",
                     "forecast_identity": forecast_identity,
                     "observation_filename": selected_replay_observation_path.name,
+                    "restart_replay_observation": "NOT_MEASURED",
                     "semantic": "EXACT_RUNTIME_REPLAY_IDENTITY_ONLY",
                     "read_only": True,
                     "real_capital": 0,
@@ -735,17 +737,94 @@ def create_app(
                     "status": "empty",
                     "reason": "no_exact_runtime_replay_observation_for_forecast",
                     "forecast_identity": forecast_identity,
+                    "restart_replay_observation": "NOT_MEASURED",
                     "semantic": "EXACT_RUNTIME_REPLAY_IDENTITY_ONLY",
                     "read_only": True,
                     "real_capital": 0,
                 }
             )
+
+        cycle_manifest_runtime_verified_here = False
+        if (
+            selected_shadow_cycle_path is not None
+            and selected_shadow_cycle_path.exists()
+        ):
+            try:
+                cycle_record = R25ShadowCycleManifest(
+                    selected_shadow_cycle_path
+                ).read_latest_for_forecast(forecast_identity)
+            except ValueError as exc:
+                raise HTTPException(status_code=500, detail=str(exc)) from exc
+            if cycle_record is None:
+                raise HTTPException(
+                    status_code=500,
+                    detail=(
+                        "runtime replay observation has no exact mounted "
+                        "cycle manifest"
+                    ),
+                )
+            exact_pairs = (
+                (
+                    observation.cycle_identity,
+                    cycle_record.cycle_identity,
+                    "cycle",
+                ),
+                (
+                    observation.proof_identity,
+                    cycle_record.proof_identity,
+                    "proof",
+                ),
+                (
+                    observation.capital_bridge_identity,
+                    cycle_record.capital_bridge_identity,
+                    "capital",
+                ),
+                (
+                    observation.sizing_bridge_identity,
+                    cycle_record.sizing_bridge_identity,
+                    "sizing",
+                ),
+                (
+                    observation.review_selection_identity,
+                    cycle_record.review_selection_identity,
+                    "review",
+                ),
+                (
+                    observation.preview_identity,
+                    cycle_record.preview_identity,
+                    "preview",
+                ),
+                (
+                    observation.journal_record_identity,
+                    cycle_record.journal_record_identity,
+                    "journal",
+                ),
+                (
+                    observation.manifest_identity,
+                    cycle_record.manifest_identity,
+                    "manifest",
+                ),
+            )
+            for observed, persisted, label in exact_pairs:
+                if observed != persisted:
+                    raise HTTPException(
+                        status_code=500,
+                        detail=(
+                            "runtime replay observation/cycle manifest "
+                            f"{label} mismatch"
+                        ),
+                    )
+            cycle_manifest_runtime_verified_here = True
+
         return _json(
             {
                 "status": "ready",
                 "forecast_identity": forecast_identity,
                 "observation": observation,
                 "restart_replay_observation": "VERIFIED",
+                "cycle_manifest_runtime_verified_here": (
+                    cycle_manifest_runtime_verified_here
+                ),
                 "semantic": "EXACT_RUNTIME_REPLAY_IDENTITY_ONLY",
                 "canonical_epoch2_mutation": False,
                 "production_authority": False,
