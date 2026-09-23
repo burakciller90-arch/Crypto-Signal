@@ -54,7 +54,7 @@ def test_galactech_command_and_evidence_room_use_same_exact_signal_freeze(
     html = preview.text
     js = script.text
     css = style.text
-    assert 'data-ui-version="galactech-v1.1-learn-system"' in html
+    assert 'data-ui-version="galactech-v1.1-polish"' in html
     assert 'id="evidenceDialog"' in html
     assert 'aria-labelledby="evidenceDialogTitle"' in html
     assert "EVIDENCE ROOM / FROZEN DECISION" in html
