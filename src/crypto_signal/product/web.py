@@ -25,6 +25,7 @@ from crypto_signal.paper.mission_control import (
     PaperMissionControlError,
     read_paper_mission_control_snapshot,
 )
+from crypto_signal.paper.shadow_cycle_manifest import R25ShadowCycleManifest
 from crypto_signal.paper.shadow_intent_journal import R25ShadowIntentJournal
 from crypto_signal.product.education import (
     EducationLesson,
@@ -111,6 +112,10 @@ def _paper_epoch_payload(epoch: PaperFundEpochSpec) -> dict[str, object]:
     }
 
 
+def _is_lower_sha256(value: str) -> bool:
+    return len(value) == 64 and all(ch in "0123456789abcdef" for ch in value)
+
+
 def create_app(
     ledger_path: Path | None = None,
     alert_outbox_path: Path | None = None,
@@ -120,6 +125,7 @@ def create_app(
     epoch2_ledger_path: Path | None = None,
     decision_evidence_path: Path | None = None,
     shadow_intent_journal_path: Path | None = None,
+    shadow_cycle_manifest_path: Path | None = None,
 ) -> FastAPI:
     selected_path = ledger_path or Path(
         os.environ.get("CRYPTO_SIGNAL_LEDGER_PATH", str(DEFAULT_LEDGER_PATH))
@@ -196,6 +202,18 @@ def create_app(
     else:
         selected_shadow_intent_path = None
 
+    if shadow_cycle_manifest_path is not None:
+        selected_shadow_cycle_path: Path | None = shadow_cycle_manifest_path
+    elif ledger_path is None:
+        shadow_cycle_env = os.environ.get(
+            "CRYPTO_SIGNAL_SHADOW_CYCLE_MANIFEST_PATH"
+        )
+        selected_shadow_cycle_path = (
+            None if not shadow_cycle_env else Path(shadow_cycle_env)
+        )
+    else:
+        selected_shadow_cycle_path = None
+
     selected_learning_memory_path = learning_memory_path
     if selected_learning_memory_path is None:
         learning_memory_env = os.environ.get("CRYPTO_SIGNAL_LEARNING_MEMORY_PATH")
@@ -222,6 +240,7 @@ def create_app(
     app.state.learning_memory_path = selected_learning_memory_path
     app.state.decision_evidence_path = selected_decision_path
     app.state.shadow_intent_journal_path = selected_shadow_intent_path
+    app.state.shadow_cycle_manifest_path = selected_shadow_cycle_path
     app.state.reader = reader
 
     app.mount(
@@ -464,6 +483,71 @@ def create_app(
                 "snapshot": snapshot,
                 "journal_filename": selected_shadow_intent_path.name,
                 "semantic": "SHADOW_RESEARCH_ONLY",
+                "canonical_epoch2_mutation": False,
+                "production_authority": False,
+                "read_only": True,
+                "real_capital": 0,
+            }
+        )
+
+    @app.get("/api/shadow-decision-rail/forecast/{forecast_identity}")
+    def shadow_cycle_for_forecast(forecast_identity: str) -> JSONResponse:
+        if not _is_lower_sha256(forecast_identity):
+            raise HTTPException(
+                status_code=400,
+                detail="forecast_identity must be lowercase SHA256",
+            )
+        if selected_shadow_cycle_path is None:
+            return _json(
+                {
+                    "status": "unavailable",
+                    "reason": "shadow_cycle_manifest_runtime_not_configured",
+                    "forecast_identity": forecast_identity,
+                    "semantic": "EXACT_PERSISTED_CYCLE_IDENTITY_ONLY",
+                    "read_only": True,
+                    "real_capital": 0,
+                }
+            )
+        if not selected_shadow_cycle_path.exists():
+            return _json(
+                {
+                    "status": "unavailable",
+                    "reason": "shadow_cycle_manifest_evidence_missing",
+                    "forecast_identity": forecast_identity,
+                    "manifest_filename": selected_shadow_cycle_path.name,
+                    "semantic": "EXACT_PERSISTED_CYCLE_IDENTITY_ONLY",
+                    "read_only": True,
+                    "real_capital": 0,
+                }
+            )
+        try:
+            record = R25ShadowCycleManifest(
+                selected_shadow_cycle_path
+            ).read_latest_for_forecast(forecast_identity)
+        except ValueError as exc:
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
+        if record is None:
+            return _json(
+                {
+                    "status": "empty",
+                    "reason": "no_exact_persisted_shadow_cycle_for_forecast",
+                    "forecast_identity": forecast_identity,
+                    "semantic": "EXACT_PERSISTED_CYCLE_IDENTITY_ONLY",
+                    "read_only": True,
+                    "real_capital": 0,
+                }
+            )
+        return _json(
+            {
+                "status": "ready",
+                "forecast_identity": forecast_identity,
+                "cycle": record,
+                "explicit_review_present": (
+                    record.review_selection_identity is not None
+                ),
+                "journal_record_referenced": True,
+                "journal_runtime_verified_here": False,
+                "semantic": "EXACT_PERSISTED_CYCLE_IDENTITY_ONLY",
                 "canonical_epoch2_mutation": False,
                 "production_authority": False,
                 "read_only": True,
