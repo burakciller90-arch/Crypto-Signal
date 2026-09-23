@@ -4338,3 +4338,35 @@ Scientific boundary:
 
 Next Event Risk frontier: circuit-breaker composition over calendar + news + market-data
 quality with versioned thresholds and ABSTAIN semantics. Wake/lease pause remains authoritative.
+
+
+---
+
+## 2026-09-23 — 12:06 EVENT RISK + NLP CORE CLOSED
+
+PR #901 completed the locked Phase 7 Event Risk + NLP core.
+
+Acceptance:
+- branch run `35840783660` focused + full repository PASS;
+- squash merge `236bd18d261784f71324278569b58b967831d48d`;
+- exact-main Stage10 run `35841011334` SUCCESS.
+
+Accepted composition:
+- CLEAR requires healthy structured calendar, accepted News/NLP context and complete
+  market-quality evidence within versioned caller-supplied thresholds;
+- CAUTION preserves pre/post-event caution and single-source news context;
+- EVENT_BLOCK preserves the structured event block;
+- DEGRADED_DATA captures missing/stale/incomplete market quality and degraded/unresolved
+  upstream evidence;
+- ABSTAIN has precedence when News/NLP provider disagreement or measured market-quality
+  threshold breach is present.
+
+Scientific boundary:
+- numeric market-quality thresholds are research policy inputs, not universal laws;
+- ABSTAIN is a safety state, not an exchange order;
+- event blocks and quality breaches do not predict direction or return;
+- no probability, leverage, sizing or real-money authority;
+- REAL_CAPITAL=0.
+
+Phase 7 exit is satisfied. Next locked intelligence frontier is Phase 8 M6 Confluence
+Matrix 2.0. User wake/lease pause remains authoritative.
