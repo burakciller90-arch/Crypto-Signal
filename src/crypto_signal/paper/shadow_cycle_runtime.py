@@ -17,10 +17,6 @@ from crypto_signal.intelligence.event_risk_circuit_breaker import (
     CircuitBreakerAnalysis,
 )
 from crypto_signal.ledger.serialization import canonical_sha256
-from crypto_signal.paper.smart_capital_allocator import (
-    OpportunityRecoveryEvidence,
-    TacticalMicrostructureEvidence,
-)
 from crypto_signal.paper.epoch2_accounting import Epoch2ActivationRecord
 from crypto_signal.paper.epochs import PaperVaultId
 from crypto_signal.paper.position_sizing_bridge import AcceptedSizingRiskInputs
@@ -38,6 +34,10 @@ from crypto_signal.paper.shadow_intent_journal import R25ShadowIntentJournal
 from crypto_signal.paper.shadow_replay_orchestrator import (
     ShadowReplayCycleResult,
     run_shadow_restart_replay_cycle,
+)
+from crypto_signal.paper.smart_capital_allocator import (
+    OpportunityRecoveryEvidence,
+    TacticalMicrostructureEvidence,
 )
 from crypto_signal.unified_decision_runtime import UnifiedDecisionIssuance
 from research.alpha_factory.probability_calibration_gate import (
