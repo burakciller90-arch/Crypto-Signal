@@ -76,20 +76,20 @@ def _assessment(experiment, *, ready: bool, supervisor_accepted: bool = False):
         status=LeakageAuditStatus.PASSED,
         auditor_version="shadow-audit-v1",
     )
-    kwargs = dict(
-        experiment_identity=experiment.experiment_identity,
-        data_contract_audit_identity=_sha("data"),
-        reproducibility_identity=_sha("repro"),
-        transaction_cost_stress_identity=_sha("cost"),
-        in_sample_sanity_identity=_sha("in"),
-        out_of_sample_identity=_sha("oos"),
-        walk_forward_identity=_sha("wf"),
-        untouched_forward_identity=_sha("forward"),
-        robustness_ablation_identity=_sha("robust"),
-        supervisor_acceptance_identity=(
+    kwargs = {
+        "experiment_identity": experiment.experiment_identity,
+        "data_contract_audit_identity": _sha("data"),
+        "reproducibility_identity": _sha("repro"),
+        "transaction_cost_stress_identity": _sha("cost"),
+        "in_sample_sanity_identity": _sha("in"),
+        "out_of_sample_identity": _sha("oos"),
+        "walk_forward_identity": _sha("wf"),
+        "untouched_forward_identity": _sha("forward"),
+        "robustness_ablation_identity": _sha("robust"),
+        "supervisor_acceptance_identity": (
             _sha("supervisor-acceptance") if supervisor_accepted else None
         ),
-    )
+    }
     if not ready:
         kwargs["untouched_forward_identity"] = None
     evidence = build_promotion_gate_evidence(**kwargs)
