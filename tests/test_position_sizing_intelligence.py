@@ -92,13 +92,14 @@ def _context(
     cost: str = "0.10",
     win_r: str = "2.00",
     loss_r: str = "1.00",
+    candidate_seed: str = "candidate",
 ):
     return build_position_sizing_risk_context(
         vault_id=vault_id,
         asset="BTCUSDT",
         as_of_ms=AS_OF,
         allocator_assessment_identity=_sha("allocator-assessment"),
-        allocator_candidate_identity=_sha("candidate"),
+        allocator_candidate_identity=_sha(candidate_seed),
         expected_win_r=Decimal(win_r),
         expected_loss_r=Decimal(loss_r),
         transaction_cost_r=Decimal(cost),
@@ -355,33 +356,7 @@ def test_vault_and_candidate_lineage_fail_closed() -> None:
             context=_context(vault_id=PaperVaultId.TACTICAL),
         )
 
-    bad_context = replace(
-        _context(),
-        allocator_candidate_identity=_sha("other-candidate"),
-    )
-    bad_context = replace(
-        bad_context,
-        context_identity=canonical_sha256(
-            {
-                "absolute_correlation_0_1": bad_context.absolute_correlation_0_1,
-                "allocator_assessment_identity": bad_context.allocator_assessment_identity,
-                "allocator_candidate_identity": bad_context.allocator_candidate_identity,
-                "as_of_ms": bad_context.as_of_ms,
-                "asset": bad_context.asset,
-                "current_drawdown_fraction": bad_context.current_drawdown_fraction,
-                "engine_version": bad_context.engine_version,
-                "expected_loss_r": bad_context.expected_loss_r,
-                "expected_win_r": bad_context.expected_win_r,
-                "liquidity_score_0_1": bad_context.liquidity_score_0_1,
-                "real_capital": bad_context.real_capital,
-                "schema_version": bad_context.schema_version,
-                "source_evidence_identities": bad_context.source_evidence_identities,
-                "transaction_cost_r": bad_context.transaction_cost_r,
-                "vault_id": bad_context.vault_id,
-                "volatility_fraction": bad_context.volatility_fraction,
-            }
-        ),
-    )
+    bad_context = _context(candidate_seed="other-candidate")
     with pytest.raises(ValueError, match="allocator candidate lineage mismatch"):
         evaluate_position_sizing_intelligence(
             policy=_policy(),
