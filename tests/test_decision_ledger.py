@@ -239,11 +239,11 @@ def test_decision_ledger_persists_and_replays_exact_read_only_evidence(
     assert feed[0]["event_identity"] == event.event_identity
     assert feed[0]["proof_identity"] == proof.proof_identity
 
-    with sqlite3.connect(path) as connection:
-        with pytest.raises(sqlite3.DatabaseError, match="immutable decision evidence"):
-            connection.execute(
-                "UPDATE r20_forecasts SET symbol = 'ETHUSDT'"
-            )
+    with (
+        sqlite3.connect(path) as connection,
+        pytest.raises(sqlite3.DatabaseError, match="immutable decision evidence"),
+    ):
+        connection.execute("UPDATE r20_forecasts SET symbol = 'ETHUSDT'")
 
 
 def test_query_only_reads_never_initialize_missing_decision_ledger(tmp_path) -> None:
