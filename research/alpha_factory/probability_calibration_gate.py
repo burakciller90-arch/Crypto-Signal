@@ -169,6 +169,53 @@ class ProbabilityCalibrationConfig:
 
 
 @dataclass(frozen=True, slots=True)
+class FrozenProbabilityPrediction:
+    prediction_identity: str
+    schema_version: str
+    engine_version: str
+    scope_identity: str
+    model_version: str
+    calibrator_version: str
+    walk_forward_fit_identity: str
+    source_prediction_identity: str
+    source_forecast_identity: str
+    issued_at_ms: int
+    predicted_probability_0_1: Decimal
+    probability_semantic: str = R19_PROBABILITY_SEMANTIC
+    production_authority: bool = False
+    real_capital: int = REAL_CAPITAL
+
+    def __post_init__(self) -> None:
+        for identity, label in (
+            (self.prediction_identity, "R19 prediction identity"),
+            (self.scope_identity, "R19 prediction scope identity"),
+            (self.walk_forward_fit_identity, "R19 prediction walk-forward identity"),
+            (self.source_forecast_identity, "R19 prediction source forecast identity"),
+        ):
+            _require_sha256(identity, label)
+        if self.schema_version != R19_CALIBRATION_SCHEMA_VERSION:
+            raise ValueError("unsupported R19 prediction schema")
+        if self.engine_version != R19_CALIBRATION_ENGINE_VERSION:
+            raise ValueError("unsupported R19 prediction engine")
+        _require_text(self.model_version, "R19 prediction model version")
+        _require_text(self.calibrator_version, "R19 prediction calibrator version")
+        if self.issued_at_ms < 0:
+            raise ValueError("R19 prediction issuance must be non-negative")
+        _require_unit_interval(
+            self.predicted_probability_0_1,
+            "R19 frozen predicted probability",
+        )
+        if self.probability_semantic != R19_PROBABILITY_SEMANTIC:
+            raise ValueError("R19 prediction probability semantic mismatch")
+        if self.production_authority:
+            raise ValueError("R19 prediction has no production/order authority")
+        if self.real_capital != REAL_CAPITAL:
+            raise ValueError("REAL_CAPITAL must remain 0")
+        if self.prediction_identity != canonical_sha256(_prediction_payload(self)):
+            raise ValueError("R19 frozen prediction identity mismatch")
+
+
+@dataclass(frozen=True, slots=True)
 class UntouchedProbabilityObservation:
     observation_identity: str
     schema_version: str
@@ -177,6 +224,7 @@ class UntouchedProbabilityObservation:
     model_version: str
     calibrator_version: str
     walk_forward_fit_identity: str
+    source_prediction_identity: str
     source_forecast_identity: str
     source_outcome_identity: str
     evidence_class: EvidenceClass
@@ -190,6 +238,7 @@ class UntouchedProbabilityObservation:
             (self.observation_identity, "R19 observation identity"),
             (self.scope_identity, "R19 observation scope identity"),
             (self.walk_forward_fit_identity, "R19 observation walk-forward identity"),
+            (self.source_prediction_identity, "R19 source prediction identity"),
             (self.source_forecast_identity, "R19 source forecast identity"),
             (self.source_outcome_identity, "R19 source outcome identity"),
         ):
@@ -377,6 +426,7 @@ class CalibratedProbabilityEvidence:
             (self.calibration_evidence_identity, "R19 calibration evidence identity"),
             (self.scope_identity, "R19 probability scope identity"),
             (self.walk_forward_fit_identity, "R19 probability walk-forward identity"),
+            (self.source_prediction_identity, "R19 probability source prediction identity"),
             (self.source_forecast_identity, "R19 probability source forecast identity"),
         ):
             _require_sha256(identity, label)
@@ -500,33 +550,36 @@ def build_probability_calibration_config(
     )
 
 
-def build_untouched_probability_observation(
+def build_frozen_probability_prediction(
     config: ProbabilityCalibrationConfig,
     *,
     source_forecast_identity: str,
-    source_outcome_identity: str,
     issued_at_ms: int,
-    outcome_available_at_ms: int,
     predicted_probability_0_1: Decimal,
-    observed_positive: bool,
-) -> UntouchedProbabilityObservation:
+) -> FrozenProbabilityPrediction:
+    if not (
+        config.decision_window_start_ms
+        <= issued_at_ms
+        < config.decision_window_end_ms
+    ):
+        raise ValueError("R19 prediction issued outside frozen holdout window")
+    _require_sha256(source_forecast_identity, "R19 prediction source forecast")
     payload = {
         "calibrator_version": config.calibrator_version,
         "engine_version": R19_CALIBRATION_ENGINE_VERSION,
-        "evidence_class": EvidenceClass.LIVE_UNTOUCHED_FORWARD,
         "issued_at_ms": issued_at_ms,
         "model_version": config.model_version,
-        "observed_positive": observed_positive,
-        "outcome_available_at_ms": outcome_available_at_ms,
         "predicted_probability_0_1": predicted_probability_0_1,
+        "probability_semantic": R19_PROBABILITY_SEMANTIC,
+        "production_authority": False,
+        "real_capital": REAL_CAPITAL,
         "schema_version": R19_CALIBRATION_SCHEMA_VERSION,
         "scope_identity": config.scope.scope_identity,
         "source_forecast_identity": source_forecast_identity,
-        "source_outcome_identity": source_outcome_identity,
         "walk_forward_fit_identity": config.walk_forward_fit_identity,
     }
-    return UntouchedProbabilityObservation(
-        observation_identity=canonical_sha256(payload),
+    return FrozenProbabilityPrediction(
+        prediction_identity=canonical_sha256(payload),
         schema_version=R19_CALIBRATION_SCHEMA_VERSION,
         engine_version=R19_CALIBRATION_ENGINE_VERSION,
         scope_identity=config.scope.scope_identity,
@@ -534,11 +587,50 @@ def build_untouched_probability_observation(
         calibrator_version=config.calibrator_version,
         walk_forward_fit_identity=config.walk_forward_fit_identity,
         source_forecast_identity=source_forecast_identity,
+        issued_at_ms=issued_at_ms,
+        predicted_probability_0_1=predicted_probability_0_1,
+    )
+
+
+def build_untouched_probability_observation(
+    prediction: FrozenProbabilityPrediction,
+    *,
+    source_outcome_identity: str,
+    outcome_available_at_ms: int,
+    observed_positive: bool,
+) -> UntouchedProbabilityObservation:
+    _require_sha256(source_outcome_identity, "R19 observation source outcome")
+    payload = {
+        "calibrator_version": prediction.calibrator_version,
+        "engine_version": R19_CALIBRATION_ENGINE_VERSION,
+        "evidence_class": EvidenceClass.LIVE_UNTOUCHED_FORWARD,
+        "issued_at_ms": prediction.issued_at_ms,
+        "model_version": prediction.model_version,
+        "observed_positive": observed_positive,
+        "outcome_available_at_ms": outcome_available_at_ms,
+        "predicted_probability_0_1": prediction.predicted_probability_0_1,
+        "schema_version": R19_CALIBRATION_SCHEMA_VERSION,
+        "scope_identity": prediction.scope_identity,
+        "source_forecast_identity": prediction.source_forecast_identity,
+        "source_outcome_identity": source_outcome_identity,
+        "source_prediction_identity": prediction.prediction_identity,
+        "walk_forward_fit_identity": prediction.walk_forward_fit_identity,
+    }
+    return UntouchedProbabilityObservation(
+        observation_identity=canonical_sha256(payload),
+        schema_version=R19_CALIBRATION_SCHEMA_VERSION,
+        engine_version=R19_CALIBRATION_ENGINE_VERSION,
+        scope_identity=prediction.scope_identity,
+        model_version=prediction.model_version,
+        calibrator_version=prediction.calibrator_version,
+        walk_forward_fit_identity=prediction.walk_forward_fit_identity,
+        source_prediction_identity=prediction.prediction_identity,
+        source_forecast_identity=prediction.source_forecast_identity,
         source_outcome_identity=source_outcome_identity,
         evidence_class=EvidenceClass.LIVE_UNTOUCHED_FORWARD,
-        issued_at_ms=issued_at_ms,
+        issued_at_ms=prediction.issued_at_ms,
         outcome_available_at_ms=outcome_available_at_ms,
-        predicted_probability_0_1=predicted_probability_0_1,
+        predicted_probability_0_1=prediction.predicted_probability_0_1,
         observed_positive=observed_positive,
     )
 
@@ -675,59 +767,52 @@ def evaluate_probability_calibration(
 
 def authorize_calibrated_probability(
     report: ProbabilityCalibrationReport,
-    *,
-    scope_identity: str,
-    model_version: str,
-    calibrator_version: str,
-    walk_forward_fit_identity: str,
-    source_forecast_identity: str,
-    issued_at_ms: int,
-    probability_0_1: Decimal,
+    prediction: FrozenProbabilityPrediction,
 ) -> CalibratedProbabilityEvidence | None:
     if report.status is not CalibrationGateStatus.ACCEPTED:
         return None
     if report.probability_status is not R19ProbabilityStatus.CALIBRATED:
         return None
-    if scope_identity != report.scope_identity:
+    if prediction.scope_identity != report.scope_identity:
         return None
-    if model_version != report.model_version:
+    if prediction.model_version != report.model_version:
         return None
-    if calibrator_version != report.calibrator_version:
+    if prediction.calibrator_version != report.calibrator_version:
         return None
-    if walk_forward_fit_identity != report.walk_forward_fit_identity:
+    if prediction.walk_forward_fit_identity != report.walk_forward_fit_identity:
         return None
-    if issued_at_ms <= report.evaluation_cutoff_ms:
+    if prediction.issued_at_ms <= report.evaluation_cutoff_ms:
         return None
-    _require_sha256(source_forecast_identity, "R19 authorization source forecast")
-    _require_unit_interval(probability_0_1, "R19 authorization probability")
     payload = {
         "calibration_evidence_identity": report.evidence_identity,
-        "calibrator_version": calibrator_version,
+        "calibrator_version": prediction.calibrator_version,
         "engine_version": R19_CALIBRATION_ENGINE_VERSION,
-        "issued_at_ms": issued_at_ms,
-        "model_version": model_version,
-        "probability_0_1": probability_0_1,
+        "issued_at_ms": prediction.issued_at_ms,
+        "model_version": prediction.model_version,
+        "probability_0_1": prediction.predicted_probability_0_1,
         "probability_semantic": R19_PROBABILITY_SEMANTIC,
         "probability_status": R19ProbabilityStatus.CALIBRATED,
         "production_authority": False,
         "real_capital": REAL_CAPITAL,
         "schema_version": R19_CALIBRATION_SCHEMA_VERSION,
-        "scope_identity": scope_identity,
-        "source_forecast_identity": source_forecast_identity,
-        "walk_forward_fit_identity": walk_forward_fit_identity,
+        "scope_identity": prediction.scope_identity,
+        "source_forecast_identity": prediction.source_forecast_identity,
+        "source_prediction_identity": prediction.prediction_identity,
+        "walk_forward_fit_identity": prediction.walk_forward_fit_identity,
     }
     return CalibratedProbabilityEvidence(
         authorization_identity=canonical_sha256(payload),
         schema_version=R19_CALIBRATION_SCHEMA_VERSION,
         engine_version=R19_CALIBRATION_ENGINE_VERSION,
         calibration_evidence_identity=report.evidence_identity,
-        scope_identity=scope_identity,
-        model_version=model_version,
-        calibrator_version=calibrator_version,
-        walk_forward_fit_identity=walk_forward_fit_identity,
-        source_forecast_identity=source_forecast_identity,
-        issued_at_ms=issued_at_ms,
-        probability_0_1=probability_0_1,
+        scope_identity=prediction.scope_identity,
+        model_version=prediction.model_version,
+        calibrator_version=prediction.calibrator_version,
+        walk_forward_fit_identity=prediction.walk_forward_fit_identity,
+        source_prediction_identity=prediction.prediction_identity,
+        source_forecast_identity=prediction.source_forecast_identity,
+        issued_at_ms=prediction.issued_at_ms,
+        probability_0_1=prediction.predicted_probability_0_1,
         probability_status=R19ProbabilityStatus.CALIBRATED,
         probability_semantic=R19_PROBABILITY_SEMANTIC,
     )
@@ -741,10 +826,15 @@ def _validate_holdout(
     if len(observations) != partition.row_count:
         raise ValueError("R19 holdout observation count must match partition")
     observation_ids = tuple(sorted(item.observation_identity for item in observations))
-    if observation_ids != partition.evidence_identities:
-        raise ValueError("R19 holdout observations do not match partition evidence")
     if len(set(observation_ids)) != len(observation_ids):
         raise ValueError("R19 holdout observations must be unique")
+    prediction_ids = tuple(
+        sorted(item.source_prediction_identity for item in observations)
+    )
+    if prediction_ids != partition.evidence_identities:
+        raise ValueError("R19 holdout predictions do not match partition evidence")
+    if len(set(prediction_ids)) != len(prediction_ids):
+        raise ValueError("R19 holdout source predictions must be unique")
 
     forecast_ids = tuple(item.source_forecast_identity for item in observations)
     if len(set(forecast_ids)) != len(forecast_ids):
@@ -946,6 +1036,25 @@ def _config_payload(config: ProbabilityCalibrationConfig) -> dict[str, object]:
     }
 
 
+def _prediction_payload(
+    prediction: FrozenProbabilityPrediction,
+) -> dict[str, object]:
+    return {
+        "calibrator_version": prediction.calibrator_version,
+        "engine_version": prediction.engine_version,
+        "issued_at_ms": prediction.issued_at_ms,
+        "model_version": prediction.model_version,
+        "predicted_probability_0_1": prediction.predicted_probability_0_1,
+        "probability_semantic": prediction.probability_semantic,
+        "production_authority": prediction.production_authority,
+        "real_capital": prediction.real_capital,
+        "schema_version": prediction.schema_version,
+        "scope_identity": prediction.scope_identity,
+        "source_forecast_identity": prediction.source_forecast_identity,
+        "walk_forward_fit_identity": prediction.walk_forward_fit_identity,
+    }
+
+
 def _observation_payload(
     observation: UntouchedProbabilityObservation,
 ) -> dict[str, object]:
@@ -961,6 +1070,7 @@ def _observation_payload(
         "schema_version": observation.schema_version,
         "scope_identity": observation.scope_identity,
         "source_forecast_identity": observation.source_forecast_identity,
+        "source_prediction_identity": observation.source_prediction_identity,
         "source_outcome_identity": observation.source_outcome_identity,
         "walk_forward_fit_identity": observation.walk_forward_fit_identity,
     }
@@ -1014,6 +1124,7 @@ def _authorization_payload(
         "schema_version": evidence.schema_version,
         "scope_identity": evidence.scope_identity,
         "source_forecast_identity": evidence.source_forecast_identity,
+        "source_prediction_identity": evidence.source_prediction_identity,
         "walk_forward_fit_identity": evidence.walk_forward_fit_identity,
     }
 
