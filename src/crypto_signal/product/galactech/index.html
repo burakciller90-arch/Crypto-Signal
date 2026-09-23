@@ -8,7 +8,7 @@
   <title>GALACTECH // CRYPTO SIGNAL</title>
   <link rel="stylesheet" href="/galactech-static/app.css">
 </head>
-<body data-ui-version="galactech-v1.1-capital-center">
+<body data-ui-version="galactech-v1.1-markets">
   <a class="skip-link" href="#mainContent">Ana içeriğe geç</a>
 
   <div id="coldBoot" class="cold-boot" role="status" aria-live="polite" aria-atomic="true">
@@ -184,24 +184,100 @@
             <div>
               <span class="page-code">02 / MARKETS</span>
               <h1 id="marketsTitle">Market Workspace</h1>
-              <p>Katmanlar ayrı tutulur; eksik evidence boşluk olarak kalır.</p>
+              <p>Provider truth, frozen chart and one evidence layer at a time. Missing layers stay visibly unavailable.</p>
+            </div>
+            <span id="marketContextTag" class="tag">CONTEXT · VERIFYING</span>
+          </div>
+
+          <div class="market-selector-bar" aria-label="Market context controls">
+            <label>
+              <span class="eyebrow">SYMBOL</span>
+              <select id="marketSymbolSelect" aria-label="Market symbol">
+                <option value="">Evidence bekleniyor…</option>
+              </select>
+            </label>
+            <label>
+              <span class="eyebrow">TIMEFRAME</span>
+              <select id="marketTimeframeSelect" aria-label="Market timeframe">
+                <option value="">Evidence bekleniyor…</option>
+              </select>
+            </label>
+            <div class="market-selector-truth">
+              <span class="eyebrow">SOURCE CONTRACT</span>
+              <strong>immutable signal freeze</strong>
+              <small>no synthetic market layer</small>
             </div>
           </div>
-          <div class="layer-toolbar" aria-label="Piyasa katmanları">
+
+          <div class="layer-toolbar" role="group" aria-label="Piyasa kanıt katmanı">
             <button type="button" class="layer-toggle is-active" data-layer="PA" aria-pressed="true">PA</button>
             <button type="button" class="layer-toggle" data-layer="LIQ" aria-pressed="false">LIQ</button>
             <button type="button" class="layer-toggle" data-layer="FLOW" aria-pressed="false">FLOW</button>
             <button type="button" class="layer-toggle" data-layer="DERIV" aria-pressed="false">DERIV</button>
             <button type="button" class="layer-toggle" data-layer="ONCHAIN" aria-pressed="false">ONCHAIN</button>
           </div>
-          <article class="panel workspace-placeholder">
-            <span class="eyebrow">FOUNDATION SLICE</span>
-            <h2>Professional chart workspace</h2>
-            <p>Bu foundation adımında data contract ve layer discipline hazır. Chart/evidence overlays sonraki ürün slice’ında bağlanacak.</p>
-            <div id="marketTruth" class="truth-table"></div>
-          </article>
-        </section>
 
+          <div class="market-workspace-grid">
+            <article class="panel market-chart-panel">
+              <div class="panel-head">
+                <div>
+                  <span class="eyebrow">FROZEN MARKET VIEW</span>
+                  <h2 id="marketWorkspaceTitle">Select a market context</h2>
+                </div>
+                <span id="marketProviderTag" class="tag">PROVIDER · —</span>
+              </div>
+              <div id="marketFrozenChart" class="empty-state">
+                <strong>Frozen chart evidence bekleniyor.</strong>
+                <p>Exact provider signal seçilmeden chart uydurulmaz.</p>
+              </div>
+              <div id="marketLayerSurface" class="market-layer-surface empty-state">
+                <strong>PA layer selected.</strong>
+                <p>Selected provider evidence gelene kadar overlay üretilmez.</p>
+              </div>
+            </article>
+
+            <aside class="panel market-provider-panel">
+              <div class="panel-head">
+                <div>
+                  <span class="eyebrow">PROVIDER TRUTH</span>
+                  <h2>Latest frozen decisions</h2>
+                </div>
+                <span class="tag">NO CONSENSUS INVENTION</span>
+              </div>
+              <div id="marketProviderList" class="market-provider-list empty-state">
+                <strong>Provider evidence bekleniyor.</strong>
+                <p>Binance/Bybit state ayrı tutulur.</p>
+              </div>
+            </aside>
+          </div>
+
+          <div class="market-secondary-grid">
+            <article class="panel">
+              <div class="panel-head">
+                <div>
+                  <span class="eyebrow">RECENT DECISION TAPE</span>
+                  <h2>Same symbol / timeframe</h2>
+                </div>
+                <span id="marketRecentCount" class="tag">—</span>
+              </div>
+              <div id="marketRecentTape" class="feed-list empty-state">
+                <strong>Recent evidence bekleniyor.</strong>
+              </div>
+            </article>
+
+            <article class="panel">
+              <span class="eyebrow">LAYER DISCIPLINE</span>
+              <h2>Only accepted evidence is visualized.</h2>
+              <div id="marketTruth" class="truth-table">
+                <div class="truth-row"><span>PA</span><strong>VERIFYING</strong></div>
+                <div class="truth-row"><span>LIQ</span><strong>NOT EXPOSED</strong></div>
+                <div class="truth-row"><span>FLOW</span><strong>NOT EXPOSED</strong></div>
+                <div class="truth-row"><span>DERIV</span><strong>NOT EXPOSED</strong></div>
+                <div class="truth-row"><span>ONCHAIN</span><strong>NOT EXPOSED</strong></div>
+              </div>
+            </article>
+          </div>
+        </section>
         <section id="view-intelligence" class="route-view" data-route-view="intelligence" aria-labelledby="intelligenceTitle" hidden>
           <div class="page-head">
             <div>

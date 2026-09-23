@@ -10,6 +10,8 @@ const API = Object.freeze({
   archive: "/api/archive/proof-wall?limit=60&offset=0",
   education: "/api/education",
   intelligence: "/api/intelligence-center",
+  assetCockpit: (symbol, timeframe) =>
+    `/api/assets/${encodeURIComponent(symbol)}/${encodeURIComponent(timeframe)}?recent_limit=30`,
   signalDetail: (identity) => `/api/signals/${encodeURIComponent(identity)}`,
 });
 
@@ -27,6 +29,12 @@ const state = {
   archive: null,
   education: null,
   intelligence: null,
+  marketLayer: "PA",
+  marketSelection: null,
+  marketCockpit: null,
+  marketProviderDetails: [],
+  marketSelectedDetail: null,
+  marketRequestSeq: 0,
   evidenceDetail: null,
   lastEvidenceTrigger: null,
 };
@@ -158,6 +166,9 @@ function routeTo(route) {
   if (main && !prefersReducedMotion()) {
     main.scrollIntoView({ block: "start", behavior: "smooth" });
   }
+  if (route === "markets") {
+    void initializeMarketWorkspace({ reload: true });
+  }
 }
 
 function bindNavigation() {
@@ -176,6 +187,7 @@ function bindNavigation() {
       renderCommand();
       renderRadar();
       renderArchive();
+      void initializeMarketWorkspace({ reload: state.route === "markets" });
     });
   });
 
@@ -193,10 +205,21 @@ function bindNavigation() {
 
   document.querySelectorAll("[data-layer]").forEach((button) => {
     button.addEventListener("click", () => {
-      const active = !button.classList.contains("is-active");
-      button.classList.toggle("is-active", active);
-      button.setAttribute("aria-pressed", String(active));
+      state.marketLayer = button.dataset.layer || "PA";
+      document.querySelectorAll("[data-layer]").forEach((item) => {
+        const active = item === button;
+        item.classList.toggle("is-active", active);
+        item.setAttribute("aria-pressed", String(active));
+      });
+      renderMarketWorkspace();
     });
+  });
+
+  byId("marketSymbolSelect")?.addEventListener("change", () => {
+    syncMarketSelectionFromControls(true);
+  });
+  byId("marketTimeframeSelect")?.addEventListener("change", () => {
+    syncMarketSelectionFromControls(true);
   });
 
   document.querySelectorAll("[data-filter]").forEach((button) => {
@@ -211,6 +234,12 @@ function bindNavigation() {
 
   document.addEventListener("click", (event) => {
     const source = event.target instanceof Element ? event.target : null;
+    const marketProvider = source?.closest("[data-market-provider-id]");
+    if (marketProvider instanceof HTMLElement) {
+      selectMarketProvider(marketProvider.dataset.marketProviderId || "");
+      return;
+    }
+
     const evidenceTrigger = source?.closest("[data-evidence-id]");
     if (evidenceTrigger instanceof HTMLElement) {
       const identity = evidenceTrigger.dataset.evidenceId || "";
@@ -330,17 +359,427 @@ function renderRadar() {
   }).join("");
 }
 
+function marketContextKey(symbol, timeframe) {
+  return `${text(symbol, "")}::${text(timeframe, "")}`;
+}
+
+function availableMarketContexts() {
+  const rows = Array.isArray(state.radar?.items) ? state.radar.items : [];
+  const byKey = new Map();
+  rows.forEach((item) => {
+    const latest = item?.latest || item || {};
+    const symbol = text(latest.symbol || item?.symbol, "");
+    const timeframe = text(latest.timeframe || item?.timeframe, "");
+    if (!symbol || !timeframe) return;
+    const key = marketContextKey(symbol, timeframe);
+    if (!byKey.has(key)) byKey.set(key, { symbol, timeframe });
+  });
+  return [...byKey.values()].sort((left, right) =>
+    (left.symbol + left.timeframe).localeCompare(right.symbol + right.timeframe)
+  );
+}
+
+function populateMarketSelectors() {
+  const symbolSelect = byId("marketSymbolSelect");
+  const timeframeSelect = byId("marketTimeframeSelect");
+  if (!symbolSelect || !timeframeSelect) return [];
+
+  const contexts = availableMarketContexts();
+  const symbols = [...new Set(contexts.map((item) => item.symbol))];
+  const selectedSymbol = state.marketSelection?.symbol || symbolSelect.value || "";
+  const nextSymbol = symbols.includes(selectedSymbol)
+    ? selectedSymbol
+    : (symbols[0] || "");
+
+  symbolSelect.innerHTML = symbols.length
+    ? symbols.map((symbol) =>
+        `<option value="${escapeHtml(symbol)}">${escapeHtml(symbol)}</option>`
+      ).join("")
+    : '<option value="">No observed symbol</option>';
+  symbolSelect.value = nextSymbol;
+
+  const timeframes = contexts
+    .filter((item) => item.symbol === nextSymbol)
+    .map((item) => item.timeframe);
+  const selectedTimeframe = state.marketSelection?.timeframe || timeframeSelect.value || "";
+  const nextTimeframe = timeframes.includes(selectedTimeframe)
+    ? selectedTimeframe
+    : (timeframes[0] || "");
+
+  timeframeSelect.innerHTML = timeframes.length
+    ? timeframes.map((timeframe) =>
+        `<option value="${escapeHtml(timeframe)}">${escapeHtml(timeframe)}</option>`
+      ).join("")
+    : '<option value="">No observed timeframe</option>';
+  timeframeSelect.value = nextTimeframe;
+
+  return contexts;
+}
+
+function preferredMarketContext(contexts) {
+  if (!contexts.length) return null;
+  const current = state.marketSelection;
+  if (
+    current &&
+    contexts.some((item) =>
+      item.symbol === current.symbol && item.timeframe === current.timeframe
+    )
+  ) {
+    if (state.asset === "ALL" || upper(current.symbol, "").startsWith(state.asset)) {
+      return current;
+    }
+  }
+  if (state.asset !== "ALL") {
+    const assetMatch = contexts.find((item) =>
+      upper(item.symbol, "").startsWith(state.asset)
+    );
+    if (assetMatch) return assetMatch;
+  }
+  return contexts[0];
+}
+
+async function initializeMarketWorkspace({ reload = true } = {}) {
+  const contexts = populateMarketSelectors();
+  const selection = preferredMarketContext(contexts);
+  if (!selection) {
+    state.marketSelection = null;
+    state.marketCockpit = null;
+    state.marketProviderDetails = [];
+    state.marketSelectedDetail = null;
+    renderMarketWorkspace();
+    renderMarketTruth();
+    return;
+  }
+
+  const symbolSelect = byId("marketSymbolSelect");
+  const timeframeSelect = byId("marketTimeframeSelect");
+  if (symbolSelect) symbolSelect.value = selection.symbol;
+  const availableTimeframes = contexts
+    .filter((item) => item.symbol === selection.symbol)
+    .map((item) => item.timeframe);
+  if (timeframeSelect) {
+    timeframeSelect.innerHTML = availableTimeframes.map((timeframe) =>
+      `<option value="${escapeHtml(timeframe)}">${escapeHtml(timeframe)}</option>`
+    ).join("");
+    timeframeSelect.value = selection.timeframe;
+  }
+
+  const changed =
+    !state.marketSelection ||
+    state.marketSelection.symbol !== selection.symbol ||
+    state.marketSelection.timeframe !== selection.timeframe;
+  state.marketSelection = { ...selection };
+  if (reload || changed || !state.marketCockpit) {
+    await loadMarketSelection();
+  } else {
+    renderMarketWorkspace();
+    renderMarketTruth();
+  }
+}
+
+function syncMarketSelectionFromControls(reload) {
+  const symbol = byId("marketSymbolSelect")?.value || "";
+  const contexts = availableMarketContexts();
+  const timeframeSelect = byId("marketTimeframeSelect");
+  if (!symbol || !timeframeSelect) return;
+
+  const timeframes = contexts
+    .filter((item) => item.symbol === symbol)
+    .map((item) => item.timeframe);
+  if (!timeframes.includes(timeframeSelect.value)) {
+    timeframeSelect.innerHTML = timeframes.map((timeframe) =>
+      `<option value="${escapeHtml(timeframe)}">${escapeHtml(timeframe)}</option>`
+    ).join("");
+    timeframeSelect.value = timeframes[0] || "";
+  }
+  const timeframe = timeframeSelect.value;
+  if (!timeframe) return;
+
+  state.marketSelection = { symbol, timeframe };
+  if (reload) void loadMarketSelection();
+  else renderMarketWorkspace();
+}
+
+async function loadMarketSelection() {
+  const selection = state.marketSelection;
+  if (!selection) return;
+  const requestSeq = ++state.marketRequestSeq;
+  state.marketCockpit = null;
+  state.marketProviderDetails = [];
+  state.marketSelectedDetail = null;
+  renderMarketWorkspace();
+
+  let cockpit;
+  try {
+    cockpit = await fetchJson(API.assetCockpit(selection.symbol, selection.timeframe));
+  } catch (error) {
+    console.warn("[GALACTECH] market cockpit unavailable", error);
+    if (requestSeq !== state.marketRequestSeq) return;
+    state.marketCockpit = {
+      status: "unavailable",
+      symbol: selection.symbol,
+      timeframe: selection.timeframe,
+      latest_by_provider: [],
+      recent_signals: [],
+    };
+    renderMarketWorkspace();
+    renderMarketTruth();
+    return;
+  }
+  if (requestSeq !== state.marketRequestSeq) return;
+  state.marketCockpit = cockpit;
+
+  const providers = Array.isArray(cockpit.latest_by_provider)
+    ? cockpit.latest_by_provider
+    : [];
+  const details = await Promise.all(
+    providers.map(async (card) => {
+      try {
+        const detail = await fetchJson(API.signalDetail(card.signal_freeze_identity));
+        return { card, detail, ok: true };
+      } catch (error) {
+        console.warn("[GALACTECH] provider signal detail unavailable", error);
+        return { card, detail: null, ok: false };
+      }
+    })
+  );
+  if (requestSeq !== state.marketRequestSeq) return;
+
+  state.marketProviderDetails = details;
+  const currentId = state.marketSelectedDetail?.signal?.signal_freeze_identity;
+  const selected =
+    details.find((item) => item.detail?.signal?.signal_freeze_identity === currentId) ||
+    details.find((item) => item.ok && item.detail?.status === "ready") ||
+    details[0] ||
+    null;
+  state.marketSelectedDetail = selected?.detail || null;
+  renderMarketWorkspace();
+  renderMarketTruth();
+}
+
+function selectMarketProvider(identity) {
+  const item = state.marketProviderDetails.find(
+    (entry) => entry.card?.signal_freeze_identity === identity
+  );
+  if (!item) return;
+  state.marketSelectedDetail = item.detail || null;
+  renderMarketWorkspace();
+}
+
+function renderMarketProviderList() {
+  const target = byId("marketProviderList");
+  if (!target) return;
+  const rows = state.marketProviderDetails;
+  if (!rows.length) {
+    target.className = "market-provider-list empty-state";
+    target.innerHTML =
+      "<strong>No provider freeze is available for this context.</strong>" +
+      "<p>Binance/Bybit state is never invented from another provider.</p>";
+    return;
+  }
+
+  const selectedId = state.marketSelectedDetail?.signal?.signal_freeze_identity || "";
+  target.className = "market-provider-list";
+  target.innerHTML = rows.map(({ card, detail, ok }) => {
+    const signal = detail?.signal || card || {};
+    const identity = card?.signal_freeze_identity || "";
+    const active = identity === selectedId;
+    return `
+      <button type="button"
+        class="market-provider-card${active ? " is-active" : ""}"
+        data-market-provider-id="${escapeHtml(identity)}"
+        aria-pressed="${active ? "true" : "false"}">
+        <div class="market-provider-head">
+          <strong>${escapeHtml(upper(signal.exchange, "UNKNOWN PROVIDER"))}</strong>
+          <span class="${stateClass(signal.state)}">${escapeHtml(upper(signal.state))}</span>
+        </div>
+        <div class="market-provider-meta">
+          <span>${escapeHtml(upper(signal.direction))}</span>
+          <span>${escapeHtml(signal.setup_type || "setup unavailable")}</span>
+          <span>frozen ${escapeHtml(formatTime(signal.frozen_at_ms))}</span>
+          <code>${escapeHtml(shortIdentity(identity))}</code>
+          <span>${ok ? "exact detail ready" : "detail unavailable"}</span>
+        </div>
+      </button>`;
+  }).join("");
+}
+
+function renderMarketRecentTape() {
+  const target = byId("marketRecentTape");
+  const count = byId("marketRecentCount");
+  if (!target) return;
+  const rows = Array.isArray(state.marketCockpit?.recent_signals)
+    ? state.marketCockpit.recent_signals
+    : [];
+  if (count) count.textContent = `${rows.length} freezes`;
+  if (!rows.length) {
+    target.className = "feed-list empty-state";
+    target.innerHTML =
+      "<strong>No recent immutable decisions for this context.</strong>" +
+      "<p>Empty tape is not interpreted as low risk or inactivity failure.</p>";
+    return;
+  }
+
+  target.className = "feed-list";
+  target.innerHTML = rows.map((signal) => `
+    <button class="evidence-trigger" type="button"
+      data-evidence-id="${escapeHtml(signal.signal_freeze_identity)}"
+      aria-label="${escapeHtml(signal.symbol)} ${escapeHtml(signal.timeframe)} recent evidence aç">
+      <article class="feed-item">
+        <div class="feed-item-head">
+          <strong>${escapeHtml(upper(signal.exchange))}</strong>
+          <span class="${stateClass(signal.state)}">${escapeHtml(upper(signal.state))}</span>
+        </div>
+        <div class="feed-item-meta">
+          <span>${escapeHtml(upper(signal.direction))}</span>
+          <span>${escapeHtml(signal.setup_type)}</span>
+          <span>agreement ${escapeHtml(signal.confluence_score)}</span>
+          <span>${escapeHtml(formatTime(signal.frozen_at_ms))}</span>
+          <code>${escapeHtml(shortIdentity(signal.signal_freeze_identity))}</code>
+          <span class="evidence-open-cue">Evidence Room →</span>
+        </div>
+      </article>
+    </button>`).join("");
+}
+
+function renderMarketLayerSurface() {
+  const target = byId("marketLayerSurface");
+  if (!target) return;
+  const detail = state.marketSelectedDetail;
+  const layer = state.marketLayer;
+
+  if (!detail || detail.status !== "ready" || !detail.signal) {
+    target.className = "market-layer-surface empty-state";
+    target.innerHTML =
+      `<strong>${escapeHtml(layer)} layer has no exact selected provider proof.</strong>` +
+      "<p>No synthetic overlay is rendered.</p>";
+    return;
+  }
+
+  if (layer !== "PA") {
+    const labels = {
+      LIQ: "Liquidity / liquidation",
+      FLOW: "Order flow / CVD",
+      DERIV: "Derivatives / OI / funding / basis",
+      ONCHAIN: "On-chain",
+    };
+    target.className = "market-layer-surface market-layer-unavailable";
+    target.innerHTML = `
+      <span class="proof-section-label">${escapeHtml(layer)} / PRODUCT BINDING</span>
+      <strong>${escapeHtml(labels[layer] || layer)} · NOT EXPOSED</strong>
+      <p>
+        This accepted intelligence family is not bound to a point-in-time customer API
+        on this workspace yet. GALACTECH keeps the layer unavailable instead of
+        synthesizing evidence from unrelated fields.
+      </p>`;
+    return;
+  }
+
+  const methods = Array.isArray(detail.methodologies) ? detail.methodologies : [];
+  const priceAction = methods.find(
+    (item) => text(item?.methodology, "").toLowerCase() === "price_action"
+  );
+  const summaries = Array.isArray(detail.evidence_summary) ? detail.evidence_summary : [];
+  const geometry = detail.geometry;
+  target.className = "market-layer-surface market-layer-pa";
+  target.innerHTML = `
+    <div class="market-layer-head">
+      <div>
+        <span class="proof-section-label">PA / FROZEN SIGNAL EVIDENCE</span>
+        <strong>${escapeHtml(detail.signal.setup_type)}</strong>
+      </div>
+      <span class="${stateClass(detail.signal.direction)}">${escapeHtml(upper(detail.signal.direction))}</span>
+    </div>
+    <div class="market-pa-grid">
+      <div>
+        <span>METHOD STATE</span>
+        <strong>${escapeHtml(upper(priceAction?.resolved_direction, "UNRESOLVED"))}</strong>
+        <small>${escapeHtml(priceAction?.selected_count ?? 0)} selected / ${escapeHtml(priceAction?.source_count ?? 0)} source</small>
+      </div>
+      <div>
+        <span>ENTRY REFERENCE</span>
+        <strong>${geometry ? `${escapeHtml(geometry.entry_zone_low)} → ${escapeHtml(geometry.entry_zone_high)}` : "NOT FROZEN"}</strong>
+        <small>${geometry ? escapeHtml(geometry.entry_reference_model) : "no synthetic zone"}</small>
+      </div>
+      <div>
+        <span>INVALIDATION</span>
+        <strong>${geometry ? escapeHtml(geometry.invalidation_price) : "NOT FROZEN"}</strong>
+        <small>${geometry ? escapeHtml(geometry.invalidation_trigger) : "no synthetic invalidation"}</small>
+      </div>
+    </div>
+    <ul class="market-evidence-summary">
+      ${summaries.length
+        ? summaries.map((item) => `<li>${escapeHtml(item)}</li>`).join("")
+        : "<li>No concise PA summary was frozen.</li>"}
+    </ul>`;
+}
+
+function renderMarketWorkspace() {
+  const selection = state.marketSelection;
+  const cockpit = state.marketCockpit;
+  const detail = state.marketSelectedDetail;
+  const title = byId("marketWorkspaceTitle");
+  const contextTag = byId("marketContextTag");
+  const providerTag = byId("marketProviderTag");
+  const chart = byId("marketFrozenChart");
+
+  if (title) {
+    title.textContent = selection
+      ? `${selection.symbol} · ${selection.timeframe}`
+      : "Select a market context";
+  }
+  if (contextTag) {
+    contextTag.textContent = selection
+      ? `CONTEXT · ${selection.symbol} / ${selection.timeframe}`
+      : "CONTEXT · UNAVAILABLE";
+  }
+  if (providerTag) {
+    providerTag.textContent = detail?.signal
+      ? `PROVIDER · ${upper(detail.signal.exchange)}`
+      : "PROVIDER · —";
+  }
+
+  if (chart) {
+    if (!selection) {
+      chart.className = "empty-state";
+      chart.innerHTML =
+        "<strong>No observed market context.</strong><p>Chart evidence is not invented.</p>";
+    } else if (!cockpit) {
+      chart.className = "empty-state";
+      chart.innerHTML =
+        "<strong>Frozen market context loading…</strong><p>Waiting for exact cockpit evidence.</p>";
+    } else if (!detail || detail.status !== "ready") {
+      chart.className = "empty-state";
+      chart.innerHTML =
+        "<strong>Selected provider detail unavailable.</strong><p>No synthetic candle chart is rendered.</p>";
+    } else {
+      chart.className = "market-frozen-chart";
+      chart.innerHTML = frozenChartMarkup(detail);
+    }
+  }
+
+  renderMarketProviderList();
+  renderMarketRecentTape();
+  renderMarketLayerSurface();
+}
+
 function renderMarketTruth() {
   const target = byId("marketTruth");
   if (!target) return;
-  const rows = Array.isArray(state.radar?.items) ? state.radar.items : [];
-  const symbols = [...new Set(rows.map((item) => item?.latest?.symbol || item?.symbol).filter(Boolean))];
-  target.innerHTML = [
+  const detail = state.marketSelectedDetail;
+  const cockpitStatus = upper(state.marketCockpit?.status, "UNAVAILABLE");
+  const paReady = detail?.status === "ready";
+  const rows = [
     ["Radar API", state.radar ? upper(state.radar.status, "READY") : "UNAVAILABLE"],
-    ["Observed market contexts", String(rows.length)],
-    ["Observed symbols", symbols.length ? symbols.join(" · ") : "NONE IN CURRENT EVIDENCE"],
-    ["LIQ / FLOW / DERIV / ONCHAIN overlays", "NOT WIRED IN FOUNDATION"],
-  ].map(([label, value]) =>
+    ["Asset cockpit", cockpitStatus],
+    ["Provider freezes", String(state.marketProviderDetails.length)],
+    ["PA", paReady ? "AVAILABLE · FROZEN SIGNAL DETAIL" : "INSUFFICIENT"],
+    ["LIQ", "NOT EXPOSED TO PRODUCT API"],
+    ["FLOW", "NOT EXPOSED TO PRODUCT API"],
+    ["DERIV", "NOT EXPOSED TO PRODUCT API"],
+    ["ONCHAIN", "NOT EXPOSED TO PRODUCT API"],
+  ];
+  target.innerHTML = rows.map(([label, value]) =>
     `<div class="truth-row"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>`
   ).join("");
 }
@@ -1026,6 +1465,7 @@ function renderSystem() {
 function renderAll() {
   renderCommand();
   renderRadar();
+  renderMarketWorkspace();
   renderMarketTruth();
   renderEpoch();
   renderPaper();
@@ -1096,6 +1536,7 @@ async function runBoot() {
     marketReady ? "ready" : "muted"
   );
 
+  await initializeMarketWorkspace({ reload: true });
   renderAll();
 
   const failed = results.filter((result) => !result.ok).map((result) => result.key);
@@ -1121,6 +1562,7 @@ function startPeriodicRefresh() {
       loadEndpoint("archive", API.archive),
     ]);
     if (results[0].ok) applyHealthTruth(results[0].data);
+    await initializeMarketWorkspace({ reload: state.route === "markets" });
     renderAll();
     if (!results.slice(1).every((item) => item.ok)) {
       setTruthChip("freshnessTruth", "FRESHNESS · PARTIAL EVIDENCE", "muted");
