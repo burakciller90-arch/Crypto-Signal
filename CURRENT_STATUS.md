@@ -10,6 +10,30 @@ REAL_CAPITAL: 0
 ## Active v1.1 frontier — read before historical sections
 
 
+### 2026-09-23 14:26 +0300 — PHASE 15 R21 CANONICAL 1,000 USDT PAPER FUND ACCEPTED
+
+- PR **#917** introduced canonical Epoch 2 activation/accounting; post-merge exact-main exposed a WAL/SHM sidecar immutability overconstraint.
+- PR **#918** corrected that boundary without changing Epoch 2 accounting semantics.
+- Authoritative accepted runs:
+  - R21 branch run `35853872557` focused + full repository PASS;
+  - R21 post-merge hotfix run `35854325501` focused + full repository PASS;
+  - exact-main Stage10 after hotfix `35854477095` SUCCESS.
+- Main R21 commits:
+  - `bb8e6c3b02553ff127a262090b5dd2eab2c414a1` canonical Epoch 2 accounting;
+  - `8ea6587a33ea3373037573363fcb553e72e5e58f` WAL/SHM sidecar boundary hotfix.
+- Epoch 1 remains a separate immutable 100 USDT legacy ledger; strict read-only validation and canonical DB raw-byte equality are preserved.
+- Epoch 2 activates separately at 1,000 USDT with exact Core 600 / Tactical 300 / Opportunity Reserve 100.
+- Per-vault and consolidated accounting cover cash, positions/exposure, NAV, realized/unrealized PnL, drawdown, explicit execution costs, turnover, expectancy and outcome distribution.
+- Empty trade history remains NOT_YET_MEASURED rather than fabricated performance.
+- Snapshot lineage is append-only; stale previous identity, historical backfill, same-timestamp fork, UPDATE and DELETE fail closed.
+- Parent high-water NAV is derived from parent history, not summed independently-timed vault peaks.
+- No leverage, borrowing, martingale, cross-vault transfer, exchange/order or real-money authority.
+- **Phase 15 infrastructure exit is satisfied.**
+- Current locked frontier: **Phase 16 — R21.5 Shadow Lab 2.0**.
+- CONTINUITY_PAUSED_BY_USER remains dominant. REAL_CAPITAL=0.
+
+
+
 ### 2026-09-23 14:03 +0300 — PHASE 14 R20.5 DECISION PROOF / LIVE INTELLIGENCE FEED ACCEPTED
 
 - PR **#916** accepted the current-main R20.5 Decision Proof / Live Intelligence Feed contract.
