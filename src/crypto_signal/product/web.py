@@ -54,6 +54,7 @@ DEFAULT_CANDLE_CACHE_PATH = (
     / "live_base_15m_cache.sqlite3"
 )
 STATIC_DIR = Path(__file__).with_name("static")
+GALACTECH_DIR = Path(__file__).with_name("galactech")
 PRODUCT_VERSION = "full-version-contextual-evidence/1"
 
 
@@ -171,10 +172,19 @@ def create_app(
         StaticFiles(directory=str(STATIC_DIR)),
         name="static",
     )
+    app.mount(
+        "/galactech-static",
+        StaticFiles(directory=str(GALACTECH_DIR)),
+        name="galactech-static",
+    )
 
     @app.get("/", include_in_schema=False)
     def index() -> FileResponse:
         return FileResponse(STATIC_DIR / "index.html")
+
+    @app.get("/galactech", include_in_schema=False)
+    def galactech_preview() -> FileResponse:
+        return FileResponse(GALACTECH_DIR / "index.html")
 
     @app.get("/api/health")
     def health() -> dict[str, object]:

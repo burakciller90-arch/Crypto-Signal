@@ -1,0 +1,331 @@
+<!doctype html>
+<html lang="tr" data-theme="galactech">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#06080C">
+  <title>GALACTECH // CRYPTO SIGNAL</title>
+  <link rel="stylesheet" href="/galactech-static/app.css">
+</head>
+<body data-ui-version="galactech-v1.1-foundation">
+  <a class="skip-link" href="#mainContent">Ana içeriğe geç</a>
+
+  <div id="coldBoot" class="cold-boot" role="status" aria-live="polite" aria-atomic="true">
+    <div class="boot-card">
+      <div class="brand-lockup brand-lockup-boot">
+        <span class="brand-mark" aria-hidden="true">G</span>
+        <div>
+          <strong>GALACTECH</strong>
+          <span>// CRYPTO SIGNAL</span>
+        </div>
+      </div>
+      <p class="boot-caption">TRUTH-FIRST SYSTEM CHECK</p>
+      <ul class="boot-list" aria-label="Başlangıç kontrolleri">
+        <li><span>PRODUCT API</span><strong id="bootApi">VERIFYING</strong></li>
+        <li><span>LEDGER</span><strong id="bootLedger">VERIFYING</strong></li>
+        <li><span>MARKET EVIDENCE</span><strong id="bootMarket">VERIFYING</strong></li>
+        <li><span>REAL CAPITAL</span><strong id="bootCapital">VERIFYING</strong></li>
+      </ul>
+      <p id="bootNote" class="boot-note">Ölçülmeyen durum ONLINE diye gösterilmez.</p>
+    </div>
+  </div>
+
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="Ana navigasyon">
+      <div class="brand-lockup">
+        <span class="brand-mark" aria-hidden="true">G</span>
+        <div>
+          <strong>GALACTECH</strong>
+          <span>// CRYPTO SIGNAL</span>
+        </div>
+      </div>
+
+      <nav id="primaryNav" class="primary-nav" aria-label="Ürün bölümleri">
+        <button class="nav-item is-active" type="button" data-route="command" aria-current="page">
+          <span class="nav-index">01</span><span class="nav-label">COMMAND</span>
+        </button>
+        <button class="nav-item" type="button" data-route="markets">
+          <span class="nav-index">02</span><span class="nav-label">MARKETS</span>
+        </button>
+        <button class="nav-item" type="button" data-route="intelligence">
+          <span class="nav-index">03</span><span class="nav-label">INTELLIGENCE</span>
+        </button>
+        <button class="nav-item" type="button" data-route="capital">
+          <span class="nav-index">04</span><span class="nav-label">CAPITAL</span>
+        </button>
+        <button class="nav-item" type="button" data-route="archive">
+          <span class="nav-index">05</span><span class="nav-label">ARCHIVE</span>
+        </button>
+        <button class="nav-item" type="button" data-route="performance">
+          <span class="nav-index">06</span><span class="nav-label">PERFORMANCE</span>
+        </button>
+        <button class="nav-item" type="button" data-route="learn">
+          <span class="nav-index">07</span><span class="nav-label">LEARN</span>
+        </button>
+        <button class="nav-item" type="button" data-route="system">
+          <span class="nav-index">08</span><span class="nav-label">SYSTEM</span>
+        </button>
+      </nav>
+
+      <div class="authority-card">
+        <div class="authority-row">
+          <span class="truth-dot truth-dot-safe" aria-hidden="true"></span>
+          <strong>READ ONLY</strong>
+        </div>
+        <p>Paper & research surface</p>
+        <code>REAL_CAPITAL=0</code>
+      </div>
+    </aside>
+
+    <div class="surface">
+      <header class="topbar">
+        <div class="asset-focus" aria-label="Varlık odağı">
+          <span class="eyebrow">ASSET FOCUS</span>
+          <div class="segmented" role="group" aria-label="Varlık seçimi">
+            <button class="segment is-active" type="button" data-asset="ALL" aria-pressed="true">ALL</button>
+            <button class="segment" type="button" data-asset="BTC" aria-pressed="false">BTC</button>
+            <button class="segment" type="button" data-asset="ETH" aria-pressed="false">ETH</button>
+            <button class="segment" type="button" data-asset="SOL" aria-pressed="false">SOL</button>
+          </div>
+        </div>
+
+        <div class="truth-bar" role="status" aria-live="polite" aria-atomic="false">
+          <span id="apiTruth" class="truth-chip truth-chip-muted">API · VERIFYING</span>
+          <span id="freshnessTruth" class="truth-chip truth-chip-muted">FRESHNESS · NOT MEASURED</span>
+          <span id="latencyTruth" class="truth-chip truth-chip-muted">LATENCY · NOT MEASURED</span>
+          <span class="truth-chip truth-chip-safe">REAL CAPITAL · DISABLED</span>
+        </div>
+      </header>
+
+      <main id="mainContent" class="main-content" tabindex="-1">
+        <section id="view-command" class="route-view is-active" data-route-view="command" aria-labelledby="commandTitle">
+          <div class="page-head page-head-command">
+            <div>
+              <span class="page-code">01 / COMMAND</span>
+              <h1 id="commandTitle">Mission Control</h1>
+              <p>Gürültüyü değil, kanıtlanan durum değişimini gösterir.</p>
+            </div>
+            <div class="authority-badge">
+              <span>AUTHORITY</span>
+              <strong>OBSERVE</strong>
+              <small>no order path</small>
+            </div>
+          </div>
+
+          <div class="situation-grid" aria-label="Durum özeti">
+            <article class="metric-card metric-card-primary">
+              <span>IMMUTABLE FORECASTS</span>
+              <strong id="metricForecasts">—</strong>
+              <small id="metricForecastsNote">ledger evidence bekleniyor</small>
+            </article>
+            <article class="metric-card">
+              <span>ATTENTION STATES</span>
+              <strong id="metricAttention">—</strong>
+              <small>WATCH + ACTIVE</small>
+            </article>
+            <article class="metric-card">
+              <span>EVENT RISK</span>
+              <strong id="metricEventRisk">NOT WIRED</strong>
+              <small>yalnız gerçek event evidence</small>
+            </article>
+            <article class="metric-card">
+              <span>PAPER NAV</span>
+              <strong id="metricPaperNav">—</strong>
+              <small id="metricPaperNavNote">runtime evidence bekleniyor</small>
+            </article>
+          </div>
+
+          <div class="command-layout">
+            <article class="panel feed-panel">
+              <div class="panel-head">
+                <div>
+                  <span class="eyebrow">INTELLIGENCE FEED</span>
+                  <h2>Meaningful state transitions</h2>
+                </div>
+                <span class="tag">IMMUTABLE</span>
+              </div>
+              <div id="commandFeed" class="feed-list empty-state">
+                <strong>Kanıt akışı hazırlanıyor.</strong>
+                <p>API sonucu gelmeden sinyal kartı uydurulmaz.</p>
+              </div>
+            </article>
+
+            <aside class="panel radar-panel">
+              <div class="panel-head">
+                <div>
+                  <span class="eyebrow">CRITICAL RADAR</span>
+                  <h2>Material only</h2>
+                </div>
+                <span class="tag tag-amber">PRIORITY</span>
+              </div>
+              <div id="criticalRadar" class="radar-list empty-state">
+                <strong>Radar kanıtı bekleniyor.</strong>
+                <p>EVENT_BLOCK / feed degradation / material anomaly dışındaki gürültü burada yer almaz.</p>
+              </div>
+            </aside>
+          </div>
+
+          <article class="panel system-strip">
+            <div>
+              <span class="eyebrow">TRUTH CONTRACT</span>
+              <strong>No fake LIVE · no fake latency · no fake probability</strong>
+            </div>
+            <div id="commandTruthDetails" class="system-strip-values">
+              <span>Confluence ≠ probability</span>
+              <span>Backtest ≠ untouched-forward</span>
+              <span>Cash is a position</span>
+            </div>
+          </article>
+        </section>
+
+        <section id="view-markets" class="route-view" data-route-view="markets" aria-labelledby="marketsTitle" hidden>
+          <div class="page-head">
+            <div>
+              <span class="page-code">02 / MARKETS</span>
+              <h1 id="marketsTitle">Market Workspace</h1>
+              <p>Katmanlar ayrı tutulur; eksik evidence boşluk olarak kalır.</p>
+            </div>
+          </div>
+          <div class="layer-toolbar" aria-label="Piyasa katmanları">
+            <button type="button" class="layer-toggle is-active" data-layer="PA" aria-pressed="true">PA</button>
+            <button type="button" class="layer-toggle" data-layer="LIQ" aria-pressed="false">LIQ</button>
+            <button type="button" class="layer-toggle" data-layer="FLOW" aria-pressed="false">FLOW</button>
+            <button type="button" class="layer-toggle" data-layer="DERIV" aria-pressed="false">DERIV</button>
+            <button type="button" class="layer-toggle" data-layer="ONCHAIN" aria-pressed="false">ONCHAIN</button>
+          </div>
+          <article class="panel workspace-placeholder">
+            <span class="eyebrow">FOUNDATION SLICE</span>
+            <h2>Professional chart workspace</h2>
+            <p>Bu foundation adımında data contract ve layer discipline hazır. Chart/evidence overlays sonraki ürün slice’ında bağlanacak.</p>
+            <div id="marketTruth" class="truth-table"></div>
+          </article>
+        </section>
+
+        <section id="view-intelligence" class="route-view" data-route-view="intelligence" aria-labelledby="intelligenceTitle" hidden>
+          <div class="page-head">
+            <div>
+              <span class="page-code">03 / INTELLIGENCE</span>
+              <h1 id="intelligenceTitle">Evidence Intelligence</h1>
+              <p>SIMPLE ve PRO aynı kanıtı anlatır; basit görünüm daha emin konuşamaz.</p>
+            </div>
+          </div>
+          <div class="dual-mode">
+            <button type="button" class="mode-button is-active" data-explain-mode="simple" aria-pressed="true">SIMPLE</button>
+            <button type="button" class="mode-button" data-explain-mode="pro" aria-pressed="false">PRO</button>
+          </div>
+          <article class="panel workspace-placeholder">
+            <span class="eyebrow">R23 CONTRACT READY</span>
+            <h2>Explainable Intelligence surface</h2>
+            <p id="intelligenceTruth">Accepted Decision Proof adapters are not yet exposed as a customer endpoint on this preview surface.</p>
+          </article>
+        </section>
+
+        <section id="view-capital" class="route-view" data-route-view="capital" aria-labelledby="capitalTitle" hidden>
+          <div class="page-head">
+            <div>
+              <span class="page-code">04 / CAPITAL</span>
+              <h1 id="capitalTitle">Capital Center</h1>
+              <p>1,000 USDT Epoch 2 constitution · Core / Tactical / Opportunity Reserve.</p>
+            </div>
+          </div>
+          <div id="capitalOverview" class="capital-grid">
+            <article class="panel workspace-placeholder">
+              <span class="eyebrow">PAPER FUND</span>
+              <h2>Canonical capital truth</h2>
+              <p>Program contract okunuyor. Runtime bağlı değilse NAV uydurulmaz.</p>
+            </article>
+          </div>
+        </section>
+
+        <section id="view-archive" class="route-view" data-route-view="archive" aria-labelledby="archiveTitle" hidden>
+          <div class="page-head">
+            <div>
+              <span class="page-code">05 / ARCHIVE</span>
+              <h1 id="archiveTitle">Archive / Proof Wall</h1>
+              <p>Issuance snapshot geriye dönük değiştirilmez; outcome yanına eklenir.</p>
+            </div>
+          </div>
+          <div class="filter-row" role="group" aria-label="Arşiv filtreleri">
+            <button type="button" class="filter-button is-active" data-filter="all">ALL</button>
+            <button type="button" class="filter-button" data-filter="winner">WINNERS</button>
+            <button type="button" class="filter-button" data-filter="loser">LOSERS</button>
+            <button type="button" class="filter-button" data-filter="expired">EXPIRED</button>
+            <button type="button" class="filter-button" data-filter="invalidated">INVALIDATED</button>
+            <button type="button" class="filter-button" data-filter="ambiguous">AMBIGUOUS</button>
+            <button type="button" class="filter-button" data-filter="not_evaluable">ABSTAIN / N-E</button>
+          </div>
+          <div id="archiveWall" class="proof-grid empty-state">
+            <strong>Proof Wall evidence bekleniyor.</strong>
+            <p>Winner ve loser aynı archive truth yüzeyinde tutulur.</p>
+          </div>
+        </section>
+
+        <section id="view-performance" class="route-view" data-route-view="performance" aria-labelledby="performanceTitle" hidden>
+          <div class="page-head">
+            <div>
+              <span class="page-code">06 / PERFORMANCE</span>
+              <h1 id="performanceTitle">Performance & Trust</h1>
+              <p>Backtest, walk-forward ve untouched-forward asla tek etiketsiz metriğe karışmaz.</p>
+            </div>
+          </div>
+          <div class="trust-grid">
+            <article class="panel workspace-placeholder">
+              <span class="eyebrow">FORECAST TRUTH</span>
+              <h2>Outcome cohorts</h2>
+              <p>R24 projection customer adapter’ı sonraki slice’ta bağlanacak.</p>
+            </article>
+            <article class="panel workspace-placeholder">
+              <span class="eyebrow">CALIBRATION</span>
+              <h2>Brier / Reliability</h2>
+              <p>Kalibrasyon yoksa yüzde yok. Ölçüm yoksa NOT MEASURED.</p>
+            </article>
+          </div>
+        </section>
+
+        <section id="view-learn" class="route-view" data-route-view="learn" aria-labelledby="learnTitle" hidden>
+          <div class="page-head">
+            <div>
+              <span class="page-code">07 / LEARN</span>
+              <h1 id="learnTitle">Learn From Evidence</h1>
+              <p>Kavramları mümkün olduğunda gerçek karar evidence’ına bağla.</p>
+            </div>
+          </div>
+          <div id="learnGrid" class="learn-grid empty-state">
+            <strong>Eğitim kataloğu bekleniyor.</strong>
+            <p>CVD, absorption, abstain ve invalidation gibi kavramlar burada açılacak.</p>
+          </div>
+        </section>
+
+        <section id="view-system" class="route-view" data-route-view="system" aria-labelledby="systemTitle" hidden>
+          <div class="page-head">
+            <div>
+              <span class="page-code">08 / SYSTEM</span>
+              <h1 id="systemTitle">System Truth</h1>
+              <p>Sağlık yalnız ölçülen kanıtla yeşil olur.</p>
+            </div>
+          </div>
+          <div id="systemGrid" class="system-grid">
+            <article class="health-card"><span>PRODUCT API</span><strong id="systemApi">VERIFYING</strong></article>
+            <article class="health-card"><span>LEDGER</span><strong id="systemLedger">VERIFYING</strong></article>
+            <article class="health-card"><span>MARKET TAPE</span><strong>NOT EXPOSED</strong></article>
+            <article class="health-card"><span>COLD ARCHIVE</span><strong>NOT EXPOSED</strong></article>
+            <article class="health-card"><span>EVENT FEED</span><strong>NOT EXPOSED</strong></article>
+            <article class="health-card"><span>LATENCY</span><strong>NOT MEASURED</strong></article>
+            <article class="health-card"><span>REAL CAPITAL</span><strong class="safe-text">DISABLED</strong></article>
+            <article class="health-card"><span>AUTHORITY</span><strong>READ ONLY</strong></article>
+          </div>
+        </section>
+      </main>
+
+      <footer class="footer">
+        <span>GALACTECH // CRYPTO SIGNAL</span>
+        <span>truth-first · evidence-bound · read-only</span>
+        <code>REAL_CAPITAL=0</code>
+      </footer>
+    </div>
+  </div>
+
+  <script src="/galactech-static/app.js" defer></script>
+</body>
+</html>
