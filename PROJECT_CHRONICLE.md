@@ -3826,3 +3826,20 @@ or production deployment occurred. REAL_CAPITAL=0.
 
 Next: consolidate all accepted M2 slices onto current main, run integrated hosted acceptance,
 then advance to M3 Order Flow / Absorption 2.0.
+
+
+---
+
+## 2026-09-23 — M2 INTEGRATED MAIN / GALACTECH A11Y GATE / WAKE DELIVERY RECONCILIATION
+
+State-first reconciliation against exact current GitHub and read-only UID504 evidence:
+
+- PR #818 consolidated already-accepted M1 Market Tape and M2 Liquidity/Liquidation Slices 1–6B onto current main; squash merge `02687ea5a3ecd544c216a301d2e0ef342c7c5828`. Authoritative hosted run `35791451348` PASS (focused and full tests, Ruff, mypy, JS/freshness, real PyArrow). CI pytest-asyncio dependency follow-up commit `b15379162a2f01e341b4dbacd2f3c74736850fab` is part of current main. Collector remains disabled; no production SSD/runtime mutation.
+- Old stacked M2 PRs are historical accepted source; do not re-import or rebuild them.
+- The next Intelligence frontier, M3 temporal observed public-trade Delta/CVD, is already under active development in draft PR #858; avoid duplicate branches or parallel modifications to its authoritative head. Existing Stage 8 order-flow microstructure is accepted and must be reused.
+- Product PR #819 now has the accepted accessibility/performance code on an exact-current-main ancestry. Focused and integrated full hosted run `35801045515` PASS; after temporary workflow removal at `d447c2d055396043b555a51f81c15227f9d85681`, final diff includes only static HTML/CSS/JS and dashboard tests. PR is review-ready but not yet merged or deployed.
+- Read-only 02:55 +0300 rollingstate run `35799709128` observed UID504 timer PID1613 alive, `RETRYING`, pending event `crypto-20m-rolling:4bc50caa43074cf2:5`, failure_count111, no pause. Relay showed many `WAITING_FOR_EXACT_OBSERVATION` retries. Five-minute watchdog classified fresh heartbeat as healthy despite stalled delivery.
+- At 03:09 +0300, read-only run `35800800867` observed **the same pending event finally receipted OBSERVED**; timer state RUNNING, failure_count=0, pending empty, exact last receipt-to-next due delta 1200 seconds, both pause latches absent, relay RUNNING on exact current-chat URL. The outage recovered without resetting generation or introducing a duplicate wake owner.
+- Open issue #856 tracks the correctness gap: watchdog liveness must be distinguished from delivery progress. Do not claim permanent delivery guarantee from heartbeat or reset an observed pending event blindly.
+- User-disabled Cursor worker/Composer remains prohibited. Safe GitHub/hosted development may continue; production/human-impact changes remain separately gated. `REAL_CAPITAL=0`.
+
