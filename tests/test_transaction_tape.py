@@ -7,10 +7,8 @@ from pathlib import Path
 
 import pytest
 from test_decision_proof_live_feed import ISSUED_AT, _forecast, _slices
-from test_position_sizing_intelligence import (
-    _context as sizing_context,
-    _vault as sizing_vault,
-)
+from test_position_sizing_intelligence import _context as sizing_context
+from test_position_sizing_intelligence import _vault as sizing_vault
 
 from crypto_signal.ledger.serialization import canonical_sha256
 from crypto_signal.paper.epoch2_accounting import (
