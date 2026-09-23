@@ -9,6 +9,23 @@ REAL_CAPITAL: 0
 
 ## Active v1.1 frontier — read before historical sections
 
+### 2026-09-23 21:23 +0300 — R25 DECISION/CAPITAL/REPLAY RAIL ACCEPTED / OPERATIONAL TRUTH CLOSED / OLD CUTOVER SUPERSEDED
+
+- Current accepted main at closeout: `c8d3fd1e065a7eeea9397c92e120182adc60f98e`.
+- Exact-main Stage10 hosted run **35901921054 SUCCESS**.
+- R25 Slice 16 Operational Runtime Truth was accepted through PR **#953** and merged as `35a7b446278c745c8daf2571df52adb91db7cb0b`; subsequent exact-main Stage10 remained green.
+- The accepted R25 rail now carries exact immutable lineage from accepted M2–M6/Event/R19 evidence through Unified Decision Runtime -> R20 Forecast -> R20.5 Decision Proof -> Capital Science -> source-bound Position Sizing -> explicit reviewed R22 intent preview -> isolated append-only Shadow Intent Journal -> deterministic restart/replay -> immutable Shadow Cycle Manifest -> restart-safe persisted cycle -> exact Forecast-to-Capital-Cycle Product link -> persisted Runtime Replay Observation -> GALACTECH runtime replay truth -> component-wise Operational Truth.
+- R25 deliberately preserves scientific boundaries: context-only liquidity/derivatives/on-chain evidence is not forced into bullish/bearish votes; missing risk/probability/runtime evidence stays missing; CI acceptance is not relabelled as deployed runtime observation.
+- Product runtime truth is now separated by source instead of one readiness score: Decision Evidence, Shadow Intent Journal, Shadow Cycle Manifest, Runtime Replay Observation, canonical Epoch 2 and GALACTECH exposure.
+- Exact replay truth can be labelled **VERIFIED** only from a persisted runtime observation proving first INSERTED/INSERTED followed by exact IDEMPOTENT/IDEMPOTENT replay on the same immutable runtime-instance identity.
+- Exact Forecast -> Capital Cycle drill-down uses lower-case SHA256 forecast identity only; symbol/time/direction/setup proximity cannot create a linkage.
+- All accepted R25 development remains authority-closed: no exchange/broker order path, credentials, leverage, borrowing, canonical Epoch 2 mutation authority or real capital. **REAL_CAPITAL=0**.
+- Old production-cutover candidate PR **#932** was mechanically reconciled as stale (20 commits behind current R25 main), explicitly **CLOSED / UNMERGED**, and must not be deployed.
+- **Current locked frontier:** create a fresh latest-main GALACTECH root-cutover candidate from the accepted R25 main, preserve the previous UI at `/legacy`, and run a new hosted cutover + integrated release-candidate acceptance.
+- That candidate preparation/testing is development-only. Physical UID504 production merge/deploy, live release acceptance, wake/lease changes and any human-impact activation remain a separate explicit user-authority boundary.
+- UID504 wake pause remains authoritative and untouched. Cursor workers remain disabled.
+
+
 
 ### 2026-09-23 18:22 +0300 — v1.1 PRODUCTION CUTOVER CANDIDATE HOSTED-READY / AUTHORITY GATED
 
