@@ -49,16 +49,16 @@ jobs:
             # A mismatch is a temporary read race or corruption, never new-event authority.
             if [ -f "$STATE_FILE" ]; then
               STATE_PENDING="$(/usr/bin/python3 - "$STATE_FILE" <<'PY'
-import json
-import sys
-try:
-    with open(sys.argv[1], encoding="utf-8") as handle:
-        state = json.load(handle)
-    pending = state.get("pending_event_id")
-    print(pending if isinstance(pending, str) else "__INVALID__")
-except (OSError, ValueError, AttributeError):
-    print("__INVALID__")
-PY
+          import json
+          import sys
+          try:
+              with open(sys.argv[1], encoding="utf-8") as handle:
+                  state = json.load(handle)
+              pending = state.get("pending_event_id")
+              print(pending if isinstance(pending, str) else "__INVALID__")
+          except (OSError, ValueError, AttributeError):
+              print("__INVALID__")
+          PY
               )"
             else
               STATE_PENDING="__MISSING__"
