@@ -34,6 +34,9 @@ from crypto_signal.product.decision_proof import (
 )
 from crypto_signal.product.web import create_app
 
+AS_OF = 12_100
+ISSUED_AT = AS_OF + 100
+
 
 def _sha(seed: str) -> str:
     return canonical_sha256({"seed": seed})
