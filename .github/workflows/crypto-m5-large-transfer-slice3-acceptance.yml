@@ -1,0 +1,45 @@
+name: Crypto M5 Large Transfer Slice3 Acceptance (Temporary)
+
+on:
+  push:
+    branches:
+      - v1.1-m5-large-transfer-clusters-v1-slice3
+    paths:
+      - "src/crypto_signal/data/large_transfers.py"
+      - "src/crypto_signal/intelligence/large_transfer_clusters.py"
+      - "tests/test_large_transfer_clusters.py"
+      - "docs/M5_LARGE_TRANSFER_CLUSTERS_SLICE3.md"
+      - ".github/workflows/crypto-m5-large-transfer-slice3-acceptance.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  hosted:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install exact hosted dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+          python -m pip install "pytest>=8.4" "pytest-asyncio>=1.2" "ruff>=0.13" "mypy>=1.18" "pyarrow==22.0.0"
+      - name: M5 large-transfer focused acceptance
+        run: |
+          python -m pytest -q tests/test_large_transfer_clusters.py tests/test_wallet_cohort_registry.py tests/test_exchange_flow_engine.py
+          python -m ruff check src/crypto_signal/data/large_transfers.py src/crypto_signal/intelligence/large_transfer_clusters.py tests/test_large_transfer_clusters.py
+          python -m mypy src/crypto_signal/data/large_transfers.py src/crypto_signal/intelligence/large_transfer_clusters.py
+          echo "M5_LARGE_TRANSFER_SLICE3_FOCUSED_PASS=YES"
+      - name: Full repository acceptance
+        run: |
+          python -m pytest -q
+          python -m ruff check src tests ops/verify_stage10_integrated.py
+          python -m mypy src ops/verify_stage10_integrated.py
+          node --check src/crypto_signal/product/static/freshness.js
+          node --check src/crypto_signal/product/static/app.js
+          node tests/js/test_product_freshness.js
+          echo "M5_LARGE_TRANSFER_SLICE3_FULL_PASS=YES"
