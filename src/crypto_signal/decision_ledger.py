@@ -300,6 +300,241 @@ class ImmutableDecisionEvidenceLedger:
             )
         return DecisionLedgerWriteDisposition.INSERTED
 
+    def append_issuance_bundle(
+        self,
+        forecast: ImmutableForecast,
+        proof: DecisionProofSnapshot,
+        event: LiveIntelligenceFeedEvent,
+    ) -> DecisionLedgerWriteDisposition:
+        """Atomically persist one R20 -> R20.5 issuance lineage."""
+        if forecast.production_authority or forecast.real_capital != REAL_CAPITAL:
+            raise DecisionLedgerConflictError(
+                "R20 forecast violates decision-ledger authority boundary"
+            )
+        if (
+            proof.production_authority
+            or not proof.read_only
+            or proof.real_capital != REAL_CAPITAL
+        ):
+            raise DecisionLedgerConflictError(
+                "Decision Proof violates decision-ledger authority boundary"
+            )
+        if (
+            event.production_authority
+            or not event.read_only
+            or event.real_capital != REAL_CAPITAL
+        ):
+            raise DecisionLedgerConflictError(
+                "Live Intelligence Feed event violates authority boundary"
+            )
+        if event.kind is not LiveFeedEventKind.FORECAST_ISSUED:
+            raise DecisionLedgerConflictError(
+                "issuance bundle requires FORECAST_ISSUED event"
+            )
+        if event.resolution_identity is not None:
+            raise DecisionLedgerConflictError(
+                "issuance bundle cannot carry resolution identity"
+            )
+        if (
+            proof.forecast_identity != forecast.forecast_identity
+            or event.forecast_identity != forecast.forecast_identity
+            or event.proof_identity != proof.proof_identity
+        ):
+            raise DecisionLedgerConflictError(
+                "issuance bundle forecast/proof/event lineage mismatch"
+            )
+        if (
+            proof.signal_freeze_identity != forecast.signal_freeze_identity
+            or proof.asset != forecast.asset
+            or proof.symbol != forecast.symbol
+            or proof.timeframe != forecast.timeframe
+            or proof.issued_at_ms != forecast.issued_at_ms
+            or event.event_at_ms != forecast.issued_at_ms
+        ):
+            raise DecisionLedgerConflictError(
+                "issuance bundle market/timestamp lineage mismatch"
+            )
+
+        forecast_payload, forecast_digest = _serialized(forecast)
+        proof_payload, proof_digest = _serialized(proof)
+        event_payload, event_digest = _serialized(event)
+
+        self.initialize()
+        with self._connect_rw() as connection:
+            connection.execute("PRAGMA foreign_keys=ON")
+            connection.execute("BEGIN IMMEDIATE")
+
+            existing_forecast = connection.execute(
+                """
+                SELECT payload_json, payload_sha256
+                FROM r20_forecasts
+                WHERE forecast_identity = ?
+                """,
+                (forecast.forecast_identity,),
+            ).fetchone()
+            existing_proof = connection.execute(
+                """
+                SELECT proof_identity, payload_json, payload_sha256
+                FROM r20_5_decision_proofs
+                WHERE forecast_identity = ? OR proof_identity = ?
+                LIMIT 1
+                """,
+                (forecast.forecast_identity, proof.proof_identity),
+            ).fetchone()
+            existing_event = connection.execute(
+                """
+                SELECT event_identity, payload_json, payload_sha256
+                FROM r20_5_live_feed_events
+                WHERE event_identity = ?
+                   OR (forecast_identity = ? AND kind = ?)
+                LIMIT 1
+                """,
+                (
+                    event.event_identity,
+                    forecast.forecast_identity,
+                    LiveFeedEventKind.FORECAST_ISSUED.value,
+                ),
+            ).fetchone()
+
+            present = (
+                existing_forecast is not None,
+                existing_proof is not None,
+                existing_event is not None,
+            )
+            if any(present):
+                if not all(present):
+                    raise DecisionLedgerConflictError(
+                        "partial immutable issuance bundle already exists"
+                    )
+                assert existing_forecast is not None
+                assert existing_proof is not None
+                assert existing_event is not None
+                exact = (
+                    str(existing_forecast[0]) == forecast_payload
+                    and str(existing_forecast[1]) == forecast_digest
+                    and str(existing_proof[0]) == proof.proof_identity
+                    and str(existing_proof[1]) == proof_payload
+                    and str(existing_proof[2]) == proof_digest
+                    and str(existing_event[0]) == event.event_identity
+                    and str(existing_event[1]) == event_payload
+                    and str(existing_event[2]) == event_digest
+                )
+                if exact:
+                    return DecisionLedgerWriteDisposition.UNCHANGED
+                raise DecisionLedgerConflictError(
+                    "immutable issuance bundle identity conflict"
+                )
+
+            last_forecast = connection.execute(
+                """
+                SELECT forecast_identity, issued_at_ms
+                FROM r20_forecasts
+                ORDER BY issued_at_ms DESC, forecast_identity DESC
+                LIMIT 1
+                """
+            ).fetchone()
+            if last_forecast is not None and (
+                forecast.issued_at_ms,
+                forecast.forecast_identity,
+            ) <= (int(last_forecast[1]), str(last_forecast[0])):
+                raise DecisionLedgerConflictError(
+                    "R20 forecast append would backfill or fork chronology"
+                )
+
+            last_event = connection.execute(
+                """
+                SELECT event_identity, event_at_ms
+                FROM r20_5_live_feed_events
+                ORDER BY event_at_ms DESC, event_identity DESC
+                LIMIT 1
+                """
+            ).fetchone()
+            if last_event is not None and (
+                event.event_at_ms,
+                event.event_identity,
+            ) <= (int(last_event[1]), str(last_event[0])):
+                raise DecisionLedgerConflictError(
+                    "live feed append would backfill or fork chronology"
+                )
+
+            connection.execute(
+                """
+                INSERT INTO r20_forecasts (
+                    forecast_identity,
+                    signal_freeze_identity,
+                    asset,
+                    symbol,
+                    timeframe,
+                    issued_at_ms,
+                    source_as_of_ms,
+                    payload_json,
+                    payload_sha256
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    forecast.forecast_identity,
+                    forecast.signal_freeze_identity,
+                    forecast.asset,
+                    forecast.symbol,
+                    forecast.timeframe,
+                    forecast.issued_at_ms,
+                    forecast.source_as_of_ms,
+                    forecast_payload,
+                    forecast_digest,
+                ),
+            )
+            connection.execute(
+                """
+                INSERT INTO r20_5_decision_proofs (
+                    proof_identity,
+                    forecast_identity,
+                    signal_freeze_identity,
+                    asset,
+                    symbol,
+                    timeframe,
+                    issued_at_ms,
+                    payload_json,
+                    payload_sha256
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    proof.proof_identity,
+                    proof.forecast_identity,
+                    proof.signal_freeze_identity,
+                    proof.asset,
+                    proof.symbol,
+                    proof.timeframe,
+                    proof.issued_at_ms,
+                    proof_payload,
+                    proof_digest,
+                ),
+            )
+            connection.execute(
+                """
+                INSERT INTO r20_5_live_feed_events (
+                    event_identity,
+                    forecast_identity,
+                    proof_identity,
+                    resolution_identity,
+                    kind,
+                    event_at_ms,
+                    payload_json,
+                    payload_sha256
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    event.event_identity,
+                    event.forecast_identity,
+                    event.proof_identity,
+                    None,
+                    event.kind.value,
+                    event.event_at_ms,
+                    event_payload,
+                    event_digest,
+                ),
+            )
+        return DecisionLedgerWriteDisposition.INSERTED
+
     def append_resolution(
         self,
         resolution: ForecastResolution,
