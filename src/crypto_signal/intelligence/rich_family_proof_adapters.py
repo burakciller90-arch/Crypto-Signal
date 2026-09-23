@@ -159,6 +159,7 @@ def enrich_accepted_m2_m5(
             and liquidation_analysis.latest_mark_age_ms <= _LIQUIDATION_MAX_AGE_MS
         )
         if liquidation_ok:
+            assert liquidation_analysis.latest_mark_age_ms is not None
             freshness = _freshness(
                 liquidation_analysis.latest_mark_age_ms,
                 _LIQUIDATION_MAX_AGE_MS,
