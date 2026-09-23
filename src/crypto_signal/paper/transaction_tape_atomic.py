@@ -8,6 +8,7 @@ from __future__ import annotations
 import json
 import sqlite3
 from dataclasses import dataclass
+from decimal import Decimal
 from pathlib import Path
 from typing import cast
 
@@ -809,32 +810,40 @@ class R22Epoch2AtomicTape:
 
     @staticmethod
     def _raw_financial_state(raw: dict[str, object]) -> tuple[object, ...]:
-        return tuple(
-            raw.get(key)
-            for key in (
-                "starting_cash_usdt",
-                "cash_usdt",
-                "positions",
-                "marked_exposure_usdt",
-                "nav_usdt",
-                "realized_pnl_usdt",
-                "unrealized_pnl_usdt",
-                "high_water_nav_usdt",
-                "drawdown_fraction",
-                "fee_usdt",
-                "spread_usdt",
-                "slippage_usdt",
-                "turnover_notional_usdt",
-                "turnover_fraction",
-                "closed_trade_count",
-                "win_count",
-                "loss_count",
-                "breakeven_count",
-                "expectancy_usdt_per_closed_trade",
-                "outcome_distribution",
-                "metrics_status",
-                "real_capital",
-            )
+        decimal_keys = (
+            "starting_cash_usdt",
+            "cash_usdt",
+            "marked_exposure_usdt",
+            "nav_usdt",
+            "realized_pnl_usdt",
+            "unrealized_pnl_usdt",
+            "high_water_nav_usdt",
+            "drawdown_fraction",
+            "fee_usdt",
+            "spread_usdt",
+            "slippage_usdt",
+            "turnover_notional_usdt",
+            "turnover_fraction",
+        )
+        decimals = tuple(
+            Decimal(str(raw[key]))
+            for key in decimal_keys
+        )
+        expectancy_raw = raw.get("expectancy_usdt_per_closed_trade")
+        expectancy = (
+            None if expectancy_raw is None else Decimal(str(expectancy_raw))
+        )
+        return (
+            *decimals,
+            raw.get("positions"),
+            raw.get("closed_trade_count"),
+            raw.get("win_count"),
+            raw.get("loss_count"),
+            raw.get("breakeven_count"),
+            expectancy,
+            raw.get("outcome_distribution"),
+            raw.get("metrics_status"),
+            raw.get("real_capital"),
         )
 
     @staticmethod
