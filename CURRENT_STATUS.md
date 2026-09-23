@@ -10,6 +10,29 @@ REAL_CAPITAL: 0
 ## Active v1.1 frontier — read before historical sections
 
 
+### 2026-09-23 12:56 +0300 — R19 CALIBRATED PROBABILITY EVIDENCE GATE ACCEPTED / PHASE 9 CLOSED
+
+- PR **#907** accepted the current-main R19 untouched-forward probability calibration gate.
+- Authoritative hosted branch run `35845579080` focused + full repository PASS.
+- Existing Alpha Factory research gate `35845430284` PASS on the accepted R19 test suite.
+- PR #907 squash-merged to main as `82802a2c1abdb5911ec9dffc0ac914a5904bd8a2`.
+- Exact-main gates:
+  - Alpha Factory research gate `35845763500` SUCCESS;
+  - Stage10 hosted gate `35845763450` SUCCESS.
+- R19 freezes exact binary event definition, asset/timeframe/regime/horizon, model version, calibrator version, walk-forward fit identity, training/evaluation cutoffs and explicit sample/class support.
+- Numeric probability is frozen before outcome as an immutable prediction identity.
+- Untouched holdout membership uses frozen prediction identities, not outcome-derived membership.
+- LIVE_UNTOUCHED_FORWARD is the only admissible R19 evidence class.
+- Brier, baseline Brier, Brier skill, reliability bins, ECE and max calibration gap remain explicit.
+- Insufficient/weak evidence remains NOT_CALIBRATED.
+- Even after acceptance, a caller cannot invent a new percentage: authorization copies only the exact value of a later frozen prediction from the accepted model/calibrator identity.
+- Historical draft PR #723 was closed as superseded by PR #907/current main.
+- **Phase 9 R19 infrastructure exit is satisfied.** Real user-visible probability remains conditional on actual accepted evidence for the exact scope; otherwise NOT CALIBRATED.
+- Current locked frontier: **Phase 10 — Smart Capital Allocator**.
+- CONTINUITY_PAUSED_BY_USER remains dominant. REAL_CAPITAL=0.
+
+
+
 ### 2026-09-23 12:28 +0300 — M6 PHASE 8 CLOSED / FORWARD THRESHOLD RESEARCH ACCEPTED
 
 - PR **#903** accepted chronological untouched-forward comparison for the locked 70/75/80/85 threshold hypotheses.
