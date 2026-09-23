@@ -13,6 +13,7 @@ const API = Object.freeze({
   performance: "/api/performance",
   decisionStatus: "/api/decision-evidence/status",
   shadowRail: "/api/shadow-decision-rail/status",
+  operationalTruth: "/api/r25/operational-truth",
   liveFeed: "/api/intelligence-feed?limit=100",
   decisionProof: (identity) => `/api/decision-proof/${encodeURIComponent(identity)}`,
   shadowForecastCycle: (identity) =>
@@ -51,6 +52,7 @@ const state = {
   performance: null,
   decisionStatus: null,
   shadowRail: null,
+  operationalTruth: null,
   liveFeed: null,
   marketLayer: "PA",
   marketSelection: null,
@@ -2053,6 +2055,61 @@ function setSystemValue(id, value, kind = "neutral") {
   );
 }
 
+function operationalComponentMarkup(label, component) {
+  const status = upper(component?.status, "UNAVAILABLE");
+  const ready = status === "READY" || status === "EXPOSED";
+  const reason = text(component?.reason, "");
+  const detail = reason
+    ? ` · ${reason}`
+    : "";
+  return `
+    <div class="truth-row">
+      <span>${escapeHtml(label)}</span>
+      <strong class="${ready ? "state-positive" : "state-watch"}">
+        ${escapeHtml(status)}${escapeHtml(detail)}
+      </strong>
+    </div>`;
+}
+
+function renderOperationalTruth() {
+  const target = byId("r25OperationalTruthGrid");
+  const tag = byId("r25OperationalTruthTag");
+  const note = byId("r25OperationalTruthNote");
+  const data = state.operationalTruth;
+  if (!target || !tag || !note) return;
+
+  if (!data || data.status !== "ready") {
+    tag.textContent = "RUNTIME EVIDENCE · UNAVAILABLE";
+    tag.className = "tag state-watch";
+    target.innerHTML = `
+      <div class="truth-row"><span>R25 OPERATIONAL TRUTH</span><strong class="state-watch">UNAVAILABLE</strong></div>`;
+    note.textContent =
+      "Operational Truth endpoint unavailable. Missing evidence is not promoted to READY.";
+    return;
+  }
+
+  const components = data.components || {};
+  target.innerHTML = [
+    ["DECISION EVIDENCE", components.decision_evidence],
+    ["SHADOW INTENT JOURNAL", components.shadow_intent_journal],
+    ["SHADOW CYCLE MANIFEST", components.shadow_cycle_manifest],
+    ["RUNTIME REPLAY OBSERVATION", components.runtime_replay_observation],
+    ["CANONICAL EPOCH 2", components.canonical_epoch2],
+    ["GALACTECH PRODUCT", components.galactech_product],
+  ].map(([label, component]) =>
+    operationalComponentMarkup(label, component)
+  ).join("");
+
+  const allPresent = data.all_required_runtime_evidence_present === true;
+  tag.textContent = allPresent
+    ? "ALL REQUIRED RUNTIME EVIDENCE PRESENT"
+    : "PARTIAL RUNTIME EVIDENCE";
+  tag.className = `tag ${allPresent ? "state-positive" : "state-watch"}`;
+  note.textContent = allPresent
+    ? "All required R25 runtime evidence sources are independently readable. This is not production or capital-mutation authority."
+    : "At least one required R25 runtime source is unavailable. Partial evidence is shown explicitly; production readiness is not inferred.";
+}
+
 function renderSystem() {
   const health = state.health || {};
   const radar = state.radar || {};
@@ -2390,6 +2447,7 @@ function renderAll() {
   renderEducation();
   renderIntelligence();
   renderSystem();
+  renderOperationalTruth();
 }
 
 function applyHealthTruth(data) {
@@ -2445,6 +2503,7 @@ async function runBoot() {
     loadEndpoint("performance", API.performance),
     loadEndpoint("decisionStatus", API.decisionStatus),
     loadEndpoint("shadowRail", API.shadowRail),
+    loadEndpoint("operationalTruth", API.operationalTruth),
     loadEndpoint("liveFeed", API.liveFeed),
   ]);
 
