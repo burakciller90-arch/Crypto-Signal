@@ -173,6 +173,39 @@ def test_future_admission_and_future_or_late_measurement_cannot_rewrite_freeze()
     assert changed == baseline
 
 
+def test_future_invalid_membership_or_forward_contract_cannot_rewrite_history() -> None:
+    admitted = _admission("cluster-a", admitted_at_ms=1_000)
+    baseline_obs = _forward(
+        admitted,
+        start_ms=1_000,
+        end_ms=6_000,
+        value="0.20",
+    )
+    baseline = build_wallet_cohort_evidence_freeze(
+        (admitted,),
+        (baseline_obs,),
+        as_of_ms=7_000,
+    )
+
+    future_duplicate_cluster = _admission(
+        "cluster-a",
+        admitted_at_ms=8_000,
+    )
+    future_invalid_forward = _forward(
+        future_duplicate_cluster,
+        start_ms=7_500,
+        end_ms=8_500,
+        value="9.99",
+    )
+    changed = build_wallet_cohort_evidence_freeze(
+        (admitted, future_duplicate_cluster),
+        (baseline_obs, future_invalid_forward),
+        as_of_ms=7_000,
+    )
+
+    assert changed == baseline
+
+
 def test_forward_measurement_cannot_start_before_member_admission() -> None:
     admission = _admission("cluster-a", admitted_at_ms=5_000)
     invalid = _forward(
