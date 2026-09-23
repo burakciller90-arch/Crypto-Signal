@@ -4406,3 +4406,34 @@ Accepted matrix truth:
 Remaining M6 locked frontier: compare 70/75/80/85 on chronological forward evidence
 without retrospective winner selection or automatic promotion. User wake/lease pause
 remains authoritative.
+
+
+---
+
+## 2026-09-23 — 12:28 M6 PHASE 8 CLOSED / FORWARD THRESHOLD RESEARCH ACCEPTED
+
+PR #903 completed the locked Phase 8 threshold-research requirement.
+
+Acceptance:
+- hosted threshold run `35842778192` focused + full PASS;
+- Alpha Factory branch research gate `35842771989` PASS;
+- squash merge `6fb192f24fd8755b4e6f5bd341bbefbfcac5cfca`;
+- exact-main Alpha Factory gate `35843052031` SUCCESS;
+- exact-main Stage10 `35843052086` SUCCESS.
+
+Accepted scientific semantics:
+- threshold set 70/75/80/85 freezes before the chronological untouched-forward window;
+- existing Alpha Factory UNTOUCHED_FORWARD partition contract is reused;
+- exact M6 snapshot identities define forward membership;
+- outcome evidence becomes available after each decision and must mature inside the frozen window;
+- only MEASURED snapshots satisfying a threshold are counted as threshold activations;
+- CONFLICT/ABSTAIN/PARTIAL/NOT_EVALUABLE snapshots remain blocked;
+- activation rate, positive-net fraction and net-R summaries are descriptive forward
+  evidence, not calibrated probability;
+- no threshold winner is selected and no threshold auto-promotes.
+
+Phase 8 M6 exit is satisfied: five-family 100-point research matrix + mandatory
+chronological forward threshold-comparison capability are accepted. REAL_CAPITAL=0.
+
+Next locked intelligence frontier: Phase 9 R19 calibrated probability. User wake/lease
+pause remains authoritative.
