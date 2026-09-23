@@ -5,8 +5,10 @@ on:
     branches: [main]
     paths:
       - ".github/workflows/crypto-mac-command.yml"
+      - ".github/workflows/crypto-wc0-state-report.yml"
       - ".github/workflows/world-class-wc0-dashboard-restart-handoff-hosted.yml"
       - "tests/test_wc0_runtime_wiring.py"
+      - "tests/test_wc0_state_report_workflow.py"
   workflow_dispatch:
 
 permissions:
@@ -28,8 +30,8 @@ jobs:
           python -m pip install "pytest>=8.4" "pytest-asyncio>=1.2" "ruff>=0.13" "mypy>=1.18"
       - name: Focused WC0 restart handoff acceptance
         run: |
-          python -m pytest -q tests/test_wc0_runtime_wiring.py tests/test_wc0_production_import_isolation.py
-          python -m ruff check tests/test_wc0_runtime_wiring.py tests/test_wc0_production_import_isolation.py
+          python -m pytest -q tests/test_wc0_runtime_wiring.py tests/test_wc0_production_import_isolation.py tests/test_wc0_state_report_workflow.py
+          python -m ruff check tests/test_wc0_runtime_wiring.py tests/test_wc0_production_import_isolation.py tests/test_wc0_state_report_workflow.py
           echo "WC0_DASHBOARD_RESTART_HANDOFF_FOCUSED_PASS=YES"
       - name: Whole-repository regression
         run: |
