@@ -9,6 +9,21 @@ REAL_CAPITAL: 0
 
 ## Active v1.1 frontier — read before historical sections
 
+
+### 2026-09-23 — VERIFIED LIVE FRONTIER / M2 MAIN INTEGRATION
+
+This section supersedes older historical “consolidate M2” notes below. Reconcile actual Git/PR/runtime state before acting.
+
+- **M2 integrated development source is already on `main`**: PR #818 squash-merged as `02687ea5a3ecd544c216a301d2e0ef342c7c5828`. Accepted integrated hosted run `35791451348` PASS: focused M1/M2 tests/Ruff/mypy, full repository pytest/Ruff/mypy/JS/freshness, and real PyArrow 22. The subsequent CI dependency fix is `b15379162a2f01e341b4dbacd2f3c74736850fab`.
+- M2 includes temporal liquidity, persistent liquidity structure, bounded sweep, observed liquidation heatmap, normalized liquidation persistence, disabled-by-default collector and Hot/Cold liquidation archive/replay. Historical stacked PRs #762/#777/#784/#789/#804/#809/#813 are accepted lineage already consolidated on main; **do not re-import/replay them**.
+- **M3 is the current Intelligence development frontier.** Open draft PR #858 (`v1.1-m3-temporal-order-flow-slice1`) already implements the first PIT-safe observed public-trade Delta/CVD slice. Inspect its latest head and authoritative hosted gate before changing it; do not create another Slice 1. Reuse the existing Stage 8 order-flow microstructure engine.
+- **GALACTECH Product #819** accessibility/responsive/reduced-motion/performance polish has authoritative hosted focused + full PASS run `35801045515` on code SHA `f4d41e271f1259d7bd0a6df5f864eba556991b41`. Temporary gate removed in `d447c2d055396043b555a51f81c15227f9d85681`; final PR diff contains only Product HTML/CSS/JS plus dashboard tests; PR is ready for review but **not merged into main** as of this reconciliation. No production UI cutover.
+- **Rolling-wake transport requires separate health assessment**: read-only 02:55 +0300 run `35799709128` found timer alive but `RETRYING` a single pending event with 111 failures; relay saw repeated exact-observation waits. Read-only 03:09 +0300 run `35800800867` subsequently confirmed that same pending event `OBSERVED`, failure_count=0, empty pending, receipt-to-next-due exactly 1200 seconds and both pause latches absent. Do not reset generation or create an independent duplicate sender.
+- Issue #856 remains open: the five-minute watchdog classified a fresh `RETRYING` timer as “healthy” based on heartbeat alone even when delivery was stalled. A running process is **not** proof that the latest message was delivered. Use exact receipts and pending age for delivery truth; do not infer permanent reliability from a single recovered event.
+- **No Cursor workers/Composer** per explicit user instruction. Use direct GitHub/hosted tests and narrowly scoped read-only UID504 checks.
+- **REAL_CAPITAL=0.** M2 production liquidation collector activation, Epoch 2 paper runtime cutover and Product production UI cutover are separate explicit human-impact gates. Safe independent development continues.
+
+
 ### EXECUTION TOOLING — CURSOR / COMPOSER DISABLED
 
 - User reaffirmed on 2026-09-23: **do not assign project work to Cursor workers or Cursor Composer**.
