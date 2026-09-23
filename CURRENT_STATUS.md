@@ -10,6 +10,26 @@ REAL_CAPITAL: 0
 ## Active v1.1 frontier — read before historical sections
 
 
+### 2026-09-23 13:09 +0300 — PHASE 10 SMART CAPITAL ALLOCATOR ACCEPTED
+
+- PR **#908** accepted the Epoch 2 Smart Capital Allocator research-envelope contract.
+- Authoritative branch hosted run `35846947767` focused + full repository PASS.
+- PR #908 merged to main as `92bc8979c68f402b9379fdd1bcba0b4f8c1de17e`.
+- Exact-main Stage10 run `35847111863` SUCCESS.
+- Reuses exact accepted Epoch 2 contract: 1,000 USDT parent, Core 600 / Tactical 300 / Opportunity Reserve 100.
+- Core requires CLEAR Event Risk plus fully measured/full-coverage/no-opposition/no-conflict M6 evidence.
+- Tactical requires CLEAR Event Risk plus complete 1m/5m liquidity/order-flow/market-quality/CVD/absorption/sweep evidence.
+- Opportunity Reserve requires CLEAR Event Risk plus explicit spread/liquidity/price-discovery/feed recovery evidence.
+- Any non-CLEAR Event Risk state forces HOLD_CASH.
+- Cash is valid; no forced deployment or cross-vault borrowing/transfer.
+- Slice 1 does not size notional and does not create the Epoch 2 ledger.
+- Pre-activation NAV/cash/exposure/PnL/drawdown/cost/turnover remain explicitly NOT_ACTIVATED.
+- **Phase 10 decision-contract exit is satisfied.**
+- Current locked frontier: **Phase 11 — Position Sizing Intelligence**.
+- CONTINUITY_PAUSED_BY_USER remains dominant. REAL_CAPITAL=0.
+
+
+
 ### 2026-09-23 12:56 +0300 — R19 CALIBRATED PROBABILITY EVIDENCE GATE ACCEPTED / PHASE 9 CLOSED
 
 - PR **#907** accepted the current-main R19 untouched-forward probability calibration gate.
