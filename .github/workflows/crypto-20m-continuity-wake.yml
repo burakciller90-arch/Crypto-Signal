@@ -29,6 +29,7 @@ jobs:
           PIDFILE="$RUNTIME/rolling_wake.pid"
           STATUS="$RUNTIME/rolling_wake_status"
           HEARTBEAT="$RUNTIME/rolling_wake_heartbeat"
+          STATE_FILE="$RUNTIME/rolling_wake_state.json"
           STATE="/Volumes/Crypto-504/Crypto-Signal/Development/runtime/continuity"
           SHARED="/Users/Shared/.crypto-signal-wake-relay"
 
@@ -44,17 +45,66 @@ jobs:
             TIMER_STATE="$(sed -n 's/^state=//p' "$STATUS" 2>/dev/null | head -1)"
             INTERVAL="$(sed -n 's/^interval_seconds=//p' "$STATUS" 2>/dev/null | head -1)"
             PENDING="$(sed -n 's/^pending_event_id=//p' "$STATUS" 2>/dev/null | head -1)"
+            # The persisted rolling state is authority, not the lagging status snapshot.
+            # A mismatch is a temporary read race or corruption, never new-event authority.
+            if [ -f "$STATE_FILE" ]; then
+              STATE_PENDING="$(/usr/bin/python3 - "$STATE_FILE" <<'PY'
+import json
+import sys
+try:
+    with open(sys.argv[1], encoding="utf-8") as handle:
+        state = json.load(handle)
+    pending = state.get("pending_event_id")
+    print(pending if isinstance(pending, str) else "__INVALID__")
+except (OSError, ValueError, AttributeError):
+    print("__INVALID__")
+PY
+              )"
+            else
+              STATE_PENDING="__MISSING__"
+            fi
+            if [ "$STATE_PENDING" = "__INVALID__" ]; then
+              echo "GITHUB_WATCHDOG_ROLLING_STATE_CORRUPT=YES"
+              exit 2
+            fi
+            if [ "$STATE_PENDING" = "__MISSING__" ]; then
+              echo "GITHUB_WATCHDOG_ROLLING_STATE_MISSING=YES"
+              # No persisted state means no proof that a second event is safe.
+              exit 2
+            fi
+            if [ "$PENDING" != "$STATE_PENDING" ]; then
+              echo "GITHUB_WATCHDOG_PENDING_SNAPSHOT_CONFLICT=YES"
+              echo "GITHUB_FALLBACK_SKIPPED_UNCERTAIN_PENDING=YES"
+              exit 2
+            fi
+            PENDING="$STATE_PENDING"
+
             HEALTHY=0
-            if [ -n "$PID" ] && kill -0 "$PID" >/dev/null 2>&1 \
+            EXACT_TIMER_ALIVE=0
+            if [[ "$PID" =~ ^[0-9]+$ ]] && kill -0 "$PID" >/dev/null 2>&1; then
+              TIMER_UID="$(ps -p "$PID" -o uid= 2>/dev/null | tr -d ' ' || true)"
+              TIMER_CMD="$(ps -p "$PID" -o command= 2>/dev/null || true)"
+              if [ "$TIMER_UID" = "$(id -u)" ] && printf '%s' "$TIMER_CMD" | grep -F "$TIMER" >/dev/null; then
+                EXACT_TIMER_ALIVE=1
+              fi
+            fi
+            if [ "$EXACT_TIMER_ALIVE" = "1" ] \
               && [[ "$HB" =~ ^[0-9]+$ ]] && [ "$INTERVAL" = "1200" ]; then
               AGE="$((NOW-HB))"
               echo "ROLLING_TIMER_HEARTBEAT_AGE_SECONDS=$AGE"
-              if [ "$AGE" -ge 0 ] && [ "$AGE" -le 30 ] \
+              # run_wake can legitimately block for up to 60s during transport timeout.
+              # Do not kill a live, exact-owned timer after a transient 30-60s pause.
+              if [ "$AGE" -ge 0 ] && [ "$AGE" -le 90 ] \
                 && [[ "$TIMER_STATE" =~ ^(RUNNING|RETRYING|WAITING_FOR_RUNTIME|PAUSED)$ ]]; then
                 HEALTHY=1
               fi
             fi
-            if [ "$HEALTHY" = "1" ]; then
+            if [ "$HEALTHY" = "1" ] || { [ -n "$PENDING" ] && [ "$EXACT_TIMER_ALIVE" = "1" ]; }; then
+              # Even a stale heartbeat is not authority to kill a timer that
+              # owns a persisted, unresolved wake. Classify the SAME pending event.
+              if [ "$HEALTHY" != "1" ]; then
+                echo "GITHUB_WATCHDOG_HEARTBEAT_STALE_WITH_PENDING=YES"
+              fi
               echo "GITHUB_WATCHDOG_TIMER_ALIVE=YES"
               DELIVERY_STATE="$(/usr/bin/python3 "$GITHUB_WORKSPACE/ops/continuity/watchdog_delivery_health.py" "$STATUS" "$NOW")"
               echo "GITHUB_WATCHDOG_DELIVERY_STATE=$DELIVERY_STATE"
@@ -90,6 +140,10 @@ jobs:
             fi
 
             echo "GITHUB_WATCHDOG_TIMER_HEALTHY=NO"
+            if [ -n "$PENDING" ] && [ "$EXACT_TIMER_ALIVE" = "1" ]; then
+              echo "GITHUB_WATCHDOG_EXISTING_PENDING_TIMER_PRESERVED=YES"
+              exit 2
+            fi
             if [ -f "$TIMER" ]; then
               if [ -n "$PID" ] && kill -0 "$PID" >/dev/null 2>&1; then
                 TIMER_UID="$(ps -p "$PID" -o uid= 2>/dev/null | tr -d ' ' || true)"
