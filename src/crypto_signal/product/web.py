@@ -521,7 +521,7 @@ def create_app(
             manifest = R25ShadowCycleManifest(selected_shadow_cycle_path)
             snapshot = manifest.verify_read_only()
             latest = manifest.read_latest(limit=limit)
-        except ValueError as exc:
+        except (TypeError, ValueError) as exc:
             raise HTTPException(status_code=500, detail=str(exc)) from exc
         return _json(
             {
