@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import sqlite3
 from decimal import Decimal
 from pathlib import Path
 
@@ -117,8 +118,6 @@ def test_shadow_decision_api_exposes_only_verified_persisted_runtime_truth(
 def test_shadow_decision_api_fails_closed_on_wrong_database_shape(
     tmp_path: Path,
 ) -> None:
-    import sqlite3
-
     signal_path = tmp_path / "signals.sqlite3"
     seed_ledger(signal_path)
     wrong = tmp_path / "wrong.shadow-intent.sqlite3"
