@@ -4726,3 +4726,33 @@ Accepted semantics:
 
 Phase 17 exit is satisfied. Next locked frontier: Phase 18 R23 Explainable Intelligence.
 User wake/lease pause remains authoritative.
+
+
+---
+
+## 2026-09-23 — 16:24 PHASE 18 R23 EXPLAINABLE INTELLIGENCE ACCEPTED
+
+PR #922 completed the locked Phase 18 same-evidence explanation layer.
+
+Acceptance:
+- exact-head branch run `35866576141` focused + full repository PASS at
+  `c4b54fe6adde71d19b98fb0fbb1a4df1e77bbf53`;
+- squash merge `fa579820fcfc96f41a900f5215933df50eca2c10`;
+- exact-main Stage10 `35866741951` SUCCESS.
+
+Accepted semantics:
+- SIMPLE and PRO are deterministic projections of one immutable Decision Proof;
+- every SIMPLE line shares exact slice identity/availability/verdict with PRO;
+- SIMPLE cannot turn missing evidence into confirmation or contradiction into support;
+- PRO surfaces the locked technical domains and exact source quality/timestamps/freshness/
+  evidence identities/summary codes without inventing absent numeric measurements;
+- CVD/delta/absorption, order-book imbalance, liquidity/liquidations, OI/funding/basis,
+  event risk and PA/methodology are represented as the technical components of their
+  accepted proof domains;
+- Confluence score never becomes probability;
+- calibrated probability is shown only when exact calibrated proof evidence exists;
+- no private reasoning, ledger/order/network authority or real capital;
+- REAL_CAPITAL=0.
+
+Phase 18 exit is satisfied. Next locked frontier: Phase 19 R24 Performance & Trust Center.
+User wake/lease pause remains authoritative.
