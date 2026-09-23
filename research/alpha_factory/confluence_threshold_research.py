@@ -7,7 +7,6 @@ from enum import StrEnum
 
 from crypto_signal.intelligence.confluence_matrix_v2 import (
     LOCKED_M6_THRESHOLD_HYPOTHESES,
-    M6_PROBABILITY_STATUS,
     ConfluenceMatrixPolicy,
     ConfluenceMatrixResolution,
     ConfluenceMatrixSnapshot,
