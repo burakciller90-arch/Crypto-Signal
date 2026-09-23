@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import sqlite3
 import time
 from pathlib import Path
 from typing import Any
@@ -25,6 +26,7 @@ from crypto_signal.paper.mission_control import (
     PaperMissionControlError,
     read_paper_mission_control_snapshot,
 )
+from crypto_signal.paper.shadow_intent_journal import R25ShadowIntentJournal
 from crypto_signal.product.education import (
     EducationLesson,
     EducationLookupMissing,
@@ -60,6 +62,12 @@ DEFAULT_DECISION_EVIDENCE_LEDGER_PATH = (
     / "runtime"
     / "decision"
     / "decision_evidence.sqlite3"
+)
+DEFAULT_SHADOW_INTENT_JOURNAL_PATH = (
+    Path("/Users/crypto-signal-agent/Crypto-Signal")
+    / "runtime"
+    / "paper"
+    / "r25.shadow-intent.sqlite3"
 )
 DEFAULT_CANDLE_CACHE_PATH = (
     Path("/Users/crypto-signal-agent/Crypto-Signal")
@@ -118,6 +126,7 @@ def create_app(
     learning_memory_path: Path | None = None,
     epoch2_ledger_path: Path | None = None,
     decision_evidence_path: Path | None = None,
+    shadow_intent_journal_path: Path | None = None,
 ) -> FastAPI:
     selected_path = ledger_path or Path(
         os.environ.get("CRYPTO_SIGNAL_LEDGER_PATH", str(DEFAULT_LEDGER_PATH))
@@ -182,6 +191,18 @@ def create_app(
     else:
         selected_decision_path = None
 
+    if shadow_intent_journal_path is not None:
+        selected_shadow_intent_path: Path | None = shadow_intent_journal_path
+    elif ledger_path is None:
+        selected_shadow_intent_path = Path(
+            os.environ.get(
+                "CRYPTO_SIGNAL_SHADOW_INTENT_JOURNAL_PATH",
+                str(DEFAULT_SHADOW_INTENT_JOURNAL_PATH),
+            )
+        )
+    else:
+        selected_shadow_intent_path = None
+
     selected_learning_memory_path = learning_memory_path
     if selected_learning_memory_path is None:
         learning_memory_env = os.environ.get("CRYPTO_SIGNAL_LEARNING_MEMORY_PATH")
@@ -207,6 +228,7 @@ def create_app(
     app.state.candle_cache_path = selected_candle_path
     app.state.learning_memory_path = selected_learning_memory_path
     app.state.decision_evidence_path = selected_decision_path
+    app.state.shadow_intent_journal_path = selected_shadow_intent_path
     app.state.reader = reader
 
     app.mount(
@@ -405,6 +427,58 @@ def create_app(
             {
                 "status": "ready",
                 "snapshot": snapshot,
+                "read_only": True,
+                "real_capital": 0,
+            }
+        )
+
+    @app.get("/api/shadow-decision/status")
+    def shadow_decision_status(
+        limit: int = Query(default=20, ge=1, le=100),
+    ) -> JSONResponse:
+        if (
+            selected_shadow_intent_path is None
+            or not selected_shadow_intent_path.exists()
+        ):
+            return _json(
+                {
+                    "status": "unavailable",
+                    "reason": "shadow_intent_runtime_not_configured",
+                    "journal_integrity_status": "NOT_PERSISTED",
+                    "restart_replay_runtime_status": "NOT_MEASURED",
+                    "capital_science_runtime_status": "NOT_PERSISTED",
+                    "canonical_epoch2_mutation": "NOT_AUTHORIZED",
+                    "latest": [],
+                    "read_only": True,
+                    "real_capital": 0,
+                }
+            )
+        try:
+            journal = R25ShadowIntentJournal(selected_shadow_intent_path)
+            snapshot = journal.verify_read_only()
+            latest = journal.read_latest_preview_summaries(limit=limit)
+        except (sqlite3.DatabaseError, ValueError) as exc:
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
+        reviewed_count = sum(
+            1 for item in latest if item.review_selection_identity is not None
+        )
+        return _json(
+            {
+                "status": "ready" if snapshot.record_count else "empty",
+                "journal": snapshot,
+                "latest": latest,
+                "journal_integrity_status": "VERIFIED",
+                "sizing_lineage_status": (
+                    "REFERENCED_BY_PREVIEW" if latest else "NOT_PERSISTED"
+                ),
+                "reviewed_preview_status": (
+                    f"{reviewed_count}_REVIEWED"
+                    if reviewed_count
+                    else "NOT_PERSISTED"
+                ),
+                "restart_replay_runtime_status": "NOT_MEASURED",
+                "capital_science_runtime_status": "NOT_PERSISTED",
+                "canonical_epoch2_mutation": "NOT_AUTHORIZED",
                 "read_only": True,
                 "real_capital": 0,
             }
