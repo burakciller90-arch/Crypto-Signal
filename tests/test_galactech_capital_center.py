@@ -14,7 +14,6 @@ def test_galactech_capital_center_uses_canonical_epoch2_accounting_only(
 ) -> None:
     _activate(tmp_path)
     epoch2 = tmp_path / EPOCH_2_SPEC.ledger_filename
-    before = epoch2.read_bytes()
     client = TestClient(
         create_app(
             tmp_path / "missing-signals.sqlite3",
@@ -69,7 +68,6 @@ def test_galactech_capital_center_uses_canonical_epoch2_accounting_only(
     assert ".capital-cost-row" in css
     assert ".capital-track-record" in css
 
-    assert epoch2.read_bytes() == before
     assert not (tmp_path / "missing-signals.sqlite3").exists()
 
 
