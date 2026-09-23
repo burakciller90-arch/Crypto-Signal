@@ -54,4 +54,5 @@ def test_production_dashboard_help_works_without_repo_root_on_pythonpath(
     assert result.returncode == 0, result.stderr
     assert "--runtime-replay-observation" in result.stdout
     assert "--market-tape" in result.stdout
+    assert "--market-tape-collector-runtime" in result.stdout
     assert "--cold-archive" in result.stdout
