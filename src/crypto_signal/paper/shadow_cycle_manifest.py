@@ -360,6 +360,31 @@ class R25ShadowCycleManifest:
             ).fetchall()
         return tuple(_record_from_row(row) for row in rows)
 
+    def read_latest_for_forecast(
+        self,
+        forecast_identity: str,
+    ) -> ShadowCycleManifestRecord | None:
+        """Return latest exact immutable cycle for one forecast SHA only."""
+        _require_sha256(forecast_identity, "shadow cycle forecast lookup")
+        self.verify_read_only()
+        uri = f"{self.path.resolve().as_uri()}?mode=ro"
+        with closing(sqlite3.connect(uri, uri=True)) as db:
+            row = db.execute(
+                f"""SELECT manifest_identity, cycle_identity, forecast_identity,
+                proof_identity, capital_bridge_identity, sizing_bridge_identity,
+                review_selection_identity, preview_identity,
+                journal_record_identity, vault_id, reviewed_method, event_at_ms,
+                previous_manifest_identity, payload_json, schema_version,
+                engine_version, canonical_epoch2_write_authority,
+                production_authority, real_capital
+                FROM {_RECORD_TABLE}
+                WHERE forecast_identity = ?
+                ORDER BY event_at_ms DESC, manifest_identity DESC
+                LIMIT 1""",
+                (forecast_identity,),
+            ).fetchone()
+        return None if row is None else _record_from_row(row)
+
     def verify_read_only(self) -> ShadowCycleManifestStatus:
         if not self.path.is_file():
             raise ValueError("shadow cycle manifest missing")
