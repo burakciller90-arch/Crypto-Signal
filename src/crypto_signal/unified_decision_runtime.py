@@ -34,10 +34,11 @@ from crypto_signal.product.decision_proof import (
     build_live_intelligence_feed_event,
 )
 from crypto_signal.signals.models import SignalDecision, SignalDirection
-from research.alpha_factory.probability_calibration_gate import (
-    CalibratedProbabilityEvidence,
-    CalibrationScope,
-)
+if TYPE_CHECKING:
+    from research.alpha_factory.probability_calibration_gate import (
+        CalibratedProbabilityEvidence,
+        CalibrationScope,
+    )
 
 REAL_CAPITAL = 0
 
