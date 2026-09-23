@@ -171,8 +171,18 @@ def _combined(
         samples,
         as_of_ms=as_of_ms,
     )
+    mark_reference = max(
+        (
+            item
+            for item in samples
+            if item.mark_price is not None
+            and max(item.event_at_ms, item.source_timestamp_ms, item.ingested_at_ms)
+            <= as_of_ms
+        ),
+        key=lambda item: (item.event_at_ms, item.observation_identity),
+    )
     liquidation = _liquidations(
-        samples[-1],
+        mark_reference,
         events,
         as_of_ms=as_of_ms,
         coverage_start_ms=coverage_start_ms,
