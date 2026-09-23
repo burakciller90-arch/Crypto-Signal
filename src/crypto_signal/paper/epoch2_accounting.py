@@ -13,7 +13,9 @@ from crypto_signal.paper.epochs import (
     EPOCH_1_SPEC,
     EPOCH_2_SPEC,
     PaperVaultId,
+    assert_legacy_epoch1_fund_creation,
 )
+from crypto_signal.paper.ledger import PaperFundLedger
 from crypto_signal.paper.models import (
     REAL_CAPITAL,
     PaperPosition,
@@ -476,6 +478,12 @@ class Epoch2CanonicalLedger:
         if snapshot.previous_snapshot_identity != expected_previous:
             raise ValueError("R21 consolidated previous lineage mismatch")
         vaults = self.read_latest_vault_snapshots(at_or_before_ms=snapshot.snapshot_at_ms)
+        if len(vaults) != len(PaperVaultId):
+            raise ValueError("R21 consolidated snapshot requires all three vaults")
+        if any(item.snapshot_at_ms != snapshot.snapshot_at_ms for item in vaults):
+            raise ValueError(
+                "R21 consolidated snapshot requires same-time vault snapshots"
+            )
         expected = tuple(sorted(item.snapshot_identity for item in vaults))
         if snapshot.vault_snapshot_identities != expected:
             raise ValueError("R21 consolidated snapshot must reference latest three vaults")
@@ -1026,6 +1034,11 @@ def initialize_epoch2_canonical_fund(
         raise ValueError("R21 Epoch1 and Epoch2 ledger paths must remain separate")
     if not epoch1_ledger_path.is_file():
         raise ValueError("R21 activation requires existing immutable Epoch1 ledger")
+    epoch1_ledger = PaperFundLedger(epoch1_ledger_path)
+    creations = epoch1_ledger.list_fund_creations()
+    if len(creations) != 1:
+        raise ValueError("R21 activation requires exactly one legacy Epoch1 fund")
+    assert_legacy_epoch1_fund_creation(creations[0])
     epoch1_before = epoch1_ledger_path.read_bytes()
     epoch1_sha = hashlib.sha256(epoch1_before).hexdigest()
     activation = build_epoch2_activation_record(
