@@ -115,6 +115,60 @@ class ShadowIntentJournalStatus:
             raise ValueError("shadow journal status cannot grant authority")
 
 
+@dataclass(frozen=True, slots=True)
+class ShadowIntentForecastLink:
+    record_identity: str
+    preview_identity: str
+    vault_id: PaperVaultId
+    event_at_ms: int
+    forecast_identity: str
+    proof_identity: str
+    sizing_bridge_identity: str
+    sizing_vault_result_identity: str
+    review_selection_identity: str | None
+    market_reference_identity: str | None
+    decision_identity: str | None
+    intent_identity: str
+    read_only_verified: bool = True
+    canonical_epoch2_write_authority: bool = False
+    production_authority: bool = False
+    real_capital: int = REAL_CAPITAL
+
+    def __post_init__(self) -> None:
+        for value, label in (
+            (self.record_identity, "shadow forecast record"),
+            (self.preview_identity, "shadow forecast preview"),
+            (self.forecast_identity, "shadow forecast identity"),
+            (self.proof_identity, "shadow forecast proof"),
+            (self.sizing_bridge_identity, "shadow forecast sizing bridge"),
+            (
+                self.sizing_vault_result_identity,
+                "shadow forecast sizing vault result",
+            ),
+            (self.intent_identity, "shadow forecast intent"),
+        ):
+            _require_sha256(value, label)
+        for value, label in (
+            (self.review_selection_identity, "shadow forecast review"),
+            (self.market_reference_identity, "shadow forecast market reference"),
+            (self.decision_identity, "shadow forecast decision"),
+        ):
+            if value is not None:
+                _require_sha256(value, label)
+        if not isinstance(self.vault_id, PaperVaultId):
+            raise TypeError("shadow forecast link requires canonical vault")
+        if self.event_at_ms < 0:
+            raise ValueError("shadow forecast event time must be non-negative")
+        if not self.read_only_verified:
+            raise ValueError("shadow forecast link requires verified journal")
+        if (
+            self.canonical_epoch2_write_authority
+            or self.production_authority
+            or self.real_capital != REAL_CAPITAL
+        ):
+            raise ValueError("shadow forecast link cannot grant authority")
+
+
 class R25ShadowIntentJournal:
     """Append-only SQLite journal isolated from canonical Epoch 2 databases."""
 
@@ -275,6 +329,76 @@ class R25ShadowIntentJournal:
             disposition=ShadowIntentAppendDisposition.INSERTED,
             record=record,
         )
+
+    def read_latest_for_forecast(
+        self,
+        forecast_identity: str,
+    ) -> ShadowIntentForecastLink | None:
+        """Return only an exact persisted forecast→preview identity match."""
+        _require_sha256(forecast_identity, "shadow forecast lookup")
+        self.verify_read_only()
+        uri = f"{self.path.resolve().as_uri()}?mode=ro"
+        with sqlite3.connect(uri, uri=True) as db:
+            rows = db.execute(
+                f"""SELECT record_identity, preview_identity, vault_id,
+                event_at_ms, previous_record_identity, payload_json,
+                schema_version, engine_version,
+                canonical_epoch2_write_authority,
+                production_authority, real_capital
+                FROM {_RECORD_TABLE}
+                ORDER BY event_at_ms DESC, record_identity DESC"""
+            ).fetchall()
+
+        for row in rows:
+            preview_identity = str(row[1])
+            payload_json = str(row[5])
+            if sha256_text(payload_json) != preview_identity:
+                raise ValueError("shadow forecast persisted preview digest mismatch")
+            raw = json.loads(payload_json)
+            if raw.get("forecast_identity") != forecast_identity:
+                continue
+            if (
+                raw.get("real_capital") != REAL_CAPITAL
+                or raw.get("production_authority") is not False
+                or raw.get("canonical_epoch2_write_authority") is not False
+                or raw.get("tape_write_authority") is not False
+            ):
+                raise ValueError("shadow forecast persisted authority mismatch")
+
+            record = _record_from_row(preview_identity, row)
+            return ShadowIntentForecastLink(
+                record_identity=record.record_identity,
+                preview_identity=preview_identity,
+                vault_id=record.vault_id,
+                event_at_ms=record.event_at_ms,
+                forecast_identity=_required_payload_sha(
+                    raw,
+                    "forecast_identity",
+                ),
+                proof_identity=_required_payload_sha(raw, "proof_identity"),
+                sizing_bridge_identity=_required_payload_sha(
+                    raw,
+                    "sizing_bridge_identity",
+                ),
+                sizing_vault_result_identity=_required_payload_sha(
+                    raw,
+                    "sizing_vault_result_identity",
+                ),
+                review_selection_identity=_optional_payload_sha(
+                    raw,
+                    "review_selection_identity",
+                ),
+                market_reference_identity=_optional_payload_sha(
+                    raw,
+                    "market_reference_identity",
+                ),
+                decision_identity=_optional_payload_sha(
+                    raw,
+                    "decision_identity",
+                ),
+                intent_identity=_required_payload_sha(raw, "intent_identity"),
+            )
+        return None
 
     def verify_read_only(self) -> ShadowIntentJournalStatus:
         if not self.path.is_file():
@@ -452,6 +576,27 @@ def _validate_preview_authority(preview: R22IntentPreview) -> None:
         or preview.real_capital != REAL_CAPITAL
     ):
         raise ValueError("shadow journal rejects authority-bearing preview")
+
+
+def _required_payload_sha(raw: dict[str, object], key: str) -> str:
+    value = raw.get(key)
+    if not isinstance(value, str):
+        raise ValueError(f"shadow forecast payload missing {key}")
+    _require_sha256(value, f"shadow forecast payload {key}")
+    return value
+
+
+def _optional_payload_sha(
+    raw: dict[str, object],
+    key: str,
+) -> str | None:
+    value = raw.get(key)
+    if value is None:
+        return None
+    if not isinstance(value, str):
+        raise ValueError(f"shadow forecast payload invalid {key}")
+    _require_sha256(value, f"shadow forecast payload {key}")
+    return value
 
 
 def _require_sha256(value: str, label: str) -> None:
