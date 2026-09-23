@@ -10,6 +10,16 @@ REAL_CAPITAL: 0
 ## Active v1.1 frontier — read before historical sections
 
 
+### 2026-09-23 03:30 +0300 — MECHANICAL RECONCILIATION
+
+- GALACTECH Product PR #819 is merged to main as `b8858083ed1d7b35980d5ee9a3b68db49dbe4f37`. Exact merged-main Stage10 run `35802326758` PASS. Development source only; **no production UI cutover**.
+- Rolling timer read-only UID504 run `35802186400` confirmed PID 1613 alive, heartbeat age 1 second, last event `crypto-20m-rolling:4bc50caa43074cf2:6` OBSERVED at `last_receipt_epoch=1790123133`, next due `1790124333` (exact +1200 seconds), empty pending, failure_count 0, exact current-chat binding, both pause latches NO. **Do not reset or reinstall the timer.**
+- Watchdog delivery-health PR #859 is **hosted accepted but still DRAFT / NOT MERGED**. Authoritative hosted run `35802247387` focused + full PASS including Ruff, mypy (146 files), JS/freshness. Its temporary hosted workflow was removed in `eb29376404378cf848ada28bb7723e34e73f26e4`; final diff is watchdog workflow, read-only classifier, tests. Review-ready transition has not completed; do not claim live watchdog fix or replay tests. Issue #856 remains open.
+- Current M3 development frontier: temporal price/CVD divergence and bounded absorption candidates, using real PIT candle/book and accepted M2 frozen evidence. M3 Slice 1 is already merged; do not repeat it.
+- User explicitly disabled Cursor workers/composer. Preserve REAL_CAPITAL=0 and separate human approval for production activation.
+
+
+
 ### 2026-09-23 — VERIFIED LIVE FRONTIER / M2 MAIN INTEGRATION
 
 This section supersedes older historical “consolidate M2” notes below. Reconcile actual Git/PR/runtime state before acting.
