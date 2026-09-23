@@ -1963,7 +1963,8 @@ function renderDecisionProofExtension(payload) {
   else body.appendChild(section);
 }
 
-function renderShadowCycleExtension(payload, replayPayload) {
+function renderShadowCycleExtension(payload) {
+  const replayPayload = arguments[1];
   const body = byId("evidenceDialogBody");
   if (!body) return;
 
@@ -2020,6 +2021,7 @@ function renderShadowCycleExtension(payload, replayPayload) {
       <p class="proof-footnote">
         Exact persisted identities only. Replay is VERIFIED only when the persisted
         runtime observation matches this exact cycle + manifest + preview lineage.
+        The manifest references a journal record identity; journal runtime presence is verified separately.
         This remains shadow/research evidence: not a fill, not canonical Epoch 2 NAV
         mutation, not an exchange order, and not a live trade.
       </p>`;
