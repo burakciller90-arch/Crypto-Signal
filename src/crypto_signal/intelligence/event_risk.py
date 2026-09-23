@@ -14,6 +14,15 @@ from crypto_signal.ledger.serialization import canonical_sha256
 
 EVENT_RISK_ENGINE_VERSION = "event-risk-calendar-v1-slice1/1"
 EVENT_RISK_FREEZE_SCHEMA_VERSION = "event-risk-calendar-freeze-v1/1"
+DEFAULT_REQUIRED_EVENT_CATEGORIES = (
+    EventCategory.INFLATION,
+    EventCategory.CENTRAL_BANK,
+    EventCategory.EMPLOYMENT,
+    EventCategory.REGULATORY,
+    EventCategory.EXCHANGE_SECURITY,
+    EventCategory.LISTING,
+    EventCategory.DELISTING,
+)
 
 
 class EventRiskState(StrEnum):
@@ -31,6 +40,7 @@ class EventRiskConfig:
     block_after_ms: int = 15 * 60_000
     stabilization_ms: int = 30 * 60_000
     max_coverage_age_ms: int = 6 * 60 * 60_000
+    required_categories: tuple[EventCategory, ...] = DEFAULT_REQUIRED_EVENT_CATEGORIES
 
     def __post_init__(self) -> None:
         if min(
@@ -43,6 +53,13 @@ class EventRiskConfig:
             raise ValueError("event-risk timing values must be positive")
         if self.block_before_ms >= self.caution_lead_ms:
             raise ValueError("event-risk block-before must be shorter than caution lead")
+        expected_categories = tuple(
+            sorted(set(self.required_categories), key=lambda item: item.value)
+        )
+        if not expected_categories or expected_categories != tuple(
+            sorted(self.required_categories, key=lambda item: item.value)
+        ):
+            raise ValueError("event-risk required categories must be non-empty and unique")
 
 
 DEFAULT_EVENT_RISK_CONFIG = EventRiskConfig()
@@ -155,12 +172,16 @@ def build_event_risk_evidence_freeze(
         )
         return _freeze(analysis, coverage, ())
 
-    available = tuple(
+    horizon_start = as_of_ms - config.block_after_ms - config.stabilization_ms
+    horizon_end = as_of_ms + config.caution_lead_ms
+    relevant = tuple(
         sorted(
             (
                 item
                 for item in events
                 if max(item.source_timestamp_ms, item.ingested_at_ms) <= as_of_ms
+                and (not item.affected_assets or asset in item.affected_assets)
+                and horizon_start <= item.scheduled_at_ms <= horizon_end
             ),
             key=lambda item: (
                 item.scheduled_at_ms,
@@ -169,17 +190,8 @@ def build_event_risk_evidence_freeze(
             ),
         )
     )
-    _validate_event_context(available, coverage)
-    _reject_duplicates(available)
-
-    horizon_start = as_of_ms - config.block_after_ms - config.stabilization_ms
-    horizon_end = as_of_ms + config.caution_lead_ms
-    relevant = tuple(
-        item
-        for item in available
-        if (not item.affected_assets or asset in item.affected_assets)
-        and horizon_start <= item.scheduled_at_ms <= horizon_end
-    )
+    _validate_event_context(relevant, coverage)
+    _reject_duplicates(relevant)
 
     unverified = tuple(
         item for item in relevant if item.source_quality is EventSourceQuality.UNVERIFIED
@@ -246,6 +258,13 @@ def _coverage_flags(
         flags.append("event_calendar_future_horizon_incomplete")
     if coverage.source_quality is EventSourceQuality.UNVERIFIED:
         flags.append("unverified_event_calendar_coverage")
+    missing_categories = tuple(
+        category
+        for category in config.required_categories
+        if category not in coverage.categories
+    )
+    if missing_categories:
+        flags.append("event_calendar_required_categories_incomplete")
     return tuple(flags)
 
 
