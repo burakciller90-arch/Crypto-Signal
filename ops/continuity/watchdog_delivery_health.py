@@ -7,8 +7,8 @@ Compatible with macOS /usr/bin/python3 (3.9).
 from __future__ import annotations
 
 import sys
-from pathlib import Path
 from collections.abc import Mapping
+from pathlib import Path
 
 HEALTHY = "HEALTHY"
 PENDING = "PENDING"
