@@ -189,7 +189,7 @@ def test_no_safe_trade_fails_closed_without_metrics() -> None:
     ("trades", "as_of", "config", "expected"),
     [
         (_trades()[:3], 12_000, _config(), "insufficient_eligible_public_trades"),
-        (_trades(), 14_000, _config(), "stale_latest_eligible_trade"),
+        (_trades(), 12_000, _config(max_trade_age_ms=400), "stale_latest_eligible_trade"),
         (
             _trades(),
             12_000,
