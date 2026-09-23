@@ -51,10 +51,17 @@ Shadow Lab reuses accepted Alpha Factory:
 - walk-forward evidence;
 - untouched-forward evidence;
 - robustness/ablation;
+- promotion-gate evidence identity;
 - promotion-gate assessment.
 
+A Shadow variant does not accept caller-invented forward/robustness/cost identities.
+Those identities are derived directly from the exact `PromotionGateEvidence` object, and
+the supplied `PromotionGateAssessment` must bind that same evidence identity.
+
 A variant whose Alpha Factory promotion gate is BLOCKED stays BLOCKED. A variant whose
-gate is ready becomes only `READY_FOR_EXPLICIT_REVIEW`. It is still not promoted.
+gate is ready becomes only `READY_FOR_EXPLICIT_REVIEW`. A supervisor-accepted gate is
+represented as `SUPERVISOR_ACCEPTED_FOR_MANUAL_PROMOTION_REVIEW`; even then no champion
+write, canonical-capital mutation, deployment or production authority is granted.
 
 ## Comparison truth
 
@@ -90,17 +97,19 @@ Any later champion/challenger transition must remain:
 
 1. All locked Shadow Lab research families are representable.
 2. Every variant binds an accepted Alpha Factory experiment identity.
-3. Untouched-forward, robustness, cost-stress and promotion assessment identities are explicit.
-4. Missing promotion evidence remains BLOCKED.
-5. Ready evidence becomes only READY_FOR_EXPLICIT_REVIEW.
-6. Comparison cannot select a winner.
-7. No self-promotion/champion write/canonical capital mutation.
-8. Descriptive metrics retain exact evidence identities.
-9. Duplicate/tampered identities fail closed.
-10. REAL_CAPITAL=0.
-11. Alpha Factory research-only gate remains green.
-12. Focused Shadow Lab + full repository regression pass.
-13. Temporary hosted workflow is removed after PASS.
+3. Untouched-forward, robustness and cost-stress identities are derived from the exact bound promotion-evidence dossier.
+4. Promotion assessment must bind the same promotion-evidence identity.
+5. Missing promotion evidence remains BLOCKED.
+6. Ready evidence becomes only READY_FOR_EXPLICIT_REVIEW.
+7. Supervisor acceptance remains manual-review evidence and grants no canonical write authority.
+8. Comparison cannot select a winner.
+9. No self-promotion/champion write/canonical capital mutation.
+10. Descriptive metrics retain exact evidence identities.
+11. Duplicate/tampered identities fail closed.
+12. REAL_CAPITAL=0.
+13. Alpha Factory research-only gate remains green.
+14. Focused Shadow Lab + full repository regression pass.
+15. Temporary hosted workflow is removed after PASS.
 
 After acceptance, Phase 16 infrastructure exit is satisfied. The next locked frontier is
 Phase 17 — R22 Transaction & Decision Tape.
