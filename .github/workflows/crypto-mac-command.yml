@@ -1460,6 +1460,41 @@ jobs:
           launchctl bootout "gui/$UID_NOW/$LABEL" >/dev/null 2>&1 || true
           rm -f "$PLIST"
 
+      - name: PRODUCT CRASH LOGS
+        if: steps.parse.outputs.command == 'productcrashlogs'
+        shell: bash
+        run: |
+          set +e
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          PRODUCT="$ROOT/Product"
+          echo "=== PRODUCT GIT ==="
+          git -C "$PRODUCT" status --short --branch 2>&1
+          echo "PRODUCT_HEAD=$(git -C "$PRODUCT" rev-parse HEAD 2>/dev/null)"
+          echo "=== SUPERVISOR DASHBOARD ERR ==="
+          tail -240 "$ROOT/ServiceLogs/dashboard.err.log" 2>&1
+          echo "=== SUPERVISOR DASHBOARD OUT ==="
+          tail -120 "$ROOT/ServiceLogs/dashboard.out.log" 2>&1
+          echo "=== CURRENT DASHBOARD PROCESS ==="
+          ps -axo pid=,ppid=,user=,etime=,command= | grep -E '[P]roduct/ops/run_dashboard.py' | head -20
+          echo "=== CURRENT HEALTH ==="
+          curl -fsS --max-time 5 http://127.0.0.1:48700/api/health 2>&1
+          echo
+          echo "=== PRODUCT IMPORT SMOKE ==="
+          PYTHONPATH="$PRODUCT/src" "$PRODUCT/.venv/bin/python" - <<'PY'
+          import sys
+          print("PYTHON", sys.version)
+          try:
+              import crypto_signal.product.web as web
+              print("WEB_IMPORT=PASS", web.PRODUCT_VERSION)
+          except Exception as exc:
+              print("WEB_IMPORT=FAIL", type(exc).__name__, repr(exc))
+              raise
+          PY
+          echo "=== PRODUCT DASHBOARD CLI SMOKE ==="
+          PYTHONPATH="$PRODUCT/src" "$PRODUCT/.venv/bin/python" "$PRODUCT/ops/run_dashboard.py" --help 2>&1 | head -160
+          echo "PRODUCT_CRASH_LOGS_READONLY_PASS=YES"
+          exit 0
+
       - name: SSD DASHBOARD WRAPPER TEST
         if: steps.parse.outputs.command == 'ssddashboardwrappertest'
         shell: bash
