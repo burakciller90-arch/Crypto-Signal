@@ -3974,3 +3974,53 @@ printed measurements prove the user-authorized ACTIVE state.
 Issue #856 closed completed. Do not reopen/replay absent new invalidating evidence.
 The locked 20-minute wake loop remains active unless the user explicitly pauses/stops it.
 REAL_CAPITAL=0.
+
+
+---
+
+## 2026-09-23 — 05:37 M3 SLICE 2 ACCEPTED / MERGED
+
+M3 advanced beyond Temporal Order Flow Slice 1.
+
+Accepted Slice 2:
+- PIT-safe price/CVD divergence candidates using closed candles and real endpoint trade
+  coverage from the accepted temporal-flow freeze;
+- window-local CVD only; no exchange-global CVD claim;
+- bounded bid/ask absorption candidates requiring aggressive flow, visible replenishment
+  and bounded price non-response;
+- immutable evidence/freezes;
+- no probability, trade command, iceberg proof, manipulation or actor attribution.
+
+Acceptance:
+- PR #873;
+- authoritative hosted run `35810883083`;
+- focused pytest/Ruff/mypy PASS;
+- full repository pytest/Ruff/mypy/JS/freshness PASS;
+- temporary workflow removed;
+- squash merge `298f1e4f2cedb9a3dbbe6f68842164b7f76c3f46`.
+
+Current M3 frontier is breakout confirmation/failure plus sweep/absorption interaction.
+REAL_CAPITAL=0.
+
+
+---
+
+## 2026-09-23 — 05:37 CONTINUITY READ-ONLY RECONCILIATION
+
+Read-only relay run `35811005593` observed:
+- state RUNNING;
+- PID 47087;
+- exact locked ChatGPT URL;
+- fresh heartbeat at 05:37:05 +0300;
+- relay log exact wake OBSERVED_AFTER_CLICK at 05:34:25 +0300.
+
+Pause/lease run `35811008661` measured:
+- LOCAL_PAUSED=NO;
+- SHARED_PAUSED=NO;
+- ACTIVE_LEASES=0;
+- LOCAL_WAKE_QUEUE=0;
+- RELAY_WAKE_QUEUE=0.
+
+The pausecheck workflow conclusion is nonzero only because the command asserts PAUSED; the
+printed state proves the user-authorized ACTIVE condition. The 20-minute loop remains active
+until explicit user pause/stop. REAL_CAPITAL=0.
