@@ -98,10 +98,15 @@ def _assessment(experiment, *, ready: bool, supervisor_accepted: bool = False):
         leakage_audit=audit,
         evidence=evidence,
     )
-    if ready:
-        assert assessment.status is PromotionGateStatus.READY_FOR_SUPERVISOR_REVIEW
-    else:
+    if not ready:
         assert assessment.status is PromotionGateStatus.BLOCKED
+    elif supervisor_accepted:
+        assert (
+            assessment.status
+            is PromotionGateStatus.SUPERVISOR_ACCEPTED_FOR_MANUAL_PROMOTION
+        )
+    else:
+        assert assessment.status is PromotionGateStatus.READY_FOR_SUPERVISOR_REVIEW
     return evidence, assessment
 
 
