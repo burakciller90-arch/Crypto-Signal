@@ -41,6 +41,10 @@ from crypto_signal.product.education import (
     lookup_education_lesson,
 )
 from crypto_signal.product.intelligence_center import build_intelligence_center_payload
+from crypto_signal.product.market_tape_runtime import (
+    read_cold_archive_runtime_truth,
+    read_market_tape_runtime_truth,
+)
 from crypto_signal.product.reader import DashboardReader, DashboardReadError
 
 DEFAULT_LEDGER_PATH = (
@@ -155,6 +159,8 @@ def create_app(
     shadow_intent_journal_path: Path | None = None,
     shadow_cycle_manifest_path: Path | None = None,
     runtime_replay_observation_path: Path | None = None,
+    market_tape_path: Path | None = None,
+    cold_archive_path: Path | None = None,
 ) -> FastAPI:
     selected_path = ledger_path or Path(
         os.environ.get("CRYPTO_SIGNAL_LEDGER_PATH", str(DEFAULT_LEDGER_PATH))
@@ -255,6 +261,26 @@ def create_app(
     else:
         selected_runtime_replay_path = None
 
+    if market_tape_path is not None:
+        selected_market_tape_path: Path | None = market_tape_path
+    elif ledger_path is None:
+        market_tape_env = os.environ.get("CRYPTO_SIGNAL_MARKET_TAPE_PATH")
+        selected_market_tape_path = (
+            None if not market_tape_env else Path(market_tape_env)
+        )
+    else:
+        selected_market_tape_path = None
+
+    if cold_archive_path is not None:
+        selected_cold_archive_path: Path | None = cold_archive_path
+    elif ledger_path is None:
+        cold_archive_env = os.environ.get("CRYPTO_SIGNAL_COLD_ARCHIVE_PATH")
+        selected_cold_archive_path = (
+            None if not cold_archive_env else Path(cold_archive_env)
+        )
+    else:
+        selected_cold_archive_path = None
+
     selected_learning_memory_path = learning_memory_path
     if selected_learning_memory_path is None:
         learning_memory_env = os.environ.get("CRYPTO_SIGNAL_LEARNING_MEMORY_PATH")
@@ -283,6 +309,8 @@ def create_app(
     app.state.shadow_intent_journal_path = selected_shadow_intent_path
     app.state.shadow_cycle_manifest_path = selected_shadow_cycle_path
     app.state.runtime_replay_observation_path = selected_runtime_replay_path
+    app.state.market_tape_path = selected_market_tape_path
+    app.state.cold_archive_path = selected_cold_archive_path
     app.state.reader = reader
 
     app.mount(
@@ -754,6 +782,58 @@ def create_app(
                     ),
                 }
 
+        if selected_market_tape_path is None:
+            components["market_tape_runtime"] = {
+                "status": "unavailable",
+                "reason": "market_tape_runtime_not_configured",
+            }
+        elif not selected_market_tape_path.exists():
+            components["market_tape_runtime"] = {
+                "status": "unavailable",
+                "reason": "market_tape_runtime_evidence_missing",
+            }
+        else:
+            try:
+                market_tape_status = read_market_tape_runtime_truth(
+                    selected_market_tape_path,
+                    observed_at_ms=time.time_ns() // 1_000_000,
+                )
+            except (OSError, sqlite3.DatabaseError, TypeError, ValueError) as exc:
+                raise HTTPException(status_code=500, detail=str(exc)) from exc
+            components["market_tape_runtime"] = {
+                "status": "ready",
+                "snapshot": market_tape_status,
+                "online_status": "NOT_ASSERTED",
+            }
+
+        if selected_cold_archive_path is None:
+            components["cold_archive"] = {
+                "status": "unavailable",
+                "reason": "cold_archive_runtime_not_configured",
+            }
+        elif not selected_cold_archive_path.exists():
+            components["cold_archive"] = {
+                "status": "unavailable",
+                "reason": "cold_archive_runtime_evidence_missing",
+            }
+        else:
+            try:
+                cold_archive_status = read_cold_archive_runtime_truth(
+                    selected_cold_archive_path,
+                    verify_limit=24,
+                )
+            except (OSError, TypeError, ValueError) as exc:
+                raise HTTPException(status_code=500, detail=str(exc)) from exc
+            components["cold_archive"] = {
+                "status": (
+                    "ready"
+                    if cold_archive_status.partition_count > 0
+                    else "empty"
+                ),
+                "snapshot": cold_archive_status,
+                "archive_process_status": "NOT_MEASURED",
+            }
+
         components["galactech_product"] = {
             "status": "exposed",
             "route": "/galactech",
@@ -778,6 +858,105 @@ def create_app(
                 "all_required_runtime_evidence_present": all_present,
                 "canonical_epoch2_mutation_authorized": False,
                 "production_authority": False,
+                "read_only": True,
+                "real_capital": 0,
+            }
+        )
+
+    @app.get("/api/market-tape-runtime/status")
+    def market_tape_runtime_status(
+        observed_at_ms: int | None = Query(default=None, ge=0),
+    ) -> JSONResponse:
+        observation = (
+            time.time_ns() // 1_000_000
+            if observed_at_ms is None
+            else observed_at_ms
+        )
+        if selected_market_tape_path is None:
+            return _json(
+                {
+                    "status": "unavailable",
+                    "reason": "market_tape_runtime_not_configured",
+                    "collection_process_status": "NOT_MEASURED",
+                    "online_status": "NOT_ASSERTED",
+                    "read_only": True,
+                    "real_capital": 0,
+                }
+            )
+        if not selected_market_tape_path.exists():
+            return _json(
+                {
+                    "status": "unavailable",
+                    "reason": "market_tape_runtime_evidence_missing",
+                    "database_filename": selected_market_tape_path.name,
+                    "collection_process_status": "NOT_MEASURED",
+                    "online_status": "NOT_ASSERTED",
+                    "read_only": True,
+                    "real_capital": 0,
+                }
+            )
+        try:
+            snapshot = read_market_tape_runtime_truth(
+                selected_market_tape_path,
+                observed_at_ms=observation,
+            )
+        except (OSError, sqlite3.DatabaseError, TypeError, ValueError) as exc:
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
+        return _json(
+            {
+                "status": "ready",
+                "snapshot": snapshot,
+                "database_filename": selected_market_tape_path.name,
+                "collection_process_status": "NOT_MEASURED",
+                "online_status": "NOT_ASSERTED",
+                "read_only": True,
+                "real_capital": 0,
+            }
+        )
+
+    @app.get("/api/cold-archive/status")
+    def cold_archive_status(
+        verify_limit: int = Query(default=24, ge=1, le=500),
+    ) -> JSONResponse:
+        if selected_cold_archive_path is None:
+            return _json(
+                {
+                    "status": "unavailable",
+                    "reason": "cold_archive_runtime_not_configured",
+                    "archive_process_status": "NOT_MEASURED",
+                    "canonical_row_digest_replay": "NOT_MEASURED",
+                    "read_only": True,
+                    "real_capital": 0,
+                }
+            )
+        if not selected_cold_archive_path.exists():
+            return _json(
+                {
+                    "status": "unavailable",
+                    "reason": "cold_archive_runtime_evidence_missing",
+                    "archive_directory": selected_cold_archive_path.name,
+                    "archive_process_status": "NOT_MEASURED",
+                    "canonical_row_digest_replay": "NOT_MEASURED",
+                    "read_only": True,
+                    "real_capital": 0,
+                }
+            )
+        try:
+            snapshot = read_cold_archive_runtime_truth(
+                selected_cold_archive_path,
+                verify_limit=verify_limit,
+            )
+        except (OSError, TypeError, ValueError) as exc:
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
+        return _json(
+            {
+                "status": (
+                    "ready" if snapshot.partition_count > 0 else "empty"
+                ),
+                "snapshot": snapshot,
+                "archive_directory": selected_cold_archive_path.name,
+                "archive_process_status": "NOT_MEASURED",
+                "canonical_row_digest_replay": "NOT_MEASURED",
                 "read_only": True,
                 "real_capital": 0,
             }
