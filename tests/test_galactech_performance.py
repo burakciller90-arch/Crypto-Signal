@@ -82,7 +82,7 @@ def test_galactech_performance_keeps_evidence_classes_separate(
     js = script.text
     css = style.text
 
-    assert 'data-ui-version="galactech-v1.1-performance"' in html
+    assert 'data-ui-version="galactech-v1.1-learn-system"' in html
     assert 'id="performanceCohorts"' in html
     assert 'id="performancePaper"' in html
     assert 'id="performanceCalibration"' in html
