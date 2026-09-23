@@ -2008,7 +2008,7 @@ function renderSystem() {
   const rail = byId("shadowDecisionRail");
   if (rail) {
     const latest = shadowLatest[0] || {};
-    const action = latest.action ? upper(latest.action) : "NOT PERSISTED";
+    const preview = latest.preview_identity ? "PERSISTED" : "NOT PERSISTED";
     const review = latest.review_selection_identity ? "EXPLICIT REVIEW" : "NO REVIEW";
     const sizing = latest.sizing_bridge_identity ? "REFERENCED" : "NOT PERSISTED";
     rail.innerHTML = [
@@ -2016,7 +2016,7 @@ function renderSystem() {
       ["CAPITAL SCIENCE", upper(shadowDecision.capital_science_runtime_status, "NOT PERSISTED")],
       ["SIZING LINEAGE", sizing],
       ["REVIEW", review],
-      ["R22 PREVIEW", action],
+      ["R22 PREVIEW", preview],
       ["SHADOW JOURNAL", shadowReady ? "INTEGRITY VERIFIED" : "NOT PERSISTED"],
       ["RESTART / REPLAY", upper(shadowDecision.restart_replay_runtime_status, "NOT MEASURED")],
       ["CANONICAL EPOCH 2", upper(shadowDecision.canonical_epoch2_mutation, "NOT AUTHORIZED")],
