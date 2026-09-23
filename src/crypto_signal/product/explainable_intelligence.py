@@ -208,12 +208,14 @@ class R23ExplainableIntelligenceSnapshot:
         ):
             if score < Decimal(0) or score > Decimal(100):
                 raise ValueError("R23 confluence score outside [0,100]")
-        if self.calibrated_probability_0_1 is not None:
-            if (
+        if (
+            self.calibrated_probability_0_1 is not None
+            and (
                 self.calibrated_probability_0_1 < Decimal(0)
                 or self.calibrated_probability_0_1 > Decimal(1)
-            ):
-                raise ValueError("R23 calibrated probability outside [0,1]")
+            )
+        ):
+            raise ValueError("R23 calibrated probability outside [0,1]")
 
         expected_domains = tuple(sorted(ProofEvidenceDomain, key=lambda item: item.value))
         if tuple(item.domain for item in self.simple_evidence) != expected_domains:
