@@ -365,7 +365,20 @@ class R25ShadowIntentJournal:
             ):
                 raise ValueError("shadow forecast persisted authority mismatch")
 
-            record = _record_from_row(preview_identity, row)
+            record = ShadowIntentJournalRecord(
+                record_identity=str(row[0]),
+                preview_identity=preview_identity,
+                vault_id=PaperVaultId(str(row[2])),
+                event_at_ms=int(str(row[3])),
+                previous_record_identity=(
+                    None if row[4] is None else str(row[4])
+                ),
+                schema_version=str(row[6]),
+                engine_version=str(row[7]),
+                canonical_epoch2_write_authority=bool(row[8]),
+                production_authority=bool(row[9]),
+                real_capital=int(str(row[10])),
+            )
             return ShadowIntentForecastLink(
                 record_identity=record.record_identity,
                 preview_identity=preview_identity,
