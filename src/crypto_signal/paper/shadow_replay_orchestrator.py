@@ -49,6 +49,7 @@ from crypto_signal.paper.smart_capital_allocator import (
     TacticalMicrostructureEvidence,
 )
 from crypto_signal.unified_decision_runtime import UnifiedDecisionIssuance
+
 if TYPE_CHECKING:
     from research.alpha_factory.probability_calibration_gate import (
         CalibratedProbabilityEvidence,
