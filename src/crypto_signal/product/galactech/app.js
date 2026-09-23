@@ -166,6 +166,9 @@ function routeTo(route) {
   if (main && !prefersReducedMotion()) {
     main.scrollIntoView({ block: "start", behavior: "smooth" });
   }
+  if (route === "markets") {
+    void initializeMarketWorkspace({ reload: true });
+  }
 }
 
 function bindNavigation() {
@@ -184,6 +187,7 @@ function bindNavigation() {
       renderCommand();
       renderRadar();
       renderArchive();
+      void initializeMarketWorkspace({ reload: state.route === "markets" });
     });
   });
 
@@ -230,6 +234,12 @@ function bindNavigation() {
 
   document.addEventListener("click", (event) => {
     const source = event.target instanceof Element ? event.target : null;
+    const marketProvider = source?.closest("[data-market-provider-id]");
+    if (marketProvider instanceof HTMLElement) {
+      selectMarketProvider(marketProvider.dataset.marketProviderId || "");
+      return;
+    }
+
     const evidenceTrigger = source?.closest("[data-evidence-id]");
     if (evidenceTrigger instanceof HTMLElement) {
       const identity = evidenceTrigger.dataset.evidenceId || "";
@@ -1455,6 +1465,7 @@ function renderSystem() {
 function renderAll() {
   renderCommand();
   renderRadar();
+  renderMarketWorkspace();
   renderMarketTruth();
   renderEpoch();
   renderPaper();
@@ -1525,6 +1536,7 @@ async function runBoot() {
     marketReady ? "ready" : "muted"
   );
 
+  await initializeMarketWorkspace({ reload: true });
   renderAll();
 
   const failed = results.filter((result) => !result.ok).map((result) => result.key);
@@ -1550,6 +1562,7 @@ function startPeriodicRefresh() {
       loadEndpoint("archive", API.archive),
     ]);
     if (results[0].ok) applyHealthTruth(results[0].data);
+    await initializeMarketWorkspace({ reload: state.route === "markets" });
     renderAll();
     if (!results.slice(1).every((item) => item.ok)) {
       setTruthChip("freshnessTruth", "FRESHNESS · PARTIAL EVIDENCE", "muted");
