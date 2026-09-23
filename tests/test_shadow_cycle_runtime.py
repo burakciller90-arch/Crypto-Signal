@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import sqlite3
 from decimal import Decimal
 
 import pytest
@@ -215,8 +216,6 @@ def test_disabled_kelly_fails_before_journal_or_manifest_creation(
 def test_manifest_failure_does_not_rewrite_existing_journal(tmp_path) -> None:
     journal_path = tmp_path / "isolation.shadow-intent.sqlite3"
     bad_manifest = tmp_path / "bad.shadow-cycle.sqlite3"
-
-    import sqlite3
 
     with sqlite3.connect(bad_manifest) as db:
         db.execute("CREATE TABLE canonical_epoch2_accounting (id TEXT)")
