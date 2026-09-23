@@ -65,14 +65,15 @@ def test_galactech_markets_workspace_binds_exact_provider_freeze(
     assert "async function initializeMarketWorkspace" in js
     assert "function syncMarketSelectionFromControls(reload)" in js
     assert "async function loadMarketSelection()" in js
-    assert "function selectMarketProvider(identity)" in js
+    assert "async function selectMarketProvider(identity)" in js
     assert "function renderMarketProviderList()" in js
     assert "function renderMarketRecentTape()" in js
     assert "function renderMarketLayerSurface()" in js
     assert "function renderMarketWorkspace()" in js
     assert "PA / FROZEN SIGNAL EVIDENCE" in js
-    assert "NOT EXPOSED TO PRODUCT API" in js
-    assert "No synthetic overlay is rendered." in js
+    assert "R20.5 DECISION PROOF" in js
+    assert "NOT PERSISTED" in js
+    assert "No exact R20.5 Decision Proof is persisted" in js
     assert "no synthetic invalidation" in js
     assert 'loadEndpoint("radar", API.radar)' in js
     assert 'data-market-provider-id="' in js
@@ -88,7 +89,7 @@ def test_galactech_markets_workspace_binds_exact_provider_freeze(
     assert client.post("/api/assets/BTCUSDT/15m").status_code == 405
 
 
-def test_galactech_markets_unexposed_layers_fail_closed(
+def test_galactech_markets_decision_proof_layers_fail_closed_when_unpersisted(
     tmp_path: Path,
 ) -> None:
     client = TestClient(create_app(tmp_path / "missing.sqlite3"))
@@ -105,5 +106,9 @@ def test_galactech_markets_unexposed_layers_fail_closed(
     assert 'FLOW: "Order flow / CVD"' in js
     assert 'DERIV: "Derivatives / OI / funding / basis"' in js
     assert 'ONCHAIN: "On-chain"' in js
-    assert "GALACTECH keeps the layer unavailable instead of" in js
-    assert "synthesizing evidence from unrelated fields." in js
+    assert 'LIQ: ["liquidity_map", "liquidation_map"]' in js
+    assert 'FLOW: ["order_book", "order_flow_cvd"]' in js
+    assert 'DERIV: ["derivatives"]' in js
+    assert 'ONCHAIN: ["onchain"]' in js
+    assert "No exact R20.5 Decision Proof is persisted" in js
+    assert "does not synthesize a layer from unrelated evidence" in js

@@ -9,6 +9,10 @@ from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
+from crypto_signal.decision_ledger import (
+    DecisionLedgerConflictError,
+    ImmutableDecisionEvidenceLedger,
+)
 from crypto_signal.ledger.serialization import canonicalize
 from crypto_signal.paper.epoch2_accounting import read_epoch2_state_read_only
 from crypto_signal.paper.epochs import (
@@ -50,6 +54,12 @@ DEFAULT_PAPER_LEDGER_PATH = (
 )
 DEFAULT_EPOCH2_LEDGER_PATH = DEFAULT_PAPER_LEDGER_PATH.with_name(
     EPOCH_2_LEDGER_FILENAME
+)
+DEFAULT_DECISION_EVIDENCE_LEDGER_PATH = (
+    Path("/Users/crypto-signal-agent/Crypto-Signal")
+    / "runtime"
+    / "decision"
+    / "decision_evidence.sqlite3"
 )
 DEFAULT_CANDLE_CACHE_PATH = (
     Path("/Users/crypto-signal-agent/Crypto-Signal")
@@ -107,6 +117,7 @@ def create_app(
     candle_cache_path: Path | None = None,
     learning_memory_path: Path | None = None,
     epoch2_ledger_path: Path | None = None,
+    decision_evidence_path: Path | None = None,
 ) -> FastAPI:
     selected_path = ledger_path or Path(
         os.environ.get("CRYPTO_SIGNAL_LEDGER_PATH", str(DEFAULT_LEDGER_PATH))
@@ -159,6 +170,18 @@ def create_app(
     else:
         selected_candle_path = None
 
+    if decision_evidence_path is not None:
+        selected_decision_path: Path | None = decision_evidence_path
+    elif ledger_path is None:
+        selected_decision_path = Path(
+            os.environ.get(
+                "CRYPTO_SIGNAL_DECISION_EVIDENCE_PATH",
+                str(DEFAULT_DECISION_EVIDENCE_LEDGER_PATH),
+            )
+        )
+    else:
+        selected_decision_path = None
+
     selected_learning_memory_path = learning_memory_path
     if selected_learning_memory_path is None:
         learning_memory_env = os.environ.get("CRYPTO_SIGNAL_LEARNING_MEMORY_PATH")
@@ -183,6 +206,7 @@ def create_app(
     app.state.epoch2_ledger_path = selected_epoch2_path
     app.state.candle_cache_path = selected_candle_path
     app.state.learning_memory_path = selected_learning_memory_path
+    app.state.decision_evidence_path = selected_decision_path
     app.state.reader = reader
 
     app.mount(
@@ -214,6 +238,10 @@ def create_app(
             "alert_outbox_present": (
                 selected_alert_path is not None
                 and selected_alert_path.exists()
+            ),
+            "decision_evidence_present": (
+                selected_decision_path is not None
+                and selected_decision_path.exists()
             ),
             "read_only": True,
         }
@@ -288,6 +316,99 @@ def create_app(
             raise HTTPException(status_code=500, detail=str(exc)) from exc
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @app.get("/api/decision-proof/{signal_freeze_identity}")
+    def decision_proof(signal_freeze_identity: str) -> JSONResponse:
+        if selected_decision_path is None or not selected_decision_path.exists():
+            return _json(
+                {
+                    "status": "unavailable",
+                    "reason": "decision_evidence_runtime_not_configured",
+                    "read_only": True,
+                    "real_capital": 0,
+                }
+            )
+        try:
+            proof = ImmutableDecisionEvidenceLedger(
+                selected_decision_path
+            ).read_proof_for_signal(signal_freeze_identity)
+        except DecisionLedgerConflictError as exc:
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        if proof is None:
+            return _json(
+                {
+                    "status": "empty",
+                    "reason": "no_persisted_decision_proof_for_signal",
+                    "signal_freeze_identity": signal_freeze_identity,
+                    "read_only": True,
+                    "real_capital": 0,
+                }
+            )
+        return _json(
+            {
+                "status": "ready",
+                "proof": proof,
+                "read_only": True,
+                "real_capital": 0,
+            }
+        )
+
+    @app.get("/api/intelligence-feed")
+    def live_intelligence_feed(
+        limit: int = Query(default=100, ge=1, le=1000),
+    ) -> JSONResponse:
+        if selected_decision_path is None or not selected_decision_path.exists():
+            return _json(
+                {
+                    "status": "unavailable",
+                    "reason": "decision_evidence_runtime_not_configured",
+                    "events": [],
+                    "read_only": True,
+                    "real_capital": 0,
+                }
+            )
+        try:
+            events = ImmutableDecisionEvidenceLedger(
+                selected_decision_path
+            ).read_feed(limit=limit)
+        except DecisionLedgerConflictError as exc:
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
+        return _json(
+            {
+                "status": "ready" if events else "empty",
+                "events": events,
+                "read_only": True,
+                "real_capital": 0,
+            }
+        )
+
+    @app.get("/api/decision-evidence/status")
+    def decision_evidence_status() -> JSONResponse:
+        if selected_decision_path is None or not selected_decision_path.exists():
+            return _json(
+                {
+                    "status": "unavailable",
+                    "reason": "decision_evidence_runtime_not_configured",
+                    "read_only": True,
+                    "real_capital": 0,
+                }
+            )
+        try:
+            snapshot = ImmutableDecisionEvidenceLedger(
+                selected_decision_path
+            ).read_status()
+        except DecisionLedgerConflictError as exc:
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
+        return _json(
+            {
+                "status": "ready",
+                "snapshot": snapshot,
+                "read_only": True,
+                "real_capital": 0,
+            }
+        )
 
     @app.get("/api/alerts")
     def alerts(

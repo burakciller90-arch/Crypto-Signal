@@ -107,14 +107,16 @@ def test_galactech_system_never_upgrades_unexposed_runtime_health(
     assert 'id="systemArchive"' in html
     assert 'id="systemMarketEvidence"' in html
     assert 'id="systemIntelligence"' in html
+    assert 'id="systemDecisionLedger"' in html
+    assert 'id="systemLiveFeed"' in html
     assert 'id="systemPerformance"' in html
     assert 'id="systemEducation"' in html
     assert 'id="systemAlerts"' in html
     assert "API READY, Market Tape ONLINE demek değildir." in html
     assert "MARKET TAPE RUNTIME" in html
     assert "COLD ARCHIVE" in html
-    assert "EVENT FEED RUNTIME" in html
-    assert html.count("NOT EXPOSED") >= 3
+    assert "EVENT SOURCE RUNTIME" in html
+    assert html.count("NOT EXPOSED") >= 2
     assert html.count("NOT MEASURED") >= 2
     assert "REAL CAPITAL" in html
     assert "DISABLED" in html
@@ -126,4 +128,6 @@ def test_galactech_system_never_upgrades_unexposed_runtime_health(
     assert 'archive.outcome_schema_available ? "AVAILABLE" : "SIGNALS ONLY"' in js
     assert "observed provider/context freezes" in js
     assert "TRUTH · PRODUCT EVIDENCE READY" in js
+    assert '"systemDecisionLedger"' in js
+    assert '"systemLiveFeed"' in js
     assert "Market Tape" not in js[js.index("function renderSystem()"):js.index("function renderAll()")]

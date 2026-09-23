@@ -9,6 +9,7 @@ import uvicorn
 from crypto_signal.product.web import (
     DEFAULT_ALERT_OUTBOX_PATH,
     DEFAULT_CANDLE_CACHE_PATH,
+    DEFAULT_DECISION_EVIDENCE_LEDGER_PATH,
     DEFAULT_LEDGER_PATH,
     DEFAULT_PAPER_LEDGER_PATH,
     create_app,
@@ -36,6 +37,11 @@ def parse_args() -> argparse.Namespace:
         default=DEFAULT_CANDLE_CACHE_PATH,
     )
     parser.add_argument(
+        "--decision-evidence",
+        type=Path,
+        default=DEFAULT_DECISION_EVIDENCE_LEDGER_PATH,
+    )
+    parser.add_argument(
         "--learning-memory",
         type=Path,
         default=None,
@@ -54,6 +60,7 @@ def main() -> None:
         paper_ledger_path=args.paper_ledger,
         candle_cache_path=args.candle_cache,
         learning_memory_path=args.learning_memory,
+        decision_evidence_path=args.decision_evidence,
     )
     uvicorn.run(
         app,

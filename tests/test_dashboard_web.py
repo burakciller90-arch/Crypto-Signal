@@ -197,6 +197,7 @@ def test_health_and_static_shell_without_ledger(tmp_path: Path) -> None:
         "real_capital": 0,
         "ledger_present": False,
         "alert_outbox_present": False,
+        "decision_evidence_present": False,
         "read_only": True,
     }
     assert index.status_code == 200
@@ -649,6 +650,9 @@ def test_api_has_no_post_command_surface(tmp_path: Path) -> None:
     assert client.post("/api/signals").status_code == 405
     assert client.post("/api/paper/mission-control").status_code == 405
     assert client.post("/api/intelligence-center").status_code == 405
+    assert client.post("/api/intelligence-feed").status_code == 405
+    assert client.post("/api/decision-evidence/status").status_code == 405
+    assert client.post("/api/decision-proof/" + digest("x")).status_code == 405
 
 
 def test_invalid_signal_identity_is_rejected_as_bad_request(tmp_path: Path) -> None:

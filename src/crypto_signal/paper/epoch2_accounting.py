@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import sqlite3
+from contextlib import closing
 from dataclasses import dataclass
 from decimal import Decimal
 from enum import StrEnum
@@ -370,7 +371,7 @@ class Epoch2CanonicalLedger:
 
     def initialize(self) -> None:
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        with sqlite3.connect(self.path) as connection:
+        with closing(sqlite3.connect(self.path)) as connection, connection:
             connection.execute("PRAGMA journal_mode=WAL")
             connection.execute("PRAGMA synchronous=NORMAL")
             connection.execute(
@@ -407,7 +408,7 @@ class Epoch2CanonicalLedger:
     def activate(self, record: Epoch2ActivationRecord) -> bool:
         self.initialize()
         payload = canonical_json(record)
-        with sqlite3.connect(self.path) as connection:
+        with closing(sqlite3.connect(self.path)) as connection, connection:
             existing = connection.execute(
                 """
                 SELECT activation_identity, payload_json, activated_at_ms
@@ -498,7 +499,7 @@ class Epoch2CanonicalLedger:
 
     def read_activation(self) -> Epoch2ActivationRecord | None:
         self.initialize()
-        with sqlite3.connect(self.path) as connection:
+        with closing(sqlite3.connect(self.path)) as connection, connection:
             row = connection.execute(
                 "SELECT payload_json FROM r21_epoch2_activation WHERE singleton = 1"
             ).fetchone()
@@ -511,7 +512,7 @@ class Epoch2CanonicalLedger:
     ) -> tuple[Epoch2VaultAccountingSnapshot, ...]:
         self.initialize()
         snapshots: list[Epoch2VaultAccountingSnapshot] = []
-        with sqlite3.connect(self.path) as connection:
+        with closing(sqlite3.connect(self.path)) as connection, connection:
             for vault_id in PaperVaultId:
                 if at_or_before_ms is None:
                     row = connection.execute(
@@ -542,7 +543,7 @@ class Epoch2CanonicalLedger:
         self,
     ) -> Epoch2ConsolidatedAccountingSnapshot | None:
         self.initialize()
-        with sqlite3.connect(self.path) as connection:
+        with closing(sqlite3.connect(self.path)) as connection, connection:
             row = connection.execute(
                 """
                 SELECT payload_json FROM r21_consolidated_snapshots
@@ -582,7 +583,7 @@ class Epoch2CanonicalLedger:
         vault_id: str | None = None,
     ) -> bool:
         self.initialize()
-        with sqlite3.connect(self.path) as connection:
+        with closing(sqlite3.connect(self.path)) as connection, connection:
             row = connection.execute(
                 f"SELECT payload_json, snapshot_at_ms FROM {table} WHERE snapshot_identity = ?",
                 (identity,),
@@ -683,7 +684,7 @@ def read_epoch2_state_read_only(path: Path) -> Epoch2LedgerState | None:
         "r21_consolidated_snapshots",
     )
     try:
-        with sqlite3.connect(uri, uri=True, timeout=5.0) as connection:
+        with closing(sqlite3.connect(uri, uri=True, timeout=5.0)) as connection:
             connection.row_factory = sqlite3.Row
             connection.execute("PRAGMA query_only=ON")
             existing_tables = {
