@@ -4057,3 +4057,37 @@ absorption, breakout confirmation/failure and sweep+absorption interaction.
 
 Next primary intelligence frontier: M4 Derivatives Intelligence 2.0.
 REAL_CAPITAL=0.
+
+
+---
+
+## 2026-09-23 — 06:06 M4 DERIVATIVES DYNAMICS SLICE 1 ACCEPTED / MERGED
+
+M4 began by preserving the accepted bounded derivatives context and adding a separate
+temporal v1.1 evidence layer.
+
+Accepted Slice 1:
+- OI x mark-price context states;
+- funding percentile over the exact consumed PIT observation window;
+- funding acceleration;
+- current mark/index basis;
+- basis change;
+- immutable evidence/freeze identities.
+
+Scientific boundary:
+- temporal states are context, not trade commands;
+- a one-off ticker is not fabricated into historical OI x price state;
+- future or late-ingested observations cannot rewrite historical evidence;
+- stale/insufficient evidence fails closed;
+- cross-venue basis and predicted funding are not claimed without separate source evidence;
+- no production confluence weighting, probability or order authority was added.
+
+Acceptance evidence:
+- PR #878;
+- authoritative branch run `35812833233` focused + full PASS;
+- squash merge `7268dd2e2f6e9aa6e1ffe8739f94f59df9dbd785`;
+- exact-main Stage10 run `35812957910` SUCCESS.
+
+Next M4 frontier: bounded crowding / squeeze-risk / deleveraging context using accepted
+derivatives dynamics, observed liquidation heatmap evidence and mark-price volatility.
+REAL_CAPITAL=0.
