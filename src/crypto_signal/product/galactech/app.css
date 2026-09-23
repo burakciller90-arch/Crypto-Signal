@@ -2183,3 +2183,273 @@ a:focus-visible,
     text-align: left;
   }
 }
+
+
+/* Product slice 6 — Performance & Trust */
+.performance-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.performance-contract {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 10px;
+  padding-top: 13px;
+  padding-bottom: 13px;
+}
+
+.performance-contract strong {
+  display: block;
+  margin-top: 5px;
+  font-family: var(--mono);
+  font-size: 11px;
+}
+
+.performance-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.55fr) minmax(300px, 0.75fr);
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.performance-cohorts {
+  display: grid;
+  gap: 10px;
+}
+
+.performance-cohort {
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: rgba(255, 255, 255, 0.012);
+  overflow: hidden;
+}
+
+.performance-cohort-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 13px 14px;
+  border-bottom: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.01);
+}
+
+.performance-cohort-head h3 {
+  margin: 5px 0 0;
+  font-size: 15px;
+}
+
+.performance-cohort-meta {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 5px 9px;
+  color: var(--text-dim);
+  font-family: var(--mono);
+  font-size: 8px;
+}
+
+.performance-segment-list {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+}
+
+.performance-segment {
+  padding: 11px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.012);
+}
+
+.performance-segment-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.performance-segment-head > div {
+  min-width: 0;
+}
+
+.performance-segment-head strong,
+.performance-segment-head span {
+  display: block;
+}
+
+.performance-segment-head strong {
+  font-size: 11px;
+}
+
+.performance-segment-head > div > span {
+  margin-top: 4px;
+  color: var(--text-soft);
+  font-size: 9px;
+}
+
+.performance-segment-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px 9px;
+  margin-top: 8px;
+  color: var(--text-dim);
+  font-family: var(--mono);
+  font-size: 8px;
+}
+
+.performance-segment-metrics {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.performance-segment-metrics > div,
+.performance-descriptive-row > span,
+.performance-paper-hero > div,
+.performance-vault-compare article {
+  min-width: 0;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.01);
+}
+
+.performance-segment-metrics span,
+.performance-descriptive-row small,
+.performance-paper-hero span,
+.performance-vault-compare span {
+  display: block;
+  color: var(--text-dim);
+  font-family: var(--mono);
+  font-size: 7px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.performance-segment-metrics strong,
+.performance-descriptive-row strong,
+.performance-paper-hero strong,
+.performance-vault-compare strong {
+  display: block;
+  margin-top: 4px;
+  overflow-wrap: anywhere;
+  font-family: var(--mono);
+  font-size: 10px;
+}
+
+.performance-descriptive-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.performance-descriptive-row em {
+  display: block;
+  margin-top: 4px;
+  color: var(--text-dim);
+  font-family: var(--mono);
+  font-size: 7px;
+  font-style: normal;
+  line-height: 1.45;
+}
+
+.performance-paper {
+  display: grid;
+  gap: 9px;
+}
+
+.performance-paper-hero {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.performance-vault-compare {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.performance-vault-compare small {
+  display: block;
+  margin-top: 4px;
+  color: var(--text-dim);
+  font-family: var(--mono);
+  font-size: 7px;
+  line-height: 1.5;
+}
+
+.performance-trust-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.performance-unavailable {
+  min-height: 118px;
+  padding: 12px;
+  border: 1px dashed var(--line-strong);
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.008);
+}
+
+.performance-unavailable strong {
+  display: block;
+  color: var(--text-soft);
+  font-size: 11px;
+}
+
+.performance-unavailable p {
+  margin: 7px 0 0;
+  color: var(--text-dim);
+  font-size: 9px;
+  line-height: 1.65;
+}
+
+@media (max-width: 1080px) {
+  .performance-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .performance-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .performance-segment-metrics {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .performance-contract,
+  .performance-cohort-head {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .performance-cohort-meta {
+    justify-content: flex-start;
+  }
+
+  .performance-trust-grid,
+  .performance-descriptive-row,
+  .performance-vault-compare {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 560px) {
+  .performance-summary-grid,
+  .performance-paper-hero,
+  .performance-segment-metrics {
+    grid-template-columns: 1fr;
+  }
+}
