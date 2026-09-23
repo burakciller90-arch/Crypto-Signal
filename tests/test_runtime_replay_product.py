@@ -49,7 +49,7 @@ def test_runtime_replay_status_is_verified_only_from_persisted_observation(
     assert cycle_body["status"] == "ready"
     assert cycle_body["capital_science_lineage"] == "PERSISTED"
     assert cycle_body["sizing_lineage"] == "PERSISTED"
-    assert cycle_body["restart_replay_observation"] == "NOT_PERSISTED"
+    assert cycle_body["restart_replay_observation"] == "NOT_MEASURED"
 
     assert replay_response.status_code == 200
     replay_body = replay_response.json()
@@ -87,12 +87,12 @@ def test_cycle_manifest_without_replay_observation_never_claims_verified(
     replay = client.get("/api/runtime-replay-observation/status").json()
 
     assert cycle["status"] == "ready"
-    assert cycle["restart_replay_observation"] == "NOT_PERSISTED"
+    assert cycle["restart_replay_observation"] == "NOT_MEASURED"
     assert replay == {
         "status": "unavailable",
         "reason": "runtime_replay_observation_not_configured",
         "semantic": "RUNTIME_RESTART_REPLAY_OBSERVATION_ONLY",
-        "restart_replay_observation": "NOT_PERSISTED",
+        "restart_replay_observation": "NOT_MEASURED",
         "canonical_epoch2_mutation": False,
         "production_authority": False,
         "read_only": True,
@@ -161,6 +161,7 @@ def test_exact_replay_lookup_never_matches_unrelated_forecast(
         "status": "empty",
         "reason": "no_exact_runtime_replay_observation_for_forecast",
         "forecast_identity": unrelated,
+        "restart_replay_observation": "NOT_MEASURED",
         "semantic": "EXACT_RUNTIME_REPLAY_IDENTITY_ONLY",
         "read_only": True,
         "real_capital": 0,
