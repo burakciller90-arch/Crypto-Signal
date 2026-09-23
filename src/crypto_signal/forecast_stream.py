@@ -368,6 +368,7 @@ def build_immutable_forecast(
         probability_scope_identity = calibrated_probability.scope_identity
 
     uncertainty = set(signal.uncertainty_flags)
+    uncertainty.update(event_context.uncertainty_flags)
     if confluence.freshness_0_1 is None:
         uncertainty.add("confluence_freshness_unavailable")
     if confluence.resolution is not ConfluenceMatrixResolution.MEASURED:
@@ -380,8 +381,14 @@ def build_immutable_forecast(
         confluence.snapshot_identity,
         event_context.evidence_identity,
     }
-    if probability_authorization_identity is not None:
-        evidence_ids.add(probability_authorization_identity)
+    if calibrated_probability is not None:
+        evidence_ids.update(
+            {
+                calibrated_probability.authorization_identity,
+                calibrated_probability.calibration_evidence_identity,
+                calibrated_probability.source_prediction_identity,
+            }
+        )
 
     version_refs = [
         ForecastVersionRef("event_circuit_engine", event_context.engine_version),
