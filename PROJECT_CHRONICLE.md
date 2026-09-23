@@ -4849,3 +4849,29 @@ Accepted truth:
 - no order/network/credential authority; REAL_CAPITAL=0.
 
 Next locked frontier: Capital Center with canonical Epoch 2 read-only truth.
+
+
+---
+
+## 2026-09-23 — 17:16 GALACTECH CAPITAL CENTER ACCEPTED
+
+PR #926 completed the canonical capital Product-rail slice.
+
+Acceptance:
+- exact-head run `35872519583` focused + full PASS at
+  `0848e52599a55a13acb22a003af653d716f24d3a`;
+- squash merge `4755fa390f1b5aa1ad144cf6867de4eb29b56d21`;
+- exact-main Stage10 `35872879217` SUCCESS.
+
+Accepted truth:
+- strict read-only R21 Epoch 2 state reader does not initialize a missing/product-read DB;
+- consolidated and vault accounting retain exact immutable lineage;
+- GALACTECH exposes canonical NAV, cash/exposure, realized/unrealized PnL, drawdown,
+  fee/spread/slippage, turnover, closed-trade/expectancy status and three-vault state;
+- Command Paper NAV consumes the same canonical R21 consolidated evidence;
+- accepted 600/300/100 constitution is policy evidence, not model inference;
+- legacy Epoch 1 mission-control state cannot silently replace canonical Epoch 2;
+- missing or empty performance evidence remains unavailable/NOT YET MEASURED;
+- no order/credential authority, leverage, borrowing, martingale or real capital.
+
+Next locked frontier: Markets workspace.
