@@ -4140,3 +4140,37 @@ Scientific boundary:
 
 The source-backed M4 core frontier is closed. Next primary locked intelligence frontier:
 M5 Smart Money / On-chain 2.0, then Event Risk + NLP.
+
+
+---
+
+## 2026-09-23 — 11:13 M5 EXCHANGE FLOW SLICE 1 ACCEPTED
+
+The locked M5 expansion began by preserving existing Bitcoin on-chain/network evidence and
+adding a separate provider-neutral exchange-flow evidence layer.
+
+Acceptance:
+- PR #889;
+- authoritative hosted branch run `35835438611` focused + full PASS;
+- squash merge `ba7954232f09b51d5328691368b0d37176e605d7`;
+- exact-main Stage10 run `35835815531` SUCCESS.
+
+Accepted semantics:
+- exact asset / exchange-scope / provider / attribution-method context;
+- PIT-safe inflow, outflow, netflow and gross-flow evidence;
+- duration-normalized rates and consumed-window percentile ranks;
+- netflow-rate velocity;
+- bounded INFLOW_ANOMALY / OUTFLOW_ANOMALY / BALANCED / MIXED;
+- stale, insufficient or unavailable evidence fails closed to UNRESOLVED;
+- future/late ingestion cannot rewrite a historical freeze.
+
+Scientific boundary:
+- provider-labeled exchange attribution is not actor intent;
+- inflow/outflow/stablecoin flow is not automatically a directional price signal;
+- no wallet-owner/institution/insider attribution;
+- no probability, capital sizing or order authority;
+- no live provider or credential activation;
+- REAL_CAPITAL=0.
+
+Next M5 frontier: PIT Wallet Cohort Registry with frozen admission time and forward-only
+measurement. User wake/lease pause remains authoritative and untouched.
