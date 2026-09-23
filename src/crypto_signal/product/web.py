@@ -104,9 +104,9 @@ def create_app(
     ledger_path: Path | None = None,
     alert_outbox_path: Path | None = None,
     paper_ledger_path: Path | None = None,
-    epoch2_ledger_path: Path | None = None,
     candle_cache_path: Path | None = None,
     learning_memory_path: Path | None = None,
+    epoch2_ledger_path: Path | None = None,
 ) -> FastAPI:
     selected_path = ledger_path or Path(
         os.environ.get("CRYPTO_SIGNAL_LEDGER_PATH", str(DEFAULT_LEDGER_PATH))
