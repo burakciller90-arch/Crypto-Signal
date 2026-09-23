@@ -15,6 +15,7 @@ def _args(ledger: Path, **overrides: Path | None) -> argparse.Namespace:
         "shadow_cycle_manifest": None,
         "runtime_replay_observation": None,
         "market_tape": None,
+        "market_tape_collector_runtime": None,
         "cold_archive": None,
     }
     values.update(overrides)
@@ -49,6 +50,9 @@ def test_dashboard_derives_all_world_class_runtime_paths_from_live_ledger() -> N
         "market_tape_path": (
             runtime / "market_tape" / "market_tape.sqlite3"
         ),
+        "market_tape_collector_runtime_path": (
+            runtime / "market_tape" / "collector_runtime.sqlite3"
+        ),
         "cold_archive_path": runtime / "market_tape" / "cold",
     }
 
@@ -64,6 +68,9 @@ def test_dashboard_runtime_path_overrides_are_exact_and_not_rebased(
         "shadow_cycle_manifest": tmp_path / "x" / "b.shadow-cycle.sqlite3",
         "runtime_replay_observation": tmp_path / "x" / "c.shadow-replay.sqlite3",
         "market_tape": tmp_path / "x" / "market.sqlite3",
+        "market_tape_collector_runtime": (
+            tmp_path / "x" / "collector.sqlite3"
+        ),
         "cold_archive": tmp_path / "x" / "cold",
     }
 
@@ -78,6 +85,9 @@ def test_dashboard_runtime_path_overrides_are_exact_and_not_rebased(
             "runtime_replay_observation"
         ],
         "market_tape_path": explicit["market_tape"],
+        "market_tape_collector_runtime_path": explicit[
+            "market_tape_collector_runtime"
+        ],
         "cold_archive_path": explicit["cold_archive"],
     }
 
