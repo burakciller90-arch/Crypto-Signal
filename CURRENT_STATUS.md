@@ -10,6 +10,25 @@ REAL_CAPITAL: 0
 ## Active v1.1 frontier — read before historical sections
 
 
+### 2026-09-23 13:48 +0300 — PHASE 13 R20 IMMUTABLE FORECAST STREAM ACCEPTED
+
+- PR **#914** accepted the current-main R20 Immutable Forecast Stream.
+- Authoritative branch hosted run `35850599441` focused + full repository PASS.
+- PR #914 squash-merged to main as `e6343a78aab04e8367418ee68921d95cb8d4db45`.
+- Exact-main Stage10 run `35850808650` SUCCESS.
+- Forecast issuance freezes exact signal, M6 Confluence, Event Risk, trigger, target, invalidation, horizon, freshness, uncertainty and version/evidence lineage.
+- Missing probability remains `NOT_CALIBRATED`.
+- R19 probability may attach only when exact immutable authorization + CalibrationScope match symbol, timeframe, regime and fixed-duration horizon.
+- R19 source forecast, frozen prediction, walk-forward fit and calibration identities remain in forecast evidence lineage.
+- Later outcomes append separate HIT_TARGET / INVALIDATED / EXPIRED / AMBIGUOUS / NOT_EVALUABLE / CANCELLED resolution artifacts.
+- Resolution append never rewrites the original forecast and one forecast may receive at most one final resolution.
+- No private chain-of-thought, sizing, ledger mutation, network/exchange/order or production authority.
+- **Phase 13 infrastructure exit is satisfied.**
+- Current locked frontier: **Phase 14 — R20.5 Decision Proof / Live Intelligence Feed**.
+- CONTINUITY_PAUSED_BY_USER remains dominant. REAL_CAPITAL=0.
+
+
+
 ### 2026-09-23 13:31 +0300 — PHASE 12 MARKET-NEUTRAL / ARBITRAGE RESEARCH ACCEPTED
 
 - PR **#911** accepted the shadow-only Phase 12 market-neutral/arbitrage research contract.
