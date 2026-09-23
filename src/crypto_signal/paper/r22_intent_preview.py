@@ -195,7 +195,7 @@ class R22IntentPreview:
             or self.real_capital != REAL_CAPITAL
         ):
             raise ValueError("R22 preview cannot grant write/execution authority")
-        if self.preview_identity != canonical_sha256(_preview_payload(self)):
+        if self.preview_identity != canonical_sha256(r22_intent_preview_payload(self)):
             raise ValueError("R22 intent preview identity mismatch")
 
 
@@ -534,7 +534,14 @@ def _selection_payload(selection: ReviewedSizingSelection) -> dict[str, object]:
     }
 
 
-def _preview_payload(preview: R22IntentPreview) -> dict[str, object]:
+def r22_intent_preview_payload(
+    preview: R22IntentPreview,
+) -> dict[str, object]:
+    """Canonical preview payload excluding its self-identity.
+
+    Public so isolated append-only journals can verify persisted preview bytes
+    without importing a private helper or reconstructing market evidence.
+    """
     return {
         "activation_identity": preview.activation_identity,
         "canonical_epoch2_write_authority": preview.canonical_epoch2_write_authority,
