@@ -4630,3 +4630,34 @@ Accepted semantics:
 
 Phase 14 exit is satisfied. Next locked frontier is Phase 15 R21 Canonical 1,000 USDT
 Paper Fund. User wake/lease pause remains authoritative.
+
+
+---
+
+## 2026-09-23 — 14:26 PHASE 15 R21 CANONICAL 1,000 USDT PAPER FUND ACCEPTED
+
+PR #917 established canonical Epoch 2 activation/accounting and PR #918 corrected a
+post-PASS WAL/SHM sidecar immutability overconstraint discovered by exact-main acceptance.
+
+Acceptance:
+- R21 branch run `35853872557` focused + full PASS;
+- post-merge hotfix run `35854325501` focused + full PASS;
+- main commits `bb8e6c3b02553ff127a262090b5dd2eab2c414a1` and
+  `8ea6587a33ea3373037573363fcb553e72e5e58f`;
+- exact-main Stage10 after hotfix `35854477095` SUCCESS.
+
+Accepted semantics:
+- Epoch 1 remains separate immutable 100 USDT history;
+- Epoch 2 is separate 1,000 USDT accounting with Core 600 / Tactical 300 / Reserve 100;
+- strict read-only legacy validation and canonical DB raw-byte equality are preserved;
+- WAL/SHM housekeeping bytes are not misclassified as economic-history mutation;
+- vault and parent accounting reconcile cash/exposure/NAV/PnL/drawdown/cost/turnover/
+  expectancy/outcome truth;
+- empty histories remain NOT_YET_MEASURED;
+- previous-snapshot lineage and SQLite immutability prevent forks/backfills/rewrites;
+- no leverage, borrowing, martingale, cross-vault transfer, order/network or real-capital
+  authority;
+- REAL_CAPITAL=0.
+
+Phase 15 infrastructure exit is satisfied. Next locked frontier: Phase 16 R21.5 Shadow
+Lab 2.0. User wake/lease pause remains authoritative.
