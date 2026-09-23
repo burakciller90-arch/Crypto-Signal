@@ -10,6 +10,29 @@ REAL_CAPITAL: 0
 ## Active v1.1 frontier — read before historical sections
 
 
+### 2026-09-23 16:16 +0300 — PHASE 17 R22 TRANSACTION & DECISION TAPE ACCEPTED
+
+- PR **#921** accepted the locked Phase 17 immutable paper-capital audit contract.
+- Authoritative branch acceptance:
+  - exact-head R22 hosted run `35865597121` SUCCESS at `40e69800ee42158bba5d56d29c48b871aefe3de7`;
+  - focused R22 pytest, Ruff and strict mypy PASS;
+  - whole-repository pytest/Ruff/mypy/JS/freshness PASS.
+- PR #921 squash-merged to main as `c7107c2dc6d448055f4b337c3672228abdc80c1e`.
+- Exact-main Stage10 run `35865750883` SUCCESS.
+- Every canonical R22 paper-capital mutation binds exact forecast -> Decision Proof -> sizing assessment/result -> paper decision -> simulated fill -> cash/position mutation -> R21 vault + consolidated accounting -> financial outcome -> immutable bundle lineage.
+- Caller-supplied free-form SHA placeholders cannot substitute for accepted sizing/decision/fill objects.
+- R22 records reference/fill price, fee/spread/slippage, venue/execution policy, cash/position before/after, realized/unrealized PnL, explicit financial outcome and exact evidence identities.
+- HOLD_CASH remains an immutable decision without fabricated forecast/sizing/fill evidence.
+- R22 and R21 accounting commit in one local Epoch 2 SQLite transaction; forced insert failure proves whole-transaction rollback.
+- Read-only replay verifies embedded hashes, row headers, predecessor chains, exact three-vault lineage, target-vault binding, missing evidence and hidden non-target mutations.
+- Decimal representation differences such as `0` vs `0E+2` are audited semantically, not mistaken for economic mutation.
+- No exchange/broker/network credential authority, leverage, borrowing, martingale, automatic Shadow promotion or Epoch 1 rewrite.
+- **Phase 17 exit is satisfied.**
+- Current locked frontier: **Phase 18 — R23 Explainable Intelligence**.
+- CONTINUITY_PAUSED_BY_USER remains dominant. REAL_CAPITAL=0.
+
+
+
 ### 2026-09-23 14:38 +0300 — PHASE 16 R21.5 SHADOW LAB 2.0 ACCEPTED
 
 - PR **#920** accepted Shadow Lab 2.0 research-governance infrastructure.
