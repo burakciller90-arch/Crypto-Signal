@@ -3905,3 +3905,44 @@ current GitHub main/PR/Actions and a new read-only UID504 rollingstate.
 - M2 integrated main and M3 Slice 1 are accepted, no replay. Next safe Intelligence
   frontier is M3 price/CVD divergence plus bounded absorption research.
 - Cursor worker/composer remains disabled by user. REAL_CAPITAL=0.
+
+
+---
+
+## 2026-09-23 — 04:49 ROLLING-WAKE EXACT-RECEIPT RECOVERY AND WATCHDOG MERGE
+
+State-first investigation of the missing/delayed continuity wake determined that a live
+rolling process is not proof of chat-message delivery.
+
+Mechanical evidence:
+- 04:37 read-only rollingstate run `35807023713`: exact generation `4bc50caa43074cf2`,
+  pending event sequence 7, RETRYING, 60 failures, no active user-pause.
+- 04:39 watchdog run `35807194134`: receipt timeout/failure under the old
+  heartbeat-only workflow.
+- Relay logs repeatedly said `WAITING_FOR_EXACT_OBSERVATION`; the *same* pending
+  event was finally observed at 04:43:34 +0300.
+- 04:47 read-only rollingstate run `35807770689`: PID 37328 alive, RUNNING,
+  failure_count 0, pending empty, last receipt epoch 1790127814,
+  next_due_epoch 1790129014 (exact +1200 seconds, next target 05:03:34 +0300).
+- 04:48 bridgestate run `35807805762`: relay PID 38052 RUNNING, exact current
+  conversation URL.
+- PR #859 had previously passed hosted focused/full run `35802247387`;
+  merged to main `9e35933ec7a9d34a2b6a48c6406d47b1bea09925` without
+  reinstallation or reset of the UID504 timer.
+- First post-merge scheduled watchdog run `35807848451` PASS at 04:49:
+  heartbeat age 2s, delivery state HEALTHY, fallback skipped.
+
+Meaning of #859: it detects a *stalled pending* identity based on failed attempts
+and overdue time rather than misreporting a live heartbeat as delivery success,
+and prevents second-event emergency fallback when that pending identity exists.
+It does not force ChatGPT/network availability or guarantee zero delay.
+
+OPEN root-cause hardening issue #856: local rolling timer blocks for up to 60s
+during one submission/receipt wait, while old watchdog health tolerance is 30s.
+A fresh in-flight pending send can therefore look falsely stale. A guarded
+watchdog policy to avoid needless restart of a confirmed exact in-flight pending
+process still needs code and hosted tests; it is **not** accepted yet.
+Do not create duplicate wake events or reset the receipt-bound generation.
+The next primary intelligence development frontier remains M3 temporal price/CVD
+divergence + bounded absorption; do not use Cursor workers/composer.
+REAL_CAPITAL=0.
