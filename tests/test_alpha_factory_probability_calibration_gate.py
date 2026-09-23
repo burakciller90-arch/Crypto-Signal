@@ -65,6 +65,8 @@ def _config(
         decision_window_end_ms=WINDOW_END,
         evaluation_cutoff_ms=EVALUATION_CUTOFF,
         probability_bin_edges=(Decimal(0), Decimal("0.50"), Decimal(1)),
+        minimum_training_n=60,
+        minimum_training_class_n=10,
         minimum_holdout_n=minimum_holdout_n,
         minimum_holdout_class_n=minimum_holdout_class_n,
         minimum_reliability_bin_n=minimum_reliability_bin_n,
@@ -154,6 +156,56 @@ def test_scope_and_config_freeze_exact_r19_context_before_holdout() -> None:
     assert config.real_capital == 0
 
 
+def test_training_support_thresholds_fail_before_probability_evaluation() -> None:
+    with pytest.raises(ValueError, match="training sample support is below minimum"):
+        build_probability_calibration_config(
+            policy_version="r19-gate-policy-v1/1",
+            scope=_scope(),
+            model_version="m6-probability-model-v1/1",
+            calibrator_version="isotonic-shadow-v1/1",
+            walk_forward_fit_identity=_sha("walk-forward-fit"),
+            created_at_ms=WINDOW_START - 100,
+            training_cutoff_ms=WINDOW_START - 200,
+            training_sample_count=20,
+            training_positive_count=10,
+            decision_window_start_ms=WINDOW_START,
+            decision_window_end_ms=WINDOW_END,
+            evaluation_cutoff_ms=EVALUATION_CUTOFF,
+            probability_bin_edges=(Decimal(0), Decimal("0.50"), Decimal(1)),
+            minimum_training_n=60,
+            minimum_training_class_n=5,
+            minimum_holdout_n=8,
+            minimum_holdout_class_n=2,
+            minimum_reliability_bin_n=2,
+            minimum_brier_skill=Decimal("0.10"),
+            maximum_expected_calibration_error=Decimal("0.21"),
+        )
+
+    with pytest.raises(ValueError, match="training class support is below minimum"):
+        build_probability_calibration_config(
+            policy_version="r19-gate-policy-v1/1",
+            scope=_scope(),
+            model_version="m6-probability-model-v1/1",
+            calibrator_version="isotonic-shadow-v1/1",
+            walk_forward_fit_identity=_sha("walk-forward-fit"),
+            created_at_ms=WINDOW_START - 100,
+            training_cutoff_ms=WINDOW_START - 200,
+            training_sample_count=100,
+            training_positive_count=2,
+            decision_window_start_ms=WINDOW_START,
+            decision_window_end_ms=WINDOW_END,
+            evaluation_cutoff_ms=EVALUATION_CUTOFF,
+            probability_bin_edges=(Decimal(0), Decimal("0.50"), Decimal(1)),
+            minimum_training_n=60,
+            minimum_training_class_n=10,
+            minimum_holdout_n=8,
+            minimum_holdout_class_n=2,
+            minimum_reliability_bin_n=2,
+            minimum_brier_skill=Decimal("0.10"),
+            maximum_expected_calibration_error=Decimal("0.21"),
+        )
+
+
 def test_untouched_forward_gate_accepts_well_calibrated_predictions() -> None:
     config = _config()
     predictions = _predictions(config)
@@ -169,6 +221,9 @@ def test_untouched_forward_gate_accepts_well_calibrated_predictions() -> None:
 
     assert report.status is CalibrationGateStatus.ACCEPTED
     assert report.probability_status is R19ProbabilityStatus.CALIBRATED
+    assert report.training_sample_count == 100
+    assert report.training_positive_count == 50
+    assert report.training_negative_count == 50
     assert report.holdout_sample_count == 8
     assert report.holdout_positive_count == 4
     assert report.holdout_negative_count == 4
