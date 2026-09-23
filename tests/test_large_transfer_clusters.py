@@ -141,6 +141,25 @@ def test_one_off_large_transfer_remains_isolated_context_not_actor_claim() -> No
     assert "large_transfer_context_is_not_price_direction" in analysis.uncertainty_flags
 
 
+def test_latest_non_tail_event_keeps_normal_context() -> None:
+    events = (
+        _transfer(1, source_cluster="a", destination_cluster="b", amount="10"),
+        _transfer(2, source_cluster="c", destination_cluster="d", amount="20"),
+        _transfer(3, source_cluster="e", destination_cluster="f", amount="100"),
+        _transfer(4, source_cluster="g", destination_cluster="h", amount="40"),
+        _transfer(5, source_cluster="i", destination_cluster="j", amount="30"),
+    )
+    analysis = build_large_transfer_cluster_evidence_freeze(
+        events,
+        as_of_ms=AS_OF,
+    ).analysis
+
+    assert analysis.label is LargeTransferLabel.NORMAL
+    assert analysis.metrics is not None
+    assert analysis.metrics.large_event_count >= 1
+    assert analysis.metrics.latest_amount_percentile_0_1 < Decimal("0.80")
+
+
 def test_insufficient_history_fails_closed_without_zero_activity_claim() -> None:
     events = (
         _transfer(1, source_cluster="a", destination_cluster="b", amount="10"),
@@ -185,6 +204,43 @@ def test_future_and_late_ingested_events_cannot_rewrite_historical_freeze() -> N
     )
     changed = build_large_transfer_cluster_evidence_freeze(
         (*baseline_events, future, late),
+        as_of_ms=AS_OF,
+    )
+
+    assert changed == baseline
+
+
+def test_future_wrong_context_and_duplicate_provider_id_do_not_rewrite_history() -> None:
+    baseline_events = (
+        _transfer(1, source_cluster="a", destination_cluster="b", amount="10"),
+        _transfer(2, source_cluster="c", destination_cluster="d", amount="20"),
+        _transfer(3, source_cluster="e", destination_cluster="f", amount="100"),
+    )
+    baseline = build_large_transfer_cluster_evidence_freeze(
+        baseline_events,
+        as_of_ms=AS_OF,
+    )
+    future_wrong_context = _transfer(
+        8,
+        source_cluster="future-a",
+        destination_cluster="future-b",
+        amount="999",
+        asset="ETH",
+        provider_transfer_id=baseline_events[0].provider_transfer_id,
+        event_at_ms=AS_OF + 1,
+    )
+    late_wrong_context = _transfer(
+        9,
+        source_cluster="late-a",
+        destination_cluster="late-b",
+        amount="999",
+        asset="ETH",
+        event_at_ms=AS_OF - 1_000,
+        ingested_at_ms=AS_OF + 1,
+    )
+
+    changed = build_large_transfer_cluster_evidence_freeze(
+        (*baseline_events, future_wrong_context, late_wrong_context),
         as_of_ms=AS_OF,
     )
 
