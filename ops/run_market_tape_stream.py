@@ -3,14 +3,23 @@ from __future__ import annotations
 import argparse
 import asyncio
 import fcntl
+import os
+import secrets
 import sqlite3
 import sys
+import time
 from pathlib import Path
 
 from crypto_signal.data.adapters.bybit_microstructure_ws import (
+    BybitMicrostructureWireEvent,
     BybitSpotMicrostructureStream,
 )
 from crypto_signal.data.market_tape import MarketTapeStore
+from crypto_signal.data.market_tape_collector_runtime import (
+    MarketTapeCollectorRuntimeStore,
+    build_collector_heartbeat,
+    build_collector_instance,
+)
 from crypto_signal.data.market_tape_wire_collection import (
     persist_bybit_wire_stream,
 )
@@ -28,6 +37,10 @@ DEFAULT_LOCK = Path(
     "/Volumes/Crypto-504/Crypto-Signal/Development/runtime/"
     "market_tape/market_tape_stream.lock"
 )
+DEFAULT_RUNTIME_STATUS_DB = Path(
+    "/Volumes/Crypto-504/Crypto-Signal/Development/runtime/"
+    "market_tape/collector_runtime.sqlite3"
+)
 DEFAULT_SYMBOLS = ("BTCUSDT", "ETHUSDT", "SOLUSDT")
 
 
@@ -36,6 +49,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--db", type=Path, default=DEFAULT_DB)
     parser.add_argument("--raw-db", type=Path, default=DEFAULT_RAW_DB)
     parser.add_argument("--lock-path", type=Path, default=DEFAULT_LOCK)
+    parser.add_argument(
+        "--runtime-status-db",
+        type=Path,
+        default=DEFAULT_RUNTIME_STATUS_DB,
+    )
     parser.add_argument(
         "--symbols",
         nargs="+",
@@ -48,6 +66,11 @@ def parse_args() -> argparse.Namespace:
         default=1_000,
     )
     parser.add_argument(
+        "--heartbeat-interval-ms",
+        type=int,
+        default=10_000,
+    )
+    parser.add_argument(
         "--max-events",
         type=int,
         default=0,
@@ -57,7 +80,11 @@ def parse_args() -> argparse.Namespace:
 
 
 async def run(args: argparse.Namespace) -> int:
-    for label, path in (("db", args.db), ("raw_db", args.raw_db)):
+    for label, path in (
+        ("db", args.db),
+        ("raw_db", args.raw_db),
+        ("runtime_status_db", args.runtime_status_db),
+    ):
         if not str(path).startswith("/Volumes/Crypto-504/"):
             print(
                 "MARKET_TAPE_STREAM_ERROR=NON_CANONICAL_DB_PATH "
@@ -77,6 +104,13 @@ async def run(args: argparse.Namespace) -> int:
     if args.orderbook_snapshot_interval_ms <= 0:
         print(
             "MARKET_TAPE_STREAM_ERROR=INVALID_SNAPSHOT_INTERVAL",
+            file=sys.stderr,
+            flush=True,
+        )
+        return 2
+    if args.heartbeat_interval_ms <= 0:
+        print(
+            "MARKET_TAPE_STREAM_ERROR=INVALID_HEARTBEAT_INTERVAL",
             file=sys.stderr,
             flush=True,
         )
@@ -101,6 +135,59 @@ async def run(args: argparse.Namespace) -> int:
         )
         return 3
 
+    runtime_store = MarketTapeCollectorRuntimeStore(args.runtime_status_db)
+    previous = runtime_store.latest_instance(
+        provider="bybit",
+        source="market_tape_stream",
+    )
+    instance = build_collector_instance(
+        provider="bybit",
+        source="market_tape_stream",
+        symbols=tuple(sorted(symbols)),
+        started_at_ms=int(time.time() * 1000),
+        process_id=os.getpid(),
+        runtime_nonce=secrets.token_hex(16),
+        previous_instance_identity=(
+            None if previous is None else previous.instance_identity
+        ),
+    )
+    runtime_store.append_instance(instance)
+    heartbeat_sequence = 0
+    last_heartbeat_ms: int | None = None
+    last_ingestion_ms: int | None = None
+    last_observed_messages = 0
+
+    def persist_progress(
+        event: BybitMicrostructureWireEvent,
+        observed_messages: int,
+    ) -> None:
+        nonlocal heartbeat_sequence
+        nonlocal last_heartbeat_ms
+        nonlocal last_ingestion_ms
+        nonlocal last_observed_messages
+        last_ingestion_ms = event.ingested_at_ms
+        last_observed_messages = observed_messages
+        if (
+            last_heartbeat_ms is not None
+            and event.ingested_at_ms - last_heartbeat_ms
+            < args.heartbeat_interval_ms
+        ):
+            return
+        heartbeat_sequence += 1
+        counts = store.counts()
+        runtime_store.append_heartbeat(
+            build_collector_heartbeat(
+                instance_identity=instance.instance_identity,
+                sequence_no=heartbeat_sequence,
+                observed_at_ms=event.ingested_at_ms,
+                last_successful_ingestion_ms=event.ingested_at_ms,
+                observed_messages_total=observed_messages,
+                normalized_rows_total=counts.total,
+                raw_rows_total=raw_store.count(),
+            )
+        )
+        last_heartbeat_ms = event.ingested_at_ms
+
     stream = BybitSpotMicrostructureStream()
     try:
         result = await persist_bybit_wire_stream(
@@ -114,7 +201,26 @@ async def run(args: argparse.Namespace) -> int:
                 args.orderbook_snapshot_interval_ms
             ),
             max_messages=(None if args.max_events == 0 else args.max_events),
+            progress_callback=persist_progress,
         )
+        if (
+            last_ingestion_ms is not None
+            and last_ingestion_ms != last_heartbeat_ms
+        ):
+            heartbeat_sequence += 1
+            counts = store.counts()
+            runtime_store.append_heartbeat(
+                build_collector_heartbeat(
+                    instance_identity=instance.instance_identity,
+                    sequence_no=heartbeat_sequence,
+                    observed_at_ms=last_ingestion_ms,
+                    last_successful_ingestion_ms=last_ingestion_ms,
+                    observed_messages_total=last_observed_messages,
+                    normalized_rows_total=counts.total,
+                    raw_rows_total=raw_store.count(),
+                )
+            )
+            last_heartbeat_ms = last_ingestion_ms
     except (OSError, sqlite3.Error, ValueError) as exc:
         print(
             "MARKET_TAPE_STREAM_ERROR "
@@ -141,6 +247,10 @@ async def run(args: argparse.Namespace) -> int:
         f"raw_latest_event_at_ms={raw_store.latest_event_at_ms() or '-'} "
         f"normalized_quick_check={'YES' if store.quick_check() else 'NO'} "
         f"raw_quick_check={'YES' if raw_store.quick_check() else 'NO'} "
+        f"collector_instance={instance.instance_identity} "
+        f"collector_start_kind={instance.start_kind.value} "
+        f"collector_heartbeat_seq={heartbeat_sequence} "
+        f"collector_runtime_quick_check={'YES' if runtime_store.quick_check() else 'NO'} "
         "REAL_CAPITAL=0",
         flush=True,
     )
