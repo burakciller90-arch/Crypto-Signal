@@ -4305,3 +4305,36 @@ Scientific boundary:
 
 Next frontier: source-bounded News/NLP evidence, then circuit-breaker composition and
 ABSTAIN semantics. User wake/lease pause remains authoritative.
+
+
+---
+
+## 2026-09-23 — 11:55 EVENT RISK NEWS/NLP SLICE 2 ACCEPTED
+
+PR #897 added the source-bounded News/NLP evidence layer.
+
+Acceptance:
+- hosted run `35839685914` focused + full PASS;
+- squash merge `d438f711f36b315655fed1c9ad535f70454a5674`;
+- exact-main Stage10 run `35839886324` SUCCESS.
+
+Accepted semantics:
+- publication/source/ingestion-time provenance;
+- affected assets and event category;
+- source quality;
+- extraction method/version and relevance confidence;
+- deterministic latest eligible event-cluster selection;
+- multi-source confirmation, single-source context, explicit provider category disagreement,
+  degraded data and unresolved states;
+- future/late/other-asset evidence cannot rewrite a historical freeze.
+
+Scientific boundary:
+- extraction confidence is not calibrated price/event probability;
+- agreement does not prove every factual detail;
+- disagreement does not prove which provider is wrong;
+- no directional mapping, sizing or order authority;
+- no live provider/credential activation;
+- REAL_CAPITAL=0.
+
+Next Event Risk frontier: circuit-breaker composition over calendar + news + market-data
+quality with versioned thresholds and ABSTAIN semantics. Wake/lease pause remains authoritative.
