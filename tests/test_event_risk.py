@@ -107,6 +107,36 @@ def test_event_window_states_are_explicit_and_versioned(
     )
 
 
+def test_overlapping_events_use_more_restrictive_state_and_global_scope() -> None:
+    post = _event("post", delta_minutes=-20)
+    caution = _event("caution", delta_minutes=30)
+    block = _event("block", delta_minutes=5)
+    global_event = _event(
+        "global",
+        delta_minutes=10,
+        assets=(),
+        category=EventCategory.CENTRAL_BANK,
+    )
+
+    combined = build_event_risk_evidence_freeze(
+        (post, caution, block),
+        coverage=_coverage(),
+        asset="BTC",
+        as_of_ms=AS_OF,
+    )
+    global_freeze = build_event_risk_evidence_freeze(
+        (global_event,),
+        coverage=_coverage(),
+        asset="ETH",
+        as_of_ms=AS_OF,
+    )
+
+    assert combined.analysis.state is EventRiskState.EVENT_BLOCK
+    assert combined.analysis.nearest_event_identity == block.event_identity
+    assert global_freeze.analysis.state is EventRiskState.EVENT_BLOCK
+    assert global_event.event_identity in global_freeze.analysis.consumed_event_identities
+
+
 def test_clear_state_requires_complete_coverage_not_missing_event_assumption() -> None:
     freeze = build_event_risk_evidence_freeze(
         (),
