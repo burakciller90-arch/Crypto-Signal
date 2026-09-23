@@ -6,10 +6,10 @@ from pathlib import Path
 
 import uvicorn
 
+from crypto_signal.paper.epochs import EPOCH_2_LEDGER_FILENAME
 from crypto_signal.product.web import (
     DEFAULT_ALERT_OUTBOX_PATH,
     DEFAULT_CANDLE_CACHE_PATH,
-    DEFAULT_DECISION_EVIDENCE_LEDGER_PATH,
     DEFAULT_LEDGER_PATH,
     DEFAULT_PAPER_LEDGER_PATH,
     create_app,
@@ -36,11 +36,13 @@ def parse_args() -> argparse.Namespace:
         type=Path,
         default=DEFAULT_CANDLE_CACHE_PATH,
     )
-    parser.add_argument(
-        "--decision-evidence",
-        type=Path,
-        default=DEFAULT_DECISION_EVIDENCE_LEDGER_PATH,
-    )
+    parser.add_argument("--decision-evidence", type=Path, default=None)
+    parser.add_argument("--epoch2-ledger", type=Path, default=None)
+    parser.add_argument("--shadow-intent-journal", type=Path, default=None)
+    parser.add_argument("--shadow-cycle-manifest", type=Path, default=None)
+    parser.add_argument("--runtime-replay-observation", type=Path, default=None)
+    parser.add_argument("--market-tape", type=Path, default=None)
+    parser.add_argument("--cold-archive", type=Path, default=None)
     parser.add_argument(
         "--learning-memory",
         type=Path,
@@ -50,17 +52,52 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+def resolve_runtime_paths(args: argparse.Namespace) -> dict[str, Path]:
+    runtime_root = args.ledger.parent.parent
+    return {
+        "decision_evidence_path": (
+            args.decision_evidence
+            or runtime_root / "decision" / "decision_evidence.sqlite3"
+        ),
+        "epoch2_ledger_path": (
+            args.epoch2_ledger
+            or runtime_root / "paper" / EPOCH_2_LEDGER_FILENAME
+        ),
+        "shadow_intent_journal_path": (
+            args.shadow_intent_journal
+            or runtime_root / "r25" / "r25.shadow-intent.sqlite3"
+        ),
+        "shadow_cycle_manifest_path": (
+            args.shadow_cycle_manifest
+            or runtime_root / "r25" / "r25.shadow-cycle.sqlite3"
+        ),
+        "runtime_replay_observation_path": (
+            args.runtime_replay_observation
+            or runtime_root / "r25" / "r25.shadow-replay.sqlite3"
+        ),
+        "market_tape_path": (
+            args.market_tape
+            or runtime_root / "market_tape" / "market_tape.sqlite3"
+        ),
+        "cold_archive_path": (
+            args.cold_archive
+            or runtime_root / "market_tape" / "cold"
+        ),
+    }
+
+
 def main() -> None:
     args = parse_args()
     if not 1 <= args.port <= 65535:
         raise SystemExit("port must be between 1 and 65535")
+    runtime_paths = resolve_runtime_paths(args)
     app = create_app(
         args.ledger,
         args.alert_outbox,
         paper_ledger_path=args.paper_ledger,
         candle_cache_path=args.candle_cache,
         learning_memory_path=args.learning_memory,
-        decision_evidence_path=args.decision_evidence,
+        **runtime_paths,
     )
     uvicorn.run(
         app,
