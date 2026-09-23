@@ -600,7 +600,9 @@ def build_performance_trust_center(
 
 
 def _forecast_metrics(stream: ForecastStreamSnapshot) -> R24ForecastTrustMetrics:
-    grouped = {evidence_class: [] for evidence_class in EvidenceClass}
+    grouped: dict[EvidenceClass, list[ForecastResolutionState]] = {
+        evidence_class: [] for evidence_class in EvidenceClass
+    }
     for resolution in stream.resolutions:
         grouped[resolution.evidence_class].append(resolution.state)
     cohorts = tuple(
