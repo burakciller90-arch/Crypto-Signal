@@ -189,9 +189,21 @@ def test_forward_measurement_cannot_start_before_member_admission() -> None:
 def test_unknown_admission_context_and_duplicate_cluster_fail_closed() -> None:
     a = _admission("cluster-a", admitted_at_ms=1_000)
     b = _admission("cluster-b", admitted_at_ms=2_000)
-    wrong_context = replace(
-        _forward(a, start_ms=1_000, end_ms=4_000, value="0.10"),
+    wrong_context = build_wallet_cohort_forward_observation(
+        admission_identity=a.admission_identity,
+        cohort_id=a.cohort_id,
         cluster_id="cluster-other",
+        asset=a.asset,
+        network=a.network,
+        measurement_start_ms=1_000,
+        measurement_end_ms=4_000,
+        metric_name="provider_forward_performance_fraction",
+        metric_value=Decimal("0.10"),
+        source_provider="test-performance-provider",
+        source=DataSource.AGGREGATED,
+        source_timestamp_ms=4_010,
+        ingested_at_ms=4_020,
+        adapter_version="wallet-cohort-test/1",
     )
     unknown = _forward(b, start_ms=2_000, end_ms=4_500, value="0.10")
 
