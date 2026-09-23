@@ -10,6 +10,32 @@ REAL_CAPITAL: 0
 ## Active v1.1 frontier — read before historical sections
 
 
+### 2026-09-23 05:37 +0300 — M3 SLICE 2 MERGED / CONTINUITY LIVE
+
+- M3 Slice 2 PR **#873** hosted run `35810883083` PASS:
+  - focused M3 pytest/Ruff/mypy PASS;
+  - full repository pytest/Ruff/mypy/JS/freshness PASS;
+  - `M3_ORDER_FLOW_PATTERNS_SLICE2_FOCUSED_PASS=YES`;
+  - `M3_ORDER_FLOW_PATTERNS_SLICE2_FULL_PASS=YES`.
+- Final diff contains only `docs/M3_ORDER_FLOW_PATTERNS_SLICE2.md`, `src/crypto_signal/intelligence/order_flow_patterns.py`, and `tests/test_order_flow_patterns.py`.
+- PR #873 squash-merged to main as `298f1e4f2cedb9a3dbbe6f68842164b7f76c3f46`.
+- Accepted semantics:
+  - price/CVD divergence uses real endpoint public-trade coverage and window-local CVD;
+  - absorption requires aggressive flow + actual replenishment + bounded price non-response;
+  - both remain candidate evidence, not probability, prediction, iceberg proof or actor attribution.
+- 05:37 read-only continuity snapshot:
+  - relay PID `47087` RUNNING on exact current chat;
+  - relay heartbeat fresh at `05:37:05 +0300`;
+  - newest observed wake in relay log at `05:34:25 +0300` with `OBSERVED_AFTER_CLICK`;
+  - local/shared pause NO;
+  - active leases 0;
+  - local/relay wake queues 0.
+- Current M3 safe frontier: breakout confirmation/failure + sweep/absorption interaction.
+- Cursor workers/composer remain disabled by user.
+- REAL_CAPITAL=0; no production cutover.
+
+
+
 ### 2026-09-23 05:17 +0300 — ROLLING WAKE IN-FLIGHT HEARTBEAT GUARD LIVE / INCIDENT #856 CLOSED
 
 - Root-cause PR **#869** hosted acceptance run `35809334485` PASS (focused + full repository pytest/Ruff/mypy/JS/freshness) and merged to main as `382f2f1253456d46eb130c0dae5234f59499a721`.
