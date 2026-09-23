@@ -192,6 +192,8 @@ class Epoch2VaultAccountingSnapshot:
             self.closed_trade_count,
         )
         if self.closed_trade_count == 0:
+            if self.realized_pnl_usdt != Decimal(0):
+                raise ValueError("R21 vault cannot realize PnL without closed trades")
             if self.metrics_status is not Epoch2MetricsStatus.NOT_YET_MEASURED:
                 raise ValueError("R21 empty vault performance must be NOT_YET_MEASURED")
             if self.expectancy_usdt_per_closed_trade is not None:
@@ -329,6 +331,10 @@ class Epoch2ConsolidatedAccountingSnapshot:
             self.closed_trade_count,
         )
         if self.closed_trade_count == 0:
+            if self.realized_pnl_usdt != Decimal(0):
+                raise ValueError(
+                    "R21 consolidated cannot realize PnL without closed trades"
+                )
             if self.metrics_status is not Epoch2MetricsStatus.NOT_YET_MEASURED:
                 raise ValueError("R21 empty consolidated metrics must be NOT_YET_MEASURED")
             if self.expectancy_usdt_per_closed_trade is not None:
