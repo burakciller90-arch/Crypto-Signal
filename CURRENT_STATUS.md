@@ -10,6 +10,30 @@ REAL_CAPITAL: 0
 ## Active v1.1 frontier — read before historical sections
 
 
+### 2026-09-23 13:31 +0300 — PHASE 12 MARKET-NEUTRAL / ARBITRAGE RESEARCH ACCEPTED
+
+- PR **#911** accepted the shadow-only Phase 12 market-neutral/arbitrage research contract.
+- Authoritative branch hosted run `35848941042` focused + full repository PASS.
+- Alpha Factory branch research gate `35848866823` SUCCESS.
+- PR #911 squash-merged to main as `aed739ac5df482e351636c95aef9dfb84cd92691`.
+- Exact-main gates:
+  - Alpha Factory research gate `35849105218` SUCCESS;
+  - Stage10 hosted gate `35849105188` SUCCESS.
+- Accepted research families:
+  - cross-exchange spread;
+  - spot-perpetual basis;
+  - funding capture;
+  - delta-neutral.
+- Gross edge uses executable long ask / short bid.
+- Fees, slippage, latency penalty, funding-change stress and transfer cost are explicit before net edge.
+- Stale/skewed evidence fails closed; transfer delay, counterparty/exchange risk, hedge mismatch and funding-change stress remain separate risk gates.
+- No risk-free/guaranteed claim, sizing, canonical capital mutation, promotion, ledger write or order authority.
+- **Phase 12 infrastructure exit is satisfied.**
+- Current locked frontier: **Phase 13 — R20 Immutable Forecast Stream**.
+- CONTINUITY_PAUSED_BY_USER remains dominant. REAL_CAPITAL=0.
+
+
+
 ### 2026-09-23 13:20 +0300 — PHASE 11 POSITION SIZING INTELLIGENCE ACCEPTED
 
 - PR **#910** accepted Position Sizing Intelligence after duplicate implementation reconciliation.
