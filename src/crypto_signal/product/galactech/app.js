@@ -11,6 +11,9 @@ const API = Object.freeze({
   education: "/api/education",
   intelligence: "/api/intelligence-center",
   performance: "/api/performance",
+  decisionStatus: "/api/decision-evidence/status",
+  liveFeed: "/api/intelligence-feed?limit=100",
+  decisionProof: (identity) => `/api/decision-proof/${encodeURIComponent(identity)}`,
   assetCockpit: (symbol, timeframe) =>
     `/api/assets/${encodeURIComponent(symbol)}/${encodeURIComponent(timeframe)}?recent_limit=30`,
   signalDetail: (identity) => `/api/signals/${encodeURIComponent(identity)}`,
@@ -43,11 +46,14 @@ const state = {
   education: null,
   intelligence: null,
   performance: null,
+  decisionStatus: null,
+  liveFeed: null,
   marketLayer: "PA",
   marketSelection: null,
   marketCockpit: null,
   marketProviderDetails: [],
   marketSelectedDetail: null,
+  marketSelectedProof: null,
   marketRequestSeq: 0,
   evidenceDetail: null,
   lastEvidenceTrigger: null,
@@ -289,7 +295,7 @@ function bindNavigation() {
     const source = event.target instanceof Element ? event.target : null;
     const marketProvider = source?.closest("[data-market-provider-id]");
     if (marketProvider instanceof HTMLElement) {
-      selectMarketProvider(marketProvider.dataset.marketProviderId || "");
+      void selectMarketProvider(marketProvider.dataset.marketProviderId || "");
       return;
     }
 
@@ -516,6 +522,7 @@ async function initializeMarketWorkspace({ reload = true } = {}) {
     state.marketCockpit = null;
     state.marketProviderDetails = [];
     state.marketSelectedDetail = null;
+    state.marketSelectedProof = null;
     renderMarketWorkspace();
     renderMarketTruth();
     return;
@@ -623,17 +630,40 @@ async function loadMarketSelection() {
     details[0] ||
     null;
   state.marketSelectedDetail = selected?.detail || null;
+  await loadSelectedDecisionProof(requestSeq);
   renderMarketWorkspace();
   renderMarketTruth();
 }
 
-function selectMarketProvider(identity) {
+async function loadSelectedDecisionProof(requestSeq = state.marketRequestSeq) {
+  const identity = state.marketSelectedDetail?.signal?.signal_freeze_identity || "";
+  state.marketSelectedProof = null;
+  if (!identity) return;
+  try {
+    const payload = await fetchJson(API.decisionProof(identity));
+    if (requestSeq !== state.marketRequestSeq) return;
+    state.marketSelectedProof = payload;
+  } catch (error) {
+    console.warn("[GALACTECH] decision proof unavailable", error);
+    if (requestSeq !== state.marketRequestSeq) return;
+    state.marketSelectedProof = {
+      status: "unavailable",
+      reason: "decision_proof_endpoint_error",
+      read_only: true,
+      real_capital: 0,
+    };
+  }
+}
+
+async function selectMarketProvider(identity) {
   const item = state.marketProviderDetails.find(
     (entry) => entry.card?.signal_freeze_identity === identity
   );
   if (!item) return;
   state.marketSelectedDetail = item.detail || null;
+  await loadSelectedDecisionProof(state.marketRequestSeq);
   renderMarketWorkspace();
+  renderMarketTruth();
 }
 
 function renderMarketProviderList() {
@@ -733,15 +763,74 @@ function renderMarketLayerSurface() {
       DERIV: "Derivatives / OI / funding / basis",
       ONCHAIN: "On-chain",
     };
-    target.className = "market-layer-surface market-layer-unavailable";
+    const domains = {
+      LIQ: ["liquidity_map", "liquidation_map"],
+      FLOW: ["order_book", "order_flow_cvd"],
+      DERIV: ["derivatives"],
+      ONCHAIN: ["onchain"],
+    };
+    const proofPayload = state.marketSelectedProof || {};
+    const proof = proofPayload.status === "ready" ? proofPayload.proof : null;
+    const slices = Array.isArray(proof?.evidence_slices)
+      ? proof.evidence_slices.filter((item) =>
+          (domains[layer] || []).includes(text(item?.domain, ""))
+        )
+      : [];
+
+    if (!proof || !slices.length) {
+      target.className = "market-layer-surface market-layer-unavailable";
+      target.innerHTML = `
+        <span class="proof-section-label">${escapeHtml(layer)} / DECISION PROOF</span>
+        <strong>${escapeHtml(labels[layer] || layer)} · NOT PERSISTED</strong>
+        <p>
+          No exact R20.5 Decision Proof is persisted for this immutable signal.
+          GALACTECH does not synthesize a layer from unrelated evidence.
+        </p>`;
+      return;
+    }
+
+    target.className = "market-layer-surface";
     target.innerHTML = `
-      <span class="proof-section-label">${escapeHtml(layer)} / PRODUCT BINDING</span>
-      <strong>${escapeHtml(labels[layer] || layer)} · NOT EXPOSED</strong>
-      <p>
-        This accepted intelligence family is not bound to a point-in-time customer API
-        on this workspace yet. GALACTECH keeps the layer unavailable instead of
-        synthesizing evidence from unrelated fields.
-      </p>`;
+      <div class="market-layer-head">
+        <div>
+          <span class="proof-section-label">${escapeHtml(layer)} / R20.5 DECISION PROOF</span>
+          <strong>${escapeHtml(labels[layer] || layer)}</strong>
+        </div>
+        <code>${escapeHtml(shortIdentity(proof.proof_identity))}</code>
+      </div>
+      <div class="truth-table">
+        ${slices.map((slice) => {
+          const availability = upper(slice?.availability, "INSUFFICIENT");
+          const verdict = upper(slice?.verdict, "INSUFFICIENT");
+          const freshness = Number(slice?.freshness_0_1);
+          const freshnessText = Number.isFinite(freshness)
+            ? `${(freshness * 100).toFixed(1)}%`
+            : "NOT MEASURED";
+          const ids = Array.isArray(slice?.evidence_identities)
+            ? slice.evidence_identities
+            : [];
+          const summaries = Array.isArray(slice?.summary_codes)
+            ? slice.summary_codes
+            : [];
+          return `
+            <div class="truth-row">
+              <span>${escapeHtml(upper(slice?.domain, "UNKNOWN"))}</span>
+              <strong class="${stateClass(verdict)}">${escapeHtml(availability)} · ${escapeHtml(verdict)}</strong>
+            </div>
+            <div class="proof-footnote">
+              source ${escapeHtml(slice?.source_quality || "NOT AVAILABLE")} ·
+              freshness ${escapeHtml(freshnessText)} ·
+              evidence ${escapeHtml(ids.length)}
+            </div>
+            ${summaries.length
+              ? `<ul class="market-evidence-summary">${summaries.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>`
+              : ""}
+            ${ids.length
+              ? `<div class="feed-item-meta">${ids.map((identity) => `<code>${escapeHtml(shortIdentity(identity))}</code>`).join("")}</div>`
+              : ""}
+          `;
+        }).join("")}
+      </div>`;
     return;
   }
 
@@ -839,15 +928,29 @@ function renderMarketTruth() {
   const detail = state.marketSelectedDetail;
   const cockpitStatus = upper(state.marketCockpit?.status, "UNAVAILABLE");
   const paReady = detail?.status === "ready";
+  const proof = state.marketSelectedProof?.status === "ready"
+    ? state.marketSelectedProof.proof
+    : null;
+  const evidenceSlices = Array.isArray(proof?.evidence_slices)
+    ? proof.evidence_slices
+    : [];
+  const domainStatus = (names) => {
+    const matches = evidenceSlices.filter((item) => names.includes(text(item?.domain, "")));
+    if (!matches.length) return "NOT PERSISTED";
+    if (matches.some((item) => item.availability === "available")) return "AVAILABLE · R20.5";
+    if (matches.some((item) => item.availability === "unsupported")) return "UNSUPPORTED";
+    return "INSUFFICIENT";
+  };
   const rows = [
     ["Radar API", state.radar ? upper(state.radar.status, "READY") : "UNAVAILABLE"],
     ["Asset cockpit", cockpitStatus],
     ["Provider freezes", String(state.marketProviderDetails.length)],
+    ["Decision Proof", proof ? "PERSISTED · IMMUTABLE" : "NOT PERSISTED"],
     ["PA", paReady ? "AVAILABLE · FROZEN SIGNAL DETAIL" : "INSUFFICIENT"],
-    ["LIQ", "NOT EXPOSED TO PRODUCT API"],
-    ["FLOW", "NOT EXPOSED TO PRODUCT API"],
-    ["DERIV", "NOT EXPOSED TO PRODUCT API"],
-    ["ONCHAIN", "NOT EXPOSED TO PRODUCT API"],
+    ["LIQ", domainStatus(["liquidity_map", "liquidation_map"])],
+    ["FLOW", domainStatus(["order_book", "order_flow_cvd"])],
+    ["DERIV", domainStatus(["derivatives"])],
+    ["ONCHAIN", domainStatus(["onchain"])],
   ];
   target.innerHTML = rows.map(([label, value]) =>
     `<div class="truth-row"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>`
@@ -1658,13 +1761,55 @@ async function openEvidenceRoom(identity, trigger) {
   }
 
   try {
-    const detail = await fetchJson(API.signalDetail(identity));
+    const [detail, decisionProof] = await Promise.all([
+      fetchJson(API.signalDetail(identity)),
+      fetchJson(API.decisionProof(identity)).catch(() => ({
+        status: "unavailable",
+        read_only: true,
+        real_capital: 0,
+      })),
+    ]);
     state.evidenceDetail = detail;
     renderEvidenceRoom(detail);
+    renderDecisionProofExtension(decisionProof);
   } catch (error) {
     console.warn("[GALACTECH] signal detail unavailable", error);
     renderEvidenceRoom({ status: "unavailable", signal: null });
   }
+}
+
+
+function renderDecisionProofExtension(payload) {
+  const body = byId("evidenceDialogBody");
+  if (!body || payload?.status !== "ready" || !payload.proof) return;
+  const proof = payload.proof;
+  const slices = Array.isArray(proof.evidence_slices) ? proof.evidence_slices : [];
+  const section = document.createElement("section");
+  section.className = "proof-section proof-section-wide";
+  section.innerHTML = `
+    <span class="proof-section-label">R20.5 DECISION PROOF</span>
+    <h3>Immutable cross-domain evidence</h3>
+    <div class="proof-metric-strip">
+      <div class="proof-metric"><span>SUPPORT</span><strong>${escapeHtml(proof.evidence_summary?.support_count ?? 0)}</strong></div>
+      <div class="proof-metric"><span>CONTRADICT</span><strong>${escapeHtml(proof.evidence_summary?.contradict_count ?? 0)}</strong></div>
+      <div class="proof-metric"><span>AVAILABLE</span><strong>${escapeHtml(proof.evidence_summary?.available_count ?? 0)}/${escapeHtml(proof.evidence_summary?.total_domain_count ?? slices.length)}</strong></div>
+    </div>
+    <div class="truth-table">
+      ${slices.map((slice) => `
+        <div class="truth-row">
+          <span>${escapeHtml(upper(slice?.domain, "UNKNOWN"))}</span>
+          <strong class="${stateClass(slice?.verdict)}">${escapeHtml(upper(slice?.availability, "INSUFFICIENT"))} · ${escapeHtml(upper(slice?.verdict, "INSUFFICIENT"))}</strong>
+        </div>
+      `).join("")}
+    </div>
+    <p class="proof-footnote">
+      proof ${escapeHtml(proof.proof_identity)} · forecast ${escapeHtml(proof.forecast_identity)} ·
+      probability ${escapeHtml(upper(proof.probability_status, "NOT_CALIBRATED"))}.
+      This is structured evidence, not private reasoning.
+    </p>`;
+  const grid = body.querySelector(".proof-grid");
+  if (grid) grid.prepend(section);
+  else body.appendChild(section);
 }
 
 function closeEvidenceRoom() {
@@ -1774,6 +1919,8 @@ function renderSystem() {
   const intelligence = state.intelligence || {};
   const performance = state.performance || {};
   const education = state.education || {};
+  const decisionStatus = state.decisionStatus || {};
+  const liveFeed = state.liveFeed || {};
 
   const apiReady = health.status === "ok";
   const ledgerPresent = health.ledger_present === true;
@@ -1785,6 +1932,10 @@ function renderSystem() {
   const educationReady = education.status === "ready";
   const radarItems = Array.isArray(radar.items) ? radar.items.length : 0;
   const lessonCount = Array.isArray(education.lessons) ? education.lessons.length : 0;
+  const decisionReady = decisionStatus.status === "ready";
+  const decisionSnapshot = decisionStatus.snapshot || {};
+  const feedReady = liveFeed.status === "ready" || liveFeed.status === "empty";
+  const feedCount = Array.isArray(liveFeed.events) ? liveFeed.events.length : 0;
 
   setSystemValue("systemApi", apiReady ? "READY" : "UNAVAILABLE", apiReady ? "positive" : "risk");
   setSystemValue("systemLedger", ledgerPresent ? "PRESENT" : "NOT PRESENT", ledgerPresent ? "positive" : "watch");
@@ -1797,6 +1948,16 @@ function renderSystem() {
   setSystemValue("systemPerformance", performanceReady ? "READY" : "UNAVAILABLE", performanceReady ? "positive" : "watch");
   setSystemValue("systemEducation", educationReady ? `${lessonCount} LESSONS` : "UNAVAILABLE", educationReady ? "positive" : "watch");
   setSystemValue("systemAlerts", health.alert_outbox_present ? "PRESENT" : "NOT PRESENT", health.alert_outbox_present ? "positive" : "neutral");
+  setSystemValue(
+    "systemDecisionLedger",
+    decisionReady ? `${decisionSnapshot.proof_count ?? 0} PROOFS` : "NOT EXPOSED",
+    decisionReady ? "positive" : "watch"
+  );
+  setSystemValue(
+    "systemLiveFeed",
+    feedReady ? `${feedCount} LOADED` : "NOT EXPOSED",
+    feedReady ? "positive" : "watch"
+  );
 
   const epochNote = byId("systemEpoch2Note");
   if (epochNote) {
@@ -2028,20 +2189,30 @@ function renderPerformance() {
 function renderIntelligence() {
   const target = byId("intelligenceTruth");
   if (!target) return;
-  if (!state.intelligence) {
-    target.textContent = "Intelligence endpoint evidence is unavailable.";
-    return;
-  }
-  const statusLabel = upper(state.intelligence.status, "READY");
+  const endpoint = state.intelligence || {};
+  const feed = state.liveFeed || {};
+  const events = Array.isArray(feed.events) ? feed.events : [];
+  const latest = events[0] || null;
   if (state.explainMode === "simple") {
+    if (!latest) {
+      target.textContent =
+        "SIMPLE · Persisted Live Intelligence Feed henüz boş veya runtime’a bağlı değil. " +
+        "Sistem eksik Decision Proof yerine sonuç uydurmuyor.";
+      return;
+    }
     target.textContent =
-      `SIMPLE · intelligence endpoint status ${statusLabel}. ` +
-      "Bu foundation slice accepted research truth’un varlığını gösterir; daha güçlü bir sonuç uydurmaz.";
+      `SIMPLE · ${latest.symbol || latest.asset || "Market"} · ${upper(latest.state, "UNKNOWN")}. ` +
+      `${latest.conditional_thesis || "Deterministic thesis unavailable."} ` +
+      `Probability: ${upper(latest.probability_status, "NOT_CALIBRATED")}.`;
   } else {
-    const keys = Object.keys(state.intelligence).sort();
+    const endpointStatus = upper(endpoint.status, "UNAVAILABLE");
+    const feedStatus = upper(feed.status, "UNAVAILABLE");
     target.textContent =
-      `PRO · endpoint fields: ${keys.join(", ") || "none"}. ` +
-      "R23 Decision Proof adapter sonraki product slice’ında exact evidence identities ile bağlanacak.";
+      `PRO · intelligence ${endpointStatus} · persisted R20.5 feed ${feedStatus} · ` +
+      `${events.length} loaded event(s). ` +
+      (latest
+        ? `latest proof ${shortIdentity(latest.proof_identity)} · forecast ${shortIdentity(latest.forecast_identity)}.`
+        : "No persisted Decision Proof event is available.");
   }
 }
 
@@ -2110,6 +2281,8 @@ async function runBoot() {
     loadEndpoint("education", API.education),
     loadEndpoint("intelligence", API.intelligence),
     loadEndpoint("performance", API.performance),
+    loadEndpoint("decisionStatus", API.decisionStatus),
+    loadEndpoint("liveFeed", API.liveFeed),
   ]);
 
   const marketReady = results.some(
@@ -2151,6 +2324,8 @@ async function refreshRuntime(reason = "timer") {
       loadEndpoint("epoch2State", API.epoch2State),
       loadEndpoint("archive", API.archive),
       loadEndpoint("performance", API.performance),
+      loadEndpoint("decisionStatus", API.decisionStatus),
+      loadEndpoint("liveFeed", API.liveFeed),
     ]);
     if (results[0].ok) applyHealthTruth(results[0].data);
     await initializeMarketWorkspace({ reload: state.route === "markets" });
