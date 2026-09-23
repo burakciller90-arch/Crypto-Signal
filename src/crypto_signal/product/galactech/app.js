@@ -9,6 +9,7 @@ const API = Object.freeze({
   archive: "/api/archive/proof-wall?limit=60&offset=0",
   education: "/api/education",
   intelligence: "/api/intelligence-center",
+  signalDetail: (identity) => `/api/signals/${encodeURIComponent(identity)}`,
 });
 
 const state = {
@@ -24,6 +25,8 @@ const state = {
   archive: null,
   education: null,
   intelligence: null,
+  evidenceDetail: null,
+  lastEvidenceTrigger: null,
 };
 
 function byId(id) {
