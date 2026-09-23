@@ -10,6 +10,22 @@ REAL_CAPITAL: 0
 ## Active v1.1 frontier — read before historical sections
 
 
+### 2026-09-23 18:22 +0300 — v1.1 PRODUCTION CUTOVER CANDIDATE HOSTED-READY / AUTHORITY GATED
+
+- Draft PR **#932** is the exact GALACTECH production-root cutover candidate and remains **OPEN / DRAFT / UNMERGED**.
+- Exact candidate head: `87f952b83bd00ac670131977be4cafcce5d99fba`.
+- Cutover focused + whole-repository hosted run `35880889080` SUCCESS.
+- Integrated v1.1 release-candidate hosted run `35880889056` SUCCESS.
+- Candidate routing is bounded: `/` -> accepted GALACTECH, `/galactech` remains the same alias, previous accepted UI is preserved at `/legacy` for rollback/audit.
+- Hosted integrated acceptance covers deterministic forecast/Decision Proof/outcome/archive evidence, Epoch 2 accounting, transaction-tape replay/atomicity, probability boundaries, Hot/Cold Market Tape contracts, frontend accessibility/cutover and complete repository regression.
+- Manual-only UID504 live release workflow is prepared at `.github/workflows/crypto-v1_1-live-release-acceptance.yml` but has **NOT** been dispatched.
+- Hosted PASS is explicitly not treated as deployed/runtime acceptance.
+- **No production root cutover merge/deploy has been executed.** The next transition crosses the locked production/human-impact authority boundary and requires explicit user approval before merge/deploy.
+- After that authority is satisfied: merge exact candidate -> deploy intended product tree -> run exact-main UID504 live acceptance -> reconcile source hashes/runtime/supervisor/heartbeat/SQLite/Market Tape/replay/probability/frontend truth -> v1.1.0 release decision.
+- UID504 wake pause remains authoritative and untouched. Cursor workers remain disabled. REAL_CAPITAL=0.
+
+
+
 ### 2026-09-23 18:12 +0300 — GALACTECH ACCESSIBILITY / PERFORMANCE POLISH ACCEPTED
 
 - PR **#931** accepted the locked GALACTECH accessibility/performance polish.
