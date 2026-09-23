@@ -10,6 +10,25 @@ REAL_CAPITAL: 0
 ## Active v1.1 frontier — read before historical sections
 
 
+### 2026-09-23 17:34 +0300 — GALACTECH MARKETS WORKSPACE ACCEPTED
+
+- PR **#927** accepted the locked GALACTECH Markets workspace.
+- Exact-head hosted run `35874866681` SUCCESS at `78209cf2a41d174a45bc981ccf5a135398999903`.
+- PR #927 squash-merged as `d51346d44ff7553349803930177f4bb3fce1244d`.
+- Exact-main Stage10 run `35875063582` SUCCESS.
+- Observed symbol/timeframe contexts are discovered from immutable Market Radar evidence.
+- Latest provider freezes remain separate; no Binance/Bybit consensus is invented.
+- Selected provider binds exact SHA256 signal detail and deterministic issuance-time frozen candles only.
+- PA is visualized from accepted frozen methodology/geometry evidence.
+- LIQ / FLOW / DERIV / ONCHAIN remain explicitly NOT EXPOSED until exact PIT customer adapters exist; no unrelated evidence is synthesized.
+- Recent same-context immutable decisions drill into the same Evidence Room.
+- Async selection is sequence-guarded so stale responses cannot overwrite a newer context.
+- No exchange/order/credential authority. REAL_CAPITAL=0.
+- Current locked frontier: **Product rail — Archive / Proof Wall**.
+- UID504 wake pause remains authoritative and untouched.
+
+
+
 ### 2026-09-23 17:16 +0300 — GALACTECH CAPITAL CENTER ACCEPTED
 
 - PR **#926** accepted canonical Epoch 2 Capital Center.
