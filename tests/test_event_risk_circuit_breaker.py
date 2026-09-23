@@ -57,7 +57,7 @@ def _event_risk(delta_minutes: int | None):
             title="Scheduled event",
             category=EventCategory.CENTRAL_BANK,
             scheduled_at_ms=AS_OF + delta_minutes * MINUTE,
-            affected_assets=("BTC",),
+            affected_assets=(asset,),
             source_provider="calendar-provider",
             source_quality=EventSourceQuality.OFFICIAL,
             source=DataSource.AGGREGATED,
@@ -79,13 +79,14 @@ def _news(
     multi: bool = True,
     disagreement: bool = False,
     low_confidence: bool = False,
+    asset: str = "BTC",
 ):
     first = build_news_event_observation(
         provider_article_id="a1",
         event_cluster_key="cluster-1",
         headline="Provider A",
         category=EventCategory.REGULATORY,
-        affected_assets=("BTC",),
+        affected_assets=(asset,),
         published_at_ms=AS_OF - 10 * MINUTE,
         source_provider="provider-a",
         source_quality=EventSourceQuality.PRIMARY_PROVIDER,
@@ -111,7 +112,7 @@ def _news(
                     if disagreement
                     else EventCategory.REGULATORY
                 ),
-                affected_assets=("BTC",),
+                affected_assets=(asset,),
                 published_at_ms=AS_OF - 9 * MINUTE,
                 source_provider="provider-b",
                 source_quality=EventSourceQuality.PRIMARY_PROVIDER,
@@ -126,7 +127,7 @@ def _news(
         )
     return build_news_evidence_freeze(
         tuple(rows),
-        asset="BTC",
+        asset=asset,
         as_of_ms=AS_OF,
     ).analysis
 
@@ -331,7 +332,7 @@ def test_context_mismatch_future_quality_tampering_and_invalid_policy_fail_close
     news = _news(multi=True)
     quality = _market_quality()
 
-    wrong_news = replace(news, asset="ETH")
+    wrong_news = _news(asset="ETH")
     with pytest.raises(ValueError, match="source assets must match"):
         evaluate_circuit_breaker(
             event,
