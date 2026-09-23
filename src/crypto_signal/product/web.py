@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import sqlite3
 import time
 from pathlib import Path
 from typing import Any
@@ -820,7 +821,7 @@ def create_app(
             try:
                 cold_archive_status = read_cold_archive_runtime_truth(
                     selected_cold_archive_path,
-                    verify_limit=24,
+                    verify_limit=1,
                 )
             except (OSError, TypeError, ValueError) as exc:
                 raise HTTPException(status_code=500, detail=str(exc)) from exc
