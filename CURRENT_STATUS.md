@@ -10,6 +10,34 @@ REAL_CAPITAL: 0
 ## Active v1.1 frontier — read before historical sections
 
 
+### 2026-09-23 11:31 +0300 — M5 SMART MONEY / ON-CHAIN 2.0 CORE CLOSED
+
+- PR **#891** accepted bounded large-transfer / repeated-relationship clustering.
+- Latest authoritative hosted branch run `35837387694` PASS on the hardened PIT tree:
+  - focused large-transfer + wallet-cohort + exchange-flow pytest PASS;
+  - focused Ruff/mypy PASS;
+  - full repository pytest/Ruff/mypy/JS/freshness PASS.
+- PR #891 squash-merged to main as `3b71b119dacd4db130b08adf9faf2cb9301e5fdb`.
+- Exact-main Stage10 run `35837582752` SUCCESS.
+- Accepted Slice 3 semantics:
+  - exact asset/network/provider/attribution context;
+  - consumed-window transfer-size percentile normalization;
+  - repeated source→destination relationship candidates under versioned count/share thresholds;
+  - provider-declared exchange/provider-known roles retained as attribution evidence;
+  - REPEATED_RELATIONSHIP_CLUSTER / ISOLATED_LARGE_TRANSFER / NORMAL / UNRESOLVED;
+  - future/late evidence is filtered before context/duplicate validation and cannot rewrite historical freezes.
+- Combined M5 core now contains:
+  - existing Bitcoin network activity evidence;
+  - provider-neutral exchange-flow evidence;
+  - immutable PIT wallet-cohort admission + forward-only measurement;
+  - bounded large-transfer relationship clustering.
+- M5 still has no live provider credential/collector activation and makes no insider/institution/actor-intent claim.
+- **Current primary intelligence frontier: Event Risk + NLP Intelligence.**
+- CONTINUITY_PAUSED_BY_USER remains dominant; wake/lease must not be re-armed.
+- REAL_CAPITAL=0.
+
+
+
 ### 2026-09-23 11:22 +0300 — M5 PIT WALLET COHORT REGISTRY SLICE 2 ACCEPTED
 
 - PR **#890** accepted immutable cohort admission + forward-only measurement.
