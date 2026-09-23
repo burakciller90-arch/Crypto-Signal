@@ -11,6 +11,7 @@ import time
 from pathlib import Path
 
 from crypto_signal.data.adapters.bybit_microstructure_ws import (
+    BybitMicrostructureWireEvent,
     BybitSpotMicrostructureStream,
 )
 from crypto_signal.data.market_tape import MarketTapeStore
@@ -156,7 +157,10 @@ async def run(args: argparse.Namespace) -> int:
     last_ingestion_ms: int | None = None
     last_observed_messages = 0
 
-    def persist_progress(event, observed_messages: int) -> None:
+    def persist_progress(
+        event: BybitMicrostructureWireEvent,
+        observed_messages: int,
+    ) -> None:
         nonlocal heartbeat_sequence
         nonlocal last_heartbeat_ms
         nonlocal last_ingestion_ms
