@@ -10,6 +10,35 @@ REAL_CAPITAL: 0
 ## Active v1.1 frontier — read before historical sections
 
 
+### 2026-09-23 11:31 +0300 — M5 LARGE-TRANSFER SLICE 3 ACCEPTED / M5 CORE CLOSED
+
+- PR **#891** accepted bounded provider-attributed large-transfer clustering.
+- Authoritative latest hosted branch run `35837387694` PASS:
+  - focused M5 large-transfer + accepted wallet/exchange-flow pytest PASS;
+  - focused Ruff/mypy PASS;
+  - full repository pytest/Ruff/mypy/JS/freshness PASS.
+- PR #891 squash-merged to main as `3b71b119dacd4db130b08adf9faf2cb9301e5fdb`.
+- Exact-main Stage10 run `35837582752` SUCCESS.
+- Accepted semantics:
+  - consumed-window transfer-size percentile evidence;
+  - repeated source→destination relationship candidates under explicit count/share thresholds;
+  - provider-declared exchange role retained as attribution evidence only;
+  - `REPEATED_RELATIONSHIP_CLUSTER`, `ISOLATED_LARGE_TRANSFER`, `NORMAL`, `UNRESOLVED`;
+  - future/late evidence is filtered before eligible context/duplicate validation and cannot rewrite historical freezes;
+  - latest-event tail classification avoids treating any prior window maximum as a current isolated-large-transfer state.
+- Scientific boundary:
+  - cluster IDs are not person/legal identity;
+  - repetition is not coordination proof;
+  - large transfer is not buy/sell direction;
+  - no insider/institution/smart-money claim;
+  - no live provider activation, capital sizing or order authority.
+- **M5 core roadmap exit is now satisfied**: existing network activity + exchange flow + PIT wallet cohorts + bounded large-transfer clustering are present.
+- Next intelligence frontier: **Event Risk + NLP Intelligence**.
+- CONTINUITY_PAUSED_BY_USER remains dominant; wake/lease must not be re-armed.
+- REAL_CAPITAL=0.
+
+
+
 ### 2026-09-23 11:31 +0300 — M5 SMART MONEY / ON-CHAIN 2.0 CORE CLOSED
 
 - PR **#891** accepted bounded large-transfer / repeated-relationship clustering.
