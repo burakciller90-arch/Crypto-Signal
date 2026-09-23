@@ -44,6 +44,7 @@ from crypto_signal.product.education import (
 from crypto_signal.product.intelligence_center import build_intelligence_center_payload
 from crypto_signal.product.market_tape_runtime import (
     read_cold_archive_runtime_truth,
+    read_market_tape_collector_runtime_truth,
     read_market_tape_runtime_truth,
 )
 from crypto_signal.product.reader import DashboardReader, DashboardReadError
@@ -161,6 +162,7 @@ def create_app(
     shadow_cycle_manifest_path: Path | None = None,
     runtime_replay_observation_path: Path | None = None,
     market_tape_path: Path | None = None,
+    market_tape_collector_runtime_path: Path | None = None,
     cold_archive_path: Path | None = None,
 ) -> FastAPI:
     selected_path = ledger_path or Path(
@@ -272,6 +274,20 @@ def create_app(
     else:
         selected_market_tape_path = None
 
+    if market_tape_collector_runtime_path is not None:
+        selected_market_tape_collector_runtime_path: Path | None = (
+            market_tape_collector_runtime_path
+        )
+    elif ledger_path is None:
+        collector_runtime_env = os.environ.get(
+            "CRYPTO_SIGNAL_MARKET_TAPE_COLLECTOR_RUNTIME_PATH"
+        )
+        selected_market_tape_collector_runtime_path = (
+            None if not collector_runtime_env else Path(collector_runtime_env)
+        )
+    else:
+        selected_market_tape_collector_runtime_path = None
+
     if cold_archive_path is not None:
         selected_cold_archive_path: Path | None = cold_archive_path
     elif ledger_path is None:
@@ -311,6 +327,9 @@ def create_app(
     app.state.shadow_cycle_manifest_path = selected_shadow_cycle_path
     app.state.runtime_replay_observation_path = selected_runtime_replay_path
     app.state.market_tape_path = selected_market_tape_path
+    app.state.market_tape_collector_runtime_path = (
+        selected_market_tape_collector_runtime_path
+    )
     app.state.cold_archive_path = selected_cold_archive_path
     app.state.reader = reader
 
@@ -877,12 +896,42 @@ def create_app(
             if observed_at_ms is None
             else observed_at_ms
         )
+        collector_runtime = None
+        collector_reason: str | None = None
+        collection_process_status = "NOT_MEASURED"
+        if selected_market_tape_collector_runtime_path is None:
+            collector_reason = "collector_runtime_not_configured"
+        elif not selected_market_tape_collector_runtime_path.exists():
+            collector_reason = "collector_runtime_evidence_missing"
+            collection_process_status = "RUNTIME_EVIDENCE_MISSING"
+        else:
+            try:
+                collector_runtime = read_market_tape_collector_runtime_truth(
+                    selected_market_tape_collector_runtime_path,
+                    observed_at_ms=observation,
+                )
+            except (
+                OSError,
+                sqlite3.DatabaseError,
+                TypeError,
+                ValueError,
+            ) as exc:
+                raise HTTPException(status_code=500, detail=str(exc)) from exc
+            if collector_runtime is None:
+                collector_reason = "collector_runtime_instance_missing"
+                collection_process_status = "NO_INSTANCE"
+            else:
+                collection_process_status = (
+                    collector_runtime.process_evidence_status
+                )
         if selected_market_tape_path is None:
             return _json(
                 {
                     "status": "unavailable",
                     "reason": "market_tape_runtime_not_configured",
-                    "collection_process_status": "NOT_MEASURED",
+                    "collection_process_status": collection_process_status,
+                    "collector_runtime": collector_runtime,
+                    "collector_runtime_reason": collector_reason,
                     "online_status": "NOT_ASSERTED",
                     "read_only": True,
                     "real_capital": 0,
@@ -894,7 +943,9 @@ def create_app(
                     "status": "unavailable",
                     "reason": "market_tape_runtime_evidence_missing",
                     "database_filename": selected_market_tape_path.name,
-                    "collection_process_status": "NOT_MEASURED",
+                    "collection_process_status": collection_process_status,
+                    "collector_runtime": collector_runtime,
+                    "collector_runtime_reason": collector_reason,
                     "online_status": "NOT_ASSERTED",
                     "read_only": True,
                     "real_capital": 0,
@@ -912,7 +963,9 @@ def create_app(
                 "status": "ready",
                 "snapshot": snapshot,
                 "database_filename": selected_market_tape_path.name,
-                "collection_process_status": "NOT_MEASURED",
+                "collection_process_status": collection_process_status,
+                "collector_runtime": collector_runtime,
+                "collector_runtime_reason": collector_reason,
                 "online_status": "NOT_ASSERTED",
                 "read_only": True,
                 "real_capital": 0,
