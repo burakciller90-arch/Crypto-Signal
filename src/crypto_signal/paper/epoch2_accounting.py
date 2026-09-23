@@ -814,6 +814,8 @@ def build_epoch2_vault_accounting_snapshot(
         else realized_pnl_usdt / Decimal(closed_trade_count)
     )
     sources = tuple(sorted(set(source_record_identities)))
+    if not sources:
+        raise ValueError("R21 measured vault snapshot requires source records")
     payload = {
         "activation_identity": activation.activation_identity,
         "breakeven_count": breakeven_count,
@@ -1025,7 +1027,11 @@ def initialize_epoch2_canonical_fund(
         epoch1_ledger_sha256=epoch1_sha,
     )
     ledger = Epoch2CanonicalLedger(epoch2_ledger_path)
-    ledger.activate(activation)
+    inserted = ledger.activate(activation)
+    if not inserted:
+        if epoch1_ledger_path.read_bytes() != epoch1_before:
+            raise ValueError("R21 activation must never mutate Epoch1 ledger")
+        return ledger.read_state()
     vaults = tuple(
         build_initial_epoch2_vault_snapshot(activation, vault_id)
         for vault_id in sorted(PaperVaultId, key=lambda item: item.value)
