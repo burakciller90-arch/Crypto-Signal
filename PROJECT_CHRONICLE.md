@@ -3843,3 +3843,40 @@ State-first reconciliation against exact current GitHub and read-only UID504 evi
 - Open issue #856 tracks the correctness gap: watchdog liveness must be distinguished from delivery progress. Do not claim permanent delivery guarantee from heartbeat or reset an observed pending event blindly.
 - User-disabled Cursor worker/Composer remains prohibited. Safe GitHub/hosted development may continue; production/human-impact changes remain separately gated. `REAL_CAPITAL=0`.
 
+
+
+---
+
+## 2026-09-23 — M3 TEMPORAL ORDER FLOW SLICE 1 ACCEPTED / MERGED
+
+State-first recovery found M1/M2 already accepted and integrated into main; Stage 8
+`order_flow_microstructure.py` was also already present and was reused rather than rewritten.
+
+M3 Slice 1 adds:
+- immutable PIT-safe normalized public-trade tape with exact source/event/ingest cutoff;
+- nonempty UTC time buckets, aggressive buy/sell notional, bucket delta and window-local CVD;
+- trade velocity, explicit research-only large-print threshold and bounded freshness/gap rules;
+- retained source identity for block/RPI trades while excluding those trades from aggressive book-flow metrics;
+- deterministic input-order-independent freeze identities;
+- fail-closed duplicate/mixed context, future/late, sparse/stale/gapped evidence.
+
+Scientific boundary: window-local CVD is not exchange-global CVD, calibrated
+probability, actor attribution, proven absorption, a directional command or a canonical
+paper mutation.
+
+Acceptance:
+- PR #858 on `v1.1-m3-temporal-order-flow-slice1`;
+- first hosted run `35801244927` failed one incorrect stale-data *test fixture*:
+  an as-of time clipped the test to three trades and latest age equaled the allowed bound;
+- test-only fix `0aee13cb4e748c7eb4fd6d25043db3c8528424d3` isolated stale evidence from sparse-window semantics;
+- authoritative hosted run `35801440005` focused + full PASS:
+  pytest, Ruff, mypy (146 source files), Product JS/freshness;
+- temporary gate removed in `cb91ee26edd49f697484ff4c53947ba73d7044df`;
+- PR #858 merged to main at `5e2f90a148e90045edf03cc0229ded42673614ef`.
+
+Next safe M3 development frontier: temporal price/CVD divergence with independently
+PIT-safe price evidence and bounded absorption candidates with order-book replenishment,
+then breakout/sweep interaction. Reuse existing Stage8 and accepted M2 frozen evidence.
+
+Production data collector and Product deployment remain separately gated. No Cursor
+worker/composer. REAL_CAPITAL=0.
