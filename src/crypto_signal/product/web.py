@@ -425,6 +425,78 @@ def create_app(
             }
         )
 
+    @app.get("/api/shadow-decision-rail/forecast/{forecast_identity}")
+    def shadow_decision_rail_forecast(
+        forecast_identity: str,
+    ) -> JSONResponse:
+        if (
+            len(forecast_identity) != 64
+            or any(
+                character not in "0123456789abcdef"
+                for character in forecast_identity
+            )
+        ):
+            raise HTTPException(
+                status_code=400,
+                detail="forecast_identity must be lowercase SHA256",
+            )
+        if selected_shadow_intent_path is None:
+            return _json(
+                {
+                    "status": "unavailable",
+                    "reason": "shadow_intent_journal_runtime_not_configured",
+                    "forecast_identity": forecast_identity,
+                    "semantic": "EXACT_PERSISTED_IDENTITY_ONLY",
+                    "read_only": True,
+                    "real_capital": 0,
+                }
+            )
+        if not selected_shadow_intent_path.exists():
+            return _json(
+                {
+                    "status": "unavailable",
+                    "reason": "shadow_intent_journal_evidence_missing",
+                    "forecast_identity": forecast_identity,
+                    "journal_filename": selected_shadow_intent_path.name,
+                    "semantic": "EXACT_PERSISTED_IDENTITY_ONLY",
+                    "read_only": True,
+                    "real_capital": 0,
+                }
+            )
+        try:
+            link = R25ShadowIntentJournal(
+                selected_shadow_intent_path
+            ).read_latest_for_forecast(forecast_identity)
+        except ValueError as exc:
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
+        if link is None:
+            return _json(
+                {
+                    "status": "empty",
+                    "reason": "no_exact_persisted_shadow_preview_for_forecast",
+                    "forecast_identity": forecast_identity,
+                    "semantic": "EXACT_PERSISTED_IDENTITY_ONLY",
+                    "read_only": True,
+                    "real_capital": 0,
+                }
+            )
+        return _json(
+            {
+                "status": "ready",
+                "forecast_identity": forecast_identity,
+                "link": link,
+                "explicit_review_present": (
+                    link.review_selection_identity is not None
+                ),
+                "decision_preview_present": link.decision_identity is not None,
+                "semantic": "EXACT_PERSISTED_IDENTITY_ONLY",
+                "canonical_epoch2_mutation": False,
+                "production_authority": False,
+                "read_only": True,
+                "real_capital": 0,
+            }
+        )
+
     @app.get("/api/shadow-decision-rail/status")
     def shadow_decision_rail_status() -> JSONResponse:
         if selected_shadow_intent_path is None:
