@@ -437,10 +437,12 @@ def _required_non_negative_int(payload: dict[str, Any], key: str) -> int:
     value = payload.get(key)
     if isinstance(value, bool):
         raise TypeError(f"{key} must be integer")
-    try:
+    if isinstance(value, int):
+        parsed = value
+    elif isinstance(value, str) and value.isdigit():
         parsed = int(value)
-    except (TypeError, ValueError) as exc:
-        raise TypeError(f"{key} must be integer") from exc
+    else:
+        raise TypeError(f"{key} must be integer")
     if parsed < 0:
         raise ValueError(f"{key} cannot be negative")
     return parsed
