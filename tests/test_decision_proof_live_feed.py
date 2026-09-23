@@ -26,7 +26,6 @@ from crypto_signal.intelligence.event_risk_circuit_breaker import CircuitBreaker
 from crypto_signal.ledger.serialization import canonical_sha256
 from crypto_signal.outcomes.models import EvidenceClass, OutcomeState
 from crypto_signal.product.decision_proof import (
-    DECISION_PROOF_ENGINE_VERSION,
     LiveFeedEventKind,
     ProofEvidenceAvailability,
     ProofEvidenceDomain,
