@@ -1,0 +1,194 @@
+name: Crypto v1.1 Latest UID504 Live Release Acceptance
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  live-acceptance:
+    name: UID504 read-only latest-main v1.1 release acceptance
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Exact accepted main identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(id -u)" = "504"
+          test "$(git rev-parse HEAD)" = "${{ github.sha }}"
+          test "${{ github.ref_name }}" = "main"
+          echo "V1_1_LATEST_UID504_EXACT_MAIN_PASS=YES sha=${{ github.sha }}"
+
+      - name: Deployed Product source hash parity
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          PRODUCT="$ROOT/Product"
+          test -d "$PRODUCT/src/crypto_signal/product"
+          EXPECTED="$(mktemp)"
+          DEPLOYED="$(mktemp)"
+          (
+            cd "$GITHUB_WORKSPACE"
+            find src/crypto_signal/product -type f -print0 | LC_ALL=C sort -z | xargs -0 shasum -a 256
+            shasum -a 256 ops/run_dashboard.py
+          ) > "$EXPECTED"
+          (
+            cd "$PRODUCT"
+            find src/crypto_signal/product -type f -print0 | LC_ALL=C sort -z | xargs -0 shasum -a 256
+            shasum -a 256 ops/run_dashboard.py
+          ) > "$DEPLOYED"
+          diff -u "$EXPECTED" "$DEPLOYED"
+          echo "V1_1_LATEST_DEPLOYED_PRODUCT_HASH_PARITY_PASS=YES"
+
+      - name: Read-only SSD topology and SQLite audit
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          DEV="$ROOT/Development"
+          PY="$DEV/.venv/bin/python"
+          test -x "$PY"
+          PYTHONPATH="$GITHUB_WORKSPACE/src" "$PY" \
+            "$GITHUB_WORKSPACE/ops/r11_runtime_acceptance.py" \
+            --root "$ROOT" \
+            --min-free-bytes 1073741824 \
+            | tee /tmp/v1_1-latest-r11-runtime-audit.log
+          grep -F 'R11_RUNTIME_AUDIT_PASS=YES' /tmp/v1_1-latest-r11-runtime-audit.log >/dev/null
+          echo "V1_1_LATEST_UID504_RUNTIME_TOPOLOGY_SQLITE_PASS=YES"
+
+      - name: Live GALACTECH root rollback and authority truth
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT_HTML="/tmp/v1_1-latest-root.html"
+          ALIAS_HTML="/tmp/v1_1-latest-alias.html"
+          LEGACY_HTML="/tmp/v1_1-latest-legacy.html"
+          HEALTH="/tmp/v1_1-latest-health.json"
+          OPERATIONAL="/tmp/v1_1-latest-operational.json"
+          curl -fsS --max-time 5 http://127.0.0.1:48700/ > "$ROOT_HTML"
+          curl -fsS --max-time 5 http://127.0.0.1:48700/galactech > "$ALIAS_HTML"
+          curl -fsS --max-time 5 http://127.0.0.1:48700/legacy > "$LEGACY_HTML"
+          curl -fsS --max-time 5 http://127.0.0.1:48700/api/health > "$HEALTH"
+          curl -fsS --max-time 5 http://127.0.0.1:48700/api/r25/operational-truth > "$OPERATIONAL"
+          cmp "$ROOT_HTML" "$ALIAS_HTML"
+          grep -F 'data-ui-version="galactech-v1.1-polish"' "$ROOT_HTML" >/dev/null
+          grep -F 'REAL_CAPITAL=0' "$ROOT_HTML" >/dev/null
+          grep -F 'data-ui-version="galactech-command-center-v1"' "$LEGACY_HTML" >/dev/null
+          python3 - "$HEALTH" "$OPERATIONAL" <<'PY'
+          import json
+          import sys
+          from pathlib import Path
+
+          health = json.loads(Path(sys.argv[1]).read_text())
+          operational = json.loads(Path(sys.argv[2]).read_text())
+          assert health.get("status") == "ok"
+          assert health.get("read_only") is True
+          assert health.get("real_capital") == 0
+          assert health.get("ledger_present") is True
+          assert operational.get("status") == "ready"
+          assert operational.get("read_only") is True
+          assert operational.get("real_capital") == 0
+          assert operational.get("production_authority") is False
+          assert operational.get("canonical_epoch2_mutation_authorized") is False
+          PY
+          echo "V1_1_LATEST_LIVE_GALACTECH_AUTHORITY_TRUTH_PASS=YES"
+
+      - name: R25 replay and Product Truth regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          PY="$ROOT/Development/.venv/bin/python"
+          test -x "$PY"
+          PYTHONPATH="$GITHUB_WORKSPACE/src" "$PY" -m pytest -q \
+            tests/test_forecast_cycle_link_product.py \
+            tests/test_runtime_replay_product_truth.py \
+            tests/test_r25_operational_truth.py \
+            tests/test_market_data_runtime_product.py \
+            tests/test_galactech_production_cutover.py \
+            tests/test_galactech_accessibility_performance.py
+          echo "V1_1_LATEST_R25_PRODUCT_TRUTH_PASS=YES"
+
+      - name: Persisted Market Tape read-only audit
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          DEV="$ROOT/Development"
+          PY="$DEV/.venv/bin/python"
+          TAPE="$DEV/runtime/market_tape/market_tape.sqlite3"
+          test -x "$PY"
+          test -f "$TAPE"
+          PYTHONPATH="$GITHUB_WORKSPACE/src" "$PY" - "$TAPE" <<'PY'
+          import sys
+          import time
+          from pathlib import Path
+          from crypto_signal.product.market_tape_runtime import read_market_tape_runtime_truth
+
+          path = Path(sys.argv[1])
+          before = path.stat().st_size
+          snapshot = read_market_tape_runtime_truth(
+              path,
+              observed_at_ms=time.time_ns() // 1_000_000,
+          )
+          assert snapshot.quick_check_ok is True
+          assert snapshot.read_only_verified is True
+          assert snapshot.collection_process_status == "NOT_MEASURED"
+          assert snapshot.real_capital == 0
+          assert path.stat().st_size == before
+          print(
+              "V1_1_LATEST_MARKET_TAPE_PERSISTED_TRUTH_PASS=YES",
+              f"rows={snapshot.total_rows}",
+              f"latest_age_ms={snapshot.latest_event_age_ms}",
+          )
+          PY
+
+      - name: Runtime freshness endurance
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          DEV="$ROOT/Development"
+          PY="$DEV/.venv/bin/python"
+          PAPER_DB="$DEV/runtime/paper/paper_fund.sqlite3"
+          test -x "$PY"
+          test -f "$PAPER_DB"
+          PYTHONPATH="$GITHUB_WORKSPACE/src" "$PY" \
+            "$GITHUB_WORKSPACE/ops/verify_stage10_integrated.py" \
+            --paper-ledger "$PAPER_DB" \
+            --cycles 12 \
+            --pause-seconds 0.25 \
+            | tee /tmp/v1_1-latest-stage10-runtime.log
+          grep -F 'STAGE10_RUNTIME_ACCEPTANCE_PASS=YES' /tmp/v1_1-latest-stage10-runtime.log >/dev/null
+          node "$GITHUB_WORKSPACE/tests/js/test_product_freshness.js"
+          echo "V1_1_LATEST_RUNTIME_FRESHNESS_ENDURANCE_PASS=YES"
+
+      - name: Continuity remains paused and isolated
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          PY="$ROOT/Development/.venv/bin/python"
+          test -x "$PY"
+          PYTHONPATH="$GITHUB_WORKSPACE/src" "$PY" "$GITHUB_WORKSPACE/ops/continuity/continuity_status.py" \
+            | tee /tmp/v1_1-latest-continuity.log
+          grep -F 'PAUSED=YES' /tmp/v1_1-latest-continuity.log >/dev/null
+          grep -F 'ACTIVE_LEASES=0' /tmp/v1_1-latest-continuity.log >/dev/null
+          grep -F 'WAKE_QUEUE=0' /tmp/v1_1-latest-continuity.log >/dev/null
+          grep -F 'RELAY_SHARED_PAUSED=YES' /tmp/v1_1-latest-continuity.log >/dev/null
+          grep -F 'RELAY_QUEUE=0' /tmp/v1_1-latest-continuity.log >/dev/null
+          echo "V1_1_LATEST_CONTINUITY_PAUSED_ISOLATED_PASS=YES"
+
+      - name: Final read-only release boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "V1_1_LATEST_NO_REBOOT_LOGOUT_SSD_DETACH_EXECUTED=YES"
+          echo "V1_1_LATEST_REAL_CAPITAL_ZERO_PASS=YES"
+          echo "V1_1_LATEST_NO_EXCHANGE_ORDER_CREDENTIAL_AUTHORITY_PASS=YES"
+          echo "V1_1_LATEST_UID504_LIVE_RELEASE_ACCEPTANCE=PASS"
