@@ -9,7 +9,7 @@ from pathlib import Path
 from crypto_signal.ledger.serialization import canonical_json, canonical_sha256
 
 MARKET_TAPE_COLLECTOR_RUNTIME_SCHEMA_VERSION = (
-    "market-tape-collector-runtime-v1/1"
+    "market-tape-collector-runtime-v1/2"
 )
 REAL_CAPITAL = 0
 
@@ -445,7 +445,7 @@ def _heartbeat_payload_values(
     instance_identity: str,
     sequence_no: int,
     observed_at_ms: int,
-    last_successful_ingestion_ms: int,
+    last_successful_ingestion_ms: int | None,
     observed_messages_total: int,
     normalized_rows_total: int,
     raw_rows_total: int,
@@ -529,8 +529,10 @@ def _heartbeat_from_payload(payload_json: str) -> MarketTapeCollectorHeartbeat:
         instance_identity=str(payload["instance_identity"]),
         sequence_no=int(payload["sequence_no"]),
         observed_at_ms=int(payload["observed_at_ms"]),
-        last_successful_ingestion_ms=int(
-            payload["last_successful_ingestion_ms"]
+        last_successful_ingestion_ms=(
+            None
+            if payload["last_successful_ingestion_ms"] is None
+            else int(payload["last_successful_ingestion_ms"])
         ),
         observed_messages_total=int(payload["observed_messages_total"]),
         normalized_rows_total=int(payload["normalized_rows_total"]),
