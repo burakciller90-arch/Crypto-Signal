@@ -290,6 +290,11 @@ def main() -> int:
                     attempt_epoch = time.time()
                     state["last_attempt_epoch"] = attempt_epoch
                     save_state(state)
+                    write_runtime_status(
+                        state,
+                        runtime_state="RETRYING",
+                        detail="attempt_in_flight",
+                    )
                     rc, output = run_wake(pending)
                     if final_receipt(pending):
                         receipt_epoch = time.time()
