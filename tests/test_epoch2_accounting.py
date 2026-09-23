@@ -54,6 +54,20 @@ def _activate(tmp_path):
     return epoch1, creation, before, state
 
 
+def test_legacy_epoch1_connection_closes_before_r21_byte_freeze(tmp_path) -> None:
+    epoch1, _ = _epoch1(tmp_path)
+    wal_path = epoch1.with_name(f"{epoch1.name}-wal")
+    before = epoch1.read_bytes()
+
+    from crypto_signal.paper.portfolio import read_paper_entries_read_only
+
+    entries = read_paper_entries_read_only(epoch1)
+
+    assert len(entries) == 1
+    assert epoch1.read_bytes() == before
+    assert not wal_path.exists() or wal_path.stat().st_size == 0
+
+
 def test_epoch2_activation_is_separate_idempotent_and_preserves_epoch1_bytes(tmp_path) -> None:
     epoch1, creation, before, state = _activate(tmp_path)
     epoch2_path = tmp_path / EPOCH_2_SPEC.ledger_filename
