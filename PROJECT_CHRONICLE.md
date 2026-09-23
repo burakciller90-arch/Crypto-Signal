@@ -4952,3 +4952,30 @@ Accepted truth:
 - no order/credential authority or real capital.
 
 Next locked frontier: Learn / System.
+
+
+---
+
+## 2026-09-23 — 18:02 GALACTECH LEARN / SYSTEM ACCEPTED
+
+PR #930 completed the locked Learn / System Product-rail slice.
+
+Acceptance:
+- exact-head Learn/System run `35878237726` focused + full repository PASS at
+  `76236447b48b3393259dfd40937a250f85e396b7`;
+- squash merge `3c86803d17056c3586669fa2abbd9f5fc4e602cb`;
+- exact-main Stage10 `35878480463` SUCCESS.
+
+Accepted truth:
+- the complete 15-lesson Turkish-first deterministic education catalog is searchable;
+- quick links cover CVD, absorption, invalidation, abstain, agreement-vs-probability and calibration;
+- Evidence Room contextual lesson links come only from explicit frozen cues;
+- education content cannot create a new market claim or trading authority;
+- System Truth exposes only customer-readable API/ledger/Epoch2/archive/radar/intelligence/
+  performance/education/alert-outbox evidence;
+- Product API READY cannot imply Market Tape runtime ONLINE;
+- Market Tape runtime, Cold Archive and Event Feed remain NOT EXPOSED;
+- latency/universal freshness remain NOT MEASURED without exact product adapters;
+- no order/credential authority and REAL_CAPITAL=0.
+
+Next locked frontier: accessibility / performance polish before production UI cutover.
