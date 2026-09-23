@@ -306,7 +306,7 @@ def build_breakout_confirmation_freeze(
         flow.as_of_ms == sweep.as_of_ms == absorption.as_of_ms == as_of_ms
     ):
         raise ValueError("breakout requires exact upstream as_of alignment")
-    if absorption.flow_freeze.freeze_identity != flow_freeze.freeze_identity:
+    if absorption_freeze.flow_freeze.freeze_identity != flow_freeze.freeze_identity:
         raise ValueError("breakout absorption must use the same flow freeze")
 
     selected = tuple(
