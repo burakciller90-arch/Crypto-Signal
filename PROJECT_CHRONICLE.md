@@ -4174,3 +4174,26 @@ Scientific boundary:
 
 Next M5 frontier: PIT Wallet Cohort Registry with frozen admission time and forward-only
 measurement. User wake/lease pause remains authoritative and untouched.
+
+
+---
+
+## 2026-09-23 — 11:22 M5 PIT WALLET COHORT REGISTRY SLICE 2 ACCEPTED
+
+PR #890 established the locked anti-hindsight wallet cohort contract.
+
+Acceptance:
+- hosted run `35836489141` focused + full PASS;
+- squash merge `30f977d3d141bfa59d073a314a5ec05798f3d373`;
+- exact-main Stage10 run `35836667987` SUCCESS.
+
+A cohort member is admitted only after its basis evidence is available. Historical
+performance cannot be used to backdate that admission. Forward measurement begins at or
+after admission, selects only PIT-eligible evidence and cannot be rewritten by future or
+late ingestion. Registry-only cohorts are valid until forward samples exist.
+
+The engine does not infer actor identity, skill, insider status, future return, probability,
+capital sizing or trade authority. No live wallet provider was activated. REAL_CAPITAL=0.
+
+Next M5 frontier: bounded temporal large-transfer clustering, then Event Risk + NLP.
+Wake/lease remains paused by explicit user instruction.
