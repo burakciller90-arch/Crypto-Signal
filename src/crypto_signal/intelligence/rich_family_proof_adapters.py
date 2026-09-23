@@ -233,29 +233,34 @@ def enrich_accepted_m2_m5(
         )
 
     if derivatives_crowding is not None:
-        a = derivatives_crowding.analysis
-        _require_market(a.symbol, a.as_of_ms, symbol, as_of_ms)
-        age = as_of_ms - a.observed_at_ms
+        crowding_analysis = derivatives_crowding.analysis
+        _require_market(
+            crowding_analysis.symbol,
+            crowding_analysis.as_of_ms,
+            symbol,
+            as_of_ms,
+        )
+        age = as_of_ms - crowding_analysis.observed_at_ms
         if (
-            a.status is DerivativesCrowdingStatus.MEASURED
+            crowding_analysis.status is DerivativesCrowdingStatus.MEASURED
             and 0 <= age <= _DERIVATIVES_MAX_AGE_MS
         ):
             freshness = _freshness(age, _DERIVATIVES_MAX_AGE_MS)
             families[ConfluenceFamily.DERIVATIVES] = _merge_family(
                 families[ConfluenceFamily.DERIVATIVES],
                 added_ids=(derivatives_crowding.freeze_identity,),
-                added_engines=(liquidation_analysis.engine_version,),
-                added_observed=(a.observed_at_ms,),
+                added_engines=(crowding_analysis.engine_version,),
+                added_observed=(crowding_analysis.observed_at_ms,),
                 added_freshness=(freshness,),
             )
             proofs[ProofEvidenceDomain.DERIVATIVES] = _merge_proof(
                 proofs[ProofEvidenceDomain.DERIVATIVES],
                 added_ids=(derivatives_crowding.freeze_identity,),
-                added_observed=(a.observed_at_ms,),
+                added_observed=(crowding_analysis.observed_at_ms,),
                 added_freshness=(freshness,),
                 added_summaries=(
-                    f"derivatives_crowding_{a.label.value}",
-                    f"crowded_side_{a.crowded_side.value}",
+                    f"derivatives_crowding_{crowding_analysis.label.value}",
+                    f"crowded_side_{crowding_analysis.crowded_side.value}",
                     "crowding_context_not_directional_rule",
                 ),
             )
