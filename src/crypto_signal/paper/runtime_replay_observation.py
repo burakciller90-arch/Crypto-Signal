@@ -273,6 +273,14 @@ class R25RuntimeReplayObservationLedger:
                         SELECT RAISE(ABORT, 'immutable R25 runtime replay observation');
                     END"""
                 )
+                db.execute(
+                    f"""CREATE TRIGGER IF NOT EXISTS
+                    {_META_TABLE}_immutable_{action.lower()}
+                    BEFORE {action} ON {_META_TABLE}
+                    BEGIN
+                        SELECT RAISE(ABORT, 'immutable R25 runtime replay metadata');
+                    END"""
+                )
             expected = {
                 "engine_version": RUNTIME_REPLAY_OBSERVATION_ENGINE_VERSION,
                 "real_capital": str(REAL_CAPITAL),
@@ -460,10 +468,6 @@ def _observation_from_json(payload_json: str) -> RuntimeReplayObservation:
     raw = json.loads(payload_json)
     if not isinstance(raw, dict):
         raise TypeError("runtime replay observation payload must be object")
-    if sha256_text(payload_json) != raw.get("observation_identity", ""):
-        # observation_identity is intentionally not inside canonical payload.
-        # Validate through reconstruction below instead.
-        pass
     return RuntimeReplayObservation(
         observation_identity=canonical_sha256(raw),
         runtime_instance_identity=_raw_sha(raw, "runtime_instance_identity"),
