@@ -4901,3 +4901,29 @@ Accepted truth:
 - no execution/network/credential authority; REAL_CAPITAL=0.
 
 Next locked frontier: Archive / Proof Wall.
+
+
+---
+
+## 2026-09-23 — 17:43 GALACTECH ARCHIVE / PROOF WALL ACCEPTED
+
+PR #928 completed the locked Archive Product-rail slice.
+
+Acceptance:
+- exact-head Archive run `35875953184` focused + full repository PASS at
+  `a6cf51e8ada8d272e2cbb8d4f3315c17b5630b26`;
+- squash merge `c12128eb2cf38c797585639335c1f3b4ef8f7466`;
+- exact-main Stage10 `35876137323` SUCCESS.
+
+Accepted truth:
+- immutable issuance remains beside later outcome instead of being replaced;
+- winners, losses, timeout/expiry, invalidation, ambiguity, not-evaluable/abstain and
+  unresolved states remain filterable and visible;
+- exact evidence class, coverage, timestamps, holding horizon and identities remain
+  visible;
+- unresolved is not converted into success/failure or a performance rate;
+- loaded-page counts are labelled separately from server total;
+- Evidence Room drill-down stays bound to the same freeze identity;
+- no history mutation, order authority or real capital.
+
+Next locked frontier: Performance & Trust.
