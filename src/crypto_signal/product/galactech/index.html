@@ -8,7 +8,7 @@
   <title>GALACTECH // CRYPTO SIGNAL</title>
   <link rel="stylesheet" href="/galactech-static/app.css">
 </head>
-<body data-ui-version="galactech-v1.1-learn-system">
+<body data-ui-version="galactech-v1.1-polish">
   <a class="skip-link" href="#mainContent">Ana içeriğe geç</a>
 
   <div id="coldBoot" class="cold-boot" role="status" aria-live="polite" aria-atomic="true">
@@ -42,28 +42,28 @@
       </div>
 
       <nav id="primaryNav" class="primary-nav" aria-label="Ürün bölümleri">
-        <button class="nav-item is-active" type="button" data-route="command" aria-current="page">
+        <button class="nav-item is-active" type="button" data-route="command" aria-current="page" aria-controls="view-command">
           <span class="nav-index">01</span><span class="nav-label">COMMAND</span>
         </button>
-        <button class="nav-item" type="button" data-route="markets">
+        <button class="nav-item" type="button" data-route="markets" aria-controls="view-markets">
           <span class="nav-index">02</span><span class="nav-label">MARKETS</span>
         </button>
-        <button class="nav-item" type="button" data-route="intelligence">
+        <button class="nav-item" type="button" data-route="intelligence" aria-controls="view-intelligence">
           <span class="nav-index">03</span><span class="nav-label">INTELLIGENCE</span>
         </button>
-        <button class="nav-item" type="button" data-route="capital">
+        <button class="nav-item" type="button" data-route="capital" aria-controls="view-capital">
           <span class="nav-index">04</span><span class="nav-label">CAPITAL</span>
         </button>
-        <button class="nav-item" type="button" data-route="archive">
+        <button class="nav-item" type="button" data-route="archive" aria-controls="view-archive">
           <span class="nav-index">05</span><span class="nav-label">ARCHIVE</span>
         </button>
-        <button class="nav-item" type="button" data-route="performance">
+        <button class="nav-item" type="button" data-route="performance" aria-controls="view-performance">
           <span class="nav-index">06</span><span class="nav-label">PERFORMANCE</span>
         </button>
-        <button class="nav-item" type="button" data-route="learn">
+        <button class="nav-item" type="button" data-route="learn" aria-controls="view-learn">
           <span class="nav-index">07</span><span class="nav-label">LEARN</span>
         </button>
-        <button class="nav-item" type="button" data-route="system">
+        <button class="nav-item" type="button" data-route="system" aria-controls="view-system">
           <span class="nav-index">08</span><span class="nav-label">SYSTEM</span>
         </button>
       </nav>
@@ -91,6 +91,8 @@
         </div>
 
         <div class="truth-bar" role="status" aria-live="polite" aria-atomic="false">
+          <span id="routeAnnouncer" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></span>
+          <span id="runtimeAnnouncer" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></span>
           <span id="apiTruth" class="truth-chip truth-chip-muted">API · VERIFYING</span>
           <span id="freshnessTruth" class="truth-chip truth-chip-muted">FRESHNESS · NOT MEASURED</span>
           <span id="latencyTruth" class="truth-chip truth-chip-muted">LATENCY · NOT MEASURED</span>
@@ -98,7 +100,7 @@
         </div>
       </header>
 
-      <main id="mainContent" class="main-content" tabindex="-1">
+      <main id="mainContent" class="main-content" tabindex="-1" aria-busy="true">
         <section id="view-command" class="route-view is-active" data-route-view="command" aria-labelledby="commandTitle">
           <div class="page-head page-head-command">
             <div>
@@ -348,14 +350,14 @@
           </div>
 
           <div class="filter-row archive-filter-row" role="group" aria-label="Arşiv filtreleri">
-            <button type="button" class="filter-button is-active" data-filter="all">ALL <span data-filter-count="all">—</span></button>
-            <button type="button" class="filter-button" data-filter="winner">WINNERS <span data-filter-count="winner">—</span></button>
-            <button type="button" class="filter-button" data-filter="loser">LOSERS <span data-filter-count="loser">—</span></button>
-            <button type="button" class="filter-button" data-filter="expired">EXPIRED <span data-filter-count="expired">—</span></button>
-            <button type="button" class="filter-button" data-filter="invalidated">INVALIDATED <span data-filter-count="invalidated">—</span></button>
-            <button type="button" class="filter-button" data-filter="ambiguous">AMBIGUOUS <span data-filter-count="ambiguous">—</span></button>
-            <button type="button" class="filter-button" data-filter="not_evaluable">ABSTAIN / N-E <span data-filter-count="not_evaluable">—</span></button>
-            <button type="button" class="filter-button" data-filter="unresolved">UNRESOLVED <span data-filter-count="unresolved">—</span></button>
+            <button type="button" class="filter-button is-active" data-filter="all" aria-pressed="true">ALL <span data-filter-count="all">—</span></button>
+            <button type="button" class="filter-button" data-filter="winner" aria-pressed="false">WINNERS <span data-filter-count="winner">—</span></button>
+            <button type="button" class="filter-button" data-filter="loser" aria-pressed="false">LOSERS <span data-filter-count="loser">—</span></button>
+            <button type="button" class="filter-button" data-filter="expired" aria-pressed="false">EXPIRED <span data-filter-count="expired">—</span></button>
+            <button type="button" class="filter-button" data-filter="invalidated" aria-pressed="false">INVALIDATED <span data-filter-count="invalidated">—</span></button>
+            <button type="button" class="filter-button" data-filter="ambiguous" aria-pressed="false">AMBIGUOUS <span data-filter-count="ambiguous">—</span></button>
+            <button type="button" class="filter-button" data-filter="not_evaluable" aria-pressed="false">ABSTAIN / N-E <span data-filter-count="not_evaluable">—</span></button>
+            <button type="button" class="filter-button" data-filter="unresolved" aria-pressed="false">UNRESOLVED <span data-filter-count="unresolved">—</span></button>
           </div>
 
           <article class="panel archive-contract">
@@ -524,7 +526,8 @@
             <label class="learn-search">
               <span class="eyebrow">SEARCH CONCEPT</span>
               <input id="learnSearchInput" type="search" autocomplete="off"
-                placeholder="CVD, absorption, invalidation, abstain…" aria-label="Eğitim kavramlarında ara">
+                placeholder="CVD, absorption, invalidation, abstain…" aria-label="Eğitim kavramlarında ara"
+                aria-controls="learnGrid">
             </label>
             <div class="learn-quick-links" role="group" aria-label="Hızlı eğitim kavramları">
               <button type="button" data-learn-concept="cvd">CVD</button>
@@ -598,7 +601,7 @@
         </section>
       </main>
 
-      <dialog id="evidenceDialog" class="evidence-room" aria-labelledby="evidenceDialogTitle">
+      <dialog id="evidenceDialog" class="evidence-room" aria-labelledby="evidenceDialogTitle" aria-describedby="evidenceDialogSubtitle">
         <div class="evidence-room-shell">
           <header class="evidence-room-head">
             <div>

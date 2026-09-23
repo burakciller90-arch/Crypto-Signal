@@ -55,7 +55,7 @@ def test_galactech_learn_renders_full_deterministic_catalog(
     html = preview.text
     js = script.text
     css = style.text
-    assert 'data-ui-version="galactech-v1.1-learn-system"' in html
+    assert 'data-ui-version="galactech-v1.1-polish"' in html
     assert 'id="learnSearchInput"' in html
     assert 'data-learn-concept="cvd"' in html
     assert 'data-learn-concept="absorption"' in html
