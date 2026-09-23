@@ -17,7 +17,7 @@ from crypto_signal.intelligence.event_risk_circuit_breaker import (
     CircuitBreakerAnalysis,
 )
 from crypto_signal.ledger.serialization import canonical_sha256
-from crypto_signal.paper.capital_science_bridge import (
+from crypto_signal.paper.smart_capital_allocator import (
     OpportunityRecoveryEvidence,
     TacticalMicrostructureEvidence,
 )
