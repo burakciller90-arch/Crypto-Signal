@@ -10,12 +10,15 @@ from crypto_signal.intelligence.confluence_matrix_v2 import (
     build_confluence_family_evidence,
 )
 from crypto_signal.intelligence.derivatives_crowding import (
-    DEFAULT_DERIVATIVES_CROWDING_CONFIG,
     DerivativesCrowdingEvidenceFreeze,
     DerivativesCrowdingStatus,
 )
 from crypto_signal.intelligence.derivatives_dynamics import (
     DEFAULT_DERIVATIVES_DYNAMICS_CONFIG,
+)
+from crypto_signal.intelligence.event_risk_circuit_breaker import (
+    CircuitBreakerAnalysis,
+    CircuitBreakerState,
 )
 from crypto_signal.intelligence.exchange_flow import (
     DEFAULT_EXCHANGE_FLOW_CONFIG,
@@ -69,6 +72,9 @@ from crypto_signal.product.decision_proof import (
     build_decision_proof_evidence_slice,
 )
 from crypto_signal.signals.models import SignalDirection
+from research.alpha_factory.probability_calibration_gate import (
+    CalibratedProbabilityEvidence,
+)
 
 _ONE = Decimal(1)
 _ZERO = Decimal(0)
@@ -791,8 +797,70 @@ def adapt_onchain_evidence(
     return FamilyEvidenceAdapterResult(family, (fragment,))
 
 
+def build_event_context_fragment(
+    event_context: CircuitBreakerAnalysis,
+) -> ProofEvidenceFragment:
+    """Expose the exact circuit-breaker decision context without making it directional."""
+    verdict = (
+        ProofEvidenceVerdict.NEUTRAL
+        if event_context.state is CircuitBreakerState.CLEAR
+        else ProofEvidenceVerdict.CONTRADICT
+    )
+    identities = {
+        event_context.evidence_identity,
+        event_context.event_risk_identity,
+        event_context.news_evidence_identity,
+    }
+    if event_context.market_quality_identity is not None:
+        identities.add(event_context.market_quality_identity)
+    return ProofEvidenceFragment(
+        domain=ProofEvidenceDomain.EVENT_CONTEXT,
+        evidence_identities=tuple(sorted(identities)),
+        market_available_at_ms=event_context.as_of_ms,
+        observed_at_ms=event_context.as_of_ms,
+        freshness_0_1=_ONE,
+        source_quality="accepted_event_risk_circuit_breaker",
+        verdict=verdict,
+        summary_codes=(
+            f"event_context_{event_context.state.value}",
+            "event_context_is_risk_gate_not_directional_vote",
+        ),
+    )
+
+
+def build_probability_calibration_fragment(
+    probability: CalibratedProbabilityEvidence,
+) -> ProofEvidenceFragment:
+    """Expose exact R19 authorization lineage; no uncalibrated probability is synthesized."""
+    return ProofEvidenceFragment(
+        domain=ProofEvidenceDomain.PROBABILITY_CALIBRATION,
+        evidence_identities=tuple(
+            sorted(
+                {
+                    probability.authorization_identity,
+                    probability.calibration_evidence_identity,
+                    probability.source_forecast_identity,
+                    probability.source_prediction_identity,
+                    probability.walk_forward_fit_identity,
+                }
+            )
+        ),
+        market_available_at_ms=probability.issued_at_ms,
+        observed_at_ms=probability.issued_at_ms,
+        freshness_0_1=_ONE,
+        source_quality="accepted_walk_forward_probability_calibration",
+        verdict=ProofEvidenceVerdict.SUPPORT,
+        summary_codes=(
+            "probability_calibrated_by_r19",
+            "probability_is_authorized_calibration_not_raw_confidence",
+        ),
+    )
+
+
 def compose_decision_proof_slices(
     results: Iterable[FamilyEvidenceAdapterResult],
+    *,
+    extra_fragments: Iterable[ProofEvidenceFragment] = (),
 ) -> tuple[DecisionProofEvidenceSlice, ...]:
     """Merge adapter fragments into the one-slice-per-domain R20.5 contract."""
     by_domain: dict[ProofEvidenceDomain, list[ProofEvidenceFragment]] = {
@@ -801,6 +869,8 @@ def compose_decision_proof_slices(
     for result in results:
         for fragment in result.proof_fragments:
             by_domain[fragment.domain].append(fragment)
+    for fragment in extra_fragments:
+        by_domain[fragment.domain].append(fragment)
 
     slices: list[DecisionProofEvidenceSlice] = []
     for domain in ProofEvidenceDomain:
