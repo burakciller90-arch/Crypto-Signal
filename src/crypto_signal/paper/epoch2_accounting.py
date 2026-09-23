@@ -115,6 +115,7 @@ class Epoch2VaultAccountingSnapshot:
     outcome_distribution: tuple[tuple[str, int], ...]
     metrics_status: Epoch2MetricsStatus
     source_record_identities: tuple[str, ...]
+    previous_snapshot_identity: str | None
     real_capital: int = REAL_CAPITAL
 
     def __post_init__(self) -> None:
@@ -208,6 +209,11 @@ class Epoch2VaultAccountingSnapshot:
             self.source_record_identities,
             "R21 vault source record",
         )
+        if self.previous_snapshot_identity is not None:
+            _require_sha256(
+                self.previous_snapshot_identity,
+                "R21 vault previous snapshot identity",
+            )
         if self.real_capital != REAL_CAPITAL:
             raise ValueError("REAL_CAPITAL must remain 0")
         if self.snapshot_identity != canonical_sha256(_vault_snapshot_payload(self)):
@@ -241,6 +247,7 @@ class Epoch2ConsolidatedAccountingSnapshot:
     expectancy_usdt_per_closed_trade: Decimal | None
     outcome_distribution: tuple[tuple[str, int], ...]
     metrics_status: Epoch2MetricsStatus
+    previous_snapshot_identity: str | None
     real_capital: int = REAL_CAPITAL
 
     def __post_init__(self) -> None:
@@ -256,6 +263,11 @@ class Epoch2ConsolidatedAccountingSnapshot:
             self.vault_snapshot_identities,
             "R21 consolidated vault snapshot",
         )
+        if self.previous_snapshot_identity is not None:
+            _require_sha256(
+                self.previous_snapshot_identity,
+                "R21 consolidated previous snapshot identity",
+            )
         if len(self.vault_snapshot_identities) != len(PaperVaultId):
             raise ValueError("R21 consolidated snapshot requires exactly three vaults")
         for value, label in (
@@ -420,6 +432,16 @@ class Epoch2CanonicalLedger:
             raise ValueError("R21 vault snapshot activation mismatch")
         if snapshot.snapshot_at_ms < activation.activated_at_ms:
             raise ValueError("R21 vault snapshot cannot predate activation")
+        latest = self.read_latest_vault_snapshots()
+        latest_for_vault = next(
+            (item for item in latest if item.vault_id is snapshot.vault_id),
+            None,
+        )
+        expected_previous = (
+            None if latest_for_vault is None else latest_for_vault.snapshot_identity
+        )
+        if snapshot.previous_snapshot_identity != expected_previous:
+            raise ValueError("R21 vault snapshot previous lineage mismatch")
         return self._append_snapshot(
             table="r21_vault_snapshots",
             identity=snapshot.snapshot_identity,
@@ -439,6 +461,14 @@ class Epoch2CanonicalLedger:
             raise ValueError("R21 consolidated snapshot activation mismatch")
         if snapshot.snapshot_at_ms < activation.activated_at_ms:
             raise ValueError("R21 consolidated snapshot cannot predate activation")
+        latest_consolidated = self.read_latest_consolidated_snapshot()
+        expected_previous = (
+            None
+            if latest_consolidated is None
+            else latest_consolidated.snapshot_identity
+        )
+        if snapshot.previous_snapshot_identity != expected_previous:
+            raise ValueError("R21 consolidated previous lineage mismatch")
         vaults = self.read_latest_vault_snapshots(at_or_before_ms=snapshot.snapshot_at_ms)
         expected = tuple(sorted(item.snapshot_identity for item in vaults))
         if snapshot.vault_snapshot_identities != expected:
@@ -687,6 +717,7 @@ def build_initial_epoch2_vault_snapshot(
         "nav_usdt": starting_cash,
         "outcome_distribution": (),
         "positions": (),
+        "previous_snapshot_identity": None,
         "real_capital": REAL_CAPITAL,
         "realized_pnl_usdt": Decimal(0),
         "schema_version": R21_SCHEMA_VERSION,
@@ -730,11 +761,127 @@ def build_initial_epoch2_vault_snapshot(
         outcome_distribution=(),
         metrics_status=Epoch2MetricsStatus.NOT_YET_MEASURED,
         source_record_identities=(activation.activation_identity,),
+        previous_snapshot_identity=None,
+    )
+
+
+def build_epoch2_vault_accounting_snapshot(
+    activation: Epoch2ActivationRecord,
+    *,
+    vault_id: PaperVaultId,
+    snapshot_at_ms: int,
+    cash_usdt: Decimal,
+    positions: tuple[PaperPosition, ...],
+    marked_exposure_usdt: Decimal,
+    realized_pnl_usdt: Decimal,
+    unrealized_pnl_usdt: Decimal,
+    fee_usdt: Decimal,
+    spread_usdt: Decimal,
+    slippage_usdt: Decimal,
+    turnover_notional_usdt: Decimal,
+    closed_trade_count: int,
+    win_count: int,
+    loss_count: int,
+    breakeven_count: int,
+    outcome_distribution: tuple[tuple[str, int], ...],
+    source_record_identities: tuple[str, ...],
+    previous: Epoch2VaultAccountingSnapshot,
+) -> Epoch2VaultAccountingSnapshot:
+    if previous.activation_identity != activation.activation_identity:
+        raise ValueError("R21 vault previous activation mismatch")
+    if previous.vault_id is not vault_id:
+        raise ValueError("R21 vault previous snapshot vault mismatch")
+    if snapshot_at_ms <= previous.snapshot_at_ms:
+        raise ValueError("R21 vault snapshot must advance time")
+    starting_cash = dict(activation.vault_starting_cash)[vault_id]
+    normalized_positions = normalize_positions(positions)
+    nav = cash_usdt + marked_exposure_usdt
+    high_water = max(previous.high_water_nav_usdt, nav)
+    drawdown = (
+        Decimal(0)
+        if high_water == Decimal(0)
+        else (high_water - nav) / high_water
+    )
+    turnover_fraction = turnover_notional_usdt / starting_cash
+    metrics_status = (
+        Epoch2MetricsStatus.AVAILABLE
+        if closed_trade_count > 0
+        else Epoch2MetricsStatus.NOT_YET_MEASURED
+    )
+    expectancy = (
+        None
+        if closed_trade_count == 0
+        else realized_pnl_usdt / Decimal(closed_trade_count)
+    )
+    sources = tuple(sorted(set(source_record_identities)))
+    payload = {
+        "activation_identity": activation.activation_identity,
+        "breakeven_count": breakeven_count,
+        "cash_usdt": cash_usdt,
+        "closed_trade_count": closed_trade_count,
+        "drawdown_fraction": drawdown,
+        "engine_version": R21_ENGINE_VERSION,
+        "expectancy_usdt_per_closed_trade": expectancy,
+        "fee_usdt": fee_usdt,
+        "high_water_nav_usdt": high_water,
+        "loss_count": loss_count,
+        "marked_exposure_usdt": marked_exposure_usdt,
+        "metrics_status": metrics_status,
+        "nav_usdt": nav,
+        "outcome_distribution": outcome_distribution,
+        "positions": normalized_positions,
+        "previous_snapshot_identity": previous.snapshot_identity,
+        "real_capital": REAL_CAPITAL,
+        "realized_pnl_usdt": realized_pnl_usdt,
+        "schema_version": R21_SCHEMA_VERSION,
+        "slippage_usdt": slippage_usdt,
+        "snapshot_at_ms": snapshot_at_ms,
+        "source_record_identities": sources,
+        "spread_usdt": spread_usdt,
+        "starting_cash_usdt": starting_cash,
+        "turnover_fraction": turnover_fraction,
+        "turnover_notional_usdt": turnover_notional_usdt,
+        "unrealized_pnl_usdt": unrealized_pnl_usdt,
+        "vault_id": vault_id,
+        "win_count": win_count,
+    }
+    return Epoch2VaultAccountingSnapshot(
+        snapshot_identity=canonical_sha256(payload),
+        schema_version=R21_SCHEMA_VERSION,
+        engine_version=R21_ENGINE_VERSION,
+        activation_identity=activation.activation_identity,
+        vault_id=vault_id,
+        snapshot_at_ms=snapshot_at_ms,
+        starting_cash_usdt=starting_cash,
+        cash_usdt=cash_usdt,
+        positions=normalized_positions,
+        marked_exposure_usdt=marked_exposure_usdt,
+        nav_usdt=nav,
+        realized_pnl_usdt=realized_pnl_usdt,
+        unrealized_pnl_usdt=unrealized_pnl_usdt,
+        high_water_nav_usdt=high_water,
+        drawdown_fraction=drawdown,
+        fee_usdt=fee_usdt,
+        spread_usdt=spread_usdt,
+        slippage_usdt=slippage_usdt,
+        turnover_notional_usdt=turnover_notional_usdt,
+        turnover_fraction=turnover_fraction,
+        closed_trade_count=closed_trade_count,
+        win_count=win_count,
+        loss_count=loss_count,
+        breakeven_count=breakeven_count,
+        expectancy_usdt_per_closed_trade=expectancy,
+        outcome_distribution=outcome_distribution,
+        metrics_status=metrics_status,
+        source_record_identities=sources,
+        previous_snapshot_identity=previous.snapshot_identity,
     )
 
 
 def build_consolidated_epoch2_snapshot(
     vaults: tuple[Epoch2VaultAccountingSnapshot, ...],
+    *,
+    previous: Epoch2ConsolidatedAccountingSnapshot | None = None,
 ) -> Epoch2ConsolidatedAccountingSnapshot:
     if len(vaults) != len(PaperVaultId):
         raise ValueError("R21 consolidated builder requires exactly three vaults")
@@ -756,7 +903,16 @@ def build_consolidated_epoch2_snapshot(
     nav = sum((item.nav_usdt for item in ordered), start=Decimal(0))
     realized = sum((item.realized_pnl_usdt for item in ordered), start=Decimal(0))
     unrealized = sum((item.unrealized_pnl_usdt for item in ordered), start=Decimal(0))
-    high_water = sum((item.high_water_nav_usdt for item in ordered), start=Decimal(0))
+    if previous is not None:
+        if previous.activation_identity != ordered[0].activation_identity:
+            raise ValueError("R21 consolidated previous activation mismatch")
+        if previous.snapshot_at_ms >= ordered[0].snapshot_at_ms:
+            raise ValueError("R21 consolidated snapshot must advance time")
+    high_water = (
+        nav
+        if previous is None
+        else max(previous.high_water_nav_usdt, nav)
+    )
     fee = sum((item.fee_usdt for item in ordered), start=Decimal(0))
     spread = sum((item.spread_usdt for item in ordered), start=Decimal(0))
     slippage = sum((item.slippage_usdt for item in ordered), start=Decimal(0))
@@ -805,6 +961,9 @@ def build_consolidated_epoch2_snapshot(
         "metrics_status": metrics_status,
         "nav_usdt": nav,
         "outcome_distribution": outcome_distribution,
+        "previous_snapshot_identity": (
+            None if previous is None else previous.snapshot_identity
+        ),
         "real_capital": REAL_CAPITAL,
         "realized_pnl_usdt": realized,
         "schema_version": R21_SCHEMA_VERSION,
@@ -843,6 +1002,9 @@ def build_consolidated_epoch2_snapshot(
         expectancy_usdt_per_closed_trade=expectancy,
         outcome_distribution=outcome_distribution,
         metrics_status=metrics_status,
+        previous_snapshot_identity=(
+            None if previous is None else previous.snapshot_identity
+        ),
     )
 
 
@@ -881,8 +1043,26 @@ def _validate_consolidated_matches_vaults(
     consolidated: Epoch2ConsolidatedAccountingSnapshot,
     vaults: tuple[Epoch2VaultAccountingSnapshot, ...],
 ) -> None:
-    rebuilt = build_consolidated_epoch2_snapshot(vaults)
-    if consolidated != rebuilt:
+    cash = sum((item.cash_usdt for item in vaults), start=Decimal(0))
+    exposure = sum((item.marked_exposure_usdt for item in vaults), start=Decimal(0))
+    nav = sum((item.nav_usdt for item in vaults), start=Decimal(0))
+    realized = sum((item.realized_pnl_usdt for item in vaults), start=Decimal(0))
+    unrealized = sum((item.unrealized_pnl_usdt for item in vaults), start=Decimal(0))
+    fee = sum((item.fee_usdt for item in vaults), start=Decimal(0))
+    spread = sum((item.spread_usdt for item in vaults), start=Decimal(0))
+    slippage = sum((item.slippage_usdt for item in vaults), start=Decimal(0))
+    turnover = sum((item.turnover_notional_usdt for item in vaults), start=Decimal(0))
+    if (
+        consolidated.cash_usdt != cash
+        or consolidated.marked_exposure_usdt != exposure
+        or consolidated.nav_usdt != nav
+        or consolidated.realized_pnl_usdt != realized
+        or consolidated.unrealized_pnl_usdt != unrealized
+        or consolidated.fee_usdt != fee
+        or consolidated.spread_usdt != spread
+        or consolidated.slippage_usdt != slippage
+        or consolidated.turnover_notional_usdt != turnover
+    ):
         raise ValueError("R21 consolidated snapshot does not reconcile to vault snapshots")
 
 
@@ -922,6 +1102,7 @@ def _vault_snapshot_payload(
         "nav_usdt": snapshot.nav_usdt,
         "outcome_distribution": snapshot.outcome_distribution,
         "positions": snapshot.positions,
+        "previous_snapshot_identity": snapshot.previous_snapshot_identity,
         "real_capital": snapshot.real_capital,
         "realized_pnl_usdt": snapshot.realized_pnl_usdt,
         "schema_version": snapshot.schema_version,
@@ -956,6 +1137,7 @@ def _consolidated_snapshot_payload(
         "metrics_status": snapshot.metrics_status,
         "nav_usdt": snapshot.nav_usdt,
         "outcome_distribution": snapshot.outcome_distribution,
+        "previous_snapshot_identity": snapshot.previous_snapshot_identity,
         "real_capital": snapshot.real_capital,
         "realized_pnl_usdt": snapshot.realized_pnl_usdt,
         "schema_version": snapshot.schema_version,
@@ -1039,6 +1221,11 @@ def _decode_vault_snapshot(payload_json: str) -> Epoch2VaultAccountingSnapshot:
         ),
         metrics_status=Epoch2MetricsStatus(str(raw["metrics_status"])),
         source_record_identities=tuple(str(item) for item in raw["source_record_identities"]),
+        previous_snapshot_identity=(
+            None
+            if raw.get("previous_snapshot_identity") is None
+            else str(raw["previous_snapshot_identity"])
+        ),
         real_capital=int(raw["real_capital"]),
     )
 
@@ -1081,6 +1268,11 @@ def _decode_consolidated_snapshot(
             (str(item[0]), int(item[1])) for item in raw["outcome_distribution"]
         ),
         metrics_status=Epoch2MetricsStatus(str(raw["metrics_status"])),
+        previous_snapshot_identity=(
+            None
+            if raw.get("previous_snapshot_identity") is None
+            else str(raw["previous_snapshot_identity"])
+        ),
         real_capital=int(raw["real_capital"]),
     )
 
