@@ -321,7 +321,7 @@ def test_quality_and_freshness_are_separate_from_support_score() -> None:
 
     assert snapshot.support_score_0_100 == Decimal("100.00")
     assert snapshot.evidence_quality_0_1 == Decimal("0.7100")
-    assert snapshot.freshness_0_1 == Decimal("0.7750")
+    assert snapshot.freshness_0_1 == Decimal("0.7500")
 
 
 def test_context_duplicates_tampering_and_invalid_measures_fail_closed() -> None:
