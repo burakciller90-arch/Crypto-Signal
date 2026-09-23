@@ -28,6 +28,7 @@ from crypto_signal.signals.models import (
     SignalState,
 )
 from research.alpha_factory.probability_calibration_gate import (
+    CalibrationScope,
     CalibratedProbabilityEvidence,
     R19ProbabilityStatus,
 )
@@ -314,6 +315,7 @@ def build_immutable_forecast(
     target_label: str,
     authority: ForecastAuthority = ForecastAuthority.SHADOW,
     calibrated_probability: CalibratedProbabilityEvidence | None = None,
+    calibration_scope: CalibrationScope | None = None,
 ) -> ImmutableForecast:
     if signal.state not in {SignalState.WATCH, SignalState.ACTIVE}:
         raise ValueError("R20 forecast requires WATCH or ACTIVE signal")
@@ -354,11 +356,26 @@ def build_immutable_forecast(
     probability_authorization_identity: str | None = None
     probability_calibration_identity: str | None = None
     probability_scope_identity: str | None = None
+    if calibrated_probability is None and calibration_scope is not None:
+        raise ValueError("R20 calibration scope requires probability evidence")
     if calibrated_probability is not None:
+        if calibration_scope is None:
+            raise ValueError("R20 calibrated probability requires exact R19 scope")
         if calibrated_probability.probability_status is not R19ProbabilityStatus.CALIBRATED:
             raise ValueError("R20 probability input must be R19 CALIBRATED")
         if calibrated_probability.issued_at_ms > issued_at_ms:
             raise ValueError("R20 probability evidence cannot come from the future")
+        if calibration_scope.scope_identity != calibrated_probability.scope_identity:
+            raise ValueError("R20 probability authorization/scope identity mismatch")
+        if calibration_scope.asset != signal.symbol:
+            raise ValueError("R20 probability scope asset mismatch")
+        if calibration_scope.timeframe != signal.timeframe:
+            raise ValueError("R20 probability scope timeframe mismatch")
+        if calibration_scope.regime != confluence.regime:
+            raise ValueError("R20 probability scope regime mismatch")
+        expected_horizon_ms = horizon_bars * _timeframe_duration_ms(signal.timeframe)
+        if calibration_scope.horizon_ms != expected_horizon_ms:
+            raise ValueError("R20 probability scope horizon mismatch")
         probability_value = calibrated_probability.probability_0_1
         probability_status = calibrated_probability.probability_status.value
         probability_authorization_identity = calibrated_probability.authorization_identity
@@ -386,7 +403,9 @@ def build_immutable_forecast(
             {
                 calibrated_probability.authorization_identity,
                 calibrated_probability.calibration_evidence_identity,
+                calibrated_probability.source_forecast_identity,
                 calibrated_probability.source_prediction_identity,
+                calibrated_probability.walk_forward_fit_identity,
             }
         )
 
@@ -739,6 +758,30 @@ def _stream_payload(stream: ForecastStreamSnapshot) -> dict[str, object]:
         "resolutions": stream.resolutions,
         "schema_version": stream.schema_version,
     }
+
+
+def _timeframe_duration_ms(timeframe: str) -> int:
+    if len(timeframe) < 2:
+        raise ValueError("R20 probability scope requires fixed-duration timeframe")
+    unit = timeframe[-1].lower()
+    try:
+        count = int(timeframe[:-1])
+    except ValueError as exc:
+        raise ValueError(
+            "R20 probability scope requires fixed-duration timeframe"
+        ) from exc
+    if count <= 0:
+        raise ValueError("R20 timeframe duration must be positive")
+    multipliers = {
+        "m": 60_000,
+        "h": 60 * 60_000,
+        "d": 24 * 60 * 60_000,
+        "w": 7 * 24 * 60 * 60_000,
+    }
+    multiplier = multipliers.get(unit)
+    if multiplier is None:
+        raise ValueError("R20 probability scope requires fixed-duration timeframe")
+    return count * multiplier
 
 
 def _require_identity_tuple(values: tuple[str, ...], label: str) -> None:
