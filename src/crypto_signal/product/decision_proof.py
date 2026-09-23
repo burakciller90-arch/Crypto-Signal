@@ -163,6 +163,10 @@ class DecisionProofSnapshot:
     engine_version: str
     forecast_identity: str
     signal_freeze_identity: str
+    confluence_identity: str
+    event_context_identity: str
+    probability_authorization_identity: str | None
+    probability_calibration_evidence_identity: str | None
     asset: str
     symbol: str
     timeframe: str
@@ -198,6 +202,26 @@ class DecisionProofSnapshot:
             self.signal_freeze_identity,
             "Decision Proof signal freeze identity",
         )
+        _require_sha256(
+            self.confluence_identity,
+            "Decision Proof confluence identity",
+        )
+        _require_sha256(
+            self.event_context_identity,
+            "Decision Proof event context identity",
+        )
+        for identity, label in (
+            (
+                self.probability_authorization_identity,
+                "Decision Proof probability authorization identity",
+            ),
+            (
+                self.probability_calibration_evidence_identity,
+                "Decision Proof probability calibration identity",
+            ),
+        ):
+            if identity is not None:
+                _require_sha256(identity, label)
         if self.schema_version != DECISION_PROOF_SCHEMA_VERSION:
             raise ValueError("unsupported Decision Proof schema")
         if self.engine_version != DECISION_PROOF_ENGINE_VERSION:
@@ -287,11 +311,18 @@ class DecisionProofSnapshot:
             self.evidence_slices,
             ProofEvidenceDomain.PROBABILITY_CALIBRATION,
         )
-        if self.forecast_source_evidence_identities:
-            if not event_slice.evidence_identities:
-                raise ValueError("Decision Proof event context evidence must be explicit")
-            if not methodology_slice.evidence_identities:
-                raise ValueError("Decision Proof methodology evidence must be explicit")
+        if self.event_context_identity not in event_slice.evidence_identities:
+            raise ValueError(
+                "Decision Proof event slice must contain exact event context identity"
+            )
+        methodology_required = {
+            self.signal_freeze_identity,
+            self.confluence_identity,
+        }
+        if not methodology_required.issubset(set(methodology_slice.evidence_identities)):
+            raise ValueError(
+                "Decision Proof methodology slice must contain signal and confluence identities"
+            )
 
         calibrated = self.calibrated_probability_0_1 is not None
         if calibrated:
@@ -299,9 +330,30 @@ class DecisionProofSnapshot:
                 raise ValueError(
                     "calibrated Decision Proof requires probability evidence slice"
                 )
+            probability_required = {
+                self.probability_authorization_identity,
+                self.probability_calibration_evidence_identity,
+            }
+            if None in probability_required:
+                raise ValueError(
+                    "calibrated Decision Proof requires exact probability identities"
+                )
+            if not probability_required.issubset(
+                set(probability_slice.evidence_identities)
+            ):
+                raise ValueError(
+                    "Decision Proof probability slice missing exact R19 identities"
+                )
         elif probability_slice.availability is ProofEvidenceAvailability.AVAILABLE:
             raise ValueError(
                 "uncalibrated Decision Proof cannot claim available probability evidence"
+            )
+        elif (
+            self.probability_authorization_identity is not None
+            or self.probability_calibration_evidence_identity is not None
+        ):
+            raise ValueError(
+                "uncalibrated Decision Proof cannot carry probability identities"
             )
 
         if self.private_reasoning_exposed:
@@ -507,6 +559,8 @@ def build_decision_proof_snapshot(
         "event_context_state": forecast.event_context_state.value,
         "evidence_slices": ordered,
         "evidence_summary": summary,
+        "confluence_identity": forecast.confluence_identity,
+        "event_context_identity": forecast.event_context_identity,
         "forecast_identity": forecast.forecast_identity,
         "forecast_source_evidence_identities": forecast.source_evidence_identities,
         "freshness_0_1": forecast.freshness_0_1,
@@ -514,6 +568,12 @@ def build_decision_proof_snapshot(
         "invalidation_price": forecast.invalidation_price,
         "issued_at_ms": forecast.issued_at_ms,
         "private_reasoning_exposed": False,
+        "probability_authorization_identity": (
+            forecast.probability_authorization_identity
+        ),
+        "probability_calibration_evidence_identity": (
+            forecast.probability_calibration_evidence_identity
+        ),
         "probability_status": forecast.probability_status,
         "production_authority": False,
         "read_only": True,
@@ -534,6 +594,14 @@ def build_decision_proof_snapshot(
         engine_version=DECISION_PROOF_ENGINE_VERSION,
         forecast_identity=forecast.forecast_identity,
         signal_freeze_identity=forecast.signal_freeze_identity,
+        confluence_identity=forecast.confluence_identity,
+        event_context_identity=forecast.event_context_identity,
+        probability_authorization_identity=(
+            forecast.probability_authorization_identity
+        ),
+        probability_calibration_evidence_identity=(
+            forecast.probability_calibration_evidence_identity
+        ),
         asset=forecast.asset,
         symbol=forecast.symbol,
         timeframe=forecast.timeframe,
@@ -768,6 +836,8 @@ def _proof_payload(proof: DecisionProofSnapshot) -> dict[str, object]:
         "event_context_state": proof.event_context_state,
         "evidence_slices": proof.evidence_slices,
         "evidence_summary": proof.evidence_summary,
+        "confluence_identity": proof.confluence_identity,
+        "event_context_identity": proof.event_context_identity,
         "forecast_identity": proof.forecast_identity,
         "forecast_source_evidence_identities": (
             proof.forecast_source_evidence_identities
@@ -777,6 +847,12 @@ def _proof_payload(proof: DecisionProofSnapshot) -> dict[str, object]:
         "invalidation_price": proof.invalidation_price,
         "issued_at_ms": proof.issued_at_ms,
         "private_reasoning_exposed": proof.private_reasoning_exposed,
+        "probability_authorization_identity": (
+            proof.probability_authorization_identity
+        ),
+        "probability_calibration_evidence_identity": (
+            proof.probability_calibration_evidence_identity
+        ),
         "probability_status": proof.probability_status,
         "production_authority": proof.production_authority,
         "read_only": proof.read_only,
