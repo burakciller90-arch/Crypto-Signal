@@ -82,20 +82,20 @@ class ShadowVariant:
 
     def __post_init__(self) -> None:
         _require_sha256(self.variant_identity, "shadow variant identity")
-        for identity, label in (
+        for required_identity, label in (
             (self.experiment_identity, "shadow experiment identity"),
             (self.parameter_identity, "shadow parameter identity"),
             (self.promotion_evidence_identity, "shadow promotion evidence identity"),
             (self.promotion_assessment_identity, "shadow promotion assessment identity"),
         ):
-            _require_sha256(identity, label)
-        for identity, label in (
+            _require_sha256(required_identity, label)
+        for optional_identity, label in (
             (self.untouched_forward_identity, "shadow untouched-forward identity"),
             (self.robustness_identity, "shadow robustness identity"),
             (self.cost_stress_identity, "shadow cost-stress identity"),
         ):
-            if identity is not None:
-                _require_sha256(identity, label)
+            if optional_identity is not None:
+                _require_sha256(optional_identity, label)
         if self.schema_version != SHADOW_LAB_V2_SCHEMA_VERSION:
             raise ValueError("unsupported Shadow Lab v2 schema")
         if self.engine_version != SHADOW_LAB_V2_ENGINE_VERSION:
