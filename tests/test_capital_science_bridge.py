@@ -137,12 +137,12 @@ def test_bridge_rejects_wrong_base_asset_without_relabeling_event_evidence(
         )
 
 
-def test_bridge_rejects_event_context_not_bound_into_decision_proof(
+def test_bridge_rejects_event_context_not_bound_into_forecast_or_proof(
     tmp_path,
 ) -> None:
     _, issuance = _issue(tmp_path)
-    wrong_event = _event_context(asset="BTCUSDT")
-    with pytest.raises(ValueError, match="Event Risk/base asset mismatch"):
+    wrong_event = _event_context(state=CircuitBreakerState.CAUTION)
+    with pytest.raises(ValueError, match="forecast/Event Risk identity mismatch"):
         assess_unified_decision_capital(
             issuance,
             event_context=wrong_event,
