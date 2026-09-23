@@ -584,6 +584,7 @@ async function loadMarketSelection() {
   state.marketCockpit = null;
   state.marketProviderDetails = [];
   state.marketSelectedDetail = null;
+  state.marketSelectedProof = null;
   renderMarketWorkspace();
 
   let cockpit;
@@ -641,11 +642,15 @@ async function loadSelectedDecisionProof(requestSeq = state.marketRequestSeq) {
   if (!identity) return;
   try {
     const payload = await fetchJson(API.decisionProof(identity));
-    if (requestSeq !== state.marketRequestSeq) return;
+    const currentIdentity =
+      state.marketSelectedDetail?.signal?.signal_freeze_identity || "";
+    if (requestSeq !== state.marketRequestSeq || currentIdentity !== identity) return;
     state.marketSelectedProof = payload;
   } catch (error) {
     console.warn("[GALACTECH] decision proof unavailable", error);
-    if (requestSeq !== state.marketRequestSeq) return;
+    const currentIdentity =
+      state.marketSelectedDetail?.signal?.signal_freeze_identity || "";
+    if (requestSeq !== state.marketRequestSeq || currentIdentity !== identity) return;
     state.marketSelectedProof = {
       status: "unavailable",
       reason: "decision_proof_endpoint_error",
