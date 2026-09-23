@@ -113,3 +113,10 @@ publication time, ingest time, affected assets, category and explicit source/con
 quality, followed by circuit-breaker composition with market-data degradation signals.
 
 The user-requested wake/lease pause remains authoritative and must not be re-armed.
+
+
+## Canonical maintenance boundary
+
+This file and `tests/test_event_risk.py` are the single canonical Slice 1 contract and
+acceptance suite. Parallel duplicate calendar docs/tests/workflows were reconciled and
+removed before acceptance so later agents have one source of truth.
