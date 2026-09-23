@@ -25,6 +25,7 @@ from crypto_signal.paper.mission_control import (
     PaperMissionControlError,
     read_paper_mission_control_snapshot,
 )
+from crypto_signal.paper.shadow_cycle_manifest import R25ShadowCycleManifest
 from crypto_signal.paper.shadow_intent_journal import R25ShadowIntentJournal
 from crypto_signal.product.education import (
     EducationLesson,
@@ -120,6 +121,7 @@ def create_app(
     epoch2_ledger_path: Path | None = None,
     decision_evidence_path: Path | None = None,
     shadow_intent_journal_path: Path | None = None,
+    shadow_cycle_manifest_path: Path | None = None,
 ) -> FastAPI:
     selected_path = ledger_path or Path(
         os.environ.get("CRYPTO_SIGNAL_LEDGER_PATH", str(DEFAULT_LEDGER_PATH))
@@ -196,6 +198,18 @@ def create_app(
     else:
         selected_shadow_intent_path = None
 
+    if shadow_cycle_manifest_path is not None:
+        selected_shadow_cycle_path: Path | None = shadow_cycle_manifest_path
+    elif ledger_path is None:
+        shadow_cycle_env = os.environ.get(
+            "CRYPTO_SIGNAL_SHADOW_CYCLE_MANIFEST_PATH"
+        )
+        selected_shadow_cycle_path = (
+            None if not shadow_cycle_env else Path(shadow_cycle_env)
+        )
+    else:
+        selected_shadow_cycle_path = None
+
     selected_learning_memory_path = learning_memory_path
     if selected_learning_memory_path is None:
         learning_memory_env = os.environ.get("CRYPTO_SIGNAL_LEARNING_MEMORY_PATH")
@@ -222,6 +236,7 @@ def create_app(
     app.state.learning_memory_path = selected_learning_memory_path
     app.state.decision_evidence_path = selected_decision_path
     app.state.shadow_intent_journal_path = selected_shadow_intent_path
+    app.state.shadow_cycle_manifest_path = selected_shadow_cycle_path
     app.state.reader = reader
 
     app.mount(
@@ -464,6 +479,63 @@ def create_app(
                 "snapshot": snapshot,
                 "journal_filename": selected_shadow_intent_path.name,
                 "semantic": "SHADOW_RESEARCH_ONLY",
+                "canonical_epoch2_mutation": False,
+                "production_authority": False,
+                "read_only": True,
+                "real_capital": 0,
+            }
+        )
+
+    @app.get("/api/shadow-cycle/status")
+    def shadow_cycle_status(
+        limit: int = Query(default=20, ge=1, le=100),
+    ) -> JSONResponse:
+        if selected_shadow_cycle_path is None:
+            return _json(
+                {
+                    "status": "unavailable",
+                    "reason": "shadow_cycle_manifest_runtime_not_configured",
+                    "semantic": "SHADOW_RESEARCH_ONLY",
+                    "restart_replay_runtime_status": "NOT_MEASURED",
+                    "canonical_epoch2_mutation": False,
+                    "production_authority": False,
+                    "read_only": True,
+                    "real_capital": 0,
+                }
+            )
+        if not selected_shadow_cycle_path.exists():
+            return _json(
+                {
+                    "status": "unavailable",
+                    "reason": "shadow_cycle_manifest_evidence_missing",
+                    "manifest_filename": selected_shadow_cycle_path.name,
+                    "semantic": "SHADOW_RESEARCH_ONLY",
+                    "restart_replay_runtime_status": "NOT_MEASURED",
+                    "canonical_epoch2_mutation": False,
+                    "production_authority": False,
+                    "read_only": True,
+                    "real_capital": 0,
+                }
+            )
+        try:
+            manifest = R25ShadowCycleManifest(selected_shadow_cycle_path)
+            snapshot = manifest.verify_read_only()
+            latest = manifest.read_latest(limit=limit)
+        except ValueError as exc:
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
+        return _json(
+            {
+                "status": "ready" if snapshot.record_count else "empty",
+                "snapshot": snapshot,
+                "latest": latest,
+                "manifest_filename": selected_shadow_cycle_path.name,
+                "semantic": "SHADOW_RESEARCH_ONLY",
+                "lineage_status": (
+                    "PERSISTED_BY_IMMUTABLE_MANIFEST"
+                    if latest
+                    else "NOT_PERSISTED"
+                ),
+                "restart_replay_runtime_status": "NOT_MEASURED",
                 "canonical_epoch2_mutation": False,
                 "production_authority": False,
                 "read_only": True,
