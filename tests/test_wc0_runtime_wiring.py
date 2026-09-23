@@ -102,4 +102,7 @@ def test_productdeploy_contract_is_exact_main_and_current_galactech() -> None:
     assert "GALACTECH_ROOT_CUTOVER_LIVE_PASS=YES" in product_block
     assert "WC0_RUNTIME_TOPOLOGY_SQLITE_PASS=YES" in product_block
     assert "WC0_CONTINUITY_PAUSE_PRESERVED=YES" in product_block
+    assert "OLD_DASH_EXITED=" in product_block
+    assert "OLD_DASH_EXIT_TIMEOUT=YES" in product_block
+    assert 'grep -F "$PRODUCT/ops/run_dashboard.py"' in product_block
     assert "REAL_CAPITAL" not in product_block or "real_capital" in product_block

@@ -271,12 +271,27 @@ jobs:
             echo "DASHBOARD_RESTART_MODE=ssd-supervisor SUP=$sup OLD_DASH=$old_dash"
             if [ -n "$old_dash" ] && kill -0 "$old_dash" >/dev/null 2>&1; then
               kill "$old_dash"
+              old_exited=0
+              for i in {1..30}; do
+                if ! kill -0 "$old_dash" >/dev/null 2>&1; then
+                  old_exited=1
+                  break
+                fi
+                sleep 1
+              done
+              if [ "$old_exited" != "1" ]; then
+                echo "OLD_DASH_EXIT_TIMEOUT=YES PID=$old_dash"
+                return 1
+              fi
+              echo "OLD_DASH_EXITED=$old_dash"
             fi
             for i in {1..45}; do
               new_dash="$(cat "$DASH_PID_FILE" 2>/dev/null || true)"
               if [ -n "$new_dash" ] && [ "$new_dash" != "$old_dash" ] && kill -0 "$new_dash" >/dev/null 2>&1; then
-                echo "NEW_DASH=$new_dash"
-                return 0
+                if ps -p "$new_dash" -o command= | grep -F "$PRODUCT/ops/run_dashboard.py" >/dev/null; then
+                  echo "NEW_DASH=$new_dash"
+                  return 0
+                fi
               fi
               sleep 1
             done
