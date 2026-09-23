@@ -44,8 +44,10 @@ Within one exact asset/network/provider/attribution context and a bounded lookba
 
 - `REPEATED_RELATIONSHIP_CLUSTER`: at least one repeated relationship passes bounded
   count/share thresholds.
-- `ISOLATED_LARGE_TRANSFER`: large normalized evidence exists but no repeated
-  relationship satisfies the candidate rule.
+- `ISOLATED_LARGE_TRANSFER`: the latest PIT-safe transfer is in the configured
+  normalized tail but no repeated relationship satisfies the candidate rule.
+- `NORMAL`: sufficient PIT-safe history exists, no repeated relationship qualifies and
+  the latest transfer is below the configured large-event percentile.
 - `UNRESOLVED`: too little PIT-safe history to characterize activity.
 
 No directional price label is produced.
@@ -70,9 +72,10 @@ No directional price label is produced.
 4. Provider exchange-role evidence retained without actor-intent inference.
 5. Isolated large-transfer context remains distinct from repeated relationship evidence.
 6. Insufficient history fails closed.
-7. Future/late evidence cannot rewrite historical freezes.
-8. Context mismatch, duplicate provider IDs, invalid thresholds and identity tampering
-   fail closed.
+7. Future/late evidence, including future wrong-context or duplicate-provider records,
+   cannot rewrite historical freezes.
+8. Eligible context mismatch, duplicate provider IDs, invalid thresholds and identity
+   tampering fail closed.
 9. Focused pytest/Ruff/mypy and full repository Python/JavaScript/freshness regression.
 10. Temporary hosted workflow removed after PASS.
 
