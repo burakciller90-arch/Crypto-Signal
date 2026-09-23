@@ -4692,3 +4692,37 @@ Accepted semantics:
 
 Phase 16 exit is satisfied. Next locked frontier: Phase 17 R22 Transaction & Decision Tape.
 User wake/lease pause remains authoritative.
+
+
+---
+
+## 2026-09-23 — 16:16 PHASE 17 R22 TRANSACTION & DECISION TAPE ACCEPTED
+
+PR #921 completed the locked Phase 17 paper-capital provenance and accounting-audit layer.
+
+Acceptance:
+- exact-head branch run `35865597121` focused + full repository PASS at
+  `40e69800ee42158bba5d56d29c48b871aefe3de7`;
+- squash merge `c7107c2dc6d448055f4b337c3672228abdc80c1e`;
+- exact-main Stage10 `35865750883` SUCCESS.
+
+Accepted semantics:
+- canonical trade provenance is exact forecast -> Decision Proof -> R11 sizing
+  assessment/result -> immutable paper decision -> simulated fill -> exact cash/position
+  mutation -> R21 vault/consolidated accounting -> explicit financial outcome -> R22 bundle;
+- free-form identity claims cannot replace the bound accepted sizing/decision/fill objects;
+- reference/fill price, fee, spread, slippage, execution policy, venue, cash/position
+  before/after, realized/unrealized PnL, outcome and evidence identities are immutable;
+- HOLD_CASH is explicit and cannot fabricate a trade lineage;
+- R22 evidence and R21 accounting use one Epoch 2 SQLite transaction; forced failure
+  proves no partial R21/R22 commit;
+- read-only replay verifies payload hashes, SQL headers, predecessor chains, exact
+  three-vault before/after sets, target binding and missing evidence;
+- semantically equal Decimal representations are treated as equal financial state;
+- unrelated vault mutation fails closed;
+- no order/network/exchange/credential authority, leverage, borrowing, martingale,
+  automatic Shadow promotion or Epoch 1 rewrite;
+- REAL_CAPITAL=0.
+
+Phase 17 exit is satisfied. Next locked frontier: Phase 18 R23 Explainable Intelligence.
+User wake/lease pause remains authoritative.
