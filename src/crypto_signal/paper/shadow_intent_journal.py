@@ -148,13 +148,21 @@ class ShadowIntentForecastLink:
             (self.intent_identity, "shadow forecast intent"),
         ):
             _require_sha256(value, label)
-        for value, label in (
-            (self.review_selection_identity, "shadow forecast review"),
-            (self.market_reference_identity, "shadow forecast market reference"),
-            (self.decision_identity, "shadow forecast decision"),
-        ):
-            if value is not None:
-                _require_sha256(value, label)
+        if self.review_selection_identity is not None:
+            _require_sha256(
+                self.review_selection_identity,
+                "shadow forecast review",
+            )
+        if self.market_reference_identity is not None:
+            _require_sha256(
+                self.market_reference_identity,
+                "shadow forecast market reference",
+            )
+        if self.decision_identity is not None:
+            _require_sha256(
+                self.decision_identity,
+                "shadow forecast decision",
+            )
         if not isinstance(self.vault_id, PaperVaultId):
             raise TypeError("shadow forecast link requires canonical vault")
         if self.event_at_ms < 0:
