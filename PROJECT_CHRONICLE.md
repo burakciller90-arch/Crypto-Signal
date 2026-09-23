@@ -4542,3 +4542,35 @@ Accepted semantics:
 
 Phase 11 infrastructure exit is satisfied. Next frontier is Phase 12 market-neutral /
 arbitrage research, shadow-only. User wake/lease pause remains authoritative.
+
+
+---
+
+## 2026-09-23 — 13:31 PHASE 12 MARKET-NEUTRAL / ARBITRAGE RESEARCH ACCEPTED
+
+PR #911 completed the locked Phase 12 shadow research infrastructure.
+
+Acceptance:
+- Phase 12 hosted run `35848941042` focused + full repository PASS;
+- Alpha Factory branch research gate `35848866823` SUCCESS;
+- squash merge `aed739ac5df482e351636c95aef9dfb84cd92691`;
+- exact-main Alpha Factory gate `35849105218` SUCCESS;
+- exact-main Stage10 `35849105188` SUCCESS.
+
+Accepted semantics:
+- cross-exchange spread, spot-perpetual basis, funding capture and delta-neutral research
+  families exist under one shadow-only evidence contract;
+- executable long ask / short bid drive gross price edge;
+- fees, slippage, latency penalty, funding-change stress and transfer cost remain explicit;
+- positive gross spread can fail after costs;
+- stale/unsynchronized evidence fails closed;
+- transfer delay, counterparty/exchange risk, hedge mismatch and funding-change stress are
+  independent risk gates rather than hidden inside the edge number;
+- policy thresholds are versioned research inputs;
+- no risk-free/guaranteed claim, sizing, canonical mutation, promotion, ledger/order/network
+  authority;
+- REAL_CAPITAL=0.
+
+Phase 12 infrastructure exit is satisfied. Next locked frontier: Phase 13 R20 Immutable
+Forecast Stream. Historical `v1.1-forecast-decision-proof-v1` is a diverged prototype,
+not current merge authority. User wake/lease pause remains authoritative.
