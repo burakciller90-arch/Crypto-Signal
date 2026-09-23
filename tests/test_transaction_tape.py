@@ -39,7 +39,7 @@ def _context():
 
 
 def _buy():
-    activation, _, forecast, proof = _context()
+    activation, before, forecast, proof = _context()
     intent = build_tape_intent(
         activation,
         vault_id=PaperVaultId.CORE,
@@ -106,7 +106,7 @@ def test_r22_exact_forecast_proof_to_r21_cash_position_nav_lineage() -> None:
 
 
 def test_r22_forecast_and_proof_are_exact_not_user_claimed() -> None:
-    activation, before, forecast, proof = _context()
+    activation, _, forecast, proof = _context()
     args = {
         "vault_id": PaperVaultId.CORE,
         "action": PaperAction.BUY,
