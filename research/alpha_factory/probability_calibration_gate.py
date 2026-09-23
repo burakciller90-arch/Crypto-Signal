@@ -4,6 +4,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from decimal import Decimal
 from enum import StrEnum
+from itertools import pairwise
 
 from crypto_signal.ledger.serialization import canonical_sha256
 from crypto_signal.outcomes.models import EvidenceClass
@@ -775,7 +776,7 @@ def _build_reliability_bins(
     edges: tuple[Decimal, ...],
 ) -> tuple[ReliabilityBin, ...]:
     bins: list[ReliabilityBin] = []
-    for index, (lower, upper) in enumerate(zip(edges, edges[1:], strict=True)):
+    for index, (lower, upper) in enumerate(pairwise(edges)):
         upper_inclusive = index == len(edges) - 2
         items = tuple(
             item
