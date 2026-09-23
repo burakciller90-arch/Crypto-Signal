@@ -10,6 +10,28 @@ REAL_CAPITAL: 0
 ## Active v1.1 frontier — read before historical sections
 
 
+### 2026-09-23 11:55 +0300 — EVENT RISK NEWS/NLP SLICE 2 ACCEPTED
+
+- PR **#897** accepted source-bounded News/NLP evidence.
+- Authoritative hosted branch run `35839685914` focused + full PASS.
+- PR #897 squash-merged to main as `d438f711f36b315655fed1c9ad535f70454a5674`.
+- Exact-main Stage10 run `35839886324` SUCCESS.
+- Accepted evidence states:
+  - MULTI_SOURCE_CONFIRMED;
+  - SINGLE_SOURCE_CONTEXT;
+  - PROVIDER_DISAGREEMENT;
+  - DEGRADED_DATA;
+  - UNRESOLVED.
+- News observations freeze publication/source/ingestion times, affected assets, category,
+  source quality, extraction/model provenance and relevance confidence.
+- Relevance confidence is extraction metadata, not calibrated price probability.
+- Provider disagreement is surfaced rather than averaged away.
+- Future/late/other-asset evidence cannot rewrite historical freezes.
+- Next Event Risk frontier: **circuit-breaker composition** across calendar + news + market-data quality, including ABSTAIN semantics.
+- CONTINUITY_PAUSED_BY_USER remains dominant. REAL_CAPITAL=0.
+
+
+
 ### 2026-09-23 11:47 +0300 — EVENT RISK STRUCTURED CALENDAR SLICE 1 ACCEPTED
 
 - PR **#896** accepted the PIT-safe structured Event Risk calendar safety layer.
