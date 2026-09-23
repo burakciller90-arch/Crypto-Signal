@@ -299,7 +299,7 @@ def test_future_and_late_evidence_cannot_rewrite_combined_freeze() -> None:
     )
     late_event = _event(
         2, side=LiquidatedPositionSide.SHORT,
-        bankruptcy_price=Decimal("111"), ingested_at_ms=AS_OF + 1,
+        bankruptcy_price=Decimal(111), ingested_at_ms=AS_OF + 1,
     )
     changed = _combined(
         "long", (*baseline_events, late_event),
