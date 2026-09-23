@@ -10,6 +10,24 @@ REAL_CAPITAL: 0
 ## Active v1.1 frontier — read before historical sections
 
 
+### 2026-09-23 17:02 +0300 — GALACTECH COMMAND + EVIDENCE ROOM ACCEPTED
+
+- PR **#925** accepted GALACTECH Command Center drill-down + Evidence Room.
+- Exact-head hosted run `35870976541` SUCCESS at `f08b947439ad970111ce883b09271554cd58f2f5`.
+- PR #925 squash-merged as `e9a22d286e38f5e926eddaadef77f2630896ba73`.
+- Exact-main Stage10 run `35871191114` SUCCESS.
+- Command, Critical Radar and Archive cards open the exact signal freeze by SHA256 identity.
+- Evidence Room shows immutable decision state/direction/setup, non-probability confluence, probability status, timestamps, methodology evidence, metrics/key levels, uncertainty/contradiction, pairwise relations and frozen geometry.
+- Frozen OHLC chart is rendered only from exact immutable bundle candles; absent OHLC produces an explicit unavailable state.
+- Later market data cannot rewrite the issuance snapshot.
+- The room is deliberately labelled Immutable Decision Evidence; it does not silently relabel the legacy signal-freeze endpoint as R20.5 Decision Proof.
+- Native dialog semantics and focus-return acceptance are preserved.
+- No private reasoning or execution authority. REAL_CAPITAL=0.
+- Current locked frontier: **Product rail — Capital Center / canonical Epoch 2 read-only truth**.
+- UID504 wake pause remains authoritative and untouched.
+
+
+
 ### 2026-09-23 16:52 +0300 — GALACTECH PRODUCT FOUNDATION ACCEPTED
 
 - PR **#924** accepted the isolated from-first-principles GALACTECH frontend foundation.
