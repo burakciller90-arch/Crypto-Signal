@@ -4790,3 +4790,36 @@ Accepted semantics:
 Phase 19 exit is satisfied. Next locked frontier is the Product rail: complete
 GALACTECH frontend rebuild, integrated acceptance, production UI cutover and v1.1.0.
 User wake/lease pause remains authoritative.
+
+
+---
+
+## 2026-09-23 — 16:52 GALACTECH PRODUCT FOUNDATION ACCEPTED
+
+PR #924 completed the first locked Product-rail slice.
+
+Acceptance:
+- exact-head GALACTECH run `35869841236` focused + full repository PASS at
+  `24c8978e100014e4852406772f210e47a29a5795`;
+- squash merge `75839c262fe32ce1af1c4642b900f3f44d121aa7`;
+- exact-main Stage10 `35870026128` SUCCESS.
+
+Accepted product semantics:
+- from-scratch GALACTECH surface is isolated at `/galactech`;
+- existing accepted root UI remains unchanged until explicit production cutover;
+- exact locked 8-section IA and ALL/BTC/ETH/SOL focus exist;
+- semantic dark design system, responsive layout, keyboard focus and reduced-motion
+  foundation exist;
+- cold-start truth checks expose only verified API/ledger/market/authority states;
+- missing freshness, latency, Paper NAV, advanced market layers or probability are
+  explicitly NOT MEASURED / NOT EXPOSED / unavailable rather than invented;
+- all current bindings are read-only existing APIs;
+- no order/credential/network authority and REAL_CAPITAL=0.
+
+State-first continuity reconciliation:
+- Cursor workers/composer remain disabled;
+- historical open M1/M2 PRs remain stale audit evidence, not current authority;
+- latest inspected UID504 scheduled watchdog log emitted
+  `GITHUB_WATCHDOG_USER_PAUSED=YES`; user pause markers were not changed.
+
+Next locked frontier: Product rail Command Center + Evidence Room.
