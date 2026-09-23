@@ -3880,3 +3880,28 @@ then breakout/sweep interaction. Reuse existing Stage8 and accepted M2 frozen ev
 
 Production data collector and Product deployment remain separately gated. No Cursor
 worker/composer. REAL_CAPITAL=0.
+
+
+---
+
+## 2026-09-23 03:30 +0300 — WATCHDOG DELIVERY GATE / PRODUCT MAIN MERGE
+
+State-first reconciliation read current READ_FIRST, CURRENT_STATUS, Chronicle, locked roadmap,
+current GitHub main/PR/Actions and a new read-only UID504 rollingstate.
+
+- GALACTECH a11y/responsive/performance PR #819 was already hosted accepted (run `35801045515`)
+  and was squash-merged to development main as `b8858083ed1d7b35980d5ee9a3b68db49dbe4f37`.
+  Exact merged-main Stage10 run `35802326758` PASS. No production UI cutover.
+- Rolling timer read-only run `35802186400` PASS: PID 1613 alive, fresh heartbeat,
+  final OBSERVED receipt for event `crypto-20m-rolling:4bc50caa43074cf2:6`,
+  `last_receipt_epoch=1790123133`, `next_due_epoch=1790124333`, exactly +1200 seconds,
+  pending empty, failure_count=0, exact chat bound, local/shared pause NO. No reset/reinstall.
+- Watchdog PR #859 classifier and workflow fix passed authoritative hosted
+  run `35802247387`: focused tests, Ruff, mypy, full repository pytest/Ruff/mypy/JS/freshness.
+  Temporary gate removed in `eb29376404378cf848ada28bb7723e34e73f26e4`.
+  The PR remains open DRAFT, not merged; a review-ready operation was blocked, so
+  watchdog live behavior is **not** claimed changed. Issue #856 is unresolved until merge
+  and later scheduled-watchdog observation. Do not force a duplicate wake or timer reset.
+- M2 integrated main and M3 Slice 1 are accepted, no replay. Next safe Intelligence
+  frontier is M3 price/CVD divergence plus bounded absorption research.
+- Cursor worker/composer remains disabled by user. REAL_CAPITAL=0.
