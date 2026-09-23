@@ -4756,3 +4756,37 @@ Accepted semantics:
 
 Phase 18 exit is satisfied. Next locked frontier: Phase 19 R24 Performance & Trust Center.
 User wake/lease pause remains authoritative.
+
+
+---
+
+## 2026-09-23 — 16:39 PHASE 19 R24 PERFORMANCE & TRUST CENTER ACCEPTED
+
+PR #923 completed the locked Phase 19 truth/performance layer.
+
+Acceptance:
+- exact-head branch run `35868328046` focused + full repository PASS at
+  `45f6f673229845848a44d33af1f6459db975dea0`;
+- squash merge `8011b196f539baacf20626b8ccd55c7db5775886`;
+- exact-main Stage10 `35868501228` SUCCESS.
+
+Accepted semantics:
+- retrospective, walk-forward and live untouched-forward forecast outcomes remain
+  separately labelled and are never merged into one accuracy figure;
+- winners and losers are visible together;
+- decisive accuracy is explicitly HIT_TARGET / (HIT_TARGET + INVALIDATED);
+- Brier/reliability metrics are descriptive and consume only exact calibrated decisive
+  live-untouched-forward forecast/resolution pairs;
+- uncalibrated forecasts are not assigned probability;
+- abstain, conflict and ambiguity rates remain separately labelled;
+- Event Block frequency is measurable while counterfactual effectiveness remains
+  NOT_YET_MEASURED without accepted evidence;
+- canonical Epoch 2 NAV/PnL/drawdown/cost/turnover/expectancy/vault truth is read-only;
+- R22 closed fills must reconcile with R21 before profit factor is available;
+- Sharpe/Sortino are not fabricated from irregular event-driven NAV snapshots;
+- no private reasoning, ledger/order/network/credential authority or real capital;
+- REAL_CAPITAL=0.
+
+Phase 19 exit is satisfied. Next locked frontier is the Product rail: complete
+GALACTECH frontend rebuild, integrated acceptance, production UI cutover and v1.1.0.
+User wake/lease pause remains authoritative.
