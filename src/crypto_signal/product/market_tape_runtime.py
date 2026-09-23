@@ -34,6 +34,89 @@ _V12_TABLES = (
     ),
 )
 
+_TABLE_REQUIRED_COLUMNS = {
+    "market_tape_meta": frozenset({"key", "value"}),
+    "market_tape_orderbooks": frozenset(
+        {
+            "snapshot_identity",
+            "exchange",
+            "market_type",
+            "symbol",
+            "event_at_ms",
+            "source_timestamp_ms",
+            "ingested_at_ms",
+            "update_id",
+            "sequence",
+            "source",
+            "adapter_version",
+            "payload_json",
+        }
+    ),
+    "market_tape_trades": frozenset(
+        {
+            "trade_identity",
+            "exchange",
+            "market_type",
+            "symbol",
+            "event_at_ms",
+            "source_timestamp_ms",
+            "ingested_at_ms",
+            "exec_id",
+            "sequence",
+            "aggressor_side",
+            "source",
+            "adapter_version",
+            "payload_json",
+        }
+    ),
+    "market_tape_derivatives": frozenset(
+        {
+            "observation_identity",
+            "semantic_identity",
+            "exchange",
+            "instrument_type",
+            "symbol",
+            "event_at_ms",
+            "source_timestamp_ms",
+            "ingested_at_ms",
+            "source",
+            "adapter_version",
+            "payload_json",
+        }
+    ),
+    "market_tape_liquidations": frozenset(
+        {
+            "liquidation_identity",
+            "provider_identity",
+            "exchange",
+            "instrument_type",
+            "symbol",
+            "event_at_ms",
+            "source_timestamp_ms",
+            "ingested_at_ms",
+            "source_row_index",
+            "liquidated_position_side",
+            "source",
+            "adapter_version",
+            "payload_json",
+        }
+    ),
+    "market_tape_liquidation_coverage": frozenset(
+        {
+            "coverage_identity",
+            "exchange",
+            "instrument_type",
+            "symbol",
+            "coverage_start_ms",
+            "coverage_end_ms",
+            "observed_at_ms",
+            "source",
+            "adapter_version",
+            "payload_json",
+        }
+    ),
+}
+
 
 @dataclass(frozen=True, slots=True)
 class MarketTapeRuntimeTruth:
@@ -155,11 +238,15 @@ def read_market_tape_runtime_truth(
         if schema_version == "market-tape-schema-v1/2":
             required.extend(_V12_TABLES)
 
+        _verify_required_columns(connection, "market_tape_meta")
+        for _label, table, _time_column in required:
+            if table not in tables:
+                raise ValueError(f"Market Tape required table missing: {table}")
+            _verify_required_columns(connection, table)
+
         counts: list[tuple[str, int]] = []
         latest_values: list[int] = []
         for label, table, time_column in required:
-            if table not in tables:
-                raise ValueError(f"Market Tape required table missing: {table}")
             row_count = int(
                 connection.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
             )
@@ -233,6 +320,23 @@ def read_cold_archive_runtime_truth(
         verified_file_bytes=sum(item.file_bytes for item in selected),
         integrity_scope=scope,
     )
+
+
+def _verify_required_columns(
+    connection: sqlite3.Connection,
+    table: str,
+) -> None:
+    expected = _TABLE_REQUIRED_COLUMNS[table]
+    observed = {
+        str(row[1])
+        for row in connection.execute(f"PRAGMA table_info({table})").fetchall()
+    }
+    missing = expected - observed
+    if missing:
+        raise ValueError(
+            f"Market Tape required columns missing from {table}: "
+            + ",".join(sorted(missing))
+        )
 
 
 def _parse_cold_manifest(path: Path) -> _ColdManifest:
