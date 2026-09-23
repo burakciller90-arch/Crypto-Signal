@@ -140,6 +140,10 @@ def _replay_matches_cycle(
     )
 
 
+def _operational_component_ready(value: object) -> bool:
+    return isinstance(value, dict) and value.get("status") == "ready"
+
+
 def create_app(
     ledger_path: Path | None = None,
     alert_outbox_path: Path | None = None,
@@ -763,8 +767,7 @@ def create_app(
             "canonical_epoch2",
         )
         all_present = all(
-            isinstance(components.get(name), dict)
-            and components[name].get("status") == "ready"  # type: ignore[union-attr]
+            _operational_component_ready(components.get(name))
             for name in required
         )
 
