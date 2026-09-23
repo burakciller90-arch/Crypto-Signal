@@ -1081,7 +1081,7 @@ async function runBoot() {
     loadEndpoint("command", API.command),
     loadEndpoint("radar", API.radar),
     loadEndpoint("epoch", API.epoch),
-    loadEndpoint("paper", API.paper),
+    loadEndpoint("epoch2State", API.epoch2State),
     loadEndpoint("archive", API.archive),
     loadEndpoint("education", API.education),
     loadEndpoint("intelligence", API.intelligence),
@@ -1117,7 +1117,7 @@ function startPeriodicRefresh() {
       loadEndpoint("health", API.health),
       loadEndpoint("command", API.command),
       loadEndpoint("radar", API.radar),
-      loadEndpoint("paper", API.paper),
+      loadEndpoint("epoch2State", API.epoch2State),
       loadEndpoint("archive", API.archive),
     ]);
     if (results[0].ok) applyHealthTruth(results[0].data);
