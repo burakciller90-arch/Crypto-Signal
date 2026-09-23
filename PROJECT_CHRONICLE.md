@@ -4823,3 +4823,29 @@ State-first continuity reconciliation:
   `GITHUB_WATCHDOG_USER_PAUSED=YES`; user pause markers were not changed.
 
 Next locked frontier: Product rail Command Center + Evidence Room.
+
+
+---
+
+## 2026-09-23 — 17:02 GALACTECH COMMAND + EVIDENCE ROOM ACCEPTED
+
+PR #925 completed the next locked Product-rail slice.
+
+Acceptance:
+- exact-head run `35870976541` focused + full PASS at
+  `f08b947439ad970111ce883b09271554cd58f2f5`;
+- squash merge `e9a22d286e38f5e926eddaadef77f2630896ba73`;
+- exact-main Stage10 `35871191114` SUCCESS.
+
+Accepted truth:
+- exact SHA256 signal freeze opens from Command/Radar/Archive;
+- deterministic frozen chart uses immutable OHLC only and never fabricates candles;
+- methodology, pairwise, evidence metrics/levels, timestamps, uncertainty and geometry are
+  structured proof surfaces rather than private chain-of-thought;
+- probability remains exact status and confluence remains non-probability;
+- missing geometry/evidence remains explicit;
+- focus returns to the launching control after modal close;
+- legacy signal-freeze provenance is named accurately and is not misrepresented as R20.5;
+- no order/network/credential authority; REAL_CAPITAL=0.
+
+Next locked frontier: Capital Center with canonical Epoch 2 read-only truth.
