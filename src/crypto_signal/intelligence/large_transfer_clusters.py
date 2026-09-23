@@ -209,9 +209,6 @@ def build_large_transfer_cluster_evidence_freeze(
             ),
         )
     )
-    _validate_context(ordered)
-    _reject_duplicates(ordered)
-    context = ordered[0]
     window_start = max(0, as_of_ms - config.lookback_ms)
     eligible = tuple(
         item
@@ -219,6 +216,10 @@ def build_large_transfer_cluster_evidence_freeze(
         if item.event_at_ms >= window_start
         and max(item.event_at_ms, item.source_timestamp_ms, item.ingested_at_ms) <= as_of_ms
     )
+    context = eligible[0] if eligible else ordered[0]
+    if eligible:
+        _validate_context(eligible)
+        _reject_duplicates(eligible)
     if len(eligible) < config.minimum_events:
         analysis = _unresolved(
             context=context,
