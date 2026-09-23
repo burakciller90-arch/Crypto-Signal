@@ -670,6 +670,103 @@ class Epoch2CanonicalLedger:
             )
 
 
+
+def read_epoch2_state_read_only(path: Path) -> Epoch2LedgerState | None:
+    """Read the canonical Epoch2 accounting state without initializing or mutating it."""
+    if not path.exists():
+        return None
+
+    uri = f"file:{path.resolve()}?mode=ro"
+    required_tables = (
+        "r21_epoch2_activation",
+        "r21_vault_snapshots",
+        "r21_consolidated_snapshots",
+    )
+    try:
+        with sqlite3.connect(uri, uri=True, timeout=5.0) as connection:
+            connection.row_factory = sqlite3.Row
+            connection.execute("PRAGMA query_only=ON")
+            existing_tables = {
+                str(row["name"])
+                for row in connection.execute(
+                    """
+                    SELECT name FROM sqlite_master
+                    WHERE type = 'table'
+                    """
+                ).fetchall()
+            }
+            if not any(table in existing_tables for table in required_tables):
+                return None
+            if any(table not in existing_tables for table in required_tables):
+                raise ValueError("R21 Epoch2 read-only schema is incomplete")
+
+            activation_row = connection.execute(
+                """
+                SELECT payload_json
+                FROM r21_epoch2_activation
+                WHERE singleton = 1
+                """
+            ).fetchone()
+            if activation_row is None:
+                return None
+            activation = _decode_activation(str(activation_row["payload_json"]))
+
+            vaults: list[Epoch2VaultAccountingSnapshot] = []
+            for vault_id in PaperVaultId:
+                row = connection.execute(
+                    """
+                    SELECT payload_json
+                    FROM r21_vault_snapshots
+                    WHERE vault_id = ?
+                    ORDER BY snapshot_at_ms DESC, snapshot_identity DESC
+                    LIMIT 1
+                    """,
+                    (vault_id.value,),
+                ).fetchone()
+                if row is None:
+                    raise ValueError(
+                        "R21 Epoch2 read-only state requires all three vault snapshots"
+                    )
+                vaults.append(_decode_vault_snapshot(str(row["payload_json"])))
+
+            consolidated_row = connection.execute(
+                """
+                SELECT payload_json
+                FROM r21_consolidated_snapshots
+                ORDER BY snapshot_at_ms DESC, snapshot_identity DESC
+                LIMIT 1
+                """
+            ).fetchone()
+            if consolidated_row is None:
+                raise ValueError(
+                    "R21 Epoch2 read-only state requires consolidated snapshot"
+                )
+            consolidated = _decode_consolidated_snapshot(
+                str(consolidated_row["payload_json"])
+            )
+    except sqlite3.Error as exc:
+        raise ValueError(f"failed to read R21 Epoch2 ledger read-only: {exc}") from exc
+
+    ordered_vaults = tuple(sorted(vaults, key=lambda item: item.vault_id.value))
+    if any(
+        item.activation_identity != activation.activation_identity
+        for item in ordered_vaults
+    ):
+        raise ValueError("R21 Epoch2 read-only vault activation mismatch")
+    if consolidated.activation_identity != activation.activation_identity:
+        raise ValueError("R21 Epoch2 read-only consolidated activation mismatch")
+    expected = tuple(sorted(item.snapshot_identity for item in ordered_vaults))
+    if consolidated.vault_snapshot_identities != expected:
+        raise ValueError(
+            "R21 Epoch2 read-only consolidated snapshot is stale versus vaults"
+        )
+    _validate_consolidated_matches_vaults(consolidated, ordered_vaults)
+    return Epoch2LedgerState(
+        activation=activation,
+        vault_snapshots=ordered_vaults,
+        consolidated_snapshot=consolidated,
+    )
+
 def build_epoch2_activation_record(
     *,
     activated_at_ms: int,
