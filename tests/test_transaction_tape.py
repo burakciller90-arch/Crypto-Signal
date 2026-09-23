@@ -3,9 +3,14 @@ from __future__ import annotations
 import sqlite3
 from dataclasses import replace
 from decimal import Decimal
+from pathlib import Path
 
 import pytest
 from test_decision_proof_live_feed import ISSUED_AT, _forecast, _slices
+from test_position_sizing_intelligence import (
+    _context as sizing_context,
+    _vault as sizing_vault,
+)
 
 from crypto_signal.ledger.serialization import canonical_sha256
 from crypto_signal.paper.epoch2_accounting import (
@@ -14,7 +19,20 @@ from crypto_signal.paper.epoch2_accounting import (
     build_initial_epoch2_vault_snapshot,
 )
 from crypto_signal.paper.epochs import PaperVaultId
-from crypto_signal.paper.models import PaperAction, PaperPosition, PaperSymbol
+from crypto_signal.paper.models import (
+    ExecutionCostAssumptions,
+    PaperAction,
+    PaperPosition,
+    PaperSymbol,
+    build_decision_intent,
+    build_position_cash_mutation,
+    build_simulated_fill,
+)
+from crypto_signal.paper.position_sizing_intelligence import (
+    SizingMethod,
+    build_position_sizing_policy,
+    evaluate_position_sizing_intelligence,
+)
 from crypto_signal.paper.transaction_tape import (
     R22DevelopmentTape,
     build_tape_fill,
@@ -25,6 +43,28 @@ from crypto_signal.product.decision_proof import build_decision_proof_snapshot
 
 def _sha(seed: str) -> str:
     return canonical_sha256({"seed": seed})
+
+
+def _sizing(fraction: str = "0.25"):
+    policy = build_position_sizing_policy(
+        policy_version=f"r22-test-sizing-{fraction}",
+        fixed_fraction_of_vault=Decimal(fraction),
+        maximum_fraction_of_vault=Decimal("0.25"),
+        maximum_absolute_correlation=Decimal("0.70"),
+        maximum_drawdown_fraction=Decimal("0.20"),
+        maximum_volatility_fraction=Decimal("0.25"),
+        minimum_liquidity_score_0_1=Decimal("0.60"),
+        maximum_transaction_cost_r=Decimal("0.20"),
+    )
+    assessment = evaluate_position_sizing_intelligence(
+        policy=policy,
+        vault=sizing_vault(),
+        context=sizing_context(),
+    )
+    result = next(
+        item for item in assessment.results if item.method is SizingMethod.FIXED_FRACTIONAL
+    )
+    return assessment, result
 
 
 def _context():
@@ -40,19 +80,54 @@ def _context():
 
 def _buy():
     activation, before, forecast, proof = _context()
+    sizing_assessment, sizing_result = _sizing()
+    decision = build_decision_intent(
+        fund_identity=activation.activation_identity,
+        decided_at_ms=ISSUED_AT + 100,
+        action=PaperAction.BUY,
+        symbol=PaperSymbol.BTCUSDT,
+        quantity=Decimal(1),
+        reference_price=Decimal(100),
+        reason="R22 accepted forecast",
+        invalidation_context="exact R20 invalidation",
+    )
     intent = build_tape_intent(
         activation,
         vault_id=PaperVaultId.CORE,
         action=PaperAction.BUY,
-        decided_at_ms=ISSUED_AT + 100,
-        policy_identity=_sha("accepted-paper-policy"),
-        sizing_decision_identity=_sha("sizing-decision"),
+        decided_at_ms=decision.decided_at_ms,
         reason_codes=("forecast_active",),
         forecast=forecast,
         proof=proof,
+        sizing_assessment=sizing_assessment,
+        sizing_result=sizing_result,
+        decision=decision,
+    )
+    costs = ExecutionCostAssumptions(
+        fee_usdt=Decimal(1),
+        spread_usdt=Decimal("0.4"),
+        slippage_usdt=Decimal("0.6"),
+    )
+    source_fill = build_simulated_fill(
+        fund_identity=activation.activation_identity,
+        decision_identity=decision.record_identity,
+        filled_at_ms=ISSUED_AT + 200,
+        action=PaperAction.BUY,
         symbol=PaperSymbol.BTCUSDT,
         quantity=Decimal(1),
         reference_price=Decimal(100),
+        simulated_fill_price=Decimal(101),
+        costs=costs,
+        venue_reference="r22-test-venue",
+    )
+    mutation = build_position_cash_mutation(
+        fund_identity=activation.activation_identity,
+        source_identity=source_fill.record_identity,
+        mutated_at_ms=ISSUED_AT + 210,
+        cash_before_usdt=Decimal(600),
+        cash_after_usdt=Decimal(498),
+        positions_before=(),
+        positions_after=(PaperPosition(PaperSymbol.BTCUSDT, Decimal(1)),),
     )
     mark = _sha("mark-after-buy")
     after = build_epoch2_vault_accounting_snapshot(
@@ -73,25 +148,59 @@ def _buy():
         loss_count=0,
         breakeven_count=0,
         outcome_distribution=(),
-        source_record_identities=(intent.intent_identity, mark),
+        source_record_identities=(
+            intent.intent_identity,
+            source_fill.record_identity,
+            mutation.record_identity,
+            mark,
+        ),
         previous=before,
     )
-    fill = build_tape_fill(
-        intent, before, after,
-        filled_at_ms=ISSUED_AT + 200,
-        simulated_fill_price=Decimal(101),
-        fee_usdt=Decimal(1),
-        spread_usdt=Decimal("0.4"),
-        slippage_usdt=Decimal("0.6"),
+    tape_fill = build_tape_fill(
+        intent,
+        before,
+        after,
+        fill=source_fill,
+        mutation=mutation,
         mark_evidence_identity=mark,
     )
-    return activation, before, forecast, proof, intent, after, fill
+    return (
+        activation,
+        before,
+        forecast,
+        proof,
+        sizing_assessment,
+        sizing_result,
+        decision,
+        intent,
+        source_fill,
+        mutation,
+        after,
+        tape_fill,
+    )
 
 
-def test_r22_exact_forecast_proof_to_r21_cash_position_nav_lineage() -> None:
-    activation, before, _, _, intent, after, fill = _buy()
-    assert fill.activation_identity == activation.activation_identity
-    assert fill.intent_identity == intent.intent_identity
+def test_r22_exact_forecast_sizing_decision_fill_to_r21_lineage() -> None:
+    (
+        activation,
+        before,
+        _,
+        _,
+        sizing_assessment,
+        sizing_result,
+        decision,
+        intent,
+        source_fill,
+        mutation,
+        after,
+        fill,
+    ) = _buy()
+    assert intent.activation_identity == activation.activation_identity
+    assert intent.sizing_assessment_identity == sizing_assessment.assessment_identity
+    assert intent.sizing_decision_identity == sizing_result.result_identity
+    assert intent.decision_identity == decision.record_identity
+    assert fill.source_fill_identity == source_fill.record_identity
+    assert fill.mutation_identity == mutation.record_identity
     assert fill.before_snapshot_identity == before.snapshot_identity
     assert fill.after_snapshot_identity == after.snapshot_identity
     assert fill.cash_before_usdt == Decimal(600)
@@ -105,106 +214,206 @@ def test_r22_exact_forecast_proof_to_r21_cash_position_nav_lineage() -> None:
     assert intent.real_capital == 0 and not intent.production_authority
 
 
-def test_r22_forecast_and_proof_are_exact_not_user_claimed() -> None:
+def test_r22_rejects_mismatched_forecast_proof_sizing_or_decision() -> None:
     activation, _, forecast, proof = _context()
-    args = {
+    sizing_assessment, sizing_result = _sizing()
+    decision = build_decision_intent(
+        fund_identity=activation.activation_identity,
+        decided_at_ms=ISSUED_AT + 100,
+        action=PaperAction.BUY,
+        symbol=PaperSymbol.BTCUSDT,
+        quantity=Decimal(1),
+        reference_price=Decimal(100),
+        reason="candidate",
+        invalidation_context="candidate invalidation",
+    )
+    common = {
         "vault_id": PaperVaultId.CORE,
         "action": PaperAction.BUY,
-        "decided_at_ms": ISSUED_AT + 100,
-        "policy_identity": _sha("policy"),
-        "sizing_decision_identity": _sha("sizing"),
+        "decided_at_ms": decision.decided_at_ms,
         "reason_codes": ("active",),
         "forecast": forecast,
-        "symbol": PaperSymbol.BTCUSDT,
-        "quantity": Decimal(1),
-        "reference_price": Decimal(100),
+        "sizing_assessment": sizing_assessment,
+        "sizing_result": sizing_result,
+        "decision": decision,
     }
+
     other_forecast = _forecast(calibrated=True)
     other_proof = build_decision_proof_snapshot(other_forecast, _slices(other_forecast))
     with pytest.raises(ValueError, match="lineage mismatch"):
-        build_tape_intent(activation, proof=other_proof, **args)
-    # A valid Decision Proof from another immutable forecast cannot be substituted.
-    with pytest.raises(ValueError, match="decision cannot precede"):
+        build_tape_intent(activation, proof=other_proof, **common)
+
+    _, wrong_result = _sizing("0.20")
+    with pytest.raises(ValueError, match="does not belong"):
         build_tape_intent(
-            activation, proof=proof, **{**args, "decided_at_ms": ISSUED_AT - 1}
+            activation,
+            proof=proof,
+            **{**common, "sizing_result": wrong_result},
         )
+
+    wrong_symbol_decision = build_decision_intent(
+        fund_identity=activation.activation_identity,
+        decided_at_ms=decision.decided_at_ms,
+        action=PaperAction.BUY,
+        symbol=PaperSymbol.ETHUSDT,
+        quantity=Decimal(1),
+        reference_price=Decimal(100),
+        reason="wrong symbol",
+        invalidation_context="wrong symbol invalidation",
+    )
     with pytest.raises(ValueError, match="symbol must match"):
         build_tape_intent(
-            activation, proof=proof, **{**args, "symbol": PaperSymbol.ETHUSDT}
-        )
-
-
-def test_r22_rejects_nonreconciling_cash_cost_position_or_missing_mark() -> None:
-    activation, before, _, _, intent, after, _ = _buy()
-    with pytest.raises(ValueError, match="cash movement"):
-        bad = build_epoch2_vault_accounting_snapshot(
             activation,
-            vault_id=PaperVaultId.CORE,
-            snapshot_at_ms=after.snapshot_at_ms,
-            cash_usdt=Decimal(497),
-            positions=after.positions,
-            marked_exposure_usdt=Decimal(100),
-            realized_pnl_usdt=Decimal(0),
-            unrealized_pnl_usdt=Decimal(-3),
-            fee_usdt=Decimal(1),
-            spread_usdt=Decimal("0.4"),
-            slippage_usdt=Decimal("0.6"),
-            turnover_notional_usdt=Decimal(101),
-            closed_trade_count=0,
-            win_count=0,
-            loss_count=0,
-            breakeven_count=0,
-            outcome_distribution=(),
-            source_record_identities=after.source_record_identities,
-            previous=before,
+            proof=proof,
+            **{**common, "decision": wrong_symbol_decision},
         )
-        build_tape_fill(
-            intent, before, bad,
-            filled_at_ms=ISSUED_AT + 200,
-            simulated_fill_price=Decimal(101),
-            fee_usdt=Decimal(1),
-            spread_usdt=Decimal("0.4"),
-            slippage_usdt=Decimal("0.6"),
-            mark_evidence_identity=_sha("mark-after-buy"),
+
+    early = build_decision_intent(
+        fund_identity=activation.activation_identity,
+        decided_at_ms=ISSUED_AT - 1,
+        action=PaperAction.BUY,
+        symbol=PaperSymbol.BTCUSDT,
+        quantity=Decimal(1),
+        reference_price=Decimal(100),
+        reason="too early",
+        invalidation_context="too early invalidation",
+    )
+    with pytest.raises(ValueError, match="cannot precede"):
+        build_tape_intent(
+            activation,
+            proof=proof,
+            **{
+                **common,
+                "decided_at_ms": early.decided_at_ms,
+                "decision": early,
+            },
         )
-    with pytest.raises(ValueError, match="execution costs"):
-        build_tape_fill(
-            intent, before, after,
-            filled_at_ms=ISSUED_AT + 200,
-            simulated_fill_price=Decimal(101),
+
+
+def test_r22_rejects_untraced_fill_mutation_or_execution_costs() -> None:
+    (
+        activation,
+        before,
+        _,
+        _,
+        _,
+        _,
+        decision,
+        intent,
+        source_fill,
+        mutation,
+        after,
+        _,
+    ) = _buy()
+
+    other_fill = build_simulated_fill(
+        fund_identity=activation.activation_identity,
+        decision_identity=decision.record_identity,
+        filled_at_ms=source_fill.filled_at_ms,
+        action=PaperAction.BUY,
+        symbol=PaperSymbol.BTCUSDT,
+        quantity=Decimal(1),
+        reference_price=Decimal(100),
+        simulated_fill_price=Decimal(101),
+        costs=ExecutionCostAssumptions(
             fee_usdt=Decimal(1),
             spread_usdt=Decimal("0.5"),
             slippage_usdt=Decimal("0.5"),
+        ),
+        venue_reference="r22-test-venue",
+    )
+    with pytest.raises(ValueError, match="lacks exact"):
+        build_tape_fill(
+            intent,
+            before,
+            after,
+            fill=other_fill,
+            mutation=mutation,
             mark_evidence_identity=_sha("mark-after-buy"),
         )
-    with pytest.raises(ValueError, match="mark evidence"):
+
+    bad_mutation = build_position_cash_mutation(
+        fund_identity=activation.activation_identity,
+        source_identity=source_fill.record_identity,
+        mutated_at_ms=mutation.mutated_at_ms,
+        cash_before_usdt=Decimal(600),
+        cash_after_usdt=Decimal(497),
+        positions_before=(),
+        positions_after=(PaperPosition(PaperSymbol.BTCUSDT, Decimal(1)),),
+    )
+    with pytest.raises(ValueError, match="does not reconcile"):
         build_tape_fill(
-            intent, before, after,
-            filled_at_ms=ISSUED_AT + 200,
-            simulated_fill_price=Decimal(101),
-            fee_usdt=Decimal(1),
-            spread_usdt=Decimal("0.4"),
-            slippage_usdt=Decimal("0.6"),
-            mark_evidence_identity=_sha("invented-mark"),
+            intent,
+            before,
+            after,
+            fill=source_fill,
+            mutation=bad_mutation,
+            mark_evidence_identity=_sha("mark-after-buy"),
         )
 
 
 def test_r22_sell_requires_outcome_and_reconciles_realized_nav() -> None:
-    activation, _, forecast, proof, buy_intent, after_buy, buy_fill = _buy()
+    (
+        activation,
+        _,
+        forecast,
+        proof,
+        sizing_assessment,
+        sizing_result,
+        _,
+        buy_intent,
+        _,
+        _,
+        after_buy,
+        buy_fill,
+    ) = _buy()
+    exit_decision = build_decision_intent(
+        fund_identity=activation.activation_identity,
+        decided_at_ms=ISSUED_AT + 400,
+        action=PaperAction.EXIT,
+        symbol=PaperSymbol.BTCUSDT,
+        quantity=Decimal(1),
+        reference_price=Decimal(109),
+        reason="exit condition",
+        invalidation_context="position closed",
+    )
     sale = build_tape_intent(
         activation,
         vault_id=PaperVaultId.CORE,
         action=PaperAction.EXIT,
-        decided_at_ms=ISSUED_AT + 400,
-        policy_identity=_sha("paper-exit-policy"),
-        sizing_decision_identity=_sha("exit-sizing"),
+        decided_at_ms=exit_decision.decided_at_ms,
         forecast=forecast,
         proof=proof,
+        sizing_assessment=sizing_assessment,
+        sizing_result=sizing_result,
+        decision=exit_decision,
         reason_codes=("exit_condition",),
+        previous_intent_identity=buy_intent.intent_identity,
+    )
+    source_fill = build_simulated_fill(
+        fund_identity=activation.activation_identity,
+        decision_identity=exit_decision.record_identity,
+        filled_at_ms=ISSUED_AT + 600,
+        action=PaperAction.EXIT,
         symbol=PaperSymbol.BTCUSDT,
         quantity=Decimal(1),
         reference_price=Decimal(109),
-        previous_intent_identity=buy_intent.intent_identity,
+        simulated_fill_price=Decimal(108),
+        costs=ExecutionCostAssumptions(
+            fee_usdt=Decimal(1),
+            spread_usdt=Decimal("0.4"),
+            slippage_usdt=Decimal("0.6"),
+        ),
+        venue_reference="r22-test-venue",
+    )
+    mutation = build_position_cash_mutation(
+        fund_identity=activation.activation_identity,
+        source_identity=source_fill.record_identity,
+        mutated_at_ms=ISSUED_AT + 610,
+        cash_before_usdt=Decimal(498),
+        cash_after_usdt=Decimal(605),
+        positions_before=(PaperPosition(PaperSymbol.BTCUSDT, Decimal(1)),),
+        positions_after=(),
     )
     mark, outcome = _sha("mark-after-exit"), _sha("closed-trade-win")
     after_sale = build_epoch2_vault_accounting_snapshot(
@@ -225,27 +434,31 @@ def test_r22_sell_requires_outcome_and_reconciles_realized_nav() -> None:
         loss_count=0,
         breakeven_count=0,
         outcome_distribution=(("WIN", 1),),
-        source_record_identities=(sale.intent_identity, mark, outcome),
+        source_record_identities=(
+            sale.intent_identity,
+            source_fill.record_identity,
+            mutation.record_identity,
+            mark,
+            outcome,
+        ),
         previous=after_buy,
     )
     with pytest.raises(ValueError, match="outcome evidence"):
         build_tape_fill(
-            sale, after_buy, after_sale,
-            filled_at_ms=ISSUED_AT + 600,
-            simulated_fill_price=Decimal(108),
-            fee_usdt=Decimal(1),
-            spread_usdt=Decimal("0.4"),
-            slippage_usdt=Decimal("0.6"),
+            sale,
+            after_buy,
+            after_sale,
+            fill=source_fill,
+            mutation=mutation,
             mark_evidence_identity=mark,
             previous_fill_identity=buy_fill.fill_identity,
         )
     fill = build_tape_fill(
-        sale, after_buy, after_sale,
-        filled_at_ms=ISSUED_AT + 600,
-        simulated_fill_price=Decimal(108),
-        fee_usdt=Decimal(1),
-        spread_usdt=Decimal("0.4"),
-        slippage_usdt=Decimal("0.6"),
+        sale,
+        after_buy,
+        after_sale,
+        fill=source_fill,
+        mutation=mutation,
         mark_evidence_identity=mark,
         outcome_evidence_identity=outcome,
         previous_fill_identity=buy_fill.fill_identity,
@@ -256,32 +469,37 @@ def test_r22_sell_requires_outcome_and_reconciles_realized_nav() -> None:
     assert fill.unrealized_pnl_delta_usdt == 2
 
 
-def test_r22_hold_cash_has_no_fill_and_no_fabricated_signal() -> None:
+def test_r22_hold_cash_has_no_fill_and_no_fabricated_trade_lineage() -> None:
     activation, before, _, _ = _context()
     hold = build_tape_intent(
         activation,
         vault_id=PaperVaultId.TACTICAL,
         action=PaperAction.HOLD_CASH,
         decided_at_ms=ISSUED_AT + 10,
-        policy_identity=_sha("hold-policy"),
+        hold_policy_identity=_sha("hold-policy"),
         reason_codes=("event_block",),
     )
     assert hold.forecast_identity is None
+    assert hold.sizing_assessment_identity is None
+    assert hold.decision_identity is None
     assert hold.quantity is None
+
+    *_, source_fill, mutation, _, _ = _buy()
     with pytest.raises(ValueError, match="cannot create"):
         build_tape_fill(
-            hold, before, before,
-            filled_at_ms=ISSUED_AT + 20,
-            simulated_fill_price=Decimal(100),
-            fee_usdt=Decimal(0),
-            spread_usdt=Decimal(0),
-            slippage_usdt=Decimal(0),
+            hold,
+            before,
+            before,
+            fill=source_fill,
+            mutation=mutation,
             mark_evidence_identity=_sha("mark"),
         )
 
 
-def test_r22_isolated_tape_is_immutable_idempotent_and_hash_checked(tmp_path) -> None:
-    _, _, _, _, intent, _, fill = _buy()
+def test_r22_isolated_tape_is_immutable_idempotent_and_hash_checked(
+    tmp_path: Path,
+) -> None:
+    *_, intent, _, _, _, fill = _buy()[7:]
     path = tmp_path / "isolated_r22_development.sqlite3"
     tape = R22DevelopmentTape(path)
     assert tape.append_intent(intent)
