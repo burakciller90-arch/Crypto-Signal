@@ -241,19 +241,24 @@ function renderCommand() {
 
   feed.className = "feed-list";
   feed.innerHTML = recent.map((item) => `
-    <article class="feed-item">
-      <div class="feed-item-head">
-        <strong>${escapeHtml(item.symbol)} · ${escapeHtml(item.timeframe)}</strong>
-        <span class="${stateClass(item.state)}">${escapeHtml(upper(item.state))}</span>
-      </div>
-      <div class="feed-item-meta">
-        <span>${escapeHtml(upper(item.direction))}</span>
-        <span>agreement ${escapeHtml(item.confluence_score)}</span>
-        <span>${escapeHtml(item.probability_status || "NOT_CALIBRATED")}</span>
-        <span>${escapeHtml(formatTime(item.frozen_at_ms))}</span>
-        <code>${escapeHtml(shortIdentity(item.signal_freeze_identity))}</code>
-      </div>
-    </article>`).join("");
+    <button class="evidence-trigger" type="button"
+      data-evidence-id="${escapeHtml(item.signal_freeze_identity)}"
+      aria-label="${escapeHtml(item.symbol)} ${escapeHtml(item.timeframe)} frozen evidence aç">
+      <article class="feed-item">
+        <div class="feed-item-head">
+          <strong>${escapeHtml(item.symbol)} · ${escapeHtml(item.timeframe)}</strong>
+          <span class="${stateClass(item.state)}">${escapeHtml(upper(item.state))}</span>
+        </div>
+        <div class="feed-item-meta">
+          <span>${escapeHtml(upper(item.direction))}</span>
+          <span>agreement ${escapeHtml(item.confluence_score)}</span>
+          <span>${escapeHtml(item.probability_status || "NOT_CALIBRATED")}</span>
+          <span>${escapeHtml(formatTime(item.frozen_at_ms))}</span>
+          <code>${escapeHtml(shortIdentity(item.signal_freeze_identity))}</code>
+          <span class="evidence-open-cue">Evidence Room →</span>
+        </div>
+      </article>
+    </button>`).join("");
 }
 
 function renderRadar() {
