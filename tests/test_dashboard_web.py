@@ -201,6 +201,8 @@ def test_health_and_static_shell_without_ledger(tmp_path: Path) -> None:
     }
     assert index.status_code == 200
     script = client.get("/static/app.js")
+    style = client.get("/static/app.css")
+    assert style.status_code == 200
     assert "Piyasa İstihbarat Merkezi" in index.text
     assert "Metodoloji uyumu ≠ olasılık" in index.text
     assert "GALACTECH // CRYPTO SIGNAL" in index.text
