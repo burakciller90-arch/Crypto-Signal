@@ -188,7 +188,7 @@ def test_health_and_static_shell_without_ledger(tmp_path: Path) -> None:
     client = TestClient(create_app(missing))
 
     health = client.get("/api/health")
-    index = client.get("/")
+    index = client.get("/legacy")
 
     assert health.status_code == 200
     assert health.json() == {
