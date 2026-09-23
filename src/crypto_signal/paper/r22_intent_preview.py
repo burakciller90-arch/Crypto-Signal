@@ -150,12 +150,16 @@ class R22IntentPreview:
             (self.sizing_vault_result_identity, "R22 preview vault result"),
         ):
             _require_sha256(value, label)
-        for value, label in (
-            (self.review_selection_identity, "R22 review selection"),
-            (self.market_reference_identity, "R22 market reference"),
-        ):
-            if value is not None:
-                _require_sha256(value, label)
+        if self.review_selection_identity is not None:
+            _require_sha256(
+                self.review_selection_identity,
+                "R22 review selection",
+            )
+        if self.market_reference_identity is not None:
+            _require_sha256(
+                self.market_reference_identity,
+                "R22 market reference",
+            )
         if self.preview_version != R22_INTENT_PREVIEW_VERSION:
             raise ValueError("unsupported R22 intent preview version")
         if self.previewed_at_ms < 0:
