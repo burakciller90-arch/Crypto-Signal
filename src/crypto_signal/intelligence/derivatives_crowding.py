@@ -460,7 +460,7 @@ def _mark_movement(
 
     returns = tuple(
         abs((right - left) / left * _BPS)
-        for left, right in zip(prices, prices[1:], strict=True)
+        for left, right in zip(prices, prices[1:])
     )
     return (
         sum(returns, start=Decimal(0)) / Decimal(len(returns)),
