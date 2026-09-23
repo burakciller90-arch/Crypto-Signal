@@ -258,10 +258,6 @@ def create_app(
                 selected_decision_path is not None
                 and selected_decision_path.exists()
             ),
-            "shadow_intent_journal_present": (
-                selected_shadow_intent_path is not None
-                and selected_shadow_intent_path.exists()
-            ),
             "read_only": True,
         }
 
