@@ -210,9 +210,12 @@ class VaultCapitalEnvelope:
             raise ValueError("vault reason codes must be unique and sorted")
         if not self.reason_codes:
             raise ValueError("vault decision requires at least one reason code")
-        if self.eligibility_state is VaultEligibilityState.ELIGIBLE_RESEARCH_ENVELOPE:
-            if not self.sizing_required_before_any_trade:
-                raise ValueError("eligible vault must still require Phase 11 sizing")
+        if (
+            self.eligibility_state
+            is VaultEligibilityState.ELIGIBLE_RESEARCH_ENVELOPE
+            and not self.sizing_required_before_any_trade
+        ):
+            raise ValueError("eligible vault must still require Phase 11 sizing")
         if self.recommended_notional_usdt is not None:
             raise ValueError("Smart Capital Allocator Slice1 cannot size notional")
         live_metrics = (
