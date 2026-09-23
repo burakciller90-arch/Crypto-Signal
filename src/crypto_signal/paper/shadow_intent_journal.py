@@ -594,7 +594,7 @@ def _validate_preview_authority(preview: R22IntentPreview) -> None:
 def _required_payload_sha(raw: dict[str, object], key: str) -> str:
     value = raw.get(key)
     if not isinstance(value, str):
-        raise ValueError(f"shadow forecast payload missing {key}")
+        raise TypeError(f"shadow forecast payload missing {key}")
     _require_sha256(value, f"shadow forecast payload {key}")
     return value
 
@@ -607,7 +607,7 @@ def _optional_payload_sha(
     if value is None:
         return None
     if not isinstance(value, str):
-        raise ValueError(f"shadow forecast payload invalid {key}")
+        raise TypeError(f"shadow forecast payload invalid {key}")
     _require_sha256(value, f"shadow forecast payload {key}")
     return value
 
