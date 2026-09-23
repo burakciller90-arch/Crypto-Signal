@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import sqlite3
 from dataclasses import dataclass
 from decimal import Decimal
@@ -260,6 +261,22 @@ class R22StoredTapeRow:
             raise ValueError("R22 stored event time must be non-negative")
         if sha256_text(self.payload_json) != self.payload_sha256:
             raise ValueError("R22 stored payload hash mismatch")
+        if self.record_identity != self.payload_sha256:
+            raise ValueError("R22 stored record identity/payload hash mismatch")
+        payload = json.loads(self.payload_json)
+        if not isinstance(payload, dict) or canonical_json(payload) != self.payload_json:
+            raise ValueError("R22 stored payload must be a canonical object")
+        if payload.get("event_at_ms") != self.event_at_ms:
+            raise ValueError("R22 stored event time/payload mismatch")
+        if payload.get("previous_record_identity") != self.previous_record_identity:
+            raise ValueError("R22 stored previous identity/payload mismatch")
+        if (
+            payload.get("schema_version") != R22_TAPE_SCHEMA_VERSION
+            or payload.get("engine_version") != R22_TAPE_ENGINE_VERSION
+            or payload.get("authority") != R22_TAPE_AUTHORITY
+            or payload.get("real_capital") != REAL_CAPITAL
+        ):
+            raise ValueError("R22 stored payload authority/schema mismatch")
 
 
 class R22TransactionDecisionTape:
