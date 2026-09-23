@@ -130,10 +130,10 @@ class Epoch2VaultAccountingSnapshot:
             raise ValueError("unsupported R21 vault snapshot engine")
         if self.snapshot_at_ms < 0:
             raise ValueError("R21 vault snapshot time must be non-negative")
-        expected_budget = dict(
-            (item.vault_id, item.starting_cash_usdt)
+        expected_budget = {
+            item.vault_id: item.starting_cash_usdt
             for item in EPOCH_2_SPEC.vault_allocations
-        )[self.vault_id]
+        }[self.vault_id]
         if self.starting_cash_usdt != expected_budget:
             raise ValueError("R21 vault starting cash mismatch")
         for value, label in (
