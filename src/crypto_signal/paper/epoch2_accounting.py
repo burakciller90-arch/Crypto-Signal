@@ -7,7 +7,6 @@ from dataclasses import dataclass
 from decimal import Decimal
 from enum import StrEnum
 from pathlib import Path
-from tempfile import TemporaryDirectory
 
 from crypto_signal.ledger.serialization import canonical_json, canonical_sha256
 from crypto_signal.paper.epochs import (
@@ -1037,11 +1036,8 @@ def initialize_epoch2_canonical_fund(
     if not epoch1_ledger_path.is_file():
         raise ValueError("R21 activation requires existing immutable Epoch1 ledger")
 
-    epoch1_storage = _capture_epoch1_storage(epoch1_ledger_path)
-    entries = _read_epoch1_entries_from_storage_snapshot(
-        epoch1_ledger_path,
-        epoch1_storage,
-    )
+    epoch1_before = epoch1_ledger_path.read_bytes()
+    entries = read_paper_entries_read_only(epoch1_ledger_path)
     creations = tuple(
         entry.record
         for entry in entries
@@ -1050,9 +1046,10 @@ def initialize_epoch2_canonical_fund(
     if len(creations) != 1:
         raise ValueError("R21 activation requires exactly one legacy Epoch1 fund")
     assert_legacy_epoch1_fund_creation(creations[0])
-    _assert_epoch1_storage_unchanged(epoch1_ledger_path, epoch1_storage)
+    if epoch1_ledger_path.read_bytes() != epoch1_before:
+        raise ValueError("R21 read-only Epoch1 validation mutated ledger bytes")
 
-    epoch1_sha = hashlib.sha256(epoch1_storage[0]).hexdigest()
+    epoch1_sha = hashlib.sha256(epoch1_before).hexdigest()
     activation = build_epoch2_activation_record(
         activated_at_ms=activated_at_ms,
         epoch1_ledger_sha256=epoch1_sha,
@@ -1060,7 +1057,8 @@ def initialize_epoch2_canonical_fund(
     ledger = Epoch2CanonicalLedger(epoch2_ledger_path)
     inserted = ledger.activate(activation)
     if not inserted:
-        _assert_epoch1_storage_unchanged(epoch1_ledger_path, epoch1_storage)
+        if epoch1_ledger_path.read_bytes() != epoch1_before:
+            raise ValueError("R21 activation must never mutate Epoch1 ledger")
         return ledger.read_state()
 
     vaults = tuple(
@@ -1071,40 +1069,9 @@ def initialize_epoch2_canonical_fund(
         ledger.append_vault_snapshot(snapshot)
     consolidated = build_consolidated_epoch2_snapshot(vaults)
     ledger.append_consolidated_snapshot(consolidated)
-    _assert_epoch1_storage_unchanged(epoch1_ledger_path, epoch1_storage)
+    if epoch1_ledger_path.read_bytes() != epoch1_before:
+        raise ValueError("R21 activation must never mutate Epoch1 ledger")
     return ledger.read_state()
-
-
-def _capture_epoch1_storage(
-    path: Path,
-) -> tuple[bytes, bytes | None, bytes | None]:
-    main = path.read_bytes()
-    wal_path = Path(f"{path}-wal")
-    shm_path = Path(f"{path}-shm")
-    wal = wal_path.read_bytes() if wal_path.is_file() else None
-    shm = shm_path.read_bytes() if shm_path.is_file() else None
-    return main, wal, shm
-
-
-def _read_epoch1_entries_from_storage_snapshot(
-    source_path: Path,
-    storage: tuple[bytes, bytes | None, bytes | None],
-) -> tuple:
-    main, wal, _ = storage
-    with TemporaryDirectory(prefix="crypto-r21-epoch1-") as directory:
-        snapshot_path = Path(directory) / source_path.name
-        snapshot_path.write_bytes(main)
-        if wal is not None:
-            Path(f"{snapshot_path}-wal").write_bytes(wal)
-        return read_paper_entries_read_only(snapshot_path)
-
-
-def _assert_epoch1_storage_unchanged(
-    path: Path,
-    expected: tuple[bytes, bytes | None, bytes | None],
-) -> None:
-    if _capture_epoch1_storage(path) != expected:
-        raise ValueError("R21 activation must never mutate Epoch1 ledger storage")
 
 
 def _validate_consolidated_matches_vaults(
