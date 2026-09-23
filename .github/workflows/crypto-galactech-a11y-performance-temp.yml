@@ -1,0 +1,49 @@
+name: Crypto GALACTECH Accessibility Performance TEMP
+
+on:
+  push:
+    branches: [v1.1-galactech-accessibility-performance-v1]
+    paths:
+      - ".github/workflows/crypto-galactech-a11y-performance-temp.yml"
+      - "src/crypto_signal/product/**"
+      - "tests/test_dashboard_web.py"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: crypto-galactech-a11y-performance-temp
+  cancel-in-progress: false
+
+jobs:
+  hosted:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install full integrated test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+          python -m pip install "pytest>=8.4" "pytest-asyncio>=1.2" "ruff>=0.13" "mypy>=1.18" "pyarrow==22.0.0"
+      - name: Accessibility and Product focused gate
+        run: |
+          python -m pytest -q tests/test_dashboard_web.py tests/test_r14_release_package.py
+          python -m ruff check src/crypto_signal/product tests/test_dashboard_web.py
+          python -m mypy src/crypto_signal/product
+          node --check src/crypto_signal/product/static/app.js
+          node --check src/crypto_signal/product/static/freshness.js
+          node tests/js/test_product_freshness.js
+          echo "GALACTECH_A11Y_PERFORMANCE_FOCUSED_PASS=YES"
+      - name: Exact integrated-main full repository gate
+        run: |
+          python -m pytest -q
+          python -m ruff check src tests ops/verify_stage10_integrated.py
+          python -m mypy src ops/verify_stage10_integrated.py
+          node --check src/crypto_signal/product/static/app.js
+          node --check src/crypto_signal/product/static/freshness.js
+          node tests/js/test_product_freshness.js
+          echo "GALACTECH_A11Y_PERFORMANCE_FULL_PASS=YES"
