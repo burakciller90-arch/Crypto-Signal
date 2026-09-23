@@ -43,6 +43,7 @@ jobs:
             HB="$(cat "$HEARTBEAT" 2>/dev/null || true)"
             TIMER_STATE="$(sed -n 's/^state=//p' "$STATUS" 2>/dev/null | head -1)"
             INTERVAL="$(sed -n 's/^interval_seconds=//p' "$STATUS" 2>/dev/null | head -1)"
+            PENDING="$(sed -n 's/^pending_event_id=//p' "$STATUS" 2>/dev/null | head -1)"
             HEALTHY=0
             if [ -n "$PID" ] && kill -0 "$PID" >/dev/null 2>&1 \
               && [[ "$HB" =~ ^[0-9]+$ ]] && [ "$INTERVAL" = "1200" ]; then
@@ -54,9 +55,38 @@ jobs:
               fi
             fi
             if [ "$HEALTHY" = "1" ]; then
-              echo "GITHUB_WATCHDOG_TIMER_HEALTHY=YES"
-              echo "GITHUB_FALLBACK_SKIPPED=YES"
-              exit 0
+              echo "GITHUB_WATCHDOG_TIMER_ALIVE=YES"
+              DELIVERY_STATE="$(/usr/bin/python3 "$GITHUB_WORKSPACE/ops/continuity/watchdog_delivery_health.py" "$STATUS" "$NOW")"
+              echo "GITHUB_WATCHDOG_DELIVERY_STATE=$DELIVERY_STATE"
+              case "$DELIVERY_STATE" in
+                HEALTHY)
+                  echo "GITHUB_WATCHDOG_TIMER_HEALTHY=YES"
+                  echo "GITHUB_FALLBACK_SKIPPED=YES"
+                  exit 0
+                  ;;
+                PENDING)
+                  echo "GITHUB_WATCHDOG_DELIVERY_PENDING=YES"
+                  echo "GITHUB_FALLBACK_SKIPPED_SAME_PENDING=YES"
+                  exit 0
+                  ;;
+                STALLED)
+                  # Red CI exposes prolonged delivery failure without resetting
+                  # or duplicating the exact pending event.
+                  echo "GITHUB_WATCHDOG_DELIVERY_STALLED=YES"
+                  echo "GITHUB_FALLBACK_SKIPPED_SAME_PENDING=YES"
+                  exit 2
+                  ;;
+                WAITING_FOR_RUNTIME)
+                  echo "GITHUB_WATCHDOG_RUNTIME_UNAVAILABLE=YES"
+                  echo "GITHUB_FALLBACK_SKIPPED=YES"
+                  exit 2
+                  ;;
+                *)
+                  echo "GITHUB_WATCHDOG_DELIVERY_STATE_INCONSISTENT=YES"
+                  echo "GITHUB_FALLBACK_SKIPPED=YES"
+                  exit 2
+                  ;;
+              esac
             fi
 
             echo "GITHUB_WATCHDOG_TIMER_HEALTHY=NO"
@@ -87,6 +117,13 @@ jobs:
                 fi
                 sleep 1
               done
+            fi
+
+            if [ -n "$PENDING" ]; then
+              # Persistent pending identity belongs to the rolling daemon.
+              # Never create a second event ID when its process restart fails.
+              echo "GITHUB_EMERGENCY_FALLBACK_SKIPPED_PENDING_EVENT=YES"
+              exit 2
             fi
 
             EVENT_ID="crypto-20m-emergency:${GITHUB_RUN_ID}:${GITHUB_RUN_ATTEMPT}"
