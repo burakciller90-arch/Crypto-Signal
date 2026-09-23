@@ -439,6 +439,391 @@ function renderArchive() {
   }).join("");
 }
 
+function proofBadgeClass(value) {
+  const normalized = text(value, "").toLowerCase();
+  if (["agree", "bullish", "valid", "valid_so_far"].includes(normalized)) {
+    return "proof-badge proof-badge-support";
+  }
+  if (["contradict", "bearish"].includes(normalized) || normalized.includes("conflict")) {
+    return "proof-badge proof-badge-risk";
+  }
+  if (
+    normalized.includes("ambigu") ||
+    normalized.includes("insufficient") ||
+    normalized.includes("unresolved")
+  ) {
+    return "proof-badge proof-badge-caution";
+  }
+  return "proof-badge proof-badge-neutral";
+}
+
+function parseFrozenBundle(detail) {
+  if (!detail?.bundle_json) return null;
+  try {
+    const parsed = JSON.parse(detail.bundle_json);
+    return parsed && typeof parsed === "object" ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+function frozenChartMarkup(detail) {
+  const bundle = parseFrozenBundle(detail);
+  const rawCandles = Array.isArray(bundle?.candles) ? bundle.candles : [];
+  const candles = rawCandles
+    .map((item) => ({
+      open: Number(item?.open),
+      high: Number(item?.high),
+      low: Number(item?.low),
+      close: Number(item?.close),
+      openTime: Number(item?.open_time_ms),
+    }))
+    .filter((item) =>
+      [item.open, item.high, item.low, item.close].every(Number.isFinite)
+    )
+    .slice(-40);
+
+  if (!candles.length) {
+    return `
+      <div class="frozen-chart-empty">
+        <strong>Frozen OHLC chart not available in this proof payload.</strong>
+        <p>Candle count/range is still shown from accepted freeze metadata; no synthetic candles are drawn.</p>
+      </div>`;
+  }
+
+  const low = Math.min(...candles.map((item) => item.low));
+  const high = Math.max(...candles.map((item) => item.high));
+  const span = Math.max(high - low, Number.EPSILON);
+  const width = 760;
+  const height = 210;
+  const paddingX = 18;
+  const paddingY = 16;
+  const plotWidth = width - paddingX * 2;
+  const plotHeight = height - paddingY * 2;
+  const slot = plotWidth / candles.length;
+  const bodyWidth = Math.max(2, Math.min(10, slot * 0.52));
+  const y = (price) => paddingY + ((high - price) / span) * plotHeight;
+
+  const candleSvg = candles.map((item, index) => {
+    const x = paddingX + slot * index + slot / 2;
+    const openY = y(item.open);
+    const closeY = y(item.close);
+    const highY = y(item.high);
+    const lowY = y(item.low);
+    const bodyY = Math.min(openY, closeY);
+    const bodyHeight = Math.max(1.5, Math.abs(closeY - openY));
+    const klass = item.close >= item.open ? "candle-up" : "candle-down";
+    return `
+      <g class="${klass}">
+        <line x1="${x.toFixed(2)}" y1="${highY.toFixed(2)}"
+          x2="${x.toFixed(2)}" y2="${lowY.toFixed(2)}"></line>
+        <rect x="${(x - bodyWidth / 2).toFixed(2)}" y="${bodyY.toFixed(2)}"
+          width="${bodyWidth.toFixed(2)}" height="${bodyHeight.toFixed(2)}"></rect>
+      </g>`;
+  }).join("");
+
+  const first = candles[0];
+  const last = candles[candles.length - 1];
+  return `
+    <div class="frozen-chart-wrap">
+      <svg class="frozen-chart" viewBox="0 0 ${width} ${height}"
+        role="img" aria-label="Frozen issuance-time candle chart">
+        <line class="chart-grid-line" x1="${paddingX}" y1="${paddingY}"
+          x2="${width - paddingX}" y2="${paddingY}"></line>
+        <line class="chart-grid-line" x1="${paddingX}" y1="${height / 2}"
+          x2="${width - paddingX}" y2="${height / 2}"></line>
+        <line class="chart-grid-line" x1="${paddingX}" y1="${height - paddingY}"
+          x2="${width - paddingX}" y2="${height - paddingY}"></line>
+        ${candleSvg}
+      </svg>
+      <div class="frozen-chart-caption">
+        <span>${escapeHtml(String(candles.length))} frozen candles rendered</span>
+        <span>low ${escapeHtml(String(low))} · high ${escapeHtml(String(high))}</span>
+        <span>${escapeHtml(formatTime(first.openTime))} → ${escapeHtml(formatTime(last.openTime))}</span>
+      </div>
+    </div>`;
+}
+
+function selectedEvidenceMarkup(item) {
+  const summaries = Array.isArray(item?.evidence_summary) ? item.evidence_summary : [];
+  const metrics = Array.isArray(item?.metrics) ? item.metrics : [];
+  const levels = Array.isArray(item?.key_levels) ? item.key_levels : [];
+  const ambiguity = Array.isArray(item?.ambiguity_flags) ? item.ambiguity_flags : [];
+  const contradiction = Array.isArray(item?.contradiction_flags)
+    ? item.contradiction_flags
+    : [];
+  const extra = [
+    ...metrics.map((metric) =>
+      `${text(metric.name)}=${text(metric.value)} ${text(metric.unit, "")}`.trim()
+    ),
+    ...levels.map((level) => `${text(level.label)}=${text(level.price)}`),
+  ];
+
+  return `
+    <li class="selected-evidence">
+      <div class="selected-evidence-head">
+        <strong>${escapeHtml(item?.setup_type || "evidence")}</strong>
+        <code>${escapeHtml(shortIdentity(item?.evidence_id))}</code>
+      </div>
+      <div class="selected-evidence-meta">
+        <span>${escapeHtml(upper(item?.direction))}</span>
+        <span>${escapeHtml(upper(item?.validity))}</span>
+        <span>market ${escapeHtml(formatTime(item?.market_available_at_ms))}</span>
+        <span>observed ${escapeHtml(formatTime(item?.observed_at_ms))}</span>
+      </div>
+      ${summaries.length
+        ? `<p class="selected-evidence-summary">${summaries.map(escapeHtml).join(" · ")}</p>`
+        : ""}
+      ${extra.length
+        ? `<p class="selected-evidence-summary">${extra.map(escapeHtml).join(" · ")}</p>`
+        : ""}
+      ${ambiguity.length
+        ? `<p class="selected-evidence-summary state-watch">ambiguity · ${ambiguity.map(escapeHtml).join(" · ")}</p>`
+        : ""}
+      ${contradiction.length
+        ? `<p class="selected-evidence-summary state-risk">contradiction · ${contradiction.map(escapeHtml).join(" · ")}</p>`
+        : ""}
+      ${item?.invalidation_price !== null && item?.invalidation_price !== undefined
+        ? `<p class="selected-evidence-summary">invalidation ${escapeHtml(item.invalidation_price)}
+          · ${escapeHtml(item.invalidation_trigger || "trigger unspecified")}</p>`
+        : ""}
+    </li>`;
+}
+
+function methodEngineMarkup(method) {
+  const selected = Array.isArray(method?.selected) ? method.selected : [];
+  return `
+    <li class="method-engine">
+      <div class="method-engine-head">
+        <strong>${escapeHtml(upper(method?.methodology))}</strong>
+        <span class="${proofBadgeClass(method?.resolved_direction)}">
+          ${escapeHtml(upper(method?.resolved_direction))}
+        </span>
+      </div>
+      <div class="method-engine-meta">
+        <span>source ${escapeHtml(method?.source_count ?? 0)}</span>
+        <span>selected ${escapeHtml(method?.selected_count ?? selected.length)}</span>
+        <span>latest ${escapeHtml(formatTime(method?.latest_market_available_at_ms))}</span>
+        <span>${method?.has_internal_direction_conflict ? "INTERNAL CONFLICT" : "no internal conflict"}</span>
+      </div>
+      ${selected.length
+        ? `<ul class="selected-evidence-list">${selected.map(selectedEvidenceMarkup).join("")}</ul>`
+        : `<p class="proof-footnote">No selected accepted evidence for this methodology slot.</p>`}
+    </li>`;
+}
+
+function pairwiseMarkup(item) {
+  return `
+    <li class="pairwise-item">
+      <span>${escapeHtml(upper(item?.left))} ↔ ${escapeHtml(upper(item?.right))}</span>
+      <span class="${proofBadgeClass(item?.relation)}">${escapeHtml(upper(item?.relation))}</span>
+      <span>${escapeHtml(upper(item?.left_direction))} / ${escapeHtml(upper(item?.right_direction))}</span>
+    </li>`;
+}
+
+function geometryMarkup(geometry) {
+  if (!geometry) {
+    return `
+      <div class="frozen-chart-empty">
+        <strong>No frozen geometry.</strong>
+        <p>The accepted signal did not freeze entry/target/invalidation geometry. Nothing is inferred.</p>
+      </div>`;
+  }
+  const targets = Array.isArray(geometry.targets) ? geometry.targets : [];
+  return `
+    <ul class="geometry-list">
+      <li class="geometry-item">
+        <strong>Entry zone</strong>
+        <span>${escapeHtml(geometry.entry_zone_low)} → ${escapeHtml(geometry.entry_zone_high)}</span>
+      </li>
+      <li class="geometry-item">
+        <strong>Reference</strong>
+        <span>${escapeHtml(geometry.entry_reference_price)} · ${escapeHtml(geometry.entry_reference_model)}</span>
+      </li>
+      <li class="geometry-item">
+        <strong>Invalidation</strong>
+        <span>${escapeHtml(geometry.invalidation_price)} · ${escapeHtml(geometry.invalidation_trigger)}</span>
+      </li>
+      ${targets.map((target) => `
+        <li class="geometry-item">
+          <strong>${escapeHtml(target.label)}</strong>
+          <span>${escapeHtml(target.target_price)} · R/R ${escapeHtml(target.reference_rr)}</span>
+        </li>`).join("")}
+    </ul>
+    <p class="proof-footnote">Reference geometry is evidence, not an order instruction.</p>`;
+}
+
+function renderEvidenceRoom(detail) {
+  const body = byId("evidenceDialogBody");
+  const subtitle = byId("evidenceDialogSubtitle");
+  if (!body) return;
+
+  if (!detail || detail.status !== "ready" || !detail.signal) {
+    if (subtitle) subtitle.textContent = `Evidence status · ${upper(detail?.status, "UNAVAILABLE")}`;
+    body.innerHTML = `
+      <div class="empty-state">
+        <strong>Frozen evidence unavailable.</strong>
+        <p>The product does not fabricate a proof when the signal ledger or exact identity is unavailable.</p>
+      </div>`;
+    return;
+  }
+
+  const signal = detail.signal;
+  const methods = Array.isArray(detail.methodologies) ? detail.methodologies : [];
+  const pairwise = Array.isArray(detail.pairwise_relations) ? detail.pairwise_relations : [];
+  const summaries = Array.isArray(detail.evidence_summary) ? detail.evidence_summary : [];
+  const uncertainty = Array.isArray(signal.uncertainty_flags) ? signal.uncertainty_flags : [];
+
+  if (subtitle) {
+    subtitle.textContent =
+      `${signal.symbol} · ${signal.timeframe} · frozen ${formatTime(signal.frozen_at_ms)}`;
+  }
+
+  body.innerHTML = `
+    <div class="proof-hero">
+      <article class="proof-state-card">
+        <span class="proof-section-label">DECISION STATE</span>
+        <div class="proof-state-line">
+          <strong class="${stateClass(signal.state)}">${escapeHtml(upper(signal.state))}</strong>
+          <span class="${stateClass(signal.direction)}">${escapeHtml(upper(signal.direction))}</span>
+        </div>
+        <p class="proof-footnote">
+          ${escapeHtml(signal.setup_type)} · methodology agreement is not probability.
+        </p>
+        <div class="proof-metric-strip">
+          <div class="proof-metric">
+            <span>CONFLUENCE</span>
+            <strong>${escapeHtml(signal.confluence_score)}</strong>
+          </div>
+          <div class="proof-metric">
+            <span>PROBABILITY</span>
+            <strong>${escapeHtml(upper(signal.probability_status, "NOT_CALIBRATED"))}</strong>
+          </div>
+          <div class="proof-metric">
+            <span>CANDLES</span>
+            <strong>${escapeHtml(detail.candle_count ?? 0)}</strong>
+          </div>
+        </div>
+      </article>
+      <article class="proof-identity-card">
+        <span>IMMUTABLE SNAPSHOT</span>
+        <code>${escapeHtml(signal.signal_freeze_identity)}</code>
+        <p>
+          as-of ${escapeHtml(formatTime(signal.as_of_ms))}<br>
+          source cutoff ${escapeHtml(formatTime(signal.source_cutoff_open_time_ms))}<br>
+          frozen ${escapeHtml(formatTime(signal.frozen_at_ms))}
+        </p>
+      </article>
+    </div>
+
+    <div class="proof-grid">
+      <section class="proof-section proof-section-wide">
+        <span class="proof-section-label">FROZEN MARKET PROOF</span>
+        <h3>Issuance-time chart evidence</h3>
+        ${frozenChartMarkup(detail)}
+        <p class="proof-footnote">
+          Freeze range ${escapeHtml(formatTime(detail.first_candle_open_time_ms))}
+          → ${escapeHtml(formatTime(detail.last_candle_open_time_ms))}.
+          Later candles cannot rewrite this snapshot.
+        </p>
+      </section>
+
+      <section class="proof-section">
+        <span class="proof-section-label">WHY THIS STATE?</span>
+        <h3>Evidence summary</h3>
+        <ul class="proof-list">
+          ${summaries.length
+            ? summaries.map((item) => `<li>${escapeHtml(item)}</li>`).join("")
+            : "<li>No concise evidence summary was frozen.</li>"}
+        </ul>
+      </section>
+
+      <section class="proof-section">
+        <span class="proof-section-label">UNCERTAINTY</span>
+        <h3>What remains unresolved?</h3>
+        <ul class="proof-list">
+          ${uncertainty.length
+            ? uncertainty.map((item) => `<li class="state-watch">${escapeHtml(item)}</li>`).join("")
+            : "<li>No explicit uncertainty flag was frozen at signal level.</li>"}
+        </ul>
+      </section>
+
+      <section class="proof-section proof-section-wide">
+        <span class="proof-section-label">METHOD ENGINES</span>
+        <h3>Accepted methodology evidence</h3>
+        <ul class="method-engine-list">
+          ${methods.length
+            ? methods.map(methodEngineMarkup).join("")
+            : "<li class=\"method-engine\">No methodology evidence is available.</li>"}
+        </ul>
+      </section>
+
+      <section class="proof-section">
+        <span class="proof-section-label">AGREEMENT MATRIX</span>
+        <h3>Cross-method relation</h3>
+        <ul class="pairwise-list">
+          ${pairwise.length
+            ? pairwise.map(pairwiseMarkup).join("")
+            : "<li class=\"pairwise-item\">No pairwise relation was frozen.</li>"}
+        </ul>
+      </section>
+
+      <section class="proof-section">
+        <span class="proof-section-label">FROZEN GEOMETRY</span>
+        <h3>Entry / target / invalidation reference</h3>
+        ${geometryMarkup(detail.geometry)}
+      </section>
+
+      <section class="proof-section proof-section-wide">
+        <span class="proof-section-label">LEARN FROM THIS SNAPSHOT</span>
+        <h3>Evidence, not private reasoning</h3>
+        <div class="evidence-learning">
+          <p class="proof-footnote">
+            This room exposes structured frozen evidence and concise deterministic context.
+            It does not expose or invent private chain-of-thought.
+          </p>
+          <button type="button" data-evidence-learn="true">OPEN LEARN CENTER →</button>
+        </div>
+      </section>
+    </div>`;
+}
+
+async function openEvidenceRoom(identity, trigger) {
+  if (!identity || !/^[0-9a-f]{64}$/.test(identity)) return;
+  const dialog = byId("evidenceDialog");
+  const body = byId("evidenceDialogBody");
+  if (!dialog || !body) return;
+
+  state.lastEvidenceTrigger = trigger || document.activeElement;
+  state.evidenceDetail = null;
+  body.innerHTML = `
+    <div class="empty-state">
+      <strong>Frozen evidence yükleniyor…</strong>
+      <p>Exact signal identity ${escapeHtml(shortIdentity(identity))}</p>
+    </div>`;
+
+  if (!dialog.open) {
+    if (typeof dialog.showModal === "function") dialog.showModal();
+    else dialog.setAttribute("open", "");
+  }
+
+  try {
+    const detail = await fetchJson(API.signalDetail(identity));
+    state.evidenceDetail = detail;
+    renderEvidenceRoom(detail);
+  } catch (error) {
+    console.warn("[GALACTECH] signal detail unavailable", error);
+    renderEvidenceRoom({ status: "unavailable", signal: null });
+  }
+}
+
+function closeEvidenceRoom() {
+  const dialog = byId("evidenceDialog");
+  if (!dialog) return;
+  if (typeof dialog.close === "function" && dialog.open) dialog.close();
+  else dialog.removeAttribute("open");
+}
+
 function renderEducation() {
   const target = byId("learnGrid");
   if (!target || !state.education) return;
