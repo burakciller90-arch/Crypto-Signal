@@ -10,6 +10,8 @@ const API = Object.freeze({
   archive: "/api/archive/proof-wall?limit=60&offset=0",
   education: "/api/education",
   intelligence: "/api/intelligence-center",
+  assetCockpit: (symbol, timeframe) =>
+    `/api/assets/${encodeURIComponent(symbol)}/${encodeURIComponent(timeframe)}?recent_limit=30`,
   signalDetail: (identity) => `/api/signals/${encodeURIComponent(identity)}`,
 });
 
@@ -27,6 +29,11 @@ const state = {
   archive: null,
   education: null,
   intelligence: null,
+  marketLayer: "PA",
+  marketSelection: null,
+  marketCockpit: null,
+  marketProviderDetails: [],
+  marketSelectedDetail: null,
   evidenceDetail: null,
   lastEvidenceTrigger: null,
 };
