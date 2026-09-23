@@ -8,6 +8,7 @@ on:
       - "src/crypto_signal/data/exchange_flows.py"
       - "src/crypto_signal/intelligence/exchange_flow.py"
       - "tests/test_exchange_flow_engine.py"
+      - "tests/test_r14_release_package.py"
       - "docs/M5_EXCHANGE_FLOW_SLICE1.md"
       - ".github/workflows/crypto-m5-exchange-flow-slice1-acceptance.yml"
 
