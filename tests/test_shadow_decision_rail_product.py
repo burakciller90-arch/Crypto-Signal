@@ -75,6 +75,26 @@ def test_shadow_decision_rail_endpoint_is_read_only_and_truthful(
     assert after_tables == before_tables
 
 
+def test_shadow_decision_rail_get_preserves_database_bytes(
+    tmp_path: Path,
+) -> None:
+    journal = _journal(tmp_path)
+    before = journal.read_bytes()
+    client = TestClient(
+        create_app(
+            tmp_path / "missing-signals.sqlite3",
+            shadow_intent_journal_path=journal,
+        )
+    )
+
+    response = client.get("/api/shadow-decision-rail/status")
+    after = journal.read_bytes()
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "ready"
+    assert after == before
+
+
 def test_shadow_decision_rail_unconfigured_does_not_create_runtime_file(
     tmp_path: Path,
 ) -> None:
