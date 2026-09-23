@@ -1413,6 +1413,41 @@ function geometryMarkup(geometry) {
     <p class="proof-footnote">Reference geometry is evidence, not an order instruction.</p>`;
 }
 
+function contextualLessonIds(detail) {
+  const signal = detail?.signal || {};
+  const methods = Array.isArray(detail?.methodologies) ? detail.methodologies : [];
+  const summaries = Array.isArray(detail?.evidence_summary) ? detail.evidence_summary : [];
+  const haystack = [
+    signal.setup_type,
+    ...summaries,
+    ...methods.flatMap((method) =>
+      Array.isArray(method?.selected)
+        ? method.selected.flatMap((item) => [
+            item?.setup_type,
+            ...(Array.isArray(item?.evidence_summary) ? item.evidence_summary : []),
+          ])
+        : []
+    ),
+  ].map((item) => text(item, "").toLowerCase()).join(" ");
+
+  const ids = new Set(["agreement_vs_probability"]);
+  if (["no_signal", "neutral"].includes(text(signal.state, "").toLowerCase())) {
+    ids.add("abstain");
+  }
+  if (detail?.geometry || text(signal.state, "").toLowerCase() === "invalidated") {
+    ids.add("invalidation");
+    ids.add("risk_reward");
+  }
+  if (haystack.includes("cvd") || haystack.includes("delta")) ids.add("cvd");
+  if (haystack.includes("absorption")) ids.add("absorption");
+  if (haystack.includes("liquidity") || haystack.includes("sweep")) ids.add("liquidity_sweep");
+  if (haystack.includes("harmonic") || haystack.includes("gartley") || haystack.includes("bat")) {
+    ids.add("harmonic_prz");
+  }
+  if (haystack.includes("elliott") || haystack.includes("wave")) ids.add("elliott_wave");
+  return [...ids];
+}
+
 function renderEvidenceRoom(detail) {
   const body = byId("evidenceDialogBody");
   const subtitle = byId("evidenceDialogSubtitle");
@@ -1542,7 +1577,12 @@ function renderEvidenceRoom(detail) {
             This room exposes structured frozen evidence and concise deterministic context.
             It does not expose or invent private chain-of-thought.
           </p>
-          <button type="button" data-evidence-learn="true">OPEN LEARN CENTER →</button>
+          <div class="evidence-learning-links">
+            ${contextualLessonIds(detail).map((conceptId) =>
+              `<button type="button" data-learn-concept="${escapeHtml(conceptId)}">${escapeHtml(upper(conceptId))} →</button>`
+            ).join("")}
+            <button type="button" data-evidence-learn="true">ALL LESSONS →</button>
+          </div>
         </div>
       </section>
     </div>`;
