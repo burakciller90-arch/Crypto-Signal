@@ -215,7 +215,10 @@ def adapt_accepted_m2_m5(
                     else ()
                 ),
                 *(
-                    (microstructure.orderbook.snapshot_identity,)
+                    (
+                        microstructure.freeze_identity,
+                        microstructure.orderbook.snapshot_identity,
+                    )
                     if micro_ok and microstructure is not None
                     and microstructure.orderbook is not None else ()
                 ),
