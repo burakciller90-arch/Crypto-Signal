@@ -4875,3 +4875,29 @@ Accepted truth:
 - no order/credential authority, leverage, borrowing, martingale or real capital.
 
 Next locked frontier: Markets workspace.
+
+
+---
+
+## 2026-09-23 — 17:34 GALACTECH MARKETS WORKSPACE ACCEPTED
+
+PR #927 completed the locked Markets Product-rail slice.
+
+Acceptance:
+- exact-head Markets run `35874866681` focused + full repository PASS at
+  `78209cf2a41d174a45bc981ccf5a135398999903`;
+- squash merge `d51346d44ff7553349803930177f4bb3fce1244d`;
+- exact-main Stage10 `35875063582` SUCCESS.
+
+Accepted truth:
+- observed symbol/timeframe context comes from immutable radar evidence;
+- provider latest state stays separate and cannot be collapsed into invented consensus;
+- exact provider SHA256 detail drives the deterministic frozen chart;
+- PA consumes exact frozen signal methodology/geometry evidence;
+- LIQ/FLOW/DERIV/ONCHAIN fail closed as NOT EXPOSED until exact PIT product adapters exist;
+- recent same-context decision tape retains immutable identity and Evidence Room drill-down;
+- stale async provider responses cannot overwrite newer selection;
+- historical M1/M2 open PRs were not replayed to fake product-layer readiness;
+- no execution/network/credential authority; REAL_CAPITAL=0.
+
+Next locked frontier: Archive / Proof Wall.
