@@ -10,6 +10,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from crypto_signal.ledger.serialization import canonicalize
+from crypto_signal.paper.epoch2_accounting import read_epoch2_state_read_only
 from crypto_signal.paper.epochs import (
     EPOCH_1_SPEC,
     EPOCH_2_LEDGER_FILENAME,
@@ -46,6 +47,9 @@ DEFAULT_PAPER_LEDGER_PATH = (
     / "runtime"
     / "paper"
     / "paper_fund.sqlite3"
+)
+DEFAULT_EPOCH2_LEDGER_PATH = DEFAULT_PAPER_LEDGER_PATH.with_name(
+    EPOCH_2_LEDGER_FILENAME
 )
 DEFAULT_CANDLE_CACHE_PATH = (
     Path("/Users/crypto-signal-agent/Crypto-Signal")
@@ -100,6 +104,7 @@ def create_app(
     ledger_path: Path | None = None,
     alert_outbox_path: Path | None = None,
     paper_ledger_path: Path | None = None,
+    epoch2_ledger_path: Path | None = None,
     candle_cache_path: Path | None = None,
     learning_memory_path: Path | None = None,
 ) -> FastAPI:
@@ -129,6 +134,18 @@ def create_app(
         )
     else:
         selected_paper_path = None
+
+    if epoch2_ledger_path is not None:
+        selected_epoch2_path: Path | None = epoch2_ledger_path
+    elif ledger_path is None:
+        selected_epoch2_path = Path(
+            os.environ.get(
+                "CRYPTO_SIGNAL_EPOCH2_LEDGER_PATH",
+                str(DEFAULT_EPOCH2_LEDGER_PATH),
+            )
+        )
+    else:
+        selected_epoch2_path = None
 
     if candle_cache_path is not None:
         selected_candle_path: Path | None = candle_cache_path
@@ -163,6 +180,7 @@ def create_app(
     app.state.ledger_path = selected_path
     app.state.alert_outbox_path = selected_alert_path
     app.state.paper_ledger_path = selected_paper_path
+    app.state.epoch2_ledger_path = selected_epoch2_path
     app.state.candle_cache_path = selected_candle_path
     app.state.learning_memory_path = selected_learning_memory_path
     app.state.reader = reader
@@ -337,6 +355,53 @@ def create_app(
                 },
                 "read_only": True,
                 "real_capital": 0,
+            }
+        )
+
+    @app.get("/api/paper/epoch2-state")
+    def paper_epoch2_state() -> JSONResponse:
+        if selected_epoch2_path is None:
+            return _json(
+                {
+                    "status": "unavailable",
+                    "reason": "epoch2_runtime_not_configured",
+                    "read_only": True,
+                    "real_capital": 0,
+                }
+            )
+        if not selected_epoch2_path.exists():
+            return _json(
+                {
+                    "status": "unavailable",
+                    "reason": "epoch2_runtime_evidence_missing",
+                    "ledger_filename": selected_epoch2_path.name,
+                    "read_only": True,
+                    "real_capital": 0,
+                }
+            )
+        try:
+            state = read_epoch2_state_read_only(selected_epoch2_path)
+        except ValueError as exc:
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
+        if state is None:
+            return _json(
+                {
+                    "status": "unavailable",
+                    "reason": "epoch2_not_activated",
+                    "ledger_filename": selected_epoch2_path.name,
+                    "read_only": True,
+                    "real_capital": 0,
+                }
+            )
+        return _json(
+            {
+                "status": "ready",
+                "activation": state.activation,
+                "vaults": state.vault_snapshots,
+                "consolidated": state.consolidated_snapshot,
+                "ledger_filename": selected_epoch2_path.name,
+                "read_only": True,
+                "real_capital": state.activation.real_capital,
             }
         )
 
