@@ -626,7 +626,7 @@ def test_forecast_resolution_and_stream_identity_tampering_fail_closed() -> None
 
 
 def test_r20_stream_has_no_outcome_rewrite_execution_or_private_reasoning_surface() -> None:
-    import crypto_signal.forecast_stream as forecast_stream
+    from crypto_signal import forecast_stream
 
     source = inspect.getsource(forecast_stream).lower()
     forbidden = (
