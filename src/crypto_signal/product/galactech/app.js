@@ -13,6 +13,7 @@ const API = Object.freeze({
   performance: "/api/performance",
   decisionStatus: "/api/decision-evidence/status",
   liveFeed: "/api/intelligence-feed?limit=100",
+  shadowDecision: "/api/shadow-decision/status?limit=20",
   decisionProof: (identity) => `/api/decision-proof/${encodeURIComponent(identity)}`,
   assetCockpit: (symbol, timeframe) =>
     `/api/assets/${encodeURIComponent(symbol)}/${encodeURIComponent(timeframe)}?recent_limit=30`,
@@ -48,6 +49,7 @@ const state = {
   performance: null,
   decisionStatus: null,
   liveFeed: null,
+  shadowDecision: null,
   marketLayer: "PA",
   marketSelection: null,
   marketCockpit: null,
@@ -1926,6 +1928,7 @@ function renderSystem() {
   const education = state.education || {};
   const decisionStatus = state.decisionStatus || {};
   const liveFeed = state.liveFeed || {};
+  const shadowDecision = state.shadowDecision || {};
 
   const apiReady = health.status === "ok";
   const ledgerPresent = health.ledger_present === true;
@@ -1941,6 +1944,14 @@ function renderSystem() {
   const decisionSnapshot = decisionStatus.snapshot || {};
   const feedReady = liveFeed.status === "ready" || liveFeed.status === "empty";
   const feedCount = Array.isArray(liveFeed.events) ? liveFeed.events.length : 0;
+  const shadowReady =
+    shadowDecision.status === "ready" || shadowDecision.status === "empty";
+  const shadowLatest = Array.isArray(shadowDecision.latest)
+    ? shadowDecision.latest
+    : [];
+  const reviewedShadow = shadowLatest.filter(
+    (item) => Boolean(item?.review_selection_identity)
+  ).length;
 
   setSystemValue("systemApi", apiReady ? "READY" : "UNAVAILABLE", apiReady ? "positive" : "risk");
   setSystemValue("systemLedger", ledgerPresent ? "PRESENT" : "NOT PRESENT", ledgerPresent ? "positive" : "watch");
@@ -1963,6 +1974,23 @@ function renderSystem() {
     feedReady ? `${feedCount} LOADED` : "NOT EXPOSED",
     feedReady ? "positive" : "watch"
   );
+  setSystemValue(
+    "systemShadowJournal",
+    shadowReady
+      ? `${shadowDecision.journal?.record_count ?? 0} VERIFIED`
+      : "NOT PERSISTED",
+    shadowReady ? "positive" : "watch"
+  );
+  setSystemValue(
+    "systemShadowPreview",
+    reviewedShadow > 0 ? `${reviewedShadow} REVIEWED` : "NOT PERSISTED",
+    reviewedShadow > 0 ? "positive" : "watch"
+  );
+  setSystemValue(
+    "systemShadowReplay",
+    upper(shadowDecision.restart_replay_runtime_status, "NOT MEASURED"),
+    "watch"
+  );
 
   const epochNote = byId("systemEpoch2Note");
   if (epochNote) {
@@ -1970,6 +1998,33 @@ function renderSystem() {
       ? `snapshot ${shortIdentity(epoch2.consolidated?.snapshot_identity)}`
       : text(epoch2.reason, "canonical R21 runtime evidence unavailable");
   }
+  const shadowNote = byId("systemShadowJournalNote");
+  if (shadowNote) {
+    shadowNote.textContent = shadowReady
+      ? `integrity ${upper(shadowDecision.journal_integrity_status, "UNVERIFIED")} · ${shadowLatest.length} latest loaded`
+      : text(shadowDecision.reason, "isolated R25 runtime evidence unavailable");
+  }
+
+  const rail = byId("shadowDecisionRail");
+  if (rail) {
+    const latest = shadowLatest[0] || {};
+    const action = latest.action ? upper(latest.action) : "NOT PERSISTED";
+    const review = latest.review_selection_identity ? "EXPLICIT REVIEW" : "NO REVIEW";
+    const sizing = latest.sizing_bridge_identity ? "REFERENCED" : "NOT PERSISTED";
+    rail.innerHTML = [
+      ["DECISION PROOF", decisionReady ? "PERSISTED" : "NOT PERSISTED"],
+      ["CAPITAL SCIENCE", upper(shadowDecision.capital_science_runtime_status, "NOT PERSISTED")],
+      ["SIZING LINEAGE", sizing],
+      ["REVIEW", review],
+      ["R22 PREVIEW", action],
+      ["SHADOW JOURNAL", shadowReady ? "INTEGRITY VERIFIED" : "NOT PERSISTED"],
+      ["RESTART / REPLAY", upper(shadowDecision.restart_replay_runtime_status, "NOT MEASURED")],
+      ["CANONICAL EPOCH 2", upper(shadowDecision.canonical_epoch2_mutation, "NOT AUTHORIZED")],
+    ].map(([label, value]) =>
+      `<span><small>${escapeHtml(label)}</small><strong>${escapeHtml(value)}</strong></span>`
+    ).join("");
+  }
+
   const marketNote = byId("systemMarketEvidenceNote");
   if (marketNote) {
     marketNote.textContent = radarReady
@@ -2288,6 +2343,7 @@ async function runBoot() {
     loadEndpoint("performance", API.performance),
     loadEndpoint("decisionStatus", API.decisionStatus),
     loadEndpoint("liveFeed", API.liveFeed),
+    loadEndpoint("shadowDecision", API.shadowDecision),
   ]);
 
   const marketReady = results.some(
@@ -2331,6 +2387,7 @@ async function refreshRuntime(reason = "timer") {
       loadEndpoint("performance", API.performance),
       loadEndpoint("decisionStatus", API.decisionStatus),
       loadEndpoint("liveFeed", API.liveFeed),
+      loadEndpoint("shadowDecision", API.shadowDecision),
     ]);
     if (results[0].ok) applyHealthTruth(results[0].data);
     await initializeMarketWorkspace({ reload: state.route === "markets" });
