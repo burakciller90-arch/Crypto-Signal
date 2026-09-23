@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from decimal import Decimal
 from enum import StrEnum
+from itertools import pairwise
 
 from crypto_signal.intelligence.derivatives_dynamics import (
     DerivativesDynamicsEvidenceFreeze,
@@ -460,7 +461,7 @@ def _mark_movement(
 
     returns = tuple(
         abs((right - left) / left * _BPS)
-        for left, right in zip(prices, prices[1:])
+        for left, right in pairwise(prices)
     )
     return (
         sum(returns, start=Decimal(0)) / Decimal(len(returns)),
