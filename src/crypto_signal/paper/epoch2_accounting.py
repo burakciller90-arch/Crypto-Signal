@@ -16,6 +16,7 @@ from crypto_signal.paper.epochs import (
     PaperVaultId,
     assert_legacy_epoch1_fund_creation,
 )
+from crypto_signal.paper.ledger import PaperLedgerEntry
 from crypto_signal.paper.models import (
     REAL_CAPITAL,
     FundCreationRecord,
@@ -1089,7 +1090,7 @@ def _capture_epoch1_storage(
 def _read_epoch1_entries_from_storage_snapshot(
     source_path: Path,
     storage: tuple[bytes, bytes | None, bytes | None],
-) -> tuple:
+) -> tuple[PaperLedgerEntry, ...]:
     main, wal, _ = storage
     with TemporaryDirectory(prefix="crypto-r21-epoch1-") as directory:
         snapshot_path = Path(directory) / source_path.name
