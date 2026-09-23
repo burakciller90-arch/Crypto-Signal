@@ -4234,3 +4234,38 @@ REAL_CAPITAL=0.
 
 Next locked intelligence frontier: Event Risk + NLP Intelligence. User wake/lease pause
 remains authoritative and untouched.
+
+
+---
+
+## 2026-09-23 — 11:31 M5 LARGE-TRANSFER SLICE 3 ACCEPTED / M5 CORE CLOSED
+
+PR #891 closed the remaining locked M5 large-transfer frontier.
+
+Acceptance:
+- latest hardened hosted branch run `35837387694` focused + full PASS;
+- squash merge `3b71b119dacd4db130b08adf9faf2cb9301e5fdb`;
+- exact-main Stage10 run `35837582752` SUCCESS.
+
+Accepted large-transfer semantics:
+- deterministic provider transfer observations;
+- PIT-safe bounded lookback;
+- amount percentile normalization inside the consumed window;
+- repeated source→destination relationship candidates requiring explicit minimum count
+  and observed-amount share;
+- provider-declared EXCHANGE/PROVIDER_KNOWN/UNKNOWN role retained without actor-intent inference;
+- REPEATED_RELATIONSHIP_CLUSTER / ISOLATED_LARGE_TRANSFER / NORMAL / UNRESOLVED;
+- future/late evidence is excluded before eligible context and duplicate validation;
+- the isolated-large-transfer label depends on the latest PIT event, avoiding a false
+  current anomaly merely because some older observation is the window maximum.
+
+M5 core exit is satisfied by the combined accepted evidence families:
+- existing Bitcoin network activity;
+- Exchange Flow Slice 1;
+- PIT Wallet Cohort Registry/forward measurement Slice 2;
+- bounded Large-transfer Clusters Slice 3.
+
+No live on-chain provider, credential, capital sizing or trading authority was activated.
+REAL_CAPITAL=0. User wake/lease pause remains authoritative.
+
+Next locked intelligence frontier: Event Risk + NLP Intelligence.
