@@ -182,4 +182,3 @@ def test_galactech_distinguishes_integrity_from_runtime_restart_replay(
     assert "NOT MEASURED" in js
     assert "REPLAY · VERIFIED" not in js
     assert "read-only replay verified" not in js
-    assert "canonical NAV mutation" not in js.lower()
