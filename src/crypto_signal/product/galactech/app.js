@@ -283,17 +283,22 @@ function renderRadar() {
   target.innerHTML = material.map((item) => {
     const latest = item.latest || {};
     return `
-      <article class="radar-item">
-        <div class="radar-item-head">
-          <strong>${escapeHtml(latest.symbol || item.symbol)} · ${escapeHtml(latest.timeframe || item.timeframe)}</strong>
-          <span class="${stateClass(latest.state)}">${escapeHtml(upper(latest.state))}</span>
-        </div>
-        <div class="radar-item-meta">
-          <span>${escapeHtml(upper(latest.direction))}</span>
-          <span>${escapeHtml(latest.setup_type || "setup unavailable")}</span>
-          <code>${escapeHtml(shortIdentity(latest.signal_freeze_identity))}</code>
-        </div>
-      </article>`;
+      <button class="evidence-trigger" type="button"
+        data-evidence-id="${escapeHtml(latest.signal_freeze_identity)}"
+        aria-label="${escapeHtml(latest.symbol || item.symbol)} critical radar evidence aç">
+        <article class="radar-item">
+          <div class="radar-item-head">
+            <strong>${escapeHtml(latest.symbol || item.symbol)} · ${escapeHtml(latest.timeframe || item.timeframe)}</strong>
+            <span class="${stateClass(latest.state)}">${escapeHtml(upper(latest.state))}</span>
+          </div>
+          <div class="radar-item-meta">
+            <span>${escapeHtml(upper(latest.direction))}</span>
+            <span>${escapeHtml(latest.setup_type || "setup unavailable")}</span>
+            <code>${escapeHtml(shortIdentity(latest.signal_freeze_identity))}</code>
+            <span class="evidence-open-cue">Proof →</span>
+          </div>
+        </article>
+      </button>`;
   }).join("");
 }
 
@@ -414,18 +419,23 @@ function renderArchive() {
     const category = proofCategory(item);
     const outcome = item.latest_outcome || {};
     return `
-      <article class="proof-card">
-        <div class="proof-card-head">
-          <strong>${escapeHtml(signal.symbol || "UNKNOWN")} · ${escapeHtml(signal.timeframe || "—")}</strong>
-          <span class="${stateClass(category)}">${escapeHtml(upper(category))}</span>
-        </div>
-        <div class="feed-item-meta">
-          <span>issued ${escapeHtml(formatTime(signal.frozen_at_ms || signal.as_of_ms))}</span>
-          <span>${escapeHtml(upper(signal.state))}</span>
-          <span>outcome ${escapeHtml(outcome.outcome_state || outcome.state || "UNRESOLVED")}</span>
-          <code>${escapeHtml(shortIdentity(signal.signal_freeze_identity))}</code>
-        </div>
-      </article>`;
+      <button class="evidence-trigger" type="button"
+        data-evidence-id="${escapeHtml(signal.signal_freeze_identity)}"
+        aria-label="${escapeHtml(signal.symbol || "UNKNOWN")} archive evidence aç">
+        <article class="proof-card">
+          <div class="proof-card-head">
+            <strong>${escapeHtml(signal.symbol || "UNKNOWN")} · ${escapeHtml(signal.timeframe || "—")}</strong>
+            <span class="${stateClass(category)}">${escapeHtml(upper(category))}</span>
+          </div>
+          <div class="feed-item-meta">
+            <span>issued ${escapeHtml(formatTime(signal.frozen_at_ms || signal.as_of_ms))}</span>
+            <span>${escapeHtml(upper(signal.state))}</span>
+            <span>outcome ${escapeHtml(outcome.outcome_state || outcome.state || "UNRESOLVED")}</span>
+            <code>${escapeHtml(shortIdentity(signal.signal_freeze_identity))}</code>
+            <span class="evidence-open-cue">Frozen proof →</span>
+          </div>
+        </article>
+      </button>`;
   }).join("");
 }
 
