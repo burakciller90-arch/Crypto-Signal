@@ -18,7 +18,7 @@ from crypto_signal.intelligence.event_risk import (
     build_event_risk_evidence_freeze,
 )
 
-AS_OF = 10_000_000
+AS_OF = 1_000_000_000
 MINUTE = 60_000
 
 
