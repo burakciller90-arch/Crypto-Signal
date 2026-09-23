@@ -153,41 +153,57 @@ async def run(args: argparse.Namespace) -> int:
     )
     runtime_store.append_instance(instance)
     heartbeat_sequence = 0
-    last_heartbeat_ms: int | None = None
     last_ingestion_ms: int | None = None
     last_observed_messages = 0
+    heartbeat_stop = asyncio.Event()
 
-    def persist_progress(
-        event: BybitMicrostructureWireEvent,
-        observed_messages: int,
-    ) -> None:
+    def emit_heartbeat() -> None:
         nonlocal heartbeat_sequence
-        nonlocal last_heartbeat_ms
-        nonlocal last_ingestion_ms
-        nonlocal last_observed_messages
-        last_ingestion_ms = event.ingested_at_ms
-        last_observed_messages = observed_messages
+        observed_at_ms = time.time_ns() // 1_000_000
+        safe_ingestion_ms = last_ingestion_ms
         if (
-            last_heartbeat_ms is not None
-            and event.ingested_at_ms - last_heartbeat_ms
-            < args.heartbeat_interval_ms
+            safe_ingestion_ms is not None
+            and safe_ingestion_ms > observed_at_ms
         ):
-            return
+            safe_ingestion_ms = observed_at_ms
         heartbeat_sequence += 1
         counts = store.counts()
         runtime_store.append_heartbeat(
             build_collector_heartbeat(
                 instance_identity=instance.instance_identity,
                 sequence_no=heartbeat_sequence,
-                observed_at_ms=event.ingested_at_ms,
-                last_successful_ingestion_ms=event.ingested_at_ms,
-                observed_messages_total=observed_messages,
+                observed_at_ms=observed_at_ms,
+                last_successful_ingestion_ms=safe_ingestion_ms,
+                observed_messages_total=last_observed_messages,
                 normalized_rows_total=counts.total,
                 raw_rows_total=raw_store.count(),
             )
         )
-        last_heartbeat_ms = event.ingested_at_ms
 
+    async def heartbeat_loop() -> None:
+        interval_seconds = args.heartbeat_interval_ms / 1_000
+        while True:
+            try:
+                await asyncio.wait_for(
+                    heartbeat_stop.wait(),
+                    timeout=interval_seconds,
+                )
+            except TimeoutError:
+                emit_heartbeat()
+                continue
+            return
+
+    def persist_progress(
+        event: BybitMicrostructureWireEvent,
+        observed_messages: int,
+    ) -> None:
+        nonlocal last_ingestion_ms
+        nonlocal last_observed_messages
+        last_ingestion_ms = event.ingested_at_ms
+        last_observed_messages = observed_messages
+
+    emit_heartbeat()
+    heartbeat_task = asyncio.create_task(heartbeat_loop())
     stream = BybitSpotMicrostructureStream()
     try:
         result = await persist_bybit_wire_stream(
@@ -203,25 +219,10 @@ async def run(args: argparse.Namespace) -> int:
             max_messages=(None if args.max_events == 0 else args.max_events),
             progress_callback=persist_progress,
         )
-        if (
-            last_ingestion_ms is not None
-            and last_ingestion_ms != last_heartbeat_ms
-        ):
-            heartbeat_sequence += 1
-            counts = store.counts()
-            runtime_store.append_heartbeat(
-                build_collector_heartbeat(
-                    instance_identity=instance.instance_identity,
-                    sequence_no=heartbeat_sequence,
-                    observed_at_ms=last_ingestion_ms,
-                    last_successful_ingestion_ms=last_ingestion_ms,
-                    observed_messages_total=last_observed_messages,
-                    normalized_rows_total=counts.total,
-                    raw_rows_total=raw_store.count(),
-                )
-            )
-            last_heartbeat_ms = last_ingestion_ms
+        emit_heartbeat()
     except (OSError, sqlite3.Error, ValueError) as exc:
+        heartbeat_stop.set()
+        await heartbeat_task
         print(
             "MARKET_TAPE_STREAM_ERROR "
             f"error={type(exc).__name__}:{exc}",
@@ -229,6 +230,9 @@ async def run(args: argparse.Namespace) -> int:
             flush=True,
         )
         return 4
+    finally:
+        heartbeat_stop.set()
+        await heartbeat_task
 
     counts = store.counts()
     print(
