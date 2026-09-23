@@ -76,6 +76,8 @@ class ProbabilityCalibrationConfig:
     decision_window_end_ms: int
     evaluation_cutoff_ms: int
     probability_bin_edges: tuple[Decimal, ...]
+    minimum_training_n: int
+    minimum_training_class_n: int
     minimum_holdout_n: int
     minimum_holdout_class_n: int
     minimum_reliability_bin_n: int
@@ -128,11 +130,22 @@ class ProbabilityCalibrationConfig:
         if not 0 < self.training_positive_count < self.training_sample_count:
             raise ValueError("R19 training set requires both outcome classes")
         if min(
+            self.minimum_training_n,
+            self.minimum_training_class_n,
             self.minimum_holdout_n,
             self.minimum_holdout_class_n,
             self.minimum_reliability_bin_n,
         ) <= 0:
-            raise ValueError("R19 holdout support thresholds must be positive")
+            raise ValueError("R19 support thresholds must be positive")
+        if self.training_sample_count < self.minimum_training_n:
+            raise ValueError("R19 training sample support is below minimum")
+        training_negative_count = (
+            self.training_sample_count - self.training_positive_count
+        )
+        if min(self.training_positive_count, training_negative_count) < (
+            self.minimum_training_class_n
+        ):
+            raise ValueError("R19 training class support is below minimum")
         if not self.probability_bin_edges:
             raise ValueError("R19 probability bins cannot be empty")
         if len(self.probability_bin_edges) < 3:
@@ -322,6 +335,9 @@ class ProbabilityCalibrationReport:
     walk_forward_fit_identity: str
     status: CalibrationGateStatus
     probability_status: R19ProbabilityStatus
+    training_sample_count: int
+    training_positive_count: int
+    training_negative_count: int
     holdout_sample_count: int
     holdout_positive_count: int
     holdout_negative_count: int
@@ -355,6 +371,9 @@ class ProbabilityCalibrationReport:
         _require_text(self.model_version, "R19 report model version")
         _require_text(self.calibrator_version, "R19 report calibrator version")
         if min(
+            self.training_sample_count,
+            self.training_positive_count,
+            self.training_negative_count,
             self.holdout_sample_count,
             self.holdout_positive_count,
             self.holdout_negative_count,
@@ -362,6 +381,11 @@ class ProbabilityCalibrationReport:
             self.evaluation_cutoff_ms,
         ) < 0:
             raise ValueError("R19 report counts/timestamps must be non-negative")
+        if (
+            self.training_positive_count + self.training_negative_count
+            != self.training_sample_count
+        ):
+            raise ValueError("R19 training class counts do not equal sample count")
         if (
             self.holdout_positive_count + self.holdout_negative_count
             != self.holdout_sample_count
@@ -525,6 +549,8 @@ def build_probability_calibration_config(
     decision_window_end_ms: int,
     evaluation_cutoff_ms: int,
     probability_bin_edges: tuple[Decimal, ...],
+    minimum_training_n: int,
+    minimum_training_class_n: int,
     minimum_holdout_n: int,
     minimum_holdout_class_n: int,
     minimum_reliability_bin_n: int,
@@ -543,6 +569,8 @@ def build_probability_calibration_config(
         "minimum_brier_skill": minimum_brier_skill,
         "minimum_holdout_class_n": minimum_holdout_class_n,
         "minimum_holdout_n": minimum_holdout_n,
+        "minimum_training_class_n": minimum_training_class_n,
+        "minimum_training_n": minimum_training_n,
         "minimum_reliability_bin_n": minimum_reliability_bin_n,
         "model_version": model_version,
         "policy_version": policy_version,
@@ -574,6 +602,8 @@ def build_probability_calibration_config(
         decision_window_end_ms=decision_window_end_ms,
         evaluation_cutoff_ms=evaluation_cutoff_ms,
         probability_bin_edges=probability_bin_edges,
+        minimum_training_n=minimum_training_n,
+        minimum_training_class_n=minimum_training_class_n,
         minimum_holdout_n=minimum_holdout_n,
         minimum_holdout_class_n=minimum_holdout_class_n,
         minimum_reliability_bin_n=minimum_reliability_bin_n,
@@ -981,6 +1011,11 @@ def _report(
         "holdout_negative_count": negative_count,
         "holdout_positive_count": positive_count,
         "holdout_sample_count": len(observations),
+        "training_negative_count": (
+            config.training_sample_count - config.training_positive_count
+        ),
+        "training_positive_count": config.training_positive_count,
+        "training_sample_count": config.training_sample_count,
         "maximum_calibration_error": maximum_calibration_error,
         "model_version": config.model_version,
         "observation_identities": observation_ids,
@@ -1008,6 +1043,11 @@ def _report(
         walk_forward_fit_identity=config.walk_forward_fit_identity,
         status=status,
         probability_status=probability_status,
+        training_sample_count=config.training_sample_count,
+        training_positive_count=config.training_positive_count,
+        training_negative_count=(
+            config.training_sample_count - config.training_positive_count
+        ),
         holdout_sample_count=len(observations),
         holdout_positive_count=positive_count,
         holdout_negative_count=negative_count,
@@ -1049,6 +1089,8 @@ def _config_payload(config: ProbabilityCalibrationConfig) -> dict[str, object]:
         "minimum_holdout_class_n": config.minimum_holdout_class_n,
         "minimum_holdout_n": config.minimum_holdout_n,
         "minimum_reliability_bin_n": config.minimum_reliability_bin_n,
+        "minimum_training_class_n": config.minimum_training_class_n,
+        "minimum_training_n": config.minimum_training_n,
         "model_version": config.model_version,
         "policy_version": config.policy_version,
         "probability_bin_edges": config.probability_bin_edges,
@@ -1120,6 +1162,9 @@ def _report_payload(report: ProbabilityCalibrationReport) -> dict[str, object]:
         "holdout_sample_count": report.holdout_sample_count,
         "maximum_calibration_error": report.maximum_calibration_error,
         "model_version": report.model_version,
+        "training_negative_count": report.training_negative_count,
+        "training_positive_count": report.training_positive_count,
+        "training_sample_count": report.training_sample_count,
         "observation_identities": report.observation_identities,
         "partition_identity": report.partition_identity,
         "probability_semantic": report.probability_semantic,
