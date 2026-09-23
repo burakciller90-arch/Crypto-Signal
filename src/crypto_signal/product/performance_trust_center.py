@@ -31,8 +31,8 @@ from crypto_signal.paper.epoch2_accounting import (
 )
 from crypto_signal.paper.epochs import PaperVaultId
 from crypto_signal.paper.transaction_tape import (
-    R22FinancialOutcome,
     PaperTapeFill,
+    R22FinancialOutcome,
 )
 from crypto_signal.signals.models import SignalDecision, SignalState
 
