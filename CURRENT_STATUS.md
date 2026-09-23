@@ -10,6 +10,24 @@ REAL_CAPITAL: 0
 ## Active v1.1 frontier — read before historical sections
 
 
+### 2026-09-23 18:02 +0300 — GALACTECH LEARN / SYSTEM ACCEPTED
+
+- PR **#930** accepted the locked GALACTECH Learn + System slice.
+- Exact-head hosted run `35878237726` SUCCESS at `76236447b48b3393259dfd40937a250f85e396b7`.
+- PR #930 squash-merged as `3c86803d17056c3586669fa2abbd9f5fc4e602cb`.
+- Exact-main Stage10 run `35878480463` SUCCESS.
+- Learn exposes the full deterministic Turkish-first 15-lesson catalog with local search and canonical quick links.
+- Education remains concept teaching only; it cannot silently become a market claim, forecast, signal or execution instruction.
+- Contextual Evidence Room lesson links are derived from explicit frozen evidence cues only.
+- System Truth projects only currently customer-readable health: Product API, ledger, canonical Epoch 2, Proof Wall, Market Radar, Intelligence, Performance, Education and alert-outbox presence.
+- Product API READY is explicitly not treated as Market Tape ONLINE.
+- Market Tape runtime, Cold Archive and Event Feed runtime remain NOT EXPOSED; latency/universal freshness remain NOT MEASURED without exact adapters.
+- No execution authority. REAL_CAPITAL=0.
+- Current locked frontier: **Product rail — accessibility / performance polish**.
+- Latest UID504 watchdog remains `GITHUB_WATCHDOG_USER_PAUSED=YES`; pause markers remain untouched. Cursor workers remain disabled.
+
+
+
 ### 2026-09-23 17:52 +0300 — GALACTECH PERFORMANCE & TRUST ACCEPTED
 
 - PR **#929** accepted the locked GALACTECH Performance & Trust customer surface.
