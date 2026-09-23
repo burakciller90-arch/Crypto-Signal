@@ -410,7 +410,7 @@ def test_future_leg_and_identity_tampering_fail_closed() -> None:
     with pytest.raises(ValueError, match="candidate identity mismatch"):
         replace(candidate, candidate_identity="f" * 64)
     with pytest.raises(ValueError, match="assessment identity mismatch"):
-        replace(result, net_edge_bps=Decimal("999"))
+        replace(result, net_edge_bps=Decimal(999))
 
 
 def test_policy_thresholds_are_versioned_inputs_not_embedded_market_truth() -> None:
