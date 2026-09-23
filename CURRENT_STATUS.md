@@ -10,6 +10,35 @@ REAL_CAPITAL: 0
 ## Active v1.1 frontier — read before historical sections
 
 
+### 2026-09-23 05:47 +0300 — M3 ORDER FLOW / ABSORPTION 2.0 COMPLETE
+
+- M3 Slice 3 PR **#877** hosted run `35811663566` PASS:
+  - focused M3 pytest/Ruff/mypy PASS;
+  - full repository pytest/Ruff/mypy/JS/freshness PASS;
+  - `M3_BREAKOUT_CONFIRMATION_SLICE3_FOCUSED_PASS=YES`;
+  - `M3_BREAKOUT_CONFIRMATION_SLICE3_FULL_PASS=YES`.
+- PR #877 squash-merged to main as `a4978d3bf1bd6adcaa0d346d738fd5e76bd9e35c`.
+- Accepted Slice 3 semantics:
+  - price crossing alone is insufficient;
+  - breakout confirmation requires accepted sweep evidence, same-direction temporal flow, closed-candle acceptance and no nearby opposing absorption;
+  - breakout failure requires sweep recovery/reclaim, closed-candle re-entry and matching absorption;
+  - all inputs are PIT-frozen and exact market/as-of aligned;
+  - no probability, future-return claim, actor attribution or trading authority.
+- Combined with accepted M3 Slice 1 and Slice 2, the locked M3 scope is now complete:
+  - aggressive buy/sell notional;
+  - delta;
+  - window-local CVD;
+  - trade velocity / bounded large-print candidates;
+  - price/CVD divergence;
+  - bounded absorption;
+  - breakout confirmation/failure;
+  - sweep + absorption interaction.
+- Current primary intelligence frontier: **M4 Derivatives Intelligence 2.0**.
+- Cursor workers/composer remain disabled by user.
+- REAL_CAPITAL=0; no production cutover.
+
+
+
 ### 2026-09-23 05:37 +0300 — M3 SLICE 2 MERGED / CONTINUITY LIVE
 
 - M3 Slice 2 PR **#873** hosted run `35810883083` PASS:
