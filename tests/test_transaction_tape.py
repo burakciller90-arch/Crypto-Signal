@@ -119,9 +119,11 @@ def test_r22_forecast_and_proof_are_exact_not_user_claimed() -> None:
         quantity=Decimal(1),
         reference_price=Decimal(100),
     )
+    other_forecast = _forecast(calibrated=True)
+    other_proof = build_decision_proof_snapshot(other_forecast, _slices(other_forecast))
     with pytest.raises(ValueError, match="lineage mismatch"):
-        build_tape_intent(activation, proof=replace(proof, proof_identity=_sha("bad")), **args)
-    # A fully rehashed, otherwise valid proof from another forecast cannot be substituted.
+        build_tape_intent(activation, proof=other_proof, **args)
+    # A valid Decision Proof from another immutable forecast cannot be substituted.
     with pytest.raises(ValueError, match="decision cannot precede"):
         build_tape_intent(
             activation, proof=proof, **{**args, "decided_at_ms": ISSUED_AT - 1}
