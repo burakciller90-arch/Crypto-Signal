@@ -1915,6 +1915,17 @@ function renderShadowCycleExtension(payload) {
     const method = cycle.reviewed_method
       ? upper(cycle.reviewed_method)
       : "NONE";
+    const replayStatus = upper(
+      payload.restart_replay_runtime_status,
+      "NOT MEASURED"
+    );
+    const replay = payload.runtime_replay_observation || null;
+    const replayDetail = replay
+      ? `runtime ${shortIdentity(replay.runtime_instance_identity)} · first ${formatTime(replay.first_observed_at_ms)} · replay ${formatTime(replay.replay_observed_at_ms)}`
+      : text(
+          payload.restart_replay_runtime_reason,
+          "runtime replay observation not persisted"
+        );
     section.innerHTML = `
       <span class="proof-section-label">R25 CAPITAL DECISION LINEAGE</span>
       <h3>Exact forecast → capital → sizing → review → preview</h3>
@@ -1928,11 +1939,13 @@ function renderShadowCycleExtension(payload) {
         <div class="truth-row"><span>R22 PREVIEW</span><strong>${escapeHtml(shortIdentity(cycle.preview_identity))}</strong></div>
         <div class="truth-row"><span>SHADOW JOURNAL REF</span><strong>${escapeHtml(shortIdentity(cycle.journal_record_identity))}</strong></div>
         <div class="truth-row"><span>CYCLE MANIFEST</span><strong>${escapeHtml(shortIdentity(cycle.manifest_identity))}</strong></div>
+        <div class="truth-row"><span>RESTART / REPLAY</span><strong class="${replayStatus === "VERIFIED" ? "state-positive" : "state-watch"}">${escapeHtml(replayStatus)}</strong></div>
       </div>
       <p class="proof-footnote">
         Exact persisted forecast_identity match only. This lineage is shadow/research evidence:
         it is not a fill, not a canonical Epoch 2 NAV mutation, not an exchange order, and not a live trade.
         The manifest references a journal record identity; journal runtime presence is verified separately.
+        Restart/replay: ${escapeHtml(replayDetail)}.
       </p>`;
   }
 
