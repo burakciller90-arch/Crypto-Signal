@@ -96,42 +96,42 @@ def enrich_accepted_m2_m5(
     liq_summaries: list[str] = []
 
     if liquidity_structure is not None:
-        a = liquidity_structure.analysis
-        _require_market(a.symbol, a.as_of_ms, symbol, as_of_ms)
+        structure_analysis = liquidity_structure.analysis
+        _require_market(structure_analysis.symbol, structure_analysis.as_of_ms, symbol, as_of_ms)
         if (
-            a.status is LiquidityStructureStatus.MEASURED
-            and a.source_quality is LiquiditySourceQuality.GOOD
-            and a.latest_snapshot_age_ms is not None
-            and a.latest_snapshot_age_ms <= _LIQUIDITY_MAX_AGE_MS
+            structure_analysis.status is LiquidityStructureStatus.MEASURED
+            and structure_analysis.source_quality is LiquiditySourceQuality.GOOD
+            and structure_analysis.latest_snapshot_age_ms is not None
+            and structure_analysis.latest_snapshot_age_ms <= _LIQUIDITY_MAX_AGE_MS
         ):
             liq_ids.append(liquidity_structure.freeze_identity)
-            liq_engines.append(a.engine_version)
-            liq_observed.append(a.observed_at_ms)
+            liq_engines.append(structure_analysis.engine_version)
+            liq_observed.append(structure_analysis.observed_at_ms)
             liq_freshness.append(
-                _freshness(a.latest_snapshot_age_ms, _LIQUIDITY_MAX_AGE_MS)
+                _freshness(structure_analysis.latest_snapshot_age_ms, _LIQUIDITY_MAX_AGE_MS)
             )
             liq_summaries.append("persistent_liquidity_structure_context")
 
     if liquidity_sweep is not None:
-        a = liquidity_sweep.analysis
-        _require_market(a.symbol, a.as_of_ms, symbol, as_of_ms)
+        sweep_analysis = liquidity_sweep.analysis
+        _require_market(sweep_analysis.symbol, sweep_analysis.as_of_ms, symbol, as_of_ms)
         sweep_age = (
-            max(a.latest_snapshot_age_ms, a.latest_trade_age_ms)
-            if a.latest_snapshot_age_ms is not None
-            and a.latest_trade_age_ms is not None
+            max(sweep_analysis.latest_snapshot_age_ms, sweep_analysis.latest_trade_age_ms)
+            if sweep_analysis.latest_snapshot_age_ms is not None
+            and sweep_analysis.latest_trade_age_ms is not None
             else None
         )
         if (
-            a.status is LiquiditySweepStatus.MEASURED
-            and a.source_quality is LiquiditySourceQuality.GOOD
+            sweep_analysis.status is LiquiditySweepStatus.MEASURED
+            and sweep_analysis.source_quality is LiquiditySourceQuality.GOOD
             and sweep_age is not None
             and sweep_age <= _LIQUIDITY_MAX_AGE_MS
         ):
             liq_ids.append(liquidity_sweep.freeze_identity)
-            liq_engines.append(a.engine_version)
-            liq_observed.append(a.observed_at_ms)
+            liq_engines.append(sweep_analysis.engine_version)
+            liq_observed.append(sweep_analysis.observed_at_ms)
             liq_freshness.append(_freshness(sweep_age, _LIQUIDITY_MAX_AGE_MS))
-            liq_summaries.append(f"liquidity_sweep_{a.sweep_state.value}")
+            liq_summaries.append(f"liquidity_sweep_{sweep_analysis.sweep_state.value}")
 
     if liq_ids:
         families[ConfluenceFamily.LIQUIDITY] = _merge_family(
@@ -150,24 +150,24 @@ def enrich_accepted_m2_m5(
         )
 
     if liquidation is not None:
-        a = liquidation.analysis
-        _require_market(a.symbol, a.as_of_ms, symbol, as_of_ms)
+        liquidation_analysis = liquidation.analysis
+        _require_market(liquidation_analysis.symbol, liquidation_analysis.as_of_ms, symbol, as_of_ms)
         liquidation_ok = (
-            a.status is LiquidationHeatmapStatus.MEASURED
-            and a.source_quality is LiquidationSourceQuality.GOOD
-            and a.latest_mark_age_ms is not None
-            and a.latest_mark_age_ms <= _LIQUIDATION_MAX_AGE_MS
+            liquidation_analysis.status is LiquidationHeatmapStatus.MEASURED
+            and liquidation_analysis.source_quality is LiquidationSourceQuality.GOOD
+            and liquidation_analysis.latest_mark_age_ms is not None
+            and liquidation_analysis.latest_mark_age_ms <= _LIQUIDATION_MAX_AGE_MS
         )
         if liquidation_ok:
             freshness = _freshness(
-                a.latest_mark_age_ms,
+                liquidation_analysis.latest_mark_age_ms,
                 _LIQUIDATION_MAX_AGE_MS,
             )
             # Liquidation is accepted context inside M2, not an automatic vote.
             families[ConfluenceFamily.LIQUIDITY] = _merge_family(
                 families[ConfluenceFamily.LIQUIDITY],
                 added_ids=(liquidation.freeze_identity,),
-                added_engines=(a.engine_version,),
+                added_engines=(liquidation_analysis.engine_version,),
                 added_observed=(as_of_ms,),
                 added_freshness=(freshness,),
             )
@@ -177,7 +177,7 @@ def enrich_accepted_m2_m5(
                 added_observed=(as_of_ms,),
                 added_freshness=(freshness,),
                 added_summaries=(
-                    f"observed_liquidation_{a.observed_state.value}",
+                    f"observed_liquidation_{liquidation_analysis.observed_state.value}",
                     "estimated_leverage_concentration_not_claimed",
                     "retail_stop_locations_not_claimed",
                 ),
@@ -194,19 +194,24 @@ def enrich_accepted_m2_m5(
     ):
         if pattern is None:
             continue
-        a = pattern.analysis
-        _require_market(a.symbol, a.as_of_ms, symbol, as_of_ms)
-        age = as_of_ms - a.observed_at_ms
+        pattern_analysis = pattern.analysis
+        _require_market(
+            pattern_analysis.symbol,
+            pattern_analysis.as_of_ms,
+            symbol,
+            as_of_ms,
+        )
+        age = as_of_ms - pattern_analysis.observed_at_ms
         if (
-            a.status is PatternStatus.MEASURED
+            pattern_analysis.status is PatternStatus.MEASURED
             and 0 <= age <= _ORDER_FLOW_MAX_AGE_MS
         ):
             pattern_ids.append(pattern.freeze_identity)
-            pattern_engines.append(a.engine_version)
-            pattern_observed.append(a.observed_at_ms)
+            pattern_engines.append(pattern_analysis.engine_version)
+            pattern_observed.append(pattern_analysis.observed_at_ms)
             pattern_freshness.append(_freshness(age, _ORDER_FLOW_MAX_AGE_MS))
             pattern_summaries.append(
-                f"{label}_{'candidate_present' if a.candidates else 'none_observed'}"
+                f"{label}_{'candidate_present' if pattern_analysis.candidates else 'none_observed'}"
             )
 
     if pattern_ids:
@@ -239,7 +244,7 @@ def enrich_accepted_m2_m5(
             families[ConfluenceFamily.DERIVATIVES] = _merge_family(
                 families[ConfluenceFamily.DERIVATIVES],
                 added_ids=(derivatives_crowding.freeze_identity,),
-                added_engines=(a.engine_version,),
+                added_engines=(liquidation_analysis.engine_version,),
                 added_observed=(a.observed_at_ms,),
                 added_freshness=(freshness,),
             )
@@ -265,13 +270,18 @@ def enrich_accepted_m2_m5(
     onchain_summaries: list[str] = []
 
     for cohort in wallet_cohorts:
-        a = cohort.analysis
-        _require_asset(a.asset, a.as_of_ms, base_asset, as_of_ms)
-        if a.status is WalletCohortStatus.UNRESOLVED:
+        cohort_analysis = cohort.analysis
+        _require_asset(
+            cohort_analysis.asset,
+            cohort_analysis.as_of_ms,
+            base_asset,
+            as_of_ms,
+        )
+        if cohort_analysis.status is WalletCohortStatus.UNRESOLVED:
             continue
         observed = (
-            a.latest_forward_measurement_ms
-            if a.latest_forward_measurement_ms is not None
+            cohort_analysis.latest_forward_measurement_ms
+            if cohort_analysis.latest_forward_measurement_ms is not None
             else as_of_ms
         )
         age = as_of_ms - observed
@@ -281,35 +291,40 @@ def enrich_accepted_m2_m5(
         onchain_proof_ids.append(cohort.freeze_identity)
         onchain_proof_observed.append(observed)
         onchain_proof_freshness.append(freshness)
-        onchain_summaries.append(f"wallet_cohort_{a.status.value}")
+        onchain_summaries.append(f"wallet_cohort_{cohort_analysis.status.value}")
         # Registry-only is transparent proof context but does not count as
         # measured M6 family evidence.
-        if a.status is WalletCohortStatus.MEASURED:
+        if cohort_analysis.status is WalletCohortStatus.MEASURED:
             onchain_family_ids.append(cohort.freeze_identity)
-            onchain_family_engines.append(a.engine_version)
+            onchain_family_engines.append(cohort_analysis.engine_version)
             onchain_family_observed.append(observed)
             onchain_family_freshness.append(freshness)
 
     for cluster in large_transfer_clusters:
-        a = cluster.analysis
-        _require_asset(a.asset, a.as_of_ms, base_asset, as_of_ms)
+        cluster_analysis = cluster.analysis
+        _require_asset(
+            cluster_analysis.asset,
+            cluster_analysis.as_of_ms,
+            base_asset,
+            as_of_ms,
+        )
         if (
-            a.status is not LargeTransferStatus.MEASURED
-            or a.observed_at_ms is None
+            cluster_analysis.status is not LargeTransferStatus.MEASURED
+            or cluster_analysis.observed_at_ms is None
         ):
             continue
-        age = as_of_ms - a.observed_at_ms
+        age = as_of_ms - cluster_analysis.observed_at_ms
         if not 0 <= age <= _ONCHAIN_MAX_AGE_MS:
             continue
         freshness = _freshness(age, _ONCHAIN_MAX_AGE_MS)
         onchain_family_ids.append(cluster.freeze_identity)
-        onchain_family_engines.append(a.engine_version)
-        onchain_family_observed.append(a.observed_at_ms)
+        onchain_family_engines.append(cluster_analysis.engine_version)
+        onchain_family_observed.append(cluster_analysis.observed_at_ms)
         onchain_family_freshness.append(freshness)
         onchain_proof_ids.append(cluster.freeze_identity)
-        onchain_proof_observed.append(a.observed_at_ms)
+        onchain_proof_observed.append(cluster_analysis.observed_at_ms)
         onchain_proof_freshness.append(freshness)
-        onchain_summaries.append(f"large_transfer_{a.label.value}")
+        onchain_summaries.append(f"large_transfer_{cluster_analysis.label.value}")
 
     if onchain_family_ids:
         families[ConfluenceFamily.ONCHAIN] = _merge_family(
