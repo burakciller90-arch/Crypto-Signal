@@ -10,6 +10,24 @@ REAL_CAPITAL: 0
 ## Active v1.1 frontier — read before historical sections
 
 
+### 2026-09-23 14:03 +0300 — PHASE 14 R20.5 DECISION PROOF / LIVE INTELLIGENCE FEED ACCEPTED
+
+- PR **#916** accepted the current-main R20.5 Decision Proof / Live Intelligence Feed contract.
+- Authoritative branch hosted run `35852044869` focused + full repository PASS.
+- PR #916 squash-merged to main as `be64a9217e5a52e39dfa2c92363e44aa295f1062`.
+- Exact-main Stage10 run `35852230388` SUCCESS.
+- Decision Proof exposes deterministic conditional thesis, trigger, target, invalidation, horizon, M6 support/opposition, probability or NOT_CALIBRATED, Event Risk, freshness, uncertainty and authority.
+- Every locked proof domain is explicit as AVAILABLE / INSUFFICIENT / UNSUPPORTED.
+- All R20 source evidence identities must be covered; Event Risk is domain-bound to EVENT_CONTEXT, signal+M6 to METHODOLOGY, calibrated R19 identities to PROBABILITY_CALIBRATION.
+- Evidence observed after forecast source-as-of is rejected.
+- Live feed is append-only FORECAST_ISSUED / FORECAST_RESOLVED; resolution requires prior issuance and exact lineage.
+- No private chain-of-thought, ledger write, sizing, network/exchange/order or production authority.
+- **Phase 14 infrastructure exit is satisfied.**
+- Current locked frontier: **Phase 15 — R21 Canonical 1,000 USDT Paper Fund**.
+- CONTINUITY_PAUSED_BY_USER remains dominant. REAL_CAPITAL=0.
+
+
+
 ### 2026-09-23 13:48 +0300 — PHASE 13 R20 IMMUTABLE FORECAST STREAM ACCEPTED
 
 - PR **#914** accepted the current-main R20 Immutable Forecast Stream.
