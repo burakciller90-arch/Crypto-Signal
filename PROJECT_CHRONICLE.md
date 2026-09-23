@@ -4478,3 +4478,36 @@ CALIBRATED.
 
 Next locked frontier: Phase 10 Smart Capital Allocator. User wake/lease pause remains
 authoritative.
+
+
+---
+
+## 2026-09-23 — 13:09 PHASE 10 SMART CAPITAL ALLOCATOR ACCEPTED
+
+PR #908 completed the locked Phase 10 allocator decision contract without activating
+Epoch 2 capital.
+
+Acceptance:
+- branch hosted run `35846947767` focused + full PASS;
+- merge `92bc8979c68f402b9379fdd1bcba0b4f8c1de17e`;
+- exact-main Stage10 `35847111863` SUCCESS.
+
+Accepted semantics:
+- exact Epoch 2 1,000 USDT / 600-300-100 vault contract is reused;
+- Core, Tactical and Opportunity Reserve have separate evidence gates;
+- Event Risk CLEAR is mandatory for eligibility;
+- non-CLEAR Event Risk forces HOLD_CASH;
+- Core rejects incomplete/opposed/conflicting M6 evidence;
+- Tactical requires complete short-horizon microstructure evidence;
+- Opportunity Reserve requires explicit recovery/stabilization evidence and cannot blindly
+  buy a crash;
+- cash is valid;
+- no cross-vault budget transfer or borrowing;
+- no notional sizing;
+- no ledger write or activation;
+- current per-vault and consolidated performance metrics remain NOT_ACTIVATED rather than
+  fabricated;
+- REAL_CAPITAL=0.
+
+Phase 10 decision-contract exit is satisfied. Next frontier is Phase 11 Position Sizing
+Intelligence. User wake/lease pause remains authoritative.
