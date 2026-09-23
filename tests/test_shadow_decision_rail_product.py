@@ -44,7 +44,7 @@ def test_shadow_decision_rail_endpoint_is_read_only_and_truthful(
     response = client.get("/api/shadow-decision-rail/status")
 
     assert health.status_code == 200
-    assert health.json()["shadow_intent_journal_present"] is True
+    assert "shadow_intent_journal_present" not in health.json()
     assert response.status_code == 200
     body = response.json()
     assert body["status"] == "ready"
