@@ -10,6 +10,26 @@ REAL_CAPITAL: 0
 ## Active v1.1 frontier — read before historical sections
 
 
+### 2026-09-23 13:20 +0300 — PHASE 11 POSITION SIZING INTELLIGENCE ACCEPTED
+
+- PR **#910** accepted Position Sizing Intelligence after duplicate implementation reconciliation.
+- Authoritative branch hosted run `35847933771` focused + full repository PASS.
+- Alpha Factory reconciliation gate `35847899769` SUCCESS.
+- PR #910 squash-merged to main as `d54589f45ba189350d9e3277d3643f7f3eef9d09`.
+- Exact-main Stage10 run `35848135767` SUCCESS.
+- Fixed-fractional remains a shadow baseline.
+- Full / half / quarter Kelly remain disabled without exact R19 CALIBRATED evidence.
+- Explicit correlation, drawdown, volatility, liquidity and transaction-cost gates fail closed.
+- Allocator HOLD_CASH blocks all sizing.
+- Non-positive calibrated expected edge blocks every sizing method.
+- Martingale remains forbidden.
+- No winner, canonical notional, ledger write, order or production authority.
+- **Phase 11 infrastructure exit is satisfied.**
+- Current locked frontier: **Phase 12 — Market-neutral / arbitrage research (shadow-only)**.
+- CONTINUITY_PAUSED_BY_USER remains dominant. REAL_CAPITAL=0.
+
+
+
 ### 2026-09-23 13:09 +0300 — PHASE 10 SMART CAPITAL ALLOCATOR ACCEPTED
 
 - PR **#908** accepted the Epoch 2 Smart Capital Allocator research-envelope contract.
