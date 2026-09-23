@@ -30,13 +30,13 @@ class ExchangeFlowObservation:
         _require_sha256(self.observation_identity, "exchange-flow observation identity")
         if not self.asset or self.asset != self.asset.upper():
             raise ValueError("exchange-flow asset must be non-empty uppercase")
-        for value, label in (
+        for text_value, label in (
             (self.exchange_scope, "exchange_scope"),
             (self.source_provider, "source_provider"),
             (self.attribution_method, "attribution_method"),
             (self.adapter_version, "adapter_version"),
         ):
-            if not value.strip():
+            if not text_value.strip():
                 raise ValueError(f"{label} must be non-empty")
         if self.temporal_semantic != EXCHANGE_FLOW_TEMPORAL_SEMANTIC:
             raise ValueError("unsupported exchange-flow temporal semantic")
@@ -53,11 +53,11 @@ class ExchangeFlowObservation:
             raise ValueError("exchange-flow source timestamp cannot predate window end")
         if self.ingested_at_ms < self.source_timestamp_ms:
             raise ValueError("exchange-flow ingestion cannot predate source timestamp")
-        for value, label in (
+        for amount, label in (
             (self.inflow_amount, "inflow_amount"),
             (self.outflow_amount, "outflow_amount"),
         ):
-            if value.is_nan() or value.is_infinite() or value < Decimal(0):
+            if amount.is_nan() or amount.is_infinite() or amount < Decimal(0):
                 raise ValueError(f"{label} must be finite and non-negative")
         if self.observation_identity != canonical_sha256(exchange_flow_observation_payload(self)):
             raise ValueError("exchange-flow observation identity mismatch")
