@@ -373,15 +373,19 @@ def _build_record(
     event_at_ms: int,
     previous_record_identity: str | None,
 ) -> ShadowIntentJournalRecord:
-    draft = ShadowIntentJournalRecord(
-        record_identity="0" * 64,
-        preview_identity=preview_identity,
-        vault_id=vault_id,
-        event_at_ms=event_at_ms,
-        previous_record_identity=previous_record_identity,
-    )
+    payload = {
+        "canonical_epoch2_write_authority": False,
+        "engine_version": SHADOW_INTENT_JOURNAL_ENGINE_VERSION,
+        "event_at_ms": event_at_ms,
+        "previous_record_identity": previous_record_identity,
+        "preview_identity": preview_identity,
+        "production_authority": False,
+        "real_capital": REAL_CAPITAL,
+        "schema_version": SHADOW_INTENT_JOURNAL_SCHEMA_VERSION,
+        "vault_id": vault_id,
+    }
     return ShadowIntentJournalRecord(
-        record_identity=canonical_sha256(_record_payload(draft)),
+        record_identity=canonical_sha256(payload),
         preview_identity=preview_identity,
         vault_id=vault_id,
         event_at_ms=event_at_ms,
