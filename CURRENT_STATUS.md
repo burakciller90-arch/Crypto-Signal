@@ -10,6 +10,28 @@ REAL_CAPITAL: 0
 ## Active v1.1 frontier — read before historical sections
 
 
+### 2026-09-23 14:38 +0300 — PHASE 16 R21.5 SHADOW LAB 2.0 ACCEPTED
+
+- PR **#920** accepted Shadow Lab 2.0 research-governance infrastructure.
+- Authoritative branch acceptance:
+  - Shadow Lab hosted run `35855465958` focused + full repository PASS;
+  - Alpha Factory research-only run `35855465997` SUCCESS.
+- PR #920 squash-merged to main as `9d50f298ae8e8a7bc024aa0f52dcf37058b3d977`.
+- Exact-main gates:
+  - Alpha Factory `35855669648` SUCCESS;
+  - Stage10 `35855669631` SUCCESS.
+- All locked Phase 16 research families are representable without a parallel backtester.
+- Every review-ready variant binds exact Alpha Factory experiment + PromotionGateEvidence + PromotionGateAssessment lineage.
+- Forward, robustness and cost-stress identities are derived from the bound promotion dossier, not caller-invented SHA values.
+- BLOCKED remains blocked; READY means explicit review only.
+- Supervisor-accepted manual-promotion review still grants no champion write, canonical-capital mutation, deployment or production authority.
+- Comparison winner is always null; no automatic winner selection or self-promotion.
+- **Phase 16 infrastructure exit is satisfied.**
+- Current locked frontier: **Phase 17 — R22 Transaction & Decision Tape**.
+- CONTINUITY_PAUSED_BY_USER remains dominant. REAL_CAPITAL=0.
+
+
+
 ### 2026-09-23 14:26 +0300 — PHASE 15 R21 CANONICAL 1,000 USDT PAPER FUND ACCEPTED
 
 - PR **#917** introduced canonical Epoch 2 activation/accounting; post-merge exact-main exposed a WAL/SHM sidecar immutability overconstraint.
