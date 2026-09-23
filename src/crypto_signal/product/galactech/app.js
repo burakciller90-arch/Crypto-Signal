@@ -21,6 +21,7 @@ const state = {
   route: "command",
   explainMode: "simple",
   proofFilter: "all",
+  learnQuery: "",
   health: null,
   command: null,
   radar: null,
@@ -249,11 +250,28 @@ function bindNavigation() {
       return;
     }
 
+    const conceptTrigger = source?.closest("[data-learn-concept]");
+    if (conceptTrigger instanceof HTMLElement) {
+      const concept = conceptTrigger.dataset.learnConcept || "";
+      state.learnQuery = concept;
+      const input = byId("learnSearchInput");
+      if (input) input.value = concept;
+      renderEducation();
+      routeTo("learn");
+      return;
+    }
+
     const learnTrigger = source?.closest("[data-evidence-learn]");
     if (learnTrigger) {
       closeEvidenceRoom();
       routeTo("learn");
     }
+  });
+
+  byId("learnSearchInput")?.addEventListener("input", (event) => {
+    const input = event.target instanceof HTMLInputElement ? event.target : null;
+    state.learnQuery = input?.value || "";
+    renderEducation();
   });
 
   const dialog = byId("evidenceDialog");
@@ -1395,6 +1413,41 @@ function geometryMarkup(geometry) {
     <p class="proof-footnote">Reference geometry is evidence, not an order instruction.</p>`;
 }
 
+function contextualLessonIds(detail) {
+  const signal = detail?.signal || {};
+  const methods = Array.isArray(detail?.methodologies) ? detail.methodologies : [];
+  const summaries = Array.isArray(detail?.evidence_summary) ? detail.evidence_summary : [];
+  const haystack = [
+    signal.setup_type,
+    ...summaries,
+    ...methods.flatMap((method) =>
+      Array.isArray(method?.selected)
+        ? method.selected.flatMap((item) => [
+            item?.setup_type,
+            ...(Array.isArray(item?.evidence_summary) ? item.evidence_summary : []),
+          ])
+        : []
+    ),
+  ].map((item) => text(item, "").toLowerCase()).join(" ");
+
+  const ids = new Set(["agreement_vs_probability"]);
+  if (["no_signal", "neutral"].includes(text(signal.state, "").toLowerCase())) {
+    ids.add("abstain");
+  }
+  if (detail?.geometry || text(signal.state, "").toLowerCase() === "invalidated") {
+    ids.add("invalidation");
+    ids.add("risk_reward");
+  }
+  if (haystack.includes("cvd") || haystack.includes("delta")) ids.add("cvd");
+  if (haystack.includes("absorption")) ids.add("absorption");
+  if (haystack.includes("liquidity") || haystack.includes("sweep")) ids.add("liquidity_sweep");
+  if (haystack.includes("harmonic") || haystack.includes("gartley") || haystack.includes("bat")) {
+    ids.add("harmonic_prz");
+  }
+  if (haystack.includes("elliott") || haystack.includes("wave")) ids.add("elliott_wave");
+  return [...ids];
+}
+
 function renderEvidenceRoom(detail) {
   const body = byId("evidenceDialogBody");
   const subtitle = byId("evidenceDialogSubtitle");
@@ -1524,7 +1577,12 @@ function renderEvidenceRoom(detail) {
             This room exposes structured frozen evidence and concise deterministic context.
             It does not expose or invent private chain-of-thought.
           </p>
-          <button type="button" data-evidence-learn="true">OPEN LEARN CENTER →</button>
+          <div class="evidence-learning-links">
+            ${contextualLessonIds(detail).map((conceptId) =>
+              `<button type="button" data-learn-concept="${escapeHtml(conceptId)}">${escapeHtml(upper(conceptId))} →</button>`
+            ).join("")}
+            <button type="button" data-evidence-learn="true">ALL LESSONS →</button>
+          </div>
         </div>
       </section>
     </div>`;
@@ -1566,23 +1624,151 @@ function closeEvidenceRoom() {
   else dialog.removeAttribute("open");
 }
 
+function lessonMatchesQuery(lesson, query) {
+  const needle = text(query, "").trim().toLocaleLowerCase("tr-TR");
+  if (!needle) return true;
+  const haystack = [
+    lesson?.concept_id,
+    lesson?.title_tr,
+    lesson?.beginner_tr,
+    lesson?.why_it_matters_tr,
+    lesson?.advanced_tr,
+  ]
+    .map((item) => text(item, "").toLocaleLowerCase("tr-TR"))
+    .join(" ");
+  return haystack.includes(needle);
+}
+
+function lessonMarkup(lesson) {
+  return `
+    <article class="learn-card learn-card-rich" data-lesson-id="${escapeHtml(lesson.concept_id)}">
+      <header class="learn-card-head">
+        <div>
+          <span class="eyebrow">${escapeHtml(upper(lesson.concept_id))}</span>
+          <h2>${escapeHtml(lesson.title_tr)}</h2>
+        </div>
+        <span class="tag">EDUCATION</span>
+      </header>
+      <p class="learn-beginner">${escapeHtml(lesson.beginner_tr)}</p>
+      <section class="learn-why">
+        <span class="proof-section-label">NEDEN ÖNEMLİ?</span>
+        <p>${escapeHtml(lesson.why_it_matters_tr)}</p>
+      </section>
+      ${lesson.advanced_tr ? `
+        <details class="learn-advanced">
+          <summary>PRO / teknik açıklamayı aç</summary>
+          <p>${escapeHtml(lesson.advanced_tr)}</p>
+        </details>` : ""}
+      <footer class="learn-card-foot">
+        <span>Deterministic catalog · no generated market claim</span>
+        <code>REAL_CAPITAL=0</code>
+      </footer>
+    </article>`;
+}
+
 function renderEducation() {
   const target = byId("learnGrid");
+  const tag = byId("learnCatalogTag");
   if (!target || !state.education) return;
   const lessons = Array.isArray(state.education.lessons) ? state.education.lessons : [];
+  const filtered = lessons.filter((lesson) => lessonMatchesQuery(lesson, state.learnQuery));
+
+  if (tag) {
+    tag.textContent = state.education.status === "ready"
+      ? `CATALOG · ${lessons.length} VERIFIED LESSONS`
+      : `CATALOG · ${upper(state.education.status, "UNAVAILABLE")}`;
+  }
+
   if (!lessons.length) {
-    target.className = "learn-grid empty-state";
-    target.innerHTML = "<strong>Eğitim evidence yok.</strong><p>Konsept açıklaması uydurulmaz.</p>";
+    target.className = "learn-grid learn-grid-rich empty-state";
+    target.innerHTML =
+      "<strong>Eğitim kanıtı yok.</strong><p>Eksik katalog yerine yeni içerik uydurulmaz.</p>";
     return;
   }
-  target.className = "learn-grid";
-  target.innerHTML = lessons.map((lesson) => `
-    <article class="learn-card">
-      <span class="eyebrow">${escapeHtml(lesson.concept_id)}</span>
-      <strong>${escapeHtml(lesson.title_tr)}</strong>
-      <p>${escapeHtml(lesson.beginner_tr)}</p>
-    </article>`).join("");
+
+  if (!filtered.length) {
+    target.className = "learn-grid learn-grid-rich empty-state";
+    target.innerHTML =
+      `<strong>“${escapeHtml(state.learnQuery)}” için eşleşme yok.</strong>` +
+      "<p>Arama sonucu boşsa içerik uydurulmaz; farklı bir kavram ara.</p>";
+    return;
+  }
+
+  target.className = "learn-grid learn-grid-rich";
+  target.innerHTML = filtered.map(lessonMarkup).join("");
 }
+
+function setSystemValue(id, value, kind = "neutral") {
+  const node = byId(id);
+  if (!node) return;
+  node.textContent = value;
+  node.classList.remove("state-positive", "state-risk", "state-watch", "state-neutral", "safe-text");
+  node.classList.add(
+    kind === "positive"
+      ? "state-positive"
+      : kind === "risk"
+        ? "state-risk"
+        : kind === "watch"
+          ? "state-watch"
+          : kind === "safe"
+            ? "safe-text"
+            : "state-neutral"
+  );
+}
+
+function renderSystem() {
+  const health = state.health || {};
+  const radar = state.radar || {};
+  const epoch2 = state.epoch2State || {};
+  const archive = state.archive || {};
+  const intelligence = state.intelligence || {};
+  const performance = state.performance || {};
+  const education = state.education || {};
+
+  const apiReady = health.status === "ok";
+  const ledgerPresent = health.ledger_present === true;
+  const epochReady = epoch2.status === "ready";
+  const archiveReady = archive.status === "ready" || archive.status === "empty";
+  const radarReady = radar.status === "ready" || radar.status === "empty";
+  const intelligenceReady = intelligence.status === "ready";
+  const performanceReady = performance.status === "ready" || performance.status === "empty";
+  const educationReady = education.status === "ready";
+  const radarItems = Array.isArray(radar.items) ? radar.items.length : 0;
+  const lessonCount = Array.isArray(education.lessons) ? education.lessons.length : 0;
+
+  setSystemValue("systemApi", apiReady ? "READY" : "UNAVAILABLE", apiReady ? "positive" : "risk");
+  setSystemValue("systemLedger", ledgerPresent ? "PRESENT" : "NOT PRESENT", ledgerPresent ? "positive" : "watch");
+  setSystemValue("systemEpoch2", epochReady ? "READY" : "UNAVAILABLE", epochReady ? "positive" : "watch");
+  setSystemValue("systemArchive", archiveReady
+    ? (archive.outcome_schema_available ? "AVAILABLE" : "SIGNALS ONLY")
+    : "UNAVAILABLE", archiveReady && archive.outcome_schema_available ? "positive" : "watch");
+  setSystemValue("systemMarketEvidence", radarReady ? "AVAILABLE" : "UNAVAILABLE", radarReady ? "positive" : "watch");
+  setSystemValue("systemIntelligence", intelligenceReady ? "READY" : "UNAVAILABLE", intelligenceReady ? "positive" : "watch");
+  setSystemValue("systemPerformance", performanceReady ? "READY" : "UNAVAILABLE", performanceReady ? "positive" : "watch");
+  setSystemValue("systemEducation", educationReady ? `${lessonCount} LESSONS` : "UNAVAILABLE", educationReady ? "positive" : "watch");
+  setSystemValue("systemAlerts", health.alert_outbox_present ? "PRESENT" : "NOT PRESENT", health.alert_outbox_present ? "positive" : "neutral");
+
+  const epochNote = byId("systemEpoch2Note");
+  if (epochNote) {
+    epochNote.textContent = epochReady
+      ? `snapshot ${shortIdentity(epoch2.consolidated?.snapshot_identity)}`
+      : text(epoch2.reason, "canonical R21 runtime evidence unavailable");
+  }
+  const marketNote = byId("systemMarketEvidenceNote");
+  if (marketNote) {
+    marketNote.textContent = radarReady
+      ? `${radarItems} observed provider/context freezes`
+      : `radar ${upper(radar.status, "UNAVAILABLE")}`;
+  }
+
+  const truthTag = byId("systemTruthTag");
+  if (truthTag) {
+    truthTag.textContent = apiReady
+      ? "TRUTH · PRODUCT EVIDENCE READY"
+      : "TRUTH · DEGRADED";
+  }
+}
+
 
 function performanceEvidenceClassLabel(value) {
   const labels = {
@@ -1807,13 +1993,6 @@ function renderIntelligence() {
       `PRO · endpoint fields: ${keys.join(", ") || "none"}. ` +
       "R23 Decision Proof adapter sonraki product slice’ında exact evidence identities ile bağlanacak.";
   }
-}
-
-function renderSystem() {
-  const api = byId("systemApi");
-  const ledger = byId("systemLedger");
-  if (api) api.textContent = state.health ? upper(state.health.status, "READY") : "UNAVAILABLE";
-  if (ledger) ledger.textContent = state.health?.ledger_present ? "PRESENT" : "NOT PRESENT";
 }
 
 function renderAll() {

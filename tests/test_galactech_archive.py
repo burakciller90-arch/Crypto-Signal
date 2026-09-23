@@ -100,7 +100,7 @@ def test_galactech_archive_pairs_immutable_issuance_with_later_outcome(
     js = script.text
     css = style.text
 
-    assert 'data-ui-version="galactech-v1.1-performance"' in html
+    assert 'data-ui-version="galactech-v1.1-learn-system"' in html
     assert 'id="archiveSummary"' in html
     assert 'id="archiveSchemaTag"' in html
     assert "ISSUANCE SNAPSHOT ↔ LATER OUTCOME SNAPSHOT" in html
