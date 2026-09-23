@@ -23,7 +23,7 @@ def test_galactech_preview_is_isolated_truthful_and_accessible(tmp_path: Path) -
 
     # Foundation is parallel until the explicit production UI cutover.
     assert 'data-ui-version="galactech-command-center-v1"' in legacy.text
-    assert 'data-ui-version="galactech-v1.1-markets"' in preview.text
+    assert 'data-ui-version="galactech-v1.1-archive"' in preview.text
 
     for section in (
         "COMMAND",
