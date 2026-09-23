@@ -332,10 +332,10 @@ def create_app(
             proof = ImmutableDecisionEvidenceLedger(
                 selected_decision_path
             ).read_proof_for_signal(signal_freeze_identity)
-        except ValueError as exc:
-            raise HTTPException(status_code=400, detail=str(exc)) from exc
         except DecisionLedgerConflictError as exc:
             raise HTTPException(status_code=500, detail=str(exc)) from exc
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
         if proof is None:
             return _json(
                 {
