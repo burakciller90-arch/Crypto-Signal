@@ -118,12 +118,12 @@ class ShadowIntentPreviewSummary:
             ),
         ):
             _require_sha256(value, label)
-        for value, label in (
+        for optional_value, label in (
             (self.review_selection_identity, "shadow summary review"),
             (self.market_reference_identity, "shadow summary market reference"),
         ):
-            if value is not None:
-                _require_sha256(value, label)
+            if optional_value is not None:
+                _require_sha256(optional_value, label)
         if not isinstance(self.vault_id, PaperVaultId):
             raise TypeError("shadow preview summary requires canonical vault")
         if self.event_at_ms < 0:
