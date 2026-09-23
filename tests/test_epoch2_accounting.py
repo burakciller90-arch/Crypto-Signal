@@ -3,7 +3,6 @@ from __future__ import annotations
 import hashlib
 import inspect
 import sqlite3
-from dataclasses import replace
 from decimal import Decimal
 
 import pytest
