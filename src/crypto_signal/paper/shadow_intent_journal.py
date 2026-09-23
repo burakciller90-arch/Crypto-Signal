@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from contextlib import closing
 from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
@@ -181,76 +182,77 @@ class R25ShadowIntentJournal:
 
     def initialize(self) -> None:
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        with sqlite3.connect(self.path) as db:
-            existing = {
-                str(row[0])
-                for row in db.execute(
-                    """SELECT name FROM sqlite_master
-                    WHERE type = 'table' AND name NOT LIKE 'sqlite_%'"""
-                ).fetchall()
-            }
-            unexpected = existing - _ALLOWED_TABLES
-            if unexpected:
-                raise ValueError(
-                    "shadow intent journal refuses database with non-shadow tables"
-                )
-            db.execute("PRAGMA journal_mode=WAL")
-            db.execute(
-                f"""CREATE TABLE IF NOT EXISTS {_META_TABLE} (
-                    key TEXT PRIMARY KEY,
-                    value TEXT NOT NULL
-                )"""
-            )
-            db.execute(
-                f"""CREATE TABLE IF NOT EXISTS {_RECORD_TABLE} (
-                    record_identity TEXT PRIMARY KEY,
-                    preview_identity TEXT NOT NULL UNIQUE,
-                    vault_id TEXT NOT NULL,
-                    event_at_ms INTEGER NOT NULL,
-                    previous_record_identity TEXT,
-                    payload_json TEXT NOT NULL,
-                    schema_version TEXT NOT NULL,
-                    engine_version TEXT NOT NULL,
-                    canonical_epoch2_write_authority INTEGER NOT NULL,
-                    production_authority INTEGER NOT NULL,
-                    real_capital INTEGER NOT NULL
-                )"""
-            )
-            for action in ("UPDATE", "DELETE"):
-                db.execute(
-                    f"""CREATE TRIGGER IF NOT EXISTS
-                    {_RECORD_TABLE}_immutable_{action.lower()}
-                    BEFORE {action} ON {_RECORD_TABLE}
-                    BEGIN
-                        SELECT RAISE(ABORT, 'immutable R25 shadow intent journal');
-                    END"""
-                )
-                db.execute(
-                    f"""CREATE TRIGGER IF NOT EXISTS
-                    {_META_TABLE}_immutable_{action.lower()}
-                    BEFORE {action} ON {_META_TABLE}
-                    BEGIN
-                        SELECT RAISE(ABORT, 'immutable R25 shadow intent metadata');
-                    END"""
-                )
-            meta = {
-                "engine_version": SHADOW_INTENT_JOURNAL_ENGINE_VERSION,
-                "real_capital": str(REAL_CAPITAL),
-                "schema_version": SHADOW_INTENT_JOURNAL_SCHEMA_VERSION,
-                "semantic": "isolated_reviewed_r22_preview_evidence_only",
-            }
-            for key, value in meta.items():
-                row = db.execute(
-                    f"SELECT value FROM {_META_TABLE} WHERE key = ?",
-                    (key,),
-                ).fetchone()
-                if row is None:
-                    db.execute(
-                        f"INSERT INTO {_META_TABLE} (key, value) VALUES (?, ?)",
-                        (key, value),
+        with closing(sqlite3.connect(self.path)) as db:
+            with db:
+                existing = {
+                    str(row[0])
+                    for row in db.execute(
+                        """SELECT name FROM sqlite_master
+                        WHERE type = 'table' AND name NOT LIKE 'sqlite_%'"""
+                    ).fetchall()
+                }
+                unexpected = existing - _ALLOWED_TABLES
+                if unexpected:
+                    raise ValueError(
+                        "shadow intent journal refuses database with non-shadow tables"
                     )
-                elif str(row[0]) != value:
-                    raise ValueError("shadow intent journal metadata mismatch")
+                db.execute("PRAGMA journal_mode=WAL")
+                db.execute(
+                    f"""CREATE TABLE IF NOT EXISTS {_META_TABLE} (
+                        key TEXT PRIMARY KEY,
+                        value TEXT NOT NULL
+                    )"""
+                )
+                db.execute(
+                    f"""CREATE TABLE IF NOT EXISTS {_RECORD_TABLE} (
+                        record_identity TEXT PRIMARY KEY,
+                        preview_identity TEXT NOT NULL UNIQUE,
+                        vault_id TEXT NOT NULL,
+                        event_at_ms INTEGER NOT NULL,
+                        previous_record_identity TEXT,
+                        payload_json TEXT NOT NULL,
+                        schema_version TEXT NOT NULL,
+                        engine_version TEXT NOT NULL,
+                        canonical_epoch2_write_authority INTEGER NOT NULL,
+                        production_authority INTEGER NOT NULL,
+                        real_capital INTEGER NOT NULL
+                    )"""
+                )
+                for action in ("UPDATE", "DELETE"):
+                    db.execute(
+                        f"""CREATE TRIGGER IF NOT EXISTS
+                        {_RECORD_TABLE}_immutable_{action.lower()}
+                        BEFORE {action} ON {_RECORD_TABLE}
+                        BEGIN
+                            SELECT RAISE(ABORT, 'immutable R25 shadow intent journal');
+                        END"""
+                    )
+                    db.execute(
+                        f"""CREATE TRIGGER IF NOT EXISTS
+                        {_META_TABLE}_immutable_{action.lower()}
+                        BEFORE {action} ON {_META_TABLE}
+                        BEGIN
+                            SELECT RAISE(ABORT, 'immutable R25 shadow intent metadata');
+                        END"""
+                    )
+                meta = {
+                    "engine_version": SHADOW_INTENT_JOURNAL_ENGINE_VERSION,
+                    "real_capital": str(REAL_CAPITAL),
+                    "schema_version": SHADOW_INTENT_JOURNAL_SCHEMA_VERSION,
+                    "semantic": "isolated_reviewed_r22_preview_evidence_only",
+                }
+                for key, value in meta.items():
+                    row = db.execute(
+                        f"SELECT value FROM {_META_TABLE} WHERE key = ?",
+                        (key,),
+                    ).fetchone()
+                    if row is None:
+                        db.execute(
+                            f"INSERT INTO {_META_TABLE} (key, value) VALUES (?, ?)",
+                            (key, value),
+                        )
+                    elif str(row[0]) != value:
+                        raise ValueError("shadow intent journal metadata mismatch")
 
     def append(self, preview: R22IntentPreview) -> ShadowIntentAppendResult:
         self.initialize()
@@ -260,7 +262,7 @@ class R25ShadowIntentJournal:
             raise ValueError("shadow journal preview payload identity mismatch")
 
         vault_id = preview.intent.vault_id
-        with sqlite3.connect(self.path) as db:
+        with closing(sqlite3.connect(self.path)) as db:
             db.execute("BEGIN IMMEDIATE")
             existing = db.execute(
                 f"""SELECT record_identity, vault_id, event_at_ms,
@@ -279,6 +281,7 @@ class R25ShadowIntentJournal:
                     or str(existing[4]) != payload_json
                 ):
                     raise ValueError("shadow journal preview identity conflict")
+                db.commit()
                 return ShadowIntentAppendResult(
                     disposition=ShadowIntentAppendDisposition.IDEMPOTENT,
                     record=record,
@@ -325,6 +328,7 @@ class R25ShadowIntentJournal:
                     record.real_capital,
                 ),
             )
+            db.commit()
         return ShadowIntentAppendResult(
             disposition=ShadowIntentAppendDisposition.INSERTED,
             record=record,
@@ -340,7 +344,7 @@ class R25ShadowIntentJournal:
             raise ValueError("shadow preview summary limit must be inside 1..500")
         self.verify_read_only()
         uri = f"{self.path.resolve().as_uri()}?mode=ro"
-        with sqlite3.connect(uri, uri=True) as db:
+        with closing(sqlite3.connect(uri, uri=True)) as db:
             rows = db.execute(
                 f"""SELECT record_identity, preview_identity, vault_id,
                 event_at_ms, payload_json
@@ -414,7 +418,7 @@ class R25ShadowIntentJournal:
         if not self.path.is_file():
             raise ValueError("shadow intent journal missing")
         uri = f"{self.path.resolve().as_uri()}?mode=ro"
-        with sqlite3.connect(uri, uri=True) as db:
+        with closing(sqlite3.connect(uri, uri=True)) as db:
             unexpected = {
                 str(row[0])
                 for row in db.execute(
