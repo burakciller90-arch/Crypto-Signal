@@ -10,6 +10,7 @@ const API = Object.freeze({
   archive: "/api/archive/proof-wall?limit=500&offset=0",
   education: "/api/education",
   intelligence: "/api/intelligence-center",
+  performance: "/api/performance",
   assetCockpit: (symbol, timeframe) =>
     `/api/assets/${encodeURIComponent(symbol)}/${encodeURIComponent(timeframe)}?recent_limit=30`,
   signalDetail: (identity) => `/api/signals/${encodeURIComponent(identity)}`,
@@ -29,6 +30,7 @@ const state = {
   archive: null,
   education: null,
   intelligence: null,
+  performance: null,
   marketLayer: "PA",
   marketSelection: null,
   marketCockpit: null,
@@ -1582,6 +1584,211 @@ function renderEducation() {
     </article>`).join("");
 }
 
+function performanceEvidenceClassLabel(value) {
+  const labels = {
+    retrospective: "RETROSPECTIVE",
+    walk_forward: "WALK-FORWARD",
+    live_untouched_forward: "LIVE UNTOUCHED-FORWARD",
+  };
+  return labels[text(value, "").toLowerCase()] || upper(value, "UNLABELLED");
+}
+
+function fractionPercent(value) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return "NOT MEASURED";
+  return `${(number * 100).toFixed(1)}%`;
+}
+
+function decimalMetric(value, suffix = "") {
+  if (value === null || value === undefined || value === "") return "NOT MEASURED";
+  return `${value}${suffix}`;
+}
+
+function performanceSegmentMarkup(segment) {
+  const key = segment?.key || {};
+  const decisive = Number(segment?.decisive_n ?? 0);
+  const historical = segment?.historical_success_fraction;
+  const historyLabel = decisive > 0
+    ? fractionPercent(historical)
+    : "NOT MEASURED";
+  const rStatus = Number(segment?.r_evaluable_n ?? 0) > 0
+    ? decimalMetric(segment?.average_r, " R")
+    : "NOT MEASURED";
+
+  return `
+    <article class="performance-segment">
+      <div class="performance-segment-head">
+        <div>
+          <strong>${escapeHtml(key.symbol || "UNKNOWN")} · ${escapeHtml(key.timeframe || "—")}</strong>
+          <span>${escapeHtml(key.setup_type || "setup unavailable")}</span>
+        </div>
+        <span class="proof-badge proof-badge-neutral">${escapeHtml(upper(key.signal_direction, "NONE"))}</span>
+      </div>
+      <div class="performance-segment-meta">
+        <span>${escapeHtml(upper(key.exchange, "UNKNOWN"))} · ${escapeHtml(upper(key.market_type, "UNKNOWN"))}</span>
+        <span>${escapeHtml(key.source_methodology || "multi-method")}</span>
+        <span>${escapeHtml(key.confluence_score_bucket || "agreement bucket unavailable")}</span>
+        <span>regime ${escapeHtml(key.regime_label || "UNLABELLED")}</span>
+      </div>
+      <div class="performance-segment-metrics">
+        <div><span>TOTAL</span><strong>${escapeHtml(segment?.total_n ?? 0)}</strong></div>
+        <div><span>WIN</span><strong>${escapeHtml(segment?.success_n ?? 0)}</strong></div>
+        <div><span>LOSS</span><strong>${escapeHtml(segment?.fail_sl_n ?? 0)}</strong></div>
+        <div><span>AMBIG</span><strong>${escapeHtml(segment?.ambiguous_n ?? 0)}</strong></div>
+        <div><span>TIMEOUT</span><strong>${escapeHtml(segment?.timeout_n ?? 0)}</strong></div>
+        <div><span>INVALID</span><strong>${escapeHtml(segment?.invalidated_n ?? 0)}</strong></div>
+      </div>
+      <div class="performance-descriptive-row">
+        <span>
+          <small>DECISIVE HISTORICAL FRACTION</small>
+          <strong>${escapeHtml(historyLabel)}</strong>
+          <em>descriptive frequency · not probability</em>
+        </span>
+        <span>
+          <small>AVERAGE R</small>
+          <strong>${escapeHtml(rStatus)}</strong>
+          <em>${escapeHtml(segment?.r_evaluable_n ?? 0)} R-evaluable</em>
+        </span>
+        <span>
+          <small>DRAWDOWN R</small>
+          <strong>${escapeHtml(decimalMetric(segment?.max_drawdown_r, " R"))}</strong>
+          <em>segment path only</em>
+        </span>
+      </div>
+    </article>`;
+}
+
+function performanceGroupMarkup(group) {
+  const segments = Array.isArray(group?.segments) ? group.segments : [];
+  const evidenceClass = performanceEvidenceClassLabel(group?.evidence_class);
+  return `
+    <section class="performance-cohort">
+      <header class="performance-cohort-head">
+        <div>
+          <span class="eyebrow">EVIDENCE CLASS</span>
+          <h3>${escapeHtml(evidenceClass)}</h3>
+        </div>
+        <div class="performance-cohort-meta">
+          <span>horizon ${escapeHtml(group?.max_holding_bars ?? "—")} bars</span>
+          <span>stored ${escapeHtml(group?.stored_snapshot_count ?? 0)}</span>
+          <span>latest ${escapeHtml(group?.selected_latest_signal_count ?? 0)}</span>
+        </div>
+      </header>
+      <div class="performance-segment-list">
+        ${segments.length
+          ? segments.map(performanceSegmentMarkup).join("")
+          : '<div class="empty-state"><strong>No segment evidence.</strong><p>Empty cohort is not a zero success rate.</p></div>'}
+      </div>
+    </section>`;
+}
+
+function renderPerformanceCohorts() {
+  const target = byId("performanceCohorts");
+  const data = state.performance;
+  if (!target || !data) return;
+
+  const groups = Array.isArray(data.groups) ? data.groups : [];
+  const counts = Array.isArray(data.evidence_class_counts)
+    ? data.evidence_class_counts
+    : [];
+
+  if (byId("performanceOutcomeCount")) {
+    byId("performanceOutcomeCount").textContent = String(data.outcome_snapshot_count ?? 0);
+  }
+  if (byId("performanceEvidenceClassCount")) {
+    byId("performanceEvidenceClassCount").textContent = String(counts.length);
+  }
+
+  const truthTag = byId("performanceTruthTag");
+  if (truthTag) {
+    truthTag.textContent =
+      data.status === "ready"
+        ? "TRUST · COHORT EVIDENCE READY"
+        : `TRUST · ${upper(data.status, "UNAVAILABLE")}`;
+  }
+
+  if (!groups.length) {
+    target.className = "performance-cohorts empty-state";
+    target.innerHTML =
+      "<strong>Henüz outcome cohort evidence yok.</strong>" +
+      "<p>Empty performance history is NOT MEASURED; %0 başarı oranı değildir.</p>";
+    return;
+  }
+
+  target.className = "performance-cohorts";
+  target.innerHTML = groups.map(performanceGroupMarkup).join("");
+}
+
+function renderPerformancePaper() {
+  const target = byId("performancePaper");
+  const canonical = state.epoch2State || {};
+  const consolidated = canonical.consolidated || {};
+  const vaults = Array.isArray(canonical.vaults) ? canonical.vaults : [];
+
+  if (byId("performancePaperNav")) {
+    byId("performancePaperNav").textContent =
+      canonical.status === "ready" ? moneyText(consolidated.nav_usdt) : "UNAVAILABLE";
+  }
+  if (byId("performanceDrawdown")) {
+    byId("performanceDrawdown").textContent =
+      canonical.status === "ready"
+        ? fractionPercent(consolidated.drawdown_fraction)
+        : "UNAVAILABLE";
+  }
+
+  if (!target) return;
+  if (canonical.status !== "ready") {
+    target.className = "empty-state";
+    target.innerHTML =
+      "<strong>Canonical Epoch 2 performance unavailable.</strong>" +
+      `<p>${escapeHtml(text(canonical.reason, "runtime evidence unavailable"))}</p>`;
+    return;
+  }
+
+  const expectancy =
+    consolidated.expectancy_usdt_per_closed_trade === null ||
+    consolidated.expectancy_usdt_per_closed_trade === undefined
+      ? "NOT YET MEASURED"
+      : moneyText(consolidated.expectancy_usdt_per_closed_trade);
+  const totalCosts =
+    Number(consolidated.fee_usdt || 0) +
+    Number(consolidated.spread_usdt || 0) +
+    Number(consolidated.slippage_usdt || 0);
+
+  target.className = "performance-paper";
+  target.innerHTML = `
+    <div class="performance-paper-hero">
+      <div><span>NAV</span><strong>${escapeHtml(moneyText(consolidated.nav_usdt))}</strong></div>
+      <div><span>REALIZED PNL</span><strong>${escapeHtml(moneyText(consolidated.realized_pnl_usdt))}</strong></div>
+      <div><span>UNREALIZED PNL</span><strong>${escapeHtml(moneyText(consolidated.unrealized_pnl_usdt))}</strong></div>
+      <div><span>CURRENT DRAWDOWN</span><strong>${escapeHtml(fractionPercent(consolidated.drawdown_fraction))}</strong></div>
+    </div>
+    <div class="truth-table">
+      <div class="truth-row"><span>Closed trades</span><strong>${escapeHtml(consolidated.closed_trade_count ?? 0)}</strong></div>
+      <div class="truth-row"><span>Wins / Losses / Breakeven</span><strong>${escapeHtml(consolidated.win_count ?? 0)} / ${escapeHtml(consolidated.loss_count ?? 0)} / ${escapeHtml(consolidated.breakeven_count ?? 0)}</strong></div>
+      <div class="truth-row"><span>Expectancy</span><strong>${escapeHtml(expectancy)}</strong></div>
+      <div class="truth-row"><span>Turnover</span><strong>${escapeHtml(fractionPercent(consolidated.turnover_fraction))}</strong></div>
+      <div class="truth-row"><span>Fee + spread + slippage</span><strong>${escapeHtml(Number.isFinite(totalCosts) ? `${totalCosts} USDT` : "NOT MEASURED")}</strong></div>
+      <div class="truth-row"><span>Metrics status</span><strong>${escapeHtml(capitalStatusText(consolidated.metrics_status))}</strong></div>
+    </div>
+    <div class="performance-vault-compare">
+      ${vaults.map((vault) => `
+        <article>
+          <span>${escapeHtml(vault.vault_id)}</span>
+          <strong>${escapeHtml(moneyText(vault.nav_usdt))}</strong>
+          <small>DD ${escapeHtml(fractionPercent(vault.drawdown_fraction))} · closed ${escapeHtml(vault.closed_trade_count ?? 0)}</small>
+        </article>`).join("")}
+    </div>
+    <p class="proof-footnote">
+      Canonical R21 accounting only. Forecast hit-rate is never substituted for paper-fund performance.
+    </p>`;
+}
+
+function renderPerformance() {
+  renderPerformanceCohorts();
+  renderPerformancePaper();
+}
+
 function renderIntelligence() {
   const target = byId("intelligenceTruth");
   if (!target) return;
@@ -1617,6 +1824,7 @@ function renderAll() {
   renderEpoch();
   renderPaper();
   renderArchive();
+  renderPerformance();
   renderEducation();
   renderIntelligence();
   renderSystem();
@@ -1672,6 +1880,7 @@ async function runBoot() {
     loadEndpoint("archive", API.archive),
     loadEndpoint("education", API.education),
     loadEndpoint("intelligence", API.intelligence),
+    loadEndpoint("performance", API.performance),
   ]);
 
   const marketReady = results.some(
@@ -1707,6 +1916,7 @@ function startPeriodicRefresh() {
       loadEndpoint("radar", API.radar),
       loadEndpoint("epoch2State", API.epoch2State),
       loadEndpoint("archive", API.archive),
+      loadEndpoint("performance", API.performance),
     ]);
     if (results[0].ok) applyHealthTruth(results[0].data);
     await initializeMarketWorkspace({ reload: state.route === "markets" });

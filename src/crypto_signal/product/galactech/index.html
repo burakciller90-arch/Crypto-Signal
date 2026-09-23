@@ -8,7 +8,7 @@
   <title>GALACTECH // CRYPTO SIGNAL</title>
   <link rel="stylesheet" href="/galactech-static/app.css">
 </head>
-<body data-ui-version="galactech-v1.1-archive">
+<body data-ui-version="galactech-v1.1-performance">
   <a class="skip-link" href="#mainContent">Ana içeriğe geç</a>
 
   <div id="coldBoot" class="cold-boot" role="status" aria-live="polite" aria-atomic="true">
@@ -381,19 +381,131 @@
             <div>
               <span class="page-code">06 / PERFORMANCE</span>
               <h1 id="performanceTitle">Performance & Trust</h1>
-              <p>Backtest, walk-forward ve untouched-forward asla tek etiketsiz metriğe karışmaz.</p>
+              <p>Retrospective, walk-forward ve live untouched-forward kanıtları asla tek etiketsiz başarı metriğine karışmaz.</p>
             </div>
+            <span id="performanceTruthTag" class="tag">TRUST · VERIFYING</span>
           </div>
-          <div class="trust-grid">
-            <article class="panel workspace-placeholder">
-              <span class="eyebrow">FORECAST TRUTH</span>
-              <h2>Outcome cohorts</h2>
-              <p>R24 projection customer adapter’ı sonraki slice’ta bağlanacak.</p>
+
+          <div class="performance-summary-grid" aria-label="Performance truth summary">
+            <article class="metric-card">
+              <span>OUTCOME SNAPSHOTS</span>
+              <strong id="performanceOutcomeCount">—</strong>
+              <small>stored immutable evaluations</small>
             </article>
-            <article class="panel workspace-placeholder">
-              <span class="eyebrow">CALIBRATION</span>
-              <h2>Brier / Reliability</h2>
-              <p>Kalibrasyon yoksa yüzde yok. Ölçüm yoksa NOT MEASURED.</p>
+            <article class="metric-card">
+              <span>EVIDENCE CLASSES</span>
+              <strong id="performanceEvidenceClassCount">—</strong>
+              <small>never merged</small>
+            </article>
+            <article class="metric-card">
+              <span>CANONICAL PAPER NAV</span>
+              <strong id="performancePaperNav">—</strong>
+              <small>Epoch 2 · read only</small>
+            </article>
+            <article class="metric-card">
+              <span>CURRENT DRAWDOWN</span>
+              <strong id="performanceDrawdown">—</strong>
+              <small>canonical snapshot</small>
+            </article>
+          </div>
+
+          <article class="panel performance-contract">
+            <div>
+              <span class="eyebrow">TRUST CONTRACT</span>
+              <strong>Historical success ≠ calibrated probability · backtest ≠ untouched-forward</strong>
+            </div>
+            <div class="system-strip-values">
+              <span>winners + losers together</span>
+              <span>missing metric stays missing</span>
+              <span>REAL_CAPITAL=0</span>
+            </div>
+          </article>
+
+          <div class="performance-layout">
+            <section class="panel performance-cohort-panel" aria-labelledby="performanceCohortTitle">
+              <div class="panel-head">
+                <div>
+                  <span class="eyebrow">FORECAST / OUTCOME TRUTH</span>
+                  <h2 id="performanceCohortTitle">Evidence-class cohorts</h2>
+                </div>
+                <span class="tag">DESCRIPTIVE · NOT PROBABILITY</span>
+              </div>
+              <div id="performanceCohorts" class="performance-cohorts empty-state">
+                <strong>Outcome cohort evidence bekleniyor.</strong>
+                <p>Kanıt sınıfları gelmeden oran üretilmez.</p>
+              </div>
+            </section>
+
+            <aside class="panel performance-paper-panel" aria-labelledby="performancePaperTitle">
+              <div class="panel-head">
+                <div>
+                  <span class="eyebrow">CANONICAL PAPER TRACK RECORD</span>
+                  <h2 id="performancePaperTitle">Epoch 2</h2>
+                </div>
+                <span class="tag">R21</span>
+              </div>
+              <div id="performancePaper" class="empty-state">
+                <strong>Canonical paper evidence bekleniyor.</strong>
+                <p>Legacy NAV veya forecast hit-rate paper performansı yerine kullanılmaz.</p>
+              </div>
+            </aside>
+          </div>
+
+          <div class="performance-trust-grid">
+            <article class="panel">
+              <div class="panel-head">
+                <div>
+                  <span class="eyebrow">PROBABILITY CALIBRATION</span>
+                  <h2>Brier / Reliability</h2>
+                </div>
+                <span id="performanceCalibrationStatus" class="tag tag-amber">NOT EXPOSED</span>
+              </div>
+              <div id="performanceCalibration" class="performance-unavailable">
+                <strong>No product runtime calibration artifact.</strong>
+                <p>R24 hesaplama motoru kabul edilmiş olsa da bu müşteri runtime’ında exact persisted R20/R19 calibration stream adapter’ı yok. Brier veya reliability uydurulmaz.</p>
+              </div>
+            </article>
+
+            <article class="panel">
+              <div class="panel-head">
+                <div>
+                  <span class="eyebrow">RISK-ADJUSTED</span>
+                  <h2>Sharpe / Sortino</h2>
+                </div>
+                <span class="tag tag-amber">NOT YET MEASURED</span>
+              </div>
+              <div class="performance-unavailable">
+                <strong>Fixed-period return-series policy yok.</strong>
+                <p>Event-driven NAV snapshot’ları eşit aralıklı getiri serisi gibi davranılarak Sharpe/Sortino üretilmez.</p>
+              </div>
+            </article>
+
+            <article class="panel">
+              <div class="panel-head">
+                <div>
+                  <span class="eyebrow">EVENT BLOCK</span>
+                  <h2>Effectiveness</h2>
+                </div>
+                <span class="tag tag-amber">NOT YET MEASURED</span>
+              </div>
+              <div class="performance-unavailable">
+                <strong>Counterfactual outcome evidence yok.</strong>
+                <p>Bir EVENT_BLOCK olmasaydı ne olacağı kanıtlanmadan “kaçınılan zarar” veya etkinlik oranı gösterilmez.</p>
+              </div>
+            </article>
+
+            <article class="panel">
+              <div class="panel-head">
+                <div>
+                  <span class="eyebrow">VERSION COMPARISON</span>
+                  <h2>Forecast versions</h2>
+                </div>
+                <span class="tag">NOT EXPOSED</span>
+              </div>
+              <div class="performance-unavailable">
+                <strong>Exact R24 version-cohort adapter henüz customer API’de yok.</strong>
+                <p>Setup veya methodology segmentleri forecast version karşılaştırması diye yeniden etiketlenmez.</p>
+              </div>
             </article>
           </div>
         </section>

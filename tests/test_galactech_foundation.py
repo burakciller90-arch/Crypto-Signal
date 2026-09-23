@@ -23,7 +23,7 @@ def test_galactech_preview_is_isolated_truthful_and_accessible(tmp_path: Path) -
 
     # Foundation is parallel until the explicit production UI cutover.
     assert 'data-ui-version="galactech-command-center-v1"' in legacy.text
-    assert 'data-ui-version="galactech-v1.1-archive"' in preview.text
+    assert 'data-ui-version="galactech-v1.1-performance"' in preview.text
 
     for section in (
         "COMMAND",
@@ -69,6 +69,7 @@ def test_galactech_preview_is_isolated_truthful_and_accessible(tmp_path: Path) -
     assert 'archive: "/api/archive/proof-wall?limit=500&offset=0"' in js.text
     assert 'education: "/api/education"' in js.text
     assert 'intelligence: "/api/intelligence-center"' in js.text
+    assert 'performance: "/api/performance"' in js.text
     assert "API · AUTHORITY MISMATCH" in js.text
     assert "NOT VERIFIED" in js.text
     assert "UNAVAILABLE" in js.text

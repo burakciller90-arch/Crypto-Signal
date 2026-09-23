@@ -49,7 +49,7 @@ def test_galactech_markets_workspace_binds_exact_provider_freeze(
     js = script.text
     css = style.text
 
-    assert 'data-ui-version="galactech-v1.1-archive"' in html
+    assert 'data-ui-version="galactech-v1.1-performance"' in html
     assert 'id="marketSymbolSelect"' in html
     assert 'id="marketTimeframeSelect"' in html
     assert 'id="marketFrozenChart"' in html
