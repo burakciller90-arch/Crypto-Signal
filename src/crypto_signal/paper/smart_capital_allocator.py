@@ -453,25 +453,21 @@ def assess_smart_capital_candidate(
     tactical_state, tactical_reasons = _tactical_eligibility(candidate)
     reserve_state, reserve_reasons = _reserve_eligibility(candidate)
 
-    shared = {
-        "candidate_identity": candidate.candidate_identity,
-        "event_risk_identity": candidate.event_risk.evidence_identity,
-        "confluence_identity": (
-            None
-            if candidate.confluence is None
-            else candidate.confluence.snapshot_identity
-        ),
-        "tactical_evidence_identity": (
-            None
-            if candidate.tactical_microstructure is None
-            else candidate.tactical_microstructure.evidence_identity
-        ),
-        "recovery_evidence_identity": (
-            None
-            if candidate.opportunity_recovery is None
-            else candidate.opportunity_recovery.evidence_identity
-        ),
-    }
+    confluence_identity = (
+        None
+        if candidate.confluence is None
+        else candidate.confluence.snapshot_identity
+    )
+    tactical_identity = (
+        None
+        if candidate.tactical_microstructure is None
+        else candidate.tactical_microstructure.evidence_identity
+    )
+    recovery_identity = (
+        None
+        if candidate.opportunity_recovery is None
+        else candidate.opportunity_recovery.evidence_identity
+    )
     vaults = tuple(
         sorted(
             (
@@ -480,32 +476,45 @@ def assess_smart_capital_candidate(
                     starting_budget_usdt=budgets[PaperVaultId.CORE],
                     eligibility_state=core_state,
                     reason_codes=core_reasons,
+                    candidate_identity=candidate.candidate_identity,
+                    event_risk_identity=candidate.event_risk.evidence_identity,
+                    confluence_identity=confluence_identity,
+                    tactical_evidence_identity=tactical_identity,
+                    recovery_evidence_identity=recovery_identity,
                     sizing_required_before_any_trade=(
-                        core_state is VaultEligibilityState.ELIGIBLE_RESEARCH_ENVELOPE
+                        core_state
+                        is VaultEligibilityState.ELIGIBLE_RESEARCH_ENVELOPE
                     ),
-                    **shared,
                 ),
                 VaultCapitalEnvelope(
                     vault_id=PaperVaultId.TACTICAL,
                     starting_budget_usdt=budgets[PaperVaultId.TACTICAL],
                     eligibility_state=tactical_state,
                     reason_codes=tactical_reasons,
+                    candidate_identity=candidate.candidate_identity,
+                    event_risk_identity=candidate.event_risk.evidence_identity,
+                    confluence_identity=confluence_identity,
+                    tactical_evidence_identity=tactical_identity,
+                    recovery_evidence_identity=recovery_identity,
                     sizing_required_before_any_trade=(
                         tactical_state
                         is VaultEligibilityState.ELIGIBLE_RESEARCH_ENVELOPE
                     ),
-                    **shared,
                 ),
                 VaultCapitalEnvelope(
                     vault_id=PaperVaultId.OPPORTUNITY_RESERVE,
                     starting_budget_usdt=budgets[PaperVaultId.OPPORTUNITY_RESERVE],
                     eligibility_state=reserve_state,
                     reason_codes=reserve_reasons,
+                    candidate_identity=candidate.candidate_identity,
+                    event_risk_identity=candidate.event_risk.evidence_identity,
+                    confluence_identity=confluence_identity,
+                    tactical_evidence_identity=tactical_identity,
+                    recovery_evidence_identity=recovery_identity,
                     sizing_required_before_any_trade=(
                         reserve_state
                         is VaultEligibilityState.ELIGIBLE_RESEARCH_ENVELOPE
                     ),
-                    **shared,
                 ),
             ),
             key=lambda item: item.vault_id.value,
