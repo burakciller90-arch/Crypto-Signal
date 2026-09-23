@@ -261,17 +261,17 @@ def assess_capital_position_sizing(
             raise ValueError("sizing probability was not available at forecast PIT cutoff")
 
     by_vault: dict[PaperVaultId, AcceptedSizingRiskInputs] = {}
-    for risk in risk_inputs:
-        if risk.vault_id in by_vault:
+    for risk_input in risk_inputs:
+        if risk_input.vault_id in by_vault:
             raise ValueError("duplicate sizing risk input for vault")
-        by_vault[risk.vault_id] = risk
+        by_vault[risk_input.vault_id] = risk_input
 
     results: list[SizingBridgeVaultResult] = []
     for vault in capital.allocation.vaults:
-        risk = by_vault.get(vault.vault_id)
+        selected_risk = by_vault.get(vault.vault_id)
 
         if vault.eligibility_state is VaultEligibilityState.HOLD_CASH:
-            if risk is not None:
+            if selected_risk is not None:
                 raise ValueError(
                     "allocator HOLD_CASH vault cannot accept sizing risk inputs"
                 )
@@ -284,7 +284,7 @@ def assess_capital_position_sizing(
             )
             continue
 
-        if risk is None:
+        if selected_risk is None:
             results.append(
                 _vault_result(
                     vault_id=vault.vault_id,
@@ -294,29 +294,29 @@ def assess_capital_position_sizing(
             )
             continue
 
-        if risk.asset != issuance.forecast.symbol:
+        if selected_risk.asset != issuance.forecast.symbol:
             raise ValueError("sizing risk input market mismatch")
-        if not issuance.forecast.issued_at_ms <= risk.measured_at_ms <= sized_at_ms:
+        if not issuance.forecast.issued_at_ms <= selected_risk.measured_at_ms <= sized_at_ms:
             raise ValueError("sizing risk input time outside decision-to-sizing window")
 
         context = build_position_sizing_risk_context(
             vault_id=vault.vault_id,
             asset=issuance.forecast.symbol,
-            as_of_ms=risk.measured_at_ms,
+            as_of_ms=selected_risk.measured_at_ms,
             allocator_assessment_identity=capital.allocation.assessment_identity,
             allocator_candidate_identity=capital.candidate.candidate_identity,
-            expected_win_r=risk.expected_win_r,
-            expected_loss_r=risk.expected_loss_r,
-            transaction_cost_r=risk.transaction_cost_r,
-            absolute_correlation_0_1=risk.absolute_correlation_0_1,
-            current_drawdown_fraction=risk.current_drawdown_fraction,
-            volatility_fraction=risk.volatility_fraction,
-            liquidity_score_0_1=risk.liquidity_score_0_1,
+            expected_win_r=selected_risk.expected_win_r,
+            expected_loss_r=selected_risk.expected_loss_r,
+            transaction_cost_r=selected_risk.transaction_cost_r,
+            absolute_correlation_0_1=selected_risk.absolute_correlation_0_1,
+            current_drawdown_fraction=selected_risk.current_drawdown_fraction,
+            volatility_fraction=selected_risk.volatility_fraction,
+            liquidity_score_0_1=selected_risk.liquidity_score_0_1,
             source_evidence_identities=tuple(
                 sorted(
                     {
-                        *risk.source_evidence_identities,
-                        risk.risk_identity,
+                        *selected_risk.source_evidence_identities,
+                        selected_risk.risk_identity,
                         capital.bridge_identity,
                         issuance.proof.proof_identity,
                     }
@@ -334,7 +334,7 @@ def assess_capital_position_sizing(
                 vault_id=vault.vault_id,
                 state=SizingBridgeState.ASSESSED_SHADOW,
                 reason_codes=("position_sizing_assessed_shadow_only",),
-                risk_identity=risk.risk_identity,
+                risk_identity=selected_risk.risk_identity,
                 context=context,
                 assessment=assessment,
             )
