@@ -168,7 +168,11 @@ def build_divergence_freeze(
         problems.append("price_does_not_cover_trade_window")
 
     state = DivergenceState.UNRESOLVED
-    first_mid = last_mid = move = cvd = imbalance = None
+    first_mid: Decimal | None = None
+    last_mid: Decimal | None = None
+    move: Decimal | None = None
+    cvd: Decimal | None = None
+    imbalance: Decimal | None = None
     flags = ["window_local_cvd_only", "book_mid_not_executable_price", *problems]
     if not problems:
         assert flow.analysis.metrics is not None
