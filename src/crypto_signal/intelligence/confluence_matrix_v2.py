@@ -53,10 +53,10 @@ LOCKED_M6_PRIORS = (
     ConfluenceFamilyPrior(ConfluenceFamily.ONCHAIN, Decimal("0.15")),
 )
 LOCKED_M6_THRESHOLD_HYPOTHESES = (
-    Decimal("70"),
-    Decimal("75"),
-    Decimal("80"),
-    Decimal("85"),
+    Decimal(70),
+    Decimal(75),
+    Decimal(80),
+    Decimal(85),
 )
 
 
@@ -308,14 +308,19 @@ class ConfluenceMatrixSnapshot:
                 raise ValueError("measured M6 snapshot requires full family coverage")
             if self.material_conflict_identities:
                 raise ValueError("measured M6 snapshot cannot carry material conflict")
-        if self.resolution is ConfluenceMatrixResolution.CONFLICT:
-            if not self.material_conflict_identities:
-                raise ValueError("conflict M6 snapshot requires material conflict evidence")
-        if self.resolution is ConfluenceMatrixResolution.ABSTAIN:
-            if not any(
-                item.state is MetaEvidenceState.ABSTAIN for item in self.contributions
-            ):
-                raise ValueError("abstain M6 snapshot requires abstaining family evidence")
+        if (
+            self.resolution is ConfluenceMatrixResolution.CONFLICT
+            and not self.material_conflict_identities
+        ):
+            raise ValueError("conflict M6 snapshot requires material conflict evidence")
+        if (
+            self.resolution is ConfluenceMatrixResolution.ABSTAIN
+            and not any(
+                item.state is MetaEvidenceState.ABSTAIN
+                for item in self.contributions
+            )
+        ):
+            raise ValueError("abstain M6 snapshot requires abstaining family evidence")
         if self.score_semantic != M6_SCORE_SEMANTIC:
             raise ValueError("M6 snapshot score semantic mismatch")
         if self.probability_status != M6_PROBABILITY_STATUS:
