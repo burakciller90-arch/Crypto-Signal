@@ -75,12 +75,13 @@ class EventRiskAnalysis:
     consumed_event_identities: tuple[str, ...]
     nearest_event_identity: str | None
     nearest_event_scheduled_at_ms: int | None
-    coverage_identity: str
+    coverage_identity: str | None
     uncertainty_flags: tuple[str, ...]
 
     def __post_init__(self) -> None:
         _require_sha256(self.evidence_identity, "event-risk evidence identity")
-        _require_sha256(self.coverage_identity, "event-risk coverage identity")
+        if self.coverage_identity is not None:
+            _require_sha256(self.coverage_identity, "event-risk coverage identity")
         if self.engine_version != EVENT_RISK_ENGINE_VERSION:
             raise ValueError("unsupported event-risk engine version")
         if not self.asset or self.asset != self.asset.upper():
@@ -108,15 +109,21 @@ class EventRiskEvidenceFreeze:
     freeze_identity: str
     schema_version: str
     analysis: EventRiskAnalysis
-    coverage: EventCalendarCoverage
+    coverage: EventCalendarCoverage | None
     events: tuple[StructuredEventObservation, ...]
 
     def __post_init__(self) -> None:
         _require_sha256(self.freeze_identity, "event-risk freeze identity")
         if self.schema_version != EVENT_RISK_FREEZE_SCHEMA_VERSION:
             raise ValueError("unsupported event-risk freeze schema")
-        if self.coverage.coverage_identity != self.analysis.coverage_identity:
-            raise ValueError("event-risk coverage identity mismatch")
+        if self.coverage is None:
+            if self.analysis.coverage_identity is not None:
+                raise ValueError("event-risk missing coverage identity mismatch")
+        else:
+            if self.coverage.coverage_identity != self.analysis.coverage_identity:
+                raise ValueError("event-risk coverage identity mismatch")
+            if self.coverage.observed_at_ms > self.analysis.as_of_ms:
+                raise ValueError("event-risk freeze contains future coverage evidence")
         if any(
             max(item.source_timestamp_ms, item.ingested_at_ms) > self.analysis.as_of_ms
             for item in self.events
@@ -132,7 +139,7 @@ class EventRiskEvidenceFreeze:
 def analyze_event_risk(
     events: Sequence[StructuredEventObservation],
     *,
-    coverage: EventCalendarCoverage,
+    coverage: EventCalendarCoverage | None,
     asset: str,
     as_of_ms: int,
     config: EventRiskConfig = DEFAULT_EVENT_RISK_CONFIG,
@@ -149,7 +156,7 @@ def analyze_event_risk(
 def build_event_risk_evidence_freeze(
     events: Sequence[StructuredEventObservation],
     *,
-    coverage: EventCalendarCoverage,
+    coverage: EventCalendarCoverage | None,
     asset: str,
     as_of_ms: int,
     config: EventRiskConfig = DEFAULT_EVENT_RISK_CONFIG,
@@ -158,6 +165,18 @@ def build_event_risk_evidence_freeze(
         raise ValueError("event-risk asset must be non-empty uppercase")
     if as_of_ms < 0:
         raise ValueError("event-risk as_of_ms must be non-negative")
+
+    if coverage is None or coverage.observed_at_ms > as_of_ms:
+        analysis = _analysis(
+            asset=asset,
+            as_of_ms=as_of_ms,
+            state=EventRiskState.DEGRADED_DATA,
+            events=(),
+            coverage=None,
+            nearest=None,
+            flags=("event_calendar_coverage_unavailable_at_as_of",),
+        )
+        return _freeze(analysis, None, ())
 
     degraded_flags = _coverage_flags(coverage, as_of_ms=as_of_ms, config=config)
     if degraded_flags:
@@ -243,12 +262,7 @@ def _coverage_flags(
     config: EventRiskConfig,
 ) -> tuple[str, ...]:
     flags: list[str] = []
-    if coverage.observed_at_ms > as_of_ms:
-        flags.append("event_calendar_coverage_unavailable_at_as_of")
-    if (
-        coverage.observed_at_ms <= as_of_ms
-        and as_of_ms - coverage.observed_at_ms > config.max_coverage_age_ms
-    ):
+    if as_of_ms - coverage.observed_at_ms > config.max_coverage_age_ms:
         flags.append("stale_event_calendar_coverage")
     required_start = max(0, as_of_ms - config.block_after_ms - config.stabilization_ms)
     required_end = as_of_ms + config.caution_lead_ms
@@ -337,7 +351,7 @@ def _analysis(
     as_of_ms: int,
     state: EventRiskState,
     events: tuple[StructuredEventObservation, ...],
-    coverage: EventCalendarCoverage,
+    coverage: EventCalendarCoverage | None,
     nearest: StructuredEventObservation | None,
     flags: tuple[str, ...],
 ) -> EventRiskAnalysis:
@@ -346,7 +360,7 @@ def _analysis(
         "asset": asset,
         "as_of_ms": as_of_ms,
         "consumed_event_identities": ids,
-        "coverage_identity": coverage.coverage_identity,
+        "coverage_identity": None if coverage is None else coverage.coverage_identity,
         "engine_version": EVENT_RISK_ENGINE_VERSION,
         "nearest_event_identity": None if nearest is None else nearest.event_identity,
         "nearest_event_scheduled_at_ms": (
@@ -366,19 +380,19 @@ def _analysis(
         nearest_event_scheduled_at_ms=(
             None if nearest is None else nearest.scheduled_at_ms
         ),
-        coverage_identity=coverage.coverage_identity,
+        coverage_identity=None if coverage is None else coverage.coverage_identity,
         uncertainty_flags=flags,
     )
 
 
 def _freeze(
     analysis: EventRiskAnalysis,
-    coverage: EventCalendarCoverage,
+    coverage: EventCalendarCoverage | None,
     events: tuple[StructuredEventObservation, ...],
 ) -> EventRiskEvidenceFreeze:
     payload = {
         "analysis_identity": analysis.evidence_identity,
-        "coverage_identity": coverage.coverage_identity,
+        "coverage_identity": None if coverage is None else coverage.coverage_identity,
         "event_identities": [item.event_identity for item in events],
         "schema_version": EVENT_RISK_FREEZE_SCHEMA_VERSION,
     }
