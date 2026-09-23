@@ -8,7 +8,7 @@
   <title>GALACTECH // CRYPTO SIGNAL</title>
   <link rel="stylesheet" href="/galactech-static/app.css">
 </head>
-<body data-ui-version="galactech-v1.1-performance">
+<body data-ui-version="galactech-v1.1-learn-system">
   <a class="skip-link" href="#mainContent">Ana içeriğe geç</a>
 
   <div id="coldBoot" class="cold-boot" role="status" aria-live="polite" aria-atomic="true">
@@ -515,12 +515,42 @@
             <div>
               <span class="page-code">07 / LEARN</span>
               <h1 id="learnTitle">Learn From Evidence</h1>
-              <p>Kavramları mümkün olduğunda gerçek karar evidence’ına bağla.</p>
+              <p>Kavramı öğren, sonra gerçek immutable kanıtta ne anlama geldiğini ayır. Eğitim içeriği tahmin veya emir değildir.</p>
+            </div>
+            <span id="learnCatalogTag" class="tag">CATALOG · VERIFYING</span>
+          </div>
+
+          <div class="learn-toolbar">
+            <label class="learn-search">
+              <span class="eyebrow">SEARCH CONCEPT</span>
+              <input id="learnSearchInput" type="search" autocomplete="off"
+                placeholder="CVD, absorption, invalidation, abstain…" aria-label="Eğitim kavramlarında ara">
+            </label>
+            <div class="learn-quick-links" role="group" aria-label="Hızlı eğitim kavramları">
+              <button type="button" data-learn-concept="cvd">CVD</button>
+              <button type="button" data-learn-concept="absorption">ABSORPTION</button>
+              <button type="button" data-learn-concept="invalidation">INVALIDATION</button>
+              <button type="button" data-learn-concept="abstain">ABSTAIN</button>
+              <button type="button" data-learn-concept="agreement_vs_probability">AGREEMENT ≠ P</button>
+              <button type="button" data-learn-concept="calibration">CALIBRATION</button>
             </div>
           </div>
-          <div id="learnGrid" class="learn-grid empty-state">
+
+          <article class="panel learn-contract">
+            <div>
+              <span class="eyebrow">EDUCATION CONTRACT</span>
+              <strong>Teach the evidence · never invent certainty</strong>
+            </div>
+            <div class="system-strip-values">
+              <span>concept ≠ signal</span>
+              <span>agreement ≠ probability</span>
+              <span>REAL_CAPITAL=0</span>
+            </div>
+          </article>
+
+          <div id="learnGrid" class="learn-grid learn-grid-rich empty-state">
             <strong>Eğitim kataloğu bekleniyor.</strong>
-            <p>CVD, absorption, abstain ve invalidation gibi kavramlar burada açılacak.</p>
+            <p>CVD, absorption, abstain ve invalidation gibi kavramlar deterministik katalogdan yüklenecek.</p>
           </div>
         </section>
 
@@ -529,18 +559,41 @@
             <div>
               <span class="page-code">08 / SYSTEM</span>
               <h1 id="systemTitle">System Truth</h1>
-              <p>Sağlık yalnız ölçülen kanıtla yeşil olur.</p>
+              <p>Bu ekran yalnız müşteri API’sinin gerçekten ölçebildiği durumu gösterir. API READY, Market Tape ONLINE demek değildir.</p>
             </div>
+            <span id="systemTruthTag" class="tag">TRUTH · VERIFYING</span>
           </div>
-          <div id="systemGrid" class="system-grid">
-            <article class="health-card"><span>PRODUCT API</span><strong id="systemApi">VERIFYING</strong></article>
-            <article class="health-card"><span>LEDGER</span><strong id="systemLedger">VERIFYING</strong></article>
-            <article class="health-card"><span>MARKET TAPE</span><strong>NOT EXPOSED</strong></article>
-            <article class="health-card"><span>COLD ARCHIVE</span><strong>NOT EXPOSED</strong></article>
-            <article class="health-card"><span>EVENT FEED</span><strong>NOT EXPOSED</strong></article>
-            <article class="health-card"><span>LATENCY</span><strong>NOT MEASURED</strong></article>
-            <article class="health-card"><span>REAL CAPITAL</span><strong class="safe-text">DISABLED</strong></article>
-            <article class="health-card"><span>AUTHORITY</span><strong>READ ONLY</strong></article>
+
+          <article class="panel system-truth-contract">
+            <div>
+              <span class="eyebrow">FAIL-CLOSED HEALTH</span>
+              <strong>Measured truth only</strong>
+            </div>
+            <div class="system-strip-values">
+              <span>no fake latency</span>
+              <span>no fake freshness</span>
+              <span>no fake LIVE</span>
+              <span>REAL_CAPITAL=0</span>
+            </div>
+          </article>
+
+          <div id="systemGrid" class="system-grid system-grid-rich">
+            <article class="health-card"><span>PRODUCT API</span><strong id="systemApi">VERIFYING</strong><small id="systemApiNote">health endpoint</small></article>
+            <article class="health-card"><span>SIGNAL LEDGER</span><strong id="systemLedger">VERIFYING</strong><small>immutable freeze store</small></article>
+            <article class="health-card"><span>EPOCH 2 PAPER</span><strong id="systemEpoch2">VERIFYING</strong><small id="systemEpoch2Note">canonical R21</small></article>
+            <article class="health-card"><span>PROOF WALL</span><strong id="systemArchive">VERIFYING</strong><small>outcome schema</small></article>
+            <article class="health-card"><span>MARKET EVIDENCE</span><strong id="systemMarketEvidence">VERIFYING</strong><small id="systemMarketEvidenceNote">radar customer API</small></article>
+            <article class="health-card"><span>INTELLIGENCE API</span><strong id="systemIntelligence">VERIFYING</strong><small>customer projection</small></article>
+            <article class="health-card"><span>PERFORMANCE API</span><strong id="systemPerformance">VERIFYING</strong><small>outcome cohorts</small></article>
+            <article class="health-card"><span>EDUCATION CATALOG</span><strong id="systemEducation">VERIFYING</strong><small>deterministic lessons</small></article>
+            <article class="health-card"><span>ALERT OUTBOX</span><strong id="systemAlerts">VERIFYING</strong><small>presence only</small></article>
+            <article class="health-card health-card-unmeasured"><span>MARKET TAPE RUNTIME</span><strong>NOT EXPOSED</strong><small>product API cannot assert ONLINE</small></article>
+            <article class="health-card health-card-unmeasured"><span>COLD ARCHIVE</span><strong>NOT EXPOSED</strong><small>runtime proof unavailable here</small></article>
+            <article class="health-card health-card-unmeasured"><span>EVENT FEED RUNTIME</span><strong>NOT EXPOSED</strong><small>no customer health adapter</small></article>
+            <article class="health-card health-card-unmeasured"><span>LATENCY</span><strong>NOT MEASURED</strong><small>no instrumentation exposed</small></article>
+            <article class="health-card health-card-unmeasured"><span>FRESHNESS</span><strong>NOT MEASURED</strong><small>no universal product freshness clock</small></article>
+            <article class="health-card"><span>REAL CAPITAL</span><strong class="safe-text">DISABLED</strong><small>hard authority boundary</small></article>
+            <article class="health-card"><span>AUTHORITY</span><strong>READ ONLY</strong><small>no order / credential path</small></article>
           </div>
         </section>
       </main>
