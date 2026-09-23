@@ -5040,3 +5040,37 @@ Authority boundary:
   final v1.1.0 release reconciliation.
 
 Wake pause remains untouched. Cursor workers remain disabled. REAL_CAPITAL=0.
+
+## 2026-09-23 — R25 integrated decision/capital/replay rail accepted
+
+R25 closed the gap between previously accepted intelligence modules and a traceable product decision/capital rail.
+
+Accepted lineage now covers:
+- accepted M2-M6 / Event Risk / optional exact-scope R19 evidence;
+- Unified Decision Runtime;
+- immutable R20 Forecast + R20.5 Decision Proof + Live Intelligence Feed persistence;
+- exact source-to-proof evidence coverage;
+- richer liquidity/liquidation/order-flow/derivatives/on-chain evidence without fabricated direction or actor intent;
+- Smart Capital / canonical 600-300-100 Epoch 2 research envelopes;
+- explicit SHA-bound Position Sizing risk inputs with Kelly disabled unless exact calibrated probability exists;
+- explicit reviewed, non-mutating R22 intent previews;
+- isolated append-only Shadow Intent Journal;
+- deterministic restart/replay;
+- immutable Shadow Cycle Manifest;
+- crash/restart-safe persisted shadow cycles;
+- exact forecast-to-capital-cycle Product API + GALACTECH Evidence Room linkage;
+- immutable Runtime Replay Observation requiring INSERTED/INSERTED then exact IDEMPOTENT/IDEMPOTENT replay;
+- GALACTECH replay truth that remains NOT MEASURED without persisted runtime observation;
+- component-wise Operational Runtime Truth across Decision Evidence, shadow journal, cycle manifest, replay observation, canonical Epoch 2 and product exposure.
+
+Key accepted hosted gates include:
+- Slice 13 exact forecast/cycle link rebased gate `35899730503` SUCCESS;
+- Slice 14 runtime replay observation gate `35900322189` SUCCESS;
+- Slice 15 runtime replay Product Truth gate `35900809363` SUCCESS;
+- Slice 16 Operational Truth gate `35901696208` SUCCESS;
+- exact-main Stage10 after R25 Operational Truth `35901921054` SUCCESS.
+
+Old GALACTECH production-root cutover PR #932 was closed as stale/unmerged because it predates the accepted R25 rail and was 20 commits behind the reconciled main.
+
+Canonical next development frontier: generate a new latest-main GALACTECH root-cutover candidate and rerun hosted cutover + integrated release-candidate acceptance. Production deployment/UID504 live activation remains separately authority-gated. REAL_CAPITAL=0.
+
