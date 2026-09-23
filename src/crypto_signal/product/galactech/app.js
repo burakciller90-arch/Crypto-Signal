@@ -14,10 +14,13 @@ const API = Object.freeze({
   decisionStatus: "/api/decision-evidence/status",
   shadowRail: "/api/shadow-decision-rail/status",
   shadowCycleStatus: "/api/shadow-cycle-manifest/status?limit=20",
+  replayStatus: "/api/runtime-replay-observation/status",
   liveFeed: "/api/intelligence-feed?limit=100",
   decisionProof: (identity) => `/api/decision-proof/${encodeURIComponent(identity)}`,
   shadowForecastCycle: (identity) =>
     `/api/shadow-decision-rail/forecast/${encodeURIComponent(identity)}`,
+  replayForecast: (identity) =>
+    `/api/runtime-replay-observation/forecast/${encodeURIComponent(identity)}`,
   assetCockpit: (symbol, timeframe) =>
     `/api/assets/${encodeURIComponent(symbol)}/${encodeURIComponent(timeframe)}?recent_limit=30`,
   signalDetail: (identity) => `/api/signals/${encodeURIComponent(identity)}`,
@@ -53,6 +56,7 @@ const state = {
   decisionStatus: null,
   shadowRail: null,
   shadowCycleStatus: null,
+  replayStatus: null,
   liveFeed: null,
   marketLayer: "PA",
   marketSelection: null,
@@ -1146,32 +1150,43 @@ function renderShadowDecisionRail() {
   const target = byId("shadowRailOverview");
   if (!target) return;
 
-  const data = state.shadowRail || {};
-  const snapshot = data.snapshot || {};
+  const journalData = state.shadowRail || {};
+  const journalSnapshot = journalData.snapshot || {};
   const cycleData = state.shadowCycleStatus || {};
   const cycleSnapshot = cycleData.snapshot || {};
-  const ready = data.status === "ready";
+  const replayData = state.replayStatus || {};
+  const replaySnapshot = replayData.snapshot || {};
+
+  const journalReady = journalData.status === "ready";
   const cycleReady = cycleData.status === "ready";
-  const replayVerified =
-    snapshot.quick_check_ok === true && snapshot.read_only_verified === true;
-  const cycleVerified =
+  const replayReady =
+    replayData.status === "ready" &&
+    replayData.restart_replay_observation === "VERIFIED";
+  const journalIntegrity =
+    journalSnapshot.quick_check_ok === true &&
+    journalSnapshot.read_only_verified === true;
+  const cycleIntegrity =
     cycleSnapshot.quick_check_ok === true &&
     cycleSnapshot.read_only_verified === true;
-  const lastRecords = Array.isArray(snapshot.last_record_identities)
-    ? snapshot.last_record_identities
+  const replayIntegrity =
+    replayReady &&
+    replaySnapshot.quick_check_ok === true &&
+    replaySnapshot.read_only_verified === true;
+  const lastRecords = Array.isArray(journalSnapshot.last_record_identities)
+    ? journalSnapshot.last_record_identities
     : [];
   const latestCycles = Array.isArray(cycleData.latest)
     ? cycleData.latest
     : [];
   const latestCycle = latestCycles[0] || null;
 
-  if (!ready && !cycleReady) {
+  if (!journalReady && !cycleReady && !replayReady) {
     target.innerHTML = `
       <article class="panel capital-unavailable">
         <span class="eyebrow">SHADOW DECISION RAIL</span>
         <h2>Runtime shadow evidence unavailable</h2>
         <p>${escapeHtml(text(
-          data.reason || cycleData.reason,
+          journalData.reason || cycleData.reason || replayData.reason,
           "shadow decision rail not exposed"
         ))}</p>
         <div class="truth-table">
@@ -1182,7 +1197,7 @@ function renderShadowDecisionRail() {
           <div class="truth-row"><span>Canonical Epoch 2 mutation</span><strong>DISABLED</strong></div>
           <div class="truth-row"><span>Production authority</span><strong>DISABLED</strong></div>
         </div>
-        <p>Unavailable shadow evidence is not interpreted as a trade, fill, or canonical paper mutation.</p>
+        <p>Hosted acceptance is never upgraded into runtime replay evidence.</p>
       </article>`;
     return;
   }
@@ -1192,21 +1207,32 @@ function renderShadowDecisionRail() {
       <div class="panel-head">
         <div>
           <span class="eyebrow">SHADOW DECISION RAIL / READ ONLY</span>
-          <h2>${escapeHtml(snapshot.record_count ?? 0)} journaled previews ·
-            ${escapeHtml(cycleSnapshot.record_count ?? 0)} cycle manifests</h2>
+          <h2>${escapeHtml(journalSnapshot.record_count ?? 0)} previews ·
+            ${escapeHtml(cycleSnapshot.record_count ?? 0)} manifests ·
+            ${escapeHtml(replaySnapshot.record_count ?? 0)} replay observations</h2>
         </div>
-        <span class="truth-chip ${replayVerified ? "truth-chip-ready" : "truth-chip-muted"}">
-          ${replayVerified ? "REPLAY · VERIFIED" : "REPLAY · UNVERIFIED"}
+        <span class="truth-chip ${replayIntegrity ? "truth-chip-ready" : "truth-chip-muted"}">
+          ${replayIntegrity
+            ? "RESTART / REPLAY · VERIFIED"
+            : "RESTART / REPLAY · NOT PERSISTED"}
         </span>
       </div>
       <div class="truth-table">
-        <div class="truth-row"><span>Journal</span><strong>${escapeHtml(data.journal_filename || "configured")}</strong></div>
-        <div class="truth-row"><span>SQLite quick_check</span><strong>${snapshot.quick_check_ok === true ? "PASS" : "UNVERIFIED"}</strong></div>
-        <div class="truth-row"><span>Read-only replay</span><strong>${snapshot.read_only_verified === true ? "VERIFIED" : "UNVERIFIED"}</strong></div>
-        <div class="truth-row"><span>Cycle manifest</span><strong>${cycleVerified ? "INTEGRITY VERIFIED" : "NOT PERSISTED"}</strong></div>
-        <div class="truth-row"><span>Capital Science lineage</span><strong>${escapeHtml(cycleData.capital_science_lineage || "NOT PERSISTED")}</strong></div>
-        <div class="truth-row"><span>Sizing lineage</span><strong>${escapeHtml(cycleData.sizing_lineage || "NOT PERSISTED")}</strong></div>
-        <div class="truth-row"><span>Restart/replay observation</span><strong>${escapeHtml(cycleData.restart_replay_observation || "NOT PERSISTED")}</strong></div>
+        <div class="truth-row"><span>Preview journal</span><strong>${
+          journalIntegrity ? "INTEGRITY VERIFIED" : "NOT PERSISTED"
+        }</strong></div>
+        <div class="truth-row"><span>Cycle manifest</span><strong>${
+          cycleIntegrity ? "INTEGRITY VERIFIED" : "NOT PERSISTED"
+        }</strong></div>
+        <div class="truth-row"><span>Capital Science lineage</span><strong>${
+          escapeHtml(cycleData.capital_science_lineage || "NOT PERSISTED")
+        }</strong></div>
+        <div class="truth-row"><span>Sizing lineage</span><strong>${
+          escapeHtml(cycleData.sizing_lineage || "NOT PERSISTED")
+        }</strong></div>
+        <div class="truth-row"><span>Restart/replay observation</span><strong>${
+          replayIntegrity ? "VERIFIED" : "NOT PERSISTED"
+        }</strong></div>
         <div class="truth-row"><span>Canonical Epoch 2 mutation</span><strong class="safe-text">DISABLED</strong></div>
         <div class="truth-row"><span>Production authority</span><strong class="safe-text">DISABLED</strong></div>
         <div class="truth-row"><span>REAL CAPITAL</span><strong class="safe-text">DISABLED</strong></div>
@@ -1225,14 +1251,14 @@ function renderShadowDecisionRail() {
             ? lastRecords.map((item) =>
                 `<span>${escapeHtml(item?.[0] || "UNKNOWN")} <code>${escapeHtml(shortIdentity(item?.[1]))}</code></span>`
               ).join("")
-            : "<span>No shadow preview has been journaled.</span>"}
+            : "<span>No shadow cycle manifest has been persisted.</span>"}
         </div>
       `}
       <p>
-        Cycle manifest proves persisted forecast/proof/capital/sizing/review/preview
-        lineage. It does not prove a deployed restart/replay observation.
+        Restart/replay is VERIFIED only by the dedicated immutable runtime observation
+        ledger after INSERTED → exact IDEMPOTENT replay on the same runtime identity.
       </p>
-      <p>Reviewed preview evidence only · not a fill, not canonical NAV mutation, not live trading.</p>
+      <p>Research evidence only · not a fill, not canonical NAV mutation, not live trading.</p>
     </article>`;
 }
 
@@ -1879,16 +1905,23 @@ async function openEvidenceRoom(identity, trigger) {
     renderDecisionProofExtension(decisionProof);
     const forecastIdentity = decisionProof?.proof?.forecast_identity;
     if (/^[0-9a-f]{64}$/.test(text(forecastIdentity, ""))) {
-      const shadowCycle = await fetchJson(
-        API.shadowForecastCycle(forecastIdentity)
-      ).catch(() => ({
-        status: "unavailable",
-        reason: "exact_shadow_cycle_lookup_failed",
-        forecast_identity: forecastIdentity,
-        read_only: true,
-        real_capital: 0,
-      }));
-      renderShadowCycleExtension(shadowCycle);
+      const [shadowCycle, replayObservation] = await Promise.all([
+        fetchJson(API.shadowForecastCycle(forecastIdentity)).catch(() => ({
+          status: "unavailable",
+          reason: "exact_shadow_cycle_lookup_failed",
+          forecast_identity: forecastIdentity,
+          read_only: true,
+          real_capital: 0,
+        })),
+        fetchJson(API.replayForecast(forecastIdentity)).catch(() => ({
+          status: "unavailable",
+          reason: "exact_runtime_replay_lookup_failed",
+          forecast_identity: forecastIdentity,
+          read_only: true,
+          real_capital: 0,
+        })),
+      ]);
+      renderShadowCycleExtension(shadowCycle, replayObservation);
     }
   } catch (error) {
     console.warn("[GALACTECH] signal detail unavailable", error);
@@ -1930,7 +1963,7 @@ function renderDecisionProofExtension(payload) {
   else body.appendChild(section);
 }
 
-function renderShadowCycleExtension(payload) {
+function renderShadowCycleExtension(payload, replayPayload) {
   const body = byId("evidenceDialogBody");
   if (!body) return;
 
@@ -1953,9 +1986,19 @@ function renderShadowCycleExtension(payload) {
     const method = cycle.reviewed_method
       ? upper(cycle.reviewed_method)
       : "NONE";
+    const observation = replayPayload?.observation || null;
+    const exactReplayVerified =
+      replayPayload?.status === "ready" &&
+      replayPayload?.restart_replay_observation === "VERIFIED" &&
+      observation?.restart_replay_verified === true &&
+      observation?.forecast_identity === cycle.forecast_identity &&
+      observation?.cycle_identity === cycle.cycle_identity &&
+      observation?.manifest_identity === cycle.manifest_identity &&
+      observation?.preview_identity === cycle.preview_identity;
+
     section.innerHTML = `
       <span class="proof-section-label">R25 CAPITAL DECISION LINEAGE</span>
-      <h3>Exact forecast → capital → sizing → review → preview</h3>
+      <h3>Exact forecast → capital → sizing → review → preview → replay</h3>
       <div class="truth-table">
         <div class="truth-row"><span>FORECAST</span><strong>${escapeHtml(shortIdentity(cycle.forecast_identity))}</strong></div>
         <div class="truth-row"><span>DECISION PROOF</span><strong>${escapeHtml(shortIdentity(cycle.proof_identity))}</strong></div>
@@ -1966,11 +2009,19 @@ function renderShadowCycleExtension(payload) {
         <div class="truth-row"><span>R22 PREVIEW</span><strong>${escapeHtml(shortIdentity(cycle.preview_identity))}</strong></div>
         <div class="truth-row"><span>SHADOW JOURNAL REF</span><strong>${escapeHtml(shortIdentity(cycle.journal_record_identity))}</strong></div>
         <div class="truth-row"><span>CYCLE MANIFEST</span><strong>${escapeHtml(shortIdentity(cycle.manifest_identity))}</strong></div>
+        <div class="truth-row"><span>RESTART / REPLAY</span><strong class="${
+          exactReplayVerified ? "state-positive" : "state-watch"
+        }">${exactReplayVerified ? "VERIFIED" : "NOT PERSISTED FOR THIS EXACT CYCLE"}</strong></div>
+        ${exactReplayVerified ? `
+          <div class="truth-row"><span>REPLAY OBSERVATION</span><strong>${escapeHtml(shortIdentity(observation.observation_identity))}</strong></div>
+          <div class="truth-row"><span>RUNTIME INSTANCE</span><strong>${escapeHtml(shortIdentity(observation.runtime_instance_identity))}</strong></div>
+        ` : ""}
       </div>
       <p class="proof-footnote">
-        Exact persisted forecast_identity match only. This lineage is shadow/research evidence:
-        it is not a fill, not a canonical Epoch 2 NAV mutation, not an exchange order, and not a live trade.
-        The manifest references a journal record identity; journal runtime presence is verified separately.
+        Exact persisted identities only. Replay is VERIFIED only when the persisted
+        runtime observation matches this exact cycle + manifest + preview lineage.
+        This remains shadow/research evidence: not a fill, not canonical Epoch 2 NAV
+        mutation, not an exchange order, and not a live trade.
       </p>`;
   }
 
@@ -2089,6 +2140,7 @@ function renderSystem() {
   const decisionStatus = state.decisionStatus || {};
   const shadowRail = state.shadowRail || {};
   const shadowCycleStatus = state.shadowCycleStatus || {};
+  const replayStatus = state.replayStatus || {};
   const liveFeed = state.liveFeed || {};
 
   const apiReady = health.status === "ok";
@@ -2109,6 +2161,10 @@ function renderSystem() {
   const shadowRailSnapshot = shadowRail.snapshot || {};
   const shadowCycleReady = shadowCycleStatus.status === "ready";
   const shadowCycleSnapshot = shadowCycleStatus.snapshot || {};
+  const replayReady =
+    replayStatus.status === "ready" &&
+    replayStatus.restart_replay_observation === "VERIFIED";
+  const replaySnapshot = replayStatus.snapshot || {};
 
   setSystemValue("systemApi", apiReady ? "READY" : "UNAVAILABLE", apiReady ? "positive" : "risk");
   setSystemValue("systemLedger", ledgerPresent ? "PRESENT" : "NOT PRESENT", ledgerPresent ? "positive" : "watch");
@@ -2145,6 +2201,13 @@ function renderSystem() {
       : "NOT EXPOSED",
     shadowCycleReady ? "positive" : "watch"
   );
+  setSystemValue(
+    "systemReplayObservation",
+    replayReady
+      ? `${replaySnapshot.record_count ?? 0} VERIFIED`
+      : "NOT PERSISTED",
+    replayReady ? "positive" : "watch"
+  );
 
   const shadowRailNote = byId("systemShadowRailNote");
   if (shadowRailNote) {
@@ -2164,6 +2227,16 @@ function renderSystem() {
       : text(
           shadowCycleStatus.reason,
           "shadow cycle manifest runtime evidence unavailable"
+        );
+  }
+
+  const replayNote = byId("systemReplayObservationNote");
+  if (replayNote) {
+    replayNote.textContent = replayReady
+      ? "immutable runtime INSERTED → IDEMPOTENT replay observation"
+      : text(
+          replayStatus.reason,
+          "no persisted runtime restart/replay observation"
         );
   }
 
@@ -2493,6 +2566,7 @@ async function runBoot() {
     loadEndpoint("decisionStatus", API.decisionStatus),
     loadEndpoint("shadowRail", API.shadowRail),
     loadEndpoint("shadowCycleStatus", API.shadowCycleStatus),
+    loadEndpoint("replayStatus", API.replayStatus),
     loadEndpoint("liveFeed", API.liveFeed),
   ]);
 
