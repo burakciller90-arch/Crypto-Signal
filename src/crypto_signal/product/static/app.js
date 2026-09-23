@@ -7,6 +7,7 @@ let educationData = null;
 let currentViewMode = "simple";
 let proofWallFilter = "all";
 let proofWallData = null;
+let lastDialogTrigger = null;
 
 const AUTO_REFRESH_MS = 15_000;
 const STALE_AFTER_MS = 45_000;
@@ -175,6 +176,28 @@ function restoreViewMode() {
   setViewMode(stored === "detailed" ? "detailed" : "simple", { persist: false });
 }
 
+function prefersReducedMotion() {
+  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+
+function scrollToWorkspaceTarget(target) {
+  window.requestAnimationFrame(() => {
+    target.scrollIntoView({
+      behavior: prefersReducedMotion() ? "auto" : "smooth",
+      block: "start",
+    });
+  });
+}
+
+function setActiveQuickNavigation(buttons, activeButton) {
+  buttons.forEach((item) => {
+    item.classList.remove("is-active");
+    item.removeAttribute("aria-current");
+  });
+  activeButton.classList.add("is-active");
+  activeButton.setAttribute("aria-current", "page");
+}
+
 function bindQuickNavigation() {
   const buttons = [...document.querySelectorAll("#quickNav [data-target]")];
   buttons.forEach((button) => {
@@ -184,11 +207,8 @@ function bindQuickNavigation() {
       if (target.hasAttribute("data-advanced-section") && currentViewMode !== "detailed") {
         setViewMode("detailed");
       }
-      buttons.forEach((item) => item.classList.remove("is-active"));
-      button.classList.add("is-active");
-      window.requestAnimationFrame(() => {
-        target.scrollIntoView({ behavior: "smooth", block: "start" });
-      });
+      setActiveQuickNavigation(buttons, button);
+      scrollToWorkspaceTarget(target);
     });
   });
 }
@@ -344,7 +364,7 @@ function renderMix(items) {
 
 function signalRow(card) {
   return `
-    <div class="signal-row" data-signal-id="${esc(card.signal_freeze_identity)}">
+    <button type="button" class="signal-row" data-signal-id="${esc(card.signal_freeze_identity)}">
       <div>
         <div class="row-title">${esc(card.exchange.toUpperCase())} · ${esc(card.symbol)}</div>
         <div class="row-sub">${esc(card.timeframe)} · ${esc(fmtTime(card.frozen_at_ms))}</div>
@@ -362,7 +382,7 @@ function signalRow(card) {
         <div class="value-main">${esc(card.confluence_score)}</div>
         <div class="row-sub">uyum endeksi · olasılık değil</div>
       </div>
-    </div>`;
+    </button>`;
 }
 
 function renderCommandCenter(data) {
@@ -2247,9 +2267,13 @@ async function openSignal(signalId) {
     return;
   }
   const card = detail.signal;
+  lastDialogTrigger = document.activeElement instanceof HTMLElement
+    ? document.activeElement
+    : null;
   $("#dialogTitle").textContent = `${card.exchange.toUpperCase()} · ${card.symbol} · ${card.timeframe}`;
   $("#dialogBody").innerHTML = renderEvidenceRoom(detail);
   $("#signalDialog").showModal();
+  $("#closeDialog").focus({ preventScroll: true });
   requestAnimationFrame(() => renderEvidenceChart(detail));
 }
 
@@ -2344,9 +2368,7 @@ function renderBeginnerBrief(command, radar, paperMission, intelligence) {
       if (target.hasAttribute("data-advanced-section") && currentViewMode !== "detailed") {
         setViewMode("detailed");
       }
-      window.requestAnimationFrame(() => {
-        target.scrollIntoView({ behavior: "smooth", block: "start" });
-      });
+      scrollToWorkspaceTarget(target);
     });
   });
 }
@@ -2603,6 +2625,12 @@ $("#providerSelect").addEventListener("change", () => {
 });
 $("#refreshButton").addEventListener("click", () => refreshAll());
 $("#closeDialog").addEventListener("click", () => $("#signalDialog").close());
+$("#signalDialog").addEventListener("close", () => {
+  if (lastDialogTrigger?.isConnected) {
+    lastDialogTrigger.focus({ preventScroll: true });
+  }
+  lastDialogTrigger = null;
+});
 $("#viewModeToggle").addEventListener("click", () => {
   setViewMode(currentViewMode === "simple" ? "detailed" : "simple");
 });
