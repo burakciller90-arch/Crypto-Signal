@@ -133,7 +133,10 @@ class SmartCapitalCandidate:
             self.source_evidence_identities,
             "capital candidate source evidence",
         )
-        if self.event_risk.asset != self.asset:
+        if not _event_asset_matches_market(
+            market_asset=self.asset,
+            event_asset=self.event_risk.asset,
+        ):
             raise ValueError("capital candidate event-risk asset mismatch")
         if self.event_risk.as_of_ms != self.as_of_ms:
             raise ValueError("capital candidate event-risk as_of mismatch")
@@ -756,6 +759,16 @@ def _require_identity_tuple(values: tuple[str, ...], label: str) -> None:
         raise ValueError(f"{label} values must be unique and sorted")
     for value in values:
         _require_sha256(value, label)
+
+
+def _event_asset_matches_market(*, market_asset: str, event_asset: str) -> bool:
+    """Allow exact market symbol or its locked USDT base asset.
+
+    Event Risk is asset-scoped (for example BTC) while M6/paper capital is
+    market-scoped (for example BTCUSDT). This is an explicit compatibility
+    rule, not a fuzzy prefix match.
+    """
+    return event_asset == market_asset or market_asset == f"{event_asset}USDT"
 
 
 def _require_asset(value: str, label: str) -> None:
