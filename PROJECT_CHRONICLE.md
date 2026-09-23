@@ -4927,3 +4927,28 @@ Accepted truth:
 - no history mutation, order authority or real capital.
 
 Next locked frontier: Performance & Trust.
+
+
+---
+
+## 2026-09-23 — 17:52 GALACTECH PERFORMANCE & TRUST ACCEPTED
+
+PR #929 completed the locked Performance Product-rail slice.
+
+Acceptance:
+- exact-head Performance run `35877052643` focused + full repository PASS at
+  `fd01daa8fff708b01b3f37fca209507f258fd168`;
+- squash merge `44acdc788e1501a4bbf00f54d518d129e70feab5`;
+- exact-main Stage10 `35877257649` SUCCESS.
+
+Accepted truth:
+- retrospective, walk-forward and untouched-forward evidence remains separately labelled;
+- historical success frequency is not probability;
+- canonical Epoch 2 accounting supplies paper NAV/PnL/drawdown/cost/expectancy/vault truth;
+- empty history is NOT MEASURED, not 0%;
+- Brier/reliability are not fabricated without a persisted R20/R19 customer adapter;
+- Sharpe/Sortino and Event Block effectiveness remain unmeasured without required policy/evidence;
+- setup/methodology segments are not renamed into unsupported forecast-version metrics;
+- no order/credential authority or real capital.
+
+Next locked frontier: Learn / System.
