@@ -128,6 +128,7 @@ def test_exact_forecast_replay_endpoint_matches_exact_cycle_lineage(
     assert replay["status"] == "ready"
     assert replay["restart_replay_observation"] == "VERIFIED"
     assert replay["semantic"] == "EXACT_RUNTIME_REPLAY_IDENTITY_ONLY"
+    assert replay["cycle_manifest_runtime_verified_here"] is True
     persisted = replay["observation"]
     assert persisted["observation_identity"] == observation.observation_identity
     assert persisted["forecast_identity"] == cycle["forecast_identity"]
@@ -252,8 +253,10 @@ def test_galactech_surfaces_replay_only_from_runtime_observation(
     assert "replayForecast: (identity) =>" in js
     assert "/api/runtime-replay-observation/forecast/" in js
     assert "RESTART / REPLAY · VERIFIED" in js
-    assert "RESTART / REPLAY · NOT PERSISTED" in js
+    assert "RESTART / REPLAY · NOT MEASURED" in js
     assert "Hosted acceptance is never upgraded" in js
     assert "observation?.manifest_identity === cycle.manifest_identity" in js
     assert "observation?.preview_identity === cycle.preview_identity" in js
-    assert 'loadEndpoint("replayStatus", API.replayStatus)' in js
+    assert js.count('loadEndpoint("replayStatus", API.replayStatus)') >= 2
+    assert "MANIFEST CROSS-CHECK" in js
+    assert "journal integrity verified · no canonical writes" in js
