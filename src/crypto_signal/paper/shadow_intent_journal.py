@@ -12,7 +12,11 @@ from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
 
-from crypto_signal.ledger.serialization import canonical_json, canonical_sha256, sha256_text
+from crypto_signal.ledger.serialization import (
+    canonical_json,
+    canonical_sha256,
+    sha256_text,
+)
 from crypto_signal.paper.epochs import PaperVaultId
 from crypto_signal.paper.r22_intent_preview import (
     R22IntentPreview,
@@ -81,6 +85,59 @@ class ShadowIntentAppendResult:
     def __post_init__(self) -> None:
         if not isinstance(self.disposition, ShadowIntentAppendDisposition):
             raise TypeError("invalid shadow intent append disposition")
+
+
+@dataclass(frozen=True, slots=True)
+class ShadowIntentPreviewSummary:
+    record_identity: str
+    preview_identity: str
+    vault_id: PaperVaultId
+    event_at_ms: int
+    action: str
+    forecast_identity: str
+    proof_identity: str
+    sizing_bridge_identity: str
+    sizing_vault_result_identity: str
+    review_selection_identity: str | None
+    market_reference_identity: str | None
+    integrity_verified: bool = True
+    canonical_epoch2_write_authority: bool = False
+    production_authority: bool = False
+    real_capital: int = REAL_CAPITAL
+
+    def __post_init__(self) -> None:
+        for value, label in (
+            (self.record_identity, "shadow summary record"),
+            (self.preview_identity, "shadow summary preview"),
+            (self.forecast_identity, "shadow summary forecast"),
+            (self.proof_identity, "shadow summary proof"),
+            (self.sizing_bridge_identity, "shadow summary sizing bridge"),
+            (
+                self.sizing_vault_result_identity,
+                "shadow summary sizing vault result",
+            ),
+        ):
+            _require_sha256(value, label)
+        for value, label in (
+            (self.review_selection_identity, "shadow summary review"),
+            (self.market_reference_identity, "shadow summary market reference"),
+        ):
+            if value is not None:
+                _require_sha256(value, label)
+        if not isinstance(self.vault_id, PaperVaultId):
+            raise TypeError("shadow preview summary requires canonical vault")
+        if self.event_at_ms < 0:
+            raise ValueError("shadow preview summary time must be non-negative")
+        if self.action not in {"HOLD_CASH", "BUY"}:
+            raise ValueError("shadow preview summary action is unsupported")
+        if not self.integrity_verified:
+            raise ValueError("shadow preview summary must be integrity verified")
+        if (
+            self.canonical_epoch2_write_authority
+            or self.production_authority
+            or self.real_capital != REAL_CAPITAL
+        ):
+            raise ValueError("shadow preview summary cannot grant authority")
 
 
 @dataclass(frozen=True, slots=True)
@@ -276,6 +333,92 @@ class R25ShadowIntentJournal:
             record=record,
         )
 
+    def read_latest_preview_summaries(
+        self,
+        *,
+        limit: int = 20,
+    ) -> tuple[ShadowIntentPreviewSummary, ...]:
+        """Read latest integrity-verified preview summaries without mutation."""
+        if limit <= 0 or limit > 500:
+            raise ValueError("shadow preview summary limit must be inside 1..500")
+        self.verify_read_only()
+        uri = f"{self.path.resolve().as_uri()}?mode=ro"
+        with sqlite3.connect(uri, uri=True) as db:
+            rows = db.execute(
+                f"""SELECT record_identity, preview_identity, vault_id,
+                event_at_ms, payload_json
+                FROM {_RECORD_TABLE}
+                ORDER BY event_at_ms DESC, record_identity DESC
+                LIMIT ?""",
+                (limit,),
+            ).fetchall()
+
+        summaries: list[ShadowIntentPreviewSummary] = []
+        for row in rows:
+            record_identity = str(row[0])
+            preview_identity = str(row[1])
+            vault_id = PaperVaultId(str(row[2]))
+            event_at_ms = int(str(row[3]))
+            payload_json = str(row[4])
+            if sha256_text(payload_json) != preview_identity:
+                raise ValueError("shadow summary preview digest mismatch")
+            raw = json.loads(payload_json)
+            if not isinstance(raw, dict):
+                raise ValueError("shadow summary preview payload must be object")
+            intent = raw.get("intent")
+            if not isinstance(intent, dict):
+                raise ValueError("shadow summary preview intent must be object")
+            if intent.get("vault_id") != vault_id.value:
+                raise ValueError("shadow summary preview vault mismatch")
+            if (
+                raw.get("real_capital") != REAL_CAPITAL
+                or raw.get("production_authority") is not False
+                or raw.get("canonical_epoch2_write_authority") is not False
+                or raw.get("tape_write_authority") is not False
+            ):
+                raise ValueError("shadow summary authority boundary mismatch")
+
+            summaries.append(
+                ShadowIntentPreviewSummary(
+                    record_identity=record_identity,
+                    preview_identity=preview_identity,
+                    vault_id=vault_id,
+                    event_at_ms=event_at_ms,
+                    action=str(intent.get("action")),
+                    forecast_identity=_raw_sha(
+                        raw,
+                        "forecast_identity",
+                        "shadow summary forecast",
+                    ),
+                    proof_identity=_raw_sha(
+                        raw,
+                        "proof_identity",
+                        "shadow summary proof",
+                    ),
+                    sizing_bridge_identity=_raw_sha(
+                        raw,
+                        "sizing_bridge_identity",
+                        "shadow summary sizing bridge",
+                    ),
+                    sizing_vault_result_identity=_raw_sha(
+                        raw,
+                        "sizing_vault_result_identity",
+                        "shadow summary sizing vault result",
+                    ),
+                    review_selection_identity=_raw_optional_sha(
+                        raw,
+                        "review_selection_identity",
+                        "shadow summary review",
+                    ),
+                    market_reference_identity=_raw_optional_sha(
+                        raw,
+                        "market_reference_identity",
+                        "shadow summary market reference",
+                    ),
+                )
+            )
+        return tuple(summaries)
+
     def verify_read_only(self) -> ShadowIntentJournalStatus:
         if not self.path.is_file():
             raise ValueError("shadow intent journal missing")
@@ -452,6 +595,32 @@ def _validate_preview_authority(preview: R22IntentPreview) -> None:
         or preview.real_capital != REAL_CAPITAL
     ):
         raise ValueError("shadow journal rejects authority-bearing preview")
+
+
+def _raw_sha(
+    payload: dict[str, object],
+    key: str,
+    label: str,
+) -> str:
+    value = payload.get(key)
+    if not isinstance(value, str):
+        raise ValueError(f"{label} missing")
+    _require_sha256(value, label)
+    return value
+
+
+def _raw_optional_sha(
+    payload: dict[str, object],
+    key: str,
+    label: str,
+) -> str | None:
+    value = payload.get(key)
+    if value is None:
+        return None
+    if not isinstance(value, str):
+        raise ValueError(f"{label} invalid")
+    _require_sha256(value, label)
+    return value
 
 
 def _require_sha256(value: str, label: str) -> None:
