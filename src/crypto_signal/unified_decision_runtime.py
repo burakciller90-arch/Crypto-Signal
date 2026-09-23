@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+
 from crypto_signal.decision_ledger import (
     DecisionLedgerWriteDisposition,
     ImmutableDecisionEvidenceLedger,
