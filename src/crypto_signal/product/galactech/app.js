@@ -6,6 +6,7 @@ const API = Object.freeze({
   radar: "/api/market-radar",
   epoch: "/api/paper/epoch-contract",
   paper: "/api/paper/mission-control",
+  epoch2State: "/api/paper/epoch2-state",
   archive: "/api/archive/proof-wall?limit=60&offset=0",
   education: "/api/education",
   intelligence: "/api/intelligence-center",
@@ -22,6 +23,7 @@ const state = {
   radar: null,
   epoch: null,
   paper: null,
+  epoch2State: null,
   archive: null,
   education: null,
   intelligence: null,
@@ -343,69 +345,195 @@ function renderMarketTruth() {
   ).join("");
 }
 
+function moneyText(value) {
+  const raw = text(value, "");
+  return raw ? `${raw} USDT` : "NOT MEASURED";
+}
+
+function capitalStatusText(value) {
+  return upper(value, "NOT_YET_MEASURED").replaceAll("_", " ");
+}
+
+function renderVaultCard(vault) {
+  const positions = Array.isArray(vault?.positions) ? vault.positions : [];
+  const costs = [
+    ["fee", vault?.fee_usdt],
+    ["spread", vault?.spread_usdt],
+    ["slippage", vault?.slippage_usdt],
+  ];
+  return `
+    <article class="capital-vault-card">
+      <div class="capital-vault-head">
+        <div>
+          <span class="eyebrow">VAULT</span>
+          <h3>${escapeHtml(vault?.vault_id || "UNKNOWN")}</h3>
+        </div>
+        <span class="tag">${escapeHtml(capitalStatusText(vault?.metrics_status))}</span>
+      </div>
+      <div class="capital-vault-metrics">
+        <div><span>NAV</span><strong>${escapeHtml(moneyText(vault?.nav_usdt))}</strong></div>
+        <div><span>CASH</span><strong>${escapeHtml(moneyText(vault?.cash_usdt))}</strong></div>
+        <div><span>EXPOSURE</span><strong>${escapeHtml(moneyText(vault?.marked_exposure_usdt))}</strong></div>
+        <div><span>DRAWDOWN</span><strong>${escapeHtml(text(vault?.drawdown_fraction, "NOT MEASURED"))}</strong></div>
+      </div>
+      <div class="capital-vault-detail">
+        <span>start ${escapeHtml(moneyText(vault?.starting_cash_usdt))}</span>
+        <span>realized ${escapeHtml(moneyText(vault?.realized_pnl_usdt))}</span>
+        <span>unrealized ${escapeHtml(moneyText(vault?.unrealized_pnl_usdt))}</span>
+        <span>turnover ${escapeHtml(text(vault?.turnover_fraction, "NOT MEASURED"))}</span>
+        <span>closed trades ${escapeHtml(vault?.closed_trade_count ?? 0)}</span>
+        <span>expectancy ${escapeHtml(
+          vault?.expectancy_usdt_per_closed_trade === null ||
+          vault?.expectancy_usdt_per_closed_trade === undefined
+            ? "NOT YET MEASURED"
+            : moneyText(vault.expectancy_usdt_per_closed_trade)
+        )}</span>
+      </div>
+      <div class="capital-cost-row" aria-label="Execution costs">
+        ${costs.map(([label, value]) =>
+          `<span><small>${escapeHtml(label)}</small><strong>${escapeHtml(moneyText(value))}</strong></span>`
+        ).join("")}
+      </div>
+      <div class="capital-position-list">
+        ${positions.length
+          ? positions.map((position) =>
+              `<span><strong>${escapeHtml(position.symbol)}</strong> · qty ${escapeHtml(position.quantity)}</span>`
+            ).join("")
+          : "<span>Cash only · no open virtual position</span>"}
+      </div>
+      <code class="capital-identity">${escapeHtml(vault?.snapshot_identity || "NO SNAPSHOT ID")}</code>
+    </article>`;
+}
+
 function renderEpoch() {
   const target = byId("capitalOverview");
   if (!target || !state.epoch) return;
+
   const program = state.epoch.current_program || {};
-  const binding = state.epoch.runtime_binding || {};
-  const allocations = Array.isArray(program.vault_allocations) ? program.vault_allocations : [];
+  const canonical = state.epoch2State || {};
+  const activation = canonical.activation || {};
+  const consolidated = canonical.consolidated || {};
+  const vaults = Array.isArray(canonical.vaults) ? canonical.vaults : [];
+  const order = ["CORE", "TACTICAL", "OPPORTUNITY_RESERVE"];
+  const orderedVaults = [...vaults].sort(
+    (left, right) => order.indexOf(left.vault_id) - order.indexOf(right.vault_id)
+  );
+
+  if (canonical.status !== "ready") {
+    target.innerHTML = `
+      <article class="panel capital-unavailable">
+        <span class="eyebrow">CANONICAL EPOCH 2</span>
+        <h2>Runtime accounting evidence unavailable</h2>
+        <p>${escapeHtml(text(canonical.reason, "epoch2 state not available"))}</p>
+        <div class="truth-table">
+          <div class="truth-row"><span>Program</span><strong>${escapeHtml(program.epoch_id || "Epoch 2")}</strong></div>
+          <div class="truth-row"><span>Constitution start</span><strong>${escapeHtml(moneyText(program.starting_cash_usdt))}</strong></div>
+          <div class="truth-row"><span>Runtime NAV</span><strong>NOT MEASURED</strong></div>
+          <div class="truth-row"><span>REAL CAPITAL</span><strong class="safe-text">DISABLED</strong></div>
+        </div>
+        <p>No NAV, PnL, allocation or performance is inferred from the constitution alone.</p>
+      </article>
+      <article class="panel">
+        <span class="eyebrow">VAULT CONSTITUTION</span>
+        <div class="truth-table">
+          ${(Array.isArray(program.vault_allocations) ? program.vault_allocations : [])
+            .map((item) =>
+              `<div class="truth-row"><span>${escapeHtml(item.vault_id)}</span><strong>${escapeHtml(moneyText(item.starting_cash_usdt))}</strong></div>`
+            ).join("") ||
+            '<div class="truth-row"><span>Allocation evidence</span><strong>UNAVAILABLE</strong></div>'}
+        </div>
+        <p>Accepted Epoch 2 constitution · not a model recommendation.</p>
+      </article>`;
+    return;
+  }
+
+  const totalCosts = [
+    ["fee", consolidated.fee_usdt],
+    ["spread", consolidated.spread_usdt],
+    ["slippage", consolidated.slippage_usdt],
+  ];
 
   target.innerHTML = `
-    <article class="panel">
-      <span class="eyebrow">CURRENT PROGRAM</span>
-      <h2>${escapeHtml(program.epoch_id || "Epoch 2 unavailable")}</h2>
-      <p>Starting cash · ${escapeHtml(program.starting_cash_usdt || "NOT MEASURED")} USDT</p>
+    <article class="capital-hero-card">
+      <div class="capital-hero-head">
+        <div>
+          <span class="eyebrow">CANONICAL EPOCH 2 / CONSOLIDATED</span>
+          <h2>${escapeHtml(moneyText(consolidated.nav_usdt))}</h2>
+          <p>NAV from immutable R21 accounting · snapshot ${escapeHtml(formatTime(consolidated.snapshot_at_ms))}</p>
+        </div>
+        <span class="truth-chip truth-chip-safe">REAL CAPITAL · DISABLED</span>
+      </div>
+      <div class="capital-hero-metrics">
+        <div><span>CASH</span><strong>${escapeHtml(moneyText(consolidated.cash_usdt))}</strong></div>
+        <div><span>MARKED EXPOSURE</span><strong>${escapeHtml(moneyText(consolidated.marked_exposure_usdt))}</strong></div>
+        <div><span>REALIZED PNL</span><strong>${escapeHtml(moneyText(consolidated.realized_pnl_usdt))}</strong></div>
+        <div><span>UNREALIZED PNL</span><strong>${escapeHtml(moneyText(consolidated.unrealized_pnl_usdt))}</strong></div>
+        <div><span>DRAWDOWN</span><strong>${escapeHtml(text(consolidated.drawdown_fraction, "NOT MEASURED"))}</strong></div>
+        <div><span>TURNOVER</span><strong>${escapeHtml(text(consolidated.turnover_fraction, "NOT MEASURED"))}</strong></div>
+      </div>
+      <div class="capital-cost-row">
+        ${totalCosts.map(([label, value]) =>
+          `<span><small>${escapeHtml(label)}</small><strong>${escapeHtml(moneyText(value))}</strong></span>`
+        ).join("")}
+      </div>
+      <code class="capital-identity">${escapeHtml(consolidated.snapshot_identity || "NO SNAPSHOT ID")}</code>
     </article>
-    <article class="panel">
-      <span class="eyebrow">VAULT ARCHITECTURE</span>
+
+    <article class="panel capital-constitution">
+      <span class="eyebrow">WHY THIS ALLOCATION?</span>
+      <h2>Accepted Epoch 2 constitution</h2>
+      <p>Core 600 / Tactical 300 / Opportunity Reserve 100 USDT is frozen program policy, not an AI inference or live recommendation.</p>
       <div class="truth-table">
-        ${allocations.map((item) =>
-          `<div class="truth-row"><span>${escapeHtml(item.vault_id)}</span><strong>${escapeHtml(item.starting_cash_usdt)} USDT</strong></div>`
-        ).join("") || '<div class="truth-row"><span>Vault evidence</span><strong>UNAVAILABLE</strong></div>'}
+        <div class="truth-row"><span>Activation</span><strong>${escapeHtml(shortIdentity(activation.activation_identity))}</strong></div>
+        <div class="truth-row"><span>Starting cash</span><strong>${escapeHtml(moneyText(activation.starting_cash_usdt))}</strong></div>
+        <div class="truth-row"><span>Leverage</span><strong>${activation.leverage_allowed === false ? "DISABLED" : "UNVERIFIED"}</strong></div>
+        <div class="truth-row"><span>Borrowing</span><strong>${activation.borrowing_allowed === false ? "DISABLED" : "UNVERIFIED"}</strong></div>
+        <div class="truth-row"><span>Martingale</span><strong>${activation.martingale_allowed === false ? "DISABLED" : "UNVERIFIED"}</strong></div>
       </div>
     </article>
-    <article class="panel">
-      <span class="eyebrow">RUNTIME BINDING</span>
-      <h2>${escapeHtml(binding.activation_status || "NOT VERIFIED")}</h2>
-      <p>${binding.ledger_present ? "Epoch ledger file is present." : "Ledger presence is not verified on this runtime."}</p>
-    </article>
-    <article class="panel">
-      <span class="eyebrow">AUTHORITY</span>
-      <h2 class="safe-text">REAL_CAPITAL=${escapeHtml(program.real_capital ?? 0)}</h2>
-      <p>Leverage · ${program.leverage_allowed === false ? "DISABLED" : "NOT VERIFIED"}</p>
+
+    <section class="capital-vault-section">
+      <div class="capital-section-head">
+        <div><span class="eyebrow">VAULT ARCHITECTURE</span><h2>Core / Tactical / Opportunity Reserve</h2></div>
+        <span class="tag">${escapeHtml(capitalStatusText(consolidated.metrics_status))}</span>
+      </div>
+      <div class="capital-vault-grid">
+        ${orderedVaults.map(renderVaultCard).join("")}
+      </div>
+    </section>
+
+    <article class="panel capital-track-record">
+      <span class="eyebrow">TRACK RECORD TRUTH</span>
+      <h2>${escapeHtml(capitalStatusText(consolidated.metrics_status))}</h2>
+      <div class="truth-table">
+        <div class="truth-row"><span>Closed trades</span><strong>${escapeHtml(consolidated.closed_trade_count ?? 0)}</strong></div>
+        <div class="truth-row"><span>Wins / Losses / Breakeven</span><strong>${escapeHtml(consolidated.win_count ?? 0)} / ${escapeHtml(consolidated.loss_count ?? 0)} / ${escapeHtml(consolidated.breakeven_count ?? 0)}</strong></div>
+        <div class="truth-row"><span>Expectancy</span><strong>${escapeHtml(
+          consolidated.expectancy_usdt_per_closed_trade === null ||
+          consolidated.expectancy_usdt_per_closed_trade === undefined
+            ? "NOT YET MEASURED"
+            : moneyText(consolidated.expectancy_usdt_per_closed_trade)
+        )}</strong></div>
+      </div>
+      <p>Empty history is not 0% win rate. Metrics remain NOT YET MEASURED until accepted closed-trade evidence exists.</p>
     </article>`;
 }
 
 function renderPaper() {
-  const data = state.paper;
-  if (!data) return;
+  const data = state.epoch2State || {};
   const navNode = byId("metricPaperNav");
   const noteNode = byId("metricPaperNavNote");
   if (!navNode || !noteNode) return;
 
-  if (data.status !== "ready" || !data.snapshot) {
+  if (data.status !== "ready" || !data.consolidated) {
     navNode.textContent = "UNAVAILABLE";
-    noteNode.textContent = text(data.reason, "runtime evidence unavailable");
+    noteNode.textContent = text(data.reason, "canonical Epoch2 evidence unavailable");
     return;
   }
 
-  const snapshot = data.snapshot;
-  const nav =
-    snapshot.nav_usdt ??
-    snapshot.total_nav_usdt ??
-    snapshot.portfolio?.nav_usdt ??
-    snapshot.performance?.nav_usdt ??
-    null;
-
-  if (nav === null) {
-    navNode.textContent = "NOT EXPOSED";
-    noteNode.textContent = "mission-control payload has no verified NAV field";
-  } else {
-    navNode.textContent = `${nav} USDT`;
-    noteNode.textContent = "read-only paper runtime evidence";
-  }
+  navNode.textContent = moneyText(data.consolidated.nav_usdt);
+  noteNode.textContent = "canonical Epoch2 · immutable R21 accounting";
 }
-
 function proofCategory(item) {
   const outcome = item?.latest_outcome;
   if (!outcome) return "unresolved";
@@ -953,7 +1081,7 @@ async function runBoot() {
     loadEndpoint("command", API.command),
     loadEndpoint("radar", API.radar),
     loadEndpoint("epoch", API.epoch),
-    loadEndpoint("paper", API.paper),
+    loadEndpoint("epoch2State", API.epoch2State),
     loadEndpoint("archive", API.archive),
     loadEndpoint("education", API.education),
     loadEndpoint("intelligence", API.intelligence),
@@ -989,7 +1117,7 @@ function startPeriodicRefresh() {
       loadEndpoint("health", API.health),
       loadEndpoint("command", API.command),
       loadEndpoint("radar", API.radar),
-      loadEndpoint("paper", API.paper),
+      loadEndpoint("epoch2State", API.epoch2State),
       loadEndpoint("archive", API.archive),
     ]);
     if (results[0].ok) applyHealthTruth(results[0].data);
