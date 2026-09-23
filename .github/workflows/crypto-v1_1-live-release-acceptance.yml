@@ -50,7 +50,10 @@ jobs:
         run: |
           set -euo pipefail
           ROOT="/Volumes/Crypto-504/Crypto-Signal"
-          PYTHONPATH="$GITHUB_WORKSPACE/src" python3 \
+          DEV="$ROOT/Development"
+          PY="$DEV/.venv/bin/python"
+          test -x "$PY"
+          PYTHONPATH="$GITHUB_WORKSPACE/src" "$PY" \
             "$GITHUB_WORKSPACE/ops/r11_runtime_acceptance.py" \
             --root "$ROOT" \
             --min-free-bytes 1073741824 \
@@ -96,10 +99,12 @@ jobs:
         run: |
           set -euo pipefail
           ROOT="/Volumes/Crypto-504/Crypto-Signal"
-          PRODUCT="$ROOT/Product"
-          PAPER_DB="$PRODUCT/runtime/paper/paper_fund.sqlite3"
+          DEV="$ROOT/Development"
+          PY="$DEV/.venv/bin/python"
+          PAPER_DB="$DEV/runtime/paper/paper_fund.sqlite3"
+          test -x "$PY"
           test -f "$PAPER_DB"
-          PYTHONPATH="$GITHUB_WORKSPACE/src" python3 \
+          PYTHONPATH="$GITHUB_WORKSPACE/src" "$PY" \
             "$GITHUB_WORKSPACE/ops/verify_stage10_integrated.py" \
             --paper-ledger "$PAPER_DB" \
             --cycles 12 \
@@ -113,7 +118,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python3 -m pytest -q \
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          PY="$ROOT/Development/.venv/bin/python"
+          test -x "$PY"
+          PYTHONPATH="$GITHUB_WORKSPACE/src" "$PY" -m pytest -q \
             tests/test_immutable_forecast_stream.py \
             tests/test_decision_proof_live_feed.py \
             tests/test_transaction_tape.py \
@@ -127,7 +135,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python3 "$GITHUB_WORKSPACE/ops/continuity/continuity_status.py" \
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          PY="$ROOT/Development/.venv/bin/python"
+          test -x "$PY"
+          PYTHONPATH="$GITHUB_WORKSPACE/src" "$PY" "$GITHUB_WORKSPACE/ops/continuity/continuity_status.py" \
             | tee /tmp/v1_1-continuity.log
           grep -F 'PAUSED=YES' /tmp/v1_1-continuity.log >/dev/null
           grep -F 'ACTIVE_LEASES=0' /tmp/v1_1-continuity.log >/dev/null
