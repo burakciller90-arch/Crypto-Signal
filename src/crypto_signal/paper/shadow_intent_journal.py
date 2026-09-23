@@ -93,7 +93,6 @@ class ShadowIntentPreviewSummary:
     preview_identity: str
     vault_id: PaperVaultId
     event_at_ms: int
-    action: str
     forecast_identity: str
     proof_identity: str
     sizing_bridge_identity: str
@@ -128,8 +127,6 @@ class ShadowIntentPreviewSummary:
             raise TypeError("shadow preview summary requires canonical vault")
         if self.event_at_ms < 0:
             raise ValueError("shadow preview summary time must be non-negative")
-        if self.action not in {"HOLD_CASH", "BUY"}:
-            raise ValueError("shadow preview summary action is unsupported")
         if not self.integrity_verified:
             raise ValueError("shadow preview summary must be integrity verified")
         if (
@@ -365,11 +362,6 @@ class R25ShadowIntentJournal:
             raw = json.loads(payload_json)
             if not isinstance(raw, dict):
                 raise ValueError("shadow summary preview payload must be object")
-            intent = raw.get("intent")
-            if not isinstance(intent, dict):
-                raise ValueError("shadow summary preview intent must be object")
-            if intent.get("vault_id") != vault_id.value:
-                raise ValueError("shadow summary preview vault mismatch")
             if (
                 raw.get("real_capital") != REAL_CAPITAL
                 or raw.get("production_authority") is not False
@@ -384,7 +376,6 @@ class R25ShadowIntentJournal:
                     preview_identity=preview_identity,
                     vault_id=vault_id,
                     event_at_ms=event_at_ms,
-                    action=str(intent.get("action")),
                     forecast_identity=_raw_sha(
                         raw,
                         "forecast_identity",
