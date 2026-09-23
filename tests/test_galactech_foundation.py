@@ -69,6 +69,7 @@ def test_galactech_preview_is_isolated_truthful_and_accessible(tmp_path: Path) -
     assert 'archive: "/api/archive/proof-wall?limit=500&offset=0"' in js.text
     assert 'education: "/api/education"' in js.text
     assert 'intelligence: "/api/intelligence-center"' in js.text
+    assert 'performance: "/api/performance"' in js.text
     assert "API · AUTHORITY MISMATCH" in js.text
     assert "NOT VERIFIED" in js.text
     assert "UNAVAILABLE" in js.text
