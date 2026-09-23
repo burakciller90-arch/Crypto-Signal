@@ -1193,7 +1193,7 @@ function renderShadowDecisionRail() {
           <div class="truth-row"><span>Semantic</span><strong>SHADOW / RESEARCH ONLY</strong></div>
           <div class="truth-row"><span>Capital Science lineage</span><strong>NOT PERSISTED</strong></div>
           <div class="truth-row"><span>Sizing lineage</span><strong>NOT PERSISTED</strong></div>
-          <div class="truth-row"><span>Restart/replay observation</span><strong>NOT PERSISTED</strong></div>
+          <div class="truth-row"><span>Restart/replay observation</span><strong>NOT MEASURED</strong></div>
           <div class="truth-row"><span>Canonical Epoch 2 mutation</span><strong>DISABLED</strong></div>
           <div class="truth-row"><span>Production authority</span><strong>DISABLED</strong></div>
         </div>
@@ -1214,7 +1214,7 @@ function renderShadowDecisionRail() {
         <span class="truth-chip ${replayIntegrity ? "truth-chip-ready" : "truth-chip-muted"}">
           ${replayIntegrity
             ? "RESTART / REPLAY · VERIFIED"
-            : "RESTART / REPLAY · NOT PERSISTED"}
+            : "RESTART / REPLAY · NOT MEASURED"}
         </span>
       </div>
       <div class="truth-table">
@@ -1231,7 +1231,7 @@ function renderShadowDecisionRail() {
           escapeHtml(cycleData.sizing_lineage || "NOT PERSISTED")
         }</strong></div>
         <div class="truth-row"><span>Restart/replay observation</span><strong>${
-          replayIntegrity ? "VERIFIED" : "NOT PERSISTED"
+          replayIntegrity ? "VERIFIED" : "NOT MEASURED"
         }</strong></div>
         <div class="truth-row"><span>Canonical Epoch 2 mutation</span><strong class="safe-text">DISABLED</strong></div>
         <div class="truth-row"><span>Production authority</span><strong class="safe-text">DISABLED</strong></div>
@@ -2012,10 +2012,13 @@ function renderShadowCycleExtension(payload) {
         <div class="truth-row"><span>CYCLE MANIFEST</span><strong>${escapeHtml(shortIdentity(cycle.manifest_identity))}</strong></div>
         <div class="truth-row"><span>RESTART / REPLAY</span><strong class="${
           exactReplayVerified ? "state-positive" : "state-watch"
-        }">${exactReplayVerified ? "VERIFIED" : "NOT PERSISTED FOR THIS EXACT CYCLE"}</strong></div>
+        }">${exactReplayVerified ? "VERIFIED" : "NOT MEASURED FOR THIS EXACT CYCLE"}</strong></div>
         ${exactReplayVerified ? `
           <div class="truth-row"><span>REPLAY OBSERVATION</span><strong>${escapeHtml(shortIdentity(observation.observation_identity))}</strong></div>
           <div class="truth-row"><span>RUNTIME INSTANCE</span><strong>${escapeHtml(shortIdentity(observation.runtime_instance_identity))}</strong></div>
+          <div class="truth-row"><span>FIRST OBSERVED</span><strong>${escapeHtml(formatTime(observation.first_observed_at_ms))}</strong></div>
+          <div class="truth-row"><span>REPLAY OBSERVED</span><strong>${escapeHtml(formatTime(observation.replay_observed_at_ms))}</strong></div>
+          <div class="truth-row"><span>MANIFEST CROSS-CHECK</span><strong>${replayPayload?.cycle_manifest_runtime_verified_here === true ? "VERIFIED" : "NOT VERIFIED HERE"}</strong></div>
         ` : ""}
       </div>
       <p class="proof-footnote">
@@ -2207,7 +2210,7 @@ function renderSystem() {
     "systemReplayObservation",
     replayReady
       ? `${replaySnapshot.record_count ?? 0} VERIFIED`
-      : "NOT PERSISTED",
+      : "NOT MEASURED",
     replayReady ? "positive" : "watch"
   );
 
@@ -2215,8 +2218,8 @@ function renderSystem() {
   if (shadowRailNote) {
     shadowRailNote.textContent = shadowRailReady
       ? (shadowRailSnapshot.read_only_verified === true
-          ? "read-only replay verified · no canonical writes"
-          : "runtime journal present · replay unverified")
+          ? "journal integrity verified · no canonical writes"
+          : "runtime journal present · integrity unverified")
       : text(shadowRail.reason, "shadow journal runtime evidence unavailable");
   }
 
@@ -2238,7 +2241,7 @@ function renderSystem() {
       ? "immutable runtime INSERTED → IDEMPOTENT replay observation"
       : text(
           replayStatus.reason,
-          "no persisted runtime restart/replay observation"
+          "runtime restart/replay not measured"
         );
   }
 
@@ -2614,6 +2617,7 @@ async function refreshRuntime(reason = "timer") {
       loadEndpoint("decisionStatus", API.decisionStatus),
       loadEndpoint("shadowRail", API.shadowRail),
       loadEndpoint("shadowCycleStatus", API.shadowCycleStatus),
+      loadEndpoint("replayStatus", API.replayStatus),
       loadEndpoint("liveFeed", API.liveFeed),
     ]);
     if (results[0].ok) applyHealthTruth(results[0].data);
