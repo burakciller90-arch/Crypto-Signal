@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import sqlite3
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import StrEnum
 from pathlib import Path
 
@@ -357,15 +357,22 @@ class IngestionSilenceGapMonitor:
     provider: str
     source: str
     max_ingestion_silence_ms: int
+    _last_ingestion: dict[tuple[str, str], int] = field(
+        default_factory=dict,
+        init=False,
+        repr=False,
+    )
+    _open_gaps: dict[tuple[str, str], MarketDataGapEvent] = field(
+        default_factory=dict,
+        init=False,
+        repr=False,
+    )
 
     def __post_init__(self) -> None:
         if not self.provider.strip() or not self.source.strip():
             raise ValueError("gap monitor provider/source must be non-empty")
         if self.max_ingestion_silence_ms <= 0:
             raise ValueError("gap monitor silence threshold must be positive")
-        self._last_ingestion: dict[tuple[str, str], int] = {}
-        self._open_gaps: dict[tuple[str, str], MarketDataGapEvent] = {}
-
     def observe_persisted_event(
         self,
         *,
@@ -416,10 +423,14 @@ class IngestionSilenceGapMonitor:
         observed_at_ms: int,
         source_evidence_identities: tuple[str, ...],
     ) -> None:
+        if observed_at_ms < 0:
+            raise ValueError("gap monitor observation time cannot be negative")
         for (channel, symbol), last_ingestion in sorted(
             self._last_ingestion.items()
         ):
             key = (channel, symbol)
+            if observed_at_ms < last_ingestion:
+                raise ValueError("gap monitor observation time regressed")
             if key in self._open_gaps:
                 continue
             if (
