@@ -2022,8 +2022,8 @@ function renderShadowCycleExtension(payload) {
         Exact persisted identities only. Replay is VERIFIED only when the persisted
         runtime observation matches this exact cycle + manifest + preview lineage.
         The manifest references a journal record identity; journal runtime presence is verified separately.
-        This remains shadow/research evidence: not a fill, not canonical Epoch 2 NAV
-        mutation, not an exchange order, and not a live trade.
+        This remains shadow/research evidence: not a fill, not a canonical Epoch 2 NAV mutation,
+        not an exchange order, and not a live trade.
       </p>`;
   }
 
