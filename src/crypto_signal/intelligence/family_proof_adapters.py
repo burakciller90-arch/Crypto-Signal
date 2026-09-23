@@ -121,8 +121,11 @@ def adapt_accepted_m2_m5(
         if analysis.observed_at_ms > as_of_ms:
             raise ValueError("adapter freeze contains future observation")
     if exchange_flow is not None:
-        chain = exchange_flow.analysis
-        if chain.asset != base_asset or chain.as_of_ms != as_of_ms:
+        chain_context = exchange_flow.analysis
+        if (
+            chain_context.asset != base_asset
+            or chain_context.as_of_ms != as_of_ms
+        ):
             raise ValueError("adapter onchain asset/PIT context mismatch")
     if liquidity is not None and microstructure is not None and (
         liquidity.analysis.exchange != microstructure.analysis.exchange
