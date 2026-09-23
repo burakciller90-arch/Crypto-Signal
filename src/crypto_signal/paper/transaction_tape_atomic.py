@@ -9,6 +9,7 @@ import json
 import sqlite3
 from dataclasses import dataclass
 from pathlib import Path
+from typing import cast
 
 from crypto_signal.ledger.serialization import canonical_json, canonical_sha256, sha256_text
 from crypto_signal.paper.epoch2_accounting import (
@@ -439,7 +440,10 @@ class R22Epoch2AtomicTape:
             ).fetchone()
             if row is None:
                 raise ValueError("R22 audit bundle not found")
-            raw = json.loads(str(row[0]))
+            decoded = json.loads(str(row[0]))
+            if not isinstance(decoded, dict):
+                raise ValueError("R22 stored bundle payload must be an object")
+            raw = cast(dict[str, object], decoded)
             if raw.get("bundle_identity") != bundle_identity:
                 raise ValueError("R22 stored bundle identity field mismatch")
             identity_payload = dict(raw)
