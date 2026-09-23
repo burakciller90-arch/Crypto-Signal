@@ -258,6 +258,22 @@ class UntouchedProbabilityObservation:
             self.predicted_probability_0_1,
             "R19 predicted probability",
         )
+        expected_prediction = {
+            "calibrator_version": self.calibrator_version,
+            "engine_version": self.engine_version,
+            "issued_at_ms": self.issued_at_ms,
+            "model_version": self.model_version,
+            "predicted_probability_0_1": self.predicted_probability_0_1,
+            "probability_semantic": R19_PROBABILITY_SEMANTIC,
+            "production_authority": False,
+            "real_capital": REAL_CAPITAL,
+            "schema_version": self.schema_version,
+            "scope_identity": self.scope_identity,
+            "source_forecast_identity": self.source_forecast_identity,
+            "walk_forward_fit_identity": self.walk_forward_fit_identity,
+        }
+        if self.source_prediction_identity != canonical_sha256(expected_prediction):
+            raise ValueError("R19 observation source prediction identity mismatch")
         if self.observation_identity != canonical_sha256(_observation_payload(self)):
             raise ValueError("R19 probability observation identity mismatch")
 
@@ -439,6 +455,22 @@ class CalibratedProbabilityEvidence:
         if self.issued_at_ms < 0:
             raise ValueError("R19 probability issuance must be non-negative")
         _require_unit_interval(self.probability_0_1, "R19 authorized probability")
+        expected_prediction = {
+            "calibrator_version": self.calibrator_version,
+            "engine_version": self.engine_version,
+            "issued_at_ms": self.issued_at_ms,
+            "model_version": self.model_version,
+            "predicted_probability_0_1": self.probability_0_1,
+            "probability_semantic": R19_PROBABILITY_SEMANTIC,
+            "production_authority": False,
+            "real_capital": REAL_CAPITAL,
+            "schema_version": self.schema_version,
+            "scope_identity": self.scope_identity,
+            "source_forecast_identity": self.source_forecast_identity,
+            "walk_forward_fit_identity": self.walk_forward_fit_identity,
+        }
+        if self.source_prediction_identity != canonical_sha256(expected_prediction):
+            raise ValueError("R19 authorization source prediction identity mismatch")
         if self.probability_status is not R19ProbabilityStatus.CALIBRATED:
             raise ValueError("R19 authorization must be CALIBRATED")
         if self.probability_semantic != R19_PROBABILITY_SEMANTIC:
@@ -557,12 +589,8 @@ def build_frozen_probability_prediction(
     issued_at_ms: int,
     predicted_probability_0_1: Decimal,
 ) -> FrozenProbabilityPrediction:
-    if not (
-        config.decision_window_start_ms
-        <= issued_at_ms
-        < config.decision_window_end_ms
-    ):
-        raise ValueError("R19 prediction issued outside frozen holdout window")
+    if issued_at_ms < config.decision_window_start_ms:
+        raise ValueError("R19 prediction cannot predate frozen holdout start")
     _require_sha256(source_forecast_identity, "R19 prediction source forecast")
     payload = {
         "calibrator_version": config.calibrator_version,
