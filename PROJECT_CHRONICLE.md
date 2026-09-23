@@ -4269,3 +4269,39 @@ No live on-chain provider, credential, capital sizing or trading authority was a
 REAL_CAPITAL=0. User wake/lease pause remains authoritative.
 
 Next locked intelligence frontier: Event Risk + NLP Intelligence.
+
+
+---
+
+## 2026-09-23 — 11:47 EVENT RISK STRUCTURED CALENDAR SLICE 1 ACCEPTED
+
+PR #896 established the first locked Event Risk + NLP safety layer.
+
+Acceptance:
+- canonical hosted run `35838930778` focused + full PASS;
+- parallel duplicate docs/tests/workflows reconciled and removed;
+- squash merge `eea464436cb7ef040c3032177c63d9e3848f95af`;
+- exact-main Stage10 run `35839133372` SUCCESS.
+
+Accepted semantics:
+- structured event identity, category, scheduled time, affected assets, source quality,
+  source timestamp and ingestion timestamp;
+- explicit calendar coverage proof is required before CLEAR;
+- default versioned policy: 60m caution lead, ±15m EVENT_BLOCK and 30m post-event
+  stabilization;
+- overlapping relevant events use the more restrictive state;
+- missing, future-only, stale, horizon-incomplete, category-incomplete or unverified
+  coverage fails closed to DEGRADED_DATA;
+- future coverage is represented as unavailable rather than leaking its future identity
+  into a historical freeze;
+- future/late/other-asset/out-of-horizon evidence cannot rewrite history.
+
+Scientific boundary:
+- scheduled events do not predict outcome or price direction;
+- the ±15m block is a research policy, not a universal law;
+- no live calendar provider/credential activation;
+- no probability, sizing or order authority;
+- REAL_CAPITAL=0.
+
+Next frontier: source-bounded News/NLP evidence, then circuit-breaker composition and
+ABSTAIN semantics. User wake/lease pause remains authoritative.
