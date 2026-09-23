@@ -4437,3 +4437,44 @@ chronological forward threshold-comparison capability are accepted. REAL_CAPITAL
 
 Next locked intelligence frontier: Phase 9 R19 calibrated probability. User wake/lease
 pause remains authoritative.
+
+
+---
+
+## 2026-09-23 — 12:56 R19 CALIBRATED PROBABILITY EVIDENCE GATE ACCEPTED / PHASE 9 CLOSED
+
+PR #907 completed the locked Phase 9 R19 calibration evidence infrastructure on current
+main.
+
+Acceptance:
+- hosted R19 run `35845579080` focused + full repository PASS;
+- Alpha Factory branch research gate `35845430284` PASS;
+- squash merge `82802a2c1abdb5911ec9dffc0ac914a5904bd8a2`;
+- exact-main Alpha Factory gate `35845763500` SUCCESS;
+- exact-main Stage10 gate `35845763450` SUCCESS.
+
+Accepted scientific semantics:
+- one probability belongs to one frozen binary outcome event + asset/timeframe/regime/horizon;
+- model, calibrator and walk-forward fit identities are explicit;
+- training cutoff/config predate untouched holdout;
+- training and holdout sample/class support are explicit;
+- numeric predictions freeze before outcomes;
+- holdout partition membership uses prediction identities rather than outcome-derived rows;
+- only LIVE_UNTOUCHED_FORWARD evidence is admissible;
+- Brier, base-rate Brier, Brier skill, reliability, ECE and maximum calibration gap are
+  retained;
+- weak/insufficient evidence remains NOT_CALIBRATED;
+- future authorization may only copy an exact frozen prediction from the accepted
+  scope/model/calibrator/walk-forward identity;
+- no automatic promotion, sizing, paper write, deployment or real-money authority;
+- REAL_CAPITAL=0.
+
+Historical draft PR #723 was closed as superseded by current-main PR #907 while preserving
+its audit value.
+
+Phase 9 R19 infrastructure exit is satisfied. A percentage is still shown only when real
+accepted evidence exists for the exact scope; otherwise the system must display NOT
+CALIBRATED.
+
+Next locked frontier: Phase 10 Smart Capital Allocator. User wake/lease pause remains
+authoritative.
