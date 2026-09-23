@@ -422,7 +422,9 @@ def _analysis_payload(analysis: EventRiskAnalysis) -> dict[str, object]:
 def _freeze_payload(freeze: EventRiskEvidenceFreeze) -> dict[str, object]:
     return {
         "analysis_identity": freeze.analysis.evidence_identity,
-        "coverage_identity": freeze.coverage.coverage_identity,
+        "coverage_identity": (
+            None if freeze.coverage is None else freeze.coverage.coverage_identity
+        ),
         "event_identities": [item.event_identity for item in freeze.events],
         "schema_version": freeze.schema_version,
     }
