@@ -20,12 +20,7 @@ from crypto_signal.paper.epoch2_accounting import (
 )
 from crypto_signal.paper.epochs import PaperVaultId
 from crypto_signal.paper.models import REAL_CAPITAL, PaperAction
-from crypto_signal.paper.transaction_tape import (
-    R22_ENGINE_VERSION,
-    R22_SCHEMA_VERSION,
-    PaperTapeFill,
-    PaperTapeIntent,
-)
+from crypto_signal.paper.transaction_tape import PaperTapeFill, PaperTapeIntent
 
 R22_BUNDLE_SCHEMA_VERSION = "r22-epoch2-accounting-bundle-v1/1"
 R22_BUNDLE_ENGINE_VERSION = "r22-epoch2-accounting-bundle-v1/1"
@@ -186,9 +181,11 @@ def build_epoch2_accounting_bundle(
             raise ValueError("R22 after-vault activation mismatch")
         if current.previous_snapshot_identity != previous.snapshot_identity:
             raise ValueError("R22 after-vault lineage must point to exact previous state")
-        if vault_id is not intent.vault_id:
-            if _vault_financial_state(current) != _vault_financial_state(previous):
-                raise ValueError("R22 accounting bundle cannot mutate a non-target vault")
+        if (
+            vault_id is not intent.vault_id
+            and _vault_financial_state(current) != _vault_financial_state(previous)
+        ):
+            raise ValueError("R22 accounting bundle cannot mutate a non-target vault")
 
     expected_parent = build_consolidated_epoch2_snapshot(
         tuple(after_by_vault[vault_id] for vault_id in PaperVaultId),
