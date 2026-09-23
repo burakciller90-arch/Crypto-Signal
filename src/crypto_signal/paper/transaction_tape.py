@@ -1,9 +1,9 @@
-"""R22 Slice 1: immutable, development-only Epoch 2 decision and transaction audit.
+"""R22: immutable Epoch 2 decision and transaction audit.
 
-This module is evidence, not a paper execution engine. It neither mutates the
-accepted R21 ledger nor authorizes live/paper orders. The separate SQLite tape
-is an isolated development artifact until cross-ledger atomicity is accepted.
-REAL_CAPITAL=0.
+R22 is evidence and paper-accounting audit infrastructure. It does not create
+exchange/network/credential authority. Trade decisions are admitted only when
+their exact R20/R20.5 forecast-proof lineage and accepted sizing evidence are
+bound to an immutable paper decision. REAL_CAPITAL=0.
 """
 from __future__ import annotations
 
@@ -20,11 +20,23 @@ from crypto_signal.paper.epoch2_accounting import (
     Epoch2VaultAccountingSnapshot,
 )
 from crypto_signal.paper.epochs import PaperVaultId
-from crypto_signal.paper.models import REAL_CAPITAL, PaperAction, PaperSymbol
+from crypto_signal.paper.models import (
+    REAL_CAPITAL,
+    DecisionIntentRecord,
+    PaperAction,
+    PaperSymbol,
+    PositionCashMutationRecord,
+    SimulatedFillRecord,
+)
+from crypto_signal.paper.position_sizing_intelligence import (
+    PositionSizingAssessment,
+    SizingMethodResult,
+    SizingMethodStatus,
+)
 from crypto_signal.product.decision_proof import DecisionProofSnapshot
 
-R22_SCHEMA_VERSION = "r22-transaction-decision-tape-v1/1"
-R22_ENGINE_VERSION = "r22-transaction-decision-tape-slice1/1"
+R22_SCHEMA_VERSION = "r22-transaction-decision-tape-v1/2"
+R22_ENGINE_VERSION = "r22-transaction-decision-tape-v1/2"
 
 
 def _sha(value: str | None, label: str, *, optional: bool = False) -> None:
@@ -59,7 +71,10 @@ class PaperTapeIntent:
     proof_identity: str | None
     signal_freeze_identity: str | None
     policy_identity: str
+    sizing_assessment_identity: str | None
     sizing_decision_identity: str | None
+    allocator_candidate_identity: str | None
+    decision_identity: str | None
     source_evidence_identities: tuple[str, ...]
     action: PaperAction
     symbol: PaperSymbol | None
@@ -80,10 +95,13 @@ class PaperTapeIntent:
         _sha(self.forecast_identity, "forecast", optional=True)
         _sha(self.proof_identity, "proof", optional=True)
         _sha(self.signal_freeze_identity, "signal", optional=True)
-        _sha(self.sizing_decision_identity, "sizing", optional=True)
+        _sha(self.sizing_assessment_identity, "sizing assessment", optional=True)
+        _sha(self.sizing_decision_identity, "sizing result", optional=True)
+        _sha(self.allocator_candidate_identity, "allocator candidate", optional=True)
+        _sha(self.decision_identity, "paper decision", optional=True)
         _sha(self.previous_intent_identity, "previous intent", optional=True)
         if self.schema_version != R22_SCHEMA_VERSION or self.engine_version != R22_ENGINE_VERSION:
-            raise ValueError("unsupported R22 version")
+            raise ValueError("unsupported R22 intent version")
         if not isinstance(self.vault_id, PaperVaultId) or not isinstance(self.action, PaperAction):
             raise TypeError("invalid R22 vault or action")
         if self.decided_at_ms < 0:
@@ -96,27 +114,38 @@ class PaperTapeIntent:
             raise ValueError("R22 source identities must be sorted and unique")
         for identity in self.source_evidence_identities:
             _sha(identity, "source evidence")
+
+        trade_lineage = (
+            self.forecast_identity,
+            self.proof_identity,
+            self.signal_freeze_identity,
+            self.sizing_assessment_identity,
+            self.sizing_decision_identity,
+            self.allocator_candidate_identity,
+            self.decision_identity,
+        )
         if self.action is PaperAction.HOLD_CASH:
-            if any(item is not None for item in (
-                self.forecast_identity, self.proof_identity,
-                self.signal_freeze_identity, self.sizing_decision_identity,
-                self.symbol, self.quantity, self.reference_price,
-            )):
-                raise ValueError("R22 HOLD_CASH cannot invent a trade or forecast")
+            if any(item is not None for item in (*trade_lineage, self.symbol, self.quantity, self.reference_price)):
+                raise ValueError("R22 HOLD_CASH cannot invent trade/sizing/forecast lineage")
         else:
-            if None in (
-                self.forecast_identity, self.proof_identity,
-                self.signal_freeze_identity, self.sizing_decision_identity,
-            ):
-                raise ValueError("R22 trade decision requires complete evidence lineage")
+            if any(item is None for item in trade_lineage):
+                raise ValueError("R22 trade requires complete forecast/sizing/decision lineage")
             if self.symbol is None or self.quantity is None or self.reference_price is None:
-                raise ValueError("R22 trade decision requires symbol, quantity, price")
+                raise ValueError("R22 trade decision requires symbol, quantity and price")
             if not isinstance(self.symbol, PaperSymbol):
-                raise ValueError("R22 trade symbol must be permitted")
+                raise TypeError("R22 trade symbol must be permitted")
             _money(self.quantity, "decision quantity", positive=True)
             _money(self.reference_price, "decision reference price", positive=True)
-            if not self.source_evidence_identities:
-                raise ValueError("R22 trade decision requires source evidence")
+            required_sources = {
+                self.proof_identity,
+                self.policy_identity,
+                self.sizing_assessment_identity,
+                self.sizing_decision_identity,
+                self.allocator_candidate_identity,
+                self.decision_identity,
+            }
+            if not required_sources.issubset(set(self.source_evidence_identities)):
+                raise ValueError("R22 trade source evidence misses exact decision lineage")
         if self.production_authority or self.real_capital != 0:
             raise ValueError("R22 decision cannot grant execution authority")
         if self.intent_identity != canonical_sha256(_payload(self)):
@@ -131,7 +160,10 @@ class PaperTapeFill:
     vault_id: PaperVaultId
     action: PaperAction
     symbol: PaperSymbol
+    source_fill_identity: str
+    mutation_identity: str
     filled_at_ms: int
+    mutated_at_ms: int
     snapshot_at_ms: int
     before_snapshot_identity: str
     after_snapshot_identity: str
@@ -143,6 +175,8 @@ class PaperTapeFill:
     fee_usdt: Decimal
     spread_usdt: Decimal
     slippage_usdt: Decimal
+    execution_policy_version: str
+    venue_reference: str
     cash_before_usdt: Decimal
     cash_after_usdt: Decimal
     position_before_quantity: Decimal
@@ -162,6 +196,8 @@ class PaperTapeFill:
         _sha(self.fill_identity, "fill")
         _sha(self.intent_identity, "intent")
         _sha(self.activation_identity, "activation")
+        _sha(self.source_fill_identity, "source fill")
+        _sha(self.mutation_identity, "mutation")
         _sha(self.before_snapshot_identity, "before snapshot")
         _sha(self.after_snapshot_identity, "after snapshot")
         _sha(self.mark_evidence_identity, "mark evidence")
@@ -173,10 +209,12 @@ class PaperTapeFill:
             raise TypeError("R22 fill requires valid vault and symbol")
         if self.action not in (PaperAction.BUY, PaperAction.REDUCE, PaperAction.EXIT):
             raise ValueError("HOLD_CASH cannot create a fill")
-        if min(self.filled_at_ms, self.snapshot_at_ms) < 0:
+        if min(self.filled_at_ms, self.mutated_at_ms, self.snapshot_at_ms) < 0:
             raise ValueError("R22 fill times cannot be negative")
-        if self.filled_at_ms > self.snapshot_at_ms:
-            raise ValueError("R22 fill cannot occur after bound R21 snapshot")
+        if not (self.filled_at_ms <= self.mutated_at_ms <= self.snapshot_at_ms):
+            raise ValueError("R22 fill/mutation/accounting times are out of order")
+        if not self.execution_policy_version.strip() or not self.venue_reference.strip():
+            raise ValueError("R22 fill requires exact execution policy and venue reference")
         _money(self.quantity, "quantity", positive=True)
         _money(self.reference_price, "reference price", positive=True)
         _money(self.simulated_fill_price, "simulated fill price", positive=True)
@@ -198,7 +236,7 @@ class PaperTapeFill:
             raise ValueError("R22 sale cannot claim adverse execution improvement")
         price_impact = abs(self.simulated_fill_price - self.reference_price) * self.quantity
         if self.spread_usdt + self.slippage_usdt != price_impact:
-            raise ValueError("R22 execution impact cannot be double-counted")
+            raise ValueError("R22 execution impact must equal spread plus slippage")
         if self.production_authority or self.real_capital != 0:
             raise ValueError("R22 fill cannot grant execution authority")
         if self.fill_identity != canonical_sha256(_payload(self)):
@@ -211,25 +249,46 @@ def build_tape_intent(
     vault_id: PaperVaultId,
     action: PaperAction,
     decided_at_ms: int,
-    policy_identity: str,
     reason_codes: tuple[str, ...],
+    hold_policy_identity: str | None = None,
     forecast: ImmutableForecast | None = None,
     proof: DecisionProofSnapshot | None = None,
-    sizing_decision_identity: str | None = None,
-    symbol: PaperSymbol | None = None,
-    quantity: Decimal | None = None,
-    reference_price: Decimal | None = None,
+    sizing_assessment: PositionSizingAssessment | None = None,
+    sizing_result: SizingMethodResult | None = None,
+    decision: DecisionIntentRecord | None = None,
     previous_intent_identity: str | None = None,
 ) -> PaperTapeIntent:
     if decided_at_ms < activation.activated_at_ms:
         raise ValueError("R22 intent cannot predate Epoch2 activation")
+
     if action is PaperAction.HOLD_CASH:
-        if forecast is not None or proof is not None:
-            raise ValueError("R22 HOLD_CASH must have no trade forecast")
+        if any(item is not None for item in (forecast, proof, sizing_assessment, sizing_result, decision)):
+            raise ValueError("R22 HOLD_CASH cannot claim trade evidence")
+        if hold_policy_identity is None:
+            raise ValueError("R22 HOLD_CASH requires exact hold-policy identity")
+        _sha(hold_policy_identity, "hold policy")
+        policy_identity = hold_policy_identity
         evidence: tuple[str, ...] = ()
+        symbol = None
+        quantity = None
+        reference_price = None
+        forecast_identity = None
+        proof_identity = None
+        signal_identity = None
+        sizing_assessment_identity = None
+        sizing_result_identity = None
+        allocator_candidate_identity = None
+        decision_identity = None
     else:
-        if forecast is None or proof is None:
-            raise ValueError("R22 trade requires exact R20 forecast and Decision Proof")
+        if hold_policy_identity is not None:
+            raise ValueError("R22 trade cannot use HOLD_CASH policy argument")
+        if any(item is None for item in (forecast, proof, sizing_assessment, sizing_result, decision)):
+            raise ValueError("R22 trade requires exact forecast/proof/sizing/decision objects")
+        assert forecast is not None
+        assert proof is not None
+        assert sizing_assessment is not None
+        assert sizing_result is not None
+        assert decision is not None
         if (
             forecast.forecast_identity != proof.forecast_identity
             or forecast.signal_freeze_identity != proof.signal_freeze_identity
@@ -238,21 +297,73 @@ def build_tape_intent(
             or forecast.source_as_of_ms != proof.source_as_of_ms
         ):
             raise ValueError("R22 forecast and proof lineage mismatch")
-        if decided_at_ms < forecast.issued_at_ms:
-            raise ValueError("R22 decision cannot precede immutable forecast")
-        if symbol is None or symbol.value != forecast.symbol:
-            raise ValueError("R22 symbol must match exact forecast")
         if not proof.read_only or proof.production_authority:
             raise ValueError("R22 proof must preserve read-only authority")
-        evidence = forecast.source_evidence_identities
+        if decision.fund_identity != activation.activation_identity:
+            raise ValueError("R22 paper decision must target exact Epoch2 activation")
+        if decision.action is not action or decision.decided_at_ms != decided_at_ms:
+            raise ValueError("R22 immutable decision/action/time mismatch")
+        if decided_at_ms < forecast.issued_at_ms:
+            raise ValueError("R22 decision cannot precede immutable forecast")
+        if decision.symbol is None or decision.symbol.value != forecast.symbol:
+            raise ValueError("R22 paper decision symbol must match exact forecast")
+        if sizing_assessment.vault_id is not vault_id:
+            raise ValueError("R22 sizing assessment vault mismatch")
+        accepted_result = next(
+            (
+                item
+                for item in sizing_assessment.results
+                if item.result_identity == sizing_result.result_identity
+            ),
+            None,
+        )
+        if accepted_result != sizing_result:
+            raise ValueError("R22 sizing result does not belong to exact assessment")
+        if sizing_result.status is not SizingMethodStatus.AVAILABLE_SHADOW:
+            raise ValueError("R22 trade requires an available reviewed sizing result")
+        if sizing_result.hypothetical_notional_usdt is None:
+            raise ValueError("R22 sizing result lacks hypothetical notional")
+        if decision.quantity is None or decision.reference_price is None:
+            raise ValueError("R22 trade decision requires quantity and reference price")
+        if decision.quantity * decision.reference_price > sizing_result.hypothetical_notional_usdt:
+            raise ValueError("R22 paper decision exceeds traced sizing envelope")
+        policy_identity = sizing_assessment.policy_identity
+        symbol = decision.symbol
+        quantity = decision.quantity
+        reference_price = decision.reference_price
+        forecast_identity = forecast.forecast_identity
+        proof_identity = proof.proof_identity
+        signal_identity = forecast.signal_freeze_identity
+        sizing_assessment_identity = sizing_assessment.assessment_identity
+        sizing_result_identity = sizing_result.result_identity
+        allocator_candidate_identity = sizing_assessment.allocator_candidate_identity
+        decision_identity = decision.record_identity
+        evidence = tuple(
+            sorted(
+                {
+                    *forecast.source_evidence_identities,
+                    *proof.forecast_source_evidence_identities,
+                    proof.proof_identity,
+                    sizing_assessment.assessment_identity,
+                    sizing_assessment.policy_identity,
+                    sizing_result.result_identity,
+                    sizing_assessment.allocator_candidate_identity,
+                    decision.record_identity,
+                }
+            )
+        )
+
     payload: dict[str, object] = {
         "activation_identity": activation.activation_identity,
         "vault_id": vault_id,
-        "forecast_identity": None if forecast is None else forecast.forecast_identity,
-        "proof_identity": None if proof is None else proof.proof_identity,
-        "signal_freeze_identity": None if forecast is None else forecast.signal_freeze_identity,
+        "forecast_identity": forecast_identity,
+        "proof_identity": proof_identity,
+        "signal_freeze_identity": signal_identity,
         "policy_identity": policy_identity,
-        "sizing_decision_identity": sizing_decision_identity,
+        "sizing_assessment_identity": sizing_assessment_identity,
+        "sizing_decision_identity": sizing_result_identity,
+        "allocator_candidate_identity": allocator_candidate_identity,
+        "decision_identity": decision_identity,
         "source_evidence_identities": evidence,
         "action": action,
         "symbol": symbol,
@@ -274,33 +385,59 @@ def build_tape_fill(
     before: Epoch2VaultAccountingSnapshot,
     after: Epoch2VaultAccountingSnapshot,
     *,
-    filled_at_ms: int,
-    simulated_fill_price: Decimal,
-    fee_usdt: Decimal,
-    spread_usdt: Decimal,
-    slippage_usdt: Decimal,
+    fill: SimulatedFillRecord,
+    mutation: PositionCashMutationRecord,
     mark_evidence_identity: str,
     outcome_evidence_identity: str | None = None,
     previous_fill_identity: str | None = None,
 ) -> PaperTapeFill:
     if intent.action is PaperAction.HOLD_CASH or intent.symbol is None:
         raise ValueError("R22 HOLD_CASH cannot create a capital mutation")
-    if intent.quantity is None or intent.reference_price is None:
-        raise ValueError("R22 fill requires exact prior quantity and reference price")
+    if intent.quantity is None or intent.reference_price is None or intent.decision_identity is None:
+        raise ValueError("R22 fill requires exact prior decision lineage")
+    if fill.fund_identity != intent.activation_identity:
+        raise ValueError("R22 simulated fill fund mismatch")
+    if fill.decision_identity != intent.decision_identity:
+        raise ValueError("R22 simulated fill must bind exact paper decision")
+    if (
+        fill.action is not intent.action
+        or fill.symbol is not intent.symbol
+        or fill.quantity != intent.quantity
+        or fill.reference_price != intent.reference_price
+    ):
+        raise ValueError("R22 simulated fill does not exactly match frozen intent")
+    if fill.filled_at_ms < intent.decided_at_ms:
+        raise ValueError("R22 fill predates immutable decision")
+    if mutation.fund_identity != intent.activation_identity:
+        raise ValueError("R22 mutation fund mismatch")
+    if mutation.source_identity != fill.record_identity:
+        raise ValueError("R22 mutation must be sourced from exact simulated fill")
+    if mutation.mutated_at_ms < fill.filled_at_ms:
+        raise ValueError("R22 mutation cannot predate simulated fill")
     if before.activation_identity != intent.activation_identity or after.activation_identity != intent.activation_identity:
         raise ValueError("R22 fill activation mismatch")
     if before.vault_id is not intent.vault_id or after.vault_id is not intent.vault_id:
         raise ValueError("R22 fill cannot cross vaults")
     if after.previous_snapshot_identity != before.snapshot_identity:
         raise ValueError("R22 fill requires exact R21 previous snapshot")
-    if not (before.snapshot_at_ms < filled_at_ms <= after.snapshot_at_ms):
-        raise ValueError("R22 fill must follow previous accounting and decision")
-    if filled_at_ms < intent.decided_at_ms:
-        raise ValueError("R22 fill predates immutable decision")
-    if intent.intent_identity not in after.source_record_identities:
-        raise ValueError("R22 R21 after-snapshot must cite the exact frozen intent")
-    if mark_evidence_identity not in after.source_record_identities:
-        raise ValueError("R22 R21 after-snapshot requires exact mark evidence")
+    if not (before.snapshot_at_ms < fill.filled_at_ms <= mutation.mutated_at_ms <= after.snapshot_at_ms):
+        raise ValueError("R22 fill/mutation must follow previous accounting and precede new snapshot")
+    if (
+        mutation.cash_before_usdt != before.cash_usdt
+        or mutation.cash_after_usdt != after.cash_usdt
+        or mutation.positions_before != before.positions
+        or mutation.positions_after != after.positions
+    ):
+        raise ValueError("R22 exact mutation does not reconcile R21 before/after state")
+
+    required_sources = {
+        intent.intent_identity,
+        fill.record_identity,
+        mutation.record_identity,
+        mark_evidence_identity,
+    }
+    if not required_sources.issubset(set(after.source_record_identities)):
+        raise ValueError("R22 R21 after-snapshot lacks exact intent/fill/mutation/mark lineage")
     if intent.action is PaperAction.BUY and after.closed_trade_count != before.closed_trade_count:
         raise ValueError("R22 BUY cannot report a closed trade")
     if intent.action in (PaperAction.REDUCE, PaperAction.EXIT):
@@ -308,13 +445,15 @@ def build_tape_fill(
             raise ValueError("R22 sale must account for its closed-trade outcome")
         if outcome_evidence_identity is None or outcome_evidence_identity not in after.source_record_identities:
             raise ValueError("R22 sale requires explicit outcome evidence")
+
+    costs = fill.costs
     if (
-        after.fee_usdt - before.fee_usdt != fee_usdt
-        or after.spread_usdt - before.spread_usdt != spread_usdt
-        or after.slippage_usdt - before.slippage_usdt != slippage_usdt
+        after.fee_usdt - before.fee_usdt != costs.fee_usdt
+        or after.spread_usdt - before.spread_usdt != costs.spread_usdt
+        or after.slippage_usdt - before.slippage_usdt != costs.slippage_usdt
     ):
         raise ValueError("R22 cumulative execution costs must reconcile")
-    notional = intent.quantity * simulated_fill_price
+    notional = fill.quantity * fill.simulated_fill_price
     if after.turnover_notional_usdt - before.turnover_notional_usdt != notional:
         raise ValueError("R22 turnover must reconcile to simulated fill notional")
     before_qty = next(
@@ -328,13 +467,13 @@ def build_tape_fill(
     if intent.action is PaperAction.BUY:
         if after_qty != before_qty + intent.quantity:
             raise ValueError("R22 BUY position quantity mismatch")
-        expected_cash = before.cash_usdt - notional - fee_usdt
+        expected_cash = before.cash_usdt - notional - costs.fee_usdt
     else:
         if before_qty < intent.quantity or after_qty != before_qty - intent.quantity:
             raise ValueError("R22 sale position quantity mismatch")
         if intent.action is PaperAction.EXIT and after_qty != 0:
             raise ValueError("R22 EXIT must flatten the specified symbol")
-        expected_cash = before.cash_usdt + notional - fee_usdt
+        expected_cash = before.cash_usdt + notional - costs.fee_usdt
     if after.cash_usdt != expected_cash:
         raise ValueError("R22 cash movement does not match fill and fee")
     before_other = tuple(p for p in before.positions if p.symbol is not intent.symbol)
@@ -345,24 +484,30 @@ def build_tape_fill(
     unrealized_delta = after.unrealized_pnl_usdt - before.unrealized_pnl_usdt
     if after.nav_usdt - before.nav_usdt != realized_delta + unrealized_delta:
         raise ValueError("R22 NAV delta cannot hide unexplained PnL")
+
     payload: dict[str, object] = {
         "intent_identity": intent.intent_identity,
         "activation_identity": intent.activation_identity,
         "vault_id": intent.vault_id,
         "action": intent.action,
         "symbol": intent.symbol,
-        "filled_at_ms": filled_at_ms,
+        "source_fill_identity": fill.record_identity,
+        "mutation_identity": mutation.record_identity,
+        "filled_at_ms": fill.filled_at_ms,
+        "mutated_at_ms": mutation.mutated_at_ms,
         "snapshot_at_ms": after.snapshot_at_ms,
         "before_snapshot_identity": before.snapshot_identity,
         "after_snapshot_identity": after.snapshot_identity,
         "previous_fill_identity": previous_fill_identity,
-        "quantity": intent.quantity,
-        "reference_price": intent.reference_price,
-        "simulated_fill_price": simulated_fill_price,
+        "quantity": fill.quantity,
+        "reference_price": fill.reference_price,
+        "simulated_fill_price": fill.simulated_fill_price,
         "notional_usdt": notional,
-        "fee_usdt": fee_usdt,
-        "spread_usdt": spread_usdt,
-        "slippage_usdt": slippage_usdt,
+        "fee_usdt": costs.fee_usdt,
+        "spread_usdt": costs.spread_usdt,
+        "slippage_usdt": costs.slippage_usdt,
+        "execution_policy_version": costs.execution_policy_version,
+        "venue_reference": fill.venue_reference,
         "cash_before_usdt": before.cash_usdt,
         "cash_after_usdt": after.cash_usdt,
         "position_before_quantity": before_qty,
