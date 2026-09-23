@@ -146,9 +146,11 @@ class BreakoutCandidate:
                 raise ValueError("upside confirmation requires positive flow")
             if self.side is BreakoutSide.DOWNSIDE and self.taker_imbalance >= _ZERO:
                 raise ValueError("downside confirmation requires negative flow")
-        if self.state is BreakoutState.FAILURE:
-            if not self.sweep_recovered or not self.opposing_absorption_present:
-                raise ValueError("breakout failure requires recovery plus opposing absorption")
+        if (
+            self.state is BreakoutState.FAILURE
+            and (not self.sweep_recovered or not self.opposing_absorption_present)
+        ):
+            raise ValueError("breakout failure requires recovery plus opposing absorption")
 
 
 @dataclass(frozen=True, slots=True)
