@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from decimal import Decimal
 from enum import StrEnum
+from typing import TYPE_CHECKING
 
 from crypto_signal.confluence.models import InvalidationTrigger, PriceZone
 from crypto_signal.intelligence.confluence_matrix_v2 import (
@@ -27,17 +28,19 @@ from crypto_signal.signals.models import (
     SignalDirection,
     SignalState,
 )
-from research.alpha_factory.probability_calibration_gate import (
-    CalibratedProbabilityEvidence,
-    CalibrationScope,
-    R19ProbabilityStatus,
-)
+
+if TYPE_CHECKING:
+    from research.alpha_factory.probability_calibration_gate import (
+        CalibratedProbabilityEvidence,
+        CalibrationScope,
+    )
 
 R20_FORECAST_ENGINE_VERSION = "r20-immutable-forecast-stream-v1-slice1/1"
 R20_FORECAST_SCHEMA_VERSION = "r20-immutable-forecast-v1/1"
 R20_RESOLUTION_SCHEMA_VERSION = "r20-forecast-resolution-v1/1"
 R20_STREAM_SCHEMA_VERSION = "r20-forecast-stream-snapshot-v1/1"
 R20_PROBABILITY_NOT_CALIBRATED = "not_calibrated"
+R20_PROBABILITY_CALIBRATED = "calibrated"
 REAL_CAPITAL = 0
 
 
@@ -172,7 +175,7 @@ class ImmutableForecast:
                 self.calibrated_probability_0_1,
                 "R20 calibrated probability",
             )
-            if self.probability_status != R19ProbabilityStatus.CALIBRATED.value:
+            if self.probability_status != R20_PROBABILITY_CALIBRATED:
                 raise ValueError("R20 calibrated forecast status mismatch")
             if any(value is None for value in probability_ids):
                 raise ValueError("R20 calibrated forecast requires exact R19 identities")
@@ -361,7 +364,7 @@ def build_immutable_forecast(
     if calibrated_probability is not None:
         if calibration_scope is None:
             raise ValueError("R20 calibrated probability requires exact R19 scope")
-        if calibrated_probability.probability_status is not R19ProbabilityStatus.CALIBRATED:
+        if calibrated_probability.probability_status.value != R20_PROBABILITY_CALIBRATED:
             raise ValueError("R20 probability input must be R19 CALIBRATED")
         if calibrated_probability.issued_at_ms > issued_at_ms:
             raise ValueError("R20 probability evidence cannot come from the future")

@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from decimal import ROUND_HALF_DOWN, Decimal
 from enum import StrEnum
+from typing import TYPE_CHECKING
 
 from crypto_signal.ledger.serialization import canonical_sha256
 from crypto_signal.paper.epochs import PaperVaultId
@@ -10,10 +11,11 @@ from crypto_signal.paper.smart_capital_allocator import (
     VaultCapitalEnvelope,
     VaultEligibilityState,
 )
-from research.alpha_factory.probability_calibration_gate import (
-    CalibratedProbabilityEvidence,
-    R19ProbabilityStatus,
-)
+
+if TYPE_CHECKING:
+    from research.alpha_factory.probability_calibration_gate import (
+        CalibratedProbabilityEvidence,
+    )
 
 POSITION_SIZING_ENGINE_VERSION = "position-sizing-intelligence-v1-slice1/1"
 POSITION_SIZING_SCHEMA_VERSION = "position-sizing-intelligence-v1/1"
@@ -671,7 +673,7 @@ def _validate_lineage(
     if context.as_of_ms < 0:
         raise ValueError("sizing context time invalid")
     if probability is not None:
-        if probability.probability_status is not R19ProbabilityStatus.CALIBRATED:
+        if probability.probability_status.value != "calibrated":
             raise ValueError("Kelly requires R19 CALIBRATED probability")
         if probability.issued_at_ms > context.as_of_ms:
             raise ValueError("sizing probability is from the future")
