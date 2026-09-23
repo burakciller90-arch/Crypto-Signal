@@ -10,6 +10,24 @@ REAL_CAPITAL: 0
 ## Active v1.1 frontier — read before historical sections
 
 
+### 2026-09-23 17:43 +0300 — GALACTECH ARCHIVE / PROOF WALL ACCEPTED
+
+- PR **#928** accepted the locked GALACTECH Archive / Proof Wall.
+- Exact-head hosted run `35875953184` SUCCESS at `a6cf51e8ada8d272e2cbb8d4f3315c17b5630b26`.
+- PR #928 squash-merged as `c12128eb2cf38c797585639335c1f3b4ef8f7466`.
+- Exact-main Stage10 run `35876137323` SUCCESS.
+- Issuance snapshot and latest later-outcome snapshot are shown side by side; later evidence never replaces issuance truth.
+- Winner / loser / expired / invalidated / ambiguous / abstain-not-evaluable / unresolved filters are deterministic.
+- Losses, invalidations and unresolved decisions remain visible.
+- Evidence class, coverage, timestamps, horizon, entry-observed truth and exact identities remain explicit.
+- Missing outcome is never rewritten as success/failure or 0% performance.
+- Archive drill-down remains exact SHA256 Evidence Room binding.
+- No archive mutation or execution authority. REAL_CAPITAL=0.
+- Current locked frontier: **Product rail — Performance & Trust**.
+- UID504 wake pause remains authoritative and untouched.
+
+
+
 ### 2026-09-23 17:34 +0300 — GALACTECH MARKETS WORKSPACE ACCEPTED
 
 - PR **#927** accepted the locked GALACTECH Markets workspace.
