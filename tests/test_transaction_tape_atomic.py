@@ -213,6 +213,7 @@ def test_r22_atomic_bundle_commits_tape_and_r21_accounting_together(
     assert audit["after_consolidated_snapshot_identity"] == parent.snapshot_identity
     assert audit["real_capital"] == 0
     assert audit["production_authority"] is False
+    assert tape.audit_all_read_only() == (1, 1, 1)
 
     assert not tape.append_accounting_bundle(
         before,
@@ -325,6 +326,7 @@ def test_r22_hold_cash_is_append_only_without_r21_capital_mutation(
     assert tape.append_hold_decision(hold)
     assert not tape.append_hold_decision(hold)
     assert Epoch2CanonicalLedger(epoch2_path).read_state() == before
+    assert tape.audit_all_read_only() == (1, 0, 0)
     with sqlite3.connect(epoch2_path) as connection:
         assert connection.execute(
             "SELECT COUNT(*) FROM r22_epoch2_intents"
@@ -362,3 +364,29 @@ def test_r22_audit_tables_are_update_delete_immutable(tmp_path: Path) -> None:
             match="immutable R22 Epoch2 audit tape",
         ):
             connection.execute("DELETE FROM r22_epoch2_intents")
+
+
+def test_r22_full_replay_detects_missing_fill_evidence(tmp_path: Path) -> None:
+    epoch2_path, before, intent, fill, after_vaults, parent, bundle = _trade_bundle(
+        tmp_path
+    )
+    tape = R22Epoch2AtomicTape(epoch2_path)
+    assert tape.append_accounting_bundle(
+        before,
+        intent=intent,
+        fill=fill,
+        after_vaults=after_vaults,
+        after_consolidated=parent,
+        bundle=bundle,
+    )
+    assert tape.audit_all_read_only() == (1, 1, 1)
+
+    with sqlite3.connect(epoch2_path) as connection:
+        connection.execute("DROP TRIGGER r22_epoch2_fills_immutable_delete")
+        connection.execute(
+            "DELETE FROM r22_epoch2_fills WHERE fill_identity = ?",
+            (fill.fill_identity,),
+        )
+
+    with pytest.raises(ValueError, match="missing its fill"):
+        tape.audit_all_read_only()
