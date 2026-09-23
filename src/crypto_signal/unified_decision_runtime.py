@@ -48,6 +48,24 @@ PREFLIGHT_PROOF_DOMAINS = tuple(
     if domain is not ProofEvidenceDomain.METHODOLOGY
 )
 
+FAMILY_PROOF_DOMAINS: dict[ConfluenceFamily, tuple[ProofEvidenceDomain, ...]] = {
+    ConfluenceFamily.GEOMETRY: (
+        ProofEvidenceDomain.FROZEN_CHART,
+        ProofEvidenceDomain.CONSUMED_CANDLES,
+    ),
+    ConfluenceFamily.LIQUIDITY: (
+        ProofEvidenceDomain.ORDER_BOOK,
+        ProofEvidenceDomain.LIQUIDITY_MAP,
+        ProofEvidenceDomain.LIQUIDATION_MAP,
+    ),
+    ConfluenceFamily.ORDER_FLOW: (
+        ProofEvidenceDomain.ORDER_BOOK,
+        ProofEvidenceDomain.ORDER_FLOW_CVD,
+    ),
+    ConfluenceFamily.DERIVATIVES: (ProofEvidenceDomain.DERIVATIVES,),
+    ConfluenceFamily.ONCHAIN: (ProofEvidenceDomain.ONCHAIN,),
+}
+
 
 @dataclass(frozen=True, slots=True)
 class UnifiedDecisionIssuance:
@@ -106,6 +124,10 @@ def issue_unified_decision(
         signal=signal,
         event_context=event_context,
         calibrated_probability=calibrated_probability,
+        slices=preflight_proof_slices,
+    )
+    _validate_family_proof_coverage(
+        family_evidence=family_evidence,
         slices=preflight_proof_slices,
     )
 
@@ -240,6 +262,25 @@ def _validate_preflight_slices(
         ):
             raise ValueError(
                 "unified runtime probability proof must bind exact R19 lineage"
+            )
+
+
+def _validate_family_proof_coverage(
+    *,
+    family_evidence: tuple[ConfluenceFamilyEvidence, ...],
+    slices: tuple[DecisionProofEvidenceSlice, ...],
+) -> None:
+    by_domain = {item.domain: item for item in slices}
+    for family_item in family_evidence:
+        required_ids = set(family_item.source_evidence_identities)
+        if not required_ids:
+            continue
+        covered_ids: set[str] = set()
+        for domain in FAMILY_PROOF_DOMAINS[family_item.family]:
+            covered_ids.update(by_domain[domain].evidence_identities)
+        if not required_ids.issubset(covered_ids):
+            raise ValueError(
+                "unified runtime proof does not cover exact M6 family source evidence"
             )
 
 
