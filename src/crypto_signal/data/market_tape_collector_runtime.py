@@ -20,7 +20,7 @@ class CollectorStartKind(StrEnum):
 
 
 class CollectorRuntimeConflictError(ValueError):
-    """Raised when an immutable runtime identity maps to conflicting content."""
+    """Raised when immutable runtime identity maps to conflicting content."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -121,8 +121,7 @@ def build_collector_instance(
         if previous_instance_identity is None
         else CollectorStartKind.RESTART
     )
-    placeholder = MarketTapeCollectorInstance(
-        instance_identity="0" * 64,
+    payload = _instance_payload_values(
         provider=provider,
         source=source,
         symbols=canonical_symbols,
@@ -131,9 +130,11 @@ def build_collector_instance(
         runtime_nonce=runtime_nonce,
         start_kind=start_kind,
         previous_instance_identity=previous_instance_identity,
+        production_authority=False,
+        real_capital=REAL_CAPITAL,
     )
     return MarketTapeCollectorInstance(
-        instance_identity=canonical_sha256(_instance_payload(placeholder)),
+        instance_identity=canonical_sha256(payload),
         provider=provider,
         source=source,
         symbols=canonical_symbols,
@@ -155,8 +156,7 @@ def build_collector_heartbeat(
     normalized_rows_total: int,
     raw_rows_total: int,
 ) -> MarketTapeCollectorHeartbeat:
-    placeholder = MarketTapeCollectorHeartbeat(
-        heartbeat_identity="0" * 64,
+    payload = _heartbeat_payload_values(
         instance_identity=instance_identity,
         sequence_no=sequence_no,
         observed_at_ms=observed_at_ms,
@@ -164,9 +164,11 @@ def build_collector_heartbeat(
         observed_messages_total=observed_messages_total,
         normalized_rows_total=normalized_rows_total,
         raw_rows_total=raw_rows_total,
+        production_authority=False,
+        real_capital=REAL_CAPITAL,
     )
     return MarketTapeCollectorHeartbeat(
-        heartbeat_identity=canonical_sha256(_heartbeat_payload(placeholder)),
+        heartbeat_identity=canonical_sha256(payload),
         instance_identity=instance_identity,
         sequence_no=sequence_no,
         observed_at_ms=observed_at_ms,
@@ -364,33 +366,87 @@ class MarketTapeCollectorRuntimeStore:
 
 
 def _instance_payload(instance: MarketTapeCollectorInstance) -> dict[str, object]:
+    return _instance_payload_values(
+        provider=instance.provider,
+        source=instance.source,
+        symbols=instance.symbols,
+        started_at_ms=instance.started_at_ms,
+        process_id=instance.process_id,
+        runtime_nonce=instance.runtime_nonce,
+        start_kind=instance.start_kind,
+        previous_instance_identity=instance.previous_instance_identity,
+        production_authority=instance.production_authority,
+        real_capital=instance.real_capital,
+    )
+
+
+def _instance_payload_values(
+    *,
+    provider: str,
+    source: str,
+    symbols: tuple[str, ...],
+    started_at_ms: int,
+    process_id: int,
+    runtime_nonce: str,
+    start_kind: CollectorStartKind,
+    previous_instance_identity: str | None,
+    production_authority: bool,
+    real_capital: int,
+) -> dict[str, object]:
     return {
-        "schema_version": instance.schema_version,
-        "provider": instance.provider,
-        "source": instance.source,
-        "symbols": instance.symbols,
-        "started_at_ms": instance.started_at_ms,
-        "process_id": instance.process_id,
-        "runtime_nonce": instance.runtime_nonce,
-        "start_kind": instance.start_kind.value,
-        "previous_instance_identity": instance.previous_instance_identity,
-        "production_authority": instance.production_authority,
-        "real_capital": instance.real_capital,
+        "schema_version": MARKET_TAPE_COLLECTOR_RUNTIME_SCHEMA_VERSION,
+        "provider": provider,
+        "source": source,
+        "symbols": symbols,
+        "started_at_ms": started_at_ms,
+        "process_id": process_id,
+        "runtime_nonce": runtime_nonce,
+        "start_kind": start_kind.value,
+        "previous_instance_identity": previous_instance_identity,
+        "production_authority": production_authority,
+        "real_capital": real_capital,
     }
 
 
-def _heartbeat_payload(heartbeat: MarketTapeCollectorHeartbeat) -> dict[str, object]:
+def _heartbeat_payload(
+    heartbeat: MarketTapeCollectorHeartbeat,
+) -> dict[str, object]:
+    return _heartbeat_payload_values(
+        instance_identity=heartbeat.instance_identity,
+        sequence_no=heartbeat.sequence_no,
+        observed_at_ms=heartbeat.observed_at_ms,
+        last_successful_ingestion_ms=heartbeat.last_successful_ingestion_ms,
+        observed_messages_total=heartbeat.observed_messages_total,
+        normalized_rows_total=heartbeat.normalized_rows_total,
+        raw_rows_total=heartbeat.raw_rows_total,
+        production_authority=heartbeat.production_authority,
+        real_capital=heartbeat.real_capital,
+    )
+
+
+def _heartbeat_payload_values(
+    *,
+    instance_identity: str,
+    sequence_no: int,
+    observed_at_ms: int,
+    last_successful_ingestion_ms: int,
+    observed_messages_total: int,
+    normalized_rows_total: int,
+    raw_rows_total: int,
+    production_authority: bool,
+    real_capital: int,
+) -> dict[str, object]:
     return {
-        "schema_version": heartbeat.schema_version,
-        "instance_identity": heartbeat.instance_identity,
-        "sequence_no": heartbeat.sequence_no,
-        "observed_at_ms": heartbeat.observed_at_ms,
-        "last_successful_ingestion_ms": heartbeat.last_successful_ingestion_ms,
-        "observed_messages_total": heartbeat.observed_messages_total,
-        "normalized_rows_total": heartbeat.normalized_rows_total,
-        "raw_rows_total": heartbeat.raw_rows_total,
-        "production_authority": heartbeat.production_authority,
-        "real_capital": heartbeat.real_capital,
+        "schema_version": MARKET_TAPE_COLLECTOR_RUNTIME_SCHEMA_VERSION,
+        "instance_identity": instance_identity,
+        "sequence_no": sequence_no,
+        "observed_at_ms": observed_at_ms,
+        "last_successful_ingestion_ms": last_successful_ingestion_ms,
+        "observed_messages_total": observed_messages_total,
+        "normalized_rows_total": normalized_rows_total,
+        "raw_rows_total": raw_rows_total,
+        "production_authority": production_authority,
+        "real_capital": real_capital,
     }
 
 
@@ -398,38 +454,38 @@ def _instance_from_payload(payload_json: str) -> MarketTapeCollectorInstance:
     payload = json.loads(payload_json)
     if not isinstance(payload, dict):
         raise TypeError("collector instance payload must be object")
+    symbols = tuple(str(value) for value in payload["symbols"])
     start_kind = CollectorStartKind(str(payload["start_kind"]))
-    provisional = MarketTapeCollectorInstance(
-        instance_identity="0" * 64,
+    previous = (
+        None
+        if payload["previous_instance_identity"] is None
+        else str(payload["previous_instance_identity"])
+    )
+    values = _instance_payload_values(
         provider=str(payload["provider"]),
         source=str(payload["source"]),
-        symbols=tuple(str(value) for value in payload["symbols"]),
+        symbols=symbols,
         started_at_ms=int(payload["started_at_ms"]),
         process_id=int(payload["process_id"]),
         runtime_nonce=str(payload["runtime_nonce"]),
         start_kind=start_kind,
-        previous_instance_identity=(
-            None
-            if payload["previous_instance_identity"] is None
-            else str(payload["previous_instance_identity"])
-        ),
-        schema_version=str(payload["schema_version"]),
+        previous_instance_identity=previous,
         production_authority=bool(payload["production_authority"]),
         real_capital=int(payload["real_capital"]),
     )
     return MarketTapeCollectorInstance(
-        instance_identity=canonical_sha256(_instance_payload(provisional)),
-        provider=provisional.provider,
-        source=provisional.source,
-        symbols=provisional.symbols,
-        started_at_ms=provisional.started_at_ms,
-        process_id=provisional.process_id,
-        runtime_nonce=provisional.runtime_nonce,
-        start_kind=provisional.start_kind,
-        previous_instance_identity=provisional.previous_instance_identity,
-        schema_version=provisional.schema_version,
-        production_authority=provisional.production_authority,
-        real_capital=provisional.real_capital,
+        instance_identity=canonical_sha256(values),
+        provider=str(payload["provider"]),
+        source=str(payload["source"]),
+        symbols=symbols,
+        started_at_ms=int(payload["started_at_ms"]),
+        process_id=int(payload["process_id"]),
+        runtime_nonce=str(payload["runtime_nonce"]),
+        start_kind=start_kind,
+        previous_instance_identity=previous,
+        schema_version=str(payload["schema_version"]),
+        production_authority=bool(payload["production_authority"]),
+        real_capital=int(payload["real_capital"]),
     )
 
 
@@ -437,31 +493,33 @@ def _heartbeat_from_payload(payload_json: str) -> MarketTapeCollectorHeartbeat:
     payload = json.loads(payload_json)
     if not isinstance(payload, dict):
         raise TypeError("collector heartbeat payload must be object")
-    provisional = MarketTapeCollectorHeartbeat(
-        heartbeat_identity="0" * 64,
+    values = _heartbeat_payload_values(
         instance_identity=str(payload["instance_identity"]),
         sequence_no=int(payload["sequence_no"]),
         observed_at_ms=int(payload["observed_at_ms"]),
-        last_successful_ingestion_ms=int(payload["last_successful_ingestion_ms"]),
+        last_successful_ingestion_ms=int(
+            payload["last_successful_ingestion_ms"]
+        ),
+        observed_messages_total=int(payload["observed_messages_total"]),
+        normalized_rows_total=int(payload["normalized_rows_total"]),
+        raw_rows_total=int(payload["raw_rows_total"]),
+        production_authority=bool(payload["production_authority"]),
+        real_capital=int(payload["real_capital"]),
+    )
+    return MarketTapeCollectorHeartbeat(
+        heartbeat_identity=canonical_sha256(values),
+        instance_identity=str(payload["instance_identity"]),
+        sequence_no=int(payload["sequence_no"]),
+        observed_at_ms=int(payload["observed_at_ms"]),
+        last_successful_ingestion_ms=int(
+            payload["last_successful_ingestion_ms"]
+        ),
         observed_messages_total=int(payload["observed_messages_total"]),
         normalized_rows_total=int(payload["normalized_rows_total"]),
         raw_rows_total=int(payload["raw_rows_total"]),
         schema_version=str(payload["schema_version"]),
         production_authority=bool(payload["production_authority"]),
         real_capital=int(payload["real_capital"]),
-    )
-    return MarketTapeCollectorHeartbeat(
-        heartbeat_identity=canonical_sha256(_heartbeat_payload(provisional)),
-        instance_identity=provisional.instance_identity,
-        sequence_no=provisional.sequence_no,
-        observed_at_ms=provisional.observed_at_ms,
-        last_successful_ingestion_ms=provisional.last_successful_ingestion_ms,
-        observed_messages_total=provisional.observed_messages_total,
-        normalized_rows_total=provisional.normalized_rows_total,
-        raw_rows_total=provisional.raw_rows_total,
-        schema_version=provisional.schema_version,
-        production_authority=provisional.production_authority,
-        real_capital=provisional.real_capital,
     )
 
 
