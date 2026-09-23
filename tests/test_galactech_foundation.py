@@ -23,7 +23,7 @@ def test_galactech_preview_is_isolated_truthful_and_accessible(tmp_path: Path) -
 
     # Foundation is parallel until the explicit production UI cutover.
     assert 'data-ui-version="galactech-command-center-v1"' in legacy.text
-    assert 'data-ui-version="galactech-v1.1-foundation"' in preview.text
+    assert 'data-ui-version="galactech-v1.1-command-evidence"' in preview.text
 
     for section in (
         "COMMAND",
@@ -75,6 +75,10 @@ def test_galactech_preview_is_isolated_truthful_and_accessible(tmp_path: Path) -
     assert "Bu, piyasanın risksiz olduğu anlamına gelmez" in js.text
     assert "document.visibilityState" in js.text
     assert "30_000" in js.text
+    assert 'id="evidenceDialog"' in preview.text
+    assert "Immutable Decision Evidence" in preview.text
+    assert "function renderEvidenceRoom(detail)" in js.text
+    assert "function frozenChartMarkup(detail)" in js.text
 
 
 def test_galactech_preview_does_not_expand_product_authority(tmp_path: Path) -> None:
