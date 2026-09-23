@@ -726,6 +726,14 @@ def append_live_intelligence_feed_event(
         raise ValueError(
             "Live feed already contains this forecast event kind"
         )
+    if event.kind is LiveFeedEventKind.FORECAST_RESOLVED and not any(
+        item.forecast_identity == event.forecast_identity
+        and item.kind is LiveFeedEventKind.FORECAST_ISSUED
+        for item in snapshot.events
+    ):
+        raise ValueError(
+            "Live feed resolution requires prior forecast issuance"
+        )
     if snapshot.events:
         last = snapshot.events[-1]
         if (event.event_at_ms, event.event_identity) <= (
