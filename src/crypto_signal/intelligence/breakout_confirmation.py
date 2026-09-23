@@ -19,6 +19,7 @@ from crypto_signal.intelligence.liquidity_sweep import (
     LiquiditySweepStatus,
 )
 from crypto_signal.intelligence.order_flow_patterns import (
+    AbsorptionCandidate,
     AbsorptionEvidenceFreeze,
     AbsorptionSide,
     PatternStatus,
@@ -67,10 +68,15 @@ class BreakoutConfig:
             ("reentry_tolerance_bps", self.reentry_tolerance_bps),
             ("absorption_level_tolerance_bps", self.absorption_level_tolerance_bps),
         ):
-            _finite(value, label)
+            if value.is_nan() or value.is_infinite():
+                raise ValueError(f"{label} must be finite")
             if value <= _ZERO:
                 raise ValueError(f"{label} must be positive")
-        _finite(self.minimum_taker_imbalance, "minimum_taker_imbalance")
+        if (
+            self.minimum_taker_imbalance.is_nan()
+            or self.minimum_taker_imbalance.is_infinite()
+        ):
+            raise ValueError("minimum_taker_imbalance must be finite")
         if not _ZERO < self.minimum_taker_imbalance <= _ONE:
             raise ValueError("minimum_taker_imbalance must be inside (0,1]")
 
@@ -525,7 +531,7 @@ def _nearby_absorption(
     side: AbsorptionSide,
     level: Decimal,
     tolerance_bps: Decimal,
-):
+) -> AbsorptionCandidate | None:
     tolerance = tolerance_bps / _BPS
     lower = level * (_ONE - tolerance)
     upper = level * (_ONE + tolerance)
