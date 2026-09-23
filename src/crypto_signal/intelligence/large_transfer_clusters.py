@@ -270,7 +270,7 @@ def build_large_transfer_cluster_evidence_freeze(
     )
     if relationships:
         label = LargeTransferLabel.REPEATED_RELATIONSHIP_CLUSTER
-    elif large:
+    elif percentiles[latest.transfer_identity] >= config.large_amount_percentile:
         label = LargeTransferLabel.ISOLATED_LARGE_TRANSFER
     else:
         label = LargeTransferLabel.NORMAL
