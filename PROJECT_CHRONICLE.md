@@ -4661,3 +4661,34 @@ Accepted semantics:
 
 Phase 15 infrastructure exit is satisfied. Next locked frontier: Phase 16 R21.5 Shadow
 Lab 2.0. User wake/lease pause remains authoritative.
+
+
+---
+
+## 2026-09-23 — 14:38 PHASE 16 R21.5 SHADOW LAB 2.0 ACCEPTED
+
+PR #920 completed the locked Phase 16 research-governance layer.
+
+Acceptance:
+- branch Shadow Lab run `35855465958` focused + full repository PASS;
+- branch Alpha Factory run `35855465997` SUCCESS;
+- squash merge `9d50f298ae8e8a7bc024aa0f52dcf37058b3d977`;
+- exact-main Alpha Factory `35855669648` SUCCESS;
+- exact-main Stage10 `35855669631` SUCCESS.
+
+Accepted semantics:
+- locked research families are represented above the existing Alpha Factory rather than by
+  a new parallel backtester;
+- exact experiment and promotion-evidence lineage is mandatory;
+- untouched-forward, robustness and cost-stress identities derive from the bound
+  PromotionGateEvidence object;
+- the assessment must bind that exact promotion-evidence identity;
+- BLOCKED stays blocked;
+- READY is explicit review only;
+- supervisor acceptance remains manual-promotion-review evidence and grants no champion
+  write, canonical-capital mutation, deploy or production authority;
+- no automatic winner and comparison winner remains null;
+- REAL_CAPITAL=0.
+
+Phase 16 exit is satisfied. Next locked frontier: Phase 17 R22 Transaction & Decision Tape.
+User wake/lease pause remains authoritative.
