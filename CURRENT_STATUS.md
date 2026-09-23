@@ -1,6 +1,6 @@
 # CURRENT STATUS
 
-Updated: 2026-09-22
+Updated: 2026-09-23
 Project: Crypto Signal
 Baseline: crypto-signal-full-version-v1.0.0 (immutable)
 Active post-v1.0 program: v1.1 world-class product + market intelligence
@@ -8,6 +8,31 @@ State: DATA_FRESHNESS_RECOVERED / R15_OPERATIONAL_ACCEPTANCE_CLOSED / LOCKED_20M
 REAL_CAPITAL: 0
 
 ## Active v1.1 frontier — read before historical sections
+
+
+### 2026-09-23 06:06 +0300 — M4 DERIVATIVES INTELLIGENCE 2.0 SLICE 1 ACCEPTED
+
+- PR **#878** hosted run `35812833233` PASS:
+  - focused derivatives pytest/Ruff/mypy PASS;
+  - full repository pytest/Ruff/mypy/JS/freshness PASS;
+  - `M4_DERIVATIVES_DYNAMICS_SLICE1_FOCUSED_PASS=YES`;
+  - `M4_DERIVATIVES_DYNAMICS_SLICE1_FULL_PASS=YES`.
+- PR #878 squash-merged to main as `7268dd2e2f6e9aa6e1ffe8739f94f59df9dbd785`.
+- Merge SHA exact-main Stage10 run `35812957910` SUCCESS.
+- Accepted temporal derivatives evidence:
+  - OI x mark-price state machine;
+  - observed PIT funding percentile;
+  - one-step funding acceleration;
+  - current mark/index basis;
+  - basis change over consumed window;
+  - deterministic evidence/freeze identities;
+  - stale/partial/future/late evidence fail-closed.
+- Existing accepted `derivatives_context.py` remains unchanged for backward replay.
+- No cross-venue basis, predicted funding, probability, trading command or production weighting is claimed.
+- Current M4 frontier: bounded crowding / squeeze-risk / deleveraging context combining accepted derivatives dynamics with observed liquidation evidence and mark-price volatility.
+- Cursor workers/composer remain disabled by user.
+- REAL_CAPITAL=0; no production cutover.
+
 
 
 ### 2026-09-23 05:47 +0300 — M3 ORDER FLOW / ABSORPTION 2.0 COMPLETE
