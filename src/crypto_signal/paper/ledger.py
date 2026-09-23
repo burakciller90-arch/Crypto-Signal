@@ -12,6 +12,7 @@ from dataclasses import dataclass
 from decimal import Decimal
 from enum import StrEnum
 from pathlib import Path
+from types import TracebackType
 from typing import Any
 
 from crypto_signal.ledger.serialization import canonical_json
@@ -93,7 +94,12 @@ class PaperProcessedEventWrite:
 class _ClosingPaperLedgerConnection(sqlite3.Connection):
     """SQLite transaction context that also closes deterministically on exit."""
 
-    def __exit__(self, exc_type, exc_value, traceback):
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> bool | None:
         try:
             return super().__exit__(exc_type, exc_value, traceback)
         finally:
