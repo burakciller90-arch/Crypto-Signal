@@ -215,17 +215,16 @@ def build_derivatives_dynamics_evidence_freeze(
     )
     eligible = _eligible(observations, as_of_ms=as_of_ms)
     consumed = tuple(eligible[-analysis.consumed_observation_count :])
-    freeze = DerivativesDynamicsEvidenceFreeze(
-        freeze_identity="0" * 64,
+    payload = {
+        "analysis": analysis,
+        "observations": consumed,
+        "schema_version": DERIVATIVES_DYNAMICS_FREEZE_SCHEMA_VERSION,
+    }
+    return DerivativesDynamicsEvidenceFreeze(
+        freeze_identity=canonical_sha256(payload),
         schema_version=DERIVATIVES_DYNAMICS_FREEZE_SCHEMA_VERSION,
         analysis=analysis,
         observations=consumed,
-    )
-    return DerivativesDynamicsEvidenceFreeze(
-        freeze_identity=canonical_sha256(_freeze_payload(freeze)),
-        schema_version=freeze.schema_version,
-        analysis=freeze.analysis,
-        observations=freeze.observations,
     )
 
 
