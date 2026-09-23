@@ -13,7 +13,7 @@ from decimal import Decimal
 from enum import StrEnum
 from pathlib import Path
 from types import TracebackType
-from typing import Any
+from typing import Any, Literal
 
 from crypto_signal.ledger.serialization import canonical_json
 from crypto_signal.paper.models import (
@@ -99,9 +99,10 @@ class _ClosingPaperLedgerConnection(sqlite3.Connection):
         exc_type: type[BaseException] | None,
         exc_value: BaseException | None,
         traceback: TracebackType | None,
-    ) -> bool | None:
+    ) -> Literal[False]:
         try:
-            return super().__exit__(exc_type, exc_value, traceback)
+            super().__exit__(exc_type, exc_value, traceback)
+            return False
         finally:
             self.close()
 
