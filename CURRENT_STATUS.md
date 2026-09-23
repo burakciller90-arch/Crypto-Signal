@@ -10,6 +10,29 @@ REAL_CAPITAL: 0
 ## Active v1.1 frontier — read before historical sections
 
 
+### 2026-09-23 12:06 +0300 — EVENT RISK + NLP CORE CLOSED
+
+- PR **#901** accepted the versioned Event Risk circuit-breaker composition layer.
+- Authoritative hosted branch run `35840783660` focused + full PASS.
+- PR #901 squash-merged to main as `236bd18d261784f71324278569b58b967831d48d`.
+- Exact-main Stage10 run `35841011334` SUCCESS.
+- Accepted composition states:
+  - CLEAR;
+  - CAUTION;
+  - EVENT_BLOCK;
+  - DEGRADED_DATA;
+  - ABSTAIN.
+- Market-quality thresholds are caller-supplied, versioned research policy; the engine does not hard-code universal spread/depth/delay/gap/disagreement truths.
+- ABSTAIN outranks EVENT_BLOCK when provider disagreement or measured market-quality threshold breach is present.
+- Missing, stale or incomplete market-quality evidence fails closed to DEGRADED_DATA.
+- Event Risk remains safety/veto context and carries no order, sizing or directional authority.
+- **Phase 7 Event Risk + NLP exit is satisfied.**
+- Current intelligence frontier: **Phase 8 — M6 Confluence Matrix 2.0**.
+- CONTINUITY_PAUSED_BY_USER remains dominant; wake/lease must not be re-armed.
+- REAL_CAPITAL=0.
+
+
+
 ### 2026-09-23 11:55 +0300 — EVENT RISK NEWS/NLP SLICE 2 ACCEPTED
 
 - PR **#897** accepted source-bounded News/NLP evidence.
