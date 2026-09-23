@@ -95,7 +95,7 @@ def test_explicit_review_builds_non_mutating_r22_buy_preview(tmp_path) -> None:
     assert preview.decision is not None
     assert preview.decision.symbol is PaperSymbol.BTCUSDT
     assert preview.decision.quantity == Decimal("0.10")
-    assert preview.decision.reference_price == Decimal("100")
+    assert preview.decision.reference_price == Decimal(100)
     assert (
         preview.decision.quantity * preview.decision.reference_price
         <= fixed.hypothetical_notional_usdt
@@ -175,7 +175,7 @@ def test_trade_preview_rejects_wrong_or_future_market_reference(tmp_path) -> Non
     wrong_symbol = build_accepted_intent_market_reference(
         symbol=PaperSymbol.ETHUSDT,
         observed_at_ms=issuance.forecast.issued_at_ms + 2,
-        reference_price=Decimal("100"),
+        reference_price=Decimal(100),
         source_evidence_identities=(_sha("eth-reference"),),
     )
     with pytest.raises(ValueError, match="symbol mismatch"):
@@ -193,7 +193,7 @@ def test_trade_preview_rejects_wrong_or_future_market_reference(tmp_path) -> Non
     future_reference = build_accepted_intent_market_reference(
         symbol=PaperSymbol.BTCUSDT,
         observed_at_ms=sizing.sized_at_ms + 50,
-        reference_price=Decimal("100"),
+        reference_price=Decimal(100),
         source_evidence_identities=(_sha("future-reference"),),
     )
     with pytest.raises(ValueError, match="outside decision window"):
