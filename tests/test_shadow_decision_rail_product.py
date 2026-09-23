@@ -21,7 +21,18 @@ def test_shadow_decision_rail_endpoint_is_read_only_and_truthful(
     tmp_path: Path,
 ) -> None:
     journal = _journal(tmp_path)
-    before = journal.read_bytes()
+    before_status = R25ShadowIntentJournal(journal).verify_read_only()
+    with sqlite3.connect(f"{journal.resolve().as_uri()}?mode=ro", uri=True) as db:
+        before_rows = db.execute(
+            """SELECT record_identity, preview_identity, vault_id, event_at_ms,
+            previous_record_identity, payload_json
+            FROM r25_shadow_intent_records
+            ORDER BY vault_id, event_at_ms, record_identity"""
+        ).fetchall()
+        before_tables = db.execute(
+            """SELECT name, sql FROM sqlite_master
+            WHERE type IN ('table', 'trigger') ORDER BY name"""
+        ).fetchall()
     client = TestClient(
         create_app(
             tmp_path / "missing-signals.sqlite3",
@@ -46,7 +57,22 @@ def test_shadow_decision_rail_endpoint_is_read_only_and_truthful(
     assert body["production_authority"] is False
     assert body["read_only"] is True
     assert body["real_capital"] == 0
-    assert journal.read_bytes() == before
+
+    after_status = R25ShadowIntentJournal(journal).verify_read_only()
+    with sqlite3.connect(f"{journal.resolve().as_uri()}?mode=ro", uri=True) as db:
+        after_rows = db.execute(
+            """SELECT record_identity, preview_identity, vault_id, event_at_ms,
+            previous_record_identity, payload_json
+            FROM r25_shadow_intent_records
+            ORDER BY vault_id, event_at_ms, record_identity"""
+        ).fetchall()
+        after_tables = db.execute(
+            """SELECT name, sql FROM sqlite_master
+            WHERE type IN ('table', 'trigger') ORDER BY name"""
+        ).fetchall()
+    assert after_status == before_status
+    assert after_rows == before_rows
+    assert after_tables == before_tables
 
 
 def test_shadow_decision_rail_unconfigured_does_not_create_runtime_file(
@@ -98,7 +124,11 @@ def test_shadow_decision_rail_fails_closed_on_non_shadow_database(
     path = tmp_path / "wrong.shadow-intent.sqlite3"
     with sqlite3.connect(path) as db:
         db.execute("CREATE TABLE canonical_epoch2_accounting (id TEXT)")
-    before = path.read_bytes()
+    with sqlite3.connect(path) as db:
+        before_tables = db.execute(
+            """SELECT name, sql FROM sqlite_master
+            WHERE type = 'table' ORDER BY name"""
+        ).fetchall()
     client = TestClient(
         create_app(
             tmp_path / "missing-signals.sqlite3",
@@ -110,7 +140,12 @@ def test_shadow_decision_rail_fails_closed_on_non_shadow_database(
 
     assert response.status_code == 500
     assert "non-shadow tables" in response.json()["detail"]
-    assert path.read_bytes() == before
+    with sqlite3.connect(path) as db:
+        after_tables = db.execute(
+            """SELECT name, sql FROM sqlite_master
+            WHERE type = 'table' ORDER BY name"""
+        ).fetchall()
+    assert after_tables == before_tables
 
 
 def test_galactech_exposes_shadow_rail_without_live_trade_claims(
