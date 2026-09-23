@@ -15,13 +15,14 @@ from crypto_signal.paper.epochs import (
     PaperVaultId,
     assert_legacy_epoch1_fund_creation,
 )
-from crypto_signal.paper.ledger import PaperFundLedger
 from crypto_signal.paper.models import (
     REAL_CAPITAL,
+    FundCreationRecord,
     PaperPosition,
     PaperSymbol,
     normalize_positions,
 )
+from crypto_signal.paper.portfolio import read_paper_entries_read_only
 
 R21_ENGINE_VERSION = "r21-canonical-paper-fund-v1-slice1/1"
 R21_SCHEMA_VERSION = "r21-canonical-paper-fund-v1/1"
@@ -1034,12 +1035,18 @@ def initialize_epoch2_canonical_fund(
         raise ValueError("R21 Epoch1 and Epoch2 ledger paths must remain separate")
     if not epoch1_ledger_path.is_file():
         raise ValueError("R21 activation requires existing immutable Epoch1 ledger")
-    epoch1_ledger = PaperFundLedger(epoch1_ledger_path)
-    creations = epoch1_ledger.list_fund_creations()
+    epoch1_before = epoch1_ledger_path.read_bytes()
+    entries = read_paper_entries_read_only(epoch1_ledger_path)
+    creations = tuple(
+        entry.record
+        for entry in entries
+        if isinstance(entry.record, FundCreationRecord)
+    )
     if len(creations) != 1:
         raise ValueError("R21 activation requires exactly one legacy Epoch1 fund")
     assert_legacy_epoch1_fund_creation(creations[0])
-    epoch1_before = epoch1_ledger_path.read_bytes()
+    if epoch1_ledger_path.read_bytes() != epoch1_before:
+        raise ValueError("R21 read-only Epoch1 validation mutated ledger bytes")
     epoch1_sha = hashlib.sha256(epoch1_before).hexdigest()
     activation = build_epoch2_activation_record(
         activated_at_ms=activated_at_ms,
