@@ -230,8 +230,11 @@ def _calibrated_probability(
     *,
     issued_at_ms: int = AS_OF,
     probability: Decimal = Decimal("0.67"),
+    scope=None,
 ):
-    scope_identity = _probability_scope().scope_identity
+    if scope is None:
+        scope = _probability_scope()
+    scope_identity = scope.scope_identity
     model_version = "probability-model-v1"
     calibrator_version = "calibrator-v1"
     walk_forward_fit_identity = _sha("walk-forward-fit")
@@ -437,8 +440,19 @@ def test_calibrated_probability_must_match_exact_forecast_scope(
 ) -> None:
     with pytest.raises(ValueError, match=message):
         _forecast(
-            probability=_calibrated_probability(),
+            probability=_calibrated_probability(scope=scope),
             probability_scope=scope,
+        )
+
+
+def test_probability_authorization_and_scope_identity_must_match() -> None:
+    with pytest.raises(
+        ValueError,
+        match="authorization/scope identity mismatch",
+    ):
+        _forecast(
+            probability=_calibrated_probability(),
+            probability_scope=_probability_scope(regime="range"),
         )
 
 
