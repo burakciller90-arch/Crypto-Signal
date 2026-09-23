@@ -1243,6 +1243,7 @@ function renderShadowDecisionRail() {
         identities belonged to the same shadow cycle. It does not prove a deployed
         restart replay until a separate replay observation exists.
       </p>
+      <p>Reviewed preview evidence only · not a fill, not canonical NAV mutation, not live trading.</p>
     </article>`;
 }
 
