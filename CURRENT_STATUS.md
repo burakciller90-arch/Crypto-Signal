@@ -10,6 +10,28 @@ REAL_CAPITAL: 0
 ## Active v1.1 frontier — read before historical sections
 
 
+### 2026-09-23 12:17 +0300 — M6 CONFLUENCE MATRIX 2.0 CORE SLICE 1 ACCEPTED
+
+- PR **#902** accepted the locked five-family M6 Confluence Matrix 2.0 core.
+- Authoritative hosted branch run `35841898852` focused + full PASS.
+- PR #902 squash-merged to main as `5dea8be9e4c7d9c0358833a196c9cc40ebbd6b42`.
+- Exact-main Stage10 run `35842054230` SUCCESS.
+- Locked priors are exact:
+  - Geometry / PA / Elliott / Harmonic 20%;
+  - Liquidity 25%;
+  - Order Flow / Absorption 25%;
+  - Derivatives 15%;
+  - On-chain / Smart Money 15%.
+- Event Risk remains outside the 100-point score as veto/context.
+- Support, opposition, coverage, evidence quality, freshness and material conflicts remain separately observable.
+- A material conflict or family ABSTAIN cannot be overridden by a high arithmetic score.
+- `Confluence 82/100` can coexist with `Probability: NOT CALIBRATED`.
+- Thresholds 70/75/80/85 are stored as research hypotheses only; Slice 1 has no ACTIVE decision or auto-promotion.
+- Current M6 frontier: **chronological forward threshold research for 70/75/80/85**, with no winner auto-selection.
+- CONTINUITY_PAUSED_BY_USER remains dominant. REAL_CAPITAL=0.
+
+
+
 ### 2026-09-23 12:06 +0300 — EVENT RISK + NLP CORE CLOSED
 
 - PR **#901** accepted the versioned Event Risk circuit-breaker composition layer.
