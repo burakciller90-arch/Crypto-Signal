@@ -4,6 +4,7 @@ on:
   pull_request:
     branches: [main]
     paths:
+      - "src/crypto_signal/data/market_tape_collector_runtime.py"
       - "src/crypto_signal/product/market_tape_runtime.py"
       - "src/crypto_signal/product/web.py"
       - "src/crypto_signal/product/galactech/app.js"
