@@ -10,6 +10,25 @@ REAL_CAPITAL: 0
 ## Active v1.1 frontier — read before historical sections
 
 
+### 2026-09-23 18:12 +0300 — GALACTECH ACCESSIBILITY / PERFORMANCE POLISH ACCEPTED
+
+- PR **#931** accepted the locked GALACTECH accessibility/performance polish.
+- Exact-head hosted run `35879516224` SUCCESS at `2af66550cd8a0ae3b886523c4b941cf801f349cb`.
+- PR #931 squash-merged as `7082849c197271214979275c27eaef1e7fb8059f`.
+- Exact-main Stage10 run `35879700507` SUCCESS.
+- Primary routes expose exact `aria-controls`, current route semantics, polite route announcements and arrow/Home/End keyboard navigation.
+- Proof Wall filters expose pressed state; Evidence Room has an explicit programmatic description.
+- Reduced-motion, higher-contrast, forced-colors and reduced-transparency preferences are respected.
+- Periodic read-only refresh is overlap-safe, hidden tabs do not poll, and visibility return triggers one exact refresh.
+- Static no-build budgets guard HTML/JS/CSS size; GALACTECH shell has no external image/HTTP dependency.
+- Rendering polish does not claim measured FPS/latency/freshness and does not delay market data for animation.
+- Historical accessibility branch 109 commits behind main was treated as stale audit evidence and not replayed.
+- No execution authority. REAL_CAPITAL=0.
+- Current locked frontier: **Product rail — production UI cutover candidate / integrated release acceptance**.
+- UID504 wake pause remains authoritative and untouched. Cursor workers remain disabled.
+
+
+
 ### 2026-09-23 18:02 +0300 — GALACTECH LEARN / SYSTEM ACCEPTED
 
 - PR **#930** accepted the locked GALACTECH Learn + System slice.
