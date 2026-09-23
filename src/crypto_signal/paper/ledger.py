@@ -90,6 +90,16 @@ class PaperProcessedEventWrite:
             raise ValueError("processed_at_ms must be non-negative")
 
 
+class _ClosingPaperLedgerConnection(sqlite3.Connection):
+    """SQLite transaction context that also closes deterministically on exit."""
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        try:
+            return super().__exit__(exc_type, exc_value, traceback)
+        finally:
+            self.close()
+
+
 _TABLE_BY_KIND: dict[PaperRecordKind, str] = {
     PaperRecordKind.FUND_CREATION: "paper_fund_creations",
     PaperRecordKind.DECISION_INTENT: "paper_decision_intents",
@@ -1006,7 +1016,11 @@ class PaperFundLedger:
         return PaperLedgerWriteDisposition.INSERTED
 
     def _connect(self) -> sqlite3.Connection:
-        connection = sqlite3.connect(self.path, timeout=5.0)
+        connection = sqlite3.connect(
+            self.path,
+            timeout=5.0,
+            factory=_ClosingPaperLedgerConnection,
+        )
         connection.row_factory = sqlite3.Row
         return connection
 
