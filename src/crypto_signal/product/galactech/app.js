@@ -14,6 +14,8 @@ const API = Object.freeze({
   decisionStatus: "/api/decision-evidence/status",
   shadowRail: "/api/shadow-decision-rail/status",
   operationalTruth: "/api/r25/operational-truth",
+  marketTapeStatus: "/api/market-tape-runtime/status",
+  coldArchiveStatus: "/api/cold-archive/status?verify_limit=24",
   liveFeed: "/api/intelligence-feed?limit=100",
   decisionProof: (identity) => `/api/decision-proof/${encodeURIComponent(identity)}`,
   shadowForecastCycle: (identity) =>
@@ -53,6 +55,8 @@ const state = {
   decisionStatus: null,
   shadowRail: null,
   operationalTruth: null,
+  marketTapeStatus: null,
+  coldArchiveStatus: null,
   liveFeed: null,
   marketLayer: "PA",
   marketSelection: null,
@@ -2095,6 +2099,8 @@ function renderOperationalTruth() {
     ["SHADOW CYCLE MANIFEST", components.shadow_cycle_manifest],
     ["RUNTIME REPLAY OBSERVATION", components.runtime_replay_observation],
     ["CANONICAL EPOCH 2", components.canonical_epoch2],
+    ["MARKET TAPE", components.market_tape_runtime],
+    ["COLD ARCHIVE", components.cold_archive],
     ["GALACTECH PRODUCT", components.galactech_product],
   ].map(([label, component]) =>
     operationalComponentMarkup(label, component)
@@ -2120,6 +2126,8 @@ function renderSystem() {
   const education = state.education || {};
   const decisionStatus = state.decisionStatus || {};
   const shadowRail = state.shadowRail || {};
+  const marketTape = state.marketTapeStatus || {};
+  const coldArchive = state.coldArchiveStatus || {};
   const liveFeed = state.liveFeed || {};
 
   const apiReady = health.status === "ok";
@@ -2167,6 +2175,40 @@ function renderSystem() {
       : "NOT EXPOSED",
     shadowRailReady ? "positive" : "watch"
   );
+  const marketTapeReady = marketTape.status === "ready";
+  const marketTapeSnapshot = marketTape.snapshot || {};
+  setSystemValue(
+    "systemMarketTape",
+    marketTapeReady
+      ? `${marketTapeSnapshot.total_rows ?? 0} ROWS · PERSISTED`
+      : "NOT EXPOSED",
+    marketTapeReady ? "positive" : "watch"
+  );
+  const marketTapeNote = byId("systemMarketTapeNote");
+  if (marketTapeNote) {
+    marketTapeNote.textContent = marketTapeReady
+      ? `latest age ${marketTapeSnapshot.latest_event_age_ms ?? "NOT MEASURED"} ms · process NOT MEASURED · ONLINE NOT ASSERTED`
+      : text(marketTape.reason, "runtime evidence unavailable");
+  }
+
+  const coldReady =
+    coldArchive.status === "ready" || coldArchive.status === "empty";
+  const coldSnapshot = coldArchive.snapshot || {};
+  setSystemValue(
+    "systemColdArchive",
+    coldReady
+      ? (coldArchive.status === "empty"
+          ? "0 PARTITIONS"
+          : `${coldSnapshot.verified_partition_count ?? 0}/${coldSnapshot.partition_count ?? 0} VERIFIED`)
+      : "NOT EXPOSED",
+    coldArchive.status === "ready" ? "positive" : "watch"
+  );
+  const coldNote = byId("systemColdArchiveNote");
+  if (coldNote) {
+    coldNote.textContent = coldReady
+      ? `${text(coldSnapshot.integrity_scope, "NO PARTITIONS")} · process NOT MEASURED · canonical-row replay NOT MEASURED`
+      : text(coldArchive.reason, "archive runtime evidence unavailable");
+  }
 
   const shadowRailNote = byId("systemShadowRailNote");
   if (shadowRailNote) {
@@ -2504,6 +2546,8 @@ async function runBoot() {
     loadEndpoint("decisionStatus", API.decisionStatus),
     loadEndpoint("shadowRail", API.shadowRail),
     loadEndpoint("operationalTruth", API.operationalTruth),
+    loadEndpoint("marketTapeStatus", API.marketTapeStatus),
+    loadEndpoint("coldArchiveStatus", API.coldArchiveStatus),
     loadEndpoint("liveFeed", API.liveFeed),
   ]);
 
@@ -2548,6 +2592,7 @@ async function refreshRuntime(reason = "timer") {
       loadEndpoint("performance", API.performance),
       loadEndpoint("decisionStatus", API.decisionStatus),
       loadEndpoint("shadowRail", API.shadowRail),
+      loadEndpoint("marketTapeStatus", API.marketTapeStatus),
       loadEndpoint("liveFeed", API.liveFeed),
     ]);
     if (results[0].ok) applyHealthTruth(results[0].data);
