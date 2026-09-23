@@ -42,6 +42,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--shadow-cycle-manifest", type=Path, default=None)
     parser.add_argument("--runtime-replay-observation", type=Path, default=None)
     parser.add_argument("--market-tape", type=Path, default=None)
+    parser.add_argument(
+        "--market-tape-collector-runtime",
+        type=Path,
+        default=None,
+    )
     parser.add_argument("--cold-archive", type=Path, default=None)
     parser.add_argument(
         "--learning-memory",
@@ -78,6 +83,10 @@ def resolve_runtime_paths(args: argparse.Namespace) -> dict[str, Path]:
         "market_tape_path": (
             args.market_tape
             or runtime_root / "market_tape" / "market_tape.sqlite3"
+        ),
+        "market_tape_collector_runtime_path": (
+            args.market_tape_collector_runtime
+            or runtime_root / "market_tape" / "collector_runtime.sqlite3"
         ),
         "cold_archive_path": (
             args.cold_archive

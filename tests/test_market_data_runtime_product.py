@@ -7,8 +7,14 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 
+from crypto_signal.data.market_tape_collector_runtime import (
+    MarketTapeCollectorRuntimeStore,
+    build_collector_heartbeat,
+    build_collector_instance,
+)
 from crypto_signal.product.market_tape_runtime import (
     read_cold_archive_runtime_truth,
+    read_market_tape_collector_runtime_truth,
     read_market_tape_runtime_truth,
 )
 from crypto_signal.product.web import create_app
@@ -127,6 +133,34 @@ def _seed_market_tape(path: Path, *, event_at_ms: int = 1_000) -> None:
         )
 
 
+def _seed_collector_runtime(
+    path: Path,
+    *,
+    heartbeat_at_ms: int = 1_900,
+    ingestion_at_ms: int | None = 1_850,
+) -> None:
+    store = MarketTapeCollectorRuntimeStore(path)
+    instance = build_collector_instance(
+        provider="bybit",
+        source="market_tape_stream",
+        symbols=("BTCUSDT", "ETHUSDT", "SOLUSDT"),
+        started_at_ms=1_000,
+        process_id=321,
+        runtime_nonce="test-runtime",
+    )
+    store.append_instance(instance)
+    heartbeat = build_collector_heartbeat(
+        instance_identity=instance.instance_identity,
+        sequence_no=1,
+        observed_at_ms=heartbeat_at_ms,
+        last_successful_ingestion_ms=ingestion_at_ms,
+        observed_messages_total=12 if ingestion_at_ms is not None else 0,
+        normalized_rows_total=8 if ingestion_at_ms is not None else 0,
+        raw_rows_total=12 if ingestion_at_ms is not None else 0,
+    )
+    store.append_heartbeat(heartbeat)
+
+
 def _seed_cold_archive(root: Path) -> Path:
     partition = root / "year=2026" / "month=09" / "day=23" / "hour=17"
     partition.mkdir(parents=True)
@@ -211,6 +245,126 @@ def test_market_tape_reader_is_read_only_and_reports_persisted_evidence(
     assert snapshot.production_authority is False
     assert snapshot.real_capital == 0
     assert path.read_bytes() == before
+
+
+def test_collector_runtime_reader_separates_heartbeat_and_ingestion_truth(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / "collector_runtime.sqlite3"
+    _seed_collector_runtime(path)
+    before = {
+        item.name: item.read_bytes()
+        for item in tmp_path.iterdir()
+        if item.is_file()
+    }
+
+    fresh = read_market_tape_collector_runtime_truth(
+        path,
+        observed_at_ms=2_000,
+        heartbeat_freshness_ms=500,
+    )
+    stale = read_market_tape_collector_runtime_truth(
+        path,
+        observed_at_ms=3_000,
+        heartbeat_freshness_ms=500,
+    )
+
+    assert fresh is not None
+    assert fresh.provider == "bybit"
+    assert fresh.source == "market_tape_stream"
+    assert fresh.symbols == ("BTCUSDT", "ETHUSDT", "SOLUSDT")
+    assert fresh.process_evidence_status == "HEARTBEAT_FRESH"
+    assert fresh.heartbeat_age_ms == 100
+    assert fresh.last_successful_ingestion_ms == 1_850
+    assert fresh.ingestion_age_ms == 150
+    assert fresh.observed_messages_total == 12
+    assert fresh.read_only_verified is True
+    assert fresh.production_authority is False
+    assert fresh.real_capital == 0
+
+    assert stale is not None
+    assert stale.process_evidence_status == "HEARTBEAT_STALE"
+    assert stale.heartbeat_age_ms == 1_100
+    assert stale.ingestion_age_ms == 1_150
+
+    after = {
+        item.name: item.read_bytes()
+        for item in tmp_path.iterdir()
+        if item.is_file()
+    }
+    assert after == before
+
+
+def test_collector_runtime_reader_preserves_no_ingestion_state(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / "collector_runtime.sqlite3"
+    _seed_collector_runtime(path, ingestion_at_ms=None)
+
+    snapshot = read_market_tape_collector_runtime_truth(
+        path,
+        observed_at_ms=2_000,
+    )
+
+    assert snapshot is not None
+    assert snapshot.process_evidence_status == "HEARTBEAT_FRESH"
+    assert snapshot.last_successful_ingestion_ms is None
+    assert snapshot.ingestion_age_ms is None
+    assert snapshot.observed_messages_total == 0
+
+
+def test_market_tape_endpoint_exposes_heartbeat_without_online_claim(
+    tmp_path: Path,
+) -> None:
+    market_path = tmp_path / "market_tape.sqlite3"
+    collector_path = tmp_path / "collector_runtime.sqlite3"
+    _seed_market_tape(market_path)
+    _seed_collector_runtime(collector_path)
+    client = TestClient(
+        create_app(
+            tmp_path / "missing-signals.sqlite3",
+            market_tape_path=market_path,
+            market_tape_collector_runtime_path=collector_path,
+        )
+    )
+
+    body = client.get(
+        "/api/market-tape-runtime/status?observed_at_ms=2000"
+    ).json()
+
+    assert body["status"] == "ready"
+    assert body["collection_process_status"] == "HEARTBEAT_FRESH"
+    assert body["collector_runtime"]["heartbeat_age_ms"] == 100
+    assert body["collector_runtime"]["ingestion_age_ms"] == 150
+    assert body["collector_runtime_reason"] is None
+    assert body["online_status"] == "NOT_ASSERTED"
+    assert body["read_only"] is True
+    assert body["real_capital"] == 0
+
+
+def test_market_tape_endpoint_marks_missing_collector_evidence_without_online_claim(
+    tmp_path: Path,
+) -> None:
+    market_path = tmp_path / "market_tape.sqlite3"
+    collector_path = tmp_path / "missing-collector.sqlite3"
+    _seed_market_tape(market_path)
+    client = TestClient(
+        create_app(
+            tmp_path / "missing-signals.sqlite3",
+            market_tape_path=market_path,
+            market_tape_collector_runtime_path=collector_path,
+        )
+    )
+
+    body = client.get(
+        "/api/market-tape-runtime/status?observed_at_ms=2000"
+    ).json()
+
+    assert body["status"] == "ready"
+    assert body["collection_process_status"] == "RUNTIME_EVIDENCE_MISSING"
+    assert body["collector_runtime"] is None
+    assert body["collector_runtime_reason"] == "collector_runtime_evidence_missing"
+    assert body["online_status"] == "NOT_ASSERTED"
 
 
 def test_market_tape_reader_fails_closed_on_incomplete_schema(
@@ -376,7 +530,10 @@ def test_galactech_system_binds_market_data_truth_without_online_claim(
     assert '"systemMarketTape"' in js
     assert '"systemColdArchive"' in js
     assert "ONLINE NOT ASSERTED" in js
-    assert "process NOT MEASURED" in js
+    assert "collection_process_status" in js
+    assert "HEARTBEAT_FRESH" in js
+    assert "heartbeat age" in js
+    assert "ingestion age" in js
     assert "canonical-row replay NOT MEASURED" in js
     assert 'loadEndpoint("marketTapeStatus", API.marketTapeStatus)' in js
     assert 'loadEndpoint("coldArchiveStatus", API.coldArchiveStatus)' in js

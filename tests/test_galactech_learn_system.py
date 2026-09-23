@@ -133,4 +133,7 @@ def test_galactech_system_never_upgrades_unexposed_runtime_health(
     assert '"systemMarketTape"' in js
     assert '"systemColdArchive"' in js
     assert "ONLINE NOT ASSERTED" in js
-    assert "process NOT MEASURED" in js
+    assert "collection_process_status" in js
+    assert "HEARTBEAT_FRESH" in js
+    assert "heartbeat age" in js
+    assert "ingestion age" in js

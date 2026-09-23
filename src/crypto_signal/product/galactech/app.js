@@ -2177,17 +2177,23 @@ function renderSystem() {
   );
   const marketTapeReady = marketTape.status === "ready";
   const marketTapeSnapshot = marketTape.snapshot || {};
+  const collectorRuntime = marketTape.collector_runtime || {};
+  const collectionProcessStatus = text(
+    marketTape.collection_process_status,
+    "NOT_MEASURED"
+  );
+  const collectionFresh = collectionProcessStatus === "HEARTBEAT_FRESH";
   setSystemValue(
     "systemMarketTape",
     marketTapeReady
       ? `${marketTapeSnapshot.total_rows ?? 0} ROWS · PERSISTED`
       : "NOT EXPOSED",
-    marketTapeReady ? "positive" : "watch"
+    marketTapeReady && collectionFresh ? "positive" : "watch"
   );
   const marketTapeNote = byId("systemMarketTapeNote");
   if (marketTapeNote) {
     marketTapeNote.textContent = marketTapeReady
-      ? `latest age ${marketTapeSnapshot.latest_event_age_ms ?? "NOT MEASURED"} ms · process NOT MEASURED · ONLINE NOT ASSERTED`
+      ? `latest persisted age ${marketTapeSnapshot.latest_event_age_ms ?? "NOT MEASURED"} ms · process ${collectionProcessStatus} · heartbeat age ${collectorRuntime.heartbeat_age_ms ?? "NOT MEASURED"} ms · ingestion age ${collectorRuntime.ingestion_age_ms ?? "NOT MEASURED"} ms · ONLINE NOT ASSERTED`
       : text(marketTape.reason, "runtime evidence unavailable");
   }
 

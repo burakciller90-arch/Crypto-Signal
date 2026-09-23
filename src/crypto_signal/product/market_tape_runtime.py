@@ -17,6 +17,7 @@ from typing import Any
 _ACCEPTED_MARKET_TAPE_SCHEMAS = frozenset(
     {"market-tape-schema-v1/1", "market-tape-schema-v1/2"}
 )
+_COLLECTOR_RUNTIME_SCHEMA = "market-tape-collector-runtime-v1/2"
 _ACCEPTED_COLD_SCHEMAS = frozenset(
     {"market-tape-cold-parquet-v1/1", "market-tape-cold-parquet-v1/2"}
 )
@@ -166,6 +167,252 @@ class MarketTapeRuntimeTruth:
             raise ValueError("Market Tape persistence cannot assert process liveness")
         if self.production_authority or self.real_capital != 0:
             raise ValueError("Market Tape Product Truth cannot grant authority")
+
+
+@dataclass(frozen=True, slots=True)
+class MarketTapeCollectorRuntimeTruth:
+    schema_version: str
+    provider: str
+    source: str
+    symbols: tuple[str, ...]
+    instance_identity: str
+    start_kind: str
+    previous_instance_identity: str | None
+    process_id: int
+    started_at_ms: int
+    heartbeat_identity: str | None
+    heartbeat_sequence_no: int | None
+    heartbeat_observed_at_ms: int | None
+    heartbeat_age_ms: int | None
+    last_successful_ingestion_ms: int | None
+    ingestion_age_ms: int | None
+    observed_messages_total: int
+    normalized_rows_total: int
+    raw_rows_total: int
+    process_evidence_status: str
+    quick_check_ok: bool = True
+    read_only_verified: bool = True
+    production_authority: bool = False
+    real_capital: int = 0
+
+    def __post_init__(self) -> None:
+        if self.schema_version != _COLLECTOR_RUNTIME_SCHEMA:
+            raise ValueError("unsupported collector runtime Product schema")
+        if not self.provider or not self.source:
+            raise ValueError("collector runtime provider/source missing")
+        if not self.symbols or tuple(sorted(set(self.symbols))) != self.symbols:
+            raise ValueError("collector runtime symbols are not canonical")
+        if self.process_id <= 0 or self.started_at_ms < 0:
+            raise ValueError("collector runtime process/start values invalid")
+        if self.start_kind not in {"start", "restart"}:
+            raise ValueError("collector runtime start kind invalid")
+        _require_sha256(self.instance_identity, "collector instance identity")
+        if self.start_kind == "start" and self.previous_instance_identity is not None:
+            raise ValueError("collector initial instance cannot have predecessor")
+        if self.start_kind == "restart":
+            if self.previous_instance_identity is None:
+                raise ValueError("collector restart predecessor missing")
+            _require_sha256(
+                self.previous_instance_identity,
+                "collector previous instance identity",
+            )
+        if self.heartbeat_identity is None:
+            if any(
+                value is not None
+                for value in (
+                    self.heartbeat_sequence_no,
+                    self.heartbeat_observed_at_ms,
+                    self.heartbeat_age_ms,
+                )
+            ):
+                raise ValueError("collector heartbeat fields are inconsistent")
+            if self.process_evidence_status != "NO_HEARTBEAT":
+                raise ValueError("collector missing heartbeat status mismatch")
+        else:
+            _require_sha256(self.heartbeat_identity, "collector heartbeat identity")
+            if (
+                self.heartbeat_sequence_no is None
+                or self.heartbeat_sequence_no <= 0
+                or self.heartbeat_observed_at_ms is None
+                or self.heartbeat_age_ms is None
+            ):
+                raise ValueError("collector heartbeat evidence is incomplete")
+            if self.heartbeat_age_ms < 0:
+                raise ValueError("collector heartbeat age cannot be negative")
+            if self.process_evidence_status not in {
+                "HEARTBEAT_FRESH",
+                "HEARTBEAT_STALE",
+            }:
+                raise ValueError("collector heartbeat status invalid")
+        if self.last_successful_ingestion_ms is None:
+            if self.ingestion_age_ms is not None:
+                raise ValueError("collector ingestion age without ingestion")
+        elif self.ingestion_age_ms is None or self.ingestion_age_ms < 0:
+            raise ValueError("collector ingestion age invalid")
+        if min(
+            self.observed_messages_total,
+            self.normalized_rows_total,
+            self.raw_rows_total,
+        ) < 0:
+            raise ValueError("collector runtime counters cannot be negative")
+        if not self.quick_check_ok or not self.read_only_verified:
+            raise ValueError("collector runtime Product Truth must be read-only")
+        if self.production_authority or self.real_capital != 0:
+            raise ValueError("collector runtime Product Truth cannot grant authority")
+
+
+def read_market_tape_collector_runtime_truth(
+    path: Path,
+    *,
+    observed_at_ms: int,
+    heartbeat_freshness_ms: int = 30_000,
+) -> MarketTapeCollectorRuntimeTruth | None:
+    if observed_at_ms < 0:
+        raise ValueError("collector runtime observation time cannot be negative")
+    if not 1 <= heartbeat_freshness_ms <= 300_000:
+        raise ValueError("collector heartbeat freshness must be inside 1..300000 ms")
+    if not path.is_file():
+        raise ValueError("collector runtime database missing")
+
+    uri = f"{path.resolve().as_uri()}?mode=ro"
+    with closing(sqlite3.connect(uri, uri=True)) as connection:
+        connection.row_factory = sqlite3.Row
+        connection.execute("PRAGMA query_only=ON")
+        quick = connection.execute("PRAGMA quick_check").fetchone()
+        if quick is None or str(quick[0]).lower() != "ok":
+            raise ValueError("collector runtime SQLite quick_check failed")
+
+        tables = {
+            str(row[0])
+            for row in connection.execute(
+                """SELECT name FROM sqlite_master
+                WHERE type='table' AND name NOT LIKE 'sqlite_%'"""
+            ).fetchall()
+        }
+        required_tables = {
+            "collector_runtime_meta",
+            "collector_instances",
+            "collector_heartbeats",
+        }
+        if not required_tables.issubset(tables):
+            raise ValueError("collector runtime required table missing")
+        _verify_collector_runtime_columns(connection)
+
+        schema_row = connection.execute(
+            """SELECT value FROM collector_runtime_meta
+            WHERE key='schema_version'"""
+        ).fetchone()
+        if schema_row is None or str(schema_row[0]) != _COLLECTOR_RUNTIME_SCHEMA:
+            raise ValueError("collector runtime schema version mismatch")
+
+        instance_row = connection.execute(
+            """SELECT instance_identity, payload_json
+            FROM collector_instances
+            ORDER BY started_at_ms DESC, instance_identity DESC
+            LIMIT 1"""
+        ).fetchone()
+        if instance_row is None:
+            return None
+
+        instance_identity = str(instance_row["instance_identity"])
+        instance_payload_json = str(instance_row["payload_json"])
+        _verify_payload_identity(
+            instance_identity,
+            instance_payload_json,
+            "collector instance",
+        )
+        instance_payload = json.loads(instance_payload_json)
+        if not isinstance(instance_payload, dict):
+            raise TypeError("collector instance payload must be object")
+        if str(instance_payload.get("schema_version")) != _COLLECTOR_RUNTIME_SCHEMA:
+            raise ValueError("collector instance payload schema mismatch")
+
+        heartbeat_row = connection.execute(
+            """SELECT heartbeat_identity, payload_json
+            FROM collector_heartbeats
+            WHERE instance_identity=?
+            ORDER BY sequence_no DESC
+            LIMIT 1""",
+            (instance_identity,),
+        ).fetchone()
+
+    heartbeat_identity: str | None = None
+    heartbeat_sequence_no: int | None = None
+    heartbeat_observed_at_ms: int | None = None
+    heartbeat_age_ms: int | None = None
+    last_successful_ingestion_ms: int | None = None
+    ingestion_age_ms: int | None = None
+    observed_messages_total = 0
+    normalized_rows_total = 0
+    raw_rows_total = 0
+    process_evidence_status = "NO_HEARTBEAT"
+
+    if heartbeat_row is not None:
+        heartbeat_identity = str(heartbeat_row["heartbeat_identity"])
+        heartbeat_payload_json = str(heartbeat_row["payload_json"])
+        _verify_payload_identity(
+            heartbeat_identity,
+            heartbeat_payload_json,
+            "collector heartbeat",
+        )
+        heartbeat_payload = json.loads(heartbeat_payload_json)
+        if not isinstance(heartbeat_payload, dict):
+            raise TypeError("collector heartbeat payload must be object")
+        if str(heartbeat_payload.get("schema_version")) != _COLLECTOR_RUNTIME_SCHEMA:
+            raise ValueError("collector heartbeat payload schema mismatch")
+        if str(heartbeat_payload.get("instance_identity")) != instance_identity:
+            raise ValueError("collector heartbeat/instance lineage mismatch")
+
+        heartbeat_sequence_no = int(heartbeat_payload["sequence_no"])
+        heartbeat_observed_at_ms = int(heartbeat_payload["observed_at_ms"])
+        if heartbeat_observed_at_ms > observed_at_ms:
+            raise ValueError("collector heartbeat is future evidence")
+        heartbeat_age_ms = observed_at_ms - heartbeat_observed_at_ms
+        process_evidence_status = (
+            "HEARTBEAT_FRESH"
+            if heartbeat_age_ms <= heartbeat_freshness_ms
+            else "HEARTBEAT_STALE"
+        )
+        ingestion_raw = heartbeat_payload.get("last_successful_ingestion_ms")
+        if ingestion_raw is not None:
+            last_successful_ingestion_ms = int(ingestion_raw)
+            if last_successful_ingestion_ms > observed_at_ms:
+                raise ValueError("collector ingestion is future evidence")
+            ingestion_age_ms = observed_at_ms - last_successful_ingestion_ms
+        observed_messages_total = int(
+            heartbeat_payload["observed_messages_total"]
+        )
+        normalized_rows_total = int(heartbeat_payload["normalized_rows_total"])
+        raw_rows_total = int(heartbeat_payload["raw_rows_total"])
+
+    symbols_raw = instance_payload.get("symbols")
+    if not isinstance(symbols_raw, list):
+        raise TypeError("collector instance symbols must be array")
+    symbols = tuple(str(value) for value in symbols_raw)
+    previous_raw = instance_payload.get("previous_instance_identity")
+    previous = None if previous_raw is None else str(previous_raw)
+
+    return MarketTapeCollectorRuntimeTruth(
+        schema_version=str(instance_payload["schema_version"]),
+        provider=str(instance_payload["provider"]),
+        source=str(instance_payload["source"]),
+        symbols=symbols,
+        instance_identity=instance_identity,
+        start_kind=str(instance_payload["start_kind"]),
+        previous_instance_identity=previous,
+        process_id=int(instance_payload["process_id"]),
+        started_at_ms=int(instance_payload["started_at_ms"]),
+        heartbeat_identity=heartbeat_identity,
+        heartbeat_sequence_no=heartbeat_sequence_no,
+        heartbeat_observed_at_ms=heartbeat_observed_at_ms,
+        heartbeat_age_ms=heartbeat_age_ms,
+        last_successful_ingestion_ms=last_successful_ingestion_ms,
+        ingestion_age_ms=ingestion_age_ms,
+        observed_messages_total=observed_messages_total,
+        normalized_rows_total=normalized_rows_total,
+        raw_rows_total=raw_rows_total,
+        process_evidence_status=process_evidence_status,
+    )
 
 
 @dataclass(frozen=True, slots=True)
@@ -334,6 +581,65 @@ def read_cold_archive_runtime_truth(
         verified_file_bytes=sum(item.file_bytes for item in selected),
         integrity_scope=scope,
     )
+
+
+def _verify_collector_runtime_columns(
+    connection: sqlite3.Connection,
+) -> None:
+    expected = {
+        "collector_runtime_meta": {"key", "value"},
+        "collector_instances": {
+            "instance_identity",
+            "provider",
+            "source",
+            "started_at_ms",
+            "process_id",
+            "payload_json",
+        },
+        "collector_heartbeats": {
+            "heartbeat_identity",
+            "instance_identity",
+            "sequence_no",
+            "observed_at_ms",
+            "last_successful_ingestion_ms",
+            "payload_json",
+        },
+    }
+    for table, required in expected.items():
+        observed = {
+            str(row[1])
+            for row in connection.execute(
+                f"PRAGMA table_info({table})"
+            ).fetchall()
+        }
+        missing = required - observed
+        if missing:
+            raise ValueError(
+                f"collector runtime columns missing from {table}: "
+                + ",".join(sorted(missing))
+            )
+
+
+def _verify_payload_identity(
+    identity: str,
+    payload_json: str,
+    label: str,
+) -> None:
+    _require_sha256(identity, f"{label} identity")
+    canonical = json.dumps(
+        json.loads(payload_json),
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=False,
+    )
+    observed = hashlib.sha256(canonical.encode()).hexdigest()
+    if observed != identity:
+        raise ValueError(f"{label} payload identity mismatch")
+
+
+def _require_sha256(value: str, label: str) -> None:
+    if len(value) != 64 or any(ch not in "0123456789abcdef" for ch in value):
+        raise ValueError(f"{label} must be lowercase SHA256")
 
 
 def _verify_required_columns(
