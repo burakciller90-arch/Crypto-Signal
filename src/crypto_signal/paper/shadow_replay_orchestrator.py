@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from decimal import Decimal
+from typing import TYPE_CHECKING
 
 from crypto_signal.intelligence.event_risk_circuit_breaker import (
     CircuitBreakerAnalysis,
@@ -48,9 +49,10 @@ from crypto_signal.paper.smart_capital_allocator import (
     TacticalMicrostructureEvidence,
 )
 from crypto_signal.unified_decision_runtime import UnifiedDecisionIssuance
-from research.alpha_factory.probability_calibration_gate import (
-    CalibratedProbabilityEvidence,
-)
+if TYPE_CHECKING:
+    from research.alpha_factory.probability_calibration_gate import (
+        CalibratedProbabilityEvidence,
+    )
 
 SHADOW_REPLAY_ENGINE_VERSION = "r25-shadow-restart-replay-v1/1"
 REAL_CAPITAL = 0
