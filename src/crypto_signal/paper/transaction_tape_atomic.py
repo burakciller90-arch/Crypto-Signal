@@ -80,6 +80,7 @@ def _assert_row_headers(
     activation_identity: str,
     vault_id: str | None = None,
     event_at_ms: int | None = None,
+    event_field: str | None = None,
     label: str,
 ) -> None:
     if raw.get("activation_identity") != activation_identity:
@@ -87,12 +88,9 @@ def _assert_row_headers(
     if vault_id is not None and raw.get("vault_id") != vault_id:
         raise ValueError(f"{label} vault header mismatch")
     if event_at_ms is not None:
-        payload_time = raw.get("snapshot_at_ms")
-        if payload_time is None:
-            payload_time = raw.get("filled_at_ms")
-        if payload_time is None:
-            payload_time = raw.get("decided_at_ms")
-        if payload_time != event_at_ms:
+        if event_field is None:
+            raise ValueError(f"{label} event-time field is not defined")
+        if raw.get(event_field) != event_at_ms:
             raise ValueError(f"{label} event-time header mismatch")
 
 
@@ -512,6 +510,7 @@ class R22Epoch2AtomicTape:
                 activation_identity=activation_identity,
                 vault_id=vault_id,
                 event_at_ms=event_at_ms,
+                event_field="snapshot_at_ms",
                 label="R22 bundle",
             )
             if bundle.get("fill_identity") != str(bundle_row[0]):
@@ -558,6 +557,7 @@ class R22Epoch2AtomicTape:
                 activation_identity=str(intent_row[0]),
                 vault_id=str(intent_row[1]),
                 event_at_ms=int(intent_row[2]),
+                event_field="decided_at_ms",
                 label="R22 intent",
             )
             if (
@@ -588,6 +588,7 @@ class R22Epoch2AtomicTape:
                 activation_identity=str(fill_row[1]),
                 vault_id=str(fill_row[2]),
                 event_at_ms=int(fill_row[3]),
+                event_field="filled_at_ms",
                 label="R22 fill",
             )
             if (
@@ -695,6 +696,7 @@ class R22Epoch2AtomicTape:
                     activation_identity=str(row[1]),
                     vault_id=vault_id,
                     event_at_ms=int(row[3]),
+                    event_field="decided_at_ms",
                     label="R22 replay intent",
                 )
                 if raw.get("previous_intent_identity") != previous_intent.get(vault_id):
@@ -724,6 +726,7 @@ class R22Epoch2AtomicTape:
                     activation_identity=str(row[2]),
                     vault_id=vault_id,
                     event_at_ms=int(row[4]),
+                    event_field="filled_at_ms",
                     label="R22 replay fill",
                 )
                 if raw.get("intent_identity") != intent_identity:
