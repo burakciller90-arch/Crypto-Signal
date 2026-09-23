@@ -183,7 +183,7 @@ class R25ShadowIntentJournal:
     def initialize(self) -> None:
         self.path.parent.mkdir(parents=True, exist_ok=True)
         with closing(sqlite3.connect(self.path)) as db, db:
-        existing = {
+            existing = {
                 str(row[0])
                 for row in db.execute(
                     """SELECT name FROM sqlite_master
