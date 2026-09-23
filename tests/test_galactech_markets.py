@@ -65,7 +65,7 @@ def test_galactech_markets_workspace_binds_exact_provider_freeze(
     assert "async function initializeMarketWorkspace" in js
     assert "function syncMarketSelectionFromControls(reload)" in js
     assert "async function loadMarketSelection()" in js
-    assert "function selectMarketProvider(identity)" in js
+    assert "async function selectMarketProvider(identity)" in js
     assert "function renderMarketProviderList()" in js
     assert "function renderMarketRecentTape()" in js
     assert "function renderMarketLayerSurface()" in js
