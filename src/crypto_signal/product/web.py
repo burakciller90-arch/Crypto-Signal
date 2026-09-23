@@ -490,6 +490,69 @@ def create_app(
             }
         )
 
+    @app.get("/api/shadow-cycle-manifest/status")
+    def shadow_cycle_manifest_status(
+        limit: int = Query(default=20, ge=1, le=100),
+    ) -> JSONResponse:
+        if selected_shadow_cycle_path is None:
+            return _json(
+                {
+                    "status": "unavailable",
+                    "reason": "shadow_cycle_manifest_runtime_not_configured",
+                    "semantic": "SHADOW_RESEARCH_ONLY",
+                    "capital_science_lineage": "NOT_PERSISTED",
+                    "sizing_lineage": "NOT_PERSISTED",
+                    "restart_replay_observation": "NOT_PERSISTED",
+                    "canonical_epoch2_mutation": False,
+                    "production_authority": False,
+                    "read_only": True,
+                    "real_capital": 0,
+                }
+            )
+        if not selected_shadow_cycle_path.exists():
+            return _json(
+                {
+                    "status": "unavailable",
+                    "reason": "shadow_cycle_manifest_evidence_missing",
+                    "manifest_filename": selected_shadow_cycle_path.name,
+                    "semantic": "SHADOW_RESEARCH_ONLY",
+                    "capital_science_lineage": "NOT_PERSISTED",
+                    "sizing_lineage": "NOT_PERSISTED",
+                    "restart_replay_observation": "NOT_PERSISTED",
+                    "canonical_epoch2_mutation": False,
+                    "production_authority": False,
+                    "read_only": True,
+                    "real_capital": 0,
+                }
+            )
+        try:
+            manifest = R25ShadowCycleManifest(selected_shadow_cycle_path)
+            snapshot = manifest.verify_read_only()
+            latest = manifest.read_latest(limit=limit)
+        except ValueError as exc:
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
+        persisted = bool(latest)
+        return _json(
+            {
+                "status": "ready" if persisted else "empty",
+                "snapshot": snapshot,
+                "latest": latest,
+                "manifest_filename": selected_shadow_cycle_path.name,
+                "semantic": "SHADOW_RESEARCH_ONLY",
+                "capital_science_lineage": (
+                    "PERSISTED" if persisted else "NOT_PERSISTED"
+                ),
+                "sizing_lineage": (
+                    "PERSISTED" if persisted else "NOT_PERSISTED"
+                ),
+                "restart_replay_observation": "NOT_PERSISTED",
+                "canonical_epoch2_mutation": False,
+                "production_authority": False,
+                "read_only": True,
+                "real_capital": 0,
+            }
+        )
+
     @app.get("/api/shadow-decision-rail/forecast/{forecast_identity}")
     def shadow_cycle_for_forecast(forecast_identity: str) -> JSONResponse:
         if not _is_lower_sha256(forecast_identity):
