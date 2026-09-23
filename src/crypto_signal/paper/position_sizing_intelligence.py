@@ -11,6 +11,7 @@ from crypto_signal.paper.smart_capital_allocator import (
     VaultCapitalEnvelope,
     VaultEligibilityState,
 )
+
 if TYPE_CHECKING:
     from research.alpha_factory.probability_calibration_gate import (
         CalibratedProbabilityEvidence,
