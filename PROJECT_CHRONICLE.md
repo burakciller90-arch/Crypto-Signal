@@ -4979,3 +4979,29 @@ Accepted truth:
 - no order/credential authority and REAL_CAPITAL=0.
 
 Next locked frontier: accessibility / performance polish before production UI cutover.
+
+
+---
+
+## 2026-09-23 — 18:12 GALACTECH ACCESSIBILITY / PERFORMANCE POLISH ACCEPTED
+
+PR #931 completed the locked accessibility/performance Product-rail slice.
+
+Acceptance:
+- exact-head polish run `35879516224` focused + full repository PASS at
+  `2af66550cd8a0ae3b886523c4b941cf801f349cb`;
+- squash merge `7082849c197271214979275c27eaef1e7fb8059f`;
+- exact-main Stage10 `35879700507` SUCCESS.
+
+Accepted truth:
+- route and dialog semantics are strengthened for keyboard/screen-reader use;
+- proof filters do not rely on color-only selection;
+- motion/transparency/contrast user preferences are respected;
+- runtime refresh cannot overlap itself and does not poll hidden tabs;
+- visibility return performs one bounded read-only refresh;
+- static asset budgets guard accidental frontend growth without claiming measured FPS;
+- no fake latency, freshness, probability or runtime-health upgrade;
+- stale legacy accessibility work was reconciled/NOOPed, not replayed;
+- no order/credential authority and REAL_CAPITAL=0.
+
+Next locked frontier: production UI cutover candidate, then integrated v1.1 release acceptance.
