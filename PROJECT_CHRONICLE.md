@@ -4370,3 +4370,39 @@ Scientific boundary:
 
 Phase 7 exit is satisfied. Next locked intelligence frontier is Phase 8 M6 Confluence
 Matrix 2.0. User wake/lease pause remains authoritative.
+
+
+---
+
+## 2026-09-23 — 12:17 M6 CONFLUENCE MATRIX 2.0 CORE SLICE 1 ACCEPTED
+
+PR #902 introduced the locked five-family Confluence Matrix 2.0 core while preserving
+legacy methodology confluence and shadow meta-intelligence.
+
+Acceptance:
+- hosted run `35841898852` focused + full repository PASS;
+- squash merge `5dea8be9e4c7d9c0358833a196c9cc40ebbd6b42`;
+- exact-main Stage10 run `35842054230` SUCCESS.
+
+Locked research priors:
+- Geometry / PA / Elliott / Harmonic 20%;
+- Liquidity 25%;
+- Order Flow / Absorption 25%;
+- Derivatives 15%;
+- On-chain / Smart Money 15%.
+
+Accepted matrix truth:
+- support and opposition remain separate;
+- coverage, evidence quality and freshness remain separate;
+- material independent conflicts remain first-class veto evidence;
+- family ABSTAIN cannot be erased by arithmetic support;
+- Event Risk remains outside the 100-point matrix;
+- score semantic is weighted support/opposition points, not probability;
+- probability status remains NOT CALIBRATED;
+- 70/75/80/85 remain research hypotheses only;
+- no automatic ACTIVE, promotion, sizing or production authority;
+- REAL_CAPITAL=0.
+
+Remaining M6 locked frontier: compare 70/75/80/85 on chronological forward evidence
+without retrospective winner selection or automatic promotion. User wake/lease pause
+remains authoritative.
