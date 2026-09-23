@@ -74,20 +74,14 @@ class PaperTapeIntent:
     real_capital: int = REAL_CAPITAL
 
     def __post_init__(self) -> None:
-        for identity, label in (
-            (self.intent_identity, "intent"),
-            (self.activation_identity, "activation"),
-            (self.policy_identity, "policy"),
-        ):
-            _sha(identity, label)
-        for identity, label in (
-            (self.forecast_identity, "forecast"),
-            (self.proof_identity, "proof"),
-            (self.signal_freeze_identity, "signal"),
-            (self.sizing_decision_identity, "sizing"),
-            (self.previous_intent_identity, "previous intent"),
-        ):
-            _sha(identity, label, optional=True)
+        _sha(self.intent_identity, "intent")
+        _sha(self.activation_identity, "activation")
+        _sha(self.policy_identity, "policy")
+        _sha(self.forecast_identity, "forecast", optional=True)
+        _sha(self.proof_identity, "proof", optional=True)
+        _sha(self.signal_freeze_identity, "signal", optional=True)
+        _sha(self.sizing_decision_identity, "sizing", optional=True)
+        _sha(self.previous_intent_identity, "previous intent", optional=True)
         if self.schema_version != R22_SCHEMA_VERSION or self.engine_version != R22_ENGINE_VERSION:
             raise ValueError("unsupported R22 version")
         if not isinstance(self.vault_id, PaperVaultId) or not isinstance(self.action, PaperAction):
@@ -165,14 +159,12 @@ class PaperTapeFill:
     real_capital: int = REAL_CAPITAL
 
     def __post_init__(self) -> None:
-        for value, label in (
-            (self.fill_identity, "fill"), (self.intent_identity, "intent"),
-            (self.activation_identity, "activation"),
-            (self.before_snapshot_identity, "before snapshot"),
-            (self.after_snapshot_identity, "after snapshot"),
-            (self.mark_evidence_identity, "mark evidence"),
-        ):
-            _sha(value, label)
+        _sha(self.fill_identity, "fill")
+        _sha(self.intent_identity, "intent")
+        _sha(self.activation_identity, "activation")
+        _sha(self.before_snapshot_identity, "before snapshot")
+        _sha(self.after_snapshot_identity, "after snapshot")
+        _sha(self.mark_evidence_identity, "mark evidence")
         _sha(self.previous_fill_identity, "previous fill", optional=True)
         _sha(self.outcome_evidence_identity, "outcome", optional=True)
         if self.schema_version != R22_SCHEMA_VERSION or self.engine_version != R22_ENGINE_VERSION:
@@ -185,20 +177,19 @@ class PaperTapeFill:
             raise ValueError("R22 fill times cannot be negative")
         if self.filled_at_ms > self.snapshot_at_ms:
             raise ValueError("R22 fill cannot occur after bound R21 snapshot")
-        for value, label in (
-            (self.quantity, "quantity"), (self.reference_price, "reference price"),
-            (self.simulated_fill_price, "simulated fill price"),
-        ):
-            _money(value, label, positive=True)
-        for value, label in (
-            (self.notional_usdt, "notional"), (self.fee_usdt, "fee"),
-            (self.spread_usdt, "spread"), (self.slippage_usdt, "slippage"),
-            (self.cash_before_usdt, "cash before"), (self.cash_after_usdt, "cash after"),
-            (self.position_before_quantity, "quantity before"),
-            (self.position_after_quantity, "quantity after"),
-            (self.nav_before_usdt, "NAV before"), (self.nav_after_usdt, "NAV after"),
-        ):
-            _money(value, label)
+        _money(self.quantity, "quantity", positive=True)
+        _money(self.reference_price, "reference price", positive=True)
+        _money(self.simulated_fill_price, "simulated fill price", positive=True)
+        _money(self.notional_usdt, "notional")
+        _money(self.fee_usdt, "fee")
+        _money(self.spread_usdt, "spread")
+        _money(self.slippage_usdt, "slippage")
+        _money(self.cash_before_usdt, "cash before")
+        _money(self.cash_after_usdt, "cash after")
+        _money(self.position_before_quantity, "quantity before")
+        _money(self.position_after_quantity, "quantity after")
+        _money(self.nav_before_usdt, "NAV before")
+        _money(self.nav_after_usdt, "NAV after")
         if self.notional_usdt != self.quantity * self.simulated_fill_price:
             raise ValueError("R22 notional must use simulated fill price")
         if self.action is PaperAction.BUY and self.simulated_fill_price < self.reference_price:
