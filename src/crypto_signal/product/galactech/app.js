@@ -15,6 +15,8 @@ const API = Object.freeze({
   shadowRail: "/api/shadow-decision-rail/status",
   liveFeed: "/api/intelligence-feed?limit=100",
   decisionProof: (identity) => `/api/decision-proof/${encodeURIComponent(identity)}`,
+  shadowForecastCycle: (identity) =>
+    `/api/shadow-decision-rail/forecast/${encodeURIComponent(identity)}`,
   assetCockpit: (symbol, timeframe) =>
     `/api/assets/${encodeURIComponent(symbol)}/${encodeURIComponent(timeframe)}?recent_limit=30`,
   signalDetail: (identity) => `/api/signals/${encodeURIComponent(identity)}`,
@@ -1837,6 +1839,19 @@ async function openEvidenceRoom(identity, trigger) {
     state.evidenceDetail = detail;
     renderEvidenceRoom(detail);
     renderDecisionProofExtension(decisionProof);
+    const forecastIdentity = decisionProof?.proof?.forecast_identity;
+    if (/^[0-9a-f]{64}$/.test(text(forecastIdentity, ""))) {
+      const shadowCycle = await fetchJson(
+        API.shadowForecastCycle(forecastIdentity)
+      ).catch(() => ({
+        status: "unavailable",
+        reason: "exact_shadow_cycle_lookup_failed",
+        forecast_identity: forecastIdentity,
+        read_only: true,
+        real_capital: 0,
+      }));
+      renderShadowCycleExtension(shadowCycle);
+    }
   } catch (error) {
     console.warn("[GALACTECH] signal detail unavailable", error);
     renderEvidenceRoom({ status: "unavailable", signal: null });
@@ -1872,6 +1887,55 @@ function renderDecisionProofExtension(payload) {
       probability ${escapeHtml(upper(proof.probability_status, "NOT_CALIBRATED"))}.
       This is structured evidence, not private reasoning.
     </p>`;
+  const grid = body.querySelector(".proof-grid");
+  if (grid) grid.prepend(section);
+  else body.appendChild(section);
+}
+
+function renderShadowCycleExtension(payload) {
+  const body = byId("evidenceDialogBody");
+  if (!body) return;
+
+  const section = document.createElement("section");
+  section.className = "proof-section proof-section-wide";
+  const ready = payload?.status === "ready" && payload?.cycle;
+  if (!ready) {
+    section.innerHTML = `
+      <span class="proof-section-label">R25 CAPITAL DECISION LINEAGE</span>
+      <h3>Exact shadow cycle not persisted</h3>
+      <p class="proof-footnote">
+        ${escapeHtml(text(payload?.reason, "no exact persisted cycle for this forecast"))}.
+        The product does not match by symbol, timestamp proximity, direction, or heuristic similarity.
+      </p>`;
+  } else {
+    const cycle = payload.cycle;
+    const review = cycle.review_selection_identity
+      ? `EXPLICIT · ${shortIdentity(cycle.review_selection_identity)}`
+      : "NO EXPLICIT REVIEW";
+    const method = cycle.reviewed_method
+      ? upper(cycle.reviewed_method)
+      : "NONE";
+    section.innerHTML = `
+      <span class="proof-section-label">R25 CAPITAL DECISION LINEAGE</span>
+      <h3>Exact forecast → capital → sizing → review → preview</h3>
+      <div class="truth-table">
+        <div class="truth-row"><span>FORECAST</span><strong>${escapeHtml(shortIdentity(cycle.forecast_identity))}</strong></div>
+        <div class="truth-row"><span>DECISION PROOF</span><strong>${escapeHtml(shortIdentity(cycle.proof_identity))}</strong></div>
+        <div class="truth-row"><span>CAPITAL SCIENCE</span><strong>${escapeHtml(shortIdentity(cycle.capital_bridge_identity))}</strong></div>
+        <div class="truth-row"><span>POSITION SIZING</span><strong>${escapeHtml(shortIdentity(cycle.sizing_bridge_identity))}</strong></div>
+        <div class="truth-row"><span>REVIEW</span><strong>${escapeHtml(review)}</strong></div>
+        <div class="truth-row"><span>REVIEWED METHOD</span><strong>${escapeHtml(method)}</strong></div>
+        <div class="truth-row"><span>R22 PREVIEW</span><strong>${escapeHtml(shortIdentity(cycle.preview_identity))}</strong></div>
+        <div class="truth-row"><span>SHADOW JOURNAL REF</span><strong>${escapeHtml(shortIdentity(cycle.journal_record_identity))}</strong></div>
+        <div class="truth-row"><span>CYCLE MANIFEST</span><strong>${escapeHtml(shortIdentity(cycle.manifest_identity))}</strong></div>
+      </div>
+      <p class="proof-footnote">
+        Exact persisted forecast_identity match only. This lineage is shadow/research evidence:
+        it is not a fill, not a canonical Epoch 2 NAV mutation, not an exchange order, and not a live trade.
+        The manifest references a journal record identity; journal runtime presence is verified separately.
+      </p>`;
+  }
+
   const grid = body.querySelector(".proof-grid");
   if (grid) grid.prepend(section);
   else body.appendChild(section);
