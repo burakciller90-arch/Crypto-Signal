@@ -623,6 +623,163 @@ def create_app(
             }
         )
 
+    @app.get("/api/r25/operational-truth")
+    def r25_operational_truth() -> JSONResponse:
+        components: dict[str, object] = {}
+
+        if selected_decision_path is None:
+            components["decision_evidence"] = {
+                "status": "unavailable",
+                "reason": "decision_evidence_runtime_not_configured",
+            }
+        elif not selected_decision_path.exists():
+            components["decision_evidence"] = {
+                "status": "unavailable",
+                "reason": "decision_evidence_runtime_evidence_missing",
+            }
+        else:
+            try:
+                decision_status = ImmutableDecisionEvidenceLedger(
+                    selected_decision_path
+                ).read_status()
+            except DecisionLedgerConflictError as exc:
+                raise HTTPException(status_code=500, detail=str(exc)) from exc
+            components["decision_evidence"] = {
+                "status": "ready",
+                "snapshot": decision_status,
+            }
+
+        if selected_shadow_intent_path is None:
+            components["shadow_intent_journal"] = {
+                "status": "unavailable",
+                "reason": "shadow_intent_journal_runtime_not_configured",
+            }
+        elif not selected_shadow_intent_path.exists():
+            components["shadow_intent_journal"] = {
+                "status": "unavailable",
+                "reason": "shadow_intent_journal_evidence_missing",
+            }
+        else:
+            try:
+                shadow_status = R25ShadowIntentJournal(
+                    selected_shadow_intent_path
+                ).verify_read_only()
+            except ValueError as exc:
+                raise HTTPException(status_code=500, detail=str(exc)) from exc
+            components["shadow_intent_journal"] = {
+                "status": "ready",
+                "snapshot": shadow_status,
+            }
+
+        if selected_shadow_cycle_path is None:
+            components["shadow_cycle_manifest"] = {
+                "status": "unavailable",
+                "reason": "shadow_cycle_manifest_runtime_not_configured",
+            }
+        elif not selected_shadow_cycle_path.exists():
+            components["shadow_cycle_manifest"] = {
+                "status": "unavailable",
+                "reason": "shadow_cycle_manifest_evidence_missing",
+            }
+        else:
+            try:
+                cycle_status = R25ShadowCycleManifest(
+                    selected_shadow_cycle_path
+                ).verify_read_only()
+            except ValueError as exc:
+                raise HTTPException(status_code=500, detail=str(exc)) from exc
+            components["shadow_cycle_manifest"] = {
+                "status": "ready",
+                "snapshot": cycle_status,
+            }
+
+        if selected_runtime_replay_path is None:
+            components["runtime_replay_observation"] = {
+                "status": "unavailable",
+                "reason": "runtime_replay_observation_not_configured",
+            }
+        elif not selected_runtime_replay_path.exists():
+            components["runtime_replay_observation"] = {
+                "status": "unavailable",
+                "reason": "runtime_replay_observation_evidence_missing",
+            }
+        else:
+            try:
+                replay_status = R25RuntimeReplayObservationLedger(
+                    selected_runtime_replay_path
+                ).verify_read_only()
+            except ValueError as exc:
+                raise HTTPException(status_code=500, detail=str(exc)) from exc
+            components["runtime_replay_observation"] = {
+                "status": "ready",
+                "snapshot": replay_status,
+            }
+
+        if selected_epoch2_path is None:
+            components["canonical_epoch2"] = {
+                "status": "unavailable",
+                "reason": "epoch2_runtime_not_configured",
+            }
+        elif not selected_epoch2_path.exists():
+            components["canonical_epoch2"] = {
+                "status": "unavailable",
+                "reason": "epoch2_runtime_evidence_missing",
+            }
+        else:
+            try:
+                epoch2_state = read_epoch2_state_read_only(selected_epoch2_path)
+            except ValueError as exc:
+                raise HTTPException(status_code=500, detail=str(exc)) from exc
+            if epoch2_state is None:
+                components["canonical_epoch2"] = {
+                    "status": "unavailable",
+                    "reason": "epoch2_not_activated",
+                }
+            else:
+                components["canonical_epoch2"] = {
+                    "status": "ready",
+                    "activation_identity": (
+                        epoch2_state.activation.activation_identity
+                    ),
+                    "consolidated_snapshot_identity": (
+                        epoch2_state.consolidated_snapshot.snapshot_identity
+                    ),
+                    "nav_usdt": epoch2_state.consolidated_snapshot.nav_usdt,
+                    "metrics_status": (
+                        epoch2_state.consolidated_snapshot.metrics_status
+                    ),
+                }
+
+        components["galactech_product"] = {
+            "status": "exposed",
+            "route": "/galactech",
+            "read_only_product_api": True,
+        }
+        required = (
+            "decision_evidence",
+            "shadow_intent_journal",
+            "shadow_cycle_manifest",
+            "runtime_replay_observation",
+            "canonical_epoch2",
+        )
+        all_present = all(
+            isinstance(components.get(name), dict)
+            and components[name].get("status") == "ready"  # type: ignore[union-attr]
+            for name in required
+        )
+
+        return _json(
+            {
+                "status": "ready",
+                "components": components,
+                "all_required_runtime_evidence_present": all_present,
+                "canonical_epoch2_mutation_authorized": False,
+                "production_authority": False,
+                "read_only": True,
+                "real_capital": 0,
+            }
+        )
+
     @app.get("/api/alerts")
     def alerts(
         limit: int = Query(default=100, ge=1, le=500),
