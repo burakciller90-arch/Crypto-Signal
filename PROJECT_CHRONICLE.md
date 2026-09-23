@@ -3946,3 +3946,31 @@ Do not create duplicate wake events or reset the receipt-bound generation.
 The next primary intelligence development frontier remains M3 temporal price/CVD
 divergence + bounded absorption; do not use Cursor workers/composer.
 REAL_CAPITAL=0.
+
+
+---
+
+## 2026-09-23 — 05:17 ROLLING WAKE IN-FLIGHT HEARTBEAT GUARD LIVE / #856 CLOSED
+
+The remaining rolling-wake root cause from issue #856 is closed.
+
+PR #869 (`continuity: keep rolling heartbeat alive during exact wake submit`) preserved
+the existing exact-event and receipt-bound semantics while preventing the UID504 rolling
+owner heartbeat from appearing stale during one legitimate bounded blocking submit.
+
+Acceptance evidence:
+- hosted run `35809334485` focused + full PASS;
+- merge `382f2f1253456d46eb130c0dae5234f59499a721`;
+- live installer run `35809473550` PASS;
+- immediate pending event showed `attempt_in_flight`, then exact OBSERVED receipt;
+- rollingstate run `35809670252`: PID 47129 alive, RUNNING, 1200s, pending empty,
+  failure_count 0, exact receipt-to-next-due +1200s, heartbeat age 1s;
+- bridgestate run `35809673668`: relay PID 47087 RUNNING, exact chat target;
+- pausecheck run `35809676460`: local/shared pause NO, active leases 0, both wake queues 0.
+
+The nonzero pausecheck conclusion is expected because that command asserts PAUSED; its
+printed measurements prove the user-authorized ACTIVE state.
+
+Issue #856 closed completed. Do not reopen/replay absent new invalidating evidence.
+The locked 20-minute wake loop remains active unless the user explicitly pauses/stops it.
+REAL_CAPITAL=0.
