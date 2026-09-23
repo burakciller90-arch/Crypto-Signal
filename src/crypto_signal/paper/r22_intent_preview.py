@@ -1,8 +1,9 @@
 """R25 Slice 8: explicit-review R22 intent previews without ledger mutation.
 
 This module reuses the accepted R22 intent contract. It never appends to the R22
-development tape or the canonical Epoch 2 ledger. Trade previews require one exact,
-explicitly selected AVAILABLE_SHADOW sizing result plus explicit quantity/price.
+development tape or the canonical Epoch 2 ledger. A BUY preview requires one exact
+explicitly reviewed AVAILABLE_SHADOW sizing result plus an immutable source-bound
+market reference and explicit paper quantity. No sizing method or price is invented.
 """
 from __future__ import annotations
 
@@ -11,6 +12,7 @@ from decimal import Decimal
 
 from crypto_signal.ledger.serialization import canonical_sha256
 from crypto_signal.paper.epoch2_accounting import Epoch2ActivationRecord
+from crypto_signal.paper.epochs import PaperVaultId
 from crypto_signal.paper.models import (
     DecisionIntentRecord,
     PaperAction,
@@ -31,12 +33,50 @@ from crypto_signal.paper.transaction_tape import (
     PaperTapeIntent,
     build_tape_intent,
 )
-from crypto_signal.signals.models import SignalDirection
+from crypto_signal.signals.models import SignalDirection, SignalState
 from crypto_signal.unified_decision_runtime import UnifiedDecisionIssuance
 
-R22_INTENT_PREVIEW_VERSION = "r25-r22-intent-preview-v1/1"
+R22_INTENT_PREVIEW_VERSION = "r25-r22-intent-preview-v1/2"
 REVIEW_MODE = "explicit_research_review_input"
 REAL_CAPITAL = 0
+
+
+@dataclass(frozen=True, slots=True)
+class AcceptedIntentMarketReference:
+    reference_identity: str
+    symbol: PaperSymbol
+    observed_at_ms: int
+    reference_price: Decimal
+    source_evidence_identities: tuple[str, ...]
+    production_authority: bool = False
+    real_capital: int = REAL_CAPITAL
+
+    def __post_init__(self) -> None:
+        _require_sha256(self.reference_identity, "intent market reference")
+        if not isinstance(self.symbol, PaperSymbol):
+            raise TypeError("intent market reference requires permitted paper symbol")
+        if self.observed_at_ms < 0:
+            raise ValueError("intent market reference time must be non-negative")
+        if (
+            not isinstance(self.reference_price, Decimal)
+            or not self.reference_price.is_finite()
+            or self.reference_price <= 0
+        ):
+            raise ValueError("intent market reference price must be positive Decimal")
+        if (
+            not self.source_evidence_identities
+            or self.source_evidence_identities
+            != tuple(sorted(set(self.source_evidence_identities)))
+        ):
+            raise ValueError(
+                "intent market reference requires sorted unique source identities"
+            )
+        for identity in self.source_evidence_identities:
+            _require_sha256(identity, "intent market reference source")
+        if self.production_authority or self.real_capital != REAL_CAPITAL:
+            raise ValueError("intent market reference cannot grant execution authority")
+        if self.reference_identity != canonical_sha256(_market_reference_payload(self)):
+            raise ValueError("intent market reference identity mismatch")
 
 
 @dataclass(frozen=True, slots=True)
@@ -44,7 +84,7 @@ class ReviewedSizingSelection:
     selection_identity: str
     sizing_bridge_identity: str
     vault_result_identity: str
-    vault_id: object
+    vault_id: PaperVaultId
     assessment_identity: str
     sizing_result_identity: str
     method: SizingMethod
@@ -64,6 +104,8 @@ class ReviewedSizingSelection:
             (self.sizing_result_identity, "review sizing result"),
         ):
             _require_sha256(value, label)
+        if not isinstance(self.vault_id, PaperVaultId):
+            raise TypeError("reviewed sizing selection requires canonical vault")
         if self.reviewed_at_ms < 0:
             raise ValueError("reviewed_at_ms must be non-negative")
         if self.review_mode != REVIEW_MODE:
@@ -88,6 +130,7 @@ class R22IntentPreview:
     sizing_bridge_identity: str
     sizing_vault_result_identity: str
     review_selection_identity: str | None
+    market_reference_identity: str | None
     intent: PaperTapeIntent
     decision: DecisionIntentRecord | None
     previewed_at_ms: int
@@ -107,8 +150,12 @@ class R22IntentPreview:
             (self.sizing_vault_result_identity, "R22 preview vault result"),
         ):
             _require_sha256(value, label)
-        if self.review_selection_identity is not None:
-            _require_sha256(self.review_selection_identity, "R22 review selection")
+        for value, label in (
+            (self.review_selection_identity, "R22 review selection"),
+            (self.market_reference_identity, "R22 market reference"),
+        ):
+            if value is not None:
+                _require_sha256(value, label)
         if self.preview_version != R22_INTENT_PREVIEW_VERSION:
             raise ValueError("unsupported R22 intent preview version")
         if self.previewed_at_ms < 0:
@@ -116,11 +163,21 @@ class R22IntentPreview:
         if self.intent.activation_identity != self.activation_identity:
             raise ValueError("R22 preview intent activation mismatch")
         if self.intent.action is PaperAction.HOLD_CASH:
-            if self.review_selection_identity is not None or self.decision is not None:
-                raise ValueError("HOLD_CASH preview cannot carry reviewed trade selection")
+            if (
+                self.review_selection_identity is not None
+                or self.market_reference_identity is not None
+                or self.decision is not None
+            ):
+                raise ValueError("HOLD_CASH preview cannot carry trade review/reference")
         else:
-            if self.review_selection_identity is None or self.decision is None:
-                raise ValueError("trade preview requires reviewed selection and decision")
+            if (
+                self.review_selection_identity is None
+                or self.market_reference_identity is None
+                or self.decision is None
+            ):
+                raise ValueError(
+                    "trade preview requires reviewed selection, market reference and decision"
+                )
             if self.intent.decision_identity != self.decision.record_identity:
                 raise ValueError("R22 preview decision lineage mismatch")
             if self.intent.forecast_identity != self.forecast_identity:
@@ -138,10 +195,35 @@ class R22IntentPreview:
             raise ValueError("R22 intent preview identity mismatch")
 
 
+def build_accepted_intent_market_reference(
+    *,
+    symbol: PaperSymbol,
+    observed_at_ms: int,
+    reference_price: Decimal,
+    source_evidence_identities: tuple[str, ...],
+) -> AcceptedIntentMarketReference:
+    sources = tuple(sorted(set(source_evidence_identities)))
+    payload = {
+        "observed_at_ms": observed_at_ms,
+        "production_authority": False,
+        "real_capital": REAL_CAPITAL,
+        "reference_price": reference_price,
+        "source_evidence_identities": sources,
+        "symbol": symbol,
+    }
+    return AcceptedIntentMarketReference(
+        reference_identity=canonical_sha256(payload),
+        symbol=symbol,
+        observed_at_ms=observed_at_ms,
+        reference_price=reference_price,
+        source_evidence_identities=sources,
+    )
+
+
 def build_reviewed_sizing_selection(
     sizing: PositionSizingBridgeResult,
     *,
-    vault_id: object,
+    vault_id: PaperVaultId,
     sizing_result_identity: str,
     reviewed_at_ms: int,
 ) -> ReviewedSizingSelection:
@@ -189,14 +271,11 @@ def build_r22_intent_preview(
     sizing: PositionSizingBridgeResult,
     activation: Epoch2ActivationRecord,
     *,
-    vault_id: object,
+    vault_id: PaperVaultId,
     previewed_at_ms: int,
     reviewed_selection: ReviewedSizingSelection | None = None,
-    action: PaperAction | None = None,
+    market_reference: AcceptedIntentMarketReference | None = None,
     quantity: Decimal | None = None,
-    reference_price: Decimal | None = None,
-    reason: str | None = None,
-    invalidation_context: str | None = None,
     reason_codes: tuple[str, ...] = (),
     previous_intent_identity: str | None = None,
 ) -> R22IntentPreview:
@@ -214,16 +293,7 @@ def build_r22_intent_preview(
 
     vault_result = _find_vault_result(sizing, vault_id)
     if reviewed_selection is None:
-        if any(
-            value is not None
-            for value in (
-                action,
-                quantity,
-                reference_price,
-                reason,
-                invalidation_context,
-            )
-        ):
+        if market_reference is not None or quantity is not None:
             raise ValueError("unreviewed R22 preview cannot carry trade fields")
         hold_policy_identity = canonical_sha256(
             {
@@ -254,6 +324,7 @@ def build_r22_intent_preview(
         )
         decision = None
         review_identity = None
+        market_reference_identity = None
     else:
         _validate_review_selection(
             sizing=sizing,
@@ -262,19 +333,24 @@ def build_r22_intent_preview(
         )
         if previewed_at_ms < reviewed_selection.reviewed_at_ms:
             raise ValueError("R22 preview cannot predate sizing review")
-        if action is not PaperAction.BUY:
-            raise ValueError("Slice8 reviewed entry preview supports BUY only")
+        if issuance.forecast.signal_state is not SignalState.ACTIVE:
+            raise ValueError("BUY preview requires ACTIVE immutable forecast")
         if issuance.forecast.direction is not SignalDirection.BULLISH:
             raise ValueError("BUY preview requires bullish immutable forecast")
-        if (
-            quantity is None
-            or reference_price is None
-            or reason is None
-            or invalidation_context is None
+        if market_reference is None or quantity is None:
+            raise ValueError(
+                "reviewed BUY preview requires market reference and explicit quantity"
+            )
+        if market_reference.symbol.value != issuance.forecast.symbol:
+            raise ValueError("R22 preview market reference symbol mismatch")
+        if not (
+            issuance.forecast.issued_at_ms
+            <= market_reference.observed_at_ms
+            <= previewed_at_ms
         ):
-            raise ValueError("reviewed trade preview requires explicit decision fields")
-        if not reason.strip() or not invalidation_context.strip():
-            raise ValueError("reviewed trade reason/invalidation cannot be blank")
+            raise ValueError("R22 preview market reference is outside decision window")
+        if not isinstance(quantity, Decimal) or not quantity.is_finite() or quantity <= 0:
+            raise ValueError("R22 preview quantity must be positive Decimal")
 
         assessment = vault_result.assessment
         assert assessment is not None
@@ -282,14 +358,29 @@ def build_r22_intent_preview(
             vault_result,
             reviewed_selection.sizing_result_identity,
         )
-        symbol = PaperSymbol(issuance.forecast.symbol)
+        if selected.hypothetical_notional_usdt is None:
+            raise ValueError("reviewed sizing result lacks hypothetical notional")
+        reviewed_notional = quantity * market_reference.reference_price
+        if reviewed_notional > selected.hypothetical_notional_usdt:
+            raise ValueError("reviewed quantity exceeds exact shadow sizing envelope")
+
+        invalidation_context = (
+            "r20_invalidation:"
+            f"{issuance.forecast.invalidation_trigger.value}:"
+            f"{issuance.forecast.invalidation_price}"
+        )
+        reason = (
+            "explicit_reviewed_shadow_sizing:"
+            f"{reviewed_selection.selection_identity}:"
+            f"{market_reference.reference_identity}"
+        )
         decision = build_decision_intent(
             fund_identity=activation.activation_identity,
             decided_at_ms=previewed_at_ms,
             action=PaperAction.BUY,
-            symbol=symbol,
+            symbol=market_reference.symbol,
             quantity=quantity,
-            reference_price=reference_price,
+            reference_price=market_reference.reference_price,
             reason=reason,
             invalidation_context=invalidation_context,
         )
@@ -298,6 +389,7 @@ def build_r22_intent_preview(
                 {
                     *reason_codes,
                     "explicit_reviewed_sizing_selection",
+                    "source_bound_market_reference",
                     f"sizing_method:{selected.method.value}",
                 }
             )
@@ -316,6 +408,7 @@ def build_r22_intent_preview(
             previous_intent_identity=previous_intent_identity,
         )
         review_identity = reviewed_selection.selection_identity
+        market_reference_identity = market_reference.reference_identity
 
     payload = {
         "activation_identity": activation.activation_identity,
@@ -323,6 +416,7 @@ def build_r22_intent_preview(
         "decision_identity": None if decision is None else decision.record_identity,
         "forecast_identity": issuance.forecast.forecast_identity,
         "intent_identity": intent.intent_identity,
+        "market_reference_identity": market_reference_identity,
         "preview_version": R22_INTENT_PREVIEW_VERSION,
         "previewed_at_ms": previewed_at_ms,
         "production_authority": False,
@@ -341,6 +435,7 @@ def build_r22_intent_preview(
         sizing_bridge_identity=sizing.bridge_identity,
         sizing_vault_result_identity=vault_result.result_identity,
         review_selection_identity=review_identity,
+        market_reference_identity=market_reference_identity,
         intent=intent,
         decision=decision,
         previewed_at_ms=previewed_at_ms,
@@ -357,7 +452,7 @@ def _validate_review_selection(
         raise ValueError("review selection sizing bridge mismatch")
     if selection.vault_result_identity != vault_result.result_identity:
         raise ValueError("review selection vault result mismatch")
-    if selection.vault_id != vault_result.vault_id:
+    if selection.vault_id is not vault_result.vault_id:
         raise ValueError("review selection vault mismatch")
     if vault_result.state is not SizingBridgeState.ASSESSED_SHADOW:
         raise ValueError("review selection cannot override non-assessed vault")
@@ -374,10 +469,10 @@ def _validate_review_selection(
 
 def _find_vault_result(
     sizing: PositionSizingBridgeResult,
-    vault_id: object,
+    vault_id: PaperVaultId,
 ) -> SizingBridgeVaultResult:
     result = next(
-        (item for item in sizing.vault_results if item.vault_id == vault_id),
+        (item for item in sizing.vault_results if item.vault_id is vault_id),
         None,
     )
     if result is None:
@@ -403,6 +498,19 @@ def _find_sizing_result(
     if result is None:
         raise ValueError("sizing result does not belong to exact vault assessment")
     return result
+
+
+def _market_reference_payload(
+    reference: AcceptedIntentMarketReference,
+) -> dict[str, object]:
+    return {
+        "observed_at_ms": reference.observed_at_ms,
+        "production_authority": reference.production_authority,
+        "real_capital": reference.real_capital,
+        "reference_price": reference.reference_price,
+        "source_evidence_identities": reference.source_evidence_identities,
+        "symbol": reference.symbol,
+    }
 
 
 def _selection_payload(selection: ReviewedSizingSelection) -> dict[str, object]:
@@ -431,6 +539,7 @@ def _preview_payload(preview: R22IntentPreview) -> dict[str, object]:
         ),
         "forecast_identity": preview.forecast_identity,
         "intent_identity": preview.intent.intent_identity,
+        "market_reference_identity": preview.market_reference_identity,
         "preview_version": preview.preview_version,
         "previewed_at_ms": preview.previewed_at_ms,
         "production_authority": preview.production_authority,
