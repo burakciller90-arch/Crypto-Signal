@@ -6,8 +6,8 @@ from pathlib import Path
 
 import pytest
 from test_decision_proof_live_feed import _forecast
+from test_event_risk_circuit_breaker import AS_OF as EVENT_AS_OF
 from test_event_risk_circuit_breaker import (
-    AS_OF as EVENT_AS_OF,
     _config,
     _event_risk,
     _market_quality,
