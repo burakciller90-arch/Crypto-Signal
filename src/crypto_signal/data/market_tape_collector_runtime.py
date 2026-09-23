@@ -74,7 +74,7 @@ class MarketTapeCollectorHeartbeat:
     instance_identity: str
     sequence_no: int
     observed_at_ms: int
-    last_successful_ingestion_ms: int
+    last_successful_ingestion_ms: int | None
     observed_messages_total: int
     normalized_rows_total: int
     raw_rows_total: int
@@ -89,10 +89,13 @@ class MarketTapeCollectorHeartbeat:
         _require_sha256(self.instance_identity, "collector instance identity")
         if self.sequence_no <= 0:
             raise ValueError("collector heartbeat sequence must be positive")
-        if min(self.observed_at_ms, self.last_successful_ingestion_ms) < 0:
-            raise ValueError("collector heartbeat timestamps must be non-negative")
-        if self.last_successful_ingestion_ms > self.observed_at_ms:
-            raise ValueError("collector ingestion cannot be in the future")
+        if self.observed_at_ms < 0:
+            raise ValueError("collector heartbeat timestamp must be non-negative")
+        if self.last_successful_ingestion_ms is not None:
+            if self.last_successful_ingestion_ms < 0:
+                raise ValueError("collector ingestion timestamp must be non-negative")
+            if self.last_successful_ingestion_ms > self.observed_at_ms:
+                raise ValueError("collector ingestion cannot be in the future")
         if min(
             self.observed_messages_total,
             self.normalized_rows_total,
@@ -151,7 +154,7 @@ def build_collector_heartbeat(
     instance_identity: str,
     sequence_no: int,
     observed_at_ms: int,
-    last_successful_ingestion_ms: int,
+    last_successful_ingestion_ms: int | None,
     observed_messages_total: int,
     normalized_rows_total: int,
     raw_rows_total: int,
@@ -209,7 +212,7 @@ class MarketTapeCollectorRuntimeStore:
                     instance_identity TEXT NOT NULL,
                     sequence_no INTEGER NOT NULL,
                     observed_at_ms INTEGER NOT NULL,
-                    last_successful_ingestion_ms INTEGER NOT NULL,
+                    last_successful_ingestion_ms INTEGER,
                     payload_json TEXT NOT NULL,
                     UNIQUE(instance_identity, sequence_no),
                     FOREIGN KEY(instance_identity)
@@ -298,7 +301,20 @@ class MarketTapeCollectorRuntimeStore:
                     return
                 if heartbeat.observed_at_ms < int(previous[1]):
                     raise ValueError("collector heartbeat observation time regressed")
-                if heartbeat.last_successful_ingestion_ms < int(previous[2]):
+                previous_ingestion = (
+                    None if previous[2] is None else int(previous[2])
+                )
+                if (
+                    previous_ingestion is not None
+                    and heartbeat.last_successful_ingestion_ms is None
+                ):
+                    raise ValueError("collector ingestion evidence cannot disappear")
+                if (
+                    previous_ingestion is not None
+                    and heartbeat.last_successful_ingestion_ms is not None
+                    and heartbeat.last_successful_ingestion_ms
+                    < previous_ingestion
+                ):
                     raise ValueError("collector ingestion time regressed")
             db.execute(
                 """
@@ -497,8 +513,10 @@ def _heartbeat_from_payload(payload_json: str) -> MarketTapeCollectorHeartbeat:
         instance_identity=str(payload["instance_identity"]),
         sequence_no=int(payload["sequence_no"]),
         observed_at_ms=int(payload["observed_at_ms"]),
-        last_successful_ingestion_ms=int(
-            payload["last_successful_ingestion_ms"]
+        last_successful_ingestion_ms=(
+            None
+            if payload["last_successful_ingestion_ms"] is None
+            else int(payload["last_successful_ingestion_ms"])
         ),
         observed_messages_total=int(payload["observed_messages_total"]),
         normalized_rows_total=int(payload["normalized_rows_total"]),
