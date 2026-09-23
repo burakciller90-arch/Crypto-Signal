@@ -10,6 +10,20 @@ REAL_CAPITAL: 0
 ## Active v1.1 frontier — read before historical sections
 
 
+### 2026-09-23 05:17 +0300 — ROLLING WAKE IN-FLIGHT HEARTBEAT GUARD LIVE / INCIDENT #856 CLOSED
+
+- Root-cause PR **#869** hosted acceptance run `35809334485` PASS (focused + full repository pytest/Ruff/mypy/JS/freshness) and merged to main as `382f2f1253456d46eb130c0dae5234f59499a721`.
+- The fix does **not** change event identity, exact-message OBSERVED receipt authority or the +1200s receipt-bound cadence. It only keeps rolling status/heartbeat fresh while the existing bounded exact-message submit is in flight.
+- Live installer run `35809473550` PASS. During the immediate event the timer exposed `detail=attempt_in_flight`, then obtained the exact receipt and emitted `ROLLING_WAKE_IMMEDIATE_RECEIPT_PASS=YES`, `LOCAL_20M_WAKE_MODE=rolling-daemon` and `LOCAL_20M_WAKE_INSTALL_PASS=YES`.
+- Read-only rollingstate run `35809670252`: PID `47129` alive under UID504, state RUNNING, interval 1200, generation `c37af6dab99b41cf`, pending empty, failure_count 0, last_receipt_epoch `1790129659`, next_due_epoch `1790130859` (**exact +1200s**), heartbeat age 1s, local/shared pause NO.
+- Read-only bridgestate run `35809673668`: relay PID `47087` RUNNING with fresh heartbeat and the exact locked chat URL.
+- pausecheck run `35809676460` measured `LOCAL_PAUSED=NO`, `SHARED_PAUSED=NO`, `ACTIVE_LEASES=0`, both wake queues 0. Its nonzero workflow result only reflects that pausecheck expects a paused state.
+- Diagnostic issue **#856 is CLOSED completed**. Reopen only if new mechanical evidence invalidates this acceptance; do not replay old pending-event incident work.
+- The 20-minute rolling loop remains ACTIVE until explicit user pause/stop.
+- REAL_CAPITAL=0.
+
+
+
 ### 2026-09-23 04:49 +0300 — ROLLING WAKE RECOVERED / WATCHDOG HEALTH FIX LIVE
 
 - The 04:37 UID504 read-only snapshot (run 35807023713) found one pending rolling event `crypto-20m-rolling:4bc50caa43074cf2:7`, `RETRYING`, failure_count 60, no pause. GitHub watchdog run 35807194134 failed on exact receipt timeout.
