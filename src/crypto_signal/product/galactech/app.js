@@ -21,6 +21,7 @@ const state = {
   route: "command",
   explainMode: "simple",
   proofFilter: "all",
+  learnQuery: "",
   health: null,
   command: null,
   radar: null,
@@ -249,11 +250,28 @@ function bindNavigation() {
       return;
     }
 
+    const conceptTrigger = source?.closest("[data-learn-concept]");
+    if (conceptTrigger instanceof HTMLElement) {
+      const concept = conceptTrigger.dataset.learnConcept || "";
+      state.learnQuery = concept;
+      const input = byId("learnSearchInput");
+      if (input) input.value = concept;
+      renderEducation();
+      routeTo("learn");
+      return;
+    }
+
     const learnTrigger = source?.closest("[data-evidence-learn]");
     if (learnTrigger) {
       closeEvidenceRoom();
       routeTo("learn");
     }
+  });
+
+  byId("learnSearchInput")?.addEventListener("input", (event) => {
+    const input = event.target instanceof HTMLInputElement ? event.target : null;
+    state.learnQuery = input?.value || "";
+    renderEducation();
   });
 
   const dialog = byId("evidenceDialog");
