@@ -206,6 +206,32 @@ function bindNavigation() {
       renderArchive();
     });
   });
+
+  document.addEventListener("click", (event) => {
+    const source = event.target instanceof Element ? event.target : null;
+    const evidenceTrigger = source?.closest("[data-evidence-id]");
+    if (evidenceTrigger instanceof HTMLElement) {
+      const identity = evidenceTrigger.dataset.evidenceId || "";
+      void openEvidenceRoom(identity, evidenceTrigger);
+      return;
+    }
+
+    const learnTrigger = source?.closest("[data-evidence-learn]");
+    if (learnTrigger) {
+      closeEvidenceRoom();
+      routeTo("learn");
+    }
+  });
+
+  const dialog = byId("evidenceDialog");
+  const closeButton = byId("closeEvidenceDialog");
+  closeButton?.addEventListener("click", closeEvidenceRoom);
+  dialog?.addEventListener("close", () => {
+    const trigger = state.lastEvidenceTrigger;
+    if (trigger instanceof HTMLElement) {
+      trigger.focus({ preventScroll: true });
+    }
+  });
 }
 
 function signalMatchesAsset(item) {
