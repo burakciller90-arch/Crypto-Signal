@@ -401,13 +401,13 @@ def _record_from_row(
         record_identity=str(row[0]),
         preview_identity=preview_identity,
         vault_id=PaperVaultId(str(row[1])),
-        event_at_ms=int(row[2]),
+        event_at_ms=int(str(row[2])),
         previous_record_identity=None if row[3] is None else str(row[3]),
         schema_version=str(row[5]),
         engine_version=str(row[6]),
         canonical_epoch2_write_authority=bool(row[7]),
         production_authority=bool(row[8]),
-        real_capital=int(row[9]),
+        real_capital=int(str(row[9])),
     )
 
 
