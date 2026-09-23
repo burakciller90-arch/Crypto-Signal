@@ -13,6 +13,8 @@ const API = Object.freeze({
   performance: "/api/performance",
   decisionStatus: "/api/decision-evidence/status",
   shadowRail: "/api/shadow-decision-rail/status",
+  shadowForecast: (identity) =>
+    `/api/shadow-decision-rail/forecast/${encodeURIComponent(identity)}`,
   liveFeed: "/api/intelligence-feed?limit=100",
   decisionProof: (identity) => `/api/decision-proof/${encodeURIComponent(identity)}`,
   assetCockpit: (symbol, timeframe) =>
@@ -1837,6 +1839,25 @@ async function openEvidenceRoom(identity, trigger) {
     state.evidenceDetail = detail;
     renderEvidenceRoom(detail);
     renderDecisionProofExtension(decisionProof);
+    const forecastIdentity =
+      decisionProof?.status === "ready"
+        ? text(decisionProof?.proof?.forecast_identity, "")
+        : "";
+    const shadowLink = forecastIdentity
+      ? await fetchJson(API.shadowForecast(forecastIdentity)).catch(() => ({
+          status: "unavailable",
+          reason: "shadow_forecast_link_endpoint_error",
+          forecast_identity: forecastIdentity,
+          read_only: true,
+          real_capital: 0,
+        }))
+      : {
+          status: "empty",
+          reason: "decision_proof_has_no_forecast_identity",
+          read_only: true,
+          real_capital: 0,
+        };
+    renderShadowForecastLink(shadowLink);
   } catch (error) {
     console.warn("[GALACTECH] signal detail unavailable", error);
     renderEvidenceRoom({ status: "unavailable", signal: null });
@@ -1874,6 +1895,54 @@ function renderDecisionProofExtension(payload) {
     </p>`;
   const grid = body.querySelector(".proof-grid");
   if (grid) grid.prepend(section);
+  else body.appendChild(section);
+}
+
+function renderShadowForecastLink(payload) {
+  const body = byId("evidenceDialogBody");
+  if (!body) return;
+
+  const section = document.createElement("section");
+  section.className = "proof-section proof-section-wide";
+  const ready = payload?.status === "ready" && payload?.link;
+  if (!ready) {
+    section.innerHTML = `
+      <span class="proof-section-label">SHADOW DECISION RAIL</span>
+      <h3>Exact persisted linkage unavailable</h3>
+      <p>
+        ${escapeHtml(text(payload?.reason, "no exact shadow link"))}.
+        GALACTECH does not match by symbol, timestamp proximity, or heuristic.
+      </p>
+      <p class="proof-footnote">
+        Preview rail remains separate from canonical Epoch 2 accounting.
+      </p>`;
+  } else {
+    const link = payload.link;
+    section.innerHTML = `
+      <span class="proof-section-label">SHADOW DECISION RAIL / EXACT IDENTITY LINK</span>
+      <h3>Persisted preview lineage found</h3>
+      <div class="truth-table">
+        <div class="truth-row"><span>Preview</span><strong>${escapeHtml(shortIdentity(link.preview_identity))}</strong></div>
+        <div class="truth-row"><span>Vault</span><strong>${escapeHtml(upper(link.vault_id, "UNKNOWN"))}</strong></div>
+        <div class="truth-row"><span>Explicit review</span><strong>${payload.explicit_review_present === true ? "PRESENT" : "NOT PRESENT"}</strong></div>
+        <div class="truth-row"><span>Decision preview</span><strong>${payload.decision_preview_present === true ? "PRESENT" : "NOT PRESENT"}</strong></div>
+        <div class="truth-row"><span>Canonical Epoch 2 mutation</span><strong class="safe-text">DISABLED</strong></div>
+        <div class="truth-row"><span>Production authority</span><strong class="safe-text">DISABLED</strong></div>
+      </div>
+      <div class="feed-item-meta">
+        <code>forecast ${escapeHtml(shortIdentity(link.forecast_identity))}</code>
+        <code>proof ${escapeHtml(shortIdentity(link.proof_identity))}</code>
+        <code>sizing ${escapeHtml(shortIdentity(link.sizing_bridge_identity))}</code>
+        <code>journal ${escapeHtml(shortIdentity(link.record_identity))}</code>
+      </div>
+      <p class="proof-footnote">
+        Exact persisted forecast_identity match only · preview evidence is not a fill,
+        canonical NAV mutation, exchange order, or live trade.
+      </p>`;
+  }
+
+  const grid = body.querySelector(".proof-grid");
+  if (grid) grid.appendChild(section);
   else body.appendChild(section);
 }
 
