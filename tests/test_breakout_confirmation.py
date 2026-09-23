@@ -457,8 +457,34 @@ def test_price_cross_without_close_acceptance_is_not_confirmation() -> None:
 
 def test_recovery_without_matching_absorption_is_not_failure() -> None:
     _, _, flow, sweep, _, candles = _failure_inputs()
-    confirmation = _confirmation_inputs()
-    no_absorption = confirmation[4]
+    stable_books = tuple(
+        _book(
+            event_ms=8_000 + index * 1_000,
+            seq=100 + index,
+            ask101_size="10",
+        )
+        for index in range(5)
+    )
+    stable_structure = build_liquidity_structure_evidence_freeze(
+        stable_books,
+        as_of_ms=12_050,
+        config=_structure_config(),
+    )
+    no_absorption = build_absorption_freeze(
+        flow,
+        stable_structure,
+        as_of_ms=12_050,
+        config=AbsorptionConfig(
+            interaction_tolerance_bps=Decimal(20),
+            minimum_aggressor_share=Decimal("0.60"),
+            minimum_aggressive_trade_count=2,
+            minimum_replenishment_cycles=1,
+            minimum_replenishment_fraction=Decimal("0.20"),
+            minimum_level_presence_fraction=Decimal("0.50"),
+            max_price_nonresponse_bps=Decimal(20),
+        ),
+    )
+    assert no_absorption.analysis.candidates == ()
 
     freeze = build_breakout_confirmation_freeze(
         candles,
