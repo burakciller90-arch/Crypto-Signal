@@ -1384,3 +1384,204 @@ a:focus-visible,
   font-family: var(--mono);
   font-size: 9px;
 }
+
+
+/* Product slice 3 — Canonical Epoch 2 Capital Center */
+.capital-unavailable,
+.capital-constitution,
+.capital-track-record {
+  min-height: 230px;
+}
+
+.capital-hero-card {
+  grid-column: 1 / -1;
+  padding: 20px;
+  border: 1px solid rgba(69, 215, 255, 0.18);
+  border-radius: var(--radius-m);
+  background:
+    linear-gradient(135deg, rgba(69, 215, 255, 0.07), transparent 58%),
+    var(--surface-0);
+}
+
+.capital-hero-head,
+.capital-vault-head,
+.capital-section-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.capital-hero-head h2 {
+  margin: 6px 0 4px;
+  font-family: var(--mono);
+  font-size: clamp(28px, 4vw, 46px);
+  font-weight: 650;
+  letter-spacing: -0.04em;
+}
+
+.capital-hero-head p,
+.capital-constitution p,
+.capital-track-record p {
+  margin: 7px 0 0;
+  color: var(--text-soft);
+  font-size: 11px;
+  line-height: 1.65;
+}
+
+.capital-hero-metrics,
+.capital-vault-metrics {
+  display: grid;
+  gap: 7px;
+  margin-top: 16px;
+}
+
+.capital-hero-metrics {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+.capital-vault-metrics {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.capital-hero-metrics > div,
+.capital-vault-metrics > div {
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.014);
+}
+
+.capital-hero-metrics span,
+.capital-vault-metrics span,
+.capital-cost-row small {
+  display: block;
+  color: var(--text-dim);
+  font-family: var(--mono);
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.capital-hero-metrics strong,
+.capital-vault-metrics strong {
+  display: block;
+  margin-top: 5px;
+  overflow-wrap: anywhere;
+  font-family: var(--mono);
+  font-size: 10px;
+}
+
+.capital-cost-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+  margin-top: 9px;
+}
+
+.capital-cost-row > span {
+  padding: 8px 9px;
+  border-left: 2px solid rgba(255, 199, 97, 0.24);
+  background: rgba(255, 199, 97, 0.025);
+}
+
+.capital-cost-row strong {
+  display: block;
+  margin-top: 4px;
+  overflow-wrap: anywhere;
+  font-family: var(--mono);
+  font-size: 9px;
+}
+
+.capital-identity {
+  display: block;
+  margin-top: 12px;
+  overflow-wrap: anywhere;
+  color: var(--text-dim);
+  font-family: var(--mono);
+  font-size: 8px;
+  line-height: 1.55;
+}
+
+.capital-vault-section {
+  grid-column: 1 / -1;
+  margin-top: 2px;
+}
+
+.capital-section-head {
+  margin-bottom: 10px;
+}
+
+.capital-section-head h2 {
+  margin: 5px 0 0;
+  font-size: 18px;
+}
+
+.capital-vault-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.capital-vault-card {
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-m);
+  background: var(--surface-0);
+}
+
+.capital-vault-head h3 {
+  margin: 5px 0 0;
+  font-size: 15px;
+}
+
+.capital-vault-detail {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  margin-top: 10px;
+  color: var(--text-dim);
+  font-family: var(--mono);
+  font-size: 8px;
+  line-height: 1.55;
+}
+
+.capital-position-list {
+  display: grid;
+  gap: 5px;
+  margin-top: 10px;
+  color: var(--text-soft);
+  font-size: 9px;
+}
+
+.capital-position-list strong {
+  color: var(--text);
+  font-family: var(--mono);
+}
+
+@media (max-width: 1120px) {
+  .capital-hero-metrics {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .capital-vault-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 620px) {
+  .capital-hero-head,
+  .capital-vault-head,
+  .capital-section-head {
+    flex-direction: column;
+  }
+
+  .capital-hero-metrics,
+  .capital-vault-metrics,
+  .capital-cost-row {
+    grid-template-columns: 1fr;
+  }
+}
