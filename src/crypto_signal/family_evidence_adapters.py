@@ -63,7 +63,7 @@ from crypto_signal.intelligence.wallet_cohorts import (
     WalletCohortEvidenceFreeze,
     WalletCohortStatus,
 )
-from crypto_signal.ledger.bundle import DecisionFreezeBundle
+from crypto_signal.ledger.bundle import DecisionFreezeBundle, verify_bundle_identity
 from crypto_signal.product.decision_proof import (
     DecisionProofEvidenceSlice,
     ProofEvidenceAvailability,
@@ -135,6 +135,7 @@ def adapt_geometry_bundle(
     freshness_0_1: Decimal,
 ) -> FamilyEvidenceAdapterResult:
     """Adapt the immutable PA/Harmonic/Elliott decision bundle without re-analysis."""
+    verify_bundle_identity(bundle)
     _unit(evidence_quality_0_1, "geometry evidence quality")
     _unit(freshness_0_1, "geometry freshness")
     signal = bundle.signal_decision
