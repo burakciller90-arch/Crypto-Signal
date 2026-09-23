@@ -4602,3 +4602,31 @@ Accepted semantics:
 
 Phase 13 exit is satisfied. Next locked frontier: Phase 14 R20.5 Decision Proof / Live
 Intelligence Feed. User wake/lease pause remains authoritative.
+
+
+---
+
+## 2026-09-23 — 14:03 PHASE 14 R20.5 DECISION PROOF / LIVE INTELLIGENCE FEED ACCEPTED
+
+PR #916 completed the locked Phase 14 structured proof/feed infrastructure.
+
+Acceptance:
+- hosted R20.5 run `35852044869` focused + full repository PASS;
+- squash merge `be64a9217e5a52e39dfa2c92363e44aa295f1062`;
+- exact-main Stage10 `35852230388` SUCCESS.
+
+Accepted semantics:
+- one read-only Decision Proof snapshot derives from one immutable R20 forecast;
+- all frozen chart/candles/order-book/liquidity/liquidation/order-flow/derivatives/on-chain/
+  event/methodology/probability domains are explicit as AVAILABLE, INSUFFICIENT or UNSUPPORTED;
+- future evidence is rejected from issuance-time proof;
+- Event Risk, signal+M6 and R19 probability lineage are bound to their exact proof domains;
+- deterministic conditional thesis derives from structured evidence only;
+- Live Intelligence Feed records append-only issuance and final-resolution state transitions;
+- resolution requires prior issuance and cannot rewrite forecast/proof truth;
+- private chain-of-thought is never stored/exposed;
+- no sizing, ledger mutation, network/exchange/order or production authority;
+- REAL_CAPITAL=0.
+
+Phase 14 exit is satisfied. Next locked frontier is Phase 15 R21 Canonical 1,000 USDT
+Paper Fund. User wake/lease pause remains authoritative.
