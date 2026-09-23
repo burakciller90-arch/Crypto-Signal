@@ -1296,3 +1296,91 @@ a:focus-visible,
     padding-right: 14px;
   }
 }
+
+
+.frozen-chart-wrap {
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background:
+    linear-gradient(180deg, rgba(69, 215, 255, 0.024), transparent 55%),
+    rgba(4, 7, 11, 0.7);
+}
+
+.frozen-chart {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.chart-grid-line {
+  stroke: rgba(167, 190, 218, 0.09);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.candle-up line,
+.candle-up rect {
+  stroke: var(--emerald);
+  fill: rgba(78, 232, 164, 0.26);
+  stroke-width: 1.2;
+  vector-effect: non-scaling-stroke;
+}
+
+.candle-down line,
+.candle-down rect {
+  stroke: var(--crimson);
+  fill: rgba(255, 95, 143, 0.26);
+  stroke-width: 1.2;
+  vector-effect: non-scaling-stroke;
+}
+
+.frozen-chart-caption {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 7px 14px;
+  padding: 9px 11px;
+  border-top: 1px solid var(--line);
+  color: var(--text-dim);
+  font-family: var(--mono);
+  font-size: 9px;
+}
+
+.frozen-chart-empty {
+  padding: 12px;
+  border: 1px dashed var(--line-strong);
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.01);
+}
+
+.frozen-chart-empty strong {
+  display: block;
+  font-size: 11px;
+}
+
+.frozen-chart-empty p {
+  margin: 6px 0 0;
+  color: var(--text-soft);
+  font-size: 10px;
+  line-height: 1.6;
+}
+
+.geometry-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.geometry-item strong {
+  color: var(--text);
+  font-size: 10px;
+}
+
+.geometry-item span {
+  overflow-wrap: anywhere;
+  text-align: right;
+  font-family: var(--mono);
+  font-size: 9px;
+}
