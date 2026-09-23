@@ -18,7 +18,6 @@ from crypto_signal.data.models import DataSource
 from crypto_signal.data.news_events import build_news_event_observation
 from crypto_signal.intelligence.event_risk import (
     DEFAULT_REQUIRED_EVENT_CATEGORIES,
-    EventRiskState,
     build_event_risk_evidence_freeze,
 )
 from crypto_signal.intelligence.event_risk_circuit_breaker import (
