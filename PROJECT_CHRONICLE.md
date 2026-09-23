@@ -5005,3 +5005,38 @@ Accepted truth:
 - no order/credential authority and REAL_CAPITAL=0.
 
 Next locked frontier: production UI cutover candidate, then integrated v1.1 release acceptance.
+
+
+---
+
+## 2026-09-23 — 18:22 v1.1 PRODUCTION CUTOVER CANDIDATE HOSTED-READY / AUTHORITY GATED
+
+Safe autonomous work reached the production UI transition boundary.
+
+Candidate evidence:
+- PR #932 is OPEN / DRAFT / UNMERGED;
+- exact candidate head `87f952b83bd00ac670131977be4cafcce5d99fba`;
+- cutover focused + full repository hosted run `35880889080` SUCCESS;
+- integrated v1.1 hosted release-candidate run `35880889056` SUCCESS.
+
+Prepared candidate behavior:
+- root `/` serves accepted GALACTECH;
+- `/galactech` remains the same GALACTECH alias;
+- previous accepted UI remains at `/legacy` as rollback/audit evidence;
+- read-only APIs and REAL_CAPITAL=0 authority are unchanged.
+
+Release acceptance separation:
+- hosted evidence is complete for the candidate tree;
+- a manual-only UID504 live release acceptance workflow is prepared but not dispatched;
+- live acceptance is designed to verify exact merged-main/deployed product hash parity,
+  SSD/runtime topology, critical SQLite truth, live GALACTECH root, runtime freshness,
+  deterministic replay, transaction-tape/probability/accessibility boundaries and paused
+  continuity state without enabling orders or real money.
+
+Authority boundary:
+- no production cutover merge/deploy/restart was executed;
+- the locked roadmap requires explicit human approval for the production UI transition;
+- next after approval is exact candidate merge/deploy, then UID504 live acceptance and
+  final v1.1.0 release reconciliation.
+
+Wake pause remains untouched. Cursor workers remain disabled. REAL_CAPITAL=0.
