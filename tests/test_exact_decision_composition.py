@@ -6,9 +6,7 @@ import pytest
 from fastapi.testclient import TestClient
 from test_family_proof_adapters import _micro, _temporal
 from test_immutable_forecast_stream import (
-    AS_OF,
     HORIZON,
-    ISSUED_AT,
     _calibrated_probability,
     _event_context,
     _probability_scope,
@@ -104,10 +102,10 @@ def _accepted_m3_only():
 def test_exact_composition_replays_source_ids_to_ledger_and_product_api(
     tmp_path,
 ) -> None:
-    signal = _signal()
+    signal = _signal(as_of_ms=AS_OF)
     geometry, geometry_proofs, chart_id, candles_id = _geometry()
     bundle, micro, temporal = _accepted_m3_only()
-    event = _event_context()
+    event = _event_context(as_of_ms=AS_OF)
     decision_path = tmp_path / "decision.sqlite3"
     ledger = ImmutableDecisionEvidenceLedger(decision_path)
 
@@ -197,7 +195,7 @@ def test_exact_composition_replays_source_ids_to_ledger_and_product_api(
 def test_exact_composition_rejects_geometry_source_not_present_in_proof(
     tmp_path,
 ) -> None:
-    signal = _signal()
+    signal = _signal(as_of_ms=AS_OF)
     geometry, geometry_proofs, _, _ = _geometry()
     bundle, _, _ = _accepted_m3_only()
     wrong_chart = build_decision_proof_evidence_slice(
@@ -220,7 +218,7 @@ def test_exact_composition_rejects_geometry_source_not_present_in_proof(
             geometry_family=geometry,
             geometry_proof_slices=(wrong_chart, geometry_proofs[1]),
             accepted_m2_m5=bundle,
-            event_context=_event_context(),
+            event_context=_event_context(as_of_ms=AS_OF),
             issued_at_ms=ISSUED_AT,
             horizon_bars=HORIZON,
             target_label="target_1",
@@ -234,13 +232,13 @@ def test_exact_composition_rejects_missing_geometry_domain(tmp_path) -> None:
 
     with pytest.raises(ValueError, match="FROZEN_CHART and CONSUMED_CANDLES"):
         compose_exact_decision(
-            signal=_signal(),
+            signal=_signal(as_of_ms=AS_OF),
             base_asset="BTC",
             regime="trend_up",
             geometry_family=geometry,
             geometry_proof_slices=(geometry_proofs[0],),
             accepted_m2_m5=bundle,
-            event_context=_event_context(),
+            event_context=_event_context(as_of_ms=AS_OF),
             issued_at_ms=ISSUED_AT,
             horizon_bars=HORIZON,
             target_label="target_1",
@@ -251,17 +249,17 @@ def test_exact_composition_rejects_missing_geometry_domain(tmp_path) -> None:
 def test_exact_composition_accepts_only_exact_r19_scope(tmp_path) -> None:
     geometry, geometry_proofs, _, _ = _geometry()
     bundle, _, _ = _accepted_m3_only()
-    probability = _calibrated_probability()
+    probability = _calibrated_probability(issued_at_ms=AS_OF)
     scope = _probability_scope()
 
     result = compose_exact_decision(
-        signal=_signal(),
+        signal=_signal(as_of_ms=AS_OF),
         base_asset="BTC",
         regime="trend_up",
         geometry_family=geometry,
         geometry_proof_slices=geometry_proofs,
         accepted_m2_m5=bundle,
-        event_context=_event_context(),
+        event_context=_event_context(as_of_ms=AS_OF),
         issued_at_ms=ISSUED_AT,
         horizon_bars=HORIZON,
         target_label="target_1",
@@ -291,13 +289,13 @@ def test_exact_composition_never_creates_probability_from_scope_alone(
         match="scope cannot be supplied without calibrated probability",
     ):
         compose_exact_decision(
-            signal=_signal(),
+            signal=_signal(as_of_ms=AS_OF),
             base_asset="BTC",
             regime="trend_up",
             geometry_family=geometry,
             geometry_proof_slices=geometry_proofs,
             accepted_m2_m5=bundle,
-            event_context=_event_context(),
+            event_context=_event_context(as_of_ms=AS_OF),
             issued_at_ms=ISSUED_AT,
             horizon_bars=HORIZON,
             target_label="target_1",
