@@ -4024,3 +4024,36 @@ Pause/lease run `35811008661` measured:
 The pausecheck workflow conclusion is nonzero only because the command asserts PAUSED; the
 printed state proves the user-authorized ACTIVE condition. The 20-minute loop remains active
 until explicit user pause/stop. REAL_CAPITAL=0.
+
+
+---
+
+## 2026-09-23 — 05:47 M3 ORDER FLOW / ABSORPTION 2.0 COMPLETE
+
+M3 Slice 3 completed the locked M3 intelligence scope.
+
+Accepted Slice 3:
+- breakout confirmation candidate requires accepted liquidity sweep + same-direction
+  temporal flow + closed-candle acceptance beyond the reference level + no nearby opposing
+  absorption;
+- breakout failure candidate requires sweep recovery/reclaim + closed-candle re-entry +
+  matching absorption;
+- price crossing by itself is insufficient;
+- all upstream freezes must share exact market/as-of context;
+- late/future candle evidence cannot rewrite a historical freeze;
+- output remains evidence, not probability or a trade command.
+
+Acceptance:
+- PR #877;
+- authoritative hosted run `35811663566`;
+- focused pytest/Ruff/mypy PASS;
+- full repository pytest/Ruff/mypy/JS/freshness PASS;
+- temporary hosted workflow removed;
+- squash merge `a4978d3bf1bd6adcaa0d346d738fd5e76bd9e35c`.
+
+With accepted M3 Slice 1 and Slice 2, the roadmap M3 target is now complete:
+aggressive buy/sell notional, delta, window-local CVD, price/CVD divergence, bounded
+absorption, breakout confirmation/failure and sweep+absorption interaction.
+
+Next primary intelligence frontier: M4 Derivatives Intelligence 2.0.
+REAL_CAPITAL=0.
