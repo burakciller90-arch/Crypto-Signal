@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import sqlite3
 from dataclasses import dataclass
@@ -13,7 +14,12 @@ from crypto_signal.paper.epochs import (
     EPOCH_2_SPEC,
     PaperVaultId,
 )
-from crypto_signal.paper.models import REAL_CAPITAL, PaperPosition, normalize_positions
+from crypto_signal.paper.models import (
+    REAL_CAPITAL,
+    PaperPosition,
+    PaperSymbol,
+    normalize_positions,
+)
 
 R21_ENGINE_VERSION = "r21-canonical-paper-fund-v1-slice1/1"
 R21_SCHEMA_VERSION = "r21-canonical-paper-fund-v1/1"
@@ -541,6 +547,17 @@ class Epoch2CanonicalLedger:
                     return False
                 raise ValueError("R21 immutable snapshot identity conflict")
             if vault_id is None:
+                same_time = connection.execute(
+                    f"SELECT snapshot_identity FROM {table} WHERE snapshot_at_ms = ? LIMIT 1",
+                    (snapshot_at_ms,),
+                ).fetchone()
+                latest = connection.execute(
+                    f"SELECT snapshot_at_ms FROM {table} ORDER BY snapshot_at_ms DESC LIMIT 1"
+                ).fetchone()
+                if same_time is not None:
+                    raise ValueError("R21 consolidated snapshot timestamp conflict")
+                if latest is not None and snapshot_at_ms < int(latest[0]):
+                    raise ValueError("R21 consolidated snapshots cannot backfill history")
                 connection.execute(
                     f"""
                     INSERT INTO {table} (
@@ -550,6 +567,27 @@ class Epoch2CanonicalLedger:
                     (identity, payload, snapshot_at_ms),
                 )
             else:
+                same_time = connection.execute(
+                    f"""
+                    SELECT snapshot_identity FROM {table}
+                    WHERE vault_id = ? AND snapshot_at_ms = ?
+                    LIMIT 1
+                    """,
+                    (vault_id, snapshot_at_ms),
+                ).fetchone()
+                latest = connection.execute(
+                    f"""
+                    SELECT snapshot_at_ms FROM {table}
+                    WHERE vault_id = ?
+                    ORDER BY snapshot_at_ms DESC
+                    LIMIT 1
+                    """,
+                    (vault_id,),
+                ).fetchone()
+                if same_time is not None:
+                    raise ValueError("R21 vault snapshot timestamp conflict")
+                if latest is not None and snapshot_at_ms < int(latest[0]):
+                    raise ValueError("R21 vault snapshots cannot backfill history")
                 connection.execute(
                     f"""
                     INSERT INTO {table} (
@@ -819,7 +857,7 @@ def initialize_epoch2_canonical_fund(
     if not epoch1_ledger_path.is_file():
         raise ValueError("R21 activation requires existing immutable Epoch1 ledger")
     epoch1_before = epoch1_ledger_path.read_bytes()
-    epoch1_sha = canonical_sha256({"bytes_hex": epoch1_before.hex()})
+    epoch1_sha = hashlib.sha256(epoch1_before).hexdigest()
     activation = build_epoch2_activation_record(
         activated_at_ms=activated_at_ms,
         epoch1_ledger_sha256=epoch1_sha,
@@ -961,7 +999,7 @@ def _decode_vault_snapshot(payload_json: str) -> Epoch2VaultAccountingSnapshot:
     raw = json.loads(payload_json)
     positions = tuple(
         PaperPosition(
-            symbol=item["symbol"],
+            symbol=PaperSymbol(str(item["symbol"])),
             quantity=Decimal(str(item["quantity"])),
         )
         for item in raw["positions"]
