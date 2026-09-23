@@ -520,7 +520,7 @@ def _event_values(
     }
 
 
-def _event_payload(event: MarketDataGapEvent) -> dict[str, object]:
+def _event_payload(event: MarketDataGapEvent) -> _GapEventValues:
     return _event_values(
         gap_identity=event.gap_identity,
         previous_event_identity=event.previous_event_identity,
