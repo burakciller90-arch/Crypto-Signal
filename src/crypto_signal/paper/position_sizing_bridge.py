@@ -9,6 +9,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from decimal import Decimal
 from enum import StrEnum
+from typing import TYPE_CHECKING
 
 from crypto_signal.ledger.serialization import canonical_sha256
 from crypto_signal.paper.capital_science_bridge import CapitalScienceBridgeResult
@@ -22,9 +23,10 @@ from crypto_signal.paper.position_sizing_intelligence import (
 )
 from crypto_signal.paper.smart_capital_allocator import VaultEligibilityState
 from crypto_signal.unified_decision_runtime import UnifiedDecisionIssuance
-from research.alpha_factory.probability_calibration_gate import (
-    CalibratedProbabilityEvidence,
-)
+if TYPE_CHECKING:
+    from research.alpha_factory.probability_calibration_gate import (
+        CalibratedProbabilityEvidence,
+    )
 
 POSITION_SIZING_BRIDGE_VERSION = "r25-position-sizing-bridge-v1/1"
 REAL_CAPITAL = 0
