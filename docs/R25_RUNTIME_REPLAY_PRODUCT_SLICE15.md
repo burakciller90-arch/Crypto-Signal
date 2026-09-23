@@ -29,7 +29,7 @@ Hosted CI acceptance alone is never runtime replay evidence.
 
 Read-only manifest status. Capital Science and Sizing may be labelled PERSISTED only when the manifest exists and verifies.
 
-The endpoint continues to report restart replay as NOT_PERSISTED because the manifest itself is not a replay observation.
+The endpoint reports restart replay as NOT_MEASURED because the manifest itself is not a replay observation.
 
 ### GET /api/runtime-replay-observation/status
 
@@ -40,6 +40,8 @@ States:
 
 Only ready may expose:
 `restart_replay_observation = VERIFIED`.
+
+Unconfigured, missing or empty replay evidence remains `NOT_MEASURED`; hosted CI success is not substituted for runtime observation.
 
 ### GET /api/runtime-replay-observation/forecast/{forecast_identity}
 
