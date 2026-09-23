@@ -104,7 +104,7 @@ def test_shadow_decision_api_exposes_only_verified_persisted_runtime_truth(
     latest = body["latest"]
     assert len(latest) == 1
     assert latest[0]["vault_id"] == "CORE"
-    assert latest[0]["action"] == "BUY"
+    assert "action" not in latest[0]
     assert latest[0]["review_selection_identity"]
     assert latest[0]["market_reference_identity"]
     assert latest[0]["sizing_bridge_identity"]
