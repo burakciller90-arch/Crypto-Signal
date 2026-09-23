@@ -517,6 +517,21 @@ def _method_result(
             expected_edge=method_edge,
             kelly_raw=method_kelly,
         )
+    if (
+        calibrated_probability is not None
+        and expected_edge is not None
+        and expected_edge <= 0
+    ):
+        return _disabled_result(
+            method=method,
+            status=SizingMethodStatus.HOLD_NON_POSITIVE_CALIBRATED_EDGE,
+            reasons=("calibrated_expected_edge_not_positive",),
+            uses_probability=True,
+            authorization_identity=calibrated_probability.authorization_identity,
+            probability=probability_value,
+            expected_edge=expected_edge,
+            kelly_raw=kelly_raw,
+        )
     if uses_probability and calibrated_probability is None:
         return _disabled_result(
             method=method,
