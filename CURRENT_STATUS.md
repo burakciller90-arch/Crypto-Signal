@@ -10,6 +10,29 @@ REAL_CAPITAL: 0
 ## Active v1.1 frontier — read before historical sections
 
 
+### 2026-09-23 11:47 +0300 — EVENT RISK STRUCTURED CALENDAR SLICE 1 ACCEPTED
+
+- PR **#896** accepted the PIT-safe structured Event Risk calendar safety layer.
+- Authoritative hosted branch run `35838930778` PASS:
+  - focused Event Risk pytest/Ruff/mypy PASS;
+  - full repository pytest/Ruff/mypy/JS/freshness PASS.
+- Parallel duplicate calendar docs/tests/workflows were reconciled before final acceptance.
+- PR #896 squash-merged to main as `eea464436cb7ef040c3032177c63d9e3848f95af`.
+- Exact-main Stage10 run `35839133372` SUCCESS.
+- Accepted states:
+  - CLEAR only with complete fresh verified calendar coverage;
+  - PRE_EVENT_CAUTION;
+  - EVENT_BLOCK;
+  - POST_EVENT_STABILIZATION;
+  - DEGRADED_DATA.
+- Missing/future/stale/incomplete/unverified coverage fails closed; future coverage identity is not leaked into historical freezes.
+- Future/late/other-asset/out-of-horizon events cannot rewrite historical freezes.
+- Event Risk is safety/veto context, not directional prediction.
+- Next Event Risk frontier: **source-bounded News/NLP evidence**, then circuit-breaker composition with market-data degradation and ABSTAIN semantics.
+- CONTINUITY_PAUSED_BY_USER remains dominant. REAL_CAPITAL=0.
+
+
+
 ### 2026-09-23 11:31 +0300 — M5 LARGE-TRANSFER SLICE 3 ACCEPTED / M5 CORE CLOSED
 
 - PR **#891** accepted bounded provider-attributed large-transfer clustering.
