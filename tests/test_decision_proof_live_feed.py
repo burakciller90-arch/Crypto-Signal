@@ -496,7 +496,7 @@ def test_live_feed_is_append_only_unique_and_chronological() -> None:
 
     with pytest.raises(ValueError, match="already exists|already contains"):
         append_live_intelligence_feed_event(issued, issuance)
-    with pytest.raises(ValueError, match="chronological order"):
+    with pytest.raises(ValueError, match="requires prior forecast issuance"):
         append_live_intelligence_feed_event(empty_live_intelligence_feed(), resolved)
 
 
