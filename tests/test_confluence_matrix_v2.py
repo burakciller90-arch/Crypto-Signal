@@ -115,10 +115,10 @@ def test_locked_policy_priors_and_threshold_hypotheses_are_exact() -> None:
     assert sum(weights.values(), start=Decimal(0)) == Decimal(1)
     assert policy.threshold_hypotheses == LOCKED_M6_THRESHOLD_HYPOTHESES
     assert policy.threshold_hypotheses == (
-        Decimal("70"),
-        Decimal("75"),
-        Decimal("80"),
-        Decimal("85"),
+        Decimal(70),
+        Decimal(75),
+        Decimal(80),
+        Decimal(85),
     )
     assert policy.event_risk_outside_matrix is True
     assert policy.automatic_activation is False
@@ -370,7 +370,7 @@ def test_context_duplicates_tampering_and_invalid_measures_fail_closed() -> None
         candidate_direction=MetaDirection.BULLISH,
     )
     with pytest.raises(ValueError, match="snapshot identity mismatch"):
-        replace(snapshot, support_score_0_100=Decimal("99"))
+        replace(snapshot, support_score_0_100=Decimal(99))
 
     with pytest.raises(ValueError, match="inside"):
         _observed(
