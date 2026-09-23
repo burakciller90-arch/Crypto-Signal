@@ -11,19 +11,24 @@ def test_galactech_preview_is_isolated_truthful_and_accessible(tmp_path: Path) -
     missing = tmp_path / "missing.sqlite3"
     client = TestClient(create_app(missing))
 
-    legacy = client.get("/")
+    production = client.get("/")
     preview = client.get("/galactech")
+    legacy = client.get("/legacy")
     css = client.get("/galactech-static/app.css")
     js = client.get("/galactech-static/app.js")
 
-    assert legacy.status_code == 200
+    assert production.status_code == 200
     assert preview.status_code == 200
+    assert legacy.status_code == 200
     assert css.status_code == 200
     assert js.status_code == 200
 
-    # Foundation is parallel until the explicit production UI cutover.
-    assert 'data-ui-version="galactech-command-center-v1"' in legacy.text
+    # Latest-main cutover candidate: root and /galactech are byte-identical
+    # R25 GALACTECH; /legacy preserves the prior accepted shell for rollback.
+    assert production.content == preview.content
+    assert 'data-ui-version="galactech-v1.1-polish"' in production.text
     assert 'data-ui-version="galactech-v1.1-polish"' in preview.text
+    assert 'data-ui-version="galactech-command-center-v1"' in legacy.text
 
     for section in (
         "COMMAND",
