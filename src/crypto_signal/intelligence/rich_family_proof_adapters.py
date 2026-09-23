@@ -347,8 +347,8 @@ def _merge_family(
     if not added_observed or not added_freshness:
         raise ValueError("rich family evidence requires time/freshness truth")
 
-    identities = tuple(sorted(set((*base.source_evidence_identities, *added_ids))))
-    engines = tuple(sorted(set((*base.source_engine_ids, *added_engines))))
+    identities = tuple(sorted({*base.source_evidence_identities, *added_ids}))
+    engines = tuple(sorted({*base.source_engine_ids, *added_engines}))
     observed_values = (
         *((base.observed_at_ms,) if base.observed_at_ms is not None else ()),
         *added_observed,
@@ -395,16 +395,14 @@ def _merge_family(
         material_conflict_identities=base.material_conflict_identities,
         uncertainty_flags=tuple(
             sorted(
-                set(
-                    (
-                        *(
-                            base.uncertainty_flags
-                            if base.state is MetaEvidenceState.OBSERVED
-                            else ()
-                        ),
-                        "rich_context_not_trade_authority",
-                    )
-                )
+                {
+                    *(
+                        base.uncertainty_flags
+                        if base.state is MetaEvidenceState.OBSERVED
+                        else ()
+                    ),
+                    "rich_context_not_trade_authority",
+                }
             )
         ),
     )
@@ -422,7 +420,7 @@ def _merge_proof(
         return base
     if not added_observed or not added_freshness:
         raise ValueError("rich proof evidence requires time/freshness truth")
-    identities = tuple(sorted(set((*base.evidence_identities, *added_ids))))
+    identities = tuple(sorted({*base.evidence_identities, *added_ids}))
     observed_values = (
         *((base.observed_at_ms,) if base.observed_at_ms is not None else ()),
         *added_observed,
@@ -440,7 +438,7 @@ def _merge_proof(
         if base.availability is ProofEvidenceAvailability.AVAILABLE
         else ()
     )
-    summaries = tuple(sorted(set((*base_summaries, *added_summaries))))
+    summaries = tuple(sorted({*base_summaries, *added_summaries}))
     return build_decision_proof_evidence_slice(
         domain=base.domain,
         availability=ProofEvidenceAvailability.AVAILABLE,
