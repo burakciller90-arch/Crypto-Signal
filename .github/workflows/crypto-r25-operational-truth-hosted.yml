@@ -1,0 +1,43 @@
+name: Crypto R25 Operational Truth Hosted
+
+on:
+  push:
+    branches:
+      - v1.1-r25-operational-truth-slice16-v1
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  r25-operational-truth:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install package and quality tools
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+          python -m pip install "pytest>=8.4" "pytest-asyncio>=1.2" "ruff>=0.13" "mypy>=1.18"
+      - name: Focused R25 operational truth acceptance
+        run: |
+          python -m pytest -q             tests/test_r25_operational_truth.py             tests/test_runtime_replay_product_truth.py             tests/test_forecast_cycle_link_product.py             tests/test_shadow_decision_rail_product.py
+          python -m ruff check             src/crypto_signal/product/web.py             tests/test_r25_operational_truth.py
+          python -m mypy src/crypto_signal/product/web.py
+          node --check src/crypto_signal/product/galactech/app.js
+          echo "R25_OPERATIONAL_TRUTH_FOCUSED_PASS=YES"
+      - name: Whole-repository regression
+        run: |
+          python -m pytest -q
+          python -m ruff check src tests ops/verify_stage10_integrated.py
+          python -m mypy src ops/verify_stage10_integrated.py
+          node --check src/crypto_signal/product/static/freshness.js
+          node --check src/crypto_signal/product/static/app.js
+          node --check src/crypto_signal/product/galactech/app.js
+          node tests/js/test_product_freshness.js
+          echo "R25_OPERATIONAL_TRUTH_FULL_PASS=YES"
+          echo "R25_REAL_CAPITAL_ZERO_PASS=YES"
