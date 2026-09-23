@@ -1,0 +1,42 @@
+name: Crypto GALACTECH Production Cutover Candidate
+
+on:
+  push:
+    branches:
+      - v1.1-product-galactech-production-cutover-candidate
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  galactech-cutover-candidate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install package and quality tools
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+          python -m pip install "pytest>=8.4" "pytest-asyncio>=1.2" "ruff>=0.13" "mypy>=1.18"
+      - name: Cutover candidate focused acceptance
+        run: |
+          python -m pytest             tests/test_galactech_production_cutover.py             tests/test_galactech_accessibility_performance.py             tests/test_galactech_learn_system.py             tests/test_galactech_performance.py             tests/test_galactech_archive.py             tests/test_galactech_markets.py             tests/test_galactech_capital_center.py             tests/test_galactech_command_evidence.py             tests/test_galactech_foundation.py             tests/test_dashboard_web.py -q
+          python -m ruff check             tests/test_galactech_production_cutover.py             tests/test_galactech_accessibility_performance.py             tests/test_galactech_foundation.py             tests/test_dashboard_web.py
+          node --check src/crypto_signal/product/galactech/app.js
+          grep -q 'return FileResponse(GALACTECH_DIR / "index.html")' src/crypto_signal/product/web.py
+          grep -q '@app.get("/legacy"' src/crypto_signal/product/web.py
+      - name: Complete repository regression
+        run: |
+          python -m pytest -q
+          python -m ruff check src tests ops/verify_stage10_integrated.py
+          python -m mypy src ops/verify_stage10_integrated.py
+          node --check src/crypto_signal/product/static/freshness.js
+          node --check src/crypto_signal/product/static/app.js
+          node --check src/crypto_signal/product/galactech/app.js
+          node tests/js/test_product_freshness.js
+          echo "GALACTECH_PRODUCTION_CUTOVER_CANDIDATE_HOSTED_FULL_PASS=YES"
