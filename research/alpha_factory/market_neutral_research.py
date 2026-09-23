@@ -735,9 +735,11 @@ def _validate_family_structure(candidate: MarketNeutralCandidate) -> None:
             NeutralInstrumentType.LINEAR_PERPETUAL,
         }:
             raise ValueError("spot/perpetual family requires one spot and one perpetual")
-    elif candidate.family is MarketNeutralFamily.DELTA_NEUTRAL:
-        if NeutralInstrumentType.LINEAR_PERPETUAL not in types:
-            raise ValueError("delta-neutral family requires a perpetual hedge leg")
+    elif (
+        candidate.family is MarketNeutralFamily.DELTA_NEUTRAL
+        and NeutralInstrumentType.LINEAR_PERPETUAL not in types
+    ):
+        raise ValueError("delta-neutral family requires a perpetual hedge leg")
 
 
 def _leg_payload(leg: MarketNeutralLegEvidence) -> dict[str, object]:
