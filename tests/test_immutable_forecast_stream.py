@@ -68,11 +68,13 @@ from research.alpha_factory.probability_calibration_gate import (
     R19_PROBABILITY_SEMANTIC,
     CalibratedProbabilityEvidence,
     R19ProbabilityStatus,
+    build_calibration_scope,
 )
 
 AS_OF = 1_000_000
 ISSUED_AT = AS_OF + 100
 HORIZON = 8
+HORIZON_MS = HORIZON * 4 * 60 * 60_000
 
 
 def _sha(seed: str) -> str:
@@ -206,12 +208,30 @@ def _event_context(
     )
 
 
+def _probability_scope(
+    *,
+    asset: str = "BTCUSDT",
+    timeframe: str = "4h",
+    regime: str = "trend_up",
+    horizon_ms: int = HORIZON_MS,
+):
+    return build_calibration_scope(
+        asset=asset,
+        timeframe=timeframe,
+        regime=regime,
+        outcome_event_definition=(
+            "frozen bullish forecast reaches target before invalidation within horizon"
+        ),
+        horizon_ms=horizon_ms,
+    )
+
+
 def _calibrated_probability(
     *,
     issued_at_ms: int = AS_OF,
     probability: Decimal = Decimal("0.67"),
 ):
-    scope_identity = _sha("r19-scope")
+    scope_identity = _probability_scope().scope_identity
     model_version = "probability-model-v1"
     calibrator_version = "calibrator-v1"
     walk_forward_fit_identity = _sha("walk-forward-fit")
@@ -269,9 +289,12 @@ def _calibrated_probability(
 def _forecast(
     *,
     probability: CalibratedProbabilityEvidence | None = None,
+    probability_scope=None,
     issued_at_ms: int = ISSUED_AT,
     event_state: CircuitBreakerState = CircuitBreakerState.CLEAR,
 ):
+    if probability is not None and probability_scope is None:
+        probability_scope = _probability_scope()
     return build_immutable_forecast(
         _signal(),
         _confluence(),
@@ -282,6 +305,7 @@ def _forecast(
         target_label="target_1",
         authority=ForecastAuthority.SHADOW,
         calibrated_probability=probability,
+        calibration_scope=probability_scope,
     )
 
 
@@ -396,6 +420,31 @@ def test_forecast_probability_requires_exact_r19_authorization_and_preserves_pro
         _forecast(
             probability=_calibrated_probability(issued_at_ms=ISSUED_AT + 1),
         )
+
+
+@pytest.mark.parametrize(
+    ("scope", "message"),
+    [
+        (_probability_scope(asset="ETHUSDT"), "scope asset mismatch"),
+        (_probability_scope(timeframe="1h"), "scope timeframe mismatch"),
+        (_probability_scope(regime="range"), "scope regime mismatch"),
+        (_probability_scope(horizon_ms=HORIZON_MS + 1), "scope horizon mismatch"),
+    ],
+)
+def test_calibrated_probability_must_match_exact_forecast_scope(
+    scope,
+    message: str,
+) -> None:
+    with pytest.raises(ValueError, match=message):
+        _forecast(
+            probability=_calibrated_probability(),
+            probability_scope=scope,
+        )
+
+
+def test_probability_scope_without_probability_evidence_fails_closed() -> None:
+    with pytest.raises(ValueError, match="scope requires probability evidence"):
+        _forecast(probability_scope=_probability_scope())
 
 
 def test_non_clear_event_context_is_preserved_not_hidden() -> None:
