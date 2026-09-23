@@ -40,7 +40,9 @@ async def persist_bybit_wire_stream(
     events: AsyncIterable[BybitMicrostructureWireEvent],
     orderbook_snapshot_interval_ms: int = 1_000,
     max_messages: int | None = None,
-    progress_callback: Callable[[BybitMicrostructureWireEvent, int], None] | None = None,
+    progress_callback: (
+        Callable[[BybitMicrostructureWireEvent, int], None] | None
+    ) = None,
 ) -> MarketTapeWireCollectionResult:
     if orderbook_snapshot_interval_ms <= 0:
         raise ValueError("orderbook snapshot interval must be positive")
