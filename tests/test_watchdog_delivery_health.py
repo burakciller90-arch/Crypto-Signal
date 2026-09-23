@@ -118,3 +118,29 @@ def test_workflow_never_marks_a_stalled_pending_timer_healthy() -> None:
     )
     assert 'GITHUB_WATCHDOG_TIMER_HEALTHY=YES' in workflow
     assert 'cron: "*/5 * * * *"' in workflow
+
+
+def test_transient_heartbeat_delay_never_duplicates_pending_delivery() -> None:
+    root = Path(__file__).resolve().parents[1]
+    workflow = (
+        root / ".github/workflows/crypto-20m-continuity-wake.yml"
+    ).read_text(encoding="utf-8")
+
+    # A transport call may block the timer heartbeat for up to 60 seconds.
+    assert '[ "$AGE" -le 90 ]' in workflow
+    assert 'GITHUB_WATCHDOG_HEARTBEAT_STALE_WITH_PENDING=YES' in workflow
+    assert 'GITHUB_WATCHDOG_EXISTING_PENDING_TIMER_PRESERVED=YES' in workflow
+    assert workflow.index(
+        'GITHUB_WATCHDOG_EXISTING_PENDING_TIMER_PRESERVED=YES'
+    ) < workflow.index('if [ -f "$TIMER" ]; then')
+    assert '[ "$EXACT_TIMER_ALIVE" = "1" ]' in workflow
+
+    # Read the persisted event ID before considering emergency fallback.
+    assert 'STATE_FILE="$RUNTIME/rolling_wake_state.json"' in workflow
+    assert 'GITHUB_WATCHDOG_PENDING_SNAPSHOT_CONFLICT=YES' in workflow
+    assert 'GITHUB_FALLBACK_SKIPPED_UNCERTAIN_PENDING=YES' in workflow
+    assert 'GITHUB_WATCHDOG_ROLLING_STATE_CORRUPT=YES' in workflow
+    assert 'GITHUB_WATCHDOG_ROLLING_STATE_MISSING=YES' in workflow
+    assert workflow.index('PENDING="$STATE_PENDING"') < workflow.index(
+        'EVENT_ID="crypto-20m-emergency:'
+    )
