@@ -21,7 +21,10 @@ from crypto_signal.intelligence.breakout_confirmation import (
     BreakoutStatus,
     build_breakout_confirmation_freeze,
 )
-from crypto_signal.intelligence.liquidity_structure import LiquidityStructureConfig
+from crypto_signal.intelligence.liquidity_structure import (
+    LiquidityStructureConfig,
+    build_liquidity_structure_evidence_freeze,
+)
 from crypto_signal.intelligence.liquidity_sweep import (
     LiquiditySweepConfig,
     build_liquidity_sweep_evidence_freeze,
@@ -48,6 +51,7 @@ def _book(
     event_ms: int,
     seq: int,
     ask101_size: str,
+    bid100_size: str = "1",
     symbol: str = "BTCUSDT",
 ):
     return build_orderbook_snapshot(
@@ -60,7 +64,7 @@ def _book(
         ingested_at_ms=event_ms + 3,
         update_id=seq,
         sequence=seq,
-        bids=_levels([("100", "1"), ("99", "1"), ("98", "1")]),
+        bids=_levels([("100", bid100_size), ("99", "1"), ("98", "1")]),
         asks=_levels([("101", ask101_size), ("102", "1"), ("103", "1")]),
         source=DataSource.WEBSOCKET,
         adapter_version="m3-slice3-test/1",
@@ -203,17 +207,14 @@ def _confirmation_inputs():
         as_of_ms=12_050,
         config=_sweep_config(),
     )
+    structure = build_liquidity_structure_evidence_freeze(
+        books,
+        as_of_ms=12_050,
+        config=_structure_config(),
+    )
     absorption = build_absorption_freeze(
         flow,
-        sweep.analysis.structure_freeze_identity
-        and __import__(
-            "crypto_signal.intelligence.liquidity_structure",
-            fromlist=["build_liquidity_structure_evidence_freeze"],
-        ).build_liquidity_structure_evidence_freeze(
-            books,
-            as_of_ms=12_050,
-            config=_structure_config(),
-        ),
+        structure,
         as_of_ms=12_050,
         config=AbsorptionConfig(
             interaction_tolerance_bps=Decimal(20),
@@ -259,11 +260,7 @@ def _failure_inputs():
         as_of_ms=12_050,
         config=_sweep_config(),
     )
-    structure_module = __import__(
-        "crypto_signal.intelligence.liquidity_structure",
-        fromlist=["build_liquidity_structure_evidence_freeze"],
-    )
-    structure = structure_module.build_liquidity_structure_evidence_freeze(
+    structure = build_liquidity_structure_evidence_freeze(
         books,
         as_of_ms=12_050,
         config=_structure_config(),
@@ -357,6 +354,84 @@ def test_recovered_sweep_plus_matching_absorption_is_breakout_failure_candidate(
     assert candidate.sweep_recovery_at_ms == 11_500
     assert candidate.opposing_absorption_present is True
     assert candidate.absorption_evidence_identity == absorption.analysis.evidence_identity
+
+
+def test_downside_breakout_confirmation_is_symmetric() -> None:
+    books = tuple(
+        _book(
+            event_ms=8_000 + index * 1_000,
+            seq=index + 1,
+            ask101_size="1",
+            bid100_size=size,
+        )
+        for index, size in enumerate(["10", "8", "5", "2", "1"])
+    )
+    trades = (
+        _trade(event_ms=8_500, seq=1, side=AggressorSide.SELL, price="100.00"),
+        _trade(event_ms=9_500, seq=2, side=AggressorSide.SELL, price="99.94"),
+        _trade(event_ms=10_500, seq=3, side=AggressorSide.SELL, price="99.92"),
+        _trade(event_ms=11_000, seq=4, side=AggressorSide.SELL, price="99.90"),
+        _trade(event_ms=11_500, seq=5, side=AggressorSide.SELL, price="99.80"),
+    )
+    flow = build_temporal_order_flow_freeze(
+        trades,
+        as_of_ms=12_050,
+        config=_flow_config(),
+    )
+    sweep = build_liquidity_sweep_evidence_freeze(
+        books,
+        trades,
+        as_of_ms=12_050,
+        config=_sweep_config(),
+    )
+    structure = build_liquidity_structure_evidence_freeze(
+        books,
+        as_of_ms=12_050,
+        config=_structure_config(),
+    )
+    absorption = build_absorption_freeze(
+        flow,
+        structure,
+        as_of_ms=12_050,
+        config=AbsorptionConfig(
+            interaction_tolerance_bps=Decimal(20),
+            minimum_aggressor_share=Decimal("0.60"),
+            minimum_aggressive_trade_count=2,
+            minimum_replenishment_cycles=1,
+            minimum_replenishment_fraction=Decimal("0.20"),
+            minimum_level_presence_fraction=Decimal("0.50"),
+            max_price_nonresponse_bps=Decimal(20),
+        ),
+    )
+    candles = (
+        _candle(open_ms=10_000, close="99.80"),
+        _candle(open_ms=11_000, close="99.50"),
+    )
+
+    freeze = build_breakout_confirmation_freeze(
+        candles,
+        flow,
+        sweep,
+        absorption,
+        as_of_ms=12_050,
+        config=BreakoutConfig(
+            minimum_closed_candles=2,
+            minimum_close_distance_bps=Decimal(10),
+            minimum_taker_imbalance=Decimal("0.15"),
+            reentry_tolerance_bps=Decimal(10),
+            absorption_level_tolerance_bps=Decimal(20),
+        ),
+    )
+
+    confirmed = [
+        item
+        for item in freeze.analysis.candidates
+        if item.state is BreakoutState.CONFIRMED
+    ]
+    assert len(confirmed) == 1
+    assert confirmed[0].side is BreakoutSide.DOWNSIDE
+    assert confirmed[0].reference_level == Decimal(100)
+    assert confirmed[0].taker_imbalance < Decimal("-0.15")
 
 
 def test_price_cross_without_close_acceptance_is_not_confirmation() -> None:
