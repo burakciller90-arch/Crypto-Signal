@@ -4,6 +4,7 @@ import sqlite3
 from dataclasses import dataclass, field
 from enum import StrEnum
 from pathlib import Path
+from typing import TypedDict
 
 from crypto_signal.ledger.serialization import canonical_json, canonical_sha256
 
@@ -20,6 +21,28 @@ class GapEventKind(StrEnum):
     RECOVERY_ATTEMPTED = "recovery_attempted"
     RECOVERED = "recovered"
     UNRECOVERED = "unrecovered"
+
+
+class _GapEventValues(TypedDict):
+    gap_identity: str
+    previous_event_identity: str | None
+    event_kind: GapEventKind
+    provider: str
+    source: str
+    channel: str
+    symbol: str
+    expectation_kind: GapExpectationKind
+    expectation_value: int
+    last_successful_ingestion_ms: int
+    gap_started_at_ms: int
+    observed_at_ms: int
+    recovered_at_ms: int | None
+    source_evidence_identities: tuple[str, ...]
+    recovery_action: str | None
+    reason_codes: tuple[str, ...]
+    schema_version: str
+    production_authority: bool
+    real_capital: int
 
 
 @dataclass(frozen=True, slots=True)
@@ -471,7 +494,7 @@ def _event_values(
     source_evidence_identities: tuple[str, ...],
     recovery_action: str | None,
     reason_codes: tuple[str, ...],
-) -> dict[str, object]:
+) -> _GapEventValues:
     return {
         "gap_identity": gap_identity,
         "previous_event_identity": previous_event_identity,
@@ -523,7 +546,7 @@ def _event_from_payload(payload_json: str) -> MarketDataGapEvent:
     payload = json.loads(payload_json)
     if not isinstance(payload, dict):
         raise TypeError("gap payload must be object")
-    values = {
+    values: _GapEventValues = {
         "gap_identity": str(payload["gap_identity"]),
         "previous_event_identity": (
             None
