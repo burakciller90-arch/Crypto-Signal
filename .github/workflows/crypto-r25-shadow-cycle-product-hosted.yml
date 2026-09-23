@@ -25,8 +25,15 @@ jobs:
           python -m pip install "pytest>=8.4" "pytest-asyncio>=1.2" "ruff>=0.13" "mypy>=1.18"
       - name: Focused shadow cycle Product Truth acceptance
         run: |
-          python -m pytest -q             tests/test_shadow_cycle_product.py             tests/test_forecast_cycle_link_product.py             tests/test_shadow_cycle_manifest.py             tests/test_shadow_decision_rail_product.py
-          python -m ruff check             src/crypto_signal/product/web.py             tests/test_shadow_cycle_product.py
+          python -m pytest -q \
+            tests/test_shadow_cycle_status_product.py \
+            tests/test_forecast_cycle_link_product.py \
+            tests/test_shadow_cycle_runtime.py \
+            tests/test_shadow_cycle_manifest.py \
+            tests/test_shadow_decision_rail_product.py
+          python -m ruff check \
+            src/crypto_signal/product/web.py \
+            tests/test_shadow_cycle_status_product.py
           python -m mypy src/crypto_signal/product/web.py
           node --check src/crypto_signal/product/galactech/app.js
           echo "R25_SHADOW_CYCLE_PRODUCT_FOCUSED_PASS=YES"
