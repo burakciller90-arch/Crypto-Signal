@@ -226,7 +226,7 @@ class DecisionProofSnapshot:
             raise ValueError("unsupported Decision Proof schema")
         if self.engine_version != DECISION_PROOF_ENGINE_VERSION:
             raise ValueError("unsupported Decision Proof engine")
-        for value, label in (
+        for text_value, label in (
             (self.asset, "Decision Proof asset"),
             (self.symbol, "Decision Proof symbol"),
             (self.timeframe, "Decision Proof timeframe"),
@@ -237,7 +237,7 @@ class DecisionProofSnapshot:
             (self.event_context_state, "Decision Proof event state"),
             (self.authority, "Decision Proof authority"),
         ):
-            _require_text(value, label)
+            _require_text(text_value, label)
         if min(self.issued_at_ms, self.source_as_of_ms) < 0:
             raise ValueError("Decision Proof timestamps must be non-negative")
         if self.issued_at_ms < self.source_as_of_ms:
@@ -246,11 +246,11 @@ class DecisionProofSnapshot:
             raise ValueError("Decision Proof horizon must be positive")
         if self.invalidation_price <= Decimal(0):
             raise ValueError("Decision Proof invalidation price must be positive")
-        for value in (
+        for score_value in (
             self.confluence_support_score_0_100,
             self.confluence_opposition_score_0_100,
         ):
-            if value < Decimal(0) or value > Decimal(100):
+            if score_value < Decimal(0) or score_value > Decimal(100):
                 raise ValueError("Decision Proof confluence score outside [0,100]")
         if self.calibrated_probability_0_1 is not None:
             _require_unit_interval(
