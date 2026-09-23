@@ -337,3 +337,19 @@ def test_tampering_and_invalid_research_thresholds_fail_closed() -> None:
         DerivativesCrowdingConfig(funding_percentile_low=Decimal("0.95"))
     with pytest.raises(ValueError, match="inside"):
         DerivativesCrowdingConfig(liquidation_dominance_share=Decimal("1.1"))
+
+
+def test_measured_but_nonaligned_components_remain_mixed_context() -> None:
+    result = build_derivatives_crowding_evidence_freeze(
+        build_derivatives_dynamics_evidence_freeze(_series("long"), as_of_ms=AS_OF),
+        _liquidations(_series("long")[-1]),
+        config=DerivativesCrowdingConfig(funding_extreme_bps=Decimal(20)),
+    )
+    assert result.analysis.status is DerivativesCrowdingStatus.MEASURED
+    assert result.analysis.label is DerivativesCrowdingLabel.MIXED
+    assert result.analysis.crowded_side is CrowdedSide.NONE
+    assert result.analysis.squeeze_risk_side is CrowdedSide.NONE
+    assert (
+        "derivatives_components_not_aligned_for_strong_label"
+        in result.analysis.uncertainty_flags
+    )
