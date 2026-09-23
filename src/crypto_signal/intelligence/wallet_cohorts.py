@@ -170,23 +170,6 @@ def build_wallet_cohort_evidence_freeze(
     ordered_admissions = tuple(
         sorted(admissions, key=lambda item: (item.admitted_at_ms, item.admission_identity))
     )
-    _validate_admission_context(ordered_admissions)
-    _reject_admission_duplicates(ordered_admissions)
-    admission_by_id = {item.admission_identity: item for item in ordered_admissions}
-
-    ordered_forward = tuple(
-        sorted(
-            forward_observations,
-            key=lambda item: (
-                item.measurement_end_ms,
-                item.ingested_at_ms,
-                item.observation_identity,
-            ),
-        )
-    )
-    _reject_forward_duplicates(ordered_forward)
-    _validate_forward_context(ordered_forward, admission_by_id)
-
     eligible_admissions = tuple(
         item for item in ordered_admissions if item.admitted_at_ms <= as_of_ms
     )
@@ -199,14 +182,31 @@ def build_wallet_cohort_evidence_freeze(
         )
         return _freeze(analysis, (), ())
 
-    eligible_ids = {item.admission_identity for item in eligible_admissions}
+    _validate_admission_context(eligible_admissions)
+    _reject_admission_duplicates(eligible_admissions)
+    admission_by_id = {item.admission_identity: item for item in eligible_admissions}
+
     eligible_forward = tuple(
-        item
-        for item in ordered_forward
-        if item.admission_identity in eligible_ids
-        and max(item.measurement_end_ms, item.source_timestamp_ms, item.ingested_at_ms)
-        <= as_of_ms
+        sorted(
+            (
+                item
+                for item in forward_observations
+                if max(
+                    item.measurement_end_ms,
+                    item.source_timestamp_ms,
+                    item.ingested_at_ms,
+                )
+                <= as_of_ms
+            ),
+            key=lambda item: (
+                item.measurement_end_ms,
+                item.ingested_at_ms,
+                item.observation_identity,
+            ),
+        )
     )
+    _reject_forward_duplicates(eligible_forward)
+    _validate_forward_context(eligible_forward, admission_by_id)
     selected_by_admission: dict[str, WalletCohortForwardObservation] = {}
     for item in eligible_forward:
         selected_by_admission[item.admission_identity] = item
