@@ -10,6 +10,26 @@ REAL_CAPITAL: 0
 ## Active v1.1 frontier — read before historical sections
 
 
+### 2026-09-23 12:28 +0300 — M6 PHASE 8 CLOSED / FORWARD THRESHOLD RESEARCH ACCEPTED
+
+- PR **#903** accepted chronological untouched-forward comparison for the locked 70/75/80/85 threshold hypotheses.
+- Authoritative branch acceptance run `35842778192` focused + full PASS.
+- Existing Alpha Factory research-only gate `35842771989` PASS.
+- PR #903 squash-merged to main as `6fb192f24fd8755b4e6f5bd341bbefbfcac5cfca`.
+- Exact-main gates:
+  - Alpha Factory research gate `35843052031` SUCCESS;
+  - Stage10 hosted gate `35843052086` SUCCESS.
+- Threshold config freezes before the forward window and reuses `UNTOUCHED_FORWARD` partition semantics.
+- Outcomes are attached only after decisions and must mature inside the frozen forward window.
+- Conflict/ABSTAIN/PARTIAL/NOT_EVALUABLE matrix states remain blocked even above arithmetic thresholds.
+- Per-threshold activation/net-R summaries are descriptive only.
+- No threshold winner, automatic selection, promotion or probability claim is produced.
+- **Phase 8 M6 Confluence Matrix 2.0 exit is satisfied.**
+- Current locked intelligence frontier: **Phase 9 — R19 calibrated probability**.
+- CONTINUITY_PAUSED_BY_USER remains dominant. REAL_CAPITAL=0.
+
+
+
 ### 2026-09-23 12:17 +0300 — M6 CONFLUENCE MATRIX 2.0 CORE SLICE 1 ACCEPTED
 
 - PR **#902** accepted the locked five-family M6 Confluence Matrix 2.0 core.
