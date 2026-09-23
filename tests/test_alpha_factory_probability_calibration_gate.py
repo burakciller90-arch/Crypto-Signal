@@ -413,45 +413,13 @@ def test_probability_authorization_requires_accepted_gate_and_exact_frozen_predi
     assert authorization.production_authority is False
     assert authorization.real_capital == 0
 
-    failed_report = replace(
-        accepted,
-        status=CalibrationGateStatus.FAILED_BRIER_SKILL,
-        probability_status=R19ProbabilityStatus.NOT_CALIBRATED,
-        evidence_identity="0" * 64,
+    failed_report = evaluate_probability_calibration(
+        config,
+        _partition(predictions),
+        _observations(predictions, reverse=True),
+        as_of_ms=EVALUATION_CUTOFF,
     )
-    failed_report = replace(
-        failed_report,
-        evidence_identity=canonical_sha256(
-            {
-                "automatic_promotion": failed_report.automatic_promotion,
-                "baseline_brier_score": failed_report.baseline_brier_score,
-                "brier_score": failed_report.brier_score,
-                "brier_skill_score": failed_report.brier_skill_score,
-                "calibrator_version": failed_report.calibrator_version,
-                "config_identity": failed_report.config_identity,
-                "engine_version": failed_report.engine_version,
-                "evaluation_cutoff_ms": failed_report.evaluation_cutoff_ms,
-                "expected_calibration_error": failed_report.expected_calibration_error,
-                "holdout_negative_count": failed_report.holdout_negative_count,
-                "holdout_positive_count": failed_report.holdout_positive_count,
-                "holdout_sample_count": failed_report.holdout_sample_count,
-                "maximum_calibration_error": failed_report.maximum_calibration_error,
-                "model_version": failed_report.model_version,
-                "observation_identities": failed_report.observation_identities,
-                "partition_identity": failed_report.partition_identity,
-                "probability_semantic": failed_report.probability_semantic,
-                "probability_status": failed_report.probability_status,
-                "production_authority": failed_report.production_authority,
-                "real_capital": failed_report.real_capital,
-                "reliability_bins": failed_report.reliability_bins,
-                "schema_version": failed_report.schema_version,
-                "scope_identity": failed_report.scope_identity,
-                "status": failed_report.status,
-                "training_cutoff_ms": failed_report.training_cutoff_ms,
-                "walk_forward_fit_identity": failed_report.walk_forward_fit_identity,
-            }
-        ),
-    )
+    assert failed_report.status is CalibrationGateStatus.FAILED_BRIER_SKILL
     assert authorize_calibrated_probability(
         failed_report,
         future_prediction,
