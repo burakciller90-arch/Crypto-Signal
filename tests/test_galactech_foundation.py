@@ -66,7 +66,7 @@ def test_galactech_preview_is_isolated_truthful_and_accessible(tmp_path: Path) -
     assert 'epoch: "/api/paper/epoch-contract"' in js.text
     assert 'paper: "/api/paper/mission-control"' in js.text
     assert 'epoch2State: "/api/paper/epoch2-state"' in js.text
-    assert 'archive: "/api/archive/proof-wall?limit=60&offset=0"' in js.text
+    assert 'archive: "/api/archive/proof-wall?limit=500&offset=0"' in js.text
     assert 'education: "/api/education"' in js.text
     assert 'intelligence: "/api/intelligence-center"' in js.text
     assert "API · AUTHORITY MISMATCH" in js.text
