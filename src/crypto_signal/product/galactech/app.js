@@ -16,6 +16,17 @@ const API = Object.freeze({
   signalDetail: (identity) => `/api/signals/${encodeURIComponent(identity)}`,
 });
 
+const ROUTE_LABELS = Object.freeze({
+  command: "COMMAND",
+  markets: "MARKETS",
+  intelligence: "INTELLIGENCE",
+  capital: "CAPITAL",
+  archive: "ARCHIVE",
+  performance: "PERFORMANCE",
+  learn: "LEARN",
+  system: "SYSTEM",
+});
+
 const state = {
   asset: "ALL",
   route: "command",
@@ -40,6 +51,7 @@ const state = {
   marketRequestSeq: 0,
   evidenceDetail: null,
   lastEvidenceTrigger: null,
+  runtimeRefreshInFlight: false,
 };
 
 function byId(id) {
@@ -152,31 +164,67 @@ function pairsToObject(pairs) {
   );
 }
 
+function setMainBusy(isBusy, announcement = "") {
+  const main = byId("mainContent");
+  if (main) main.setAttribute("aria-busy", String(isBusy));
+  if (announcement) {
+    const announcer = byId("runtimeAnnouncer");
+    if (announcer) announcer.textContent = announcement;
+  }
+}
+
+function announceRoute(route) {
+  const label = ROUTE_LABELS[route] || "COMMAND";
+  const announcer = byId("routeAnnouncer");
+  if (announcer) announcer.textContent = `${label} bölümü açıldı.`;
+  document.title = `GALACTECH // ${label}`;
+}
+
 function routeTo(route) {
-  state.route = route;
+  const nextRoute = ROUTE_LABELS[route] ? route : "command";
+  state.route = nextRoute;
   document.querySelectorAll("[data-route-view]").forEach((view) => {
-    const active = view.dataset.routeView === route;
+    const active = view.dataset.routeView === nextRoute;
     view.hidden = !active;
     view.classList.toggle("is-active", active);
   });
   document.querySelectorAll("[data-route]").forEach((button) => {
-    const active = button.dataset.route === route;
+    const active = button.dataset.route === nextRoute;
     button.classList.toggle("is-active", active);
     if (active) button.setAttribute("aria-current", "page");
     else button.removeAttribute("aria-current");
   });
   const main = byId("mainContent");
-  if (main && !prefersReducedMotion()) {
-    main.scrollIntoView({ block: "start", behavior: "smooth" });
+  if (main) {
+    main.scrollIntoView({
+      block: "start",
+      behavior: prefersReducedMotion() ? "auto" : "smooth",
+    });
   }
-  if (route === "markets") {
+  announceRoute(nextRoute);
+  if (nextRoute === "markets") {
     void initializeMarketWorkspace({ reload: true });
   }
 }
-
 function bindNavigation() {
-  document.querySelectorAll("[data-route]").forEach((button) => {
+  const navButtons = [...document.querySelectorAll("#primaryNav [data-route]")];
+  navButtons.forEach((button, index) => {
     button.addEventListener("click", () => routeTo(button.dataset.route || "command"));
+    button.addEventListener("keydown", (event) => {
+      let nextIndex = null;
+      if (event.key === "ArrowDown" || event.key === "ArrowRight") {
+        nextIndex = (index + 1) % navButtons.length;
+      } else if (event.key === "ArrowUp" || event.key === "ArrowLeft") {
+        nextIndex = (index - 1 + navButtons.length) % navButtons.length;
+      } else if (event.key === "Home") {
+        nextIndex = 0;
+      } else if (event.key === "End") {
+        nextIndex = navButtons.length - 1;
+      }
+      if (nextIndex === null) return;
+      event.preventDefault();
+      navButtons[nextIndex]?.focus();
+    });
   });
 
   document.querySelectorAll("[data-asset]").forEach((button) => {
@@ -229,7 +277,9 @@ function bindNavigation() {
     button.addEventListener("click", () => {
       state.proofFilter = button.dataset.filter || "all";
       document.querySelectorAll("[data-filter]").forEach((item) => {
-        item.classList.toggle("is-active", item === button);
+        const active = item === button;
+        item.classList.toggle("is-active", active);
+        item.setAttribute("aria-pressed", String(active));
       });
       renderArchive();
     });
@@ -2073,6 +2123,7 @@ async function runBoot() {
 
   await initializeMarketWorkspace({ reload: true });
   renderAll();
+  setMainBusy(false);
 
   const failed = results.filter((result) => !result.ok).map((result) => result.key);
   byId("bootNote").textContent = failed.length
@@ -2086,9 +2137,13 @@ async function runBoot() {
   }, prefersReducedMotion() ? 0 : 220);
 }
 
-function startPeriodicRefresh() {
-  window.setInterval(async () => {
-    if (document.visibilityState !== "visible") return;
+async function refreshRuntime(reason = "timer") {
+  if (state.runtimeRefreshInFlight || document.visibilityState !== "visible") {
+    return false;
+  }
+  state.runtimeRefreshInFlight = true;
+  setMainBusy(true);
+  try {
     const results = await Promise.all([
       loadEndpoint("health", API.health),
       loadEndpoint("command", API.command),
@@ -2103,9 +2158,27 @@ function startPeriodicRefresh() {
     if (!results.slice(1).every((item) => item.ok)) {
       setTruthChip("freshnessTruth", "FRESHNESS · PARTIAL EVIDENCE", "muted");
     }
-  }, 30_000);
+    if (reason === "visibility") {
+      setMainBusy(false, "Görünür sekmede runtime kanıtı yenilendi.");
+    }
+    return true;
+  } finally {
+    state.runtimeRefreshInFlight = false;
+    setMainBusy(false);
+  }
 }
 
+function startPeriodicRefresh() {
+  window.setInterval(() => {
+    void refreshRuntime("timer");
+  }, 30_000);
+
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") {
+      void refreshRuntime("visibility");
+    }
+  });
+}
 document.addEventListener("DOMContentLoaded", () => {
   bindNavigation();
   renderSystem();
