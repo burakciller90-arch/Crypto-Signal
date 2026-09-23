@@ -130,4 +130,7 @@ def test_galactech_system_never_upgrades_unexposed_runtime_health(
     assert "TRUTH · PRODUCT EVIDENCE READY" in js
     assert '"systemDecisionLedger"' in js
     assert '"systemLiveFeed"' in js
-    assert "Market Tape" not in js[js.index("function renderSystem()"):js.index("function renderAll()")]
+    assert '"systemMarketTape"' in js
+    assert '"systemColdArchive"' in js
+    assert "ONLINE NOT ASSERTED" in js
+    assert "process NOT MEASURED" in js
