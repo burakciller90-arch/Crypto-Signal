@@ -198,11 +198,15 @@ def create_app(
 
     @app.get("/", include_in_schema=False)
     def index() -> FileResponse:
-        return FileResponse(STATIC_DIR / "index.html")
+        return FileResponse(GALACTECH_DIR / "index.html")
 
     @app.get("/galactech", include_in_schema=False)
     def galactech_preview() -> FileResponse:
         return FileResponse(GALACTECH_DIR / "index.html")
+
+    @app.get("/legacy", include_in_schema=False)
+    def legacy_product() -> FileResponse:
+        return FileResponse(STATIC_DIR / "index.html")
 
     @app.get("/api/health")
     def health() -> dict[str, object]:
