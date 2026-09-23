@@ -10,6 +10,21 @@ REAL_CAPITAL: 0
 ## Active v1.1 frontier — read before historical sections
 
 
+### 2026-09-23 11:22 +0300 — M5 PIT WALLET COHORT REGISTRY SLICE 2 ACCEPTED
+
+- PR **#890** accepted immutable cohort admission + forward-only measurement.
+- Authoritative hosted branch run `35836489141` focused + full repository PASS.
+- PR #890 squash-merged to main as `30f977d3d141bfa59d073a314a5ec05798f3d373`.
+- Exact-main Stage10 run `35836667987` SUCCESS.
+- A cohort member's admission time is frozen after admission-basis evidence is available.
+- Forward observations cannot begin before admission; future/late observations cannot rewrite a historical freeze.
+- Registry-only is valid until post-admission evidence exists.
+- Cohort metrics are descriptive forward evidence, not proof of skill, identity, insider status or future return.
+- Current M5 frontier: **bounded large-transfer / temporal transfer-cluster evidence**, then M5 closeout and Event Risk + NLP.
+- CONTINUITY_PAUSED_BY_USER remains dominant. REAL_CAPITAL=0.
+
+
+
 ### 2026-09-23 11:13 +0300 — M5 EXCHANGE FLOW SLICE 1 ACCEPTED
 
 - PR **#889** accepted provider-neutral PIT-safe exchange-flow evidence.
