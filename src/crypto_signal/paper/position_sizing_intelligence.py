@@ -572,9 +572,10 @@ def _method_result(
             SizingMethod.KELLY_HALF: Decimal("0.5"),
             SizingMethod.KELLY_QUARTER: Decimal("0.25"),
         }[method]
-        fraction = kelly_raw * multiplier
-        if fraction > policy.maximum_fraction_of_vault:
-            fraction = policy.maximum_fraction_of_vault
+        fraction = min(
+            kelly_raw * multiplier,
+            policy.maximum_fraction_of_vault,
+        )
         reasons = (f"{method.value}_shadow_only",)
 
     fraction = _q_fraction(fraction)
