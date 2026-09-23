@@ -68,6 +68,14 @@ frozen signal evidence without relabelling one as the other.
 Intelligence and System Truth can now expose persisted feed/proof availability. This does
 not mean Market Tape, event-source providers, latency or universal freshness are measured.
 
+## Cross-regression hardening
+
+Full-repository acceptance exposed a pre-existing SQLite connection-lifecycle sensitivity in
+the R21 Epoch 2 read-only byte-preservation test. The accounting semantics were unchanged;
+the fix makes writer/read-only connections close explicitly so committed WAL state is
+settled before byte-preservation assertions. This is now part of the focused gate rather
+than being left as order-dependent test behavior.
+
 ## Explicit non-goals
 
 This slice does not:
