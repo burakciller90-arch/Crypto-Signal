@@ -25,7 +25,14 @@ from crypto_signal.paper.mission_control import (
     PaperMissionControlError,
     read_paper_mission_control_snapshot,
 )
-from crypto_signal.paper.shadow_cycle_manifest import R25ShadowCycleManifest
+from crypto_signal.paper.runtime_replay_observation import (
+    R25RuntimeReplayObservationLedger,
+    RuntimeReplayObservation,
+)
+from crypto_signal.paper.shadow_cycle_manifest import (
+    R25ShadowCycleManifest,
+    ShadowCycleManifestRecord,
+)
 from crypto_signal.paper.shadow_intent_journal import R25ShadowIntentJournal
 from crypto_signal.product.education import (
     EducationLesson,
@@ -116,6 +123,23 @@ def _is_lower_sha256(value: str) -> bool:
     return len(value) == 64 and all(ch in "0123456789abcdef" for ch in value)
 
 
+def _replay_matches_cycle(
+    replay: RuntimeReplayObservation,
+    cycle: ShadowCycleManifestRecord,
+) -> bool:
+    return (
+        replay.cycle_identity == cycle.cycle_identity
+        and replay.forecast_identity == cycle.forecast_identity
+        and replay.proof_identity == cycle.proof_identity
+        and replay.capital_bridge_identity == cycle.capital_bridge_identity
+        and replay.sizing_bridge_identity == cycle.sizing_bridge_identity
+        and replay.review_selection_identity == cycle.review_selection_identity
+        and replay.preview_identity == cycle.preview_identity
+        and replay.journal_record_identity == cycle.journal_record_identity
+        and replay.manifest_identity == cycle.manifest_identity
+    )
+
+
 def create_app(
     ledger_path: Path | None = None,
     alert_outbox_path: Path | None = None,
@@ -126,6 +150,7 @@ def create_app(
     decision_evidence_path: Path | None = None,
     shadow_intent_journal_path: Path | None = None,
     shadow_cycle_manifest_path: Path | None = None,
+    runtime_replay_observation_path: Path | None = None,
 ) -> FastAPI:
     selected_path = ledger_path or Path(
         os.environ.get("CRYPTO_SIGNAL_LEDGER_PATH", str(DEFAULT_LEDGER_PATH))
@@ -214,6 +239,18 @@ def create_app(
     else:
         selected_shadow_cycle_path = None
 
+    if runtime_replay_observation_path is not None:
+        selected_runtime_replay_path: Path | None = runtime_replay_observation_path
+    elif ledger_path is None:
+        runtime_replay_env = os.environ.get(
+            "CRYPTO_SIGNAL_RUNTIME_REPLAY_OBSERVATION_PATH"
+        )
+        selected_runtime_replay_path = (
+            None if not runtime_replay_env else Path(runtime_replay_env)
+        )
+    else:
+        selected_runtime_replay_path = None
+
     selected_learning_memory_path = learning_memory_path
     if selected_learning_memory_path is None:
         learning_memory_env = os.environ.get("CRYPTO_SIGNAL_LEARNING_MEMORY_PATH")
@@ -241,6 +278,7 @@ def create_app(
     app.state.decision_evidence_path = selected_decision_path
     app.state.shadow_intent_journal_path = selected_shadow_intent_path
     app.state.shadow_cycle_manifest_path = selected_shadow_cycle_path
+    app.state.runtime_replay_observation_path = selected_runtime_replay_path
     app.state.reader = reader
 
     app.mount(
@@ -537,6 +575,33 @@ def create_app(
                     "real_capital": 0,
                 }
             )
+        replay_observation = None
+        replay_status = "NOT_MEASURED"
+        replay_reason = "runtime_replay_observation_not_configured"
+        if selected_runtime_replay_path is not None:
+            if not selected_runtime_replay_path.exists():
+                replay_reason = "runtime_replay_observation_evidence_missing"
+            else:
+                try:
+                    replay_observation = R25RuntimeReplayObservationLedger(
+                        selected_runtime_replay_path
+                    ).read_latest_for_forecast(forecast_identity)
+                except ValueError as exc:
+                    raise HTTPException(status_code=500, detail=str(exc)) from exc
+                if replay_observation is None:
+                    replay_reason = "no_exact_runtime_replay_observation_for_forecast"
+                elif not _replay_matches_cycle(replay_observation, record):
+                    raise HTTPException(
+                        status_code=500,
+                        detail=(
+                            "runtime replay observation does not match exact "
+                            "persisted shadow cycle lineage"
+                        ),
+                    )
+                else:
+                    replay_status = "VERIFIED"
+                    replay_reason = "exact_runtime_restart_replay_observed"
+
         return _json(
             {
                 "status": "ready",
@@ -547,6 +612,9 @@ def create_app(
                 ),
                 "journal_record_referenced": True,
                 "journal_runtime_verified_here": False,
+                "restart_replay_runtime_status": replay_status,
+                "restart_replay_runtime_reason": replay_reason,
+                "runtime_replay_observation": replay_observation,
                 "semantic": "EXACT_PERSISTED_CYCLE_IDENTITY_ONLY",
                 "canonical_epoch2_mutation": False,
                 "production_authority": False,
