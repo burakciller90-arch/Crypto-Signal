@@ -205,6 +205,39 @@ async def test_wire_collection_can_bound_wire_messages(tmp_path) -> None:
     assert result.orderbooks_skipped_by_cadence == 1
 
 
+
+@pytest.mark.asyncio
+async def test_wire_collection_reports_progress_only_after_persistence(tmp_path) -> None:
+    store = MarketTapeStore(tmp_path / "market_tape.sqlite3")
+    raw_store = RawMarketTapeStore(tmp_path / "raw_market_tape.sqlite3")
+    progress: list[tuple[int, int, int]] = []
+
+    def record_progress(
+        event: BybitMicrostructureWireEvent,
+        observed_messages: int,
+    ) -> None:
+        progress.append(
+            (
+                observed_messages,
+                raw_store.count(),
+                store.counts().total,
+            )
+        )
+        assert event.ingested_at_ms > 0
+
+    result = await persist_bybit_wire_stream(
+        store=store,
+        raw_store=raw_store,
+        events=_wire_events(),
+        orderbook_snapshot_interval_ms=1_000,
+        progress_callback=record_progress,
+    )
+
+    assert result.observed_messages == 5
+    assert tuple(item[0] for item in progress) == (1, 2, 3, 4, 5)
+    assert tuple(item[1] for item in progress) == (1, 2, 3, 4, 5)
+    assert progress[-1][2] == store.counts().total == 4
+
 @pytest.mark.asyncio
 async def test_wire_collection_rejects_non_positive_cadence(tmp_path) -> None:
     store = MarketTapeStore(tmp_path / "market_tape.sqlite3")
