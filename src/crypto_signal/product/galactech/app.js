@@ -200,10 +200,21 @@ function bindNavigation() {
 
   document.querySelectorAll("[data-layer]").forEach((button) => {
     button.addEventListener("click", () => {
-      const active = !button.classList.contains("is-active");
-      button.classList.toggle("is-active", active);
-      button.setAttribute("aria-pressed", String(active));
+      state.marketLayer = button.dataset.layer || "PA";
+      document.querySelectorAll("[data-layer]").forEach((item) => {
+        const active = item === button;
+        item.classList.toggle("is-active", active);
+        item.setAttribute("aria-pressed", String(active));
+      });
+      renderMarketWorkspace();
     });
+  });
+
+  byId("marketSymbolSelect")?.addEventListener("change", () => {
+    syncMarketSelectionFromControls(true);
+  });
+  byId("marketTimeframeSelect")?.addEventListener("change", () => {
+    syncMarketSelectionFromControls(true);
   });
 
   document.querySelectorAll("[data-filter]").forEach((button) => {
