@@ -20,7 +20,7 @@ from crypto_signal.paper.epoch2_accounting import (
     Epoch2VaultAccountingSnapshot,
 )
 from crypto_signal.paper.epochs import PaperVaultId
-from crypto_signal.paper.models import PaperAction, PaperSymbol, REAL_CAPITAL
+from crypto_signal.paper.models import REAL_CAPITAL, PaperAction, PaperSymbol
 from crypto_signal.product.decision_proof import DecisionProofSnapshot
 
 R22_SCHEMA_VERSION = "r22-transaction-decision-tape-v1/1"
@@ -91,7 +91,7 @@ class PaperTapeIntent:
         if self.schema_version != R22_SCHEMA_VERSION or self.engine_version != R22_ENGINE_VERSION:
             raise ValueError("unsupported R22 version")
         if not isinstance(self.vault_id, PaperVaultId) or not isinstance(self.action, PaperAction):
-            raise ValueError("invalid R22 vault or action")
+            raise TypeError("invalid R22 vault or action")
         if self.decided_at_ms < 0:
             raise ValueError("R22 decision time must be non-negative")
         if not self.reason_codes or self.reason_codes != tuple(sorted(set(self.reason_codes))):
@@ -178,7 +178,7 @@ class PaperTapeFill:
         if self.schema_version != R22_SCHEMA_VERSION or self.engine_version != R22_ENGINE_VERSION:
             raise ValueError("unsupported R22 fill version")
         if not isinstance(self.vault_id, PaperVaultId) or not isinstance(self.symbol, PaperSymbol):
-            raise ValueError("R22 fill requires valid vault and symbol")
+            raise TypeError("R22 fill requires valid vault and symbol")
         if self.action not in (PaperAction.BUY, PaperAction.REDUCE, PaperAction.EXIT):
             raise ValueError("HOLD_CASH cannot create a fill")
         if min(self.filled_at_ms, self.snapshot_at_ms) < 0:
