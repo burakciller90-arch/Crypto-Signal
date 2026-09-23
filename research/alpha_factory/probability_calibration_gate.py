@@ -177,7 +177,6 @@ class FrozenProbabilityPrediction:
     model_version: str
     calibrator_version: str
     walk_forward_fit_identity: str
-    source_prediction_identity: str
     source_forecast_identity: str
     issued_at_ms: int
     predicted_probability_0_1: Decimal
@@ -412,6 +411,7 @@ class CalibratedProbabilityEvidence:
     model_version: str
     calibrator_version: str
     walk_forward_fit_identity: str
+    source_prediction_identity: str
     source_forecast_identity: str
     issued_at_ms: int
     probability_0_1: Decimal
