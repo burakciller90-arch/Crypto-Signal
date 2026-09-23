@@ -28,8 +28,8 @@ from crypto_signal.signals.models import (
     SignalState,
 )
 from research.alpha_factory.probability_calibration_gate import (
-    CalibrationScope,
     CalibratedProbabilityEvidence,
+    CalibrationScope,
     R19ProbabilityStatus,
 )
 
