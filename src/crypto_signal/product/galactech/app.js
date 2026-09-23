@@ -1223,6 +1223,7 @@ function renderShadowDecisionRail() {
           <span>manifest <code>${escapeHtml(shortIdentity(latest.manifest_identity))}</code></span>
         </div>`
         : "<p>No immutable cycle manifest is persisted on this runtime.</p>"}
+      <p>Reviewed preview evidence only · not a fill, not canonical NAV mutation, not live trading.</p>
       <p>Journal integrity verification is not a process restart/replay observation. Restart/replay remains NOT MEASURED until separately persisted.</p>
     </article>`;
 }
