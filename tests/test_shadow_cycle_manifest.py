@@ -140,6 +140,44 @@ def test_shadow_cycle_manifest_rejects_backfill_without_partial_insert(
     )
 
 
+def test_shadow_cycle_manifest_read_only_verification_is_byte_stable(
+    tmp_path: Path,
+) -> None:
+    cycle = _cycle(tmp_path)
+    path = tmp_path / "byte-stable.shadow-cycle.sqlite3"
+    manifest = R25ShadowCycleManifest(path)
+    manifest.append(cycle)
+    before = path.read_bytes()
+
+    status = manifest.verify_read_only()
+    latest = manifest.read_latest()
+    after = path.read_bytes()
+
+    assert status.record_count == 1
+    assert len(latest) == 1
+    assert after == before
+
+
+def test_shadow_cycle_manifest_append_does_not_mutate_intent_journal(
+    tmp_path: Path,
+) -> None:
+    intent_path = tmp_path / "isolated.shadow-intent.sqlite3"
+    journal = R25ShadowIntentJournal(intent_path)
+    _, cycle = _run(tmp_path, journal)
+    intent_before = intent_path.read_bytes()
+
+    manifest = R25ShadowCycleManifest(
+        tmp_path / "isolated.shadow-cycle.sqlite3"
+    )
+    result = manifest.append(cycle)
+    intent_after = intent_path.read_bytes()
+
+    assert result.record.journal_record_identity == (
+        cycle.journal_append.record.record_identity
+    )
+    assert intent_after == intent_before
+
+
 def test_shadow_cycle_manifest_update_delete_are_immutable(
     tmp_path: Path,
 ) -> None:
