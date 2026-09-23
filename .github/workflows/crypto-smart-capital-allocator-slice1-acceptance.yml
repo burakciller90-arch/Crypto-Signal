@@ -1,0 +1,44 @@
+name: Crypto Smart Capital Allocator Slice1 Acceptance (Temporary)
+
+on:
+  push:
+    branches:
+      - v1.1-smart-capital-allocator-v1-slice1
+    paths:
+      - "src/crypto_signal/paper/smart_capital_allocator.py"
+      - "tests/test_smart_capital_allocator.py"
+      - "docs/SMART_CAPITAL_ALLOCATOR_SLICE1.md"
+      - ".github/workflows/crypto-smart-capital-allocator-slice1-acceptance.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  hosted:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install exact hosted dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+          python -m pip install "pytest>=8.4" "pytest-asyncio>=1.2" "ruff>=0.13" "mypy>=1.18" "pyarrow==22.0.0"
+      - name: Smart Capital Allocator focused acceptance
+        run: |
+          python -m pytest -q tests/test_smart_capital_allocator.py tests/test_paper_epochs.py tests/test_confluence_matrix_v2.py tests/test_event_risk_circuit_breaker.py
+          python -m ruff check src/crypto_signal/paper/smart_capital_allocator.py tests/test_smart_capital_allocator.py
+          python -m mypy src/crypto_signal/paper/smart_capital_allocator.py
+          echo "SMART_CAPITAL_ALLOCATOR_SLICE1_FOCUSED_PASS=YES"
+      - name: Full repository acceptance
+        run: |
+          python -m pytest -q
+          python -m ruff check src tests research ops/verify_stage10_integrated.py
+          python -m mypy src research ops/verify_stage10_integrated.py
+          node --check src/crypto_signal/product/static/freshness.js
+          node --check src/crypto_signal/product/static/app.js
+          node tests/js/test_product_freshness.js
+          echo "SMART_CAPITAL_ALLOCATOR_SLICE1_FULL_PASS=YES"
