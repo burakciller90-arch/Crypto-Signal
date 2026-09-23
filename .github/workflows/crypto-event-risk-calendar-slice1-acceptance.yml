@@ -1,0 +1,45 @@
+name: Crypto Event Risk Calendar Slice1 Acceptance (Temporary)
+
+on:
+  push:
+    branches:
+      - v1.1-event-risk-calendar-v1-slice1
+    paths:
+      - "src/crypto_signal/data/event_risk.py"
+      - "src/crypto_signal/intelligence/event_risk.py"
+      - "tests/test_event_risk_calendar.py"
+      - "docs/EVENT_RISK_CALENDAR_SLICE1.md"
+      - ".github/workflows/crypto-event-risk-calendar-slice1-acceptance.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  hosted:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install exact hosted dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+          python -m pip install "pytest>=8.4" "pytest-asyncio>=1.2" "ruff>=0.13" "mypy>=1.18" "pyarrow==22.0.0"
+      - name: Event Risk focused acceptance
+        run: |
+          python -m pytest -q tests/test_event_risk_calendar.py
+          python -m ruff check src/crypto_signal/data/event_risk.py src/crypto_signal/intelligence/event_risk.py tests/test_event_risk_calendar.py
+          python -m mypy src/crypto_signal/data/event_risk.py src/crypto_signal/intelligence/event_risk.py
+          echo "EVENT_RISK_CALENDAR_SLICE1_FOCUSED_PASS=YES"
+      - name: Full repository acceptance
+        run: |
+          python -m pytest -q
+          python -m ruff check src tests ops/verify_stage10_integrated.py
+          python -m mypy src ops/verify_stage10_integrated.py
+          node --check src/crypto_signal/product/static/freshness.js
+          node --check src/crypto_signal/product/static/app.js
+          node tests/js/test_product_freshness.js
+          echo "EVENT_RISK_CALENDAR_SLICE1_FULL_PASS=YES"
