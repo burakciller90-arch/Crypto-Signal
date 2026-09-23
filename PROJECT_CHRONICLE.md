@@ -4574,3 +4574,31 @@ Accepted semantics:
 Phase 12 infrastructure exit is satisfied. Next locked frontier: Phase 13 R20 Immutable
 Forecast Stream. Historical `v1.1-forecast-decision-proof-v1` is a diverged prototype,
 not current merge authority. User wake/lease pause remains authoritative.
+
+
+---
+
+## 2026-09-23 — 13:48 PHASE 13 R20 IMMUTABLE FORECAST STREAM ACCEPTED
+
+PR #914 completed the locked Phase 13 immutable forecast infrastructure.
+
+Acceptance:
+- hosted R20 run `35850599441` focused + full repository PASS;
+- squash merge `e6343a78aab04e8367418ee68921d95cb8d4db45`;
+- exact-main Stage10 `35850808650` SUCCESS.
+
+Accepted semantics:
+- forecast freezes signal, M6 Confluence, Event Risk, trigger, target, invalidation, horizon,
+  evidence identities, version refs, freshness and uncertainty before outcome;
+- no R19 evidence means NOT_CALIBRATED;
+- calibrated probability requires exact immutable R19 authorization and CalibrationScope
+  matching symbol, timeframe, regime and fixed-duration horizon;
+- forecast probability lineage retains authorization, calibration, source forecast, frozen
+  prediction and walk-forward fit identities;
+- outcomes append separate final resolution artifacts and cannot rewrite original forecast;
+- at most one final resolution per forecast;
+- no private chain-of-thought, sizing, ledger, network/exchange/order or production authority;
+- REAL_CAPITAL=0.
+
+Phase 13 exit is satisfied. Next locked frontier: Phase 14 R20.5 Decision Proof / Live
+Intelligence Feed. User wake/lease pause remains authoritative.
