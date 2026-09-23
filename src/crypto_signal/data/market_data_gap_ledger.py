@@ -95,9 +95,11 @@ class MarketDataGapEvent:
                 raise ValueError("recovered gap requires recovered_at_ms")
             if self.recovered_at_ms < self.observed_at_ms:
                 raise ValueError("gap recovery cannot predate observation")
-        if self.event_kind is GapEventKind.UNRECOVERED:
-            if self.recovered_at_ms is not None:
-                raise ValueError("unrecovered gap cannot carry recovery time")
+        if (
+            self.event_kind is GapEventKind.UNRECOVERED
+            and self.recovered_at_ms is not None
+        ):
+            raise ValueError("unrecovered gap cannot carry recovery time")
         if not self.source_evidence_identities:
             raise ValueError("gap event requires exact source evidence")
         for identity in self.source_evidence_identities:
