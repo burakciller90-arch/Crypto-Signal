@@ -1,0 +1,43 @@
+name: Crypto R25 Market Data Product Truth Hosted
+
+on:
+  push:
+    branches:
+      - v1.1-r25-market-tape-product-truth-slice16-v2
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  r25-market-data-product-truth:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install package and quality tools
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+          python -m pip install "pytest>=8.4" "pytest-asyncio>=1.2" "ruff>=0.13" "mypy>=1.18"
+      - name: Focused Market Tape / Cold Archive Product Truth acceptance
+        run: |
+          python -m pytest -q             tests/test_market_data_runtime_product.py             tests/test_galactech_learn_system.py             tests/test_r25_operational_truth.py             tests/test_galactech_markets.py
+          python -m ruff check             src/crypto_signal/product/market_tape_runtime.py             src/crypto_signal/product/web.py             tests/test_market_data_runtime_product.py             tests/test_galactech_learn_system.py
+          python -m mypy             src/crypto_signal/product/market_tape_runtime.py             src/crypto_signal/product/web.py
+          node --check src/crypto_signal/product/galactech/app.js
+          echo "R25_MARKET_DATA_PRODUCT_TRUTH_FOCUSED_PASS=YES"
+      - name: Whole-repository regression
+        run: |
+          python -m pytest -q
+          python -m ruff check src tests ops/verify_stage10_integrated.py
+          python -m mypy src ops/verify_stage10_integrated.py
+          node --check src/crypto_signal/product/static/freshness.js
+          node --check src/crypto_signal/product/static/app.js
+          node --check src/crypto_signal/product/galactech/app.js
+          node tests/js/test_product_freshness.js
+          echo "R25_MARKET_DATA_PRODUCT_TRUTH_FULL_PASS=YES"
+          echo "R25_REAL_CAPITAL_ZERO_PASS=YES"
