@@ -69,7 +69,7 @@ def _experiment(seed: str = "base"):
     )
 
 
-def _assessment(experiment, *, ready: bool):
+def _assessment(experiment, *, ready: bool, supervisor_accepted: bool = False):
     audit = build_leakage_audit(
         experiment_identity=experiment.experiment_identity,
         audited_at_ms=1_000,
@@ -86,6 +86,9 @@ def _assessment(experiment, *, ready: bool):
         walk_forward_identity=_sha("wf"),
         untouched_forward_identity=_sha("forward"),
         robustness_ablation_identity=_sha("robust"),
+        supervisor_acceptance_identity=(
+            _sha("supervisor-acceptance") if supervisor_accepted else None
+        ),
     )
     if not ready:
         kwargs["untouched_forward_identity"] = None
@@ -99,7 +102,7 @@ def _assessment(experiment, *, ready: bool):
         assert assessment.status is PromotionGateStatus.READY_FOR_SUPERVISOR_REVIEW
     else:
         assert assessment.status is PromotionGateStatus.BLOCKED
-    return assessment
+    return evidence, assessment
 
 
 def _variant(
@@ -110,7 +113,7 @@ def _variant(
 ):
     effective_seed = seed or family.value
     experiment = _experiment(effective_seed)
-    assessment = _assessment(experiment, ready=ready)
+    promotion_evidence, assessment = _assessment(experiment, ready=ready)
     return build_shadow_variant(
         family=family,
         name=f"{family.value}-challenger",
@@ -118,9 +121,7 @@ def _variant(
         hypothesis=f"test {family.value} without canonical mutation",
         experiment=experiment,
         parameter_identity=_sha(f"params-{effective_seed}"),
-        untouched_forward_identity=_sha(f"forward-{effective_seed}"),
-        robustness_identity=_sha(f"robust-{effective_seed}"),
-        cost_stress_identity=_sha(f"stress-{effective_seed}"),
+        promotion_evidence=promotion_evidence,
         promotion_assessment=assessment,
         metrics=(
             ShadowMetric(
@@ -178,6 +179,84 @@ def test_missing_forward_promotion_evidence_remains_blocked() -> None:
     assert comparison.review_ready_variant_identities == ()
     assert comparison.blocked_variant_identities == (blocked.variant_identity,)
     assert comparison.winner_identity is None
+
+
+def test_shadow_variant_rejects_assessment_from_another_promotion_dossier() -> None:
+    experiment = _experiment("lineage")
+    evidence, assessment = _assessment(experiment, ready=True)
+    other_evidence = build_promotion_gate_evidence(
+        experiment_identity=experiment.experiment_identity,
+        data_contract_audit_identity=_sha("other-data"),
+        reproducibility_identity=_sha("other-repro"),
+        transaction_cost_stress_identity=_sha("other-cost"),
+        in_sample_sanity_identity=_sha("other-in"),
+        out_of_sample_identity=_sha("other-oos"),
+        walk_forward_identity=_sha("other-wf"),
+        untouched_forward_identity=_sha("other-forward"),
+        robustness_ablation_identity=_sha("other-robust"),
+    )
+    assert other_evidence.evidence_identity != evidence.evidence_identity
+
+    with pytest.raises(ValueError, match="does not bind supplied promotion evidence"):
+        build_shadow_variant(
+            family=ShadowResearchFamily.CONFLUENCE_THRESHOLD,
+            name="lineage-challenger",
+            policy_version="shadow-policy-v1",
+            hypothesis="must retain exact promotion dossier lineage",
+            experiment=experiment,
+            parameter_identity=_sha("lineage-params"),
+            promotion_evidence=other_evidence,
+            promotion_assessment=assessment,
+            metrics=(
+                ShadowMetric(
+                    name="net_r",
+                    value=Decimal("0.25"),
+                    unit="R",
+                    evidence_identity=_sha("lineage-metric"),
+                ),
+            ),
+        )
+
+
+def test_supervisor_review_acceptance_still_grants_no_champion_write() -> None:
+    experiment = _experiment("supervisor")
+    promotion_evidence, assessment = _assessment(
+        experiment,
+        ready=True,
+        supervisor_accepted=True,
+    )
+    assert (
+        assessment.status
+        is PromotionGateStatus.SUPERVISOR_ACCEPTED_FOR_MANUAL_PROMOTION
+    )
+
+    variant = build_shadow_variant(
+        family=ShadowResearchFamily.HORIZON,
+        name="supervisor-reviewed-challenger",
+        policy_version="shadow-policy-v1",
+        hypothesis="manual review remains separate from canonical mutation",
+        experiment=experiment,
+        parameter_identity=_sha("supervisor-params"),
+        promotion_evidence=promotion_evidence,
+        promotion_assessment=assessment,
+        metrics=(
+            ShadowMetric(
+                name="net_r",
+                value=Decimal("0.10"),
+                unit="R",
+                evidence_identity=_sha("supervisor-metric"),
+            ),
+        ),
+    )
+
+    assert (
+        variant.review_state
+        is ShadowReviewState.SUPERVISOR_ACCEPTED_FOR_MANUAL_PROMOTION_REVIEW
+    )
+    assert variant.can_self_promote is False
+    assert variant.champion_write_authority is False
+    assert variant.canonical_capital_write_authority is False
+    assert variant.production_authority is False
 
 
 def test_review_ready_is_not_promotion_or_winner_selection() -> None:
