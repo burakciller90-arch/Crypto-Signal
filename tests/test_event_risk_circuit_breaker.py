@@ -57,7 +57,7 @@ def _event_risk(delta_minutes: int | None):
             title="Scheduled event",
             category=EventCategory.CENTRAL_BANK,
             scheduled_at_ms=AS_OF + delta_minutes * MINUTE,
-            affected_assets=(asset,),
+            affected_assets=("BTC",),
             source_provider="calendar-provider",
             source_quality=EventSourceQuality.OFFICIAL,
             source=DataSource.AGGREGATED,
