@@ -4091,3 +4091,52 @@ Acceptance evidence:
 Next M4 frontier: bounded crowding / squeeze-risk / deleveraging context using accepted
 derivatives dynamics, observed liquidation heatmap evidence and mark-price volatility.
 REAL_CAPITAL=0.
+
+
+---
+
+## 2026-09-23 — 10:55 M4 CROWDING SLICE 2 ACCEPTED / CONTINUITY PAUSE PRESERVED
+
+State-first reconciliation was repeated before continuing development.
+
+Live UID504 continuity truth at 10:49 +0300:
+- LOCAL_PAUSED=YES;
+- SHARED_PAUSED=YES;
+- ACTIVE_LEASES=0;
+- LOCAL_WAKE_QUEUE=0;
+- RELAY_WAKE_QUEUE=0;
+- rolling timer process alive but state=PAUSED;
+- no pending wake identity.
+
+The user's explicit pause therefore remains authoritative. Safe development continues without
+re-arming wake/lease.
+
+M4 Slice 2 acceptance:
+- PR #887;
+- authoritative hosted branch run `35834066926` focused + full PASS;
+- final intended diff only crowding engine + tests + scientific contract doc;
+- squash merge `ee555919116b2625f678dc78b4ea20046acce874`;
+- exact-main Stage10 run `35834224420` SUCCESS.
+
+Accepted semantics:
+- LONG_CROWDING / SHORT_CROWDING require aligned observed OI expansion, funding
+  extremity/rank and mark-index basis under explicit versioned research thresholds;
+- SQUEEZE_RISK is bounded context using the candidate crowding state, already-observed
+  liquidation dominance and measured mark movement;
+- DELEVERAGING requires OI contraction plus observed liquidation activity;
+- BALANCED requires low measured derivatives pressure plus complete liquidation coverage
+  with no observed events;
+- MIXED remains valid when measured components do not align;
+- unresolved upstream quality propagates fail-closed;
+- future/late evidence cannot rewrite historical freezes;
+- exact market/instrument/symbol/as-of alignment is mandatory.
+
+Scientific boundary:
+- observed liquidations are not future liquidation-zone estimates;
+- crowding/squeeze is not probability, position sizing or a trade command;
+- no actor attribution;
+- predicted funding and cross-venue extensions remain unclaimed without accepted source evidence;
+- no production weighting/cutover and REAL_CAPITAL=0.
+
+The source-backed M4 core frontier is closed. Next primary locked intelligence frontier:
+M5 Smart Money / On-chain 2.0, then Event Risk + NLP.
