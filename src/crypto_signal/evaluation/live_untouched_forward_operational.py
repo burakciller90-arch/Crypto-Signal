@@ -74,7 +74,7 @@ class WC2LiveSourceInputs:
     geometry_proof_slices: tuple[DecisionProofEvidenceSlice, ...]
     accepted_m2_m5: AcceptedFamilyAdapterBundle
     event_context: CircuitBreakerAnalysis
-    regime: str = WC2_UNMEASURED_REGIME
+    regime: str
     production_authority: bool = False
     real_capital: int = REAL_CAPITAL
 
