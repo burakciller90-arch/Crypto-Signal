@@ -14,7 +14,7 @@ from crypto_signal.confluence.models import (
     ScoreSemantic,
 )
 from crypto_signal.data.models import Exchange, MarketType
-from crypto_signal.paper import execution_lab, execution_lab_lifecycle
+from crypto_signal.paper import execution_lab, execution_lab_lifecycle, execution_lab_sandbox
 from crypto_signal.paper.activation import (
     activate_paper_policy,
     commit_planned_pretrade_event,
@@ -40,6 +40,18 @@ from crypto_signal.paper.execution_lab_lifecycle import (
     WC6ShadowOrderStatus,
     build_wc6_partial_fill_scenario,
     simulate_wc6_shadow_order_lifecycle,
+)
+from crypto_signal.paper.execution_lab_sandbox import (
+    WC6SandboxAdapterStatus as WC6SandboxBoundaryAdapterStatus,
+)
+from crypto_signal.paper.execution_lab_sandbox import (
+    WC6SandboxBoundaryError,
+    WC6SandboxDispatchStatus,
+    WC6SandboxEvidenceSemantic,
+    build_wc6_not_configured_sandbox_config,
+    build_wc6_sandbox_order_request,
+    evaluate_wc6_sandbox_boundary,
+    require_wc6_sandbox_dispatch_ready,
 )
 from crypto_signal.paper.ledger import (
     PaperFundLedger,
@@ -517,3 +529,131 @@ def test_wc6_shadow_lifecycle_source_has_no_canonical_write_or_order_surface() -
     assert "canonical_partial_fills_supported: bool = false" in source
     assert "sandbox_adapter_implemented: bool = false" in source
     assert execution_lab_lifecycle.REAL_CAPITAL == 0
+
+
+
+def _shadow_lifecycle_for_sandbox(tmp_path):
+    _, commit, snapshot = _committed_trade_for_shadow_lifecycle(tmp_path)
+    canonical_fill = commit.pipeline.bundle.fill
+    assert canonical_fill is not None
+    first_quantity = snapshot.quantity_step
+    second_quantity = canonical_fill.quantity - first_quantity
+    scenario = build_wc6_partial_fill_scenario(
+        commit=commit,
+        execution_snapshot=snapshot,
+        ack_latency_ms=20,
+        fill_latency_ms=(40, 80),
+        partial_quantities=(first_quantity, second_quantity),
+    )
+    lifecycle = simulate_wc6_shadow_order_lifecycle(
+        commit=commit,
+        execution_snapshot=snapshot,
+        scenario=scenario,
+    )
+    return lifecycle
+
+
+def test_wc6_sandbox_boundary_prepares_request_but_preserves_not_configured_truth(
+    tmp_path,
+) -> None:
+    lifecycle = _shadow_lifecycle_for_sandbox(tmp_path)
+    config = build_wc6_not_configured_sandbox_config()
+    request = build_wc6_sandbox_order_request(lifecycle)
+    evidence = evaluate_wc6_sandbox_boundary(
+        config=config,
+        request=request,
+    )
+
+    assert config.status is WC6SandboxBoundaryAdapterStatus.NOT_CONFIGURED
+    assert config.endpoint_reference_identity is None
+    assert config.credential_reference_identity is None
+    assert config.transport_reference_identity is None
+    assert config.network_authority is False
+    assert config.credential_loaded is False
+    assert config.live_order_authority is False
+    assert config.production_authority is False
+
+    assert request.lifecycle_identity == lifecycle.lifecycle_identity
+    assert request.processed_event_identity == lifecycle.processed_event_identity
+    assert request.pretrade_identity == lifecycle.pretrade_identity
+    assert request.execution_snapshot_identity == lifecycle.execution_snapshot_identity
+    assert request.canonical_fill_identity == lifecycle.canonical_fill_identity
+    assert request.canonical_mutation_identity == lifecycle.canonical_mutation_identity
+    assert request.order_identity == lifecycle.order_identity
+    assert request.quantity == lifecycle.requested_quantity
+    assert request.reference_price == lifecycle.canonical_fill_price
+    assert request.lab_shadow_fill_count == len(lifecycle.partial_fills)
+    assert request.client_order_reference.startswith("wc6-sandbox-")
+
+    assert evidence.semantic is (
+        WC6SandboxEvidenceSemantic.REQUEST_PREPARED_NO_DISPATCH_NO_VENUE_EVIDENCE
+    )
+    assert evidence.dispatch_status is WC6SandboxDispatchStatus.BLOCKED_NOT_CONFIGURED
+    assert evidence.dispatch_attempted is False
+    assert evidence.venue_acknowledgement_identity is None
+    assert evidence.venue_fill_identities == ()
+    assert evidence.endpoint_bound is False
+    assert evidence.credential_bound is False
+    assert evidence.transport_bound is False
+    assert evidence.network_authority is False
+    assert evidence.live_order_authority is False
+    assert evidence.production_authority is False
+    assert evidence.real_capital == REAL_CAPITAL == 0
+
+
+def test_wc6_sandbox_boundary_is_deterministic_and_dispatch_fails_closed(
+    tmp_path,
+) -> None:
+    first_lifecycle = _shadow_lifecycle_for_sandbox(tmp_path / "first")
+    second_lifecycle = _shadow_lifecycle_for_sandbox(tmp_path / "second")
+    assert first_lifecycle == second_lifecycle
+
+    first_config = build_wc6_not_configured_sandbox_config()
+    second_config = build_wc6_not_configured_sandbox_config()
+    first_request = build_wc6_sandbox_order_request(first_lifecycle)
+    second_request = build_wc6_sandbox_order_request(second_lifecycle)
+    assert first_config == second_config
+    assert first_request == second_request
+    assert evaluate_wc6_sandbox_boundary(
+        config=first_config,
+        request=first_request,
+    ) == evaluate_wc6_sandbox_boundary(
+        config=second_config,
+        request=second_request,
+    )
+
+    with pytest.raises(
+        WC6SandboxBoundaryError,
+        match="WC6_SANDBOX_NOT_CONFIGURED",
+    ):
+        require_wc6_sandbox_dispatch_ready(first_config)
+
+
+def test_wc6_sandbox_boundary_source_has_no_transport_or_secret_surface() -> None:
+    source = inspect.getsource(execution_lab_sandbox).lower()
+    forbidden = (
+        "import requests",
+        "import httpx",
+        "import urllib",
+        "import socket",
+        "api_key",
+        "api_secret",
+        "secret_key",
+        "private_key",
+        "authorization",
+        "ccxt",
+        "place_order",
+        "submit_order",
+        "cancel_order",
+        "client.post",
+        "client.get",
+        "launchctl",
+        "subprocess",
+        "api.binance.com",
+        "testnet.binance",
+    )
+    assert all(token not in source for token in forbidden)
+    assert "not_configured" in source
+    assert "venue_acknowledgement_identity: str | none" in source
+    assert "venue_fill_identities: tuple[str, ...]" in source
+    assert execution_lab_sandbox.REAL_CAPITAL == 0
