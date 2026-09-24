@@ -5,6 +5,7 @@ from dataclasses import dataclass
 
 from crypto_signal.confluence.models import InvalidationTrigger, PriceZone
 from crypto_signal.data.aggregation import aggregate_closed_15m
+from crypto_signal.data.models import Candle
 from crypto_signal.data.store import CandleStore
 from crypto_signal.decision_ledger import ImmutableDecisionEvidenceLedger
 from crypto_signal.evaluation.untouched_forward_journal import (
@@ -49,7 +50,7 @@ from crypto_signal.outcomes.models import (
     OutcomeResolutionStatus,
     OutcomeState,
 )
-from crypto_signal.signals.models import SignalDirection, SignalState
+from crypto_signal.signals.models import SignalDecision, SignalDirection, SignalState
 
 REAL_CAPITAL = 0
 _SUPPORTED_OUTCOME_TIMEFRAMES = {"15m", "1h", "4h"}
@@ -233,7 +234,7 @@ def _read_exact_forecast(
 def _read_exact_signal_decision(
     signal_ledger: ImmutableSignalLedger,
     cohort_forecast: WC2CohortForecast,
-):
+) -> SignalDecision:
     freeze = signal_ledger.read_freeze_by_signal(
         cohort_forecast.signal_freeze_identity
     )
@@ -264,9 +265,9 @@ def _read_exact_signal_decision(
 def _outcome_candles(
     candle_store: CandleStore,
     *,
-    decision,
+    decision: SignalDecision,
     observed_at_ms: int,
-):
+) -> tuple[Candle, ...]:
     if decision.timeframe not in _SUPPORTED_OUTCOME_TIMEFRAMES:
         raise ValueError("WC2 outcome timeframe is outside preregistered scope")
 
