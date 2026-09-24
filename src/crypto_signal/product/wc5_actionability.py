@@ -221,7 +221,7 @@ def _require_payload_int(value: object, label: str) -> int:
             return int(value)
         except ValueError as exc:
             raise ValueError(f"{label} must be an integer") from exc
-    raise ValueError(f"{label} must be an integer")
+    raise TypeError(f"{label} must be an integer")
 
 
 def _require_schema(db: sqlite3.Connection) -> None:
