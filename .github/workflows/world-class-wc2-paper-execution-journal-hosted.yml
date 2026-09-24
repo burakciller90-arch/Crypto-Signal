@@ -1,4 +1,4 @@
-name: World-Class WC2 Paper Execution Journal Hosted
+name: World-Class WC2 Paper Execution Journal UID504
 
 on:
   pull_request:
@@ -14,33 +14,50 @@ permissions:
 
 jobs:
   wc2-paper-execution-journal:
-    runs-on: ubuntu-latest
+    if: >
+      github.actor == 'burakciller90-arch' &&
+      (github.event_name == 'workflow_dispatch' ||
+       github.event.pull_request.head.repo.full_name == github.repository)
+    runs-on: [self-hosted, crypto-signal, uid504]
     timeout-minutes: 45
+    env:
+      PY: /Volumes/Crypto-504/Crypto-Signal/Development/.venv/bin/python
+      PYTHONPATH: ${{ github.workspace }}/src
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - name: Install package and quality tools
+      - name: Verify isolated runner toolchain
+        shell: bash
         run: |
-          python -m pip install --upgrade pip
-          python -m pip install -e .
-          python -m pip install "pytest>=8.4" "ruff>=0.13" "mypy>=1.18"
+          set -euo pipefail
+          test -x "$PY"
+          "$PY" --version
+          "$PY" -m pytest --version
+          "$PY" -m ruff --version
+          "$PY" -m mypy --version
+          node --version
+          echo "WC2_EXECUTION_JOURNAL_UID504_TOOLCHAIN_PASS=YES"
       - name: Focused WC2 paper execution journal acceptance
+        shell: bash
         run: |
-          python -m pytest -q tests/test_wc2_paper_execution_journal.py
-          python -m ruff check             src/crypto_signal/evaluation/untouched_forward_execution_journal.py             tests/test_wc2_paper_execution_journal.py
-          python -m mypy             src/crypto_signal/evaluation/untouched_forward_execution_journal.py
+          set -euo pipefail
+          "$PY" -m pytest -q tests/test_wc2_paper_execution_journal.py
+          "$PY" -m ruff check \
+            src/crypto_signal/evaluation/untouched_forward_execution_journal.py \
+            tests/test_wc2_paper_execution_journal.py
+          "$PY" -m mypy \
+            src/crypto_signal/evaluation/untouched_forward_execution_journal.py
           echo "WC2_EXECUTION_JOURNAL_APPEND_ONLY_PASS=YES"
           echo "WC2_EXECUTION_JOURNAL_FORWARD_BOUNDARY_PASS=YES"
           echo "WC2_EXECUTION_JOURNAL_EXPLICIT_COST_PASS=YES"
           echo "WC2_EXECUTION_JOURNAL_PROVIDER_LINEAGE_PASS=YES"
           echo "WC2_REAL_CAPITAL_ZERO_PASS=YES"
       - name: Whole-repository regression
+        shell: bash
         run: |
-          python -m pytest -q
-          python -m ruff check src tests ops/verify_stage10_integrated.py
-          python -m mypy src ops/verify_stage10_integrated.py
+          set -euo pipefail
+          "$PY" -m pytest -q
+          "$PY" -m ruff check src tests ops/verify_stage10_integrated.py
+          "$PY" -m mypy src ops/verify_stage10_integrated.py
           node --check src/crypto_signal/product/static/freshness.js
           node --check src/crypto_signal/product/static/app.js
           node --check src/crypto_signal/product/galactech/app.js
