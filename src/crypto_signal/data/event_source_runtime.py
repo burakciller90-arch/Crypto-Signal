@@ -390,28 +390,7 @@ class EventSourceRuntimeStore:
     def append_raw_payload(self, payload: EventSourceRawPayload) -> None:
         self.initialize()
         with sqlite3.connect(self.path) as db:
-            existing = db.execute(
-                "SELECT content_bytes, content_type, payload_text "
-                "FROM event_source_raw_payloads WHERE payload_sha256=?",
-                (payload.payload_sha256,),
-            ).fetchone()
-            values = (
-                payload.content_bytes,
-                payload.content_type,
-                payload.payload_text,
-            )
-            if existing is not None:
-                if tuple(existing) != values:
-                    raise ValueError("event source raw payload identity conflict")
-                return
-            db.execute(
-                """
-                INSERT INTO event_source_raw_payloads(
-                    payload_sha256, content_bytes, content_type, payload_text
-                ) VALUES (?, ?, ?, ?)
-                """,
-                (payload.payload_sha256, *values),
-            )
+            self._append_raw_payload_db(db, payload)
 
     def append_calendar_coverage(self, coverage: EventCalendarCoverage) -> None:
         self._append_identity_payload(
@@ -481,69 +460,168 @@ class EventSourceRuntimeStore:
     def append_fetch(self, fetch: EventSourceFetchObservation) -> None:
         self.initialize()
         with sqlite3.connect(self.path) as db:
-            if fetch.raw_payload_sha256 is not None:
-                raw = db.execute(
-                    "SELECT content_bytes FROM event_source_raw_payloads "
-                    "WHERE payload_sha256=?",
-                    (fetch.raw_payload_sha256,),
-                ).fetchone()
-                if raw is None:
-                    raise ValueError(
-                        "event source fetch references unknown raw payload"
-                    )
-                if int(raw[0]) != fetch.raw_payload_bytes:
-                    raise ValueError(
-                        "event source fetch raw payload byte mismatch"
-                    )
+            self._validate_fetch_references_db(db, fetch)
+            self._append_fetch_db(db, fetch)
 
-            if fetch.outcome is EventSourceFetchOutcome.SUCCESS:
-                if fetch.source_kind is EventSourceKind.CALENDAR:
-                    coverage = db.execute(
-                        "SELECT 1 FROM event_calendar_coverages "
-                        "WHERE coverage_identity=?",
-                        (fetch.coverage_identity,),
-                    ).fetchone()
-                    if coverage is None:
-                        raise ValueError(
-                            "calendar fetch references unknown coverage"
-                        )
-                    table = "structured_event_observations"
-                    identity_column = "event_identity"
-                else:
-                    table = "news_event_observations"
-                    identity_column = "news_identity"
-
-                for identity in fetch.item_identities:
-                    row = db.execute(
-                        f"SELECT 1 FROM {table} WHERE {identity_column}=?",
-                        (identity,),
-                    ).fetchone()
-                    if row is None:
-                        raise ValueError(
-                            "event source fetch references unknown item"
-                        )
-
-        self._append_identity_payload(
-            table="event_source_fetches",
-            identity_column="fetch_identity",
-            identity=fetch.fetch_identity,
-            payload=_fetch_payload(fetch),
-            columns=(
-                "fetch_identity",
-                "source_provider",
-                "source_kind",
-                "fetched_at_ms",
-                "outcome",
-                "payload_json",
-            ),
-            values=(
-                fetch.fetch_identity,
-                fetch.source_provider,
-                fetch.source_kind.value,
-                fetch.fetched_at_ms,
-                fetch.outcome.value,
-            ),
+    def append_calendar_snapshot(
+        self,
+        *,
+        raw_payload: EventSourceRawPayload,
+        coverage: EventCalendarCoverage,
+        events: tuple[StructuredEventObservation, ...],
+        fetch: EventSourceFetchObservation,
+    ) -> None:
+        if fetch.outcome is not EventSourceFetchOutcome.SUCCESS:
+            raise ValueError("calendar snapshot requires successful fetch")
+        if fetch.source_kind is not EventSourceKind.CALENDAR:
+            raise ValueError("calendar snapshot fetch kind mismatch")
+        if fetch.raw_payload_sha256 != raw_payload.payload_sha256:
+            raise ValueError("calendar snapshot raw payload mismatch")
+        if fetch.raw_payload_bytes != raw_payload.content_bytes:
+            raise ValueError("calendar snapshot raw payload bytes mismatch")
+        if fetch.coverage_identity != coverage.coverage_identity:
+            raise ValueError("calendar snapshot coverage mismatch")
+        event_identities = tuple(
+            sorted(event.event_identity for event in events)
         )
+        if not events or fetch.item_identities != event_identities:
+            raise ValueError("calendar snapshot item identity mismatch")
+        if coverage.source_provider != fetch.source_provider:
+            raise ValueError("calendar snapshot provider mismatch")
+        if any(
+            event.source_provider != fetch.source_provider
+            for event in events
+        ):
+            raise ValueError("calendar snapshot event provider mismatch")
+
+        self.initialize()
+        with sqlite3.connect(self.path) as db:
+            db.execute("BEGIN IMMEDIATE")
+            self._append_raw_payload_db(db, raw_payload)
+            self._append_identity_payload_db(
+                db,
+                table="event_calendar_coverages",
+                identity_column="coverage_identity",
+                identity=coverage.coverage_identity,
+                payload=event_calendar_coverage_payload(coverage),
+                columns=(
+                    "coverage_identity",
+                    "source_provider",
+                    "observed_at_ms",
+                    "payload_json",
+                ),
+                values=(
+                    coverage.coverage_identity,
+                    coverage.source_provider,
+                    coverage.observed_at_ms,
+                ),
+            )
+            for event in events:
+                self._append_identity_payload_db(
+                    db,
+                    table="structured_event_observations",
+                    identity_column="event_identity",
+                    identity=event.event_identity,
+                    payload=structured_event_payload(event),
+                    columns=(
+                        "event_identity",
+                        "provider_event_id",
+                        "source_provider",
+                        "scheduled_at_ms",
+                        "ingested_at_ms",
+                        "payload_json",
+                    ),
+                    values=(
+                        event.event_identity,
+                        event.provider_event_id,
+                        event.source_provider,
+                        event.scheduled_at_ms,
+                        event.ingested_at_ms,
+                    ),
+                )
+            self._validate_fetch_references_db(db, fetch)
+            self._append_fetch_db(db, fetch)
+
+    def append_news_snapshot(
+        self,
+        *,
+        raw_payload: EventSourceRawPayload,
+        events: tuple[NewsEventObservation, ...],
+        fetch: EventSourceFetchObservation,
+    ) -> None:
+        if fetch.outcome is not EventSourceFetchOutcome.SUCCESS:
+            raise ValueError("news snapshot requires successful fetch")
+        if fetch.source_kind is not EventSourceKind.NEWS:
+            raise ValueError("news snapshot fetch kind mismatch")
+        if fetch.raw_payload_sha256 != raw_payload.payload_sha256:
+            raise ValueError("news snapshot raw payload mismatch")
+        if fetch.raw_payload_bytes != raw_payload.content_bytes:
+            raise ValueError("news snapshot raw payload bytes mismatch")
+        event_identities = tuple(
+            sorted(event.news_identity for event in events)
+        )
+        if not events or fetch.item_identities != event_identities:
+            raise ValueError("news snapshot item identity mismatch")
+        if any(
+            event.source_provider != fetch.source_provider
+            for event in events
+        ):
+            raise ValueError("news snapshot event provider mismatch")
+
+        self.initialize()
+        with sqlite3.connect(self.path) as db:
+            db.execute("BEGIN IMMEDIATE")
+            self._append_raw_payload_db(db, raw_payload)
+            for event in events:
+                self._append_identity_payload_db(
+                    db,
+                    table="news_event_observations",
+                    identity_column="news_identity",
+                    identity=event.news_identity,
+                    payload=news_event_payload(event),
+                    columns=(
+                        "news_identity",
+                        "provider_article_id",
+                        "source_provider",
+                        "published_at_ms",
+                        "ingested_at_ms",
+                        "payload_json",
+                    ),
+                    values=(
+                        event.news_identity,
+                        event.provider_article_id,
+                        event.source_provider,
+                        event.published_at_ms,
+                        event.ingested_at_ms,
+                    ),
+                )
+            self._validate_fetch_references_db(db, fetch)
+            self._append_fetch_db(db, fetch)
+
+    def append_failed_fetch(
+        self,
+        *,
+        fetch: EventSourceFetchObservation,
+        raw_payload: EventSourceRawPayload | None = None,
+    ) -> None:
+        if fetch.outcome is not EventSourceFetchOutcome.FAILURE:
+            raise ValueError("failed fetch append requires failure outcome")
+        if raw_payload is None:
+            if fetch.raw_payload_sha256 is not None:
+                raise ValueError("failed fetch raw payload evidence missing")
+        else:
+            if fetch.raw_payload_sha256 != raw_payload.payload_sha256:
+                raise ValueError("failed fetch raw payload mismatch")
+            if fetch.raw_payload_bytes != raw_payload.content_bytes:
+                raise ValueError("failed fetch raw payload bytes mismatch")
+
+        self.initialize()
+        with sqlite3.connect(self.path) as db:
+            db.execute("BEGIN IMMEDIATE")
+            if raw_payload is not None:
+                self._append_raw_payload_db(db, raw_payload)
+            self._validate_fetch_references_db(db, fetch)
+            self._append_fetch_db(db, fetch)
 
     def counts(self) -> dict[str, int]:
         if not self.path.is_file():
@@ -601,22 +679,144 @@ class EventSourceRuntimeStore:
         values: tuple[object, ...],
     ) -> None:
         self.initialize()
-        payload_json = canonical_json(payload)
         with sqlite3.connect(self.path) as db:
-            existing = db.execute(
-                f"SELECT payload_json FROM {table} WHERE {identity_column}=?",
+            self._append_identity_payload_db(
+                db,
+                table=table,
+                identity_column=identity_column,
+                identity=identity,
+                payload=payload,
+                columns=columns,
+                values=values,
+            )
+
+    def _append_identity_payload_db(
+        self,
+        db: sqlite3.Connection,
+        *,
+        table: str,
+        identity_column: str,
+        identity: str,
+        payload: dict[str, object],
+        columns: tuple[str, ...],
+        values: tuple[object, ...],
+    ) -> None:
+        payload_json = canonical_json(payload)
+        existing = db.execute(
+            f"SELECT payload_json FROM {table} WHERE {identity_column}=?",
+            (identity,),
+        ).fetchone()
+        if existing is not None:
+            if str(existing[0]) != payload_json:
+                raise ValueError(f"{table} identity conflict")
+            return
+        placeholders = ",".join("?" for _ in columns)
+        db.execute(
+            f"INSERT INTO {table}({','.join(columns)}) "
+            f"VALUES ({placeholders})",
+            (*values, payload_json),
+        )
+
+    def _append_raw_payload_db(
+        self,
+        db: sqlite3.Connection,
+        payload: EventSourceRawPayload,
+    ) -> None:
+        existing = db.execute(
+            "SELECT content_bytes, content_type, payload_text "
+            "FROM event_source_raw_payloads WHERE payload_sha256=?",
+            (payload.payload_sha256,),
+        ).fetchone()
+        values = (
+            payload.content_bytes,
+            payload.content_type,
+            payload.payload_text,
+        )
+        if existing is not None:
+            if tuple(existing) != values:
+                raise ValueError("event source raw payload identity conflict")
+            return
+        db.execute(
+            """
+            INSERT INTO event_source_raw_payloads(
+                payload_sha256, content_bytes, content_type, payload_text
+            ) VALUES (?, ?, ?, ?)
+            """,
+            (payload.payload_sha256, *values),
+        )
+
+    def _validate_fetch_references_db(
+        self,
+        db: sqlite3.Connection,
+        fetch: EventSourceFetchObservation,
+    ) -> None:
+        if fetch.raw_payload_sha256 is not None:
+            raw = db.execute(
+                "SELECT content_bytes FROM event_source_raw_payloads "
+                "WHERE payload_sha256=?",
+                (fetch.raw_payload_sha256,),
+            ).fetchone()
+            if raw is None:
+                raise ValueError(
+                    "event source fetch references unknown raw payload"
+                )
+            if int(raw[0]) != fetch.raw_payload_bytes:
+                raise ValueError(
+                    "event source fetch raw payload byte mismatch"
+                )
+
+        if fetch.outcome is not EventSourceFetchOutcome.SUCCESS:
+            return
+
+        if fetch.source_kind is EventSourceKind.CALENDAR:
+            coverage = db.execute(
+                "SELECT 1 FROM event_calendar_coverages "
+                "WHERE coverage_identity=?",
+                (fetch.coverage_identity,),
+            ).fetchone()
+            if coverage is None:
+                raise ValueError("calendar fetch references unknown coverage")
+            table = "structured_event_observations"
+            identity_column = "event_identity"
+        else:
+            table = "news_event_observations"
+            identity_column = "news_identity"
+
+        for identity in fetch.item_identities:
+            row = db.execute(
+                f"SELECT 1 FROM {table} WHERE {identity_column}=?",
                 (identity,),
             ).fetchone()
-            if existing is not None:
-                if str(existing[0]) != payload_json:
-                    raise ValueError(f"{table} identity conflict")
-                return
-            placeholders = ",".join("?" for _ in columns)
-            db.execute(
-                f"INSERT INTO {table}({','.join(columns)}) "
-                f"VALUES ({placeholders})",
-                (*values, payload_json),
-            )
+            if row is None:
+                raise ValueError("event source fetch references unknown item")
+
+    def _append_fetch_db(
+        self,
+        db: sqlite3.Connection,
+        fetch: EventSourceFetchObservation,
+    ) -> None:
+        self._append_identity_payload_db(
+            db,
+            table="event_source_fetches",
+            identity_column="fetch_identity",
+            identity=fetch.fetch_identity,
+            payload=_fetch_payload(fetch),
+            columns=(
+                "fetch_identity",
+                "source_provider",
+                "source_kind",
+                "fetched_at_ms",
+                "outcome",
+                "payload_json",
+            ),
+            values=(
+                fetch.fetch_identity,
+                fetch.source_provider,
+                fetch.source_kind.value,
+                fetch.fetched_at_ms,
+                fetch.outcome.value,
+            ),
+        )
 
 
 def _fetch_payload(
