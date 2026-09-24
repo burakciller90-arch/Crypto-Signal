@@ -39,6 +39,7 @@ from crypto_signal.signals.models import SignalDirection, SignalState
 
 WC2_LIVE_RUNTIME_ENGINE_VERSION = "wc2-live-runtime-index-v1/1"
 WC2_LIVE_SOURCE_VERSION_COMPONENT = "wc2_live_source_adapter"
+WC2_COLLECTION_PROTOCOL_VERSION_COMPONENT = "wc2_collection_protocol"
 REAL_CAPITAL = 0
 
 
@@ -95,10 +96,15 @@ def process_wc2_live_freeze(
     maximum_issuance_delay_ms: int,
     horizon_bars: int,
     base_asset: str,
+    collection_protocol_identity: str,
 ) -> WC2LiveIndexResult:
     """Index one live freeze without retrospective forecast creation."""
     if observed_at_ms < 0:
         raise ValueError("WC2 runtime observation time cannot be negative")
+    _require_sha256(
+        collection_protocol_identity,
+        "WC2 collection protocol identity",
+    )
     if maximum_issuance_delay_ms <= 0:
         raise ValueError("WC2 runtime issuance delay must be positive")
     if horizon_bars <= 0:
@@ -118,6 +124,7 @@ def process_wc2_live_freeze(
             maximum_issuance_delay_ms=maximum_issuance_delay_ms,
             horizon_bars=horizon_bars,
             base_asset=base_asset,
+            collection_protocol_identity=collection_protocol_identity,
         )
     if result.status is not LiveFreezeStatus.ALREADY_FROZEN:
         raise ValueError("unsupported live freeze status")
@@ -129,6 +136,7 @@ def process_wc2_live_freeze(
         decision_ledger=decision_ledger,
         cohort_journal=cohort_journal,
         observed_at_ms=observed_at_ms,
+        collection_protocol_identity=collection_protocol_identity,
     )
 
 
@@ -142,6 +150,7 @@ def _process_fresh(
     maximum_issuance_delay_ms: int,
     horizon_bars: int,
     base_asset: str,
+    collection_protocol_identity: str,
 ) -> WC2LiveIndexResult:
     if result.bundle is None or result.frozen_at_ms is None:
         raise ValueError("fresh WC2 cycle lost exact in-process bundle")
@@ -191,6 +200,7 @@ def _process_fresh(
         maximum_issuance_delay_ms=maximum_issuance_delay_ms,
         horizon_bars=horizon_bars,
         base_asset=base_asset,
+        collection_protocol_identity=collection_protocol_identity,
         ledger=decision_ledger,
     )
     existing = cohort_journal.find_forecast_identity(
@@ -232,6 +242,7 @@ def _recover_persisted(
     decision_ledger: ImmutableDecisionEvidenceLedger,
     cohort_journal: WC2CohortJournal,
     observed_at_ms: int,
+    collection_protocol_identity: str,
 ) -> WC2LiveIndexResult:
     freeze = signal_ledger.get_freeze_by_source_cutoff(
         exchange=context.exchange.value,
@@ -272,6 +283,7 @@ def _recover_persisted(
         expected_signal_identity=freeze.signal_freeze_identity,
         cohort_journal=cohort_journal,
         indexed_at_ms=observed_at_ms,
+        collection_protocol_identity=collection_protocol_identity,
     )
 
 
@@ -283,6 +295,7 @@ def _index_recovered_issuance(
     expected_signal_identity: str,
     cohort_journal: WC2CohortJournal,
     indexed_at_ms: int,
+    collection_protocol_identity: str,
 ) -> WC2LiveIndexResult:
     forecast_identity = _raw_sha(forecast, "forecast_identity")
     existing = cohort_journal.find_forecast_identity(forecast_identity)
@@ -300,6 +313,7 @@ def _index_recovered_issuance(
         proof=proof,
         expected_signal_identity=expected_signal_identity,
         indexed_at_ms=indexed_at_ms,
+        collection_protocol_identity=collection_protocol_identity,
     )
     disposition = cohort_journal.append_forecast(cohort)
     return _result(
@@ -319,6 +333,7 @@ def _recovered_cohort_forecast(
     proof: dict[str, Any],
     expected_signal_identity: str,
     indexed_at_ms: int,
+    collection_protocol_identity: str,
 ) -> WC2CohortForecast:
     if _raw_sha(forecast, "signal_freeze_identity") != expected_signal_identity:
         raise ValueError("WC2 recovered R20 signal lineage mismatch")
@@ -333,7 +348,10 @@ def _recovered_cohort_forecast(
         raise ValueError("WC2 recovered forecast predates collection start")
     if indexed_at_ms < issued_at_ms:
         raise ValueError("WC2 recovery index predates original issuance")
-    _require_wc2_source_version(forecast)
+    _require_wc2_source_version(
+        forecast,
+        collection_protocol_identity=collection_protocol_identity,
+    )
 
     asset = _raw_text(forecast, "asset")
     symbol = _raw_text(forecast, "symbol")
@@ -406,20 +424,34 @@ def _recovered_cohort_forecast(
     )
 
 
-def _require_wc2_source_version(forecast: dict[str, Any]) -> None:
+def _require_wc2_source_version(
+    forecast: dict[str, Any],
+    *,
+    collection_protocol_identity: str,
+) -> None:
     raw = forecast.get("version_refs")
     if not isinstance(raw, list):
         raise TypeError("WC2 recovered R20 version refs must be array")
-    matches = [
+    source_matches = [
         item
         for item in raw
         if isinstance(item, dict)
         and item.get("component") == WC2_LIVE_SOURCE_VERSION_COMPONENT
     ]
-    if len(matches) != 1:
+    if len(source_matches) != 1:
         raise ValueError("persisted R20 lacks exact WC2 live-source provenance")
-    if matches[0].get("version") != WC2_LIVE_SOURCE_ADAPTER_VERSION:
+    if source_matches[0].get("version") != WC2_LIVE_SOURCE_ADAPTER_VERSION:
         raise ValueError("persisted R20 WC2 live-source version mismatch")
+    protocol_matches = [
+        item
+        for item in raw
+        if isinstance(item, dict)
+        and item.get("component") == WC2_COLLECTION_PROTOCOL_VERSION_COMPONENT
+    ]
+    if len(protocol_matches) != 1:
+        raise ValueError("persisted R20 lacks exact WC2 protocol provenance")
+    if protocol_matches[0].get("version") != collection_protocol_identity:
+        raise ValueError("persisted R20 WC2 protocol identity mismatch")
 
 
 def _result(
