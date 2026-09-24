@@ -49,18 +49,18 @@ def test_galactech_capital_center_uses_canonical_epoch2_accounting_only(
     html = preview.text
     js = script.text
     css = style.text
-    assert 'data-ui-version="galactech-v1.1-polish"' in html
-    assert "Canonical Epoch 2 accounting" in html
+    assert 'data-ui-version="galactech-v2-intelligence-first-tr"' in html
+    assert "Kanonik Epoch 2 muhasebesi" in html
     assert 'epoch2State: "/api/paper/epoch2-state"' in js
     assert "function renderVaultCard(vault)" in js
     assert "function renderEpoch()" in js
     assert "function renderPaper()" in js
-    assert "Accepted Epoch 2 constitution" in js
-    assert "not an AI inference or live recommendation" in js
-    assert "canonical Epoch2 · immutable R21 accounting" in js
-    assert "Empty history is not 0% win rate." in js
-    assert "NOT YET MEASURED" in js
-    assert "No NAV, PnL, allocation or performance is inferred" in js
+    assert "Kabul edilmiş Epoch 2 sermaye anayasası" in js
+    assert "yapay zekâ çıkarımı veya canlı yatırım tavsiyesi değildir" in js
+    assert "kanonik Epoch 2 · değiştirilemez R21 muhasebesi" in js
+    assert "Boş geçmiş %0 başarı oranı değildir." in js
+    assert "HENÜZ ÖLÇÜLMEDİ" in js
+    assert "Yalnız program sözleşmesine bakılarak NAV, kâr/zarar, dağılım veya performans uydurulmaz" in js
     assert 'loadEndpoint("epoch2State", API.epoch2State)' in js
 
     assert ".capital-hero-card" in css
@@ -92,4 +92,4 @@ def test_galactech_capital_center_does_not_use_legacy_mission_control_for_nav(
     render_paper = js[start:end]
     assert "state.epoch2State" in render_paper
     assert "state.paper" not in render_paper
-    assert "canonical Epoch2 evidence unavailable" in render_paper
+    assert "kanonik Epoch 2 kanıtı kullanılamıyor" in render_paper
