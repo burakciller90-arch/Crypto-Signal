@@ -41,6 +41,30 @@ class LiveFreezeResult:
     signal_state: SignalState | None
     confluence_score: str | None
     lifecycle_disposition: LedgerWriteDisposition | None
+    bundle: DecisionFreezeBundle | None = None
+    frozen_at_ms: int | None = None
+
+    def __post_init__(self) -> None:
+        if self.source_cutoff_open_time_ms < 0:
+            raise ValueError("live freeze source cutoff must be non-negative")
+        if self.status is LiveFreezeStatus.FROZEN:
+            if self.bundle is None or self.frozen_at_ms is None:
+                raise ValueError(
+                    "fresh live freeze requires exact in-process bundle and timestamp"
+                )
+            if self.bundle.bundle_identity != self.bundle_identity:
+                raise ValueError("live freeze result bundle identity mismatch")
+            if (
+                self.bundle.signal_decision.freeze_identity
+                != self.signal_freeze_identity
+            ):
+                raise ValueError("live freeze result signal identity mismatch")
+            if self.frozen_at_ms < self.bundle.signal_decision.as_of_ms:
+                raise ValueError("live freeze timestamp predates signal as-of")
+        elif self.bundle is not None or self.frozen_at_ms is not None:
+            raise ValueError(
+                "already-frozen result cannot replay historical bundle as fresh"
+            )
 
 
 def utc_now_ms() -> int:
@@ -106,6 +130,8 @@ def freeze_live_candles(
             signal_state=None,
             confluence_score=None,
             lifecycle_disposition=None,
+            bundle=None,
+            frozen_at_ms=None,
         )
 
     as_of_ms = max(observed_at_ms, now_ms())
@@ -163,6 +189,8 @@ def freeze_live_candles(
         signal_state=decision.state,
         confluence_score=str(confluence.score.value),
         lifecycle_disposition=lifecycle_disposition,
+        bundle=bundle,
+        frozen_at_ms=frozen_at_ms,
     )
 
 
