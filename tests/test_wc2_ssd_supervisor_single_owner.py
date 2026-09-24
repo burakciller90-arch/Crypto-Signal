@@ -22,4 +22,10 @@ def test_ssd_supervisor_has_single_wc2_live_owner() -> None:
     assert '--wc2-cohort "$cohort"' in text
     assert '--wc2-shadow-intent "$shadow_intent"' in text
     assert '--wc2-shadow-cycle "$shadow_cycle"' in text
+    assert text.count("--wc2-execution-enabled") == 1
+    assert '--wc2-execution-protocol "$execution_protocol"' in text
+    assert '--wc2-execution-runtime "$execution_runtime"' in text
+    assert '--wc2-execution-journal "$execution_journal"' in text
+    assert '--wc2-venue-rules "$venue_rules"' in text
+    assert "run_wc2_paper_execution_cycle.py" not in text
     assert "FAIL_CLOSED=YES REAL_CAPITAL=0" in text
