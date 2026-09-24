@@ -243,6 +243,8 @@ def test_event_source_product_reader_fails_closed_on_raw_tamper(
             "SET payload_blob=? WHERE payload_sha256=?",
             (b"tampered-source", str(row[0])),
         )
+        db.commit()
+        db.execute("PRAGMA wal_checkpoint(TRUNCATE)")
 
     with pytest.raises(ValueError, match="raw payload"):
         read_event_source_runtime_truth(
