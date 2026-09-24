@@ -33,6 +33,7 @@ from crypto_signal.ledger.live_clock import LiveFreezeResult, LiveFreezeStatus
 from crypto_signal.ledger.store import ImmutableSignalLedger
 from crypto_signal.paper.epoch2_accounting import Epoch2ActivationRecord
 from crypto_signal.paper.models import PaperAction
+from crypto_signal.signals.models import SignalDirection, SignalState
 from crypto_signal.paper.shadow_cycle_manifest import R25ShadowCycleManifest
 from crypto_signal.paper.shadow_intent_journal import R25ShadowIntentJournal
 
@@ -44,6 +45,7 @@ class WC2PreparedLiveStatus(StrEnum):
     COMPLETED_FRESH = "completed_fresh"
     COMPLETED_RECOVERED = "completed_recovered"
     SKIPPED_BEFORE_COLLECTION = "skipped_before_collection"
+    SKIPPED_BEFORE_ACTIVATION = "skipped_before_activation"
     SKIPPED_INELIGIBLE_SOURCE = "skipped_ineligible_source"
     NO_PREPARED_RECEIPT = "no_prepared_receipt"
 
@@ -178,9 +180,15 @@ def _process_fresh_prepared(
             signal_identity=signal.freeze_identity,
             reasons=("observation_predates_collection_start",),
         )
+    if result.frozen_at_ms < activation.activated_at_ms:
+        return _prepared_live_result(
+            WC2PreparedLiveStatus.SKIPPED_BEFORE_ACTIVATION,
+            signal_identity=signal.freeze_identity,
+            reasons=("source_freeze_predates_epoch2_activation",),
+        )
     if (
-        signal.state.value not in {"watch", "active"}
-        or signal.direction.value == "none"
+        signal.state not in {SignalState.WATCH, SignalState.ACTIVE}
+        or signal.direction is SignalDirection.NONE
         or signal.geometry is None
     ):
         return _prepared_live_result(
@@ -252,6 +260,12 @@ def _process_replay_prepared(
             WC2PreparedLiveStatus.SKIPPED_BEFORE_COLLECTION,
             signal_identity=freeze.signal_freeze_identity,
             reasons=("source_freeze_predates_collection_start",),
+        )
+    if freeze.frozen_at_ms < activation.activated_at_ms:
+        return _prepared_live_result(
+            WC2PreparedLiveStatus.SKIPPED_BEFORE_ACTIVATION,
+            signal_identity=freeze.signal_freeze_identity,
+            reasons=("source_freeze_predates_epoch2_activation",),
         )
     receipt = prepared_journal.read_for_signal(
         freeze.signal_freeze_identity
