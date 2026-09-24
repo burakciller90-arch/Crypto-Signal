@@ -6,6 +6,7 @@ on:
     paths:
       - ".github/workflows/crypto-mac-command.yml"
       - "ops/r11/start_ssd_runtime.command"
+      - "ops/r11_runtime_acceptance.py"
       - "tests/test_wc1_event_source_state_workflow.py"
       - "tests/test_r11_runtime_supervisor_detection.py"
       - ".github/workflows/runtime-supervisor-detection-uid504.yml"
@@ -44,3 +45,23 @@ jobs:
             tests/test_r11_runtime_supervisor_detection.py
           bash -n ops/r11/start_ssd_runtime.command
           echo "RUNTIME_SUPERVISOR_DETECTION_FOCUSED_PASS=YES"
+      - name: Live R11 topology acceptance
+        shell: bash
+        run: |
+          set -euo pipefail
+          PY="/Volumes/Crypto-504/Crypto-Signal/Development/.venv/bin/python"
+          export PYTHONPATH="$GITHUB_WORKSPACE/src:$GITHUB_WORKSPACE"
+          cd "$GITHUB_WORKSPACE"
+          "$PY" - <<'PY'
+          from pathlib import Path
+          from ops.r11_runtime_acceptance import _assert_process_topology
+
+          topology = _assert_process_topology(
+              Path("/Volumes/Crypto-504/Crypto-Signal")
+          )
+          assert topology["supervisor_pid"] > 0
+          assert topology["dashboard_pid"] > 0
+          assert topology["runner_listener_pid"] > 0
+          print(f"R11_LIVE_TOPOLOGY={topology}")
+          print("RUNTIME_SUPERVISOR_DETECTION_LIVE_PASS=YES")
+          PY
