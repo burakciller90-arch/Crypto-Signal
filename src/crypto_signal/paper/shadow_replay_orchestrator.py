@@ -26,6 +26,7 @@ from crypto_signal.paper.position_sizing_bridge import (
     PositionSizingBridgeResult,
     SizingBridgeState,
     assess_capital_position_sizing,
+    build_no_policy_position_sizing_bridge,
 )
 from crypto_signal.paper.position_sizing_intelligence import (
     PositionSizingPolicy,
@@ -127,7 +128,7 @@ def run_shadow_restart_replay_cycle(
     event_context: CircuitBreakerAnalysis,
     base_asset: str,
     activation: Epoch2ActivationRecord,
-    sizing_policy: PositionSizingPolicy,
+    sizing_policy: PositionSizingPolicy | None,
     journal: R25ShadowIntentJournal,
     vault_id: PaperVaultId,
     capital_assessed_at_ms: int,
@@ -153,14 +154,33 @@ def run_shadow_restart_replay_cycle(
         tactical_microstructure=tactical_microstructure,
         opportunity_recovery=opportunity_recovery,
     )
-    sizing = assess_capital_position_sizing(
-        issuance,
-        capital,
-        policy=sizing_policy,
-        sized_at_ms=sized_at_ms,
-        risk_inputs=risk_inputs,
-        calibrated_probability=calibrated_probability,
-    )
+    if sizing_policy is None:
+        if risk_inputs:
+            raise ValueError(
+                "sizing risk inputs require explicit sizing policy"
+            )
+        if calibrated_probability is not None:
+            raise ValueError(
+                "calibrated sizing requires explicit sizing policy"
+            )
+        if reviewed_method is not None or reviewed_at_ms is not None:
+            raise ValueError(
+                "reviewed sizing requires explicit sizing policy"
+            )
+        sizing = build_no_policy_position_sizing_bridge(
+            issuance,
+            capital,
+            sized_at_ms=sized_at_ms,
+        )
+    else:
+        sizing = assess_capital_position_sizing(
+            issuance,
+            capital,
+            policy=sizing_policy,
+            sized_at_ms=sized_at_ms,
+            risk_inputs=risk_inputs,
+            calibrated_probability=calibrated_probability,
+        )
 
     selection: ReviewedSizingSelection | None = None
     if reviewed_method is not None:
