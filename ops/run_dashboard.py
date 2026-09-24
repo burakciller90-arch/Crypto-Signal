@@ -104,7 +104,7 @@ def resolve_runtime_paths(args: argparse.Namespace) -> dict[str, Path]:
             or runtime_root / "events" / "event_source.sqlite3"
         ),
         "wc2_cohort_path": (
-            args.wc2_cohort
+            getattr(args, "wc2_cohort", None)
             or runtime_root / "wc2" / "wc2_untouched_forward.sqlite3"
         ),
     }
