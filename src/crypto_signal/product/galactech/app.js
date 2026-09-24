@@ -3158,7 +3158,7 @@ function renderIntelligence() {
       `${latest.symbol || latest.asset || "Piyasa"} · ${trState(latest.state)}. ${feedNarrative(latest)} ${feedSimpleExplanation(latest)}`;
   } else {
     target.textContent =
-      `Teknik görünüm · Intelligence Center: ${trState(endpoint.status)} · Canlı feed: ${trState(feed.status)} · ${events.length} kayıt yüklü · proof ${shortIdentity(latest.proof_identity)} · forecast ${shortIdentity(latest.forecast_identity)}.`;
+      `Teknik görünüm · İstihbarat Merkezi: ${trState(endpoint.status)} · Canlı akış: ${trState(feed.status)} · ${events.length} kayıt yüklü · kanıt ${shortIdentity(latest.proof_identity)} · öngörü ${shortIdentity(latest.forecast_identity)}.`;
   }
 }
 
@@ -3183,19 +3183,19 @@ function applyHealthTruth(data) {
   state.health = data;
   const ready = data?.status === "ok";
   setTruthChip("apiTruth", ready ? "API · HAZIR" : "API · SORUNLU", ready ? "ready" : "risk");
-  setBoot("bootApi", ready ? "READY" : "DEGRADED", ready ? "ready" : "muted");
+  setBoot("bootApi", ready ? "HAZIR" : "SORUNLU", ready ? "ready" : "muted");
 
   const ledgerPresent = data?.ledger_present === true;
-  setBoot("bootLedger", ledgerPresent ? "PRESENT" : "NOT PRESENT", ledgerPresent ? "ready" : "muted");
+  setBoot("bootLedger", ledgerPresent ? "MEVCUT" : "YOK", ledgerPresent ? "ready" : "muted");
   if (byId("systemLedger")) {
-    byId("systemLedger").textContent = ledgerPresent ? "PRESENT" : "NOT PRESENT";
+    byId("systemLedger").textContent = ledgerPresent ? "MEVCUT" : "YOK";
   }
 
   if (Number(data?.real_capital) === 0) {
-    setBoot("bootCapital", "DISABLED", "safe");
+    setBoot("bootCapital", "KAPALI", "safe");
   } else {
-    setBoot("bootCapital", "UNVERIFIED", "muted");
-    setTruthChip("apiTruth", "API · AUTHORITY MISMATCH", "risk");
+    setBoot("bootCapital", "DOĞRULANMADI", "muted");
+    setTruthChip("apiTruth", "API · YETKİ SINIRI UYUŞMAZLIĞI", "risk");
   }
 }
 
@@ -3205,7 +3205,7 @@ async function loadEndpoint(key, url) {
     state[key] = data;
     return { ok: true, key, data };
   } catch (error) {
-    console.warn(`[GALACTECH] ${key} unavailable`, error);
+    console.warn(`[GALACTECH] ${key} kullanılamıyor`, error);
     return { ok: false, key, error };
   }
 }
@@ -3215,10 +3215,10 @@ async function runBoot() {
   if (healthResult.ok) {
     applyHealthTruth(healthResult.data);
   } else {
-    setBoot("bootApi", "UNAVAILABLE", "muted");
-    setBoot("bootLedger", "NOT VERIFIED", "muted");
-    setBoot("bootCapital", "NOT VERIFIED", "muted");
-    setTruthChip("apiTruth", "API · UNAVAILABLE", "risk");
+    setBoot("bootApi", "KULLANILAMIYOR", "muted");
+    setBoot("bootLedger", "DOĞRULANMADI", "muted");
+    setBoot("bootCapital", "DOĞRULANMADI", "muted");
+    setTruthChip("apiTruth", "API · KULLANILAMIYOR", "risk");
   }
 
   const results = await Promise.all([
@@ -3245,7 +3245,7 @@ async function runBoot() {
   );
   setBoot(
     "bootMarket",
-    marketReady ? "EVIDENCE API READY" : "NOT VERIFIED",
+    marketReady ? "KANIT API HAZIR" : "DOĞRULANMADI",
     marketReady ? "ready" : "muted"
   );
 
@@ -3256,8 +3256,8 @@ async function runBoot() {
 
   const failed = results.filter((result) => !result.ok).map((result) => result.key);
   byId("bootNote").textContent = failed.length
-    ? `Partial evidence surface · unavailable: ${failed.join(", ")}. Eksik veri gizlenmedi.`
-    : "Read-only product evidence endpoints responded. REAL_CAPITAL remains disabled.";
+    ? `Kısmi kanıt yüzeyi · kullanılamayan kaynaklar: ${failed.join(", ")}. Eksik veri gizlenmedi.`
+    : "Salt-okunur ürün kanıt kaynakları yanıt verdi. Gerçek sermaye kapalı kalıyor.";
 
   window.setTimeout(() => {
     const boot = byId("coldBoot");
