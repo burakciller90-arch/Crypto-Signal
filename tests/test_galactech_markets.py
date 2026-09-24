@@ -73,7 +73,7 @@ def test_galactech_markets_workspace_binds_exact_provider_freeze(
     assert "FİYAT HAREKETİ / DONDURULMUŞ SİNYAL KANITI" in js
     assert "R20.5 KARAR KANITI" in js
     assert "KALICI KANIT YOK" in js
-    assert "Bu değiştirilemez sinyal için exact R20.5 Karar Kanıtı yok" in js
+    assert "Bu değiştirilemez sinyal için kesin R20.5 Karar Kanıtı yok" in js
     assert "sentetik geçersizlik yok" in js
     assert 'loadEndpoint("radar", API.radar)' in js
     assert 'data-market-provider-id="' in js
@@ -110,5 +110,5 @@ def test_galactech_markets_decision_proof_layers_fail_closed_when_unpersisted(
     assert 'FLOW: ["order_book", "order_flow_cvd"]' in js
     assert 'DERIV: ["derivatives"]' in js
     assert 'ONCHAIN: ["onchain"]' in js
-    assert "Bu değiştirilemez sinyal için exact R20.5 Karar Kanıtı yok" in js
+    assert "Bu değiştirilemez sinyal için kesin R20.5 Karar Kanıtı yok" in js
     assert "Sentetik grafik katmanı üretilmez" in js

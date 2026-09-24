@@ -706,14 +706,14 @@ function renderCommand() {
         <details class="intel-raw-v2">
           <summary>Orijinal değiştirilemez tez kaydını göster</summary>
           <p>${escapeHtml(item.conditional_thesis || "Kalıcı tez metni bulunmuyor.")}</p>
-          <code>forecast ${escapeHtml(shortIdentity(item.forecast_identity))} · proof ${escapeHtml(shortIdentity(item.proof_identity))}</code>
+          <code>öngörü ${escapeHtml(shortIdentity(item.forecast_identity))} · kanıt ${escapeHtml(shortIdentity(item.proof_identity))}</code>
         </details>
 
         <footer class="intel-card-foot-v2">
           <span>SHA-256 bağlı kanıt · gerçek sermaye kapalı</span>
           ${hasProof
             ? `<button class="intel-proof-button" type="button" data-feed-forecast-id="${escapeHtml(forecastId)}">Kanıt grafiğini ve dondurulmuş kararı aç →</button>`
-            : '<span class="intel-proof-unavailable">Exact kanıt bağlantısı doğrulanıyor</span>'}
+            : '<span class="intel-proof-unavailable">Kesin kanıt bağlantısı doğrulanıyor</span>'}
         </footer>
       </article>`;
   }).join("");
@@ -753,7 +753,7 @@ function renderPortfolioV2(events = []) {
     if (trades) trades.textContent = "0";
     if (stateNode) stateNode.textContent = "Canlı muhasebe kanıtı kullanılamıyor";
     if (metricNav) metricNav.textContent = "ÖLÇÜLMEDİ";
-    if (metricNavNote) metricNavNote.textContent = "runtime kanıtı yok";
+    if (metricNavNote) metricNavNote.textContent = "çalışma zamanı kanıtı yok";
   }
 
   const stream = byId("portfolioProofStream");
@@ -878,7 +878,7 @@ function renderCommandDecisionSurface() {
     body.innerHTML = `
       <div class="wc5-decision-hero">
         <div><span>EYLEM</span><strong>YETERSİZ KANIT</strong></div>
-        <p>Bu dondurulmuş karar için exact R20.5 Karar Kanıtı ürün yüzeyinde mevcut değil.</p>
+        <p>Bu dondurulmuş karar için kesin R20.5 Karar Kanıtı ürün yüzeyinde mevcut değil.</p>
       </div>`;
     return;
   }
@@ -921,7 +921,7 @@ function renderCommandDecisionSurface() {
       <div>
         <span>UYGULANABİLİR EYLEM</span>
         <strong class="${actionClass}">${escapeHtml(trAction(action))}</strong>
-        <small>yalnız exact kalıcı WC2 eylemi · emir talimatı değildir</small>
+        <small>yalnız kesin eşleşen kalıcı WC2 eylemi · emir talimatı değildir</small>
       </div>
     </div>
 
@@ -942,7 +942,7 @@ function renderCommandDecisionSurface() {
     <div class="wc5-change-condition">
       <span>FİKRİN DEĞİŞMESİ İÇİN NE GEREKİYOR?</span>
       <strong>${escapeHtml(proofNarrative(proof))}</strong>
-      <small>Dondurulmuş geçersizlik seviyesi: ${escapeHtml(formatPrice(proof.invalidation_price))}. Eski karar geriye dönük değiştirilmez; farklı eylem için yeni exact öngörü / niyet kanıtı gerekir.</small>
+      <small>Dondurulmuş geçersizlik seviyesi: ${escapeHtml(formatPrice(proof.invalidation_price))}. Eski karar geriye dönük değiştirilmez; farklı eylem için yeni kesin öngörü / niyet kanıtı gerekir.</small>
     </div>
 
     <div class="wc5-decision-actions">
@@ -953,7 +953,7 @@ function renderCommandDecisionSurface() {
     </div>
 
     <details class="wc5-pro-details">
-      <summary>TEKNİK · exact kimlik ve alan ayrıntısı</summary>
+      <summary>TEKNİK · kesin kimlik ve alan ayrıntısı</summary>
       <div class="truth-table">
         <div class="truth-row"><span>ÖNGÖRÜ</span><strong>${escapeHtml(shortIdentity(proof.forecast_identity))}</strong></div>
         <div class="truth-row"><span>KARAR KANITI</span><strong>${escapeHtml(shortIdentity(proof.proof_identity))}</strong></div>
@@ -1364,7 +1364,7 @@ function renderMarketLayerSurface() {
       target.innerHTML = `
         <span class="proof-section-label">${escapeHtml(layerNames[layer] || layer)} / KARAR KANITI</span>
         <strong>KALICI KANIT YOK</strong>
-        <p>Bu değiştirilemez sinyal için exact R20.5 Karar Kanıtı yok. GALACTECH başka bir veriden bu katmanı uydurmaz.</p>`;
+        <p>Bu değiştirilemez sinyal için kesin R20.5 Karar Kanıtı yok. GALACTECH başka bir veriden bu katmanı uydurmaz.</p>`;
       return;
     }
 
@@ -1487,7 +1487,7 @@ function renderMarketWorkspace() {
     } else if (!cockpit) {
       chart.className = "empty-state";
       chart.innerHTML =
-        "<strong>Dondurulmuş piyasa görünümü yükleniyor…</strong><p>Exact piyasa kanıtı bekleniyor.</p>";
+        "<strong>Dondurulmuş piyasa görünümü yükleniyor…</strong><p>Kesin piyasa kanıtı bekleniyor.</p>";
     } else if (!detail || detail.status !== "ready") {
       chart.className = "empty-state";
       chart.innerHTML =
@@ -1988,7 +1988,7 @@ function renderArchive() {
   if (!visibleRows.length) {
     target.className = "archive-proof-wall empty-state";
     target.innerHTML =
-      "<strong>Bu filtre için immutable proof kaydı yok.</strong>" +
+      "<strong>Bu filtre için değiştirilemez kanıt kaydı yok.</strong>" +
       "<p>Boş filtre sonucu başarı, başarısızlık veya risksizlik iddiası değildir.</p>";
     return;
   }
@@ -2262,7 +2262,7 @@ function renderEvidenceRoom(detail) {
     body.innerHTML = `
       <div class="empty-state">
         <strong>Dondurulmuş kanıt kullanılamıyor.</strong>
-        <p>Sinyal günlüğü veya exact kimlik yoksa ürün kanıt uydurmaz.</p>
+        <p>Sinyal günlüğü veya kesin kimlik yoksa ürün kanıt uydurmaz.</p>
       </div>`;
     return;
   }
@@ -2433,7 +2433,7 @@ async function openEvidenceRoom(identity, trigger) {
   body.innerHTML = `
     <div class="empty-state">
       <strong>Dondurulmuş kanıt yükleniyor…</strong>
-      <p>Exact sinyal kimliği ${escapeHtml(shortIdentity(identity))}</p>
+      <p>Kesin sinyal kimliği ${escapeHtml(shortIdentity(identity))}</p>
     </div>`;
 
   if (!dialog.open) {
@@ -2517,9 +2517,9 @@ function renderShadowCycleExtension(payload) {
   if (!ready) {
     section.innerHTML = `
       <span class="proof-section-label">R25 SERMAYE KARARI SOY AĞACI</span>
-      <h3>Exact deneme döngüsü kalıcı değil</h3>
+      <h3>Kesin deneme döngüsü kalıcı değil</h3>
       <p class="proof-footnote">
-        ${escapeHtml(text(payload?.reason, "bu öngörü için exact kalıcı döngü yok"))}.
+        ${escapeHtml(text(payload?.reason, "bu öngörü için kesin eşleşen kalıcı döngü yok"))}.
         Ürün sembol, yakın zaman, yön veya benzerlik tahminiyle kayıt eşleştirmez.
       </p>`;
   } else {
@@ -2539,7 +2539,7 @@ function renderShadowCycleExtension(payload) {
 
     section.innerHTML = `
       <span class="proof-section-label">R25 SERMAYE KARARI SOY AĞACI</span>
-      <h3>Exact öngörü → sermaye → boyutlandırma → inceleme → önizleme</h3>
+      <h3>Kesin öngörü → sermaye → boyutlandırma → inceleme → önizleme</h3>
       <div class="truth-table">
         <div class="truth-row"><span>ÖNGÖRÜ</span><strong>${escapeHtml(shortIdentity(cycle.forecast_identity))}</strong></div>
         <div class="truth-row"><span>KARAR KANITI</span><strong>${escapeHtml(shortIdentity(cycle.proof_identity))}</strong></div>
@@ -2553,7 +2553,7 @@ function renderShadowCycleExtension(payload) {
         <div class="truth-row"><span>YENİDEN BAŞLATMA / TEKRAR</span><strong class="${replayRaw === "VERIFIED" ? "state-positive" : "state-watch"}">${escapeHtml(replayStatus)}</strong></div>
       </div>
       <p class="proof-footnote">
-        Yalnız exact kalıcı forecast_identity eşleşmesi kullanılır. Bu soy ağacı deneme/araştırma kanıtıdır;
+        Yalnız kalıcı forecast_identity kimliğinin kesin eşleşmesi kullanılır. Bu soy ağacı deneme/araştırma kanıtıdır;
         gerçekleşmiş işlem, kanonik Epoch 2 NAV değişikliği, borsa emri veya canlı alım-satım değildir.
         Yeniden başlatma/tekrar: ${escapeHtml(replayDetail)}.
       </p>`;
@@ -3149,7 +3149,7 @@ function renderIntelligence() {
 
   if (!latest) {
     target.textContent =
-      "Kalıcı Canlı Zekâ Akışı henüz boş veya runtime'a bağlı değil. Sistem eksik kanıt yerine yorum uydurmuyor.";
+      "Kalıcı Canlı Zekâ Akışı henüz boş veya çalışma zamanına bağlı değil. Sistem eksik kanıt yerine yorum uydurmuyor.";
     return;
   }
 
@@ -3298,7 +3298,7 @@ async function refreshRuntime(reason = "timer") {
       setTruthChip("freshnessTruth", "TAZELİK · KISMİ KANIT", "muted");
     }
     if (reason === "visibility") {
-      setMainBusy(false, "Görünür sekmede runtime kanıtı yenilendi.");
+      setMainBusy(false, "Görünür sekmede çalışma zamanı kanıtı yenilendi.");
     }
     return true;
   } finally {

@@ -209,4 +209,4 @@ def test_galactech_evidence_room_uses_exact_cycle_manifest_link(
     assert "DÖNGÜ MANİFESTOSU" in js
     assert "sembol, yakın zaman, yön veya benzerlik tahminiyle kayıt eşleştirmez" in js
     assert "kanonik Epoch 2 NAV değişikliği" in js
-    assert "Yalnız exact kalıcı forecast_identity eşleşmesi kullanılır." in js
+    assert "Yalnız kalıcı forecast_identity kimliğinin kesin eşleşmesi kullanılır." in js

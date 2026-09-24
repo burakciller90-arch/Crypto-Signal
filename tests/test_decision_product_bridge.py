@@ -175,6 +175,6 @@ def test_galactech_binds_only_persisted_r20_5_evidence_domains(
     assert 'FLOW: ["order_book", "order_flow_cvd"]' in js
     assert 'DERIV: ["derivatives"]' in js
     assert 'ONCHAIN: ["onchain"]' in js
-    assert "Bu değiştirilemez sinyal için exact R20.5 Karar Kanıtı yok" in js
+    assert "Bu değiştirilemez sinyal için kesin R20.5 Karar Kanıtı yok" in js
     assert "Sentetik grafik katmanı üretilmez" in js
     assert "gizli akıl yürütme" in js.lower()

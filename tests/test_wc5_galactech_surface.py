@@ -34,7 +34,7 @@ def test_wc5_galactech_surface_is_truth_bound_and_drills_to_proof(
     assert "same immutable intent" not in js
     assert "Eski karar geriye dönük değiştirilmez" in js
     assert "different action" not in js
-    assert "farklı eylem için yeni exact öngörü / niyet kanıtı gerekir" in js
+    assert "farklı eylem için yeni kesin öngörü / niyet kanıtı gerekir" in js
     assert "Öncelik sırası öğrenilmiş bir önem puanı değildir" in js
     assert "kanonik kanıt alanlarının deterministik sunum sırasıdır" in js
     assert 'data-evidence-id="' in js
