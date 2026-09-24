@@ -320,7 +320,7 @@ def test_galactech_system_exposes_event_source_without_online_claim(
 
     assert 'id="systemEventSource"' in html
     assert 'id="systemEventSourceNote"' in html
-    assert "EVENT SOURCE RUNTIME" in html
+    assert "OLAY KAYNAĞI ÇALIŞMA DURUMU" in html
     assert 'eventSourceStatus: "/api/event-source-runtime/status"' in js
     assert '"eventSourceStatus"' in js
     assert '"systemEventSource"' in js

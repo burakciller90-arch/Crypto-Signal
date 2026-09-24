@@ -639,7 +639,7 @@ def test_galactech_system_binds_market_data_truth_without_online_claim(
     assert 'id="systemColdArchive"' in html
     assert 'id="systemColdArchiveNote"' in html
     assert "OLAY KAYNAĞI ÇALIŞMA DURUMU" in html
-    assert "NOT EXPOSED" in html
+    assert "SUNULMUYOR" in html
 
     assert 'marketTapeStatus: "/api/market-tape-runtime/status"' in js
     assert 'coldArchiveStatus: "/api/cold-archive/status?verify_limit=24"' in js

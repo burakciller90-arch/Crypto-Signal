@@ -190,7 +190,7 @@ def test_galactech_exposes_shadow_rail_without_live_trade_claims(
     assert 'id="shadowRailOverview"' in html
     assert 'id="systemShadowRail"' in html
     assert 'id="systemShadowRailNote"' in html
-    assert "SHADOW DECISION RAIL" in html
+    assert "DENEME KARAR HATTI" in html
     assert "no canonical writes" in html
 
     assert 'shadowRail: "/api/shadow-decision-rail/status"' in js

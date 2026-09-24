@@ -202,7 +202,7 @@ def test_galactech_evidence_room_uses_exact_cycle_manifest_link(
     assert "shadowForecastCycle: (identity) =>" in js
     assert "/api/shadow-decision-rail/forecast/" in js
     assert "function renderShadowCycleExtension(payload)" in js
-    assert "R25 CAPITAL DECISION LINEAGE" in js
+    assert "R25 SERMAYE KARARI SOY AĞACI" in js
     assert "CAPITAL SCIENCE" in js
     assert "POSITION SIZING" in js
     assert "SHADOW JOURNAL REF" in js

@@ -211,7 +211,7 @@ def test_galactech_system_exposes_provider_divergence_without_consensus(
 
     assert 'id="systemProviderDivergence"' in html
     assert 'id="systemProviderDivergenceNote"' in html
-    assert "PROVIDER DIVERGENCE" in html
+    assert "VERİ SAĞLAYICI AYRIŞMASI" in html
     assert "consensus not inferred" in html.lower()
     assert (
         'providerDivergenceStatus: "/api/provider-divergence/status"'

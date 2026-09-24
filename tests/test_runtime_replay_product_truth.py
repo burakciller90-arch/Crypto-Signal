@@ -203,4 +203,4 @@ def test_galactech_evidence_room_labels_runtime_replay_truth_explicitly(
     assert "runtime_instance_identity" in js
     assert "first_observed_at_ms" in js
     assert "replay_observed_at_ms" in js
-    assert "Restart/replay:" in js
+    assert "Yeniden başlatma/tekrar:" in js
