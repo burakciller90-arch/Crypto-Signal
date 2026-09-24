@@ -92,6 +92,39 @@ def test_wc2_same_cycle_persists_explicit_hold_cash_without_fill(
     assert R25ShadowCycleManifest(manifest_path).verify_read_only().record_count == 1
 
 
+def test_wc2_same_cycle_hold_cash_needs_no_numeric_sizing_policy(
+    tmp_path: Path,
+) -> None:
+    issuance, cohort, cohort_journal = _cohort(tmp_path)
+    shadow_path, manifest_path = _paths(tmp_path)
+    issued = issuance.forecast.issued_at_ms
+
+    result = persist_wc2_same_cycle_hold_cash_intent(
+        issuance,
+        cohort,
+        event_context=_event_context(),
+        base_asset="BTC",
+        activation=_activation(),
+        sizing_policy=None,
+        shadow_journal=R25ShadowIntentJournal(shadow_path),
+        shadow_manifest=R25ShadowCycleManifest(manifest_path),
+        cohort_journal=cohort_journal,
+        capital_assessed_at_ms=issued + 1,
+        sized_at_ms=issued + 2,
+        previewed_at_ms=issued + 3,
+        indexed_at_ms=issued + 3,
+    )
+
+    status = cohort_journal.verify_read_only()
+    assert result.action is PaperAction.HOLD_CASH
+    assert result.explicit_review_used is False
+    assert result.simulated_execution_created is False
+    assert result.canonical_epoch2_mutation is False
+    assert status.forecast_count == 1
+    assert status.intent_count == 1
+    assert status.execution_count == 0
+
+
 def test_wc2_same_cycle_exact_replay_is_idempotent(
     tmp_path: Path,
 ) -> None:
