@@ -60,6 +60,7 @@ def compose_exact_decision(
     calibrated_probability: CalibratedProbabilityEvidence | None = None,
     calibration_scope: CalibrationScope | None = None,
     forecast_version_refs: tuple[ForecastVersionRef, ...] = (),
+    forecast_source_evidence_identities: tuple[str, ...] = (),
 ) -> UnifiedDecisionIssuance:
     """Compose exact accepted sources; no surrogate or hidden evidence creation."""
     if geometry_family.family is not ConfluenceFamily.GEOMETRY:
@@ -127,6 +128,9 @@ def compose_exact_decision(
         calibrated_probability=calibrated_probability,
         calibration_scope=calibration_scope,
         forecast_version_refs=forecast_version_refs,
+        forecast_source_evidence_identities=(
+            forecast_source_evidence_identities
+        ),
     )
 
 

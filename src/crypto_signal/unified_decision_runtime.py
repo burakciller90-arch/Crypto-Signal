@@ -110,6 +110,7 @@ def issue_unified_decision(
     calibrated_probability: CalibratedProbabilityEvidence | None = None,
     calibration_scope: CalibrationScope | None = None,
     forecast_version_refs: tuple[ForecastVersionRef, ...] = (),
+    forecast_source_evidence_identities: tuple[str, ...] = (),
 ) -> UnifiedDecisionIssuance:
     """Compose one exact-PIT shadow/research decision and persist it atomically.
 
@@ -157,9 +158,16 @@ def issue_unified_decision(
         calibrated_probability=calibrated_probability,
         calibration_scope=calibration_scope,
         extra_version_refs=forecast_version_refs,
+        extra_source_evidence_identities=(
+            forecast_source_evidence_identities
+        ),
     )
 
-    methodology = _methodology_slice(signal, confluence)
+    methodology = _methodology_slice(
+        signal,
+        confluence,
+        extra_lineage_identities=forecast_source_evidence_identities,
+    )
     proof = build_decision_proof_snapshot(
         forecast,
         (*preflight_proof_slices, methodology),
@@ -292,28 +300,43 @@ def _validate_family_proof_coverage(
 def _methodology_slice(
     signal: SignalDecision,
     confluence: ConfluenceMatrixSnapshot,
+    *,
+    extra_lineage_identities: tuple[str, ...] = (),
 ) -> DecisionProofEvidenceSlice:
     if confluence.freshness_0_1 is None:
         raise ValueError(
             "unified runtime requires measured M6 freshness for methodology proof"
         )
     verdict = _methodology_verdict(confluence)
+    evidence_identities = tuple(
+        sorted(
+            {
+                signal.freeze_identity,
+                confluence.snapshot_identity,
+                *extra_lineage_identities,
+            }
+        )
+    )
+    summary_codes = {
+        f"m6_resolution_{confluence.resolution.value}",
+        f"signal_state_{signal.state.value}",
+    }
+    if extra_lineage_identities:
+        summary_codes.add("extra_forecast_source_lineage_bound")
     return build_decision_proof_evidence_slice(
         domain=ProofEvidenceDomain.METHODOLOGY,
         availability=ProofEvidenceAvailability.AVAILABLE,
         verdict=verdict,
-        evidence_identities=(
-            signal.freeze_identity,
-            confluence.snapshot_identity,
-        ),
+        evidence_identities=evidence_identities,
         market_available_at_ms=signal.as_of_ms,
         observed_at_ms=signal.as_of_ms,
         freshness_0_1=confluence.freshness_0_1,
-        source_quality="accepted_signal_plus_m6",
-        summary_codes=(
-            f"m6_resolution_{confluence.resolution.value}",
-            f"signal_state_{signal.state.value}",
+        source_quality=(
+            "accepted_signal_plus_m6_plus_operational_lineage"
+            if extra_lineage_identities
+            else "accepted_signal_plus_m6"
         ),
+        summary_codes=tuple(sorted(summary_codes)),
     )
 
 

@@ -52,6 +52,7 @@ from crypto_signal.signals.models import SignalDecision, SignalDirection, Signal
 from crypto_signal.unified_decision_runtime import UnifiedDecisionIssuance
 
 WC2_LIVE_SOURCE_ADAPTER_VERSION = "wc2-live-source-adapter-v1/1"
+WC2_COLLECTION_PROTOCOL_VERSION_COMPONENT = "wc2_collection_protocol"
 WC2_MISSING_CONTEXT_POLICY_VERSION = (
     "wc2-missing-pit-context-fail-closed-v1/1"
 )
@@ -318,6 +319,7 @@ def issue_accepted_wc2_live_source(
     target_label: str,
     base_asset: str,
     ledger: ImmutableDecisionEvidenceLedger,
+    collection_protocol_identity: str | None = None,
 ) -> UnifiedDecisionIssuance:
     """Issue exact R20 from already accepted WC2 PIT inputs.
 
@@ -339,6 +341,25 @@ def issue_accepted_wc2_live_source(
         raise ValueError("WC2 accepted source requires frozen geometry")
     if target_label not in {item.label for item in signal.geometry.targets}:
         raise ValueError("WC2 accepted source target is not frozen geometry")
+    if collection_protocol_identity is not None:
+        _require_sha256(
+            collection_protocol_identity,
+            "WC2 collection protocol",
+        )
+
+    version_refs = [
+        ForecastVersionRef(
+            "wc2_live_source_adapter",
+            WC2_LIVE_SOURCE_ADAPTER_VERSION,
+        ),
+    ]
+    if collection_protocol_identity is not None:
+        version_refs.append(
+            ForecastVersionRef(
+                WC2_COLLECTION_PROTOCOL_VERSION_COMPONENT,
+                collection_protocol_identity,
+            )
+        )
 
     return compose_exact_decision(
         signal=signal,
@@ -352,11 +373,11 @@ def issue_accepted_wc2_live_source(
         horizon_bars=horizon_bars,
         target_label=target_label,
         ledger=ledger,
-        forecast_version_refs=(
-            ForecastVersionRef(
-                "wc2_live_source_adapter",
-                WC2_LIVE_SOURCE_ADAPTER_VERSION,
-            ),
+        forecast_version_refs=tuple(version_refs),
+        forecast_source_evidence_identities=(
+            ()
+            if collection_protocol_identity is None
+            else (collection_protocol_identity,)
         ),
     )
 
@@ -370,6 +391,7 @@ def issue_same_cycle_untouched_forward_forecast(
     horizon_bars: int,
     base_asset: str,
     ledger: ImmutableDecisionEvidenceLedger,
+    collection_protocol_identity: str | None = None,
 ) -> UnifiedDecisionIssuance:
     """Issue R20 only from a fresh same-cycle immutable bundle.
 
@@ -408,6 +430,7 @@ def issue_same_cycle_untouched_forward_forecast(
         target_label=first_target.label,
         base_asset=base_asset,
         ledger=ledger,
+        collection_protocol_identity=collection_protocol_identity,
     )
 
 

@@ -35,6 +35,9 @@ class FailingDecisionLedger(ImmutableDecisionEvidenceLedger):
         raise RuntimeError("forced R20 persistence crash")
 
 
+PROTOCOL_IDENTITY = "f" * 64
+
+
 def _context(bundle) -> LiveCoverageContext:
     signal = bundle.signal_decision
     return LiveCoverageContext(
@@ -111,6 +114,7 @@ def _call(
     observed_at_ms: int,
     decision_ledger: ImmutableDecisionEvidenceLedger | None = None,
     collection_start_ms: int | None = None,
+    collection_protocol_identity: str = PROTOCOL_IDENTITY,
 ):
     return process_wc2_prepared_live_freeze(
         result,
@@ -131,6 +135,7 @@ def _call(
         maximum_issuance_delay_ms=100,
         horizon_bars=4,
         base_asset="BTC",
+        collection_protocol_identity=collection_protocol_identity,
         collection_start_ms=collection_start_ms,
     )
 
@@ -158,6 +163,11 @@ def test_fresh_prepared_cycle_persists_receipt_forecast_and_hold_cash(
 
     assert result.status is WC2PreparedLiveStatus.COMPLETED_FRESH
     assert result.receipt_identity is not None
+    receipt = WC2PreparedCycleJournal(
+        paths["prepared"]
+    ).read_for_signal(signal.freeze_identity)
+    assert receipt is not None
+    assert receipt.collection_protocol_identity == PROTOCOL_IDENTITY
     assert result.forecast_identity is not None
     assert result.cohort_forecast_identity is not None
     assert result.paper_intent_identity is not None
@@ -414,6 +424,43 @@ def test_operational_collection_boundary_cannot_predate_review_policy(
     assert not paths["prepared"].exists()
     assert not paths["decision"].exists()
     assert not paths["cohort"].exists()
+
+
+def test_replay_refuses_receipt_from_different_collection_protocol(
+    tmp_path: Path,
+) -> None:
+    bundle = directional_bundle()
+    signal = bundle.signal_decision
+    frozen_at = signal.as_of_ms + 10
+    observed_at = frozen_at + 20
+    paths = _paths(tmp_path)
+    ledger = ImmutableSignalLedger(tmp_path / "signal.sqlite3")
+    _persist_source(ledger, bundle, frozen_at_ms=frozen_at)
+    policy = _policy(bundle)
+    activation = _activation()
+
+    first = _call(
+        _fresh(bundle, frozen_at),
+        bundle=bundle,
+        signal_ledger=ledger,
+        policy=policy,
+        activation=activation,
+        paths=paths,
+        observed_at_ms=observed_at,
+    )
+    assert first.status is WC2PreparedLiveStatus.COMPLETED_FRESH
+
+    with pytest.raises(ValueError, match="collection protocol identity mismatch"):
+        _call(
+            _replay(bundle),
+            bundle=bundle,
+            signal_ledger=ledger,
+            policy=policy,
+            activation=activation,
+            paths=paths,
+            observed_at_ms=observed_at + 50_000,
+            collection_protocol_identity="e" * 64,
+        )
 
 
 def test_ineligible_fresh_source_creates_no_wc2_runtime_evidence(
