@@ -61,7 +61,6 @@ from crypto_signal.signals.models import (
     SignalState,
 )
 
-
 AS_OF = 10_000
 EVALUATED_AT = 10_100
 OBSERVED_AT = 20_000
