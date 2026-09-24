@@ -4,6 +4,7 @@ import argparse
 import json
 import os
 import signal
+import sqlite3
 import subprocess
 import time
 import urllib.request
@@ -105,7 +106,7 @@ def _wait_for_initial_state(
                 source="market_tape_stream",
             )
             gap_ok = gap_ledger.quick_check()
-        except Exception as exc:  # bounded diagnostic loop
+        except (OSError, ValueError, sqlite3.Error) as exc:
             last_reason = f"state_not_readable:{type(exc).__name__}:{exc}"
             time.sleep(2)
             continue
@@ -206,7 +207,7 @@ def _read_product_truth(timeout_seconds: int) -> dict[str, Any]:
     ) as response:
         body = json.loads(response.read().decode("utf-8"))
     if not isinstance(body, dict):
-        raise RuntimeError("WC1 Product Market Tape payload is not an object")
+        raise TypeError("WC1 Product Market Tape payload is not an object")
     return body
 
 
@@ -276,7 +277,7 @@ def main() -> int:
         raise RuntimeError("WC1 Product authority/read-only boundary mismatch")
     collector = product.get("collector_runtime")
     if not isinstance(collector, dict):
-        raise RuntimeError("WC1 Product collector runtime evidence missing")
+        raise TypeError("WC1 Product collector runtime evidence missing")
     if collector.get("instance_identity") != new_instance.instance_identity:
         raise RuntimeError("WC1 Product collector instance identity mismatch")
     if collector.get("process_evidence_status") != "HEARTBEAT_FRESH":
