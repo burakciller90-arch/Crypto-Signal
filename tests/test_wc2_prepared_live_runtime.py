@@ -8,6 +8,9 @@ from test_r22_intent_preview import _activation
 from test_wc2_live_source_adapter import _bundle as directional_bundle
 
 from crypto_signal.decision_ledger import ImmutableDecisionEvidenceLedger
+from crypto_signal.evaluation.untouched_forward_collection_protocol import (
+    build_wc2_collection_protocol,
+)
 from crypto_signal.evaluation.untouched_forward_journal import WC2CohortJournal
 from crypto_signal.evaluation.untouched_forward_policy import (
     build_wc2_untouched_forward_policy,
@@ -51,6 +54,20 @@ def _policy(bundle, *, collection_offset_ms: int = -1_000):
     return build_wc2_untouched_forward_policy(
         preregistered_at_ms=start - 1_000,
         collection_start_ms=start,
+    )
+
+
+def _protocol(bundle, policy, activation):
+    collection_start = max(
+        bundle.signal_decision.as_of_ms,
+        policy.collection_start_ms,
+        activation.activated_at_ms,
+    )
+    return build_wc2_collection_protocol(
+        review_policy=policy,
+        activation=activation,
+        preregistered_at_ms=collection_start - 1,
+        collection_start_ms=collection_start,
     )
 
 
@@ -110,13 +127,20 @@ def _call(
     paths: dict[str, Path],
     observed_at_ms: int,
     decision_ledger: ImmutableDecisionEvidenceLedger | None = None,
+    protocol=None,
 ):
+    selected_protocol = (
+        _protocol(bundle, policy, activation)
+        if protocol is None
+        else protocol
+    )
     return process_wc2_prepared_live_freeze(
         result,
         context=_context(bundle),
         signal_ledger=signal_ledger,
         policy=policy,
         activation=activation,
+        protocol=selected_protocol,
         prepared_journal=WC2PreparedCycleJournal(paths["prepared"]),
         decision_ledger=(
             decision_ledger
@@ -127,8 +151,6 @@ def _call(
         shadow_journal=R25ShadowIntentJournal(paths["shadow"]),
         shadow_manifest=R25ShadowCycleManifest(paths["manifest"]),
         observed_at_ms=observed_at_ms,
-        maximum_issuance_delay_ms=100,
-        horizon_bars=4,
         base_asset="BTC",
     )
 
@@ -155,6 +177,21 @@ def test_fresh_prepared_cycle_persists_receipt_forecast_and_hold_cash(
     )
 
     assert result.status is WC2PreparedLiveStatus.COMPLETED_FRESH
+    protocol = _protocol(bundle, _policy(bundle), _activation())
+    persisted = (
+        ImmutableDecisionEvidenceLedger(paths["decision"])
+        .read_issuance_for_signal(signal.freeze_identity)
+    )
+    assert persisted is not None
+    forecast, _ = persisted
+    version_refs = {
+        item["component"]: item["version"]
+        for item in forecast["version_refs"]
+    }
+    assert (
+        version_refs["wc2_collection_protocol"]
+        == protocol.protocol_identity
+    )
     assert result.receipt_identity is not None
     assert result.forecast_identity is not None
     assert result.cohort_forecast_identity is not None
@@ -294,7 +331,7 @@ def test_post_activation_replay_without_receipt_never_backfills(
     assert not paths["manifest"].exists()
 
 
-def test_pre_activation_replay_is_expected_skip_not_receipt_gap(
+def test_pre_protocol_replay_is_expected_skip_not_receipt_gap(
     tmp_path: Path,
 ) -> None:
     bundle = directional_bundle()
@@ -319,7 +356,7 @@ def test_pre_activation_replay_is_expected_skip_not_receipt_gap(
         observed_at_ms=frozen_at + 10_000,
     )
 
-    assert result.status is WC2PreparedLiveStatus.SKIPPED_BEFORE_ACTIVATION
+    assert result.status is WC2PreparedLiveStatus.SKIPPED_BEFORE_COLLECTION
     assert result.receipt_identity is None
     assert not paths["prepared"].exists()
     assert not paths["decision"].exists()
