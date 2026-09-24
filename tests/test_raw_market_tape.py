@@ -109,3 +109,64 @@ def test_raw_market_tape_separates_changed_wire_payload(tmp_path) -> None:
     assert first is RawMarketTapeWriteDisposition.INSERTED
     assert second is RawMarketTapeWriteDisposition.INSERTED
     assert store.count() == 2
+
+
+def test_raw_market_tape_latest_by_context_uses_persisted_ingestion_time(
+    tmp_path,
+) -> None:
+    store = RawMarketTapeStore(tmp_path / "raw_market_tape.sqlite3")
+    book_payload = {
+        "topic": "orderbook.50.BTCUSDT",
+        "type": "delta",
+        "ts": 1_010,
+        "cts": 1_009,
+        "data": {"s": "BTCUSDT", "b": [], "a": [], "u": 11, "seq": 21},
+    }
+    _, first = store.append(
+        exchange=Exchange.BYBIT,
+        channel="orderbook.50",
+        symbol="BTCUSDT",
+        event_kind="delta",
+        source_timestamp_ms=1_010,
+        event_at_ms=1_009,
+        ingested_at_ms=1_020,
+        sequence=21,
+        update_id=11,
+        payload=book_payload,
+    )
+    replay_disposition, replay = store.append(
+        exchange=Exchange.BYBIT,
+        channel="orderbook.50",
+        symbol="BTCUSDT",
+        event_kind="delta",
+        source_timestamp_ms=1_010,
+        event_at_ms=1_009,
+        ingested_at_ms=9_999,
+        sequence=21,
+        update_id=11,
+        payload=book_payload,
+    )
+    _, trade = store.append(
+        exchange=Exchange.BYBIT,
+        channel="publicTrade",
+        symbol="ETHUSDT",
+        event_kind="trade_batch",
+        source_timestamp_ms=2_010,
+        event_at_ms=2_001,
+        ingested_at_ms=2_020,
+        sequence=100,
+        update_id=0,
+        payload={"topic": "publicTrade.ETHUSDT", "data": []},
+    )
+
+    latest = store.latest_by_context(exchange=Exchange.BYBIT)
+
+    assert replay_disposition is RawMarketTapeWriteDisposition.UNCHANGED
+    assert replay.event_identity == first.event_identity
+    assert tuple((event.channel, event.symbol) for event in latest) == (
+        ("orderbook.50", "BTCUSDT"),
+        ("publicTrade", "ETHUSDT"),
+    )
+    assert latest[0].ingested_at_ms == 1_020
+    assert latest[0].event_identity == first.event_identity
+    assert latest[1].event_identity == trade.event_identity
