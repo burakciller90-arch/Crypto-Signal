@@ -24,7 +24,7 @@ jobs:
           set -euo pipefail
           cmd="$(printf '%s\n' "$ISSUE_BODY" | awk -F: 'tolower($1)=="command" {gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2); print tolower($2); exit}')"
           case "$cmd" in
-            status|eventsourcestate|eventsourcesnapshot|blsprobe|fredprobe|services|logs|disk|sync|producttest|fulltest|productstate|productdeploy|paperreview|paperinspect|paperfixlint|paperharden|stateplanreview|stateplaninspect|stateplanharden|cursorreview|cursorreviewtail|cursorcleanup|bridgecheck|bridgestate|rollingstate|pausecheck|wakepause|wakeresume|wakearm|waketest|wakeheartbeat|chatbusyprobe|cursorcheck|cursorauthdiag|cursorttycheck|alertclockstate|alertclockpause|alertclockresume|migrationinspect|migrationinventory|ssddashboarddiag|productcrashlogs|ssddashboardwrappertest|ssdtcclaunchtest|ssdbackgroundteststart|ssdbackgroundtestcheck|ssdleftover|runnerpersistinstall|runnerpersistdiag|runnercutoverdiag|dashboardstart504|runnerterminalwatchdoginstall)
+            status|eventsourcestate|eventsourcesnapshot|blsprobe|fredprobe|wc2policyregister|services|logs|disk|sync|producttest|fulltest|productstate|productdeploy|paperreview|paperinspect|paperfixlint|paperharden|stateplanreview|stateplaninspect|stateplanharden|cursorreview|cursorreviewtail|cursorcleanup|bridgecheck|bridgestate|rollingstate|pausecheck|wakepause|wakeresume|wakearm|waketest|wakeheartbeat|chatbusyprobe|cursorcheck|cursorauthdiag|cursorttycheck|alertclockstate|alertclockpause|alertclockresume|migrationinspect|migrationinventory|ssddashboarddiag|productcrashlogs|ssddashboardwrappertest|ssdtcclaunchtest|ssdbackgroundteststart|ssdbackgroundtestcheck|ssdleftover|runnerpersistinstall|runnerpersistdiag|runnercutoverdiag|dashboardstart504|runnerterminalwatchdoginstall)
               ;;
             *)
               echo "Unsupported command: $cmd"
@@ -59,6 +59,25 @@ jobs:
           echo "EVENT_SOURCE_WORKFLOW_SHA=$GITHUB_SHA"
           test "$WORKSPACE_HEAD" = "$GITHUB_SHA"
           echo "EVENT_SOURCE_EXACT_WORKFLOW_SOURCE_PASS=YES"
+
+      - name: CHECKOUT EXACT WC2 POLICY COMMAND SOURCE
+        if: steps.parse.outputs.command == 'wc2policyregister'
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          clean: true
+          fetch-depth: 1
+
+      - name: VERIFY EXACT WC2 POLICY COMMAND SOURCE
+        if: steps.parse.outputs.command == 'wc2policyregister'
+        shell: bash
+        run: |
+          set -euo pipefail
+          WORKSPACE_HEAD="$(git -C "$GITHUB_WORKSPACE" rev-parse HEAD)"
+          echo "WC2_POLICY_WORKSPACE_HEAD=$WORKSPACE_HEAD"
+          echo "WC2_POLICY_WORKFLOW_SHA=$GITHUB_SHA"
+          test "$WORKSPACE_HEAD" = "$GITHUB_SHA"
+          echo "WC2_POLICY_EXACT_WORKFLOW_SOURCE_PASS=YES"
 
       - name: STATUS
         if: steps.parse.outputs.command == 'status'
@@ -334,6 +353,37 @@ jobs:
           echo "EVENT_SOURCE_SNAPSHOT_BOUNDED_PASS=YES"
           echo "EVENT_SOURCE_SNAPSHOT_APPEND_ONLY_EVIDENCE=YES"
           echo "EVENT_SOURCE_ONLINE_NOT_ASSERTED_PASS=YES"
+          echo "REAL_CAPITAL=0"
+
+      - name: WC2 POLICY REGISTER
+        if: steps.parse.outputs.command == 'wc2policyregister'
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          DEV="$ROOT/Development"
+          POLICY_DB="$DEV/runtime/wc2/wc2_forward_policy.sqlite3"
+          PY="$DEV/.venv/bin/python"
+          REGISTER="$GITHUB_WORKSPACE/ops/register_wc2_forward_policy.py"
+
+          test "$(id -u)" = "504"
+          test -x "$PY"
+          test -f "$REGISTER"
+
+          echo "=== WC2 POLICY REGISTER PRE-STATE ==="
+          echo "DEVELOPMENT_HEAD=$(git -C "$DEV" rev-parse HEAD 2>/dev/null || true)"
+          echo "WORKFLOW_SHA=$GITHUB_SHA"
+          before="MISSING"
+          [ -f "$POLICY_DB" ] && before="$(shasum -a 256 "$POLICY_DB" | awk '{print $1}')"
+          echo "WC2_POLICY_DB_SHA256_BEFORE=$before"
+
+          PYTHONPATH="$GITHUB_WORKSPACE/src" "$PY" "$REGISTER" \
+            --db "$POLICY_DB"
+
+          test -f "$POLICY_DB"
+          after="$(shasum -a 256 "$POLICY_DB" | awk '{print $1}')"
+          echo "WC2_POLICY_DB_SHA256_AFTER=$after"
+          echo "WC2_POLICY_REGISTER_BOUNDED_PASS=YES"
           echo "REAL_CAPITAL=0"
 
       - name: BLS SOURCE PROBE
