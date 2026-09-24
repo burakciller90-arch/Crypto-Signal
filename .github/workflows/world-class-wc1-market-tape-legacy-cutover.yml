@@ -14,15 +14,12 @@ permissions:
 jobs:
   static-acceptance:
     if: github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, crypto-signal, uid504]
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha }}
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
       - name: Verify bounded cutover contract
         shell: bash
         run: |
