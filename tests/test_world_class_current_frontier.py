@@ -315,11 +315,43 @@ def test_wc4_engineering_cycle_is_blocker_boundary_not_regime_edge_evidence() ->
     assert claim.status is WC7EvidenceStatus.MISSING
     assert claim.evidence_identity is None
     assert provenance.source_artifact_identity is None
+    assert provenance.blocker_boundary_identity is not None
     assert (
         provenance.blocker_boundary_identity
-        == inputs.wc4_research_cycle_identity
+        != inputs.wc4_research_cycle_identity
     )
+    assert inputs.wc4_research_cycle_identity in provenance.source_reference
     assert "durable" in claim.evidence_note.lower()
+
+
+def test_current_frontier_uses_explicit_distinct_blocker_boundaries() -> None:
+    inputs = _inputs(eligible_wc2=False)
+    snapshot = build_wc7_current_frontier_snapshot(inputs)
+    provenance = _provenance_by_dimension(snapshot)
+
+    cost = provenance[WC7EvidenceDimension.COST_ADJUSTED_EXPECTANCY]
+    drawdown = provenance[WC7EvidenceDimension.CONTROLLED_DRAWDOWN]
+    regime = provenance[WC7EvidenceDimension.REGIME_ROBUSTNESS]
+    usability = provenance[
+        WC7EvidenceDimension.USABILITY_WITHOUT_HIDDEN_UNCERTAINTY
+    ]
+
+    identities = {
+        cost.blocker_boundary_identity,
+        drawdown.blocker_boundary_identity,
+        regime.blocker_boundary_identity,
+        usability.blocker_boundary_identity,
+    }
+    assert None not in identities
+    assert len(identities) == 4
+    assert cost.blocker_boundary_identity != inputs.wc2_readiness.readiness_identity
+    assert (
+        drawdown.blocker_boundary_identity
+        != inputs.wc2_readiness.readiness_identity
+    )
+    assert regime.blocker_boundary_identity != inputs.wc4_research_cycle_identity
+    assert usability.source_kind is WC7EvidenceSourceKind.NOT_MEASURED_BOUNDARY
+    assert usability.source_artifact_identity is None
 
 
 def test_wc7_current_frontier_rejects_invalid_accepted_boundary_identity() -> None:
