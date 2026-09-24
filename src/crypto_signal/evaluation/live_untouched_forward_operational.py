@@ -36,6 +36,11 @@ from crypto_signal.intelligence.meta_intelligence import (
 from crypto_signal.intelligence.news_event_risk import (
     build_news_evidence_freeze,
 )
+from crypto_signal.intelligence.regime import (
+    REGIME_ENGINE_VERSION,
+    RegimeLabel,
+    build_regime_evidence_freeze,
+)
 from crypto_signal.ledger.bundle import (
     DecisionFreezeBundle,
     verify_bundle_identity,
@@ -53,6 +58,7 @@ from crypto_signal.unified_decision_runtime import UnifiedDecisionIssuance
 
 WC2_LIVE_SOURCE_ADAPTER_VERSION = "wc2-live-source-adapter-v1/1"
 WC2_COLLECTION_PROTOCOL_VERSION_COMPONENT = "wc2_collection_protocol"
+WC2_REGIME_ENGINE_VERSION_COMPONENT = "wc2_regime_engine"
 WC2_MISSING_CONTEXT_POLICY_VERSION = (
     "wc2-missing-pit-context-fail-closed-v1/1"
 )
@@ -68,7 +74,7 @@ class WC2LiveSourceInputs:
     geometry_proof_slices: tuple[DecisionProofEvidenceSlice, ...]
     accepted_m2_m5: AcceptedFamilyAdapterBundle
     event_context: CircuitBreakerAnalysis
-    regime: str = WC2_UNMEASURED_REGIME
+    regime: str
     production_authority: bool = False
     real_capital: int = REAL_CAPITAL
 
@@ -99,12 +105,33 @@ class WC2LiveSourceInputs:
             self.bundle_identity,
             self.consumed_candles_identity,
         }
-        if set(self.geometry_family.source_evidence_identities) != (
-            required_geometry_sources
+        geometry_sources = set(
+            self.geometry_family.source_evidence_identities
+        )
+        regime_sources = geometry_sources - required_geometry_sources
+        if (
+            not required_geometry_sources.issubset(geometry_sources)
+            or len(regime_sources) != 1
         ):
             raise ValueError("WC2 geometry source lineage mismatch")
-        if self.regime != WC2_UNMEASURED_REGIME:
-            raise ValueError("WC2 live source cannot invent regime truth")
+        if f"regime:{REGIME_ENGINE_VERSION}" not in (
+            self.geometry_family.source_engine_ids
+        ):
+            raise ValueError("WC2 regime engine lineage missing")
+        measured_regimes = {
+            label.value
+            for label in RegimeLabel
+            if label is not RegimeLabel.UNRESOLVED
+        }
+        if self.regime not in measured_regimes:
+            raise ValueError("WC2 live source requires measured PIT regime")
+        if self.geometry_family.regime != self.regime:
+            raise ValueError("WC2 geometry/regime mismatch")
+        if any(
+            item.regime != self.regime
+            for item in self.accepted_m2_m5.families
+        ):
+            raise ValueError("WC2 M2-M5/regime mismatch")
         if self.event_context.state is not CircuitBreakerState.DEGRADED_DATA:
             raise ValueError(
                 "WC2 missing-context source must fail closed to DEGRADED_DATA"
@@ -138,13 +165,27 @@ def adapt_same_cycle_legacy_bundle(
         raise ValueError("WC2 signal/base asset mismatch")
 
     candles_identity = canonical_sha256(bundle.candles)
+    regime_freeze = build_regime_evidence_freeze(
+        bundle.candles,
+        as_of_ms=signal.as_of_ms,
+    )
+    if regime_freeze.analysis.label is RegimeLabel.UNRESOLVED:
+        raise ValueError("WC2 live source requires resolved PIT regime evidence")
+    regime = regime_freeze.analysis.label.value
     source_ids = tuple(
-        sorted((bundle.bundle_identity, candles_identity))
+        sorted(
+            (
+                bundle.bundle_identity,
+                candles_identity,
+                regime_freeze.freeze_identity,
+            )
+        )
     )
     engine_ids = tuple(
         sorted(
             {
                 f"legacy_signal:{signal.signal_version}",
+                f"regime:{REGIME_ENGINE_VERSION}",
                 *(
                     f"{item.methodology.value}:{item.version}"
                     for item in signal.methodology_versions
@@ -174,7 +215,6 @@ def adapt_same_cycle_legacy_bundle(
     uncertainty = {
         "legacy_geometry_source_is_not_probability",
         "same_pit_snapshot_freshness_not_predictive_quality",
-        "regime_not_measured",
     }
     if has_opposition:
         uncertainty.add("legacy_methodology_opposition_forces_geometry_abstain")
@@ -183,7 +223,7 @@ def adapt_same_cycle_legacy_bundle(
         family=ConfluenceFamily.GEOMETRY,
         asset=signal.symbol,
         timeframe=signal.timeframe,
-        regime=WC2_UNMEASURED_REGIME,
+        regime=regime,
         as_of_ms=signal.as_of_ms,
         state=state,
         direction=direction,
@@ -215,13 +255,21 @@ def adapt_same_cycle_legacy_bundle(
         domain=ProofEvidenceDomain.CONSUMED_CANDLES,
         availability=ProofEvidenceAvailability.AVAILABLE,
         verdict=ProofEvidenceVerdict.NEUTRAL,
-        evidence_identities=(candles_identity,),
+        evidence_identities=tuple(
+            sorted(
+                (
+                    candles_identity,
+                    regime_freeze.freeze_identity,
+                )
+            )
+        ),
         market_available_at_ms=signal.as_of_ms,
         observed_at_ms=signal.as_of_ms,
         freshness_0_1=Decimal(1),
-        source_quality="exact_immutable_consumed_candles",
+        source_quality="exact_consumed_candles_with_pit_regime_freeze",
         summary_codes=(
             "consumed_candle_content_digest",
+            "pit_regime_freeze_derived_from_consumed_candles",
             "same_pit_snapshot_not_predictive_quality",
         ),
     )
@@ -230,7 +278,7 @@ def adapt_same_cycle_legacy_bundle(
         symbol=signal.symbol,
         base_asset=base_asset,
         timeframe=signal.timeframe,
-        regime=WC2_UNMEASURED_REGIME,
+        regime=regime,
         as_of_ms=signal.as_of_ms,
     )
     event_context = build_missing_pit_event_context(
@@ -244,6 +292,7 @@ def adapt_same_cycle_legacy_bundle(
         geometry_proof_slices=(chart, candles),
         accepted_m2_m5=accepted,
         event_context=event_context,
+        regime=regime,
     )
 
 
@@ -352,6 +401,10 @@ def issue_accepted_wc2_live_source(
             "wc2_live_source_adapter",
             WC2_LIVE_SOURCE_ADAPTER_VERSION,
         ),
+        ForecastVersionRef(
+            WC2_REGIME_ENGINE_VERSION_COMPONENT,
+            REGIME_ENGINE_VERSION,
+        ),
     ]
     if collection_protocol_identity is not None:
         version_refs.append(
@@ -374,10 +427,17 @@ def issue_accepted_wc2_live_source(
         target_label=target_label,
         ledger=ledger,
         forecast_version_refs=tuple(version_refs),
-        forecast_source_evidence_identities=(
-            ()
-            if collection_protocol_identity is None
-            else (collection_protocol_identity,)
+        forecast_source_evidence_identities=tuple(
+            sorted(
+                {
+                    *inputs.geometry_family.source_evidence_identities,
+                    *(
+                        ()
+                        if collection_protocol_identity is None
+                        else (collection_protocol_identity,)
+                    ),
+                }
+            )
         ),
     )
 
