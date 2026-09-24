@@ -1,0 +1,26 @@
+name: Diagnostic SSD Clock Wrapper
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/diag-ssd-clock-wrapper.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  inspect-wrapper:
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 5
+    steps:
+      - name: Read wrapper and current child tree
+        shell: bash
+        run: |
+          set +e
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          echo "=== WRAPPER ==="
+          sed -n "1,260p" "$ROOT/ssd-clock-wrapper.py" 2>/dev/null
+          echo "=== CLOCK PROCESSES ==="
+          ps -axo pid=,ppid=,%cpu=,%mem=,etime=,state=,command= | grep -E "[s]sd-clock-wrapper.py|[r]un_alert_clock.py|[r]un_paper|[r]un_live_evidence_clock.py" | head -120
+          echo "SSD_CLOCK_WRAPPER_DIAG_PASS=YES"
