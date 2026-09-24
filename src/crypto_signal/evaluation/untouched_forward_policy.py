@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import sqlite3
 from dataclasses import dataclass
 from enum import StrEnum
@@ -564,6 +565,40 @@ class WC2PolicyStore:
                 ),
             )
         return True
+
+    def latest(self) -> WC2UntouchedForwardPolicy | None:
+        if not self.path.is_file():
+            return None
+        uri = f"{self.path.resolve().as_uri()}?mode=ro"
+        with sqlite3.connect(uri, uri=True) as db:
+            db.execute("PRAGMA query_only=ON")
+            quick = db.execute("PRAGMA quick_check").fetchone()
+            if quick is None or str(quick[0]).lower() != "ok":
+                raise ValueError("WC2 policy registry quick_check failed")
+            row = db.execute(
+                """
+                SELECT policy_identity, payload_json
+                FROM wc2_forward_policies
+                ORDER BY sequence_id DESC
+                LIMIT 1
+                """
+            ).fetchone()
+        if row is None:
+            return None
+        identity = str(row[0])
+        payload_json = str(row[1])
+        payload = json.loads(payload_json)
+        if not isinstance(payload, dict):
+            raise TypeError("WC2 policy payload must be object")
+        policy = build_wc2_untouched_forward_policy(
+            preregistered_at_ms=int(payload["preregistered_at_ms"]),
+            collection_start_ms=int(payload["collection_start_ms"]),
+        )
+        if policy.policy_identity != identity:
+            raise ValueError("WC2 stored policy identity mismatch")
+        if canonical_json(_policy_payload(policy)) != payload_json:
+            raise ValueError("WC2 stored policy payload mismatch")
+        return policy
 
     def count(self) -> int:
         if not self.path.is_file():
