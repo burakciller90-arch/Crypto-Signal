@@ -277,6 +277,7 @@ def test_same_cycle_issuance_rejects_backdating_and_stale_delay(
             maximum_issuance_delay_ms=100,
             horizon_bars=4,
             base_asset="BTC",
+            collection_protocol_identity=PROTOCOL_IDENTITY,
             ledger=ImmutableDecisionEvidenceLedger(
                 tmp_path / "backdated.sqlite3"
             ),
@@ -290,6 +291,7 @@ def test_same_cycle_issuance_rejects_backdating_and_stale_delay(
             maximum_issuance_delay_ms=100,
             horizon_bars=4,
             base_asset="BTC",
+            collection_protocol_identity=PROTOCOL_IDENTITY,
             ledger=ImmutableDecisionEvidenceLedger(
                 tmp_path / "stale.sqlite3"
             ),
@@ -332,6 +334,7 @@ def test_tampered_bundle_is_rejected_before_decision_ledger_creation(
             maximum_issuance_delay_ms=100,
             horizon_bars=4,
             base_asset="BTC",
+            collection_protocol_identity=PROTOCOL_IDENTITY,
             ledger=ImmutableDecisionEvidenceLedger(decision_path),
         )
 
