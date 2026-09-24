@@ -25,6 +25,7 @@ from crypto_signal.data.market_tape_collector_runtime import (
     build_collector_instance,
 )
 from crypto_signal.data.market_tape_wire_collection import (
+    MarketTapeWireCollectionResult,
     persist_bybit_wire_stream,
 )
 from crypto_signal.data.models import Exchange
@@ -165,6 +166,8 @@ async def run(args: argparse.Namespace) -> int:
             flush=True,
         )
         return 3
+    baseline_normalized_rows_total = store.counts().total
+    baseline_raw_rows_total = raw_store.count()
 
     runtime_store = MarketTapeCollectorRuntimeStore(args.runtime_status_db)
     gap_ledger = MarketDataGapLedger(args.gap_ledger_db)
@@ -202,21 +205,22 @@ async def run(args: argparse.Namespace) -> int:
     heartbeat_sequence = 0
     last_ingestion_ms: int | None = None
     last_observed_messages = 0
+    normalized_rows_total = baseline_normalized_rows_total
+    raw_rows_total = baseline_raw_rows_total
     heartbeat_stop = asyncio.Event()
 
     def emit_heartbeat() -> None:
         nonlocal heartbeat_sequence
         observed_at_ms = time.time_ns() // 1_000_000
         heartbeat_sequence += 1
-        counts = store.counts()
         heartbeat = build_collector_heartbeat(
             instance_identity=instance.instance_identity,
             sequence_no=heartbeat_sequence,
             observed_at_ms=observed_at_ms,
             last_successful_ingestion_ms=last_ingestion_ms,
             observed_messages_total=last_observed_messages,
-            normalized_rows_total=counts.total,
-            raw_rows_total=raw_store.count(),
+            normalized_rows_total=normalized_rows_total,
+            raw_rows_total=raw_rows_total,
         )
         runtime_store.append_heartbeat(heartbeat)
         gap_monitor.check_silence(
@@ -236,6 +240,17 @@ async def run(args: argparse.Namespace) -> int:
                 emit_heartbeat()
                 continue
             return
+
+    def persist_collection_progress(
+        progress: MarketTapeWireCollectionResult,
+    ) -> None:
+        nonlocal normalized_rows_total
+        nonlocal raw_rows_total
+        normalized_rows_total = (
+            baseline_normalized_rows_total
+            + progress.normalized_inserted_total
+        )
+        raw_rows_total = baseline_raw_rows_total + progress.raw_inserted
 
     def persist_progress(
         event: BybitMicrostructureWireEvent,
@@ -276,6 +291,7 @@ async def run(args: argparse.Namespace) -> int:
             max_messages=(None if args.max_events == 0 else args.max_events),
             progress_callback=persist_progress,
             persisted_event_callback=persist_raw_event,
+            collection_progress_callback=persist_collection_progress,
         )
         emit_heartbeat()
     except (OSError, sqlite3.Error, ValueError) as exc:
