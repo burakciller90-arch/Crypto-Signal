@@ -20,6 +20,7 @@ from crypto_signal.evaluation.untouched_forward_paper import (
 from crypto_signal.evaluation.untouched_forward_policy import (
     build_wc2_untouched_forward_policy,
 )
+from crypto_signal.paper.epoch2_accounting import build_epoch2_activation_record
 from crypto_signal.paper.models import PaperAction
 from crypto_signal.paper.shadow_cycle_manifest import R25ShadowCycleManifest
 from crypto_signal.paper.shadow_intent_journal import R25ShadowIntentJournal
@@ -163,21 +164,10 @@ def test_wc2_same_cycle_rejects_epoch2_activation_after_forecast_before_writes(
     issuance, cohort, cohort_journal = _cohort(tmp_path)
     shadow_path, manifest_path = _paths(tmp_path)
     issued = issuance.forecast.issued_at_ms
-    late_activation = _activation()
-    late_activation = type(late_activation)(
-        activation_identity=late_activation.activation_identity,
-        schema_version=late_activation.schema_version,
-        engine_version=late_activation.engine_version,
-        epoch_identity=late_activation.epoch_identity,
-        predecessor_epoch_identity=late_activation.predecessor_epoch_identity,
+    base_activation = _activation()
+    late_activation = build_epoch2_activation_record(
         activated_at_ms=issued + 10,
-        starting_cash_usdt=late_activation.starting_cash_usdt,
-        vault_starting_cash=late_activation.vault_starting_cash,
-        epoch1_ledger_sha256=late_activation.epoch1_ledger_sha256,
-        real_capital=late_activation.real_capital,
-        leverage_allowed=late_activation.leverage_allowed,
-        borrowing_allowed=late_activation.borrowing_allowed,
-        martingale_allowed=late_activation.martingale_allowed,
+        epoch1_ledger_sha256=base_activation.epoch1_ledger_sha256,
     )
 
     with pytest.raises(ValueError):
