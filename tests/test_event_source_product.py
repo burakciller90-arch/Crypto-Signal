@@ -5,6 +5,7 @@ import sqlite3
 from pathlib import Path
 
 import pytest
+from fastapi.testclient import TestClient
 
 from crypto_signal.data.event_risk import (
     EventCategory,
@@ -27,6 +28,7 @@ from crypto_signal.intelligence.event_risk import (
 from crypto_signal.product.event_source_runtime import (
     read_event_source_runtime_truth,
 )
+from crypto_signal.product.web import create_app
 
 
 def _seed(path: Path) -> EventSourceRuntimeStore:
@@ -215,3 +217,113 @@ def test_event_source_missing_runtime_creates_nothing(tmp_path: Path) -> None:
         read_event_source_runtime_truth(path, observed_at_ms=1_500)
 
     assert not path.exists()
+
+
+def test_event_source_endpoint_exposes_persisted_partial_truth_read_only(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / "event_source.sqlite3"
+    _seed(path)
+    before = {
+        item.name: item.read_bytes()
+        for item in tmp_path.iterdir()
+        if item.is_file()
+    }
+    client = TestClient(
+        create_app(
+            tmp_path / "missing-signals.sqlite3",
+            event_source_path=path,
+        )
+    )
+
+    response = client.get(
+        "/api/event-source/status?observed_at_ms=3000"
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "ready"
+    assert body["database_filename"] == "event_source.sqlite3"
+    assert body["runtime_status"] == "PERSISTED_EVIDENCE_ONLY"
+    assert body["online_status"] == "NOT_ASSERTED"
+    assert body["calendar_completeness"] == "PARTIAL"
+    assert body["missing_required_calendar_categories"]
+    assert body["read_only"] is True
+    assert body["real_capital"] == 0
+    assert body["snapshot"]["latest_calendar_coverage"][
+        "completeness_status"
+    ] == "PARTIAL"
+    assert "payload_blob" not in json.dumps(body)
+    assert client.post("/api/event-source/status").status_code == 405
+
+    after = {
+        item.name: item.read_bytes()
+        for item in tmp_path.iterdir()
+        if item.is_file()
+    }
+    assert after == before
+
+
+def test_event_source_endpoint_missing_runtime_creates_nothing(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / "event-source-missing.sqlite3"
+    client = TestClient(
+        create_app(
+            tmp_path / "missing-signals.sqlite3",
+            event_source_path=path,
+        )
+    )
+
+    body = client.get("/api/event-source/status").json()
+
+    assert body["status"] == "unavailable"
+    assert body["reason"] == "event_source_runtime_evidence_missing"
+    assert body["runtime_status"] == "NOT_EXPOSED"
+    assert body["online_status"] == "NOT_ASSERTED"
+    assert body["read_only"] is True
+    assert body["real_capital"] == 0
+    assert not path.exists()
+
+
+def test_event_source_operational_truth_is_additive_not_r25_required(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / "event_source.sqlite3"
+    _seed(path)
+    client = TestClient(
+        create_app(
+            tmp_path / "missing-signals.sqlite3",
+            event_source_path=path,
+        )
+    )
+
+    body = client.get("/api/r25/operational-truth").json()
+
+    component = body["components"]["event_source_runtime"]
+    assert component["status"] == "ready"
+    assert component["latest_fetch_count"] == 1
+    assert component["calendar_completeness"] == "PARTIAL"
+    assert component["online_status"] == "NOT_ASSERTED"
+    assert body["production_authority"] is False
+    assert body["real_capital"] == 0
+
+
+def test_galactech_event_source_truth_never_claims_online_or_complete(
+    tmp_path: Path,
+) -> None:
+    client = TestClient(create_app(tmp_path / "missing-signals.sqlite3"))
+
+    html = client.get("/galactech").text
+    js = client.get("/galactech-static/app.js").text
+
+    assert 'id="systemEventSource"' in html
+    assert 'id="systemEventSourceNote"' in html
+    assert "EVENT SOURCE RUNTIME" in html
+    assert "ONLINE not asserted" in html
+    assert 'eventSourceStatus: "/api/event-source/status"' in js
+    assert '"eventSourceStatus"' in js
+    assert '"systemEventSource"' in js
+    assert "calendar_completeness" in js
+    assert "missing_required_calendar_categories" in js
+    assert "ONLINE NOT ASSERTED" in js
