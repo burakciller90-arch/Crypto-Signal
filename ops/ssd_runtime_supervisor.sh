@@ -92,23 +92,14 @@ run_clock() {
 
 market_tape_pid_is_expected() {
   local pid="$1"
+  local py="$DEV/.venv/bin/python"
   local runner="$DEV/ops/run_market_tape_stream.py"
   [ -n "$pid" ] || return 1
   kill -0 "$pid" >/dev/null 2>&1 || return 1
-  /bin/ps -p "$pid" -o comm=,args= 2>/dev/null \
-    | /usr/bin/awk -v runner="$runner" '
+  /bin/ps -ww -p "$pid" -o uid=,args= 2>/dev/null \
+    | /usr/bin/awk -v py="$py" -v runner="$runner" '
         {
-          comm=tolower($1)
-          if (index(comm, "python") == 0) {
-            exit 1
-          }
-          for (i=2; i<=NF; i++) {
-            if ($i == runner) {
-              found=1
-              break
-            }
-          }
-          exit(found ? 0 : 1)
+          exit($1 == 504 && $2 == py && $3 == runner ? 0 : 1)
         }
       '
 }
