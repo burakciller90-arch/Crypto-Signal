@@ -24,7 +24,7 @@ jobs:
           set -euo pipefail
           cmd="$(printf '%s\n' "$ISSUE_BODY" | awk -F: 'tolower($1)=="command" {gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2); print tolower($2); exit}')"
           case "$cmd" in
-            status|eventsourcestate|eventsourcesnapshot|blsprobe|fredprobe|wc2policyregister|wc2state|services|logs|disk|sync|producttest|fulltest|productstate|productdeploy|paperreview|paperinspect|paperfixlint|paperharden|stateplanreview|stateplaninspect|stateplanharden|cursorreview|cursorreviewtail|cursorcleanup|bridgecheck|bridgestate|rollingstate|pausecheck|wakepause|wakeresume|wakearm|waketest|wakeheartbeat|chatbusyprobe|cursorcheck|cursorauthdiag|cursorttycheck|alertclockstate|alertclockpause|alertclockresume|migrationinspect|migrationinventory|ssddashboarddiag|productcrashlogs|ssddashboardwrappertest|ssdtcclaunchtest|ssdbackgroundteststart|ssdbackgroundtestcheck|ssdleftover|runnerpersistinstall|runnerpersistdiag|runnercutoverdiag|dashboardstart504|runnerterminalwatchdoginstall)
+            status|eventsourcestate|eventsourcesnapshot|blsprobe|fredprobe|wc2epoch2activate|wc2policyregister|wc2state|services|logs|disk|sync|producttest|fulltest|productstate|productdeploy|paperreview|paperinspect|paperfixlint|paperharden|stateplanreview|stateplaninspect|stateplanharden|cursorreview|cursorreviewtail|cursorcleanup|bridgecheck|bridgestate|rollingstate|pausecheck|wakepause|wakeresume|wakearm|waketest|wakeheartbeat|chatbusyprobe|cursorcheck|cursorauthdiag|cursorttycheck|alertclockstate|alertclockpause|alertclockresume|migrationinspect|migrationinventory|ssddashboarddiag|productcrashlogs|ssddashboardwrappertest|ssdtcclaunchtest|ssdbackgroundteststart|ssdbackgroundtestcheck|ssdleftover|runnerpersistinstall|runnerpersistdiag|runnercutoverdiag|dashboardstart504|runnerterminalwatchdoginstall)
               ;;
             *)
               echo "Unsupported command: $cmd"
@@ -63,6 +63,7 @@ jobs:
       - name: CHECKOUT EXACT WC2 POLICY COMMAND SOURCE
         if: >-
           steps.parse.outputs.command == 'wc2policyregister' ||
+          steps.parse.outputs.command == 'wc2epoch2activate' ||
           steps.parse.outputs.command == 'wc2state'
         uses: actions/checkout@v4
         with:
@@ -73,6 +74,7 @@ jobs:
       - name: VERIFY EXACT WC2 POLICY COMMAND SOURCE
         if: >-
           steps.parse.outputs.command == 'wc2policyregister' ||
+          steps.parse.outputs.command == 'wc2epoch2activate' ||
           steps.parse.outputs.command == 'wc2state'
         shell: bash
         run: |
@@ -388,6 +390,51 @@ jobs:
           after="$(shasum -a 256 "$POLICY_DB" | awk '{print $1}')"
           echo "WC2_POLICY_DB_SHA256_AFTER=$after"
           echo "WC2_POLICY_REGISTER_BOUNDED_PASS=YES"
+          echo "REAL_CAPITAL=0"
+
+      - name: WC2 EPOCH2 ACTIVATE
+        if: steps.parse.outputs.command == 'wc2epoch2activate'
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          DEV="$ROOT/Development"
+          EPOCH1="$DEV/runtime/paper/paper_fund.sqlite3"
+          EPOCH2="$DEV/runtime/paper/paper_fund_epoch2.sqlite3"
+          PY="$DEV/.venv/bin/python"
+          ACTIVATE="$GITHUB_WORKSPACE/ops/activate_wc2_epoch2.py"
+
+          test "$(id -u)" = "504"
+          test -x "$PY"
+          test -f "$ACTIVATE"
+          test -f "$EPOCH1"
+
+          echo "=== WC2 EPOCH2 PRE-STATE ==="
+          echo "DEVELOPMENT_HEAD=$(git -C "$DEV" rev-parse HEAD 2>/dev/null || true)"
+          echo "WORKFLOW_SHA=$GITHUB_SHA"
+          epoch1_before="$(shasum -a 256 "$EPOCH1" | awk '{print $1}')"
+          epoch2_before="MISSING"
+          [ -f "$EPOCH2" ] && epoch2_before="$(shasum -a 256 "$EPOCH2" | awk '{print $1}')"
+          echo "WC2_EPOCH1_SHA256_BEFORE=$epoch1_before"
+          echo "WC2_EPOCH2_SHA256_BEFORE=$epoch2_before"
+
+          PYTHONPATH="$GITHUB_WORKSPACE/src" "$PY" "$ACTIVATE" \
+            --epoch1 "$EPOCH1" \
+            --epoch2 "$EPOCH2" \
+            | tee "$RUNNER_TEMP/wc2-epoch2-activation.log"
+
+          test -f "$EPOCH2"
+          epoch1_after="$(shasum -a 256 "$EPOCH1" | awk '{print $1}')"
+          epoch2_after="$(shasum -a 256 "$EPOCH2" | awk '{print $1}')"
+          echo "WC2_EPOCH1_SHA256_AFTER=$epoch1_after"
+          echo "WC2_EPOCH2_SHA256_AFTER_WORKFLOW=$epoch2_after"
+          test "$epoch1_before" = "$epoch1_after"
+
+          grep -F 'WC2_EPOCH1_BYTE_STABLE_PASS=YES' "$RUNNER_TEMP/wc2-epoch2-activation.log" >/dev/null
+          grep -F 'WC2_EPOCH2_READONLY_REPLAY_PASS=YES' "$RUNNER_TEMP/wc2-epoch2-activation.log" >/dev/null
+          grep -F 'WC2_EPOCH2_NO_LEVERAGE_BORROWING_MARTINGALE_PASS=YES' "$RUNNER_TEMP/wc2-epoch2-activation.log" >/dev/null
+          grep -F 'REAL_CAPITAL=0' "$RUNNER_TEMP/wc2-epoch2-activation.log" >/dev/null
+          echo "WC2_EPOCH2_ACTIVATION_BOUNDED_PASS=YES"
           echo "REAL_CAPITAL=0"
 
       - name: WC2 STATE
