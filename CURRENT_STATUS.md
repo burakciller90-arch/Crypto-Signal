@@ -10,6 +10,48 @@ REAL_CAPITAL: 0
 ## Active v1.1 frontier — read before historical sections
 
 
+### 2026-09-25 00:56 +0300 — WC7 TYPED PROVENANCE ACCEPTED / CURRENT EVIDENCE STILL INSUFFICIENT
+
+This entry **supersedes the earlier 2026-09-25 00:49 frontier snapshot** while preserving it below as historical evidence.
+
+- Exact accepted main: `441dd9d5da20c4d5645d63f6975079992d2981f2`.
+- PR **#1199** hardened the accepted WC7 review by adding one typed provenance packet over all nine review dimensions.
+- A claim can no longer be treated as satisfied/partial/negative merely because it carries a free-form note and SHA256-looking value. Each evidenced claim must use the source class allowed for that exact dimension:
+  - runtime acceptance;
+  - WC2 preregistered forward evidence;
+  - probability calibration or an explicit no-probability-use boundary;
+  - WC2 cost-adjusted economics;
+  - WC2 drawdown evidence;
+  - WC4 regime research;
+  - fail-closed transparency;
+  - WC6 sandbox/testnet dossier;
+  - human usability study.
+- Blocker states remain structurally different from evidence states:
+  - `MISSING` -> `MISSING_REQUIRED_EVIDENCE`;
+  - `NOT_MEASURED` -> `NOT_MEASURED_BOUNDARY`;
+  - `EXTERNAL_DEPENDENCY` -> `EXTERNAL_DEPENDENCY_BOUNDARY`;
+  - blocker provenance cannot invent an artifact identity.
+- `NOT_APPLICABLE` is restricted to probability calibration and requires an explicit probability-not-used boundary artifact.
+- The provenance packet requires one canonical-order provenance record for every WC7 dimension and exact claim/status/source-artifact identity agreement with the accepted WC7 review.
+- Human review remains required; automatic edge verdict and production authority remain false; `REAL_CAPITAL=0`.
+- PR #1199 exact-head UID504 run **36064310603** completed **SUCCESS**.
+- After merge as `441dd9d5da20c4d5645d63f6975079992d2981f2`, exact-main push run **36064416622 / job 107850699031** independently completed **SUCCESS** with:
+  - `WC7_EXACT_SOURCE_PASS=YES`;
+  - `WC7_FOCUSED_PASS=YES`;
+  - `WC7_MACHINE_EDGE_VERDICT=NONE`;
+  - `WC7_RESEARCH_REGRESSION_PASS=YES`;
+  - `WC7_FULL_REGRESSION_PASS=YES`;
+  - `WC7_DEVELOPMENT_NON_MUTATING_PASS=YES`;
+  - `REAL_CAPITAL=0`.
+- This provenance hardening does **not** remove any current blocker. The accepted WC7 machine conclusion remains `INSUFFICIENT_EVIDENCE`.
+
+Current true frontier:
+- WC2 evidence accumulation, WC6 real venue evidence and measured human usability remain genuine future/external evidence dependencies;
+- WC3 scientific/economic conclusions remain blocked;
+- WC7 may perform deterministic read-only reporting/provenance presentation, but may not manufacture evidence, convert blocker boundaries into satisfied artifacts, or auto-select an EDGE_* verdict;
+- continuity remains paused and **REAL_CAPITAL=0**.
+
+
 ### 2026-09-25 00:56 +0300 — WC7 TYPED EVIDENCE PROVENANCE ACCEPTED / CONCLUSION STILL INSUFFICIENT_EVIDENCE
 
 This entry **supersedes the earlier 2026-09-25 00:49 frontier snapshot** while preserving it below as historical evidence.
