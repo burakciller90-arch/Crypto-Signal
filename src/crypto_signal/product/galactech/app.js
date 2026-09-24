@@ -22,6 +22,8 @@ const API = Object.freeze({
   decisionProof: (identity) => `/api/decision-proof/${encodeURIComponent(identity)}`,
   shadowForecastCycle: (identity) =>
     `/api/shadow-decision-rail/forecast/${encodeURIComponent(identity)}`,
+  wc2Action: (identity) =>
+    `/api/wc2/action/${encodeURIComponent(identity)}`,
   assetCockpit: (symbol, timeframe) =>
     `/api/assets/${encodeURIComponent(symbol)}/${encodeURIComponent(timeframe)}?recent_limit=30`,
   signalDetail: (identity) => `/api/signals/${encodeURIComponent(identity)}`,
@@ -46,6 +48,8 @@ const state = {
   learnQuery: "",
   health: null,
   command: null,
+  commandDecision: null,
+  commandDecisionSeq: 0,
   radar: null,
   epoch: null,
   paper: null,
@@ -258,6 +262,7 @@ function bindNavigation() {
       renderCommand();
       renderRadar();
       renderArchive();
+      void loadCommandDecisionSurface();
       void initializeMarketWorkspace({ reload: state.route === "markets" });
     });
   });
@@ -406,6 +411,192 @@ function renderCommand() {
         </div>
       </article>
     </button>`).join("");
+}
+
+function commandFocusSignal() {
+  const recent = Array.isArray(state.command?.recent_signals)
+    ? state.command.recent_signals.filter(signalMatchesAsset)
+    : [];
+  return recent[0] || null;
+}
+
+async function loadCommandDecisionSurface() {
+  const requestSeq = ++state.commandDecisionSeq;
+  const signal = commandFocusSignal();
+  state.commandDecision = null;
+  renderCommandDecisionSurface();
+  if (!signal?.signal_freeze_identity) return;
+
+  let proofPayload;
+  try {
+    proofPayload = await fetchJson(API.decisionProof(signal.signal_freeze_identity));
+  } catch (error) {
+    console.warn("[GALACTECH] WC5 Decision Proof unavailable", error);
+    if (requestSeq !== state.commandDecisionSeq) return;
+    state.commandDecision = {
+      signal,
+      proofPayload: {
+        status: "unavailable",
+        reason: "decision_proof_endpoint_error",
+      },
+      actionPayload: null,
+    };
+    renderCommandDecisionSurface();
+    return;
+  }
+  if (requestSeq !== state.commandDecisionSeq) return;
+
+  const forecastIdentity = text(proofPayload?.proof?.forecast_identity, "");
+  if (
+    proofPayload?.status !== "ready" ||
+    !/^[0-9a-f]{64}$/.test(forecastIdentity)
+  ) {
+    state.commandDecision = { signal, proofPayload, actionPayload: null };
+    renderCommandDecisionSurface();
+    return;
+  }
+
+  let actionPayload;
+  try {
+    actionPayload = await fetchJson(API.wc2Action(forecastIdentity));
+  } catch (error) {
+    console.warn("[GALACTECH] WC5 persisted action unavailable", error);
+    actionPayload = {
+      status: "unavailable",
+      reason: "wc2_action_endpoint_error",
+      forecast_identity: forecastIdentity,
+      read_only: true,
+      real_capital: 0,
+    };
+  }
+  if (requestSeq !== state.commandDecisionSeq) return;
+  state.commandDecision = { signal, proofPayload, actionPayload };
+  renderCommandDecisionSurface();
+}
+
+function wc5PrimaryEvidence(proof, verdict) {
+  const slices = Array.isArray(proof?.evidence_slices)
+    ? proof.evidence_slices
+    : [];
+  return slices.find(
+    (item) =>
+      text(item?.availability, "").toLowerCase() === "available" &&
+      text(item?.verdict, "").toLowerCase() === verdict
+  ) || null;
+}
+
+function wc5EvidenceText(slice, emptyLabel) {
+  if (!slice) return emptyLabel;
+  const codes = Array.isArray(slice.summary_codes) ? slice.summary_codes : [];
+  const code = codes[0] || "accepted evidence";
+  return `${upper(slice.domain, "UNKNOWN")} · ${text(code, "accepted evidence")}`;
+}
+
+function renderCommandDecisionSurface() {
+  const body = byId("wc5DecisionBody");
+  const tag = byId("wc5DecisionTag");
+  if (!body || !tag) return;
+
+  const data = state.commandDecision;
+  if (!data) {
+    const signal = commandFocusSignal();
+    tag.textContent = signal ? "VERIFYING" : "INSUFFICIENT EVIDENCE";
+    tag.className = `tag ${signal ? "state-watch" : "state-neutral"}`;
+    body.className = "wc5-decision-body empty-state";
+    body.innerHTML = signal
+      ? "<strong>Exact Decision Proof / WC2 intent lineage doğrulanıyor.</strong><p>Doğrulama bitmeden action gösterilmez.</p>"
+      : "<strong>Seçili asset odağında karar kanıtı yok.</strong><p>Boş state TRADE veya HOLD_CASH diye yorumlanmaz.</p>";
+    return;
+  }
+
+  const signal = data.signal || {};
+  const proofPayload = data.proofPayload || {};
+  const proof = proofPayload.status === "ready" ? proofPayload.proof : null;
+  if (!proof) {
+    tag.textContent = "INSUFFICIENT EVIDENCE";
+    tag.className = "tag state-watch";
+    body.className = "wc5-decision-body";
+    body.innerHTML = `
+      <div class="wc5-decision-hero">
+        <div><span>ACTION</span><strong>INSUFFICIENT_EVIDENCE</strong></div>
+        <p>Exact R20.5 Decision Proof bu immutable freeze için Product yüzeyinde mevcut değil.</p>
+      </div>`;
+    return;
+  }
+
+  const actionSnapshot =
+    data.actionPayload?.status === "ready"
+      ? data.actionPayload.snapshot
+      : null;
+  const persistedAction =
+    actionSnapshot?.status === "PERSISTED_ACTION"
+      ? upper(actionSnapshot.action, "")
+      : "";
+  const action = persistedAction || "INSUFFICIENT_EVIDENCE";
+  const support = wc5PrimaryEvidence(proof, "support");
+  const contradiction = wc5PrimaryEvidence(proof, "contradict");
+  const eventSlice = Array.isArray(proof.evidence_slices)
+    ? proof.evidence_slices.find((item) => item?.domain === "event_context")
+    : null;
+  const capitalState =
+    persistedAction === "HOLD_CASH"
+      ? "NOT ELIGIBLE · PERSISTED HOLD_CASH"
+      : persistedAction
+        ? "PAPER/SHADOW INTENT ONLY"
+        : "NOT AVAILABLE";
+  const actionClass =
+    persistedAction === "HOLD_CASH"
+      ? "state-watch"
+      : persistedAction
+        ? "state-positive"
+        : "state-neutral";
+
+  tag.textContent = action;
+  tag.className = `tag ${actionClass}`;
+  body.className = "wc5-decision-body";
+  body.innerHTML = `
+    <div class="wc5-decision-hero">
+      <div>
+        <span>MARKET / STANCE</span>
+        <strong>${escapeHtml(signal.symbol || proof.symbol)} · ${escapeHtml(signal.timeframe || proof.timeframe)} · ${escapeHtml(upper(proof.signal_state))} / ${escapeHtml(upper(proof.direction))}</strong>
+      </div>
+      <div>
+        <span>ACTIONABILITY</span>
+        <strong class="${actionClass}">${escapeHtml(action)}</strong>
+        <small>exact persisted WC2 action only · not an order instruction</small>
+      </div>
+    </div>
+    <div class="wc5-decision-grid">
+      <div><span>SUPPORT</span><strong>${escapeHtml(wc5EvidenceText(support, "NO ACCEPTED SUPPORT SLICE"))}</strong></div>
+      <div><span>CONTRADICTION / RISK</span><strong>${escapeHtml(wc5EvidenceText(contradiction, "NO ACCEPTED CONTRADICTION SLICE"))}</strong></div>
+      <div><span>EVENT RISK</span><strong>${escapeHtml(upper(proof.event_context_state, "NOT AVAILABLE"))} · ${escapeHtml(upper(eventSlice?.verdict, "INSUFFICIENT"))}</strong></div>
+      <div><span>CAPITAL ELIGIBILITY</span><strong>${escapeHtml(capitalState)}</strong></div>
+      <div><span>MAX PAPER/SHADOW EXPOSURE</span><strong>NOT AVAILABLE</strong><small>cohort intent notional içermez; 0 veya başka tutar uydurulmaz</small></div>
+      <div><span>PROBABILITY</span><strong>${escapeHtml(upper(proof.probability_status, "NOT_CALIBRATED"))}</strong></div>
+    </div>
+    <div class="wc5-change-condition">
+      <span>WHAT MUST CHANGE?</span>
+      <strong>${escapeHtml(proof.conditional_thesis || "Conditional thesis unavailable.")}</strong>
+      <small>Frozen invalidation: ${escapeHtml(text(proof.invalidation_price, "NOT AVAILABLE"))}. Aynı immutable intent sonradan rewrite edilmez; farklı action için yeni exact forecast/intent evidence gerekir.</small>
+    </div>
+    <div class="wc5-decision-actions">
+      <button class="evidence-trigger wc5-proof-button" type="button"
+        data-evidence-id="${escapeHtml(signal.signal_freeze_identity || proof.signal_freeze_identity)}">
+        PROOF · exact issuance evidence
+      </button>
+    </div>
+    <details class="wc5-pro-details">
+      <summary>PRO · exact lineage / domain detail</summary>
+      <div class="truth-table">
+        <div class="truth-row"><span>FORECAST</span><strong>${escapeHtml(shortIdentity(proof.forecast_identity))}</strong></div>
+        <div class="truth-row"><span>DECISION PROOF</span><strong>${escapeHtml(shortIdentity(proof.proof_identity))}</strong></div>
+        <div class="truth-row"><span>WC2 ACTION STATUS</span><strong>${escapeHtml(actionSnapshot?.status || "INSUFFICIENT_EVIDENCE")}</strong></div>
+        <div class="truth-row"><span>WC2 INTENT</span><strong>${escapeHtml(shortIdentity(actionSnapshot?.intent_link_identity))}</strong></div>
+        <div class="truth-row"><span>VAULT</span><strong>${escapeHtml(actionSnapshot?.vault_id || "NOT AVAILABLE")}</strong></div>
+        <div class="truth-row"><span>SUPPORT / CONTRADICT</span><strong>${escapeHtml(proof.evidence_summary?.support_count ?? 0)} / ${escapeHtml(proof.evidence_summary?.contradict_count ?? 0)}</strong></div>
+      </div>
+      <p>Primary line selection is deterministic canonical evidence-domain order for presentation only; it is not a learned importance ranking.</p>
+    </details>`;
 }
 
 function renderRadar() {
@@ -2558,6 +2749,7 @@ function renderIntelligence() {
 
 function renderAll() {
   renderCommand();
+  renderCommandDecisionSurface();
   renderRadar();
   renderMarketWorkspace();
   renderMarketTruth();
@@ -2642,6 +2834,7 @@ async function runBoot() {
     marketReady ? "ready" : "muted"
   );
 
+  await loadCommandDecisionSurface();
   await initializeMarketWorkspace({ reload: true });
   renderAll();
   setMainBusy(false);
@@ -2683,6 +2876,7 @@ async function refreshRuntime(reason = "timer") {
       loadEndpoint("liveFeed", API.liveFeed),
     ]);
     if (results[0].ok) applyHealthTruth(results[0].data);
+    await loadCommandDecisionSurface();
     await initializeMarketWorkspace({ reload: state.route === "markets" });
     renderAll();
     if (!results.slice(1).every((item) => item.ok)) {
