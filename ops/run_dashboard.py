@@ -48,6 +48,7 @@ def parse_args() -> argparse.Namespace:
         default=None,
     )
     parser.add_argument("--cold-archive", type=Path, default=None)
+    parser.add_argument("--provider-divergence", type=Path, default=None)
     parser.add_argument(
         "--learning-memory",
         type=Path,
@@ -91,6 +92,10 @@ def resolve_runtime_paths(args: argparse.Namespace) -> dict[str, Path]:
         "cold_archive_path": (
             args.cold_archive
             or runtime_root / "market_tape" / "cold"
+        ),
+        "provider_divergence_path": (
+            args.provider_divergence
+            or runtime_root / "data" / "provider_divergence.sqlite3"
         ),
     }
 

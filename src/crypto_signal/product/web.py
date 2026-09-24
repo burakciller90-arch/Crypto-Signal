@@ -47,6 +47,9 @@ from crypto_signal.product.market_tape_runtime import (
     read_market_tape_collector_runtime_truth,
     read_market_tape_runtime_truth,
 )
+from crypto_signal.product.provider_divergence_runtime import (
+    read_provider_divergence_runtime_truth,
+)
 from crypto_signal.product.reader import DashboardReader, DashboardReadError
 
 DEFAULT_LEDGER_PATH = (
@@ -81,6 +84,9 @@ DEFAULT_CANDLE_CACHE_PATH = (
     / "runtime"
     / "data"
     / "live_base_15m_cache.sqlite3"
+)
+DEFAULT_PROVIDER_DIVERGENCE_PATH = DEFAULT_CANDLE_CACHE_PATH.with_name(
+    "provider_divergence.sqlite3"
 )
 STATIC_DIR = Path(__file__).with_name("static")
 GALACTECH_DIR = Path(__file__).with_name("galactech")
@@ -164,6 +170,7 @@ def create_app(
     market_tape_path: Path | None = None,
     market_tape_collector_runtime_path: Path | None = None,
     cold_archive_path: Path | None = None,
+    provider_divergence_path: Path | None = None,
 ) -> FastAPI:
     selected_path = ledger_path or Path(
         os.environ.get("CRYPTO_SIGNAL_LEDGER_PATH", str(DEFAULT_LEDGER_PATH))
@@ -298,6 +305,22 @@ def create_app(
     else:
         selected_cold_archive_path = None
 
+    if provider_divergence_path is not None:
+        selected_provider_divergence_path: Path | None = (
+            provider_divergence_path
+        )
+    elif ledger_path is None:
+        provider_divergence_env = os.environ.get(
+            "CRYPTO_SIGNAL_PROVIDER_DIVERGENCE_PATH"
+        )
+        selected_provider_divergence_path = (
+            Path(provider_divergence_env)
+            if provider_divergence_env
+            else DEFAULT_PROVIDER_DIVERGENCE_PATH
+        )
+    else:
+        selected_provider_divergence_path = None
+
     selected_learning_memory_path = learning_memory_path
     if selected_learning_memory_path is None:
         learning_memory_env = os.environ.get("CRYPTO_SIGNAL_LEARNING_MEMORY_PATH")
@@ -331,6 +354,7 @@ def create_app(
         selected_market_tape_collector_runtime_path
     )
     app.state.cold_archive_path = selected_cold_archive_path
+    app.state.provider_divergence_path = selected_provider_divergence_path
     app.state.reader = reader
 
     app.mount(
@@ -830,6 +854,35 @@ def create_app(
                 "online_status": "NOT_ASSERTED",
             }
 
+        if selected_provider_divergence_path is None:
+            components["provider_divergence"] = {
+                "status": "unavailable",
+                "reason": "provider_divergence_runtime_not_configured",
+            }
+        elif not selected_provider_divergence_path.exists():
+            components["provider_divergence"] = {
+                "status": "unavailable",
+                "reason": "provider_divergence_runtime_evidence_missing",
+            }
+        else:
+            try:
+                provider_snapshots = read_provider_divergence_runtime_truth(
+                    selected_provider_divergence_path,
+                    observed_at_ms=time.time_ns() // 1_000_000,
+                )
+            except (
+                OSError,
+                sqlite3.DatabaseError,
+                TypeError,
+                ValueError,
+            ) as exc:
+                raise HTTPException(status_code=500, detail=str(exc)) from exc
+            components["provider_divergence"] = {
+                "status": "ready" if provider_snapshots else "empty",
+                "snapshot_count": len(provider_snapshots),
+                "consensus_status": "NOT_INFERRED",
+            }
+
         if selected_cold_archive_path is None:
             components["cold_archive"] = {
                 "status": "unavailable",
@@ -967,6 +1020,67 @@ def create_app(
                 "collector_runtime": collector_runtime,
                 "collector_runtime_reason": collector_reason,
                 "online_status": "NOT_ASSERTED",
+                "read_only": True,
+                "real_capital": 0,
+            }
+        )
+
+    @app.get("/api/provider-divergence/status")
+    def provider_divergence_status(
+        observed_at_ms: int | None = Query(default=None, ge=0),
+    ) -> JSONResponse:
+        observation = (
+            time.time_ns() // 1_000_000
+            if observed_at_ms is None
+            else observed_at_ms
+        )
+        if selected_provider_divergence_path is None:
+            return _json(
+                {
+                    "status": "unavailable",
+                    "reason": "provider_divergence_runtime_not_configured",
+                    "snapshots": [],
+                    "consensus_status": "NOT_INFERRED",
+                    "runtime_status": "PERSISTED_EVIDENCE_ONLY",
+                    "read_only": True,
+                    "real_capital": 0,
+                }
+            )
+        if not selected_provider_divergence_path.exists():
+            return _json(
+                {
+                    "status": "unavailable",
+                    "reason": "provider_divergence_runtime_evidence_missing",
+                    "database_filename": (
+                        selected_provider_divergence_path.name
+                    ),
+                    "snapshots": [],
+                    "consensus_status": "NOT_INFERRED",
+                    "runtime_status": "PERSISTED_EVIDENCE_ONLY",
+                    "read_only": True,
+                    "real_capital": 0,
+                }
+            )
+        try:
+            snapshots = read_provider_divergence_runtime_truth(
+                selected_provider_divergence_path,
+                observed_at_ms=observation,
+            )
+        except (
+            OSError,
+            sqlite3.DatabaseError,
+            TypeError,
+            ValueError,
+        ) as exc:
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
+        return _json(
+            {
+                "status": "ready" if snapshots else "empty",
+                "database_filename": selected_provider_divergence_path.name,
+                "observed_at_ms": observation,
+                "snapshots": snapshots,
+                "consensus_status": "NOT_INFERRED",
+                "runtime_status": "PERSISTED_EVIDENCE_ONLY",
                 "read_only": True,
                 "real_capital": 0,
             }

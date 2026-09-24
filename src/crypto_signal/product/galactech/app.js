@@ -15,6 +15,7 @@ const API = Object.freeze({
   shadowRail: "/api/shadow-decision-rail/status",
   operationalTruth: "/api/r25/operational-truth",
   marketTapeStatus: "/api/market-tape-runtime/status",
+  providerDivergenceStatus: "/api/provider-divergence/status",
   coldArchiveStatus: "/api/cold-archive/status?verify_limit=24",
   liveFeed: "/api/intelligence-feed?limit=100",
   decisionProof: (identity) => `/api/decision-proof/${encodeURIComponent(identity)}`,
@@ -56,6 +57,7 @@ const state = {
   shadowRail: null,
   operationalTruth: null,
   marketTapeStatus: null,
+  providerDivergenceStatus: null,
   coldArchiveStatus: null,
   liveFeed: null,
   marketLayer: "PA",
@@ -2100,6 +2102,7 @@ function renderOperationalTruth() {
     ["RUNTIME REPLAY OBSERVATION", components.runtime_replay_observation],
     ["CANONICAL EPOCH 2", components.canonical_epoch2],
     ["MARKET TAPE", components.market_tape_runtime],
+    ["PROVIDER DIVERGENCE", components.provider_divergence],
     ["COLD ARCHIVE", components.cold_archive],
     ["GALACTECH PRODUCT", components.galactech_product],
   ].map(([label, component]) =>
@@ -2127,6 +2130,7 @@ function renderSystem() {
   const decisionStatus = state.decisionStatus || {};
   const shadowRail = state.shadowRail || {};
   const marketTape = state.marketTapeStatus || {};
+  const providerDivergence = state.providerDivergenceStatus || {};
   const coldArchive = state.coldArchiveStatus || {};
   const liveFeed = state.liveFeed || {};
 
@@ -2195,6 +2199,39 @@ function renderSystem() {
     marketTapeNote.textContent = marketTapeReady
       ? `latest persisted age ${marketTapeSnapshot.latest_event_age_ms ?? "NOT MEASURED"} ms · process ${collectionProcessStatus} · heartbeat age ${collectorRuntime.heartbeat_age_ms ?? "NOT MEASURED"} ms · ingestion age ${collectorRuntime.ingestion_age_ms ?? "NOT MEASURED"} ms · ONLINE NOT ASSERTED`
       : text(marketTape.reason, "runtime evidence unavailable");
+  }
+
+  const providerReady =
+    providerDivergence.status === "ready" ||
+    providerDivergence.status === "empty";
+  const providerSnapshots = Array.isArray(providerDivergence.snapshots)
+    ? providerDivergence.snapshots
+    : [];
+  const staleProviderSides = providerSnapshots.reduce((count, snapshot) => {
+    const leftStale = snapshot?.left_quality?.stale === true ? 1 : 0;
+    const rightStale = snapshot?.right_quality?.stale === true ? 1 : 0;
+    return count + leftStale + rightStale;
+  }, 0);
+  setSystemValue(
+    "systemProviderDivergence",
+    providerReady
+      ? `${providerSnapshots.length} CONTEXTS · PERSISTED`
+      : "NOT EXPOSED",
+    providerDivergence.status === "ready" ? "positive" : "watch"
+  );
+  const providerNote = byId("systemProviderDivergenceNote");
+  if (providerNote) {
+    const gridSummary = providerSnapshots
+      .map((snapshot) =>
+        `${snapshot.symbol || "UNKNOWN"}:${upper(snapshot.grid_state, "UNKNOWN")}`
+      )
+      .join(" · ");
+    providerNote.textContent = providerReady
+      ? `${gridSummary || "no persisted context"} · stale provider sides ${staleProviderSides} · CONSENSUS NOT INFERRED`
+      : text(
+          providerDivergence.reason,
+          "provider divergence runtime evidence unavailable"
+        );
   }
 
   const coldReady =
@@ -2553,6 +2590,7 @@ async function runBoot() {
     loadEndpoint("shadowRail", API.shadowRail),
     loadEndpoint("operationalTruth", API.operationalTruth),
     loadEndpoint("marketTapeStatus", API.marketTapeStatus),
+    loadEndpoint("providerDivergenceStatus", API.providerDivergenceStatus),
     loadEndpoint("coldArchiveStatus", API.coldArchiveStatus),
     loadEndpoint("liveFeed", API.liveFeed),
   ]);
@@ -2599,6 +2637,10 @@ async function refreshRuntime(reason = "timer") {
       loadEndpoint("decisionStatus", API.decisionStatus),
       loadEndpoint("shadowRail", API.shadowRail),
       loadEndpoint("marketTapeStatus", API.marketTapeStatus),
+      loadEndpoint(
+        "providerDivergenceStatus",
+        API.providerDivergenceStatus
+      ),
       loadEndpoint("liveFeed", API.liveFeed),
     ]);
     if (results[0].ok) applyHealthTruth(results[0].data);
