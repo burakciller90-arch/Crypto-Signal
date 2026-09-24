@@ -244,6 +244,35 @@ Promotion eligibility means "ready for explicit review", not "deploy".
 
 At least one full champion-vs-challenger cycle can be executed end-to-end without leaking untouched evidence and without automatic production mutation.
 
+## Accepted engineering closure evidence — 2026-09-24
+
+**WC4 status: ACCEPTED / ENGINEERING CLOSED / RESEARCH ONLY.**
+
+- PR **#1189** added one immutable champion/challenger cycle manifest over the accepted Alpha Factory evidence chain.
+- “Champion” is explicitly the frozen chronological research reference model, **not** mutable production champion state.
+- One cycle binds:
+  - data-contract and leakage-audit identity;
+  - reproducibility identity;
+  - in-sample sanity and out-of-sample evidence;
+  - walk-forward identity;
+  - transaction-cost stress identity;
+  - robustness/ablation identity;
+  - exact frozen untouched-forward snapshot/run;
+  - immutable promotion dossier;
+  - optional explicit supervisor acceptance.
+- Evaluated untouched-forward evidence is required for a complete cycle but remains descriptive:
+  - no aggregate winner selection;
+  - no retrospective optimization;
+  - no model refit or threshold/feature change from untouched outcomes.
+- Cycle terminal states remain review-only:
+  - `REVIEW_READY_NOT_PROMOTED`;
+  - `SUPERVISOR_ACCEPTED_MANUAL_REVIEW_NOT_PROMOTED`.
+- The manifest fails closed on cross-cycle untouched-forward evidence and requires distinct frozen reference/challenger model identities.
+- It grants no champion-state write, automatic promotion, deploy or production authority. `REAL_CAPITAL=0`.
+- PR #1189 UID504 exact-head run **36057586739** passed focused WC4, full Alpha Factory, whole-repository and Development non-mutation acceptance.
+- PR **#1190** made the same gate exact-main aware; merged-main run **36058041036 / job 107829844817** passed on `c10f919fee75237282a2d020160afa59752385ef`.
+- This closure proves the **research engineering cycle can execute end-to-end safely**. It does not prove challenger superiority, durable alpha or a production promotion decision.
+
 # WC5 — 10-Second Trader UX
 
 ## Goal
