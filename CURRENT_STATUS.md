@@ -4,10 +4,52 @@ Updated: 2026-09-24
 Project: Crypto Signal
 Baseline: crypto-signal-full-version-v1.0.0 (immutable)
 Active post-v1.0 program: v1.1 world-class product + market intelligence
-State: WC0_LIVE_PRODUCT_PARITY_ACCEPTED / WC1_24_7_DATA_RELIABILITY_ACCEPTED / WC2_ENGINEERING_FROZEN_EVIDENCE_ACCUMULATION_ACTIVE / CONTINUITY_PAUSED_BY_USER
+State: WC0_LIVE_PRODUCT_PARITY_ACCEPTED / WC1_24_7_DATA_RELIABILITY_ACCEPTED / WC2_ENGINEERING_FROZEN_EVIDENCE_ACCUMULATION_ACTIVE / WC5_ENGINEERING_ACCEPTED_PRODUCT_DEPLOYED_HUMAN_USABILITY_NOT_MEASURED / CONTINUITY_PAUSED_BY_USER
 REAL_CAPITAL: 0
 
 ## Active v1.1 frontier — read before historical sections
+
+
+### 2026-09-24 23:43 +0300 — WC5 ENGINEERING ACCEPTED + PRODUCTION DEPLOYED / HUMAN 10-SECOND USABILITY NOT MEASURED
+
+This entry **supersedes the earlier 2026-09-24 23:23 frontier snapshot** while preserving it below as historical evidence.
+
+- Exact accepted main/Product code head: `15fa3dca848fb9e76841f9b113f9f13a2a1ee11b` (merge of PR **#1185**).
+- The stale pre-WC1 WC5 candidate PR **#1162** was closed unmerged and replaced rather than merged across the accepted WC1 boundary.
+- PR **#1185** rebuilt the WC5 10-second decision surface on the post-WC1 accepted main with exactly 10 intended files. The sole semantic overlap, `src/crypto_signal/product/web.py`, remained addition-only (+73/-0), preserving snapshot-bound WC1 Market Tape Product Truth while adding read-only WC2 actionability.
+- Fresh exact-head UID504 WC5 acceptance **run 36055644923 / job 107821752702** completed **SUCCESS**:
+  - `WC5_EXACT_SOURCE_PASS=YES`;
+  - focused WC5 pytest/Ruff/mypy + frontend contract acceptance passed;
+  - live read-only Product preview resolved exact forecast `8c9fe8e3f4f144c1958b64cb33af6c3551f201f0e9d2bf4fa7e7bf52ba29e19f` to persisted `HOLD_CASH`, vault `CORE`;
+  - `WC5_LIVE_ACTIONABILITY_PASS=YES`;
+  - `WC5_COHORT_BYTE_STABLE_PASS=YES`;
+  - `WC5_LIVE_PRODUCT_PREVIEW_PASS=YES`;
+  - whole-repository regression and Development non-mutation passed;
+  - `REAL_CAPITAL=0`.
+- The same exact WC5 head also passed **WC0 Operational Truth Latency UID504 run 36055644816**, including focused contracts, live read-only latency acceptance, whole-repository regression and Development non-mutation.
+- Several path-triggered `ubuntu-latest` legacy hosted workflows ended in ~3-4 seconds with **zero executed steps** on this PR. No pytest/Ruff/mypy assertion ran in those failures; they are retained as hosted-runner startup evidence rather than being mislabelled as code regressions. The exact-head UID504 full regressions above are the executed acceptance evidence.
+- Product deployment issue **#1186**, run **36056040911**, job **107823095953** completed **SUCCESS**:
+  - Product moved from `1af79d48c155de14fb51af2a3f87f39bbe7405da` to exact target `15fa3dca848fb9e76841f9b113f9f13a2a1ee11b`;
+  - dashboard child moved from PID `58419` to PID `66286` under supervisor PID `40756`;
+  - health returned `status=ok`, `read_only=true`, `REAL_CAPITAL=0`;
+  - Intelligence Center, GALACTECH root and R25 Operational Truth passed live;
+  - R11 WAL-aware backup/restore audit passed for the ~7.96 GB signal ledger plus alert, paper and candle databases;
+  - `R11_RUNTIME_AUDIT_PASS=YES`, `WC0_RUNTIME_TOPOLOGY_SQLITE_PASS=YES`, `PRODUCT_DEPLOY_PASS=YES`.
+- Independent Product state issue **#1187**, run **36056686776**, reconfirmed `HEAD=15fa3dca848fb9e76841f9b113f9f13a2a1ee11b` and live health `status=ok`, `read_only=true`, `REAL_CAPITAL=0`.
+- WC5 Product semantics are deliberately narrow:
+  - actionability is projected only from exact persisted WC2 forecast/proof/intent lineage;
+  - missing intent remains `INSUFFICIENT_EVIDENCE`;
+  - multiple intents remain `INSUFFICIENT_EVIDENCE_MULTIPLE_INTENTS` rather than choosing one;
+  - `ACTIVE` is never promoted to `TRADE`;
+  - maximum exposure remains `NOT_AVAILABLE_FROM_COHORT_INTENT` when the persisted evidence does not support it;
+  - the command surface exposes market/system state, actionability, primary support, contradiction/risk, event risk, capital eligibility, what-must-change and one-click exact issuance proof without hidden chain-of-thought or order authority.
+- Therefore WC5 is **ACCEPTED as an engineering/mechanical Product rail and production-deployed**. This does **not** claim a completed human usability study or measured <=10-second comprehension; human time-to-understand remains `NOT_MEASURED`.
+
+Current true frontier:
+- keep WC2 engineering-frozen and allow genuine untouched-forward/paper evidence to accumulate under the preregistered contract;
+- do not start WC3 scientific/economic conclusions before WC2 evidence sufficiency exists;
+- safe parallel engineering may advance isolated WC4 champion/challenger research infrastructure or WC6 paper/sandbox execution-lab infrastructure without reading untouched outcomes to tune policy and without production mutation;
+- preserve WC1 closure, WC5 exact-evidence/no-authority semantics, continuity pause and **REAL_CAPITAL=0**.
 
 
 ### 2026-09-24 23:23 +0300 — WC1 24/7 DATA RELIABILITY ACCEPTED / WC2 ENGINEERING FROZEN, UNTOUCHED-FORWARD EVIDENCE ACCUMULATION ACTIVE
