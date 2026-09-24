@@ -199,3 +199,24 @@ def test_provider_divergence_endpoint_missing_runtime_creates_nothing(
     assert body["read_only"] is True
     assert body["real_capital"] == 0
     assert not missing.exists()
+
+
+def test_galactech_system_exposes_provider_divergence_without_consensus(
+    tmp_path: Path,
+) -> None:
+    client = TestClient(create_app(tmp_path / "missing-signals.sqlite3"))
+
+    html = client.get("/galactech").text
+    js = client.get("/galactech-static/app.js").text
+
+    assert 'id="systemProviderDivergence"' in html
+    assert 'id="systemProviderDivergenceNote"' in html
+    assert "PROVIDER DIVERGENCE" in html
+    assert "consensus not inferred" in html.lower()
+    assert (
+        'providerDivergenceStatus: "/api/provider-divergence/status"'
+        in js
+    )
+    assert '"providerDivergenceStatus"' in js
+    assert '"systemProviderDivergence"' in js
+    assert "CONSENSUS NOT INFERRED" in js
