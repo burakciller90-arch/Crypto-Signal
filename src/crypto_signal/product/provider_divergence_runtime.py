@@ -131,6 +131,19 @@ class ProviderDivergenceRuntimeTruth:
                 _require_sha256(identity, "provider source evidence identity")
         if self.overlap_count < 0:
             raise ValueError("provider overlap cannot be negative")
+        if len(self.left_source_evidence_identities) != (
+            self.left_quality.consumed_closed_candles
+        ):
+            raise ValueError("left provider evidence/count mismatch")
+        if len(self.right_source_evidence_identities) != (
+            self.right_quality.consumed_closed_candles
+        ):
+            raise ValueError("right provider evidence/count mismatch")
+        if self.overlap_count > min(
+            self.left_quality.consumed_closed_candles,
+            self.right_quality.consumed_closed_candles,
+        ):
+            raise ValueError("provider overlap exceeds consumed evidence")
         if tuple(sorted(self.left_only_open_times_ms)) != (
             self.left_only_open_times_ms
         ):
@@ -154,8 +167,46 @@ class ProviderDivergenceRuntimeTruth:
                 )
             ):
                 raise ValueError("no-overlap provider snapshot exposes spread")
-        elif self.grid_state == "no_overlap":
-            raise ValueError("provider overlap cannot be no_overlap")
+        else:
+            if self.grid_state == "no_overlap":
+                raise ValueError("provider overlap cannot be no_overlap")
+            if self.latest_overlap_open_time_ms is None:
+                raise ValueError("provider overlap missing latest open")
+            if any(
+                value is None
+                for value in (
+                    self.latest_close_spread_bps,
+                    self.median_absolute_close_spread_bps,
+                    self.max_absolute_close_spread_bps,
+                )
+            ):
+                raise ValueError("provider overlap missing spread metrics")
+            if (
+                self.median_absolute_close_spread_bps is not None
+                and self.median_absolute_close_spread_bps < 0
+            ):
+                raise ValueError("provider median absolute spread invalid")
+            if (
+                self.max_absolute_close_spread_bps is not None
+                and self.max_absolute_close_spread_bps < 0
+            ):
+                raise ValueError("provider max absolute spread invalid")
+            if (
+                self.grid_state == "full_overlap"
+                and (
+                    self.left_only_open_times_ms
+                    or self.right_only_open_times_ms
+                )
+            ):
+                raise ValueError("full provider overlap has provider-only grid")
+            if (
+                self.grid_state == "partial_overlap"
+                and not (
+                    self.left_only_open_times_ms
+                    or self.right_only_open_times_ms
+                )
+            ):
+                raise ValueError("partial provider overlap lacks grid divergence")
         if self.consensus_status != "NOT_INFERRED":
             raise ValueError("provider Product Truth cannot infer consensus")
         if not self.read_only_verified:
@@ -283,6 +334,11 @@ def _runtime_truth_from_row(
         raise ValueError("provider divergence payload grants production authority")
     if int(payload.get("real_capital", -1)) != 0:
         raise ValueError("provider divergence payload real capital mismatch")
+    spread_points = payload.get("spread_points")
+    if not isinstance(spread_points, list):
+        raise TypeError("provider divergence spread points must be array")
+    if len(spread_points) != int(payload["overlap_count"]):
+        raise ValueError("provider divergence overlap/spread point mismatch")
 
     return ProviderDivergenceRuntimeTruth(
         snapshot_identity=snapshot_identity,
