@@ -1,0 +1,182 @@
+name: World-Class WC1 Market Tape Legacy Cutover
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/world-class-wc1-market-tape-legacy-cutover.yml"
+  issues:
+    types: [opened]
+
+permissions:
+  contents: read
+
+jobs:
+  static-acceptance:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Verify bounded cutover contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          WF=".github/workflows/world-class-wc1-market-tape-legacy-cutover.yml"
+          grep -F '/MarketTape/ops/run_market_tape_runtime.py' "$WF" >/dev/null
+          grep -F '/MarketTape/ops/market_tape/run_market_tape_supervisor.py' "$WF" >/dev/null
+          grep -F '/MarketTape/ops/market_tape/stop_market_tape_supervisor.sh' "$WF" >/dev/null
+          grep -F '/Development/ops/run_market_tape_stream.py' "$WF" >/dev/null
+          ! grep -E 'place_order|submit_order|api_secret|api_key|leverage|martingale' "$WF"
+          grep -F 'REAL_CAPITAL=0' "$WF" >/dev/null
+          echo "WC1_LEGACY_CUTOVER_STATIC_PASS=YES"
+
+  live-cutover:
+    if: >
+      github.event_name == 'issues' &&
+      github.actor == 'burakciller90-arch' &&
+      github.event.issue.title == '[WC1] MARKET TAPE LEGACY CUTOVER'
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          clean: true
+          fetch-depth: 1
+
+      - name: Verify exact default-branch runtime source
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
+          test "$(id -u)" = "504"
+          test "$(git -C "$GITHUB_WORKSPACE" rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$(git -C "$DEV" rev-parse HEAD)" = "$GITHUB_SHA"
+          test -z "$(git -C "$DEV" status --porcelain)"
+          echo "WC1_LEGACY_CUTOVER_EXACT_SOURCE_PASS=YES"
+
+      - name: Stop only exact legacy owner and prove canonical takeover
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          DEV="$ROOT/Development"
+          LOCK="$DEV/runtime/market_tape/market_tape_stream.lock"
+          CURRENT="$DEV/ops/run_market_tape_stream.py"
+          LEGACY_RUNTIME="$ROOT/MarketTape/ops/run_market_tape_runtime.py"
+          LEGACY_SUPERVISOR="$ROOT/MarketTape/ops/market_tape/run_market_tape_supervisor.py"
+          LEGACY_STOP="$ROOT/MarketTape/ops/market_tape/stop_market_tape_supervisor.sh"
+          PIDFILE="$ROOT/market-tape-stream.pid"
+          PY="$DEV/.venv/bin/python"
+
+          lock_pid() {
+            /usr/sbin/lsof -t "$LOCK" 2>/dev/null | head -1 || true
+          }
+
+          exact_python_script() {
+            local pid="$1"
+            local script="$2"
+            [ -n "$pid" ] || return 1
+            kill -0 "$pid" >/dev/null 2>&1 || return 1
+            /bin/ps -ww -p "$pid" -o uid=,comm=,args= 2>/dev/null |
+              /usr/bin/awk -v script="$script" '
+                {
+                  if ($1 != 504 || index(tolower($2), "python") == 0) exit 1
+                  for (i=3; i<=NF; i++) if ($i == script) found=1
+                  exit(found ? 0 : 1)
+                }'
+          }
+
+          pid="$(lock_pid)"
+          if exact_python_script "$pid" "$CURRENT"; then
+            echo "WC1_LEGACY_CUTOVER_ALREADY_CANONICAL=YES pid=$pid"
+          else
+            exact_python_script "$pid" "$LEGACY_RUNTIME" || {
+              echo "WC1_LEGACY_CUTOVER_FAIL=UNEXPECTED_LOCK_HOLDER pid=$pid" >&2
+              /bin/ps -ww -p "$pid" -o pid=,ppid=,uid=,comm=,args= 2>/dev/null || true
+              exit 76
+            }
+            ppid="$(/bin/ps -p "$pid" -o ppid= | tr -d ' ')"
+            exact_python_script "$ppid" "$LEGACY_SUPERVISOR" || {
+              echo "WC1_LEGACY_CUTOVER_FAIL=UNEXPECTED_PARENT pid=$pid ppid=$ppid" >&2
+              /bin/ps -ww -p "$ppid" -o pid=,ppid=,uid=,comm=,args= 2>/dev/null || true
+              exit 77
+            }
+            test -f "$LEGACY_STOP"
+            echo "WC1_LEGACY_OWNER_VERIFIED pid=$pid ppid=$ppid"
+            /bin/bash "$LEGACY_STOP"
+
+            for _ in {1..40}; do
+              if ! kill -0 "$pid" >/dev/null 2>&1 && ! kill -0 "$ppid" >/dev/null 2>&1; then
+                break
+              fi
+              sleep 1
+            done
+            if kill -0 "$pid" >/dev/null 2>&1 || kill -0 "$ppid" >/dev/null 2>&1; then
+              echo "WC1_LEGACY_CUTOVER_FAIL=LEGACY_PROCESS_STILL_ALIVE" >&2
+              exit 78
+            fi
+            echo "WC1_LEGACY_OWNER_STOP_PASS=YES"
+          fi
+
+          new_pid=""
+          for _ in {1..90}; do
+            candidate="$(lock_pid)"
+            if exact_python_script "$candidate" "$CURRENT"; then
+              new_pid="$candidate"
+              break
+            fi
+            sleep 1
+          done
+          test -n "$new_pid"
+          test "$(cat "$PIDFILE" 2>/dev/null || true)" = "$new_pid"
+          echo "WC1_CANONICAL_MARKET_TAPE_OWNER_PASS=YES pid=$new_pid"
+
+          export PYTHONPATH="$GITHUB_WORKSPACE/src:$GITHUB_WORKSPACE"
+          "$PY" - <<'PY'
+          from pathlib import Path
+          import time
+          from crypto_signal.data.market_data_gap_ledger import MarketDataGapLedger
+          from crypto_signal.data.market_tape_collector_runtime import MarketTapeCollectorRuntimeStore
+
+          runtime = Path("/Volumes/Crypto-504/Crypto-Signal/Development/runtime/market_tape")
+          store = MarketTapeCollectorRuntimeStore(runtime / "collector_runtime.sqlite3")
+          gaps = MarketDataGapLedger(runtime / "market_data_gaps.sqlite3")
+          deadline = time.monotonic() + 45
+          while time.monotonic() < deadline:
+              instance = store.latest_instance(provider="bybit", source="market_tape_stream")
+              if instance is not None:
+                  heartbeat = store.latest_heartbeat(instance.instance_identity)
+                  if heartbeat is not None and store.quick_check() and gaps.quick_check():
+                      print("WC1_CANONICAL_INSTANCE=" + instance.instance_identity)
+                      print("WC1_CANONICAL_START_KIND=" + instance.start_kind.value)
+                      print("WC1_CANONICAL_HEARTBEAT_SEQ=" + str(heartbeat.sequence_no))
+                      print("WC1_CANONICAL_RUNTIME_EVIDENCE_PASS=YES")
+                      print("REAL_CAPITAL=0")
+                      raise SystemExit(0)
+              time.sleep(2)
+          raise SystemExit("WC1_CANONICAL_RUNTIME_EVIDENCE_TIMEOUT")
+          PY
+
+          curl -fsS --max-time 180 http://127.0.0.1:48700/api/market-tape-runtime/status > "$RUNNER_TEMP/wc1-market-tape-truth.json"
+          "$PY" - "$RUNNER_TEMP/wc1-market-tape-truth.json" <<'PY'
+          import json
+          import sys
+          with open(sys.argv[1], encoding="utf-8") as handle:
+              data = json.load(handle)
+          assert data["status"] == "ready"
+          assert data["online_status"] == "NOT_ASSERTED"
+          assert data["read_only"] is True
+          assert data["real_capital"] == 0
+          collector = data.get("collector_runtime")
+          assert isinstance(collector, dict)
+          assert collector.get("process_evidence_status") == "HEARTBEAT_FRESH"
+          print("WC1_LEGACY_CUTOVER_PRODUCT_TRUTH_PASS=YES")
+          print("REAL_CAPITAL=0")
+          PY
