@@ -209,9 +209,15 @@ class WC2CohortExecution:
             raise ValueError("WC2 execution times cannot be negative")
         if self.indexed_at_ms < self.filled_at_ms:
             raise ValueError("WC2 execution index cannot predate fill")
-        for value in (self.fee_usdt, self.spread_usdt, self.slippage_usdt):
-            if not isinstance(value, Decimal) or not value.is_finite() or value < 0:
-                raise ValueError("WC2 execution costs must be finite non-negative")
+        for cost in (self.fee_usdt, self.spread_usdt, self.slippage_usdt):
+            if (
+                not isinstance(cost, Decimal)
+                or not cost.is_finite()
+                or cost < 0
+            ):
+                raise ValueError(
+                    "WC2 execution costs must be finite non-negative"
+                )
         if not self.execution_policy_version.strip():
             raise ValueError("WC2 execution policy version missing")
         if not self.venue_reference.strip():
