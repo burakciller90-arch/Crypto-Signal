@@ -49,14 +49,14 @@ def test_galactech_markets_workspace_binds_exact_provider_freeze(
     js = script.text
     css = style.text
 
-    assert 'data-ui-version="galactech-v1.1-polish"' in html
+    assert 'data-ui-version="galactech-v2-intelligence-first-tr"' in html
     assert 'id="marketSymbolSelect"' in html
     assert 'id="marketTimeframeSelect"' in html
     assert 'id="marketFrozenChart"' in html
     assert 'id="marketLayerSurface"' in html
     assert 'id="marketProviderList"' in html
     assert 'id="marketRecentTape"' in html
-    assert "NO CONSENSUS INVENTION" in html
+    assert "SAHTE UZLAŞI YOK" in html
     for layer in ("PA", "LIQ", "FLOW", "DERIV", "ONCHAIN"):
         assert f'data-layer="{layer}"' in html
 
@@ -70,11 +70,11 @@ def test_galactech_markets_workspace_binds_exact_provider_freeze(
     assert "function renderMarketRecentTape()" in js
     assert "function renderMarketLayerSurface()" in js
     assert "function renderMarketWorkspace()" in js
-    assert "PA / FROZEN SIGNAL EVIDENCE" in js
-    assert "R20.5 DECISION PROOF" in js
-    assert "NOT PERSISTED" in js
-    assert "No exact R20.5 Decision Proof is persisted" in js
-    assert "no synthetic invalidation" in js
+    assert "FİYAT HAREKETİ / DONDURULMUŞ SİNYAL KANITI" in js
+    assert "R20.5 KARAR KANITI" in js
+    assert "KALICI KANIT YOK" in js
+    assert "Bu değiştirilemez sinyal için exact R20.5 Karar Kanıtı yok" in js
+    assert "sentetik geçersizlik yok" in js
     assert 'loadEndpoint("radar", API.radar)' in js
     assert 'data-market-provider-id="' in js
     assert 'data-evidence-id="' in js
@@ -102,13 +102,13 @@ def test_galactech_markets_decision_proof_layers_fail_closed_when_unpersisted(
     assert not (tmp_path / "missing.sqlite3").exists()
 
     js = script.text
-    assert 'LIQ: "Liquidity / liquidation"' in js
-    assert 'FLOW: "Order flow / CVD"' in js
-    assert 'DERIV: "Derivatives / OI / funding / basis"' in js
-    assert 'ONCHAIN: "On-chain"' in js
+    assert 'LIQ: "Likidite / Likidasyon"' in js
+    assert 'FLOW: "Emir Akışı / CVD"' in js
+    assert 'DERIV: "Türevler / Açık Pozisyon / Fonlama / Baz"' in js
+    assert 'ONCHAIN: "Zincir Üstü"' in js
     assert 'LIQ: ["liquidity_map", "liquidation_map"]' in js
     assert 'FLOW: ["order_book", "order_flow_cvd"]' in js
     assert 'DERIV: ["derivatives"]' in js
     assert 'ONCHAIN: ["onchain"]' in js
-    assert "No exact R20.5 Decision Proof is persisted" in js
-    assert "does not synthesize a layer from unrelated evidence" in js
+    assert "Bu değiştirilemez sinyal için exact R20.5 Karar Kanıtı yok" in js
+    assert "Sentetik grafik katmanı üretilmez" in js
