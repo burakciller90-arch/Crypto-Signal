@@ -71,9 +71,10 @@ def activate_wc2_epoch2(
         )
         status = WC2Epoch2ActivationStatus.INSERTED
     else:
-        state = read_epoch2_state_read_only(epoch2_ledger_path)
-        if state is None:
+        existing_state = read_epoch2_state_read_only(epoch2_ledger_path)
+        if existing_state is None:
             raise ValueError("existing Epoch2 file has no canonical activation")
+        state = existing_state
         status = WC2Epoch2ActivationStatus.UNCHANGED
 
     if epoch1_ledger_path.read_bytes() != epoch1_before:
