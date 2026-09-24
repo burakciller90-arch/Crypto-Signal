@@ -254,6 +254,38 @@ def test_same_cycle_issuance_is_not_calibrated_and_uses_first_frozen_target(
     assert status.resolution_count == 0
 
 
+def test_same_cycle_issuance_binds_exact_collection_protocol_lineage(
+    tmp_path: Path,
+) -> None:
+    bundle = _bundle()
+    signal = bundle.signal_decision
+    frozen_at = signal.as_of_ms + 10
+    issued_at = frozen_at + 20
+    protocol_identity = "f" * 64
+
+    issuance = issue_same_cycle_untouched_forward_forecast(
+        bundle,
+        frozen_at_ms=frozen_at,
+        issued_at_ms=issued_at,
+        maximum_issuance_delay_ms=100,
+        horizon_bars=4,
+        base_asset="BTC",
+        ledger=ImmutableDecisionEvidenceLedger(
+            tmp_path / "protocol-lineage.sqlite3"
+        ),
+        collection_protocol_identity=protocol_identity,
+    )
+
+    assert protocol_identity in (
+        issuance.forecast.source_evidence_identities
+    )
+    refs = {
+        item.component: item.version
+        for item in issuance.forecast.version_refs
+    }
+    assert refs["wc2_collection_protocol"] == protocol_identity
+
+
 def test_same_cycle_issuance_rejects_backdating_and_stale_delay(
     tmp_path: Path,
 ) -> None:
