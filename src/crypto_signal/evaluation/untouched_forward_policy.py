@@ -178,13 +178,19 @@ class WC2CohortReadinessEvidence:
             self.asset_decisive_counts,
             label="WC2 asset decisive counts",
         )
+        if tuple(name for name, _ in self.asset_decisive_counts) != tuple(
+            sorted(WC2_REQUIRED_ASSETS)
+        ):
+            raise ValueError(
+                "WC2 asset decisive counts must cover BTC/ETH/SOL only"
+            )
         _validate_count_pairs(
             self.regime_decisive_counts,
             label="WC2 regime decisive counts",
         )
-        if sum(value for _, value in self.asset_decisive_counts) < self.decisive_n:
+        if sum(value for _, value in self.asset_decisive_counts) != self.decisive_n:
             raise ValueError(
-                "WC2 asset decisive coverage cannot be below decisive total"
+                "WC2 asset decisive counts must equal decisive total"
             )
         if self.source_evidence_identities != tuple(
             sorted(set(self.source_evidence_identities))
