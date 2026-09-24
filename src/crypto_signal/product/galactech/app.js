@@ -471,6 +471,23 @@ function trEventContext(value) {
   return upper(value, "ÖLÇÜLMEDİ").replaceAll("_", " ");
 }
 
+function trVault(value) {
+  const key = upper(value, "");
+  if (key === "CORE") return "ANA KASA";
+  if (key === "TACTICAL") return "TAKTİK KASA";
+  if (key === "OPPORTUNITY_RESERVE") return "FIRSAT REZERVİ";
+  return key || "KASA";
+}
+
+function trMetricStatus(value) {
+  const key = text(value, "").toLowerCase();
+  if (key === "not_yet_measured") return "HENÜZ ÖLÇÜLMEDİ";
+  if (key === "measured") return "ÖLÇÜLDÜ";
+  if (key === "ready") return "HAZIR";
+  if (key === "unavailable") return "KULLANILAMIYOR";
+  return upper(value, "HENÜZ ÖLÇÜLMEDİ").replaceAll("_", " ");
+}
+
 function proofNarrative(proof) {
   const symbol = text(proof?.symbol || proof?.asset, "Piyasa");
   const direction = text(proof?.direction, "").toLowerCase();
@@ -1495,45 +1512,46 @@ function moneyText(value) {
 }
 
 function capitalStatusText(value) {
-  return upper(value, "NOT_YET_MEASURED").replaceAll("_", " ");
+  return trMetricStatus(value);
 }
+
 
 function renderVaultCard(vault) {
   const positions = Array.isArray(vault?.positions) ? vault.positions : [];
   const costs = [
-    ["fee", vault?.fee_usdt],
-    ["spread", vault?.spread_usdt],
-    ["slippage", vault?.slippage_usdt],
+    ["Komisyon", vault?.fee_usdt],
+    ["Alış-satış farkı", vault?.spread_usdt],
+    ["Fiyat kayması", vault?.slippage_usdt],
   ];
   return `
     <article class="capital-vault-card">
       <div class="capital-vault-head">
         <div>
-          <span class="eyebrow">VAULT</span>
-          <h3>${escapeHtml(vault?.vault_id || "UNKNOWN")}</h3>
+          <span class="eyebrow">KASA</span>
+          <h3>${escapeHtml(trVault(vault?.vault_id))}</h3>
         </div>
         <span class="tag">${escapeHtml(capitalStatusText(vault?.metrics_status))}</span>
       </div>
       <div class="capital-vault-metrics">
         <div><span>NAV</span><strong>${escapeHtml(moneyText(vault?.nav_usdt))}</strong></div>
-        <div><span>CASH</span><strong>${escapeHtml(moneyText(vault?.cash_usdt))}</strong></div>
-        <div><span>EXPOSURE</span><strong>${escapeHtml(moneyText(vault?.marked_exposure_usdt))}</strong></div>
-        <div><span>DRAWDOWN</span><strong>${escapeHtml(text(vault?.drawdown_fraction, "ÖLÇÜLMEDİ"))}</strong></div>
+        <div><span>NAKİT</span><strong>${escapeHtml(moneyText(vault?.cash_usdt))}</strong></div>
+        <div><span>MARUZİYET</span><strong>${escapeHtml(moneyText(vault?.marked_exposure_usdt))}</strong></div>
+        <div><span>GERİLEME</span><strong>${escapeHtml(text(vault?.drawdown_fraction, "ÖLÇÜLMEDİ"))}</strong></div>
       </div>
       <div class="capital-vault-detail">
-        <span>start ${escapeHtml(moneyText(vault?.starting_cash_usdt))}</span>
-        <span>realized ${escapeHtml(moneyText(vault?.realized_pnl_usdt))}</span>
-        <span>unrealized ${escapeHtml(moneyText(vault?.unrealized_pnl_usdt))}</span>
-        <span>turnover ${escapeHtml(text(vault?.turnover_fraction, "ÖLÇÜLMEDİ"))}</span>
-        <span>closed trades ${escapeHtml(vault?.closed_trade_count ?? 0)}</span>
-        <span>expectancy ${escapeHtml(
+        <span>başlangıç ${escapeHtml(moneyText(vault?.starting_cash_usdt))}</span>
+        <span>gerçekleşen K/Z ${escapeHtml(moneyText(vault?.realized_pnl_usdt))}</span>
+        <span>gerçekleşmemiş K/Z ${escapeHtml(moneyText(vault?.unrealized_pnl_usdt))}</span>
+        <span>devir oranı ${escapeHtml(text(vault?.turnover_fraction, "ÖLÇÜLMEDİ"))}</span>
+        <span>kapanan işlem ${escapeHtml(vault?.closed_trade_count ?? 0)}</span>
+        <span>beklenen değer ${escapeHtml(
           vault?.expectancy_usdt_per_closed_trade === null ||
           vault?.expectancy_usdt_per_closed_trade === undefined
-            ? "NOT YET MEASURED"
+            ? "HENÜZ ÖLÇÜLMEDİ"
             : moneyText(vault.expectancy_usdt_per_closed_trade)
         )}</span>
       </div>
-      <div class="capital-cost-row" aria-label="Execution costs">
+      <div class="capital-cost-row" aria-label="İşlem maliyetleri">
         ${costs.map(([label, value]) =>
           `<span><small>${escapeHtml(label)}</small><strong>${escapeHtml(moneyText(value))}</strong></span>`
         ).join("")}
@@ -1541,13 +1559,14 @@ function renderVaultCard(vault) {
       <div class="capital-position-list">
         ${positions.length
           ? positions.map((position) =>
-              `<span><strong>${escapeHtml(position.symbol)}</strong> · qty ${escapeHtml(position.quantity)}</span>`
+              `<span><strong>${escapeHtml(position.symbol)}</strong> · miktar ${escapeHtml(position.quantity)}</span>`
             ).join("")
-          : "<span>Cash only · no open virtual position</span>"}
+          : "<span>Yalnız nakit · açık sanal pozisyon yok</span>"}
       </div>
-      <code class="capital-identity">${escapeHtml(vault?.snapshot_identity || "NO SNAPSHOT ID")}</code>
+      <code class="capital-identity">${escapeHtml(vault?.snapshot_identity || "KAYIT KİMLİĞİ YOK")}</code>
     </article>`;
 }
+
 
 function renderEpoch() {
   const target = byId("capitalOverview");
@@ -1566,79 +1585,79 @@ function renderEpoch() {
   if (canonical.status !== "ready") {
     target.innerHTML = `
       <article class="panel capital-unavailable">
-        <span class="eyebrow">CANONICAL EPOCH 2</span>
-        <h2>Runtime accounting evidence unavailable</h2>
-        <p>${escapeHtml(text(canonical.reason, "epoch2 state not available"))}</p>
+        <span class="eyebrow">KANONİK EPOCH 2</span>
+        <h2>Canlı muhasebe kanıtı kullanılamıyor</h2>
+        <p>${escapeHtml(text(canonical.reason, "Epoch 2 çalışma zamanı durumu yok"))}</p>
         <div class="truth-table">
           <div class="truth-row"><span>Program</span><strong>${escapeHtml(program.epoch_id || "Epoch 2")}</strong></div>
-          <div class="truth-row"><span>Constitution start</span><strong>${escapeHtml(moneyText(program.starting_cash_usdt))}</strong></div>
-          <div class="truth-row"><span>Runtime NAV</span><strong>ÖLÇÜLMEDİ</strong></div>
-          <div class="truth-row"><span>REAL CAPITAL</span><strong class="safe-text">DISABLED</strong></div>
+          <div class="truth-row"><span>Program başlangıcı</span><strong>${escapeHtml(moneyText(program.starting_cash_usdt))}</strong></div>
+          <div class="truth-row"><span>Canlı NAV</span><strong>ÖLÇÜLMEDİ</strong></div>
+          <div class="truth-row"><span>Gerçek sermaye</span><strong class="safe-text">KAPALI</strong></div>
         </div>
-        <p>No NAV, PnL, allocation or performance is inferred from the constitution alone.</p>
+        <p>Yalnız program sözleşmesine bakılarak NAV, kâr/zarar, dağılım veya performans uydurulmaz.</p>
       </article>
       <article class="panel">
-        <span class="eyebrow">VAULT CONSTITUTION</span>
+        <span class="eyebrow">KASA ANAYASASI</span>
         <div class="truth-table">
           ${(Array.isArray(program.vault_allocations) ? program.vault_allocations : [])
             .map((item) =>
-              `<div class="truth-row"><span>${escapeHtml(item.vault_id)}</span><strong>${escapeHtml(moneyText(item.starting_cash_usdt))}</strong></div>`
+              `<div class="truth-row"><span>${escapeHtml(trVault(item.vault_id))}</span><strong>${escapeHtml(moneyText(item.starting_cash_usdt))}</strong></div>`
             ).join("") ||
-            '<div class="truth-row"><span>Allocation evidence</span><strong>UNAVAILABLE</strong></div>'}
+            '<div class="truth-row"><span>Dağılım kanıtı</span><strong>KULLANILAMIYOR</strong></div>'}
         </div>
-        <p>Accepted Epoch 2 constitution · not a model recommendation.</p>
+        <p>Kabul edilmiş Epoch 2 program politikasıdır; model tavsiyesi değildir.</p>
       </article>`;
     return;
   }
 
   const totalCosts = [
-    ["fee", consolidated.fee_usdt],
-    ["spread", consolidated.spread_usdt],
-    ["slippage", consolidated.slippage_usdt],
+    ["Komisyon", consolidated.fee_usdt],
+    ["Alış-satış farkı", consolidated.spread_usdt],
+    ["Fiyat kayması", consolidated.slippage_usdt],
   ];
 
   target.innerHTML = `
     <article class="capital-hero-card">
       <div class="capital-hero-head">
         <div>
-          <span class="eyebrow">CANONICAL EPOCH 2 / CONSOLIDATED</span>
+          <span class="eyebrow">KANONİK EPOCH 2 / TOPLAM</span>
           <h2>${escapeHtml(moneyText(consolidated.nav_usdt))}</h2>
-          <p>NAV from immutable R21 accounting · snapshot ${escapeHtml(formatTime(consolidated.snapshot_at_ms))}</p>
+          <p>Değiştirilemez R21 muhasebesinden NAV · kayıt ${escapeHtml(formatTime(consolidated.snapshot_at_ms))}</p>
         </div>
-        <span class="truth-chip truth-chip-safe">REAL CAPITAL · DISABLED</span>
+        <span class="truth-chip truth-chip-safe">GERÇEK SERMAYE · KAPALI</span>
       </div>
       <div class="capital-hero-metrics">
-        <div><span>CASH</span><strong>${escapeHtml(moneyText(consolidated.cash_usdt))}</strong></div>
-        <div><span>MARKED EXPOSURE</span><strong>${escapeHtml(moneyText(consolidated.marked_exposure_usdt))}</strong></div>
-        <div><span>REALIZED PNL</span><strong>${escapeHtml(moneyText(consolidated.realized_pnl_usdt))}</strong></div>
-        <div><span>UNREALIZED PNL</span><strong>${escapeHtml(moneyText(consolidated.unrealized_pnl_usdt))}</strong></div>
-        <div><span>DRAWDOWN</span><strong>${escapeHtml(text(consolidated.drawdown_fraction, "ÖLÇÜLMEDİ"))}</strong></div>
-        <div><span>TURNOVER</span><strong>${escapeHtml(text(consolidated.turnover_fraction, "ÖLÇÜLMEDİ"))}</strong></div>
+        <div><span>NAKİT</span><strong>${escapeHtml(moneyText(consolidated.cash_usdt))}</strong></div>
+        <div><span>İŞARETLİ MARUZİYET</span><strong>${escapeHtml(moneyText(consolidated.marked_exposure_usdt))}</strong></div>
+        <div><span>GERÇEKLEŞEN K/Z</span><strong>${escapeHtml(moneyText(consolidated.realized_pnl_usdt))}</strong></div>
+        <div><span>GERÇEKLEŞMEMİŞ K/Z</span><strong>${escapeHtml(moneyText(consolidated.unrealized_pnl_usdt))}</strong></div>
+        <div><span>GERİLEME</span><strong>${escapeHtml(text(consolidated.drawdown_fraction, "ÖLÇÜLMEDİ"))}</strong></div>
+        <div><span>DEVİR ORANI</span><strong>${escapeHtml(text(consolidated.turnover_fraction, "ÖLÇÜLMEDİ"))}</strong></div>
       </div>
       <div class="capital-cost-row">
         ${totalCosts.map(([label, value]) =>
           `<span><small>${escapeHtml(label)}</small><strong>${escapeHtml(moneyText(value))}</strong></span>`
         ).join("")}
       </div>
-      <code class="capital-identity">${escapeHtml(consolidated.snapshot_identity || "NO SNAPSHOT ID")}</code>
+      <code class="capital-identity">${escapeHtml(consolidated.snapshot_identity || "KAYIT KİMLİĞİ YOK")}</code>
     </article>
 
     <article class="panel capital-constitution">
-      <span class="eyebrow">WHY THIS ALLOCATION?</span>
-      <h2>Accepted Epoch 2 constitution</h2>
-      <p>Core 600 / Tactical 300 / Opportunity Reserve 100 USDT is frozen program policy, not an AI inference or live recommendation.</p>
+      <span class="eyebrow">BU DAĞILIM NEDEN BÖYLE?</span>
+      <h2>Kabul edilmiş Epoch 2 sermaye anayasası</h2>
+      <p>Ana Kasa 600 / Taktik Kasa 300 / Fırsat Rezervi 100 USDT, dondurulmuş program politikasıdır; yapay zekâ çıkarımı veya canlı yatırım tavsiyesi değildir.</p>
       <div class="truth-table">
-        <div class="truth-row"><span>Activation</span><strong>${escapeHtml(shortIdentity(activation.activation_identity))}</strong></div>
-        <div class="truth-row"><span>Starting cash</span><strong>${escapeHtml(moneyText(activation.starting_cash_usdt))}</strong></div>
-        <div class="truth-row"><span>Leverage</span><strong>${activation.leverage_allowed === false ? "DISABLED" : "UNVERIFIED"}</strong></div>
-        <div class="truth-row"><span>Borrowing</span><strong>${activation.borrowing_allowed === false ? "DISABLED" : "UNVERIFIED"}</strong></div>
-        <div class="truth-row"><span>Martingale</span><strong>${activation.martingale_allowed === false ? "DISABLED" : "UNVERIFIED"}</strong></div>
+        <div class="truth-row"><span>Aktivasyon</span><strong>${escapeHtml(shortIdentity(activation.activation_identity))}</strong></div>
+        <div class="truth-row"><span>Başlangıç nakdi</span><strong>${escapeHtml(moneyText(activation.starting_cash_usdt))}</strong></div>
+        <div class="truth-row"><span>Kaldıraç</span><strong>${activation.leverage_allowed === false ? "KAPALI" : "DOĞRULANMADI"}</strong></div>
+        <div class="truth-row"><span>Borçlanma</span><strong>${activation.borrowing_allowed === false ? "KAPALI" : "DOĞRULANMADI"}</strong></div>
+        <div class="truth-row"><span>Martingale</span><strong>${activation.martingale_allowed === false ? "KAPALI" : "DOĞRULANMADI"}</strong></div>
       </div>
     </article>
 
     <section class="capital-vault-section">
       <div class="capital-section-head">
-        <div><span class="eyebrow">VAULT ARCHITECTURE</span><h2>Core / Tactical / Opportunity Reserve</h2></div>
+        <div><span class="eyebrow">KASA MİMARİSİ</span><h2>Ana Kasa / Taktik Kasa / Fırsat Rezervi</h2></div>
         <span class="tag">${escapeHtml(capitalStatusText(consolidated.metrics_status))}</span>
       </div>
       <div class="capital-vault-grid">
@@ -1647,21 +1666,22 @@ function renderEpoch() {
     </section>
 
     <article class="panel capital-track-record">
-      <span class="eyebrow">TRACK RECORD TRUTH</span>
+      <span class="eyebrow">PERFORMANS KAYDI DOĞRULUĞU</span>
       <h2>${escapeHtml(capitalStatusText(consolidated.metrics_status))}</h2>
       <div class="truth-table">
-        <div class="truth-row"><span>Closed trades</span><strong>${escapeHtml(consolidated.closed_trade_count ?? 0)}</strong></div>
-        <div class="truth-row"><span>Wins / Losses / Breakeven</span><strong>${escapeHtml(consolidated.win_count ?? 0)} / ${escapeHtml(consolidated.loss_count ?? 0)} / ${escapeHtml(consolidated.breakeven_count ?? 0)}</strong></div>
-        <div class="truth-row"><span>Expectancy</span><strong>${escapeHtml(
+        <div class="truth-row"><span>Kapanan işlemler</span><strong>${escapeHtml(consolidated.closed_trade_count ?? 0)}</strong></div>
+        <div class="truth-row"><span>Kazanç / Kayıp / Başabaş</span><strong>${escapeHtml(consolidated.win_count ?? 0)} / ${escapeHtml(consolidated.loss_count ?? 0)} / ${escapeHtml(consolidated.breakeven_count ?? 0)}</strong></div>
+        <div class="truth-row"><span>Beklenen değer</span><strong>${escapeHtml(
           consolidated.expectancy_usdt_per_closed_trade === null ||
           consolidated.expectancy_usdt_per_closed_trade === undefined
-            ? "NOT YET MEASURED"
+            ? "HENÜZ ÖLÇÜLMEDİ"
             : moneyText(consolidated.expectancy_usdt_per_closed_trade)
         )}</strong></div>
       </div>
-      <p>Empty history is not 0% win rate. Metrics remain NOT YET MEASURED until accepted closed-trade evidence exists.</p>
+      <p>Boş geçmiş %0 başarı oranı değildir. Kabul edilmiş kapanmış işlem kanıtı oluşana kadar metrikler “henüz ölçülmedi” olarak kalır.</p>
     </article>`;
 }
+
 
 function renderShadowDecisionRail() {
   const target = byId("shadowRailOverview");
@@ -1678,15 +1698,15 @@ function renderShadowDecisionRail() {
   if (!ready) {
     target.innerHTML = `
       <article class="panel capital-unavailable">
-        <span class="eyebrow">SHADOW DECISION RAIL</span>
-        <h2>Runtime shadow evidence unavailable</h2>
-        <p>${escapeHtml(text(data.reason, "shadow decision rail not exposed"))}</p>
+        <span class="eyebrow">DENEME KARAR HATTI</span>
+        <h2>Çalışma zamanı deneme kanıtı kullanılamıyor</h2>
+        <p>${escapeHtml(text(data.reason, "deneme karar hattı sunulmuyor"))}</p>
         <div class="truth-table">
-          <div class="truth-row"><span>Semantic</span><strong>SHADOW / RESEARCH ONLY</strong></div>
-          <div class="truth-row"><span>Canonical Epoch 2 mutation</span><strong>DISABLED</strong></div>
-          <div class="truth-row"><span>Production authority</span><strong>DISABLED</strong></div>
+          <div class="truth-row"><span>Anlamı</span><strong>YALNIZ DENEME / ARAŞTIRMA</strong></div>
+          <div class="truth-row"><span>Kanonik Epoch 2 değişikliği</span><strong>KAPALI</strong></div>
+          <div class="truth-row"><span>Üretim yetkisi</span><strong>KAPALI</strong></div>
         </div>
-        <p>Unavailable shadow evidence is not interpreted as a trade, fill, or canonical paper mutation.</p>
+        <p>Eksik deneme kanıtı; işlem, gerçekleşme veya kanonik kâğıt portföy değişikliği olarak yorumlanmaz.</p>
       </article>`;
     return;
   }
@@ -1695,31 +1715,32 @@ function renderShadowDecisionRail() {
     <article class="panel">
       <div class="panel-head">
         <div>
-          <span class="eyebrow">SHADOW DECISION RAIL / READ ONLY</span>
-          <h2>${escapeHtml(snapshot.record_count ?? 0)} journaled previews</h2>
+          <span class="eyebrow">DENEME KARAR HATTI / YALNIZCA GÖZLEM</span>
+          <h2>${escapeHtml(snapshot.record_count ?? 0)} kayıtlı önizleme</h2>
         </div>
         <span class="truth-chip ${replayVerified ? "truth-chip-ready" : "truth-chip-muted"}">
-          ${replayVerified ? "REPLAY · VERIFIED" : "REPLAY · UNVERIFIED"}
+          ${replayVerified ? "TEKRAR OYNATMA · DOĞRULANDI" : "TEKRAR OYNATMA · DOĞRULANMADI"}
         </span>
       </div>
       <div class="truth-table">
-        <div class="truth-row"><span>Journal</span><strong>${escapeHtml(data.journal_filename || "configured")}</strong></div>
-        <div class="truth-row"><span>SQLite quick_check</span><strong>${snapshot.quick_check_ok === true ? "PASS" : "UNVERIFIED"}</strong></div>
-        <div class="truth-row"><span>Read-only replay</span><strong>${snapshot.read_only_verified === true ? "VERIFIED" : "UNVERIFIED"}</strong></div>
-        <div class="truth-row"><span>Canonical Epoch 2 mutation</span><strong class="safe-text">DISABLED</strong></div>
-        <div class="truth-row"><span>Production authority</span><strong class="safe-text">DISABLED</strong></div>
-        <div class="truth-row"><span>REAL CAPITAL</span><strong class="safe-text">DISABLED</strong></div>
+        <div class="truth-row"><span>Günlük</span><strong>${escapeHtml(data.journal_filename || "yapılandırıldı")}</strong></div>
+        <div class="truth-row"><span>SQLite hızlı kontrol</span><strong>${snapshot.quick_check_ok === true ? "GEÇTİ" : "DOĞRULANMADI"}</strong></div>
+        <div class="truth-row"><span>Salt-okunur tekrar oynatma</span><strong>${snapshot.read_only_verified === true ? "DOĞRULANDI" : "DOĞRULANMADI"}</strong></div>
+        <div class="truth-row"><span>Kanonik Epoch 2 değişikliği</span><strong class="safe-text">KAPALI</strong></div>
+        <div class="truth-row"><span>Üretim yetkisi</span><strong class="safe-text">KAPALI</strong></div>
+        <div class="truth-row"><span>Gerçek sermaye</span><strong class="safe-text">KAPALI</strong></div>
       </div>
       <div class="feed-item-meta">
         ${lastRecords.length
           ? lastRecords.map((item) =>
-              `<span>${escapeHtml(item?.[0] || "UNKNOWN")} <code>${escapeHtml(shortIdentity(item?.[1]))}</code></span>`
+              `<span>${escapeHtml(item?.[0] || "BİLİNMİYOR")} <code>${escapeHtml(shortIdentity(item?.[1]))}</code></span>`
             ).join("")
-          : "<span>No shadow preview has been journaled.</span>"}
+          : "<span>Henüz deneme önizlemesi günlüğe yazılmadı.</span>"}
       </div>
-      <p>Reviewed preview evidence only · not a fill, not canonical NAV mutation, not live trading.</p>
+      <p>Yalnızca gözden geçirilmiş önizleme kanıtıdır; gerçekleşmiş işlem, kanonik NAV değişikliği veya canlı alım-satım değildir.</p>
     </article>`;
 }
+
 
 function renderPaper() {
   const data = state.epoch2State || {};
@@ -1728,14 +1749,15 @@ function renderPaper() {
   if (!navNode || !noteNode) return;
 
   if (data.status !== "ready" || !data.consolidated) {
-    navNode.textContent = "UNAVAILABLE";
-    noteNode.textContent = text(data.reason, "canonical Epoch2 evidence unavailable");
+    navNode.textContent = "KULLANILAMIYOR";
+    noteNode.textContent = text(data.reason, "kanonik Epoch 2 kanıtı kullanılamıyor");
     return;
   }
 
   navNode.textContent = moneyText(data.consolidated.nav_usdt);
-  noteNode.textContent = "canonical Epoch2 · immutable R21 accounting";
+  noteNode.textContent = "kanonik Epoch 2 · değiştirilemez R21 muhasebesi";
 }
+
 function proofCategory(item) {
   const outcome = item?.latest_outcome;
   if (!outcome) {
