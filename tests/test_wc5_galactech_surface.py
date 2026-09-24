@@ -19,8 +19,8 @@ def test_wc5_galactech_surface_is_truth_bound_and_drills_to_proof(
 
     assert 'id="wc5DecisionBody"' in html
     assert 'id="wc5DecisionTag"' in html
-    assert "10-SECOND DECISION / EXACT PERSISTED EVIDENCE" in html
-    assert "Persisted action yoksa TRADE veya HOLD_CASH uydurulmaz." in html
+    assert "ŞU ANKİ EYLEM DURUMU" in html
+    assert "Kalıcı eylem kanıtı yoksa sistem AL / SAT / NAKİTTE KAL uydurmaz." in html
 
     assert "wc2Action: (identity)" in js
     assert "async function loadCommandDecisionSurface()" in js
@@ -28,17 +28,17 @@ def test_wc5_galactech_surface_is_truth_bound_and_drills_to_proof(
     assert "function wc5PrimaryEvidence(proof, verdict)" in js
     assert 'actionSnapshot?.status === "PERSISTED_ACTION"' in js
     assert 'persistedAction || "INSUFFICIENT_EVIDENCE"' in js
-    assert "MAX PAPER/SHADOW EXPOSURE" in js
-    assert "NOT AVAILABLE" in js
-    assert "cohort intent notional içermez" in js
+    assert "AZAMİ KAĞIT / DENEME MARUZİYETİ" in js
+    assert "MEVCUT DEĞİL" in js
+    assert "cohort niyeti tutar içermiyorsa sistem rakam uydurmaz" in js
     assert "same immutable intent" not in js
-    assert "Aynı immutable intent sonradan rewrite edilmez" in js
+    assert "Eski karar geriye dönük değiştirilmez" in js
     assert "different action" not in js
-    assert "farklı action için yeni exact forecast/intent evidence gerekir" in js
-    assert "Primary line selection is deterministic canonical evidence-domain order" in js
-    assert "it is not a learned importance ranking" in js
+    assert "farklı eylem için yeni kesin öngörü / niyet kanıtı gerekir" in js
+    assert "Öncelik sırası öğrenilmiş bir önem puanı değildir" in js
+    assert "kanonik kanıt alanlarının deterministik sunum sırasıdır" in js
     assert 'data-evidence-id="' in js
-    assert "PROOF · exact issuance evidence" in js
+    assert "DONDURULMUŞ KANITI AÇ" in js
 
     assert ".wc5-decision-surface" in css
     assert ".wc5-decision-grid" in css
@@ -54,7 +54,7 @@ def test_wc5_surface_does_not_expand_product_authority(tmp_path: Path) -> None:
 
     assert health["real_capital"] == 0
     assert health["read_only"] is True
-    assert "no order path" in html
+    assert "emir / erişim anahtarı yolu yok" in html
     assert "REAL_CAPITAL=0" in html
 
 

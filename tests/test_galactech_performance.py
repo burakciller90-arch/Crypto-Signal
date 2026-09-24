@@ -82,15 +82,15 @@ def test_galactech_performance_keeps_evidence_classes_separate(
     js = script.text
     css = style.text
 
-    assert 'data-ui-version="galactech-v1.1-polish"' in html
+    assert 'data-ui-version="galactech-v2-intelligence-first-tr"' in html
     assert 'id="performanceCohorts"' in html
     assert 'id="performancePaper"' in html
     assert 'id="performanceCalibration"' in html
-    assert "Historical success ≠ calibrated probability" in html
-    assert "backtest ≠ untouched-forward" in html
-    assert "NOT YET MEASURED" in html
-    assert "NOT EXPOSED" in html
-    assert "Counterfactual outcome evidence yok." in html
+    assert "Geçmiş başarı ≠ kalibre edilmiş olasılık" in html
+    assert "geçmiş test ≠ ileri dönem kanıtı" in html
+    assert "HENÜZ ÖLÇÜLMEDİ" in html
+    assert "SUNULMUYOR" in html
+    assert "Karşı-olgusal sonuç kanıtı yok." in html
 
     assert 'performance: "/api/performance"' in js
     assert "function performanceEvidenceClassLabel(value)" in js
@@ -99,9 +99,9 @@ def test_galactech_performance_keeps_evidence_classes_separate(
     assert "function renderPerformanceCohorts()" in js
     assert "function renderPerformancePaper()" in js
     assert "function renderPerformance()" in js
-    assert "descriptive frequency · not probability" in js
-    assert "Empty performance history is NOT MEASURED" in js
-    assert "Forecast hit-rate is never substituted for paper-fund performance." in js
+    assert "betimleyici sıklık · olasılık değildir" in js
+    assert "Boş performans geçmişi “ölçülmedi” demektir" in js
+    assert "Öngörü isabet oranı, kâğıt portföy performansı yerine geçirilmez." in js
     assert 'loadEndpoint("performance", API.performance)' in js
 
     assert ".performance-summary-grid" in css
@@ -132,6 +132,6 @@ def test_galactech_performance_empty_history_is_not_zero_rate(
     }
 
     js = script.text
-    assert "Empty performance history is NOT MEASURED; %0 başarı oranı değildir." in js
+    assert "Boş performans geçmişi “ölçülmedi” demektir; %0 başarı oranı değildir." in js
     assert "historical_success_fraction" in js
-    assert "NOT MEASURED" in js
+    assert "ÖLÇÜLMEDİ" in js

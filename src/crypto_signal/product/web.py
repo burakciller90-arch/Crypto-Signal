@@ -553,6 +553,48 @@ def create_app(
             }
         )
 
+    @app.get("/api/decision-proof/forecast/{forecast_identity}")
+    def decision_proof_for_forecast(forecast_identity: str) -> JSONResponse:
+        if not _is_lower_sha256(forecast_identity):
+            raise HTTPException(
+                status_code=400,
+                detail="forecast_identity must be lowercase SHA256",
+            )
+        if selected_decision_path is None or not selected_decision_path.exists():
+            return _json(
+                {
+                    "status": "unavailable",
+                    "reason": "decision_evidence_runtime_not_configured",
+                    "forecast_identity": forecast_identity,
+                    "read_only": True,
+                    "real_capital": 0,
+                }
+            )
+        try:
+            proof = ImmutableDecisionEvidenceLedger(
+                selected_decision_path
+            ).read_proof_for_forecast(forecast_identity)
+        except DecisionLedgerConflictError as exc:
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
+        if proof is None:
+            return _json(
+                {
+                    "status": "empty",
+                    "reason": "no_persisted_decision_proof_for_forecast",
+                    "forecast_identity": forecast_identity,
+                    "read_only": True,
+                    "real_capital": 0,
+                }
+            )
+        return _json(
+            {
+                "status": "ready",
+                "proof": proof,
+                "read_only": True,
+                "real_capital": 0,
+            }
+        )
+
     @app.get("/api/intelligence-feed")
     def live_intelligence_feed(
         limit: int = Query(default=100, ge=1, le=1000),

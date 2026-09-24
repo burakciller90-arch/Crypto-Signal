@@ -39,6 +39,9 @@ def test_product_exposes_persisted_decision_proof_and_feed_read_only(
     health = client.get("/api/health")
     status = client.get("/api/decision-evidence/status")
     detail = client.get(f"/api/decision-proof/{forecast.signal_freeze_identity}")
+    forecast_detail = client.get(
+        f"/api/decision-proof/forecast/{forecast.forecast_identity}"
+    )
     feed = client.get("/api/intelligence-feed?limit=20")
 
     assert health.status_code == 200
@@ -69,6 +72,16 @@ def test_product_exposes_persisted_decision_proof_and_feed_read_only(
     assert detail_body["read_only"] is True
     assert detail_body["real_capital"] == 0
 
+    assert forecast_detail.status_code == 200
+    forecast_detail_body = forecast_detail.json()
+    assert forecast_detail_body["status"] == "ready"
+    assert forecast_detail_body["proof"]["proof_identity"] == proof.proof_identity
+    assert forecast_detail_body["proof"]["signal_freeze_identity"] == (
+        forecast.signal_freeze_identity
+    )
+    assert forecast_detail_body["read_only"] is True
+    assert forecast_detail_body["real_capital"] == 0
+
     assert feed.status_code == 200
     feed_body = feed.json()
     assert feed_body["status"] == "ready"
@@ -82,6 +95,9 @@ def test_product_exposes_persisted_decision_proof_and_feed_read_only(
     assert client.post("/api/intelligence-feed").status_code == 405
     assert client.post(
         f"/api/decision-proof/{forecast.signal_freeze_identity}"
+    ).status_code == 405
+    assert client.post(
+        f"/api/decision-proof/forecast/{forecast.forecast_identity}"
     ).status_code == 405
     assert decision_path.read_bytes() == before
     assert not signal_path.exists()
@@ -144,11 +160,13 @@ def test_galactech_binds_only_persisted_r20_5_evidence_domains(
 
     assert 'id="systemDecisionLedger"' in html
     assert 'id="systemLiveFeed"' in html
-    assert "DECISION PROOF LEDGER" in html
-    assert "LIVE INTELLIGENCE FEED" in html
-    assert "Persisted R20/R20.5 Decision Proof" in html
+    assert "KARAR KANITI GÜNLÜĞÜ" in html
+    assert "CANLI ZEKÂ AKIŞI" in html
+    assert "Kalıcı Karar Kanıtı" in html
 
     assert 'decisionProof: (identity)' in js
+    assert "decisionProofByForecast: (identity)" in js
+    assert "async function openFeedForecastProof" in js
     assert 'decisionStatus: "/api/decision-evidence/status"' in js
     assert 'liveFeed: "/api/intelligence-feed?limit=100"' in js
     assert "function renderDecisionProofExtension(payload)" in js
@@ -157,6 +175,6 @@ def test_galactech_binds_only_persisted_r20_5_evidence_domains(
     assert 'FLOW: ["order_book", "order_flow_cvd"]' in js
     assert 'DERIV: ["derivatives"]' in js
     assert 'ONCHAIN: ["onchain"]' in js
-    assert "No exact R20.5 Decision Proof is persisted" in js
-    assert "does not synthesize a layer from unrelated evidence" in js
-    assert "private reasoning" in js.lower()
+    assert "Bu değiştirilemez sinyal için kesin R20.5 Karar Kanıtı yok" in js
+    assert "Sentetik grafik katmanı üretilmez" in js
+    assert "gizli akıl yürütme" in js.lower()

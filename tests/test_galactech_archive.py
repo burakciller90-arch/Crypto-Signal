@@ -100,10 +100,10 @@ def test_galactech_archive_pairs_immutable_issuance_with_later_outcome(
     js = script.text
     css = style.text
 
-    assert 'data-ui-version="galactech-v1.1-polish"' in html
+    assert 'data-ui-version="galactech-v2-intelligence-first-tr"' in html
     assert 'id="archiveSummary"' in html
     assert 'id="archiveSchemaTag"' in html
-    assert "ISSUANCE SNAPSHOT ↔ LATER OUTCOME SNAPSHOT" in html
+    assert "KARAR ANI KAYDI ↔ SONRAKİ SONUÇ KAYDI" in html
     assert 'data-filter="winner"' in html
     assert 'data-filter="loser"' in html
     assert 'data-filter="unresolved"' in html
@@ -122,9 +122,9 @@ def test_galactech_archive_pairs_immutable_issuance_with_later_outcome(
     assert 'outcomeState === "invalidated"' in js
     assert 'outcomeState === "ambiguous"' in js
     assert 'outcomeState === "not_evaluable"' in js
-    assert "Missing outcome is not rewritten as failure, success or 0% performance." in js
-    assert "Freeze stays immutable after outcome." in js
-    assert "not probability" in js
+    assert "Eksik sonuç, başarı, başarısızlık veya %0 performans olarak yeniden yazılmaz." in js
+    assert "Sonuç geldikten sonra karar anı kaydı değişmez." in js
+    assert "olasılık değildir" in js
 
     assert ".archive-summary-grid" in css
     assert ".archive-snapshot-pair" in css
@@ -155,5 +155,5 @@ def test_galactech_archive_preserves_unresolved_issuance(
     js = script.text
     assert 'if (!outcome) {' in js
     assert 'return "unresolved";' in js
-    assert "NO LATER OUTCOME YET" in js
-    assert "unresolved ≠ failure" in client.get("/galactech").text
+    assert "HENÜZ SONUÇ KAYDI YOK" in js
+    assert "sonuç bekliyor ≠ başarısız" in client.get("/galactech").text

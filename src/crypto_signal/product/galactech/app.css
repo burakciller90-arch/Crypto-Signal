@@ -2898,3 +2898,193 @@ code,
     width: 100%;
   }
 }
+
+
+/* ==========================================================================
+   GALACTECH V2 — Intelligence-first Turkish Command Center
+   ========================================================================== */
+:root {
+  --gt-bg-0:#06080c; --gt-bg-1:#0b0f17; --gt-glass:rgba(17,22,34,.72);
+  --gt-cyan:#00f0ff; --gt-green:#00ff87; --gt-red:#ff0055; --gt-amber:#ffb800;
+  --gt-text:#f4f8fb; --gt-muted:#91a3b5; --gt-border:rgba(141,175,204,.13);
+}
+body[data-ui-version="galactech-v2-intelligence-first-tr"]{
+  min-height:100vh;color:var(--gt-text);
+  background:
+    radial-gradient(circle at 12% 12%,rgba(0,240,255,.10),transparent 30rem),
+    radial-gradient(circle at 86% 8%,rgba(109,77,255,.12),transparent 34rem),
+    radial-gradient(circle at 70% 82%,rgba(255,0,85,.055),transparent 30rem),
+    linear-gradient(145deg,var(--gt-bg-0),var(--gt-bg-1) 55%,#07101b);
+  font-family:Inter,"Plus Jakarta Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+}
+body[data-ui-version="galactech-v2-intelligence-first-tr"]::before{
+  content:"";position:fixed;inset:0;z-index:-2;pointer-events:none;opacity:.32;
+  background-image:
+    radial-gradient(circle at 15% 20%,rgba(255,255,255,.55) 0 1px,transparent 1.4px),
+    radial-gradient(circle at 82% 24%,rgba(0,240,255,.65) 0 1px,transparent 1.4px),
+    radial-gradient(circle at 64% 76%,rgba(255,255,255,.42) 0 1px,transparent 1.4px),
+    radial-gradient(circle at 34% 68%,rgba(139,111,255,.58) 0 1px,transparent 1.4px);
+  background-size:170px 170px,230px 230px,280px 280px,320px 320px;
+  animation:gtStarDrift 55s linear infinite;
+}
+body[data-ui-version="galactech-v2-intelligence-first-tr"] .app-shell{display:block;min-height:100vh}
+body[data-ui-version="galactech-v2-intelligence-first-tr"] .sidebar{
+  position:sticky;top:0;z-index:60;width:100%;min-height:0;padding:.72rem 1.1rem;
+  display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:1rem;align-items:center;
+  border-right:0;border-bottom:1px solid rgba(0,240,255,.14);
+  background:rgba(6,8,12,.82);backdrop-filter:blur(24px) saturate(135%);
+  -webkit-backdrop-filter:blur(24px) saturate(135%);box-shadow:0 15px 44px rgba(0,0,0,.26);
+}
+body[data-ui-version="galactech-v2-intelligence-first-tr"] .brand-lockup{min-width:max-content}
+body[data-ui-version="galactech-v2-intelligence-first-tr"] .brand-mark{
+  color:#041014;background:linear-gradient(145deg,#eaffff,var(--gt-cyan));
+  box-shadow:0 0 26px rgba(0,240,255,.36),inset 0 0 18px rgba(255,255,255,.22)
+}
+body[data-ui-version="galactech-v2-intelligence-first-tr"] .primary-nav{
+  display:flex;justify-content:center;align-items:center;flex-wrap:wrap;gap:.28rem;margin:0
+}
+body[data-ui-version="galactech-v2-intelligence-first-tr"] .nav-item{
+  width:auto;min-width:0;padding:.62rem .7rem;border:1px solid transparent;border-radius:.72rem;
+  background:transparent;transition:160ms ease
+}
+body[data-ui-version="galactech-v2-intelligence-first-tr"] .nav-item:hover{
+  transform:translateY(-1px);border-color:rgba(0,240,255,.28);background:rgba(0,240,255,.055);
+  box-shadow:0 0 24px rgba(0,240,255,.065)
+}
+body[data-ui-version="galactech-v2-intelligence-first-tr"] .nav-item.is-active{
+  border-color:rgba(0,240,255,.42);background:linear-gradient(180deg,rgba(0,240,255,.13),rgba(0,240,255,.035));
+  box-shadow:inset 0 0 20px rgba(0,240,255,.035),0 0 24px rgba(0,240,255,.06)
+}
+body[data-ui-version="galactech-v2-intelligence-first-tr"] .nav-index{display:none}
+body[data-ui-version="galactech-v2-intelligence-first-tr"] .nav-label{font-size:.71rem;letter-spacing:.05em;white-space:nowrap}
+body[data-ui-version="galactech-v2-intelligence-first-tr"] .authority-card{
+  margin:0;padding:.58rem .72rem;border-color:rgba(0,255,135,.2);background:rgba(0,255,135,.035)
+}
+body[data-ui-version="galactech-v2-intelligence-first-tr"] .authority-card p{display:none}
+body[data-ui-version="galactech-v2-intelligence-first-tr"] .surface{width:100%}
+body[data-ui-version="galactech-v2-intelligence-first-tr"] .topbar{
+  position:sticky;top:4.55rem;z-index:50;padding:.68rem clamp(1rem,2vw,2rem);
+  background:rgba(7,10,15,.72);border-bottom:1px solid rgba(255,255,255,.055);
+  backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)
+}
+body[data-ui-version="galactech-v2-intelligence-first-tr"] .main-content{
+  max-width:1800px;margin:0 auto;padding:1.35rem clamp(1rem,2.2vw,2.5rem) 4rem
+}
+body[data-ui-version="galactech-v2-intelligence-first-tr"] .panel,
+body[data-ui-version="galactech-v2-intelligence-first-tr"] .metric-card,
+body[data-ui-version="galactech-v2-intelligence-first-tr"] .capital-hero-card,
+body[data-ui-version="galactech-v2-intelligence-first-tr"] .archive-proof-card{
+  position:relative;overflow:hidden;border:1px solid var(--gt-border);
+  background:linear-gradient(145deg,rgba(255,255,255,.022),transparent 42%),var(--gt-glass);
+  box-shadow:0 28px 90px rgba(0,0,0,.34);backdrop-filter:blur(16px) saturate(128%);
+  -webkit-backdrop-filter:blur(16px) saturate(128%)
+}
+body[data-ui-version="galactech-v2-intelligence-first-tr"] .panel::before,
+body[data-ui-version="galactech-v2-intelligence-first-tr"] .metric-card::before{
+  content:"";position:absolute;inset:0;pointer-events:none;border-radius:inherit;padding:1px;
+  background:linear-gradient(120deg,rgba(0,240,255,.22),transparent 34%,transparent 64%,rgba(109,77,255,.18));
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+  -webkit-mask-composite:xor;mask-composite:exclude;opacity:.55;transition:opacity 180ms ease
+}
+body[data-ui-version="galactech-v2-intelligence-first-tr"] .panel:hover::before,
+body[data-ui-version="galactech-v2-intelligence-first-tr"] .metric-card:hover::before{opacity:1}
+.command-hero-head{align-items:center;margin-bottom:1rem}
+.command-hero-head h1{margin-bottom:.38rem;font-size:clamp(2rem,3.4vw,3.7rem);letter-spacing:-.045em;line-height:1;text-wrap:balance}
+.command-hero-head p{max-width:62rem;color:#a7b5c4;font-size:.98rem}
+.live-intel-badge{display:flex;align-items:center;gap:.72rem;min-width:13rem;padding:.78rem .92rem;border:1px solid rgba(0,240,255,.24);border-radius:.9rem;background:rgba(0,240,255,.055);box-shadow:inset 0 0 24px rgba(0,240,255,.035)}
+.live-intel-badge strong,.live-intel-badge small{display:block}
+.live-intel-badge strong{color:#eaffff;font-size:.72rem;letter-spacing:.09em}
+.live-intel-badge small{margin-top:.14rem;color:#8ba1af;font-size:.68rem}
+.live-intel-pulse,.live-dot{width:.54rem;height:.54rem;flex:0 0 auto;border-radius:50%;background:var(--gt-cyan);box-shadow:0 0 0 .2rem rgba(0,240,255,.08),0 0 18px rgba(0,240,255,.65);animation:gtLivePulse 1.8s ease-in-out infinite}
+.situation-grid-v2{margin-bottom:1rem}
+body[data-ui-version="galactech-v2-intelligence-first-tr"] .metric-card{min-height:7.1rem}
+body[data-ui-version="galactech-v2-intelligence-first-tr"] .metric-card>span{color:#7f94a7;font-size:.67rem;letter-spacing:.09em}
+.command-grid-v2{display:grid;grid-template-columns:minmax(245px,.78fr) minmax(460px,1.62fr) minmax(260px,.82fr);gap:1rem;align-items:start}
+.command-left-rail,.command-center-stream,.command-right-rail{min-width:0;display:grid;gap:1rem}
+.portfolio-hero-v2{min-height:20rem}
+.portfolio-balance-v2{margin:.65rem 0 1rem;padding:1rem;border-radius:1rem;border:1px solid rgba(0,255,135,.13);background:radial-gradient(circle at 20% 0%,rgba(0,255,135,.09),transparent 48%),rgba(0,0,0,.14)}
+.portfolio-balance-v2>span{display:block;color:#799286;font-size:.68rem;letter-spacing:.08em;text-transform:uppercase}
+.portfolio-balance-v2>strong{display:block;margin:.28rem 0 .2rem;color:#effff7;font-family:"JetBrains Mono","Space Mono",ui-monospace,monospace;font-size:clamp(1.7rem,2.7vw,2.55rem);letter-spacing:-.045em;text-shadow:0 0 22px rgba(0,255,135,.12)}
+.portfolio-balance-v2>small{color:#779184}
+.portfolio-mini-stats{display:grid;grid-template-columns:1fr 1fr;gap:.65rem}
+.portfolio-mini-stats>div{padding:.75rem;border:1px solid rgba(255,255,255,.06);border-radius:.78rem;background:rgba(0,0,0,.12)}
+.portfolio-mini-stats span,.portfolio-mini-stats strong{display:block}
+.portfolio-mini-stats span{margin-bottom:.24rem;color:#718699;font-size:.64rem}
+.portfolio-mini-stats strong{font-family:"JetBrains Mono","Space Mono",ui-monospace,monospace;font-size:.78rem}
+.equity-ghost{height:4.2rem;margin-top:1rem;display:flex;align-items:end;gap:.25rem;opacity:.55}
+.equity-ghost span{flex:1;min-height:.45rem;border-radius:.22rem .22rem 0 0;background:linear-gradient(180deg,rgba(0,255,135,.55),rgba(0,240,255,.08));animation:gtBars 3.5s ease-in-out infinite alternate}
+.equity-ghost span:nth-child(1){height:28%}.equity-ghost span:nth-child(2){height:42%;animation-delay:-.5s}.equity-ghost span:nth-child(3){height:38%;animation-delay:-1.1s}.equity-ghost span:nth-child(4){height:60%;animation-delay:-.8s}.equity-ghost span:nth-child(5){height:51%;animation-delay:-1.6s}.equity-ghost span:nth-child(6){height:75%;animation-delay:-1.9s}
+.proof-ledger-panel{max-height:34rem}
+.proof-stream-v2{display:grid;gap:.5rem}
+.proof-stream-row-v2{display:grid;grid-template-columns:auto 1fr auto;gap:.18rem .58rem;align-items:center;padding:.68rem .72rem;border:1px solid rgba(255,255,255,.055);border-radius:.72rem;background:rgba(0,0,0,.12)}
+.proof-stream-row-v2>span,.proof-stream-row-v2>em{color:#8194a7;font-size:.62rem;font-style:normal}
+.proof-stream-row-v2>em{color:var(--gt-cyan);text-align:right}.proof-stream-row-v2>code{grid-column:1/-1;color:#536a7b;font-size:.58rem}
+.decision-surface-v2{border-color:rgba(255,184,0,.16);background:radial-gradient(circle at 12% 0%,rgba(255,184,0,.06),transparent 32rem),var(--gt-glass)}
+.feed-panel-live{min-height:42rem;border-color:rgba(0,240,255,.17)}
+.feed-panel-head-v2{align-items:flex-start}.feed-panel-head-v2 p{margin:.3rem 0 0;color:#7d91a4;font-size:.74rem}
+.live-tag{display:inline-flex;gap:.4rem;align-items:center;color:#aefbff;border-color:rgba(0,240,255,.24)}
+.intelligence-feed-v2{display:grid;gap:.84rem}
+.intel-card-v2{position:relative;overflow:hidden;padding:1rem;border:1px solid rgba(0,240,255,.13);border-radius:1rem;background:linear-gradient(145deg,rgba(0,240,255,.04),rgba(255,255,255,.012) 35%,rgba(0,0,0,.08));box-shadow:0 14px 34px rgba(0,0,0,.18);animation:gtFeedIn 420ms ease both;animation-delay:calc(var(--feed-order) * 35ms)}
+.intel-card-v2::before{content:"";position:absolute;left:0;top:1rem;bottom:1rem;width:2px;border-radius:4px;background:linear-gradient(var(--gt-cyan),rgba(0,240,255,0));box-shadow:0 0 14px rgba(0,240,255,.55)}
+.intel-card-resolved::before{background:linear-gradient(var(--gt-green),rgba(0,255,135,0));box-shadow:0 0 14px rgba(0,255,135,.45)}
+.intel-card-head-v2{display:flex;justify-content:space-between;gap:1rem;align-items:flex-start}
+.intel-identity-v2{display:flex;align-items:center;flex-wrap:wrap;gap:.5rem}.intel-identity-v2 strong{font-size:.92rem}.intel-identity-v2>span:not(.intel-kind-v2){color:#758ba0;font-size:.65rem}
+.intel-kind-v2{padding:.22rem .42rem;border-radius:.35rem;background:rgba(0,240,255,.08);color:#8cf7ff;font-size:.6rem;letter-spacing:.075em}
+.intel-state-v2{font-size:.66rem}
+.intel-thought-v2{margin:.85rem 0;padding:.92rem 1rem;border:1px solid rgba(255,255,255,.055);border-radius:.82rem;background:rgba(3,7,12,.42)}
+.intel-label-v2{display:block;margin-bottom:.42rem;color:var(--gt-cyan);font-size:.61rem;letter-spacing:.11em}.intel-thought-v2 p{margin:0;color:#eff7fb;font-size:1rem;line-height:1.62}
+.intel-explain-grid-v2{display:grid;grid-template-columns:1fr 1fr;gap:.7rem}.intel-simple-v2,.intel-technical-v2{padding:.78rem;border-radius:.75rem;border:1px solid rgba(255,255,255,.05);background:rgba(255,255,255,.018)}
+.intel-simple-v2>span,.intel-technical-v2>span{display:block;margin-bottom:.4rem;color:#7f94a6;font-size:.59rem;letter-spacing:.09em}.intel-simple-v2 p{margin:0;color:#b9c9d6;font-size:.78rem;line-height:1.55}
+.intel-technical-v2>div{display:flex;gap:.35rem;flex-wrap:wrap}.intel-technical-v2 b{padding:.26rem .42rem;border-radius:.38rem;background:rgba(0,240,255,.06);color:#bffbff;font-family:"JetBrains Mono","Space Mono",ui-monospace,monospace;font-size:.62rem;font-weight:600}.intel-technical-v2 small{display:block;margin-top:.5rem;color:#74889b}
+.intel-levels-v2{display:grid;grid-template-columns:repeat(4,1fr);gap:.45rem;margin:.75rem 0}.intel-levels-v2>div{padding:.62rem;border-radius:.62rem;border:1px solid rgba(255,255,255,.045);background:rgba(0,0,0,.12)}.intel-levels-v2 span,.intel-levels-v2 strong{display:block}.intel-levels-v2 span{margin-bottom:.22rem;color:#708496;font-size:.56rem}.intel-levels-v2 strong{font-family:"JetBrains Mono","Space Mono",ui-monospace,monospace;font-size:.68rem;color:#dfeef5}
+.intel-raw-v2{margin:.55rem 0;padding:.55rem .68rem;border:1px dashed rgba(133,160,184,.13);border-radius:.62rem}.intel-raw-v2 summary{cursor:pointer;color:#8fa3b6;font-size:.67rem}.intel-raw-v2 p{color:#a6b7c5;font-size:.73rem;line-height:1.5}.intel-raw-v2 code{font-size:.59rem;color:#587184}
+.intel-card-foot-v2{display:flex;justify-content:space-between;gap:.7rem;align-items:center;margin-top:.75rem;padding-top:.7rem;border-top:1px solid rgba(255,255,255,.05)}.intel-card-foot-v2>span{color:#5f7487;font-size:.58rem}.intel-proof-button{padding:.52rem .7rem;border:1px solid rgba(0,240,255,.24);border-radius:.55rem;background:linear-gradient(180deg,rgba(0,240,255,.12),rgba(0,240,255,.04));color:#c8fbff;font:600 .65rem/1.2 Inter,sans-serif;cursor:pointer;transition:160ms ease}.intel-proof-button:hover{transform:translateY(-1px);border-color:rgba(0,240,255,.52);box-shadow:0 0 24px rgba(0,240,255,.12)}
+.radar-panel-v2{border-color:rgba(255,184,0,.14)}.truth-card-v2{border-color:rgba(109,77,255,.16);background:radial-gradient(circle at 100% 0%,rgba(109,77,255,.08),transparent 20rem),var(--gt-glass)}.truth-card-v2 h2{margin:.38rem 0 .8rem;font-size:1.2rem}.truth-stack-v2{display:grid;gap:.5rem}.truth-stack-v2 span{padding:.58rem .65rem;border-radius:.55rem;background:rgba(255,255,255,.025);color:#94a7b9;font-size:.69rem}
+body[data-ui-version="galactech-v2-intelligence-first-tr"] .cold-boot{background:radial-gradient(circle at 50% 45%,rgba(0,240,255,.10),transparent 24rem),linear-gradient(145deg,#020407,#07111b)}
+body[data-ui-version="galactech-v2-intelligence-first-tr"] .boot-card{position:relative;overflow:hidden;border-color:rgba(0,240,255,.22);background:rgba(8,13,21,.82);box-shadow:0 0 90px rgba(0,240,255,.10);backdrop-filter:blur(18px)}
+body[data-ui-version="galactech-v2-intelligence-first-tr"] .boot-card::before{content:"010101  •  BTC/USDT  •  ETH/USDT  •  SOL/USDT  •  KANIT DOĞRULANIYOR  •  SHA-256";position:absolute;left:-8%;right:-8%;bottom:.6rem;color:rgba(0,240,255,.18);font-family:"JetBrains Mono",ui-monospace,monospace;font-size:.58rem;letter-spacing:.18em;white-space:nowrap;animation:gtBootTape 7s linear infinite}
+body[data-ui-version="galactech-v2-intelligence-first-tr"] .footer{max-width:1800px;margin:0 auto;padding:1rem clamp(1rem,2.2vw,2.5rem) 2rem;color:#5f7385}
+
+.intel-ticker-shell{
+  flex-basis:100%;min-width:0;display:grid;grid-template-columns:auto minmax(0,1fr);
+  align-items:center;gap:.8rem;margin-top:.55rem;padding:.48rem .65rem;
+  border:1px solid rgba(0,240,255,.10);border-radius:.7rem;background:rgba(0,0,0,.16);
+  overflow:hidden
+}
+.intel-ticker-label{display:flex;align-items:center;gap:.38rem;color:#9cf8ff;font-size:.61rem;font-weight:700;letter-spacing:.09em;white-space:nowrap}
+.intel-ticker-label i{width:.42rem;height:.42rem;border-radius:50%;background:var(--gt-cyan);box-shadow:0 0 15px rgba(0,240,255,.65);animation:gtLivePulse 1.8s ease-in-out infinite}
+.intel-ticker-window{min-width:0;overflow:hidden;mask-image:linear-gradient(90deg,transparent,#000 3%,#000 97%,transparent)}
+.intel-ticker-track{display:flex;width:max-content;gap:.72rem;align-items:center;animation:gtTicker 42s linear infinite}
+.intel-ticker-track>span{color:#8397aa;font-size:.65rem}
+.intel-ticker-item{display:inline-flex;align-items:center;gap:.42rem;padding-right:.7rem;border-right:1px solid rgba(255,255,255,.07);white-space:nowrap}
+.intel-ticker-item b{color:#eaf9ff;font-family:"JetBrains Mono","Space Mono",ui-monospace,monospace;font-size:.65rem}
+.intel-ticker-item em{font-style:normal;font-size:.58rem}.intel-ticker-item i{font-style:normal;color:#9bb0bf;font-size:.59rem}.intel-ticker-item small{color:#63798b;font-family:"JetBrains Mono","Space Mono",ui-monospace,monospace;font-size:.57rem}
+@keyframes gtTicker{to{transform:translateX(-50%)}}
+@keyframes gtLivePulse{0%,100%{opacity:.58;transform:scale(.92)}50%{opacity:1;transform:scale(1.1)}}
+@keyframes gtStarDrift{to{background-position:170px 85px,-230px 120px,140px -280px,-160px 180px}}
+@keyframes gtBars{from{filter:brightness(.75)}to{filter:brightness(1.3)}}
+@keyframes gtFeedIn{from{opacity:0;transform:translateY(10px) scale(.992)}to{opacity:1;transform:none}}
+@keyframes gtBootTape{to{transform:translateX(18%)}}
+@media(max-width:1280px){
+  .command-grid-v2{grid-template-columns:minmax(230px,.8fr) minmax(430px,1.5fr)}
+  .command-right-rail{grid-column:1/-1;grid-template-columns:1fr 1fr}
+  body[data-ui-version="galactech-v2-intelligence-first-tr"] .sidebar{grid-template-columns:auto 1fr}.authority-card{display:none}
+}
+@media(max-width:920px){
+  body[data-ui-version="galactech-v2-intelligence-first-tr"] .sidebar{position:relative;grid-template-columns:1fr;padding:.8rem}
+  body[data-ui-version="galactech-v2-intelligence-first-tr"] .primary-nav{justify-content:flex-start;overflow-x:auto;flex-wrap:nowrap;padding-bottom:.2rem}
+  body[data-ui-version="galactech-v2-intelligence-first-tr"] .topbar{top:0}
+  .command-grid-v2{grid-template-columns:1fr}.command-right-rail{grid-column:auto;grid-template-columns:1fr}
+  .command-center-stream{grid-row:1}.command-left-rail{grid-row:2}.command-right-rail{grid-row:3}
+  .intel-explain-grid-v2{grid-template-columns:1fr}.intel-levels-v2{grid-template-columns:1fr 1fr}
+  .live-intel-badge{display:none}
+}
+@media(max-width:620px){
+  .command-hero-head h1{font-size:2rem}.intel-card-v2{padding:.82rem}.intel-card-head-v2{display:grid}
+  .intel-levels-v2{grid-template-columns:1fr 1fr}.intel-card-foot-v2{align-items:stretch;flex-direction:column}
+  .intel-proof-button{width:100%}.situation-grid-v2{grid-template-columns:1fr 1fr}
+}
+@media(prefers-reduced-motion:reduce){
+  .intel-ticker-track{animation:none!important;}
+  body[data-ui-version="galactech-v2-intelligence-first-tr"]::before,.live-intel-pulse,.live-dot,.equity-ghost span,.intel-card-v2,.boot-card::before{animation:none!important}
+}

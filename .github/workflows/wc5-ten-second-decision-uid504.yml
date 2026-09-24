@@ -172,7 +172,7 @@ jobs:
           PY
 
           grep -F 'id="wc5DecisionBody"' "$RUNNER_TEMP/wc5-root.html" >/dev/null
-          grep -F '10-SECOND DECISION / EXACT PERSISTED EVIDENCE' "$RUNNER_TEMP/wc5-root.html" >/dev/null
+          grep -F 'ŞU ANKİ EYLEM DURUMU' "$RUNNER_TEMP/wc5-root.html" >/dev/null
 
           AFTER_HASH="$(shasum -a 256 "$COHORT" | awk '{print $1}')"
           test "$BEFORE_HASH" = "$AFTER_HASH"
