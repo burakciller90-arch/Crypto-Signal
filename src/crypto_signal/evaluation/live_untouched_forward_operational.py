@@ -255,13 +255,21 @@ def adapt_same_cycle_legacy_bundle(
         domain=ProofEvidenceDomain.CONSUMED_CANDLES,
         availability=ProofEvidenceAvailability.AVAILABLE,
         verdict=ProofEvidenceVerdict.NEUTRAL,
-        evidence_identities=(candles_identity,),
+        evidence_identities=tuple(
+            sorted(
+                (
+                    candles_identity,
+                    regime_freeze.freeze_identity,
+                )
+            )
+        ),
         market_available_at_ms=signal.as_of_ms,
         observed_at_ms=signal.as_of_ms,
         freshness_0_1=Decimal(1),
-        source_quality="exact_immutable_consumed_candles",
+        source_quality="exact_consumed_candles_with_pit_regime_freeze",
         summary_codes=(
             "consumed_candle_content_digest",
+            "pit_regime_freeze_derived_from_consumed_candles",
             "same_pit_snapshot_not_predictive_quality",
         ),
     )
