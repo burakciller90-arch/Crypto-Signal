@@ -395,7 +395,7 @@ class WC2PaperExecutionProtocolStore:
             for key, value in expected.items():
                 row = db.execute(
                     f"SELECT value FROM {_META_TABLE} WHERE key=?",
-                    (key, value),
+                    (key,),
                 ).fetchone()
                 if row is None:
                     db.execute(
