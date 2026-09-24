@@ -19,15 +19,12 @@ def test_wc2_collect_once_is_explicitly_allowlisted_and_exact_source() -> None:
         "CHECKOUT EXACT WC2 POLICY COMMAND SOURCE",
         "VERIFY EXACT WC2 POLICY COMMAND SOURCE",
     )
-    verify = _block(
-        "VERIFY EXACT WC2 POLICY COMMAND SOURCE",
-        "STATUS",
-    )
     assert "steps.parse.outputs.command == 'wc2collectonce'" in checkout
-    assert "steps.parse.outputs.command == 'wc2collectonce'" in verify
     assert "ref: ${{ github.sha }}" in checkout
     assert "clean: true" in checkout
-    assert 'test "$WORKSPACE_HEAD" = "$GITHUB_SHA"' in verify
+
+    collect = _block("WC2 COLLECTION ONCE", "WC2 STATE")
+    assert 'test "$DEV_HEAD" = "$GITHUB_SHA"' in collect
 
 
 def test_wc2_collect_once_uses_only_canonical_ssd_runtime_paths() -> None:
