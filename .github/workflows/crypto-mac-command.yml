@@ -33,6 +33,33 @@ jobs:
           esac
           echo "command=$cmd" >> "$GITHUB_OUTPUT"
 
+      - name: CHECKOUT EXACT EVENT SOURCE COMMAND SOURCE
+        if: >-
+          steps.parse.outputs.command == 'eventsourcestate' ||
+          steps.parse.outputs.command == 'eventsourcesnapshot' ||
+          steps.parse.outputs.command == 'blsprobe' ||
+          steps.parse.outputs.command == 'fredprobe'
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          clean: true
+          fetch-depth: 1
+
+      - name: VERIFY EXACT EVENT SOURCE COMMAND SOURCE
+        if: >-
+          steps.parse.outputs.command == 'eventsourcestate' ||
+          steps.parse.outputs.command == 'eventsourcesnapshot' ||
+          steps.parse.outputs.command == 'blsprobe' ||
+          steps.parse.outputs.command == 'fredprobe'
+        shell: bash
+        run: |
+          set -euo pipefail
+          WORKSPACE_HEAD="$(git -C "$GITHUB_WORKSPACE" rev-parse HEAD)"
+          echo "EVENT_SOURCE_WORKSPACE_HEAD=$WORKSPACE_HEAD"
+          echo "EVENT_SOURCE_WORKFLOW_SHA=$GITHUB_SHA"
+          test "$WORKSPACE_HEAD" = "$GITHUB_SHA"
+          echo "EVENT_SOURCE_EXACT_WORKFLOW_SOURCE_PASS=YES"
+
       - name: STATUS
         if: steps.parse.outputs.command == 'status'
         shell: bash
