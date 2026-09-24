@@ -4,10 +4,63 @@ Updated: 2026-09-25
 Project: Crypto Signal
 Baseline: crypto-signal-full-version-v1.0.0 (immutable)
 Active post-v1.0 program: v1.1 world-class product + market intelligence
-State: WC0_LIVE_PRODUCT_PARITY_ACCEPTED / WC1_24_7_DATA_RELIABILITY_ACCEPTED / WC2_ENGINEERING_FROZEN_EVIDENCE_ACCUMULATION_ACTIVE / WC4_CHAMPION_CHALLENGER_ENGINEERING_ACCEPTED_RESEARCH_ONLY / WC5_ENGINEERING_ACCEPTED_PRODUCT_DEPLOYED_HUMAN_USABILITY_NOT_MEASURED / WC6_SANDBOX_BOUNDARY_ACCEPTED_VENUE_EVIDENCE_EXTERNAL_DEPENDENCY / CONTINUITY_PAUSED_BY_USER
+State: WC0_LIVE_PRODUCT_PARITY_ACCEPTED / WC1_24_7_DATA_RELIABILITY_ACCEPTED / WC2_ENGINEERING_FROZEN_EVIDENCE_ACCUMULATION_ACTIVE / WC4_CHAMPION_CHALLENGER_ENGINEERING_ACCEPTED_RESEARCH_ONLY / WC5_ENGINEERING_ACCEPTED_PRODUCT_DEPLOYED_HUMAN_USABILITY_NOT_MEASURED / WC6_SANDBOX_BOUNDARY_ACCEPTED_VENUE_EVIDENCE_EXTERNAL_DEPENDENCY / WC7_REVIEW_INFRA_ACCEPTED_CURRENT_INSUFFICIENT_EVIDENCE / CONTINUITY_PAUSED_BY_USER
 REAL_CAPITAL: 0
 
 ## Active v1.1 frontier — read before historical sections
+
+
+### 2026-09-25 00:49 +0300 — WC7 FAIL-CLOSED REVIEW INFRA ACCEPTED / CURRENT CONCLUSION INSUFFICIENT_EVIDENCE
+
+This entry **supersedes the earlier 2026-09-25 00:38 frontier snapshot** while preserving it below as historical evidence.
+
+- Exact accepted main: `d27563bee4418c4fef2a6e7fcb351fa8f7e96686`.
+- PR **#1197** added the first WC7 evidence-review contract over the roadmap's exact minimum dimensions:
+  - production/runtime reliability;
+  - untouched-forward history;
+  - probability calibration where probability claims are actually used;
+  - cost-adjusted expectancy;
+  - controlled drawdown;
+  - regime robustness;
+  - abstention/failure transparency;
+  - capital/execution lineage;
+  - usability without hidden uncertainty.
+- The WC7 machine layer is deliberately **not an edge-verdict engine**:
+  - it may emit only `INSUFFICIENT_EVIDENCE` or `READY_FOR_HUMAN_REVIEW`;
+  - it cannot auto-select `EDGE_SUPPORTED`, `EDGE_PARTIAL / regime-specific` or `EDGE_NOT_SUPPORTED`;
+  - final EDGE_* conclusions require a separate explicit human-review record;
+  - positive/partial/negative human conclusions are guarded against the evidence-status set and cannot override missing required evidence.
+- Fail-closed semantics are explicit:
+  - any required dimension in `MISSING`, `NOT_MEASURED` or `EXTERNAL_DEPENDENCY` forces `INSUFFICIENT_EVIDENCE`;
+  - calibration may be `NOT_APPLICABLE` only when no probability claims are used;
+  - when probability claims are used, calibration evidence must be applicable;
+  - no automatic production/order authority is introduced; `REAL_CAPITAL=0`.
+- The accepted current-frontier regression remains **`INSUFFICIENT_EVIDENCE`**. Its blocking dimensions are:
+  - `UNTOUCHED_FORWARD_HISTORY`;
+  - `COST_ADJUSTED_EXPECTANCY`;
+  - `CONTROLLED_DRAWDOWN`;
+  - `REGIME_ROBUSTNESS`;
+  - `CAPITAL_EXECUTION_LINEAGE` (WC6 real venue evidence remains external/missing);
+  - `USABILITY_WITHOUT_HIDDEN_UNCERTAINTY` (human <=10-second timing remains `NOT_MEASURED`).
+- PR #1197 exact-head UID504 run **36063510771 / job 107847770771** completed **SUCCESS**:
+  - `WC7_EXACT_SOURCE_PASS=YES`;
+  - `WC7_FOCUSED_PASS=YES`;
+  - `WC7_MACHINE_EDGE_VERDICT=NONE`;
+  - `WC7_RESEARCH_REGRESSION_PASS=YES`;
+  - `WC7_FULL_REGRESSION_PASS=YES`;
+  - `WC7_DEVELOPMENT_NON_MUTATING_PASS=YES`;
+  - `REAL_CAPITAL=0`.
+- After merge, exact-main push run **36063771392 / job 107848618741** independently completed **SUCCESS** on `d27563bee4418c4fef2a6e7fcb351fa8f7e96686` with the same focused/research/full-repository/non-mutation gates.
+- WC7 review infrastructure is therefore **ACCEPTED**, but the project is **not** allowed to claim `EDGE_SUPPORTED`, `EDGE_PARTIAL`, `EDGE_NOT_SUPPORTED` or “world-class achieved” from the currently incomplete evidence set.
+
+Current true frontier:
+- keep WC2 engineering-frozen and continue genuine untouched-forward evidence accumulation under its preregistered contract;
+- keep WC3 scientific/economic conclusions blocked until evidence sufficiency exists;
+- preserve WC4 research-only/no-auto-promotion semantics;
+- preserve WC5 human usability timing as `NOT_MEASURED` until actually measured;
+- keep WC6 parked at its fail-closed sandbox boundary until safe external venue acknowledgement/fill/recovery evidence exists;
+- WC7 may only add **read-only evidence adapters, provenance binding and review reporting** that preserve fail-closed blockers; it must not manufacture missing evidence or hardcode a positive conclusion;
+- continuity remains paused and **REAL_CAPITAL=0**.
 
 
 ### 2026-09-25 00:38 +0300 — WC6 SANDBOX BOUNDARY ACCEPTED / REAL VENUE EVIDENCE BLOCKED BY EXTERNAL DEPENDENCY
