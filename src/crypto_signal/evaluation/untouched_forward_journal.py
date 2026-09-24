@@ -27,12 +27,14 @@ WC2_COHORT_ENGINE_VERSION = "wc2-cohort-journal-v1/1"
 REAL_CAPITAL = 0
 
 _META_TABLE = "wc2_cohort_meta"
-_ISSUANCE_TABLE = "wc2_cohort_issuances"
+_FORECAST_TABLE = "wc2_cohort_forecasts"
+_INTENT_TABLE = "wc2_cohort_intents"
 _EXECUTION_TABLE = "wc2_cohort_executions"
 _RESOLUTION_TABLE = "wc2_cohort_resolutions"
 _ALLOWED_TABLES = {
     _META_TABLE,
-    _ISSUANCE_TABLE,
+    _FORECAST_TABLE,
+    _INTENT_TABLE,
     _EXECUTION_TABLE,
     _RESOLUTION_TABLE,
 }
@@ -44,27 +46,19 @@ class WC2CohortAppendDisposition(StrEnum):
 
 
 @dataclass(frozen=True, slots=True)
-class WC2CohortIssuance:
-    cohort_issuance_identity: str
+class WC2CohortForecast:
+    cohort_forecast_identity: str
     policy_identity: str
     forecast_identity: str
     proof_identity: str
     signal_freeze_identity: str
-    persisted_cycle_identity: str
-    manifest_identity: str
-    shadow_cycle_identity: str
-    preview_identity: str
-    shadow_intent_record_identity: str
-    paper_intent_identity: str
-    action: PaperAction
-    vault_id: PaperVaultId
+    confluence_identity: str
+    event_context_identity: str
     asset: str
     symbol: str
     timeframe: str
     regime: str
     issued_at_ms: int
-    decision_at_ms: int
-    previewed_at_ms: int
     indexed_at_ms: int
     source_evidence_identities: tuple[str, ...]
     evidence_class: EvidenceClass = EvidenceClass.LIVE_UNTOUCHED_FORWARD
@@ -75,11 +69,70 @@ class WC2CohortIssuance:
 
     def __post_init__(self) -> None:
         for value, label in (
-            (self.cohort_issuance_identity, "WC2 cohort issuance"),
+            (self.cohort_forecast_identity, "WC2 cohort forecast record"),
             (self.policy_identity, "WC2 cohort policy"),
-            (self.forecast_identity, "WC2 cohort forecast"),
-            (self.proof_identity, "WC2 cohort proof"),
-            (self.signal_freeze_identity, "WC2 cohort signal"),
+            (self.forecast_identity, "WC2 R20 forecast"),
+            (self.proof_identity, "WC2 decision proof"),
+            (self.signal_freeze_identity, "WC2 signal freeze"),
+            (self.confluence_identity, "WC2 confluence"),
+            (self.event_context_identity, "WC2 event context"),
+        ):
+            _require_sha256(value, label)
+        if self.evidence_class is not EvidenceClass.LIVE_UNTOUCHED_FORWARD:
+            raise ValueError("WC2 cohort forecast must be LIVE_UNTOUCHED_FORWARD")
+        if not self.asset or self.asset != self.asset.upper():
+            raise ValueError("WC2 cohort asset must be uppercase")
+        if not self.symbol or self.symbol != self.symbol.upper():
+            raise ValueError("WC2 cohort symbol must be uppercase")
+        if not self.timeframe.strip() or not self.regime.strip():
+            raise ValueError("WC2 cohort timeframe/regime must be non-empty")
+        if min(self.issued_at_ms, self.indexed_at_ms) < 0:
+            raise ValueError("WC2 cohort forecast times cannot be negative")
+        if self.indexed_at_ms < self.issued_at_ms:
+            raise ValueError("WC2 cohort index cannot predate forecast issuance")
+        _validate_sources(self.source_evidence_identities)
+        if self.schema_version != WC2_COHORT_SCHEMA_VERSION:
+            raise ValueError("unsupported WC2 cohort schema")
+        if self.engine_version != WC2_COHORT_ENGINE_VERSION:
+            raise ValueError("unsupported WC2 cohort engine")
+        if self.production_authority or self.real_capital != REAL_CAPITAL:
+            raise ValueError("WC2 cohort forecast cannot grant authority")
+        if self.cohort_forecast_identity != canonical_sha256(
+            _forecast_payload(self)
+        ):
+            raise ValueError("WC2 cohort forecast identity mismatch")
+
+
+@dataclass(frozen=True, slots=True)
+class WC2CohortIntent:
+    intent_link_identity: str
+    policy_identity: str
+    cohort_forecast_identity: str
+    forecast_identity: str
+    proof_identity: str
+    persisted_cycle_identity: str
+    manifest_identity: str
+    shadow_cycle_identity: str
+    preview_identity: str
+    shadow_intent_record_identity: str
+    paper_intent_identity: str
+    vault_id: PaperVaultId
+    action: PaperAction
+    decided_at_ms: int
+    previewed_at_ms: int
+    indexed_at_ms: int
+    schema_version: str = WC2_COHORT_SCHEMA_VERSION
+    engine_version: str = WC2_COHORT_ENGINE_VERSION
+    production_authority: bool = False
+    real_capital: int = REAL_CAPITAL
+
+    def __post_init__(self) -> None:
+        for value, label in (
+            (self.intent_link_identity, "WC2 intent link"),
+            (self.policy_identity, "WC2 intent policy"),
+            (self.cohort_forecast_identity, "WC2 intent cohort forecast"),
+            (self.forecast_identity, "WC2 intent forecast"),
+            (self.proof_identity, "WC2 intent proof"),
             (self.persisted_cycle_identity, "WC2 persisted cycle"),
             (self.manifest_identity, "WC2 cycle manifest"),
             (self.shadow_cycle_identity, "WC2 shadow cycle"),
@@ -88,57 +141,32 @@ class WC2CohortIssuance:
             (self.paper_intent_identity, "WC2 paper intent"),
         ):
             _require_sha256(value, label)
-        if self.evidence_class is not EvidenceClass.LIVE_UNTOUCHED_FORWARD:
-            raise ValueError("WC2 cohort issuance must be LIVE_UNTOUCHED_FORWARD")
-        if not isinstance(self.action, PaperAction):
-            raise TypeError("WC2 cohort issuance requires canonical paper action")
         if not isinstance(self.vault_id, PaperVaultId):
-            raise TypeError("WC2 cohort issuance requires canonical vault")
-        if not self.asset or self.asset != self.asset.upper():
-            raise ValueError("WC2 cohort asset must be uppercase")
-        if not self.symbol or self.symbol != self.symbol.upper():
-            raise ValueError("WC2 cohort symbol must be uppercase")
-        if not self.timeframe.strip() or not self.regime.strip():
-            raise ValueError("WC2 cohort timeframe/regime must be non-empty")
-        if min(
-            self.issued_at_ms,
-            self.decision_at_ms,
-            self.previewed_at_ms,
-            self.indexed_at_ms,
-        ) < 0:
-            raise ValueError("WC2 cohort issuance times cannot be negative")
+            raise TypeError("WC2 intent requires canonical vault")
+        if not isinstance(self.action, PaperAction):
+            raise TypeError("WC2 intent requires canonical paper action")
+        if min(self.decided_at_ms, self.previewed_at_ms, self.indexed_at_ms) < 0:
+            raise ValueError("WC2 intent times cannot be negative")
         if not (
-            self.issued_at_ms
-            <= self.decision_at_ms
-            <= self.previewed_at_ms
-            <= self.indexed_at_ms
+            self.decided_at_ms <= self.previewed_at_ms <= self.indexed_at_ms
         ):
-            raise ValueError("WC2 cohort issuance chronology is invalid")
-        if self.source_evidence_identities != tuple(
-            sorted(set(self.source_evidence_identities))
-        ):
-            raise ValueError("WC2 cohort issuance evidence must be canonical")
-        if not self.source_evidence_identities:
-            raise ValueError("WC2 cohort issuance requires exact source evidence")
-        for identity in self.source_evidence_identities:
-            _require_sha256(identity, "WC2 cohort source evidence")
+            raise ValueError("WC2 intent chronology is invalid")
         if self.schema_version != WC2_COHORT_SCHEMA_VERSION:
-            raise ValueError("unsupported WC2 cohort schema")
+            raise ValueError("unsupported WC2 intent schema")
         if self.engine_version != WC2_COHORT_ENGINE_VERSION:
-            raise ValueError("unsupported WC2 cohort engine")
+            raise ValueError("unsupported WC2 intent engine")
         if self.production_authority or self.real_capital != REAL_CAPITAL:
-            raise ValueError("WC2 cohort issuance cannot grant authority")
-        if self.cohort_issuance_identity != canonical_sha256(
-            _issuance_payload(self)
-        ):
-            raise ValueError("WC2 cohort issuance identity mismatch")
+            raise ValueError("WC2 intent cannot grant authority")
+        if self.intent_link_identity != canonical_sha256(_intent_payload(self)):
+            raise ValueError("WC2 intent link identity mismatch")
 
 
 @dataclass(frozen=True, slots=True)
 class WC2CohortExecution:
     execution_link_identity: str
     policy_identity: str
-    cohort_issuance_identity: str
+    cohort_forecast_identity: str
+    intent_link_identity: str
     forecast_identity: str
     paper_intent_identity: str
     fill_identity: str
@@ -162,7 +190,8 @@ class WC2CohortExecution:
         for value, label in (
             (self.execution_link_identity, "WC2 execution link"),
             (self.policy_identity, "WC2 execution policy"),
-            (self.cohort_issuance_identity, "WC2 execution issuance"),
+            (self.cohort_forecast_identity, "WC2 execution cohort forecast"),
+            (self.intent_link_identity, "WC2 execution intent link"),
             (self.forecast_identity, "WC2 execution forecast"),
             (self.paper_intent_identity, "WC2 execution paper intent"),
             (self.fill_identity, "WC2 execution fill"),
@@ -193,8 +222,7 @@ class WC2CohortExecution:
             raise ValueError("unsupported WC2 execution engine")
         if self.production_authority or self.real_capital != REAL_CAPITAL:
             raise ValueError("WC2 execution cannot grant authority")
-        expected_cost = canonical_sha256(_cost_payload(self))
-        if self.cost_evidence_identity != expected_cost:
+        if self.cost_evidence_identity != canonical_sha256(_cost_payload(self)):
             raise ValueError("WC2 execution cost identity mismatch")
         if self.execution_link_identity != canonical_sha256(
             _execution_payload(self)
@@ -206,7 +234,7 @@ class WC2CohortExecution:
 class WC2CohortResolution:
     resolution_link_identity: str
     policy_identity: str
-    cohort_issuance_identity: str
+    cohort_forecast_identity: str
     forecast_identity: str
     resolution_identity: str
     source_outcome_identity: str
@@ -223,7 +251,7 @@ class WC2CohortResolution:
         for value, label in (
             (self.resolution_link_identity, "WC2 resolution link"),
             (self.policy_identity, "WC2 resolution policy"),
-            (self.cohort_issuance_identity, "WC2 resolution issuance"),
+            (self.cohort_forecast_identity, "WC2 resolution cohort forecast"),
             (self.forecast_identity, "WC2 resolution forecast"),
             (self.resolution_identity, "WC2 R20 resolution"),
             (self.source_outcome_identity, "WC2 source outcome"),
@@ -251,10 +279,11 @@ class WC2CohortResolution:
 
 @dataclass(frozen=True, slots=True)
 class WC2CohortJournalStatus:
-    issuance_count: int
+    forecast_count: int
+    intent_count: int
     execution_count: int
     resolution_count: int
-    unresolved_count: int
+    unresolved_forecast_count: int
     quick_check_ok: bool
     read_only_verified: bool
     production_authority: bool = False
@@ -262,72 +291,47 @@ class WC2CohortJournalStatus:
 
     def __post_init__(self) -> None:
         if min(
-            self.issuance_count,
+            self.forecast_count,
+            self.intent_count,
             self.execution_count,
             self.resolution_count,
-            self.unresolved_count,
+            self.unresolved_forecast_count,
         ) < 0:
             raise ValueError("WC2 cohort journal counts cannot be negative")
-        if self.resolution_count > self.issuance_count:
-            raise ValueError("WC2 resolutions cannot exceed issuances")
-        if self.unresolved_count != self.issuance_count - self.resolution_count:
-            raise ValueError("WC2 unresolved count mismatch")
+        if self.resolution_count > self.forecast_count:
+            raise ValueError("WC2 resolutions cannot exceed forecasts")
+        if self.unresolved_forecast_count != (
+            self.forecast_count - self.resolution_count
+        ):
+            raise ValueError("WC2 unresolved forecast count mismatch")
         if not self.quick_check_ok or not self.read_only_verified:
             raise ValueError("WC2 cohort journal must be read-only verified")
         if self.production_authority or self.real_capital != REAL_CAPITAL:
             raise ValueError("WC2 cohort journal status cannot grant authority")
 
 
-def build_wc2_cohort_issuance(
+def build_wc2_cohort_forecast(
     *,
     policy: WC2UntouchedForwardPolicy,
     issuance: UnifiedDecisionIssuance,
-    persisted_cycle: PersistedShadowCycleResult,
     indexed_at_ms: int,
-) -> WC2CohortIssuance:
+) -> WC2CohortForecast:
     forecast = issuance.forecast
     proof = issuance.proof
-    cycle = persisted_cycle.cycle
-    manifest = persisted_cycle.manifest_append.record
-    preview = cycle.preview
-
     if forecast.issued_at_ms < policy.collection_start_ms:
         raise ValueError("WC2 forecast predates preregistered collection start")
-    if cycle.forecast_identity != forecast.forecast_identity:
-        raise ValueError("WC2 shadow cycle/forecast lineage mismatch")
-    if cycle.proof_identity != proof.proof_identity:
-        raise ValueError("WC2 shadow cycle/proof lineage mismatch")
-    if manifest.forecast_identity != forecast.forecast_identity:
-        raise ValueError("WC2 manifest/forecast lineage mismatch")
-    if manifest.proof_identity != proof.proof_identity:
-        raise ValueError("WC2 manifest/proof lineage mismatch")
-    if preview.forecast_identity != forecast.forecast_identity:
-        raise ValueError("WC2 preview/forecast lineage mismatch")
-    if preview.proof_identity != proof.proof_identity:
-        raise ValueError("WC2 preview/proof lineage mismatch")
-    if preview.preview_identity != manifest.preview_identity:
-        raise ValueError("WC2 preview/manifest lineage mismatch")
-    if (
-        cycle.journal_append.record.record_identity
-        != manifest.journal_record_identity
-    ):
-        raise ValueError("WC2 journal/manifest lineage mismatch")
-    if preview.intent.intent_identity != cycle.preview.intent.intent_identity:
-        raise ValueError("WC2 paper intent lineage mismatch")
-    if indexed_at_ms < preview.previewed_at_ms:
-        raise ValueError("WC2 cohort index cannot predate preview")
+    if proof.forecast_identity != forecast.forecast_identity:
+        raise ValueError("WC2 forecast/proof lineage mismatch")
+    if indexed_at_ms < forecast.issued_at_ms:
+        raise ValueError("WC2 cohort index cannot predate forecast issuance")
 
     sources = tuple(
         sorted(
             {
                 *forecast.source_evidence_identities,
                 proof.proof_identity,
-                persisted_cycle.persisted_cycle_identity,
-                manifest.manifest_identity,
-                manifest.cycle_identity,
-                manifest.preview_identity,
-                manifest.journal_record_identity,
-                preview.intent.intent_identity,
+                forecast.confluence_identity,
+                forecast.event_context_identity,
             }
         )
     )
@@ -336,21 +340,13 @@ def build_wc2_cohort_issuance(
         "forecast_identity": forecast.forecast_identity,
         "proof_identity": proof.proof_identity,
         "signal_freeze_identity": forecast.signal_freeze_identity,
-        "persisted_cycle_identity": persisted_cycle.persisted_cycle_identity,
-        "manifest_identity": manifest.manifest_identity,
-        "shadow_cycle_identity": manifest.cycle_identity,
-        "preview_identity": preview.preview_identity,
-        "shadow_intent_record_identity": manifest.journal_record_identity,
-        "paper_intent_identity": preview.intent.intent_identity,
-        "action": preview.intent.action,
-        "vault_id": manifest.vault_id,
+        "confluence_identity": forecast.confluence_identity,
+        "event_context_identity": forecast.event_context_identity,
         "asset": forecast.asset,
         "symbol": forecast.symbol,
         "timeframe": forecast.timeframe,
         "regime": issuance.confluence.regime,
         "issued_at_ms": forecast.issued_at_ms,
-        "decision_at_ms": preview.intent.decided_at_ms,
-        "previewed_at_ms": preview.previewed_at_ms,
         "indexed_at_ms": indexed_at_ms,
         "source_evidence_identities": sources,
         "evidence_class": EvidenceClass.LIVE_UNTOUCHED_FORWARD,
@@ -359,43 +355,103 @@ def build_wc2_cohort_issuance(
         "production_authority": False,
         "real_capital": REAL_CAPITAL,
     }
-    return WC2CohortIssuance(
-        cohort_issuance_identity=canonical_sha256(values),
+    return WC2CohortForecast(
+        cohort_forecast_identity=canonical_sha256(values),
         policy_identity=policy.policy_identity,
         forecast_identity=forecast.forecast_identity,
         proof_identity=proof.proof_identity,
         signal_freeze_identity=forecast.signal_freeze_identity,
+        confluence_identity=forecast.confluence_identity,
+        event_context_identity=forecast.event_context_identity,
+        asset=forecast.asset,
+        symbol=forecast.symbol,
+        timeframe=forecast.timeframe,
+        regime=issuance.confluence.regime,
+        issued_at_ms=forecast.issued_at_ms,
+        indexed_at_ms=indexed_at_ms,
+        source_evidence_identities=sources,
+    )
+
+
+def build_wc2_cohort_intent(
+    cohort_forecast: WC2CohortForecast,
+    persisted_cycle: PersistedShadowCycleResult,
+    *,
+    indexed_at_ms: int,
+) -> WC2CohortIntent:
+    cycle = persisted_cycle.cycle
+    manifest = persisted_cycle.manifest_append.record
+    preview = cycle.preview
+    if cycle.forecast_identity != cohort_forecast.forecast_identity:
+        raise ValueError("WC2 intent shadow cycle/forecast mismatch")
+    if cycle.proof_identity != cohort_forecast.proof_identity:
+        raise ValueError("WC2 intent shadow cycle/proof mismatch")
+    if manifest.forecast_identity != cohort_forecast.forecast_identity:
+        raise ValueError("WC2 intent manifest/forecast mismatch")
+    if manifest.proof_identity != cohort_forecast.proof_identity:
+        raise ValueError("WC2 intent manifest/proof mismatch")
+    if preview.preview_identity != manifest.preview_identity:
+        raise ValueError("WC2 intent preview/manifest mismatch")
+    if (
+        cycle.journal_append.record.record_identity
+        != manifest.journal_record_identity
+    ):
+        raise ValueError("WC2 intent journal/manifest mismatch")
+    if indexed_at_ms < preview.previewed_at_ms:
+        raise ValueError("WC2 intent index cannot predate preview")
+
+    values = {
+        "policy_identity": cohort_forecast.policy_identity,
+        "cohort_forecast_identity": cohort_forecast.cohort_forecast_identity,
+        "forecast_identity": cohort_forecast.forecast_identity,
+        "proof_identity": cohort_forecast.proof_identity,
+        "persisted_cycle_identity": persisted_cycle.persisted_cycle_identity,
+        "manifest_identity": manifest.manifest_identity,
+        "shadow_cycle_identity": manifest.cycle_identity,
+        "preview_identity": preview.preview_identity,
+        "shadow_intent_record_identity": manifest.journal_record_identity,
+        "paper_intent_identity": preview.intent.intent_identity,
+        "vault_id": manifest.vault_id,
+        "action": preview.intent.action,
+        "decided_at_ms": preview.intent.decided_at_ms,
+        "previewed_at_ms": preview.previewed_at_ms,
+        "indexed_at_ms": indexed_at_ms,
+        "schema_version": WC2_COHORT_SCHEMA_VERSION,
+        "engine_version": WC2_COHORT_ENGINE_VERSION,
+        "production_authority": False,
+        "real_capital": REAL_CAPITAL,
+    }
+    return WC2CohortIntent(
+        intent_link_identity=canonical_sha256(values),
+        policy_identity=cohort_forecast.policy_identity,
+        cohort_forecast_identity=cohort_forecast.cohort_forecast_identity,
+        forecast_identity=cohort_forecast.forecast_identity,
+        proof_identity=cohort_forecast.proof_identity,
         persisted_cycle_identity=persisted_cycle.persisted_cycle_identity,
         manifest_identity=manifest.manifest_identity,
         shadow_cycle_identity=manifest.cycle_identity,
         preview_identity=preview.preview_identity,
         shadow_intent_record_identity=manifest.journal_record_identity,
         paper_intent_identity=preview.intent.intent_identity,
-        action=preview.intent.action,
         vault_id=manifest.vault_id,
-        asset=forecast.asset,
-        symbol=forecast.symbol,
-        timeframe=forecast.timeframe,
-        regime=issuance.confluence.regime,
-        issued_at_ms=forecast.issued_at_ms,
-        decision_at_ms=preview.intent.decided_at_ms,
+        action=preview.intent.action,
+        decided_at_ms=preview.intent.decided_at_ms,
         previewed_at_ms=preview.previewed_at_ms,
         indexed_at_ms=indexed_at_ms,
-        source_evidence_identities=sources,
     )
 
 
 def build_wc2_cohort_execution(
-    issuance: WC2CohortIssuance,
+    intent: WC2CohortIntent,
     fill: PaperTapeFill,
     *,
     indexed_at_ms: int,
 ) -> WC2CohortExecution:
-    if issuance.action is PaperAction.HOLD_CASH:
-        raise ValueError("WC2 HOLD_CASH issuance cannot receive execution")
-    if fill.intent_identity != issuance.paper_intent_identity:
+    if intent.action is PaperAction.HOLD_CASH:
+        raise ValueError("WC2 HOLD_CASH intent cannot receive execution")
+    if fill.intent_identity != intent.paper_intent_identity:
         raise ValueError("WC2 fill does not bind exact paper intent")
-    if fill.action is not issuance.action:
+    if fill.action is not intent.action:
         raise ValueError("WC2 fill action does not match frozen paper intent")
     if indexed_at_ms < fill.filled_at_ms:
         raise ValueError("WC2 execution index cannot predate fill")
@@ -409,10 +465,11 @@ def build_wc2_cohort_execution(
     }
     cost_identity = canonical_sha256(cost_values)
     values = {
-        "policy_identity": issuance.policy_identity,
-        "cohort_issuance_identity": issuance.cohort_issuance_identity,
-        "forecast_identity": issuance.forecast_identity,
-        "paper_intent_identity": issuance.paper_intent_identity,
+        "policy_identity": intent.policy_identity,
+        "cohort_forecast_identity": intent.cohort_forecast_identity,
+        "intent_link_identity": intent.intent_link_identity,
+        "forecast_identity": intent.forecast_identity,
+        "paper_intent_identity": intent.paper_intent_identity,
         "fill_identity": fill.fill_identity,
         "cost_evidence_identity": cost_identity,
         "action": fill.action,
@@ -432,10 +489,11 @@ def build_wc2_cohort_execution(
     }
     return WC2CohortExecution(
         execution_link_identity=canonical_sha256(values),
-        policy_identity=issuance.policy_identity,
-        cohort_issuance_identity=issuance.cohort_issuance_identity,
-        forecast_identity=issuance.forecast_identity,
-        paper_intent_identity=issuance.paper_intent_identity,
+        policy_identity=intent.policy_identity,
+        cohort_forecast_identity=intent.cohort_forecast_identity,
+        intent_link_identity=intent.intent_link_identity,
+        forecast_identity=intent.forecast_identity,
+        paper_intent_identity=intent.paper_intent_identity,
         fill_identity=fill.fill_identity,
         cost_evidence_identity=cost_identity,
         action=fill.action,
@@ -451,26 +509,26 @@ def build_wc2_cohort_execution(
 
 
 def build_wc2_cohort_resolution(
-    issuance: WC2CohortIssuance,
+    cohort_forecast: WC2CohortForecast,
     resolution: ForecastResolution,
     *,
     indexed_at_ms: int,
 ) -> WC2CohortResolution:
-    if resolution.forecast_identity != issuance.forecast_identity:
+    if resolution.forecast_identity != cohort_forecast.forecast_identity:
         raise ValueError("WC2 resolution does not bind cohort forecast")
-    if resolution.signal_freeze_identity != issuance.signal_freeze_identity:
+    if resolution.signal_freeze_identity != cohort_forecast.signal_freeze_identity:
         raise ValueError("WC2 resolution does not bind cohort signal")
     if resolution.evidence_class is not EvidenceClass.LIVE_UNTOUCHED_FORWARD:
         raise ValueError("WC2 resolution must be LIVE_UNTOUCHED_FORWARD")
-    if resolution.evaluated_at_ms < issuance.issued_at_ms:
+    if resolution.evaluated_at_ms < cohort_forecast.issued_at_ms:
         raise ValueError("WC2 resolution cannot predate forecast issuance")
     if indexed_at_ms < resolution.evaluated_at_ms:
         raise ValueError("WC2 resolution index cannot predate evaluation")
 
     values = {
-        "policy_identity": issuance.policy_identity,
-        "cohort_issuance_identity": issuance.cohort_issuance_identity,
-        "forecast_identity": issuance.forecast_identity,
+        "policy_identity": cohort_forecast.policy_identity,
+        "cohort_forecast_identity": cohort_forecast.cohort_forecast_identity,
+        "forecast_identity": cohort_forecast.forecast_identity,
         "resolution_identity": resolution.resolution_identity,
         "source_outcome_identity": resolution.source_outcome_identity,
         "state": resolution.state,
@@ -484,9 +542,9 @@ def build_wc2_cohort_resolution(
     }
     return WC2CohortResolution(
         resolution_link_identity=canonical_sha256(values),
-        policy_identity=issuance.policy_identity,
-        cohort_issuance_identity=issuance.cohort_issuance_identity,
-        forecast_identity=issuance.forecast_identity,
+        policy_identity=cohort_forecast.policy_identity,
+        cohort_forecast_identity=cohort_forecast.cohort_forecast_identity,
+        forecast_identity=cohort_forecast.forecast_identity,
         resolution_identity=resolution.resolution_identity,
         source_outcome_identity=resolution.source_outcome_identity,
         state=resolution.state,
@@ -526,14 +584,12 @@ class WC2CohortJournal:
                 )"""
             )
             db.execute(
-                f"""CREATE TABLE IF NOT EXISTS {_ISSUANCE_TABLE} (
+                f"""CREATE TABLE IF NOT EXISTS {_FORECAST_TABLE} (
                     sequence_id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    cohort_issuance_identity TEXT UNIQUE NOT NULL,
+                    cohort_forecast_identity TEXT UNIQUE NOT NULL,
                     policy_identity TEXT NOT NULL,
                     forecast_identity TEXT UNIQUE NOT NULL,
                     proof_identity TEXT NOT NULL,
-                    paper_intent_identity TEXT UNIQUE NOT NULL,
-                    action TEXT NOT NULL,
                     symbol TEXT NOT NULL,
                     regime TEXT NOT NULL,
                     issued_at_ms INTEGER NOT NULL,
@@ -542,30 +598,49 @@ class WC2CohortJournal:
                 )"""
             )
             db.execute(
+                f"""CREATE TABLE IF NOT EXISTS {_INTENT_TABLE} (
+                    sequence_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    intent_link_identity TEXT UNIQUE NOT NULL,
+                    cohort_forecast_identity TEXT NOT NULL,
+                    forecast_identity TEXT NOT NULL,
+                    paper_intent_identity TEXT UNIQUE NOT NULL,
+                    vault_id TEXT NOT NULL,
+                    action TEXT NOT NULL,
+                    indexed_at_ms INTEGER NOT NULL,
+                    payload_json TEXT NOT NULL,
+                    UNIQUE(forecast_identity, vault_id),
+                    FOREIGN KEY (cohort_forecast_identity)
+                        REFERENCES {_FORECAST_TABLE}(cohort_forecast_identity)
+                )"""
+            )
+            db.execute(
                 f"""CREATE TABLE IF NOT EXISTS {_EXECUTION_TABLE} (
                     sequence_id INTEGER PRIMARY KEY AUTOINCREMENT,
                     execution_link_identity TEXT UNIQUE NOT NULL,
-                    cohort_issuance_identity TEXT NOT NULL,
+                    cohort_forecast_identity TEXT NOT NULL,
+                    intent_link_identity TEXT NOT NULL,
                     forecast_identity TEXT NOT NULL,
                     fill_identity TEXT UNIQUE NOT NULL,
                     indexed_at_ms INTEGER NOT NULL,
                     payload_json TEXT NOT NULL,
-                    FOREIGN KEY (cohort_issuance_identity)
-                        REFERENCES {_ISSUANCE_TABLE}(cohort_issuance_identity)
+                    FOREIGN KEY (cohort_forecast_identity)
+                        REFERENCES {_FORECAST_TABLE}(cohort_forecast_identity),
+                    FOREIGN KEY (intent_link_identity)
+                        REFERENCES {_INTENT_TABLE}(intent_link_identity)
                 )"""
             )
             db.execute(
                 f"""CREATE TABLE IF NOT EXISTS {_RESOLUTION_TABLE} (
                     sequence_id INTEGER PRIMARY KEY AUTOINCREMENT,
                     resolution_link_identity TEXT UNIQUE NOT NULL,
-                    cohort_issuance_identity TEXT UNIQUE NOT NULL,
+                    cohort_forecast_identity TEXT UNIQUE NOT NULL,
                     forecast_identity TEXT UNIQUE NOT NULL,
                     resolution_identity TEXT UNIQUE NOT NULL,
                     evaluated_at_ms INTEGER NOT NULL,
                     indexed_at_ms INTEGER NOT NULL,
                     payload_json TEXT NOT NULL,
-                    FOREIGN KEY (cohort_issuance_identity)
-                        REFERENCES {_ISSUANCE_TABLE}(cohort_issuance_identity)
+                    FOREIGN KEY (cohort_forecast_identity)
+                        REFERENCES {_FORECAST_TABLE}(cohort_forecast_identity)
                 )"""
             )
             row = db.execute(
@@ -581,7 +656,8 @@ class WC2CohortJournal:
 
             for table in (
                 _META_TABLE,
-                _ISSUANCE_TABLE,
+                _FORECAST_TABLE,
+                _INTENT_TABLE,
                 _EXECUTION_TABLE,
                 _RESOLUTION_TABLE,
             ):
@@ -598,54 +674,117 @@ class WC2CohortJournal:
                         END"""
                     )
 
-    def append_issuance(
+    def append_forecast(
         self,
-        record: WC2CohortIssuance,
+        record: WC2CohortForecast,
     ) -> WC2CohortAppendDisposition:
         self.initialize()
-        payload = canonical_json(_issuance_payload(record))
+        payload = canonical_json(_forecast_payload(record))
         with closing(sqlite3.connect(self.path)) as db, db:
             db.execute("PRAGMA foreign_keys=ON")
             existing = db.execute(
-                f"""SELECT cohort_issuance_identity, payload_json
-                FROM {_ISSUANCE_TABLE}
-                WHERE forecast_identity=? OR cohort_issuance_identity=?""",
+                f"""SELECT cohort_forecast_identity, payload_json
+                FROM {_FORECAST_TABLE}
+                WHERE forecast_identity=? OR cohort_forecast_identity=?""",
                 (
                     record.forecast_identity,
-                    record.cohort_issuance_identity,
+                    record.cohort_forecast_identity,
                 ),
             ).fetchone()
             if existing is not None:
                 if (
-                    str(existing[0]) == record.cohort_issuance_identity
+                    str(existing[0]) == record.cohort_forecast_identity
                     and str(existing[1]) == payload
                 ):
                     return WC2CohortAppendDisposition.IDEMPOTENT
-                raise ValueError("WC2 cohort forecast issuance conflict")
+                raise ValueError("WC2 cohort forecast conflict")
             db.execute(
-                f"""INSERT INTO {_ISSUANCE_TABLE}(
-                    cohort_issuance_identity,
+                f"""INSERT INTO {_FORECAST_TABLE}(
+                    cohort_forecast_identity,
                     policy_identity,
                     forecast_identity,
                     proof_identity,
-                    paper_intent_identity,
-                    action,
                     symbol,
                     regime,
                     issued_at_ms,
                     indexed_at_ms,
                     payload_json
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (
-                    record.cohort_issuance_identity,
+                    record.cohort_forecast_identity,
                     record.policy_identity,
                     record.forecast_identity,
                     record.proof_identity,
-                    record.paper_intent_identity,
-                    record.action.value,
                     record.symbol,
                     record.regime,
                     record.issued_at_ms,
+                    record.indexed_at_ms,
+                    payload,
+                ),
+            )
+        return WC2CohortAppendDisposition.INSERTED
+
+    def append_intent(
+        self,
+        record: WC2CohortIntent,
+    ) -> WC2CohortAppendDisposition:
+        self.initialize()
+        payload = canonical_json(_intent_payload(record))
+        with closing(sqlite3.connect(self.path)) as db, db:
+            db.execute("PRAGMA foreign_keys=ON")
+            forecast = db.execute(
+                f"""SELECT policy_identity, forecast_identity, proof_identity
+                FROM {_FORECAST_TABLE}
+                WHERE cohort_forecast_identity=?""",
+                (record.cohort_forecast_identity,),
+            ).fetchone()
+            if forecast is None:
+                raise ValueError("WC2 intent references unknown cohort forecast")
+            if (
+                str(forecast[0]) != record.policy_identity
+                or str(forecast[1]) != record.forecast_identity
+                or str(forecast[2]) != record.proof_identity
+            ):
+                raise ValueError("WC2 intent/forecast lineage conflict")
+
+            existing = db.execute(
+                f"""SELECT intent_link_identity, payload_json
+                FROM {_INTENT_TABLE}
+                WHERE paper_intent_identity=?
+                   OR intent_link_identity=?
+                   OR (forecast_identity=? AND vault_id=?)""",
+                (
+                    record.paper_intent_identity,
+                    record.intent_link_identity,
+                    record.forecast_identity,
+                    record.vault_id.value,
+                ),
+            ).fetchone()
+            if existing is not None:
+                if (
+                    str(existing[0]) == record.intent_link_identity
+                    and str(existing[1]) == payload
+                ):
+                    return WC2CohortAppendDisposition.IDEMPOTENT
+                raise ValueError("WC2 cohort intent conflict")
+            db.execute(
+                f"""INSERT INTO {_INTENT_TABLE}(
+                    intent_link_identity,
+                    cohort_forecast_identity,
+                    forecast_identity,
+                    paper_intent_identity,
+                    vault_id,
+                    action,
+                    indexed_at_ms,
+                    payload_json
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+                (
+                    record.intent_link_identity,
+                    record.cohort_forecast_identity,
+                    record.forecast_identity,
+                    record.paper_intent_identity,
+                    record.vault_id.value,
+                    record.action.value,
                     record.indexed_at_ms,
                     payload,
                 ),
@@ -660,22 +799,22 @@ class WC2CohortJournal:
         payload = canonical_json(_execution_payload(record))
         with closing(sqlite3.connect(self.path)) as db, db:
             db.execute("PRAGMA foreign_keys=ON")
-            issuance = db.execute(
-                f"""SELECT policy_identity, forecast_identity, action,
-                           paper_intent_identity
-                FROM {_ISSUANCE_TABLE}
-                WHERE cohort_issuance_identity=?""",
-                (record.cohort_issuance_identity,),
+            intent = db.execute(
+                f"""SELECT policy_identity, forecast_identity,
+                           paper_intent_identity, action
+                FROM {_INTENT_TABLE}
+                WHERE intent_link_identity=?""",
+                (record.intent_link_identity,),
             ).fetchone()
-            if issuance is None:
-                raise ValueError("WC2 execution references unknown issuance")
+            if intent is None:
+                raise ValueError("WC2 execution references unknown intent")
             if (
-                str(issuance[0]) != record.policy_identity
-                or str(issuance[1]) != record.forecast_identity
-                or str(issuance[2]) != record.action.value
-                or str(issuance[3]) != record.paper_intent_identity
+                str(intent[0]) != record.policy_identity
+                or str(intent[1]) != record.forecast_identity
+                or str(intent[2]) != record.paper_intent_identity
+                or str(intent[3]) != record.action.value
             ):
-                raise ValueError("WC2 execution/issuance lineage conflict")
+                raise ValueError("WC2 execution/intent lineage conflict")
 
             existing = db.execute(
                 f"""SELECT execution_link_identity, payload_json
@@ -693,15 +832,17 @@ class WC2CohortJournal:
             db.execute(
                 f"""INSERT INTO {_EXECUTION_TABLE}(
                     execution_link_identity,
-                    cohort_issuance_identity,
+                    cohort_forecast_identity,
+                    intent_link_identity,
                     forecast_identity,
                     fill_identity,
                     indexed_at_ms,
                     payload_json
-                ) VALUES (?, ?, ?, ?, ?, ?)""",
+                ) VALUES (?, ?, ?, ?, ?, ?, ?)""",
                 (
                     record.execution_link_identity,
-                    record.cohort_issuance_identity,
+                    record.cohort_forecast_identity,
+                    record.intent_link_identity,
                     record.forecast_identity,
                     record.fill_identity,
                     record.indexed_at_ms,
@@ -718,31 +859,31 @@ class WC2CohortJournal:
         payload = canonical_json(_resolution_payload(record))
         with closing(sqlite3.connect(self.path)) as db, db:
             db.execute("PRAGMA foreign_keys=ON")
-            issuance = db.execute(
+            forecast = db.execute(
                 f"""SELECT policy_identity, forecast_identity, issued_at_ms
-                FROM {_ISSUANCE_TABLE}
-                WHERE cohort_issuance_identity=?""",
-                (record.cohort_issuance_identity,),
+                FROM {_FORECAST_TABLE}
+                WHERE cohort_forecast_identity=?""",
+                (record.cohort_forecast_identity,),
             ).fetchone()
-            if issuance is None:
-                raise ValueError("WC2 resolution references unknown issuance")
+            if forecast is None:
+                raise ValueError("WC2 resolution references unknown cohort forecast")
             if (
-                str(issuance[0]) != record.policy_identity
-                or str(issuance[1]) != record.forecast_identity
+                str(forecast[0]) != record.policy_identity
+                or str(forecast[1]) != record.forecast_identity
             ):
-                raise ValueError("WC2 resolution/issuance lineage conflict")
-            if record.evaluated_at_ms < int(issuance[2]):
-                raise ValueError("WC2 resolution predates persisted issuance")
+                raise ValueError("WC2 resolution/forecast lineage conflict")
+            if record.evaluated_at_ms < int(forecast[2]):
+                raise ValueError("WC2 resolution predates persisted forecast")
 
             existing = db.execute(
                 f"""SELECT resolution_link_identity, payload_json
                 FROM {_RESOLUTION_TABLE}
-                WHERE cohort_issuance_identity=?
+                WHERE cohort_forecast_identity=?
                    OR forecast_identity=?
                    OR resolution_identity=?
                    OR resolution_link_identity=?""",
                 (
-                    record.cohort_issuance_identity,
+                    record.cohort_forecast_identity,
                     record.forecast_identity,
                     record.resolution_identity,
                     record.resolution_link_identity,
@@ -758,7 +899,7 @@ class WC2CohortJournal:
             db.execute(
                 f"""INSERT INTO {_RESOLUTION_TABLE}(
                     resolution_link_identity,
-                    cohort_issuance_identity,
+                    cohort_forecast_identity,
                     forecast_identity,
                     resolution_identity,
                     evaluated_at_ms,
@@ -767,7 +908,7 @@ class WC2CohortJournal:
                 ) VALUES (?, ?, ?, ?, ?, ?, ?)""",
                 (
                     record.resolution_link_identity,
-                    record.cohort_issuance_identity,
+                    record.cohort_forecast_identity,
                     record.forecast_identity,
                     record.resolution_identity,
                     record.evaluated_at_ms,
@@ -801,44 +942,62 @@ class WC2CohortJournal:
             ).fetchone()
             if meta is None or str(meta[0]) != WC2_COHORT_SCHEMA_VERSION:
                 raise ValueError("WC2 cohort journal schema mismatch")
-            issuance_count = _table_count(db, _ISSUANCE_TABLE)
+            forecast_count = _table_count(db, _FORECAST_TABLE)
+            intent_count = _table_count(db, _INTENT_TABLE)
             execution_count = _table_count(db, _EXECUTION_TABLE)
             resolution_count = _table_count(db, _RESOLUTION_TABLE)
 
         return WC2CohortJournalStatus(
-            issuance_count=issuance_count,
+            forecast_count=forecast_count,
+            intent_count=intent_count,
             execution_count=execution_count,
             resolution_count=resolution_count,
-            unresolved_count=issuance_count - resolution_count,
+            unresolved_forecast_count=forecast_count - resolution_count,
             quick_check_ok=True,
             read_only_verified=True,
         )
 
 
-def _issuance_payload(record: WC2CohortIssuance) -> dict[str, object]:
+def _forecast_payload(record: WC2CohortForecast) -> dict[str, object]:
     return {
         "policy_identity": record.policy_identity,
         "forecast_identity": record.forecast_identity,
         "proof_identity": record.proof_identity,
         "signal_freeze_identity": record.signal_freeze_identity,
+        "confluence_identity": record.confluence_identity,
+        "event_context_identity": record.event_context_identity,
+        "asset": record.asset,
+        "symbol": record.symbol,
+        "timeframe": record.timeframe,
+        "regime": record.regime,
+        "issued_at_ms": record.issued_at_ms,
+        "indexed_at_ms": record.indexed_at_ms,
+        "source_evidence_identities": record.source_evidence_identities,
+        "evidence_class": record.evidence_class,
+        "schema_version": record.schema_version,
+        "engine_version": record.engine_version,
+        "production_authority": record.production_authority,
+        "real_capital": record.real_capital,
+    }
+
+
+def _intent_payload(record: WC2CohortIntent) -> dict[str, object]:
+    return {
+        "policy_identity": record.policy_identity,
+        "cohort_forecast_identity": record.cohort_forecast_identity,
+        "forecast_identity": record.forecast_identity,
+        "proof_identity": record.proof_identity,
         "persisted_cycle_identity": record.persisted_cycle_identity,
         "manifest_identity": record.manifest_identity,
         "shadow_cycle_identity": record.shadow_cycle_identity,
         "preview_identity": record.preview_identity,
         "shadow_intent_record_identity": record.shadow_intent_record_identity,
         "paper_intent_identity": record.paper_intent_identity,
-        "action": record.action,
         "vault_id": record.vault_id,
-        "asset": record.asset,
-        "symbol": record.symbol,
-        "timeframe": record.timeframe,
-        "regime": record.regime,
-        "issued_at_ms": record.issued_at_ms,
-        "decision_at_ms": record.decision_at_ms,
+        "action": record.action,
+        "decided_at_ms": record.decided_at_ms,
         "previewed_at_ms": record.previewed_at_ms,
         "indexed_at_ms": record.indexed_at_ms,
-        "source_evidence_identities": record.source_evidence_identities,
-        "evidence_class": record.evidence_class,
         "schema_version": record.schema_version,
         "engine_version": record.engine_version,
         "production_authority": record.production_authority,
@@ -860,7 +1019,8 @@ def _cost_payload(record: WC2CohortExecution) -> dict[str, object]:
 def _execution_payload(record: WC2CohortExecution) -> dict[str, object]:
     return {
         "policy_identity": record.policy_identity,
-        "cohort_issuance_identity": record.cohort_issuance_identity,
+        "cohort_forecast_identity": record.cohort_forecast_identity,
+        "intent_link_identity": record.intent_link_identity,
         "forecast_identity": record.forecast_identity,
         "paper_intent_identity": record.paper_intent_identity,
         "fill_identity": record.fill_identity,
@@ -885,7 +1045,7 @@ def _execution_payload(record: WC2CohortExecution) -> dict[str, object]:
 def _resolution_payload(record: WC2CohortResolution) -> dict[str, object]:
     return {
         "policy_identity": record.policy_identity,
-        "cohort_issuance_identity": record.cohort_issuance_identity,
+        "cohort_forecast_identity": record.cohort_forecast_identity,
         "forecast_identity": record.forecast_identity,
         "resolution_identity": record.resolution_identity,
         "source_outcome_identity": record.source_outcome_identity,
@@ -898,6 +1058,13 @@ def _resolution_payload(record: WC2CohortResolution) -> dict[str, object]:
         "production_authority": record.production_authority,
         "real_capital": record.real_capital,
     }
+
+
+def _validate_sources(values: tuple[str, ...]) -> None:
+    if values != tuple(sorted(set(values))) or not values:
+        raise ValueError("WC2 cohort source evidence must be non-empty canonical")
+    for identity in values:
+        _require_sha256(identity, "WC2 cohort source evidence")
 
 
 def _table_count(db: sqlite3.Connection, table: str) -> int:
