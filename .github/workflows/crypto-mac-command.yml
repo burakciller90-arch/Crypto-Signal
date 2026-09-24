@@ -540,7 +540,7 @@ jobs:
           echo "WC2_COLLECTION_PROTOCOL_SHA256_BEFORE=$protocol_before"
 
           set +e
-          PYTHONPATH="$GITHUB_WORKSPACE/src" "$PY" "$RUNNER"             --db "$LEDGER"             --candle-cache "$CANDLE"             --provider-divergence "$DIVERGENCE"             --wc2-enabled             --wc2-policy "$POLICY"             --wc2-epoch2 "$EPOCH2"             --wc2-collection-protocol "$PROTOCOL"             --wc2-prepared "$PREPARED"             --wc2-decision-evidence "$DECISION"             --wc2-cohort "$COHORT"             --wc2-shadow-intent "$SHADOW_INTENT"             --wc2-shadow-cycle "$SHADOW_CYCLE"             >"$RUNNER_TEMP/wc2-collect-once.out"             2>"$RUNNER_TEMP/wc2-collect-once.err"
+          PYTHONPATH="$GITHUB_WORKSPACE:$GITHUB_WORKSPACE/src" "$PY" "$RUNNER"             --db "$LEDGER"             --candle-cache "$CANDLE"             --provider-divergence "$DIVERGENCE"             --wc2-enabled             --wc2-policy "$POLICY"             --wc2-epoch2 "$EPOCH2"             --wc2-collection-protocol "$PROTOCOL"             --wc2-prepared "$PREPARED"             --wc2-decision-evidence "$DECISION"             --wc2-cohort "$COHORT"             --wc2-shadow-intent "$SHADOW_INTENT"             --wc2-shadow-cycle "$SHADOW_CYCLE"             >"$RUNNER_TEMP/wc2-collect-once.out"             2>"$RUNNER_TEMP/wc2-collect-once.err"
           rc=$?
           set -e
 
