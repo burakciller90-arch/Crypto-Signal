@@ -374,6 +374,12 @@ def build_provider_divergence_snapshot(
     )
 
 
+@dataclass(frozen=True, slots=True)
+class ProviderDivergenceCycleResult:
+    observed_at_ms: int
+    snapshots: tuple[ProviderDivergenceSnapshot, ...]
+
+
 class ProviderDivergenceStore:
     def __init__(self, path: Path) -> None:
         self.path = path
@@ -543,6 +549,64 @@ def read_candles_read_only(
             (exchange.value, market_type.value, symbol, timeframe),
         ).fetchall()
     return tuple(_candle_from_row(row) for row in rows)
+
+
+def collect_provider_divergence_cycle(
+    *,
+    candle_db: Path,
+    divergence_db: Path,
+    symbols: tuple[str, ...],
+    timeframe: str,
+    lookback: int,
+    observed_at_ms: int,
+) -> ProviderDivergenceCycleResult:
+    if observed_at_ms < 0:
+        raise ValueError("observed_at_ms cannot be negative")
+    if not symbols or tuple(sorted(set(symbols))) != symbols:
+        raise ValueError("symbols must be unique and sorted")
+    if any(not symbol or symbol != symbol.upper() for symbol in symbols):
+        raise ValueError("symbols must be uppercase")
+    if not timeframe.strip():
+        raise ValueError("timeframe must be non-empty")
+    if lookback <= 0 or lookback > 10_000:
+        raise ValueError("lookback must be inside 1..10000")
+
+    output = ProviderDivergenceStore(divergence_db)
+    output.initialize()
+    snapshots: list[ProviderDivergenceSnapshot] = []
+    for symbol in symbols:
+        binance = read_candles_read_only(
+            candle_db,
+            exchange=Exchange.BINANCE,
+            market_type=MarketType.SPOT,
+            symbol=symbol,
+            timeframe=timeframe,
+        )
+        bybit = read_candles_read_only(
+            candle_db,
+            exchange=Exchange.BYBIT,
+            market_type=MarketType.SPOT,
+            symbol=symbol,
+            timeframe=timeframe,
+        )
+        snapshot = build_provider_divergence_snapshot(
+            market_type=MarketType.SPOT,
+            symbol=symbol,
+            timeframe=timeframe,
+            observed_at_ms=observed_at_ms,
+            left_exchange=Exchange.BINANCE,
+            right_exchange=Exchange.BYBIT,
+            left_candles=binance,
+            right_candles=bybit,
+            lookback_limit=lookback,
+        )
+        output.append(snapshot)
+        snapshots.append(snapshot)
+
+    return ProviderDivergenceCycleResult(
+        observed_at_ms=observed_at_ms,
+        snapshots=tuple(snapshots),
+    )
 
 
 def _prepare_provider_candles(
