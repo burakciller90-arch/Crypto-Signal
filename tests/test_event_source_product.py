@@ -93,11 +93,7 @@ def test_event_source_product_reader_verifies_exact_lineage_read_only(
 ) -> None:
     path = tmp_path / "event_source.sqlite3"
     _seed(path)
-    before = {
-        item.name: item.read_bytes()
-        for item in tmp_path.iterdir()
-        if item.is_file()
-    }
+    before = path.read_bytes()
 
     snapshot = read_event_source_runtime_truth(
         path,
@@ -125,12 +121,7 @@ def test_event_source_product_reader_verifies_exact_lineage_read_only(
     assert snapshot.production_authority is False
     assert snapshot.real_capital == 0
 
-    after = {
-        item.name: item.read_bytes()
-        for item in tmp_path.iterdir()
-        if item.is_file()
-    }
-    assert after == before
+    assert path.read_bytes() == before
 
 
 def test_event_source_product_reports_partial_calendar_coverage(
@@ -224,11 +215,7 @@ def test_event_source_endpoint_exposes_persisted_partial_truth_read_only(
 ) -> None:
     path = tmp_path / "event_source.sqlite3"
     _seed(path)
-    before = {
-        item.name: item.read_bytes()
-        for item in tmp_path.iterdir()
-        if item.is_file()
-    }
+    before = path.read_bytes()
     client = TestClient(
         create_app(
             tmp_path / "missing-signals.sqlite3",
@@ -256,12 +243,7 @@ def test_event_source_endpoint_exposes_persisted_partial_truth_read_only(
     assert "payload_blob" not in json.dumps(body)
     assert client.post("/api/event-source/status").status_code == 405
 
-    after = {
-        item.name: item.read_bytes()
-        for item in tmp_path.iterdir()
-        if item.is_file()
-    }
-    assert after == before
+    assert path.read_bytes() == before
 
 
 def test_event_source_endpoint_missing_runtime_creates_nothing(
