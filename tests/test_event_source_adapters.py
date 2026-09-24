@@ -4,10 +4,7 @@ from datetime import UTC, datetime
 
 import pytest
 
-from crypto_signal.data.event_risk import (
-    EventCategory,
-    EventSourceQuality,
-)
+from crypto_signal.data.event_risk import EventCategory, EventSourceQuality
 from crypto_signal.data.event_source_adapters import (
     BLS_CALENDAR_ADAPTER_VERSION,
     FED_MONETARY_RSS_ADAPTER_VERSION,
