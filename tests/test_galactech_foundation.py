@@ -25,18 +25,18 @@ def test_galactech_preview_is_isolated_truthful_and_accessible(tmp_path: Path) -
 
     # Cutover candidate keeps /galactech as an alias and /legacy as rollback evidence.
     assert production.content == preview.content
-    assert 'data-ui-version="galactech-v1.1-polish"' in production.text
+    assert 'data-ui-version="galactech-v2-intelligence-first-tr"' in production.text
     assert 'data-ui-version="galactech-command-center-v1"' in legacy.text
 
     for section in (
-        "COMMAND",
-        "MARKETS",
-        "INTELLIGENCE",
-        "CAPITAL",
-        "ARCHIVE",
-        "PERFORMANCE",
-        "LEARN",
-        "SYSTEM",
+        "ANA MERKEZ",
+        "VARLIK MERKEZİ",
+        "İSTİHBARAT",
+        "SERMAYE",
+        "SİNYAL ARŞİVİ",
+        "PERFORMANS",
+        "BANA ÖĞRET",
+        "SİSTEM SAĞLIĞI",
     ):
         assert f'class="nav-label">{section}</span>' in preview.text
 
@@ -44,13 +44,13 @@ def test_galactech_preview_is_isolated_truthful_and_accessible(tmp_path: Path) -
     assert 'aria-current="page"' in preview.text
     assert 'aria-live="polite"' in preview.text
     assert 'id="coldBoot"' in preview.text
-    assert "REAL CAPITAL" in preview.text
+    assert "GERÇEK SERMAYE" in preview.text
     assert "REAL_CAPITAL=0" in preview.text
-    assert "No fake LIVE · no fake latency · no fake probability" in preview.text
-    assert "MARKET TAPE" in preview.text
-    assert "NOT EXPOSED" in preview.text
-    assert "LATENCY" in preview.text
-    assert "NOT MEASURED" in preview.text
+    assert "Bilmediğini biliyor." in preview.text
+    assert "PİYASA AKIŞI ÇALIŞMA DURUMU" in preview.text
+    assert "SUNULMUYOR" in preview.text
+    assert "GECİKME" in preview.text
+    assert "ÖLÇÜLMEDİ" in preview.text
     assert "Bloomberg" not in preview.text  # design thesis is not a fake runtime claim
 
     assert "--bg-0: #06080c" in css.text
@@ -73,15 +73,19 @@ def test_galactech_preview_is_isolated_truthful_and_accessible(tmp_path: Path) -
     assert 'education: "/api/education"' in js.text
     assert 'intelligence: "/api/intelligence-center"' in js.text
     assert 'performance: "/api/performance"' in js.text
-    assert "API · AUTHORITY MISMATCH" in js.text
-    assert "NOT VERIFIED" in js.text
-    assert "UNAVAILABLE" in js.text
-    assert "Boş liste sıfır başarı ya da sıfır risk anlamına gelmez." in js.text
+    assert "API · YETKİ SINIRI UYUŞMAZLIĞI" in js.text
+    assert "DOĞRULANMADI" in js.text
+    assert "KULLANILAMIYOR" in js.text
+    assert "Seçili varlıkta canlı Intelligence Feed kaydı yok." in js.text
     assert "Bu, piyasanın risksiz olduğu anlamına gelmez" in js.text
     assert "document.visibilityState" in js.text
     assert "30_000" in js.text
+    assert "5_000" in js.text
+    assert 'id="intelTicker"' in preview.text
+    assert "function renderTickerV2(events)" in js.text
+    assert "intelligence-feed-v2" in preview.text
     assert 'id="evidenceDialog"' in preview.text
-    assert "Immutable Decision Evidence" in preview.text
+    assert "Değiştirilemez Karar Kanıtı" in preview.text
     assert "function renderEvidenceRoom(detail)" in js.text
     assert "function frozenChartMarkup(detail)" in js.text
 
@@ -95,7 +99,7 @@ def test_galactech_preview_does_not_expand_product_authority(tmp_path: Path) -> 
 
     assert health["real_capital"] == 0
     assert health["read_only"] is True
-    assert "READ ONLY" in preview.text
-    assert "no order path" in preview.text
+    assert "YALNIZCA GÖZLEM" in preview.text
+    assert "emir / erişim anahtarı yolu yok" in preview.text
     assert client.post("/galactech").status_code == 405
     assert not missing.exists()
