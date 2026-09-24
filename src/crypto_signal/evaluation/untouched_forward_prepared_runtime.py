@@ -106,6 +106,7 @@ def process_wc2_prepared_live_freeze(
     maximum_issuance_delay_ms: int,
     horizon_bars: int,
     base_asset: str,
+    collection_start_ms: int | None = None,
 ) -> WC2PreparedLiveResult:
     """Process one live freeze with durable pre-R20 crash recovery."""
     if observed_at_ms < 0:
@@ -118,6 +119,15 @@ def process_wc2_prepared_live_freeze(
         raise ValueError("WC2 prepared live base asset must be uppercase")
     if not context.symbol.startswith(base_asset):
         raise ValueError("WC2 prepared live context/base asset mismatch")
+    effective_collection_start_ms = (
+        policy.collection_start_ms
+        if collection_start_ms is None
+        else collection_start_ms
+    )
+    if effective_collection_start_ms < policy.collection_start_ms:
+        raise ValueError(
+            "WC2 operational collection cannot predate review-policy collection"
+        )
 
     if result.status is LiveFreezeStatus.FROZEN:
         return _process_fresh_prepared(
@@ -133,6 +143,7 @@ def process_wc2_prepared_live_freeze(
             maximum_issuance_delay_ms=maximum_issuance_delay_ms,
             horizon_bars=horizon_bars,
             base_asset=base_asset,
+            collection_start_ms=effective_collection_start_ms,
         )
     if result.status is LiveFreezeStatus.ALREADY_FROZEN:
         return _process_replay_prepared(
@@ -146,6 +157,7 @@ def process_wc2_prepared_live_freeze(
             cohort_journal=cohort_journal,
             shadow_journal=shadow_journal,
             shadow_manifest=shadow_manifest,
+            collection_start_ms=effective_collection_start_ms,
         )
     raise ValueError("unsupported WC2 prepared live freeze status")
 
@@ -164,17 +176,18 @@ def _process_fresh_prepared(
     maximum_issuance_delay_ms: int,
     horizon_bars: int,
     base_asset: str,
+    collection_start_ms: int,
 ) -> WC2PreparedLiveResult:
     if result.bundle is None or result.frozen_at_ms is None:
         raise ValueError("fresh WC2 prepared cycle lost exact in-process bundle")
     signal = result.bundle.signal_decision
-    if result.frozen_at_ms < policy.collection_start_ms:
+    if result.frozen_at_ms < collection_start_ms:
         return _prepared_live_result(
             WC2PreparedLiveStatus.SKIPPED_BEFORE_COLLECTION,
             signal_identity=signal.freeze_identity,
             reasons=("source_freeze_predates_collection_start",),
         )
-    if observed_at_ms < policy.collection_start_ms:
+    if observed_at_ms < collection_start_ms:
         return _prepared_live_result(
             WC2PreparedLiveStatus.SKIPPED_BEFORE_COLLECTION,
             signal_identity=signal.freeze_identity,
@@ -243,6 +256,7 @@ def _process_replay_prepared(
     cohort_journal: WC2CohortJournal,
     shadow_journal: R25ShadowIntentJournal,
     shadow_manifest: R25ShadowCycleManifest,
+    collection_start_ms: int,
 ) -> WC2PreparedLiveResult:
     freeze = signal_ledger.get_freeze_by_source_cutoff(
         exchange=context.exchange.value,
@@ -255,7 +269,7 @@ def _process_replay_prepared(
         raise ValueError(
             "already-frozen WC2 prepared source cutoff has no freeze record"
         )
-    if freeze.frozen_at_ms < policy.collection_start_ms:
+    if freeze.frozen_at_ms < collection_start_ms:
         return _prepared_live_result(
             WC2PreparedLiveStatus.SKIPPED_BEFORE_COLLECTION,
             signal_identity=freeze.signal_freeze_identity,
