@@ -17,7 +17,7 @@ LEGACY_HOME = Path("/Users/crypto-signal-agent")
 
 def _ps_text() -> str:
     result = subprocess.run(
-        ["/bin/ps", "-axo", "pid=,ppid=,user=,command="],
+        ["/bin/ps", "-axo", "pid=,ppid=,user=,comm=,args="],
         check=True,
         capture_output=True,
         text=True,
@@ -47,6 +47,22 @@ def _health() -> dict[str, Any]:
     if payload.get("alert_outbox_present") is not True:
         raise RuntimeError("alert outbox missing")
     return payload
+
+
+def _matching_supervisor_pids(ps: str, supervisor_needle: str) -> list[int]:
+    result: list[int] = []
+    for line in ps.splitlines():
+        parts = line.strip().split(maxsplit=4)
+        if len(parts) < 5:
+            continue
+        pid_text, _ppid, _user, command_name, args = parts
+        if Path(command_name).name != "bash":
+            continue
+        if supervisor_needle not in args:
+            continue
+        if pid_text.isdigit():
+            result.append(int(pid_text))
+    return result
 
 
 def _assert_no_legacy_runtime_payload() -> tuple[str, ...]:
@@ -82,7 +98,7 @@ def _assert_process_topology(root: Path) -> dict[str, int]:
                 result.append(int(first))
         return result
 
-    supervisors = matching_pids(supervisor_needle)
+    supervisors = _matching_supervisor_pids(ps, supervisor_needle)
     dashboards = matching_pids(dashboard_needle)
     runners = matching_pids(runner_needle)
     if len(supervisors) != 1:
