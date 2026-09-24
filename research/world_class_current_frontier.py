@@ -24,14 +24,12 @@ from research.world_class_evidence_adapters import (
 )
 from research.world_class_evidence_provenance import (
     WC7EvidencePacket,
-    WC7EvidenceProvenance,
     WC7EvidenceSourceKind,
     build_wc7_evidence_packet,
     build_wc7_evidence_provenance,
 )
 from research.world_class_evidence_review import (
     REAL_CAPITAL,
-    WC7EvidenceClaim,
     WC7EvidenceDimension,
     WC7EvidenceReview,
     WC7EvidenceStatus,
