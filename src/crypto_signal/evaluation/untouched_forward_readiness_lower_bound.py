@@ -31,8 +31,8 @@ from crypto_signal.evaluation.untouched_forward_policy import (
     WC2_MIN_DECISIVE_PER_REGIME,
     WC2_MIN_QUALIFYING_REGIMES,
     WC2_MIN_TOTAL_DECISIVE_N,
-    WC2PolicyStore,
     WC2_REQUIRED_ASSETS,
+    WC2PolicyStore,
 )
 from crypto_signal.ledger.serialization import canonical_sha256
 from crypto_signal.paper.models import PaperAction
