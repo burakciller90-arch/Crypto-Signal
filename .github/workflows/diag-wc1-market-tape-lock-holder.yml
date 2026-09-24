@@ -1,0 +1,51 @@
+name: DIAG WC1 Market Tape Lock Holder
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/diag-wc1-market-tape-lock-holder.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          clean: true
+          fetch-depth: 1
+
+      - name: Read-only lock-holder diagnosis
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          DEV="$ROOT/Development"
+          LOCK="$DEV/runtime/market_tape/market_tape_stream.lock"
+          PIDFILE="$ROOT/market-tape-stream.pid"
+          echo "DIAG_HEAD=$(git -C "$GITHUB_WORKSPACE" rev-parse HEAD)"
+          echo "DEVELOPMENT_HEAD=$(git -C "$DEV" rev-parse HEAD)"
+          test -z "$(git -C "$DEV" status --porcelain)"
+          echo "=== LOCK FILE ==="
+          ls -l "$LOCK" || true
+          /usr/sbin/lsof "$LOCK" || true
+          echo "=== LOCK HOLDER PIDS ==="
+          PIDS="$(/usr/sbin/lsof -t "$LOCK" 2>/dev/null || true)"
+          printf '%s\n' "$PIDS"
+          for pid in $PIDS; do
+            echo "=== PID $pid ==="
+            /bin/ps -ww -p "$pid" -o pid=,ppid=,uid=,comm=,args= || true
+          done
+          echo "=== PIDFILE ==="
+          cat "$PIDFILE" 2>/dev/null || true
+          echo "=== ALL MARKET TAPE PROCESSES ==="
+          /bin/ps -ww -axo pid=,ppid=,uid=,comm=,args= | /usr/bin/grep -F 'run_market_tape_stream.py' | /usr/bin/grep -v grep || true
+          echo "=== SUPERVISOR ==="
+          /bin/ps -ww -axo pid=,ppid=,uid=,comm=,args= | /usr/bin/grep -F "$ROOT/ssd-service-supervisor.sh" | /usr/bin/grep -v grep || true
+          echo "WC1_LOCK_HOLDER_DIAG_READONLY_PASS=YES"
+          echo "REAL_CAPITAL=0"
