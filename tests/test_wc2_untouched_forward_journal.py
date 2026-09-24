@@ -260,12 +260,18 @@ def test_wc2_execution_rejects_unknown_or_wrong_intent(tmp_path: Path) -> None:
         journal.append_execution(execution)
 
     journal.append_intent(intent)
-    wrong = replace(
-        execution,
-        paper_intent_identity=_sha("d"),
+    other_intent = _intent(
+        forecast,
+        vault_id=PaperVaultId.TACTICAL,
+        intent_seed="4",
     )
-    with pytest.raises(ValueError, match="lineage conflict"):
-        journal.append_execution(wrong)
+    other_execution = _execution(
+        forecast,
+        other_intent,
+        fill_identity=_sha("d"),
+    )
+    with pytest.raises(ValueError, match="unknown intent"):
+        journal.append_execution(other_execution)
 
 
 def test_wc2_resolution_is_append_only_and_unresolved_is_retained(
@@ -290,11 +296,19 @@ def test_wc2_resolution_is_append_only_and_unresolved_is_retained(
     assert status.resolution_count == 1
     assert status.unresolved_forecast_count == 0
 
-    fork = replace(
-        resolution,
-        resolution_link_identity=_sha("d"),
+    alternate = SimpleNamespace(
+        forecast_identity=forecast.forecast_identity,
+        signal_freeze_identity=forecast.signal_freeze_identity,
+        evidence_class=EvidenceClass.LIVE_UNTOUCHED_FORWARD,
+        evaluated_at_ms=3_000,
         resolution_identity=_sha("e"),
+        source_outcome_identity=_sha("f"),
         state=ForecastResolutionState.INVALIDATED,
+    )
+    fork = build_wc2_cohort_resolution(
+        forecast,
+        alternate,
+        indexed_at_ms=3_100,
     )
     with pytest.raises(ValueError, match="resolution conflict"):
         journal.append_resolution(fork)
