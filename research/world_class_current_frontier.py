@@ -11,7 +11,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from crypto_signal.evaluation.untouched_forward_policy import WC2ReviewReadiness
+from crypto_signal.evaluation.untouched_forward_policy import (
+    WC2ReviewReadiness,
+    WC2ReviewStatus,
+)
 from crypto_signal.ledger.serialization import canonical_sha256
 from crypto_signal.paper.execution_lab_sandbox import WC6SandboxBoundaryEvidence
 from research.world_class_evidence_adapters import (
@@ -188,7 +191,11 @@ def build_wc7_current_frontier_snapshot(
             f"wc2-readiness={wc2_blocker_identity}"
         ),
         observed_at_ms=inputs.observed_at_ms,
-        blocker_boundary_identity=wc2_blocker_identity,
+        blocker_boundary_identity=_derived_blocker_boundary_identity(
+            dimension=WC7EvidenceDimension.COST_ADJUSTED_EXPECTANCY,
+            source_identity=wc2_blocker_identity,
+            semantic="wc3_cost_adjusted_economics_not_available",
+        ),
     )
     drawdown = _blocker_claim(
         dimension=WC7EvidenceDimension.CONTROLLED_DRAWDOWN,
@@ -203,7 +210,11 @@ def build_wc7_current_frontier_snapshot(
             f"wc2-readiness={wc2_blocker_identity}"
         ),
         observed_at_ms=inputs.observed_at_ms,
-        blocker_boundary_identity=wc2_blocker_identity,
+        blocker_boundary_identity=_derived_blocker_boundary_identity(
+            dimension=WC7EvidenceDimension.CONTROLLED_DRAWDOWN,
+            source_identity=wc2_blocker_identity,
+            semantic="wc3_drawdown_evidence_not_available",
+        ),
     )
     regime = _blocker_claim(
         dimension=WC7EvidenceDimension.REGIME_ROBUSTNESS,
@@ -218,7 +229,11 @@ def build_wc7_current_frontier_snapshot(
             f"{inputs.wc4_research_cycle_identity}:engineering-only"
         ),
         observed_at_ms=inputs.observed_at_ms,
-        blocker_boundary_identity=inputs.wc4_research_cycle_identity,
+        blocker_boundary_identity=_derived_blocker_boundary_identity(
+            dimension=WC7EvidenceDimension.REGIME_ROBUSTNESS,
+            source_identity=inputs.wc4_research_cycle_identity,
+            semantic="wc4_engineering_only_durable_regime_edge_not_established",
+        ),
     )
 
     abstention = _evidenced_claim(
@@ -242,7 +257,13 @@ def build_wc7_current_frontier_snapshot(
         ),
         source_reference="wc5-human-usability:not-measured",
         observed_at_ms=inputs.observed_at_ms,
-        blocker_boundary_identity=None,
+        blocker_boundary_identity=_derived_blocker_boundary_identity(
+            dimension=(
+                WC7EvidenceDimension.USABILITY_WITHOUT_HIDDEN_UNCERTAINTY
+            ),
+            source_identity=inputs.abstention_transparency_identity,
+            semantic="wc5_human_ten_second_usability_not_measured",
+        ),
     )
 
     adapted = (
@@ -274,7 +295,7 @@ def build_wc7_current_frontier_snapshot(
         WC7EvidenceDimension.REGIME_ROBUSTNESS,
         WC7EvidenceDimension.USABILITY_WITHOUT_HIDDEN_UNCERTAINTY,
     )
-    if inputs.wc2_readiness.status.value == "insufficient_evidence":
+    if inputs.wc2_readiness.status is WC2ReviewStatus.INSUFFICIENT_EVIDENCE:
         expected_blockers = tuple(
             sorted(
                 (
@@ -372,6 +393,25 @@ def _blocker_claim(
         real_capital=REAL_CAPITAL,
     )
 
+
+
+def _derived_blocker_boundary_identity(
+    *,
+    dimension: WC7EvidenceDimension,
+    source_identity: str,
+    semantic: str,
+) -> str:
+    _require_sha256(source_identity, "WC7 blocker source identity")
+    if not semantic.strip():
+        raise ValueError("WC7 blocker semantic must be non-empty")
+    return canonical_sha256(
+        {
+            "dimension": dimension,
+            "engine_version": WC7_CURRENT_FRONTIER_ENGINE_VERSION,
+            "semantic": semantic,
+            "source_identity": source_identity,
+        }
+    )
 
 def _snapshot_payload(
     snapshot: WC7CurrentFrontierSnapshot,
