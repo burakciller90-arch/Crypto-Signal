@@ -348,7 +348,6 @@ def test_wc2_runtime_error_fail_stops_before_second_context(
 
     def divergence(**kwargs):
         calls["divergence"] += 1
-        return None
 
     monkeypatch.setattr(clock, "freeze_coverage_context", fake_freeze)
     monkeypatch.setattr(
