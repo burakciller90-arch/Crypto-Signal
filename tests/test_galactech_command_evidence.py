@@ -54,12 +54,12 @@ def test_galactech_command_and_evidence_room_use_same_exact_signal_freeze(
     html = preview.text
     js = script.text
     css = style.text
-    assert 'data-ui-version="galactech-v1.1-polish"' in html
+    assert 'data-ui-version="galactech-v2-intelligence-first-tr"' in html
     assert 'id="evidenceDialog"' in html
     assert 'aria-labelledby="evidenceDialogTitle"' in html
-    assert "EVIDENCE ROOM / FROZEN DECISION" in html
-    assert "Immutable Decision Evidence" in html
-    assert "later market data cannot rewrite it" in html
+    assert "KANIT ODASI / DONDURULMUŞ KARAR" in html
+    assert "Değiştirilemez Karar Kanıtı" in html
+    assert "sonraki piyasa verisi geçmişi değiştiremez" in html
 
     assert "signalDetail: (identity)" in js
     assert "function renderEvidenceRoom(detail)" in js
@@ -71,9 +71,9 @@ def test_galactech_command_and_evidence_room_use_same_exact_signal_freeze(
     assert "async function openEvidenceRoom(identity, trigger)" in js
     assert "function closeEvidenceRoom()" in js
     assert 'data-evidence-id="' in js
-    assert "Evidence, not private reasoning" in js
-    assert "Reference geometry is evidence, not an order instruction." in js
-    assert "no synthetic candles are drawn" in js.lower()
+    assert "Kanıtı açıklar; gizli düşünce zinciri üretmez" in js
+    assert "Bu geometri kanıttır; emir talimatı değildir." in js
+    assert "sentetik mum çizilmez" in js.lower()
     assert 'trigger.focus({ preventScroll: true })' in js
 
     assert ".evidence-room::backdrop" in css
