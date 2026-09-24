@@ -408,6 +408,7 @@ def process_wc2_paper_execution_cycle(
         common = {
             "event_identity": event.event_identity,
             "execution_protocol_identity": protocol.protocol_identity,
+            "runtime_activation_identity": activation.activation_identity,
             "execution_start_ms": activation.collection_start_ms,
             "source_exchanges": event.source_exchanges,
             "source_freeze_identities": event.source_freeze_identities,
