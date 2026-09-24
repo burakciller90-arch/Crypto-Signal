@@ -113,7 +113,7 @@ jobs:
           echo "GALACTECH_PREVIEW_WORKSPACE_HEAD=$WORKSPACE_HEAD"
           echo "GALACTECH_PREVIEW_WORKFLOW_SHA=$GITHUB_SHA"
           test "$WORKSPACE_HEAD" = "$GITHUB_SHA"
-          grep -F 'data-ui-version="galactech-v1.1-polish"' "$GITHUB_WORKSPACE/src/crypto_signal/product/galactech/index.html" >/dev/null
+          grep -F 'data-ui-version="galactech-v2-intelligence-first-tr"' "$GITHUB_WORKSPACE/src/crypto_signal/product/galactech/index.html" >/dev/null
           echo "GALACTECH_PREVIEW_EXACT_SOURCE_PASS=YES"
 
       - name: GALACTECH EXACT MAIN PREVIEW
@@ -182,8 +182,8 @@ jobs:
           fi
 
           curl -fsS --max-time 5 "$URL/" >/tmp/galactech-preview-index.html
-          grep -F 'data-ui-version="galactech-v1.1-polish"' /tmp/galactech-preview-index.html >/dev/null
-          grep -F 'R25 / OPERATIONAL TRUTH' /tmp/galactech-preview-index.html >/dev/null
+          grep -F 'data-ui-version="galactech-v2-intelligence-first-tr"' /tmp/galactech-preview-index.html >/dev/null
+          grep -F 'R25 / OPERASYONEL DOĞRULUK' /tmp/galactech-preview-index.html >/dev/null
           grep -F 'REAL_CAPITAL=0' /tmp/galactech-preview-index.html >/dev/null
           test "$(curl -sS -o /dev/null -w '%{http_code}' -X POST --max-time 5 "$URL/")" = "405"
 
@@ -1983,9 +1983,9 @@ jobs:
           curl -fsS --max-time 5 http://127.0.0.1:48700/galactech > /tmp/crypto-product-galactech.html
           curl -fsS --max-time 5 http://127.0.0.1:48700/legacy > /tmp/crypto-product-legacy.html
           cmp /tmp/crypto-product-index.html /tmp/crypto-product-galactech.html
-          grep -F 'data-ui-version="galactech-v1.1-polish"' /tmp/crypto-product-index.html >/dev/null
+          grep -F 'data-ui-version="galactech-v2-intelligence-first-tr"' /tmp/crypto-product-index.html >/dev/null
           grep -F 'data-ui-version="galactech-command-center-v1"' /tmp/crypto-product-legacy.html >/dev/null
-          grep -F 'R25 / OPERATIONAL TRUTH' /tmp/crypto-product-index.html >/dev/null
+          grep -F 'R25 / OPERASYONEL DOĞRULUK' /tmp/crypto-product-index.html >/dev/null
           grep -F 'REAL_CAPITAL=0' /tmp/crypto-product-index.html >/dev/null
 
           fetch_live_json http://127.0.0.1:48700/api/r25/operational-truth /tmp/crypto-r25-operational.json
