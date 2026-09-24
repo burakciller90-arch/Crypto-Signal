@@ -2258,11 +2258,11 @@ function renderEvidenceRoom(detail) {
   if (!body) return;
 
   if (!detail || detail.status !== "ready" || !detail.signal) {
-    if (subtitle) subtitle.textContent = `Evidence status · ${upper(detail?.status, "UNAVAILABLE")}`;
+    if (subtitle) subtitle.textContent = `Kanıt durumu · ${trState(detail?.status)}`;
     body.innerHTML = `
       <div class="empty-state">
-        <strong>Frozen evidence unavailable.</strong>
-        <p>The product does not fabricate a proof when the signal ledger or exact identity is unavailable.</p>
+        <strong>Dondurulmuş kanıt kullanılamıyor.</strong>
+        <p>Sinyal günlüğü veya exact kimlik yoksa ürün kanıt uydurmaz.</p>
       </div>`;
     return;
   }
@@ -2275,122 +2275,123 @@ function renderEvidenceRoom(detail) {
 
   if (subtitle) {
     subtitle.textContent =
-      `${signal.symbol} · ${signal.timeframe} · frozen ${formatTime(signal.frozen_at_ms)}`;
+      `${signal.symbol} · ${signal.timeframe} · donduruldu ${formatTime(signal.frozen_at_ms)}`;
   }
 
   body.innerHTML = `
     <div class="proof-hero">
       <article class="proof-state-card">
-        <span class="proof-section-label">DECISION STATE</span>
+        <span class="proof-section-label">KARAR DURUMU</span>
         <div class="proof-state-line">
-          <strong class="${stateClass(signal.state)}">${escapeHtml(upper(signal.state))}</strong>
-          <span class="${stateClass(signal.direction)}">${escapeHtml(upper(signal.direction))}</span>
+          <strong class="${stateClass(signal.state)}">${escapeHtml(trState(signal.state))}</strong>
+          <span class="${stateClass(signal.direction)}">${escapeHtml(trDirection(signal.direction))}</span>
         </div>
         <p class="proof-footnote">
-          ${escapeHtml(signal.setup_type)} · methodology agreement is not probability.
+          ${escapeHtml(signal.setup_type)} · yöntemlerin uyumu olasılık değildir.
         </p>
         <div class="proof-metric-strip">
           <div class="proof-metric">
-            <span>CONFLUENCE</span>
+            <span>UYUM</span>
             <strong>${escapeHtml(signal.confluence_score)}</strong>
           </div>
           <div class="proof-metric">
-            <span>PROBABILITY</span>
-            <strong>${escapeHtml(upper(signal.probability_status, "NOT_CALIBRATED"))}</strong>
+            <span>OLASILIK</span>
+            <strong>${escapeHtml(trProbability(signal.probability_status))}</strong>
           </div>
           <div class="proof-metric">
-            <span>CANDLES</span>
+            <span>MUMLAR</span>
             <strong>${escapeHtml(detail.candle_count ?? 0)}</strong>
           </div>
         </div>
       </article>
       <article class="proof-identity-card">
-        <span>IMMUTABLE SNAPSHOT</span>
+        <span>DEĞİŞTİRİLEMEZ ANLIK KAYIT</span>
         <code>${escapeHtml(signal.signal_freeze_identity)}</code>
         <p>
-          as-of ${escapeHtml(formatTime(signal.as_of_ms))}<br>
-          source cutoff ${escapeHtml(formatTime(signal.source_cutoff_open_time_ms))}<br>
-          frozen ${escapeHtml(formatTime(signal.frozen_at_ms))}
+          veri zamanı ${escapeHtml(formatTime(signal.as_of_ms))}<br>
+          kaynak kesimi ${escapeHtml(formatTime(signal.source_cutoff_open_time_ms))}<br>
+          dondurma ${escapeHtml(formatTime(signal.frozen_at_ms))}
         </p>
       </article>
     </div>
 
     <div class="proof-grid">
       <section class="proof-section proof-section-wide">
-        <span class="proof-section-label">FROZEN MARKET PROOF</span>
-        <h3>Issuance-time chart evidence</h3>
+        <span class="proof-section-label">DONDURULMUŞ PİYASA KANITI</span>
+        <h3>Karar anındaki mum grafiği</h3>
         ${frozenChartMarkup(detail)}
         <p class="proof-footnote">
-          Freeze range ${escapeHtml(formatTime(detail.first_candle_open_time_ms))}
+          Dondurulan aralık ${escapeHtml(formatTime(detail.first_candle_open_time_ms))}
           → ${escapeHtml(formatTime(detail.last_candle_open_time_ms))}.
-          Later candles cannot rewrite this snapshot.
+          Sonraki mumlar bu kaydı geriye dönük değiştiremez.
         </p>
       </section>
 
       <section class="proof-section">
-        <span class="proof-section-label">WHY THIS STATE?</span>
-        <h3>Evidence summary</h3>
+        <span class="proof-section-label">SİSTEM BU DURUMA NEDEN GELDİ?</span>
+        <h3>Kanıt özeti</h3>
         <ul class="proof-list">
           ${summaries.length
             ? summaries.map((item) => `<li>${escapeHtml(item)}</li>`).join("")
-            : "<li>No concise evidence summary was frozen.</li>"}
+            : "<li>Kısa kanıt özeti dondurulmamış.</li>"}
         </ul>
       </section>
 
       <section class="proof-section">
-        <span class="proof-section-label">UNCERTAINTY</span>
-        <h3>What remains unresolved?</h3>
+        <span class="proof-section-label">BELİRSİZLİK</span>
+        <h3>Henüz çözülemeyen ne var?</h3>
         <ul class="proof-list">
           ${uncertainty.length
             ? uncertainty.map((item) => `<li class="state-watch">${escapeHtml(item)}</li>`).join("")
-            : "<li>No explicit uncertainty flag was frozen at signal level.</li>"}
+            : "<li>Sinyal seviyesinde açık belirsizlik bayrağı dondurulmamış.</li>"}
         </ul>
       </section>
 
       <section class="proof-section proof-section-wide">
-        <span class="proof-section-label">METHOD ENGINES</span>
-        <h3>Accepted methodology evidence</h3>
+        <span class="proof-section-label">ANALİZ MOTORLARI</span>
+        <h3>Kabul edilmiş yöntem kanıtları</h3>
         <ul class="method-engine-list">
           ${methods.length
             ? methods.map(methodEngineMarkup).join("")
-            : "<li class=\"method-engine\">No methodology evidence is available.</li>"}
+            : "<li class=\"method-engine\">Yöntem kanıtı bulunmuyor.</li>"}
         </ul>
       </section>
 
       <section class="proof-section">
-        <span class="proof-section-label">AGREEMENT MATRIX</span>
-        <h3>Cross-method relation</h3>
+        <span class="proof-section-label">UYUM MATRİSİ</span>
+        <h3>Yöntemler arası ilişki</h3>
         <ul class="pairwise-list">
           ${pairwise.length
             ? pairwise.map(pairwiseMarkup).join("")
-            : "<li class=\"pairwise-item\">No pairwise relation was frozen.</li>"}
+            : "<li class=\"pairwise-item\">İkili yöntem ilişkisi dondurulmamış.</li>"}
         </ul>
       </section>
 
       <section class="proof-section">
-        <span class="proof-section-label">FROZEN GEOMETRY</span>
-        <h3>Entry / target / invalidation reference</h3>
+        <span class="proof-section-label">DONDURULMUŞ FİYAT GEOMETRİSİ</span>
+        <h3>Giriş / hedef / geçersizlik referansı</h3>
         ${geometryMarkup(detail.geometry)}
       </section>
 
       <section class="proof-section proof-section-wide">
-        <span class="proof-section-label">LEARN FROM THIS SNAPSHOT</span>
-        <h3>Evidence, not private reasoning</h3>
+        <span class="proof-section-label">BU KANITTAN ÖĞREN</span>
+        <h3>Kanıtı açıklar; gizli düşünce zinciri üretmez</h3>
         <div class="evidence-learning">
           <p class="proof-footnote">
-            This room exposes structured frozen evidence and concise deterministic context.
-            It does not expose or invent private chain-of-thought.
+            Bu oda yapılandırılmış dondurulmuş kanıtı ve kısa deterministik bağlamı gösterir.
+            Gizli akıl yürütme üretmez veya ifşa etmez.
           </p>
           <div class="evidence-learning-links">
             ${contextualLessonIds(detail).map((conceptId) =>
               `<button type="button" data-learn-concept="${escapeHtml(conceptId)}">${escapeHtml(upper(conceptId))} →</button>`
             ).join("")}
-            <button type="button" data-evidence-learn="true">ALL LESSONS →</button>
+            <button type="button" data-evidence-learn="true">TÜM DERSLER →</button>
           </div>
         </div>
       </section>
     </div>`;
 }
+
 
 async function openFeedForecastProof(forecastIdentity, trigger) {
   if (!/^[0-9a-f]{64}$/.test(forecastIdentity)) return;
@@ -2431,8 +2432,8 @@ async function openEvidenceRoom(identity, trigger) {
   state.evidenceDetail = null;
   body.innerHTML = `
     <div class="empty-state">
-      <strong>Frozen evidence yükleniyor…</strong>
-      <p>Exact signal identity ${escapeHtml(shortIdentity(identity))}</p>
+      <strong>Dondurulmuş kanıt yükleniyor…</strong>
+      <p>Exact sinyal kimliği ${escapeHtml(shortIdentity(identity))}</p>
     </div>`;
 
   if (!dialog.open) {
@@ -2480,30 +2481,31 @@ function renderDecisionProofExtension(payload) {
   const section = document.createElement("section");
   section.className = "proof-section proof-section-wide";
   section.innerHTML = `
-    <span class="proof-section-label">R20.5 DECISION PROOF</span>
-    <h3>Immutable cross-domain evidence</h3>
+    <span class="proof-section-label">R20.5 KARAR KANITI</span>
+    <h3>Alanlar arası değiştirilemez kanıt</h3>
     <div class="proof-metric-strip">
-      <div class="proof-metric"><span>SUPPORT</span><strong>${escapeHtml(proof.evidence_summary?.support_count ?? 0)}</strong></div>
-      <div class="proof-metric"><span>CONTRADICT</span><strong>${escapeHtml(proof.evidence_summary?.contradict_count ?? 0)}</strong></div>
-      <div class="proof-metric"><span>AVAILABLE</span><strong>${escapeHtml(proof.evidence_summary?.available_count ?? 0)}/${escapeHtml(proof.evidence_summary?.total_domain_count ?? slices.length)}</strong></div>
+      <div class="proof-metric"><span>DESTEK</span><strong>${escapeHtml(proof.evidence_summary?.support_count ?? 0)}</strong></div>
+      <div class="proof-metric"><span>KARŞIT</span><strong>${escapeHtml(proof.evidence_summary?.contradict_count ?? 0)}</strong></div>
+      <div class="proof-metric"><span>MEVCUT</span><strong>${escapeHtml(proof.evidence_summary?.available_count ?? 0)}/${escapeHtml(proof.evidence_summary?.total_domain_count ?? slices.length)}</strong></div>
     </div>
     <div class="truth-table">
       ${slices.map((slice) => `
         <div class="truth-row">
-          <span>${escapeHtml(upper(slice?.domain, "UNKNOWN"))}</span>
-          <strong class="${stateClass(slice?.verdict)}">${escapeHtml(upper(slice?.availability, "INSUFFICIENT"))} · ${escapeHtml(upper(slice?.verdict, "INSUFFICIENT"))}</strong>
+          <span>${escapeHtml(trEvidenceDomain(slice?.domain))}</span>
+          <strong class="${stateClass(slice?.verdict)}">${escapeHtml(trAvailability(slice?.availability))} · ${escapeHtml(trVerdict(slice?.verdict))}</strong>
         </div>
       `).join("")}
     </div>
     <p class="proof-footnote">
-      proof ${escapeHtml(proof.proof_identity)} · forecast ${escapeHtml(proof.forecast_identity)} ·
-      probability ${escapeHtml(upper(proof.probability_status, "NOT_CALIBRATED"))}.
-      This is structured evidence, not private reasoning.
+      kanıt ${escapeHtml(proof.proof_identity)} · öngörü ${escapeHtml(proof.forecast_identity)} ·
+      olasılık ${escapeHtml(trProbability(proof.probability_status))}.
+      Bu yapılandırılmış kanıttır; gizli akıl yürütme değildir.
     </p>`;
   const grid = body.querySelector(".proof-grid");
   if (grid) grid.prepend(section);
   else body.appendChild(section);
 }
+
 
 function renderShadowCycleExtension(payload) {
   const body = byId("evidenceDialogBody");
@@ -2514,51 +2516,46 @@ function renderShadowCycleExtension(payload) {
   const ready = payload?.status === "ready" && payload?.cycle;
   if (!ready) {
     section.innerHTML = `
-      <span class="proof-section-label">R25 CAPITAL DECISION LINEAGE</span>
-      <h3>Exact shadow cycle not persisted</h3>
+      <span class="proof-section-label">R25 SERMAYE KARARI SOY AĞACI</span>
+      <h3>Exact deneme döngüsü kalıcı değil</h3>
       <p class="proof-footnote">
-        ${escapeHtml(text(payload?.reason, "no exact persisted cycle for this forecast"))}.
-        The product does not match by symbol, timestamp proximity, direction, or heuristic similarity.
+        ${escapeHtml(text(payload?.reason, "bu öngörü için exact kalıcı döngü yok"))}.
+        Ürün sembol, yakın zaman, yön veya benzerlik tahminiyle kayıt eşleştirmez.
       </p>`;
   } else {
     const cycle = payload.cycle;
     const review = cycle.review_selection_identity
-      ? `EXPLICIT · ${shortIdentity(cycle.review_selection_identity)}`
-      : "NO EXPLICIT REVIEW";
+      ? `AÇIK · ${shortIdentity(cycle.review_selection_identity)}`
+      : "AÇIK İNCELEME YOK";
     const method = cycle.reviewed_method
       ? upper(cycle.reviewed_method)
-      : "NONE";
-    const replayStatus = upper(
-      payload.restart_replay_runtime_status,
-      "ÖLÇÜLMEDİ"
-    );
+      : "YOK";
+    const replayRaw = upper(payload.restart_replay_runtime_status, "NOT_MEASURED");
+    const replayStatus = replayRaw === "VERIFIED" ? "DOĞRULANDI" : trMetricStatus(replayRaw);
     const replay = payload.runtime_replay_observation || null;
     const replayDetail = replay
-      ? `runtime ${shortIdentity(replay.runtime_instance_identity)} · first ${formatTime(replay.first_observed_at_ms)} · replay ${formatTime(replay.replay_observed_at_ms)}`
-      : text(
-          payload.restart_replay_runtime_reason,
-          "runtime replay observation not persisted"
-        );
+      ? `çalışma ${shortIdentity(replay.runtime_instance_identity)} · ilk ${formatTime(replay.first_observed_at_ms)} · tekrar ${formatTime(replay.replay_observed_at_ms)}`
+      : text(payload.restart_replay_runtime_reason, "tekrar oynatma kanıtı kalıcı değil");
+
     section.innerHTML = `
-      <span class="proof-section-label">R25 CAPITAL DECISION LINEAGE</span>
-      <h3>Exact forecast → capital → sizing → review → preview</h3>
+      <span class="proof-section-label">R25 SERMAYE KARARI SOY AĞACI</span>
+      <h3>Exact öngörü → sermaye → boyutlandırma → inceleme → önizleme</h3>
       <div class="truth-table">
-        <div class="truth-row"><span>FORECAST</span><strong>${escapeHtml(shortIdentity(cycle.forecast_identity))}</strong></div>
-        <div class="truth-row"><span>DECISION PROOF</span><strong>${escapeHtml(shortIdentity(cycle.proof_identity))}</strong></div>
-        <div class="truth-row"><span>CAPITAL SCIENCE</span><strong>${escapeHtml(shortIdentity(cycle.capital_bridge_identity))}</strong></div>
-        <div class="truth-row"><span>POSITION SIZING</span><strong>${escapeHtml(shortIdentity(cycle.sizing_bridge_identity))}</strong></div>
-        <div class="truth-row"><span>REVIEW</span><strong>${escapeHtml(review)}</strong></div>
-        <div class="truth-row"><span>REVIEWED METHOD</span><strong>${escapeHtml(method)}</strong></div>
-        <div class="truth-row"><span>R22 PREVIEW</span><strong>${escapeHtml(shortIdentity(cycle.preview_identity))}</strong></div>
-        <div class="truth-row"><span>SHADOW JOURNAL REF</span><strong>${escapeHtml(shortIdentity(cycle.journal_record_identity))}</strong></div>
-        <div class="truth-row"><span>CYCLE MANIFEST</span><strong>${escapeHtml(shortIdentity(cycle.manifest_identity))}</strong></div>
-        <div class="truth-row"><span>RESTART / REPLAY</span><strong class="${replayStatus === "VERIFIED" ? "state-positive" : "state-watch"}">${escapeHtml(replayStatus)}</strong></div>
+        <div class="truth-row"><span>ÖNGÖRÜ</span><strong>${escapeHtml(shortIdentity(cycle.forecast_identity))}</strong></div>
+        <div class="truth-row"><span>KARAR KANITI</span><strong>${escapeHtml(shortIdentity(cycle.proof_identity))}</strong></div>
+        <div class="truth-row"><span>SERMAYE BİLİMİ</span><strong>${escapeHtml(shortIdentity(cycle.capital_bridge_identity))}</strong></div>
+        <div class="truth-row"><span>POZİSYON BOYUTU</span><strong>${escapeHtml(shortIdentity(cycle.sizing_bridge_identity))}</strong></div>
+        <div class="truth-row"><span>İNCELEME</span><strong>${escapeHtml(review)}</strong></div>
+        <div class="truth-row"><span>İNCELENEN YÖNTEM</span><strong>${escapeHtml(method)}</strong></div>
+        <div class="truth-row"><span>R22 ÖNİZLEME</span><strong>${escapeHtml(shortIdentity(cycle.preview_identity))}</strong></div>
+        <div class="truth-row"><span>DENEME GÜNLÜĞÜ REFERANSI</span><strong>${escapeHtml(shortIdentity(cycle.journal_record_identity))}</strong></div>
+        <div class="truth-row"><span>DÖNGÜ MANİFESTOSU</span><strong>${escapeHtml(shortIdentity(cycle.manifest_identity))}</strong></div>
+        <div class="truth-row"><span>YENİDEN BAŞLATMA / TEKRAR</span><strong class="${replayRaw === "VERIFIED" ? "state-positive" : "state-watch"}">${escapeHtml(replayStatus)}</strong></div>
       </div>
       <p class="proof-footnote">
-        Exact persisted forecast_identity match only. This lineage is shadow/research evidence:
-        it is not a fill, not a canonical Epoch 2 NAV mutation, not an exchange order, and not a live trade.
-        The manifest references a journal record identity; journal runtime presence is verified separately.
-        Restart/replay: ${escapeHtml(replayDetail)}.
+        Yalnız exact kalıcı forecast_identity eşleşmesi kullanılır. Bu soy ağacı deneme/araştırma kanıtıdır;
+        gerçekleşmiş işlem, kanonik Epoch 2 NAV değişikliği, borsa emri veya canlı alım-satım değildir.
+        Yeniden başlatma/tekrar: ${escapeHtml(replayDetail)}.
       </p>`;
   }
 
@@ -2566,6 +2563,7 @@ function renderShadowCycleExtension(payload) {
   if (grid) grid.prepend(section);
   else body.appendChild(section);
 }
+
 
 function closeEvidenceRoom() {
   const dialog = byId("evidenceDialog");
