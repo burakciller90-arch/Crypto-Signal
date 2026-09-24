@@ -360,7 +360,7 @@ def read_market_tape_collector_runtime_truth(
 
     heartbeat_identity: str | None = None
     heartbeat_sequence_no: int | None = None
-    heartbeat_observation: int | None = None
+    heartbeat_observed_at_ms: int | None = None
     heartbeat_age_ms: int | None = None
     last_successful_ingestion_ms: int | None = None
     ingestion_age_ms: int | None = None
@@ -386,10 +386,10 @@ def read_market_tape_collector_runtime_truth(
             raise ValueError("collector heartbeat/instance lineage mismatch")
 
         heartbeat_sequence_no = int(heartbeat_payload["sequence_no"])
-        heartbeat_observation = int(heartbeat_payload["observation"])
-        if heartbeat_observation > observation:
+        heartbeat_observed_at_ms = int(heartbeat_payload["observed_at_ms"])
+        if heartbeat_observed_at_ms > observation:
             raise ValueError("collector heartbeat is future evidence")
-        heartbeat_age_ms = observation - heartbeat_observation
+        heartbeat_age_ms = observation - heartbeat_observed_at_ms
         process_evidence_status = (
             "HEARTBEAT_FRESH"
             if heartbeat_age_ms <= heartbeat_freshness_ms
@@ -426,7 +426,7 @@ def read_market_tape_collector_runtime_truth(
         started_at_ms=int(instance_payload["started_at_ms"]),
         heartbeat_identity=heartbeat_identity,
         heartbeat_sequence_no=heartbeat_sequence_no,
-        heartbeat_observation=heartbeat_observation,
+        heartbeat_observed_at_ms=heartbeat_observed_at_ms,
         heartbeat_age_ms=heartbeat_age_ms,
         last_successful_ingestion_ms=last_successful_ingestion_ms,
         ingestion_age_ms=ingestion_age_ms,
