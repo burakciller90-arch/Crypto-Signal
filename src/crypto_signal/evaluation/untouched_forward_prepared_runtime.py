@@ -400,6 +400,19 @@ def complete_wc2_prepared_cycle(
         raise ValueError("WC2 prepared completion protocol/policy mismatch")
     if protocol.epoch2_activation_identity != activation.activation_identity:
         raise ValueError("WC2 prepared completion protocol/Epoch2 mismatch")
+    if (
+        receipt.maximum_issuance_delay_ms
+        != protocol.maximum_issuance_delay_ms
+    ):
+        raise ValueError("WC2 prepared receipt issuance-delay mismatch")
+    if receipt.horizon_bars != protocol.horizon_bars_for(
+        receipt.signal.timeframe
+    ):
+        raise ValueError("WC2 prepared receipt horizon mismatch")
+    if receipt.source_frozen_at_ms < protocol.collection_start_ms:
+        raise ValueError("WC2 prepared receipt predates protocol collection")
+    if receipt.issued_at_ms < protocol.collection_start_ms:
+        raise ValueError("WC2 prepared issuance predates protocol collection")
     if activation.activated_at_ms > receipt.issued_at_ms:
         raise ValueError("WC2 prepared completion activation is too late")
 
