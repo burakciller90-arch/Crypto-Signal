@@ -33,8 +33,7 @@ def test_expected_collector_uses_exact_uid_python_and_script(
             504,
             (
                 python,
-                "/Volumes/Crypto-504/Crypto-Signal/MarketTape/"
-                "ops/run_market_tape_runtime.py",
+                "/Volumes/Crypto-504/Crypto-Signal/MarketTape/ops/run_market_tape_runtime.py",
             ),
         ),
     )
