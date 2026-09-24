@@ -38,6 +38,7 @@ class WC2PaperExecutionDecision:
     record_identity: str
     event_identity: str
     execution_protocol_identity: str
+    runtime_activation_identity: str
     execution_start_ms: int
     source_exchanges: tuple[str, str]
     source_freeze_identities: tuple[str, str]
@@ -80,6 +81,7 @@ class WC2PaperExecutionDecision:
             (self.record_identity, "WC2 execution record"),
             (self.event_identity, "WC2 execution event"),
             (self.execution_protocol_identity, "WC2 execution protocol"),
+            (self.runtime_activation_identity, "WC2 execution runtime activation"),
             (self.epoch2_core_snapshot_identity, "WC2 Epoch2 CORE snapshot"),
         ):
             _require_sha256(value, label)
@@ -430,6 +432,7 @@ def build_wc2_paper_execution_decision(
     *,
     event_identity: str,
     execution_protocol_identity: str,
+    runtime_activation_identity: str,
     execution_start_ms: int,
     source_exchanges: tuple[str, str],
     source_freeze_identities: tuple[str, str],
@@ -466,6 +469,7 @@ def build_wc2_paper_execution_decision(
     values: dict[str, object] = {
         "event_identity": event_identity,
         "execution_protocol_identity": execution_protocol_identity,
+        "runtime_activation_identity": runtime_activation_identity,
         "execution_start_ms": execution_start_ms,
         "source_exchanges": source_exchanges,
         "source_freeze_identities": source_freeze_identities,
@@ -507,6 +511,7 @@ def build_wc2_paper_execution_decision(
         record_identity=canonical_sha256(values),
         event_identity=event_identity,
         execution_protocol_identity=execution_protocol_identity,
+        runtime_activation_identity=runtime_activation_identity,
         execution_start_ms=execution_start_ms,
         source_exchanges=source_exchanges,
         source_freeze_identities=source_freeze_identities,
@@ -731,6 +736,7 @@ def _record_payload(record: WC2PaperExecutionDecision) -> dict[str, object]:
         for field in (
             "event_identity",
             "execution_protocol_identity",
+            "runtime_activation_identity",
             "execution_start_ms",
             "source_exchanges",
             "source_freeze_identities",
@@ -779,6 +785,7 @@ def _record_from_json(payload_json: str) -> WC2PaperExecutionDecision:
         record_identity=canonical_sha256(raw),
         event_identity=_text(raw, "event_identity"),
         execution_protocol_identity=_text(raw, "execution_protocol_identity"),
+        runtime_activation_identity=_text(raw, "runtime_activation_identity"),
         execution_start_ms=_integer(raw, "execution_start_ms"),
         source_exchanges=_two_text(raw, "source_exchanges"),
         source_freeze_identities=_two_text(raw, "source_freeze_identities"),
