@@ -24,7 +24,7 @@ jobs:
           set -euo pipefail
           cmd="$(printf '%s\n' "$ISSUE_BODY" | awk -F: 'tolower($1)=="command" {gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2); print tolower($2); exit}')"
           case "$cmd" in
-            status|eventsourcestate|eventsourcesnapshot|blsprobe|fredprobe|wc2epoch2activate|wc2policyregister|wc2protocolregister|wc2executionprotocolregister|wc2collectonce|wc2state|services|logs|disk|sync|producttest|fulltest|productstate|productdeploy|paperreview|paperinspect|paperfixlint|paperharden|stateplanreview|stateplaninspect|stateplanharden|cursorreview|cursorreviewtail|cursorcleanup|bridgecheck|bridgestate|rollingstate|pausecheck|wakepause|wakeresume|wakearm|waketest|wakeheartbeat|chatbusyprobe|cursorcheck|cursorauthdiag|cursorttycheck|alertclockstate|alertclockpause|alertclockresume|migrationinspect|migrationinventory|ssddashboarddiag|productcrashlogs|ssddashboardwrappertest|ssdtcclaunchtest|ssdbackgroundteststart|ssdbackgroundtestcheck|ssdleftover|runnerpersistinstall|runnerpersistdiag|runnercutoverdiag|dashboardstart504|galactechpreview|runnerterminalwatchdoginstall)
+            status|eventsourcestate|eventsourcesnapshot|blsprobe|fredprobe|wc2epoch2activate|wc2policyregister|wc2protocolregister|wc2executionprotocolregister|wc2executionruntimeregister|wc2executiononce|wc2executionstate|wc2collectonce|wc2state|services|logs|disk|sync|producttest|fulltest|productstate|productdeploy|paperreview|paperinspect|paperfixlint|paperharden|stateplanreview|stateplaninspect|stateplanharden|cursorreview|cursorreviewtail|cursorcleanup|bridgecheck|bridgestate|rollingstate|pausecheck|wakepause|wakeresume|wakearm|waketest|wakeheartbeat|chatbusyprobe|cursorcheck|cursorauthdiag|cursorttycheck|alertclockstate|alertclockpause|alertclockresume|migrationinspect|migrationinventory|ssddashboarddiag|productcrashlogs|ssddashboardwrappertest|ssdtcclaunchtest|ssdbackgroundteststart|ssdbackgroundtestcheck|ssdleftover|runnerpersistinstall|runnerpersistdiag|runnercutoverdiag|dashboardstart504|galactechpreview|runnerterminalwatchdoginstall)
               ;;
             *)
               echo "Unsupported command: $cmd"
@@ -66,6 +66,9 @@ jobs:
           steps.parse.outputs.command == 'wc2epoch2activate' ||
           steps.parse.outputs.command == 'wc2protocolregister' ||
           steps.parse.outputs.command == 'wc2executionprotocolregister' ||
+          steps.parse.outputs.command == 'wc2executionruntimeregister' ||
+          steps.parse.outputs.command == 'wc2executiononce' ||
+          steps.parse.outputs.command == 'wc2executionstate' ||
           steps.parse.outputs.command == 'wc2collectonce' ||
           steps.parse.outputs.command == 'wc2state'
         uses: actions/checkout@v4
@@ -80,6 +83,9 @@ jobs:
           steps.parse.outputs.command == 'wc2epoch2activate' ||
           steps.parse.outputs.command == 'wc2protocolregister' ||
           steps.parse.outputs.command == 'wc2executionprotocolregister' ||
+          steps.parse.outputs.command == 'wc2executionruntimeregister' ||
+          steps.parse.outputs.command == 'wc2executiononce' ||
+          steps.parse.outputs.command == 'wc2executionstate' ||
           steps.parse.outputs.command == 'wc2state'
         shell: bash
         run: |
@@ -750,6 +756,347 @@ jobs:
           grep -F 'REAL_CAPITAL=0' "$RUNNER_TEMP/wc2-paper-execution-protocol-registration.log" >/dev/null
           echo "WC2_EXECUTION_PROTOCOL_REGISTER_BOUNDED_PASS=YES"
           echo "REAL_CAPITAL=0"
+
+
+      - name: WC2 PAPER EXECUTION RUNTIME REGISTER
+        if: steps.parse.outputs.command == 'wc2executionruntimeregister'
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          DEV="$ROOT/Development"
+          EXECUTION_PROTOCOL_DB="$DEV/runtime/wc2/wc2_paper_execution.wc2-paper-execution-protocol.sqlite3"
+          RUNTIME_DB="$DEV/runtime/wc2/wc2_paper_execution.wc2-paper-execution-runtime.sqlite3"
+          PY="$DEV/.venv/bin/python"
+          REGISTER="$GITHUB_WORKSPACE/ops/register_wc2_paper_execution_runtime.py"
+
+          test "$(id -u)" = "504"
+          test -x "$PY"
+          test -f "$REGISTER"
+          test -f "$EXECUTION_PROTOCOL_DB"
+
+          echo "=== WC2 PAPER EXECUTION RUNTIME PRE-STATE ==="
+          echo "DEVELOPMENT_HEAD=$(git -C "$DEV" rev-parse HEAD 2>/dev/null || true)"
+          echo "WORKFLOW_SHA=$GITHUB_SHA"
+          protocol_before="$(shasum -a 256 "$EXECUTION_PROTOCOL_DB" | awk '{print $1}')"
+          runtime_before="MISSING"
+          [ -f "$RUNTIME_DB" ] && runtime_before="$(shasum -a 256 "$RUNTIME_DB" | awk '{print $1}')"
+          echo "WC2_EXECUTION_RUNTIME_PROTOCOL_SHA256_BEFORE=$protocol_before"
+          echo "WC2_EXECUTION_RUNTIME_DB_SHA256_BEFORE=$runtime_before"
+
+          PYTHONPATH="$GITHUB_WORKSPACE/src" "$PY" "$REGISTER" \
+            --execution-protocol-db "$EXECUTION_PROTOCOL_DB" \
+            --runtime-db "$RUNTIME_DB" \
+            | tee "$RUNNER_TEMP/wc2-paper-execution-runtime-registration.log"
+
+          test -f "$RUNTIME_DB"
+          protocol_after="$(shasum -a 256 "$EXECUTION_PROTOCOL_DB" | awk '{print $1}')"
+          runtime_after="$(shasum -a 256 "$RUNTIME_DB" | awk '{print $1}')"
+          echo "WC2_EXECUTION_RUNTIME_PROTOCOL_SHA256_AFTER=$protocol_after"
+          echo "WC2_EXECUTION_RUNTIME_DB_SHA256_AFTER=$runtime_after"
+          test "$protocol_before" = "$protocol_after"
+
+          "$PY" - "$RUNTIME_DB" <<'PY'
+          import sqlite3
+          import sys
+          from pathlib import Path
+
+          path = Path(sys.argv[1])
+          uri = f"{path.resolve().as_uri()}?mode=ro"
+          with sqlite3.connect(uri, uri=True) as db:
+              db.execute("PRAGMA query_only=ON")
+              row = db.execute("PRAGMA quick_check").fetchone()
+          if row is None or str(row[0]).lower() != "ok":
+              raise SystemExit("WC2_EXECUTION_RUNTIME_QUICK_CHECK_FAILED")
+          PY
+
+          grep -F 'WC2_EXECUTION_RUNTIME_FORWARD_ONLY_PASS=YES' "$RUNNER_TEMP/wc2-paper-execution-runtime-registration.log" >/dev/null
+          grep -F 'WC2_EXECUTION_RUNTIME_HISTORICAL_BACKFILL=NO' "$RUNNER_TEMP/wc2-paper-execution-runtime-registration.log" >/dev/null
+          grep -F 'WC2_EXECUTION_RUNTIME_PRODUCTION_AUTHORITY=NO' "$RUNNER_TEMP/wc2-paper-execution-runtime-registration.log" >/dev/null
+          grep -F 'REAL_CAPITAL=0' "$RUNNER_TEMP/wc2-paper-execution-runtime-registration.log" >/dev/null
+          echo "WC2_EXECUTION_RUNTIME_REGISTER_BOUNDED_PASS=YES"
+          echo "REAL_CAPITAL=0"
+
+      - name: WC2 PAPER EXECUTION ONCE
+        if: steps.parse.outputs.command == 'wc2executiononce'
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          DEV="$ROOT/Development"
+          RUNTIME="$DEV/runtime"
+          PY="$DEV/.venv/bin/python"
+          CYCLE="$GITHUB_WORKSPACE/ops/run_wc2_paper_execution_cycle.py"
+
+          SIGNAL="$RUNTIME/ledger/live_signal_ledger.sqlite3"
+          DECISION="$RUNTIME/decision/decision_evidence.sqlite3"
+          COHORT="$RUNTIME/wc2/wc2_untouched_forward.sqlite3"
+          EPOCH2="$RUNTIME/paper/paper_fund_epoch2.sqlite3"
+          EXECUTION_PROTOCOL="$RUNTIME/wc2/wc2_paper_execution.wc2-paper-execution-protocol.sqlite3"
+          EXECUTION_RUNTIME="$RUNTIME/wc2/wc2_paper_execution.wc2-paper-execution-runtime.sqlite3"
+          EXECUTION_JOURNAL="$RUNTIME/wc2/wc2_paper_execution.wc2-paper-execution.sqlite3"
+          CANDLE="$RUNTIME/data/live_base_15m_cache.sqlite3"
+          VENUE="$RUNTIME/paper/paper_fund.sqlite3"
+
+          test "$(id -u)" = "504"
+          test -x "$PY"
+          test -f "$CYCLE"
+          DEV_HEAD="$(git -C "$DEV" rev-parse HEAD)"
+          echo "DEVELOPMENT_HEAD=$DEV_HEAD"
+          echo "WORKFLOW_SHA=$GITHUB_SHA"
+          test "$DEV_HEAD" = "$GITHUB_SHA"
+
+          for path in "$SIGNAL" "$DECISION" "$COHORT" "$EPOCH2" "$EXECUTION_PROTOCOL" "$EXECUTION_RUNTIME" "$CANDLE" "$VENUE"; do
+            test -f "$path"
+          done
+
+          protocol_before="$(shasum -a 256 "$EXECUTION_PROTOCOL" | awk '{print $1}')"
+          runtime_before="$(shasum -a 256 "$EXECUTION_RUNTIME" | awk '{print $1}')"
+          epoch2_before="$(shasum -a 256 "$EPOCH2" | awk '{print $1}')"
+
+          PYTHONPATH="$GITHUB_WORKSPACE/src" "$PY" "$CYCLE" \
+            --signal-ledger "$SIGNAL" \
+            --decision-evidence "$DECISION" \
+            --cohort-journal "$COHORT" \
+            --epoch2 "$EPOCH2" \
+            --execution-protocol "$EXECUTION_PROTOCOL" \
+            --runtime-activation "$EXECUTION_RUNTIME" \
+            --execution-journal "$EXECUTION_JOURNAL" \
+            --candle-cache "$CANDLE" \
+            --venue-rules "$VENUE" \
+            | tee "$RUNNER_TEMP/wc2-paper-execution-cycle.log"
+
+          protocol_after="$(shasum -a 256 "$EXECUTION_PROTOCOL" | awk '{print $1}')"
+          runtime_after="$(shasum -a 256 "$EXECUTION_RUNTIME" | awk '{print $1}')"
+          epoch2_after="$(shasum -a 256 "$EPOCH2" | awk '{print $1}')"
+          test "$protocol_before" = "$protocol_after"
+          test "$runtime_before" = "$runtime_after"
+          test "$epoch2_before" = "$epoch2_after"
+
+          if [ -f "$EXECUTION_JOURNAL" ]; then
+            "$PY" - "$EXECUTION_JOURNAL" <<'PY'
+          import sqlite3
+          import sys
+          from pathlib import Path
+
+          path = Path(sys.argv[1])
+          uri = f"{path.resolve().as_uri()}?mode=ro"
+          with sqlite3.connect(uri, uri=True) as db:
+              db.execute("PRAGMA query_only=ON")
+              row = db.execute("PRAGMA quick_check").fetchone()
+          if row is None or str(row[0]).lower() != "ok":
+              raise SystemExit("WC2_EXECUTION_JOURNAL_QUICK_CHECK_FAILED")
+          PY
+          fi
+
+          grep -F 'WC2_EXECUTION_CYCLE_HISTORICAL_BACKFILL=NO' "$RUNNER_TEMP/wc2-paper-execution-cycle.log" >/dev/null
+          grep -F 'WC2_EXECUTION_CYCLE_REAL_ORDER_AUTHORITY=NO' "$RUNNER_TEMP/wc2-paper-execution-cycle.log" >/dev/null
+          grep -F 'REAL_CAPITAL=0' "$RUNNER_TEMP/wc2-paper-execution-cycle.log" >/dev/null
+          echo "WC2_EXECUTION_BOUNDED_ONE_SHOT_PASS=YES"
+          echo "WC2_EXECUTION_NO_SERVICE_MUTATION_PASS=YES"
+          echo "REAL_CAPITAL=0"
+
+      - name: WC2 PAPER EXECUTION STATE
+        if: steps.parse.outputs.command == 'wc2executionstate'
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          DEV="$ROOT/Development"
+          RUNTIME="$DEV/runtime"
+          PY="$DEV/.venv/bin/python"
+
+          test "$(id -u)" = "504"
+          test -x "$PY"
+          echo "=== WC2 PAPER EXECUTION STATE ==="
+          echo "DEVELOPMENT_HEAD=$(git -C "$DEV" rev-parse HEAD 2>/dev/null || true)"
+          echo "WORKFLOW_SHA=$GITHUB_SHA"
+
+          PYTHONPATH="$GITHUB_WORKSPACE/src" "$PY" - "$RUNTIME" "$RUNNER_TEMP" <<'PY'
+          import hashlib
+          import json
+          import shutil
+          import sqlite3
+          import sys
+          import tempfile
+          import time
+          from collections import Counter
+          from pathlib import Path
+
+          runtime = Path(sys.argv[1])
+          runner_temp = Path(sys.argv[2])
+          sources = {
+              "execution_protocol": runtime / "wc2" / "wc2_paper_execution.wc2-paper-execution-protocol.sqlite3",
+              "execution_runtime": runtime / "wc2" / "wc2_paper_execution.wc2-paper-execution-runtime.sqlite3",
+              "execution_journal": runtime / "wc2" / "wc2_paper_execution.wc2-paper-execution.sqlite3",
+              "epoch2": runtime / "paper" / "paper_fund_epoch2.sqlite3",
+          }
+
+          def digest(path: Path) -> str | None:
+              if not path.is_file():
+                  return None
+              h = hashlib.sha256()
+              with path.open("rb") as handle:
+                  for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+                      h.update(chunk)
+              return h.hexdigest()
+
+          def snapshot(path: Path) -> dict[str, str | None]:
+              return {
+                  "main": digest(path),
+                  "wal": digest(Path(str(path) + "-wal")),
+                  "shm": digest(Path(str(path) + "-shm")),
+              }
+
+          temp_root = Path(tempfile.mkdtemp(prefix="wc2executionstate-", dir=runner_temp))
+          copies: dict[str, Path | None] = {}
+          accepted: dict[str, dict[str, str | None]] = {}
+          try:
+              for name, source in sources.items():
+                  if not source.is_file():
+                      copies[name] = None
+                      print(f"WC2_EXECUTION_STATE_{name.upper()}_PRESENT=NO")
+                      continue
+                  target = temp_root / f"{name}.sqlite3"
+                  stable = False
+                  for attempt in range(1, 6):
+                      before = snapshot(source)
+                      for suffix in ("", "-wal", "-shm"):
+                          src = Path(str(source) + suffix)
+                          dst = Path(str(target) + suffix)
+                          if src.is_file():
+                              shutil.copy2(src, dst)
+                          elif dst.exists():
+                              dst.unlink()
+                      after = snapshot(source)
+                      if before == after:
+                          copies[name] = target
+                          accepted[name] = after
+                          stable = True
+                          print(
+                              f"WC2_EXECUTION_STATE_{name.upper()}_PRESENT=YES "
+                              f"snapshot_attempt={attempt} main_sha256={after['main']} "
+                              f"wal_sha256={after['wal'] or 'MISSING'} "
+                              f"shm_sha256={after['shm'] or 'MISSING'}"
+                          )
+                          break
+                      time.sleep(0.05)
+                  if not stable:
+                      raise SystemExit(f"WC2_EXECUTION_STATE_{name.upper()}_SOURCE_UNSTABLE")
+
+              protocol_id = None
+              protocol = copies["execution_protocol"]
+              if protocol is None:
+                  print("WC2_EXECUTION_PROTOCOL_STATUS=NOT_REGISTERED")
+              else:
+                  with sqlite3.connect(protocol) as db:
+                      quick = db.execute("PRAGMA quick_check").fetchone()
+                      if quick is None or str(quick[0]).lower() != "ok":
+                          raise SystemExit("WC2_EXECUTION_PROTOCOL_QUICK_CHECK_FAILED")
+                      row = db.execute(
+                          """
+                          SELECT protocol_identity, execution_start_ms
+                          FROM wc2_paper_execution_protocols
+                          ORDER BY sequence_id DESC LIMIT 1
+                          """
+                      ).fetchone()
+                  if row is None:
+                      raise SystemExit("WC2_EXECUTION_PROTOCOL_RECORD_MISSING")
+                  protocol_id = str(row[0])
+                  print(
+                      "WC2_EXECUTION_PROTOCOL_STATUS=REGISTERED "
+                      f"protocol_identity={protocol_id} execution_start_ms={int(row[1])}"
+                  )
+
+              activation_id = None
+              activation = copies["execution_runtime"]
+              if activation is None:
+                  print("WC2_EXECUTION_RUNTIME_STATUS=NOT_REGISTERED")
+              else:
+                  with sqlite3.connect(activation) as db:
+                      quick = db.execute("PRAGMA quick_check").fetchone()
+                      if quick is None or str(quick[0]).lower() != "ok":
+                          raise SystemExit("WC2_EXECUTION_RUNTIME_QUICK_CHECK_FAILED")
+                      row = db.execute(
+                          """
+                          SELECT activation_identity, execution_protocol_identity,
+                                 registered_at_ms, collection_start_ms, payload_json
+                          FROM wc2_paper_execution_runtime_activation
+                          WHERE singleton=1
+                          """
+                      ).fetchone()
+                  if row is None:
+                      raise SystemExit("WC2_EXECUTION_RUNTIME_RECORD_MISSING")
+                  activation_id = str(row[0])
+                  if protocol_id is not None and str(row[1]) != protocol_id:
+                      raise SystemExit("WC2_EXECUTION_RUNTIME_PROTOCOL_BINDING_MISMATCH")
+                  payload = json.loads(str(row[4]))
+                  if bool(payload.get("historical_backfill_authority")):
+                      raise SystemExit("WC2_EXECUTION_RUNTIME_BACKFILL_AUTHORITY_MISMATCH")
+                  if bool(payload.get("production_authority")) or int(payload.get("real_capital", -1)) != 0:
+                      raise SystemExit("WC2_EXECUTION_RUNTIME_AUTHORITY_MISMATCH")
+                  print(
+                      "WC2_EXECUTION_RUNTIME_STATUS=REGISTERED "
+                      f"activation_identity={activation_id} "
+                      f"execution_protocol_identity={row[1]} "
+                      f"registered_at_ms={int(row[2])} "
+                      f"collection_start_ms={int(row[3])}"
+                  )
+
+              journal = copies["execution_journal"]
+              if journal is None:
+                  print("WC2_EXECUTION_JOURNAL_STATUS=EMPTY_OR_NOT_CREATED decisions=0")
+              else:
+                  with sqlite3.connect(journal) as db:
+                      quick = db.execute("PRAGMA quick_check").fetchone()
+                      if quick is None or str(quick[0]).lower() != "ok":
+                          raise SystemExit("WC2_EXECUTION_JOURNAL_QUICK_CHECK_FAILED")
+                      rows = db.execute(
+                          """
+                          SELECT status, payload_json
+                          FROM wc2_paper_execution_events
+                          ORDER BY sequence_id
+                          """
+                      ).fetchall()
+                  counts = Counter(str(row[0]) for row in rows)
+                  explicit_cost = 0
+                  for status, payload_json in rows:
+                      payload = json.loads(str(payload_json))
+                      if activation_id is not None and payload.get("runtime_activation_identity") != activation_id:
+                          raise SystemExit("WC2_EXECUTION_JOURNAL_RUNTIME_BINDING_MISMATCH")
+                      if protocol_id is not None and payload.get("execution_protocol_identity") != protocol_id:
+                          raise SystemExit("WC2_EXECUTION_JOURNAL_PROTOCOL_BINDING_MISMATCH")
+                      if bool(payload.get("historical_backfill_performed")):
+                          raise SystemExit("WC2_EXECUTION_JOURNAL_BACKFILL_MISMATCH")
+                      if bool(payload.get("production_authority")) or int(payload.get("real_capital", -1)) != 0:
+                          raise SystemExit("WC2_EXECUTION_JOURNAL_AUTHORITY_MISMATCH")
+                      if str(status) == "EXECUTED":
+                          required = (
+                              payload.get("fill_identity"),
+                              payload.get("cost_evidence_identity"),
+                              payload.get("quantity"),
+                              payload.get("reference_price"),
+                              payload.get("simulated_fill_price"),
+                          )
+                          if any(value in (None, "") for value in required):
+                              raise SystemExit("WC2_EXECUTION_JOURNAL_EXECUTION_ECONOMICS_MISSING")
+                          explicit_cost += 1
+                  print(
+                      "WC2_EXECUTION_JOURNAL_STATUS=PERSISTED "
+                      f"decisions={len(rows)} "
+                      f"hold_cash={counts['HOLD_CASH']} "
+                      f"sizing_rejected={counts['SIZING_REJECTED']} "
+                      f"pretrade_rejected={counts['PRETRADE_REJECTED']} "
+                      f"executed={counts['EXECUTED']} "
+                      f"explicit_cost_executed={explicit_cost}"
+                  )
+
+              print("WC2_EXECUTION_STATE_SOURCE_BYTE_STABLE_PASS=YES")
+              print("WC2_EXECUTION_STATE_READONLY_PASS=YES")
+              print("REAL_CAPITAL=0")
+          finally:
+              shutil.rmtree(temp_root, ignore_errors=True)
+          PY
 
       - name: WC2 STATE
         if: steps.parse.outputs.command == 'wc2state'
