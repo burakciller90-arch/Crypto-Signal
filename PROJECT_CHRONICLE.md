@@ -1,6 +1,22 @@
 # PROJECT CHRONICLE
 
 
+## 2026-09-24 — WC4 champion/challenger research cycle becomes mechanically complete without promotion authority
+
+The Alpha Factory already had strong individual rails: chronological walk-forward evaluation, fixed family expansion, transaction-cost stress, robustness/ablation, an untouched-forward freeze/evaluation contract, and an immutable promotion dossier that stops at supervisor review. What it did not have was one explicit artifact proving that those stages belong to the same champion/challenger research cycle.
+
+PR #1189 added that missing boundary as `WC4ChampionChallengerCycle`. The cycle does not create production champion state. Its “champion” is explicitly the frozen research reference model from the accepted untouched-forward snapshot. The manifest binds exact data-contract, leakage, reproducibility, in-sample sanity, OOS, walk-forward, cost-stress, robustness, untouched-forward and promotion-dossier identities, and rejects cross-cycle forward evidence.
+
+The fail-closed semantics are deliberate. A complete cycle requires evaluated untouched-forward evidence, but that forward evidence cannot declare a performance winner, trigger champion mutation, promote automatically, deploy, or gain production authority. A dossier that is ready for supervisor review remains `REVIEW_READY_NOT_PROMOTED`; even an explicit supervisor acceptance becomes `SUPERVISOR_ACCEPTED_MANUAL_REVIEW_NOT_PROMOTED` and still carries no write/deploy authority. REAL_CAPITAL=0.
+
+The existing hosted Alpha Factory workflow was also observed failing in the GitHub runner layer before any step executed. Rather than treating a zero-step infrastructure failure as research evidence, PR #1189 added a UID504 exact-head research acceptance gate. Its PR run 36057586739 passed focused WC4 tests, the entire Alpha Factory suite, whole-repository regression and Development non-mutation.
+
+PR #1190 then hardened the same gate for exact `main` pushes and manual dispatch. After merge, exact-main run 36058041036 / job 107829844817 succeeded on `c10f919fee75237282a2d020160afa59752385ef`: exact source, focused cycle contract, all Alpha Factory research tests, whole-repository regression and Development non-mutation all passed with REAL_CAPITAL=0.
+
+This closes WC4 as an engineering research-cycle rail. It does not say a challenger won, does not establish durable alpha, and does not authorize a production champion change. Those remain separate empirical and human-review questions.
+
+
+
 ## 2026-09-24 — WC5 truth-bound 10-second decision surface reaches exact-main production
 
 WC5 was rebuilt after WC1 closed rather than merging its older pre-WC1 candidate. PR #1162 was closed unmerged. Its intended ten-file WC5 surface was replayed onto the accepted post-WC1 main, with the only overlapping file, `src/crypto_signal/product/web.py`, merged addition-only so none of the accepted snapshot-bound Market Tape Product Truth behavior was removed.

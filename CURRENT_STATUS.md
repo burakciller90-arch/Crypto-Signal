@@ -4,10 +4,47 @@ Updated: 2026-09-24
 Project: Crypto Signal
 Baseline: crypto-signal-full-version-v1.0.0 (immutable)
 Active post-v1.0 program: v1.1 world-class product + market intelligence
-State: WC0_LIVE_PRODUCT_PARITY_ACCEPTED / WC1_24_7_DATA_RELIABILITY_ACCEPTED / WC2_ENGINEERING_FROZEN_EVIDENCE_ACCUMULATION_ACTIVE / WC5_ENGINEERING_ACCEPTED_PRODUCT_DEPLOYED_HUMAN_USABILITY_NOT_MEASURED / CONTINUITY_PAUSED_BY_USER
+State: WC0_LIVE_PRODUCT_PARITY_ACCEPTED / WC1_24_7_DATA_RELIABILITY_ACCEPTED / WC2_ENGINEERING_FROZEN_EVIDENCE_ACCUMULATION_ACTIVE / WC4_CHAMPION_CHALLENGER_ENGINEERING_ACCEPTED_RESEARCH_ONLY / WC5_ENGINEERING_ACCEPTED_PRODUCT_DEPLOYED_HUMAN_USABILITY_NOT_MEASURED / CONTINUITY_PAUSED_BY_USER
 REAL_CAPITAL: 0
 
 ## Active v1.1 frontier — read before historical sections
+
+
+### 2026-09-24 23:56 +0300 — WC4 CHAMPION/CHALLENGER ENGINEERING ACCEPTED / NO WINNER OR PROMOTION CLAIM
+
+This entry **supersedes the earlier 2026-09-24 23:43 frontier snapshot** while preserving it below as historical evidence.
+
+- Exact accepted main at this WC4 closure: `c10f919fee75237282a2d020160afa59752385ef`.
+- PR **#1189** added the missing immutable WC4 cycle boundary instead of adding another model:
+  - the "champion" is explicitly a **frozen research reference**, not production champion state;
+  - the cycle binds exact data-contract, leakage-audit, reproducibility, in-sample sanity, out-of-sample, walk-forward, transaction-cost stress, robustness/ablation, untouched-forward and promotion-dossier identities;
+  - the frozen reference and challenger model identities must be distinct;
+  - exact untouched-forward snapshot/run lineage must match the promotion machine evidence;
+  - evaluated untouched-forward evidence is required;
+  - `performance_winner_declared=false`;
+  - `champion_state_mutation_performed=false`;
+  - `automatic_promotion=false`;
+  - `deploy_authority=false`, `production_authority=false`, `REAL_CAPITAL=0`.
+- The cycle may end either `REVIEW_READY_NOT_PROMOTED` or `SUPERVISOR_ACCEPTED_MANUAL_REVIEW_NOT_PROMOTED`; even explicit supervisor acceptance grants no write/deploy authority.
+- The pre-existing `ubuntu-latest` Alpha Factory gate was observed failing before step execution (`steps=null`) rather than being mislabeled as a research regression. PR **#1189** therefore added a permanent UID504 exact-head WC4 acceptance gate.
+- PR #1189 exact-head run **36057586739** completed **SUCCESS**:
+  - `WC4_EXACT_SOURCE_PASS=YES`;
+  - `WC4_FOCUSED_PASS=YES`;
+  - `WC4_ALPHA_FACTORY_REGRESSION_PASS=YES`;
+  - `WC4_FULL_REGRESSION_PASS=YES`;
+  - `WC4_DEVELOPMENT_NON_MUTATING_PASS=YES`;
+  - `REAL_CAPITAL=0`.
+- PR **#1190** hardened that gate to run on PRs, exact `main` pushes and manual dispatch. Its PR acceptance **36057871714** passed, then the merged exact-main run **36058041036 / job 107829844817** also completed **SUCCESS** on `c10f919fee75237282a2d020160afa59752385ef` with focused WC4, all Alpha Factory, whole-repository and Development non-mutation acceptance.
+- WC4 is therefore **ACCEPTED/CLOSED as an engineering research-cycle rail**: at least one complete deterministic champion-reference-vs-challenger cycle can execute end-to-end without untouched-forward winner selection and without automatic production mutation.
+- This is **not** evidence that the challenger outperforms the reference, that durable alpha exists, or that a production champion should change. Those remain evidence/review questions outside this engineering closure.
+
+Current true frontier:
+- WC2 remains engineering-frozen; preserve genuine untouched-forward evidence accumulation and its locked review thresholds;
+- WC3 scientific/economic conclusions remain blocked until WC2 evidence sufficiency exists;
+- WC4 may generate/review research dossiers, but no challenger may self-promote or mutate production;
+- WC5 engineering is production-deployed while human <=10-second comprehension remains `NOT_MEASURED`;
+- the next safe active engineering lane is **WC6 Execution Lab**, strictly paper/sandbox/testnet-only with isolated authority, deterministic recovery, duplicate prevention and reconciliation;
+- continuity remains paused and **REAL_CAPITAL=0**.
 
 
 ### 2026-09-24 23:43 +0300 — WC5 ENGINEERING ACCEPTED + PRODUCTION DEPLOYED / HUMAN 10-SECOND USABILITY NOT MEASURED
