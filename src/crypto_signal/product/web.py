@@ -54,6 +54,7 @@ from crypto_signal.product.provider_divergence_runtime import (
     read_provider_divergence_runtime_truth,
 )
 from crypto_signal.product.reader import DashboardReader, DashboardReadError
+from crypto_signal.product.wc5_actionability import read_wc5_actionability
 
 DEFAULT_LEDGER_PATH = (
     Path("/Users/crypto-signal-agent/Crypto-Signal")
@@ -95,6 +96,11 @@ DEFAULT_EVENT_SOURCE_RUNTIME_PATH = (
     DEFAULT_LEDGER_PATH.parent.parent
     / "events"
     / "event_source.sqlite3"
+)
+DEFAULT_WC2_COHORT_PATH = (
+    DEFAULT_LEDGER_PATH.parent.parent
+    / "wc2"
+    / "wc2_untouched_forward.sqlite3"
 )
 STATIC_DIR = Path(__file__).with_name("static")
 GALACTECH_DIR = Path(__file__).with_name("galactech")
@@ -180,6 +186,7 @@ def create_app(
     cold_archive_path: Path | None = None,
     provider_divergence_path: Path | None = None,
     event_source_runtime_path: Path | None = None,
+    wc2_cohort_path: Path | None = None,
 ) -> FastAPI:
     selected_path = ledger_path or Path(
         os.environ.get("CRYPTO_SIGNAL_LEDGER_PATH", str(DEFAULT_LEDGER_PATH))
@@ -346,6 +353,18 @@ def create_app(
     else:
         selected_event_source_runtime_path = None
 
+    if wc2_cohort_path is not None:
+        selected_wc2_cohort_path: Path | None = wc2_cohort_path
+    elif ledger_path is None:
+        wc2_cohort_env = os.environ.get("CRYPTO_SIGNAL_WC2_COHORT_PATH")
+        selected_wc2_cohort_path = (
+            Path(wc2_cohort_env)
+            if wc2_cohort_env
+            else DEFAULT_WC2_COHORT_PATH
+        )
+    else:
+        selected_wc2_cohort_path = None
+
     selected_learning_memory_path = learning_memory_path
     if selected_learning_memory_path is None:
         learning_memory_env = os.environ.get("CRYPTO_SIGNAL_LEARNING_MEMORY_PATH")
@@ -381,6 +400,7 @@ def create_app(
     app.state.cold_archive_path = selected_cold_archive_path
     app.state.provider_divergence_path = selected_provider_divergence_path
     app.state.event_source_runtime_path = selected_event_source_runtime_path
+    app.state.wc2_cohort_path = selected_wc2_cohort_path
     app.state.reader = reader
 
     app.mount(
@@ -558,6 +578,59 @@ def create_app(
                 "status": "ready" if events else "empty",
                 "events": events,
                 "read_only": True,
+                "real_capital": 0,
+            }
+        )
+
+    @app.get("/api/wc2/action/{forecast_identity}")
+    def wc2_actionability(forecast_identity: str) -> JSONResponse:
+        if not _is_lower_sha256(forecast_identity):
+            raise HTTPException(
+                status_code=400,
+                detail="forecast_identity must be lowercase SHA256",
+            )
+        if selected_wc2_cohort_path is None:
+            return _json(
+                {
+                    "status": "unavailable",
+                    "reason": "wc2_cohort_runtime_not_configured",
+                    "forecast_identity": forecast_identity,
+                    "semantic": "EXACT_PERSISTED_WC2_COHORT_ACTION_ONLY",
+                    "read_only": True,
+                    "production_authority": False,
+                    "real_capital": 0,
+                }
+            )
+        if not selected_wc2_cohort_path.exists():
+            return _json(
+                {
+                    "status": "unavailable",
+                    "reason": "wc2_cohort_runtime_evidence_missing",
+                    "forecast_identity": forecast_identity,
+                    "semantic": "EXACT_PERSISTED_WC2_COHORT_ACTION_ONLY",
+                    "read_only": True,
+                    "production_authority": False,
+                    "real_capital": 0,
+                }
+            )
+        try:
+            snapshot = read_wc5_actionability(
+                selected_wc2_cohort_path,
+                forecast_identity=forecast_identity,
+            )
+        except (OSError, sqlite3.DatabaseError, TypeError, ValueError) as exc:
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
+        return _json(
+            {
+                "status": (
+                    "empty"
+                    if snapshot.status.value == "NO_COHORT_FORECAST"
+                    else "ready"
+                ),
+                "snapshot": snapshot,
+                "semantic": "EXACT_PERSISTED_WC2_COHORT_ACTION_ONLY",
+                "read_only": True,
+                "production_authority": False,
                 "real_capital": 0,
             }
         )

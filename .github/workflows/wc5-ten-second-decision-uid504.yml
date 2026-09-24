@@ -1,0 +1,205 @@
+name: WC5 Ten-Second Decision Surface UID504
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/crypto_signal/product/wc5_actionability.py"
+      - "src/crypto_signal/product/web.py"
+      - "src/crypto_signal/product/galactech/index.html"
+      - "src/crypto_signal/product/galactech/app.js"
+      - "src/crypto_signal/product/galactech/app.css"
+      - "ops/run_dashboard.py"
+      - "tests/test_wc5_actionability_product.py"
+      - "tests/test_wc5_galactech_surface.py"
+      - ".github/workflows/wc5-ten-second-decision-uid504.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: wc5-ten-second-decision-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  acceptance:
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          clean: true
+          fetch-depth: 1
+
+      - name: Verify exact source and clean Development
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
+          test "$(id -u)" = "504"
+          test "$(git -C "$GITHUB_WORKSPACE" rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+          test -z "$(git -C "$DEV" status --porcelain)"
+          echo "WC5_EXACT_SOURCE_PASS=YES"
+
+      - name: Create isolated test environment
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE_PY="/Volumes/Crypto-504/Crypto-Signal/Development/.venv/bin/python"
+          TEST_VENV="$RUNNER_TEMP/wc5-decision-venv"
+          rm -rf "$TEST_VENV"
+          "$BASE_PY" -m venv "$TEST_VENV"
+          "$TEST_VENV/bin/python" -m pip install --upgrade pip
+          "$TEST_VENV/bin/python" -m pip install -e "$GITHUB_WORKSPACE"
+          "$TEST_VENV/bin/python" -m pip install "pytest>=8.4" "pytest-asyncio>=1.2" "ruff>=0.13" "mypy>=1.18"
+          echo "TEST_PY=$TEST_VENV/bin/python" >> "$GITHUB_ENV"
+
+      - name: Focused WC5 contract acceptance
+        shell: bash
+        run: |
+          set -euo pipefail
+          export PYTHONPATH="$GITHUB_WORKSPACE/src:$GITHUB_WORKSPACE"
+          cd "$GITHUB_WORKSPACE"
+          "$TEST_PY" -m pytest -q             tests/test_wc5_actionability_product.py             tests/test_wc5_galactech_surface.py             tests/test_galactech_command_evidence.py             tests/test_galactech_foundation.py
+          "$TEST_PY" -m ruff check             src/crypto_signal/product/wc5_actionability.py             src/crypto_signal/product/web.py             ops/run_dashboard.py             tests/test_wc5_actionability_product.py             tests/test_wc5_galactech_surface.py
+          "$TEST_PY" -m mypy             src/crypto_signal/product/wc5_actionability.py             src/crypto_signal/product/web.py             ops/run_dashboard.py
+          node --check src/crypto_signal/product/galactech/app.js
+          echo "WC5_FOCUSED_PASS=YES"
+
+      - name: Live read-only exact cohort Product preview
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
+          PY="$DEV/.venv/bin/python"
+          PORT=48706
+          COHORT="$DEV/runtime/wc2/wc2_untouched_forward.sqlite3"
+          LOG="$RUNNER_TEMP/wc5-preview.log"
+          BEFORE_HASH="$(shasum -a 256 "$COHORT" | awk '{print $1}')"
+
+          cleanup() {
+            if [ -n "${PID:-}" ] && kill -0 "$PID" >/dev/null 2>&1; then
+              kill "$PID" >/dev/null 2>&1 || true
+            fi
+          }
+          trap cleanup EXIT
+
+          existing="$(/usr/sbin/lsof -nP -iTCP:$PORT -sTCP:LISTEN -t 2>/dev/null || true)"
+          test -z "$existing"
+
+          (
+            export PYTHONPATH="$GITHUB_WORKSPACE/src:$GITHUB_WORKSPACE"
+            cd "$GITHUB_WORKSPACE"
+            exec nice -n 15 "$PY" "$GITHUB_WORKSPACE/ops/run_dashboard.py"               --host 127.0.0.1               --port "$PORT"               --ledger "$DEV/runtime/ledger/live_signal_ledger.sqlite3"               --alert-outbox "$DEV/runtime/alerts/alert_outbox.sqlite3"               --paper-ledger "$DEV/runtime/paper/paper_fund.sqlite3"               --candle-cache "$DEV/runtime/data/live_base_15m_cache.sqlite3"
+          ) >"$LOG" 2>&1 &
+          PID=$!
+
+          ready=0
+          for _ in {1..45}; do
+            if curl -fsS --max-time 3 "http://127.0.0.1:$PORT/api/health" >/dev/null 2>&1; then
+              ready=1
+              break
+            fi
+            sleep 1
+          done
+          if [ "$ready" != "1" ]; then
+            cat "$LOG"
+            exit 1
+          fi
+
+          FORECAST_ID="$("$PY" - "$COHORT" <<'PY'
+          import sqlite3
+          import sys
+
+          path = sys.argv[1]
+          uri = f"file:{path}?mode=ro"
+          db = sqlite3.connect(uri, uri=True)
+          try:
+              db.execute("PRAGMA query_only=ON")
+              row = db.execute(
+                  """
+                  SELECT f.forecast_identity
+                  FROM wc2_cohort_forecasts AS f
+                  JOIN wc2_cohort_intents AS i
+                    ON i.forecast_identity = f.forecast_identity
+                  GROUP BY f.forecast_identity, f.issued_at_ms
+                  HAVING COUNT(i.intent_link_identity) = 1
+                  ORDER BY f.issued_at_ms DESC, f.forecast_identity DESC
+                  LIMIT 1
+                  """
+              ).fetchone()
+          finally:
+              db.close()
+          if row is None:
+              raise SystemExit("NO_EXACT_SINGLE_INTENT_WC2_FORECAST")
+          print(str(row[0]))
+          PY
+          )"
+
+          curl -fsS --max-time 8             "http://127.0.0.1:$PORT/api/wc2/action/$FORECAST_ID"             -o "$RUNNER_TEMP/wc5-action.json"
+          curl -fsS --max-time 8             "http://127.0.0.1:$PORT/"             -o "$RUNNER_TEMP/wc5-root.html"
+
+          "$PY" - "$RUNNER_TEMP/wc5-action.json" "$FORECAST_ID" <<'PY'
+          import json
+          import sys
+
+          path, forecast_identity = sys.argv[1:3]
+          with open(path, encoding="utf-8") as handle:
+              data = json.load(handle)
+          assert data["status"] == "ready"
+          assert data["semantic"] == "EXACT_PERSISTED_WC2_COHORT_ACTION_ONLY"
+          assert data["read_only"] is True
+          assert data["production_authority"] is False
+          assert data["real_capital"] == 0
+          snapshot = data["snapshot"]
+          assert snapshot["status"] == "PERSISTED_ACTION"
+          assert snapshot["forecast_identity"] == forecast_identity
+          assert snapshot["action"] in {"HOLD_CASH", "BUY", "REDUCE", "EXIT"}
+          assert snapshot["intent_count"] == 1
+          assert snapshot["maximum_exposure_status"] == (
+              "NOT_AVAILABLE_FROM_COHORT_INTENT"
+          )
+          assert snapshot["production_authority"] is False
+          assert snapshot["real_capital"] == 0
+          print(
+              "WC5_LIVE_ACTION "
+              f"forecast={forecast_identity} action={snapshot['action']} "
+              f"vault={snapshot['vault_id']}"
+          )
+          print("WC5_LIVE_ACTIONABILITY_PASS=YES")
+          print("REAL_CAPITAL=0")
+          PY
+
+          grep -F 'id="wc5DecisionBody"' "$RUNNER_TEMP/wc5-root.html" >/dev/null
+          grep -F '10-SECOND DECISION / EXACT PERSISTED EVIDENCE' "$RUNNER_TEMP/wc5-root.html" >/dev/null
+
+          AFTER_HASH="$(shasum -a 256 "$COHORT" | awk '{print $1}')"
+          test "$BEFORE_HASH" = "$AFTER_HASH"
+          echo "WC5_COHORT_BYTE_STABLE_PASS=YES"
+          echo "WC5_LIVE_PRODUCT_PREVIEW_PASS=YES"
+
+      - name: Whole-repository regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          export PYTHONPATH="$GITHUB_WORKSPACE/src:$GITHUB_WORKSPACE"
+          cd "$GITHUB_WORKSPACE"
+          "$TEST_PY" -m pytest -q
+          "$TEST_PY" -m ruff check src tests ops/verify_stage10_integrated.py
+          "$TEST_PY" -m mypy src ops/verify_stage10_integrated.py
+          node --check src/crypto_signal/product/static/freshness.js
+          node --check src/crypto_signal/product/static/app.js
+          node --check src/crypto_signal/product/galactech/app.js
+          node tests/js/test_product_freshness.js
+          echo "WC5_FULL_REGRESSION_PASS=YES"
+
+      - name: Prove Development remained untouched
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
+          test -z "$(git -C "$DEV" status --porcelain)"
+          echo "WC5_DEVELOPMENT_NON_MUTATING_PASS=YES"
+          echo "REAL_CAPITAL=0"

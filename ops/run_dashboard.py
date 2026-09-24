@@ -50,6 +50,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--cold-archive", type=Path, default=None)
     parser.add_argument("--provider-divergence", type=Path, default=None)
     parser.add_argument("--event-source-runtime", type=Path, default=None)
+    parser.add_argument("--wc2-cohort", type=Path, default=None)
     parser.add_argument(
         "--learning-memory",
         type=Path,
@@ -101,6 +102,10 @@ def resolve_runtime_paths(args: argparse.Namespace) -> dict[str, Path]:
         "event_source_runtime_path": (
             args.event_source_runtime
             or runtime_root / "events" / "event_source.sqlite3"
+        ),
+        "wc2_cohort_path": (
+            getattr(args, "wc2_cohort", None)
+            or runtime_root / "wc2" / "wc2_untouched_forward.sqlite3"
         ),
     }
 
