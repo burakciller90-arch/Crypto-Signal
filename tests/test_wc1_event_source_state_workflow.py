@@ -61,3 +61,39 @@ def test_event_source_state_has_no_runtime_mutation_surface() -> None:
 
     for token in forbidden:
         assert token not in block
+
+
+
+def test_event_source_commands_checkout_and_verify_exact_workflow_sha() -> None:
+    text = WORKFLOW.read_text(encoding="utf-8")
+    checkout_start = text.index(
+        "      - name: CHECKOUT EXACT EVENT SOURCE COMMAND SOURCE"
+    )
+    verify_start = text.index(
+        "      - name: VERIFY EXACT EVENT SOURCE COMMAND SOURCE",
+        checkout_start,
+    )
+    status_start = text.index("      - name: STATUS", verify_start)
+    checkout = text[checkout_start:verify_start]
+    verify = text[verify_start:status_start]
+
+    assert "uses: actions/checkout@v4" in checkout
+    for command in (
+        "eventsourcestate",
+        "eventsourcesnapshot",
+        "blsprobe",
+        "fredprobe",
+    ):
+        assert f"steps.parse.outputs.command == '{command}'" in checkout
+        assert f"steps.parse.outputs.command == '{command}'" in verify
+
+    assert "ref: ${{ github.sha }}" in checkout
+    assert "clean: true" in checkout
+    assert "fetch-depth: 1" in checkout
+    assert 'git -C "$GITHUB_WORKSPACE" rev-parse HEAD' in verify
+    assert 'test "$WORKSPACE_HEAD" = "$GITHUB_SHA"' in verify
+    assert "EVENT_SOURCE_EXACT_WORKFLOW_SOURCE_PASS=YES" in verify
+    assert "/Volumes/Crypto-504/Crypto-Signal/Development" not in checkout
+    assert "/Volumes/Crypto-504/Crypto-Signal/Product" not in checkout
+    assert "/Volumes/Crypto-504/Crypto-Signal/Development" not in verify
+    assert "/Volumes/Crypto-504/Crypto-Signal/Product" not in verify
