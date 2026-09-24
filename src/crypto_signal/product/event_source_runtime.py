@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any
 
 _EVENT_SOURCE_SCHEMA = "event-source-runtime-v1/2"
+_MAX_PRODUCT_DB_BYTES = 128 * 1024 * 1024
 _REQUIRED_TABLES = frozenset(
     {
         "event_source_runtime_meta",
@@ -198,8 +199,16 @@ def read_event_source_runtime_truth(
             "event source runtime has uncheckpointed WAL evidence"
         )
 
-    uri = f"{path.resolve().as_uri()}?mode=ro&immutable=1"
-    with closing(sqlite3.connect(uri, uri=True)) as connection:
+    database_bytes = path.read_bytes()
+    if not database_bytes:
+        raise ValueError("event source runtime database is empty")
+    if len(database_bytes) > _MAX_PRODUCT_DB_BYTES:
+        raise ValueError(
+            "event source runtime database exceeds Product read bound"
+        )
+
+    with closing(sqlite3.connect(":memory:")) as connection:
+        connection.deserialize(database_bytes)
         connection.row_factory = sqlite3.Row
         connection.execute("PRAGMA query_only=ON")
         quick = connection.execute("PRAGMA quick_check").fetchone()
