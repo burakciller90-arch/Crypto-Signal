@@ -17,6 +17,7 @@ from crypto_signal.paper.position_sizing_bridge import (
     SizingBridgeState,
     assess_capital_position_sizing,
     build_accepted_sizing_risk_inputs,
+    build_no_policy_position_sizing_bridge,
 )
 from crypto_signal.paper.position_sizing_intelligence import (
     SizingMethod,
@@ -132,6 +133,35 @@ def test_only_allocator_eligible_vault_with_explicit_risk_inputs_is_sized(
     assert result.selected_method is None
     assert result.canonical_notional_usdt is None
     assert result.automatic_method_selection is False
+    assert result.production_authority is False
+    assert result.real_capital == 0
+
+
+def test_policy_free_bridge_records_missing_sizing_without_numbers(
+    tmp_path,
+) -> None:
+    issuance, capital = _capital(tmp_path)
+
+    result = build_no_policy_position_sizing_bridge(
+        issuance,
+        capital,
+        sized_at_ms=issuance.forecast.issued_at_ms + 2,
+    )
+
+    core = _vault_result(result, PaperVaultId.CORE)
+    tactical = _vault_result(result, PaperVaultId.TACTICAL)
+    reserve = _vault_result(result, PaperVaultId.OPPORTUNITY_RESERVE)
+    assert result.policy_identity is None
+    assert core.state is SizingBridgeState.MISSING_RISK_INPUTS
+    assert core.reason_codes == (
+        "sizing_policy_and_risk_inputs_not_supplied",
+    )
+    assert core.context is None
+    assert core.assessment is None
+    assert tactical.state is SizingBridgeState.HOLD_ALLOCATOR
+    assert reserve.state is SizingBridgeState.HOLD_ALLOCATOR
+    assert result.selected_method is None
+    assert result.canonical_notional_usdt is None
     assert result.production_authority is False
     assert result.real_capital == 0
 

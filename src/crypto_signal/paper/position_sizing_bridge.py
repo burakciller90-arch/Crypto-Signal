@@ -149,7 +149,7 @@ class PositionSizingBridgeResult:
     capital_bridge_identity: str
     forecast_identity: str
     proof_identity: str
-    policy_identity: str
+    policy_identity: str | None
     sized_at_ms: int
     vault_results: tuple[SizingBridgeVaultResult, ...]
     bridge_version: str = POSITION_SIZING_BRIDGE_VERSION
@@ -165,12 +165,23 @@ class PositionSizingBridgeResult:
             (self.capital_bridge_identity, "capital bridge"),
             (self.forecast_identity, "sizing forecast"),
             (self.proof_identity, "sizing proof"),
-            (self.policy_identity, "sizing policy"),
         ):
             _require_sha256(identity, label)
+        if self.policy_identity is not None:
+            _require_sha256(self.policy_identity, "sizing policy")
         expected_vaults = tuple(sorted(PaperVaultId, key=lambda item: item.value))
         if tuple(item.vault_id for item in self.vault_results) != expected_vaults:
             raise ValueError("sizing bridge requires canonical three-vault order")
+        if (
+            self.policy_identity is None
+            and any(
+                item.state is SizingBridgeState.ASSESSED_SHADOW
+                for item in self.vault_results
+            )
+        ):
+            raise ValueError(
+                "assessed sizing bridge requires explicit sizing policy"
+            )
         if (
             self.selected_method is not None
             or self.canonical_notional_usdt is not None
@@ -227,6 +238,71 @@ def build_accepted_sizing_risk_inputs(
         volatility_fraction=volatility_fraction,
         liquidity_score_0_1=liquidity_score_0_1,
         source_evidence_identities=sources,
+    )
+
+
+def build_no_policy_position_sizing_bridge(
+    issuance: UnifiedDecisionIssuance,
+    capital: CapitalScienceBridgeResult,
+    *,
+    sized_at_ms: int,
+) -> PositionSizingBridgeResult:
+    """Represent HOLD/MISSING sizing truth without inventing numeric policy."""
+    if capital.forecast_identity != issuance.forecast.forecast_identity:
+        raise ValueError("sizing bridge capital/forecast lineage mismatch")
+    if capital.proof_identity != issuance.proof.proof_identity:
+        raise ValueError("sizing bridge capital/proof lineage mismatch")
+    if capital.confluence_identity != issuance.confluence.snapshot_identity:
+        raise ValueError("sizing bridge capital/M6 lineage mismatch")
+    if sized_at_ms < max(capital.assessed_at_ms, issuance.forecast.issued_at_ms):
+        raise ValueError("sizing bridge cannot predate forecast/capital assessment")
+
+    results: list[SizingBridgeVaultResult] = []
+    for vault in capital.allocation.vaults:
+        if vault.eligibility_state is VaultEligibilityState.HOLD_CASH:
+            results.append(
+                _vault_result(
+                    vault_id=vault.vault_id,
+                    state=SizingBridgeState.HOLD_ALLOCATOR,
+                    reason_codes=vault.reason_codes,
+                )
+            )
+        else:
+            results.append(
+                _vault_result(
+                    vault_id=vault.vault_id,
+                    state=SizingBridgeState.MISSING_RISK_INPUTS,
+                    reason_codes=(
+                        "sizing_policy_and_risk_inputs_not_supplied",
+                    ),
+                )
+            )
+
+    ordered = tuple(sorted(results, key=lambda item: item.vault_id.value))
+    payload = {
+        "automatic_method_selection": False,
+        "bridge_version": POSITION_SIZING_BRIDGE_VERSION,
+        "canonical_notional_usdt": None,
+        "capital_bridge_identity": capital.bridge_identity,
+        "forecast_identity": issuance.forecast.forecast_identity,
+        "policy_identity": None,
+        "production_authority": False,
+        "proof_identity": issuance.proof.proof_identity,
+        "real_capital": REAL_CAPITAL,
+        "selected_method": None,
+        "sized_at_ms": sized_at_ms,
+        "vault_result_identities": tuple(
+            item.result_identity for item in ordered
+        ),
+    }
+    return PositionSizingBridgeResult(
+        bridge_identity=canonical_sha256(payload),
+        capital_bridge_identity=capital.bridge_identity,
+        forecast_identity=issuance.forecast.forecast_identity,
+        proof_identity=issuance.proof.proof_identity,
+        policy_identity=None,
+        sized_at_ms=sized_at_ms,
+        vault_results=ordered,
     )
 
 

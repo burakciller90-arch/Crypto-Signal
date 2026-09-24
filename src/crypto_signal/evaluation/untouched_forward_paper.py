@@ -90,7 +90,7 @@ def persist_wc2_same_cycle_hold_cash_intent(
     event_context: CircuitBreakerAnalysis,
     base_asset: str,
     activation: Epoch2ActivationRecord,
-    sizing_policy: PositionSizingPolicy,
+    sizing_policy: PositionSizingPolicy | None,
     shadow_journal: R25ShadowIntentJournal,
     shadow_manifest: R25ShadowCycleManifest,
     cohort_journal: WC2CohortJournal,
@@ -148,6 +148,11 @@ def persist_wc2_same_cycle_hold_cash_intent(
         reason_codes=(
             "wc2_explicit_hold_cash_without_reviewed_sizing",
             "wc2_no_fabricated_risk_or_execution_evidence",
+            (
+                "wc2_no_numeric_sizing_policy_applicable"
+                if sizing_policy is None
+                else "wc2_explicit_sizing_policy_present"
+            ),
         ),
     )
     if persisted.cycle.preview.intent.action is not PaperAction.HOLD_CASH:

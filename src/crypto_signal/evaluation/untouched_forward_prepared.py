@@ -83,7 +83,7 @@ class WC2PreparedCycleReceipt:
     horizon_bars: int
     target_label: str
     base_asset: str
-    sizing_policy: PositionSizingPolicy
+    sizing_policy: PositionSizingPolicy | None
     vault_id: PaperVaultId
     capital_assessed_at_ms: int
     sized_at_ms: int
@@ -144,10 +144,15 @@ class WC2PreparedCycleReceipt:
             raise ValueError("WC2 prepared event/signal PIT mismatch")
         if self.vault_id is not PaperVaultId.CORE:
             raise ValueError("WC2 prepared Slice1 vault must be CORE")
-        if self.sizing_policy.production_authority:
-            raise ValueError("WC2 prepared sizing policy has production authority")
-        if self.sizing_policy.real_capital != REAL_CAPITAL:
-            raise ValueError("WC2 prepared sizing policy REAL_CAPITAL mismatch")
+        if self.sizing_policy is not None:
+            if self.sizing_policy.production_authority:
+                raise ValueError(
+                    "WC2 prepared sizing policy has production authority"
+                )
+            if self.sizing_policy.real_capital != REAL_CAPITAL:
+                raise ValueError(
+                    "WC2 prepared sizing policy REAL_CAPITAL mismatch"
+                )
         if not (
             self.issued_at_ms
             <= self.capital_assessed_at_ms
@@ -176,7 +181,7 @@ def build_wc2_prepared_cycle_receipt(
     *,
     policy: WC2UntouchedForwardPolicy,
     activation: Epoch2ActivationRecord,
-    sizing_policy: PositionSizingPolicy,
+    sizing_policy: PositionSizingPolicy | None,
     source_frozen_at_ms: int,
     issued_at_ms: int,
     maximum_issuance_delay_ms: int,
@@ -486,7 +491,9 @@ def _receipt_from_json(payload_json: str) -> WC2PreparedCycleReceipt:
     root = require_mapping(raw, "WC2 prepared receipt")
     signal = parse_signal_decision(root.get("signal"))
     source_inputs = _parse_source_inputs(root.get("source_inputs"))
-    sizing_policy = _parse_sizing_policy(root.get("sizing_policy"))
+    sizing_policy = _parse_optional_sizing_policy(
+        root.get("sizing_policy")
+    )
     receipt = WC2PreparedCycleReceipt(
         receipt_identity=canonical_sha256(root),
         policy_identity=_text(root, "policy_identity"),
@@ -645,6 +652,14 @@ def _parse_event(value: Any) -> CircuitBreakerAnalysis:
         uncertainty_flags=_text_tuple(raw, "uncertainty_flags"),
         real_capital=_integer(raw, "real_capital"),
     )
+
+
+def _parse_optional_sizing_policy(
+    value: Any,
+) -> PositionSizingPolicy | None:
+    if value is None:
+        return None
+    return _parse_sizing_policy(value)
 
 
 def _parse_sizing_policy(value: Any) -> PositionSizingPolicy:

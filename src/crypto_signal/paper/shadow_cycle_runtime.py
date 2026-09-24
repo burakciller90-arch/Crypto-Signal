@@ -115,7 +115,7 @@ def run_persisted_shadow_cycle(
     event_context: CircuitBreakerAnalysis,
     base_asset: str,
     activation: Epoch2ActivationRecord,
-    sizing_policy: PositionSizingPolicy,
+    sizing_policy: PositionSizingPolicy | None,
     journal: R25ShadowIntentJournal,
     manifest: R25ShadowCycleManifest,
     vault_id: PaperVaultId,
