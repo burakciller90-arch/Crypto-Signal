@@ -320,6 +320,7 @@ def build_immutable_forecast(
     calibrated_probability: CalibratedProbabilityEvidence | None = None,
     calibration_scope: CalibrationScope | None = None,
     extra_version_refs: tuple[ForecastVersionRef, ...] = (),
+    extra_source_evidence_identities: tuple[str, ...] = (),
 ) -> ImmutableForecast:
     if signal.state not in {SignalState.WATCH, SignalState.ACTIVE}:
         raise ValueError("R20 forecast requires WATCH or ACTIVE signal")
@@ -412,6 +413,13 @@ def build_immutable_forecast(
                 calibrated_probability.walk_forward_fit_identity,
             }
         )
+    if len(set(extra_source_evidence_identities)) != len(
+        extra_source_evidence_identities
+    ):
+        raise ValueError("R20 extra source evidence identities must be unique")
+    for identity in extra_source_evidence_identities:
+        _require_sha256(identity, "R20 extra source evidence identity")
+    evidence_ids.update(extra_source_evidence_identities)
 
     version_refs = [
         ForecastVersionRef("event_circuit_engine", event_context.engine_version),
