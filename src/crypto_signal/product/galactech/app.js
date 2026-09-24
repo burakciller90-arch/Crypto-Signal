@@ -16,6 +16,7 @@ const API = Object.freeze({
   operationalTruth: "/api/r25/operational-truth",
   marketTapeStatus: "/api/market-tape-runtime/status",
   providerDivergenceStatus: "/api/provider-divergence/status",
+  eventSourceStatus: "/api/event-source/status",
   coldArchiveStatus: "/api/cold-archive/status?verify_limit=24",
   liveFeed: "/api/intelligence-feed?limit=100",
   decisionProof: (identity) => `/api/decision-proof/${encodeURIComponent(identity)}`,
@@ -58,6 +59,7 @@ const state = {
   operationalTruth: null,
   marketTapeStatus: null,
   providerDivergenceStatus: null,
+  eventSourceStatus: null,
   coldArchiveStatus: null,
   liveFeed: null,
   marketLayer: "PA",
@@ -2103,6 +2105,7 @@ function renderOperationalTruth() {
     ["CANONICAL EPOCH 2", components.canonical_epoch2],
     ["MARKET TAPE", components.market_tape_runtime],
     ["PROVIDER DIVERGENCE", components.provider_divergence],
+    ["EVENT SOURCE", components.event_source_runtime],
     ["COLD ARCHIVE", components.cold_archive],
     ["GALACTECH PRODUCT", components.galactech_product],
   ].map(([label, component]) =>
@@ -2131,6 +2134,7 @@ function renderSystem() {
   const shadowRail = state.shadowRail || {};
   const marketTape = state.marketTapeStatus || {};
   const providerDivergence = state.providerDivergenceStatus || {};
+  const eventSource = state.eventSourceStatus || {};
   const coldArchive = state.coldArchiveStatus || {};
   const liveFeed = state.liveFeed || {};
 
@@ -2231,6 +2235,47 @@ function renderSystem() {
       : text(
           providerDivergence.reason,
           "provider divergence runtime evidence unavailable"
+        );
+  }
+
+  const eventReady =
+    eventSource.status === "ready" || eventSource.status === "empty";
+  const eventSnapshot = eventSource.snapshot || {};
+  const eventFetches = Array.isArray(eventSnapshot.latest_fetches)
+    ? eventSnapshot.latest_fetches
+    : [];
+  const eventFailures = eventFetches.filter(
+    (fetch) => text(fetch?.outcome, "") === "failure"
+  ).length;
+  const eventCoverage = eventSnapshot.latest_calendar_coverage || null;
+  const eventCompleteness = text(
+    eventSource.calendar_completeness,
+    eventCoverage?.completeness_status || "UNAVAILABLE"
+  );
+  const missingEventCategories = Array.isArray(
+    eventSource.missing_required_calendar_categories
+  )
+    ? eventSource.missing_required_calendar_categories
+    : [];
+  setSystemValue(
+    "systemEventSource",
+    eventReady
+      ? `${eventFetches.length} SOURCES · PERSISTED`
+      : "NOT EXPOSED",
+    eventSource.status === "ready" && eventFailures === 0
+      ? "positive"
+      : "watch"
+  );
+  const eventSourceNote = byId("systemEventSourceNote");
+  if (eventSourceNote) {
+    const missingSummary = missingEventCategories.length
+      ? missingEventCategories.join(", ")
+      : "none";
+    eventSourceNote.textContent = eventReady
+      ? `calendar ${eventCompleteness} · missing required ${missingSummary} · latest fetch failures ${eventFailures} · ONLINE NOT ASSERTED`
+      : text(
+          eventSource.reason,
+          "calendar/news runtime evidence unavailable"
         );
   }
 
@@ -2597,6 +2642,7 @@ async function runBoot() {
     loadEndpoint("operationalTruth", API.operationalTruth),
     loadEndpoint("marketTapeStatus", API.marketTapeStatus),
     loadEndpoint("providerDivergenceStatus", API.providerDivergenceStatus),
+    loadEndpoint("eventSourceStatus", API.eventSourceStatus),
     loadEndpoint("coldArchiveStatus", API.coldArchiveStatus),
     loadEndpoint("liveFeed", API.liveFeed),
   ]);
@@ -2647,6 +2693,7 @@ async function refreshRuntime(reason = "timer") {
         "providerDivergenceStatus",
         API.providerDivergenceStatus
       ),
+      loadEndpoint("eventSourceStatus", API.eventSourceStatus),
       loadEndpoint("liveFeed", API.liveFeed),
     ]);
     if (results[0].ok) applyHealthTruth(results[0].data);
