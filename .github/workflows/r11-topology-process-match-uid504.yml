@@ -65,6 +65,8 @@ jobs:
           export PYTHONPATH="$GITHUB_WORKSPACE/src:$GITHUB_WORKSPACE"
           ROOT="/Volumes/Crypto-504/Crypto-Signal"
           SUP="$ROOT/ssd-service-supervisor.sh"
+          DASH="$ROOT/Product/ops/run_dashboard.py"
+          RUNNER="$ROOT/Runner/bin/Runner.Listener run --startuptype service"
           PIDFILE="$(cat "$ROOT/ssd-service-supervisor.pid")"
           test -n "$PIDFILE"
           kill -0 "$PIDFILE"
@@ -73,7 +75,8 @@ jobs:
           probe_loop() {
             while true; do
               /usr/bin/grep -F "$SUP" /dev/null >/dev/null 2>&1 || true
-              /usr/bin/awk -v needle="$SUP" 'index($0, needle) {print}' /dev/null >/dev/null 2>&1 || true
+              /usr/bin/grep -F "$DASH" /dev/null >/dev/null 2>&1 || true
+              /usr/bin/awk -v expected="$RUNNER" 'index($0, expected) {print}' /dev/null >/dev/null 2>&1 || true
             done
           }
           probe_loop &
