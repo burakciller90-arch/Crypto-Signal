@@ -7,12 +7,19 @@ on:
       - "research/alpha_factory/**"
       - "tests/test_alpha_factory_*.py"
       - ".github/workflows/wc4-champion-challenger-cycle-uid504.yml"
+  push:
+    branches: [main]
+    paths:
+      - "research/alpha_factory/**"
+      - "tests/test_alpha_factory_*.py"
+      - ".github/workflows/wc4-champion-challenger-cycle-uid504.yml"
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: wc4-champion-challenger-${{ github.event.pull_request.number }}
+  group: wc4-champion-challenger-${{ github.event.pull_request.number || github.run_id }}
   cancel-in-progress: true
 
 jobs:
@@ -23,7 +30,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.head.sha }}
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           clean: true
           fetch-depth: 1
 
@@ -33,7 +40,7 @@ jobs:
           set -euo pipefail
           DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
           test "$(id -u)" = "504"
-          test "$(git -C "$GITHUB_WORKSPACE" rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+          test "$(git -C "$GITHUB_WORKSPACE" rev-parse HEAD)" = "${{ github.event.pull_request.head.sha || github.sha }}"
           test -z "$(git -C "$DEV" status --porcelain)"
           echo "WC4_EXACT_SOURCE_PASS=YES"
 
