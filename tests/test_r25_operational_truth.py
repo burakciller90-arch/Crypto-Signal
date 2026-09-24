@@ -216,3 +216,46 @@ def test_galactech_system_truth_exposes_component_states_not_a_readiness_score(
     assert "PARTIAL RUNTIME EVIDENCE" in js
     assert "PRODUCTION READY" not in markup
     assert "PRODUCTION READY" not in js
+
+
+def test_operational_truth_delegates_expensive_market_tape_verification(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    market_tape = tmp_path / "market_tape.sqlite3"
+    with sqlite3.connect(market_tape) as db:
+        db.execute("CREATE TABLE marker (value TEXT)")
+
+    def fail_if_full_market_tape_verification_runs(*args, **kwargs):
+        raise ValueError("full_market_tape_verification_called")
+
+    monkeypatch.setattr(
+        "crypto_signal.product.web.read_market_tape_runtime_truth",
+        fail_if_full_market_tape_verification_runs,
+    )
+    client = TestClient(
+        create_app(
+            tmp_path / "missing-signals.sqlite3",
+            market_tape_path=market_tape,
+        )
+    )
+
+    operational = client.get("/api/r25/operational-truth")
+    assert operational.status_code == 200
+    component = operational.json()["components"]["market_tape_runtime"]
+    assert component == {
+        "status": "delegated",
+        "reason": (
+            "detailed_market_tape_verification_delegated_to_dedicated_endpoint"
+        ),
+        "verification_endpoint": "/api/market-tape-runtime/status",
+        "runtime_evidence_present": True,
+        "online_status": "NOT_ASSERTED",
+        "read_only": True,
+    }
+
+    detailed = client.get(
+        "/api/market-tape-runtime/status?observed_at_ms=2000"
+    )
+    assert detailed.status_code == 500
+    assert detailed.json()["detail"] == "full_market_tape_verification_called"

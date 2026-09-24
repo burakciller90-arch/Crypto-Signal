@@ -867,17 +867,16 @@ def create_app(
                 "reason": "market_tape_runtime_evidence_missing",
             }
         else:
-            try:
-                market_tape_status = read_market_tape_runtime_truth(
-                    selected_market_tape_path,
-                    observed_at_ms=time.time_ns() // 1_000_000,
-                )
-            except (OSError, sqlite3.DatabaseError, TypeError, ValueError) as exc:
-                raise HTTPException(status_code=500, detail=str(exc)) from exc
             components["market_tape_runtime"] = {
-                "status": "ready",
-                "snapshot": market_tape_status,
+                "status": "delegated",
+                "reason": (
+                    "detailed_market_tape_verification_delegated_to_"
+                    "dedicated_endpoint"
+                ),
+                "verification_endpoint": "/api/market-tape-runtime/status",
+                "runtime_evidence_present": True,
                 "online_status": "NOT_ASSERTED",
+                "read_only": True,
             }
 
         if selected_provider_divergence_path is None:
