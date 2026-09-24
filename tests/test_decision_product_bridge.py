@@ -160,11 +160,13 @@ def test_galactech_binds_only_persisted_r20_5_evidence_domains(
 
     assert 'id="systemDecisionLedger"' in html
     assert 'id="systemLiveFeed"' in html
-    assert "DECISION PROOF LEDGER" in html
-    assert "LIVE INTELLIGENCE FEED" in html
-    assert "Persisted R20/R20.5 Decision Proof" in html
+    assert "KARAR KANITI GÜNLÜĞÜ" in html
+    assert "CANLI ZEKÂ AKIŞI" in html
+    assert "Kalıcı Karar Kanıtı" in html
 
     assert 'decisionProof: (identity)' in js
+    assert "decisionProofByForecast: (identity)" in js
+    assert "async function openFeedForecastProof" in js
     assert 'decisionStatus: "/api/decision-evidence/status"' in js
     assert 'liveFeed: "/api/intelligence-feed?limit=100"' in js
     assert "function renderDecisionProofExtension(payload)" in js
@@ -173,6 +175,6 @@ def test_galactech_binds_only_persisted_r20_5_evidence_domains(
     assert 'FLOW: ["order_book", "order_flow_cvd"]' in js
     assert 'DERIV: ["derivatives"]' in js
     assert 'ONCHAIN: ["onchain"]' in js
-    assert "No exact R20.5 Decision Proof is persisted" in js
-    assert "does not synthesize a layer from unrelated evidence" in js
-    assert "private reasoning" in js.lower()
+    assert "Bu değiştirilemez sinyal için exact R20.5 Karar Kanıtı yok" in js
+    assert "Sentetik grafik katmanı üretilmez" in js
+    assert "gizli akıl yürütme" in js.lower()
