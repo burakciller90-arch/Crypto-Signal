@@ -104,6 +104,34 @@ class CandleStore:
             ).fetchall()
         return tuple(self._row_to_candle(row) for row in rows)
 
+    def list_candles_read_only(
+        self,
+        *,
+        exchange: Exchange,
+        market_type: MarketType,
+        symbol: str,
+        timeframe: str,
+    ) -> tuple[Candle, ...]:
+        """Read persisted candles without initializing or mutating the cache."""
+        if not self.path.is_file():
+            raise FileNotFoundError(self.path)
+        uri = f"{self.path.resolve().as_uri()}?mode=ro"
+        connection = sqlite3.connect(uri, uri=True, timeout=5.0)
+        connection.row_factory = sqlite3.Row
+        connection.execute("PRAGMA query_only=ON")
+        try:
+            rows = connection.execute(
+                """
+                SELECT * FROM candles
+                WHERE exchange = ? AND market_type = ? AND symbol = ? AND timeframe = ?
+                ORDER BY open_time_ms ASC
+                """,
+                (exchange.value, market_type.value, symbol, timeframe),
+            ).fetchall()
+        finally:
+            connection.close()
+        return tuple(self._row_to_candle(row) for row in rows)
+
     def count(self) -> int:
         self.initialize()
         with closing(self._connect()) as connection, connection:
