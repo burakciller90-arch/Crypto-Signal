@@ -130,10 +130,13 @@ def test_productdeploy_contract_is_exact_main_and_current_galactech() -> None:
     assert "GALACTECH_ROOT_CUTOVER_LIVE_PASS=YES" in product_block
     assert "WC0_RUNTIME_TOPOLOGY_SQLITE_PASS=YES" in product_block
     assert "WC0_CONTINUITY_PAUSE_PRESERVED=YES" in product_block
-    assert "DASHBOARD_RESTART_MODE=direct-supervisor-contract" in product_block
-    assert "/usr/sbin/lsof -nP -iTCP:48700 -sTCP:LISTEN -t" in product_block
-    assert "DASHBOARD_TERM_PORT_STILL_BOUND=YES" in product_block
-    assert 'kill -KILL "$listener"' in product_block
+    assert "DASHBOARD_RESTART_MODE=supervisor-managed" in product_block
+    assert "DASHBOARD_SUPERVISOR_RESPAWN_PID=" in product_block
+    assert "DASHBOARD_SUPERVISOR_RESPAWN_TIMEOUT=YES" in product_block
+    assert "DASHBOARD_OLD_PIDS=" in product_block
+    assert "DASHBOARD_OLD_PID_FORCE_KILL=" in product_block
+    assert 'kill -KILL "$pid"' in product_block
+    assert "DASHBOARD_RESTART_MODE=direct-no-supervisor" in product_block
     assert "DASHBOARD_DIRECT_START_PID=" in product_block
     assert "DIRECT_DASHBOARD_RESTART_TIMEOUT=YES" in product_block
     assert "fetch_live_json() {" in product_block
@@ -142,6 +145,7 @@ def test_productdeploy_contract_is_exact_main_and_current_galactech() -> None:
     assert 'curl -fsS --max-time 15 "$url" -o "$tmp"' in product_block
     assert "for i in {1..8}; do" in product_block
     assert 'grep -F "$PRODUCT/ops/run_dashboard.py"' in product_block
+    assert "direct-supervisor-contract" not in product_block
     assert "OLD_DASH_EXIT_TIMEOUT=YES" not in product_block
     assert "REAL_CAPITAL" not in product_block or "real_capital" in product_block
 
