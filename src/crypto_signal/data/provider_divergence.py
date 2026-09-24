@@ -343,7 +343,34 @@ def build_provider_divergence_snapshot(
     }
     return ProviderDivergenceSnapshot(
         snapshot_identity=canonical_sha256(values),
-        **values,
+        semantic=PROVIDER_DIVERGENCE_SEMANTIC,
+        market_type=market_type,
+        symbol=symbol,
+        timeframe=timeframe,
+        observed_at_ms=observed_at_ms,
+        lookback_limit=lookback_limit,
+        left_exchange=left_exchange,
+        right_exchange=right_exchange,
+        left_quality=left_quality,
+        right_quality=right_quality,
+        left_source_evidence_identities=tuple(
+            candle_evidence_identity(item) for item in left
+        ),
+        right_source_evidence_identities=tuple(
+            candle_evidence_identity(item) for item in right
+        ),
+        overlap_count=reconciliation.overlap_count,
+        left_only_open_times_ms=reconciliation.left_only_open_times_ms,
+        right_only_open_times_ms=reconciliation.right_only_open_times_ms,
+        spread_points=points,
+        latest_overlap_open_time_ms=latest_overlap_open_time_ms,
+        latest_close_spread_bps=latest_close_spread_bps,
+        median_absolute_close_spread_bps=median_absolute_close_spread_bps,
+        max_absolute_close_spread_bps=max_absolute_close_spread_bps,
+        grid_state=grid_state,
+        schema_version=PROVIDER_DIVERGENCE_SCHEMA_VERSION,
+        production_authority=False,
+        real_capital=REAL_CAPITAL,
     )
 
 
