@@ -969,11 +969,7 @@ def create_app(
     def market_tape_runtime_status(
         observed_at_ms: int | None = Query(default=None, ge=0),
     ) -> JSONResponse:
-        observation = (
-            time.time_ns() // 1_000_000
-            if observed_at_ms is None
-            else observed_at_ms
-        )
+        requested_observation = observed_at_ms
         collector_runtime = None
         collector_reason: str | None = None
         collection_process_status = "NOT_MEASURED"
@@ -986,7 +982,7 @@ def create_app(
             try:
                 collector_runtime = read_market_tape_collector_runtime_truth(
                     selected_market_tape_collector_runtime_path,
-                    observed_at_ms=observation,
+                    observed_at_ms=requested_observation,
                 )
             except (
                 OSError,
@@ -1032,7 +1028,7 @@ def create_app(
         try:
             snapshot = read_market_tape_runtime_truth(
                 selected_market_tape_path,
-                observed_at_ms=observation,
+                observed_at_ms=requested_observation,
             )
         except (OSError, sqlite3.DatabaseError, TypeError, ValueError) as exc:
             raise HTTPException(status_code=500, detail=str(exc)) from exc
