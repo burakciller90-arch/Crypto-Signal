@@ -1323,7 +1323,25 @@ jobs:
           assert data.get("alert_outbox_present") is True
           PY
 
-          curl -fsS --max-time 5 http://127.0.0.1:48700/api/intelligence-center > /tmp/crypto-intelligence-center.json
+          fetch_live_json() {
+            local url="$1"
+            local output="$2"
+            local tmp="${output}.tmp"
+            rm -f "$tmp"
+            for i in {1..8}; do
+              if curl -fsS --max-time 15 "$url" -o "$tmp"; then
+                mv "$tmp" "$output"
+                echo "PRODUCT_LIVE_API_READY url=$url attempt=$i"
+                return 0
+              fi
+              rm -f "$tmp"
+              sleep 2
+            done
+            echo "PRODUCT_LIVE_API_TIMEOUT url=$url"
+            return 1
+          }
+
+          fetch_live_json http://127.0.0.1:48700/api/intelligence-center /tmp/crypto-intelligence-center.json
           /usr/bin/python3 - <<'PY'
           import json
           from pathlib import Path
@@ -1344,7 +1362,7 @@ jobs:
           grep -F 'R25 / OPERATIONAL TRUTH' /tmp/crypto-product-index.html >/dev/null
           grep -F 'REAL_CAPITAL=0' /tmp/crypto-product-index.html >/dev/null
 
-          curl -fsS --max-time 5 http://127.0.0.1:48700/api/r25/operational-truth > /tmp/crypto-r25-operational.json
+          fetch_live_json http://127.0.0.1:48700/api/r25/operational-truth /tmp/crypto-r25-operational.json
           /usr/bin/python3 - <<'PY'
           import json
           from pathlib import Path
