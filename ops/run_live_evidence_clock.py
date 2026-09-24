@@ -443,15 +443,16 @@ async def run(
                 flush=True,
             )
             if wc2_result.status is WC2PreparedLiveStatus.NO_PREPARED_RECEIPT:
+                failures += 1
                 print(
                     f"wc2 provider={name} symbol={context.symbol} "
                     f"timeframe={context.timeframe} "
-                    "status=EVIDENCE_GAP FAIL_STOP=YES "
+                    "status=EVIDENCE_GAP FAIL_STOP=YES CYCLE_CONTINUES=YES "
                     "HISTORICAL_FORECAST_BACKFILL=NO REAL_CAPITAL=0",
                     file=sys.stderr,
                     flush=True,
                 )
-                return 1
+                continue
 
     selected_divergence_path = (
         provider_divergence_path

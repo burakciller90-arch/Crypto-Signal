@@ -475,11 +475,10 @@ def test_wc2_runtime_error_fail_stops_before_second_context(
     assert calls == {"freeze": 1, "wc2": 1, "divergence": 0}
 
 
-def test_activation_post_receipt_gap_is_fail_stop(
+def test_activation_post_receipt_gap_fails_cycle_but_continues_contexts(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    _patch_cycle(monkeypatch)
     policy_path = tmp_path / "policy.sqlite3"
     policy = _seed_policy(policy_path)
     activation = _patch_epoch2(monkeypatch)
@@ -489,8 +488,14 @@ def test_activation_post_receipt_gap_is_fail_stop(
         policy=policy,
         activation=activation,
     )
+    calls = {"freeze": 0, "wc2": 0, "divergence": 0}
+
+    async def fake_freeze(**kwargs):
+        calls["freeze"] += 1
+        return _replay_result()
 
     def gap(*args, **kwargs):
+        calls["wc2"] += 1
         return SimpleNamespace(
             status=WC2PreparedLiveStatus.NO_PREPARED_RECEIPT,
             receipt_identity=None,
@@ -499,16 +504,18 @@ def test_activation_post_receipt_gap_is_fail_stop(
             paper_intent_identity=None,
         )
 
-    monkeypatch.setattr(
-        clock,
-        "process_wc2_prepared_live_freeze",
-        gap,
-    )
+    def divergence(**kwargs):
+        calls["divergence"] += 1
 
+    monkeypatch.setattr(clock, "freeze_coverage_context", fake_freeze)
+    monkeypatch.setattr(clock, "process_wc2_prepared_live_freeze", gap)
+    monkeypatch.setattr(clock, "persist_provider_divergence_for_plan", divergence)
+
+    plan = LiveCoveragePlan.current_pilot()
     status = asyncio.run(
         clock.run(
             tmp_path / "signal.sqlite3",
-            plan=_plan(),
+            plan=plan,
             candle_cache_path=tmp_path / "candles.sqlite3",
             provider_divergence_path=tmp_path / "divergence.sqlite3",
             wc2_config=_config(tmp_path, policy_path=policy_path),
@@ -516,6 +523,11 @@ def test_activation_post_receipt_gap_is_fail_stop(
     )
 
     assert status == 1
+    assert calls == {
+        "freeze": len(plan.enabled_contexts),
+        "wc2": len(plan.enabled_contexts),
+        "divergence": 1,
+    }
 
 
 def test_wc2_base_asset_is_explicit_usdt_only() -> None:
