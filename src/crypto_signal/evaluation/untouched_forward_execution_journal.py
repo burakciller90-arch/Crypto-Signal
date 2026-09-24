@@ -17,8 +17,8 @@ from crypto_signal.paper.models import (
     PaperSymbol,
 )
 
-WC2_PAPER_EXECUTION_JOURNAL_SCHEMA_VERSION = "wc2-paper-execution-journal.v1"
-WC2_PAPER_EXECUTION_JOURNAL_ENGINE_VERSION = "wc2-paper-execution-journal-v1/1"
+WC2_PAPER_EXECUTION_JOURNAL_SCHEMA_VERSION = "wc2-paper-execution-journal.v1/2"
+WC2_PAPER_EXECUTION_JOURNAL_ENGINE_VERSION = "wc2-paper-execution-journal-v1/2"
 WC2_PAPER_EXECUTION_JOURNAL_SUFFIX = ".wc2-paper-execution.sqlite3"
 
 _META_TABLE = "wc2_paper_execution_meta"
@@ -38,6 +38,7 @@ class WC2PaperExecutionDecision:
     record_identity: str
     event_identity: str
     execution_protocol_identity: str
+    runtime_activation_identity: str
     execution_start_ms: int
     source_exchanges: tuple[str, str]
     source_freeze_identities: tuple[str, str]
@@ -61,6 +62,9 @@ class WC2PaperExecutionDecision:
     plan_identity: str | None = None
     fill_identity: str | None = None
     cost_evidence_identity: str | None = None
+    quantity: Decimal | None = None
+    reference_price: Decimal | None = None
+    simulated_fill_price: Decimal | None = None
     fee_usdt: Decimal = Decimal(0)
     spread_usdt: Decimal = Decimal(0)
     slippage_usdt: Decimal = Decimal(0)
@@ -77,6 +81,7 @@ class WC2PaperExecutionDecision:
             (self.record_identity, "WC2 execution record"),
             (self.event_identity, "WC2 execution event"),
             (self.execution_protocol_identity, "WC2 execution protocol"),
+            (self.runtime_activation_identity, "WC2 execution runtime activation"),
             (self.epoch2_core_snapshot_identity, "WC2 Epoch2 CORE snapshot"),
         ):
             _require_sha256(value, label)
@@ -128,6 +133,19 @@ class WC2PaperExecutionDecision:
             raise ValueError("WC2 execution reason/policy must be non-empty")
         if self.execution_policy_version != PAPER_EXECUTION_POLICY_VERSION:
             raise ValueError("WC2 execution policy version mismatch")
+        for optional_trade_value, label in (
+            (self.quantity, "quantity"),
+            (self.reference_price, "reference price"),
+            (self.simulated_fill_price, "simulated fill price"),
+        ):
+            if optional_trade_value is not None and (
+                not isinstance(optional_trade_value, Decimal)
+                or not optional_trade_value.is_finite()
+                or optional_trade_value <= 0
+            ):
+                raise ValueError(
+                    f"WC2 execution {label} must be finite positive when present"
+                )
         for cost_value, label in (
             (self.fee_usdt, "fee"),
             (self.spread_usdt, "spread"),
@@ -162,6 +180,15 @@ class WC2PaperExecutionDecision:
             if any(value is not None for value in downstream):
                 raise ValueError("WC2 HOLD_CASH cannot fabricate execution evidence")
             if any(
+                value is not None
+                for value in (
+                    self.quantity,
+                    self.reference_price,
+                    self.simulated_fill_price,
+                )
+            ):
+                raise ValueError("WC2 HOLD_CASH cannot carry execution economics")
+            if any(
                 value != Decimal(0)
                 for value in (self.fee_usdt, self.spread_usdt, self.slippage_usdt)
             ) or self.venue_reference is not None:
@@ -186,6 +213,15 @@ class WC2PaperExecutionDecision:
                 )
             ):
                 raise ValueError("WC2 sizing rejection cannot carry fill evidence")
+            if any(
+                value is not None
+                for value in (
+                    self.quantity,
+                    self.reference_price,
+                    self.simulated_fill_price,
+                )
+            ):
+                raise ValueError("WC2 sizing rejection cannot carry execution economics")
         elif self.status is WC2PaperExecutionDecisionStatus.PRETRADE_REJECTED:
             if self.action not in {PaperAction.BUY, PaperAction.EXIT}:
                 raise ValueError("WC2 pretrade rejection requires trade candidate")
@@ -209,6 +245,15 @@ class WC2PaperExecutionDecision:
                 )
             ):
                 raise ValueError("WC2 pretrade rejection cannot carry fill evidence")
+            if any(
+                value is not None
+                for value in (
+                    self.quantity,
+                    self.reference_price,
+                    self.simulated_fill_price,
+                )
+            ):
+                raise ValueError("WC2 pretrade rejection cannot carry execution economics")
         else:
             if self.status is not WC2PaperExecutionDecisionStatus.EXECUTED:
                 raise ValueError("unsupported WC2 execution status")
@@ -218,6 +263,32 @@ class WC2PaperExecutionDecision:
                 raise ValueError("WC2 executed decision requires complete evidence lineage")
             if not self.venue_reference:
                 raise ValueError("WC2 executed decision requires venue reference")
+            if (
+                self.quantity is None
+                or self.reference_price is None
+                or self.simulated_fill_price is None
+            ):
+                raise ValueError(
+                    "WC2 executed decision requires complete execution economics"
+                )
+            price_impact = (
+                abs(self.simulated_fill_price - self.reference_price)
+                * self.quantity
+            )
+            if price_impact != self.spread_usdt + self.slippage_usdt:
+                raise ValueError(
+                    "WC2 execution price impact must equal spread plus slippage"
+                )
+            if (
+                self.action is PaperAction.BUY
+                and self.simulated_fill_price < self.reference_price
+            ):
+                raise ValueError("WC2 BUY cannot claim beneficial simulated execution")
+            if (
+                self.action is PaperAction.EXIT
+                and self.simulated_fill_price > self.reference_price
+            ):
+                raise ValueError("WC2 EXIT cannot claim beneficial simulated execution")
             assert self.fill_identity is not None
             expected_cost = compute_wc2_cost_evidence_identity(
                 fill_identity=self.fill_identity,
@@ -361,6 +432,7 @@ def build_wc2_paper_execution_decision(
     *,
     event_identity: str,
     execution_protocol_identity: str,
+    runtime_activation_identity: str,
     execution_start_ms: int,
     source_exchanges: tuple[str, str],
     source_freeze_identities: tuple[str, str],
@@ -384,6 +456,9 @@ def build_wc2_paper_execution_decision(
     plan_identity: str | None = None,
     fill_identity: str | None = None,
     cost_evidence_identity: str | None = None,
+    quantity: Decimal | None = None,
+    reference_price: Decimal | None = None,
+    simulated_fill_price: Decimal | None = None,
     fee_usdt: Decimal = Decimal(0),
     spread_usdt: Decimal = Decimal(0),
     slippage_usdt: Decimal = Decimal(0),
@@ -394,6 +469,7 @@ def build_wc2_paper_execution_decision(
     values: dict[str, object] = {
         "event_identity": event_identity,
         "execution_protocol_identity": execution_protocol_identity,
+        "runtime_activation_identity": runtime_activation_identity,
         "execution_start_ms": execution_start_ms,
         "source_exchanges": source_exchanges,
         "source_freeze_identities": source_freeze_identities,
@@ -417,6 +493,9 @@ def build_wc2_paper_execution_decision(
         "plan_identity": plan_identity,
         "fill_identity": fill_identity,
         "cost_evidence_identity": cost_evidence_identity,
+        "quantity": quantity,
+        "reference_price": reference_price,
+        "simulated_fill_price": simulated_fill_price,
         "fee_usdt": fee_usdt,
         "spread_usdt": spread_usdt,
         "slippage_usdt": slippage_usdt,
@@ -432,6 +511,7 @@ def build_wc2_paper_execution_decision(
         record_identity=canonical_sha256(values),
         event_identity=event_identity,
         execution_protocol_identity=execution_protocol_identity,
+        runtime_activation_identity=runtime_activation_identity,
         execution_start_ms=execution_start_ms,
         source_exchanges=source_exchanges,
         source_freeze_identities=source_freeze_identities,
@@ -455,6 +535,9 @@ def build_wc2_paper_execution_decision(
         plan_identity=plan_identity,
         fill_identity=fill_identity,
         cost_evidence_identity=cost_evidence_identity,
+        quantity=quantity,
+        reference_price=reference_price,
+        simulated_fill_price=simulated_fill_price,
         fee_usdt=fee_usdt,
         spread_usdt=spread_usdt,
         slippage_usdt=slippage_usdt,
@@ -593,6 +676,19 @@ class WC2PaperExecutionJournal:
             ).fetchone()
         return row is not None
 
+    def read_records(self) -> tuple[WC2PaperExecutionDecision, ...]:
+        """Read the immutable terminal execution evidence in event order."""
+        if not self.path.is_file():
+            return ()
+        uri = f"{self.path.resolve().as_uri()}?mode=ro"
+        with closing(sqlite3.connect(uri, uri=True)) as db:
+            db.execute("PRAGMA query_only=ON")
+            rows = db.execute(
+                f"""SELECT payload_json FROM {_EVENT_TABLE}
+                ORDER BY decided_at_ms ASC, event_identity ASC"""
+            ).fetchall()
+        return tuple(_record_from_json(str(row[0])) for row in rows)
+
     def verify_read_only(self) -> WC2PaperExecutionJournalStatus:
         if not self.path.is_file():
             raise FileNotFoundError(self.path)
@@ -640,6 +736,7 @@ def _record_payload(record: WC2PaperExecutionDecision) -> dict[str, object]:
         for field in (
             "event_identity",
             "execution_protocol_identity",
+            "runtime_activation_identity",
             "execution_start_ms",
             "source_exchanges",
             "source_freeze_identities",
@@ -663,6 +760,9 @@ def _record_payload(record: WC2PaperExecutionDecision) -> dict[str, object]:
             "plan_identity",
             "fill_identity",
             "cost_evidence_identity",
+            "quantity",
+            "reference_price",
+            "simulated_fill_price",
             "fee_usdt",
             "spread_usdt",
             "slippage_usdt",
@@ -685,6 +785,7 @@ def _record_from_json(payload_json: str) -> WC2PaperExecutionDecision:
         record_identity=canonical_sha256(raw),
         event_identity=_text(raw, "event_identity"),
         execution_protocol_identity=_text(raw, "execution_protocol_identity"),
+        runtime_activation_identity=_text(raw, "runtime_activation_identity"),
         execution_start_ms=_integer(raw, "execution_start_ms"),
         source_exchanges=_two_text(raw, "source_exchanges"),
         source_freeze_identities=_two_text(raw, "source_freeze_identities"),
@@ -712,6 +813,9 @@ def _record_from_json(payload_json: str) -> WC2PaperExecutionDecision:
         plan_identity=_optional_text(raw.get("plan_identity")),
         fill_identity=_optional_text(raw.get("fill_identity")),
         cost_evidence_identity=_optional_text(raw.get("cost_evidence_identity")),
+        quantity=_optional_decimal(raw.get("quantity")),
+        reference_price=_optional_decimal(raw.get("reference_price")),
+        simulated_fill_price=_optional_decimal(raw.get("simulated_fill_price")),
         fee_usdt=_decimal(raw, "fee_usdt"),
         spread_usdt=_decimal(raw, "spread_usdt"),
         slippage_usdt=_decimal(raw, "slippage_usdt"),
@@ -775,6 +879,16 @@ def _optional_text(value: object) -> str | None:
     if value is None:
         return None
     return _text_item(value)
+
+
+def _optional_decimal(value: object) -> Decimal | None:
+    if value is None:
+        return None
+    if isinstance(value, Decimal):
+        return value
+    if isinstance(value, (str, int, float)) and not isinstance(value, bool):
+        return Decimal(str(value))
+    raise TypeError("WC2 execution journal optional decimal value required")
 
 
 def _require_sha256(value: str, label: str) -> None:
