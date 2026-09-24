@@ -353,7 +353,6 @@ def issue_accepted_wc2_live_source(
             WC2_LIVE_SOURCE_ADAPTER_VERSION,
         ),
     ]
-    source_evidence: tuple[str, ...] = ()
     if collection_protocol_identity is not None:
         version_refs.append(
             ForecastVersionRef(
@@ -361,7 +360,6 @@ def issue_accepted_wc2_live_source(
                 collection_protocol_identity,
             )
         )
-        source_evidence = (collection_protocol_identity,)
 
     return compose_exact_decision(
         signal=signal,
@@ -376,7 +374,6 @@ def issue_accepted_wc2_live_source(
         target_label=target_label,
         ledger=ledger,
         forecast_version_refs=tuple(version_refs),
-        forecast_source_evidence_identities=source_evidence,
     )
 
 
