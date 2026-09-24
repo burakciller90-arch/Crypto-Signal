@@ -24,7 +24,7 @@ jobs:
           set -euo pipefail
           cmd="$(printf '%s\n' "$ISSUE_BODY" | awk -F: 'tolower($1)=="command" {gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2); print tolower($2); exit}')"
           case "$cmd" in
-            status|eventsourcestate|eventsourcesnapshot|blsprobe|fredprobe|wc2epoch2activate|wc2policyregister|wc2protocolregister|wc2state|services|logs|disk|sync|producttest|fulltest|productstate|productdeploy|paperreview|paperinspect|paperfixlint|paperharden|stateplanreview|stateplaninspect|stateplanharden|cursorreview|cursorreviewtail|cursorcleanup|bridgecheck|bridgestate|rollingstate|pausecheck|wakepause|wakeresume|wakearm|waketest|wakeheartbeat|chatbusyprobe|cursorcheck|cursorauthdiag|cursorttycheck|alertclockstate|alertclockpause|alertclockresume|migrationinspect|migrationinventory|ssddashboarddiag|productcrashlogs|ssddashboardwrappertest|ssdtcclaunchtest|ssdbackgroundteststart|ssdbackgroundtestcheck|ssdleftover|runnerpersistinstall|runnerpersistdiag|runnercutoverdiag|dashboardstart504|runnerterminalwatchdoginstall)
+            status|eventsourcestate|eventsourcesnapshot|blsprobe|fredprobe|wc2epoch2activate|wc2policyregister|wc2protocolregister|wc2collectonce|wc2state|services|logs|disk|sync|producttest|fulltest|productstate|productdeploy|paperreview|paperinspect|paperfixlint|paperharden|stateplanreview|stateplaninspect|stateplanharden|cursorreview|cursorreviewtail|cursorcleanup|bridgecheck|bridgestate|rollingstate|pausecheck|wakepause|wakeresume|wakearm|waketest|wakeheartbeat|chatbusyprobe|cursorcheck|cursorauthdiag|cursorttycheck|alertclockstate|alertclockpause|alertclockresume|migrationinspect|migrationinventory|ssddashboarddiag|productcrashlogs|ssddashboardwrappertest|ssdtcclaunchtest|ssdbackgroundteststart|ssdbackgroundtestcheck|ssdleftover|runnerpersistinstall|runnerpersistdiag|runnercutoverdiag|dashboardstart504|runnerterminalwatchdoginstall)
               ;;
             *)
               echo "Unsupported command: $cmd"
@@ -65,6 +65,7 @@ jobs:
           steps.parse.outputs.command == 'wc2policyregister' ||
           steps.parse.outputs.command == 'wc2epoch2activate' ||
           steps.parse.outputs.command == 'wc2protocolregister' ||
+          steps.parse.outputs.command == 'wc2collectonce' ||
           steps.parse.outputs.command == 'wc2state'
         uses: actions/checkout@v4
         with:
@@ -77,6 +78,7 @@ jobs:
           steps.parse.outputs.command == 'wc2policyregister' ||
           steps.parse.outputs.command == 'wc2epoch2activate' ||
           steps.parse.outputs.command == 'wc2protocolregister' ||
+          steps.parse.outputs.command == 'wc2collectonce' ||
           steps.parse.outputs.command == 'wc2state'
         shell: bash
         run: |
@@ -486,6 +488,194 @@ jobs:
           grep -F 'WC2_PROTOCOL_HISTORICAL_BACKFILL=NO' "$RUNNER_TEMP/wc2-collection-protocol-registration.log" >/dev/null
           grep -F 'REAL_CAPITAL=0' "$RUNNER_TEMP/wc2-collection-protocol-registration.log" >/dev/null
           echo "WC2_PROTOCOL_REGISTER_BOUNDED_PASS=YES"
+          echo "REAL_CAPITAL=0"
+
+      - name: WC2 COLLECT ONCE
+        if: steps.parse.outputs.command == 'wc2collectonce'
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          DEV="$ROOT/Development"
+          RUNTIME="$DEV/runtime"
+          PY="$DEV/.venv/bin/python"
+          RUNNER="$GITHUB_WORKSPACE/ops/run_wc2_collection_once.py"
+
+          SIGNAL_LEDGER="$RUNTIME/ledger/live_signal_ledger.sqlite3"
+          CANDLE_CACHE="$RUNTIME/data/live_base_15m_cache.sqlite3"
+          DIVERGENCE_DB="$RUNTIME/data/provider_divergence.sqlite3"
+          POLICY_DB="$RUNTIME/wc2/wc2_forward_policy.sqlite3"
+          EPOCH2_DB="$RUNTIME/paper/paper_fund_epoch2.sqlite3"
+          PROTOCOL_DB="$RUNTIME/wc2/wc2_collection_protocol.wc2-collection-protocol.sqlite3"
+          PREPARED_DB="$RUNTIME/wc2/wc2_prepared.wc2-prepared.sqlite3"
+          DECISION_DB="$RUNTIME/decision/decision_evidence.sqlite3"
+          COHORT_DB="$RUNTIME/wc2/wc2_untouched_forward.sqlite3"
+          SHADOW_INTENT_DB="$RUNTIME/r25/r25.shadow-intent.sqlite3"
+          SHADOW_CYCLE_DB="$RUNTIME/r25/r25.shadow-cycle.sqlite3"
+
+          test "$(id -u)" = "504"
+          test -x "$PY"
+          test -f "$RUNNER"
+          test -f "$POLICY_DB"
+          test -f "$EPOCH2_DB"
+          test -f "$PROTOCOL_DB"
+
+          DEV_HEAD="$(git -C "$DEV" rev-parse HEAD)"
+          echo "DEVELOPMENT_HEAD=$DEV_HEAD"
+          echo "WORKFLOW_SHA=$GITHUB_SHA"
+          test "$DEV_HEAD" = "$GITHUB_SHA"
+
+          if pgrep -f '[r]un_live_evidence_clock.py' >/dev/null 2>&1; then
+            echo "WC2_ONE_SHOT_ERROR=LIVE_CLOCK_ALREADY_RUNNING"
+            exit 3
+          fi
+
+          policy_before="$(shasum -a 256 "$POLICY_DB" | awk '{print $1}')"
+          epoch2_before="$(shasum -a 256 "$EPOCH2_DB" | awk '{print $1}')"
+          protocol_before="$(shasum -a 256 "$PROTOCOL_DB" | awk '{print $1}')"
+          echo "WC2_ONE_SHOT_POLICY_SHA256_BEFORE=$policy_before"
+          echo "WC2_ONE_SHOT_EPOCH2_SHA256_BEFORE=$epoch2_before"
+          echo "WC2_ONE_SHOT_PROTOCOL_SHA256_BEFORE=$protocol_before"
+
+          PYTHONPATH="$GITHUB_WORKSPACE/src:$GITHUB_WORKSPACE" "$PY" - "$PROTOCOL_DB" <<'PY'
+          import sys
+          import time
+          from pathlib import Path
+
+          from crypto_signal.evaluation.untouched_forward_collection_protocol import (
+              WC2CollectionProtocolStore,
+          )
+
+          protocol = WC2CollectionProtocolStore(Path(sys.argv[1])).latest()
+          if protocol is None:
+              raise SystemExit("WC2_ONE_SHOT_PROTOCOL_MISSING")
+          now_ms = time.time_ns() // 1_000_000
+          print(
+              "WC2_ONE_SHOT_PROTOCOL "
+              f"identity={protocol.protocol_identity} "
+              f"collection_start_ms={protocol.collection_start_ms} "
+              f"now_ms={now_ms} "
+              f"contexts={len(protocol.coverage_context_identities)}"
+          )
+          if now_ms < protocol.collection_start_ms:
+              raise SystemExit("WC2_ONE_SHOT_BEFORE_COLLECTION_START")
+          if protocol.real_capital != 0:
+              raise SystemExit("WC2_ONE_SHOT_REAL_CAPITAL_MISMATCH")
+          PY
+
+          PYTHONPATH="$GITHUB_WORKSPACE/src:$GITHUB_WORKSPACE" "$PY" "$RUNNER" \
+            --signal-ledger "$SIGNAL_LEDGER" \
+            --candle-cache "$CANDLE_CACHE" \
+            --provider-divergence "$DIVERGENCE_DB" \
+            --policy "$POLICY_DB" \
+            --epoch2 "$EPOCH2_DB" \
+            --collection-protocol "$PROTOCOL_DB" \
+            --prepared "$PREPARED_DB" \
+            --decision-evidence "$DECISION_DB" \
+            --cohort "$COHORT_DB" \
+            --shadow-intent "$SHADOW_INTENT_DB" \
+            --shadow-cycle "$SHADOW_CYCLE_DB" \
+            | tee "$RUNNER_TEMP/wc2-one-shot.log"
+
+          grep -F 'WC2_ONE_SHOT_COMPLETE status=0' "$RUNNER_TEMP/wc2-one-shot.log" >/dev/null
+          grep -F 'PERIODIC_SERVICE_ACTIVATED=NO' "$RUNNER_TEMP/wc2-one-shot.log" >/dev/null
+          grep -F 'HISTORICAL_FORECAST_BACKFILL=NO' "$RUNNER_TEMP/wc2-one-shot.log" >/dev/null
+          grep -F 'REAL_CAPITAL=0' "$RUNNER_TEMP/wc2-one-shot.log" >/dev/null
+
+          policy_after="$(shasum -a 256 "$POLICY_DB" | awk '{print $1}')"
+          epoch2_after="$(shasum -a 256 "$EPOCH2_DB" | awk '{print $1}')"
+          protocol_after="$(shasum -a 256 "$PROTOCOL_DB" | awk '{print $1}')"
+          echo "WC2_ONE_SHOT_POLICY_SHA256_AFTER=$policy_after"
+          echo "WC2_ONE_SHOT_EPOCH2_SHA256_AFTER=$epoch2_after"
+          echo "WC2_ONE_SHOT_PROTOCOL_SHA256_AFTER=$protocol_after"
+          test "$policy_before" = "$policy_after"
+          test "$epoch2_before" = "$epoch2_after"
+          test "$protocol_before" = "$protocol_after"
+
+          PYTHONPATH="$GITHUB_WORKSPACE/src:$GITHUB_WORKSPACE" "$PY" - \
+            "$PREPARED_DB" "$DECISION_DB" "$COHORT_DB" \
+            "$SHADOW_INTENT_DB" "$SHADOW_CYCLE_DB" <<'PY'
+          import sys
+          from pathlib import Path
+
+          from crypto_signal.decision_ledger import ImmutableDecisionEvidenceLedger
+          from crypto_signal.evaluation.untouched_forward_journal import (
+              WC2CohortJournal,
+          )
+          from crypto_signal.evaluation.untouched_forward_prepared import (
+              WC2PreparedCycleJournal,
+          )
+          from crypto_signal.paper.shadow_cycle_manifest import (
+              R25ShadowCycleManifest,
+          )
+          from crypto_signal.paper.shadow_intent_journal import (
+              R25ShadowIntentJournal,
+          )
+
+          prepared, decision, cohort, shadow_intent, shadow_cycle = map(
+              Path,
+              sys.argv[1:],
+          )
+
+          if prepared.is_file():
+              print(
+                  "WC2_ONE_SHOT_PREPARED "
+                  f"count={WC2PreparedCycleJournal(prepared).verify_read_only()}"
+              )
+          else:
+              print("WC2_ONE_SHOT_PREPARED count=0")
+
+          if decision.is_file():
+              status = ImmutableDecisionEvidenceLedger(decision).read_status()
+              print(
+                  "WC2_ONE_SHOT_DECISION "
+                  f"forecasts={status.forecast_count} "
+                  f"proofs={status.proof_count}"
+              )
+          else:
+              print("WC2_ONE_SHOT_DECISION forecasts=0 proofs=0")
+
+          if cohort.is_file():
+              status = WC2CohortJournal(cohort).verify_read_only()
+              print(
+                  "WC2_ONE_SHOT_COHORT "
+                  f"forecasts={status.forecast_count} "
+                  f"intents={status.intent_count} "
+                  f"executions={status.execution_count} "
+                  f"resolutions={status.resolution_count}"
+              )
+          else:
+              print(
+                  "WC2_ONE_SHOT_COHORT "
+                  "forecasts=0 intents=0 executions=0 resolutions=0"
+              )
+
+          if shadow_intent.is_file():
+              status = R25ShadowIntentJournal(
+                  shadow_intent
+              ).verify_read_only()
+              print(
+                  "WC2_ONE_SHOT_SHADOW_INTENT "
+                  f"records={status.record_count}"
+              )
+          else:
+              print("WC2_ONE_SHOT_SHADOW_INTENT records=0")
+
+          if shadow_cycle.is_file():
+              status = R25ShadowCycleManifest(
+                  shadow_cycle
+              ).verify_read_only()
+              print(
+                  "WC2_ONE_SHOT_SHADOW_CYCLE "
+                  f"records={status.record_count}"
+              )
+          else:
+              print("WC2_ONE_SHOT_SHADOW_CYCLE records=0")
+          PY
+
+          echo "WC2_ONE_SHOT_EXACT_SOURCE_PASS=YES"
+          echo "WC2_ONE_SHOT_IMMUTABLE_PREREQUISITES_PASS=YES"
+          echo "WC2_ONE_SHOT_PERIODIC_SERVICE_ACTIVATED=NO"
           echo "REAL_CAPITAL=0"
 
       - name: WC2 STATE
