@@ -416,6 +416,75 @@ function trEventKind(value) {
   return "İSTİHBARAT GÜNCELLEMESİ";
 }
 
+const TURKISH_EVIDENCE_DOMAIN = Object.freeze({
+  frozen_chart: "DONDURULMUŞ GRAFİK",
+  consumed_candles: "KULLANILAN MUMLAR",
+  order_book: "EMİR DEFTERİ",
+  liquidity_map: "LİKİDİTE HARİTASI",
+  liquidation_map: "LİKİDASYON HARİTASI",
+  order_flow_cvd: "EMİR AKIŞI / CVD",
+  derivatives: "TÜREV PİYASA",
+  onchain: "ZİNCİR ÜSTÜ",
+  event_context: "OLAY RİSKİ",
+  methodology: "ANALİZ YÖNTEMLERİ",
+  probability_calibration: "OLASILIK KALİBRASYONU",
+});
+
+function trEvidenceDomain(value) {
+  const key = text(value, "").toLowerCase();
+  return TURKISH_EVIDENCE_DOMAIN[key] || upper(value, "KANIT").replaceAll("_", " ");
+}
+
+function trVerdict(value) {
+  const key = text(value, "").toLowerCase();
+  if (key === "support") return "DESTEK";
+  if (key === "contradict") return "KARŞIT";
+  if (key === "neutral") return "NÖTR";
+  if (key === "insufficient") return "YETERSİZ";
+  return upper(value, "YETERSİZ").replaceAll("_", " ");
+}
+
+function trAvailability(value) {
+  const key = text(value, "").toLowerCase();
+  if (key === "available") return "MEVCUT";
+  if (key === "insufficient") return "YETERSİZ";
+  if (key === "unsupported") return "DESTEKLENMİYOR";
+  return upper(value, "YETERSİZ").replaceAll("_", " ");
+}
+
+function trAction(value) {
+  const key = text(value, "").toLowerCase();
+  if (key === "hold_cash") return "NAKİTTE KAL";
+  if (key === "buy") return "AL";
+  if (key === "sell") return "SAT";
+  if (key === "long") return "UZUN POZİSYON";
+  if (key === "short") return "KISA POZİSYON";
+  if (key === "insufficient_evidence") return "YETERSİZ KANIT";
+  return upper(value, "YETERSİZ KANIT").replaceAll("_", " ");
+}
+
+function trEventContext(value) {
+  const key = text(value, "").toLowerCase();
+  if (key === "clear") return "TEMİZ";
+  if (key === "caution") return "DİKKAT";
+  if (key === "blocked") return "RİSK NEDENİYLE DURDURULDU";
+  return upper(value, "ÖLÇÜLMEDİ").replaceAll("_", " ");
+}
+
+function proofNarrative(proof) {
+  const symbol = text(proof?.symbol || proof?.asset, "Piyasa");
+  const direction = text(proof?.direction, "").toLowerCase();
+  const trigger = priceZoneText(proof?.trigger_zone);
+  const target = priceZoneText(proof?.target_zone);
+  if (["bullish", "long"].includes(direction)) {
+    return `${symbol} için yukarı yönlü senaryo geçerli. ${trigger} bölgesi tetikleyici; ${target} hedef bölgesi izleniyor. ${formatPrice(proof?.invalidation_price)} seviyesi senaryoyu geçersiz kılar.`;
+  }
+  if (["bearish", "short"].includes(direction)) {
+    return `${symbol} için aşağı yönlü senaryo geçerli. ${trigger} bölgesi tetikleyici; ${target} hedef bölgesi izleniyor. ${formatPrice(proof?.invalidation_price)} seviyesi senaryoyu geçersiz kılar.`;
+  }
+  return `${symbol} için yönlü işlem yerine kanıt bekleniyor. Yeni veri gelmeden eylem gücü artırılmıyor.`;
+}
+
 function formatPrice(value) {
   const numeric = Number(value);
   if (!Number.isFinite(numeric)) return text(value, "—");
@@ -709,9 +778,7 @@ function wc5PrimaryEvidence(proof, verdict) {
 
 function wc5EvidenceText(slice, emptyLabel) {
   if (!slice) return emptyLabel;
-  const codes = Array.isArray(slice.summary_codes) ? slice.summary_codes : [];
-  const code = codes[0] || "accepted evidence";
-  return `${upper(slice.domain, "UNKNOWN")} · ${text(code, "accepted evidence")}`;
+  return trEvidenceDomain(slice.domain);
 }
 
 function renderCommandDecisionSurface() {
@@ -722,12 +789,12 @@ function renderCommandDecisionSurface() {
   const data = state.commandDecision;
   if (!data) {
     const signal = commandFocusSignal();
-    tag.textContent = signal ? "VERIFYING" : "YETERSİZ KANIT";
+    tag.textContent = signal ? "DOĞRULANIYOR" : "YETERSİZ KANIT";
     tag.className = `tag ${signal ? "state-watch" : "state-neutral"}`;
     body.className = "wc5-decision-body empty-state";
     body.innerHTML = signal
-      ? "<strong>Exact Decision Proof / WC2 intent lineage doğrulanıyor.</strong><p>Doğrulama bitmeden action gösterilmez.</p>"
-      : "<strong>Seçili asset odağında karar kanıtı yok.</strong><p>Boş state TRADE veya HOLD_CASH diye yorumlanmaz.</p>";
+      ? "<strong>Karar kanıtı ve kâğıt işlem niyeti doğrulanıyor.</strong><p>Doğrulama tamamlanmadan eylem gösterilmez.</p>"
+      : "<strong>Seçili varlık için doğrulanmış karar kanıtı yok.</strong><p>Sistem veri yokken AL, SAT veya NAKİTTE KAL kararı uydurmaz.</p>";
     return;
   }
 
@@ -740,16 +807,14 @@ function renderCommandDecisionSurface() {
     body.className = "wc5-decision-body";
     body.innerHTML = `
       <div class="wc5-decision-hero">
-        <div><span>ACTION</span><strong>INSUFFICIENT_EVIDENCE</strong></div>
-        <p>Exact R20.5 Decision Proof bu immutable freeze için Product yüzeyinde mevcut değil.</p>
+        <div><span>EYLEM</span><strong>YETERSİZ KANIT</strong></div>
+        <p>Bu dondurulmuş karar için exact R20.5 Karar Kanıtı ürün yüzeyinde mevcut değil.</p>
       </div>`;
     return;
   }
 
   const actionSnapshot =
-    data.actionPayload?.status === "ready"
-      ? data.actionPayload.snapshot
-      : null;
+    data.actionPayload?.status === "ready" ? data.actionPayload.snapshot : null;
   const persistedAction =
     actionSnapshot?.status === "PERSISTED_ACTION"
       ? upper(actionSnapshot.action, "")
@@ -760,12 +825,13 @@ function renderCommandDecisionSurface() {
   const eventSlice = Array.isArray(proof.evidence_slices)
     ? proof.evidence_slices.find((item) => item?.domain === "event_context")
     : null;
+
   const capitalState =
     persistedAction === "HOLD_CASH"
-      ? "NOT ELIGIBLE · PERSISTED HOLD_CASH"
+      ? "SERMAYE KULLANILMIYOR · NAKİTTE KAL"
       : persistedAction
-        ? "PAPER/SHADOW INTENT ONLY"
-        : "KULLANILAMIYOR";
+        ? "YALNIZ KAĞIT / DENEME KARARI"
+        : "YETERSİZ KANIT";
   const actionClass =
     persistedAction === "HOLD_CASH"
       ? "state-watch"
@@ -773,53 +839,63 @@ function renderCommandDecisionSurface() {
         ? "state-positive"
         : "state-neutral";
 
-  tag.textContent = action;
+  tag.textContent = trAction(action);
   tag.className = `tag ${actionClass}`;
   body.className = "wc5-decision-body";
   body.innerHTML = `
     <div class="wc5-decision-hero">
       <div>
-        <span>MARKET / STANCE</span>
-        <strong>${escapeHtml(signal.symbol || proof.symbol)} · ${escapeHtml(signal.timeframe || proof.timeframe)} · ${escapeHtml(upper(proof.signal_state))} / ${escapeHtml(upper(proof.direction))}</strong>
+        <span>PİYASA / DURUŞ</span>
+        <strong>${escapeHtml(signal.symbol || proof.symbol)} · ${escapeHtml(signal.timeframe || proof.timeframe)} · ${escapeHtml(trState(proof.signal_state))} / ${escapeHtml(trDirection(proof.direction))}</strong>
       </div>
       <div>
-        <span>ACTIONABILITY</span>
-        <strong class="${actionClass}">${escapeHtml(action)}</strong>
-        <small>exact persisted WC2 action only · not an order instruction</small>
+        <span>UYGULANABİLİR EYLEM</span>
+        <strong class="${actionClass}">${escapeHtml(trAction(action))}</strong>
+        <small>yalnız exact kalıcı WC2 eylemi · emir talimatı değildir</small>
       </div>
     </div>
+
+    <div class="wc5-human-summary">
+      <span>SİSTEMİN KISA CÜMLESİ</span>
+      <strong>${escapeHtml(proofNarrative(proof))}</strong>
+    </div>
+
     <div class="wc5-decision-grid">
-      <div><span>SUPPORT</span><strong>${escapeHtml(wc5EvidenceText(support, "NO ACCEPTED SUPPORT SLICE"))}</strong></div>
-      <div><span>CONTRADICTION / RISK</span><strong>${escapeHtml(wc5EvidenceText(contradiction, "NO ACCEPTED CONTRADICTION SLICE"))}</strong></div>
-      <div><span>EVENT RISK</span><strong>${escapeHtml(upper(proof.event_context_state, "KULLANILAMIYOR"))} · ${escapeHtml(upper(eventSlice?.verdict, "INSUFFICIENT"))}</strong></div>
-      <div><span>CAPITAL ELIGIBILITY</span><strong>${escapeHtml(capitalState)}</strong></div>
-      <div><span>MAX PAPER/SHADOW EXPOSURE</span><strong>KULLANILAMIYOR</strong><small>cohort intent notional içermez; 0 veya başka tutar uydurulmaz</small></div>
-      <div><span>PROBABILITY</span><strong>${escapeHtml(upper(proof.probability_status, "NOT_CALIBRATED"))}</strong></div>
+      <div><span>ANA DESTEK</span><strong>${escapeHtml(wc5EvidenceText(support, "DOĞRULANMIŞ DESTEK YOK"))}</strong></div>
+      <div><span>ANA KARŞIT / RİSK</span><strong>${escapeHtml(wc5EvidenceText(contradiction, "DOĞRULANMIŞ KARŞIT KANIT YOK"))}</strong></div>
+      <div><span>OLAY RİSKİ</span><strong>${escapeHtml(trEventContext(proof.event_context_state))} · ${escapeHtml(trVerdict(eventSlice?.verdict))}</strong></div>
+      <div><span>SERMAYE UYGUNLUĞU</span><strong>${escapeHtml(capitalState)}</strong></div>
+      <div><span>AZAMİ KAĞIT / DENEME MARUZİYETİ</span><strong>MEVCUT DEĞİL</strong><small>cohort niyeti tutar içermiyorsa sistem rakam uydurmaz</small></div>
+      <div><span>OLASILIK</span><strong>${escapeHtml(trProbability(proof.probability_status))}</strong></div>
     </div>
+
     <div class="wc5-change-condition">
-      <span>WHAT MUST CHANGE?</span>
-      <strong>${escapeHtml(proof.conditional_thesis || "Conditional thesis unavailable.")}</strong>
-      <small>Frozen invalidation: ${escapeHtml(text(proof.invalidation_price, "KULLANILAMIYOR"))}. Aynı immutable intent sonradan rewrite edilmez; farklı action için yeni exact forecast/intent evidence gerekir.</small>
+      <span>FİKRİN DEĞİŞMESİ İÇİN NE GEREKİYOR?</span>
+      <strong>${escapeHtml(proofNarrative(proof))}</strong>
+      <small>Dondurulmuş geçersizlik seviyesi: ${escapeHtml(formatPrice(proof.invalidation_price))}. Eski karar geriye dönük değiştirilmez; farklı eylem için yeni exact öngörü / niyet kanıtı gerekir.</small>
     </div>
+
     <div class="wc5-decision-actions">
       <button class="evidence-trigger wc5-proof-button" type="button"
         data-evidence-id="${escapeHtml(signal.signal_freeze_identity || proof.signal_freeze_identity)}">
-        PROOF · exact issuance evidence
+        DONDURULMUŞ KANITI AÇ →
       </button>
     </div>
+
     <details class="wc5-pro-details">
-      <summary>PRO · exact lineage / domain detail</summary>
+      <summary>TEKNİK · exact kimlik ve alan ayrıntısı</summary>
       <div class="truth-table">
-        <div class="truth-row"><span>FORECAST</span><strong>${escapeHtml(shortIdentity(proof.forecast_identity))}</strong></div>
-        <div class="truth-row"><span>DECISION PROOF</span><strong>${escapeHtml(shortIdentity(proof.proof_identity))}</strong></div>
-        <div class="truth-row"><span>WC2 ACTION STATUS</span><strong>${escapeHtml(actionSnapshot?.status || "INSUFFICIENT_EVIDENCE")}</strong></div>
-        <div class="truth-row"><span>WC2 INTENT</span><strong>${escapeHtml(shortIdentity(actionSnapshot?.intent_link_identity))}</strong></div>
-        <div class="truth-row"><span>VAULT</span><strong>${escapeHtml(actionSnapshot?.vault_id || "KULLANILAMIYOR")}</strong></div>
-        <div class="truth-row"><span>SUPPORT / CONTRADICT</span><strong>${escapeHtml(proof.evidence_summary?.support_count ?? 0)} / ${escapeHtml(proof.evidence_summary?.contradict_count ?? 0)}</strong></div>
+        <div class="truth-row"><span>ÖNGÖRÜ</span><strong>${escapeHtml(shortIdentity(proof.forecast_identity))}</strong></div>
+        <div class="truth-row"><span>KARAR KANITI</span><strong>${escapeHtml(shortIdentity(proof.proof_identity))}</strong></div>
+        <div class="truth-row"><span>WC2 EYLEM DURUMU</span><strong>${escapeHtml(actionSnapshot?.status || "INSUFFICIENT_EVIDENCE")}</strong></div>
+        <div class="truth-row"><span>WC2 NİYETİ</span><strong>${escapeHtml(shortIdentity(actionSnapshot?.intent_link_identity))}</strong></div>
+        <div class="truth-row"><span>KASA</span><strong>${escapeHtml(actionSnapshot?.vault_id || "MEVCUT DEĞİL")}</strong></div>
+        <div class="truth-row"><span>DESTEK / KARŞIT</span><strong>${escapeHtml(proof.evidence_summary?.support_count ?? 0)} / ${escapeHtml(proof.evidence_summary?.contradict_count ?? 0)}</strong></div>
       </div>
-      <p>Primary line selection is deterministic canonical evidence-domain order for presentation only; it is not a learned importance ranking.</p>
+      <p>Öncelik sırası öğrenilmiş bir önem puanı değildir; kanonik kanıt alanlarının deterministik sunum sırasıdır.</p>
     </details>`;
 }
+
 
 function renderRadar() {
   const target = byId("criticalRadar");
@@ -834,8 +910,8 @@ function renderRadar() {
   if (!material.length) {
     target.className = "radar-list empty-state";
     target.innerHTML =
-      "<strong>Şu anda bu endpointten material radar state gelmiyor.</strong>" +
-      "<p>Bu, piyasanın risksiz olduğu anlamına gelmez; yalnız bu evidence yüzeyinde material WATCH/ACTIVE yok.</p>";
+      "<strong>Şu anda kritik radar uyarısı yok.</strong>" +
+      "<p>Bu, piyasanın risksiz olduğu anlamına gelmez; yalnızca bu kanıt yüzeyinde İZLEMEDE veya AKTİF durum yok.</p>";
     return;
   }
 
@@ -845,17 +921,17 @@ function renderRadar() {
     return `
       <button class="evidence-trigger" type="button"
         data-evidence-id="${escapeHtml(latest.signal_freeze_identity)}"
-        aria-label="${escapeHtml(latest.symbol || item.symbol)} critical radar evidence aç">
+        aria-label="${escapeHtml(latest.symbol || item.symbol)} kritik radar kanıtını aç">
         <article class="radar-item">
           <div class="radar-item-head">
             <strong>${escapeHtml(latest.symbol || item.symbol)} · ${escapeHtml(latest.timeframe || item.timeframe)}</strong>
-            <span class="${stateClass(latest.state)}">${escapeHtml(upper(latest.state))}</span>
+            <span class="${stateClass(latest.state)}">${escapeHtml(trState(latest.state))}</span>
           </div>
           <div class="radar-item-meta">
-            <span>${escapeHtml(upper(latest.direction))}</span>
-            <span>${escapeHtml(latest.setup_type || "setup unavailable")}</span>
+            <span>${escapeHtml(trDirection(latest.direction))}</span>
+            <span>${escapeHtml(latest.setup_type || "kurulum bilgisi yok")}</span>
             <code>${escapeHtml(shortIdentity(latest.signal_freeze_identity))}</code>
-            <span class="evidence-open-cue">Proof →</span>
+            <span class="evidence-open-cue">Kanıtı aç →</span>
           </div>
         </article>
       </button>`;
