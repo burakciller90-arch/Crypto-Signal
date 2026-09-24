@@ -107,7 +107,29 @@ Add real calendar/news runtime persistence before replacing EVENT SOURCE RUNTIME
 - Event Source is exposed only if exact runtime evidence exists;
 - outage/restart drills preserve immutable evidence and deterministic recovery.
 
+## Accepted closure evidence — 2026-09-24
+
+**WC1 status: ACCEPTED / ENGINEERING CLOSED.**
+
+- Exact accepted main: `1af79d48c155de14fb51af2a3f87f39bbe7405da` (PR #1179).
+- PR #1179 exact-head restart-drill static acceptance passed focused safety, whole-repository regression and Development non-mutation before merge.
+- Issue #1182 / run 36053337362 deployed the exact merged target with read-only/no-order authority preserved.
+- Issue #1183 / run 36053838731 / job 107815787924 physically replaced the exact canonical Market Tape lock holder and proved:
+  - different PID;
+  - immutable `RESTART` instance with exact predecessor identity;
+  - Product-fresh persisted heartbeat without widening the <=30 s freshness rule;
+  - valid append-only gap chain (66 events / 36 gaps);
+  - read-only Market Tape Product Truth;
+  - `ONLINE_STATUS=NOT_ASSERTED`;
+  - `REAL_CAPITAL=0`.
+- Earlier WC1 slices retain their narrower truth boundaries: Event Source remains source-scoped persisted evidence rather than an invented global ONLINE claim; provider divergence remains provider-separated; Cold Archive verification remains bounded and integrity-based.
+- WC1 may be reopened only by new correctness evidence that falsifies this accepted closure, not to add unrelated scope.
+
 # WC2 — Untouched-Forward Paper Evidence Program
+
+**Engineering status: FROZEN / EVIDENCE ACCUMULATION ACTIVE. Scientific/economic status: OPEN.**
+
+The preregistered collection/execution contract is no longer a feature-expansion target. Correctness, safety, reproducibility and evidence-preservation fixes remain allowed, but the untouched-forward boundary, cohort membership and economic evidence rules must not move in response to observed outcomes.
 
 ## Goal
 
