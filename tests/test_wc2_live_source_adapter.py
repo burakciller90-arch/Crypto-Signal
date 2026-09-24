@@ -18,8 +18,6 @@ from crypto_signal.confluence.models import (
     NamedPrice,
     PriceZone,
 )
-from crypto_signal.ledger.bundle import build_decision_freeze_bundle
-
 from crypto_signal.decision_ledger import ImmutableDecisionEvidenceLedger
 from crypto_signal.evaluation.live_untouched_forward_operational import (
     WC2_MISSING_CONTEXT_POLICY_VERSION,
@@ -33,6 +31,7 @@ from crypto_signal.intelligence.event_risk_circuit_breaker import (
     CircuitBreakerState,
 )
 from crypto_signal.intelligence.meta_intelligence import MetaEvidenceState
+from crypto_signal.ledger.bundle import build_decision_freeze_bundle
 from crypto_signal.product.decision_proof import (
     ProofEvidenceAvailability,
     ProofEvidenceDomain,
@@ -73,18 +72,18 @@ def _directional_evidence(
         market_available_at_ms=as_of_ms - 2,
         observed_at_ms=as_of_ms - 1,
         entry_zone=(
-            PriceZone(Decimal("1000"), Decimal("1002"))
+            PriceZone(Decimal(1000), Decimal(1002))
             if geometry
             else None
         ),
-        invalidation_price=Decimal("990") if geometry else None,
+        invalidation_price=Decimal(990) if geometry else None,
         invalidation_trigger=(
             InvalidationTrigger.TOUCH_OR_CROSS if geometry else None
         ),
         targets=(
             (
-                NamedPrice("target_1", Decimal("1015")),
-                NamedPrice("target_2", Decimal("1025")),
+                NamedPrice("target_1", Decimal(1015)),
+                NamedPrice("target_2", Decimal(1025)),
             )
             if geometry
             else ()
