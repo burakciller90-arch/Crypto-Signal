@@ -82,12 +82,19 @@ def _matching_dashboard_pids(ps: str, dashboard_needle: str) -> list[int]:
         parsed = _parsed_process(line)
         if parsed is None:
             continue
-        pid, command_name, args = parsed
-        if not command_name.lower().startswith("python"):
+        pid, _command_name, args = parsed
+        argv = args.split()
+        if not argv:
             continue
-        if dashboard_needle not in args.split():
+        if not Path(argv[0]).name.lower().startswith("python"):
             continue
-        if "--port" not in args.split() or "48700" not in args.split():
+        if dashboard_needle not in argv:
+            continue
+        try:
+            port_index = argv.index("--port")
+        except ValueError:
+            continue
+        if port_index + 1 >= len(argv) or argv[port_index + 1] != "48700":
             continue
         result.append(pid)
     return result
