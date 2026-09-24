@@ -108,6 +108,7 @@ def _decision(
     common = {
         "event_identity": event,
         "execution_protocol_identity": protocol.protocol_identity,
+        "runtime_activation_identity": _runtime_activation().activation_identity,
         "execution_start_ms": 9_000,
         "source_exchanges": (Exchange.BINANCE.value, Exchange.BYBIT.value),
         "source_freeze_identities": freezes,
