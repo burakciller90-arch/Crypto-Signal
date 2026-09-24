@@ -1,13 +1,34 @@
 # CURRENT STATUS
 
-Updated: 2026-09-23
+Updated: 2026-09-24
 Project: Crypto Signal
 Baseline: crypto-signal-full-version-v1.0.0 (immutable)
 Active post-v1.0 program: v1.1 world-class product + market intelligence
-State: DATA_FRESHNESS_RECOVERED / R15_OPERATIONAL_ACCEPTANCE_CLOSED / CONTINUITY_PAUSED_BY_USER / PARALLEL_V1_1_DEVELOPMENT_ACTIVE
+State: WC2_FORWARD_COLLECTION_ACTIVE / PIT_REGIME_BOUND / OUTCOME_RESOLVER_ACTIVE / PAPER_EXECUTION_EVIDENCE_FRONTIER / CONTINUITY_PAUSED_BY_USER
 REAL_CAPITAL: 0
 
 ## Active v1.1 frontier — read before historical sections
+
+### 2026-09-24 16:58 +0300 — WC2 GENUINE FORWARD COLLECTION ACTIVE / PIT REGIME + OUTCOME RESOLVER ACCEPTED / ECONOMIC EXECUTION EVIDENCE IS FRONTIER
+
+- Current accepted main: `bd8193f935f4a2e25c0b60e782c43c5d61dc6980`.
+- PR **#1070** removed the hidden legacy live-clock owner and made the SSD supervisor the single WC2-aware forward collector. Exact-head hosted gates passed; R11 UID504 recovery/audit passed on merged main with legacy runtime paths absent and `REAL_CAPITAL=0`.
+- PR **#1072** bound the pre-existing deterministic PIT-safe regime engine to exact consumed candle evidence. New forecasts cannot silently use `NOT_MEASURED`; unresolved regime truth fails closed.
+- PR **#1075** added strictly read-only cohort-regime observability from ephemeral stable DB copies.
+- PR **#1078** added crash-safe operational LIVE_UNTOUCHED_FORWARD outcome resolution. Pending outcomes are not persisted; closed outcomes append immutable OutcomeEvaluation -> R20 resolution -> WC2 cohort resolution. The resolver performs no network fetch and no historical backfill.
+- Latest read-only UID504 state on exact merged main:
+  - Decision Evidence: `forecasts=2 proofs=2 resolutions=0 feed_events=2`.
+  - WC2 cohort: `forecasts=2 intents=2 executions=0 resolutions=0`.
+  - Regimes: `NOT_MEASURED:1, transition:1`.
+  - Latest measured forecast: `0b6a7f050ac3012b3ee18e370bd36a1d63c142503520e0dd27a867ef04d64c4f`, regime `transition`.
+  - source-byte stability PASS, read-only probe PASS, `REAL_CAPITAL=0`.
+- The sole `NOT_MEASURED` row predates PIT-regime binding. It is immutable historical evidence and must never be relabelled/backfilled.
+- Runtime outcome acceptance observed `scanned=2 pending=2 resolved_fresh=0 recovered=0 HISTORICAL_BACKFILL=NO REAL_CAPITAL=0`. No outcome was fabricated merely to make the resolver look active.
+- Transition-era `NO_PREPARED_RECEIPT` rows came from cutoffs frozen before the single-owner collector was installed. They remain explicit permanent gaps; forcing them green would violate the project constitution.
+- The current WC2 collection protocol remains explicitly `hold_cash_no_reviewed_sizing`. Therefore the genuine next implementation frontier is **preregistered paper execution / explicit cost evidence**, not retrospective conversion of existing HOLD_CASH forecasts.
+- WC2 is **not closed**. Evidence sufficiency still requires LIVE_UNTOUCHED_FORWARD decisive N>=300, BTC/ETH/SOL >=75 each, >=3 qualifying regimes with >=50 decisive each, >=120 calendar days, complete retention/lineage, and truthful economic evidence for every actual paper trade.
+- Cursor workers/Composer remain disabled. Continuity wake transport remains paused unless explicitly re-armed by the user. Safe direct GitHub development remains authorized. **REAL_CAPITAL=0**.
+
 
 ### 2026-09-23 21:23 +0300 — R25 DECISION/CAPITAL/REPLAY RAIL ACCEPTED / OPERATIONAL TRUTH CLOSED / OLD CUTOVER SUPERSEDED
 
