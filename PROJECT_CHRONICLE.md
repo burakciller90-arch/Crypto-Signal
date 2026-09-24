@@ -1,6 +1,20 @@
 # PROJECT CHRONICLE
 
 
+## 2026-09-25 — WC7 evidence claims gain typed provenance and blocker-safe source classes
+
+After the fail-closed WC7 review contract was accepted, one remaining trust boundary was obvious: a review claim still carried a free-form note plus an evidence identity. That was sufficient for deterministic hashing, but not sufficient to prove that the identity belonged to the correct class of evidence.
+
+PR #1199 added `world_class_evidence_provenance.py`. It binds every WC7 claim to an allowed source class for that exact dimension and requires an exact nine-dimension provenance packet. Runtime reliability, WC2 forward/economic/drawdown evidence, calibration, WC4 regime research, fail-closed transparency, WC6 sandbox/testnet evidence and human usability can no longer substitute for one another.
+
+The blocker side is deliberately stricter. `MISSING`, `NOT_MEASURED` and `EXTERNAL_DEPENDENCY` use explicit blocker source kinds and cannot invent an artifact identity. Probability calibration `NOT_APPLICABLE` requires a dedicated no-probability-use boundary instead of a free-form assertion.
+
+The packet is still not a scoring engine. Human review remains required, `WC7_MACHINE_EDGE_VERDICT=NONE`, production authority remains false and REAL_CAPITAL=0. PR #1199 merged as `441dd9d5da20c4d5645d63f6975079992d2981f2`; exact-main UID504 run 36064416622 / job 107850699031 passed focused WC7, research, whole-repository and Development non-mutation acceptance.
+
+This hardening improves provenance quality but intentionally leaves the current WC7 conclusion unchanged: `INSUFFICIENT_EVIDENCE`.
+
+
+
 ## 2026-09-25 — WC7 review claims become source-typed without changing the insufficient-evidence conclusion
 
 The first WC7 slice made the final review fail closed, but its claims still accepted a status, hash and note without mechanically constraining which subsystem was allowed to support that dimension. PR #1199 added the missing provenance boundary.
