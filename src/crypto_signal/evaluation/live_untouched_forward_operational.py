@@ -10,8 +10,8 @@ from dataclasses import dataclass
 from decimal import Decimal
 
 from crypto_signal.decision_ledger import ImmutableDecisionEvidenceLedger
-from crypto_signal.forecast_stream import ForecastVersionRef
 from crypto_signal.exact_decision_composition import compose_exact_decision
+from crypto_signal.forecast_stream import ForecastVersionRef
 from crypto_signal.intelligence.confluence_matrix_v2 import (
     ConfluenceFamily,
     ConfluenceFamilyEvidence,
