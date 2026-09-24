@@ -75,7 +75,7 @@ class WC2ClockConfig:
     horizon_bars: int | None = None
 
     def __post_init__(self) -> None:
-        values = (
+        required_values = (
             self.policy_path,
             self.epoch2_path,
             self.collection_protocol_path,
@@ -84,25 +84,27 @@ class WC2ClockConfig:
             self.cohort_path,
             self.shadow_intent_path,
             self.shadow_cycle_path,
+        )
+        optional_legacy_values = (
             self.maximum_issuance_delay_ms,
             self.horizon_bars,
         )
         if not self.enabled:
-            if any(value is not None for value in values):
+            if any(
+                value is not None
+                for value in (*required_values, *optional_legacy_values)
+            ):
                 raise ValueError(
                     "WC2 clock options require explicit --wc2-enabled"
                 )
             return
-        if any(value is None for value in values):
+        if any(value is None for value in required_values):
             raise ValueError(
                 "enabled WC2 clock requires policy, Epoch2, collection-"
                 "protocol, prepared, decision, cohort, shadow-intent and "
                 "shadow-cycle inputs"
             )
-        if (
-            self.maximum_issuance_delay_ms is not None
-            or self.horizon_bars is not None
-        ):
+        if any(value is not None for value in optional_legacy_values):
             raise ValueError(
                 "WC2 issuance delay and horizon are immutable collection-"
                 "protocol values, not runtime CLI inputs"
