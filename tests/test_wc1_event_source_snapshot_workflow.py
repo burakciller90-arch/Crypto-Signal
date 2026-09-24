@@ -13,10 +13,9 @@ def _event_source_snapshot_block() -> str:
 def test_event_source_snapshot_is_explicitly_allowlisted() -> None:
     text = WORKFLOW.read_text(encoding="utf-8")
 
-    assert (
-        "status|eventsourcestate|eventsourcesnapshot|services|"
-        in text
-    )
+    assert "eventsourcestate" in text
+    assert "eventsourcesnapshot" in text
+    assert "blsprobe" in text
     block = _event_source_snapshot_block()
     assert (
         "steps.parse.outputs.command == 'eventsourcesnapshot'"
