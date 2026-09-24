@@ -365,3 +365,32 @@ def test_event_source_product_reader_does_not_create_sqlite_sidecars(
     assert path.read_bytes() == before
     assert not wal.exists()
     assert not shm.exists()
+
+
+def test_event_source_product_reader_preserves_existing_empty_sidecars(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / "event_source.sqlite3"
+    _seed_successes(path)
+    wal = Path(f"{path}-wal")
+    shm = Path(f"{path}-shm")
+    wal.write_bytes(b"")
+    shm.write_bytes(b"existing-shm-evidence")
+    before = {
+        item.name: item.read_bytes()
+        for item in tmp_path.iterdir()
+        if item.is_file()
+    }
+
+    snapshot = read_event_source_runtime_truth(
+        path,
+        observed_at_ms=1_000,
+    )
+
+    after = {
+        item.name: item.read_bytes()
+        for item in tmp_path.iterdir()
+        if item.is_file()
+    }
+    assert snapshot.read_only_verified is True
+    assert after == before
