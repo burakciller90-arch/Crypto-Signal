@@ -11,6 +11,9 @@ from crypto_signal.decision_ledger import (
     DecisionLedgerWriteDisposition,
     ImmutableDecisionEvidenceLedger,
 )
+from crypto_signal.evaluation.untouched_forward_collection_protocol import (
+    build_wc2_collection_protocol,
+)
 from crypto_signal.evaluation.untouched_forward_journal import (
     WC2CohortAppendDisposition,
     WC2CohortJournal,
@@ -40,6 +43,24 @@ class FailingShadowIntentJournal(R25ShadowIntentJournal):
         raise RuntimeError("forced shadow intent crash")
 
 
+def _protocol(bundle, policy, activation, *, start_ms: int | None = None):
+    collection_start = (
+        max(
+            bundle.signal_decision.as_of_ms,
+            policy.collection_start_ms,
+            activation.activated_at_ms,
+        )
+        if start_ms is None
+        else start_ms
+    )
+    return build_wc2_collection_protocol(
+        review_policy=policy,
+        activation=activation,
+        preregistered_at_ms=collection_start - 1,
+        collection_start_ms=collection_start,
+    )
+
+
 def _inputs(tmp_path: Path):
     bundle = directional_bundle()
     signal = bundle.signal_decision
@@ -48,17 +69,17 @@ def _inputs(tmp_path: Path):
         collection_start_ms=signal.as_of_ms - 1_000,
     )
     activation = _activation()
+    protocol = _protocol(bundle, policy, activation)
     frozen_at = signal.as_of_ms + 10
     issued_at = frozen_at + 10
     receipt = build_wc2_prepared_cycle_receipt(
         bundle,
         policy=policy,
         activation=activation,
+        protocol=protocol,
         sizing_policy=_policy(),
         source_frozen_at_ms=frozen_at,
         issued_at_ms=issued_at,
-        maximum_issuance_delay_ms=100,
-        horizon_bars=4,
         base_asset="BTC",
         capital_assessed_at_ms=issued_at + 1,
         sized_at_ms=issued_at + 2,
@@ -69,7 +90,7 @@ def _inputs(tmp_path: Path):
         tmp_path / "cycle.wc2-prepared.sqlite3"
     )
     assert prepared.append(receipt) is True
-    return receipt, policy, activation, prepared
+    return receipt, policy, activation, protocol, prepared
 
 
 def _runtime_paths(tmp_path: Path):
@@ -84,7 +105,7 @@ def _runtime_paths(tmp_path: Path):
 def test_prepared_receipt_round_trips_before_any_r20_write(
     tmp_path: Path,
 ) -> None:
-    receipt, _, _, prepared = _inputs(tmp_path)
+    receipt, _, _, _, prepared = _inputs(tmp_path)
     decision, cohort, shadow, manifest = _runtime_paths(tmp_path)
 
     assert prepared.verify_read_only() == 1
@@ -102,7 +123,7 @@ def test_prepared_receipt_round_trips_before_any_r20_write(
 def test_prepared_cycle_completes_forecast_and_required_hold_cash_intent(
     tmp_path: Path,
 ) -> None:
-    receipt, policy, activation, _ = _inputs(tmp_path)
+    receipt, policy, activation, protocol, _ = _inputs(tmp_path)
     decision_path, cohort_path, shadow_path, manifest_path = _runtime_paths(
         tmp_path
     )
@@ -113,6 +134,7 @@ def test_prepared_cycle_completes_forecast_and_required_hold_cash_intent(
         receipt,
         policy=policy,
         activation=activation,
+        protocol=protocol,
         decision_ledger=decision,
         cohort_journal=cohort,
         shadow_journal=R25ShadowIntentJournal(shadow_path),
@@ -144,17 +166,17 @@ def test_prepared_cycle_round_trips_and_completes_without_sizing_policy(
         collection_start_ms=signal.as_of_ms - 1_000,
     )
     activation = _activation()
+    protocol = _protocol(bundle, policy, activation)
     frozen_at = signal.as_of_ms + 10
     issued_at = frozen_at + 10
     receipt = build_wc2_prepared_cycle_receipt(
         bundle,
         policy=policy,
         activation=activation,
+        protocol=protocol,
         sizing_policy=None,
         source_frozen_at_ms=frozen_at,
         issued_at_ms=issued_at,
-        maximum_issuance_delay_ms=100,
-        horizon_bars=4,
         base_asset="BTC",
         capital_assessed_at_ms=issued_at + 1,
         sized_at_ms=issued_at + 2,
@@ -177,6 +199,7 @@ def test_prepared_cycle_round_trips_and_completes_without_sizing_policy(
         replayed,
         policy=policy,
         activation=activation,
+        protocol=protocol,
         decision_ledger=ImmutableDecisionEvidenceLedger(decision_path),
         cohort_journal=WC2CohortJournal(cohort_path),
         shadow_journal=R25ShadowIntentJournal(shadow_path),
@@ -196,7 +219,7 @@ def test_prepared_cycle_round_trips_and_completes_without_sizing_policy(
 def test_prepared_cycle_exact_replay_is_fully_idempotent(
     tmp_path: Path,
 ) -> None:
-    receipt, policy, activation, _ = _inputs(tmp_path)
+    receipt, policy, activation, protocol, _ = _inputs(tmp_path)
     decision_path, cohort_path, shadow_path, manifest_path = _runtime_paths(
         tmp_path
     )
@@ -205,6 +228,7 @@ def test_prepared_cycle_exact_replay_is_fully_idempotent(
     kwargs = {
         "policy": policy,
         "activation": activation,
+        "protocol": protocol,
         "decision_ledger": decision,
         "cohort_journal": cohort,
         "shadow_journal": R25ShadowIntentJournal(shadow_path),
@@ -233,7 +257,7 @@ def test_prepared_cycle_exact_replay_is_fully_idempotent(
 def test_crash_after_r20_before_cohort_recovers_from_receipt(
     tmp_path: Path,
 ) -> None:
-    receipt, policy, activation, prepared = _inputs(tmp_path)
+    receipt, policy, activation, protocol, prepared = _inputs(tmp_path)
     decision_path, cohort_path, shadow_path, manifest_path = _runtime_paths(
         tmp_path
     )
@@ -260,6 +284,7 @@ def test_crash_after_r20_before_cohort_recovers_from_receipt(
         receipt,
         policy=policy,
         activation=activation,
+        protocol=protocol,
         decision_ledger=decision,
         cohort_journal=WC2CohortJournal(cohort_path),
         shadow_journal=R25ShadowIntentJournal(shadow_path),
@@ -279,7 +304,7 @@ def test_crash_after_r20_before_cohort_recovers_from_receipt(
 def test_crash_after_cohort_before_shadow_intent_recovers_from_receipt(
     tmp_path: Path,
 ) -> None:
-    receipt, policy, activation, prepared = _inputs(tmp_path)
+    receipt, policy, activation, protocol, prepared = _inputs(tmp_path)
     decision_path, cohort_path, shadow_path, manifest_path = _runtime_paths(
         tmp_path
     )
@@ -309,6 +334,7 @@ def test_crash_after_cohort_before_shadow_intent_recovers_from_receipt(
         receipt,
         policy=policy,
         activation=activation,
+        protocol=protocol,
         decision_ledger=decision,
         cohort_journal=cohort,
         shadow_journal=R25ShadowIntentJournal(shadow_path),
@@ -333,11 +359,20 @@ def test_receipt_refuses_source_before_preregistered_collection(
         collection_start_ms=signal.as_of_ms + 10_000,
     )
 
-    with pytest.raises(ValueError, match="predates collection start"):
+    activation = _activation()
+    protocol = _protocol(
+        bundle,
+        policy,
+        activation,
+        start_ms=policy.collection_start_ms,
+    )
+
+    with pytest.raises(ValueError, match="predates protocol collection"):
         build_wc2_prepared_cycle_receipt(
             bundle,
             policy=policy,
-            activation=_activation(),
+            activation=activation,
+            protocol=protocol,
             sizing_policy=_policy(),
             source_frozen_at_ms=signal.as_of_ms + 10,
             issued_at_ms=signal.as_of_ms + 20,
