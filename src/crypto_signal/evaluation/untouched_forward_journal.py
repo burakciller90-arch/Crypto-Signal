@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import sqlite3
 from contextlib import closing
 from dataclasses import dataclass
@@ -749,6 +750,37 @@ class WC2CohortJournal:
             ).fetchone()
         return None if row is None else str(row[0])
 
+    def read_unresolved_forecasts(
+        self,
+        *,
+        limit: int = 1000,
+    ) -> tuple[WC2CohortForecast, ...]:
+        """Read oldest unresolved cohort forecasts from the append-only journal."""
+        if limit <= 0 or limit > 10000:
+            raise ValueError("WC2 unresolved forecast limit must be inside [1,10000]")
+        if not self.path.is_file():
+            return ()
+        uri = f"{self.path.resolve().as_uri()}?mode=ro"
+        with closing(sqlite3.connect(uri, uri=True)) as db:
+            db.execute("PRAGMA query_only=ON")
+            db.execute("PRAGMA foreign_keys=ON")
+            rows = db.execute(
+                f"""
+                SELECT f.cohort_forecast_identity, f.payload_json
+                FROM {_FORECAST_TABLE} AS f
+                LEFT JOIN {_RESOLUTION_TABLE} AS r
+                  ON r.cohort_forecast_identity = f.cohort_forecast_identity
+                WHERE r.resolution_link_identity IS NULL
+                ORDER BY f.issued_at_ms ASC, f.sequence_id ASC
+                LIMIT ?
+                """,
+                (limit,),
+            ).fetchall()
+        return tuple(
+            _decode_forecast(str(row[0]), str(row[1]))
+            for row in rows
+        )
+
     def append_intent(
         self,
         record: WC2CohortIntent,
@@ -983,6 +1015,41 @@ class WC2CohortJournal:
             quick_check_ok=True,
             read_only_verified=True,
         )
+
+
+def _decode_forecast(
+    cohort_forecast_identity: str,
+    payload_json: str,
+) -> WC2CohortForecast:
+    raw = json.loads(payload_json)
+    if not isinstance(raw, dict):
+        raise TypeError("WC2 cohort forecast payload must be object")
+    record = WC2CohortForecast(
+        cohort_forecast_identity=cohort_forecast_identity,
+        policy_identity=str(raw["policy_identity"]),
+        forecast_identity=str(raw["forecast_identity"]),
+        proof_identity=str(raw["proof_identity"]),
+        signal_freeze_identity=str(raw["signal_freeze_identity"]),
+        confluence_identity=str(raw["confluence_identity"]),
+        event_context_identity=str(raw["event_context_identity"]),
+        asset=str(raw["asset"]),
+        symbol=str(raw["symbol"]),
+        timeframe=str(raw["timeframe"]),
+        regime=str(raw["regime"]),
+        issued_at_ms=int(raw["issued_at_ms"]),
+        indexed_at_ms=int(raw["indexed_at_ms"]),
+        source_evidence_identities=tuple(
+            str(item) for item in raw["source_evidence_identities"]
+        ),
+        evidence_class=EvidenceClass(str(raw["evidence_class"])),
+        schema_version=str(raw["schema_version"]),
+        engine_version=str(raw["engine_version"]),
+        production_authority=bool(raw["production_authority"]),
+        real_capital=int(raw["real_capital"]),
+    )
+    if canonical_json(_forecast_payload(record)) != payload_json:
+        raise ValueError("WC2 cohort forecast persisted payload mismatch")
+    return record
 
 
 def _forecast_payload(record: WC2CohortForecast) -> dict[str, object]:
