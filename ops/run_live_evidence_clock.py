@@ -22,6 +22,10 @@ from crypto_signal.data.provider_divergence import (
 )
 from crypto_signal.data.store import CandleStore
 from crypto_signal.decision_ledger import ImmutableDecisionEvidenceLedger
+from crypto_signal.evaluation.untouched_forward_collection_protocol import (
+    WC2CollectionProtocol,
+    WC2CollectionProtocolStore,
+)
 from crypto_signal.evaluation.untouched_forward_journal import WC2CohortJournal
 from crypto_signal.evaluation.untouched_forward_policy import (
     WC2PolicyStore,
@@ -61,6 +65,7 @@ class WC2ClockConfig:
     enabled: bool = False
     policy_path: Path | None = None
     epoch2_path: Path | None = None
+    collection_protocol_path: Path | None = None
     prepared_path: Path | None = None
     decision_evidence_path: Path | None = None
     cohort_path: Path | None = None
@@ -73,6 +78,7 @@ class WC2ClockConfig:
         values = (
             self.policy_path,
             self.epoch2_path,
+            self.collection_protocol_path,
             self.prepared_path,
             self.decision_evidence_path,
             self.cohort_path,
@@ -89,16 +95,18 @@ class WC2ClockConfig:
             return
         if any(value is None for value in values):
             raise ValueError(
-                "enabled WC2 clock requires policy, Epoch2, prepared, "
-                "decision, cohort, shadow-intent, shadow-cycle, "
-                "issuance-delay and horizon inputs"
+                "enabled WC2 clock requires policy, Epoch2, collection-"
+                "protocol, prepared, decision, cohort, shadow-intent and "
+                "shadow-cycle inputs"
             )
-        assert self.maximum_issuance_delay_ms is not None
-        assert self.horizon_bars is not None
-        if self.maximum_issuance_delay_ms <= 0:
-            raise ValueError("WC2 clock issuance delay must be positive")
-        if self.horizon_bars <= 0:
-            raise ValueError("WC2 clock horizon bars must be positive")
+        if (
+            self.maximum_issuance_delay_ms is not None
+            or self.horizon_bars is not None
+        ):
+            raise ValueError(
+                "WC2 issuance delay and horizon are immutable collection-"
+                "protocol values, not runtime CLI inputs"
+            )
 
 
 def parse_args() -> argparse.Namespace:
@@ -131,6 +139,11 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--wc2-policy", type=Path, default=None)
     parser.add_argument("--wc2-epoch2", type=Path, default=None)
+    parser.add_argument(
+        "--wc2-collection-protocol",
+        type=Path,
+        default=None,
+    )
     parser.add_argument("--wc2-prepared", type=Path, default=None)
     parser.add_argument("--wc2-decision-evidence", type=Path, default=None)
     parser.add_argument("--wc2-cohort", type=Path, default=None)
@@ -140,8 +153,14 @@ def parse_args() -> argparse.Namespace:
         "--wc2-maximum-issuance-delay-ms",
         type=int,
         default=None,
+        help="rejected when WC2 is enabled; collection protocol owns this",
     )
-    parser.add_argument("--wc2-horizon-bars", type=int, default=None)
+    parser.add_argument(
+        "--wc2-horizon-bars",
+        type=int,
+        default=None,
+        help="rejected when WC2 is enabled; collection protocol owns this",
+    )
     return parser.parse_args()
 
 
@@ -150,6 +169,7 @@ def build_wc2_clock_config(args: argparse.Namespace) -> WC2ClockConfig:
         enabled=bool(args.wc2_enabled),
         policy_path=args.wc2_policy,
         epoch2_path=args.wc2_epoch2,
+        collection_protocol_path=args.wc2_collection_protocol,
         prepared_path=args.wc2_prepared,
         decision_evidence_path=args.wc2_decision_evidence,
         cohort_path=args.wc2_cohort,
@@ -162,11 +182,16 @@ def build_wc2_clock_config(args: argparse.Namespace) -> WC2ClockConfig:
 
 def load_wc2_prerequisites(
     config: WC2ClockConfig,
-) -> tuple[WC2UntouchedForwardPolicy, Epoch2ActivationRecord] | None:
+) -> tuple[
+    WC2UntouchedForwardPolicy,
+    Epoch2ActivationRecord,
+    WC2CollectionProtocol,
+] | None:
     if not config.enabled:
         return None
     assert config.policy_path is not None
     assert config.epoch2_path is not None
+    assert config.collection_protocol_path is not None
     policy = WC2PolicyStore(config.policy_path).latest()
     if policy is None:
         raise ValueError("WC2 clock enabled but preregistered policy is missing")
@@ -175,7 +200,21 @@ def load_wc2_prerequisites(
         raise ValueError(
             "WC2 clock enabled but canonical Epoch2 activation is missing"
         )
-    return policy, epoch2.activation
+    protocol = WC2CollectionProtocolStore(
+        config.collection_protocol_path
+    ).latest()
+    if protocol is None:
+        raise ValueError(
+            "WC2 clock enabled but collection protocol is missing"
+        )
+    if protocol.review_policy_identity != policy.policy_identity:
+        raise ValueError("WC2 collection protocol/review policy mismatch")
+    if (
+        protocol.epoch2_activation_identity
+        != epoch2.activation.activation_identity
+    ):
+        raise ValueError("WC2 collection protocol/Epoch2 mismatch")
+    return policy, epoch2.activation, protocol
 
 
 def wc2_base_asset(symbol: str) -> str:
@@ -185,6 +224,17 @@ def wc2_base_asset(symbol: str) -> str:
     if not asset or asset != asset.upper():
         raise ValueError("WC2 live clock base asset must be uppercase")
     return asset
+
+
+def validate_wc2_collection_plan(
+    protocol: WC2CollectionProtocol,
+    plan: LiveCoveragePlan,
+) -> None:
+    if protocol.coverage_plan_version != plan.version:
+        raise ValueError("WC2 collection protocol/live plan version mismatch")
+    identities = tuple(sorted(context.identity for context in plan.enabled_contexts))
+    if protocol.coverage_context_identities != identities:
+        raise ValueError("WC2 collection protocol/live contexts mismatch")
 
 
 def provider_divergence_symbols(
@@ -242,18 +292,21 @@ async def run(
     candle_store = CandleStore(candle_cache_path)
     failures = 0
     selected_wc2 = wc2_config or WC2ClockConfig()
+    selected_plan = LiveCoveragePlan.current_pilot() if plan is None else plan
     try:
         prerequisites = load_wc2_prerequisites(selected_wc2)
         if prerequisites is None:
             wc2_policy = None
             wc2_activation = None
+            wc2_protocol = None
             wc2_prepared = None
             wc2_decision = None
             wc2_cohort = None
             wc2_shadow_intent = None
             wc2_shadow_cycle = None
         else:
-            wc2_policy, wc2_activation = prerequisites
+            wc2_policy, wc2_activation, wc2_protocol = prerequisites
+            validate_wc2_collection_plan(wc2_protocol, selected_plan)
             wc2_prepared = WC2PreparedCycleJournal(
                 _required_path(selected_wc2.prepared_path, "WC2 prepared")
             )
@@ -286,7 +339,6 @@ async def run(
             flush=True,
         )
         return 1
-    selected_plan = LiveCoveragePlan.current_pilot() if plan is None else plan
     adapters: dict[Exchange, MarketDataAdapter] = {
         Exchange.BYBIT: BybitSpotAdapter(),
         Exchange.BINANCE: BinanceSpotAdapter(),
@@ -334,13 +386,12 @@ async def run(
         if selected_wc2.enabled:
             assert wc2_policy is not None
             assert wc2_activation is not None
+            assert wc2_protocol is not None
             assert wc2_prepared is not None
             assert wc2_decision is not None
             assert wc2_cohort is not None
             assert wc2_shadow_intent is not None
             assert wc2_shadow_cycle is not None
-            assert selected_wc2.maximum_issuance_delay_ms is not None
-            assert selected_wc2.horizon_bars is not None
             try:
                 wc2_result = process_wc2_prepared_live_freeze(
                     result,
@@ -355,10 +406,13 @@ async def run(
                     shadow_manifest=wc2_shadow_cycle,
                     observed_at_ms=time.time_ns() // 1_000_000,
                     maximum_issuance_delay_ms=(
-                        selected_wc2.maximum_issuance_delay_ms
+                        wc2_protocol.maximum_issuance_delay_ms
                     ),
-                    horizon_bars=selected_wc2.horizon_bars,
+                    horizon_bars=wc2_protocol.horizon_bars_for(
+                        context.timeframe
+                    ),
                     base_asset=wc2_base_asset(context.symbol),
+                    collection_start_ms=wc2_protocol.collection_start_ms,
                 )
             except (OSError, TypeError, ValueError, sqlite3.Error) as exc:
                 print(
@@ -379,6 +433,8 @@ async def run(
                 f"forecast={wc2_result.forecast_identity or '-'} "
                 f"cohort={wc2_result.cohort_forecast_identity or '-'} "
                 f"intent={wc2_result.paper_intent_identity or '-'} "
+                f"protocol={wc2_protocol.protocol_identity} "
+                f"collection_start_ms={wc2_protocol.collection_start_ms} "
                 "HISTORICAL_FORECAST_BACKFILL=NO REAL_CAPITAL=0",
                 flush=True,
             )
