@@ -383,13 +383,24 @@ Accepted paper/lab rails:
 - PR #1193 exact-main UID504 run **36060806366 / job 107839002389** passed focused WC6, full paper, whole-repository and Development non-mutation acceptance.
 - All accepted WC6 slices retain no network, credential, live-order or production authority and `REAL_CAPITAL=0`.
 
-Remaining exit blockers:
-- no sandbox/testnet venue adapter is implemented;
-- no real sandbox/testnet order acknowledgement/fill evidence exists;
-- therefore no sandbox/testnet execution dossier can yet satisfy the WC6 exit gate.
-- Missing venue evidence must remain missing. Lab simulation must not be relabelled as sandbox/testnet acceptance.
+Accepted sandbox-boundary rail:
+- PR **#1195** adds a fail-closed sandbox/testnet contract over the accepted shadow lifecycle.
+- It deterministically prepares an immutable future order request with exact processed-event/pretrade/snapshot/fill/mutation lineage plus idempotency and client-order identities.
+- The only accepted v1 adapter state is `NOT_CONFIGURED` / `SANDBOX_TESTNET_ONLY`.
+- While unconfigured, endpoint, credential-reference and transport-reference fields must remain absent; dispatch is `BLOCKED_NOT_CONFIGURED`; dispatch is not attempted; venue acknowledgement/fill evidence remains absent.
+- Dispatch readiness fails closed with `WC6_SANDBOX_NOT_CONFIGURED`.
+- PR #1195 exact-head UID504 run **36062491109 / job 107844484263** passed focused WC6, full paper-subsystem, whole-repository and Development non-mutation acceptance.
+- After merge as `cde9006f0b344c037ff093e66605d40e26ae242b`, exact-main push run **36062672930 / job 107845073963** independently passed the same gate.
+- No network, credential-loaded, live-order or production authority was introduced; `REAL_CAPITAL=0`.
 
-The next safe engineering step is a fail-closed sandbox-adapter contract that can represent `NOT_CONFIGURED` without embedding credentials or network authority. Actual sandbox/testnet execution remains contingent on a safely supported venue/environment and explicit non-production credentials.
+Remaining exit blocker:
+- the adapter boundary exists, but it is intentionally **NOT_CONFIGURED**;
+- no safely supported external sandbox/testnet transport plus explicit non-production credential configuration has been accepted;
+- no real venue acknowledgement/fill/recovery evidence exists;
+- therefore the WC6 sandbox/testnet execution dossier required by the exit gate remains open.
+- Missing venue evidence must remain missing. Prepared requests and lab simulations must not be relabelled as sandbox/testnet acceptance.
+
+The next WC6 step is now an **external dependency**, not a reason to invent more local venue evidence. Safe parallel engineering may proceed on WC7 evidence-review infrastructure only if missing WC2/WC6/usability evidence forces `INSUFFICIENT_EVIDENCE` rather than a positive edge/world-class conclusion.
 
 # WC7 — World-Class Evidence Review
 

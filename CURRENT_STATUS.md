@@ -4,10 +4,47 @@ Updated: 2026-09-25
 Project: Crypto Signal
 Baseline: crypto-signal-full-version-v1.0.0 (immutable)
 Active post-v1.0 program: v1.1 world-class product + market intelligence
-State: WC0_LIVE_PRODUCT_PARITY_ACCEPTED / WC1_24_7_DATA_RELIABILITY_ACCEPTED / WC2_ENGINEERING_FROZEN_EVIDENCE_ACCUMULATION_ACTIVE / WC4_CHAMPION_CHALLENGER_ENGINEERING_ACCEPTED_RESEARCH_ONLY / WC5_ENGINEERING_ACCEPTED_PRODUCT_DEPLOYED_HUMAN_USABILITY_NOT_MEASURED / WC6_PAPER_EXECUTION_LAB_CORE_ACCEPTED_SANDBOX_OPEN / CONTINUITY_PAUSED_BY_USER
+State: WC0_LIVE_PRODUCT_PARITY_ACCEPTED / WC1_24_7_DATA_RELIABILITY_ACCEPTED / WC2_ENGINEERING_FROZEN_EVIDENCE_ACCUMULATION_ACTIVE / WC4_CHAMPION_CHALLENGER_ENGINEERING_ACCEPTED_RESEARCH_ONLY / WC5_ENGINEERING_ACCEPTED_PRODUCT_DEPLOYED_HUMAN_USABILITY_NOT_MEASURED / WC6_SANDBOX_BOUNDARY_ACCEPTED_VENUE_EVIDENCE_EXTERNAL_DEPENDENCY / CONTINUITY_PAUSED_BY_USER
 REAL_CAPITAL: 0
 
 ## Active v1.1 frontier — read before historical sections
+
+
+### 2026-09-25 00:38 +0300 — WC6 SANDBOX BOUNDARY ACCEPTED / REAL VENUE EVIDENCE BLOCKED BY EXTERNAL DEPENDENCY
+
+This entry **supersedes the earlier 2026-09-25 00:21 frontier snapshot** while preserving it below as historical evidence.
+
+- Exact accepted main: `cde9006f0b344c037ff093e66605d40e26ae242b`.
+- PR **#1195** completed the next safe WC6 boundary without fabricating sandbox/testnet execution:
+  - one immutable future sandbox order request is projected from the already-accepted, fully reconciled WC6 shadow lifecycle;
+  - the request binds processed-event, pretrade, execution-snapshot, canonical fill/mutation and lab order identities;
+  - deterministic idempotency identity and client-order reference are fixed before any future transport exists;
+  - the only accepted adapter state is `NOT_CONFIGURED` targeting `SANDBOX_TESTNET_ONLY`;
+  - `NOT_CONFIGURED` forbids endpoint, credential-reference and transport-reference bindings;
+  - dispatch status is explicitly `BLOCKED_NOT_CONFIGURED`;
+  - `dispatch_attempted=false`;
+  - venue acknowledgement is `None` and venue fill identities are empty rather than simulated and relabelled;
+  - `require_wc6_sandbox_dispatch_ready()` fails closed with `WC6_SANDBOX_NOT_CONFIGURED`;
+  - network, credential-loaded, live-order and production authority remain false; `REAL_CAPITAL=0`.
+- PR #1195 exact-head UID504 run **36062491109 / job 107844484263** completed **SUCCESS** after the final import-only cleanup:
+  - exact source and clean Development passed;
+  - focused WC6 sandbox-boundary acceptance passed;
+  - full paper-subsystem regression passed;
+  - whole-repository regression passed;
+  - Development non-mutation passed.
+- PR #1195 merged as `cde9006f0b344c037ff093e66605d40e26ae242b`.
+- Exact-main push run **36062672930 / job 107845073963** independently completed **SUCCESS** with the same focused WC6, full-paper, whole-repository and Development non-mutation gates.
+- WC6 is therefore **engineering-ready up to the sandbox transport boundary but remains OPEN at the roadmap exit gate**.
+- The remaining WC6 blocker is intentionally external: a safely supported sandbox/testnet environment plus explicitly non-production credentials/transport and observable venue acknowledgement/fill/recovery evidence. The repository must not invent those facts.
+- No local simulation, shadow fill, prepared request or `NOT_CONFIGURED` boundary may be relabelled as real venue evidence.
+
+Current true frontier:
+- keep WC2 engineering-frozen and continue untouched-forward evidence accumulation;
+- keep WC3 scientific/economic conclusions blocked until evidence sufficiency exists;
+- preserve WC4 research-only/no-auto-promotion and WC5 human-usability `NOT_MEASURED` truth;
+- WC6 may remain parked at the accepted fail-closed boundary until safe external sandbox/testnet evidence becomes available;
+- safe parallel work may advance **WC7 evidence-review infrastructure only**, provided it fail-closes to `INSUFFICIENT_EVIDENCE` whenever required WC2/WC6/human-usability evidence is absent and never hardcodes a world-class/edge-positive outcome;
+- continuity remains paused and **REAL_CAPITAL=0**.
 
 
 ### 2026-09-25 00:21 +0300 — WC6 PAPER EXECUTION LAB CORE ACCEPTED / SANDBOX-TESTNET EVIDENCE STILL OPEN
