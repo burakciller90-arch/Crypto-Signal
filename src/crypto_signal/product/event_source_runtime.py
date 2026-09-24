@@ -217,18 +217,21 @@ def read_event_source_runtime_truth(
                 f.outcome,
                 f.payload_json
             FROM event_source_fetches AS f
-            WHERE f.sequence_id = (
+            WHERE f.fetched_at_ms <= ?
+              AND f.sequence_id = (
                 SELECT candidate.sequence_id
                 FROM event_source_fetches AS candidate
                 WHERE candidate.source_provider = f.source_provider
                   AND candidate.source_kind = f.source_kind
+                  AND candidate.fetched_at_ms <= ?
                 ORDER BY
                     candidate.fetched_at_ms DESC,
                     candidate.sequence_id DESC
                 LIMIT 1
-            )
+              )
             ORDER BY f.source_provider, f.source_kind
-            """
+            """,
+            (observed_at_ms, observed_at_ms),
         ).fetchall()
         latest_fetches = tuple(
             _provider_truth_from_row(
@@ -243,7 +246,9 @@ def read_event_source_runtime_truth(
             SELECT MAX(fetched_at_ms)
             FROM event_source_fetches
             WHERE outcome='success'
-            """
+              AND fetched_at_ms <= ?
+            """,
+            (observed_at_ms,),
         ).fetchone()
 
     latest_success = (
