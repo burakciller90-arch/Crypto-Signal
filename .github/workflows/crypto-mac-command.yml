@@ -383,8 +383,7 @@ jobs:
           PY
 
       - name: FRED CALENDAR PROBE
-        if: steps.parse.outputs.command == 'fredprobe' ||
-          steps.parse.outputs.command == 'wc2policyregister'
+        if: steps.parse.outputs.command == 'fredprobe'
         shell: bash
         run: |
           set -euo pipefail
