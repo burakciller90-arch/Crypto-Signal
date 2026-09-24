@@ -4,10 +4,47 @@ Updated: 2026-09-25
 Project: Crypto Signal
 Baseline: crypto-signal-full-version-v1.0.0 (immutable)
 Active post-v1.0 program: v1.1 world-class product + market intelligence
-State: WC0_LIVE_PRODUCT_PARITY_ACCEPTED / WC1_24_7_DATA_RELIABILITY_ACCEPTED / WC2_ENGINEERING_FROZEN_EVIDENCE_ACCUMULATION_ACTIVE / WC4_CHAMPION_CHALLENGER_ENGINEERING_ACCEPTED_RESEARCH_ONLY / WC5_ENGINEERING_ACCEPTED_PRODUCT_DEPLOYED_HUMAN_USABILITY_NOT_MEASURED / WC6_SANDBOX_BOUNDARY_ACCEPTED_VENUE_EVIDENCE_EXTERNAL_DEPENDENCY / WC7_REVIEW_INFRA_ACCEPTED_CURRENT_INSUFFICIENT_EVIDENCE / CONTINUITY_PAUSED_BY_USER
+State: WC0_LIVE_PRODUCT_PARITY_ACCEPTED / WC1_24_7_DATA_RELIABILITY_ACCEPTED / WC2_ENGINEERING_FROZEN_EVIDENCE_ACCUMULATION_ACTIVE / WC4_CHAMPION_CHALLENGER_ENGINEERING_ACCEPTED_RESEARCH_ONLY / WC5_ENGINEERING_ACCEPTED_PRODUCT_DEPLOYED_HUMAN_USABILITY_NOT_MEASURED / WC6_SANDBOX_BOUNDARY_ACCEPTED_VENUE_EVIDENCE_EXTERNAL_DEPENDENCY / WC7_REVIEW_INFRA_TYPED_PROVENANCE_ACCEPTED_CURRENT_INSUFFICIENT_EVIDENCE / CONTINUITY_PAUSED_BY_USER
 REAL_CAPITAL: 0
 
 ## Active v1.1 frontier — read before historical sections
+
+
+### 2026-09-25 00:56 +0300 — WC7 TYPED EVIDENCE PROVENANCE ACCEPTED / CONCLUSION STILL INSUFFICIENT_EVIDENCE
+
+This entry **supersedes the earlier 2026-09-25 00:49 frontier snapshot** while preserving it below as historical evidence.
+
+- Exact accepted main: `441dd9d5da20c4d5645d63f6975079992d2981f2`.
+- PR **#1199** hardened the accepted WC7 review contract without changing its verdict semantics:
+  - every review claim is now bound to an explicit typed evidence source or blocker boundary;
+  - production/runtime reliability may only use runtime-acceptance evidence;
+  - untouched-forward history may only use preregistered WC2 forward evidence;
+  - probability calibration may only use calibration evidence, while `NOT_APPLICABLE` requires an explicit no-probability-use boundary;
+  - cost-adjusted expectancy and controlled drawdown require their own WC2/WC3 economic evidence classes;
+  - regime robustness requires WC4 regime-research evidence;
+  - abstention/failure transparency requires fail-closed transparency evidence;
+  - capital/execution lineage requires a WC6 sandbox/testnet execution dossier rather than local paper/lab evidence;
+  - usability may only be satisfied by a human usability study.
+- `MISSING`, `NOT_MEASURED`, and `EXTERNAL_DEPENDENCY` claims are now blocker provenance and cannot carry invented artifact evidence.
+- A provenance packet must match the exact claim identity, status and artifact identity for all nine dimensions; source-kind substitution fails closed.
+- This slice does **not** fill any missing evidence. The accepted current review remains `INSUFFICIENT_EVIDENCE` with the same blockers: WC2 forward sufficiency, cost-adjusted expectancy, drawdown, durable regime evidence, external WC6 venue evidence and measured human usability.
+- PR #1199 exact-head UID504 run **36064310603 / job 107850349078** completed **SUCCESS**.
+- After merge, exact-main push run **36064416622 / job 107850699031** independently completed **SUCCESS** on `441dd9d5da20c4d5645d63f6975079992d2981f2`:
+  - `WC7_EXACT_SOURCE_PASS=YES`;
+  - `WC7_FOCUSED_PASS=YES`;
+  - `WC7_MACHINE_EDGE_VERDICT=NONE`;
+  - `WC7_RESEARCH_REGRESSION_PASS=YES`;
+  - `WC7_FULL_REGRESSION_PASS=YES`;
+  - `WC7_DEVELOPMENT_NON_MUTATING_PASS=YES`;
+  - `REAL_CAPITAL=0`.
+
+Current true frontier:
+- keep WC2 engineering-frozen and preserve genuine untouched-forward accumulation;
+- keep WC3 blocked until preregistered evidence sufficiency exists;
+- keep WC6 external venue evidence explicitly external/missing;
+- keep WC5 human usability `NOT_MEASURED`;
+- WC7 may next add **read-only adapters that instantiate the typed packet from canonical accepted subsystem artifacts**, but adapters must never convert a missing blocker into evidence and must never select an EDGE_* verdict;
+- continuity remains paused and **REAL_CAPITAL=0**.
 
 
 ### 2026-09-25 00:49 +0300 — WC7 FAIL-CLOSED REVIEW INFRA ACCEPTED / CURRENT CONCLUSION INSUFFICIENT_EVIDENCE
