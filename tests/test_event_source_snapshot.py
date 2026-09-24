@@ -16,7 +16,6 @@ from crypto_signal.data.event_source_runtime import (
 )
 from ops.run_event_source_snapshot import collect_event_source_cycle
 
-
 BLS_ICS = """BEGIN:VCALENDAR
 VERSION:2.0
 BEGIN:VEVENT
