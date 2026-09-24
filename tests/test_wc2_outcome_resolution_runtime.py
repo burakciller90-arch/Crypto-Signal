@@ -49,12 +49,12 @@ def _invalidating_candle(bundle) -> Candle:
     close_time = open_time + duration - 1
 
     if decision.direction is SignalDirection.BULLISH:
-        high = decision.geometry.entry_reference_price - Decimal("1")
-        low = decision.geometry.invalidation_price - Decimal("1")
+        high = decision.geometry.entry_reference_price - Decimal(1)
+        low = decision.geometry.invalidation_price - Decimal(1)
     else:
-        low = decision.geometry.entry_reference_price + Decimal("1")
-        high = decision.geometry.invalidation_price + Decimal("1")
-    close = (high + low) / Decimal("2")
+        low = decision.geometry.entry_reference_price + Decimal(1)
+        high = decision.geometry.invalidation_price + Decimal(1)
+    close = (high + low) / Decimal(2)
 
     return Candle(
         exchange=decision.exchange,
@@ -67,8 +67,8 @@ def _invalidating_candle(bundle) -> Candle:
         high=high,
         low=low,
         close=close,
-        volume=Decimal("1"),
-        quote_volume=Decimal("1000"),
+        volume=Decimal(1),
+        quote_volume=Decimal(1000),
         trade_count=None,
         is_closed=True,
         source=DataSource.REST,
@@ -153,7 +153,7 @@ def test_wc2_outcome_resolver_persists_terminal_live_outcome_and_resolution(
 def test_wc2_outcome_resolver_does_not_persist_pending_snapshot(
     tmp_path: Path,
 ) -> None:
-    bundle, signal_ledger, decision, cohort, cache, issuance = _fixture(tmp_path)
+    _, signal_ledger, decision, cohort, cache, issuance = _fixture(tmp_path)
 
     result = resolve_wc2_outcomes_once(
         signal_ledger=signal_ledger,
