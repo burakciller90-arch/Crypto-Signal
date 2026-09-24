@@ -17,7 +17,7 @@ for required in "$DEV" "$LIVE" "$PRODUCT" "$ALERTS" "$PAPER"; do
     exit 75
   fi
 done
-for required in   "$PRODUCT/.venv/bin/python"   "$PRODUCT/ops/run_dashboard.py"   "$LIVE/.venv/bin/python"   "$ALERTS/.venv/bin/python"   "$PAPER/.venv/bin/python"   "$WRAPPER"; do
+for required in   "$PRODUCT/.venv/bin/python"   "$PRODUCT/ops/run_dashboard.py"   "$DEV/.venv/bin/python"   "$DEV/ops/run_live_evidence_clock.py"   "$ALERTS/.venv/bin/python"   "$PAPER/.venv/bin/python"   "$WRAPPER"; do
   if [ ! -e "$required" ]; then
     echo "RUNTIME_REQUIRED_FILE_MISSING=$required" >&2
     exit 75
@@ -90,6 +90,49 @@ run_clock() {
   ) >>"$LOGDIR/$kind.out.log" 2>>"$LOGDIR/$kind.err.log" < /dev/null &
 }
 
+run_wc2_live_clock() {
+  local runtime="$DEV/runtime"
+  local py="$DEV/.venv/bin/python"
+  local runner="$DEV/ops/run_live_evidence_clock.py"
+  local ledger="$runtime/ledger/live_signal_ledger.sqlite3"
+  local candle="$runtime/data/live_base_15m_cache.sqlite3"
+  local divergence="$runtime/data/provider_divergence.sqlite3"
+  local policy="$runtime/wc2/wc2_forward_policy.sqlite3"
+  local epoch2="$runtime/paper/paper_fund_epoch2.sqlite3"
+  local protocol="$runtime/wc2/wc2_collection_protocol.wc2-collection-protocol.sqlite3"
+  local prepared="$runtime/wc2/wc2.wc2-prepared.sqlite3"
+  local decision="$runtime/decision/decision_evidence.sqlite3"
+  local cohort="$runtime/wc2/wc2_untouched_forward.sqlite3"
+  local shadow_intent="$runtime/wc2/wc2.shadow-intent.sqlite3"
+  local shadow_cycle="$runtime/wc2/wc2.shadow-cycle.sqlite3"
+
+  for required in "$py" "$runner" "$ledger" "$candle" "$policy" "$epoch2" "$protocol"; do
+    if [ ! -e "$required" ]; then
+      echo "$(date '+%Y-%m-%d %H:%M:%S %z') wc2_live_not_ready missing=$required FAIL_CLOSED=YES REAL_CAPITAL=0"
+      return 0
+    fi
+  done
+
+  (
+    unset RUNNER_TRACKING_ID
+    export PYTHONPATH="$DEV:$DEV/src"
+    cd "$DEV" || exit 75
+    exec "$py" "$runner" \
+      --db "$ledger" \
+      --candle-cache "$candle" \
+      --provider-divergence "$divergence" \
+      --wc2-enabled \
+      --wc2-policy "$policy" \
+      --wc2-epoch2 "$epoch2" \
+      --wc2-collection-protocol "$protocol" \
+      --wc2-prepared "$prepared" \
+      --wc2-decision-evidence "$decision" \
+      --wc2-cohort "$cohort" \
+      --wc2-shadow-intent "$shadow_intent" \
+      --wc2-shadow-cycle "$shadow_cycle"
+  ) >>"$LOGDIR/live.out.log" 2>>"$LOGDIR/live.err.log" < /dev/null &
+}
+
 bound_logs() {
   local helper="$DEV/ops/bound_runtime_logs.py"
   local python="$DEV/.venv/bin/python"
@@ -111,7 +154,7 @@ while true; do
   now="$(date +%s)"
 
   if [ $((now-last_clock)) -ge 120 ]; then
-    run_clock live "$LIVE/.venv/bin/python" "$LIVE/src"
+    run_wc2_live_clock
     run_clock alert "$ALERTS/.venv/bin/python" "$ALERTS/src"
     run_clock paper "$PAPER/.venv/bin/python" "$PAPER/src"
     run_clock dry "$PAPER/.venv/bin/python" "$PAPER/src"
