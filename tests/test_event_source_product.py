@@ -224,15 +224,15 @@ def test_event_source_product_reader_fails_closed_on_raw_tamper(
 
     with sqlite3.connect(path) as db:
         db.execute("DROP TRIGGER event_source_raw_payload_no_update")
+        row = db.execute(
+            "SELECT payload_sha256 FROM event_source_raw_payloads "
+            "ORDER BY payload_sha256 LIMIT 1"
+        ).fetchone()
+        assert row is not None
         db.execute(
             "UPDATE event_source_raw_payloads "
-            "SET payload_blob=? WHERE payload_sha256=("
-            "SELECT raw_payload_sha256 FROM ("
-            "SELECT json_extract(payload_json, '$.raw_payload_sha256') "
-            "AS raw_payload_sha256 FROM event_source_fetches "
-            "WHERE outcome='success' LIMIT 1"
-            "))",
-            (b"tampered-source",),
+            "SET payload_blob=? WHERE payload_sha256=?",
+            (b"tampered-source", str(row[0])),
         )
 
     with pytest.raises(ValueError, match="raw payload"):
