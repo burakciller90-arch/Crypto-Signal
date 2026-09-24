@@ -484,7 +484,7 @@ def _verify_coverage(
     categories = payload.get("categories")
     if not isinstance(categories, list):
         raise TypeError("event source coverage categories must be array")
-    result = tuple(sorted(set(str(value) for value in categories)))
+    result = tuple(sorted({str(value) for value in categories}))
     if not result:
         raise ValueError("event source coverage categories missing")
     return result
