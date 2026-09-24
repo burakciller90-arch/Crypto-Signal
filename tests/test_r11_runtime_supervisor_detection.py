@@ -21,22 +21,10 @@ def test_r11_acceptance_ignores_helper_process_with_supervisor_path(
     monkeypatch,
 ) -> None:
     root = Path("/Volumes/Crypto-504/Crypto-Signal")
-    ps = "\n".join(
-        (
-            "78361 1 crypto-signal-agent /bin/bash "
-            "/bin/bash /Volumes/Crypto-504/Crypto-Signal/ssd-service-supervisor.sh",
-            "81786 81780 crypto-signal-agent /usr/bin/awk "
-            "/usr/bin/awk -v needle "
-            "/Volumes/Crypto-504/Crypto-Signal/ssd-service-supervisor.sh",
-            "81826 78361 crypto-signal-agent Python "
-            "/Volumes/Crypto-504/Crypto-Signal/Product/.venv/bin/python "
-            "/Volumes/Crypto-504/Crypto-Signal/Product/ops/run_dashboard.py "
-            "--host 127.0.0.1 --port 48700",
-            "81900 1 crypto-signal-agent Runner.Listener "
-            "/Volumes/Crypto-504/Crypto-Signal/Runner/bin/Runner.Listener "
-            "run --startuptype service",
-        )
-    )
+    ps = """78361 1 crypto-signal-agent /bin/bash /bin/bash /Volumes/Crypto-504/Crypto-Signal/ssd-service-supervisor.sh
+81786 81780 crypto-signal-agent /usr/bin/awk /usr/bin/awk -v needle /Volumes/Crypto-504/Crypto-Signal/ssd-service-supervisor.sh
+81826 78361 crypto-signal-agent Python /Volumes/Crypto-504/Crypto-Signal/Product/.venv/bin/python /Volumes/Crypto-504/Crypto-Signal/Product/ops/run_dashboard.py --host 127.0.0.1 --port 48700
+81900 1 crypto-signal-agent Runner.Listener /Volumes/Crypto-504/Crypto-Signal/Runner/bin/Runner.Listener run --startuptype service"""
     monkeypatch.setattr(runtime_acceptance, "_ps_text", lambda: ps)
 
     topology = runtime_acceptance._assert_process_topology(root)
