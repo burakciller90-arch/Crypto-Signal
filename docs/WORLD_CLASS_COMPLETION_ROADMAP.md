@@ -481,6 +481,33 @@ A credible world-class claim would require, at minimum:
 - Exact-head run **36065071631** passed; after merge as `3d0283ab180255e5eca12955814985cab04c3548`, exact-main run **36065254385 / job 107853404508** passed focused/research/full-repository/non-mutation acceptance.
 - The current conclusion remains `INSUFFICIENT_EVIDENCE`; no EDGE_* verdict or production authority is introduced.
 
+### Canonical current-frontier packet — 2026-09-25
+
+- PR **#1203** composes one deterministic read-only WC7 packet across all nine review dimensions.
+- Accepted evidence remains source-typed:
+  - production/runtime reliability uses runtime acceptance only;
+  - abstention/failure transparency uses accepted fail-closed transparency only;
+  - probability calibration is `NOT_APPLICABLE` only through an explicit no-probability-use boundary.
+- Canonical subsystem blockers remain blockers:
+  - current WC2 insufficient readiness maps to missing untouched-forward history via its readiness boundary;
+  - WC6 NOT_CONFIGURED remains capital/execution `EXTERNAL_DEPENDENCY` via the accepted sandbox boundary.
+- Remaining absent evidence is represented by explicit semantic blocker identities rather than borrowed evidence hashes:
+  - cost-adjusted expectancy;
+  - controlled drawdown;
+  - durable regime robustness;
+  - measured human usability.
+- The accepted current blocker set is exactly:
+  - `CAPITAL_EXECUTION_LINEAGE`;
+  - `CONTROLLED_DRAWDOWN`;
+  - `COST_ADJUSTED_EXPECTANCY`;
+  - `REGIME_ROBUSTNESS`;
+  - `UNTOUCHED_FORWARD_HISTORY` while WC2 remains below sufficiency;
+  - `USABILITY_WITHOUT_HIDDEN_UNCERTAINTY`.
+- Exact-head run **36066162469 / job 107856301392** passed focused WC7, full research, whole-repository and Development non-mutation acceptance.
+- After merge as `84a66a34dd6096ff4b635305347cef1d6782d6b9`, exact-main run **36066300555 / job 107856745333** independently passed the same gate.
+- `WC7_MACHINE_EDGE_VERDICT=NONE`, no production authority and `REAL_CAPITAL=0` remain mandatory.
+- This packet makes the current evidence state reviewable and reproducible; it **does not** improve the evidence itself. The current conclusion remains `INSUFFICIENT_EVIDENCE`.
+
 ## Final boundary
 
 Real-money authority is not part of World-Class Completion.
