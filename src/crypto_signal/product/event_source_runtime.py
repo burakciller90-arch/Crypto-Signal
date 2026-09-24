@@ -192,7 +192,13 @@ def read_event_source_runtime_truth(
     if not path.is_file():
         raise ValueError("event source runtime database missing")
 
-    uri = f"{path.resolve().as_uri()}?mode=ro"
+    wal_path = Path(f"{path}-wal")
+    if wal_path.exists() and wal_path.stat().st_size > 0:
+        raise ValueError(
+            "event source runtime has uncheckpointed WAL evidence"
+        )
+
+    uri = f"{path.resolve().as_uri()}?mode=ro&immutable=1"
     with closing(sqlite3.connect(uri, uri=True)) as connection:
         connection.row_factory = sqlite3.Row
         connection.execute("PRAGMA query_only=ON")

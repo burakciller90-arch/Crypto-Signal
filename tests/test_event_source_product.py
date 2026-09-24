@@ -133,7 +133,11 @@ def test_event_source_product_reader_verifies_exact_persisted_lineage(
 ) -> None:
     path = tmp_path / "event_source.sqlite3"
     _seed_successes(path)
-    before = path.read_bytes()
+    before = {
+        item.name: item.read_bytes()
+        for item in tmp_path.iterdir()
+        if item.is_file()
+    }
 
     snapshot = read_event_source_runtime_truth(
         path,
@@ -168,7 +172,12 @@ def test_event_source_product_reader_verifies_exact_persisted_lineage(
     assert news.source_kind == "news"
     assert news.outcome == "success"
     assert news.item_categories == ("central_bank",)
-    assert path.read_bytes() == before
+    after = {
+        item.name: item.read_bytes()
+        for item in tmp_path.iterdir()
+        if item.is_file()
+    }
+    assert after == before
 
 
 def test_event_source_product_reader_is_point_in_time(tmp_path: Path) -> None:
@@ -234,6 +243,8 @@ def test_event_source_product_reader_fails_closed_on_raw_tamper(
             "SET payload_blob=? WHERE payload_sha256=?",
             (b"tampered-source", str(row[0])),
         )
+        db.commit()
+        db.execute("PRAGMA wal_checkpoint(TRUNCATE)")
 
     with pytest.raises(ValueError, match="raw payload"):
         read_event_source_runtime_truth(
@@ -315,3 +326,42 @@ def test_galactech_system_exposes_event_source_without_online_claim(
     assert '"systemEventSource"' in js
     assert "SOURCE_SCOPED_ONLY" in js
     assert "ONLINE NOT ASSERTED" in js
+
+
+def test_event_source_product_reader_fails_closed_on_nonempty_wal(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / "event_source.sqlite3"
+    _seed_successes(path)
+    wal = Path(f"{path}-wal")
+    wal.write_bytes(b"uncheckpointed")
+
+    with pytest.raises(ValueError, match="uncheckpointed WAL"):
+        read_event_source_runtime_truth(
+            path,
+            observed_at_ms=1_000,
+        )
+
+    assert wal.read_bytes() == b"uncheckpointed"
+
+
+def test_event_source_product_reader_does_not_create_sqlite_sidecars(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / "event_source.sqlite3"
+    _seed_successes(path)
+    wal = Path(f"{path}-wal")
+    shm = Path(f"{path}-shm")
+    wal.unlink(missing_ok=True)
+    shm.unlink(missing_ok=True)
+    before = path.read_bytes()
+
+    snapshot = read_event_source_runtime_truth(
+        path,
+        observed_at_ms=1_000,
+    )
+
+    assert snapshot.read_only_verified is True
+    assert path.read_bytes() == before
+    assert not wal.exists()
+    assert not shm.exists()
