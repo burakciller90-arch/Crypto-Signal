@@ -126,6 +126,18 @@ class EventSourceFetchObservation:
             )
         if self.raw_payload_bytes is not None and self.raw_payload_bytes <= 0:
             raise ValueError("event source raw payload bytes must be positive")
+        if (self.source_timestamp_ms is None) != (
+            self.source_timestamp_basis is None
+        ):
+            raise ValueError(
+                "event source timestamp and timestamp basis must be paired"
+            )
+        if (self.raw_payload_sha256 is None) != (
+            self.raw_payload_bytes is None
+        ):
+            raise ValueError(
+                "event source raw payload identity and bytes must be paired"
+            )
         if tuple(sorted(set(self.item_identities))) != self.item_identities:
             raise ValueError("event source item identities must be canonical")
         for identity in self.item_identities:
@@ -170,15 +182,6 @@ class EventSourceFetchObservation:
                 raise ValueError("failed event source fetch requires reason code")
             if self.item_identities or self.coverage_identity is not None:
                 raise ValueError("failed event source fetch cannot claim persisted items")
-            if (
-                self.source_timestamp_ms is not None
-                or self.source_timestamp_basis is not None
-                or self.raw_payload_sha256 is not None
-                or self.raw_payload_bytes is not None
-            ):
-                raise ValueError(
-                    "failed event source fetch cannot claim source payload evidence"
-                )
 
         if self.production_authority or self.real_capital != REAL_CAPITAL:
             raise ValueError("event source runtime cannot grant authority")
@@ -476,6 +479,50 @@ class EventSourceRuntimeStore:
         )
 
     def append_fetch(self, fetch: EventSourceFetchObservation) -> None:
+        self.initialize()
+        with sqlite3.connect(self.path) as db:
+            if fetch.raw_payload_sha256 is not None:
+                raw = db.execute(
+                    "SELECT content_bytes FROM event_source_raw_payloads "
+                    "WHERE payload_sha256=?",
+                    (fetch.raw_payload_sha256,),
+                ).fetchone()
+                if raw is None:
+                    raise ValueError(
+                        "event source fetch references unknown raw payload"
+                    )
+                if int(raw[0]) != fetch.raw_payload_bytes:
+                    raise ValueError(
+                        "event source fetch raw payload byte mismatch"
+                    )
+
+            if fetch.outcome is EventSourceFetchOutcome.SUCCESS:
+                if fetch.source_kind is EventSourceKind.CALENDAR:
+                    coverage = db.execute(
+                        "SELECT 1 FROM event_calendar_coverages "
+                        "WHERE coverage_identity=?",
+                        (fetch.coverage_identity,),
+                    ).fetchone()
+                    if coverage is None:
+                        raise ValueError(
+                            "calendar fetch references unknown coverage"
+                        )
+                    table = "structured_event_observations"
+                    identity_column = "event_identity"
+                else:
+                    table = "news_event_observations"
+                    identity_column = "news_identity"
+
+                for identity in fetch.item_identities:
+                    row = db.execute(
+                        f"SELECT 1 FROM {table} WHERE {identity_column}=?",
+                        (identity,),
+                    ).fetchone()
+                    if row is None:
+                        raise ValueError(
+                            "event source fetch references unknown item"
+                        )
+
         self._append_identity_payload(
             table="event_source_fetches",
             identity_column="fetch_identity",
