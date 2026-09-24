@@ -25,6 +25,7 @@ def test_wc2_collect_once_is_explicitly_allowlisted_and_exact_source() -> None:
 
     collect = _block("WC2 COLLECTION ONCE", "WC2 STATE")
     assert 'test "$DEV_HEAD" = "$GITHUB_SHA"' in collect
+    assert 'PYTHONPATH="$GITHUB_WORKSPACE:$GITHUB_WORKSPACE/src"' in collect
 
 
 def test_wc2_collect_once_uses_only_canonical_ssd_runtime_paths() -> None:
