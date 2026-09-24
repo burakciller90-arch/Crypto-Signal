@@ -105,7 +105,7 @@ def process_wc2_live_freeze(
         raise ValueError("WC2 runtime horizon must be positive")
     if not base_asset or base_asset != base_asset.upper():
         raise ValueError("WC2 runtime base asset must be uppercase")
-    if context.symbol.startswith(base_asset) is False:
+    if not context.symbol.startswith(base_asset):
         raise ValueError("WC2 runtime context/base asset mismatch")
 
     if result.status is LiveFreezeStatus.FROZEN:
@@ -167,6 +167,21 @@ def _process_fresh(
             WC2LiveIndexStatus.SKIPPED_INELIGIBLE_SOURCE,
             signal_identity=signal.freeze_identity,
             reasons=("source_not_directional_with_frozen_geometry",),
+        )
+
+    existing_issuance = (
+        decision_ledger.read_issuance_for_signal(signal.freeze_identity)
+        if decision_ledger.path.is_file()
+        else None
+    )
+    if existing_issuance is not None:
+        return _index_recovered_issuance(
+            policy=policy,
+            forecast=existing_issuance[0],
+            proof=existing_issuance[1],
+            expected_signal_identity=signal.freeze_identity,
+            cohort_journal=cohort_journal,
+            indexed_at_ms=observed_at_ms,
         )
 
     issuance = issue_same_cycle_untouched_forward_forecast(
@@ -250,28 +265,46 @@ def _recover_persisted(
             reasons=("no_preoutcome_r20_issuance_for_source_freeze",),
         )
     forecast, proof = issuance
+    return _index_recovered_issuance(
+        policy=policy,
+        forecast=forecast,
+        proof=proof,
+        expected_signal_identity=freeze.signal_freeze_identity,
+        cohort_journal=cohort_journal,
+        indexed_at_ms=observed_at_ms,
+    )
+
+
+def _index_recovered_issuance(
+    *,
+    policy: WC2UntouchedForwardPolicy,
+    forecast: dict[str, Any],
+    proof: dict[str, Any],
+    expected_signal_identity: str,
+    cohort_journal: WC2CohortJournal,
+    indexed_at_ms: int,
+) -> WC2LiveIndexResult:
     forecast_identity = _raw_sha(forecast, "forecast_identity")
     existing = cohort_journal.find_forecast_identity(forecast_identity)
     if existing is not None:
         return _result(
             WC2LiveIndexStatus.ALREADY_INDEXED,
-            signal_identity=freeze.signal_freeze_identity,
+            signal_identity=expected_signal_identity,
             forecast_identity=forecast_identity,
             cohort_identity=existing,
             reasons=("cohort_forecast_already_persisted",),
         )
-
     cohort = _recovered_cohort_forecast(
         policy=policy,
         forecast=forecast,
         proof=proof,
-        expected_signal_identity=freeze.signal_freeze_identity,
-        indexed_at_ms=observed_at_ms,
+        expected_signal_identity=expected_signal_identity,
+        indexed_at_ms=indexed_at_ms,
     )
     disposition = cohort_journal.append_forecast(cohort)
     return _result(
         WC2LiveIndexStatus.INDEXED_RECOVERED,
-        signal_identity=freeze.signal_freeze_identity,
+        signal_identity=expected_signal_identity,
         forecast_identity=forecast_identity,
         cohort_identity=cohort.cohort_forecast_identity,
         cohort_disposition=disposition,
