@@ -862,6 +862,26 @@ class ImmutableDecisionEvidenceLedger:
                 return None
             return _verified_payload(str(row[0]), str(row[1]))
 
+    def read_proof_for_forecast(
+        self,
+        forecast_identity: str,
+    ) -> dict[str, Any] | None:
+        _require_sha256(forecast_identity, "forecast identity")
+        with self._connect_ro() as connection:
+            self._require_schema(connection)
+            row = connection.execute(
+                """
+                SELECT payload_json, payload_sha256
+                FROM r20_5_decision_proofs
+                WHERE forecast_identity = ?
+                LIMIT 1
+                """,
+                (forecast_identity,),
+            ).fetchone()
+            if row is None:
+                return None
+            return _verified_payload(str(row[0]), str(row[1]))
+
     def read_feed(
         self,
         *,
