@@ -21,6 +21,7 @@ from crypto_signal.confluence.models import (
 from crypto_signal.decision_ledger import ImmutableDecisionEvidenceLedger
 from crypto_signal.evaluation.live_untouched_forward_operational import (
     WC2_MISSING_CONTEXT_POLICY_VERSION,
+    WC2_REGIME_ENGINE_VERSION_COMPONENT,
     WC2_UNMEASURED_REGIME,
     adapt_same_cycle_legacy_bundle,
     build_missing_pit_event_context,
@@ -31,6 +32,11 @@ from crypto_signal.intelligence.event_risk_circuit_breaker import (
     CircuitBreakerState,
 )
 from crypto_signal.intelligence.meta_intelligence import MetaEvidenceState
+from crypto_signal.intelligence.regime import (
+    REGIME_ENGINE_VERSION,
+    RegimeLabel,
+    build_regime_evidence_freeze,
+)
 from crypto_signal.ledger.bundle import build_decision_freeze_bundle
 from crypto_signal.product.decision_proof import (
     ProofEvidenceAvailability,
@@ -145,13 +151,29 @@ def test_live_source_adapter_preserves_exact_bundle_and_missing_domains() -> Non
     adapted = adapt_same_cycle_legacy_bundle(bundle, base_asset="BTC")
 
     assert adapted.bundle_identity == bundle.bundle_identity
-    assert adapted.regime == WC2_UNMEASURED_REGIME
+    regime_freeze = build_regime_evidence_freeze(
+        bundle.candles,
+        as_of_ms=signal.as_of_ms,
+    )
+    assert adapted.regime == regime_freeze.analysis.label.value
+    assert adapted.regime != WC2_UNMEASURED_REGIME
+    assert adapted.regime in {
+        label.value
+        for label in RegimeLabel
+        if label is not RegimeLabel.UNRESOLVED
+    }
     assert adapted.geometry_family.family is ConfluenceFamily.GEOMETRY
     assert bundle.bundle_identity in (
         adapted.geometry_family.source_evidence_identities
     )
     assert adapted.consumed_candles_identity in (
         adapted.geometry_family.source_evidence_identities
+    )
+    assert regime_freeze.freeze_identity in (
+        adapted.geometry_family.source_evidence_identities
+    )
+    assert f"regime:{REGIME_ENGINE_VERSION}" in (
+        adapted.geometry_family.source_engine_ids
     )
     assert adapted.geometry_family.as_of_ms == signal.as_of_ms
     assert adapted.geometry_family.asset == signal.symbol
@@ -243,7 +265,20 @@ def test_same_cycle_issuance_is_not_calibrated_and_uses_first_frozen_target(
     assert issuance.forecast.event_context_state is (
         CircuitBreakerState.DEGRADED_DATA
     )
-    assert issuance.confluence.regime == WC2_UNMEASURED_REGIME
+    expected_regime = build_regime_evidence_freeze(
+        bundle.candles,
+        as_of_ms=signal.as_of_ms,
+    )
+    assert issuance.confluence.regime == expected_regime.analysis.label.value
+    assert issuance.confluence.regime != WC2_UNMEASURED_REGIME
+    assert expected_regime.freeze_identity in (
+        issuance.forecast.source_evidence_identities
+    )
+    refs = {
+        item.component: item.version
+        for item in issuance.forecast.version_refs
+    }
+    assert refs[WC2_REGIME_ENGINE_VERSION_COMPONENT] == REGIME_ENGINE_VERSION
     assert issuance.production_authority is False
     assert issuance.real_capital == 0
 
@@ -284,6 +319,14 @@ def test_same_cycle_issuance_binds_exact_collection_protocol_lineage(
         for item in issuance.forecast.version_refs
     }
     assert refs["wc2_collection_protocol"] == protocol_identity
+    assert refs[WC2_REGIME_ENGINE_VERSION_COMPONENT] == REGIME_ENGINE_VERSION
+    regime_freeze = build_regime_evidence_freeze(
+        bundle.candles,
+        as_of_ms=signal.as_of_ms,
+    )
+    assert regime_freeze.freeze_identity in (
+        issuance.forecast.source_evidence_identities
+    )
     methodology = next(
         item
         for item in issuance.proof.evidence_slices
