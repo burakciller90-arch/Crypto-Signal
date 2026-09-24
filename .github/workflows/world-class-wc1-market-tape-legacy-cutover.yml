@@ -79,14 +79,13 @@ jobs:
           exact_python_script() {
             local pid="$1"
             local script="$2"
+            local python="$DEV/.venv/bin/python"
             [ -n "$pid" ] || return 1
             kill -0 "$pid" >/dev/null 2>&1 || return 1
-            /bin/ps -ww -p "$pid" -o uid=,comm=,args= 2>/dev/null |
-              /usr/bin/awk -v script="$script" '
+            /bin/ps -ww -p "$pid" -o uid=,args= 2>/dev/null |
+              /usr/bin/awk -v python="$python" -v script="$script" '
                 {
-                  if ($1 != 504 || index(tolower($2), "python") == 0) exit 1
-                  for (i=3; i<=NF; i++) if ($i == script) found=1
-                  exit(found ? 0 : 1)
+                  exit($1 == 504 && $2 == python && $3 == script ? 0 : 1)
                 }'
           }
 
