@@ -6,6 +6,7 @@ from contextlib import closing
 from dataclasses import dataclass
 from decimal import Decimal
 from pathlib import Path
+from typing import TypedDict
 
 from crypto_signal.data.models import Exchange, MarketType
 from crypto_signal.decision_ledger import ImmutableDecisionEvidenceLedger
@@ -270,6 +271,25 @@ class WC2ExecutionSourceEvent:
             raise ValueError("WC2 runtime signal/provider order mismatch")
 
 
+class _WC2DecisionCommon(TypedDict):
+    event_identity: str
+    execution_protocol_identity: str
+    runtime_activation_identity: str
+    execution_start_ms: int
+    source_exchanges: tuple[str, str]
+    source_freeze_identities: tuple[str, str]
+    source_forecast_identities: tuple[str, str]
+    source_cohort_forecast_identities: tuple[str, str]
+    source_signal_as_of_ms: tuple[int, int]
+    source_frozen_at_ms: tuple[int, int]
+    source_forecast_issued_at_ms: tuple[int, int]
+    source_cutoff_open_time_ms: int
+    symbol: PaperSymbol
+    epoch2_core_snapshot_identity: str
+    decided_at_ms: int
+    autonomy_policy_version: str
+
+
 @dataclass(frozen=True, slots=True)
 class WC2PaperExecutionCycleResult:
     observed_at_ms: int
@@ -405,7 +425,7 @@ def process_wc2_paper_execution_cycle(
                 Exchange.BYBIT: event.source_cutoff_open_time_ms,
             },
         )
-        common = {
+        common: _WC2DecisionCommon = {
             "event_identity": event.event_identity,
             "execution_protocol_identity": protocol.protocol_identity,
             "runtime_activation_identity": activation.activation_identity,
