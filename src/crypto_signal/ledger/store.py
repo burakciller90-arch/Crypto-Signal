@@ -484,6 +484,29 @@ class ImmutableSignalLedger:
             )
         return self._row_to_freeze(rows[0])
 
+    def read_freeze_by_signal(
+        self,
+        signal_freeze_identity: str,
+    ) -> FreezeRecord | None:
+        """Read a persisted freeze without initializing or mutating the ledger."""
+        if not self.path.is_file():
+            return None
+        uri = f"{self.path.resolve().as_uri()}?mode=ro"
+        connection = sqlite3.connect(uri, uri=True, timeout=5.0)
+        connection.row_factory = sqlite3.Row
+        connection.execute("PRAGMA query_only=ON")
+        try:
+            row = connection.execute(
+                """
+                SELECT * FROM signal_freezes
+                WHERE signal_freeze_identity = ?
+                """,
+                (signal_freeze_identity,),
+            ).fetchone()
+        finally:
+            connection.close()
+        return None if row is None else self._row_to_freeze(row)
+
     def get_freeze_by_signal(
         self,
         signal_freeze_identity: str,
