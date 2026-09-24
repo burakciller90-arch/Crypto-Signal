@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import sqlite3
+from contextlib import closing
 from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
@@ -261,7 +262,7 @@ class EventSourceRuntimeStore:
 
     def initialize(self) -> None:
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        with sqlite3.connect(self.path) as db:
+        with closing(sqlite3.connect(self.path)) as db, db:
             db.execute("PRAGMA journal_mode=WAL")
             db.execute("PRAGMA synchronous=FULL")
             db.executescript(
@@ -397,7 +398,7 @@ class EventSourceRuntimeStore:
 
     def append_raw_payload(self, payload: EventSourceRawPayload) -> None:
         self.initialize()
-        with sqlite3.connect(self.path) as db:
+        with closing(sqlite3.connect(self.path)) as db, db:
             self._append_raw_payload_db(db, payload)
 
     def append_calendar_coverage(self, coverage: EventCalendarCoverage) -> None:
@@ -467,7 +468,7 @@ class EventSourceRuntimeStore:
 
     def append_fetch(self, fetch: EventSourceFetchObservation) -> None:
         self.initialize()
-        with sqlite3.connect(self.path) as db:
+        with closing(sqlite3.connect(self.path)) as db, db:
             self._validate_fetch_references_db(db, fetch)
             self._append_fetch_db(db, fetch)
 
@@ -503,7 +504,7 @@ class EventSourceRuntimeStore:
             raise ValueError("calendar snapshot event provider mismatch")
 
         self.initialize()
-        with sqlite3.connect(self.path) as db:
+        with closing(sqlite3.connect(self.path)) as db, db:
             db.execute("BEGIN IMMEDIATE")
             self._append_raw_payload_db(db, raw_payload)
             self._append_identity_payload_db(
@@ -577,7 +578,7 @@ class EventSourceRuntimeStore:
             raise ValueError("news snapshot event provider mismatch")
 
         self.initialize()
-        with sqlite3.connect(self.path) as db:
+        with closing(sqlite3.connect(self.path)) as db, db:
             db.execute("BEGIN IMMEDIATE")
             self._append_raw_payload_db(db, raw_payload)
             for event in events:
@@ -624,7 +625,7 @@ class EventSourceRuntimeStore:
                 raise ValueError("failed fetch raw payload bytes mismatch")
 
         self.initialize()
-        with sqlite3.connect(self.path) as db:
+        with closing(sqlite3.connect(self.path)) as db, db:
             db.execute("BEGIN IMMEDIATE")
             if raw_payload is not None:
                 self._append_raw_payload_db(db, raw_payload)
@@ -640,7 +641,7 @@ class EventSourceRuntimeStore:
                 "news_events": 0,
                 "fetches": 0,
             }
-        with sqlite3.connect(self.path) as db:
+        with closing(sqlite3.connect(self.path)) as db, db:
             return {
                 "raw_payloads": int(
                     db.execute(
@@ -672,7 +673,7 @@ class EventSourceRuntimeStore:
     def quick_check(self) -> bool:
         if not self.path.is_file():
             return False
-        with sqlite3.connect(self.path) as db:
+        with closing(sqlite3.connect(self.path)) as db, db:
             row = db.execute("PRAGMA quick_check").fetchone()
         return row is not None and str(row[0]).lower() == "ok"
 
@@ -687,7 +688,7 @@ class EventSourceRuntimeStore:
         values: tuple[object, ...],
     ) -> None:
         self.initialize()
-        with sqlite3.connect(self.path) as db:
+        with closing(sqlite3.connect(self.path)) as db, db:
             self._append_identity_payload_db(
                 db,
                 table=table,
