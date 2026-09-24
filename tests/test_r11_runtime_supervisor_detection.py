@@ -68,5 +68,5 @@ def test_r11_acceptance_ps_exposes_executable_and_args() -> None:
     text = Path("ops/r11_runtime_acceptance.py").read_text(encoding="utf-8")
     assert '"pid=,ppid=,user=,comm=,args="' in text
     assert 'command_name != "bash"' in text
-    assert 'command_name.lower().startswith("python")' in text
+    assert 'Path(argv[0]).name.lower().startswith("python")' in text
     assert "args.strip() == runner_needle" in text
