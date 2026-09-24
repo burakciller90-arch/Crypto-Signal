@@ -36,6 +36,7 @@ def _base() -> dict[str, object]:
     return {
         "event_identity": event,
         "execution_protocol_identity": _sha("protocol"),
+        "runtime_activation_identity": _sha("runtime-activation"),
         "execution_start_ms": START,
         "source_exchanges": (Exchange.BINANCE.value, Exchange.BYBIT.value),
         "source_freeze_identities": freezes,
