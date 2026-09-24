@@ -44,7 +44,8 @@ class EventSourceRawPayload:
     payload_sha256: str
     content_bytes: int
     content_type: str
-    payload_text: str
+    text_encoding: str
+    payload_bytes: bytes
     schema_version: str = EVENT_SOURCE_RUNTIME_SCHEMA_VERSION
 
     def __post_init__(self) -> None:
@@ -57,24 +58,30 @@ class EventSourceRawPayload:
             raise ValueError("event source raw payload exceeds bounded size")
         if not self.content_type.strip():
             raise ValueError("event source raw payload content type is required")
-        encoded = self.payload_text.encode("utf-8")
-        if len(encoded) != self.content_bytes:
+        if not self.text_encoding.strip():
+            raise ValueError("event source raw payload encoding is required")
+        if len(self.payload_bytes) != self.content_bytes:
             raise ValueError("event source raw payload byte count mismatch")
-        if hashlib.sha256(encoded).hexdigest() != self.payload_sha256:
+        if hashlib.sha256(self.payload_bytes).hexdigest() != self.payload_sha256:
             raise ValueError("event source raw payload SHA256 mismatch")
+        try:
+            self.payload_bytes.decode(self.text_encoding)
+        except (LookupError, UnicodeDecodeError) as exc:
+            raise ValueError("event source raw payload decoding failed") from exc
 
 
 def build_event_source_raw_payload(
     *,
-    payload_text: str,
+    payload_bytes: bytes,
     content_type: str,
+    text_encoding: str,
 ) -> EventSourceRawPayload:
-    encoded = payload_text.encode("utf-8")
     return EventSourceRawPayload(
-        payload_sha256=hashlib.sha256(encoded).hexdigest(),
-        content_bytes=len(encoded),
+        payload_sha256=hashlib.sha256(payload_bytes).hexdigest(),
+        content_bytes=len(payload_bytes),
         content_type=content_type,
-        payload_text=payload_text,
+        text_encoding=text_encoding,
+        payload_bytes=payload_bytes,
     )
 
 
@@ -268,7 +275,8 @@ class EventSourceRuntimeStore:
                     payload_sha256 TEXT PRIMARY KEY,
                     content_bytes INTEGER NOT NULL,
                     content_type TEXT NOT NULL,
-                    payload_text TEXT NOT NULL
+                    text_encoding TEXT NOT NULL,
+                    payload_blob BLOB NOT NULL
                 );
 
                 CREATE TABLE IF NOT EXISTS event_calendar_coverages (
@@ -723,14 +731,15 @@ class EventSourceRuntimeStore:
         payload: EventSourceRawPayload,
     ) -> None:
         existing = db.execute(
-            "SELECT content_bytes, content_type, payload_text "
+            "SELECT content_bytes, content_type, text_encoding, payload_blob "
             "FROM event_source_raw_payloads WHERE payload_sha256=?",
             (payload.payload_sha256,),
         ).fetchone()
         values = (
             payload.content_bytes,
             payload.content_type,
-            payload.payload_text,
+            payload.text_encoding,
+            payload.payload_bytes,
         )
         if existing is not None:
             if tuple(existing) != values:
@@ -739,8 +748,9 @@ class EventSourceRuntimeStore:
         db.execute(
             """
             INSERT INTO event_source_raw_payloads(
-                payload_sha256, content_bytes, content_type, payload_text
-            ) VALUES (?, ?, ?, ?)
+                payload_sha256, content_bytes, content_type,
+                text_encoding, payload_blob
+            ) VALUES (?, ?, ?, ?, ?)
             """,
             (payload.payload_sha256, *values),
         )
