@@ -1,7 +1,7 @@
 """Append-only pre-issuance receipt for WC2 untouched-forward cycles.
 
 The receipt is written before canonical R20 persistence. It freezes only the
-already accepted PIT inputs and exact caller-owned runtime parameters required
+already accepted PIT inputs and exact protocol-owned runtime parameters required
 to finish the same decision after a crash. It is not permission to backfill an
 unprepared historical signal.
 REAL_CAPITAL=0.
