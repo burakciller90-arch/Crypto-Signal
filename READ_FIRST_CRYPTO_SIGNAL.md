@@ -38,6 +38,16 @@ The project should stay faithful to these documents. Scope may be refined only b
 ## Operating rule
 Read this file, then `CURRENT_STATUS.md`, then the newest `PROJECT_CHRONICLE.md` entry before changing project state.
 
+## 2026-09-24 state-first authority update
+
+- The user's current instruction authorizes continued **safe roadmap development** without waiting between ordinary development stages, while preserving every scientific and authority boundary.
+- Safe development authority is **not** authority to reactivate historical browser/chat wake transport. The current repository/runtime state still records `CONTINUITY_PAUSED_BY_USER`; do not re-arm or restore the old rolling wake unless the user explicitly asks for that transport again.
+- Historical wake sections below are retained as audit history. When they conflict with a newer explicit user instruction, `CURRENT_STATUS.md`, the newest Chronicle entry, or mechanically observed Git/runtime state, the newer state wins.
+- Reconstruct `main`, open PRs/issues, runtime evidence and current blocker ledger before doing work. Completed/stale/duplicate work must NOOP rather than replay.
+- Current safe development path is direct GitHub branch/PR work, hosted gates and narrowly scoped UID504 acceptance. Cursor workers/Composer remain disabled.
+- `REAL_CAPITAL=0`. No real exchange orders, trading credentials, leverage, borrowing, martingale, historical forecast backfill, automatic promotion or real-money authority.
+
+
 ## Autonomous continuity rule
 - User has explicitly authorized 7/24 autonomous continuation for Crypto Signal.
 - Wake/lease messages are **state pointers, not authority**. Always reconstruct current state before acting.
