@@ -49,19 +49,59 @@ def _health() -> dict[str, Any]:
     return payload
 
 
+def _parsed_process(
+    line: str,
+) -> tuple[int, str, str] | None:
+    parts = line.strip().split(maxsplit=4)
+    if len(parts) < 5:
+        return None
+    pid_text, _ppid, _user, command_name, args = parts
+    if not pid_text.isdigit():
+        return None
+    return int(pid_text), Path(command_name).name, args
+
+
 def _matching_supervisor_pids(ps: str, supervisor_needle: str) -> list[int]:
     result: list[int] = []
     for line in ps.splitlines():
-        parts = line.strip().split(maxsplit=4)
-        if len(parts) < 5:
+        parsed = _parsed_process(line)
+        if parsed is None:
             continue
-        pid_text, _ppid, _user, command_name, args = parts
-        if Path(command_name).name != "bash":
+        pid, command_name, args = parsed
+        if command_name != "bash":
             continue
-        if supervisor_needle not in args:
+        if supervisor_needle not in args.split():
             continue
-        if pid_text.isdigit():
-            result.append(int(pid_text))
+        result.append(pid)
+    return result
+
+
+def _matching_dashboard_pids(ps: str, dashboard_needle: str) -> list[int]:
+    result: list[int] = []
+    for line in ps.splitlines():
+        parsed = _parsed_process(line)
+        if parsed is None:
+            continue
+        pid, command_name, args = parsed
+        if not command_name.lower().startswith("python"):
+            continue
+        if dashboard_needle not in args.split():
+            continue
+        if "--port" not in args.split() or "48700" not in args.split():
+            continue
+        result.append(pid)
+    return result
+
+
+def _matching_runner_pids(ps: str, runner_needle: str) -> list[int]:
+    result: list[int] = []
+    for line in ps.splitlines():
+        parsed = _parsed_process(line)
+        if parsed is None:
+            continue
+        pid, _command_name, args = parsed
+        if args.strip() == runner_needle:
+            result.append(pid)
     return result
 
 
@@ -88,19 +128,9 @@ def _assert_process_topology(root: Path) -> dict[str, int]:
     dashboard_needle = str(root / "Product/ops/run_dashboard.py")
     runner_needle = str(root / "Runner/bin/Runner.Listener run --startuptype service")
 
-    def matching_pids(needle: str) -> list[int]:
-        result: list[int] = []
-        for line in ps.splitlines():
-            if needle not in line:
-                continue
-            first = line.strip().split(maxsplit=1)[0]
-            if first.isdigit():
-                result.append(int(first))
-        return result
-
     supervisors = _matching_supervisor_pids(ps, supervisor_needle)
-    dashboards = matching_pids(dashboard_needle)
-    runners = matching_pids(runner_needle)
+    dashboards = _matching_dashboard_pids(ps, dashboard_needle)
+    runners = _matching_runner_pids(ps, runner_needle)
     if len(supervisors) != 1:
         raise RuntimeError(f"expected exactly one SSD supervisor, got {supervisors}")
     if len(dashboards) != 1:
