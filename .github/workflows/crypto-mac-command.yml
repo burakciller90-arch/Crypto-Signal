@@ -1844,47 +1844,77 @@ jobs:
             fi
 
             local sup=""
-            local old_dash=""
             local listener=""
             local new_dash=""
-            sup="$(cat "$SUP_PID_FILE" 2>/dev/null || true)"
-            test -n "$sup"
-            kill -0 "$sup" >/dev/null 2>&1
-            ps -p "$sup" -o command= | grep -F "$ROOT/ssd-service-supervisor.sh" >/dev/null
+            local old_pids=""
+            local current_pids=""
+            local count=""
 
-            listener="$(/usr/sbin/lsof -nP -iTCP:48700 -sTCP:LISTEN -t 2>/dev/null | head -1 || true)"
-            old_dash="$listener"
-            if [ -z "$old_dash" ]; then
-              old_dash="$(cat "$DASH_PID_FILE" 2>/dev/null || true)"
-            fi
-            echo "DASHBOARD_RESTART_MODE=direct-supervisor-contract SUP=$sup OLD_DASH=$old_dash"
+            dashboard_pids() {
+              ps -axo pid=,command= \
+                | awk -v needle="$PRODUCT/ops/run_dashboard.py" \
+                    'index($0, needle) > 0 {print $1}'
+            }
 
-            if [ -n "$old_dash" ] && kill -0 "$old_dash" >/dev/null 2>&1; then
-              if ps -p "$old_dash" -o command= | grep -F "$PRODUCT/ops/run_dashboard.py" | grep -F -- "--port 48700" >/dev/null; then
-                kill "$old_dash" >/dev/null 2>&1 || true
-              fi
-            fi
+            terminate_old_dashboards() {
+              local pid=""
+              old_pids="$(dashboard_pids)"
+              echo "DASHBOARD_OLD_PIDS=${old_pids:-NONE}"
+              for pid in $old_pids; do
+                if kill -0 "$pid" >/dev/null 2>&1 \
+                  && ps -p "$pid" -o command= | grep -F "$PRODUCT/ops/run_dashboard.py" >/dev/null; then
+                  kill "$pid" >/dev/null 2>&1 || true
+                fi
+              done
 
-            for i in {1..10}; do
-              listener="$(/usr/sbin/lsof -nP -iTCP:48700 -sTCP:LISTEN -t 2>/dev/null | head -1 || true)"
-              if [ -z "$listener" ]; then
-                break
-              fi
-              sleep 1
-            done
-            listener="$(/usr/sbin/lsof -nP -iTCP:48700 -sTCP:LISTEN -t 2>/dev/null | head -1 || true)"
-            if [ -n "$listener" ]; then
-              echo "DASHBOARD_TERM_PORT_STILL_BOUND=YES PID=$listener"
-              kill -KILL "$listener" >/dev/null 2>&1 || true
-              for i in {1..5}; do
-                listener="$(/usr/sbin/lsof -nP -iTCP:48700 -sTCP:LISTEN -t 2>/dev/null | head -1 || true)"
-                [ -z "$listener" ] && break
+              for i in {1..10}; do
+                local alive=0
+                for pid in $old_pids; do
+                  if kill -0 "$pid" >/dev/null 2>&1; then
+                    alive=1
+                    break
+                  fi
+                done
+                [ "$alive" = "0" ] && break
                 sleep 1
               done
-            fi
-            listener="$(/usr/sbin/lsof -nP -iTCP:48700 -sTCP:LISTEN -t 2>/dev/null | head -1 || true)"
-            test -z "$listener"
 
+              for pid in $old_pids; do
+                if kill -0 "$pid" >/dev/null 2>&1; then
+                  echo "DASHBOARD_OLD_PID_FORCE_KILL=$pid"
+                  kill -KILL "$pid" >/dev/null 2>&1 || true
+                fi
+              done
+            }
+
+            sup="$(cat "$SUP_PID_FILE" 2>/dev/null || true)"
+            if [ -n "$sup" ] \
+              && kill -0 "$sup" >/dev/null 2>&1 \
+              && ps -p "$sup" -o command= | grep -F "$ROOT/ssd-service-supervisor.sh" >/dev/null; then
+              echo "DASHBOARD_RESTART_MODE=supervisor-managed SUP=$sup"
+              terminate_old_dashboards
+              rm -f "$DASH_PID_FILE"
+
+              for i in {1..45}; do
+                current_pids="$(dashboard_pids)"
+                count="$(printf '%s\n' "$current_pids" | awk 'NF {n++} END {print n+0}')"
+                listener="$(/usr/sbin/lsof -nP -iTCP:48700 -sTCP:LISTEN -t 2>/dev/null | head -1 || true)"
+                if [ "$count" = "1" ] \
+                  && [ -n "$listener" ] \
+                  && [ "$listener" = "$(printf '%s\n' "$current_pids" | awk 'NF {print $1; exit}')" ] \
+                  && curl -fsS --max-time 3 http://127.0.0.1:48700/api/health >/dev/null 2>&1; then
+                  echo "$listener" > "$DASH_PID_FILE"
+                  echo "DASHBOARD_SUPERVISOR_RESPAWN_PID=$listener"
+                  return 0
+                fi
+                sleep 1
+              done
+              echo "DASHBOARD_SUPERVISOR_RESPAWN_TIMEOUT=YES"
+              return 1
+            fi
+
+            echo "DASHBOARD_RESTART_MODE=direct-no-supervisor"
+            terminate_old_dashboards
             rm -f "$DASH_PID_FILE"
             mkdir -p "$ROOT/ServiceLogs"
             (
@@ -1904,13 +1934,15 @@ jobs:
             echo "DASHBOARD_DIRECT_START_PID=$new_dash"
 
             for i in {1..45}; do
-              if curl -fsS --max-time 3 http://127.0.0.1:48700/api/health >/dev/null 2>&1; then
-                listener="$(/usr/sbin/lsof -nP -iTCP:48700 -sTCP:LISTEN -t 2>/dev/null | head -1 || true)"
-                if [ -n "$listener" ] && ps -p "$listener" -o command= | grep -F "$PRODUCT/ops/run_dashboard.py" | grep -F -- "--port 48700" >/dev/null; then
-                  echo "$listener" > "$DASH_PID_FILE"
-                  echo "NEW_DASH=$listener"
-                  return 0
-                fi
+              current_pids="$(dashboard_pids)"
+              count="$(printf '%s\n' "$current_pids" | awk 'NF {n++} END {print n+0}')"
+              listener="$(/usr/sbin/lsof -nP -iTCP:48700 -sTCP:LISTEN -t 2>/dev/null | head -1 || true)"
+              if [ "$count" = "1" ] \
+                && [ "$listener" = "$new_dash" ] \
+                && curl -fsS --max-time 3 http://127.0.0.1:48700/api/health >/dev/null 2>&1; then
+                echo "$listener" > "$DASH_PID_FILE"
+                echo "NEW_DASH=$listener"
+                return 0
               fi
               sleep 1
             done
