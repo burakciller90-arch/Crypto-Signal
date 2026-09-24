@@ -315,6 +315,7 @@ def test_enabled_clock_passes_exact_protocol_runtime_inputs(
         _context().timeframe
     )
     assert kwargs["collection_start_ms"] == protocol.collection_start_ms
+    assert kwargs["collection_protocol_identity"] == protocol.protocol_identity
     assert kwargs["base_asset"] == "BTC"
     assert kwargs["prepared_journal"].path == paths["prepared"]
     assert kwargs["decision_ledger"].path == paths["decision"]
