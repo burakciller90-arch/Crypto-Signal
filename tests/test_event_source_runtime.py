@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import sqlite3
+from decimal import Decimal
 
 import pytest
 
@@ -14,11 +15,12 @@ from crypto_signal.data.event_source_runtime import (
     EventSourceFetchOutcome,
     EventSourceKind,
     EventSourceRuntimeStore,
+    EventSourceTimestampBasis,
     build_event_source_fetch_observation,
+    build_event_source_raw_payload,
 )
 from crypto_signal.data.models import DataSource
 from crypto_signal.data.news_events import build_news_event_observation
-from decimal import Decimal
 
 
 def _coverage():
@@ -70,19 +72,31 @@ def _news():
     )
 
 
+def _raw(text: str):
+    return build_event_source_raw_payload(
+        payload_text=text,
+        content_type="text/plain; charset=utf-8",
+    )
+
+
 def test_event_source_store_is_append_only_and_replay_safe(tmp_path) -> None:
     store = EventSourceRuntimeStore(tmp_path / "event-sources.sqlite3")
     coverage = _coverage()
     event = _event()
     news = _news()
+    calendar_raw = _raw("calendar-payload")
+    news_raw = _raw("news-payload")
     calendar_fetch = build_event_source_fetch_observation(
         source_provider="bls.gov",
         source_kind=EventSourceKind.CALENDAR,
         endpoint_url="https://www.bls.gov/schedule/news_release/bls.ics",
         fetched_at_ms=900,
         source_timestamp_ms=800,
+        source_timestamp_basis=EventSourceTimestampBasis.HTTP_LAST_MODIFIED,
         http_status=200,
         outcome=EventSourceFetchOutcome.SUCCESS,
+        raw_payload_sha256=calendar_raw.payload_sha256,
+        raw_payload_bytes=calendar_raw.content_bytes,
         item_identities=(event.event_identity,),
         coverage_identity=coverage.coverage_identity,
         adapter_version="test/1",
@@ -93,13 +107,18 @@ def test_event_source_store_is_append_only_and_replay_safe(tmp_path) -> None:
         endpoint_url="https://www.federalreserve.gov/feeds/press_monetary.xml",
         fetched_at_ms=900,
         source_timestamp_ms=800,
+        source_timestamp_basis=EventSourceTimestampBasis.HTTP_DATE,
         http_status=200,
         outcome=EventSourceFetchOutcome.SUCCESS,
+        raw_payload_sha256=news_raw.payload_sha256,
+        raw_payload_bytes=news_raw.content_bytes,
         item_identities=(news.news_identity,),
         adapter_version="test/1",
     )
 
     for _ in range(2):
+        store.append_raw_payload(calendar_raw)
+        store.append_raw_payload(news_raw)
         store.append_calendar_coverage(coverage)
         store.append_structured_event(event)
         store.append_news_event(news)
@@ -107,6 +126,7 @@ def test_event_source_store_is_append_only_and_replay_safe(tmp_path) -> None:
         store.append_fetch(news_fetch)
 
     assert store.counts() == {
+        "raw_payloads": 2,
         "calendar_coverages": 1,
         "structured_events": 1,
         "news_events": 1,
@@ -116,6 +136,7 @@ def test_event_source_store_is_append_only_and_replay_safe(tmp_path) -> None:
 
     with sqlite3.connect(store.path) as db:
         for table in (
+            "event_source_raw_payloads",
             "event_calendar_coverages",
             "structured_event_observations",
             "news_event_observations",
@@ -133,6 +154,7 @@ def test_event_source_store_records_failure_without_fake_items(tmp_path) -> None
         endpoint_url="https://www.bls.gov/schedule/news_release/bls.ics",
         fetched_at_ms=1_000,
         source_timestamp_ms=None,
+        source_timestamp_basis=None,
         http_status=503,
         outcome=EventSourceFetchOutcome.FAILURE,
         reason_code="http_status_503",
@@ -142,6 +164,7 @@ def test_event_source_store_records_failure_without_fake_items(tmp_path) -> None
     store.append_fetch(failed)
 
     assert store.counts() == {
+        "raw_payloads": 0,
         "calendar_coverages": 0,
         "structured_events": 0,
         "news_events": 0,
@@ -157,8 +180,12 @@ def test_successful_calendar_fetch_requires_exact_coverage_identity() -> None:
             endpoint_url="https://www.bls.gov/schedule/news_release/bls.ics",
             fetched_at_ms=1_000,
             source_timestamp_ms=900,
+            source_timestamp_basis=EventSourceTimestampBasis.HTTP_DATE,
             http_status=200,
             outcome=EventSourceFetchOutcome.SUCCESS,
+            raw_payload_sha256="a" * 64,
+            raw_payload_bytes=1,
+            item_identities=("b" * 64,),
             adapter_version="test/1",
         )
 
@@ -171,9 +198,92 @@ def test_failed_fetch_cannot_claim_items() -> None:
             endpoint_url="https://www.federalreserve.gov/feeds/press_monetary.xml",
             fetched_at_ms=1_000,
             source_timestamp_ms=None,
+            source_timestamp_basis=None,
             http_status=None,
             outcome=EventSourceFetchOutcome.FAILURE,
             item_identities=("a" * 64,),
             reason_code="network_error",
             adapter_version="test/1",
         )
+
+
+def test_event_source_raw_payload_is_exact_and_bounded() -> None:
+    raw = _raw("exact-source")
+
+    assert len(raw.payload_sha256) == 64
+    assert raw.content_bytes == len("exact-source".encode())
+
+    with pytest.raises(ValueError, match="byte count mismatch"):
+        type(raw)(
+            payload_sha256=raw.payload_sha256,
+            content_bytes=raw.content_bytes + 1,
+            content_type=raw.content_type,
+            payload_text=raw.payload_text,
+        )
+
+
+def test_success_fetch_rejects_dangling_raw_or_item_lineage(tmp_path) -> None:
+    store = EventSourceRuntimeStore(tmp_path / "event-sources.sqlite3")
+    raw = _raw("calendar-payload")
+    coverage = _coverage()
+    event = _event()
+    fetch = build_event_source_fetch_observation(
+        source_provider="bls.gov",
+        source_kind=EventSourceKind.CALENDAR,
+        endpoint_url="https://www.bls.gov/schedule/news_release/bls.ics",
+        fetched_at_ms=900,
+        source_timestamp_ms=800,
+        source_timestamp_basis=EventSourceTimestampBasis.HTTP_LAST_MODIFIED,
+        http_status=200,
+        outcome=EventSourceFetchOutcome.SUCCESS,
+        raw_payload_sha256=raw.payload_sha256,
+        raw_payload_bytes=raw.content_bytes,
+        item_identities=(event.event_identity,),
+        coverage_identity=coverage.coverage_identity,
+        adapter_version="test/1",
+    )
+
+    with pytest.raises(ValueError, match="unknown raw payload"):
+        store.append_fetch(fetch)
+
+    store.append_raw_payload(raw)
+    with pytest.raises(ValueError, match="unknown coverage"):
+        store.append_fetch(fetch)
+
+    store.append_calendar_coverage(coverage)
+    with pytest.raises(ValueError, match="unknown item"):
+        store.append_fetch(fetch)
+
+    store.append_structured_event(event)
+    store.append_fetch(fetch)
+    assert store.counts()["fetches"] == 1
+
+
+def test_failed_parse_can_retain_raw_payload_without_fake_items(tmp_path) -> None:
+    store = EventSourceRuntimeStore(tmp_path / "event-sources.sqlite3")
+    raw = _raw("malformed-source")
+    store.append_raw_payload(raw)
+    failed = build_event_source_fetch_observation(
+        source_provider="bls.gov",
+        source_kind=EventSourceKind.CALENDAR,
+        endpoint_url="https://www.bls.gov/schedule/news_release/bls.ics",
+        fetched_at_ms=1_000,
+        source_timestamp_ms=900,
+        source_timestamp_basis=EventSourceTimestampBasis.HTTP_DATE,
+        http_status=200,
+        outcome=EventSourceFetchOutcome.FAILURE,
+        raw_payload_sha256=raw.payload_sha256,
+        raw_payload_bytes=raw.content_bytes,
+        reason_code="parse_error",
+        adapter_version="test/1",
+    )
+
+    store.append_fetch(failed)
+
+    assert store.counts() == {
+        "raw_payloads": 1,
+        "calendar_coverages": 0,
+        "structured_events": 0,
+        "news_events": 0,
+        "fetches": 1,
+    }
