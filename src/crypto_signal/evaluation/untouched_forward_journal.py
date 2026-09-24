@@ -731,6 +731,24 @@ class WC2CohortJournal:
             )
         return WC2CohortAppendDisposition.INSERTED
 
+    def find_forecast_identity(
+        self,
+        forecast_identity: str,
+    ) -> str | None:
+        _require_sha256(forecast_identity, "WC2 cohort forecast lookup")
+        if not self.path.is_file():
+            return None
+        uri = f"{self.path.resolve().as_uri()}?mode=ro"
+        with closing(sqlite3.connect(uri, uri=True)) as db:
+            db.execute("PRAGMA query_only=ON")
+            row = db.execute(
+                f"""SELECT cohort_forecast_identity
+                FROM {_FORECAST_TABLE}
+                WHERE forecast_identity=?""",
+                (forecast_identity,),
+            ).fetchone()
+        return None if row is None else str(row[0])
+
     def append_intent(
         self,
         record: WC2CohortIntent,
