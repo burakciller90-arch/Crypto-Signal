@@ -319,6 +319,7 @@ def build_immutable_forecast(
     authority: ForecastAuthority = ForecastAuthority.SHADOW,
     calibrated_probability: CalibratedProbabilityEvidence | None = None,
     calibration_scope: CalibrationScope | None = None,
+    extra_version_refs: tuple[ForecastVersionRef, ...] = (),
 ) -> ImmutableForecast:
     if signal.state not in {SignalState.WATCH, SignalState.ACTIVE}:
         raise ValueError("R20 forecast requires WATCH or ACTIVE signal")
@@ -432,6 +433,13 @@ def build_immutable_forecast(
                 ),
             )
         )
+    base_components = {item.component for item in version_refs}
+    extra_components = [item.component for item in extra_version_refs]
+    if len(set(extra_components)) != len(extra_components):
+        raise ValueError("R20 extra version refs must be unique by component")
+    if base_components.intersection(extra_components):
+        raise ValueError("R20 extra version ref collides with canonical component")
+    version_refs.extend(extra_version_refs)
     ordered_versions = tuple(sorted(version_refs, key=lambda item: item.component))
     ordered_evidence = tuple(sorted(evidence_ids))
     ordered_uncertainty = tuple(sorted(uncertainty))
