@@ -20,6 +20,9 @@ _REQUIRED_TABLES = frozenset(
         "event_source_fetches",
     }
 )
+_ACCEPTED_TIMESTAMP_BASES = frozenset(
+    {"http_last_modified", "http_date", "fetch_time_fallback"}
+)
 _REQUIRED_FETCH_COLUMNS = frozenset(
     {
         "sequence_id",
@@ -61,12 +64,20 @@ class EventSourceProviderRuntimeTruth:
             raise ValueError("event source kind invalid")
         if self.fetched_at_ms < 0 or self.fetch_age_ms < 0:
             raise ValueError("event source fetch time invalid")
-        if self.source_timestamp_ms is not None and self.source_timestamp_ms < 0:
-            raise ValueError("event source timestamp invalid")
+        if self.source_timestamp_ms is not None:
+            if self.source_timestamp_ms < 0:
+                raise ValueError("event source timestamp invalid")
+            if self.source_timestamp_ms > self.fetched_at_ms:
+                raise ValueError("event source timestamp cannot postdate fetch")
         if (self.source_timestamp_ms is None) != (
             self.source_timestamp_basis is None
         ):
             raise ValueError("event source timestamp basis mismatch")
+        if (
+            self.source_timestamp_basis is not None
+            and self.source_timestamp_basis not in _ACCEPTED_TIMESTAMP_BASES
+        ):
+            raise ValueError("event source timestamp basis invalid")
         if self.http_status is not None and not 100 <= self.http_status <= 599:
             raise ValueError("event source HTTP status invalid")
         if self.outcome not in {"success", "failure"}:
