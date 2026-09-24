@@ -6,7 +6,7 @@ WORKFLOW = Path(".github/workflows/crypto-mac-command.yml")
 def _block() -> str:
     text = WORKFLOW.read_text(encoding="utf-8")
     start = text.index("      - name: WC2 POLICY REGISTER")
-    end = text.index("      - name: SERVICES", start)
+    end = text.index("      - name: BLS SOURCE PROBE", start)
     return text[start:end]
 
 
@@ -15,10 +15,10 @@ def test_wc2_policy_register_is_explicitly_allowlisted_and_exact_source() -> Non
     assert "wc2policyregister" in text
 
     checkout_start = text.index(
-        "      - name: CHECKOUT EXACT EVENT SOURCE COMMAND SOURCE"
+        "      - name: CHECKOUT EXACT WC2 POLICY COMMAND SOURCE"
     )
     verify_start = text.index(
-        "      - name: VERIFY EXACT EVENT SOURCE COMMAND SOURCE",
+        "      - name: VERIFY EXACT WC2 POLICY COMMAND SOURCE",
         checkout_start,
     )
     status_start = text.index("      - name: STATUS", verify_start)
@@ -63,12 +63,13 @@ def test_wc2_policy_register_is_bounded_to_policy_db_only() -> None:
 
 def test_wc2_policy_register_does_not_run_event_source_probes() -> None:
     text = WORKFLOW.read_text(encoding="utf-8")
-    fred_start = text.index("      - name: FRED CALENDAR PROBE")
-    register_start = text.index("      - name: WC2 POLICY REGISTER", fred_start)
-    fred_block = text[fred_start:register_start]
+    register_start = text.index("      - name: WC2 POLICY REGISTER")
+    bls_start = text.index("      - name: BLS SOURCE PROBE", register_start)
+    fred_start = text.index("      - name: FRED CALENDAR PROBE", bls_start)
+    services_start = text.index("      - name: SERVICES", fred_start)
 
-    bls_start = text.index("      - name: BLS SOURCE PROBE")
     bls_block = text[bls_start:fred_start]
+    fred_block = text[fred_start:services_start]
 
     assert "wc2policyregister" not in fred_block
     assert "wc2policyregister" not in bls_block
