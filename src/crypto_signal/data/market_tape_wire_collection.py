@@ -12,6 +12,7 @@ from crypto_signal.data.market_tape import (
 )
 from crypto_signal.data.models import Exchange
 from crypto_signal.data.raw_market_tape import (
+    RawMarketEvent,
     RawMarketTapeStore,
     RawMarketTapeWriteDisposition,
 )
@@ -43,6 +44,9 @@ async def persist_bybit_wire_stream(
     progress_callback: (
         Callable[[BybitMicrostructureWireEvent, int], None] | None
     ) = None,
+    persisted_event_callback: (
+        Callable[[RawMarketEvent, int], None] | None
+    ) = None,
 ) -> MarketTapeWireCollectionResult:
     if orderbook_snapshot_interval_ms <= 0:
         raise ValueError("orderbook snapshot interval must be positive")
@@ -60,7 +64,7 @@ async def persist_bybit_wire_stream(
     last_orderbook_bucket: dict[str, int] = {}
 
     async for event in events:
-        raw_disposition, _ = raw_store.append(
+        raw_disposition, raw_event = raw_store.append(
             exchange=Exchange.BYBIT,
             channel=event.channel,
             symbol=event.symbol,
@@ -108,6 +112,8 @@ async def persist_bybit_wire_stream(
         observed_messages += 1
         if progress_callback is not None:
             progress_callback(event, observed_messages)
+        if persisted_event_callback is not None:
+            persisted_event_callback(raw_event, observed_messages)
         if max_messages is not None and observed_messages >= max_messages:
             break
 
