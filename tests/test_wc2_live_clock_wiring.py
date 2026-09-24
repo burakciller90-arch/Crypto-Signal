@@ -6,12 +6,16 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
+from test_r22_intent_preview import _activation
 
 import ops.run_live_evidence_clock as clock
 from crypto_signal.data.models import Exchange, MarketType
 from crypto_signal.evaluation.untouched_forward_policy import (
     WC2PolicyStore,
     build_wc2_untouched_forward_policy,
+)
+from crypto_signal.evaluation.untouched_forward_prepared_runtime import (
+    WC2PreparedLiveStatus,
 )
 from crypto_signal.ledger.coverage import (
     LiveCoverageContext,
@@ -21,11 +25,11 @@ from crypto_signal.ledger.coverage import (
 from crypto_signal.ledger.live_clock import LiveFreezeResult, LiveFreezeStatus
 
 
-def _context() -> LiveCoverageContext:
+def _context(symbol: str = "BTCUSDT") -> LiveCoverageContext:
     return LiveCoverageContext(
         exchange=Exchange.BYBIT,
         market_type=MarketType.SPOT,
-        symbol="BTCUSDT",
+        symbol=symbol,
         timeframe="15m",
         source_strategy=LiveCoverageSourceStrategy.DIRECT_CANONICAL_15M,
         freeze_limit=120,
@@ -37,6 +41,13 @@ def _plan() -> LiveCoveragePlan:
     return LiveCoveragePlan(
         version="wc2-clock-test/1",
         contexts=(_context(),),
+    )
+
+
+def _two_context_plan() -> LiveCoveragePlan:
+    return LiveCoveragePlan(
+        version="wc2-clock-test-two/1",
+        contexts=(_context("BTCUSDT"), _context("ETHUSDT")),
     )
 
 
@@ -56,13 +67,48 @@ def _args(**overrides):
     values = {
         "wc2_enabled": False,
         "wc2_policy": None,
+        "wc2_epoch2": None,
+        "wc2_prepared": None,
         "wc2_decision_evidence": None,
         "wc2_cohort": None,
+        "wc2_shadow_intent": None,
+        "wc2_shadow_cycle": None,
         "wc2_maximum_issuance_delay_ms": None,
         "wc2_horizon_bars": None,
     }
     values.update(overrides)
     return argparse.Namespace(**values)
+
+
+def _paths(tmp_path: Path) -> dict[str, Path]:
+    return {
+        "epoch2": tmp_path / "paper_fund_epoch2.sqlite3",
+        "prepared": tmp_path / "wc2.wc2-prepared.sqlite3",
+        "decision": tmp_path / "decision.sqlite3",
+        "cohort": tmp_path / "wc2_untouched_forward.sqlite3",
+        "shadow_intent": tmp_path / "wc2.shadow-intent.sqlite3",
+        "shadow_cycle": tmp_path / "wc2.shadow-cycle.sqlite3",
+    }
+
+
+def _config(
+    tmp_path: Path,
+    *,
+    policy_path: Path,
+) -> clock.WC2ClockConfig:
+    paths = _paths(tmp_path)
+    return clock.WC2ClockConfig(
+        enabled=True,
+        policy_path=policy_path,
+        epoch2_path=paths["epoch2"],
+        prepared_path=paths["prepared"],
+        decision_evidence_path=paths["decision"],
+        cohort_path=paths["cohort"],
+        shadow_intent_path=paths["shadow_intent"],
+        shadow_cycle_path=paths["shadow_cycle"],
+        maximum_issuance_delay_ms=30_000,
+        horizon_bars=4,
+    )
 
 
 def _patch_cycle(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -77,12 +123,31 @@ def _patch_cycle(monkeypatch: pytest.MonkeyPatch) -> None:
     )
 
 
+def _seed_policy(path: Path):
+    policy = build_wc2_untouched_forward_policy(
+        preregistered_at_ms=1_000,
+        collection_start_ms=2_000,
+    )
+    assert WC2PolicyStore(path).append(policy) is True
+    return policy
+
+
+def _patch_epoch2(monkeypatch: pytest.MonkeyPatch):
+    activation = _activation()
+    monkeypatch.setattr(
+        clock,
+        "read_epoch2_state_read_only",
+        lambda path: SimpleNamespace(activation=activation),
+    )
+    return activation
+
+
 def test_wc2_clock_is_disabled_by_default() -> None:
     config = clock.build_wc2_clock_config(_args())
 
     assert config == clock.WC2ClockConfig()
     assert config.enabled is False
-    assert clock.load_wc2_policy(config) is None
+    assert clock.load_wc2_prerequisites(config) is None
 
 
 def test_wc2_clock_rejects_partial_or_implicit_configuration(
@@ -101,12 +166,17 @@ def test_wc2_clock_rejects_partial_or_implicit_configuration(
             )
         )
 
+    paths = _paths(tmp_path)
     with pytest.raises(ValueError, match="issuance delay"):
         clock.WC2ClockConfig(
             enabled=True,
             policy_path=tmp_path / "policy.sqlite3",
-            decision_evidence_path=tmp_path / "decision.sqlite3",
-            cohort_path=tmp_path / "cohort.sqlite3",
+            epoch2_path=paths["epoch2"],
+            prepared_path=paths["prepared"],
+            decision_evidence_path=paths["decision"],
+            cohort_path=paths["cohort"],
+            shadow_intent_path=paths["shadow_intent"],
+            shadow_cycle_path=paths["shadow_cycle"],
             maximum_issuance_delay_ms=0,
             horizon_bars=4,
         )
@@ -117,13 +187,16 @@ def test_disabled_clock_never_calls_wc2_or_creates_wc2_databases(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     _patch_cycle(monkeypatch)
-    decision_path = tmp_path / "decision.sqlite3"
-    cohort_path = tmp_path / "cohort.sqlite3"
+    paths = _paths(tmp_path)
 
-    def forbidden_wc2(**kwargs):
+    def forbidden_wc2(*args, **kwargs):
         raise AssertionError("WC2 processor must remain disabled")
 
-    monkeypatch.setattr(clock, "process_wc2_live_freeze", forbidden_wc2)
+    monkeypatch.setattr(
+        clock,
+        "process_wc2_prepared_live_freeze",
+        forbidden_wc2,
+    )
 
     status = asyncio.run(
         clock.run(
@@ -136,43 +209,37 @@ def test_disabled_clock_never_calls_wc2_or_creates_wc2_databases(
     )
 
     assert status == 0
-    assert not decision_path.exists()
-    assert not cohort_path.exists()
+    assert all(not path.exists() for path in paths.values())
 
 
-def test_enabled_clock_passes_exact_policy_and_runtime_inputs(
+def test_enabled_clock_passes_exact_prepared_runtime_inputs(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     _patch_cycle(monkeypatch)
     policy_path = tmp_path / "policy.sqlite3"
-    decision_path = tmp_path / "decision.sqlite3"
-    cohort_path = tmp_path / "cohort.sqlite3"
-    policy = build_wc2_untouched_forward_policy(
-        preregistered_at_ms=1_000,
-        collection_start_ms=2_000,
-    )
-    assert WC2PolicyStore(policy_path).append(policy) is True
+    policy = _seed_policy(policy_path)
+    activation = _patch_epoch2(monkeypatch)
+    paths = _paths(tmp_path)
     captured = {}
 
     def fake_wc2(result, **kwargs):
         captured["result"] = result
         captured.update(kwargs)
         return SimpleNamespace(
-            status=SimpleNamespace(value="no_persisted_issuance"),
+            status=WC2PreparedLiveStatus.SKIPPED_BEFORE_ACTIVATION,
+            receipt_identity=None,
             forecast_identity=None,
             cohort_forecast_identity=None,
+            paper_intent_identity=None,
         )
 
-    monkeypatch.setattr(clock, "process_wc2_live_freeze", fake_wc2)
-    config = clock.WC2ClockConfig(
-        enabled=True,
-        policy_path=policy_path,
-        decision_evidence_path=decision_path,
-        cohort_path=cohort_path,
-        maximum_issuance_delay_ms=30_000,
-        horizon_bars=4,
+    monkeypatch.setattr(
+        clock,
+        "process_wc2_prepared_live_freeze",
+        fake_wc2,
     )
+    config = _config(tmp_path, policy_path=policy_path)
 
     status = asyncio.run(
         clock.run(
@@ -187,30 +254,149 @@ def test_enabled_clock_passes_exact_policy_and_runtime_inputs(
     assert status == 0
     assert captured["result"].status is LiveFreezeStatus.ALREADY_FROZEN
     assert captured["policy"] == policy
+    assert captured["activation"] == activation
     assert captured["maximum_issuance_delay_ms"] == 30_000
     assert captured["horizon_bars"] == 4
     assert captured["base_asset"] == "BTC"
-    assert captured["decision_ledger"].path == decision_path
-    assert captured["cohort_journal"].path == cohort_path
-    assert not decision_path.exists()
-    assert not cohort_path.exists()
+    assert captured["prepared_journal"].path == paths["prepared"]
+    assert captured["decision_ledger"].path == paths["decision"]
+    assert captured["cohort_journal"].path == paths["cohort"]
+    assert captured["shadow_journal"].path == paths["shadow_intent"]
+    assert captured["shadow_manifest"].path == paths["shadow_cycle"]
+    assert all(not path.exists() for path in paths.values())
 
 
-def test_enabled_clock_missing_policy_fails_before_runtime_db_creation(
+def test_enabled_clock_missing_policy_fails_before_network_or_runtime_writes(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    policy_path = tmp_path / "missing-policy.sqlite3"
+    paths = _paths(tmp_path)
+    called = {"network": 0}
+
+    async def forbidden_freeze(**kwargs):
+        called["network"] += 1
+        raise AssertionError("network cycle must not start")
+
+    monkeypatch.setattr(clock, "freeze_coverage_context", forbidden_freeze)
+    status = asyncio.run(
+        clock.run(
+            tmp_path / "signal.sqlite3",
+            plan=_plan(),
+            candle_cache_path=tmp_path / "candles.sqlite3",
+            provider_divergence_path=tmp_path / "divergence.sqlite3",
+            wc2_config=_config(tmp_path, policy_path=policy_path),
+        )
+    )
+
+    assert status == 1
+    assert called["network"] == 0
+    assert not policy_path.exists()
+    assert all(not path.exists() for path in paths.values())
+
+
+def test_enabled_clock_missing_epoch2_fails_before_network_or_runtime_writes(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    policy_path = tmp_path / "policy.sqlite3"
+    _seed_policy(policy_path)
+    paths = _paths(tmp_path)
+    called = {"network": 0}
+
+    async def forbidden_freeze(**kwargs):
+        called["network"] += 1
+        raise AssertionError("network cycle must not start")
+
+    monkeypatch.setattr(clock, "freeze_coverage_context", forbidden_freeze)
+    status = asyncio.run(
+        clock.run(
+            tmp_path / "signal.sqlite3",
+            plan=_plan(),
+            candle_cache_path=tmp_path / "candles.sqlite3",
+            provider_divergence_path=tmp_path / "divergence.sqlite3",
+            wc2_config=_config(tmp_path, policy_path=policy_path),
+        )
+    )
+
+    assert status == 1
+    assert called["network"] == 0
+    assert not paths["epoch2"].exists()
+    assert not paths["prepared"].exists()
+    assert not paths["decision"].exists()
+    assert not paths["cohort"].exists()
+    assert not paths["shadow_intent"].exists()
+    assert not paths["shadow_cycle"].exists()
+
+
+def test_wc2_runtime_error_fail_stops_before_second_context(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    policy_path = tmp_path / "policy.sqlite3"
+    _seed_policy(policy_path)
+    _patch_epoch2(monkeypatch)
+    calls = {"freeze": 0, "wc2": 0, "divergence": 0}
+
+    async def fake_freeze(**kwargs):
+        calls["freeze"] += 1
+        return _replay_result()
+
+    def fail_wc2(*args, **kwargs):
+        calls["wc2"] += 1
+        raise ValueError("forced prepared persistence failure")
+
+    def divergence(**kwargs):
+        calls["divergence"] += 1
+
+    monkeypatch.setattr(clock, "freeze_coverage_context", fake_freeze)
+    monkeypatch.setattr(
+        clock,
+        "process_wc2_prepared_live_freeze",
+        fail_wc2,
+    )
+    monkeypatch.setattr(
+        clock,
+        "persist_provider_divergence_for_plan",
+        divergence,
+    )
+
+    status = asyncio.run(
+        clock.run(
+            tmp_path / "signal.sqlite3",
+            plan=_two_context_plan(),
+            candle_cache_path=tmp_path / "candles.sqlite3",
+            provider_divergence_path=tmp_path / "divergence.sqlite3",
+            wc2_config=_config(tmp_path, policy_path=policy_path),
+        )
+    )
+
+    assert status == 1
+    assert calls == {"freeze": 1, "wc2": 1, "divergence": 0}
+
+
+def test_activation_post_receipt_gap_is_fail_stop(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     _patch_cycle(monkeypatch)
-    policy_path = tmp_path / "missing-policy.sqlite3"
-    decision_path = tmp_path / "decision.sqlite3"
-    cohort_path = tmp_path / "cohort.sqlite3"
-    config = clock.WC2ClockConfig(
-        enabled=True,
-        policy_path=policy_path,
-        decision_evidence_path=decision_path,
-        cohort_path=cohort_path,
-        maximum_issuance_delay_ms=30_000,
-        horizon_bars=4,
+    policy_path = tmp_path / "policy.sqlite3"
+    _seed_policy(policy_path)
+    _patch_epoch2(monkeypatch)
+
+    def gap(*args, **kwargs):
+        return SimpleNamespace(
+            status=WC2PreparedLiveStatus.NO_PREPARED_RECEIPT,
+            receipt_identity=None,
+            forecast_identity=None,
+            cohort_forecast_identity=None,
+            paper_intent_identity=None,
+        )
+
+    monkeypatch.setattr(
+        clock,
+        "process_wc2_prepared_live_freeze",
+        gap,
     )
 
     status = asyncio.run(
@@ -219,14 +405,11 @@ def test_enabled_clock_missing_policy_fails_before_runtime_db_creation(
             plan=_plan(),
             candle_cache_path=tmp_path / "candles.sqlite3",
             provider_divergence_path=tmp_path / "divergence.sqlite3",
-            wc2_config=config,
+            wc2_config=_config(tmp_path, policy_path=policy_path),
         )
     )
 
     assert status == 1
-    assert not policy_path.exists()
-    assert not decision_path.exists()
-    assert not cohort_path.exists()
 
 
 def test_wc2_base_asset_is_explicit_usdt_only() -> None:

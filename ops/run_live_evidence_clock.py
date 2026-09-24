@@ -22,13 +22,17 @@ from crypto_signal.data.provider_divergence import (
 )
 from crypto_signal.data.store import CandleStore
 from crypto_signal.decision_ledger import ImmutableDecisionEvidenceLedger
-from crypto_signal.evaluation.live_untouched_forward_runtime import (
-    process_wc2_live_freeze,
-)
 from crypto_signal.evaluation.untouched_forward_journal import WC2CohortJournal
 from crypto_signal.evaluation.untouched_forward_policy import (
     WC2PolicyStore,
     WC2UntouchedForwardPolicy,
+)
+from crypto_signal.evaluation.untouched_forward_prepared import (
+    WC2PreparedCycleJournal,
+)
+from crypto_signal.evaluation.untouched_forward_prepared_runtime import (
+    WC2PreparedLiveStatus,
+    process_wc2_prepared_live_freeze,
 )
 from crypto_signal.ledger.coverage import (
     LiveCoveragePlan,
@@ -38,6 +42,12 @@ from crypto_signal.ledger.store import (
     ImmutableSignalLedger,
     LedgerConflictError,
 )
+from crypto_signal.paper.epoch2_accounting import (
+    Epoch2ActivationRecord,
+    read_epoch2_state_read_only,
+)
+from crypto_signal.paper.shadow_cycle_manifest import R25ShadowCycleManifest
+from crypto_signal.paper.shadow_intent_journal import R25ShadowIntentJournal
 
 BASE = Path("/Users/crypto-signal-agent/Crypto-Signal")
 DEFAULT_DB = BASE / "runtime" / "ledger" / "live_signal_ledger.sqlite3"
@@ -50,16 +60,24 @@ PROVIDER_DIVERGENCE_LOOKBACK = 96
 class WC2ClockConfig:
     enabled: bool = False
     policy_path: Path | None = None
+    epoch2_path: Path | None = None
+    prepared_path: Path | None = None
     decision_evidence_path: Path | None = None
     cohort_path: Path | None = None
+    shadow_intent_path: Path | None = None
+    shadow_cycle_path: Path | None = None
     maximum_issuance_delay_ms: int | None = None
     horizon_bars: int | None = None
 
     def __post_init__(self) -> None:
         values = (
             self.policy_path,
+            self.epoch2_path,
+            self.prepared_path,
             self.decision_evidence_path,
             self.cohort_path,
+            self.shadow_intent_path,
+            self.shadow_cycle_path,
             self.maximum_issuance_delay_ms,
             self.horizon_bars,
         )
@@ -71,7 +89,8 @@ class WC2ClockConfig:
             return
         if any(value is None for value in values):
             raise ValueError(
-                "enabled WC2 clock requires policy, decision, cohort, "
+                "enabled WC2 clock requires policy, Epoch2, prepared, "
+                "decision, cohort, shadow-intent, shadow-cycle, "
                 "issuance-delay and horizon inputs"
             )
         assert self.maximum_issuance_delay_ms is not None
@@ -111,8 +130,12 @@ def parse_args() -> argparse.Namespace:
         help="explicitly enable preregistered WC2 untouched-forward indexing",
     )
     parser.add_argument("--wc2-policy", type=Path, default=None)
+    parser.add_argument("--wc2-epoch2", type=Path, default=None)
+    parser.add_argument("--wc2-prepared", type=Path, default=None)
     parser.add_argument("--wc2-decision-evidence", type=Path, default=None)
     parser.add_argument("--wc2-cohort", type=Path, default=None)
+    parser.add_argument("--wc2-shadow-intent", type=Path, default=None)
+    parser.add_argument("--wc2-shadow-cycle", type=Path, default=None)
     parser.add_argument(
         "--wc2-maximum-issuance-delay-ms",
         type=int,
@@ -126,21 +149,33 @@ def build_wc2_clock_config(args: argparse.Namespace) -> WC2ClockConfig:
     return WC2ClockConfig(
         enabled=bool(args.wc2_enabled),
         policy_path=args.wc2_policy,
+        epoch2_path=args.wc2_epoch2,
+        prepared_path=args.wc2_prepared,
         decision_evidence_path=args.wc2_decision_evidence,
         cohort_path=args.wc2_cohort,
+        shadow_intent_path=args.wc2_shadow_intent,
+        shadow_cycle_path=args.wc2_shadow_cycle,
         maximum_issuance_delay_ms=args.wc2_maximum_issuance_delay_ms,
         horizon_bars=args.wc2_horizon_bars,
     )
 
 
-def load_wc2_policy(config: WC2ClockConfig) -> WC2UntouchedForwardPolicy | None:
+def load_wc2_prerequisites(
+    config: WC2ClockConfig,
+) -> tuple[WC2UntouchedForwardPolicy, Epoch2ActivationRecord] | None:
     if not config.enabled:
         return None
     assert config.policy_path is not None
+    assert config.epoch2_path is not None
     policy = WC2PolicyStore(config.policy_path).latest()
     if policy is None:
         raise ValueError("WC2 clock enabled but preregistered policy is missing")
-    return policy
+    epoch2 = read_epoch2_state_read_only(config.epoch2_path)
+    if epoch2 is None:
+        raise ValueError(
+            "WC2 clock enabled but canonical Epoch2 activation is missing"
+        )
+    return policy, epoch2.activation
 
 
 def wc2_base_asset(symbol: str) -> str:
@@ -208,32 +243,49 @@ async def run(
     failures = 0
     selected_wc2 = wc2_config or WC2ClockConfig()
     try:
-        wc2_policy = load_wc2_policy(selected_wc2)
+        prerequisites = load_wc2_prerequisites(selected_wc2)
+        if prerequisites is None:
+            wc2_policy = None
+            wc2_activation = None
+            wc2_prepared = None
+            wc2_decision = None
+            wc2_cohort = None
+            wc2_shadow_intent = None
+            wc2_shadow_cycle = None
+        else:
+            wc2_policy, wc2_activation = prerequisites
+            wc2_prepared = WC2PreparedCycleJournal(
+                _required_path(selected_wc2.prepared_path, "WC2 prepared")
+            )
+            wc2_decision = ImmutableDecisionEvidenceLedger(
+                _required_path(
+                    selected_wc2.decision_evidence_path,
+                    "WC2 decision evidence",
+                )
+            )
+            wc2_cohort = WC2CohortJournal(
+                _required_path(selected_wc2.cohort_path, "WC2 cohort")
+            )
+            wc2_shadow_intent = R25ShadowIntentJournal(
+                _required_path(
+                    selected_wc2.shadow_intent_path,
+                    "WC2 shadow intent",
+                )
+            )
+            wc2_shadow_cycle = R25ShadowCycleManifest(
+                _required_path(
+                    selected_wc2.shadow_cycle_path,
+                    "WC2 shadow cycle",
+                )
+            )
     except (OSError, TypeError, ValueError, sqlite3.Error) as exc:
         print(
             f"wc2 status=ERROR error={type(exc).__name__}:{exc} "
-            "REAL_CAPITAL=0",
+            "PRE_NETWORK_FAIL_CLOSED=YES REAL_CAPITAL=0",
             file=sys.stderr,
             flush=True,
         )
         return 1
-    wc2_decision = (
-        None
-        if not selected_wc2.enabled
-        else ImmutableDecisionEvidenceLedger(
-            _required_path(
-                selected_wc2.decision_evidence_path,
-                "WC2 decision evidence",
-            )
-        )
-    )
-    wc2_cohort = (
-        None
-        if not selected_wc2.enabled
-        else WC2CohortJournal(
-            _required_path(selected_wc2.cohort_path, "WC2 cohort")
-        )
-    )
     selected_plan = LiveCoveragePlan.current_pilot() if plan is None else plan
     adapters: dict[Exchange, MarketDataAdapter] = {
         Exchange.BYBIT: BybitSpotAdapter(),
@@ -281,18 +333,26 @@ async def run(
 
         if selected_wc2.enabled:
             assert wc2_policy is not None
+            assert wc2_activation is not None
+            assert wc2_prepared is not None
             assert wc2_decision is not None
             assert wc2_cohort is not None
+            assert wc2_shadow_intent is not None
+            assert wc2_shadow_cycle is not None
             assert selected_wc2.maximum_issuance_delay_ms is not None
             assert selected_wc2.horizon_bars is not None
             try:
-                wc2_result = process_wc2_live_freeze(
+                wc2_result = process_wc2_prepared_live_freeze(
                     result,
                     context=context,
                     signal_ledger=ledger,
                     policy=wc2_policy,
+                    activation=wc2_activation,
+                    prepared_journal=wc2_prepared,
                     decision_ledger=wc2_decision,
                     cohort_journal=wc2_cohort,
+                    shadow_journal=wc2_shadow_intent,
+                    shadow_manifest=wc2_shadow_cycle,
                     observed_at_ms=time.time_ns() // 1_000_000,
                     maximum_issuance_delay_ms=(
                         selected_wc2.maximum_issuance_delay_ms
@@ -301,24 +361,37 @@ async def run(
                     base_asset=wc2_base_asset(context.symbol),
                 )
             except (OSError, TypeError, ValueError, sqlite3.Error) as exc:
-                failures += 1
                 print(
                     f"wc2 provider={name} symbol={context.symbol} "
                     f"timeframe={context.timeframe} status=ERROR "
-                    f"error={type(exc).__name__}:{exc} REAL_CAPITAL=0",
+                    f"error={type(exc).__name__}:{exc} "
+                    "FAIL_STOP=YES REAL_CAPITAL=0",
                     file=sys.stderr,
                     flush=True,
                 )
-            else:
+                return 1
+
+            print(
+                f"wc2 provider={name} symbol={context.symbol} "
+                f"timeframe={context.timeframe} "
+                f"status={wc2_result.status.value} "
+                f"receipt={wc2_result.receipt_identity or '-'} "
+                f"forecast={wc2_result.forecast_identity or '-'} "
+                f"cohort={wc2_result.cohort_forecast_identity or '-'} "
+                f"intent={wc2_result.paper_intent_identity or '-'} "
+                "HISTORICAL_FORECAST_BACKFILL=NO REAL_CAPITAL=0",
+                flush=True,
+            )
+            if wc2_result.status is WC2PreparedLiveStatus.NO_PREPARED_RECEIPT:
                 print(
                     f"wc2 provider={name} symbol={context.symbol} "
                     f"timeframe={context.timeframe} "
-                    f"status={wc2_result.status.value} "
-                    f"forecast={wc2_result.forecast_identity or '-'} "
-                    f"cohort={wc2_result.cohort_forecast_identity or '-'} "
+                    "status=EVIDENCE_GAP FAIL_STOP=YES "
                     "HISTORICAL_FORECAST_BACKFILL=NO REAL_CAPITAL=0",
+                    file=sys.stderr,
                     flush=True,
                 )
+                return 1
 
     selected_divergence_path = (
         provider_divergence_path
