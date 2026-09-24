@@ -13,7 +13,7 @@ def _block(name: str, next_name: str) -> str:
 def test_wc2_collect_once_is_explicitly_allowlisted_and_exact_source() -> None:
     text = WORKFLOW.read_text(encoding="utf-8")
 
-    assert "wc2protocolregister|wc2collectonce|wc2state|" in text
+    assert "wc2protocolregister|wc2executionprotocolregister|wc2collectonce|wc2state|" in text
 
     checkout = _block(
         "CHECKOUT EXACT WC2 POLICY COMMAND SOURCE",
