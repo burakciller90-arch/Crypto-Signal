@@ -26,7 +26,7 @@ def test_latest_main_galactech_root_cutover_preserves_legacy_rollback(
     assert legacy_js.status_code == 200
 
     assert root.content == alias.content
-    assert 'data-ui-version="galactech-v1.1-polish"' in root.text
+    assert 'data-ui-version="galactech-v2-intelligence-first-tr"' in root.text
     assert 'data-ui-version="galactech-command-center-v1"' in legacy.text
     assert "/galactech-static/app.js" in root.text
     assert "/static/app.js" in legacy.text
@@ -37,12 +37,12 @@ def test_latest_main_galactech_root_cutover_preserves_legacy_rollback(
     assert health["real_capital"] == 0
 
     # Latest-main R25 / Slice16 customer truth must survive the cutover.
-    assert "R25 / OPERATIONAL TRUTH" in root.text
+    assert "R25 / OPERASYONEL DOĞRULUK" in root.text
     assert 'id="systemMarketTape"' in root.text
     assert 'id="systemColdArchive"' in root.text
-    assert "EVENT SOURCE RUNTIME" in root.text
+    assert "OLAY KAYNAĞI ÇALIŞMA DURUMU" in root.text
     assert "REAL_CAPITAL=0" in root.text
-    assert "no order path" in root.text
+    assert "emir / erişim anahtarı yolu yok" in root.text
 
     assert client.post("/").status_code == 405
     assert client.post("/galactech").status_code == 405
@@ -76,10 +76,10 @@ def test_cutover_does_not_expand_market_runtime_claims(tmp_path: Path) -> None:
     root = client.get("/").text
     js = client.get("/galactech-static/app.js").text
 
-    assert "ONLINE NOT ASSERTED" in js
-    assert "process NOT MEASURED" in js
-    assert "canonical-row replay" in js
+    assert "ÇEVRİMİÇİ OLDUĞU İDDİA EDİLMEZ" in js
+    assert "süreç ÖLÇÜLMEDİ" in js
+    assert "kanonik satır tekrar kontrolü" in js
     assert "canonical_row_digest_replay" in js
-    assert "replayed partitions" in js
-    assert "EVENT SOURCE RUNTIME" in root
-    assert "NOT EXPOSED" in root
+    assert "kontrol edilen bölüm" in js
+    assert "OLAY KAYNAĞI ÇALIŞMA DURUMU" in root
+    assert "SUNULMUYOR" in root
