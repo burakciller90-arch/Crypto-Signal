@@ -1,13 +1,55 @@
 # CURRENT STATUS
 
-Updated: 2026-09-24
+Updated: 2026-09-25
 Project: Crypto Signal
 Baseline: crypto-signal-full-version-v1.0.0 (immutable)
 Active post-v1.0 program: v1.1 world-class product + market intelligence
-State: WC0_LIVE_PRODUCT_PARITY_ACCEPTED / WC1_24_7_DATA_RELIABILITY_ACCEPTED / WC2_ENGINEERING_FROZEN_EVIDENCE_ACCUMULATION_ACTIVE / WC4_CHAMPION_CHALLENGER_ENGINEERING_ACCEPTED_RESEARCH_ONLY / WC5_ENGINEERING_ACCEPTED_PRODUCT_DEPLOYED_HUMAN_USABILITY_NOT_MEASURED / CONTINUITY_PAUSED_BY_USER
+State: WC0_LIVE_PRODUCT_PARITY_ACCEPTED / WC1_24_7_DATA_RELIABILITY_ACCEPTED / WC2_ENGINEERING_FROZEN_EVIDENCE_ACCUMULATION_ACTIVE / WC4_CHAMPION_CHALLENGER_ENGINEERING_ACCEPTED_RESEARCH_ONLY / WC5_ENGINEERING_ACCEPTED_PRODUCT_DEPLOYED_HUMAN_USABILITY_NOT_MEASURED / WC6_PAPER_EXECUTION_LAB_CORE_ACCEPTED_SANDBOX_OPEN / CONTINUITY_PAUSED_BY_USER
 REAL_CAPITAL: 0
 
 ## Active v1.1 frontier — read before historical sections
+
+
+### 2026-09-25 00:21 +0300 — WC6 PAPER EXECUTION LAB CORE ACCEPTED / SANDBOX-TESTNET EVIDENCE STILL OPEN
+
+This entry **supersedes the earlier 2026-09-24 23:56 frontier snapshot** while preserving it below as historical evidence.
+
+- Exact accepted main: `c075aac87e53bb9f6c2ce1a4e542bc8a985bcb0c`.
+- WC6 deliberately reuses the already-accepted virtual paper fund instead of creating a second accounting engine. It does not modify the frozen WC2 cohort, does not add live order authority and does not activate real capital.
+- PR **#1192** added the first Execution Lab dossier over existing deterministic paper primitives:
+  - one accepted trade bundle commits atomically as decision intent + simulated fill + position/cash mutation + processed-event receipt;
+  - exact retry from the original state returns `UNCHANGED` with the same receipt, record identities and reconstructed state;
+  - receipt lineage reconciles exactly to pretrade, execution snapshot, decision, fill and mutation identities;
+  - append-only virtual paper write authority can be explicitly enabled and then disabled;
+  - the disabled authority acts as the WC6 paper kill switch: a subsequent commit attempt is rejected fail-closed and both ledger replay and processed-event receipts remain unchanged;
+  - duplicate prevention, restart-safe idempotence, accounting reconciliation and authority isolation are therefore represented in one immutable lab dossier;
+  - sandbox adapter remains `NOT_IMPLEMENTED`; canonical paper partial fills remain `UNSUPPORTED_V1`; network/credential/live-order/production authority are false; `REAL_CAPITAL=0`.
+- PR #1192 exact-head run **36059860939** passed focused WC6, full paper-subsystem, whole-repository and Development non-mutation acceptance. After merge as `64cce164bd2561c2e3f16fc4f44e612544f0d854`, exact-main push run **36060028438 / job 107836479650** independently passed the same gate.
+- PR **#1193** added WC6 Stage-2 execution realism without changing canonical paper accounting:
+  - one already-accepted canonical simulated fill is projected into a **lab-only** shadow order lifecycle;
+  - acknowledgement latency is explicit and deterministic;
+  - two-or-more strictly ordered shadow partial fills must sum exactly to the canonical fill quantity and align to the frozen venue quantity step;
+  - every shadow partial fill uses the already-accepted canonical simulated fill price, so aggregate shadow notional must equal canonical fill notional exactly;
+  - the final shadow lifecycle reconciles processed event -> pretrade -> execution snapshot -> decision -> canonical fill -> mutation;
+  - rerunning the same lifecycle is deterministic and does not mutate canonical paper replay;
+  - canonical `partial_fills_supported=False` remains unchanged and the shadow lifecycle explicitly records `LAB_ONLY_CANONICAL_UNSUPPORTED`;
+  - no sandbox/testnet adapter, network call, credentials, live-order authority or production authority was introduced.
+- PR #1193 exact-head run **36060646367** passed. After merge as `c075aac87e53bb9f6c2ce1a4e542bc8a985bcb0c`, exact-main push run **36060806366 / job 107839002389** completed **SUCCESS** with:
+  - `WC6_EXACT_SOURCE_PASS=YES`;
+  - `WC6_FOCUSED_PASS=YES`;
+  - `WC6_PAPER_REGRESSION_PASS=YES`;
+  - `WC6_FULL_REGRESSION_PASS=YES`;
+  - `WC6_DEVELOPMENT_NON_MUTATING_PASS=YES`;
+  - `REAL_CAPITAL=0`.
+- WC6 is therefore **materially advanced but OPEN**. Deterministic paper execution, explicit costs, venue-rule rejection, restart/idempotence, duplicate prevention, paper kill-switch behavior, accounting reconciliation, acknowledgement latency and lab-only partial-fill simulation are accepted engineering rails.
+- WC6 does **not** yet satisfy its roadmap exit gate because no safe sandbox/testnet venue adapter has been implemented and no real sandbox/testnet acknowledgement/fill/recovery evidence exists. Missing sandbox evidence must remain missing rather than being simulated and relabelled as venue evidence.
+
+Current true frontier:
+- leave WC2 engineering-frozen and continue genuine untouched-forward evidence accumulation under its preregistered contract;
+- WC3 remains blocked on evidence sufficiency; WC4 remains research-only/no-promotion; WC5 human usability timing remains `NOT_MEASURED`;
+- continue WC6 with a fail-closed **sandbox adapter contract / NOT_CONFIGURED boundary** that introduces no network or credentials by itself;
+- actual sandbox/testnet execution may be accepted only if a safely supported venue/environment later provides explicit non-production credentials and observable venue acknowledgement/fill evidence;
+- preserve continuity pause, no live exchange/broker authority and **REAL_CAPITAL=0**.
 
 
 ### 2026-09-24 23:56 +0300 — WC4 CHAMPION/CHALLENGER ENGINEERING ACCEPTED / NO WINNER OR PROMOTION CLAIM

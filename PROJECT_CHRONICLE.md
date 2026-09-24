@@ -1,6 +1,22 @@
 # PROJECT CHRONICLE
 
 
+## 2026-09-25 — WC6 paper Execution Lab gains deterministic recovery, kill-switch and shadow partial-fill reconciliation
+
+WC6 began by inventorying the existing Paper Fund rather than building a parallel execution stack. The repository already had deterministic simulated fills with explicit fee/spread/slippage, frozen venue-rule inputs, atomic paper bundle persistence, processed-event receipts, append-only write authority and replay-based accounting. The missing work was to bind those primitives into an Execution Lab evidence boundary and then exercise latency/partial-fill behavior without pretending canonical paper or a real venue supported it.
+
+PR #1192 added the first WC6 recovery/reconciliation dossier. One accepted trade commit is required to persist decision, simulated fill, position/cash mutation and processed-event receipt atomically. Replaying the exact same event from the original state must return `UNCHANGED` with identical receipt, record identities and reconstructed state. The dossier also binds the append-only virtual write-authority chain: after a reviewed enable is followed by an explicit disable, the disabled state acts as a paper kill switch. The same commit boundary must reject the attempt and leave both ledger replay and processed-event receipts unchanged.
+
+That slice intentionally did not invent missing capabilities. Sandbox/testnet status remained `NOT_IMPLEMENTED`; canonical paper partial fills remained `UNSUPPORTED_V1`; and network, credential, live-order and production authority all remained false. PR #1192 merged as `64cce164bd2561c2e3f16fc4f44e612544f0d854`. Its exact-main UID504 run 36060028438 passed focused WC6, the complete paper subsystem, whole-repository regression and Development non-mutation with REAL_CAPITAL=0.
+
+PR #1193 then addressed latency and partial-fill engineering as **lab-only shadow evidence**. It leaves the canonical single simulated fill untouched. From one already-accepted canonical paper trade, the lab freezes acknowledgement latency plus two-or-more strictly increasing partial-fill latencies and quantities. Partial quantities must align to the frozen quantity step and sum exactly to the canonical fill quantity. Every shadow partial fill uses the accepted canonical simulated fill price, which makes aggregate shadow notional reconcile exactly to the canonical fill notional. The lifecycle binds the processed event, pretrade, execution snapshot, decision, canonical fill and accounting mutation while never writing the canonical paper ledger.
+
+PR #1193 merged as `c075aac87e53bb9f6c2ce1a4e542bc8a985bcb0c`. Exact-main UID504 run 36060806366 / job 107839002389 passed the focused lifecycle contract, all paper tests, whole-repository regression and Development non-mutation. Canonical paper still says `partial_fills_supported=False`; the accepted shadow semantic is explicitly `LAB_ONLY_CANONICAL_UNSUPPORTED`.
+
+WC6 is therefore materially advanced but not closed. Paper recovery/idempotence, duplicate prevention, kill-switch behavior, accounting reconciliation, deterministic acknowledgement latency and lab-only partial-fill reconciliation now have exact-main engineering evidence. The roadmap exit gate still requires real sandbox/testnet execution evidence. No sandbox/testnet adapter has yet been implemented and no venue acknowledgement/fill evidence exists, so those states remain open rather than being simulated into success. REAL_CAPITAL=0.
+
+
+
 ## 2026-09-24 — WC4 champion/challenger research cycle becomes mechanically complete without promotion authority
 
 The Alpha Factory already had strong individual rails: chronological walk-forward evaluation, fixed family expansion, transaction-cost stress, robustness/ablation, an untouched-forward freeze/evaluation contract, and an immutable promotion dossier that stops at supervisor review. What it did not have was one explicit artifact proving that those stages belong to the same champion/challenger research cycle.
