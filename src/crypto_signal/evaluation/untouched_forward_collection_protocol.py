@@ -389,7 +389,7 @@ def _protocol_from_json(payload_json: str) -> WC2CollectionProtocol:
         epoch2_activated_at_ms=_integer(raw, "epoch2_activated_at_ms"),
         coverage_plan_version=_text(raw, "coverage_plan_version"),
         coverage_context_identities=tuple(
-            tuple(_text_item(part) for part in item)
+            _context_identity_item(item)
             for item in _list(raw, "coverage_context_identities")
         ),
         maximum_issuance_delay_ms=_integer(
@@ -397,7 +397,7 @@ def _protocol_from_json(payload_json: str) -> WC2CollectionProtocol:
             "maximum_issuance_delay_ms",
         ),
         horizon_bars_by_timeframe=tuple(
-            (_text_item(item[0]), _integer_item(item[1]))
+            _horizon_item(item)
             for item in _list(raw, "horizon_bars_by_timeframe")
         ),
         paper_action_mode=_text(raw, "paper_action_mode"),
@@ -433,6 +433,25 @@ def _text(raw: dict[str, object], key: str) -> str:
 def _integer(raw: dict[str, object], key: str) -> int:
     value = raw.get(key)
     return _integer_item(value)
+
+
+def _context_identity_item(
+    value: object,
+) -> tuple[str, str, str, str]:
+    if not isinstance(value, list) or len(value) != 4:
+        raise TypeError("WC2 collection context identity must have four items")
+    return (
+        _text_item(value[0]),
+        _text_item(value[1]),
+        _text_item(value[2]),
+        _text_item(value[3]),
+    )
+
+
+def _horizon_item(value: object) -> tuple[str, int]:
+    if not isinstance(value, list) or len(value) != 2:
+        raise TypeError("WC2 collection horizon item must have two items")
+    return (_text_item(value[0]), _integer_item(value[1]))
 
 
 def _text_item(value: object) -> str:
