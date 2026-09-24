@@ -24,7 +24,7 @@ jobs:
           set -euo pipefail
           cmd="$(printf '%s\n' "$ISSUE_BODY" | awk -F: 'tolower($1)=="command" {gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2); print tolower($2); exit}')"
           case "$cmd" in
-            status|eventsourcestate|services|logs|disk|sync|producttest|fulltest|productstate|productdeploy|paperreview|paperinspect|paperfixlint|paperharden|stateplanreview|stateplaninspect|stateplanharden|cursorreview|cursorreviewtail|cursorcleanup|bridgecheck|bridgestate|rollingstate|pausecheck|wakepause|wakeresume|wakearm|waketest|wakeheartbeat|chatbusyprobe|cursorcheck|cursorauthdiag|cursorttycheck|alertclockstate|alertclockpause|alertclockresume|migrationinspect|migrationinventory|ssddashboarddiag|productcrashlogs|ssddashboardwrappertest|ssdtcclaunchtest|ssdbackgroundteststart|ssdbackgroundtestcheck|ssdleftover|runnerpersistinstall|runnerpersistdiag|runnercutoverdiag|dashboardstart504|runnerterminalwatchdoginstall)
+            status|eventsourcestate|eventsourcesnapshot|services|logs|disk|sync|producttest|fulltest|productstate|productdeploy|paperreview|paperinspect|paperfixlint|paperharden|stateplanreview|stateplaninspect|stateplanharden|cursorreview|cursorreviewtail|cursorcleanup|bridgecheck|bridgestate|rollingstate|pausecheck|wakepause|wakeresume|wakearm|waketest|wakeheartbeat|chatbusyprobe|cursorcheck|cursorauthdiag|cursorttycheck|alertclockstate|alertclockpause|alertclockresume|migrationinspect|migrationinventory|ssddashboarddiag|productcrashlogs|ssddashboardwrappertest|ssdtcclaunchtest|ssdbackgroundteststart|ssdbackgroundtestcheck|ssdleftover|runnerpersistinstall|runnerpersistdiag|runnercutoverdiag|dashboardstart504|runnerterminalwatchdoginstall)
               ;;
             *)
               echo "Unsupported command: $cmd"
@@ -165,6 +165,75 @@ jobs:
           test "$before_shm" = "$after_shm"
           echo "EVENT_SOURCE_STATE_BYTE_STABLE_PASS=YES"
           echo "EVENT_SOURCE_STATE_READONLY_PASS=YES"
+
+      - name: EVENT SOURCE SNAPSHOT
+        if: steps.parse.outputs.command == 'eventsourcesnapshot'
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          DEV="$ROOT/Development"
+          EVENT_DB="$DEV/runtime/events/event_source.sqlite3"
+          PY="$DEV/.venv/bin/python"
+          SNAPSHOT="$GITHUB_WORKSPACE/ops/run_event_source_snapshot.py"
+
+          test "$(id -u)" = "504"
+          test -x "$PY"
+          test -f "$SNAPSHOT"
+
+          echo "=== EVENT SOURCE SNAPSHOT PRE-STATE ==="
+          echo "DEVELOPMENT_HEAD=$(git -C "$DEV" rev-parse HEAD 2>/dev/null || true)"
+          echo "MAIN_SHA="$GITHUB_SHA
+          before="MISSING"
+          [ -f "$EVENT_DB" ] && before="$(shasum -a 256 "$EVENT_DB" | awk '{print $1}')"
+          echo "EVENT_SOURCE_DB_SHA256_BEFORE=$before"
+
+          PYTHONPATH="$GITHUB_WORKSPACE/src" "$PY" "$SNAPSHOT" \
+            --db "$EVENT_DB" \
+            --timeout-seconds 20
+
+          test -f "$EVENT_DB"
+          after="$(shasum -a 256 "$EVENT_DB" | awk '{print $1}')"
+          echo "EVENT_SOURCE_DB_SHA256_AFTER=$after"
+
+          PYTHONPATH="$GITHUB_WORKSPACE/src" "$PY" - "$EVENT_DB" <<'PY'
+          import json
+          import sys
+          import time
+          from dataclasses import asdict
+          from pathlib import Path
+
+          from crypto_signal.product.event_source_runtime import (
+              read_event_source_runtime_truth,
+          )
+
+          snapshot = read_event_source_runtime_truth(
+              Path(sys.argv[1]),
+              observed_at_ms=time.time_ns() // 1_000_000,
+          )
+          print(
+              "EVENT_SOURCE_PRODUCT_TRUTH="
+              + json.dumps(
+                  asdict(snapshot),
+                  sort_keys=True,
+                  separators=(",", ":"),
+              )
+          )
+          print("EVENT_SOURCE_RUNTIME_STATUS=" + snapshot.runtime_status)
+          print("EVENT_SOURCE_ONLINE_STATUS=" + snapshot.online_status)
+          print("EVENT_SOURCE_PROCESS_STATUS=" + snapshot.process_status)
+          print("EVENT_SOURCE_COVERAGE_CLAIM=" + snapshot.coverage_claim)
+          print("EVENT_SOURCE_REAL_CAPITAL=" + str(snapshot.real_capital))
+          if snapshot.real_capital != 0:
+              raise SystemExit("REAL_CAPITAL_MISMATCH")
+          if snapshot.online_status != "NOT_ASSERTED":
+              raise SystemExit("ONLINE_STATUS_MISMATCH")
+          PY
+
+          echo "EVENT_SOURCE_SNAPSHOT_BOUNDED_PASS=YES"
+          echo "EVENT_SOURCE_SNAPSHOT_APPEND_ONLY_EVIDENCE=YES"
+          echo "EVENT_SOURCE_ONLINE_NOT_ASSERTED_PASS=YES"
+          echo "REAL_CAPITAL=0"
 
       - name: ROLLING WAKE STATE
         if: steps.parse.outputs.command == 'rollingstate'
