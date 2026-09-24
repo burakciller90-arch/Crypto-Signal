@@ -1,6 +1,20 @@
 # PROJECT CHRONICLE
 
 
+## 2026-09-25 — WC7 begins consuming canonical WC2/WC6 state without upgrading blockers into evidence
+
+PR #1201 moved WC7 from typed-but-manually supplied provenance toward canonical subsystem adapters. The change is intentionally asymmetric: canonical source state may satisfy a dimension only when its own accepted semantics justify that, while an accepted blocker artifact remains a blocker.
+
+For WC2, the adapter consumes `WC2ReviewReadiness`, which is already derived from the preregistered 300-decisive / per-asset / regime / 120-day / retention / paper-cost evidence policy. Only `REVIEW_ELIGIBLE` can satisfy WC7's untouched-forward-history dimension, and even then its meaning remains “eligible for WC3 review”, not “edge/profitability supported”. An insufficient WC2 readiness becomes a WC7 `MISSING` claim and carries the readiness identity only as blocker-boundary provenance.
+
+For WC6, the accepted v1 sandbox boundary can only represent `NOT_CONFIGURED`, no dispatch, no venue acknowledgement and no venue fills. The adapter therefore maps it to `CAPITAL_EXECUTION_LINEAGE = EXTERNAL_DEPENDENCY`. Its immutable boundary identity proves why the evidence is missing; it is explicitly not the missing venue evidence itself.
+
+To support that distinction, typed provenance now has separate source-evidence and blocker-boundary identities. PR #1201 exact-head run 36065071631 passed. The PR merged as `3d0283ab180255e5eca12955814985cab04c3548`, and exact-main run 36065254385 / job 107853404508 independently passed focused WC7, research, whole-repository and Development non-mutation acceptance.
+
+The result remains `INSUFFICIENT_EVIDENCE`. The improvement is provenance quality, not a better edge verdict.
+
+
+
 ## 2026-09-25 — WC7 review claims become source-typed without changing the insufficient-evidence conclusion
 
 The first WC7 slice made the final review fail closed, but its claims still accepted a status, hash and note without mechanically constraining which subsystem was allowed to support that dimension. PR #1199 added the missing provenance boundary.
