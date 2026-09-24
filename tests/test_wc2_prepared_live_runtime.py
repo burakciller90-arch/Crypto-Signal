@@ -110,6 +110,7 @@ def _call(
     paths: dict[str, Path],
     observed_at_ms: int,
     decision_ledger: ImmutableDecisionEvidenceLedger | None = None,
+    collection_start_ms: int | None = None,
 ):
     return process_wc2_prepared_live_freeze(
         result,
@@ -130,6 +131,7 @@ def _call(
         maximum_issuance_delay_ms=100,
         horizon_bars=4,
         base_asset="BTC",
+        collection_start_ms=collection_start_ms,
     )
 
 
@@ -321,6 +323,94 @@ def test_pre_activation_replay_is_expected_skip_not_receipt_gap(
 
     assert result.status is WC2PreparedLiveStatus.SKIPPED_BEFORE_ACTIVATION
     assert result.receipt_identity is None
+    assert not paths["prepared"].exists()
+    assert not paths["decision"].exists()
+    assert not paths["cohort"].exists()
+
+
+def test_operational_collection_boundary_blocks_fresh_before_protocol_start(
+    tmp_path: Path,
+) -> None:
+    bundle = directional_bundle()
+    signal = bundle.signal_decision
+    frozen_at = signal.as_of_ms + 10
+    observed_at = frozen_at + 20
+    protocol_start = observed_at + 1_000
+    paths = _paths(tmp_path)
+    ledger = ImmutableSignalLedger(tmp_path / "signal.sqlite3")
+    _persist_source(ledger, bundle, frozen_at_ms=frozen_at)
+
+    result = _call(
+        _fresh(bundle, frozen_at),
+        bundle=bundle,
+        signal_ledger=ledger,
+        policy=_policy(bundle),
+        activation=_activation(),
+        paths=paths,
+        observed_at_ms=observed_at,
+        collection_start_ms=protocol_start,
+    )
+
+    assert result.status is WC2PreparedLiveStatus.SKIPPED_BEFORE_COLLECTION
+    assert result.receipt_identity is None
+    assert not paths["prepared"].exists()
+    assert not paths["decision"].exists()
+    assert not paths["cohort"].exists()
+    assert not paths["shadow"].exists()
+    assert not paths["manifest"].exists()
+
+
+def test_operational_collection_boundary_blocks_replay_before_protocol_start(
+    tmp_path: Path,
+) -> None:
+    bundle = directional_bundle()
+    signal = bundle.signal_decision
+    frozen_at = signal.as_of_ms + 10
+    paths = _paths(tmp_path)
+    ledger = ImmutableSignalLedger(tmp_path / "signal.sqlite3")
+    _persist_source(ledger, bundle, frozen_at_ms=frozen_at)
+
+    result = _call(
+        _replay(bundle),
+        bundle=bundle,
+        signal_ledger=ledger,
+        policy=_policy(bundle),
+        activation=_activation(),
+        paths=paths,
+        observed_at_ms=frozen_at + 10_000,
+        collection_start_ms=frozen_at + 1,
+    )
+
+    assert result.status is WC2PreparedLiveStatus.SKIPPED_BEFORE_COLLECTION
+    assert result.receipt_identity is None
+    assert not paths["prepared"].exists()
+    assert not paths["decision"].exists()
+    assert not paths["cohort"].exists()
+
+
+def test_operational_collection_boundary_cannot_predate_review_policy(
+    tmp_path: Path,
+) -> None:
+    bundle = directional_bundle()
+    signal = bundle.signal_decision
+    frozen_at = signal.as_of_ms + 10
+    policy = _policy(bundle)
+    paths = _paths(tmp_path)
+    ledger = ImmutableSignalLedger(tmp_path / "signal.sqlite3")
+    _persist_source(ledger, bundle, frozen_at_ms=frozen_at)
+
+    with pytest.raises(ValueError, match="cannot predate review-policy"):
+        _call(
+            _fresh(bundle, frozen_at),
+            bundle=bundle,
+            signal_ledger=ledger,
+            policy=policy,
+            activation=_activation(),
+            paths=paths,
+            observed_at_ms=frozen_at + 20,
+            collection_start_ms=policy.collection_start_ms - 1,
+        )
+
     assert not paths["prepared"].exists()
     assert not paths["decision"].exists()
     assert not paths["cohort"].exists()
