@@ -361,6 +361,36 @@ Validate execution engineering without real capital.
 
 A sandbox/testnet execution dossier shows deterministic recovery, duplicate prevention, reconciliation, kill-switch behavior and authority isolation.
 
+## Engineering progress — 2026-09-25
+
+**WC6 status: OPEN / PAPER EXECUTION-LAB CORE ACCEPTED / SANDBOX-TESTNET EVIDENCE MISSING.**
+
+Accepted paper/lab rails:
+- PR **#1192** binds one deterministic paper trade through exact decision intent, simulated fill, position/cash mutation and processed-event receipt lineage.
+- Exact retry is required to return `UNCHANGED` with identical receipt, identities and reconstructed state.
+- Append-only virtual paper write authority provides an explicit paper kill switch: once disabled, the same protected commit surface is rejected and paper replay/receipts remain unchanged.
+- Existing frozen venue-rule and explicit fee/spread/slippage assumptions remain bound to deterministic paper execution.
+- PR #1192 exact-main UID504 run **36060028438 / job 107836479650** passed focused WC6, full paper, whole-repository and Development non-mutation acceptance.
+- PR **#1193** adds deterministic **lab-only** acknowledgement latency and partial-fill simulation over an already-accepted canonical paper fill:
+  - two-or-more shadow fills;
+  - strictly increasing fill times after acknowledgement;
+  - frozen quantity-step alignment;
+  - aggregate quantity exactly equals canonical fill quantity;
+  - aggregate shadow notional exactly equals canonical fill notional;
+  - processed-event/pretrade/snapshot/decision/fill/mutation reconciliation;
+  - deterministic rerun with no canonical ledger mutation.
+- Canonical Paper Fund v1 is deliberately unchanged: `partial_fills_supported=False`. Shadow partial fills are labelled `LAB_ONLY_CANONICAL_UNSUPPORTED`; they are engineering evidence, not venue evidence.
+- PR #1193 exact-main UID504 run **36060806366 / job 107839002389** passed focused WC6, full paper, whole-repository and Development non-mutation acceptance.
+- All accepted WC6 slices retain no network, credential, live-order or production authority and `REAL_CAPITAL=0`.
+
+Remaining exit blockers:
+- no sandbox/testnet venue adapter is implemented;
+- no real sandbox/testnet order acknowledgement/fill evidence exists;
+- therefore no sandbox/testnet execution dossier can yet satisfy the WC6 exit gate.
+- Missing venue evidence must remain missing. Lab simulation must not be relabelled as sandbox/testnet acceptance.
+
+The next safe engineering step is a fail-closed sandbox-adapter contract that can represent `NOT_CONFIGURED` without embedding credentials or network authority. Actual sandbox/testnet execution remains contingent on a safely supported venue/environment and explicit non-production credentials.
+
 # WC7 — World-Class Evidence Review
 
 ## Goal
