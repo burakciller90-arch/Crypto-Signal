@@ -1219,40 +1219,76 @@ jobs:
 
             local sup=""
             local old_dash=""
+            local listener=""
             local new_dash=""
             sup="$(cat "$SUP_PID_FILE" 2>/dev/null || true)"
             test -n "$sup"
             kill -0 "$sup" >/dev/null 2>&1
             ps -p "$sup" -o command= | grep -F "$ROOT/ssd-service-supervisor.sh" >/dev/null
-            old_dash="$(cat "$DASH_PID_FILE" 2>/dev/null || true)"
-            echo "DASHBOARD_RESTART_MODE=ssd-supervisor SUP=$sup OLD_DASH=$old_dash"
+
+            listener="$(/usr/sbin/lsof -nP -iTCP:48700 -sTCP:LISTEN -t 2>/dev/null | head -1 || true)"
+            old_dash="$listener"
+            if [ -z "$old_dash" ]; then
+              old_dash="$(cat "$DASH_PID_FILE" 2>/dev/null || true)"
+            fi
+            echo "DASHBOARD_RESTART_MODE=direct-supervisor-contract SUP=$sup OLD_DASH=$old_dash"
+
             if [ -n "$old_dash" ] && kill -0 "$old_dash" >/dev/null 2>&1; then
-              kill "$old_dash"
-              old_exited=0
-              for i in {1..30}; do
-                if ! kill -0 "$old_dash" >/dev/null 2>&1; then
-                  old_exited=1
-                  break
-                fi
+              if ps -p "$old_dash" -o command= | grep -F "$PRODUCT/ops/run_dashboard.py" | grep -F -- "--port 48700" >/dev/null; then
+                kill "$old_dash" >/dev/null 2>&1 || true
+              fi
+            fi
+
+            for i in {1..10}; do
+              listener="$(/usr/sbin/lsof -nP -iTCP:48700 -sTCP:LISTEN -t 2>/dev/null | head -1 || true)"
+              if [ -z "$listener" ]; then
+                break
+              fi
+              sleep 1
+            done
+            listener="$(/usr/sbin/lsof -nP -iTCP:48700 -sTCP:LISTEN -t 2>/dev/null | head -1 || true)"
+            if [ -n "$listener" ]; then
+              echo "DASHBOARD_TERM_PORT_STILL_BOUND=YES PID=$listener"
+              kill -KILL "$listener" >/dev/null 2>&1 || true
+              for i in {1..5}; do
+                listener="$(/usr/sbin/lsof -nP -iTCP:48700 -sTCP:LISTEN -t 2>/dev/null | head -1 || true)"
+                [ -z "$listener" ] && break
                 sleep 1
               done
-              if [ "$old_exited" != "1" ]; then
-                echo "OLD_DASH_EXIT_TIMEOUT=YES PID=$old_dash"
-                return 1
-              fi
-              echo "OLD_DASH_EXITED=$old_dash"
             fi
+            listener="$(/usr/sbin/lsof -nP -iTCP:48700 -sTCP:LISTEN -t 2>/dev/null | head -1 || true)"
+            test -z "$listener"
+
+            rm -f "$DASH_PID_FILE"
+            mkdir -p "$ROOT/ServiceLogs"
+            (
+              unset RUNNER_TRACKING_ID
+              export PYTHONPATH="$PRODUCT/src"
+              cd "$PRODUCT" || exit 75
+              exec "$PRODUCT/.venv/bin/python" "$PRODUCT/ops/run_dashboard.py" \
+                --host 127.0.0.1 \
+                --port 48700 \
+                --ledger "$REPO/runtime/ledger/live_signal_ledger.sqlite3" \
+                --alert-outbox "$REPO/runtime/alerts/alert_outbox.sqlite3" \
+                --paper-ledger "$REPO/runtime/paper/paper_fund.sqlite3" \
+                --candle-cache "$REPO/runtime/data/live_base_15m_cache.sqlite3"
+            ) >>"$ROOT/ServiceLogs/dashboard.out.log" 2>>"$ROOT/ServiceLogs/dashboard.err.log" < /dev/null &
+            new_dash="$!"
+            echo "$new_dash" > "$DASH_PID_FILE"
+            echo "DASHBOARD_DIRECT_START_PID=$new_dash"
+
             for i in {1..45}; do
-              new_dash="$(cat "$DASH_PID_FILE" 2>/dev/null || true)"
-              if [ -n "$new_dash" ] && [ "$new_dash" != "$old_dash" ] && kill -0 "$new_dash" >/dev/null 2>&1; then
-                if ps -p "$new_dash" -o command= | grep -F "$PRODUCT/ops/run_dashboard.py" >/dev/null; then
-                  echo "NEW_DASH=$new_dash"
+              if curl -fsS --max-time 3 http://127.0.0.1:48700/api/health >/dev/null 2>&1; then
+                listener="$(/usr/sbin/lsof -nP -iTCP:48700 -sTCP:LISTEN -t 2>/dev/null | head -1 || true)"
+                if [ -n "$listener" ] && ps -p "$listener" -o command= | grep -F "$PRODUCT/ops/run_dashboard.py" | grep -F -- "--port 48700" >/dev/null; then
+                  echo "$listener" > "$DASH_PID_FILE"
+                  echo "NEW_DASH=$listener"
                   return 0
                 fi
               fi
               sleep 1
             done
-            echo "SSD_SUPERVISOR_DASHBOARD_RESTART_TIMEOUT=YES"
+            echo "DIRECT_DASHBOARD_RESTART_TIMEOUT=YES"
             return 1
           }
 
