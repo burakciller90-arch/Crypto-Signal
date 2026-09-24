@@ -53,6 +53,9 @@ from crypto_signal.product.market_tape_runtime import (
 from crypto_signal.product.provider_divergence_runtime import (
     read_provider_divergence_runtime_truth,
 )
+from crypto_signal.product.wc2_execution_runtime import (
+    read_wc2_execution_runtime_truth,
+)
 from crypto_signal.product.reader import DashboardReader, DashboardReadError
 
 DEFAULT_LEDGER_PATH = (
@@ -180,6 +183,8 @@ def create_app(
     cold_archive_path: Path | None = None,
     provider_divergence_path: Path | None = None,
     event_source_runtime_path: Path | None = None,
+    wc2_execution_runtime_path: Path | None = None,
+    wc2_execution_journal_path: Path | None = None,
 ) -> FastAPI:
     selected_path = ledger_path or Path(
         os.environ.get("CRYPTO_SIGNAL_LEDGER_PATH", str(DEFAULT_LEDGER_PATH))
@@ -346,6 +351,9 @@ def create_app(
     else:
         selected_event_source_runtime_path = None
 
+    selected_wc2_execution_runtime_path = wc2_execution_runtime_path
+    selected_wc2_execution_journal_path = wc2_execution_journal_path
+
     selected_learning_memory_path = learning_memory_path
     if selected_learning_memory_path is None:
         learning_memory_env = os.environ.get("CRYPTO_SIGNAL_LEARNING_MEMORY_PATH")
@@ -381,6 +389,8 @@ def create_app(
     app.state.cold_archive_path = selected_cold_archive_path
     app.state.provider_divergence_path = selected_provider_divergence_path
     app.state.event_source_runtime_path = selected_event_source_runtime_path
+    app.state.wc2_execution_runtime_path = selected_wc2_execution_runtime_path
+    app.state.wc2_execution_journal_path = selected_wc2_execution_journal_path
     app.state.reader = reader
 
     app.mount(
@@ -1230,6 +1240,38 @@ def create_app(
                 "real_capital": 0,
             }
         )
+
+
+    @app.get("/api/wc2/paper-execution/status")
+    def wc2_paper_execution_status(
+        recent_limit: int = Query(default=50, ge=1, le=500),
+    ) -> JSONResponse:
+        if (
+            selected_wc2_execution_runtime_path is None
+            or selected_wc2_execution_journal_path is None
+        ):
+            return _json(
+                {
+                    "status": "unavailable",
+                    "reason": "wc2_execution_product_paths_not_configured",
+                    "online_status": "NOT_ASSERTED",
+                    "process_status": "NOT_MEASURED",
+                    "economic_evidence_status": "NOT_MEASURED",
+                    "read_only": True,
+                    "production_authority": False,
+                    "real_capital": 0,
+                }
+            )
+        try:
+            return _json(
+                read_wc2_execution_runtime_truth(
+                    runtime_activation_path=selected_wc2_execution_runtime_path,
+                    execution_journal_path=selected_wc2_execution_journal_path,
+                    recent_limit=recent_limit,
+                )
+            )
+        except (OSError, sqlite3.DatabaseError, TypeError, ValueError) as exc:
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
 
     @app.get("/api/alerts")
     def alerts(
