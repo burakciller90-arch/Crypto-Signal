@@ -47,6 +47,9 @@ async def persist_bybit_wire_stream(
     persisted_event_callback: (
         Callable[[RawMarketEvent, int], None] | None
     ) = None,
+    persisted_counts_callback: (
+        Callable[[int, int, int], None] | None
+    ) = None,
 ) -> MarketTapeWireCollectionResult:
     if orderbook_snapshot_interval_ms <= 0:
         raise ValueError("orderbook snapshot interval must be positive")
@@ -114,6 +117,12 @@ async def persist_bybit_wire_stream(
             progress_callback(event, observed_messages)
         if persisted_event_callback is not None:
             persisted_event_callback(raw_event, observed_messages)
+        if persisted_counts_callback is not None:
+            persisted_counts_callback(
+                observed_messages,
+                raw_inserted,
+                orderbooks_inserted + trades_inserted,
+            )
         if max_messages is not None and observed_messages >= max_messages:
             break
 
