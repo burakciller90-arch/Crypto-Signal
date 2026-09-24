@@ -33,9 +33,9 @@ from crypto_signal.ledger.live_clock import LiveFreezeResult, LiveFreezeStatus
 from crypto_signal.ledger.store import ImmutableSignalLedger
 from crypto_signal.paper.epoch2_accounting import Epoch2ActivationRecord
 from crypto_signal.paper.models import PaperAction
-from crypto_signal.signals.models import SignalDirection, SignalState
 from crypto_signal.paper.shadow_cycle_manifest import R25ShadowCycleManifest
 from crypto_signal.paper.shadow_intent_journal import R25ShadowIntentJournal
+from crypto_signal.signals.models import SignalDirection, SignalState
 
 WC2_PREPARED_COMPLETION_ENGINE_VERSION = "wc2-prepared-completion-v1/1"
 REAL_CAPITAL = 0
@@ -301,7 +301,7 @@ def _prepared_completion_result(
     *,
     signal_identity: str,
     receipt: WC2PreparedCycleReceipt,
-    completion: "WC2PreparedCompletionResult",
+    completion: WC2PreparedCompletionResult,
     reasons: tuple[str, ...],
 ) -> WC2PreparedLiveResult:
     return WC2PreparedLiveResult(
