@@ -1,5 +1,30 @@
 # PROJECT CHRONICLE
 
+## 2026-09-24 — WC2 genuine untouched-forward collection becomes operational
+
+State was reconstructed from READ_FIRST, CURRENT_STATUS, Chronicle, real `main`, open PRs/issues and UID504 runtime evidence rather than memory.
+
+The hidden live-owner race was found in `ops/ssd_runtime_supervisor.sh`: a legacy `Live` clone could freeze cutoffs before the WC2 prepared-receipt path. PR #1070 replaced that with one exact-main WC2-aware owner and preserved fail-closed/no-backfill semantics. Exact-head hosted gates and R11 UID504 recovery/audit passed; the persistent supervisor now owns forward collection with `REAL_CAPITAL=0`.
+
+PR #1072 reused the deterministic PIT-safe regime engine that predates WC2 policy/protocol registration. Regime evidence is now derived from the exact consumed candle bundle, bound into forecast lineage, and unresolved/unmeasured regime issuance fails closed. No existing forecast was relabelled.
+
+PR #1075 added read-only regime observability. PR #1078 then wired the accepted Outcome V1 contract into a crash-safe operational resolver. It reads persisted freezes/candles query-only, uses canonical 15m evidence plus deterministic 1h/4h aggregation, persists no PENDING snapshots, and can recover from persisted outcome or R20-resolution crash boundaries without market rereads or historical backfill.
+
+Latest exact-main UID504 read-only state:
+- main / Development: `bd8193f935f4a2e25c0b60e782c43c5d61dc6980`;
+- Decision Evidence: 2 forecasts, 2 proofs, 0 resolutions, 2 feed events;
+- WC2 cohort: 2 forecasts, 2 paper intents, 0 executions, 0 resolutions;
+- regime distribution: `NOT_MEASURED:1, transition:1`;
+- latest measured forecast: `0b6a7f050ac3012b3ee18e370bd36a1d63c142503520e0dd27a867ef04d64c4f`, regime `transition`;
+- source-byte stability PASS, read-only state PASS, `REAL_CAPITAL=0`.
+
+The old `NOT_MEASURED` forecast and pre-single-owner `NO_PREPARED_RECEIPT` cutoffs are retained as immutable transition evidence. They will not be backfilled or rewritten. Runtime resolver evidence currently reports 2 pending forecasts and no fabricated closed outcome.
+
+The live collection protocol is still deliberately HOLD_CASH/no-reviewed-sizing. Therefore the next scientific frontier is preregistered paper execution + explicit cost evidence using accepted deterministic paper primitives and real PIT risk inputs. Synthetic sizing fixtures must never become runtime truth.
+
+WC2 remains open until the preregistered evidence thresholds and economic-evidence conditions are actually satisfied. `REVIEW_ELIGIBLE` is not an edge/profitability claim. Cursor development remains disabled; continuity wake transport remains paused; safe direct GitHub development continues. REAL_CAPITAL=0.
+
+
 ## 2026-09-19 — Phase 0 bootstrap begins
 
 The Crypto Signal master handoff was accepted as governing project context.
