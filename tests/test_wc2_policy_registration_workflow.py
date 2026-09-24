@@ -58,3 +58,17 @@ def test_wc2_policy_register_is_bounded_to_policy_db_only() -> None:
     )
     for token in forbidden:
         assert token not in block
+
+
+
+def test_wc2_policy_register_does_not_run_event_source_probes() -> None:
+    text = WORKFLOW.read_text(encoding="utf-8")
+    fred_start = text.index("      - name: FRED CALENDAR PROBE")
+    register_start = text.index("      - name: WC2 POLICY REGISTER", fred_start)
+    fred_block = text[fred_start:register_start]
+
+    bls_start = text.index("      - name: BLS SOURCE PROBE")
+    bls_block = text[bls_start:fred_start]
+
+    assert "wc2policyregister" not in fred_block
+    assert "wc2policyregister" not in bls_block
