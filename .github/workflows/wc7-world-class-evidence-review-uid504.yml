@@ -1,0 +1,120 @@
+name: WC7 World-Class Evidence Review UID504
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "research/world_class_evidence_review.py"
+      - "research/alpha_factory/**"
+      - "src/crypto_signal/outcomes/**"
+      - "src/crypto_signal/paper/execution_lab*.py"
+      - "tests/test_world_class_evidence_review.py"
+      - ".github/workflows/wc7-world-class-evidence-review-uid504.yml"
+  push:
+    branches: [main]
+    paths:
+      - "research/world_class_evidence_review.py"
+      - "research/alpha_factory/**"
+      - "src/crypto_signal/outcomes/**"
+      - "src/crypto_signal/paper/execution_lab*.py"
+      - "tests/test_world_class_evidence_review.py"
+      - ".github/workflows/wc7-world-class-evidence-review-uid504.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: wc7-evidence-review-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  acceptance:
+    name: WC7 exact-head evidence-review acceptance
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          clean: true
+          fetch-depth: 1
+
+      - name: Verify exact source and clean Development
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
+          test "$(id -u)" = "504"
+          test "$(git -C "$GITHUB_WORKSPACE" rev-parse HEAD)" = "${{ github.event.pull_request.head.sha || github.sha }}"
+          test -z "$(git -C "$DEV" status --porcelain)"
+          echo "WC7_EXACT_SOURCE_PASS=YES"
+
+      - name: Create isolated test environment
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE_PY="/Volumes/Crypto-504/Crypto-Signal/Development/.venv/bin/python"
+          TEST_VENV="$RUNNER_TEMP/wc7-evidence-review-venv"
+          rm -rf "$TEST_VENV"
+          "$BASE_PY" -m venv "$TEST_VENV"
+          "$TEST_VENV/bin/python" -m pip install --upgrade pip
+          "$TEST_VENV/bin/python" -m pip install -e "$GITHUB_WORKSPACE"
+          "$TEST_VENV/bin/python" -m pip install "pytest>=8.4" "pytest-asyncio>=1.2" "ruff>=0.13" "mypy>=1.18"
+          echo "TEST_PY=$TEST_VENV/bin/python" >> "$GITHUB_ENV"
+
+      - name: Focused WC7 fail-closed review acceptance
+        shell: bash
+        run: |
+          set -euo pipefail
+          export PYTHONPATH="$GITHUB_WORKSPACE/src:$GITHUB_WORKSPACE"
+          cd "$GITHUB_WORKSPACE"
+          "$TEST_PY" -m pytest -q \
+            tests/test_world_class_evidence_review.py \
+            tests/test_alpha_factory_probability_calibration_gate.py \
+            tests/test_alpha_factory_champion_challenger_cycle.py \
+            tests/test_outcome_evaluator.py \
+            tests/test_wc6_execution_lab.py
+          "$TEST_PY" -m ruff check \
+            research/world_class_evidence_review.py \
+            tests/test_world_class_evidence_review.py
+          "$TEST_PY" -m mypy research/world_class_evidence_review.py
+          echo "WC7_FOCUSED_PASS=YES"
+          echo "WC7_MACHINE_EDGE_VERDICT=NONE"
+          echo "REAL_CAPITAL=0"
+
+      - name: Full research regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          export PYTHONPATH="$GITHUB_WORKSPACE/src:$GITHUB_WORKSPACE"
+          cd "$GITHUB_WORKSPACE"
+          "$TEST_PY" -m pytest -q tests/test_alpha_factory_*.py tests/test_world_class_evidence_review.py
+          "$TEST_PY" -m ruff check research tests/test_alpha_factory_*.py tests/test_world_class_evidence_review.py
+          "$TEST_PY" -m mypy research
+          echo "WC7_RESEARCH_REGRESSION_PASS=YES"
+
+      - name: Whole-repository regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          export PYTHONPATH="$GITHUB_WORKSPACE/src:$GITHUB_WORKSPACE"
+          cd "$GITHUB_WORKSPACE"
+          "$TEST_PY" -m pytest -q
+          "$TEST_PY" -m ruff check src tests ops/verify_stage10_integrated.py
+          "$TEST_PY" -m mypy src ops/verify_stage10_integrated.py
+          node --check src/crypto_signal/product/static/freshness.js
+          node --check src/crypto_signal/product/static/app.js
+          node --check src/crypto_signal/product/galactech/app.js
+          node tests/js/test_product_freshness.js
+          echo "WC7_FULL_REGRESSION_PASS=YES"
+
+      - name: Prove Development remained untouched
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
+          test -z "$(git -C "$DEV" status --porcelain)"
+          echo "WC7_DEVELOPMENT_NON_MUTATING_PASS=YES"
+          echo "REAL_CAPITAL=0"
