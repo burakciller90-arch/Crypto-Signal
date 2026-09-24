@@ -168,6 +168,7 @@ async def run(args: argparse.Namespace) -> int:
 
     runtime_store = MarketTapeCollectorRuntimeStore(args.runtime_status_db)
     gap_ledger = MarketDataGapLedger(args.gap_ledger_db)
+    gap_ledger.initialize()
     gap_monitor = IngestionSilenceGapMonitor(
         ledger=gap_ledger,
         provider="bybit",
