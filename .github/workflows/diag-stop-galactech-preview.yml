@@ -1,0 +1,44 @@
+name: Diagnostic Stop GALACTECH Preview
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/diag-stop-galactech-preview.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  stop-preview:
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 5
+    steps:
+      - name: Stop exact 48705 GALACTECH preview only
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          PORT=48705
+          PIDFILE="$ROOT/galactech-preview.pid"
+          listener="$(/usr/sbin/lsof -nP -iTCP:$PORT -sTCP:LISTEN -t 2>/dev/null | head -1 || true)"
+          if [ -n "$listener" ]; then echo "PREVIEW_LISTENER_BEFORE=$listener"; else echo "PREVIEW_LISTENER_BEFORE=ABSENT"; fi
+          if [ -n "$listener" ]; then
+            cmd="$(ps -p "$listener" -o command=)"
+            echo "PREVIEW_COMMAND=$cmd"
+            printf '%s\n' "$cmd" | grep -F 'ops/run_dashboard.py' >/dev/null
+            printf '%s\n' "$cmd" | grep -F -- '--port 48705' >/dev/null
+            kill "$listener"
+            for i in {1..20}; do
+              if ! kill -0 "$listener" >/dev/null 2>&1; then
+                break
+              fi
+              sleep 0.25
+            done
+            if kill -0 "$listener" >/dev/null 2>&1; then
+              kill -KILL "$listener"
+            fi
+          fi
+          rm -f "$PIDFILE"
+          test -z "$(/usr/sbin/lsof -nP -iTCP:$PORT -sTCP:LISTEN -t 2>/dev/null | head -1 || true)"
+          echo "GALACTECH_PREVIEW_STOP_PASS=YES"
