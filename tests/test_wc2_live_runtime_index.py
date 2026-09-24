@@ -257,6 +257,7 @@ def test_crash_after_r20_commit_recovers_cohort_without_new_forecast(
             maximum_issuance_delay_ms=100,
             horizon_bars=4,
             base_asset="BTC",
+            collection_protocol_identity=PROTOCOL_IDENTITY,
         )
 
     assert decision.read_status().forecast_count == 1
