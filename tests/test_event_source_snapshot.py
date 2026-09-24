@@ -295,12 +295,16 @@ def test_event_source_parse_failure_retains_exact_raw_without_items(
     assert failed.raw_payload_bytes == len(broken)
     assert failed.item_identities == ()
     assert failed.coverage_identity is None
+    assert result.failure_count == 1
+    assert result.required_calendar_coverage_satisfied is True
+    assert result.required_news_coverage_satisfied is True
+    assert result.required_coverage_satisfied is True
     assert store.counts() == {
-        "raw_payloads": 2,
-        "calendar_coverages": 0,
-        "structured_events": 0,
+        "raw_payloads": 4,
+        "calendar_coverages": 2,
+        "structured_events": 4,
         "news_events": 2,
-        "fetches": 2,
+        "fetches": 4,
     }
 
 
