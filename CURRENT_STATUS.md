@@ -14,7 +14,7 @@ REAL_CAPITAL: 0
 
 This entry **supersedes the earlier 2026-09-24 20:47 frontier snapshot** while preserving it below as historical evidence.
 
-- Accepted exact-main code head: `1af79d48c155de14fb51af2a3f87f39bbe7405da` (merge of PR **#1179**).
+- Accepted runtime/product code head before this docs-only closure: `1af79d48c155de14fb51af2a3f87f39bbe7405da` (merge of PR **#1179**).
 - WC1's final outage/restart blocker was closed from physical UID504 evidence rather than CI inference:
   - PR **#1149** established the bounded exact-main Market Tape restart drill;
   - PRs **#1154/#1157** removed the legacy `/MarketTape` lock owner through an exact-path, fail-closed cutover;
