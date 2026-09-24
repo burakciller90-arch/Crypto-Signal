@@ -6,7 +6,7 @@ WORKFLOW = Path(".github/workflows/crypto-mac-command.yml")
 def _event_source_snapshot_block() -> str:
     text = WORKFLOW.read_text(encoding="utf-8")
     start = text.index("      - name: EVENT SOURCE SNAPSHOT")
-    end = text.index("      - name: ROLLING WAKE STATE", start)
+    end = text.index("      - name: SERVICES", start)
     return text[start:end]
 
 
