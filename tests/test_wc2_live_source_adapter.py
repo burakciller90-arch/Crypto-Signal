@@ -198,7 +198,20 @@ def test_live_source_adapter_preserves_exact_bundle_and_missing_domains() -> Non
     ].evidence_identities == (bundle.bundle_identity,)
     assert geometry_proof[
         ProofEvidenceDomain.CONSUMED_CANDLES
-    ].evidence_identities == (adapted.consumed_candles_identity,)
+    ].evidence_identities == tuple(
+        sorted(
+            (
+                adapted.consumed_candles_identity,
+                regime_freeze.freeze_identity,
+            )
+        )
+    )
+    assert (
+        "pit_regime_freeze_derived_from_consumed_candles"
+        in geometry_proof[
+            ProofEvidenceDomain.CONSUMED_CANDLES
+        ].summary_codes
+    )
 
     assert all(
         item.state is MetaEvidenceState.NO_EVIDENCE
