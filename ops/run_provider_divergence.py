@@ -125,9 +125,7 @@ def run(args: argparse.Namespace) -> int:
 
     try:
         symbols = tuple(
-            sorted(
-                set(str(value).upper() for value in args.symbols)
-            )
+            sorted({str(value).upper() for value in args.symbols})
         )
         observed_at_ms = (
             time.time_ns() // 1_000_000
