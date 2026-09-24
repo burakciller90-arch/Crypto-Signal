@@ -5,6 +5,9 @@ on:
     branches: [main]
     paths:
       - "ops/wc1_market_tape_restart_acceptance.py"
+      - "ops/run_market_tape_stream.py"
+      - "src/crypto_signal/data/market_tape_wire_collection.py"
+      - "tests/test_market_tape_wire_collection.py"
       - ".github/workflows/world-class-wc1-market-tape-restart-drill.yml"
   issues:
     types: [opened]
@@ -56,9 +59,10 @@ jobs:
         run: |
           set -euo pipefail
           cd "$GITHUB_WORKSPACE"
-          "$TEST_PY" -m py_compile ops/wc1_market_tape_restart_acceptance.py
-          "$TEST_PY" -m ruff check ops/wc1_market_tape_restart_acceptance.py
-          "$TEST_PY" -m mypy ops/wc1_market_tape_restart_acceptance.py
+          "$TEST_PY" -m py_compile ops/wc1_market_tape_restart_acceptance.py ops/run_market_tape_stream.py
+          "$TEST_PY" -m pytest -q tests/test_market_tape_wire_collection.py tests/test_market_tape_collector_runtime.py
+          "$TEST_PY" -m ruff check ops/wc1_market_tape_restart_acceptance.py ops/run_market_tape_stream.py src/crypto_signal/data/market_tape_wire_collection.py tests/test_market_tape_wire_collection.py
+          "$TEST_PY" -m mypy ops/wc1_market_tape_restart_acceptance.py ops/run_market_tape_stream.py src/crypto_signal/data/market_tape_wire_collection.py
           "$TEST_PY" ops/wc1_market_tape_restart_acceptance.py --help >/dev/null
           ! grep -E 'place_order|submit_order|api_secret|api_key|leverage|martingale' ops/wc1_market_tape_restart_acceptance.py
           grep -F 'REAL_CAPITAL=0' ops/wc1_market_tape_restart_acceptance.py >/dev/null
