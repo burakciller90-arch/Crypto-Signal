@@ -261,7 +261,7 @@ def build_wc7_current_frontier_snapshot(
             dimension=(
                 WC7EvidenceDimension.USABILITY_WITHOUT_HIDDEN_UNCERTAINTY
             ),
-            source_identity=inputs.abstention_transparency_identity,
+            source_identity=None,
             semantic="wc5_human_ten_second_usability_not_measured",
         ),
     )
@@ -398,10 +398,11 @@ def _blocker_claim(
 def _derived_blocker_boundary_identity(
     *,
     dimension: WC7EvidenceDimension,
-    source_identity: str,
+    source_identity: str | None,
     semantic: str,
 ) -> str:
-    _require_sha256(source_identity, "WC7 blocker source identity")
+    if source_identity is not None:
+        _require_sha256(source_identity, "WC7 blocker source identity")
     if not semantic.strip():
         raise ValueError("WC7 blocker semantic must be non-empty")
     return canonical_sha256(
