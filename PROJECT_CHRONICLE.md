@@ -1,6 +1,24 @@
 # PROJECT CHRONICLE
 
 
+## 2026-09-25 — WC7 gains a fail-closed evidence review without an automatic edge verdict
+
+WC7 began only after WC6 reached its truthful external-dependency boundary. The purpose was not to manufacture a final “world-class” verdict, but to make it mechanically impossible for incomplete evidence to be mistaken for one.
+
+PR #1197 added `research/world_class_evidence_review.py`, which encodes the roadmap's nine minimum review dimensions: production/runtime reliability, untouched-forward history, probability calibration where probabilities are used, cost-adjusted expectancy, controlled drawdown, regime robustness, abstention/failure transparency, capital/execution lineage, and usability without hiding uncertainty.
+
+The machine layer has only two readiness states: `INSUFFICIENT_EVIDENCE` and `READY_FOR_HUMAN_REVIEW`. Any required claim marked `MISSING`, `NOT_MEASURED`, or `EXTERNAL_DEPENDENCY` forces the former. The machine never chooses `EDGE_SUPPORTED`, `EDGE_PARTIAL / regime-specific`, or `EDGE_NOT_SUPPORTED`. Those conclusion states exist only behind a separate explicit human-review record with guards that prevent a conclusion from contradicting the evidence statuses.
+
+Probability handling is also fail closed. `NOT_APPLICABLE` calibration is legal only when no probability claims are used. If probability claims exist, applicable calibration evidence is required.
+
+The accepted current-frontier fixture remains `INSUFFICIENT_EVIDENCE`. It deliberately records the unresolved blockers rather than hiding them: untouched-forward sufficiency, cost-adjusted expectancy, controlled drawdown, regime robustness, real capital/execution lineage at the external WC6 venue boundary, and measured human usability. This does not say the edge is absent; it says the evidence required to decide is incomplete.
+
+PR #1197 exact-head UID504 run 36063510771 / job 107847770771 passed focused WC7 semantics, research regression, whole-repository regression and Development non-mutation with `WC7_MACHINE_EDGE_VERDICT=NONE` and `REAL_CAPITAL=0`. The PR merged as `d27563bee4418c4fef2a6e7fcb351fa8f7e96686`, and exact-main push run 36063771392 / job 107848618741 independently passed the same acceptance.
+
+WC7 review infrastructure is therefore accepted. WC7 itself is not “won” or “closed positive”: the current evidence state remains `INSUFFICIENT_EVIDENCE`, and no world-class/edge-positive claim is authorized.
+
+
+
 ## 2026-09-25 — WC6 reaches a fail-closed sandbox/testnet boundary without inventing venue evidence
 
 After the deterministic paper recovery dossier (#1192) and the lab-only acknowledgement/partial-fill lifecycle (#1193), WC6 still had one important ambiguity: the repository needed a place to represent a future sandbox/testnet request without silently implying that a transport, credential, acknowledgement or fill already existed.
