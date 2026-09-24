@@ -1,0 +1,38 @@
+name: Diagnostic UID504 CPU Snapshot
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/diag-uid504-cpu-readonly.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  cpu-snapshot:
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 5
+    steps:
+      - name: Read-only CPU snapshot
+        shell: bash
+        run: |
+          set +e
+          echo "=== SYSTEM ==="
+          date
+          uptime
+          echo "LOGICAL_CPU_COUNT=$(sysctl -n hw.ncpu 2>/dev/null)"
+          echo "MEMORY_BYTES=$(sysctl -n hw.memsize 2>/dev/null)"
+          echo "=== TOP CPU SAMPLE ==="
+          top -l 2 -n 25 -o cpu -stats pid,command,cpu,mem,threads,state,time 2>/dev/null | tail -90
+          echo "=== PS TOP CPU ==="
+          ps -axo pid=,ppid=,user=,%cpu=,%mem=,etime=,state=,command= | sort -k4 -nr | head -40
+          echo "=== CRYPTO / RUNNER ==="
+          ps -axo pid=,ppid=,user=,%cpu=,%mem=,etime=,state=,command= | grep -E '[C]rypto-Signal|[c]rypto_signal|[R]unner\.(Listener|Worker)|[r]un_dashboard.py|[s]sd-service-supervisor' | head -100
+          echo "=== MEMORY PRESSURE ==="
+          memory_pressure 2>/dev/null | head -50
+          echo "=== VM STAT ==="
+          vm_stat 2>/dev/null | head -35
+          echo "=== THERMAL ==="
+          pmset -g therm 2>/dev/null || true
+          echo "CPU_DIAG_READONLY_PASS=YES"
