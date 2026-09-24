@@ -481,6 +481,60 @@ def test_market_tape_product_endpoint_never_claims_online(
     assert client.post("/api/market-tape-runtime/status").status_code == 405
 
 
+def test_market_tape_endpoint_default_now_is_reader_snapshot_bound(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    path = tmp_path / "market_tape.sqlite3"
+    _seed_market_tape(path, event_at_ms=1_780)
+    monkeypatch.setattr(
+        "crypto_signal.product.web.time.time_ns",
+        lambda: 1_500_000_000,
+    )
+    monkeypatch.setattr(
+        "crypto_signal.product.market_tape_runtime.time.time_ns",
+        lambda: 2_000_000_000,
+    )
+    client = TestClient(
+        create_app(
+            tmp_path / "missing-signals.sqlite3",
+            market_tape_path=path,
+        )
+    )
+
+    response = client.get("/api/market-tape-runtime/status")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["snapshot"]["latest_event_at_ms"] == 1_800
+    assert body["snapshot"]["latest_event_age_ms"] == 200
+    assert body["online_status"] == "NOT_ASSERTED"
+    assert body["read_only"] is True
+    assert body["real_capital"] == 0
+
+
+def test_market_tape_endpoint_explicit_observation_remains_fail_closed(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / "market_tape.sqlite3"
+    _seed_market_tape(path, event_at_ms=1_780)
+    client = TestClient(
+        create_app(
+            tmp_path / "missing-signals.sqlite3",
+            market_tape_path=path,
+        )
+    )
+
+    response = client.get(
+        "/api/market-tape-runtime/status?observed_at_ms=1500"
+    )
+
+    assert response.status_code == 500
+    assert response.json()["detail"] == (
+        "Market Tape contains future evidence at observation time"
+    )
+
+
 def test_market_tape_missing_runtime_creates_nothing(tmp_path: Path) -> None:
     missing = tmp_path / "missing.sqlite3"
     client = TestClient(
