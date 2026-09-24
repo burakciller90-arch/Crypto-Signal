@@ -820,6 +820,27 @@ class ImmutableDecisionEvidenceLedger:
             )
         return forecast, proof
 
+    def read_resolution_for_forecast(
+        self,
+        forecast_identity: str,
+    ) -> dict[str, Any] | None:
+        """Read one immutable R20 resolution without mutating the ledger."""
+        _require_sha256(forecast_identity, "forecast identity")
+        with self._connect_ro() as connection:
+            self._require_schema(connection)
+            row = connection.execute(
+                """
+                SELECT payload_json, payload_sha256
+                FROM r20_resolutions
+                WHERE forecast_identity = ?
+                LIMIT 1
+                """,
+                (forecast_identity,),
+            ).fetchone()
+            if row is None:
+                return None
+            return _verified_payload(str(row[0]), str(row[1]))
+
     def read_proof_for_signal(
         self,
         signal_freeze_identity: str,
