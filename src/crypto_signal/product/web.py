@@ -41,6 +41,9 @@ from crypto_signal.product.education import (
     all_education_lessons,
     lookup_education_lesson,
 )
+from crypto_signal.product.event_source_runtime import (
+    read_event_source_runtime_truth,
+)
 from crypto_signal.product.intelligence_center import build_intelligence_center_payload
 from crypto_signal.product.market_tape_runtime import (
     read_cold_archive_runtime_truth,
@@ -87,6 +90,11 @@ DEFAULT_CANDLE_CACHE_PATH = (
 )
 DEFAULT_PROVIDER_DIVERGENCE_PATH = DEFAULT_CANDLE_CACHE_PATH.with_name(
     "provider_divergence.sqlite3"
+)
+DEFAULT_EVENT_SOURCE_RUNTIME_PATH = (
+    DEFAULT_LEDGER_PATH.parent.parent
+    / "events"
+    / "event_source.sqlite3"
 )
 STATIC_DIR = Path(__file__).with_name("static")
 GALACTECH_DIR = Path(__file__).with_name("galactech")
@@ -171,6 +179,7 @@ def create_app(
     market_tape_collector_runtime_path: Path | None = None,
     cold_archive_path: Path | None = None,
     provider_divergence_path: Path | None = None,
+    event_source_runtime_path: Path | None = None,
 ) -> FastAPI:
     selected_path = ledger_path or Path(
         os.environ.get("CRYPTO_SIGNAL_LEDGER_PATH", str(DEFAULT_LEDGER_PATH))
@@ -321,6 +330,22 @@ def create_app(
     else:
         selected_provider_divergence_path = None
 
+    if event_source_runtime_path is not None:
+        selected_event_source_runtime_path: Path | None = (
+            event_source_runtime_path
+        )
+    elif ledger_path is None:
+        event_source_env = os.environ.get(
+            "CRYPTO_SIGNAL_EVENT_SOURCE_RUNTIME_PATH"
+        )
+        selected_event_source_runtime_path = (
+            Path(event_source_env)
+            if event_source_env
+            else DEFAULT_EVENT_SOURCE_RUNTIME_PATH
+        )
+    else:
+        selected_event_source_runtime_path = None
+
     selected_learning_memory_path = learning_memory_path
     if selected_learning_memory_path is None:
         learning_memory_env = os.environ.get("CRYPTO_SIGNAL_LEARNING_MEMORY_PATH")
@@ -355,6 +380,7 @@ def create_app(
     )
     app.state.cold_archive_path = selected_cold_archive_path
     app.state.provider_divergence_path = selected_provider_divergence_path
+    app.state.event_source_runtime_path = selected_event_source_runtime_path
     app.state.reader = reader
 
     app.mount(
@@ -1081,6 +1107,69 @@ def create_app(
                 "snapshots": snapshots,
                 "consensus_status": "NOT_INFERRED",
                 "runtime_status": "PERSISTED_EVIDENCE_ONLY",
+                "read_only": True,
+                "real_capital": 0,
+            }
+        )
+
+    @app.get("/api/event-source-runtime/status")
+    def event_source_runtime_status(
+        observed_at_ms: int | None = Query(default=None, ge=0),
+    ) -> JSONResponse:
+        observation = (
+            time.time_ns() // 1_000_000
+            if observed_at_ms is None
+            else observed_at_ms
+        )
+        if selected_event_source_runtime_path is None:
+            return _json(
+                {
+                    "status": "unavailable",
+                    "reason": "event_source_runtime_not_configured",
+                    "runtime_status": "NOT_EXPOSED",
+                    "online_status": "NOT_ASSERTED",
+                    "process_status": "NOT_MEASURED",
+                    "coverage_claim": "SOURCE_SCOPED_ONLY",
+                    "read_only": True,
+                    "real_capital": 0,
+                }
+            )
+        if not selected_event_source_runtime_path.exists():
+            return _json(
+                {
+                    "status": "unavailable",
+                    "reason": "event_source_runtime_evidence_missing",
+                    "database_filename": selected_event_source_runtime_path.name,
+                    "runtime_status": "NOT_EXPOSED",
+                    "online_status": "NOT_ASSERTED",
+                    "process_status": "NOT_MEASURED",
+                    "coverage_claim": "SOURCE_SCOPED_ONLY",
+                    "read_only": True,
+                    "real_capital": 0,
+                }
+            )
+        try:
+            snapshot = read_event_source_runtime_truth(
+                selected_event_source_runtime_path,
+                observed_at_ms=observation,
+            )
+        except (
+            OSError,
+            sqlite3.DatabaseError,
+            TypeError,
+            ValueError,
+        ) as exc:
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
+        return _json(
+            {
+                "status": "ready",
+                "database_filename": selected_event_source_runtime_path.name,
+                "observed_at_ms": observation,
+                "snapshot": snapshot,
+                "runtime_status": snapshot.runtime_status,
+                "online_status": snapshot.online_status,
+                "process_status": snapshot.process_status,
+                "coverage_claim": snapshot.coverage_claim,
                 "read_only": True,
                 "real_capital": 0,
             }
