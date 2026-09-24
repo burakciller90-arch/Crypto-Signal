@@ -55,12 +55,12 @@ def test_galactech_learn_renders_full_deterministic_catalog(
     html = preview.text
     js = script.text
     css = style.text
-    assert 'data-ui-version="galactech-v1.1-polish"' in html
+    assert 'data-ui-version="galactech-v2-intelligence-first-tr"' in html
     assert 'id="learnSearchInput"' in html
     assert 'data-learn-concept="cvd"' in html
     assert 'data-learn-concept="absorption"' in html
     assert 'data-learn-concept="abstain"' in html
-    assert "Teach the evidence · never invent certainty" in html
+    assert "Kanıtı öğret · kesinlik uydurma" in html
 
     assert "function lessonMatchesQuery(lesson, query)" in js
     assert "function lessonMarkup(lesson)" in js
@@ -71,9 +71,9 @@ def test_galactech_learn_renders_full_deterministic_catalog(
     assert 'ids.add("cvd")' in js
     assert 'ids.add("absorption")' in js
     assert 'ids.add("liquidity_sweep")' in js
-    assert "Deterministic catalog · no generated market claim" in js
+    assert "Sabit eğitim kataloğu · piyasa iddiası üretilmez" in js
     assert "NEDEN ÖNEMLİ?" in js
-    assert "PRO / teknik açıklamayı aç" in js
+    assert "TEKNİK AÇIKLAMAYI AÇ" in js
 
     assert ".learn-toolbar" in css
     assert ".learn-grid-rich" in css
@@ -112,28 +112,28 @@ def test_galactech_system_never_upgrades_unexposed_runtime_health(
     assert 'id="systemPerformance"' in html
     assert 'id="systemEducation"' in html
     assert 'id="systemAlerts"' in html
-    assert "API READY, Market Tape ONLINE demek değildir." in html
-    assert "MARKET TAPE RUNTIME" in html
-    assert "COLD ARCHIVE" in html
-    assert "EVENT SOURCE RUNTIME" in html
-    assert html.count("NOT EXPOSED") >= 2
-    assert html.count("NOT MEASURED") >= 2
-    assert "REAL CAPITAL" in html
-    assert "DISABLED" in html
-    assert "READ ONLY" in html
+    assert "API hazır olması, piyasa verisinin çevrimiçi olduğunu tek başına kanıtlamaz." in html
+    assert "PİYASA AKIŞI ÇALIŞMA DURUMU" in html
+    assert "SOĞUK ARŞİV" in html
+    assert "OLAY KAYNAĞI ÇALIŞMA DURUMU" in html
+    assert html.count("SUNULMUYOR") >= 2
+    assert html.count("ÖLÇÜLMEDİ") >= 2
+    assert "GERÇEK SERMAYE" in html
+    assert "KAPALI" in html
+    assert "YALNIZCA GÖZLEM" in html
 
     assert "function setSystemValue(id, value, kind = \"neutral\")" in js
     assert "function renderSystem()" in js
-    assert 'health.alert_outbox_present ? "PRESENT" : "NOT PRESENT"' in js
-    assert 'archive.outcome_schema_available ? "AVAILABLE" : "SIGNALS ONLY"' in js
-    assert "observed provider/context freezes" in js
-    assert "TRUTH · PRODUCT EVIDENCE READY" in js
+    assert 'health.alert_outbox_present ? "MEVCUT" : "YOK"' in js
+    assert 'archive.outcome_schema_available ? "MEVCUT" : "YALNIZ SİNYALLER"' in js
+    assert "gözlemlenmiş veri sağlayıcı / piyasa bağlamı kaydı" in js
+    assert "DOĞRULUK · ÜRÜN KANITI HAZIR" in js
     assert '"systemDecisionLedger"' in js
     assert '"systemLiveFeed"' in js
     assert '"systemMarketTape"' in js
     assert '"systemColdArchive"' in js
-    assert "ONLINE NOT ASSERTED" in js
+    assert "ÇEVRİMİÇİ OLDUĞU İDDİA EDİLMEZ" in js
     assert "collection_process_status" in js
     assert "HEARTBEAT_FRESH" in js
-    assert "heartbeat age" in js
-    assert "ingestion age" in js
+    assert "nabız yaşı" in js
+    assert "veri alım yaşı" in js
