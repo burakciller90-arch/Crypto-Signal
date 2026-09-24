@@ -5,7 +5,7 @@ import email.utils
 import sys
 import time
 from dataclasses import dataclass
-from datetime import UTC
+from datetime import UTC, datetime
 from pathlib import Path
 
 import httpx
@@ -15,8 +15,15 @@ from crypto_signal.data.event_source_adapters import (
     BLS_CALENDAR_ENDPOINT,
     FED_MONETARY_RSS_ADAPTER_VERSION,
     FED_MONETARY_RSS_ENDPOINT,
+    FRED_CALENDAR_ADAPTER_VERSION,
+    FRED_CPI_PROVIDER,
+    FRED_CPI_RELEASE_ID,
+    FRED_EMPLOYMENT_PROVIDER,
+    FRED_EMPLOYMENT_RELEASE_ID,
+    fred_release_calendar_endpoint,
     parse_bls_calendar_ics,
     parse_fed_monetary_rss,
+    parse_fred_release_calendar_html,
 )
 from crypto_signal.data.event_source_runtime import (
     EventSourceFetchObservation,
@@ -47,6 +54,40 @@ class EventSourceCycleResult:
         return sum(
             fetch.outcome is EventSourceFetchOutcome.FAILURE
             for fetch in self.fetches
+        )
+
+    @property
+    def required_calendar_coverage_satisfied(self) -> bool:
+        successful_calendar_providers = {
+            fetch.source_provider
+            for fetch in self.fetches
+            if (
+                fetch.source_kind is EventSourceKind.CALENDAR
+                and fetch.outcome is EventSourceFetchOutcome.SUCCESS
+            )
+        }
+        return (
+            "bls.gov" in successful_calendar_providers
+            or {
+                FRED_CPI_PROVIDER,
+                FRED_EMPLOYMENT_PROVIDER,
+            }.issubset(successful_calendar_providers)
+        )
+
+    @property
+    def required_news_coverage_satisfied(self) -> bool:
+        return any(
+            fetch.source_provider == "federalreserve.gov"
+            and fetch.source_kind is EventSourceKind.NEWS
+            and fetch.outcome is EventSourceFetchOutcome.SUCCESS
+            for fetch in self.fetches
+        )
+
+    @property
+    def required_coverage_satisfied(self) -> bool:
+        return (
+            self.required_calendar_coverage_satisfied
+            and self.required_news_coverage_satisfied
         )
 
 
@@ -80,19 +121,41 @@ def collect_event_source_cycle(
     if observation_ms < 0:
         raise ValueError("event source observation time cannot be negative")
 
-    fetches = (
-        _collect_bls_calendar(
-            store=store,
-            client=client,
-            fetched_at_ms=observation_ms,
-        ),
-        _collect_fed_monetary_news(
-            store=store,
-            client=client,
-            fetched_at_ms=observation_ms,
-        ),
+    bls_fetch = _collect_bls_calendar(
+        store=store,
+        client=client,
+        fetched_at_ms=observation_ms,
     )
-    return EventSourceCycleResult(fetches=fetches)
+    calendar_fallbacks: tuple[EventSourceFetchObservation, ...] = ()
+    if bls_fetch.outcome is EventSourceFetchOutcome.FAILURE:
+        year = datetime.fromtimestamp(
+            observation_ms / 1000,
+            tz=UTC,
+        ).year
+        calendar_fallbacks = (
+            _collect_fred_calendar(
+                store=store,
+                client=client,
+                fetched_at_ms=observation_ms,
+                release_id=FRED_CPI_RELEASE_ID,
+                year=year,
+            ),
+            _collect_fred_calendar(
+                store=store,
+                client=client,
+                fetched_at_ms=observation_ms,
+                release_id=FRED_EMPLOYMENT_RELEASE_ID,
+                year=year,
+            ),
+        )
+    fed_fetch = _collect_fed_monetary_news(
+        store=store,
+        client=client,
+        fetched_at_ms=observation_ms,
+    )
+    return EventSourceCycleResult(
+        fetches=(bls_fetch, *calendar_fallbacks, fed_fetch)
+    )
 
 
 def _collect_bls_calendar(
@@ -189,6 +252,124 @@ def _collect_bls_calendar(
         ),
         coverage_identity=parsed.coverage.coverage_identity,
         adapter_version=BLS_CALENDAR_ADAPTER_VERSION,
+    )
+    store.append_calendar_snapshot(
+        raw_payload=raw,
+        coverage=parsed.coverage,
+        events=parsed.events,
+        fetch=fetch,
+    )
+    return fetch
+
+
+def _collect_fred_calendar(
+    *,
+    store: EventSourceRuntimeStore,
+    client: httpx.Client,
+    fetched_at_ms: int,
+    release_id: int,
+    year: int,
+) -> EventSourceFetchObservation:
+    if release_id == FRED_CPI_RELEASE_ID:
+        provider = FRED_CPI_PROVIDER
+    elif release_id == FRED_EMPLOYMENT_RELEASE_ID:
+        provider = FRED_EMPLOYMENT_PROVIDER
+    else:
+        raise ValueError("unsupported FRED fallback release")
+    endpoint = fred_release_calendar_endpoint(
+        release_id=release_id,
+        year=year,
+    )
+    try:
+        response = client.get(endpoint)
+    except httpx.HTTPError:
+        fetch = _failure_fetch(
+            provider=provider,
+            kind=EventSourceKind.CALENDAR,
+            endpoint=endpoint,
+            adapter_version=FRED_CALENDAR_ADAPTER_VERSION,
+            fetched_at_ms=fetched_at_ms,
+            http_status=None,
+            reason_code="network_error",
+        )
+        store.append_failed_fetch(fetch=fetch)
+        return fetch
+
+    raw = _raw_payload_or_none(response)
+    source_timestamp_ms, basis = _source_timestamp(
+        response,
+        fetched_at_ms=fetched_at_ms,
+    )
+    if response.status_code != 200:
+        fetch = _failure_fetch(
+            provider=provider,
+            kind=EventSourceKind.CALENDAR,
+            endpoint=endpoint,
+            adapter_version=FRED_CALENDAR_ADAPTER_VERSION,
+            fetched_at_ms=fetched_at_ms,
+            http_status=response.status_code,
+            reason_code=f"http_status_{response.status_code}",
+            raw_payload=raw,
+            source_timestamp_ms=source_timestamp_ms,
+            source_timestamp_basis=basis,
+        )
+        store.append_failed_fetch(fetch=fetch, raw_payload=raw)
+        return fetch
+    if raw is None:
+        fetch = _failure_fetch(
+            provider=provider,
+            kind=EventSourceKind.CALENDAR,
+            endpoint=endpoint,
+            adapter_version=FRED_CALENDAR_ADAPTER_VERSION,
+            fetched_at_ms=fetched_at_ms,
+            http_status=200,
+            reason_code="empty_or_invalid_text_payload",
+            source_timestamp_ms=source_timestamp_ms,
+            source_timestamp_basis=basis,
+        )
+        store.append_failed_fetch(fetch=fetch)
+        return fetch
+
+    try:
+        parsed = parse_fred_release_calendar_html(
+            raw.payload_bytes.decode(raw.text_encoding),
+            release_id=release_id,
+            year=year,
+            fetched_at_ms=fetched_at_ms,
+            source_timestamp_ms=source_timestamp_ms,
+        )
+    except (UnicodeError, ValueError):
+        fetch = _failure_fetch(
+            provider=provider,
+            kind=EventSourceKind.CALENDAR,
+            endpoint=endpoint,
+            adapter_version=FRED_CALENDAR_ADAPTER_VERSION,
+            fetched_at_ms=fetched_at_ms,
+            http_status=200,
+            reason_code="parse_error",
+            raw_payload=raw,
+            source_timestamp_ms=source_timestamp_ms,
+            source_timestamp_basis=basis,
+        )
+        store.append_failed_fetch(fetch=fetch, raw_payload=raw)
+        return fetch
+
+    fetch = build_event_source_fetch_observation(
+        source_provider=provider,
+        source_kind=EventSourceKind.CALENDAR,
+        endpoint_url=endpoint,
+        fetched_at_ms=fetched_at_ms,
+        source_timestamp_ms=source_timestamp_ms,
+        source_timestamp_basis=basis,
+        http_status=200,
+        outcome=EventSourceFetchOutcome.SUCCESS,
+        raw_payload_sha256=raw.payload_sha256,
+        raw_payload_bytes=raw.content_bytes,
+        item_identities=tuple(
+            event.event_identity for event in parsed.events
+        ),
+        coverage_identity=parsed.coverage.coverage_identity,
+        adapter_version=FRED_CALENDAR_ADAPTER_VERSION,
     )
     store.append_calendar_snapshot(
         raw_payload=raw,
@@ -407,7 +588,10 @@ def run(args: argparse.Namespace) -> int:
         follow_redirects=True,
         headers={
             "User-Agent": USER_AGENT,
-            "Accept": "text/calendar, application/rss+xml, application/xml, text/xml",
+            "Accept": (
+                "text/calendar, text/html, application/xhtml+xml, "
+                "application/rss+xml, application/xml, text/xml"
+            ),
         },
     ) as client:
         try:
@@ -442,12 +626,16 @@ def run(args: argparse.Namespace) -> int:
         )
     print(
         "EVENT_SOURCE_CYCLE_COMPLETE "
-        f"failures={result.failure_count} "
+        f"source_failures={result.failure_count} "
+        "required_calendar_coverage="
+        f"{'YES' if result.required_calendar_coverage_satisfied else 'NO'} "
+        "required_news_coverage="
+        f"{'YES' if result.required_news_coverage_satisfied else 'NO'} "
         f"quick_check={'YES' if store.quick_check() else 'NO'} "
         "REAL_CAPITAL=0",
         flush=True,
     )
-    return 1 if result.failure_count else 0
+    return 0 if result.required_coverage_satisfied else 1
 
 
 def main() -> int:
