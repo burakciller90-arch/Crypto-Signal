@@ -22,7 +22,7 @@ from crypto_signal.evaluation.untouched_forward_execution_protocol import (
     WC2PaperExecutionProtocolStore,
 )
 from crypto_signal.evaluation.untouched_forward_journal import WC2CohortJournal
-from crypto_signal.ledger.bundle import parse_signal_decision
+from crypto_signal.ledger.deserialization import parse_signal_decision
 from crypto_signal.ledger.serialization import canonical_json, canonical_sha256
 from crypto_signal.paper.autonomy import (
     PAPER_AUTONOMY_POLICY_VERSION,
