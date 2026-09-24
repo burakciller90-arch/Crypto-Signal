@@ -24,7 +24,7 @@ jobs:
           set -euo pipefail
           cmd="$(printf '%s\n' "$ISSUE_BODY" | awk -F: 'tolower($1)=="command" {gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2); print tolower($2); exit}')"
           case "$cmd" in
-            status|eventsourcestate|eventsourcesnapshot|blsprobe|fredprobe|wc2epoch2activate|wc2policyregister|wc2protocolregister|wc2executionprotocolregister|wc2collectonce|wc2state|services|logs|disk|sync|producttest|fulltest|productstate|productdeploy|paperreview|paperinspect|paperfixlint|paperharden|stateplanreview|stateplaninspect|stateplanharden|cursorreview|cursorreviewtail|cursorcleanup|bridgecheck|bridgestate|rollingstate|pausecheck|wakepause|wakeresume|wakearm|waketest|wakeheartbeat|chatbusyprobe|cursorcheck|cursorauthdiag|cursorttycheck|alertclockstate|alertclockpause|alertclockresume|migrationinspect|migrationinventory|ssddashboarddiag|productcrashlogs|ssddashboardwrappertest|ssdtcclaunchtest|ssdbackgroundteststart|ssdbackgroundtestcheck|ssdleftover|runnerpersistinstall|runnerpersistdiag|runnercutoverdiag|dashboardstart504|galactechpreview|runnerterminalwatchdoginstall)
+            status|eventsourcestate|eventsourcesnapshot|blsprobe|fredprobe|wc2epoch2activate|wc2policyregister|wc2protocolregister|wc2executionprotocolregister|wc2collectonce|wc2state|services|logs|disk|sync|producttest|fulltest|productstate|productdeploy|paperreview|paperinspect|paperfixlint|paperharden|stateplanreview|stateplaninspect|stateplanharden|cursorreview|cursorreviewtail|cursorcleanup|bridgecheck|bridgestate|rollingstate|pausecheck|wakepause|wakeresume|wakearm|waketest|wakeheartbeat|chatbusyprobe|cursorcheck|cursorauthdiag|cursorttycheck|alertclockstate|alertclockpause|alertclockresume|migrationinspect|migrationinventory|ssddashboarddiag|productcrashlogs|ssddashboardwrappertest|ssdtcclaunchtest|ssdbackgroundteststart|ssdbackgroundtestcheck|ssdleftover|runnerpersistinstall|runnerpersistdiag|runnercutoverdiag|dashboardstart504|galactechpreview|runnerterminalwatchdoginstall|cpudiag)
               ;;
             *)
               echo "Unsupported command: $cmd"
@@ -2558,6 +2558,30 @@ jobs:
 
 
 
+
+      - name: CPU DIAG
+        if: steps.parse.outputs.command == 'cpudiag'
+        shell: bash
+        run: |
+          set +e
+          echo "=== SYSTEM ==="
+          date
+          uptime
+          sysctl -n hw.ncpu 2>/dev/null | awk '{print "LOGICAL_CPU_COUNT=" $1}'
+          sysctl -n hw.memsize 2>/dev/null | awk '{printf "MEMORY_BYTES=%s\n", $1}'
+          echo "=== LOAD SNAPSHOT ==="
+          top -l 2 -n 20 -o cpu -stats pid,command,cpu,mem,threads,state,time 2>/dev/null | tail -80
+          echo "=== TOP CPU PROCESSES ==="
+          ps -axo pid=,ppid=,user=,%cpu=,%mem=,etime=,state=,command= | sort -k4 -nr | head -35
+          echo "=== CRYPTO SIGNAL PROCESSES ==="
+          ps -axo pid=,ppid=,user=,%cpu=,%mem=,etime=,state=,command= | grep -E '[C]rypto-Signal|[c]rypto_signal|[R]unner\.(Listener|Worker)|[r]un_dashboard.py|[s]sd-service-supervisor' | head -80
+          echo "=== MEMORY PRESSURE ==="
+          memory_pressure 2>/dev/null | head -40
+          echo "=== VM STAT ==="
+          vm_stat 2>/dev/null | head -30
+          echo "=== THERMAL ==="
+          pmset -g therm 2>/dev/null || true
+          echo "CPU_DIAG_READONLY_PASS=YES"
 
       - name: SSD LEFTOVER INSPECT
         if: steps.parse.outputs.command == 'ssdleftover'
