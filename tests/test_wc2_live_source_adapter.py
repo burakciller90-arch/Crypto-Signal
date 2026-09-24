@@ -2,10 +2,23 @@ from __future__ import annotations
 
 import inspect
 from dataclasses import replace
+from decimal import Decimal
 from pathlib import Path
 
 import pytest
 from test_immutable_ledger import build_bundle, candles
+
+from crypto_signal.confluence.agreement import analyze_confluence
+from crypto_signal.confluence.models import (
+    EvidenceDirection,
+    EvidenceValidity,
+    InvalidationTrigger,
+    MethodologyEvidence,
+    MethodologyKind,
+    NamedPrice,
+    PriceZone,
+)
+from crypto_signal.ledger.bundle import build_decision_freeze_bundle
 
 from crypto_signal.decision_ledger import ImmutableDecisionEvidenceLedger
 from crypto_signal.evaluation.live_untouched_forward_operational import (
@@ -25,13 +38,105 @@ from crypto_signal.product.decision_proof import (
     ProofEvidenceDomain,
 )
 from crypto_signal.signals.models import SignalState
+from crypto_signal.signals.semantics import build_signal_decision
+
+
+def _directional_evidence(
+    *,
+    methodology: MethodologyKind,
+    exchange,
+    market_type,
+    as_of_ms: int,
+    evidence_id: str,
+    geometry: bool,
+) -> MethodologyEvidence:
+    return MethodologyEvidence(
+        methodology=methodology,
+        exchange=exchange,
+        market_type=market_type,
+        symbol="BTCUSDT",
+        timeframe="15m",
+        as_of_ms=as_of_ms,
+        methodology_version=f"{methodology.value}/wc2-test",
+        evidence_id=evidence_id,
+        setup_type=(
+            "gartley"
+            if methodology is MethodologyKind.HARMONIC
+            else "directional_context"
+        ),
+        direction=EvidenceDirection.BULLISH,
+        validity=(
+            EvidenceValidity.VALID
+            if methodology is MethodologyKind.HARMONIC
+            else EvidenceValidity.CONTEXT
+        ),
+        market_available_at_ms=as_of_ms - 2,
+        observed_at_ms=as_of_ms - 1,
+        entry_zone=(
+            PriceZone(Decimal("1000"), Decimal("1002"))
+            if geometry
+            else None
+        ),
+        invalidation_price=Decimal("990") if geometry else None,
+        invalidation_trigger=(
+            InvalidationTrigger.TOUCH_OR_CROSS if geometry else None
+        ),
+        targets=(
+            (
+                NamedPrice("target_1", Decimal("1015")),
+                NamedPrice("target_2", Decimal("1025")),
+            )
+            if geometry
+            else ()
+        ),
+        key_levels=(),
+        metrics=(),
+        ambiguity_flags=(),
+        contradiction_flags=(),
+        evidence_summary=("synthetic_directional_fixture",),
+    )
 
 
 def _bundle():
-    bundle = build_bundle(candles())
-    assert bundle.signal_decision.state in {SignalState.WATCH, SignalState.ACTIVE}
-    assert bundle.signal_decision.geometry is not None
-    return bundle
+    base = build_bundle(candles())
+    as_of_ms = base.signal_decision.as_of_ms
+    evidence = (
+        _directional_evidence(
+            methodology=MethodologyKind.PRICE_ACTION,
+            exchange=base.signal_decision.exchange,
+            market_type=base.signal_decision.market_type,
+            as_of_ms=as_of_ms,
+            evidence_id="wc2-pa-directional",
+            geometry=False,
+        ),
+        _directional_evidence(
+            methodology=MethodologyKind.HARMONIC,
+            exchange=base.signal_decision.exchange,
+            market_type=base.signal_decision.market_type,
+            as_of_ms=as_of_ms,
+            evidence_id="wc2-harmonic-geometry",
+            geometry=True,
+        ),
+    )
+    confluence = analyze_confluence(
+        evidence,
+        exchange=base.signal_decision.exchange,
+        market_type=base.signal_decision.market_type,
+        symbol=base.signal_decision.symbol,
+        timeframe=base.signal_decision.timeframe,
+        as_of_ms=as_of_ms,
+    )
+    decision = build_signal_decision(confluence)
+    assert decision.state is SignalState.ACTIVE
+    assert decision.geometry is not None
+    return build_decision_freeze_bundle(
+        decision=decision,
+        confluence=confluence,
+        price_action=base.price_action,
+        harmonic=base.harmonic,
+        elliott=base.elliott,
+        candles=base.candles,
+    )
 
 
 def test_live_source_adapter_preserves_exact_bundle_and_missing_domains() -> None:
