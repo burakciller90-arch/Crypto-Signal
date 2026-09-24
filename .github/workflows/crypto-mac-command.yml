@@ -111,20 +111,32 @@ jobs:
           echo "EVENT_SOURCE_DB_SHA256_BEFORE=$before_main"
           echo "EVENT_SOURCE_WAL_SHA256_BEFORE=$before_wal"
           echo "EVENT_SOURCE_SHM_SHA256_BEFORE=$before_shm"
+          echo "EVENT_SOURCE_LSOF_BEFORE_BEGIN"
+          lsof "$EVENT_DB" "$EVENT_DB-wal" "$EVENT_DB-shm" 2>/dev/null || true
+          echo "EVENT_SOURCE_LSOF_BEFORE_END"
 
           PYTHONPATH="$GITHUB_WORKSPACE/src" "$PY" - "$EVENT_DB" <<'PY'
           import json
+          import sqlite3
           import sys
           import time
           from dataclasses import asdict
           from pathlib import Path
 
-          from crypto_signal.product.event_source_runtime import (
-              read_event_source_runtime_truth,
-          )
+          import crypto_signal.product.event_source_runtime as event_runtime
 
           path = Path(sys.argv[1])
-          snapshot = read_event_source_runtime_truth(
+          print("EVENT_SOURCE_READER_MODULE=" + str(event_runtime.__file__))
+          print("EVENT_SOURCE_SQLITE_VERSION=" + sqlite3.sqlite_version)
+
+          original_connect = event_runtime.sqlite3.connect
+
+          def traced_connect(database, *args, **kwargs):
+              print("EVENT_SOURCE_SQLITE_CONNECT_TARGET=" + str(database))
+              return original_connect(database, *args, **kwargs)
+
+          event_runtime.sqlite3.connect = traced_connect
+          snapshot = event_runtime.read_event_source_runtime_truth(
               path,
               observed_at_ms=time.time_ns() // 1_000_000,
           )
@@ -160,6 +172,9 @@ jobs:
           echo "EVENT_SOURCE_DB_SHA256_AFTER=$after_main"
           echo "EVENT_SOURCE_WAL_SHA256_AFTER=$after_wal"
           echo "EVENT_SOURCE_SHM_SHA256_AFTER=$after_shm"
+          echo "EVENT_SOURCE_LSOF_AFTER_BEGIN"
+          lsof "$EVENT_DB" "$EVENT_DB-wal" "$EVENT_DB-shm" 2>/dev/null || true
+          echo "EVENT_SOURCE_LSOF_AFTER_END"
           test "$before_main" = "$after_main"
           test "$before_wal" = "$after_wal"
           test "$before_shm" = "$after_shm"
