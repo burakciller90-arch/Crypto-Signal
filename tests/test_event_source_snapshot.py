@@ -14,7 +14,7 @@ from crypto_signal.data.event_source_runtime import (
     EventSourceRuntimeStore,
     EventSourceTimestampBasis,
 )
-from ops.run_event_source_snapshot import collect_event_source_cycle
+from ops.run_event_source_snapshot import USER_AGENT, collect_event_source_cycle
 
 BLS_ICS = """BEGIN:VCALENDAR
 VERSION:2.0
@@ -252,3 +252,9 @@ def test_event_source_network_failure_does_not_fabricate_payload(
     assert failed.raw_payload_sha256 is None
     assert failed.source_timestamp_ms is None
     assert store.counts()["raw_payloads"] == 1
+
+
+
+def test_event_source_user_agent_includes_owner_contact_url() -> None:
+    assert USER_AGENT.startswith("Crypto-Signal/1.1 EventSourceRuntime")
+    assert "https://github.com/burakciller90-arch" in USER_AGENT

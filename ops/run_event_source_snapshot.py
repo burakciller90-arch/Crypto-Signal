@@ -34,7 +34,7 @@ DEFAULT_EVENT_SOURCE_DB = Path(
     "event_source.sqlite3"
 )
 DEFAULT_TIMEOUT_SECONDS = 20.0
-USER_AGENT = "Crypto-Signal/1.1 EventSourceRuntime public-data"
+USER_AGENT = "Crypto-Signal/1.1 EventSourceRuntime (+https://github.com/burakciller90-arch)"
 REAL_CAPITAL = 0
 
 
