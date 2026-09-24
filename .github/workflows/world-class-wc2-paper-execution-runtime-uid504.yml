@@ -16,7 +16,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: wc2-execution-${{ github.event.pull_request.number }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
   cancel-in-progress: true
 
 jobs:
