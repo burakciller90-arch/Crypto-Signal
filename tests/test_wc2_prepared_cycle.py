@@ -40,6 +40,9 @@ class FailingShadowIntentJournal(R25ShadowIntentJournal):
         raise RuntimeError("forced shadow intent crash")
 
 
+PROTOCOL_IDENTITY = "f" * 64
+
+
 def _inputs(tmp_path: Path):
     bundle = directional_bundle()
     signal = bundle.signal_decision
@@ -54,6 +57,7 @@ def _inputs(tmp_path: Path):
         bundle,
         policy=policy,
         activation=activation,
+        collection_protocol_identity=PROTOCOL_IDENTITY,
         sizing_policy=_policy(),
         source_frozen_at_ms=frozen_at,
         issued_at_ms=issued_at,
@@ -89,6 +93,7 @@ def test_prepared_receipt_round_trips_before_any_r20_write(
 
     assert prepared.verify_read_only() == 1
     assert prepared.read_for_signal(receipt.signal.freeze_identity) == receipt
+    assert receipt.collection_protocol_identity == PROTOCOL_IDENTITY
     assert receipt.historical_backfill_authority is False
     assert receipt.canonical_epoch2_write_authority is False
     assert receipt.production_authority is False
@@ -130,6 +135,17 @@ def test_prepared_cycle_completes_forecast_and_required_hold_cash_intent(
     assert status.intent_count == 1
     assert status.execution_count == 0
     assert decision.read_status().forecast_count == 1
+    persisted = decision.read_issuance_for_signal(
+        receipt.signal.freeze_identity
+    )
+    assert persisted is not None
+    forecast, _ = persisted
+    assert PROTOCOL_IDENTITY in forecast["source_evidence_identities"]
+    refs = {
+        item["component"]: item["version"]
+        for item in forecast["version_refs"]
+    }
+    assert refs["wc2_collection_protocol"] == PROTOCOL_IDENTITY
     assert R25ShadowIntentJournal(shadow_path).verify_read_only().record_count == 1
     assert R25ShadowCycleManifest(manifest_path).verify_read_only().record_count == 1
 
@@ -150,6 +166,7 @@ def test_prepared_cycle_round_trips_and_completes_without_sizing_policy(
         bundle,
         policy=policy,
         activation=activation,
+        collection_protocol_identity=PROTOCOL_IDENTITY,
         sizing_policy=None,
         source_frozen_at_ms=frozen_at,
         issued_at_ms=issued_at,
@@ -338,6 +355,7 @@ def test_receipt_refuses_source_before_preregistered_collection(
             bundle,
             policy=policy,
             activation=_activation(),
+            collection_protocol_identity=PROTOCOL_IDENTITY,
             sizing_policy=_policy(),
             source_frozen_at_ms=signal.as_of_ms + 10,
             issued_at_ms=signal.as_of_ms + 20,
