@@ -30,14 +30,14 @@ const API = Object.freeze({
 });
 
 const ROUTE_LABELS = Object.freeze({
-  command: "COMMAND",
-  markets: "MARKETS",
-  intelligence: "INTELLIGENCE",
-  capital: "CAPITAL",
-  archive: "ARCHIVE",
-  performance: "PERFORMANCE",
-  learn: "LEARN",
-  system: "SYSTEM",
+  command: "ANA MERKEZ",
+  markets: "VARLIK MERKEZİ",
+  intelligence: "İSTİHBARAT",
+  capital: "SERMAYE",
+  archive: "SİNYAL ARŞİVİ",
+  performance: "PERFORMANS",
+  learn: "BANA ÖĞRET",
+  system: "SİSTEM SAĞLIĞI",
 });
 
 const state = {
@@ -102,7 +102,7 @@ function shortIdentity(value) {
 }
 
 function formatTime(ms) {
-  if (!Number.isFinite(Number(ms))) return "NOT MEASURED";
+  if (!Number.isFinite(Number(ms))) return "ÖLÇÜLMEDİ";
   try {
     return new Intl.DateTimeFormat("tr-TR", {
       hour: "2-digit",
@@ -112,7 +112,7 @@ function formatTime(ms) {
       month: "2-digit",
     }).format(new Date(Number(ms)));
   } catch {
-    return "NOT MEASURED";
+    return "ÖLÇÜLMEDİ";
   }
 }
 
@@ -360,57 +360,271 @@ function bindNavigation() {
   });
 }
 
+const TURKISH_STATE = Object.freeze({
+  active: "AKTİF",
+  watch: "İZLE",
+  neutral: "NÖTR",
+  no_signal: "SİNYAL YOK",
+  hit_target: "HEDEFE ULAŞTI",
+  invalidated: "GEÇERSİZ KALDI",
+  expired: "SÜRESİ DOLDU",
+  ambiguous: "BELİRSİZ",
+  not_evaluable: "DEĞERLENDİRİLEMEDİ",
+  cancelled: "İPTAL EDİLDİ",
+  ready: "HAZIR",
+  empty: "BOŞ",
+  unavailable: "KULLANILAMIYOR",
+});
+
+const TURKISH_DIRECTION = Object.freeze({
+  bullish: "YUKARI YÖNLÜ",
+  bearish: "AŞAĞI YÖNLÜ",
+  neutral: "NÖTR",
+  long: "YUKARI YÖNLÜ",
+  short: "AŞAĞI YÖNLÜ",
+});
+
+function trState(value) {
+  const key = text(value, "").toLowerCase();
+  return TURKISH_STATE[key] || upper(value, "BİLİNMİYOR").replaceAll("_", " ");
+}
+
+function trDirection(value) {
+  const key = text(value, "").toLowerCase();
+  return TURKISH_DIRECTION[key] || upper(value, "YÖN YOK").replaceAll("_", " ");
+}
+
+function trProbability(value) {
+  const key = text(value, "not_calibrated").toLowerCase();
+  if (key === "calibrated") return "KALİBRE EDİLMİŞ";
+  if (key === "not_calibrated") return "KALİBRE EDİLMEMİŞ";
+  return upper(value, "KALİBRE EDİLMEMİŞ").replaceAll("_", " ");
+}
+
+function trEventKind(value) {
+  const key = text(value, "").toLowerCase();
+  if (key === "forecast_issued") return "YENİ BEKLENTİ";
+  if (key === "forecast_resolved") return "SONUÇLANDI";
+  return "İSTİHBARAT GÜNCELLEMESİ";
+}
+
+function formatPrice(value) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return text(value, "—");
+  return new Intl.NumberFormat("tr-TR", {
+    maximumFractionDigits: Math.abs(numeric) >= 1000 ? 2 : 6,
+  }).format(numeric);
+}
+
+function priceZoneText(zone) {
+  if (!zone || typeof zone !== "object") return "ÖLÇÜLMEDİ";
+  const low = formatPrice(zone.low);
+  const high = formatPrice(zone.high);
+  return low === high ? low : `${low} – ${high}`;
+}
+
+function feedMatchesAsset(item) {
+  if (state.asset === "ALL") return true;
+  return upper(item?.symbol || item?.asset, "").startsWith(state.asset);
+}
+
+function feedNarrative(item) {
+  const symbol = text(item?.symbol || item?.asset, "Piyasa");
+  const direction = text(item?.state, "").toLowerCase();
+  const marketDirection = text(item?.direction, "").toLowerCase();
+  if (text(item?.kind, "").toLowerCase() === "forecast_resolved") {
+    return `${symbol} için önceki beklenti sonuçlandı: ${trState(item?.state)}.`;
+  }
+  if (["bullish", "long"].includes(marketDirection)) {
+    return `${symbol} için yukarı yönlü senaryo izleniyor. Tetik bölgesi ${priceZoneText(item?.trigger_zone)}, hedef bölgesi ${priceZoneText(item?.target_zone)}.`;
+  }
+  if (["bearish", "short"].includes(marketDirection)) {
+    return `${symbol} için aşağı yönlü senaryo izleniyor. Tetik bölgesi ${priceZoneText(item?.trigger_zone)}, hedef bölgesi ${priceZoneText(item?.target_zone)}.`;
+  }
+  if (direction === "active" || direction === "watch") {
+    return `${symbol} dikkat listesinde. Sistem yeni kanıt geldikçe senaryoyu yeniden değerlendirecek.`;
+  }
+  return `${symbol} için net işlem yönü yerine kanıt durumu izleniyor.`;
+}
+
+function feedSimpleExplanation(item) {
+  const summary = item?.evidence_summary || {};
+  const support = Number(summary.support_count || 0);
+  const contradict = Number(summary.contradict_count || 0);
+  const neutral = Number(summary.neutral_count || 0);
+  return `Kanıtların ${support} tanesi senaryoyu destekliyor, ${contradict} tanesi karşı çıkıyor, ${neutral} tanesi nötr. Bu sayılar olasılık değildir.`;
+}
+
 function signalMatchesAsset(item) {
   if (state.asset === "ALL") return true;
   return upper(item?.symbol, "").startsWith(state.asset);
 }
 
 function renderCommand() {
-  const data = state.command;
-  if (!data) return;
+  const data = state.command || {};
+  const liveFeed = state.liveFeed || {};
+  const events = Array.isArray(liveFeed.events)
+    ? liveFeed.events.filter(feedMatchesAsset)
+    : [];
 
-  byId("metricForecasts").textContent = text(data.freeze_count, "0");
-  byId("metricForecastsNote").textContent = data.latest_frozen_at_ms
-    ? `latest · ${formatTime(data.latest_frozen_at_ms)}`
-    : "henüz immutable freeze yok";
+  const forecastMetric = byId("metricForecasts");
+  if (forecastMetric) forecastMetric.textContent = text(data.freeze_count, "0");
+  const forecastNote = byId("metricForecastsNote");
+  if (forecastNote) {
+    forecastNote.textContent = data.latest_frozen_at_ms
+      ? `son kayıt · ${formatTime(data.latest_frozen_at_ms)}`
+      : "henüz değiştirilemez tahmin yok";
+  }
 
   const counts = pairsToObject(data.state_counts);
-  byId("metricAttention").textContent = String((counts.watch || 0) + (counts.active || 0));
+  const attention = byId("metricAttention");
+  if (attention) {
+    attention.textContent = String((counts.watch || 0) + (counts.active || 0));
+  }
 
-  const recent = Array.isArray(data.recent_signals)
-    ? data.recent_signals.filter(signalMatchesAsset)
-    : [];
+  const eventRisk = byId("metricEventRisk");
+  if (eventRisk) {
+    eventRisk.textContent =
+      state.eventSourceStatus?.status === "ready" ? "KANIT VAR" : "ÖLÇÜLMEDİ";
+  }
+
+  const pulseText = byId("liveFeedPulseText");
+  if (pulseText) {
+    pulseText.textContent =
+      liveFeed.status === "ready"
+        ? `${events.length} canlı kayıt · 5 sn yenileme`
+        : liveFeed.status === "empty"
+          ? "akış hazır · yeni kayıt bekleniyor"
+          : "canlı akış doğrulanamadı";
+  }
+
+  renderPortfolioV2(events);
+
   const feed = byId("commandFeed");
   if (!feed) return;
 
-  if (!recent.length) {
-    feed.className = "feed-list empty-state";
+  if (!events.length) {
+    feed.className = "feed-list intelligence-feed-v2 empty-state";
     feed.innerHTML =
-      "<strong>Seçili odakta immutable forecast yok.</strong>" +
-      "<p>Boş liste sıfır başarı ya da sıfır risk anlamına gelmez.</p>";
+      "<strong>Seçili varlıkta canlı Intelligence Feed kaydı yok.</strong>" +
+      "<p>Bu durum piyasanın sakin veya risksiz olduğunu kanıtlamaz; yalnızca kalıcı feed olayı henüz yoktur.</p>";
     return;
   }
 
-  feed.className = "feed-list";
-  feed.innerHTML = recent.map((item) => `
-    <button class="evidence-trigger" type="button"
-      data-evidence-id="${escapeHtml(item.signal_freeze_identity)}"
-      aria-label="${escapeHtml(item.symbol)} ${escapeHtml(item.timeframe)} frozen evidence aç">
-      <article class="feed-item">
-        <div class="feed-item-head">
-          <strong>${escapeHtml(item.symbol)} · ${escapeHtml(item.timeframe)}</strong>
-          <span class="${stateClass(item.state)}">${escapeHtml(upper(item.state))}</span>
+  feed.className = "feed-list intelligence-feed-v2";
+  feed.innerHTML = events.map((item, index) => {
+    const summary = item.evidence_summary || {};
+    const signalId = text(item.signal_freeze_identity, "");
+    const hasProof = /^[0-9a-f]{64}$/.test(signalId);
+    const resolved = text(item.kind, "").toLowerCase() === "forecast_resolved";
+    return `
+      <article class="intel-card-v2 ${resolved ? "intel-card-resolved" : ""}" style="--feed-order:${index}">
+        <header class="intel-card-head-v2">
+          <div class="intel-identity-v2">
+            <span class="intel-kind-v2">${escapeHtml(trEventKind(item.kind))}</span>
+            <strong>${escapeHtml(item.symbol || item.asset || "PİYASA")} · ${escapeHtml(item.timeframe || "—")}</strong>
+            <span>${escapeHtml(formatTime(item.event_at_ms))}</span>
+          </div>
+          <span class="${stateClass(item.state)} intel-state-v2">${escapeHtml(trState(item.state))}</span>
+        </header>
+
+        <div class="intel-thought-v2">
+          <span class="intel-label-v2">SİSTEMİN DÜŞÜNCESİ</span>
+          <p>${escapeHtml(feedNarrative(item))}</p>
         </div>
-        <div class="feed-item-meta">
-          <span>${escapeHtml(upper(item.direction))}</span>
-          <span>agreement ${escapeHtml(item.confluence_score)}</span>
-          <span>${escapeHtml(item.probability_status || "NOT_CALIBRATED")}</span>
-          <span>${escapeHtml(formatTime(item.frozen_at_ms))}</span>
-          <code>${escapeHtml(shortIdentity(item.signal_freeze_identity))}</code>
-          <span class="evidence-open-cue">Evidence Room →</span>
+
+        <div class="intel-explain-grid-v2">
+          <section class="intel-simple-v2">
+            <span>SADE ANLATIM</span>
+            <p>${escapeHtml(feedSimpleExplanation(item))}</p>
+          </section>
+          <section class="intel-technical-v2">
+            <span>TEKNİK KANIT ÖZETİ</span>
+            <div>
+              <b>Destek ${escapeHtml(summary.support_count ?? 0)}</b>
+              <b>Karşıt ${escapeHtml(summary.contradict_count ?? 0)}</b>
+              <b>Kullanılabilir ${escapeHtml(summary.available_count ?? 0)}/${escapeHtml(summary.total_domain_count ?? 0)}</b>
+            </div>
+            <small>${escapeHtml(trProbability(item.probability_status))} · tazelik ${escapeHtml(item.freshness_0_1 ?? "ölçülmedi")}</small>
+          </section>
         </div>
-      </article>
-    </button>`).join("");
+
+        <div class="intel-levels-v2">
+          <div><span>Tetik bölgesi</span><strong>${escapeHtml(priceZoneText(item.trigger_zone))}</strong></div>
+          <div><span>Hedef bölgesi</span><strong>${escapeHtml(priceZoneText(item.target_zone))}</strong></div>
+          <div><span>Geçersizlik</span><strong>${escapeHtml(formatPrice(item.invalidation_price))}</strong></div>
+          <div><span>Yön</span><strong>${escapeHtml(trDirection(item.direction))}</strong></div>
+        </div>
+
+        <details class="intel-raw-v2">
+          <summary>Orijinal değiştirilemez tez kaydını göster</summary>
+          <p>${escapeHtml(item.conditional_thesis || "Kalıcı tez metni bulunmuyor.")}</p>
+          <code>forecast ${escapeHtml(shortIdentity(item.forecast_identity))} · proof ${escapeHtml(shortIdentity(item.proof_identity))}</code>
+        </details>
+
+        <footer class="intel-card-foot-v2">
+          <span>SHA-256 bağlı kanıt · gerçek sermaye kapalı</span>
+          ${hasProof
+            ? `<button class="intel-proof-button" type="button" data-evidence-id="${escapeHtml(signalId)}">Kanıt grafiğini ve dondurulmuş kararı aç →</button>`
+            : '<span class="intel-proof-unavailable">Exact kanıt bağlantısı doğrulanıyor</span>'}
+        </footer>
+      </article>`;
+  }).join("");
+}
+
+function renderPortfolioV2(events = []) {
+  const canonical = state.epoch2State || {};
+  const consolidated = canonical.consolidated || {};
+  const vaults = Array.isArray(canonical.vaults) ? canonical.vaults : [];
+
+  const balance = byId("portfolioBalance");
+  const pnl = byId("portfolioPnl");
+  const trades = byId("portfolioTrades");
+  const stateNode = byId("portfolioState");
+  const metricNav = byId("metricPaperNav");
+  const metricNavNote = byId("metricPaperNavNote");
+
+  if (canonical.status === "ready") {
+    const nav = moneyText(consolidated.nav_usdt);
+    const totalPnl =
+      Number(consolidated.realized_pnl_usdt || 0) +
+      Number(consolidated.unrealized_pnl_usdt || 0);
+    const closedTrades = vaults.reduce(
+      (sum, vault) => sum + Number(vault.closed_trade_count || 0),
+      0
+    );
+    if (balance) balance.textContent = nav;
+    if (pnl) pnl.textContent = `${totalPnl >= 0 ? "+" : ""}${formatPrice(totalPnl)} USDT`;
+    if (trades) trades.textContent = String(closedTrades);
+    if (stateNode) stateNode.textContent = `Epoch 2 · ${formatTime(consolidated.snapshot_at_ms)}`;
+    if (metricNav) metricNav.textContent = nav;
+    if (metricNavNote) metricNavNote.textContent = "kanonik Epoch 2 · yalnızca gözlem";
+  } else {
+    const starting = state.epoch?.current_program?.starting_cash_usdt;
+    if (balance) balance.textContent = starting ? `${starting} USDT` : "ÖLÇÜLMEDİ";
+    if (pnl) pnl.textContent = "ÖLÇÜLMEDİ";
+    if (trades) trades.textContent = "0";
+    if (stateNode) stateNode.textContent = "Canlı muhasebe kanıtı kullanılamıyor";
+    if (metricNav) metricNav.textContent = "ÖLÇÜLMEDİ";
+    if (metricNavNote) metricNavNote.textContent = "runtime kanıtı yok";
+  }
+
+  const stream = byId("portfolioProofStream");
+  if (!stream) return;
+  const recent = events.slice(0, 8);
+  if (!recent.length) {
+    stream.className = "proof-stream-v2 empty-state";
+    stream.innerHTML = "<strong>Henüz canlı karar kaydı yok.</strong><p>Yeni feed olayı geldiğinde burada görünecek.</p>";
+    return;
+  }
+  stream.className = "proof-stream-v2";
+  stream.innerHTML = recent.map((item) => `
+    <div class="proof-stream-row-v2">
+      <span>${escapeHtml(formatTime(item.event_at_ms))}</span>
+      <strong>${escapeHtml(item.symbol || item.asset || "PİYASA")}</strong>
+      <em>${escapeHtml(trEventKind(item.kind))}</em>
+      <code>${escapeHtml(shortIdentity(item.event_identity))}</code>
+    </div>`).join("");
 }
 
 function commandFocusSignal() {
@@ -500,7 +714,7 @@ function renderCommandDecisionSurface() {
   const data = state.commandDecision;
   if (!data) {
     const signal = commandFocusSignal();
-    tag.textContent = signal ? "VERIFYING" : "INSUFFICIENT EVIDENCE";
+    tag.textContent = signal ? "VERIFYING" : "YETERSİZ KANIT";
     tag.className = `tag ${signal ? "state-watch" : "state-neutral"}`;
     body.className = "wc5-decision-body empty-state";
     body.innerHTML = signal
@@ -513,7 +727,7 @@ function renderCommandDecisionSurface() {
   const proofPayload = data.proofPayload || {};
   const proof = proofPayload.status === "ready" ? proofPayload.proof : null;
   if (!proof) {
-    tag.textContent = "INSUFFICIENT EVIDENCE";
+    tag.textContent = "YETERSİZ KANIT";
     tag.className = "tag state-watch";
     body.className = "wc5-decision-body";
     body.innerHTML = `
@@ -543,7 +757,7 @@ function renderCommandDecisionSurface() {
       ? "NOT ELIGIBLE · PERSISTED HOLD_CASH"
       : persistedAction
         ? "PAPER/SHADOW INTENT ONLY"
-        : "NOT AVAILABLE";
+        : "KULLANILAMIYOR";
   const actionClass =
     persistedAction === "HOLD_CASH"
       ? "state-watch"
@@ -569,15 +783,15 @@ function renderCommandDecisionSurface() {
     <div class="wc5-decision-grid">
       <div><span>SUPPORT</span><strong>${escapeHtml(wc5EvidenceText(support, "NO ACCEPTED SUPPORT SLICE"))}</strong></div>
       <div><span>CONTRADICTION / RISK</span><strong>${escapeHtml(wc5EvidenceText(contradiction, "NO ACCEPTED CONTRADICTION SLICE"))}</strong></div>
-      <div><span>EVENT RISK</span><strong>${escapeHtml(upper(proof.event_context_state, "NOT AVAILABLE"))} · ${escapeHtml(upper(eventSlice?.verdict, "INSUFFICIENT"))}</strong></div>
+      <div><span>EVENT RISK</span><strong>${escapeHtml(upper(proof.event_context_state, "KULLANILAMIYOR"))} · ${escapeHtml(upper(eventSlice?.verdict, "INSUFFICIENT"))}</strong></div>
       <div><span>CAPITAL ELIGIBILITY</span><strong>${escapeHtml(capitalState)}</strong></div>
-      <div><span>MAX PAPER/SHADOW EXPOSURE</span><strong>NOT AVAILABLE</strong><small>cohort intent notional içermez; 0 veya başka tutar uydurulmaz</small></div>
+      <div><span>MAX PAPER/SHADOW EXPOSURE</span><strong>KULLANILAMIYOR</strong><small>cohort intent notional içermez; 0 veya başka tutar uydurulmaz</small></div>
       <div><span>PROBABILITY</span><strong>${escapeHtml(upper(proof.probability_status, "NOT_CALIBRATED"))}</strong></div>
     </div>
     <div class="wc5-change-condition">
       <span>WHAT MUST CHANGE?</span>
       <strong>${escapeHtml(proof.conditional_thesis || "Conditional thesis unavailable.")}</strong>
-      <small>Frozen invalidation: ${escapeHtml(text(proof.invalidation_price, "NOT AVAILABLE"))}. Aynı immutable intent sonradan rewrite edilmez; farklı action için yeni exact forecast/intent evidence gerekir.</small>
+      <small>Frozen invalidation: ${escapeHtml(text(proof.invalidation_price, "KULLANILAMIYOR"))}. Aynı immutable intent sonradan rewrite edilmez; farklı action için yeni exact forecast/intent evidence gerekir.</small>
     </div>
     <div class="wc5-decision-actions">
       <button class="evidence-trigger wc5-proof-button" type="button"
@@ -592,7 +806,7 @@ function renderCommandDecisionSurface() {
         <div class="truth-row"><span>DECISION PROOF</span><strong>${escapeHtml(shortIdentity(proof.proof_identity))}</strong></div>
         <div class="truth-row"><span>WC2 ACTION STATUS</span><strong>${escapeHtml(actionSnapshot?.status || "INSUFFICIENT_EVIDENCE")}</strong></div>
         <div class="truth-row"><span>WC2 INTENT</span><strong>${escapeHtml(shortIdentity(actionSnapshot?.intent_link_identity))}</strong></div>
-        <div class="truth-row"><span>VAULT</span><strong>${escapeHtml(actionSnapshot?.vault_id || "NOT AVAILABLE")}</strong></div>
+        <div class="truth-row"><span>VAULT</span><strong>${escapeHtml(actionSnapshot?.vault_id || "KULLANILAMIYOR")}</strong></div>
         <div class="truth-row"><span>SUPPORT / CONTRADICT</span><strong>${escapeHtml(proof.evidence_summary?.support_count ?? 0)} / ${escapeHtml(proof.evidence_summary?.contradict_count ?? 0)}</strong></div>
       </div>
       <p>Primary line selection is deterministic canonical evidence-domain order for presentation only; it is not a learned importance ranking.</p>
@@ -1015,7 +1229,7 @@ function renderMarketLayerSurface() {
           const freshness = Number(slice?.freshness_0_1);
           const freshnessText = Number.isFinite(freshness)
             ? `${(freshness * 100).toFixed(1)}%`
-            : "NOT MEASURED";
+            : "ÖLÇÜLMEDİ";
           const ids = Array.isArray(slice?.evidence_identities)
             ? slice.evidence_identities
             : [];
@@ -1028,7 +1242,7 @@ function renderMarketLayerSurface() {
               <strong class="${stateClass(verdict)}">${escapeHtml(availability)} · ${escapeHtml(verdict)}</strong>
             </div>
             <div class="proof-footnote">
-              source ${escapeHtml(slice?.source_quality || "NOT AVAILABLE")} ·
+              source ${escapeHtml(slice?.source_quality || "KULLANILAMIYOR")} ·
               freshness ${escapeHtml(freshnessText)} ·
               evidence ${escapeHtml(ids.length)}
             </div>
@@ -1169,7 +1383,7 @@ function renderMarketTruth() {
 
 function moneyText(value) {
   const raw = text(value, "");
-  return raw ? `${raw} USDT` : "NOT MEASURED";
+  return raw ? `${raw} USDT` : "ÖLÇÜLMEDİ";
 }
 
 function capitalStatusText(value) {
@@ -1196,13 +1410,13 @@ function renderVaultCard(vault) {
         <div><span>NAV</span><strong>${escapeHtml(moneyText(vault?.nav_usdt))}</strong></div>
         <div><span>CASH</span><strong>${escapeHtml(moneyText(vault?.cash_usdt))}</strong></div>
         <div><span>EXPOSURE</span><strong>${escapeHtml(moneyText(vault?.marked_exposure_usdt))}</strong></div>
-        <div><span>DRAWDOWN</span><strong>${escapeHtml(text(vault?.drawdown_fraction, "NOT MEASURED"))}</strong></div>
+        <div><span>DRAWDOWN</span><strong>${escapeHtml(text(vault?.drawdown_fraction, "ÖLÇÜLMEDİ"))}</strong></div>
       </div>
       <div class="capital-vault-detail">
         <span>start ${escapeHtml(moneyText(vault?.starting_cash_usdt))}</span>
         <span>realized ${escapeHtml(moneyText(vault?.realized_pnl_usdt))}</span>
         <span>unrealized ${escapeHtml(moneyText(vault?.unrealized_pnl_usdt))}</span>
-        <span>turnover ${escapeHtml(text(vault?.turnover_fraction, "NOT MEASURED"))}</span>
+        <span>turnover ${escapeHtml(text(vault?.turnover_fraction, "ÖLÇÜLMEDİ"))}</span>
         <span>closed trades ${escapeHtml(vault?.closed_trade_count ?? 0)}</span>
         <span>expectancy ${escapeHtml(
           vault?.expectancy_usdt_per_closed_trade === null ||
@@ -1250,7 +1464,7 @@ function renderEpoch() {
         <div class="truth-table">
           <div class="truth-row"><span>Program</span><strong>${escapeHtml(program.epoch_id || "Epoch 2")}</strong></div>
           <div class="truth-row"><span>Constitution start</span><strong>${escapeHtml(moneyText(program.starting_cash_usdt))}</strong></div>
-          <div class="truth-row"><span>Runtime NAV</span><strong>NOT MEASURED</strong></div>
+          <div class="truth-row"><span>Runtime NAV</span><strong>ÖLÇÜLMEDİ</strong></div>
           <div class="truth-row"><span>REAL CAPITAL</span><strong class="safe-text">DISABLED</strong></div>
         </div>
         <p>No NAV, PnL, allocation or performance is inferred from the constitution alone.</p>
@@ -1290,8 +1504,8 @@ function renderEpoch() {
         <div><span>MARKED EXPOSURE</span><strong>${escapeHtml(moneyText(consolidated.marked_exposure_usdt))}</strong></div>
         <div><span>REALIZED PNL</span><strong>${escapeHtml(moneyText(consolidated.realized_pnl_usdt))}</strong></div>
         <div><span>UNREALIZED PNL</span><strong>${escapeHtml(moneyText(consolidated.unrealized_pnl_usdt))}</strong></div>
-        <div><span>DRAWDOWN</span><strong>${escapeHtml(text(consolidated.drawdown_fraction, "NOT MEASURED"))}</strong></div>
-        <div><span>TURNOVER</span><strong>${escapeHtml(text(consolidated.turnover_fraction, "NOT MEASURED"))}</strong></div>
+        <div><span>DRAWDOWN</span><strong>${escapeHtml(text(consolidated.drawdown_fraction, "ÖLÇÜLMEDİ"))}</strong></div>
+        <div><span>TURNOVER</span><strong>${escapeHtml(text(consolidated.turnover_fraction, "ÖLÇÜLMEDİ"))}</strong></div>
       </div>
       <div class="capital-cost-row">
         ${totalCosts.map(([label, value]) =>
@@ -1485,7 +1699,7 @@ function updateArchiveSummary(allRows, visibleRows) {
   if (schemaTag) {
     schemaTag.textContent = state.archive?.outcome_schema_available
       ? "OUTCOME SCHEMA · AVAILABLE"
-      : "OUTCOME SCHEMA · NOT AVAILABLE";
+      : "OUTCOME SCHEMA · KULLANILAMIYOR";
   }
 
   const counts = {
@@ -2118,7 +2332,7 @@ function renderShadowCycleExtension(payload) {
       : "NONE";
     const replayStatus = upper(
       payload.restart_replay_runtime_status,
-      "NOT MEASURED"
+      "ÖLÇÜLMEDİ"
     );
     const replay = payload.runtime_replay_observation || null;
     const replayDetail = replay
@@ -2391,7 +2605,7 @@ function renderSystem() {
   const marketTapeNote = byId("systemMarketTapeNote");
   if (marketTapeNote) {
     marketTapeNote.textContent = marketTapeReady
-      ? `latest persisted age ${marketTapeSnapshot.latest_event_age_ms ?? "NOT MEASURED"} ms · process ${collectionProcessStatus} · heartbeat age ${collectorRuntime.heartbeat_age_ms ?? "NOT MEASURED"} ms · ingestion age ${collectorRuntime.ingestion_age_ms ?? "NOT MEASURED"} ms · ONLINE NOT ASSERTED`
+      ? `latest persisted age ${marketTapeSnapshot.latest_event_age_ms ?? "ÖLÇÜLMEDİ"} ms · process ${collectionProcessStatus} · heartbeat age ${collectorRuntime.heartbeat_age_ms ?? "ÖLÇÜLMEDİ"} ms · ingestion age ${collectorRuntime.ingestion_age_ms ?? "ÖLÇÜLMEDİ"} ms · ONLINE NOT ASSERTED`
       : text(marketTape.reason, "runtime evidence unavailable");
   }
 
@@ -2448,7 +2662,7 @@ function renderSystem() {
     const sourceSummary = eventSourceFetches
       .map(
         (fetch) =>
-          `${fetch.source_provider || "unknown"}:${upper(fetch.source_kind, "UNKNOWN")}:${upper(fetch.outcome, "UNKNOWN")}:${fetch.fetch_age_ms ?? "NOT MEASURED"}ms`
+          `${fetch.source_provider || "unknown"}:${upper(fetch.source_kind, "UNKNOWN")}:${upper(fetch.outcome, "UNKNOWN")}:${fetch.fetch_age_ms ?? "ÖLÇÜLMEDİ"}ms`
       )
       .join(" · ");
     eventSourceNote.textContent = eventSourceReady
@@ -2477,7 +2691,7 @@ function renderSystem() {
     const replayCount =
       coldSnapshot.canonical_replay_verified_partition_count ?? 0;
     coldNote.textContent = coldReady
-      ? `${text(coldSnapshot.integrity_scope, "NO PARTITIONS")} · process NOT MEASURED · canonical-row replay ${replayStatus} · replayed partitions ${replayCount}`
+      ? `${text(coldSnapshot.integrity_scope, "NO PARTITIONS")} · process ÖLÇÜLMEDİ · canonical-row replay ${replayStatus} · replayed partitions ${replayCount}`
       : text(coldArchive.reason, "archive runtime evidence unavailable");
   }
 
@@ -2523,12 +2737,12 @@ function performanceEvidenceClassLabel(value) {
 
 function fractionPercent(value) {
   const number = Number(value);
-  if (!Number.isFinite(number)) return "NOT MEASURED";
+  if (!Number.isFinite(number)) return "ÖLÇÜLMEDİ";
   return `${(number * 100).toFixed(1)}%`;
 }
 
 function decimalMetric(value, suffix = "") {
-  if (value === null || value === undefined || value === "") return "NOT MEASURED";
+  if (value === null || value === undefined || value === "") return "ÖLÇÜLMEDİ";
   return `${value}${suffix}`;
 }
 
@@ -2538,10 +2752,10 @@ function performanceSegmentMarkup(segment) {
   const historical = segment?.historical_success_fraction;
   const historyLabel = decisive > 0
     ? fractionPercent(historical)
-    : "NOT MEASURED";
+    : "ÖLÇÜLMEDİ";
   const rStatus = Number(segment?.r_evaluable_n ?? 0) > 0
     ? decimalMetric(segment?.average_r, " R")
-    : "NOT MEASURED";
+    : "ÖLÇÜLMEDİ";
 
   return `
     <article class="performance-segment">
@@ -2639,7 +2853,7 @@ function renderPerformanceCohorts() {
     target.className = "performance-cohorts empty-state";
     target.innerHTML =
       "<strong>Henüz outcome cohort evidence yok.</strong>" +
-      "<p>Empty performance history is NOT MEASURED; %0 başarı oranı değildir.</p>";
+      "<p>Empty performance history is ÖLÇÜLMEDİ; %0 başarı oranı değildir.</p>";
     return;
   }
 
@@ -2696,7 +2910,7 @@ function renderPerformancePaper() {
       <div class="truth-row"><span>Wins / Losses / Breakeven</span><strong>${escapeHtml(consolidated.win_count ?? 0)} / ${escapeHtml(consolidated.loss_count ?? 0)} / ${escapeHtml(consolidated.breakeven_count ?? 0)}</strong></div>
       <div class="truth-row"><span>Expectancy</span><strong>${escapeHtml(expectancy)}</strong></div>
       <div class="truth-row"><span>Turnover</span><strong>${escapeHtml(fractionPercent(consolidated.turnover_fraction))}</strong></div>
-      <div class="truth-row"><span>Fee + spread + slippage</span><strong>${escapeHtml(Number.isFinite(totalCosts) ? `${totalCosts} USDT` : "NOT MEASURED")}</strong></div>
+      <div class="truth-row"><span>Fee + spread + slippage</span><strong>${escapeHtml(Number.isFinite(totalCosts) ? `${totalCosts} USDT` : "ÖLÇÜLMEDİ")}</strong></div>
       <div class="truth-row"><span>Metrics status</span><strong>${escapeHtml(capitalStatusText(consolidated.metrics_status))}</strong></div>
     </div>
     <div class="performance-vault-compare">
@@ -2722,28 +2936,21 @@ function renderIntelligence() {
   if (!target) return;
   const endpoint = state.intelligence || {};
   const feed = state.liveFeed || {};
-  const events = Array.isArray(feed.events) ? feed.events : [];
+  const events = Array.isArray(feed.events) ? feed.events.filter(feedMatchesAsset) : [];
   const latest = events[0] || null;
+
+  if (!latest) {
+    target.textContent =
+      "Kalıcı Canlı Zekâ Akışı henüz boş veya runtime'a bağlı değil. Sistem eksik kanıt yerine yorum uydurmuyor.";
+    return;
+  }
+
   if (state.explainMode === "simple") {
-    if (!latest) {
-      target.textContent =
-        "SIMPLE · Persisted Live Intelligence Feed henüz boş veya runtime’a bağlı değil. " +
-        "Sistem eksik Decision Proof yerine sonuç uydurmuyor.";
-      return;
-    }
     target.textContent =
-      `SIMPLE · ${latest.symbol || latest.asset || "Market"} · ${upper(latest.state, "UNKNOWN")}. ` +
-      `${latest.conditional_thesis || "Deterministic thesis unavailable."} ` +
-      `Probability: ${upper(latest.probability_status, "NOT_CALIBRATED")}.`;
+      `${latest.symbol || latest.asset || "Piyasa"} · ${trState(latest.state)}. ${feedNarrative(latest)} ${feedSimpleExplanation(latest)}`;
   } else {
-    const endpointStatus = upper(endpoint.status, "UNAVAILABLE");
-    const feedStatus = upper(feed.status, "UNAVAILABLE");
     target.textContent =
-      `PRO · intelligence ${endpointStatus} · persisted R20.5 feed ${feedStatus} · ` +
-      `${events.length} loaded event(s). ` +
-      (latest
-        ? `latest proof ${shortIdentity(latest.proof_identity)} · forecast ${shortIdentity(latest.forecast_identity)}.`
-        : "No persisted Decision Proof event is available.");
+      `Teknik görünüm · Intelligence Center: ${trState(endpoint.status)} · Canlı feed: ${trState(feed.status)} · ${events.length} kayıt yüklü · proof ${shortIdentity(latest.proof_identity)} · forecast ${shortIdentity(latest.forecast_identity)}.`;
   }
 }
 
@@ -2767,7 +2974,7 @@ function renderAll() {
 function applyHealthTruth(data) {
   state.health = data;
   const ready = data?.status === "ok";
-  setTruthChip("apiTruth", ready ? "API · READY" : "API · DEGRADED", ready ? "ready" : "risk");
+  setTruthChip("apiTruth", ready ? "API · HAZIR" : "API · SORUNLU", ready ? "ready" : "risk");
   setBoot("bootApi", ready ? "READY" : "DEGRADED", ready ? "ready" : "muted");
 
   const ledgerPresent = data?.ledger_present === true;
@@ -2848,7 +3055,7 @@ async function runBoot() {
     const boot = byId("coldBoot");
     if (boot) boot.hidden = true;
     byId("mainContent")?.focus({ preventScroll: true });
-  }, prefersReducedMotion() ? 0 : 220);
+  }, prefersReducedMotion() ? 0 : 1500);
 }
 
 async function refreshRuntime(reason = "timer") {
@@ -2880,7 +3087,7 @@ async function refreshRuntime(reason = "timer") {
     await initializeMarketWorkspace({ reload: state.route === "markets" });
     renderAll();
     if (!results.slice(1).every((item) => item.ok)) {
-      setTruthChip("freshnessTruth", "FRESHNESS · PARTIAL EVIDENCE", "muted");
+      setTruthChip("freshnessTruth", "TAZELİK · KISMİ KANIT", "muted");
     }
     if (reason === "visibility") {
       setMainBusy(false, "Görünür sekmede runtime kanıtı yenilendi.");
@@ -2896,6 +3103,15 @@ function startPeriodicRefresh() {
   window.setInterval(() => {
     void refreshRuntime("timer");
   }, 30_000);
+
+  window.setInterval(async () => {
+    if (document.visibilityState !== "visible") return;
+    const result = await loadEndpoint("liveFeed", API.liveFeed);
+    if (result.ok) {
+      renderCommand();
+      renderIntelligence();
+    }
+  }, 5_000);
 
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "visible") {
