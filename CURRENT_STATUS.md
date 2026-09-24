@@ -4,10 +4,62 @@ Updated: 2026-09-24
 Project: Crypto Signal
 Baseline: crypto-signal-full-version-v1.0.0 (immutable)
 Active post-v1.0 program: v1.1 world-class product + market intelligence
-State: WC2_FORWARD_COLLECTION_ACTIVE / PIT_REGIME_BOUND / OUTCOME_RESOLVER_ACTIVE / PAPER_EXECUTION_EVIDENCE_FRONTIER / CONTINUITY_PAUSED_BY_USER
+State: WC0_LIVE_PRODUCT_PARITY_ACCEPTED / WC1_EVENT_SOURCE_PERSISTED_TRUTH / WC2_PERSISTENT_EXECUTION_RUNTIME_ACTIVE_NO_ELIGIBLE_TRADE / CONTINUITY_PAUSED_BY_USER
 REAL_CAPITAL: 0
 
 ## Active v1.1 frontier — read before historical sections
+
+
+### 2026-09-24 20:47 +0300 — WC0 LIVE PRODUCT PARITY ACCEPTED / WC1 SOURCE-SCOPED EVENT TRUTH RECONCILED / WC2 PERSISTENT EXECUTION RUNTIME ACTIVE WITH ZERO ELIGIBLE TRADE EVIDENCE
+
+This entry **supersedes the earlier 2026-09-24 16:58 frontier snapshot** while preserving it below as historical evidence.
+
+- Accepted runtime/product code head before this docs-only reconciliation: `448289db2c4dae83a8413cdd1943cafb17b9d6fb`.
+- WC0 exact-main Product cutover is now mechanically accepted live:
+  - issue **#1136**, run **36036079259**: `PRODUCT_DEPLOY_PASS=YES`;
+  - Product moved from `f15cbafd9f4359d385eca097a6a2635bf815ded1` to exact target `448289db2c4dae83a8413cdd1943cafb17b9d6fb`;
+  - GALACTECH root, Intelligence Center and R25 Operational Truth all passed live acceptance;
+  - SSD supervisor remained single owner at PID `78361`; dashboard child moved to PID `95669`; Runner.Listener PID `44162`;
+  - R11 audit passed WAL-aware backup/restore parity for the ~7.58 GB signal ledger plus alert, paper and candle databases;
+  - issue **#1138**, run **36036384590** independently reconfirmed Product HEAD exact parity and health `status=ok`, ledger/alert/decision evidence present, `read_only=true`, `REAL_CAPITAL=0`.
+- The prior R25 deploy timeout was diagnosed rather than hidden:
+  - live Market Tape was ~2.66 GB;
+  - diagnostic `PRAGMA quick_check` took ~84.37 s and the full Market Tape Product Truth reader took ~45.71 s;
+  - PR **#1127** therefore bounded R25 Operational Truth by delegating the heavy, non-required Market Tape verification to the dedicated `/api/market-tape-runtime/status` endpoint;
+  - the dedicated Market Tape integrity contract remains unchanged/full-strength; R25 does not claim Market Tape ONLINE merely because evidence exists.
+- The prior R11 deploy topology failure was also diagnostic false-positive evidence, not silently ignored:
+  - a transient helper process carrying the supervisor path was counted as a second supervisor by the old acceptance matcher;
+  - PR **#1134** made the R11 acceptance match the already-accepted executable-aware supervisor contract;
+  - exact-source UID504 regression + live topology acceptance passed before merge.
+- WC1 Event Source runtime truth was reconciled read-only on exact current source in issue **#1143**, run **36036665769**:
+  - schema `event-source-runtime-v1/2`;
+  - `runtime_status=PERSISTED_EVIDENCE_ONLY`;
+  - `online_status=NOT_ASSERTED`, `process_status=NOT_MEASURED`, `coverage_claim=SOURCE_SCOPED_ONLY`;
+  - 12 fetch records, 24 structured events, 75 news events, 8 raw payloads and 2 calendar-coverage records;
+  - FRED CPI and Employment calendars and Federal Reserve RSS retain successful persisted evidence;
+  - the BLS calendar ICS attempt remains an explicit HTTP 403 failure rather than being rewritten as success;
+  - DB bytes were unchanged across the probe; read-only verification passed; `REAL_CAPITAL=0`.
+- WC2 forward evidence has advanced materially since the 16:58 snapshot:
+  - issue **#1140**, run **36036463117**: Decision Evidence `forecasts=17 proofs=17 resolutions=5 feed_events=17`;
+  - untouched-forward cohort `forecasts=17 intents=17 executions=0 resolutions=5`;
+  - regime distribution `NOT_MEASURED:1, range:6, transition:10`; the sole legacy `NOT_MEASURED` row remains immutable historical evidence;
+  - Epoch 2 R22 canonical mutation tables remain `intents=0 fills=0 bundles=0`.
+- WC2 paper-execution evidence boundary is preregistered and persistent, but **economic evidence does not yet exist**:
+  - execution protocol `8f503ffb501c3c81f4f11f5389b36ef997b1ab596bff744799b762d09d69622a`, `execution_start_ms=1790262900000`;
+  - frozen simulated costs: fee `0.001`, spread `0.0005`, slippage `0.0005`;
+  - persistent execution runtime activation `7d907e169a06bc5b5a60ed000060ae07e217fe8ba64cbe878ba854e5f51ca1e0`;
+  - issue **#1141**, run **36036569202**: execution journal is still `EMPTY_OR_NOT_CREATED decisions=0`;
+  - the post-boundary one-shot acceptance also observed zero eligible events and zero appends with `HISTORICAL_BACKFILL=NO`.
+- Therefore **do not claim paper profitability, execution quality, fee-adjusted expectancy, Sharpe/Sortino, slippage performance or promotion readiness from WC2 yet**. The persistent writer is armed, but it must wait for genuine post-boundary eligible forward events.
+- Continuity remains user-paused and empty after WC0 deploy: `PAUSED=YES`, shared pause YES, active leases 0 and wake queue 0.
+- Cursor workers/Composer remain disabled. No exchange order authority, no broker credentials, no historical backfill and **REAL_CAPITAL=0**.
+
+Current true frontier:
+- keep WC2 forward collection/execution evidence running under the preregistered immutable boundary until real eligible trade evidence exists;
+- advance the remaining world-class acceptance rails only from persisted evidence, without converting zero-trade state into economic success;
+- Product actionability work must use exact persisted decision/action evidence; an ACTIVE signal alone must never be relabelled TRADE;
+- preserve WC1 source-scoped/online-not-asserted semantics and the dedicated heavy Market Tape verification boundary.
+
 
 ### 2026-09-24 16:58 +0300 — WC2 GENUINE FORWARD COLLECTION ACTIVE / PIT REGIME + OUTCOME RESOLVER ACCEPTED / ECONOMIC EXECUTION EVIDENCE IS FRONTIER
 
