@@ -2045,8 +2045,8 @@ function frozenChartMarkup(detail) {
   if (!candles.length) {
     return `
       <div class="frozen-chart-empty">
-        <strong>Frozen OHLC chart not available in this proof payload.</strong>
-        <p>Candle count/range is still shown from accepted freeze metadata; no synthetic candles are drawn.</p>
+        <strong>Bu kanıt kaydında dondurulmuş OHLC mum grafiği yok.</strong>
+        <p>Kabul edilmiş dondurma metadatasındaki mum sayısı ve zaman aralığı korunur; sentetik mum çizilmez.</p>
       </div>`;
   }
 
@@ -2086,7 +2086,7 @@ function frozenChartMarkup(detail) {
   return `
     <div class="frozen-chart-wrap">
       <svg class="frozen-chart" viewBox="0 0 ${width} ${height}"
-        role="img" aria-label="Frozen issuance-time candle chart">
+        role="img" aria-label="Karar anındaki dondurulmuş mum grafiği">
         <line class="chart-grid-line" x1="${paddingX}" y1="${paddingY}"
           x2="${width - paddingX}" y2="${paddingY}"></line>
         <line class="chart-grid-line" x1="${paddingX}" y1="${height / 2}"
@@ -2096,12 +2096,13 @@ function frozenChartMarkup(detail) {
         ${candleSvg}
       </svg>
       <div class="frozen-chart-caption">
-        <span>${escapeHtml(String(candles.length))} frozen candles rendered</span>
-        <span>low ${escapeHtml(String(low))} · high ${escapeHtml(String(high))}</span>
+        <span>${escapeHtml(String(candles.length))} dondurulmuş mum</span>
+        <span>en düşük ${escapeHtml(String(low))} · en yüksek ${escapeHtml(String(high))}</span>
         <span>${escapeHtml(formatTime(first.openTime))} → ${escapeHtml(formatTime(last.openTime))}</span>
       </div>
     </div>`;
 }
+
 
 function selectedEvidenceMarkup(item) {
   const summaries = Array.isArray(item?.evidence_summary) ? item.evidence_summary : [];
@@ -2121,96 +2122,100 @@ function selectedEvidenceMarkup(item) {
   return `
     <li class="selected-evidence">
       <div class="selected-evidence-head">
-        <strong>${escapeHtml(item?.setup_type || "evidence")}</strong>
+        <strong>${escapeHtml(item?.setup_type || "kanıt")}</strong>
         <code>${escapeHtml(shortIdentity(item?.evidence_id))}</code>
       </div>
       <div class="selected-evidence-meta">
-        <span>${escapeHtml(upper(item?.direction))}</span>
-        <span>${escapeHtml(upper(item?.validity))}</span>
-        <span>market ${escapeHtml(formatTime(item?.market_available_at_ms))}</span>
-        <span>observed ${escapeHtml(formatTime(item?.observed_at_ms))}</span>
+        <span>${escapeHtml(trDirection(item?.direction))}</span>
+        <span>${escapeHtml(trState(item?.validity))}</span>
+        <span>piyasada ${escapeHtml(formatTime(item?.market_available_at_ms))}</span>
+        <span>gözlendi ${escapeHtml(formatTime(item?.observed_at_ms))}</span>
       </div>
       ${summaries.length
-        ? `<p class="selected-evidence-summary">${summaries.map(escapeHtml).join(" · ")}</p>`
+        ? `<details><summary>Ham kanıt özeti</summary><p class="selected-evidence-summary">${summaries.map(escapeHtml).join(" · ")}</p></details>`
         : ""}
       ${extra.length
         ? `<p class="selected-evidence-summary">${extra.map(escapeHtml).join(" · ")}</p>`
         : ""}
       ${ambiguity.length
-        ? `<p class="selected-evidence-summary state-watch">ambiguity · ${ambiguity.map(escapeHtml).join(" · ")}</p>`
+        ? `<p class="selected-evidence-summary state-watch">belirsizlik · ${ambiguity.map(escapeHtml).join(" · ")}</p>`
         : ""}
       ${contradiction.length
-        ? `<p class="selected-evidence-summary state-risk">contradiction · ${contradiction.map(escapeHtml).join(" · ")}</p>`
+        ? `<p class="selected-evidence-summary state-risk">karşıtlık · ${contradiction.map(escapeHtml).join(" · ")}</p>`
         : ""}
       ${item?.invalidation_price !== null && item?.invalidation_price !== undefined
-        ? `<p class="selected-evidence-summary">invalidation ${escapeHtml(item.invalidation_price)}
-          · ${escapeHtml(item.invalidation_trigger || "trigger unspecified")}</p>`
+        ? `<p class="selected-evidence-summary">geçersizlik ${escapeHtml(item.invalidation_price)}
+          · ${escapeHtml(item.invalidation_trigger || "tetik bilgisi yok")}</p>`
         : ""}
     </li>`;
 }
+
 
 function methodEngineMarkup(method) {
   const selected = Array.isArray(method?.selected) ? method.selected : [];
   return `
     <li class="method-engine">
       <div class="method-engine-head">
-        <strong>${escapeHtml(upper(method?.methodology))}</strong>
+        <strong>${escapeHtml(upper(method?.methodology).replaceAll("_", " "))}</strong>
         <span class="${proofBadgeClass(method?.resolved_direction)}">
-          ${escapeHtml(upper(method?.resolved_direction))}
+          ${escapeHtml(trDirection(method?.resolved_direction))}
         </span>
       </div>
       <div class="method-engine-meta">
-        <span>source ${escapeHtml(method?.source_count ?? 0)}</span>
-        <span>selected ${escapeHtml(method?.selected_count ?? selected.length)}</span>
-        <span>latest ${escapeHtml(formatTime(method?.latest_market_available_at_ms))}</span>
-        <span>${method?.has_internal_direction_conflict ? "INTERNAL CONFLICT" : "no internal conflict"}</span>
+        <span>kaynak ${escapeHtml(method?.source_count ?? 0)}</span>
+        <span>seçili ${escapeHtml(method?.selected_count ?? selected.length)}</span>
+        <span>son veri ${escapeHtml(formatTime(method?.latest_market_available_at_ms))}</span>
+        <span>${method?.has_internal_direction_conflict ? "İÇ YÖN ÇATIŞMASI" : "iç yön çatışması yok"}</span>
       </div>
       ${selected.length
         ? `<ul class="selected-evidence-list">${selected.map(selectedEvidenceMarkup).join("")}</ul>`
-        : `<p class="proof-footnote">No selected accepted evidence for this methodology slot.</p>`}
+        : `<p class="proof-footnote">Bu analiz yöntemi için seçilmiş kabul edilmiş kanıt yok.</p>`}
     </li>`;
 }
+
 
 function pairwiseMarkup(item) {
   return `
     <li class="pairwise-item">
-      <span>${escapeHtml(upper(item?.left))} ↔ ${escapeHtml(upper(item?.right))}</span>
-      <span class="${proofBadgeClass(item?.relation)}">${escapeHtml(upper(item?.relation))}</span>
-      <span>${escapeHtml(upper(item?.left_direction))} / ${escapeHtml(upper(item?.right_direction))}</span>
+      <span>${escapeHtml(upper(item?.left).replaceAll("_", " "))} ↔ ${escapeHtml(upper(item?.right).replaceAll("_", " "))}</span>
+      <span class="${proofBadgeClass(item?.relation)}">${escapeHtml(trVerdict(item?.relation))}</span>
+      <span>${escapeHtml(trDirection(item?.left_direction))} / ${escapeHtml(trDirection(item?.right_direction))}</span>
     </li>`;
 }
+
 
 function geometryMarkup(geometry) {
   if (!geometry) {
     return `
       <div class="frozen-chart-empty">
-        <strong>No frozen geometry.</strong>
-        <p>The accepted signal did not freeze entry/target/invalidation geometry. Nothing is inferred.</p>
+        <strong>Dondurulmuş fiyat geometrisi yok.</strong>
+        <p>Kabul edilmiş sinyal giriş, hedef veya geçersizlik geometrisi dondurmamışsa sistem bunları sonradan türetmez.</p>
       </div>`;
   }
   const targets = Array.isArray(geometry.targets) ? geometry.targets : [];
   return `
     <ul class="geometry-list">
       <li class="geometry-item">
-        <strong>Entry zone</strong>
+        <strong>Giriş bölgesi</strong>
         <span>${escapeHtml(geometry.entry_zone_low)} → ${escapeHtml(geometry.entry_zone_high)}</span>
       </li>
       <li class="geometry-item">
-        <strong>Reference</strong>
+        <strong>Referans</strong>
         <span>${escapeHtml(geometry.entry_reference_price)} · ${escapeHtml(geometry.entry_reference_model)}</span>
       </li>
       <li class="geometry-item">
-        <strong>Invalidation</strong>
+        <strong>Geçersizlik</strong>
         <span>${escapeHtml(geometry.invalidation_price)} · ${escapeHtml(geometry.invalidation_trigger)}</span>
       </li>
       ${targets.map((target) => `
         <li class="geometry-item">
           <strong>${escapeHtml(target.label)}</strong>
-          <span>${escapeHtml(target.target_price)} · R/R ${escapeHtml(target.reference_rr)}</span>
+          <span>${escapeHtml(target.target_price)} · Risk/Getiri ${escapeHtml(target.reference_rr)}</span>
         </li>`).join("")}
     </ul>
-    <p class="proof-footnote">Reference geometry is evidence, not an order instruction.</p>`;
+    <p class="proof-footnote">Bu geometri kanıttır; emir talimatı değildir.</p>`;
 }
+
 
 function contextualLessonIds(detail) {
   const signal = detail?.signal || {};
