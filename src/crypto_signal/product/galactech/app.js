@@ -537,6 +537,24 @@ function signalMatchesAsset(item) {
   return upper(item?.symbol, "").startsWith(state.asset);
 }
 
+function renderTickerV2(events) {
+  const target = byId("intelTicker");
+  if (!target) return;
+  const rows = Array.isArray(events) ? events.slice(0, 12) : [];
+  if (!rows.length) {
+    target.innerHTML = "<span>Yeni kalıcı piyasa zekâsı kaydı bekleniyor…</span>";
+    return;
+  }
+  const cells = rows.map((item) => `
+    <span class="intel-ticker-item">
+      <b>${escapeHtml(item.symbol || item.asset || "PİYASA")}</b>
+      <em class="${stateClass(item.state)}">${escapeHtml(trState(item.state))}</em>
+      <i>${escapeHtml(trDirection(item.direction))}</i>
+      <small>tetik ${escapeHtml(priceZoneText(item.trigger_zone))} → hedef ${escapeHtml(priceZoneText(item.target_zone))}</small>
+    </span>`).join("");
+  target.innerHTML = cells + cells;
+}
+
 function renderCommand() {
   const data = state.command || {};
   const liveFeed = state.liveFeed || {};
@@ -575,6 +593,7 @@ function renderCommand() {
           : "canlı akış doğrulanamadı";
   }
 
+  renderTickerV2(events);
   renderPortfolioV2(events);
 
   const feed = byId("commandFeed");
