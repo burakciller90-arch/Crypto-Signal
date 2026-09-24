@@ -24,7 +24,7 @@ jobs:
           set -euo pipefail
           cmd="$(printf '%s\n' "$ISSUE_BODY" | awk -F: 'tolower($1)=="command" {gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2); print tolower($2); exit}')"
           case "$cmd" in
-            status|eventsourcestate|eventsourcesnapshot|blsprobe|services|logs|disk|sync|producttest|fulltest|productstate|productdeploy|paperreview|paperinspect|paperfixlint|paperharden|stateplanreview|stateplaninspect|stateplanharden|cursorreview|cursorreviewtail|cursorcleanup|bridgecheck|bridgestate|rollingstate|pausecheck|wakepause|wakeresume|wakearm|waketest|wakeheartbeat|chatbusyprobe|cursorcheck|cursorauthdiag|cursorttycheck|alertclockstate|alertclockpause|alertclockresume|migrationinspect|migrationinventory|ssddashboarddiag|productcrashlogs|ssddashboardwrappertest|ssdtcclaunchtest|ssdbackgroundteststart|ssdbackgroundtestcheck|ssdleftover|runnerpersistinstall|runnerpersistdiag|runnercutoverdiag|dashboardstart504|runnerterminalwatchdoginstall)
+            status|eventsourcestate|eventsourcesnapshot|blsprobe|fredprobe|services|logs|disk|sync|producttest|fulltest|productstate|productdeploy|paperreview|paperinspect|paperfixlint|paperharden|stateplanreview|stateplaninspect|stateplanharden|cursorreview|cursorreviewtail|cursorcleanup|bridgecheck|bridgestate|rollingstate|pausecheck|wakepause|wakeresume|wakearm|waketest|wakeheartbeat|chatbusyprobe|cursorcheck|cursorauthdiag|cursorttycheck|alertclockstate|alertclockpause|alertclockresume|migrationinspect|migrationinventory|ssddashboarddiag|productcrashlogs|ssddashboardwrappertest|ssdtcclaunchtest|ssdbackgroundteststart|ssdbackgroundtestcheck|ssdleftover|runnerpersistinstall|runnerpersistdiag|runnercutoverdiag|dashboardstart504|runnerterminalwatchdoginstall)
               ;;
             *)
               echo "Unsupported command: $cmd"
@@ -350,6 +350,62 @@ jobs:
                       f"sha256={hashlib.sha256(payload).hexdigest()}"
                   )
           print("BLS_PROBE_READONLY_PASS=YES")
+          print("REAL_CAPITAL=0")
+          PY
+
+      - name: FRED CALENDAR PROBE
+        if: steps.parse.outputs.command == 'fredprobe'
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
+          PY="$DEV/.venv/bin/python"
+          test "$(id -u)" = "504"
+          test -x "$PY"
+
+          PYTHONPATH="$GITHUB_WORKSPACE/src" "$PY" - <<'PY'
+          import hashlib
+          from datetime import UTC, datetime
+
+          import httpx
+
+          from ops.run_event_source_snapshot import USER_AGENT
+
+          year = datetime.now(UTC).year
+          probes = (
+              (
+                  "cpi",
+                  f"https://fred.stlouisfed.org/releases/calendar?rid=10&y={year}",
+                  "Consumer Price Index",
+              ),
+              (
+                  "employment",
+                  f"https://fred.stlouisfed.org/releases/calendar?rid=50&y={year}",
+                  "Employment Situation",
+              ),
+          )
+          with httpx.Client(
+              timeout=20.0,
+              follow_redirects=True,
+              headers={
+                  "User-Agent": USER_AGENT,
+                  "Accept": "text/html,application/xhtml+xml",
+              },
+          ) as client:
+              for label, url, expected in probes:
+                  response = client.get(url)
+                  payload = response.content
+                  text = response.text
+                  print(
+                      "FRED_PROBE "
+                      f"label={label} "
+                      f"status={response.status_code} "
+                      f"content_type={response.headers.get('content-type', 'MISSING')} "
+                      f"bytes={len(payload)} "
+                      f"sha256={hashlib.sha256(payload).hexdigest()} "
+                      f"contains_expected_title={'YES' if expected in text else 'NO'}"
+                  )
+          print("FRED_PROBE_READONLY_PASS=YES")
           print("REAL_CAPITAL=0")
           PY
 
