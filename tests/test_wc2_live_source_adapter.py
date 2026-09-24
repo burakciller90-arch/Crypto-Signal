@@ -284,6 +284,13 @@ def test_same_cycle_issuance_binds_exact_collection_protocol_lineage(
         for item in issuance.forecast.version_refs
     }
     assert refs["wc2_collection_protocol"] == protocol_identity
+    methodology = next(
+        item
+        for item in issuance.proof.evidence_slices
+        if item.domain is ProofEvidenceDomain.METHODOLOGY
+    )
+    assert protocol_identity in methodology.evidence_identities
+    assert "extra_forecast_source_lineage_bound" in methodology.summary_codes
 
 
 def test_same_cycle_issuance_rejects_backdating_and_stale_delay(
