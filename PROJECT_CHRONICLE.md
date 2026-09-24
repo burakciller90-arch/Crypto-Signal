@@ -1,5 +1,25 @@
 # PROJECT CHRONICLE
 
+
+## 2026-09-24 — WC0 live cutover accepted; WC1 persisted Event Source truth and WC2 execution runtime reconciled
+
+The earlier same-day WC2 snapshot was intentionally retained below, but the operational frontier moved forward substantially.
+
+WC0 production parity was closed only after two independent blockers were measured and fixed. The first was not a generic slow API: the live Market Tape database was ~2.66 GB, its full SQLite `quick_check` took ~84.37 seconds and the existing Product Truth read took ~45.71 seconds. That made the 15-second R25 deployment acceptance deterministically impossible. PR #1127 kept the full Market Tape integrity reader on its dedicated endpoint while making R25 Operational Truth explicitly delegate that heavy non-required component instead of recomputing it inline.
+
+The next deploy reached R25 successfully but failed the R11 topology audit because the acceptance matcher counted any process line containing the supervisor path. A read-only UID504 process snapshot proved that a transient `awk -v needle /Volumes/.../ssd-service-supervisor.sh` helper could be counted beside the real `/bin/bash .../ssd-service-supervisor.sh`. PR #1134 aligned R11 acceptance with the already-accepted executable-aware supervisor detector and passed both regression and live UID504 topology acceptance.
+
+After Development was synchronized to the corrected exact main, issue #1136 / run 36036079259 deployed Product from `f15cbafd9f4359d385eca097a6a2635bf815ded1` to `448289db2c4dae83a8413cdd1943cafb17b9d6fb`. Live GALACTECH root, Intelligence Center and R25 Operational Truth passed. R11 backup/restore audit passed on the ~7.58 GB signal ledger and the alert/paper/candle stores; the accepted topology was supervisor 78361, dashboard 95669 and Runner.Listener 44162. Continuity remained paused with zero leases and zero wake queue. Issue #1138 independently reconfirmed exact Product HEAD and clean read-only health.
+
+WC1 Event Source truth was then reread from exact source without mutation in issue #1143 / run 36036665769. The persisted runtime contains 12 fetches, 24 structured events, 75 news events, 8 raw payloads and 2 calendar coverage records. FRED CPI, FRED Employment Situation and Federal Reserve RSS success evidence is preserved; the BLS ICS HTTP 403 remains an explicit failure. Product semantics remain deliberately narrow: `PERSISTED_EVIDENCE_ONLY`, `ONLINE NOT ASSERTED`, `PROCESS NOT MEASURED`, `SOURCE_SCOPED_ONLY`. The database hash was byte-stable across the read.
+
+WC2 also advanced from 2 forecasts to 17 immutable forward forecasts/proofs, 17 cohort intents and 5 resolutions. Regime evidence is now `NOT_MEASURED:1, range:6, transition:10`; the legacy unmeasured row is not backfilled. The preregistered paper execution boundary freezes the exact protocol plus fee/spread/slippage assumptions and has a persisted runtime activation, but there are still zero cohort executions, zero Epoch 2 R22 intents/fills/bundles and no execution-journal decisions. A bounded post-boundary one-shot also produced zero eligible events and zero appends.
+
+That zero is a scientific result, not a failure to be cosmetically filled. No paper-economics, execution-quality, profitability or promotion claim is authorized until genuine post-boundary eligible events produce exact fills and explicit cost evidence. Historical conversion remains forbidden. REAL_CAPITAL=0.
+
+The current safe frontier is therefore persistent untouched-forward collection plus truthful execution-evidence accumulation, followed by remaining world-class acceptance/product slices that consume exact persisted evidence only. ACTIVE signal state is not itself TRADE authority, and missing actionability evidence must remain missing.
+
+
 ## 2026-09-24 — WC2 genuine untouched-forward collection becomes operational
 
 State was reconstructed from READ_FIRST, CURRENT_STATUS, Chronicle, real `main`, open PRs/issues and UID504 runtime evidence rather than memory.
