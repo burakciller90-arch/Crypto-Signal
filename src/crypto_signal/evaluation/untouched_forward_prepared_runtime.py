@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from enum import StrEnum
 
 from crypto_signal.decision_ledger import (
     DecisionLedgerWriteDisposition,
@@ -23,8 +24,13 @@ from crypto_signal.evaluation.untouched_forward_policy import (
     WC2UntouchedForwardPolicy,
 )
 from crypto_signal.evaluation.untouched_forward_prepared import (
+    WC2PreparedCycleJournal,
     WC2PreparedCycleReceipt,
+    build_wc2_prepared_cycle_receipt,
 )
+from crypto_signal.ledger.coverage import LiveCoverageContext
+from crypto_signal.ledger.live_clock import LiveFreezeResult, LiveFreezeStatus
+from crypto_signal.ledger.store import ImmutableSignalLedger
 from crypto_signal.paper.epoch2_accounting import Epoch2ActivationRecord
 from crypto_signal.paper.models import PaperAction
 from crypto_signal.paper.shadow_cycle_manifest import R25ShadowCycleManifest
@@ -32,6 +38,284 @@ from crypto_signal.paper.shadow_intent_journal import R25ShadowIntentJournal
 
 WC2_PREPARED_COMPLETION_ENGINE_VERSION = "wc2-prepared-completion-v1/1"
 REAL_CAPITAL = 0
+
+
+class WC2PreparedLiveStatus(StrEnum):
+    COMPLETED_FRESH = "completed_fresh"
+    COMPLETED_RECOVERED = "completed_recovered"
+    SKIPPED_BEFORE_COLLECTION = "skipped_before_collection"
+    SKIPPED_INELIGIBLE_SOURCE = "skipped_ineligible_source"
+    NO_PREPARED_RECEIPT = "no_prepared_receipt"
+
+
+@dataclass(frozen=True, slots=True)
+class WC2PreparedLiveResult:
+    status: WC2PreparedLiveStatus
+    signal_freeze_identity: str | None
+    receipt_identity: str | None
+    forecast_identity: str | None
+    cohort_forecast_identity: str | None
+    paper_intent_identity: str | None
+    reason_codes: tuple[str, ...]
+    historical_market_read_performed: bool = False
+    historical_backfill_authority: bool = False
+    canonical_epoch2_mutation: bool = False
+    production_authority: bool = False
+    real_capital: int = REAL_CAPITAL
+
+    def __post_init__(self) -> None:
+        for value, label in (
+            (self.signal_freeze_identity, "WC2 prepared live signal"),
+            (self.receipt_identity, "WC2 prepared live receipt"),
+            (self.forecast_identity, "WC2 prepared live forecast"),
+            (
+                self.cohort_forecast_identity,
+                "WC2 prepared live cohort forecast",
+            ),
+            (self.paper_intent_identity, "WC2 prepared live paper intent"),
+        ):
+            if value is not None:
+                _require_sha256(value, label)
+        if self.reason_codes != tuple(sorted(set(self.reason_codes))):
+            raise ValueError("WC2 prepared live reasons must be canonical")
+        if (
+            self.historical_market_read_performed
+            or self.historical_backfill_authority
+            or self.canonical_epoch2_mutation
+            or self.production_authority
+            or self.real_capital != REAL_CAPITAL
+        ):
+            raise ValueError("WC2 prepared live result crossed authority boundary")
+
+
+def process_wc2_prepared_live_freeze(
+    result: LiveFreezeResult,
+    *,
+    context: LiveCoverageContext,
+    signal_ledger: ImmutableSignalLedger,
+    policy: WC2UntouchedForwardPolicy,
+    activation: Epoch2ActivationRecord,
+    prepared_journal: WC2PreparedCycleJournal,
+    decision_ledger: ImmutableDecisionEvidenceLedger,
+    cohort_journal: WC2CohortJournal,
+    shadow_journal: R25ShadowIntentJournal,
+    shadow_manifest: R25ShadowCycleManifest,
+    observed_at_ms: int,
+    maximum_issuance_delay_ms: int,
+    horizon_bars: int,
+    base_asset: str,
+) -> WC2PreparedLiveResult:
+    """Process one live freeze with durable pre-R20 crash recovery."""
+    if observed_at_ms < 0:
+        raise ValueError("WC2 prepared live observation cannot be negative")
+    if maximum_issuance_delay_ms <= 0:
+        raise ValueError("WC2 prepared live issuance delay must be positive")
+    if horizon_bars <= 0:
+        raise ValueError("WC2 prepared live horizon must be positive")
+    if not base_asset or base_asset != base_asset.upper():
+        raise ValueError("WC2 prepared live base asset must be uppercase")
+    if not context.symbol.startswith(base_asset):
+        raise ValueError("WC2 prepared live context/base asset mismatch")
+
+    if result.status is LiveFreezeStatus.FROZEN:
+        return _process_fresh_prepared(
+            result,
+            policy=policy,
+            activation=activation,
+            prepared_journal=prepared_journal,
+            decision_ledger=decision_ledger,
+            cohort_journal=cohort_journal,
+            shadow_journal=shadow_journal,
+            shadow_manifest=shadow_manifest,
+            observed_at_ms=observed_at_ms,
+            maximum_issuance_delay_ms=maximum_issuance_delay_ms,
+            horizon_bars=horizon_bars,
+            base_asset=base_asset,
+        )
+    if result.status is LiveFreezeStatus.ALREADY_FROZEN:
+        return _process_replay_prepared(
+            result,
+            context=context,
+            signal_ledger=signal_ledger,
+            policy=policy,
+            activation=activation,
+            prepared_journal=prepared_journal,
+            decision_ledger=decision_ledger,
+            cohort_journal=cohort_journal,
+            shadow_journal=shadow_journal,
+            shadow_manifest=shadow_manifest,
+        )
+    raise ValueError("unsupported WC2 prepared live freeze status")
+
+
+def _process_fresh_prepared(
+    result: LiveFreezeResult,
+    *,
+    policy: WC2UntouchedForwardPolicy,
+    activation: Epoch2ActivationRecord,
+    prepared_journal: WC2PreparedCycleJournal,
+    decision_ledger: ImmutableDecisionEvidenceLedger,
+    cohort_journal: WC2CohortJournal,
+    shadow_journal: R25ShadowIntentJournal,
+    shadow_manifest: R25ShadowCycleManifest,
+    observed_at_ms: int,
+    maximum_issuance_delay_ms: int,
+    horizon_bars: int,
+    base_asset: str,
+) -> WC2PreparedLiveResult:
+    if result.bundle is None or result.frozen_at_ms is None:
+        raise ValueError("fresh WC2 prepared cycle lost exact in-process bundle")
+    signal = result.bundle.signal_decision
+    if result.frozen_at_ms < policy.collection_start_ms:
+        return _prepared_live_result(
+            WC2PreparedLiveStatus.SKIPPED_BEFORE_COLLECTION,
+            signal_identity=signal.freeze_identity,
+            reasons=("source_freeze_predates_collection_start",),
+        )
+    if observed_at_ms < policy.collection_start_ms:
+        return _prepared_live_result(
+            WC2PreparedLiveStatus.SKIPPED_BEFORE_COLLECTION,
+            signal_identity=signal.freeze_identity,
+            reasons=("observation_predates_collection_start",),
+        )
+    if (
+        signal.state.value not in {"watch", "active"}
+        or signal.direction.value == "none"
+        or signal.geometry is None
+    ):
+        return _prepared_live_result(
+            WC2PreparedLiveStatus.SKIPPED_INELIGIBLE_SOURCE,
+            signal_identity=signal.freeze_identity,
+            reasons=("source_not_directional_with_frozen_geometry",),
+        )
+
+    receipt = build_wc2_prepared_cycle_receipt(
+        result.bundle,
+        policy=policy,
+        activation=activation,
+        sizing_policy=None,
+        source_frozen_at_ms=result.frozen_at_ms,
+        issued_at_ms=observed_at_ms,
+        maximum_issuance_delay_ms=maximum_issuance_delay_ms,
+        horizon_bars=horizon_bars,
+        base_asset=base_asset,
+        capital_assessed_at_ms=observed_at_ms,
+        sized_at_ms=observed_at_ms,
+        previewed_at_ms=observed_at_ms,
+        indexed_at_ms=observed_at_ms,
+    )
+    prepared_journal.append(receipt)
+    completion = complete_wc2_prepared_cycle(
+        receipt,
+        policy=policy,
+        activation=activation,
+        decision_ledger=decision_ledger,
+        cohort_journal=cohort_journal,
+        shadow_journal=shadow_journal,
+        shadow_manifest=shadow_manifest,
+    )
+    return _prepared_completion_result(
+        WC2PreparedLiveStatus.COMPLETED_FRESH,
+        signal_identity=signal.freeze_identity,
+        receipt=receipt,
+        completion=completion,
+        reasons=("prepared_before_r20_then_completed",),
+    )
+
+
+def _process_replay_prepared(
+    result: LiveFreezeResult,
+    *,
+    context: LiveCoverageContext,
+    signal_ledger: ImmutableSignalLedger,
+    policy: WC2UntouchedForwardPolicy,
+    activation: Epoch2ActivationRecord,
+    prepared_journal: WC2PreparedCycleJournal,
+    decision_ledger: ImmutableDecisionEvidenceLedger,
+    cohort_journal: WC2CohortJournal,
+    shadow_journal: R25ShadowIntentJournal,
+    shadow_manifest: R25ShadowCycleManifest,
+) -> WC2PreparedLiveResult:
+    freeze = signal_ledger.get_freeze_by_source_cutoff(
+        exchange=context.exchange.value,
+        market_type=context.market_type.value,
+        symbol=context.symbol,
+        timeframe=context.timeframe,
+        source_cutoff_open_time_ms=result.source_cutoff_open_time_ms,
+    )
+    if freeze is None:
+        raise ValueError(
+            "already-frozen WC2 prepared source cutoff has no freeze record"
+        )
+    if freeze.frozen_at_ms < policy.collection_start_ms:
+        return _prepared_live_result(
+            WC2PreparedLiveStatus.SKIPPED_BEFORE_COLLECTION,
+            signal_identity=freeze.signal_freeze_identity,
+            reasons=("source_freeze_predates_collection_start",),
+        )
+    receipt = prepared_journal.read_for_signal(
+        freeze.signal_freeze_identity
+    )
+    if receipt is None:
+        return _prepared_live_result(
+            WC2PreparedLiveStatus.NO_PREPARED_RECEIPT,
+            signal_identity=freeze.signal_freeze_identity,
+            reasons=("no_preoutcome_prepared_receipt_for_source_freeze",),
+        )
+    if receipt.source_cutoff_open_time_ms != result.source_cutoff_open_time_ms:
+        raise ValueError("WC2 prepared receipt/source cutoff mismatch")
+    completion = complete_wc2_prepared_cycle(
+        receipt,
+        policy=policy,
+        activation=activation,
+        decision_ledger=decision_ledger,
+        cohort_journal=cohort_journal,
+        shadow_journal=shadow_journal,
+        shadow_manifest=shadow_manifest,
+    )
+    return _prepared_completion_result(
+        WC2PreparedLiveStatus.COMPLETED_RECOVERED,
+        signal_identity=freeze.signal_freeze_identity,
+        receipt=receipt,
+        completion=completion,
+        reasons=("prepared_receipt_recovered_without_market_read",),
+    )
+
+
+def _prepared_completion_result(
+    status: WC2PreparedLiveStatus,
+    *,
+    signal_identity: str,
+    receipt: WC2PreparedCycleReceipt,
+    completion: "WC2PreparedCompletionResult",
+    reasons: tuple[str, ...],
+) -> WC2PreparedLiveResult:
+    return WC2PreparedLiveResult(
+        status=status,
+        signal_freeze_identity=signal_identity,
+        receipt_identity=receipt.receipt_identity,
+        forecast_identity=completion.forecast_identity,
+        cohort_forecast_identity=completion.cohort_forecast_identity,
+        paper_intent_identity=completion.paper_intent_identity,
+        reason_codes=tuple(sorted(set(reasons))),
+    )
+
+
+def _prepared_live_result(
+    status: WC2PreparedLiveStatus,
+    *,
+    signal_identity: str | None,
+    reasons: tuple[str, ...],
+) -> WC2PreparedLiveResult:
+    return WC2PreparedLiveResult(
+        status=status,
+        signal_freeze_identity=signal_identity,
+        receipt_identity=None,
+        forecast_identity=None,
+        cohort_forecast_identity=None,
+        paper_intent_identity=None,
+        reason_codes=tuple(sorted(set(reasons))),
+    )
 
 
 @dataclass(frozen=True, slots=True)
