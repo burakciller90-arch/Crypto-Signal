@@ -442,9 +442,14 @@ def test_market_tape_missing_runtime_creates_nothing(tmp_path: Path) -> None:
 
 def test_cold_archive_verifies_manifest_and_file_hash_without_mutation(
     tmp_path: Path,
+    monkeypatch,
 ) -> None:
     root = tmp_path / "cold"
     partition = _seed_cold_archive(root)
+    monkeypatch.setattr(
+        "crypto_signal.product.market_tape_runtime.importlib.util.find_spec",
+        lambda name: None,
+    )
     before = {
         path.relative_to(root): path.read_bytes()
         for path in root.rglob("*")
@@ -534,6 +539,8 @@ def test_galactech_system_binds_market_data_truth_without_online_claim(
     assert "HEARTBEAT_FRESH" in js
     assert "heartbeat age" in js
     assert "ingestion age" in js
-    assert "canonical-row replay NOT MEASURED" in js
+    assert "canonical-row replay" in js
+    assert "canonical_row_digest_replay" in js
+    assert "replayed partitions" in js
     assert 'loadEndpoint("marketTapeStatus", API.marketTapeStatus)' in js
     assert 'loadEndpoint("coldArchiveStatus", API.coldArchiveStatus)' in js

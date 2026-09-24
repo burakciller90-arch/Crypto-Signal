@@ -7,12 +7,15 @@ databases. Runtime process liveness is not inferred from persisted evidence.
 from __future__ import annotations
 
 import hashlib
+import importlib.util
 import json
 import sqlite3
 from contextlib import closing
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+
+from crypto_signal.data.market_tape_cold_archive import verify_cold_partition
 
 _ACCEPTED_MARKET_TAPE_SCHEMAS = frozenset(
     {"market-tape-schema-v1/1", "market-tape-schema-v1/2"}
@@ -424,6 +427,8 @@ class ColdArchiveRuntimeTruth:
     verified_file_bytes: int
     integrity_scope: str
     canonical_row_digest_replay: str = "NOT_MEASURED"
+    canonical_replay_verified_partition_count: int = 0
+    canonical_replay_scope: str = "NOT_MEASURED"
     archive_process_status: str = "NOT_MEASURED"
     read_only_verified: bool = True
     production_authority: bool = False
@@ -440,15 +445,39 @@ class ColdArchiveRuntimeTruth:
             raise ValueError("Cold Archive verified metrics cannot be negative")
         if not self.integrity_scope:
             raise ValueError("Cold Archive integrity scope cannot be empty")
-        if self.canonical_row_digest_replay != "NOT_MEASURED":
-            raise ValueError("Product adapter does not replay Parquet canonical rows")
+        if self.canonical_row_digest_replay not in {
+            "NOT_MEASURED",
+            "VERIFIED",
+        }:
+            raise ValueError("unsupported Cold Archive canonical replay status")
+        if (
+            self.canonical_replay_verified_partition_count < 0
+            or self.canonical_replay_verified_partition_count
+            > self.verified_partition_count
+        ):
+            raise ValueError("Cold Archive canonical replay count is invalid")
+        if self.canonical_row_digest_replay == "NOT_MEASURED":
+            if self.canonical_replay_verified_partition_count != 0:
+                raise ValueError(
+                    "unmeasured Cold Archive replay cannot claim verified partitions"
+                )
+            if self.canonical_replay_scope != "NOT_MEASURED":
+                raise ValueError(
+                    "unmeasured Cold Archive replay scope must remain explicit"
+                )
+        else:
+            if self.canonical_replay_verified_partition_count <= 0:
+                raise ValueError(
+                    "verified Cold Archive replay requires verified partition"
+                )
+            if not self.canonical_replay_scope:
+                raise ValueError("verified Cold Archive replay scope missing")
         if self.archive_process_status != "NOT_MEASURED":
             raise ValueError("Cold Archive evidence cannot assert process liveness")
         if not self.read_only_verified:
             raise ValueError("Cold Archive Product Truth must be read-only verified")
         if self.production_authority or self.real_capital != 0:
             raise ValueError("Cold Archive Product Truth cannot grant authority")
-
 
 @dataclass(frozen=True, slots=True)
 class _ColdManifest:
@@ -542,9 +571,14 @@ def read_cold_archive_runtime_truth(
     cold_dir: Path,
     *,
     verify_limit: int = 24,
+    canonical_replay_limit: int = 3,
 ) -> ColdArchiveRuntimeTruth:
     if verify_limit <= 0 or verify_limit > 500:
         raise ValueError("Cold Archive verify_limit must be inside 1..500")
+    if canonical_replay_limit <= 0 or canonical_replay_limit > 500:
+        raise ValueError(
+            "Cold Archive canonical_replay_limit must be inside 1..500"
+        )
     if not cold_dir.is_dir():
         raise ValueError("Cold Archive runtime directory missing")
 
@@ -567,6 +601,29 @@ def read_cold_archive_runtime_truth(
     for item in selected:
         _verify_cold_manifest_files(item.path)
 
+    replay_status = "NOT_MEASURED"
+    replay_count = 0
+    replay_scope = "NOT_MEASURED"
+    if importlib.util.find_spec("pyarrow") is not None:
+        effective_replay_limit = min(
+            canonical_replay_limit,
+            len(selected),
+        )
+        replay_selected = selected[-effective_replay_limit:]
+        for item in replay_selected:
+            verify_cold_partition(item.path)
+        replay_count = len(replay_selected)
+        if replay_count:
+            replay_status = "VERIFIED"
+            replay_scope = (
+                "ALL_FILE_VERIFIED_PARTITIONS_CANONICAL_ROW_SHA256"
+                if replay_count == len(selected)
+                else (
+                    f"LATEST_{replay_count}_OF_{len(selected)}_"
+                    "FILE_VERIFIED_PARTITIONS_CANONICAL_ROW_SHA256"
+                )
+            )
+
     all_verified = len(selected) == len(ordered)
     scope = (
         "ALL_PARTITIONS_FILE_SHA256"
@@ -580,8 +637,10 @@ def read_cold_archive_runtime_truth(
         verified_rows=sum(item.rows for item in selected),
         verified_file_bytes=sum(item.file_bytes for item in selected),
         integrity_scope=scope,
+        canonical_row_digest_replay=replay_status,
+        canonical_replay_verified_partition_count=replay_count,
+        canonical_replay_scope=replay_scope,
     )
-
 
 def _verify_collector_runtime_columns(
     connection: sqlite3.Connection,
