@@ -123,12 +123,13 @@ def complete_wc2_prepared_cycle(
         indexed_at_ms=receipt.indexed_at_ms,
     )
     _validate_paper(receipt, paper)
-    if receipt.sizing_policy is None:
-        sizing = paper
-        if sizing.explicit_review_used or sizing.simulated_execution_created:
-            raise ValueError(
-                "policy-free WC2 completion cannot create reviewed execution"
-            )
+    if (
+        receipt.sizing_policy is None
+        and (paper.explicit_review_used or paper.simulated_execution_created)
+    ):
+        raise ValueError(
+            "policy-free WC2 completion cannot create reviewed execution"
+        )
 
     return WC2PreparedCompletionResult(
         receipt_identity=receipt.receipt_identity,
