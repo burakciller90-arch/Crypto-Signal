@@ -278,6 +278,35 @@ This text must be generated from explicit persisted product fields, not hidden c
 
 Usability acceptance proves the primary decision can be understood without visiting multiple screens, while every summary statement can drill to exact evidence.
 
+## Engineering / production acceptance evidence — 2026-09-24
+
+**WC5 engineering status: ACCEPTED / PRODUCTION DEPLOYED. Human usability timing: NOT_MEASURED.**
+
+- Fresh post-WC1 PR **#1185** replaced stale candidate #1162 and merged as exact main `15fa3dca848fb9e76841f9b113f9f13a2a1ee11b`.
+- Exact-head UID504 run **36055644923** passed:
+  - exact-source and clean-Development guard;
+  - focused WC5 pytest/Ruff/mypy/frontend contracts;
+  - live read-only exact WC2 cohort Product preview;
+  - byte-stability of the cohort;
+  - whole-repository regression;
+  - Development non-mutation;
+  - `REAL_CAPITAL=0`.
+- The accepted live preview used exact forecast `8c9fe8e3f4f144c1958b64cb33af6c3551f201f0e9d2bf4fa7e7bf52ba29e19f` and returned the persisted action `HOLD_CASH` / vault `CORE`; no action was inferred from `ACTIVE` state.
+- Missing intent, multiple intents and unsupported maximum exposure remain explicit insufficient/unavailable states.
+- The command surface mechanically exposes in one card:
+  - market/system state;
+  - actionability;
+  - primary supporting evidence;
+  - contradiction/risk;
+  - event risk;
+  - capital eligibility;
+  - what must change;
+  - one-click immutable issuance proof.
+- Product deployment issue **#1186**, run **36056040911**, completed `PRODUCT_DEPLOY_PASS=YES` on exact merge commit `15fa3dca...`; live health, GALACTECH root, Intelligence Center, R25 Operational Truth and R11 runtime/SQLite acceptance passed.
+- Independent Product state issue **#1187**, run **36056686776**, reconfirmed exact Product HEAD plus `status=ok`, `read_only=true`, `REAL_CAPITAL=0`.
+- No exchange/broker authority, WC2 cohort mutation or real capital was introduced.
+- This evidence closes the **engineering/mechanical and deployment portion** of WC5. It does not claim that a human participant study measured <=10-second comprehension. That human usability dimension remains `NOT_MEASURED` and must stay explicit if the roadmap later requires empirical UX timing evidence.
+
 # WC6 — Execution Lab (Paper / Sandbox / Testnet Only)
 
 ## Goal

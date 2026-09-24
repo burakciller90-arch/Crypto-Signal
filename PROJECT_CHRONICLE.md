@@ -1,6 +1,24 @@
 # PROJECT CHRONICLE
 
 
+## 2026-09-24 — WC5 truth-bound 10-second decision surface reaches exact-main production
+
+WC5 was rebuilt after WC1 closed rather than merging its older pre-WC1 candidate. PR #1162 was closed unmerged. Its intended ten-file WC5 surface was replayed onto the accepted post-WC1 main, with the only overlapping file, `src/crypto_signal/product/web.py`, merged addition-only so none of the accepted snapshot-bound Market Tape Product Truth behavior was removed.
+
+The replacement PR #1185 carried exact persisted actionability rather than deriving a trade from signal state. The Product reader validates one WC2 cohort forecast/proof lineage and exposes a persisted action only when exactly one immutable intent exists. Missing intent remains `INSUFFICIENT_EVIDENCE`; multiple intents remain `INSUFFICIENT_EVIDENCE_MULTIPLE_INTENTS`; tampered intent payloads fail closed; maximum exposure stays `NOT_AVAILABLE_FROM_COHORT_INTENT` when the cohort does not support it; and `ACTIVE` is not converted into `TRADE`.
+
+Fresh UID504 acceptance on exact PR head `455d06fbc605966932cac5ced208bb1283366085` passed focused WC5 contracts, a live read-only exact-cohort preview, full repository regression and Development non-mutation. The live preview resolved forecast `8c9fe8e3f4f144c1958b64cb33af6c3551f201f0e9d2bf4fa7e7bf52ba29e19f` to the exact persisted action `HOLD_CASH` in vault `CORE`, while the cohort remained byte-stable and `REAL_CAPITAL=0`. The same head independently passed the WC0 UID504 operational-truth latency acceptance.
+
+The GALACTECH command surface now places system/market state, actionability, primary supporting evidence, contradiction/risk, event risk, capital eligibility and the frozen “what must change” condition on one decision card, with a PROOF control that drills to exact immutable issuance evidence. The presentation logic remains deterministic and evidence-bound; it is not a learned importance ranking and it does not expose hidden chain-of-thought.
+
+PR #1185 merged as `15fa3dca848fb9e76841f9b113f9f13a2a1ee11b`. Issue #1186 / run 36056040911 then deployed that exact target from the prior `1af79d48...` Product head. Health, Intelligence Center, GALACTECH root, R25 Operational Truth and R11 runtime/SQLite acceptance all passed; the ~7.96 GB signal ledger passed WAL-aware backup/restore parity; the dashboard restarted under the accepted supervisor contract; and `PRODUCT_DEPLOY_PASS=YES`. Independent issue #1187 / run 36056686776 reconfirmed exact Product HEAD `15fa3dca...`, `status=ok`, `read_only=true` and `REAL_CAPITAL=0`.
+
+WC5 is therefore accepted as an engineering/mechanical Product rail and is production-deployed. The narrower statement matters: no human usability study has measured whether users actually understand the surface within ten seconds, so human time-to-understand remains `NOT_MEASURED`. That missing human evidence is not rewritten as success.
+
+WC2 remains engineering-frozen and scientifically/economically open. No WC5 work changed its preregistered evidence thresholds, cohort membership, historical data or execution authority. REAL_CAPITAL=0.
+
+
+
 ## 2026-09-24 — WC1 24/7 data reliability closes on physical exact-main restart evidence
 
 WC1 was not closed from hosted CI or from a healthy-looking dashboard. The final acceptance was driven by successive live failures on UID504 until the exact runtime contract held.
