@@ -1,6 +1,20 @@
 # PROJECT CHRONICLE
 
 
+## 2026-09-25 — WC7 review claims become source-typed without changing the insufficient-evidence conclusion
+
+The first WC7 slice made the final review fail closed, but its claims still accepted a status, hash and note without mechanically constraining which subsystem was allowed to support that dimension. PR #1199 added the missing provenance boundary.
+
+Each of the nine WC7 dimensions now has an allowed source class. Runtime reliability cannot be satisfied by a usability artifact; usability cannot be satisfied by runtime acceptance; capital/execution lineage cannot be satisfied by local paper/lab simulation and instead requires a sandbox/testnet dossier; regime robustness requires WC4 research evidence; and economic dimensions require their own economic evidence classes. Probability `NOT_APPLICABLE` is legal only through an explicit no-probability-use boundary.
+
+Blockers are equally strict. `MISSING`, `NOT_MEASURED` and `EXTERNAL_DEPENDENCY` provenance cannot invent an artifact identity. The final packet binds all nine claim identities, statuses and source artifact identities exactly, while preserving the human-review-only edge verdict boundary.
+
+PR #1199 exact-head run 36064310603 passed. It merged as `441dd9d5da20c4d5645d63f6975079992d2981f2`, and exact-main run 36064416622 / job 107850699031 independently passed focused WC7, research, whole-repository and Development non-mutation acceptance with `WC7_MACHINE_EDGE_VERDICT=NONE` and `REAL_CAPITAL=0`.
+
+The scientific conclusion did not improve merely because provenance became stronger. The current review remains `INSUFFICIENT_EVIDENCE`; the same WC2, WC6 and human-usability blockers remain real and explicit.
+
+
+
 ## 2026-09-25 — WC7 gains a fail-closed evidence review without an automatic edge verdict
 
 WC7 began only after WC6 reached its truthful external-dependency boundary. The purpose was not to manufacture a final “world-class” verdict, but to make it mechanically impossible for incomplete evidence to be mistaken for one.
