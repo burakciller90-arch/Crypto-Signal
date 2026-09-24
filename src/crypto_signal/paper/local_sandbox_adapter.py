@@ -474,7 +474,7 @@ def build_local_sandbox_accepted_order(
         "adapter_status": WC6LocalSandboxAdapterStatus.IMPLEMENTED_NO_NETWORK,
         "adapter_version": WC6_LOCAL_SANDBOX_ADAPTER_VERSION,
         "authority_event_identity": authority.authority_event_identity,
-        "acknowledgement_latency_ms": accepted_order.acknowledgement_latency_ms,
+        "acknowledgement_latency_ms": acknowledgement_latency_ms,
         "canonical_fill_identity": lifecycle.canonical_fill_identity,
         "canonical_mutation_identity": lifecycle.canonical_mutation_identity,
         "client_order_key": client_order_key,
@@ -485,7 +485,7 @@ def build_local_sandbox_accepted_order(
         "live_order_authority": False,
         "network_authority": False,
         "order_identity": lifecycle.order_identity,
-        "final_fill_latency_ms": accepted_order.final_fill_latency_ms,
+        "final_fill_latency_ms": final_fill_latency_ms,
         "partial_fill_identities": tuple(
             item.fill_identity for item in lifecycle.partial_fills
         ),
@@ -511,8 +511,8 @@ def build_local_sandbox_accepted_order(
         venue_rule_snapshot_identity=venue_rules.snapshot_identity,
         authority_event_identity=authority.authority_event_identity,
         submitted_at_ms=submitted_at_ms,
-        acknowledgement_latency_ms=accepted_order.acknowledgement_latency_ms,
-        final_fill_latency_ms=accepted_order.final_fill_latency_ms,
+        acknowledgement_latency_ms=acknowledgement_latency_ms,
+        final_fill_latency_ms=final_fill_latency_ms,
         canonical_fill_identity=lifecycle.canonical_fill_identity,
         canonical_mutation_identity=lifecycle.canonical_mutation_identity,
         partial_fill_identities=tuple(
@@ -659,7 +659,7 @@ def build_wc6_local_sandbox_dossier(
             accepted_order.adapter_order_identity
         ),
         "accepted_lifecycle_identity": lifecycle.lifecycle_identity,
-        "acknowledgement_latency_ms": accepted_order.acknowledgement_latency_ms,
+        "acknowledgement_latency_ms": acknowledgement_latency_ms,
         "accounting_shadow_reconciled": lifecycle.accounting_shadow_reconciled,
         "adapter_status": WC6LocalSandboxAdapterStatus.IMPLEMENTED_NO_NETWORK,
         "adapter_version": WC6_LOCAL_SANDBOX_ADAPTER_VERSION,
@@ -668,7 +668,7 @@ def build_wc6_local_sandbox_dossier(
         "credential_authority": False,
         "duplicate_prevention_proven": True,
         "external_testnet_status": WC6ExternalTestnetStatus.NOT_CONNECTED,
-        "final_fill_latency_ms": accepted_order.final_fill_latency_ms,
+        "final_fill_latency_ms": final_fill_latency_ms,
         "first_journal_disposition": first_journal_disposition,
         "kill_switch_proven": True,
         "kill_switch_rejection_identity": (
