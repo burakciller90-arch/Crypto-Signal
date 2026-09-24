@@ -26,7 +26,6 @@ from crypto_signal.ledger.deserialization import parse_signal_decision
 from crypto_signal.ledger.serialization import canonical_json, canonical_sha256
 from crypto_signal.paper.autonomy import (
     PAPER_AUTONOMY_POLICY_VERSION,
-    PaperAutonomyReason,
     evaluate_autonomy_policy,
 )
 from crypto_signal.paper.epoch2_accounting import (
@@ -45,7 +44,6 @@ from crypto_signal.paper.models import (
     PAPER_RISK_POLICY_VERSION,
     REAL_CAPITAL,
     PaperAction,
-    PaperPosition,
     PaperSymbol,
     normalize_positions,
 )
