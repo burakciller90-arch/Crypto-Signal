@@ -284,7 +284,15 @@ def test_enabled_clock_passes_exact_prepared_runtime_inputs(
     assert captured["cohort_journal"].path == paths["cohort"]
     assert captured["shadow_journal"].path == paths["shadow_intent"]
     assert captured["shadow_manifest"].path == paths["shadow_cycle"]
-    assert all(not path.exists() for path in paths.values())
+    assert paths["protocol"].is_file()
+    for key in (
+        "prepared",
+        "decision",
+        "cohort",
+        "shadow_intent",
+        "shadow_cycle",
+    ):
+        assert not paths[key].exists()
 
 
 def test_enabled_clock_missing_protocol_fails_before_network_or_runtime_writes(
@@ -383,6 +391,45 @@ def test_enabled_clock_missing_epoch2_fails_before_network_or_runtime_writes(
     assert not paths["shadow_cycle"].exists()
 
 
+def test_enabled_clock_rejects_non_protocol_plan_before_network(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    policy_path = tmp_path / "policy.sqlite3"
+    policy = _seed_policy(policy_path)
+    activation = _patch_epoch2(monkeypatch)
+    paths = _paths(tmp_path)
+    _seed_protocol(paths["protocol"], policy, activation)
+    calls = {"network": 0}
+
+    async def forbidden_freeze(**kwargs):
+        calls["network"] += 1
+        raise AssertionError("network cycle must not start")
+
+    monkeypatch.setattr(clock, "freeze_coverage_context", forbidden_freeze)
+
+    status = asyncio.run(
+        clock.run(
+            tmp_path / "signal.sqlite3",
+            plan=_two_context_plan(),
+            candle_cache_path=tmp_path / "candles.sqlite3",
+            provider_divergence_path=tmp_path / "divergence.sqlite3",
+            wc2_config=_config(tmp_path, policy_path=policy_path),
+        )
+    )
+
+    assert status == 1
+    assert calls["network"] == 0
+    for key in (
+        "prepared",
+        "decision",
+        "cohort",
+        "shadow_intent",
+        "shadow_cycle",
+    ):
+        assert not paths[key].exists()
+
+
 def test_wc2_runtime_error_fail_stops_before_second_context(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -419,7 +466,7 @@ def test_wc2_runtime_error_fail_stops_before_second_context(
     status = asyncio.run(
         clock.run(
             tmp_path / "signal.sqlite3",
-            plan=_two_context_plan(),
+            plan=LiveCoveragePlan.current_pilot(),
             candle_cache_path=tmp_path / "candles.sqlite3",
             provider_divergence_path=tmp_path / "divergence.sqlite3",
             wc2_config=_config(tmp_path, policy_path=policy_path),
