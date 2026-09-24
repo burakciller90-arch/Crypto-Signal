@@ -1,0 +1,109 @@
+name: DIAG WC1 Market Tape Product 500
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/diag-wc1-market-tape-product-500.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          clean: true
+          fetch-depth: 1
+
+      - name: Read-only Product 500 diagnosis
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          DEV="$ROOT/Development"
+          PY="$DEV/.venv/bin/python"
+          MT="$DEV/runtime/market_tape/market_tape.sqlite3"
+          CR="$DEV/runtime/market_tape/collector_runtime.sqlite3"
+          test "$(id -u)" = "504"
+          test -z "$(git -C "$DEV" status --porcelain)"
+          echo "DEVELOPMENT_HEAD=$(git -C "$DEV" rev-parse HEAD)"
+          echo "=== LIVE ENDPOINT ==="
+          code="$(curl -sS --max-time 240 -o "$RUNNER_TEMP/market-tape-body.json" -w '%{http_code}' http://127.0.0.1:48700/api/market-tape-runtime/status || true)"
+          echo "MARKET_TAPE_HTTP_STATUS=$code"
+          cat "$RUNNER_TEMP/market-tape-body.json" 2>/dev/null || true
+          echo
+          echo "=== DIRECT READERS ==="
+          PYTHONPATH="$GITHUB_WORKSPACE/src:$GITHUB_WORKSPACE" "$PY" - "$MT" "$CR" <<'PY'
+          import json
+          import sys
+          import time
+          from dataclasses import asdict
+          from pathlib import Path
+
+          from crypto_signal.product.market_tape_runtime import (
+              read_market_tape_collector_runtime_truth,
+              read_market_tape_runtime_truth,
+          )
+
+          market = Path(sys.argv[1])
+          collector = Path(sys.argv[2])
+
+          observed = time.time_ns() // 1_000_000
+          t0 = time.monotonic()
+          try:
+              value = read_market_tape_collector_runtime_truth(
+                  collector,
+                  observed_at_ms=observed,
+              )
+          except Exception as exc:
+              print(
+                  "COLLECTOR_READER_ERROR="
+                  + type(exc).__name__
+                  + ":"
+                  + str(exc)
+              )
+          else:
+              print(
+                  "COLLECTOR_READER_PASS="
+                  + json.dumps(
+                      None if value is None else asdict(value),
+                      sort_keys=True,
+                      separators=(",", ":"),
+                  )
+              )
+          print(f"COLLECTOR_READER_SECONDS={time.monotonic()-t0:.6f}")
+
+          observed = time.time_ns() // 1_000_000
+          print(f"MARKET_READER_OBSERVED_AT_MS={observed}")
+          t0 = time.monotonic()
+          try:
+              value = read_market_tape_runtime_truth(
+                  market,
+                  observed_at_ms=observed,
+              )
+          except Exception as exc:
+              print(
+                  "MARKET_READER_ERROR="
+                  + type(exc).__name__
+                  + ":"
+                  + str(exc)
+              )
+          else:
+              print(
+                  "MARKET_READER_PASS="
+                  + json.dumps(
+                      asdict(value),
+                      sort_keys=True,
+                      separators=(",", ":"),
+                  )
+              )
+          print(f"MARKET_READER_SECONDS={time.monotonic()-t0:.6f}")
+          print("WC1_PRODUCT_500_DIAG_READONLY_PASS=YES")
+          print("REAL_CAPITAL=0")
+          PY
+          test -z "$(git -C "$DEV" status --porcelain)"
