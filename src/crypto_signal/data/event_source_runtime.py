@@ -141,7 +141,20 @@ def build_event_source_fetch_observation(
     }
     return EventSourceFetchObservation(
         fetch_identity=canonical_sha256(values),
-        **values,
+        source_provider=source_provider,
+        source_kind=source_kind,
+        endpoint_url=endpoint_url,
+        fetched_at_ms=fetched_at_ms,
+        source_timestamp_ms=source_timestamp_ms,
+        http_status=http_status,
+        outcome=outcome,
+        item_identities=identities,
+        coverage_identity=coverage_identity,
+        reason_code=reason_code,
+        adapter_version=adapter_version,
+        schema_version=EVENT_SOURCE_RUNTIME_SCHEMA_VERSION,
+        production_authority=False,
+        real_capital=REAL_CAPITAL,
     )
 
 
