@@ -602,6 +602,7 @@ class WC2CohortJournal:
                     sequence_id INTEGER PRIMARY KEY AUTOINCREMENT,
                     intent_link_identity TEXT UNIQUE NOT NULL,
                     cohort_forecast_identity TEXT NOT NULL,
+                    policy_identity TEXT NOT NULL,
                     forecast_identity TEXT NOT NULL,
                     paper_intent_identity TEXT UNIQUE NOT NULL,
                     vault_id TEXT NOT NULL,
@@ -771,16 +772,18 @@ class WC2CohortJournal:
                 f"""INSERT INTO {_INTENT_TABLE}(
                     intent_link_identity,
                     cohort_forecast_identity,
+                    policy_identity,
                     forecast_identity,
                     paper_intent_identity,
                     vault_id,
                     action,
                     indexed_at_ms,
                     payload_json
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (
                     record.intent_link_identity,
                     record.cohort_forecast_identity,
+                    record.policy_identity,
                     record.forecast_identity,
                     record.paper_intent_identity,
                     record.vault_id.value,
