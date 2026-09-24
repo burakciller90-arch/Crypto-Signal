@@ -648,10 +648,10 @@ def test_galactech_system_binds_market_data_truth_without_online_claim(
     assert "ÇEVRİMİÇİ OLDUĞU İDDİA EDİLMEZ" in js
     assert "collection_process_status" in js
     assert "HEARTBEAT_FRESH" in js
-    assert "heartbeat age" in js
-    assert "ingestion age" in js
-    assert "canonical-row replay" in js
+    assert "nabız yaşı" in js
+    assert "veri alım yaşı" in js
+    assert "kanonik satır tekrar kontrolü" in js
     assert "canonical_row_digest_replay" in js
-    assert "replayed partitions" in js
+    assert "kontrol edilen bölüm" in js
     assert 'loadEndpoint("marketTapeStatus", API.marketTapeStatus)' in js
     assert 'loadEndpoint("coldArchiveStatus", API.coldArchiveStatus)' in js

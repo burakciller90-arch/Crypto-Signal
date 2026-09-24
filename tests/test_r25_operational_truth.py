@@ -202,18 +202,18 @@ def test_galactech_system_truth_exposes_component_states_not_a_readiness_score(
     assert 'id="r25OperationalTruthTag"' in markup
     assert "R25 / OPERASYONEL DOĞRULUK" in markup
     assert "Çalışma zamanı kanıt uzlaştırması" in markup
-    assert "production readiness değildir" in markup
+    assert "üretime hazır olduğu anlamına gelmez" in markup
 
     assert 'operationalTruth: "/api/r25/operational-truth"' in js
     assert "function renderOperationalTruth()" in js
-    assert "DECISION EVIDENCE" in js
-    assert "SHADOW INTENT JOURNAL" in js
-    assert "SHADOW CYCLE MANIFEST" in js
-    assert "RUNTIME REPLAY OBSERVATION" in js
-    assert "CANONICAL EPOCH 2" in js
-    assert "GALACTECH PRODUCT" in js
-    assert "ALL REQUIRED RUNTIME EVIDENCE PRESENT" in js
-    assert "PARTIAL RUNTIME EVIDENCE" in js
+    assert "Karar kanıtı" in js
+    assert "Deneme niyet günlüğü" in js
+    assert "Deneme döngü manifestosu" in js
+    assert "Yeniden başlatma / tekrar oynatma" in js
+    assert "Kanonik Epoch 2" in js
+    assert "GALACTECH ürünü" in js
+    assert "GEREKLİ ÇALIŞMA ZAMANI KANITLARI MEVCUT" in js
+    assert "KISMİ ÇALIŞMA ZAMANI KANITI" in js
     assert "PRODUCTION READY" not in markup
     assert "PRODUCTION READY" not in js
 

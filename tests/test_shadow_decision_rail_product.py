@@ -191,13 +191,13 @@ def test_galactech_exposes_shadow_rail_without_live_trade_claims(
     assert 'id="systemShadowRail"' in html
     assert 'id="systemShadowRailNote"' in html
     assert "DENEME KARAR HATTI" in html
-    assert "no canonical writes" in html
+    assert "kanonik yazma yok" in html
 
     assert 'shadowRail: "/api/shadow-decision-rail/status"' in js
     assert "function renderShadowDecisionRail()" in js
     assert 'loadEndpoint("shadowRail", API.shadowRail)' in js
     assert '"systemShadowRail"' in js
-    assert "SHADOW / RESEARCH ONLY" in js
+    assert "YALNIZ DENEME / ARAŞTIRMA" in js
     assert "CANONICAL EPOCH 2 mutation" not in js
-    assert "Canonical Epoch 2 mutation" in js
-    assert "not a fill, not canonical NAV mutation, not live trading" in js
+    assert "Kanonik Epoch 2 değişikliği" in js
+    assert "gerçekleşmiş işlem, kanonik NAV değişikliği veya canlı alım-satım değildir" in js

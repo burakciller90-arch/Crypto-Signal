@@ -324,8 +324,8 @@ def test_galactech_system_exposes_event_source_without_online_claim(
     assert 'eventSourceStatus: "/api/event-source-runtime/status"' in js
     assert '"eventSourceStatus"' in js
     assert '"systemEventSource"' in js
-    assert "SOURCE_SCOPED_ONLY" in js
-    assert "ONLINE NOT ASSERTED" in js
+    assert "ÇEVRİMİÇİ OLDUĞU İDDİA EDİLMEZ" in js
+    assert "Olay kaynağı çalışma zamanı kanıtı kullanılamıyor." in js
 
 
 def test_event_source_product_reader_fails_closed_on_nonempty_wal(

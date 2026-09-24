@@ -203,10 +203,10 @@ def test_galactech_evidence_room_uses_exact_cycle_manifest_link(
     assert "/api/shadow-decision-rail/forecast/" in js
     assert "function renderShadowCycleExtension(payload)" in js
     assert "R25 SERMAYE KARARI SOY AĞACI" in js
-    assert "CAPITAL SCIENCE" in js
-    assert "POSITION SIZING" in js
-    assert "SHADOW JOURNAL REF" in js
-    assert "CYCLE MANIFEST" in js
-    assert "does not match by symbol, timestamp proximity" in js
-    assert "not a canonical Epoch 2 NAV mutation" in js
-    assert "journal runtime presence is verified separately" in js
+    assert "SERMAYE BİLİMİ" in js
+    assert "POZİSYON BOYUTU" in js
+    assert "DENEME GÜNLÜĞÜ REFERANSI" in js
+    assert "DÖNGÜ MANİFESTOSU" in js
+    assert "sembol, yakın zaman, yön veya benzerlik tahminiyle kayıt eşleştirmez" in js
+    assert "kanonik Epoch 2 NAV değişikliği" in js
+    assert "Yalnız exact kalıcı forecast_identity eşleşmesi kullanılır." in js
