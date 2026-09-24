@@ -8,6 +8,7 @@ from decimal import Decimal
 from enum import StrEnum
 from pathlib import Path
 
+from crypto_signal.data.models import Exchange
 from crypto_signal.ledger.serialization import canonical_json, canonical_sha256
 from crypto_signal.paper.models import (
     PAPER_EXECUTION_POLICY_VERSION,
@@ -38,6 +39,7 @@ class WC2PaperExecutionDecision:
     event_identity: str
     execution_protocol_identity: str
     execution_start_ms: int
+    source_exchanges: tuple[str, str]
     source_freeze_identities: tuple[str, str]
     source_forecast_identities: tuple[str, str]
     source_cohort_forecast_identities: tuple[str, str]
@@ -78,6 +80,11 @@ class WC2PaperExecutionDecision:
             (self.epoch2_core_snapshot_identity, "WC2 Epoch2 CORE snapshot"),
         ):
             _require_sha256(value, label)
+        if self.source_exchanges != (
+            Exchange.BINANCE.value,
+            Exchange.BYBIT.value,
+        ):
+            raise ValueError("WC2 execution source order must be Binance then Bybit")
         for values, label in (
             (self.source_freeze_identities, "source freeze"),
             (self.source_forecast_identities, "source forecast"),
@@ -215,6 +222,16 @@ class WC2PaperExecutionDecision:
             if self.cost_evidence_identity != expected_cost:
                 raise ValueError("WC2 explicit cost evidence identity mismatch")
 
+        expected_event = compute_wc2_paper_execution_event_identity(
+            execution_protocol_identity=self.execution_protocol_identity,
+            symbol=self.symbol,
+            source_cutoff_open_time_ms=self.source_cutoff_open_time_ms,
+            source_exchanges=self.source_exchanges,
+            source_freeze_identities=self.source_freeze_identities,
+        )
+        if self.event_identity != expected_event:
+            raise ValueError("WC2 paper execution event identity mismatch")
+
         if self.historical_backfill_performed:
             raise ValueError("WC2 paper execution cannot backfill history")
         if self.production_authority or self.real_capital != REAL_CAPITAL:
@@ -282,21 +299,27 @@ def compute_wc2_paper_execution_event_identity(
     execution_protocol_identity: str,
     symbol: PaperSymbol,
     source_cutoff_open_time_ms: int,
+    source_exchanges: tuple[str, str],
     source_freeze_identities: tuple[str, str],
 ) -> str:
     _require_sha256(execution_protocol_identity, "WC2 execution protocol")
     if source_cutoff_open_time_ms < 0:
         raise ValueError("WC2 execution source cutoff cannot be negative")
+    if source_exchanges != (
+        Exchange.BINANCE.value,
+        Exchange.BYBIT.value,
+    ):
+        raise ValueError("WC2 execution source order must be Binance then Bybit")
     if len(source_freeze_identities) != 2 or len(set(source_freeze_identities)) != 2:
         raise ValueError("WC2 execution event requires two source freezes")
-    ordered = tuple(sorted(source_freeze_identities))
-    for identity in ordered:
+    for identity in source_freeze_identities:
         _require_sha256(identity, "WC2 execution source freeze")
     return canonical_sha256(
         {
             "execution_protocol_identity": execution_protocol_identity,
             "source_cutoff_open_time_ms": source_cutoff_open_time_ms,
-            "source_freeze_identities": ordered,
+            "source_exchanges": source_exchanges,
+            "source_freeze_identities": source_freeze_identities,
             "symbol": symbol,
         }
     )
@@ -326,18 +349,111 @@ def compute_wc2_cost_evidence_identity(
     )
 
 
-def build_wc2_paper_execution_decision(**values: object) -> WC2PaperExecutionDecision:
-    payload = dict(values)
-    payload.setdefault("historical_backfill_performed", False)
-    payload.setdefault("production_authority", False)
-    payload.setdefault("real_capital", REAL_CAPITAL)
-    payload.setdefault("schema_version", WC2_PAPER_EXECUTION_JOURNAL_SCHEMA_VERSION)
-    payload.setdefault("engine_version", WC2_PAPER_EXECUTION_JOURNAL_ENGINE_VERSION)
-    payload.setdefault("execution_policy_version", PAPER_EXECUTION_POLICY_VERSION)
-    payload["record_identity"] = canonical_sha256(
-        {key: value for key, value in payload.items() if key != "record_identity"}
+def build_wc2_paper_execution_decision(
+    *,
+    event_identity: str,
+    execution_protocol_identity: str,
+    execution_start_ms: int,
+    source_exchanges: tuple[str, str],
+    source_freeze_identities: tuple[str, str],
+    source_forecast_identities: tuple[str, str],
+    source_cohort_forecast_identities: tuple[str, str],
+    source_signal_as_of_ms: tuple[int, int],
+    source_frozen_at_ms: tuple[int, int],
+    source_forecast_issued_at_ms: tuple[int, int],
+    source_cutoff_open_time_ms: int,
+    symbol: PaperSymbol,
+    epoch2_core_snapshot_identity: str,
+    decided_at_ms: int,
+    status: WC2PaperExecutionDecisionStatus,
+    action: PaperAction,
+    reason_code: str,
+    autonomy_policy_version: str,
+    execution_input_identity: str | None = None,
+    sizing_identity: str | None = None,
+    venue_rule_snapshot_identity: str | None = None,
+    pretrade_identity: str | None = None,
+    plan_identity: str | None = None,
+    fill_identity: str | None = None,
+    cost_evidence_identity: str | None = None,
+    fee_usdt: Decimal = Decimal(0),
+    spread_usdt: Decimal = Decimal(0),
+    slippage_usdt: Decimal = Decimal(0),
+    execution_policy_version: str = PAPER_EXECUTION_POLICY_VERSION,
+    venue_reference: str | None = None,
+    historical_backfill_performed: bool = False,
+) -> WC2PaperExecutionDecision:
+    values: dict[str, object] = {
+        "event_identity": event_identity,
+        "execution_protocol_identity": execution_protocol_identity,
+        "execution_start_ms": execution_start_ms,
+        "source_exchanges": source_exchanges,
+        "source_freeze_identities": source_freeze_identities,
+        "source_forecast_identities": source_forecast_identities,
+        "source_cohort_forecast_identities": source_cohort_forecast_identities,
+        "source_signal_as_of_ms": source_signal_as_of_ms,
+        "source_frozen_at_ms": source_frozen_at_ms,
+        "source_forecast_issued_at_ms": source_forecast_issued_at_ms,
+        "source_cutoff_open_time_ms": source_cutoff_open_time_ms,
+        "symbol": symbol,
+        "epoch2_core_snapshot_identity": epoch2_core_snapshot_identity,
+        "decided_at_ms": decided_at_ms,
+        "status": status,
+        "action": action,
+        "reason_code": reason_code,
+        "autonomy_policy_version": autonomy_policy_version,
+        "execution_input_identity": execution_input_identity,
+        "sizing_identity": sizing_identity,
+        "venue_rule_snapshot_identity": venue_rule_snapshot_identity,
+        "pretrade_identity": pretrade_identity,
+        "plan_identity": plan_identity,
+        "fill_identity": fill_identity,
+        "cost_evidence_identity": cost_evidence_identity,
+        "fee_usdt": fee_usdt,
+        "spread_usdt": spread_usdt,
+        "slippage_usdt": slippage_usdt,
+        "execution_policy_version": execution_policy_version,
+        "venue_reference": venue_reference,
+        "historical_backfill_performed": historical_backfill_performed,
+        "production_authority": False,
+        "real_capital": REAL_CAPITAL,
+        "schema_version": WC2_PAPER_EXECUTION_JOURNAL_SCHEMA_VERSION,
+        "engine_version": WC2_PAPER_EXECUTION_JOURNAL_ENGINE_VERSION,
+    }
+    return WC2PaperExecutionDecision(
+        record_identity=canonical_sha256(values),
+        event_identity=event_identity,
+        execution_protocol_identity=execution_protocol_identity,
+        execution_start_ms=execution_start_ms,
+        source_exchanges=source_exchanges,
+        source_freeze_identities=source_freeze_identities,
+        source_forecast_identities=source_forecast_identities,
+        source_cohort_forecast_identities=source_cohort_forecast_identities,
+        source_signal_as_of_ms=source_signal_as_of_ms,
+        source_frozen_at_ms=source_frozen_at_ms,
+        source_forecast_issued_at_ms=source_forecast_issued_at_ms,
+        source_cutoff_open_time_ms=source_cutoff_open_time_ms,
+        symbol=symbol,
+        epoch2_core_snapshot_identity=epoch2_core_snapshot_identity,
+        decided_at_ms=decided_at_ms,
+        status=status,
+        action=action,
+        reason_code=reason_code,
+        autonomy_policy_version=autonomy_policy_version,
+        execution_input_identity=execution_input_identity,
+        sizing_identity=sizing_identity,
+        venue_rule_snapshot_identity=venue_rule_snapshot_identity,
+        pretrade_identity=pretrade_identity,
+        plan_identity=plan_identity,
+        fill_identity=fill_identity,
+        cost_evidence_identity=cost_evidence_identity,
+        fee_usdt=fee_usdt,
+        spread_usdt=spread_usdt,
+        slippage_usdt=slippage_usdt,
+        execution_policy_version=execution_policy_version,
+        venue_reference=venue_reference,
+        historical_backfill_performed=historical_backfill_performed,
     )
-    return WC2PaperExecutionDecision(**payload)  # type: ignore[arg-type]
 
 
 class WC2PaperExecutionJournal:
@@ -517,6 +633,7 @@ def _record_payload(record: WC2PaperExecutionDecision) -> dict[str, object]:
             "event_identity",
             "execution_protocol_identity",
             "execution_start_ms",
+            "source_exchanges",
             "source_freeze_identities",
             "source_forecast_identities",
             "source_cohort_forecast_identities",
@@ -561,6 +678,7 @@ def _record_from_json(payload_json: str) -> WC2PaperExecutionDecision:
         event_identity=_text(raw, "event_identity"),
         execution_protocol_identity=_text(raw, "execution_protocol_identity"),
         execution_start_ms=_integer(raw, "execution_start_ms"),
+        source_exchanges=_two_text(raw, "source_exchanges"),
         source_freeze_identities=_two_text(raw, "source_freeze_identities"),
         source_forecast_identities=_two_text(raw, "source_forecast_identities"),
         source_cohort_forecast_identities=_two_text(
