@@ -1,6 +1,20 @@
 # PROJECT CHRONICLE
 
 
+## 2026-09-25 — WC6 reaches a fail-closed sandbox/testnet boundary without inventing venue evidence
+
+After the deterministic paper recovery dossier (#1192) and the lab-only acknowledgement/partial-fill lifecycle (#1193), WC6 still had one important ambiguity: the repository needed a place to represent a future sandbox/testnet request without silently implying that a transport, credential, acknowledgement or fill already existed.
+
+PR #1195 added that boundary in `execution_lab_sandbox.py`. The accepted v1 state is intentionally `NOT_CONFIGURED` and `SANDBOX_TESTNET_ONLY`. It can deterministically project a fully reconciled shadow lifecycle into an immutable future order request with idempotency and client-order identities, but it cannot bind an endpoint, credential reference or transport while unconfigured. Dispatch remains `BLOCKED_NOT_CONFIGURED`, no dispatch is attempted, and venue acknowledgement/fill fields remain absent.
+
+This distinction is the point of the slice. Lab acknowledgement latency and partial fills are engineering simulations; they are not exchange evidence. The new boundary makes that impossible to blur accidentally. A caller that asks for dispatch readiness while the adapter is unconfigured receives `WC6_SANDBOX_NOT_CONFIGURED`. Network authority, credential-loaded state, live-order authority and production authority remain false and REAL_CAPITAL=0.
+
+The final PR head `23fa0a1186a7d03795f999c6c13106e118e6c2bc` passed UID504 run 36062491109 after an import-order-only cleanup. The PR merged as `cde9006f0b344c037ff093e66605d40e26ae242b`, and exact-main push run 36062672930 / job 107845073963 independently passed focused WC6, full paper-subsystem, whole-repository and Development non-mutation acceptance.
+
+WC6 is now engineering-ready up to the sandbox transport boundary, but its roadmap exit gate remains open. The missing evidence is external and must stay missing until a safely supported sandbox/testnet environment, explicit non-production credential/transport configuration and observable venue acknowledgement/fill/recovery evidence exist. No local simulation is promoted into that claim.
+
+
+
 ## 2026-09-25 — WC6 paper Execution Lab gains deterministic recovery, kill-switch and shadow partial-fill reconciliation
 
 WC6 began by inventorying the existing Paper Fund rather than building a parallel execution stack. The repository already had deterministic simulated fills with explicit fee/spread/slippage, frozen venue-rule inputs, atomic paper bundle persistence, processed-event receipts, append-only write authority and replay-based accounting. The missing work was to bind those primitives into an Execution Lab evidence boundary and then exercise latency/partial-fill behavior without pretending canonical paper or a real venue supported it.
