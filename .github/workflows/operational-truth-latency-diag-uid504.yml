@@ -1,0 +1,129 @@
+name: Operational Truth Latency Diagnostic UID504
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/operational-truth-latency-diag-uid504.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: operational-truth-latency-diag-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  diagnose:
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          clean: true
+          fetch-depth: 1
+
+      - name: Verify exact diagnostic source and clean Development
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
+          test "$(id -u)" = "504"
+          test "$(git -C "$GITHUB_WORKSPACE" rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+          test -z "$(git -C "$DEV" status --porcelain)"
+          echo "OP_TRUTH_DIAG_EXACT_SOURCE_PASS=YES"
+
+      - name: Profile Market Tape Product Truth read path
+        shell: bash
+        run: |
+          set -euo pipefail
+          export PYTHONPATH="$GITHUB_WORKSPACE/src:$GITHUB_WORKSPACE"
+          PY="/Volumes/Crypto-504/Crypto-Signal/Development/.venv/bin/python"
+          DB="/Volumes/Crypto-504/Crypto-Signal/Development/runtime/market_tape/market_tape.sqlite3"
+          test -f "$DB"
+          DB="$DB" "$PY" - <<'PY'
+          from __future__ import annotations
+
+          import os
+          import sqlite3
+          import time
+          from pathlib import Path
+
+          from crypto_signal.product.market_tape_runtime import read_market_tape_runtime_truth
+
+          path = Path(os.environ["DB"])
+          before = path.stat()
+          print(f"MARKET_TAPE_BYTES={before.st_size}")
+
+          uri = f"{path.resolve().as_uri()}?mode=ro"
+          connection = sqlite3.connect(uri, uri=True)
+          try:
+              connection.execute("PRAGMA query_only=ON")
+              started = time.perf_counter()
+              quick = connection.execute("PRAGMA quick_check").fetchone()
+              elapsed = time.perf_counter() - started
+              print(f"MARKET_TAPE_QUICK_CHECK_SECONDS={elapsed:.6f}")
+              print(f"MARKET_TAPE_QUICK_CHECK_RESULT={quick[0] if quick else 'MISSING'}")
+
+              schema = connection.execute(
+                  "SELECT value FROM market_tape_meta WHERE key='schema_version'"
+              ).fetchone()
+              if schema is None:
+                  raise SystemExit("MARKET_TAPE_SCHEMA_MISSING")
+              schema_version = str(schema[0])
+              print(f"MARKET_TAPE_SCHEMA_VERSION={schema_version}")
+
+              tables = [
+                  ("orderbooks", "market_tape_orderbooks", "event_at_ms"),
+                  ("trades", "market_tape_trades", "event_at_ms"),
+                  ("derivatives", "market_tape_derivatives", "event_at_ms"),
+              ]
+              if schema_version == "market-tape-schema-v1/2":
+                  tables.extend(
+                      [
+                          ("liquidations", "market_tape_liquidations", "event_at_ms"),
+                          (
+                              "liquidation_coverage",
+                              "market_tape_liquidation_coverage",
+                              "coverage_end_ms",
+                          ),
+                      ]
+                  )
+
+              for label, table, time_column in tables:
+                  started = time.perf_counter()
+                  count = int(connection.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0])
+                  count_elapsed = time.perf_counter() - started
+                  started = time.perf_counter()
+                  latest = connection.execute(f"SELECT MAX({time_column}) FROM {table}").fetchone()[0]
+                  max_elapsed = time.perf_counter() - started
+                  print(
+                      f"MARKET_TAPE_TABLE label={label} count={count} "
+                      f"count_seconds={count_elapsed:.6f} max_seconds={max_elapsed:.6f} "
+                      f"latest={latest}"
+                  )
+          finally:
+              connection.close()
+
+          started = time.perf_counter()
+          snapshot = read_market_tape_runtime_truth(
+              path,
+              observed_at_ms=time.time_ns() // 1_000_000,
+          )
+          total_elapsed = time.perf_counter() - started
+          print(f"MARKET_TAPE_PRODUCT_TRUTH_SECONDS={total_elapsed:.6f}")
+          print(f"MARKET_TAPE_PRODUCT_TRUTH_ROWS={snapshot.total_rows}")
+          print(f"MARKET_TAPE_PRODUCT_TRUTH_READ_ONLY={snapshot.read_only_verified}")
+          print(f"MARKET_TAPE_PRODUCT_TRUTH_REAL_CAPITAL={snapshot.real_capital}")
+
+          after = path.stat()
+          if (before.st_ino, before.st_size) != (after.st_ino, after.st_size):
+              print(
+                  "MARKET_TAPE_LIVE_WRITER_CHANGED_SIZE=YES "
+                  f"before={before.st_size} after={after.st_size}"
+              )
+          else:
+              print("MARKET_TAPE_DIAG_MAIN_FILE_SIZE_STABLE=YES")
+          print("REAL_CAPITAL=0")
+          PY
