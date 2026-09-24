@@ -279,6 +279,45 @@ async def test_wire_collection_exposes_exact_persisted_raw_identity(tmp_path) ->
 
 
 @pytest.mark.asyncio
+async def test_wire_collection_reports_exact_inserted_count_progress(tmp_path) -> None:
+    store = MarketTapeStore(tmp_path / "market_tape.sqlite3")
+    raw_store = RawMarketTapeStore(tmp_path / "raw_market_tape.sqlite3")
+    progress: list[tuple[int, int, int]] = []
+
+    def record_counts(
+        observed_messages: int,
+        raw_inserted_total: int,
+        normalized_inserted_total: int,
+    ) -> None:
+        progress.append(
+            (
+                observed_messages,
+                raw_inserted_total,
+                normalized_inserted_total,
+            )
+        )
+
+    result = await persist_bybit_wire_stream(
+        store=store,
+        raw_store=raw_store,
+        events=_wire_events(),
+        orderbook_snapshot_interval_ms=1_000,
+        persisted_counts_callback=record_counts,
+    )
+
+    assert result.observed_messages == 5
+    assert progress == [
+        (1, 1, 1),
+        (2, 2, 1),
+        (3, 3, 1),
+        (4, 4, 2),
+        (5, 5, 4),
+    ]
+    assert progress[-1][1] == result.raw_inserted
+    assert progress[-1][2] == result.normalized_inserted_total
+
+
+@pytest.mark.asyncio
 async def test_wire_collection_rejects_non_positive_cadence(tmp_path) -> None:
     store = MarketTapeStore(tmp_path / "market_tape.sqlite3")
     raw_store = RawMarketTapeStore(tmp_path / "raw_market_tape.sqlite3")
