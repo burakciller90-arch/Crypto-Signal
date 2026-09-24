@@ -481,6 +481,23 @@ A credible world-class claim would require, at minimum:
 - Exact-head run **36065071631** passed; after merge as `3d0283ab180255e5eca12955814985cab04c3548`, exact-main run **36065254385 / job 107853404508** passed focused/research/full-repository/non-mutation acceptance.
 - The current conclusion remains `INSUFFICIENT_EVIDENCE`; no EDGE_* verdict or production authority is introduced.
 
+### Current-frontier composition — 2026-09-25
+
+- PR **#1203** adds one deterministic WC7 current-frontier snapshot over the accepted typed review/provenance/adapters.
+- It composes canonical WC2 readiness and WC6 sandbox-boundary evidence with explicit accepted runtime, abstention/transparency and WC4 research-cycle identities.
+- The composer is fail closed:
+  - current WC2 `INSUFFICIENT_EVIDENCE` keeps untouched-forward history missing;
+  - future WC2 `REVIEW_ELIGIBLE` can satisfy only the history dimension and remains not an edge/profitability conclusion;
+  - cost-adjusted expectancy and controlled drawdown remain missing until accepted WC3 economic evidence exists;
+  - WC4 engineering acceptance does not by itself satisfy durable regime-edge evidence;
+  - WC6 `NOT_CONFIGURED` remains `EXTERNAL_DEPENDENCY`;
+  - human usability remains `NOT_MEASURED`;
+  - probability calibration is `NOT_APPLICABLE` only while probability claims are explicitly unused.
+- Blocker-boundary identities remain provenance for absence, never substitute evidence artifacts.
+- Exact-head run **36066162469** passed. After merge as `84a66a34dd6096ff4b635305347cef1d6782d6b9`, exact-main run **36066300555 / job 107856745333** passed exact-source, focused WC7, research, whole-repository and Development non-mutation acceptance.
+- `WC7_MACHINE_EDGE_VERDICT=NONE`, `REAL_CAPITAL=0`.
+- The accepted current conclusion remains **`INSUFFICIENT_EVIDENCE`**. The current-frontier packet improves reproducibility and honesty; it does not remove scientific, external-venue or human-usability blockers.
+
 ## Final boundary
 
 Real-money authority is not part of World-Class Completion.
