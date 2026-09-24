@@ -78,6 +78,8 @@ def test_cutover_does_not_expand_market_runtime_claims(tmp_path: Path) -> None:
 
     assert "ONLINE NOT ASSERTED" in js
     assert "process NOT MEASURED" in js
-    assert "canonical-row replay NOT MEASURED" in js
+    assert "canonical-row replay" in js
+    assert "canonical_row_digest_replay" in js
+    assert "replayed partitions" in js
     assert "EVENT SOURCE RUNTIME" in root
     assert "NOT EXPOSED" in root
