@@ -44,9 +44,9 @@ def test_event_source_state_has_no_runtime_mutation_surface() -> None:
     block = _event_source_state_block()
     forbidden = (
         "run_event_source_snapshot.py",
-        "git -C "$DEV" merge",
-        "git -C "$DEV" checkout",
-        "git -C "$PRODUCT" checkout",
+        'git -C "$DEV" merge',
+        'git -C "$DEV" checkout',
+        'git -C "$PRODUCT" checkout',
         "launchctl kickstart",
         "launchctl bootstrap",
         "kill ",
