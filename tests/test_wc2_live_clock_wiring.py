@@ -78,6 +78,11 @@ def _args(**overrides):
         "wc2_cohort": None,
         "wc2_shadow_intent": None,
         "wc2_shadow_cycle": None,
+        "wc2_execution_enabled": False,
+        "wc2_execution_protocol": None,
+        "wc2_execution_runtime": None,
+        "wc2_execution_journal": None,
+        "wc2_venue_rules": None,
         "wc2_maximum_issuance_delay_ms": None,
         "wc2_horizon_bars": None,
     }
@@ -97,6 +102,10 @@ def _paths(tmp_path: Path) -> dict[str, Path]:
         "cohort": tmp_path / "wc2_untouched_forward.sqlite3",
         "shadow_intent": tmp_path / "wc2.shadow-intent.sqlite3",
         "shadow_cycle": tmp_path / "wc2.shadow-cycle.sqlite3",
+        "execution_protocol": tmp_path / "wc2_paper_execution_protocol.sqlite3",
+        "execution_runtime": tmp_path / "wc2_paper_execution_runtime.sqlite3",
+        "execution_journal": tmp_path / "wc2_paper_execution.sqlite3",
+        "venue_rules": tmp_path / "paper_fund.sqlite3",
     }
 
 
@@ -104,6 +113,7 @@ def _config(
     tmp_path: Path,
     *,
     policy_path: Path,
+    execution_enabled: bool = False,
 ) -> clock.WC2ClockConfig:
     paths = _paths(tmp_path)
     return clock.WC2ClockConfig(
@@ -116,6 +126,17 @@ def _config(
         cohort_path=paths["cohort"],
         shadow_intent_path=paths["shadow_intent"],
         shadow_cycle_path=paths["shadow_cycle"],
+        execution_enabled=execution_enabled,
+        execution_protocol_path=(
+            paths["execution_protocol"] if execution_enabled else None
+        ),
+        execution_runtime_path=(
+            paths["execution_runtime"] if execution_enabled else None
+        ),
+        execution_journal_path=(
+            paths["execution_journal"] if execution_enabled else None
+        ),
+        venue_rule_store_path=paths["venue_rules"] if execution_enabled else None,
     )
 
 
@@ -226,6 +247,120 @@ def test_wc2_clock_rejects_partial_or_implicit_configuration(
         )
 
 
+def test_wc2_execution_requires_explicit_enable_and_complete_paths(
+    tmp_path: Path,
+) -> None:
+    paths = _paths(tmp_path)
+    with pytest.raises(ValueError, match="explicit --wc2-execution-enabled"):
+        clock.WC2ClockConfig(
+            enabled=True,
+            policy_path=tmp_path / "policy.sqlite3",
+            epoch2_path=paths["epoch2"],
+            collection_protocol_path=paths["protocol"],
+            prepared_path=paths["prepared"],
+            decision_evidence_path=paths["decision"],
+            cohort_path=paths["cohort"],
+            shadow_intent_path=paths["shadow_intent"],
+            shadow_cycle_path=paths["shadow_cycle"],
+            execution_protocol_path=paths["execution_protocol"],
+        )
+
+    with pytest.raises(ValueError, match="enabled WC2 execution requires"):
+        clock.WC2ClockConfig(
+            enabled=True,
+            policy_path=tmp_path / "policy.sqlite3",
+            epoch2_path=paths["epoch2"],
+            collection_protocol_path=paths["protocol"],
+            prepared_path=paths["prepared"],
+            decision_evidence_path=paths["decision"],
+            cohort_path=paths["cohort"],
+            shadow_intent_path=paths["shadow_intent"],
+            shadow_cycle_path=paths["shadow_cycle"],
+            execution_enabled=True,
+            execution_protocol_path=paths["execution_protocol"],
+        )
+
+
+def test_enabled_execution_uses_existing_live_owner_and_exact_paths(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _patch_cycle(monkeypatch)
+    policy_path = tmp_path / "policy.sqlite3"
+    policy = _seed_policy(policy_path)
+    activation = _patch_epoch2(monkeypatch)
+    paths = _paths(tmp_path)
+    _seed_protocol(paths["protocol"], policy=policy, activation=activation)
+    captured: dict[str, object] = {}
+
+    def fake_wc2(result, **kwargs):
+        return SimpleNamespace(
+            status=WC2PreparedLiveStatus.SKIPPED_BEFORE_ACTIVATION,
+            receipt_identity=None,
+            forecast_identity=None,
+            cohort_forecast_identity=None,
+            paper_intent_identity=None,
+        )
+
+    def fake_outcomes(**kwargs):
+        return SimpleNamespace(
+            scanned=0,
+            pending=0,
+            resolved_fresh=0,
+            recovered=0,
+            cohort_idempotent=0,
+        )
+
+    def fake_execution(**kwargs):
+        captured.update(kwargs)
+        return SimpleNamespace(
+            scanned_pair_n=0,
+            eligible_event_n=0,
+            already_terminal_n=0,
+            expired_gap_n=0,
+            waiting_lineage_n=0,
+            waiting_execution_input_n=0,
+            waiting_venue_rules_n=0,
+            hold_cash_n=0,
+            sizing_rejected_n=0,
+            pretrade_rejected_n=0,
+            executed_n=0,
+            appended_record_identities=(),
+        )
+
+    monkeypatch.setattr(clock, "process_wc2_prepared_live_freeze", fake_wc2)
+    monkeypatch.setattr(clock, "resolve_wc2_outcomes_once", fake_outcomes)
+    monkeypatch.setattr(clock, "process_wc2_paper_execution_cycle", fake_execution)
+
+    signal = tmp_path / "signal.sqlite3"
+    candles = tmp_path / "candles.sqlite3"
+    status = asyncio.run(
+        clock.run(
+            signal,
+            plan=LiveCoveragePlan.current_pilot(),
+            candle_cache_path=candles,
+            provider_divergence_path=tmp_path / "divergence.sqlite3",
+            wc2_config=_config(
+                tmp_path,
+                policy_path=policy_path,
+                execution_enabled=True,
+            ),
+        )
+    )
+
+    assert status == 0
+    assert captured["signal_ledger_path"] == signal
+    assert captured["decision_evidence_path"] == paths["decision"]
+    assert captured["cohort_journal_path"] == paths["cohort"]
+    assert captured["epoch2_path"] == paths["epoch2"]
+    assert captured["execution_protocol_path"] == paths["execution_protocol"]
+    assert captured["runtime_activation_path"] == paths["execution_runtime"]
+    assert captured["execution_journal_path"] == paths["execution_journal"]
+    assert captured["candle_cache_path"] == candles
+    assert captured["venue_rule_store_path"] == paths["venue_rules"]
+    assert isinstance(captured["observed_at_ms"], int)
+
+
 def test_disabled_clock_never_calls_wc2_or_creates_wc2_databases(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -239,6 +374,11 @@ def test_disabled_clock_never_calls_wc2_or_creates_wc2_databases(
     monkeypatch.setattr(
         clock,
         "process_wc2_prepared_live_freeze",
+        forbidden_wc2,
+    )
+    monkeypatch.setattr(
+        clock,
+        "process_wc2_paper_execution_cycle",
         forbidden_wc2,
     )
 
