@@ -9,9 +9,11 @@ from crypto_signal.data.models import (
     Exchange,
     MarketType,
 )
-from crypto_signal.data.provider_divergence import ProviderDivergenceStore
+from crypto_signal.data.provider_divergence import (
+    ProviderDivergenceStore,
+    collect_provider_divergence_cycle,
+)
 from crypto_signal.data.store import CandleStore
-from ops.run_provider_divergence import collect_provider_divergence
 
 
 def _seed(
@@ -72,7 +74,7 @@ def test_provider_divergence_cycle_reads_source_and_persists_separate_evidence(
         )
 
     source_before = candle_db.read_bytes()
-    result = collect_provider_divergence(
+    result = collect_provider_divergence_cycle(
         candle_db=candle_db,
         divergence_db=divergence_db,
         symbols=("BTCUSDT", "ETHUSDT"),
@@ -122,8 +124,8 @@ def test_provider_divergence_cycle_is_idempotent_at_same_observation(
         "lookback": 96,
         "observed_at_ms": 1_000_000,
     }
-    first = collect_provider_divergence(**kwargs)
-    second = collect_provider_divergence(**kwargs)
+    first = collect_provider_divergence_cycle(**kwargs)
+    second = collect_provider_divergence_cycle(**kwargs)
 
     assert first == second
     assert ProviderDivergenceStore(divergence_db).count() == 1

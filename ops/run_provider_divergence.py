@@ -3,15 +3,10 @@ from __future__ import annotations
 import argparse
 import sys
 import time
-from dataclasses import dataclass
 from pathlib import Path
 
-from crypto_signal.data.models import Exchange, MarketType
 from crypto_signal.data.provider_divergence import (
-    ProviderDivergenceSnapshot,
-    ProviderDivergenceStore,
-    build_provider_divergence_snapshot,
-    read_candles_read_only,
+    collect_provider_divergence_cycle,
 )
 
 DEFAULT_CANDLE_DB = Path(
@@ -25,12 +20,6 @@ DEFAULT_DIVERGENCE_DB = Path(
 DEFAULT_SYMBOLS = ("BTCUSDT", "ETHUSDT", "SOLUSDT")
 DEFAULT_TIMEFRAME = "15m"
 DEFAULT_LOOKBACK = 96
-
-
-@dataclass(frozen=True, slots=True)
-class ProviderDivergenceCycleResult:
-    observed_at_ms: int
-    snapshots: tuple[ProviderDivergenceSnapshot, ...]
 
 
 def parse_args() -> argparse.Namespace:
@@ -50,64 +39,6 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--lookback", type=int, default=DEFAULT_LOOKBACK)
     parser.add_argument("--observed-at-ms", type=int)
     return parser.parse_args()
-
-
-def collect_provider_divergence(
-    *,
-    candle_db: Path,
-    divergence_db: Path,
-    symbols: tuple[str, ...],
-    timeframe: str,
-    lookback: int,
-    observed_at_ms: int,
-) -> ProviderDivergenceCycleResult:
-    if observed_at_ms < 0:
-        raise ValueError("observed_at_ms cannot be negative")
-    if not symbols or tuple(sorted(set(symbols))) != symbols:
-        raise ValueError("symbols must be unique and sorted")
-    if any(not symbol or symbol != symbol.upper() for symbol in symbols):
-        raise ValueError("symbols must be uppercase")
-    if not timeframe.strip():
-        raise ValueError("timeframe must be non-empty")
-    if lookback <= 0 or lookback > 10_000:
-        raise ValueError("lookback must be inside 1..10000")
-
-    output = ProviderDivergenceStore(divergence_db)
-    output.initialize()
-    snapshots: list[ProviderDivergenceSnapshot] = []
-    for symbol in symbols:
-        binance = read_candles_read_only(
-            candle_db,
-            exchange=Exchange.BINANCE,
-            market_type=MarketType.SPOT,
-            symbol=symbol,
-            timeframe=timeframe,
-        )
-        bybit = read_candles_read_only(
-            candle_db,
-            exchange=Exchange.BYBIT,
-            market_type=MarketType.SPOT,
-            symbol=symbol,
-            timeframe=timeframe,
-        )
-        snapshot = build_provider_divergence_snapshot(
-            market_type=MarketType.SPOT,
-            symbol=symbol,
-            timeframe=timeframe,
-            observed_at_ms=observed_at_ms,
-            left_exchange=Exchange.BINANCE,
-            right_exchange=Exchange.BYBIT,
-            left_candles=binance,
-            right_candles=bybit,
-            lookback_limit=lookback,
-        )
-        output.append(snapshot)
-        snapshots.append(snapshot)
-
-    return ProviderDivergenceCycleResult(
-        observed_at_ms=observed_at_ms,
-        snapshots=tuple(snapshots),
-    )
 
 
 def run(args: argparse.Namespace) -> int:
@@ -132,7 +63,7 @@ def run(args: argparse.Namespace) -> int:
             if args.observed_at_ms is None
             else int(args.observed_at_ms)
         )
-        result = collect_provider_divergence(
+        result = collect_provider_divergence_cycle(
             candle_db=args.candle_db,
             divergence_db=args.divergence_db,
             symbols=symbols,
