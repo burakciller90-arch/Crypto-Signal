@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from contextlib import closing
 from dataclasses import dataclass
 from decimal import Decimal
 from enum import StrEnum
@@ -386,7 +387,7 @@ class ProviderDivergenceStore:
 
     def initialize(self) -> None:
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        with sqlite3.connect(self.path) as db:
+        with closing(sqlite3.connect(self.path)) as db, db:
             db.execute("PRAGMA journal_mode=DELETE")
             db.execute("PRAGMA synchronous=FULL")
             db.executescript(
@@ -438,7 +439,7 @@ class ProviderDivergenceStore:
     def append(self, snapshot: ProviderDivergenceSnapshot) -> None:
         self.initialize()
         payload = canonical_json(_snapshot_payload(snapshot))
-        with sqlite3.connect(self.path) as db:
+        with closing(sqlite3.connect(self.path)) as db, db:
             existing = db.execute(
                 "SELECT payload_json FROM provider_divergence_snapshots "
                 "WHERE snapshot_identity=?",
@@ -476,7 +477,7 @@ class ProviderDivergenceStore:
     ) -> ProviderDivergenceSnapshot | None:
         if not self.path.is_file():
             return None
-        with sqlite3.connect(self.path) as db:
+        with closing(sqlite3.connect(self.path)) as db:
             row = db.execute(
                 """
                 SELECT snapshot_identity, payload_json
@@ -494,7 +495,7 @@ class ProviderDivergenceStore:
     def count(self) -> int:
         if not self.path.is_file():
             return 0
-        with sqlite3.connect(self.path) as db:
+        with closing(sqlite3.connect(self.path)) as db:
             row = db.execute(
                 "SELECT COUNT(*) FROM provider_divergence_snapshots"
             ).fetchone()
@@ -503,7 +504,7 @@ class ProviderDivergenceStore:
     def quick_check(self) -> bool:
         if not self.path.is_file():
             return False
-        with sqlite3.connect(self.path) as db:
+        with closing(sqlite3.connect(self.path)) as db:
             row = db.execute("PRAGMA quick_check").fetchone()
         return row is not None and str(row[0]).lower() == "ok"
 
@@ -519,7 +520,7 @@ def read_candles_read_only(
     if not path.is_file():
         raise ValueError("canonical candle database missing")
     uri = f"{path.resolve().as_uri()}?mode=ro"
-    with sqlite3.connect(uri, uri=True) as db:
+    with closing(sqlite3.connect(uri, uri=True)) as db:
         db.row_factory = sqlite3.Row
         db.execute("PRAGMA query_only=ON")
         quick = db.execute("PRAGMA quick_check").fetchone()

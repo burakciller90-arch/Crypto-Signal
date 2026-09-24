@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import sqlite3
+from contextlib import closing
 from enum import StrEnum
 from pathlib import Path
 
@@ -25,7 +26,7 @@ class CandleStore:
 
     def initialize(self) -> None:
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        with self._connect() as connection:
+        with closing(self._connect()) as connection, connection:
             connection.execute("PRAGMA journal_mode=WAL")
             connection.execute("PRAGMA synchronous=NORMAL")
             connection.execute(
@@ -62,7 +63,7 @@ class CandleStore:
 
     def upsert(self, candle: Candle) -> WriteDisposition:
         self.initialize()
-        with self._connect() as connection:
+        with closing(self._connect()) as connection, connection:
             connection.execute("BEGIN IMMEDIATE")
             existing = self._get_one(connection, candle)
             if existing is None:
@@ -92,7 +93,7 @@ class CandleStore:
         timeframe: str,
     ) -> tuple[Candle, ...]:
         self.initialize()
-        with self._connect() as connection:
+        with closing(self._connect()) as connection, connection:
             rows = connection.execute(
                 """
                 SELECT * FROM candles
@@ -105,7 +106,7 @@ class CandleStore:
 
     def count(self) -> int:
         self.initialize()
-        with self._connect() as connection:
+        with closing(self._connect()) as connection, connection:
             row = connection.execute("SELECT COUNT(*) AS count FROM candles").fetchone()
         if row is None:
             return 0

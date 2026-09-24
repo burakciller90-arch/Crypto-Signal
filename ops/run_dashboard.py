@@ -49,6 +49,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--cold-archive", type=Path, default=None)
     parser.add_argument("--provider-divergence", type=Path, default=None)
+    parser.add_argument("--event-source-runtime", type=Path, default=None)
     parser.add_argument(
         "--learning-memory",
         type=Path,
@@ -96,6 +97,10 @@ def resolve_runtime_paths(args: argparse.Namespace) -> dict[str, Path]:
         "provider_divergence_path": (
             args.provider_divergence
             or runtime_root / "data" / "provider_divergence.sqlite3"
+        ),
+        "event_source_runtime_path": (
+            args.event_source_runtime
+            or runtime_root / "events" / "event_source.sqlite3"
         ),
     }
 
