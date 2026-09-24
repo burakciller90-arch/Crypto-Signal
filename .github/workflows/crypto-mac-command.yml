@@ -24,7 +24,7 @@ jobs:
           set -euo pipefail
           cmd="$(printf '%s\n' "$ISSUE_BODY" | awk -F: 'tolower($1)=="command" {gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2); print tolower($2); exit}')"
           case "$cmd" in
-            status|eventsourcestate|eventsourcesnapshot|blsprobe|fredprobe|wc2epoch2activate|wc2policyregister|wc2protocolregister|wc2state|services|logs|disk|sync|producttest|fulltest|productstate|productdeploy|paperreview|paperinspect|paperfixlint|paperharden|stateplanreview|stateplaninspect|stateplanharden|cursorreview|cursorreviewtail|cursorcleanup|bridgecheck|bridgestate|rollingstate|pausecheck|wakepause|wakeresume|wakearm|waketest|wakeheartbeat|chatbusyprobe|cursorcheck|cursorauthdiag|cursorttycheck|alertclockstate|alertclockpause|alertclockresume|migrationinspect|migrationinventory|ssddashboarddiag|productcrashlogs|ssddashboardwrappertest|ssdtcclaunchtest|ssdbackgroundteststart|ssdbackgroundtestcheck|ssdleftover|runnerpersistinstall|runnerpersistdiag|runnercutoverdiag|dashboardstart504|runnerterminalwatchdoginstall)
+            status|eventsourcestate|eventsourcesnapshot|blsprobe|fredprobe|wc2epoch2activate|wc2policyregister|wc2protocolregister|wc2collectonce|wc2state|services|logs|disk|sync|producttest|fulltest|productstate|productdeploy|paperreview|paperinspect|paperfixlint|paperharden|stateplanreview|stateplaninspect|stateplanharden|cursorreview|cursorreviewtail|cursorcleanup|bridgecheck|bridgestate|rollingstate|pausecheck|wakepause|wakeresume|wakearm|waketest|wakeheartbeat|chatbusyprobe|cursorcheck|cursorauthdiag|cursorttycheck|alertclockstate|alertclockpause|alertclockresume|migrationinspect|migrationinventory|ssddashboarddiag|productcrashlogs|ssddashboardwrappertest|ssdtcclaunchtest|ssdbackgroundteststart|ssdbackgroundtestcheck|ssdleftover|runnerpersistinstall|runnerpersistdiag|runnercutoverdiag|dashboardstart504|runnerterminalwatchdoginstall)
               ;;
             *)
               echo "Unsupported command: $cmd"
@@ -65,6 +65,7 @@ jobs:
           steps.parse.outputs.command == 'wc2policyregister' ||
           steps.parse.outputs.command == 'wc2epoch2activate' ||
           steps.parse.outputs.command == 'wc2protocolregister' ||
+          steps.parse.outputs.command == 'wc2collectonce' ||
           steps.parse.outputs.command == 'wc2state'
         uses: actions/checkout@v4
         with:
@@ -486,6 +487,104 @@ jobs:
           grep -F 'WC2_PROTOCOL_HISTORICAL_BACKFILL=NO' "$RUNNER_TEMP/wc2-collection-protocol-registration.log" >/dev/null
           grep -F 'REAL_CAPITAL=0' "$RUNNER_TEMP/wc2-collection-protocol-registration.log" >/dev/null
           echo "WC2_PROTOCOL_REGISTER_BOUNDED_PASS=YES"
+          echo "REAL_CAPITAL=0"
+
+      - name: WC2 COLLECTION ONCE
+        if: steps.parse.outputs.command == 'wc2collectonce'
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          DEV="$ROOT/Development"
+          RUNTIME="$DEV/runtime"
+          PY="$DEV/.venv/bin/python"
+          RUNNER="$GITHUB_WORKSPACE/ops/run_live_evidence_clock.py"
+
+          LEDGER="$RUNTIME/ledger/live_signal_ledger.sqlite3"
+          CANDLE="$RUNTIME/data/live_base_15m_cache.sqlite3"
+          DIVERGENCE="$RUNTIME/data/provider_divergence.sqlite3"
+          POLICY="$RUNTIME/wc2/wc2_forward_policy.sqlite3"
+          EPOCH2="$RUNTIME/paper/paper_fund_epoch2.sqlite3"
+          PROTOCOL="$RUNTIME/wc2/wc2_collection_protocol.wc2-collection-protocol.sqlite3"
+          PREPARED="$RUNTIME/wc2/wc2.wc2-prepared.sqlite3"
+          DECISION="$RUNTIME/decision/decision_evidence.sqlite3"
+          COHORT="$RUNTIME/wc2/wc2_untouched_forward.sqlite3"
+          SHADOW_INTENT="$RUNTIME/wc2/wc2.shadow-intent.sqlite3"
+          SHADOW_CYCLE="$RUNTIME/wc2/wc2.shadow-cycle.sqlite3"
+
+          test "$(id -u)" = "504"
+          test -x "$PY"
+          test -f "$RUNNER"
+          test -f "$LEDGER"
+          test -f "$CANDLE"
+          test -f "$POLICY"
+          test -f "$EPOCH2"
+          test -f "$PROTOCOL"
+
+          DEV_HEAD="$(git -C "$DEV" rev-parse HEAD)"
+          echo "DEVELOPMENT_HEAD=$DEV_HEAD"
+          echo "WORKFLOW_SHA=$GITHUB_SHA"
+          test "$DEV_HEAD" = "$GITHUB_SHA"
+
+          if pgrep -f '/Volumes/Crypto-504/Crypto-Signal/(Live|Development)/ops/run_live_evidence_clock.py' >/dev/null 2>&1; then
+            echo "WC2_COLLECTION_EXISTING_CLOCK_PROCESS=YES"
+            pgrep -af 'run_live_evidence_clock.py' || true
+            exit 79
+          fi
+
+          policy_before="$(shasum -a 256 "$POLICY" | awk '{print $1}')"
+          epoch2_before="$(shasum -a 256 "$EPOCH2" | awk '{print $1}')"
+          protocol_before="$(shasum -a 256 "$PROTOCOL" | awk '{print $1}')"
+          echo "WC2_COLLECTION_POLICY_SHA256_BEFORE=$policy_before"
+          echo "WC2_COLLECTION_EPOCH2_SHA256_BEFORE=$epoch2_before"
+          echo "WC2_COLLECTION_PROTOCOL_SHA256_BEFORE=$protocol_before"
+
+          set +e
+          PYTHONPATH="$GITHUB_WORKSPACE/src" "$PY" "$RUNNER"             --db "$LEDGER"             --candle-cache "$CANDLE"             --provider-divergence "$DIVERGENCE"             --wc2-enabled             --wc2-policy "$POLICY"             --wc2-epoch2 "$EPOCH2"             --wc2-collection-protocol "$PROTOCOL"             --wc2-prepared "$PREPARED"             --wc2-decision-evidence "$DECISION"             --wc2-cohort "$COHORT"             --wc2-shadow-intent "$SHADOW_INTENT"             --wc2-shadow-cycle "$SHADOW_CYCLE"             >"$RUNNER_TEMP/wc2-collect-once.out"             2>"$RUNNER_TEMP/wc2-collect-once.err"
+          rc=$?
+          set -e
+
+          echo "=== WC2 COLLECTION STDOUT ==="
+          cat "$RUNNER_TEMP/wc2-collect-once.out"
+          echo "=== WC2 COLLECTION STDERR ==="
+          cat "$RUNNER_TEMP/wc2-collect-once.err"
+
+          policy_after="$(shasum -a 256 "$POLICY" | awk '{print $1}')"
+          epoch2_after="$(shasum -a 256 "$EPOCH2" | awk '{print $1}')"
+          protocol_after="$(shasum -a 256 "$PROTOCOL" | awk '{print $1}')"
+          test "$policy_before" = "$policy_after"
+          test "$epoch2_before" = "$epoch2_after"
+          test "$protocol_before" = "$protocol_after"
+
+          echo "WC2_COLLECTION_EXIT_CODE=$rc"
+          test "$rc" = "0"
+          grep -F 'HISTORICAL_FORECAST_BACKFILL=NO REAL_CAPITAL=0'             "$RUNNER_TEMP/wc2-collect-once.out" >/dev/null
+          if grep -F 'REAL_CAPITAL=' "$RUNNER_TEMP/wc2-collect-once.out"             | grep -v 'REAL_CAPITAL=0' >/dev/null; then
+            echo "WC2_COLLECTION_REAL_CAPITAL_MISMATCH"
+            exit 79
+          fi
+          if grep -F 'REAL_CAPITAL=' "$RUNNER_TEMP/wc2-collect-once.err"             | grep -v 'REAL_CAPITAL=0' >/dev/null; then
+            echo "WC2_COLLECTION_REAL_CAPITAL_MISMATCH"
+            exit 79
+          fi
+
+          for db in "$PREPARED" "$DECISION" "$COHORT" "$SHADOW_INTENT" "$SHADOW_CYCLE"; do
+            if [ -f "$db" ]; then
+              "$PY" - "$db" <<'PY'
+          import sqlite3
+          import sys
+
+          with sqlite3.connect(sys.argv[1]) as db:
+              row = db.execute("PRAGMA quick_check").fetchone()
+          if row is None or str(row[0]).lower() != "ok":
+              raise SystemExit("WC2_COLLECTION_QUICK_CHECK_FAILED")
+          PY
+            fi
+          done
+
+          echo "WC2_COLLECTION_BOUNDED_ONE_SHOT_PASS=YES"
+          echo "WC2_COLLECTION_NO_SERVICE_MUTATION_PASS=YES"
+          echo "WC2_COLLECTION_HISTORICAL_BACKFILL=NO"
           echo "REAL_CAPITAL=0"
 
       - name: WC2 STATE
