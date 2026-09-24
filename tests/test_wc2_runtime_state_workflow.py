@@ -51,6 +51,10 @@ def test_wc2_state_reads_only_ephemeral_stable_copies() -> None:
     assert "tempfile.mkdtemp" in block
     assert "shutil.copy2" in block
     assert "source_snapshot(source)" in block
+    assert "SELECT regime, COUNT(*)" in block
+    assert "GROUP BY regime" in block
+    assert "ORDER BY regime" in block
+    assert "SELECT forecast_identity, regime, issued_at_ms" in block
     assert "WC2_STATE_SOURCE_BYTE_STABLE_PASS=YES" in block
     assert "WC2_STATE_READONLY_PASS=YES" in block
     assert 'print("REAL_CAPITAL=0")' in block
@@ -87,6 +91,8 @@ def test_wc2_state_reports_all_lineage_layers_without_performance_claims() -> No
         "WC2_SHADOW_CYCLE",
         "WC2_EPOCH2_R22",
         "WC2_COHORT_STATUS=",
+        "WC2_COHORT_REGIMES",
+        "WC2_COHORT_LATEST_FORECAST",
     ):
         assert marker in block
 
