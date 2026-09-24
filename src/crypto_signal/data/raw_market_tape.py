@@ -270,6 +270,32 @@ class RawMarketTapeStore:
             reversed(tuple(_event_from_row(row) for row in rows))
         )
 
+    def latest_by_context(
+        self,
+        *,
+        exchange: Exchange,
+    ) -> tuple[RawMarketEvent, ...]:
+        self.initialize()
+        with self._connect() as connection:
+            rows = connection.execute(
+                """
+                SELECT *
+                FROM raw_market_events
+                WHERE exchange = ?
+                ORDER BY channel, symbol, ingested_at_ms DESC, rowid DESC
+                """,
+                (exchange.value,),
+            ).fetchall()
+
+        latest: dict[tuple[str, str], RawMarketEvent] = {}
+        for row in rows:
+            event = _event_from_row(row)
+            latest.setdefault((event.channel, event.symbol), event)
+        return tuple(
+            latest[key]
+            for key in sorted(latest)
+        )
+
     def _connect(self) -> sqlite3.Connection:
         connection = sqlite3.connect(self.path, timeout=5.0)
         connection.row_factory = sqlite3.Row
