@@ -187,12 +187,14 @@ def test_runtime_activation_is_future_bound_and_append_only(tmp_path: Path) -> N
     assert store.append(activation) is False
     assert store.latest() == activation
 
-    with sqlite3.connect(path) as db:
-        with pytest.raises(sqlite3.IntegrityError, match="append-only"):
-            db.execute(
-                "UPDATE wc2_paper_execution_runtime_activation "
-                "SET collection_start_ms=1"
-            )
+    with (
+        sqlite3.connect(path) as db,
+        pytest.raises(sqlite3.IntegrityError, match="append-only"),
+    ):
+        db.execute(
+            "UPDATE wc2_paper_execution_runtime_activation "
+            "SET collection_start_ms=1"
+        )
 
 
 def test_runtime_activation_rejects_protocol_backdating() -> None:
@@ -216,8 +218,8 @@ def test_execution_state_replay_uses_actual_fill_economics() -> None:
         seed="buy",
         core_identity=core.snapshot_identity,
         action=PaperAction.BUY,
-        quantity=Decimal("1"),
-        reference_price=Decimal("10"),
+        quantity=Decimal(1),
+        reference_price=Decimal(10),
         fill_price=Decimal("10.01"),
         fee=Decimal("0.01"),
         spread=Decimal("0.005"),
@@ -230,7 +232,7 @@ def test_execution_state_replay_uses_actual_fill_economics() -> None:
     )
     assert state.cash_usdt == Decimal("589.98")
     assert state.positions[0].symbol is PaperSymbol.BTCUSDT
-    assert state.positions[0].quantity == Decimal("1")
+    assert state.positions[0].quantity == Decimal(1)
     assert state.replayed_record_count == 1
     assert state.last_mutation_identity == buy.fill_identity
 
@@ -250,10 +252,10 @@ def test_replay_refuses_cross_core_or_impossible_cash() -> None:
         seed="large",
         core_identity=core.snapshot_identity,
         action=PaperAction.BUY,
-        quantity=Decimal("100"),
-        reference_price=Decimal("10"),
+        quantity=Decimal(100),
+        reference_price=Decimal(10),
         fill_price=Decimal("10.01"),
-        fee=Decimal("1"),
+        fee=Decimal(1),
         spread=Decimal("0.5"),
         slippage=Decimal("0.5"),
     )
