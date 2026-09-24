@@ -2595,7 +2595,7 @@ function lessonMarkup(lesson) {
           <span class="eyebrow">${escapeHtml(upper(lesson.concept_id))}</span>
           <h2>${escapeHtml(lesson.title_tr)}</h2>
         </div>
-        <span class="tag">EDUCATION</span>
+        <span class="tag">EĞİTİM</span>
       </header>
       <p class="learn-beginner">${escapeHtml(lesson.beginner_tr)}</p>
       <section class="learn-why">
@@ -2604,12 +2604,12 @@ function lessonMarkup(lesson) {
       </section>
       ${lesson.advanced_tr ? `
         <details class="learn-advanced">
-          <summary>PRO / teknik açıklamayı aç</summary>
+          <summary>TEKNİK AÇIKLAMAYI AÇ</summary>
           <p>${escapeHtml(lesson.advanced_tr)}</p>
         </details>` : ""}
       <footer class="learn-card-foot">
-        <span>Deterministic catalog · no generated market claim</span>
-        <code>REAL_CAPITAL=0</code>
+        <span>Sabit eğitim kataloğu · piyasa iddiası üretilmez</span>
+        <code>GERÇEK_SERMAYE=0</code>
       </footer>
     </article>`;
 }
@@ -2623,14 +2623,14 @@ function renderEducation() {
 
   if (tag) {
     tag.textContent = state.education.status === "ready"
-      ? `CATALOG · ${lessons.length} VERIFIED LESSONS`
-      : `CATALOG · ${upper(state.education.status, "UNAVAILABLE")}`;
+      ? `KATALOG · ${lessons.length} DOĞRULANMIŞ DERS`
+      : `KATALOG · ${trState(state.education.status)}`;
   }
 
   if (!lessons.length) {
     target.className = "learn-grid learn-grid-rich empty-state";
     target.innerHTML =
-      "<strong>Eğitim kanıtı yok.</strong><p>Eksik katalog yerine yeni içerik uydurulmaz.</p>";
+      "<strong>Eğitim içeriği kullanılamıyor.</strong><p>Eksik katalog yerine yeni içerik uydurulmaz.</p>";
     return;
   }
 
@@ -2664,18 +2664,41 @@ function setSystemValue(id, value, kind = "neutral") {
   );
 }
 
+function trSystemStatus(value) {
+  const key = text(value, "").toUpperCase();
+  const labels = {
+    READY: "HAZIR",
+    EXPOSED: "SUNULUYOR",
+    EMPTY: "BOŞ",
+    UNAVAILABLE: "KULLANILAMIYOR",
+    PRESENT: "MEVCUT",
+    "NOT PRESENT": "YOK",
+    AVAILABLE: "MEVCUT",
+    "SIGNALS ONLY": "YALNIZ SİNYALLER",
+    "NOT EXPOSED": "SUNULMUYOR",
+    VERIFIED: "DOĞRULANDI",
+    UNVERIFIED: "DOĞRULANMADI",
+    DISABLED: "KAPALI",
+    DEGRADED: "SORUNLU",
+    PASS: "GEÇTİ",
+    FAILURE: "BAŞARISIZ",
+    SUCCESS: "BAŞARILI",
+    "HEARTBEAT_FRESH": "NABIZ TAZE",
+    "NOT_MEASURED": "ÖLÇÜLMEDİ",
+    "NOT MEASURED": "ÖLÇÜLMEDİ",
+    "PERSISTED_EVIDENCE_ONLY": "YALNIZ KALICI KANIT",
+  };
+  return labels[key] || key.replaceAll("_", " ") || "ÖLÇÜLMEDİ";
+}
+
 function operationalComponentMarkup(label, component) {
-  const status = upper(component?.status, "UNAVAILABLE");
-  const ready = status === "READY" || status === "EXPOSED";
-  const reason = text(component?.reason, "");
-  const detail = reason
-    ? ` · ${reason}`
-    : "";
+  const raw = upper(component?.status, "UNAVAILABLE");
+  const ready = raw === "READY" || raw === "EXPOSED";
   return `
     <div class="truth-row">
       <span>${escapeHtml(label)}</span>
       <strong class="${ready ? "state-positive" : "state-watch"}">
-        ${escapeHtml(status)}${escapeHtml(detail)}
+        ${escapeHtml(trSystemStatus(raw))}
       </strong>
     </div>`;
 }
@@ -2688,38 +2711,38 @@ function renderOperationalTruth() {
   if (!target || !tag || !note) return;
 
   if (!data || data.status !== "ready") {
-    tag.textContent = "RUNTIME EVIDENCE · UNAVAILABLE";
+    tag.textContent = "ÇALIŞMA ZAMANI KANITI · KULLANILAMIYOR";
     tag.className = "tag state-watch";
-    target.innerHTML = `
-      <div class="truth-row"><span>R25 OPERATIONAL TRUTH</span><strong class="state-watch">UNAVAILABLE</strong></div>`;
+    target.innerHTML =
+      '<div class="truth-row"><span>R25 OPERASYONEL DOĞRULUK</span><strong class="state-watch">KULLANILAMIYOR</strong></div>';
     note.textContent =
-      "Operational Truth endpoint unavailable. Missing evidence is not promoted to READY.";
+      "Operasyonel doğruluk kaynağı kullanılamıyor. Eksik kanıt otomatik olarak HAZIR durumuna yükseltilmez.";
     return;
   }
 
   const components = data.components || {};
   target.innerHTML = [
-    ["DECISION EVIDENCE", components.decision_evidence],
-    ["SHADOW INTENT JOURNAL", components.shadow_intent_journal],
-    ["SHADOW CYCLE MANIFEST", components.shadow_cycle_manifest],
-    ["RUNTIME REPLAY OBSERVATION", components.runtime_replay_observation],
-    ["CANONICAL EPOCH 2", components.canonical_epoch2],
-    ["MARKET TAPE", components.market_tape_runtime],
-    ["PROVIDER DIVERGENCE", components.provider_divergence],
-    ["COLD ARCHIVE", components.cold_archive],
-    ["GALACTECH PRODUCT", components.galactech_product],
+    ["Karar kanıtı", components.decision_evidence],
+    ["Deneme niyet günlüğü", components.shadow_intent_journal],
+    ["Deneme döngü manifestosu", components.shadow_cycle_manifest],
+    ["Yeniden başlatma / tekrar oynatma", components.runtime_replay_observation],
+    ["Kanonik Epoch 2", components.canonical_epoch2],
+    ["Piyasa veri akışı", components.market_tape_runtime],
+    ["Veri sağlayıcı ayrışması", components.provider_divergence],
+    ["Soğuk arşiv", components.cold_archive],
+    ["GALACTECH ürünü", components.galactech_product],
   ].map(([label, component]) =>
     operationalComponentMarkup(label, component)
   ).join("");
 
   const allPresent = data.all_required_runtime_evidence_present === true;
   tag.textContent = allPresent
-    ? "ALL REQUIRED RUNTIME EVIDENCE PRESENT"
-    : "PARTIAL RUNTIME EVIDENCE";
+    ? "GEREKLİ ÇALIŞMA ZAMANI KANITLARI MEVCUT"
+    : "KISMİ ÇALIŞMA ZAMANI KANITI";
   tag.className = `tag ${allPresent ? "state-positive" : "state-watch"}`;
   note.textContent = allPresent
-    ? "All required R25 runtime evidence sources are independently readable. This is not production or capital-mutation authority."
-    : "At least one required R25 runtime source is unavailable. Partial evidence is shown explicitly; production readiness is not inferred.";
+    ? "Gerekli R25 çalışma zamanı kaynakları bağımsız olarak okunabiliyor. Bu durum gerçek sermaye veya emir yetkisi vermez."
+    : "En az bir gerekli R25 kaynağı kullanılamıyor. Kısmi kanıt açıkça gösterilir; hazır olma durumu uydurulmaz.";
 }
 
 function renderSystem() {
@@ -2755,59 +2778,56 @@ function renderSystem() {
   const shadowRailReady = shadowRail.status === "ready";
   const shadowRailSnapshot = shadowRail.snapshot || {};
 
-  setSystemValue("systemApi", apiReady ? "READY" : "UNAVAILABLE", apiReady ? "positive" : "risk");
-  setSystemValue("systemLedger", ledgerPresent ? "PRESENT" : "NOT PRESENT", ledgerPresent ? "positive" : "watch");
-  setSystemValue("systemEpoch2", epochReady ? "READY" : "UNAVAILABLE", epochReady ? "positive" : "watch");
+  setSystemValue("systemApi", apiReady ? "HAZIR" : "KULLANILAMIYOR", apiReady ? "positive" : "risk");
+  setSystemValue("systemLedger", ledgerPresent ? "MEVCUT" : "YOK", ledgerPresent ? "positive" : "watch");
+  setSystemValue("systemEpoch2", epochReady ? "HAZIR" : "KULLANILAMIYOR", epochReady ? "positive" : "watch");
   setSystemValue("systemArchive", archiveReady
-    ? (archive.outcome_schema_available ? "AVAILABLE" : "SIGNALS ONLY")
-    : "UNAVAILABLE", archiveReady && archive.outcome_schema_available ? "positive" : "watch");
-  setSystemValue("systemMarketEvidence", radarReady ? "AVAILABLE" : "UNAVAILABLE", radarReady ? "positive" : "watch");
-  setSystemValue("systemIntelligence", intelligenceReady ? "READY" : "UNAVAILABLE", intelligenceReady ? "positive" : "watch");
-  setSystemValue("systemPerformance", performanceReady ? "READY" : "UNAVAILABLE", performanceReady ? "positive" : "watch");
-  setSystemValue("systemEducation", educationReady ? `${lessonCount} LESSONS` : "UNAVAILABLE", educationReady ? "positive" : "watch");
-  setSystemValue("systemAlerts", health.alert_outbox_present ? "PRESENT" : "NOT PRESENT", health.alert_outbox_present ? "positive" : "neutral");
+    ? (archive.outcome_schema_available ? "MEVCUT" : "YALNIZ SİNYALLER")
+    : "KULLANILAMIYOR", archiveReady && archive.outcome_schema_available ? "positive" : "watch");
+  setSystemValue("systemMarketEvidence", radarReady ? "MEVCUT" : "KULLANILAMIYOR", radarReady ? "positive" : "watch");
+  setSystemValue("systemIntelligence", intelligenceReady ? "HAZIR" : "KULLANILAMIYOR", intelligenceReady ? "positive" : "watch");
+  setSystemValue("systemPerformance", performanceReady ? "HAZIR" : "KULLANILAMIYOR", performanceReady ? "positive" : "watch");
+  setSystemValue("systemEducation", educationReady ? `${lessonCount} DERS` : "KULLANILAMIYOR", educationReady ? "positive" : "watch");
+  setSystemValue("systemAlerts", health.alert_outbox_present ? "MEVCUT" : "YOK", health.alert_outbox_present ? "positive" : "neutral");
   setSystemValue(
     "systemDecisionLedger",
-    decisionReady ? `${decisionSnapshot.proof_count ?? 0} PROOFS` : "NOT EXPOSED",
+    decisionReady ? `${decisionSnapshot.proof_count ?? 0} KANIT` : "SUNULMUYOR",
     decisionReady ? "positive" : "watch"
   );
   setSystemValue(
     "systemLiveFeed",
-    feedReady ? `${feedCount} LOADED` : "NOT EXPOSED",
+    feedReady ? `${feedCount} KAYIT YÜKLÜ` : "SUNULMUYOR",
     feedReady ? "positive" : "watch"
   );
   setSystemValue(
     "systemShadowRail",
     shadowRailReady
-      ? `${shadowRailSnapshot.record_count ?? 0} PREVIEWS`
-      : "NOT EXPOSED",
+      ? `${shadowRailSnapshot.record_count ?? 0} ÖNİZLEME`
+      : "SUNULMUYOR",
     shadowRailReady ? "positive" : "watch"
   );
+
   const marketTapeReady = marketTape.status === "ready";
   const marketTapeSnapshot = marketTape.snapshot || {};
   const collectorRuntime = marketTape.collector_runtime || {};
-  const collectionProcessStatus = text(
-    marketTape.collection_process_status,
-    "NOT_MEASURED"
-  );
+  const collectionProcessStatus = text(marketTape.collection_process_status, "NOT_MEASURED");
   const collectionFresh = collectionProcessStatus === "HEARTBEAT_FRESH";
   setSystemValue(
     "systemMarketTape",
     marketTapeReady
-      ? `${marketTapeSnapshot.total_rows ?? 0} ROWS · PERSISTED`
-      : "NOT EXPOSED",
+      ? `${marketTapeSnapshot.total_rows ?? 0} SATIR · KALICI`
+      : "SUNULMUYOR",
     marketTapeReady && collectionFresh ? "positive" : "watch"
   );
   const marketTapeNote = byId("systemMarketTapeNote");
   if (marketTapeNote) {
     marketTapeNote.textContent = marketTapeReady
-      ? `latest persisted age ${marketTapeSnapshot.latest_event_age_ms ?? "ÖLÇÜLMEDİ"} ms · process ${collectionProcessStatus} · heartbeat age ${collectorRuntime.heartbeat_age_ms ?? "ÖLÇÜLMEDİ"} ms · ingestion age ${collectorRuntime.ingestion_age_ms ?? "ÖLÇÜLMEDİ"} ms · ONLINE NOT ASSERTED`
-      : text(marketTape.reason, "runtime evidence unavailable");
+      ? `son kalıcı veri yaşı ${marketTapeSnapshot.latest_event_age_ms ?? "ÖLÇÜLMEDİ"} ms · süreç ${trSystemStatus(collectionProcessStatus)} · nabız yaşı ${collectorRuntime.heartbeat_age_ms ?? "ÖLÇÜLMEDİ"} ms · veri alım yaşı ${collectorRuntime.ingestion_age_ms ?? "ÖLÇÜLMEDİ"} ms · ÇEVRİMİÇİ OLDUĞU İDDİA EDİLMEZ`
+      : "Piyasa veri akışı çalışma zamanı kanıtı kullanılamıyor.";
   }
 
   const providerReady =
-    providerDivergence.status === "ready" ||
-    providerDivergence.status === "empty";
+    providerDivergence.status === "ready" || providerDivergence.status === "empty";
   const providerSnapshots = Array.isArray(providerDivergence.snapshots)
     ? providerDivergence.snapshots
     : [];
@@ -2819,23 +2839,20 @@ function renderSystem() {
   setSystemValue(
     "systemProviderDivergence",
     providerReady
-      ? `${providerSnapshots.length} CONTEXTS · PERSISTED`
-      : "NOT EXPOSED",
+      ? `${providerSnapshots.length} BAĞLAM · KALICI`
+      : "SUNULMUYOR",
     providerDivergence.status === "ready" ? "positive" : "watch"
   );
   const providerNote = byId("systemProviderDivergenceNote");
   if (providerNote) {
     const gridSummary = providerSnapshots
       .map((snapshot) =>
-        `${snapshot.symbol || "UNKNOWN"}:${upper(snapshot.grid_state, "UNKNOWN")}`
+        `${snapshot.symbol || "BİLİNMİYOR"}:${trSystemStatus(snapshot.grid_state)}`
       )
       .join(" · ");
     providerNote.textContent = providerReady
-      ? `${gridSummary || "no persisted context"} · stale provider sides ${staleProviderSides} · CONSENSUS NOT INFERRED`
-      : text(
-          providerDivergence.reason,
-          "provider divergence runtime evidence unavailable"
-        );
+      ? `${gridSummary || "kalıcı bağlam yok"} · eski veri tarafı ${staleProviderSides} · ORTAK GÖRÜŞ TÜRETİLMEZ`
+      : "Veri sağlayıcı ayrışma kanıtı kullanılamıyor.";
   }
 
   const eventSourceReady = eventSource.status === "ready";
@@ -2849,21 +2866,20 @@ function renderSystem() {
   setSystemValue(
     "systemEventSource",
     eventSourceReady
-      ? `${eventSourceSnapshot.fetch_count ?? 0} FETCHES · PERSISTED`
-      : "NOT EXPOSED",
+      ? `${eventSourceSnapshot.fetch_count ?? 0} ALIM · KALICI`
+      : "SUNULMUYOR",
     eventSourceReady && eventSourceFailures === 0 ? "positive" : "watch"
   );
   const eventSourceNote = byId("systemEventSourceNote");
   if (eventSourceNote) {
     const sourceSummary = eventSourceFetches
-      .map(
-        (fetch) =>
-          `${fetch.source_provider || "unknown"}:${upper(fetch.source_kind, "UNKNOWN")}:${upper(fetch.outcome, "UNKNOWN")}:${fetch.fetch_age_ms ?? "ÖLÇÜLMEDİ"}ms`
+      .map((fetch) =>
+        `${fetch.source_provider || "bilinmiyor"}:${trSystemStatus(fetch.source_kind)}:${trSystemStatus(fetch.outcome)}:${fetch.fetch_age_ms ?? "ÖLÇÜLMEDİ"}ms`
       )
       .join(" · ");
     eventSourceNote.textContent = eventSourceReady
-      ? `${sourceSummary || "no persisted fetch"} · ${text(eventSource.coverage_claim, "SOURCE_SCOPED_ONLY").replaceAll("_", " ")} · process ${text(eventSource.process_status, "NOT_MEASURED")} · ONLINE NOT ASSERTED`
-      : text(eventSource.reason, "event source runtime evidence unavailable");
+      ? `${sourceSummary || "kalıcı veri alımı yok"} · süreç ${trSystemStatus(eventSource.process_status)} · ÇEVRİMİÇİ OLDUĞU İDDİA EDİLMEZ`
+      : "Olay kaynağı çalışma zamanı kanıtı kullanılamıyor.";
   }
 
   const coldReady =
@@ -2873,51 +2889,47 @@ function renderSystem() {
     "systemColdArchive",
     coldReady
       ? (coldArchive.status === "empty"
-          ? "0 PARTITIONS"
-          : `${coldSnapshot.verified_partition_count ?? 0}/${coldSnapshot.partition_count ?? 0} VERIFIED`)
-      : "NOT EXPOSED",
+          ? "0 BÖLÜM"
+          : `${coldSnapshot.verified_partition_count ?? 0}/${coldSnapshot.partition_count ?? 0} DOĞRULANDI`)
+      : "SUNULMUYOR",
     coldArchive.status === "ready" ? "positive" : "watch"
   );
   const coldNote = byId("systemColdArchiveNote");
   if (coldNote) {
-    const replayStatus = text(
-      coldSnapshot.canonical_row_digest_replay,
-      "NOT_MEASURED"
-    );
-    const replayCount =
-      coldSnapshot.canonical_replay_verified_partition_count ?? 0;
+    const replayStatus = trSystemStatus(coldSnapshot.canonical_row_digest_replay);
+    const replayCount = coldSnapshot.canonical_replay_verified_partition_count ?? 0;
     coldNote.textContent = coldReady
-      ? `${text(coldSnapshot.integrity_scope, "NO PARTITIONS")} · process ÖLÇÜLMEDİ · canonical-row replay ${replayStatus} · replayed partitions ${replayCount}`
-      : text(coldArchive.reason, "archive runtime evidence unavailable");
+      ? `dosya bütünlüğü · süreç ÖLÇÜLMEDİ · kanonik satır tekrar kontrolü ${replayStatus} · kontrol edilen bölüm ${replayCount}`
+      : "Arşiv çalışma zamanı kanıtı kullanılamıyor.";
   }
 
   const shadowRailNote = byId("systemShadowRailNote");
   if (shadowRailNote) {
     shadowRailNote.textContent = shadowRailReady
       ? (shadowRailSnapshot.read_only_verified === true
-          ? "read-only replay verified · no canonical writes"
-          : "runtime journal present · replay unverified")
-      : text(shadowRail.reason, "shadow journal runtime evidence unavailable");
+          ? "salt-okunur tekrar oynatma doğrulandı · kanonik yazma yok"
+          : "çalışma zamanı günlüğü mevcut · tekrar oynatma doğrulanmadı")
+      : "Deneme günlüğü çalışma zamanı kanıtı kullanılamıyor.";
   }
 
   const epochNote = byId("systemEpoch2Note");
   if (epochNote) {
     epochNote.textContent = epochReady
-      ? `snapshot ${shortIdentity(epoch2.consolidated?.snapshot_identity)}`
-      : text(epoch2.reason, "canonical R21 runtime evidence unavailable");
+      ? `anlık kayıt ${shortIdentity(epoch2.consolidated?.snapshot_identity)}`
+      : "Kanonik R21 çalışma zamanı kanıtı kullanılamıyor.";
   }
   const marketNote = byId("systemMarketEvidenceNote");
   if (marketNote) {
     marketNote.textContent = radarReady
-      ? `${radarItems} observed provider/context freezes`
-      : `radar ${upper(radar.status, "UNAVAILABLE")}`;
+      ? `${radarItems} gözlemlenmiş veri sağlayıcı / piyasa bağlamı kaydı`
+      : `radar ${trState(radar.status)}`;
   }
 
   const truthTag = byId("systemTruthTag");
   if (truthTag) {
     truthTag.textContent = apiReady
-      ? "TRUTH · PRODUCT EVIDENCE READY"
-      : "TRUTH · DEGRADED";
+      ? "DOĞRULUK · ÜRÜN KANITI HAZIR"
+      : "DOĞRULUK · SORUNLU";
   }
 }
 
