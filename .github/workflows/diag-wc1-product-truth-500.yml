@@ -1,0 +1,58 @@
+name: DIAG WC1 Product Truth 500
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/diag-wc1-product-truth-500.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          clean: true
+          fetch-depth: 1
+
+      - name: Read-only Product truth diagnosis
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          DEV="$ROOT/Development"
+          echo "DIAG_HEAD=$(git -C "$GITHUB_WORKSPACE" rev-parse HEAD)"
+          echo "DEVELOPMENT_HEAD=$(git -C "$DEV" rev-parse HEAD)"
+          test -z "$(git -C "$DEV" status --porcelain)"
+
+          echo "=== PRODUCT HEALTH ==="
+          curl -sS --max-time 15 -D "$RUNNER_TEMP/health.headers"             -o "$RUNNER_TEMP/health.body"             http://127.0.0.1:48700/api/health || true
+          cat "$RUNNER_TEMP/health.headers" || true
+          cat "$RUNNER_TEMP/health.body" || true
+
+          echo "=== MARKET TAPE PRODUCT TRUTH ==="
+          code="$(curl -sS --max-time 240 -w '%{http_code}'             -o "$RUNNER_TEMP/market-tape.body"             http://127.0.0.1:48700/api/market-tape-runtime/status || true)"
+          echo "HTTP_STATUS=$code"
+          cat "$RUNNER_TEMP/market-tape.body" || true
+
+          echo "=== MARKET TAPE LOCK HOLDER ==="
+          LOCK="$DEV/runtime/market_tape/market_tape_stream.lock"
+          PID="$(/usr/sbin/lsof -t "$LOCK" 2>/dev/null | head -1 || true)"
+          echo "LOCK_PID=$PID"
+          [ -n "$PID" ] && /bin/ps -ww -p "$PID" -o pid=,ppid=,uid=,%cpu=,%mem=,etime=,args= || true
+
+          echo "=== DASHBOARD LOG TAIL ==="
+          tail -200 "$ROOT/ServiceLogs/dashboard.out.log" 2>/dev/null || true
+          tail -240 "$ROOT/ServiceLogs/dashboard.err.log" 2>/dev/null || true
+
+          echo "=== MARKET TAPE LOG TAIL ==="
+          tail -160 "$ROOT/ServiceLogs/market-tape.out.log" 2>/dev/null || true
+          tail -220 "$ROOT/ServiceLogs/market-tape.err.log" 2>/dev/null || true
+
+          echo "WC1_PRODUCT_TRUTH_500_DIAG_READONLY_PASS=YES"
+          echo "REAL_CAPITAL=0"
