@@ -20,6 +20,7 @@ const API = Object.freeze({
   coldArchiveStatus: "/api/cold-archive/status?verify_limit=24",
   liveFeed: "/api/intelligence-feed?limit=100",
   decisionProof: (identity) => `/api/decision-proof/${encodeURIComponent(identity)}`,
+  decisionProofByForecast: (identity) => `/api/decision-proof/forecast/${encodeURIComponent(identity)}`,
   shadowForecastCycle: (identity) =>
     `/api/shadow-decision-rail/forecast/${encodeURIComponent(identity)}`,
   wc2Action: (identity) =>
@@ -318,6 +319,13 @@ function bindNavigation() {
       return;
     }
 
+    const feedForecastTrigger = source?.closest("[data-feed-forecast-id]");
+    if (feedForecastTrigger instanceof HTMLElement) {
+      const forecastIdentity = feedForecastTrigger.dataset.feedForecastId || "";
+      void openFeedForecastProof(forecastIdentity, feedForecastTrigger);
+      return;
+    }
+
     const evidenceTrigger = source?.closest("[data-evidence-id]");
     if (evidenceTrigger instanceof HTMLElement) {
       const identity = evidenceTrigger.dataset.evidenceId || "";
@@ -514,8 +522,8 @@ function renderCommand() {
   feed.className = "feed-list intelligence-feed-v2";
   feed.innerHTML = events.map((item, index) => {
     const summary = item.evidence_summary || {};
-    const signalId = text(item.signal_freeze_identity, "");
-    const hasProof = /^[0-9a-f]{64}$/.test(signalId);
+    const forecastId = text(item.forecast_identity, "");
+    const hasProof = /^[0-9a-f]{64}$/.test(forecastId);
     const resolved = text(item.kind, "").toLowerCase() === "forecast_resolved";
     return `
       <article class="intel-card-v2 ${resolved ? "intel-card-resolved" : ""}" style="--feed-order:${index}">
@@ -565,7 +573,7 @@ function renderCommand() {
         <footer class="intel-card-foot-v2">
           <span>SHA-256 bağlı kanıt · gerçek sermaye kapalı</span>
           ${hasProof
-            ? `<button class="intel-proof-button" type="button" data-evidence-id="${escapeHtml(signalId)}">Kanıt grafiğini ve dondurulmuş kararı aç →</button>`
+            ? `<button class="intel-proof-button" type="button" data-feed-forecast-id="${escapeHtml(forecastId)}">Kanıt grafiğini ve dondurulmuş kararı aç →</button>`
             : '<span class="intel-proof-unavailable">Exact kanıt bağlantısı doğrulanıyor</span>'}
         </footer>
       </article>`;
@@ -2221,6 +2229,35 @@ function renderEvidenceRoom(detail) {
         </div>
       </section>
     </div>`;
+}
+
+async function openFeedForecastProof(forecastIdentity, trigger) {
+  if (!/^[0-9a-f]{64}$/.test(forecastIdentity)) return;
+  const button = trigger instanceof HTMLElement ? trigger : null;
+  const original = button?.textContent || "";
+  if (button) {
+    button.disabled = true;
+    button.textContent = "KANIT BAĞLANTISI DOĞRULANIYOR…";
+  }
+  try {
+    const payload = await fetchJson(API.decisionProofByForecast(forecastIdentity));
+    const signalIdentity = text(payload?.proof?.signal_freeze_identity, "");
+    if (payload?.status !== "ready" || !/^[0-9a-f]{64}$/.test(signalIdentity)) {
+      if (button) button.textContent = "KANIT ŞU AN KULLANILAMIYOR";
+      return;
+    }
+    await openEvidenceRoom(signalIdentity, button || trigger);
+  } catch (error) {
+    console.warn("[GALACTECH] forecast proof bridge unavailable", error);
+    if (button) button.textContent = "KANIT ŞU AN KULLANILAMIYOR";
+  } finally {
+    window.setTimeout(() => {
+      if (button) {
+        button.disabled = false;
+        button.textContent = original || "KANIT GRAFİĞİNİ AÇ";
+      }
+    }, 900);
+  }
 }
 
 async function openEvidenceRoom(identity, trigger) {
