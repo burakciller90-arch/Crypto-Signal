@@ -40,17 +40,36 @@ jobs:
           test "$WORKSPACE_HEAD" = "$GITHUB_SHA"
           echo "WC2_EXECUTION_JOURNAL_EXACT_SOURCE_PASS=YES"
 
-      - name: Focused WC2 paper execution journal acceptance
+      - name: Create isolated exact-source test environment
         shell: bash
         run: |
           set -euo pipefail
           DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
-          PY="$DEV/.venv/bin/python"
+          BASE_PY="$DEV/.venv/bin/python"
+          TEST_VENV="$RUNNER_TEMP/wc2-journal-venv"
+          rm -rf "$TEST_VENV"
+          "$BASE_PY" -m venv "$TEST_VENV"
+          "$TEST_VENV/bin/python" -m pip install --upgrade pip
+          "$TEST_VENV/bin/python" -m pip install -e "$GITHUB_WORKSPACE"
+          "$TEST_VENV/bin/python" -m pip install \
+            "pytest>=8.4" \
+            "pytest-asyncio>=1.2" \
+            "ruff>=0.13" \
+            "mypy>=1.18"
+          echo "TEST_PY=$TEST_VENV/bin/python" >> "$GITHUB_ENV"
+
+      - name: Focused WC2 paper execution journal acceptance
+        shell: bash
+        run: |
+          set -euo pipefail
           export PYTHONPATH="$GITHUB_WORKSPACE/src:$GITHUB_WORKSPACE"
           cd "$GITHUB_WORKSPACE"
-          "$PY" -m pytest -q tests/test_wc2_paper_execution_journal.py
-          "$PY" -m ruff check             src/crypto_signal/evaluation/untouched_forward_execution_journal.py             tests/test_wc2_paper_execution_journal.py
-          "$PY" -m mypy             src/crypto_signal/evaluation/untouched_forward_execution_journal.py
+          "$TEST_PY" -m pytest -q tests/test_wc2_paper_execution_journal.py
+          "$TEST_PY" -m ruff check \
+            src/crypto_signal/evaluation/untouched_forward_execution_journal.py \
+            tests/test_wc2_paper_execution_journal.py
+          "$TEST_PY" -m mypy \
+            src/crypto_signal/evaluation/untouched_forward_execution_journal.py
           echo "WC2_EXECUTION_JOURNAL_APPEND_ONLY_PASS=YES"
           echo "WC2_EXECUTION_JOURNAL_FORWARD_BOUNDARY_PASS=YES"
           echo "WC2_EXECUTION_JOURNAL_EXPLICIT_COST_PASS=YES"
@@ -61,13 +80,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
-          PY="$DEV/.venv/bin/python"
           export PYTHONPATH="$GITHUB_WORKSPACE/src:$GITHUB_WORKSPACE"
           cd "$GITHUB_WORKSPACE"
-          "$PY" -m pytest -q
-          "$PY" -m ruff check src tests ops/verify_stage10_integrated.py
-          "$PY" -m mypy src ops/verify_stage10_integrated.py
+          "$TEST_PY" -m pytest -q
+          "$TEST_PY" -m ruff check src tests ops/verify_stage10_integrated.py
+          "$TEST_PY" -m mypy src ops/verify_stage10_integrated.py
           node --check src/crypto_signal/product/static/freshness.js
           node --check src/crypto_signal/product/static/app.js
           node --check src/crypto_signal/product/galactech/app.js
