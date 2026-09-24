@@ -234,6 +234,11 @@ def test_decision_ledger_persists_and_replays_exact_read_only_evidence(
     assert stored_proof["production_authority"] is False
     assert stored_proof["real_capital"] == 0
 
+    forecast_proof = ledger.read_proof_for_forecast(forecast.forecast_identity)
+    assert forecast_proof is not None
+    assert forecast_proof["proof_identity"] == proof.proof_identity
+    assert forecast_proof["signal_freeze_identity"] == forecast.signal_freeze_identity
+
     feed = ledger.read_feed(limit=10)
     assert len(feed) == 1
     assert feed[0]["event_identity"] == event.event_identity
