@@ -134,6 +134,65 @@ def test_prepared_cycle_completes_forecast_and_required_hold_cash_intent(
     assert R25ShadowCycleManifest(manifest_path).verify_read_only().record_count == 1
 
 
+def test_prepared_cycle_round_trips_and_completes_without_sizing_policy(
+    tmp_path: Path,
+) -> None:
+    bundle = directional_bundle()
+    signal = bundle.signal_decision
+    policy = build_wc2_untouched_forward_policy(
+        preregistered_at_ms=signal.as_of_ms - 2_000,
+        collection_start_ms=signal.as_of_ms - 1_000,
+    )
+    activation = _activation()
+    frozen_at = signal.as_of_ms + 10
+    issued_at = frozen_at + 10
+    receipt = build_wc2_prepared_cycle_receipt(
+        bundle,
+        policy=policy,
+        activation=activation,
+        sizing_policy=None,
+        source_frozen_at_ms=frozen_at,
+        issued_at_ms=issued_at,
+        maximum_issuance_delay_ms=100,
+        horizon_bars=4,
+        base_asset="BTC",
+        capital_assessed_at_ms=issued_at + 1,
+        sized_at_ms=issued_at + 2,
+        previewed_at_ms=issued_at + 3,
+        indexed_at_ms=issued_at + 3,
+    )
+    prepared = WC2PreparedCycleJournal(
+        tmp_path / "policy-free.wc2-prepared.sqlite3"
+    )
+    assert prepared.append(receipt) is True
+    replayed = prepared.read_for_signal(signal.freeze_identity)
+    assert replayed is not None
+    assert replayed.sizing_policy is None
+    assert replayed == receipt
+
+    decision_path, cohort_path, shadow_path, manifest_path = _runtime_paths(
+        tmp_path
+    )
+    result = complete_wc2_prepared_cycle(
+        replayed,
+        policy=policy,
+        activation=activation,
+        decision_ledger=ImmutableDecisionEvidenceLedger(decision_path),
+        cohort_journal=WC2CohortJournal(cohort_path),
+        shadow_journal=R25ShadowIntentJournal(shadow_path),
+        shadow_manifest=R25ShadowCycleManifest(manifest_path),
+    )
+
+    assert result.action is PaperAction.HOLD_CASH
+    assert result.historical_market_read_performed is False
+    assert result.historical_backfill_authority is False
+    assert result.canonical_epoch2_mutation is False
+    status = WC2CohortJournal(cohort_path).verify_read_only()
+    assert status.forecast_count == 1
+    assert status.intent_count == 1
+    assert status.execution_count == 0
+
+
 def test_prepared_cycle_exact_replay_is_fully_idempotent(
     tmp_path: Path,
 ) -> None:
