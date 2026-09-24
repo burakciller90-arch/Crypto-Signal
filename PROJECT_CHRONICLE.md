@@ -1,6 +1,24 @@
 # PROJECT CHRONICLE
 
 
+## 2026-09-25 — WC7 composes the canonical current frontier without upgrading any blocker into an edge claim
+
+PR #1203 completed the next WC7 review-infrastructure step: one deterministic current-frontier snapshot now combines accepted evidence, canonical subsystem adapters and explicit blocker boundaries across all nine world-class review dimensions.
+
+The composer consumes WC2 and WC6 only through their accepted read-only adapters. Current insufficient WC2 readiness remains missing untouched-forward evidence and carries its readiness identity only as blocker provenance. WC6 remains an external dependency because the accepted sandbox/testnet boundary is still NOT_CONFIGURED with no venue acknowledgement or fills. The other incomplete dimensions are equally explicit: WC3 has not produced accepted cost-adjusted expectancy or controlled-drawdown evidence; WC4's accepted champion/challenger engineering cycle is not durable regime-edge evidence; human <=10-second usability remains unmeasured.
+
+The satisfied/currently-applicable side is equally constrained. Runtime reliability is supported only by runtime-acceptance evidence. Abstention/failure transparency is supported by its accepted fail-closed evidence. Probability calibration is NOT_APPLICABLE only because the current WC7 packet uses no probability claim, and that status is bound to an explicit no-probability-use boundary.
+
+PR #1203 also separates semantic blocker identities for cost, drawdown, regime and usability from their upstream artifacts, preventing an engineering acceptance hash from silently masquerading as the missing scientific evidence itself. A regression proves that even if WC2 alone later becomes REVIEW_ELIGIBLE, the remaining blockers still force INSUFFICIENT_EVIDENCE.
+
+The final PR head `cfbfb55e59df8688f7f06937231a97d3e20f575d` passed UID504 run 36066162469 / job 107856301392: exact source, focused WC7 packet semantics, full research regression, whole-repository regression and Development non-mutation all passed with `WC7_MACHINE_EDGE_VERDICT=NONE` and `REAL_CAPITAL=0`.
+
+PR #1203 merged as `84a66a34dd6096ff4b635305347cef1d6782d6b9`. Exact-main push run 36066300555 / job 107856745333 independently passed the same acceptance.
+
+The result is deliberately not a better trading verdict. WC7 current-frontier packet composition is accepted, while the current conclusion remains `INSUFFICIENT_EVIDENCE`. No machine EDGE_* verdict, production authority or real-capital authority exists.
+
+
+
 ## 2026-09-25 — WC7 begins consuming canonical WC2/WC6 state without upgrading blockers into evidence
 
 PR #1201 moved WC7 from typed-but-manually supplied provenance toward canonical subsystem adapters. The change is intentionally asymmetric: canonical source state may satisfy a dimension only when its own accepted semantics justify that, while an accepted blocker artifact remains a blocker.
