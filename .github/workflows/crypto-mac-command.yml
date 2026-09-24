@@ -166,6 +166,65 @@ jobs:
           echo "EVENT_SOURCE_STATE_BYTE_STABLE_PASS=YES"
           echo "EVENT_SOURCE_STATE_READONLY_PASS=YES"
 
+      - name: ROLLING WAKE STATE
+        if: steps.parse.outputs.command == 'rollingstate'
+        shell: bash
+        run: |
+          set -euo pipefail
+          INSTALL="$HOME/Library/Application Support/CryptoSignal/continuity20m"
+          RUNTIME="$INSTALL/runtime"
+          SHARED="/Users/Shared/.crypto-signal-wake-relay"
+          LOCAL_STATE="/Volumes/Crypto-504/Crypto-Signal/Development/runtime/continuity"
+          PIDFILE="$RUNTIME/rolling_wake.pid"
+          STATUS_FILE="$RUNTIME/rolling_wake_status"
+          STATE_FILE="$RUNTIME/rolling_wake_state.json"
+          HEARTBEAT_FILE="$RUNTIME/rolling_wake_heartbeat"
+
+          echo "=== ROLLING TIMER PROCESS ==="
+          PID="$(cat "$PIDFILE" 2>/dev/null || true)"
+          echo "ROLLING_PID=$PID"
+          if [ -n "$PID" ] && kill -0 "$PID" >/dev/null 2>&1; then
+            echo "ROLLING_PID_ALIVE=YES"
+            ps -p "$PID" -o pid=,ppid=,uid=,etime=,command=
+          else
+            echo "ROLLING_PID_ALIVE=NO"
+          fi
+
+          echo "=== ROLLING TIMER STATUS ==="
+          if [ -f "$STATUS_FILE" ]; then
+            cat "$STATUS_FILE"
+          else
+            echo "ROLLING_STATUS_MISSING=YES"
+          fi
+
+          echo "=== ROLLING TIMER STATE JSON ==="
+          if [ -f "$STATE_FILE" ]; then
+            cat "$STATE_FILE"
+          else
+            echo "ROLLING_STATE_MISSING=YES"
+          fi
+
+          NOW="$(date +%s)"
+          HB="$(cat "$HEARTBEAT_FILE" 2>/dev/null || true)"
+          if [[ "$HB" =~ ^[0-9]+$ ]]; then
+            echo "ROLLING_HEARTBEAT_AGE_SECONDS=$((NOW-HB))"
+          else
+            echo "ROLLING_HEARTBEAT_MISSING=YES"
+          fi
+
+          echo "=== PAUSE AUTHORITY ==="
+          [ -f "$LOCAL_STATE/user_pause" ] && echo "LOCAL_PAUSED=YES" || echo "LOCAL_PAUSED=NO"
+          [ -f "$SHARED/user_pause" ] && echo "SHARED_PAUSED=YES" || echo "SHARED_PAUSED=NO"
+
+          echo "=== RELAY ==="
+          if [ -f "$SHARED/relay_status" ]; then
+            cat "$SHARED/relay_status"
+          else
+            echo "RELAY_STATUS_MISSING=YES"
+          fi
+
+          echo "ROLLING_STATE_READONLY_PASS=YES"
+
       - name: EVENT SOURCE SNAPSHOT
         if: steps.parse.outputs.command == 'eventsourcesnapshot'
         shell: bash
@@ -234,65 +293,6 @@ jobs:
           echo "EVENT_SOURCE_SNAPSHOT_APPEND_ONLY_EVIDENCE=YES"
           echo "EVENT_SOURCE_ONLINE_NOT_ASSERTED_PASS=YES"
           echo "REAL_CAPITAL=0"
-
-      - name: ROLLING WAKE STATE
-        if: steps.parse.outputs.command == 'rollingstate'
-        shell: bash
-        run: |
-          set -euo pipefail
-          INSTALL="$HOME/Library/Application Support/CryptoSignal/continuity20m"
-          RUNTIME="$INSTALL/runtime"
-          SHARED="/Users/Shared/.crypto-signal-wake-relay"
-          LOCAL_STATE="/Volumes/Crypto-504/Crypto-Signal/Development/runtime/continuity"
-          PIDFILE="$RUNTIME/rolling_wake.pid"
-          STATUS_FILE="$RUNTIME/rolling_wake_status"
-          STATE_FILE="$RUNTIME/rolling_wake_state.json"
-          HEARTBEAT_FILE="$RUNTIME/rolling_wake_heartbeat"
-
-          echo "=== ROLLING TIMER PROCESS ==="
-          PID="$(cat "$PIDFILE" 2>/dev/null || true)"
-          echo "ROLLING_PID=$PID"
-          if [ -n "$PID" ] && kill -0 "$PID" >/dev/null 2>&1; then
-            echo "ROLLING_PID_ALIVE=YES"
-            ps -p "$PID" -o pid=,ppid=,uid=,etime=,command=
-          else
-            echo "ROLLING_PID_ALIVE=NO"
-          fi
-
-          echo "=== ROLLING TIMER STATUS ==="
-          if [ -f "$STATUS_FILE" ]; then
-            cat "$STATUS_FILE"
-          else
-            echo "ROLLING_STATUS_MISSING=YES"
-          fi
-
-          echo "=== ROLLING TIMER STATE JSON ==="
-          if [ -f "$STATE_FILE" ]; then
-            cat "$STATE_FILE"
-          else
-            echo "ROLLING_STATE_MISSING=YES"
-          fi
-
-          NOW="$(date +%s)"
-          HB="$(cat "$HEARTBEAT_FILE" 2>/dev/null || true)"
-          if [[ "$HB" =~ ^[0-9]+$ ]]; then
-            echo "ROLLING_HEARTBEAT_AGE_SECONDS=$((NOW-HB))"
-          else
-            echo "ROLLING_HEARTBEAT_MISSING=YES"
-          fi
-
-          echo "=== PAUSE AUTHORITY ==="
-          [ -f "$LOCAL_STATE/user_pause" ] && echo "LOCAL_PAUSED=YES" || echo "LOCAL_PAUSED=NO"
-          [ -f "$SHARED/user_pause" ] && echo "SHARED_PAUSED=YES" || echo "SHARED_PAUSED=NO"
-
-          echo "=== RELAY ==="
-          if [ -f "$SHARED/relay_status" ]; then
-            cat "$SHARED/relay_status"
-          else
-            echo "RELAY_STATUS_MISSING=YES"
-          fi
-
-          echo "ROLLING_STATE_READONLY_PASS=YES"
 
       - name: SERVICES
         if: steps.parse.outputs.command == 'services'
