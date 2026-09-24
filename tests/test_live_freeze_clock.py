@@ -139,10 +139,19 @@ def test_live_clock_freezes_once_per_closed_source_cutoff(
     assert first.confluence_score is not None
     assert first.lifecycle_disposition is LedgerWriteDisposition.INSERTED
     assert first.source_cutoff_open_time_ms == items[-2].open_time_ms
+    assert first.bundle is not None
+    assert first.bundle.bundle_identity == first.bundle_identity
+    assert first.bundle.signal_decision.freeze_identity == (
+        first.signal_freeze_identity
+    )
+    assert first.frozen_at_ms is not None
+    assert first.frozen_at_ms >= first.bundle.signal_decision.as_of_ms
 
     assert second.status is LiveFreezeStatus.ALREADY_FROZEN
     assert second.source_cutoff_open_time_ms == first.source_cutoff_open_time_ms
     assert second.signal_freeze_identity is None
+    assert second.bundle is None
+    assert second.frozen_at_ms is None
     assert ledger.count_freezes() == 1
     assert ledger.count_lifecycle_evaluations() == 1
     assert adapter.calls == 2
