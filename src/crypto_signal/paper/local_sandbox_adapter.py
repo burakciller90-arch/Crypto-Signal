@@ -73,6 +73,9 @@ class WC6LocalSandboxAcceptedOrder:
     execution_snapshot_identity: str
     venue_rule_snapshot_identity: str
     authority_event_identity: str
+    submitted_at_ms: int
+    acknowledgement_latency_ms: int
+    final_fill_latency_ms: int
     canonical_fill_identity: str
     canonical_mutation_identity: str
     partial_fill_identities: tuple[str, ...]
@@ -116,6 +119,12 @@ class WC6LocalSandboxAcceptedOrder:
             raise ValueError("unsupported WC6 local-sandbox schema")
         if self.adapter_version != WC6_LOCAL_SANDBOX_ADAPTER_VERSION:
             raise ValueError("unsupported WC6 local-sandbox adapter")
+        if self.submitted_at_ms < 0:
+            raise ValueError("WC6 sandbox submit time cannot be negative")
+        if self.acknowledgement_latency_ms <= 0:
+            raise ValueError("WC6 sandbox acknowledgement latency must be positive")
+        if self.final_fill_latency_ms <= self.acknowledgement_latency_ms:
+            raise ValueError("WC6 sandbox final fill must follow acknowledgement")
         if self.adapter_status is not (
             WC6LocalSandboxAdapterStatus.IMPLEMENTED_NO_NETWORK
         ):
@@ -280,9 +289,9 @@ class WC6LocalSandboxDossier:
             raise ValueError("WC6 sandbox restart retry must be unchanged")
         if self.partial_fill_count < 2:
             raise ValueError("WC6 sandbox dossier requires partial fills")
-        if self.acknowledgement_latency_ms < 0:
-            raise ValueError("WC6 acknowledgement latency cannot be negative")
-        if self.final_fill_latency_ms < self.acknowledgement_latency_ms:
+        if self.acknowledgement_latency_ms <= 0:
+            raise ValueError("WC6 acknowledgement latency must be positive")
+        if self.final_fill_latency_ms <= self.acknowledgement_latency_ms:
             raise ValueError("WC6 final fill cannot predate acknowledgement")
         if not (
             self.quantity_reconciled
@@ -424,6 +433,24 @@ def build_local_sandbox_accepted_order(
         != bound_pretrade.execution_snapshot.snapshot_identity
     ):
         raise WC6LocalSandboxError("sandbox lifecycle/snapshot mismatch")
+    plan = bound_pretrade.pretrade.plan
+    if plan is None:
+        raise WC6LocalSandboxError("accepted sandbox order lost paper plan")
+    submitted_at_ms = plan.planned_at_ms
+    acknowledgement_latency_ms = (
+        lifecycle.acknowledgement.acknowledged_at_ms - submitted_at_ms
+    )
+    final_fill_latency_ms = (
+        lifecycle.partial_fills[-1].filled_at_ms - submitted_at_ms
+    )
+    if acknowledgement_latency_ms <= 0:
+        raise WC6LocalSandboxError(
+            "accepted sandbox acknowledgement latency must be positive"
+        )
+    if final_fill_latency_ms <= acknowledgement_latency_ms:
+        raise WC6LocalSandboxError(
+            "accepted sandbox final fill must follow acknowledgement"
+        )
     if lifecycle.sandbox_adapter_implemented:
         raise WC6LocalSandboxError(
             "shadow lifecycle must remain adapter-agnostic before wrapping"
@@ -447,6 +474,7 @@ def build_local_sandbox_accepted_order(
         "adapter_status": WC6LocalSandboxAdapterStatus.IMPLEMENTED_NO_NETWORK,
         "adapter_version": WC6_LOCAL_SANDBOX_ADAPTER_VERSION,
         "authority_event_identity": authority.authority_event_identity,
+        "acknowledgement_latency_ms": accepted_order.acknowledgement_latency_ms,
         "canonical_fill_identity": lifecycle.canonical_fill_identity,
         "canonical_mutation_identity": lifecycle.canonical_mutation_identity,
         "client_order_key": client_order_key,
@@ -457,12 +485,14 @@ def build_local_sandbox_accepted_order(
         "live_order_authority": False,
         "network_authority": False,
         "order_identity": lifecycle.order_identity,
+        "final_fill_latency_ms": accepted_order.final_fill_latency_ms,
         "partial_fill_identities": tuple(
             item.fill_identity for item in lifecycle.partial_fills
         ),
         "pretrade_identity": lifecycle.pretrade_identity,
         "production_authority": False,
         "real_capital": REAL_CAPITAL,
+        "submitted_at_ms": submitted_at_ms,
         "schema_version": WC6_LOCAL_SANDBOX_SCHEMA_VERSION,
         "venue_rule_snapshot_identity": venue_rules.snapshot_identity,
     }
@@ -480,6 +510,9 @@ def build_local_sandbox_accepted_order(
         execution_snapshot_identity=lifecycle.execution_snapshot_identity,
         venue_rule_snapshot_identity=venue_rules.snapshot_identity,
         authority_event_identity=authority.authority_event_identity,
+        submitted_at_ms=submitted_at_ms,
+        acknowledgement_latency_ms=accepted_order.acknowledgement_latency_ms,
+        final_fill_latency_ms=accepted_order.final_fill_latency_ms,
         canonical_fill_identity=lifecycle.canonical_fill_identity,
         canonical_mutation_identity=lifecycle.canonical_mutation_identity,
         partial_fill_identities=tuple(
@@ -621,30 +654,12 @@ def build_wc6_local_sandbox_dossier(
     ):
         raise WC6LocalSandboxError("WC6 lifecycle reconciliation is incomplete")
 
-    decision_time = min(
-        item.filled_at_ms for item in lifecycle.partial_fills
-    ) - min(
-        scenario_offset
-        for scenario_offset in (
-            item.filled_at_ms - lifecycle.acknowledgement.acknowledged_at_ms
-            for item in lifecycle.partial_fills
-        )
-    )
-    acknowledgement_latency_ms = (
-        lifecycle.acknowledgement.acknowledged_at_ms - decision_time
-    )
-    final_fill_latency_ms = (
-        lifecycle.partial_fills[-1].filled_at_ms - decision_time
-    )
-    if acknowledgement_latency_ms < 0:
-        raise WC6LocalSandboxError("WC6 acknowledgement latency is invalid")
-
     payload = {
         "accepted_adapter_order_identity": (
             accepted_order.adapter_order_identity
         ),
         "accepted_lifecycle_identity": lifecycle.lifecycle_identity,
-        "acknowledgement_latency_ms": acknowledgement_latency_ms,
+        "acknowledgement_latency_ms": accepted_order.acknowledgement_latency_ms,
         "accounting_shadow_reconciled": lifecycle.accounting_shadow_reconciled,
         "adapter_status": WC6LocalSandboxAdapterStatus.IMPLEMENTED_NO_NETWORK,
         "adapter_version": WC6_LOCAL_SANDBOX_ADAPTER_VERSION,
@@ -653,7 +668,7 @@ def build_wc6_local_sandbox_dossier(
         "credential_authority": False,
         "duplicate_prevention_proven": True,
         "external_testnet_status": WC6ExternalTestnetStatus.NOT_CONNECTED,
-        "final_fill_latency_ms": final_fill_latency_ms,
+        "final_fill_latency_ms": accepted_order.final_fill_latency_ms,
         "first_journal_disposition": first_journal_disposition,
         "kill_switch_proven": True,
         "kill_switch_rejection_identity": (
@@ -759,6 +774,9 @@ def _accepted_order_payload(
         "adapter_status": order.adapter_status,
         "adapter_version": order.adapter_version,
         "authority_event_identity": order.authority_event_identity,
+        "submitted_at_ms": order.submitted_at_ms,
+        "acknowledgement_latency_ms": order.acknowledgement_latency_ms,
+        "final_fill_latency_ms": order.final_fill_latency_ms,
         "canonical_fill_identity": order.canonical_fill_identity,
         "canonical_mutation_identity": order.canonical_mutation_identity,
         "client_order_key": order.client_order_key,
