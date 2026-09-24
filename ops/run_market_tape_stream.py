@@ -14,6 +14,10 @@ from crypto_signal.data.adapters.bybit_microstructure_ws import (
     BybitMicrostructureWireEvent,
     BybitSpotMicrostructureStream,
 )
+from crypto_signal.data.market_data_gap_ledger import (
+    IngestionSilenceGapMonitor,
+    MarketDataGapLedger,
+)
 from crypto_signal.data.market_tape import MarketTapeStore
 from crypto_signal.data.market_tape_collector_runtime import (
     MarketTapeCollectorRuntimeStore,
@@ -23,7 +27,11 @@ from crypto_signal.data.market_tape_collector_runtime import (
 from crypto_signal.data.market_tape_wire_collection import (
     persist_bybit_wire_stream,
 )
-from crypto_signal.data.raw_market_tape import RawMarketTapeStore
+from crypto_signal.data.models import Exchange
+from crypto_signal.data.raw_market_tape import (
+    RawMarketEvent,
+    RawMarketTapeStore,
+)
 
 DEFAULT_DB = Path(
     "/Volumes/Crypto-504/Crypto-Signal/Development/runtime/"
@@ -41,6 +49,11 @@ DEFAULT_RUNTIME_STATUS_DB = Path(
     "/Volumes/Crypto-504/Crypto-Signal/Development/runtime/"
     "market_tape/collector_runtime.sqlite3"
 )
+DEFAULT_GAP_LEDGER_DB = Path(
+    "/Volumes/Crypto-504/Crypto-Signal/Development/runtime/"
+    "market_tape/market_data_gaps.sqlite3"
+)
+DEFAULT_MAX_INGESTION_SILENCE_MS = 60_000
 DEFAULT_SYMBOLS = ("BTCUSDT", "ETHUSDT", "SOLUSDT")
 
 
@@ -53,6 +66,11 @@ def parse_args() -> argparse.Namespace:
         "--runtime-status-db",
         type=Path,
         default=DEFAULT_RUNTIME_STATUS_DB,
+    )
+    parser.add_argument(
+        "--gap-ledger-db",
+        type=Path,
+        default=DEFAULT_GAP_LEDGER_DB,
     )
     parser.add_argument(
         "--symbols",
@@ -71,6 +89,11 @@ def parse_args() -> argparse.Namespace:
         default=10_000,
     )
     parser.add_argument(
+        "--max-ingestion-silence-ms",
+        type=int,
+        default=DEFAULT_MAX_INGESTION_SILENCE_MS,
+    )
+    parser.add_argument(
         "--max-events",
         type=int,
         default=0,
@@ -84,6 +107,7 @@ async def run(args: argparse.Namespace) -> int:
         ("db", args.db),
         ("raw_db", args.raw_db),
         ("runtime_status_db", args.runtime_status_db),
+        ("gap_ledger_db", args.gap_ledger_db),
     ):
         if not str(path).startswith("/Volumes/Crypto-504/"):
             print(
@@ -115,6 +139,13 @@ async def run(args: argparse.Namespace) -> int:
             flush=True,
         )
         return 2
+    if args.max_ingestion_silence_ms <= 0:
+        print(
+            "MARKET_TAPE_STREAM_ERROR=INVALID_GAP_SILENCE_POLICY",
+            file=sys.stderr,
+            flush=True,
+        )
+        return 2
 
     symbols = tuple(dict.fromkeys(str(value).upper() for value in args.symbols))
     if not symbols or any(not symbol for symbol in symbols):
@@ -136,6 +167,21 @@ async def run(args: argparse.Namespace) -> int:
         return 3
 
     runtime_store = MarketTapeCollectorRuntimeStore(args.runtime_status_db)
+    gap_ledger = MarketDataGapLedger(args.gap_ledger_db)
+    gap_monitor = IngestionSilenceGapMonitor(
+        ledger=gap_ledger,
+        provider="bybit",
+        source="market_tape_stream",
+        max_ingestion_silence_ms=args.max_ingestion_silence_ms,
+    )
+    for raw_event in raw_store.latest_by_context(exchange=Exchange.BYBIT):
+        gap_monitor.seed_persisted_event(
+            channel=raw_event.channel,
+            symbol=raw_event.symbol,
+            ingested_at_ms=raw_event.ingested_at_ms,
+            source_evidence_identities=(raw_event.event_identity,),
+        )
+
     previous = runtime_store.latest_instance(
         provider="bybit",
         source="market_tape_stream",
@@ -162,16 +208,19 @@ async def run(args: argparse.Namespace) -> int:
         observed_at_ms = time.time_ns() // 1_000_000
         heartbeat_sequence += 1
         counts = store.counts()
-        runtime_store.append_heartbeat(
-            build_collector_heartbeat(
-                instance_identity=instance.instance_identity,
-                sequence_no=heartbeat_sequence,
-                observed_at_ms=observed_at_ms,
-                last_successful_ingestion_ms=last_ingestion_ms,
-                observed_messages_total=last_observed_messages,
-                normalized_rows_total=counts.total,
-                raw_rows_total=raw_store.count(),
-            )
+        heartbeat = build_collector_heartbeat(
+            instance_identity=instance.instance_identity,
+            sequence_no=heartbeat_sequence,
+            observed_at_ms=observed_at_ms,
+            last_successful_ingestion_ms=last_ingestion_ms,
+            observed_messages_total=last_observed_messages,
+            normalized_rows_total=counts.total,
+            raw_rows_total=raw_store.count(),
+        )
+        runtime_store.append_heartbeat(heartbeat)
+        gap_monitor.check_silence(
+            observed_at_ms=observed_at_ms,
+            source_evidence_identities=(heartbeat.heartbeat_identity,),
         )
 
     async def heartbeat_loop() -> None:
@@ -191,10 +240,23 @@ async def run(args: argparse.Namespace) -> int:
         event: BybitMicrostructureWireEvent,
         observed_messages: int,
     ) -> None:
+        nonlocal last_observed_messages
+        last_observed_messages = observed_messages
+
+    def persist_raw_event(
+        raw_event: RawMarketEvent,
+        observed_messages: int,
+    ) -> None:
         nonlocal last_ingestion_ms
         nonlocal last_observed_messages
-        last_ingestion_ms = event.ingested_at_ms
+        last_ingestion_ms = raw_event.ingested_at_ms
         last_observed_messages = observed_messages
+        gap_monitor.observe_persisted_event(
+            channel=raw_event.channel,
+            symbol=raw_event.symbol,
+            ingested_at_ms=raw_event.ingested_at_ms,
+            source_evidence_identities=(raw_event.event_identity,),
+        )
 
     emit_heartbeat()
     heartbeat_task = asyncio.create_task(heartbeat_loop())
@@ -212,6 +274,7 @@ async def run(args: argparse.Namespace) -> int:
             ),
             max_messages=(None if args.max_events == 0 else args.max_events),
             progress_callback=persist_progress,
+            persisted_event_callback=persist_raw_event,
         )
         emit_heartbeat()
     except (OSError, sqlite3.Error, ValueError) as exc:
@@ -247,6 +310,9 @@ async def run(args: argparse.Namespace) -> int:
         f"collector_start_kind={instance.start_kind.value} "
         f"collector_heartbeat_seq={heartbeat_sequence} "
         f"collector_runtime_quick_check={'YES' if runtime_store.quick_check() else 'NO'} "
+        f"gap_ledger_events={len(gap_ledger.events())} "
+        f"gap_ledger_quick_check={'YES' if gap_ledger.quick_check() else 'NO'} "
+        f"gap_silence_policy_ms={args.max_ingestion_silence_ms} "
         "REAL_CAPITAL=0",
         flush=True,
     )
