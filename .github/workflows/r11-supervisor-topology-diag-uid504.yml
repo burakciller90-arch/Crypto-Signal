@@ -1,0 +1,38 @@
+name: R11 Supervisor Topology Diagnostic UID504
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/r11-supervisor-topology-diag-uid504.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          clean: true
+          fetch-depth: 1
+
+      - name: Exact source and process snapshot
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git -C "$GITHUB_WORKSPACE" rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          SUP="$ROOT/ssd-service-supervisor.sh"
+          echo "=== MATCHING PATH ==="
+          /bin/ps -axo pid=,ppid=,comm=,args= | /usr/bin/awk -v needle="$SUP" 'index($0, needle) > 0 {print}'
+          echo "=== REAL BASH MATCH ==="
+          /bin/ps -axo pid=,ppid=,comm=,args= | /usr/bin/awk -v needle="$SUP" '($3 == "bash" || $3 == "/bin/bash") && index($0, needle) > 0 {print}'
+          echo "=== PIDFILE ==="
+          cat "$ROOT/ssd-service-supervisor.pid" 2>/dev/null || true
+          echo "=== SUPERVISOR LOG TAIL ==="
+          tail -80 "$ROOT/ServiceLogs/supervisor.log" 2>/dev/null || true
+          echo "R11_SUPERVISOR_TOPOLOGY_DIAG_PASS=YES"
