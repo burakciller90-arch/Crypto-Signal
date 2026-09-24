@@ -85,6 +85,9 @@ def _executed_values() -> dict[str, object]:
                 venue_reference=venue,
                 **costs,
             ),
+            "quantity": Decimal("1"),
+            "reference_price": Decimal("100"),
+            "simulated_fill_price": Decimal("100.10"),
             **costs,
             "venue_reference": venue,
         }
@@ -113,6 +116,9 @@ def test_execution_requires_fill_and_explicit_cost_evidence() -> None:
     assert record.simulated_execution is True
     assert record.explicit_cost_evidence is True
     assert record.fill_identity == _sha("fill")
+    assert record.quantity == Decimal("1")
+    assert record.reference_price == Decimal("100")
+    assert record.simulated_fill_price == Decimal("100.10")
     assert record.fee_usdt == Decimal("0.10")
     assert record.spread_usdt == Decimal("0.05")
     assert record.slippage_usdt == Decimal("0.05")
@@ -198,6 +204,9 @@ def test_journal_is_append_only_idempotent_and_counts_economic_truth(
     executed_values["symbol"] = PaperSymbol.ETHUSDT
     executed = build_wc2_paper_execution_decision(**executed_values)
     assert journal.append(executed) is True
+
+    records = journal.read_records()
+    assert records == (hold, executed)
 
     status = journal.verify_read_only()
     assert status.decision_n == 2
