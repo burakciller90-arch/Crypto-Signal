@@ -47,6 +47,9 @@ async def persist_bybit_wire_stream(
     persisted_event_callback: (
         Callable[[RawMarketEvent, int], None] | None
     ) = None,
+    collection_progress_callback: (
+        Callable[[MarketTapeWireCollectionResult], None] | None
+    ) = None,
 ) -> MarketTapeWireCollectionResult:
     if orderbook_snapshot_interval_ms <= 0:
         raise ValueError("orderbook snapshot interval must be positive")
@@ -62,6 +65,18 @@ async def persist_bybit_wire_stream(
     trades_inserted = 0
     trades_unchanged = 0
     last_orderbook_bucket: dict[str, int] = {}
+
+    def result_snapshot() -> MarketTapeWireCollectionResult:
+        return MarketTapeWireCollectionResult(
+            observed_messages=observed_messages,
+            raw_inserted=raw_inserted,
+            raw_unchanged=raw_unchanged,
+            orderbooks_inserted=orderbooks_inserted,
+            orderbooks_unchanged=orderbooks_unchanged,
+            orderbooks_skipped_by_cadence=orderbooks_skipped_by_cadence,
+            trades_inserted=trades_inserted,
+            trades_unchanged=trades_unchanged,
+        )
 
     async for event in events:
         raw_disposition, raw_event = raw_store.append(
@@ -114,16 +129,9 @@ async def persist_bybit_wire_stream(
             progress_callback(event, observed_messages)
         if persisted_event_callback is not None:
             persisted_event_callback(raw_event, observed_messages)
+        if collection_progress_callback is not None:
+            collection_progress_callback(result_snapshot())
         if max_messages is not None and observed_messages >= max_messages:
             break
 
-    return MarketTapeWireCollectionResult(
-        observed_messages=observed_messages,
-        raw_inserted=raw_inserted,
-        raw_unchanged=raw_unchanged,
-        orderbooks_inserted=orderbooks_inserted,
-        orderbooks_unchanged=orderbooks_unchanged,
-        orderbooks_skipped_by_cadence=orderbooks_skipped_by_cadence,
-        trades_inserted=trades_inserted,
-        trades_unchanged=trades_unchanged,
-    )
+    return result_snapshot()
