@@ -24,7 +24,7 @@ jobs:
           set -euo pipefail
           cmd="$(printf '%s\n' "$ISSUE_BODY" | awk -F: 'tolower($1)=="command" {gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2); print tolower($2); exit}')"
           case "$cmd" in
-            status|eventsourcestate|eventsourcesnapshot|blsprobe|fredprobe|wc2epoch2activate|wc2policyregister|wc2protocolregister|wc2collectonce|wc2state|services|logs|disk|sync|producttest|fulltest|productstate|productdeploy|paperreview|paperinspect|paperfixlint|paperharden|stateplanreview|stateplaninspect|stateplanharden|cursorreview|cursorreviewtail|cursorcleanup|bridgecheck|bridgestate|rollingstate|pausecheck|wakepause|wakeresume|wakearm|waketest|wakeheartbeat|chatbusyprobe|cursorcheck|cursorauthdiag|cursorttycheck|alertclockstate|alertclockpause|alertclockresume|migrationinspect|migrationinventory|ssddashboarddiag|productcrashlogs|ssddashboardwrappertest|ssdtcclaunchtest|ssdbackgroundteststart|ssdbackgroundtestcheck|ssdleftover|runnerpersistinstall|runnerpersistdiag|runnercutoverdiag|dashboardstart504|runnerterminalwatchdoginstall)
+            status|eventsourcestate|eventsourcesnapshot|blsprobe|fredprobe|wc2epoch2activate|wc2policyregister|wc2protocolregister|wc2collectonce|wc2state|services|logs|disk|sync|producttest|fulltest|productstate|productdeploy|paperreview|paperinspect|paperfixlint|paperharden|stateplanreview|stateplaninspect|stateplanharden|cursorreview|cursorreviewtail|cursorcleanup|bridgecheck|bridgestate|rollingstate|pausecheck|wakepause|wakeresume|wakearm|waketest|wakeheartbeat|chatbusyprobe|cursorcheck|cursorauthdiag|cursorttycheck|alertclockstate|alertclockpause|alertclockresume|migrationinspect|migrationinventory|ssddashboarddiag|productcrashlogs|ssddashboardwrappertest|ssdtcclaunchtest|ssdbackgroundteststart|ssdbackgroundtestcheck|ssdleftover|runnerpersistinstall|runnerpersistdiag|runnercutoverdiag|dashboardstart504|galactechpreview|runnerterminalwatchdoginstall)
               ;;
             *)
               echo "Unsupported command: $cmd"
@@ -87,6 +87,105 @@ jobs:
           echo "WC2_POLICY_WORKFLOW_SHA=$GITHUB_SHA"
           test "$WORKSPACE_HEAD" = "$GITHUB_SHA"
           echo "WC2_POLICY_EXACT_WORKFLOW_SOURCE_PASS=YES"
+
+      - name: CHECKOUT EXACT GALACTECH PREVIEW SOURCE
+        if: steps.parse.outputs.command == 'galactechpreview'
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          clean: true
+          fetch-depth: 1
+
+      - name: VERIFY EXACT GALACTECH PREVIEW SOURCE
+        if: steps.parse.outputs.command == 'galactechpreview'
+        shell: bash
+        run: |
+          set -euo pipefail
+          WORKSPACE_HEAD="$(git -C "$GITHUB_WORKSPACE" rev-parse HEAD)"
+          echo "GALACTECH_PREVIEW_WORKSPACE_HEAD=$WORKSPACE_HEAD"
+          echo "GALACTECH_PREVIEW_WORKFLOW_SHA=$GITHUB_SHA"
+          test "$WORKSPACE_HEAD" = "$GITHUB_SHA"
+          grep -F 'data-ui-version="galactech-v1.1-polish"' "$GITHUB_WORKSPACE/src/crypto_signal/product/galactech/index.html" >/dev/null
+          echo "GALACTECH_PREVIEW_EXACT_SOURCE_PASS=YES"
+
+      - name: GALACTECH EXACT MAIN PREVIEW
+        if: steps.parse.outputs.command == 'galactechpreview'
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          DEV="$ROOT/Development"
+          PY="$DEV/.venv/bin/python"
+          PORT=48705
+          URL="http://127.0.0.1:$PORT"
+          PIDFILE="$ROOT/galactech-preview.pid"
+          OUT="$ROOT/ServiceLogs/galactech-preview.out.log"
+          ERR="$ROOT/ServiceLogs/galactech-preview.err.log"
+
+          test "$(id -u)" = "504"
+          test -x "$PY"
+          test -f "$GITHUB_WORKSPACE/ops/run_dashboard.py"
+          test -f "$DEV/runtime/ledger/live_signal_ledger.sqlite3"
+          mkdir -p "$ROOT/ServiceLogs"
+
+          listener="$(/usr/sbin/lsof -nP -iTCP:$PORT -sTCP:LISTEN -t 2>/dev/null | head -1 || true)"
+          if [ -n "$listener" ]; then
+            kill "$listener" >/dev/null 2>&1 || true
+            for i in {1..10}; do
+              listener="$(/usr/sbin/lsof -nP -iTCP:$PORT -sTCP:LISTEN -t 2>/dev/null | head -1 || true)"
+              [ -z "$listener" ] && break
+              sleep 1
+            done
+          fi
+          listener="$(/usr/sbin/lsof -nP -iTCP:$PORT -sTCP:LISTEN -t 2>/dev/null | head -1 || true)"
+          if [ -n "$listener" ]; then
+            kill -KILL "$listener" >/dev/null 2>&1 || true
+            sleep 1
+          fi
+
+          (
+            unset RUNNER_TRACKING_ID
+            export PYTHONPATH="$GITHUB_WORKSPACE/src"
+            cd "$GITHUB_WORKSPACE"
+            exec "$PY" "$GITHUB_WORKSPACE/ops/run_dashboard.py" \
+              --host 127.0.0.1 \
+              --port "$PORT" \
+              --ledger "$DEV/runtime/ledger/live_signal_ledger.sqlite3" \
+              --alert-outbox "$DEV/runtime/alerts/alert_outbox.sqlite3" \
+              --paper-ledger "$DEV/runtime/paper/paper_fund.sqlite3" \
+              --candle-cache "$DEV/runtime/data/live_base_15m_cache.sqlite3"
+          ) >>"$OUT" 2>>"$ERR" < /dev/null &
+          preview_pid="$!"
+          echo "$preview_pid" > "$PIDFILE"
+
+          ready=0
+          for i in {1..30}; do
+            if curl -fsS --max-time 3 "$URL/api/health" >/tmp/galactech-preview-health.json 2>/dev/null; then
+              ready=1
+              break
+            fi
+            sleep 1
+          done
+          if [ "$ready" != "1" ]; then
+            echo "GALACTECH_PREVIEW_HEALTH_FAIL"
+            tail -120 "$ERR" 2>/dev/null || true
+            exit 70
+          fi
+
+          curl -fsS --max-time 5 "$URL/" >/tmp/galactech-preview-index.html
+          grep -F 'data-ui-version="galactech-v1.1-polish"' /tmp/galactech-preview-index.html >/dev/null
+          grep -F 'R25 / OPERATIONAL TRUTH' /tmp/galactech-preview-index.html >/dev/null
+          grep -F 'REAL_CAPITAL=0' /tmp/galactech-preview-index.html >/dev/null
+          test "$(curl -sS -o /dev/null -w '%{http_code}' -X POST --max-time 5 "$URL/")" = "405"
+
+          listener="$(/usr/sbin/lsof -nP -iTCP:$PORT -sTCP:LISTEN -t 2>/dev/null | head -1 || true)"
+          test -n "$listener"
+          echo "$listener" > "$PIDFILE"
+          echo "GALACTECH_PREVIEW_PID=$listener"
+          echo "GALACTECH_PREVIEW_URL=$URL/"
+          echo "GALACTECH_PREVIEW_READ_ONLY_PASS=YES"
+          echo "REAL_CAPITAL=0"
+          /usr/bin/open "$URL/" || true
 
       - name: STATUS
         if: steps.parse.outputs.command == 'status'
