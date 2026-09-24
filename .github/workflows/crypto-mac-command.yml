@@ -910,6 +910,22 @@ jobs:
                               "wc2_cohort_resolutions",
                           )
                       }
+                      regime_rows = db.execute(
+                          """
+                          SELECT regime, COUNT(*)
+                          FROM wc2_cohort_forecasts
+                          GROUP BY regime
+                          ORDER BY regime
+                          """
+                      ).fetchall()
+                      latest_forecast = db.execute(
+                          """
+                          SELECT forecast_identity, regime, issued_at_ms
+                          FROM wc2_cohort_forecasts
+                          ORDER BY issued_at_ms DESC, sequence_id DESC
+                          LIMIT 1
+                          """
+                      ).fetchone()
                   print(
                       "WC2_COHORT_STATUS=PERSISTED "
                       f"forecasts={counts['wc2_cohort_forecasts']} "
@@ -917,6 +933,21 @@ jobs:
                       f"executions={counts['wc2_cohort_executions']} "
                       f"resolutions={counts['wc2_cohort_resolutions']}"
                   )
+                  regimes = ",".join(
+                      f"{str(row[0])}:{int(row[1])}"
+                      for row in regime_rows
+                  )
+                  print(
+                      "WC2_COHORT_REGIMES "
+                      f"counts={regimes or 'EMPTY'}"
+                  )
+                  if latest_forecast is not None:
+                      print(
+                          "WC2_COHORT_LATEST_FORECAST "
+                          f"forecast_identity={latest_forecast[0]} "
+                          f"regime={latest_forecast[1]} "
+                          f"issued_at_ms={int(latest_forecast[2])}"
+                      )
 
               for name, source in sources.items():
                   if name not in accepted:
