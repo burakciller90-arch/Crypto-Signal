@@ -57,6 +57,33 @@ DEFAULT_MAX_INGESTION_SILENCE_MS = 60_000
 DEFAULT_SYMBOLS = ("BTCUSDT", "ETHUSDT", "SOLUSDT")
 
 
+class _MarketTapeCounterCache:
+    def __init__(
+        self,
+        *,
+        normalized_rows_total: int,
+        raw_rows_total: int,
+    ) -> None:
+        self._normalized_rows_total = normalized_rows_total
+        self._raw_rows_total = raw_rows_total
+
+    def snapshot(self) -> tuple[int, int]:
+        return self._normalized_rows_total, self._raw_rows_total
+
+    async def refresh(
+        self,
+        *,
+        store: MarketTapeStore,
+        raw_store: RawMarketTapeStore,
+    ) -> None:
+        normalized_counts, raw_rows_total = await asyncio.gather(
+            asyncio.to_thread(store.counts),
+            asyncio.to_thread(raw_store.count),
+        )
+        self._normalized_rows_total = normalized_counts.total
+        self._raw_rows_total = raw_rows_total
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--db", type=Path, default=DEFAULT_DB)
@@ -166,6 +193,12 @@ async def run(args: argparse.Namespace) -> int:
         )
         return 3
 
+    initial_counts = store.counts()
+    counter_cache = _MarketTapeCounterCache(
+        normalized_rows_total=initial_counts.total,
+        raw_rows_total=raw_store.count(),
+    )
+
     runtime_store = MarketTapeCollectorRuntimeStore(args.runtime_status_db)
     gap_ledger = MarketDataGapLedger(args.gap_ledger_db)
     gap_ledger.initialize()
@@ -208,15 +241,15 @@ async def run(args: argparse.Namespace) -> int:
         nonlocal heartbeat_sequence
         observed_at_ms = time.time_ns() // 1_000_000
         heartbeat_sequence += 1
-        counts = store.counts()
+        normalized_rows_total, raw_rows_total = counter_cache.snapshot()
         heartbeat = build_collector_heartbeat(
             instance_identity=instance.instance_identity,
             sequence_no=heartbeat_sequence,
             observed_at_ms=observed_at_ms,
             last_successful_ingestion_ms=last_ingestion_ms,
             observed_messages_total=last_observed_messages,
-            normalized_rows_total=counts.total,
-            raw_rows_total=raw_store.count(),
+            normalized_rows_total=normalized_rows_total,
+            raw_rows_total=raw_rows_total,
         )
         runtime_store.append_heartbeat(heartbeat)
         gap_monitor.check_silence(
@@ -234,6 +267,30 @@ async def run(args: argparse.Namespace) -> int:
                 )
             except TimeoutError:
                 emit_heartbeat()
+                continue
+            return
+
+    async def counter_refresh_loop() -> None:
+        interval_seconds = args.heartbeat_interval_ms / 1_000
+        while True:
+            try:
+                await asyncio.wait_for(
+                    heartbeat_stop.wait(),
+                    timeout=interval_seconds,
+                )
+            except TimeoutError:
+                try:
+                    await counter_cache.refresh(
+                        store=store,
+                        raw_store=raw_store,
+                    )
+                except (OSError, sqlite3.Error, ValueError) as exc:
+                    print(
+                        "MARKET_TAPE_COUNTER_REFRESH_ERROR "
+                        f"error={type(exc).__name__}:{exc}",
+                        file=sys.stderr,
+                        flush=True,
+                    )
                 continue
             return
 
@@ -261,6 +318,7 @@ async def run(args: argparse.Namespace) -> int:
 
     emit_heartbeat()
     heartbeat_task = asyncio.create_task(heartbeat_loop())
+    counter_refresh_task = asyncio.create_task(counter_refresh_loop())
     stream = BybitSpotMicrostructureStream()
     try:
         result = await persist_bybit_wire_stream(
@@ -289,6 +347,7 @@ async def run(args: argparse.Namespace) -> int:
     finally:
         heartbeat_stop.set()
         await heartbeat_task
+        await counter_refresh_task
 
     counts = store.counts()
     print(
