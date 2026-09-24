@@ -317,6 +317,7 @@ def issue_accepted_wc2_live_source(
     horizon_bars: int,
     target_label: str,
     base_asset: str,
+    collection_protocol_identity: str,
     ledger: ImmutableDecisionEvidenceLedger,
 ) -> UnifiedDecisionIssuance:
     """Issue exact R20 from already accepted WC2 PIT inputs.
@@ -327,6 +328,10 @@ def issue_accepted_wc2_live_source(
     """
     if issued_at_ms < signal.as_of_ms:
         raise ValueError("WC2 issuance cannot predate signal as-of")
+    _require_sha256(
+        collection_protocol_identity,
+        "WC2 collection protocol identity",
+    )
     if horizon_bars <= 0:
         raise ValueError("WC2 horizon bars must be positive")
     if not target_label.strip():
@@ -354,6 +359,10 @@ def issue_accepted_wc2_live_source(
         ledger=ledger,
         forecast_version_refs=(
             ForecastVersionRef(
+                "wc2_collection_protocol",
+                collection_protocol_identity,
+            ),
+            ForecastVersionRef(
                 "wc2_live_source_adapter",
                 WC2_LIVE_SOURCE_ADAPTER_VERSION,
             ),
@@ -369,6 +378,7 @@ def issue_same_cycle_untouched_forward_forecast(
     maximum_issuance_delay_ms: int,
     horizon_bars: int,
     base_asset: str,
+    collection_protocol_identity: str,
     ledger: ImmutableDecisionEvidenceLedger,
 ) -> UnifiedDecisionIssuance:
     """Issue R20 only from a fresh same-cycle immutable bundle.
@@ -407,8 +417,14 @@ def issue_same_cycle_untouched_forward_forecast(
         horizon_bars=horizon_bars,
         target_label=first_target.label,
         base_asset=base_asset,
+        collection_protocol_identity=collection_protocol_identity,
         ledger=ledger,
     )
+
+
+def _require_sha256(value: str, label: str) -> None:
+    if len(value) != 64 or any(ch not in "0123456789abcdef" for ch in value):
+        raise ValueError(f"{label} must be lowercase SHA256")
 
 
 def _meta_direction(direction: SignalDirection) -> MetaDirection:
