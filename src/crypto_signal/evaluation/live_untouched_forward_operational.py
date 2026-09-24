@@ -48,7 +48,7 @@ from crypto_signal.product.decision_proof import (
     ProofEvidenceVerdict,
     build_decision_proof_evidence_slice,
 )
-from crypto_signal.signals.models import SignalDirection, SignalState
+from crypto_signal.signals.models import SignalDecision, SignalDirection, SignalState
 from crypto_signal.unified_decision_runtime import UnifiedDecisionIssuance
 
 WC2_LIVE_SOURCE_ADAPTER_VERSION = "wc2-live-source-adapter-v1/1"
@@ -309,6 +309,58 @@ def build_missing_pit_event_context(
     )
 
 
+def issue_accepted_wc2_live_source(
+    signal: SignalDecision,
+    inputs: WC2LiveSourceInputs,
+    *,
+    issued_at_ms: int,
+    horizon_bars: int,
+    target_label: str,
+    base_asset: str,
+    ledger: ImmutableDecisionEvidenceLedger,
+) -> UnifiedDecisionIssuance:
+    """Issue exact R20 from already accepted WC2 PIT inputs.
+
+    This entry point exists for crash recovery from a durable pre-issuance
+    receipt. It accepts no market reads and cannot alter the original PIT
+    source or issuance timestamp.
+    """
+    if issued_at_ms < signal.as_of_ms:
+        raise ValueError("WC2 issuance cannot predate signal as-of")
+    if horizon_bars <= 0:
+        raise ValueError("WC2 horizon bars must be positive")
+    if not target_label.strip():
+        raise ValueError("WC2 target label must be non-empty")
+    if not base_asset or base_asset != base_asset.upper():
+        raise ValueError("WC2 base asset must be uppercase")
+    if not signal.symbol.startswith(base_asset):
+        raise ValueError("WC2 signal/base asset mismatch")
+    if signal.geometry is None:
+        raise ValueError("WC2 accepted source requires frozen geometry")
+    if target_label not in {item.label for item in signal.geometry.targets}:
+        raise ValueError("WC2 accepted source target is not frozen geometry")
+
+    return compose_exact_decision(
+        signal=signal,
+        base_asset=base_asset,
+        regime=inputs.regime,
+        geometry_family=inputs.geometry_family,
+        geometry_proof_slices=inputs.geometry_proof_slices,
+        accepted_m2_m5=inputs.accepted_m2_m5,
+        event_context=inputs.event_context,
+        issued_at_ms=issued_at_ms,
+        horizon_bars=horizon_bars,
+        target_label=target_label,
+        ledger=ledger,
+        forecast_version_refs=(
+            ForecastVersionRef(
+                "wc2_live_source_adapter",
+                WC2_LIVE_SOURCE_ADAPTER_VERSION,
+            ),
+        ),
+    )
+
+
 def issue_same_cycle_untouched_forward_forecast(
     bundle: DecisionFreezeBundle,
     *,
@@ -348,24 +400,14 @@ def issue_same_cycle_untouched_forward_forecast(
         base_asset=base_asset,
     )
     first_target = signal.geometry.targets[0]
-    return compose_exact_decision(
-        signal=signal,
-        base_asset=base_asset,
-        regime=inputs.regime,
-        geometry_family=inputs.geometry_family,
-        geometry_proof_slices=inputs.geometry_proof_slices,
-        accepted_m2_m5=inputs.accepted_m2_m5,
-        event_context=inputs.event_context,
+    return issue_accepted_wc2_live_source(
+        signal,
+        inputs,
         issued_at_ms=issued_at_ms,
         horizon_bars=horizon_bars,
         target_label=first_target.label,
+        base_asset=base_asset,
         ledger=ledger,
-        forecast_version_refs=(
-            ForecastVersionRef(
-                "wc2_live_source_adapter",
-                WC2_LIVE_SOURCE_ADAPTER_VERSION,
-            ),
-        ),
     )
 
 
