@@ -471,6 +471,16 @@ A credible world-class claim would require, at minimum:
 - `WC7_MACHINE_EDGE_VERDICT=NONE` and `REAL_CAPITAL=0` remain mandatory.
 - Typed provenance strengthens the review boundary; it does **not** change the current `INSUFFICIENT_EVIDENCE` conclusion or remove any existing blocker.
 
+### Canonical read-only adapters — 2026-09-25
+
+- PR **#1201** adds read-only WC7 adapters for accepted WC2 and WC6 artifacts.
+- WC2 `REVIEW_ELIGIBLE` may satisfy only untouched-forward-history sufficiency and retains the explicit “not edge/profitability claim” semantic.
+- WC2 `INSUFFICIENT_EVIDENCE` remains a missing WC7 dimension; its readiness identity is blocker-boundary provenance, not evidence.
+- WC6 `NOT_CONFIGURED / BLOCKED_NOT_CONFIGURED` remains `CAPITAL_EXECUTION_LINEAGE = EXTERNAL_DEPENDENCY`; the sandbox-boundary identity proves the blocker rather than pretending to be venue evidence.
+- Provenance now separates `source_artifact_identity` from `blocker_boundary_identity`.
+- Exact-head run **36065071631** passed; after merge as `3d0283ab180255e5eca12955814985cab04c3548`, exact-main run **36065254385 / job 107853404508** passed focused/research/full-repository/non-mutation acceptance.
+- The current conclusion remains `INSUFFICIENT_EVIDENCE`; no EDGE_* verdict or production authority is introduced.
+
 ## Final boundary
 
 Real-money authority is not part of World-Class Completion.
