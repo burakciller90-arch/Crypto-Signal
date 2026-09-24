@@ -213,7 +213,7 @@ def read_wc5_actionability(
 
 def _require_payload_int(value: object, label: str) -> int:
     if isinstance(value, bool):
-        raise ValueError(f"{label} must be an integer")
+        raise TypeError(f"{label} must be an integer")
     if isinstance(value, int):
         return value
     if isinstance(value, str):
