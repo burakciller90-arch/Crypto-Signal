@@ -1,0 +1,128 @@
+name: R11 Topology Process Match UID504
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "ops/r11_runtime_acceptance.py"
+      - "tests/test_r11_runtime_supervisor_detection.py"
+      - ".github/workflows/r11-topology-process-match-uid504.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: r11-topology-process-match-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  acceptance:
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          clean: true
+          fetch-depth: 1
+
+      - name: Verify exact source and immutable Development
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
+          test "$(id -u)" = "504"
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+          test -z "$(git -C "$DEV" status --porcelain)"
+          echo "R11_TOPOLOGY_EXACT_SOURCE_PASS=YES"
+
+      - name: Create isolated test environment
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE_PY="/Volumes/Crypto-504/Crypto-Signal/Development/.venv/bin/python"
+          TEST_VENV="$RUNNER_TEMP/r11-topology-venv"
+          rm -rf "$TEST_VENV"
+          "$BASE_PY" -m venv "$TEST_VENV"
+          "$TEST_VENV/bin/python" -m pip install --upgrade pip
+          "$TEST_VENV/bin/python" -m pip install -e "$GITHUB_WORKSPACE"
+          "$TEST_VENV/bin/python" -m pip install "pytest>=8.4" "pytest-asyncio>=1.2" "ruff>=0.13" "mypy>=1.18"
+          echo "TEST_PY=$TEST_VENV/bin/python" >> "$GITHUB_ENV"
+
+      - name: Focused supervisor matcher acceptance
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$GITHUB_WORKSPACE"
+          "$TEST_PY" -m pytest -q tests/test_r11_runtime_supervisor_detection.py
+          "$TEST_PY" -m ruff check ops/r11_runtime_acceptance.py tests/test_r11_runtime_supervisor_detection.py
+          echo "R11_TOPOLOGY_FOCUSED_PASS=YES"
+
+      - name: Live race-safe topology probe
+        shell: bash
+        run: |
+          set -euo pipefail
+          export PYTHONPATH="$GITHUB_WORKSPACE/src:$GITHUB_WORKSPACE"
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          SUP="$ROOT/ssd-service-supervisor.sh"
+          PIDFILE="$(cat "$ROOT/ssd-service-supervisor.pid")"
+          test -n "$PIDFILE"
+          kill -0 "$PIDFILE"
+          ps -p "$PIDFILE" -o command= | grep -F "$SUP" >/dev/null
+
+          probe_loop() {
+            while true; do
+              /usr/bin/grep -F "$SUP" /dev/null >/dev/null 2>&1 || true
+              /usr/bin/awk -v needle="$SUP" 'index($0, needle) {print}' /dev/null >/dev/null 2>&1 || true
+            done
+          }
+          probe_loop &
+          NOISE_PID=$!
+          cleanup() {
+            kill "$NOISE_PID" >/dev/null 2>&1 || true
+            wait "$NOISE_PID" 2>/dev/null || true
+          }
+          trap cleanup EXIT
+
+          ROOT="$ROOT" PIDFILE="$PIDFILE" "$TEST_PY" - <<'PY'
+          import os
+          import time
+          from pathlib import Path
+
+          from ops.r11_runtime_acceptance import _assert_process_topology
+
+          root = Path(os.environ["ROOT"])
+          expected = int(os.environ["PIDFILE"])
+          for _ in range(100):
+              topology = _assert_process_topology(root)
+              assert topology["supervisor_pid"] == expected, topology
+              time.sleep(0.01)
+          print(f"R11_TOPOLOGY_LIVE_SUPERVISOR_PID={expected}")
+          print("R11_TOPOLOGY_LIVE_RACE_PASS=YES")
+          print("REAL_CAPITAL=0")
+          PY
+
+      - name: Whole-repository regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          export PYTHONPATH="$GITHUB_WORKSPACE/src:$GITHUB_WORKSPACE"
+          cd "$GITHUB_WORKSPACE"
+          "$TEST_PY" -m pytest -q
+          "$TEST_PY" -m ruff check src tests ops/verify_stage10_integrated.py
+          "$TEST_PY" -m mypy src ops/verify_stage10_integrated.py
+          node --check src/crypto_signal/product/static/freshness.js
+          node --check src/crypto_signal/product/static/app.js
+          node --check src/crypto_signal/product/galactech/app.js
+          node tests/js/test_product_freshness.js
+          echo "R11_TOPOLOGY_FULL_PASS=YES"
+
+      - name: Prove Development remained untouched
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
+          test -z "$(git -C "$DEV" status --porcelain)"
+          echo "R11_TOPOLOGY_NON_MUTATING_PASS=YES"
+          echo "REAL_CAPITAL=0"
