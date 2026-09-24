@@ -111,7 +111,7 @@ Add real calendar/news runtime persistence before replacing EVENT SOURCE RUNTIME
 
 **WC1 status: ACCEPTED / ENGINEERING CLOSED.**
 
-- Exact accepted main: `1af79d48c155de14fb51af2a3f87f39bbe7405da` (PR #1179).
+- Exact accepted runtime/product code head at WC1 closure: `1af79d48c155de14fb51af2a3f87f39bbe7405da` (PR #1179).
 - PR #1179 exact-head restart-drill static acceptance passed focused safety, whole-repository regression and Development non-mutation before merge.
 - Issue #1182 / run 36053337362 deployed the exact merged target with read-only/no-order authority preserved.
 - Issue #1183 / run 36053838731 / job 107815787924 physically replaced the exact canonical Market Tape lock holder and proved:
