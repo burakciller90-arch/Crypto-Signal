@@ -212,7 +212,7 @@ def test_event_source_raw_payload_is_exact_and_bounded() -> None:
     raw = _raw("exact-source")
 
     assert len(raw.payload_sha256) == 64
-    assert raw.content_bytes == len("exact-source".encode())
+    assert raw.content_bytes == len(b"exact-source")
 
     with pytest.raises(ValueError, match="byte count mismatch"):
         type(raw)(
