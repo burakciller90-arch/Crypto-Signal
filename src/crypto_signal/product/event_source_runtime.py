@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any
 
 _EVENT_SOURCE_SCHEMA = "event-source-runtime-v1/2"
+_MAX_PRODUCT_DB_BYTES = 128 * 1024 * 1024
 _REQUIRED_TABLES = frozenset(
     {
         "event_source_runtime_meta",
@@ -198,8 +199,10 @@ def read_event_source_runtime_truth(
             "event source runtime has uncheckpointed WAL evidence"
         )
 
-    uri = f"{path.resolve().as_uri()}?mode=ro&immutable=1"
-    with closing(sqlite3.connect(uri, uri=True)) as connection:
+    database_bytes = _detached_sqlite_bytes(path)
+
+    with closing(sqlite3.connect(":memory:")) as connection:
+        connection.deserialize(database_bytes)
         connection.row_factory = sqlite3.Row
         connection.execute("PRAGMA query_only=ON")
         quick = connection.execute("PRAGMA quick_check").fetchone()
@@ -291,6 +294,30 @@ def read_event_source_runtime_truth(
         ),
         latest_fetches=latest_fetches,
     )
+
+
+def _detached_sqlite_bytes(path: Path) -> bytes:
+    database_bytes = path.read_bytes()
+    if not database_bytes:
+        raise ValueError("event source runtime database is empty")
+    if len(database_bytes) > _MAX_PRODUCT_DB_BYTES:
+        raise ValueError(
+            "event source runtime database exceeds Product read bound"
+        )
+    if len(database_bytes) < 100 or not database_bytes.startswith(
+        b"SQLite format 3\x00"
+    ):
+        raise ValueError("event source runtime SQLite header invalid")
+
+    detached = bytearray(database_bytes)
+    write_version = detached[18]
+    read_version = detached[19]
+    if write_version != read_version or write_version not in {1, 2}:
+        raise ValueError("event source runtime SQLite format version invalid")
+    if write_version == 2:
+        detached[18] = 1
+        detached[19] = 1
+    return bytes(detached)
 
 
 def _verify_schema(connection: sqlite3.Connection) -> None:
