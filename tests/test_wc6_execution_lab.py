@@ -14,7 +14,7 @@ from crypto_signal.confluence.models import (
     ScoreSemantic,
 )
 from crypto_signal.data.models import Exchange, MarketType
-from crypto_signal.paper import execution_lab
+from crypto_signal.paper import execution_lab, execution_lab_lifecycle
 from crypto_signal.paper.activation import (
     activate_paper_policy,
     commit_planned_pretrade_event,
@@ -33,6 +33,13 @@ from crypto_signal.paper.execution_lab import (
     WC6SandboxAdapterStatus,
     build_wc6_execution_lab_dossier,
     probe_disabled_paper_write_authority,
+)
+from crypto_signal.paper.execution_lab_lifecycle import (
+    WC6PartialFillSupport,
+    WC6ShadowLifecycleError,
+    WC6ShadowOrderStatus,
+    build_wc6_partial_fill_scenario,
+    simulate_wc6_shadow_order_lifecycle,
 )
 from crypto_signal.paper.ledger import (
     PaperFundLedger,
@@ -362,3 +369,151 @@ def test_wc6_execution_lab_source_has_no_external_order_surface() -> None:
     assert "not_implemented" in source
     assert "unsupported_v1" in source
     assert execution_lab.REAL_CAPITAL == 0
+
+
+
+def _committed_trade_for_shadow_lifecycle(tmp_path):
+    (
+        ledger,
+        state,
+        execution_input,
+        snapshot,
+        pretrade,
+        activation,
+        enabled,
+    ) = _prepared_cycle(tmp_path)
+    commit = commit_planned_pretrade_event(
+        ledger=ledger,
+        state=state,
+        activation=activation,
+        pretrade=pretrade,
+        execution_input=execution_input,
+        execution_snapshot=snapshot,
+        required_authority_event_identity=enabled.authority_event_identity,
+    )
+    return ledger, commit, snapshot
+
+
+def test_wc6_shadow_partial_fill_lifecycle_reconciles_to_canonical_accounting(
+    tmp_path,
+) -> None:
+    ledger, commit, snapshot = _committed_trade_for_shadow_lifecycle(tmp_path)
+    canonical_fill = commit.pipeline.bundle.fill
+    assert canonical_fill is not None
+    assert canonical_fill.quantity > snapshot.quantity_step
+
+    first_quantity = snapshot.quantity_step
+    second_quantity = canonical_fill.quantity - first_quantity
+    scenario = build_wc6_partial_fill_scenario(
+        commit=commit,
+        execution_snapshot=snapshot,
+        ack_latency_ms=25,
+        fill_latency_ms=(50, 125),
+        partial_quantities=(first_quantity, second_quantity),
+    )
+    lifecycle = simulate_wc6_shadow_order_lifecycle(
+        commit=commit,
+        execution_snapshot=snapshot,
+        scenario=scenario,
+    )
+
+    assert lifecycle.final_status is WC6ShadowOrderStatus.FILLED
+    assert lifecycle.partial_fill_support is (
+        WC6PartialFillSupport.LAB_ONLY_CANONICAL_UNSUPPORTED
+    )
+    assert lifecycle.acknowledgement.acknowledged_at_ms == (
+        commit.pipeline.bundle.decision.decided_at_ms + 25
+    )
+    assert len(lifecycle.partial_fills) == 2
+    assert lifecycle.partial_fills[0].filled_at_ms == (
+        commit.pipeline.bundle.decision.decided_at_ms + 50
+    )
+    assert lifecycle.partial_fills[1].filled_at_ms == (
+        commit.pipeline.bundle.decision.decided_at_ms + 125
+    )
+    assert lifecycle.partial_fills[-1].cumulative_quantity == canonical_fill.quantity
+    assert lifecycle.filled_quantity == canonical_fill.quantity
+    assert lifecycle.canonical_fill_price == canonical_fill.simulated_fill_price
+    assert lifecycle.shadow_notional_usdt == lifecycle.canonical_notional_usdt
+    assert lifecycle.quantity_reconciled is True
+    assert lifecycle.notional_reconciled is True
+    assert lifecycle.accounting_shadow_reconciled is True
+    assert lifecycle.canonical_partial_fills_supported is False
+    assert lifecycle.sandbox_adapter_implemented is False
+    assert lifecycle.network_authority is False
+    assert lifecycle.credential_authority is False
+    assert lifecycle.live_order_authority is False
+    assert lifecycle.production_authority is False
+    assert lifecycle.real_capital == REAL_CAPITAL == 0
+
+    replay_before = ledger.replay()
+    second = simulate_wc6_shadow_order_lifecycle(
+        commit=commit,
+        execution_snapshot=snapshot,
+        scenario=scenario,
+    )
+    assert second == lifecycle
+    assert ledger.replay() == replay_before
+
+
+def test_wc6_partial_fill_scenario_rejects_quantity_mismatch(tmp_path) -> None:
+    _, commit, snapshot = _committed_trade_for_shadow_lifecycle(tmp_path)
+    canonical_fill = commit.pipeline.bundle.fill
+    assert canonical_fill is not None
+
+    with pytest.raises(
+        WC6ShadowLifecycleError,
+        match="sum to canonical fill quantity",
+    ):
+        build_wc6_partial_fill_scenario(
+            commit=commit,
+            execution_snapshot=snapshot,
+            ack_latency_ms=10,
+            fill_latency_ms=(20, 30),
+            partial_quantities=(
+                snapshot.quantity_step,
+                snapshot.quantity_step,
+            ),
+        )
+
+
+def test_wc6_partial_fill_scenario_rejects_fill_before_ack(tmp_path) -> None:
+    _, commit, snapshot = _committed_trade_for_shadow_lifecycle(tmp_path)
+    canonical_fill = commit.pipeline.bundle.fill
+    assert canonical_fill is not None
+    first_quantity = snapshot.quantity_step
+    second_quantity = canonical_fill.quantity - first_quantity
+
+    with pytest.raises(ValueError, match="predate acknowledgement"):
+        build_wc6_partial_fill_scenario(
+            commit=commit,
+            execution_snapshot=snapshot,
+            ack_latency_ms=50,
+            fill_latency_ms=(40, 75),
+            partial_quantities=(first_quantity, second_quantity),
+        )
+
+
+def test_wc6_shadow_lifecycle_source_has_no_canonical_write_or_order_surface() -> None:
+    source = inspect.getsource(execution_lab_lifecycle).lower()
+    forbidden = (
+        "paperfundledger",
+        "commit_planned_pretrade_event",
+        "append_paper_write_authority_event",
+        "import requests",
+        "import httpx",
+        "import urllib",
+        "import socket",
+        "api_key",
+        "api_secret",
+        "ccxt",
+        "place_order",
+        "submit_order",
+        "cancel_order",
+        "launchctl",
+        "subprocess",
+    )
+    assert all(token not in source for token in forbidden)
+    assert "canonical_partial_fills_supported: bool = false" in source
+    assert "sandbox_adapter_implemented: bool = false" in source
+    assert execution_lab_lifecycle.REAL_CAPITAL == 0
