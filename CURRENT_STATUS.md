@@ -4,10 +4,52 @@ Updated: 2026-09-24
 Project: Crypto Signal
 Baseline: crypto-signal-full-version-v1.0.0 (immutable)
 Active post-v1.0 program: v1.1 world-class product + market intelligence
-State: WC0_LIVE_PRODUCT_PARITY_ACCEPTED / WC1_EVENT_SOURCE_PERSISTED_TRUTH / WC2_PERSISTENT_EXECUTION_RUNTIME_ACTIVE_NO_ELIGIBLE_TRADE / CONTINUITY_PAUSED_BY_USER
+State: WC0_LIVE_PRODUCT_PARITY_ACCEPTED / WC1_24_7_DATA_RELIABILITY_ACCEPTED / WC2_ENGINEERING_FROZEN_EVIDENCE_ACCUMULATION_ACTIVE / CONTINUITY_PAUSED_BY_USER
 REAL_CAPITAL: 0
 
 ## Active v1.1 frontier — read before historical sections
+
+
+### 2026-09-24 23:23 +0300 — WC1 24/7 DATA RELIABILITY ACCEPTED / WC2 ENGINEERING FROZEN, UNTOUCHED-FORWARD EVIDENCE ACCUMULATION ACTIVE
+
+This entry **supersedes the earlier 2026-09-24 20:47 frontier snapshot** while preserving it below as historical evidence.
+
+- Accepted runtime/product code head before this docs-only closure: `1af79d48c155de14fb51af2a3f87f39bbe7405da` (merge of PR **#1179**).
+- WC1's final outage/restart blocker was closed from physical UID504 evidence rather than CI inference:
+  - PR **#1149** established the bounded exact-main Market Tape restart drill;
+  - PRs **#1154/#1157** removed the legacy `/MarketTape` lock owner through an exact-path, fail-closed cutover;
+  - PR **#1164** made supervisor and acceptance process identity macOS-safe using UID 504 + exact Python argv0 + exact canonical runner argv1;
+  - PR **#1173** pinned live Market Tape Product Truth reads to one SQLite read snapshot, eliminating the live-read observation race while preserving explicit historical `observed_at_ms` fail-closed semantics;
+  - exact-main issues **#1177/#1178** then independently exposed the remaining truthful blocker: the configured 10 s heartbeat was becoming stale because every heartbeat synchronously rescanned multi-million-row Market Tape tables with `COUNT(*)`;
+  - PR **#1179** preserved counter semantics without widening freshness thresholds: one startup baseline plus exact persisted INSERTED deltas makes heartbeat emission O(1).
+- Exact target deployment issue **#1182**, run **36053337362**, completed `PRODUCT_DEPLOY_PASS=YES` on `1af79d48c155de14fb51af2a3f87f39bbe7405da`, keeping Development/Product source parity and the read-only/no-order boundary.
+- Authoritative WC1 closure issue **#1183**, run **36053838731**, job **107815787924**: **SUCCESS**.
+  - before: PID `55904`, instance `5f88ad8a59d7ea542f33b6e7fd6876b855720eb795cf5d1b15d43e136415339c`, `start_kind=restart`, heartbeat sequence 13;
+  - after: PID `59678`, instance `1a19d23b3448b99d505b77a92010b52308913cf6b326c060a664e3e6280ed223`;
+  - exact predecessor identity equals the before-instance;
+  - new heartbeat sequence 1 was Product-fresh;
+  - append-only gap ledger remained valid with 66 events across 36 gaps;
+  - `WC1_MARKET_TAPE_RESTART_LINEAGE_PASS=YES`;
+  - `WC1_MARKET_TAPE_GAP_CHAIN_PASS=YES`;
+  - `WC1_MARKET_TAPE_PRODUCT_TRUTH_PASS=YES`;
+  - `WC1_MARKET_TAPE_ONLINE_NOT_ASSERTED_PASS=YES`;
+  - `WC1_MARKET_TAPE_RESTART_DRILL_PASS=YES`;
+  - `REAL_CAPITAL=0`.
+- WC1 is therefore **ACCEPTED/CLOSED as an engineering acceptance rail**: persisted collector liveness, auditable gap state, immutable recovery lineage, source-scoped Event Source truth, provider-divergence visibility, Cold Archive integrity boundaries and physical restart continuity are all represented without inventing ONLINE or production authority.
+- WC2 now enters **ENGINEERING FROZEN / EVIDENCE ACCUMULATION ACTIVE**:
+  - no feature expansion of the preregistered untouched-forward/paper-execution evidence contract;
+  - only correctness, safety, reproducibility and evidence-preservation fixes may change that rail;
+  - genuine post-boundary evidence continues to accumulate naturally;
+  - historical backfill/relabeling remains forbidden.
+- WC2 is **NOT scientifically or economically closed**. Promotion-quality review still requires the locked untouched-forward policy: decisive N>=300; BTC/ETH/SOL >=75 each; >=3 qualifying regimes with >=50 decisive observations each; >=120 calendar days; complete retention/lineage; and truthful fee/spread/slippage evidence for every actual paper trade.
+- Zero eligible trades remains valid evidence, not a reason to synthesize fills. Do not claim profitability, execution quality, calibration sufficiency, Sharpe/Sortino or promotion readiness until the preregistered evidence actually supports those claims.
+- Continuity remains user-paused; no exchange/broker order authority, credentials, leverage, borrowing, historical rewrite or real capital was introduced. **REAL_CAPITAL=0**.
+
+Current true frontier:
+- leave WC2 collection/execution evidence running under the frozen preregistered contract;
+- advance subsequent world-class engineering/acceptance work only from exact persisted evidence and without contaminating the LIVE_UNTOUCHED_FORWARD cohort;
+- preserve `ACTIVE != TRADE`, missing evidence as missing, and Product read-only/no-authority semantics;
+- do not reopen WC1 unless new correctness evidence falsifies the accepted closure.
 
 
 ### 2026-09-24 20:47 +0300 — WC0 LIVE PRODUCT PARITY ACCEPTED / WC1 SOURCE-SCOPED EVENT TRUTH RECONCILED / WC2 PERSISTENT EXECUTION RUNTIME ACTIVE WITH ZERO ELIGIBLE TRADE EVIDENCE

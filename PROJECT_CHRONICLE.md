@@ -1,6 +1,24 @@
 # PROJECT CHRONICLE
 
 
+## 2026-09-24 — WC1 24/7 data reliability closes on physical exact-main restart evidence
+
+WC1 was not closed from hosted CI or from a healthy-looking dashboard. The final acceptance was driven by successive live failures on UID504 until the exact runtime contract held.
+
+PR #1149 first created a bounded Market Tape restart drill. That drill exposed a real legacy ownership collision: the canonical Development lock was still held by the older `/MarketTape` runtime. PRs #1154/#1157 performed a fail-closed cutover using exact legacy child/supervisor paths and the accepted legacy stop path, after which the canonical Development collector became the lock owner. A subsequent restart attempt then exposed macOS process-name truncation; PR #1164 replaced fragile `ps comm` matching with UID 504 plus exact Python/runner argv identity in both the SSD supervisor and restart acceptance.
+
+With ownership fixed, the drill progressed to Product Truth and found a different live race. The Product endpoint froze its observation timestamp before a heavy read of an actively mutating multi-GB Market Tape database, so legitimate rows committed during that read could be rejected as “future evidence.” PR #1173 pinned each read-only SQLite Product read to one transaction snapshot and derived default-now observation semantics from that snapshot while preserving explicit historical `observed_at_ms` fail-closed behavior.
+
+Exact-main retries #1177 and #1178 independently advanced past that Product 500 failure but both stopped on the same remaining fact: Product correctly reported the restarted collector heartbeat as stale. The configured heartbeat interval was 10 seconds, yet the heartbeat hot path synchronously ran full `COUNT(*)` scans over the normalized and raw Market Tape stores. Liveness therefore depended on multi-million-row telemetry latency. PR #1179 kept the immutable heartbeat schema and freshness threshold unchanged, took one startup baseline, and combined it with exact INSERTED deltas already produced by the single-owner wire persistence path. Heartbeat emission became O(1) without fabricating counts or weakening the <=30 s freshness contract.
+
+PR #1179 merged as exact main `1af79d48c155de14fb51af2a3f87f39bbe7405da`. Issue #1182 / run 36053337362 deployed that exact target and kept Development/Product parity. The sole authoritative post-fix closure issue #1183 / run 36053838731 / job 107815787924 then succeeded physically: PID 55904 was replaced by PID 59678; the new immutable RESTART instance `1a19d23b3448b99d505b77a92010b52308913cf6b326c060a664e3e6280ed223` points exactly to predecessor `5f88ad8a59d7ea542f33b6e7fd6876b855720eb795cf5d1b15d43e136415339c`; the new persisted heartbeat was Product-fresh; the append-only gap ledger remained valid at 66 events / 36 gaps; Product Truth passed while ONLINE remained NOT ASSERTED; and `REAL_CAPITAL=0`.
+
+That closes WC1 as an engineering acceptance rail. It does not convert persisted evidence into an ONLINE claim and it does not authorize exchange/broker execution.
+
+WC2 now moves to **engineering frozen / evidence accumulation active**. Its preregistered LIVE_UNTOUCHED_FORWARD and paper-execution contract is no longer a feature-development target except for correctness, safety, reproducibility and evidence-preservation fixes. Scientific/economic closure remains explicitly open: decisive N>=300, BTC/ETH/SOL >=75 each, >=3 qualifying regimes with >=50 decisive each, >=120 calendar days, complete retention/lineage and truthful fee/spread/slippage evidence for every actual paper trade remain required. Zero eligible trades is preserved as evidence; no historical backfill or synthetic fill is permitted. REAL_CAPITAL=0.
+
+
+
 ## 2026-09-24 — WC0 live cutover accepted; WC1 persisted Event Source truth and WC2 execution runtime reconciled
 
 The earlier same-day WC2 snapshot was intentionally retained below, but the operational frontier moved forward substantially.
