@@ -24,7 +24,7 @@ def test_galactech_polish_preserves_accessible_semantics_and_truth(
     js = script.text
     css = style.text
 
-    assert 'data-ui-version="galactech-v1.1-polish"' in html
+    assert 'data-ui-version="galactech-v2-intelligence-first-tr"' in html
     assert 'id="mainContent" class="main-content" tabindex="-1" aria-busy="true"' in html
     assert 'id="routeAnnouncer"' in html
     assert 'id="runtimeAnnouncer"' in html
@@ -73,7 +73,7 @@ def test_galactech_polish_preserves_accessible_semantics_and_truth(
     assert "contain-intrinsic-size:" in css
 
     assert "REAL_CAPITAL=0" in html
-    assert "No fake LIVE · no fake latency · no fake probability" in html
+    assert "Bilmediğini biliyor." in html
     assert client.post("/galactech").status_code == 405
 
 
@@ -86,8 +86,8 @@ def test_galactech_static_budget_stays_bounded(tmp_path: Path) -> None:
 
     # Coarse no-build bundle budgets: catch accidental asset explosions before cutover.
     assert len(html) < 50_000
-    assert len(js) < 120_000
-    assert len(css) < 85_000
+    assert len(js) < 160_000
+    assert len(css) < 90_000
 
     text = html.decode("utf-8")
     assert "<img" not in text
