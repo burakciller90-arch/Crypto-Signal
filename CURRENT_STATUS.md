@@ -10,6 +10,38 @@ REAL_CAPITAL: 0
 ## Active v1.1 frontier — read before historical sections
 
 
+### 2026-09-25 01:04 +0300 — WC7 CANONICAL WC2/WC6 READ-ONLY ADAPTERS ACCEPTED / CURRENT VERDICT UNCHANGED
+
+This entry **supersedes the earlier 2026-09-25 00:56 frontier snapshot** while preserving it below as historical evidence.
+
+- Exact accepted main: `3d0283ab180255e5eca12955814985cab04c3548`.
+- PR **#1201** connected accepted canonical subsystem artifacts to the typed WC7 review without granting new evidence:
+  - `WC2ReviewReadiness` is adapted read-only into the `UNTOUCHED_FORWARD_HISTORY` dimension;
+  - `WC2ReviewStatus.REVIEW_ELIGIBLE` may satisfy **history sufficiency only** and is explicitly **not** an edge/profitability claim;
+  - `WC2ReviewStatus.INSUFFICIENT_EVIDENCE` remains `MISSING`, while the exact readiness identity is carried only as `blocker_boundary_identity`;
+  - accepted WC6 `WC6SandboxBoundaryEvidence` in `BLOCKED_NOT_CONFIGURED` state maps only to `CAPITAL_EXECUTION_LINEAGE: EXTERNAL_DEPENDENCY`;
+  - the WC6 boundary identity is blocker provenance, not capital/execution evidence;
+  - satisfied evidence cannot carry blocker-boundary identity, and blocker boundaries cannot be silently upgraded into source artifacts.
+- This adapter contract does **not** assert that the live/current WC2 cohort is `REVIEW_ELIGIBLE`. The acceptance tests prove mapping semantics using both eligible and insufficient fixtures. Current WC2 status must continue to come from canonical WC2 readiness evidence itself.
+- PR #1201 exact-head UID504 run **36065071631** completed **SUCCESS**.
+- After merge as `3d0283ab180255e5eca12955814985cab04c3548`, exact-main push run **36065254385 / job 107853404508** independently completed **SUCCESS** with:
+  - `WC7_EXACT_SOURCE_PASS=YES`;
+  - `WC7_FOCUSED_PASS=YES`;
+  - `WC7_MACHINE_EDGE_VERDICT=NONE`;
+  - `WC7_RESEARCH_REGRESSION_PASS=YES`;
+  - `WC7_FULL_REGRESSION_PASS=YES`;
+  - `WC7_DEVELOPMENT_NON_MUTATING_PASS=YES`;
+  - `REAL_CAPITAL=0`.
+- The accepted current WC7 conclusion remains `INSUFFICIENT_EVIDENCE`. #1201 improves canonical provenance/adaptation, not evidence sufficiency.
+
+Current true frontier:
+- keep WC2 engineering-frozen and derive any future WC7 history-status change only from canonical `WC2ReviewReadiness`;
+- keep WC6 real venue execution evidence external/missing while its adapter remains `BLOCKED_NOT_CONFIGURED`;
+- keep WC3 scientific/economic conclusions blocked and WC5 human usability `NOT_MEASURED`;
+- the next safe WC7 engineering slice is deterministic **read-only review reporting** from the already-built review + typed provenance packet; reporting must not create claims/evidence, alter readiness, select an EDGE_* verdict, or mutate subsystem state;
+- continuity remains paused and **REAL_CAPITAL=0**.
+
+
 ### 2026-09-25 01:04 +0300 — WC7 CANONICAL WC2/WC6 ADAPTERS ACCEPTED / CONCLUSION STILL INSUFFICIENT_EVIDENCE
 
 This entry **supersedes the earlier 2026-09-25 00:56 frontier snapshot** while preserving it below as historical evidence.
