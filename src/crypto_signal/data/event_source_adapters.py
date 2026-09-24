@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import email.utils
+import re
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from decimal import Decimal
+from html.parser import HTMLParser
 from zoneinfo import ZoneInfo
 
 from crypto_signal.data.event_risk import (
@@ -25,14 +27,180 @@ BLS_CALENDAR_ENDPOINT = "https://www.bls.gov/schedule/news_release/bls.ics"
 FED_MONETARY_RSS_ENDPOINT = (
     "https://www.federalreserve.gov/feeds/press_monetary.xml"
 )
+FRED_CPI_RELEASE_ID = 10
+FRED_EMPLOYMENT_RELEASE_ID = 50
+FRED_CPI_PROVIDER = "fred.stlouisfed.org:cpi"
+FRED_EMPLOYMENT_PROVIDER = "fred.stlouisfed.org:employment-situation"
 BLS_CALENDAR_ADAPTER_VERSION = "bls-calendar-ics-v1/1"
+FRED_CALENDAR_ADAPTER_VERSION = "fred-release-calendar-html-v1/1"
 FED_MONETARY_RSS_ADAPTER_VERSION = "fed-monetary-rss-v1/1"
+
+_FRED_RELEASE_CHANNELS = {
+    FRED_CPI_RELEASE_ID: (
+        "Consumer Price Index",
+        EventCategory.INFLATION,
+        FRED_CPI_PROVIDER,
+    ),
+    FRED_EMPLOYMENT_RELEASE_ID: (
+        "Employment Situation",
+        EventCategory.EMPLOYMENT,
+        FRED_EMPLOYMENT_PROVIDER,
+    ),
+}
+_FRED_DATE_PATTERN = (
+    r"(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)\s+"
+    r"(?P<month>January|February|March|April|May|June|July|August|"
+    r"September|October|November|December)\s+"
+    r"(?P<day>\d{1,2}),\s+(?P<year>\d{4})"
+    r"(?:\s+Updated)?\s+"
+    r"(?P<time>\d{1,2}:\d{2}\s*(?:am|pm))\s+"
+)
 
 
 @dataclass(frozen=True, slots=True)
 class ParsedBlsCalendar:
     coverage: EventCalendarCoverage
     events: tuple[StructuredEventObservation, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class ParsedFredCalendar:
+    coverage: EventCalendarCoverage
+    events: tuple[StructuredEventObservation, ...]
+
+
+class _VisibleTextParser(HTMLParser):
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.parts: list[str] = []
+        self._hidden_depth = 0
+
+    def handle_starttag(
+        self,
+        tag: str,
+        attrs: list[tuple[str, str | None]],
+    ) -> None:
+        del attrs
+        if tag.casefold() in {"script", "style", "noscript"}:
+            self._hidden_depth += 1
+
+    def handle_endtag(self, tag: str) -> None:
+        if (
+            tag.casefold() in {"script", "style", "noscript"}
+            and self._hidden_depth
+        ):
+            self._hidden_depth -= 1
+
+    def handle_data(self, data: str) -> None:
+        if self._hidden_depth:
+            return
+        normalized = " ".join(data.split())
+        if normalized:
+            self.parts.append(normalized)
+
+
+def fred_release_calendar_endpoint(*, release_id: int, year: int) -> str:
+    if release_id not in _FRED_RELEASE_CHANNELS:
+        raise ValueError("unsupported FRED release calendar")
+    if year < 2000 or year > 2200:
+        raise ValueError("FRED release calendar year is out of bounds")
+    return (
+        "https://fred.stlouisfed.org/releases/calendar"
+        f"?rid={release_id}&y={year}"
+    )
+
+
+def parse_fred_release_calendar_html(
+    payload: str,
+    *,
+    release_id: int,
+    year: int,
+    fetched_at_ms: int,
+    source_timestamp_ms: int,
+) -> ParsedFredCalendar:
+    if fetched_at_ms < 0 or source_timestamp_ms < 0:
+        raise ValueError("FRED calendar timestamps cannot be negative")
+    if source_timestamp_ms > fetched_at_ms:
+        raise ValueError("FRED source timestamp cannot postdate fetch")
+    try:
+        release_title, category, source_provider = _FRED_RELEASE_CHANNELS[
+            release_id
+        ]
+    except KeyError as exc:
+        raise ValueError("unsupported FRED release calendar") from exc
+
+    parser = _VisibleTextParser()
+    parser.feed(payload)
+    parser.close()
+    visible = " ".join(parser.parts)
+    if "All times are US Central Time" not in visible:
+        raise ValueError("FRED calendar Central Time contract missing")
+
+    pattern = re.compile(
+        _FRED_DATE_PATTERN + re.escape(release_title),
+        flags=re.IGNORECASE,
+    )
+    parsed: list[StructuredEventObservation] = []
+    for match in pattern.finditer(visible):
+        event_year = int(match.group("year"))
+        if event_year != year:
+            continue
+        local_time = datetime.strptime(
+            (
+                f"{match.group('month')} {match.group('day')} "
+                f"{match.group('year')} {match.group('time')}"
+            ),
+            "%B %d %Y %I:%M %p",
+        ).replace(tzinfo=ZoneInfo("America/Chicago"))
+        scheduled_at_ms = int(local_time.timestamp() * 1000)
+        provider_event_id = (
+            f"fred-release-{release_id}-{scheduled_at_ms}"
+        )
+        parsed.append(
+            build_structured_event_observation(
+                provider_event_id=provider_event_id,
+                title=release_title,
+                category=category,
+                scheduled_at_ms=scheduled_at_ms,
+                affected_assets=(),
+                source_provider=source_provider,
+                source_quality=EventSourceQuality.SECONDARY_AGGREGATOR,
+                source=DataSource.REST,
+                source_timestamp_ms=source_timestamp_ms,
+                ingested_at_ms=fetched_at_ms,
+                adapter_version=FRED_CALENDAR_ADAPTER_VERSION,
+            )
+        )
+
+    if not parsed:
+        raise ValueError("FRED release calendar contains no matching events")
+    events = tuple(
+        sorted(
+            parsed,
+            key=lambda item: (
+                item.scheduled_at_ms,
+                item.provider_event_id,
+                item.event_identity,
+            ),
+        )
+    )
+    provider_ids = tuple(item.provider_event_id for item in events)
+    if len(set(provider_ids)) != len(provider_ids):
+        raise ValueError("FRED release calendar contains duplicate event")
+    if len(events) > 24:
+        raise ValueError("FRED release calendar exceeds bounded annual events")
+
+    coverage = build_event_calendar_coverage(
+        coverage_start_ms=min(item.scheduled_at_ms for item in events),
+        coverage_end_ms=max(item.scheduled_at_ms for item in events),
+        categories=(category,),
+        source_provider=source_provider,
+        source_quality=EventSourceQuality.SECONDARY_AGGREGATOR,
+        source=DataSource.REST,
+        observed_at_ms=fetched_at_ms,
+        adapter_version=FRED_CALENDAR_ADAPTER_VERSION,
+    )
+    return ParsedFredCalendar(coverage=coverage, events=events)
 
 
 def parse_bls_calendar_ics(

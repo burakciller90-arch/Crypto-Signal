@@ -8,6 +8,11 @@ import httpx
 from crypto_signal.data.event_source_adapters import (
     BLS_CALENDAR_ENDPOINT,
     FED_MONETARY_RSS_ENDPOINT,
+    FRED_CPI_PROVIDER,
+    FRED_CPI_RELEASE_ID,
+    FRED_EMPLOYMENT_PROVIDER,
+    FRED_EMPLOYMENT_RELEASE_ID,
+    fred_release_calendar_endpoint,
 )
 from crypto_signal.data.event_source_runtime import (
     EventSourceFetchOutcome,
@@ -32,6 +37,23 @@ STATUS:CONFIRMED
 END:VEVENT
 END:VCALENDAR
 """
+
+FRED_CPI_HTML = """<html><body>
+<div>Tuesday January 13, 2026 Updated</div>
+<div>7:30 am</div><div>Consumer Price Index</div>
+<div>Wednesday October 14, 2026</div>
+<div>7:30 am</div><div>Consumer Price Index</div>
+<p>All times are US Central Time.</p>
+</body></html>"""
+
+FRED_EMPLOYMENT_HTML = """<html><body>
+<div>Friday January 09, 2026 Updated</div>
+<div>7:30 am</div><div>Employment Situation</div>
+<div>Friday October 02, 2026</div>
+<div>7:30 am</div><div>Employment Situation</div>
+<p>All times are US Central Time.</p>
+</body></html>"""
+
 
 FED_RSS = """<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0">
@@ -139,19 +161,44 @@ def test_event_source_cycle_keeps_other_source_when_bls_is_down(
     fetched_at_ms = _ms("2026-09-24T05:00:00+00:00")
 
     def handler(request: httpx.Request) -> httpx.Response:
-        if str(request.url) == BLS_CALENDAR_ENDPOINT:
+        url = str(request.url)
+        if url == BLS_CALENDAR_ENDPOINT:
             return httpx.Response(
                 503,
                 content=b"temporarily unavailable",
                 headers={"Content-Type": "text/plain; charset=utf-8"},
                 request=request,
             )
-        return httpx.Response(
-            200,
-            content=FED_RSS.encode(),
-            headers={"Content-Type": "application/rss+xml; charset=utf-8"},
-            request=request,
-        )
+        if url == fred_release_calendar_endpoint(
+            release_id=FRED_CPI_RELEASE_ID,
+            year=2026,
+        ):
+            return httpx.Response(
+                200,
+                content=FRED_CPI_HTML.encode(),
+                headers={"Content-Type": "text/html; charset=utf-8"},
+                request=request,
+            )
+        if url == fred_release_calendar_endpoint(
+            release_id=FRED_EMPLOYMENT_RELEASE_ID,
+            year=2026,
+        ):
+            return httpx.Response(
+                200,
+                content=FRED_EMPLOYMENT_HTML.encode(),
+                headers={"Content-Type": "text/html; charset=utf-8"},
+                request=request,
+            )
+        if url == FED_MONETARY_RSS_ENDPOINT:
+            return httpx.Response(
+                200,
+                content=FED_RSS.encode(),
+                headers={
+                    "Content-Type": "application/rss+xml; charset=utf-8"
+                },
+                request=request,
+            )
+        raise AssertionError(f"unexpected URL {request.url}")
 
     store = EventSourceRuntimeStore(tmp_path / "event_source.sqlite3")
     with _client(handler) as client:
@@ -162,18 +209,28 @@ def test_event_source_cycle_keeps_other_source_when_bls_is_down(
         )
 
     assert result.failure_count == 1
+    assert result.required_calendar_coverage_satisfied is True
+    assert result.required_news_coverage_satisfied is True
+    assert result.required_coverage_satisfied is True
     assert result.fetches[0].outcome is EventSourceFetchOutcome.FAILURE
     assert result.fetches[0].reason_code == "http_status_503"
-    assert result.fetches[1].outcome is EventSourceFetchOutcome.SUCCESS
-    assert result.fetches[1].source_timestamp_basis is (
+    assert tuple(fetch.source_provider for fetch in result.fetches[1:3]) == (
+        FRED_CPI_PROVIDER,
+        FRED_EMPLOYMENT_PROVIDER,
+    )
+    assert all(
+        fetch.outcome is EventSourceFetchOutcome.SUCCESS
+        for fetch in result.fetches[1:]
+    )
+    assert result.fetches[-1].source_timestamp_basis is (
         EventSourceTimestampBasis.FETCH_TIME_FALLBACK
     )
     assert store.counts() == {
-        "raw_payloads": 2,
-        "calendar_coverages": 0,
-        "structured_events": 0,
+        "raw_payloads": 4,
+        "calendar_coverages": 2,
+        "structured_events": 4,
         "news_events": 2,
-        "fetches": 2,
+        "fetches": 4,
     }
 
 
@@ -184,19 +241,44 @@ def test_event_source_parse_failure_retains_exact_raw_without_items(
     broken = b"BEGIN:VCALENDAR\nBEGIN:VEVENT\nBROKEN\n"
 
     def handler(request: httpx.Request) -> httpx.Response:
-        if str(request.url) == BLS_CALENDAR_ENDPOINT:
+        url = str(request.url)
+        if url == BLS_CALENDAR_ENDPOINT:
             return httpx.Response(
                 200,
                 content=broken,
                 headers={"Content-Type": "text/calendar; charset=utf-8"},
                 request=request,
             )
-        return httpx.Response(
-            200,
-            content=FED_RSS.encode(),
-            headers={"Content-Type": "application/rss+xml; charset=utf-8"},
-            request=request,
-        )
+        if url == fred_release_calendar_endpoint(
+            release_id=FRED_CPI_RELEASE_ID,
+            year=2026,
+        ):
+            return httpx.Response(
+                200,
+                content=FRED_CPI_HTML.encode(),
+                headers={"Content-Type": "text/html; charset=utf-8"},
+                request=request,
+            )
+        if url == fred_release_calendar_endpoint(
+            release_id=FRED_EMPLOYMENT_RELEASE_ID,
+            year=2026,
+        ):
+            return httpx.Response(
+                200,
+                content=FRED_EMPLOYMENT_HTML.encode(),
+                headers={"Content-Type": "text/html; charset=utf-8"},
+                request=request,
+            )
+        if url == FED_MONETARY_RSS_ENDPOINT:
+            return httpx.Response(
+                200,
+                content=FED_RSS.encode(),
+                headers={
+                    "Content-Type": "application/rss+xml; charset=utf-8"
+                },
+                request=request,
+            )
+        raise AssertionError(f"unexpected URL {request.url}")
 
     store = EventSourceRuntimeStore(tmp_path / "event_source.sqlite3")
     with _client(handler) as client:
@@ -213,12 +295,16 @@ def test_event_source_parse_failure_retains_exact_raw_without_items(
     assert failed.raw_payload_bytes == len(broken)
     assert failed.item_identities == ()
     assert failed.coverage_identity is None
+    assert result.failure_count == 1
+    assert result.required_calendar_coverage_satisfied is True
+    assert result.required_news_coverage_satisfied is True
+    assert result.required_coverage_satisfied is True
     assert store.counts() == {
-        "raw_payloads": 2,
-        "calendar_coverages": 0,
-        "structured_events": 0,
+        "raw_payloads": 4,
+        "calendar_coverages": 2,
+        "structured_events": 4,
         "news_events": 2,
-        "fetches": 2,
+        "fetches": 4,
     }
 
 
@@ -228,14 +314,39 @@ def test_event_source_network_failure_does_not_fabricate_payload(
     fetched_at_ms = _ms("2026-09-24T05:00:00+00:00")
 
     def handler(request: httpx.Request) -> httpx.Response:
-        if str(request.url) == BLS_CALENDAR_ENDPOINT:
+        url = str(request.url)
+        if url == BLS_CALENDAR_ENDPOINT:
             raise httpx.ConnectError("offline", request=request)
-        return httpx.Response(
-            200,
-            content=FED_RSS.encode(),
-            headers={"Content-Type": "application/rss+xml; charset=utf-8"},
-            request=request,
-        )
+        if url == fred_release_calendar_endpoint(
+            release_id=FRED_CPI_RELEASE_ID,
+            year=2026,
+        ):
+            return httpx.Response(
+                200,
+                content=FRED_CPI_HTML.encode(),
+                headers={"Content-Type": "text/html; charset=utf-8"},
+                request=request,
+            )
+        if url == fred_release_calendar_endpoint(
+            release_id=FRED_EMPLOYMENT_RELEASE_ID,
+            year=2026,
+        ):
+            return httpx.Response(
+                200,
+                content=FRED_EMPLOYMENT_HTML.encode(),
+                headers={"Content-Type": "text/html; charset=utf-8"},
+                request=request,
+            )
+        if url == FED_MONETARY_RSS_ENDPOINT:
+            return httpx.Response(
+                200,
+                content=FED_RSS.encode(),
+                headers={
+                    "Content-Type": "application/rss+xml; charset=utf-8"
+                },
+                request=request,
+            )
+        raise AssertionError(f"unexpected URL {request.url}")
 
     store = EventSourceRuntimeStore(tmp_path / "event_source.sqlite3")
     with _client(handler) as client:
@@ -251,10 +362,72 @@ def test_event_source_network_failure_does_not_fabricate_payload(
     assert failed.http_status is None
     assert failed.raw_payload_sha256 is None
     assert failed.source_timestamp_ms is None
-    assert store.counts()["raw_payloads"] == 1
+    assert result.required_calendar_coverage_satisfied is True
+    assert result.required_coverage_satisfied is True
+    assert store.counts()["raw_payloads"] == 3
 
 
 
 def test_event_source_user_agent_includes_owner_contact_url() -> None:
     assert USER_AGENT.startswith("Crypto-Signal/1.1 EventSourceRuntime")
     assert "https://github.com/burakciller90-arch" in USER_AGENT
+
+
+
+def test_fred_fallback_requires_both_calendar_channels(tmp_path: Path) -> None:
+    fetched_at_ms = _ms("2026-09-24T05:00:00+00:00")
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        url = str(request.url)
+        if url == BLS_CALENDAR_ENDPOINT:
+            return httpx.Response(
+                403,
+                content=b"blocked",
+                headers={"Content-Type": "text/html; charset=utf-8"},
+                request=request,
+            )
+        if url == fred_release_calendar_endpoint(
+            release_id=FRED_CPI_RELEASE_ID,
+            year=2026,
+        ):
+            return httpx.Response(
+                200,
+                content=FRED_CPI_HTML.encode(),
+                headers={"Content-Type": "text/html; charset=utf-8"},
+                request=request,
+            )
+        if url == fred_release_calendar_endpoint(
+            release_id=FRED_EMPLOYMENT_RELEASE_ID,
+            year=2026,
+        ):
+            return httpx.Response(
+                503,
+                content=b"unavailable",
+                headers={"Content-Type": "text/plain; charset=utf-8"},
+                request=request,
+            )
+        if url == FED_MONETARY_RSS_ENDPOINT:
+            return httpx.Response(
+                200,
+                content=FED_RSS.encode(),
+                headers={
+                    "Content-Type": "application/rss+xml; charset=utf-8"
+                },
+                request=request,
+            )
+        raise AssertionError(f"unexpected URL {request.url}")
+
+    store = EventSourceRuntimeStore(tmp_path / "event_source.sqlite3")
+    with _client(handler) as client:
+        result = collect_event_source_cycle(
+            store=store,
+            client=client,
+            fetched_at_ms=fetched_at_ms,
+        )
+
+    assert result.failure_count == 2
+    assert result.required_calendar_coverage_satisfied is False
+    assert result.required_news_coverage_satisfied is True
+    assert result.required_coverage_satisfied is False
+    assert store.counts()["calendar_coverages"] == 1
+    assert store.counts()["structured_events"] == 2
