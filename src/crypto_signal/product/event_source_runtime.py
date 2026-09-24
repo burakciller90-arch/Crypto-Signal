@@ -1,0 +1,550 @@
+"""Read-only Product Truth for persisted Event Source runtime evidence."""
+from __future__ import annotations
+
+import hashlib
+import json
+import sqlite3
+from contextlib import closing
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any
+
+_EVENT_SOURCE_SCHEMA = "event-source-runtime-v1/2"
+_REQUIRED_TABLES = frozenset(
+    {
+        "event_source_runtime_meta",
+        "event_source_raw_payloads",
+        "event_calendar_coverages",
+        "structured_event_observations",
+        "news_event_observations",
+        "event_source_fetches",
+    }
+)
+_REQUIRED_FETCH_COLUMNS = frozenset(
+    {
+        "sequence_id",
+        "fetch_identity",
+        "source_provider",
+        "source_kind",
+        "fetched_at_ms",
+        "outcome",
+        "payload_json",
+    }
+)
+
+
+@dataclass(frozen=True, slots=True)
+class EventSourceProviderRuntimeTruth:
+    fetch_identity: str
+    source_provider: str
+    source_kind: str
+    fetched_at_ms: int
+    fetch_age_ms: int
+    source_timestamp_ms: int | None
+    source_timestamp_basis: str | None
+    http_status: int | None
+    outcome: str
+    raw_payload_sha256: str | None
+    raw_payload_bytes: int | None
+    item_count: int
+    item_categories: tuple[str, ...]
+    coverage_identity: str | None
+    coverage_categories: tuple[str, ...]
+    reason_code: str | None
+    adapter_version: str
+
+    def __post_init__(self) -> None:
+        _require_sha256(self.fetch_identity, "event source fetch identity")
+        if not self.source_provider.strip():
+            raise ValueError("event source provider missing")
+        if self.source_kind not in {"calendar", "news"}:
+            raise ValueError("event source kind invalid")
+        if self.fetched_at_ms < 0 or self.fetch_age_ms < 0:
+            raise ValueError("event source fetch time invalid")
+        if self.source_timestamp_ms is not None and self.source_timestamp_ms < 0:
+            raise ValueError("event source timestamp invalid")
+        if (self.source_timestamp_ms is None) != (
+            self.source_timestamp_basis is None
+        ):
+            raise ValueError("event source timestamp basis mismatch")
+        if self.http_status is not None and not 100 <= self.http_status <= 599:
+            raise ValueError("event source HTTP status invalid")
+        if self.outcome not in {"success", "failure"}:
+            raise ValueError("event source outcome invalid")
+        if (self.raw_payload_sha256 is None) != (
+            self.raw_payload_bytes is None
+        ):
+            raise ValueError("event source raw payload evidence mismatch")
+        if self.raw_payload_sha256 is not None:
+            _require_sha256(
+                self.raw_payload_sha256,
+                "event source raw payload identity",
+            )
+        if self.raw_payload_bytes is not None and self.raw_payload_bytes <= 0:
+            raise ValueError("event source raw payload bytes invalid")
+        if self.item_count < 0:
+            raise ValueError("event source item count invalid")
+        if self.item_categories != tuple(sorted(set(self.item_categories))):
+            raise ValueError("event source item categories must be canonical")
+        if self.coverage_categories != tuple(
+            sorted(set(self.coverage_categories))
+        ):
+            raise ValueError("event source coverage categories must be canonical")
+        if self.coverage_identity is not None:
+            _require_sha256(
+                self.coverage_identity,
+                "event source coverage identity",
+            )
+        if not self.adapter_version.strip():
+            raise ValueError("event source adapter version missing")
+        if self.outcome == "success":
+            if self.http_status != 200:
+                raise ValueError("event source success requires HTTP 200")
+            if self.raw_payload_sha256 is None:
+                raise ValueError("event source success requires raw payload")
+            if self.item_count <= 0:
+                raise ValueError("event source success requires items")
+            if self.reason_code is not None:
+                raise ValueError("event source success cannot carry failure reason")
+            if self.source_kind == "calendar":
+                if self.coverage_identity is None:
+                    raise ValueError("calendar success requires coverage")
+                if not self.coverage_categories:
+                    raise ValueError("calendar coverage categories missing")
+            elif self.coverage_identity is not None:
+                raise ValueError("news success cannot carry calendar coverage")
+        elif self.reason_code is None or not self.reason_code.strip():
+            raise ValueError("event source failure requires reason code")
+
+
+@dataclass(frozen=True, slots=True)
+class EventSourceRuntimeTruth:
+    schema_version: str
+    raw_payload_count: int
+    calendar_coverage_count: int
+    structured_event_count: int
+    news_event_count: int
+    fetch_count: int
+    latest_successful_fetch_at_ms: int | None
+    latest_successful_fetch_age_ms: int | None
+    latest_fetches: tuple[EventSourceProviderRuntimeTruth, ...]
+    runtime_status: str = "PERSISTED_EVIDENCE_ONLY"
+    online_status: str = "NOT_ASSERTED"
+    process_status: str = "NOT_MEASURED"
+    coverage_claim: str = "SOURCE_SCOPED_ONLY"
+    read_only_verified: bool = True
+    production_authority: bool = False
+    real_capital: int = 0
+
+    def __post_init__(self) -> None:
+        if self.schema_version != _EVENT_SOURCE_SCHEMA:
+            raise ValueError("event source Product schema mismatch")
+        counts = (
+            self.raw_payload_count,
+            self.calendar_coverage_count,
+            self.structured_event_count,
+            self.news_event_count,
+            self.fetch_count,
+        )
+        if min(counts) < 0:
+            raise ValueError("event source Product counts cannot be negative")
+        if (self.latest_successful_fetch_at_ms is None) != (
+            self.latest_successful_fetch_age_ms is None
+        ):
+            raise ValueError("event source latest success age mismatch")
+        if (
+            self.latest_successful_fetch_age_ms is not None
+            and self.latest_successful_fetch_age_ms < 0
+        ):
+            raise ValueError("event source latest success age invalid")
+        if self.runtime_status != "PERSISTED_EVIDENCE_ONLY":
+            raise ValueError("event source runtime status invalid")
+        if self.online_status != "NOT_ASSERTED":
+            raise ValueError("event source Product Truth cannot assert ONLINE")
+        if self.process_status != "NOT_MEASURED":
+            raise ValueError("event source process status is not measured")
+        if self.coverage_claim != "SOURCE_SCOPED_ONLY":
+            raise ValueError("event source coverage claim invalid")
+        if not self.read_only_verified:
+            raise ValueError("event source Product Truth must be read-only")
+        if self.production_authority or self.real_capital != 0:
+            raise ValueError("event source Product Truth cannot grant authority")
+
+
+def read_event_source_runtime_truth(
+    path: Path,
+    *,
+    observed_at_ms: int,
+) -> EventSourceRuntimeTruth:
+    if observed_at_ms < 0:
+        raise ValueError("event source observation time cannot be negative")
+    if not path.is_file():
+        raise ValueError("event source runtime database missing")
+
+    uri = f"{path.resolve().as_uri()}?mode=ro"
+    with closing(sqlite3.connect(uri, uri=True)) as connection:
+        connection.row_factory = sqlite3.Row
+        connection.execute("PRAGMA query_only=ON")
+        quick = connection.execute("PRAGMA quick_check").fetchone()
+        if quick is None or str(quick[0]).lower() != "ok":
+            raise ValueError("event source SQLite quick_check failed")
+        _verify_schema(connection)
+
+        counts = {
+            "raw_payloads": _count(connection, "event_source_raw_payloads"),
+            "calendar_coverages": _count(
+                connection,
+                "event_calendar_coverages",
+            ),
+            "structured_events": _count(
+                connection,
+                "structured_event_observations",
+            ),
+            "news_events": _count(
+                connection,
+                "news_event_observations",
+            ),
+            "fetches": _count(connection, "event_source_fetches"),
+        }
+        rows = connection.execute(
+            """
+            SELECT
+                f.sequence_id,
+                f.fetch_identity,
+                f.source_provider,
+                f.source_kind,
+                f.fetched_at_ms,
+                f.outcome,
+                f.payload_json
+            FROM event_source_fetches AS f
+            WHERE f.sequence_id = (
+                SELECT candidate.sequence_id
+                FROM event_source_fetches AS candidate
+                WHERE candidate.source_provider = f.source_provider
+                  AND candidate.source_kind = f.source_kind
+                ORDER BY
+                    candidate.fetched_at_ms DESC,
+                    candidate.sequence_id DESC
+                LIMIT 1
+            )
+            ORDER BY f.source_provider, f.source_kind
+            """
+        ).fetchall()
+        latest_fetches = tuple(
+            _provider_truth_from_row(
+                connection,
+                row,
+                observed_at_ms=observed_at_ms,
+            )
+            for row in rows
+        )
+        latest_success_row = connection.execute(
+            """
+            SELECT MAX(fetched_at_ms)
+            FROM event_source_fetches
+            WHERE outcome='success'
+            """
+        ).fetchone()
+
+    latest_success = (
+        None
+        if latest_success_row is None or latest_success_row[0] is None
+        else int(latest_success_row[0])
+    )
+    if latest_success is not None and latest_success > observed_at_ms:
+        raise ValueError("event source contains future successful fetch")
+
+    return EventSourceRuntimeTruth(
+        schema_version=_EVENT_SOURCE_SCHEMA,
+        raw_payload_count=counts["raw_payloads"],
+        calendar_coverage_count=counts["calendar_coverages"],
+        structured_event_count=counts["structured_events"],
+        news_event_count=counts["news_events"],
+        fetch_count=counts["fetches"],
+        latest_successful_fetch_at_ms=latest_success,
+        latest_successful_fetch_age_ms=(
+            None
+            if latest_success is None
+            else observed_at_ms - latest_success
+        ),
+        latest_fetches=latest_fetches,
+    )
+
+
+def _verify_schema(connection: sqlite3.Connection) -> None:
+    tables = {
+        str(row[0])
+        for row in connection.execute(
+            """SELECT name FROM sqlite_master
+            WHERE type='table' AND name NOT LIKE 'sqlite_%'"""
+        ).fetchall()
+    }
+    if not _REQUIRED_TABLES.issubset(tables):
+        raise ValueError("event source required table missing")
+
+    fetch_columns = {
+        str(row[1])
+        for row in connection.execute(
+            "PRAGMA table_info(event_source_fetches)"
+        ).fetchall()
+    }
+    missing = _REQUIRED_FETCH_COLUMNS - fetch_columns
+    if missing:
+        raise ValueError(
+            "event source fetch columns missing: "
+            + ",".join(sorted(missing))
+        )
+
+    schema_row = connection.execute(
+        """SELECT value FROM event_source_runtime_meta
+        WHERE key='schema_version'"""
+    ).fetchone()
+    if schema_row is None or str(schema_row[0]) != _EVENT_SOURCE_SCHEMA:
+        raise ValueError("event source schema version mismatch")
+
+
+def _count(connection: sqlite3.Connection, table: str) -> int:
+    row = connection.execute(f"SELECT COUNT(*) FROM {table}").fetchone()
+    if row is None:
+        raise ValueError(f"event source count unavailable: {table}")
+    return int(row[0])
+
+
+def _provider_truth_from_row(
+    connection: sqlite3.Connection,
+    row: sqlite3.Row,
+    *,
+    observed_at_ms: int,
+) -> EventSourceProviderRuntimeTruth:
+    fetch_identity = str(row["fetch_identity"])
+    payload_json = str(row["payload_json"])
+    _verify_payload_identity(fetch_identity, payload_json, "event source fetch")
+    payload = json.loads(payload_json)
+    if not isinstance(payload, dict):
+        raise TypeError("event source fetch payload must be object")
+
+    for key in ("source_provider", "source_kind", "outcome"):
+        if str(payload.get(key)) != str(row[key]):
+            raise ValueError(f"event source row/payload mismatch: {key}")
+    fetched_at_ms = int(payload["fetched_at_ms"])
+    if fetched_at_ms != int(row["fetched_at_ms"]):
+        raise ValueError("event source row/payload fetch time mismatch")
+    if fetched_at_ms > observed_at_ms:
+        raise ValueError("event source contains future fetch evidence")
+    if str(payload.get("schema_version")) != _EVENT_SOURCE_SCHEMA:
+        raise ValueError("event source fetch schema mismatch")
+    if bool(payload.get("production_authority")):
+        raise ValueError("event source fetch grants production authority")
+    if int(payload.get("real_capital", -1)) != 0:
+        raise ValueError("event source fetch real capital mismatch")
+
+    item_identities = _identity_list(payload.get("item_identities"))
+    raw_sha = _optional_text(payload.get("raw_payload_sha256"))
+    raw_bytes = _optional_int(payload.get("raw_payload_bytes"))
+    if raw_sha is not None:
+        _verify_raw_payload(
+            connection,
+            payload_sha256=raw_sha,
+            expected_bytes=raw_bytes,
+        )
+
+    source_kind = str(payload["source_kind"])
+    outcome = str(payload["outcome"])
+    coverage_identity = _optional_text(payload.get("coverage_identity"))
+    item_categories: tuple[str, ...] = ()
+    coverage_categories: tuple[str, ...] = ()
+    if outcome == "success":
+        if source_kind == "calendar":
+            if coverage_identity is None:
+                raise ValueError("calendar fetch coverage identity missing")
+            coverage_categories = _verify_coverage(
+                connection,
+                coverage_identity=coverage_identity,
+                source_provider=str(payload["source_provider"]),
+            )
+            item_categories = _verify_items(
+                connection,
+                table="structured_event_observations",
+                identity_column="event_identity",
+                identities=item_identities,
+                source_provider=str(payload["source_provider"]),
+            )
+        elif source_kind == "news":
+            if coverage_identity is not None:
+                raise ValueError("news fetch cannot carry calendar coverage")
+            item_categories = _verify_items(
+                connection,
+                table="news_event_observations",
+                identity_column="news_identity",
+                identities=item_identities,
+                source_provider=str(payload["source_provider"]),
+            )
+        else:
+            raise ValueError("event source kind invalid")
+
+    return EventSourceProviderRuntimeTruth(
+        fetch_identity=fetch_identity,
+        source_provider=str(payload["source_provider"]),
+        source_kind=source_kind,
+        fetched_at_ms=fetched_at_ms,
+        fetch_age_ms=observed_at_ms - fetched_at_ms,
+        source_timestamp_ms=_optional_int(
+            payload.get("source_timestamp_ms")
+        ),
+        source_timestamp_basis=_optional_text(
+            payload.get("source_timestamp_basis")
+        ),
+        http_status=_optional_int(payload.get("http_status")),
+        outcome=outcome,
+        raw_payload_sha256=raw_sha,
+        raw_payload_bytes=raw_bytes,
+        item_count=len(item_identities),
+        item_categories=item_categories,
+        coverage_identity=coverage_identity,
+        coverage_categories=coverage_categories,
+        reason_code=_optional_text(payload.get("reason_code")),
+        adapter_version=str(payload["adapter_version"]),
+    )
+
+
+def _verify_raw_payload(
+    connection: sqlite3.Connection,
+    *,
+    payload_sha256: str,
+    expected_bytes: int | None,
+) -> None:
+    _require_sha256(payload_sha256, "event source raw payload identity")
+    if expected_bytes is None or expected_bytes <= 0:
+        raise ValueError("event source raw payload byte count missing")
+    row = connection.execute(
+        """
+        SELECT content_bytes, payload_blob
+        FROM event_source_raw_payloads
+        WHERE payload_sha256=?
+        """,
+        (payload_sha256,),
+    ).fetchone()
+    if row is None:
+        raise ValueError("event source raw payload missing")
+    payload_bytes = bytes(row["payload_blob"])
+    if int(row["content_bytes"]) != expected_bytes:
+        raise ValueError("event source raw payload byte mismatch")
+    if len(payload_bytes) != expected_bytes:
+        raise ValueError("event source raw payload stored size mismatch")
+    if hashlib.sha256(payload_bytes).hexdigest() != payload_sha256:
+        raise ValueError("event source raw payload hash mismatch")
+
+
+def _verify_coverage(
+    connection: sqlite3.Connection,
+    *,
+    coverage_identity: str,
+    source_provider: str,
+) -> tuple[str, ...]:
+    _require_sha256(coverage_identity, "event source coverage identity")
+    row = connection.execute(
+        """
+        SELECT source_provider, payload_json
+        FROM event_calendar_coverages
+        WHERE coverage_identity=?
+        """,
+        (coverage_identity,),
+    ).fetchone()
+    if row is None:
+        raise ValueError("event source calendar coverage missing")
+    if str(row["source_provider"]) != source_provider:
+        raise ValueError("event source calendar coverage provider mismatch")
+    payload_json = str(row["payload_json"])
+    _verify_payload_identity(
+        coverage_identity,
+        payload_json,
+        "event source calendar coverage",
+    )
+    payload = json.loads(payload_json)
+    if not isinstance(payload, dict):
+        raise TypeError("event source coverage payload must be object")
+    if str(payload.get("source_provider")) != source_provider:
+        raise ValueError("event source coverage payload provider mismatch")
+    categories = payload.get("categories")
+    if not isinstance(categories, list):
+        raise TypeError("event source coverage categories must be array")
+    result = tuple(sorted(set(str(value) for value in categories)))
+    if not result:
+        raise ValueError("event source coverage categories missing")
+    return result
+
+
+def _verify_items(
+    connection: sqlite3.Connection,
+    *,
+    table: str,
+    identity_column: str,
+    identities: tuple[str, ...],
+    source_provider: str,
+) -> tuple[str, ...]:
+    if not identities:
+        raise ValueError("event source success item identities missing")
+    categories: set[str] = set()
+    for identity in identities:
+        _require_sha256(identity, "event source item identity")
+        row = connection.execute(
+            f"""SELECT source_provider, payload_json
+            FROM {table}
+            WHERE {identity_column}=?""",
+            (identity,),
+        ).fetchone()
+        if row is None:
+            raise ValueError("event source normalized item missing")
+        if str(row["source_provider"]) != source_provider:
+            raise ValueError("event source normalized item provider mismatch")
+        payload_json = str(row["payload_json"])
+        _verify_payload_identity(identity, payload_json, "event source item")
+        payload = json.loads(payload_json)
+        if not isinstance(payload, dict):
+            raise TypeError("event source item payload must be object")
+        if str(payload.get("source_provider")) != source_provider:
+            raise ValueError("event source item payload provider mismatch")
+        category = str(payload.get("category", "")).strip()
+        if not category:
+            raise ValueError("event source item category missing")
+        categories.add(category)
+    return tuple(sorted(categories))
+
+
+def _verify_payload_identity(
+    identity: str,
+    payload_json: str,
+    label: str,
+) -> None:
+    _require_sha256(identity, label)
+    parsed = json.loads(payload_json)
+    canonical = json.dumps(
+        parsed,
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=False,
+    )
+    if hashlib.sha256(canonical.encode()).hexdigest() != identity:
+        raise ValueError(f"{label} identity mismatch")
+
+
+def _identity_list(value: Any) -> tuple[str, ...]:
+    if not isinstance(value, list):
+        raise TypeError("event source item identities must be array")
+    result = tuple(str(item) for item in value)
+    if result != tuple(sorted(set(result))):
+        raise ValueError("event source item identities must be canonical")
+    return result
+
+
+def _optional_text(value: Any) -> str | None:
+    return None if value is None else str(value)
+
+
+def _optional_int(value: Any) -> int | None:
+    return None if value is None else int(value)
+
+
+def _require_sha256(value: str, label: str) -> None:
+    if len(value) != 64 or any(ch not in "0123456789abcdef" for ch in value):
+        raise ValueError(f"{label} must be lowercase SHA256")
