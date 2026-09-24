@@ -191,6 +191,7 @@ def _process_fresh(
             expected_signal_identity=signal.freeze_identity,
             cohort_journal=cohort_journal,
             indexed_at_ms=observed_at_ms,
+            collection_protocol_identity=collection_protocol_identity,
         )
 
     issuance = issue_same_cycle_untouched_forward_forecast(
