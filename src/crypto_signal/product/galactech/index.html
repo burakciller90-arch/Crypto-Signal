@@ -84,9 +84,9 @@
           <span class="eyebrow">VARLIK ODAĞI</span>
           <div class="segmented" role="group" aria-label="Varlık seçimi">
             <button class="segment is-active" type="button" data-asset="ALL" aria-pressed="true">TÜMÜ</button>
-            <button class="segment" type="button" data-asset="BTC" aria-pressed="false">BTC</button>
-            <button class="segment" type="button" data-asset="ETH" aria-pressed="false">ETH</button>
-            <button class="segment" type="button" data-asset="SOL" aria-pressed="false">SOL</button>
+            <button class="segment" type="button" data-asset="BTC" aria-pressed="false">BTC / USDT</button>
+            <button class="segment" type="button" data-asset="ETH" aria-pressed="false">ETH / USDT</button>
+            <button class="segment" type="button" data-asset="SOL" aria-pressed="false">SOL / USDT</button>
           </div>
         </div>
 
@@ -94,9 +94,18 @@
           <span id="routeAnnouncer" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></span>
           <span id="runtimeAnnouncer" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></span>
           <span id="apiTruth" class="truth-chip truth-chip-muted">API · DOĞRULANIYOR</span>
-          <span id="freshnessTruth" class="truth-chip truth-chip-muted">VERİ TAZELİĞİ · NOT MEASURED</span>
-          <span id="latencyTruth" class="truth-chip truth-chip-muted">GECİKME · NOT MEASURED</span>
+          <span id="freshnessTruth" class="truth-chip truth-chip-muted">VERİ TAZELİĞİ · ÖLÇÜLMEDİ</span>
+          <span id="latencyTruth" class="truth-chip truth-chip-muted">GECİKME · ÖLÇÜLMEDİ</span>
           <span class="truth-chip truth-chip-safe">GERÇEK SERMAYE · KAPALI</span>
+        </div>
+
+        <div class="intel-ticker-shell" aria-label="Canlı piyasa zekâsı bandı">
+          <span class="intel-ticker-label"><i></i> CANLI ZEKÂ</span>
+          <div class="intel-ticker-window">
+            <div id="intelTicker" class="intel-ticker-track">
+              <span>Kalıcı piyasa zekâsı akışı doğrulanıyor…</span>
+            </div>
+          </div>
         </div>
       </header>
 
