@@ -110,6 +110,7 @@ def issue_unified_decision(
     calibrated_probability: CalibratedProbabilityEvidence | None = None,
     calibration_scope: CalibrationScope | None = None,
     forecast_version_refs: tuple[ForecastVersionRef, ...] = (),
+    forecast_source_evidence_identities: tuple[str, ...] = (),
 ) -> UnifiedDecisionIssuance:
     """Compose one exact-PIT shadow/research decision and persist it atomically.
 
@@ -157,6 +158,9 @@ def issue_unified_decision(
         calibrated_probability=calibrated_probability,
         calibration_scope=calibration_scope,
         extra_version_refs=forecast_version_refs,
+        extra_source_evidence_identities=(
+            forecast_source_evidence_identities
+        ),
     )
 
     methodology = _methodology_slice(signal, confluence)
