@@ -4,10 +4,35 @@ Updated: 2026-09-25
 Project: Crypto Signal
 Baseline: crypto-signal-full-version-v1.0.0 (immutable)
 Active post-v1.0 program: v1.1 world-class product + market intelligence
-State: WC0_LIVE_PRODUCT_PARITY_ACCEPTED / WC1_24_7_DATA_RELIABILITY_ACCEPTED / WC2_ENGINEERING_FROZEN_EVIDENCE_ACCUMULATION_ACTIVE / WC4_CHAMPION_CHALLENGER_ENGINEERING_ACCEPTED_RESEARCH_ONLY / WC5_ENGINEERING_ACCEPTED_PRODUCT_DEPLOYED_HUMAN_USABILITY_NOT_MEASURED / WC6_SANDBOX_BOUNDARY_ACCEPTED_VENUE_EVIDENCE_EXTERNAL_DEPENDENCY / WC7_REVIEW_INFRA_TYPED_PROVENANCE_ACCEPTED_CURRENT_INSUFFICIENT_EVIDENCE / CONTINUITY_PAUSED_BY_USER
+State: WC0_LIVE_PRODUCT_PARITY_ACCEPTED / WC1_24_7_DATA_RELIABILITY_ACCEPTED / WC2_ENGINEERING_FROZEN_EVIDENCE_ACCUMULATION_ACTIVE / WC4_CHAMPION_CHALLENGER_ENGINEERING_ACCEPTED_RESEARCH_ONLY / WC5_ENGINEERING_ACCEPTED_PRODUCT_DEPLOYED_HUMAN_USABILITY_NOT_MEASURED / WC6_SANDBOX_BOUNDARY_ACCEPTED_VENUE_EVIDENCE_EXTERNAL_DEPENDENCY / WC7_REVIEW_INFRA_CANONICAL_ADAPTERS_ACCEPTED_CURRENT_INSUFFICIENT_EVIDENCE / CONTINUITY_PAUSED_BY_USER
 REAL_CAPITAL: 0
 
 ## Active v1.1 frontier — read before historical sections
+
+
+### 2026-09-25 01:04 +0300 — WC7 CANONICAL WC2/WC6 ADAPTERS ACCEPTED / CONCLUSION STILL INSUFFICIENT_EVIDENCE
+
+This entry **supersedes the earlier 2026-09-25 00:56 frontier snapshot** while preserving it below as historical evidence.
+
+- Exact accepted main: `3d0283ab180255e5eca12955814985cab04c3548`.
+- PR **#1201** added the first canonical read-only subsystem adapters for WC7:
+  - `WC2ReviewReadiness.REVIEW_ELIGIBLE` may satisfy **only** `UNTOUCHED_FORWARD_HISTORY`, using the exact readiness identity and preserving the semantic `eligible_for_wc3_review_not_edge_or_profitability_claim`;
+  - `WC2ReviewReadiness.INSUFFICIENT_EVIDENCE` remains WC7 `MISSING`; the readiness identity is carried only as `blocker_boundary_identity`, never as evidence;
+  - accepted WC6 `REQUEST_PREPARED_NO_DISPATCH_NO_VENUE_EVIDENCE / BLOCKED_NOT_CONFIGURED` maps only to WC7 `CAPITAL_EXECUTION_LINEAGE = EXTERNAL_DEPENDENCY`;
+  - the WC6 boundary evidence identity proves the blocker state only and cannot be promoted into capital/execution evidence.
+- Typed provenance now separates `source_artifact_identity` from `blocker_boundary_identity`. Evidence-bearing statuses cannot carry blocker boundaries; blocker statuses cannot invent evidence identities.
+- These adapters are read-only and contain no SQLite writes, network/credential/order surface, automatic EDGE_* verdict or production authority.
+- PR #1201 exact-head UID504 run **36065071631 / job 107852817064** completed **SUCCESS**.
+- After merge, exact-main push run **36065254385 / job 107853404508** independently completed **SUCCESS** with focused WC7, full research, whole-repository and Development non-mutation acceptance.
+- The current WC7 conclusion remains **`INSUFFICIENT_EVIDENCE`**. In particular, current WC2 readiness remains below preregistered sufficiency and current WC6 venue evidence remains an external dependency; no adapter is allowed to reinterpret those blockers as success.
+
+Current true frontier:
+- keep WC2 engineering-frozen and continue genuine evidence accumulation;
+- keep WC3 scientific/economic conclusions blocked until WC2 becomes `REVIEW_ELIGIBLE`;
+- keep WC6 venue evidence external/missing until a safely supported sandbox/testnet environment exists;
+- preserve WC5 human usability as `NOT_MEASURED`;
+- WC7 may next compose a **read-only current-frontier review packet** from canonical adapters plus explicit blocker boundaries for the remaining dimensions; composition must preserve `INSUFFICIENT_EVIDENCE` and `WC7_MACHINE_EDGE_VERDICT=NONE`;
+- continuity remains paused and **REAL_CAPITAL=0**.
 
 
 ### 2026-09-25 00:56 +0300 — WC7 TYPED EVIDENCE PROVENANCE ACCEPTED / CONCLUSION STILL INSUFFICIENT_EVIDENCE
