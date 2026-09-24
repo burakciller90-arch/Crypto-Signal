@@ -47,9 +47,7 @@ from crypto_signal.paper.models import (
 from crypto_signal.paper.pretrade import prepare_paper_trade_plan
 from crypto_signal.paper.sizing import size_paper_candidate
 from crypto_signal.paper.state import reconstruct_paper_fund_state
-from crypto_signal.paper.write_authority import (
-    append_paper_write_authority_event,
-)
+from crypto_signal.paper.write_authority import append_paper_write_authority_event
 from crypto_signal.signals.models import (
     EntryReferenceModel,
     HistoricalStatsStatus,
