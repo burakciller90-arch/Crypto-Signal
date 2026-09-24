@@ -368,6 +368,44 @@ class MarketDataGapLedger:
             ).fetchall()
         return tuple(_event_from_payload(str(row[0])) for row in rows)
 
+    def open_gaps(
+        self,
+        *,
+        provider: str,
+        source: str,
+    ) -> tuple[MarketDataGapEvent, ...]:
+        latest_by_gap: dict[str, MarketDataGapEvent] = {}
+        for event in self.events():
+            if event.provider != provider or event.source != source:
+                continue
+            latest_by_gap[event.gap_identity] = event
+
+        open_events = tuple(
+            sorted(
+                (
+                    event
+                    for event in latest_by_gap.values()
+                    if event.event_kind
+                    not in {GapEventKind.RECOVERED, GapEventKind.UNRECOVERED}
+                ),
+                key=lambda event: (
+                    event.channel,
+                    event.symbol,
+                    event.gap_started_at_ms,
+                    event.gap_identity,
+                ),
+            )
+        )
+        contexts: set[tuple[str, str]] = set()
+        for event in open_events:
+            key = (event.channel, event.symbol)
+            if key in contexts:
+                raise ValueError(
+                    "multiple open gaps exist for one provider/source context"
+                )
+            contexts.add(key)
+        return open_events
+
     def quick_check(self) -> bool:
         if not self.path.is_file():
             return False
@@ -398,6 +436,48 @@ class IngestionSilenceGapMonitor:
             raise ValueError("gap monitor provider/source must be non-empty")
         if self.max_ingestion_silence_ms <= 0:
             raise ValueError("gap monitor silence threshold must be positive")
+
+        for event in self.ledger.open_gaps(
+            provider=self.provider,
+            source=self.source,
+        ):
+            if event.expectation_value != self.max_ingestion_silence_ms:
+                raise ValueError(
+                    "open gap expectation conflicts with active monitor policy"
+                )
+            key = (event.channel, event.symbol)
+            self._open_gaps[key] = event
+            self._last_ingestion[key] = event.last_successful_ingestion_ms
+
+    def seed_persisted_event(
+        self,
+        *,
+        channel: str,
+        symbol: str,
+        ingested_at_ms: int,
+        source_evidence_identities: tuple[str, ...],
+    ) -> None:
+        key = (channel, symbol)
+        previous = self._last_ingestion.get(key)
+        open_gap = self._open_gaps.get(key)
+        if previous is not None and ingested_at_ms < previous:
+            raise ValueError("gap monitor seed ingestion time regressed")
+        if open_gap is not None:
+            if ingested_at_ms <= open_gap.last_successful_ingestion_ms:
+                return
+            if ingested_at_ms <= open_gap.observed_at_ms:
+                raise ValueError(
+                    "persisted evidence conflicts with restored open gap"
+                )
+            self.observe_persisted_event(
+                channel=channel,
+                symbol=symbol,
+                ingested_at_ms=ingested_at_ms,
+                source_evidence_identities=source_evidence_identities,
+            )
+            return
+        self._last_ingestion[key] = ingested_at_ms
+
     def observe_persisted_event(
         self,
         *,
@@ -412,6 +492,10 @@ class IngestionSilenceGapMonitor:
         if previous is not None and ingested_at_ms < previous:
             raise ValueError("gap monitor ingestion time regressed")
         if open_gap is not None:
+            if ingested_at_ms <= open_gap.observed_at_ms:
+                raise ValueError(
+                    "gap recovery evidence must postdate gap observation"
+                )
             recovered = build_gap_recovered(
                 open_gap,
                 recovered_at_ms=ingested_at_ms,
