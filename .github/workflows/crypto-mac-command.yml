@@ -258,7 +258,7 @@ jobs:
           echo "PRODUCT_STATUS_END"
 
           echo "=== SINGLE OWNER SUPERVISOR ==="
-          SUP_PIDS="$(ps -axo pid=,command= | awk -v needle="$ROOT/ssd-service-supervisor.sh" 'index($0, needle) > 0 {print $1}')"
+          SUP_PIDS="$(ps -axo pid=,comm=,args= | awk -v needle="$ROOT/ssd-service-supervisor.sh" '($2 == "bash" || $2 == "/bin/bash") && index($0, needle) > 0 {print $1}')"
           SUP_COUNT="$(printf '%s\n' "$SUP_PIDS" | awk 'NF {n++} END {print n+0}')"
           echo "SSD_SUPERVISOR_COUNT=$SUP_COUNT"
           printf '%s\n' "$SUP_PIDS" | awk 'NF {print "SSD_SUPERVISOR_PID=" $1}'

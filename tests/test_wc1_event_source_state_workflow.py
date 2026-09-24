@@ -26,6 +26,8 @@ def test_event_source_state_reads_exact_runtime_truth_without_mutation() -> None
     assert 'EVENT_DB="$DEV/runtime/events/event_source.sqlite3"' in block
     assert 'WRAPPER="$ROOT/ssd-clock-wrapper.py"' in block
     assert "SSD_SUPERVISOR_COUNT=" in block
+    assert "ps -axo pid=,comm=,args=" in block
+    assert '($2 == "bash" || $2 == "/bin/bash")' in block
     assert "SSD_CLOCK_WRAPPER_SHA256=" in block
     assert "SSD_CLOCK_WRAPPER_CONTENT_BEGIN" in block
     assert "read_event_source_runtime_truth" in block

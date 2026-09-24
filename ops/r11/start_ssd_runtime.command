@@ -10,7 +10,8 @@ LOGDIR="$ROOT/ServiceLogs"
 mkdir -p "$LOCAL_LOG"
 
 find_supervisor_pid() {
-  /bin/ps -axo pid=,command= 2>/dev/null     | /usr/bin/awk -v needle="$SUP" 'index($0, needle) > 0 {print $1; exit}'
+  /bin/ps -axo pid=,comm=,args= 2>/dev/null \
+    | /usr/bin/awk -v needle="$SUP" '($2 == "bash" || $2 == "/bin/bash") && index($0, needle) > 0 {print $1; exit}'
 }
 
 pid="$(find_supervisor_pid)"
