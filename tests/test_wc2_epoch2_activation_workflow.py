@@ -29,7 +29,7 @@ def test_epoch2_activation_command_is_allowlisted_and_exact_source() -> None:
 
 
 def test_epoch2_activation_command_is_bounded_and_epoch1_byte_stable() -> None:
-    block = _block("WC2 EPOCH2 ACTIVATE", "WC2 STATE")
+    block = _block("WC2 EPOCH2 ACTIVATE", "WC2 COLLECTION PROTOCOL REGISTER")
 
     assert 'EPOCH1="$DEV/runtime/paper/paper_fund.sqlite3"' in block
     assert 'EPOCH2="$DEV/runtime/paper/paper_fund_epoch2.sqlite3"' in block

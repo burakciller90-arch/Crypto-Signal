@@ -13,7 +13,7 @@ def _block(name: str, next_name: str) -> str:
 def test_wc2_state_is_allowlisted_and_uses_exact_workflow_source() -> None:
     text = WORKFLOW.read_text(encoding="utf-8")
 
-    assert "wc2policyregister|wc2state|services|" in text
+    assert "wc2policyregister|wc2protocolregister|wc2state|services|" in text
 
     checkout = _block(
         "CHECKOUT EXACT WC2 POLICY COMMAND SOURCE",
@@ -23,7 +23,7 @@ def test_wc2_state_is_allowlisted_and_uses_exact_workflow_source() -> None:
         "VERIFY EXACT WC2 POLICY COMMAND SOURCE",
         "STATUS",
     )
-    for command in ("wc2policyregister", "wc2state"):
+    for command in ("wc2policyregister", "wc2protocolregister", "wc2state"):
         assert f"steps.parse.outputs.command == '{command}'" in checkout
         assert f"steps.parse.outputs.command == '{command}'" in verify
 
@@ -40,6 +40,7 @@ def test_wc2_state_reads_only_ephemeral_stable_copies() -> None:
 
     for path in (
         'runtime / "wc2" / "wc2_forward_policy.sqlite3"',
+        '"wc2_collection_protocol.wc2-collection-protocol.sqlite3"',
         'runtime / "decision" / "decision_evidence.sqlite3"',
         'runtime / "r25" / "r25.shadow-cycle.sqlite3"',
         'runtime / "paper" / "paper_fund_epoch2.sqlite3"',
@@ -81,6 +82,7 @@ def test_wc2_state_reports_all_lineage_layers_without_performance_claims() -> No
 
     for marker in (
         "WC2_POLICY_STATUS=",
+        "WC2_PROTOCOL_STATUS=",
         "WC2_DECISION_EVIDENCE",
         "WC2_SHADOW_CYCLE",
         "WC2_EPOCH2_R22",
