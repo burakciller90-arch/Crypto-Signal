@@ -5,8 +5,6 @@ from pathlib import Path
 
 import httpx
 
-from ops.run_event_source_snapshot import collect_event_source_cycle
-
 from crypto_signal.data.event_source_adapters import (
     BLS_CALENDAR_ENDPOINT,
     FED_MONETARY_RSS_ENDPOINT,
@@ -16,6 +14,7 @@ from crypto_signal.data.event_source_runtime import (
     EventSourceRuntimeStore,
     EventSourceTimestampBasis,
 )
+from ops.run_event_source_snapshot import collect_event_source_cycle
 
 
 BLS_ICS = """BEGIN:VCALENDAR
