@@ -74,8 +74,9 @@ def _news():
 
 def _raw(text: str):
     return build_event_source_raw_payload(
-        payload_text=text,
+        payload_bytes=text.encode("utf-8"),
         content_type="text/plain; charset=utf-8",
+        text_encoding="utf-8",
     )
 
 
@@ -218,7 +219,8 @@ def test_event_source_raw_payload_is_exact_and_bounded() -> None:
             payload_sha256=raw.payload_sha256,
             content_bytes=raw.content_bytes + 1,
             content_type=raw.content_type,
-            payload_text=raw.payload_text,
+            text_encoding=raw.text_encoding,
+            payload_bytes=raw.payload_bytes,
         )
 
 
@@ -286,4 +288,42 @@ def test_failed_parse_can_retain_raw_payload_without_fake_items(tmp_path) -> Non
         "structured_events": 0,
         "news_events": 0,
         "fetches": 1,
+    }
+
+
+def test_atomic_calendar_snapshot_rolls_back_on_lineage_error(tmp_path) -> None:
+    store = EventSourceRuntimeStore(tmp_path / "event-sources.sqlite3")
+    raw = _raw("calendar-payload")
+    coverage = _coverage()
+    event = _event()
+    bad_fetch = build_event_source_fetch_observation(
+        source_provider="bls.gov",
+        source_kind=EventSourceKind.CALENDAR,
+        endpoint_url="https://www.bls.gov/schedule/news_release/bls.ics",
+        fetched_at_ms=900,
+        source_timestamp_ms=800,
+        source_timestamp_basis=EventSourceTimestampBasis.HTTP_DATE,
+        http_status=200,
+        outcome=EventSourceFetchOutcome.SUCCESS,
+        raw_payload_sha256=raw.payload_sha256,
+        raw_payload_bytes=raw.content_bytes,
+        item_identities=("f" * 64,),
+        coverage_identity=coverage.coverage_identity,
+        adapter_version="test/1",
+    )
+
+    with pytest.raises(ValueError, match="item identity mismatch"):
+        store.append_calendar_snapshot(
+            raw_payload=raw,
+            coverage=coverage,
+            events=(event,),
+            fetch=bad_fetch,
+        )
+
+    assert store.counts() == {
+        "raw_payloads": 0,
+        "calendar_coverages": 0,
+        "structured_events": 0,
+        "news_events": 0,
+        "fetches": 0,
     }
