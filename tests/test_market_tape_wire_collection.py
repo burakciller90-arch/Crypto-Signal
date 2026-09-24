@@ -11,7 +11,10 @@ from crypto_signal.data.adapters.bybit_microstructure_ws import (
     parse_bybit_public_trade_payload,
 )
 from crypto_signal.data.market_tape import MarketTapeStore
-from crypto_signal.data.market_tape_wire_collection import persist_bybit_wire_stream
+from crypto_signal.data.market_tape_wire_collection import (
+    MarketTapeWireCollectionResult,
+    persist_bybit_wire_stream,
+)
 from crypto_signal.data.raw_market_tape import RawMarketEvent, RawMarketTapeStore
 
 ADAPTER_VERSION = BybitSpotMicrostructureStream.ADAPTER_VERSION
@@ -237,6 +240,45 @@ async def test_wire_collection_reports_progress_only_after_persistence(tmp_path)
     assert tuple(item[0] for item in progress) == (1, 2, 3, 4, 5)
     assert tuple(item[1] for item in progress) == (1, 2, 3, 4, 5)
     assert progress[-1][2] == store.counts().total == 4
+
+@pytest.mark.asyncio
+async def test_wire_collection_exposes_exact_in_memory_progress_counters(
+    tmp_path,
+) -> None:
+    store = MarketTapeStore(tmp_path / "market_tape.sqlite3")
+    raw_store = RawMarketTapeStore(tmp_path / "raw_market_tape.sqlite3")
+    progress: list[tuple[int, int, int]] = []
+
+    def record_progress(snapshot: MarketTapeWireCollectionResult) -> None:
+        progress.append(
+            (
+                snapshot.observed_messages,
+                snapshot.raw_inserted,
+                snapshot.normalized_inserted_total,
+            )
+        )
+
+    result = await persist_bybit_wire_stream(
+        store=store,
+        raw_store=raw_store,
+        events=_wire_events(),
+        orderbook_snapshot_interval_ms=1_000,
+        collection_progress_callback=record_progress,
+    )
+
+    assert progress == [
+        (1, 1, 1),
+        (2, 2, 1),
+        (3, 3, 1),
+        (4, 4, 2),
+        (5, 5, 4),
+    ]
+    assert progress[-1] == (
+        result.observed_messages,
+        result.raw_inserted,
+        result.normalized_inserted_total,
+    )
+
 
 @pytest.mark.asyncio
 async def test_wire_collection_exposes_exact_persisted_raw_identity(tmp_path) -> None:
