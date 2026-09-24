@@ -46,6 +46,41 @@ jobs:
           echo "LOCK_PID=$PID"
           [ -n "$PID" ] && /bin/ps -ww -p "$PID" -o pid=,ppid=,uid=,%cpu=,%mem=,etime=,args= || true
 
+          echo "=== MARKET TAPE TIMESTAMP SKEW ==="
+          "$DEV/.venv/bin/python" - <<'PY'
+          import sqlite3
+          import time
+          from pathlib import Path
+
+          path=Path("/Volumes/Crypto-504/Crypto-Signal/Development/runtime/market_tape/market_tape.sqlite3")
+          now_ms=time.time_ns()//1_000_000
+          print(f"LOCAL_NOW_MS={now_ms}")
+          uri=f"{path.resolve().as_uri()}?mode=ro"
+          with sqlite3.connect(uri, uri=True) as db:
+              db.execute("PRAGMA query_only=ON")
+              specs=(
+                  ("orderbooks","market_tape_orderbooks","event_at_ms","ingested_at_ms"),
+                  ("trades","market_tape_trades","event_at_ms","ingested_at_ms"),
+                  ("derivatives","market_tape_derivatives","event_at_ms","ingested_at_ms"),
+                  ("liquidations","market_tape_liquidations","event_at_ms","ingested_at_ms"),
+                  ("liquidation_coverage","market_tape_liquidation_coverage","coverage_end_ms","observed_at_ms"),
+              )
+              for label,table,event_col,availability_col in specs:
+                  row=db.execute(
+                      f"SELECT MAX({event_col}), MAX({availability_col}) FROM {table}"
+                  ).fetchone()
+                  event=row[0]
+                  availability=row[1]
+                  print(
+                      f"{label.upper()}_MAX_EVENT_MS={event} "
+                      f"{label.upper()}_MAX_AVAILABILITY_MS={availability} "
+                      f"{label.upper()}_EVENT_MINUS_NOW_MS="
+                      f"{None if event is None else int(event)-now_ms} "
+                      f"{label.upper()}_AVAILABILITY_MINUS_NOW_MS="
+                      f"{None if availability is None else int(availability)-now_ms}"
+                  )
+          PY
+
           echo "=== DASHBOARD LOG TAIL ==="
           tail -200 "$ROOT/ServiceLogs/dashboard.out.log" 2>/dev/null || true
           tail -240 "$ROOT/ServiceLogs/dashboard.err.log" 2>/dev/null || true
