@@ -12,6 +12,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: wc2-execution-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
 jobs:
   wc2-paper-execution-journal-uid504:
     name: WC2 paper execution journal exact-source UID504 acceptance
