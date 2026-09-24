@@ -1,0 +1,50 @@
+name: World-Class WC2 Bounded Live Acceptance Hosted
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "ops/run_live_evidence_clock.py"
+      - ".github/workflows/crypto-mac-command.yml"
+      - "tests/test_wc2_live_clock_lock_path.py"
+      - "tests/test_wc2_bounded_collection_workflow.py"
+      - ".github/workflows/world-class-wc2-bounded-live-acceptance-hosted.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  wc2-bounded-live-acceptance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install package and quality tools
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+          python -m pip install "pytest>=8.4" "pytest-asyncio>=1.2" "ruff>=0.13" "mypy>=1.18"
+      - name: Focused WC2 bounded live acceptance
+        run: |
+          python -m pytest -q             tests/test_wc2_bounded_collection_workflow.py             tests/test_wc2_live_clock_lock_path.py             tests/test_wc2_live_clock_wiring.py             tests/test_wc2_prepared_live_runtime.py             tests/test_wc2_collection_protocol.py
+          python -m ruff check             ops/run_live_evidence_clock.py             tests/test_wc2_live_clock_lock_path.py             tests/test_wc2_bounded_collection_workflow.py
+          python -m mypy ops/run_live_evidence_clock.py
+          echo "WC2_BOUNDED_COLLECTION_CONTRACT_PASS=YES"
+          echo "WC2_LEDGER_LOCAL_LOCK_PASS=YES"
+          echo "WC2_NO_SERVICE_MUTATION_PASS=YES"
+          echo "WC2_HISTORICAL_BACKFILL_FORBIDDEN_PASS=YES"
+          echo "WC2_REAL_CAPITAL_ZERO_PASS=YES"
+      - name: Whole-repository regression
+        run: |
+          python -m pytest -q
+          python -m ruff check src tests ops/verify_stage10_integrated.py
+          python -m mypy src ops/verify_stage10_integrated.py
+          node --check src/crypto_signal/product/static/freshness.js
+          node --check src/crypto_signal/product/static/app.js
+          node --check src/crypto_signal/product/galactech/app.js
+          node tests/js/test_product_freshness.js
+          echo "WC2_BOUNDED_LIVE_ACCEPTANCE_FULL_PASS=YES"
