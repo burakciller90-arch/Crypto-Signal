@@ -59,25 +59,35 @@ def _lock_holder(lock_path: Path) -> int | None:
     return None
 
 
-def _process_args(pid: int) -> tuple[str, str]:
+def _parse_process_identity(raw: str) -> tuple[int | None, tuple[str, ...]]:
+    line = raw.strip()
+    if not line:
+        return None, ()
+    parts = line.split()
+    if len(parts) < 2 or not parts[0].isdigit():
+        return None, ()
+    return int(parts[0]), tuple(parts[1:])
+
+
+def _process_identity(pid: int) -> tuple[int | None, tuple[str, ...]]:
     result = subprocess.run(
-        ["/bin/ps", "-p", str(pid), "-o", "comm=,args="],
+        ["/bin/ps", "-ww", "-p", str(pid), "-o", "uid=,args="],
         check=False,
         capture_output=True,
         text=True,
     )
-    line = result.stdout.strip()
-    if not line:
-        return "", ""
-    parts = line.split(maxsplit=1)
-    return parts[0], "" if len(parts) == 1 else parts[1]
+    return _parse_process_identity(result.stdout)
 
 
 def _is_expected_collector(pid: int, runner: Path) -> bool:
-    comm, args = _process_args(pid)
-    if "python" not in comm.lower():
-        return False
-    return str(runner) in args.split()
+    uid, argv = _process_identity(pid)
+    expected_python = runner.parent.parent / ".venv" / "bin" / "python"
+    return (
+        uid == 504
+        and len(argv) >= 2
+        and argv[0] == str(expected_python)
+        and argv[1] == str(runner)
+    )
 
 
 def _wait_for_initial_state(
