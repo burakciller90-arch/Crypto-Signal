@@ -42,7 +42,7 @@ from crypto_signal.paper.execution_lab_lifecycle import (
     simulate_wc6_shadow_order_lifecycle,
 )
 from crypto_signal.paper.execution_lab_sandbox import (
-    WC6SandboxAdapterStatus,
+    WC6SandboxAdapterStatus as WC6SandboxBoundaryAdapterStatus,
     WC6SandboxBoundaryError,
     WC6SandboxDispatchStatus,
     WC6SandboxEvidenceSemantic,
@@ -562,7 +562,7 @@ def test_wc6_sandbox_boundary_prepares_request_but_preserves_not_configured_trut
         request=request,
     )
 
-    assert config.status is WC6SandboxAdapterStatus.NOT_CONFIGURED
+    assert config.status is WC6SandboxBoundaryAdapterStatus.NOT_CONFIGURED
     assert config.endpoint_reference_identity is None
     assert config.credential_reference_identity is None
     assert config.transport_reference_identity is None
