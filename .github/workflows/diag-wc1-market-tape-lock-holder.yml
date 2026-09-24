@@ -40,7 +40,21 @@ jobs:
           for pid in $PIDS; do
             echo "=== PID $pid ==="
             /bin/ps -ww -p "$pid" -o pid=,ppid=,uid=,comm=,args= || true
+            ppid="$(/bin/ps -p "$pid" -o ppid= | tr -d ' ')"
+            if [ -n "$ppid" ]; then
+              echo "=== PARENT $ppid ==="
+              /bin/ps -ww -p "$ppid" -o pid=,ppid=,uid=,comm=,args= || true
+            fi
+            echo "=== PID CWD ==="
+            /usr/sbin/lsof -a -p "$pid" -d cwd || true
           done
+          echo "=== LEGACY MARKETTAPE WORKTREE ==="
+          if [ -d "$ROOT/MarketTape/.git" ] || [ -f "$ROOT/MarketTape/.git" ]; then
+            echo "LEGACY_HEAD=$(git -C "$ROOT/MarketTape" rev-parse HEAD 2>/dev/null || true)"
+            git -C "$ROOT/MarketTape" status --short --branch || true
+          else
+            echo "LEGACY_WORKTREE_GIT=NO"
+          fi
           echo "=== PIDFILE ==="
           cat "$PIDFILE" 2>/dev/null || true
           echo "=== ALL MARKET TAPE PROCESSES ==="
