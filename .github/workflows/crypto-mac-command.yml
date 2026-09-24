@@ -76,6 +76,7 @@ jobs:
         if: >-
           steps.parse.outputs.command == 'wc2policyregister' ||
           steps.parse.outputs.command == 'wc2epoch2activate' ||
+          steps.parse.outputs.command == 'wc2protocolregister' ||
           steps.parse.outputs.command == 'wc2state'
         shell: bash
         run: |
