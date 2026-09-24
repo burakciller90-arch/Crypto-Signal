@@ -6,7 +6,6 @@ import sqlite3
 from pathlib import Path
 
 import pytest
-
 from fastapi.testclient import TestClient
 
 from crypto_signal.data.market_tape_collector_runtime import (
