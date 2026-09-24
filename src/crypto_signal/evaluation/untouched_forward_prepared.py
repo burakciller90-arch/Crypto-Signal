@@ -50,11 +50,7 @@ from crypto_signal.ledger.serialization import (
 )
 from crypto_signal.paper.epoch2_accounting import Epoch2ActivationRecord
 from crypto_signal.paper.epochs import PaperVaultId
-from crypto_signal.paper.position_sizing_intelligence import (
-    POSITION_SIZING_ENGINE_VERSION,
-    POSITION_SIZING_SCHEMA_VERSION,
-    PositionSizingPolicy,
-)
+from crypto_signal.paper.position_sizing_intelligence import PositionSizingPolicy
 from crypto_signal.product.decision_proof import (
     DecisionProofEvidenceSlice,
     ProofEvidenceAvailability,
@@ -107,8 +103,6 @@ class WC2PreparedCycleReceipt:
             (self.activation_identity, "WC2 prepared activation"),
         ):
             _require_sha256(value, label)
-        if self.signal.freeze_identity != self.source_inputs.geometry_family.asset and False:
-            raise AssertionError("unreachable")
         if self.source_inputs.bundle_identity == "":
             raise ValueError("WC2 prepared source bundle missing")
         if self.signal.state not in {SignalState.WATCH, SignalState.ACTIVE}:
@@ -207,8 +201,33 @@ def build_wc2_prepared_cycle_receipt(
         raise ValueError("WC2 prepared cycle requires frozen target")
     target_label = signal.geometry.targets[0].label
 
-    draft = WC2PreparedCycleReceipt(
-        receipt_identity="0" * 64,
+    values: dict[str, object] = {
+        "activation_identity": activation.activation_identity,
+        "base_asset": base_asset,
+        "canonical_epoch2_write_authority": False,
+        "capital_assessed_at_ms": capital_assessed_at_ms,
+        "engine_version": WC2_PREPARED_RECEIPT_ENGINE_VERSION,
+        "historical_backfill_authority": False,
+        "horizon_bars": horizon_bars,
+        "indexed_at_ms": indexed_at_ms,
+        "issued_at_ms": issued_at_ms,
+        "maximum_issuance_delay_ms": maximum_issuance_delay_ms,
+        "policy_identity": policy.policy_identity,
+        "previewed_at_ms": previewed_at_ms,
+        "production_authority": False,
+        "real_capital": REAL_CAPITAL,
+        "schema_version": WC2_PREPARED_RECEIPT_SCHEMA_VERSION,
+        "signal": signal,
+        "sized_at_ms": sized_at_ms,
+        "sizing_policy": sizing_policy,
+        "source_cutoff_open_time_ms": bundle.source_cutoff_open_time_ms,
+        "source_frozen_at_ms": source_frozen_at_ms,
+        "source_inputs": inputs,
+        "target_label": target_label,
+        "vault_id": PaperVaultId.CORE,
+    }
+    return WC2PreparedCycleReceipt(
+        receipt_identity=canonical_sha256(values),
         policy_identity=policy.policy_identity,
         activation_identity=activation.activation_identity,
         signal=signal,
@@ -226,26 +245,6 @@ def build_wc2_prepared_cycle_receipt(
         sized_at_ms=sized_at_ms,
         previewed_at_ms=previewed_at_ms,
         indexed_at_ms=indexed_at_ms,
-    )
-    return WC2PreparedCycleReceipt(
-        receipt_identity=canonical_sha256(_receipt_payload(draft)),
-        policy_identity=draft.policy_identity,
-        activation_identity=draft.activation_identity,
-        signal=draft.signal,
-        source_inputs=draft.source_inputs,
-        source_cutoff_open_time_ms=draft.source_cutoff_open_time_ms,
-        source_frozen_at_ms=draft.source_frozen_at_ms,
-        issued_at_ms=draft.issued_at_ms,
-        maximum_issuance_delay_ms=draft.maximum_issuance_delay_ms,
-        horizon_bars=draft.horizon_bars,
-        target_label=draft.target_label,
-        base_asset=draft.base_asset,
-        sizing_policy=draft.sizing_policy,
-        vault_id=draft.vault_id,
-        capital_assessed_at_ms=draft.capital_assessed_at_ms,
-        sized_at_ms=draft.sized_at_ms,
-        previewed_at_ms=draft.previewed_at_ms,
-        indexed_at_ms=draft.indexed_at_ms,
     )
 
 
