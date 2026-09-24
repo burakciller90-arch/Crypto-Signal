@@ -1,5 +1,4 @@
 from __future__ import annotations
-
 from pathlib import Path
 
 from crypto_signal.data.models import (
@@ -34,11 +33,11 @@ def _seed(
             open_time_ms=open_time_ms,
             close_time_ms=close_time_ms,
             open=value,
-            high=value + Decimal("1"),
-            low=value - Decimal("1"),
+            high=value + Decimal(1),
+            low=value - Decimal(1),
             close=value,
-            volume=Decimal("1"),
-            quote_volume=Decimal("100"),
+            volume=Decimal(1),
+            quote_volume=Decimal(100),
             trade_count=1 if exchange is Exchange.BINANCE else None,
             is_closed=True,
             source=DataSource.REST,
@@ -115,14 +114,14 @@ def test_provider_divergence_cycle_is_idempotent_at_same_observation(
         close="100.1",
     )
 
-    kwargs = dict(
-        candle_db=candle_db,
-        divergence_db=divergence_db,
-        symbols=("BTCUSDT",),
-        timeframe="15m",
-        lookback=96,
-        observed_at_ms=1_000_000,
-    )
+    kwargs = {
+        "candle_db": candle_db,
+        "divergence_db": divergence_db,
+        "symbols": ("BTCUSDT",),
+        "timeframe": "15m",
+        "lookback": 96,
+        "observed_at_ms": 1_000_000,
+    }
     first = collect_provider_divergence(**kwargs)
     second = collect_provider_divergence(**kwargs)
 
