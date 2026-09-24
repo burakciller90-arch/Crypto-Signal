@@ -288,7 +288,28 @@ def build_wc2_untouched_forward_policy(
     }
     return WC2UntouchedForwardPolicy(
         policy_identity=canonical_sha256(values),
-        **values,
+        preregistered_at_ms=preregistered_at_ms,
+        collection_start_ms=collection_start_ms,
+        evidence_class=EvidenceClass.LIVE_UNTOUCHED_FORWARD,
+        required_assets=tuple(sorted(WC2_REQUIRED_ASSETS)),
+        minimum_total_decisive_n=WC2_MIN_TOTAL_DECISIVE_N,
+        minimum_decisive_per_asset=WC2_MIN_DECISIVE_PER_ASSET,
+        minimum_qualifying_regimes=WC2_MIN_QUALIFYING_REGIMES,
+        minimum_decisive_per_regime=WC2_MIN_DECISIVE_PER_REGIME,
+        minimum_calendar_days=WC2_MIN_CALENDAR_DAYS,
+        require_paper_decision_for_every_forecast=True,
+        require_simulated_execution_for_every_trade=True,
+        require_explicit_cost_evidence_for_every_trade=True,
+        require_loss_retention=True,
+        require_abstain_retention=True,
+        require_invalidation_retention=True,
+        require_unresolved_retention=True,
+        automatic_promotion=False,
+        performance_thresholds_included=False,
+        schema_version=WC2_POLICY_SCHEMA_VERSION,
+        engine_version=WC2_POLICY_ENGINE_VERSION,
+        production_authority=False,
+        real_capital=REAL_CAPITAL,
     )
 
 
@@ -343,7 +364,30 @@ def build_wc2_cohort_readiness_evidence(
     }
     return WC2CohortReadinessEvidence(
         evidence_identity=canonical_sha256(values),
-        **values,
+        policy_identity=policy.policy_identity,
+        observed_at_ms=observed_at_ms,
+        collection_start_ms=collection_start_ms,
+        collection_end_ms=collection_end_ms,
+        evidence_class=EvidenceClass.LIVE_UNTOUCHED_FORWARD,
+        total_forecast_n=total_forecast_n,
+        resolved_forecast_n=resolved_forecast_n,
+        decisive_n=decisive_n,
+        paper_decision_n=paper_decision_n,
+        trade_decision_n=trade_decision_n,
+        simulated_execution_n=simulated_execution_n,
+        explicit_cost_evidence_trade_n=explicit_cost_evidence_trade_n,
+        asset_decisive_counts=tuple(sorted(asset_decisive_counts)),
+        regime_decisive_counts=tuple(sorted(regime_decisive_counts)),
+        loss_retention_complete=loss_retention_complete,
+        abstain_retention_complete=abstain_retention_complete,
+        invalidation_retention_complete=invalidation_retention_complete,
+        unresolved_retention_complete=unresolved_retention_complete,
+        source_evidence_identities=tuple(
+            sorted(set(source_evidence_identities))
+        ),
+        schema_version=WC2_POLICY_SCHEMA_VERSION,
+        production_authority=False,
+        real_capital=REAL_CAPITAL,
     )
 
 
@@ -431,7 +475,17 @@ def evaluate_wc2_review_readiness(
     }
     return WC2ReviewReadiness(
         readiness_identity=canonical_sha256(values),
-        **values,
+        policy_identity=policy.policy_identity,
+        evidence_identity=evidence.evidence_identity,
+        status=status,
+        reason_codes=ordered_reasons,
+        qualifying_regime_count=qualifying_regimes,
+        calendar_duration_days=calendar_days,
+        semantic="eligible_for_wc3_review_not_edge_or_profitability_claim",
+        automatic_promotion=False,
+        schema_version=WC2_POLICY_SCHEMA_VERSION,
+        production_authority=False,
+        real_capital=REAL_CAPITAL,
     )
 
 
