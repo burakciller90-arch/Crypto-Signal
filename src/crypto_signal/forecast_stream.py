@@ -320,6 +320,7 @@ def build_immutable_forecast(
     calibrated_probability: CalibratedProbabilityEvidence | None = None,
     calibration_scope: CalibrationScope | None = None,
     extra_version_refs: tuple[ForecastVersionRef, ...] = (),
+    extra_source_evidence_identities: tuple[str, ...] = (),
 ) -> ImmutableForecast:
     if signal.state not in {SignalState.WATCH, SignalState.ACTIVE}:
         raise ValueError("R20 forecast requires WATCH or ACTIVE signal")
@@ -402,6 +403,15 @@ def build_immutable_forecast(
         confluence.snapshot_identity,
         event_context.evidence_identity,
     }
+    if tuple(sorted(set(extra_source_evidence_identities))) != (
+        extra_source_evidence_identities
+    ):
+        raise ValueError(
+            "R20 extra source evidence identities must be sorted and unique"
+        )
+    for identity in extra_source_evidence_identities:
+        _require_sha256(identity, "R20 extra source evidence identity")
+    evidence_ids.update(extra_source_evidence_identities)
     if calibrated_probability is not None:
         evidence_ids.update(
             {
