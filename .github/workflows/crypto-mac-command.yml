@@ -125,6 +125,7 @@ jobs:
           DEV="$ROOT/Development"
           PY="$DEV/.venv/bin/python"
           PORT=48705
+          PREVIEW_TTL_SECONDS=900
           URL="http://127.0.0.1:$PORT"
           PIDFILE="$ROOT/galactech-preview.pid"
           OUT="$ROOT/ServiceLogs/galactech-preview.out.log"
@@ -155,7 +156,7 @@ jobs:
             unset RUNNER_TRACKING_ID
             export PYTHONPATH="$GITHUB_WORKSPACE/src"
             cd "$GITHUB_WORKSPACE"
-            exec "$PY" "$GITHUB_WORKSPACE/ops/run_dashboard.py" \
+            exec /usr/bin/nice -n 15 "$PY" "$GITHUB_WORKSPACE/ops/run_dashboard.py" \
               --host 127.0.0.1 \
               --port "$PORT" \
               --ledger "$DEV/runtime/ledger/live_signal_ledger.sqlite3" \
@@ -191,9 +192,29 @@ jobs:
           echo "$listener" > "$PIDFILE"
           echo "GALACTECH_PREVIEW_PID=$listener"
           echo "GALACTECH_PREVIEW_URL=$URL/"
+          echo "GALACTECH_PREVIEW_TTL_SECONDS=$PREVIEW_TTL_SECONDS"
           echo "GALACTECH_PREVIEW_READ_ONLY_PASS=YES"
           echo "REAL_CAPITAL=0"
           /usr/bin/open "$URL/" || true
+
+          (
+            unset RUNNER_TRACKING_ID
+            sleep "$PREVIEW_TTL_SECONDS"
+            current="$(/usr/sbin/lsof -nP -iTCP:$PORT -sTCP:LISTEN -t 2>/dev/null | head -1 || true)"
+            if [ "$current" = "$listener" ]; then
+              cmd="$(ps -p "$current" -o command= 2>/dev/null || true)"
+              if printf '%s\n' "$cmd" | grep -F 'ops/run_dashboard.py' >/dev/null \
+                && printf '%s\n' "$cmd" | grep -F -- '--port 48705' >/dev/null; then
+                kill "$current" >/dev/null 2>&1 || true
+                sleep 1
+                kill -0 "$current" >/dev/null 2>&1 \
+                  && kill -KILL "$current" >/dev/null 2>&1 || true
+              fi
+            fi
+            if [ "$(cat "$PIDFILE" 2>/dev/null || true)" = "$listener" ]; then
+              rm -f "$PIDFILE"
+            fi
+          ) >>"$OUT" 2>>"$ERR" < /dev/null &
 
       - name: STATUS
         if: steps.parse.outputs.command == 'status'
