@@ -132,7 +132,7 @@ def read_wc5_actionability(
         proof_identity = str(forecast_row["proof_identity"])
         symbol = str(forecast_row["symbol"])
         regime = str(forecast_row["regime"])
-        issued_at_ms = int(forecast_row["issued_at_ms"])
+        issued_at_ms = _require_payload_int(forecast_row["issued_at_ms"], "WC2 issued_at_ms")
         forecast_payload = _verified_payload(
             cohort_identity,
             str(forecast_row["payload_json"]),
@@ -143,7 +143,7 @@ def read_wc5_actionability(
             or forecast_payload.get("proof_identity") != proof_identity
             or forecast_payload.get("symbol") != symbol
             or forecast_payload.get("regime") != regime
-            or int(forecast_payload.get("issued_at_ms", -1)) != issued_at_ms
+            or _require_payload_int(forecast_payload.get("issued_at_ms"), "WC2 cohort forecast issued_at_ms") != issued_at_ms
         ):
             raise ValueError("WC5 cohort forecast row/payload mismatch")
         _require_authority_closed(forecast_payload, "WC2 cohort forecast")
@@ -206,9 +206,22 @@ def read_wc5_actionability(
         intent_link_identity=intent_identity,
         paper_intent_identity=str(intent_row["paper_intent_identity"]),
         vault_id=str(intent_row["vault_id"]),
-        decided_at_ms=int(intent_payload["decided_at_ms"]),
-        previewed_at_ms=int(intent_payload["previewed_at_ms"]),
+        decided_at_ms=_require_payload_int(intent_payload.get("decided_at_ms"), "WC2 intent decided_at_ms"),
+        previewed_at_ms=_require_payload_int(intent_payload.get("previewed_at_ms"), "WC2 intent previewed_at_ms"),
     )
+
+
+def _require_payload_int(value: object, label: str) -> int:
+    if isinstance(value, bool):
+        raise ValueError(f"{label} must be an integer")
+    if isinstance(value, int):
+        return value
+    if isinstance(value, str):
+        try:
+            return int(value)
+        except ValueError as exc:
+            raise ValueError(f"{label} must be an integer") from exc
+    raise ValueError(f"{label} must be an integer")
 
 
 def _require_schema(db: sqlite3.Connection) -> None:
