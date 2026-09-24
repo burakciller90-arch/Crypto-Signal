@@ -24,7 +24,7 @@ jobs:
           set -euo pipefail
           cmd="$(printf '%s\n' "$ISSUE_BODY" | awk -F: 'tolower($1)=="command" {gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2); print tolower($2); exit}')"
           case "$cmd" in
-            status|services|logs|disk|sync|producttest|fulltest|productstate|productdeploy|paperreview|paperinspect|paperfixlint|paperharden|stateplanreview|stateplaninspect|stateplanharden|cursorreview|cursorreviewtail|cursorcleanup|bridgecheck|bridgestate|rollingstate|pausecheck|wakepause|wakeresume|wakearm|waketest|wakeheartbeat|chatbusyprobe|cursorcheck|cursorauthdiag|cursorttycheck|alertclockstate|alertclockpause|alertclockresume|migrationinspect|migrationinventory|ssddashboarddiag|productcrashlogs|ssddashboardwrappertest|ssdtcclaunchtest|ssdbackgroundteststart|ssdbackgroundtestcheck|ssdleftover|runnerpersistinstall|runnerpersistdiag|runnercutoverdiag|dashboardstart504|runnerterminalwatchdoginstall)
+            status|eventsourcestate|services|logs|disk|sync|producttest|fulltest|productstate|productdeploy|paperreview|paperinspect|paperfixlint|paperharden|stateplanreview|stateplaninspect|stateplanharden|cursorreview|cursorreviewtail|cursorcleanup|bridgecheck|bridgestate|rollingstate|pausecheck|wakepause|wakeresume|wakearm|waketest|wakeheartbeat|chatbusyprobe|cursorcheck|cursorauthdiag|cursorttycheck|alertclockstate|alertclockpause|alertclockresume|migrationinspect|migrationinventory|ssddashboarddiag|productcrashlogs|ssddashboardwrappertest|ssdtcclaunchtest|ssdbackgroundteststart|ssdbackgroundtestcheck|ssdleftover|runnerpersistinstall|runnerpersistdiag|runnercutoverdiag|dashboardstart504|runnerterminalwatchdoginstall)
               ;;
             *)
               echo "Unsupported command: $cmd"
@@ -47,6 +47,124 @@ jobs:
           echo "=== DASHBOARD ==="
           curl -fsS --max-time 5 http://127.0.0.1:48700/api/health
           echo
+
+      - name: EVENT SOURCE STATE
+        if: steps.parse.outputs.command == 'eventsourcestate'
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          DEV="$ROOT/Development"
+          PRODUCT="$ROOT/Product"
+          WRAPPER="$ROOT/ssd-clock-wrapper.py"
+          EVENT_DB="$DEV/runtime/events/event_source.sqlite3"
+          PY="$DEV/.venv/bin/python"
+
+          test "$(id -u)" = "504"
+          test -d "$DEV"
+          test -x "$PY"
+
+          echo "=== GIT STATE ==="
+          echo "DEVELOPMENT_HEAD=$(git -C "$DEV" rev-parse HEAD 2>/dev/null || true)"
+          echo "DEVELOPMENT_STATUS_BEGIN"
+          git -C "$DEV" status --short --branch || true
+          echo "DEVELOPMENT_STATUS_END"
+          echo "PRODUCT_HEAD=$(git -C "$PRODUCT" rev-parse HEAD 2>/dev/null || true)"
+          echo "PRODUCT_STATUS_BEGIN"
+          git -C "$PRODUCT" status --short --branch || true
+          echo "PRODUCT_STATUS_END"
+
+          echo "=== SINGLE OWNER SUPERVISOR ==="
+          SUP_PIDS="$(ps -axo pid=,command= | awk -v needle="$ROOT/ssd-service-supervisor.sh" 'index($0, needle) > 0 {print $1}')"
+          SUP_COUNT="$(printf '%s\n' "$SUP_PIDS" | awk 'NF {n++} END {print n+0}')"
+          echo "SSD_SUPERVISOR_COUNT=$SUP_COUNT"
+          printf '%s\n' "$SUP_PIDS" | awk 'NF {print "SSD_SUPERVISOR_PID=" $1}'
+          echo "DASHBOARD_PID=$(cat "$ROOT/dashboard.pid" 2>/dev/null || true)"
+
+          echo "=== CLOCK WRAPPER ==="
+          if [ -f "$WRAPPER" ]; then
+            echo "SSD_CLOCK_WRAPPER_PRESENT=YES"
+            shasum -a 256 "$WRAPPER" | awk '{print "SSD_CLOCK_WRAPPER_SHA256=" $1}'
+            stat -f 'SSD_CLOCK_WRAPPER_MODE=%Sp SIZE=%z MTIME=%Sm' -t '%Y-%m-%dT%H:%M:%S%z' "$WRAPPER"
+            echo "SSD_CLOCK_WRAPPER_CONTENT_BEGIN"
+            sed -n '1,320p' "$WRAPPER"
+            echo "SSD_CLOCK_WRAPPER_CONTENT_END"
+          else
+            echo "SSD_CLOCK_WRAPPER_PRESENT=NO"
+          fi
+
+          echo "=== EVENT SOURCE RUNTIME ==="
+          if [ ! -f "$EVENT_DB" ]; then
+            echo "EVENT_SOURCE_DB_PRESENT=NO"
+            echo "EVENT_SOURCE_RUNTIME_STATUS=NOT_EXPOSED"
+            echo "EVENT_SOURCE_ONLINE_STATUS=NOT_ASSERTED"
+            echo "EVENT_SOURCE_STATE_READONLY_PASS=YES"
+            exit 0
+          fi
+
+          echo "EVENT_SOURCE_DB_PRESENT=YES"
+          before_main="$(shasum -a 256 "$EVENT_DB" | awk '{print $1}')"
+          before_wal="MISSING"
+          before_shm="MISSING"
+          [ -f "$EVENT_DB-wal" ] && before_wal="$(shasum -a 256 "$EVENT_DB-wal" | awk '{print $1}')"
+          [ -f "$EVENT_DB-shm" ] && before_shm="$(shasum -a 256 "$EVENT_DB-shm" | awk '{print $1}')"
+          echo "EVENT_SOURCE_DB_SHA256_BEFORE=$before_main"
+          echo "EVENT_SOURCE_WAL_SHA256_BEFORE=$before_wal"
+          echo "EVENT_SOURCE_SHM_SHA256_BEFORE=$before_shm"
+
+          PYTHONPATH="$GITHUB_WORKSPACE/src" "$PY" - "$EVENT_DB" <<'PY'
+          import json
+          import sys
+          import time
+          from dataclasses import asdict
+          from pathlib import Path
+
+          from crypto_signal.product.event_source_runtime import (
+              read_event_source_runtime_truth,
+          )
+
+          path = Path(sys.argv[1])
+          snapshot = read_event_source_runtime_truth(
+              path,
+              observed_at_ms=time.time_ns() // 1_000_000,
+          )
+          print("EVENT_SOURCE_PRODUCT_TRUTH=" + json.dumps(
+              asdict(snapshot),
+              sort_keys=True,
+              separators=(",", ":"),
+          ))
+          print(
+              "EVENT_SOURCE_RUNTIME_STATUS="
+              + snapshot.runtime_status
+          )
+          print(
+              "EVENT_SOURCE_ONLINE_STATUS="
+              + snapshot.online_status
+          )
+          print(
+              "EVENT_SOURCE_PROCESS_STATUS="
+              + snapshot.process_status
+          )
+          print(
+              "EVENT_SOURCE_COVERAGE_CLAIM="
+              + snapshot.coverage_claim
+          )
+          print("EVENT_SOURCE_REAL_CAPITAL=" + str(snapshot.real_capital))
+          PY
+
+          after_main="$(shasum -a 256 "$EVENT_DB" | awk '{print $1}')"
+          after_wal="MISSING"
+          after_shm="MISSING"
+          [ -f "$EVENT_DB-wal" ] && after_wal="$(shasum -a 256 "$EVENT_DB-wal" | awk '{print $1}')"
+          [ -f "$EVENT_DB-shm" ] && after_shm="$(shasum -a 256 "$EVENT_DB-shm" | awk '{print $1}')"
+          echo "EVENT_SOURCE_DB_SHA256_AFTER=$after_main"
+          echo "EVENT_SOURCE_WAL_SHA256_AFTER=$after_wal"
+          echo "EVENT_SOURCE_SHM_SHA256_AFTER=$after_shm"
+          test "$before_main" = "$after_main"
+          test "$before_wal" = "$after_wal"
+          test "$before_shm" = "$after_shm"
+          echo "EVENT_SOURCE_STATE_BYTE_STABLE_PASS=YES"
+          echo "EVENT_SOURCE_STATE_READONLY_PASS=YES"
 
       - name: ROLLING WAKE STATE
         if: steps.parse.outputs.command == 'rollingstate'
