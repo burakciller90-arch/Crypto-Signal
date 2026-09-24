@@ -488,6 +488,40 @@ function trMetricStatus(value) {
   return upper(value, "HENÜZ ÖLÇÜLMEDİ").replaceAll("_", " ");
 }
 
+function trOutcome(value) {
+  const key = text(value, "").toLowerCase();
+  if (key.startsWith("success_tp")) return "HEDEFE ULAŞTI";
+  if (key === "hit_target") return "HEDEFE ULAŞTI";
+  if (key === "fail_sl") return "ZARAR DURDUR SEVİYESİNDE SONLANDI";
+  if (key === "timeout" || key === "expired") return "SÜRESİ DOLDU";
+  if (key === "invalidated") return "GEÇERSİZ KALDI";
+  if (key === "ambiguous") return "BELİRSİZ";
+  if (key === "not_evaluable") return "DEĞERLENDİRİLEMEDİ";
+  if (key === "cancelled") return "İPTAL EDİLDİ";
+  if (key === "resolved") return "SONUÇLANDI";
+  if (key === "pending") return "SONUÇ BEKLİYOR";
+  return upper(value, "SONUÇ BEKLİYOR").replaceAll("_", " ");
+}
+
+function trEvidenceClass(value) {
+  const key = text(value, "").toLowerCase();
+  if (key === "live_untouched_forward") return "GERÇEK İLERİ DÖNEM";
+  if (key === "walk_forward") return "İLERİ YÜRÜYEN TEST";
+  if (key === "retrospective") return "GEÇMİŞE DÖNÜK";
+  if (key === "paper") return "KAĞIT İŞLEM";
+  return upper(value, "ETİKETSİZ").replaceAll("_", " ");
+}
+
+function trCoverage(value) {
+  const key = text(value, "").toLowerCase();
+  if (key === "complete") return "TAM";
+  if (key === "partial") return "KISMİ";
+  if (key === "missing") return "EKSİK";
+  if (key === "sufficient") return "YETERLİ";
+  if (key === "insufficient") return "YETERSİZ";
+  return upper(value, "ÖLÇÜLMEDİ").replaceAll("_", " ");
+}
+
 function proofNarrative(proof) {
   const symbol = text(proof?.symbol || proof?.asset, "Piyasa");
   const direction = text(proof?.direction, "").toLowerCase();
@@ -1785,16 +1819,17 @@ function proofCategory(item) {
 
 function archiveCategoryLabel(category) {
   const labels = {
-    winner: "WINNER",
-    loser: "LOSER",
-    expired: "EXPIRED",
-    invalidated: "INVALIDATED",
-    ambiguous: "AMBIGUOUS",
-    not_evaluable: "ABSTAIN / N-E",
-    unresolved: "UNRESOLVED",
+    winner: "BAŞARILI",
+    loser: "BAŞARISIZ",
+    expired: "SÜRESİ DOLDU",
+    invalidated: "GEÇERSİZ KALDI",
+    ambiguous: "BELİRSİZ",
+    not_evaluable: "İŞLEM YOK / DEĞERLENDİRİLEMEDİ",
+    unresolved: "SONUÇ BEKLİYOR",
   };
   return labels[category] || upper(category);
 }
+
 
 function archiveCategoryClass(category) {
   if (category === "winner") return "archive-status archive-status-winner";
@@ -1808,12 +1843,13 @@ function archiveCategoryClass(category) {
 }
 
 function archiveReason(outcome) {
-  if (!outcome) return "No later outcome snapshot yet.";
-  if (outcome.ambiguity_reason) return `ambiguity · ${outcome.ambiguity_reason}`;
-  if (outcome.not_evaluable_reason) return `not evaluable · ${outcome.not_evaluable_reason}`;
-  if (outcome.outcome_state === "cancelled") return "cancelled";
+  if (!outcome) return "Henüz sonraki sonuç kaydı yok.";
+  if (outcome.ambiguity_reason) return `belirsizlik · ${outcome.ambiguity_reason}`;
+  if (outcome.not_evaluable_reason) return `değerlendirilemedi · ${outcome.not_evaluable_reason}`;
+  if (outcome.outcome_state === "cancelled") return "iptal edildi";
   return "";
 }
+
 
 function updateArchiveSummary(allRows, visibleRows) {
   const total = Number(state.archive?.total_count ?? allRows.length);
@@ -1828,8 +1864,8 @@ function updateArchiveSummary(allRows, visibleRows) {
   const schemaTag = byId("archiveSchemaTag");
   if (schemaTag) {
     schemaTag.textContent = state.archive?.outcome_schema_available
-      ? "OUTCOME SCHEMA · AVAILABLE"
-      : "OUTCOME SCHEMA · KULLANILAMIYOR";
+      ? "SONUÇ ŞEMASI · MEVCUT"
+      : "SONUÇ ŞEMASI · KULLANILAMIYOR";
   }
 
   const counts = {
@@ -1857,20 +1893,17 @@ function archiveItemMarkup(item) {
   const outcome = item?.latest_outcome || null;
   const category = proofCategory(item);
   const reason = archiveReason(outcome);
-  const probability = upper(signal.probability_status, "NOT_CALIBRATED");
-  const confluenceSemantic =
-    signal.confluence_score_semantic || "agreement_index_not_probability";
+  const probability = trProbability(signal.probability_status);
 
   return `
     <button class="archive-proof-trigger" type="button"
       data-evidence-id="${escapeHtml(signal.signal_freeze_identity)}"
-      aria-label="${escapeHtml(signal.symbol || "UNKNOWN")} ${escapeHtml(signal.timeframe || "")}
-        issuance snapshot ve Evidence Room aç">
+      aria-label="${escapeHtml(signal.symbol || "BİLİNMİYOR")} ${escapeHtml(signal.timeframe || "")} karar anı kaydı ve Kanıt Odası">
       <article class="archive-proof-card">
         <header class="archive-proof-head">
           <div>
-            <span class="eyebrow">IMMUTABLE PROOF</span>
-            <h2>${escapeHtml(signal.symbol || "UNKNOWN")} · ${escapeHtml(signal.timeframe || "—")}</h2>
+            <span class="eyebrow">DEĞİŞTİRİLEMEZ KANIT</span>
+            <h2>${escapeHtml(signal.symbol || "BİLİNMİYOR")} · ${escapeHtml(signal.timeframe || "—")}</h2>
           </div>
           <span class="${archiveCategoryClass(category)}">${escapeHtml(archiveCategoryLabel(category))}</span>
         </header>
@@ -1879,65 +1912,66 @@ function archiveItemMarkup(item) {
           <section class="archive-snapshot archive-snapshot-issuance">
             <div class="archive-snapshot-title">
               <span>01</span>
-              <strong>ISSUANCE SNAPSHOT</strong>
+              <strong>KARAR ANI KAYDI</strong>
             </div>
             <div class="archive-signal-line">
-              <strong class="${stateClass(signal.state)}">${escapeHtml(upper(signal.state))}</strong>
-              <span class="${stateClass(signal.direction)}">${escapeHtml(upper(signal.direction))}</span>
+              <strong class="${stateClass(signal.state)}">${escapeHtml(trState(signal.state))}</strong>
+              <span class="${stateClass(signal.direction)}">${escapeHtml(trDirection(signal.direction))}</span>
             </div>
             <dl class="archive-kv">
-              <div><dt>provider</dt><dd>${escapeHtml(upper(signal.exchange))} · ${escapeHtml(upper(signal.market_type))}</dd></div>
-              <div><dt>setup</dt><dd>${escapeHtml(signal.setup_type || "UNAVAILABLE")}</dd></div>
-              <div><dt>agreement</dt><dd>${escapeHtml(signal.confluence_score)} · not probability</dd></div>
-              <div><dt>probability</dt><dd>${escapeHtml(probability)}</dd></div>
-              <div><dt>issued</dt><dd>${escapeHtml(formatTime(signal.frozen_at_ms))}</dd></div>
-              <div><dt>source cutoff</dt><dd>${escapeHtml(formatTime(signal.source_cutoff_open_time_ms))}</dd></div>
+              <div><dt>veri sağlayıcı</dt><dd>${escapeHtml(upper(signal.exchange))} · ${escapeHtml(upper(signal.market_type))}</dd></div>
+              <div><dt>kurulum</dt><dd>${escapeHtml(signal.setup_type || "KULLANILAMIYOR")}</dd></div>
+              <div><dt>uyum</dt><dd>${escapeHtml(signal.confluence_score)} · olasılık değildir</dd></div>
+              <div><dt>olasılık</dt><dd>${escapeHtml(probability)}</dd></div>
+              <div><dt>karar zamanı</dt><dd>${escapeHtml(formatTime(signal.frozen_at_ms))}</dd></div>
+              <div><dt>kaynak kesim zamanı</dt><dd>${escapeHtml(formatTime(signal.source_cutoff_open_time_ms))}</dd></div>
             </dl>
-            <p class="archive-semantic-note">${escapeHtml(confluenceSemantic)}</p>
-            <code>${escapeHtml(signal.signal_freeze_identity || "NO FREEZE ID")}</code>
+            <p class="archive-semantic-note">Uyum skoru kanıtların anlaşma derecesidir; kalibre edilmiş olasılık değildir.</p>
+            <code>${escapeHtml(signal.signal_freeze_identity || "DONDURMA KİMLİĞİ YOK")}</code>
           </section>
 
           <div class="archive-link-line" aria-hidden="true">
             <span>→</span>
-            <small>append only</small>
+            <small>yalnızca eklenir</small>
           </div>
 
           <section class="archive-snapshot archive-snapshot-outcome">
             <div class="archive-snapshot-title">
               <span>02</span>
-              <strong>LATER · OUTCOME SNAPSHOT</strong>
+              <strong>SONRAKİ SONUÇ KAYDI</strong>
             </div>
             ${outcome ? `
               <div class="archive-outcome-line">
-                <strong class="${archiveCategoryClass(category)}">${escapeHtml(upper(outcome.outcome_state || outcome.resolution_status))}</strong>
-                <span>${escapeHtml(upper(outcome.evidence_class, "UNLABELLED"))}</span>
+                <strong class="${archiveCategoryClass(category)}">${escapeHtml(trOutcome(outcome.outcome_state || outcome.resolution_status))}</strong>
+                <span>${escapeHtml(trEvidenceClass(outcome.evidence_class))}</span>
               </div>
               <dl class="archive-kv">
-                <div><dt>resolution</dt><dd>${escapeHtml(upper(outcome.resolution_status))}</dd></div>
-                <div><dt>coverage</dt><dd>${escapeHtml(upper(outcome.coverage_status))}</dd></div>
-                <div><dt>evaluated</dt><dd>${escapeHtml(formatTime(outcome.evaluated_as_of_ms))}</dd></div>
-                <div><dt>horizon</dt><dd>${escapeHtml(outcome.max_holding_bars)} bars</dd></div>
-                <div><dt>entry observed</dt><dd>${outcome.entry_observed ? "YES" : "NO"}</dd></div>
-                <div><dt>highest target</dt><dd>${escapeHtml(outcome.highest_target_index ?? 0)}</dd></div>
+                <div><dt>sonuç durumu</dt><dd>${escapeHtml(trOutcome(outcome.resolution_status))}</dd></div>
+                <div><dt>kapsama</dt><dd>${escapeHtml(trCoverage(outcome.coverage_status))}</dd></div>
+                <div><dt>değerlendirildi</dt><dd>${escapeHtml(formatTime(outcome.evaluated_as_of_ms))}</dd></div>
+                <div><dt>ufuk</dt><dd>${escapeHtml(outcome.max_holding_bars)} mum</dd></div>
+                <div><dt>giriş görüldü</dt><dd>${outcome.entry_observed ? "EVET" : "HAYIR"}</dd></div>
+                <div><dt>ulaşılan en yüksek hedef</dt><dd>${escapeHtml(outcome.highest_target_index ?? 0)}</dd></div>
               </dl>
               ${reason ? `<p class="archive-outcome-reason">${escapeHtml(reason)}</p>` : ""}
-              <code>${escapeHtml(outcome.outcome_identity || "NO OUTCOME ID")}</code>
+              <code>${escapeHtml(outcome.outcome_identity || "SONUÇ KİMLİĞİ YOK")}</code>
             ` : `
               <div class="archive-unresolved">
-                <strong>NO LATER OUTCOME YET</strong>
-                <p>Issuance remains visible. Missing outcome is not rewritten as failure, success or 0% performance.</p>
+                <strong>HENÜZ SONUÇ KAYDI YOK</strong>
+                <p>Karar anı kaydı görünür kalır. Eksik sonuç, başarı, başarısızlık veya %0 performans olarak yeniden yazılmaz.</p>
               </div>
             `}
           </section>
         </div>
 
         <footer class="archive-proof-foot">
-          <span>Freeze stays immutable after outcome.</span>
-          <span class="evidence-open-cue">Open frozen Evidence Room →</span>
+          <span>Sonuç geldikten sonra karar anı kaydı değişmez.</span>
+          <span class="evidence-open-cue">Dondurulmuş Kanıt Odasını aç →</span>
         </footer>
       </article>
     </button>`;
 }
+
 
 function renderArchive() {
   const target = byId("archiveWall");
