@@ -26,6 +26,9 @@ from crypto_signal.evaluation.untouched_forward_collection_protocol import (
     WC2CollectionProtocol,
     WC2CollectionProtocolStore,
 )
+from crypto_signal.evaluation.untouched_forward_execution_runtime import (
+    process_wc2_paper_execution_cycle,
+)
 from crypto_signal.evaluation.untouched_forward_journal import WC2CohortJournal
 from crypto_signal.evaluation.untouched_forward_policy import (
     WC2PolicyStore,
@@ -40,9 +43,6 @@ from crypto_signal.evaluation.untouched_forward_prepared_runtime import (
 )
 from crypto_signal.evaluation.untouched_forward_resolution_runtime import (
     resolve_wc2_outcomes_once,
-)
-from crypto_signal.evaluation.untouched_forward_execution_runtime import (
-    process_wc2_paper_execution_cycle,
 )
 from crypto_signal.ledger.coverage import (
     LiveCoveragePlan,
