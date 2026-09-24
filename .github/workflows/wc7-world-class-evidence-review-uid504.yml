@@ -5,19 +5,23 @@ on:
     branches: [main]
     paths:
       - "research/world_class_evidence_review.py"
+      - "research/world_class_evidence_adapters.py"
       - "research/alpha_factory/**"
       - "src/crypto_signal/outcomes/**"
       - "src/crypto_signal/paper/execution_lab*.py"
       - "tests/test_world_class_evidence_review.py"
+      - "tests/test_world_class_evidence_adapters.py"
       - ".github/workflows/wc7-world-class-evidence-review-uid504.yml"
   push:
     branches: [main]
     paths:
       - "research/world_class_evidence_review.py"
+      - "research/world_class_evidence_adapters.py"
       - "research/alpha_factory/**"
       - "src/crypto_signal/outcomes/**"
       - "src/crypto_signal/paper/execution_lab*.py"
       - "tests/test_world_class_evidence_review.py"
+      - "tests/test_world_class_evidence_adapters.py"
       - ".github/workflows/wc7-world-class-evidence-review-uid504.yml"
   workflow_dispatch:
 
@@ -71,14 +75,19 @@ jobs:
           cd "$GITHUB_WORKSPACE"
           "$TEST_PY" -m pytest -q \
             tests/test_world_class_evidence_review.py \
+            tests/test_world_class_evidence_adapters.py \
             tests/test_alpha_factory_probability_calibration_gate.py \
             tests/test_alpha_factory_champion_challenger_cycle.py \
             tests/test_outcome_evaluator.py \
             tests/test_wc6_execution_lab.py
           "$TEST_PY" -m ruff check \
             research/world_class_evidence_review.py \
-            tests/test_world_class_evidence_review.py
-          "$TEST_PY" -m mypy research/world_class_evidence_review.py
+            research/world_class_evidence_adapters.py \
+            tests/test_world_class_evidence_review.py \
+            tests/test_world_class_evidence_adapters.py
+          "$TEST_PY" -m mypy \
+            research/world_class_evidence_review.py \
+            research/world_class_evidence_adapters.py
           echo "WC7_FOCUSED_PASS=YES"
           echo "WC7_MACHINE_EDGE_VERDICT=NONE"
           echo "REAL_CAPITAL=0"
@@ -89,8 +98,8 @@ jobs:
           set -euo pipefail
           export PYTHONPATH="$GITHUB_WORKSPACE/src:$GITHUB_WORKSPACE"
           cd "$GITHUB_WORKSPACE"
-          "$TEST_PY" -m pytest -q tests/test_alpha_factory_*.py tests/test_world_class_evidence_review.py
-          "$TEST_PY" -m ruff check research tests/test_alpha_factory_*.py tests/test_world_class_evidence_review.py
+          "$TEST_PY" -m pytest -q tests/test_alpha_factory_*.py tests/test_world_class_evidence_review.py tests/test_world_class_evidence_adapters.py
+          "$TEST_PY" -m ruff check research tests/test_alpha_factory_*.py tests/test_world_class_evidence_review.py tests/test_world_class_evidence_adapters.py
           "$TEST_PY" -m mypy research
           echo "WC7_RESEARCH_REGRESSION_PASS=YES"
 
