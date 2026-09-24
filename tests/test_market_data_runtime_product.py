@@ -638,14 +638,14 @@ def test_galactech_system_binds_market_data_truth_without_online_claim(
     assert 'id="systemMarketTapeNote"' in html
     assert 'id="systemColdArchive"' in html
     assert 'id="systemColdArchiveNote"' in html
-    assert "EVENT SOURCE RUNTIME" in html
+    assert "OLAY KAYNAĞI ÇALIŞMA DURUMU" in html
     assert "NOT EXPOSED" in html
 
     assert 'marketTapeStatus: "/api/market-tape-runtime/status"' in js
     assert 'coldArchiveStatus: "/api/cold-archive/status?verify_limit=24"' in js
     assert '"systemMarketTape"' in js
     assert '"systemColdArchive"' in js
-    assert "ONLINE NOT ASSERTED" in js
+    assert "ÇEVRİMİÇİ OLDUĞU İDDİA EDİLMEZ" in js
     assert "collection_process_status" in js
     assert "HEARTBEAT_FRESH" in js
     assert "heartbeat age" in js
