@@ -50,6 +50,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--cold-archive", type=Path, default=None)
     parser.add_argument("--provider-divergence", type=Path, default=None)
     parser.add_argument("--event-source-runtime", type=Path, default=None)
+    parser.add_argument("--wc2-execution-runtime", type=Path, default=None)
+    parser.add_argument("--wc2-execution-journal", type=Path, default=None)
     parser.add_argument(
         "--learning-memory",
         type=Path,
@@ -101,6 +103,18 @@ def resolve_runtime_paths(args: argparse.Namespace) -> dict[str, Path]:
         "event_source_runtime_path": (
             args.event_source_runtime
             or runtime_root / "events" / "event_source.sqlite3"
+        ),
+        "wc2_execution_runtime_path": (
+            args.wc2_execution_runtime
+            or runtime_root
+            / "wc2"
+            / "wc2_paper_execution.wc2-paper-execution-runtime.sqlite3"
+        ),
+        "wc2_execution_journal_path": (
+            args.wc2_execution_journal
+            or runtime_root
+            / "wc2"
+            / "wc2_paper_execution.wc2-paper-execution.sqlite3"
         ),
     }
 
