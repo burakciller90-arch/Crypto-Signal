@@ -166,6 +166,9 @@ async def run(args: argparse.Namespace) -> int:
         )
         return 3
 
+    initial_normalized_rows_total = store.counts().total
+    initial_raw_rows_total = raw_store.count()
+
     runtime_store = MarketTapeCollectorRuntimeStore(args.runtime_status_db)
     gap_ledger = MarketDataGapLedger(args.gap_ledger_db)
     gap_ledger.initialize()
@@ -202,21 +205,22 @@ async def run(args: argparse.Namespace) -> int:
     heartbeat_sequence = 0
     last_ingestion_ms: int | None = None
     last_observed_messages = 0
+    normalized_rows_total = initial_normalized_rows_total
+    raw_rows_total = initial_raw_rows_total
     heartbeat_stop = asyncio.Event()
 
     def emit_heartbeat() -> None:
         nonlocal heartbeat_sequence
         observed_at_ms = time.time_ns() // 1_000_000
         heartbeat_sequence += 1
-        counts = store.counts()
         heartbeat = build_collector_heartbeat(
             instance_identity=instance.instance_identity,
             sequence_no=heartbeat_sequence,
             observed_at_ms=observed_at_ms,
             last_successful_ingestion_ms=last_ingestion_ms,
             observed_messages_total=last_observed_messages,
-            normalized_rows_total=counts.total,
-            raw_rows_total=raw_store.count(),
+            normalized_rows_total=normalized_rows_total,
+            raw_rows_total=raw_rows_total,
         )
         runtime_store.append_heartbeat(heartbeat)
         gap_monitor.check_silence(
@@ -259,6 +263,18 @@ async def run(args: argparse.Namespace) -> int:
             source_evidence_identities=(raw_event.event_identity,),
         )
 
+    def persist_counts(
+        _observed_messages: int,
+        raw_inserted_total: int,
+        normalized_inserted_total: int,
+    ) -> None:
+        nonlocal normalized_rows_total
+        nonlocal raw_rows_total
+        normalized_rows_total = (
+            initial_normalized_rows_total + normalized_inserted_total
+        )
+        raw_rows_total = initial_raw_rows_total + raw_inserted_total
+
     emit_heartbeat()
     heartbeat_task = asyncio.create_task(heartbeat_loop())
     stream = BybitSpotMicrostructureStream()
@@ -276,6 +292,7 @@ async def run(args: argparse.Namespace) -> int:
             max_messages=(None if args.max_events == 0 else args.max_events),
             progress_callback=persist_progress,
             persisted_event_callback=persist_raw_event,
+            persisted_counts_callback=persist_counts,
         )
         emit_heartbeat()
     except (OSError, sqlite3.Error, ValueError) as exc:
