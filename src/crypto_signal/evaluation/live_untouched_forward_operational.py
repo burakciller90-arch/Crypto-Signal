@@ -374,6 +374,11 @@ def issue_accepted_wc2_live_source(
         target_label=target_label,
         ledger=ledger,
         forecast_version_refs=tuple(version_refs),
+        forecast_source_evidence_identities=(
+            ()
+            if collection_protocol_identity is None
+            else (collection_protocol_identity,)
+        ),
     )
 
 
