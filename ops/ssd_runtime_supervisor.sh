@@ -105,8 +105,12 @@ run_wc2_live_clock() {
   local cohort="$runtime/wc2/wc2_untouched_forward.sqlite3"
   local shadow_intent="$runtime/wc2/wc2.shadow-intent.sqlite3"
   local shadow_cycle="$runtime/wc2/wc2.shadow-cycle.sqlite3"
+  local execution_protocol="$runtime/wc2/wc2_paper_execution.wc2-paper-execution-protocol.sqlite3"
+  local execution_runtime="$runtime/wc2/wc2_paper_execution.wc2-paper-execution-runtime.sqlite3"
+  local execution_journal="$runtime/wc2/wc2_paper_execution.wc2-paper-execution.sqlite3"
+  local venue_rules="$runtime/paper/paper_fund.sqlite3"
 
-  for required in "$py" "$runner" "$ledger" "$candle" "$policy" "$epoch2" "$protocol"; do
+  for required in "$py" "$runner" "$ledger" "$candle" "$policy" "$epoch2" "$protocol" "$execution_protocol" "$execution_runtime" "$venue_rules"; do
     if [ ! -e "$required" ]; then
       echo "$(date '+%Y-%m-%d %H:%M:%S %z') wc2_live_not_ready missing=$required FAIL_CLOSED=YES REAL_CAPITAL=0"
       return 0
@@ -129,7 +133,12 @@ run_wc2_live_clock() {
       --wc2-decision-evidence "$decision" \
       --wc2-cohort "$cohort" \
       --wc2-shadow-intent "$shadow_intent" \
-      --wc2-shadow-cycle "$shadow_cycle"
+      --wc2-shadow-cycle "$shadow_cycle" \
+      --wc2-execution-enabled \
+      --wc2-execution-protocol "$execution_protocol" \
+      --wc2-execution-runtime "$execution_runtime" \
+      --wc2-execution-journal "$execution_journal" \
+      --wc2-venue-rules "$venue_rules"
   ) >>"$LOGDIR/live.out.log" 2>>"$LOGDIR/live.err.log" < /dev/null &
 }
 

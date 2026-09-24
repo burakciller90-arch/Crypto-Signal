@@ -26,6 +26,9 @@ from crypto_signal.evaluation.untouched_forward_collection_protocol import (
     WC2CollectionProtocol,
     WC2CollectionProtocolStore,
 )
+from crypto_signal.evaluation.untouched_forward_execution_runtime import (
+    process_wc2_paper_execution_cycle,
+)
 from crypto_signal.evaluation.untouched_forward_journal import WC2CohortJournal
 from crypto_signal.evaluation.untouched_forward_policy import (
     WC2PolicyStore,
@@ -73,6 +76,11 @@ class WC2ClockConfig:
     cohort_path: Path | None = None
     shadow_intent_path: Path | None = None
     shadow_cycle_path: Path | None = None
+    execution_enabled: bool = False
+    execution_protocol_path: Path | None = None
+    execution_runtime_path: Path | None = None
+    execution_journal_path: Path | None = None
+    venue_rule_store_path: Path | None = None
     maximum_issuance_delay_ms: int | None = None
     horizon_bars: int | None = None
 
@@ -87,14 +95,24 @@ class WC2ClockConfig:
             self.shadow_intent_path,
             self.shadow_cycle_path,
         )
+        execution_values = (
+            self.execution_protocol_path,
+            self.execution_runtime_path,
+            self.execution_journal_path,
+            self.venue_rule_store_path,
+        )
         optional_legacy_values = (
             self.maximum_issuance_delay_ms,
             self.horizon_bars,
         )
         if not self.enabled:
-            if any(
+            if self.execution_enabled or any(
                 value is not None
-                for value in (*required_values, *optional_legacy_values)
+                for value in (
+                    *required_values,
+                    *execution_values,
+                    *optional_legacy_values,
+                )
             ):
                 raise ValueError(
                     "WC2 clock options require explicit --wc2-enabled"
@@ -110,6 +128,17 @@ class WC2ClockConfig:
             raise ValueError(
                 "WC2 issuance delay and horizon are immutable collection-"
                 "protocol values, not runtime CLI inputs"
+            )
+        if self.execution_enabled:
+            if any(value is None for value in execution_values):
+                raise ValueError(
+                    "enabled WC2 execution requires execution protocol, "
+                    "runtime activation, execution journal and venue rules"
+                )
+        elif any(value is not None for value in execution_values):
+            raise ValueError(
+                "WC2 execution paths require explicit "
+                "--wc2-execution-enabled"
             )
 
 
@@ -154,6 +183,15 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--wc2-shadow-intent", type=Path, default=None)
     parser.add_argument("--wc2-shadow-cycle", type=Path, default=None)
     parser.add_argument(
+        "--wc2-execution-enabled",
+        action="store_true",
+        help="enable preregistered forward-only WC2 paper execution writer",
+    )
+    parser.add_argument("--wc2-execution-protocol", type=Path, default=None)
+    parser.add_argument("--wc2-execution-runtime", type=Path, default=None)
+    parser.add_argument("--wc2-execution-journal", type=Path, default=None)
+    parser.add_argument("--wc2-venue-rules", type=Path, default=None)
+    parser.add_argument(
         "--wc2-maximum-issuance-delay-ms",
         type=int,
         default=None,
@@ -179,6 +217,11 @@ def build_wc2_clock_config(args: argparse.Namespace) -> WC2ClockConfig:
         cohort_path=args.wc2_cohort,
         shadow_intent_path=args.wc2_shadow_intent,
         shadow_cycle_path=args.wc2_shadow_cycle,
+        execution_enabled=bool(args.wc2_execution_enabled),
+        execution_protocol_path=args.wc2_execution_protocol,
+        execution_runtime_path=args.wc2_execution_runtime,
+        execution_journal_path=args.wc2_execution_journal,
+        venue_rule_store_path=args.wc2_venue_rules,
         maximum_issuance_delay_ms=args.wc2_maximum_issuance_delay_ms,
         horizon_bars=args.wc2_horizon_bars,
     )
@@ -484,6 +527,55 @@ async def run(
             f"resolved_fresh={outcome_cycle.resolved_fresh} "
             f"recovered={outcome_cycle.recovered} "
             f"cohort_idempotent={outcome_cycle.cohort_idempotent} "
+            "HISTORICAL_BACKFILL=NO REAL_CAPITAL=0",
+            flush=True,
+        )
+
+    if selected_wc2.execution_enabled:
+        assert selected_wc2.decision_evidence_path is not None
+        assert selected_wc2.cohort_path is not None
+        assert selected_wc2.epoch2_path is not None
+        assert selected_wc2.execution_protocol_path is not None
+        assert selected_wc2.execution_runtime_path is not None
+        assert selected_wc2.execution_journal_path is not None
+        assert selected_wc2.venue_rule_store_path is not None
+        try:
+            execution_cycle = process_wc2_paper_execution_cycle(
+                signal_ledger_path=db_path,
+                decision_evidence_path=selected_wc2.decision_evidence_path,
+                cohort_journal_path=selected_wc2.cohort_path,
+                epoch2_path=selected_wc2.epoch2_path,
+                execution_protocol_path=selected_wc2.execution_protocol_path,
+                runtime_activation_path=selected_wc2.execution_runtime_path,
+                execution_journal_path=selected_wc2.execution_journal_path,
+                candle_cache_path=candle_cache_path,
+                venue_rule_store_path=selected_wc2.venue_rule_store_path,
+                observed_at_ms=time.time_ns() // 1_000_000,
+            )
+        except (OSError, RuntimeError, TypeError, ValueError, sqlite3.Error) as exc:
+            print(
+                "wc2_execution status=ERROR "
+                f"error={type(exc).__name__}:{exc} "
+                "FAIL_STOP=YES HISTORICAL_BACKFILL=NO REAL_CAPITAL=0",
+                file=sys.stderr,
+                flush=True,
+            )
+            return 1
+        print(
+            "wc2_execution status=COMPLETE "
+            f"scanned_pair_n={execution_cycle.scanned_pair_n} "
+            f"eligible_event_n={execution_cycle.eligible_event_n} "
+            f"already_terminal_n={execution_cycle.already_terminal_n} "
+            f"expired_gap_n={execution_cycle.expired_gap_n} "
+            f"waiting_lineage_n={execution_cycle.waiting_lineage_n} "
+            f"waiting_execution_input_n={execution_cycle.waiting_execution_input_n} "
+            f"waiting_venue_rules_n={execution_cycle.waiting_venue_rules_n} "
+            f"hold_cash_n={execution_cycle.hold_cash_n} "
+            f"sizing_rejected_n={execution_cycle.sizing_rejected_n} "
+            f"pretrade_rejected_n={execution_cycle.pretrade_rejected_n} "
+            f"executed_n={execution_cycle.executed_n} "
+            f"appended_n={len(execution_cycle.appended_record_identities)} "
+            "PERSISTENT_SINGLE_OWNER=YES "
             "HISTORICAL_BACKFILL=NO REAL_CAPITAL=0",
             flush=True,
         )
