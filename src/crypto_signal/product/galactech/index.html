@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="color-scheme" content="dark">
   <meta name="theme-color" content="#06080C">
-  <title>GALACTECH // CRYPTO SIGNAL</title>
+  <title>GALACTECH // KRİPTO PİYASA ZEKÂSI</title>
   <link rel="stylesheet" href="/galactech-static/app.css">
 </head>
 <body data-ui-version="galactech-v2-intelligence-first-tr">
@@ -17,15 +17,15 @@
         <span class="brand-mark" aria-hidden="true">G</span>
         <div>
           <strong>GALACTECH</strong>
-          <span>// CRYPTO SIGNAL</span>
+          <span>// KRİPTO PİYASA ZEKÂSI</span>
         </div>
       </div>
       <p class="boot-caption">PİYASA ZEKÂSI BAŞLATILIYOR</p>
       <ul class="boot-list" aria-label="Başlangıç kontrolleri">
-        <li><span>ÜRÜN API</span><strong id="bootApi">VERIFYING</strong></li>
-        <li><span>DEĞİŞTİRİLEMEZ KAYIT</span><strong id="bootLedger">VERIFYING</strong></li>
-        <li><span>PİYASA KANITI</span><strong id="bootMarket">VERIFYING</strong></li>
-        <li><span>GERÇEK SERMAYE</span><strong id="bootCapital">VERIFYING</strong></li>
+        <li><span>ÜRÜN API</span><strong id="bootApi">DOĞRULANIYOR</strong></li>
+        <li><span>DEĞİŞTİRİLEMEZ KAYIT</span><strong id="bootLedger">DOĞRULANIYOR</strong></li>
+        <li><span>PİYASA KANITI</span><strong id="bootMarket">DOĞRULANIYOR</strong></li>
+        <li><span>GERÇEK SERMAYE</span><strong id="bootCapital">DOĞRULANIYOR</strong></li>
       </ul>
       <p id="bootNote" class="boot-note">Ölçülmeyen durum ONLINE diye gösterilmez.</p>
     </div>
@@ -37,7 +37,7 @@
         <span class="brand-mark" aria-hidden="true">G</span>
         <div>
           <strong>GALACTECH</strong>
-          <span>// CRYPTO SIGNAL</span>
+          <span>// KRİPTO PİYASA ZEKÂSI</span>
         </div>
       </div>
 
@@ -93,9 +93,9 @@
         <div class="truth-bar" role="status" aria-live="polite" aria-atomic="false">
           <span id="routeAnnouncer" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></span>
           <span id="runtimeAnnouncer" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></span>
-          <span id="apiTruth" class="truth-chip truth-chip-muted">API · VERIFYING</span>
-          <span id="freshnessTruth" class="truth-chip truth-chip-muted">FRESHNESS · NOT MEASURED</span>
-          <span id="latencyTruth" class="truth-chip truth-chip-muted">LATENCY · NOT MEASURED</span>
+          <span id="apiTruth" class="truth-chip truth-chip-muted">API · DOĞRULANIYOR</span>
+          <span id="freshnessTruth" class="truth-chip truth-chip-muted">VERİ TAZELİĞİ · NOT MEASURED</span>
+          <span id="latencyTruth" class="truth-chip truth-chip-muted">GECİKME · NOT MEASURED</span>
           <span class="truth-chip truth-chip-safe">GERÇEK SERMAYE · KAPALI</span>
         </div>
       </header>
@@ -241,71 +241,71 @@
         <section id="view-markets" class="route-view" data-route-view="markets" aria-labelledby="marketsTitle" hidden>
           <div class="page-head">
             <div>
-              <span class="page-code">02 / MARKETS</span>
-              <h1 id="marketsTitle">Market Workspace</h1>
-              <p>Provider truth, frozen chart and one evidence layer at a time. Missing layers stay visibly unavailable.</p>
+              <span class="page-code">02 / VARLIK MERKEZİ</span>
+              <h1 id="marketsTitle">Varlık Merkezi</h1>
+              <p>Fiyatı, dondurulmuş grafiği ve kabul edilmiş piyasa kanıtlarını tek yerde incele. Eksik veri eksik olarak görünür.</p>
             </div>
-            <span id="marketContextTag" class="tag">CONTEXT · VERIFYING</span>
+            <span id="marketContextTag" class="tag">BAĞLAM · DOĞRULANIYOR</span>
           </div>
 
-          <div class="market-selector-bar" aria-label="Market context controls">
+          <div class="market-selector-bar" aria-label="Piyasa bağlamı kontrolleri">
             <label>
               <span class="eyebrow">SYMBOL</span>
-              <select id="marketSymbolSelect" aria-label="Market symbol">
-                <option value="">Evidence bekleniyor…</option>
+              <select id="marketSymbolSelect" aria-label="İşlem çifti">
+                <option value="">Kanıt bekleniyor…</option>
               </select>
             </label>
             <label>
               <span class="eyebrow">TIMEFRAME</span>
-              <select id="marketTimeframeSelect" aria-label="Market timeframe">
-                <option value="">Evidence bekleniyor…</option>
+              <select id="marketTimeframeSelect" aria-label="Zaman aralığı">
+                <option value="">Kanıt bekleniyor…</option>
               </select>
             </label>
             <div class="market-selector-truth">
-              <span class="eyebrow">SOURCE CONTRACT</span>
-              <strong>immutable signal freeze</strong>
-              <small>no synthetic market layer</small>
+              <span class="eyebrow">KAYNAK SÖZLEŞMESİ</span>
+              <strong>değiştirilemez sinyal dondurması</strong>
+              <small>sentetik piyasa katmanı yok</small>
             </div>
           </div>
 
           <div class="layer-toolbar" role="group" aria-label="Piyasa kanıt katmanı">
-            <button type="button" class="layer-toggle is-active" data-layer="PA" aria-pressed="true">PA</button>
-            <button type="button" class="layer-toggle" data-layer="LIQ" aria-pressed="false">LIQ</button>
-            <button type="button" class="layer-toggle" data-layer="FLOW" aria-pressed="false">FLOW</button>
-            <button type="button" class="layer-toggle" data-layer="DERIV" aria-pressed="false">DERIV</button>
-            <button type="button" class="layer-toggle" data-layer="ONCHAIN" aria-pressed="false">ONCHAIN</button>
+            <button type="button" class="layer-toggle is-active" data-layer="PA" aria-pressed="true">FİYAT</button>
+            <button type="button" class="layer-toggle" data-layer="LIQ" aria-pressed="false">LİKİDİTE</button>
+            <button type="button" class="layer-toggle" data-layer="FLOW" aria-pressed="false">EMİR AKIŞI</button>
+            <button type="button" class="layer-toggle" data-layer="DERIV" aria-pressed="false">TÜREVLER</button>
+            <button type="button" class="layer-toggle" data-layer="ONCHAIN" aria-pressed="false">ZİNCİR ÜSTÜ</button>
           </div>
 
           <div class="market-workspace-grid">
             <article class="panel market-chart-panel">
               <div class="panel-head">
                 <div>
-                  <span class="eyebrow">FROZEN MARKET VIEW</span>
-                  <h2 id="marketWorkspaceTitle">Select a market context</h2>
+                  <span class="eyebrow">DONDURULMUŞ PİYASA GÖRÜNÜMÜ</span>
+                  <h2 id="marketWorkspaceTitle">Bir işlem çifti seç</h2>
                 </div>
-                <span id="marketProviderTag" class="tag">PROVIDER · —</span>
+                <span id="marketProviderTag" class="tag">VERİ SAĞLAYICI · —</span>
               </div>
               <div id="marketFrozenChart" class="empty-state">
-                <strong>Frozen chart evidence bekleniyor.</strong>
-                <p>Exact provider signal seçilmeden chart uydurulmaz.</p>
+                <strong>Dondurulmuş grafik kanıtı bekleniyor.</strong>
+                <p>Kesin veri sağlayıcı sinyali seçilmeden grafik uydurulmaz.</p>
               </div>
               <div id="marketLayerSurface" class="market-layer-surface empty-state">
                 <strong>PA layer selected.</strong>
-                <p>Selected provider evidence gelene kadar overlay üretilmez.</p>
+                <p>Seçili veri sağlayıcı kanıtı gelene kadar ek katman üretilmez.</p>
               </div>
             </article>
 
             <aside class="panel market-provider-panel">
               <div class="panel-head">
                 <div>
-                  <span class="eyebrow">PROVIDER TRUTH</span>
-                  <h2>Latest frozen decisions</h2>
+                  <span class="eyebrow">VERİ SAĞLAYICI DOĞRULUĞU</span>
+                  <h2>Son dondurulmuş kararlar</h2>
                 </div>
-                <span class="tag">NO CONSENSUS INVENTION</span>
+                <span class="tag">SAHTE UZLAŞI YOK</span>
               </div>
               <div id="marketProviderList" class="market-provider-list empty-state">
-                <strong>Provider evidence bekleniyor.</strong>
-                <p>Binance/Bybit state ayrı tutulur.</p>
+                <strong>Veri sağlayıcı kanıtı bekleniyor.</strong>
+                <p>Binance ve Bybit durumu ayrı tutulur; sahte ortak görüş üretilmez.</p>
               </div>
             </aside>
           </div>
@@ -314,25 +314,25 @@
             <article class="panel">
               <div class="panel-head">
                 <div>
-                  <span class="eyebrow">RECENT DECISION TAPE</span>
-                  <h2>Same symbol / timeframe</h2>
+                  <span class="eyebrow">SON KARAR AKIŞI</span>
+                  <h2>Aynı işlem çifti / zaman aralığı</h2>
                 </div>
                 <span id="marketRecentCount" class="tag">—</span>
               </div>
               <div id="marketRecentTape" class="feed-list empty-state">
-                <strong>Recent evidence bekleniyor.</strong>
+                <strong>Son kanıtlar bekleniyor.</strong>
               </div>
             </article>
 
             <article class="panel">
-              <span class="eyebrow">LAYER DISCIPLINE</span>
-              <h2>Only accepted evidence is visualized.</h2>
+              <span class="eyebrow">KANIT KATMANLARI</span>
+              <h2>Yalnızca kabul edilmiş kanıt görselleştirilir.</h2>
               <div id="marketTruth" class="truth-table">
-                <div class="truth-row"><span>PA</span><strong>VERIFYING</strong></div>
-                <div class="truth-row"><span>LIQ</span><strong>NOT EXPOSED</strong></div>
-                <div class="truth-row"><span>FLOW</span><strong>NOT EXPOSED</strong></div>
-                <div class="truth-row"><span>DERIV</span><strong>NOT EXPOSED</strong></div>
-                <div class="truth-row"><span>ONCHAIN</span><strong>NOT EXPOSED</strong></div>
+                <div class="truth-row"><span>PA</span><strong>DOĞRULANIYOR</strong></div>
+                <div class="truth-row"><span>LIQ</span><strong>SUNULMUYOR</strong></div>
+                <div class="truth-row"><span>FLOW</span><strong>SUNULMUYOR</strong></div>
+                <div class="truth-row"><span>DERIV</span><strong>SUNULMUYOR</strong></div>
+                <div class="truth-row"><span>ONCHAIN</span><strong>SUNULMUYOR</strong></div>
               </div>
             </article>
           </div>
@@ -340,42 +340,42 @@
         <section id="view-intelligence" class="route-view" data-route-view="intelligence" aria-labelledby="intelligenceTitle" hidden>
           <div class="page-head">
             <div>
-              <span class="page-code">03 / INTELLIGENCE</span>
-              <h1 id="intelligenceTitle">Evidence Intelligence</h1>
-              <p>SIMPLE ve PRO aynı kanıtı anlatır; basit görünüm daha emin konuşamaz.</p>
+              <span class="page-code">03 / İSTİHBARAT</span>
+              <h1 id="intelligenceTitle">İstihbarat Laboratuvarı</h1>
+              <p>SADE ve TEKNİK aynı kanıtı anlatır; basit görünüm daha emin konuşamaz.</p>
             </div>
           </div>
           <div class="dual-mode">
-            <button type="button" class="mode-button is-active" data-explain-mode="simple" aria-pressed="true">SIMPLE</button>
-            <button type="button" class="mode-button" data-explain-mode="pro" aria-pressed="false">PRO</button>
+            <button type="button" class="mode-button is-active" data-explain-mode="simple" aria-pressed="true">SADE</button>
+            <button type="button" class="mode-button" data-explain-mode="pro" aria-pressed="false">TEKNİK</button>
           </div>
           <article class="panel workspace-placeholder">
-            <span class="eyebrow">R23 CONTRACT READY</span>
-            <h2>Explainable Intelligence surface</h2>
-            <p id="intelligenceTruth">Persisted R20/R20.5 Decision Proof and Live Intelligence Feed evidence is being verified. Missing evidence remains explicit.</p>
+            <span class="eyebrow">AÇIKLANABİLİR ZEKÂ</span>
+            <h2>Sistemin ne gördüğünü ayrıntılı incele</h2>
+            <p id="intelligenceTruth">Kalıcı Karar Kanıtı ve Canlı Zekâ Akışı doğrulanıyor. Eksik kanıt açıkça eksik gösterilir.</p>
           </article>
         </section>
 
         <section id="view-capital" class="route-view" data-route-view="capital" aria-labelledby="capitalTitle" hidden>
           <div class="page-head">
             <div>
-              <span class="page-code">04 / CAPITAL</span>
-              <h1 id="capitalTitle">Capital Center</h1>
-              <p>Canonical Epoch 2 accounting · Core / Tactical / Opportunity Reserve · immutable NAV/PnL/cost truth.</p>
+              <span class="page-code">04 / SERMAYE</span>
+              <h1 id="capitalTitle">Sermaye Merkezi</h1>
+              <p>Kanonik Epoch 2 muhasebesi · Ana / Taktik / Fırsat Rezervi · değiştirilemez NAV, kâr/zarar ve maliyet kayıtları.</p>
             </div>
           </div>
           <div id="capitalOverview" class="capital-grid">
             <article class="panel workspace-placeholder">
-              <span class="eyebrow">PAPER FUND</span>
-              <h2>Canonical capital truth</h2>
-              <p>Program contract okunuyor. Runtime bağlı değilse NAV uydurulmaz.</p>
+              <span class="eyebrow">KAĞIT PORTFÖYÜ</span>
+              <h2>Kanonik sermaye görünümü</h2>
+              <p>Program sözleşmesi okunuyor. Çalışma zamanı verisi bağlı değilse NAV uydurulmaz.</p>
             </article>
           </div>
           <div id="shadowRailOverview" class="capital-grid" aria-label="Shadow decision rail status">
             <article class="panel workspace-placeholder">
-              <span class="eyebrow">SHADOW DECISION RAIL</span>
-              <h2>Read-only preview evidence</h2>
-              <p>Shadow journal doğrulanıyor. Bu yüzey canonical Epoch 2 mutation veya live trade anlamına gelmez.</p>
+              <span class="eyebrow">DENEME KARAR HATTI</span>
+              <h2>Yalnızca görüntülenebilir karar önizlemesi</h2>
+              <p>Deneme karar günlüğü doğrulanıyor. Bu yüzey gerçek emir veya Epoch 2 kaydı değişikliği anlamına gelmez.</p>
             </article>
           </div>
         </section>
@@ -383,106 +383,106 @@
         <section id="view-archive" class="route-view" data-route-view="archive" aria-labelledby="archiveTitle" hidden>
           <div class="page-head">
             <div>
-              <span class="page-code">05 / ARCHIVE</span>
-              <h1 id="archiveTitle">Archive / Proof Wall</h1>
-              <p>Issuance snapshot geriye dönük değiştirilmez; later outcome yalnız yanına eklenir.</p>
+              <span class="page-code">05 / SİNYAL ARŞİVİ</span>
+              <h1 id="archiveTitle">Sinyal Arşivi / Kanıt Duvarı</h1>
+              <p>Kararın verildiği andaki kayıt geriye dönük değiştirilmez; sonraki sonuç yalnızca yanına eklenir.</p>
             </div>
-            <span id="archiveSchemaTag" class="tag">OUTCOME SCHEMA · VERIFYING</span>
+            <span id="archiveSchemaTag" class="tag">SONUÇ ŞEMASI · DOĞRULANIYOR</span>
           </div>
 
           <div id="archiveSummary" class="archive-summary-grid" aria-label="Arşiv özeti">
             <article class="metric-card">
-              <span>TOTAL IMMUTABLE</span>
+              <span>TOPLAM DEĞİŞTİRİLEMEZ</span>
               <strong id="archiveTotal">—</strong>
-              <small>issuance freezes</small>
+              <small>karar anı kayıtları</small>
             </article>
             <article class="metric-card">
-              <span>RESOLVED</span>
+              <span>SONUÇLANAN</span>
               <strong id="archiveResolved">—</strong>
-              <small>loaded page · latest outcome present</small>
+              <small>yüklenen sayfa · sonuç kaydı var</small>
             </article>
             <article class="metric-card">
-              <span>UNRESOLVED</span>
+              <span>UNSONUÇLANAN</span>
               <strong id="archiveUnresolved">—</strong>
-              <small>loaded page · no later outcome yet</small>
+              <small>yüklenen sayfa · henüz sonuç yok</small>
             </article>
             <article class="metric-card">
-              <span>VISIBLE</span>
+              <span>GÖRÜNÜR</span>
               <strong id="archiveVisible">—</strong>
-              <small>loaded page · current filter</small>
+              <small>yüklenen sayfa · mevcut filtre</small>
             </article>
           </div>
 
           <div class="filter-row archive-filter-row" role="group" aria-label="Arşiv filtreleri">
-            <button type="button" class="filter-button is-active" data-filter="all" aria-pressed="true">ALL <span data-filter-count="all">—</span></button>
-            <button type="button" class="filter-button" data-filter="winner" aria-pressed="false">WINNERS <span data-filter-count="winner">—</span></button>
-            <button type="button" class="filter-button" data-filter="loser" aria-pressed="false">LOSERS <span data-filter-count="loser">—</span></button>
-            <button type="button" class="filter-button" data-filter="expired" aria-pressed="false">EXPIRED <span data-filter-count="expired">—</span></button>
-            <button type="button" class="filter-button" data-filter="invalidated" aria-pressed="false">INVALIDATED <span data-filter-count="invalidated">—</span></button>
-            <button type="button" class="filter-button" data-filter="ambiguous" aria-pressed="false">AMBIGUOUS <span data-filter-count="ambiguous">—</span></button>
-            <button type="button" class="filter-button" data-filter="not_evaluable" aria-pressed="false">ABSTAIN / N-E <span data-filter-count="not_evaluable">—</span></button>
-            <button type="button" class="filter-button" data-filter="unresolved" aria-pressed="false">UNRESOLVED <span data-filter-count="unresolved">—</span></button>
+            <button type="button" class="filter-button is-active" data-filter="all" aria-pressed="true">TÜMÜ <span data-filter-count="all">—</span></button>
+            <button type="button" class="filter-button" data-filter="winner" aria-pressed="false">BAŞARILI <span data-filter-count="winner">—</span></button>
+            <button type="button" class="filter-button" data-filter="loser" aria-pressed="false">BAŞARISIZ <span data-filter-count="loser">—</span></button>
+            <button type="button" class="filter-button" data-filter="expired" aria-pressed="false">SÜRESİ DOLAN <span data-filter-count="expired">—</span></button>
+            <button type="button" class="filter-button" data-filter="invalidated" aria-pressed="false">GEÇERSİZ KALAN <span data-filter-count="invalidated">—</span></button>
+            <button type="button" class="filter-button" data-filter="ambiguous" aria-pressed="false">BELİRSİZ <span data-filter-count="ambiguous">—</span></button>
+            <button type="button" class="filter-button" data-filter="not_evaluable" aria-pressed="false">İŞLEM YOK / D-D <span data-filter-count="not_evaluable">—</span></button>
+            <button type="button" class="filter-button" data-filter="unresolved" aria-pressed="false">UNSONUÇLANAN <span data-filter-count="unresolved">—</span></button>
           </div>
 
           <article class="panel archive-contract">
             <div>
-              <span class="eyebrow">PROOF CONTRACT</span>
-              <strong>ISSUANCE SNAPSHOT ↔ LATER OUTCOME SNAPSHOT</strong>
+              <span class="eyebrow">TEKNİKOF CONTRACT</span>
+              <strong>KARAR ANI KAYDI ↔ SONRAKİ SONUÇ KAYDI</strong>
             </div>
             <div class="system-strip-values">
-              <span>losses stay visible</span>
-              <span>evidence class stays explicit</span>
-              <span>unresolved ≠ failure</span>
+              <span>başarısız sonuçlar gizlenmez</span>
+              <span>kanıt sınıfı açık kalır</span>
+              <span>sonuç bekliyor ≠ başarısız</span>
             </div>
           </article>
 
           <div id="archiveWall" class="archive-proof-wall empty-state">
-            <strong>Proof Wall evidence bekleniyor.</strong>
-            <p>Winner, loser, unresolved ve not-evaluable aynı immutable truth yüzeyinde tutulur.</p>
+            <strong>Kanıt Duvarı verisi bekleniyor.</strong>
+            <p>Başarılı, başarısız, sonuç bekleyen ve değerlendirilemeyen kayıtlar aynı değiştirilemez yüzeyde tutulur.</p>
           </div>
         </section>
 
         <section id="view-performance" class="route-view" data-route-view="performance" aria-labelledby="performanceTitle" hidden>
           <div class="page-head">
             <div>
-              <span class="page-code">06 / PERFORMANCE</span>
-              <h1 id="performanceTitle">Performance & Trust</h1>
-              <p>Retrospective, walk-forward ve live untouched-forward kanıtları asla tek etiketsiz başarı metriğine karışmaz.</p>
+              <span class="page-code">06 / PERFORMANS</span>
+              <h1 id="performanceTitle">Performans & Güven</h1>
+              <p>Geçmiş test, ileri yürüyen test ve gerçek ileri dönem kanıtları tek bir yanıltıcı başarı metriğinde birleştirilmez.</p>
             </div>
-            <span id="performanceTruthTag" class="tag">TRUST · VERIFYING</span>
+            <span id="performanceTruthTag" class="tag">GÜVEN · DOĞRULANIYOR</span>
           </div>
 
-          <div class="performance-summary-grid" aria-label="Performance truth summary">
+          <div class="performance-summary-grid" aria-label="Performans doğruluk özeti">
             <article class="metric-card">
-              <span>OUTCOME SNAPSHOTS</span>
+              <span>SONUÇ KAYITLARI</span>
               <strong id="performanceOutcomeCount">—</strong>
-              <small>stored immutable evaluations</small>
+              <small>saklanan değiştirilemez değerlendirmeler</small>
             </article>
             <article class="metric-card">
-              <span>EVIDENCE CLASSES</span>
+              <span>KANIT SINIFLARI</span>
               <strong id="performanceEvidenceClassCount">—</strong>
-              <small>never merged</small>
+              <small>birbirine karıştırılmaz</small>
             </article>
             <article class="metric-card">
-              <span>CANONICAL PAPER NAV</span>
+              <span>KAĞIT PORTFÖY NAV</span>
               <strong id="performancePaperNav">—</strong>
-              <small>Epoch 2 · read only</small>
+              <small>Epoch 2 · yalnızca görüntüleme</small>
             </article>
             <article class="metric-card">
-              <span>CURRENT DRAWDOWN</span>
+              <span>MEVCUT GERİLEME</span>
               <strong id="performanceDrawdown">—</strong>
-              <small>canonical snapshot</small>
+              <small>kanonik anlık kayıt</small>
             </article>
           </div>
 
           <article class="panel performance-contract">
             <div>
-              <span class="eyebrow">TRUST CONTRACT</span>
-              <strong>Historical success ≠ calibrated probability · backtest ≠ untouched-forward</strong>
+              <span class="eyebrow">GÜVEN SÖZLEŞMESİ</span>
+              <strong>Geçmiş başarı ≠ kalibre edilmiş olasılık · geçmiş test ≠ ileri dönem kanıtı</strong>
             </div>
             <div class="system-strip-values">
-              <span>winners + losers together</span>
-              <span>missing metric stays missing</span>
+              <span>başarılı + başarısız birlikte</span>
+              <span>eksik metrik eksik kalır</span>
               <span>REAL_CAPITAL=0</span>
             </div>
           </article>
@@ -491,13 +491,13 @@
             <section class="panel performance-cohort-panel" aria-labelledby="performanceCohortTitle">
               <div class="panel-head">
                 <div>
-                  <span class="eyebrow">FORECAST / OUTCOME TRUTH</span>
-                  <h2 id="performanceCohortTitle">Evidence-class cohorts</h2>
+                  <span class="eyebrow">ÖNGÖRÜ / SONUÇ DOĞRULUĞU</span>
+                  <h2 id="performanceCohortTitle">Kanıt sınıfına göre gruplar</h2>
                 </div>
-                <span class="tag">DESCRIPTIVE · NOT PROBABILITY</span>
+                <span class="tag">DESCRIPTIVE · NOT TEKNİKBABILITY</span>
               </div>
               <div id="performanceCohorts" class="performance-cohorts empty-state">
-                <strong>Outcome cohort evidence bekleniyor.</strong>
+                <strong>Sonuç grubu kanıtı bekleniyor.</strong>
                 <p>Kanıt sınıfları gelmeden oran üretilmez.</p>
               </div>
             </section>
@@ -505,14 +505,14 @@
             <aside class="panel performance-paper-panel" aria-labelledby="performancePaperTitle">
               <div class="panel-head">
                 <div>
-                  <span class="eyebrow">CANONICAL PAPER TRACK RECORD</span>
+                  <span class="eyebrow">KANONİK KAĞIT PORTFÖY GEÇMİŞİ</span>
                   <h2 id="performancePaperTitle">Epoch 2</h2>
                 </div>
                 <span class="tag">R21</span>
               </div>
               <div id="performancePaper" class="empty-state">
-                <strong>Canonical paper evidence bekleniyor.</strong>
-                <p>Legacy NAV veya forecast hit-rate paper performansı yerine kullanılmaz.</p>
+                <strong>Kanonik kâğıt portföy kanıtı bekleniyor.</strong>
+                <p>Eski NAV veya öngörü isabet oranı, kâğıt portföy performansı yerine kullanılmaz.</p>
               </div>
             </aside>
           </div>
@@ -521,14 +521,14 @@
             <article class="panel">
               <div class="panel-head">
                 <div>
-                  <span class="eyebrow">PROBABILITY CALIBRATION</span>
+                  <span class="eyebrow">TEKNİKBABILITY CALIBRATION</span>
                   <h2>Brier / Reliability</h2>
                 </div>
-                <span id="performanceCalibrationStatus" class="tag tag-amber">NOT EXPOSED</span>
+                <span id="performanceCalibrationStatus" class="tag tag-amber">SUNULMUYOR</span>
               </div>
               <div id="performanceCalibration" class="performance-unavailable">
-                <strong>No product runtime calibration artifact.</strong>
-                <p>R24 hesaplama motoru kabul edilmiş olsa da bu müşteri runtime’ında exact persisted R20/R19 calibration stream adapter’ı yok. Brier veya reliability uydurulmaz.</p>
+                <strong>Ürün çalışma zamanında kalibrasyon kanıtı yok.</strong>
+                <p>R24 hesaplama motoru kabul edilmiş olsa da bu çalışma zamanında kalıcı R20/R19 kalibrasyon akışı yok. Brier skoru veya güvenilirlik değeri uydurulmaz.</p>
               </div>
             </article>
 
@@ -555,7 +555,7 @@
                 <span class="tag tag-amber">NOT YET MEASURED</span>
               </div>
               <div class="performance-unavailable">
-                <strong>Counterfactual outcome evidence yok.</strong>
+                <strong>Karşı-olgusal sonuç kanıtı yok.</strong>
                 <p>Bir EVENT_BLOCK olmasaydı ne olacağı kanıtlanmadan “kaçınılan zarar” veya etkinlik oranı gösterilmez.</p>
               </div>
             </article>
@@ -564,13 +564,13 @@
               <div class="panel-head">
                 <div>
                   <span class="eyebrow">VERSION COMPARISON</span>
-                  <h2>Forecast versions</h2>
+                  <h2>Öngörü sürümleri</h2>
                 </div>
-                <span class="tag">NOT EXPOSED</span>
+                <span class="tag">SUNULMUYOR</span>
               </div>
               <div class="performance-unavailable">
                 <strong>Exact R24 version-cohort adapter henüz customer API’de yok.</strong>
-                <p>Setup veya methodology segmentleri forecast version karşılaştırması diye yeniden etiketlenmez.</p>
+                <p>Kurulum veya yöntem bölümleri öngörü sürümü karşılaştırması gibi yeniden etiketlenmez.</p>
               </div>
             </article>
           </div>
@@ -579,37 +579,37 @@
         <section id="view-learn" class="route-view" data-route-view="learn" aria-labelledby="learnTitle" hidden>
           <div class="page-head">
             <div>
-              <span class="page-code">07 / LEARN</span>
-              <h1 id="learnTitle">Learn From Evidence</h1>
+              <span class="page-code">07 / BANA ÖĞRET</span>
+              <h1 id="learnTitle">Kanıttan Öğren</h1>
               <p>Kavramı öğren, sonra gerçek immutable kanıtta ne anlama geldiğini ayır. Eğitim içeriği tahmin veya emir değildir.</p>
             </div>
-            <span id="learnCatalogTag" class="tag">CATALOG · VERIFYING</span>
+            <span id="learnCatalogTag" class="tag">KATALOG · DOĞRULANIYOR</span>
           </div>
 
           <div class="learn-toolbar">
             <label class="learn-search">
-              <span class="eyebrow">SEARCH CONCEPT</span>
+              <span class="eyebrow">KAVRAM ARA</span>
               <input id="learnSearchInput" type="search" autocomplete="off"
                 placeholder="CVD, absorption, invalidation, abstain…" aria-label="Eğitim kavramlarında ara"
                 aria-controls="learnGrid">
             </label>
-            <div class="learn-quick-links" role="group" aria-label="Hızlı eğitim kavramları">
+            <div class="learn-quick-links" role="group" aria-label="Hızlı öğrenme kavramları">
               <button type="button" data-learn-concept="cvd">CVD</button>
-              <button type="button" data-learn-concept="absorption">ABSORPTION</button>
-              <button type="button" data-learn-concept="invalidation">INVALIDATION</button>
-              <button type="button" data-learn-concept="abstain">ABSTAIN</button>
-              <button type="button" data-learn-concept="agreement_vs_probability">AGREEMENT ≠ P</button>
-              <button type="button" data-learn-concept="calibration">CALIBRATION</button>
+              <button type="button" data-learn-concept="absorption">EMİLİM</button>
+              <button type="button" data-learn-concept="invalidation">GEÇERSİZLİK</button>
+              <button type="button" data-learn-concept="abstain">İŞLEM AÇMA</button>
+              <button type="button" data-learn-concept="agreement_vs_probability">UYUM ≠ OLASILIK</button>
+              <button type="button" data-learn-concept="calibration">KALİBRASYON</button>
             </div>
           </div>
 
           <article class="panel learn-contract">
             <div>
               <span class="eyebrow">EDUCATION CONTRACT</span>
-              <strong>Teach the evidence · never invent certainty</strong>
+              <strong>Kanıtı öğret · kesinlik uydurma</strong>
             </div>
             <div class="system-strip-values">
-              <span>concept ≠ signal</span>
+              <span>kavram ≠ sinyal</span>
               <span>agreement ≠ probability</span>
               <span>REAL_CAPITAL=0</span>
             </div>
@@ -624,67 +624,67 @@
         <section id="view-system" class="route-view" data-route-view="system" aria-labelledby="systemTitle" hidden>
           <div class="page-head">
             <div>
-              <span class="page-code">08 / SYSTEM</span>
-              <h1 id="systemTitle">System Truth</h1>
-              <p>Bu ekran yalnız müşteri API’sinin gerçekten ölçebildiği durumu gösterir. API READY, Market Tape ONLINE demek değildir.</p>
+              <span class="page-code">08 / SİSTEM SAĞLIĞI</span>
+              <h1 id="systemTitle">Sistem Sağlığı</h1>
+              <p>Bu ekran yalnız sistemin gerçekten ölçebildiği durumu gösterir. API hazır olması, piyasa verisinin çevrimiçi olduğunu tek başına kanıtlamaz.</p>
             </div>
-            <span id="systemTruthTag" class="tag">TRUTH · VERIFYING</span>
+            <span id="systemTruthTag" class="tag">DOĞRULUK · DOĞRULANIYOR</span>
           </div>
 
           <article class="panel system-truth-contract">
             <div>
-              <span class="eyebrow">FAIL-CLOSED HEALTH</span>
+              <span class="eyebrow">EKSİK KANITTA DURAN SAĞLIK KONTROLÜ</span>
               <strong>Measured truth only</strong>
             </div>
             <div class="system-strip-values">
               <span>no fake latency</span>
               <span>no fake freshness</span>
-              <span>no fake LIVE</span>
+              <span>sahte CANLI yok</span>
               <span>REAL_CAPITAL=0</span>
             </div>
           </article>
 
           <div id="systemGrid" class="system-grid system-grid-rich">
-            <article class="health-card"><span>ÜRÜN API</span><strong id="systemApi">VERIFYING</strong><small id="systemApiNote">health endpoint</small></article>
-            <article class="health-card"><span>SIGNAL LEDGER</span><strong id="systemLedger">VERIFYING</strong><small>immutable freeze store</small></article>
-            <article class="health-card"><span>EPOCH 2 PAPER</span><strong id="systemEpoch2">VERIFYING</strong><small id="systemEpoch2Note">canonical R21</small></article>
-            <article class="health-card"><span>PROOF WALL</span><strong id="systemArchive">VERIFYING</strong><small>outcome schema</small></article>
-            <article class="health-card"><span>PİYASA KANITI</span><strong id="systemMarketEvidence">VERIFYING</strong><small id="systemMarketEvidenceNote">radar customer API</small></article>
-            <article class="health-card"><span>INTELLIGENCE API</span><strong id="systemIntelligence">VERIFYING</strong><small>customer projection</small></article>
-            <article class="health-card"><span>DECISION PROOF LEDGER</span><strong id="systemDecisionLedger">VERIFYING</strong><small>R20 / R20.5 immutable persistence</small></article>
-            <article class="health-card"><span>LIVE INTELLIGENCE FEED</span><strong id="systemLiveFeed">VERIFYING</strong><small>persisted issuance / resolution events</small></article>
-            <article class="health-card"><span>SHADOW DECISION RAIL</span><strong id="systemShadowRail">VERIFYING</strong><small id="systemShadowRailNote">reviewed preview journal · no canonical writes</small></article>
-            <article class="health-card"><span>PERFORMANCE API</span><strong id="systemPerformance">VERIFYING</strong><small>outcome cohorts</small></article>
-            <article class="health-card"><span>EDUCATION CATALOG</span><strong id="systemEducation">VERIFYING</strong><small>deterministic lessons</small></article>
-            <article class="health-card"><span>ALERT OUTBOX</span><strong id="systemAlerts">VERIFYING</strong><small>presence only</small></article>
-            <article class="health-card"><span>MARKET TAPE RUNTIME</span><strong id="systemMarketTape">NOT EXPOSED</strong><small id="systemMarketTapeNote">persisted evidence only · ONLINE not asserted</small></article>
-            <article class="health-card"><span>PROVIDER DIVERGENCE</span><strong id="systemProviderDivergence">NOT EXPOSED</strong><small id="systemProviderDivergenceNote">separate Binance / Bybit quality · consensus not inferred</small></article>
-            <article class="health-card"><span>COLD ARCHIVE</span><strong id="systemColdArchive">NOT EXPOSED</strong><small id="systemColdArchiveNote">partition manifests + file SHA only</small></article>
-            <article class="health-card"><span>EVENT SOURCE RUNTIME</span><strong id="systemEventSource">NOT EXPOSED</strong><small id="systemEventSourceNote">calendar/news persisted evidence · ONLINE not asserted</small></article>
-            <article class="health-card health-card-unmeasured"><span>LATENCY</span><strong>NOT MEASURED</strong><small>no instrumentation exposed</small></article>
-            <article class="health-card health-card-unmeasured"><span>FRESHNESS</span><strong>NOT MEASURED</strong><small>no universal product freshness clock</small></article>
-            <article class="health-card"><span>GERÇEK SERMAYE</span><strong class="safe-text">DISABLED</strong><small>hard authority boundary</small></article>
-            <article class="health-card"><span>AUTHORITY</span><strong>YALNIZCA GÖZLEM</strong><small>no order / credential path</small></article>
+            <article class="health-card"><span>ÜRÜN API</span><strong id="systemApi">DOĞRULANIYOR</strong><small id="systemApiNote">health endpoint</small></article>
+            <article class="health-card"><span>SİNYAL GÜNLÜĞÜ</span><strong id="systemLedger">DOĞRULANIYOR</strong><small>değiştirilemez karar deposu</small></article>
+            <article class="health-card"><span>EPOCH 2 KAĞIT PORTFÖY</span><strong id="systemEpoch2">DOĞRULANIYOR</strong><small id="systemEpoch2Note">canonical R21</small></article>
+            <article class="health-card"><span>TEKNİKOF WALL</span><strong id="systemArchive">DOĞRULANIYOR</strong><small>sonuç şeması</small></article>
+            <article class="health-card"><span>PİYASA KANITI</span><strong id="systemMarketEvidence">DOĞRULANIYOR</strong><small id="systemMarketEvidenceNote">radar kullanıcı API’si</small></article>
+            <article class="health-card"><span>İSTİHBARAT API</span><strong id="systemIntelligence">DOĞRULANIYOR</strong><small>kullanıcı görünümü</small></article>
+            <article class="health-card"><span>DECISION TEKNİKOF LEDGER</span><strong id="systemDecisionLedger">DOĞRULANIYOR</strong><small>R20 / R20.5 değiştirilemez kayıt</small></article>
+            <article class="health-card"><span>CANLI ZEKÂ AKIŞI</span><strong id="systemLiveFeed">DOĞRULANIYOR</strong><small>kalıcı karar / sonuç olayları</small></article>
+            <article class="health-card"><span>DENEME KARAR HATTI</span><strong id="systemShadowRail">DOĞRULANIYOR</strong><small id="systemShadowRailNote">gözden geçirilmiş önizleme günlüğü · kanonik yazma yok</small></article>
+            <article class="health-card"><span>PERFORMANS API</span><strong id="systemPerformance">DOĞRULANIYOR</strong><small>sonuç grupları</small></article>
+            <article class="health-card"><span>EĞİTİM KATALOĞU</span><strong id="systemEducation">DOĞRULANIYOR</strong><small>deterministik dersler</small></article>
+            <article class="health-card"><span>UYARI ÇIKIŞ KUTUSU</span><strong id="systemAlerts">DOĞRULANIYOR</strong><small>yalnız varlık kontrolü</small></article>
+            <article class="health-card"><span>PİYASA AKIŞI ÇALIŞMA DURUMU</span><strong id="systemMarketTape">SUNULMUYOR</strong><small id="systemMarketTapeNote">yalnız kalıcı kanıt · çevrimiçi olduğu iddia edilmez</small></article>
+            <article class="health-card"><span>TEKNİKVIDER DIVERGENCE</span><strong id="systemProviderDivergence">SUNULMUYOR</strong><small id="systemProviderDivergenceNote">Binance / Bybit kalitesi ayrı · ortak görüş türetilmez</small></article>
+            <article class="health-card"><span>SOĞUK ARŞİV</span><strong id="systemColdArchive">SUNULMUYOR</strong><small id="systemColdArchiveNote">bölüm manifestoları + dosya SHA</small></article>
+            <article class="health-card"><span>OLAY KAYNAĞI ÇALIŞMA DURUMU</span><strong id="systemEventSource">SUNULMUYOR</strong><small id="systemEventSourceNote">takvim/haber kalıcı kanıtı · çevrimiçi olduğu iddia edilmez</small></article>
+            <article class="health-card health-card-unmeasured"><span>GECİKME</span><strong>NOT MEASURED</strong><small>ölçüm altyapısı sunulmuyor</small></article>
+            <article class="health-card health-card-unmeasured"><span>VERİ TAZELİĞİ</span><strong>NOT MEASURED</strong><small>evrensel ürün tazelik saati yok</small></article>
+            <article class="health-card"><span>GERÇEK SERMAYE</span><strong class="safe-text">KAPALI</strong><small>katı yetki sınırı</small></article>
+            <article class="health-card"><span>YETKİ</span><strong>YALNIZCA GÖZLEM</strong><small>emir / erişim anahtarı yolu yok</small></article>
           </div>
 
           <article class="panel system-truth-contract" aria-labelledby="r25OperationalTruthTitle">
             <div class="section-head">
               <div>
                 <span class="eyebrow">R25 / OPERATIONAL TRUTH</span>
-                <h2 id="r25OperationalTruthTitle">Runtime evidence reconciliation</h2>
+                <h2 id="r25OperationalTruthTitle">Çalışma zamanı kanıt uzlaştırması</h2>
               </div>
-              <span id="r25OperationalTruthTag" class="tag">VERIFYING</span>
+              <span id="r25OperationalTruthTag" class="tag">DOĞRULANIYOR</span>
             </div>
             <div id="r25OperationalTruthGrid" class="truth-table">
-              <div class="truth-row"><span>DECISION EVIDENCE</span><strong>VERIFYING</strong></div>
-              <div class="truth-row"><span>SHADOW INTENT JOURNAL</span><strong>VERIFYING</strong></div>
-              <div class="truth-row"><span>SHADOW CYCLE MANIFEST</span><strong>VERIFYING</strong></div>
-              <div class="truth-row"><span>RUNTIME REPLAY OBSERVATION</span><strong>VERIFYING</strong></div>
-              <div class="truth-row"><span>CANONICAL EPOCH 2</span><strong>VERIFYING</strong></div>
-              <div class="truth-row"><span>GALACTECH PRODUCT</span><strong>VERIFYING</strong></div>
+              <div class="truth-row"><span>KARAR KANITI</span><strong>DOĞRULANIYOR</strong></div>
+              <div class="truth-row"><span>DENEME NİYET GÜNLÜĞÜ</span><strong>DOĞRULANIYOR</strong></div>
+              <div class="truth-row"><span>DENEME DÖNGÜ MANİFESTOSU</span><strong>DOĞRULANIYOR</strong></div>
+              <div class="truth-row"><span>YENİDEN BAŞLATMA / TEKRAR OYNATMA KANITI</span><strong>DOĞRULANIYOR</strong></div>
+              <div class="truth-row"><span>KANONİK EPOCH 2</span><strong>DOĞRULANIYOR</strong></div>
+              <div class="truth-row"><span>GALACTECH TEKNİKDUCT</span><strong>DOĞRULANIYOR</strong></div>
             </div>
             <p id="r25OperationalTruthNote" class="proof-footnote">
-              Her kaynak ayrı doğrulanır. Partial runtime evidence, production readiness değildir.
+              Her kaynak ayrı doğrulanır. Kısmi çalışma zamanı kanıtı, üretime hazır olduğu anlamına gelmez.
             </p>
           </article>
         </section>
@@ -704,15 +704,15 @@
           </header>
           <div id="evidenceDialogBody" class="evidence-room-body" aria-live="polite">
             <div class="empty-state">
-              <strong>Evidence seçimi bekleniyor.</strong>
-              <p>Bir immutable forecast açıldığında yalnız kabul edilmiş freeze kanıtı gösterilir.</p>
+              <strong>Kanıt seçimi bekleniyor.</strong>
+              <p>Bir değiştirilemez öngörü açıldığında yalnız kabul edilmiş dondurulmuş kanıt gösterilir.</p>
             </div>
           </div>
         </div>
       </dialog>
 
       <footer class="footer">
-        <span>GALACTECH // CRYPTO SIGNAL</span>
+        <span>GALACTECH // KRİPTO PİYASA ZEKÂSI</span>
         <span>kanıta bağlı · şeffaf · yalnızca gözlem</span>
         <code>REAL_CAPITAL=0</code>
       </footer>
