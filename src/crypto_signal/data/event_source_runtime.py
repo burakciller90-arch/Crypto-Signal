@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import sqlite3
 from dataclasses import dataclass
 from enum import StrEnum
@@ -17,7 +18,8 @@ from crypto_signal.data.news_events import (
 )
 from crypto_signal.ledger.serialization import canonical_json, canonical_sha256
 
-EVENT_SOURCE_RUNTIME_SCHEMA_VERSION = "event-source-runtime-v1/1"
+EVENT_SOURCE_RUNTIME_SCHEMA_VERSION = "event-source-runtime-v1/2"
+MAX_EVENT_SOURCE_PAYLOAD_BYTES = 4 * 1024 * 1024
 REAL_CAPITAL = 0
 
 
@@ -31,6 +33,51 @@ class EventSourceFetchOutcome(StrEnum):
     FAILURE = "failure"
 
 
+class EventSourceTimestampBasis(StrEnum):
+    HTTP_LAST_MODIFIED = "http_last_modified"
+    HTTP_DATE = "http_date"
+    FETCH_TIME_FALLBACK = "fetch_time_fallback"
+
+
+@dataclass(frozen=True, slots=True)
+class EventSourceRawPayload:
+    payload_sha256: str
+    content_bytes: int
+    content_type: str
+    payload_text: str
+    schema_version: str = EVENT_SOURCE_RUNTIME_SCHEMA_VERSION
+
+    def __post_init__(self) -> None:
+        _require_sha256(self.payload_sha256, "event source raw payload")
+        if self.schema_version != EVENT_SOURCE_RUNTIME_SCHEMA_VERSION:
+            raise ValueError("unsupported event-source runtime schema")
+        if self.content_bytes <= 0:
+            raise ValueError("event source raw payload must be non-empty")
+        if self.content_bytes > MAX_EVENT_SOURCE_PAYLOAD_BYTES:
+            raise ValueError("event source raw payload exceeds bounded size")
+        if not self.content_type.strip():
+            raise ValueError("event source raw payload content type is required")
+        encoded = self.payload_text.encode("utf-8")
+        if len(encoded) != self.content_bytes:
+            raise ValueError("event source raw payload byte count mismatch")
+        if hashlib.sha256(encoded).hexdigest() != self.payload_sha256:
+            raise ValueError("event source raw payload SHA256 mismatch")
+
+
+def build_event_source_raw_payload(
+    *,
+    payload_text: str,
+    content_type: str,
+) -> EventSourceRawPayload:
+    encoded = payload_text.encode("utf-8")
+    return EventSourceRawPayload(
+        payload_sha256=hashlib.sha256(encoded).hexdigest(),
+        content_bytes=len(encoded),
+        content_type=content_type,
+        payload_text=payload_text,
+    )
+
+
 @dataclass(frozen=True, slots=True)
 class EventSourceFetchObservation:
     fetch_identity: str
@@ -39,8 +86,11 @@ class EventSourceFetchObservation:
     endpoint_url: str
     fetched_at_ms: int
     source_timestamp_ms: int | None
+    source_timestamp_basis: EventSourceTimestampBasis | None
     http_status: int | None
     outcome: EventSourceFetchOutcome
+    raw_payload_sha256: str | None
+    raw_payload_bytes: int | None
     item_identities: tuple[str, ...]
     coverage_identity: str | None
     reason_code: str | None
@@ -69,6 +119,13 @@ class EventSourceFetchObservation:
                 raise ValueError("event source timestamp cannot postdate fetch")
         if self.http_status is not None and not 100 <= self.http_status <= 599:
             raise ValueError("event source HTTP status is invalid")
+        if self.raw_payload_sha256 is not None:
+            _require_sha256(
+                self.raw_payload_sha256,
+                "event source raw payload identity",
+            )
+        if self.raw_payload_bytes is not None and self.raw_payload_bytes <= 0:
+            raise ValueError("event source raw payload bytes must be positive")
         if tuple(sorted(set(self.item_identities))) != self.item_identities:
             raise ValueError("event source item identities must be canonical")
         for identity in self.item_identities:
@@ -84,6 +141,18 @@ class EventSourceFetchObservation:
                 raise ValueError("successful event source fetch requires HTTP 200")
             if self.source_timestamp_ms is None:
                 raise ValueError("successful event source fetch requires source timestamp")
+            if self.source_timestamp_basis is None:
+                raise ValueError(
+                    "successful event source fetch requires timestamp basis"
+                )
+            if self.raw_payload_sha256 is None or self.raw_payload_bytes is None:
+                raise ValueError(
+                    "successful event source fetch requires exact raw payload"
+                )
+            if not self.item_identities:
+                raise ValueError(
+                    "successful event source fetch requires persisted items"
+                )
             if self.reason_code is not None:
                 raise ValueError("successful event source fetch cannot carry failure reason")
             if (
@@ -101,6 +170,15 @@ class EventSourceFetchObservation:
                 raise ValueError("failed event source fetch requires reason code")
             if self.item_identities or self.coverage_identity is not None:
                 raise ValueError("failed event source fetch cannot claim persisted items")
+            if (
+                self.source_timestamp_ms is not None
+                or self.source_timestamp_basis is not None
+                or self.raw_payload_sha256 is not None
+                or self.raw_payload_bytes is not None
+            ):
+                raise ValueError(
+                    "failed event source fetch cannot claim source payload evidence"
+                )
 
         if self.production_authority or self.real_capital != REAL_CAPITAL:
             raise ValueError("event source runtime cannot grant authority")
@@ -115,8 +193,11 @@ def build_event_source_fetch_observation(
     endpoint_url: str,
     fetched_at_ms: int,
     source_timestamp_ms: int | None,
+    source_timestamp_basis: EventSourceTimestampBasis | None,
     http_status: int | None,
     outcome: EventSourceFetchOutcome,
+    raw_payload_sha256: str | None = None,
+    raw_payload_bytes: int | None = None,
     item_identities: tuple[str, ...] = (),
     coverage_identity: str | None = None,
     reason_code: str | None = None,
@@ -129,8 +210,11 @@ def build_event_source_fetch_observation(
         "endpoint_url": endpoint_url,
         "fetched_at_ms": fetched_at_ms,
         "source_timestamp_ms": source_timestamp_ms,
+        "source_timestamp_basis": source_timestamp_basis,
         "http_status": http_status,
         "outcome": outcome,
+        "raw_payload_sha256": raw_payload_sha256,
+        "raw_payload_bytes": raw_payload_bytes,
         "item_identities": identities,
         "coverage_identity": coverage_identity,
         "reason_code": reason_code,
@@ -146,8 +230,11 @@ def build_event_source_fetch_observation(
         endpoint_url=endpoint_url,
         fetched_at_ms=fetched_at_ms,
         source_timestamp_ms=source_timestamp_ms,
+        source_timestamp_basis=source_timestamp_basis,
         http_status=http_status,
         outcome=outcome,
+        raw_payload_sha256=raw_payload_sha256,
+        raw_payload_bytes=raw_payload_bytes,
         item_identities=identities,
         coverage_identity=coverage_identity,
         reason_code=reason_code,
@@ -172,6 +259,13 @@ class EventSourceRuntimeStore:
                 CREATE TABLE IF NOT EXISTS event_source_runtime_meta (
                     key TEXT PRIMARY KEY,
                     value TEXT NOT NULL
+                );
+
+                CREATE TABLE IF NOT EXISTS event_source_raw_payloads (
+                    payload_sha256 TEXT PRIMARY KEY,
+                    content_bytes INTEGER NOT NULL,
+                    content_type TEXT NOT NULL,
+                    payload_text TEXT NOT NULL
                 );
 
                 CREATE TABLE IF NOT EXISTS event_calendar_coverages (
@@ -223,6 +317,17 @@ class EventSourceRuntimeStore:
                     ON event_source_fetches(
                         source_provider, source_kind, fetched_at_ms
                     );
+
+                CREATE TRIGGER IF NOT EXISTS event_source_raw_payload_no_update
+                BEFORE UPDATE ON event_source_raw_payloads
+                BEGIN
+                    SELECT RAISE(ABORT, 'event-source runtime is append-only');
+                END;
+                CREATE TRIGGER IF NOT EXISTS event_source_raw_payload_no_delete
+                BEFORE DELETE ON event_source_raw_payloads
+                BEGIN
+                    SELECT RAISE(ABORT, 'event-source runtime is append-only');
+                END;
 
                 CREATE TRIGGER IF NOT EXISTS event_calendar_no_update
                 BEFORE UPDATE ON event_calendar_coverages
@@ -278,6 +383,32 @@ class EventSourceRuntimeStore:
                 )
             elif str(row[0]) != EVENT_SOURCE_RUNTIME_SCHEMA_VERSION:
                 raise ValueError("event-source runtime schema mismatch")
+
+    def append_raw_payload(self, payload: EventSourceRawPayload) -> None:
+        self.initialize()
+        with sqlite3.connect(self.path) as db:
+            existing = db.execute(
+                "SELECT content_bytes, content_type, payload_text "
+                "FROM event_source_raw_payloads WHERE payload_sha256=?",
+                (payload.payload_sha256,),
+            ).fetchone()
+            values = (
+                payload.content_bytes,
+                payload.content_type,
+                payload.payload_text,
+            )
+            if existing is not None:
+                if tuple(existing) != values:
+                    raise ValueError("event source raw payload identity conflict")
+                return
+            db.execute(
+                """
+                INSERT INTO event_source_raw_payloads(
+                    payload_sha256, content_bytes, content_type, payload_text
+                ) VALUES (?, ?, ?, ?)
+                """,
+                (payload.payload_sha256, *values),
+            )
 
     def append_calendar_coverage(self, coverage: EventCalendarCoverage) -> None:
         self._append_identity_payload(
@@ -370,6 +501,7 @@ class EventSourceRuntimeStore:
     def counts(self) -> dict[str, int]:
         if not self.path.is_file():
             return {
+                "raw_payloads": 0,
                 "calendar_coverages": 0,
                 "structured_events": 0,
                 "news_events": 0,
@@ -377,6 +509,11 @@ class EventSourceRuntimeStore:
             }
         with sqlite3.connect(self.path) as db:
             return {
+                "raw_payloads": int(
+                    db.execute(
+                        "SELECT COUNT(*) FROM event_source_raw_payloads"
+                    ).fetchone()[0]
+                ),
                 "calendar_coverages": int(
                     db.execute(
                         "SELECT COUNT(*) FROM event_calendar_coverages"
@@ -444,8 +581,11 @@ def _fetch_payload(
         "endpoint_url": fetch.endpoint_url,
         "fetched_at_ms": fetch.fetched_at_ms,
         "source_timestamp_ms": fetch.source_timestamp_ms,
+        "source_timestamp_basis": fetch.source_timestamp_basis,
         "http_status": fetch.http_status,
         "outcome": fetch.outcome,
+        "raw_payload_sha256": fetch.raw_payload_sha256,
+        "raw_payload_bytes": fetch.raw_payload_bytes,
         "item_identities": fetch.item_identities,
         "coverage_identity": fetch.coverage_identity,
         "reason_code": fetch.reason_code,
