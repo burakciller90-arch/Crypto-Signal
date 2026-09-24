@@ -34,8 +34,9 @@ def test_ssd_supervisor_owns_market_tape_stream_once() -> None:
 def test_market_tape_adoption_requires_lock_holder_and_exact_python_script() -> None:
     text = SUPERVISOR.read_text(encoding="utf-8")
 
-    assert 'comm=tolower($1)' in text
-    assert 'index(comm, "python") == 0' in text
-    assert 'if ($i == runner)' in text
+    assert 'local py="$DEV/.venv/bin/python"' in text
+    assert '/bin/ps -ww -p "$pid" -o uid=,args=' in text
+    assert 'exit($1 == 504 && $2 == py && $3 == runner ? 0 : 1)' in text
+    assert 'comm=tolower($1)' not in text
     assert 'market_tape_pid_is_expected "$pid" || return 1' in text
     assert 'market_tape_pid_is_expected "$pid"; then' in text
