@@ -2248,8 +2248,14 @@ function renderSystem() {
   );
   const coldNote = byId("systemColdArchiveNote");
   if (coldNote) {
+    const replayStatus = text(
+      coldSnapshot.canonical_row_digest_replay,
+      "NOT_MEASURED"
+    );
+    const replayCount =
+      coldSnapshot.canonical_replay_verified_partition_count ?? 0;
     coldNote.textContent = coldReady
-      ? `${text(coldSnapshot.integrity_scope, "NO PARTITIONS")} · process NOT MEASURED · canonical-row replay NOT MEASURED`
+      ? `${text(coldSnapshot.integrity_scope, "NO PARTITIONS")} · process NOT MEASURED · canonical-row replay ${replayStatus} · replayed partitions ${replayCount}`
       : text(coldArchive.reason, "archive runtime evidence unavailable");
   }
 
