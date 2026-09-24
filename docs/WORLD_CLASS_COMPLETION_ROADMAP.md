@@ -458,6 +458,19 @@ A credible world-class claim would require, at minimum:
 - After merge as `d27563bee4418c4fef2a6e7fcb351fa8f7e96686`, exact-main push run **36063771392 / job 107848618741** independently passed the same gate.
 - This acceptance proves the review process itself is fail closed. It does **not** prove `EDGE_SUPPORTED`, “world-class achieved”, or any other positive edge conclusion.
 
+### Typed provenance hardening — 2026-09-25
+
+- PR **#1199** binds each WC7 claim to an allowed typed evidence source or explicit blocker boundary.
+- Satisfied/partial/negative claims cannot use an unrelated evidence class.
+- Human usability can only be supported by a human-usability-study source.
+- Capital/execution lineage can only be supported by a WC6 sandbox/testnet dossier; paper/lab simulation cannot be relabelled as venue evidence.
+- Missing, not-measured and external-dependency claims cannot invent an artifact identity.
+- Probability calibration `NOT_APPLICABLE` requires an explicit no-probability-use boundary.
+- The final packet must match all nine exact claim identities, statuses and artifact identities.
+- Exact-head UID504 run **36064310603** passed; after merge as `441dd9d5da20c4d5645d63f6975079992d2981f2`, exact-main run **36064416622 / job 107850699031** independently passed focused/research/full-repository/non-mutation acceptance.
+- `WC7_MACHINE_EDGE_VERDICT=NONE` and `REAL_CAPITAL=0` remain mandatory.
+- Typed provenance strengthens the review boundary; it does **not** change the current `INSUFFICIENT_EVIDENCE` conclusion or remove any existing blocker.
+
 ## Final boundary
 
 Real-money authority is not part of World-Class Completion.
