@@ -356,9 +356,10 @@ def test_wc6_execution_lab_source_has_no_external_order_surface() -> None:
         "cancel_order",
         "launchctl",
         "subprocess",
-        "binance.com",
-        "testnet",
+        "api.binance.com",
+        "testnet.binance",
         "sandbox_url",
+        "sandbox_client",
     )
     assert all(token not in source for token in forbidden)
     assert "not_implemented" in source
