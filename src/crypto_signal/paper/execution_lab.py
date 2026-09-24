@@ -13,6 +13,7 @@ from enum import StrEnum
 from crypto_signal.ledger.serialization import canonical_sha256
 from crypto_signal.paper.activation import (
     PaperActivationState,
+    PaperProcessedEventReceipt,
     PaperProcessedTradeCommit,
     commit_planned_pretrade_event,
     list_processed_paper_events,
@@ -21,6 +22,7 @@ from crypto_signal.paper.execution import FrozenExecutionSnapshot
 from crypto_signal.paper.execution_input import FrozenPaperExecutionInput
 from crypto_signal.paper.ledger import (
     PaperFundLedger,
+    PaperLedgerEntry,
     PaperLedgerWriteAuthorityError,
     PaperLedgerWriteDisposition,
 )
@@ -506,30 +508,28 @@ def _state_identity(state: PaperFundState) -> str:
     )
 
 
-def _replay_identity(entries: tuple[object, ...]) -> str:
-    payload: list[dict[str, object]] = []
-    for entry in entries:
-        sequence_id = getattr(entry, "sequence_id")
-        record_kind = getattr(entry, "record_kind")
-        record_identity = getattr(entry, "record_identity")
-        appended_at_ms = getattr(entry, "appended_at_ms")
-        payload.append(
-            {
-                "appended_at_ms": appended_at_ms,
-                "record_identity": record_identity,
-                "record_kind": str(record_kind),
-                "sequence_id": sequence_id,
-            }
-        )
-    return canonical_sha256(payload)
-
-
-def _receipts_identity(receipts: tuple[object, ...]) -> str:
+def _replay_identity(entries: tuple[PaperLedgerEntry, ...]) -> str:
     return canonical_sha256(
         [
             {
-                "event_identity": getattr(item, "event_identity"),
-                "processed_at_ms": getattr(item, "processed_at_ms"),
+                "appended_at_ms": entry.appended_at_ms,
+                "record_identity": entry.record_identity,
+                "record_kind": entry.record_kind,
+                "sequence_id": entry.sequence_id,
+            }
+            for entry in entries
+        ]
+    )
+
+
+def _receipts_identity(
+    receipts: tuple[PaperProcessedEventReceipt, ...],
+) -> str:
+    return canonical_sha256(
+        [
+            {
+                "event_identity": item.event_identity,
+                "processed_at_ms": item.processed_at_ms,
             }
             for item in receipts
         ]
