@@ -138,3 +138,22 @@ def test_productdeploy_contract_is_exact_main_and_current_galactech() -> None:
     assert 'grep -F "$PRODUCT/ops/run_dashboard.py"' in product_block
     assert "OLD_DASH_EXIT_TIMEOUT=YES" not in product_block
     assert "REAL_CAPITAL" not in product_block or "real_capital" in product_block
+
+
+def test_galactech_preview_contract_is_exact_main_read_only() -> None:
+    workflow = Path(
+        ".github/workflows/crypto-mac-command.yml"
+    ).read_text(encoding="utf-8")
+
+    assert "galactechpreview" in workflow
+    assert "- name: CHECKOUT EXACT GALACTECH PREVIEW SOURCE" in workflow
+    assert 'ref: ${{ github.sha }}' in workflow
+    assert "GALACTECH_PREVIEW_EXACT_SOURCE_PASS=YES" in workflow
+    assert "- name: GALACTECH EXACT MAIN PREVIEW" in workflow
+    assert "PORT=48705" in workflow
+    assert 'export PYTHONPATH="$GITHUB_WORKSPACE/src"' in workflow
+    assert '"$GITHUB_WORKSPACE/ops/run_dashboard.py"' in workflow
+    assert 'data-ui-version="galactech-v1.1-polish"' in workflow
+    assert "GALACTECH_PREVIEW_READ_ONLY_PASS=YES" in workflow
+    assert 'test "$(curl -sS -o /dev/null -w \'%{http_code}\' -X POST --max-time 5 "$URL/")" = "405"' in workflow
+    assert "REAL_CAPITAL=0" in workflow
