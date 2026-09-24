@@ -1,6 +1,20 @@
 # PROJECT CHRONICLE
 
 
+## 2026-09-25 — WC7 connects canonical WC2/WC6 boundaries without upgrading blockers
+
+PR #1201 moved WC7 from generic typed provenance to canonical subsystem adapters. The important change was not a new verdict; it was preserving the semantic difference between an evidence artifact and a blocker-boundary identity.
+
+`WC2ReviewReadiness` now feeds only the WC7 untouched-forward-history dimension. If canonical WC2 readiness is `REVIEW_ELIGIBLE`, that may satisfy history sufficiency and nothing more; the adapter note explicitly states that review eligibility is not an edge or profitability claim. If readiness is `INSUFFICIENT_EVIDENCE`, the WC7 claim remains `MISSING`; the readiness identity is retained only as blocker provenance.
+
+The accepted WC6 sandbox boundary is handled the same way. A `BLOCKED_NOT_CONFIGURED` boundary remains `CAPITAL_EXECUTION_LINEAGE: EXTERNAL_DEPENDENCY`. Its identity proves exactly why the blocker exists; it is not venue acknowledgement/fill/recovery evidence.
+
+PR #1201 also hardened generic provenance with a dedicated `blocker_boundary_identity` field so evidenced claims and blocker boundaries cannot be conflated. Exact-head run 36065071631 passed, the PR merged as `3d0283ab180255e5eca12955814985cab04c3548`, and exact-main run 36065254385 / job 107853404508 independently passed focused WC7, research, whole-repository and Development non-mutation acceptance with `WC7_MACHINE_EDGE_VERDICT=NONE` and `REAL_CAPITAL=0`.
+
+The acceptance tests include synthetic eligible and insufficient WC2 readiness fixtures. They prove adapter behavior; they do not assert that the current live WC2 cohort is review-eligible. The current WC7 conclusion therefore remains `INSUFFICIENT_EVIDENCE` until canonical future evidence actually changes it.
+
+
+
 ## 2026-09-25 — WC7 begins consuming canonical WC2/WC6 state without upgrading blockers into evidence
 
 PR #1201 moved WC7 from typed-but-manually supplied provenance toward canonical subsystem adapters. The change is intentionally asymmetric: canonical source state may satisfy a dimension only when its own accepted semantics justify that, while an accepted blocker artifact remains a blocker.
