@@ -484,6 +484,68 @@ class ImmutableSignalLedger:
             )
         return self._row_to_freeze(rows[0])
 
+    def read_freeze_by_signal(
+        self,
+        signal_freeze_identity: str,
+    ) -> FreezeRecord | None:
+        """Read a persisted freeze without initializing or mutating the ledger."""
+        if not self.path.is_file():
+            return None
+        uri = f"{self.path.resolve().as_uri()}?mode=ro"
+        connection = sqlite3.connect(uri, uri=True, timeout=5.0)
+        connection.row_factory = sqlite3.Row
+        connection.execute("PRAGMA query_only=ON")
+        try:
+            row = connection.execute(
+                """
+                SELECT * FROM signal_freezes
+                WHERE signal_freeze_identity = ?
+                """,
+                (signal_freeze_identity,),
+            ).fetchone()
+        finally:
+            connection.close()
+        return None if row is None else self._row_to_freeze(row)
+
+    def read_closed_outcome_record(
+        self,
+        signal_freeze_identity: str,
+        *,
+        evidence_class: str,
+        max_holding_bars: int,
+    ) -> OutcomeRecord | None:
+        """Read the earliest persisted non-pending outcome without mutation."""
+        if not evidence_class.strip():
+            raise ValueError("outcome evidence class must be non-empty")
+        if max_holding_bars <= 0:
+            raise ValueError("outcome holding horizon must be positive")
+        if not self.path.is_file():
+            return None
+        uri = f"{self.path.resolve().as_uri()}?mode=ro"
+        connection = sqlite3.connect(uri, uri=True, timeout=5.0)
+        connection.row_factory = sqlite3.Row
+        connection.execute("PRAGMA query_only=ON")
+        try:
+            row = connection.execute(
+                """
+                SELECT * FROM outcome_evaluations
+                WHERE signal_freeze_identity = ?
+                  AND evidence_class = ?
+                  AND max_holding_bars = ?
+                  AND resolution_status != 'pending'
+                ORDER BY evaluated_as_of_ms ASC, outcome_identity ASC
+                LIMIT 1
+                """,
+                (
+                    signal_freeze_identity,
+                    evidence_class,
+                    max_holding_bars,
+                ),
+            ).fetchone()
+        finally:
+            connection.close()
+        return None if row is None else self._row_to_outcome(row)
+
     def get_freeze_by_signal(
         self,
         signal_freeze_identity: str,

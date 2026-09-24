@@ -38,6 +38,9 @@ from crypto_signal.evaluation.untouched_forward_prepared_runtime import (
     WC2PreparedLiveStatus,
     process_wc2_prepared_live_freeze,
 )
+from crypto_signal.evaluation.untouched_forward_resolution_runtime import (
+    resolve_wc2_outcomes_once,
+)
 from crypto_signal.ledger.coverage import (
     LiveCoveragePlan,
 )
@@ -453,6 +456,37 @@ async def run(
                     flush=True,
                 )
                 continue
+
+    if selected_wc2.enabled:
+        assert wc2_decision is not None
+        assert wc2_cohort is not None
+        try:
+            outcome_cycle = resolve_wc2_outcomes_once(
+                signal_ledger=ledger,
+                candle_store=candle_store,
+                decision_ledger=wc2_decision,
+                cohort_journal=wc2_cohort,
+                observed_at_ms=time.time_ns() // 1_000_000,
+            )
+        except (OSError, TypeError, ValueError, sqlite3.Error) as exc:
+            print(
+                "wc2_outcomes status=ERROR "
+                f"error={type(exc).__name__}:{exc} "
+                "FAIL_STOP=YES HISTORICAL_BACKFILL=NO REAL_CAPITAL=0",
+                file=sys.stderr,
+                flush=True,
+            )
+            return 1
+        print(
+            "wc2_outcomes status=COMPLETE "
+            f"scanned={outcome_cycle.scanned} "
+            f"pending={outcome_cycle.pending} "
+            f"resolved_fresh={outcome_cycle.resolved_fresh} "
+            f"recovered={outcome_cycle.recovered} "
+            f"cohort_idempotent={outcome_cycle.cohort_idempotent} "
+            "HISTORICAL_BACKFILL=NO REAL_CAPITAL=0",
+            flush=True,
+        )
 
     selected_divergence_path = (
         provider_divergence_path
