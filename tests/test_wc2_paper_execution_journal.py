@@ -17,7 +17,6 @@ from crypto_signal.evaluation.untouched_forward_execution_journal import (
 from crypto_signal.ledger.serialization import canonical_sha256
 from crypto_signal.paper.models import PaperAction, PaperSymbol
 
-
 START = 1_000_000
 
 
