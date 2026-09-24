@@ -2924,11 +2924,11 @@ function renderSystem() {
 
 function performanceEvidenceClassLabel(value) {
   const labels = {
-    retrospective: "RETROSPECTIVE",
-    walk_forward: "WALK-FORWARD",
-    live_untouched_forward: "LIVE UNTOUCHED-FORWARD",
+    retrospective: "GEÇMİŞE DÖNÜK",
+    walk_forward: "İLERİ YÜRÜYEN TEST",
+    live_untouched_forward: "GERÇEK İLERİ DÖNEM",
   };
-  return labels[text(value, "").toLowerCase()] || upper(value, "UNLABELLED");
+  return labels[text(value, "").toLowerCase()] || upper(value, "ETİKETSİZ").replaceAll("_", " ");
 }
 
 function fractionPercent(value) {
@@ -2945,9 +2945,8 @@ function decimalMetric(value, suffix = "") {
 function performanceSegmentMarkup(segment) {
   const key = segment?.key || {};
   const decisive = Number(segment?.decisive_n ?? 0);
-  const historical = segment?.historical_success_fraction;
   const historyLabel = decisive > 0
-    ? fractionPercent(historical)
+    ? fractionPercent(segment?.historical_success_fraction)
     : "ÖLÇÜLMEDİ";
   const rStatus = Number(segment?.r_evaluable_n ?? 0) > 0
     ? decimalMetric(segment?.average_r, " R")
@@ -2957,40 +2956,40 @@ function performanceSegmentMarkup(segment) {
     <article class="performance-segment">
       <div class="performance-segment-head">
         <div>
-          <strong>${escapeHtml(key.symbol || "UNKNOWN")} · ${escapeHtml(key.timeframe || "—")}</strong>
-          <span>${escapeHtml(key.setup_type || "setup unavailable")}</span>
+          <strong>${escapeHtml(key.symbol || "BİLİNMİYOR")} · ${escapeHtml(key.timeframe || "—")}</strong>
+          <span>${escapeHtml(key.setup_type || "kurulum bilgisi yok")}</span>
         </div>
-        <span class="proof-badge proof-badge-neutral">${escapeHtml(upper(key.signal_direction, "NONE"))}</span>
+        <span class="proof-badge proof-badge-neutral">${escapeHtml(trDirection(key.signal_direction))}</span>
       </div>
       <div class="performance-segment-meta">
-        <span>${escapeHtml(upper(key.exchange, "UNKNOWN"))} · ${escapeHtml(upper(key.market_type, "UNKNOWN"))}</span>
-        <span>${escapeHtml(key.source_methodology || "multi-method")}</span>
-        <span>${escapeHtml(key.confluence_score_bucket || "agreement bucket unavailable")}</span>
-        <span>regime ${escapeHtml(key.regime_label || "UNLABELLED")}</span>
+        <span>${escapeHtml(upper(key.exchange, "BİLİNMİYOR"))} · ${escapeHtml(upper(key.market_type, "BİLİNMİYOR"))}</span>
+        <span>${escapeHtml(key.source_methodology || "çoklu yöntem")}</span>
+        <span>${escapeHtml(key.confluence_score_bucket || "uyum aralığı yok")}</span>
+        <span>rejim ${escapeHtml(key.regime_label || "ETİKETSİZ")}</span>
       </div>
       <div class="performance-segment-metrics">
-        <div><span>TOTAL</span><strong>${escapeHtml(segment?.total_n ?? 0)}</strong></div>
-        <div><span>WIN</span><strong>${escapeHtml(segment?.success_n ?? 0)}</strong></div>
-        <div><span>LOSS</span><strong>${escapeHtml(segment?.fail_sl_n ?? 0)}</strong></div>
-        <div><span>AMBIG</span><strong>${escapeHtml(segment?.ambiguous_n ?? 0)}</strong></div>
-        <div><span>TIMEOUT</span><strong>${escapeHtml(segment?.timeout_n ?? 0)}</strong></div>
-        <div><span>INVALID</span><strong>${escapeHtml(segment?.invalidated_n ?? 0)}</strong></div>
+        <div><span>TOPLAM</span><strong>${escapeHtml(segment?.total_n ?? 0)}</strong></div>
+        <div><span>BAŞARILI</span><strong>${escapeHtml(segment?.success_n ?? 0)}</strong></div>
+        <div><span>BAŞARISIZ</span><strong>${escapeHtml(segment?.fail_sl_n ?? 0)}</strong></div>
+        <div><span>BELİRSİZ</span><strong>${escapeHtml(segment?.ambiguous_n ?? 0)}</strong></div>
+        <div><span>SÜRE DOLDU</span><strong>${escapeHtml(segment?.timeout_n ?? 0)}</strong></div>
+        <div><span>GEÇERSİZ</span><strong>${escapeHtml(segment?.invalidated_n ?? 0)}</strong></div>
       </div>
       <div class="performance-descriptive-row">
         <span>
-          <small>DECISIVE HISTORICAL FRACTION</small>
+          <small>KARARLI SONUÇLARDA TARİHSEL ORAN</small>
           <strong>${escapeHtml(historyLabel)}</strong>
-          <em>descriptive frequency · not probability</em>
+          <em>betimleyici sıklık · olasılık değildir</em>
         </span>
         <span>
-          <small>AVERAGE R</small>
+          <small>ORTALAMA R</small>
           <strong>${escapeHtml(rStatus)}</strong>
-          <em>${escapeHtml(segment?.r_evaluable_n ?? 0)} R-evaluable</em>
+          <em>${escapeHtml(segment?.r_evaluable_n ?? 0)} adet R ile değerlendirilebilir</em>
         </span>
         <span>
-          <small>DRAWDOWN R</small>
+          <small>GERİLEME R</small>
           <strong>${escapeHtml(decimalMetric(segment?.max_drawdown_r, " R"))}</strong>
-          <em>segment path only</em>
+          <em>yalnız bu segmentin yolu</em>
         </span>
       </div>
     </article>`;
@@ -3003,19 +3002,19 @@ function performanceGroupMarkup(group) {
     <section class="performance-cohort">
       <header class="performance-cohort-head">
         <div>
-          <span class="eyebrow">EVIDENCE CLASS</span>
+          <span class="eyebrow">KANIT SINIFI</span>
           <h3>${escapeHtml(evidenceClass)}</h3>
         </div>
         <div class="performance-cohort-meta">
-          <span>horizon ${escapeHtml(group?.max_holding_bars ?? "—")} bars</span>
-          <span>stored ${escapeHtml(group?.stored_snapshot_count ?? 0)}</span>
-          <span>latest ${escapeHtml(group?.selected_latest_signal_count ?? 0)}</span>
+          <span>ufuk ${escapeHtml(group?.max_holding_bars ?? "—")} mum</span>
+          <span>saklanan ${escapeHtml(group?.stored_snapshot_count ?? 0)}</span>
+          <span>son seçilen ${escapeHtml(group?.selected_latest_signal_count ?? 0)}</span>
         </div>
       </header>
       <div class="performance-segment-list">
         ${segments.length
           ? segments.map(performanceSegmentMarkup).join("")
-          : '<div class="empty-state"><strong>No segment evidence.</strong><p>Empty cohort is not a zero success rate.</p></div>'}
+          : '<div class="empty-state"><strong>Segment kanıtı yok.</strong><p>Boş grup, %0 başarı oranı değildir.</p></div>'}
       </div>
     </section>`;
 }
@@ -3041,15 +3040,15 @@ function renderPerformanceCohorts() {
   if (truthTag) {
     truthTag.textContent =
       data.status === "ready"
-        ? "TRUST · COHORT EVIDENCE READY"
-        : `TRUST · ${upper(data.status, "UNAVAILABLE")}`;
+        ? "GÜVEN · GRUP KANITI HAZIR"
+        : `GÜVEN · ${trState(data.status)}`;
   }
 
   if (!groups.length) {
     target.className = "performance-cohorts empty-state";
     target.innerHTML =
-      "<strong>Henüz outcome cohort evidence yok.</strong>" +
-      "<p>Empty performance history is ÖLÇÜLMEDİ; %0 başarı oranı değildir.</p>";
+      "<strong>Henüz sonuç grubu kanıtı yok.</strong>" +
+      "<p>Boş performans geçmişi “ölçülmedi” demektir; %0 başarı oranı değildir.</p>";
     return;
   }
 
@@ -3065,28 +3064,28 @@ function renderPerformancePaper() {
 
   if (byId("performancePaperNav")) {
     byId("performancePaperNav").textContent =
-      canonical.status === "ready" ? moneyText(consolidated.nav_usdt) : "UNAVAILABLE";
+      canonical.status === "ready" ? moneyText(consolidated.nav_usdt) : "KULLANILAMIYOR";
   }
   if (byId("performanceDrawdown")) {
     byId("performanceDrawdown").textContent =
       canonical.status === "ready"
         ? fractionPercent(consolidated.drawdown_fraction)
-        : "UNAVAILABLE";
+        : "KULLANILAMIYOR";
   }
 
   if (!target) return;
   if (canonical.status !== "ready") {
     target.className = "empty-state";
     target.innerHTML =
-      "<strong>Canonical Epoch 2 performance unavailable.</strong>" +
-      `<p>${escapeHtml(text(canonical.reason, "runtime evidence unavailable"))}</p>`;
+      "<strong>Kanonik Epoch 2 performansı kullanılamıyor.</strong>" +
+      `<p>${escapeHtml(text(canonical.reason, "çalışma zamanı kanıtı kullanılamıyor"))}</p>`;
     return;
   }
 
   const expectancy =
     consolidated.expectancy_usdt_per_closed_trade === null ||
     consolidated.expectancy_usdt_per_closed_trade === undefined
-      ? "NOT YET MEASURED"
+      ? "HENÜZ ÖLÇÜLMEDİ"
       : moneyText(consolidated.expectancy_usdt_per_closed_trade);
   const totalCosts =
     Number(consolidated.fee_usdt || 0) +
@@ -3097,28 +3096,28 @@ function renderPerformancePaper() {
   target.innerHTML = `
     <div class="performance-paper-hero">
       <div><span>NAV</span><strong>${escapeHtml(moneyText(consolidated.nav_usdt))}</strong></div>
-      <div><span>REALIZED PNL</span><strong>${escapeHtml(moneyText(consolidated.realized_pnl_usdt))}</strong></div>
-      <div><span>UNREALIZED PNL</span><strong>${escapeHtml(moneyText(consolidated.unrealized_pnl_usdt))}</strong></div>
-      <div><span>CURRENT DRAWDOWN</span><strong>${escapeHtml(fractionPercent(consolidated.drawdown_fraction))}</strong></div>
+      <div><span>GERÇEKLEŞEN K/Z</span><strong>${escapeHtml(moneyText(consolidated.realized_pnl_usdt))}</strong></div>
+      <div><span>GERÇEKLEŞMEMİŞ K/Z</span><strong>${escapeHtml(moneyText(consolidated.unrealized_pnl_usdt))}</strong></div>
+      <div><span>MEVCUT GERİLEME</span><strong>${escapeHtml(fractionPercent(consolidated.drawdown_fraction))}</strong></div>
     </div>
     <div class="truth-table">
-      <div class="truth-row"><span>Closed trades</span><strong>${escapeHtml(consolidated.closed_trade_count ?? 0)}</strong></div>
-      <div class="truth-row"><span>Wins / Losses / Breakeven</span><strong>${escapeHtml(consolidated.win_count ?? 0)} / ${escapeHtml(consolidated.loss_count ?? 0)} / ${escapeHtml(consolidated.breakeven_count ?? 0)}</strong></div>
-      <div class="truth-row"><span>Expectancy</span><strong>${escapeHtml(expectancy)}</strong></div>
-      <div class="truth-row"><span>Turnover</span><strong>${escapeHtml(fractionPercent(consolidated.turnover_fraction))}</strong></div>
-      <div class="truth-row"><span>Fee + spread + slippage</span><strong>${escapeHtml(Number.isFinite(totalCosts) ? `${totalCosts} USDT` : "ÖLÇÜLMEDİ")}</strong></div>
-      <div class="truth-row"><span>Metrics status</span><strong>${escapeHtml(capitalStatusText(consolidated.metrics_status))}</strong></div>
+      <div class="truth-row"><span>Kapanan işlemler</span><strong>${escapeHtml(consolidated.closed_trade_count ?? 0)}</strong></div>
+      <div class="truth-row"><span>Kazanç / Kayıp / Başabaş</span><strong>${escapeHtml(consolidated.win_count ?? 0)} / ${escapeHtml(consolidated.loss_count ?? 0)} / ${escapeHtml(consolidated.breakeven_count ?? 0)}</strong></div>
+      <div class="truth-row"><span>Beklenen değer</span><strong>${escapeHtml(expectancy)}</strong></div>
+      <div class="truth-row"><span>Devir oranı</span><strong>${escapeHtml(fractionPercent(consolidated.turnover_fraction))}</strong></div>
+      <div class="truth-row"><span>Komisyon + alış-satış farkı + fiyat kayması</span><strong>${escapeHtml(Number.isFinite(totalCosts) ? `${totalCosts} USDT` : "ÖLÇÜLMEDİ")}</strong></div>
+      <div class="truth-row"><span>Metrik durumu</span><strong>${escapeHtml(capitalStatusText(consolidated.metrics_status))}</strong></div>
     </div>
     <div class="performance-vault-compare">
       ${vaults.map((vault) => `
         <article>
-          <span>${escapeHtml(vault.vault_id)}</span>
+          <span>${escapeHtml(trVault(vault.vault_id))}</span>
           <strong>${escapeHtml(moneyText(vault.nav_usdt))}</strong>
-          <small>DD ${escapeHtml(fractionPercent(vault.drawdown_fraction))} · closed ${escapeHtml(vault.closed_trade_count ?? 0)}</small>
+          <small>gerileme ${escapeHtml(fractionPercent(vault.drawdown_fraction))} · kapanan ${escapeHtml(vault.closed_trade_count ?? 0)}</small>
         </article>`).join("")}
     </div>
     <p class="proof-footnote">
-      Canonical R21 accounting only. Forecast hit-rate is never substituted for paper-fund performance.
+      Yalnız kanonik R21 muhasebesi kullanılır. Öngörü isabet oranı, kâğıt portföy performansı yerine geçirilmez.
     </p>`;
 }
 
@@ -3126,6 +3125,7 @@ function renderPerformance() {
   renderPerformanceCohorts();
   renderPerformancePaper();
 }
+
 
 function renderIntelligence() {
   const target = byId("intelligenceTruth");
