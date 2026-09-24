@@ -93,6 +93,7 @@ class WC7EvidenceProvenance:
     claim_status: WC7EvidenceStatus
     source_kind: WC7EvidenceSourceKind
     source_artifact_identity: str | None
+    blocker_boundary_identity: str | None
     source_reference: str
     observed_at_ms: int
     real_capital: int = REAL_CAPITAL
@@ -116,6 +117,11 @@ class WC7EvidenceProvenance:
                 self.source_artifact_identity,
                 "WC7 source artifact identity",
             )
+        if self.blocker_boundary_identity is not None:
+            _require_sha256(
+                self.blocker_boundary_identity,
+                "WC7 blocker boundary identity",
+            )
         if self.real_capital != REAL_CAPITAL:
             raise ValueError("REAL_CAPITAL must remain 0")
         _validate_source_semantics(
@@ -123,6 +129,7 @@ class WC7EvidenceProvenance:
             status=self.claim_status,
             source_kind=self.source_kind,
             source_artifact_identity=self.source_artifact_identity,
+            blocker_boundary_identity=self.blocker_boundary_identity,
         )
         if self.provenance_identity != canonical_sha256(
             _provenance_payload(self)
@@ -173,6 +180,7 @@ def build_wc7_evidence_provenance(
     source_reference: str,
     observed_at_ms: int,
     source_artifact_identity: str | None = None,
+    blocker_boundary_identity: str | None = None,
 ) -> WC7EvidenceProvenance:
     """Bind one claim to an allowed typed evidence source or blocker."""
 
@@ -190,8 +198,10 @@ def build_wc7_evidence_provenance(
         status=claim.status,
         source_kind=source_kind,
         source_artifact_identity=source_artifact_identity,
+        blocker_boundary_identity=blocker_boundary_identity,
     )
     payload = {
+        "blocker_boundary_identity": blocker_boundary_identity,
         "claim_identity": claim.claim_identity,
         "claim_status": claim.status,
         "dimension": claim.dimension,
@@ -212,6 +222,7 @@ def build_wc7_evidence_provenance(
         claim_status=claim.status,
         source_kind=source_kind,
         source_artifact_identity=source_artifact_identity,
+        blocker_boundary_identity=blocker_boundary_identity,
         source_reference=source_reference,
         observed_at_ms=observed_at_ms,
         real_capital=REAL_CAPITAL,
@@ -270,6 +281,7 @@ def _validate_source_semantics(
     status: WC7EvidenceStatus,
     source_kind: WC7EvidenceSourceKind,
     source_artifact_identity: str | None,
+    blocker_boundary_identity: str | None,
 ) -> None:
     blocker_kind = _BLOCKER_SOURCE_BY_STATUS.get(status)
     if blocker_kind is not None:
@@ -290,6 +302,8 @@ def _validate_source_semantics(
             raise ValueError("WC7 calibration N/A requires probability-use boundary")
         if source_artifact_identity is None:
             raise ValueError("WC7 calibration N/A requires boundary artifact")
+        if blocker_boundary_identity is not None:
+            raise ValueError("WC7 calibration N/A cannot carry blocker boundary")
         return
 
     if status not in {
@@ -304,12 +318,15 @@ def _validate_source_semantics(
         raise ValueError("WC7 evidence dimension/source kind mismatch")
     if source_artifact_identity is None:
         raise ValueError("WC7 evidenced status requires source artifact identity")
+    if blocker_boundary_identity is not None:
+        raise ValueError("WC7 evidenced status cannot carry blocker boundary")
 
 
 def _provenance_payload(
     provenance: WC7EvidenceProvenance,
 ) -> dict[str, object]:
     return {
+        "blocker_boundary_identity": provenance.blocker_boundary_identity,
         "claim_identity": provenance.claim_identity,
         "claim_status": provenance.claim_status,
         "dimension": provenance.dimension,
