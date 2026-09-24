@@ -124,7 +124,7 @@ def test_productdeploy_contract_is_exact_main_and_current_galactech() -> None:
     assert 'git -C "$PRODUCT"' in product_block
     assert 'fetch --no-tags origin main' in product_block
     assert 'rev-parse origin/main' in product_block
-    assert 'data-ui-version="galactech-v1.1-polish"' in product_block
+    assert 'data-ui-version="galactech-v2-intelligence-first-tr"' in product_block
     assert 'data-ui-version="galactech-command-center-v1"' in product_block
     assert "/api/r25/operational-truth" in product_block
     assert "GALACTECH_ROOT_CUTOVER_LIVE_PASS=YES" in product_block
@@ -159,7 +159,7 @@ def test_galactech_preview_contract_is_exact_main_read_only() -> None:
     assert "PORT=48705" in workflow
     assert 'export PYTHONPATH="$GITHUB_WORKSPACE/src"' in workflow
     assert '"$GITHUB_WORKSPACE/ops/run_dashboard.py"' in workflow
-    assert 'data-ui-version="galactech-v1.1-polish"' in workflow
+    assert 'data-ui-version="galactech-v2-intelligence-first-tr"' in workflow
     assert "GALACTECH_PREVIEW_READ_ONLY_PASS=YES" in workflow
     assert 'test "$(curl -sS -o /dev/null -w \'%{http_code}\' -X POST --max-time 5 "$URL/")" = "405"' in workflow
     assert "REAL_CAPITAL=0" in workflow
