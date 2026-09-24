@@ -1,0 +1,41 @@
+from __future__ import annotations
+
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+SUPERVISOR = ROOT / "ops" / "ssd_runtime_supervisor.sh"
+
+
+def test_ssd_supervisor_owns_market_tape_stream_once() -> None:
+    text = SUPERVISOR.read_text(encoding="utf-8")
+
+    assert "market_tape_pid_is_expected()" in text
+    assert "adopt_market_tape_stream()" in text
+    assert "start_market_tape_stream()" in text
+    assert 'local runner="$DEV/ops/run_market_tape_stream.py"' in text
+    assert 'local db="$runtime/market_tape.sqlite3"' in text
+    assert 'local raw="$runtime/raw_market_tape.sqlite3"' in text
+    assert 'local lock="$runtime/market_tape_stream.lock"' in text
+    assert 'local collector_runtime="$runtime/collector_runtime.sqlite3"' in text
+    assert 'local gaps="$runtime/market_data_gaps.sqlite3"' in text
+    assert '/usr/sbin/lsof -t "$lock"' in text
+    assert 'exec "$py" "$runner"' in text
+    assert '--runtime-status-db "$collector_runtime"' in text
+    assert '--gap-ledger-db "$gaps"' in text
+    assert "--heartbeat-interval-ms 10000" in text
+    assert "--max-ingestion-silence-ms 60000" in text
+    assert "--max-events 0" in text
+    assert 'echo "$pid" > "$ROOT/market-tape-stream.pid"' in text
+    assert "start_market_tape_stream\n  now=" in text
+    assert "FAIL_CLOSED=YES REAL_CAPITAL=0" in text
+    assert "market_tape_started pid=$pid REAL_CAPITAL=0" in text
+
+
+def test_market_tape_adoption_requires_lock_holder_and_exact_python_script() -> None:
+    text = SUPERVISOR.read_text(encoding="utf-8")
+
+    assert 'comm=tolower($1)' in text
+    assert 'index(comm, "python") == 0' in text
+    assert 'if ($i == runner)' in text
+    assert 'market_tape_pid_is_expected "$pid" || return 1' in text
+    assert 'market_tape_pid_is_expected "$pid"; then' in text

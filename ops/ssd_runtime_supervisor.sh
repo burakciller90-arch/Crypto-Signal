@@ -90,6 +90,93 @@ run_clock() {
   ) >>"$LOGDIR/$kind.out.log" 2>>"$LOGDIR/$kind.err.log" < /dev/null &
 }
 
+market_tape_pid_is_expected() {
+  local pid="$1"
+  local runner="$DEV/ops/run_market_tape_stream.py"
+  [ -n "$pid" ] || return 1
+  kill -0 "$pid" >/dev/null 2>&1 || return 1
+  /bin/ps -p "$pid" -o comm=,args= 2>/dev/null \
+    | /usr/bin/awk -v runner="$runner" '
+        {
+          comm=tolower($1)
+          if (index(comm, "python") == 0) {
+            exit 1
+          }
+          for (i=2; i<=NF; i++) {
+            if ($i == runner) {
+              found=1
+              break
+            }
+          }
+          exit(found ? 0 : 1)
+        }
+      '
+}
+
+adopt_market_tape_stream() {
+  local lock="$DEV/runtime/market_tape/market_tape_stream.lock"
+  local pid=""
+  [ -f "$lock" ] || return 1
+  pid="$(/usr/sbin/lsof -t "$lock" 2>/dev/null | head -1 || true)"
+  market_tape_pid_is_expected "$pid" || return 1
+  echo "$pid" > "$ROOT/market-tape-stream.pid"
+  echo "$(date '+%Y-%m-%d %H:%M:%S %z') market_tape_adopted pid=$pid"
+  return 0
+}
+
+start_market_tape_stream() {
+  local pid=""
+  local pidfile="$ROOT/market-tape-stream.pid"
+  local py="$DEV/.venv/bin/python"
+  local runner="$DEV/ops/run_market_tape_stream.py"
+  local runtime="$DEV/runtime/market_tape"
+  local db="$runtime/market_tape.sqlite3"
+  local raw="$runtime/raw_market_tape.sqlite3"
+  local lock="$runtime/market_tape_stream.lock"
+  local collector_runtime="$runtime/collector_runtime.sqlite3"
+  local gaps="$runtime/market_data_gaps.sqlite3"
+
+  if [ -f "$pidfile" ]; then
+    pid="$(cat "$pidfile" 2>/dev/null || true)"
+    if market_tape_pid_is_expected "$pid"; then
+      return 0
+    fi
+    rm -f "$pidfile"
+  fi
+
+  if adopt_market_tape_stream; then
+    return 0
+  fi
+
+  for required in "$py" "$runner" "$db" "$raw"; do
+    if [ ! -e "$required" ]; then
+      echo "$(date '+%Y-%m-%d %H:%M:%S %z') market_tape_not_ready missing=$required FAIL_CLOSED=YES REAL_CAPITAL=0"
+      return 0
+    fi
+  done
+
+  (
+    unset RUNNER_TRACKING_ID
+    export PYTHONPATH="$DEV:$DEV/src"
+    cd "$DEV" || exit 75
+    exec "$py" "$runner" \
+      --db "$db" \
+      --raw-db "$raw" \
+      --lock-path "$lock" \
+      --runtime-status-db "$collector_runtime" \
+      --gap-ledger-db "$gaps" \
+      --symbols BTCUSDT ETHUSDT SOLUSDT \
+      --depth 50 \
+      --orderbook-snapshot-interval-ms 1000 \
+      --heartbeat-interval-ms 10000 \
+      --max-ingestion-silence-ms 60000 \
+      --max-events 0
+  ) >>"$LOGDIR/market-tape.out.log" 2>>"$LOGDIR/market-tape.err.log" < /dev/null &
+  pid="$!"
+  echo "$pid" > "$pidfile"
+  echo "$(date '+%Y-%m-%d %H:%M:%S %z') market_tape_started pid=$pid REAL_CAPITAL=0"
+}
+
 run_wc2_live_clock() {
   local runtime="$DEV/runtime"
   local py="$DEV/.venv/bin/python"
@@ -160,6 +247,7 @@ last_clock=0
 last_rotation=0
 while true; do
   start_dashboard
+  start_market_tape_stream
   now="$(date +%s)"
 
   if [ $((now-last_clock)) -ge 120 ]; then
