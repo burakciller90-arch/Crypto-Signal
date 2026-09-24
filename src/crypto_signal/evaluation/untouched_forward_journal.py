@@ -532,6 +532,7 @@ class WC2CohortJournal:
                     policy_identity TEXT NOT NULL,
                     forecast_identity TEXT UNIQUE NOT NULL,
                     proof_identity TEXT NOT NULL,
+                    paper_intent_identity TEXT UNIQUE NOT NULL,
                     action TEXT NOT NULL,
                     symbol TEXT NOT NULL,
                     regime TEXT NOT NULL,
@@ -627,18 +628,20 @@ class WC2CohortJournal:
                     policy_identity,
                     forecast_identity,
                     proof_identity,
+                    paper_intent_identity,
                     action,
                     symbol,
                     regime,
                     issued_at_ms,
                     indexed_at_ms,
                     payload_json
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (
                     record.cohort_issuance_identity,
                     record.policy_identity,
                     record.forecast_identity,
                     record.proof_identity,
+                    record.paper_intent_identity,
                     record.action.value,
                     record.symbol,
                     record.regime,
@@ -658,7 +661,8 @@ class WC2CohortJournal:
         with closing(sqlite3.connect(self.path)) as db, db:
             db.execute("PRAGMA foreign_keys=ON")
             issuance = db.execute(
-                f"""SELECT policy_identity, forecast_identity, action, payload_json
+                f"""SELECT policy_identity, forecast_identity, action,
+                           paper_intent_identity
                 FROM {_ISSUANCE_TABLE}
                 WHERE cohort_issuance_identity=?""",
                 (record.cohort_issuance_identity,),
@@ -669,11 +673,9 @@ class WC2CohortJournal:
                 str(issuance[0]) != record.policy_identity
                 or str(issuance[1]) != record.forecast_identity
                 or str(issuance[2]) != record.action.value
+                or str(issuance[3]) != record.paper_intent_identity
             ):
                 raise ValueError("WC2 execution/issuance lineage conflict")
-            issuance_payload = str(issuance[3])
-            if f'"paper_intent_identity":"{record.paper_intent_identity}"' not in issuance_payload:
-                raise ValueError("WC2 execution paper intent lineage conflict")
 
             existing = db.execute(
                 f"""SELECT execution_link_identity, payload_json
