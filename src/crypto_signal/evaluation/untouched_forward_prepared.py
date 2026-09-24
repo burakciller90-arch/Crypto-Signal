@@ -59,8 +59,8 @@ from crypto_signal.product.decision_proof import (
 )
 from crypto_signal.signals.models import SignalDecision, SignalDirection, SignalState
 
-WC2_PREPARED_RECEIPT_SCHEMA_VERSION = "wc2-prepared-cycle-receipt-v1/1"
-WC2_PREPARED_RECEIPT_ENGINE_VERSION = "wc2-prepared-cycle-receipt-v1/1"
+WC2_PREPARED_RECEIPT_SCHEMA_VERSION = "wc2-prepared-cycle-receipt-v1/2"
+WC2_PREPARED_RECEIPT_ENGINE_VERSION = "wc2-prepared-cycle-receipt-v1/2"
 WC2_PREPARED_RECEIPT_SUFFIX = ".wc2-prepared.sqlite3"
 REAL_CAPITAL = 0
 
@@ -74,6 +74,7 @@ class WC2PreparedCycleReceipt:
     receipt_identity: str
     policy_identity: str
     activation_identity: str
+    collection_protocol_identity: str
     signal: SignalDecision
     source_inputs: WC2LiveSourceInputs
     source_cutoff_open_time_ms: int
@@ -101,6 +102,10 @@ class WC2PreparedCycleReceipt:
             (self.receipt_identity, "WC2 prepared receipt"),
             (self.policy_identity, "WC2 prepared policy"),
             (self.activation_identity, "WC2 prepared activation"),
+            (
+                self.collection_protocol_identity,
+                "WC2 prepared collection protocol",
+            ),
         ):
             _require_sha256(value, label)
         if self.source_inputs.bundle_identity == "":
@@ -181,6 +186,7 @@ def build_wc2_prepared_cycle_receipt(
     *,
     policy: WC2UntouchedForwardPolicy,
     activation: Epoch2ActivationRecord,
+    collection_protocol_identity: str,
     sizing_policy: PositionSizingPolicy | None,
     source_frozen_at_ms: int,
     issued_at_ms: int,
@@ -201,6 +207,10 @@ def build_wc2_prepared_cycle_receipt(
         raise ValueError("WC2 prepared issuance predates collection start")
     if activation.activated_at_ms > issued_at_ms:
         raise ValueError("WC2 Epoch2 activation must predate prepared issuance")
+    _require_sha256(
+        collection_protocol_identity,
+        "WC2 prepared collection protocol",
+    )
     inputs = adapt_same_cycle_legacy_bundle(bundle, base_asset=base_asset)
     if signal.geometry is None or not signal.geometry.targets:
         raise ValueError("WC2 prepared cycle requires frozen target")
@@ -211,6 +221,7 @@ def build_wc2_prepared_cycle_receipt(
         "base_asset": base_asset,
         "canonical_epoch2_write_authority": False,
         "capital_assessed_at_ms": capital_assessed_at_ms,
+        "collection_protocol_identity": collection_protocol_identity,
         "engine_version": WC2_PREPARED_RECEIPT_ENGINE_VERSION,
         "historical_backfill_authority": False,
         "horizon_bars": horizon_bars,
@@ -235,6 +246,7 @@ def build_wc2_prepared_cycle_receipt(
         receipt_identity=canonical_sha256(values),
         policy_identity=policy.policy_identity,
         activation_identity=activation.activation_identity,
+        collection_protocol_identity=collection_protocol_identity,
         signal=signal,
         source_inputs=inputs,
         source_cutoff_open_time_ms=bundle.source_cutoff_open_time_ms,
@@ -293,6 +305,7 @@ class WC2PreparedCycleJournal:
                     receipt_identity TEXT UNIQUE NOT NULL,
                     policy_identity TEXT NOT NULL,
                     activation_identity TEXT NOT NULL,
+                    collection_protocol_identity TEXT NOT NULL,
                     signal_freeze_identity TEXT UNIQUE NOT NULL,
                     bundle_identity TEXT UNIQUE NOT NULL,
                     source_cutoff_open_time_ms INTEGER NOT NULL,
@@ -363,17 +376,19 @@ class WC2PreparedCycleJournal:
                     receipt_identity,
                     policy_identity,
                     activation_identity,
+                    collection_protocol_identity,
                     signal_freeze_identity,
                     bundle_identity,
                     source_cutoff_open_time_ms,
                     issued_at_ms,
                     previewed_at_ms,
                     payload_json
-                ) VALUES (?,?,?,?,?,?,?,?,?)""",
+                ) VALUES (?,?,?,?,?,?,?,?,?,?)""",
                 (
                     receipt.receipt_identity,
                     receipt.policy_identity,
                     receipt.activation_identity,
+                    receipt.collection_protocol_identity,
                     receipt.signal.freeze_identity,
                     receipt.source_inputs.bundle_identity,
                     receipt.source_cutoff_open_time_ms,
@@ -423,18 +438,20 @@ class WC2PreparedCycleJournal:
                 raise ValueError("WC2 prepared journal quick_check failed")
             rows = db.execute(
                 f"""SELECT receipt_identity, policy_identity,
-                activation_identity, signal_freeze_identity,
-                bundle_identity, source_cutoff_open_time_ms,
-                issued_at_ms, previewed_at_ms, payload_json
+                activation_identity, collection_protocol_identity,
+                signal_freeze_identity, bundle_identity,
+                source_cutoff_open_time_ms, issued_at_ms,
+                previewed_at_ms, payload_json
                 FROM {_RECORD_TABLE}
                 ORDER BY sequence_id"""
             ).fetchall()
             for row in rows:
-                receipt = _receipt_from_json(str(row[8]))
+                receipt = _receipt_from_json(str(row[9]))
                 expected = (
                     receipt.receipt_identity,
                     receipt.policy_identity,
                     receipt.activation_identity,
+                    receipt.collection_protocol_identity,
                     receipt.signal.freeze_identity,
                     receipt.source_inputs.bundle_identity,
                     receipt.source_cutoff_open_time_ms,
@@ -447,9 +464,10 @@ class WC2PreparedCycleJournal:
                     str(row[2]),
                     str(row[3]),
                     str(row[4]),
-                    int(row[5]),
+                    str(row[5]),
                     int(row[6]),
                     int(row[7]),
+                    int(row[8]),
                 )
                 if actual != expected:
                     raise ValueError("WC2 prepared journal row/payload mismatch")
@@ -464,6 +482,7 @@ def _receipt_payload(receipt: WC2PreparedCycleReceipt) -> dict[str, object]:
             receipt.canonical_epoch2_write_authority
         ),
         "capital_assessed_at_ms": receipt.capital_assessed_at_ms,
+        "collection_protocol_identity": receipt.collection_protocol_identity,
         "engine_version": receipt.engine_version,
         "historical_backfill_authority": receipt.historical_backfill_authority,
         "horizon_bars": receipt.horizon_bars,
@@ -498,6 +517,10 @@ def _receipt_from_json(payload_json: str) -> WC2PreparedCycleReceipt:
         receipt_identity=canonical_sha256(root),
         policy_identity=_text(root, "policy_identity"),
         activation_identity=_text(root, "activation_identity"),
+        collection_protocol_identity=_text(
+            root,
+            "collection_protocol_identity",
+        ),
         signal=signal,
         source_inputs=source_inputs,
         source_cutoff_open_time_ms=_integer(
