@@ -106,6 +106,7 @@ def process_wc2_prepared_live_freeze(
     maximum_issuance_delay_ms: int,
     horizon_bars: int,
     base_asset: str,
+    collection_protocol_identity: str,
     collection_start_ms: int | None = None,
 ) -> WC2PreparedLiveResult:
     """Process one live freeze with durable pre-R20 crash recovery."""
@@ -119,6 +120,10 @@ def process_wc2_prepared_live_freeze(
         raise ValueError("WC2 prepared live base asset must be uppercase")
     if not context.symbol.startswith(base_asset):
         raise ValueError("WC2 prepared live context/base asset mismatch")
+    _require_sha256(
+        collection_protocol_identity,
+        "WC2 prepared live collection protocol",
+    )
     effective_collection_start_ms = (
         policy.collection_start_ms
         if collection_start_ms is None
@@ -143,6 +148,7 @@ def process_wc2_prepared_live_freeze(
             maximum_issuance_delay_ms=maximum_issuance_delay_ms,
             horizon_bars=horizon_bars,
             base_asset=base_asset,
+            collection_protocol_identity=collection_protocol_identity,
             collection_start_ms=effective_collection_start_ms,
         )
     if result.status is LiveFreezeStatus.ALREADY_FROZEN:
@@ -157,6 +163,7 @@ def process_wc2_prepared_live_freeze(
             cohort_journal=cohort_journal,
             shadow_journal=shadow_journal,
             shadow_manifest=shadow_manifest,
+            collection_protocol_identity=collection_protocol_identity,
             collection_start_ms=effective_collection_start_ms,
         )
     raise ValueError("unsupported WC2 prepared live freeze status")
@@ -176,6 +183,7 @@ def _process_fresh_prepared(
     maximum_issuance_delay_ms: int,
     horizon_bars: int,
     base_asset: str,
+    collection_protocol_identity: str,
     collection_start_ms: int,
 ) -> WC2PreparedLiveResult:
     if result.bundle is None or result.frozen_at_ms is None:
@@ -214,6 +222,7 @@ def _process_fresh_prepared(
         result.bundle,
         policy=policy,
         activation=activation,
+        collection_protocol_identity=collection_protocol_identity,
         sizing_policy=None,
         source_frozen_at_ms=result.frozen_at_ms,
         issued_at_ms=observed_at_ms,
@@ -256,6 +265,7 @@ def _process_replay_prepared(
     cohort_journal: WC2CohortJournal,
     shadow_journal: R25ShadowIntentJournal,
     shadow_manifest: R25ShadowCycleManifest,
+    collection_protocol_identity: str,
     collection_start_ms: int,
 ) -> WC2PreparedLiveResult:
     freeze = signal_ledger.get_freeze_by_source_cutoff(
@@ -292,6 +302,10 @@ def _process_replay_prepared(
         )
     if receipt.source_cutoff_open_time_ms != result.source_cutoff_open_time_ms:
         raise ValueError("WC2 prepared receipt/source cutoff mismatch")
+    if receipt.collection_protocol_identity != collection_protocol_identity:
+        raise ValueError(
+            "WC2 prepared receipt/collection protocol identity mismatch"
+        )
     completion = complete_wc2_prepared_cycle(
         receipt,
         policy=policy,
@@ -411,12 +425,39 @@ def complete_wc2_prepared_cycle(
         target_label=receipt.target_label,
         base_asset=receipt.base_asset,
         ledger=decision_ledger,
+        collection_protocol_identity=(
+            receipt.collection_protocol_identity
+        ),
     )
+    protocol_ref = next(
+        (
+            item
+            for item in issuance.forecast.version_refs
+            if item.component == "wc2_collection_protocol"
+        ),
+        None,
+    )
+    if (
+        protocol_ref is None
+        or protocol_ref.version != receipt.collection_protocol_identity
+    ):
+        raise ValueError("WC2 R20 collection protocol lineage mismatch")
+    if (
+        receipt.collection_protocol_identity
+        not in issuance.forecast.source_evidence_identities
+    ):
+        raise ValueError("WC2 R20 protocol source evidence missing")
+
     cohort = build_wc2_cohort_forecast(
         policy=policy,
         issuance=issuance,
         indexed_at_ms=receipt.indexed_at_ms,
     )
+    if (
+        receipt.collection_protocol_identity
+        not in cohort.source_evidence_identities
+    ):
+        raise ValueError("WC2 cohort protocol source evidence missing")
     cohort_forecast_disposition = cohort_journal.append_forecast(cohort)
 
     paper = persist_wc2_same_cycle_hold_cash_intent(
