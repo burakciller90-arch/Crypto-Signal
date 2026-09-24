@@ -506,7 +506,6 @@ def test_activation_post_receipt_gap_fails_cycle_but_continues_contexts(
 
     def divergence(**kwargs):
         calls["divergence"] += 1
-        return None
 
     monkeypatch.setattr(clock, "freeze_coverage_context", fake_freeze)
     monkeypatch.setattr(clock, "process_wc2_prepared_live_freeze", gap)
