@@ -24,7 +24,7 @@ jobs:
           set -euo pipefail
           cmd="$(printf '%s\n' "$ISSUE_BODY" | awk -F: 'tolower($1)=="command" {gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2); print tolower($2); exit}')"
           case "$cmd" in
-            status|eventsourcestate|eventsourcesnapshot|blsprobe|fredprobe|services|logs|disk|sync|producttest|fulltest|productstate|productdeploy|paperreview|paperinspect|paperfixlint|paperharden|stateplanreview|stateplaninspect|stateplanharden|cursorreview|cursorreviewtail|cursorcleanup|bridgecheck|bridgestate|rollingstate|pausecheck|wakepause|wakeresume|wakearm|waketest|wakeheartbeat|chatbusyprobe|cursorcheck|cursorauthdiag|cursorttycheck|alertclockstate|alertclockpause|alertclockresume|migrationinspect|migrationinventory|ssddashboarddiag|productcrashlogs|ssddashboardwrappertest|ssdtcclaunchtest|ssdbackgroundteststart|ssdbackgroundtestcheck|ssdleftover|runnerpersistinstall|runnerpersistdiag|runnercutoverdiag|dashboardstart504|runnerterminalwatchdoginstall)
+            status|eventsourcestate|eventsourcesnapshot|blsprobe|fredprobe|wc2policyregister|services|logs|disk|sync|producttest|fulltest|productstate|productdeploy|paperreview|paperinspect|paperfixlint|paperharden|stateplanreview|stateplaninspect|stateplanharden|cursorreview|cursorreviewtail|cursorcleanup|bridgecheck|bridgestate|rollingstate|pausecheck|wakepause|wakeresume|wakearm|waketest|wakeheartbeat|chatbusyprobe|cursorcheck|cursorauthdiag|cursorttycheck|alertclockstate|alertclockpause|alertclockresume|migrationinspect|migrationinventory|ssddashboarddiag|productcrashlogs|ssddashboardwrappertest|ssdtcclaunchtest|ssdbackgroundteststart|ssdbackgroundtestcheck|ssdleftover|runnerpersistinstall|runnerpersistdiag|runnercutoverdiag|dashboardstart504|runnerterminalwatchdoginstall)
               ;;
             *)
               echo "Unsupported command: $cmd"
@@ -38,7 +38,8 @@ jobs:
           steps.parse.outputs.command == 'eventsourcestate' ||
           steps.parse.outputs.command == 'eventsourcesnapshot' ||
           steps.parse.outputs.command == 'blsprobe' ||
-          steps.parse.outputs.command == 'fredprobe'
+          steps.parse.outputs.command == 'fredprobe' ||
+          steps.parse.outputs.command == 'wc2policyregister'
         uses: actions/checkout@v4
         with:
           ref: ${{ github.sha }}
@@ -50,7 +51,8 @@ jobs:
           steps.parse.outputs.command == 'eventsourcestate' ||
           steps.parse.outputs.command == 'eventsourcesnapshot' ||
           steps.parse.outputs.command == 'blsprobe' ||
-          steps.parse.outputs.command == 'fredprobe'
+          steps.parse.outputs.command == 'fredprobe' ||
+          steps.parse.outputs.command == 'wc2policyregister'
         shell: bash
         run: |
           set -euo pipefail
@@ -381,7 +383,8 @@ jobs:
           PY
 
       - name: FRED CALENDAR PROBE
-        if: steps.parse.outputs.command == 'fredprobe'
+        if: steps.parse.outputs.command == 'fredprobe' ||
+          steps.parse.outputs.command == 'wc2policyregister'
         shell: bash
         run: |
           set -euo pipefail
@@ -435,6 +438,37 @@ jobs:
           print("FRED_PROBE_READONLY_PASS=YES")
           print("REAL_CAPITAL=0")
           PY
+
+      - name: WC2 POLICY REGISTER
+        if: steps.parse.outputs.command == 'wc2policyregister'
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          DEV="$ROOT/Development"
+          POLICY_DB="$DEV/runtime/wc2/wc2_forward_policy.sqlite3"
+          PY="$DEV/.venv/bin/python"
+          REGISTER="$GITHUB_WORKSPACE/ops/register_wc2_forward_policy.py"
+
+          test "$(id -u)" = "504"
+          test -x "$PY"
+          test -f "$REGISTER"
+
+          echo "=== WC2 POLICY REGISTER PRE-STATE ==="
+          echo "DEVELOPMENT_HEAD=$(git -C "$DEV" rev-parse HEAD 2>/dev/null || true)"
+          echo "WORKFLOW_SHA=$GITHUB_SHA"
+          before="MISSING"
+          [ -f "$POLICY_DB" ] && before="$(shasum -a 256 "$POLICY_DB" | awk '{print $1}')"
+          echo "WC2_POLICY_DB_SHA256_BEFORE=$before"
+
+          PYTHONPATH="$GITHUB_WORKSPACE/src" "$PY" "$REGISTER" \
+            --db "$POLICY_DB"
+
+          test -f "$POLICY_DB"
+          after="$(shasum -a 256 "$POLICY_DB" | awk '{print $1}')"
+          echo "WC2_POLICY_DB_SHA256_AFTER=$after"
+          echo "WC2_POLICY_REGISTER_BOUNDED_PASS=YES"
+          echo "REAL_CAPITAL=0"
 
       - name: SERVICES
         if: steps.parse.outputs.command == 'services'
