@@ -6,7 +6,7 @@ WORKFLOW = Path(".github/workflows/crypto-mac-command.yml")
 def _block() -> str:
     text = WORKFLOW.read_text(encoding="utf-8")
     start = text.index("      - name: WC2 POLICY REGISTER")
-    end = text.index("      - name: BLS SOURCE PROBE", start)
+    end = text.index("      - name: WC2 EPOCH2 ACTIVATE", start)
     return text[start:end]
 
 
