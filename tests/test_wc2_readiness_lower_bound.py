@@ -10,9 +10,6 @@ from crypto_signal.evaluation import untouched_forward_readiness_lower_bound
 from crypto_signal.evaluation.untouched_forward_journal import WC2CohortJournal
 from crypto_signal.evaluation.untouched_forward_policy import (
     WC2_MIN_CALENDAR_DAYS,
-    WC2LowerBoundStatus if False else WC2ReviewStatus,
-)
-from crypto_signal.evaluation.untouched_forward_policy import (
     WC2PolicyStore,
     build_wc2_untouched_forward_policy,
 )
@@ -20,6 +17,7 @@ from crypto_signal.evaluation.untouched_forward_readiness_lower_bound import (
     WC2LowerBoundStatus,
     read_wc2_readiness_lower_bound,
 )
+from crypto_signal.paper.models import PaperAction
 
 DAY_MS = 86_400_000
 
@@ -89,7 +87,11 @@ def _seed_cohort(
                 ),
             )
             intent_identity = _sha(40_000 + index)
-            action = "BUY" if trade_intent else "HOLD_CASH"
+            action = (
+                PaperAction.BUY.value
+                if trade_intent
+                else PaperAction.HOLD_CASH.value
+            )
             db.execute(
                 """
                 INSERT INTO wc2_cohort_intents(
