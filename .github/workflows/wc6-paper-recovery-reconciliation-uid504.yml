@@ -75,9 +75,11 @@ jobs:
             tests/test_paper_venue_rules.py
           "$TEST_PY" -m ruff check \
             src/crypto_signal/paper/execution_lab.py \
+            src/crypto_signal/paper/execution_lab_lifecycle.py \
             tests/test_wc6_execution_lab.py
           "$TEST_PY" -m mypy \
-            src/crypto_signal/paper/execution_lab.py
+            src/crypto_signal/paper/execution_lab.py \
+            src/crypto_signal/paper/execution_lab_lifecycle.py
           echo "WC6_FOCUSED_PASS=YES"
 
       - name: Full paper subsystem regression
