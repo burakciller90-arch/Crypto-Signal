@@ -16,6 +16,7 @@ const API = Object.freeze({
   operationalTruth: "/api/r25/operational-truth",
   marketTapeStatus: "/api/market-tape-runtime/status",
   providerDivergenceStatus: "/api/provider-divergence/status",
+  eventSourceStatus: "/api/event-source-runtime/status",
   coldArchiveStatus: "/api/cold-archive/status?verify_limit=24",
   liveFeed: "/api/intelligence-feed?limit=100",
   decisionProof: (identity) => `/api/decision-proof/${encodeURIComponent(identity)}`,
@@ -58,6 +59,7 @@ const state = {
   operationalTruth: null,
   marketTapeStatus: null,
   providerDivergenceStatus: null,
+  eventSourceStatus: null,
   coldArchiveStatus: null,
   liveFeed: null,
   marketLayer: "PA",
@@ -2131,6 +2133,7 @@ function renderSystem() {
   const shadowRail = state.shadowRail || {};
   const marketTape = state.marketTapeStatus || {};
   const providerDivergence = state.providerDivergenceStatus || {};
+  const eventSource = state.eventSourceStatus || {};
   const coldArchive = state.coldArchiveStatus || {};
   const liveFeed = state.liveFeed || {};
 
@@ -2232,6 +2235,34 @@ function renderSystem() {
           providerDivergence.reason,
           "provider divergence runtime evidence unavailable"
         );
+  }
+
+  const eventSourceReady = eventSource.status === "ready";
+  const eventSourceSnapshot = eventSource.snapshot || {};
+  const eventSourceFetches = Array.isArray(eventSourceSnapshot.latest_fetches)
+    ? eventSourceSnapshot.latest_fetches
+    : [];
+  const eventSourceFailures = eventSourceFetches.filter(
+    (fetch) => fetch?.outcome === "failure"
+  ).length;
+  setSystemValue(
+    "systemEventSource",
+    eventSourceReady
+      ? `${eventSourceSnapshot.fetch_count ?? 0} FETCHES · PERSISTED`
+      : "NOT EXPOSED",
+    eventSourceReady && eventSourceFailures === 0 ? "positive" : "watch"
+  );
+  const eventSourceNote = byId("systemEventSourceNote");
+  if (eventSourceNote) {
+    const sourceSummary = eventSourceFetches
+      .map(
+        (fetch) =>
+          `${fetch.source_provider || "unknown"}:${upper(fetch.source_kind, "UNKNOWN")}:${upper(fetch.outcome, "UNKNOWN")}:${fetch.fetch_age_ms ?? "NOT MEASURED"}ms`
+      )
+      .join(" · ");
+    eventSourceNote.textContent = eventSourceReady
+      ? `${sourceSummary || "no persisted fetch"} · ${text(eventSource.coverage_claim, "SOURCE_SCOPED_ONLY").replaceAll("_", " ")} · process ${text(eventSource.process_status, "NOT_MEASURED")} · ONLINE NOT ASSERTED`
+      : text(eventSource.reason, "event source runtime evidence unavailable");
   }
 
   const coldReady =
@@ -2597,6 +2628,7 @@ async function runBoot() {
     loadEndpoint("operationalTruth", API.operationalTruth),
     loadEndpoint("marketTapeStatus", API.marketTapeStatus),
     loadEndpoint("providerDivergenceStatus", API.providerDivergenceStatus),
+    loadEndpoint("eventSourceStatus", API.eventSourceStatus),
     loadEndpoint("coldArchiveStatus", API.coldArchiveStatus),
     loadEndpoint("liveFeed", API.liveFeed),
   ]);
@@ -2647,6 +2679,7 @@ async function refreshRuntime(reason = "timer") {
         "providerDivergenceStatus",
         API.providerDivergenceStatus
       ),
+      loadEndpoint("eventSourceStatus", API.eventSourceStatus),
       loadEndpoint("liveFeed", API.liveFeed),
     ]);
     if (results[0].ok) applyHealthTruth(results[0].data);
