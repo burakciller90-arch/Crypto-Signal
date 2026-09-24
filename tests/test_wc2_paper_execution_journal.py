@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pytest
 
+from crypto_signal.data.models import Exchange
 from crypto_signal.evaluation.untouched_forward_execution_journal import (
     WC2PaperExecutionDecisionStatus,
     WC2PaperExecutionJournal,
@@ -30,12 +31,14 @@ def _base() -> dict[str, object]:
         execution_protocol_identity=_sha("protocol"),
         symbol=PaperSymbol.BTCUSDT,
         source_cutoff_open_time_ms=START + 100,
+        source_exchanges=(Exchange.BINANCE.value, Exchange.BYBIT.value),
         source_freeze_identities=freezes,
     )
     return {
         "event_identity": event,
         "execution_protocol_identity": _sha("protocol"),
         "execution_start_ms": START,
+        "source_exchanges": (Exchange.BINANCE.value, Exchange.BYBIT.value),
         "source_freeze_identities": freezes,
         "source_forecast_identities": (
             _sha("binance-forecast"),
@@ -177,6 +180,7 @@ def test_journal_is_append_only_idempotent_and_counts_economic_truth(
         execution_protocol_identity=_sha("protocol"),
         symbol=PaperSymbol.ETHUSDT,
         source_cutoff_open_time_ms=START + 200,
+        source_exchanges=(Exchange.BINANCE.value, Exchange.BYBIT.value),
         source_freeze_identities=(_sha("eth-binance"), _sha("eth-bybit")),
     )
     executed_values["source_freeze_identities"] = (
