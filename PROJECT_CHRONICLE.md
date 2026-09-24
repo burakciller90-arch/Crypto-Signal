@@ -1,6 +1,22 @@
 # PROJECT CHRONICLE
 
 
+## 2026-09-25 — WC7 composes the canonical current frontier without upgrading missing evidence
+
+After WC7 had a fail-closed review contract, typed provenance and read-only adapters for canonical WC2/WC6 state, the remaining infrastructure gap was composition: one deterministic artifact needed to say what the project can and cannot conclude **right now** without a human or a helper silently filling missing dimensions.
+
+PR #1203 added that current-frontier composer. It consumes canonical WC2 review readiness and canonical WC6 sandbox-boundary evidence, plus explicit accepted identities for runtime reliability, abstention/failure transparency and the WC4 research cycle. It then builds the same nine-dimension WC7 review packet under typed provenance.
+
+The important property is asymmetric evidence handling. Current WC2 insufficiency remains a missing untouched-forward-history dimension. A future `REVIEW_ELIGIBLE` WC2 state could satisfy only that history dimension; it still would not prove cost-adjusted expectancy, controlled drawdown or profitability. WC4 engineering closure remains research-process evidence rather than durable regime-edge evidence. The accepted WC6 `NOT_CONFIGURED` boundary remains an external dependency and cannot be relabelled as execution/capital evidence. Human usability remains not measured. Probability calibration is not applicable only because the current frontier explicitly uses no probability claims.
+
+The composer therefore keeps the machine state at `INSUFFICIENT_EVIDENCE` and keeps `WC7_MACHINE_EDGE_VERDICT=NONE`. It cannot automatically emit `EDGE_SUPPORTED`, `EDGE_PARTIAL / regime-specific` or `EDGE_NOT_SUPPORTED`.
+
+PR #1203 exact-head UID504 run 36066162469 passed. The PR merged as `84a66a34dd6096ff4b635305347cef1d6782d6b9`, and exact-main push run 36066300555 / job 107856745333 independently passed focused WC7, full research, whole-repository and Development non-mutation acceptance with REAL_CAPITAL=0.
+
+At this point the project has a mechanically trustworthy statement of its current frontier. That is progress in epistemic quality, not a better edge verdict. The correct current conclusion remains `INSUFFICIENT_EVIDENCE`, and the next changes to that conclusion must come from genuine source evidence rather than more local composition code.
+
+
+
 ## 2026-09-25 — WC7 begins consuming canonical WC2/WC6 state without upgrading blockers into evidence
 
 PR #1201 moved WC7 from typed-but-manually supplied provenance toward canonical subsystem adapters. The change is intentionally asymmetric: canonical source state may satisfy a dimension only when its own accepted semantics justify that, while an accepted blocker artifact remains a blocker.
