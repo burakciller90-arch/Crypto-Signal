@@ -31,7 +31,7 @@ def test_protocol_registration_is_allowlisted_and_exact_source() -> None:
 def test_protocol_registration_mutates_only_protocol_db() -> None:
     block = _block(
         "WC2 COLLECTION PROTOCOL REGISTER",
-        "WC2 STATE",
+        "WC2 PAPER EXECUTION PROTOCOL REGISTER",
     )
     assert 'POLICY_DB="$DEV/runtime/wc2/wc2_forward_policy.sqlite3"' in block
     assert 'EPOCH2_DB="$DEV/runtime/paper/paper_fund_epoch2.sqlite3"' in block
