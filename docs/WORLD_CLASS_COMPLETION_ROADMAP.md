@@ -431,6 +431,33 @@ A credible world-class claim would require, at minimum:
 - reproducible capital and execution lineage;
 - strong usability without hiding uncertainty.
 
+## Accepted review infrastructure — 2026-09-25
+
+**WC7 infrastructure status: ACCEPTED. Current evidence conclusion: `INSUFFICIENT_EVIDENCE`.**
+
+- PR **#1197** adds one immutable evidence-review contract over the exact nine roadmap dimensions above.
+- Machine review is deliberately limited to:
+  - `INSUFFICIENT_EVIDENCE`;
+  - `READY_FOR_HUMAN_REVIEW`.
+- The machine does **not** automatically select any final EDGE_* conclusion.
+- Any required evidence in `MISSING`, `NOT_MEASURED`, or `EXTERNAL_DEPENDENCY` forces `INSUFFICIENT_EVIDENCE`.
+- Probability calibration may be `NOT_APPLICABLE` only when probability claims are not used. Probability use requires applicable calibration evidence.
+- A later human review may record only one of the roadmap conclusion states, and the record is guarded against the evidence-status set:
+  - `EDGE_SUPPORTED` requires every applicable dimension satisfied;
+  - `EDGE_PARTIAL / regime-specific` requires explicit partial evidence and cannot override negative evidence;
+  - `EDGE_NOT_SUPPORTED` requires explicit negative evidence;
+  - incomplete evidence cannot be rewritten as a positive or negative edge verdict.
+- The accepted current-frontier review remains `INSUFFICIENT_EVIDENCE` because required evidence is still incomplete for:
+  - untouched-forward history/evidence sufficiency;
+  - cost-adjusted expectancy;
+  - controlled drawdown;
+  - regime robustness as durable edge evidence;
+  - capital/execution lineage at the missing external WC6 venue-evidence boundary;
+  - measured human usability.
+- PR #1197 exact-head UID504 run **36063510771 / job 107847770771** passed exact-source, focused WC7, research, whole-repository and Development non-mutation acceptance with `WC7_MACHINE_EDGE_VERDICT=NONE` and `REAL_CAPITAL=0`.
+- After merge as `d27563bee4418c4fef2a6e7fcb351fa8f7e96686`, exact-main push run **36063771392 / job 107848618741** independently passed the same gate.
+- This acceptance proves the review process itself is fail closed. It does **not** prove `EDGE_SUPPORTED`, “world-class achieved”, or any other positive edge conclusion.
+
 ## Final boundary
 
 Real-money authority is not part of World-Class Completion.
