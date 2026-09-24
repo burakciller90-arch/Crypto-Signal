@@ -90,7 +90,7 @@ def test_galactech_performance_keeps_evidence_classes_separate(
     assert "geçmiş test ≠ ileri dönem kanıtı" in html
     assert "HENÜZ ÖLÇÜLMEDİ" in html
     assert "SUNULMUYOR" in html
-    assert "Counterfactual outcome evidence yok." in html
+    assert "Karşı-olgusal sonuç kanıtı yok." in html
 
     assert 'performance: "/api/performance"' in js
     assert "function performanceEvidenceClassLabel(value)" in js
@@ -100,7 +100,7 @@ def test_galactech_performance_keeps_evidence_classes_separate(
     assert "function renderPerformancePaper()" in js
     assert "function renderPerformance()" in js
     assert "betimleyici sıklık · olasılık değildir" in js
-    assert "Empty performance history is ÖLÇÜLMEDİ" in js
+    assert "Boş performans geçmişi “ölçülmedi” demektir" in js
     assert "Öngörü isabet oranı, kâğıt portföy performansı yerine geçirilmez." in js
     assert 'loadEndpoint("performance", API.performance)' in js
 
