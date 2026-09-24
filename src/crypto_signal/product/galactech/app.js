@@ -1200,8 +1200,8 @@ function renderMarketProviderList() {
   if (!rows.length) {
     target.className = "market-provider-list empty-state";
     target.innerHTML =
-      "<strong>No provider freeze is available for this context.</strong>" +
-      "<p>Binance/Bybit state is never invented from another provider.</p>";
+      "<strong>Bu bağlam için veri sağlayıcı dondurması yok.</strong>" +
+      "<p>Binance veya Bybit verisi diğer sağlayıcıdan türetilmez; eksikse eksik gösterilir.</p>";
     return;
   }
 
@@ -1217,19 +1217,20 @@ function renderMarketProviderList() {
         data-market-provider-id="${escapeHtml(identity)}"
         aria-pressed="${active ? "true" : "false"}">
         <div class="market-provider-head">
-          <strong>${escapeHtml(upper(signal.exchange, "UNKNOWN PROVIDER"))}</strong>
-          <span class="${stateClass(signal.state)}">${escapeHtml(upper(signal.state))}</span>
+          <strong>${escapeHtml(upper(signal.exchange, "VERİ SAĞLAYICI"))}</strong>
+          <span class="${stateClass(signal.state)}">${escapeHtml(trState(signal.state))}</span>
         </div>
         <div class="market-provider-meta">
-          <span>${escapeHtml(upper(signal.direction))}</span>
-          <span>${escapeHtml(signal.setup_type || "setup unavailable")}</span>
-          <span>frozen ${escapeHtml(formatTime(signal.frozen_at_ms))}</span>
+          <span>${escapeHtml(trDirection(signal.direction))}</span>
+          <span>${escapeHtml(signal.setup_type || "kurulum bilgisi yok")}</span>
+          <span>donduruldu · ${escapeHtml(formatTime(signal.frozen_at_ms))}</span>
           <code>${escapeHtml(shortIdentity(identity))}</code>
-          <span>${ok ? "exact detail ready" : "detail unavailable"}</span>
+          <span>${ok ? "ayrıntı doğrulandı" : "ayrıntı kullanılamıyor"}</span>
         </div>
       </button>`;
   }).join("");
 }
+
 
 function renderMarketRecentTape() {
   const target = byId("marketRecentTape");
@@ -1238,12 +1239,12 @@ function renderMarketRecentTape() {
   const rows = Array.isArray(state.marketCockpit?.recent_signals)
     ? state.marketCockpit.recent_signals
     : [];
-  if (count) count.textContent = `${rows.length} freezes`;
+  if (count) count.textContent = `${rows.length} kayıt`;
   if (!rows.length) {
     target.className = "feed-list empty-state";
     target.innerHTML =
-      "<strong>No recent immutable decisions for this context.</strong>" +
-      "<p>Empty tape is not interpreted as low risk or inactivity failure.</p>";
+      "<strong>Bu bağlam için yakın tarihli değiştirilemez karar yok.</strong>" +
+      "<p>Boş akış, düşük risk veya sistem hatası olarak yorumlanmaz.</p>";
     return;
   }
 
@@ -1251,23 +1252,24 @@ function renderMarketRecentTape() {
   target.innerHTML = rows.map((signal) => `
     <button class="evidence-trigger" type="button"
       data-evidence-id="${escapeHtml(signal.signal_freeze_identity)}"
-      aria-label="${escapeHtml(signal.symbol)} ${escapeHtml(signal.timeframe)} recent evidence aç">
+      aria-label="${escapeHtml(signal.symbol)} ${escapeHtml(signal.timeframe)} son kanıtı aç">
       <article class="feed-item">
         <div class="feed-item-head">
           <strong>${escapeHtml(upper(signal.exchange))}</strong>
-          <span class="${stateClass(signal.state)}">${escapeHtml(upper(signal.state))}</span>
+          <span class="${stateClass(signal.state)}">${escapeHtml(trState(signal.state))}</span>
         </div>
         <div class="feed-item-meta">
-          <span>${escapeHtml(upper(signal.direction))}</span>
+          <span>${escapeHtml(trDirection(signal.direction))}</span>
           <span>${escapeHtml(signal.setup_type)}</span>
-          <span>agreement ${escapeHtml(signal.confluence_score)}</span>
+          <span>uyum ${escapeHtml(signal.confluence_score)}</span>
           <span>${escapeHtml(formatTime(signal.frozen_at_ms))}</span>
           <code>${escapeHtml(shortIdentity(signal.signal_freeze_identity))}</code>
-          <span class="evidence-open-cue">Evidence Room →</span>
+          <span class="evidence-open-cue">Kanıt Odası →</span>
         </div>
       </article>
     </button>`).join("");
 }
+
 
 function renderMarketLayerSurface() {
   const target = byId("marketLayerSurface");
@@ -1275,21 +1277,23 @@ function renderMarketLayerSurface() {
   const detail = state.marketSelectedDetail;
   const layer = state.marketLayer;
 
+  const layerNames = {
+    PA: "Fiyat Hareketi",
+    LIQ: "Likidite / Likidasyon",
+    FLOW: "Emir Akışı / CVD",
+    DERIV: "Türevler / Açık Pozisyon / Fonlama / Baz",
+    ONCHAIN: "Zincir Üstü",
+  };
+
   if (!detail || detail.status !== "ready" || !detail.signal) {
     target.className = "market-layer-surface empty-state";
     target.innerHTML =
-      `<strong>${escapeHtml(layer)} layer has no exact selected provider proof.</strong>` +
-      "<p>No synthetic overlay is rendered.</p>";
+      `<strong>${escapeHtml(layerNames[layer] || layer)} için seçili sağlayıcı kanıtı yok.</strong>` +
+      "<p>Sentetik grafik katmanı üretilmez.</p>";
     return;
   }
 
   if (layer !== "PA") {
-    const labels = {
-      LIQ: "Liquidity / liquidation",
-      FLOW: "Order flow / CVD",
-      DERIV: "Derivatives / OI / funding / basis",
-      ONCHAIN: "On-chain",
-    };
     const domains = {
       LIQ: ["liquidity_map", "liquidation_map"],
       FLOW: ["order_book", "order_flow_cvd"],
@@ -1307,12 +1311,9 @@ function renderMarketLayerSurface() {
     if (!proof || !slices.length) {
       target.className = "market-layer-surface market-layer-unavailable";
       target.innerHTML = `
-        <span class="proof-section-label">${escapeHtml(layer)} / DECISION PROOF</span>
-        <strong>${escapeHtml(labels[layer] || layer)} · NOT PERSISTED</strong>
-        <p>
-          No exact R20.5 Decision Proof is persisted for this immutable signal.
-          GALACTECH does not synthesize a layer from unrelated evidence.
-        </p>`;
+        <span class="proof-section-label">${escapeHtml(layerNames[layer] || layer)} / KARAR KANITI</span>
+        <strong>KALICI KANIT YOK</strong>
+        <p>Bu değiştirilemez sinyal için exact R20.5 Karar Kanıtı yok. GALACTECH başka bir veriden bu katmanı uydurmaz.</p>`;
       return;
     }
 
@@ -1320,15 +1321,13 @@ function renderMarketLayerSurface() {
     target.innerHTML = `
       <div class="market-layer-head">
         <div>
-          <span class="proof-section-label">${escapeHtml(layer)} / R20.5 DECISION PROOF</span>
-          <strong>${escapeHtml(labels[layer] || layer)}</strong>
+          <span class="proof-section-label">${escapeHtml(layerNames[layer] || layer)} / R20.5 KARAR KANITI</span>
+          <strong>${escapeHtml(layerNames[layer] || layer)}</strong>
         </div>
         <code>${escapeHtml(shortIdentity(proof.proof_identity))}</code>
       </div>
       <div class="truth-table">
         ${slices.map((slice) => {
-          const availability = upper(slice?.availability, "INSUFFICIENT");
-          const verdict = upper(slice?.verdict, "INSUFFICIENT");
           const freshness = Number(slice?.freshness_0_1);
           const freshnessText = Number.isFinite(freshness)
             ? `${(freshness * 100).toFixed(1)}%`
@@ -1341,16 +1340,16 @@ function renderMarketLayerSurface() {
             : [];
           return `
             <div class="truth-row">
-              <span>${escapeHtml(upper(slice?.domain, "UNKNOWN"))}</span>
-              <strong class="${stateClass(verdict)}">${escapeHtml(availability)} · ${escapeHtml(verdict)}</strong>
+              <span>${escapeHtml(trEvidenceDomain(slice?.domain))}</span>
+              <strong class="${stateClass(slice?.verdict)}">${escapeHtml(trAvailability(slice?.availability))} · ${escapeHtml(trVerdict(slice?.verdict))}</strong>
             </div>
             <div class="proof-footnote">
-              source ${escapeHtml(slice?.source_quality || "KULLANILAMIYOR")} ·
-              freshness ${escapeHtml(freshnessText)} ·
-              evidence ${escapeHtml(ids.length)}
+              kaynak ${escapeHtml(slice?.source_quality || "MEVCUT DEĞİL")} ·
+              tazelik ${escapeHtml(freshnessText)} ·
+              kanıt ${escapeHtml(ids.length)}
             </div>
             ${summaries.length
-              ? `<ul class="market-evidence-summary">${summaries.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>`
+              ? `<details class="market-evidence-summary"><summary>Ham kanıt kodları</summary><ul>${summaries.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul></details>`
               : ""}
             ${ids.length
               ? `<div class="feed-item-meta">${ids.map((identity) => `<code>${escapeHtml(shortIdentity(identity))}</code>`).join("")}</div>`
@@ -1371,34 +1370,38 @@ function renderMarketLayerSurface() {
   target.innerHTML = `
     <div class="market-layer-head">
       <div>
-        <span class="proof-section-label">PA / FROZEN SIGNAL EVIDENCE</span>
+        <span class="proof-section-label">FİYAT HAREKETİ / DONDURULMUŞ SİNYAL KANITI</span>
         <strong>${escapeHtml(detail.signal.setup_type)}</strong>
       </div>
-      <span class="${stateClass(detail.signal.direction)}">${escapeHtml(upper(detail.signal.direction))}</span>
+      <span class="${stateClass(detail.signal.direction)}">${escapeHtml(trDirection(detail.signal.direction))}</span>
     </div>
     <div class="market-pa-grid">
       <div>
-        <span>METHOD STATE</span>
-        <strong>${escapeHtml(upper(priceAction?.resolved_direction, "UNRESOLVED"))}</strong>
-        <small>${escapeHtml(priceAction?.selected_count ?? 0)} selected / ${escapeHtml(priceAction?.source_count ?? 0)} source</small>
+        <span>YÖNTEM DURUMU</span>
+        <strong>${escapeHtml(trDirection(priceAction?.resolved_direction))}</strong>
+        <small>${escapeHtml(priceAction?.selected_count ?? 0)} seçili / ${escapeHtml(priceAction?.source_count ?? 0)} kaynak</small>
       </div>
       <div>
-        <span>ENTRY REFERENCE</span>
-        <strong>${geometry ? `${escapeHtml(geometry.entry_zone_low)} → ${escapeHtml(geometry.entry_zone_high)}` : "NOT FROZEN"}</strong>
-        <small>${geometry ? escapeHtml(geometry.entry_reference_model) : "no synthetic zone"}</small>
+        <span>GİRİŞ REFERANSI</span>
+        <strong>${geometry ? `${escapeHtml(geometry.entry_zone_low)} → ${escapeHtml(geometry.entry_zone_high)}` : "DONDURULMADI"}</strong>
+        <small>${geometry ? escapeHtml(geometry.entry_reference_model) : "sentetik bölge yok"}</small>
       </div>
       <div>
-        <span>INVALIDATION</span>
-        <strong>${geometry ? escapeHtml(geometry.invalidation_price) : "NOT FROZEN"}</strong>
-        <small>${geometry ? escapeHtml(geometry.invalidation_trigger) : "no synthetic invalidation"}</small>
+        <span>GEÇERSİZLİK</span>
+        <strong>${geometry ? escapeHtml(geometry.invalidation_price) : "DONDURULMADI"}</strong>
+        <small>${geometry ? escapeHtml(geometry.invalidation_trigger) : "sentetik geçersizlik yok"}</small>
       </div>
     </div>
-    <ul class="market-evidence-summary">
-      ${summaries.length
-        ? summaries.map((item) => `<li>${escapeHtml(item)}</li>`).join("")
-        : "<li>No concise PA summary was frozen.</li>"}
-    </ul>`;
+    <details class="market-evidence-summary">
+      <summary>Ham fiyat hareketi kanıt kodları</summary>
+      <ul>
+        ${summaries.length
+          ? summaries.map((item) => `<li>${escapeHtml(item)}</li>`).join("")
+          : "<li>Kısa kanıt özeti dondurulmamış.</li>"}
+      </ul>
+    </details>`;
 }
+
 
 function renderMarketWorkspace() {
   const selection = state.marketSelection;
@@ -1412,32 +1415,32 @@ function renderMarketWorkspace() {
   if (title) {
     title.textContent = selection
       ? `${selection.symbol} · ${selection.timeframe}`
-      : "Select a market context";
+      : "Bir piyasa bağlamı seç";
   }
   if (contextTag) {
     contextTag.textContent = selection
-      ? `CONTEXT · ${selection.symbol} / ${selection.timeframe}`
-      : "CONTEXT · UNAVAILABLE";
+      ? `BAĞLAM · ${selection.symbol} / ${selection.timeframe}`
+      : "BAĞLAM · KULLANILAMIYOR";
   }
   if (providerTag) {
     providerTag.textContent = detail?.signal
-      ? `PROVIDER · ${upper(detail.signal.exchange)}`
-      : "PROVIDER · —";
+      ? `VERİ SAĞLAYICI · ${upper(detail.signal.exchange)}`
+      : "VERİ SAĞLAYICI · —";
   }
 
   if (chart) {
     if (!selection) {
       chart.className = "empty-state";
       chart.innerHTML =
-        "<strong>No observed market context.</strong><p>Chart evidence is not invented.</p>";
+        "<strong>Gözlemlenmiş piyasa bağlamı yok.</strong><p>Grafik kanıtı uydurulmaz.</p>";
     } else if (!cockpit) {
       chart.className = "empty-state";
       chart.innerHTML =
-        "<strong>Frozen market context loading…</strong><p>Waiting for exact cockpit evidence.</p>";
+        "<strong>Dondurulmuş piyasa görünümü yükleniyor…</strong><p>Exact piyasa kanıtı bekleniyor.</p>";
     } else if (!detail || detail.status !== "ready") {
       chart.className = "empty-state";
       chart.innerHTML =
-        "<strong>Selected provider detail unavailable.</strong><p>No synthetic candle chart is rendered.</p>";
+        "<strong>Seçili veri sağlayıcının ayrıntısı kullanılamıyor.</strong><p>Sentetik mum grafiği üretilmez.</p>";
     } else {
       chart.className = "market-frozen-chart";
       chart.innerHTML = frozenChartMarkup(detail);
@@ -1449,11 +1452,12 @@ function renderMarketWorkspace() {
   renderMarketLayerSurface();
 }
 
+
 function renderMarketTruth() {
   const target = byId("marketTruth");
   if (!target) return;
   const detail = state.marketSelectedDetail;
-  const cockpitStatus = upper(state.marketCockpit?.status, "UNAVAILABLE");
+  const cockpitStatus = state.marketCockpit?.status;
   const paReady = detail?.status === "ready";
   const proof = state.marketSelectedProof?.status === "ready"
     ? state.marketSelectedProof.proof
@@ -1463,26 +1467,27 @@ function renderMarketTruth() {
     : [];
   const domainStatus = (names) => {
     const matches = evidenceSlices.filter((item) => names.includes(text(item?.domain, "")));
-    if (!matches.length) return "NOT PERSISTED";
-    if (matches.some((item) => item.availability === "available")) return "AVAILABLE · R20.5";
-    if (matches.some((item) => item.availability === "unsupported")) return "UNSUPPORTED";
-    return "INSUFFICIENT";
+    if (!matches.length) return "KALICI KANIT YOK";
+    if (matches.some((item) => item.availability === "available")) return "MEVCUT · R20.5";
+    if (matches.some((item) => item.availability === "unsupported")) return "DESTEKLENMİYOR";
+    return "YETERSİZ";
   };
   const rows = [
-    ["Radar API", state.radar ? upper(state.radar.status, "READY") : "UNAVAILABLE"],
-    ["Asset cockpit", cockpitStatus],
-    ["Provider freezes", String(state.marketProviderDetails.length)],
-    ["Decision Proof", proof ? "PERSISTED · IMMUTABLE" : "NOT PERSISTED"],
-    ["PA", paReady ? "AVAILABLE · FROZEN SIGNAL DETAIL" : "INSUFFICIENT"],
-    ["LIQ", domainStatus(["liquidity_map", "liquidation_map"])],
-    ["FLOW", domainStatus(["order_book", "order_flow_cvd"])],
-    ["DERIV", domainStatus(["derivatives"])],
-    ["ONCHAIN", domainStatus(["onchain"])],
+    ["Radar API", state.radar ? trState(state.radar.status) : "KULLANILAMIYOR"],
+    ["Varlık görünümü", cockpitStatus ? trState(cockpitStatus) : "KULLANILAMIYOR"],
+    ["Veri sağlayıcı kayıtları", String(state.marketProviderDetails.length)],
+    ["Karar Kanıtı", proof ? "KALICI · DEĞİŞTİRİLEMEZ" : "KALICI KANIT YOK"],
+    ["Fiyat Hareketi", paReady ? "MEVCUT · DONDURULMUŞ SİNYAL" : "YETERSİZ"],
+    ["Likidite", domainStatus(["liquidity_map", "liquidation_map"])],
+    ["Emir Akışı", domainStatus(["order_book", "order_flow_cvd"])],
+    ["Türevler", domainStatus(["derivatives"])],
+    ["Zincir Üstü", domainStatus(["onchain"])],
   ];
   target.innerHTML = rows.map(([label, value]) =>
     `<div class="truth-row"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>`
   ).join("");
 }
+
 
 function moneyText(value) {
   const raw = text(value, "");
