@@ -1,0 +1,70 @@
+name: World-Class WC2 Outcome Resolution Hosted
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "ops/run_live_evidence_clock.py"
+      - "src/crypto_signal/data/store.py"
+      - "src/crypto_signal/decision_ledger.py"
+      - "src/crypto_signal/evaluation/untouched_forward_journal.py"
+      - "src/crypto_signal/evaluation/untouched_forward_resolution_runtime.py"
+      - "src/crypto_signal/ledger/store.py"
+      - "tests/test_wc2_outcome_resolution_runtime.py"
+      - ".github/workflows/world-class-wc2-outcome-resolution-hosted.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  wc2-outcome-resolution:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install package and quality tools
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+          python -m pip install "pytest>=8.4" "pytest-asyncio>=1.2" "ruff>=0.13" "mypy>=1.18"
+      - name: Focused WC2 outcome resolution acceptance
+        run: |
+          python -m pytest -q \
+            tests/test_wc2_outcome_resolution_runtime.py \
+            tests/test_outcome_evaluator.py \
+            tests/test_wc2_untouched_forward_journal.py \
+            tests/test_wc2_live_clock_wiring.py
+          python -m ruff check \
+            ops/run_live_evidence_clock.py \
+            src/crypto_signal/data/store.py \
+            src/crypto_signal/decision_ledger.py \
+            src/crypto_signal/evaluation/untouched_forward_journal.py \
+            src/crypto_signal/evaluation/untouched_forward_resolution_runtime.py \
+            src/crypto_signal/ledger/store.py \
+            tests/test_wc2_outcome_resolution_runtime.py
+          python -m mypy \
+            ops/run_live_evidence_clock.py \
+            src/crypto_signal/data/store.py \
+            src/crypto_signal/decision_ledger.py \
+            src/crypto_signal/evaluation/untouched_forward_journal.py \
+            src/crypto_signal/evaluation/untouched_forward_resolution_runtime.py \
+            src/crypto_signal/ledger/store.py
+          echo "WC2_OUTCOME_LIVE_UNTOUCHED_FORWARD_PASS=YES"
+          echo "WC2_OUTCOME_CRASH_RECOVERY_PASS=YES"
+          echo "WC2_OUTCOME_NO_BACKFILL_PASS=YES"
+          echo "WC2_OUTCOME_PENDING_NOT_PERSISTED_PASS=YES"
+          echo "WC2_REAL_CAPITAL_ZERO_PASS=YES"
+      - name: Whole-repository regression
+        run: |
+          python -m pytest -q
+          python -m ruff check src tests ops/verify_stage10_integrated.py
+          python -m mypy src ops/verify_stage10_integrated.py
+          node --check src/crypto_signal/product/static/freshness.js
+          node --check src/crypto_signal/product/static/app.js
+          node --check src/crypto_signal/product/galactech/app.js
+          node tests/js/test_product_freshness.js
+          echo "WC2_OUTCOME_RESOLUTION_FULL_PASS=YES"
