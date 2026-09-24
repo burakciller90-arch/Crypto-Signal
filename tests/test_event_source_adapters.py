@@ -13,7 +13,6 @@ from crypto_signal.data.event_source_adapters import (
 )
 from crypto_signal.data.models import DataSource
 
-
 BLS_ICS = """BEGIN:VCALENDAR
 VERSION:2.0
 BEGIN:VEVENT
