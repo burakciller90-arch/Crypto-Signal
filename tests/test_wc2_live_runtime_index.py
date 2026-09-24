@@ -28,6 +28,8 @@ from crypto_signal.ledger.live_clock import (
 )
 from crypto_signal.ledger.store import ImmutableSignalLedger
 
+PROTOCOL_IDENTITY = "c" * 64
+
 
 class FailingCohortJournal(WC2CohortJournal):
     def append_forecast(self, record):
@@ -113,6 +115,7 @@ def test_fresh_wc2_cycle_persists_r20_and_cohort_with_source_version(
         maximum_issuance_delay_ms=100,
         horizon_bars=4,
         base_asset="BTC",
+        collection_protocol_identity=PROTOCOL_IDENTITY,
     )
 
     assert result.status is WC2LiveIndexStatus.INDEXED_FRESH
@@ -135,6 +138,7 @@ def test_fresh_wc2_cycle_persists_r20_and_cohort_with_source_version(
         version_refs["wc2_live_source_adapter"]
         == WC2_LIVE_SOURCE_ADAPTER_VERSION
     )
+    assert version_refs["wc2_collection_protocol"] == PROTOCOL_IDENTITY
 
 
 def test_fresh_wc2_cycle_before_collection_creates_no_r20_or_cohort(
@@ -161,6 +165,7 @@ def test_fresh_wc2_cycle_before_collection_creates_no_r20_or_cohort(
         maximum_issuance_delay_ms=100,
         horizon_bars=4,
         base_asset="BTC",
+        collection_protocol_identity=PROTOCOL_IDENTITY,
     )
 
     assert result.status is WC2LiveIndexStatus.SKIPPED_BEFORE_COLLECTION
@@ -188,6 +193,7 @@ def test_neutral_fresh_source_creates_no_r20_or_cohort(tmp_path: Path) -> None:
         maximum_issuance_delay_ms=100,
         horizon_bars=4,
         base_asset="BTC",
+        collection_protocol_identity=PROTOCOL_IDENTITY,
     )
 
     assert result.status is WC2LiveIndexStatus.SKIPPED_INELIGIBLE_SOURCE
@@ -217,6 +223,7 @@ def test_replay_without_persisted_r20_never_backfills_forecast(
         maximum_issuance_delay_ms=100,
         horizon_bars=4,
         base_asset="BTC",
+        collection_protocol_identity=PROTOCOL_IDENTITY,
     )
 
     assert result.status is WC2LiveIndexStatus.NO_PERSISTED_ISSUANCE
@@ -267,6 +274,7 @@ def test_crash_after_r20_commit_recovers_cohort_without_new_forecast(
         maximum_issuance_delay_ms=100,
         horizon_bars=4,
         base_asset="BTC",
+        collection_protocol_identity=PROTOCOL_IDENTITY,
     )
 
     assert recovered.status is WC2LiveIndexStatus.INDEXED_RECOVERED
@@ -285,6 +293,7 @@ def test_crash_after_r20_commit_recovers_cohort_without_new_forecast(
         maximum_issuance_delay_ms=100,
         horizon_bars=4,
         base_asset="BTC",
+        collection_protocol_identity=PROTOCOL_IDENTITY,
     )
     assert replayed.status is WC2LiveIndexStatus.ALREADY_INDEXED
     assert replayed.cohort_forecast_identity == (
@@ -317,6 +326,7 @@ def test_retry_of_same_fresh_result_uses_persisted_r20_not_second_issuance(
         maximum_issuance_delay_ms=100,
         horizon_bars=4,
         base_asset="BTC",
+        collection_protocol_identity=PROTOCOL_IDENTITY,
     )
     second = process_wc2_live_freeze(
         _fresh_result(bundle, frozen_at_ms=frozen_at),
@@ -329,6 +339,7 @@ def test_retry_of_same_fresh_result_uses_persisted_r20_not_second_issuance(
         maximum_issuance_delay_ms=100,
         horizon_bars=4,
         base_asset="BTC",
+        collection_protocol_identity=PROTOCOL_IDENTITY,
     )
 
     assert first.status is WC2LiveIndexStatus.INDEXED_FRESH
