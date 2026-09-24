@@ -1,4 +1,6 @@
 from __future__ import annotations
+
+from decimal import Decimal
 from pathlib import Path
 
 from crypto_signal.data.models import (
@@ -10,8 +12,6 @@ from crypto_signal.data.models import (
 from crypto_signal.data.provider_divergence import ProviderDivergenceStore
 from crypto_signal.data.store import CandleStore
 from ops.run_provider_divergence import collect_provider_divergence
-
-from decimal import Decimal
 
 
 def _seed(
