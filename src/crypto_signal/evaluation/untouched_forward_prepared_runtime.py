@@ -11,6 +11,9 @@ from crypto_signal.decision_ledger import (
 from crypto_signal.evaluation.live_untouched_forward_operational import (
     issue_accepted_wc2_live_source,
 )
+from crypto_signal.evaluation.untouched_forward_collection_protocol import (
+    WC2CollectionProtocol,
+)
 from crypto_signal.evaluation.untouched_forward_journal import (
     WC2CohortAppendDisposition,
     WC2CohortJournal,
@@ -97,23 +100,24 @@ def process_wc2_prepared_live_freeze(
     signal_ledger: ImmutableSignalLedger,
     policy: WC2UntouchedForwardPolicy,
     activation: Epoch2ActivationRecord,
+    protocol: WC2CollectionProtocol,
     prepared_journal: WC2PreparedCycleJournal,
     decision_ledger: ImmutableDecisionEvidenceLedger,
     cohort_journal: WC2CohortJournal,
     shadow_journal: R25ShadowIntentJournal,
     shadow_manifest: R25ShadowCycleManifest,
     observed_at_ms: int,
-    maximum_issuance_delay_ms: int,
-    horizon_bars: int,
     base_asset: str,
 ) -> WC2PreparedLiveResult:
     """Process one live freeze with durable pre-R20 crash recovery."""
     if observed_at_ms < 0:
         raise ValueError("WC2 prepared live observation cannot be negative")
-    if maximum_issuance_delay_ms <= 0:
-        raise ValueError("WC2 prepared live issuance delay must be positive")
-    if horizon_bars <= 0:
-        raise ValueError("WC2 prepared live horizon must be positive")
+    if protocol.review_policy_identity != policy.policy_identity:
+        raise ValueError("WC2 prepared live protocol/policy mismatch")
+    if protocol.epoch2_activation_identity != activation.activation_identity:
+        raise ValueError("WC2 prepared live protocol/Epoch2 mismatch")
+    if context.identity not in protocol.coverage_context_identities:
+        raise ValueError("WC2 prepared live context is outside protocol")
     if not base_asset or base_asset != base_asset.upper():
         raise ValueError("WC2 prepared live base asset must be uppercase")
     if not context.symbol.startswith(base_asset):
@@ -124,14 +128,13 @@ def process_wc2_prepared_live_freeze(
             result,
             policy=policy,
             activation=activation,
+            protocol=protocol,
             prepared_journal=prepared_journal,
             decision_ledger=decision_ledger,
             cohort_journal=cohort_journal,
             shadow_journal=shadow_journal,
             shadow_manifest=shadow_manifest,
             observed_at_ms=observed_at_ms,
-            maximum_issuance_delay_ms=maximum_issuance_delay_ms,
-            horizon_bars=horizon_bars,
             base_asset=base_asset,
         )
     if result.status is LiveFreezeStatus.ALREADY_FROZEN:
@@ -141,6 +144,7 @@ def process_wc2_prepared_live_freeze(
             signal_ledger=signal_ledger,
             policy=policy,
             activation=activation,
+            protocol=protocol,
             prepared_journal=prepared_journal,
             decision_ledger=decision_ledger,
             cohort_journal=cohort_journal,
@@ -155,26 +159,25 @@ def _process_fresh_prepared(
     *,
     policy: WC2UntouchedForwardPolicy,
     activation: Epoch2ActivationRecord,
+    protocol: WC2CollectionProtocol,
     prepared_journal: WC2PreparedCycleJournal,
     decision_ledger: ImmutableDecisionEvidenceLedger,
     cohort_journal: WC2CohortJournal,
     shadow_journal: R25ShadowIntentJournal,
     shadow_manifest: R25ShadowCycleManifest,
     observed_at_ms: int,
-    maximum_issuance_delay_ms: int,
-    horizon_bars: int,
     base_asset: str,
 ) -> WC2PreparedLiveResult:
     if result.bundle is None or result.frozen_at_ms is None:
         raise ValueError("fresh WC2 prepared cycle lost exact in-process bundle")
     signal = result.bundle.signal_decision
-    if result.frozen_at_ms < policy.collection_start_ms:
+    if result.frozen_at_ms < protocol.collection_start_ms:
         return _prepared_live_result(
             WC2PreparedLiveStatus.SKIPPED_BEFORE_COLLECTION,
             signal_identity=signal.freeze_identity,
             reasons=("source_freeze_predates_collection_start",),
         )
-    if observed_at_ms < policy.collection_start_ms:
+    if observed_at_ms < protocol.collection_start_ms:
         return _prepared_live_result(
             WC2PreparedLiveStatus.SKIPPED_BEFORE_COLLECTION,
             signal_identity=signal.freeze_identity,
@@ -201,11 +204,10 @@ def _process_fresh_prepared(
         result.bundle,
         policy=policy,
         activation=activation,
+        protocol=protocol,
         sizing_policy=None,
         source_frozen_at_ms=result.frozen_at_ms,
         issued_at_ms=observed_at_ms,
-        maximum_issuance_delay_ms=maximum_issuance_delay_ms,
-        horizon_bars=horizon_bars,
         base_asset=base_asset,
         capital_assessed_at_ms=observed_at_ms,
         sized_at_ms=observed_at_ms,
@@ -217,6 +219,7 @@ def _process_fresh_prepared(
         receipt,
         policy=policy,
         activation=activation,
+        protocol=protocol,
         decision_ledger=decision_ledger,
         cohort_journal=cohort_journal,
         shadow_journal=shadow_journal,
@@ -238,6 +241,7 @@ def _process_replay_prepared(
     signal_ledger: ImmutableSignalLedger,
     policy: WC2UntouchedForwardPolicy,
     activation: Epoch2ActivationRecord,
+    protocol: WC2CollectionProtocol,
     prepared_journal: WC2PreparedCycleJournal,
     decision_ledger: ImmutableDecisionEvidenceLedger,
     cohort_journal: WC2CohortJournal,
@@ -255,7 +259,7 @@ def _process_replay_prepared(
         raise ValueError(
             "already-frozen WC2 prepared source cutoff has no freeze record"
         )
-    if freeze.frozen_at_ms < policy.collection_start_ms:
+    if freeze.frozen_at_ms < protocol.collection_start_ms:
         return _prepared_live_result(
             WC2PreparedLiveStatus.SKIPPED_BEFORE_COLLECTION,
             signal_identity=freeze.signal_freeze_identity,
@@ -278,10 +282,13 @@ def _process_replay_prepared(
         )
     if receipt.source_cutoff_open_time_ms != result.source_cutoff_open_time_ms:
         raise ValueError("WC2 prepared receipt/source cutoff mismatch")
+    if receipt.collection_protocol_identity != protocol.protocol_identity:
+        raise ValueError("WC2 prepared receipt/protocol identity mismatch")
     completion = complete_wc2_prepared_cycle(
         receipt,
         policy=policy,
         activation=activation,
+        protocol=protocol,
         decision_ledger=decision_ledger,
         cohort_journal=cohort_journal,
         shadow_journal=shadow_journal,
@@ -376,6 +383,7 @@ def complete_wc2_prepared_cycle(
     *,
     policy: WC2UntouchedForwardPolicy,
     activation: Epoch2ActivationRecord,
+    protocol: WC2CollectionProtocol,
     decision_ledger: ImmutableDecisionEvidenceLedger,
     cohort_journal: WC2CohortJournal,
     shadow_journal: R25ShadowIntentJournal,
@@ -386,6 +394,12 @@ def complete_wc2_prepared_cycle(
         raise ValueError("WC2 prepared completion policy identity mismatch")
     if activation.activation_identity != receipt.activation_identity:
         raise ValueError("WC2 prepared completion activation identity mismatch")
+    if protocol.protocol_identity != receipt.collection_protocol_identity:
+        raise ValueError("WC2 prepared completion protocol identity mismatch")
+    if protocol.review_policy_identity != policy.policy_identity:
+        raise ValueError("WC2 prepared completion protocol/policy mismatch")
+    if protocol.epoch2_activation_identity != activation.activation_identity:
+        raise ValueError("WC2 prepared completion protocol/Epoch2 mismatch")
     if activation.activated_at_ms > receipt.issued_at_ms:
         raise ValueError("WC2 prepared completion activation is too late")
 
@@ -396,6 +410,7 @@ def complete_wc2_prepared_cycle(
         horizon_bars=receipt.horizon_bars,
         target_label=receipt.target_label,
         base_asset=receipt.base_asset,
+        collection_protocol_identity=protocol.protocol_identity,
         ledger=decision_ledger,
     )
     cohort = build_wc2_cohort_forecast(
