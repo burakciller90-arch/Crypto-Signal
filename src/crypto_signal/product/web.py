@@ -1089,6 +1089,7 @@ def create_app(
     @app.get("/api/cold-archive/status")
     def cold_archive_status(
         verify_limit: int = Query(default=24, ge=1, le=500),
+        canonical_replay_limit: int = Query(default=3, ge=1, le=500),
     ) -> JSONResponse:
         if selected_cold_archive_path is None:
             return _json(
@@ -1117,6 +1118,7 @@ def create_app(
             snapshot = read_cold_archive_runtime_truth(
                 selected_cold_archive_path,
                 verify_limit=verify_limit,
+                canonical_replay_limit=canonical_replay_limit,
             )
         except (OSError, TypeError, ValueError) as exc:
             raise HTTPException(status_code=500, detail=str(exc)) from exc
@@ -1128,7 +1130,13 @@ def create_app(
                 "snapshot": snapshot,
                 "archive_directory": selected_cold_archive_path.name,
                 "archive_process_status": "NOT_MEASURED",
-                "canonical_row_digest_replay": "NOT_MEASURED",
+                "canonical_row_digest_replay": (
+                    snapshot.canonical_row_digest_replay
+                ),
+                "canonical_replay_verified_partition_count": (
+                    snapshot.canonical_replay_verified_partition_count
+                ),
+                "canonical_replay_scope": snapshot.canonical_replay_scope,
                 "read_only": True,
                 "real_capital": 0,
             }
