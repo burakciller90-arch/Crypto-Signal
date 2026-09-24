@@ -85,21 +85,21 @@ class WC2PaperExecutionDecision:
             Exchange.BYBIT.value,
         ):
             raise ValueError("WC2 execution source order must be Binance then Bybit")
-        for values, label in (
+        for identity_values, label in (
             (self.source_freeze_identities, "source freeze"),
             (self.source_forecast_identities, "source forecast"),
             (self.source_cohort_forecast_identities, "source cohort forecast"),
         ):
-            if len(values) != 2 or len(set(values)) != 2:
+            if len(identity_values) != 2 or len(set(identity_values)) != 2:
                 raise ValueError(f"WC2 execution requires two unique {label} identities")
-            for value in values:
-                _require_sha256(value, f"WC2 execution {label}")
-        for values, label in (
+            for identity_value in identity_values:
+                _require_sha256(identity_value, f"WC2 execution {label}")
+        for timestamp_values, label in (
             (self.source_signal_as_of_ms, "source signal as-of"),
             (self.source_frozen_at_ms, "source frozen-at"),
             (self.source_forecast_issued_at_ms, "source forecast issued-at"),
         ):
-            if len(values) != 2 or min(values) < 0:
+            if len(timestamp_values) != 2 or min(timestamp_values) < 0:
                 raise ValueError(f"WC2 execution {label} values are invalid")
         if self.execution_start_ms < 0 or self.source_cutoff_open_time_ms < 0:
             raise ValueError("WC2 execution boundary/cutoff cannot be negative")
@@ -128,12 +128,16 @@ class WC2PaperExecutionDecision:
             raise ValueError("WC2 execution reason/policy must be non-empty")
         if self.execution_policy_version != PAPER_EXECUTION_POLICY_VERSION:
             raise ValueError("WC2 execution policy version mismatch")
-        for value, label in (
+        for cost_value, label in (
             (self.fee_usdt, "fee"),
             (self.spread_usdt, "spread"),
             (self.slippage_usdt, "slippage"),
         ):
-            if not isinstance(value, Decimal) or not value.is_finite() or value < 0:
+            if (
+                not isinstance(cost_value, Decimal)
+                or not cost_value.is_finite()
+                or cost_value < 0
+            ):
                 raise ValueError(f"WC2 execution {label} must be finite non-negative")
 
         downstream = (
@@ -145,9 +149,12 @@ class WC2PaperExecutionDecision:
             self.fill_identity,
             self.cost_evidence_identity,
         )
-        for value in downstream:
-            if value is not None:
-                _require_sha256(value, "WC2 downstream execution evidence")
+        for downstream_identity in downstream:
+            if downstream_identity is not None:
+                _require_sha256(
+                    downstream_identity,
+                    "WC2 downstream execution evidence",
+                )
 
         if self.status is WC2PaperExecutionDecisionStatus.HOLD_CASH:
             if self.action is not PaperAction.HOLD_CASH:
@@ -211,6 +218,7 @@ class WC2PaperExecutionDecision:
                 raise ValueError("WC2 executed decision requires complete evidence lineage")
             if not self.venue_reference:
                 raise ValueError("WC2 executed decision requires venue reference")
+            assert self.fill_identity is not None
             expected_cost = compute_wc2_cost_evidence_identity(
                 fill_identity=self.fill_identity,
                 fee_usdt=self.fee_usdt,
