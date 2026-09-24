@@ -1,0 +1,66 @@
+name: DIAG WC1 Canonical Market Tape Startup
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/diag-wc1-canonical-market-tape-startup.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          clean: true
+          fetch-depth: 1
+      - name: Read-only canonical startup diagnosis
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          DEV="$ROOT/Development"
+          RUNTIME="$DEV/runtime/market_tape"
+          LOCK="$RUNTIME/market_tape_stream.lock"
+          PID="$(/usr/sbin/lsof -t "$LOCK" 2>/dev/null | head -1 || true)"
+          echo "DEVELOPMENT_HEAD=$(git -C "$DEV" rev-parse HEAD)"
+          test -z "$(git -C "$DEV" status --porcelain)"
+          echo "LOCK_PID=$PID"
+          [ -n "$PID" ] && /bin/ps -ww -p "$PID" -o pid=,ppid=,uid=,%cpu=,%mem=,etime=,comm=,args= || true
+          [ -n "$PID" ] && /usr/sbin/lsof -p "$PID" 2>/dev/null | /usr/bin/grep -E 'market_tape|raw_market_tape|collector_runtime|market_data_gaps' | head -120 || true
+          echo "PIDFILE=$(cat "$ROOT/market-tape-stream.pid" 2>/dev/null || true)"
+          echo "=== RUNTIME FILES ==="
+          ls -lh "$RUNTIME"/collector_runtime.sqlite3* "$RUNTIME"/market_data_gaps.sqlite3* 2>/dev/null || true
+          echo "=== MARKET TAPE LOG TAIL ==="
+          tail -120 "$ROOT/ServiceLogs/market-tape.out.log" 2>/dev/null || true
+          tail -160 "$ROOT/ServiceLogs/market-tape.err.log" 2>/dev/null || true
+          echo "=== COLLECTOR EVIDENCE READ ==="
+          PYTHONPATH="$GITHUB_WORKSPACE/src:$GITHUB_WORKSPACE" "$DEV/.venv/bin/python" - <<'PY'
+          from pathlib import Path
+          from crypto_signal.data.market_tape_collector_runtime import MarketTapeCollectorRuntimeStore
+          from crypto_signal.data.market_data_gap_ledger import MarketDataGapLedger
+          runtime=Path("/Volumes/Crypto-504/Crypto-Signal/Development/runtime/market_tape")
+          cr=runtime/"collector_runtime.sqlite3"
+          gl=runtime/"market_data_gaps.sqlite3"
+          print("COLLECTOR_DB_PRESENT=" + ("YES" if cr.is_file() else "NO"))
+          print("GAP_DB_PRESENT=" + ("YES" if gl.is_file() else "NO"))
+          if cr.is_file():
+              store=MarketTapeCollectorRuntimeStore(cr)
+              inst=store.latest_instance(provider="bybit", source="market_tape_stream")
+              print("COLLECTOR_QUICK_CHECK=" + ("YES" if store.quick_check() else "NO"))
+              print("LATEST_INSTANCE=" + ("NONE" if inst is None else inst.instance_identity))
+              if inst is not None:
+                  hb=store.latest_heartbeat(inst.instance_identity)
+                  print("LATEST_START_KIND=" + inst.start_kind.value)
+                  print("LATEST_HEARTBEAT=" + ("NONE" if hb is None else str(hb.sequence_no)))
+          if gl.is_file():
+              gaps=MarketDataGapLedger(gl)
+              print("GAP_QUICK_CHECK=" + ("YES" if gaps.quick_check() else "NO"))
+          print("WC1_CANONICAL_STARTUP_DIAG_READONLY_PASS=YES")
+          print("REAL_CAPITAL=0")
+          PY
