@@ -10,6 +10,7 @@ import hashlib
 import importlib.util
 import json
 import sqlite3
+import time
 from contextlib import closing
 from dataclasses import dataclass
 from pathlib import Path
@@ -134,6 +135,21 @@ _TABLE_REQUIRED_COLUMNS = {
         }
     ),
 }
+
+
+def _pin_live_read_snapshot(
+    connection: sqlite3.Connection,
+    observed_at_ms: int | None,
+    *,
+    label: str,
+) -> int:
+    if observed_at_ms is not None and observed_at_ms < 0:
+        raise ValueError(f"{label} observation time cannot be negative")
+    connection.execute("BEGIN")
+    connection.execute("SELECT 1 FROM sqlite_master LIMIT 1").fetchone()
+    if observed_at_ms is not None:
+        return observed_at_ms
+    return time.time_ns() // 1_000_000
 
 
 @dataclass(frozen=True, slots=True)
@@ -267,11 +283,9 @@ class MarketTapeCollectorRuntimeTruth:
 def read_market_tape_collector_runtime_truth(
     path: Path,
     *,
-    observed_at_ms: int,
+    observed_at_ms: int | None,
     heartbeat_freshness_ms: int = 30_000,
 ) -> MarketTapeCollectorRuntimeTruth | None:
-    if observed_at_ms < 0:
-        raise ValueError("collector runtime observation time cannot be negative")
     if not 1 <= heartbeat_freshness_ms <= 300_000:
         raise ValueError("collector heartbeat freshness must be inside 1..300000 ms")
     if not path.is_file():
@@ -281,6 +295,11 @@ def read_market_tape_collector_runtime_truth(
     with closing(sqlite3.connect(uri, uri=True)) as connection:
         connection.row_factory = sqlite3.Row
         connection.execute("PRAGMA query_only=ON")
+        observation = _pin_live_read_snapshot(
+            connection,
+            observed_at_ms,
+            label="collector runtime",
+        )
         quick = connection.execute("PRAGMA quick_check").fetchone()
         if quick is None or str(quick[0]).lower() != "ok":
             raise ValueError("collector runtime SQLite quick_check failed")
@@ -341,7 +360,7 @@ def read_market_tape_collector_runtime_truth(
 
     heartbeat_identity: str | None = None
     heartbeat_sequence_no: int | None = None
-    heartbeat_observed_at_ms: int | None = None
+    heartbeat_observation: int | None = None
     heartbeat_age_ms: int | None = None
     last_successful_ingestion_ms: int | None = None
     ingestion_age_ms: int | None = None
@@ -367,10 +386,10 @@ def read_market_tape_collector_runtime_truth(
             raise ValueError("collector heartbeat/instance lineage mismatch")
 
         heartbeat_sequence_no = int(heartbeat_payload["sequence_no"])
-        heartbeat_observed_at_ms = int(heartbeat_payload["observed_at_ms"])
-        if heartbeat_observed_at_ms > observed_at_ms:
+        heartbeat_observation = int(heartbeat_payload["observation"])
+        if heartbeat_observation > observation:
             raise ValueError("collector heartbeat is future evidence")
-        heartbeat_age_ms = observed_at_ms - heartbeat_observed_at_ms
+        heartbeat_age_ms = observation - heartbeat_observation
         process_evidence_status = (
             "HEARTBEAT_FRESH"
             if heartbeat_age_ms <= heartbeat_freshness_ms
@@ -379,9 +398,9 @@ def read_market_tape_collector_runtime_truth(
         ingestion_raw = heartbeat_payload.get("last_successful_ingestion_ms")
         if ingestion_raw is not None:
             last_successful_ingestion_ms = int(ingestion_raw)
-            if last_successful_ingestion_ms > observed_at_ms:
+            if last_successful_ingestion_ms > observation:
                 raise ValueError("collector ingestion is future evidence")
-            ingestion_age_ms = observed_at_ms - last_successful_ingestion_ms
+            ingestion_age_ms = observation - last_successful_ingestion_ms
         observed_messages_total = int(
             heartbeat_payload["observed_messages_total"]
         )
@@ -407,7 +426,7 @@ def read_market_tape_collector_runtime_truth(
         started_at_ms=int(instance_payload["started_at_ms"]),
         heartbeat_identity=heartbeat_identity,
         heartbeat_sequence_no=heartbeat_sequence_no,
-        heartbeat_observed_at_ms=heartbeat_observed_at_ms,
+        heartbeat_observation=heartbeat_observation,
         heartbeat_age_ms=heartbeat_age_ms,
         last_successful_ingestion_ms=last_successful_ingestion_ms,
         ingestion_age_ms=ingestion_age_ms,
@@ -490,10 +509,8 @@ class _ColdManifest:
 def read_market_tape_runtime_truth(
     path: Path,
     *,
-    observed_at_ms: int,
+    observed_at_ms: int | None,
 ) -> MarketTapeRuntimeTruth:
-    if observed_at_ms < 0:
-        raise ValueError("Market Tape observation time cannot be negative")
     if not path.is_file():
         raise ValueError("Market Tape runtime database missing")
 
@@ -501,6 +518,11 @@ def read_market_tape_runtime_truth(
     with closing(sqlite3.connect(uri, uri=True)) as connection:
         connection.row_factory = sqlite3.Row
         connection.execute("PRAGMA query_only=ON")
+        observation = _pin_live_read_snapshot(
+            connection,
+            observed_at_ms,
+            label="Market Tape",
+        )
         quick = connection.execute("PRAGMA quick_check").fetchone()
         if quick is None or str(quick[0]).lower() != "ok":
             raise ValueError("Market Tape SQLite quick_check failed")
@@ -548,12 +570,12 @@ def read_market_tape_runtime_truth(
                 latest_values.append(int(latest))
 
     latest_event_at_ms = max(latest_values) if latest_values else None
-    if latest_event_at_ms is not None and latest_event_at_ms > observed_at_ms:
+    if latest_event_at_ms is not None and latest_event_at_ms > observation:
         raise ValueError("Market Tape contains future evidence at observation time")
     latest_age_ms = (
         None
         if latest_event_at_ms is None
-        else observed_at_ms - latest_event_at_ms
+        else observation - latest_event_at_ms
     )
     canonical_counts = tuple(sorted(counts))
     return MarketTapeRuntimeTruth(
