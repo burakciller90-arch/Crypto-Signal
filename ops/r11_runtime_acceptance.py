@@ -17,7 +17,7 @@ LEGACY_HOME = Path("/Users/crypto-signal-agent")
 
 def _ps_text() -> str:
     result = subprocess.run(
-        ["/bin/ps", "-axo", "pid=,ppid=,user=,command="],
+        ["/bin/ps", "-axo", "pid=,ppid=,user=,comm=,args="],
         check=True,
         capture_output=True,
         text=True,
@@ -72,17 +72,29 @@ def _assert_process_topology(root: Path) -> dict[str, int]:
     dashboard_needle = str(root / "Product/ops/run_dashboard.py")
     runner_needle = str(root / "Runner/bin/Runner.Listener run --startuptype service")
 
-    def matching_pids(needle: str) -> list[int]:
+    def matching_pids(
+        needle: str,
+        *,
+        allowed_comm: frozenset[str] | None = None,
+    ) -> list[int]:
         result: list[int] = []
         for line in ps.splitlines():
-            if needle not in line:
+            parts = line.strip().split(maxsplit=4)
+            if len(parts) != 5:
                 continue
-            first = line.strip().split(maxsplit=1)[0]
-            if first.isdigit():
-                result.append(int(first))
+            pid_text, _ppid, _user, comm, args = parts
+            if needle not in args:
+                continue
+            if allowed_comm is not None and comm not in allowed_comm:
+                continue
+            if pid_text.isdigit():
+                result.append(int(pid_text))
         return result
 
-    supervisors = matching_pids(supervisor_needle)
+    supervisors = matching_pids(
+        supervisor_needle,
+        allowed_comm=frozenset({"bash", "/bin/bash"}),
+    )
     dashboards = matching_pids(dashboard_needle)
     runners = matching_pids(runner_needle)
     if len(supervisors) != 1:
