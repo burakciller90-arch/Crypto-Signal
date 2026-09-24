@@ -17,6 +17,7 @@ def _args(ledger: Path, **overrides: Path | None) -> argparse.Namespace:
         "market_tape": None,
         "market_tape_collector_runtime": None,
         "cold_archive": None,
+        "provider_divergence": None,
     }
     values.update(overrides)
     return argparse.Namespace(**values)
@@ -54,6 +55,9 @@ def test_dashboard_derives_all_world_class_runtime_paths_from_live_ledger() -> N
             runtime / "market_tape" / "collector_runtime.sqlite3"
         ),
         "cold_archive_path": runtime / "market_tape" / "cold",
+        "provider_divergence_path": (
+            runtime / "data" / "provider_divergence.sqlite3"
+        ),
     }
 
 
@@ -72,6 +76,7 @@ def test_dashboard_runtime_path_overrides_are_exact_and_not_rebased(
             tmp_path / "x" / "collector.sqlite3"
         ),
         "cold_archive": tmp_path / "x" / "cold",
+        "provider_divergence": tmp_path / "x" / "provider.sqlite3",
     }
 
     paths = resolve_runtime_paths(_args(ledger, **explicit))
@@ -89,6 +94,7 @@ def test_dashboard_runtime_path_overrides_are_exact_and_not_rebased(
             "market_tape_collector_runtime"
         ],
         "cold_archive_path": explicit["cold_archive"],
+        "provider_divergence_path": explicit["provider_divergence"],
     }
 
 
