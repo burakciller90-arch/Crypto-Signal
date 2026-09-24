@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from decimal import Decimal
 
 from crypto_signal.confluence.models import InvalidationTrigger, PriceZone
 from crypto_signal.data.aggregation import aggregate_closed_15m
