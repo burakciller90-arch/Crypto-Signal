@@ -200,7 +200,7 @@ def test_galactech_system_truth_exposes_component_states_not_a_readiness_score(
     js = script.text
     assert 'id="r25OperationalTruthGrid"' in markup
     assert 'id="r25OperationalTruthTag"' in markup
-    assert "R25 / OPERATIONAL TRUTH" in markup
+    assert "R25 / OPERASYONEL DOĞRULUK" in markup
     assert "Runtime evidence reconciliation" in markup
     assert "production readiness değildir" in markup
 
