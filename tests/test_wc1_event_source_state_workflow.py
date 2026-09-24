@@ -13,7 +13,8 @@ def _event_source_state_block() -> str:
 def test_event_source_state_is_explicitly_allowlisted() -> None:
     text = WORKFLOW.read_text(encoding="utf-8")
 
-    assert "status|eventsourcestate|services|" in text
+    assert "eventsourcestate" in text
+    assert "eventsourcesnapshot" in text
     block = _event_source_state_block()
     assert "steps.parse.outputs.command == 'eventsourcestate'" in block
 
