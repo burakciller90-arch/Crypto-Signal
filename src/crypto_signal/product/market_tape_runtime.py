@@ -10,6 +10,7 @@ import hashlib
 import importlib.util
 import json
 import sqlite3
+import time
 from contextlib import closing
 from dataclasses import dataclass
 from pathlib import Path
@@ -267,10 +268,10 @@ class MarketTapeCollectorRuntimeTruth:
 def read_market_tape_collector_runtime_truth(
     path: Path,
     *,
-    observed_at_ms: int,
+    observed_at_ms: int | None,
     heartbeat_freshness_ms: int = 30_000,
 ) -> MarketTapeCollectorRuntimeTruth | None:
-    if observed_at_ms < 0:
+    if observed_at_ms is not None and observed_at_ms < 0:
         raise ValueError("collector runtime observation time cannot be negative")
     if not 1 <= heartbeat_freshness_ms <= 300_000:
         raise ValueError("collector heartbeat freshness must be inside 1..300000 ms")
@@ -339,6 +340,12 @@ def read_market_tape_collector_runtime_truth(
             (instance_identity,),
         ).fetchone()
 
+    effective_observed_at_ms = (
+        time.time_ns() // 1_000_000
+        if observed_at_ms is None
+        else observed_at_ms
+    )
+
     heartbeat_identity: str | None = None
     heartbeat_sequence_no: int | None = None
     heartbeat_observed_at_ms: int | None = None
@@ -368,9 +375,9 @@ def read_market_tape_collector_runtime_truth(
 
         heartbeat_sequence_no = int(heartbeat_payload["sequence_no"])
         heartbeat_observed_at_ms = int(heartbeat_payload["observed_at_ms"])
-        if heartbeat_observed_at_ms > observed_at_ms:
+        if heartbeat_observed_at_ms > effective_observed_at_ms:
             raise ValueError("collector heartbeat is future evidence")
-        heartbeat_age_ms = observed_at_ms - heartbeat_observed_at_ms
+        heartbeat_age_ms = effective_observed_at_ms - heartbeat_observed_at_ms
         process_evidence_status = (
             "HEARTBEAT_FRESH"
             if heartbeat_age_ms <= heartbeat_freshness_ms
@@ -379,9 +386,9 @@ def read_market_tape_collector_runtime_truth(
         ingestion_raw = heartbeat_payload.get("last_successful_ingestion_ms")
         if ingestion_raw is not None:
             last_successful_ingestion_ms = int(ingestion_raw)
-            if last_successful_ingestion_ms > observed_at_ms:
+            if last_successful_ingestion_ms > effective_observed_at_ms:
                 raise ValueError("collector ingestion is future evidence")
-            ingestion_age_ms = observed_at_ms - last_successful_ingestion_ms
+            ingestion_age_ms = effective_observed_at_ms - last_successful_ingestion_ms
         observed_messages_total = int(
             heartbeat_payload["observed_messages_total"]
         )
@@ -490,9 +497,9 @@ class _ColdManifest:
 def read_market_tape_runtime_truth(
     path: Path,
     *,
-    observed_at_ms: int,
+    observed_at_ms: int | None,
 ) -> MarketTapeRuntimeTruth:
-    if observed_at_ms < 0:
+    if observed_at_ms is not None and observed_at_ms < 0:
         raise ValueError("Market Tape observation time cannot be negative")
     if not path.is_file():
         raise ValueError("Market Tape runtime database missing")
@@ -547,13 +554,21 @@ def read_market_tape_runtime_truth(
             if latest is not None:
                 latest_values.append(int(latest))
 
+    effective_observed_at_ms = (
+        time.time_ns() // 1_000_000
+        if observed_at_ms is None
+        else observed_at_ms
+    )
     latest_event_at_ms = max(latest_values) if latest_values else None
-    if latest_event_at_ms is not None and latest_event_at_ms > observed_at_ms:
+    if (
+        latest_event_at_ms is not None
+        and latest_event_at_ms > effective_observed_at_ms
+    ):
         raise ValueError("Market Tape contains future evidence at observation time")
     latest_age_ms = (
         None
         if latest_event_at_ms is None
-        else observed_at_ms - latest_event_at_ms
+        else effective_observed_at_ms - latest_event_at_ms
     )
     canonical_counts = tuple(sorted(counts))
     return MarketTapeRuntimeTruth(
