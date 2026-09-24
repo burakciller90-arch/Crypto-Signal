@@ -414,6 +414,9 @@ async def run(
                         context.timeframe
                     ),
                     base_asset=wc2_base_asset(context.symbol),
+                    collection_protocol_identity=(
+                        wc2_protocol.protocol_identity
+                    ),
                     collection_start_ms=wc2_protocol.collection_start_ms,
                 )
             except (OSError, TypeError, ValueError, sqlite3.Error) as exc:
