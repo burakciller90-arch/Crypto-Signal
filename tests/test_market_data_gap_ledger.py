@@ -158,3 +158,117 @@ def test_gap_monitor_rejects_time_regression(tmp_path) -> None:
             observed_at_ms=999,
             source_evidence_identities=("b" * 64,),
         )
+
+
+def test_gap_monitor_restores_open_gap_without_duplicate_root(tmp_path) -> None:
+    ledger = MarketDataGapLedger(tmp_path / "gaps.sqlite3")
+    first_monitor = IngestionSilenceGapMonitor(
+        ledger=ledger,
+        provider="bybit",
+        source="market_tape_stream",
+        max_ingestion_silence_ms=300,
+    )
+    first_monitor.observe_persisted_event(
+        channel="publicTrade",
+        symbol="BTCUSDT",
+        ingested_at_ms=1_000,
+        source_evidence_identities=("a" * 64,),
+    )
+    first_monitor.check_silence(
+        observed_at_ms=1_400,
+        source_evidence_identities=("b" * 64,),
+    )
+
+    restored = IngestionSilenceGapMonitor(
+        ledger=ledger,
+        provider="bybit",
+        source="market_tape_stream",
+        max_ingestion_silence_ms=300,
+    )
+    restored.seed_persisted_event(
+        channel="publicTrade",
+        symbol="BTCUSDT",
+        ingested_at_ms=1_000,
+        source_evidence_identities=("a" * 64,),
+    )
+    restored.check_silence(
+        observed_at_ms=1_500,
+        source_evidence_identities=("c" * 64,),
+    )
+
+    events = ledger.events()
+    assert len(events) == 1
+    assert events[0].event_kind is GapEventKind.OBSERVED
+
+    restored.observe_persisted_event(
+        channel="publicTrade",
+        symbol="BTCUSDT",
+        ingested_at_ms=1_600,
+        source_evidence_identities=("d" * 64,),
+    )
+    events = ledger.events()
+    assert len(events) == 2
+    assert events[1].event_kind is GapEventKind.RECOVERED
+    assert events[1].previous_event_identity == events[0].event_identity
+
+
+def test_gap_monitor_fails_closed_on_restored_policy_mismatch(tmp_path) -> None:
+    ledger = MarketDataGapLedger(tmp_path / "gaps.sqlite3")
+    monitor = IngestionSilenceGapMonitor(
+        ledger=ledger,
+        provider="bybit",
+        source="market_tape_stream",
+        max_ingestion_silence_ms=300,
+    )
+    monitor.observe_persisted_event(
+        channel="orderbook.50",
+        symbol="ETHUSDT",
+        ingested_at_ms=1_000,
+        source_evidence_identities=("a" * 64,),
+    )
+    monitor.check_silence(
+        observed_at_ms=1_400,
+        source_evidence_identities=("b" * 64,),
+    )
+
+    with pytest.raises(ValueError, match="expectation conflicts"):
+        IngestionSilenceGapMonitor(
+            ledger=ledger,
+            provider="bybit",
+            source="market_tape_stream",
+            max_ingestion_silence_ms=600,
+        )
+
+
+def test_gap_monitor_rejects_ambiguous_restart_seed(tmp_path) -> None:
+    ledger = MarketDataGapLedger(tmp_path / "gaps.sqlite3")
+    monitor = IngestionSilenceGapMonitor(
+        ledger=ledger,
+        provider="bybit",
+        source="market_tape_stream",
+        max_ingestion_silence_ms=300,
+    )
+    monitor.observe_persisted_event(
+        channel="publicTrade",
+        symbol="SOLUSDT",
+        ingested_at_ms=1_000,
+        source_evidence_identities=("a" * 64,),
+    )
+    monitor.check_silence(
+        observed_at_ms=1_400,
+        source_evidence_identities=("b" * 64,),
+    )
+
+    restored = IngestionSilenceGapMonitor(
+        ledger=ledger,
+        provider="bybit",
+        source="market_tape_stream",
+        max_ingestion_silence_ms=300,
+    )
+    with pytest.raises(ValueError, match="conflicts with restored open gap"):
+        restored.seed_persisted_event(
+            channel="publicTrade",
+            symbol="SOLUSDT",
+            ingested_at_ms=1_350,
+            source_evidence_identities=("c" * 64,),
+        )
