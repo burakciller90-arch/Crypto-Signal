@@ -4,10 +4,57 @@ Updated: 2026-09-25
 Project: Crypto Signal
 Baseline: crypto-signal-full-version-v1.0.0 (immutable)
 Active post-v1.0 program: v1.1 world-class product + market intelligence
-State: WC0_LIVE_PRODUCT_PARITY_ACCEPTED / WC1_24_7_DATA_RELIABILITY_ACCEPTED / WC2_ENGINEERING_FROZEN_EVIDENCE_ACCUMULATION_ACTIVE / WC4_CHAMPION_CHALLENGER_ENGINEERING_ACCEPTED_RESEARCH_ONLY / WC5_ENGINEERING_ACCEPTED_PRODUCT_DEPLOYED_HUMAN_USABILITY_NOT_MEASURED / WC6_SANDBOX_BOUNDARY_ACCEPTED_VENUE_EVIDENCE_EXTERNAL_DEPENDENCY / WC7_REVIEW_INFRA_CANONICAL_ADAPTERS_ACCEPTED_CURRENT_INSUFFICIENT_EVIDENCE / CONTINUITY_PAUSED_BY_USER
+State: WC0_LIVE_PRODUCT_PARITY_ACCEPTED / WC1_24_7_DATA_RELIABILITY_ACCEPTED / WC2_ENGINEERING_FROZEN_EVIDENCE_ACCUMULATION_ACTIVE / WC4_CHAMPION_CHALLENGER_ENGINEERING_ACCEPTED_RESEARCH_ONLY / WC5_ENGINEERING_ACCEPTED_PRODUCT_DEPLOYED_HUMAN_USABILITY_NOT_MEASURED / WC6_SANDBOX_BOUNDARY_ACCEPTED_VENUE_EVIDENCE_EXTERNAL_DEPENDENCY / WC7_CURRENT_FRONTIER_PACKET_ACCEPTED_CURRENT_INSUFFICIENT_EVIDENCE / CONTINUITY_PAUSED_BY_USER
 REAL_CAPITAL: 0
 
 ## Active v1.1 frontier — read before historical sections
+
+
+### 2026-09-25 01:15 +0300 — WC7 CURRENT-FRONTIER PACKET ACCEPTED / CONCLUSION REMAINS INSUFFICIENT_EVIDENCE
+
+This entry **supersedes the earlier 2026-09-25 01:04 frontier snapshot** while preserving it below as historical evidence.
+
+- Exact accepted main: `84a66a34dd6096ff4b635305347cef1d6782d6b9`.
+- PR **#1203** now composes one deterministic read-only WC7 current-frontier snapshot from:
+  - accepted runtime-reliability evidence;
+  - canonical WC2 readiness through the accepted WC2 adapter;
+  - an explicit no-probability-use boundary;
+  - explicit blocker boundaries for cost-adjusted expectancy and controlled drawdown while WC3 economics is unavailable;
+  - a WC4 engineering-only blocker boundary that cannot be relabelled as durable regime-edge evidence;
+  - accepted fail-closed abstention/failure transparency evidence;
+  - canonical WC6 `NOT_CONFIGURED / BLOCKED_NOT_CONFIGURED` external-dependency evidence through the accepted WC6 adapter;
+  - an explicit `NOT_MEASURED` human-usability boundary.
+- Missing/blocking dimensions remain exactly:
+  - `CAPITAL_EXECUTION_LINEAGE`;
+  - `CONTROLLED_DRAWDOWN`;
+  - `COST_ADJUSTED_EXPECTANCY`;
+  - `REGIME_ROBUSTNESS`;
+  - `UNTOUCHED_FORWARD_HISTORY` while current WC2 readiness remains insufficient;
+  - `USABILITY_WITHOUT_HIDDEN_UNCERTAINTY`.
+- Blocker provenance is now identity-separated:
+  - WC2/WC6 canonical blocker artifacts remain blocker boundaries rather than evidence;
+  - cost/drawdown/regime/usability receive explicit semantic blocker-boundary identities;
+  - evidence-bearing dimensions cannot carry those blocker identities.
+- The current-frontier composer never records a human EDGE_* verdict and cannot auto-promote incomplete evidence. Even if WC2 alone later becomes `REVIEW_ELIGIBLE`, the current packet remains `INSUFFICIENT_EVIDENCE` while the other blockers remain.
+- PR #1203 exact-head UID504 run **36066162469 / job 107856301392** completed **SUCCESS**:
+  - `WC7_EXACT_SOURCE_PASS=YES`;
+  - `WC7_FOCUSED_PASS=YES`;
+  - `WC7_MACHINE_EDGE_VERDICT=NONE`;
+  - `WC7_RESEARCH_REGRESSION_PASS=YES`;
+  - `WC7_FULL_REGRESSION_PASS=YES`;
+  - `WC7_DEVELOPMENT_NON_MUTATING_PASS=YES`;
+  - `REAL_CAPITAL=0`.
+- After merge, exact-main push run **36066300555 / job 107856745333** independently completed **SUCCESS** on `84a66a34dd6096ff4b635305347cef1d6782d6b9` with the same focused/research/full-repository/non-mutation acceptance.
+- Therefore WC7 current-frontier packet composition is **ACCEPTED as review infrastructure only**. The accepted scientific/economic conclusion remains **`INSUFFICIENT_EVIDENCE`**; `WC7_MACHINE_EDGE_VERDICT=NONE`; no world-class/edge-positive or edge-negative conclusion is authorized.
+
+Current true frontier:
+- keep WC2 engineering-frozen and allow genuine preregistered evidence accumulation to continue;
+- keep WC3 scientific/economic conclusions blocked until WC2 becomes `REVIEW_ELIGIBLE`;
+- keep cost-adjusted expectancy, controlled drawdown and durable regime-edge evidence missing until their accepted evidence rails actually produce them;
+- keep WC6 capital/execution lineage at `EXTERNAL_DEPENDENCY` until safe external sandbox/testnet venue evidence exists;
+- keep WC5 human usability `NOT_MEASURED`;
+- WC7 may next add **read-only observability/reporting of this accepted packet** or additional canonical adapters, but may not manufacture missing evidence, auto-select EDGE_* or mutate production;
+- continuity remains paused and **REAL_CAPITAL=0**.
 
 
 ### 2026-09-25 01:04 +0300 — WC7 CANONICAL WC2/WC6 ADAPTERS ACCEPTED / CONCLUSION STILL INSUFFICIENT_EVIDENCE
