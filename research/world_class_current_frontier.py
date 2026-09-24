@@ -286,7 +286,7 @@ def build_wc7_current_frontier_snapshot(
         review,
         provenances=provenances,
     )
-    expected_blockers = (
+    expected_blockers: tuple[WC7EvidenceDimension, ...] = (
         WC7EvidenceDimension.CAPITAL_EXECUTION_LINEAGE,
         WC7EvidenceDimension.CONTROLLED_DRAWDOWN,
         WC7EvidenceDimension.COST_ADJUSTED_EXPECTANCY,
