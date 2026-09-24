@@ -56,7 +56,6 @@ from crypto_signal.paper.shadow_intent_journal import R25ShadowIntentJournal
 BASE = Path("/Users/crypto-signal-agent/Crypto-Signal")
 DEFAULT_DB = BASE / "runtime" / "ledger" / "live_signal_ledger.sqlite3"
 DEFAULT_CANDLE_CACHE = BASE / "runtime" / "data" / "live_base_15m_cache.sqlite3"
-LOCK_PATH = BASE / "runtime" / "ledger" / "live_clock.lock"
 PROVIDER_DIVERGENCE_LOOKBACK = 96
 
 
@@ -511,6 +510,10 @@ def _required_path(path: Path | None, label: str) -> Path:
     return path
 
 
+def live_clock_lock_path(db_path: Path) -> Path:
+    return db_path.with_name("live_clock.lock")
+
+
 def main() -> int:
     args = parse_args()
     try:
@@ -518,8 +521,9 @@ def main() -> int:
     except ValueError as exc:
         print(f"WC2_CLOCK_CONFIG_ERROR={exc}", file=sys.stderr, flush=True)
         return 2
-    LOCK_PATH.parent.mkdir(parents=True, exist_ok=True)
-    with LOCK_PATH.open("a+") as lock_handle:
+    lock_path = live_clock_lock_path(args.db)
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
+    with lock_path.open("a+") as lock_handle:
         try:
             fcntl.flock(
                 lock_handle.fileno(),

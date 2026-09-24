@@ -8,6 +8,7 @@ from __future__ import annotations
 import json
 import sqlite3
 from collections.abc import Sequence
+from contextlib import closing
 from dataclasses import dataclass
 from decimal import Decimal
 from enum import StrEnum
@@ -135,7 +136,7 @@ class PaperFundLedger:
 
     def initialize(self) -> None:
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        with self._connect() as connection:
+        with closing(self._connect()) as connection, connection:
             connection.execute("PRAGMA journal_mode=WAL")
             connection.execute("PRAGMA synchronous=NORMAL")
             for table in _TABLE_BY_KIND.values():
@@ -272,7 +273,7 @@ class PaperFundLedger:
     def replay(self) -> tuple[PaperLedgerEntry, ...]:
         """Return all paper-fund records in append order."""
         self.initialize()
-        with self._connect() as connection:
+        with closing(self._connect()) as connection, connection:
             return self._replay_with_connection(connection)
 
     def list_fund_creations(self) -> tuple[FundCreationRecord, ...]:
@@ -298,7 +299,7 @@ class PaperFundLedger:
         if activated_at_ms < 0:
             raise ValueError("activated_at_ms must be non-negative")
         self.initialize()
-        with self._connect() as connection:
+        with closing(self._connect()) as connection, connection:
             connection.execute("BEGIN IMMEDIATE")
             existing = connection.execute(
                 """
@@ -332,7 +333,7 @@ class PaperFundLedger:
 
     def _get_activation_state_row(self) -> tuple[str, str, int] | None:
         self.initialize()
-        with self._connect() as connection:
+        with closing(self._connect()) as connection, connection:
             row = connection.execute(
                 """
                 SELECT activation_identity, payload_json, activated_at_ms
@@ -353,7 +354,7 @@ class PaperFundLedger:
         event_identity: str,
     ) -> tuple[str, str, str, int] | None:
         self.initialize()
-        with self._connect() as connection:
+        with closing(self._connect()) as connection, connection:
             row = connection.execute(
                 """
                 SELECT activation_identity, outcome, payload_json, processed_at_ms
@@ -375,7 +376,7 @@ class PaperFundLedger:
         self,
     ) -> tuple[tuple[str, str, str, str, int], ...]:
         self.initialize()
-        with self._connect() as connection:
+        with closing(self._connect()) as connection, connection:
             rows = connection.execute(
                 """
                 SELECT
@@ -414,7 +415,7 @@ class PaperFundLedger:
         if not authority_event_identity or not activation_identity or not payload_json:
             raise ValueError("authority identity/activation/payload are required")
         self.initialize()
-        with self._connect() as connection:
+        with closing(self._connect()) as connection, connection:
             connection.execute("BEGIN IMMEDIATE")
             activation = connection.execute(
                 """
@@ -512,7 +513,7 @@ class PaperFundLedger:
         self,
     ) -> tuple[str, str, bool, str | None, str, int] | None:
         self.initialize()
-        with self._connect() as connection:
+        with closing(self._connect()) as connection, connection:
             row = connection.execute(
                 """
                 SELECT
@@ -546,7 +547,7 @@ class PaperFundLedger:
         self,
     ) -> tuple[tuple[int, str, str, bool, str | None, str, int], ...]:
         self.initialize()
-        with self._connect() as connection:
+        with closing(self._connect()) as connection, connection:
             rows = connection.execute(
                 """
                 SELECT
@@ -620,7 +621,7 @@ class PaperFundLedger:
             raise ValueError("appended_at_ms must be non-negative")
 
         self.initialize()
-        with self._connect() as connection:
+        with closing(self._connect()) as connection, connection:
             connection.execute("BEGIN IMMEDIATE")
             activation = connection.execute(
                 """
@@ -815,7 +816,7 @@ class PaperFundLedger:
             raise ValueError("appended_at_ms must be non-negative")
 
         self.initialize()
-        with self._connect() as connection:
+        with closing(self._connect()) as connection, connection:
             connection.execute("BEGIN IMMEDIATE")
             present_count = 0
             for kind, record_identity, payload_json, _ in prepared:
@@ -953,7 +954,7 @@ class PaperFundLedger:
             raise ValueError("appended_at_ms must be non-negative")
         table = _TABLE_BY_KIND[kind]
         self.initialize()
-        with self._connect() as connection:
+        with closing(self._connect()) as connection, connection:
             connection.execute("BEGIN IMMEDIATE")
             existing = connection.execute(
                 f"""
