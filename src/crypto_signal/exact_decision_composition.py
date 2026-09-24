@@ -8,7 +8,7 @@ from __future__ import annotations
 from decimal import Decimal
 
 from crypto_signal.decision_ledger import ImmutableDecisionEvidenceLedger
-from crypto_signal.forecast_stream import ForecastAuthority
+from crypto_signal.forecast_stream import ForecastAuthority, ForecastVersionRef
 from crypto_signal.intelligence.confluence_matrix_v2 import (
     ConfluenceFamily,
     ConfluenceFamilyEvidence,
@@ -59,6 +59,7 @@ def compose_exact_decision(
     authority: ForecastAuthority = ForecastAuthority.SHADOW,
     calibrated_probability: CalibratedProbabilityEvidence | None = None,
     calibration_scope: CalibrationScope | None = None,
+    forecast_version_refs: tuple[ForecastVersionRef, ...] = (),
 ) -> UnifiedDecisionIssuance:
     """Compose exact accepted sources; no surrogate or hidden evidence creation."""
     if geometry_family.family is not ConfluenceFamily.GEOMETRY:
@@ -125,6 +126,7 @@ def compose_exact_decision(
         authority=authority,
         calibrated_probability=calibrated_probability,
         calibration_scope=calibration_scope,
+        forecast_version_refs=forecast_version_refs,
     )
 
 

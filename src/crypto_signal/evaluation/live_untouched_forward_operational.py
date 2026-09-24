@@ -11,6 +11,7 @@ from decimal import Decimal
 
 from crypto_signal.decision_ledger import ImmutableDecisionEvidenceLedger
 from crypto_signal.exact_decision_composition import compose_exact_decision
+from crypto_signal.forecast_stream import ForecastVersionRef
 from crypto_signal.intelligence.confluence_matrix_v2 import (
     ConfluenceFamily,
     ConfluenceFamilyEvidence,
@@ -359,6 +360,12 @@ def issue_same_cycle_untouched_forward_forecast(
         horizon_bars=horizon_bars,
         target_label=first_target.label,
         ledger=ledger,
+        forecast_version_refs=(
+            ForecastVersionRef(
+                "wc2_live_source_adapter",
+                WC2_LIVE_SOURCE_ADAPTER_VERSION,
+            ),
+        ),
     )
 
 

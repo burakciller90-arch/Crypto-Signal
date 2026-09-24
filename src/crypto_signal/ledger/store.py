@@ -446,6 +446,44 @@ class ImmutableSignalLedger:
             ).fetchone()
         return row is not None
 
+    def get_freeze_by_source_cutoff(
+        self,
+        *,
+        exchange: str,
+        market_type: str,
+        symbol: str,
+        timeframe: str,
+        source_cutoff_open_time_ms: int,
+    ) -> FreezeRecord | None:
+        self.initialize()
+        with self._connect() as connection:
+            rows = connection.execute(
+                """
+                SELECT * FROM signal_freezes
+                WHERE exchange = ?
+                  AND market_type = ?
+                  AND symbol = ?
+                  AND timeframe = ?
+                  AND source_cutoff_open_time_ms = ?
+                ORDER BY frozen_at_ms, bundle_identity
+                LIMIT 2
+                """,
+                (
+                    exchange,
+                    market_type,
+                    symbol,
+                    timeframe,
+                    source_cutoff_open_time_ms,
+                ),
+            ).fetchall()
+        if not rows:
+            return None
+        if len(rows) != 1:
+            raise LedgerConflictError(
+                "source cutoff maps to multiple immutable freezes"
+            )
+        return self._row_to_freeze(rows[0])
+
     def get_freeze_by_signal(
         self,
         signal_freeze_identity: str,

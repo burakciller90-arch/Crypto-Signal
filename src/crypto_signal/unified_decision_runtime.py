@@ -9,6 +9,7 @@ from crypto_signal.decision_ledger import (
 )
 from crypto_signal.forecast_stream import (
     ForecastAuthority,
+    ForecastVersionRef,
     ImmutableForecast,
     build_immutable_forecast,
 )
@@ -108,6 +109,7 @@ def issue_unified_decision(
     m6_policy: ConfluenceMatrixPolicy | None = None,
     calibrated_probability: CalibratedProbabilityEvidence | None = None,
     calibration_scope: CalibrationScope | None = None,
+    forecast_version_refs: tuple[ForecastVersionRef, ...] = (),
 ) -> UnifiedDecisionIssuance:
     """Compose one exact-PIT shadow/research decision and persist it atomically.
 
@@ -154,6 +156,7 @@ def issue_unified_decision(
         authority=authority,
         calibrated_probability=calibrated_probability,
         calibration_scope=calibration_scope,
+        extra_version_refs=forecast_version_refs,
     )
 
     methodology = _methodology_slice(signal, confluence)

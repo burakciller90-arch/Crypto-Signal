@@ -773,6 +773,53 @@ class ImmutableDecisionEvidenceLedger:
             latest_event_at_ms=None if latest is None else int(latest[0]),
         )
 
+    def read_issuance_for_signal(
+        self,
+        signal_freeze_identity: str,
+    ) -> tuple[dict[str, Any], dict[str, Any]] | None:
+        """Read one exact persisted R20/R20.5 issuance for recovery only."""
+        _require_sha256(signal_freeze_identity, "signal freeze identity")
+        with self._connect_ro() as connection:
+            self._require_schema(connection)
+            rows = connection.execute(
+                """
+                SELECT
+                    f.payload_json,
+                    f.payload_sha256,
+                    p.payload_json,
+                    p.payload_sha256
+                FROM r20_forecasts AS f
+                JOIN r20_5_decision_proofs AS p
+                  ON p.forecast_identity = f.forecast_identity
+                WHERE f.signal_freeze_identity = ?
+                ORDER BY f.issued_at_ms, f.forecast_identity
+                LIMIT 2
+                """,
+                (signal_freeze_identity,),
+            ).fetchall()
+        if not rows:
+            return None
+        if len(rows) != 1:
+            raise DecisionLedgerConflictError(
+                "signal freeze maps to multiple immutable R20 issuances"
+            )
+        row = rows[0]
+        forecast = _verified_payload(str(row[0]), str(row[1]))
+        proof = _verified_payload(str(row[2]), str(row[3]))
+        if forecast.get("signal_freeze_identity") != signal_freeze_identity:
+            raise DecisionLedgerConflictError(
+                "persisted R20 signal identity mismatch"
+            )
+        if proof.get("signal_freeze_identity") != signal_freeze_identity:
+            raise DecisionLedgerConflictError(
+                "persisted Decision Proof signal identity mismatch"
+            )
+        if proof.get("forecast_identity") != forecast.get("forecast_identity"):
+            raise DecisionLedgerConflictError(
+                "persisted R20/Decision Proof identity mismatch"
+            )
+        return forecast, proof
+
     def read_proof_for_signal(
         self,
         signal_freeze_identity: str,
