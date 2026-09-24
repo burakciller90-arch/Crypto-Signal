@@ -39,6 +39,8 @@ from crypto_signal.product.decision_proof import (
 from crypto_signal.signals.models import SignalState
 from crypto_signal.signals.semantics import build_signal_decision
 
+PROTOCOL_IDENTITY = "c" * 64
+
 
 def _directional_evidence(
     *,
@@ -233,6 +235,7 @@ def test_same_cycle_issuance_is_not_calibrated_and_uses_first_frozen_target(
         maximum_issuance_delay_ms=100,
         horizon_bars=4,
         base_asset="BTC",
+        collection_protocol_identity=PROTOCOL_IDENTITY,
         ledger=ledger,
     )
 
@@ -244,6 +247,11 @@ def test_same_cycle_issuance_is_not_calibrated_and_uses_first_frozen_target(
         CircuitBreakerState.DEGRADED_DATA
     )
     assert issuance.confluence.regime == WC2_UNMEASURED_REGIME
+    version_refs = {
+        item.component: item.version
+        for item in issuance.forecast.version_refs
+    }
+    assert version_refs["wc2_collection_protocol"] == PROTOCOL_IDENTITY
     assert issuance.production_authority is False
     assert issuance.real_capital == 0
 
@@ -301,6 +309,10 @@ def test_operational_issuance_has_no_hidden_policy_defaults() -> None:
         inspect.Parameter.empty
     )
     assert signature.parameters["base_asset"].default is inspect.Parameter.empty
+    assert (
+        signature.parameters["collection_protocol_identity"].default
+        is inspect.Parameter.empty
+    )
     assert "calibrated_probability" not in signature.parameters
     assert "outcome" not in signature.parameters
 
