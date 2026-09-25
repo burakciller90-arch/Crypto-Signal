@@ -38,6 +38,18 @@ from crypto_signal.product.decision_proof import (
     build_decision_proof_snapshot,
     build_live_intelligence_feed_event,
 )
+from crypto_signal.product.intelligence_stream_analytical import (
+    StreamAnalyticalPublicationDisposition,
+    StreamCapitalConsequenceState,
+    StreamEffectiveStance,
+    StreamStanceStrength,
+    build_stream_analytical_policy,
+    compose_stream_analytical_view,
+)
+from crypto_signal.product.intelligence_stream_analytical_ledger import (
+    IntelligenceStreamAnalyticalLedger,
+    StreamAnalyticalLedgerWriteDisposition,
+)
 from crypto_signal.product.intelligence_stream_ledger import (
     IntelligenceStreamLedger,
     StreamLedgerConflictError,
@@ -1539,3 +1551,428 @@ def test_stream_story_ledger_persists_exact_continuity_chain(tmp_path) -> None:
         connection.execute(
             "UPDATE stream_story_states SET story_identity = 'tampered'"
         )
+
+
+def test_stream_analytical_view_is_deterministic_and_identity_bound(tmp_path) -> None:
+    _, forecast, proof, context, feed_event = _full_bundle(
+        as_of_ms=14_000_000,
+        issued_at_ms=14_000_100,
+        seed="analytical-root",
+    )
+    activation = build_stream_activation_boundary(activated_at_ms=14_000_000)
+    issuance = project_forecast_issuance(
+        activation,
+        context,
+        forecast,
+        proof,
+        feed_event,
+    )
+    observation = build_story_observation(
+        issuance.message_input,
+        issuance.fact_bundle,
+    )
+    state = build_story_state(observation)
+    change = build_change_set(state)
+    policy = build_stream_analytical_policy()
+
+    first = compose_stream_analytical_view(
+        policy,
+        issuance.fact_bundle,
+        state,
+        change,
+        message=issuance.message_input,
+    )
+    second = compose_stream_analytical_view(
+        policy,
+        issuance.fact_bundle,
+        state,
+        change,
+        message=issuance.message_input,
+    )
+
+    assert first == second
+    assert first.policy_identity == policy.policy_identity
+    assert first.fact_bundle_identity == issuance.fact_bundle.fact_bundle_identity
+    assert first.change_set_identity == change.change_set_identity
+    assert first.current_state_identity == state.state_identity
+    assert first.source_message_identity == issuance.message_input.message_identity
+    assert first.story_identity == issuance.message_input.story_identity
+    assert first.stance.effective_stance is StreamEffectiveStance.BULLISH
+    assert first.stance.strength is StreamStanceStrength.HIGH
+    assert first.stance.direction == "bullish"
+    assert first.stance.decision_state == "active"
+    assert first.stance.support_score_0_100 == Decimal("82.00")
+    assert first.stance.opposition_score_0_100 == Decimal("0.00")
+    assert first.stance.net_support_points == Decimal("82.00")
+
+    assert first.dominant_support is not None
+    assert first.dominant_support.family is ConfluenceFamily.LIQUIDITY
+    assert first.dominant_support.support_points == Decimal("25.00")
+    assert first.secondary_support is not None
+    assert first.secondary_support.family is ConfluenceFamily.ORDER_FLOW
+    assert first.secondary_support.support_points == Decimal("25.00")
+    assert first.main_contradiction is None
+
+    assert "accepted_evidence_incomplete" in first.uncertainty.codes
+    assert "probability_not_calibrated" in first.uncertainty.codes
+    assert first.uncertainty.insufficient_evidence_count > 0
+    assert first.uncertainty.calibrated_probability_0_1 is None
+
+    assert first.changed_codes == ("story_started",)
+    assert first.changed_families == ()
+    assert first.next_condition.low == issuance.fact_bundle.trigger_zone.low
+    assert first.next_condition.high == issuance.fact_bundle.trigger_zone.high
+    assert first.next_condition.price is None
+    assert (
+        first.invalidation_condition.price
+        == issuance.fact_bundle.invalidation_price
+    )
+    assert first.capital_consequence.state is StreamCapitalConsequenceState.NOT_BOUND
+    assert (
+        first.materiality.disposition
+        is StreamAnalyticalPublicationDisposition.PUBLISH
+    )
+    assert first.materiality.reason_codes == ("story_started",)
+
+
+def test_stream_analytical_ledger_persists_story_views_idempotently(tmp_path) -> None:
+    _, forecast, proof, context, issuance_feed_event = _full_bundle(
+        as_of_ms=15_000_000,
+        issued_at_ms=15_000_100,
+        seed="analytical-ledger",
+    )
+    activation = build_stream_activation_boundary(activated_at_ms=15_000_000)
+    issuance = project_forecast_issuance(
+        activation,
+        context,
+        forecast,
+        proof,
+        issuance_feed_event,
+    )
+    path = tmp_path / "stream-analytical.sqlite3"
+
+    source_ledger = IntelligenceStreamLedger(path)
+    source_ledger.append_activation(activation)
+    source_ledger.append_issuance_bundle(context, issuance.source_event)
+
+    message_ledger = IntelligenceStreamMessageLedger(path)
+    message_ledger.append_message_bundle(
+        issuance.fact_bundle,
+        issuance.message_input,
+    )
+
+    root_observation = build_story_observation(
+        issuance.message_input,
+        issuance.fact_bundle,
+    )
+    root_state = build_story_state(root_observation)
+    root_change = build_change_set(root_state)
+    story_ledger = IntelligenceStreamStoryLedger(path)
+    story_ledger.append_transition(
+        root_observation,
+        root_state,
+        root_change,
+    )
+
+    policy = build_stream_analytical_policy()
+    root_view = compose_stream_analytical_view(
+        policy,
+        issuance.fact_bundle,
+        root_state,
+        root_change,
+        message=issuance.message_input,
+    )
+    analytical_ledger = IntelligenceStreamAnalyticalLedger(path)
+    assert (
+        analytical_ledger.append_view(root_view)
+        is StreamAnalyticalLedgerWriteDisposition.INSERTED
+    )
+    assert (
+        analytical_ledger.append_view(root_view)
+        is StreamAnalyticalLedgerWriteDisposition.UNCHANGED
+    )
+
+    resolution = _resolution(
+        forecast,
+        evaluated_at_ms=15_400_000,
+        seed="analytical-ledger",
+    )
+    resolution_feed_event = build_live_intelligence_feed_event(
+        proof,
+        forecast,
+        resolution=resolution,
+    )
+    resolved = project_forecast_resolution(
+        activation,
+        context,
+        forecast,
+        proof,
+        resolution_feed_event,
+        resolution,
+        issuance_message=issuance.message_input,
+    )
+    source_ledger.append_source_event(resolved.source_event)
+    message_ledger.append_message_bundle(
+        resolved.fact_bundle,
+        resolved.message_input,
+    )
+    resolved_observation = build_story_observation(
+        resolved.message_input,
+        resolved.fact_bundle,
+        previous_state_identity=root_state.state_identity,
+    )
+    resolved_state = build_story_state(
+        resolved_observation,
+        previous_state=root_state,
+    )
+    resolved_change = build_change_set(
+        resolved_state,
+        previous_state=root_state,
+    )
+    story_ledger.append_transition(
+        resolved_observation,
+        resolved_state,
+        resolved_change,
+    )
+    resolved_view = compose_stream_analytical_view(
+        policy,
+        resolved.fact_bundle,
+        resolved_state,
+        resolved_change,
+        message=resolved.message_input,
+    )
+    assert resolved_view.stance.effective_stance is StreamEffectiveStance.RESOLVED
+    assert resolved_view.stance.strength is StreamStanceStrength.NOT_APPLICABLE
+    assert (
+        resolved_view.materiality.disposition
+        is StreamAnalyticalPublicationDisposition.PUBLISH
+    )
+    assert "outcome_changed" in resolved_view.materiality.reason_codes
+    assert (
+        analytical_ledger.append_view(resolved_view)
+        is StreamAnalyticalLedgerWriteDisposition.INSERTED
+    )
+
+    stored = analytical_ledger.read_for_message(
+        resolved.message_input.message_identity
+    )
+    assert stored is not None
+    assert stored["analytical_view_identity"] == resolved_view.analytical_view_identity
+    assert stored["changed_codes"] == ["outcome_changed"]
+    assert stored["story_identity"] == root_view.story_identity
+
+    stored_by_state = analytical_ledger.read_for_state(
+        resolved_state.state_identity
+    )
+    assert stored_by_state is not None
+    assert (
+        stored_by_state["analytical_view_identity"]
+        == resolved_view.analytical_view_identity
+    )
+
+    story = analytical_ledger.read_story(root_view.story_identity)
+    assert len(story) == 2
+    assert story[0]["analytical_view_identity"] == root_view.analytical_view_identity
+    assert story[1]["analytical_view_identity"] == resolved_view.analytical_view_identity
+
+    status = analytical_ledger.read_status()
+    assert status.analytical_view_count == 2
+    assert status.story_count == 1
+    assert status.latest_event_at_ms == 15_400_000
+    assert status.real_capital == 0
+
+
+def test_stream_analytical_composer_rejects_unrelated_story_state() -> None:
+    _, forecast_a, proof_a, context_a, feed_a = _full_bundle(
+        as_of_ms=16_000_000,
+        issued_at_ms=16_000_100,
+        seed="analytical-a",
+    )
+    _, forecast_b, proof_b, context_b, feed_b = _full_bundle(
+        as_of_ms=16_100_000,
+        issued_at_ms=16_100_100,
+        seed="analytical-b",
+    )
+    activation = build_stream_activation_boundary(activated_at_ms=16_000_000)
+    first = project_forecast_issuance(
+        activation,
+        context_a,
+        forecast_a,
+        proof_a,
+        feed_a,
+    )
+    second = project_forecast_issuance(
+        activation,
+        context_b,
+        forecast_b,
+        proof_b,
+        feed_b,
+    )
+    first_observation = build_story_observation(
+        first.message_input,
+        first.fact_bundle,
+    )
+    first_state = build_story_state(first_observation)
+    first_change = build_change_set(first_state)
+    policy = build_stream_analytical_policy()
+
+    with pytest.raises(ValueError, match="state/fact story mismatch"):
+        compose_stream_analytical_view(
+            policy,
+            second.fact_bundle,
+            first_state,
+            first_change,
+            message=second.message_input,
+        )
+
+
+def test_stream_analytical_view_can_persist_before_message_publication(tmp_path) -> None:
+    _, forecast, proof, context, feed_event = _full_bundle(
+        as_of_ms=16_500_000,
+        issued_at_ms=16_500_100,
+        seed="analytical-prepublication",
+    )
+    activation = build_stream_activation_boundary(activated_at_ms=16_500_000)
+    issuance = project_forecast_issuance(
+        activation,
+        context,
+        forecast,
+        proof,
+        feed_event,
+    )
+    path = tmp_path / "stream-analytical-prepublication.sqlite3"
+    source_ledger = IntelligenceStreamLedger(path)
+    source_ledger.append_activation(activation)
+    source_ledger.append_issuance_bundle(context, issuance.source_event)
+
+    message_ledger = IntelligenceStreamMessageLedger(path)
+    assert (
+        message_ledger.append_fact_bundle(issuance.fact_bundle)
+        is StreamMessageLedgerWriteDisposition.INSERTED
+    )
+    assert (
+        message_ledger.append_fact_bundle(issuance.fact_bundle)
+        is StreamMessageLedgerWriteDisposition.UNCHANGED
+    )
+
+    observation = build_story_observation_snapshot(
+        story_identity=issuance.fact_bundle.story_identity,
+        source_event_identity=issuance.fact_bundle.source_event_identity,
+        stream_event_identity=issuance.fact_bundle.stream_event_identity,
+        message_identity=None,
+        previous_state_identity=None,
+        asset=issuance.fact_bundle.asset,
+        symbol=issuance.fact_bundle.symbol,
+        timeframe=issuance.fact_bundle.timeframe,
+        event_at_ms=issuance.fact_bundle.event_at_ms,
+        decision_state=issuance.fact_bundle.decision_state,
+        direction=issuance.fact_bundle.direction,
+        support_score_0_100=issuance.fact_bundle.confluence_support_score_0_100,
+        opposition_score_0_100=issuance.fact_bundle.confluence_opposition_score_0_100,
+        family_contributions=issuance.fact_bundle.family_contributions,
+        event_risk_state=issuance.fact_bundle.event_context_state,
+        trigger_state=None,
+        capital_reference_identities=(),
+        outcome_state=None,
+    )
+    state = build_story_state(observation)
+    change = build_change_set(state)
+    story_ledger = IntelligenceStreamStoryLedger(path)
+    story_ledger.append_transition(observation, state, change)
+
+    view = compose_stream_analytical_view(
+        build_stream_analytical_policy(),
+        issuance.fact_bundle,
+        state,
+        change,
+    )
+    assert view.source_message_identity is None
+    assert (
+        view.materiality.disposition
+        is StreamAnalyticalPublicationDisposition.PUBLISH
+    )
+
+    analytical_ledger = IntelligenceStreamAnalyticalLedger(path)
+    assert (
+        analytical_ledger.append_view(view)
+        is StreamAnalyticalLedgerWriteDisposition.INSERTED
+    )
+    stored = analytical_ledger.read_for_state(state.state_identity)
+    assert stored is not None
+    assert stored["source_message_identity"] is None
+
+    assert (
+        message_ledger.append_message_bundle(
+            issuance.fact_bundle,
+            issuance.message_input,
+        )
+        is StreamMessageLedgerWriteDisposition.INSERTED
+    )
+    assert (
+        analytical_ledger.read_for_state(state.state_identity)
+        == stored
+    )
+
+
+def test_stream_analytical_ledger_rows_are_physically_immutable(tmp_path) -> None:
+    _, forecast, proof, context, feed_event = _full_bundle(
+        as_of_ms=17_000_000,
+        issued_at_ms=17_000_100,
+        seed="analytical-immutable",
+    )
+    activation = build_stream_activation_boundary(activated_at_ms=17_000_000)
+    issuance = project_forecast_issuance(
+        activation,
+        context,
+        forecast,
+        proof,
+        feed_event,
+    )
+    path = tmp_path / "stream-analytical-immutable.sqlite3"
+    source_ledger = IntelligenceStreamLedger(path)
+    source_ledger.append_activation(activation)
+    source_ledger.append_issuance_bundle(context, issuance.source_event)
+    IntelligenceStreamMessageLedger(path).append_message_bundle(
+        issuance.fact_bundle,
+        issuance.message_input,
+    )
+    observation = build_story_observation(
+        issuance.message_input,
+        issuance.fact_bundle,
+    )
+    state = build_story_state(observation)
+    change = build_change_set(state)
+    IntelligenceStreamStoryLedger(path).append_transition(
+        observation,
+        state,
+        change,
+    )
+    view = compose_stream_analytical_view(
+        build_stream_analytical_policy(),
+        issuance.fact_bundle,
+        state,
+        change,
+        message=issuance.message_input,
+    )
+    ledger = IntelligenceStreamAnalyticalLedger(path)
+    ledger.append_view(view)
+
+    with (
+        sqlite3.connect(path) as connection,
+        pytest.raises(
+            sqlite3.DatabaseError,
+            match="immutable intelligence stream analytical ledger",
+        ),
+    ):
+        connection.execute(
+            "UPDATE stream_analytical_views SET event_at_ms = 99999999"
+        )
+
+
+def test_query_only_analytical_reads_never_initialize_missing_database(tmp_path) -> None:
+    path = tmp_path / "missing-stream-analytical.sqlite3"
+    ledger = IntelligenceStreamAnalyticalLedger(path)
+
+    with pytest.raises(FileNotFoundError):
+        ledger.read_status()
+    assert not path.exists()

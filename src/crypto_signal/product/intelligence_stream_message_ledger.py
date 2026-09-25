@@ -149,6 +149,121 @@ class IntelligenceStreamMessageLedger:
                         """
                     )
 
+    def append_fact_bundle(
+        self,
+        fact_bundle: StreamFactBundle,
+    ) -> StreamMessageLedgerWriteDisposition:
+        """Persist canonical facts before a publication/message decision exists."""
+        self.initialize()
+        fact_json = canonical_json(fact_bundle)
+        fact_digest = sha256_text(fact_json)
+
+        with closing(sqlite3.connect(self.path)) as connection:
+            connection.execute("PRAGMA foreign_keys=ON")
+            connection.execute("BEGIN IMMEDIATE")
+            self._verify_meta(connection)
+
+            source_row = connection.execute(
+                """
+                SELECT source_event_identity, event_at_ms
+                FROM stream_source_events
+                WHERE stream_event_identity = ?
+                """,
+                (fact_bundle.stream_event_identity,),
+            ).fetchone()
+            if source_row is None:
+                raise StreamMessageLedgerConflictError(
+                    "Stream fact bundle references unknown source event"
+                )
+            if str(source_row[0]) != fact_bundle.source_event_identity:
+                raise StreamMessageLedgerConflictError(
+                    "Stream fact/source-event identity mismatch"
+                )
+            if int(str(source_row[1])) != fact_bundle.event_at_ms:
+                raise StreamMessageLedgerConflictError(
+                    "Stream fact/source-event time mismatch"
+                )
+
+            context_row = connection.execute(
+                """
+                SELECT 1 FROM stream_decision_contexts
+                WHERE context_identity = ?
+                """,
+                (fact_bundle.decision_context_identity,),
+            ).fetchone()
+            if context_row is None:
+                raise StreamMessageLedgerConflictError(
+                    "Stream fact bundle references unknown decision context"
+                )
+
+            existing = connection.execute(
+                """
+                SELECT fact_bundle_identity, payload_json, payload_sha256
+                FROM stream_fact_bundles
+                WHERE fact_bundle_identity = ?
+                   OR stream_event_identity = ?
+                   OR source_event_identity = ?
+                LIMIT 1
+                """,
+                (
+                    fact_bundle.fact_bundle_identity,
+                    fact_bundle.stream_event_identity,
+                    fact_bundle.source_event_identity,
+                ),
+            ).fetchone()
+            if existing is not None:
+                exact = (
+                    str(existing[0]) == fact_bundle.fact_bundle_identity
+                    and str(existing[1]) == fact_json
+                    and str(existing[2]) == fact_digest
+                )
+                if exact:
+                    return StreamMessageLedgerWriteDisposition.UNCHANGED
+                raise StreamMessageLedgerConflictError(
+                    "immutable Stream fact-bundle conflict"
+                )
+
+            last_fact = connection.execute(
+                """
+                SELECT event_at_ms, stream_event_identity
+                FROM stream_fact_bundles
+                ORDER BY event_at_ms DESC, stream_event_identity DESC
+                LIMIT 1
+                """
+            ).fetchone()
+            if last_fact is not None and (
+                fact_bundle.event_at_ms,
+                fact_bundle.stream_event_identity,
+            ) <= (int(str(last_fact[0])), str(last_fact[1])):
+                raise StreamMessageLedgerConflictError(
+                    "Stream fact-bundle append would backfill or fork chronology"
+                )
+
+            connection.execute(
+                """
+                INSERT INTO stream_fact_bundles (
+                    fact_bundle_identity,
+                    stream_event_identity,
+                    source_event_identity,
+                    story_identity,
+                    event_at_ms,
+                    payload_json,
+                    payload_sha256
+                ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    fact_bundle.fact_bundle_identity,
+                    fact_bundle.stream_event_identity,
+                    fact_bundle.source_event_identity,
+                    fact_bundle.story_identity,
+                    fact_bundle.event_at_ms,
+                    fact_json,
+                    fact_digest,
+                ),
+            )
+            connection.commit()
+        return StreamMessageLedgerWriteDisposition.INSERTED
+
     def append_message_bundle(
         self,
         fact_bundle: StreamFactBundle,
@@ -258,27 +373,31 @@ class IntelligenceStreamMessageLedger:
                 ),
             ).fetchone()
 
-            present = (existing_fact is not None, existing_message is not None)
-            if any(present):
-                if not all(present):
-                    raise StreamMessageLedgerConflictError(
-                        "partial immutable Stream message bundle already exists"
-                    )
-                assert existing_fact is not None
-                assert existing_message is not None
-                exact = (
+            if existing_fact is not None:
+                fact_exact = (
                     str(existing_fact[0]) == fact_bundle.fact_bundle_identity
                     and str(existing_fact[1]) == fact_json
                     and str(existing_fact[2]) == fact_digest
-                    and str(existing_message[0]) == message.message_identity
+                )
+                if not fact_exact:
+                    raise StreamMessageLedgerConflictError(
+                        "immutable Stream fact-bundle conflict"
+                    )
+            if existing_message is not None:
+                message_exact = (
+                    str(existing_message[0]) == message.message_identity
                     and str(existing_message[1]) == message_json
                     and str(existing_message[2]) == message_digest
                 )
-                if exact:
-                    return StreamMessageLedgerWriteDisposition.UNCHANGED
-                raise StreamMessageLedgerConflictError(
-                    "immutable Stream message projection conflict"
-                )
+                if not message_exact:
+                    raise StreamMessageLedgerConflictError(
+                        "immutable Stream message projection conflict"
+                    )
+                if existing_fact is None:
+                    raise StreamMessageLedgerConflictError(
+                        "Stream message exists without canonical fact bundle"
+                    )
+                return StreamMessageLedgerWriteDisposition.UNCHANGED
 
             last_message = connection.execute(
                 """
@@ -296,28 +415,29 @@ class IntelligenceStreamMessageLedger:
                     "Stream message append would backfill or fork chronology"
                 )
 
-            connection.execute(
-                """
-                INSERT INTO stream_fact_bundles (
-                    fact_bundle_identity,
-                    stream_event_identity,
-                    source_event_identity,
-                    story_identity,
-                    event_at_ms,
-                    payload_json,
-                    payload_sha256
-                ) VALUES (?, ?, ?, ?, ?, ?, ?)
-                """,
-                (
-                    fact_bundle.fact_bundle_identity,
-                    fact_bundle.stream_event_identity,
-                    fact_bundle.source_event_identity,
-                    fact_bundle.story_identity,
-                    fact_bundle.event_at_ms,
-                    fact_json,
-                    fact_digest,
-                ),
-            )
+            if existing_fact is None:
+                connection.execute(
+                    """
+                    INSERT INTO stream_fact_bundles (
+                        fact_bundle_identity,
+                        stream_event_identity,
+                        source_event_identity,
+                        story_identity,
+                        event_at_ms,
+                        payload_json,
+                        payload_sha256
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        fact_bundle.fact_bundle_identity,
+                        fact_bundle.stream_event_identity,
+                        fact_bundle.source_event_identity,
+                        fact_bundle.story_identity,
+                        fact_bundle.event_at_ms,
+                        fact_json,
+                        fact_digest,
+                    ),
+                )
             connection.execute(
                 """
                 INSERT INTO stream_message_inputs (
