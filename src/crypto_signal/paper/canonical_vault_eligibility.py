@@ -32,6 +32,7 @@ class CanonicalVaultEligibilityProof:
     allocator_candidate_identity: str
     vault_id: PaperVaultId
     asset: str
+    source_timeframe: str
     candidate_as_of_ms: int
     assessed_at_ms: int
     starting_budget_usdt: Decimal
@@ -69,6 +70,8 @@ class CanonicalVaultEligibilityProof:
             raise TypeError("S11 vault eligibility proof requires canonical vault")
         if not self.asset or self.asset != self.asset.upper():
             raise ValueError("S11 vault eligibility asset must be uppercase")
+        if not self.source_timeframe.strip():
+            raise ValueError("S11 vault eligibility source timeframe must be non-empty")
         if min(self.candidate_as_of_ms, self.assessed_at_ms) < 0:
             raise ValueError("S11 vault eligibility timestamps must be non-negative")
         if self.assessed_at_ms < self.candidate_as_of_ms:
@@ -197,6 +200,13 @@ def promote_vault_eligibility(
         and candidate.tactical_microstructure is not None
         else None
     )
+    source_timeframe = (
+        tactical_timeframe
+        if tactical_timeframe is not None
+        else candidate.confluence.timeframe
+        if candidate.confluence is not None
+        else "event"
+    )
     payload = {
         "allocator_assessment_identity": assessment.assessment_identity,
         "allocator_candidate_identity": candidate.candidate_identity,
@@ -214,6 +224,7 @@ def promote_vault_eligibility(
         "proof_version": S11_VAULT_ELIGIBILITY_VERSION,
         "real_capital": REAL_CAPITAL,
         "recovery_evidence_identity": envelope.recovery_evidence_identity,
+        "source_timeframe": source_timeframe,
         "starting_budget_usdt": envelope.starting_budget_usdt,
         "tactical_evidence_identity": envelope.tactical_evidence_identity,
         "tactical_timeframe": tactical_timeframe,
@@ -226,6 +237,7 @@ def promote_vault_eligibility(
         allocator_candidate_identity=candidate.candidate_identity,
         vault_id=vault_id,
         asset=candidate.asset,
+        source_timeframe=source_timeframe,
         candidate_as_of_ms=candidate.as_of_ms,
         assessed_at_ms=assessment.assessed_at_ms,
         starting_budget_usdt=envelope.starting_budget_usdt,
@@ -259,6 +271,7 @@ def _proof_payload(value: CanonicalVaultEligibilityProof) -> dict[str, object]:
         "proof_version": value.proof_version,
         "real_capital": value.real_capital,
         "recovery_evidence_identity": value.recovery_evidence_identity,
+        "source_timeframe": value.source_timeframe,
         "starting_budget_usdt": value.starting_budget_usdt,
         "tactical_evidence_identity": value.tactical_evidence_identity,
         "tactical_timeframe": value.tactical_timeframe,
