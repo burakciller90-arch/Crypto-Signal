@@ -19,8 +19,8 @@ def test_stream_preview_is_isolated_from_production_root(tmp_path: Path) -> None
     assert root.status_code == 200
     assert preview.status_code == 200
     assert 'data-ui-version="galactech-v2-intelligence-first-tr"' in root.text
-    assert 'data-ui-version="crypto-signal-stream-v1-s7"' in preview.text
-    assert 'data-ui-version="crypto-signal-stream-v1-s7"' not in root.text
+    assert 'data-ui-version="crypto-signal-stream-v1-s8"' in preview.text
+    assert 'data-ui-version="crypto-signal-stream-v1-s8"' not in root.text
 
 
 def test_stream_preview_obeys_one_panel_contract() -> None:
@@ -71,15 +71,39 @@ def test_stream_fixture_mode_is_explicitly_non_live_truth() -> None:
     assert "applyFixture(state.fixture)" in script
 
 
-def test_stream_s7_does_not_enable_sound_or_message_expansion() -> None:
+def test_stream_s8_expands_supported_depth_inline_and_preserves_anchor() -> None:
+    script = (STREAM_DIR / "app.js").read_text(encoding="utf-8")
+
+    assert "/detail" in script
+    assert "buildExpandedContent" in script
+    assert "preserveMessageAnchor" in script
+    assert "toggleMessageExpansion" in script
+    assert "SIMPLE" in script
+    assert "PRO" in script
+    assert "INTELLIGENCE" in script
+    assert "DECISION" in script
+    assert "TRADE GEOMETRY" in script
+    assert "CAPITAL" in script
+    assert "PROOF" in script
+    assert "family_contributions" in script
+    assert "trigger_zone" in script
+    assert "target_zone" in script
+    assert "invalidation_price" in script
+    assert "/api/decision-proof/forecast/" in script
+
+
+def test_stream_s8_does_not_jump_to_s9_or_s13() -> None:
     html = (STREAM_DIR / "index.html").read_text(encoding="utf-8")
     script = (STREAM_DIR / "app.js").read_text(encoding="utf-8")
 
     assert "S13’te etkinleşecek" in html
-    assert "expanded-message" not in html
     assert "new Audio(" not in script
     assert "AudioContext" not in script
     assert "Notification.requestPermission" not in script
+    assert "dragstart" not in script
+    assert "pointermove" not in script
+    assert "resizeHandle" not in script
+    assert "window.open(" not in script
 
 
 def test_stream_preview_static_assets_exist_and_are_light_first() -> None:
