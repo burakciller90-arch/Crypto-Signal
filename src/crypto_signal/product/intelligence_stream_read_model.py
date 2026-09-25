@@ -541,6 +541,24 @@ class IntelligenceStreamReadModel:
                         """,
                         (narrative_identity,),
                     ).fetchone()
+                capital_lifecycle_row = None
+                if (
+                    capital_row is None
+                    and capital_decision_row is None
+                    and capital_sizing_row is None
+                    and self._table_exists(
+                        connection,
+                        "stream_capital_lifecycle_messages",
+                    )
+                ):
+                    capital_lifecycle_row = connection.execute(
+                        """
+                        SELECT narrative_identity, event_at_ms, payload_json, payload_sha256
+                        FROM stream_capital_lifecycle_messages
+                        WHERE narrative_identity = ?
+                        """,
+                        (narrative_identity,),
+                    ).fetchone()
             if capital_row is not None:
                 capital = self._verified_capital_record(
                     narrative_identity=str(capital_row[0]),
