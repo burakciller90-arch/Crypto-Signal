@@ -355,8 +355,12 @@ def build_tape_intent(
             raise ValueError("R22 sizing result lacks hypothetical notional")
         if decision.quantity is None or decision.reference_price is None:
             raise ValueError("R22 trade decision requires quantity and reference price")
-        if decision.quantity * decision.reference_price > sizing_result.hypothetical_notional_usdt:
-            raise ValueError("R22 paper decision exceeds traced sizing envelope")
+        if (
+            action is PaperAction.BUY
+            and decision.quantity * decision.reference_price
+            > sizing_result.hypothetical_notional_usdt
+        ):
+            raise ValueError("R22 BUY decision exceeds traced sizing envelope")
         policy_identity = sizing_assessment.policy_identity
         symbol = decision.symbol
         quantity = decision.quantity
