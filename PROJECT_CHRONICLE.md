@@ -1,5 +1,17 @@
 # PROJECT CHRONICLE
 
+## 2026-09-25 — Stream S6 realtime backend accepted; S7 One-Panel UI Shell becomes active
+
+S6 now carries the immutable S5 narrative history into a messaging-grade delivery contract without turning the browser into a source of truth.
+
+PR #1274 added the read model: stable keyset cursors over event time + narrative identity, older-history pagination, reconnect/catch-up pagination, exact lookup, query filtering/full-text search and polling fallback. Exact-head UID504 run `36165298510` passed focused pytest/Ruff/strict mypy, full repository regression and Development checkout non-mutation.
+
+PR #1275 added live Server-Sent Events. Each message is emitted with its exact opaque Stream cursor as SSE `id`; browser `Last-Event-ID` reconnect and explicit `after` cursors resume from the furthest safe boundary, never move backwards and do not replay already-delivered messages. Empty sessions use a deterministic origin cursor, first connect tails current history, heartbeat/retry framing is present, and the same filter contract remains available. Exact-head UID504 run `36167138486` passed the same acceptance stack.
+
+PR #1276 was closed as stale/duplicate because PR #1275 had already merged the same accepted implementation head.
+
+The active frontier is S7 One-Panel UI Shell. The UI must remain one messaging-first surface; the superseded multi-screen dashboard architecture must not return.
+
 ## 2026-09-25 — Stream S5 Narrative Engine accepted; S6 Real-time Stream Backend becomes active
 
 S5 now turns the accepted S4 Analytical View into fact-safe Turkish analyst language without making prose the source of market truth.
