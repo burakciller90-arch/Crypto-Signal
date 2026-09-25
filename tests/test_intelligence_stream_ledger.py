@@ -2262,7 +2262,7 @@ def test_stream_narrative_story_outcome_references_previous_expectation(tmp_path
         activation,
         forecast,
         proof,
-        _,
+        context,
         issuance,
         root_state,
         _,
@@ -2292,11 +2292,7 @@ def test_stream_narrative_story_outcome_references_previous_expectation(tmp_path
     )
     resolved = project_forecast_resolution(
         activation,
-        build_stream_decision_context(
-            forecast,
-            proof,
-            _confluence(as_of_ms=20_000_000, seed="narrative-outcome"),
-        ),
+        context,
         forecast,
         proof,
         resolved_event,
