@@ -14,6 +14,9 @@ from pathlib import Path
 
 from crypto_signal.forecast_stream import ImmutableForecast
 from crypto_signal.paper.canonical_sizing import CanonicalPaperSizingSelection
+from crypto_signal.paper.canonical_vault_eligibility import (
+    CanonicalVaultEligibilityProof,
+)
 from crypto_signal.paper.epoch2_accounting import (
     Epoch2CanonicalLedger,
     Epoch2ConsolidatedAccountingSnapshot,
@@ -112,6 +115,7 @@ def commit_canonical_paper_buy(
     proof: DecisionProofSnapshot,
     sizing_assessment: PositionSizingAssessment,
     sizing_selection: CanonicalPaperSizingSelection,
+    eligibility_proof: CanonicalVaultEligibilityProof,
     symbol: PaperSymbol,
     reference_price: Decimal,
     reference_price_evidence_identity: str,
@@ -138,6 +142,7 @@ def commit_canonical_paper_buy(
         proof=proof,
         sizing_assessment=sizing_assessment,
         sizing_selection=sizing_selection,
+        eligibility_proof=eligibility_proof,
         symbol=symbol,
         reference_price=reference_price,
         execution_snapshot=execution_snapshot,
@@ -205,6 +210,8 @@ def commit_canonical_paper_buy(
         sorted(
             {
                 sizing_selection.selection_identity,
+                eligibility_proof.proof_identity,
+                eligibility_proof.allocator_assessment_identity,
                 reference_price_evidence_identity,
                 mark_evidence_identity,
                 execution_snapshot.snapshot_identity,
@@ -275,6 +282,8 @@ def commit_canonical_paper_buy(
                 reference_price_evidence_identity,
                 execution_snapshot.snapshot_identity,
                 sizing_selection.selection_identity,
+                eligibility_proof.proof_identity,
+                eligibility_proof.allocator_assessment_identity,
             }
         )
     )
@@ -354,6 +363,7 @@ def _validate_trade_lineage(
     proof: DecisionProofSnapshot,
     sizing_assessment: PositionSizingAssessment,
     sizing_selection: CanonicalPaperSizingSelection,
+    eligibility_proof: CanonicalVaultEligibilityProof,
     symbol: PaperSymbol,
     reference_price: Decimal,
     execution_snapshot: FrozenExecutionSnapshot,
@@ -364,6 +374,32 @@ def _validate_trade_lineage(
 ) -> None:
     if sizing_selection.current_vault_snapshot_identity != current.snapshot_identity:
         raise ValueError("S11 sizing selection is stale against current vault")
+    if eligibility_proof.vault_id is not current.vault_id:
+        raise ValueError("S11 allocator eligibility proof vault mismatch")
+    if (
+        eligibility_proof.allocator_candidate_identity
+        != sizing_selection.allocator_candidate_identity
+        or eligibility_proof.allocator_candidate_identity
+        != sizing_assessment.allocator_candidate_identity
+    ):
+        raise ValueError("S11 allocator eligibility/sizing candidate mismatch")
+    if (
+        eligibility_proof.starting_budget_usdt
+        != sizing_assessment.allocator_vault_starting_budget_usdt
+        or eligibility_proof.starting_budget_usdt != current.starting_cash_usdt
+    ):
+        raise ValueError("S11 allocator eligibility/vault budget mismatch")
+    if not eligibility_proof.canonical_paper_execution_eligible:
+        raise ValueError("S11 allocator eligibility proof is not executable")
+    if eligibility_proof.assessed_at_ms > sizing_selection.selected_at_ms:
+        raise ValueError("S11 sizing selection predates allocator eligibility")
+    if eligibility_proof.asset != symbol.value:
+        raise ValueError("S11 allocator eligibility asset/symbol mismatch")
+    if eligibility_proof.vault_id is PaperVaultId.TACTICAL:
+        if eligibility_proof.tactical_timeframe != forecast.timeframe:
+            raise ValueError(
+                "S11 Tactical execution requires exact 1m/5m eligibility timeframe"
+            )
     if sizing_selection.vault_id is not current.vault_id:
         raise ValueError("S11 sizing selection vault mismatch")
     if sizing_assessment.assessment_identity != sizing_selection.sizing_assessment_identity:
