@@ -25,6 +25,37 @@ The product is not considered ready to broaden into more screens until Intellige
 
 Repository-wide scientific, point-in-time, evidence, persistence, paper-capital and REAL_CAPITAL safety boundaries remain binding.
 
+## 0.1 Locked user product decisions
+
+These decisions are already made and must not be re-opened during ordinary implementation:
+
+- V1 has **one primary panel only**;
+- the primary surface is a Telegram/WhatsApp-like live Intelligence Stream;
+- no other main tabs/screens are built before Stream V1 is accepted;
+- normal feed messages are short and show primarily the first analytical paragraph;
+- clicking a message expands deeper SIMPLE / PRO / INTELLIGENCE / DECISION / geometry / CAPITAL / PROOF content;
+- technical evidence and score components are clickable;
+- evidence opens in movable/resizable Mac-like windows without leaving the stream;
+- supported proof windows can detach to another browser window/monitor;
+- the system writes original Turkish in a consistent trader/analyst voice from canonical facts and story history;
+- the system can explain its current view, what changed, what it is waiting for, what would change its view and what virtual capital did;
+- new real messages arrive automatically;
+- a configurable original short notification chime accompanies eligible new messages;
+- messages are backend-persistent, append-only and never silently deleted/revised;
+- older history is reached by scrolling upward;
+- the default experience is one mixed chronological stream;
+- search/filter is a temporary discovery tool, not separate navigation;
+- BTC / ETH / SOL, message category, timeframe, vault, evidence domain, state, importance, date and full-text filtering are supported targets;
+- five-family intelligence and three-vault paper-capital behavior are surfaced through the stream;
+- future standalone screens are a later decision after Stream V1 is finished.
+
+## 0.2 Current execution frontier
+
+- **S0 Authority Freeze: PASS** after this supersession package is merged.
+- **S1 Stream-only Backend Capability Audit: ACTIVE NEXT FRONTIER**.
+- Do not begin broad UI implementation before S1 has mapped exact source/evidence/message contracts needed by the stream.
+- The deployed GALACTECH V2 surface remains production fallback until S16 controlled cutover.
+
 ---
 
 # 1. Product thesis
