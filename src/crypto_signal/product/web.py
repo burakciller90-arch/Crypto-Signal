@@ -3,11 +3,12 @@ from __future__ import annotations
 import os
 import sqlite3
 import time
+from collections.abc import AsyncIterator
 from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI, HTTPException, Query
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi import FastAPI, Header, HTTPException, Query, Response
+from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
 from crypto_signal.decision_ledger import (
@@ -50,6 +51,10 @@ from crypto_signal.product.intelligence_stream_read_model import (
     StreamMessageQuery,
     StreamReadModelError,
     decode_stream_cursor,
+    encode_stream_cursor,
+)
+from crypto_signal.product.intelligence_stream_realtime import (
+    IntelligenceStreamRealtime,
 )
 from crypto_signal.product.market_tape_runtime import (
     read_cold_archive_runtime_truth,
@@ -719,6 +724,74 @@ def create_app(
                 "read_only": True,
                 "real_capital": 0,
             }
+        )
+
+    @app.get(
+        "/api/stream/live",
+        response_class=StreamingResponse,
+        response_model=None,
+    )
+    def stream_live(
+        after: str | None = Query(default=None, max_length=512),
+        last_event_id: str | None = Header(
+            default=None,
+            alias="Last-Event-ID",
+            max_length=512,
+        ),
+    ) -> Response:
+        if selected_stream_path is None or not selected_stream_path.exists():
+            return _json(
+                {
+                    "status": "unavailable",
+                    "reason": "intelligence_stream_runtime_not_configured",
+                    "transport": "sse",
+                    "read_only": True,
+                    "real_capital": 0,
+                },
+                status_code=503,
+            )
+
+        try:
+            normalized_after = (
+                None
+                if after is None
+                else encode_stream_cursor(decode_stream_cursor(after))
+            )
+            normalized_last_event = (
+                None
+                if last_event_id is None
+                else encode_stream_cursor(
+                    decode_stream_cursor(last_event_id)
+                )
+            )
+            if (
+                normalized_after is not None
+                and normalized_last_event is not None
+                and normalized_after != normalized_last_event
+            ):
+                raise ValueError(
+                    "after cursor and Last-Event-ID must reference the same position"
+                )
+            resume_cursor = normalized_after or normalized_last_event
+            realtime = IntelligenceStreamRealtime(selected_stream_path)
+            start_cursor = realtime.resolve_start_cursor(resume_cursor)
+        except (StreamReadModelError, ValueError) as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+        async def event_body() -> AsyncIterator[str]:
+            async for chunk in realtime.sse_events(
+                resume_cursor=start_cursor,
+            ):
+                yield chunk
+
+        return StreamingResponse(
+            event_body(),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache, no-transform",
+                "Connection": "keep-alive",
+                "X-Accel-Buffering": "no",
+            },
         )
 
     @app.get("/api/stream/messages/{narrative_identity}")
