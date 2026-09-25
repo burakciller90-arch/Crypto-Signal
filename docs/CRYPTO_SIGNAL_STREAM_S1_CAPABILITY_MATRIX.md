@@ -334,7 +334,19 @@ For Stream V1:
 
 Code acceptance alone is insufficient for Stream V1.
 
-GitHub tooling available to the project can expose workflow artifacts, so later UI phases must add deterministic screenshot artifacts (for example through browser acceptance/Playwright) for visual review.
+This capability is **already materially implemented and must be reused** rather than rebuilt.
+
+Current-main evidence:
+- `.github/workflows/crypto-mac-command.yml` has the allowlisted `visualsnapshot` command;
+- job `GALACTECH VISUAL SNAPSHOT UID504` captures the live local Product surface at `http://127.0.0.1:48700`;
+- Chrome/Chromium-family headless capture is preferred, with Safari fallback;
+- current headless viewports are desktop 1440x950 and mobile 430x860;
+- PNGs + health/metadata are uploaded as a GitHub Actions artifact;
+- exact Product HEAD, read-only state and REAL_CAPITAL=0 are recorded;
+- hard browser timeout/process-group cleanup/renderer limits are already present;
+- UID501 has an existing narrow bridge command `visualcleanup504` that can clean UID504 headless browser processes.
+
+Therefore the Stream gap is **not screenshot infrastructure creation**. The gap is to extend the accepted visualsnapshot path with Stream-specific deterministic states, preview routing/fixtures and the additional viewport/state matrix below.
 
 Required future screenshot states:
 - empty/new-user stream;
@@ -368,7 +380,7 @@ The assistant cannot directly view the user’s local `127.0.0.1` screen without
 - full on-chain/exchange-flow/wallet live runtime remains to be traced;
 - capital accounting/tape primitives are stronger than the current Product projection;
 - canonical three-vault forward runtime remains incomplete;
-- screenshot-artifact visual acceptance is feasible through CI and should be mandatory during UI stages.
+- existing UID504 Chromium screenshot-artifact acceptance is reusable; Stream-specific fixture/state coverage must be added and should remain mandatory during UI stages.
 
 ### Still required before S1 PASS
 - exact identity graph across Stream source families;

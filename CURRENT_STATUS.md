@@ -9,6 +9,28 @@ REAL_CAPITAL: 0
 
 ## Active v1.1 frontier — read before historical sections
 
+### 2026-09-25 17:24 +0300 — EXISTING UID504 CHROMIUM VISUAL-SNAPSHOT INFRASTRUCTURE REDISCOVERED / STREAM PLAN CORRECTED
+
+A follow-up repository/history audit corrected one Wave-1 assumption: browser screenshot artifact infrastructure is **not new work**.
+
+Current main already contains:
+- allowlisted `visualsnapshot` in `.github/workflows/crypto-mac-command.yml`;
+- `GALACTECH VISUAL SNAPSHOT UID504`, targeting the local Product surface on port 48700;
+- installed Chrome/Chromium-family detection and `--headless=new` capture;
+- current desktop 1440x950 + mobile 430x860 PNG capture;
+- `actions/upload-artifact@v4` artifact upload with exact Product/read-only/REAL_CAPITAL metadata;
+- bounded 30-second browser timeout, process-group kill, renderer-process-limit=2 and exit cleanup;
+- Safari fallback.
+
+Historical commits confirm the evolution:
+- PR #1223 / commit `15943723...` introduced rendered Safari snapshot artifact capture;
+- PR #1230 / commit `fa7cab27...` changed the preferred backend to Chrome/Chromium-family headless capture;
+- commit `84204c46...` added hard browser limits/emergency cleanup after headless resource pressure.
+
+UID501's role is maintenance/administration rather than primary capture: `.github/workflows/crypto-mac-uid501.yml` contains `visualcleanup504`, which uses the narrow UID501->UID504 bridge to terminate stale UID504 headless browser processes.
+
+Accordingly Stream S7-S16 will **reuse and extend** this existing path for Stream fixtures/states. It will not introduce a redundant screenshot stack.
+
 ### 2026-09-25 16:58 +0300 — STREAM S1 AUDIT WAVE 1 STARTED / VISUAL ACCEPTANCE CONTRACT ADDED
 
 S1 has begun mechanically against current main.

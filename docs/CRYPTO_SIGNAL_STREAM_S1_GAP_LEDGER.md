@@ -46,7 +46,7 @@ Classification:
 | S1-G028 | Notification chime/settings | not implemented | original sound + unlock/volume/mode/persistence; replay must be silent | UI | S13 |
 | S1-G029 | Unread/new-message behavior | current polling feed does not implement messaging UX | bottom anchor + N-new control + no forced scroll | UI | S7 |
 | S1-G030 | Long-session feed performance | current UI not designed as all-day message stream | virtualization/reverse pagination/memory/reconnect tests | UI/ACCEPTANCE | S14 |
-| S1-G031 | Visual screenshot acceptance | code tests cannot prove rendered UX | CI preview/browser screenshots as artifacts + visual review at key states/viewports | ACCEPTANCE | S7-S16 |
+| S1-G031 | Stream visual-snapshot coverage | existing UID504 `visualsnapshot` already captures Chromium-family desktop/mobile PNG artifacts; UID501 already provides `visualcleanup504` maintenance | reuse/extend existing capture path for deterministic Stream states, additional viewports, exact-message/evidence-window fixtures and review gates; do **not** build a second screenshot stack | ADAPT/ACCEPTANCE | S7-S16 |
 | S1-G032 | Detached proof / second-monitor workflow | not implemented | browser pop-out window tied to exact message/evidence identity | UI | S9-S10 |
 | S1-G033 | Historical activation boundary | old feed contains issuance/resolution but not rich story events | define forward activation boundary; do not synthesize rich history with future knowledge | BUILD | S2/S6 |
 | S1-G034 | Message materiality policy | no general customer-message threshold | versioned rules deciding what deserves a message vs silent state update | BUILD | S2-S4 |

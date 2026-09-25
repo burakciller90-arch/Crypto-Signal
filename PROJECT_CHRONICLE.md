@@ -1,5 +1,17 @@
 # PROJECT CHRONICLE
 
+## 2026-09-25 — Existing Chromium visual-snapshot pipeline rediscovered and adopted for Stream V1
+
+A repository/history review triggered by the user recovered an already-built visual QA path that the initial Stream S1 notes had described too generically as future infrastructure.
+
+The current repository still carries the `visualsnapshot` command in `.github/workflows/crypto-mac-command.yml`. Its primary capture job runs on UID504, opens the local Product at port 48700 through an installed Chrome/Chromium-family binary using `--headless=new`, captures desktop/mobile PNGs and uploads them as GitHub Actions artifacts together with exact Product/read-only/REAL_CAPITAL metadata. Safari remains a fallback.
+
+The path was not merely planned. PR #1223 introduced the rendered screenshot artifact command; PR #1230 moved preferred capture to a Chromium-family headless backend after Safari Automation permission failures; later hardening added a 30-second browser timeout, process-group kill, renderer-process-limit=2 and cleanup because a headless capture had created resource pressure.
+
+UID501 is already part of the operational safety path: its command bridge contains `visualcleanup504`, which can clean UID504 headless processes through the accepted narrow UID501->UID504 maintenance bridge.
+
+Stream V1 therefore reuses this infrastructure. Future UI work extends its state/fixture/viewpoint coverage rather than creating a second browser-screenshot framework.
+
 ## 2026-09-25 — Stream S1 begins with backend-to-message capability audit
 
 The first implementation frontier under Intelligence Stream V1 is deliberately not visual coding. S1 began by separating six different questions for each capability: does the engine exist, does a live source exist, is PIT evidence persisted, is there a Product read projection, is there a Stream message projection, and is there a UI surface.
