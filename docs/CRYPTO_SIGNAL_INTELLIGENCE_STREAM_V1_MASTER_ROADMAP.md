@@ -1411,6 +1411,38 @@ PASS:
 
 ---
 
+# 40.1 Rendered Visual Acceptance Contract
+
+Beginning with S7, frontend acceptance must include **actual browser-rendered screenshots**, not source-code inspection alone.
+
+Required acceptance mechanism:
+- deterministic UI fixture states rendered in a real browser;
+- screenshots captured as CI/preview artifacts;
+- common desktop/laptop viewports plus mobile sanity view;
+- capture after fonts/layout/data fixture settle;
+- screenshot artifact tied to exact commit/run;
+- visual review checks hierarchy, clipping, scroll behavior, bubble density, expanded-message readability, floating-window overlap/z-order, search/filter state and responsive behavior;
+- critical visual regressions block the relevant UI phase even when unit/contract tests pass.
+
+Minimum screenshot states:
+- empty/initial stream;
+- normal mixed stream;
+- incoming new message;
+- user reading old history with “N yeni mesaj” affordance;
+- expanded message;
+- SIMPLE/PRO/INTELLIGENCE/DECISION/CAPITAL sections;
+- one evidence window;
+- multiple overlapping evidence windows;
+- large frozen proof;
+- search/filter open;
+- settings/sound state;
+- reconnect/degraded-data state;
+- long-history viewport.
+
+User-provided screenshots remain valid direct review inputs. The assistant cannot see a local `127.0.0.1` browser without a supplied image or accessible artifact, so Stream V1 must make render artifacts available during UI acceptance.
+
+---
+
 # 41. Phase S15 — Product Acceptance
 
 The product is not accepted because it looks good.
