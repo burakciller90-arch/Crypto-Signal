@@ -4,10 +4,47 @@ Updated: 2026-09-25
 Project: Crypto Signal
 Baseline: crypto-signal-full-version-v1.0.0 (immutable)
 Active post-v1.0 program: v1.1 world-class product + market intelligence + Crypto Signal Intelligence Stream V1
-State: WC0_LIVE_PRODUCT_PARITY_ACCEPTED / WC1_24_7_DATA_RELIABILITY_ACCEPTED / WC2_ENGINEERING_FROZEN_EVIDENCE_ACCUMULATION_ACTIVE / WC4_CHAMPION_CHALLENGER_ENGINEERING_ACCEPTED_RESEARCH_ONLY / WC5_ENGINEERING_ACCEPTED_PRODUCT_DEPLOYED_HUMAN_USABILITY_NOT_MEASURED / WC6_SANDBOX_BOUNDARY_ACCEPTED_VENUE_EVIDENCE_EXTERNAL_DEPENDENCY / WC7_CURRENT_FRONTIER_PACKET_ACCEPTED_CURRENT_INSUFFICIENT_EVIDENCE / INTELLIGENCE_STREAM_V1_S0_PASS_S1_PASS_S2_PASS_S3_PASS_S4_PASS_S5_ACTIVE / CONTINUITY_PAUSED_BY_USER
+State: WC0_LIVE_PRODUCT_PARITY_ACCEPTED / WC1_24_7_DATA_RELIABILITY_ACCEPTED / WC2_ENGINEERING_FROZEN_EVIDENCE_ACCUMULATION_ACTIVE / WC4_CHAMPION_CHALLENGER_ENGINEERING_ACCEPTED_RESEARCH_ONLY / WC5_ENGINEERING_ACCEPTED_PRODUCT_DEPLOYED_HUMAN_USABILITY_NOT_MEASURED / WC6_SANDBOX_BOUNDARY_ACCEPTED_VENUE_EVIDENCE_EXTERNAL_DEPENDENCY / WC7_CURRENT_FRONTIER_PACKET_ACCEPTED_CURRENT_INSUFFICIENT_EVIDENCE / INTELLIGENCE_STREAM_V1_S0_PASS_S1_PASS_S2_PASS_S3_PASS_S4_PASS_S5_PASS_S6_ACTIVE / CONTINUITY_PAUSED_BY_USER
 REAL_CAPITAL: 0
 
 ## Active v1.1 frontier — read before historical sections
+
+### 2026-09-25 19:34 +0300 — STREAM S5 NARRATIVE ENGINE PASS / S6 REAL-TIME STREAM BACKEND ACTIVE
+
+S5 is mechanically accepted.
+
+Canonical acceptance record:
+- `docs/CRYPTO_SIGNAL_STREAM_S5_ACCEPTANCE.md`.
+
+Accepted S5 customer-language layer:
+- deterministic Turkish Narrative Plan + renderer from exact S4 Analytical View truth;
+- collapsed + SIMPLE + TECHNICAL + INTELLIGENCE + DECISION + CAPITAL sections;
+- story-aware wording from exact S3 Change Sets only;
+- numeric/certainty/probability validator;
+- length budgets and repetition/similarity guard;
+- append-only original narrative persistence/versioning;
+- concrete loopback-only local rewrite adapter compatible with a local OpenAI-style/Ollama endpoint;
+- local rewrite limited to collapsed + SIMPLE prose;
+- technical/intelligence/decision/capital text protected;
+- semantic guard against unsupported new qualitative market concepts;
+- deterministic fallback when local rewrite is unavailable, invalid or repetitive.
+
+Merged implementation:
+- PR #1270 / main `e9dcca413dd82da4d6a3702ae6e74bb6f1037e3b`;
+- PR #1271 / main `4befb074d5b8843a2efb4a1eb09bc9e015f9202a`.
+
+Exact-head acceptance:
+- Slice 1 head `e252a2b42fbe4cdf38d2a09a0092ffa37b6370a9`, run `36160125242` PASS;
+- Slice 2 head `5a099345c602e09f6ec602dae716eaa6a7a53fd5`, run `36162999184` PASS;
+- focused pytest/Ruff/strict mypy PASS;
+- whole-repository regression PASS;
+- Development checkout non-mutation PASS.
+
+S5 does not claim that a specific local model is currently installed/running on UID504; the accepted local-only adapter is optional and deterministic rendering remains the safe fallback.
+
+The active Stream frontier is now **S6 — Real-time Stream Backend**.
+
+S6 must make accepted immutable messages arrive without refresh using a cursor-based append-only read model, SSE/WebSocket delivery, reconnect/catch-up, de-duplication, history pagination, exact lookup and search/filter contracts while preserving the S2 activation boundary.
 
 ### 2026-09-25 19:05 +0300 — STREAM S4 ANALYTICAL COMPOSER PASS / S5 NARRATIVE ENGINE ACTIVE
 
