@@ -4,6 +4,8 @@ const API = Object.freeze({
   messages: "/api/stream/messages",
   live: "/api/stream/live",
   detail: (identity) => `/api/stream/messages/${encodeURIComponent(identity)}/detail`,
+  visualProof: (identity) =>
+    `/api/stream/messages/${encodeURIComponent(identity)}/visual-proof`,
   decisionProofForForecast: (identity) =>
     `/api/decision-proof/forecast/${encodeURIComponent(identity)}`,
   education: (concept) => `/api/education/${encodeURIComponent(concept)}`,
@@ -299,7 +301,7 @@ function proofPanel(fact) {
 
   const result = document.createElement("span");
   result.className = "proof-result";
-  result.textContent = "S10 görsel proof değil; exact persisted karar kanıtı kontrolü.";
+  result.textContent = "Exact karar kanıtı doğrulanabilir; frozen görsel proof Kanıt penceresinde açılır.";
 
   action.addEventListener("click", async () => {
     if (!forecastIdentity) return;
@@ -754,6 +756,48 @@ function startEvidenceWindowResize(event, model) {
   event.preventDefault();
 }
 
+async function hydrateFrozenVisualProof(model) {
+  if (!["proof", "geometry"].includes(model.kind)) return;
+  const body = model.element?.querySelector(".evidence-window-body");
+  if (!(body instanceof HTMLElement)) return;
+  const renderer = window.CryptoSignalVisualProof?.renderFrozenVisualProof;
+  if (typeof renderer !== "function") return;
+
+  const record = state.messages.find(
+    (item) => item?.narrative_identity === model.narrativeIdentity
+  );
+  let visualProof =
+    record?.__fixture_visual_proof && typeof record.__fixture_visual_proof === "object"
+      ? record.__fixture_visual_proof
+      : null;
+
+  if (!visualProof) {
+    try {
+      const payload = await fetchJson(API.visualProof(model.narrativeIdentity));
+      visualProof =
+        payload?.visual_proof && typeof payload.visual_proof === "object"
+          ? payload.visual_proof
+          : {
+              status: payload?.status || "unavailable",
+              reason: payload?.reason || "exact_visual_proof_unavailable",
+              narrative_identity: model.narrativeIdentity,
+            };
+    } catch {
+      visualProof = {
+        status: "unavailable",
+        reason: "visual_proof_request_failed",
+        narrative_identity: model.narrativeIdentity,
+      };
+    }
+  }
+
+  if (!model.element?.isConnected) return;
+  const currentBody = model.element.querySelector(".evidence-window-body");
+  if (!(currentBody instanceof HTMLElement)) return;
+  currentBody.querySelector(".frozen-visual-proof")?.remove();
+  currentBody.prepend(renderer(visualProof));
+}
+
 function renderEvidenceWindowBody(model, detail) {
   const body = model.element?.querySelector(".evidence-window-body");
   if (!(body instanceof HTMLElement)) return;
@@ -765,6 +809,9 @@ function renderEvidenceWindowBody(model, detail) {
     subtitle.textContent = `${text(narrative.symbol, "PİYASA")} · ${text(
       narrative.timeframe
     )} · ${model.narrativeIdentity.slice(0, 8)}…`;
+  }
+  if (["proof", "geometry"].includes(model.kind)) {
+    void hydrateFrozenVisualProof(model);
   }
 }
 
@@ -1505,7 +1552,7 @@ function fixtureRecord(index, symbol, timeframe, stateLabel, copy, minutesAgo, s
     freshness_0_1: 0.97 - offset * 0.06,
     material_conflict_count: offset === 3 ? 1 : 0,
   }));
-  return {
+  const record = {
     narrative_identity: narrativeIdentity,
     event_at_ms: Date.now() - minutesAgo * 60_000,
     symbol,
@@ -1551,6 +1598,17 @@ function fixtureRecord(index, symbol, timeframe, stateLabel, copy, minutesAgo, s
       real_capital: 0,
     },
   };
+  const fixtureBuilder = window.CryptoSignalVisualProof?.fixtureVisualProof;
+  if (typeof fixtureBuilder === "function") {
+    record.__fixture_visual_proof = fixtureBuilder({
+      narrativeIdentity,
+      symbol,
+      timeframe,
+      forecastIdentity,
+      proofIdentity,
+    });
+  }
+  return record;
 }
 
 function fixtureMessages() {
@@ -1623,13 +1681,13 @@ function applyFixture(name) {
     }
   });
 
-  if (name === "expanded" || name === "windows") {
+  if (name === "expanded" || name === "windows" || name === "proof") {
     window.requestAnimationFrame(() => {
       const target = ui.list?.children?.[2];
       const summary = target?.querySelector?.(".message-summary");
       if (summary instanceof HTMLButtonElement) summary.click();
 
-      if (name === "windows") {
+      if (name === "windows" || name === "proof") {
         closeAllEvidenceWindows({ persist: false });
         try {
           localStorage.removeItem(EVIDENCE_WINDOW_SESSION_KEY);
@@ -1638,7 +1696,7 @@ function applyFixture(name) {
         }
         const record = state.messages[2];
         const detail = record?.__fixture_detail;
-        if (record && detail) {
+        if (record && detail && name === "windows") {
           openEvidenceWindow(record, detail, "liquidity");
           openEvidenceWindow(record, detail, "geometry");
           const decisionWindow = openEvidenceWindow(record, detail, "decision");
@@ -1647,6 +1705,17 @@ function applyFixture(name) {
             decisionWindow.x = 44;
             decisionWindow.y = 70;
             applyEvidenceWindowGeometry(decisionWindow);
+          }
+          persistEvidenceWindows();
+        } else if (record && detail && name === "proof") {
+          const proofWindow = openEvidenceWindow(record, detail, "proof");
+          if (proofWindow) {
+            proofWindow.pinned = true;
+            proofWindow.x = 70;
+            proofWindow.y = 18;
+            proofWindow.width = 940;
+            proofWindow.height = 860;
+            applyEvidenceWindowGeometry(proofWindow);
           }
           persistEvidenceWindows();
         }
