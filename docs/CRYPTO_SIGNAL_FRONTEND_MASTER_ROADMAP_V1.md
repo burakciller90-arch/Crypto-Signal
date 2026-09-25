@@ -494,11 +494,53 @@ Home must visibly unite the two signature pillars:
 - a feed event may show a capital consequence only through exact canonical lineage;
 - the Home surface must never reduce virtual capital to a static "1,000 USDT" card.
 
+### 6.6.1 Institutional Intelligence Stack — mandatory visible architecture
+
+The new Product must visibly exploit the accepted five-family intelligence architecture rather than hiding it behind one forecast sentence.
+
+Canonical families:
+1. **GEOMETRY — 20%**: Price Action / methodology geometry and related structure.
+2. **LIQUIDITY — 25%**: order-book/liquidity structure, liquidation context, sweeps, spoofing/hidden-liquidity candidates where measured.
+3. **ORDER FLOW / ABSORPTION — 25%**: CVD/delta/temporal flow, divergence and absorption candidates.
+4. **DERIVATIVES — 15%**: OI, funding, basis, crowding and OI-price dynamics.
+5. **ON-CHAIN — 15%**: exchange flow, transfer clusters, wallet cohorts and network context where evidence is accepted.
+
+**EVENT RISK** is a separate veto/context layer and is never buried inside the 100-point score.
+
+Feed/Proof/Markets must allow a user to understand:
+- which families support the current thesis;
+- which contradict it;
+- which are neutral;
+- which are unavailable/insufficient/stale/degraded;
+- exact source/freeze identities and timestamps in PROOF.
+
+Confluence is an evidence score, not calibrated probability. The UI must never render "80 confluence" as "80% chance" or "80% accuracy."
+
+Market-maker-style evidence is presented as measured/candidate behavior, not omniscient actor attribution. For example:
+- "spoofing candidate observed" is allowed when canonical evidence supports it;
+- "market maker is manipulating price here" is not allowed without direct canonical proof;
+- "absorption candidate" is evidence;
+- "this means price must fall" is not a valid automatic translation.
+
 ### 6.7 Rich Intelligence event projection — mandatory, not deferred
 
 M3 must not stop at FORECAST_ISSUED / FORECAST_RESOLVED.
 
-Before M3 PASS, build/accept the read-only event projection architecture capable of surfacing, where canonical source evidence exists:
+Before M3 PASS, build/accept the read-only event projection architecture capable of surfacing, where canonical source evidence exists. A flagship feed card should support the following contract when fields exist:
+- exact timestamp;
+- symbol / market / timeframe;
+- live state badge;
+- one fact-bound Turkish system sentence;
+- SIMPLE explanation;
+- PRO technical evidence chips/metrics;
+- trigger / target / invalidation;
+- evidence support / contradiction / insufficiency summary;
+- capital consequence;
+- one-click **KANIT GRAFİĞİNİ & DONDURULMUŞ KANITI GÖR** action.
+
+The frozen proof action should open the exact issuance-time chart/evidence workspace and, where exact snapshot lineage is proven, the frozen order-book/microstructure evidence. No current order book may be substituted for a missing historical snapshot.
+
+Event projection must be capable of surfacing:
 - liquidity / sweep / liquidation state;
 - order-flow / CVD / absorption;
 - derivatives context;
@@ -508,6 +550,8 @@ Before M3 PASS, build/accept the read-only event projection architecture capable
 - actionability;
 - capital eligibility / hold / block / sizing / simulated execution / exit;
 - data-quality/system degradation.
+
+M3 acceptance must explicitly audit all five intelligence families plus Event Risk through the ENGINE -> LIVE_SOURCE -> PERSISTED_EVIDENCE -> PRODUCT_PROJECTION -> UI_SURFACE chain.
 
 An event category remains absent only when its canonical source cannot be established. "No product adapter yet" is an implementation gap and must not be represented as "no backend data."
 
@@ -544,6 +588,9 @@ Owner-only testing is recorded as OWNER_ACCEPTANCE, not generalized human-usabil
 - event taxonomy contract PASS;
 - narrative deterministic-fallback PASS;
 - no-narrative-hallucination fixtures PASS;
+- five-layer intelligence surfacing matrix PASS or every missing stage explicitly classified;
+- confluence presentation cannot be confused with calibrated probability;
+- spoofing/hidden-liquidity/absorption candidate copy preserves uncertainty/actor-intent boundaries;
 - Home uses real backend/fixture truth, not invented demo values;
 - formative 10-second test result recorded;
 - user approves Home before M4 becomes the active screen frontier.
