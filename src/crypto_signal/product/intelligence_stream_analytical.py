@@ -383,6 +383,25 @@ def compose_stream_analytical_view(
             key=lambda item: item.value,
         )
     )
+    dominant_support = (
+        None if not support_ranked else _evidence_signal(support_ranked[0])
+    )
+    secondary_support = (
+        None
+        if len(support_ranked) < 2
+        else _evidence_signal(support_ranked[1])
+    )
+    main_contradiction = (
+        None
+        if not contradiction_ranked
+        else _evidence_signal(contradiction_ranked[0])
+    )
+    next_condition = StreamAnalyticalNextCondition(
+        trigger_zone=fact_bundle.trigger_zone,
+        trigger_state=change_set.current_trigger_state,
+        target_zone=fact_bundle.target_zone,
+        invalidation_price=fact_bundle.invalidation_price,
+    )
     payload = {
         "asset": fact_bundle.asset,
         "capital_consequence": capital,
@@ -390,36 +409,19 @@ def compose_stream_analytical_view(
         "changed_families": changed_families,
         "change_set_identity": change_set.change_set_identity,
         "composer_version": STREAM_ANALYTICAL_COMPOSER_VERSION,
-        "dominant_support": (
-            None
-            if not support_ranked
-            else _evidence_signal(support_ranked[0])
-        ),
+        "dominant_support": dominant_support,
         "engine_version": STREAM_ENGINE_VERSION,
         "event_at_ms": fact_bundle.event_at_ms,
         "fact_bundle_identity": fact_bundle.fact_bundle_identity,
-        "main_contradiction": (
-            None
-            if not contradiction_ranked
-            else _evidence_signal(contradiction_ranked[0])
-        ),
+        "main_contradiction": main_contradiction,
         "materiality": materiality,
         "message_identity": message.message_identity,
-        "next_condition": StreamAnalyticalNextCondition(
-            trigger_zone=fact_bundle.trigger_zone,
-            trigger_state=change_set.current_trigger_state,
-            target_zone=fact_bundle.target_zone,
-            invalidation_price=fact_bundle.invalidation_price,
-        ),
+        "next_condition": next_condition,
         "production_authority": False,
         "read_only": True,
         "real_capital": REAL_CAPITAL,
         "schema_version": STREAM_ANALYTICAL_VIEW_SCHEMA_VERSION,
-        "secondary_support": (
-            None
-            if len(support_ranked) < 2
-            else _evidence_signal(support_ranked[1])
-        ),
+        "secondary_support": secondary_support,
         "source_event_identity": fact_bundle.source_event_identity,
         "stance": stance,
         "story_identity": fact_bundle.story_identity,
@@ -441,13 +443,13 @@ def compose_stream_analytical_view(
         timeframe=fact_bundle.timeframe,
         event_at_ms=fact_bundle.event_at_ms,
         stance=stance,
-        dominant_support=payload["dominant_support"],  # type: ignore[arg-type]
-        secondary_support=payload["secondary_support"],  # type: ignore[arg-type]
-        main_contradiction=payload["main_contradiction"],  # type: ignore[arg-type]
+        dominant_support=dominant_support,
+        secondary_support=secondary_support,
+        main_contradiction=main_contradiction,
         uncertainty=uncertainty,
         changed_codes=change_set.changed_codes,
         changed_families=changed_families,
-        next_condition=payload["next_condition"],  # type: ignore[arg-type]
+        next_condition=next_condition,
         capital_consequence=capital,
         materiality=materiality,
     )
