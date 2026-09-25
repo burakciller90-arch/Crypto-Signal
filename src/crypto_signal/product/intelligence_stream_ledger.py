@@ -241,7 +241,7 @@ class IntelligenceStreamLedger:
             self._verify_meta(connection)
             activation = self._activation_row(connection)
             activation_identity = str(activation[0])
-            activated_at_ms = int(activation[1])
+            activated_at_ms = int(str(activation[1]))
             if event.activation_identity != activation_identity:
                 raise StreamLedgerConflictError(
                     "Stream event activation identity mismatch"
@@ -386,7 +386,7 @@ class IntelligenceStreamLedger:
         latest_event = None if latest is None or latest[0] is None else int(latest[0])
         return StreamLedgerStatus(
             activation_identity=str(activation[0]),
-            activated_at_ms=int(activation[1]),
+            activated_at_ms=int(str(activation[1])),
             decision_context_count=context_count,
             source_event_count=event_count,
             latest_event_at_ms=latest_event,
@@ -481,7 +481,13 @@ class IntelligenceStreamLedger:
             raise StreamLedgerConflictError(
                 "Stream ledger requires exactly one activation boundary"
             )
-        return rows[0]
+        row = rows[0]
+        return (
+            str(row[0]),
+            int(str(row[1])),
+            str(row[2]),
+            str(row[3]),
+        )
 
     @staticmethod
     def _table_count(connection: sqlite3.Connection, table: str) -> int:
