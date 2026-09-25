@@ -1,6 +1,10 @@
 # Crypto Signal Frontend M0 — Canonical Product Constitution
 
-Status: CANONICAL M0 — PASS / CLOSED  
+> **SUPERSEDED FOR CURRENT FRONTEND SCOPE — 2026-09-25**  
+> Current frontend/product execution authority is `docs/CRYPTO_SIGNAL_INTELLIGENCE_STREAM_V1_MASTER_ROADMAP.md`.  
+> This file remains useful historical decision evidence, but it no longer defines current IA, phases or screen scope. Repository-wide scientific and REAL_CAPITAL safety contracts remain independently binding.
+
+Status: **SUPERSEDED FRONTEND DECISION RECORD / HISTORICAL**  
 Company: GALACTECH  
 Product/project: Crypto Signal  
 Authority: frontend/product decisions only; scientific and safety boundaries remain governed by repository-wide contracts.

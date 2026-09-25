@@ -10,9 +10,10 @@ For exact current state, **do not treat this README as the authoritative HEAD/ru
 
 Current program facts recorded by the canonical state documents:
 - the existing GALACTECH V2 interface is the deployed Product baseline/fallback;
-- the new Crypto Signal frontend program is canonicalized as **M0 -> M7**;
-- **M0 Product Constitution is PASS / CLOSED**;
-- **M1 Discovery & Product Architecture is ACTIVE and not yet PASS**;
+- the sole current frontend/product program is **Intelligence Stream V1**;
+- **S0 authority/supersession freeze is PASS**;
+- **S1 Stream-only backend capability audit is ACTIVE**;
+- the previous M0→M7 multi-screen frontend roadmap is historical/superseded;
 - WC2 frozen evidence accumulation remains active;
 - WC5 broad human <=10-second usability remains `NOT_MEASURED` until actually measured;
 - WC6 real venue evidence remains an external dependency;
@@ -55,9 +56,9 @@ Always start with:
 4. `docs/V1_1_LOCKED_MASTER_ROADMAP_20260922.md` for global v1.1 product/science/capital boundaries
 
 For **new frontend work**, then read:
-5. `docs/CRYPTO_SIGNAL_FRONTEND_MASTER_ROADMAP_V1.md`
-6. `docs/CRYPTO_SIGNAL_FRONTEND_M0_CONSTITUTION.md`
-7. `docs/CRYPTO_SIGNAL_FRONTEND_M1_CAPABILITY_GAP_LEDGER.md`
+5. `docs/CRYPTO_SIGNAL_INTELLIGENCE_STREAM_V1_MASTER_ROADMAP.md`
+
+The older `CRYPTO_SIGNAL_FRONTEND_MASTER_ROADMAP_V1.md`, M0 Constitution and M1 Capability/Gap Ledger are retained only as historical/discovery records and must not drive current scope or sequencing.
 
 For runtime/operations, consult as needed:
 - `ENVIRONMENT_REGISTRY.md`

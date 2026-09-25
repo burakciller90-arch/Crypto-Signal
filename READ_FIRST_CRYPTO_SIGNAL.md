@@ -21,16 +21,20 @@ Its foundational project-isolation, scientific-truth and REAL_CAPITAL safety bou
 - NO_SIGNAL, AMBIGUOUS and NOT_EVALUABLE are valid.
 - Numeric truth comes from deterministic/statistical evidence, not LLM prose.
 
-## Frontend authority hygiene — 2026-09-25
+## Frontend authority hygiene — 2026-09-25 / Intelligence Stream V1 supersession
 
-- For **new frontend/product design and implementation**, the current frontend-specific authority is:
-  1. `docs/CRYPTO_SIGNAL_FRONTEND_MASTER_ROADMAP_V1.md`;
-  2. `docs/CRYPTO_SIGNAL_FRONTEND_M0_CONSTITUTION.md`;
-  3. `docs/CRYPTO_SIGNAL_FRONTEND_M1_CAPABILITY_GAP_LEDGER.md`.
+- For **all current frontend/product design and implementation**, the sole current frontend execution authority is:
+  1. `docs/CRYPTO_SIGNAL_INTELLIGENCE_STREAM_V1_MASTER_ROADMAP.md`.
+- The previous multi-screen frontend authority chain is **SUPERSEDED / HISTORICAL**:
+  - `docs/CRYPTO_SIGNAL_FRONTEND_MASTER_ROADMAP_V1.md`;
+  - `docs/CRYPTO_SIGNAL_FRONTEND_M0_CONSTITUTION.md`;
+  - `docs/CRYPTO_SIGNAL_FRONTEND_M1_CAPABILITY_GAP_LEDGER.md`.
+- The old M1 file remains useful **discovery evidence** about backend capabilities, but it is no longer an active execution roadmap or product-scope authority.
+- Current frontend scope is intentionally one primary surface: a persistent, Telegram/WhatsApp-like **Intelligence Stream** with expandable messages, clickable evidence, floating/detachable proof windows, search/filter/history, configurable notification sound and exact capital/evidence lineage.
+- Do not build standalone Markets / Capital / Performance / Archive / Learn / System screens until Intelligence Stream V1 reaches its Definition of Done and the user explicitly opens a new scope.
 - The global scientific, persistence, evidence, replay, capital-safety and production-authority boundaries in the locked v1.1 program remain binding.
-- Historical `docs/GALACTECH_*.md`, older `POST_V1_*.md` frontend acceptance records and older frontend sections inside v1.1 roadmaps are **historical evidence**, not current design authority where they conflict with the canonical frontend documents.
-- Do not revive superseded dark-theme targets, fixed navigation counts, GALACTECH-as-product branding or old frontend execution order merely because an older accepted slice records them.
-- The currently deployed GALACTECH V2 interface remains the production baseline/fallback until a future M7 controlled cutover; historical deployment acceptance is not a mandate to preserve its final visual/IA choices.
+- Historical `docs/GALACTECH_*.md`, older `POST_V1_*.md` acceptance records and all superseded frontend roadmaps remain audit evidence, not current frontend design authority.
+- The currently deployed GALACTECH V2 interface remains the production baseline/fallback until Intelligence Stream V1 controlled cutover.
 - Paper authority is epoch-specific: **Epoch 1 = immutable historical 100 USDT**; **Epoch 2 = current 1,000 USDT paper-program contract for new activity**. Never combine them into an unlabeled track record.
 
 ## Governing Full Version documents
@@ -38,9 +42,10 @@ The user's 2026-09-20 Full Version direction supersedes the earlier deliberately
 
 Before planning new product work, read **in this order**:
 - `docs/V1_1_LOCKED_MASTER_ROADMAP_20260922.md` — **LOCKED user-approved v1.1 global product/science/capital contract (2026-09-22)**. Its program-level Product rail remains valid, while current frontend-specific IA/brand/visual/execution details are governed by the canonical frontend documents below.
-- `docs/CRYPTO_SIGNAL_FRONTEND_MASTER_ROADMAP_V1.md` — **current canonical frontend-program architecture**. For new frontend/product work it supersedes older UI-only assumptions where conflicting (brand hierarchy, navigation count, dark visual target, frontend execution order) while preserving all scientific, evidence, persistence and REAL_CAPITAL boundaries.
-- `docs/CRYPTO_SIGNAL_FRONTEND_M0_CONSTITUTION.md` — canonical frontend M0 product constitution, decision rights, multi-axis truth, temporal integrity, lineage and authority boundaries.
-- `docs/CRYPTO_SIGNAL_FRONTEND_M1_CAPABILITY_GAP_LEDGER.md` — mechanically verified frontend capability matrix and live Gap Ledger; update it as M1 discovery advances.
+- `docs/CRYPTO_SIGNAL_INTELLIGENCE_STREAM_V1_MASTER_ROADMAP.md` — **sole current frontend/product execution authority**. It supersedes the prior M0→M7 multi-screen frontend program and narrows the active target to one Intelligence Stream.
+- `docs/CRYPTO_SIGNAL_FRONTEND_MASTER_ROADMAP_V1.md` — **SUPERSEDED historical frontend roadmap**; do not execute it.
+- `docs/CRYPTO_SIGNAL_FRONTEND_M0_CONSTITUTION.md` — **SUPERSEDED historical frontend decision record**; only reuse principles explicitly re-adopted by the Stream roadmap/global contracts.
+- `docs/CRYPTO_SIGNAL_FRONTEND_M1_CAPABILITY_GAP_LEDGER.md` — **historical discovery evidence**; useful for capability facts, not current product execution authority.
 - `docs/V1_1_MASTER_EXECUTION_ROADMAP.md` — **current governing post-v1.0 / v1.1+ execution roadmap**, including R15 runtime recovery, parallel UI + Market Tape tracks, Live Intelligence Feed / Decision Proof, Canonical Fund vs Shadow Lab, calibration, acceptance and v2 deferrals.
 - `docs/V1_1_WORLD_CLASS_PRODUCT_ROADMAP.md` — condensed v1.1 product roadmap.
 - `docs/CRYPTO_SIGNAL_FULL_VERSION_WORLD_CLASS_ROADMAP.md` — accepted Full Version/v1.0 architectural history and foundations.
@@ -52,7 +57,7 @@ Before planning new product work, read **in this order**:
 The project should stay faithful to these documents. Scope may be refined only by preserving their intent and hard invariants; do not silently regress to a narrower historical roadmap.
 
 ## Operating rule
-Read this file, then `CURRENT_STATUS.md`, then the newest `PROJECT_CHRONICLE.md` entry before changing project state. For frontend work, then read the canonical Frontend Master Roadmap, M0 Constitution and active M1 Capability/Gap Ledger **before** using any historical GALACTECH/frontend slice as context.
+Read this file, then `CURRENT_STATUS.md`, then the newest `PROJECT_CHRONICLE.md` entry before changing project state. For frontend work, then read **only** `docs/CRYPTO_SIGNAL_INTELLIGENCE_STREAM_V1_MASTER_ROADMAP.md` as current execution authority. Older frontend roadmaps may be consulted as history/discovery evidence but must not drive scope or sequencing.
 
 ## 2026-09-24 state-first authority update
 

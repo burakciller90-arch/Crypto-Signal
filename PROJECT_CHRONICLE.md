@@ -1,5 +1,23 @@
 # PROJECT CHRONICLE
 
+## 2026-09-25 — User supersedes multi-screen frontend program; Intelligence Stream V1 becomes sole product frontier
+
+The user made a deliberate scope reduction after reviewing the product direction: do **not** build the broader multi-screen frontend first. Finish one exceptional surface before expanding the product.
+
+The new product concept is a single persistent messaging-style Intelligence Stream. Crypto Signal should feel like a capable trader/analyst is sending live Telegram/WhatsApp-style messages: concise first paragraph in the main flow, deeper explanation only when the message is opened, and exact evidence/capital context accessible from the same message.
+
+The stream is not a chat simulation. Every published message must bind to canonical source events/evidence. The system may generate natural Turkish through a structured narrative pipeline (facts -> change set -> analytical view -> narrative plan -> renderer -> fact validator), with deterministic fallback if a language model is unavailable. Messages are immutable once published; changes in view create new messages.
+
+Technical evidence such as Liquidity Sweep, CVD Divergence, Absorption, Geometry contribution, total Decision state or a capital consequence becomes clickable. It opens an evidence window with “Bu nedir?”, “Bu mesajda neden önemli?”, message-specific analysis, frozen proof and provenance. Evidence windows are designed as draggable/resizable Mac-like work windows and may be detached to a separate browser window/monitor.
+
+The normal product remains one chronological stream. Search/filter is available from a compact magnifying-glass workflow for asset, category, timeframe, vault, evidence family, state, importance and date. Older messages load upward and are never silently deleted or rewritten. New messages append live and can play a configurable original Crypto Signal notification chime.
+
+The previous `CRYPTO_SIGNAL_FRONTEND_MASTER_ROADMAP_V1.md` M0→M7 program and its M0/M1 frontend authority chain are superseded for current product execution. Their historical/backend-discovery facts remain useful evidence only. The new sole frontend authority is `docs/CRYPTO_SIGNAL_INTELLIGENCE_STREAM_V1_MASTER_ROADMAP.md`.
+
+The deployed GALACTECH V2 interface remains production fallback until controlled cutover. Scientific truth, frozen evidence, three-vault paper boundaries, WC2/WC7 state and REAL_CAPITAL=0 remain unchanged.
+
+This authority reset is implemented by documentation-only **PR #1257**.
+
 ## 2026-09-25 — Intelligence Feed and Smart Capital become the two flagship frontend pillars
 
 A deeper backend-to-product audit exposed an important product risk: accepted backend capability was sometimes being discussed as if it were unavailable merely because the current Product API or GALACTECH V2 surface did not project it. The new frontend program now forbids that ambiguity. Existing truth that needs a read model is classified as an adapter/surfacing gap, not "no data."
