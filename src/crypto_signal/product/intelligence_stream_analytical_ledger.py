@@ -237,10 +237,92 @@ class IntelligenceStreamAnalyticalLedger:
                 )
 
             if view.source_message_identity is not None:
+                state_row = connection.execute(
+                """
+                SELECT story_identity, source_event_identity,
+                       current_stream_event_identity, current_message_identity,
+                       event_at_ms
+                FROM stream_story_states
+                WHERE state_identity = ?
+                """,
+                (view.current_state_identity,),
+            ).fetchone()
+            if state_row is None:
+                raise StreamAnalyticalLedgerConflictError(
+                    "Stream analytical view references unknown story state"
+                )
+            if str(state_row[0]) != view.story_identity:
+                raise StreamAnalyticalLedgerConflictError(
+                    "Stream analytical view/state story mismatch"
+                )
+            if str(state_row[1]) != view.source_event_identity:
+                raise StreamAnalyticalLedgerConflictError(
+                    "Stream analytical view/state source-event mismatch"
+                )
+            if str(state_row[2]) != view.stream_event_identity:
+                raise StreamAnalyticalLedgerConflictError(
+                    "Stream analytical view/state stream-event mismatch"
+                )
+            state_message = (
+                None if state_row[3] is None else str(state_row[3])
+            )
+            if state_message != view.source_message_identity:
+                raise StreamAnalyticalLedgerConflictError(
+                    "Stream analytical view/state message mismatch"
+                )
+            if int(str(state_row[4])) != view.event_at_ms:
+                raise StreamAnalyticalLedgerConflictError(
+                    "Stream analytical view/state event-time mismatch"
+                )
+
+            change_row = connection.execute(
+                """
+                SELECT story_identity, current_state_identity
+                FROM stream_story_change_sets
+                WHERE change_set_identity = ?
+                """,
+                (view.change_set_identity,),
+            ).fetchone()
+            if change_row is None:
+                raise StreamAnalyticalLedgerConflictError(
+                    "Stream analytical view references unknown change set"
+                )
+            if str(change_row[0]) != view.story_identity:
+                raise StreamAnalyticalLedgerConflictError(
+                    "Stream analytical view/change-set story mismatch"
+                )
+            if str(change_row[1]) != view.current_state_identity:
+                raise StreamAnalyticalLedgerConflictError(
+                    "Stream analytical view/change-set state mismatch"
+                )
+
+            source_row = connection.execute(
+                """
+                SELECT source_event_identity, event_at_ms
+                FROM stream_source_events
+                WHERE stream_event_identity = ?
+                """,
+                (view.stream_event_identity,),
+            ).fetchone()
+            if source_row is None:
+                raise StreamAnalyticalLedgerConflictError(
+                    "Stream analytical view references unknown source event"
+                )
+            if str(source_row[0]) != view.source_event_identity:
+                raise StreamAnalyticalLedgerConflictError(
+                    "Stream analytical view/source-event mismatch"
+                )
+            if int(str(source_row[1])) != view.event_at_ms:
+                raise StreamAnalyticalLedgerConflictError(
+                    "Stream analytical view/source-event time mismatch"
+                )
+
+            if view.source_message_identity is not None:
                 message_row = connection.execute(
                     """
                     SELECT story_identity, fact_bundle_identity,
-                           source_event_identity, stream_event_identity
+                           stream_event_identity, source_event_identity,
+                           event_at_ms
                     FROM stream_message_inputs
                     WHERE message_identity = ?
                     """,
@@ -258,13 +340,17 @@ class IntelligenceStreamAnalyticalLedger:
                     raise StreamAnalyticalLedgerConflictError(
                         "Stream analytical view/message fact mismatch"
                     )
-                if str(message_row[2]) != view.source_event_identity:
+                if str(message_row[2]) != view.stream_event_identity:
+                    raise StreamAnalyticalLedgerConflictError(
+                        "Stream analytical view/message stream-event mismatch"
+                    )
+                if str(message_row[3]) != view.source_event_identity:
                     raise StreamAnalyticalLedgerConflictError(
                         "Stream analytical view/message source-event mismatch"
                     )
-                if str(message_row[3]) != view.stream_event_identity:
+                if int(str(message_row[4])) != view.event_at_ms:
                     raise StreamAnalyticalLedgerConflictError(
-                        "Stream analytical view/message stream-event mismatch"
+                        "Stream analytical view/message event-time mismatch"
                     )
 
             existing = connection.execute(
