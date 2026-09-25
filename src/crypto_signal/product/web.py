@@ -45,6 +45,12 @@ from crypto_signal.product.event_source_runtime import (
     read_event_source_runtime_truth,
 )
 from crypto_signal.product.intelligence_center import build_intelligence_center_payload
+from crypto_signal.product.intelligence_stream_read_model import (
+    IntelligenceStreamReadModel,
+    StreamMessageQuery,
+    StreamReadModelError,
+    decode_stream_cursor,
+)
 from crypto_signal.product.market_tape_runtime import (
     read_cold_archive_runtime_truth,
     read_market_tape_collector_runtime_truth,
@@ -82,6 +88,12 @@ DEFAULT_DECISION_EVIDENCE_LEDGER_PATH = (
     / "runtime"
     / "decision"
     / "decision_evidence.sqlite3"
+)
+DEFAULT_STREAM_LEDGER_PATH = (
+    Path("/Users/crypto-signal-agent/Crypto-Signal")
+    / "runtime"
+    / "stream"
+    / "intelligence_stream.sqlite3"
 )
 DEFAULT_CANDLE_CACHE_PATH = (
     Path("/Users/crypto-signal-agent/Crypto-Signal")
@@ -187,6 +199,7 @@ def create_app(
     provider_divergence_path: Path | None = None,
     event_source_runtime_path: Path | None = None,
     wc2_cohort_path: Path | None = None,
+    stream_ledger_path: Path | None = None,
 ) -> FastAPI:
     selected_path = ledger_path or Path(
         os.environ.get("CRYPTO_SIGNAL_LEDGER_PATH", str(DEFAULT_LEDGER_PATH))
@@ -250,6 +263,18 @@ def create_app(
         )
     else:
         selected_decision_path = None
+
+    if stream_ledger_path is not None:
+        selected_stream_path: Path | None = stream_ledger_path
+    elif ledger_path is None:
+        selected_stream_path = Path(
+            os.environ.get(
+                "CRYPTO_SIGNAL_STREAM_LEDGER_PATH",
+                str(DEFAULT_STREAM_LEDGER_PATH),
+            )
+        )
+    else:
+        selected_stream_path = None
 
     if shadow_intent_journal_path is not None:
         selected_shadow_intent_path: Path | None = shadow_intent_journal_path
@@ -619,6 +644,112 @@ def create_app(
             {
                 "status": "ready" if events else "empty",
                 "events": events,
+                "read_only": True,
+                "real_capital": 0,
+            }
+        )
+
+    @app.get("/api/stream/messages")
+    def stream_messages(
+        limit: int = Query(default=50, ge=1, le=200),
+        before: str | None = Query(default=None, max_length=512),
+        after: str | None = Query(default=None, max_length=512),
+        symbol: str | None = Query(default=None, min_length=1, max_length=32),
+        timeframe: str | None = Query(default=None, min_length=1, max_length=16),
+        story_identity: str | None = Query(default=None, min_length=64, max_length=64),
+        source_kind: str | None = Query(default=None, min_length=1, max_length=64),
+        effective_stance: str | None = Query(default=None, min_length=1, max_length=32),
+        category: str | None = Query(default=None, min_length=1, max_length=64),
+        importance: str | None = Query(default=None, min_length=1, max_length=64),
+        evidence_domain: str | None = Query(default=None, min_length=1, max_length=64),
+        from_ms: int | None = Query(default=None, ge=0),
+        to_ms: int | None = Query(default=None, ge=0),
+        text: str | None = Query(default=None, min_length=1, max_length=200),
+    ) -> JSONResponse:
+        if selected_stream_path is None or not selected_stream_path.exists():
+            return _json(
+                {
+                    "status": "unavailable",
+                    "reason": "intelligence_stream_runtime_not_configured",
+                    "page": {
+                        "items": [],
+                        "order": "newest_to_oldest",
+                        "newest_cursor": None,
+                        "oldest_cursor": None,
+                        "next_after_cursor": None,
+                        "next_before_cursor": None,
+                        "has_more": False,
+                        "read_only": True,
+                        "real_capital": 0,
+                        "schema_version": "intelligence-stream-read-model-v1/1",
+                    },
+                    "read_only": True,
+                    "real_capital": 0,
+                }
+            )
+        try:
+            before_cursor = None if before is None else decode_stream_cursor(before)
+            after_cursor = None if after is None else decode_stream_cursor(after)
+            query = StreamMessageQuery(
+                limit=limit,
+                before=before_cursor,
+                after=after_cursor,
+                symbol=symbol,
+                timeframe=timeframe,
+                story_identity=story_identity,
+                source_kind=source_kind,
+                effective_stance=effective_stance,
+                category=category,
+                importance=importance,
+                evidence_domain=evidence_domain,
+                from_ms=from_ms,
+                to_ms=to_ms,
+                text=text,
+            )
+        except (StreamReadModelError, ValueError) as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        try:
+            page = IntelligenceStreamReadModel(selected_stream_path).read_messages(query)
+        except StreamReadModelError as exc:
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
+        return _json(
+            {
+                "status": "ready" if page.items else "empty",
+                "page": page,
+                "read_only": True,
+                "real_capital": 0,
+            }
+        )
+
+    @app.get("/api/stream/messages/{narrative_identity}")
+    def stream_message_lookup(narrative_identity: str) -> JSONResponse:
+        if not _is_lower_sha256(narrative_identity):
+            raise HTTPException(
+                status_code=400,
+                detail="narrative_identity must be lowercase SHA256",
+            )
+        if selected_stream_path is None or not selected_stream_path.exists():
+            return _json(
+                {
+                    "status": "unavailable",
+                    "reason": "intelligence_stream_runtime_not_configured",
+                    "narrative_identity": narrative_identity,
+                    "message": None,
+                    "read_only": True,
+                    "real_capital": 0,
+                }
+            )
+        try:
+            message = IntelligenceStreamReadModel(
+                selected_stream_path
+            ).read_message(narrative_identity)
+        except StreamReadModelError as exc:
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
+        return _json(
+            {
+                "status": "ready" if message is not None else "empty",
+                "narrative_identity": narrative_identity,
+                "message": message,
                 "read_only": True,
                 "real_capital": 0,
             }
