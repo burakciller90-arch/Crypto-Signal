@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="tr" data-theme="stream-light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <meta name="theme-color" content="#f5f7fb">
+  <title>Crypto Signal — Intelligence Stream</title>
+  <link rel="stylesheet" href="/stream-v1-static/app.css">
+</head>
+<body data-ui-version="crypto-signal-stream-v1-s7-shell">
+  <a class="skip-link" href="#messageStream">Mesaj akışına geç</a>
+
+  <div class="stream-app">
+    <header class="topbar">
+      <div class="brand" aria-label="Crypto Signal">
+        <span class="brand-orbit" aria-hidden="true"><i></i></span>
+        <div class="brand-copy">
+          <strong>CRYPTO SIGNAL</strong>
+          <span>INTELLIGENCE STREAM</span>
+        </div>
+      </div>
+
+      <div class="topbar-center" role="status" aria-live="polite">
+        <span id="connectionDot" class="status-dot status-dot-waiting" aria-hidden="true"></span>
+        <span id="connectionText">Akış hazırlanıyor</span>
+        <span class="environment-pill">SANAL ORTAM</span>
+      </div>
+
+      <div class="topbar-actions" aria-label="Akış kontrolleri">
+        <button id="searchButton" class="icon-button" type="button" aria-controls="searchDrawer" aria-expanded="false" title="Mesajlarda ara">
+          <span aria-hidden="true">⌕</span><span class="action-label">Ara</span>
+        </button>
+        <button id="soundButton" class="icon-button" type="button" aria-controls="settingsDrawer" aria-expanded="false" title="Bildirim sesi ayarları">
+          <span aria-hidden="true">♪</span><span class="action-label">Ses</span>
+        </button>
+        <button id="windowButton" class="icon-button" type="button" aria-controls="windowNotice" aria-expanded="false" title="Kanıt pencereleri">
+          <span aria-hidden="true">▣</span><span class="action-label">Pencereler</span>
+        </button>
+        <button id="settingsButton" class="icon-button" type="button" aria-controls="settingsDrawer" aria-expanded="false" title="Ayarlar">
+          <span aria-hidden="true">⋯</span><span class="action-label">Ayarlar</span>
+        </button>
+      </div>
+    </header>
+
+    <main class="workspace">
+      <section class="stream-column" aria-labelledby="streamTitle">
+        <div class="stream-heading">
+          <div>
+            <span class="kicker">CANLI ANALİST AKIŞI</span>
+            <h1 id="streamTitle">Piyasa ne anlatıyor?</h1>
+            <p>Yeni bir görüş, değişim veya sonuç oluştuğunda burada tek bir konuşma içinde görünür.</p>
+          </div>
+          <div class="stream-heading-state">
+            <span id="liveBadge" class="live-badge"><i aria-hidden="true"></i> CANLI</span>
+            <span id="filterBadge" class="filter-badge" hidden>FİLTRE AKTİF</span>
+          </div>
+        </div>
+
+        <div id="streamViewport" class="stream-viewport" tabindex="0" aria-label="Intelligence Stream mesajları">
+          <button id="loadOlderButton" class="history-button" type="button" hidden>
+            Daha eski mesajları yükle
+          </button>
+
+          <div id="streamSentinel" class="top-sentinel" aria-hidden="true"></div>
+
+          <div id="messageStream" class="message-stream" role="log" aria-live="polite" aria-relevant="additions">
+            <div id="initialState" class="initial-state">
+              <div class="initial-orbit" aria-hidden="true"><i></i></div>
+              <strong>Intelligence Stream hazırlanıyor</strong>
+              <p>Kalıcı mesaj geçmişi okunuyor. Uydurma demo mesaj gösterilmez.</p>
+            </div>
+          </div>
+
+          <button id="newMessagesButton" class="new-messages-button" type="button" hidden>
+            <span id="newMessagesCount">1</span> yeni mesaj
+            <span aria-hidden="true">↓</span>
+          </button>
+        </div>
+
+        <footer class="composer-ghost" aria-label="Sistem mesaj gönderim durumu">
+          <span class="composer-pulse" aria-hidden="true"></span>
+          <div>
+            <strong>Sistem piyasayı izliyor</strong>
+            <span>Mesaj yalnızca kabul edilmiş değişim oluştuğunda gelir.</span>
+          </div>
+          <code>REAL_CAPITAL=0</code>
+        </footer>
+      </section>
+    </main>
+
+    <div id="drawerBackdrop" class="drawer-backdrop" hidden></div>
+
+    <aside id="searchDrawer" class="drawer" aria-labelledby="searchTitle" aria-hidden="true">
+      <div class="drawer-head">
+        <div>
+          <span class="kicker">MESAJ BUL</span>
+          <h2 id="searchTitle">Akışta ara</h2>
+        </div>
+        <button class="drawer-close" type="button" data-close-drawer aria-label="Aramayı kapat">×</button>
+      </div>
+
+      <form id="searchForm" class="search-form">
+        <label>
+          <span>Metin</span>
+          <input id="searchText" name="text" type="search" autocomplete="off" placeholder="Örn. likidite, teyit, sonuç">
+        </label>
+        <div class="field-grid">
+          <label>
+            <span>Varlık</span>
+            <select id="searchSymbol" name="symbol">
+              <option value="">Tümü</option>
+              <option value="BTCUSDT">BTC</option>
+              <option value="ETHUSDT">ETH</option>
+              <option value="SOLUSDT">SOL</option>
+            </select>
+          </label>
+          <label>
+            <span>Zaman dilimi</span>
+            <select id="searchTimeframe" name="timeframe">
+              <option value="">Tümü</option>
+              <option value="1m">1m</option>
+              <option value="5m">5m</option>
+              <option value="15m">15m</option>
+              <option value="1h">1h</option>
+              <option value="4h">4h</option>
+            </select>
+          </label>
+        </div>
+        <div class="field-grid">
+          <label>
+            <span>Mesaj türü</span>
+            <select id="searchCategory" name="category">
+              <option value="">Tümü</option>
+              <option value="decision">Karar</option>
+              <option value="outcome">Sonuç</option>
+              <option value="risk">Risk</option>
+              <option value="capital">Sermaye</option>
+            </select>
+          </label>
+          <label>
+            <span>Kanıt alanı</span>
+            <select id="searchEvidence" name="evidence_domain">
+              <option value="">Tümü</option>
+              <option value="frozen_chart">Grafik</option>
+              <option value="liquidity_map">Likidite</option>
+              <option value="order_flow_cvd">Order Flow / CVD</option>
+            </select>
+          </label>
+        </div>
+        <div class="drawer-actions">
+          <button id="clearSearchButton" class="button-secondary" type="button">Temizle</button>
+          <button class="button-primary" type="submit">Filtreyi uygula</button>
+        </div>
+      </form>
+      <p class="drawer-note">Filtre yalnızca mesaj bulmayı kolaylaştırır; ana deneyim tek kronolojik akıştır.</p>
+    </aside>
+
+    <aside id="settingsDrawer" class="drawer" aria-labelledby="settingsTitle" aria-hidden="true">
+      <div class="drawer-head">
+        <div>
+          <span class="kicker">AKIŞ AYARLARI</span>
+          <h2 id="settingsTitle">Deneyim</h2>
+        </div>
+        <button class="drawer-close" type="button" data-close-drawer aria-label="Ayarları kapat">×</button>
+      </div>
+
+      <div class="setting-list">
+        <div class="setting-row">
+          <div>
+            <strong>Bildirim sesi</strong>
+            <span>Özgün Crypto Signal sesi S13 kabulünde etkinleşecek.</span>
+          </div>
+          <span class="setting-state">S13</span>
+        </div>
+        <div class="setting-row">
+          <div>
+            <strong>Açık tema</strong>
+            <span>S7 ürün kabuğunun varsayılan görünümü.</span>
+          </div>
+          <span class="setting-state setting-state-ready">AÇIK</span>
+        </div>
+        <div class="setting-row">
+          <div>
+            <strong>Canlı bağlantı</strong>
+            <span>SSE kesilirse aynı cursor üzerinden polling fallback devreye girer.</span>
+          </div>
+          <span id="transportState" class="setting-state">HAZIRLANIYOR</span>
+        </div>
+      </div>
+    </aside>
+
+    <aside id="windowNotice" class="window-notice" aria-live="polite" hidden>
+      <button id="windowNoticeClose" type="button" aria-label="Bilgiyi kapat">×</button>
+      <span class="kicker">KANIT PENCERELERİ</span>
+      <strong>Katman hazır.</strong>
+      <p>Taşınabilir ve ayrılabilir kanıt pencereleri S9’da bu katmana bağlanacak.</p>
+    </aside>
+
+    <div id="floatingWindowLayer" class="floating-window-layer" aria-hidden="true"></div>
+    <div id="connectionToast" class="connection-toast" role="status" aria-live="polite" hidden></div>
+  </div>
+
+  <script src="/stream-v1-static/app.js" defer></script>
+</body>
+</html>
