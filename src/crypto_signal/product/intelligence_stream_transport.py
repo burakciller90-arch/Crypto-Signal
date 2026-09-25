@@ -16,6 +16,9 @@ from crypto_signal.product.intelligence_stream_read_model import (
 STREAM_SSE_EVENT_NAME = "message"
 STREAM_SSE_RETRY_MS = 3000
 STREAM_SSE_BATCH_LIMIT = 200
+_STREAM_ORIGIN_CURSOR = encode_stream_cursor(
+    StreamCursor(event_at_ms=0, narrative_identity="0" * 64)
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -70,7 +73,8 @@ def resolve_stream_resume_cursor(
     explicit = after if after is not None else last_event_id
     if explicit is not None:
         return explicit
-    return reader.latest_cursor()
+    latest = reader.latest_cursor()
+    return latest if latest is not None else _STREAM_ORIGIN_CURSOR
 
 
 def read_stream_live_batch(
