@@ -4,10 +4,36 @@ Updated: 2026-09-25
 Project: Crypto Signal
 Baseline: crypto-signal-full-version-v1.0.0 (immutable)
 Active post-v1.0 program: v1.1 world-class product + market intelligence + Crypto Signal Intelligence Stream V1
-State: WC0_LIVE_PRODUCT_PARITY_ACCEPTED / WC1_24_7_DATA_RELIABILITY_ACCEPTED / WC2_ENGINEERING_FROZEN_EVIDENCE_ACCUMULATION_ACTIVE / WC4_CHAMPION_CHALLENGER_ENGINEERING_ACCEPTED_RESEARCH_ONLY / WC5_ENGINEERING_ACCEPTED_PRODUCT_DEPLOYED_HUMAN_USABILITY_NOT_MEASURED / WC6_SANDBOX_BOUNDARY_ACCEPTED_VENUE_EVIDENCE_EXTERNAL_DEPENDENCY / WC7_CURRENT_FRONTIER_PACKET_ACCEPTED_CURRENT_INSUFFICIENT_EVIDENCE / INTELLIGENCE_STREAM_V1_CANONICAL_S0_PASS_S1_ACTIVE / CONTINUITY_PAUSED_BY_USER
+State: WC0_LIVE_PRODUCT_PARITY_ACCEPTED / WC1_24_7_DATA_RELIABILITY_ACCEPTED / WC2_ENGINEERING_FROZEN_EVIDENCE_ACCUMULATION_ACTIVE / WC4_CHAMPION_CHALLENGER_ENGINEERING_ACCEPTED_RESEARCH_ONLY / WC5_ENGINEERING_ACCEPTED_PRODUCT_DEPLOYED_HUMAN_USABILITY_NOT_MEASURED / WC6_SANDBOX_BOUNDARY_ACCEPTED_VENUE_EVIDENCE_EXTERNAL_DEPENDENCY / WC7_CURRENT_FRONTIER_PACKET_ACCEPTED_CURRENT_INSUFFICIENT_EVIDENCE / INTELLIGENCE_STREAM_V1_S0_PASS_S1_PASS_S2_ACTIVE / CONTINUITY_PAUSED_BY_USER
 REAL_CAPITAL: 0
 
 ## Active v1.1 frontier — read before historical sections
+
+### 2026-09-25 17:52 +0300 — STREAM S1 CAPABILITY AUDIT PASS / S2 EVENT-MESSAGE MODEL ACTIVE
+
+S1 Stream-only Backend Capability Audit is closed at the discovery/contract level.
+
+New canonical S1 closeout evidence:
+- `docs/CRYPTO_SIGNAL_STREAM_S1_IDENTITY_TEMPORAL_MAP.md`;
+- `docs/CRYPTO_SIGNAL_STREAM_S1_SOURCE_MESSAGE_MAP.md`;
+- updated Capability Matrix;
+- updated Gap Ledger.
+
+Key resolved findings:
+- the full M6 five-family contribution snapshot exists at issuance time but is **not persisted** in the R20/R20.5 Decision Ledger; historical score-component windows require new immutable decision-context persistence;
+- Decision Proof exposes evidence identities/status but there is no universal evidence-object registry;
+- Market Tape/Event Source/Signal Freeze provide several exact persisted evidence classes, while some research freezes are not universally persisted;
+- Bitcoin on-chain/network has a real accepted public Blockstream source but no always-on Stream runtime;
+- M5 Exchange Flow / Wallet Cohort / Large Transfer are accepted provider-neutral research contracts with **no live provider activation**;
+- liquidation collection plumbing + Hot/Cold replay exist, but the production continuous collector is explicitly disabled;
+- rich Capital Science and Position Sizing runtime objects are not fully persisted/projected, while R22 Preview and canonical R22/R21 transaction/accounting infrastructure are separately persisted;
+- secondary Intelligence Center engines are now classified into STREAM_PRIMARY / STREAM_CONTEXT / EVIDENCE_WINDOW_ONLY / RESEARCH_ONLY / INTERNAL_ONLY.
+
+Exact identity/time lineage from Signal -> M6 -> Event Risk -> Forecast -> Proof -> Feed -> Capital -> Sizing -> R22 -> R21 is now documented.
+
+Therefore S1 is **PASS**. The active frontier is now **S2 — Canonical Stream Event & Message Model**.
+
+S2 must first build the append-only message backbone, immutable decision-context/evidence references, source-event projection contract, activation boundary, narrative-version fields and materiality metadata before UI work begins.
 
 ### 2026-09-25 17:24 +0300 — EXISTING UID504 CHROMIUM VISUAL-SNAPSHOT INFRASTRUCTURE REDISCOVERED / STREAM PLAN CORRECTED
 

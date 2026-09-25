@@ -1,8 +1,8 @@
 # Crypto Signal — Stream S1 Capability Matrix
 
-Status: **S1 ACTIVE / AUDIT BASELINE — NOT YET PASS**  
+Status: **S1 PASS / CANONICAL DISCOVERY BASELINE**  
 Authority: `docs/CRYPTO_SIGNAL_INTELLIGENCE_STREAM_V1_MASTER_ROADMAP.md`  
-Observed main baseline: `993e916bf8ab30157f529d4ef2c1fe456a1eccf9`  
+Observed main baseline: `2a61ad47e1f09640f3b36e4ccf09f6ed46dde7ef`  
 Purpose: map accepted backend capability to the exact Intelligence Stream pipeline without confusing “adapter missing” with “backend capability missing”.
 
 ## 1. Audit semantics
@@ -33,7 +33,7 @@ A later missing stage does not erase an earlier one. For example, ENGINE=YES and
 | Capability | ENGINE | LIVE_SOURCE | PERSISTED_EVIDENCE | PRODUCT_PROJECTION | MESSAGE_PROJECTION | UI_SURFACE | S1 finding |
 |---|---|---:|---:|---:|---:|---:|---|
 | Frozen signal / geometry | YES | YES | YES | YES | PARTIAL | PARTIAL | Signal freeze bundle, entry zone, target and invalidation already exist; current feed does not expose rich geometry-change messages |
-| Five-family Confluence | YES | YES/PARTIAL | YES | YES/PARTIAL | NO | PARTIAL | M6 stores family weights/support/opposition/coverage/quality/freshness; Decision Proof carries aggregate support/opposition, but Stream needs exact family breakdown projection |
+| Five-family Confluence | YES | YES/PARTIAL | **PARTIAL** | YES/PARTIAL | NO | PARTIAL | Full five-family contribution exists in `ConfluenceMatrixSnapshot` at issuance, but Decision Ledger does not persist that snapshot; Forecast/Proof preserve identity + aggregate truth only. Historical family windows therefore require new immutable decision-context persistence. |
 | Decision Proof | YES | YES | YES | YES | PARTIAL | PARTIAL | Strong immutable source for expanded message + proof drill-down |
 | Forecast issued | YES | YES | YES | YES | YES | PARTIAL | Current R20.5 feed already publishes issuance |
 | Forecast resolved | YES | YES | YES | YES | YES | PARTIAL | Current R20.5 feed already publishes resolution |
@@ -146,13 +146,13 @@ Verified building blocks:
 | Stage | State | Notes |
 |---|---|---|
 | ENGINE | YES | on-chain/exchange-flow/transfer/cohort analysis exists |
-| LIVE_SOURCE | DISCOVER | Blockstream adapter exists; no canonical always-on runner for the full on-chain/exchange-flow/wallet set was proven in this audit wave |
-| PERSISTED_EVIDENCE | DISCOVER/PARTIAL | proof can bind accepted freezes, but live source stores for every sub-family must be traced |
+| LIVE_SOURCE | PARTIAL | Bitcoin network has an accepted real public Blockstream adapter/source-quality gate, but no always-on Product/Stream collector is established. Exchange Flow / Wallet Cohort / Large Transfer explicitly have no live provider activation. |
+| PERSISTED_EVIDENCE | PARTIAL | accepted freeze contracts exist; Bitcoin network/source engines are deterministic, but full always-on persisted Stream stores are not established. Provider-neutral M5 sub-families are not live-collected. |
 | PRODUCT_PROJECTION | PARTIAL | Decision Proof domain can expose accepted identities; full detail lookup absent |
 | MESSAGE_PROJECTION | NO | no exchange-flow/wallet/on-chain event projector |
 | UI_SURFACE | NO for Stream V1 | not implemented |
 
-S1 must not call this “data yok”; it must finish live-source and persistence tracing per sub-family.
+S1 tracing is complete: Bitcoin network is a real accepted public-source engine but not an always-on Stream source; Exchange Flow / Wallet Cohort / Large Transfer remain provider-neutral research contracts without live provider activation. Stream must not call them live until a runtime/persistence path is explicitly added.
 
 ---
 
@@ -377,22 +377,27 @@ The assistant cannot directly view the user’s local `127.0.0.1` screen without
 - current Product feed has no search/cursor/filter model;
 - Market Tape supplies live order-book/trade/derivatives paths;
 - Event Source supplies persisted calendar/news paths;
-- full on-chain/exchange-flow/wallet live runtime remains to be traced;
+- on-chain/smart-money live status is resolved: Bitcoin network has a real public source but no always-on Stream runtime; Exchange Flow / Wallet Cohort / Large Transfer have no live provider activation;
 - capital accounting/tape primitives are stronger than the current Product projection;
 - canonical three-vault forward runtime remains incomplete;
 - existing UID504 Chromium screenshot-artifact acceptance is reusable; Stream-specific fixture/state coverage must be added and should remain mandatory during UI stages.
 
-### Still required before S1 PASS
-- exact identity graph across Stream source families;
-- exact temporal-field map;
-- live-source/persistence trace for each On-chain/Smart-Money sub-family;
-- production/bounded status of liquidation collection;
-- evidence-detail retrieval contract by evidence identity;
-- family breakdown retrieval contract for M6 score;
-- capital assessment/sizing/fill read contracts;
-- event materiality/source-to-message mapping;
-- classification of secondary research engines for Stream vs evidence-window vs research-only;
-- Stream Gap Ledger closure plan;
-- final S1 completeness audit against current repo.
+### Wave-2 closeout findings
 
-S1 remains **ACTIVE / NOT PASS**.
+Resolved mechanically:
+- exact identity + temporal lineage is documented in `CRYPTO_SIGNAL_STREAM_S1_IDENTITY_TEMPORAL_MAP.md`;
+- source-to-message mapping and secondary-engine classification are documented in `CRYPTO_SIGNAL_STREAM_S1_SOURCE_MESSAGE_MAP.md`;
+- liquidation collector status is resolved: implementation/persistence exists, production continuous collector is explicitly disabled;
+- on-chain/smart-money status is resolved by sub-family rather than one vague bucket;
+- M6 family breakdown persistence gap is exact: contribution data exists at issuance but is not persisted in the R20/R20.5 Decision Ledger;
+- universal evidence-by-identity lookup does not exist; geometry, Market Tape and Event Source have different persistence/read paths, while some accepted research freezes need future immutable Stream evidence persistence;
+- rich Capital Science / Position Sizing runtime objects are not fully persisted/projected; R22 preview and canonical R22/R21 transaction/accounting infrastructure are separately persisted;
+- existing Chromium visual acceptance is already reusable.
+
+### S1 PASS conclusion
+
+S1 discovery is **PASS** at the contract/audit level.
+
+All major user-relevant capabilities are now classified, open DISCOVER items have been converted into exact implementation gaps or explicit not-live boundaries, and the source/identity/time/message contracts needed to begin S2 are documented.
+
+S1 PASS does **not** mean those gaps are implemented. S2+ must build the missing immutable Stream message/evidence/context projections without inventing historical truth.
