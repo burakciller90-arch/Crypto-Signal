@@ -13,7 +13,7 @@ REAL_CAPITAL: 0
 
 This entry **supersedes the older WC5 production-UI state from PR #1185** while preserving its evidence below as historical acceptance.
 
-- Canonical main is now `d8843003f2a7fec663db124333ebf633c0f34dea`.
+- Accepted GALACTECH V2 production/deploy target: `d8843003f2a7fec663db124333ebf633c0f34dea`.
 - PR **#1207** replaced the prior Product presentation layer with **GALACTECH V2**, a Turkish-first intelligence product rather than a developer dashboard:
   - the main surface consumes the persisted `/api/intelligence-feed` as a social-style live timeline;
   - a lightweight 5-second feed refresh is isolated from the heavier 30-second runtime refresh;
