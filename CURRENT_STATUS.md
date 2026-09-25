@@ -3,11 +3,42 @@
 Updated: 2026-09-25
 Project: Crypto Signal
 Baseline: crypto-signal-full-version-v1.0.0 (immutable)
-Active post-v1.0 program: v1.1 world-class product + market intelligence + Crypto Signal frontend M0-M7
-State: WC0_LIVE_PRODUCT_PARITY_ACCEPTED / WC1_24_7_DATA_RELIABILITY_ACCEPTED / WC2_ENGINEERING_FROZEN_EVIDENCE_ACCUMULATION_ACTIVE / WC4_CHAMPION_CHALLENGER_ENGINEERING_ACCEPTED_RESEARCH_ONLY / WC5_ENGINEERING_ACCEPTED_PRODUCT_DEPLOYED_HUMAN_USABILITY_NOT_MEASURED / WC6_SANDBOX_BOUNDARY_ACCEPTED_VENUE_EVIDENCE_EXTERNAL_DEPENDENCY / WC7_CURRENT_FRONTIER_PACKET_ACCEPTED_CURRENT_INSUFFICIENT_EVIDENCE / FRONTEND_M0_CANONICAL_M1_DISCOVERY_ACTIVE / CONTINUITY_PAUSED_BY_USER
+Active post-v1.0 program: v1.1 world-class product + market intelligence + Crypto Signal Intelligence Stream V1
+State: WC0_LIVE_PRODUCT_PARITY_ACCEPTED / WC1_24_7_DATA_RELIABILITY_ACCEPTED / WC2_ENGINEERING_FROZEN_EVIDENCE_ACCUMULATION_ACTIVE / WC4_CHAMPION_CHALLENGER_ENGINEERING_ACCEPTED_RESEARCH_ONLY / WC5_ENGINEERING_ACCEPTED_PRODUCT_DEPLOYED_HUMAN_USABILITY_NOT_MEASURED / WC6_SANDBOX_BOUNDARY_ACCEPTED_VENUE_EVIDENCE_EXTERNAL_DEPENDENCY / WC7_CURRENT_FRONTIER_PACKET_ACCEPTED_CURRENT_INSUFFICIENT_EVIDENCE / INTELLIGENCE_STREAM_V1_CANONICAL_S0_PASS_S1_ACTIVE / CONTINUITY_PAUSED_BY_USER
 REAL_CAPITAL: 0
 
 ## Active v1.1 frontier — read before historical sections
+
+### 2026-09-25 16:41 +0300 — INTELLIGENCE STREAM V1 IS THE SOLE CURRENT FRONTEND PRODUCT FRONTIER
+
+The user explicitly superseded the prior multi-screen frontend program.
+
+Current frontend/product execution authority is now only:
+
+- `docs/CRYPTO_SIGNAL_INTELLIGENCE_STREAM_V1_MASTER_ROADMAP.md`.
+
+The active product target is intentionally **one primary panel**:
+- Telegram/WhatsApp-like live Intelligence Stream;
+- short collapsed message bubble;
+- click-to-expand SIMPLE / PRO / INTELLIGENCE / DECISION / geometry / CAPITAL / PROOF;
+- technical concepts and score components open contextual evidence windows;
+- evidence windows are draggable/resizable/minimizable and may detach for a second monitor where supported;
+- original Turkish system prose is generated from canonical facts + story/change context with deterministic validation/fallback;
+- messages arrive live without refresh;
+- configurable original notification chime;
+- history is backend-persistent, append-only, scrolls upward and remains searchable/filterable;
+- normal mode remains one mixed chronological stream rather than separate product sections.
+
+The prior frontend documents are no longer current execution authority:
+- `CRYPTO_SIGNAL_FRONTEND_MASTER_ROADMAP_V1.md` = SUPERSEDED;
+- `CRYPTO_SIGNAL_FRONTEND_M0_CONSTITUTION.md` = SUPERSEDED frontend decision record;
+- `CRYPTO_SIGNAL_FRONTEND_M1_CAPABILITY_GAP_LEDGER.md` = historical discovery evidence only.
+
+Standalone Markets, Capital, Performance, Archive, Learn and System pages are explicitly out of current scope. Required information from those domains is surfaced through messages and contextual windows. Additional main screens may be considered only after Stream V1 Definition of Done is accepted by the user.
+
+S0 authority freeze is therefore **PASS** after this documentation reconciliation. The active implementation/discovery frontier becomes **S1 — Stream-only backend capability audit**.
+
+The deployed GALACTECH V2 interface remains the current production baseline/fallback until a future controlled Stream V1 cutover. No runtime/product code, scientific evidence state, WC2/WC7 verdict or REAL_CAPITAL boundary is changed by this authority update.
 
 ### 2026-09-25 15:02 +0300 — FRONTEND PRODUCT PILLARS CLARIFIED / DORMANT-BACKEND SURFACING AUDIT REQUIRED
 
