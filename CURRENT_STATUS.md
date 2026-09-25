@@ -9,6 +9,25 @@ REAL_CAPITAL: 0
 
 ## Active v1.1 frontier — read before historical sections
 
+### 2026-09-25 15:02 +0300 — FRONTEND PRODUCT PILLARS CLARIFIED / DORMANT-BACKEND SURFACING AUDIT REQUIRED
+
+User product direction now makes two capabilities first-class for the from-scratch Crypto Signal frontend:
+
+1. **Live Intelligence Feed** must become a rich evidence-bound timeline rather than remaining a forecast-issued/resolved-only presentation.
+2. **Virtual Capital / Smart Capital** must be a flagship active simulation surface, with canonical Epoch 2 and its three vaults visible through exact decision/sizing/execution/accounting lineage.
+
+Mechanical repo review found an important distinction:
+- many accepted backend intelligence capabilities exist but are not currently exposed as live feed events;
+- Tactical Smart Capital evidence/allocator support exists for 1m/5m;
+- Position Sizing Bridge, R22 Transaction Tape and R21 Epoch 2 accounting are already three-vault aware;
+- the accepted automatic forward paper-execution runtime is currently bound to **CORE** and exact dual-provider **4h** mode.
+
+Therefore "frontend has no data" must not be used when the real state is "accepted backend truth exists but product adapter is missing." M1 now requires a complete accepted-capability surfacing audit.
+
+The missing **Tactical 1m/5m forward virtual-paper execution bridge** is elevated to a mandatory product/backend closure. It must reuse accepted allocator/sizing/tape/accounting primitives, remain forward-only, simulate only, fail closed, and preserve REAL_CAPITAL=0. It may trade on its activation day when a real eligible setup appears, but no trade may be forced merely to create activity.
+
+Scientific/economic conclusions are unchanged. This product-direction update does not claim profitability, does not change WC2/WC7 evidence sufficiency, and grants no real-order authority.
+
 ### 2026-09-25 14:11 +0300 — CRYPTO SIGNAL FRONTEND M0 CANONICAL / M1 DISCOVERY ACTIVE
 
 This entry records the current frontend-program authority without changing deployed Product truth or any scientific/economic verdict.
