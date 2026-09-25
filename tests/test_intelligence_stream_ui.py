@@ -19,8 +19,8 @@ def test_stream_preview_is_isolated_from_production_root(tmp_path: Path) -> None
     assert root.status_code == 200
     assert preview.status_code == 200
     assert 'data-ui-version="galactech-v2-intelligence-first-tr"' in root.text
-    assert 'data-ui-version="crypto-signal-stream-v1-s10"' in preview.text
-    assert 'data-ui-version="crypto-signal-stream-v1-s10"' not in root.text
+    assert 'data-ui-version="crypto-signal-stream-v1-s11"' in preview.text
+    assert 'data-ui-version="crypto-signal-stream-v1-s11"' not in root.text
 
 
 def test_stream_preview_obeys_one_panel_contract() -> None:
