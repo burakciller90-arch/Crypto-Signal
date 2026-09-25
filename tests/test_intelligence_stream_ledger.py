@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import sqlite3
+from dataclasses import replace
 from decimal import Decimal
 
 import pytest
@@ -70,6 +71,16 @@ from crypto_signal.product.intelligence_stream_policy import (
 from crypto_signal.product.intelligence_stream_projectors import (
     project_forecast_issuance,
     project_forecast_resolution,
+)
+from crypto_signal.product.intelligence_stream_story import (
+    build_change_set,
+    build_story_observation,
+    build_story_observation_snapshot,
+    build_story_state,
+)
+from crypto_signal.product.intelligence_stream_story_ledger import (
+    IntelligenceStreamStoryLedger,
+    StreamStoryLedgerWriteDisposition,
 )
 from crypto_signal.signals.models import SignalDirection, SignalState
 
@@ -864,3 +875,667 @@ def test_stream_forecast_projector_replay_preserves_story_and_resolution_relatio
         == issuance.message_input.message_identity
     )
     assert first.message_input.supersedes_message_identity is None
+
+
+
+def test_stream_story_root_and_resolution_change_are_deterministic() -> None:
+    _, forecast, proof, context, issuance_feed_event = _full_bundle(
+        as_of_ms=7_000_000,
+        issued_at_ms=7_000_100,
+        seed="story-resolution",
+    )
+    activation = build_stream_activation_boundary(activated_at_ms=7_000_000)
+    issuance = project_forecast_issuance(
+        activation,
+        context,
+        forecast,
+        proof,
+        issuance_feed_event,
+    )
+    root_observation = build_story_observation(
+        issuance.message_input,
+        issuance.fact_bundle,
+    )
+    root_state = build_story_state(root_observation)
+    root_change = build_change_set(root_state)
+
+    assert root_change.story_started is True
+    assert root_change.changed_codes == ("story_started",)
+    assert root_change.previous_state_identity is None
+    assert root_change.previous_message_identity is None
+    assert root_change.support_score_delta is None
+    assert root_change.family_changes == ()
+
+    resolution = _resolution(
+        forecast,
+        evaluated_at_ms=7_400_000,
+        seed="story-resolution",
+    )
+    resolution_feed_event = build_live_intelligence_feed_event(
+        proof,
+        forecast,
+        resolution=resolution,
+    )
+    resolved = project_forecast_resolution(
+        activation,
+        context,
+        forecast,
+        proof,
+        resolution_feed_event,
+        resolution,
+        issuance_message=issuance.message_input,
+    )
+    resolved_observation = build_story_observation(
+        resolved.message_input,
+        resolved.fact_bundle,
+        previous_state_identity=root_state.state_identity,
+    )
+    resolved_state = build_story_state(
+        resolved_observation,
+        previous_state=root_state,
+    )
+    resolved_change = build_change_set(
+        resolved_state,
+        previous_state=root_state,
+    )
+
+    replay_state = build_story_state(
+        resolved_observation,
+        previous_state=root_state,
+    )
+    replay_change = build_change_set(
+        replay_state,
+        previous_state=root_state,
+    )
+
+    assert resolved_state == replay_state
+    assert resolved_change == replay_change
+    assert resolved_state.story_identity == root_state.story_identity
+    assert resolved_state.previous_state_identity == root_state.state_identity
+    assert (
+        resolved_state.previous_message_identity
+        == issuance.message_input.message_identity
+    )
+    assert resolved_change.story_started is False
+    assert resolved_change.stance_changed is False
+    assert resolved_change.support_score_delta == Decimal(0)
+    assert resolved_change.opposition_score_delta == Decimal(0)
+    assert resolved_change.family_changes == ()
+    assert resolved_change.risk_changed is False
+    assert resolved_change.trigger_changed is False
+    assert resolved_change.capital_changed is False
+    assert resolved_change.outcome_changed is True
+    assert resolved_change.previous_outcome_state is None
+    assert resolved_change.current_outcome_state == "hit_target"
+    assert resolved_change.changed_codes == ("outcome_changed",)
+
+
+def test_stream_story_rejects_unrelated_previous_story() -> None:
+    _, forecast_a, proof_a, context_a, feed_a = _full_bundle(
+        as_of_ms=8_000_000,
+        issued_at_ms=8_000_100,
+        seed="story-a",
+    )
+    _, forecast_b, proof_b, context_b, feed_b = _full_bundle(
+        as_of_ms=8_100_000,
+        issued_at_ms=8_100_100,
+        seed="story-b",
+    )
+    activation = build_stream_activation_boundary(activated_at_ms=8_000_000)
+    first = project_forecast_issuance(
+        activation,
+        context_a,
+        forecast_a,
+        proof_a,
+        feed_a,
+    )
+    second = project_forecast_issuance(
+        activation,
+        context_b,
+        forecast_b,
+        proof_b,
+        feed_b,
+    )
+    first_state = build_story_state(
+        build_story_observation(first.message_input, first.fact_bundle)
+    )
+    second_observation = build_story_observation(
+        second.message_input,
+        second.fact_bundle,
+        previous_state_identity=first_state.state_identity,
+    )
+
+    with pytest.raises(ValueError, match="cannot join unrelated story"):
+        build_story_state(second_observation, previous_state=first_state)
+
+
+def test_stream_story_transition_requires_exact_previous_state_identity() -> None:
+    _, forecast, proof, context, feed_event = _full_bundle(
+        as_of_ms=9_000_000,
+        issued_at_ms=9_000_100,
+        seed="story-previous-state",
+    )
+    activation = build_stream_activation_boundary(activated_at_ms=9_000_000)
+    issuance = project_forecast_issuance(
+        activation,
+        context,
+        forecast,
+        proof,
+        feed_event,
+    )
+    root_observation = build_story_observation(
+        issuance.message_input,
+        issuance.fact_bundle,
+    )
+    root_state = build_story_state(root_observation)
+
+    unlinked = build_story_observation_snapshot(
+        story_identity=root_state.story_identity,
+        source_event_identity=_sha("unlinked-source-event"),
+        stream_event_identity=_sha("unlinked-stream-event"),
+        message_identity=_sha("unlinked-message"),
+        previous_state_identity=None,
+        asset=root_state.asset,
+        symbol=root_state.symbol,
+        timeframe=root_state.timeframe,
+        event_at_ms=root_state.event_at_ms + 1,
+        decision_state=root_state.decision_state,
+        direction=root_state.direction,
+        support_score_0_100=root_state.support_score_0_100,
+        opposition_score_0_100=root_state.opposition_score_0_100,
+        family_contributions=root_state.family_contributions,
+        event_risk_state=root_state.event_risk_state,
+        trigger_state=root_state.trigger_state,
+        capital_reference_identities=root_state.capital_reference_identities,
+        outcome_state=root_state.outcome_state,
+    )
+
+    with pytest.raises(ValueError, match="previous-state mismatch"):
+        build_story_state(unlinked, previous_state=root_state)
+
+
+def test_stream_story_change_set_detects_exact_structured_deltas() -> None:
+    _, forecast, proof, context, feed_event = _full_bundle(
+        as_of_ms=10_000_000,
+        issued_at_ms=10_000_100,
+        seed="story-delta",
+    )
+    activation = build_stream_activation_boundary(activated_at_ms=10_000_000)
+    issuance = project_forecast_issuance(
+        activation,
+        context,
+        forecast,
+        proof,
+        feed_event,
+    )
+    root_observation = build_story_observation(
+        issuance.message_input,
+        issuance.fact_bundle,
+    )
+    root_state = build_story_state(root_observation)
+
+    changed_families = list(root_state.family_contributions)
+    order_flow_index = next(
+        index
+        for index, item in enumerate(changed_families)
+        if item.family is ConfluenceFamily.ORDER_FLOW
+    )
+    changed_families[order_flow_index] = replace(
+        changed_families[order_flow_index],
+        support_points=Decimal("20.00"),
+        opposition_points=Decimal("5.00"),
+    )
+    capital_identity = _sha("story-delta-capital")
+    synthetic = build_story_observation_snapshot(
+        story_identity=root_state.story_identity,
+        source_event_identity=_sha("story-delta-source-event"),
+        stream_event_identity=_sha("story-delta-stream-event"),
+        message_identity=None,
+        previous_state_identity=root_state.state_identity,
+        asset=root_state.asset,
+        symbol=root_state.symbol,
+        timeframe=root_state.timeframe,
+        event_at_ms=root_state.event_at_ms + 1,
+        decision_state=root_state.decision_state,
+        direction="bearish",
+        support_score_0_100=Decimal("75.00"),
+        opposition_score_0_100=Decimal("5.00"),
+        family_contributions=tuple(changed_families),
+        event_risk_state="blocked",
+        trigger_state="met",
+        capital_reference_identities=(capital_identity,),
+        outcome_state=None,
+    )
+    current_state = build_story_state(
+        synthetic,
+        previous_state=root_state,
+    )
+    change = build_change_set(
+        current_state,
+        previous_state=root_state,
+    )
+
+    assert change.stance_changed is True
+    assert change.previous_stance_key == root_state.source_stance_key
+    assert change.current_stance_key == "bearish:active"
+    assert change.support_score_delta == Decimal("-7.00")
+    assert change.opposition_score_delta == Decimal("5.00")
+    assert len(change.family_changes) == 1
+    assert change.family_changes[0].family is ConfluenceFamily.ORDER_FLOW
+    assert change.family_changes[0].support_delta == Decimal("-5.00")
+    assert change.family_changes[0].opposition_delta == Decimal("5.00")
+    assert change.risk_changed is True
+    assert change.previous_risk_state == root_state.event_risk_state
+    assert change.current_risk_state == "blocked"
+    assert change.trigger_changed is True
+    assert change.previous_trigger_state is None
+    assert change.current_trigger_state == "met"
+    assert change.capital_changed is True
+    assert change.capital_reference_added == (capital_identity,)
+    assert change.capital_reference_removed == ()
+    assert change.outcome_changed is False
+    assert change.changed_codes == (
+        "capital_changed",
+        "evidence_family_changed",
+        "risk_changed",
+        "score_changed",
+        "stance_changed",
+        "trigger_changed",
+    )
+
+
+def test_stream_story_ledger_persists_explicit_chain_idempotently(tmp_path) -> None:
+    _, forecast, proof, context, issuance_feed_event = _full_bundle(
+        as_of_ms=11_000_000,
+        issued_at_ms=11_000_100,
+        seed="story-ledger",
+    )
+    activation = build_stream_activation_boundary(activated_at_ms=11_000_000)
+    issuance = project_forecast_issuance(
+        activation,
+        context,
+        forecast,
+        proof,
+        issuance_feed_event,
+    )
+    path = tmp_path / "stream-story-ledger.sqlite3"
+    source_ledger = IntelligenceStreamLedger(path)
+    source_ledger.append_activation(activation)
+    source_ledger.append_issuance_bundle(context, issuance.source_event)
+    message_ledger = IntelligenceStreamMessageLedger(path)
+    message_ledger.append_message_bundle(
+        issuance.fact_bundle,
+        issuance.message_input,
+    )
+
+    root_observation = build_story_observation(
+        issuance.message_input,
+        issuance.fact_bundle,
+    )
+    root_state = build_story_state(root_observation)
+    root_change = build_change_set(root_state)
+    story_ledger = IntelligenceStreamStoryLedger(path)
+    assert (
+        story_ledger.append_transition(
+            root_observation,
+            root_state,
+            root_change,
+        )
+        is StreamStoryLedgerWriteDisposition.INSERTED
+    )
+    assert (
+        story_ledger.append_transition(
+            root_observation,
+            root_state,
+            root_change,
+        )
+        is StreamStoryLedgerWriteDisposition.UNCHANGED
+    )
+
+    resolution = _resolution(
+        forecast,
+        evaluated_at_ms=11_400_000,
+        seed="story-ledger",
+    )
+    resolution_feed_event = build_live_intelligence_feed_event(
+        proof,
+        forecast,
+        resolution=resolution,
+    )
+    resolved = project_forecast_resolution(
+        activation,
+        context,
+        forecast,
+        proof,
+        resolution_feed_event,
+        resolution,
+        issuance_message=issuance.message_input,
+    )
+    source_ledger.append_source_event(resolved.source_event)
+    message_ledger.append_message_bundle(
+        resolved.fact_bundle,
+        resolved.message_input,
+    )
+    observation = build_story_observation(
+        resolved.message_input,
+        resolved.fact_bundle,
+        previous_state_identity=root_state.state_identity,
+    )
+    state = build_story_state(observation, previous_state=root_state)
+    change = build_change_set(state, previous_state=root_state)
+    assert (
+        story_ledger.append_transition(observation, state, change)
+        is StreamStoryLedgerWriteDisposition.INSERTED
+    )
+
+    status = story_ledger.read_status()
+    assert status.observation_count == 2
+    assert status.state_count == 2
+    assert status.change_set_count == 2
+    assert status.story_count == 1
+    assert status.real_capital == 0
+
+    latest = story_ledger.read_latest_state(root_state.story_identity)
+    assert latest is not None
+    assert latest["state_identity"] == state.state_identity
+    assert latest["previous_state_identity"] == root_state.state_identity
+    assert latest["outcome_state"] == "hit_target"
+
+    history = story_ledger.read_story_states(root_state.story_identity)
+    assert len(history) == 2
+    assert history[0]["state_identity"] == root_state.state_identity
+    assert history[1]["state_identity"] == state.state_identity
+
+    stored_change = story_ledger.read_change_set(state.state_identity)
+    assert stored_change is not None
+    assert stored_change["changed_codes"] == ["outcome_changed"]
+
+
+def test_stream_story_ledger_accepts_prepublication_observation_without_message(
+    tmp_path,
+) -> None:
+    _, forecast, proof, context, issuance_feed_event = _full_bundle(
+        as_of_ms=12_000_000,
+        issued_at_ms=12_000_100,
+        seed="story-prepublication",
+    )
+    activation = build_stream_activation_boundary(activated_at_ms=12_000_000)
+    issuance = project_forecast_issuance(
+        activation,
+        context,
+        forecast,
+        proof,
+        issuance_feed_event,
+    )
+    path = tmp_path / "stream-story-prepublication.sqlite3"
+    source_ledger = IntelligenceStreamLedger(path)
+    source_ledger.append_activation(activation)
+    source_ledger.append_issuance_bundle(context, issuance.source_event)
+    message_ledger = IntelligenceStreamMessageLedger(path)
+    message_ledger.append_message_bundle(
+        issuance.fact_bundle,
+        issuance.message_input,
+    )
+
+    root_observation = build_story_observation(
+        issuance.message_input,
+        issuance.fact_bundle,
+    )
+    root_state = build_story_state(root_observation)
+    root_change = build_change_set(root_state)
+    story_ledger = IntelligenceStreamStoryLedger(path)
+    story_ledger.append_transition(root_observation, root_state, root_change)
+
+    resolution = _resolution(
+        forecast,
+        evaluated_at_ms=12_400_000,
+        seed="story-prepublication",
+    )
+    resolution_feed_event = build_live_intelligence_feed_event(
+        proof,
+        forecast,
+        resolution=resolution,
+    )
+    resolved = project_forecast_resolution(
+        activation,
+        context,
+        forecast,
+        proof,
+        resolution_feed_event,
+        resolution,
+        issuance_message=issuance.message_input,
+    )
+    source_ledger.append_source_event(resolved.source_event)
+
+    observation = build_story_observation_snapshot(
+        story_identity=root_state.story_identity,
+        source_event_identity=resolved.source_event.source_event_identity,
+        stream_event_identity=resolved.source_event.stream_event_identity,
+        message_identity=None,
+        previous_state_identity=root_state.state_identity,
+        asset=root_state.asset,
+        symbol=root_state.symbol,
+        timeframe=root_state.timeframe,
+        event_at_ms=resolved.source_event.event_at_ms,
+        decision_state=root_state.decision_state,
+        direction=root_state.direction,
+        support_score_0_100=root_state.support_score_0_100,
+        opposition_score_0_100=root_state.opposition_score_0_100,
+        family_contributions=root_state.family_contributions,
+        event_risk_state=root_state.event_risk_state,
+        trigger_state="met",
+        capital_reference_identities=(),
+        outcome_state="hit_target",
+    )
+    state = build_story_state(observation, previous_state=root_state)
+    change = build_change_set(state, previous_state=root_state)
+
+    assert state.current_message_identity is None
+    assert change.current_message_identity is None
+    assert change.trigger_changed is True
+    assert change.outcome_changed is True
+    assert change.changed_codes == ("outcome_changed", "trigger_changed")
+    assert (
+        story_ledger.append_transition(observation, state, change)
+        is StreamStoryLedgerWriteDisposition.INSERTED
+    )
+
+
+def test_stream_story_ledger_rows_are_physically_immutable(tmp_path) -> None:
+    _, forecast, proof, context, feed_event = _full_bundle(
+        as_of_ms=13_000_000,
+        issued_at_ms=13_000_100,
+        seed="story-immutable",
+    )
+    activation = build_stream_activation_boundary(activated_at_ms=13_000_000)
+    issuance = project_forecast_issuance(
+        activation,
+        context,
+        forecast,
+        proof,
+        feed_event,
+    )
+    path = tmp_path / "stream-story-immutable.sqlite3"
+    source_ledger = IntelligenceStreamLedger(path)
+    source_ledger.append_activation(activation)
+    source_ledger.append_issuance_bundle(context, issuance.source_event)
+    IntelligenceStreamMessageLedger(path).append_message_bundle(
+        issuance.fact_bundle,
+        issuance.message_input,
+    )
+    observation = build_story_observation(
+        issuance.message_input,
+        issuance.fact_bundle,
+    )
+    state = build_story_state(observation)
+    change = build_change_set(state)
+    IntelligenceStreamStoryLedger(path).append_transition(
+        observation,
+        state,
+        change,
+    )
+
+    with (
+        sqlite3.connect(path) as connection,
+        pytest.raises(
+            sqlite3.DatabaseError,
+            match="immutable intelligence stream story ledger",
+        ),
+    ):
+        connection.execute(
+            "UPDATE stream_story_states SET event_at_ms = 99999999"
+        )
+
+
+def test_query_only_story_reads_never_initialize_missing_database(tmp_path) -> None:
+    path = tmp_path / "missing-stream-story.sqlite3"
+    ledger = IntelligenceStreamStoryLedger(path)
+
+    with pytest.raises(FileNotFoundError):
+        ledger.read_status()
+    assert not path.exists()
+
+
+
+def test_stream_story_ledger_persists_exact_continuity_chain(tmp_path) -> None:
+    _, forecast, proof, context, issuance_feed_event = _full_bundle(
+        as_of_ms=11_000_000,
+        issued_at_ms=11_000_100,
+        seed="story-ledger",
+    )
+    activation = build_stream_activation_boundary(activated_at_ms=11_000_000)
+    issuance = project_forecast_issuance(
+        activation,
+        context,
+        forecast,
+        proof,
+        issuance_feed_event,
+    )
+    path = tmp_path / "stream-story-ledger.sqlite3"
+    source_ledger = IntelligenceStreamLedger(path)
+    source_ledger.append_activation(activation)
+    source_ledger.append_issuance_bundle(
+        context,
+        issuance.source_event,
+    )
+    message_ledger = IntelligenceStreamMessageLedger(path)
+    message_ledger.append_message_bundle(
+        issuance.fact_bundle,
+        issuance.message_input,
+    )
+
+    root_observation = build_story_observation(
+        issuance.message_input,
+        issuance.fact_bundle,
+    )
+    root_state = build_story_state(root_observation)
+    root_change = build_change_set(root_state)
+    story_ledger = IntelligenceStreamStoryLedger(path)
+    assert (
+        story_ledger.append_transition(
+            root_observation,
+            root_state,
+            root_change,
+        )
+        is StreamStoryLedgerWriteDisposition.INSERTED
+    )
+    assert (
+        story_ledger.append_transition(
+            root_observation,
+            root_state,
+            root_change,
+        )
+        is StreamStoryLedgerWriteDisposition.UNCHANGED
+    )
+
+    resolution = _resolution(
+        forecast,
+        evaluated_at_ms=11_400_000,
+        seed="story-ledger",
+    )
+    resolution_feed_event = build_live_intelligence_feed_event(
+        proof,
+        forecast,
+        resolution=resolution,
+    )
+    resolved = project_forecast_resolution(
+        activation,
+        context,
+        forecast,
+        proof,
+        resolution_feed_event,
+        resolution,
+        issuance_message=issuance.message_input,
+    )
+    source_ledger.append_source_event(resolved.source_event)
+    message_ledger.append_message_bundle(
+        resolved.fact_bundle,
+        resolved.message_input,
+    )
+    resolved_observation = build_story_observation(
+        resolved.message_input,
+        resolved.fact_bundle,
+        previous_state_identity=root_state.state_identity,
+    )
+    resolved_state = build_story_state(
+        resolved_observation,
+        previous_state=root_state,
+    )
+    resolved_change = build_change_set(
+        resolved_state,
+        previous_state=root_state,
+    )
+
+    assert (
+        story_ledger.append_transition(
+            resolved_observation,
+            resolved_state,
+            resolved_change,
+        )
+        is StreamStoryLedgerWriteDisposition.INSERTED
+    )
+    assert (
+        story_ledger.append_transition(
+            resolved_observation,
+            resolved_state,
+            resolved_change,
+        )
+        is StreamStoryLedgerWriteDisposition.UNCHANGED
+    )
+
+    status = story_ledger.read_status()
+    assert status.observation_count == 2
+    assert status.state_count == 2
+    assert status.change_set_count == 2
+    assert status.story_count == 1
+    assert status.real_capital == 0
+
+    latest = story_ledger.read_latest_state(root_state.story_identity)
+    assert latest is not None
+    assert latest["state_identity"] == resolved_state.state_identity
+    assert latest["previous_state_identity"] == root_state.state_identity
+    assert (
+        latest["previous_message_identity"]
+        == issuance.message_input.message_identity
+    )
+
+    history = story_ledger.read_story_states(root_state.story_identity)
+    assert len(history) == 2
+    assert history[0]["state_identity"] == root_state.state_identity
+    assert history[1]["state_identity"] == resolved_state.state_identity
+
+    stored_change = story_ledger.read_change_set(resolved_state.state_identity)
+    assert stored_change is not None
+    assert stored_change["change_set_identity"] == resolved_change.change_set_identity
+    assert stored_change["changed_codes"] == ["outcome_changed"]
+
+    with (
+        sqlite3.connect(path) as connection,
+        pytest.raises(
+            sqlite3.DatabaseError,
+            match="immutable intelligence stream story ledger",
+        ),
+    ):
+        connection.execute(
+            "UPDATE stream_story_states SET story_identity = 'tampered'"
+        )
