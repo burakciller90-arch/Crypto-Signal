@@ -58,12 +58,12 @@ class StreamStoryObservation:
             (self.stream_event_identity, "Stream story stream-event identity"),
         ):
             _require_sha256(value, label)
-        for value, label in (
+        for optional_identity, label in (
             (self.message_identity, "Stream story message identity"),
             (self.previous_state_identity, "Stream previous story-state identity"),
         ):
-            if value is not None:
-                _require_sha256(value, label)
+            if optional_identity is not None:
+                _require_sha256(optional_identity, label)
         _require_identity_tuple(
             self.capital_reference_identities,
             "Stream story capital reference",
@@ -145,13 +145,13 @@ class StreamStoryState:
             ),
         ):
             _require_sha256(value, label)
-        for value, label in (
+        for optional_identity, label in (
             (self.current_message_identity, "Stream current message identity"),
             (self.previous_state_identity, "Stream previous story state identity"),
             (self.previous_message_identity, "Stream previous message identity"),
         ):
-            if value is not None:
-                _require_sha256(value, label)
+            if optional_identity is not None:
+                _require_sha256(optional_identity, label)
         _require_identity_tuple(
             self.capital_reference_identities,
             "Stream story state capital reference",
@@ -254,13 +254,13 @@ class StreamChangeSet:
             (self.current_state_identity, "Stream current story-state identity"),
         ):
             _require_sha256(value, label)
-        for value, label in (
+        for optional_identity, label in (
             (self.previous_state_identity, "Stream previous change-state identity"),
             (self.previous_message_identity, "Stream previous change message"),
             (self.current_message_identity, "Stream current change message"),
         ):
-            if value is not None:
-                _require_sha256(value, label)
+            if optional_identity is not None:
+                _require_sha256(optional_identity, label)
         if self.story_started != (self.previous_state_identity is None):
             raise ValueError("Stream story-start flag does not match previous state")
         if not self.current_stance_key.strip() or not self.current_risk_state.strip():
@@ -538,7 +538,31 @@ def build_change_set(
         )
         return StreamChangeSet(
             change_set_identity=canonical_sha256(payload),
-            **payload,
+            story_identity=current_state.story_identity,
+            previous_state_identity=None,
+            current_state_identity=current_state.state_identity,
+            previous_message_identity=None,
+            current_message_identity=current_state.current_message_identity,
+            story_started=True,
+            stance_changed=False,
+            previous_stance_key=None,
+            current_stance_key=current_state.source_stance_key,
+            support_score_delta=None,
+            opposition_score_delta=None,
+            family_changes=(),
+            risk_changed=False,
+            previous_risk_state=None,
+            current_risk_state=current_state.event_risk_state,
+            trigger_changed=False,
+            previous_trigger_state=None,
+            current_trigger_state=current_state.trigger_state,
+            capital_changed=False,
+            capital_reference_added=(),
+            capital_reference_removed=(),
+            outcome_changed=False,
+            previous_outcome_state=None,
+            current_outcome_state=current_state.outcome_state,
+            changed_codes=("story_started",),
         )
 
     if current_state.story_identity != previous_state.story_identity:
@@ -614,7 +638,31 @@ def build_change_set(
     )
     return StreamChangeSet(
         change_set_identity=canonical_sha256(payload),
-        **payload,
+        story_identity=current_state.story_identity,
+        previous_state_identity=previous_state.state_identity,
+        current_state_identity=current_state.state_identity,
+        previous_message_identity=previous_state.current_message_identity,
+        current_message_identity=current_state.current_message_identity,
+        story_started=False,
+        stance_changed=stance_changed,
+        previous_stance_key=previous_state.source_stance_key,
+        current_stance_key=current_state.source_stance_key,
+        support_score_delta=support_delta,
+        opposition_score_delta=opposition_delta,
+        family_changes=family_changes,
+        risk_changed=risk_changed,
+        previous_risk_state=previous_state.event_risk_state,
+        current_risk_state=current_state.event_risk_state,
+        trigger_changed=trigger_changed,
+        previous_trigger_state=previous_state.trigger_state,
+        current_trigger_state=current_state.trigger_state,
+        capital_changed=capital_changed,
+        capital_reference_added=capital_added,
+        capital_reference_removed=capital_removed,
+        outcome_changed=outcome_changed,
+        previous_outcome_state=previous_state.outcome_state,
+        current_outcome_state=current_state.outcome_state,
+        changed_codes=changed_codes,
     )
 
 
