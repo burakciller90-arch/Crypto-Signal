@@ -18,11 +18,11 @@ from crypto_signal.product.intelligence_stream_capital import (
 from crypto_signal.product.intelligence_stream_capital_decisions import (
     STREAM_CAPITAL_DECISION_MESSAGE_SCHEMA_VERSION,
 )
-from crypto_signal.product.intelligence_stream_capital_sizing import (
-    STREAM_CAPITAL_SIZING_MESSAGE_SCHEMA_VERSION,
-)
 from crypto_signal.product.intelligence_stream_capital_lifecycle import (
     STREAM_CAPITAL_LIFECYCLE_MESSAGE_SCHEMA_VERSION,
+)
+from crypto_signal.product.intelligence_stream_capital_sizing import (
+    STREAM_CAPITAL_SIZING_MESSAGE_SCHEMA_VERSION,
 )
 from crypto_signal.product.intelligence_stream_messages import (
     STREAM_FACT_BUNDLE_SCHEMA_VERSION,
