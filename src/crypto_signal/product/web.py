@@ -4,7 +4,6 @@ import asyncio
 import os
 import sqlite3
 import time
-from collections.abc import Iterator
 from collections.abc import AsyncIterator
 from pathlib import Path
 from typing import Any
