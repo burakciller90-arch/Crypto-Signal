@@ -186,9 +186,10 @@ def _create_visual_truth(
                 symbol,
                 timeframe,
                 issued_at_ms,
+                source_as_of_ms,
                 payload_json,
                 payload_sha256
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 forecast_identity,
@@ -196,6 +197,7 @@ def _create_visual_truth(
                 "BTC",
                 "BTCUSDT",
                 "4h",
+                1_000,
                 1_000,
                 canonical_json(
                     {
