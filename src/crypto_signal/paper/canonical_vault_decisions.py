@@ -51,6 +51,7 @@ class CanonicalVaultDecisionRecord:
     vault_id: PaperVaultId
     disposition: CanonicalVaultDecisionDisposition
     asset: str
+    source_timeframe: str
     candidate_as_of_ms: int
     assessed_at_ms: int
     decided_at_ms: int
@@ -93,6 +94,8 @@ class CanonicalVaultDecisionRecord:
             raise TypeError("S11 vault decision requires canonical Event Risk state")
         if not self.asset or self.asset != self.asset.upper():
             raise ValueError("S11 vault decision asset must be uppercase")
+        if not self.source_timeframe.strip():
+            raise ValueError("S11 vault decision source timeframe must be non-empty")
         if min(self.candidate_as_of_ms, self.assessed_at_ms, self.decided_at_ms) < 0:
             raise ValueError("S11 vault decision timestamps must be non-negative")
         if not (
@@ -348,6 +351,13 @@ def build_vault_decision(
         and candidate.tactical_microstructure is not None
         else None
     )
+    source_timeframe = (
+        tactical_timeframe
+        if tactical_timeframe is not None
+        else candidate.confluence.timeframe
+        if candidate.confluence is not None
+        else "event"
+    )
     source_ids = {
         assessment.assessment_identity,
         candidate.candidate_identity,
@@ -373,6 +383,7 @@ def build_vault_decision(
         "recovery_evidence_identity": envelope.recovery_evidence_identity,
         "schema_version": S11_VAULT_DECISION_SCHEMA_VERSION,
         "source_evidence_identities": tuple(sorted(source_ids)),
+        "source_timeframe": source_timeframe,
         "starting_budget_usdt": envelope.starting_budget_usdt,
         "tactical_evidence_identity": envelope.tactical_evidence_identity,
         "tactical_timeframe": tactical_timeframe,
@@ -386,6 +397,7 @@ def build_vault_decision(
         vault_id=vault_id,
         disposition=disposition,
         asset=candidate.asset,
+        source_timeframe=source_timeframe,
         candidate_as_of_ms=candidate.as_of_ms,
         assessed_at_ms=assessment.assessed_at_ms,
         decided_at_ms=decided_at_ms,
@@ -465,6 +477,7 @@ def _decision_payload(value: CanonicalVaultDecisionRecord) -> dict[str, object]:
         "recovery_evidence_identity": value.recovery_evidence_identity,
         "schema_version": value.schema_version,
         "source_evidence_identities": value.source_evidence_identities,
+        "source_timeframe": value.source_timeframe,
         "starting_budget_usdt": value.starting_budget_usdt,
         "tactical_evidence_identity": value.tactical_evidence_identity,
         "tactical_timeframe": value.tactical_timeframe,
