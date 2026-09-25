@@ -6,14 +6,9 @@ from pathlib import Path
 import pytest
 from test_decision_proof_live_feed import ISSUED_AT, _forecast, _slices
 from test_position_sizing_intelligence import (
-    _context as sizing_context,
-)
-from test_position_sizing_intelligence import (
     _policy as sizing_policy,
 )
-from test_position_sizing_intelligence import (
-    _vault as sizing_vault,
-)
+from test_smart_capital_allocator import _candidate
 from test_transaction_tape_atomic import _initial_state
 
 from crypto_signal.ledger.serialization import canonical_sha256
@@ -22,13 +17,16 @@ from crypto_signal.paper.canonical_capital_runtime import (
     commit_canonical_paper_buy,
 )
 from crypto_signal.paper.canonical_sizing import promote_fixed_fractional_sizing
+from crypto_signal.paper.canonical_vault_eligibility import promote_vault_eligibility
 from crypto_signal.paper.epoch2_accounting import Epoch2CanonicalLedger
 from crypto_signal.paper.epochs import PaperVaultId
 from crypto_signal.paper.execution import build_frozen_execution_snapshot
 from crypto_signal.paper.models import PaperSymbol
 from crypto_signal.paper.position_sizing_intelligence import (
+    build_position_sizing_risk_context,
     evaluate_position_sizing_intelligence,
 )
+from crypto_signal.paper.smart_capital_allocator import assess_smart_capital_candidate
 from crypto_signal.paper.transaction_tape_atomic import R22Epoch2AtomicTape
 from crypto_signal.product.decision_proof import build_decision_proof_snapshot
 
@@ -37,12 +35,47 @@ def _sha(seed: str) -> str:
     return canonical_sha256({"seed": seed})
 
 
-def _assessment(vault_id: PaperVaultId):
-    return evaluate_position_sizing_intelligence(
-        policy=sizing_policy(),
-        vault=sizing_vault(vault_id=vault_id),
-        context=sizing_context(vault_id=vault_id),
+def _capital_inputs(vault_id: PaperVaultId):
+    candidate = _candidate()
+    allocator = assess_smart_capital_candidate(
+        candidate,
+        assessed_at_ms=candidate.as_of_ms + 1,
     )
+    envelope = next(
+        item for item in allocator.vaults if item.vault_id is vault_id
+    )
+    context = build_position_sizing_risk_context(
+        vault_id=vault_id,
+        asset="BTCUSDT",
+        as_of_ms=ISSUED_AT,
+        allocator_assessment_identity=allocator.assessment_identity,
+        allocator_candidate_identity=candidate.candidate_identity,
+        expected_win_r=Decimal(2),
+        expected_loss_r=Decimal(1),
+        transaction_cost_r=Decimal("0.10"),
+        absolute_correlation_0_1=Decimal("0.20"),
+        current_drawdown_fraction=Decimal("0.05"),
+        volatility_fraction=Decimal("0.10"),
+        liquidity_score_0_1=Decimal("0.90"),
+        source_evidence_identities=(
+            _sha(f"{vault_id.value}-correlation"),
+            _sha(f"{vault_id.value}-drawdown"),
+            _sha(f"{vault_id.value}-liquidity"),
+            _sha(f"{vault_id.value}-payoff"),
+            _sha(f"{vault_id.value}-volatility"),
+        ),
+    )
+    sizing = evaluate_position_sizing_intelligence(
+        policy=sizing_policy(),
+        vault=envelope,
+        context=context,
+    )
+    eligibility = promote_vault_eligibility(
+        candidate,
+        allocator,
+        vault_id=vault_id,
+    )
+    return sizing, eligibility
 
 
 def _execution_snapshot():
@@ -68,7 +101,7 @@ def test_s11_atomic_buy_mutates_only_target_vault_and_binds_exact_lineage(
         item for item in before.vault_snapshots
         if item.vault_id is PaperVaultId.CORE
     )
-    assessment = _assessment(PaperVaultId.CORE)
+    assessment, eligibility = _capital_inputs(PaperVaultId.CORE)
     selection = promote_fixed_fractional_sizing(
         assessment,
         current_vault=core,
@@ -81,6 +114,7 @@ def test_s11_atomic_buy_mutates_only_target_vault_and_binds_exact_lineage(
         proof=proof,
         sizing_assessment=assessment,
         sizing_selection=selection,
+        eligibility_proof=eligibility,
         symbol=PaperSymbol.BTCUSDT,
         reference_price=Decimal(101),
         reference_price_evidence_identity=_sha("reference-price"),
@@ -139,8 +173,6 @@ def test_s11_same_atomic_runtime_can_participate_for_all_three_vaults(
     tmp_path: Path,
 ) -> None:
     epoch2_path, _ = _initial_state(tmp_path)
-    forecast = _forecast()
-    proof = build_decision_proof_snapshot(forecast, _slices(forecast))
     execution = _execution_snapshot()
 
     for index, vault_id in enumerate(
@@ -150,12 +182,16 @@ def test_s11_same_atomic_runtime_can_participate_for_all_three_vaults(
             PaperVaultId.OPPORTUNITY_RESERVE,
         )
     ):
+        forecast = _forecast(
+            timeframe="5m" if vault_id is PaperVaultId.TACTICAL else "4h"
+        )
+        proof = build_decision_proof_snapshot(forecast, _slices(forecast))
         state = Epoch2CanonicalLedger(epoch2_path).read_state()
         current = next(
             item for item in state.vault_snapshots
             if item.vault_id is vault_id
         )
-        assessment = _assessment(vault_id)
+        assessment, eligibility = _capital_inputs(vault_id)
         base_time = ISSUED_AT + 100 + index * 100
         selection = promote_fixed_fractional_sizing(
             assessment,
@@ -202,7 +238,7 @@ def test_s11_buy_refuses_stale_selection_and_price_outside_trigger(
         item for item in before.vault_snapshots
         if item.vault_id is PaperVaultId.CORE
     )
-    assessment = _assessment(PaperVaultId.CORE)
+    assessment, eligibility = _capital_inputs(PaperVaultId.CORE)
     selection = promote_fixed_fractional_sizing(
         assessment,
         current_vault=core,
@@ -214,6 +250,7 @@ def test_s11_buy_refuses_stale_selection_and_price_outside_trigger(
         "proof": proof,
         "sizing_assessment": assessment,
         "sizing_selection": selection,
+        "eligibility_proof": eligibility,
         "symbol": PaperSymbol.BTCUSDT,
         "reference_price_evidence_identity": _sha("reference-price"),
         "mark_prices": {PaperSymbol.BTCUSDT: Decimal(101)},
