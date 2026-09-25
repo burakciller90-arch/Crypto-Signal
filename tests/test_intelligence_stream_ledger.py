@@ -59,11 +59,11 @@ def _confluence(*, as_of_ms: int, seed: str):
         ConfluenceFamily.ONCHAIN: MetaDirection.NEUTRAL,
     }
     strengths = {
-        ConfluenceFamily.GEOMETRY: Decimal("1"),
-        ConfluenceFamily.LIQUIDITY: Decimal("1"),
-        ConfluenceFamily.ORDER_FLOW: Decimal("1"),
+        ConfluenceFamily.GEOMETRY: Decimal(1),
+        ConfluenceFamily.LIQUIDITY: Decimal(1),
+        ConfluenceFamily.ORDER_FLOW: Decimal(1),
         ConfluenceFamily.DERIVATIVES: Decimal("0.8"),
-        ConfluenceFamily.ONCHAIN: Decimal("0"),
+        ConfluenceFamily.ONCHAIN: Decimal(0),
     }
     evidence = tuple(
         build_confluence_family_evidence(
