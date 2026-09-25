@@ -9,6 +9,47 @@ REAL_CAPITAL: 0
 
 ## Active v1.1 frontier — read before historical sections
 
+### 2026-09-25 03:08 +0300 — GALACTECH V2 TURKISH INTELLIGENCE-FIRST PRODUCT DEPLOYED / WC0 LIVE PARITY RECONFIRMED
+
+This entry records the current Product deployment truth without changing the scientific WC2/WC7 verdicts below.
+
+- GALACTECH V2 product code was accepted through PR **#1207**. Its final frontend exact-head `47f99f6198a4d9962b8787d9d444adea80b1784c` passed:
+  - WC0 Operational Truth Latency UID504 run **36074112621** — focused acceptance, live read-only latency acceptance, whole-repository regression and Development non-mutation all **SUCCESS**;
+  - WC5 Ten-Second Decision Surface UID504 run **36074112582** — focused product contracts, live read-only exact-cohort preview, whole-repository regression and Development non-mutation all **SUCCESS**.
+- PR #1207 merged the Turkish intelligence-first frontend as `36f631d5ee85a670e5ecc1bdb291173f6837e343`. The accepted source tree preserves:
+  - Turkish-first navigation and user-facing copy;
+  - social/timeline-style live Intelligence Feed;
+  - exact forecast -> Decision Proof -> frozen evidence drill-down;
+  - canonical Epoch 2/read-only runtime truth;
+  - no fake latency/ONLINE/probability claims;
+  - no credential/order/real-capital authority.
+- The first two live deployment attempts were **correctly fail-closed and rolled back**:
+  - issue **#1208** exposed stale V1.1 UI assertions in the deploy gate;
+  - issue **#1211** then exposed a dashboard PID self-match defect in the restart detector.
+- PR **#1209** updated Product deploy/preview assertions to GALACTECH V2 and made restart supervisor-managed. PR **#1215** then fixed the PID detector itself with exact Product dashboard argv matching. Its exact-head UID504 acceptance passed:
+  - GALACTECH Preview Lifecycle run **36075850254** — **SUCCESS**;
+  - Runtime Supervisor Detection run **36075850297** — **SUCCESS**;
+  - WC2 Bounded Paper Execution run **36075850367** — **SUCCESS**.
+- Final canonical runtime/product code head: **`d8843003f2a7fec663db124333ebf633c0f34dea`** (merge of PR #1215).
+- Final live deployment issue **#1216**, run **36075986903 / job 107887168347**, completed **SUCCESS**:
+  - Product advanced from `15fa3dca848fb9e76841f9b113f9f13a2a1ee11b` to exact target `d8843003f2a7fec663db124333ebf633c0f34dea`;
+  - supervisor PID **40756** replaced the single old Product dashboard PID **43226** with single respawn PID **46826**;
+  - Intelligence Center live acceptance passed;
+  - GALACTECH root/alias live acceptance passed;
+  - R25 Operational Truth live acceptance passed;
+  - `R11_RUNTIME_AUDIT_PASS=YES`;
+  - `WC0_RUNTIME_TOPOLOGY_SQLITE_PASS=YES`;
+  - continuity remained `PAUSED=YES`, `ACTIVE_LEASES=0`, `WAKE_QUEUE=0`;
+  - `PRODUCT_DEPLOY_PASS=YES`.
+- Independent post-deploy Product state issue **#1219**, run **36076149961 / job 107887678023**, reconfirmed:
+  - `HEAD=d8843003f2a7fec663db124333ebf633c0f34dea`;
+  - `status=ok`;
+  - `read_only=true`;
+  - `REAL_CAPITAL=0`.
+- Therefore the GALACTECH V2 frontend is not merely merged or previewed: it is the current deployed Product surface.
+- This deployment does **not** upgrade missing scientific/economic evidence. WC5 human <=10-second comprehension remains `NOT_MEASURED`; WC2 evidence accumulation remains preregistered/frozen; WC7 remains `INSUFFICIENT_EVIDENCE` with `WC7_MACHINE_EDGE_VERDICT=NONE`.
+
+
 
 ### 2026-09-25 01:15 +0300 — WC7 CURRENT FRONTIER PACKET ACCEPTED / CONCLUSION REMAINS INSUFFICIENT_EVIDENCE
 

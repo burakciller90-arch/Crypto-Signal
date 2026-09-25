@@ -62,6 +62,29 @@ WC0 closes only when:
 
 Hosted CI alone does not close WC0.
 
+## Accepted GALACTECH V2 redeployment evidence — 2026-09-25
+
+The current production Product surface is GALACTECH V2.
+
+- Frontend/Product rebuild PR **#1207** accepted the Turkish intelligence-first surface with exact read-only forecast/proof lineage.
+- Exact frontend head `47f99f6198a4d9962b8787d9d444adea80b1784c` passed WC0 UID504 run **36074112621** and WC5 UID504 run **36074112582**, including whole-repository regression and Development non-mutation.
+- Deployment-gate/runtime restart defects were kept fail-closed:
+  - #1208 rolled back on stale V1.1 UI assertions;
+  - #1211 rolled back on Product dashboard PID self-match.
+- PR **#1209** aligned V2 deploy assertions and supervisor-managed restart.
+- PR **#1215** fixed exact Product dashboard PID matching; GALACTECH Preview Lifecycle **36075850254** and Runtime Supervisor Detection **36075850297** passed.
+- Final deployed exact code head: `d8843003f2a7fec663db124333ebf633c0f34dea`.
+- Final deployment issue **#1216**, run **36075986903 / job 107887168347**:
+  - exact Product HEAD advance succeeded;
+  - one supervisor-owned dashboard respawn was accepted;
+  - Intelligence Center, root/alias and R25 Operational Truth passed live;
+  - R11 runtime/SQLite acceptance passed;
+  - continuity pause was preserved;
+  - `PRODUCT_DEPLOY_PASS=YES`.
+- Independent issue **#1219**, run **36076149961 / job 107887678023**, reconfirmed exact Product HEAD, `status=ok`, `read_only=true` and `REAL_CAPITAL=0`.
+
+WC0 Product parity is therefore reconfirmed for GALACTECH V2. This operational acceptance does not imply calibrated probability, profitability, human usability success or real-money authority.
+
 # WC1 — 24/7 Data Reliability and Event Runtime Truth
 
 ## Goal
