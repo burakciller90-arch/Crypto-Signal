@@ -626,8 +626,8 @@ def _build_capital_source_event(
     }
     if outcome is not None:
         outcome_identity = _sha_field(outcome, "outcome_identity", "S11 outcome")
-        if outcome.get("source_fill_identity") != fill.get("fill_identity"):
-            raise ValueError("S11 sell outcome/fill lineage mismatch")
+        if outcome.get("source_fill_identity") != fill.get("source_fill_identity"):
+            raise ValueError("S11 sell outcome/source-fill lineage mismatch")
         if outcome.get("action") != action:
             raise ValueError("S11 sell outcome/action mismatch")
         evidence_set.add(outcome_identity)
