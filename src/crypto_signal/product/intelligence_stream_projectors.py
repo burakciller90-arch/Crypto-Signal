@@ -10,6 +10,7 @@ from crypto_signal.product.decision_proof import (
 from crypto_signal.product.intelligence_stream_messages import (
     StreamFactBundle,
     StreamMessageInput,
+    build_forecast_story_identity,
     build_resolution_relation,
     build_stream_fact_bundle,
     build_stream_message_input,
@@ -91,39 +92,9 @@ def project_forecast_resolution(
     issuance_message: StreamMessageInput,
 ) -> StreamProjectedMessage:
     _require_implemented_projector("r20_5_forecast_resolved")
-    if issuance_message.story_identity != build_stream_fact_bundle(
-        build_forecast_issued_source_event(
-            activation,
-            context,
-            LiveIntelligenceFeedEvent(
-                event_identity=issuance_message.source_event_identity,
-                schema_version=feed_event.schema_version,
-                engine_version=feed_event.engine_version,
-                kind=feed_event.kind.FORECAST_ISSUED,
-                event_at_ms=forecast.issued_at_ms,
-                forecast_identity=forecast.forecast_identity,
-                proof_identity=proof.proof_identity,
-                resolution_identity=None,
-                state=forecast.signal_state.value,
-                asset=forecast.asset,
-                symbol=forecast.symbol,
-                timeframe=forecast.timeframe,
-                conditional_thesis=proof.conditional_thesis,
-                trigger_zone=proof.trigger_zone,
-                target_zone=proof.target_zone,
-                invalidation_price=proof.invalidation_price,
-                evidence_summary=proof.evidence_summary,
-                freshness_0_1=proof.freshness_0_1,
-                authority=proof.authority,
-                probability_status=proof.probability_status,
-                calibrated_probability_0_1=proof.calibrated_probability_0_1,
-                uncertainty_flags=proof.uncertainty_flags,
-            ),
-        ),
-        context,
-        forecast,
-        proof,
-    ).story_identity:
+    if issuance_message.story_identity != build_forecast_story_identity(
+        forecast.forecast_identity
+    ):
         raise ValueError("Stream resolution issuance/story lineage mismatch")
 
     source_event = build_forecast_resolved_source_event(
