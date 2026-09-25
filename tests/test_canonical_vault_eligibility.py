@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-from dataclasses import replace
-
 import pytest
 from test_smart_capital_allocator import _candidate
 
+from crypto_signal.intelligence.event_risk_circuit_breaker import CircuitBreakerState
 from crypto_signal.paper.epochs import PaperVaultId
 from crypto_signal.paper.smart_capital_allocator import (
     VaultEligibilityState,
@@ -61,7 +60,7 @@ def test_s11_promotes_exact_allocator_eligibility_for_all_three_vaults(
 
 
 def test_s11_refuses_hold_cash_envelope_promotion() -> None:
-    candidate = _candidate(event_state="event_block")
+    candidate = _candidate(event_state=CircuitBreakerState.EVENT_BLOCK)
     assessment = _assessment(candidate)
     assert all(
         item.eligibility_state is VaultEligibilityState.HOLD_CASH
@@ -78,10 +77,7 @@ def test_s11_refuses_hold_cash_envelope_promotion() -> None:
 
 def test_s11_refuses_assessment_from_different_candidate() -> None:
     candidate = _candidate()
-    other = _candidate(recovery=replace(
-        candidate.opportunity_recovery,
-        feed_quality_healthy=False,
-    ))
+    other = _candidate(event_state=CircuitBreakerState.CAUTION)
     assessment = _assessment(candidate)
 
     with pytest.raises(ValueError, match="assessment/candidate identity mismatch"):
