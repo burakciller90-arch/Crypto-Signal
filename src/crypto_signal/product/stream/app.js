@@ -171,7 +171,11 @@ function messageText(record) {
 function messageState(record) {
   if (typeof record.__fixture_state === "string") return record.__fixture_state;
   if (text(record?.category, "") === "capital") {
-    if (text(record?.subtype, "") === "capital_executed") return "SERMAYE İŞLENDİ";
+    const subtype = text(record?.subtype, "");
+    if (subtype === "capital_executed") return "SERMAYE İŞLENDİ";
+    if (subtype === "capital_blocked") return "SERMAYE BLOKE";
+    if (subtype === "capital_hold") return "NAKİTTE BEKLE";
+    if (subtype === "capital_eligible") return "SERMAYE UYGUN";
     return "SERMAYE";
   }
   return "ANALİZ";
@@ -1117,6 +1121,110 @@ function capitalLineagePanel(capital) {
   return wrap;
 }
 
+function capitalDecisionMetricGrid(capital) {
+  const grid = document.createElement("div");
+  grid.className = "geometry-grid";
+  const reasons = Array.isArray(capital?.reason_codes)
+    ? capital.reason_codes.join(" · ")
+    : "—";
+  const rows = [
+    ["Vault", text(capital?.vault_id, "—")],
+    ["Durum", text(capital?.disposition, "—").toUpperCase()],
+    ["Event Risk", text(capital?.event_risk_state, "—").toUpperCase()],
+    ["Zaman ufku", text(capital?.timeframe, "—")],
+    ["Başlangıç bütçesi", `${displayNumber(capital?.starting_budget_usdt)} USDT`],
+    ["Nedenler", reasons],
+  ];
+  for (const [labelText, valueText] of rows) {
+    const cell = document.createElement("div");
+    const label = document.createElement("span");
+    label.textContent = labelText;
+    const value = document.createElement("strong");
+    value.textContent = valueText;
+    cell.append(label, value);
+    grid.append(cell);
+  }
+  return grid;
+}
+
+function capitalDecisionLineagePanel(capital) {
+  const wrap = document.createElement("div");
+  wrap.className = "proof-panel";
+  const rows = [
+    ["Vault decision", capital?.decision_identity],
+    ["Allocator assessment", capital?.allocator_assessment_identity],
+    ["Allocator candidate", capital?.allocator_candidate_identity],
+  ];
+  for (const [labelText, identity] of rows) {
+    const line = document.createElement("div");
+    line.className = "condition-row";
+    const label = document.createElement("span");
+    label.textContent = labelText;
+    const code = document.createElement("code");
+    code.textContent = compactIdentity(identity);
+    line.append(label, code);
+    wrap.append(line);
+  }
+  const refs = Array.isArray(capital?.capital_reference_identities)
+    ? capital.capital_reference_identities
+    : [];
+  const evidence = document.createElement("small");
+  evidence.textContent = `Exact kanıt zinciri: ${refs.length} kimlik · REAL_CAPITAL=0 · borsa emri yok`;
+  wrap.append(evidence);
+  return wrap;
+}
+
+function buildCapitalDecisionExpandedContent(record, detail) {
+  const capital =
+    detail && typeof detail.capital_decision === "object" && detail.capital_decision
+      ? detail.capital_decision
+      : record;
+  const textBundle =
+    capital && typeof capital.text === "object" && capital.text ? capital.text : {};
+  const grid = document.createElement("div");
+  grid.className = "message-depth-grid";
+
+  grid.append(
+    depthSection("SIMPLE", textBundle.simple_text, {
+      className: "depth-simple depth-wide",
+    }),
+    depthSection("PRO", textBundle.technical_text, {
+      className: "depth-pro",
+    })
+  );
+
+  const truth = document.createElement("div");
+  truth.className = "depth-composite";
+  const copy = document.createElement("p");
+  copy.textContent = text(
+    textBundle.intelligence_text,
+    "Bu kayıt yalnız allocator sermaye kararını açıklar; fill veya PnL üretmez."
+  );
+  truth.append(copy, capitalDecisionMetricGrid(capital));
+  grid.append(
+    depthSection("CAPITAL DECISION", "", {
+      className: "depth-intelligence depth-wide",
+      content: truth,
+    })
+  );
+
+  grid.append(
+    depthSection("DECISION", textBundle.decision_text, {
+      className: "depth-decision",
+    }),
+    depthSection("CAPITAL", textBundle.capital_text, {
+      className: "depth-capital",
+    })
+  );
+  grid.append(
+    depthSection("IMMUTABLE LINEAGE", "", {
+      className: "depth-proof depth-wide",
+      content: capitalDecisionLineagePanel(capital),
+    })
+  );
+  return grid;
+}
+
 function buildCapitalExpandedContent(record, detail) {
   const capital =
     detail && typeof detail.capital_story === "object" && detail.capital_story
@@ -1170,8 +1278,20 @@ function buildCapitalExpandedContent(record, detail) {
 }
 
 function buildExpandedContent(record, detail) {
+  const subtype = text(record?.subtype, "");
   if (
-    text(record?.category, "") === "capital"
+    subtype !== "capital_executed"
+    && (
+      subtype === "capital_eligible"
+      || subtype === "capital_hold"
+      || subtype === "capital_blocked"
+      || (detail && typeof detail.capital_decision === "object" && detail.capital_decision)
+    )
+  ) {
+    return buildCapitalDecisionExpandedContent(record, detail);
+  }
+  if (
+    subtype === "capital_executed"
     || (detail && typeof detail.capital_story === "object" && detail.capital_story)
   ) {
     return buildCapitalExpandedContent(record, detail);
