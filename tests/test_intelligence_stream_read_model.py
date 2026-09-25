@@ -682,8 +682,10 @@ def test_stream_exact_detail_fails_closed_on_persisted_tamper(tmp_path) -> None:
     try:
         row = connection.execute(
             """
-            SELECT n.fact_bundle_identity
+            SELECT p.fact_bundle_identity
             FROM stream_narrative_messages AS n
+            JOIN stream_narrative_plans AS p
+              ON p.plan_identity = n.plan_identity
             WHERE n.narrative_identity = ?
             """,
             (identities["btc-issued"],),
