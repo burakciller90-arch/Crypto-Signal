@@ -76,7 +76,7 @@ def test_stream_s7_does_not_enable_sound_or_message_expansion() -> None:
     script = (STREAM_DIR / "app.js").read_text(encoding="utf-8")
 
     assert "S13’te etkinleşecek" in html
-    assert "S8" in html
+    assert "expanded-message" not in html
     assert "new Audio(" not in script
     assert "AudioContext" not in script
     assert "Notification.requestPermission" not in script
