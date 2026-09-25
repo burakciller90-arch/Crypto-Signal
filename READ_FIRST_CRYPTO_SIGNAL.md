@@ -26,6 +26,9 @@ The user's 2026-09-20 Full Version direction supersedes the earlier deliberately
 
 Before planning new product work, read **in this order**:
 - `docs/V1_1_LOCKED_MASTER_ROADMAP_20260922.md` — **LOCKED user-approved v1.1 governing product contract (2026-09-22)**. It supersedes older v1.1 scope where conflicting, including the new 1,000 USDT Paper Fund Epoch 2, three parallel execution rails, and the from-scratch GALACTECH frontend rebuild.
+- `docs/CRYPTO_SIGNAL_FRONTEND_MASTER_ROADMAP_V1.md` — **current canonical frontend-program architecture**. For new frontend/product work it supersedes older UI-only assumptions where conflicting (brand hierarchy, navigation count, dark visual target, frontend execution order) while preserving all scientific, evidence, persistence and REAL_CAPITAL boundaries.
+- `docs/CRYPTO_SIGNAL_FRONTEND_M0_CONSTITUTION.md` — canonical frontend M0 product constitution, decision rights, multi-axis truth, temporal integrity, lineage and authority boundaries.
+- `docs/CRYPTO_SIGNAL_FRONTEND_M1_CAPABILITY_GAP_LEDGER.md` — mechanically verified frontend capability matrix and live Gap Ledger; update it as M1 discovery advances.
 - `docs/V1_1_MASTER_EXECUTION_ROADMAP.md` — **current governing post-v1.0 / v1.1+ execution roadmap**, including R15 runtime recovery, parallel UI + Market Tape tracks, Live Intelligence Feed / Decision Proof, Canonical Fund vs Shadow Lab, calibration, acceptance and v2 deferrals.
 - `docs/V1_1_WORLD_CLASS_PRODUCT_ROADMAP.md` — condensed v1.1 product roadmap.
 - `docs/CRYPTO_SIGNAL_FULL_VERSION_WORLD_CLASS_ROADMAP.md` — accepted Full Version/v1.0 architectural history and foundations.
