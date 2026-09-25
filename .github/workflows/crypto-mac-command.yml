@@ -3592,19 +3592,55 @@ jobs:
             local name="$1"
             local width="$2"
             local height="$3"
-            "$BROWSER" \
-              --headless=new \
-              --disable-gpu \
-              --hide-scrollbars \
-              --no-first-run \
-              --no-default-browser-check \
-              --disable-background-networking \
-              --disable-sync \
-              --metrics-recording-only \
-              --window-size="$width,$height" \
-              --virtual-time-budget=10000 \
-              --screenshot="$OUT/$name.png" \
-              "$URL/" >/tmp/galactech-visual-${name}.log 2>&1
+            BROWSER="$BROWSER" URL="$URL/" OUTFILE="$OUT/$name.png" NAME="$name" WIDTH="$width" HEIGHT="$height" \
+              /usr/bin/python3 - <<'PY'
+          import os
+          import signal
+          import subprocess
+          from pathlib import Path
+
+          browser = os.environ["BROWSER"]
+          url = os.environ["URL"]
+          outfile = os.environ["OUTFILE"]
+          name = os.environ["NAME"]
+          width = os.environ["WIDTH"]
+          height = os.environ["HEIGHT"]
+          log_path = Path("/tmp") / f"galactech-visual-{name}.log"
+
+          cmd = [
+              browser,
+              "--headless=new",
+              "--disable-gpu",
+              "--disable-extensions",
+              "--disable-background-networking",
+              "--disable-component-update",
+              "--disable-sync",
+              "--hide-scrollbars",
+              "--metrics-recording-only",
+              "--no-default-browser-check",
+              "--no-first-run",
+              "--renderer-process-limit=2",
+              f"--window-size={width},{height}",
+              "--virtual-time-budget=8000",
+              f"--screenshot={outfile}",
+              url,
+          ]
+          with log_path.open("wb") as log:
+              proc = subprocess.Popen(
+                  cmd,
+                  stdout=log,
+                  stderr=subprocess.STDOUT,
+                  start_new_session=True,
+              )
+              try:
+                  rc = proc.wait(timeout=30)
+              except subprocess.TimeoutExpired:
+                  os.killpg(proc.pid, signal.SIGKILL)
+                  proc.wait(timeout=5)
+                  raise SystemExit("HEADLESS_BROWSER_TIMEOUT")
+          if rc != 0:
+              raise SystemExit(f"HEADLESS_BROWSER_EXIT={rc}")
+          PY
             test -s "$OUT/$name.png"
             /usr/bin/sips -g pixelWidth -g pixelHeight "$OUT/$name.png" || true
           }
