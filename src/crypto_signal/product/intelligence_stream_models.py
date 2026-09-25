@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import StrEnum
 
-from crypto_signal.forecast_stream import ImmutableForecast
+from crypto_signal.forecast_stream import ForecastResolution, ImmutableForecast
 from crypto_signal.intelligence.confluence_matrix_v2 import ConfluenceMatrixSnapshot
 from crypto_signal.ledger.serialization import canonical_sha256
 from crypto_signal.product.decision_proof import (
@@ -383,6 +383,103 @@ def build_forecast_issued_source_event(
         decision_context_identity=context.context_identity,
         evidence_identities=evidence_ids,
         materiality_codes=("new_forecast_issued",),
+    )
+
+
+def build_forecast_resolved_source_event(
+    activation: StreamActivationBoundary,
+    context: StreamDecisionContextSnapshot,
+    event: LiveIntelligenceFeedEvent,
+    resolution: ForecastResolution,
+) -> StreamSourceEvent:
+    if event.kind is not LiveFeedEventKind.FORECAST_RESOLVED:
+        raise ValueError("Stream resolution projector requires FORECAST_RESOLVED")
+    if event.resolution_identity != resolution.resolution_identity:
+        raise ValueError("Stream resolution event/source identity mismatch")
+    if resolution.forecast_identity != context.forecast_identity:
+        raise ValueError("Stream resolution/context forecast mismatch")
+    if resolution.signal_freeze_identity != context.signal_freeze_identity:
+        raise ValueError("Stream resolution/context signal mismatch")
+    if event.forecast_identity != context.forecast_identity:
+        raise ValueError("Stream resolution event/context forecast mismatch")
+    if event.proof_identity != context.proof_identity:
+        raise ValueError("Stream resolution event/context proof mismatch")
+    if event.event_at_ms != resolution.evaluated_at_ms:
+        raise ValueError("Stream resolution event time mismatch")
+    if event.state != resolution.state.value:
+        raise ValueError("Stream resolution state mismatch")
+    if event.event_at_ms < activation.activated_at_ms:
+        raise ValueError("Stream refuses rich event before activation boundary")
+    if (event.asset, event.symbol, event.timeframe) != (
+        context.asset,
+        context.symbol,
+        context.timeframe,
+    ):
+        raise ValueError("Stream resolution event/context market mismatch")
+
+    evidence_ids = tuple(
+        sorted(
+            {
+                context.context_identity,
+                context.confluence_identity,
+                context.event_context_identity,
+                context.signal_freeze_identity,
+                resolution.resolution_identity,
+                resolution.source_outcome_identity,
+                *context.proof_slice_identities,
+                *context.forecast_source_evidence_identities,
+            }
+        )
+    )
+    materiality_codes = tuple(
+        sorted(
+            {
+                "forecast_outcome_resolved",
+                f"resolution_{resolution.state.value}",
+            }
+        )
+    )
+    payload = {
+        "activation_identity": activation.activation_identity,
+        "asset": context.asset,
+        "category": StreamCategory.OUTCOME,
+        "decision_context_identity": context.context_identity,
+        "engine_version": STREAM_ENGINE_VERSION,
+        "event_at_ms": resolution.evaluated_at_ms,
+        "evidence_identities": evidence_ids,
+        "forecast_identity": context.forecast_identity,
+        "importance": StreamImportance.IMPORTANT,
+        "materiality_codes": materiality_codes,
+        "production_authority": False,
+        "proof_identity": context.proof_identity,
+        "read_only": True,
+        "real_capital": REAL_CAPITAL,
+        "resolution_identity": resolution.resolution_identity,
+        "schema_version": STREAM_SOURCE_EVENT_SCHEMA_VERSION,
+        "source_as_of_ms": resolution.evaluated_at_ms,
+        "source_event_identity": event.event_identity,
+        "subtype": LiveFeedEventKind.FORECAST_RESOLVED.value,
+        "symbol": context.symbol,
+        "timeframe": context.timeframe,
+    }
+    return StreamSourceEvent(
+        stream_event_identity=canonical_sha256(payload),
+        activation_identity=activation.activation_identity,
+        source_event_identity=event.event_identity,
+        category=StreamCategory.OUTCOME,
+        subtype=LiveFeedEventKind.FORECAST_RESOLVED.value,
+        importance=StreamImportance.IMPORTANT,
+        asset=context.asset,
+        symbol=context.symbol,
+        timeframe=context.timeframe,
+        event_at_ms=resolution.evaluated_at_ms,
+        source_as_of_ms=resolution.evaluated_at_ms,
+        forecast_identity=context.forecast_identity,
+        proof_identity=context.proof_identity,
+        resolution_identity=resolution.resolution_identity,
+        decision_context_identity=context.context_identity,
+        evidence_identities=evidence_ids,
+        materiality_codes=materiality_codes,
     )
 
 

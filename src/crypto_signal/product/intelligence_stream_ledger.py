@@ -370,6 +370,128 @@ class IntelligenceStreamLedger:
             connection.commit()
         return StreamLedgerWriteDisposition.INSERTED
 
+    def append_source_event(
+        self,
+        event: StreamSourceEvent,
+    ) -> StreamLedgerWriteDisposition:
+        """Append one post-context Stream source event without rewriting prior truth."""
+        self.initialize()
+        event_json = canonical_json(event)
+        event_digest = sha256_text(event_json)
+
+        with closing(sqlite3.connect(self.path)) as connection:
+            connection.execute("PRAGMA foreign_keys=ON")
+            connection.execute("BEGIN IMMEDIATE")
+            self._verify_meta(connection)
+            activation = self._activation_row(connection)
+            activation_identity = str(activation[0])
+            activated_at_ms = int(str(activation[1]))
+            if event.activation_identity != activation_identity:
+                raise StreamLedgerConflictError(
+                    "Stream event activation identity mismatch"
+                )
+            if event.event_at_ms < activated_at_ms:
+                raise StreamLedgerConflictError(
+                    "Stream refuses rich history before activation boundary"
+                )
+
+            if event.decision_context_identity is not None:
+                context_row = connection.execute(
+                    """
+                    SELECT forecast_identity, proof_identity
+                    FROM stream_decision_contexts
+                    WHERE context_identity = ?
+                    """,
+                    (event.decision_context_identity,),
+                ).fetchone()
+                if context_row is None:
+                    raise StreamLedgerConflictError(
+                        "Stream source event references unknown decision context"
+                    )
+                if (
+                    event.forecast_identity is not None
+                    and str(context_row[0]) != event.forecast_identity
+                ):
+                    raise StreamLedgerConflictError(
+                        "Stream source event/context forecast mismatch"
+                    )
+                if (
+                    event.proof_identity is not None
+                    and str(context_row[1]) != event.proof_identity
+                ):
+                    raise StreamLedgerConflictError(
+                        "Stream source event/context proof mismatch"
+                    )
+
+            existing = connection.execute(
+                """
+                SELECT stream_event_identity, payload_json, payload_sha256
+                FROM stream_source_events
+                WHERE stream_event_identity = ?
+                   OR source_event_identity = ?
+                LIMIT 1
+                """,
+                (event.stream_event_identity, event.source_event_identity),
+            ).fetchone()
+            if existing is not None:
+                exact = (
+                    str(existing[0]) == event.stream_event_identity
+                    and str(existing[1]) == event_json
+                    and str(existing[2]) == event_digest
+                )
+                if exact:
+                    return StreamLedgerWriteDisposition.UNCHANGED
+                raise StreamLedgerConflictError(
+                    "immutable Stream source-event identity conflict"
+                )
+
+            last_event = connection.execute(
+                """
+                SELECT event_at_ms, stream_event_identity
+                FROM stream_source_events
+                ORDER BY event_at_ms DESC, stream_event_identity DESC
+                LIMIT 1
+                """
+            ).fetchone()
+            if last_event is not None and (
+                event.event_at_ms,
+                event.stream_event_identity,
+            ) <= (int(str(last_event[0])), str(last_event[1])):
+                raise StreamLedgerConflictError(
+                    "Stream source-event append would backfill or fork chronology"
+                )
+
+            connection.execute(
+                """
+                INSERT INTO stream_source_events (
+                    stream_event_identity,
+                    source_event_identity,
+                    activation_identity,
+                    decision_context_identity,
+                    category,
+                    subtype,
+                    event_at_ms,
+                    source_as_of_ms,
+                    payload_json,
+                    payload_sha256
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    event.stream_event_identity,
+                    event.source_event_identity,
+                    event.activation_identity,
+                    event.decision_context_identity,
+                    event.category.value,
+                    event.subtype,
+                    event.event_at_ms,
+                    event.source_as_of_ms,
+                    event_json,
+                    event_digest,
+                ),
+            )
+            connection.commit()
+        return StreamLedgerWriteDisposition.INSERTED
+
     def read_status(self) -> StreamLedgerStatus:
         with self._connect_ro() as connection:
             self._require_schema(connection)
