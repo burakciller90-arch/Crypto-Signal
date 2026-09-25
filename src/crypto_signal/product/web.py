@@ -1,13 +1,15 @@
 from __future__ import annotations
 
+import asyncio
 import os
 import sqlite3
 import time
+from collections.abc import AsyncIterator
 from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI, HTTPException, Query
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi import FastAPI, Header, HTTPException, Query, Request
+from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
 from crypto_signal.decision_ledger import (
@@ -50,6 +52,13 @@ from crypto_signal.product.intelligence_stream_read_model import (
     StreamMessageQuery,
     StreamReadModelError,
     decode_stream_cursor,
+)
+from crypto_signal.product.intelligence_stream_transport import (
+    encode_stream_sse_event,
+    encode_stream_sse_heartbeat,
+    encode_stream_sse_retry,
+    read_stream_live_batch,
+    resolve_stream_resume_cursor,
 )
 from crypto_signal.product.market_tape_runtime import (
     read_cold_archive_runtime_truth,
@@ -719,6 +728,105 @@ def create_app(
                 "read_only": True,
                 "real_capital": 0,
             }
+        )
+
+    @app.get("/api/stream/live")
+    async def stream_live(
+        request: Request,
+        after: str | None = Query(default=None, max_length=512),
+        last_event_id: str | None = Header(
+            default=None,
+            alias="Last-Event-ID",
+            max_length=512,
+        ),
+        batch_limit: int = Query(default=200, ge=1, le=200),
+        symbol: str | None = Query(default=None, min_length=1, max_length=32),
+        timeframe: str | None = Query(default=None, min_length=1, max_length=16),
+        story_identity: str | None = Query(default=None, min_length=64, max_length=64),
+        source_kind: str | None = Query(default=None, min_length=1, max_length=64),
+        effective_stance: str | None = Query(default=None, min_length=1, max_length=32),
+        category: str | None = Query(default=None, min_length=1, max_length=64),
+        importance: str | None = Query(default=None, min_length=1, max_length=64),
+        evidence_domain: str | None = Query(default=None, min_length=1, max_length=64),
+        from_ms: int | None = Query(default=None, ge=0),
+        to_ms: int | None = Query(default=None, ge=0),
+        text: str | None = Query(default=None, min_length=1, max_length=200),
+        follow: bool = Query(default=True),
+    ) -> StreamingResponse:
+        if selected_stream_path is None or not selected_stream_path.exists():
+            raise HTTPException(
+                status_code=503,
+                detail="intelligence_stream_runtime_not_configured",
+            )
+        reader = IntelligenceStreamReadModel(selected_stream_path)
+        try:
+            query = StreamMessageQuery(
+                limit=batch_limit,
+                symbol=symbol,
+                timeframe=timeframe,
+                story_identity=story_identity,
+                source_kind=source_kind,
+                effective_stance=effective_stance,
+                category=category,
+                importance=importance,
+                evidence_domain=evidence_domain,
+                from_ms=from_ms,
+                to_ms=to_ms,
+                text=text,
+            )
+            initial_cursor = resolve_stream_resume_cursor(
+                reader=reader,
+                after=after,
+                last_event_id=last_event_id,
+            )
+        except (StreamReadModelError, ValueError) as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+        async def event_stream() -> AsyncIterator[str]:
+            cursor = initial_cursor
+            last_heartbeat_at = time.monotonic()
+            yield encode_stream_sse_retry()
+            while True:
+                if await request.is_disconnected():
+                    return
+                try:
+                    batch = read_stream_live_batch(
+                        reader,
+                        query,
+                        after_cursor=cursor,
+                    )
+                except StreamReadModelError as exc:
+                    yield f"event: error\\ndata: {{\"detail\":\"{exc!s}\"}}\\n\\n"
+                    return
+
+                if batch.events:
+                    for event in batch.events:
+                        yield encode_stream_sse_event(event)
+                        cursor = event.event_id
+                    last_heartbeat_at = time.monotonic()
+                    if batch.has_more:
+                        continue
+                    if not follow:
+                        return
+                elif not follow:
+                    return
+
+                now = time.monotonic()
+                if now - last_heartbeat_at >= 15.0:
+                    yield encode_stream_sse_heartbeat(
+                        now_ms=int(time.time() * 1000)
+                    )
+                    last_heartbeat_at = now
+                await asyncio.sleep(1.0)
+
+        return StreamingResponse(
+            event_stream(),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache, no-transform",
+                "Connection": "keep-alive",
+                "X-Accel-Buffering": "no",
+            },
         )
 
     @app.get("/api/stream/messages/{narrative_identity}")

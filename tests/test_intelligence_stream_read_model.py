@@ -26,6 +26,14 @@ from crypto_signal.product.intelligence_stream_read_model import (
     decode_stream_cursor,
     encode_stream_cursor,
 )
+from crypto_signal.product.intelligence_stream_transport import (
+    STREAM_SSE_RETRY_MS,
+    cursor_for_stream_record,
+    encode_stream_sse_heartbeat,
+    encode_stream_sse_retry,
+    read_stream_live_batch,
+    resolve_stream_resume_cursor,
+)
 from crypto_signal.product.web import create_app
 
 
@@ -506,4 +514,227 @@ def test_stream_api_fails_closed_when_runtime_not_configured(tmp_path) -> None:
     assert response.status_code == 200
     assert response.json()["status"] == "unavailable"
     assert response.json()["page"]["items"] == []
+    assert not missing_stream.exists()
+
+
+def test_stream_sse_empty_first_connection_catches_first_future_message(tmp_path) -> None:
+    stream_path = tmp_path / "stream.sqlite3"
+    identities = _create_read_fixture(stream_path)
+
+    connection = sqlite3.connect(stream_path)
+    try:
+        saved = connection.execute(
+            """
+            SELECT narrative_identity, plan_identity, analytical_view_identity,
+                   story_identity, source_event_identity, stream_event_identity,
+                   event_at_ms, source_kind, payload_json, payload_sha256
+            FROM stream_narrative_messages
+            WHERE narrative_identity = ?
+            """,
+            (identities["btc-issued"],),
+        ).fetchone()
+        assert saved is not None
+        connection.execute("DELETE FROM stream_narrative_messages")
+        connection.commit()
+    finally:
+        connection.close()
+
+    reader = IntelligenceStreamReadModel(stream_path)
+    origin = resolve_stream_resume_cursor(
+        reader=reader,
+        after=None,
+        last_event_id=None,
+    )
+    assert origin is not None
+    decoded_origin = decode_stream_cursor(origin)
+    assert decoded_origin.event_at_ms == 0
+    assert decoded_origin.narrative_identity == "0" * 64
+
+    connection = sqlite3.connect(stream_path)
+    try:
+        connection.execute(
+            """
+            INSERT INTO stream_narrative_messages
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            saved,
+        )
+        connection.commit()
+    finally:
+        connection.close()
+
+    batch = read_stream_live_batch(
+        reader,
+        StreamMessageQuery(limit=200),
+        after_cursor=origin,
+    )
+    assert [event.data["narrative_identity"] for event in batch.events] == [
+        identities["btc-issued"]
+    ]
+    assert batch.next_cursor == batch.events[-1].event_id
+
+
+def test_stream_sse_transport_helpers_are_deterministic() -> None:
+    assert encode_stream_sse_retry() == f"retry: {STREAM_SSE_RETRY_MS}\n\n"
+    assert encode_stream_sse_heartbeat(now_ms=1234) == ": heartbeat 1234\n\n"
+    with pytest.raises(ValueError, match="heartbeat time"):
+        encode_stream_sse_heartbeat(now_ms=-1)
+
+
+def test_stream_sse_first_connection_tails_without_replaying_history(tmp_path) -> None:
+    stream_path = tmp_path / "stream.sqlite3"
+    _create_read_fixture(stream_path)
+    client = TestClient(
+        create_app(
+            tmp_path / "missing-signal-ledger.sqlite3",
+            stream_ledger_path=stream_path,
+        )
+    )
+
+    response = client.get("/api/stream/live", params={"follow": "false"})
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("text/event-stream")
+    assert response.headers["cache-control"] == "no-cache, no-transform"
+    assert response.text == f"retry: {STREAM_SSE_RETRY_MS}\n\n"
+
+
+def test_stream_sse_after_cursor_catches_up_without_duplicates(tmp_path) -> None:
+    stream_path = tmp_path / "stream.sqlite3"
+    identities = _create_read_fixture(stream_path)
+    reader = IntelligenceStreamReadModel(stream_path)
+    eth = reader.read_message(identities["eth-outcome"])
+    assert eth is not None
+    after = cursor_for_stream_record(eth)
+
+    client = TestClient(
+        create_app(
+            tmp_path / "missing-signal-ledger.sqlite3",
+            stream_ledger_path=stream_path,
+        )
+    )
+    response = client.get(
+        "/api/stream/live",
+        params={"after": after, "follow": "false"},
+    )
+    assert response.status_code == 200
+    body = response.text
+    assert body.count("event: message\n") == 2
+    assert identities["eth-outcome"] not in body
+    assert body.count(identities["btc-flow"]) == 1
+    assert body.count(identities["sol-issued"]) == 1
+    assert body.index(identities["btc-flow"]) < body.index(identities["sol-issued"])
+
+
+def test_stream_sse_last_event_id_resumes_exactly_after_delivered_message(tmp_path) -> None:
+    stream_path = tmp_path / "stream.sqlite3"
+    identities = _create_read_fixture(stream_path)
+    reader = IntelligenceStreamReadModel(stream_path)
+    btc_flow = reader.read_message(identities["btc-flow"])
+    assert btc_flow is not None
+    last_event_id = cursor_for_stream_record(btc_flow)
+
+    client = TestClient(
+        create_app(
+            tmp_path / "missing-signal-ledger.sqlite3",
+            stream_ledger_path=stream_path,
+        )
+    )
+    response = client.get(
+        "/api/stream/live",
+        params={"follow": "false"},
+        headers={"Last-Event-ID": last_event_id},
+    )
+    assert response.status_code == 200
+    assert response.text.count("event: message\n") == 1
+    assert identities["btc-flow"] not in response.text
+    assert response.text.count(identities["sol-issued"]) == 1
+
+
+def test_stream_sse_reconnect_prefers_newer_resume_boundary(tmp_path) -> None:
+    stream_path = tmp_path / "stream.sqlite3"
+    identities = _create_read_fixture(stream_path)
+    reader = IntelligenceStreamReadModel(stream_path)
+    eth = reader.read_message(identities["eth-outcome"])
+    btc_flow = reader.read_message(identities["btc-flow"])
+    assert eth is not None
+    assert btc_flow is not None
+
+    client = TestClient(
+        create_app(
+            tmp_path / "missing-signal-ledger.sqlite3",
+            stream_ledger_path=stream_path,
+        )
+    )
+    response = client.get(
+        "/api/stream/live",
+        params={
+            "after": cursor_for_stream_record(eth),
+            "follow": "false",
+        },
+        headers={"Last-Event-ID": cursor_for_stream_record(btc_flow)},
+    )
+    assert response.status_code == 200
+    assert identities["btc-flow"] not in response.text
+    assert response.text.count(identities["sol-issued"]) == 1
+
+    older_header = client.get(
+        "/api/stream/live",
+        params={
+            "after": cursor_for_stream_record(btc_flow),
+            "follow": "false",
+        },
+        headers={"Last-Event-ID": cursor_for_stream_record(eth)},
+    )
+    assert older_header.status_code == 200
+    assert identities["btc-flow"] not in older_header.text
+    assert older_header.text.count(identities["sol-issued"]) == 1
+
+
+def test_stream_sse_filters_match_polling_contract(tmp_path) -> None:
+    stream_path = tmp_path / "stream.sqlite3"
+    identities = _create_read_fixture(stream_path)
+    reader = IntelligenceStreamReadModel(stream_path)
+    issued = reader.read_message(identities["btc-issued"])
+    assert issued is not None
+    after = cursor_for_stream_record(issued)
+
+    client = TestClient(
+        create_app(
+            tmp_path / "missing-signal-ledger.sqlite3",
+            stream_ledger_path=stream_path,
+        )
+    )
+    params = {
+        "after": after,
+        "follow": "false",
+        "symbol": "BTCUSDT",
+        "timeframe": "4h",
+        "evidence_domain": "order_flow_cvd",
+        "text": "emir akışı",
+    }
+    sse = client.get("/api/stream/live", params=params)
+    polling = client.get(
+        "/api/stream/messages",
+        params={key: value for key, value in params.items() if key != "follow"},
+    )
+    assert sse.status_code == 200
+    assert polling.status_code == 200
+    assert sse.text.count(identities["btc-flow"]) == 1
+    assert [
+        item["narrative_identity"]
+        for item in polling.json()["page"]["items"]
+    ] == [identities["btc-flow"]]
+
+
+def test_stream_sse_fails_closed_when_runtime_is_missing(tmp_path) -> None:
+    missing_stream = tmp_path / "missing-stream.sqlite3"
+    client = TestClient(
+        create_app(
+            tmp_path / "missing-signal-ledger.sqlite3",
+            stream_ledger_path=missing_stream,
+        )
+    )
+    response = client.get("/api/stream/live", params={"follow": "false"})
+    assert response.status_code == 503
+    assert response.json()["detail"] == "intelligence_stream_runtime_not_configured"
     assert not missing_stream.exists()
