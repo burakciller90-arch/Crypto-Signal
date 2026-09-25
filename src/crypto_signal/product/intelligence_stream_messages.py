@@ -29,16 +29,19 @@ from crypto_signal.product.intelligence_stream_models import (
     StreamImportance,
     StreamSourceEvent,
 )
+from crypto_signal.product.intelligence_stream_policy import (
+    STREAM_MATERIALITY_POLICY_VERSION,
+    StreamMateriality,
+    StreamMaterialityDecision,
+    StreamPublicationDisposition,
+    build_stream_materiality_policy,
+    evaluate_stream_materiality,
+)
 
 STREAM_FACT_BUNDLE_SCHEMA_VERSION = "intelligence-stream-fact-bundle-v1/1"
-STREAM_MESSAGE_INPUT_SCHEMA_VERSION = "intelligence-stream-message-input-v1/1"
+STREAM_MESSAGE_INPUT_SCHEMA_VERSION = "intelligence-stream-message-input-v1/2"
 STREAM_MESSAGE_PROJECTOR_VERSION = "intelligence-stream-message-projector-v1/1"
 STREAM_STORY_NAMESPACE_VERSION = "intelligence-stream-story-namespace-v1/1"
-
-
-class StreamMateriality(StrEnum):
-    ROUTINE = "routine"
-    MATERIAL = "material"
 
 
 class StreamMessageRelationKind(StrEnum):
@@ -243,6 +246,10 @@ class StreamMessageInput:
     subtype: str
     importance: StreamImportance
     materiality: StreamMateriality
+    materiality_decision_identity: str
+    materiality_policy_identity: str
+    materiality_policy_version: str
+    publication_disposition: StreamPublicationDisposition
     asset: str
     symbol: str
     market: str
@@ -276,6 +283,17 @@ class StreamMessageInput:
             (self.fact_bundle_identity, "Stream message fact-bundle identity"),
         ):
             _require_sha256(value, label)
+        for value, label in (
+            (
+                self.materiality_decision_identity,
+                "Stream materiality decision identity",
+            ),
+            (
+                self.materiality_policy_identity,
+                "Stream materiality policy identity",
+            ),
+        ):
+            _require_sha256(value, label)
         if self.supersedes_message_identity is not None:
             _require_sha256(
                 self.supersedes_message_identity,
@@ -297,6 +315,15 @@ class StreamMessageInput:
             raise TypeError("Stream message importance must be canonical")
         if not isinstance(self.materiality, StreamMateriality):
             raise TypeError("Stream message materiality must be canonical")
+        if not isinstance(
+            self.publication_disposition,
+            StreamPublicationDisposition,
+        ):
+            raise TypeError("Stream publication disposition must be canonical")
+        if self.publication_disposition is not StreamPublicationDisposition.PUBLISH:
+            raise ValueError("canonical Stream message input requires publish disposition")
+        if self.materiality_policy_version != STREAM_MATERIALITY_POLICY_VERSION:
+            raise ValueError("Stream message materiality policy version mismatch")
         if min(self.event_at_ms, self.source_as_of_ms) < 0:
             raise ValueError("Stream message timestamps must be non-negative")
         if self.event_at_ms < self.source_as_of_ms:
@@ -541,6 +568,7 @@ def build_stream_message_input(
     relations: tuple[StreamMessageRelation, ...] = (),
     supersedes_message_identity: str | None = None,
     capital_reference_identities: tuple[str, ...] = (),
+    materiality_decision: StreamMaterialityDecision | None = None,
 ) -> StreamMessageInput:
     if fact_bundle.stream_event_identity != source_event.stream_event_identity:
         raise ValueError("Stream message fact/source normalized-event mismatch")
@@ -623,12 +651,17 @@ def build_stream_message_input(
         vaults=(),
         search_terms=search_terms,
     )
-    materiality = (
-        StreamMateriality.ROUTINE
-        if source_event.category is StreamCategory.ROUTINE
-        or source_event.importance is StreamImportance.ROUTINE
-        else StreamMateriality.MATERIAL
-    )
+    selected_materiality = materiality_decision
+    if selected_materiality is None:
+        selected_materiality = evaluate_stream_materiality(
+            build_stream_materiality_policy(),
+            source_event,
+        )
+    if selected_materiality.source_event_identity != source_event.stream_event_identity:
+        raise ValueError("Stream message materiality/source-event mismatch")
+    if selected_materiality.disposition is not StreamPublicationDisposition.PUBLISH:
+        raise ValueError("silent Stream source event cannot become canonical message input")
+    materiality = selected_materiality.materiality
     payload = {
         "analytical_view_version": None,
         "asset": fact_bundle.asset,
@@ -641,7 +674,11 @@ def build_stream_message_input(
         "importance": source_event.importance,
         "market": fact_bundle.market,
         "materiality": materiality,
+        "materiality_decision_identity": selected_materiality.decision_identity,
+        "materiality_policy_identity": selected_materiality.policy_identity,
+        "materiality_policy_version": selected_materiality.policy_version,
         "narrative_schema_version": None,
+        "publication_disposition": selected_materiality.disposition,
         "production_authority": False,
         "projector_version": STREAM_MESSAGE_PROJECTOR_VERSION,
         "proof_reference_identities": proof_refs,
@@ -672,6 +709,10 @@ def build_stream_message_input(
         subtype=source_event.subtype,
         importance=source_event.importance,
         materiality=materiality,
+        materiality_decision_identity=selected_materiality.decision_identity,
+        materiality_policy_identity=selected_materiality.policy_identity,
+        materiality_policy_version=selected_materiality.policy_version,
+        publication_disposition=selected_materiality.disposition,
         asset=fact_bundle.asset,
         symbol=fact_bundle.symbol,
         market=fact_bundle.market,
@@ -763,7 +804,11 @@ def _message_input_payload(value: StreamMessageInput) -> dict[str, object]:
         "importance": value.importance,
         "market": value.market,
         "materiality": value.materiality,
+        "materiality_decision_identity": value.materiality_decision_identity,
+        "materiality_policy_identity": value.materiality_policy_identity,
+        "materiality_policy_version": value.materiality_policy_version,
         "narrative_schema_version": value.narrative_schema_version,
+        "publication_disposition": value.publication_disposition,
         "production_authority": value.production_authority,
         "projector_version": value.projector_version,
         "proof_reference_identities": value.proof_reference_identities,
