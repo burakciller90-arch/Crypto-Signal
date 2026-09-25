@@ -4,10 +4,48 @@ Updated: 2026-09-25
 Project: Crypto Signal
 Baseline: crypto-signal-full-version-v1.0.0 (immutable)
 Active post-v1.0 program: v1.1 world-class product + market intelligence + Crypto Signal Intelligence Stream V1
-State: WC0_LIVE_PRODUCT_PARITY_ACCEPTED / WC1_24_7_DATA_RELIABILITY_ACCEPTED / WC2_ENGINEERING_FROZEN_EVIDENCE_ACCUMULATION_ACTIVE / WC4_CHAMPION_CHALLENGER_ENGINEERING_ACCEPTED_RESEARCH_ONLY / WC5_ENGINEERING_ACCEPTED_PRODUCT_DEPLOYED_HUMAN_USABILITY_NOT_MEASURED / WC6_SANDBOX_BOUNDARY_ACCEPTED_VENUE_EVIDENCE_EXTERNAL_DEPENDENCY / WC7_CURRENT_FRONTIER_PACKET_ACCEPTED_CURRENT_INSUFFICIENT_EVIDENCE / INTELLIGENCE_STREAM_V1_S0_PASS_S1_PASS_S2_PASS_S3_PASS_S4_PASS_S5_PASS_S6_ACTIVE / CONTINUITY_PAUSED_BY_USER
+State: WC0_LIVE_PRODUCT_PARITY_ACCEPTED / WC1_24_7_DATA_RELIABILITY_ACCEPTED / WC2_ENGINEERING_FROZEN_EVIDENCE_ACCUMULATION_ACTIVE / WC4_CHAMPION_CHALLENGER_ENGINEERING_ACCEPTED_RESEARCH_ONLY / WC5_ENGINEERING_ACCEPTED_PRODUCT_DEPLOYED_HUMAN_USABILITY_NOT_MEASURED / WC6_SANDBOX_BOUNDARY_ACCEPTED_VENUE_EVIDENCE_EXTERNAL_DEPENDENCY / WC7_CURRENT_FRONTIER_PACKET_ACCEPTED_CURRENT_INSUFFICIENT_EVIDENCE / INTELLIGENCE_STREAM_V1_S0_PASS_S1_PASS_S2_PASS_S3_PASS_S4_PASS_S5_PASS_S6_PASS_S7_ACTIVE / CONTINUITY_PAUSED_BY_USER
 REAL_CAPITAL: 0
 
 ## Active v1.1 frontier — read before historical sections
+
+### 2026-09-25 — STREAM S6 REAL-TIME BACKEND PASS / S7 ONE-PANEL UI ACTIVE
+
+S6 is mechanically accepted.
+
+Canonical acceptance record:
+- `docs/CRYPTO_SIGNAL_STREAM_S6_ACCEPTANCE.md`.
+
+Accepted S6 backend delivery:
+- immutable S5 Narrative Ledger read model;
+- stable before/after keyset cursors;
+- upward history pagination;
+- exact message lookup;
+- backend search/filter query model;
+- polling fallback;
+- live SSE transport;
+- EventSource Last-Event-ID reconnect/catch-up;
+- duplicate-free cursor resume;
+- empty-stream first-future-message delivery;
+- heartbeat/retry framing;
+- no narrative re-rendering inside transport.
+
+Merged implementation:
+- PR #1274 / main `ef5d435b2523946baea2a98b13cb2ea890a8c1ef`;
+- PR #1275 / main `c2a9deca8d36c191a0a05594e20710c438febf0c`.
+
+Exact-head acceptance:
+- Slice 1 head `021e1cfcfa706e792cbb189626bde45709e2b263`, run `36165298510` PASS;
+- Slice 2 head `4e87a4e53299f7054224ebe93d9a9be44c2ca77a`, run `36167138486` PASS;
+- focused pytest/Ruff/strict mypy PASS;
+- whole-repository regression PASS;
+- Development checkout non-mutation PASS.
+
+S6 only reads/transports S5 narratives that descend from the S2 activation-bound immutable write chain; it adds no historical synthesis/backfill authority.
+
+The active Stream frontier is now **S7 — One-Panel UI Shell**.
+
+S7 must build only the messaging shell: top bar, live stream, compact collapsed bubbles, search/filter affordance, sound/settings control surface and floating-window layer placeholder. The deployed GALACTECH V2 remains fallback; no root cutover before S16.
 
 ### 2026-09-25 19:34 +0300 — STREAM S5 NARRATIVE ENGINE PASS / S6 REAL-TIME STREAM BACKEND ACTIVE
 
