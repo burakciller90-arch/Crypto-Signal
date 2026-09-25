@@ -74,6 +74,7 @@ jobs:
             src/crypto_signal/product/intelligence_stream_capital_lifecycle.py \
             src/crypto_signal/product/intelligence_stream_capital_decisions.py \
             src/crypto_signal/product/intelligence_stream_capital_sizing.py \
+            src/crypto_signal/product/intelligence_stream_policy.py \
             src/crypto_signal/product/intelligence_stream_read_model.py \
             tests/test_canonical_paper_sizing.py \
             tests/test_canonical_vault_eligibility.py \
@@ -84,6 +85,7 @@ jobs:
             tests/test_intelligence_stream_capital_lifecycle.py \
             tests/test_intelligence_stream_capital_decisions.py \
             tests/test_intelligence_stream_capital_sizing.py \
+            tests/test_intelligence_stream_ledger.py \
             tests/test_intelligence_stream_ui.py
           "$TEST_PY" -m mypy \
             src/crypto_signal/paper/canonical_sizing.py \
@@ -98,6 +100,7 @@ jobs:
             src/crypto_signal/product/intelligence_stream_capital_lifecycle.py \
             src/crypto_signal/product/intelligence_stream_capital_decisions.py \
             src/crypto_signal/product/intelligence_stream_capital_sizing.py \
+            src/crypto_signal/product/intelligence_stream_policy.py \
             src/crypto_signal/product/intelligence_stream_read_model.py
           echo "STREAM_S11_CAPITAL_CORE_PASS=YES"
 
