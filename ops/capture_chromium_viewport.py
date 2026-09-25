@@ -542,6 +542,17 @@ def _capture(args: argparse.Namespace) -> dict[str, object]:
                     "returnByValue": True,
                 },
             )
+            discovery_exception = discovery_probe_result.get("exceptionDetails")
+            if isinstance(discovery_exception, dict):
+                description = discovery_exception.get("text", "unknown JS exception")
+                exception_object = discovery_exception.get("exception", {})
+                if isinstance(exception_object, dict):
+                    description = str(
+                        exception_object.get("description", description)
+                    )
+                raise RuntimeError(
+                    f"CDP discovery probe JavaScript exception: {description}"
+                )
             raw_discovery_probe = discovery_probe_result.get("result", {})
             if not isinstance(raw_discovery_probe, dict):
                 raise RuntimeError("CDP discovery probe result missing")
