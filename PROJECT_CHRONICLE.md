@@ -1,5 +1,17 @@
 # PROJECT CHRONICLE
 
+## 2026-09-25 — Stream S2 canonical backbone accepted; S3 Story Engine becomes active
+
+S2 is complete at the event/message-model layer.
+
+The Stream now has a forward-only activation boundary, append-only source truth, immutable five-family decision context, canonical Fact Bundles, stable forecast-root Story Identities and canonical Message Inputs. Exact issuance and resolution projections are deterministic and replay-safe. A later outcome becomes a new message in the same story; it never rewrites the original issuance.
+
+A versioned materiality/publication policy is now part of message identity. Only the currently accepted exact forecast-issued and forecast-resolved source events are publishable at S2. Event Risk, provider/data-quality and market-family projectors are explicitly registered but remain blocked on S3-S4 change-detection/analysis work. Bitcoin network context remains source-gated; provider-neutral M5 smart-money contracts remain research-only for live Stream purposes; capital transitions remain reserved for S11.
+
+S2 acceptance is recorded in `docs/CRYPTO_SIGNAL_STREAM_S2_ACCEPTANCE.md` with exact merged commits and UID504 acceptance runs.
+
+The active frontier is S3 Story Engine and Change Detection: deterministic previous->current story state, explicit change sets and identity-bound continuity without heuristic time-only grouping.
+
 ## 2026-09-25 — Stream S1 capability audit closes; S2 event/message backbone becomes active
 
 The Stream-only backend audit is now complete enough to stop discovery and start implementation.
