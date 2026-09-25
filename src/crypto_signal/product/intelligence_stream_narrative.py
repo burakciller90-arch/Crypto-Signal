@@ -337,7 +337,7 @@ def render_stream_narrative(
     )
     try:
         candidate = rewriter.rewrite(request)
-    except Exception:
+    except Exception:  # noqa: BLE001 - external/local rewriter failure must fail open
         return _build_message(
             plan=plan,
             text=deterministic,
@@ -378,15 +378,9 @@ def validate_stream_narrative(
     text: StreamNarrativeText,
 ) -> StreamNarrativeValidation:
     violations: set[str] = set()
-    combined = " ".join(
-        (
-            text.collapsed_text,
-            text.simple_text,
-            text.technical_text,
-            text.intelligence_text,
-            text.decision_text,
-            text.capital_text,
-        )
+    combined = (
+        f"{text.collapsed_text} {text.simple_text} {text.technical_text} "
+        f"{text.intelligence_text} {text.decision_text} {text.capital_text}"
     )
     lowered = combined.casefold()
     for phrase in ("garanti", "risksiz", "mutlaka", "kesin olarak", "kesinlikle"):
@@ -398,9 +392,11 @@ def validate_stream_narrative(
     if any(value not in allowed for value in observed):
         violations.add("invented_numeric_fact")
 
-    if fact.calibrated_probability_0_1 is None:
-        if re.search(r"\b(?:olasılık|ihtimal)\b[^.]{0,30}%", lowered):
-            violations.add("uncalibrated_probability_language")
+    if (
+        fact.calibrated_probability_0_1 is None
+        and re.search(r"\b(?:olasılık|ihtimal)\b[^.]{0,30}%", lowered)
+    ):
+        violations.add("uncalibrated_probability_language")
 
     if view.symbol not in text.collapsed_text:
         violations.add("collapsed_symbol_missing")
