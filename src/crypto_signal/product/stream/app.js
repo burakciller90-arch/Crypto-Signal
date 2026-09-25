@@ -179,6 +179,9 @@ function messageState(record) {
     if (subtype === "capital_sized") return "SERMAYE BOYUTLANDI";
     if (subtype === "capital_reduced") return "POZİSYON AZALTILDI";
     if (subtype === "capital_exited") return "POZİSYON KAPANDI";
+    if (subtype === "capital_candidate") return "SERMAYE ADAYI";
+    if (subtype === "capital_accounting_updated") return "MUHASEBE GÜNCELLENDİ";
+    if (subtype === "capital_outcome") return "SONUÇ KAYDEDİLDİ";
     return "SERMAYE";
   }
   return "ANALİZ";
@@ -1395,8 +1398,157 @@ function buildCapitalExpandedContent(record, detail) {
   return grid;
 }
 
+function capitalLifecycleGrid(capital) {
+  const grid = document.createElement("div");
+  grid.className = "geometry-grid";
+  const subtype = text(capital?.subtype, "");
+  const rows = [];
+
+  if (subtype === "capital_candidate") {
+    rows.push(
+      ["Aday", compactIdentity(capital?.allocator_candidate_identity)],
+      ["Değerlendirme", compactIdentity(capital?.allocator_assessment_identity)],
+      ["Durum", "3 vault değerlendirmesi başladı"],
+      ["Otorite", "Paper-only · REAL_CAPITAL=0"]
+    );
+  } else if (subtype === "capital_accounting_updated") {
+    rows.push(
+      ["Vault", text(capital?.vault_id, "—").replaceAll("_", " ")],
+      ["Aksiyon", text(capital?.action, "—")],
+      [
+        "Nakit",
+        `${displayNumber(capital?.cash_before_usdt)} → ${displayNumber(
+          capital?.cash_after_usdt
+        )} USDT`,
+      ],
+      [
+        "Vault NAV",
+        `${displayNumber(capital?.vault_nav_before_usdt)} → ${displayNumber(
+          capital?.vault_nav_after_usdt
+        )} USDT`,
+      ],
+      [
+        "Epoch 2 NAV",
+        `${displayNumber(capital?.consolidated_nav_before_usdt)} → ${displayNumber(
+          capital?.consolidated_nav_after_usdt
+        )} USDT`,
+      ],
+      ["R22 bundle", compactIdentity(capital?.bundle_identity)]
+    );
+  } else if (subtype === "capital_outcome") {
+    rows.push(
+      ["Vault", text(capital?.vault_id, "—").replaceAll("_", " ")],
+      ["Aksiyon", text(capital?.action, "—")],
+      ["Finansal sonuç", text(capital?.financial_outcome, "—")],
+      ["Gerçekleşen PnL", `${displayNumber(capital?.realized_pnl_delta_usdt)} USDT`],
+      [
+        "Pozisyon",
+        `${displayNumber(capital?.position_quantity_before)} → ${displayNumber(
+          capital?.position_quantity_after
+        )}`,
+      ],
+      ["Outcome", compactIdentity(capital?.outcome_identity)]
+    );
+  }
+
+  for (const [labelText, valueText] of rows) {
+    const cell = document.createElement("div");
+    const label = document.createElement("span");
+    label.textContent = labelText;
+    const value = document.createElement("strong");
+    value.textContent = valueText;
+    cell.append(label, value);
+    grid.append(cell);
+  }
+  return grid;
+}
+
+function capitalLifecycleLineage(capital) {
+  const wrap = document.createElement("div");
+  wrap.className = "proof-panel";
+  const rows = [
+    ["Lifecycle", capital?.lifecycle_identity],
+    ["Candidate", capital?.allocator_candidate_identity],
+    ["Assessment", capital?.allocator_assessment_identity],
+    ["Forecast", capital?.forecast_identity],
+    ["Proof", capital?.proof_identity],
+    ["Decision context", capital?.decision_context_identity],
+    ["R22 bundle", capital?.bundle_identity],
+    ["Outcome", capital?.outcome_identity],
+  ];
+  for (const [labelText, identity] of rows) {
+    if (!exactSha256(identity)) continue;
+    const line = document.createElement("div");
+    line.className = "condition-row";
+    const label = document.createElement("span");
+    label.textContent = labelText;
+    const code = document.createElement("code");
+    code.textContent = compactIdentity(identity);
+    line.append(label, code);
+    wrap.append(line);
+  }
+  const authority = document.createElement("small");
+  authority.textContent = "Deterministic immutable lifecycle · REAL_CAPITAL=0 · gerçek borsa emri yok";
+  wrap.append(authority);
+  return wrap;
+}
+
+function buildCapitalLifecycleExpandedContent(record, detail) {
+  const capital =
+    detail && typeof detail.capital_lifecycle === "object" && detail.capital_lifecycle
+      ? detail.capital_lifecycle
+      : record;
+  const textBundle =
+    capital && typeof capital.text === "object" && capital.text ? capital.text : {};
+  const grid = document.createElement("div");
+  grid.className = "message-depth-grid";
+
+  grid.append(
+    depthSection("SIMPLE", textBundle.simple_text, {
+      className: "depth-simple depth-wide",
+    }),
+    depthSection("PRO", textBundle.technical_text, {
+      className: "depth-pro",
+    })
+  );
+
+  const truth = document.createElement("div");
+  truth.className = "depth-composite";
+  const copy = document.createElement("p");
+  copy.textContent = text(
+    textBundle.intelligence_text,
+    "Bu lifecycle olayı için ek yorum mevcut değil."
+  );
+  truth.append(copy, capitalLifecycleGrid(capital));
+  grid.append(
+    depthSection("CAPITAL LIFECYCLE", "", {
+      className: "depth-intelligence depth-wide",
+      content: truth,
+    }),
+    depthSection("DECISION", textBundle.decision_text, {
+      className: "depth-decision",
+    }),
+    depthSection("CAPITAL", textBundle.capital_text, {
+      className: "depth-capital",
+    }),
+    depthSection("IMMUTABLE LINEAGE", "", {
+      className: "depth-proof depth-wide",
+      content: capitalLifecycleLineage(capital),
+    })
+  );
+  return grid;
+}
+
 function buildExpandedContent(record, detail) {
   const subtype = text(record?.subtype, "");
+  if (
+    subtype === "capital_candidate"
+    || subtype === "capital_accounting_updated"
+    || subtype === "capital_outcome"
+    || (detail && typeof detail.capital_lifecycle === "object" && detail.capital_lifecycle)
+  ) {
+    return buildCapitalLifecycleExpandedContent(record, detail);
+  }
   if (
     subtype === "capital_sized"
     || (detail && typeof detail.capital_sizing === "object" && detail.capital_sizing)
