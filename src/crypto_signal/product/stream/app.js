@@ -1776,6 +1776,9 @@ function renderMessage(record, { isNew = false } = {}) {
   if (isNew) item.classList.add("is-new");
   const identity = text(record.narrative_identity, "");
   item.dataset.identity = identity;
+  item.dataset.category = text(record?.category, "");
+  item.dataset.subtype = text(record?.subtype, "");
+  item.dataset.vaultId = text(record?.vault_id, "");
 
   const summary = document.createElement("button");
   summary.type = "button";
@@ -2157,6 +2160,249 @@ function fixtureRecord(index, symbol, timeframe, stateLabel, copy, minutesAgo, s
   return record;
 }
 
+function capitalFixtureRecord(
+  index,
+  subtype,
+  vaultId,
+  copy,
+  minutesAgo,
+  extra = {}
+) {
+  const identity = (offset) => fixtureIdentity(3000 + index * 20 + offset);
+  const textBundle = {
+    collapsed_text: `${copy} REAL_CAPITAL=0.`,
+    simple_text: `${copy} Bu yalnız sanal sermaye akışıdır; gerçek borsa emri yoktur.`,
+    technical_text:
+      "Exact allocator / sizing / R22 / R21 lineage korunur; fixture yalnız görsel kabul içindir.",
+    intelligence_text:
+      "Bu kayıt yeni piyasa kanıtı uydurmaz; yalnız canonical paper-capital lifecycle durumunu gösterir.",
+    decision_text: `Lifecycle durumu: ${subtype.replaceAll("_", " ")}.`,
+    capital_text: "Paper capital only · REAL_CAPITAL=0 · production authority yok.",
+  };
+  const base = {
+    narrative_identity: identity(1),
+    event_at_ms: Date.now() - minutesAgo * 60_000,
+    category: "capital",
+    subtype,
+    asset: "BTCUSDT",
+    symbol: "BTCUSDT",
+    timeframe: vaultId === "TACTICAL" ? "5m" : "4h",
+    source_kind: "deterministic",
+    original_text_preserved: true,
+    read_only: true,
+    production_authority: false,
+    real_capital: 0,
+    vault_id: vaultId || null,
+    lifecycle_identity: identity(2),
+    allocator_candidate_identity: identity(3),
+    allocator_assessment_identity: identity(4),
+    forecast_identity: identity(5),
+    proof_identity: identity(6),
+    decision_context_identity: identity(7),
+    bundle_identity: identity(8),
+    intent_identity: identity(9),
+    fill_identity: identity(10),
+    outcome_identity: null,
+    before_vault_snapshot_identity: identity(11),
+    after_vault_snapshot_identity: identity(12),
+    before_consolidated_snapshot_identity: identity(13),
+    after_consolidated_snapshot_identity: identity(14),
+    action: null,
+    quantity: null,
+    reference_price: null,
+    simulated_fill_price: null,
+    notional_usdt: null,
+    cash_before_usdt: null,
+    cash_after_usdt: null,
+    vault_nav_before_usdt: null,
+    vault_nav_after_usdt: null,
+    consolidated_nav_before_usdt: null,
+    consolidated_nav_after_usdt: null,
+    fee_usdt: null,
+    spread_usdt: null,
+    slippage_usdt: null,
+    financial_outcome: null,
+    realized_pnl_delta_usdt: null,
+    position_quantity_before: null,
+    position_quantity_after: null,
+    text: textBundle,
+    ...extra,
+  };
+
+  let detailKey = "capital_lifecycle";
+  if (["capital_eligible", "capital_hold", "capital_blocked"].includes(subtype)) {
+    detailKey = "capital_decision";
+  } else if (subtype === "capital_sized") {
+    detailKey = "capital_sizing";
+  } else if (
+    ["capital_executed", "capital_reduced", "capital_exited"].includes(subtype)
+  ) {
+    detailKey = "capital_story";
+  }
+  base.__fixture_detail = {
+    [detailKey]: { ...base },
+    read_only: true,
+    production_authority: false,
+    real_capital: 0,
+  };
+  delete base.__fixture_detail[detailKey].__fixture_detail;
+  return base;
+}
+
+function capitalFixtureMessages() {
+  return [
+    capitalFixtureRecord(
+      1,
+      "capital_candidate",
+      null,
+      "BTC Smart Capital adayı üç vault değerlendirmesine alındı; henüz sizing veya fill yok.",
+      50
+    ),
+    capitalFixtureRecord(
+      2,
+      "capital_eligible",
+      "CORE",
+      "Core vault exact allocator kuralları altında aday için uygun bulundu.",
+      45,
+      { disposition: "eligible", starting_budget_usdt: 600 }
+    ),
+    capitalFixtureRecord(
+      3,
+      "capital_hold",
+      "TACTICAL",
+      "Tactical vault 5m teyidi tamamlanmadığı için nakitte bekliyor.",
+      40,
+      { disposition: "hold", tactical_timeframe: "5m", starting_budget_usdt: 300 }
+    ),
+    capitalFixtureRecord(
+      4,
+      "capital_blocked",
+      "OPPORTUNITY_RESERVE",
+      "Opportunity vault Event Risk nedeniyle sermaye kullanmıyor.",
+      35,
+      { disposition: "blocked", starting_budget_usdt: 100 }
+    ),
+    capitalFixtureRecord(
+      5,
+      "capital_sized",
+      "CORE",
+      "Core için fixed-fractional canonical paper boyutu seçildi; Kelly promote edilmedi.",
+      30,
+      {
+        sizing_selection_identity: fixtureIdentity(3901),
+        sizing_decision_identity: fixtureIdentity(3902),
+        canonical_notional_usdt: 150,
+        fraction_of_vault: 0.25,
+        method: "fixed_fractional",
+      }
+    ),
+    capitalFixtureRecord(
+      6,
+      "capital_executed",
+      "CORE",
+      "Core BTCUSDT paper BUY simüle edildi ve R21/R22 atomik muhasebeye işlendi.",
+      25,
+      {
+        action: "BUY",
+        quantity: 1.45,
+        reference_price: 101,
+        simulated_fill_price: 101.2,
+        notional_usdt: 146.74,
+        cash_before_usdt: 600,
+        cash_after_usdt: 453.11,
+        vault_nav_before_usdt: 600,
+        vault_nav_after_usdt: 599.71,
+        consolidated_nav_before_usdt: 1000,
+        consolidated_nav_after_usdt: 999.71,
+        fee_usdt: 0.15,
+        spread_usdt: 0.07,
+        slippage_usdt: 0.07,
+      }
+    ),
+    capitalFixtureRecord(
+      7,
+      "capital_reduced",
+      "CORE",
+      "Core açık BTCUSDT paper pozisyonunun bir kısmını azalttı.",
+      20,
+      {
+        action: "REDUCE",
+        quantity: 0.7,
+        reference_price: 105,
+        simulated_fill_price: 104.8,
+        notional_usdt: 73.36,
+        cash_before_usdt: 453.11,
+        cash_after_usdt: 526.32,
+        vault_nav_before_usdt: 605.2,
+        vault_nav_after_usdt: 605.02,
+        consolidated_nav_before_usdt: 1005.2,
+        consolidated_nav_after_usdt: 1005.02,
+        outcome_identity: fixtureIdentity(3941),
+        financial_outcome: "PARTIAL_REDUCTION",
+        realized_pnl_delta_usdt: 2.31,
+        position_quantity_before: 1.45,
+        position_quantity_after: 0.75,
+      }
+    ),
+    capitalFixtureRecord(
+      8,
+      "capital_exited",
+      "CORE",
+      "Core kalan BTCUSDT paper pozisyonunu tamamen kapattı.",
+      15,
+      {
+        action: "EXIT",
+        quantity: 0.75,
+        reference_price: 110,
+        simulated_fill_price: 109.8,
+        notional_usdt: 82.35,
+        cash_before_usdt: 526.32,
+        cash_after_usdt: 608.49,
+        vault_nav_before_usdt: 608.7,
+        vault_nav_after_usdt: 608.49,
+        consolidated_nav_before_usdt: 1008.7,
+        consolidated_nav_after_usdt: 1008.49,
+        outcome_identity: fixtureIdentity(3961),
+        financial_outcome: "CLOSED_WIN",
+        realized_pnl_delta_usdt: 6.42,
+        position_quantity_before: 0.75,
+        position_quantity_after: 0,
+      }
+    ),
+    capitalFixtureRecord(
+      9,
+      "capital_accounting_updated",
+      "CORE",
+      "Epoch 2 accounting yeni cash/NAV snapshot'larını immutable şekilde kaydetti.",
+      10,
+      {
+        action: "EXIT",
+        cash_before_usdt: 526.32,
+        cash_after_usdt: 608.49,
+        vault_nav_before_usdt: 608.7,
+        vault_nav_after_usdt: 608.49,
+        consolidated_nav_before_usdt: 1008.7,
+        consolidated_nav_after_usdt: 1008.49,
+      }
+    ),
+    capitalFixtureRecord(
+      10,
+      "capital_outcome",
+      "CORE",
+      "Kapanan paper pozisyonun finansal sonucu immutable outcome evidence olarak kaydedildi.",
+      5,
+      {
+        action: "EXIT",
+        outcome_identity: fixtureIdentity(3991),
+        financial_outcome: "CLOSED_WIN",
+        realized_pnl_delta_usdt: 6.42,
+        position_quantity_before: 0.75,
+        position_quantity_after: 0,
+      }
+    ),
+  ];
+}
+
 function fixtureMessages() {
   return [
     fixtureRecord(1, "BTCUSDT", "4h", "GÖRÜŞ KORUNUYOR", "Bitcoin tarafında ana yapı korunuyor. Likidite temizliği sonrası alıcı tepkisi var; sistem yeni teyit gelmeden pozisyon görüşünü büyütmüyor.", 48),
@@ -2172,7 +2418,7 @@ function applyFixture(name) {
   state.fixture = name;
   if (ui.fixtureBanner) ui.fixtureBanner.hidden = false;
   resetMessages();
-  const base = fixtureMessages();
+  const base = name === "capital" ? capitalFixtureMessages() : fixtureMessages();
 
   if (name === "empty") {
     setConnection("live", "HAZIR", "fixture · mesaj bekleniyor");
@@ -2226,6 +2472,15 @@ function applyFixture(name) {
       if (last) last.classList.add("is-new");
     }
   });
+
+  if (name === "capital") {
+    window.requestAnimationFrame(() => {
+      const target = ui.list?.lastElementChild;
+      const summary = target?.querySelector?.(".message-summary");
+      if (summary instanceof HTMLButtonElement) summary.click();
+      scrollToBottom({ smooth: false });
+    });
+  }
 
   if (name === "expanded" || name === "windows" || name === "proof") {
     window.requestAnimationFrame(() => {
