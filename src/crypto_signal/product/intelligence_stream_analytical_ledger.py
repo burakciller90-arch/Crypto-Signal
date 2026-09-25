@@ -22,7 +22,7 @@ from crypto_signal.product.intelligence_stream_story_ledger import (
     IntelligenceStreamStoryLedger,
 )
 
-STREAM_ANALYTICAL_LEDGER_SCHEMA_VERSION = "intelligence-stream-analytical-ledger-v1/1"
+STREAM_ANALYTICAL_LEDGER_SCHEMA_VERSION = "intelligence-stream-analytical-ledger-v1/2"
 
 
 class StreamAnalyticalLedgerConflictError(ValueError):
@@ -64,9 +64,11 @@ class IntelligenceStreamAnalyticalLedger:
 
                 CREATE TABLE IF NOT EXISTS stream_analytical_views (
                     analytical_view_identity TEXT PRIMARY KEY,
+                    policy_identity TEXT NOT NULL,
                     fact_bundle_identity TEXT NOT NULL UNIQUE,
                     change_set_identity TEXT NOT NULL UNIQUE,
-                    message_identity TEXT NOT NULL UNIQUE,
+                    current_state_identity TEXT NOT NULL UNIQUE,
+                    source_message_identity TEXT UNIQUE,
                     story_identity TEXT NOT NULL,
                     source_event_identity TEXT NOT NULL UNIQUE,
                     stream_event_identity TEXT NOT NULL UNIQUE,
@@ -77,7 +79,9 @@ class IntelligenceStreamAnalyticalLedger:
                         REFERENCES stream_fact_bundles(fact_bundle_identity),
                     FOREIGN KEY (change_set_identity)
                         REFERENCES stream_story_change_sets(change_set_identity),
-                    FOREIGN KEY (message_identity)
+                    FOREIGN KEY (current_state_identity)
+                        REFERENCES stream_story_states(state_identity),
+                    FOREIGN KEY (source_message_identity)
                         REFERENCES stream_message_inputs(message_identity),
                     FOREIGN KEY (stream_event_identity)
                         REFERENCES stream_source_events(stream_event_identity)
@@ -143,47 +147,79 @@ class IntelligenceStreamAnalyticalLedger:
             connection.execute("BEGIN IMMEDIATE")
             self._verify_meta(connection)
 
-            message_row = connection.execute(
+            fact_row = connection.execute(
                 """
-                SELECT story_identity, fact_bundle_identity, stream_event_identity,
-                       source_event_identity, event_at_ms
-                FROM stream_message_inputs
-                WHERE message_identity = ?
+                SELECT story_identity, source_event_identity, stream_event_identity,
+                       event_at_ms
+                FROM stream_fact_bundles
+                WHERE fact_bundle_identity = ?
                 """,
-                (view.message_identity,),
+                (view.fact_bundle_identity,),
             ).fetchone()
-            if message_row is None:
+            if fact_row is None:
                 raise StreamAnalyticalLedgerConflictError(
-                    "Stream analytical view references unknown message"
+                    "Stream analytical view references unknown fact bundle"
                 )
-            if str(message_row[0]) != view.story_identity:
+            if str(fact_row[0]) != view.story_identity:
                 raise StreamAnalyticalLedgerConflictError(
-                    "Stream analytical view/message story mismatch"
+                    "Stream analytical view/fact story mismatch"
                 )
-            if str(message_row[1]) != view.fact_bundle_identity:
+            if str(fact_row[1]) != view.source_event_identity:
                 raise StreamAnalyticalLedgerConflictError(
-                    "Stream analytical view/message fact mismatch"
+                    "Stream analytical view/fact source-event mismatch"
                 )
-            if str(message_row[2]) != view.stream_event_identity:
+            if str(fact_row[2]) != view.stream_event_identity:
                 raise StreamAnalyticalLedgerConflictError(
-                    "Stream analytical view/message stream-event mismatch"
+                    "Stream analytical view/fact stream-event mismatch"
                 )
-            if str(message_row[3]) != view.source_event_identity:
+            if int(str(fact_row[3])) != view.event_at_ms:
                 raise StreamAnalyticalLedgerConflictError(
-                    "Stream analytical view/message source-event mismatch"
+                    "Stream analytical view/fact event-time mismatch"
                 )
-            if int(str(message_row[4])) != view.event_at_ms:
+
+            state_row = connection.execute(
+                """
+                SELECT story_identity, source_event_identity,
+                       current_stream_event_identity, current_message_identity,
+                       event_at_ms
+                FROM stream_story_states
+                WHERE state_identity = ?
+                """,
+                (view.current_state_identity,),
+            ).fetchone()
+            if state_row is None:
                 raise StreamAnalyticalLedgerConflictError(
-                    "Stream analytical view/message event-time mismatch"
+                    "Stream analytical view references unknown story state"
+                )
+            if str(state_row[0]) != view.story_identity:
+                raise StreamAnalyticalLedgerConflictError(
+                    "Stream analytical view/state story mismatch"
+                )
+            if str(state_row[1]) != view.source_event_identity:
+                raise StreamAnalyticalLedgerConflictError(
+                    "Stream analytical view/state source-event mismatch"
+                )
+            if str(state_row[2]) != view.stream_event_identity:
+                raise StreamAnalyticalLedgerConflictError(
+                    "Stream analytical view/state stream-event mismatch"
+                )
+            state_message_identity = (
+                None if state_row[3] is None else str(state_row[3])
+            )
+            if state_message_identity != view.source_message_identity:
+                raise StreamAnalyticalLedgerConflictError(
+                    "Stream analytical view/state message mismatch"
+                )
+            if int(str(state_row[4])) != view.event_at_ms:
+                raise StreamAnalyticalLedgerConflictError(
+                    "Stream analytical view/state event-time mismatch"
                 )
 
             change_row = connection.execute(
                 """
-                SELECT changes.story_identity, states.current_message_identity
-                FROM stream_story_change_sets AS changes
-                JOIN stream_story_states AS states
-                  ON states.state_identity = changes.current_state_identity
-                WHERE changes.change_set_identity = ?
+                SELECT story_identity, current_state_identity
+                FROM stream_story_change_sets
+                WHERE change_set_identity = ?
                 """,
                 (view.change_set_identity,),
             ).fetchone()
@@ -195,10 +231,41 @@ class IntelligenceStreamAnalyticalLedger:
                 raise StreamAnalyticalLedgerConflictError(
                     "Stream analytical view/change-set story mismatch"
                 )
-            if str(change_row[1]) != view.message_identity:
+            if str(change_row[1]) != view.current_state_identity:
                 raise StreamAnalyticalLedgerConflictError(
-                    "Stream analytical view/change-set message mismatch"
+                    "Stream analytical view/change-set state mismatch"
                 )
+
+            if view.source_message_identity is not None:
+                message_row = connection.execute(
+                    """
+                    SELECT story_identity, fact_bundle_identity,
+                           source_event_identity, stream_event_identity
+                    FROM stream_message_inputs
+                    WHERE message_identity = ?
+                    """,
+                    (view.source_message_identity,),
+                ).fetchone()
+                if message_row is None:
+                    raise StreamAnalyticalLedgerConflictError(
+                        "Stream analytical view references unknown source message"
+                    )
+                if str(message_row[0]) != view.story_identity:
+                    raise StreamAnalyticalLedgerConflictError(
+                        "Stream analytical view/message story mismatch"
+                    )
+                if str(message_row[1]) != view.fact_bundle_identity:
+                    raise StreamAnalyticalLedgerConflictError(
+                        "Stream analytical view/message fact mismatch"
+                    )
+                if str(message_row[2]) != view.source_event_identity:
+                    raise StreamAnalyticalLedgerConflictError(
+                        "Stream analytical view/message source-event mismatch"
+                    )
+                if str(message_row[3]) != view.stream_event_identity:
+                    raise StreamAnalyticalLedgerConflictError(
+                        "Stream analytical view/message stream-event mismatch"
+                    )
 
             existing = connection.execute(
                 """
@@ -207,7 +274,8 @@ class IntelligenceStreamAnalyticalLedger:
                 WHERE analytical_view_identity = ?
                    OR fact_bundle_identity = ?
                    OR change_set_identity = ?
-                   OR message_identity = ?
+                   OR current_state_identity = ?
+                   OR (? IS NOT NULL AND source_message_identity = ?)
                    OR source_event_identity = ?
                    OR stream_event_identity = ?
                 LIMIT 1
@@ -216,7 +284,9 @@ class IntelligenceStreamAnalyticalLedger:
                     view.analytical_view_identity,
                     view.fact_bundle_identity,
                     view.change_set_identity,
-                    view.message_identity,
+                    view.current_state_identity,
+                    view.source_message_identity,
+                    view.source_message_identity,
                     view.source_event_identity,
                     view.stream_event_identity,
                 ),
@@ -253,22 +323,26 @@ class IntelligenceStreamAnalyticalLedger:
                 """
                 INSERT INTO stream_analytical_views (
                     analytical_view_identity,
+                    policy_identity,
                     fact_bundle_identity,
                     change_set_identity,
-                    message_identity,
+                    current_state_identity,
+                    source_message_identity,
                     story_identity,
                     source_event_identity,
                     stream_event_identity,
                     event_at_ms,
                     payload_json,
                     payload_sha256
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     view.analytical_view_identity,
+                    view.policy_identity,
                     view.fact_bundle_identity,
                     view.change_set_identity,
-                    view.message_identity,
+                    view.current_state_identity,
+                    view.source_message_identity,
                     view.story_identity,
                     view.source_event_identity,
                     view.stream_event_identity,
@@ -317,9 +391,33 @@ class IntelligenceStreamAnalyticalLedger:
                 """
                 SELECT analytical_view_identity, payload_json, payload_sha256
                 FROM stream_analytical_views
-                WHERE message_identity = ?
+                WHERE source_message_identity = ?
                 """,
                 (message_identity,),
+            ).fetchone()
+        if row is None:
+            return None
+        return self._verified_record(
+            payload_json=str(row[1]),
+            expected_digest=str(row[2]),
+            expected_identity=str(row[0]),
+        )
+
+    def read_for_state(
+        self,
+        state_identity: str,
+    ) -> dict[str, Any] | None:
+        _require_sha256(state_identity, "Stream analytical state lookup")
+        with self._connect_ro() as connection:
+            self._require_schema(connection)
+            self._verify_meta(connection)
+            row = connection.execute(
+                """
+                SELECT analytical_view_identity, payload_json, payload_sha256
+                FROM stream_analytical_views
+                WHERE current_state_identity = ?
+                """,
+                (state_identity,),
             ).fetchone()
         if row is None:
             return None
@@ -375,6 +473,7 @@ class IntelligenceStreamAnalyticalLedger:
             "stream_source_events",
             "stream_fact_bundles",
             "stream_message_inputs",
+            "stream_story_states",
             "stream_story_change_sets",
             "stream_analytical_meta",
             "stream_analytical_views",
