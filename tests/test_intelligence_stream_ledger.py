@@ -1987,12 +1987,22 @@ def test_query_only_analytical_reads_never_initialize_missing_database(tmp_path)
     assert not path.exists()
 
 
-class _ExplodingNarrativeRewriter:
+class _NarrativeTestRewriter:
+    @property
+    def rewriter_identity(self) -> str:
+        return _sha(type(self).__name__)
+
+    @property
+    def rewriter_version(self) -> str:
+        return "test-narrative-rewriter-v1/1"
+
+
+class _ExplodingNarrativeRewriter(_NarrativeTestRewriter):
     def rewrite(self, request):
         raise RuntimeError("local model unavailable")
 
 
-class _InventingNarrativeRewriter:
+class _InventingNarrativeRewriter(_NarrativeTestRewriter):
     def rewrite(self, request):
         return replace(
             request.deterministic_text,
@@ -2003,7 +2013,7 @@ class _InventingNarrativeRewriter:
         )
 
 
-class _SafeNarrativeRewriter:
+class _SafeNarrativeRewriter(_NarrativeTestRewriter):
     def rewrite(self, request):
         return replace(
             request.deterministic_text,
@@ -2017,9 +2027,28 @@ class _SafeNarrativeRewriter:
         )
 
 
-class _RepeatingNarrativeRewriter:
+class _RepeatingNarrativeRewriter(_NarrativeTestRewriter):
     def rewrite(self, request):
         return request.deterministic_text
+
+
+class _ProtectedSectionMutatingRewriter(_NarrativeTestRewriter):
+    def rewrite(self, request):
+        return replace(
+            request.deterministic_text,
+            technical_text=request.deterministic_text.technical_text + " Değişti.",
+        )
+
+
+class _QualitativeInventingRewriter(_NarrativeTestRewriter):
+    def rewrite(self, request):
+        return replace(
+            request.deterministic_text,
+            collapsed_text=(
+                request.deterministic_text.collapsed_text
+                + " Balinalar piyasaya agresif şekilde giriyor."
+            ),
+        )
 
 
 def _persist_narrative_fixture(
@@ -2140,6 +2169,8 @@ def test_stream_narrative_is_deterministic_turkish_and_fact_safe(tmp_path) -> No
     assert second_plan == plan
     assert second == first
     assert first.source_kind is StreamNarrativeSourceKind.DETERMINISTIC
+    assert first.rewrite_engine_identity is None
+    assert first.rewrite_engine_version is None
     assert first.validation.valid is True
     assert first.validation.violation_codes == ()
     assert "BTCUSDT" in first.text.collapsed_text
@@ -2171,15 +2202,18 @@ def test_stream_narrative_rewriter_failure_never_stops_stream(tmp_path) -> None:
         issued_at_ms=18_500_100,
     )
     change = build_change_set(state)
+    rewriter = _ExplodingNarrativeRewriter()
     narrative = render_stream_narrative(
         plan,
         view,
         issuance.fact_bundle,
         change,
-        rewriter=_ExplodingNarrativeRewriter(),
+        rewriter=rewriter,
     )
     assert narrative.source_kind is StreamNarrativeSourceKind.DETERMINISTIC_FALLBACK
     assert narrative.fallback_reason_codes == ("rewriter_exception",)
+    assert narrative.rewrite_engine_identity == rewriter.rewriter_identity
+    assert narrative.rewrite_engine_version == rewriter.rewriter_version
     assert narrative.validation.valid is True
 
 
@@ -2234,14 +2268,17 @@ def test_stream_narrative_accepts_safe_rewrite_and_rejects_repetition(tmp_path) 
         issued_at_ms=19_500_100,
     )
     change = build_change_set(state)
+    safe_rewriter = _SafeNarrativeRewriter()
     safe = render_stream_narrative(
         plan,
         view,
         issuance.fact_bundle,
         change,
-        rewriter=_SafeNarrativeRewriter(),
+        rewriter=safe_rewriter,
     )
     assert safe.source_kind is StreamNarrativeSourceKind.LOCAL_REWRITE
+    assert safe.rewrite_engine_identity == safe_rewriter.rewriter_identity
+    assert safe.rewrite_engine_version == safe_rewriter.rewriter_version
     assert safe.validation.valid is True
 
     repeated = render_stream_narrative(
@@ -2254,6 +2291,70 @@ def test_stream_narrative_accepts_safe_rewrite_and_rejects_repetition(tmp_path) 
     )
     assert repeated.source_kind is StreamNarrativeSourceKind.DETERMINISTIC_FALLBACK
     assert repeated.fallback_reason_codes == ("rewriter_similarity_rejected",)
+
+
+def test_stream_narrative_rejects_protected_section_mutation(tmp_path) -> None:
+    (
+        _,
+        _,
+        _,
+        _,
+        _,
+        issuance,
+        state,
+        view,
+        plan,
+        deterministic,
+    ) = _persist_narrative_fixture(
+        tmp_path,
+        seed="narrative-protected-section",
+        as_of_ms=19_700_000,
+        issued_at_ms=19_700_100,
+    )
+    change = build_change_set(state)
+    narrative = render_stream_narrative(
+        plan,
+        view,
+        issuance.fact_bundle,
+        change,
+        rewriter=_ProtectedSectionMutatingRewriter(),
+    )
+    assert narrative.source_kind is StreamNarrativeSourceKind.DETERMINISTIC_FALLBACK
+    assert narrative.fallback_reason_codes == (
+        "rewriter_protected_section_rejected",
+    )
+    assert narrative.text == deterministic.text
+
+
+def test_stream_narrative_rejects_new_qualitative_market_claim(tmp_path) -> None:
+    (
+        _,
+        _,
+        _,
+        _,
+        _,
+        issuance,
+        state,
+        view,
+        plan,
+        deterministic,
+    ) = _persist_narrative_fixture(
+        tmp_path,
+        seed="narrative-qualitative-claim",
+        as_of_ms=19_800_000,
+        issued_at_ms=19_800_100,
+    )
+    change = build_change_set(state)
+    narrative = render_stream_narrative(
+        plan,
+        view,
+        issuance.fact_bundle,
+        change,
+        rewriter=_QualitativeInventingRewriter(),
+    )
+    assert narrative.source_kind is StreamNarrativeSourceKind.DETERMINISTIC_FALLBACK
+    assert narrative.fallback_reason_codes == ("rewriter_semantic_guard_rejected",)
+    assert narrative.text == deterministic.text
 
 
 def test_stream_narrative_story_outcome_references_previous_expectation(tmp_path) -> None:
