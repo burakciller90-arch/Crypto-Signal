@@ -26,9 +26,10 @@ STREAM_CHANGE_SET_SCHEMA_VERSION = "intelligence-stream-change-set-v1/1"
 class StreamStoryObservation:
     observation_identity: str
     story_identity: str
-    message_identity: str
+    source_event_identity: str
     stream_event_identity: str
-    relation_target_message_identities: tuple[str, ...]
+    message_identity: str | None
+    previous_state_identity: str | None
     asset: str
     symbol: str
     timeframe: str
@@ -53,14 +54,16 @@ class StreamStoryObservation:
         for value, label in (
             (self.observation_identity, "Stream story observation identity"),
             (self.story_identity, "Stream story identity"),
-            (self.message_identity, "Stream story message identity"),
+            (self.source_event_identity, "Stream story source-event identity"),
             (self.stream_event_identity, "Stream story stream-event identity"),
         ):
             _require_sha256(value, label)
-        _require_identity_tuple(
-            self.relation_target_message_identities,
-            "Stream story relation target",
-        )
+        for value, label in (
+            (self.message_identity, "Stream story message identity"),
+            (self.previous_state_identity, "Stream previous story-state identity"),
+        ):
+            if value is not None:
+                _require_sha256(value, label)
         _require_identity_tuple(
             self.capital_reference_identities,
             "Stream story capital reference",
@@ -86,8 +89,7 @@ class StreamStoryObservation:
             raise ValueError("Stream trigger state cannot be blank")
         if self.outcome_state is not None and not self.outcome_state.strip():
             raise ValueError("Stream outcome state cannot be blank")
-        expected_stance = f"{self.direction}:{self.decision_state}"
-        if self.source_stance_key != expected_stance:
+        if self.source_stance_key != f"{self.direction}:{self.decision_state}":
             raise ValueError("Stream story stance key mismatch")
         _require_authority(
             schema_version=self.schema_version,
@@ -97,9 +99,7 @@ class StreamStoryObservation:
             production_authority=self.production_authority,
             real_capital=self.real_capital,
         )
-        if self.observation_identity != canonical_sha256(
-            _observation_payload(self)
-        ):
+        if self.observation_identity != canonical_sha256(_observation_payload(self)):
             raise ValueError("Stream story observation identity mismatch")
 
 
@@ -108,8 +108,9 @@ class StreamStoryState:
     state_identity: str
     story_identity: str
     observation_identity: str
-    current_message_identity: str
+    source_event_identity: str
     current_stream_event_identity: str
+    current_message_identity: str | None
     previous_state_identity: str | None
     previous_message_identity: str | None
     asset: str
@@ -137,7 +138,7 @@ class StreamStoryState:
             (self.state_identity, "Stream story state identity"),
             (self.story_identity, "Stream story state story identity"),
             (self.observation_identity, "Stream story state observation identity"),
-            (self.current_message_identity, "Stream story current message identity"),
+            (self.source_event_identity, "Stream story state source-event identity"),
             (
                 self.current_stream_event_identity,
                 "Stream story current stream-event identity",
@@ -145,15 +146,12 @@ class StreamStoryState:
         ):
             _require_sha256(value, label)
         for value, label in (
+            (self.current_message_identity, "Stream current message identity"),
             (self.previous_state_identity, "Stream previous story state identity"),
             (self.previous_message_identity, "Stream previous message identity"),
         ):
             if value is not None:
                 _require_sha256(value, label)
-        if (self.previous_state_identity is None) != (
-            self.previous_message_identity is None
-        ):
-            raise ValueError("Stream previous state/message must both exist or both be absent")
         _require_identity_tuple(
             self.capital_reference_identities,
             "Stream story state capital reference",
@@ -222,7 +220,7 @@ class StreamChangeSet:
     previous_state_identity: str | None
     current_state_identity: str
     previous_message_identity: str | None
-    current_message_identity: str
+    current_message_identity: str | None
     story_started: bool
     stance_changed: bool
     previous_stance_key: str | None
@@ -254,21 +252,17 @@ class StreamChangeSet:
             (self.change_set_identity, "Stream change-set identity"),
             (self.story_identity, "Stream change-set story identity"),
             (self.current_state_identity, "Stream current story-state identity"),
-            (self.current_message_identity, "Stream current message identity"),
         ):
             _require_sha256(value, label)
         for value, label in (
             (self.previous_state_identity, "Stream previous change-state identity"),
             (self.previous_message_identity, "Stream previous change message"),
+            (self.current_message_identity, "Stream current change message"),
         ):
             if value is not None:
                 _require_sha256(value, label)
         if self.story_started != (self.previous_state_identity is None):
             raise ValueError("Stream story-start flag does not match previous state")
-        if (self.previous_state_identity is None) != (
-            self.previous_message_identity is None
-        ):
-            raise ValueError("Stream change previous state/message mismatch")
         if not self.current_stance_key.strip() or not self.current_risk_state.strip():
             raise ValueError("Stream change current state text must be non-empty")
         _require_identity_tuple(
@@ -314,6 +308,8 @@ class StreamChangeSet:
 def build_story_observation(
     message: StreamMessageInput,
     fact_bundle: StreamFactBundle,
+    *,
+    previous_state_identity: str | None = None,
 ) -> StreamStoryObservation:
     if message.fact_bundle_identity != fact_bundle.fact_bundle_identity:
         raise ValueError("Stream story message/fact identity mismatch")
@@ -321,24 +317,12 @@ def build_story_observation(
         raise ValueError("Stream story message/fact story mismatch")
     if message.stream_event_identity != fact_bundle.stream_event_identity:
         raise ValueError("Stream story message/fact event mismatch")
-    relation_targets = tuple(
-        sorted(
-            {
-                relation.target_message_identity
-                for relation in message.relations
-            }
-        )
-    )
-    outcome_state = (
-        None
-        if fact_bundle.resolution_state is None
-        else fact_bundle.resolution_state.value
-    )
     return build_story_observation_snapshot(
         story_identity=message.story_identity,
-        message_identity=message.message_identity,
+        source_event_identity=fact_bundle.source_event_identity,
         stream_event_identity=message.stream_event_identity,
-        relation_target_message_identities=relation_targets,
+        message_identity=message.message_identity,
+        previous_state_identity=previous_state_identity,
         asset=fact_bundle.asset,
         symbol=fact_bundle.symbol,
         timeframe=fact_bundle.timeframe,
@@ -351,16 +335,21 @@ def build_story_observation(
         event_risk_state=fact_bundle.event_context_state,
         trigger_state=None,
         capital_reference_identities=message.capital_reference_identities,
-        outcome_state=outcome_state,
+        outcome_state=(
+            None
+            if fact_bundle.resolution_state is None
+            else fact_bundle.resolution_state.value
+        ),
     )
 
 
 def build_story_observation_snapshot(
     *,
     story_identity: str,
-    message_identity: str,
+    source_event_identity: str,
     stream_event_identity: str,
-    relation_target_message_identities: tuple[str, ...],
+    message_identity: str | None,
+    previous_state_identity: str | None,
     asset: str,
     symbol: str,
     timeframe: str,
@@ -375,7 +364,6 @@ def build_story_observation_snapshot(
     capital_reference_identities: tuple[str, ...],
     outcome_state: str | None,
 ) -> StreamStoryObservation:
-    relation_targets = tuple(sorted(set(relation_target_message_identities)))
     capital_refs = tuple(sorted(set(capital_reference_identities)))
     payload = {
         "asset": asset,
@@ -389,11 +377,12 @@ def build_story_observation_snapshot(
         "message_identity": message_identity,
         "opposition_score_0_100": opposition_score_0_100,
         "outcome_state": outcome_state,
+        "previous_state_identity": previous_state_identity,
         "production_authority": False,
         "read_only": True,
         "real_capital": REAL_CAPITAL,
-        "relation_target_message_identities": relation_targets,
         "schema_version": STREAM_STORY_OBSERVATION_SCHEMA_VERSION,
+        "source_event_identity": source_event_identity,
         "source_stance_key": f"{direction}:{decision_state}",
         "story_identity": story_identity,
         "stream_event_identity": stream_event_identity,
@@ -405,9 +394,10 @@ def build_story_observation_snapshot(
     return StreamStoryObservation(
         observation_identity=canonical_sha256(payload),
         story_identity=story_identity,
-        message_identity=message_identity,
+        source_event_identity=source_event_identity,
         stream_event_identity=stream_event_identity,
-        relation_target_message_identities=relation_targets,
+        message_identity=message_identity,
+        previous_state_identity=previous_state_identity,
         asset=asset,
         symbol=symbol,
         timeframe=timeframe,
@@ -431,9 +421,13 @@ def build_story_state(
     previous_state: StreamStoryState | None = None,
 ) -> StreamStoryState:
     if previous_state is None:
+        if observation.previous_state_identity is not None:
+            raise ValueError("root Stream story observation cannot name previous state")
         previous_state_identity = None
         previous_message_identity = None
     else:
+        if observation.previous_state_identity != previous_state.state_identity:
+            raise ValueError("Stream story observation previous-state mismatch")
         if observation.story_identity != previous_state.story_identity:
             raise ValueError("Stream story state cannot join unrelated story")
         if (observation.asset, observation.symbol, observation.timeframe) != (
@@ -450,13 +444,6 @@ def build_story_state(
             previous_state.current_stream_event_identity,
         ):
             raise ValueError("Stream story state append would backfill or fork")
-        if (
-            previous_state.current_message_identity
-            not in observation.relation_target_message_identities
-        ):
-            raise ValueError(
-                "Stream story transition requires exact previous-message relation"
-            )
         previous_state_identity = previous_state.state_identity
         previous_message_identity = previous_state.current_message_identity
 
@@ -480,6 +467,7 @@ def build_story_state(
         "read_only": True,
         "real_capital": REAL_CAPITAL,
         "schema_version": STREAM_STORY_STATE_SCHEMA_VERSION,
+        "source_event_identity": observation.source_event_identity,
         "source_stance_key": observation.source_stance_key,
         "story_identity": observation.story_identity,
         "support_score_0_100": observation.support_score_0_100,
@@ -491,8 +479,9 @@ def build_story_state(
         state_identity=canonical_sha256(payload),
         story_identity=observation.story_identity,
         observation_identity=observation.observation_identity,
-        current_message_identity=observation.message_identity,
+        source_event_identity=observation.source_event_identity,
         current_stream_event_identity=observation.stream_event_identity,
+        current_message_identity=observation.message_identity,
         previous_state_identity=previous_state_identity,
         previous_message_identity=previous_message_identity,
         asset=observation.asset,
@@ -520,7 +509,6 @@ def build_change_set(
     if previous_state is None:
         if current_state.previous_state_identity is not None:
             raise ValueError("Stream initial change set requires root story state")
-        changed_codes = ("story_started",)
         payload = _change_payload_values(
             story_identity=current_state.story_identity,
             previous_state_identity=None,
@@ -546,7 +534,7 @@ def build_change_set(
             outcome_changed=False,
             previous_outcome_state=None,
             current_outcome_state=current_state.outcome_state,
-            changed_codes=changed_codes,
+            changed_codes=("story_started",),
         )
         return StreamChangeSet(
             change_set_identity=canonical_sha256(payload),
@@ -634,15 +622,15 @@ def _family_changes(
     previous: StreamStoryState,
     current: StreamStoryState,
 ) -> tuple[StreamFamilyChange, ...]:
-    previous_by_family = {item.family: item for item in previous.family_contributions}
-    current_by_family = {item.family: item for item in current.family_contributions}
-    if set(previous_by_family) != set(current_by_family):
+    before_by_family = {item.family: item for item in previous.family_contributions}
+    after_by_family = {item.family: item for item in current.family_contributions}
+    if set(before_by_family) != set(after_by_family):
         raise ValueError("Stream story family set changed unexpectedly")
 
     changes: list[StreamFamilyChange] = []
     for family in sorted(ConfluenceFamily, key=lambda item: item.value):
-        before = previous_by_family[family]
-        after = current_by_family[family]
+        before = before_by_family[family]
+        after = after_by_family[family]
         if before == after:
             continue
         changes.append(
@@ -675,7 +663,7 @@ def _change_payload_values(
     previous_state_identity: str | None,
     current_state_identity: str,
     previous_message_identity: str | None,
-    current_message_identity: str,
+    current_message_identity: str | None,
     story_started: bool,
     stance_changed: bool,
     previous_stance_key: str | None,
@@ -744,11 +732,12 @@ def _observation_payload(value: StreamStoryObservation) -> dict[str, object]:
         "message_identity": value.message_identity,
         "opposition_score_0_100": value.opposition_score_0_100,
         "outcome_state": value.outcome_state,
+        "previous_state_identity": value.previous_state_identity,
         "production_authority": value.production_authority,
         "read_only": value.read_only,
         "real_capital": value.real_capital,
-        "relation_target_message_identities": value.relation_target_message_identities,
         "schema_version": value.schema_version,
+        "source_event_identity": value.source_event_identity,
         "source_stance_key": value.source_stance_key,
         "story_identity": value.story_identity,
         "stream_event_identity": value.stream_event_identity,
@@ -780,6 +769,7 @@ def _state_payload(value: StreamStoryState) -> dict[str, object]:
         "read_only": value.read_only,
         "real_capital": value.real_capital,
         "schema_version": value.schema_version,
+        "source_event_identity": value.source_event_identity,
         "source_stance_key": value.source_stance_key,
         "story_identity": value.story_identity,
         "support_score_0_100": value.support_score_0_100,
