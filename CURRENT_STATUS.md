@@ -4,10 +4,48 @@ Updated: 2026-09-25
 Project: Crypto Signal
 Baseline: crypto-signal-full-version-v1.0.0 (immutable)
 Active post-v1.0 program: v1.1 world-class product + market intelligence + Crypto Signal Intelligence Stream V1
-State: WC0_LIVE_PRODUCT_PARITY_ACCEPTED / WC1_24_7_DATA_RELIABILITY_ACCEPTED / WC2_ENGINEERING_FROZEN_EVIDENCE_ACCUMULATION_ACTIVE / WC4_CHAMPION_CHALLENGER_ENGINEERING_ACCEPTED_RESEARCH_ONLY / WC5_ENGINEERING_ACCEPTED_PRODUCT_DEPLOYED_HUMAN_USABILITY_NOT_MEASURED / WC6_SANDBOX_BOUNDARY_ACCEPTED_VENUE_EVIDENCE_EXTERNAL_DEPENDENCY / WC7_CURRENT_FRONTIER_PACKET_ACCEPTED_CURRENT_INSUFFICIENT_EVIDENCE / INTELLIGENCE_STREAM_V1_S0_PASS_S1_PASS_S2_PASS_S3_PASS_S4_PASS_S5_PASS_S6_PASS_S7_PASS_S8_PASS_S9_PASS_S10_ACTIVE / CONTINUITY_PAUSED_BY_USER
+State: WC0_LIVE_PRODUCT_PARITY_ACCEPTED / WC1_24_7_DATA_RELIABILITY_ACCEPTED / WC2_ENGINEERING_FROZEN_EVIDENCE_ACCUMULATION_ACTIVE / WC4_CHAMPION_CHALLENGER_ENGINEERING_ACCEPTED_RESEARCH_ONLY / WC5_ENGINEERING_ACCEPTED_PRODUCT_DEPLOYED_HUMAN_USABILITY_NOT_MEASURED / WC6_SANDBOX_BOUNDARY_ACCEPTED_VENUE_EVIDENCE_EXTERNAL_DEPENDENCY / WC7_CURRENT_FRONTIER_PACKET_ACCEPTED_CURRENT_INSUFFICIENT_EVIDENCE / INTELLIGENCE_STREAM_V1_S0_PASS_S1_PASS_S2_PASS_S3_PASS_S4_PASS_S5_PASS_S6_PASS_S7_PASS_S8_PASS_S9_PASS_S10_PASS_S11_ACTIVE / CONTINUITY_PAUSED_BY_USER
 REAL_CAPITAL: 0
 
 ## Active v1.1 frontier — read before historical sections
+
+### 2026-09-25 — STREAM S10 FROZEN VISUAL PROOF PASS / S11 CAPITAL STORY INTEGRATION ACTIVE
+
+S10 is mechanically and visually accepted.
+
+Canonical acceptance record:
+- `docs/CRYPTO_SIGNAL_STREAM_S10_ACCEPTANCE.md`.
+
+Accepted S10 proof:
+- exact Narrative -> Forecast/Proof -> signal freeze -> immutable decision-freeze bundle lineage;
+- frozen OHLC only from consumed candles persisted at decision time;
+- bundle digest + market/time/source-as-of fail-closed validation;
+- exact trigger/target/invalidation annotations with identity/provenance;
+- message/forecast/proof/signal/bundle provenance surface;
+- five-family score-component explanation;
+- explicit resolved / identity-only / unavailable evidence-domain semantics;
+- no current-data substitution when historical visual payload is absent;
+- floating-window and detached-window frozen proof;
+- exact 430px mobile rendered proof with no whole-page overflow.
+
+Merged implementation:
+- PR #1288;
+- main `2dfd2089cc1a9a65e4d7839569f670ca01b4478c`.
+
+Exact-head acceptance:
+- head `8f0a8d548113048377a44149230f00f94376834b`;
+- UID504 run `36178009648` PASS;
+- artifact `stream-s10-visual-snapshot-36178009648`;
+- focused PIT/digest/future-leak tests PASS;
+- whole-repository regression PASS;
+- frozen candle/annotation/provenance Chromium probe PASS;
+- current-data substitution rejection PASS;
+- exact mobile no-overflow PASS;
+- Development checkout non-mutation PASS.
+
+The active Stream frontier is now **S11 — Capital Story Integration**.
+
+S11 must close the canonical forward paper-capital runtime and project capital decisions back into the same Stream. It must preserve Epoch 1 vs Epoch 2 separation and REAL_CAPITAL=0, and every simulated fill must retain exact decision/proof lineage.
 
 ### 2026-09-25 — STREAM S9 EVIDENCE WINDOW MANAGER PASS / S10 FROZEN VISUAL PROOF ACTIVE
 
