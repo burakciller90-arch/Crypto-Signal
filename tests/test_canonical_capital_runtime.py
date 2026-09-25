@@ -17,6 +17,7 @@ from crypto_signal.paper.canonical_capital_runtime import (
     commit_canonical_paper_buy,
 )
 from crypto_signal.paper.canonical_sizing import promote_fixed_fractional_sizing
+from crypto_signal.paper.canonical_sizing_events import CanonicalSizingEventLedger
 from crypto_signal.paper.canonical_vault_eligibility import promote_vault_eligibility
 from crypto_signal.paper.epoch2_accounting import Epoch2CanonicalLedger
 from crypto_signal.paper.epochs import PaperVaultId
@@ -131,6 +132,11 @@ def test_s11_atomic_buy_mutates_only_target_vault_and_binds_exact_lineage(
     assert result.version == S11_CAPITAL_COMMIT_VERSION
     assert result.vault_id is PaperVaultId.CORE
     assert result.sizing_selection_identity == selection.selection_identity
+    sizing_event = CanonicalSizingEventLedger(epoch2_path).read(
+        result.sizing_event_identity
+    )
+    assert sizing_event is not None
+    assert sizing_event["selection_identity"] == selection.selection_identity
     assert result.inserted is True
     assert result.production_authority is False
     assert result.real_capital == 0
@@ -140,6 +146,7 @@ def test_s11_atomic_buy_mutates_only_target_vault_and_binds_exact_lineage(
     after_by_vault = {item.vault_id: item for item in after.vault_snapshots}
     core_after = after_by_vault[PaperVaultId.CORE]
     assert core_after.snapshot_identity == result.after_vault_snapshot_identity
+    assert result.sizing_event_identity in core_after.source_record_identities
     assert core_after.cash_usdt < before_by_vault[PaperVaultId.CORE].cash_usdt
     assert core_after.positions
     assert core_after.positions[0].symbol is PaperSymbol.BTCUSDT
@@ -163,6 +170,12 @@ def test_s11_atomic_buy_mutates_only_target_vault_and_binds_exact_lineage(
     )
     assert audit["intent_identity"] == result.intent_identity
     assert audit["fill_identity"] == result.fill_identity
+    story_context = R22Epoch2AtomicTape(epoch2_path).read_bundle_story_context(
+        result.accounting_bundle_identity
+    )
+    assert result.sizing_event_identity in (
+        story_context["intent"]["source_evidence_identities"]
+    )
     assert audit["after_consolidated_snapshot_identity"] == (
         result.after_consolidated_snapshot_identity
     )
