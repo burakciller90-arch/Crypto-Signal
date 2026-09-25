@@ -2684,6 +2684,14 @@ function applyFixture(name) {
     openDrawer(ui.discoveryDrawer);
     if (ui.searchInput) ui.searchInput.value = "likidite";
     if (ui.symbolFilter) ui.symbolFilter.value = "BTCUSDT";
+    if (ui.categoryFilter) ui.categoryFilter.value = "decision";
+    if (ui.timeframeFilter) ui.timeframeFilter.value = "4h";
+    if (ui.vaultFilter) ui.vaultFilter.value = "";
+    if (ui.evidenceFilter) ui.evidenceFilter.value = "order_flow_cvd";
+    if (ui.stateFilter) ui.stateFilter.value = "watch";
+    if (ui.importanceFilter) ui.importanceFilter.value = "important";
+    if (ui.fromDateFilter) ui.fromDateFilter.value = "2026-09-20";
+    if (ui.toDateFilter) ui.toDateFilter.value = "2026-09-25";
   }
 }
 
