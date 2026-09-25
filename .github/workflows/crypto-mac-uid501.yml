@@ -312,6 +312,47 @@ jobs:
           /bin/ps -p "$(/bin/echo "$pids" | /usr/bin/paste -sd, -)" -o pid=,ppid=,user=,ni=,%cpu=,%mem=,rss=,etime=,state=,command= || true
           echo "UID504_DASHBOARD_THROTTLE_PASS=YES"
 
+      - name: UID504 DASHBOARD DEDUPE VIA UID501
+        if: steps.parse.outputs.command == 'dashboarddedupe504'
+        shell: bash
+        timeout-minutes: 2
+        run: |
+          set -euo pipefail
+          PATTERN='^/Volumes/Crypto-504/Crypto-Signal/Product/.venv/bin/python /Volumes/Crypto-504/Crypto-Signal/Product/ops/run_dashboard.py( |$)'
+
+          echo "=== DASHBOARD BEFORE ==="
+          pids="$(/usr/bin/pgrep -f "$PATTERN" 2>/dev/null || true)"
+          test -n "$pids"
+          /bin/ps -p "$(/bin/echo "$pids" | /usr/bin/paste -sd, -)" -o pid=,ppid=,user=,%cpu=,%mem=,rss=,etime=,command= || true
+
+          kept=""
+          for pid in $pids; do
+            ppid="$(/bin/ps -p "$pid" -o ppid= | /usr/bin/tr -d ' ')"
+            if [ "$ppid" = "1" ]; then
+              echo "DASHBOARD_ORPHAN_KILL_PID=$pid"
+              /usr/bin/sudo -n -u crypto-signal-agent /bin/kill -TERM "$pid" 2>/dev/null || true
+              /bin/sleep 1
+              if /bin/kill -0 "$pid" 2>/dev/null; then
+                /usr/bin/sudo -n -u crypto-signal-agent /bin/kill -KILL "$pid" 2>/dev/null || true
+              fi
+            else
+              kept="$kept $pid"
+            fi
+          done
+
+          /bin/sleep 2
+          current="$(/usr/bin/pgrep -f "$PATTERN" 2>/dev/null || true)"
+          count="$(printf '%s\n' "$current" | /usr/bin/awk 'NF{n++} END{print n+0}')"
+          echo "DASHBOARD_COUNT_AFTER=$count"
+          test "$count" = "1"
+          survivor="$(printf '%s\n' "$current" | /usr/bin/head -1)"
+          survivor_ppid="$(/bin/ps -p "$survivor" -o ppid= | /usr/bin/tr -d ' ')"
+          test "$survivor_ppid" != "1"
+          /bin/ps -p "$survivor" -o pid=,ppid=,user=,%cpu=,%mem=,rss=,etime=,command=
+          echo "LOAD_AFTER=$(/usr/sbin/sysctl -n vm.loadavg)"
+          /usr/bin/memory_pressure | /usr/bin/grep -E 'System-wide memory free percentage' | /usr/bin/head -1 || true
+          echo "UID504_DASHBOARD_DEDUPE_PASS=YES"
+
       - name: UID504 DASHBOARD RESTART VIA UID501
         if: steps.parse.outputs.command == 'dashboardrestart504'
         shell: bash
