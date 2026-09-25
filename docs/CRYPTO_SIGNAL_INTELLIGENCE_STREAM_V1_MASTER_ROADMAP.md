@@ -59,8 +59,9 @@ These decisions are already made and must not be re-opened during ordinary imple
 - **S5 Narrative Engine: PASS**.
 - **S6 Real-time Stream Backend: PASS**.
 - **S7 One-Panel UI Shell: PASS**.
-- **S8 Expandable Message Experience: ACTIVE FRONTIER**.
-- Do not begin S9 as the active implementation frontier until S8 inline depth is browser-rendered and accepted without scroll-position corruption.
+- **S8 Expandable Message Experience: PASS**.
+- **S9 Evidence Window Manager: ACTIVE FRONTIER**.
+- Do not begin S10 as the active implementation frontier until S9 reusable evidence-window behavior is browser-rendered and accepted with exact identity preservation.
 - The deployed GALACTECH V2 surface remains production fallback until S16 controlled cutover.
 
 ---
