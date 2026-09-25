@@ -4,14 +4,14 @@ import pytest
 from test_smart_capital_allocator import _candidate
 
 from crypto_signal.intelligence.event_risk_circuit_breaker import CircuitBreakerState
+from crypto_signal.paper.canonical_vault_eligibility import (
+    S11_VAULT_ELIGIBILITY_VERSION,
+    promote_vault_eligibility,
+)
 from crypto_signal.paper.epochs import PaperVaultId
 from crypto_signal.paper.smart_capital_allocator import (
     VaultEligibilityState,
     assess_smart_capital_candidate,
-)
-from crypto_signal.paper.canonical_vault_eligibility import (
-    S11_VAULT_ELIGIBILITY_VERSION,
-    promote_vault_eligibility,
 )
 
 
