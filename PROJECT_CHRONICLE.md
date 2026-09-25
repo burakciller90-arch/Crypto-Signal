@@ -1,5 +1,17 @@
 # PROJECT CHRONICLE
 
+## 2026-09-25 — Stream S1 capability audit closes; S2 event/message backbone becomes active
+
+The Stream-only backend audit is now complete enough to stop discovery and start implementation.
+
+S1 produced an exact identity/temporal lineage map and a source-to-message classification rather than treating the backend as one undifferentiated “data exists” bucket. The largest structural discovery is that the full M6 five-family contribution object exists during unified issuance but is not persisted in the R20/R20.5 Decision Ledger. Forecast/Proof preserve the M6 identity and aggregate support/opposition truth, but not the historical per-family contribution payload required by future clickable Geometry/Liquidity/Order Flow/Derivatives/On-chain score windows. S2 must therefore persist immutable decision-context truth at publication rather than recompute history later.
+
+The audit also resolved source boundaries. Bitcoin network/on-chain has a real accepted Blockstream source but remains observation-only without an always-on Stream collector. Exchange Flow, Wallet Cohort and Large Transfer are accepted provider-neutral research contracts with no live provider activation. The bounded liquidation collector and Hot/Cold persistence exist but production continuous liquidation collection remains explicitly disabled. These are now explicit product availability boundaries, not vague “missing data.”
+
+Capital lineage was similarly separated: rich Capital Science and Position Sizing objects exist during runtime but are not fully historical Product read models; shadow R22 preview persistence and canonical R22/R21 transaction/accounting persistence are separate accepted stores. The future Stream must preserve that distinction.
+
+S1 is now PASS. S2 is active and will create the canonical append-only Stream event/message model before any messaging UI is implemented.
+
 ## 2026-09-25 — Existing Chromium visual-snapshot pipeline rediscovered and adopted for Stream V1
 
 A repository/history review triggered by the user recovered an already-built visual QA path that the initial Stream S1 notes had described too generically as future infrastructure.
