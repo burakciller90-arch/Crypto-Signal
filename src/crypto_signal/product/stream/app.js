@@ -672,6 +672,11 @@ function applyEvidenceWindowGeometry(model) {
     pin.setAttribute("aria-pressed", String(Boolean(model.pinned)));
     pin.title = model.pinned ? "Sabitlemeyi kaldır" : "Pencereyi sabitle";
   }
+  const minimize = node.querySelector('[data-window-action="minimize"]');
+  if (minimize instanceof HTMLButtonElement) {
+    minimize.textContent = model.minimized ? "□" : "—";
+    minimize.title = model.minimized ? "Geri aç" : "Küçült";
+  }
 }
 
 function focusEvidenceWindow(id) {
