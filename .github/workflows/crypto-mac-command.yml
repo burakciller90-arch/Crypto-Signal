@@ -3541,7 +3541,17 @@ jobs:
           OUT="$RUNNER_TEMP/galactech-visual-snapshot"
           mkdir -p "$OUT"
 
-          curl -fsS --max-time 5 "$URL/api/health" > "$OUT/health.json"
+          health_ok=0
+          for i in {1..8}; do
+            if curl -fsS --max-time 15 "$URL/api/health" > "$OUT/health.json"; then
+              health_ok=1
+              echo "VISUAL_SNAPSHOT_HEALTH_READY attempt=$i"
+              break
+            fi
+            rm -f "$OUT/health.json"
+            sleep 2
+          done
+          test "$health_ok" = "1"
           /usr/bin/python3 - <<'PY'
           import json
           import os
