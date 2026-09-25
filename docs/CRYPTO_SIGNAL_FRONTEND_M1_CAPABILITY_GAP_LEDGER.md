@@ -149,6 +149,41 @@ Capital has the same distinction:
 
 Therefore the missing product closure is broader than Tactical: **one canonical three-vault forward virtual-capital runtime** must bind each vault's accepted eligibility/sizing policy to deterministic simulated execution and canonical R22/R21 accounting. Existing Core execution logic should be reused, not discarded; Tactical and Opportunity require their own evidence/policy adapters.
 
+## 3.5 Five-layer institutional intelligence coverage
+
+The user's target intelligence architecture maps strongly to existing backend evidence engines:
+
+| Layer | Backend evidence already present | Current truth caveat | Product action |
+|---|---|---|---|
+| Liquidity / Order Book Dynamics | liquidity dynamics, liquidity structure, liquidation heatmap/sweep, spoofing candidates, hidden-liquidity candidates | candidate evidence is not proof of market-maker intent; exact live/frozen projection must be traced | SURFACE_ADAPTER / DISCOVER |
+| Order Flow / Absorption | temporal order flow, CVD, price-CVD divergence candidates, absorption candidates, order-flow patterns | candidate evidence is not a return prediction or proof of iceberg actor | SURFACE_ADAPTER |
+| Derivatives Intelligence | funding, OI, basis, crowding and OI/price dynamics | derivatives context is evidence, not an automatic contrarian trade command | SURFACE_ADAPTER |
+| Smart Money / On-chain | exchange inflow/outflow anomalies, large-transfer clusters, wallet cohorts, Bitcoin network context | cohort performance is not actor identity/future return; flow context is not price direction | SURFACE_ADAPTER / RESEARCH_ONLY depending source |
+| Event-Driven Risk | structured event calendar, news evidence, event-risk states, circuit breaker | event risk is context/veto, not directional price truth | SURFACE_DIRECT / SURFACE_ADAPTER |
+
+The M6 Confluence Matrix already uses the target family priors:
+- Geometry 20%;
+- Liquidity 25%;
+- Order Flow / Absorption 25%;
+- Derivatives 15%;
+- On-chain 15%.
+
+Its canonical semantic is `weighted_support_opposition_points_not_probability`; probability remains `not_calibrated`; Event Risk remains outside the 100-point score; the matrix itself has no automatic production activation authority.
+
+Therefore a frontend that shows only a thin forecast sentence would materially under-surface the accepted backend architecture.
+
+### Capability pipeline audit
+
+For every major engine/family M1 must record five separate stages instead of collapsing them into "data exists / does not exist":
+
+1. ENGINE — analysis/contract implementation exists;
+2. LIVE_SOURCE — current source collection exists and has freshness/quality truth;
+3. PERSISTED_EVIDENCE — exact PIT/frozen evidence is stored;
+4. PRODUCT_PROJECTION — safe read-only adapter/API exists;
+5. UI_SURFACE — the new frontend actually exposes it.
+
+A missing stage 4 or 5 must be classified as an adapter/product gap, not as missing stage 1-3 evidence.
+
 ## 4. Product Gap Ledger
 
 | ID | Desired capability | Current truth | Gap | Class | Required next action |
@@ -178,6 +213,9 @@ Therefore the missing product closure is broader than Tactical: **one canonical 
 | GAP-023 | Canonical three-vault forward virtual-capital runtime | Core forward execution engineering exists; Core/Tactical/Opportunity allocator contracts + three-vault sizing/R22/R21 primitives exist | no single canonical runtime currently advances Epoch 2 R22/R21 for all three vaults; existing WC2 runtime is CORE/4h and journal-isolated | ADAPT | build/accept per-vault forward execution adapters over one canonical Epoch 2 transaction/accounting path; reuse Core rail, add Tactical 1m/5m and Opportunity recovery rails |
 | GAP-024 | Capital events inside Intelligence Feed | Epoch 2/R22/WC2 decisions and fills exist in separate stores/read models | user cannot see WHY virtual capital held/deployed as part of the live story | ADAPT | add exact identity-bound capital timeline projection: ELIGIBLE/HOLD/BLOCK/SIZED/EXECUTED/EXITED/accounting-result events |
 | GAP-025 | Zero-activity diagnosability | HOLD_CASH is valid but prolonged inactivity can be indistinguishable from a broken bridge in the UI | user may see idle capital without knowing whether no setup or subsystem gap caused it | ADAPT/ADD_PRESENTATION | expose decision cadence, candidates scanned, blockers, last eligible event, last executed simulation and data-quality reason without forcing trades |
+| GAP-026 | Five-layer intelligence surfacing | backend implements the target Geometry/Liquidity/OrderFlow/Derivatives/On-chain evidence families plus Event Risk | current live feed/product projections expose only a fraction of this stack | ADAPT/DISCOVER | complete ENGINE -> LIVE_SOURCE -> PERSISTED_EVIDENCE -> PRODUCT_PROJECTION -> UI_SURFACE audit for every family and surface all safe accepted evidence |
+| GAP-027 | Market-maker-style candidate semantics | spoofing/hidden-liquidity/absorption/flow engines exist | naive copy could overclaim manipulation, actor identity or causality | ADD_PRESENTATION | preserve candidate/uncertainty semantics in SIMPLE/PRO copy; never translate candidate into "market maker definitely did X" |
+| GAP-028 | Confluence user presentation | exact 20/25/25/15/15 priors exist | score may be misread as probability or "80 means 80% accuracy" | ADD_PRESENTATION | show support/opposition/coverage/quality/freshness separately; label score as evidence confluence, never probability |
 
 ## 5. Temporal integrity observations
 
