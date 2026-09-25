@@ -1,6 +1,10 @@
 # Crypto Signal Frontend M1 — Backend Capability Matrix & Gap Ledger
 
-Status: **M1 ACTIVE — INITIAL MECHANICALLY VERIFIED BASELINE / NOT YET PASS**  
+> **NO LONGER THE ACTIVE FRONTEND FRONTIER — 2026-09-25**  
+> Current execution authority is `docs/CRYPTO_SIGNAL_INTELLIGENCE_STREAM_V1_MASTER_ROADMAP.md`.  
+> This matrix remains valuable evidence about verified backend capabilities and gaps. Reuse/refresh those facts during Stream S1, but do not execute its old multi-screen IA sequence.
+
+Status: **HISTORICAL DISCOVERY EVIDENCE — SUPERSEDED AS EXECUTION FRONTIER**  
 Observed runtime/code baseline: repository main at `26cc5b05f9b15a0a8569042c534886e4681b4502`  
 Frontend canonicalization merge: `59d2bd51ff4696945cb8a963ed490d6abe3bdfb8` (PR #1254, documentation/authority only)  
 Baseline validity: PR #1254 and follow-up PR #1255 are documentation-only and do not change the runtime/backend code inspected for this matrix.  
