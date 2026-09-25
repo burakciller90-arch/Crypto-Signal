@@ -497,6 +497,7 @@ function applyFixture(name) {
     state.messages.push(record);
   }
   state.hasOlder = name === "history" || name === "long";
+  if (name === "history") state.unread = 3;
   renderAll();
   setConnection("live", "CANLI", "fixture · S7 görsel kabul");
   if (ui.transportMode) ui.transportMode.textContent = "SSE CANLI · FIXTURE";
@@ -505,8 +506,6 @@ function applyFixture(name) {
     if (!ui.viewport) return;
     if (name === "history") {
       ui.viewport.scrollTop = Math.max(0, ui.viewport.scrollHeight * 0.36);
-      state.unread = 3;
-      updateUnread();
     } else {
       scrollToBottom({ smooth: false });
     }
