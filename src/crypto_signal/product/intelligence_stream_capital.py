@@ -165,7 +165,7 @@ class StreamCapitalMessage:
             raise ValueError("S11 Capital Story market context must be non-empty")
         if self.event_at_ms < 0:
             raise ValueError("S11 Capital Story event time must be non-negative")
-        for value, label, positive in (
+        for amount, amount_label, positive in (
             (self.quantity, "quantity", True),
             (self.reference_price, "reference price", True),
             (self.simulated_fill_price, "simulated fill price", True),
@@ -188,7 +188,7 @@ class StreamCapitalMessage:
             (self.spread_usdt, "spread", False),
             (self.slippage_usdt, "slippage", False),
         ):
-            _decimal(value, label, positive=positive)
+            _decimal(amount, amount_label, positive=positive)
         _identity_tuple(self.capital_reference_identities, "capital reference")
         required_refs = {
             self.bundle_identity,
