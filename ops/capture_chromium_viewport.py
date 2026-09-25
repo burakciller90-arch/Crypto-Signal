@@ -327,6 +327,79 @@ def _capture(args: argparse.Namespace) -> dict[str, object]:
                 raise RuntimeError(f"evidence windows hid Stream surface: {window_probe!r}")
             metrics["window_manager_probe"] = window_probe
 
+        if args.probe_frozen_proof:
+            proof_probe_result = session.command(
+                "Runtime.evaluate",
+                {
+                    "expression": (
+                        "(async()=>{"
+                        "await new Promise(r=>setTimeout(r,260));"
+                        "const win=document.querySelector('.evidence-window[data-kind=proof]');"
+                        "if(!win){return {ok:false,reason:'proof_window_missing'};}"
+                        "const proof=win.querySelector('.frozen-visual-proof');"
+                        "const chart=win.querySelector('.frozen-proof-chart');"
+                        "if(!proof||!chart){return {ok:false,reason:'chart_missing'};}"
+                        "const candles=[...chart.querySelectorAll('[data-candle-identity]')];"
+                        "const annotations=[...chart.querySelectorAll('[data-annotation-identity]')];"
+                        "const candleIds=candles.map(n=>n.getAttribute('data-candle-identity')||'');"
+                        "const annotationIds=annotations.map(n=>n.getAttribute('data-annotation-identity')||'');"
+                        "const sourceIds=annotations.map(n=>n.getAttribute('data-source-evidence-identity')||'').filter(Boolean);"
+                        "const provenance=[...win.querySelectorAll('.frozen-proof-identities code')].map(n=>({kind:n.dataset.identityKind||'',text:n.textContent||''}));"
+                        "const domains=[...win.querySelectorAll('.frozen-proof-domain')].map(n=>({domain:n.dataset.domain||'',state:n.dataset.visualState||''}));"
+                        "const resolved=domains.filter(x=>x.state==='resolved_frozen_bundle').length;"
+                        "const identityOnly=domains.filter(x=>x.state==='identity_only').length;"
+                        "const unavailable=domains.filter(x=>x.state==='unavailable').length;"
+                        "const stream=document.getElementById('streamViewport');"
+                        "const streamVisible=!!stream&&stream.getBoundingClientRect().height>100;"
+                        "const textContent=proof.textContent||'';"
+                        "return {ok:true,candleCount:candles.length,annotationCount:annotations.length,"
+                        "allCandleIds:candleIds.every(Boolean),allAnnotationIds:annotationIds.every(Boolean),"
+                        "sourceIdentityCount:sourceIds.length,provenanceKinds:provenance.map(x=>x.kind),"
+                        "resolved,identityOnly,unavailable,streamVisible,"
+                        "currentDataSubstitutionNone:textContent.includes('Current-data substitution: YOK'),"
+                        "narrativeIdentity:proof.dataset.narrativeIdentity||''"
+                        "};"
+                        "})()"
+                    ),
+                    "awaitPromise": True,
+                    "returnByValue": True,
+                },
+            )
+            raw_proof_probe = proof_probe_result.get("result", {})
+            if not isinstance(raw_proof_probe, dict):
+                raise RuntimeError("CDP frozen-proof probe result missing")
+            proof_probe = raw_proof_probe.get("value", {})
+            if not isinstance(proof_probe, dict):
+                raise RuntimeError("CDP frozen-proof probe value missing")
+            if proof_probe.get("ok") is not True:
+                raise RuntimeError(f"frozen visual proof probe failed: {proof_probe!r}")
+            if int(proof_probe.get("candleCount", 0)) < 20:
+                raise RuntimeError(f"frozen proof candle coverage failed: {proof_probe!r}")
+            if int(proof_probe.get("annotationCount", 0)) < 3:
+                raise RuntimeError(f"frozen proof annotation coverage failed: {proof_probe!r}")
+            if proof_probe.get("allCandleIds") is not True:
+                raise RuntimeError(f"frozen proof candle identity failed: {proof_probe!r}")
+            if proof_probe.get("allAnnotationIds") is not True:
+                raise RuntimeError(f"frozen proof annotation identity failed: {proof_probe!r}")
+            if int(proof_probe.get("sourceIdentityCount", 0)) < 2:
+                raise RuntimeError(f"frozen proof source identity failed: {proof_probe!r}")
+            provenance_kinds = set(proof_probe.get("provenanceKinds", []))
+            if not {"message", "forecast", "proof", "signal", "bundle"}.issubset(
+                provenance_kinds
+            ):
+                raise RuntimeError(f"frozen proof provenance incomplete: {proof_probe!r}")
+            if int(proof_probe.get("resolved", 0)) < 2:
+                raise RuntimeError(f"frozen proof resolved-domain coverage failed: {proof_probe!r}")
+            if int(proof_probe.get("identityOnly", 0)) < 2:
+                raise RuntimeError(f"frozen proof identity-only contract failed: {proof_probe!r}")
+            if int(proof_probe.get("unavailable", 0)) < 1:
+                raise RuntimeError(f"frozen proof unavailable-domain contract failed: {proof_probe!r}")
+            if proof_probe.get("streamVisible") is not True:
+                raise RuntimeError(f"frozen proof hid Stream surface: {proof_probe!r}")
+            if proof_probe.get("currentDataSubstitutionNone") is not True:
+                raise RuntimeError(f"frozen proof substitution boundary failed: {proof_probe!r}")
+            metrics["frozen_proof_probe"] = proof_probe
+
         screenshot = session.command(
             "Page.captureScreenshot",
             {
@@ -372,6 +445,7 @@ def main() -> None:
     parser.add_argument("--require-no-horizontal-overflow", action="store_true")
     parser.add_argument("--probe-expansion-anchor", action="store_true")
     parser.add_argument("--probe-window-manager", action="store_true")
+    parser.add_argument("--probe-frozen-proof", action="store_true")
     args = parser.parse_args()
 
     if not args.browser.is_file():
@@ -394,6 +468,7 @@ def main() -> None:
         f"ui_version={metrics.get('uiVersion')}",
         f"expansion_probe={'YES' if metrics.get('expansion_probe') else 'NO'}",
         f"window_manager_probe={'YES' if metrics.get('window_manager_probe') else 'NO'}",
+        f"frozen_proof_probe={'YES' if metrics.get('frozen_proof_probe') else 'NO'}",
     )
 
 
