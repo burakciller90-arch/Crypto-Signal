@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Any
 
 from websockets.sync.client import connect
+from websockets.typing import Origin
 
 
 def _free_port() -> int:
@@ -44,7 +45,7 @@ class CdpSession:
     def __init__(self, websocket_url: str) -> None:
         self._socket = connect(
             websocket_url,
-            origin="http://127.0.0.1",
+            origin=Origin("http://127.0.0.1"),
             open_timeout=5,
             close_timeout=2,
         )
