@@ -1,5 +1,17 @@
 # PROJECT CHRONICLE
 
+## 2026-09-25 — Stream S7 One-Panel UI Shell accepted; S8 Expandable Message Experience becomes active
+
+S7 now establishes the final Stream V1 application shell without replacing the deployed product root. PR #1280 added an isolated `/stream-preview` surface, a Turkish-first light messaging UI, compact collapsed S5 narrative bubbles, S6 SSE + polling fallback consumption, upward cursor history, bottom-anchor behavior, buffered `N yeni mesaj` handling, temporary search/filter controls, settings/sound surfaces and the reserved floating-window layer.
+
+The implementation also closed a runtime integration gap discovered during S7: `ops/run_dashboard.py` now binds the canonical Stream ledger so the preview can consume real persisted S5/S6 truth instead of fixtures only.
+
+Exact-head UID504 run `36170910074` passed focused tests, whole-repository regression, real Chromium desktop/mobile rendering and Development non-mutation at head `65dc2e3dcf141940c8d93ba29d0b988e8d3dd3d3`. The visual artifact `stream-s7-visual-snapshot-36170910074` covers mixed stream, incoming message, history/unread, search/filter and degraded states. Mobile acceptance uses a real 430x860 CDP viewport and mechanically rejects horizontal overflow.
+
+The production root remains GALACTECH V2. S7 adds no historical backfill, exchange authority or real capital. REAL_CAPITAL=0.
+
+The active frontier is S8 Expandable Message Experience: the same message must expose SIMPLE, technical/PRO, INTELLIGENCE, DECISION, trade geometry, CAPITAL and proof actions inline without destroying feed scroll position.
+
 ## 2026-09-25 — Stream S6 realtime backend accepted; S7 One-Panel UI becomes active
 
 S6 now completes the backend messaging transport required by Intelligence Stream V1. PR #1274 added the immutable cursor/query layer over S5 narratives: stable keyset before/after cursors, upward history, reconnect catch-up, exact lookup, full backend filter/search semantics and polling fallback. Exact-head UID504 run `36165298510` passed focused checks, whole-repository regression and Development non-mutation.
