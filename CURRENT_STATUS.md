@@ -4,10 +4,39 @@ Updated: 2026-09-25
 Project: Crypto Signal
 Baseline: crypto-signal-full-version-v1.0.0 (immutable)
 Active post-v1.0 program: v1.1 world-class product + market intelligence + Crypto Signal Intelligence Stream V1
-State: WC0_LIVE_PRODUCT_PARITY_ACCEPTED / WC1_24_7_DATA_RELIABILITY_ACCEPTED / WC2_ENGINEERING_FROZEN_EVIDENCE_ACCUMULATION_ACTIVE / WC4_CHAMPION_CHALLENGER_ENGINEERING_ACCEPTED_RESEARCH_ONLY / WC5_ENGINEERING_ACCEPTED_PRODUCT_DEPLOYED_HUMAN_USABILITY_NOT_MEASURED / WC6_SANDBOX_BOUNDARY_ACCEPTED_VENUE_EVIDENCE_EXTERNAL_DEPENDENCY / WC7_CURRENT_FRONTIER_PACKET_ACCEPTED_CURRENT_INSUFFICIENT_EVIDENCE / INTELLIGENCE_STREAM_V1_S0_PASS_S1_PASS_S2_ACTIVE / CONTINUITY_PAUSED_BY_USER
+State: WC0_LIVE_PRODUCT_PARITY_ACCEPTED / WC1_24_7_DATA_RELIABILITY_ACCEPTED / WC2_ENGINEERING_FROZEN_EVIDENCE_ACCUMULATION_ACTIVE / WC4_CHAMPION_CHALLENGER_ENGINEERING_ACCEPTED_RESEARCH_ONLY / WC5_ENGINEERING_ACCEPTED_PRODUCT_DEPLOYED_HUMAN_USABILITY_NOT_MEASURED / WC6_SANDBOX_BOUNDARY_ACCEPTED_VENUE_EVIDENCE_EXTERNAL_DEPENDENCY / WC7_CURRENT_FRONTIER_PACKET_ACCEPTED_CURRENT_INSUFFICIENT_EVIDENCE / INTELLIGENCE_STREAM_V1_S0_PASS_S1_PASS_S2_PASS_S3_ACTIVE / CONTINUITY_PAUSED_BY_USER
 REAL_CAPITAL: 0
 
 ## Active v1.1 frontier — read before historical sections
+
+### 2026-09-25 18:22 +0300 — STREAM S2 CANONICAL EVENT/MESSAGE MODEL PASS / S3 STORY ENGINE ACTIVE
+
+S2 is now mechanically accepted.
+
+Canonical acceptance record:
+- `docs/CRYPTO_SIGNAL_STREAM_S2_ACCEPTANCE.md`.
+
+Accepted S2 backbone now includes:
+- forward-only Stream activation boundary;
+- immutable source-event persistence;
+- full five-family M6 decision-context persistence;
+- canonical Fact Bundle and Message Input identities;
+- forecast-root Story Identity;
+- category/subtype/importance/materiality/search/evidence/capital/relation metadata;
+- append-only source/message ledgers;
+- deterministic issuance + resolution projections;
+- same-story outcome continuation without rewriting issuance;
+- versioned materiality/publication policy;
+- accepted source-projector registry with explicit IMPLEMENTED / REQUIRES_CHANGE_DETECTION / DEFERRED_SOURCE / RESEARCH_ONLY / LATER_PHASE states;
+- exact replay -> same canonical projection.
+
+Three exact-head UID504 acceptance runs are preserved in the S2 acceptance document; each passed focused checks, whole-repository regression and Development checkout non-mutation.
+
+S2 does **not** claim Story Engine deltas, analytical opinion, Turkish narrative publication, realtime transport, UI, rich evidence windows or capital story completion.
+
+The active Stream frontier is now **S3 — Story Engine and Change Detection**.
+
+S3 must deterministically bind current state to the previous relevant state and produce exact stance/score/evidence-family/trigger/risk/capital change sets without heuristic time-only joins.
 
 ### 2026-09-25 17:52 +0300 — STREAM S1 CAPABILITY AUDIT PASS / S2 EVENT-MESSAGE MODEL ACTIVE
 

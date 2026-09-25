@@ -13,7 +13,8 @@ Current program facts recorded by the canonical state documents:
 - the sole current frontend/product program is **Intelligence Stream V1**;
 - **S0 authority/supersession freeze is PASS**;
 - **S1 Stream-only backend capability audit is PASS**;
-- **S2 Canonical Stream Event & Message Model is ACTIVE**;
+- **S2 Canonical Stream Event & Message Model is PASS**;
+- **S3 Story Engine and Change Detection is ACTIVE**;
 - the previous M0→M7 multi-screen frontend roadmap is historical/superseded;
 - WC2 frozen evidence accumulation remains active;
 - WC5 broad human <=10-second usability remains `NOT_MEASURED` until actually measured;
