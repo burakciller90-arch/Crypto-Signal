@@ -1,6 +1,6 @@
 # Crypto Signal — Stream S1 Gap Ledger
 
-Status: **CANONICAL STREAM GAP LEDGER / S4 CLOSEOUT APPLIED**  
+Status: **CANONICAL STREAM GAP LEDGER / S5 CLOSEOUT APPLIED**  
 Authority: `docs/CRYPTO_SIGNAL_INTELLIGENCE_STREAM_V1_MASTER_ROADMAP.md`  
 Baseline: `2a61ad47e1f09640f3b36e4ccf09f6ed46dde7ef`
 
@@ -21,8 +21,8 @@ Classification:
 | S1-G003 | Story identity and relation graph | **CLOSED S3** — explicit Story Observation/State lineage uses exact previous-state identity; pre-publication observations do not require a message | preserve exact lineage; S4/S5 consume it without heuristic time-only joins | ACCEPTANCE | S3 PASS |
 | S1-G004 | Change detection | **CLOSED S3** — deterministic stance/score/five-family/risk/trigger/capital-reference/outcome Change Set is persisted append-only | S4 consumes exact Change Set for analytical composition | ACCEPTANCE | S3 PASS |
 | S1-G005 | Analytical View contract | **CLOSED S4** — versioned policy + deterministic identity-bound Analytical View covers stance/strength/support/contradiction/uncertainty/change/conditions/capital consequence/materiality | preserve exact S4 identity/version lineage into S5 narrative | ACCEPTANCE | S4 PASS |
-| S1-G006 | Story-aware Turkish Narrative Engine | R23 SIMPLE/PRO exists but is not story-aware analyst prose | Fact Bundle -> Change Set -> Analytical View -> Narrative Plan -> renderer -> validator | BUILD | S5 |
-| S1-G007 | Narrative persistence/versioning | S2 reserves analytical/narrative/renderer version fields and preserves projector/materiality lineage; no published Turkish message text exists yet | S5 must persist original published narrative text/version and never silently rewrite it | BUILD | S5 |
+| S1-G006 | Story-aware Turkish Narrative Engine | **CLOSED S5** — deterministic Turkish Narrative Plan/renderer consumes exact S4 view + S3 history; optional guarded local rewrite cannot invent market truth | preserve narrative identities/version/validation through S6+ transport/UI | ACCEPTANCE | S5 PASS |
+| S1-G007 | Narrative persistence/versioning | **CLOSED S5** — Narrative Plan and original rendered Turkish text are append-only persisted with renderer/voice/rewrite provenance | S6 must transport persisted narrative records without rerendering historical text | ACCEPTANCE | S5 PASS |
 | S1-G008 | Realtime delivery | product has GET feed only | SSE/WebSocket + cursor + reconnect catch-up + dedupe + polling fallback | BUILD | S6 |
 | S1-G009 | Cursor/history API | current feed has limit only | stable older-history cursor and exact message lookup | BUILD | S6 |
 | S1-G010 | Search/filter API | no Stream filtering/full-text | asset/category/timeframe/vault/evidence/state/importance/date/text search | BUILD | S6/S12 |
@@ -50,7 +50,7 @@ Classification:
 | S1-G032 | Detached proof / second-monitor workflow | not implemented | browser pop-out window tied to exact message/evidence identity | UI | S9-S10 |
 | S1-G033 | Historical activation boundary | **CLOSED S2** — one immutable forward activation boundary rejects rich pre-activation backfill | S6 history/reconnect must respect the same activation boundary | ACCEPTANCE | S6 |
 | S1-G034 | Message materiality policy | **CLOSED S4 CORE** — versioned Analytical Policy deterministically maps exact S3 changes to PUBLISH/SILENT + reason codes | future source-specific projectors must consume this contract rather than invent ad-hoc spam thresholds | ACCEPTANCE | S4 PASS |
-| S1-G035 | Secondary-engine Stream classification | **S2 ENFORCEMENT CONTRACT ADDED** — accepted projector registry keeps deferred/research-only/later-phase sources out of implemented live projectors | maintain the classification while S3-S5 projectors/narrative are added | ACCEPTANCE | S3-S5 |
+| S1-G035 | Secondary-engine Stream classification | **CLOSED THROUGH S5 CORE** — accepted projector registry still keeps deferred/research-only/later-phase sources out of canonical Stream truth and S5 renders only accepted upstream views | maintain classification as new S6+ source integrations are added | ACCEPTANCE | S5 PASS / ongoing invariant |
 
 ## S1 closeout
 
