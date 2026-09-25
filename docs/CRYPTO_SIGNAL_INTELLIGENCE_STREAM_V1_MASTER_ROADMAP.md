@@ -60,8 +60,9 @@ These decisions are already made and must not be re-opened during ordinary imple
 - **S6 Real-time Stream Backend: PASS**.
 - **S7 One-Panel UI Shell: PASS**.
 - **S8 Expandable Message Experience: PASS**.
-- **S9 Evidence Window Manager: ACTIVE FRONTIER**.
-- Do not begin S10 as the active implementation frontier until S9 reusable evidence-window behavior is browser-rendered and accepted with exact identity preservation.
+- **S9 Evidence Window Manager: PASS**.
+- **S10 Frozen Visual Proof: ACTIVE FRONTIER**.
+- Do not begin S11 as the active implementation frontier until S10 proves exact point-in-time visual evidence without current-data substitution.
 - The deployed GALACTECH V2 surface remains production fallback until S16 controlled cutover.
 
 ---

@@ -4,10 +4,50 @@ Updated: 2026-09-25
 Project: Crypto Signal
 Baseline: crypto-signal-full-version-v1.0.0 (immutable)
 Active post-v1.0 program: v1.1 world-class product + market intelligence + Crypto Signal Intelligence Stream V1
-State: WC0_LIVE_PRODUCT_PARITY_ACCEPTED / WC1_24_7_DATA_RELIABILITY_ACCEPTED / WC2_ENGINEERING_FROZEN_EVIDENCE_ACCUMULATION_ACTIVE / WC4_CHAMPION_CHALLENGER_ENGINEERING_ACCEPTED_RESEARCH_ONLY / WC5_ENGINEERING_ACCEPTED_PRODUCT_DEPLOYED_HUMAN_USABILITY_NOT_MEASURED / WC6_SANDBOX_BOUNDARY_ACCEPTED_VENUE_EVIDENCE_EXTERNAL_DEPENDENCY / WC7_CURRENT_FRONTIER_PACKET_ACCEPTED_CURRENT_INSUFFICIENT_EVIDENCE / INTELLIGENCE_STREAM_V1_S0_PASS_S1_PASS_S2_PASS_S3_PASS_S4_PASS_S5_PASS_S6_PASS_S7_PASS_S8_PASS_S9_ACTIVE / CONTINUITY_PAUSED_BY_USER
+State: WC0_LIVE_PRODUCT_PARITY_ACCEPTED / WC1_24_7_DATA_RELIABILITY_ACCEPTED / WC2_ENGINEERING_FROZEN_EVIDENCE_ACCUMULATION_ACTIVE / WC4_CHAMPION_CHALLENGER_ENGINEERING_ACCEPTED_RESEARCH_ONLY / WC5_ENGINEERING_ACCEPTED_PRODUCT_DEPLOYED_HUMAN_USABILITY_NOT_MEASURED / WC6_SANDBOX_BOUNDARY_ACCEPTED_VENUE_EVIDENCE_EXTERNAL_DEPENDENCY / WC7_CURRENT_FRONTIER_PACKET_ACCEPTED_CURRENT_INSUFFICIENT_EVIDENCE / INTELLIGENCE_STREAM_V1_S0_PASS_S1_PASS_S2_PASS_S3_PASS_S4_PASS_S5_PASS_S6_PASS_S7_PASS_S8_PASS_S9_PASS_S10_ACTIVE / CONTINUITY_PAUSED_BY_USER
 REAL_CAPITAL: 0
 
 ## Active v1.1 frontier — read before historical sections
+
+### 2026-09-25 — STREAM S9 EVIDENCE WINDOW MANAGER PASS / S10 FROZEN VISUAL PROOF ACTIVE
+
+S9 is mechanically and visually accepted.
+
+Canonical acceptance record:
+- `docs/CRYPTO_SIGNAL_STREAM_S9_ACCEPTANCE.md`.
+
+Accepted S9 window framework:
+- reusable floating evidence windows over the same Stream;
+- drag / resize;
+- minimize / close / pin;
+- multiple simultaneous windows;
+- focus / z-order;
+- session geometry/state persistence + restore;
+- exact-message detach/pop-out at `/stream-evidence`;
+- Liquidity, Order Flow, Derivatives, On-chain, Geometry, Decision, Capital, Event Risk and Proof window kinds;
+- window content from the S8 verified persisted detail projection;
+- deterministic context education;
+- exact-message “neden önemli?” explanations;
+- Stream remains visible while windows are open.
+
+Merged implementation:
+- PR #1285;
+- main `9492d9347f3a0170f9da2a73c2e206998d3eb3f8`.
+
+Exact-head acceptance:
+- head `8fdcc0a4ed7320db1b257fd3827656da3df75c76`;
+- UID504 run `36175446260` PASS;
+- artifact `stream-s9-visual-snapshot-36175446260`;
+- focused acceptance PASS;
+- whole-repository regression PASS;
+- three-window Chromium mechanics PASS;
+- drag/resize/pin/minimize/session/detach identity PASS;
+- exact 430px mobile no-overflow PASS;
+- Development checkout non-mutation PASS.
+
+The active Stream frontier is now **S10 — Frozen Visual Proof**.
+
+S10 must resolve only supported persisted evidence identities into frozen, point-in-time visual payloads. Every mark must have exact coordinates/identity/provenance; unsupported evidence must remain unavailable rather than reconstructed from current data.
 
 ### 2026-09-25 — STREAM S8 EXPANDABLE MESSAGE EXPERIENCE PASS / S9 EVIDENCE WINDOW MANAGER ACTIVE
 

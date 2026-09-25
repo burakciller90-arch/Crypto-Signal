@@ -1,5 +1,15 @@
 # PROJECT CHRONICLE
 
+## 2026-09-25 — Stream S9 Evidence Window Manager accepted; S10 Frozen Visual Proof becomes active
+
+S9 now lets the user deepen analysis without leaving the one-panel Stream. PR #1285 added a reusable exact-identity evidence-window manager with drag, resize, minimize, close, pin, multiple simultaneous windows, focus/z-order, session-local geometry persistence and detached second-window routing.
+
+The manager exposes Liquidity, Order Flow, Derivatives, On-chain, Geometry, Decision, Capital, Event Risk and Proof windows. It reuses S8's fail-closed persisted message-detail projection; window layout state is local UI state and never becomes market evidence. Deterministic “Bu nedir?” content comes from the existing education catalog, while message-specific “neden önemli?” text is derived only from the same persisted snapshot.
+
+Exact-head UID504 run `36175446260` passed focused S9 acceptance, whole-repository regression, real Chromium multi-window mechanics and Development non-mutation at head `8fdcc0a4ed7320db1b257fd3827656da3df75c76`. It proved three simultaneous windows, drag/resize, pin/minimize, persisted session state, exact narrative/kind detach URL, visible Stream continuity and exact 430px mobile no-overflow.
+
+S9 does not manufacture frozen charts or coordinate evidence. That is now the active S10 frontier. REAL_CAPITAL=0 remains unchanged.
+
 ## 2026-09-25 — Stream S8 Expandable Message Experience accepted; S9 Evidence Window Manager becomes active
 
 S8 now puts the supported product depth inside the same immutable Stream message without turning the collapsed feed back into a dashboard. PR #1283 added inline SIMPLE, PRO, INTELLIGENCE, DECISION, trade geometry, CAPITAL and PROOF sections plus an exact read-only message-detail projection joining the persisted S5 Narrative, S4 Analytical View, S2 Fact Bundle and optional canonical Message Input.
