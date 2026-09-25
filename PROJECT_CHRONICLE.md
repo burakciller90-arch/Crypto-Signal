@@ -1,5 +1,17 @@
 # PROJECT CHRONICLE
 
+## 2026-09-25 — Stream S3 Story Engine accepted; S4 Analytical Composer becomes active
+
+S3 now gives the Intelligence Stream deterministic memory instead of treating each event as isolated.
+
+The accepted Story Engine persists explicit Story Observations, Story States and Change Sets. Continuity is identity-bound: a new observation names the exact previous story-state identity, and the ledger verifies the same story, same market context, latest-state lineage and forward chronology. Time proximity is not used as a substitute for lineage.
+
+Change detection is structured and deterministic across stance, support/opposition score, the five M6 evidence families, Event Risk, trigger state, capital references and outcome state. Story observations may exist before a customer message exists, which avoids a circular dependency: S3 can first establish what changed; S4 can then decide what that change means analytically; S5 can later render natural Turkish.
+
+The accepted implementation is PR #1265 / main `f0ec56b830d22679b9cdf489f7e2453635fafe20`, with exact-head UID504 run `36155780247` passing focused checks, whole-repository regression and Development checkout non-mutation.
+
+The active frontier is S4 Analytical Composer. S4 must remain structured/deterministic; it must not jump ahead into final Turkish prose.
+
 ## 2026-09-25 — Stream S2 canonical backbone accepted; S3 Story Engine becomes active
 
 S2 is complete at the event/message-model layer.
