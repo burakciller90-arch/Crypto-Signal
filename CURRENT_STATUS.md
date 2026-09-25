@@ -9,6 +9,28 @@ REAL_CAPITAL: 0
 
 ## Active v1.1 frontier — read before historical sections
 
+### 2026-09-25 16:58 +0300 — STREAM S1 AUDIT WAVE 1 STARTED / VISUAL ACCEPTANCE CONTRACT ADDED
+
+S1 has begun mechanically against current main.
+
+New S1 working documents:
+- `docs/CRYPTO_SIGNAL_STREAM_S1_CAPABILITY_MATRIX.md`;
+- `docs/CRYPTO_SIGNAL_STREAM_S1_GAP_LEDGER.md`.
+
+Wave-1 findings confirm:
+- current `/api/intelligence-feed` is request/response only and persists essentially forecast-issued/resolved events;
+- R23 SIMPLE/PRO already exists as deterministic Decision-Proof projection;
+- five-family intelligence evidence is materially deeper than the current live feed;
+- Market Tape supplies order-book/trade/derivatives persistence;
+- Event Source supplies append-only calendar/news evidence;
+- proof exposes evidence identities but rich evidence-object lookup/message projectors remain gaps;
+- current feed has no cursor/search/filter/SSE/WebSocket story/message architecture;
+- capital accounting/tape primitives are three-vault aware, while canonical all-vault forward integration remains incomplete.
+
+S1 is **ACTIVE / NOT PASS**. Open discovery includes exact on-chain/smart-money live-source tracing, liquidation continuous-runtime status, evidence-object lookup contracts, M6 family breakdown read model, capital-detail read models, identity graph and temporal map.
+
+A rendered visual acceptance rule is also now part of the Stream roadmap: from S7 onward, critical UI states must be captured from a real browser as commit/run-bound screenshot artifacts. Code-only inspection is insufficient for UI acceptance.
+
 ### 2026-09-25 16:41 +0300 — INTELLIGENCE STREAM V1 IS THE SOLE CURRENT FRONTEND PRODUCT FRONTIER
 
 The user explicitly superseded the prior multi-screen frontend program.
