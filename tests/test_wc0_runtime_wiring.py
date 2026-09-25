@@ -148,6 +148,8 @@ def test_productdeploy_contract_is_exact_main_and_current_galactech() -> None:
     assert "for i in {1..8}; do" in product_block
     assert 'grep -F "$PRODUCT/ops/run_dashboard.py"' in product_block
     assert "direct-supervisor-contract" not in product_block
+    assert "OLD_DASH_EXIT_TIMEOUT=YES" not in product_block
+    assert "REAL_CAPITAL" not in product_block or "real_capital" in product_block
 
 
 def test_visualsnapshot_command_captures_real_safari_window_and_uploads_artifact() -> None:
@@ -166,8 +168,6 @@ def test_visualsnapshot_command_captures_real_safari_window_and_uploads_artifact
     assert "GALACTECH_VISUAL_SNAPSHOT_PASS=YES" in workflow
     assert 'assert data.get("read_only") is True' in workflow
     assert 'assert data.get("real_capital") == 0' in workflow
-    assert "OLD_DASH_EXIT_TIMEOUT=YES" not in product_block
-    assert "REAL_CAPITAL" not in product_block or "real_capital" in product_block
 
 
 def test_galactech_preview_contract_is_exact_main_read_only() -> None:
