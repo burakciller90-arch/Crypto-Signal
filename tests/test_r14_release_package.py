@@ -35,9 +35,11 @@ def test_r14_root_release_surfaces_match_canonical_ssd_state() -> None:
         assert "/Volumes/Crypto-504/Crypto-Signal" in text
         assert "crypto-signal-full-version-v1.0.0" in text
 
-    assert "R13 Full Version Integrated Acceptance v2 is **PASS**" in readme
-    assert "f95efc358ac396e50d0bfdb920b0187706cd2af2" in readme
-    assert "Runtime owner: `crypto-signal-agent` / observed UID504" in readme
+    assert "The immutable release baseline is `crypto-signal-full-version-v1.0.0`" in readme
+    assert "Intelligence Stream V1" in readme
+    assert "S1 Stream-only backend capability audit is PASS" in readme
+    assert "S2 Canonical Stream Event & Message Model is ACTIVE" in readme
+    assert "Runtime owner: `crypto-signal-agent`" in readme
     assert "self-hosted runner: `crypto-signal-uid504`" in registry
     assert "There is no accepted fallback" in registry
 
