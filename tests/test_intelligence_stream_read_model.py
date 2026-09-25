@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from decimal import Decimal
 from pathlib import Path
 
 import pytest
@@ -160,8 +161,12 @@ def _create_read_fixture(path: Path) -> dict[str, str]:
                     "direction": item["stance"],
                     "support_points": 72 - index * 7,
                     "opposition_points": 9 + index * 3,
-                    "evidence_quality_0_1": 0.91 - index * 0.06,
-                    "freshness_0_1": 0.95 - index * 0.05,
+                    "evidence_quality_0_1": (
+                        Decimal("0.91") - Decimal(index) * Decimal("0.06")
+                    ),
+                    "freshness_0_1": (
+                        Decimal("0.95") - Decimal(index) * Decimal("0.05")
+                    ),
                     "material_conflict_count": 1 if family == "derivatives" else 0,
                     "source_evidence_identities": (_sha(f"{name}-{family}-evidence"),),
                 }
@@ -195,7 +200,7 @@ def _create_read_fixture(path: Path) -> dict[str, str]:
                 "invalidation_price": 60750,
                 "probability_status": "not_calibrated",
                 "calibrated_probability_0_1": None,
-                "freshness_0_1": 0.94,
+                "freshness_0_1": Decimal("0.94"),
                 "uncertainty_flags": ("probability_not_calibrated",),
                 "available_evidence_domains": item["evidence"],
                 "evidence_summary": {
