@@ -51,10 +51,12 @@ jobs:
             tests/test_canonical_vault_eligibility.py \
             tests/test_canonical_vault_decisions.py \
             tests/test_canonical_capital_runtime.py \
+            tests/test_canonical_capital_sell_runtime.py \
             tests/test_intelligence_stream_capital_sizing.py \
             tests/test_intelligence_stream_capital.py \
             tests/test_intelligence_stream_capital_decisions.py \
             tests/test_intelligence_stream_read_model.py \
+            tests/test_intelligence_stream_ui.py \
             tests/test_transaction_tape.py \
             tests/test_transaction_tape_atomic.py \
             tests/test_epoch2_accounting.py
@@ -64,6 +66,7 @@ jobs:
             src/crypto_signal/paper/canonical_vault_eligibility.py \
             src/crypto_signal/paper/canonical_vault_decisions.py \
             src/crypto_signal/paper/canonical_capital_runtime.py \
+            src/crypto_signal/paper/canonical_capital_outcomes.py \
             src/crypto_signal/paper/transaction_tape.py \
             src/crypto_signal/paper/transaction_tape_atomic.py \
             src/crypto_signal/product/intelligence_stream_capital.py \
@@ -74,15 +77,18 @@ jobs:
             tests/test_canonical_vault_eligibility.py \
             tests/test_canonical_vault_decisions.py \
             tests/test_canonical_capital_runtime.py \
+            tests/test_canonical_capital_sell_runtime.py \
             tests/test_intelligence_stream_capital.py \
             tests/test_intelligence_stream_capital_decisions.py \
-            tests/test_intelligence_stream_capital_sizing.py
+            tests/test_intelligence_stream_capital_sizing.py \
+            tests/test_intelligence_stream_ui.py
           "$TEST_PY" -m mypy \
             src/crypto_signal/paper/canonical_sizing.py \
             src/crypto_signal/paper/canonical_sizing_events.py \
             src/crypto_signal/paper/canonical_vault_eligibility.py \
             src/crypto_signal/paper/canonical_vault_decisions.py \
             src/crypto_signal/paper/canonical_capital_runtime.py \
+            src/crypto_signal/paper/canonical_capital_outcomes.py \
             src/crypto_signal/paper/transaction_tape.py \
             src/crypto_signal/paper/transaction_tape_atomic.py \
             src/crypto_signal/product/intelligence_stream_capital.py \
