@@ -56,8 +56,9 @@ These decisions are already made and must not be re-opened during ordinary imple
 - **S2 Canonical Stream Event & Message Model: PASS**.
 - **S3 Story Engine and Change Detection: PASS**.
 - **S4 Analytical Composer: PASS**.
-- **S5 Narrative Engine: ACTIVE FRONTIER**.
-- Do not begin S6 or broad UI implementation before S5 can deterministically render and persist fact-safe Turkish narrative from the exact S4 Analytical View, with a validated fallback path.
+- **S5 Narrative Engine: PASS**.
+- **S6 Real-time Stream Backend: ACTIVE FRONTIER**.
+- Do not begin S7 or broad UI implementation before S6 can deliver immutable accepted messages through cursor-based live transport with reconnect/catch-up, de-duplication, history pagination, exact lookup and polling fallback.
 - The deployed GALACTECH V2 surface remains production fallback until S16 controlled cutover.
 
 ---
