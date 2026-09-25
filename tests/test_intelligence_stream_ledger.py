@@ -52,6 +52,18 @@ from crypto_signal.product.intelligence_stream_messages import (
     build_stream_fact_bundle,
     build_stream_message_input,
 )
+from crypto_signal.product.intelligence_stream_policy import (
+    STREAM_MATERIALITY_POLICY_VERSION,
+    StreamProjectorImplementationState,
+    StreamPublicationDisposition,
+    accepted_stream_projector_registry,
+    build_stream_materiality_policy,
+    evaluate_stream_materiality,
+)
+from crypto_signal.product.intelligence_stream_projectors import (
+    project_forecast_issuance,
+    project_forecast_resolution,
+)
 from crypto_signal.product.intelligence_stream_models import (
     StreamCategory,
     build_forecast_issued_source_event,
@@ -531,6 +543,14 @@ def test_stream_message_projection_is_deterministic_and_append_only(tmp_path) ->
     assert first_message.renderer_version is None
     assert first_message.category is StreamCategory.DECISION
     assert first_message.supersedes_message_identity is None
+    assert (
+        first_message.materiality_policy_version
+        == STREAM_MATERIALITY_POLICY_VERSION
+    )
+    assert (
+        first_message.publication_disposition
+        is StreamPublicationDisposition.PUBLISH
+    )
 
     message_ledger = IntelligenceStreamMessageLedger(path)
     assert (
@@ -550,6 +570,8 @@ def test_stream_message_projection_is_deterministic_and_append_only(tmp_path) ->
     assert stored["story_identity"] == first_message.story_identity
     assert stored["ready_for_publication"] is False
     assert stored["renderer_version"] is None
+    assert stored["materiality_policy_version"] == STREAM_MATERIALITY_POLICY_VERSION
+    assert stored["publication_disposition"] == "publish"
     assert stored["search_metadata"]["asset"] == "BTC"
     assert stored["search_metadata"]["symbol"] == "BTCUSDT"
     assert "frozen_chart" in stored["search_metadata"]["evidence_domains"]
@@ -710,3 +732,135 @@ def test_query_only_message_reads_never_initialize_missing_database(tmp_path) ->
     with pytest.raises(FileNotFoundError):
         ledger.read_status()
     assert not path.exists()
+
+
+
+def test_stream_materiality_policy_and_projector_registry_are_versioned() -> None:
+    _, forecast, proof, context, feed_event = _full_bundle(
+        as_of_ms=5_000_000,
+        issued_at_ms=5_000_100,
+        seed="materiality-policy",
+    )
+    activation = build_stream_activation_boundary(activated_at_ms=5_000_000)
+    source_event = build_forecast_issued_source_event(
+        activation,
+        context,
+        feed_event,
+    )
+    policy_first = build_stream_materiality_policy()
+    policy_second = build_stream_materiality_policy()
+    assert policy_first == policy_second
+
+    decision_first = evaluate_stream_materiality(policy_first, source_event)
+    decision_second = evaluate_stream_materiality(policy_second, source_event)
+    assert decision_first == decision_second
+    assert decision_first.disposition is StreamPublicationDisposition.PUBLISH
+    assert decision_first.source_event_identity == source_event.stream_event_identity
+    assert decision_first.policy_identity == policy_first.policy_identity
+
+    registry = {
+        item.projector_id: item
+        for item in accepted_stream_projector_registry()
+    }
+    assert (
+        registry["r20_5_forecast_issued"].implementation_state
+        is StreamProjectorImplementationState.IMPLEMENTED
+    )
+    assert (
+        registry["r20_5_forecast_resolved"].implementation_state
+        is StreamProjectorImplementationState.IMPLEMENTED
+    )
+    assert (
+        registry["event_risk_change"].implementation_state
+        is StreamProjectorImplementationState.REQUIRES_CHANGE_DETECTION
+    )
+    assert (
+        registry["provider_quality_change"].implementation_state
+        is StreamProjectorImplementationState.REQUIRES_CHANGE_DETECTION
+    )
+    assert (
+        registry["bitcoin_network_context"].implementation_state
+        is StreamProjectorImplementationState.DEFERRED_SOURCE
+    )
+    assert (
+        registry["m5_smart_money_research"].implementation_state
+        is StreamProjectorImplementationState.RESEARCH_ONLY
+    )
+    assert (
+        registry["paper_capital_transition"].implementation_state
+        is StreamProjectorImplementationState.LATER_PHASE
+    )
+
+    projected = project_forecast_issuance(
+        activation,
+        context,
+        forecast,
+        proof,
+        feed_event,
+    )
+    replayed = project_forecast_issuance(
+        activation,
+        context,
+        forecast,
+        proof,
+        feed_event,
+    )
+    assert projected == replayed
+    assert (
+        projected.message_input.materiality_decision_identity
+        == decision_first.decision_identity
+    )
+
+
+def test_stream_forecast_projector_replay_preserves_story_and_resolution_relation() -> None:
+    _, forecast, proof, context, issuance_feed_event = _full_bundle(
+        as_of_ms=6_000_000,
+        issued_at_ms=6_000_100,
+        seed="projector-replay",
+    )
+    activation = build_stream_activation_boundary(activated_at_ms=6_000_000)
+    issuance = project_forecast_issuance(
+        activation,
+        context,
+        forecast,
+        proof,
+        issuance_feed_event,
+    )
+
+    resolution = _resolution(
+        forecast,
+        evaluated_at_ms=6_400_000,
+        seed="projector-replay",
+    )
+    resolution_feed_event = build_live_intelligence_feed_event(
+        proof,
+        forecast,
+        resolution=resolution,
+    )
+    first = project_forecast_resolution(
+        activation,
+        context,
+        forecast,
+        proof,
+        resolution_feed_event,
+        resolution,
+        issuance_message=issuance.message_input,
+    )
+    second = project_forecast_resolution(
+        activation,
+        context,
+        forecast,
+        proof,
+        resolution_feed_event,
+        resolution,
+        issuance_message=issuance.message_input,
+    )
+
+    assert first == second
+    assert first.message_input.story_identity == issuance.message_input.story_identity
+    assert len(first.message_input.relations) == 1
+    assert (
+        first.message_input.relations[0].target_message_identity
+        == issuance.message_input.message_identity
+    )
+    assert first.message_input.supersedes_message_identity is None
