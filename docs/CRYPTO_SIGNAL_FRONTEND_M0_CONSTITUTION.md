@@ -1,6 +1,6 @@
 # Crypto Signal Frontend M0 — Canonical Product Constitution
 
-Status: CANONICAL M0  
+Status: CANONICAL M0 — PASS / CLOSED  
 Company: GALACTECH  
 Product/project: Crypto Signal  
 Authority: frontend/product decisions only; scientific and safety boundaries remain governed by repository-wide contracts.
@@ -129,4 +129,4 @@ M0 is PASS because:
 - scientific UI invariants are explicit;
 - screen-by-screen execution rule is explicit.
 
-Next frontier: M1 Backend Capability Matrix + Gap Ledger.
+Next frontier: **M1 ACTIVE** — complete the canonical cross-surface identity graph and frontend temporal-field map, resolve only the remaining open product decisions, and obtain user-approved final information architecture before M2 routes are frozen.
