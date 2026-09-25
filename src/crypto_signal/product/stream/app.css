@@ -812,6 +812,7 @@ body[data-density="compact"] .message-copy {
 
   .message-list {
     width: calc(100% - 18px);
+    max-width: calc(100% - 18px);
   }
 
   .stream-foot span:first-child {
@@ -828,8 +829,41 @@ body[data-density="compact"] .message-copy {
     --topbar: 66px;
   }
 
+  html,
+  body,
+  .stream-app,
+  .stream-main {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+
   body {
     background: #f5f9ff;
+  }
+
+  .stream-topbar {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 6px;
+    padding-inline: 8px;
+  }
+
+  .brand-lockup,
+  .brand-copy,
+  .stream-stage,
+  .timeline-shell,
+  .stream-viewport,
+  .message-list,
+  .message,
+  .message-button,
+  .message-copy,
+  .message-meta,
+  .stream-foot {
+    min-width: 0;
+  }
+
+  .brand-copy span {
+    display: none;
   }
 
   .brand-orbit {
@@ -855,9 +889,16 @@ body[data-density="compact"] .message-copy {
   }
 
   .stream-stage {
-    width: calc(100% - 12px);
+    width: calc(100vw - 12px);
+    max-width: calc(100vw - 12px);
     gap: 8px;
     padding: 13px 0 6px;
+  }
+
+  .timeline-shell,
+  .stream-viewport {
+    width: 100%;
+    max-width: 100%;
   }
 
   .stream-heading {
@@ -881,7 +922,15 @@ body[data-density="compact"] .message-copy {
   }
 
   .message-copy {
+    max-width: 100%;
+    overflow-wrap: anywhere;
     font-size: 13px;
+  }
+
+  .message {
+    width: 100%;
+    max-width: 100%;
+    overflow: hidden;
   }
 
   .message-meta {
