@@ -1,3 +1,4 @@
+# Stream S2 exact-head acceptance gate
 name: Crypto Stream S2 Event Context UID504
 
 on:
