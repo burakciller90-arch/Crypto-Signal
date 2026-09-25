@@ -1,5 +1,17 @@
 # PROJECT CHRONICLE
 
+## 2026-09-25 — Crypto Signal frontend authority is canonicalized; M0 closes and M1 becomes the active product frontier
+
+PR #1254 canonicalized the new frontend program without touching runtime or scientific code. The repository now separates company and product identity explicitly: GALACTECH is the company; Crypto Signal is the product/project. The frontend program is governed by `CRYPTO_SIGNAL_FRONTEND_MASTER_ROADMAP_V1.md`, the M0 constitution and the live M1 Capability/Gap Ledger. M0 is closed as a product constitution; M1 is active and remains incomplete until identity/temporal mapping, remaining product decisions and final information architecture are accepted.
+
+The new authority deliberately does not rewrite historical frontend evidence. The existing GALACTECH V2 deployment remains the current production baseline/fallback until a future M7 controlled cutover. Earlier GALACTECH slice documents, prior dark-theme targets, fixed route counts and older brand interpretations remain valuable historical acceptance records, but they are not current frontend design authority when they conflict with the new canonical documents.
+
+The same reconciliation preserves capital history. Epoch 1 remains immutable historical 100 USDT paper evidence. Epoch 2 is the current 1,000 USDT paper-program contract for new canonical activity. The epochs must remain separately identified and neither creates real-money authority; REAL_CAPITAL remains 0.
+
+Follow-up authority hygiene is tracked by PR #FOLLOWUP_PR_PLACEHOLDER. It updates README/current-state/read-order/supersession wording and authority-gate language only. It does not mutate Product/runtime code, SQLite state, Market Tape, signal/forecast history, paper ledgers, research evidence, continuity state or production UI behavior.
+
+The active frontend sequence is now unambiguous: finish M1 discovery and the user-approved information architecture first; only then enter M2 Application Foundation. The screen lifecycle remains truth discovery -> unresolved user decisions -> wireframe -> approval -> visual -> approval -> just-in-time adapter -> real data -> acceptance -> formative usability -> close. Macro M0->M7 architecture is not to be reopened unless new backend truth or an explicit user decision invalidates it.
+
 ## 2026-09-25 — GALACTECH V2 becomes the live Product surface after two fail-closed deployment defects are measured and fixed
 
 The frontend rebuild reached its intended product form in PR #1207 rather than by weakening backend truth. The new GALACTECH surface is Turkish-first, intelligence-feed-first and evidence-drilldown-first: live intelligence is presented as a timeline, forecast cards resolve only through exact persisted identities, Decision Proof remains read-only, and missing probability/performance/latency evidence is still shown as missing instead of being invented. The Product keeps REAL_CAPITAL=0 and has no exchange/order/credential authority.
