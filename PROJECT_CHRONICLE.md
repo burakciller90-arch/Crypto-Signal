@@ -1,5 +1,17 @@
 # PROJECT CHRONICLE
 
+## 2026-09-25 — Stream S8 Expandable Message Experience accepted; S9 Evidence Window Manager becomes active
+
+S8 now puts the supported product depth inside the same immutable Stream message without turning the collapsed feed back into a dashboard. PR #1283 added inline SIMPLE, PRO, INTELLIGENCE, DECISION, trade geometry, CAPITAL and PROOF sections plus an exact read-only message-detail projection joining the persisted S5 Narrative, S4 Analytical View, S2 Fact Bundle and optional canonical Message Input.
+
+The detail projection verifies persisted payload digests, canonical identities, schema/engine authority and cross-record lineage before exposing anything. It never recomputes historical state from current market data. The proof action is bound to exact forecast identity and verifies existing Decision Proof; it does not prematurely implement the S9 window manager or S10 frozen visual proof.
+
+Exact-head UID504 run `36173568201` passed focused S8 acceptance, whole-repository regression, real Chromium desktop/mobile rendering and Development non-mutation at head `95ba554e76bbf5147d0126a89e0f27265c447c51`. The artifact `stream-s8-visual-snapshot-36173568201` records all required inline sections, exact 430px mobile width with no horizontal overflow and 0px expansion anchor drift on both desktop and mobile.
+
+The production root remains GALACTECH V2. S8 adds no historical backfill, exchange authority or real capital. REAL_CAPITAL=0.
+
+The active frontier is S9 Evidence Window Manager: reusable draggable/resizable/minimize/pin/multi-window/detach behavior tied to exact message/evidence identity while the Stream continues scrolling underneath.
+
 ## 2026-09-25 — Stream S7 One-Panel UI Shell accepted; S8 Expandable Message Experience becomes active
 
 S7 now establishes the final Stream V1 application shell without replacing the deployed product root. PR #1280 added an isolated `/stream-preview` surface, a Turkish-first light messaging UI, compact collapsed S5 narrative bubbles, S6 SSE + polling fallback consumption, upward cursor history, bottom-anchor behavior, buffered `N yeni mesaj` handling, temporary search/filter controls, settings/sound surfaces and the reserved floating-window layer.
