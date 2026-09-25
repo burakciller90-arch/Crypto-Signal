@@ -1,4 +1,4 @@
-name: Crypto Stream S2 Event Context Hosted
+name: Crypto Stream S2 Event Context UID504
 
 on:
   push:
@@ -11,36 +11,62 @@ permissions:
 
 jobs:
   stream-s2-event-context:
-    runs-on: ubuntu-latest
-    timeout-minutes: 35
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
-
-      - uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          ref: ${{ github.sha }}
+          clean: true
+          fetch-depth: 1
 
-      - name: Install package and quality tools
+      - name: Verify exact source and create isolated environment
+        shell: bash
         run: |
-          python -m pip install --upgrade pip
-          python -m pip install -e .
-          python -m pip install "pytest>=8.4" "pytest-asyncio>=1.2" "ruff>=0.13" "mypy>=1.18"
+          set -euo pipefail
+          DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
+          BASE_PY="$DEV/.venv/bin/python"
+          TEST_VENV="$RUNNER_TEMP/stream-s2-event-context-venv"
+          test "$(id -u)" = "504"
+          test -x "$BASE_PY"
+          test -z "$(git -C "$DEV" status --porcelain)"
+          echo "DEV_HEAD_BEFORE=$(git -C "$DEV" rev-parse HEAD)" >> "$RUNNER_TEMP/stream-s2-dev-state"
+          test "$(git -C "$GITHUB_WORKSPACE" rev-parse HEAD)" = "$GITHUB_SHA"
+          rm -rf "$TEST_VENV"
+          "$BASE_PY" -m venv "$TEST_VENV"
+          "$TEST_VENV/bin/python" -m pip install --upgrade pip
+          "$TEST_VENV/bin/python" -m pip install -e "$GITHUB_WORKSPACE"
+          "$TEST_VENV/bin/python" -m pip install "pytest>=8.4" "pytest-asyncio>=1.2" "ruff>=0.13" "mypy>=1.18"
+          echo "TEST_PY=$TEST_VENV/bin/python" >> "$GITHUB_ENV"
+          echo "STREAM_S2_EXACT_SOURCE_PASS=YES"
 
       - name: Focused Stream S2 acceptance
         run: |
-          python -m pytest -q             tests/test_intelligence_stream_ledger.py             tests/test_confluence_matrix_v2.py             tests/test_decision_ledger.py
-          python -m ruff check             src/crypto_signal/product/intelligence_stream_models.py             src/crypto_signal/product/intelligence_stream_ledger.py             tests/test_intelligence_stream_ledger.py
-          python -m mypy             src/crypto_signal/product/intelligence_stream_models.py             src/crypto_signal/product/intelligence_stream_ledger.py
+          "$TEST_PY" -m pytest -q             tests/test_intelligence_stream_ledger.py             tests/test_confluence_matrix_v2.py             tests/test_decision_ledger.py
+          "$TEST_PY" -m ruff check             src/crypto_signal/product/intelligence_stream_models.py             src/crypto_signal/product/intelligence_stream_ledger.py             tests/test_intelligence_stream_ledger.py
+          "$TEST_PY" -m mypy             src/crypto_signal/product/intelligence_stream_models.py             src/crypto_signal/product/intelligence_stream_ledger.py
           echo "STREAM_S2_EVENT_CONTEXT_FOCUSED_PASS=YES"
 
       - name: Whole-repository regression
         run: |
-          python -m pytest -q
-          python -m ruff check src tests ops/verify_stage10_integrated.py
-          python -m mypy src ops/verify_stage10_integrated.py
+          "$TEST_PY" -m pytest -q
+          "$TEST_PY" -m ruff check src tests ops/verify_stage10_integrated.py
+          "$TEST_PY" -m mypy src ops/verify_stage10_integrated.py
           node --check src/crypto_signal/product/static/freshness.js
           node --check src/crypto_signal/product/static/app.js
           node --check src/crypto_signal/product/galactech/app.js
           node tests/js/test_product_freshness.js
           echo "STREAM_S2_EVENT_CONTEXT_FULL_PASS=YES"
           echo "REAL_CAPITAL=0"
+
+      - name: Prove Development checkout remained untouched
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
+          BEFORE="$(sed -n 's/^DEV_HEAD_BEFORE=//p' "$RUNNER_TEMP/stream-s2-dev-state")"
+          AFTER="$(git -C "$DEV" rev-parse HEAD)"
+          test -z "$(git -C "$DEV" status --porcelain)"
+          test "$BEFORE" = "$AFTER"
+          echo "STREAM_S2_UID504_NON_MUTATING_PASS=YES"
