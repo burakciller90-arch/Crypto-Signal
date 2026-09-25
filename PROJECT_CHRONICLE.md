@@ -16,6 +16,8 @@ The previous `CRYPTO_SIGNAL_FRONTEND_MASTER_ROADMAP_V1.md` M0→M7 program and i
 
 The deployed GALACTECH V2 interface remains production fallback until controlled cutover. Scientific truth, frozen evidence, three-vault paper boundaries, WC2/WC7 state and REAL_CAPITAL=0 remain unchanged.
 
+This authority reset is implemented by documentation-only **PR #1257**.
+
 ## 2026-09-25 — Intelligence Feed and Smart Capital become the two flagship frontend pillars
 
 A deeper backend-to-product audit exposed an important product risk: accepted backend capability was sometimes being discussed as if it were unavailable merely because the current Product API or GALACTECH V2 surface did not project it. The new frontend program now forbids that ambiguity. Existing truth that needs a read model is classified as an adapter/surfacing gap, not "no data."
