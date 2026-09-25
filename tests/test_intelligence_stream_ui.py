@@ -185,7 +185,37 @@ def test_stream_s10_frozen_visual_proof_contract() -> None:
     assert "current data ile yeniden üretilmedi" in renderer.lower()
 
 
-def test_stream_s10_does_not_jump_to_s11_or_s13() -> None:
+def test_stream_s11_capital_story_lifecycle_contract() -> None:
+    script = (STREAM_DIR / "app.js").read_text(encoding="utf-8")
+
+    for subtype in (
+        "capital_candidate",
+        "capital_eligible",
+        "capital_hold",
+        "capital_blocked",
+        "capital_sized",
+        "capital_executed",
+        "capital_reduced",
+        "capital_exited",
+        "capital_accounting_updated",
+        "capital_outcome",
+    ):
+        assert subtype in script
+
+    assert "SERMAYE ADAYI" in script
+    assert "MUHASEBE GÜNCELLENDİ" in script
+    assert "SONUÇ KAYDEDİLDİ" in script
+    assert "POZİSYON AZALTILDI" in script
+    assert "POZİSYON KAPANDI" in script
+    assert "buildCapitalLifecycleExpandedContent" in script
+    assert "capitalLifecycleGrid" in script
+    assert "capitalLifecycleLineage" in script
+    assert "Gerçekleşen PnL" in script
+    assert "REAL_CAPITAL=0" in script
+    assert "gerçek borsa emri yok" in script
+
+
+def test_stream_s11_does_not_jump_to_s13() -> None:
     html = (STREAM_DIR / "index.html").read_text(encoding="utf-8")
     script = (STREAM_DIR / "app.js").read_text(encoding="utf-8")
     renderer = (STREAM_DIR / "visual_proof.js").read_text(encoding="utf-8")
