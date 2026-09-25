@@ -134,6 +134,8 @@ def test_productdeploy_contract_is_exact_main_and_current_galactech() -> None:
     assert "DASHBOARD_SUPERVISOR_RESPAWN_PID=" in product_block
     assert "DASHBOARD_SUPERVISOR_RESPAWN_TIMEOUT=YES" in product_block
     assert "DASHBOARD_OLD_PIDS=" in product_block
+    assert '/usr/bin/pgrep -f "^$PRODUCT/.venv/bin/python $PRODUCT/ops/run_dashboard.py( |$)"' in product_block
+    assert "ps -axo pid=,command=" not in product_block
     assert "DASHBOARD_OLD_PID_FORCE_KILL=" in product_block
     assert 'kill -KILL "$pid"' in product_block
     assert "DASHBOARD_RESTART_MODE=direct-no-supervisor" in product_block

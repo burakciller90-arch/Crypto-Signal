@@ -1851,9 +1851,8 @@ jobs:
             local count=""
 
             dashboard_pids() {
-              ps -axo pid=,command= \
-                | awk -v needle="$PRODUCT/ops/run_dashboard.py" \
-                    'index($0, needle) > 0 {print $1}'
+              /usr/bin/pgrep -f "^$PRODUCT/.venv/bin/python $PRODUCT/ops/run_dashboard.py( |$)" \
+                2>/dev/null || true
             }
 
             terminate_old_dashboards() {
