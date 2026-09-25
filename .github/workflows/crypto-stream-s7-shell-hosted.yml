@@ -3,7 +3,7 @@ name: Crypto Stream S7 Shell UID504
 on:
   push:
     branches:
-      - 'stream/s7-*'
+      - 'stream/s7-one-panel-shell'
   workflow_dispatch:
 
 permissions:

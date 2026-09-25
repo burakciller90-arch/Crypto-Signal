@@ -43,7 +43,8 @@ def test_r14_root_release_surfaces_match_canonical_ssd_state() -> None:
     assert "S4 Analytical Composer is PASS" in readme
     assert "S5 Narrative Engine is PASS" in readme
     assert "S6 Real-time Stream Backend is PASS" in readme
-    assert "S7 One-Panel UI Shell is ACTIVE" in readme
+    assert "S7 One-Panel UI Shell is PASS" in readme
+    assert "S8 Expandable Message Experience is ACTIVE" in readme
     assert "Runtime owner: `crypto-signal-agent`" in readme
     assert "self-hosted runner: `crypto-signal-uid504`" in registry
     assert "There is no accepted fallback" in registry

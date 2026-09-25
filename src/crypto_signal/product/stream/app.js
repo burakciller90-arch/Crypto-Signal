@@ -481,13 +481,14 @@ function applyFixture(name) {
     return;
   }
 
-  const records = name === "long"
-    ? Array.from({ length: 36 }, (_, i) => {
+  const fixtureCount = name === "long" ? 36 : name === "history" ? 14 : 0;
+  const records = fixtureCount
+    ? Array.from({ length: fixtureCount }, (_, i) => {
         const seed = base[i % base.length];
         return {
           ...seed,
           narrative_identity: fixtureIdentity(100 + i),
-          event_at_ms: Date.now() - (36 - i) * 4 * 60_000,
+          event_at_ms: Date.now() - (fixtureCount - i) * 4 * 60_000,
         };
       })
     : base;
@@ -505,7 +506,7 @@ function applyFixture(name) {
   window.requestAnimationFrame(() => {
     if (!ui.viewport) return;
     if (name === "history") {
-      ui.viewport.scrollTop = Math.max(0, ui.viewport.scrollHeight * 0.36);
+      ui.viewport.scrollTop = Math.max(0, ui.viewport.scrollHeight * 0.18);
     } else {
       scrollToBottom({ smooth: false });
     }
