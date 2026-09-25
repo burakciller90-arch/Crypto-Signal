@@ -116,6 +116,122 @@ jobs:
           echo "STREAM_S11_FULL_PASS=YES"
           echo "REAL_CAPITAL=0"
 
+      - name: Render S11 Capital Story and prove three-vault lifecycle
+        shell: bash
+        timeout-minutes: 10
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          DEV="$ROOT/Development"
+          PORT=48710
+          BASE_URL="http://127.0.0.1:$PORT"
+          OUT="$RUNNER_TEMP/stream-s11-visual-snapshot"
+          mkdir -p "$OUT"
+
+          cleanup() {
+            if [ -n "${PREVIEW_PID:-}" ]; then
+              kill "$PREVIEW_PID" >/dev/null 2>&1 || true
+            fi
+            pkill -TERM -f -- '--headless=new' 2>/dev/null || true
+            sleep 1
+            pkill -KILL -f -- '--headless=new' 2>/dev/null || true
+          }
+          trap cleanup EXIT
+
+          (
+            unset RUNNER_TRACKING_ID
+            export PYTHONPATH="$GITHUB_WORKSPACE/src"
+            cd "$GITHUB_WORKSPACE"
+            exec /usr/bin/nice -n 15 "$TEST_PY" "$GITHUB_WORKSPACE/ops/run_dashboard.py" \
+              --host 127.0.0.1 \
+              --port "$PORT" \
+              --ledger "$DEV/runtime/ledger/live_signal_ledger.sqlite3" \
+              --alert-outbox "$DEV/runtime/alerts/alert_outbox.sqlite3" \
+              --paper-ledger "$DEV/runtime/paper/paper_fund.sqlite3" \
+              --candle-cache "$DEV/runtime/data/live_base_15m_cache.sqlite3" \
+              --stream-ledger "$DEV/runtime/stream/intelligence_stream.sqlite3"
+          ) >"$OUT/preview.out.log" 2>"$OUT/preview.err.log" < /dev/null &
+          PREVIEW_PID="$!"
+
+          ready=0
+          for i in {1..30}; do
+            if curl -fsS --max-time 3 "$BASE_URL/api/health" > "$OUT/health.json" 2>/dev/null; then
+              ready=1
+              break
+            fi
+            sleep 1
+          done
+          if [ "$ready" != "1" ]; then
+            tail -120 "$OUT/preview.err.log" || true
+            exit 70
+          fi
+
+          curl -fsS "$BASE_URL/stream-preview?fixture=capital" > "$OUT/stream-preview.html"
+          grep -F 'data-ui-version="crypto-signal-stream-v1-s11"' "$OUT/stream-preview.html" >/dev/null
+          grep -F 'GÖRSEL TEST FIXTURE' "$OUT/stream-preview.html" >/dev/null
+
+          BROWSER=""
+          for candidate in \
+            "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" \
+            "/Applications/Chromium.app/Contents/MacOS/Chromium" \
+            "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge" \
+            "/Applications/Google Chrome Canary.app/Contents/MacOS/Google Chrome Canary"; do
+            if [ -x "$candidate" ]; then
+              BROWSER="$candidate"
+              break
+            fi
+          done
+          test -n "$BROWSER"
+
+          {
+            echo "URL=$BASE_URL/stream-preview?fixture=capital"
+            echo "CAPTURED_AT=$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
+            echo "SOURCE_HEAD=$GITHUB_SHA"
+            echo "BROWSER_CAPTURE_BACKEND=CHROMIUM_CDP"
+            echo "BROWSER_BINARY=$BROWSER"
+            echo "REAL_CAPITAL=0"
+            echo "READ_ONLY_CAPTURE=YES"
+            echo "FIXTURE_NON_LIVE=YES"
+          } > "$OUT/metadata.txt"
+
+          "$TEST_PY" "$GITHUB_WORKSPACE/ops/capture_chromium_viewport.py" \
+            --browser "$BROWSER" \
+            --url "$BASE_URL/stream-preview?fixture=capital" \
+            --output "$OUT/desktop-capital-story.png" \
+            --metrics-out "$OUT/desktop-capital-story.metrics.json" \
+            --width 1440 \
+            --height 1100 \
+            --require-no-horizontal-overflow \
+            --probe-capital-story
+          test -s "$OUT/desktop-capital-story.png"
+
+          "$TEST_PY" "$GITHUB_WORKSPACE/ops/capture_chromium_viewport.py" \
+            --browser "$BROWSER" \
+            --url "$BASE_URL/stream-preview?fixture=capital" \
+            --output "$OUT/mobile-capital-story.png" \
+            --metrics-out "$OUT/mobile-capital-story.metrics.json" \
+            --width 430 \
+            --height 860 \
+            --mobile \
+            --require-no-horizontal-overflow \
+            --probe-capital-story
+          test -s "$OUT/mobile-capital-story.png"
+
+          grep -F '"capital_story_probe"' "$OUT/desktop-capital-story.metrics.json" >/dev/null
+          grep -F '"capital_story_probe"' "$OUT/mobile-capital-story.metrics.json" >/dev/null
+          grep -F '"innerWidth": 430' "$OUT/mobile-capital-story.metrics.json" >/dev/null
+          grep -F '"scrollWidth": 430' "$OUT/mobile-capital-story.metrics.json" >/dev/null
+          echo "STREAM_S11_RENDERED_CAPITAL_STORY_PASS=YES"
+
+      - name: Upload Stream S11 visual snapshot
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stream-s11-visual-snapshot-${{ github.run_id }}
+          path: ${{ runner.temp }}/stream-s11-visual-snapshot
+          if-no-files-found: error
+          retention-days: 7
+
       - name: Prove Development checkout remained untouched
         if: always()
         shell: bash
