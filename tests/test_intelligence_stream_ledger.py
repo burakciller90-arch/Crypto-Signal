@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import sqlite3
+from dataclasses import replace
 from decimal import Decimal
 
 import pytest
@@ -70,6 +71,12 @@ from crypto_signal.product.intelligence_stream_policy import (
 from crypto_signal.product.intelligence_stream_projectors import (
     project_forecast_issuance,
     project_forecast_resolution,
+)
+from crypto_signal.product.intelligence_stream_story import (
+    build_change_set,
+    build_story_observation,
+    build_story_observation_snapshot,
+    build_story_state,
 )
 from crypto_signal.signals.models import SignalDirection, SignalState
 
@@ -864,3 +871,270 @@ def test_stream_forecast_projector_replay_preserves_story_and_resolution_relatio
         == issuance.message_input.message_identity
     )
     assert first.message_input.supersedes_message_identity is None
+
+
+
+def test_stream_story_root_and_resolution_change_are_deterministic() -> None:
+    _, forecast, proof, context, issuance_feed_event = _full_bundle(
+        as_of_ms=7_000_000,
+        issued_at_ms=7_000_100,
+        seed="story-resolution",
+    )
+    activation = build_stream_activation_boundary(activated_at_ms=7_000_000)
+    issuance = project_forecast_issuance(
+        activation,
+        context,
+        forecast,
+        proof,
+        issuance_feed_event,
+    )
+    root_observation = build_story_observation(
+        issuance.message_input,
+        issuance.fact_bundle,
+    )
+    root_state = build_story_state(root_observation)
+    root_change = build_change_set(root_state)
+
+    assert root_change.story_started is True
+    assert root_change.changed_codes == ("story_started",)
+    assert root_change.previous_state_identity is None
+    assert root_change.previous_message_identity is None
+    assert root_change.support_score_delta is None
+    assert root_change.family_changes == ()
+
+    resolution = _resolution(
+        forecast,
+        evaluated_at_ms=7_400_000,
+        seed="story-resolution",
+    )
+    resolution_feed_event = build_live_intelligence_feed_event(
+        proof,
+        forecast,
+        resolution=resolution,
+    )
+    resolved = project_forecast_resolution(
+        activation,
+        context,
+        forecast,
+        proof,
+        resolution_feed_event,
+        resolution,
+        issuance_message=issuance.message_input,
+    )
+    resolved_observation = build_story_observation(
+        resolved.message_input,
+        resolved.fact_bundle,
+        previous_state_identity=root_state.state_identity,
+    )
+    resolved_state = build_story_state(
+        resolved_observation,
+        previous_state=root_state,
+    )
+    resolved_change = build_change_set(
+        resolved_state,
+        previous_state=root_state,
+    )
+
+    replay_state = build_story_state(
+        resolved_observation,
+        previous_state=root_state,
+    )
+    replay_change = build_change_set(
+        replay_state,
+        previous_state=root_state,
+    )
+
+    assert resolved_state == replay_state
+    assert resolved_change == replay_change
+    assert resolved_state.story_identity == root_state.story_identity
+    assert resolved_state.previous_state_identity == root_state.state_identity
+    assert (
+        resolved_state.previous_message_identity
+        == issuance.message_input.message_identity
+    )
+    assert resolved_change.story_started is False
+    assert resolved_change.stance_changed is False
+    assert resolved_change.support_score_delta == Decimal(0)
+    assert resolved_change.opposition_score_delta == Decimal(0)
+    assert resolved_change.family_changes == ()
+    assert resolved_change.risk_changed is False
+    assert resolved_change.trigger_changed is False
+    assert resolved_change.capital_changed is False
+    assert resolved_change.outcome_changed is True
+    assert resolved_change.previous_outcome_state is None
+    assert resolved_change.current_outcome_state == "hit_target"
+    assert resolved_change.changed_codes == ("outcome_changed",)
+
+
+def test_stream_story_rejects_unrelated_previous_story() -> None:
+    _, forecast_a, proof_a, context_a, feed_a = _full_bundle(
+        as_of_ms=8_000_000,
+        issued_at_ms=8_000_100,
+        seed="story-a",
+    )
+    _, forecast_b, proof_b, context_b, feed_b = _full_bundle(
+        as_of_ms=8_100_000,
+        issued_at_ms=8_100_100,
+        seed="story-b",
+    )
+    activation = build_stream_activation_boundary(activated_at_ms=8_000_000)
+    first = project_forecast_issuance(
+        activation,
+        context_a,
+        forecast_a,
+        proof_a,
+        feed_a,
+    )
+    second = project_forecast_issuance(
+        activation,
+        context_b,
+        forecast_b,
+        proof_b,
+        feed_b,
+    )
+    first_state = build_story_state(
+        build_story_observation(first.message_input, first.fact_bundle)
+    )
+    second_observation = build_story_observation(
+        second.message_input,
+        second.fact_bundle,
+        previous_state_identity=first_state.state_identity,
+    )
+
+    with pytest.raises(ValueError, match="cannot join unrelated story"):
+        build_story_state(second_observation, previous_state=first_state)
+
+
+def test_stream_story_transition_requires_exact_previous_state_identity() -> None:
+    _, forecast, proof, context, feed_event = _full_bundle(
+        as_of_ms=9_000_000,
+        issued_at_ms=9_000_100,
+        seed="story-previous-state",
+    )
+    activation = build_stream_activation_boundary(activated_at_ms=9_000_000)
+    issuance = project_forecast_issuance(
+        activation,
+        context,
+        forecast,
+        proof,
+        feed_event,
+    )
+    root_observation = build_story_observation(
+        issuance.message_input,
+        issuance.fact_bundle,
+    )
+    root_state = build_story_state(root_observation)
+
+    unlinked = build_story_observation_snapshot(
+        story_identity=root_state.story_identity,
+        source_event_identity=_sha("unlinked-source-event"),
+        stream_event_identity=_sha("unlinked-stream-event"),
+        message_identity=_sha("unlinked-message"),
+        previous_state_identity=None,
+        asset=root_state.asset,
+        symbol=root_state.symbol,
+        timeframe=root_state.timeframe,
+        event_at_ms=root_state.event_at_ms + 1,
+        decision_state=root_state.decision_state,
+        direction=root_state.direction,
+        support_score_0_100=root_state.support_score_0_100,
+        opposition_score_0_100=root_state.opposition_score_0_100,
+        family_contributions=root_state.family_contributions,
+        event_risk_state=root_state.event_risk_state,
+        trigger_state=root_state.trigger_state,
+        capital_reference_identities=root_state.capital_reference_identities,
+        outcome_state=root_state.outcome_state,
+    )
+
+    with pytest.raises(ValueError, match="previous-state mismatch"):
+        build_story_state(unlinked, previous_state=root_state)
+
+
+def test_stream_story_change_set_detects_exact_structured_deltas() -> None:
+    _, forecast, proof, context, feed_event = _full_bundle(
+        as_of_ms=10_000_000,
+        issued_at_ms=10_000_100,
+        seed="story-delta",
+    )
+    activation = build_stream_activation_boundary(activated_at_ms=10_000_000)
+    issuance = project_forecast_issuance(
+        activation,
+        context,
+        forecast,
+        proof,
+        feed_event,
+    )
+    root_observation = build_story_observation(
+        issuance.message_input,
+        issuance.fact_bundle,
+    )
+    root_state = build_story_state(root_observation)
+
+    changed_families = list(root_state.family_contributions)
+    order_flow_index = next(
+        index
+        for index, item in enumerate(changed_families)
+        if item.family is ConfluenceFamily.ORDER_FLOW
+    )
+    changed_families[order_flow_index] = replace(
+        changed_families[order_flow_index],
+        support_points=Decimal("20.00"),
+        opposition_points=Decimal("5.00"),
+    )
+    capital_identity = _sha("story-delta-capital")
+    synthetic = build_story_observation_snapshot(
+        story_identity=root_state.story_identity,
+        source_event_identity=_sha("story-delta-source-event"),
+        stream_event_identity=_sha("story-delta-stream-event"),
+        message_identity=None,
+        previous_state_identity=root_state.state_identity,
+        asset=root_state.asset,
+        symbol=root_state.symbol,
+        timeframe=root_state.timeframe,
+        event_at_ms=root_state.event_at_ms + 1,
+        decision_state=root_state.decision_state,
+        direction="bearish",
+        support_score_0_100=Decimal("75.00"),
+        opposition_score_0_100=Decimal("5.00"),
+        family_contributions=tuple(changed_families),
+        event_risk_state="blocked",
+        trigger_state="met",
+        capital_reference_identities=(capital_identity,),
+        outcome_state=None,
+    )
+    current_state = build_story_state(
+        synthetic,
+        previous_state=root_state,
+    )
+    change = build_change_set(
+        current_state,
+        previous_state=root_state,
+    )
+
+    assert change.stance_changed is True
+    assert change.previous_stance_key == root_state.source_stance_key
+    assert change.current_stance_key == "bearish:active"
+    assert change.support_score_delta == Decimal("-7.00")
+    assert change.opposition_score_delta == Decimal("5.00")
+    assert len(change.family_changes) == 1
+    assert change.family_changes[0].family is ConfluenceFamily.ORDER_FLOW
+    assert change.family_changes[0].support_delta == Decimal("-5.00")
+    assert change.family_changes[0].opposition_delta == Decimal("5.00")
+    assert change.risk_changed is True
+    assert change.previous_risk_state == root_state.event_risk_state
+    assert change.current_risk_state == "blocked"
+    assert change.trigger_changed is True
+    assert change.previous_trigger_state is None
+    assert change.current_trigger_state == "met"
+    assert change.capital_changed is True
+    assert change.capital_reference_added == (capital_identity,)
+    assert change.capital_reference_removed == ()
+    assert change.outcome_changed is False
+    assert change.changed_codes == (
+        "capital_changed",
+        "evidence_family_changed",
+        "risk_changed",
+        "score_changed",
+        "stance_changed",
+        "trigger_changed",
+    )
