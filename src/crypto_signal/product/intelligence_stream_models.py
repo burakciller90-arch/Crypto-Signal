@@ -189,14 +189,14 @@ class StreamSourceEvent:
             raise ValueError("Stream source-event timestamps must be non-negative")
         if self.event_at_ms < self.source_as_of_ms:
             raise ValueError("Stream source event cannot predate source as-of")
-        for value, label in (
+        for optional_identity, label in (
             (self.forecast_identity, "Stream source-event forecast identity"),
             (self.proof_identity, "Stream source-event proof identity"),
             (self.resolution_identity, "Stream source-event resolution identity"),
             (self.decision_context_identity, "Stream source-event context identity"),
         ):
-            if value is not None:
-                _require_sha256(value, label)
+            if optional_identity is not None:
+                _require_sha256(optional_identity, label)
         _require_identity_tuple(
             self.evidence_identities,
             "Stream source-event evidence identity",
