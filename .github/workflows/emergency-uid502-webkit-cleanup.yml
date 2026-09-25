@@ -1,0 +1,65 @@
+name: Emergency UID502 WebKit Cleanup
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/emergency-uid502-webkit-cleanup.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  cleanup:
+    name: UID502 cleanup slot ${{ matrix.slot }}
+    runs-on: [self-hosted]
+    timeout-minutes: 2
+    strategy:
+      fail-fast: false
+      max-parallel: 8
+      matrix:
+        slot: [1, 2, 3, 4, 5, 6, 7, 8]
+    steps:
+      - name: Target only durdurulamaz-agent runner
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "USER=$(whoami) UID=$(id -u) SLOT=${{ matrix.slot }}"
+          if [ "$(id -u)" != "502" ]; then
+            echo "UID502_SLOT_SKIP=YES"
+            exit 0
+          fi
+
+          echo "=== WEBKIT BEFORE ==="
+          /bin/ps -axo pid=,ppid=,user=,%cpu=,%mem=,rss=,etime=,command= \
+            | /usr/bin/grep -E '[W]ebKit\.WebContent' \
+            | /usr/bin/head -100 || true
+
+          pids="$(
+            /bin/ps -axo pid=,user=,command= \
+              | /usr/bin/awk '$2=="durdurulamaz-agent" && $0 ~ /WebKit\.WebContent/ {print $1}'
+          )"
+          echo "UID502_WEBKIT_TARGETS=$(echo "$pids" | tr '\n' ' ')"
+
+          for pid in $pids; do
+            /bin/kill -TERM "$pid" 2>/dev/null || true
+          done
+          /bin/sleep 2
+
+          for pid in $pids; do
+            if /bin/kill -0 "$pid" 2>/dev/null; then
+              /bin/kill -KILL "$pid" 2>/dev/null || true
+            fi
+          done
+          /bin/sleep 2
+
+          echo "=== WEBKIT AFTER ==="
+          /bin/ps -axo pid=,ppid=,user=,%cpu=,%mem=,rss=,etime=,command= \
+            | /usr/bin/grep -E '[W]ebKit\.WebContent' \
+            | /usr/bin/head -100 || true
+          echo "=== MEMORY ==="
+          /usr/bin/memory_pressure | /usr/bin/grep -E 'System-wide memory free percentage' | /usr/bin/head -1 || true
+          echo "=== TOP CPU ==="
+          /bin/ps -axo pid=,ppid=,user=,%cpu=,%mem=,etime=,command= \
+            | /usr/bin/sort -k4 -nr | /usr/bin/head -20 || true
+          echo "UID502_WEBKIT_CLEANUP_PASS=YES"
