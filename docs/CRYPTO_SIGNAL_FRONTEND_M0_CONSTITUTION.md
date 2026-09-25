@@ -114,12 +114,14 @@ For every accepted backend capability relevant to the user, M1 must classify it 
 
 Epoch 2 is a simulation/research capital system, not a decorative wallet.
 
-- Core, Tactical and Opportunity Reserve remain independent canonical vaults.
-- Tactical is intended for short-horizon 1m/5m microstructure research.
-- The product must not intentionally leave Tactical disconnected when canonical evidence, allocation, sizing and paper-accounting primitives exist.
-- A missing canonical Tactical execution bridge is an implementation GAP, not a reason to hide Tactical.
-- The system must continuously evaluate eligible simulated opportunities and explain every HOLD / BLOCK / EXECUTE outcome.
-- **No forced trade is permitted solely to make the UI look active.** Activity means the decision engine is genuinely processing opportunities; capital is deployed only when canonical gates pass.
+- Core, Tactical and Opportunity Reserve remain independent canonical vaults and **all three are active parts of the forward virtual-capital experiment**.
+- Core uses its conservative/high-evidence decision policy; Tactical is intended for short-horizon 1m/5m microstructure; Opportunity Reserve acts only on its explicit recovery/dislocation conditions.
+- No vault may be left permanently decorative merely because its current automatic execution adapter is incomplete.
+- The system must continuously evaluate eligible simulated opportunities and explain every HOLD / BLOCK / ELIGIBLE / SIZED / EXECUTE / REDUCE / EXIT outcome.
+- When a vault's **pre-registered canonical evidence, risk, sizing, venue/cost and execution gates all pass**, the virtual-paper runtime must execute according to policy without an extra discretionary "too cautious to simulate" veto.
+- **No forced trade is permitted solely to make the UI look active.** A real forward setup must still satisfy the vault's frozen policy.
+- Each vault must also have deterministic execution-acceptance fixtures proving that BUY/REDUCE/EXIT, costs, accounting and replay work even if live market conditions produce no eligible trade for a long period. Fixture/sandbox acceptance is engineering proof, not economic edge evidence.
+- Live forward paper outcomes and deterministic test fixtures must remain explicitly separated in storage and UI.
 - REAL_CAPITAL remains 0; there is no real-order authority.
 
 ## Scientific UI invariants
