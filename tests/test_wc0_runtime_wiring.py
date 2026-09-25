@@ -152,12 +152,12 @@ def test_productdeploy_contract_is_exact_main_and_current_galactech() -> None:
     assert "REAL_CAPITAL" not in product_block or "real_capital" in product_block
 
 
-def test_visualsnapshot_command_captures_real_safari_window_and_uploads_artifact() -> None:
+def test_visualsnapshot_command_prefers_headless_and_uploads_artifact() -> None:
     workflow = Path(
         ".github/workflows/crypto-mac-command.yml"
     ).read_text(encoding="utf-8")
 
-    assert "dashboardstart504|visualsnapshot|galactechpreview" in workflow
+    assert "dashboardstart504|visualcleanup|visualsnapshot|galactechpreview" in workflow
     assert "- name: GALACTECH VISUAL SNAPSHOT UID504" in workflow
     assert "steps.parse.outputs.command == 'visualsnapshot'" in workflow
     assert "/usr/sbin/screencapture -x -l" in workflow
@@ -165,6 +165,8 @@ def test_visualsnapshot_command_captures_real_safari_window_and_uploads_artifact
     assert "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" in workflow
     assert "/Applications/Chromium.app/Contents/MacOS/Chromium" in workflow
     assert "--headless=new" in workflow
+    assert "--renderer-process-limit=2" in workflow
+    assert "proc.wait(timeout=30)" in workflow
     assert "capture_headless desktop 1440 950" in workflow
     assert "capture_headless mobile 430 860" in workflow
     assert 'tell application "Safari"' in workflow
