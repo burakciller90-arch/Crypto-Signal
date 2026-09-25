@@ -46,7 +46,8 @@ def test_r14_root_release_surfaces_match_canonical_ssd_state() -> None:
     assert "S7 One-Panel UI Shell is PASS" in readme
     assert "S8 Expandable Message Experience is PASS" in readme
     assert "S9 Evidence Window Manager is PASS" in readme
-    assert "S10 Frozen Visual Proof is ACTIVE" in readme
+    assert "S10 Frozen Visual Proof is PASS" in readme
+    assert "S11 Capital Story Integration is ACTIVE" in readme
     assert "Runtime owner: `crypto-signal-agent`" in readme
     assert "self-hosted runner: `crypto-signal-uid504`" in registry
     assert "There is no accepted fallback" in registry
