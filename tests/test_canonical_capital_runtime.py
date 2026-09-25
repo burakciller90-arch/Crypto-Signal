@@ -21,12 +21,13 @@ from crypto_signal.paper.canonical_vault_eligibility import promote_vault_eligib
 from crypto_signal.paper.epoch2_accounting import Epoch2CanonicalLedger
 from crypto_signal.paper.epochs import PaperVaultId
 from crypto_signal.paper.execution import build_frozen_execution_snapshot
-from crypto_signal.paper.models import PaperSymbol
+from crypto_signal.paper.models import PaperAction, PaperSymbol
 from crypto_signal.paper.position_sizing_intelligence import (
     build_position_sizing_risk_context,
     evaluate_position_sizing_intelligence,
 )
 from crypto_signal.paper.smart_capital_allocator import assess_smart_capital_candidate
+from crypto_signal.paper.transaction_tape import build_tape_intent
 from crypto_signal.paper.transaction_tape_atomic import R22Epoch2AtomicTape
 from crypto_signal.product.decision_proof import build_decision_proof_snapshot
 
@@ -293,3 +294,57 @@ def test_s11_buy_refuses_stale_selection_and_price_outside_trigger(
                 }
             },
         )
+
+
+def test_s11_buy_preserves_r22_chain_after_prior_hold_and_restart(
+    tmp_path: Path,
+) -> None:
+    epoch2_path, before = _initial_state(tmp_path)
+    tape = R22Epoch2AtomicTape(epoch2_path)
+    hold = build_tape_intent(
+        before.activation,
+        vault_id=PaperVaultId.CORE,
+        action=PaperAction.HOLD_CASH,
+        decided_at_ms=ISSUED_AT + 5,
+        reason_codes=("allocator_hold",),
+        hold_policy_identity=_sha("s11-prior-hold-policy"),
+    )
+    assert tape.append_hold_decision(hold) is True
+
+    forecast = _forecast()
+    proof = build_decision_proof_snapshot(forecast, _slices(forecast))
+    core = next(
+        item for item in before.vault_snapshots
+        if item.vault_id is PaperVaultId.CORE
+    )
+    assessment, eligibility = _capital_inputs(PaperVaultId.CORE)
+    selection = promote_fixed_fractional_sizing(
+        assessment,
+        current_vault=core,
+        selected_at_ms=ISSUED_AT + 10,
+    )
+    result = commit_canonical_paper_buy(
+        epoch2_path=epoch2_path,
+        forecast=forecast,
+        proof=proof,
+        sizing_assessment=assessment,
+        sizing_selection=selection,
+        eligibility_proof=eligibility,
+        symbol=PaperSymbol.BTCUSDT,
+        reference_price=Decimal(101),
+        reference_price_evidence_identity=_sha("restart-reference-price"),
+        mark_prices={PaperSymbol.BTCUSDT: Decimal(101)},
+        mark_evidence_identity=_sha("restart-mark"),
+        execution_snapshot=_execution_snapshot(),
+        decided_at_ms=ISSUED_AT + 20,
+        filled_at_ms=ISSUED_AT + 30,
+        mutated_at_ms=ISSUED_AT + 31,
+        snapshot_at_ms=ISSUED_AT + 40,
+    )
+
+    assert tape.audit_all_read_only() == (2, 1, 1)
+    latest_intent, latest_fill = tape.read_latest_chain_identities(
+        PaperVaultId.CORE
+    )
+    assert latest_intent == result.intent_identity
+    assert latest_fill == result.fill_identity
