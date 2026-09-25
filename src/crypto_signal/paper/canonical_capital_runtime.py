@@ -884,9 +884,9 @@ def _validate_sell_lineage(
             != sizing_assessment.assessment_identity
         ):
             raise ValueError("S11 sell open BUY decision/proof/sizing lineage mismatch")
-        result_identity = intent_raw.get("sizing_result_identity")
+        result_identity = intent_raw.get("sizing_decision_identity")
         if not isinstance(result_identity, str):
-            raise ValueError("S11 sell open BUY lost sizing result identity")
+            raise ValueError("S11 sell open BUY lost sizing decision identity")
         result_ids.add(result_identity)
     if len(result_ids) != 1:
         raise ValueError("S11 sell open position has ambiguous sizing lineage")
