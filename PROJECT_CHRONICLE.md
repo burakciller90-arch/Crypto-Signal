@@ -1,5 +1,15 @@
 # PROJECT CHRONICLE
 
+## 2026-09-25 — Stream S6 realtime backend accepted; S7 One-Panel UI becomes active
+
+S6 now completes the backend messaging transport required by Intelligence Stream V1. PR #1274 added the immutable cursor/query layer over S5 narratives: stable keyset before/after cursors, upward history, reconnect catch-up, exact lookup, full backend filter/search semantics and polling fallback. Exact-head UID504 run `36165298510` passed focused checks, whole-repository regression and Development non-mutation.
+
+PR #1275 added live SSE delivery on top of that same persisted truth. The accepted transport tails from current state on first connection, supports empty-stream first-future-message delivery, uses exact event-id cursors, resumes through EventSource `Last-Event-ID`, catches missed messages without duplicates, shares polling filters and emits bounded heartbeat/retry framing. Exact-head UID504 run `36167138486` passed focused live acceptance, whole-repository regression and Development non-mutation.
+
+S6 does not add any history-writing authority. It only transports S5 narratives descended from the S2 activation-bound source chain, so no rich pre-activation backfill path was reopened.
+
+The active frontier is S7 One-Panel UI Shell. The existing GALACTECH V2 surface remains production fallback until S16 controlled cutover.
+
 ## 2026-09-25 — Stream S5 Narrative Engine accepted; S6 Real-time Stream Backend becomes active
 
 S5 now turns the accepted S4 Analytical View into fact-safe Turkish analyst language without making prose the source of market truth.
