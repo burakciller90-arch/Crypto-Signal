@@ -4,10 +4,64 @@ Updated: 2026-09-25
 Project: Crypto Signal
 Baseline: crypto-signal-full-version-v1.0.0 (immutable)
 Active post-v1.0 program: v1.1 world-class product + market intelligence + Crypto Signal Intelligence Stream V1
-State: WC0_LIVE_PRODUCT_PARITY_ACCEPTED / WC1_24_7_DATA_RELIABILITY_ACCEPTED / WC2_ENGINEERING_FROZEN_EVIDENCE_ACCUMULATION_ACTIVE / WC4_CHAMPION_CHALLENGER_ENGINEERING_ACCEPTED_RESEARCH_ONLY / WC5_ENGINEERING_ACCEPTED_PRODUCT_DEPLOYED_HUMAN_USABILITY_NOT_MEASURED / WC6_SANDBOX_BOUNDARY_ACCEPTED_VENUE_EVIDENCE_EXTERNAL_DEPENDENCY / WC7_CURRENT_FRONTIER_PACKET_ACCEPTED_CURRENT_INSUFFICIENT_EVIDENCE / INTELLIGENCE_STREAM_V1_S0_PASS_S1_PASS_S2_PASS_S3_PASS_S4_PASS_S5_PASS_S6_PASS_S7_PASS_S8_PASS_S9_PASS_S10_PASS_S11_ACTIVE / CONTINUITY_PAUSED_BY_USER
+State: WC0_LIVE_PRODUCT_PARITY_ACCEPTED / WC1_24_7_DATA_RELIABILITY_ACCEPTED / WC2_ENGINEERING_FROZEN_EVIDENCE_ACCUMULATION_ACTIVE / WC4_CHAMPION_CHALLENGER_ENGINEERING_ACCEPTED_RESEARCH_ONLY / WC5_ENGINEERING_ACCEPTED_PRODUCT_DEPLOYED_HUMAN_USABILITY_NOT_MEASURED / WC6_SANDBOX_BOUNDARY_ACCEPTED_VENUE_EVIDENCE_EXTERNAL_DEPENDENCY / WC7_CURRENT_FRONTIER_PACKET_ACCEPTED_CURRENT_INSUFFICIENT_EVIDENCE / INTELLIGENCE_STREAM_V1_S0_PASS_S1_PASS_S2_PASS_S3_PASS_S4_PASS_S5_PASS_S6_PASS_S7_PASS_S8_PASS_S9_PASS_S10_PASS_S11_PASS_S12_ACTIVE / CONTINUITY_PAUSED_BY_USER
 REAL_CAPITAL: 0
 
 ## Active v1.1 frontier — read before historical sections
+
+### 2026-09-25 — STREAM S11 CAPITAL STORY INTEGRATION PASS / S12 SEARCH, FILTERS AND HISTORY UX ACTIVE
+
+S11 is mechanically, behaviorally and visually accepted.
+
+Canonical acceptance record:
+- `docs/CRYPTO_SIGNAL_STREAM_S11_ACCEPTANCE.md`.
+
+Accepted S11 capital runtime:
+- canonical three-vault Epoch 2 paper participation under exact allocator rules;
+- fixed-fractional canonical sizing promotion while Kelly remains research-only;
+- Core / Tactical / Opportunity eligibility proofs;
+- Tactical exact 1m/5m microstructure gating;
+- Opportunity recovery gating;
+- immutable candidate / eligible / hold / blocked decisions;
+- restart-safe R22 predecessor chains;
+- simulated BUY / reduction / exit with R22 intent/fill + R21 atomic accounting;
+- accounting update + outcome persistence;
+- exact Decision Proof / evidence lineage for simulated fills;
+- no Epoch 1 / Epoch 2 history merging;
+- REAL_CAPITAL=0 throughout.
+
+Accepted S11 Stream lifecycle:
+- capital_candidate;
+- capital_eligible;
+- capital_hold;
+- capital_blocked;
+- capital_sized;
+- capital_executed;
+- capital_reduced;
+- capital_exited;
+- capital_accounting_updated;
+- capital_outcome.
+
+Merged implementation:
+- PR #1290;
+- main `32375dbb89dd158d5d30b85db696ed640e4b8a4b`.
+
+Exact-head acceptance:
+- implementation head `4575ab564871c3a333bac4614cd483b6e8295217`;
+- UID504 run `36197140443` PASS;
+- artifact `stream-s11-visual-snapshot-36197140443`;
+- focused S11 acceptance PASS;
+- whole-repository regression PASS;
+- desktop Chromium lifecycle render PASS;
+- exact 430px mobile lifecycle render PASS;
+- all ten lifecycle states PASS;
+- CORE / TACTICAL / OPPORTUNITY_RESERVE coverage PASS;
+- exact identity / PnL / lineage / REAL_CAPITAL boundary PASS;
+- Development checkout non-mutation PASS.
+
+The active Stream frontier is now **S12 — Search, Filters and History UX**.
+
+S12 should reuse the accepted S6 cursor/query backend and S7 discovery drawer instead of rebuilding search/history. It must close the missing asset/category/vault/evidence/state/importance/date controls, clear-filter behavior and exact-message deep-link while preserving one mixed Stream as the default surface.
 
 ### 2026-09-25 — STREAM S10 FROZEN VISUAL PROOF PASS / S11 CAPITAL STORY INTEGRATION ACTIVE
 
