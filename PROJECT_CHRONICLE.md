@@ -1,5 +1,17 @@
 # PROJECT CHRONICLE
 
+## 2026-09-25 — Intelligence Feed and Smart Capital become the two flagship frontend pillars
+
+A deeper backend-to-product audit exposed an important product risk: accepted backend capability was sometimes being discussed as if it were unavailable merely because the current Product API or GALACTECH V2 surface did not project it. The new frontend program now forbids that ambiguity. Existing truth that needs a read model is classified as an adapter/surfacing gap, not "no data."
+
+The user explicitly elevated two systems to flagship status. The first is a rich Live Intelligence Feed: evidence-bound, social/timeline-like, human-readable in Turkish, progressively disclosable into technical evidence and one-click frozen Proof, and capable of carrying real market/intelligence/decision/capital events where canonical source lineage exists. The second is the canonical 1,000 USDT Epoch 2 virtual-capital system, with Core 600 / Tactical 300 / Opportunity Reserve 100 visible as real simulated-accounting domains rather than decorative balances.
+
+Repository inspection confirmed Tactical is partly complete but not yet end-to-end automatic. Smart Capital Allocator already defines Tactical 1m/5m liquidity/order-flow/market-quality/CVD/absorption/sweep eligibility. The Position Sizing Bridge and R22/R21 layers are already vault-aware. However, the accepted forward paper-execution runtime is bound to CORE and exact dual-provider 4h mode. The missing Tactical 1m/5m execution bridge is therefore a narrow but real backend/product gap and is now mandatory rather than deferred.
+
+The activity contract is intentionally not "force a trade." The Tactical rail must continuously process eligible forward opportunities and be capable of simulated execution as soon as canonical gates pass. HOLD/BLOCK/no-trade remains valid evidence and must be explained; prolonged inactivity must be diagnosable so a broken adapter cannot masquerade as prudent cash.
+
+REAL_CAPITAL remains 0. No profitability, guarantee, leverage, real-order or automatic real-money authority is introduced.
+
 ## 2026-09-25 — Crypto Signal frontend authority is canonicalized; M0 closes and M1 becomes the active product frontier
 
 PR #1254 canonicalized the new frontend program without touching runtime or scientific code. The repository now separates company and product identity explicitly: GALACTECH is the company; Crypto Signal is the product/project. The frontend program is governed by `CRYPTO_SIGNAL_FRONTEND_MASTER_ROADMAP_V1.md`, the M0 constitution and the live M1 Capability/Gap Ledger. M0 is closed as a product constitution; M1 is active and remains incomplete until identity/temporal mapping, remaining product decisions and final information architecture are accepted.
