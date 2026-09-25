@@ -1,6 +1,6 @@
 # Crypto Signal — Stream S1 Gap Ledger
 
-Status: **CANONICAL STREAM GAP LEDGER / S8 CLOSEOUT APPLIED**  
+Status: **CANONICAL STREAM GAP LEDGER / S9 CLOSEOUT APPLIED**  
 Authority: `docs/CRYPTO_SIGNAL_INTELLIGENCE_STREAM_V1_MASTER_ROADMAP.md`  
 Baseline: `2a61ad47e1f09640f3b36e4ccf09f6ed46dde7ef`
 
@@ -41,14 +41,14 @@ Classification:
 | S1-G023 | Zero-activity diagnostics | no single Stream truth explains long HOLD periods | candidates scanned, strongest candidate, blockers, last eligible/execution, source quality | BUILD/ADAPT | S11 |
 | S1-G024 | One-panel Stream shell | **CLOSED S7** — isolated browser-rendered messaging shell exists at `/stream-preview`; production root remains GALACTECH V2 until S16 | preserve one-panel IA through S8-S16 and cut over only at S16 | ACCEPTANCE | S7 PASS |
 | S1-G025 | Compact expandable bubble | **CLOSED S8** — same immutable message now expands inline to SIMPLE/PRO/INTELLIGENCE/DECISION/geometry/CAPITAL/PROOF; exact persisted detail projection is fail-closed and Chromium proves 0px anchor drift | preserve inline-depth contract through S9-S16 | ACCEPTANCE | S8 PASS |
-| S1-G026 | Evidence Window Manager | current product uses conventional UI/modal patterns | draggable/resizable/minimize/pin/multi-window/detach manager | UI | S9 |
-| S1-G027 | Context education in evidence windows | education API exists, not bound to message evidence | “Bu nedir?” concept mapping + message-specific “neden önemli?” | ADAPT/UI | S9 |
+| S1-G026 | Evidence Window Manager | **CLOSED S9** — reusable exact-message windows support drag/resize/minimize/close/pin, multi-window focus/z-order, session restore and detach | preserve framework while S10 adds frozen visual payloads | ACCEPTANCE | S9 PASS |
+| S1-G027 | Context education in evidence windows | **CLOSED S9** — deterministic education concepts are bound to window kinds; message-specific importance text is derived only from exact persisted detail | preserve non-generative education boundary | ACCEPTANCE | S9 PASS |
 | S1-G028 | Notification chime/settings | not implemented | original sound + unlock/volume/mode/persistence; replay must be silent | UI | S13 |
 | S1-G029 | Unread/new-message behavior | **CLOSED S7** — bottom anchor, no forced scroll while reading history, and buffered `N yeni mesaj` affordance are browser-rendered and accepted | preserve semantics through virtualization/reconnect/sound phases | ACCEPTANCE | S7 PASS |
 | S1-G030 | Long-session feed performance | current UI not designed as all-day message stream | virtualization/reverse pagination/memory/reconnect tests | UI/ACCEPTANCE | S14 |
-| S1-G031 | Stream visual-snapshot coverage | **CLOSED THROUGH S8** — UID504 Chromium path renders collapsed/expanded Stream desktop plus exact 430px mobile, rejects horizontal overflow and mechanically probes 0px expansion anchor drift | extend the same artifact path for windows, frozen proof, settings and long-history states through S16 | ADAPT/ACCEPTANCE | S9-S16 |
-| S1-G032 | Detached proof / second-monitor workflow | not implemented | browser pop-out window tied to exact message/evidence identity | UI | S9-S10 |
-| S1-G033 | Historical activation boundary | **CLOSED THROUGH S8** — S2 activation-bound truth flows through S5/S6/S7; S8 detail joins persisted Narrative/Analytical/Fact/Message lineage and never recomputes old detail from current data | preserve this no-synthesis rule through windows/proof/cutover | ACCEPTANCE | S8 PASS |
+| S1-G031 | Stream visual-snapshot coverage | **CLOSED THROUGH S9** — UID504 Chromium path now also proves multi-window mechanics, detach identity and exact 430px no-overflow | extend same path for S10 frozen proof and later acceptance states | ADAPT/ACCEPTANCE | S10-S16 |
+| S1-G032 | Detached proof / second-monitor workflow | **S9 FRAMEWORK CLOSED** — detached evidence route is tied to exact narrative identity + evidence kind and re-reads persisted detail; frozen proof rendering remains S10 | add frozen visual payload to the exact detached proof window | ADAPT | S10 |
+| S1-G033 | Historical activation boundary | **CLOSED THROUGH S9** — S9 windows only re-read S8 verified persisted detail; localStorage stores layout only, never evidence | preserve no-synthesis rule through frozen proof/cutover | ACCEPTANCE | S9 PASS |
 | S1-G034 | Message materiality policy | **CLOSED S4 CORE** — versioned Analytical Policy deterministically maps exact S3 changes to PUBLISH/SILENT + reason codes | future source-specific projectors must consume this contract rather than invent ad-hoc spam thresholds | ACCEPTANCE | S4 PASS |
 | S1-G035 | Secondary-engine Stream classification | **CLOSED THROUGH S5 CORE** — accepted projector registry still keeps deferred/research-only/later-phase sources out of canonical Stream truth and S5 renders only accepted upstream views | maintain classification as new S6+ source integrations are added | ACCEPTANCE | S5 PASS / ongoing invariant |
 
@@ -147,3 +147,23 @@ S8 closed:
 **S8 = PASS. S9 Evidence Window Manager is the active frontier.**
 
 Do not jump to S10. S9 must first deliver reusable exact-identity evidence windows with drag/resize/minimize/pin/multi-window/focus/session persistence/detach behavior while keeping the stream usable.
+
+
+## S9 closeout
+
+Canonical S9 acceptance:
+- `docs/CRYPTO_SIGNAL_STREAM_S9_ACCEPTANCE.md`.
+
+S9 closed:
+- reusable evidence-window framework;
+- drag / resize / minimize / close / pin;
+- multi-window focus and z-order;
+- session-local geometry/state restore;
+- exact narrative/kind detach route;
+- all nine evidence-window kinds;
+- context education binding;
+- Chromium multi-window acceptance.
+
+**S9 = PASS. S10 Frozen Visual Proof is the active frontier.**
+
+S10 must resolve supported persisted evidence into exact point-in-time visuals with identity/provenance/coordinates and must fail closed where a historical visual cannot be recovered exactly.
