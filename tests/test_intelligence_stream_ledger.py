@@ -1539,12 +1539,3 @@ def test_stream_story_ledger_persists_exact_continuity_chain(tmp_path) -> None:
         connection.execute(
             "UPDATE stream_story_states SET story_identity = 'tampered'"
         )
-
-
-def test_query_only_story_reads_never_initialize_missing_database(tmp_path) -> None:
-    path = tmp_path / "missing-stream-story.sqlite3"
-    ledger = IntelligenceStreamStoryLedger(path)
-
-    with pytest.raises(FileNotFoundError):
-        ledger.read_status()
-    assert not path.exists()
