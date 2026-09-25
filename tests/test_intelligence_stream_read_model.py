@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import json
 import sqlite3
 from pathlib import Path
@@ -286,6 +287,110 @@ def _create_read_fixture(
             identities[f"{name}-story"] = story_identity
         connection.commit()
         return identities
+    finally:
+        connection.close()
+
+
+def _append_read_fixture_message(
+    path: Path,
+    *,
+    source_narrative_identity: str,
+    seed: str,
+    event_at_ms: int,
+) -> str:
+    connection = sqlite3.connect(path)
+    try:
+        source = connection.execute(
+            """
+            SELECT payload_json
+            FROM stream_narrative_messages
+            WHERE narrative_identity = ?
+            """,
+            (source_narrative_identity,),
+        ).fetchone()
+        assert source is not None
+        raw = json.loads(str(source[0]))
+        raw["event_at_ms"] = event_at_ms
+        raw["source_event_identity"] = _sha(f"{seed}-source")
+        raw["stream_event_identity"] = _sha(f"{seed}-stream")
+        raw["story_identity"] = _sha(f"{seed}-story")
+        raw["plan_identity"] = _sha(f"{seed}-plan")
+        raw["analytical_view_identity"] = _sha(f"{seed}-analytical")
+        raw["fact_bundle_identity"] = _sha(f"{seed}-fact")
+        raw["change_set_identity"] = _sha(f"{seed}-change")
+        raw["source_kind"] = "deterministic"
+        raw["text"]["collapsed_text"] = (
+            f"{raw['symbol']} {raw['timeframe']}: Yeni canlı test mesajı."
+        )
+        raw.pop("narrative_identity")
+        narrative_identity = canonical_sha256(raw)
+        payload = {"narrative_identity": narrative_identity, **raw}
+        payload_json = canonical_json(payload)
+
+        message_identity = _sha(f"{seed}-message")
+        connection.execute(
+            "INSERT INTO stream_narrative_plans VALUES (?, ?)",
+            (raw["plan_identity"], raw["fact_bundle_identity"]),
+        )
+        connection.execute(
+            "INSERT INTO stream_analytical_views VALUES (?, ?, ?)",
+            (
+                raw["analytical_view_identity"],
+                message_identity,
+                canonical_json({"stance": {"effective_stance": "watch"}}),
+            ),
+        )
+        connection.execute(
+            "INSERT INTO stream_fact_bundles VALUES (?, ?)",
+            (
+                raw["fact_bundle_identity"],
+                canonical_json(
+                    {"available_evidence_domains": ("frozen_chart",)}
+                ),
+            ),
+        )
+        connection.execute(
+            "INSERT INTO stream_message_inputs VALUES (?, ?)",
+            (
+                message_identity,
+                canonical_json(
+                    {
+                        "category": "decision",
+                        "importance": "important",
+                    }
+                ),
+            ),
+        )
+        connection.execute(
+            """
+            INSERT INTO stream_narrative_messages (
+                narrative_identity,
+                plan_identity,
+                analytical_view_identity,
+                story_identity,
+                source_event_identity,
+                stream_event_identity,
+                event_at_ms,
+                source_kind,
+                payload_json,
+                payload_sha256
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                narrative_identity,
+                raw["plan_identity"],
+                raw["analytical_view_identity"],
+                raw["story_identity"],
+                raw["source_event_identity"],
+                raw["stream_event_identity"],
+                event_at_ms,
+                raw["source_kind"],
+                payload_json,
+                sha256_text(payload_json),
+            ),
+        )
+        connection.commit()
+        return narrative_identity
     finally:
         connection.close()
 
@@ -709,3 +814,54 @@ def test_stream_live_api_fails_closed_when_runtime_not_configured(tmp_path) -> N
     assert response.json()["status"] == "unavailable"
     assert response.json()["transport"] == "sse"
     assert not missing_stream.exists()
+
+
+@pytest.mark.asyncio
+async def test_stream_sse_delivers_message_appended_after_connection_ready(
+    tmp_path,
+) -> None:
+    path = tmp_path / "stream-live-append.sqlite3"
+    identities = _create_read_fixture(path)
+    realtime = IntelligenceStreamRealtime(
+        path,
+        config=StreamRealtimeConfig(
+            poll_interval_ms=100,
+            heartbeat_ms=1_000,
+            retry_ms=500,
+            batch_limit=20,
+        ),
+    )
+    events = realtime.sse_events()
+
+    ready = await anext(events)
+    assert "event: ready\n" in ready
+    ready_id = next(
+        line.removeprefix("id: ")
+        for line in ready.splitlines()
+        if line.startswith("id: ")
+    )
+    assert (
+        decode_stream_cursor(ready_id).narrative_identity
+        == identities["sol-issued"]
+    )
+
+    new_identity = _append_read_fixture_message(
+        path,
+        source_narrative_identity=identities["sol-issued"],
+        seed="live-appended",
+        event_at_ms=5_000,
+    )
+    message_event = await asyncio.wait_for(anext(events), timeout=2)
+    assert "event: message\n" in message_event
+    data_line = next(
+        line.removeprefix("data: ")
+        for line in message_event.splitlines()
+        if line.startswith("data: ")
+    )
+    payload = json.loads(data_line)
+    assert payload["message"]["narrative_identity"] == new_identity
+    assert (
+        decode_stream_cursor(payload["cursor"]).narrative_identity
+        == new_identity
+    )
+    await events.aclose()
