@@ -351,17 +351,20 @@ def accepted_stream_projector_registry() -> tuple[StreamProjectorSpec, ...]:
             source_system="Capital Science / Position Sizing / R22 / R21",
             category=StreamCategory.CAPITAL,
             subtypes=(
+                "capital_accounting_updated",
                 "capital_blocked",
+                "capital_candidate",
                 "capital_eligible",
                 "capital_executed",
-                "capital_exit",
+                "capital_exited",
                 "capital_hold",
+                "capital_outcome",
                 "capital_reduced",
                 "capital_sized",
             ),
-            implementation_state=StreamProjectorImplementationState.LATER_PHASE,
+            implementation_state=StreamProjectorImplementationState.IMPLEMENTED,
             target_phase="S11",
-            customer_stream_scope="canonical three-vault paper-capital story",
+            customer_stream_scope="canonical three-vault paper-capital lifecycle",
         ),
     )
     return tuple(sorted(specs, key=lambda item: item.projector_id))
