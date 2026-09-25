@@ -44,10 +44,13 @@ from crypto_signal.product.intelligence_stream_ledger import (
 )
 from crypto_signal.product.intelligence_stream_message_ledger import (
     IntelligenceStreamMessageLedger,
+    StreamMessageLedgerConflictError,
     StreamMessageLedgerWriteDisposition,
 )
 from crypto_signal.product.intelligence_stream_messages import (
+    STREAM_MATERIALITY_POLICY_VERSION,
     StreamMessageRelationKind,
+    build_published_message_record,
     build_resolution_relation,
     build_stream_fact_bundle,
     build_stream_message_input,
@@ -526,6 +529,10 @@ def test_stream_message_projection_is_deterministic_and_append_only(tmp_path) ->
     assert first_message == second_message
     assert first_message.ready_for_analysis is True
     assert first_message.ready_for_publication is False
+    assert (
+        first_message.materiality_policy_version
+        == STREAM_MATERIALITY_POLICY_VERSION
+    )
     assert first_message.analytical_view_version is None
     assert first_message.narrative_schema_version is None
     assert first_message.renderer_version is None
@@ -562,6 +569,7 @@ def test_stream_message_projection_is_deterministic_and_append_only(tmp_path) ->
     status = message_ledger.read_status()
     assert status.fact_bundle_count == 1
     assert status.message_input_count == 1
+    assert status.published_message_count == 0
     assert status.story_count == 1
     assert status.latest_event_at_ms == 2_000_100
     assert status.real_capital == 0
@@ -671,6 +679,89 @@ def test_stream_resolution_appends_to_same_story_without_rewriting_issuance(
     assert resolved_fact["decision_state"] == proof.signal_state
 
 
+def test_stream_publication_contract_preserves_original_text_and_versions(
+    tmp_path,
+) -> None:
+    _, forecast, proof, context, feed_event = _full_bundle(
+        as_of_ms=3_600_000,
+        issued_at_ms=3_600_100,
+        seed="message-publication",
+    )
+    activation = build_stream_activation_boundary(activated_at_ms=3_600_000)
+    source_event = build_forecast_issued_source_event(
+        activation,
+        context,
+        feed_event,
+    )
+    path = tmp_path / "stream-publication.sqlite3"
+    source_ledger = IntelligenceStreamLedger(path)
+    source_ledger.append_activation(activation)
+    source_ledger.append_issuance_bundle(context, source_event)
+
+    fact = build_stream_fact_bundle(source_event, context, forecast, proof)
+    message = build_stream_message_input(source_event, fact)
+    ledger = IntelligenceStreamMessageLedger(path)
+    ledger.append_message_bundle(fact, message)
+
+    publication = build_published_message_record(
+        message,
+        published_at_ms=3_600_200,
+        analytical_view_identity=_sha("publication-analytical-view"),
+        analytical_view_version="stream-analytical-view-v1/1",
+        narrative_plan_identity=_sha("publication-narrative-plan"),
+        narrative_schema_version="stream-narrative-schema-v1/1",
+        renderer_version="stream-renderer-v1/1",
+        collapsed_text="Bitcoin için yeni bir karar durumu oluştu.",
+        simple_content=(
+            "Sistem şu anda yukarı yönlü koşulu izliyor ve kanıtları aynı "
+            "karar paketine bağlı tutuyor."
+        ),
+    )
+
+    assert (
+        ledger.append_published_message(publication)
+        is StreamMessageLedgerWriteDisposition.INSERTED
+    )
+    assert (
+        ledger.append_published_message(publication)
+        is StreamMessageLedgerWriteDisposition.UNCHANGED
+    )
+
+    stored = ledger.read_published_message(message.message_identity)
+    assert stored is not None
+    assert stored["publication_identity"] == publication.publication_identity
+    assert stored["collapsed_text"] == publication.collapsed_text
+    assert stored["simple_content"] == publication.simple_content
+    assert stored["analytical_view_version"] == "stream-analytical-view-v1/1"
+    assert stored["narrative_schema_version"] == "stream-narrative-schema-v1/1"
+    assert stored["renderer_version"] == "stream-renderer-v1/1"
+    assert stored["original_publication_preserved"] is True
+    assert stored["materiality_policy_version"] == STREAM_MATERIALITY_POLICY_VERSION
+
+    changed = build_published_message_record(
+        message,
+        published_at_ms=3_600_201,
+        analytical_view_identity=_sha("publication-analytical-view"),
+        analytical_view_version="stream-analytical-view-v1/1",
+        narrative_plan_identity=_sha("publication-narrative-plan"),
+        narrative_schema_version="stream-narrative-schema-v1/1",
+        renderer_version="stream-renderer-v1/1",
+        collapsed_text="Aynı canonical mesajı sonradan değiştirmeye çalışma.",
+        simple_content=publication.simple_content,
+    )
+    with pytest.raises(
+        StreamMessageLedgerConflictError,
+        match="immutable Stream publication conflict",
+    ):
+        ledger.append_published_message(changed)
+
+    status = ledger.read_status()
+    assert status.fact_bundle_count == 1
+    assert status.message_input_count == 1
+    assert status.published_message_count == 1
+    assert status.story_count == 1
+
+
 def test_stream_message_ledger_rows_are_physically_immutable(tmp_path) -> None:
     _, forecast, proof, context, feed_event = _full_bundle(
         as_of_ms=4_000_000,
@@ -700,6 +791,31 @@ def test_stream_message_ledger_rows_are_physically_immutable(tmp_path) -> None:
     ):
         connection.execute(
             "UPDATE stream_message_inputs SET subtype = 'tampered'"
+        )
+
+    publication = build_published_message_record(
+        message,
+        published_at_ms=4_000_200,
+        analytical_view_identity=_sha("immutable-analytical-view"),
+        analytical_view_version="stream-analytical-view-v1/1",
+        narrative_plan_identity=_sha("immutable-narrative-plan"),
+        narrative_schema_version="stream-narrative-schema-v1/1",
+        renderer_version="stream-renderer-v1/1",
+        collapsed_text="Immutable yayın.",
+        simple_content="Bu metin yayımlandıktan sonra değiştirilemez.",
+    )
+    ledger = IntelligenceStreamMessageLedger(path)
+    ledger.append_published_message(publication)
+
+    with (
+        sqlite3.connect(path) as connection,
+        pytest.raises(
+            sqlite3.DatabaseError,
+            match="immutable intelligence stream message ledger",
+        ),
+    ):
+        connection.execute(
+            "UPDATE stream_published_messages SET published_at_ms = 9999999"
         )
 
 
