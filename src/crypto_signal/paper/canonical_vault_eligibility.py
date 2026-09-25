@@ -109,9 +109,11 @@ class CanonicalVaultEligibilityProof:
                 raise ValueError("S11 Tactical eligibility requires 1m/5m timeframe")
         elif self.tactical_timeframe is not None:
             raise ValueError("S11 non-Tactical eligibility cannot carry tactical timeframe")
-        if self.vault_id is PaperVaultId.OPPORTUNITY_RESERVE:
-            if self.recovery_evidence_identity is None:
-                raise ValueError("S11 Opportunity eligibility requires recovery evidence")
+        if (
+            self.vault_id is PaperVaultId.OPPORTUNITY_RESERVE
+            and self.recovery_evidence_identity is None
+        ):
+            raise ValueError("S11 Opportunity eligibility requires recovery evidence")
         if (
             not self.canonical_paper_execution_eligible
             or self.cross_vault_borrowing_allowed
