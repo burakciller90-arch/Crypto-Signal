@@ -52,7 +52,7 @@ jobs:
           set -euo pipefail
           cmd="$(printf '%s\n' "$ISSUE_BODY" | awk -F: 'tolower($1)=="command" {gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2); print tolower($2); exit}')"
           case "$cmd" in
-            status|repo|services|disk|externaldisk|hostdiag|audiorestart|audioadminrestart|loadtree|loadtree2|bginventory|bgsafecheck|cryptomigrationdiag|cryptomigrationdiag2|cryptodashboarddiag|cryptorunnertree|cryptorunnercutoverdiag|cryptossdrunnerps|uidsudo|uid504runneradminstart|uid504runnerguiadminstart|cryptofinalaudit|cryptofinaladmincleanup|cryptofinalterminalcleanup|crypto504grant501|coldarchivecheck)
+            status|repo|services|disk|externaldisk|hostdiag|audiorestart|audioadminrestart|loadtree|loadtree2|bginventory|bgsafecheck|cryptomigrationdiag|cryptomigrationdiag2|cryptodashboarddiag|cryptorunnertree|cryptorunnercutoverdiag|cryptossdrunnerps|uidsudo|uid504runneradminstart|uid504runnerguiadminstart|cryptofinalaudit|cryptofinaladmincleanup|cryptofinalterminalcleanup|crypto504grant501|coldarchivecheck|visualcleanup504)
               ;;
             *)
               echo "Unsupported command: $cmd"
@@ -290,6 +290,31 @@ jobs:
           echo "CRYPTO_SSD_RUNNER_PS_PASS=YES"
           exit 0
 
+
+      - name: UID504 VISUAL SNAPSHOT CLEANUP VIA UID501
+        if: steps.parse.outputs.command == 'visualcleanup504'
+        shell: bash
+        timeout-minutes: 2
+        run: |
+          set -euo pipefail
+          echo "=== HEADLESS BEFORE ==="
+          /bin/ps -axo pid=,ppid=,user=,%cpu=,%mem=,rss=,etime=,command= \
+            | /usr/bin/grep -E '[G]oogle Chrome.*--headless=new|[C]hromium.*--headless=new|[M]icrosoft Edge.*--headless=new' \
+            | /usr/bin/head -120 || true
+
+          /usr/bin/sudo -n -u crypto-signal-agent /usr/bin/pkill -TERM -f -- '--headless=new' 2>/dev/null || true
+          /bin/sleep 2
+          /usr/bin/sudo -n -u crypto-signal-agent /usr/bin/pkill -KILL -f -- '--headless=new' 2>/dev/null || true
+          /bin/sleep 1
+
+          echo "=== HEADLESS AFTER ==="
+          left="$(/usr/bin/pgrep -f -- '--headless=new' 2>/dev/null || true)"
+          if [ -n "$left" ]; then
+            /bin/ps -p "$(/bin/echo "$left" | /usr/bin/paste -sd, -)" -o pid=,ppid=,user=,%cpu=,%mem=,rss=,etime=,command= || true
+            echo "UID504_VISUAL_CLEANUP_PASS=NO"
+            exit 92
+          fi
+          echo "UID504_VISUAL_CLEANUP_PASS=YES"
 
       - name: UID501 SUDO PROBE
         if: steps.parse.outputs.command == 'uidsudo'
