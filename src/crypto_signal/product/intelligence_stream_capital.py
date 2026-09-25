@@ -613,7 +613,7 @@ def _build_capital_source_event(
         raise ValueError("S11 Capital Story forecast/context mismatch")
     if decision_context.get("proof_identity") != proof_identity:
         raise ValueError("S11 Capital Story proof/context mismatch")
-    event_at_ms = _int_field(bundle, "snapshot_at_ms")
+    event_at_ms = _int_field(fill, "filled_at_ms")
     evidence_set = {
         bundle_identity,
         _sha_field(intent, "intent_identity", "R22 intent"),
