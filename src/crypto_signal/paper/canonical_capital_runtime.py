@@ -135,6 +135,10 @@ def commit_canonical_paper_buy(
     _require_sha256(mark_evidence_identity, "S11 mark evidence")
     state = Epoch2CanonicalLedger(epoch2_path).read_state()
     current = _current_vault(state, sizing_selection.vault_id)
+    atomic_tape = R22Epoch2AtomicTape(epoch2_path)
+    previous_intent_identity, previous_fill_identity = (
+        atomic_tape.read_latest_chain_identities(sizing_selection.vault_id)
+    )
     _validate_trade_lineage(
         state=state,
         current=current,
@@ -233,6 +237,7 @@ def commit_canonical_paper_buy(
         sizing_assessment=sizing_assessment,
         sizing_result=sizing_result,
         decision=decision,
+        previous_intent_identity=previous_intent_identity,
         additional_source_evidence_identities=additional_evidence,
     )
     simulation = simulate_paper_fill(
@@ -326,6 +331,7 @@ def commit_canonical_paper_buy(
         fill=fill,
         mutation=mutation,
         mark_evidence_identity=mark_evidence_identity,
+        previous_fill_identity=previous_fill_identity,
     )
     bundle = build_epoch2_accounting_bundle(
         state,
@@ -334,7 +340,7 @@ def commit_canonical_paper_buy(
         after_vaults=after_vaults,
         after_consolidated=after_parent,
     )
-    inserted = R22Epoch2AtomicTape(epoch2_path).append_accounting_bundle(
+    inserted = atomic_tape.append_accounting_bundle(
         state,
         intent=intent,
         fill=tape_fill,
