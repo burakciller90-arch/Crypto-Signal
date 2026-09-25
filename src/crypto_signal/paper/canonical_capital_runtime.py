@@ -13,6 +13,12 @@ from decimal import ROUND_DOWN, Decimal
 from pathlib import Path
 
 from crypto_signal.forecast_stream import ImmutableForecast
+from crypto_signal.paper.canonical_capital_outcomes import (
+    CanonicalCapitalFinancialOutcome,
+    CanonicalCapitalOutcomeEvidence,
+    build_capital_outcome_evidence,
+    reconstruct_open_cost_basis,
+)
 from crypto_signal.paper.canonical_sizing import CanonicalPaperSizingSelection
 from crypto_signal.paper.canonical_sizing_events import (
     CanonicalSizingEvent,
@@ -53,7 +59,9 @@ from crypto_signal.paper.planning import (
 )
 from crypto_signal.paper.position_sizing_intelligence import (
     PositionSizingAssessment,
+    SizingMethod,
     SizingMethodResult,
+    SizingMethodStatus,
 )
 from crypto_signal.paper.state import PaperFundState
 from crypto_signal.paper.transaction_tape import (
@@ -71,6 +79,7 @@ from crypto_signal.product.decision_proof import DecisionProofSnapshot
 from crypto_signal.signals.models import SignalDirection, SignalState
 
 S11_CAPITAL_COMMIT_VERSION = "stream-s11-capital-commit-v1/1"
+S11_CAPITAL_SELL_COMMIT_VERSION = "stream-s11-capital-sell-commit-v1/1"
 
 
 @dataclass(frozen=True, slots=True)
@@ -113,6 +122,55 @@ class CanonicalCapitalCommitResult:
             raise ValueError("S11 committed prices must be positive")
         if self.production_authority or self.real_capital != REAL_CAPITAL:
             raise ValueError("S11 commit cannot grant production/real-capital authority")
+
+
+@dataclass(frozen=True, slots=True)
+class CanonicalCapitalSellCommitResult:
+    version: str
+    vault_id: PaperVaultId
+    action: PaperAction
+    intent_identity: str
+    fill_identity: str
+    outcome_identity: str
+    accounting_bundle_identity: str
+    after_vault_snapshot_identity: str
+    after_consolidated_snapshot_identity: str
+    quantity: Decimal
+    reference_price: Decimal
+    simulated_fill_price: Decimal
+    realized_pnl_delta_usdt: Decimal
+    financial_outcome: CanonicalCapitalFinancialOutcome
+    inserted: bool
+    production_authority: bool = False
+    real_capital: int = REAL_CAPITAL
+
+    def __post_init__(self) -> None:
+        if self.version != S11_CAPITAL_SELL_COMMIT_VERSION:
+            raise ValueError("unsupported S11 capital sell commit version")
+        if not isinstance(self.vault_id, PaperVaultId):
+            raise TypeError("S11 sell commit requires canonical vault")
+        if self.action not in {PaperAction.REDUCE, PaperAction.EXIT}:
+            raise ValueError("S11 sell commit requires REDUCE or EXIT")
+        for identity, label in (
+            (self.intent_identity, "S11 sell R22 intent"),
+            (self.fill_identity, "S11 sell R22 fill"),
+            (self.outcome_identity, "S11 sell outcome"),
+            (self.accounting_bundle_identity, "S11 sell accounting bundle"),
+            (self.after_vault_snapshot_identity, "S11 sell vault snapshot"),
+            (
+                self.after_consolidated_snapshot_identity,
+                "S11 sell consolidated snapshot",
+            ),
+        ):
+            _require_sha256(identity, label)
+        if self.quantity <= 0:
+            raise ValueError("S11 sold quantity must be positive")
+        if self.reference_price <= 0 or self.simulated_fill_price <= 0:
+            raise ValueError("S11 sell prices must be positive")
+        if not self.realized_pnl_delta_usdt.is_finite():
+            raise ValueError("S11 sell realized PnL must be finite")
+        if self.production_authority or self.real_capital != REAL_CAPITAL:
+            raise ValueError("S11 sell cannot grant production/real-capital authority")
 
 
 def commit_canonical_paper_buy(
@@ -376,6 +434,302 @@ def commit_canonical_paper_buy(
     )
 
 
+def commit_canonical_paper_sell(
+    *,
+    epoch2_path: Path,
+    action: PaperAction,
+    forecast: ImmutableForecast,
+    proof: DecisionProofSnapshot,
+    sizing_assessment: PositionSizingAssessment,
+    symbol: PaperSymbol,
+    quantity: Decimal | None,
+    reference_price: Decimal,
+    reference_price_evidence_identity: str,
+    exit_evidence_identity: str,
+    exit_reason_codes: tuple[str, ...],
+    mark_prices: Mapping[PaperSymbol, Decimal],
+    mark_evidence_identity: str,
+    execution_snapshot: FrozenExecutionSnapshot,
+    decided_at_ms: int,
+    filled_at_ms: int,
+    mutated_at_ms: int,
+    snapshot_at_ms: int,
+) -> CanonicalCapitalSellCommitResult:
+    """Commit one canonical simulated REDUCE/EXIT with exact outcome evidence."""
+    if action not in {PaperAction.REDUCE, PaperAction.EXIT}:
+        raise ValueError("S11 canonical sell requires REDUCE or EXIT")
+    _require_sha256(reference_price_evidence_identity, "S11 sell reference evidence")
+    _require_sha256(exit_evidence_identity, "S11 sell exit evidence")
+    _require_sha256(mark_evidence_identity, "S11 sell mark evidence")
+    if not exit_reason_codes or any(not item.strip() for item in exit_reason_codes):
+        raise ValueError("S11 sell requires non-empty exit reason codes")
+    reason_codes = tuple(sorted(set(exit_reason_codes)))
+    if reason_codes != exit_reason_codes:
+        raise ValueError("S11 sell exit reason codes must be sorted unique")
+
+    state = Epoch2CanonicalLedger(epoch2_path).read_state()
+    current = _current_vault(state, sizing_assessment.vault_id)
+    atomic_tape = R22Epoch2AtomicTape(epoch2_path)
+    history = atomic_tape.read_trade_history(current.vault_id, symbol)
+    basis = reconstruct_open_cost_basis(
+        history,
+        vault_id=current.vault_id,
+        symbol=symbol,
+    )
+    current_quantity = _held_quantity(current.positions, symbol)
+    if current_quantity != basis.open_quantity:
+        raise ValueError("S11 R21 holdings disagree with reconstructed R22 cost basis")
+    sell_quantity = (
+        current_quantity
+        if action is PaperAction.EXIT
+        else quantity
+    )
+    if sell_quantity is None:
+        raise ValueError("S11 REDUCE requires exact sell quantity")
+    if not isinstance(sell_quantity, Decimal) or not sell_quantity.is_finite():
+        raise TypeError("S11 sell quantity must be finite Decimal")
+    if sell_quantity <= 0 or sell_quantity > current_quantity:
+        raise ValueError("S11 sell quantity is outside current holdings")
+    if action is PaperAction.REDUCE and sell_quantity >= current_quantity:
+        raise ValueError("S11 REDUCE must leave a positive open quantity")
+    if action is PaperAction.EXIT and quantity not in {None, current_quantity}:
+        raise ValueError("S11 EXIT quantity must be omitted or equal full holdings")
+
+    sizing_result = _validate_sell_lineage(
+        state=state,
+        current=current,
+        history=history,
+        forecast=forecast,
+        proof=proof,
+        sizing_assessment=sizing_assessment,
+        symbol=symbol,
+        reference_price=reference_price,
+        execution_snapshot=execution_snapshot,
+        decided_at_ms=decided_at_ms,
+        filled_at_ms=filled_at_ms,
+        mutated_at_ms=mutated_at_ms,
+        snapshot_at_ms=snapshot_at_ms,
+    )
+    normalized_marks = _validate_marks(
+        current=current,
+        new_symbol=symbol,
+        mark_prices=mark_prices,
+    )
+    previous_intent_identity, previous_fill_identity = (
+        atomic_tape.read_latest_chain_identities(current.vault_id)
+    )
+    cost_budget = _sell_execution_cost_budget(
+        quantity=sell_quantity,
+        reference_price=reference_price,
+        snapshot=execution_snapshot,
+    )
+    paper_state = _paper_state_from_vault(state, current)
+    reason_text = ",".join(reason_codes)
+    plan = plan_paper_trade(
+        state=paper_state,
+        planned_at_ms=decided_at_ms,
+        action=action,
+        symbol=symbol,
+        quantity=sell_quantity,
+        reference_price=reference_price,
+        cost_budget_usdt=cost_budget,
+        mark_prices=normalized_marks,
+        risk_policy=default_conservative_risk_policy(),
+        reason=f"S11 canonical Epoch2 paper {action.value}: {reason_text}",
+        invalidation_context=f"exit_evidence:{exit_evidence_identity}",
+    )
+    decision = build_decision_intent(
+        fund_identity=state.activation.activation_identity,
+        decided_at_ms=decided_at_ms,
+        action=action,
+        symbol=symbol,
+        quantity=sell_quantity,
+        reference_price=reference_price,
+        reason=f"S11 canonical Epoch2 paper {action.value}: {reason_text}",
+        invalidation_context=f"exit_evidence:{exit_evidence_identity}",
+    )
+    additional_evidence = tuple(
+        sorted(
+            {
+                exit_evidence_identity,
+                reference_price_evidence_identity,
+                mark_evidence_identity,
+                execution_snapshot.snapshot_identity,
+            }
+        )
+    )
+    intent = build_tape_intent(
+        state.activation,
+        vault_id=current.vault_id,
+        action=action,
+        decided_at_ms=decided_at_ms,
+        reason_codes=tuple(
+            sorted(
+                {
+                    f"canonical_epoch2_paper_{action.value.lower()}",
+                    "weighted_average_cost_basis",
+                    *reason_codes,
+                }
+            )
+        ),
+        forecast=forecast,
+        proof=proof,
+        sizing_assessment=sizing_assessment,
+        sizing_result=sizing_result,
+        decision=decision,
+        previous_intent_identity=previous_intent_identity,
+        additional_source_evidence_identities=additional_evidence,
+    )
+    simulation = simulate_paper_fill(
+        plan=plan,
+        snapshot=execution_snapshot,
+        decision_identity=decision.record_identity,
+        filled_at_ms=filled_at_ms,
+    )
+    if simulation.fill is None or simulation.costs is None:
+        raise ValueError("S11 sell did not produce a simulated fill")
+    source_fill = simulation.fill
+    costs = simulation.costs
+    outcome = build_capital_outcome_evidence(
+        basis,
+        action=action,
+        fill=source_fill,
+        exit_evidence_identity=exit_evidence_identity,
+        additional_source_evidence_identities=tuple(
+            sorted(
+                {
+                    forecast.forecast_identity,
+                    proof.proof_identity,
+                    sizing_assessment.assessment_identity,
+                    sizing_result.result_identity,
+                    reference_price_evidence_identity,
+                    mark_evidence_identity,
+                    execution_snapshot.snapshot_identity,
+                }
+            )
+        ),
+    )
+
+    after_positions = plan.projected_positions
+    cash_after = current.cash_usdt + simulation.fill_notional_usdt - costs.fee_usdt
+    mutation = build_position_cash_mutation(
+        fund_identity=state.activation.activation_identity,
+        source_identity=source_fill.record_identity,
+        mutated_at_ms=mutated_at_ms,
+        cash_before_usdt=current.cash_usdt,
+        cash_after_usdt=cash_after,
+        positions_before=current.positions,
+        positions_after=after_positions,
+    )
+    marked_exposure = _marked_exposure(after_positions, normalized_marks)
+    nav = cash_after + marked_exposure
+    realized_pnl = current.realized_pnl_usdt + outcome.realized_pnl_delta_usdt
+    unrealized_pnl = nav - current.starting_cash_usdt - realized_pnl
+    outcome_key = (
+        "WIN"
+        if outcome.realized_pnl_delta_usdt > 0
+        else "LOSS"
+        if outcome.realized_pnl_delta_usdt < 0
+        else "BREAKEVEN"
+    )
+    distribution = dict(current.outcome_distribution)
+    distribution[outcome_key] = distribution.get(outcome_key, 0) + 1
+    win_count = current.win_count + (1 if outcome_key == "WIN" else 0)
+    loss_count = current.loss_count + (1 if outcome_key == "LOSS" else 0)
+    breakeven_count = (
+        current.breakeven_count + (1 if outcome_key == "BREAKEVEN" else 0)
+    )
+    source_ids = tuple(
+        sorted(
+            {
+                intent.intent_identity,
+                source_fill.record_identity,
+                mutation.record_identity,
+                outcome.outcome_identity,
+                exit_evidence_identity,
+                mark_evidence_identity,
+                reference_price_evidence_identity,
+                execution_snapshot.snapshot_identity,
+            }
+        )
+    )
+    target_after = build_epoch2_vault_accounting_snapshot(
+        state.activation,
+        vault_id=current.vault_id,
+        snapshot_at_ms=snapshot_at_ms,
+        cash_usdt=cash_after,
+        positions=after_positions,
+        marked_exposure_usdt=marked_exposure,
+        realized_pnl_usdt=realized_pnl,
+        unrealized_pnl_usdt=unrealized_pnl,
+        fee_usdt=current.fee_usdt + costs.fee_usdt,
+        spread_usdt=current.spread_usdt + costs.spread_usdt,
+        slippage_usdt=current.slippage_usdt + costs.slippage_usdt,
+        turnover_notional_usdt=(
+            current.turnover_notional_usdt + simulation.fill_notional_usdt
+        ),
+        closed_trade_count=current.closed_trade_count + 1,
+        win_count=win_count,
+        loss_count=loss_count,
+        breakeven_count=breakeven_count,
+        outcome_distribution=tuple(sorted(distribution.items())),
+        source_record_identities=source_ids,
+        previous=current,
+    )
+    after_vaults = _same_time_vault_snapshots(
+        state=state,
+        target=target_after,
+        snapshot_at_ms=snapshot_at_ms,
+    )
+    after_parent = build_consolidated_epoch2_snapshot(
+        after_vaults,
+        previous=state.consolidated_snapshot,
+    )
+    tape_fill = build_tape_fill(
+        intent,
+        current,
+        target_after,
+        fill=source_fill,
+        mutation=mutation,
+        mark_evidence_identity=mark_evidence_identity,
+        outcome_evidence_identity=outcome.outcome_identity,
+        previous_fill_identity=previous_fill_identity,
+    )
+    bundle = build_epoch2_accounting_bundle(
+        state,
+        intent=intent,
+        fill=tape_fill,
+        after_vaults=after_vaults,
+        after_consolidated=after_parent,
+    )
+    inserted = atomic_tape.append_accounting_bundle(
+        state,
+        intent=intent,
+        fill=tape_fill,
+        after_vaults=after_vaults,
+        after_consolidated=after_parent,
+        bundle=bundle,
+        outcome_evidence=outcome,
+    )
+    return CanonicalCapitalSellCommitResult(
+        version=S11_CAPITAL_SELL_COMMIT_VERSION,
+        vault_id=current.vault_id,
+        action=action,
+        intent_identity=intent.intent_identity,
+        fill_identity=tape_fill.fill_identity,
+        outcome_identity=outcome.outcome_identity,
+        accounting_bundle_identity=bundle.bundle_identity,
+        after_vault_snapshot_identity=target_after.snapshot_identity,
+        after_consolidated_snapshot_identity=after_parent.snapshot_identity,
+        quantity=sell_quantity,
+        reference_price=reference_price,
+        simulated_fill_price=source_fill.simulated_fill_price,
+        realized_pnl_delta_usdt=outcome.realized_pnl_delta_usdt,
+        financial_outcome=outcome.financial_outcome,
+        inserted=inserted,
+    )
+
+
 def _validate_trade_lineage(
     *,
     state: Epoch2LedgerState,
@@ -457,6 +811,127 @@ def _validate_trade_lineage(
         raise ValueError("S11 decision/fill/mutation/accounting time order invalid")
     if snapshot_at_ms <= current.snapshot_at_ms:
         raise ValueError("S11 accounting snapshot must advance vault time")
+
+
+def _validate_sell_lineage(
+    *,
+    state: Epoch2LedgerState,
+    current: Epoch2VaultAccountingSnapshot,
+    history: tuple[dict[str, object], ...],
+    forecast: ImmutableForecast,
+    proof: DecisionProofSnapshot,
+    sizing_assessment: PositionSizingAssessment,
+    symbol: PaperSymbol,
+    reference_price: Decimal,
+    execution_snapshot: FrozenExecutionSnapshot,
+    decided_at_ms: int,
+    filled_at_ms: int,
+    mutated_at_ms: int,
+    snapshot_at_ms: int,
+) -> SizingMethodResult:
+    if proof.forecast_identity != forecast.forecast_identity:
+        raise ValueError("S11 sell proof/forecast identity mismatch")
+    if proof.signal_freeze_identity != forecast.signal_freeze_identity:
+        raise ValueError("S11 sell proof/forecast signal mismatch")
+    if forecast.symbol != symbol.value or proof.symbol != symbol.value:
+        raise ValueError("S11 sell symbol does not match forecast/proof")
+    if sizing_assessment.vault_id is not current.vault_id:
+        raise ValueError("S11 sell sizing assessment vault mismatch")
+    if reference_price <= 0:
+        raise ValueError("S11 sell reference price must be positive")
+    if execution_snapshot.symbol is not symbol:
+        raise ValueError("S11 sell execution snapshot symbol mismatch")
+    if execution_snapshot.real_capital != REAL_CAPITAL:
+        raise ValueError("S11 sell execution snapshot REAL_CAPITAL mismatch")
+    if decided_at_ms < max(forecast.issued_at_ms, state.activation.activated_at_ms):
+        raise ValueError("S11 sell decision predates forecast/Epoch2 activation")
+    if not (decided_at_ms <= filled_at_ms <= mutated_at_ms <= snapshot_at_ms):
+        raise ValueError("S11 sell decision/fill/mutation/accounting order invalid")
+    if snapshot_at_ms <= current.snapshot_at_ms:
+        raise ValueError("S11 sell accounting snapshot must advance vault time")
+
+    open_quantity = Decimal(0)
+    active_buy_intents: list[dict[str, object]] = []
+    for record in history:
+        fill_raw = record.get("fill")
+        intent_raw = record.get("intent")
+        if not isinstance(fill_raw, dict) or not isinstance(intent_raw, dict):
+            raise TypeError("S11 sell history requires verified intent/fill mappings")
+        action = PaperAction(str(fill_raw["action"]))
+        fill_quantity = Decimal(str(fill_raw["quantity"]))
+        if action is PaperAction.BUY:
+            if open_quantity == 0:
+                active_buy_intents = []
+            open_quantity += fill_quantity
+            active_buy_intents.append(intent_raw)
+        elif action in {PaperAction.REDUCE, PaperAction.EXIT}:
+            open_quantity -= fill_quantity
+            if open_quantity < 0:
+                raise ValueError("S11 sell history reconstructed negative position")
+            if open_quantity == 0:
+                active_buy_intents = []
+    if open_quantity != _held_quantity(current.positions, symbol):
+        raise ValueError("S11 sell history does not match current R21 holdings")
+    if not active_buy_intents:
+        raise ValueError("S11 sell cannot find open BUY lineage")
+
+    result_ids: set[str] = set()
+    for intent_raw in active_buy_intents:
+        if (
+            intent_raw.get("forecast_identity") != forecast.forecast_identity
+            or intent_raw.get("proof_identity") != proof.proof_identity
+            or intent_raw.get("sizing_assessment_identity")
+            != sizing_assessment.assessment_identity
+        ):
+            raise ValueError("S11 sell open BUY decision/proof/sizing lineage mismatch")
+        result_identity = intent_raw.get("sizing_result_identity")
+        if not isinstance(result_identity, str):
+            raise ValueError("S11 sell open BUY lost sizing result identity")
+        result_ids.add(result_identity)
+    if len(result_ids) != 1:
+        raise ValueError("S11 sell open position has ambiguous sizing lineage")
+    result_identity = next(iter(result_ids))
+    matches = tuple(
+        item for item in sizing_assessment.results
+        if item.result_identity == result_identity
+    )
+    if len(matches) != 1:
+        raise ValueError("S11 sell sizing result is not in supplied assessment")
+    result = matches[0]
+    if (
+        result.method is not SizingMethod.FIXED_FRACTIONAL
+        or result.status is not SizingMethodStatus.AVAILABLE_SHADOW
+        or result.hypothetical_notional_usdt is None
+    ):
+        raise ValueError("S11 sell requires original available fixed-fractional sizing")
+    return result
+
+
+def _held_quantity(
+    positions: tuple[PaperPosition, ...],
+    symbol: PaperSymbol,
+) -> Decimal:
+    return next(
+        (item.quantity for item in positions if item.symbol is symbol),
+        Decimal(0),
+    )
+
+
+def _sell_execution_cost_budget(
+    *,
+    quantity: Decimal,
+    reference_price: Decimal,
+    snapshot: FrozenExecutionSnapshot,
+) -> Decimal:
+    reference_notional = quantity * reference_price
+    adverse = snapshot.spread_rate + snapshot.slippage_rate
+    fill_notional = reference_notional * (Decimal(1) - adverse)
+    fee = fill_notional * snapshot.fee_rate
+    return (
+        fee
+        + reference_notional * snapshot.spread_rate
+        + reference_notional * snapshot.slippage_rate
+    )
 
 
 def _selected_sizing_result(
