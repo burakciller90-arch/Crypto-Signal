@@ -117,7 +117,7 @@ class StreamCapitalLifecycleMessage:
             (self.lifecycle_identity, "capital lifecycle identity"),
         ):
             _sha(identity, label)
-        for identity, label in (
+        for optional_identity, optional_label in (
             (self.allocator_assessment_identity, "allocator assessment"),
             (self.allocator_candidate_identity, "allocator candidate"),
             (self.forecast_identity, "forecast"),
@@ -126,8 +126,8 @@ class StreamCapitalLifecycleMessage:
             (self.bundle_identity, "R22 bundle"),
             (self.outcome_identity, "capital outcome"),
         ):
-            if identity is not None:
-                _sha(identity, label)
+            if optional_identity is not None:
+                _sha(optional_identity, optional_label)
         if self.subtype not in {
             "capital_candidate",
             "capital_accounting_updated",
