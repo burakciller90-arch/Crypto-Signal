@@ -11,7 +11,7 @@ import sqlite3
 from collections.abc import Mapping
 from contextlib import closing
 from dataclasses import dataclass
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from enum import StrEnum
 from pathlib import Path
 from urllib.parse import quote
@@ -964,7 +964,7 @@ def _decimal_field(value: Mapping[str, object], key: str) -> Decimal:
     selected = value.get(key)
     try:
         result = Decimal(str(selected))
-    except Exception as exc:
+    except (InvalidOperation, TypeError, ValueError) as exc:
         raise ValueError(
             f"S11 Capital Story field {key} must be Decimal-compatible"
         ) from exc
