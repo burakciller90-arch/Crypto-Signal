@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 from __future__ import annotations
 
 import argparse
@@ -77,7 +76,7 @@ class CdpSession:
                 raise RuntimeError(f"CDP {method} failed: {message['error']!r}")
             result = message.get("result", {})
             if not isinstance(result, dict):
-                raise RuntimeError(f"CDP {method} returned invalid result")
+                raise TypeError(f"CDP {method} returned invalid result")
             return result
         raise RuntimeError(f"CDP {method} timed out")
 
@@ -118,7 +117,7 @@ def _capture(args: argparse.Namespace) -> dict[str, object]:
         target = _wait_target(port, args.url)
         websocket_url = target.get("webSocketDebuggerUrl")
         if not isinstance(websocket_url, str):
-            raise RuntimeError("Chrome target missing websocket URL")
+            raise TypeError("Chrome target missing websocket URL")
         session = CdpSession(websocket_url)
         session.command("Page.enable")
         session.command("Runtime.enable")
@@ -157,10 +156,10 @@ def _capture(args: argparse.Namespace) -> dict[str, object]:
         )
         result = settle.get("result", {})
         if not isinstance(result, dict):
-            raise RuntimeError("CDP metrics evaluation result missing")
+            raise TypeError("CDP metrics evaluation result missing")
         metrics = result.get("value", {})
         if not isinstance(metrics, dict):
-            raise RuntimeError("CDP viewport metrics missing")
+            raise TypeError("CDP viewport metrics missing")
 
         if int(metrics.get("innerWidth", -1)) != args.width:
             raise RuntimeError(
@@ -195,10 +194,7 @@ def _capture(args: argparse.Namespace) -> dict[str, object]:
         }
     finally:
         if session is not None:
-            try:
-                session.close()
-            except Exception:
-                pass
+            session.close()
         if process.poll() is None:
             os.killpg(process.pid, signal.SIGTERM)
             try:
