@@ -19,7 +19,6 @@ from crypto_signal.product.intelligence_stream_models import (
 )
 from crypto_signal.product.intelligence_stream_story import (
     STREAM_CHANGE_SET_SCHEMA_VERSION,
-    STREAM_STORY_OBSERVATION_SCHEMA_VERSION,
     STREAM_STORY_STATE_SCHEMA_VERSION,
     StreamChangeSet,
     StreamStoryObservation,
