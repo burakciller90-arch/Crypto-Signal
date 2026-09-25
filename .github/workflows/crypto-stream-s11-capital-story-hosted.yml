@@ -54,6 +54,7 @@ jobs:
             tests/test_canonical_capital_sell_runtime.py \
             tests/test_intelligence_stream_capital_sizing.py \
             tests/test_intelligence_stream_capital.py \
+            tests/test_intelligence_stream_capital_lifecycle.py \
             tests/test_intelligence_stream_capital_decisions.py \
             tests/test_intelligence_stream_read_model.py \
             tests/test_intelligence_stream_ui.py \
@@ -70,6 +71,7 @@ jobs:
             src/crypto_signal/paper/transaction_tape.py \
             src/crypto_signal/paper/transaction_tape_atomic.py \
             src/crypto_signal/product/intelligence_stream_capital.py \
+            src/crypto_signal/product/intelligence_stream_capital_lifecycle.py \
             src/crypto_signal/product/intelligence_stream_capital_decisions.py \
             src/crypto_signal/product/intelligence_stream_capital_sizing.py \
             src/crypto_signal/product/intelligence_stream_read_model.py \
@@ -79,6 +81,7 @@ jobs:
             tests/test_canonical_capital_runtime.py \
             tests/test_canonical_capital_sell_runtime.py \
             tests/test_intelligence_stream_capital.py \
+            tests/test_intelligence_stream_capital_lifecycle.py \
             tests/test_intelligence_stream_capital_decisions.py \
             tests/test_intelligence_stream_capital_sizing.py \
             tests/test_intelligence_stream_ui.py
@@ -92,6 +95,7 @@ jobs:
             src/crypto_signal/paper/transaction_tape.py \
             src/crypto_signal/paper/transaction_tape_atomic.py \
             src/crypto_signal/product/intelligence_stream_capital.py \
+            src/crypto_signal/product/intelligence_stream_capital_lifecycle.py \
             src/crypto_signal/product/intelligence_stream_capital_decisions.py \
             src/crypto_signal/product/intelligence_stream_capital_sizing.py \
             src/crypto_signal/product/intelligence_stream_read_model.py
