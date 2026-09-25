@@ -14,6 +14,11 @@ from pathlib import Path
 
 from crypto_signal.forecast_stream import ImmutableForecast
 from crypto_signal.paper.canonical_sizing import CanonicalPaperSizingSelection
+from crypto_signal.paper.canonical_sizing_events import (
+    CanonicalSizingEvent,
+    CanonicalSizingEventLedger,
+    build_canonical_sizing_event,
+)
 from crypto_signal.paper.canonical_vault_eligibility import (
     CanonicalVaultEligibilityProof,
 )
@@ -73,6 +78,7 @@ class CanonicalCapitalCommitResult:
     version: str
     vault_id: PaperVaultId
     sizing_selection_identity: str
+    sizing_event_identity: str
     intent_identity: str
     fill_identity: str
     accounting_bundle_identity: str
@@ -90,6 +96,7 @@ class CanonicalCapitalCommitResult:
             raise ValueError("unsupported S11 capital commit version")
         for value, label in (
             (self.sizing_selection_identity, "S11 sizing selection"),
+            (self.sizing_event_identity, "S11 sizing event"),
             (self.intent_identity, "S11 R22 intent"),
             (self.fill_identity, "S11 R22 fill"),
             (self.accounting_bundle_identity, "S11 accounting bundle"),
@@ -155,6 +162,11 @@ def commit_canonical_paper_buy(
         mutated_at_ms=mutated_at_ms,
         snapshot_at_ms=snapshot_at_ms,
     )
+    sizing_event = build_canonical_sizing_event(
+        sizing_selection,
+        eligibility_proof,
+    )
+    CanonicalSizingEventLedger(epoch2_path).append(sizing_event)
     normalized_marks = _validate_marks(
         current=current,
         new_symbol=symbol,
@@ -214,6 +226,7 @@ def commit_canonical_paper_buy(
         sorted(
             {
                 sizing_selection.selection_identity,
+                sizing_event.event_identity,
                 eligibility_proof.proof_identity,
                 eligibility_proof.allocator_assessment_identity,
                 reference_price_evidence_identity,
@@ -287,6 +300,7 @@ def commit_canonical_paper_buy(
                 reference_price_evidence_identity,
                 execution_snapshot.snapshot_identity,
                 sizing_selection.selection_identity,
+                sizing_event.event_identity,
                 eligibility_proof.proof_identity,
                 eligibility_proof.allocator_assessment_identity,
             }
@@ -350,6 +364,7 @@ def commit_canonical_paper_buy(
     )
     return _result(
         selection=sizing_selection,
+        sizing_event=sizing_event,
         intent=intent,
         fill=tape_fill,
         bundle=bundle,
@@ -613,6 +628,7 @@ def _same_time_vault_snapshots(
 def _result(
     *,
     selection: CanonicalPaperSizingSelection,
+    sizing_event: CanonicalSizingEvent,
     intent: PaperTapeIntent,
     fill: PaperTapeFill,
     bundle: R22Epoch2AccountingBundle,
@@ -626,6 +642,7 @@ def _result(
         version=S11_CAPITAL_COMMIT_VERSION,
         vault_id=selection.vault_id,
         sizing_selection_identity=selection.selection_identity,
+        sizing_event_identity=sizing_event.event_identity,
         intent_identity=intent.intent_identity,
         fill_identity=fill.fill_identity,
         accounting_bundle_identity=bundle.bundle_identity,
