@@ -1,0 +1,31 @@
+name: Emergency Hold Crypto Runners
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/emergency-hold-crypto-runners.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  hold501:
+    runs-on: [self-hosted, crypto-signal, uid501]
+    timeout-minutes: 3
+    steps:
+      - shell: bash
+        run: |
+          echo "HOLD501_START"
+          sleep 120
+          echo "HOLD501_END"
+
+  hold504:
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 3
+    steps:
+      - shell: bash
+        run: |
+          echo "HOLD504_START"
+          sleep 120
+          echo "HOLD504_END"
