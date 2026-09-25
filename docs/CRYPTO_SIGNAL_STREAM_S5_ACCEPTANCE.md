@@ -97,7 +97,7 @@ Roadmap criterion: LLM failure does not stop the Stream.
 **PASS** — exceptions, invalid output and repetitive output fall back to deterministic Turkish rendering.
 
 Roadmap criterion: story-aware phrases work only when exact history supports them.  
-**PASS** — narrative plans consume the exact S3 Change Set and accepted tests cover story continuation/outcome wording.
+**PASS** — acceptance includes an exact same-story `ORDER_FLOW: NO_EVIDENCE -> OBSERVED` transition. The narrative plan emits `missing_confirmation_arrived` and the Turkish message says “Önce eksik olan teyitlerden biri geldi” only for that history-backed transition; a root message with no prior missing evidence does not emit the phrase. Outcome continuation wording is separately covered.
 
 ## Important operational boundary
 

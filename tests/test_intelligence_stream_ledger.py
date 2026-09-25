@@ -2357,6 +2357,149 @@ def test_stream_narrative_rejects_new_qualitative_market_claim(tmp_path) -> None
     assert narrative.text == deterministic.text
 
 
+def test_stream_narrative_missing_confirmation_requires_exact_story_transition(
+    tmp_path,
+) -> None:
+    _, forecast, proof, context, feed_event = _full_bundle(
+        as_of_ms=19_900_000,
+        issued_at_ms=19_900_100,
+        seed="narrative-missing-confirmation",
+    )
+    activation = build_stream_activation_boundary(activated_at_ms=19_900_000)
+    issuance = project_forecast_issuance(
+        activation,
+        context,
+        forecast,
+        proof,
+        feed_event,
+    )
+
+    current_families = issuance.fact_bundle.family_contributions
+    order_flow = next(
+        item
+        for item in current_families
+        if item.family is ConfluenceFamily.ORDER_FLOW
+    )
+    previous_families = tuple(
+        replace(
+            item,
+            state=MetaEvidenceState.NO_EVIDENCE,
+            direction=None,
+            directional_strength_0_1=None,
+            support_points=Decimal(0),
+            opposition_points=Decimal(0),
+            evidence_quality_0_1=None,
+            freshness_0_1=None,
+            material_conflict_count=0,
+            source_evidence_identities=(),
+        )
+        if item.family is ConfluenceFamily.ORDER_FLOW
+        else item
+        for item in current_families
+    )
+    previous_observation = build_story_observation_snapshot(
+        story_identity=issuance.fact_bundle.story_identity,
+        source_event_identity=_sha("narrative-missing-confirmation-prev-source"),
+        stream_event_identity=_sha("narrative-missing-confirmation-prev-stream"),
+        message_identity=None,
+        previous_state_identity=None,
+        asset=issuance.fact_bundle.asset,
+        symbol=issuance.fact_bundle.symbol,
+        timeframe=issuance.fact_bundle.timeframe,
+        event_at_ms=issuance.fact_bundle.event_at_ms - 1,
+        decision_state=issuance.fact_bundle.decision_state,
+        direction=issuance.fact_bundle.direction,
+        support_score_0_100=(
+            issuance.fact_bundle.confluence_support_score_0_100
+            - order_flow.support_points
+        ),
+        opposition_score_0_100=(
+            issuance.fact_bundle.confluence_opposition_score_0_100
+            - order_flow.opposition_points
+        ),
+        family_contributions=previous_families,
+        event_risk_state=issuance.fact_bundle.event_context_state,
+        trigger_state=None,
+        capital_reference_identities=(),
+        outcome_state=None,
+    )
+    previous_state = build_story_state(previous_observation)
+
+    current_observation = build_story_observation(
+        issuance.message_input,
+        issuance.fact_bundle,
+        previous_state_identity=previous_state.state_identity,
+    )
+    current_state = build_story_state(
+        current_observation,
+        previous_state=previous_state,
+    )
+    change = build_change_set(
+        current_state,
+        previous_state=previous_state,
+    )
+
+    order_flow_change = next(
+        item
+        for item in change.family_changes
+        if item.family is ConfluenceFamily.ORDER_FLOW
+    )
+    assert order_flow_change.previous_state == MetaEvidenceState.NO_EVIDENCE.value
+    assert order_flow_change.current_state == MetaEvidenceState.OBSERVED.value
+
+    view = compose_stream_analytical_view(
+        build_stream_analytical_policy(),
+        issuance.fact_bundle,
+        current_state,
+        change,
+        message=issuance.message_input,
+    )
+    plan = build_stream_narrative_plan(
+        view,
+        issuance.fact_bundle,
+        change,
+    )
+    narrative = render_stream_narrative(
+        plan,
+        view,
+        issuance.fact_bundle,
+        change,
+    )
+
+    assert "missing_confirmation_arrived" in plan.story_awareness_codes
+    assert "Önce eksik olan teyitlerden biri geldi" in narrative.text.collapsed_text
+    assert "Emir akışı" in narrative.text.collapsed_text
+
+    root_observation = build_story_observation(
+        issuance.message_input,
+        issuance.fact_bundle,
+    )
+    root_state = build_story_state(root_observation)
+    root_change = build_change_set(root_state)
+    root_view = compose_stream_analytical_view(
+        build_stream_analytical_policy(),
+        issuance.fact_bundle,
+        root_state,
+        root_change,
+        message=issuance.message_input,
+    )
+    root_plan = build_stream_narrative_plan(
+        root_view,
+        issuance.fact_bundle,
+        root_change,
+    )
+    root_narrative = render_stream_narrative(
+        root_plan,
+        root_view,
+        issuance.fact_bundle,
+        root_change,
+    )
+    assert "missing_confirmation_arrived" not in root_plan.story_awareness_codes
+    assert "Önce eksik olan teyitlerden biri geldi" not in (
+        root_narrative.text.collapsed_text
+    )
+
+
 def test_stream_narrative_story_outcome_references_previous_expectation(tmp_path) -> None:
     (
         path,
