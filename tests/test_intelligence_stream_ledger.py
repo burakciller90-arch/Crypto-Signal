@@ -10,7 +10,10 @@ from crypto_signal.forecast_stream import (
     R20_FORECAST_ENGINE_VERSION,
     R20_FORECAST_SCHEMA_VERSION,
     R20_PROBABILITY_NOT_CALIBRATED,
+    R20_RESOLUTION_SCHEMA_VERSION,
     ForecastAuthority,
+    ForecastResolution,
+    ForecastResolutionState,
     ForecastTriggerKind,
     ImmutableForecast,
 )
@@ -25,6 +28,7 @@ from crypto_signal.intelligence.confluence_matrix_v2 import (
 from crypto_signal.intelligence.event_risk_circuit_breaker import CircuitBreakerState
 from crypto_signal.intelligence.meta_intelligence import MetaDirection, MetaEvidenceState
 from crypto_signal.ledger.serialization import canonical_sha256
+from crypto_signal.outcomes.models import EvidenceClass, OutcomeState
 from crypto_signal.product.decision_proof import (
     ProofEvidenceAvailability,
     ProofEvidenceDomain,
@@ -38,8 +42,20 @@ from crypto_signal.product.intelligence_stream_ledger import (
     StreamLedgerConflictError,
     StreamLedgerWriteDisposition,
 )
+from crypto_signal.product.intelligence_stream_message_ledger import (
+    IntelligenceStreamMessageLedger,
+    StreamMessageLedgerWriteDisposition,
+)
+from crypto_signal.product.intelligence_stream_messages import (
+    StreamMessageRelationKind,
+    build_resolution_relation,
+    build_stream_fact_bundle,
+    build_stream_message_input,
+)
 from crypto_signal.product.intelligence_stream_models import (
+    StreamCategory,
     build_forecast_issued_source_event,
+    build_forecast_resolved_source_event,
     build_stream_activation_boundary,
     build_stream_decision_context,
 )
@@ -277,6 +293,58 @@ def _bundle(*, as_of_ms: int, issued_at_ms: int, seed: str):
     return confluence, forecast, context, old_feed_event
 
 
+def _full_bundle(*, as_of_ms: int, issued_at_ms: int, seed: str):
+    confluence = _confluence(as_of_ms=as_of_ms, seed=seed)
+    assert confluence.resolution is ConfluenceMatrixResolution.MEASURED
+    forecast = _forecast(
+        confluence=confluence,
+        as_of_ms=as_of_ms,
+        issued_at_ms=issued_at_ms,
+        seed=seed,
+    )
+    proof = _proof(forecast, as_of_ms=as_of_ms, seed=seed)
+    old_feed_event = build_live_intelligence_feed_event(proof, forecast)
+    context = build_stream_decision_context(forecast, proof, confluence)
+    return confluence, forecast, proof, context, old_feed_event
+
+
+def _resolution(
+    forecast: ImmutableForecast,
+    *,
+    evaluated_at_ms: int,
+    seed: str,
+) -> ForecastResolution:
+    reasons = ("source_outcome_success_tp1",)
+    payload = {
+        "engine_version": R20_FORECAST_ENGINE_VERSION,
+        "evaluated_at_ms": evaluated_at_ms,
+        "evidence_class": EvidenceClass.LIVE_UNTOUCHED_FORWARD,
+        "forecast_identity": forecast.forecast_identity,
+        "original_forecast_unchanged": True,
+        "production_authority": False,
+        "real_capital": 0,
+        "reason_codes": reasons,
+        "schema_version": R20_RESOLUTION_SCHEMA_VERSION,
+        "signal_freeze_identity": forecast.signal_freeze_identity,
+        "source_outcome_identity": _sha(f"{seed}-outcome"),
+        "source_outcome_state": OutcomeState.SUCCESS_TP1,
+        "state": ForecastResolutionState.HIT_TARGET,
+    }
+    return ForecastResolution(
+        resolution_identity=canonical_sha256(payload),
+        schema_version=R20_RESOLUTION_SCHEMA_VERSION,
+        engine_version=R20_FORECAST_ENGINE_VERSION,
+        forecast_identity=forecast.forecast_identity,
+        signal_freeze_identity=forecast.signal_freeze_identity,
+        source_outcome_identity=_sha(f"{seed}-outcome"),
+        evidence_class=EvidenceClass.LIVE_UNTOUCHED_FORWARD,
+        evaluated_at_ms=evaluated_at_ms,
+        state=ForecastResolutionState.HIT_TARGET,
+        source_outcome_state=OutcomeState.SUCCESS_TP1,
+        reason_codes=reasons,
+    )
+
+
 def test_stream_ledger_persists_full_five_family_breakdown(tmp_path) -> None:
     _, forecast, context, old_feed_event = _bundle(
         as_of_ms=1_000_000,
@@ -415,6 +483,229 @@ def test_stream_sqlite_rows_are_immutable(tmp_path) -> None:
 def test_query_only_stream_reads_never_initialize_missing_database(tmp_path) -> None:
     path = tmp_path / "missing-stream.sqlite3"
     ledger = IntelligenceStreamLedger(path)
+
+    with pytest.raises(FileNotFoundError):
+        ledger.read_status()
+    assert not path.exists()
+
+
+
+def test_stream_message_projection_is_deterministic_and_append_only(tmp_path) -> None:
+    _, forecast, proof, context, old_feed_event = _full_bundle(
+        as_of_ms=2_000_000,
+        issued_at_ms=2_000_100,
+        seed="message-issuance",
+    )
+    activation = build_stream_activation_boundary(activated_at_ms=2_000_000)
+    source_event = build_forecast_issued_source_event(
+        activation,
+        context,
+        old_feed_event,
+    )
+    path = tmp_path / "stream-message.sqlite3"
+    source_ledger = IntelligenceStreamLedger(path)
+    source_ledger.append_activation(activation)
+    source_ledger.append_issuance_bundle(context, source_event)
+
+    first_fact = build_stream_fact_bundle(
+        source_event,
+        context,
+        forecast,
+        proof,
+    )
+    second_fact = build_stream_fact_bundle(
+        source_event,
+        context,
+        forecast,
+        proof,
+    )
+    assert first_fact == second_fact
+
+    first_message = build_stream_message_input(source_event, first_fact)
+    second_message = build_stream_message_input(source_event, second_fact)
+    assert first_message == second_message
+    assert first_message.ready_for_analysis is True
+    assert first_message.ready_for_publication is False
+    assert first_message.analytical_view_version is None
+    assert first_message.narrative_schema_version is None
+    assert first_message.renderer_version is None
+    assert first_message.category is StreamCategory.DECISION
+    assert first_message.supersedes_message_identity is None
+
+    message_ledger = IntelligenceStreamMessageLedger(path)
+    assert (
+        message_ledger.append_message_bundle(first_fact, first_message)
+        is StreamMessageLedgerWriteDisposition.INSERTED
+    )
+    assert (
+        message_ledger.append_message_bundle(first_fact, first_message)
+        is StreamMessageLedgerWriteDisposition.UNCHANGED
+    )
+
+    stored = message_ledger.read_message_for_source_event(
+        source_event.source_event_identity
+    )
+    assert stored is not None
+    assert stored["message_identity"] == first_message.message_identity
+    assert stored["story_identity"] == first_message.story_identity
+    assert stored["ready_for_publication"] is False
+    assert stored["renderer_version"] is None
+    assert stored["search_metadata"]["asset"] == "BTC"
+    assert stored["search_metadata"]["symbol"] == "BTCUSDT"
+    assert "frozen_chart" in stored["search_metadata"]["evidence_domains"]
+
+    stored_fact = message_ledger.read_fact_bundle(first_fact.fact_bundle_identity)
+    assert stored_fact is not None
+    assert stored_fact["confluence_support_score_0_100"] == "82.00"
+    assert len(stored_fact["family_contributions"]) == 5
+
+    status = message_ledger.read_status()
+    assert status.fact_bundle_count == 1
+    assert status.message_input_count == 1
+    assert status.story_count == 1
+    assert status.latest_event_at_ms == 2_000_100
+    assert status.real_capital == 0
+
+
+def test_stream_resolution_appends_to_same_story_without_rewriting_issuance(
+    tmp_path,
+) -> None:
+    _, forecast, proof, context, issuance_feed_event = _full_bundle(
+        as_of_ms=3_000_000,
+        issued_at_ms=3_000_100,
+        seed="message-story",
+    )
+    activation = build_stream_activation_boundary(activated_at_ms=3_000_000)
+    issuance_source = build_forecast_issued_source_event(
+        activation,
+        context,
+        issuance_feed_event,
+    )
+    path = tmp_path / "stream-story.sqlite3"
+    source_ledger = IntelligenceStreamLedger(path)
+    source_ledger.append_activation(activation)
+    source_ledger.append_issuance_bundle(context, issuance_source)
+
+    issuance_fact = build_stream_fact_bundle(
+        issuance_source,
+        context,
+        forecast,
+        proof,
+    )
+    issuance_message = build_stream_message_input(
+        issuance_source,
+        issuance_fact,
+    )
+    message_ledger = IntelligenceStreamMessageLedger(path)
+    message_ledger.append_message_bundle(issuance_fact, issuance_message)
+
+    resolution = _resolution(
+        forecast,
+        evaluated_at_ms=3_400_000,
+        seed="message-story",
+    )
+    resolution_feed_event = build_live_intelligence_feed_event(
+        proof,
+        forecast,
+        resolution=resolution,
+    )
+    resolution_source = build_forecast_resolved_source_event(
+        activation,
+        context,
+        resolution_feed_event,
+        resolution,
+    )
+    assert (
+        source_ledger.append_source_event(resolution_source)
+        is StreamLedgerWriteDisposition.INSERTED
+    )
+    assert (
+        source_ledger.append_source_event(resolution_source)
+        is StreamLedgerWriteDisposition.UNCHANGED
+    )
+
+    resolution_fact = build_stream_fact_bundle(
+        resolution_source,
+        context,
+        forecast,
+        proof,
+        resolution=resolution,
+    )
+    relation = build_resolution_relation(issuance_message)
+    resolution_message = build_stream_message_input(
+        resolution_source,
+        resolution_fact,
+        relations=(relation,),
+    )
+
+    assert resolution_message.story_identity == issuance_message.story_identity
+    assert resolution_message.category is StreamCategory.OUTCOME
+    assert resolution_message.supersedes_message_identity is None
+    assert len(resolution_message.relations) == 1
+    assert resolution_message.relations[0].kind is StreamMessageRelationKind.RESOLVES
+    assert (
+        resolution_message.relations[0].target_message_identity
+        == issuance_message.message_identity
+    )
+
+    message_ledger.append_message_bundle(resolution_fact, resolution_message)
+    story = message_ledger.read_story(issuance_message.story_identity)
+    assert len(story) == 2
+    assert story[0]["message_identity"] == issuance_message.message_identity
+    assert story[1]["message_identity"] == resolution_message.message_identity
+    assert story[0]["supersedes_message_identity"] is None
+    assert story[1]["supersedes_message_identity"] is None
+
+    original = message_ledger.read_message_for_source_event(
+        issuance_source.source_event_identity
+    )
+    assert original is not None
+    assert original["message_identity"] == issuance_message.message_identity
+
+    resolved_fact = message_ledger.read_fact_bundle(
+        resolution_fact.fact_bundle_identity
+    )
+    assert resolved_fact is not None
+    assert resolved_fact["resolution_state"] == "hit_target"
+    assert resolved_fact["source_outcome_state"] == "success_tp1"
+    assert resolved_fact["decision_state"] == proof.signal_state
+
+
+def test_stream_message_ledger_rows_are_physically_immutable(tmp_path) -> None:
+    _, forecast, proof, context, feed_event = _full_bundle(
+        as_of_ms=4_000_000,
+        issued_at_ms=4_000_100,
+        seed="message-immutable",
+    )
+    activation = build_stream_activation_boundary(activated_at_ms=4_000_000)
+    source_event = build_forecast_issued_source_event(
+        activation,
+        context,
+        feed_event,
+    )
+    path = tmp_path / "stream-message-immutable.sqlite3"
+    source_ledger = IntelligenceStreamLedger(path)
+    source_ledger.append_activation(activation)
+    source_ledger.append_issuance_bundle(context, source_event)
+    fact = build_stream_fact_bundle(source_event, context, forecast, proof)
+    message = build_stream_message_input(source_event, fact)
+    IntelligenceStreamMessageLedger(path).append_message_bundle(fact, message)
+
+    with (
+        sqlite3.connect(path) as connection,
+        pytest.raises(
+            sqlite3.DatabaseError,
+            match="immutable intelligence stream message ledger",
+        ),
+    ):
+        connection.execute(
+            "UPDATE stream_message_inputs SET subtype = 'tampered'"
+        )
+
+
+def test_query_only_message_reads_never_initialize_missing_database(tmp_path) -> None:
+    path = tmp_path / "missing-stream-message.sqlite3"
+    ledger = IntelligenceStreamMessageLedger(path)
 
     with pytest.raises(FileNotFoundError):
         ledger.read_status()
