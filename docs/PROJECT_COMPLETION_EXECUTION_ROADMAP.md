@@ -1,8 +1,12 @@
 # Crypto Signal — Project Completion Execution Roadmap
 
-Status: authoritative execution roadmap for completing the Full Version while preserving existing accepted evidence.
+Status: **HISTORICAL EXECUTION RECORD — superseded for current planning; accepted evidence remains preserved.**
 
 Date established: 2026-09-21
+
+> **CURRENT-AUTHORITY NOTICE — 2026-09-25**
+>
+> This file records an earlier completion sequence and accepted evidence. It is no longer the current execution authority. Start with `READ_FIRST_CRYPTO_SIGNAL.md`, `CURRENT_STATUS.md`, the newest Chronicle entry and `docs/V1_1_LOCKED_MASTER_ROADMAP_20260922.md`. For frontend work, use the canonical Crypto Signal Frontend Master Roadmap, M0 Constitution and active M1 Capability/Gap Ledger. Do not replay old "current baseline" or milestone instructions from this document without state reconciliation.
 
 Hard invariants:
 - REAL_CAPITAL=0.
