@@ -3,6 +3,9 @@
 const API = Object.freeze({
   messages: "/api/stream/messages",
   live: "/api/stream/live",
+  detail: (identity) => `/api/stream/messages/${encodeURIComponent(identity)}/detail`,
+  decisionProofForForecast: (identity) =>
+    `/api/decision-proof/forecast/${encodeURIComponent(identity)}`,
 });
 
 const ui = {
@@ -44,6 +47,9 @@ const state = {
   eventSource: null,
   pollingTimer: null,
   loadingHistory: false,
+  expanded: new Set(),
+  details: new Map(),
+  detailRequests: new Set(),
   fixture: new URLSearchParams(window.location.search).get("fixture") || "",
   filters: {
     text: "",
@@ -146,14 +152,364 @@ function messageState(record) {
   return "ANALİZ";
 }
 
+function displayNumber(value, fallback = "—") {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return fallback;
+  return new Intl.NumberFormat("tr-TR", { maximumFractionDigits: 2 }).format(n);
+}
+
+function familyLabel(value) {
+  const labels = {
+    geometry: "Geometri",
+    liquidity: "Likidite",
+    order_flow: "Emir akışı",
+    derivatives: "Türevler",
+    onchain: "On-chain",
+  };
+  const key = text(value, "").toLowerCase();
+  return labels[key] || text(value, "Kanıt");
+}
+
+function preserveMessageAnchor(item, mutate) {
+  if (!ui.viewport) {
+    mutate();
+    return;
+  }
+  const beforeTop = item.getBoundingClientRect().top;
+  const beforeScroll = ui.viewport.scrollTop;
+  mutate();
+  window.requestAnimationFrame(() => {
+    if (!ui.viewport || !item.isConnected) return;
+    const afterTop = item.getBoundingClientRect().top;
+    ui.viewport.scrollTop = beforeScroll + (afterTop - beforeTop);
+  });
+}
+
+function depthSection(label, body, { className = "", content = null } = {}) {
+  const section = document.createElement("section");
+  section.className = `depth-section ${className}`.trim();
+
+  const heading = document.createElement("div");
+  heading.className = "depth-heading";
+  const eyebrow = document.createElement("span");
+  eyebrow.textContent = label;
+  heading.append(eyebrow);
+  section.append(heading);
+
+  if (content) {
+    section.append(content);
+  } else {
+    const paragraph = document.createElement("p");
+    paragraph.textContent = text(body, "Bu bölüm için ek anlatım yok.");
+    section.append(paragraph);
+  }
+  return section;
+}
+
+function evidenceFamilyGrid(fact) {
+  const grid = document.createElement("div");
+  grid.className = "family-grid";
+  const families = Array.isArray(fact?.family_contributions)
+    ? fact.family_contributions
+    : [];
+  for (const family of families) {
+    const card = document.createElement("div");
+    card.className = "family-card";
+    const label = document.createElement("span");
+    label.textContent = familyLabel(family?.family);
+    const score = document.createElement("strong");
+    score.textContent = `+${displayNumber(family?.support_points, "0")} / -${displayNumber(
+      family?.opposition_points,
+      "0"
+    )}`;
+    const note = document.createElement("small");
+    const quality = Number(family?.evidence_quality_0_1);
+    note.textContent = Number.isFinite(quality)
+      ? `kanıt kalitesi %${Math.round(quality * 100)}`
+      : text(family?.state, "ölçülmedi");
+    card.append(label, score, note);
+    grid.append(card);
+  }
+  if (!families.length) {
+    const note = document.createElement("p");
+    note.className = "depth-muted";
+    note.textContent = "Beş-aile katkısı bu kayıtta mevcut değil.";
+    grid.append(note);
+  }
+  return grid;
+}
+
+function geometryGrid(fact) {
+  const grid = document.createElement("div");
+  grid.className = "geometry-grid";
+  const rows = [
+    ["Tetik bölgesi", fact?.trigger_zone?.low, fact?.trigger_zone?.high],
+    ["Hedef bölgesi", fact?.target_zone?.low, fact?.target_zone?.high],
+    ["Geçersizleşme", fact?.invalidation_price, null],
+  ];
+  for (const [labelText, low, high] of rows) {
+    const cell = document.createElement("div");
+    const label = document.createElement("span");
+    label.textContent = labelText;
+    const value = document.createElement("strong");
+    value.textContent =
+      high === null
+        ? displayNumber(low)
+        : `${displayNumber(low)} – ${displayNumber(high)}`;
+    cell.append(label, value);
+    grid.append(cell);
+  }
+  return grid;
+}
+
+function proofPanel(fact) {
+  const wrap = document.createElement("div");
+  wrap.className = "proof-panel";
+  const proofIdentity = text(fact?.proof_identity, "");
+  const forecastIdentity = text(fact?.forecast_identity, "");
+
+  const identity = document.createElement("code");
+  identity.textContent = proofIdentity
+    ? `${proofIdentity.slice(0, 12)}…${proofIdentity.slice(-8)}`
+    : "kanıt kimliği yok";
+
+  const action = document.createElement("button");
+  action.type = "button";
+  action.className = "proof-action";
+  action.textContent = "Değiştirilemez kanıtı doğrula";
+  action.disabled = !forecastIdentity;
+
+  const result = document.createElement("span");
+  result.className = "proof-result";
+  result.textContent = "S10 görsel proof değil; exact persisted karar kanıtı kontrolü.";
+
+  action.addEventListener("click", async () => {
+    if (!forecastIdentity) return;
+    action.disabled = true;
+    result.textContent = "Kanıt okunuyor…";
+    try {
+      const payload = await fetchJson(API.decisionProofForForecast(forecastIdentity));
+      if (payload.status === "ready") {
+        result.textContent = "Persisted karar kanıtı doğrulandı.";
+        result.dataset.state = "ready";
+      } else if (payload.status === "empty") {
+        result.textContent = "Bu forecast için persisted karar kanıtı bulunamadı.";
+        result.dataset.state = "muted";
+      } else {
+        result.textContent = "Decision Evidence runtime şu anda bağlı değil.";
+        result.dataset.state = "muted";
+      }
+    } catch {
+      result.textContent = "Kanıt doğrulama isteği başarısız; veri uydurulmadı.";
+      result.dataset.state = "risk";
+    } finally {
+      action.disabled = false;
+    }
+  });
+
+  wrap.append(identity, action, result);
+  return wrap;
+}
+
+function buildExpandedContent(record, detail) {
+  const textBundle =
+    record && typeof record.text === "object" && record.text ? record.text : {};
+  const fact = detail && typeof detail.fact_bundle === "object"
+    ? detail.fact_bundle
+    : {};
+  const analytical = detail && typeof detail.analytical_view === "object"
+    ? detail.analytical_view
+    : {};
+
+  const grid = document.createElement("div");
+  grid.className = "message-depth-grid";
+
+  grid.append(
+    depthSection("SIMPLE", textBundle.simple_text, { className: "depth-simple depth-wide" }),
+    depthSection("PRO", textBundle.technical_text, { className: "depth-pro" })
+  );
+
+  const intelligence = document.createElement("div");
+  intelligence.className = "depth-composite";
+  const intelligenceCopy = document.createElement("p");
+  intelligenceCopy.textContent = text(
+    textBundle.intelligence_text,
+    "Structured intelligence anlatımı mevcut değil."
+  );
+  intelligence.append(intelligenceCopy, evidenceFamilyGrid(fact));
+  grid.append(
+    depthSection("INTELLIGENCE", "", {
+      className: "depth-intelligence depth-wide",
+      content: intelligence,
+    })
+  );
+
+  const decision = document.createElement("div");
+  decision.className = "depth-composite";
+  const decisionCopy = document.createElement("p");
+  decisionCopy.textContent = text(
+    textBundle.decision_text,
+    "Karar anlatımı mevcut değil."
+  );
+  const conditions = document.createElement("div");
+  conditions.className = "condition-row";
+  const next = document.createElement("span");
+  next.textContent = `Sonraki koşul · ${text(analytical?.next_condition?.state, "ölçülmedi")}`;
+  const invalidation = document.createElement("span");
+  invalidation.textContent = `Geçersizleşme · ${displayNumber(
+    analytical?.invalidation_condition?.price ?? fact?.invalidation_price
+  )}`;
+  conditions.append(next, invalidation);
+  decision.append(decisionCopy, conditions);
+  grid.append(
+    depthSection("DECISION", "", {
+      className: "depth-decision",
+      content: decision,
+    }),
+    depthSection("TRADE GEOMETRY", "", {
+      className: "depth-geometry",
+      content: geometryGrid(fact),
+    })
+  );
+
+  const capital = document.createElement("div");
+  capital.className = "depth-composite";
+  const capitalCopy = document.createElement("p");
+  capitalCopy.textContent = text(
+    textBundle.capital_text,
+    "Bu mesajda sermaye anlatımı mevcut değil."
+  );
+  const capitalState = document.createElement("span");
+  capitalState.className = "capital-state";
+  capitalState.textContent = `Sanal sermaye sonucu · ${text(
+    analytical?.capital_consequence?.state,
+    "not_bound"
+  ).replaceAll("_", " ")} · REAL_CAPITAL=0`;
+  capital.append(capitalCopy, capitalState);
+  grid.append(
+    depthSection("CAPITAL", "", {
+      className: "depth-capital",
+      content: capital,
+    }),
+    depthSection("PROOF", "", {
+      className: "depth-proof",
+      content: proofPanel(fact),
+    })
+  );
+
+  return grid;
+}
+
+function detailPlaceholder(label) {
+  const box = document.createElement("div");
+  box.className = "message-depth-placeholder";
+  box.textContent = label;
+  return box;
+}
+
+function renderExpandedPanel(item, record, detail) {
+  const panel = item.querySelector(".message-detail");
+  if (!(panel instanceof HTMLElement)) return;
+  preserveMessageAnchor(item, () => {
+    panel.replaceChildren(buildExpandedContent(record, detail));
+    panel.hidden = false;
+  });
+}
+
+async function loadMessageDetail(item, record) {
+  const identity = text(record?.narrative_identity, "");
+  if (!identity || state.detailRequests.has(identity)) return;
+
+  if (record.__fixture_detail && typeof record.__fixture_detail === "object") {
+    state.details.set(identity, record.__fixture_detail);
+    renderExpandedPanel(item, record, record.__fixture_detail);
+    return;
+  }
+
+  state.detailRequests.add(identity);
+  try {
+    const payload = await fetchJson(API.detail(identity));
+    if (payload.status === "ready" && payload.detail) {
+      state.details.set(identity, payload.detail);
+      if (state.expanded.has(identity)) {
+        renderExpandedPanel(item, record, payload.detail);
+      }
+    } else {
+      const panel = item.querySelector(".message-detail");
+      if (panel instanceof HTMLElement && state.expanded.has(identity)) {
+        preserveMessageAnchor(item, () => {
+          panel.replaceChildren(
+            detailPlaceholder(
+              payload.status === "unavailable"
+                ? "Structured detail runtime şu anda bağlı değil."
+                : "Bu mesaj için structured detail bulunamadı."
+            )
+          );
+        });
+      }
+    }
+  } catch {
+    const panel = item.querySelector(".message-detail");
+    if (panel instanceof HTMLElement && state.expanded.has(identity)) {
+      preserveMessageAnchor(item, () => {
+        panel.replaceChildren(
+          detailPlaceholder("Structured detail okunamadı; içerik uydurulmadı.")
+        );
+      });
+    }
+  } finally {
+    state.detailRequests.delete(identity);
+  }
+}
+
+function toggleMessageExpansion(item, record) {
+  const identity = text(record?.narrative_identity, "");
+  if (!identity) return;
+  const summary = item.querySelector(".message-summary");
+  const panel = item.querySelector(".message-detail");
+  if (!(summary instanceof HTMLButtonElement) || !(panel instanceof HTMLElement)) return;
+
+  const willOpen = !state.expanded.has(identity);
+  preserveMessageAnchor(item, () => {
+    if (willOpen) {
+      state.expanded.add(identity);
+      item.classList.add("is-expanded");
+      summary.setAttribute("aria-expanded", "true");
+      const cue = summary.querySelector(".message-expand-cue");
+      if (cue) cue.textContent = "Detayı kapat ↑";
+      panel.hidden = false;
+      const cached = state.details.get(identity);
+      panel.replaceChildren(
+        cached
+          ? buildExpandedContent(record, cached)
+          : detailPlaceholder("Exact persisted message depth okunuyor…")
+      );
+    } else {
+      state.expanded.delete(identity);
+      item.classList.remove("is-expanded");
+      summary.setAttribute("aria-expanded", "false");
+      const cue = summary.querySelector(".message-expand-cue");
+      if (cue) cue.textContent = "Detayı aç ↓";
+      panel.hidden = true;
+    }
+  });
+
+  if (willOpen && !state.details.has(identity)) {
+    void loadMessageDetail(item, record);
+  }
+}
+
 function renderMessage(record, { isNew = false } = {}) {
   const item = document.createElement("li");
   item.className = "message";
   if (isNew) item.classList.add("is-new");
-  item.dataset.identity = text(record.narrative_identity, "");
+  const identity = text(record.narrative_identity, "");
+  item.dataset.identity = identity;
 
-  const button = document.createElement("div");
-  button.className = "message-button";
+  const summary = document.createElement("button");
+  summary.type = "button";
+  summary.className = "message-summary";
+  summary.setAttribute("aria-expanded", String(state.expanded.has(identity)));
 
   const meta = document.createElement("div");
   meta.className = "message-meta";
@@ -167,28 +523,43 @@ function renderMessage(record, { isNew = false } = {}) {
   const stateBadge = document.createElement("span");
   stateBadge.className = "message-state";
   stateBadge.textContent = messageState(record);
-
   meta.append(time, symbol, timeframe, stateBadge);
 
   const copy = document.createElement("p");
   copy.className = "message-copy";
   copy.textContent = messageText(record);
 
+  const footer = document.createElement("div");
+  footer.className = "message-summary-foot";
   const chips = document.createElement("div");
   chips.className = "message-chips";
   chips.append(buildChip(shortSource(record.source_kind)));
-  if (record.original_text_preserved === true) {
-    chips.append(buildChip("ORİJİNAL METİN"));
-  }
-  if (record.real_capital === 0) {
-    chips.append(buildChip("GERÇEK PARA KAPALI", true));
+  if (record.original_text_preserved === true) chips.append(buildChip("ORİJİNAL METİN"));
+  if (record.real_capital === 0) chips.append(buildChip("GERÇEK PARA KAPALI", true));
+  const cue = document.createElement("span");
+  cue.className = "message-expand-cue";
+  cue.textContent = state.expanded.has(identity) ? "Detayı kapat ↑" : "Detayı aç ↓";
+  footer.append(chips, cue);
+  summary.append(meta, copy, footer);
+
+  const detailPanel = document.createElement("div");
+  detailPanel.className = "message-detail";
+  detailPanel.hidden = !state.expanded.has(identity);
+  const cached = state.details.get(identity);
+  if (state.expanded.has(identity)) {
+    detailPanel.append(
+      cached
+        ? buildExpandedContent(record, cached)
+        : detailPlaceholder("Exact persisted message depth okunuyor…")
+    );
+    item.classList.add("is-expanded");
   }
 
-  button.append(meta, copy, chips);
-  item.append(button);
+  summary.addEventListener("click", () => toggleMessageExpansion(item, record));
+  item.append(summary, detailPanel);
+  if (state.expanded.has(identity) && !cached) void loadMessageDetail(item, record);
   return item;
 }
-
 function renderAll() {
   if (!ui.list || !ui.empty) return;
   ui.list.replaceChildren();
@@ -225,6 +596,9 @@ function resetMessages() {
   state.newestCursor = null;
   state.hasOlder = false;
   state.unread = 0;
+  state.expanded = new Set();
+  state.details = new Map();
+  state.detailRequests = new Set();
   renderAll();
 }
 
@@ -434,8 +808,22 @@ function fixtureIdentity(index) {
 }
 
 function fixtureRecord(index, symbol, timeframe, stateLabel, copy, minutesAgo, source = "deterministic") {
+  const narrativeIdentity = fixtureIdentity(index + 1);
+  const forecastIdentity = fixtureIdentity(700 + index);
+  const proofIdentity = fixtureIdentity(800 + index);
+  const familyNames = ["geometry", "liquidity", "order_flow", "derivatives", "onchain"];
+  const familyContributions = familyNames.map((family, offset) => ({
+    family,
+    state: "observed",
+    direction: offset === 3 ? "mixed" : "support",
+    support_points: 74 - offset * 8,
+    opposition_points: 8 + offset * 4,
+    evidence_quality_0_1: 0.94 - offset * 0.07,
+    freshness_0_1: 0.97 - offset * 0.06,
+    material_conflict_count: offset === 3 ? 1 : 0,
+  }));
   return {
-    narrative_identity: fixtureIdentity(index + 1),
+    narrative_identity: narrativeIdentity,
     event_at_ms: Date.now() - minutesAgo * 60_000,
     symbol,
     timeframe,
@@ -443,7 +831,42 @@ function fixtureRecord(index, symbol, timeframe, stateLabel, copy, minutesAgo, s
     original_text_preserved: true,
     real_capital: 0,
     __fixture_state: stateLabel,
-    text: { collapsed_text: copy },
+    text: {
+      collapsed_text: copy,
+      simple_text: `${copy} Kısaca sistem yeni kanıt gelene kadar görüşünü kontrollü tutuyor.`,
+      technical_text: "Trend yapısı, likidite davranışı ve emir akışı birlikte değerlendirildi; teyit eşiği henüz tam kapanmadı.",
+      intelligence_text: "Beş-aile kanıtı aynı yönde değil. Geometri ve likidite destek verirken türev tarafı ana çelişkiyi taşıyor.",
+      decision_text: "Yeni karar için tetik bölgesinin korunması ve emir akışının teyidi gerekiyor. Geçersizleşme seviyesi aşılırsa görüş bırakılır.",
+      capital_text: "Bu mesaj yeni sanal sermaye hareketi üretmedi. Üç-vault davranışı S11’de canonical runtime ile tamamlanacak.",
+    },
+    __fixture_detail: {
+      analytical_view: {
+        stance: {
+          effective_stance: stateLabel.toLowerCase(),
+          strength: "moderate",
+          support_score_0_100: 74,
+          opposition_score_0_100: 19,
+          net_support_points: 55,
+        },
+        next_condition: { state: "entry_zone_watch" },
+        invalidation_condition: { price: 60750 },
+        capital_consequence: { state: "not_bound" },
+      },
+      fact_bundle: {
+        forecast_identity: forecastIdentity,
+        proof_identity: proofIdentity,
+        confluence_support_score_0_100: 74,
+        confluence_opposition_score_0_100: 19,
+        family_contributions: familyContributions,
+        trigger_zone: { low: 62000, high: 62500 },
+        target_zone: { low: 65000, high: 66000 },
+        invalidation_price: 60750,
+      },
+      message_input: { importance: "important", category: "decision" },
+      read_only: true,
+      production_authority: false,
+      real_capital: 0,
+    },
   };
 }
 
@@ -516,6 +939,14 @@ function applyFixture(name) {
       if (last) last.classList.add("is-new");
     }
   });
+
+  if (name === "expanded") {
+    window.requestAnimationFrame(() => {
+      const target = ui.list?.children?.[2];
+      const summary = target?.querySelector?.(".message-summary");
+      if (summary instanceof HTMLButtonElement) summary.click();
+    });
+  }
 
   if (name === "filters") {
     openDrawer(ui.discoveryDrawer);
