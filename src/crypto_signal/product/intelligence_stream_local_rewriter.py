@@ -7,6 +7,7 @@ from urllib.parse import urlsplit
 
 import httpx
 
+from crypto_signal.ledger.serialization import canonical_sha256
 from crypto_signal.product.intelligence_stream_narrative import (
     StreamNarrativeRewriteRequest,
     StreamNarrativeText,
@@ -32,8 +33,8 @@ class LocalNarrativeRewriteError(RuntimeError):
 
 @dataclass(frozen=True, slots=True)
 class LocalNarrativeRewriteConfig:
-    base_url: str = "http://127.0.0.1:8080/v1"
-    model: str = "local-model"
+    model: str
+    base_url: str = "http://127.0.0.1:11434/v1"
     timeout_seconds: float = 8.0
     temperature: float = 0.25
     max_tokens: int = 1400
@@ -51,6 +52,19 @@ class LocalNarrativeRewriteConfig:
             raise ValueError("local narrative max_tokens must be inside 128..4096")
         if self.version != LOCAL_NARRATIVE_REWRITER_VERSION:
             raise ValueError("unsupported local narrative rewriter version")
+
+    @property
+    def rewriter_identity(self) -> str:
+        return canonical_sha256(
+            {
+                "base_url": self.base_url,
+                "max_tokens": self.max_tokens,
+                "model": self.model,
+                "temperature": self.temperature,
+                "timeout_seconds": self.timeout_seconds,
+                "version": self.version,
+            }
+        )
 
     @property
     def chat_completions_url(self) -> str:
@@ -121,8 +135,18 @@ class OpenAICompatibleLocalNarrativeRewriter:
         *,
         transport: LocalNarrativeChatTransport | None = None,
     ) -> None:
-        self.config = config or LocalNarrativeRewriteConfig()
+        if config is None:
+            raise ValueError("local narrative rewriter requires explicit model config")
+        self.config = config
         self.transport = transport or HttpxLocalNarrativeChatTransport()
+
+    @property
+    def rewriter_identity(self) -> str:
+        return self.config.rewriter_identity
+
+    @property
+    def rewriter_version(self) -> str:
+        return self.config.version
 
     def rewrite(self, request: StreamNarrativeRewriteRequest) -> StreamNarrativeText:
         payload = _chat_payload(self.config, request)
@@ -154,10 +178,13 @@ def _chat_payload(
     system = (
         "Sen Crypto Signal'in yerel Türkçe editörüsün. Yeni piyasa analizi yapma. "
         "Yeni rakam, fiyat, yüzde, hedef, seviye, neden, kanıt veya kesinlik ekleme. "
-        "Mevcut anlamı tersine çevirme. Yalnızca verilen altı metin alanını daha doğal, "
-        "sakin ve profesyonel trader Türkçesiyle yeniden ifade et. collapsed_text tek "
-        "paragraf ve kısa kalmalı. Alan adlarını değiştirme. Çıktı yalnızca ham JSON "
-        "nesnesi olmalı; markdown veya açıklama ekleme."
+        "Yeni teknik kavram, aktör, haber, piyasa nedeni veya kanıt türü icat etme. "
+        "Mevcut anlamı ve yönü tersine çevirme. Yalnız collapsed_text ve simple_text "
+        "alanlarını daha doğal, sakin ve profesyonel trader Türkçesiyle yeniden yaz. "
+        "technical_text, intelligence_text, decision_text ve capital_text alanlarını "
+        "tek karakter dahi değiştirmeden kopyala. collapsed_text tek paragraf ve kısa "
+        "kalmalı. Alan adlarını değiştirme. Çıktı yalnızca ham JSON nesnesi olmalı; "
+        "markdown veya açıklama ekleme."
     )
     user_payload = {
         "symbol": request.symbol,
@@ -182,7 +209,6 @@ def _chat_payload(
         "temperature": config.temperature,
         "max_tokens": config.max_tokens,
         "stream": False,
-        "response_format": {"type": "json_object"},
     }
 
 
