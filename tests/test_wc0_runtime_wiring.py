@@ -20,6 +20,7 @@ def _args(ledger: Path, **overrides: Path | None) -> argparse.Namespace:
         "provider_divergence": None,
         "event_source_runtime": None,
         "wc2_cohort": None,
+        "stream_ledger": None,
     }
     values.update(overrides)
     return argparse.Namespace(**values)
@@ -66,6 +67,9 @@ def test_dashboard_derives_all_world_class_runtime_paths_from_live_ledger() -> N
         "wc2_cohort_path": (
             runtime / "wc2" / "wc2_untouched_forward.sqlite3"
         ),
+        "stream_ledger_path": (
+            runtime / "stream" / "intelligence_stream.sqlite3"
+        ),
     }
 
 
@@ -87,6 +91,7 @@ def test_dashboard_runtime_path_overrides_are_exact_and_not_rebased(
         "provider_divergence": tmp_path / "x" / "provider.sqlite3",
         "event_source_runtime": tmp_path / "x" / "event-source.sqlite3",
         "wc2_cohort": tmp_path / "x" / "wc2.sqlite3",
+        "stream_ledger": tmp_path / "x" / "stream.sqlite3",
     }
 
     paths = resolve_runtime_paths(_args(ledger, **explicit))
@@ -107,6 +112,7 @@ def test_dashboard_runtime_path_overrides_are_exact_and_not_rebased(
         "provider_divergence_path": explicit["provider_divergence"],
         "event_source_runtime_path": explicit["event_source_runtime"],
         "wc2_cohort_path": explicit["wc2_cohort"],
+        "stream_ledger_path": explicit["stream_ledger"],
     }
 
 
