@@ -1,5 +1,23 @@
 # PROJECT CHRONICLE
 
+## 2026-09-25 — GALACTECH V2 becomes the live Product surface after two fail-closed deployment defects are measured and fixed
+
+The frontend rebuild reached its intended product form in PR #1207 rather than by weakening backend truth. The new GALACTECH surface is Turkish-first, intelligence-feed-first and evidence-drilldown-first: live intelligence is presented as a timeline, forecast cards resolve only through exact persisted identities, Decision Proof remains read-only, and missing probability/performance/latency evidence is still shown as missing instead of being invented. The Product keeps REAL_CAPITAL=0 and has no exchange/order/credential authority.
+
+The final V2 frontend head `47f99f6198a4d9962b8787d9d444adea80b1784c` passed both WC0 and WC5 UID504 acceptance. WC0 run 36074112621 passed focused contracts, live read-only latency truth, full repository regression and Development non-mutation. WC5 run 36074112582 passed focused product contracts, a live read-only exact-cohort preview, full repository regression and Development non-mutation. PR #1207 merged as `36f631d5ee85a670e5ecc1bdb291173f6837e343`.
+
+Production deployment then exposed two operational defects that hosted/frontend tests could not substitute for. Issue #1208 successfully checked out the new code and brought health/Intelligence Center up, but the deployment gate still searched for the old `galactech-v1.1-polish` identity and English R25 heading, so the command failed closed and rolled Product back. PR #1209 moved those assertions to the V2/Turkish contract and changed dashboard restart to supervisor-managed.
+
+The next attempt, issue #1211, exposed a subtler process-identification defect. The dashboard PID scanner used `ps | awk -v needle=...run_dashboard.py`; the awk process itself contained that needle in its argv and could therefore be counted as a Product dashboard. The deploy again failed closed and rolled back. Read-only diagnostics proved the live runtime itself had stabilized to one real dashboard child of the SSD supervisor. PR #1215 replaced the scanner with exact anchored `pgrep` matching for the Product Python + `ops/run_dashboard.py` argv. Its exact-head GALACTECH Preview Lifecycle run 36075850254 and Runtime Supervisor Detection run 36075850297 both passed.
+
+Final issue #1216 / run 36075986903 / job 107887168347 then deployed exact main `d8843003f2a7fec663db124333ebf633c0f34dea`. Product moved from `15fa3dca...` to `d8843003...`. Supervisor 40756 retired old dashboard PID 43226 and produced one accepted replacement PID 46826. Intelligence Center, GALACTECH root/alias and R25 Operational Truth passed live. The full R11 runtime audit passed, including SQLite backup/restore acceptance; continuity stayed paused with zero active leases and zero wake queue; and `PRODUCT_DEPLOY_PASS=YES`.
+
+Independent issue #1219 / run 36076149961 / job 107887678023 then reconfirmed Product HEAD `d8843003...`, health `status=ok`, `read_only=true` and `REAL_CAPITAL=0`.
+
+This closes the GALACTECH V2 deployment story mechanically. It does not close WC2 scientific/economic evidence, WC6 external venue evidence or WC5 human usability measurement. The interface is live; the system is still forbidden from turning missing evidence into a world-class/edge claim.
+
+
+
 
 ## 2026-09-25 — WC7 composes the canonical current frontier without upgrading missing evidence
 
