@@ -74,7 +74,30 @@ function familyContribution(fact, family) {
 function exactWhy(config, detail) {
   const fact = detail?.fact_bundle || {};
   const analytical = detail?.analytical_view || {};
-  if (config.family) {
+  if (kind === "geometry") {
+    content.append(
+      section(
+        "Trade geometry",
+        `Tetik ${number(fact?.trigger_zone?.low)}–${number(
+          fact?.trigger_zone?.high
+        )} · hedef ${number(fact?.target_zone?.low)}–${number(
+          fact?.target_zone?.high
+        )} · geçersizleşme ${number(fact?.invalidation_price)}`
+      )
+    );
+    const contribution = familyContribution(fact, "geometry");
+    if (contribution) {
+      content.append(
+        section(
+          "Geometry contribution",
+          `Destek +${number(contribution.support_points, "0")} / karşıt -${number(
+            contribution.opposition_points,
+            "0"
+          )} · ${text(contribution.state)}`
+        )
+      );
+    }
+  } else if (config.family) {
     const contribution = familyContribution(fact, config.family);
     if (!contribution) return "Bu mesajda bu aile için persisted katkı bulunmuyor.";
     return `Bu mesajda destek ${number(contribution.support_points, "0")}, karşıt ${number(
@@ -151,17 +174,6 @@ function renderCore(config, detail) {
     } else {
       content.append(section("Persisted aile katkısı", "Bu exact mesajda bu aile için katkı kaydı yok."));
     }
-  } else if (kind === "geometry") {
-    content.append(
-      section(
-        "Trade geometry",
-        `Tetik ${number(fact?.trigger_zone?.low)}–${number(
-          fact?.trigger_zone?.high
-        )} · hedef ${number(fact?.target_zone?.low)}–${number(
-          fact?.target_zone?.high
-        )} · geçersizleşme ${number(fact?.invalidation_price)}`
-      )
-    );
   } else if (kind === "decision") {
     content.append(
       section(
