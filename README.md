@@ -17,7 +17,8 @@ Current program facts recorded by the canonical state documents:
 - **S3 Story Engine and Change Detection is PASS**;
 - **S4 Analytical Composer is PASS**;
 - **S5 Narrative Engine is PASS**;
-- **S6 Real-time Stream Backend is ACTIVE**;
+- **S6 Real-time Stream Backend is PASS**;
+- **S7 One-Panel UI Shell is ACTIVE**;
 - the previous M0→M7 multi-screen frontend roadmap is historical/superseded;
 - WC2 frozen evidence accumulation remains active;
 - WC5 broad human <=10-second usability remains `NOT_MEASURED` until actually measured;
