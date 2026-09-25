@@ -244,7 +244,7 @@ def test_s11_stream_capital_decision_rows_are_physically_immutable(
         sqlite3.connect(stream_path) as connection,
         pytest.raises(
             sqlite3.DatabaseError,
-            match="immutable intelligence stream capital decision ledger",
+            match="immutable intelligence stream capital-decision ledger",
         ),
     ):
         connection.execute(
