@@ -13,6 +13,7 @@ from crypto_signal.paper.canonical_sizing_events import (
     CanonicalSizingEventLedger,
     build_canonical_sizing_event,
 )
+from crypto_signal.paper.epoch2_accounting import Epoch2CanonicalLedger
 from crypto_signal.paper.epochs import PaperVaultId
 from crypto_signal.product.intelligence_stream_capital_sizing import (
     IntelligenceStreamCapitalSizingLedger,
@@ -76,10 +77,7 @@ def test_s11_sizing_event_is_durable_before_any_fill(tmp_path: Path) -> None:
     assert stored["real_capital"] == 0
 
     # Sizing does not mutate R21 accounting or create an R22 fill.
-    assert state == __import__(
-        "crypto_signal.paper.epoch2_accounting",
-        fromlist=["Epoch2CanonicalLedger"],
-    ).Epoch2CanonicalLedger(epoch2_path).read_state()
+    assert state == Epoch2CanonicalLedger(epoch2_path).read_state()
 
 
 def test_s11_capital_sized_joins_main_stream_and_deep_link(tmp_path: Path) -> None:
