@@ -770,6 +770,23 @@ def test_stream_api_exposes_cursor_history_search_and_lookup(tmp_path) -> None:
         for item in filtered.json()["page"]["items"]
     ] == [identities["btc-flow"]]
 
+    state_filtered = client.get(
+        "/api/stream/messages",
+        params={"state": "watch"},
+    )
+    assert state_filtered.status_code == 200
+    assert identities["btc-flow"] in {
+        item["narrative_identity"]
+        for item in state_filtered.json()["page"]["items"]
+    }
+
+    vault_filtered = client.get(
+        "/api/stream/messages",
+        params={"vault": "CORE"},
+    )
+    assert vault_filtered.status_code == 200
+    assert vault_filtered.json()["page"]["items"] == []
+
     exact = client.get(f"/api/stream/messages/{identities['eth-outcome']}")
     assert exact.status_code == 200
     assert exact.json()["status"] == "ready"
