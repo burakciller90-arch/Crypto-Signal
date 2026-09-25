@@ -77,11 +77,13 @@ class StreamAnalyticalEvidenceSignal:
     def __post_init__(self) -> None:
         if not self.state.strip():
             raise ValueError("Stream analytical evidence state must be non-empty")
-        for value in (self.support_points, self.opposition_points):
-            if value < Decimal(0) or value > Decimal(100):
+        for points_value in (self.support_points, self.opposition_points):
+            if points_value < Decimal(0) or points_value > Decimal(100):
                 raise ValueError("Stream analytical evidence points outside [0,100]")
-        for value in (self.evidence_quality_0_1, self.freshness_0_1):
-            if value is not None and (value < Decimal(0) or value > Decimal(1)):
+        for quality_value in (self.evidence_quality_0_1, self.freshness_0_1):
+            if quality_value is not None and (
+                quality_value < Decimal(0) or quality_value > Decimal(1)
+            ):
                 raise ValueError("Stream analytical evidence quality outside [0,1]")
         if self.material_conflict_count < 0:
             raise ValueError("Stream analytical material conflict count cannot be negative")
