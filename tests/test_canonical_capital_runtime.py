@@ -204,6 +204,7 @@ def test_s11_same_atomic_runtime_can_participate_for_all_three_vaults(
             proof=proof,
             sizing_assessment=assessment,
             sizing_selection=selection,
+            eligibility_proof=eligibility,
             symbol=PaperSymbol.BTCUSDT,
             reference_price=Decimal(101),
             reference_price_evidence_identity=_sha(
