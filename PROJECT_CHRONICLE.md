@@ -1,5 +1,17 @@
 # PROJECT CHRONICLE
 
+## 2026-09-25 — Stream S4 Analytical Composer accepted; S5 Narrative Engine becomes active
+
+S4 now gives the Intelligence Stream a deterministic structured opinion between raw/canonical facts and customer prose. The accepted composer binds a versioned Analytical Policy to the exact Fact Bundle, current Story State and S3 Change Set; Message Input is optional, so analysis can exist before publication.
+
+The Analytical View carries effective stance, stance strength, support/opposition/net-support points, dominant and secondary evidence families, main contradiction, uncertainty, what changed, next condition, invalidation condition, capital-reference consequence and deterministic analytical materiality. The policy can keep non-material updates silent and identify why a material change deserves publication.
+
+S4 also closes an important sequencing gap: immutable Fact Bundles can now be persisted before a message exists, and Analytical Views are append-only by exact Story State / Change Set identity. A later message can attach only to the same frozen Fact Bundle; it cannot rewrite the earlier analytical record.
+
+The accepted implementation is PR #1268 / main `d8d53e26c8b552615d14697f614124d3f1e1ed00`, with exact-head UID504 run `36158170886` passing focused pytest/Ruff/strict mypy, whole-repository regression and Development checkout non-mutation.
+
+The active frontier is S5 Narrative Engine. S5 may make the system sound like a capable Turkish trader/analyst, but it must render from the accepted Analytical View rather than invent market truth.
+
 ## 2026-09-25 — Stream S3 Story Engine accepted; S4 Analytical Composer becomes active
 
 S3 now gives the Intelligence Stream deterministic memory instead of treating each event as isolated.
