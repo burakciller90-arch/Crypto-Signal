@@ -161,14 +161,20 @@ def test_visualsnapshot_command_captures_real_safari_window_and_uploads_artifact
     assert "- name: GALACTECH VISUAL SNAPSHOT UID504" in workflow
     assert "steps.parse.outputs.command == 'visualsnapshot'" in workflow
     assert "/usr/sbin/screencapture -x -l" in workflow
+    assert "BROWSER_CAPTURE_BACKEND=HEADLESS_CHROMIUM" in workflow
+    assert "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" in workflow
+    assert "/Applications/Chromium.app/Contents/MacOS/Chromium" in workflow
+    assert "--headless=new" in workflow
+    assert "capture_headless desktop 1440 950" in workflow
+    assert "capture_headless mobile 430 860" in workflow
     assert 'tell application "Safari"' in workflow
     assert "capture_window desktop 40 50 1480 1000" in workflow
     assert "capture_window mobile 80 60 510 920" in workflow
     assert "actions/upload-artifact@v4" in workflow
     assert "GALACTECH_VISUAL_SNAPSHOT_PASS=YES" in workflow
     assert "VISUAL_SNAPSHOT_HEALTH_READY" in workflow
-    assert 'curl -fsS --max-time 15 "$URL/api/health"' in workflow
-    assert "for i in {1..8}; do" in workflow
+    assert 'curl -fsS --max-time 8 "$URL/api/health"' in workflow
+    assert "for i in {1..4}; do" in workflow
     assert 'assert data.get("read_only") is True' in workflow
     assert 'assert data.get("real_capital") == 0' in workflow
     assert "VISUAL_SNAPSHOT_HEALTH_UNAVAILABLE=YES" in workflow
