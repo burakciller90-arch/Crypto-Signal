@@ -140,12 +140,14 @@ This means a missing live frontend card is often a **projection gap**, not missi
 
 Capital has the same distinction:
 - Smart Capital Allocator is accepted for all three Epoch 2 vaults;
-- Tactical eligibility explicitly consumes 1m/5m liquidity/order-flow/market-quality/CVD/absorption/sweep evidence;
+- Core eligibility, Tactical 1m/5m microstructure eligibility, and Opportunity Reserve recovery eligibility are all explicitly modeled;
 - Position Sizing Bridge is canonical-three-vault aware;
-- R22 Transaction Tape and R21 Epoch 2 accounting are vault-aware and can bind exact intent/fill/accounting lineage;
-- however, the currently accepted automatic forward paper-execution runtime is specifically bound to **CORE** and `paper_autonomy_v2_exact_dual_provider_4h`.
+- R22 Transaction Tape and R21 Epoch 2 accounting are vault-aware and already define exact per-vault intent/fill/accounting lineage;
+- R22Epoch2AtomicTape can atomically persist an accepted fill plus all three post-trade vault snapshots and the consolidated Epoch 2 snapshot;
+- the currently accepted forward paper-execution runtime is specifically bound to **CORE** and `paper_autonomy_v2_exact_dual_provider_4h`, and writes its own WC2 execution journal rather than automatically advancing the canonical R22/R21 Epoch 2 transaction/accounting tape;
+- current status therefore may truthfully show successful forward execution engineering while canonical R22 Epoch 2 mutation tables still contain zero real forward bundles.
 
-Therefore the missing Tactical 1m/5m automatic paper path is a **canonical runtime bridge gap**, not a missing accounting/allocator foundation.
+Therefore the missing product closure is broader than Tactical: **one canonical three-vault forward virtual-capital runtime** must bind each vault's accepted eligibility/sizing policy to deterministic simulated execution and canonical R22/R21 accounting. Existing Core execution logic should be reused, not discarded; Tactical and Opportunity require their own evidence/policy adapters.
 
 ## 4. Product Gap Ledger
 
@@ -173,7 +175,7 @@ Therefore the missing Tactical 1m/5m automatic paper path is a **canonical runti
 | GAP-020 | Executable real-money controls | REAL_CAPITAL=0 | no authority and intentionally prohibited | NOT_AVAILABLE | never add real Buy/Sell execution surface |
 | GAP-021 | Full backend-capability surfacing audit | accepted intelligence/capital/research modules exceed current product projections | some accepted capability can be mistaken for "missing data" because no read model/UI exists | ADAPT/DISCOVER | classify every user-relevant accepted capability as SURFACE_DIRECT / SURFACE_ADAPTER / ADVANCED_ONLY / RESEARCH_ONLY / INTERNAL_ONLY / NOT_AVAILABLE |
 | GAP-022 | Rich live Intelligence Feed | Decision Feed is currently forecast-issued/resolved while many accepted engines are not exposed as live feed | machine observations are hidden behind static/catalog/proof layers | ADAPT | build canonical read-only event projections for real liquidity/order-flow/derivatives/event-risk/on-chain/regime/data-quality/capital events; no inferred/fake events |
-| GAP-023 | Tactical 1m/5m autonomous virtual-paper rail | Tactical allocator contract + three-vault sizing/accounting/tape primitives exist; accepted forward execution runtime is CORE + 4h only | no canonical Tactical evidence -> simulated execution runtime | ADAPT | implement and accept a forward-only Tactical Paper Execution Rail reusing accepted allocator/sizing/R22/R21 primitives |
+| GAP-023 | Canonical three-vault forward virtual-capital runtime | Core forward execution engineering exists; Core/Tactical/Opportunity allocator contracts + three-vault sizing/R22/R21 primitives exist | no single canonical runtime currently advances Epoch 2 R22/R21 for all three vaults; existing WC2 runtime is CORE/4h and journal-isolated | ADAPT | build/accept per-vault forward execution adapters over one canonical Epoch 2 transaction/accounting path; reuse Core rail, add Tactical 1m/5m and Opportunity recovery rails |
 | GAP-024 | Capital events inside Intelligence Feed | Epoch 2/R22/WC2 decisions and fills exist in separate stores/read models | user cannot see WHY virtual capital held/deployed as part of the live story | ADAPT | add exact identity-bound capital timeline projection: ELIGIBLE/HOLD/BLOCK/SIZED/EXECUTED/EXITED/accounting-result events |
 | GAP-025 | Zero-activity diagnosability | HOLD_CASH is valid but prolonged inactivity can be indistinguishable from a broken bridge in the UI | user may see idle capital without knowing whether no setup or subsystem gap caused it | ADAPT/ADD_PRESENTATION | expose decision cadence, candidates scanned, blockers, last eligible event, last executed simulation and data-quality reason without forcing trades |
 
@@ -255,7 +257,7 @@ The largest gaps are not "invent a new trading system." They are:
 - product-friendly query/read models;
 - comprehensive surfacing of accepted backend capability rather than treating adapter gaps as missing data;
 - broader canonical intelligence timeline;
-- the missing Tactical 1m/5m forward paper-execution bridge between already-accepted evidence/allocator/sizing/accounting primitives;
+- the missing canonical three-vault forward paper-capital runtime that turns already-accepted Core/Tactical/Opportunity eligibility, sizing, simulated execution and R22/R21 accounting primitives into one active Epoch 2 experiment;
 - identity-bound capital events in the live Intelligence Feed;
 - renderable visual-evidence contracts;
 - proof-bound microstructure exposure;
@@ -289,6 +291,6 @@ Still required before M1 can PASS:
 - user-approved final information architecture;
 - final check that every planned visual/product feature is backed by REUSE/ADAPT truth or explicitly marked DISCOVER/NOT_AVAILABLE;
 - accepted-backend surfacing audit complete, with no user-relevant accepted capability silently dropped because an adapter is missing;
-- Tactical forward-paper execution bridge contract specified before M2 freezes Capital/Feed data dependencies.
+- canonical three-vault forward-paper execution contract specified before M2 freezes Capital/Feed data dependencies, including Core reuse, Tactical 1m/5m execution, Opportunity recovery execution, fixture-vs-forward evidence separation, and atomic R22/R21 Epoch 2 accounting.
 
 M2 Application Foundation must **not** freeze routes or final shell information architecture before these items pass.
