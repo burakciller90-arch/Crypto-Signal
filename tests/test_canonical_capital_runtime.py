@@ -51,7 +51,7 @@ def _execution_snapshot():
         symbol=PaperSymbol.BTCUSDT,
         quantity_step=Decimal("0.0001"),
         min_quantity=Decimal("0.0001"),
-        min_notional_usdt=Decimal("1"),
+        min_notional_usdt=Decimal(1),
         fee_rate=Decimal("0.001"),
         spread_rate=Decimal("0.0005"),
         slippage_rate=Decimal("0.0005"),
@@ -82,9 +82,9 @@ def test_s11_atomic_buy_mutates_only_target_vault_and_binds_exact_lineage(
         sizing_assessment=assessment,
         sizing_selection=selection,
         symbol=PaperSymbol.BTCUSDT,
-        reference_price=Decimal("101"),
+        reference_price=Decimal(101),
         reference_price_evidence_identity=_sha("reference-price"),
-        mark_prices={PaperSymbol.BTCUSDT: Decimal("101")},
+        mark_prices={PaperSymbol.BTCUSDT: Decimal(101)},
         mark_evidence_identity=_sha("mark-set"),
         execution_snapshot=_execution_snapshot(),
         decided_at_ms=ISSUED_AT + 20,
@@ -169,11 +169,11 @@ def test_s11_same_atomic_runtime_can_participate_for_all_three_vaults(
             sizing_assessment=assessment,
             sizing_selection=selection,
             symbol=PaperSymbol.BTCUSDT,
-            reference_price=Decimal("101"),
+            reference_price=Decimal(101),
             reference_price_evidence_identity=_sha(
                 f"reference-price-{vault_id.value}"
             ),
-            mark_prices={PaperSymbol.BTCUSDT: Decimal("101")},
+            mark_prices={PaperSymbol.BTCUSDT: Decimal(101)},
             mark_evidence_identity=_sha(f"mark-{vault_id.value}"),
             execution_snapshot=execution,
             decided_at_ms=base_time + 1,
@@ -208,38 +208,38 @@ def test_s11_buy_refuses_stale_selection_and_price_outside_trigger(
         current_vault=core,
         selected_at_ms=ISSUED_AT + 10,
     )
-    kwargs = dict(
-        epoch2_path=epoch2_path,
-        forecast=forecast,
-        proof=proof,
-        sizing_assessment=assessment,
-        sizing_selection=selection,
-        symbol=PaperSymbol.BTCUSDT,
-        reference_price_evidence_identity=_sha("reference-price"),
-        mark_prices={PaperSymbol.BTCUSDT: Decimal("101")},
-        mark_evidence_identity=_sha("mark-set"),
-        execution_snapshot=_execution_snapshot(),
-        decided_at_ms=ISSUED_AT + 20,
-        filled_at_ms=ISSUED_AT + 30,
-        mutated_at_ms=ISSUED_AT + 31,
-        snapshot_at_ms=ISSUED_AT + 40,
-    )
+    kwargs = {
+        "epoch2_path": epoch2_path,
+        "forecast": forecast,
+        "proof": proof,
+        "sizing_assessment": assessment,
+        "sizing_selection": selection,
+        "symbol": PaperSymbol.BTCUSDT,
+        "reference_price_evidence_identity": _sha("reference-price"),
+        "mark_prices": {PaperSymbol.BTCUSDT: Decimal(101)},
+        "mark_evidence_identity": _sha("mark-set"),
+        "execution_snapshot": _execution_snapshot(),
+        "decided_at_ms": ISSUED_AT + 20,
+        "filled_at_ms": ISSUED_AT + 30,
+        "mutated_at_ms": ISSUED_AT + 31,
+        "snapshot_at_ms": ISSUED_AT + 40,
+    }
 
     with pytest.raises(ValueError, match="inside exact trigger zone"):
         commit_canonical_paper_buy(
-            reference_price=Decimal("103"),
+            reference_price=Decimal(103),
             **kwargs,
         )
 
     committed = commit_canonical_paper_buy(
-        reference_price=Decimal("101"),
+        reference_price=Decimal(101),
         **kwargs,
     )
     assert committed.inserted is True
 
     with pytest.raises(ValueError, match="stale against current vault"):
         commit_canonical_paper_buy(
-            reference_price=Decimal("101"),
+            reference_price=Decimal(101),
             decided_at_ms=ISSUED_AT + 50,
             filled_at_ms=ISSUED_AT + 51,
             mutated_at_ms=ISSUED_AT + 52,
