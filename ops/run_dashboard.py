@@ -51,6 +51,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--provider-divergence", type=Path, default=None)
     parser.add_argument("--event-source-runtime", type=Path, default=None)
     parser.add_argument("--wc2-cohort", type=Path, default=None)
+    parser.add_argument("--stream-ledger", type=Path, default=None)
     parser.add_argument(
         "--learning-memory",
         type=Path,
@@ -106,6 +107,10 @@ def resolve_runtime_paths(args: argparse.Namespace) -> dict[str, Path]:
         "wc2_cohort_path": (
             getattr(args, "wc2_cohort", None)
             or runtime_root / "wc2" / "wc2_untouched_forward.sqlite3"
+        ),
+        "stream_ledger_path": (
+            getattr(args, "stream_ledger", None)
+            or runtime_root / "stream" / "intelligence_stream.sqlite3"
         ),
     }
 

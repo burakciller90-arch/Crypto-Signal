@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="tr" data-theme="stream-light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <meta name="theme-color" content="#f4f8ff">
+  <title>Crypto Signal // Intelligence Stream</title>
+  <link rel="stylesheet" href="/stream-static/app.css">
+</head>
+<body data-ui-version="crypto-signal-stream-v1-s7">
+  <a class="skip-link" href="#streamMain">Akışa geç</a>
+
+  <div class="stream-app">
+    <header class="stream-topbar">
+      <div class="brand-lockup" aria-label="GALACTECH Crypto Signal">
+        <span class="brand-orbit" aria-hidden="true"><i></i></span>
+        <div class="brand-copy">
+          <strong>CRYPTO SIGNAL</strong>
+          <span>GALACTECH · INTELLIGENCE STREAM</span>
+        </div>
+      </div>
+
+      <div class="topbar-center" role="status" aria-live="polite">
+        <span id="connectionDot" class="connection-dot is-connecting" aria-hidden="true"></span>
+        <strong id="connectionLabel">BAĞLANIYOR</strong>
+        <span id="connectionNote">S6 canlı akış doğrulanıyor</span>
+      </div>
+
+      <div class="topbar-actions" aria-label="Akış kontrolleri">
+        <button id="searchButton" class="icon-button" type="button" aria-controls="discoveryDrawer" aria-expanded="false">
+          <span aria-hidden="true">⌕</span><span class="button-label">Ara</span>
+        </button>
+        <button id="filterButton" class="icon-button" type="button" aria-controls="discoveryDrawer" aria-expanded="false">
+          <span aria-hidden="true">≡</span><span class="button-label">Filtre</span>
+        </button>
+        <button id="soundButton" class="icon-button" type="button" aria-controls="settingsDrawer" aria-expanded="false">
+          <span aria-hidden="true">◌</span><span class="button-label">Ses</span>
+        </button>
+        <button id="settingsButton" class="icon-button" type="button" aria-controls="settingsDrawer" aria-expanded="false">
+          <span aria-hidden="true">⚙</span><span class="button-label">Ayar</span>
+        </button>
+      </div>
+    </header>
+
+    <main id="streamMain" class="stream-main" tabindex="-1">
+      <section class="stream-stage" aria-labelledby="streamTitle">
+        <div class="stream-heading">
+          <div>
+            <span class="eyebrow">TEK PANEL · CANLI ANALİST AKIŞI</span>
+            <h1 id="streamTitle">Piyasa değiştiğinde sistem sana yazar.</h1>
+            <p>Önce kısa görüş. Derin kanıt aynı mesajın altında; ayrı dashboard yok.</p>
+          </div>
+          <div class="safety-lock" title="Gerçek sermaye yetkisi kapalı">
+            <span>REAL_CAPITAL</span><strong>0</strong>
+          </div>
+        </div>
+
+        <div id="fixtureBanner" class="fixture-banner" hidden>
+          GÖRSEL TEST FIXTURE · CANLI PİYASA GERÇEĞİ DEĞİL
+        </div>
+
+        <div class="timeline-shell">
+          <button id="loadOlderButton" class="history-loader" type="button" hidden>
+            ↑ Daha eski mesajları yükle
+          </button>
+
+          <div id="streamViewport" class="stream-viewport" aria-label="Intelligence Stream" tabindex="0">
+            <ol id="messageList" class="message-list" aria-live="polite" aria-relevant="additions"></ol>
+            <div id="emptyState" class="empty-state" hidden>
+              <span class="empty-glyph" aria-hidden="true">◉</span>
+              <strong id="emptyTitle">Henüz mesaj yok</strong>
+              <p id="emptyCopy">Yeni ve anlamlı bir değişiklik olduğunda burada görünecek.</p>
+            </div>
+          </div>
+
+          <button id="newMessageButton" class="new-message-button" type="button" hidden>
+            ↓ <span id="newMessageCount">1</span> yeni mesaj
+          </button>
+
+          <div class="stream-foot">
+            <span>Mesajlar backend’de kalıcıdır; görünüm değişse de geçmiş yeniden yazılmaz.</span>
+            <span id="transportMode">SSE + POLLING FALLBACK</span>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <aside id="discoveryDrawer" class="drawer" aria-labelledby="discoveryTitle" hidden>
+      <div class="drawer-head">
+        <div>
+          <span class="eyebrow">GEÇİCİ KEŞİF</span>
+          <h2 id="discoveryTitle">Ara ve daralt</h2>
+        </div>
+        <button class="drawer-close" type="button" data-close-drawer="discoveryDrawer" aria-label="Kapat">×</button>
+      </div>
+      <label>
+        <span>Metin</span>
+        <input id="searchInput" type="search" placeholder="Örn. teyit, likidite, BTC">
+      </label>
+      <div class="drawer-grid">
+        <label>
+          <span>Varlık</span>
+          <select id="symbolFilter">
+            <option value="">Tümü</option>
+            <option value="BTCUSDT">BTC / USDT</option>
+            <option value="ETHUSDT">ETH / USDT</option>
+            <option value="SOLUSDT">SOL / USDT</option>
+          </select>
+        </label>
+        <label>
+          <span>Zaman dilimi</span>
+          <select id="timeframeFilter">
+            <option value="">Tümü</option>
+            <option value="1m">1m</option>
+            <option value="5m">5m</option>
+            <option value="15m">15m</option>
+            <option value="1h">1h</option>
+            <option value="4h">4h</option>
+          </select>
+        </label>
+      </div>
+      <p class="drawer-note">S7 yalnız temel keşif girişini kurar. Tam filtre sözleşmesi S12’de tamamlanır.</p>
+      <div class="drawer-actions">
+        <button id="clearFiltersButton" class="secondary-button" type="button">Temizle</button>
+        <button id="applyFiltersButton" class="primary-button" type="button">Akışa uygula</button>
+      </div>
+    </aside>
+
+    <aside id="settingsDrawer" class="drawer" aria-labelledby="settingsTitle" hidden>
+      <div class="drawer-head">
+        <div>
+          <span class="eyebrow">GÖRÜNÜM</span>
+          <h2 id="settingsTitle">Akış ayarları</h2>
+        </div>
+        <button class="drawer-close" type="button" data-close-drawer="settingsDrawer" aria-label="Kapat">×</button>
+      </div>
+      <fieldset class="density-control">
+        <legend>Mesaj yoğunluğu</legend>
+        <label><input type="radio" name="density" value="comfortable" checked> Rahat</label>
+        <label><input type="radio" name="density" value="compact"> Kompakt</label>
+      </fieldset>
+      <div class="future-setting" aria-disabled="true">
+        <div>
+          <strong>Bildirim sesi</strong>
+          <span>S13’te etkinleşecek</span>
+        </div>
+        <span class="future-pill">KAPALI</span>
+      </div>
+      <p class="drawer-note">S7 ses kontrol yüzeyini ayırır; gerçek chime, izin ve replay-silent davranışı S13 kapsamıdır.</p>
+    </aside>
+
+    <div id="drawerBackdrop" class="drawer-backdrop" hidden></div>
+    <div id="floatingWindowLayer" class="floating-window-layer" aria-hidden="true"></div>
+    <div id="liveAnnouncer" class="sr-only" aria-live="polite" aria-atomic="true"></div>
+  </div>
+
+  <script src="/stream-static/app.js"></script>
+</body>
+</html>
