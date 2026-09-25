@@ -24,7 +24,7 @@ jobs:
           set -euo pipefail
           cmd="$(printf '%s\n' "$ISSUE_BODY" | awk -F: 'tolower($1)=="command" {gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2); print tolower($2); exit}')"
           case "$cmd" in
-            status|eventsourcestate|eventsourcesnapshot|blsprobe|fredprobe|wc2epoch2activate|wc2policyregister|wc2protocolregister|wc2executionprotocolregister|wc2executionruntimeregister|wc2executiononce|wc2executionstate|wc2collectonce|wc2state|services|logs|disk|sync|producttest|fulltest|productstate|productdeploy|paperreview|paperinspect|paperfixlint|paperharden|stateplanreview|stateplaninspect|stateplanharden|cursorreview|cursorreviewtail|cursorcleanup|bridgecheck|bridgestate|rollingstate|pausecheck|wakepause|wakeresume|wakearm|waketest|wakeheartbeat|chatbusyprobe|cursorcheck|cursorauthdiag|cursorttycheck|alertclockstate|alertclockpause|alertclockresume|migrationinspect|migrationinventory|ssddashboarddiag|productcrashlogs|ssddashboardwrappertest|ssdtcclaunchtest|ssdbackgroundteststart|ssdbackgroundtestcheck|ssdleftover|runnerpersistinstall|runnerpersistdiag|runnercutoverdiag|dashboardstart504|visualsnapshot|galactechpreview|runnerterminalwatchdoginstall)
+            status|eventsourcestate|eventsourcesnapshot|blsprobe|fredprobe|wc2epoch2activate|wc2policyregister|wc2protocolregister|wc2executionprotocolregister|wc2executionruntimeregister|wc2executiononce|wc2executionstate|wc2collectonce|wc2state|services|logs|disk|sync|producttest|fulltest|productstate|productdeploy|paperreview|paperinspect|paperfixlint|paperharden|stateplanreview|stateplaninspect|stateplanharden|cursorreview|cursorreviewtail|cursorcleanup|bridgecheck|bridgestate|rollingstate|pausecheck|wakepause|wakeresume|wakearm|waketest|wakeheartbeat|chatbusyprobe|cursorcheck|cursorauthdiag|cursorttycheck|alertclockstate|alertclockpause|alertclockresume|migrationinspect|migrationinventory|ssddashboarddiag|productcrashlogs|ssddashboardwrappertest|ssdtcclaunchtest|ssdbackgroundteststart|ssdbackgroundtestcheck|ssdleftover|runnerpersistinstall|runnerpersistdiag|runnercutoverdiag|dashboardstart504|visualcleanup|visualsnapshot|galactechpreview|runnerterminalwatchdoginstall)
               ;;
             *)
               echo "Unsupported command: $cmd"
@@ -3532,9 +3532,35 @@ jobs:
           echo "CRYPTO_DASHBOARD_OPENED_UID504=YES"
           echo "CRYPTO_DASHBOARD_HEALTH_UID504=PASS"
 
+      - name: VISUAL SNAPSHOT EMERGENCY CLEANUP UID504
+        if: steps.parse.outputs.command == 'visualcleanup'
+        shell: bash
+        timeout-minutes: 2
+        run: |
+          set -euo pipefail
+          echo "=== BEFORE ==="
+          ps -axo pid=,ppid=,%cpu=,%mem=,rss=,etime=,command= \
+            | grep -E '[G]oogle Chrome.*--headless=new|[C]hromium.*--headless=new|[M]icrosoft Edge.*--headless=new' \
+            | head -100 || true
+
+          pkill -TERM -f -- '--headless=new' 2>/dev/null || true
+          sleep 2
+          pkill -KILL -f -- '--headless=new' 2>/dev/null || true
+          sleep 1
+
+          echo "=== AFTER ==="
+          left="$(pgrep -f -- '--headless=new' 2>/dev/null || true)"
+          if [ -n "$left" ]; then
+            ps -p "$(echo "$left" | paste -sd, -)" -o pid=,ppid=,%cpu=,%mem=,rss=,etime=,command= || true
+            echo "VISUAL_HEADLESS_CLEANUP_PASS=NO"
+            exit 91
+          fi
+          echo "VISUAL_HEADLESS_CLEANUP_PASS=YES"
+
       - name: GALACTECH VISUAL SNAPSHOT UID504
         if: steps.parse.outputs.command == 'visualsnapshot'
         shell: bash
+        timeout-minutes: 3
         run: |
           set -euo pipefail
           URL="http://127.0.0.1:48700"
@@ -3588,23 +3614,65 @@ jobs:
             fi
           done
 
+          cleanup_headless() {
+            pkill -TERM -f -- '--headless=new' 2>/dev/null || true
+            sleep 1
+            pkill -KILL -f -- '--headless=new' 2>/dev/null || true
+          }
+          trap cleanup_headless EXIT
+
           capture_headless() {
             local name="$1"
             local width="$2"
             local height="$3"
-            "$BROWSER" \
-              --headless=new \
-              --disable-gpu \
-              --hide-scrollbars \
-              --no-first-run \
-              --no-default-browser-check \
-              --disable-background-networking \
-              --disable-sync \
-              --metrics-recording-only \
-              --window-size="$width,$height" \
-              --virtual-time-budget=10000 \
-              --screenshot="$OUT/$name.png" \
-              "$URL/" >/tmp/galactech-visual-${name}.log 2>&1
+            BROWSER="$BROWSER" URL="$URL/" OUTFILE="$OUT/$name.png" NAME="$name" WIDTH="$width" HEIGHT="$height" \
+              /usr/bin/python3 - <<'PY'
+          import os
+          import signal
+          import subprocess
+          from pathlib import Path
+
+          browser = os.environ["BROWSER"]
+          url = os.environ["URL"]
+          outfile = os.environ["OUTFILE"]
+          name = os.environ["NAME"]
+          width = os.environ["WIDTH"]
+          height = os.environ["HEIGHT"]
+          log_path = Path("/tmp") / f"galactech-visual-{name}.log"
+          cmd = [
+              browser,
+              "--headless=new",
+              "--disable-gpu",
+              "--disable-extensions",
+              "--disable-background-networking",
+              "--disable-component-update",
+              "--disable-sync",
+              "--hide-scrollbars",
+              "--metrics-recording-only",
+              "--no-default-browser-check",
+              "--no-first-run",
+              "--renderer-process-limit=2",
+              f"--window-size={width},{height}",
+              "--virtual-time-budget=8000",
+              f"--screenshot={outfile}",
+              url,
+          ]
+          with log_path.open("wb") as log:
+              proc = subprocess.Popen(
+                  cmd,
+                  stdout=log,
+                  stderr=subprocess.STDOUT,
+                  start_new_session=True,
+              )
+              try:
+                  rc = proc.wait(timeout=30)
+              except subprocess.TimeoutExpired:
+                  os.killpg(proc.pid, signal.SIGKILL)
+                  proc.wait(timeout=5)
+                  raise SystemExit("HEADLESS_BROWSER_TIMEOUT")
+          if rc != 0:
+              raise SystemExit(f"HEADLESS_BROWSER_EXIT={rc}")
+          PY
             test -s "$OUT/$name.png"
             /usr/bin/sips -g pixelWidth -g pixelHeight "$OUT/$name.png" || true
           }
