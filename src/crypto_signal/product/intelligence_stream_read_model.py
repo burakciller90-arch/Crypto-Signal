@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import quote
 
-from crypto_signal.ledger.serialization import canonical_json, sha256_text
+from crypto_signal.ledger.serialization import canonical_json, canonical_sha256, sha256_text
 from crypto_signal.product.intelligence_stream_models import (
     REAL_CAPITAL,
     STREAM_ENGINE_VERSION,
@@ -375,6 +375,12 @@ class IntelligenceStreamReadModel:
         if raw.get("event_at_ms") != event_at_ms:
             raise StreamReadModelError(
                 "Stream read narrative event-time column mismatch"
+            )
+        identity_payload = dict(raw)
+        identity_payload.pop("narrative_identity", None)
+        if canonical_sha256(identity_payload) != narrative_identity:
+            raise StreamReadModelError(
+                "Stream read narrative canonical identity mismatch"
             )
         if raw.get("schema_version") != STREAM_NARRATIVE_MESSAGE_SCHEMA_VERSION:
             raise StreamReadModelError(
