@@ -282,6 +282,7 @@ def build_tape_intent(
     sizing_result: SizingMethodResult | None = None,
     decision: DecisionIntentRecord | None = None,
     previous_intent_identity: str | None = None,
+    additional_source_evidence_identities: tuple[str, ...] = (),
 ) -> PaperTapeIntent:
     if decided_at_ms < activation.activated_at_ms:
         raise ValueError("R22 intent cannot predate Epoch2 activation")
@@ -293,6 +294,10 @@ def build_tape_intent(
             raise ValueError("R22 HOLD_CASH requires exact hold-policy identity")
         _sha(hold_policy_identity, "hold policy")
         policy_identity = hold_policy_identity
+        if additional_source_evidence_identities:
+            raise ValueError(
+                "R22 HOLD_CASH cannot carry trade-only additional evidence"
+            )
         evidence: tuple[str, ...] = ()
         symbol = None
         quantity = None
@@ -363,11 +368,14 @@ def build_tape_intent(
         sizing_result_identity = sizing_result.result_identity
         allocator_candidate_identity = sizing_assessment.allocator_candidate_identity
         decision_identity = decision.record_identity
+        for identity in additional_source_evidence_identities:
+            _sha(identity, "additional R22 source evidence")
         evidence = tuple(
             sorted(
                 {
                     *forecast.source_evidence_identities,
                     *proof.forecast_source_evidence_identities,
+                    *additional_source_evidence_identities,
                     proof.proof_identity,
                     sizing_assessment.assessment_identity,
                     sizing_assessment.policy_identity,
