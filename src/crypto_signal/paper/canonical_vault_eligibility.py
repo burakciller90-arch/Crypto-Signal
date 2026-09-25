@@ -56,13 +56,13 @@ class CanonicalVaultEligibilityProof:
             (self.event_risk_identity, "S11 allocator Event Risk"),
         ):
             _require_sha256(identity, label)
-        for identity, label in (
+        for optional_identity, optional_label in (
             (self.confluence_identity, "S11 allocator confluence"),
             (self.tactical_evidence_identity, "S11 tactical evidence"),
             (self.recovery_evidence_identity, "S11 recovery evidence"),
         ):
-            if identity is not None:
-                _require_sha256(identity, label)
+            if optional_identity is not None:
+                _require_sha256(optional_identity, optional_label)
         if self.proof_version != S11_VAULT_ELIGIBILITY_VERSION:
             raise ValueError("unsupported S11 vault eligibility proof version")
         if not isinstance(self.vault_id, PaperVaultId):
