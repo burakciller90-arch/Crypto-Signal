@@ -31,6 +31,8 @@ from crypto_signal.product.intelligence_stream_transport import (
     cursor_for_stream_record,
     encode_stream_sse_heartbeat,
     encode_stream_sse_retry,
+    read_stream_live_batch,
+    resolve_stream_resume_cursor,
 )
 from crypto_signal.product.web import create_app
 
@@ -513,6 +515,63 @@ def test_stream_api_fails_closed_when_runtime_not_configured(tmp_path) -> None:
     assert response.json()["status"] == "unavailable"
     assert response.json()["page"]["items"] == []
     assert not missing_stream.exists()
+
+
+def test_stream_sse_empty_first_connection_catches_first_future_message(tmp_path) -> None:
+    stream_path = tmp_path / "stream.sqlite3"
+    identities = _create_read_fixture(stream_path)
+
+    connection = sqlite3.connect(stream_path)
+    try:
+        saved = connection.execute(
+            """
+            SELECT narrative_identity, plan_identity, analytical_view_identity,
+                   story_identity, source_event_identity, stream_event_identity,
+                   event_at_ms, source_kind, payload_json, payload_sha256
+            FROM stream_narrative_messages
+            WHERE narrative_identity = ?
+            """,
+            (identities["btc-issued"],),
+        ).fetchone()
+        assert saved is not None
+        connection.execute("DELETE FROM stream_narrative_messages")
+        connection.commit()
+    finally:
+        connection.close()
+
+    reader = IntelligenceStreamReadModel(stream_path)
+    origin = resolve_stream_resume_cursor(
+        reader=reader,
+        after=None,
+        last_event_id=None,
+    )
+    assert origin is not None
+    decoded_origin = decode_stream_cursor(origin)
+    assert decoded_origin.event_at_ms == 0
+    assert decoded_origin.narrative_identity == "0" * 64
+
+    connection = sqlite3.connect(stream_path)
+    try:
+        connection.execute(
+            """
+            INSERT INTO stream_narrative_messages
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            saved,
+        )
+        connection.commit()
+    finally:
+        connection.close()
+
+    batch = read_stream_live_batch(
+        reader,
+        StreamMessageQuery(limit=200),
+        after_cursor=origin,
+    )
+    assert [event.data["narrative_identity"] for event in batch.events] == [
+        identities["btc-issued"]
+    ]
+    assert batch.next_cursor == batch.events[-1].event_id
 
 
 def test_stream_sse_transport_helpers_are_deterministic() -> None:
