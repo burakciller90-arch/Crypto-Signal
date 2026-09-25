@@ -177,6 +177,8 @@ function messageState(record) {
     if (subtype === "capital_hold") return "NAKİTTE BEKLE";
     if (subtype === "capital_eligible") return "SERMAYE UYGUN";
     if (subtype === "capital_sized") return "SERMAYE BOYUTLANDI";
+    if (subtype === "capital_reduced") return "POZİSYON AZALTILDI";
+    if (subtype === "capital_exited") return "POZİSYON KAPANDI";
     return "SERMAYE";
   }
   return "ANALİZ";
@@ -1082,6 +1084,18 @@ function capitalMetricGrid(capital) {
       )} · slippage ${displayNumber(capital?.slippage_usdt)} USDT`,
     ],
   ];
+  if (capital?.outcome_identity) {
+    rows.push(
+      ["Finansal sonuç", text(capital?.financial_outcome, "—")],
+      ["Gerçekleşen PnL", `${displayNumber(capital?.realized_pnl_delta_usdt)} USDT`],
+      [
+        "Pozisyon miktarı",
+        `${displayNumber(capital?.position_quantity_before)} → ${displayNumber(
+          capital?.position_quantity_after
+        )}`,
+      ]
+    );
+  }
   for (const [labelText, valueText] of rows) {
     const cell = document.createElement("div");
     const label = document.createElement("span");
@@ -1101,6 +1115,7 @@ function capitalLineagePanel(capital) {
     ["R22 bundle", capital?.bundle_identity],
     ["R22 intent", capital?.intent_identity],
     ["R22 fill", capital?.fill_identity],
+    ...(capital?.outcome_identity ? [["Outcome", capital.outcome_identity]] : []),
     ["Vault önce", capital?.before_vault_snapshot_identity],
     ["Vault sonra", capital?.after_vault_snapshot_identity],
     ["Epoch 2 önce", capital?.before_consolidated_snapshot_identity],
@@ -1401,6 +1416,8 @@ function buildExpandedContent(record, detail) {
   }
   if (
     subtype === "capital_executed"
+    || subtype === "capital_reduced"
+    || subtype === "capital_exited"
     || (detail && typeof detail.capital_story === "object" && detail.capital_story)
   ) {
     return buildCapitalExpandedContent(record, detail);
