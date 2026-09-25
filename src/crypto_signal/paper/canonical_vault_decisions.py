@@ -283,6 +283,44 @@ class CanonicalVaultDecisionLedger:
             connection.commit()
         return True
 
+    def read_assessment_decisions(
+        self,
+        allocator_assessment_identity: str,
+    ) -> tuple[dict[str, object], ...]:
+        """Return verified per-vault decisions for one allocator assessment."""
+        _require_sha256(
+            allocator_assessment_identity,
+            "S11 allocator assessment lookup",
+        )
+        if not self.epoch2_path.is_file():
+            return ()
+        uri = f"file:{quote(str(self.epoch2_path.resolve()), safe='/')}?mode=ro"
+        with sqlite3.connect(uri, uri=True) as connection:
+            rows = connection.execute(
+                """
+                SELECT decision_identity
+                FROM s11_vault_decisions
+                WHERE allocator_assessment_identity = ?
+                ORDER BY event_at_ms ASC, decision_identity ASC
+                """,
+                (allocator_assessment_identity,),
+            ).fetchall()
+        result: list[dict[str, object]] = []
+        for row in rows:
+            decision_identity = str(row[0])
+            verified = self.read(decision_identity)
+            if verified is None:
+                raise ValueError(
+                    "S11 allocator assessment lost persisted vault decision"
+                )
+            if (
+                verified.get("allocator_assessment_identity")
+                != allocator_assessment_identity
+            ):
+                raise ValueError("S11 allocator assessment decision mismatch")
+            result.append(verified)
+        return tuple(result)
+
     def read(self, decision_identity: str) -> dict[str, object] | None:
         _require_sha256(decision_identity, "S11 vault decision lookup")
         if not self.epoch2_path.is_file():
