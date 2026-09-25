@@ -21,7 +21,7 @@ This entry records the current frontend-program authority without changing deplo
 - The deployed **GALACTECH V2** surface remains the current production Product baseline/fallback until a future M7 controlled cutover. The new Crypto Signal frontend has **not** been cut over to production.
 - Older GALACTECH/frontend slice documents remain immutable historical acceptance/evidence. Their old dark-theme, fixed navigation-count, GALACTECH-as-product or old execution-order assumptions are **not current frontend design authority** where they conflict with the canonical frontend documents.
 - Paper authority is explicit: **Epoch 1 = immutable historical 100 USDT**; **Epoch 2 = current 1,000 USDT paper-program contract for new activity**. Neither is real capital.
-- Follow-up authority hygiene is tracked by **PR #FOLLOWUP_PR_PLACEHOLDER** and is documentation-only: README/current-status/Chronicle/read-order/supersession notices are reconciled without runtime, database, collection, paper, signal, research or production-UI mutation.
+- Follow-up authority hygiene is tracked by **PR #1255** and is documentation-only: README/current-status/Chronicle/read-order/supersession notices are reconciled without runtime, database, collection, paper, signal, research or production-UI mutation.
 - M1 is **ACTIVE, not PASS**. Before M2 routes are frozen, M1 must complete the cross-surface identity graph, frontend temporal-field map, remaining small product-decision sessions and user-approved final information architecture.
 - WC2 evidence accumulation, WC5 human usability `NOT_MEASURED`, WC6 external venue dependency, WC7 `INSUFFICIENT_EVIDENCE`, continuity pause and **REAL_CAPITAL=0** are unchanged.
 
