@@ -173,6 +173,72 @@ def _capture(args: argparse.Namespace) -> dict[str, object]:
                     f"horizontal overflow: scrollWidth={scroll_width} width={args.width}"
                 )
 
+        if args.probe_expansion_anchor:
+            probe_result = session.command(
+                "Runtime.evaluate",
+                {
+                    "expression": (
+                        "(async()=>{"
+                        "const viewport=document.getElementById('streamViewport');"
+                        "const items=[...document.querySelectorAll('.message')];"
+                        "const item=items[Math.min(2,Math.max(0,items.length-1))];"
+                        "if(!viewport||!item){return {ok:false,reason:'missing_target'};}"
+                        "item.scrollIntoView({block:'center'});"
+                        "await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));"
+                        "const beforeTop=item.getBoundingClientRect().top;"
+                        "const beforeScroll=viewport.scrollTop;"
+                        "const button=item.querySelector('.message-summary');"
+                        "if(!button){return {ok:false,reason:'missing_summary'};}"
+                        "button.click();"
+                        "await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(()=>requestAnimationFrame(r))));"
+                        "await new Promise(r=>setTimeout(r,120));"
+                        "const afterTop=item.getBoundingClientRect().top;"
+                        "const labels=[...item.querySelectorAll('.depth-heading span')].map(n=>n.textContent);"
+                        "return {"
+                        "ok:item.classList.contains('is-expanded'),"
+                        "beforeTop,afterTop,beforeScroll,afterScroll:viewport.scrollTop,"
+                        "anchorDriftPx:Math.abs(afterTop-beforeTop),"
+                        "labels"
+                        "};"
+                        "})()"
+                    ),
+                    "awaitPromise": True,
+                    "returnByValue": True,
+                },
+            )
+            raw_probe = probe_result.get("result", {})
+            if not isinstance(raw_probe, dict):
+                raise RuntimeError("CDP expansion probe result missing")
+            expansion_probe = raw_probe.get("value", {})
+            if not isinstance(expansion_probe, dict):
+                raise RuntimeError("CDP expansion probe value missing")
+            if expansion_probe.get("ok") is not True:
+                raise RuntimeError(
+                    f"message expansion probe failed: {expansion_probe!r}"
+                )
+            anchor_drift = float(expansion_probe.get("anchorDriftPx", 9999))
+            if anchor_drift > 1.0:
+                raise RuntimeError(
+                    f"message expansion anchor drift: {anchor_drift}"
+                )
+            labels = expansion_probe.get("labels", [])
+            required_labels = {
+                "SIMPLE",
+                "PRO",
+                "INTELLIGENCE",
+                "DECISION",
+                "TRADE GEOMETRY",
+                "CAPITAL",
+                "PROOF",
+            }
+            if not isinstance(labels, list) or not required_labels.issubset(
+                {str(value) for value in labels}
+            ):
+                raise RuntimeError(
+                    f"message expansion depth incomplete: {labels!r}"
+                )
+            metrics["expansion_probe"] = expansion_probe
+
         screenshot = session.command(
             "Page.captureScreenshot",
             {
@@ -216,6 +282,7 @@ def main() -> None:
     parser.add_argument("--device-scale-factor", type=float, default=1.0)
     parser.add_argument("--mobile", action="store_true")
     parser.add_argument("--require-no-horizontal-overflow", action="store_true")
+    parser.add_argument("--probe-expansion-anchor", action="store_true")
     args = parser.parse_args()
 
     if not args.browser.is_file():
@@ -236,6 +303,7 @@ def main() -> None:
         f"viewport={metrics.get('innerWidth')}x{metrics.get('innerHeight')}",
         f"scroll_width={metrics.get('scrollWidth')}",
         f"ui_version={metrics.get('uiVersion')}",
+        f"expansion_probe={'YES' if metrics.get('expansion_probe') else 'NO'}",
     )
 
 

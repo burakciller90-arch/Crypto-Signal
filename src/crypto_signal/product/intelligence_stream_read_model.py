@@ -9,6 +9,13 @@ from typing import Any
 from urllib.parse import quote
 
 from crypto_signal.ledger.serialization import canonical_json, canonical_sha256, sha256_text
+from crypto_signal.product.intelligence_stream_analytical import (
+    STREAM_ANALYTICAL_VIEW_SCHEMA_VERSION,
+)
+from crypto_signal.product.intelligence_stream_messages import (
+    STREAM_FACT_BUNDLE_SCHEMA_VERSION,
+    STREAM_MESSAGE_INPUT_SCHEMA_VERSION,
+)
 from crypto_signal.product.intelligence_stream_models import (
     REAL_CAPITAL,
     STREAM_ENGINE_VERSION,
@@ -19,6 +26,7 @@ from crypto_signal.product.intelligence_stream_narrative import (
 
 STREAM_READ_MODEL_SCHEMA_VERSION = "intelligence-stream-read-model-v1/1"
 STREAM_CURSOR_SCHEMA_VERSION = "intelligence-stream-cursor-v1/1"
+STREAM_MESSAGE_DETAIL_SCHEMA_VERSION = "intelligence-stream-message-detail-v1/1"
 DEFAULT_STREAM_PAGE_LIMIT = 50
 MAX_STREAM_PAGE_LIMIT = 200
 
@@ -300,6 +308,93 @@ class IntelligenceStreamReadModel:
             expected_digest=str(row[3]),
         )
 
+    def read_message_detail(
+        self,
+        narrative_identity: str,
+    ) -> dict[str, Any] | None:
+        _require_sha256(narrative_identity, "Stream detail narrative identity")
+        with self._connect_ro() as connection:
+            self._require_schema(connection)
+            row = connection.execute(
+                """
+                SELECT
+                    n.narrative_identity,
+                    n.event_at_ms,
+                    n.payload_json,
+                    n.payload_sha256,
+                    a.analytical_view_identity,
+                    a.payload_json,
+                    a.payload_sha256,
+                    f.fact_bundle_identity,
+                    f.payload_json,
+                    f.payload_sha256,
+                    m.message_identity,
+                    m.payload_json,
+                    m.payload_sha256
+                FROM stream_narrative_messages AS n
+                JOIN stream_narrative_plans AS p
+                  ON p.plan_identity = n.plan_identity
+                JOIN stream_analytical_views AS a
+                  ON a.analytical_view_identity = n.analytical_view_identity
+                JOIN stream_fact_bundles AS f
+                  ON f.fact_bundle_identity = p.fact_bundle_identity
+                LEFT JOIN stream_message_inputs AS m
+                  ON m.message_identity = a.source_message_identity
+                WHERE n.narrative_identity = ?
+                """,
+                (narrative_identity,),
+            ).fetchone()
+        if row is None:
+            return None
+
+        narrative = self._verified_narrative_record(
+            narrative_identity=str(row[0]),
+            event_at_ms=int(str(row[1])),
+            payload_json=str(row[2]),
+            expected_digest=str(row[3]),
+        )
+        analytical = self._verified_linked_record(
+            payload_json=str(row[5]),
+            expected_digest=str(row[6]),
+            identity_key="analytical_view_identity",
+            expected_identity=str(row[4]),
+            expected_schema=STREAM_ANALYTICAL_VIEW_SCHEMA_VERSION,
+        )
+        fact_bundle = self._verified_linked_record(
+            payload_json=str(row[8]),
+            expected_digest=str(row[9]),
+            identity_key="fact_bundle_identity",
+            expected_identity=str(row[7]),
+            expected_schema=STREAM_FACT_BUNDLE_SCHEMA_VERSION,
+        )
+        message_input = (
+            None
+            if row[10] is None
+            else self._verified_linked_record(
+                payload_json=str(row[11]),
+                expected_digest=str(row[12]),
+                identity_key="message_identity",
+                expected_identity=str(row[10]),
+                expected_schema=STREAM_MESSAGE_INPUT_SCHEMA_VERSION,
+            )
+        )
+        self._verify_detail_lineage(
+            narrative=narrative,
+            analytical=analytical,
+            fact_bundle=fact_bundle,
+            message_input=message_input,
+        )
+        return {
+            "narrative": narrative,
+            "analytical_view": analytical,
+            "fact_bundle": fact_bundle,
+            "message_input": message_input,
+            "schema_version": STREAM_MESSAGE_DETAIL_SCHEMA_VERSION,
+            "read_only": True,
+            "production_authority": False,
+            "real_capital": REAL_CAPITAL,
+        }
+
     def latest_cursor(self) -> str | None:
         with self._connect_ro() as connection:
             self._require_schema(connection)
@@ -348,6 +443,101 @@ class IntelligenceStreamReadModel:
             if row is None:
                 raise StreamReadModelError(
                     f"Stream read model missing table: {table}"
+                )
+
+    @staticmethod
+    def _verified_linked_record(
+        *,
+        payload_json: str,
+        expected_digest: str,
+        identity_key: str,
+        expected_identity: str,
+        expected_schema: str,
+    ) -> dict[str, Any]:
+        if sha256_text(payload_json) != expected_digest:
+            raise StreamReadModelError("Stream detail persisted payload digest mismatch")
+        raw = json.loads(payload_json)
+        if not isinstance(raw, dict):
+            raise StreamReadModelError("Stream detail payload must decode to object")
+        if raw.get(identity_key) != expected_identity:
+            raise StreamReadModelError("Stream detail identity column mismatch")
+        identity_payload = dict(raw)
+        identity_payload.pop(identity_key, None)
+        if canonical_sha256(identity_payload) != expected_identity:
+            raise StreamReadModelError("Stream detail canonical identity mismatch")
+        if raw.get("schema_version") != expected_schema:
+            raise StreamReadModelError("Stream detail schema mismatch")
+        if raw.get("engine_version") != STREAM_ENGINE_VERSION:
+            raise StreamReadModelError("Stream detail engine mismatch")
+        if raw.get("read_only") is not True:
+            raise StreamReadModelError("Stream detail read-only mismatch")
+        if raw.get("production_authority") is not False:
+            raise StreamReadModelError("Stream detail production-authority mismatch")
+        if raw.get("real_capital") != REAL_CAPITAL:
+            raise StreamReadModelError("Stream detail REAL_CAPITAL mismatch")
+        return raw
+
+    @staticmethod
+    def _verify_detail_lineage(
+        *,
+        narrative: dict[str, Any],
+        analytical: dict[str, Any],
+        fact_bundle: dict[str, Any],
+        message_input: dict[str, Any] | None,
+    ) -> None:
+        if narrative.get("analytical_view_identity") != analytical.get(
+            "analytical_view_identity"
+        ):
+            raise StreamReadModelError("Stream detail narrative/analytical mismatch")
+        if narrative.get("fact_bundle_identity") != fact_bundle.get(
+            "fact_bundle_identity"
+        ):
+            raise StreamReadModelError("Stream detail narrative/fact mismatch")
+        if analytical.get("fact_bundle_identity") != fact_bundle.get(
+            "fact_bundle_identity"
+        ):
+            raise StreamReadModelError("Stream detail analytical/fact mismatch")
+
+        for key in (
+            "story_identity",
+            "source_event_identity",
+            "stream_event_identity",
+            "symbol",
+            "timeframe",
+            "event_at_ms",
+        ):
+            expected = narrative.get(key)
+            if analytical.get(key) != expected or fact_bundle.get(key) != expected:
+                raise StreamReadModelError(
+                    f"Stream detail lineage mismatch for {key}"
+                )
+
+        source_message_identity = analytical.get("source_message_identity")
+        if source_message_identity is None:
+            if message_input is not None:
+                raise StreamReadModelError(
+                    "Stream detail unexpected message-input projection"
+                )
+            return
+        if message_input is None:
+            raise StreamReadModelError("Stream detail missing source message input")
+        if message_input.get("message_identity") != source_message_identity:
+            raise StreamReadModelError("Stream detail analytical/message mismatch")
+        if message_input.get("fact_bundle_identity") != fact_bundle.get(
+            "fact_bundle_identity"
+        ):
+            raise StreamReadModelError("Stream detail message/fact mismatch")
+        for key in (
+            "story_identity",
+            "source_event_identity",
+            "stream_event_identity",
+            "symbol",
+            "timeframe",
+            "event_at_ms",
+        ):
+            if message_input.get(key) != narrative.get(key):
+                raise StreamReadModelError(
+                    f"Stream detail message lineage mismatch for {key}"
                 )
 
     @staticmethod

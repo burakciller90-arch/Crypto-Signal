@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from decimal import Decimal
 from pathlib import Path
 
 import pytest
@@ -11,6 +12,13 @@ from crypto_signal.ledger.serialization import (
     canonical_json,
     canonical_sha256,
     sha256_text,
+)
+from crypto_signal.product.intelligence_stream_analytical import (
+    STREAM_ANALYTICAL_VIEW_SCHEMA_VERSION,
+)
+from crypto_signal.product.intelligence_stream_messages import (
+    STREAM_FACT_BUNDLE_SCHEMA_VERSION,
+    STREAM_MESSAGE_INPUT_SCHEMA_VERSION,
 )
 from crypto_signal.product.intelligence_stream_models import (
     REAL_CAPITAL,
@@ -53,15 +61,18 @@ def _create_read_fixture(path: Path) -> dict[str, str]:
             CREATE TABLE stream_analytical_views (
                 analytical_view_identity TEXT PRIMARY KEY,
                 source_message_identity TEXT,
-                payload_json TEXT NOT NULL
+                payload_json TEXT NOT NULL,
+                payload_sha256 TEXT NOT NULL
             );
             CREATE TABLE stream_fact_bundles (
                 fact_bundle_identity TEXT PRIMARY KEY,
-                payload_json TEXT NOT NULL
+                payload_json TEXT NOT NULL,
+                payload_sha256 TEXT NOT NULL
             );
             CREATE TABLE stream_message_inputs (
                 message_identity TEXT PRIMARY KEY,
-                payload_json TEXT NOT NULL
+                payload_json TEXT NOT NULL,
+                payload_sha256 TEXT NOT NULL
             );
             CREATE TABLE stream_narrative_messages (
                 narrative_identity TEXT PRIMARY KEY,
@@ -131,18 +142,194 @@ def _create_read_fixture(path: Path) -> dict[str, str]:
         for item in rows:
             name = str(item["name"])
             plan_identity = _sha(f"{name}-plan")
-            analytical_identity = _sha(f"{name}-analytical")
-            fact_identity = _sha(f"{name}-fact")
-            message_identity = _sha(f"{name}-message")
             story_identity = _sha(f"{name}-story")
             source_event_identity = _sha(f"{name}-source-event")
             stream_event_identity = _sha(f"{name}-stream-event")
+            change_set_identity = _sha(f"{name}-change")
+
+            family_names = (
+                "geometry",
+                "liquidity",
+                "order_flow",
+                "derivatives",
+                "onchain",
+            )
+            family_contributions = tuple(
+                {
+                    "family": family,
+                    "state": "observed",
+                    "direction": item["stance"],
+                    "support_points": 72 - index * 7,
+                    "opposition_points": 9 + index * 3,
+                    "evidence_quality_0_1": (
+                        Decimal("0.91") - Decimal(index) * Decimal("0.06")
+                    ),
+                    "freshness_0_1": (
+                        Decimal("0.95") - Decimal(index) * Decimal("0.05")
+                    ),
+                    "material_conflict_count": 1 if family == "derivatives" else 0,
+                    "source_evidence_identities": (_sha(f"{name}-{family}-evidence"),),
+                }
+                for index, family in enumerate(family_names)
+            )
+            fact_without_identity = {
+                "stream_event_identity": stream_event_identity,
+                "source_event_identity": source_event_identity,
+                "story_identity": story_identity,
+                "decision_context_identity": _sha(f"{name}-decision-context"),
+                "forecast_identity": _sha(f"{name}-forecast"),
+                "proof_identity": _sha(f"{name}-proof"),
+                "resolution_identity": None,
+                "source_outcome_identity": None,
+                "asset": str(item["symbol"]).replace("USDT", ""),
+                "symbol": item["symbol"],
+                "market": item["symbol"],
+                "timeframe": item["timeframe"],
+                "event_at_ms": item["event_at_ms"],
+                "source_as_of_ms": item["event_at_ms"],
+                "decision_source_as_of_ms": item["event_at_ms"],
+                "decision_state": item["stance"],
+                "direction": item["stance"],
+                "confluence_support_score_0_100": 72,
+                "confluence_opposition_score_0_100": 18,
+                "confluence_resolution": "measured",
+                "family_contributions": family_contributions,
+                "event_context_state": "clear",
+                "trigger_zone": {"low": 62000, "high": 62500},
+                "target_zone": {"low": 65000, "high": 66000},
+                "invalidation_price": 60750,
+                "probability_status": "not_calibrated",
+                "calibrated_probability_0_1": None,
+                "freshness_0_1": Decimal("0.94"),
+                "uncertainty_flags": ("probability_not_calibrated",),
+                "available_evidence_domains": item["evidence"],
+                "evidence_summary": {
+                    "available_count": len(item["evidence"]),
+                    "missing_count": 0,
+                },
+                "resolution_state": None,
+                "source_outcome_state": None,
+                "outcome_evidence_class": None,
+                "resolution_reason_codes": (),
+                "schema_version": STREAM_FACT_BUNDLE_SCHEMA_VERSION,
+                "engine_version": STREAM_ENGINE_VERSION,
+                "read_only": True,
+                "production_authority": False,
+                "real_capital": REAL_CAPITAL,
+            }
+            fact_identity = canonical_sha256(fact_without_identity)
+            fact_payload = {"fact_bundle_identity": fact_identity, **fact_without_identity}
+
+            message_without_identity = {
+                "source_event_identity": source_event_identity,
+                "stream_event_identity": stream_event_identity,
+                "story_identity": story_identity,
+                "fact_bundle_identity": fact_identity,
+                "category": item["category"],
+                "subtype": "fixture",
+                "importance": item["importance"],
+                "asset": str(item["symbol"]).replace("USDT", ""),
+                "symbol": item["symbol"],
+                "market": item["symbol"],
+                "timeframe": item["timeframe"],
+                "event_at_ms": item["event_at_ms"],
+                "evidence_reference_identities": tuple(
+                    _sha(f"{name}-{domain}-ref") for domain in item["evidence"]
+                ),
+                "capital_reference_identities": (),
+                "schema_version": STREAM_MESSAGE_INPUT_SCHEMA_VERSION,
+                "engine_version": STREAM_ENGINE_VERSION,
+                "read_only": True,
+                "production_authority": False,
+                "real_capital": REAL_CAPITAL,
+            }
+            message_identity = canonical_sha256(message_without_identity)
+            message_payload = {"message_identity": message_identity, **message_without_identity}
+
+            analytical_without_identity = {
+                "policy_identity": _sha(f"{name}-policy"),
+                "policy_version": "fixture-v1",
+                "fact_bundle_identity": fact_identity,
+                "change_set_identity": change_set_identity,
+                "current_state_identity": _sha(f"{name}-state"),
+                "source_message_identity": message_identity,
+                "story_identity": story_identity,
+                "source_event_identity": source_event_identity,
+                "stream_event_identity": stream_event_identity,
+                "asset": str(item["symbol"]).replace("USDT", ""),
+                "symbol": item["symbol"],
+                "timeframe": item["timeframe"],
+                "event_at_ms": item["event_at_ms"],
+                "stance": {
+                    "effective_stance": item["stance"],
+                    "direction": item["stance"],
+                    "decision_state": item["stance"],
+                    "stance_key": f"{item['stance']}:{item['stance']}",
+                    "strength": "moderate",
+                    "support_score_0_100": 72,
+                    "opposition_score_0_100": 18,
+                    "net_support_points": 54,
+                },
+                "dominant_support": family_contributions[0],
+                "secondary_support": family_contributions[1],
+                "main_contradiction": family_contributions[3],
+                "uncertainty": {
+                    "codes": ("probability_not_calibrated",),
+                    "support_evidence_count": 3,
+                    "contradict_evidence_count": 1,
+                    "neutral_evidence_count": 1,
+                    "insufficient_evidence_count": 0,
+                    "available_evidence_count": 5,
+                    "total_evidence_domain_count": 5,
+                    "material_conflict_count": 1,
+                    "probability_status": "not_calibrated",
+                    "calibrated_probability_0_1": None,
+                },
+                "changed_codes": ("fixture_change",),
+                "changed_families": ("geometry", "liquidity"),
+                "next_condition": {
+                    "kind": "entry_zone",
+                    "state": "watch",
+                    "low": 62000,
+                    "high": 62500,
+                    "price": None,
+                    "reason_code": "fixture_entry_zone",
+                },
+                "invalidation_condition": {
+                    "kind": "invalidation_price",
+                    "state": "watch",
+                    "low": None,
+                    "high": None,
+                    "price": 60750,
+                    "reason_code": "fixture_invalidation",
+                },
+                "capital_consequence": {
+                    "state": "not_bound",
+                    "current_reference_identities": (),
+                    "added_reference_identities": (),
+                    "removed_reference_identities": (),
+                },
+                "materiality": {
+                    "disposition": "publish",
+                    "reason_codes": ("fixture_material",),
+                },
+                "schema_version": STREAM_ANALYTICAL_VIEW_SCHEMA_VERSION,
+                "engine_version": STREAM_ENGINE_VERSION,
+                "read_only": True,
+                "production_authority": False,
+                "real_capital": REAL_CAPITAL,
+            }
+            analytical_identity = canonical_sha256(analytical_without_identity)
+            analytical_payload = {
+                "analytical_view_identity": analytical_identity,
+                **analytical_without_identity,
+            }
 
             payload_without_identity = {
                 "plan_identity": plan_identity,
                 "analytical_view_identity": analytical_identity,
                 "fact_bundle_identity": fact_identity,
-                "change_set_identity": _sha(f"{name}-change"),
+                "change_set_identity": change_set_identity,
                 "story_identity": story_identity,
                 "source_event_identity": source_event_identity,
                 "stream_event_identity": stream_event_identity,
@@ -189,51 +376,47 @@ def _create_read_fixture(path: Path) -> dict[str, str]:
                 """,
                 (plan_identity, fact_identity),
             )
+            analytical_json = canonical_json(analytical_payload)
+            fact_json = canonical_json(fact_payload)
+            message_json = canonical_json(message_payload)
             connection.execute(
                 """
                 INSERT INTO stream_analytical_views (
-                    analytical_view_identity, source_message_identity, payload_json
-                ) VALUES (?, ?, ?)
+                    analytical_view_identity,
+                    source_message_identity,
+                    payload_json,
+                    payload_sha256
+                ) VALUES (?, ?, ?, ?)
                 """,
                 (
                     analytical_identity,
                     message_identity,
-                    canonical_json(
-                        {
-                            "stance": {"effective_stance": item["stance"]},
-                        }
-                    ),
+                    analytical_json,
+                    sha256_text(analytical_json),
                 ),
             )
             connection.execute(
                 """
                 INSERT INTO stream_fact_bundles (
-                    fact_bundle_identity, payload_json
-                ) VALUES (?, ?)
+                    fact_bundle_identity, payload_json, payload_sha256
+                ) VALUES (?, ?, ?)
                 """,
                 (
                     fact_identity,
-                    canonical_json(
-                        {
-                            "available_evidence_domains": item["evidence"],
-                        }
-                    ),
+                    fact_json,
+                    sha256_text(fact_json),
                 ),
             )
             connection.execute(
                 """
                 INSERT INTO stream_message_inputs (
-                    message_identity, payload_json
-                ) VALUES (?, ?)
+                    message_identity, payload_json, payload_sha256
+                ) VALUES (?, ?, ?)
                 """,
                 (
                     message_identity,
-                    canonical_json(
-                        {
-                            "category": item["category"],
-                            "importance": item["importance"],
-                        }
-                    ),
+                    message_json,
+                    sha256_text(message_json),
                 ),
             )
             connection.execute(
@@ -364,19 +547,27 @@ def test_stream_old_history_cursor_does_not_shift_when_new_message_arrives(tmp_p
             "INSERT INTO stream_narrative_plans VALUES (?, ?)",
             (raw["plan_identity"], raw["fact_bundle_identity"]),
         )
+        analytical_json = canonical_json(
+            {"stance": {"effective_stance": "watch"}}
+        )
+        fact_json = canonical_json(
+            {"available_evidence_domains": ("frozen_chart",)}
+        )
         connection.execute(
-            "INSERT INTO stream_analytical_views VALUES (?, ?, ?)",
+            "INSERT INTO stream_analytical_views VALUES (?, ?, ?, ?)",
             (
                 raw["analytical_view_identity"],
                 None,
-                canonical_json({"stance": {"effective_stance": "watch"}}),
+                analytical_json,
+                sha256_text(analytical_json),
             ),
         )
         connection.execute(
-            "INSERT INTO stream_fact_bundles VALUES (?, ?)",
+            "INSERT INTO stream_fact_bundles VALUES (?, ?, ?)",
             (
                 raw["fact_bundle_identity"],
-                canonical_json({"available_evidence_domains": ("frozen_chart",)}),
+                fact_json,
+                sha256_text(fact_json),
             ),
         )
         connection.execute(
@@ -447,6 +638,75 @@ def test_stream_filters_and_exact_lookup(tmp_path) -> None:
     assert story.items[0]["narrative_identity"] == identities["btc-issued"]
 
 
+def test_stream_exact_detail_projects_persisted_depth_without_recompute(tmp_path) -> None:
+    path = tmp_path / "stream.sqlite3"
+    identities = _create_read_fixture(path)
+    reader = IntelligenceStreamReadModel(path)
+
+    detail = reader.read_message_detail(identities["btc-issued"])
+    assert detail is not None
+    assert detail["read_only"] is True
+    assert detail["production_authority"] is False
+    assert detail["real_capital"] == 0
+
+    narrative = detail["narrative"]
+    analytical = detail["analytical_view"]
+    fact = detail["fact_bundle"]
+    message_input = detail["message_input"]
+
+    assert narrative["narrative_identity"] == identities["btc-issued"]
+    assert narrative["fact_bundle_identity"] == fact["fact_bundle_identity"]
+    assert (
+        narrative["analytical_view_identity"]
+        == analytical["analytical_view_identity"]
+    )
+    assert analytical["fact_bundle_identity"] == fact["fact_bundle_identity"]
+    assert fact["proof_identity"]
+    assert len(fact["family_contributions"]) == 5
+    assert fact["trigger_zone"] == {"high": 62500, "low": 62000}
+    assert fact["target_zone"] == {"high": 66000, "low": 65000}
+    assert fact["invalidation_price"] == 60750
+    assert analytical["next_condition"]["kind"] == "entry_zone"
+    assert analytical["capital_consequence"]["state"] == "not_bound"
+    assert message_input is not None
+    assert message_input["message_identity"] == analytical["source_message_identity"]
+    assert reader.read_message_detail(_sha("missing-detail")) is None
+
+
+def test_stream_exact_detail_fails_closed_on_persisted_tamper(tmp_path) -> None:
+    path = tmp_path / "stream.sqlite3"
+    identities = _create_read_fixture(path)
+    reader = IntelligenceStreamReadModel(path)
+
+    connection = sqlite3.connect(path)
+    try:
+        row = connection.execute(
+            """
+            SELECT p.fact_bundle_identity
+            FROM stream_narrative_messages AS n
+            JOIN stream_narrative_plans AS p
+              ON p.plan_identity = n.plan_identity
+            WHERE n.narrative_identity = ?
+            """,
+            (identities["btc-issued"],),
+        ).fetchone()
+        assert row is not None
+        connection.execute(
+            """
+            UPDATE stream_fact_bundles
+            SET payload_json = ?
+            WHERE fact_bundle_identity = ?
+            """,
+            ('{"tampered":true}', str(row[0])),
+        )
+        connection.commit()
+    finally:
+        connection.close()
+
+    with pytest.raises(StreamReadModelError, match="persisted payload digest"):
+        reader.read_message_detail(identities["btc-issued"])
+
+
 def test_stream_read_model_is_read_only_and_missing_db_is_not_initialized(tmp_path) -> None:
     missing = tmp_path / "missing.sqlite3"
     reader = IntelligenceStreamReadModel(missing)
@@ -497,6 +757,16 @@ def test_stream_api_exposes_cursor_history_search_and_lookup(tmp_path) -> None:
     assert exact.status_code == 200
     assert exact.json()["status"] == "ready"
     assert exact.json()["message"]["symbol"] == "ETHUSDT"
+
+    detail = client.get(
+        f"/api/stream/messages/{identities['btc-issued']}/detail"
+    )
+    assert detail.status_code == 200
+    detail_payload = detail.json()
+    assert detail_payload["status"] == "ready"
+    assert detail_payload["detail"]["fact_bundle"]["proof_identity"]
+    assert len(detail_payload["detail"]["fact_bundle"]["family_contributions"]) == 5
+    assert detail_payload["detail"]["real_capital"] == 0
 
     invalid = client.get("/api/stream/messages?before=not-a-cursor")
     assert invalid.status_code == 400
