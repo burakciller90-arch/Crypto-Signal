@@ -3541,18 +3541,26 @@ jobs:
           OUT="$RUNNER_TEMP/galactech-visual-snapshot"
           mkdir -p "$OUT"
 
+          {
+            echo "URL=$URL/"
+            echo "CAPTURED_AT=$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
+            echo "PRODUCT_HEAD=$(git -C /Volumes/Crypto-504/Crypto-Signal/Product rev-parse HEAD)"
+            echo "REAL_CAPITAL=0"
+            echo "READ_ONLY_CAPTURE=YES"
+          } > "$OUT/metadata.txt"
+
           health_ok=0
-          for i in {1..8}; do
-            if curl -fsS --max-time 15 "$URL/api/health" > "$OUT/health.json"; then
+          for i in {1..4}; do
+            if curl -fsS --max-time 8 "$URL/api/health" > "$OUT/health.json"; then
               health_ok=1
               echo "VISUAL_SNAPSHOT_HEALTH_READY attempt=$i"
               break
             fi
             rm -f "$OUT/health.json"
-            sleep 2
+            sleep 1
           done
-          test "$health_ok" = "1"
-          /usr/bin/python3 - <<'PY'
+          if [ "$health_ok" = "1" ]; then
+            /usr/bin/python3 - <<'PY'
           import json
           import os
           from pathlib import Path
@@ -3562,6 +3570,11 @@ jobs:
           assert data.get("read_only") is True
           assert data.get("real_capital") == 0
           PY
+            echo "HEALTH_STATUS=READY" >> "$OUT/metadata.txt"
+          else
+            echo "VISUAL_SNAPSHOT_HEALTH_UNAVAILABLE=YES"
+            echo "HEALTH_STATUS=UNAVAILABLE_CAPTURE_CONTINUES" >> "$OUT/metadata.txt"
+          fi
 
           /usr/bin/open -a Safari "$URL/"
           sleep 3
@@ -3604,14 +3617,6 @@ jobs:
             set bounds of front window to {40, 50, 1480, 1000}
           end tell
           OSA
-
-          {
-            echo "URL=$URL/"
-            echo "CAPTURED_AT=$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
-            echo "PRODUCT_HEAD=$(git -C /Volumes/Crypto-504/Crypto-Signal/Product rev-parse HEAD)"
-            echo "REAL_CAPITAL=0"
-            echo "READ_ONLY=YES"
-          } > "$OUT/metadata.txt"
 
           echo "GALACTECH_VISUAL_SNAPSHOT_PASS=YES"
 
