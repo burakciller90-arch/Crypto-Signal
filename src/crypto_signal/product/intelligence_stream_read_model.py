@@ -112,8 +112,9 @@ class IntelligenceStreamReadModel:
         self.path = path
 
     def read_messages(self, query: StreamMessageQuery) -> StreamReadPage:
-        params: list[object] = []
-        clauses = ["1 = 1"]
+        activation_at_ms = self.activation_boundary_ms()
+        params: list[object] = [activation_at_ms]
+        clauses = ["n.event_at_ms >= ?"]
 
         if query.before is not None:
             clauses.append(
@@ -281,6 +282,7 @@ class IntelligenceStreamReadModel:
 
     def read_message(self, narrative_identity: str) -> dict[str, Any] | None:
         _require_sha256(narrative_identity, "Stream narrative lookup identity")
+        activation_at_ms = self.activation_boundary_ms()
         with self._connect_ro() as connection:
             self._require_schema(connection)
             row = connection.execute(
@@ -288,8 +290,9 @@ class IntelligenceStreamReadModel:
                 SELECT narrative_identity, event_at_ms, payload_json, payload_sha256
                 FROM stream_narrative_messages
                 WHERE narrative_identity = ?
+                  AND event_at_ms >= ?
                 """,
-                (narrative_identity,),
+                (narrative_identity, activation_at_ms),
             ).fetchone()
         if row is None:
             return None
@@ -301,15 +304,18 @@ class IntelligenceStreamReadModel:
         )
 
     def latest_cursor(self) -> str | None:
+        activation_at_ms = self.activation_boundary_ms()
         with self._connect_ro() as connection:
             self._require_schema(connection)
             row = connection.execute(
                 """
                 SELECT event_at_ms, narrative_identity
                 FROM stream_narrative_messages
+                WHERE event_at_ms >= ?
                 ORDER BY event_at_ms DESC, narrative_identity DESC
                 LIMIT 1
-                """
+                """,
+                (activation_at_ms,),
             ).fetchone()
         if row is None:
             return None
@@ -317,6 +323,38 @@ class IntelligenceStreamReadModel:
             StreamCursor(
                 event_at_ms=int(str(row[0])),
                 narrative_identity=str(row[1]),
+            )
+        )
+
+    def activation_boundary_ms(self) -> int:
+        with self._connect_ro() as connection:
+            self._require_schema(connection)
+            rows = connection.execute(
+                """
+                SELECT activated_at_ms
+                FROM stream_activation
+                ORDER BY activated_at_ms, activation_identity
+                """
+            ).fetchall()
+        if len(rows) != 1:
+            raise StreamReadModelError(
+                "Stream read model requires exactly one activation boundary"
+            )
+        activated_at_ms = int(str(rows[0][0]))
+        if activated_at_ms < 0:
+            raise StreamReadModelError(
+                "Stream activation boundary must be non-negative"
+            )
+        return activated_at_ms
+
+    def live_start_cursor(self) -> str:
+        latest = self.latest_cursor()
+        if latest is not None:
+            return latest
+        return encode_stream_cursor(
+            StreamCursor(
+                event_at_ms=self.activation_boundary_ms(),
+                narrative_identity="0" * 64,
             )
         )
 
@@ -332,6 +370,7 @@ class IntelligenceStreamReadModel:
     @staticmethod
     def _require_schema(connection: sqlite3.Connection) -> None:
         for table in (
+            "stream_activation",
             "stream_narrative_messages",
             "stream_narrative_plans",
             "stream_analytical_views",
