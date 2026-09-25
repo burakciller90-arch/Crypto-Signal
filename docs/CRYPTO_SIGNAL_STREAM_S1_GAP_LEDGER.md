@@ -167,3 +167,23 @@ S9 closed:
 **S9 = PASS. S10 Frozen Visual Proof is the active frontier.**
 
 S10 must resolve supported persisted evidence into exact point-in-time visuals with identity/provenance/coordinates and must fail closed where a historical visual cannot be recovered exactly.
+
+
+## S10 closeout
+
+Canonical S10 acceptance:
+- `docs/CRYPTO_SIGNAL_STREAM_S10_ACCEPTANCE.md`.
+
+S10 closed:
+- immutable frozen OHLC projection;
+- supported geometry annotations;
+- exact timestamp/provenance;
+- score-component explanation;
+- identity-only vs unavailable behavior for proof domains without bound visual payload;
+- floating + detached proof rendering;
+- current-data substitution rejection;
+- desktop/mobile Chromium proof acceptance.
+
+**S10 = PASS. S11 Capital Story Integration is the active frontier.**
+
+Do not jump to S12. S11 must first complete canonical three-vault forward paper-capital behavior and project exact capital intent/fill/accounting lineage into the Stream while preserving Epoch separation and REAL_CAPITAL=0.
