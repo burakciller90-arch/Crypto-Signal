@@ -6,6 +6,12 @@ Baseline: **crypto-signal-full-version-v1.0.0 (immutable)**
 Safety invariant: **REAL_CAPITAL=0**  
 Canonical paper program: **Epoch 2 starts at 1,000 USDT; Epoch 1 (100 USDT) remains immutable history**
 
+> **FRONTEND-SPECIFIC AUTHORITY UPDATE — 2026-09-25**
+>
+> This locked roadmap remains the global v1.1 product/science/capital contract. Its high-level Product rail remains valid. For **current frontend architecture, brand hierarchy, information architecture, visual direction and frontend execution order**, read `docs/CRYPTO_SIGNAL_FRONTEND_MASTER_ROADMAP_V1.md`, `docs/CRYPTO_SIGNAL_FRONTEND_M0_CONSTITUTION.md` and the active `docs/CRYPTO_SIGNAL_FRONTEND_M1_CAPABILITY_GAP_LEDGER.md`.
+>
+> Older frontend route counts, dark-theme targets, GALACTECH-as-product wording and screen-order details in this or historical slice documents are retained as history where applicable; they are not current frontend design authority when they conflict with the canonical frontend program. Scientific, evidence, persistence, capital-safety and REAL_CAPITAL=0 rules are unchanged.
+
 ## 0. Authority and interpretation
 
 This document is the canonical post-v1.0 product roadmap. New agents must read it after
