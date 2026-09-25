@@ -311,10 +311,8 @@ def accepted_stream_projector_registry() -> tuple[StreamProjectorSpec, ...]:
             source_system="Event Source / Event Risk circuit breaker",
             category=StreamCategory.RISK,
             subtypes=("event_risk_block", "event_risk_change", "event_risk_recovery"),
-            implementation_state=(
-                StreamProjectorImplementationState.REQUIRES_CHANGE_DETECTION
-            ),
-            target_phase="S3-S4",
+            implementation_state=StreamProjectorImplementationState.IMPLEMENTED,
+            target_phase="S4",
             customer_stream_scope="material approach/block/recovery only",
         ),
         StreamProjectorSpec(
@@ -322,10 +320,8 @@ def accepted_stream_projector_registry() -> tuple[StreamProjectorSpec, ...]:
             source_system="Operational Truth / Provider Divergence",
             category=StreamCategory.SYSTEM,
             subtypes=("data_quality_degraded", "data_quality_recovered"),
-            implementation_state=(
-                StreamProjectorImplementationState.REQUIRES_CHANGE_DETECTION
-            ),
-            target_phase="S3-S4",
+            implementation_state=StreamProjectorImplementationState.IMPLEMENTED,
+            target_phase="S4",
             customer_stream_scope="decision-relevant degradation/recovery only",
         ),
         StreamProjectorSpec(
