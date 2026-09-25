@@ -167,8 +167,8 @@ def test_visualsnapshot_command_captures_real_safari_window_and_uploads_artifact
     assert "actions/upload-artifact@v4" in workflow
     assert "GALACTECH_VISUAL_SNAPSHOT_PASS=YES" in workflow
     assert "VISUAL_SNAPSHOT_HEALTH_READY" in workflow
-    assert 'curl -fsS --max-time 15 "$URL/api/health"' in workflow
-    assert "for i in {1..8}; do" in workflow
+    assert 'curl -fsS --max-time 8 "$URL/api/health"' in workflow
+    assert "for i in {1..4}; do" in workflow
     assert 'assert data.get("read_only") is True' in workflow
     assert 'assert data.get("real_capital") == 0' in workflow
     assert "VISUAL_SNAPSHOT_HEALTH_UNAVAILABLE=YES" in workflow
