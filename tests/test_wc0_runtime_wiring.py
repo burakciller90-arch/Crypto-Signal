@@ -167,6 +167,10 @@ def test_visualsnapshot_command_captures_real_safari_window_and_uploads_artifact
     assert "--headless=new" in workflow
     assert "capture_headless desktop 1440 950" in workflow
     assert "capture_headless mobile 430 860" in workflow
+    assert "proc.wait(timeout=30)" in workflow
+    assert "os.killpg(proc.pid, signal.SIGKILL)" in workflow
+    assert '"--renderer-process-limit=2"' in workflow
+    assert '"--disable-extensions"' in workflow
     assert 'tell application "Safari"' in workflow
     assert "capture_window desktop 40 50 1480 1000" in workflow
     assert "capture_window mobile 80 60 510 920" in workflow
