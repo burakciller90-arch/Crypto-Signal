@@ -1,0 +1,56 @@
+name: Emergency Direct UID502 WebKit Cleanup
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/emergency-direct-uid502-webkit-cleanup.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  cleanup:
+    name: direct cleanup slot ${{ matrix.slot }}
+    runs-on: [self-hosted]
+    timeout-minutes: 2
+    strategy:
+      fail-fast: false
+      max-parallel: 6
+      matrix:
+        slot: [1, 2, 3, 4, 5, 6]
+    steps:
+      - name: Cleanup only on UID502
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "RUNNER_USER=$(whoami) UID=$(id -u) SLOT=${{ matrix.slot }}"
+          if [ "$(id -u)" != "502" ]; then
+            echo "DIRECT_UID502_SKIP=YES"
+            exit 0
+          fi
+
+          echo "=== BEFORE ==="
+          /bin/ps -axo pid=,ppid=,user=,%cpu=,%mem=,rss=,etime=,command= \
+            | /usr/bin/grep -E '[W]ebKit\.WebContent' \
+            | /usr/bin/head -100 || true
+
+          pids="$(
+            /bin/ps -axo pid=,user=,%cpu=,%mem=,command= \
+              | /usr/bin/awk '$2=="durdurulamaz-agent" && $0 ~ /WebKit\.WebContent/ {print $1}'
+          )"
+          echo "DIRECT_UID502_TARGETS=$(echo "$pids" | tr '\n' ' ')"
+
+          for pid in $pids; do /bin/kill -TERM "$pid" 2>/dev/null || true; done
+          /bin/sleep 2
+          for pid in $pids; do
+            if /bin/kill -0 "$pid" 2>/dev/null; then /bin/kill -KILL "$pid" 2>/dev/null || true; fi
+          done
+          /bin/sleep 2
+
+          echo "=== AFTER ==="
+          /bin/ps -axo pid=,ppid=,user=,%cpu=,%mem=,rss=,etime=,command= \
+            | /usr/bin/grep -E '[W]ebKit\.WebContent' \
+            | /usr/bin/head -100 || true
+          /usr/bin/memory_pressure | /usr/bin/grep -E 'System-wide memory free percentage' | /usr/bin/head -1 || true
+          echo "DIRECT_UID502_WEBKIT_CLEANUP_PASS=YES"
