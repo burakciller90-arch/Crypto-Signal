@@ -807,7 +807,7 @@ class R22Epoch2AtomicTape:
                 if (
                     str(outcome_row[0]) != str(fill["source_fill_identity"])
                     or str(outcome_row[1]) != vault_id
-                    or int(outcome_row[2]) != int(fill["filled_at_ms"])
+                    or int(str(outcome_row[2])) != int(str(fill["filled_at_ms"]))
                     or outcome.get("action") != fill.get("action")
                     or outcome.get("symbol") != fill.get("symbol")
                     or outcome.get("quantity") != fill.get("quantity")
