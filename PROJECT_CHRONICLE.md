@@ -1,5 +1,21 @@
 # PROJECT CHRONICLE
 
+## 2026-09-25 — GALACTECH V2 becomes the production Product without weakening evidence boundaries
+
+The final Product phase did not simply repaint the existing dashboard. PR #1207 rebuilt GALACTECH around the backend's persisted intelligence and proof rails. The primary screen now behaves as a live Turkish market-intelligence product: persisted forecast/resolution events form a social-style timeline, a lightweight live intelligence ticker and feed refresh keep the surface moving, and the user sees a plain-language system view before opening technical evidence. Deeper proof remains one click away through exact forecast -> Decision Proof -> frozen signal lineage.
+
+The visual identity moved to a deep-space glass system with cyan/mint/magenta/amber accents, but the important product change is informational hierarchy rather than color. Backend and protocol words were pushed into technical layers; Turkish user-facing concepts such as Ana Merkez, Varlık Merkezi, Sermaye, Sinyal Arşivi and Sistem Sağlığı became the primary vocabulary. Canonical paper accounting is still read-only, absent evidence is still absent, and the UI does not invent latency, ONLINE state, prices, fills, probability calibration or trading authority.
+
+PR #1207's exact head `47f99f6198a4d9962b8787d9d444adea80b1784c` passed both WC0 and WC5 UID504 acceptance, including the live read-only Product preview and whole-repository regression. The accepted source tree is byte-identical to its merge tree.
+
+Deployment then exposed two operational assumptions that static UI testing could not reveal. First, the existing productdeploy command still asserted the V1.1 UI identity; the V2 process booted and health/Intelligence were good, but the stale deployment grep intentionally caused rollback. PR #1209 updated those gates and also removed a restart race in which productdeploy could launch a dashboard while the SSD supervisor was independently responsible for the same process.
+
+The next live attempt revealed a narrower diagnostic bug: a broad `ps | awk` dashboard matcher could see the matcher command line itself because that command line contained the Product dashboard path. Salt-read diagnostics showed one real dashboard child of the SSD supervisor even while the deploy matcher believed two existed. PR #1215 changed discovery to an exact Product Python argv regex. Preview Lifecycle run 36075850254 then passed focused, full-repository and Development non-mutation acceptance; Runtime Supervisor Detection run 36075850297 independently passed the live one-supervisor / one-dashboard / one-runner topology check.
+
+Issue #1216 / run 36075986903 / job 107887168347 performed the final exact-main deploy to `d8843003f2a7fec663db124333ebf633c0f34dea`. Supervisor PID 40756 replaced dashboard PID 43226 with PID 46826. The live V2 root, Intelligence Center, R25 Operational Truth, R11 topology/SQLite audit and continuity-pause preservation all passed, ending with `PRODUCT_DEPLOY_PASS=YES`. Issue #1218 / run 36076141929 / job 107887652934 independently reconfirmed the exact Product HEAD and healthy read-only state with `REAL_CAPITAL=0`.
+
+The engineering/productization goal is therefore real: the new frontend is merged and deployed, not merely present on a branch. The scientific and human-evidence boundaries remain deliberately separate. No human <=10-second comprehension study has been performed, WC2 remains in preregistered evidence accumulation, WC6 still lacks external venue evidence, and WC7 remains `INSUFFICIENT_EVIDENCE`.
+
 
 ## 2026-09-25 — WC7 composes the canonical current frontier without upgrading missing evidence
 
