@@ -16,15 +16,17 @@ from crypto_signal.product.intelligence_stream_ledger import (
 from crypto_signal.product.intelligence_stream_messages import (
     STREAM_FACT_BUNDLE_SCHEMA_VERSION,
     STREAM_MESSAGE_INPUT_SCHEMA_VERSION,
+    STREAM_PUBLISHED_MESSAGE_SCHEMA_VERSION,
     StreamFactBundle,
     StreamMessageInput,
+    StreamPublishedMessage,
 )
 from crypto_signal.product.intelligence_stream_models import (
     REAL_CAPITAL,
     STREAM_ENGINE_VERSION,
 )
 
-STREAM_MESSAGE_LEDGER_SCHEMA_VERSION = "intelligence-stream-message-ledger-v1/1"
+STREAM_MESSAGE_LEDGER_SCHEMA_VERSION = "intelligence-stream-message-ledger-v1/2"
 
 
 class StreamMessageLedgerConflictError(ValueError):
@@ -40,6 +42,7 @@ class StreamMessageLedgerWriteDisposition(StrEnum):
 class StreamMessageLedgerStatus:
     fact_bundle_count: int
     message_input_count: int
+    published_message_count: int
     story_count: int
     latest_event_at_ms: int | None
     schema_version: str = STREAM_MESSAGE_LEDGER_SCHEMA_VERSION
@@ -99,6 +102,21 @@ class IntelligenceStreamMessageLedger:
                         REFERENCES stream_fact_bundles(fact_bundle_identity)
                 );
 
+                CREATE TABLE IF NOT EXISTS stream_published_messages (
+                    publication_identity TEXT PRIMARY KEY,
+                    message_identity TEXT NOT NULL UNIQUE,
+                    source_event_identity TEXT NOT NULL UNIQUE,
+                    story_identity TEXT NOT NULL,
+                    fact_bundle_identity TEXT NOT NULL,
+                    published_at_ms INTEGER NOT NULL,
+                    payload_json TEXT NOT NULL,
+                    payload_sha256 TEXT NOT NULL,
+                    FOREIGN KEY (message_identity)
+                        REFERENCES stream_message_inputs(message_identity),
+                    FOREIGN KEY (fact_bundle_identity)
+                        REFERENCES stream_fact_bundles(fact_bundle_identity)
+                );
+
                 CREATE INDEX IF NOT EXISTS stream_message_inputs_chrono
                 ON stream_message_inputs(event_at_ms, stream_event_identity);
 
@@ -107,6 +125,9 @@ class IntelligenceStreamMessageLedger:
 
                 CREATE INDEX IF NOT EXISTS stream_fact_bundles_story
                 ON stream_fact_bundles(story_identity, event_at_ms, stream_event_identity);
+
+                CREATE INDEX IF NOT EXISTS stream_published_messages_story
+                ON stream_published_messages(story_identity, published_at_ms, publication_identity);
                 """
             )
             expected_meta = {
@@ -133,6 +154,7 @@ class IntelligenceStreamMessageLedger:
                 "stream_message_meta",
                 "stream_fact_bundles",
                 "stream_message_inputs",
+                "stream_published_messages",
             ):
                 for operation in ("UPDATE", "DELETE"):
                     connection.execute(
@@ -351,12 +373,124 @@ class IntelligenceStreamMessageLedger:
             connection.commit()
         return StreamMessageLedgerWriteDisposition.INSERTED
 
+    def append_published_message(
+        self,
+        publication: StreamPublishedMessage,
+    ) -> StreamMessageLedgerWriteDisposition:
+        self.initialize()
+        payload_json = canonical_json(publication)
+        payload_digest = sha256_text(payload_json)
+
+        with closing(sqlite3.connect(self.path)) as connection:
+            connection.execute("PRAGMA foreign_keys=ON")
+            connection.execute("BEGIN IMMEDIATE")
+            self._verify_meta(connection)
+
+            message_row = connection.execute(
+                """
+                SELECT source_event_identity, story_identity, fact_bundle_identity
+                FROM stream_message_inputs
+                WHERE message_identity = ?
+                """,
+                (publication.message_identity,),
+            ).fetchone()
+            if message_row is None:
+                raise StreamMessageLedgerConflictError(
+                    "Stream publication references unknown message input"
+                )
+            if str(message_row[0]) != publication.source_event_identity:
+                raise StreamMessageLedgerConflictError(
+                    "Stream publication/message source-event mismatch"
+                )
+            if str(message_row[1]) != publication.story_identity:
+                raise StreamMessageLedgerConflictError(
+                    "Stream publication/message story mismatch"
+                )
+            if str(message_row[2]) != publication.fact_bundle_identity:
+                raise StreamMessageLedgerConflictError(
+                    "Stream publication/message fact-bundle mismatch"
+                )
+
+            existing = connection.execute(
+                """
+                SELECT publication_identity, payload_json, payload_sha256
+                FROM stream_published_messages
+                WHERE publication_identity = ?
+                   OR message_identity = ?
+                   OR source_event_identity = ?
+                LIMIT 1
+                """,
+                (
+                    publication.publication_identity,
+                    publication.message_identity,
+                    publication.source_event_identity,
+                ),
+            ).fetchone()
+            if existing is not None:
+                exact = (
+                    str(existing[0]) == publication.publication_identity
+                    and str(existing[1]) == payload_json
+                    and str(existing[2]) == payload_digest
+                )
+                if exact:
+                    return StreamMessageLedgerWriteDisposition.UNCHANGED
+                raise StreamMessageLedgerConflictError(
+                    "immutable Stream publication conflict"
+                )
+
+            last_row = connection.execute(
+                """
+                SELECT published_at_ms, publication_identity
+                FROM stream_published_messages
+                ORDER BY published_at_ms DESC, publication_identity DESC
+                LIMIT 1
+                """
+            ).fetchone()
+            if last_row is not None and (
+                publication.published_at_ms,
+                publication.publication_identity,
+            ) <= (int(str(last_row[0])), str(last_row[1])):
+                raise StreamMessageLedgerConflictError(
+                    "Stream publication append would backfill or fork chronology"
+                )
+
+            connection.execute(
+                """
+                INSERT INTO stream_published_messages (
+                    publication_identity,
+                    message_identity,
+                    source_event_identity,
+                    story_identity,
+                    fact_bundle_identity,
+                    published_at_ms,
+                    payload_json,
+                    payload_sha256
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    publication.publication_identity,
+                    publication.message_identity,
+                    publication.source_event_identity,
+                    publication.story_identity,
+                    publication.fact_bundle_identity,
+                    publication.published_at_ms,
+                    payload_json,
+                    payload_digest,
+                ),
+            )
+            connection.commit()
+        return StreamMessageLedgerWriteDisposition.INSERTED
+
     def read_status(self) -> StreamMessageLedgerStatus:
         with self._connect_ro() as connection:
             self._require_schema(connection)
             self._verify_meta(connection)
             fact_count = self._table_count(connection, "stream_fact_bundles")
             message_count = self._table_count(connection, "stream_message_inputs")
+            published_count = self._table_count(
+                connection,
+                "stream_published_messages",
+            )
             story_row = connection.execute(
                 "SELECT COUNT(DISTINCT story_identity) FROM stream_message_inputs"
             ).fetchone()
@@ -372,6 +506,7 @@ class IntelligenceStreamMessageLedger:
         return StreamMessageLedgerStatus(
             fact_bundle_count=fact_count,
             message_input_count=message_count,
+            published_message_count=published_count,
             story_count=story_count,
             latest_event_at_ms=latest,
         )
@@ -400,6 +535,32 @@ class IntelligenceStreamMessageLedger:
             identity_key="message_identity",
             expected_identity=str(row[0]),
             expected_schema=STREAM_MESSAGE_INPUT_SCHEMA_VERSION,
+        )
+
+    def read_published_message(
+        self,
+        message_identity: str,
+    ) -> dict[str, Any] | None:
+        _require_sha256(message_identity, "Stream publication message lookup")
+        with self._connect_ro() as connection:
+            self._require_schema(connection)
+            self._verify_meta(connection)
+            row = connection.execute(
+                """
+                SELECT publication_identity, payload_json, payload_sha256
+                FROM stream_published_messages
+                WHERE message_identity = ?
+                """,
+                (message_identity,),
+            ).fetchone()
+        if row is None:
+            return None
+        return self._verified_record(
+            payload_json=str(row[1]),
+            expected_digest=str(row[2]),
+            identity_key="publication_identity",
+            expected_identity=str(row[0]),
+            expected_schema=STREAM_PUBLISHED_MESSAGE_SCHEMA_VERSION,
         )
 
     def read_fact_bundle(
@@ -504,6 +665,7 @@ class IntelligenceStreamMessageLedger:
             "stream_message_meta",
             "stream_fact_bundles",
             "stream_message_inputs",
+            "stream_published_messages",
         ):
             row = connection.execute(
                 """
