@@ -342,6 +342,73 @@ class R22Epoch2AtomicTape:
                         END"""
                     )
 
+    def read_latest_chain_identities(
+        self,
+        vault_id: PaperVaultId,
+    ) -> tuple[str | None, str | None]:
+        """Read the exact latest per-vault intent/fill predecessors without mutation."""
+        if not isinstance(vault_id, PaperVaultId):
+            raise TypeError("R22 chain lookup requires canonical vault")
+        if not self.epoch2_path.is_file():
+            raise ValueError("R22 Epoch2 ledger is missing")
+        uri = f"{self.epoch2_path.resolve().as_uri()}?mode=ro"
+        with sqlite3.connect(uri, uri=True) as connection:
+            tables = {
+                str(row[0])
+                for row in connection.execute(
+                    """
+                    SELECT name FROM sqlite_master
+                    WHERE type = 'table'
+                      AND name IN ('r22_epoch2_intents', 'r22_epoch2_fills')
+                    """
+                ).fetchall()
+            }
+            if "r22_epoch2_intents" not in tables:
+                return None, None
+            intent_row = connection.execute(
+                """SELECT intent_identity, payload_json
+                FROM r22_epoch2_intents
+                WHERE vault_id = ?
+                ORDER BY event_at_ms DESC, intent_identity DESC
+                LIMIT 1""",
+                (vault_id.value,),
+            ).fetchone()
+            fill_row = (
+                None
+                if "r22_epoch2_fills" not in tables
+                else connection.execute(
+                    """SELECT fill_identity, payload_json
+                    FROM r22_epoch2_fills
+                    WHERE vault_id = ?
+                    ORDER BY event_at_ms DESC, fill_identity DESC
+                    LIMIT 1""",
+                    (vault_id.value,),
+                ).fetchone()
+            )
+        intent_identity = None
+        if intent_row is not None:
+            intent_identity = str(intent_row[0])
+            raw_intent = _verify_embedded_identity(
+                str(intent_row[1]),
+                identity_field="intent_identity",
+                expected_identity=intent_identity,
+                label="R22 latest intent",
+            )
+            if raw_intent.get("vault_id") != vault_id.value:
+                raise ValueError("R22 latest intent vault header mismatch")
+        fill_identity = None
+        if fill_row is not None:
+            fill_identity = str(fill_row[0])
+            raw_fill = _verify_embedded_identity(
+                str(fill_row[1]),
+                identity_field="fill_identity",
+                expected_identity=fill_identity,
+                label="R22 latest fill",
+            )
+            if raw_fill.get("vault_id") != vault_id.value:
+                raise ValueError("R22 latest fill vault header mismatch")
+        return intent_identity, fill_identity
+
     def append_hold_decision(self, intent: PaperTapeIntent) -> bool:
         if intent.action is not PaperAction.HOLD_CASH:
             raise ValueError("R22 hold-decision API accepts HOLD_CASH only")
