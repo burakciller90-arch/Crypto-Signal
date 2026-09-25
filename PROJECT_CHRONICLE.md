@@ -8,7 +8,7 @@ The new authority deliberately does not rewrite historical frontend evidence. Th
 
 The same reconciliation preserves capital history. Epoch 1 remains immutable historical 100 USDT paper evidence. Epoch 2 is the current 1,000 USDT paper-program contract for new canonical activity. The epochs must remain separately identified and neither creates real-money authority; REAL_CAPITAL remains 0.
 
-Follow-up authority hygiene is tracked by PR #FOLLOWUP_PR_PLACEHOLDER. It updates README/current-state/read-order/supersession wording and authority-gate language only. It does not mutate Product/runtime code, SQLite state, Market Tape, signal/forecast history, paper ledgers, research evidence, continuity state or production UI behavior.
+Follow-up authority hygiene is tracked by PR #1255. It updates README/current-state/read-order/supersession wording and authority-gate language only. It does not mutate Product/runtime code, SQLite state, Market Tape, signal/forecast history, paper ledgers, research evidence, continuity state or production UI behavior.
 
 The active frontend sequence is now unambiguous: finish M1 discovery and the user-approved information architecture first; only then enter M2 Application Foundation. The screen lifecycle remains truth discovery -> unresolved user decisions -> wireframe -> approval -> visual -> approval -> just-in-time adapter -> real data -> acceptance -> formative usability -> close. Macro M0->M7 architecture is not to be reopened unless new backend truth or an explicit user decision invalidates it.
 
