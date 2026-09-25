@@ -19,8 +19,8 @@ def test_stream_preview_is_isolated_from_production_root(tmp_path: Path) -> None
     assert root.status_code == 200
     assert preview.status_code == 200
     assert 'data-ui-version="galactech-v2-intelligence-first-tr"' in root.text
-    assert 'data-ui-version="crypto-signal-stream-v1-s8"' in preview.text
-    assert 'data-ui-version="crypto-signal-stream-v1-s8"' not in root.text
+    assert 'data-ui-version="crypto-signal-stream-v1-s9"' in preview.text
+    assert 'data-ui-version="crypto-signal-stream-v1-s9"' not in root.text
 
 
 def test_stream_preview_obeys_one_panel_contract() -> None:
@@ -92,7 +92,77 @@ def test_stream_s8_expands_supported_depth_inline_and_preserves_anchor() -> None
     assert "/api/decision-proof/forecast/" in script
 
 
-def test_stream_s8_does_not_jump_to_s9_or_s13() -> None:
+def test_stream_s9_evidence_window_manager_contract() -> None:
+    html = (STREAM_DIR / "index.html").read_text(encoding="utf-8")
+    script = (STREAM_DIR / "app.js").read_text(encoding="utf-8")
+    css = (STREAM_DIR / "app.css").read_text(encoding="utf-8")
+
+    assert 'aria-label="Kanıt pencereleri"' in html
+    assert "EVIDENCE_WINDOW_KINDS" in script
+    for kind in (
+        "liquidity",
+        "order_flow",
+        "derivatives",
+        "onchain",
+        "geometry",
+        "decision",
+        "capital",
+        "event_risk",
+        "proof",
+    ):
+        assert kind in script
+
+    assert "openEvidenceWindow" in script
+    assert "startEvidenceWindowDrag" in script
+    assert "startEvidenceWindowResize" in script
+    assert "focusEvidenceWindow" in script
+    assert "persistEvidenceWindows" in script
+    assert "restoreEvidenceWindows" in script
+    assert "localStorage" in script
+    assert "window.open(" in script
+    assert "/stream-evidence?narrative=" in script
+    assert "data-window-action" in script
+    assert "pointermove" in script
+    assert ".evidence-window-resize" in css
+    assert ".evidence-window.is-minimized" in css
+    assert ".evidence-window.is-pinned" in css
+    assert "pointer-events: auto" in css
+
+
+def test_stream_s9_detached_evidence_is_exact_identity_and_read_only(tmp_path: Path) -> None:
+    client = TestClient(create_app(tmp_path / "missing-ledger.sqlite3"))
+    response = client.get(
+        "/stream-evidence?narrative="
+        + "a" * 64
+        + "&kind=geometry"
+    )
+    assert response.status_code == 200
+    assert 'data-ui-version="crypto-signal-stream-v1-s9-evidence"' in response.text
+
+    detached = (STREAM_DIR / "evidence.js").read_text(encoding="utf-8")
+    assert "/api/stream/messages/" in detached
+    assert "/detail" in detached
+    assert "/api/decision-proof/forecast/" in detached
+    assert "/api/education/" in detached
+    assert "REAL_CAPITAL=0" in detached
+    assert "Frozen visual coordinates" in detached
+
+
+def test_stream_s9_binds_context_education_without_inventing_missing_data() -> None:
+    script = (STREAM_DIR / "app.js").read_text(encoding="utf-8")
+
+    assert "liquidity_sweep" in script
+    assert '"cvd"' in script
+    assert "liquidation_heatmap" in script
+    assert "agreement_vs_probability" in script
+    assert "paper_trading" in script
+    assert "abstain" in script
+    assert "calibration" in script
+    assert "Bu mesajda neden önemli?" in script
+    assert "veri uydurulmadı" in script
+
+
+def test_stream_s9_does_not_jump_to_s10_or_s13() -> None:
     html = (STREAM_DIR / "index.html").read_text(encoding="utf-8")
     script = (STREAM_DIR / "app.js").read_text(encoding="utf-8")
 
@@ -100,10 +170,9 @@ def test_stream_s8_does_not_jump_to_s9_or_s13() -> None:
     assert "new Audio(" not in script
     assert "AudioContext" not in script
     assert "Notification.requestPermission" not in script
-    assert "dragstart" not in script
-    assert "pointermove" not in script
-    assert "resizeHandle" not in script
-    assert "window.open(" not in script
+    assert "S10 kapsamıdır" in script
+    assert "candlestick" not in script.lower()
+    assert "ohlc" not in script.lower()
 
 
 def test_stream_preview_static_assets_exist_and_are_light_first() -> None:
@@ -111,6 +180,9 @@ def test_stream_preview_static_assets_exist_and_are_light_first() -> None:
 
     assert (STREAM_DIR / "index.html").is_file()
     assert (STREAM_DIR / "app.js").is_file()
+    assert (STREAM_DIR / "evidence.html").is_file()
+    assert (STREAM_DIR / "evidence.js").is_file()
+    assert (STREAM_DIR / "evidence.css").is_file()
     assert "--bg: #f4f8ff" in css
     assert 'color-scheme" content="light"' in (
         STREAM_DIR / "index.html"
