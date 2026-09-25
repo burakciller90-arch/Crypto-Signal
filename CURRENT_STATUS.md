@@ -4,10 +4,49 @@ Updated: 2026-09-25
 Project: Crypto Signal
 Baseline: crypto-signal-full-version-v1.0.0 (immutable)
 Active post-v1.0 program: v1.1 world-class product + market intelligence + Crypto Signal Intelligence Stream V1
-State: WC0_LIVE_PRODUCT_PARITY_ACCEPTED / WC1_24_7_DATA_RELIABILITY_ACCEPTED / WC2_ENGINEERING_FROZEN_EVIDENCE_ACCUMULATION_ACTIVE / WC4_CHAMPION_CHALLENGER_ENGINEERING_ACCEPTED_RESEARCH_ONLY / WC5_ENGINEERING_ACCEPTED_PRODUCT_DEPLOYED_HUMAN_USABILITY_NOT_MEASURED / WC6_SANDBOX_BOUNDARY_ACCEPTED_VENUE_EVIDENCE_EXTERNAL_DEPENDENCY / WC7_CURRENT_FRONTIER_PACKET_ACCEPTED_CURRENT_INSUFFICIENT_EVIDENCE / INTELLIGENCE_STREAM_V1_S0_PASS_S1_PASS_S2_PASS_S3_PASS_S4_PASS_S5_PASS_S6_PASS_S7_ACTIVE / CONTINUITY_PAUSED_BY_USER
+State: WC0_LIVE_PRODUCT_PARITY_ACCEPTED / WC1_24_7_DATA_RELIABILITY_ACCEPTED / WC2_ENGINEERING_FROZEN_EVIDENCE_ACCUMULATION_ACTIVE / WC4_CHAMPION_CHALLENGER_ENGINEERING_ACCEPTED_RESEARCH_ONLY / WC5_ENGINEERING_ACCEPTED_PRODUCT_DEPLOYED_HUMAN_USABILITY_NOT_MEASURED / WC6_SANDBOX_BOUNDARY_ACCEPTED_VENUE_EVIDENCE_EXTERNAL_DEPENDENCY / WC7_CURRENT_FRONTIER_PACKET_ACCEPTED_CURRENT_INSUFFICIENT_EVIDENCE / INTELLIGENCE_STREAM_V1_S0_PASS_S1_PASS_S2_PASS_S3_PASS_S4_PASS_S5_PASS_S6_PASS_S7_PASS_S8_ACTIVE / CONTINUITY_PAUSED_BY_USER
 REAL_CAPITAL: 0
 
 ## Active v1.1 frontier — read before historical sections
+
+### 2026-09-25 — STREAM S7 ONE-PANEL UI SHELL PASS / S8 EXPANDABLE MESSAGE EXPERIENCE ACTIVE
+
+S7 is mechanically and visually accepted.
+
+Canonical acceptance record:
+- `docs/CRYPTO_SIGNAL_STREAM_S7_ACCEPTANCE.md`.
+
+Accepted S7 browser shell:
+- isolated `/stream-preview` surface while GALACTECH V2 remains production root/fallback;
+- one persistent messaging-first panel with no standalone product sections;
+- compact collapsed S5 narrative bubbles;
+- S6 SSE live delivery + polling fallback;
+- upward cursor history;
+- bottom-anchor + buffered `N yeni mesaj` behavior;
+- temporary search/filter drawer;
+- settings/sound control surface;
+- floating-window layer placeholder;
+- canonical Stream ledger runtime binding;
+- explicit non-live visual fixtures;
+- UID504 Chromium rendered acceptance;
+- exact 430x860 CSS viewport proof with no horizontal overflow.
+
+Merged implementation:
+- PR #1280;
+- main `f25ee7e3f6f81097b61f1f33136d3d71001d50f4`.
+
+Exact-head acceptance:
+- head `65dc2e3dcf141940c8d93ba29d0b988e8d3dd3d3`;
+- UID504 run `36170910074` PASS;
+- artifact `stream-s7-visual-snapshot-36170910074`;
+- focused checks PASS;
+- whole-repository regression PASS;
+- desktop/mobile rendered fixtures PASS;
+- Development checkout non-mutation PASS.
+
+The active Stream frontier is now **S8 — Expandable Message Experience**.
+
+S8 must keep the collapsed feed clean while exposing SIMPLE, PRO/technical, INTELLIGENCE, DECISION, trade geometry, CAPITAL and proof actions inline from the same immutable message lineage. Expansion must not destroy scroll position. S9 evidence-window behavior remains out of scope until S8 is accepted.
 
 ### 2026-09-25 — STREAM S6 REAL-TIME BACKEND PASS / S7 ONE-PANEL UI ACTIVE
 
