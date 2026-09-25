@@ -4,6 +4,7 @@ import asyncio
 import os
 import sqlite3
 import time
+from collections.abc import Iterator
 from collections.abc import AsyncIterator
 from pathlib import Path
 from typing import Any
@@ -868,7 +869,7 @@ def create_app(
         except (StreamReadModelError, ValueError) as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
 
-        def events():
+        def events() -> Iterator[str]:
             yield stream_ready_sse(session.cursor)
             last_heartbeat = time.monotonic()
             while True:
