@@ -12,6 +12,10 @@ The missing product closure is therefore a **canonical three-vault forward virtu
 
 The activity contract is intentionally neither "force a trade" nor "stay in cash forever." Every vault continuously evaluates forward opportunities. When every preregistered evidence/risk/sizing/execution gate passes, simulated execution proceeds without an extra discretionary caution veto. If no live setup qualifies, HOLD/BLOCK remains valid evidence. Independent deterministic fixtures must prove each vault's BUY/REDUCE/EXIT/cost/accounting/replay machinery now, while remaining clearly separated from untouched-forward economic evidence.
 
+The same audit confirmed the original five-layer intelligence thesis is materially represented in the codebase rather than existing only as product prose. Liquidity/order-book structure includes persisted candidate semantics for spoofing and hidden liquidity; order-flow research includes PIT-safe CVD divergence and absorption candidates; derivatives measure funding/OI/basis/crowding/dynamics; exchange-flow/large-transfer/wallet-cohort/on-chain evidence exists; and event/calendar/news circuit-breaker logic exists. The locked M6 family priors are exactly Geometry 20 / Liquidity 25 / Order Flow 25 / Derivatives 15 / On-chain 15.
+
+The crucial correction is semantic rather than architectural: these are evidence families and candidate measurements, not omniscient proof of market-maker intent. M6 itself explicitly says its score is weighted support/opposition points, not probability, and it has no automatic production authority. The frontend program therefore commits to surfacing the depth of the backend without turning "candidate" into false certainty or "80 confluence" into "80% accuracy."
+
 REAL_CAPITAL remains 0. No profitability, guarantee, leverage, real-order or automatic real-money authority is introduced.
 
 ## 2026-09-25 — Crypto Signal frontend authority is canonicalized; M0 closes and M1 becomes the active product frontier
