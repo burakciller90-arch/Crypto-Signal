@@ -21,25 +21,38 @@ If any local note conflicts with that handoff, the master handoff wins.
 - NO_SIGNAL, AMBIGUOUS and NOT_EVALUABLE are valid.
 - Numeric truth comes from deterministic/statistical evidence, not LLM prose.
 
+## Frontend authority hygiene — 2026-09-25
+
+- For **new frontend/product design and implementation**, the current frontend-specific authority is:
+  1. `docs/CRYPTO_SIGNAL_FRONTEND_MASTER_ROADMAP_V1.md`;
+  2. `docs/CRYPTO_SIGNAL_FRONTEND_M0_CONSTITUTION.md`;
+  3. `docs/CRYPTO_SIGNAL_FRONTEND_M1_CAPABILITY_GAP_LEDGER.md`.
+- The global scientific, persistence, evidence, replay, capital-safety and production-authority boundaries in the locked v1.1 program remain binding.
+- Historical `docs/GALACTECH_*.md`, older `POST_V1_*.md` frontend acceptance records and older frontend sections inside v1.1 roadmaps are **historical evidence**, not current design authority where they conflict with the canonical frontend documents.
+- Do not revive superseded dark-theme targets, fixed navigation counts, GALACTECH-as-product branding or old frontend execution order merely because an older accepted slice records them.
+- The currently deployed GALACTECH V2 interface remains the production baseline/fallback until a future M7 controlled cutover; historical deployment acceptance is not a mandate to preserve its final visual/IA choices.
+- Paper authority is epoch-specific: **Epoch 1 = immutable historical 100 USDT**; **Epoch 2 = current 1,000 USDT paper-program contract for new activity**. Never combine them into an unlabeled track record.
+
 ## Governing Full Version documents
 The user's 2026-09-20 Full Version direction supersedes the earlier deliberately-limited Birthday Edition scope where they conflict, while preserving every scientific and REAL_CAPITAL boundary.
 
 Before planning new product work, read **in this order**:
-- `docs/V1_1_LOCKED_MASTER_ROADMAP_20260922.md` — **LOCKED user-approved v1.1 governing product contract (2026-09-22)**. It supersedes older v1.1 scope where conflicting, including the new 1,000 USDT Paper Fund Epoch 2, three parallel execution rails, and the from-scratch GALACTECH frontend rebuild.
+- `docs/V1_1_LOCKED_MASTER_ROADMAP_20260922.md` — **LOCKED user-approved v1.1 global product/science/capital contract (2026-09-22)**. Its program-level Product rail remains valid, while current frontend-specific IA/brand/visual/execution details are governed by the canonical frontend documents below.
 - `docs/CRYPTO_SIGNAL_FRONTEND_MASTER_ROADMAP_V1.md` — **current canonical frontend-program architecture**. For new frontend/product work it supersedes older UI-only assumptions where conflicting (brand hierarchy, navigation count, dark visual target, frontend execution order) while preserving all scientific, evidence, persistence and REAL_CAPITAL boundaries.
 - `docs/CRYPTO_SIGNAL_FRONTEND_M0_CONSTITUTION.md` — canonical frontend M0 product constitution, decision rights, multi-axis truth, temporal integrity, lineage and authority boundaries.
 - `docs/CRYPTO_SIGNAL_FRONTEND_M1_CAPABILITY_GAP_LEDGER.md` — mechanically verified frontend capability matrix and live Gap Ledger; update it as M1 discovery advances.
 - `docs/V1_1_MASTER_EXECUTION_ROADMAP.md` — **current governing post-v1.0 / v1.1+ execution roadmap**, including R15 runtime recovery, parallel UI + Market Tape tracks, Live Intelligence Feed / Decision Proof, Canonical Fund vs Shadow Lab, calibration, acceptance and v2 deferrals.
 - `docs/V1_1_WORLD_CLASS_PRODUCT_ROADMAP.md` — condensed v1.1 product roadmap.
 - `docs/CRYPTO_SIGNAL_FULL_VERSION_WORLD_CLASS_ROADMAP.md` — accepted Full Version/v1.0 architectural history and foundations.
-- `docs/AUTONOMOUS_PAPER_FUND_V1_SPEC.md` — immutable 100 USDT virtual fund contract.
+- `docs/PAPER_FUND_EPOCH2_V1_SPEC.md` — current 1,000 USDT Epoch 2 paper-program contract for new activity; REAL_CAPITAL=0.
+- `docs/AUTONOMOUS_PAPER_FUND_V1_SPEC.md` — immutable **historical Epoch 1 / 100 USDT** contract; not canonical for new paper activity.
 - `docs/INTELLIGENCE_ALPHA_FACTORY_ARCHITECTURE.md` — multi-engine, regime, learning and challenger/champion rules.
-- `docs/BEGINNER_UX_EVIDENCE_CENTER_SPEC.md` — live refresh, teaching and evidence UX contract.
+- `docs/BEGINNER_UX_EVIDENCE_CENTER_SPEC.md` — historical/live teaching-and-evidence UX contract; reuse its truth principles, while current placement/IA follows the canonical frontend program.
 
 The project should stay faithful to these documents. Scope may be refined only by preserving their intent and hard invariants; do not silently regress to a narrower historical roadmap.
 
 ## Operating rule
-Read this file, then `CURRENT_STATUS.md`, then the newest `PROJECT_CHRONICLE.md` entry before changing project state.
+Read this file, then `CURRENT_STATUS.md`, then the newest `PROJECT_CHRONICLE.md` entry before changing project state. For frontend work, then read the canonical Frontend Master Roadmap, M0 Constitution and active M1 Capability/Gap Ledger **before** using any historical GALACTECH/frontend slice as context.
 
 ## 2026-09-24 state-first authority update
 
