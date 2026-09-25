@@ -55,8 +55,9 @@ These decisions are already made and must not be re-opened during ordinary imple
 - **S1 Stream-only Backend Capability Audit: PASS**.
 - **S2 Canonical Stream Event & Message Model: PASS**.
 - **S3 Story Engine and Change Detection: PASS**.
-- **S4 Analytical Composer: ACTIVE FRONTIER**.
-- Do not begin S5 or broad UI implementation before S4 can deterministically compose the structured system opinion from canonical facts + S3 change sets.
+- **S4 Analytical Composer: PASS**.
+- **S5 Narrative Engine: ACTIVE FRONTIER**.
+- Do not begin S6 or broad UI implementation before S5 can deterministically render and persist fact-safe Turkish narrative from the exact S4 Analytical View, with a validated fallback path.
 - The deployed GALACTECH V2 surface remains production fallback until S16 controlled cutover.
 
 ---

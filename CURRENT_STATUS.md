@@ -4,10 +4,47 @@ Updated: 2026-09-25
 Project: Crypto Signal
 Baseline: crypto-signal-full-version-v1.0.0 (immutable)
 Active post-v1.0 program: v1.1 world-class product + market intelligence + Crypto Signal Intelligence Stream V1
-State: WC0_LIVE_PRODUCT_PARITY_ACCEPTED / WC1_24_7_DATA_RELIABILITY_ACCEPTED / WC2_ENGINEERING_FROZEN_EVIDENCE_ACCUMULATION_ACTIVE / WC4_CHAMPION_CHALLENGER_ENGINEERING_ACCEPTED_RESEARCH_ONLY / WC5_ENGINEERING_ACCEPTED_PRODUCT_DEPLOYED_HUMAN_USABILITY_NOT_MEASURED / WC6_SANDBOX_BOUNDARY_ACCEPTED_VENUE_EVIDENCE_EXTERNAL_DEPENDENCY / WC7_CURRENT_FRONTIER_PACKET_ACCEPTED_CURRENT_INSUFFICIENT_EVIDENCE / INTELLIGENCE_STREAM_V1_S0_PASS_S1_PASS_S2_PASS_S3_PASS_S4_ACTIVE / CONTINUITY_PAUSED_BY_USER
+State: WC0_LIVE_PRODUCT_PARITY_ACCEPTED / WC1_24_7_DATA_RELIABILITY_ACCEPTED / WC2_ENGINEERING_FROZEN_EVIDENCE_ACCUMULATION_ACTIVE / WC4_CHAMPION_CHALLENGER_ENGINEERING_ACCEPTED_RESEARCH_ONLY / WC5_ENGINEERING_ACCEPTED_PRODUCT_DEPLOYED_HUMAN_USABILITY_NOT_MEASURED / WC6_SANDBOX_BOUNDARY_ACCEPTED_VENUE_EVIDENCE_EXTERNAL_DEPENDENCY / WC7_CURRENT_FRONTIER_PACKET_ACCEPTED_CURRENT_INSUFFICIENT_EVIDENCE / INTELLIGENCE_STREAM_V1_S0_PASS_S1_PASS_S2_PASS_S3_PASS_S4_PASS_S5_ACTIVE / CONTINUITY_PAUSED_BY_USER
 REAL_CAPITAL: 0
 
 ## Active v1.1 frontier — read before historical sections
+
+### 2026-09-25 19:05 +0300 — STREAM S4 ANALYTICAL COMPOSER PASS / S5 NARRATIVE ENGINE ACTIVE
+
+S4 is mechanically accepted.
+
+Canonical acceptance record:
+- `docs/CRYPTO_SIGNAL_STREAM_S4_ACCEPTANCE.md`.
+
+Accepted S4 structured-opinion layer:
+- versioned identity-bound Analytical Policy;
+- deterministic Analytical View over exact Fact Bundle + current Story State + Change Set;
+- pre-publication composition with optional Message Input linkage;
+- effective stance and deterministic stance strength;
+- dominant/secondary support and main contradiction from persisted five-family evidence;
+- uncertainty from exact evidence/risk/probability state;
+- frozen next-condition + invalidation geometry;
+- deterministic analytical PUBLISH/SILENT materiality with reason codes;
+- identity-bound capital-reference consequence;
+- append-only analytical persistence by Story State / Change Set;
+- immutable Fact Bundle persistence before message publication.
+
+Merged implementation:
+- PR #1268;
+- main `d8d53e26c8b552615d14697f614124d3f1e1ed00`.
+
+Exact-head acceptance:
+- head `a425a0dac8065ca142da20ada14534d07adff198`;
+- run `36158170886`;
+- focused pytest/Ruff/strict mypy PASS;
+- whole-repository regression PASS;
+- Development checkout non-mutation PASS.
+
+S4 does not claim Turkish prose, local-LLM rewriting, realtime transport, UI, rich proof windows or canonical three-vault execution.
+
+The active Stream frontier is now **S5 — Narrative Engine**.
+
+S5 must turn the exact Analytical View into original, natural Turkish while preserving every number, identity, uncertainty boundary and materiality decision; deterministic fallback and immutable original-publication persistence are required.
 
 ### 2026-09-25 18:43 +0300 — STREAM S3 STORY ENGINE PASS / S4 ANALYTICAL COMPOSER ACTIVE
 
