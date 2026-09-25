@@ -1,0 +1,523 @@
+"use strict";
+
+(() => {
+  const SVG_NS = "http://www.w3.org/2000/svg";
+
+  function text(value, fallback = "—") {
+    if (value === null || value === undefined || value === "") return fallback;
+    return String(value);
+  }
+
+  function number(value, fallback = null) {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : fallback;
+  }
+
+  function formatNumber(value, fallback = "—") {
+    const parsed = number(value);
+    if (parsed === null) return fallback;
+    return new Intl.NumberFormat("tr-TR", { maximumFractionDigits: 2 }).format(parsed);
+  }
+
+  function formatTime(value) {
+    const parsed = number(value);
+    if (parsed === null) return "—";
+    try {
+      return new Intl.DateTimeFormat("tr-TR", {
+        day: "2-digit",
+        month: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+      }).format(new Date(parsed));
+    } catch {
+      return "—";
+    }
+  }
+
+  function svgElement(name, attrs = {}) {
+    const node = document.createElementNS(SVG_NS, name);
+    for (const [key, value] of Object.entries(attrs)) {
+      node.setAttribute(key, String(value));
+    }
+    return node;
+  }
+
+  function proofSection(label, body = "") {
+    const section = document.createElement("section");
+    section.className = "frozen-proof-section";
+    const heading = document.createElement("h5");
+    heading.textContent = label;
+    const paragraph = document.createElement("p");
+    paragraph.textContent = text(body);
+    section.append(heading, paragraph);
+    return section;
+  }
+
+  function priceExtent(candles, annotations) {
+    const prices = [];
+    for (const candle of candles) {
+      for (const key of ["open", "high", "low", "close"]) {
+        const value = number(candle?.[key]);
+        if (value !== null) prices.push(value);
+      }
+    }
+    for (const annotation of annotations) {
+      for (const key of ["low", "high", "price"]) {
+        const value = number(annotation?.[key]);
+        if (value !== null) prices.push(value);
+      }
+    }
+    if (!prices.length) return [0, 1];
+    let low = Math.min(...prices);
+    let high = Math.max(...prices);
+    if (high <= low) high = low + 1;
+    const pad = Math.max((high - low) * 0.08, high * 0.002);
+    low -= pad;
+    high += pad;
+    return [low, high];
+  }
+
+  function renderChart(payload) {
+    const candles = Array.isArray(payload?.candles) ? payload.candles : [];
+    const annotations = Array.isArray(payload?.annotations) ? payload.annotations : [];
+    const shell = document.createElement("div");
+    shell.className = "frozen-proof-chart-shell";
+
+    if (!candles.length) {
+      const empty = document.createElement("div");
+      empty.className = "frozen-proof-unavailable";
+      empty.textContent = "Dondurulmuş OHLC payload bulunamadı; current data ile yeniden üretilmedi.";
+      shell.append(empty);
+      return shell;
+    }
+
+    const width = 900;
+    const height = 420;
+    const left = 62;
+    const right = 20;
+    const top = 24;
+    const bottom = 42;
+    const plotWidth = width - left - right;
+    const plotHeight = height - top - bottom;
+    const [minPrice, maxPrice] = priceExtent(candles, annotations);
+    const y = (price) => top + ((maxPrice - price) / (maxPrice - minPrice)) * plotHeight;
+    const step = plotWidth / Math.max(candles.length, 1);
+    const bodyWidth = Math.max(3, Math.min(14, step * 0.55));
+
+    const svg = svgElement("svg", {
+      class: "frozen-proof-chart",
+      viewBox: `0 0 ${width} ${height}`,
+      role: "img",
+      "aria-label": "Karar anında dondurulmuş OHLC ve exact kanıt işaretleri",
+      preserveAspectRatio: "xMidYMid meet",
+    });
+
+    const grid = svgElement("g", { class: "proof-chart-grid" });
+    for (let index = 0; index <= 4; index += 1) {
+      const yy = top + (plotHeight / 4) * index;
+      const line = svgElement("line", {
+        x1: left,
+        x2: width - right,
+        y1: yy,
+        y2: yy,
+      });
+      grid.append(line);
+      const price = maxPrice - ((maxPrice - minPrice) / 4) * index;
+      const label = svgElement("text", {
+        x: left - 9,
+        y: yy + 4,
+        "text-anchor": "end",
+      });
+      label.textContent = formatNumber(price);
+      grid.append(label);
+    }
+    svg.append(grid);
+
+    const entry = annotations.find((item) => item?.kind === "entry_zone");
+    if (entry) {
+      const low = number(entry.low);
+      const high = number(entry.high);
+      if (low !== null && high !== null) {
+        const yHigh = y(Math.max(low, high));
+        const yLow = y(Math.min(low, high));
+        const zone = svgElement("rect", {
+          class: "proof-entry-zone",
+          x: left,
+          y: yHigh,
+          width: plotWidth,
+          height: Math.max(1, yLow - yHigh),
+          "data-annotation-identity": text(entry.annotation_identity, ""),
+        });
+        svg.append(zone);
+      }
+    }
+
+    const candleGroup = svgElement("g", { class: "proof-candles" });
+    candles.forEach((candle, index) => {
+      const open = number(candle.open);
+      const high = number(candle.high);
+      const low = number(candle.low);
+      const close = number(candle.close);
+      if ([open, high, low, close].some((value) => value === null)) return;
+      const x = left + step * index + step / 2;
+      const up = close >= open;
+      const identity = Array.isArray(candle.candle_identity)
+        ? candle.candle_identity.join(":")
+        : text(candle.candle_identity, "");
+      const group = svgElement("g", {
+        class: `proof-candle ${up ? "is-up" : "is-down"}`,
+        "data-candle-identity": identity,
+      });
+      group.append(
+        svgElement("line", {
+          class: "proof-candle-wick",
+          x1: x,
+          x2: x,
+          y1: y(high),
+          y2: y(low),
+        })
+      );
+      const bodyTop = Math.min(y(open), y(close));
+      const bodyHeight = Math.max(2, Math.abs(y(open) - y(close)));
+      group.append(
+        svgElement("rect", {
+          class: "proof-candle-body",
+          x: x - bodyWidth / 2,
+          y: bodyTop,
+          width: bodyWidth,
+          height: bodyHeight,
+          rx: 1.5,
+        })
+      );
+      candleGroup.append(group);
+    });
+    svg.append(candleGroup);
+
+    const markGroup = svgElement("g", { class: "proof-annotations" });
+    for (const annotation of annotations) {
+      if (annotation?.kind === "entry_zone") continue;
+      const price = number(annotation?.price);
+      if (price === null) continue;
+      const group = svgElement("g", {
+        class: `proof-annotation proof-annotation-${text(annotation.kind, "mark")}`,
+        "data-annotation-identity": text(annotation.annotation_identity, ""),
+        "data-source-evidence-identity": text(annotation.source_evidence_identity, ""),
+      });
+      const line = svgElement("line", {
+        x1: left,
+        x2: width - right,
+        y1: y(price),
+        y2: y(price),
+      });
+      const label = svgElement("text", {
+        x: width - right - 5,
+        y: y(price) - 5,
+        "text-anchor": "end",
+      });
+      label.textContent = `${text(annotation.label, annotation.kind)} · ${formatNumber(price)}`;
+      group.append(line, label);
+      markGroup.append(group);
+    }
+    svg.append(markGroup);
+
+    const axis = svgElement("g", { class: "proof-chart-axis" });
+    const firstTime = candles[0]?.open_time_ms;
+    const lastTime = candles[candles.length - 1]?.open_time_ms;
+    const leftLabel = svgElement("text", {
+      x: left,
+      y: height - 14,
+      "text-anchor": "start",
+    });
+    leftLabel.textContent = formatTime(firstTime);
+    const rightLabel = svgElement("text", {
+      x: width - right,
+      y: height - 14,
+      "text-anchor": "end",
+    });
+    rightLabel.textContent = formatTime(lastTime);
+    axis.append(leftLabel, rightLabel);
+    svg.append(axis);
+
+    shell.append(svg);
+    return shell;
+  }
+
+  function renderProvenance(payload) {
+    const provenance = payload?.provenance || {};
+    const lineage = payload?.lineage || {};
+    const section = proofSection(
+      "PROVENANCE",
+      `Karar kaynağı: ${text(provenance.candle_source)} · source as-of ${formatTime(
+        provenance.source_as_of_ms
+      )} · freeze ${formatTime(provenance.frozen_at_ms)}. Current-data substitution: ${provenance.current_data_substitution === false ? "YOK" : "BİLİNMİYOR"}.`
+    );
+    const identities = document.createElement("div");
+    identities.className = "frozen-proof-identities";
+    for (const [label, value] of [
+      ["message", lineage.narrative_identity],
+      ["forecast", lineage.forecast_identity],
+      ["proof", lineage.proof_identity],
+      ["signal", lineage.signal_freeze_identity],
+      ["bundle", lineage.decision_freeze_bundle_identity],
+    ]) {
+      if (!value) continue;
+      const code = document.createElement("code");
+      code.dataset.identityKind = label;
+      code.textContent = `${label}: ${value}`;
+      identities.append(code);
+    }
+    section.append(identities);
+    return section;
+  }
+
+  function renderScoreComponents(payload) {
+    const components = payload?.score_components || {};
+    const families = Array.isArray(components.family_contributions)
+      ? components.family_contributions
+      : [];
+    const section = proofSection(
+      "SCORE COMPONENTS",
+      `Confluence support ${formatNumber(
+        components.confluence_support_score_0_100
+      )} · opposition ${formatNumber(
+        components.confluence_opposition_score_0_100
+      )}. Bu skor olasılık değildir.`
+    );
+    const grid = document.createElement("div");
+    grid.className = "frozen-proof-score-grid";
+    for (const family of families) {
+      const item = document.createElement("div");
+      item.className = "frozen-proof-score";
+      item.dataset.family = text(family?.family, "");
+      const label = document.createElement("span");
+      label.textContent = text(family?.family, "family").replaceAll("_", " ");
+      const values = document.createElement("strong");
+      values.textContent = `+${formatNumber(family?.support_points, "0")} / -${formatNumber(
+        family?.opposition_points,
+        "0"
+      )}`;
+      item.append(label, values);
+      grid.append(item);
+    }
+    section.append(grid);
+    return section;
+  }
+
+  function renderDomainManifest(payload) {
+    const domains = Array.isArray(payload?.domain_evidence) ? payload.domain_evidence : [];
+    const section = proofSection(
+      "EVIDENCE DOMAINS",
+      "Görsel payload yalnız exact bound store varsa çizilir; identity-only kanıt current data ile yeniden kurulmaz."
+    );
+    const grid = document.createElement("div");
+    grid.className = "frozen-proof-domain-grid";
+    for (const domain of domains) {
+      const item = document.createElement("div");
+      item.className = "frozen-proof-domain";
+      item.dataset.domain = text(domain?.domain, "");
+      item.dataset.visualState = text(domain?.visual_state, "unavailable");
+      const head = document.createElement("div");
+      const label = document.createElement("strong");
+      label.textContent = text(domain?.domain, "domain").replaceAll("_", " ");
+      const state = document.createElement("span");
+      state.textContent = text(domain?.visual_state, "unavailable").replaceAll("_", " ");
+      head.append(label, state);
+      const note = document.createElement("p");
+      note.textContent =
+        domain?.visual_state === "resolved_frozen_bundle"
+          ? "Exact immutable freeze payload çözüldü."
+          : domain?.visual_state === "identity_only"
+            ? "Exact evidence identity var; bound visual payload yok, çizim yapılmadı."
+            : "Bu proof domaini bu mesajda görselleştirilebilir değil.";
+      item.append(head, note);
+      const identities = Array.isArray(domain?.evidence_identities)
+        ? domain.evidence_identities
+        : [];
+      for (const identity of identities.slice(0, 3)) {
+        const code = document.createElement("code");
+        code.textContent = identity;
+        item.append(code);
+      }
+      grid.append(item);
+    }
+    section.append(grid);
+    return section;
+  }
+
+  function renderFrozenVisualProof(payload) {
+    const root = document.createElement("article");
+    root.className = "frozen-visual-proof";
+    root.dataset.visualProofStatus = text(payload?.status, "unavailable");
+    root.dataset.narrativeIdentity = text(payload?.narrative_identity, "");
+
+    const head = document.createElement("header");
+    head.className = "frozen-proof-head";
+    const copy = document.createElement("div");
+    const eyebrow = document.createElement("span");
+    eyebrow.textContent = "DONDURULMUŞ KANIT · POINT-IN-TIME";
+    const title = document.createElement("strong");
+    title.textContent = `${text(payload?.symbol, "PİYASA")} · ${text(
+      payload?.timeframe
+    )} · Frozen Visual Proof`;
+    copy.append(eyebrow, title);
+    const badge = document.createElement("span");
+    badge.className = "frozen-proof-badge";
+    badge.textContent = payload?.status === "ready" ? "EXACT PERSISTED" : "UNAVAILABLE";
+    head.append(copy, badge);
+    root.append(head);
+
+    if (payload?.status !== "ready") {
+      const unavailable = document.createElement("div");
+      unavailable.className = "frozen-proof-unavailable";
+      unavailable.textContent = `Frozen visual proof hazır değil: ${text(
+        payload?.reason,
+        "exact persisted visual payload unavailable"
+      )}. Current data ile yerine konmadı.`;
+      root.append(unavailable);
+      if (Array.isArray(payload?.domain_evidence)) {
+        root.append(renderDomainManifest(payload));
+      }
+      return root;
+    }
+
+    root.append(
+      renderChart(payload),
+      renderProvenance(payload),
+      renderScoreComponents(payload),
+      renderDomainManifest(payload)
+    );
+    return root;
+  }
+
+  function fixtureVisualProof({
+    narrativeIdentity,
+    symbol,
+    timeframe,
+    forecastIdentity,
+    proofIdentity,
+  }) {
+    const candles = [];
+    let close = 62000;
+    for (let index = 0; index < 28; index += 1) {
+      const wave = ((index % 7) - 3) * 70;
+      const open = close;
+      close = open + (index % 3 === 0 ? 180 : index % 3 === 1 ? -90 : 125) + wave;
+      const high = Math.max(open, close) + 180 + (index % 4) * 24;
+      const low = Math.min(open, close) - 160 - (index % 5) * 18;
+      const openTime = 1_790_000_000_000 + index * 14_400_000;
+      candles.push({
+        candle_identity: ["binance", "spot", symbol, timeframe, openTime],
+        open_time_ms: openTime,
+        close_time_ms: openTime + 14_399_999,
+        open: String(open),
+        high: String(high),
+        low: String(low),
+        close: String(close),
+        volume: String(10 + index),
+        source: "fixture",
+        source_timestamp_ms: openTime + 14_399_900,
+        ingested_at_ms: openTime + 14_399_950,
+      });
+    }
+    const identity = (suffix) => String(suffix).padStart(64, "0");
+    return {
+      schema_version: "intelligence-stream-visual-proof-v1/1",
+      status: "ready",
+      visual_kind: "frozen_ohlc",
+      narrative_identity: narrativeIdentity,
+      symbol,
+      timeframe,
+      lineage: {
+        narrative_identity: narrativeIdentity,
+        forecast_identity: forecastIdentity,
+        proof_identity: proofIdentity,
+        signal_freeze_identity: identity(910),
+        decision_freeze_bundle_identity: identity(911),
+      },
+      provenance: {
+        source_as_of_ms: candles[candles.length - 1].close_time_ms,
+        issued_at_ms: candles[candles.length - 1].close_time_ms + 1,
+        frozen_at_ms: candles[candles.length - 1].close_time_ms + 2,
+        source_cutoff_open_time_ms: candles[candles.length - 1].open_time_ms,
+        candle_source: "explicit_visual_test_fixture",
+        current_data_substitution: false,
+        exact_persisted: false,
+      },
+      candles,
+      annotations: [
+        {
+          annotation_identity: identity(920),
+          kind: "entry_zone",
+          label: "Tetik bölgesi",
+          low: "62000",
+          high: "62500",
+          source_evidence_identity: identity(930),
+          source_methodology: "price_action",
+        },
+        {
+          annotation_identity: identity(921),
+          kind: "invalidation",
+          label: "Geçersizleşme",
+          price: "60750",
+          source_evidence_identity: identity(930),
+          source_methodology: "price_action",
+        },
+        {
+          annotation_identity: identity(922),
+          kind: "target",
+          label: "target_1",
+          price: "65000",
+          source_evidence_identity: identity(930),
+          source_methodology: "price_action",
+        },
+        {
+          annotation_identity: identity(923),
+          kind: "target",
+          label: "target_2",
+          price: "66000",
+          source_evidence_identity: identity(930),
+          source_methodology: "price_action",
+        },
+      ],
+      score_components: {
+        confluence_support_score_0_100: 74,
+        confluence_opposition_score_0_100: 19,
+        family_contributions: [
+          ["geometry", 78, 8],
+          ["liquidity", 71, 13],
+          ["order_flow", 65, 18],
+          ["derivatives", 44, 31],
+          ["onchain", 36, 22],
+        ].map(([family, support, opposition]) => ({
+          family,
+          support_points: support,
+          opposition_points: opposition,
+        })),
+      },
+      domain_evidence: [
+        ["frozen_chart", "resolved_frozen_bundle", identity(940)],
+        ["consumed_candles", "resolved_frozen_bundle", identity(941)],
+        ["order_book", "identity_only", identity(942)],
+        ["liquidity_map", "identity_only", identity(943)],
+        ["order_flow_cvd", "identity_only", identity(944)],
+        ["onchain", "unavailable", null],
+      ].map(([domain, visual_state, evidenceIdentity], index) => ({
+        slice_identity: identity(950 + index),
+        domain,
+        availability: visual_state === "unavailable" ? "insufficient" : "available",
+        verdict: visual_state === "unavailable" ? "insufficient" : "neutral",
+        evidence_identities: evidenceIdentity ? [evidenceIdentity] : [],
+        visual_state,
+      })),
+      read_only: true,
+      production_authority: false,
+      real_capital: 0,
+      fixture: true,
+    };
+  }
+
+  window.CryptoSignalVisualProof = Object.freeze({
+    renderFrozenVisualProof,
+    fixtureVisualProof,
+  });
+})();

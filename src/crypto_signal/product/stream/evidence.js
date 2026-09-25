@@ -204,7 +204,7 @@ function renderCore(config, detail) {
   } else if (kind === "proof") {
     const proof = section(
       "Exact proof lineage",
-      "S9 bu pencereyi ve exact identity bağını sağlar. Frozen visual coordinates ve çizimler S10 kapsamıdır."
+      "Bu pencere exact persisted lineage'ı korur. Frozen visual proof yalnız immutable karar freeze'i çözülebiliyorsa aşağıda çizilir."
     );
     const forecast = document.createElement("code");
     forecast.textContent = `forecast: ${text(fact?.forecast_identity)}`;
@@ -275,6 +275,34 @@ function renderCore(config, detail) {
   }
 }
 
+async function renderDetachedFrozenVisualProof() {
+  if (!["proof", "geometry"].includes(kind) || !content) return;
+  const renderer = window.CryptoSignalVisualProof?.renderFrozenVisualProof;
+  if (typeof renderer !== "function") return;
+  let visualProof;
+  try {
+    const payload = await fetchJson(
+      `/api/stream/messages/${encodeURIComponent(narrativeIdentity)}/visual-proof`
+    );
+    visualProof =
+      payload?.visual_proof && typeof payload.visual_proof === "object"
+        ? payload.visual_proof
+        : {
+            status: payload?.status || "unavailable",
+            reason: payload?.reason || "exact_visual_proof_unavailable",
+            narrative_identity: narrativeIdentity,
+          };
+  } catch {
+    visualProof = {
+      status: "unavailable",
+      reason: "visual_proof_request_failed",
+      narrative_identity: narrativeIdentity,
+    };
+  }
+  content.querySelector(".frozen-visual-proof")?.remove();
+  content.prepend(renderer(visualProof));
+}
+
 async function init() {
   const config = KIND_CONFIG[kind];
   if (!validSha256(narrativeIdentity) || !config) {
@@ -304,6 +332,7 @@ async function init() {
     }
     if (content) content.replaceChildren();
     renderCore(config, payload.detail);
+    await renderDetachedFrozenVisualProof();
   } catch {
     if (content) {
       content.replaceChildren();
