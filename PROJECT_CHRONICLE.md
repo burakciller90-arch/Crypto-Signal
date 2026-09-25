@@ -1,5 +1,15 @@
 # PROJECT CHRONICLE
 
+## 2026-09-25 — Stream S1 begins with backend-to-message capability audit
+
+The first implementation frontier under Intelligence Stream V1 is deliberately not visual coding. S1 began by separating six different questions for each capability: does the engine exist, does a live source exist, is PIT evidence persisted, is there a Product read projection, is there a Stream message projection, and is there a UI surface.
+
+This immediately confirmed why the old “data yok” shorthand is unsafe. Current backend code contains substantially richer intelligence/proof/capital primitives than the current feed projects. The existing R20.5 feed is a valuable append-only seed but remains issuance/resolution-oriented and request/response only. R23 already proves SIMPLE and PRO can be derived deterministically from the same proof. Market Tape persists microstructure and derivatives source truth, Event Source persists calendar/news evidence, and Epoch2/R22 contain rich vault/accounting lineage. The missing Stream layer is therefore primarily message/event projection, story/change semantics, rich evidence lookup, realtime transport and customer presentation rather than invention of a new market-analysis engine.
+
+Two canonical S1 working records were added: the Stream Capability Matrix and the Stream Gap Ledger. S1 remains open until exact identity/temporal maps and the remaining DISCOVER items are closed.
+
+The user also asked that frontend review reflect what is actually visible rather than only code. The Stream roadmap now requires real-browser screenshot artifacts from S7 onward. Rendered visual evidence becomes part of acceptance for message density, expansion, floating evidence windows, search/settings, long history and responsive states.
+
 ## 2026-09-25 — User supersedes multi-screen frontend program; Intelligence Stream V1 becomes sole product frontier
 
 The user made a deliberate scope reduction after reviewing the product direction: do **not** build the broader multi-screen frontend first. Finish one exceptional surface before expanding the product.
