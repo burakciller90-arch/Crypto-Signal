@@ -3,7 +3,6 @@ from __future__ import annotations
 import base64
 import json
 import sqlite3
-from contextlib import closing
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
