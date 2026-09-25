@@ -1,7 +1,9 @@
 # Crypto Signal Frontend M1 — Backend Capability Matrix & Gap Ledger
 
-Status: INITIAL MECHANICALLY VERIFIED M1 BASELINE  
-Observed source: repository main at 26cc5b05f9b15a0a8569042c534886e4681b4502  
+Status: **M1 ACTIVE — INITIAL MECHANICALLY VERIFIED BASELINE / NOT YET PASS**  
+Observed runtime/code baseline: repository main at `26cc5b05f9b15a0a8569042c534886e4681b4502`  
+Frontend canonicalization merge: `59d2bd51ff4696945cb8a963ed490d6abe3bdfb8` (PR #1254, documentation/authority only)  
+Baseline validity: PR #1254 and the subsequent authority-hygiene follow-up are documentation-only and do not change the runtime/backend code inspected for this matrix.  
 Purpose: map real backend truth to future frontend capability without invention.
 
 ## 1. Classification
@@ -242,3 +244,24 @@ Next action after this baseline is accepted:
 - formalize the identity graph and temporal map;
 - run the first unresolved user product-decision session;
 - freeze IA only after those decisions.
+
+## 10. M1 PASS status
+
+M1 is **ACTIVE and NOT YET PASS**.
+
+Already established:
+- initial mechanically verified product API/capability baseline;
+- initial Product Gap Ledger;
+- known frozen-signal / Decision-Proof / Market-Tape identity and temporal primitives;
+- explicit REUSE / ADAPT / DISCOVER / NOT_AVAILABLE / ADD_PRESENTATION classification;
+- no-fabrication boundaries for visual evidence, intelligence expansion, archive navigation and microstructure proof.
+
+Still required before M1 can PASS:
+- complete canonical cross-surface identity graph;
+- complete frontend temporal-field map for critical product surfaces;
+- completeness audit against every current product API and major evidence surface;
+- remaining product-decision sessions, asked in small groups without re-asking locked decisions;
+- user-approved final information architecture;
+- final check that every planned visual/product feature is backed by REUSE/ADAPT truth or explicitly marked DISCOVER/NOT_AVAILABLE.
+
+M2 Application Foundation must **not** freeze routes or final shell information architecture before these items pass.
