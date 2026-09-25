@@ -15,6 +15,9 @@ from crypto_signal.product.intelligence_stream_analytical import (
 from crypto_signal.product.intelligence_stream_capital import (
     STREAM_CAPITAL_MESSAGE_SCHEMA_VERSION,
 )
+from crypto_signal.product.intelligence_stream_capital_decisions import (
+    STREAM_CAPITAL_DECISION_MESSAGE_SCHEMA_VERSION,
+)
 from crypto_signal.product.intelligence_stream_messages import (
     STREAM_FACT_BUNDLE_SCHEMA_VERSION,
     STREAM_MESSAGE_INPUT_SCHEMA_VERSION,
@@ -241,6 +244,10 @@ class IntelligenceStreamReadModel:
             self._require_schema(connection)
             rows = connection.execute(sql, tuple(params)).fetchall()
             capital_items = self._read_capital_messages(connection, query)
+            capital_decision_items = self._read_capital_decision_messages(
+                connection,
+                query,
+            )
 
         regular_items = tuple(
             self._verified_narrative_record(
@@ -251,7 +258,7 @@ class IntelligenceStreamReadModel:
             )
             for row in rows
         )
-        combined = [*regular_items, *capital_items]
+        combined = [*regular_items, *capital_items, *capital_decision_items]
         combined.sort(
             key=lambda item: (
                 _record_event_at_ms(item),
@@ -324,6 +331,23 @@ class IntelligenceStreamReadModel:
                     """,
                     (narrative_identity,),
                 ).fetchone()
+            capital_decision_row = None
+            if (
+                row is None
+                and capital_row is None
+                and self._table_exists(
+                    connection,
+                    "stream_capital_decision_messages",
+                )
+            ):
+                capital_decision_row = connection.execute(
+                    """
+                    SELECT narrative_identity, event_at_ms, payload_json, payload_sha256
+                    FROM stream_capital_decision_messages
+                    WHERE narrative_identity = ?
+                    """,
+                    (narrative_identity,),
+                ).fetchone()
         if row is not None:
             return self._verified_narrative_record(
                 narrative_identity=str(row[0]),
@@ -331,13 +355,20 @@ class IntelligenceStreamReadModel:
                 payload_json=str(row[2]),
                 expected_digest=str(row[3]),
             )
-        if capital_row is None:
+        if capital_row is not None:
+            return self._verified_capital_record(
+                narrative_identity=str(capital_row[0]),
+                event_at_ms=int(str(capital_row[1])),
+                payload_json=str(capital_row[2]),
+                expected_digest=str(capital_row[3]),
+            )
+        if capital_decision_row is None:
             return None
-        return self._verified_capital_record(
-            narrative_identity=str(capital_row[0]),
-            event_at_ms=int(str(capital_row[1])),
-            payload_json=str(capital_row[2]),
-            expected_digest=str(capital_row[3]),
+        return self._verified_capital_decision_record(
+            narrative_identity=str(capital_decision_row[0]),
+            event_at_ms=int(str(capital_decision_row[1])),
+            payload_json=str(capital_decision_row[2]),
+            expected_digest=str(capital_decision_row[3]),
         )
 
     def read_message_detail(
@@ -378,27 +409,58 @@ class IntelligenceStreamReadModel:
             ).fetchone()
         if row is None:
             with self._connect_ro() as connection:
-                if not self._table_exists(connection, "stream_capital_messages"):
-                    return None
-                capital_row = connection.execute(
-                    """
-                    SELECT narrative_identity, event_at_ms, payload_json, payload_sha256
-                    FROM stream_capital_messages
-                    WHERE narrative_identity = ?
-                    """,
-                    (narrative_identity,),
-                ).fetchone()
-            if capital_row is None:
+                capital_row = None
+                if self._table_exists(connection, "stream_capital_messages"):
+                    capital_row = connection.execute(
+                        """
+                        SELECT narrative_identity, event_at_ms, payload_json, payload_sha256
+                        FROM stream_capital_messages
+                        WHERE narrative_identity = ?
+                        """,
+                        (narrative_identity,),
+                    ).fetchone()
+                capital_decision_row = None
+                if (
+                    capital_row is None
+                    and self._table_exists(
+                        connection,
+                        "stream_capital_decision_messages",
+                    )
+                ):
+                    capital_decision_row = connection.execute(
+                        """
+                        SELECT narrative_identity, event_at_ms, payload_json, payload_sha256
+                        FROM stream_capital_decision_messages
+                        WHERE narrative_identity = ?
+                        """,
+                        (narrative_identity,),
+                    ).fetchone()
+            if capital_row is not None:
+                capital = self._verified_capital_record(
+                    narrative_identity=str(capital_row[0]),
+                    event_at_ms=int(str(capital_row[1])),
+                    payload_json=str(capital_row[2]),
+                    expected_digest=str(capital_row[3]),
+                )
+                return {
+                    "narrative": capital,
+                    "capital_story": capital,
+                    "schema_version": STREAM_MESSAGE_DETAIL_SCHEMA_VERSION,
+                    "read_only": True,
+                    "production_authority": False,
+                    "real_capital": REAL_CAPITAL,
+                }
+            if capital_decision_row is None:
                 return None
-            capital = self._verified_capital_record(
-                narrative_identity=str(capital_row[0]),
-                event_at_ms=int(str(capital_row[1])),
-                payload_json=str(capital_row[2]),
-                expected_digest=str(capital_row[3]),
+            capital_decision = self._verified_capital_decision_record(
+                narrative_identity=str(capital_decision_row[0]),
+                event_at_ms=int(str(capital_decision_row[1])),
+                payload_json=str(capital_decision_row[2]),
+                expected_digest=str(capital_decision_row[3]),
             )
             return {
-                "narrative": capital,
-                "capital_story": capital,
+                "narrative": capital_decision,
+                "capital_decision": capital_decision,
                 "schema_version": STREAM_MESSAGE_DETAIL_SCHEMA_VERSION,
                 "read_only": True,
                 "production_authority": False,
@@ -474,9 +536,22 @@ class IntelligenceStreamReadModel:
                     LIMIT 1
                     """
                 ).fetchone()
+            capital_decision_row = None
+            if self._table_exists(
+                connection,
+                "stream_capital_decision_messages",
+            ):
+                capital_decision_row = connection.execute(
+                    """
+                    SELECT event_at_ms, narrative_identity
+                    FROM stream_capital_decision_messages
+                    ORDER BY event_at_ms DESC, narrative_identity DESC
+                    LIMIT 1
+                    """
+                ).fetchone()
         candidates = tuple(
             (int(str(item[0])), str(item[1]))
-            for item in (row, capital_row)
+            for item in (row, capital_row, capital_decision_row)
             if item is not None
         )
         if not candidates:
@@ -585,6 +660,113 @@ class IntelligenceStreamReadModel:
         ).fetchall()
         return tuple(
             self._verified_capital_record(
+                narrative_identity=str(row[0]),
+                event_at_ms=int(str(row[1])),
+                payload_json=str(row[2]),
+                expected_digest=str(row[3]),
+            )
+            for row in rows
+        )
+
+    def _read_capital_decision_messages(
+        self,
+        connection: sqlite3.Connection,
+        query: StreamMessageQuery,
+    ) -> tuple[dict[str, Any], ...]:
+        if not self._table_exists(
+            connection,
+            "stream_capital_decision_messages",
+        ):
+            return ()
+        if query.effective_stance is not None or query.evidence_domain is not None:
+            return ()
+        if query.category is not None and query.category != "capital":
+            return ()
+        if query.importance is not None and query.importance != "important":
+            return ()
+        if query.source_kind is not None and query.source_kind != "deterministic":
+            return ()
+
+        clauses = ["1 = 1"]
+        params: list[object] = []
+        if query.before is not None:
+            clauses.append(
+                "(event_at_ms < ? OR "
+                "(event_at_ms = ? AND narrative_identity < ?))"
+            )
+            params.extend(
+                (
+                    query.before.event_at_ms,
+                    query.before.event_at_ms,
+                    query.before.narrative_identity,
+                )
+            )
+        if query.after is not None:
+            clauses.append(
+                "(event_at_ms > ? OR "
+                "(event_at_ms = ? AND narrative_identity > ?))"
+            )
+            params.extend(
+                (
+                    query.after.event_at_ms,
+                    query.after.event_at_ms,
+                    query.after.narrative_identity,
+                )
+            )
+        if query.story_identity is not None:
+            clauses.append("story_identity = ?")
+            params.append(query.story_identity)
+        if query.symbol is not None:
+            clauses.append("symbol = ?")
+            params.append(query.symbol)
+        if query.timeframe is not None:
+            clauses.append("timeframe = ?")
+            params.append(query.timeframe)
+        if query.from_ms is not None:
+            clauses.append("event_at_ms >= ?")
+            params.append(query.from_ms)
+        if query.to_ms is not None:
+            clauses.append("event_at_ms <= ?")
+            params.append(query.to_ms)
+        if query.text is not None:
+            needle = f"%{_escape_like(query.text.casefold())}%"
+            text_fields = (
+                "$.text.collapsed_text",
+                "$.text.simple_text",
+                "$.text.technical_text",
+                "$.text.intelligence_text",
+                "$.text.decision_text",
+                "$.text.capital_text",
+            )
+            clauses.append(
+                "("
+                + " OR ".join(
+                    "lower(json_extract(payload_json, ?)) LIKE ? ESCAPE '\\'"
+                    for _ in text_fields
+                )
+                + ")"
+            )
+            for field in text_fields:
+                params.extend((field, needle))
+
+        ascending = query.after is not None
+        order_sql = (
+            "ORDER BY event_at_ms ASC, narrative_identity ASC"
+            if ascending
+            else "ORDER BY event_at_ms DESC, narrative_identity DESC"
+        )
+        rows = connection.execute(
+            f"""
+            SELECT narrative_identity, event_at_ms, payload_json, payload_sha256
+            FROM stream_capital_decision_messages
+            WHERE {" AND ".join(clauses)}
+            {order_sql}
+            LIMIT ?
+            """,
+            (*params, query.limit + 1),
+        ).fetchall()
+        return tuple(
+            self._verified_capital_decision_record(
                 narrative_identity=str(row[0]),
                 event_at_ms=int(str(row[1])),
                 payload_json=str(row[2]),
@@ -730,6 +912,62 @@ class IntelligenceStreamReadModel:
                 raise StreamReadModelError(
                     f"Stream detail message lineage mismatch for {key}"
                 )
+
+    @staticmethod
+    def _verified_capital_decision_record(
+        *,
+        narrative_identity: str,
+        event_at_ms: int,
+        payload_json: str,
+        expected_digest: str,
+    ) -> dict[str, Any]:
+        if sha256_text(payload_json) != expected_digest:
+            raise StreamReadModelError(
+                "Stream read capital-decision payload digest mismatch"
+            )
+        raw = json.loads(payload_json)
+        if not isinstance(raw, dict):
+            raise StreamReadModelError(
+                "Stream read capital-decision payload must decode to object"
+            )
+        if raw.get("narrative_identity") != narrative_identity:
+            raise StreamReadModelError(
+                "Stream read capital-decision identity column mismatch"
+            )
+        if raw.get("event_at_ms") != event_at_ms:
+            raise StreamReadModelError(
+                "Stream read capital-decision event-time column mismatch"
+            )
+        identity_payload = dict(raw)
+        identity_payload.pop("narrative_identity", None)
+        if canonical_sha256(identity_payload) != narrative_identity:
+            raise StreamReadModelError(
+                "Stream read capital-decision canonical identity mismatch"
+            )
+        if (
+            raw.get("schema_version")
+            != STREAM_CAPITAL_DECISION_MESSAGE_SCHEMA_VERSION
+        ):
+            raise StreamReadModelError(
+                "Stream read capital-decision schema mismatch"
+            )
+        if raw.get("engine_version") != STREAM_ENGINE_VERSION:
+            raise StreamReadModelError(
+                "Stream read capital-decision engine mismatch"
+            )
+        if raw.get("read_only") is not True:
+            raise StreamReadModelError(
+                "Stream read capital-decision read-only mismatch"
+            )
+        if raw.get("production_authority") is not False:
+            raise StreamReadModelError(
+                "Stream read capital-decision production-authority mismatch"
+            )
+        if raw.get("real_capital") != REAL_CAPITAL:
+            raise StreamReadModelError(
+                "Stream read capital-decision REAL_CAPITAL mismatch"
+            )
+        return raw
 
     @staticmethod
     def _verified_capital_record(
