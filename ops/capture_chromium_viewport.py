@@ -239,6 +239,94 @@ def _capture(args: argparse.Namespace) -> dict[str, object]:
                 )
             metrics["expansion_probe"] = expansion_probe
 
+        if args.probe_window_manager:
+            window_probe_result = session.command(
+                "Runtime.evaluate",
+                {
+                    "expression": (
+                        "(async()=>{"
+                        "await new Promise(r=>setTimeout(r,180));"
+                        "const wins=[...document.querySelectorAll('.evidence-window')];"
+                        "if(wins.length<3){return {ok:false,reason:'window_count',count:wins.length};}"
+                        "const validSha=v=>/^[0-9a-f]{64}$/.test(v||'');"
+                        "const first=wins[0],second=wins[1],third=wins[2];"
+                        "const identities=wins.map(w=>w.dataset.narrativeIdentity||'');"
+                        "const kinds=wins.map(w=>w.dataset.kind||'');"
+                        "if(!identities.every(validSha)){return {ok:false,reason:'identity',identities};}"
+                        "const before=first.getBoundingClientRect();"
+                        "const bar=first.querySelector('.evidence-window-drag');"
+                        "if(!bar){return {ok:false,reason:'drag_handle'};}"
+                        "bar.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true,button:0,pointerId:21,clientX:before.left+60,clientY:before.top+24}));"
+                        "window.dispatchEvent(new PointerEvent('pointermove',{bubbles:true,button:0,pointerId:21,clientX:before.left+120,clientY:before.top+64}));"
+                        "window.dispatchEvent(new PointerEvent('pointerup',{bubbles:true,button:0,pointerId:21,clientX:before.left+120,clientY:before.top+64}));"
+                        "await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));"
+                        "const after=first.getBoundingClientRect();"
+                        "const resize=second.querySelector('.evidence-window-resize');"
+                        "if(!resize){return {ok:false,reason:'resize_handle'};}"
+                        "const resizeBefore=second.getBoundingClientRect();"
+                        "resize.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true,button:0,pointerId:22,clientX:resizeBefore.right-4,clientY:resizeBefore.bottom-4}));"
+                        "window.dispatchEvent(new PointerEvent('pointermove',{bubbles:true,button:0,pointerId:22,clientX:resizeBefore.right+76,clientY:resizeBefore.bottom+46}));"
+                        "window.dispatchEvent(new PointerEvent('pointerup',{bubbles:true,button:0,pointerId:22,clientX:resizeBefore.right+76,clientY:resizeBefore.bottom+46}));"
+                        "await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));"
+                        "const resizeAfter=second.getBoundingClientRect();"
+                        "const pin=first.querySelector('[data-window-action=pin]');"
+                        "const minimize=second.querySelector('[data-window-action=minimize]');"
+                        "if(!pin||!minimize){return {ok:false,reason:'controls'};}"
+                        "pin.click();minimize.click();"
+                        "await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));"
+                        "let stored=[];"
+                        "try{stored=JSON.parse(localStorage.getItem('crypto-signal-stream-v1-s9-windows')||'[]');}catch{}"
+                        "const detach=first.querySelector('[data-window-action=detach]');"
+                        "const detachUrl=detach&&detach.dataset?detach.dataset.detachUrl:'';"
+                        "const stream=document.getElementById('streamViewport');"
+                        "const streamVisible=!!stream&&stream.getBoundingClientRect().height>100;"
+                        "return {"
+                        "ok:true,count:wins.length,identities,kinds,"
+                        "dragDx:Math.round(after.left-before.left),dragDy:Math.round(after.top-before.top),"
+                        "resizeDw:Math.round(resizeAfter.width-resizeBefore.width),resizeDh:Math.round(resizeAfter.height-resizeBefore.height),"
+                        "pinned:first.classList.contains('is-pinned'),"
+                        "minimized:second.classList.contains('is-minimized'),"
+                        "storedCount:Array.isArray(stored)?stored.length:-1,"
+                        "detachUrl,streamVisible,"
+                        "thirdPinned:third.classList.contains('is-pinned')"
+                        "};"
+                        "})()"
+                    ),
+                    "awaitPromise": True,
+                    "returnByValue": True,
+                },
+            )
+            raw_window_probe = window_probe_result.get("result", {})
+            if not isinstance(raw_window_probe, dict):
+                raise RuntimeError("CDP window-manager probe result missing")
+            window_probe = raw_window_probe.get("value", {})
+            if not isinstance(window_probe, dict):
+                raise RuntimeError("CDP window-manager probe value missing")
+            if window_probe.get("ok") is not True:
+                raise RuntimeError(f"evidence window-manager probe failed: {window_probe!r}")
+            if int(window_probe.get("count", 0)) < 3:
+                raise RuntimeError(f"evidence multi-window count failed: {window_probe!r}")
+            if abs(int(window_probe.get("dragDx", 0))) < 20 or abs(
+                int(window_probe.get("dragDy", 0))
+            ) < 15:
+                raise RuntimeError(f"evidence drag probe failed: {window_probe!r}")
+            if int(window_probe.get("resizeDw", 0)) < 40 or int(
+                window_probe.get("resizeDh", 0)
+            ) < 25:
+                raise RuntimeError(f"evidence resize probe failed: {window_probe!r}")
+            if window_probe.get("pinned") is not True:
+                raise RuntimeError(f"evidence pin probe failed: {window_probe!r}")
+            if window_probe.get("minimized") is not True:
+                raise RuntimeError(f"evidence minimize probe failed: {window_probe!r}")
+            if int(window_probe.get("storedCount", 0)) < 3:
+                raise RuntimeError(f"evidence session persistence failed: {window_probe!r}")
+            detach_url = str(window_probe.get("detachUrl", ""))
+            if "/stream-evidence?narrative=" not in detach_url or "&kind=" not in detach_url:
+                raise RuntimeError(f"evidence detach identity URL failed: {window_probe!r}")
+            if window_probe.get("streamVisible") is not True:
+                raise RuntimeError(f"evidence windows hid Stream surface: {window_probe!r}")
+            metrics["window_manager_probe"] = window_probe
+
         screenshot = session.command(
             "Page.captureScreenshot",
             {
@@ -283,6 +371,7 @@ def main() -> None:
     parser.add_argument("--mobile", action="store_true")
     parser.add_argument("--require-no-horizontal-overflow", action="store_true")
     parser.add_argument("--probe-expansion-anchor", action="store_true")
+    parser.add_argument("--probe-window-manager", action="store_true")
     args = parser.parse_args()
 
     if not args.browser.is_file():
@@ -304,6 +393,7 @@ def main() -> None:
         f"scroll_width={metrics.get('scrollWidth')}",
         f"ui_version={metrics.get('uiVersion')}",
         f"expansion_probe={'YES' if metrics.get('expansion_probe') else 'NO'}",
+        f"window_manager_probe={'YES' if metrics.get('window_manager_probe') else 'NO'}",
     )
 
 
