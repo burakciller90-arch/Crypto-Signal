@@ -7,15 +7,16 @@ REAL_CAPITAL remains 0.
 """
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 from decimal import ROUND_DOWN, Decimal
 from pathlib import Path
-from typing import Mapping
 
 from crypto_signal.forecast_stream import ImmutableForecast
 from crypto_signal.paper.canonical_sizing import CanonicalPaperSizingSelection
 from crypto_signal.paper.epoch2_accounting import (
     Epoch2CanonicalLedger,
+    Epoch2ConsolidatedAccountingSnapshot,
     Epoch2LedgerState,
     Epoch2VaultAccountingSnapshot,
     build_consolidated_epoch2_snapshot,
@@ -572,14 +573,11 @@ def _result(
     fill: PaperTapeFill,
     bundle: R22Epoch2AccountingBundle,
     target_after: Epoch2VaultAccountingSnapshot,
-    after_parent: object,
+    after_parent: Epoch2ConsolidatedAccountingSnapshot,
     reference_price: Decimal,
     simulated_fill_price: Decimal,
     inserted: bool,
 ) -> CanonicalCapitalCommitResult:
-    after_identity = getattr(after_parent, "snapshot_identity", None)
-    if not isinstance(after_identity, str):
-        raise ValueError("S11 consolidated snapshot identity missing")
     return CanonicalCapitalCommitResult(
         version=S11_CAPITAL_COMMIT_VERSION,
         vault_id=selection.vault_id,
@@ -588,7 +586,7 @@ def _result(
         fill_identity=fill.fill_identity,
         accounting_bundle_identity=bundle.bundle_identity,
         after_vault_snapshot_identity=target_after.snapshot_identity,
-        after_consolidated_snapshot_identity=after_identity,
+        after_consolidated_snapshot_identity=after_parent.snapshot_identity,
         quantity=fill.quantity,
         reference_price=reference_price,
         simulated_fill_price=simulated_fill_price,
