@@ -868,6 +868,31 @@ def _extract_numeric_values(text: str) -> tuple[Decimal, ...]:
     return tuple(values)
 
 
+def _protected_rewrite_sections_unchanged(
+    baseline: StreamNarrativeText,
+    candidate: StreamNarrativeText,
+) -> bool:
+    return all(
+        getattr(candidate, field_name) == getattr(baseline, field_name)
+        for field_name in _PROTECTED_REWRITE_FIELDS
+    )
+
+
+def _introduces_unsupported_qualitative_claim(
+    baseline: StreamNarrativeText,
+    candidate: StreamNarrativeText,
+) -> bool:
+    baseline_text = f"{baseline.collapsed_text} {baseline.simple_text}".casefold()
+    candidate_text = f"{candidate.collapsed_text} {candidate.simple_text}".casefold()
+    baseline_terms = {
+        term for term in _QUALITATIVE_CLAIM_TERMS if term in baseline_text
+    }
+    candidate_terms = {
+        term for term in _QUALITATIVE_CLAIM_TERMS if term in candidate_text
+    }
+    return bool(candidate_terms - baseline_terms)
+
+
 def _too_similar(candidate: str, recent: tuple[str, ...]) -> bool:
     if not recent:
         return False
