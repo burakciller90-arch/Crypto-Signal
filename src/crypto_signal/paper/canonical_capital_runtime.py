@@ -15,7 +15,6 @@ from pathlib import Path
 from crypto_signal.forecast_stream import ImmutableForecast
 from crypto_signal.paper.canonical_capital_outcomes import (
     CanonicalCapitalFinancialOutcome,
-    CanonicalCapitalOutcomeEvidence,
     build_capital_outcome_evidence,
     reconstruct_open_cost_basis,
 )
@@ -886,7 +885,7 @@ def _validate_sell_lineage(
             raise ValueError("S11 sell open BUY decision/proof/sizing lineage mismatch")
         result_identity = intent_raw.get("sizing_decision_identity")
         if not isinstance(result_identity, str):
-            raise ValueError("S11 sell open BUY lost sizing decision identity")
+            raise TypeError("S11 sell open BUY lost sizing decision identity")
         result_ids.add(result_identity)
     if len(result_ids) != 1:
         raise ValueError("S11 sell open position has ambiguous sizing lineage")
