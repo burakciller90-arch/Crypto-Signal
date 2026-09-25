@@ -176,6 +176,7 @@ function messageState(record) {
     if (subtype === "capital_blocked") return "SERMAYE BLOKE";
     if (subtype === "capital_hold") return "NAKİTTE BEKLE";
     if (subtype === "capital_eligible") return "SERMAYE UYGUN";
+    if (subtype === "capital_sized") return "SERMAYE BOYUTLANDI";
     return "SERMAYE";
   }
   return "ANALİZ";
@@ -1174,6 +1175,108 @@ function capitalDecisionLineagePanel(capital) {
   return wrap;
 }
 
+function capitalSizingMetricGrid(capital) {
+  const grid = document.createElement("div");
+  grid.className = "geometry-grid";
+  const fraction = Number(capital?.fraction_of_vault);
+  const rows = [
+    ["Vault", text(capital?.vault_id, "—")],
+    [
+      "Vault payı",
+      Number.isFinite(fraction) ? `%${displayNumber(fraction * 100)}` : "—",
+    ],
+    ["Paper notional", `${displayNumber(capital?.canonical_notional_usdt)} USDT`],
+    ["Mevcut nakit", `${displayNumber(capital?.current_cash_usdt)} USDT`],
+    ["Mevcut NAV", `${displayNumber(capital?.current_nav_usdt)} USDT`],
+    ["Zaman ufku", text(capital?.timeframe, "—")],
+  ];
+  for (const [labelText, valueText] of rows) {
+    const cell = document.createElement("div");
+    const label = document.createElement("span");
+    label.textContent = labelText;
+    const value = document.createElement("strong");
+    value.textContent = valueText;
+    cell.append(label, value);
+    grid.append(cell);
+  }
+  return grid;
+}
+
+function capitalSizingLineagePanel(capital) {
+  const wrap = document.createElement("div");
+  wrap.className = "proof-panel";
+  const rows = [
+    ["Sizing event", capital?.sizing_event_identity],
+    ["Sizing selection", capital?.selection_identity],
+    ["Eligibility proof", capital?.eligibility_proof_identity],
+    ["Allocator candidate", capital?.allocator_candidate_identity],
+  ];
+  for (const [labelText, identity] of rows) {
+    const line = document.createElement("div");
+    line.className = "condition-row";
+    const label = document.createElement("span");
+    label.textContent = labelText;
+    const code = document.createElement("code");
+    code.textContent = compactIdentity(identity);
+    line.append(label, code);
+    wrap.append(line);
+  }
+  const note = document.createElement("small");
+  note.textContent =
+    "Boyut seçimi execution değildir · fill/PnL yok · REAL_CAPITAL=0 · borsa emri yok";
+  wrap.append(note);
+  return wrap;
+}
+
+function buildCapitalSizingExpandedContent(record, detail) {
+  const capital =
+    detail && typeof detail.capital_sizing === "object" && detail.capital_sizing
+      ? detail.capital_sizing
+      : record;
+  const textBundle =
+    capital && typeof capital.text === "object" && capital.text ? capital.text : {};
+  const grid = document.createElement("div");
+  grid.className = "message-depth-grid";
+
+  grid.append(
+    depthSection("SIMPLE", textBundle.simple_text, {
+      className: "depth-simple depth-wide",
+    }),
+    depthSection("PRO", textBundle.technical_text, {
+      className: "depth-pro",
+    })
+  );
+
+  const sizingTruth = document.createElement("div");
+  sizingTruth.className = "depth-composite";
+  const copy = document.createElement("p");
+  copy.textContent = text(
+    textBundle.intelligence_text,
+    "Bu kayıt yalnız paper sizing kararını açıklar; henüz execution veya fill yoktur."
+  );
+  sizingTruth.append(copy, capitalSizingMetricGrid(capital));
+  grid.append(
+    depthSection("CAPITAL SIZING", "", {
+      className: "depth-intelligence depth-wide",
+      content: sizingTruth,
+    })
+  );
+
+  grid.append(
+    depthSection("DECISION", textBundle.decision_text, {
+      className: "depth-decision",
+    }),
+    depthSection("CAPITAL", textBundle.capital_text, {
+      className: "depth-capital",
+    }),
+    depthSection("IMMUTABLE LINEAGE", "", {
+      className: "depth-proof depth-wide",
+      content: capitalSizingLineagePanel(capital),
+    })
+  );
+  return grid;
+}
+
 function buildCapitalDecisionExpandedContent(record, detail) {
   const capital =
     detail && typeof detail.capital_decision === "object" && detail.capital_decision
@@ -1279,6 +1382,12 @@ function buildCapitalExpandedContent(record, detail) {
 
 function buildExpandedContent(record, detail) {
   const subtype = text(record?.subtype, "");
+  if (
+    subtype === "capital_sized"
+    || (detail && typeof detail.capital_sizing === "object" && detail.capital_sizing)
+  ) {
+    return buildCapitalSizingExpandedContent(record, detail);
+  }
   if (
     subtype !== "capital_executed"
     && (
