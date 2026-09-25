@@ -542,19 +542,27 @@ def test_stream_old_history_cursor_does_not_shift_when_new_message_arrives(tmp_p
             "INSERT INTO stream_narrative_plans VALUES (?, ?)",
             (raw["plan_identity"], raw["fact_bundle_identity"]),
         )
+        analytical_json = canonical_json(
+            {"stance": {"effective_stance": "watch"}}
+        )
+        fact_json = canonical_json(
+            {"available_evidence_domains": ("frozen_chart",)}
+        )
         connection.execute(
-            "INSERT INTO stream_analytical_views VALUES (?, ?, ?)",
+            "INSERT INTO stream_analytical_views VALUES (?, ?, ?, ?)",
             (
                 raw["analytical_view_identity"],
                 None,
-                canonical_json({"stance": {"effective_stance": "watch"}}),
+                analytical_json,
+                sha256_text(analytical_json),
             ),
         )
         connection.execute(
-            "INSERT INTO stream_fact_bundles VALUES (?, ?)",
+            "INSERT INTO stream_fact_bundles VALUES (?, ?, ?)",
             (
                 raw["fact_bundle_identity"],
-                canonical_json({"available_evidence_domains": ("frozen_chart",)}),
+                fact_json,
+                sha256_text(fact_json),
             ),
         )
         connection.execute(
@@ -625,6 +633,73 @@ def test_stream_filters_and_exact_lookup(tmp_path) -> None:
     assert story.items[0]["narrative_identity"] == identities["btc-issued"]
 
 
+def test_stream_exact_detail_projects_persisted_depth_without_recompute(tmp_path) -> None:
+    path = tmp_path / "stream.sqlite3"
+    identities = _create_read_fixture(path)
+    reader = IntelligenceStreamReadModel(path)
+
+    detail = reader.read_message_detail(identities["btc-issued"])
+    assert detail is not None
+    assert detail["read_only"] is True
+    assert detail["production_authority"] is False
+    assert detail["real_capital"] == 0
+
+    narrative = detail["narrative"]
+    analytical = detail["analytical_view"]
+    fact = detail["fact_bundle"]
+    message_input = detail["message_input"]
+
+    assert narrative["narrative_identity"] == identities["btc-issued"]
+    assert narrative["fact_bundle_identity"] == fact["fact_bundle_identity"]
+    assert (
+        narrative["analytical_view_identity"]
+        == analytical["analytical_view_identity"]
+    )
+    assert analytical["fact_bundle_identity"] == fact["fact_bundle_identity"]
+    assert fact["proof_identity"]
+    assert len(fact["family_contributions"]) == 5
+    assert fact["trigger_zone"] == {"high": 62500, "low": 62000}
+    assert fact["target_zone"] == {"high": 66000, "low": 65000}
+    assert fact["invalidation_price"] == 60750
+    assert analytical["next_condition"]["kind"] == "entry_zone"
+    assert analytical["capital_consequence"]["state"] == "not_bound"
+    assert message_input is not None
+    assert message_input["message_identity"] == analytical["source_message_identity"]
+    assert reader.read_message_detail(_sha("missing-detail")) is None
+
+
+def test_stream_exact_detail_fails_closed_on_persisted_tamper(tmp_path) -> None:
+    path = tmp_path / "stream.sqlite3"
+    identities = _create_read_fixture(path)
+    reader = IntelligenceStreamReadModel(path)
+
+    connection = sqlite3.connect(path)
+    try:
+        row = connection.execute(
+            """
+            SELECT n.fact_bundle_identity
+            FROM stream_narrative_messages AS n
+            WHERE n.narrative_identity = ?
+            """,
+            (identities["btc-issued"],),
+        ).fetchone()
+        assert row is not None
+        connection.execute(
+            """
+            UPDATE stream_fact_bundles
+            SET payload_json = ?
+            WHERE fact_bundle_identity = ?
+            """,
+            ('{"tampered":true}', str(row[0])),
+        )
+        connection.commit()
+    finally:
+        connection.close()
+
+    with pytest.raises(StreamReadModelError, match="persisted payload digest"):
+        reader.read_message_detail(identities["btc-issued"])
+
+
 def test_stream_read_model_is_read_only_and_missing_db_is_not_initialized(tmp_path) -> None:
     missing = tmp_path / "missing.sqlite3"
     reader = IntelligenceStreamReadModel(missing)
@@ -675,6 +750,16 @@ def test_stream_api_exposes_cursor_history_search_and_lookup(tmp_path) -> None:
     assert exact.status_code == 200
     assert exact.json()["status"] == "ready"
     assert exact.json()["message"]["symbol"] == "ETHUSDT"
+
+    detail = client.get(
+        f"/api/stream/messages/{identities['btc-issued']}/detail"
+    )
+    assert detail.status_code == 200
+    detail_payload = detail.json()
+    assert detail_payload["status"] == "ready"
+    assert detail_payload["detail"]["fact_bundle"]["proof_identity"]
+    assert len(detail_payload["detail"]["fact_bundle"]["family_contributions"]) == 5
+    assert detail_payload["detail"]["real_capital"] == 0
 
     invalid = client.get("/api/stream/messages?before=not-a-cursor")
     assert invalid.status_code == 400
