@@ -53,16 +53,16 @@ from crypto_signal.product.intelligence_stream_read_model import (
     StreamReadModelError,
     decode_stream_cursor,
 )
-from crypto_signal.product.intelligence_stream_visual_proof import (
-    IntelligenceStreamVisualProofReadModel,
-    StreamVisualProofError,
-)
 from crypto_signal.product.intelligence_stream_transport import (
     encode_stream_sse_event,
     encode_stream_sse_heartbeat,
     encode_stream_sse_retry,
     read_stream_live_batch,
     resolve_stream_resume_cursor,
+)
+from crypto_signal.product.intelligence_stream_visual_proof import (
+    IntelligenceStreamVisualProofReadModel,
+    StreamVisualProofError,
 )
 from crypto_signal.product.market_tape_runtime import (
     read_cold_archive_runtime_truth,
