@@ -6,6 +6,9 @@ const API = Object.freeze({
   detail: (identity) => `/api/stream/messages/${encodeURIComponent(identity)}/detail`,
   decisionProofForForecast: (identity) =>
     `/api/decision-proof/forecast/${encodeURIComponent(identity)}`,
+  education: (concept) => `/api/education/${encodeURIComponent(concept)}`,
+  detachedEvidence: (identity, kind) =>
+    `/stream-evidence?narrative=${encodeURIComponent(identity)}&kind=${encodeURIComponent(kind)}`,
 });
 
 const ui = {
@@ -34,6 +37,7 @@ const ui = {
   timeframeFilter: document.getElementById("timeframeFilter"),
   clearFilters: document.getElementById("clearFiltersButton"),
   applyFilters: document.getElementById("applyFiltersButton"),
+  floatingLayer: document.getElementById("floatingWindowLayer"),
   announcer: document.getElementById("liveAnnouncer"),
 };
 
@@ -50,6 +54,8 @@ const state = {
   expanded: new Set(),
   details: new Map(),
   detailRequests: new Set(),
+  evidenceWindows: new Map(),
+  evidenceWindowZ: 1,
   fixture: new URLSearchParams(window.location.search).get("fixture") || "",
   filters: {
     text: "",
@@ -57,6 +63,19 @@ const state = {
     timeframe: "",
   },
 };
+
+const EVIDENCE_WINDOW_SESSION_KEY = "crypto-signal-stream-v1-s9-windows";
+const EVIDENCE_WINDOW_KINDS = Object.freeze({
+  liquidity: { label: "Likidite", family: "liquidity", concept: "liquidity_sweep" },
+  order_flow: { label: "Emir Akışı", family: "order_flow", concept: "cvd" },
+  derivatives: { label: "Türevler", family: "derivatives", concept: "liquidation_heatmap" },
+  onchain: { label: "On-chain", family: "onchain", concept: null },
+  geometry: { label: "Geometri", family: "geometry", concept: "invalidation" },
+  decision: { label: "Karar", family: null, concept: "agreement_vs_probability" },
+  capital: { label: "Sermaye", family: null, concept: "paper_trading" },
+  event_risk: { label: "Event Risk", family: null, concept: "abstain" },
+  proof: { label: "Proof", family: null, concept: "calibration" },
+});
 
 function text(value, fallback = "—") {
   if (value === null || value === undefined || value === "") return fallback;
@@ -310,6 +329,662 @@ function proofPanel(fact) {
   return wrap;
 }
 
+function exactSha256(value) {
+  return typeof value === "string" && /^[0-9a-f]{64}$/.test(value);
+}
+
+function familyContribution(detail, family) {
+  const fact = detail && typeof detail.fact_bundle === "object" ? detail.fact_bundle : {};
+  const families = Array.isArray(fact?.family_contributions) ? fact.family_contributions : [];
+  return families.find((item) => item && item.family === family) || null;
+}
+
+function evidenceWindowSpecificWhy(kind, detail) {
+  const config = EVIDENCE_WINDOW_KINDS[kind];
+  const fact = detail?.fact_bundle || {};
+  const analytical = detail?.analytical_view || {};
+  if (config?.family && kind !== "geometry") {
+    const contribution = familyContribution(detail, config.family);
+    if (!contribution) return "Bu exact mesajda bu aile için persisted katkı yok.";
+    return `Bu mesajda destek +${displayNumber(contribution.support_points, "0")}, karşıt -${displayNumber(
+      contribution.opposition_points,
+      "0"
+    )}. Pencere yalnız bu mesajın dondurulmuş katkısını gösterir.`;
+  }
+  if (kind === "geometry") {
+    return `Tetik ${displayNumber(fact?.trigger_zone?.low)}–${displayNumber(
+      fact?.trigger_zone?.high
+    )}, hedef ${displayNumber(fact?.target_zone?.low)}–${displayNumber(
+      fact?.target_zone?.high
+    )}, geçersizleşme ${displayNumber(fact?.invalidation_price)}.`;
+  }
+  if (kind === "decision") {
+    return `Stance ${text(analytical?.stance?.effective_stance)}, sonraki koşul ${text(
+      analytical?.next_condition?.state
+    )}. Bu pencere aynı immutable karar lineage'ına bağlıdır.`;
+  }
+  if (kind === "capital") {
+    return `Capital consequence ${text(
+      analytical?.capital_consequence?.state,
+      "not_bound"
+    )}. REAL_CAPITAL=0; burada gerçek para emri yoktur.`;
+  }
+  if (kind === "event_risk") {
+    return `Event context ${text(fact?.event_context_state)}. Bu mevcut persisted karar bağlamıdır; yeni haber yorumu üretilmez.`;
+  }
+  if (kind === "proof") {
+    return `Forecast ${text(fact?.forecast_identity, "").slice(0, 12)}… ve proof ${text(
+      fact?.proof_identity,
+      ""
+    ).slice(0, 12)}… aynı exact mesaj lineage'ında doğrulanır.`;
+  }
+  return "Pencere yalnız exact persisted message detail üzerinden okunur.";
+}
+
+function evidenceMetric(label, value) {
+  const cell = document.createElement("div");
+  cell.className = "window-metric";
+  const l = document.createElement("span");
+  l.textContent = label;
+  const v = document.createElement("strong");
+  v.textContent = text(value);
+  cell.append(l, v);
+  return cell;
+}
+
+function evidenceWindowSection(label, body = "") {
+  const section = document.createElement("section");
+  section.className = "window-section";
+  const heading = document.createElement("h4");
+  heading.textContent = label;
+  const paragraph = document.createElement("p");
+  paragraph.textContent = text(body);
+  section.append(heading, paragraph);
+  return section;
+}
+
+function buildEvidenceWindowData(kind, detail) {
+  const config = EVIDENCE_WINDOW_KINDS[kind];
+  const narrative = detail?.narrative || {};
+  const fact = detail?.fact_bundle || {};
+  const analytical = detail?.analytical_view || {};
+  const fragment = document.createDocumentFragment();
+
+  const context = document.createElement("div");
+  context.className = "window-context-grid";
+  context.append(
+    evidenceMetric("Varlık", narrative.symbol),
+    evidenceMetric("TF", narrative.timeframe),
+    evidenceMetric("Kaynak", narrative.source_kind)
+  );
+  fragment.append(context);
+
+  if (kind === "geometry") {
+    const geometry = document.createElement("div");
+    geometry.className = "window-context-grid";
+    geometry.append(
+      evidenceMetric(
+        "Tetik",
+        `${displayNumber(fact?.trigger_zone?.low)}–${displayNumber(fact?.trigger_zone?.high)}`
+      ),
+      evidenceMetric(
+        "Hedef",
+        `${displayNumber(fact?.target_zone?.low)}–${displayNumber(fact?.target_zone?.high)}`
+      ),
+      evidenceMetric("Geçersiz", displayNumber(fact?.invalidation_price))
+    );
+    fragment.append(evidenceWindowSection("Exact trade geometry"));
+    fragment.append(geometry);
+    const family = familyContribution(detail, "geometry");
+    if (family) {
+      fragment.append(
+        evidenceWindowSection(
+          "Geometry contribution",
+          `Destek +${displayNumber(family.support_points, "0")} / karşıt -${displayNumber(
+            family.opposition_points,
+            "0"
+          )} · ${text(family.state)}`
+        )
+      );
+    }
+  } else if (config?.family) {
+    const family = familyContribution(detail, config.family);
+    if (family) {
+      const quality = Number(family.evidence_quality_0_1);
+      const freshness = Number(family.freshness_0_1);
+      const grid = document.createElement("div");
+      grid.className = "window-context-grid";
+      grid.append(
+        evidenceMetric("Destek", `+${displayNumber(family.support_points, "0")}`),
+        evidenceMetric("Karşıt", `-${displayNumber(family.opposition_points, "0")}`),
+        evidenceMetric(
+          "Kalite",
+          Number.isFinite(quality) ? `%${Math.round(quality * 100)}` : text(family.state)
+        ),
+        evidenceMetric(
+          "Fresh",
+          Number.isFinite(freshness) ? `%${Math.round(freshness * 100)}` : "—"
+        )
+      );
+      fragment.append(grid);
+
+      const refs = Array.isArray(family.source_evidence_identities)
+        ? family.source_evidence_identities
+        : [];
+      const refsSection = evidenceWindowSection(
+        "Exact source evidence identities",
+        refs.length ? `${refs.length} persisted source identity bağlı.` : "Persisted source identity listesi yok."
+      );
+      for (const ref of refs) {
+        const code = document.createElement("code");
+        code.className = "window-identity";
+        code.textContent = ref;
+        refsSection.append(code);
+      }
+      fragment.append(refsSection);
+    } else {
+      fragment.append(
+        evidenceWindowSection(
+          "Persisted evidence",
+          "Bu exact mesajda bu kanıt ailesi için katkı kaydı yok; veri uydurulmadı."
+        )
+      );
+    }
+  } else if (kind === "decision") {
+    fragment.append(
+      evidenceWindowSection(
+        "Decision state",
+        `Stance ${text(analytical?.stance?.effective_stance)} · strength ${text(
+          analytical?.stance?.strength
+        )} · support ${displayNumber(analytical?.stance?.support_score_0_100)} · opposition ${displayNumber(
+          analytical?.stance?.opposition_score_0_100
+        )}`
+      ),
+      evidenceWindowSection(
+        "Next / invalidation",
+        `${text(analytical?.next_condition?.state)} · ${displayNumber(
+          analytical?.invalidation_condition?.price ?? fact?.invalidation_price
+        )}`
+      )
+    );
+  } else if (kind === "capital") {
+    const capital = analytical?.capital_consequence || {};
+    fragment.append(
+      evidenceWindowSection(
+        "Capital consequence",
+        `${text(capital.state, "not_bound")} · current refs ${Array.isArray(
+          capital.current_reference_identities
+        ) ? capital.current_reference_identities.length : 0} · REAL_CAPITAL=0`
+      )
+    );
+  } else if (kind === "event_risk") {
+    fragment.append(
+      evidenceWindowSection(
+        "Event Risk",
+        `Event context ${text(fact?.event_context_state)} · uncertainty ${(
+          Array.isArray(fact?.uncertainty_flags) ? fact.uncertainty_flags : []
+        ).join(", ") || "yok"}`
+      )
+    );
+  } else if (kind === "proof") {
+    const proof = evidenceWindowSection(
+      "Exact proof lineage",
+      "S9 exact identity penceresini sağlar. Frozen visual coordinates ve çizimler S10 kapsamıdır."
+    );
+    for (const [label, value] of [
+      ["forecast", fact?.forecast_identity],
+      ["proof", fact?.proof_identity],
+    ]) {
+      const code = document.createElement("code");
+      code.className = "window-identity";
+      code.textContent = `${label}: ${text(value)}`;
+      proof.append(code);
+    }
+    const verify = document.createElement("button");
+    verify.type = "button";
+    verify.className = "window-primary-action";
+    verify.textContent = "Persisted Decision Proof’u doğrula";
+    const result = document.createElement("span");
+    result.className = "window-action-result";
+    verify.addEventListener("click", async () => {
+      const forecastIdentity = text(fact?.forecast_identity, "");
+      if (!exactSha256(forecastIdentity)) return;
+      verify.disabled = true;
+      result.textContent = "Doğrulanıyor…";
+      try {
+        const payload = await fetchJson(API.decisionProofForForecast(forecastIdentity));
+        result.textContent =
+          payload.status === "ready"
+            ? "Persisted Decision Proof doğrulandı."
+            : "Persisted Decision Proof bu runtime’da mevcut değil.";
+      } catch {
+        result.textContent = "Proof isteği başarısız; veri uydurulmadı.";
+      } finally {
+        verify.disabled = false;
+      }
+    });
+    proof.append(verify, result);
+    fragment.append(proof);
+  }
+
+  fragment.append(
+    evidenceWindowSection(
+      "Bu mesajda neden önemli?",
+      evidenceWindowSpecificWhy(kind, detail)
+    )
+  );
+
+  if (config?.concept) {
+    const education = evidenceWindowSection(
+      "Bu nedir?",
+      "Deterministik eğitim açıklaması yalnız istek üzerine yüklenir."
+    );
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "window-secondary-action";
+    button.textContent = "Açıklamayı getir";
+    const target = education.querySelector("p");
+    button.addEventListener("click", async () => {
+      button.disabled = true;
+      try {
+        const payload = await fetchJson(API.education(config.concept));
+        if (target) {
+          target.textContent = `${text(payload?.lesson?.beginner_tr)} ${text(
+            payload?.lesson?.why_it_matters_tr,
+            ""
+          )}`.trim();
+        }
+      } catch {
+        if (target) target.textContent = "Eğitim içeriği şu anda okunamadı.";
+      } finally {
+        button.disabled = false;
+      }
+    });
+    education.append(button);
+    fragment.append(education);
+  }
+
+  return fragment;
+}
+
+function evidenceWindowId(narrativeIdentity, kind) {
+  return `${narrativeIdentity}:${kind}`;
+}
+
+function defaultEvidenceWindowGeometry(index) {
+  const layer = ui.floatingLayer?.getBoundingClientRect();
+  const layerWidth = layer?.width || window.innerWidth;
+  const width = Math.min(470, Math.max(340, layerWidth - 32));
+  return {
+    x: Math.max(12, layerWidth - width - 26 - (index % 3) * 28),
+    y: 18 + (index % 5) * 34,
+    width,
+    height: 520,
+  };
+}
+
+function evidenceWindowSnapshot() {
+  return [...state.evidenceWindows.values()].map((model) => ({
+    id: model.id,
+    narrativeIdentity: model.narrativeIdentity,
+    kind: model.kind,
+    x: Math.round(model.x),
+    y: Math.round(model.y),
+    width: Math.round(model.width),
+    height: Math.round(model.height),
+    minimized: Boolean(model.minimized),
+    pinned: Boolean(model.pinned),
+    z: Number(model.z) || 1,
+  }));
+}
+
+function persistEvidenceWindows() {
+  try {
+    localStorage.setItem(
+      EVIDENCE_WINDOW_SESSION_KEY,
+      JSON.stringify(evidenceWindowSnapshot())
+    );
+  } catch {
+    // Session persistence is best-effort; evidence truth remains server-side.
+  }
+}
+
+function applyEvidenceWindowGeometry(model) {
+  const node = model.element;
+  if (!(node instanceof HTMLElement)) return;
+  const layer = ui.floatingLayer?.getBoundingClientRect();
+  if (layer) {
+    const effectiveHeight = model.minimized ? 56 : model.height;
+    model.width = Math.min(Math.max(320, model.width), Math.max(320, layer.width - 16));
+    model.height = Math.min(Math.max(260, model.height), Math.max(260, layer.height - 16));
+    model.x = Math.min(Math.max(8, model.x), Math.max(8, layer.width - model.width - 8));
+    model.y = Math.min(Math.max(8, model.y), Math.max(8, layer.height - effectiveHeight - 8));
+  }
+  node.style.left = `${Math.round(model.x)}px`;
+  node.style.top = `${Math.round(model.y)}px`;
+  node.style.width = `${Math.round(model.width)}px`;
+  node.style.height = `${Math.round(model.height)}px`;
+  node.style.zIndex = String((model.pinned ? 5000 : 2000) + model.z);
+  node.classList.toggle("is-minimized", Boolean(model.minimized));
+  node.classList.toggle("is-pinned", Boolean(model.pinned));
+  const pin = node.querySelector('[data-window-action="pin"]');
+  if (pin instanceof HTMLButtonElement) {
+    pin.setAttribute("aria-pressed", String(Boolean(model.pinned)));
+    pin.title = model.pinned ? "Sabitlemeyi kaldır" : "Pencereyi sabitle";
+  }
+  const minimize = node.querySelector('[data-window-action="minimize"]');
+  if (minimize instanceof HTMLButtonElement) {
+    minimize.textContent = model.minimized ? "□" : "—";
+    minimize.title = model.minimized ? "Geri aç" : "Küçült";
+  }
+}
+
+function focusEvidenceWindow(id) {
+  const model = state.evidenceWindows.get(id);
+  if (!model) return;
+  state.evidenceWindowZ += 1;
+  model.z = state.evidenceWindowZ;
+  applyEvidenceWindowGeometry(model);
+  persistEvidenceWindows();
+}
+
+function closeEvidenceWindow(id, { persist = true } = {}) {
+  const model = state.evidenceWindows.get(id);
+  if (!model) return;
+  model.element?.remove();
+  state.evidenceWindows.delete(id);
+  if (persist) persistEvidenceWindows();
+}
+
+function closeAllEvidenceWindows({ persist = true } = {}) {
+  for (const id of [...state.evidenceWindows.keys()]) {
+    closeEvidenceWindow(id, { persist: false });
+  }
+  if (persist) persistEvidenceWindows();
+}
+
+function startEvidenceWindowDrag(event, model) {
+  if (!(event instanceof PointerEvent) || event.button !== 0) return;
+  if (event.target instanceof Element && event.target.closest("button")) return;
+  focusEvidenceWindow(model.id);
+  const startX = event.clientX;
+  const startY = event.clientY;
+  const originX = model.x;
+  const originY = model.y;
+
+  const move = (moveEvent) => {
+    model.x = originX + (moveEvent.clientX - startX);
+    model.y = originY + (moveEvent.clientY - startY);
+    applyEvidenceWindowGeometry(model);
+  };
+  const end = () => {
+    window.removeEventListener("pointermove", move);
+    window.removeEventListener("pointerup", end);
+    window.removeEventListener("pointercancel", end);
+    persistEvidenceWindows();
+  };
+  window.addEventListener("pointermove", move);
+  window.addEventListener("pointerup", end, { once: true });
+  window.addEventListener("pointercancel", end, { once: true });
+  event.preventDefault();
+}
+
+function startEvidenceWindowResize(event, model) {
+  if (!(event instanceof PointerEvent) || event.button !== 0 || model.minimized) return;
+  focusEvidenceWindow(model.id);
+  const startX = event.clientX;
+  const startY = event.clientY;
+  const originWidth = model.width;
+  const originHeight = model.height;
+
+  const move = (moveEvent) => {
+    model.width = originWidth + (moveEvent.clientX - startX);
+    model.height = originHeight + (moveEvent.clientY - startY);
+    applyEvidenceWindowGeometry(model);
+  };
+  const end = () => {
+    window.removeEventListener("pointermove", move);
+    window.removeEventListener("pointerup", end);
+    window.removeEventListener("pointercancel", end);
+    persistEvidenceWindows();
+  };
+  window.addEventListener("pointermove", move);
+  window.addEventListener("pointerup", end, { once: true });
+  window.addEventListener("pointercancel", end, { once: true });
+  event.preventDefault();
+}
+
+function renderEvidenceWindowBody(model, detail) {
+  const body = model.element?.querySelector(".evidence-window-body");
+  if (!(body instanceof HTMLElement)) return;
+  body.replaceChildren(buildEvidenceWindowData(model.kind, detail));
+  model.detail = detail;
+  const narrative = detail?.narrative || {};
+  const subtitle = model.element?.querySelector(".evidence-window-subtitle");
+  if (subtitle) {
+    subtitle.textContent = `${text(narrative.symbol, "PİYASA")} · ${text(
+      narrative.timeframe
+    )} · ${model.narrativeIdentity.slice(0, 8)}…`;
+  }
+}
+
+async function hydrateEvidenceWindow(model, detail = null) {
+  if (detail && typeof detail === "object") {
+    renderEvidenceWindowBody(model, detail);
+    return;
+  }
+  try {
+    const payload = await fetchJson(API.detail(model.narrativeIdentity));
+    if (payload.status === "ready" && payload.detail) {
+      renderEvidenceWindowBody(model, payload.detail);
+      return;
+    }
+    throw new Error("detail unavailable");
+  } catch {
+    const body = model.element?.querySelector(".evidence-window-body");
+    if (body instanceof HTMLElement) {
+      body.replaceChildren(
+        detailPlaceholder("Exact persisted evidence detail okunamadı; veri uydurulmadı.")
+      );
+    }
+  }
+}
+
+function createEvidenceWindowShell(model) {
+  if (!ui.floatingLayer) return null;
+  const config = EVIDENCE_WINDOW_KINDS[model.kind];
+  if (!config) return null;
+
+  const node = document.createElement("article");
+  node.className = "evidence-window";
+  node.dataset.windowId = model.id;
+  node.dataset.kind = model.kind;
+  node.dataset.narrativeIdentity = model.narrativeIdentity;
+  node.setAttribute("role", "dialog");
+  node.setAttribute("aria-label", `${config.label} kanıt penceresi`);
+
+  const bar = document.createElement("header");
+  bar.className = "evidence-window-bar evidence-window-drag";
+
+  const heading = document.createElement("div");
+  heading.className = "evidence-window-heading";
+  const title = document.createElement("strong");
+  title.textContent = config.label;
+  const subtitle = document.createElement("span");
+  subtitle.className = "evidence-window-subtitle";
+  subtitle.textContent = `${model.narrativeIdentity.slice(0, 8)}…`;
+  heading.append(title, subtitle);
+
+  const controls = document.createElement("div");
+  controls.className = "evidence-window-controls";
+  const controlSpecs = [
+    ["minimize", "—", "Küçült"],
+    ["pin", "⌖", "Sabitle"],
+    ["detach", "↗", "Ayrı pencereye al"],
+    ["close", "×", "Kapat"],
+  ];
+  for (const [action, glyph, label] of controlSpecs) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.dataset.windowAction = action;
+    button.setAttribute("aria-label", label);
+    button.title = label;
+    button.textContent = glyph;
+    if (action === "pin") button.setAttribute("aria-pressed", "false");
+    controls.append(button);
+  }
+  bar.append(heading, controls);
+
+  const body = document.createElement("div");
+  body.className = "evidence-window-body";
+  body.append(detailPlaceholder("Exact persisted evidence yükleniyor…"));
+
+  const resize = document.createElement("button");
+  resize.type = "button";
+  resize.className = "evidence-window-resize";
+  resize.setAttribute("aria-label", "Pencereyi yeniden boyutlandır");
+  resize.title = "Yeniden boyutlandır";
+
+  node.append(bar, body, resize);
+  ui.floatingLayer.append(node);
+  model.element = node;
+
+  node.addEventListener("pointerdown", () => focusEvidenceWindow(model.id));
+  bar.addEventListener("pointerdown", (event) => startEvidenceWindowDrag(event, model));
+  resize.addEventListener("pointerdown", (event) => startEvidenceWindowResize(event, model));
+
+  controls.addEventListener("click", (event) => {
+    const button = event.target instanceof Element
+      ? event.target.closest("button[data-window-action]")
+      : null;
+    if (!(button instanceof HTMLButtonElement)) return;
+    const action = button.dataset.windowAction;
+    if (action === "close") {
+      closeEvidenceWindow(model.id);
+    } else if (action === "minimize") {
+      model.minimized = !model.minimized;
+      button.textContent = model.minimized ? "□" : "—";
+      applyEvidenceWindowGeometry(model);
+      persistEvidenceWindows();
+    } else if (action === "pin") {
+      model.pinned = !model.pinned;
+      focusEvidenceWindow(model.id);
+    } else if (action === "detach") {
+      const url = API.detachedEvidence(model.narrativeIdentity, model.kind);
+      button.dataset.detachUrl = url;
+      window.open(
+        url,
+        "_blank",
+        "popup=yes,resizable=yes,scrollbars=yes,width=900,height=760"
+      );
+    }
+    event.stopPropagation();
+  });
+
+  const detach = controls.querySelector('[data-window-action="detach"]');
+  if (detach instanceof HTMLButtonElement) {
+    detach.dataset.detachUrl = API.detachedEvidence(model.narrativeIdentity, model.kind);
+  }
+
+  applyEvidenceWindowGeometry(model);
+  return node;
+}
+
+function openEvidenceWindow(record, detail, kind) {
+  const config = EVIDENCE_WINDOW_KINDS[kind];
+  const narrativeIdentity = text(record?.narrative_identity ?? detail?.narrative?.narrative_identity, "");
+  if (!config || !exactSha256(narrativeIdentity)) return null;
+
+  const id = evidenceWindowId(narrativeIdentity, kind);
+  const existing = state.evidenceWindows.get(id);
+  if (existing) {
+    focusEvidenceWindow(id);
+    if (detail) renderEvidenceWindowBody(existing, detail);
+    return existing;
+  }
+
+  const geometry = defaultEvidenceWindowGeometry(state.evidenceWindows.size);
+  const model = {
+    id,
+    narrativeIdentity,
+    kind,
+    ...geometry,
+    minimized: false,
+    pinned: false,
+    z: ++state.evidenceWindowZ,
+    element: null,
+    detail: null,
+  };
+  state.evidenceWindows.set(id, model);
+  createEvidenceWindowShell(model);
+  persistEvidenceWindows();
+  void hydrateEvidenceWindow(model, detail);
+  return model;
+}
+
+function restoreEvidenceWindows() {
+  let raw;
+  try {
+    raw = JSON.parse(localStorage.getItem(EVIDENCE_WINDOW_SESSION_KEY) || "[]");
+  } catch {
+    return;
+  }
+  if (!Array.isArray(raw)) return;
+  for (const saved of raw.slice(0, 10)) {
+    if (!saved || !exactSha256(saved.narrativeIdentity) || !EVIDENCE_WINDOW_KINDS[saved.kind]) {
+      continue;
+    }
+    const id = evidenceWindowId(saved.narrativeIdentity, saved.kind);
+    const defaults = defaultEvidenceWindowGeometry(state.evidenceWindows.size);
+    const model = {
+      id,
+      narrativeIdentity: saved.narrativeIdentity,
+      kind: saved.kind,
+      x: Number.isFinite(Number(saved.x)) ? Number(saved.x) : defaults.x,
+      y: Number.isFinite(Number(saved.y)) ? Number(saved.y) : defaults.y,
+      width: Number.isFinite(Number(saved.width)) ? Number(saved.width) : defaults.width,
+      height: Number.isFinite(Number(saved.height)) ? Number(saved.height) : defaults.height,
+      minimized: Boolean(saved.minimized),
+      pinned: Boolean(saved.pinned),
+      z: Number.isFinite(Number(saved.z)) ? Number(saved.z) : ++state.evidenceWindowZ,
+      element: null,
+      detail: null,
+    };
+    state.evidenceWindowZ = Math.max(state.evidenceWindowZ, model.z);
+    state.evidenceWindows.set(id, model);
+    createEvidenceWindowShell(model);
+    void hydrateEvidenceWindow(model);
+  }
+}
+
+function evidenceWindowLauncher(record, detail) {
+  const launcher = document.createElement("section");
+  launcher.className = "evidence-launcher depth-wide";
+  const heading = document.createElement("div");
+  heading.className = "evidence-launcher-head";
+  const title = document.createElement("strong");
+  title.textContent = "KANIT PENCERELERİ";
+  const note = document.createElement("span");
+  note.textContent = "Akıştan ayrılmadan derinleş";
+  heading.append(title, note);
+
+  const actions = document.createElement("div");
+  actions.className = "evidence-launcher-actions";
+  for (const [kind, config] of Object.entries(EVIDENCE_WINDOW_KINDS)) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.dataset.evidenceKind = kind;
+    button.textContent = config.label;
+    button.addEventListener("click", (event) => {
+      event.stopPropagation();
+      openEvidenceWindow(record, detail, kind);
+    });
+    actions.append(button);
+  }
+  launcher.append(heading, actions);
+  return launcher;
+}
+
 function buildExpandedContent(record, detail) {
   const textBundle =
     record && typeof record.text === "object" && record.text ? record.text : {};
@@ -396,6 +1071,7 @@ function buildExpandedContent(record, detail) {
     })
   );
 
+  grid.append(evidenceWindowLauncher(record, detail));
   return grid;
 }
 
@@ -930,7 +1606,7 @@ function applyFixture(name) {
   state.hasOlder = name === "history" || name === "long";
   if (name === "history") state.unread = 3;
   renderAll();
-  setConnection("live", "CANLI", "fixture · S7 görsel kabul");
+  setConnection("live", "CANLI", "fixture · Stream görsel kabul");
   if (ui.transportMode) ui.transportMode.textContent = "SSE CANLI · FIXTURE";
 
   window.requestAnimationFrame(() => {
@@ -947,11 +1623,34 @@ function applyFixture(name) {
     }
   });
 
-  if (name === "expanded") {
+  if (name === "expanded" || name === "windows") {
     window.requestAnimationFrame(() => {
       const target = ui.list?.children?.[2];
       const summary = target?.querySelector?.(".message-summary");
       if (summary instanceof HTMLButtonElement) summary.click();
+
+      if (name === "windows") {
+        closeAllEvidenceWindows({ persist: false });
+        try {
+          localStorage.removeItem(EVIDENCE_WINDOW_SESSION_KEY);
+        } catch {
+          // Deterministic fixture remains usable without storage.
+        }
+        const record = state.messages[2];
+        const detail = record?.__fixture_detail;
+        if (record && detail) {
+          openEvidenceWindow(record, detail, "liquidity");
+          openEvidenceWindow(record, detail, "geometry");
+          const decisionWindow = openEvidenceWindow(record, detail, "decision");
+          if (decisionWindow) {
+            decisionWindow.pinned = true;
+            decisionWindow.x = 44;
+            decisionWindow.y = 70;
+            applyEvidenceWindowGeometry(decisionWindow);
+          }
+          persistEvidenceWindows();
+        }
+      }
     });
   }
 
@@ -1008,6 +1707,13 @@ function wireUi() {
     });
   });
 
+  window.addEventListener("resize", () => {
+    for (const model of state.evidenceWindows.values()) {
+      applyEvidenceWindowGeometry(model);
+    }
+    persistEvidenceWindows();
+  });
+
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape") closeDrawers();
     if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
@@ -1024,10 +1730,19 @@ function init() {
     applyFixture(state.fixture);
     return;
   }
+  restoreEvidenceWindows();
   void loadInitial();
 }
 
+window.__cryptoSignalStreamS9 = Object.freeze({
+  openEvidenceWindow,
+  closeAllEvidenceWindows,
+  evidenceWindowSnapshot,
+  persistEvidenceWindows,
+});
+
 window.addEventListener("beforeunload", () => {
+  persistEvidenceWindows();
   state.eventSource?.close();
   stopPolling();
 });

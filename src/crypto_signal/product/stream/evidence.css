@@ -1,0 +1,151 @@
+.evidence-popout-body {
+  min-height: 100vh;
+  overflow: auto;
+}
+
+.evidence-popout {
+  width: min(1040px, calc(100vw - 28px));
+  margin: 0 auto;
+  padding: 28px 0 40px;
+}
+
+.evidence-popout-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 14px;
+}
+
+.evidence-popout-head h1 {
+  margin: 4px 0 6px;
+  font-size: clamp(24px, 4vw, 38px);
+  letter-spacing: -0.035em;
+}
+
+.evidence-popout-head p {
+  margin: 0;
+  color: var(--text-dim);
+  font-family: var(--mono);
+  font-size: 9px;
+  overflow-wrap: anywhere;
+}
+
+.evidence-popout-content {
+  display: grid;
+  gap: 12px;
+  min-height: 300px;
+  padding: 18px;
+  border: 1px solid var(--line-strong);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: var(--shadow);
+}
+
+.evidence-loading,
+.evidence-error {
+  display: grid;
+  min-height: 220px;
+  place-items: center;
+  color: var(--text-dim);
+  text-align: center;
+}
+
+.evidence-error {
+  color: var(--risk);
+}
+
+.evidence-popout-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.evidence-popout-card,
+.evidence-popout-section {
+  min-width: 0;
+  padding: 13px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface-soft);
+}
+
+.evidence-popout-card span,
+.evidence-popout-section h2 {
+  color: var(--text-dim);
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+}
+
+.evidence-popout-card strong {
+  display: block;
+  margin-top: 5px;
+  overflow-wrap: anywhere;
+  font-size: 14px;
+}
+
+.evidence-popout-section h2 {
+  margin: 0 0 8px;
+  color: var(--indigo);
+}
+
+.evidence-popout-section p {
+  margin: 0;
+  color: #33455f;
+  font-size: 12px;
+  line-height: 1.62;
+}
+
+.evidence-popout-section code {
+  display: block;
+  margin-top: 7px;
+  padding: 8px;
+  overflow-wrap: anywhere;
+  border-radius: 9px;
+  background: white;
+  color: var(--text-soft);
+  font-size: 9px;
+}
+
+.evidence-popout-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.evidence-popout-actions button {
+  min-height: 36px;
+  padding: 0 11px;
+  border: 1px solid rgba(88, 104, 242, 0.2);
+  border-radius: 9px;
+  background: var(--indigo-soft);
+  color: var(--indigo);
+  font-size: 9px;
+  font-weight: 800;
+}
+
+@media (max-width: 640px) {
+  .evidence-popout {
+    width: calc(100vw - 16px);
+    padding-top: 12px;
+  }
+
+  .evidence-popout-head {
+    display: grid;
+  }
+
+  .evidence-popout-head .safety-lock {
+    display: none;
+  }
+
+  .evidence-popout-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .evidence-popout-content {
+    padding: 12px;
+    border-radius: 18px;
+  }
+}

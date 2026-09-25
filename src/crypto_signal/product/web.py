@@ -466,6 +466,10 @@ def create_app(
     def stream_preview() -> FileResponse:
         return FileResponse(STREAM_DIR / "index.html")
 
+    @app.get("/stream-evidence", include_in_schema=False)
+    def stream_evidence_window() -> FileResponse:
+        return FileResponse(STREAM_DIR / "evidence.html")
+
     @app.get("/legacy", include_in_schema=False)
     def legacy_product() -> FileResponse:
         return FileResponse(STATIC_DIR / "index.html")
