@@ -9,6 +9,11 @@
 > Visual target: **Bloomberg precision × cinematic sci-fi**. No fake live/latency/probability/whale/spoofing certainty. Motion is reserved for real state change.
 >
 
+> ## FRONTEND AUTHORITY UPDATE — 2026-09-25
+>
+> The route list and visual target above are retained as historical 2026-09-22 product-planning context. They are **superseded for current frontend design** by `docs/CRYPTO_SIGNAL_FRONTEND_MASTER_ROADMAP_V1.md`, the M0 Constitution and active M1 Capability/Gap Ledger. Do not treat the older fixed IA, dark/cinematic direction or GALACTECH-as-product interpretation as a current lock. Scientific and REAL_CAPITAL boundaries remain unchanged.
+>
+
 Status: **implementation roadmap**
 Governing detail: **`docs/V1_1_MASTER_EXECUTION_ROADMAP.md`**
 Baseline: **Full Version v1.0.0 frozen**

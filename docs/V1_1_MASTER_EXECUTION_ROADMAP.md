@@ -17,6 +17,13 @@
 > Historical R15/M1/M2 evidence retained below is still valuable, but stale "current" statements must be reconciled against `CURRENT_STATUS.md` and live mechanical state.
 >
 
+> ## FRONTEND AUTHORITY UPDATE — 2026-09-25
+>
+> Current frontend-specific authority is `CRYPTO_SIGNAL_FRONTEND_MASTER_ROADMAP_V1.md` + M0 Constitution + active M1 Capability/Gap Ledger. Older GALACTECH route counts, dark/cinematic visual assumptions, GALACTECH-as-product wording and frontend execution sequencing in this historical detail are not current design authority where they conflict. The deployed GALACTECH V2 surface remains production baseline/fallback until controlled M7 cutover.
+>
+> Paper references must also preserve epoch semantics: Epoch 1 is immutable 100 USDT history; Epoch 2 is the current 1,000 USDT contract for new activity.
+>
+
 Status: **governing post-v1.0 execution plan**
 Updated: **2026-09-22**
 Baseline release: **crypto-signal-full-version-v1.0.0**
@@ -61,7 +68,7 @@ The product should answer, at increasing depth:
 - What exact event would activate or invalidate it?
 - What did the system know at issuance time?
 - What happened afterward?
-- What did the canonical 100 USDT paper fund actually do?
+- What did each canonical paper epoch actually do, with Epoch 1 and Epoch 2 kept explicitly separate?
 - How well are forecasts and policies performing under untouched-forward evidence?
 - What is still unknown or insufficiently sampled?
 

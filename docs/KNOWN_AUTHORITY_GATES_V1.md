@@ -12,10 +12,14 @@ These gates are deliberate. They are not unfinished bugs.
 
 ## Paper authority
 
-The 100 USDT Mission Control is simulation/paper state.
+Paper authority is epoch-specific and remains simulation-only.
 
-`trade_policy=NOT_ACTIVATED` is a valid accepted state. A paper candidate or
-simulation is not real-money authority.
+- **Epoch 1** is the immutable historical 100 USDT paper record. It remains replayable history and is not canonical for new activity.
+- **Epoch 2** is the current 1,000 USDT paper-program contract for new canonical activity, governed by `docs/PAPER_FUND_EPOCH2_V1_SPEC.md` and its later accepted runtime/activation evidence.
+- Epoch 1 and Epoch 2 must never be silently merged, rescaled or presented as one unlabeled performance series.
+- No paper epoch creates exchange-order, credential or real-money authority.
+
+A non-activated/blocked paper state is valid. A paper candidate, simulated fill, paper NAV or Mission Control state is never real-money authority.
 
 ## Research authority
 

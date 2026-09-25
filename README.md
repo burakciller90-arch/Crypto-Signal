@@ -1,35 +1,38 @@
 # Crypto Signal
 
-Crypto Signal Full Version is a Turkish-first, explainable, evidence-driven
-crypto intelligence platform. It combines immutable signal history, beginner
-education, a 100 USDT virtual paper-fund domain, honest performance/benchmark
-evidence, independent market-intelligence engines, Alpha Factory research,
-Learning Memory and a read-only Research Lab.
+Crypto Signal is a Turkish-first, explainable, evidence-driven crypto market-intelligence platform. The repository preserves immutable historical signal/forecast evidence, point-in-time Decision Proof, Market Tape data, research/scientific rails, contextual education and a paper-capital program with explicit epoch separation.
 
-## Current release state
+## Current authority and state
 
-R13 Full Version Integrated Acceptance v2 is **PASS** on main
-`f95efc358ac396e50d0bfdb920b0187706cd2af2` through canonical issue #704 /
-run `35672790463`.
+The immutable release baseline is `crypto-signal-full-version-v1.0.0`. Active development is the post-v1.0 / v1.1 world-class product + market-intelligence program.
 
-R14 is the final release/documentation frontier. The reserved immutable release
-tag is `crypto-signal-full-version-v1.0.0`; the release is final only after the
-canonical release-freeze workflow verifies exact current main and emits
-`R14_FULL_VERSION_RELEASE_FREEZE_PASS=YES`.
+For exact current state, **do not treat this README as the authoritative HEAD/runtime snapshot**. Read `READ_FIRST_CRYPTO_SIGNAL.md`, then `CURRENT_STATUS.md`, the newest relevant `PROJECT_CHRONICLE.md` entry, and mechanically inspect Git/runtime state.
 
-Live Gift Edition Product code remains the accepted head
-`f15cbafd9f4359d385eca097a6a2635bf815ded1`; R13 proved product/runtime-code
-parity against current main.
+Current program facts recorded by the canonical state documents:
+- the existing GALACTECH V2 interface is the deployed Product baseline/fallback;
+- the new Crypto Signal frontend program is canonicalized as **M0 -> M7**;
+- **M0 Product Constitution is PASS / CLOSED**;
+- **M1 Discovery & Product Architecture is ACTIVE and not yet PASS**;
+- WC2 frozen evidence accumulation remains active;
+- WC5 broad human <=10-second usability remains `NOT_MEASURED` until actually measured;
+- WC6 real venue evidence remains an external dependency;
+- WC7 remains `INSUFFICIENT_EVIDENCE` and no automatic positive edge verdict is authorized;
+- continuity remains state-first and currently paused unless explicitly resumed;
+- `REAL_CAPITAL=0`.
 
-## Open the product
+Paper history is epoch-specific:
+- **Epoch 1:** immutable historical 100 USDT paper record;
+- **Epoch 2:** current 1,000 USDT paper-program contract for new canonical activity;
+- the two epochs must never be silently merged or rescaled.
+
+## Open the currently deployed product
 
 ```bash
 open http://127.0.0.1:48700
 curl -fsS http://127.0.0.1:48700/api/health
 ```
 
-Expected safety truth includes `status=ok`, `read_only=true`,
-`ledger_present=true`, `alert_outbox_present=true` and `real_capital=0`.
+Expected safety truth includes a read-only Product surface and `real_capital=0`. Exact health/freshness/runtime claims must be taken from live runtime evidence, not inferred from this README.
 
 ## Canonical runtime
 
@@ -38,31 +41,42 @@ Expected safety truth includes `status=ok`, `read_only=true`,
 - Product: `/Volumes/Crypto-504/Crypto-Signal/Product`
 - Runner: `/Volumes/Crypto-504/Crypto-Signal/Runner`
 - Dashboard: `http://127.0.0.1:48700`
-- Runtime owner: `crypto-signal-agent` / observed UID504
+- Runtime owner: `crypto-signal-agent`; actual UID/process state is discovered mechanically, never assumed from stale documentation
 - Dashboard/service owner: SSD supervisor
-- Self-hosted control channel: `crypto-signal-uid504`
+
+See `ENVIRONMENT_REGISTRY.md` for current environment authority.
 
 ## Read order
 
+Always start with:
 1. `READ_FIRST_CRYPTO_SIGNAL.md`
 2. `CURRENT_STATUS.md`
 3. newest relevant entry in `PROJECT_CHRONICLE.md`
-4. `docs/FINAL_RELEASE_MANIFEST_V1.md`
-5. `docs/OPERATOR_RUNBOOK_FULL_VERSION_V1.md`
-6. `docs/KNOWN_AUTHORITY_GATES_V1.md`
-7. `docs/PROJECT_COMPLETION_EXECUTION_ROADMAP.md`
-8. `ENVIRONMENT_REGISTRY.md`
+4. `docs/V1_1_LOCKED_MASTER_ROADMAP_20260922.md` for global v1.1 product/science/capital boundaries
+
+For **new frontend work**, then read:
+5. `docs/CRYPTO_SIGNAL_FRONTEND_MASTER_ROADMAP_V1.md`
+6. `docs/CRYPTO_SIGNAL_FRONTEND_M0_CONSTITUTION.md`
+7. `docs/CRYPTO_SIGNAL_FRONTEND_M1_CAPABILITY_GAP_LEDGER.md`
+
+For runtime/operations, consult as needed:
+- `ENVIRONMENT_REGISTRY.md`
+- `docs/OPERATOR_RUNBOOK_FULL_VERSION_V1.md`
+- `docs/KNOWN_AUTHORITY_GATES_V1.md`
+
+Historical release/acceptance/roadmap files remain audit evidence. They are not automatically current execution or frontend design authority merely because they were once accepted.
 
 ## Hard boundaries
 
 - `REAL_CAPITAL=0`.
-- No exchange-order or credential authority is exposed.
-- Paper policy remains evidence-governed and may be `NOT_ACTIVATED`.
-- Agreement/confluence and shadow weighted balance are not calibrated probability.
-- Missing evidence is never invented.
-- Research cannot promote or deploy itself.
+- No real exchange-order, credential, withdrawal, leverage or borrowing authority is exposed.
+- Point-in-time evidence is never backfilled with future knowledge.
+- Historical decisions, losses, invalidations, abstentions and not-evaluable states are not rewritten away.
+- Confluence/hit-rate/research scores are not calibrated probability unless separately authorized by accepted calibration evidence.
+- Backtest is not untouched-forward evidence.
+- Missing, stale or unmeasured evidence is never invented or silently converted to healthy/zero/neutral.
+- Research cannot promote/deploy itself.
+- Paper Epoch 1 and Epoch 2 remain separately identified; paper is not real capital.
 - Durdurulmaz and Quantum Capital remain isolated projects.
-- Physical reboot/logout/SSD detach-remount are not claimed as autonomously tested.
 
-For operations and recovery, start with
-`docs/OPERATOR_RUNBOOK_FULL_VERSION_V1.md`.
+For operations and recovery, begin with `READ_FIRST_CRYPTO_SIGNAL.md`, current state, and the operator runbook rather than an old historical roadmap.

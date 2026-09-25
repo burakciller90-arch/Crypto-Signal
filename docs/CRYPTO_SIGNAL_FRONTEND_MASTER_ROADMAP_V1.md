@@ -1,6 +1,6 @@
 # GALACTECH — Crypto Signal Frontend Master Roadmap v1.0
 
-Status: CANONICAL FRONTEND PROGRAM ARCHITECTURE  
+Status: CANONICAL FRONTEND PROGRAM ARCHITECTURE — M0 PASS / M1 ACTIVE  
 Owner context: GALACTECH company / Crypto Signal product-project  
 Safety: REAL_CAPITAL=0 / read-only product surface  
 Execution model: M0 -> M7 with screen-by-screen completion loops
@@ -22,6 +22,17 @@ Canonical brand hierarchy:
 - Product/project: Crypto Signal
 
 The current deployed GALACTECH V2 surface is a truthful production baseline and fallback, not the final frontend target.
+
+### Historical frontend artifact handling
+
+Repository history intentionally retains accepted frontend/deployment evidence, including `docs/GALACTECH_*.md`, older `POST_V1_*.md` acceptance records and frontend sections inside older v1.1 roadmaps.
+
+Rules:
+- historical acceptance remains audit evidence and must not be rewritten merely to match the new design;
+- historical acceptance does **not** make an old theme, route count, brand interpretation or screen hierarchy current product authority;
+- when an old frontend assumption conflicts with this roadmap/M0/M1, the old assumption is historical and the canonical frontend program wins;
+- the deployed GALACTECH V2 surface remains production truth until controlled cutover, while the target Crypto Signal frontend remains a separate in-progress program;
+- scientific, evidence, persistence, replay, capital-safety and production-authority rules continue to come from their governing contracts and are never weakened by frontend supersession.
 
 ## 1. Program objective
 
