@@ -76,17 +76,15 @@ class CanonicalPaperSizingSelection:
             or self.fraction_of_vault > 1
         ):
             raise ValueError("S11 canonical sizing fraction must be inside (0,1]")
-        for value, label in (
+        for amount, amount_label in (
             (self.canonical_notional_usdt, "canonical notional"),
             (self.current_cash_usdt, "current cash"),
             (self.current_nav_usdt, "current NAV"),
         ):
-            if (
-                not isinstance(value, Decimal)
-                or not value.is_finite()
-                or value < 0
-            ):
-                raise ValueError(f"S11 {label} must be finite and non-negative")
+            if not amount.is_finite() or amount < 0:
+                raise ValueError(
+                    f"S11 {amount_label} must be finite and non-negative"
+                )
         if self.canonical_notional_usdt <= 0:
             raise ValueError("S11 canonical notional must be positive")
         if self.canonical_notional_usdt > self.current_cash_usdt:
