@@ -7,7 +7,6 @@ import pytest
 from fastapi.testclient import TestClient
 
 from test_intelligence_stream_read_model import _create_read_fixture, _sha
-
 from crypto_signal.decision_ledger import ImmutableDecisionEvidenceLedger
 from crypto_signal.ledger.serialization import canonical_json, sha256_text
 from crypto_signal.ledger.store import ImmutableSignalLedger
@@ -19,6 +18,7 @@ from crypto_signal.product.intelligence_stream_visual_proof import (
     StreamVisualProofError,
 )
 from crypto_signal.product.web import create_app
+
 
 def _create_visual_truth(
     *,
