@@ -17,7 +17,7 @@ Classification:
 | ID | Gap | Current truth | Required closure | Class | Target phase |
 |---|---|---|---|---|---|
 | S1-G001 | Rich canonical Stream event/message ledger | **CLOSED S2** — forward activation, immutable source events, decision context, Fact Bundles and canonical Message Inputs are append-only persisted | preserve and extend without rewriting canonical history | ACCEPTANCE | S2 PASS |
-| S1-G002 | Source event projectors | **S2 CONTRACT CLOSED** — accepted projector registry exists; forecast issuance/resolution are IMPLEMENTED; other families are explicitly gated | implement material market/intelligence/risk/system projectors only after S3-S4 change detection; capital remains S11 | ADAPT | S3-S4 / S11 |
+| S1-G002 | Source event projectors | **CLOSED THROUGH S11** — forecast issuance/resolution plus canonical three-vault capital lifecycle are IMPLEMENTED in the accepted projector registry; deferred/research-only sources remain explicitly gated | preserve registry truth as later sources are activated | ACCEPTANCE | S11 PASS / ongoing invariant |
 | S1-G003 | Story identity and relation graph | **CLOSED S3** — explicit Story Observation/State lineage uses exact previous-state identity; pre-publication observations do not require a message | preserve exact lineage; S4/S5 consume it without heuristic time-only joins | ACCEPTANCE | S3 PASS |
 | S1-G004 | Change detection | **CLOSED S3** — deterministic stance/score/five-family/risk/trigger/capital-reference/outcome Change Set is persisted append-only | S4 consumes exact Change Set for analytical composition | ACCEPTANCE | S3 PASS |
 | S1-G005 | Analytical View contract | **CLOSED S4** — versioned policy + deterministic identity-bound Analytical View covers stance/strength/support/contradiction/uncertainty/change/conditions/capital consequence/materiality | preserve exact S4 identity/version lineage into S5 narrative | ACCEPTANCE | S4 PASS |
@@ -46,11 +46,11 @@ Classification:
 | S1-G028 | Notification chime/settings | not implemented | original sound + unlock/volume/mode/persistence; replay must be silent | UI | S13 |
 | S1-G029 | Unread/new-message behavior | **CLOSED S7** — bottom anchor, no forced scroll while reading history, and buffered `N yeni mesaj` affordance are browser-rendered and accepted | preserve semantics through virtualization/reconnect/sound phases | ACCEPTANCE | S7 PASS |
 | S1-G030 | Long-session feed performance | current UI not designed as all-day message stream | virtualization/reverse pagination/memory/reconnect tests | UI/ACCEPTANCE | S14 |
-| S1-G031 | Stream visual-snapshot coverage | **CLOSED THROUGH S9** — UID504 Chromium path now also proves multi-window mechanics, detach identity and exact 430px no-overflow | extend same path for S10 frozen proof and later acceptance states | ADAPT/ACCEPTANCE | S10-S16 |
+| S1-G031 | Stream visual-snapshot coverage | **CLOSED THROUGH S11** — UID504 Chromium now covers one-panel Stream, evidence windows, frozen proof and ten-state three-vault Capital Story on desktop plus exact 430px mobile no-overflow | extend same path for discovery, sound, long-history and cutover states | ADAPT/ACCEPTANCE | S12-S16 |
 | S1-G032 | Detached proof / second-monitor workflow | **S9 FRAMEWORK CLOSED** — detached evidence route is tied to exact narrative identity + evidence kind and re-reads persisted detail; frozen proof rendering remains S10 | add frozen visual payload to the exact detached proof window | ADAPT | S10 |
-| S1-G033 | Historical activation boundary | **CLOSED THROUGH S9** — S9 windows only re-read S8 verified persisted detail; localStorage stores layout only, never evidence | preserve no-synthesis rule through frozen proof/cutover | ACCEPTANCE | S9 PASS |
+| S1-G033 | Historical activation boundary | **CLOSED THROUGH S11** — S10 proof uses immutable decision freezes and S11 capital lifecycle uses forward Epoch 2 R21/R22 truth only; no historical paper backfill/rescaling or current-data substitution is introduced | preserve no-synthesis/no-backfill rule through discovery/sound/cutover | ACCEPTANCE | S11 PASS |
 | S1-G034 | Message materiality policy | **CLOSED S4 CORE** — versioned Analytical Policy deterministically maps exact S3 changes to PUBLISH/SILENT + reason codes | future source-specific projectors must consume this contract rather than invent ad-hoc spam thresholds | ACCEPTANCE | S4 PASS |
-| S1-G035 | Secondary-engine Stream classification | **CLOSED THROUGH S5 CORE** — accepted projector registry still keeps deferred/research-only/later-phase sources out of canonical Stream truth and S5 renders only accepted upstream views | maintain classification as new S6+ source integrations are added | ACCEPTANCE | S5 PASS / ongoing invariant |
+| S1-G035 | Secondary-engine Stream classification | **CLOSED THROUGH S11** — paper_capital_transition is now IMPLEMENTED with the exact ten-state lifecycle while deferred/research-only sources remain gated; no shadow/research evidence is silently promoted | maintain classification as later sources are activated | ACCEPTANCE | S11 PASS / ongoing invariant |
 
 ## S1 closeout
 
@@ -187,3 +187,28 @@ S10 closed:
 **S10 = PASS. S11 Capital Story Integration is the active frontier.**
 
 Do not jump to S12. S11 must first complete canonical three-vault forward paper-capital behavior and project exact capital intent/fill/accounting lineage into the Stream while preserving Epoch separation and REAL_CAPITAL=0.
+
+
+## S11 closeout
+
+Canonical S11 acceptance:
+- `docs/CRYPTO_SIGNAL_STREAM_S11_ACCEPTANCE.md`.
+
+S11 closed:
+- canonical three-vault Epoch 2 paper runtime;
+- exact Core / Tactical / Opportunity eligibility rules;
+- fixed-fractional canonical sizing promotion;
+- immutable eligible / hold / blocked decisions;
+- restart-safe R22 predecessor lineage;
+- simulated execution / reduction / exit;
+- R22/R21 atomic accounting;
+- accounting and outcome records;
+- ten-state Capital Story projection into the same mixed Stream;
+- exact decision/proof/evidence lineage;
+- browser-rendered three-vault lifecycle on desktop and exact 430px mobile;
+- no standalone Capital screen;
+- REAL_CAPITAL=0.
+
+**S11 = PASS. S12 Search, Filters and History UX is the active frontier.**
+
+Do not jump to S13. S12 must first reuse S6/S7 primitives to complete full discovery controls, exact message deep-links and browser-rendered search/history behavior without creating permanent navigation sections.
