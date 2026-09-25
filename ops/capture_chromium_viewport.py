@@ -489,7 +489,7 @@ def _capture(args: argparse.Namespace) -> dict[str, object]:
                         "const missing=ids.filter(id=>!document.getElementById(id));"
                         "if(missing.length){return {ok:false,reason:'controls_missing',missing};}"
                         "const initialMessage=new URL(location.href).searchParams.get('message')||'';"
-                        "const initialExpanded=!!document.querySelector('.message.is-expanded[data-identity="'+initialMessage+'"]');"
+                        "const initialExpanded=[...document.querySelectorAll('.message.is-expanded')].some(n=>(n.dataset.identity||'')===initialMessage);"
                         "document.getElementById('applyFiltersButton').click();"
                         "await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));"
                         "const applied=api.discoverySnapshot();"
