@@ -650,7 +650,7 @@ def test_stream_sse_last_event_id_resumes_exactly_after_delivered_message(tmp_pa
     assert response.text.count(identities["sol-issued"]) == 1
 
 
-def test_stream_sse_rejects_conflicting_resume_cursors(tmp_path) -> None:
+def test_stream_sse_reconnect_prefers_newer_resume_boundary(tmp_path) -> None:
     stream_path = tmp_path / "stream.sqlite3"
     identities = _create_read_fixture(stream_path)
     reader = IntelligenceStreamReadModel(stream_path)
@@ -673,8 +673,21 @@ def test_stream_sse_rejects_conflicting_resume_cursors(tmp_path) -> None:
         },
         headers={"Last-Event-ID": cursor_for_stream_record(btc_flow)},
     )
-    assert response.status_code == 400
-    assert "conflicts with Last-Event-ID" in response.json()["detail"]
+    assert response.status_code == 200
+    assert identities["btc-flow"] not in response.text
+    assert response.text.count(identities["sol-issued"]) == 1
+
+    older_header = client.get(
+        "/api/stream/live",
+        params={
+            "after": cursor_for_stream_record(btc_flow),
+            "follow": "false",
+        },
+        headers={"Last-Event-ID": cursor_for_stream_record(eth)},
+    )
+    assert older_header.status_code == 200
+    assert identities["btc-flow"] not in older_header.text
+    assert older_header.text.count(identities["sol-issued"]) == 1
 
 
 def test_stream_sse_filters_match_polling_contract(tmp_path) -> None:
