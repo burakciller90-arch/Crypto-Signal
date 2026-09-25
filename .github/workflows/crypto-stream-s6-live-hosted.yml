@@ -3,7 +3,7 @@ name: Crypto Stream S6 Live SSE UID504
 on:
   push:
     branches:
-      - 'stream/s6-*'
+      - 'stream/s6-live-*'
   workflow_dispatch:
 
 permissions:
