@@ -73,6 +73,8 @@ class StreamMessageQuery:
     effective_stance: str | None = None
     category: str | None = None
     importance: str | None = None
+    vault: str | None = None
+    state: str | None = None
     evidence_domain: str | None = None
     from_ms: int | None = None
     to_ms: int | None = None
@@ -94,6 +96,8 @@ class StreamMessageQuery:
             (self.effective_stance, "Stream query effective stance"),
             (self.category, "Stream query category"),
             (self.importance, "Stream query importance"),
+            (self.vault, "Stream query vault"),
+            (self.state, "Stream query state"),
             (self.evidence_domain, "Stream query evidence domain"),
             (self.text, "Stream query text"),
         ):
@@ -182,6 +186,13 @@ class IntelligenceStreamReadModel:
         if query.importance is not None:
             clauses.append("json_extract(m.payload_json, '$.importance') = ?")
             params.append(query.importance)
+        if query.vault is not None:
+            clauses.append("0 = 1")
+        if query.state is not None:
+            clauses.append(
+                "json_extract(a.payload_json, '$.stance.effective_stance') = ?"
+            )
+            params.append(query.state)
         if query.evidence_domain is not None:
             clauses.append(
                 "EXISTS ("
@@ -801,6 +812,12 @@ class IntelligenceStreamReadModel:
         if query.timeframe is not None:
             clauses.append("timeframe = ?")
             params.append(query.timeframe)
+        if query.vault is not None:
+            clauses.append("json_extract(payload_json, '$.vault_id') = ?")
+            params.append(query.vault)
+        if query.state is not None:
+            clauses.append("json_extract(payload_json, '$.subtype') = ?")
+            params.append(query.state)
         if query.from_ms is not None:
             clauses.append("event_at_ms >= ?")
             params.append(query.from_ms)
@@ -908,6 +925,12 @@ class IntelligenceStreamReadModel:
         if query.timeframe is not None:
             clauses.append("timeframe = ?")
             params.append(query.timeframe)
+        if query.vault is not None:
+            clauses.append("json_extract(payload_json, '$.vault_id') = ?")
+            params.append(query.vault)
+        if query.state is not None:
+            clauses.append("json_extract(payload_json, '$.subtype') = ?")
+            params.append(query.state)
         if query.from_ms is not None:
             clauses.append("event_at_ms >= ?")
             params.append(query.from_ms)
@@ -1015,6 +1038,12 @@ class IntelligenceStreamReadModel:
         if query.timeframe is not None:
             clauses.append("timeframe = ?")
             params.append(query.timeframe)
+        if query.vault is not None:
+            clauses.append("json_extract(payload_json, '$.vault_id') = ?")
+            params.append(query.vault)
+        if query.state is not None:
+            clauses.append("json_extract(payload_json, '$.subtype') = ?")
+            params.append(query.state)
         if query.from_ms is not None:
             clauses.append("event_at_ms >= ?")
             params.append(query.from_ms)
@@ -1122,6 +1151,12 @@ class IntelligenceStreamReadModel:
         if query.timeframe is not None:
             clauses.append("timeframe = ?")
             params.append(query.timeframe)
+        if query.vault is not None:
+            clauses.append("json_extract(payload_json, '$.vault_id') = ?")
+            params.append(query.vault)
+        if query.state is not None:
+            clauses.append("json_extract(payload_json, '$.subtype') = ?")
+            params.append(query.state)
         if query.from_ms is not None:
             clauses.append("event_at_ms >= ?")
             params.append(query.from_ms)
