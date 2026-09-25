@@ -18,8 +18,8 @@ Classification:
 |---|---|---|---|---|---|
 | S1-G001 | Rich canonical Stream event/message ledger | **CLOSED S2** — forward activation, immutable source events, decision context, Fact Bundles and canonical Message Inputs are append-only persisted | preserve and extend without rewriting canonical history | ACCEPTANCE | S2 PASS |
 | S1-G002 | Source event projectors | **S2 CONTRACT CLOSED** — accepted projector registry exists; forecast issuance/resolution are IMPLEMENTED; other families are explicitly gated | implement material market/intelligence/risk/system projectors only after S3-S4 change detection; capital remains S11 | ADAPT | S3-S4 / S11 |
-| S1-G003 | Story identity and relation graph | S2 now provides forecast-root story identity plus relation/supersession schema; current/previous story state and continuity engine are not built | deterministic story state + exact prior-message relations without heuristic time-only joins | BUILD | S3 |
-| S1-G004 | Change detection | current feed events do not encode “what changed” | deterministic previous->current evidence/stance/score/risk/capital delta | BUILD | S3 |
+| S1-G003 | Story identity and relation graph | **CLOSED S3** — explicit Story Observation/State lineage uses exact previous-state identity; pre-publication observations do not require a message | preserve exact lineage; S4/S5 consume it without heuristic time-only joins | ACCEPTANCE | S3 PASS |
+| S1-G004 | Change detection | **CLOSED S3** — deterministic stance/score/five-family/risk/trigger/capital-reference/outcome Change Set is persisted append-only | S4 consumes exact Change Set for analytical composition | ACCEPTANCE | S3 PASS |
 | S1-G005 | Analytical View contract | facts/proof exist; no unified Stream opinion structure | stance/support/contradiction/next-condition/capital-consequence structure | BUILD | S4 |
 | S1-G006 | Story-aware Turkish Narrative Engine | R23 SIMPLE/PRO exists but is not story-aware analyst prose | Fact Bundle -> Change Set -> Analytical View -> Narrative Plan -> renderer -> validator | BUILD | S5 |
 | S1-G007 | Narrative persistence/versioning | S2 reserves analytical/narrative/renderer version fields and preserves projector/materiality lineage; no published Turkish message text exists yet | S5 must persist original published narrative text/version and never silently rewrite it | BUILD | S5 |
@@ -33,8 +33,8 @@ Classification:
 | S1-G015 | Order-flow visual proof | CVD/divergence/absorption evidence exists but no unified customer graph payload | frozen series/measurement projection tied to message evidence | ADAPT | S10 |
 | S1-G016 | On-chain/Smart-Money Stream runtime | discovery resolved: Bitcoin network has real public Blockstream source but no always-on Stream runtime; Exchange Flow/Wallet Cohort/Large Transfer have no live provider activation | add runtime persistence only for explicitly selected/accepted sub-families; keep non-live M5 provider-neutral engines research/evidence-only | ADAPT/DEFERRED_BY_SOURCE | S2+ |
 | S1-G017 | Liquidation continuous-source activation | discovery resolved: bounded collector + hot/cold persistence exist, but production continuous collector is explicitly disabled | Stream may use exact persisted liquidation evidence when available; live liquidation messages require separate accepted collector activation | DEFERRED_BY_ACTIVATION | S2+ |
-| S1-G018 | Event Risk messages | S2 projector registry defines Event Risk as REQUIRES_CHANGE_DETECTION; no premature live projector is active | S3-S4 must detect material approach/block/recovery transitions before publication | ADAPT | S3-S4 |
-| S1-G019 | Provider/data-quality messages | S2 projector registry defines provider/data-quality as REQUIRES_CHANGE_DETECTION | S3-S4 must emit only decision-relevant degradation/recovery transitions | ADAPT | S3-S4 |
+| S1-G018 | Event Risk messages | S3 can deterministically represent Event Risk state transitions; the live Event Risk projector + analytical publication decision are not yet implemented | S4 must compose/materialize only decision-relevant approach/block/recovery transitions before publication | ADAPT | S4 |
+| S1-G019 | Provider/data-quality messages | S3 generic Change Set can represent contextual state change, but provider-specific projector/materiality composition is not yet implemented | S4 must emit only decision-relevant degradation/recovery analytical candidates | ADAPT | S4 |
 | S1-G020 | Three-vault canonical forward runtime | allocator/sizing/R22/R21 exist; current accepted execution rail is CORE/4h journal-isolated | one canonical Core/Tactical/Opportunity forward paper runtime mutating R22/R21 Epoch2 | INTEGRATE | S11 |
 | S1-G021 | Capital event projection | Epoch2/R22 truth exists; no Stream event model | HOLD/BLOCK/ELIGIBLE/SIZED/EXECUTED/REDUCED/EXITED/accounting event projector | ADAPT | S11 |
 | S1-G022 | Capital context persistence/read models | Epoch2 summary and canonical R22/R21 persistence exist; rich Capital Science/Sizing objects are not fully persisted/projected, while Shadow Preview persists only downstream preview payload | persist/read exact assessment + sizing context and expose intent/fill/bundle lineage without confusing shadow evidence with canonical Epoch2 mutation | BUILD/ADAPT | S11 |
@@ -49,7 +49,7 @@ Classification:
 | S1-G031 | Stream visual-snapshot coverage | existing UID504 `visualsnapshot` already captures Chromium-family desktop/mobile PNG artifacts; UID501 already provides `visualcleanup504` maintenance | reuse/extend existing capture path for deterministic Stream states, additional viewports, exact-message/evidence-window fixtures and review gates; do **not** build a second screenshot stack | ADAPT/ACCEPTANCE | S7-S16 |
 | S1-G032 | Detached proof / second-monitor workflow | not implemented | browser pop-out window tied to exact message/evidence identity | UI | S9-S10 |
 | S1-G033 | Historical activation boundary | **CLOSED S2** — one immutable forward activation boundary rejects rich pre-activation backfill | S6 history/reconnect must respect the same activation boundary | ACCEPTANCE | S6 |
-| S1-G034 | Message materiality policy | **CORE S2 CLOSED** — versioned policy identity + immutable PUBLISH/SILENT decision is bound into message identity for accepted issuance/resolution events | S3-S4 extend policy with deterministic change thresholds for new material event families | BUILD/ADAPT | S3-S4 |
+| S1-G034 | Message materiality policy | core S2 publication policy is accepted and S3 now supplies exact deterministic Change Sets | S4 extends analytical/materiality composition for new change-driven event families; no tick-spam | BUILD/ADAPT | S4 |
 | S1-G035 | Secondary-engine Stream classification | **S2 ENFORCEMENT CONTRACT ADDED** — accepted projector registry keeps deferred/research-only/later-phase sources out of implemented live projectors | maintain the classification while S3-S5 projectors/narrative are added | ACCEPTANCE | S3-S5 |
 
 ## S1 closeout
@@ -86,3 +86,22 @@ S2 closed:
 **S2 = PASS. S3 Story Engine and Change Detection is the active frontier.**
 
 Do not jump to S4 or UI. S3 must first create deterministic previous -> current story state and explicit change sets without heuristic time-only joins.
+
+
+## S3 closeout
+
+Canonical S3 acceptance:
+- `docs/CRYPTO_SIGNAL_STREAM_S3_ACCEPTANCE.md`.
+
+S3 closed:
+- explicit Story Observation / Story State / Change Set contracts;
+- exact previous-state continuity;
+- deterministic stance/score/five-family/risk/trigger/capital/outcome deltas;
+- pre-publication observation support;
+- append-only story persistence;
+- unrelated-story and chronology rejection;
+- replay/idempotence/immutability acceptance.
+
+**S3 = PASS. S4 Analytical Composer is the active frontier.**
+
+Do not jump to S5 or UI. S4 must first create a deterministic structured system opinion from Fact Bundle + Change Set.

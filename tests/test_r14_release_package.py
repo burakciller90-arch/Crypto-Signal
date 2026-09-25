@@ -39,7 +39,8 @@ def test_r14_root_release_surfaces_match_canonical_ssd_state() -> None:
     assert "Intelligence Stream V1" in readme
     assert "S1 Stream-only backend capability audit is PASS" in readme
     assert "S2 Canonical Stream Event & Message Model is PASS" in readme
-    assert "S3 Story Engine and Change Detection is ACTIVE" in readme
+    assert "S3 Story Engine and Change Detection is PASS" in readme
+    assert "S4 Analytical Composer is ACTIVE" in readme
     assert "Runtime owner: `crypto-signal-agent`" in readme
     assert "self-hosted runner: `crypto-signal-uid504`" in registry
     assert "There is no accepted fallback" in registry

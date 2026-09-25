@@ -54,8 +54,9 @@ These decisions are already made and must not be re-opened during ordinary imple
 - **S0 Authority Freeze: PASS**.
 - **S1 Stream-only Backend Capability Audit: PASS**.
 - **S2 Canonical Stream Event & Message Model: PASS**.
-- **S3 Story Engine and Change Detection: ACTIVE FRONTIER**.
-- Do not begin S4 or broad UI implementation before S3 can deterministically explain previous -> current story change without heuristic time-only joins.
+- **S3 Story Engine and Change Detection: PASS**.
+- **S4 Analytical Composer: ACTIVE FRONTIER**.
+- Do not begin S5 or broad UI implementation before S4 can deterministically compose the structured system opinion from canonical facts + S3 change sets.
 - The deployed GALACTECH V2 surface remains production fallback until S16 controlled cutover.
 
 ---

@@ -4,10 +4,43 @@ Updated: 2026-09-25
 Project: Crypto Signal
 Baseline: crypto-signal-full-version-v1.0.0 (immutable)
 Active post-v1.0 program: v1.1 world-class product + market intelligence + Crypto Signal Intelligence Stream V1
-State: WC0_LIVE_PRODUCT_PARITY_ACCEPTED / WC1_24_7_DATA_RELIABILITY_ACCEPTED / WC2_ENGINEERING_FROZEN_EVIDENCE_ACCUMULATION_ACTIVE / WC4_CHAMPION_CHALLENGER_ENGINEERING_ACCEPTED_RESEARCH_ONLY / WC5_ENGINEERING_ACCEPTED_PRODUCT_DEPLOYED_HUMAN_USABILITY_NOT_MEASURED / WC6_SANDBOX_BOUNDARY_ACCEPTED_VENUE_EVIDENCE_EXTERNAL_DEPENDENCY / WC7_CURRENT_FRONTIER_PACKET_ACCEPTED_CURRENT_INSUFFICIENT_EVIDENCE / INTELLIGENCE_STREAM_V1_S0_PASS_S1_PASS_S2_PASS_S3_ACTIVE / CONTINUITY_PAUSED_BY_USER
+State: WC0_LIVE_PRODUCT_PARITY_ACCEPTED / WC1_24_7_DATA_RELIABILITY_ACCEPTED / WC2_ENGINEERING_FROZEN_EVIDENCE_ACCUMULATION_ACTIVE / WC4_CHAMPION_CHALLENGER_ENGINEERING_ACCEPTED_RESEARCH_ONLY / WC5_ENGINEERING_ACCEPTED_PRODUCT_DEPLOYED_HUMAN_USABILITY_NOT_MEASURED / WC6_SANDBOX_BOUNDARY_ACCEPTED_VENUE_EVIDENCE_EXTERNAL_DEPENDENCY / WC7_CURRENT_FRONTIER_PACKET_ACCEPTED_CURRENT_INSUFFICIENT_EVIDENCE / INTELLIGENCE_STREAM_V1_S0_PASS_S1_PASS_S2_PASS_S3_PASS_S4_ACTIVE / CONTINUITY_PAUSED_BY_USER
 REAL_CAPITAL: 0
 
 ## Active v1.1 frontier — read before historical sections
+
+### 2026-09-25 18:43 +0300 — STREAM S3 STORY ENGINE PASS / S4 ANALYTICAL COMPOSER ACTIVE
+
+S3 is mechanically accepted.
+
+Canonical acceptance record:
+- `docs/CRYPTO_SIGNAL_STREAM_S3_ACCEPTANCE.md`.
+
+Accepted S3 continuity/change layer:
+- immutable Story Observation / Story State / Change Set;
+- explicit previous-state identity rather than heuristic time-proximity joins;
+- append-only story memory;
+- pre-publication observations with optional message linkage;
+- deterministic stance, support/opposition score, five-family evidence, Event Risk, trigger, capital-reference and outcome deltas;
+- exact replay/idempotence;
+- unrelated-story and backfill/fork rejection;
+- physical SQLite immutability.
+
+Merged implementation:
+- PR #1265;
+- main `f0ec56b830d22679b9cdf489f7e2453635fafe20`.
+
+Exact-head acceptance:
+- run `36155780247`;
+- focused pytest/Ruff/strict mypy PASS;
+- whole-repository regression PASS;
+- Development checkout non-mutation PASS.
+
+S3 does not claim analytical opinion, publication policy for newly detected event families, Turkish prose, realtime delivery, UI or canonical three-vault capital story.
+
+The active Stream frontier is now **S4 — Analytical Composer**.
+
+S4 must transform canonical Fact Bundle + Change Set into a deterministic structured system opinion: current stance, stance strength, dominant/secondary support, main contradiction, uncertainty, what changed, next condition, invalidation/change condition, capital consequence and message materiality.
 
 ### 2026-09-25 18:22 +0300 — STREAM S2 CANONICAL EVENT/MESSAGE MODEL PASS / S3 STORY ENGINE ACTIVE
 
