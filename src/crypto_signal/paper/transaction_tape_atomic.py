@@ -670,6 +670,94 @@ class R22Epoch2AtomicTape:
                 raise ValueError("R22 fill does not bind exact audited target snapshots")
         return bundle
 
+    def read_bundle_story_context(
+        self,
+        bundle_identity: str,
+    ) -> dict[str, object]:
+        """Return verified persisted R22/R21 truth for Stream capital projection."""
+        bundle = self.audit_bundle_read_only(bundle_identity)
+        uri = f"{self.epoch2_path.resolve().as_uri()}?mode=ro"
+        with sqlite3.connect(uri, uri=True) as connection:
+            intent_identity = str(bundle["intent_identity"])
+            fill_identity = str(bundle["fill_identity"])
+            vault_id = str(bundle["vault_id"])
+            before_parent_identity = str(
+                bundle["before_consolidated_snapshot_identity"]
+            )
+            after_parent_identity = str(
+                bundle["after_consolidated_snapshot_identity"]
+            )
+
+            intent_row = connection.execute(
+                """SELECT payload_json FROM r22_epoch2_intents
+                WHERE intent_identity = ?""",
+                (intent_identity,),
+            ).fetchone()
+            fill_row = connection.execute(
+                """SELECT payload_json FROM r22_epoch2_fills
+                WHERE fill_identity = ?""",
+                (fill_identity,),
+            ).fetchone()
+            if intent_row is None or fill_row is None:
+                raise ValueError("R22 story context lost intent/fill evidence")
+            intent = _verify_embedded_identity(
+                str(intent_row[0]),
+                identity_field="intent_identity",
+                expected_identity=intent_identity,
+                label="R22 story intent",
+            )
+            fill = _verify_embedded_identity(
+                str(fill_row[0]),
+                identity_field="fill_identity",
+                expected_identity=fill_identity,
+                label="R22 story fill",
+            )
+            before_identity = str(fill["before_snapshot_identity"])
+            after_identity = str(fill["after_snapshot_identity"])
+            before_vault = self._read_verified_snapshot(
+                connection,
+                table="r21_vault_snapshots",
+                identity=before_identity,
+                label="R21 story before vault",
+            )
+            after_vault = self._read_verified_snapshot(
+                connection,
+                table="r21_vault_snapshots",
+                identity=after_identity,
+                label="R21 story after vault",
+            )
+            before_parent = self._read_verified_snapshot(
+                connection,
+                table="r21_consolidated_snapshots",
+                identity=before_parent_identity,
+                label="R21 story before consolidated",
+            )
+            after_parent = self._read_verified_snapshot(
+                connection,
+                table="r21_consolidated_snapshots",
+                identity=after_parent_identity,
+                label="R21 story after consolidated",
+            )
+            if (
+                intent.get("vault_id") != vault_id
+                or fill.get("vault_id") != vault_id
+                or before_vault.get("vault_id") != vault_id
+                or after_vault.get("vault_id") != vault_id
+            ):
+                raise ValueError("R22 story context vault lineage mismatch")
+            return {
+                "bundle": bundle,
+                "intent": intent,
+                "fill": fill,
+                "before_vault": before_vault,
+                "after_vault": after_vault,
+                "before_consolidated": before_parent,
+                "after_consolidated": after_parent,
+                "read_only": True,
+                "production_authority": False,
+                "real_capital": 0,
+            }
+
     def audit_all_read_only(self) -> tuple[int, int, int]:
         """Replay-check all intent/fill chains and every accounting bundle read-only."""
         if not self.epoch2_path.is_file():
