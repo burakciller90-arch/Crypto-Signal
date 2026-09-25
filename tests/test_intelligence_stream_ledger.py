@@ -818,9 +818,23 @@ def test_stream_materiality_policy_and_projector_registry_are_versioned() -> Non
         registry["m5_smart_money_research"].implementation_state
         is StreamProjectorImplementationState.RESEARCH_ONLY
     )
+    capital_projector = registry["paper_capital_transition"]
     assert (
-        registry["paper_capital_transition"].implementation_state
-        is StreamProjectorImplementationState.LATER_PHASE
+        capital_projector.implementation_state
+        is StreamProjectorImplementationState.IMPLEMENTED
+    )
+    assert capital_projector.target_phase == "S11"
+    assert capital_projector.subtypes == (
+        "capital_accounting_updated",
+        "capital_blocked",
+        "capital_candidate",
+        "capital_eligible",
+        "capital_executed",
+        "capital_exited",
+        "capital_hold",
+        "capital_outcome",
+        "capital_reduced",
+        "capital_sized",
     )
 
     projected = project_forecast_issuance(

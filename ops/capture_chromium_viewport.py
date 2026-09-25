@@ -400,6 +400,81 @@ def _capture(args: argparse.Namespace) -> dict[str, object]:
                 raise RuntimeError(f"frozen proof substitution boundary failed: {proof_probe!r}")
             metrics["frozen_proof_probe"] = proof_probe
 
+        if args.probe_capital_story:
+            capital_probe_result = session.command(
+                "Runtime.evaluate",
+                {
+                    "expression": (
+                        "(async()=>{"
+                        "await new Promise(r=>setTimeout(r,260));"
+                        "const expected=['capital_candidate','capital_eligible','capital_hold','capital_blocked','capital_sized','capital_executed','capital_reduced','capital_exited','capital_accounting_updated','capital_outcome'];"
+                        "const messages=[...document.querySelectorAll('.message[data-subtype]')];"
+                        "const subtypes=messages.map(n=>n.dataset.subtype||'');"
+                        "const ids=messages.map(n=>n.dataset.identity||'');"
+                        "const vaults=[...new Set(messages.map(n=>n.dataset.vaultId||'').filter(Boolean))];"
+                        "const labels=messages.map(n=>n.querySelector('.message-state')?.textContent||'');"
+                        "const expanded=document.querySelector('.message.is-expanded');"
+                        "const detail=expanded?.querySelector('.message-detail');"
+                        "const detailText=detail?.textContent||'';"
+                        "const lineageCodes=detail?[...detail.querySelectorAll('.proof-panel code')].map(n=>n.textContent||''):[];"
+                        "const stream=document.getElementById('streamViewport');"
+                        "const streamVisible=!!stream&&stream.getBoundingClientRect().height>100;"
+                        "return {ok:true,count:messages.length,subtypes,ids,vaults,labels,"
+                        "missing:expected.filter(x=>!subtypes.includes(x)),"
+                        "validIds:ids.every(v=>/^[0-9a-f]{64}$/.test(v)),"
+                        "expandedSubtype:expanded?.dataset.subtype||'',"
+                        "detailHasRealCapital:detailText.includes('REAL_CAPITAL=0'),"
+                        "detailHasPnl:detailText.includes('Gerçekleşen PnL'),"
+                        "lineageCodeCount:lineageCodes.length,streamVisible};"
+                        "})()"
+                    ),
+                    "awaitPromise": True,
+                    "returnByValue": True,
+                },
+            )
+            raw_capital_probe = capital_probe_result.get("result", {})
+            if not isinstance(raw_capital_probe, dict):
+                raise RuntimeError("CDP capital-story probe result missing")
+            capital_probe = raw_capital_probe.get("value", {})
+            if not isinstance(capital_probe, dict):
+                raise RuntimeError("CDP capital-story probe value missing")
+            if capital_probe.get("ok") is not True:
+                raise RuntimeError(f"capital story probe failed: {capital_probe!r}")
+            if int(capital_probe.get("count", 0)) < 10:
+                raise RuntimeError(f"capital story message count failed: {capital_probe!r}")
+            if capital_probe.get("missing"):
+                raise RuntimeError(f"capital story lifecycle incomplete: {capital_probe!r}")
+            if capital_probe.get("validIds") is not True:
+                raise RuntimeError(f"capital story identity coverage failed: {capital_probe!r}")
+            vaults = set(capital_probe.get("vaults", []))
+            if not {"CORE", "TACTICAL", "OPPORTUNITY_RESERVE"}.issubset(vaults):
+                raise RuntimeError(f"capital story three-vault coverage failed: {capital_probe!r}")
+            labels = set(capital_probe.get("labels", []))
+            if not {
+                "SERMAYE ADAYI",
+                "SERMAYE UYGUN",
+                "NAKİTTE BEKLE",
+                "SERMAYE BLOKE",
+                "SERMAYE BOYUTLANDI",
+                "SERMAYE İŞLENDİ",
+                "POZİSYON AZALTILDI",
+                "POZİSYON KAPANDI",
+                "MUHASEBE GÜNCELLENDİ",
+                "SONUÇ KAYDEDİLDİ",
+            }.issubset(labels):
+                raise RuntimeError(f"capital story state labels failed: {capital_probe!r}")
+            if capital_probe.get("expandedSubtype") != "capital_outcome":
+                raise RuntimeError(f"capital outcome expansion failed: {capital_probe!r}")
+            if capital_probe.get("detailHasRealCapital") is not True:
+                raise RuntimeError(f"capital REAL_CAPITAL boundary failed: {capital_probe!r}")
+            if capital_probe.get("detailHasPnl") is not True:
+                raise RuntimeError(f"capital PnL detail failed: {capital_probe!r}")
+            if int(capital_probe.get("lineageCodeCount", 0)) < 3:
+                raise RuntimeError(f"capital lineage display failed: {capital_probe!r}")
+            if capital_probe.get("streamVisible") is not True:
+                raise RuntimeError(f"capital fixture hid Stream surface: {capital_probe!r}")
+            metrics["capital_story_probe"] = capital_probe
+
         screenshot = session.command(
             "Page.captureScreenshot",
             {
@@ -446,6 +521,7 @@ def main() -> None:
     parser.add_argument("--probe-expansion-anchor", action="store_true")
     parser.add_argument("--probe-window-manager", action="store_true")
     parser.add_argument("--probe-frozen-proof", action="store_true")
+    parser.add_argument("--probe-capital-story", action="store_true")
     args = parser.parse_args()
 
     if not args.browser.is_file():
@@ -469,6 +545,7 @@ def main() -> None:
         f"expansion_probe={'YES' if metrics.get('expansion_probe') else 'NO'}",
         f"window_manager_probe={'YES' if metrics.get('window_manager_probe') else 'NO'}",
         f"frozen_proof_probe={'YES' if metrics.get('frozen_proof_probe') else 'NO'}",
+        f"capital_story_probe={'YES' if metrics.get('capital_story_probe') else 'NO'}",
     )
 
 

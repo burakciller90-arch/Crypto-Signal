@@ -47,7 +47,11 @@ def _sha(seed: str) -> str:
     return canonical_sha256({"seed": seed})
 
 
-def _forecast(*, calibrated: bool = False) -> ImmutableForecast:
+def _forecast(
+    *,
+    calibrated: bool = False,
+    timeframe: str = "4h",
+) -> ImmutableForecast:
     signal_id = _sha("signal")
     confluence_id = _sha("confluence")
     event_id = _sha("event")
@@ -109,7 +113,7 @@ def _forecast(*, calibrated: bool = False) -> ImmutableForecast:
         "symbol": "BTCUSDT",
         "target_label": "target_1",
         "target_zone": target_zone,
-        "timeframe": "4h",
+        "timeframe": timeframe,
         "trigger_kind": ForecastTriggerKind.ENTRY_ZONE,
         "trigger_zone": trigger_zone,
         "uncertainty_flags": uncertainty,
@@ -122,7 +126,7 @@ def _forecast(*, calibrated: bool = False) -> ImmutableForecast:
         authority=ForecastAuthority.SHADOW,
         asset="BTC",
         symbol="BTCUSDT",
-        timeframe="4h",
+        timeframe=timeframe,
         issued_at_ms=ISSUED_AT,
         source_as_of_ms=AS_OF,
         signal_freeze_identity=signal_id,

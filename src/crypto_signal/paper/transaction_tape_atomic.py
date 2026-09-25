@@ -13,6 +13,9 @@ from pathlib import Path
 from typing import cast
 
 from crypto_signal.ledger.serialization import canonical_json, canonical_sha256, sha256_text
+from crypto_signal.paper.canonical_capital_outcomes import (
+    CanonicalCapitalOutcomeEvidence,
+)
 from crypto_signal.paper.epoch2_accounting import (
     Epoch2CanonicalLedger,
     Epoch2ConsolidatedAccountingSnapshot,
@@ -21,7 +24,7 @@ from crypto_signal.paper.epoch2_accounting import (
     build_consolidated_epoch2_snapshot,
 )
 from crypto_signal.paper.epochs import PaperVaultId
-from crypto_signal.paper.models import REAL_CAPITAL, PaperAction
+from crypto_signal.paper.models import REAL_CAPITAL, PaperAction, PaperSymbol
 from crypto_signal.paper.transaction_tape import PaperTapeFill, PaperTapeIntent
 
 R22_BUNDLE_SCHEMA_VERSION = "r22-epoch2-accounting-bundle-v1/1"
@@ -327,10 +330,20 @@ class R22Epoch2AtomicTape:
                     payload_json TEXT NOT NULL
                 )"""
             )
+            connection.execute(
+                """CREATE TABLE IF NOT EXISTS s11_capital_outcome_evidence (
+                    outcome_identity TEXT PRIMARY KEY,
+                    source_fill_identity TEXT NOT NULL UNIQUE,
+                    vault_id TEXT NOT NULL,
+                    event_at_ms INTEGER NOT NULL,
+                    payload_json TEXT NOT NULL
+                )"""
+            )
             for table in (
                 "r22_epoch2_intents",
                 "r22_epoch2_fills",
                 "r22_epoch2_bundles",
+                "s11_capital_outcome_evidence",
             ):
                 for operation in ("UPDATE", "DELETE"):
                     connection.execute(
@@ -341,6 +354,150 @@ class R22Epoch2AtomicTape:
                             SELECT RAISE(ABORT, 'immutable R22 Epoch2 audit tape');
                         END"""
                     )
+
+    def read_latest_chain_identities(
+        self,
+        vault_id: PaperVaultId,
+    ) -> tuple[str | None, str | None]:
+        """Read the exact latest per-vault intent/fill predecessors without mutation."""
+        if not isinstance(vault_id, PaperVaultId):
+            raise TypeError("R22 chain lookup requires canonical vault")
+        if not self.epoch2_path.is_file():
+            raise ValueError("R22 Epoch2 ledger is missing")
+        uri = f"{self.epoch2_path.resolve().as_uri()}?mode=ro"
+        with sqlite3.connect(uri, uri=True) as connection:
+            tables = {
+                str(row[0])
+                for row in connection.execute(
+                    """
+                    SELECT name FROM sqlite_master
+                    WHERE type = 'table'
+                      AND name IN ('r22_epoch2_intents', 'r22_epoch2_fills')
+                    """
+                ).fetchall()
+            }
+            if "r22_epoch2_intents" not in tables:
+                return None, None
+            intent_row = connection.execute(
+                """SELECT intent_identity, payload_json
+                FROM r22_epoch2_intents
+                WHERE vault_id = ?
+                ORDER BY event_at_ms DESC, intent_identity DESC
+                LIMIT 1""",
+                (vault_id.value,),
+            ).fetchone()
+            fill_row = (
+                None
+                if "r22_epoch2_fills" not in tables
+                else connection.execute(
+                    """SELECT fill_identity, payload_json
+                    FROM r22_epoch2_fills
+                    WHERE vault_id = ?
+                    ORDER BY event_at_ms DESC, fill_identity DESC
+                    LIMIT 1""",
+                    (vault_id.value,),
+                ).fetchone()
+            )
+        intent_identity = None
+        if intent_row is not None:
+            intent_identity = str(intent_row[0])
+            raw_intent = _verify_embedded_identity(
+                str(intent_row[1]),
+                identity_field="intent_identity",
+                expected_identity=intent_identity,
+                label="R22 latest intent",
+            )
+            if raw_intent.get("vault_id") != vault_id.value:
+                raise ValueError("R22 latest intent vault header mismatch")
+        fill_identity = None
+        if fill_row is not None:
+            fill_identity = str(fill_row[0])
+            raw_fill = _verify_embedded_identity(
+                str(fill_row[1]),
+                identity_field="fill_identity",
+                expected_identity=fill_identity,
+                label="R22 latest fill",
+            )
+            if raw_fill.get("vault_id") != vault_id.value:
+                raise ValueError("R22 latest fill vault header mismatch")
+        return intent_identity, fill_identity
+
+    def read_trade_history(
+        self,
+        vault_id: PaperVaultId,
+        symbol: PaperSymbol,
+    ) -> tuple[dict[str, object], ...]:
+        """Read verified per-vault trade intent/fill pairs in fill chronology."""
+        if not isinstance(vault_id, PaperVaultId):
+            raise TypeError("R22 trade-history lookup requires canonical vault")
+        if not isinstance(symbol, PaperSymbol):
+            raise TypeError("R22 trade-history lookup requires canonical symbol")
+        if not self.epoch2_path.is_file():
+            raise ValueError("R22 Epoch2 ledger is missing")
+        uri = f"{self.epoch2_path.resolve().as_uri()}?mode=ro"
+        with sqlite3.connect(uri, uri=True) as connection:
+            tables = {
+                str(row[0])
+                for row in connection.execute(
+                    """SELECT name FROM sqlite_master
+                    WHERE type = 'table'
+                      AND name IN ('r22_epoch2_intents', 'r22_epoch2_fills')"""
+                ).fetchall()
+            }
+            if "r22_epoch2_fills" not in tables:
+                return ()
+            rows = connection.execute(
+                """SELECT
+                    f.fill_identity,
+                    f.intent_identity,
+                    f.activation_identity,
+                    f.vault_id,
+                    f.event_at_ms,
+                    f.payload_json,
+                    i.payload_json
+                FROM r22_epoch2_fills AS f
+                JOIN r22_epoch2_intents AS i
+                  ON i.intent_identity = f.intent_identity
+                WHERE f.vault_id = ?
+                ORDER BY f.event_at_ms, f.fill_identity""",
+                (vault_id.value,),
+            ).fetchall()
+
+        result: list[dict[str, object]] = []
+        for row in rows:
+            fill_identity = str(row[0])
+            intent_identity = str(row[1])
+            fill = _verify_embedded_identity(
+                str(row[5]),
+                identity_field="fill_identity",
+                expected_identity=fill_identity,
+                label="R22 trade-history fill",
+            )
+            intent = _verify_embedded_identity(
+                str(row[6]),
+                identity_field="intent_identity",
+                expected_identity=intent_identity,
+                label="R22 trade-history intent",
+            )
+            _assert_row_headers(
+                fill,
+                activation_identity=str(row[2]),
+                vault_id=str(row[3]),
+                event_at_ms=int(row[4]),
+                event_field="filled_at_ms",
+                label="R22 trade-history fill",
+            )
+            if (
+                fill.get("intent_identity") != intent_identity
+                or intent.get("activation_identity") != str(row[2])
+                or intent.get("vault_id") != vault_id.value
+                or fill.get("vault_id") != vault_id.value
+            ):
+                raise ValueError("R22 trade-history intent/fill lineage mismatch")
+            if fill.get("symbol") != symbol.value:
+                continue
+            result.append({"intent": intent, "fill": fill})
+        return tuple(result)
 
     def append_hold_decision(self, intent: PaperTapeIntent) -> bool:
         if intent.action is not PaperAction.HOLD_CASH:
@@ -383,7 +540,13 @@ class R22Epoch2AtomicTape:
         after_vaults: tuple[Epoch2VaultAccountingSnapshot, ...],
         after_consolidated: Epoch2ConsolidatedAccountingSnapshot,
         bundle: R22Epoch2AccountingBundle,
+        outcome_evidence: CanonicalCapitalOutcomeEvidence | None = None,
     ) -> bool:
+        self._validate_outcome_binding(
+            fill=fill,
+            after_vaults=after_vaults,
+            outcome_evidence=outcome_evidence,
+        )
         expected_bundle = build_epoch2_accounting_bundle(
             before,
             intent=intent,
@@ -411,6 +574,7 @@ class R22Epoch2AtomicTape:
                     fill=fill,
                     after_vaults=after_vaults,
                     after_consolidated=after_consolidated,
+                    outcome_evidence=outcome_evidence,
                 )
                 return False
 
@@ -452,6 +616,20 @@ class R22Epoch2AtomicTape:
                     after_consolidated.snapshot_at_ms,
                 ),
             )
+            if outcome_evidence is not None:
+                connection.execute(
+                    """INSERT INTO s11_capital_outcome_evidence (
+                        outcome_identity, source_fill_identity, vault_id,
+                        event_at_ms, payload_json
+                    ) VALUES (?, ?, ?, ?, ?)""",
+                    (
+                        outcome_evidence.outcome_identity,
+                        outcome_evidence.source_fill_identity,
+                        outcome_evidence.vault_id.value,
+                        outcome_evidence.filled_at_ms,
+                        canonical_json(outcome_evidence),
+                    ),
+                )
             connection.execute(
                 """INSERT INTO r22_epoch2_fills (
                     fill_identity, intent_identity, activation_identity,
@@ -602,6 +780,44 @@ class R22Epoch2AtomicTape:
             ):
                 raise ValueError("R22 fill bundle lineage/authority mismatch")
 
+            outcome = None
+            outcome_identity_raw = fill.get("outcome_evidence_identity")
+            action = PaperAction(str(fill["action"]))
+            if action is PaperAction.BUY:
+                if outcome_identity_raw is not None:
+                    raise ValueError("R22 audited BUY unexpectedly has outcome evidence")
+            else:
+                if not isinstance(outcome_identity_raw, str):
+                    raise ValueError("R22 audited sell fill lacks outcome evidence")
+                _require_sha256(outcome_identity_raw, "R22 audited outcome")
+                outcome_row = connection.execute(
+                    """SELECT source_fill_identity, vault_id, event_at_ms, payload_json
+                    FROM s11_capital_outcome_evidence
+                    WHERE outcome_identity = ?""",
+                    (outcome_identity_raw,),
+                ).fetchone()
+                if outcome_row is None:
+                    raise ValueError("R22 audited sell outcome evidence is missing")
+                outcome = _verify_embedded_identity(
+                    str(outcome_row[3]),
+                    identity_field="outcome_identity",
+                    expected_identity=outcome_identity_raw,
+                    label="S11 sell outcome",
+                )
+                if (
+                    str(outcome_row[0]) != str(fill["source_fill_identity"])
+                    or str(outcome_row[1]) != vault_id
+                    or int(str(outcome_row[2])) != int(str(fill["filled_at_ms"]))
+                    or outcome.get("action") != fill.get("action")
+                    or outcome.get("symbol") != fill.get("symbol")
+                    or outcome.get("quantity") != fill.get("quantity")
+                    or outcome.get("realized_pnl_delta_usdt")
+                    != fill.get("realized_pnl_delta_usdt")
+                    or outcome.get("real_capital") != 0
+                    or outcome.get("production_authority") is not False
+                ):
+                    raise ValueError("R22 audited sell outcome lineage mismatch")
+
             before_parent_identity = str(bundle["before_consolidated_snapshot_identity"])
             after_parent_identity = str(bundle["after_consolidated_snapshot_identity"])
             before_parent = self._read_verified_snapshot(
@@ -668,7 +884,119 @@ class R22Epoch2AtomicTape:
                 or fill.get("snapshot_at_ms") != event_at_ms
             ):
                 raise ValueError("R22 fill does not bind exact audited target snapshots")
+            if outcome is not None:
+                source_ids = target_after.get("source_record_identities")
+                if (
+                    not isinstance(source_ids, list)
+                    or outcome["outcome_identity"] not in source_ids
+                ):
+                    raise ValueError("R21 audited sell snapshot lost outcome lineage")
         return bundle
+
+    def read_bundle_story_context(
+        self,
+        bundle_identity: str,
+    ) -> dict[str, object]:
+        """Return verified persisted R22/R21 truth for Stream capital projection."""
+        bundle = self.audit_bundle_read_only(bundle_identity)
+        uri = f"{self.epoch2_path.resolve().as_uri()}?mode=ro"
+        with sqlite3.connect(uri, uri=True) as connection:
+            intent_identity = str(bundle["intent_identity"])
+            fill_identity = str(bundle["fill_identity"])
+            vault_id = str(bundle["vault_id"])
+            before_parent_identity = str(
+                bundle["before_consolidated_snapshot_identity"]
+            )
+            after_parent_identity = str(
+                bundle["after_consolidated_snapshot_identity"]
+            )
+
+            intent_row = connection.execute(
+                """SELECT payload_json FROM r22_epoch2_intents
+                WHERE intent_identity = ?""",
+                (intent_identity,),
+            ).fetchone()
+            fill_row = connection.execute(
+                """SELECT payload_json FROM r22_epoch2_fills
+                WHERE fill_identity = ?""",
+                (fill_identity,),
+            ).fetchone()
+            if intent_row is None or fill_row is None:
+                raise ValueError("R22 story context lost intent/fill evidence")
+            intent = _verify_embedded_identity(
+                str(intent_row[0]),
+                identity_field="intent_identity",
+                expected_identity=intent_identity,
+                label="R22 story intent",
+            )
+            fill = _verify_embedded_identity(
+                str(fill_row[0]),
+                identity_field="fill_identity",
+                expected_identity=fill_identity,
+                label="R22 story fill",
+            )
+            before_identity = str(fill["before_snapshot_identity"])
+            after_identity = str(fill["after_snapshot_identity"])
+            before_vault = self._read_verified_snapshot(
+                connection,
+                table="r21_vault_snapshots",
+                identity=before_identity,
+                label="R21 story before vault",
+            )
+            after_vault = self._read_verified_snapshot(
+                connection,
+                table="r21_vault_snapshots",
+                identity=after_identity,
+                label="R21 story after vault",
+            )
+            before_parent = self._read_verified_snapshot(
+                connection,
+                table="r21_consolidated_snapshots",
+                identity=before_parent_identity,
+                label="R21 story before consolidated",
+            )
+            after_parent = self._read_verified_snapshot(
+                connection,
+                table="r21_consolidated_snapshots",
+                identity=after_parent_identity,
+                label="R21 story after consolidated",
+            )
+            if (
+                intent.get("vault_id") != vault_id
+                or fill.get("vault_id") != vault_id
+                or before_vault.get("vault_id") != vault_id
+                or after_vault.get("vault_id") != vault_id
+            ):
+                raise ValueError("R22 story context vault lineage mismatch")
+            outcome = None
+            outcome_identity = fill.get("outcome_evidence_identity")
+            if isinstance(outcome_identity, str):
+                outcome_row = connection.execute(
+                    """SELECT payload_json FROM s11_capital_outcome_evidence
+                    WHERE outcome_identity = ?""",
+                    (outcome_identity,),
+                ).fetchone()
+                if outcome_row is None:
+                    raise ValueError("R22 story context lost sell outcome evidence")
+                outcome = _verify_embedded_identity(
+                    str(outcome_row[0]),
+                    identity_field="outcome_identity",
+                    expected_identity=outcome_identity,
+                    label="S11 story outcome",
+                )
+            return {
+                "bundle": bundle,
+                "intent": intent,
+                "fill": fill,
+                "outcome": outcome,
+                "before_vault": before_vault,
+                "after_vault": after_vault,
+                "before_consolidated": before_parent,
+                "after_consolidated": after_parent,
+                "read_only": True,
+                "production_authority": False,
+                "real_capital": 0,
+            }
 
     def audit_all_read_only(self) -> tuple[int, int, int]:
         """Replay-check all intent/fill chains and every accounting bundle read-only."""
@@ -758,6 +1086,39 @@ class R22Epoch2AtomicTape:
             for fill_identity in (str(row[0]) for row in fills):
                 if fill_identity not in bundle_by_fill:
                     raise ValueError("R22 fill replay is missing its accounting bundle")
+
+            outcome_rows = connection.execute(
+                """SELECT outcome_identity, source_fill_identity, payload_json
+                FROM s11_capital_outcome_evidence"""
+            ).fetchall()
+            sell_source_fills: set[str] = set()
+            for row in fills:
+                fill_raw = _decode_object(str(row[5]), "R22 replay fill")
+                if fill_raw.get("action") in {
+                    PaperAction.REDUCE.value,
+                    PaperAction.EXIT.value,
+                }:
+                    source_fill = fill_raw.get("source_fill_identity")
+                    if not isinstance(source_fill, str):
+                        raise ValueError("R22 replay sell fill lost source fill")
+                    sell_source_fills.add(source_fill)
+            outcome_source_fills: set[str] = set()
+            for row in outcome_rows:
+                identity = str(row[0])
+                source_fill = str(row[1])
+                raw = _verify_embedded_identity(
+                    str(row[2]),
+                    identity_field="outcome_identity",
+                    expected_identity=identity,
+                    label="S11 replay outcome",
+                )
+                if raw.get("source_fill_identity") != source_fill:
+                    raise ValueError("S11 replay outcome source-fill mismatch")
+                if source_fill in outcome_source_fills:
+                    raise ValueError("S11 replay found duplicate outcome source fill")
+                outcome_source_fills.add(source_fill)
+            if outcome_source_fills != sell_source_fills:
+                raise ValueError("S11 replay outcome evidence is missing or orphaned")
 
             bundle_ids = tuple(str(row[0]) for row in bundle_rows)
         for bundle_identity in bundle_ids:
@@ -891,6 +1252,43 @@ class R22Epoch2AtomicTape:
             raise ValueError("R22 atomic fill cannot backfill or fork a timestamp")
 
     @staticmethod
+    def _validate_outcome_binding(
+        *,
+        fill: PaperTapeFill,
+        after_vaults: tuple[Epoch2VaultAccountingSnapshot, ...],
+        outcome_evidence: CanonicalCapitalOutcomeEvidence | None,
+    ) -> None:
+        if fill.action is PaperAction.BUY:
+            if outcome_evidence is not None or fill.outcome_evidence_identity is not None:
+                raise ValueError("R22 BUY cannot carry sell outcome evidence")
+            return
+        if fill.action not in {PaperAction.REDUCE, PaperAction.EXIT}:
+            raise ValueError("R22 outcome binding found unsupported fill action")
+        if outcome_evidence is None:
+            raise ValueError("R22 sell fill requires canonical outcome evidence")
+        if fill.outcome_evidence_identity != outcome_evidence.outcome_identity:
+            raise ValueError("R22 sell fill/outcome identity mismatch")
+        if (
+            fill.source_fill_identity != outcome_evidence.source_fill_identity
+            or fill.vault_id is not outcome_evidence.vault_id
+            or fill.action is not outcome_evidence.action
+            or fill.symbol is not outcome_evidence.symbol
+            or fill.filled_at_ms != outcome_evidence.filled_at_ms
+            or fill.quantity != outcome_evidence.quantity
+            or fill.realized_pnl_delta_usdt
+            != outcome_evidence.realized_pnl_delta_usdt
+        ):
+            raise ValueError("R22 sell fill/outcome financial lineage mismatch")
+        target = next(
+            (item for item in after_vaults if item.vault_id is fill.vault_id),
+            None,
+        )
+        if target is None:
+            raise ValueError("R22 sell outcome lacks target R21 vault snapshot")
+        if outcome_evidence.outcome_identity not in target.source_record_identities:
+            raise ValueError("R21 sell snapshot lacks exact outcome evidence")
+
+    @staticmethod
     def _assert_current_r21_state(
         connection: sqlite3.Connection,
         before: Epoch2LedgerState,
@@ -928,6 +1326,7 @@ class R22Epoch2AtomicTape:
         fill: PaperTapeFill,
         after_vaults: tuple[Epoch2VaultAccountingSnapshot, ...],
         after_consolidated: Epoch2ConsolidatedAccountingSnapshot,
+        outcome_evidence: CanonicalCapitalOutcomeEvidence | None,
     ) -> None:
         expected_rows = (
             (
@@ -956,6 +1355,16 @@ class R22Epoch2AtomicTape:
             ).fetchone()
             if row is None or str(row[0]) != payload:
                 raise ValueError("R22 idempotent replay found incomplete persisted bundle")
+        if outcome_evidence is not None:
+            row = connection.execute(
+                """SELECT payload_json FROM s11_capital_outcome_evidence
+                WHERE outcome_identity = ?""",
+                (outcome_evidence.outcome_identity,),
+            ).fetchone()
+            if row is None or str(row[0]) != canonical_json(outcome_evidence):
+                raise ValueError(
+                    "R22 idempotent replay found incomplete outcome evidence"
+                )
         for snapshot in after_vaults:
             row = connection.execute(
                 """SELECT payload_json FROM r21_vault_snapshots

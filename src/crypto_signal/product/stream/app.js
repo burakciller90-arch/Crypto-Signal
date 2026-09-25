@@ -170,6 +170,20 @@ function messageText(record) {
 
 function messageState(record) {
   if (typeof record.__fixture_state === "string") return record.__fixture_state;
+  if (text(record?.category, "") === "capital") {
+    const subtype = text(record?.subtype, "");
+    if (subtype === "capital_executed") return "SERMAYE İŞLENDİ";
+    if (subtype === "capital_blocked") return "SERMAYE BLOKE";
+    if (subtype === "capital_hold") return "NAKİTTE BEKLE";
+    if (subtype === "capital_eligible") return "SERMAYE UYGUN";
+    if (subtype === "capital_sized") return "SERMAYE BOYUTLANDI";
+    if (subtype === "capital_reduced") return "POZİSYON AZALTILDI";
+    if (subtype === "capital_exited") return "POZİSYON KAPANDI";
+    if (subtype === "capital_candidate") return "SERMAYE ADAYI";
+    if (subtype === "capital_accounting_updated") return "MUHASEBE GÜNCELLENDİ";
+    if (subtype === "capital_outcome") return "SONUÇ KAYDEDİLDİ";
+    return "SERMAYE";
+  }
   return "ANALİZ";
 }
 
@@ -1032,7 +1046,534 @@ function evidenceWindowLauncher(record, detail) {
   return launcher;
 }
 
+function compactIdentity(value, fallback = "kanıt kimliği yok") {
+  const raw = text(value, "");
+  if (!exactSha256(raw)) return fallback;
+  return `${raw.slice(0, 12)}…${raw.slice(-8)}`;
+}
+
+function capitalMetricGrid(capital) {
+  const grid = document.createElement("div");
+  grid.className = "geometry-grid";
+  const rows = [
+    ["Vault", text(capital?.vault_id, "—")],
+    ["Aksiyon", text(capital?.action, "—")],
+    ["Miktar", displayNumber(capital?.quantity)],
+    ["Referans", `${displayNumber(capital?.reference_price)} USDT`],
+    ["Simüle fill", `${displayNumber(capital?.simulated_fill_price)} USDT`],
+    ["Notional", `${displayNumber(capital?.notional_usdt)} USDT`],
+    [
+      "Nakit",
+      `${displayNumber(capital?.cash_before_usdt)} → ${displayNumber(
+        capital?.cash_after_usdt
+      )} USDT`,
+    ],
+    [
+      "Vault NAV",
+      `${displayNumber(capital?.vault_nav_before_usdt)} → ${displayNumber(
+        capital?.vault_nav_after_usdt
+      )} USDT`,
+    ],
+    [
+      "Epoch 2 NAV",
+      `${displayNumber(capital?.consolidated_nav_before_usdt)} → ${displayNumber(
+        capital?.consolidated_nav_after_usdt
+      )} USDT`,
+    ],
+    [
+      "Maliyet",
+      `fee ${displayNumber(capital?.fee_usdt)} · spread ${displayNumber(
+        capital?.spread_usdt
+      )} · slippage ${displayNumber(capital?.slippage_usdt)} USDT`,
+    ],
+  ];
+  if (capital?.outcome_identity) {
+    rows.push(
+      ["Finansal sonuç", text(capital?.financial_outcome, "—")],
+      ["Gerçekleşen PnL", `${displayNumber(capital?.realized_pnl_delta_usdt)} USDT`],
+      [
+        "Pozisyon miktarı",
+        `${displayNumber(capital?.position_quantity_before)} → ${displayNumber(
+          capital?.position_quantity_after
+        )}`,
+      ]
+    );
+  }
+  for (const [labelText, valueText] of rows) {
+    const cell = document.createElement("div");
+    const label = document.createElement("span");
+    label.textContent = labelText;
+    const value = document.createElement("strong");
+    value.textContent = valueText;
+    cell.append(label, value);
+    grid.append(cell);
+  }
+  return grid;
+}
+
+function capitalLineagePanel(capital) {
+  const wrap = document.createElement("div");
+  wrap.className = "proof-panel";
+  const rows = [
+    ["R22 bundle", capital?.bundle_identity],
+    ["R22 intent", capital?.intent_identity],
+    ["R22 fill", capital?.fill_identity],
+    ...(capital?.outcome_identity ? [["Outcome", capital.outcome_identity]] : []),
+    ["Vault önce", capital?.before_vault_snapshot_identity],
+    ["Vault sonra", capital?.after_vault_snapshot_identity],
+    ["Epoch 2 önce", capital?.before_consolidated_snapshot_identity],
+    ["Epoch 2 sonra", capital?.after_consolidated_snapshot_identity],
+  ];
+  for (const [labelText, identity] of rows) {
+    const line = document.createElement("div");
+    line.className = "condition-row";
+    const label = document.createElement("span");
+    label.textContent = labelText;
+    const code = document.createElement("code");
+    code.textContent = compactIdentity(identity);
+    line.append(label, code);
+    wrap.append(line);
+  }
+  const authority = document.createElement("small");
+  authority.textContent = "Immutable paper-capital kanıtı · REAL_CAPITAL=0 · borsa emri yok";
+  wrap.append(authority);
+  return wrap;
+}
+
+function capitalDecisionMetricGrid(capital) {
+  const grid = document.createElement("div");
+  grid.className = "geometry-grid";
+  const reasons = Array.isArray(capital?.reason_codes)
+    ? capital.reason_codes.join(" · ")
+    : "—";
+  const rows = [
+    ["Vault", text(capital?.vault_id, "—")],
+    ["Durum", text(capital?.disposition, "—").toUpperCase()],
+    ["Event Risk", text(capital?.event_risk_state, "—").toUpperCase()],
+    ["Zaman ufku", text(capital?.timeframe, "—")],
+    ["Başlangıç bütçesi", `${displayNumber(capital?.starting_budget_usdt)} USDT`],
+    ["Nedenler", reasons],
+  ];
+  for (const [labelText, valueText] of rows) {
+    const cell = document.createElement("div");
+    const label = document.createElement("span");
+    label.textContent = labelText;
+    const value = document.createElement("strong");
+    value.textContent = valueText;
+    cell.append(label, value);
+    grid.append(cell);
+  }
+  return grid;
+}
+
+function capitalDecisionLineagePanel(capital) {
+  const wrap = document.createElement("div");
+  wrap.className = "proof-panel";
+  const rows = [
+    ["Vault decision", capital?.decision_identity],
+    ["Allocator assessment", capital?.allocator_assessment_identity],
+    ["Allocator candidate", capital?.allocator_candidate_identity],
+  ];
+  for (const [labelText, identity] of rows) {
+    const line = document.createElement("div");
+    line.className = "condition-row";
+    const label = document.createElement("span");
+    label.textContent = labelText;
+    const code = document.createElement("code");
+    code.textContent = compactIdentity(identity);
+    line.append(label, code);
+    wrap.append(line);
+  }
+  const refs = Array.isArray(capital?.capital_reference_identities)
+    ? capital.capital_reference_identities
+    : [];
+  const evidence = document.createElement("small");
+  evidence.textContent = `Exact kanıt zinciri: ${refs.length} kimlik · REAL_CAPITAL=0 · borsa emri yok`;
+  wrap.append(evidence);
+  return wrap;
+}
+
+function capitalSizingMetricGrid(capital) {
+  const grid = document.createElement("div");
+  grid.className = "geometry-grid";
+  const fraction = Number(capital?.fraction_of_vault);
+  const rows = [
+    ["Vault", text(capital?.vault_id, "—")],
+    [
+      "Vault payı",
+      Number.isFinite(fraction) ? `%${displayNumber(fraction * 100)}` : "—",
+    ],
+    ["Paper notional", `${displayNumber(capital?.canonical_notional_usdt)} USDT`],
+    ["Mevcut nakit", `${displayNumber(capital?.current_cash_usdt)} USDT`],
+    ["Mevcut NAV", `${displayNumber(capital?.current_nav_usdt)} USDT`],
+    ["Zaman ufku", text(capital?.timeframe, "—")],
+  ];
+  for (const [labelText, valueText] of rows) {
+    const cell = document.createElement("div");
+    const label = document.createElement("span");
+    label.textContent = labelText;
+    const value = document.createElement("strong");
+    value.textContent = valueText;
+    cell.append(label, value);
+    grid.append(cell);
+  }
+  return grid;
+}
+
+function capitalSizingLineagePanel(capital) {
+  const wrap = document.createElement("div");
+  wrap.className = "proof-panel";
+  const rows = [
+    ["Sizing event", capital?.sizing_event_identity],
+    ["Sizing selection", capital?.selection_identity],
+    ["Eligibility proof", capital?.eligibility_proof_identity],
+    ["Allocator candidate", capital?.allocator_candidate_identity],
+  ];
+  for (const [labelText, identity] of rows) {
+    const line = document.createElement("div");
+    line.className = "condition-row";
+    const label = document.createElement("span");
+    label.textContent = labelText;
+    const code = document.createElement("code");
+    code.textContent = compactIdentity(identity);
+    line.append(label, code);
+    wrap.append(line);
+  }
+  const note = document.createElement("small");
+  note.textContent =
+    "Boyut seçimi execution değildir · fill/PnL yok · REAL_CAPITAL=0 · borsa emri yok";
+  wrap.append(note);
+  return wrap;
+}
+
+function buildCapitalSizingExpandedContent(record, detail) {
+  const capital =
+    detail && typeof detail.capital_sizing === "object" && detail.capital_sizing
+      ? detail.capital_sizing
+      : record;
+  const textBundle =
+    capital && typeof capital.text === "object" && capital.text ? capital.text : {};
+  const grid = document.createElement("div");
+  grid.className = "message-depth-grid";
+
+  grid.append(
+    depthSection("SIMPLE", textBundle.simple_text, {
+      className: "depth-simple depth-wide",
+    }),
+    depthSection("PRO", textBundle.technical_text, {
+      className: "depth-pro",
+    })
+  );
+
+  const sizingTruth = document.createElement("div");
+  sizingTruth.className = "depth-composite";
+  const copy = document.createElement("p");
+  copy.textContent = text(
+    textBundle.intelligence_text,
+    "Bu kayıt yalnız paper sizing kararını açıklar; henüz execution veya fill yoktur."
+  );
+  sizingTruth.append(copy, capitalSizingMetricGrid(capital));
+  grid.append(
+    depthSection("CAPITAL SIZING", "", {
+      className: "depth-intelligence depth-wide",
+      content: sizingTruth,
+    })
+  );
+
+  grid.append(
+    depthSection("DECISION", textBundle.decision_text, {
+      className: "depth-decision",
+    }),
+    depthSection("CAPITAL", textBundle.capital_text, {
+      className: "depth-capital",
+    }),
+    depthSection("IMMUTABLE LINEAGE", "", {
+      className: "depth-proof depth-wide",
+      content: capitalSizingLineagePanel(capital),
+    })
+  );
+  return grid;
+}
+
+function buildCapitalDecisionExpandedContent(record, detail) {
+  const capital =
+    detail && typeof detail.capital_decision === "object" && detail.capital_decision
+      ? detail.capital_decision
+      : record;
+  const textBundle =
+    capital && typeof capital.text === "object" && capital.text ? capital.text : {};
+  const grid = document.createElement("div");
+  grid.className = "message-depth-grid";
+
+  grid.append(
+    depthSection("SIMPLE", textBundle.simple_text, {
+      className: "depth-simple depth-wide",
+    }),
+    depthSection("PRO", textBundle.technical_text, {
+      className: "depth-pro",
+    })
+  );
+
+  const truth = document.createElement("div");
+  truth.className = "depth-composite";
+  const copy = document.createElement("p");
+  copy.textContent = text(
+    textBundle.intelligence_text,
+    "Bu kayıt yalnız allocator sermaye kararını açıklar; fill veya PnL üretmez."
+  );
+  truth.append(copy, capitalDecisionMetricGrid(capital));
+  grid.append(
+    depthSection("CAPITAL DECISION", "", {
+      className: "depth-intelligence depth-wide",
+      content: truth,
+    })
+  );
+
+  grid.append(
+    depthSection("DECISION", textBundle.decision_text, {
+      className: "depth-decision",
+    }),
+    depthSection("CAPITAL", textBundle.capital_text, {
+      className: "depth-capital",
+    })
+  );
+  grid.append(
+    depthSection("IMMUTABLE LINEAGE", "", {
+      className: "depth-proof depth-wide",
+      content: capitalDecisionLineagePanel(capital),
+    })
+  );
+  return grid;
+}
+
+function buildCapitalExpandedContent(record, detail) {
+  const capital =
+    detail && typeof detail.capital_story === "object" && detail.capital_story
+      ? detail.capital_story
+      : record;
+  const textBundle =
+    capital && typeof capital.text === "object" && capital.text ? capital.text : {};
+
+  const grid = document.createElement("div");
+  grid.className = "message-depth-grid";
+  grid.append(
+    depthSection("SIMPLE", textBundle.simple_text, {
+      className: "depth-simple depth-wide",
+    }),
+    depthSection("PRO", textBundle.technical_text, {
+      className: "depth-pro",
+    })
+  );
+
+  const intelligence = document.createElement("div");
+  intelligence.className = "depth-composite";
+  const intelligenceCopy = document.createElement("p");
+  intelligenceCopy.textContent = text(
+    textBundle.intelligence_text,
+    "Bu kayıt için ek sermaye yorumu mevcut değil."
+  );
+  intelligence.append(intelligenceCopy, capitalMetricGrid(capital));
+  grid.append(
+    depthSection("CAPITAL TRUTH", "", {
+      className: "depth-intelligence depth-wide",
+      content: intelligence,
+    })
+  );
+
+  grid.append(
+    depthSection("DECISION", textBundle.decision_text, {
+      className: "depth-decision",
+    }),
+    depthSection("CAPITAL", textBundle.capital_text, {
+      className: "depth-capital",
+    })
+  );
+
+  grid.append(
+    depthSection("IMMUTABLE LINEAGE", "", {
+      className: "depth-proof depth-wide",
+      content: capitalLineagePanel(capital),
+    })
+  );
+  return grid;
+}
+
+function capitalLifecycleGrid(capital) {
+  const grid = document.createElement("div");
+  grid.className = "geometry-grid";
+  const subtype = text(capital?.subtype, "");
+  const rows = [];
+
+  if (subtype === "capital_candidate") {
+    rows.push(
+      ["Aday", compactIdentity(capital?.allocator_candidate_identity)],
+      ["Değerlendirme", compactIdentity(capital?.allocator_assessment_identity)],
+      ["Durum", "3 vault değerlendirmesi başladı"],
+      ["Otorite", "Paper-only · REAL_CAPITAL=0"]
+    );
+  } else if (subtype === "capital_accounting_updated") {
+    rows.push(
+      ["Vault", text(capital?.vault_id, "—").replaceAll("_", " ")],
+      ["Aksiyon", text(capital?.action, "—")],
+      [
+        "Nakit",
+        `${displayNumber(capital?.cash_before_usdt)} → ${displayNumber(
+          capital?.cash_after_usdt
+        )} USDT`,
+      ],
+      [
+        "Vault NAV",
+        `${displayNumber(capital?.vault_nav_before_usdt)} → ${displayNumber(
+          capital?.vault_nav_after_usdt
+        )} USDT`,
+      ],
+      [
+        "Epoch 2 NAV",
+        `${displayNumber(capital?.consolidated_nav_before_usdt)} → ${displayNumber(
+          capital?.consolidated_nav_after_usdt
+        )} USDT`,
+      ],
+      ["R22 bundle", compactIdentity(capital?.bundle_identity)]
+    );
+  } else if (subtype === "capital_outcome") {
+    rows.push(
+      ["Vault", text(capital?.vault_id, "—").replaceAll("_", " ")],
+      ["Aksiyon", text(capital?.action, "—")],
+      ["Finansal sonuç", text(capital?.financial_outcome, "—")],
+      ["Gerçekleşen PnL", `${displayNumber(capital?.realized_pnl_delta_usdt)} USDT`],
+      [
+        "Pozisyon",
+        `${displayNumber(capital?.position_quantity_before)} → ${displayNumber(
+          capital?.position_quantity_after
+        )}`,
+      ],
+      ["Outcome", compactIdentity(capital?.outcome_identity)]
+    );
+  }
+
+  for (const [labelText, valueText] of rows) {
+    const cell = document.createElement("div");
+    const label = document.createElement("span");
+    label.textContent = labelText;
+    const value = document.createElement("strong");
+    value.textContent = valueText;
+    cell.append(label, value);
+    grid.append(cell);
+  }
+  return grid;
+}
+
+function capitalLifecycleLineage(capital) {
+  const wrap = document.createElement("div");
+  wrap.className = "proof-panel";
+  const rows = [
+    ["Lifecycle", capital?.lifecycle_identity],
+    ["Candidate", capital?.allocator_candidate_identity],
+    ["Assessment", capital?.allocator_assessment_identity],
+    ["Forecast", capital?.forecast_identity],
+    ["Proof", capital?.proof_identity],
+    ["Decision context", capital?.decision_context_identity],
+    ["R22 bundle", capital?.bundle_identity],
+    ["Outcome", capital?.outcome_identity],
+  ];
+  for (const [labelText, identity] of rows) {
+    if (!exactSha256(identity)) continue;
+    const line = document.createElement("div");
+    line.className = "condition-row";
+    const label = document.createElement("span");
+    label.textContent = labelText;
+    const code = document.createElement("code");
+    code.textContent = compactIdentity(identity);
+    line.append(label, code);
+    wrap.append(line);
+  }
+  const authority = document.createElement("small");
+  authority.textContent = "Deterministic immutable lifecycle · REAL_CAPITAL=0 · gerçek borsa emri yok";
+  wrap.append(authority);
+  return wrap;
+}
+
+function buildCapitalLifecycleExpandedContent(record, detail) {
+  const capital =
+    detail && typeof detail.capital_lifecycle === "object" && detail.capital_lifecycle
+      ? detail.capital_lifecycle
+      : record;
+  const textBundle =
+    capital && typeof capital.text === "object" && capital.text ? capital.text : {};
+  const grid = document.createElement("div");
+  grid.className = "message-depth-grid";
+
+  grid.append(
+    depthSection("SIMPLE", textBundle.simple_text, {
+      className: "depth-simple depth-wide",
+    }),
+    depthSection("PRO", textBundle.technical_text, {
+      className: "depth-pro",
+    })
+  );
+
+  const truth = document.createElement("div");
+  truth.className = "depth-composite";
+  const copy = document.createElement("p");
+  copy.textContent = text(
+    textBundle.intelligence_text,
+    "Bu lifecycle olayı için ek yorum mevcut değil."
+  );
+  truth.append(copy, capitalLifecycleGrid(capital));
+  grid.append(
+    depthSection("CAPITAL LIFECYCLE", "", {
+      className: "depth-intelligence depth-wide",
+      content: truth,
+    }),
+    depthSection("DECISION", textBundle.decision_text, {
+      className: "depth-decision",
+    }),
+    depthSection("CAPITAL", textBundle.capital_text, {
+      className: "depth-capital",
+    }),
+    depthSection("IMMUTABLE LINEAGE", "", {
+      className: "depth-proof depth-wide",
+      content: capitalLifecycleLineage(capital),
+    })
+  );
+  return grid;
+}
+
 function buildExpandedContent(record, detail) {
+  const subtype = text(record?.subtype, "");
+  if (
+    subtype === "capital_candidate"
+    || subtype === "capital_accounting_updated"
+    || subtype === "capital_outcome"
+    || (detail && typeof detail.capital_lifecycle === "object" && detail.capital_lifecycle)
+  ) {
+    return buildCapitalLifecycleExpandedContent(record, detail);
+  }
+  if (
+    subtype === "capital_sized"
+    || (detail && typeof detail.capital_sizing === "object" && detail.capital_sizing)
+  ) {
+    return buildCapitalSizingExpandedContent(record, detail);
+  }
+  if (
+    subtype !== "capital_executed"
+    && (
+      subtype === "capital_eligible"
+      || subtype === "capital_hold"
+      || subtype === "capital_blocked"
+      || (detail && typeof detail.capital_decision === "object" && detail.capital_decision)
+    )
+  ) {
+    return buildCapitalDecisionExpandedContent(record, detail);
+  }
+  if (
+    subtype === "capital_executed"
+    || subtype === "capital_reduced"
+    || subtype === "capital_exited"
+    || (detail && typeof detail.capital_story === "object" && detail.capital_story)
+  ) {
+    return buildCapitalExpandedContent(record, detail);
+  }
   const textBundle =
     record && typeof record.text === "object" && record.text ? record.text : {};
   const fact = detail && typeof detail.fact_bundle === "object"
@@ -1235,6 +1776,9 @@ function renderMessage(record, { isNew = false } = {}) {
   if (isNew) item.classList.add("is-new");
   const identity = text(record.narrative_identity, "");
   item.dataset.identity = identity;
+  item.dataset.category = text(record?.category, "");
+  item.dataset.subtype = text(record?.subtype, "");
+  item.dataset.vaultId = text(record?.vault_id, "");
 
   const summary = document.createElement("button");
   summary.type = "button";
@@ -1264,6 +1808,11 @@ function renderMessage(record, { isNew = false } = {}) {
   const chips = document.createElement("div");
   chips.className = "message-chips";
   chips.append(buildChip(shortSource(record.source_kind)));
+  if (text(record?.category, "") === "capital") {
+    chips.append(buildChip("CAPITAL"));
+    const vault = text(record?.vault_id, "");
+    if (vault) chips.append(buildChip(vault.replaceAll("_", " ")));
+  }
   if (record.original_text_preserved === true) chips.append(buildChip("ORİJİNAL METİN"));
   if (record.real_capital === 0) chips.append(buildChip("GERÇEK PARA KAPALI", true));
   const cue = document.createElement("span");
@@ -1611,6 +2160,249 @@ function fixtureRecord(index, symbol, timeframe, stateLabel, copy, minutesAgo, s
   return record;
 }
 
+function capitalFixtureRecord(
+  index,
+  subtype,
+  vaultId,
+  copy,
+  minutesAgo,
+  extra = {}
+) {
+  const identity = (offset) => fixtureIdentity(3000 + index * 20 + offset);
+  const textBundle = {
+    collapsed_text: `${copy} REAL_CAPITAL=0.`,
+    simple_text: `${copy} Bu yalnız sanal sermaye akışıdır; gerçek borsa emri yoktur.`,
+    technical_text:
+      "Exact allocator / sizing / R22 / R21 lineage korunur; fixture yalnız görsel kabul içindir.",
+    intelligence_text:
+      "Bu kayıt yeni piyasa kanıtı uydurmaz; yalnız canonical paper-capital lifecycle durumunu gösterir.",
+    decision_text: `Lifecycle durumu: ${subtype.replaceAll("_", " ")}.`,
+    capital_text: "Paper capital only · REAL_CAPITAL=0 · production authority yok.",
+  };
+  const base = {
+    narrative_identity: identity(1),
+    event_at_ms: Date.now() - minutesAgo * 60_000,
+    category: "capital",
+    subtype,
+    asset: "BTCUSDT",
+    symbol: "BTCUSDT",
+    timeframe: vaultId === "TACTICAL" ? "5m" : "4h",
+    source_kind: "deterministic",
+    original_text_preserved: true,
+    read_only: true,
+    production_authority: false,
+    real_capital: 0,
+    vault_id: vaultId || null,
+    lifecycle_identity: identity(2),
+    allocator_candidate_identity: identity(3),
+    allocator_assessment_identity: identity(4),
+    forecast_identity: identity(5),
+    proof_identity: identity(6),
+    decision_context_identity: identity(7),
+    bundle_identity: identity(8),
+    intent_identity: identity(9),
+    fill_identity: identity(10),
+    outcome_identity: null,
+    before_vault_snapshot_identity: identity(11),
+    after_vault_snapshot_identity: identity(12),
+    before_consolidated_snapshot_identity: identity(13),
+    after_consolidated_snapshot_identity: identity(14),
+    action: null,
+    quantity: null,
+    reference_price: null,
+    simulated_fill_price: null,
+    notional_usdt: null,
+    cash_before_usdt: null,
+    cash_after_usdt: null,
+    vault_nav_before_usdt: null,
+    vault_nav_after_usdt: null,
+    consolidated_nav_before_usdt: null,
+    consolidated_nav_after_usdt: null,
+    fee_usdt: null,
+    spread_usdt: null,
+    slippage_usdt: null,
+    financial_outcome: null,
+    realized_pnl_delta_usdt: null,
+    position_quantity_before: null,
+    position_quantity_after: null,
+    text: textBundle,
+    ...extra,
+  };
+
+  let detailKey = "capital_lifecycle";
+  if (["capital_eligible", "capital_hold", "capital_blocked"].includes(subtype)) {
+    detailKey = "capital_decision";
+  } else if (subtype === "capital_sized") {
+    detailKey = "capital_sizing";
+  } else if (
+    ["capital_executed", "capital_reduced", "capital_exited"].includes(subtype)
+  ) {
+    detailKey = "capital_story";
+  }
+  base.__fixture_detail = {
+    [detailKey]: { ...base },
+    read_only: true,
+    production_authority: false,
+    real_capital: 0,
+  };
+  delete base.__fixture_detail[detailKey].__fixture_detail;
+  return base;
+}
+
+function capitalFixtureMessages() {
+  return [
+    capitalFixtureRecord(
+      1,
+      "capital_candidate",
+      null,
+      "BTC Smart Capital adayı üç vault değerlendirmesine alındı; henüz sizing veya fill yok.",
+      50
+    ),
+    capitalFixtureRecord(
+      2,
+      "capital_eligible",
+      "CORE",
+      "Core vault exact allocator kuralları altında aday için uygun bulundu.",
+      45,
+      { disposition: "eligible", starting_budget_usdt: 600 }
+    ),
+    capitalFixtureRecord(
+      3,
+      "capital_hold",
+      "TACTICAL",
+      "Tactical vault 5m teyidi tamamlanmadığı için nakitte bekliyor.",
+      40,
+      { disposition: "hold", tactical_timeframe: "5m", starting_budget_usdt: 300 }
+    ),
+    capitalFixtureRecord(
+      4,
+      "capital_blocked",
+      "OPPORTUNITY_RESERVE",
+      "Opportunity vault Event Risk nedeniyle sermaye kullanmıyor.",
+      35,
+      { disposition: "blocked", starting_budget_usdt: 100 }
+    ),
+    capitalFixtureRecord(
+      5,
+      "capital_sized",
+      "CORE",
+      "Core için fixed-fractional canonical paper boyutu seçildi; Kelly promote edilmedi.",
+      30,
+      {
+        sizing_selection_identity: fixtureIdentity(3901),
+        sizing_decision_identity: fixtureIdentity(3902),
+        canonical_notional_usdt: 150,
+        fraction_of_vault: 0.25,
+        method: "fixed_fractional",
+      }
+    ),
+    capitalFixtureRecord(
+      6,
+      "capital_executed",
+      "CORE",
+      "Core BTCUSDT paper BUY simüle edildi ve R21/R22 atomik muhasebeye işlendi.",
+      25,
+      {
+        action: "BUY",
+        quantity: 1.45,
+        reference_price: 101,
+        simulated_fill_price: 101.2,
+        notional_usdt: 146.74,
+        cash_before_usdt: 600,
+        cash_after_usdt: 453.11,
+        vault_nav_before_usdt: 600,
+        vault_nav_after_usdt: 599.71,
+        consolidated_nav_before_usdt: 1000,
+        consolidated_nav_after_usdt: 999.71,
+        fee_usdt: 0.15,
+        spread_usdt: 0.07,
+        slippage_usdt: 0.07,
+      }
+    ),
+    capitalFixtureRecord(
+      7,
+      "capital_reduced",
+      "CORE",
+      "Core açık BTCUSDT paper pozisyonunun bir kısmını azalttı.",
+      20,
+      {
+        action: "REDUCE",
+        quantity: 0.7,
+        reference_price: 105,
+        simulated_fill_price: 104.8,
+        notional_usdt: 73.36,
+        cash_before_usdt: 453.11,
+        cash_after_usdt: 526.32,
+        vault_nav_before_usdt: 605.2,
+        vault_nav_after_usdt: 605.02,
+        consolidated_nav_before_usdt: 1005.2,
+        consolidated_nav_after_usdt: 1005.02,
+        outcome_identity: fixtureIdentity(3941),
+        financial_outcome: "PARTIAL_REDUCTION",
+        realized_pnl_delta_usdt: 2.31,
+        position_quantity_before: 1.45,
+        position_quantity_after: 0.75,
+      }
+    ),
+    capitalFixtureRecord(
+      8,
+      "capital_exited",
+      "CORE",
+      "Core kalan BTCUSDT paper pozisyonunu tamamen kapattı.",
+      15,
+      {
+        action: "EXIT",
+        quantity: 0.75,
+        reference_price: 110,
+        simulated_fill_price: 109.8,
+        notional_usdt: 82.35,
+        cash_before_usdt: 526.32,
+        cash_after_usdt: 608.49,
+        vault_nav_before_usdt: 608.7,
+        vault_nav_after_usdt: 608.49,
+        consolidated_nav_before_usdt: 1008.7,
+        consolidated_nav_after_usdt: 1008.49,
+        outcome_identity: fixtureIdentity(3961),
+        financial_outcome: "CLOSED_WIN",
+        realized_pnl_delta_usdt: 6.42,
+        position_quantity_before: 0.75,
+        position_quantity_after: 0,
+      }
+    ),
+    capitalFixtureRecord(
+      9,
+      "capital_accounting_updated",
+      "CORE",
+      "Epoch 2 accounting yeni cash/NAV snapshot'larını immutable şekilde kaydetti.",
+      10,
+      {
+        action: "EXIT",
+        cash_before_usdt: 526.32,
+        cash_after_usdt: 608.49,
+        vault_nav_before_usdt: 608.7,
+        vault_nav_after_usdt: 608.49,
+        consolidated_nav_before_usdt: 1008.7,
+        consolidated_nav_after_usdt: 1008.49,
+      }
+    ),
+    capitalFixtureRecord(
+      10,
+      "capital_outcome",
+      "CORE",
+      "Kapanan paper pozisyonun finansal sonucu immutable outcome evidence olarak kaydedildi.",
+      5,
+      {
+        action: "EXIT",
+        outcome_identity: fixtureIdentity(3991),
+        financial_outcome: "CLOSED_WIN",
+        realized_pnl_delta_usdt: 6.42,
+        position_quantity_before: 0.75,
+        position_quantity_after: 0,
+      }
+    ),
+  ];
+}
+
 function fixtureMessages() {
   return [
     fixtureRecord(1, "BTCUSDT", "4h", "GÖRÜŞ KORUNUYOR", "Bitcoin tarafında ana yapı korunuyor. Likidite temizliği sonrası alıcı tepkisi var; sistem yeni teyit gelmeden pozisyon görüşünü büyütmüyor.", 48),
@@ -1626,7 +2418,7 @@ function applyFixture(name) {
   state.fixture = name;
   if (ui.fixtureBanner) ui.fixtureBanner.hidden = false;
   resetMessages();
-  const base = fixtureMessages();
+  const base = name === "capital" ? capitalFixtureMessages() : fixtureMessages();
 
   if (name === "empty") {
     setConnection("live", "HAZIR", "fixture · mesaj bekleniyor");
@@ -1680,6 +2472,15 @@ function applyFixture(name) {
       if (last) last.classList.add("is-new");
     }
   });
+
+  if (name === "capital") {
+    window.requestAnimationFrame(() => {
+      const target = ui.list?.lastElementChild;
+      const summary = target?.querySelector?.(".message-summary");
+      if (summary instanceof HTMLButtonElement) summary.click();
+      scrollToBottom({ smooth: false });
+    });
+  }
 
   if (name === "expanded" || name === "windows" || name === "proof") {
     window.requestAnimationFrame(() => {
