@@ -1,0 +1,66 @@
+name: Emergency Admin WebKit Cleanup
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/emergency-admin-webkit-cleanup.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  cleanup:
+    runs-on: [self-hosted, crypto-signal, uid501]
+    timeout-minutes: 3
+    steps:
+      - name: Cleanup runaway UID502 WebKit with local admin authorization
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(id -u)" = "501"
+
+          echo "=== BEFORE ==="
+          /bin/ps -axo pid=,ppid=,user=,%cpu=,%mem=,rss=,etime=,command= \
+            | /usr/bin/awk '$3=="durdurulamaz-agent" && $0 ~ /WebKit\.WebContent/ {print}' \
+            | /usr/bin/head -80 || true
+
+          SCRIPT="/tmp/crypto-emergency-webkit-cleanup.sh"
+          cat > "$SCRIPT" <<'SH'
+          #!/bin/bash
+          set -euo pipefail
+          targets="$(
+            /bin/ps -axo pid=,user=,%cpu=,%mem=,command= \
+              | /usr/bin/awk '$2=="durdurulamaz-agent" && $0 ~ /WebKit\.WebContent/ && (($3+0)>=50 || ($4+0)>=5) {print $1}'
+          )"
+          printf 'ADMIN_WEBKIT_TARGETS=%s\n' "$(echo "$targets" | tr '\n' ' ')"
+          [ -n "$targets" ] || exit 0
+
+          for pid in $targets; do
+            /bin/kill -TERM "$pid" 2>/dev/null || true
+          done
+          /bin/sleep 2
+          for pid in $targets; do
+            if /bin/kill -0 "$pid" 2>/dev/null; then
+              /bin/kill -KILL "$pid" 2>/dev/null || true
+            fi
+          done
+          /bin/sleep 1
+          SH
+          /bin/chmod 700 "$SCRIPT"
+
+          echo "REQUESTING_LOCAL_ADMIN_WEBKIT_CLEANUP=YES"
+          RESULT="$(/usr/bin/osascript -e 'do shell script "/bin/bash /tmp/crypto-emergency-webkit-cleanup.sh" with administrator privileges')"
+          echo "$RESULT"
+          /bin/rm -f "$SCRIPT"
+
+          echo "=== AFTER ==="
+          /bin/ps -axo pid=,ppid=,user=,%cpu=,%mem=,rss=,etime=,command= \
+            | /usr/bin/awk '$3=="durdurulamaz-agent" && $0 ~ /WebKit\.WebContent/ {print}' \
+            | /usr/bin/head -80 || true
+          echo "=== MEMORY ==="
+          /usr/bin/memory_pressure | /usr/bin/grep -E 'System-wide memory free percentage' | /usr/bin/head -1 || true
+          echo "=== TOP CPU ==="
+          /bin/ps -axo pid=,ppid=,user=,%cpu=,%mem=,etime=,command= \
+            | /usr/bin/sort -k4 -nr | /usr/bin/head -20 || true
+          echo "EMERGENCY_ADMIN_WEBKIT_CLEANUP_DONE=YES"
