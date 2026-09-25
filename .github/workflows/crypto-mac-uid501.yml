@@ -52,7 +52,7 @@ jobs:
           set -euo pipefail
           cmd="$(printf '%s\n' "$ISSUE_BODY" | awk -F: 'tolower($1)=="command" {gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2); print tolower($2); exit}')"
           case "$cmd" in
-            status|repo|services|disk|externaldisk|hostdiag|audiorestart|audioadminrestart|loadtree|loadtree2|bginventory|bgsafecheck|cryptomigrationdiag|cryptomigrationdiag2|cryptodashboarddiag|cryptorunnertree|cryptorunnercutoverdiag|cryptossdrunnerps|uidsudo|uid504runneradminstart|uid504runnerguiadminstart|cryptofinalaudit|cryptofinaladmincleanup|cryptofinalterminalcleanup|crypto504grant501|coldarchivecheck|visualcleanup504)
+            status|repo|services|disk|externaldisk|hostdiag|audiorestart|audioadminrestart|loadtree|loadtree2|bginventory|bgsafecheck|cryptomigrationdiag|cryptomigrationdiag2|cryptodashboarddiag|cryptorunnertree|cryptorunnercutoverdiag|cryptossdrunnerps|uidsudo|uid504runneradminstart|uid504runnerguiadminstart|cryptofinalaudit|cryptofinaladmincleanup|cryptofinalterminalcleanup|crypto504grant501|coldarchivecheck|visualcleanup504|dashboardrestart504)
               ;;
             *)
               echo "Unsupported command: $cmd"
@@ -290,6 +290,54 @@ jobs:
           echo "CRYPTO_SSD_RUNNER_PS_PASS=YES"
           exit 0
 
+
+      - name: UID504 DASHBOARD RESTART VIA UID501
+        if: steps.parse.outputs.command == 'dashboardrestart504'
+        shell: bash
+        timeout-minutes: 3
+        run: |
+          set -euo pipefail
+          PATTERN='^/Volumes/Crypto-504/Crypto-Signal/Product/.venv/bin/python /Volumes/Crypto-504/Crypto-Signal/Product/ops/run_dashboard.py( |$)'
+
+          before="$(/usr/bin/pgrep -f "$PATTERN" 2>/dev/null || true)"
+          echo "DASHBOARD_BEFORE_PIDS=$(echo "$before" | tr '\n' ' ')"
+          test -n "$before"
+          /bin/ps -p "$(/bin/echo "$before" | /usr/bin/paste -sd, -)" -o pid=,ppid=,user=,%cpu=,%mem=,rss=,etime=,command= || true
+
+          for pid in $before; do
+            /usr/bin/sudo -n -u crypto-signal-agent /bin/kill -TERM "$pid" 2>/dev/null || true
+          done
+
+          for _ in {1..20}; do
+            alive=0
+            for pid in $before; do
+              if /bin/kill -0 "$pid" 2>/dev/null; then alive=1; fi
+            done
+            [ "$alive" = "0" ] && break
+            /bin/sleep 1
+          done
+
+          new_pid=""
+          for _ in {1..60}; do
+            current="$(/usr/bin/pgrep -f "$PATTERN" 2>/dev/null || true)"
+            count="$(printf '%s\n' "$current" | /usr/bin/awk 'NF{n++} END{print n+0}')"
+            if [ "$count" = "1" ]; then
+              candidate="$(printf '%s\n' "$current" | /usr/bin/head -1)"
+              if ! printf '%s\n' "$before" | /usr/bin/grep -qx "$candidate"; then
+                new_pid="$candidate"
+                break
+              fi
+            fi
+            /bin/sleep 1
+          done
+
+          test -n "$new_pid"
+          /bin/sleep 5
+          echo "DASHBOARD_AFTER_PID=$new_pid"
+          /bin/ps -p "$new_pid" -o pid=,ppid=,user=,%cpu=,%mem=,rss=,etime=,command=
+          echo "LOAD_AFTER=$(/usr/sbin/sysctl -n vm.loadavg)"
+          /usr/bin/memory_pressure | /usr/bin/grep -E 'System-wide memory free percentage' | /usr/bin/head -1 || true
+          echo "UID504_DASHBOARD_RESTART_PASS=YES"
 
       - name: UID504 VISUAL SNAPSHOT CLEANUP VIA UID501
         if: steps.parse.outputs.command == 'visualcleanup504'
