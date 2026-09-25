@@ -1,5 +1,18 @@
 # PROJECT CHRONICLE
 
+## 2026-09-25 — Stream S6 Real-time Stream Backend accepted; S7 One-Panel UI Shell becomes active
+
+S6 now carries immutable S5 narrative messages from backend persistence to a browser-ready live delivery contract without making transport a second source of truth.
+
+PR #1274 added the cursor/read backbone: stable keyset cursors, upward history, reconnect catch-up, exact lookup, full Stream query/filter semantics and polling fallback over immutable persistence. Exact-head UID504 run `36165298510` passed focused pytest/Ruff/strict mypy, whole-repository regression and Development checkout non-mutation.
+
+PR #1275 completed live delivery with SSE event ids, retry/heartbeat framing, first-connect tailing, empty-stream first-future-message delivery, strict de-duplication and `Last-Event-ID` reconnect. Final review also corrected a real EventSource edge case: a newer reconnect header now safely supersedes the original query cursor, while an older header cannot move the session backwards. Exact-head UID504 run `36167138486` passed the same acceptance stack.
+
+Canonical S6 acceptance is recorded in `docs/CRYPTO_SIGNAL_STREAM_S6_ACCEPTANCE.md`. REAL_CAPITAL remains 0 and the transport is read-only.
+
+The active frontier is S7 One-Panel UI Shell. The existing GALACTECH V2 root remains the deployed fallback; S7 must be developed and visually accepted as a controlled Stream preview rather than blindly replacing production.
+
+
 ## 2026-09-25 — Stream S5 Narrative Engine accepted; S6 Real-time Stream Backend becomes active
 
 S5 now turns the accepted S4 Analytical View into fact-safe Turkish analyst language without making prose the source of market truth.
