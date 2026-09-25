@@ -7,14 +7,9 @@ from pathlib import Path
 import pytest
 from test_intelligence_stream_ledger import _full_bundle
 from test_position_sizing_intelligence import (
-    _context as sizing_context,
-)
-from test_position_sizing_intelligence import (
     _policy as sizing_policy,
 )
-from test_position_sizing_intelligence import (
-    _vault as sizing_vault,
-)
+from test_smart_capital_allocator import _candidate
 from test_transaction_tape_atomic import _initial_state
 
 from crypto_signal.ledger.serialization import canonical_sha256
@@ -22,12 +17,15 @@ from crypto_signal.paper.canonical_capital_runtime import (
     commit_canonical_paper_buy,
 )
 from crypto_signal.paper.canonical_sizing import promote_fixed_fractional_sizing
+from crypto_signal.paper.canonical_vault_eligibility import promote_vault_eligibility
 from crypto_signal.paper.epochs import PaperVaultId
 from crypto_signal.paper.execution import build_frozen_execution_snapshot
 from crypto_signal.paper.models import PaperSymbol
 from crypto_signal.paper.position_sizing_intelligence import (
+    build_position_sizing_risk_context,
     evaluate_position_sizing_intelligence,
 )
+from crypto_signal.paper.smart_capital_allocator import assess_smart_capital_candidate
 from crypto_signal.product.intelligence_stream_capital import (
     IntelligenceStreamCapitalLedger,
     StreamCapitalWriteDisposition,
@@ -99,10 +97,45 @@ def _prepare(tmp_path: Path):
         item for item in state.vault_snapshots
         if item.vault_id is PaperVaultId.CORE
     )
+    candidate = _candidate()
+    allocator = assess_smart_capital_candidate(
+        candidate,
+        assessed_at_ms=candidate.as_of_ms + 1,
+    )
+    core_envelope = next(
+        item for item in allocator.vaults
+        if item.vault_id is PaperVaultId.CORE
+    )
+    sizing_context = build_position_sizing_risk_context(
+        vault_id=PaperVaultId.CORE,
+        asset="BTCUSDT",
+        as_of_ms=2_000_100,
+        allocator_assessment_identity=allocator.assessment_identity,
+        allocator_candidate_identity=candidate.candidate_identity,
+        expected_win_r=Decimal(2),
+        expected_loss_r=Decimal(1),
+        transaction_cost_r=Decimal("0.10"),
+        absolute_correlation_0_1=Decimal("0.20"),
+        current_drawdown_fraction=Decimal("0.05"),
+        volatility_fraction=Decimal("0.10"),
+        liquidity_score_0_1=Decimal("0.90"),
+        source_evidence_identities=(
+            _sha("capital-story-correlation"),
+            _sha("capital-story-drawdown"),
+            _sha("capital-story-liquidity"),
+            _sha("capital-story-payoff"),
+            _sha("capital-story-volatility"),
+        ),
+    )
     assessment = evaluate_position_sizing_intelligence(
         policy=sizing_policy(),
-        vault=sizing_vault(vault_id=PaperVaultId.CORE),
-        context=sizing_context(vault_id=PaperVaultId.CORE),
+        vault=core_envelope,
+        context=sizing_context,
+    )
+    eligibility = promote_vault_eligibility(
+        candidate,
+        allocator,
+        vault_id=PaperVaultId.CORE,
     )
     selection = promote_fixed_fractional_sizing(
         assessment,
@@ -115,6 +148,7 @@ def _prepare(tmp_path: Path):
         proof=proof,
         sizing_assessment=assessment,
         sizing_selection=selection,
+        eligibility_proof=eligibility,
         symbol=PaperSymbol.BTCUSDT,
         reference_price=Decimal(101),
         reference_price_evidence_identity=_sha("s11-reference-price"),
