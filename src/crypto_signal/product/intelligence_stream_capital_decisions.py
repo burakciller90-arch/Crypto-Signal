@@ -5,14 +5,12 @@ the same Intelligence Stream without inventing fills, PnL, or analytical facts.
 """
 from __future__ import annotations
 
-import json
 import sqlite3
 from contextlib import closing
 from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
 from enum import StrEnum
 from pathlib import Path
-from urllib.parse import quote
 
 from crypto_signal.ledger.serialization import canonical_json, canonical_sha256, sha256_text
 from crypto_signal.paper.canonical_vault_decisions import (
