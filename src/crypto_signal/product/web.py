@@ -839,6 +839,40 @@ def create_app(
             },
         )
 
+    @app.get("/api/stream/messages/{narrative_identity}/detail")
+    def stream_message_detail(narrative_identity: str) -> JSONResponse:
+        if not _is_lower_sha256(narrative_identity):
+            raise HTTPException(
+                status_code=400,
+                detail="narrative_identity must be lowercase SHA256",
+            )
+        if selected_stream_path is None or not selected_stream_path.exists():
+            return _json(
+                {
+                    "status": "unavailable",
+                    "reason": "intelligence_stream_runtime_not_configured",
+                    "narrative_identity": narrative_identity,
+                    "detail": None,
+                    "read_only": True,
+                    "real_capital": 0,
+                }
+            )
+        try:
+            detail = IntelligenceStreamReadModel(
+                selected_stream_path
+            ).read_message_detail(narrative_identity)
+        except StreamReadModelError as exc:
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
+        return _json(
+            {
+                "status": "ready" if detail is not None else "empty",
+                "narrative_identity": narrative_identity,
+                "detail": detail,
+                "read_only": True,
+                "real_capital": 0,
+            }
+        )
+
     @app.get("/api/stream/messages/{narrative_identity}")
     def stream_message_lookup(narrative_identity: str) -> JSONResponse:
         if not _is_lower_sha256(narrative_identity):
