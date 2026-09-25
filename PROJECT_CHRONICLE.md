@@ -1,5 +1,17 @@
 # PROJECT CHRONICLE
 
+## 2026-09-25 — Stream S5 Narrative Engine accepted; S6 Real-time Stream Backend becomes active
+
+S5 now turns the accepted S4 Analytical View into fact-safe Turkish analyst language without making prose the source of market truth.
+
+PR #1270 added the deterministic narrative backbone: exact Narrative Plans, Turkish voice variants, collapsed/SIMPLE/TECHNICAL/INTELLIGENCE/DECISION/CAPITAL sections, story-aware phrasing from S3 history, numeric/certainty/probability validation, length budgets, repetition guard, deterministic fallback and append-only preservation of original rendered text. Exact-head UID504 run `36160125242` passed focused pytest/Ruff/strict mypy, whole-repository regression and Development checkout non-mutation.
+
+PR #1271 added the concrete optional local rewrite path. The adapter is loopback-only, defaults to an Ollama-compatible `127.0.0.1:11434/v1` endpoint, requires explicit local model configuration, disables proxy/redirect behavior, protects technical/intelligence/decision/capital sections and rejects unsupported new qualitative concepts. Exact-head UID504 run `36162999184` passed the same acceptance stack.
+
+A local model is not required for Stream continuity. If unavailable, invalid or repetitive, the deterministic Turkish renderer remains authoritative fallback. S5 acceptance does not claim a particular model is currently installed/running on UID504.
+
+The active frontier is S6 Real-time Stream Backend: cursor-based append-only reads, live delivery, reconnect/catch-up, dedupe, history pagination, exact message lookup and search/filter APIs.
+
 ## 2026-09-25 — Stream S4 Analytical Composer accepted; S5 Narrative Engine becomes active
 
 S4 now gives the Intelligence Stream a deterministic structured opinion between raw/canonical facts and customer prose. The accepted composer binds a versioned Analytical Policy to the exact Fact Bundle, current Story State and S3 Change Set; Message Input is optional, so analysis can exist before publication.
