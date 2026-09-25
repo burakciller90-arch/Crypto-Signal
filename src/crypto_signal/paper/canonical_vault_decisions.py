@@ -79,13 +79,13 @@ class CanonicalVaultDecisionRecord:
             (self.event_risk_identity, "S11 Event Risk"),
         ):
             _require_sha256(identity, label)
-        for identity, label in (
+        for optional_identity, optional_label in (
             (self.confluence_identity, "S11 confluence"),
             (self.tactical_evidence_identity, "S11 tactical evidence"),
             (self.recovery_evidence_identity, "S11 recovery evidence"),
         ):
-            if identity is not None:
-                _require_sha256(identity, label)
+            if optional_identity is not None:
+                _require_sha256(optional_identity, optional_label)
         if not isinstance(self.vault_id, PaperVaultId):
             raise TypeError("S11 vault decision requires canonical vault")
         if not isinstance(self.disposition, CanonicalVaultDecisionDisposition):
