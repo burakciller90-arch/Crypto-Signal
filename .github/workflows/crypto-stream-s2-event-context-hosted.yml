@@ -10,6 +10,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: stream-s2-event-context-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   stream-s2-event-context:
     runs-on: [self-hosted, crypto-signal, uid504]
