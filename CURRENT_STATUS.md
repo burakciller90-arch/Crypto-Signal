@@ -9,6 +9,38 @@ REAL_CAPITAL: 0
 
 ## Active v1.1 frontier — read before historical sections
 
+### 2026-09-25 03:08 +0300 — GALACTECH V2 TURKISH INTELLIGENCE-FIRST PRODUCT DEPLOYED / ENGINEERING ACCEPTED
+
+This entry **supersedes the older WC5 production-UI state from PR #1185** while preserving its evidence below as historical acceptance.
+
+- Canonical main is now `d8843003f2a7fec663db124333ebf633c0f34dea`.
+- PR **#1207** replaced the prior Product presentation layer with **GALACTECH V2**, a Turkish-first intelligence product rather than a developer dashboard:
+  - the main surface consumes the persisted `/api/intelligence-feed` as a social-style live timeline;
+  - a lightweight 5-second feed refresh is isolated from the heavier 30-second runtime refresh;
+  - forecast cards resolve through exact forecast identity -> immutable Decision Proof -> signal freeze -> Evidence Room lineage;
+  - the main product language is Turkish-first across Ana Merkez, Varlık Merkezi, İstihbarat, Sermaye, Sinyal Arşivi, Performans, Bana Öğret and Sistem Sağlığı;
+  - canonical Epoch 2 accounting remains read-only and missing evidence remains visibly missing;
+  - no fake latency, fake ONLINE state, synthetic price feed, order path or credential authority was introduced.
+- PR #1207 exact-head `47f99f6198a4d9962b8787d9d444adea80b1784c` passed both WC0 and WC5 UID504 gates, including focused acceptance, live read-only Product preview, whole-repository regression and Development non-mutation. Its Git tree is byte-identical to merge commit `36f631d5ee85a670e5ecc1bdb291173f6837e343`.
+- The first V2 deploy attempt correctly rolled back when the existing `productdeploy` gate still asserted the older V1.1 UI identity. PR **#1209** updated Product/preview acceptance to the V2 identity and made dashboard restart supervisor-managed instead of launching a competing direct dashboard.
+- A subsequent live diagnostic exposed a PID-matching false positive: the broad `ps | awk` matcher could count its own matching command line. PR **#1215** replaced that matcher with exact Product dashboard argv matching. Exact-head Preview Lifecycle run **36075850254** passed focused/full/non-mutating acceptance, and Runtime Supervisor Detection run **36075850297** passed exact-source, focused and live R11 topology acceptance.
+- Final Product deployment issue **#1216**, run **36075986903 / job 107887168347**, deployed exact main `d8843003...`:
+  - previous Product HEAD: `15fa3dca848fb9e76841f9b113f9f13a2a1ee11b`;
+  - target Product HEAD: `d8843003f2a7fec663db124333ebf633c0f34dea`;
+  - SSD supervisor PID: `40756`;
+  - prior dashboard PID `43226` was replaced by supervisor-managed PID `46826`;
+  - live health returned `status=ok`, `read_only=true`, `real_capital=0`;
+  - `INTELLIGENCE_CENTER_LIVE_PASS=YES`;
+  - `GALACTECH_ROOT_CUTOVER_LIVE_PASS=YES`;
+  - `R25_OPERATIONAL_TRUTH_LIVE_PASS=YES`;
+  - `R11_RUNTIME_AUDIT_PASS=YES`;
+  - `WC0_RUNTIME_TOPOLOGY_SQLITE_PASS=YES`;
+  - `WC0_CONTINUITY_PAUSE_PRESERVED=YES`;
+  - `PRODUCT_DEPLOY_PASS=YES`.
+- Independent Product-state issue **#1218**, run **36076141929 / job 107887652934**, reconfirmed Product HEAD `d8843003...` plus `status=ok`, `read_only=true` and `REAL_CAPITAL=0`.
+- WC5 is therefore **engineering accepted and GALACTECH V2 is production-deployed**. The unresolved UX claim is unchanged: no human participant study has measured <=10-second comprehension, so human usability remains **`NOT_MEASURED`**.
+- This Product work does **not** alter WC2 evidence thresholds, WC6 external venue dependency or WC7's current conclusion. WC7 remains **`INSUFFICIENT_EVIDENCE`** with `WC7_MACHINE_EDGE_VERDICT=NONE`; continuity remains paused and **REAL_CAPITAL=0**.
+
 
 ### 2026-09-25 01:15 +0300 — WC7 CURRENT FRONTIER PACKET ACCEPTED / CONCLUSION REMAINS INSUFFICIENT_EVIDENCE
 
