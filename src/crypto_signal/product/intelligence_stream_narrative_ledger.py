@@ -19,7 +19,6 @@ from crypto_signal.product.intelligence_stream_models import (
 )
 from crypto_signal.product.intelligence_stream_narrative import (
     STREAM_NARRATIVE_MESSAGE_SCHEMA_VERSION,
-    STREAM_NARRATIVE_PLAN_SCHEMA_VERSION,
     StreamNarrativeMessage,
     StreamNarrativePlan,
 )
