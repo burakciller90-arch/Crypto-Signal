@@ -41,7 +41,6 @@ from crypto_signal.product.decision_proof import (
 from crypto_signal.product.intelligence_stream_analytical import (
     StreamAnalyticalPublicationDisposition,
     StreamCapitalConsequenceState,
-    StreamConditionKind,
     StreamEffectiveStance,
     StreamStanceStrength,
     build_stream_analytical_policy,
