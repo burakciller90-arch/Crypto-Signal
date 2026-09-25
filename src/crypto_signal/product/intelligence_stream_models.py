@@ -263,7 +263,9 @@ def build_stream_decision_context(
         forecast.issued_at_ms,
     ):
         raise ValueError("Stream context proof/forecast market-time mismatch")
-    proof_slice_ids = tuple(item.slice_identity for item in proof.evidence_slices)
+    proof_slice_ids = tuple(
+        sorted(item.slice_identity for item in proof.evidence_slices)
+    )
     source_ids = tuple(forecast.source_evidence_identities)
     draft = StreamDecisionContextSnapshot(
         context_identity="0" * 64,
@@ -281,11 +283,22 @@ def build_stream_decision_context(
         proof_slice_identities=proof_slice_ids,
         forecast_source_evidence_identities=source_ids,
     )
+    context_identity = canonical_sha256(_decision_context_payload(draft))
     return StreamDecisionContextSnapshot(
-        **{
-            **_decision_context_payload(draft),
-            "context_identity": canonical_sha256(_decision_context_payload(draft)),
-        }
+        context_identity=context_identity,
+        forecast_identity=forecast.forecast_identity,
+        proof_identity=proof.proof_identity,
+        signal_freeze_identity=forecast.signal_freeze_identity,
+        confluence_identity=forecast.confluence_identity,
+        event_context_identity=forecast.event_context_identity,
+        asset=forecast.asset,
+        symbol=forecast.symbol,
+        timeframe=forecast.timeframe,
+        source_as_of_ms=forecast.source_as_of_ms,
+        issued_at_ms=forecast.issued_at_ms,
+        confluence=confluence,
+        proof_slice_identities=proof_slice_ids,
+        forecast_source_evidence_identities=source_ids,
     )
 
 
@@ -343,11 +356,25 @@ def build_forecast_issued_source_event(
         evidence_identities=evidence_ids,
         materiality_codes=("new_forecast_issued",),
     )
+    stream_event_identity = canonical_sha256(_source_event_payload(draft))
     return StreamSourceEvent(
-        **{
-            **_source_event_payload(draft),
-            "stream_event_identity": canonical_sha256(_source_event_payload(draft)),
-        }
+        stream_event_identity=stream_event_identity,
+        activation_identity=activation.activation_identity,
+        source_event_identity=event.event_identity,
+        category=StreamCategory.DECISION,
+        subtype=LiveFeedEventKind.FORECAST_ISSUED.value,
+        importance=StreamImportance.IMPORTANT,
+        asset=context.asset,
+        symbol=context.symbol,
+        timeframe=context.timeframe,
+        event_at_ms=event.event_at_ms,
+        source_as_of_ms=context.source_as_of_ms,
+        forecast_identity=context.forecast_identity,
+        proof_identity=context.proof_identity,
+        resolution_identity=None,
+        decision_context_identity=context.context_identity,
+        evidence_identities=evidence_ids,
+        materiality_codes=("new_forecast_issued",),
     )
 
 
