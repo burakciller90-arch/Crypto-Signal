@@ -125,6 +125,7 @@ DEFAULT_WC2_COHORT_PATH = (
 )
 STATIC_DIR = Path(__file__).with_name("static")
 GALACTECH_DIR = Path(__file__).with_name("galactech")
+STREAM_DIR = Path(__file__).with_name("stream")
 PRODUCT_VERSION = "full-version-contextual-evidence/1"
 
 
