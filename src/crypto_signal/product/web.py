@@ -53,6 +53,10 @@ from crypto_signal.product.intelligence_stream_read_model import (
     StreamReadModelError,
     decode_stream_cursor,
 )
+from crypto_signal.product.intelligence_stream_visual_proof import (
+    IntelligenceStreamVisualProofReadModel,
+    StreamVisualProofError,
+)
 from crypto_signal.product.intelligence_stream_transport import (
     encode_stream_sse_event,
     encode_stream_sse_heartbeat,
@@ -841,6 +845,65 @@ def create_app(
                 "Connection": "keep-alive",
                 "X-Accel-Buffering": "no",
             },
+        )
+
+    @app.get("/api/stream/messages/{narrative_identity}/visual-proof")
+    def stream_message_visual_proof(narrative_identity: str) -> JSONResponse:
+        if not _is_lower_sha256(narrative_identity):
+            raise HTTPException(
+                status_code=400,
+                detail="narrative_identity must be lowercase SHA256",
+            )
+        if selected_stream_path is None or not selected_stream_path.exists():
+            return _json(
+                {
+                    "status": "unavailable",
+                    "reason": "intelligence_stream_runtime_not_configured",
+                    "narrative_identity": narrative_identity,
+                    "visual_proof": None,
+                    "read_only": True,
+                    "real_capital": 0,
+                }
+            )
+        if selected_decision_path is None or not selected_decision_path.exists():
+            return _json(
+                {
+                    "status": "unavailable",
+                    "reason": "decision_evidence_runtime_not_configured",
+                    "narrative_identity": narrative_identity,
+                    "visual_proof": None,
+                    "read_only": True,
+                    "real_capital": 0,
+                }
+            )
+        try:
+            visual_proof = IntelligenceStreamVisualProofReadModel(
+                stream_ledger_path=selected_stream_path,
+                signal_ledger_path=selected_path,
+                decision_evidence_path=selected_decision_path,
+            ).read_for_narrative(narrative_identity)
+        except StreamVisualProofError as exc:
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
+        if visual_proof is None:
+            return _json(
+                {
+                    "status": "empty",
+                    "reason": "stream_message_not_found",
+                    "narrative_identity": narrative_identity,
+                    "visual_proof": None,
+                    "read_only": True,
+                    "real_capital": 0,
+                }
+            )
+        status = str(visual_proof.get("status", "unavailable"))
+        return _json(
+            {
+                "status": status,
+                "narrative_identity": narrative_identity,
+                "visual_proof": visual_proof,
+                "read_only": True,
+                "real_capital": 0,
+            }
         )
 
     @app.get("/api/stream/messages/{narrative_identity}/detail")
