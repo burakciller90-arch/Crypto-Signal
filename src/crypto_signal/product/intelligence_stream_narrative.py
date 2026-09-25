@@ -20,10 +20,10 @@ from crypto_signal.product.intelligence_stream_models import REAL_CAPITAL, STREA
 from crypto_signal.product.intelligence_stream_story import StreamChangeSet
 
 STREAM_NARRATIVE_PLAN_SCHEMA_VERSION = "intelligence-stream-narrative-plan-v1/1"
-STREAM_NARRATIVE_MESSAGE_SCHEMA_VERSION = "intelligence-stream-narrative-message-v1/1"
+STREAM_NARRATIVE_MESSAGE_SCHEMA_VERSION = "intelligence-stream-narrative-message-v1/2"
 STREAM_NARRATIVE_VOICE_VERSION = "crypto-signal-turkish-analyst-v1/1"
 STREAM_NARRATIVE_RENDERER_VERSION = "crypto-signal-deterministic-tr-v1/1"
-STREAM_NARRATIVE_VALIDATOR_VERSION = "crypto-signal-narrative-validator-v1/1"
+STREAM_NARRATIVE_VALIDATOR_VERSION = "crypto-signal-narrative-validator-v1/2"
 
 COLLAPSED_MAX_CHARS = 420
 SIMPLE_MAX_CHARS = 900
@@ -34,6 +34,39 @@ CAPITAL_MAX_CHARS = 650
 
 _NUMERIC_RE = re.compile(
     r"(?<![A-Za-z0-9_])\$?(-?\d[\d,]*(?:\.\d+)?)(?:%)?(?![A-Za-z_])"
+)
+
+_PROTECTED_REWRITE_FIELDS = (
+    "technical_text",
+    "intelligence_text",
+    "decision_text",
+    "capital_text",
+)
+_QUALITATIVE_CLAIM_TERMS = frozenset(
+    {
+        "absorption",
+        "balina",
+        "balinalar",
+        "basis",
+        "buzdağı",
+        "cpi",
+        "cvd",
+        "emilim",
+        "fed",
+        "fonlama",
+        "funding",
+        "heatmap",
+        "iceberg",
+        "likidasyon",
+        "manipülasyon",
+        "oi",
+        "order book",
+        "short squeeze",
+        "spoof",
+        "sweep",
+        "süpürme",
+        "tahta",
+    }
 )
 
 
@@ -159,6 +192,8 @@ class StreamNarrativeMessage:
     event_at_ms: int
     source_kind: StreamNarrativeSourceKind
     fallback_reason_codes: tuple[str, ...]
+    rewrite_engine_identity: str | None
+    rewrite_engine_version: str | None
     text: StreamNarrativeText
     validation: StreamNarrativeValidation
     original_text_preserved: bool = True
@@ -190,11 +225,36 @@ class StreamNarrativeMessage:
             self.fallback_reason_codes,
             "Stream narrative fallback reason",
         )
-        if self.source_kind is StreamNarrativeSourceKind.DETERMINISTIC_FALLBACK:
-            if not self.fallback_reason_codes:
-                raise ValueError("Stream narrative fallback requires reason code")
-        elif self.fallback_reason_codes:
-            raise ValueError("non-fallback Stream narrative cannot carry fallback reasons")
+        if self.rewrite_engine_identity is not None:
+            _require_sha256(
+                self.rewrite_engine_identity,
+                "Stream narrative rewrite engine identity",
+            )
+        if self.rewrite_engine_version is not None and not self.rewrite_engine_version.strip():
+            raise ValueError("Stream narrative rewrite engine version cannot be blank")
+        rewrite_provenance_complete = (
+            self.rewrite_engine_identity is not None
+            and self.rewrite_engine_version is not None
+        )
+        if (self.rewrite_engine_identity is None) != (
+            self.rewrite_engine_version is None
+        ):
+            raise ValueError("Stream narrative rewrite provenance must be all-or-none")
+        if self.source_kind is StreamNarrativeSourceKind.DETERMINISTIC:
+            if self.fallback_reason_codes or rewrite_provenance_complete:
+                raise ValueError(
+                    "deterministic Stream narrative cannot carry rewrite provenance"
+                )
+        elif self.source_kind is StreamNarrativeSourceKind.LOCAL_REWRITE:
+            if self.fallback_reason_codes or not rewrite_provenance_complete:
+                raise ValueError(
+                    "local rewrite requires provenance and no fallback reason"
+                )
+        else:
+            if not self.fallback_reason_codes or not rewrite_provenance_complete:
+                raise ValueError(
+                    "Stream narrative fallback requires reason and rewrite provenance"
+                )
         if not self.validation.valid:
             raise ValueError("persistable Stream narrative must pass validation")
         if not self.original_text_preserved:
@@ -226,6 +286,14 @@ class StreamNarrativeRewriteRequest:
 
 
 class StreamNarrativeRewriter(Protocol):
+    @property
+    def rewriter_identity(self) -> str:
+        ...
+
+    @property
+    def rewriter_version(self) -> str:
+        ...
+
     def rewrite(self, request: StreamNarrativeRewriteRequest) -> StreamNarrativeText:
         ...
 
@@ -325,7 +393,18 @@ def render_stream_narrative(
             validation=deterministic_validation,
             source_kind=StreamNarrativeSourceKind.DETERMINISTIC,
             fallback_reason_codes=(),
+            rewrite_engine_identity=None,
+            rewrite_engine_version=None,
         )
+
+    rewrite_engine_identity = rewriter.rewriter_identity
+    rewrite_engine_version = rewriter.rewriter_version
+    _require_sha256(
+        rewrite_engine_identity,
+        "Stream narrative rewriter identity",
+    )
+    if not rewrite_engine_version.strip():
+        raise ValueError("Stream narrative rewriter version cannot be blank")
 
     request = StreamNarrativeRewriteRequest(
         plan_identity=plan.plan_identity,
@@ -344,6 +423,8 @@ def render_stream_narrative(
             validation=deterministic_validation,
             source_kind=StreamNarrativeSourceKind.DETERMINISTIC_FALLBACK,
             fallback_reason_codes=("rewriter_exception",),
+            rewrite_engine_identity=rewrite_engine_identity,
+            rewrite_engine_version=rewrite_engine_version,
         )
 
     candidate_validation = validate_stream_narrative(view, fact, candidate)
@@ -354,6 +435,28 @@ def render_stream_narrative(
             validation=deterministic_validation,
             source_kind=StreamNarrativeSourceKind.DETERMINISTIC_FALLBACK,
             fallback_reason_codes=("rewriter_validation_rejected",),
+            rewrite_engine_identity=rewrite_engine_identity,
+            rewrite_engine_version=rewrite_engine_version,
+        )
+    if not _protected_rewrite_sections_unchanged(deterministic, candidate):
+        return _build_message(
+            plan=plan,
+            text=deterministic,
+            validation=deterministic_validation,
+            source_kind=StreamNarrativeSourceKind.DETERMINISTIC_FALLBACK,
+            fallback_reason_codes=("rewriter_protected_section_rejected",),
+            rewrite_engine_identity=rewrite_engine_identity,
+            rewrite_engine_version=rewrite_engine_version,
+        )
+    if _introduces_unsupported_qualitative_claim(deterministic, candidate):
+        return _build_message(
+            plan=plan,
+            text=deterministic,
+            validation=deterministic_validation,
+            source_kind=StreamNarrativeSourceKind.DETERMINISTIC_FALLBACK,
+            fallback_reason_codes=("rewriter_semantic_guard_rejected",),
+            rewrite_engine_identity=rewrite_engine_identity,
+            rewrite_engine_version=rewrite_engine_version,
         )
     if _too_similar(candidate.collapsed_text, recent_collapsed_texts):
         return _build_message(
@@ -362,6 +465,8 @@ def render_stream_narrative(
             validation=deterministic_validation,
             source_kind=StreamNarrativeSourceKind.DETERMINISTIC_FALLBACK,
             fallback_reason_codes=("rewriter_similarity_rejected",),
+            rewrite_engine_identity=rewrite_engine_identity,
+            rewrite_engine_version=rewrite_engine_version,
         )
     return _build_message(
         plan=plan,
@@ -369,6 +474,8 @@ def render_stream_narrative(
         validation=candidate_validation,
         source_kind=StreamNarrativeSourceKind.LOCAL_REWRITE,
         fallback_reason_codes=(),
+        rewrite_engine_identity=rewrite_engine_identity,
+        rewrite_engine_version=rewrite_engine_version,
     )
 
 
@@ -795,6 +902,8 @@ def _build_message(
     validation: StreamNarrativeValidation,
     source_kind: StreamNarrativeSourceKind,
     fallback_reason_codes: tuple[str, ...],
+    rewrite_engine_identity: str | None,
+    rewrite_engine_version: str | None,
 ) -> StreamNarrativeMessage:
     payload = {
         "analytical_view_identity": plan.analytical_view_identity,
@@ -809,6 +918,8 @@ def _build_message(
         "read_only": True,
         "real_capital": REAL_CAPITAL,
         "renderer_version": STREAM_NARRATIVE_RENDERER_VERSION,
+        "rewrite_engine_identity": rewrite_engine_identity,
+        "rewrite_engine_version": rewrite_engine_version,
         "schema_version": STREAM_NARRATIVE_MESSAGE_SCHEMA_VERSION,
         "source_event_identity": plan.source_event_identity,
         "source_kind": source_kind,
@@ -834,6 +945,8 @@ def _build_message(
         event_at_ms=plan.event_at_ms,
         source_kind=source_kind,
         fallback_reason_codes=fallback_reason_codes,
+        rewrite_engine_identity=rewrite_engine_identity,
+        rewrite_engine_version=rewrite_engine_version,
         text=text,
         validation=validation,
     )
@@ -916,6 +1029,8 @@ def _message_payload(value: StreamNarrativeMessage) -> dict[str, object]:
         "read_only": value.read_only,
         "real_capital": value.real_capital,
         "renderer_version": value.renderer_version,
+        "rewrite_engine_identity": value.rewrite_engine_identity,
+        "rewrite_engine_version": value.rewrite_engine_version,
         "schema_version": value.schema_version,
         "source_event_identity": value.source_event_identity,
         "source_kind": value.source_kind,
