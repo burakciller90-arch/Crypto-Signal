@@ -15,6 +15,8 @@ Authority: frontend/product decisions only; scientific and safety boundaries rem
 - Calm, legible, low-noise surface.
 - Approximately ten-second comprehension is a core UX target.
 - Technical detail is progressive disclosure.
+- **Intelligence Feed is the primary product pillar**: the user should see the machine's accepted market observations, decisions, evidence changes and capital consequences as a live, evidence-bound timeline rather than a thin forecast list.
+- **Virtual Capital / Smart Capital is the second primary product pillar**: canonical Epoch 2 (1,000 USDT; Core 600 / Tactical 300 / Opportunity Reserve 100) must be visible as an active simulated capital system, not a decorative balance card.
 - Intelligence and Decision Proof are core product values.
 - Evidence must be truthful and frozen when the claim depends on point-in-time state.
 - Visual technical claims should be shown on-chart only when exact evidence coordinates exist.
@@ -93,6 +95,32 @@ It cannot carry:
 - REAL_CAPITAL authority.
 
 REAL_CAPITAL=0.
+
+## Backend capability surfacing invariant
+
+Accepted backend capability must not disappear merely because a product adapter or UI component has not yet been written.
+
+For every accepted backend capability relevant to the user, M1 must classify it as one of:
+- SURFACE_DIRECT — already safely consumable;
+- SURFACE_ADAPTER — canonical truth exists; build a read-only product projection;
+- ADVANCED_ONLY — expose through progressive disclosure;
+- RESEARCH_ONLY — visible only as clearly labelled research evidence where useful;
+- INTERNAL_ONLY — intentionally not a user-facing product concept;
+- NOT_AVAILABLE — the underlying canonical evidence truly does not exist.
+
+**SURFACE_ADAPTER is not NOT_AVAILABLE.** Frontend copy must never say "data does not exist" merely because the current API does not project an existing backend capability.
+
+## Virtual-capital activity invariant
+
+Epoch 2 is a simulation/research capital system, not a decorative wallet.
+
+- Core, Tactical and Opportunity Reserve remain independent canonical vaults.
+- Tactical is intended for short-horizon 1m/5m microstructure research.
+- The product must not intentionally leave Tactical disconnected when canonical evidence, allocation, sizing and paper-accounting primitives exist.
+- A missing canonical Tactical execution bridge is an implementation GAP, not a reason to hide Tactical.
+- The system must continuously evaluate eligible simulated opportunities and explain every HOLD / BLOCK / EXECUTE outcome.
+- **No forced trade is permitted solely to make the UI look active.** Activity means the decision engine is genuinely processing opportunities; capital is deployed only when canonical gates pass.
+- REAL_CAPITAL remains 0; there is no real-order authority.
 
 ## Scientific UI invariants
 
