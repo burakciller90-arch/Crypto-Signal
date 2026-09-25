@@ -17,6 +17,9 @@ Authority: frontend/product decisions only; scientific and safety boundaries rem
 - Technical detail is progressive disclosure.
 - **Intelligence Feed is the primary product pillar**: the user should see the machine's accepted market observations, decisions, evidence changes and capital consequences as a live, evidence-bound timeline rather than a thin forecast list.
 - **Virtual Capital / Smart Capital is the second primary product pillar**: canonical Epoch 2 (1,000 USDT; Core 600 / Tactical 300 / Opportunity Reserve 100) must be visible as an active simulated capital system, not a decorative balance card.
+- **Institutional Market Intelligence Stack** is the canonical intelligence worldview: Geometry 20% / Liquidity 25% / Order Flow & Absorption 25% / Derivatives 15% / On-chain 15%, with Event Risk outside the 100-point matrix as a veto/context layer.
+- These weights are evidence-family priors, not probability. A support score of 80 is not "80% chance" and is not by itself automatic activation authority.
+- The product may surface market-maker-style microstructure evidence (liquidity pools, spoofing candidates, hidden-liquidity candidates, absorption, CVD divergence, crowding, exchange flow, wallet cohorts), but must not claim actor intent or insider identity unless canonical evidence explicitly proves it.
 - Intelligence and Decision Proof are core product values.
 - Evidence must be truthful and frozen when the claim depends on point-in-time state.
 - Visual technical claims should be shown on-chart only when exact evidence coordinates exist.
