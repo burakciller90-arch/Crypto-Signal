@@ -19,8 +19,8 @@ def test_stream_preview_is_isolated_from_production_root(tmp_path: Path) -> None
     assert root.status_code == 200
     assert preview.status_code == 200
     assert 'data-ui-version="galactech-v2-intelligence-first-tr"' in root.text
-    assert 'data-ui-version="crypto-signal-stream-v1-s9"' in preview.text
-    assert 'data-ui-version="crypto-signal-stream-v1-s9"' not in root.text
+    assert 'data-ui-version="crypto-signal-stream-v1-s10"' in preview.text
+    assert 'data-ui-version="crypto-signal-stream-v1-s10"' not in root.text
 
 
 def test_stream_preview_obeys_one_panel_contract() -> None:
@@ -137,7 +137,7 @@ def test_stream_s9_detached_evidence_is_exact_identity_and_read_only(tmp_path: P
         + "&kind=geometry"
     )
     assert response.status_code == 200
-    assert 'data-ui-version="crypto-signal-stream-v1-s9-evidence"' in response.text
+    assert 'data-ui-version="crypto-signal-stream-v1-s10-evidence"' in response.text
 
     detached = (STREAM_DIR / "evidence.js").read_text(encoding="utf-8")
     assert "/api/stream/messages/" in detached
@@ -162,17 +162,40 @@ def test_stream_s9_binds_context_education_without_inventing_missing_data() -> N
     assert "veri uydurulmadı" in script
 
 
-def test_stream_s9_does_not_jump_to_s10_or_s13() -> None:
+def test_stream_s10_frozen_visual_proof_contract() -> None:
+    script = (STREAM_DIR / "app.js").read_text(encoding="utf-8")
+    renderer = (STREAM_DIR / "visual_proof.js").read_text(encoding="utf-8")
+    detached = (STREAM_DIR / "evidence.js").read_text(encoding="utf-8")
+
+    assert "/visual-proof" in script
+    assert "hydrateFrozenVisualProof" in script
+    assert "renderDetachedFrozenVisualProof" in detached
+    assert "frozen_ohlc" in renderer
+    assert "frozen-proof-chart" in renderer
+    assert "data-candle-identity" in renderer
+    assert "data-annotation-identity" in renderer
+    assert "data-source-evidence-identity" in renderer
+    assert "current_data_substitution" in renderer
+    assert "identity_only" in renderer
+    assert "resolved_frozen_bundle" in renderer
+    assert "SCORE COMPONENTS" in renderer
+    assert "Confluence support" in renderer
+    assert "Bu skor olasılık değildir." in renderer
+    assert "current data ile yeniden üretilmedi" in renderer.lower()
+
+
+def test_stream_s10_does_not_jump_to_s11_or_s13() -> None:
     html = (STREAM_DIR / "index.html").read_text(encoding="utf-8")
     script = (STREAM_DIR / "app.js").read_text(encoding="utf-8")
+    renderer = (STREAM_DIR / "visual_proof.js").read_text(encoding="utf-8")
 
     assert "S13’te etkinleşecek" in html
     assert "new Audio(" not in script
     assert "AudioContext" not in script
     assert "Notification.requestPermission" not in script
-    assert "S10 kapsamıdır" in script
-    assert "candlestick" not in script.lower()
-    assert "ohlc" not in script.lower()
+    assert "REAL_CAPITAL=0" not in renderer or "real_capital" in renderer
+    assert "execute_order" not in script
+    assert "place_order" not in script
 
 
 def test_stream_preview_static_assets_exist_and_are_light_first() -> None:
@@ -183,6 +206,7 @@ def test_stream_preview_static_assets_exist_and_are_light_first() -> None:
     assert (STREAM_DIR / "evidence.html").is_file()
     assert (STREAM_DIR / "evidence.js").is_file()
     assert (STREAM_DIR / "evidence.css").is_file()
+    assert (STREAM_DIR / "visual_proof.js").is_file()
     assert "--bg: #f4f8ff" in css
     assert 'color-scheme" content="light"' in (
         STREAM_DIR / "index.html"
