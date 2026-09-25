@@ -336,6 +336,27 @@ Usability acceptance proves the primary decision can be understood without visit
 - No exchange/broker authority, WC2 cohort mutation or real capital was introduced.
 - This evidence closes the **engineering/mechanical and deployment portion** of WC5. It does not claim that a human participant study measured <=10-second comprehension. That human usability dimension remains `NOT_MEASURED` and must stay explicit if the roadmap later requires empirical UX timing evidence.
 
+## GALACTECH V2 production productization refresh — 2026-09-25
+
+**Current WC5 Product status: GALACTECH V2 DEPLOYED / ENGINEERING ACCEPTED / HUMAN <=10-SECOND USABILITY NOT_MEASURED.**
+
+- PR **#1207** replaced the earlier WC5 presentation layer with the Turkish-first GALACTECH V2 intelligence product while preserving read-only evidence semantics and `REAL_CAPITAL=0`.
+- The main command surface now reads the persisted live intelligence feed directly, separates lightweight feed refresh from heavy runtime refresh, and resolves feed cards to immutable Decision Proof / frozen signal evidence by exact identity.
+- User-facing product vocabulary is Turkish-first; technical hashes, protocol identities and raw evidence stay available in deeper proof layers.
+- Exact-head WC0 and WC5 UID504 acceptance passed focused contracts, live read-only Product preview, whole-repository regression and Development non-mutation before merge.
+- PR **#1209** updated the deployment/preview gates to the V2 UI identity and made dashboard restart supervisor-managed.
+- PR **#1215** hardened dashboard process discovery to exact Product argv matching. Preview Lifecycle run **36075850254** and Runtime Supervisor Detection run **36075850297** both completed successfully, including full regression/non-mutation and live R11 topology acceptance.
+- Final deployment issue **#1216**, run **36075986903 / job 107887168347**, moved Product from `15fa3dca...` to exact canonical main `d8843003f2a7fec663db124333ebf633c0f34dea`, replaced the dashboard under SSD supervisor ownership, and passed:
+  - live Product health;
+  - Intelligence Center;
+  - GALACTECH root/alias cutover;
+  - R25 Operational Truth;
+  - R11 topology and WAL-aware SQLite acceptance;
+  - continuity-pause preservation;
+  - `PRODUCT_DEPLOY_PASS=YES`.
+- Independent issue **#1218**, run **36076141929 / job 107887652934**, reconfirmed the exact Product HEAD plus `status=ok`, `read_only=true` and `REAL_CAPITAL=0`.
+- This refresh does not satisfy the remaining empirical usability requirement. Human comprehension timing remains `NOT_MEASURED`, and no UI acceptance is allowed to stand in for WC2/WC3/WC6/WC7 scientific or economic evidence.
+
 # WC6 — Execution Lab (Paper / Sandbox / Testnet Only)
 
 ## Goal
