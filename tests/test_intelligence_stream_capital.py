@@ -41,6 +41,14 @@ from crypto_signal.product.intelligence_stream_models import (
     build_forecast_issued_source_event,
     build_stream_activation_boundary,
 )
+from crypto_signal.product.intelligence_stream_narrative_ledger import (
+    IntelligenceStreamNarrativeLedger,
+)
+from crypto_signal.product.intelligence_stream_read_model import (
+    IntelligenceStreamReadModel,
+    StreamMessageQuery,
+    decode_stream_cursor,
+)
 
 
 def _sha(seed: str) -> str:
@@ -195,3 +203,75 @@ def test_s11_capital_story_rows_are_physically_immutable(tmp_path: Path) -> None
         connection.execute(
             "UPDATE stream_capital_messages SET vault_id = 'TACTICAL'"
         )
+
+
+def test_s11_capital_story_joins_canonical_stream_pagination_and_filters(
+    tmp_path: Path,
+) -> None:
+    stream_path, epoch2_path, _, committed = _prepare(tmp_path)
+    IntelligenceStreamNarrativeLedger(stream_path).initialize()
+    projected = project_capital_bundle_to_stream(
+        epoch2_path=epoch2_path,
+        stream_path=stream_path,
+        bundle_identity=committed.accounting_bundle_identity,
+    )
+    reader = IntelligenceStreamReadModel(stream_path)
+
+    page = reader.read_messages(StreamMessageQuery(limit=20))
+    assert [item["narrative_identity"] for item in page.items] == [
+        projected.narrative_identity
+    ]
+    assert page.items[0]["category"] == "capital"
+    assert page.items[0]["vault_id"] == PaperVaultId.CORE.value
+    assert page.newest_cursor is not None
+    assert decode_stream_cursor(page.newest_cursor).narrative_identity == (
+        projected.narrative_identity
+    )
+
+    capital_only = reader.read_messages(
+        StreamMessageQuery(limit=20, category="capital")
+    )
+    assert len(capital_only.items) == 1
+
+    decision_only = reader.read_messages(
+        StreamMessageQuery(limit=20, category="decision")
+    )
+    assert decision_only.items == ()
+
+    text_match = reader.read_messages(
+        StreamMessageQuery(limit=20, text="sanal alımı")
+    )
+    assert len(text_match.items) == 1
+
+    no_stance_fabrication = reader.read_messages(
+        StreamMessageQuery(limit=20, effective_stance="bullish")
+    )
+    assert no_stance_fabrication.items == ()
+
+
+def test_s11_capital_story_lookup_and_detail_do_not_invent_analytical_truth(
+    tmp_path: Path,
+) -> None:
+    stream_path, epoch2_path, _, committed = _prepare(tmp_path)
+    IntelligenceStreamNarrativeLedger(stream_path).initialize()
+    projected = project_capital_bundle_to_stream(
+        epoch2_path=epoch2_path,
+        stream_path=stream_path,
+        bundle_identity=committed.accounting_bundle_identity,
+    )
+    reader = IntelligenceStreamReadModel(stream_path)
+
+    message = reader.read_message(projected.narrative_identity)
+    assert message is not None
+    assert message["category"] == "capital"
+
+    detail = reader.read_message_detail(projected.narrative_identity)
+    assert detail is not None
+    assert detail["narrative"]["narrative_identity"] == projected.narrative_identity
+    assert detail["capital_story"]["bundle_identity"] == (
+        committed.accounting_bundle_identity
+    )
+    assert "analytical_view" not in detail
+    assert "fact_bundle" not in detail
+    assert detail["production_authority"] is False
+    assert detail["real_capital"] == 0
