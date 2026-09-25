@@ -447,6 +447,11 @@ def create_app(
         StaticFiles(directory=str(GALACTECH_DIR)),
         name="galactech-static",
     )
+    app.mount(
+        "/stream-static",
+        StaticFiles(directory=str(STREAM_DIR)),
+        name="stream-static",
+    )
 
     @app.get("/", include_in_schema=False)
     def index() -> FileResponse:
@@ -455,6 +460,10 @@ def create_app(
     @app.get("/galactech", include_in_schema=False)
     def galactech_preview() -> FileResponse:
         return FileResponse(GALACTECH_DIR / "index.html")
+
+    @app.get("/stream-preview", include_in_schema=False)
+    def stream_preview() -> FileResponse:
+        return FileResponse(STREAM_DIR / "index.html")
 
     @app.get("/legacy", include_in_schema=False)
     def legacy_product() -> FileResponse:
