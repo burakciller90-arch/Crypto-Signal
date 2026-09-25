@@ -3,11 +3,27 @@
 Updated: 2026-09-25
 Project: Crypto Signal
 Baseline: crypto-signal-full-version-v1.0.0 (immutable)
-Active post-v1.0 program: v1.1 world-class product + market intelligence
-State: WC0_LIVE_PRODUCT_PARITY_ACCEPTED / WC1_24_7_DATA_RELIABILITY_ACCEPTED / WC2_ENGINEERING_FROZEN_EVIDENCE_ACCUMULATION_ACTIVE / WC4_CHAMPION_CHALLENGER_ENGINEERING_ACCEPTED_RESEARCH_ONLY / WC5_ENGINEERING_ACCEPTED_PRODUCT_DEPLOYED_HUMAN_USABILITY_NOT_MEASURED / WC6_SANDBOX_BOUNDARY_ACCEPTED_VENUE_EVIDENCE_EXTERNAL_DEPENDENCY / WC7_CURRENT_FRONTIER_PACKET_ACCEPTED_CURRENT_INSUFFICIENT_EVIDENCE / CONTINUITY_PAUSED_BY_USER
+Active post-v1.0 program: v1.1 world-class product + market intelligence + Crypto Signal frontend M0-M7
+State: WC0_LIVE_PRODUCT_PARITY_ACCEPTED / WC1_24_7_DATA_RELIABILITY_ACCEPTED / WC2_ENGINEERING_FROZEN_EVIDENCE_ACCUMULATION_ACTIVE / WC4_CHAMPION_CHALLENGER_ENGINEERING_ACCEPTED_RESEARCH_ONLY / WC5_ENGINEERING_ACCEPTED_PRODUCT_DEPLOYED_HUMAN_USABILITY_NOT_MEASURED / WC6_SANDBOX_BOUNDARY_ACCEPTED_VENUE_EVIDENCE_EXTERNAL_DEPENDENCY / WC7_CURRENT_FRONTIER_PACKET_ACCEPTED_CURRENT_INSUFFICIENT_EVIDENCE / FRONTEND_M0_CANONICAL_M1_DISCOVERY_ACTIVE / CONTINUITY_PAUSED_BY_USER
 REAL_CAPITAL: 0
 
 ## Active v1.1 frontier — read before historical sections
+
+### 2026-09-25 14:11 +0300 — CRYPTO SIGNAL FRONTEND M0 CANONICAL / M1 DISCOVERY ACTIVE
+
+This entry records the current frontend-program authority without changing deployed Product truth or any scientific/economic verdict.
+
+- PR **#1254** merged the canonical frontend authority package as `59d2bd51ff4696945cb8a963ed490d6abe3bdfb8`:
+  - `docs/CRYPTO_SIGNAL_FRONTEND_MASTER_ROADMAP_V1.md` is the current M0->M7 frontend-program architecture;
+  - `docs/CRYPTO_SIGNAL_FRONTEND_M0_CONSTITUTION.md` is **PASS / CLOSED**;
+  - `docs/CRYPTO_SIGNAL_FRONTEND_M1_CAPABILITY_GAP_LEDGER.md` is the active M1 discovery baseline and live Gap Ledger;
+  - `READ_FIRST_CRYPTO_SIGNAL.md` routes new frontend work through this authority chain.
+- The deployed **GALACTECH V2** surface remains the current production Product baseline/fallback until a future M7 controlled cutover. The new Crypto Signal frontend has **not** been cut over to production.
+- Older GALACTECH/frontend slice documents remain immutable historical acceptance/evidence. Their old dark-theme, fixed navigation-count, GALACTECH-as-product or old execution-order assumptions are **not current frontend design authority** where they conflict with the canonical frontend documents.
+- Paper authority is explicit: **Epoch 1 = immutable historical 100 USDT**; **Epoch 2 = current 1,000 USDT paper-program contract for new activity**. Neither is real capital.
+- Follow-up authority hygiene is tracked by **PR #FOLLOWUP_PR_PLACEHOLDER** and is documentation-only: README/current-status/Chronicle/read-order/supersession notices are reconciled without runtime, database, collection, paper, signal, research or production-UI mutation.
+- M1 is **ACTIVE, not PASS**. Before M2 routes are frozen, M1 must complete the cross-surface identity graph, frontend temporal-field map, remaining small product-decision sessions and user-approved final information architecture.
+- WC2 evidence accumulation, WC5 human usability `NOT_MEASURED`, WC6 external venue dependency, WC7 `INSUFFICIENT_EVIDENCE`, continuity pause and **REAL_CAPITAL=0** are unchanged.
 
 ### 2026-09-25 03:08 +0300 — GALACTECH V2 TURKISH INTELLIGENCE-FIRST PRODUCT DEPLOYED / WC0 LIVE PARITY RECONFIRMED
 
