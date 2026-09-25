@@ -60,8 +60,8 @@ class LocalNarrativeRewriteConfig:
                 "base_url": self.base_url,
                 "max_tokens": self.max_tokens,
                 "model": self.model,
-                "temperature": self.temperature,
-                "timeout_seconds": self.timeout_seconds,
+                "temperature": format(self.temperature, ".17g"),
+                "timeout_seconds": format(self.timeout_seconds, ".17g"),
                 "version": self.version,
             }
         )
