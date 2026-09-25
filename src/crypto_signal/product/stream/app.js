@@ -176,12 +176,11 @@ function preserveMessageAnchor(item, mutate) {
     return;
   }
   const beforeTop = item.getBoundingClientRect().top;
-  const beforeScroll = ui.viewport.scrollTop;
   mutate();
   window.requestAnimationFrame(() => {
     if (!ui.viewport || !item.isConnected) return;
     const afterTop = item.getBoundingClientRect().top;
-    ui.viewport.scrollTop = beforeScroll + (afterTop - beforeTop);
+    ui.viewport.scrollTop += afterTop - beforeTop;
   });
 }
 
@@ -470,6 +469,14 @@ function toggleMessageExpansion(item, record) {
   if (!(summary instanceof HTMLButtonElement) || !(panel instanceof HTMLElement)) return;
 
   const willOpen = !state.expanded.has(identity);
+  if (
+    willOpen
+    && !state.details.has(identity)
+    && record.__fixture_detail
+    && typeof record.__fixture_detail === "object"
+  ) {
+    state.details.set(identity, record.__fixture_detail);
+  }
   preserveMessageAnchor(item, () => {
     if (willOpen) {
       state.expanded.add(identity);
