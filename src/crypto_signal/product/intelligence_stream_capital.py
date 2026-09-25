@@ -781,8 +781,8 @@ def _build_capital_message(
         realized_pnl = _decimal_field(outcome, "realized_pnl_delta_usdt")
         position_before = _decimal_field(outcome, "position_quantity_before")
         position_after = _decimal_field(outcome, "position_quantity_after")
-        if outcome.get("source_fill_identity") != fill.get("fill_identity"):
-            raise ValueError("S11 sell message outcome/fill mismatch")
+        if outcome.get("source_fill_identity") != fill.get("source_fill_identity"):
+            raise ValueError("S11 sell message outcome/source-fill mismatch")
         if outcome.get("action") != action:
             raise ValueError("S11 sell message outcome/action mismatch")
         text_bundle = _capital_sell_text(
