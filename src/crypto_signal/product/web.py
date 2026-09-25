@@ -47,6 +47,13 @@ from crypto_signal.product.event_source_runtime import (
     read_event_source_runtime_truth,
 )
 from crypto_signal.product.intelligence_center import build_intelligence_center_payload
+from crypto_signal.product.intelligence_stream_live import (
+    IntelligenceStreamLiveSession,
+    resolve_stream_resume_cursor,
+    stream_heartbeat_sse,
+    stream_message_sse,
+    stream_ready_sse,
+)
 from crypto_signal.product.intelligence_stream_read_model import (
     IntelligenceStreamReadModel,
     StreamMessageQuery,
@@ -826,6 +833,69 @@ def create_app(
                 "Cache-Control": "no-cache, no-transform",
                 "Connection": "keep-alive",
                 "X-Accel-Buffering": "no",
+            },
+        )
+
+    @app.get("/api/stream/live")
+    def stream_live(
+        after: str | None = Query(default=None, max_length=512),
+        last_event_id: str | None = Header(
+            default=None,
+            alias="Last-Event-ID",
+            max_length=512,
+        ),
+        batch_limit: int = Query(default=100, ge=1, le=200),
+    ) -> JSONResponse | StreamingResponse:
+        if selected_stream_path is None or not selected_stream_path.exists():
+            return _json(
+                {
+                    "status": "unavailable",
+                    "reason": "intelligence_stream_runtime_not_configured",
+                    "read_only": True,
+                    "real_capital": 0,
+                },
+                status_code=503,
+            )
+        try:
+            resume_cursor = resolve_stream_resume_cursor(
+                after=after,
+                last_event_id=last_event_id,
+            )
+            session = IntelligenceStreamLiveSession(
+                IntelligenceStreamReadModel(selected_stream_path),
+                after=resume_cursor,
+            )
+        except (StreamReadModelError, ValueError) as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+        def events():
+            yield stream_ready_sse(session.cursor)
+            last_heartbeat = time.monotonic()
+            while True:
+                try:
+                    poll = session.poll(limit=batch_limit)
+                except (FileNotFoundError, StreamReadModelError, sqlite3.DatabaseError):
+                    return
+                if poll.items:
+                    for item in poll.items:
+                        event, _ = stream_message_sse(item)
+                        yield event
+                    last_heartbeat = time.monotonic()
+                    continue
+                now = time.monotonic()
+                if now - last_heartbeat >= 15:
+                    yield stream_heartbeat_sse()
+                    last_heartbeat = now
+                time.sleep(0.5)
+
+        return StreamingResponse(
+            events(),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache, no-transform",
+                "Connection": "keep-alive",
+                "X-Accel-Buffering": "no",
+                "X-Content-Type-Options": "nosniff",
             },
         )
 
