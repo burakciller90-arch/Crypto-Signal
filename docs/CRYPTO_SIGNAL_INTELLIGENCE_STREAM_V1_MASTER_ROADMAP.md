@@ -57,8 +57,9 @@ These decisions are already made and must not be re-opened during ordinary imple
 - **S3 Story Engine and Change Detection: PASS**.
 - **S4 Analytical Composer: PASS**.
 - **S5 Narrative Engine: PASS**.
-- **S6 Real-time Stream Backend: ACTIVE FRONTIER**.
-- Do not begin S7 or broad UI implementation before S6 can deliver immutable accepted messages through cursor-based live transport with reconnect/catch-up, de-duplication, history pagination, exact lookup and polling fallback.
+- **S6 Real-time Stream Backend: PASS**.
+- **S7 One-Panel UI Shell: ACTIVE FRONTIER**.
+- Do not begin S8 as the active implementation frontier until the S7 messaging shell is browser-rendered and accepted with the existing UID504 visual-snapshot path.
 - The deployed GALACTECH V2 surface remains production fallback until S16 controlled cutover.
 
 ---
