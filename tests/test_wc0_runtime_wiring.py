@@ -171,6 +171,9 @@ def test_visualsnapshot_command_captures_real_safari_window_and_uploads_artifact
     assert "for i in {1..8}; do" in workflow
     assert 'assert data.get("read_only") is True' in workflow
     assert 'assert data.get("real_capital") == 0' in workflow
+    assert "VISUAL_SNAPSHOT_HEALTH_UNAVAILABLE=YES" in workflow
+    assert "HEALTH_STATUS=UNAVAILABLE_CAPTURE_CONTINUES" in workflow
+    assert 'echo "READ_ONLY_CAPTURE=YES"' in workflow
 
 
 def test_galactech_preview_contract_is_exact_main_read_only() -> None:
