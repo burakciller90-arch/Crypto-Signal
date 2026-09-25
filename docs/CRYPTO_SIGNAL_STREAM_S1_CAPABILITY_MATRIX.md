@@ -1,6 +1,6 @@
 # Crypto Signal — Stream S1 Capability Matrix
 
-Status: **S1 ACTIVE / AUDIT BASELINE — NOT YET PASS**  
+Status: **S1 PASS / CANONICAL DISCOVERY BASELINE**  
 Authority: `docs/CRYPTO_SIGNAL_INTELLIGENCE_STREAM_V1_MASTER_ROADMAP.md`  
 Observed main baseline: `2a61ad47e1f09640f3b36e4ccf09f6ed46dde7ef`  
 Purpose: map accepted backend capability to the exact Intelligence Stream pipeline without confusing “adapter missing” with “backend capability missing”.
