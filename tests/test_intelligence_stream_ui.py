@@ -145,7 +145,8 @@ def test_stream_s9_detached_evidence_is_exact_identity_and_read_only(tmp_path: P
     assert "/api/decision-proof/forecast/" in detached
     assert "/api/education/" in detached
     assert "REAL_CAPITAL=0" in detached
-    assert "Frozen visual coordinates" in detached
+    assert "/visual-proof" in detached
+    assert "immutable karar freeze" in detached
 
 
 def test_stream_s9_binds_context_education_without_inventing_missing_data() -> None:
