@@ -21,6 +21,9 @@ from crypto_signal.product.intelligence_stream_capital_decisions import (
 from crypto_signal.product.intelligence_stream_capital_sizing import (
     STREAM_CAPITAL_SIZING_MESSAGE_SCHEMA_VERSION,
 )
+from crypto_signal.product.intelligence_stream_capital_lifecycle import (
+    STREAM_CAPITAL_LIFECYCLE_MESSAGE_SCHEMA_VERSION,
+)
 from crypto_signal.product.intelligence_stream_messages import (
     STREAM_FACT_BUNDLE_SCHEMA_VERSION,
     STREAM_MESSAGE_INPUT_SCHEMA_VERSION,
@@ -255,6 +258,10 @@ class IntelligenceStreamReadModel:
                 connection,
                 query,
             )
+            capital_lifecycle_items = self._read_capital_lifecycle_messages(
+                connection,
+                query,
+            )
 
         regular_items = tuple(
             self._verified_narrative_record(
@@ -270,6 +277,7 @@ class IntelligenceStreamReadModel:
             *capital_items,
             *capital_decision_items,
             *capital_sizing_items,
+            *capital_lifecycle_items,
         ]
         combined.sort(
             key=lambda item: (
@@ -378,6 +386,43 @@ class IntelligenceStreamReadModel:
                     """,
                     (narrative_identity,),
                 ).fetchone()
+                capital_lifecycle_row = None
+                if (
+                    capital_row is None
+                    and capital_decision_row is None
+                    and capital_sizing_row is None
+                    and self._table_exists(
+                        connection,
+                        "stream_capital_lifecycle_messages",
+                    )
+                ):
+                    capital_lifecycle_row = connection.execute(
+                        """
+                        SELECT narrative_identity, event_at_ms, payload_json, payload_sha256
+                        FROM stream_capital_lifecycle_messages
+                        WHERE narrative_identity = ?
+                        """,
+                        (narrative_identity,),
+                    ).fetchone()
+            capital_lifecycle_row = None
+            if (
+                row is None
+                and capital_row is None
+                and capital_decision_row is None
+                and capital_sizing_row is None
+                and self._table_exists(
+                    connection,
+                    "stream_capital_lifecycle_messages",
+                )
+            ):
+                capital_lifecycle_row = connection.execute(
+                    """
+                    SELECT narrative_identity, event_at_ms, payload_json, payload_sha256
+                    FROM stream_capital_lifecycle_messages
+                    WHERE narrative_identity = ?
+                    """,
+                    (narrative_identity,),
+                ).fetchone()
         if row is not None:
             return self._verified_narrative_record(
                 narrative_identity=str(row[0]),
@@ -399,13 +444,20 @@ class IntelligenceStreamReadModel:
                 payload_json=str(capital_decision_row[2]),
                 expected_digest=str(capital_decision_row[3]),
             )
-        if capital_sizing_row is None:
+        if capital_sizing_row is not None:
+            return self._verified_capital_sizing_record(
+                narrative_identity=str(capital_sizing_row[0]),
+                event_at_ms=int(str(capital_sizing_row[1])),
+                payload_json=str(capital_sizing_row[2]),
+                expected_digest=str(capital_sizing_row[3]),
+            )
+        if capital_lifecycle_row is None:
             return None
-        return self._verified_capital_sizing_record(
-            narrative_identity=str(capital_sizing_row[0]),
-            event_at_ms=int(str(capital_sizing_row[1])),
-            payload_json=str(capital_sizing_row[2]),
-            expected_digest=str(capital_sizing_row[3]),
+        return self._verified_capital_lifecycle_record(
+            narrative_identity=str(capital_lifecycle_row[0]),
+            event_at_ms=int(str(capital_lifecycle_row[1])),
+            payload_json=str(capital_lifecycle_row[2]),
+            expected_digest=str(capital_lifecycle_row[3]),
         )
 
     def read_message_detail(
@@ -519,17 +571,32 @@ class IntelligenceStreamReadModel:
                     "production_authority": False,
                     "real_capital": REAL_CAPITAL,
                 }
-            if capital_sizing_row is None:
+            if capital_sizing_row is not None:
+                capital_sizing = self._verified_capital_sizing_record(
+                    narrative_identity=str(capital_sizing_row[0]),
+                    event_at_ms=int(str(capital_sizing_row[1])),
+                    payload_json=str(capital_sizing_row[2]),
+                    expected_digest=str(capital_sizing_row[3]),
+                )
+                return {
+                    "narrative": capital_sizing,
+                    "capital_sizing": capital_sizing,
+                    "schema_version": STREAM_MESSAGE_DETAIL_SCHEMA_VERSION,
+                    "read_only": True,
+                    "production_authority": False,
+                    "real_capital": REAL_CAPITAL,
+                }
+            if capital_lifecycle_row is None:
                 return None
-            capital_sizing = self._verified_capital_sizing_record(
-                narrative_identity=str(capital_sizing_row[0]),
-                event_at_ms=int(str(capital_sizing_row[1])),
-                payload_json=str(capital_sizing_row[2]),
-                expected_digest=str(capital_sizing_row[3]),
+            capital_lifecycle = self._verified_capital_lifecycle_record(
+                narrative_identity=str(capital_lifecycle_row[0]),
+                event_at_ms=int(str(capital_lifecycle_row[1])),
+                payload_json=str(capital_lifecycle_row[2]),
+                expected_digest=str(capital_lifecycle_row[3]),
             )
             return {
-                "narrative": capital_sizing,
-                "capital_sizing": capital_sizing,
+                "narrative": capital_lifecycle,
+                "capital_lifecycle": capital_lifecycle,
                 "schema_version": STREAM_MESSAGE_DETAIL_SCHEMA_VERSION,
                 "read_only": True,
                 "production_authority": False,
@@ -631,6 +698,19 @@ class IntelligenceStreamReadModel:
                     LIMIT 1
                     """
                 ).fetchone()
+            capital_lifecycle_row = None
+            if self._table_exists(
+                connection,
+                "stream_capital_lifecycle_messages",
+            ):
+                capital_lifecycle_row = connection.execute(
+                    """
+                    SELECT event_at_ms, narrative_identity
+                    FROM stream_capital_lifecycle_messages
+                    ORDER BY event_at_ms DESC, narrative_identity DESC
+                    LIMIT 1
+                    """
+                ).fetchone()
         candidates = tuple(
             (int(str(item[0])), str(item[1]))
             for item in (
@@ -638,6 +718,7 @@ class IntelligenceStreamReadModel:
                 capital_row,
                 capital_decision_row,
                 capital_sizing_row,
+                capital_lifecycle_row,
             )
             if item is not None
         )
