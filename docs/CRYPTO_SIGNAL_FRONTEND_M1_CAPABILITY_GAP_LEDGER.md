@@ -4,7 +4,9 @@ Status: **M1 ACTIVE — INITIAL MECHANICALLY VERIFIED BASELINE / NOT YET PASS**
 Observed runtime/code baseline: repository main at `26cc5b05f9b15a0a8569042c534886e4681b4502`  
 Frontend canonicalization merge: `59d2bd51ff4696945cb8a963ed490d6abe3bdfb8` (PR #1254, documentation/authority only)  
 Baseline validity: PR #1254 and follow-up PR #1255 are documentation-only and do not change the runtime/backend code inspected for this matrix.  
-Purpose: map real backend truth to future frontend capability without invention.
+Purpose: map real backend truth to future frontend capability without invention, and prevent accepted backend capability from remaining dormant merely because a product adapter/UI has not yet been written.
+
+Current code re-check: the documentation-only PRs #1254/#1255 did not alter the backend baseline. This M1 pass now additionally audits accepted-but-unsurfaced intelligence/capital capability against current main.
 
 ## 1. Classification
 
@@ -130,6 +132,21 @@ Order-book rows include:
 
 Conclusion: exact order-book data appears to exist in Market Tape storage, but current product API does not yet prove a Decision-Proof-bound render contract for bid/ask levels. Classification: DISCOVER -> likely ADAPT, not automatically REUSE.
 
+## 3.4 Accepted capability is not the same as surfaced capability
+
+The current product layer already exposes an accepted intelligence catalog whose entries explicitly report `runtime_evidence_status = not_exposed_as_live_feed`. The repository also contains accepted intelligence engines and evidence contracts for regime, trend/momentum, mean reversion, breakout/volatility, derivatives, order flow/microstructure, on-chain, sentiment/attention, cross-market context, liquidity/liquidation families and related event-risk evidence.
+
+This means a missing live frontend card is often a **projection gap**, not missing backend science.
+
+Capital has the same distinction:
+- Smart Capital Allocator is accepted for all three Epoch 2 vaults;
+- Tactical eligibility explicitly consumes 1m/5m liquidity/order-flow/market-quality/CVD/absorption/sweep evidence;
+- Position Sizing Bridge is canonical-three-vault aware;
+- R22 Transaction Tape and R21 Epoch 2 accounting are vault-aware and can bind exact intent/fill/accounting lineage;
+- however, the currently accepted automatic forward paper-execution runtime is specifically bound to **CORE** and `paper_autonomy_v2_exact_dual_provider_4h`.
+
+Therefore the missing Tactical 1m/5m automatic paper path is a **canonical runtime bridge gap**, not a missing accounting/allocator foundation.
+
 ## 4. Product Gap Ledger
 
 | ID | Desired capability | Current truth | Gap | Class | Required next action |
@@ -154,6 +171,11 @@ Conclusion: exact order-book data appears to exist in Market Tape storage, but c
 | GAP-018 | Broad edge/performance conclusions | performance infrastructure exists | WC2/WC3 sufficiency blockers remain | NOT_AVAILABLE | display INSUFFICIENT_EVIDENCE until canonical readiness |
 | GAP-019 | Real venue execution evidence | WC6 remains external dependency | no real venue evidence | NOT_AVAILABLE | do not represent local simulation as venue truth |
 | GAP-020 | Executable real-money controls | REAL_CAPITAL=0 | no authority and intentionally prohibited | NOT_AVAILABLE | never add real Buy/Sell execution surface |
+| GAP-021 | Full backend-capability surfacing audit | accepted intelligence/capital/research modules exceed current product projections | some accepted capability can be mistaken for "missing data" because no read model/UI exists | ADAPT/DISCOVER | classify every user-relevant accepted capability as SURFACE_DIRECT / SURFACE_ADAPTER / ADVANCED_ONLY / RESEARCH_ONLY / INTERNAL_ONLY / NOT_AVAILABLE |
+| GAP-022 | Rich live Intelligence Feed | Decision Feed is currently forecast-issued/resolved while many accepted engines are not exposed as live feed | machine observations are hidden behind static/catalog/proof layers | ADAPT | build canonical read-only event projections for real liquidity/order-flow/derivatives/event-risk/on-chain/regime/data-quality/capital events; no inferred/fake events |
+| GAP-023 | Tactical 1m/5m autonomous virtual-paper rail | Tactical allocator contract + three-vault sizing/accounting/tape primitives exist; accepted forward execution runtime is CORE + 4h only | no canonical Tactical evidence -> simulated execution runtime | ADAPT | implement and accept a forward-only Tactical Paper Execution Rail reusing accepted allocator/sizing/R22/R21 primitives |
+| GAP-024 | Capital events inside Intelligence Feed | Epoch 2/R22/WC2 decisions and fills exist in separate stores/read models | user cannot see WHY virtual capital held/deployed as part of the live story | ADAPT | add exact identity-bound capital timeline projection: ELIGIBLE/HOLD/BLOCK/SIZED/EXECUTED/EXITED/accounting-result events |
+| GAP-025 | Zero-activity diagnosability | HOLD_CASH is valid but prolonged inactivity can be indistinguishable from a broken bridge in the UI | user may see idle capital without knowing whether no setup or subsystem gap caused it | ADAPT/ADD_PRESENTATION | expose decision cadence, candidates scanned, blockers, last eligible event, last executed simulation and data-quality reason without forcing trades |
 
 ## 5. Temporal integrity observations
 
@@ -228,10 +250,13 @@ Recommended sequence:
 
 The backend is already substantially capable of supporting a serious product frontend.
 
-The largest gaps are not "build a new trading engine." They are:
+The largest gaps are not "invent a new trading system." They are:
 - frontend information architecture;
 - product-friendly query/read models;
+- comprehensive surfacing of accepted backend capability rather than treating adapter gaps as missing data;
 - broader canonical intelligence timeline;
+- the missing Tactical 1m/5m forward paper-execution bridge between already-accepted evidence/allocator/sizing/accounting primitives;
+- identity-bound capital events in the live Intelligence Feed;
 - renderable visual-evidence contracts;
 - proof-bound microstructure exposure;
 - stable archive querying;
@@ -262,6 +287,8 @@ Still required before M1 can PASS:
 - completeness audit against every current product API and major evidence surface;
 - remaining product-decision sessions, asked in small groups without re-asking locked decisions;
 - user-approved final information architecture;
-- final check that every planned visual/product feature is backed by REUSE/ADAPT truth or explicitly marked DISCOVER/NOT_AVAILABLE.
+- final check that every planned visual/product feature is backed by REUSE/ADAPT truth or explicitly marked DISCOVER/NOT_AVAILABLE;
+- accepted-backend surfacing audit complete, with no user-relevant accepted capability silently dropped because an adapter is missing;
+- Tactical forward-paper execution bridge contract specified before M2 freezes Capital/Feed data dependencies.
 
 M2 Application Foundation must **not** freeze routes or final shell information architecture before these items pass.
