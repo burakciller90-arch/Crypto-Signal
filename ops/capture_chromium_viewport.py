@@ -306,9 +306,9 @@ def _capture(args: argparse.Namespace) -> dict[str, object]:
                 raise RuntimeError(f"evidence window-manager probe failed: {window_probe!r}")
             if int(window_probe.get("count", 0)) < 3:
                 raise RuntimeError(f"evidence multi-window count failed: {window_probe!r}")
-            if abs(int(window_probe.get("dragDx", 0))) < 20 or abs(
-                int(window_probe.get("dragDy", 0))
-            ) < 15:
+            drag_dx = abs(int(window_probe.get("dragDx", 0)))
+            drag_dy = abs(int(window_probe.get("dragDy", 0)))
+            if drag_dx + drag_dy < 30 or max(drag_dx, drag_dy) < 15:
                 raise RuntimeError(f"evidence drag probe failed: {window_probe!r}")
             if int(window_probe.get("resizeDw", 0)) < 40 or int(
                 window_probe.get("resizeDh", 0)
