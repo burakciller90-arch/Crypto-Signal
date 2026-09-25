@@ -42,6 +42,8 @@ class CanonicalSizingEvent:
     vault_id: PaperVaultId
     asset: str
     timeframe: str
+    candidate_as_of_ms: int
+    eligibility_assessed_at_ms: int
     selected_at_ms: int
     method: SizingMethod
     fraction_of_vault: Decimal
@@ -79,8 +81,18 @@ class CanonicalSizingEvent:
             raise ValueError("S11 sizing event asset must be uppercase")
         if not self.timeframe.strip():
             raise ValueError("S11 sizing event timeframe must be non-empty")
-        if self.selected_at_ms < 0:
-            raise ValueError("S11 sizing event time must be non-negative")
+        if min(
+            self.candidate_as_of_ms,
+            self.eligibility_assessed_at_ms,
+            self.selected_at_ms,
+        ) < 0:
+            raise ValueError("S11 sizing event times must be non-negative")
+        if not (
+            self.candidate_as_of_ms
+            <= self.eligibility_assessed_at_ms
+            <= self.selected_at_ms
+        ):
+            raise ValueError("S11 sizing event chronology is invalid")
         for amount, label, positive in (
             (self.fraction_of_vault, "fraction", True),
             (self.canonical_notional_usdt, "notional", True),
@@ -315,11 +327,13 @@ def build_canonical_sizing_event(
         "allocator_assessment_identity": eligibility.allocator_assessment_identity,
         "allocator_candidate_identity": eligibility.allocator_candidate_identity,
         "asset": eligibility.asset,
+        "candidate_as_of_ms": eligibility.candidate_as_of_ms,
         "canonical_notional_usdt": selection.canonical_notional_usdt,
         "current_cash_usdt": selection.current_cash_usdt,
         "current_nav_usdt": selection.current_nav_usdt,
         "current_vault_snapshot_identity": selection.current_vault_snapshot_identity,
         "eligibility_proof_identity": eligibility.proof_identity,
+        "eligibility_assessed_at_ms": eligibility.assessed_at_ms,
         "engine_version": S11_SIZING_EVENT_ENGINE_VERSION,
         "fraction_of_vault": selection.fraction_of_vault,
         "method": selection.method,
@@ -350,6 +364,8 @@ def build_canonical_sizing_event(
         vault_id=selection.vault_id,
         asset=eligibility.asset,
         timeframe=eligibility.source_timeframe,
+        candidate_as_of_ms=eligibility.candidate_as_of_ms,
+        eligibility_assessed_at_ms=eligibility.assessed_at_ms,
         selected_at_ms=selection.selected_at_ms,
         method=selection.method,
         fraction_of_vault=selection.fraction_of_vault,
@@ -396,10 +412,12 @@ def _event_payload(value: CanonicalSizingEvent) -> dict[str, object]:
         "allocator_assessment_identity": value.allocator_assessment_identity,
         "allocator_candidate_identity": value.allocator_candidate_identity,
         "asset": value.asset,
+        "candidate_as_of_ms": value.candidate_as_of_ms,
         "canonical_notional_usdt": value.canonical_notional_usdt,
         "current_cash_usdt": value.current_cash_usdt,
         "current_nav_usdt": value.current_nav_usdt,
         "current_vault_snapshot_identity": value.current_vault_snapshot_identity,
+        "eligibility_assessed_at_ms": value.eligibility_assessed_at_ms,
         "eligibility_proof_identity": value.eligibility_proof_identity,
         "engine_version": value.engine_version,
         "fraction_of_vault": value.fraction_of_vault,
