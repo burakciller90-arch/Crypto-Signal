@@ -51,9 +51,10 @@ These decisions are already made and must not be re-opened during ordinary imple
 
 ## 0.2 Current execution frontier
 
-- **S0 Authority Freeze: PASS** after this supersession package is merged.
-- **S1 Stream-only Backend Capability Audit: ACTIVE NEXT FRONTIER**.
-- Do not begin broad UI implementation before S1 has mapped exact source/evidence/message contracts needed by the stream.
+- **S0 Authority Freeze: PASS**.
+- **S1 Stream-only Backend Capability Audit: PASS**.
+- **S2 Canonical Stream Event & Message Model: ACTIVE FRONTIER**.
+- Do not begin broad UI implementation before S2 has established the immutable message/event/context backbone.
 - The deployed GALACTECH V2 surface remains production fallback until S16 controlled cutover.
 
 ---
