@@ -24,7 +24,7 @@ jobs:
           set -euo pipefail
           cmd="$(printf '%s\n' "$ISSUE_BODY" | awk -F: 'tolower($1)=="command" {gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2); print tolower($2); exit}')"
           case "$cmd" in
-            status|eventsourcestate|eventsourcesnapshot|blsprobe|fredprobe|wc2epoch2activate|wc2policyregister|wc2protocolregister|wc2executionprotocolregister|wc2executionruntimeregister|wc2executiononce|wc2executionstate|wc2collectonce|wc2state|services|logs|disk|sync|producttest|fulltest|productstate|productdeploy|paperreview|paperinspect|paperfixlint|paperharden|stateplanreview|stateplaninspect|stateplanharden|cursorreview|cursorreviewtail|cursorcleanup|bridgecheck|bridgestate|rollingstate|pausecheck|wakepause|wakeresume|wakearm|waketest|wakeheartbeat|chatbusyprobe|cursorcheck|cursorauthdiag|cursorttycheck|alertclockstate|alertclockpause|alertclockresume|migrationinspect|migrationinventory|ssddashboarddiag|productcrashlogs|ssddashboardwrappertest|ssdtcclaunchtest|ssdbackgroundteststart|ssdbackgroundtestcheck|ssdleftover|runnerpersistinstall|runnerpersistdiag|runnercutoverdiag|dashboardstart504|galactechpreview|runnerterminalwatchdoginstall)
+            status|eventsourcestate|eventsourcesnapshot|blsprobe|fredprobe|wc2epoch2activate|wc2policyregister|wc2protocolregister|wc2executionprotocolregister|wc2executionruntimeregister|wc2executiononce|wc2executionstate|wc2collectonce|wc2state|services|logs|disk|sync|producttest|fulltest|productstate|productdeploy|paperreview|paperinspect|paperfixlint|paperharden|stateplanreview|stateplaninspect|stateplanharden|cursorreview|cursorreviewtail|cursorcleanup|bridgecheck|bridgestate|rollingstate|pausecheck|wakepause|wakeresume|wakearm|waketest|wakeheartbeat|chatbusyprobe|cursorcheck|cursorauthdiag|cursorttycheck|alertclockstate|alertclockpause|alertclockresume|migrationinspect|migrationinventory|ssddashboarddiag|productcrashlogs|ssddashboardwrappertest|ssdtcclaunchtest|ssdbackgroundteststart|ssdbackgroundtestcheck|ssdleftover|runnerpersistinstall|runnerpersistdiag|runnercutoverdiag|dashboardstart504|visualsnapshot|galactechpreview|runnerterminalwatchdoginstall)
               ;;
             *)
               echo "Unsupported command: $cmd"
@@ -3531,6 +3531,88 @@ jobs:
           /usr/bin/open "$URL/"
           echo "CRYPTO_DASHBOARD_OPENED_UID504=YES"
           echo "CRYPTO_DASHBOARD_HEALTH_UID504=PASS"
+
+      - name: GALACTECH VISUAL SNAPSHOT UID504
+        if: steps.parse.outputs.command == 'visualsnapshot'
+        shell: bash
+        run: |
+          set -euo pipefail
+          URL="http://127.0.0.1:48700"
+          OUT="$RUNNER_TEMP/galactech-visual-snapshot"
+          mkdir -p "$OUT"
+
+          curl -fsS --max-time 5 "$URL/api/health" > "$OUT/health.json"
+          /usr/bin/python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          p = Path(os.environ["RUNNER_TEMP"]) / "galactech-visual-snapshot" / "health.json"
+          data = json.loads(p.read_text())
+          assert data.get("status") == "ok"
+          assert data.get("read_only") is True
+          assert data.get("real_capital") == 0
+          PY
+
+          /usr/bin/open -a Safari "$URL/"
+          sleep 3
+
+          capture_window() {
+            local name="$1"
+            local left="$2"
+            local top="$3"
+            local right="$4"
+            local bottom="$5"
+            local win_id=""
+            win_id="$(/usr/bin/osascript <<OSA
+          tell application "Safari"
+            activate
+            if (count of windows) = 0 then
+              make new document with properties {URL:"$URL/"}
+            else
+              set URL of front document to "$URL/"
+            end if
+            set bounds of front window to {$left, $top, $right, $bottom}
+            delay 3
+            return id of front window
+          end tell
+          OSA
+          )"
+            echo "CAPTURE_${name}_WINDOW_ID=$win_id"
+            test -n "$win_id"
+            /usr/sbin/screencapture -x -l "$win_id" "$OUT/$name.png"
+            test -s "$OUT/$name.png"
+            /usr/bin/sips -g pixelWidth -g pixelHeight "$OUT/$name.png" || true
+          }
+
+          capture_window desktop 40 50 1480 1000
+          capture_window mobile 80 60 510 920
+
+          /usr/bin/osascript <<OSA
+          tell application "Safari"
+            activate
+            set URL of front document to "$URL/"
+            set bounds of front window to {40, 50, 1480, 1000}
+          end tell
+          OSA
+
+          {
+            echo "URL=$URL/"
+            echo "CAPTURED_AT=$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
+            echo "PRODUCT_HEAD=$(git -C /Volumes/Crypto-504/Crypto-Signal/Product rev-parse HEAD)"
+            echo "REAL_CAPITAL=0"
+            echo "READ_ONLY=YES"
+          } > "$OUT/metadata.txt"
+
+          echo "GALACTECH_VISUAL_SNAPSHOT_PASS=YES"
+
+      - name: UPLOAD GALACTECH VISUAL SNAPSHOT
+        if: steps.parse.outputs.command == 'visualsnapshot' && always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: galactech-visual-snapshot-${{ github.run_id }}
+          path: ${{ runner.temp }}/galactech-visual-snapshot
+          if-no-files-found: error
+          retention-days: 7
 
       - name: RUNNER TERMINAL WATCHDOG INSTALL
         if: steps.parse.outputs.command == 'runnerterminalwatchdoginstall'
