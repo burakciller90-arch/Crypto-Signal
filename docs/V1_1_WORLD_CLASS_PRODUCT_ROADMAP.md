@@ -9,9 +9,13 @@
 > Visual target: **Bloomberg precision × cinematic sci-fi**. No fake live/latency/probability/whale/spoofing certainty. Motion is reserved for real state change.
 >
 
-> ## FRONTEND AUTHORITY UPDATE — 2026-09-25
+> ## FRONTEND AUTHORITY UPDATE — 2026-09-25 / LATEST USER SUPERSESSION
 >
-> The route list and visual target above are retained as historical 2026-09-22 product-planning context. They are **superseded for current frontend design** by `docs/CRYPTO_SIGNAL_FRONTEND_MASTER_ROADMAP_V1.md`, the M0 Constitution and active M1 Capability/Gap Ledger. Do not treat the older fixed IA, dark/cinematic direction or GALACTECH-as-product interpretation as a current lock. Scientific and REAL_CAPITAL boundaries remain unchanged.
+> The route list and visual target above are historical planning context. The former replacement M0→M7 frontend roadmap is also now superseded.
+>
+> **Sole current frontend/product authority:** `docs/CRYPTO_SIGNAL_INTELLIGENCE_STREAM_V1_MASTER_ROADMAP.md`.
+>
+> Current scope is one live Intelligence Stream only. Do not revive the old multi-page IA until Stream V1 is accepted and the user explicitly requests a new product scope. Scientific and REAL_CAPITAL boundaries remain unchanged.
 >
 
 Status: **implementation roadmap**
