@@ -1,6 +1,11 @@
 # GALACTECH — Crypto Signal Frontend Master Roadmap v1.0
 
-Status: CANONICAL FRONTEND PROGRAM ARCHITECTURE — M0 PASS / M1 ACTIVE  
+> **SUPERSEDED BY USER — 2026-09-25**  
+> Current frontend/product execution authority is `docs/CRYPTO_SIGNAL_INTELLIGENCE_STREAM_V1_MASTER_ROADMAP.md`.  
+> Do not execute this M0→M7 multi-screen roadmap. It is retained only as historical product-planning/audit evidence.  
+> Standalone Markets/Capital/Performance/Archive/Learn/System work is deferred until Intelligence Stream V1 is complete and the user explicitly opens a new scope.
+
+Status: **SUPERSEDED / HISTORICAL — NOT CURRENT EXECUTION AUTHORITY**  
 Owner context: GALACTECH company / Crypto Signal product-project  
 Safety: REAL_CAPITAL=0 / read-only product surface  
 Execution model: M0 -> M7 with screen-by-screen completion loops
