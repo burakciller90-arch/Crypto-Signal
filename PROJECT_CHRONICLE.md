@@ -1,5 +1,17 @@
 # PROJECT CHRONICLE
 
+## 2026-09-25 — Stream S10 Frozen Visual Proof accepted; S11 Capital Story Integration becomes active
+
+S10 now provides point-in-time “show me” evidence without substituting current market data into historical decisions. PR #1288 added a read-only visual-proof projection that starts from the exact Stream message, verifies its persisted Decision Proof, resolves the linked immutable signal freeze, verifies the decision-freeze bundle digest and then renders only the candles and geometry that were frozen at decision time.
+
+The chart exposes exact consumed-candle identities, trigger/entry zone, targets and invalidation with deterministic annotation identity and source-evidence identity. It also carries message/forecast/proof/signal/bundle provenance and five-family score components. Evidence domains whose exact proof identity exists but whose historical visual payload is not bound are explicitly shown as identity-only rather than reconstructed from current order book, CVD, liquidity or other live data.
+
+Exact-head UID504 run `36178009648` passed focused PIT/digest/future-leak tests, whole-repository regression, real Chromium desktop/mobile proof rendering and Development non-mutation at head `8f0a8d548113048377a44149230f00f94376834b`. Browser acceptance mechanically verified 28 frozen candle identities, four annotation identities, three source identities, full provenance, resolved/identity-only/unavailable domain states and no current-data substitution.
+
+S10 introduces no exchange authority and no real capital. REAL_CAPITAL=0.
+
+The active frontier is S11 Capital Story Integration: finish the canonical forward three-vault paper runtime and publish capital candidate/eligible/hold/blocked/sizing/execution/reduction/exit/accounting/outcome changes into the same immutable Stream with exact Decision Proof lineage.
+
 ## 2026-09-25 — Stream S9 Evidence Window Manager accepted; S10 Frozen Visual Proof becomes active
 
 S9 now lets the user deepen analysis without leaving the one-panel Stream. PR #1285 added a reusable exact-identity evidence-window manager with drag, resize, minimize, close, pin, multiple simultaneous windows, focus/z-order, session-local geometry persistence and detached second-window routing.
