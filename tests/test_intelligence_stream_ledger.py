@@ -1394,3 +1394,157 @@ def test_query_only_story_reads_never_initialize_missing_database(tmp_path) -> N
     with pytest.raises(FileNotFoundError):
         ledger.read_status()
     assert not path.exists()
+
+
+
+def test_stream_story_ledger_persists_exact_continuity_chain(tmp_path) -> None:
+    _, forecast, proof, context, issuance_feed_event = _full_bundle(
+        as_of_ms=11_000_000,
+        issued_at_ms=11_000_100,
+        seed="story-ledger",
+    )
+    activation = build_stream_activation_boundary(activated_at_ms=11_000_000)
+    issuance = project_forecast_issuance(
+        activation,
+        context,
+        forecast,
+        proof,
+        issuance_feed_event,
+    )
+    path = tmp_path / "stream-story-ledger.sqlite3"
+    source_ledger = IntelligenceStreamLedger(path)
+    source_ledger.append_activation(activation)
+    source_ledger.append_issuance_bundle(
+        context,
+        issuance.source_event,
+    )
+    message_ledger = IntelligenceStreamMessageLedger(path)
+    message_ledger.append_message_bundle(
+        issuance.fact_bundle,
+        issuance.message_input,
+    )
+
+    root_observation = build_story_observation(
+        issuance.message_input,
+        issuance.fact_bundle,
+    )
+    root_state = build_story_state(root_observation)
+    root_change = build_change_set(root_state)
+    story_ledger = IntelligenceStreamStoryLedger(path)
+    assert (
+        story_ledger.append_transition(
+            root_observation,
+            root_state,
+            root_change,
+        )
+        is StreamStoryLedgerWriteDisposition.INSERTED
+    )
+    assert (
+        story_ledger.append_transition(
+            root_observation,
+            root_state,
+            root_change,
+        )
+        is StreamStoryLedgerWriteDisposition.UNCHANGED
+    )
+
+    resolution = _resolution(
+        forecast,
+        evaluated_at_ms=11_400_000,
+        seed="story-ledger",
+    )
+    resolution_feed_event = build_live_intelligence_feed_event(
+        proof,
+        forecast,
+        resolution=resolution,
+    )
+    resolved = project_forecast_resolution(
+        activation,
+        context,
+        forecast,
+        proof,
+        resolution_feed_event,
+        resolution,
+        issuance_message=issuance.message_input,
+    )
+    source_ledger.append_source_event(resolved.source_event)
+    message_ledger.append_message_bundle(
+        resolved.fact_bundle,
+        resolved.message_input,
+    )
+    resolved_observation = build_story_observation(
+        resolved.message_input,
+        resolved.fact_bundle,
+        previous_state_identity=root_state.state_identity,
+    )
+    resolved_state = build_story_state(
+        resolved_observation,
+        previous_state=root_state,
+    )
+    resolved_change = build_change_set(
+        resolved_state,
+        previous_state=root_state,
+    )
+
+    assert (
+        story_ledger.append_transition(
+            resolved_observation,
+            resolved_state,
+            resolved_change,
+        )
+        is StreamStoryLedgerWriteDisposition.INSERTED
+    )
+    assert (
+        story_ledger.append_transition(
+            resolved_observation,
+            resolved_state,
+            resolved_change,
+        )
+        is StreamStoryLedgerWriteDisposition.UNCHANGED
+    )
+
+    status = story_ledger.read_status()
+    assert status.observation_count == 2
+    assert status.state_count == 2
+    assert status.change_set_count == 2
+    assert status.story_count == 1
+    assert status.real_capital == 0
+
+    latest = story_ledger.read_latest_state(root_state.story_identity)
+    assert latest is not None
+    assert latest["state_identity"] == resolved_state.state_identity
+    assert latest["previous_state_identity"] == root_state.state_identity
+    assert (
+        latest["previous_message_identity"]
+        == issuance.message_input.message_identity
+    )
+
+    history = story_ledger.read_story_states(root_state.story_identity)
+    assert len(history) == 2
+    assert history[0]["state_identity"] == root_state.state_identity
+    assert history[1]["state_identity"] == resolved_state.state_identity
+
+    stored_change = story_ledger.read_change_set(resolved_state.state_identity)
+    assert stored_change is not None
+    assert stored_change["change_set_identity"] == resolved_change.change_set_identity
+    assert stored_change["changed_codes"] == ["outcome_changed"]
+
+    with (
+        sqlite3.connect(path) as connection,
+        pytest.raises(
+            sqlite3.DatabaseError,
+            match="immutable intelligence stream story ledger",
+        ),
+    ):
+        connection.execute(
+            "UPDATE stream_story_states SET story_identity = 'tampered'"
+        )
+
+
+def test_query_only_story_reads_never_initialize_missing_database(tmp_path) -> None:
+    path = tmp_path / "missing-stream-story.sqlite3"
+    ledger = IntelligenceStreamStoryLedger(path)
+
+    with pytest.raises(FileNotFoundError):
+        ledger.read_status()
+    assert not path.exists()
