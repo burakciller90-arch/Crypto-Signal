@@ -22,7 +22,8 @@ Current program facts recorded by the canonical state documents:
 - **S8 Expandable Message Experience is PASS**;
 - **S9 Evidence Window Manager is PASS**;
 - **S10 Frozen Visual Proof is PASS**;
-- **S11 Capital Story Integration is ACTIVE**;
+- **S11 Capital Story Integration is PASS**;
+- **S12 Search, Filters and History UX is ACTIVE**;
 - the previous M0→M7 multi-screen frontend roadmap is historical/superseded;
 - WC2 frozen evidence accumulation remains active;
 - WC5 broad human <=10-second usability remains `NOT_MEASURED` until actually measured;
