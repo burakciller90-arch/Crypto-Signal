@@ -796,7 +796,7 @@ def create_app(
                         after_cursor=cursor,
                     )
                 except StreamReadModelError as exc:
-                    yield f"event: error\\ndata: {{\"detail\":\"{str(exc)}\"}}\\n\\n"
+                    yield f"event: error\\ndata: {{\"detail\":\"{exc!s}\"}}\\n\\n"
                     return
 
                 if batch.events:
