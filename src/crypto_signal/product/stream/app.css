@@ -397,6 +397,7 @@ select {
   z-index: 1;
   min-height: 0;
   overflow-y: auto;
+  overflow-anchor: none;
   overscroll-behavior: contain;
   scroll-behavior: smooth;
   scrollbar-width: thin;
