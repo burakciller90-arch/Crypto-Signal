@@ -179,9 +179,11 @@ class IntelligenceStreamAnalyticalLedger:
 
             change_row = connection.execute(
                 """
-                SELECT story_identity, current_message_identity
-                FROM stream_story_change_sets
-                WHERE change_set_identity = ?
+                SELECT changes.story_identity, states.current_message_identity
+                FROM stream_story_change_sets AS changes
+                JOIN stream_story_states AS states
+                  ON states.state_identity = changes.current_state_identity
+                WHERE changes.change_set_identity = ?
                 """,
                 (view.change_set_identity,),
             ).fetchone()
