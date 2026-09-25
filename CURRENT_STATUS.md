@@ -32,6 +32,15 @@ When a live forward candidate satisfies every preregistered gate, its vault must
 
 Scientific/economic conclusions are unchanged. This product-direction update does not claim profitability, does not change WC2/WC7 evidence sufficiency, and grants no real-order authority.
 
+A deeper intelligence audit also confirmed that the target five-layer market-intelligence architecture is substantially implemented in backend evidence engines:
+- Liquidity: liquidity/order-book dynamics, liquidation context/sweeps, spoofing and hidden-liquidity **candidates**;
+- Order Flow: CVD/delta, divergence and absorption **candidates**;
+- Derivatives: OI, funding, basis, crowding and OI-price dynamics;
+- Smart Money/On-chain: exchange-flow anomalies, large-transfer clusters, wallet cohorts and Bitcoin-network context;
+- Event Risk: structured event calendar, news evidence and circuit-breaker states.
+
+The M6 Confluence Matrix already carries the requested 20/25/25/15/15 Geometry/Liquidity/OrderFlow/Derivatives/On-chain priors. Its score is explicitly not probability and currently grants no automatic activation authority. M1 must now audit each family across ENGINE -> LIVE_SOURCE -> PERSISTED_EVIDENCE -> PRODUCT_PROJECTION -> UI_SURFACE so accepted backend capability cannot disappear behind a missing adapter.
+
 ### 2026-09-25 14:11 +0300 — CRYPTO SIGNAL FRONTEND M0 CANONICAL / M1 DISCOVERY ACTIVE
 
 This entry records the current frontend-program authority without changing deployed Product truth or any scientific/economic verdict.
