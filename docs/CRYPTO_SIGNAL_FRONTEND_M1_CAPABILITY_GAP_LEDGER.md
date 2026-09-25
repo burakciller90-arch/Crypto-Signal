@@ -4,7 +4,9 @@ Status: **M1 ACTIVE — INITIAL MECHANICALLY VERIFIED BASELINE / NOT YET PASS**
 Observed runtime/code baseline: repository main at `26cc5b05f9b15a0a8569042c534886e4681b4502`  
 Frontend canonicalization merge: `59d2bd51ff4696945cb8a963ed490d6abe3bdfb8` (PR #1254, documentation/authority only)  
 Baseline validity: PR #1254 and follow-up PR #1255 are documentation-only and do not change the runtime/backend code inspected for this matrix.  
-Purpose: map real backend truth to future frontend capability without invention.
+Purpose: map real backend truth to future frontend capability without invention, and prevent accepted backend capability from remaining dormant merely because a product adapter/UI has not yet been written.
+
+Current code re-check: the documentation-only PRs #1254/#1255 did not alter the backend baseline. This M1 pass now additionally audits accepted-but-unsurfaced intelligence/capital capability against current main.
 
 ## 1. Classification
 
@@ -130,6 +132,58 @@ Order-book rows include:
 
 Conclusion: exact order-book data appears to exist in Market Tape storage, but current product API does not yet prove a Decision-Proof-bound render contract for bid/ask levels. Classification: DISCOVER -> likely ADAPT, not automatically REUSE.
 
+## 3.4 Accepted capability is not the same as surfaced capability
+
+The current product layer already exposes an accepted intelligence catalog whose entries explicitly report `runtime_evidence_status = not_exposed_as_live_feed`. The repository also contains accepted intelligence engines and evidence contracts for regime, trend/momentum, mean reversion, breakout/volatility, derivatives, order flow/microstructure, on-chain, sentiment/attention, cross-market context, liquidity/liquidation families and related event-risk evidence.
+
+This means a missing live frontend card is often a **projection gap**, not missing backend science.
+
+Capital has the same distinction:
+- Smart Capital Allocator is accepted for all three Epoch 2 vaults;
+- Core eligibility, Tactical 1m/5m microstructure eligibility, and Opportunity Reserve recovery eligibility are all explicitly modeled;
+- Position Sizing Bridge is canonical-three-vault aware;
+- R22 Transaction Tape and R21 Epoch 2 accounting are vault-aware and already define exact per-vault intent/fill/accounting lineage;
+- R22Epoch2AtomicTape can atomically persist an accepted fill plus all three post-trade vault snapshots and the consolidated Epoch 2 snapshot;
+- the currently accepted forward paper-execution runtime is specifically bound to **CORE** and `paper_autonomy_v2_exact_dual_provider_4h`, and writes its own WC2 execution journal rather than automatically advancing the canonical R22/R21 Epoch 2 transaction/accounting tape;
+- current status therefore may truthfully show successful forward execution engineering while canonical R22 Epoch 2 mutation tables still contain zero real forward bundles.
+
+Therefore the missing product closure is broader than Tactical: **one canonical three-vault forward virtual-capital runtime** must bind each vault's accepted eligibility/sizing policy to deterministic simulated execution and canonical R22/R21 accounting. Existing Core execution logic should be reused, not discarded; Tactical and Opportunity require their own evidence/policy adapters.
+
+## 3.5 Five-layer institutional intelligence coverage
+
+The user's target intelligence architecture maps strongly to existing backend evidence engines:
+
+| Layer | Backend evidence already present | Current truth caveat | Product action |
+|---|---|---|---|
+| Liquidity / Order Book Dynamics | liquidity dynamics, liquidity structure, liquidation heatmap/sweep, spoofing candidates, hidden-liquidity candidates | candidate evidence is not proof of market-maker intent; exact live/frozen projection must be traced | SURFACE_ADAPTER / DISCOVER |
+| Order Flow / Absorption | temporal order flow, CVD, price-CVD divergence candidates, absorption candidates, order-flow patterns | candidate evidence is not a return prediction or proof of iceberg actor | SURFACE_ADAPTER |
+| Derivatives Intelligence | funding, OI, basis, crowding and OI/price dynamics | derivatives context is evidence, not an automatic contrarian trade command | SURFACE_ADAPTER |
+| Smart Money / On-chain | exchange inflow/outflow anomalies, large-transfer clusters, wallet cohorts, Bitcoin network context | cohort performance is not actor identity/future return; flow context is not price direction | SURFACE_ADAPTER / RESEARCH_ONLY depending source |
+| Event-Driven Risk | structured event calendar, news evidence, event-risk states, circuit breaker | event risk is context/veto, not directional price truth | SURFACE_DIRECT / SURFACE_ADAPTER |
+
+The M6 Confluence Matrix already uses the target family priors:
+- Geometry 20%;
+- Liquidity 25%;
+- Order Flow / Absorption 25%;
+- Derivatives 15%;
+- On-chain 15%.
+
+Its canonical semantic is `weighted_support_opposition_points_not_probability`; probability remains `not_calibrated`; Event Risk remains outside the 100-point score; the matrix itself has no automatic production activation authority.
+
+Therefore a frontend that shows only a thin forecast sentence would materially under-surface the accepted backend architecture.
+
+### Capability pipeline audit
+
+For every major engine/family M1 must record five separate stages instead of collapsing them into "data exists / does not exist":
+
+1. ENGINE — analysis/contract implementation exists;
+2. LIVE_SOURCE — current source collection exists and has freshness/quality truth;
+3. PERSISTED_EVIDENCE — exact PIT/frozen evidence is stored;
+4. PRODUCT_PROJECTION — safe read-only adapter/API exists;
+5. UI_SURFACE — the new frontend actually exposes it.
+
+A missing stage 4 or 5 must be classified as an adapter/product gap, not as missing stage 1-3 evidence.
+
 ## 4. Product Gap Ledger
 
 | ID | Desired capability | Current truth | Gap | Class | Required next action |
@@ -154,6 +208,14 @@ Conclusion: exact order-book data appears to exist in Market Tape storage, but c
 | GAP-018 | Broad edge/performance conclusions | performance infrastructure exists | WC2/WC3 sufficiency blockers remain | NOT_AVAILABLE | display INSUFFICIENT_EVIDENCE until canonical readiness |
 | GAP-019 | Real venue execution evidence | WC6 remains external dependency | no real venue evidence | NOT_AVAILABLE | do not represent local simulation as venue truth |
 | GAP-020 | Executable real-money controls | REAL_CAPITAL=0 | no authority and intentionally prohibited | NOT_AVAILABLE | never add real Buy/Sell execution surface |
+| GAP-021 | Full backend-capability surfacing audit | accepted intelligence/capital/research modules exceed current product projections | some accepted capability can be mistaken for "missing data" because no read model/UI exists | ADAPT/DISCOVER | classify every user-relevant accepted capability as SURFACE_DIRECT / SURFACE_ADAPTER / ADVANCED_ONLY / RESEARCH_ONLY / INTERNAL_ONLY / NOT_AVAILABLE |
+| GAP-022 | Rich live Intelligence Feed | Decision Feed is currently forecast-issued/resolved while many accepted engines are not exposed as live feed | machine observations are hidden behind static/catalog/proof layers | ADAPT | build canonical read-only event projections for real liquidity/order-flow/derivatives/event-risk/on-chain/regime/data-quality/capital events; no inferred/fake events |
+| GAP-023 | Canonical three-vault forward virtual-capital runtime | Core forward execution engineering exists; Core/Tactical/Opportunity allocator contracts + three-vault sizing/R22/R21 primitives exist | no single canonical runtime currently advances Epoch 2 R22/R21 for all three vaults; existing WC2 runtime is CORE/4h and journal-isolated | ADAPT | build/accept per-vault forward execution adapters over one canonical Epoch 2 transaction/accounting path; reuse Core rail, add Tactical 1m/5m and Opportunity recovery rails |
+| GAP-024 | Capital events inside Intelligence Feed | Epoch 2/R22/WC2 decisions and fills exist in separate stores/read models | user cannot see WHY virtual capital held/deployed as part of the live story | ADAPT | add exact identity-bound capital timeline projection: ELIGIBLE/HOLD/BLOCK/SIZED/EXECUTED/EXITED/accounting-result events |
+| GAP-025 | Zero-activity diagnosability | HOLD_CASH is valid but prolonged inactivity can be indistinguishable from a broken bridge in the UI | user may see idle capital without knowing whether no setup or subsystem gap caused it | ADAPT/ADD_PRESENTATION | expose decision cadence, candidates scanned, blockers, last eligible event, last executed simulation and data-quality reason without forcing trades |
+| GAP-026 | Five-layer intelligence surfacing | backend implements the target Geometry/Liquidity/OrderFlow/Derivatives/On-chain evidence families plus Event Risk | current live feed/product projections expose only a fraction of this stack | ADAPT/DISCOVER | complete ENGINE -> LIVE_SOURCE -> PERSISTED_EVIDENCE -> PRODUCT_PROJECTION -> UI_SURFACE audit for every family and surface all safe accepted evidence |
+| GAP-027 | Market-maker-style candidate semantics | spoofing/hidden-liquidity/absorption/flow engines exist | naive copy could overclaim manipulation, actor identity or causality | ADD_PRESENTATION | preserve candidate/uncertainty semantics in SIMPLE/PRO copy; never translate candidate into "market maker definitely did X" |
+| GAP-028 | Confluence user presentation | exact 20/25/25/15/15 priors exist | score may be misread as probability or "80 means 80% accuracy" | ADD_PRESENTATION | show support/opposition/coverage/quality/freshness separately; label score as evidence confluence, never probability |
 
 ## 5. Temporal integrity observations
 
@@ -228,10 +290,13 @@ Recommended sequence:
 
 The backend is already substantially capable of supporting a serious product frontend.
 
-The largest gaps are not "build a new trading engine." They are:
+The largest gaps are not "invent a new trading system." They are:
 - frontend information architecture;
 - product-friendly query/read models;
+- comprehensive surfacing of accepted backend capability rather than treating adapter gaps as missing data;
 - broader canonical intelligence timeline;
+- the missing canonical three-vault forward paper-capital runtime that turns already-accepted Core/Tactical/Opportunity eligibility, sizing, simulated execution and R22/R21 accounting primitives into one active Epoch 2 experiment;
+- identity-bound capital events in the live Intelligence Feed;
 - renderable visual-evidence contracts;
 - proof-bound microstructure exposure;
 - stable archive querying;
@@ -262,6 +327,8 @@ Still required before M1 can PASS:
 - completeness audit against every current product API and major evidence surface;
 - remaining product-decision sessions, asked in small groups without re-asking locked decisions;
 - user-approved final information architecture;
-- final check that every planned visual/product feature is backed by REUSE/ADAPT truth or explicitly marked DISCOVER/NOT_AVAILABLE.
+- final check that every planned visual/product feature is backed by REUSE/ADAPT truth or explicitly marked DISCOVER/NOT_AVAILABLE;
+- accepted-backend surfacing audit complete, with no user-relevant accepted capability silently dropped because an adapter is missing;
+- canonical three-vault forward-paper execution contract specified before M2 freezes Capital/Feed data dependencies, including Core reuse, Tactical 1m/5m execution, Opportunity recovery execution, fixture-vs-forward evidence separation, and atomic R22/R21 Epoch 2 accounting.
 
 M2 Application Foundation must **not** freeze routes or final shell information architecture before these items pass.

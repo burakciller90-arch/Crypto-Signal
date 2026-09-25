@@ -49,9 +49,38 @@ The user should be able to answer the highest-priority questions in roughly ten 
 
 Technical depth must remain available on demand through exact evidence and frozen point-in-time proof.
 
+## 1.1 Two signature product pillars
+
+### Pillar A — Live Intelligence Feed
+The primary surface is not a thin signal list. It is an evidence-bound live intelligence timeline that can project accepted market observations, forecast/decision state, contradiction/risk, evidence availability changes, capital decisions and later resolution.
+
+Target card hierarchy:
+- exact event time + asset/timeframe + truthful state badge;
+- one human-readable system sentence generated only from canonical facts;
+- SIMPLE explanation;
+- PRO technical evidence;
+- trigger / target / invalidation when canonically available;
+- exact evidence-status summary;
+- **KANITI GÖR** action into frozen Proof;
+- capital consequence when exact lineage exists.
+
+The feed should feel alive through new real events and restrained micro-motion, never through synthetic chatter.
+
+### Pillar B — Virtual Capital / Smart Capital
+Epoch 2 is a first-class product system:
+- 1,000 USDT canonical paper capital;
+- Core 600;
+- Tactical 300;
+- Opportunity Reserve 100;
+- exact per-vault + consolidated accounting;
+- decision/sizing/fill/cost/outcome lineage;
+- visible explanations for HOLD / BLOCK / ELIGIBLE / EXECUTED states.
+
+Capital is not a decorative balance widget. The product must show what the machine did with simulated capital and why.
+
 Program thesis:
 
-**Understand the decision in seconds. Open the proof in one action. Preserve history immutably.**
+**See what the machine sees. Understand why. See what simulated capital did. Open the proof in one action. Preserve history immutably.**
 
 ## 2. Global execution rules
 
@@ -459,7 +488,90 @@ Whether these are tabs, expanders or another interaction is a user product decis
 ### 6.6 Home / Command Center
 Home is designed and accepted before advancing to other main screens.
 
-### 6.7 Formative 10-second test
+Home must visibly unite the two signature pillars:
+- Intelligence Feed is the dominant workspace;
+- Capital Pulse shows current Epoch 2 consolidated + vault state from real read-only truth;
+- a feed event may show a capital consequence only through exact canonical lineage;
+- the Home surface must never reduce virtual capital to a static "1,000 USDT" card.
+
+### 6.6.1 Institutional Intelligence Stack — mandatory visible architecture
+
+The new Product must visibly exploit the accepted five-family intelligence architecture rather than hiding it behind one forecast sentence.
+
+Canonical families:
+1. **GEOMETRY — 20%**: Price Action / methodology geometry and related structure.
+2. **LIQUIDITY — 25%**: order-book/liquidity structure, liquidation context, sweeps, spoofing/hidden-liquidity candidates where measured.
+3. **ORDER FLOW / ABSORPTION — 25%**: CVD/delta/temporal flow, divergence and absorption candidates.
+4. **DERIVATIVES — 15%**: OI, funding, basis, crowding and OI-price dynamics.
+5. **ON-CHAIN — 15%**: exchange flow, transfer clusters, wallet cohorts and network context where evidence is accepted.
+
+**EVENT RISK** is a separate veto/context layer and is never buried inside the 100-point score.
+
+Feed/Proof/Markets must allow a user to understand:
+- which families support the current thesis;
+- which contradict it;
+- which are neutral;
+- which are unavailable/insufficient/stale/degraded;
+- exact source/freeze identities and timestamps in PROOF.
+
+Confluence is an evidence score, not calibrated probability. The UI must never render "80 confluence" as "80% chance" or "80% accuracy."
+
+Market-maker-style evidence is presented as measured/candidate behavior, not omniscient actor attribution. For example:
+- "spoofing candidate observed" is allowed when canonical evidence supports it;
+- "market maker is manipulating price here" is not allowed without direct canonical proof;
+- "absorption candidate" is evidence;
+- "this means price must fall" is not a valid automatic translation.
+
+### 6.7 Rich Intelligence event projection — mandatory, not deferred
+
+M3 must not stop at FORECAST_ISSUED / FORECAST_RESOLVED.
+
+Before M3 PASS, build/accept the read-only event projection architecture capable of surfacing, where canonical source evidence exists. A flagship feed card should support the following contract when fields exist:
+- exact timestamp;
+- symbol / market / timeframe;
+- live state badge;
+- one fact-bound Turkish system sentence;
+- SIMPLE explanation;
+- PRO technical evidence chips/metrics;
+- trigger / target / invalidation;
+- evidence support / contradiction / insufficiency summary;
+- capital consequence;
+- one-click **KANIT GRAFİĞİNİ & DONDURULMUŞ KANITI GÖR** action.
+
+The frozen proof action should open the exact issuance-time chart/evidence workspace and, where exact snapshot lineage is proven, the frozen order-book/microstructure evidence. No current order book may be substituted for a missing historical snapshot.
+
+Event projection must be capable of surfacing:
+- liquidity / sweep / liquidation state;
+- order-flow / CVD / absorption;
+- derivatives context;
+- regime / trend / volatility;
+- event risk;
+- forecast issued / changed-state / resolved;
+- actionability;
+- capital eligibility / hold / block / sizing / simulated execution / exit;
+- data-quality/system degradation.
+
+M3 acceptance must explicitly audit all five intelligence families plus Event Risk through the ENGINE -> LIVE_SOURCE -> PERSISTED_EVIDENCE -> PRODUCT_PROJECTION -> UI_SURFACE chain.
+
+An event category remains absent only when its canonical source cannot be established. "No product adapter yet" is an implementation gap and must not be represented as "no backend data."
+
+### 6.8 Capital activity visibility
+
+M3 does not wait for the full Capital Center to make capital behavior understandable.
+
+Home/Feed must expose:
+- last capital decision;
+- vault;
+- action/state;
+- exact reason codes translated into human copy;
+- last simulated execution when one exists;
+- blocked/hold reason when no execution exists;
+- candidate/decision cadence health so long inactivity is diagnosable.
+
+No forced trade is allowed merely to produce activity.
+
+
+### 6.9 Formative 10-second test
 Use a fixed scenario dataset and a documented timer protocol.
 
 Measure whether the tester can answer without prior prompting:
@@ -476,6 +588,9 @@ Owner-only testing is recorded as OWNER_ACCEPTANCE, not generalized human-usabil
 - event taxonomy contract PASS;
 - narrative deterministic-fallback PASS;
 - no-narrative-hallucination fixtures PASS;
+- five-layer intelligence surfacing matrix PASS or every missing stage explicitly classified;
+- confluence presentation cannot be confused with calibrated probability;
+- spoofing/hidden-liquidity/absorption candidate copy preserves uncertainty/actor-intent boundaries;
 - Home uses real backend/fixture truth, not invented demo values;
 - formative 10-second test result recorded;
 - user approves Home before M4 becomes the active screen frontier.
@@ -581,8 +696,22 @@ Requirements:
 ### 8.2 THEN <-> NOW
 Archive detail exposes issuance truth beside later outcome without rewriting issuance.
 
-### 8.3 Capital Center
+### 8.3 Capital Center — second signature surface
 Paper Fund is professional but always visibly PAPER.
+
+Capital Center is a mandatory flagship surface, not a secondary portfolio widget.
+
+Required first-class areas:
+- consolidated Epoch 2 state;
+- three independent vault workspaces;
+- current cash / NAV / exposure / PnL / drawdown / costs where canonically measured;
+- open simulated positions;
+- exact paper transaction history;
+- allocation/eligibility decision reasons;
+- sizing state and reason;
+- before -> decision -> fill -> after accounting lineage;
+- link from every eligible trade/fill back to forecast + Decision Proof;
+- clear separation of measured, unavailable and not-yet-measured metrics.
 
 Possible truthful fields when evidence exists:
 - NAV;
@@ -597,6 +726,66 @@ Possible truthful fields when evidence exists:
 - equity;
 - vault state;
 - allocation explanation.
+
+### 8.3.1 Canonical Three-Vault Forward Paper Capital — mandatory backend/product closure
+
+The 1,000 USDT Epoch 2 fund is an experiment only if all three vaults can genuinely participate under their own frozen rules.
+
+Current repository truth:
+- Core has an accepted forward execution rail, currently exact dual-provider 4h and CORE-bound;
+- Tactical has accepted 1m/5m microstructure eligibility;
+- Opportunity Reserve has accepted recovery/dislocation eligibility;
+- Position Sizing Bridge understands all three vaults;
+- R22 Transaction Tape and R21 Epoch 2 accounting are vault-aware;
+- R22 atomic infrastructure can persist one accepted fill together with exact per-vault and consolidated accounting;
+- the current CORE WC2 execution journal does not by itself mean canonical Epoch 2 R22/R21 has advanced.
+
+Required target is therefore one **canonical forward-only three-vault virtual-paper capital runtime** with vault-specific decision adapters:
+
+**Core Rail**
+- reuse accepted conservative/high-evidence Core logic and existing 4h forward-execution engineering where valid;
+- bind accepted Core decisions into canonical Epoch 2 transaction/accounting lineage.
+
+**Tactical Rail**
+- consume canonical 1m/5m liquidity/order-flow/market-quality/CVD/absorption/sweep evidence;
+- when all frozen gates pass, size and execute a simulated trade without a discretionary delay merely because the strategy is short-horizon.
+
+**Opportunity Reserve Rail**
+- consume canonical spread stabilization, liquidity recovery, price-discovery stability and feed-quality recovery evidence;
+- when all recovery/risk/sizing gates pass, execute the simulated opportunity according to policy rather than remaining a decorative 100 USDT reserve.
+
+Common acceptance must prove:
+- forward-only/no historical backfill;
+- exact per-vault evidence lineage;
+- Event Risk and data-quality gates;
+- allocator eligibility;
+- explicit risk/sizing evidence;
+- deterministic fee/spread/slippage/fill policy;
+- BUY / REDUCE / EXIT where the vault policy allows;
+- exact target-vault mutation while non-target vault financial state remains unchanged;
+- atomic R22 + R21 per-vault and consolidated persistence;
+- restart/idempotence/duplicate prevention;
+- HOLD/BLOCK/REJECT outcomes persisted and exposed;
+- no leverage, borrowing, martingale, cross-vault borrowing or real-order authority;
+- REAL_CAPITAL=0.
+
+**No-fear / no-forcing rule:** once a live forward candidate satisfies every preregistered gate, the paper runtime must execute according to policy. There is no extra manual caution veto. Conversely, rules are not weakened merely to manufacture a trade.
+
+**Engineering liveness proof:** each vault must have deterministic acceptance scenarios that prove BUY/REDUCE/EXIT, cost application, accounting, replay and failure handling independent of whether live markets happen to produce a qualifying setup. These scenarios are labelled FIXTURE/SANDBOX and never counted as untouched-forward economic evidence.
+
+### 8.3.2 Capital -> Intelligence timeline
+
+Every canonical capital state transition should have a read-only product event projection:
+- candidate observed;
+- vault eligible;
+- HOLD_CASH;
+- risk blocked;
+- sizing blocked/available;
+- simulated BUY/REDUCE/EXIT;
+- accounting snapshot updated;
+- position closed/outcome available.
+
+This turns capital management into an auditable live story rather than a separate silent database.
 
 ### 8.4 Performance & Trust
 First question: is there enough evidence?
@@ -618,6 +807,12 @@ Interruption is reserved for attention states that justify it.
 
 ### M5 PASS gate
 - archive stable-order/persistence PASS;
+- backend-capability surfacing audit has no unexplained user-relevant omissions;
+- canonical three-vault forward paper-capital runtime accepted, with Core/Tactical/Opportunity each proven executable under its own policy;
+- Capital Center shows exact three-vault state and transaction lineage;
+- Intelligence Feed receives exact capital-event projections;
+- prolonged zero-trade state is diagnosable as genuine HOLD/BLOCK/data issue rather than silent inactivity;
+- deterministic per-vault execution fixtures PASS and are visibly separated from genuine forward economic evidence;
 - THEN/NOW immutability PASS;
 - paper/real authority separation PASS;
 - evidence-class separation PASS;

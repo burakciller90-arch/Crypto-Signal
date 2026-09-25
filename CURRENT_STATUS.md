@@ -9,6 +9,38 @@ REAL_CAPITAL: 0
 
 ## Active v1.1 frontier — read before historical sections
 
+### 2026-09-25 15:02 +0300 — FRONTEND PRODUCT PILLARS CLARIFIED / DORMANT-BACKEND SURFACING AUDIT REQUIRED
+
+User product direction now makes two capabilities first-class for the from-scratch Crypto Signal frontend:
+
+1. **Live Intelligence Feed** must become a rich evidence-bound timeline rather than remaining a forecast-issued/resolved-only presentation.
+2. **Virtual Capital / Smart Capital** must be a flagship active simulation surface, with canonical Epoch 2 and its three vaults visible through exact decision/sizing/execution/accounting lineage.
+
+Mechanical repo review found an important distinction:
+- many accepted backend intelligence capabilities exist but are not currently exposed as live feed events;
+- Smart Capital Allocator has explicit Core, Tactical and Opportunity Reserve eligibility logic;
+- Tactical support consumes 1m/5m microstructure evidence; Opportunity Reserve consumes explicit recovery evidence;
+- Position Sizing Bridge, R22 Transaction Tape and R21 Epoch 2 accounting are already three-vault aware;
+- R22 atomic infrastructure can bind a target-vault fill to exact three-vault + consolidated accounting;
+- the accepted automatic forward paper-execution runtime is currently bound to **CORE** and exact dual-provider **4h** mode, and its WC2 execution journal is distinct from canonical R22/R21 Epoch 2 mutation.
+
+Therefore "frontend has no data" must not be used when the real state is "accepted backend truth exists but product adapter is missing." M1 now requires a complete accepted-capability surfacing audit.
+
+The missing **canonical three-vault forward virtual-paper capital runtime** is elevated to a mandatory product/backend closure. Core's accepted execution engineering must be reused and bound into canonical Epoch 2 accounting; Tactical needs its 1m/5m execution adapter; Opportunity Reserve needs its recovery-event execution adapter. All three must reuse accepted allocator/sizing/tape/accounting primitives, remain forward-only, simulate only, fail closed and preserve REAL_CAPITAL=0.
+
+When a live forward candidate satisfies every preregistered gate, its vault must execute the simulated policy without an extra discretionary caution veto. No gate is weakened merely to manufacture activity. Separate deterministic per-vault fixtures must prove the machinery can BUY/REDUCE/EXIT and account correctly even during long live periods with no qualifying setup; fixture results never count as forward economic evidence.
+
+Scientific/economic conclusions are unchanged. This product-direction update does not claim profitability, does not change WC2/WC7 evidence sufficiency, and grants no real-order authority.
+
+A deeper intelligence audit also confirmed that the target five-layer market-intelligence architecture is substantially implemented in backend evidence engines:
+- Liquidity: liquidity/order-book dynamics, liquidation context/sweeps, spoofing and hidden-liquidity **candidates**;
+- Order Flow: CVD/delta, divergence and absorption **candidates**;
+- Derivatives: OI, funding, basis, crowding and OI-price dynamics;
+- Smart Money/On-chain: exchange-flow anomalies, large-transfer clusters, wallet cohorts and Bitcoin-network context;
+- Event Risk: structured event calendar, news evidence and circuit-breaker states.
+
+The M6 Confluence Matrix already carries the requested 20/25/25/15/15 Geometry/Liquidity/OrderFlow/Derivatives/On-chain priors. Its score is explicitly not probability and currently grants no automatic activation authority. M1 must now audit each family across ENGINE -> LIVE_SOURCE -> PERSISTED_EVIDENCE -> PRODUCT_PROJECTION -> UI_SURFACE so accepted backend capability cannot disappear behind a missing adapter.
+
 ### 2026-09-25 14:11 +0300 — CRYPTO SIGNAL FRONTEND M0 CANONICAL / M1 DISCOVERY ACTIVE
 
 This entry records the current frontend-program authority without changing deployed Product truth or any scientific/economic verdict.
