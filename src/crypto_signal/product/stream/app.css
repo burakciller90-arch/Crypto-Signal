@@ -818,6 +818,9 @@ select {
 .drawer {
   position: fixed;
   z-index: 160;
+  max-height: calc(100vh - var(--topbar) - 30px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
   top: calc(var(--topbar) + 12px);
   right: 18px;
   width: min(390px, calc(100vw - 36px));
@@ -1781,4 +1784,22 @@ body[data-density="compact"] .message-copy {
   .frozen-proof-domain-grid {
     grid-template-columns: 1fr;
   }
+}
+
+.drawer-field-wide {
+  grid-column: 1 / -1;
+}
+
+.message.is-deep-linked {
+  border-color: rgba(10, 168, 207, 0.48);
+  box-shadow:
+    0 0 0 3px rgba(10, 168, 207, 0.08),
+    0 18px 48px rgba(47, 69, 104, 0.12);
+}
+
+.discovery-status {
+  margin: 8px 0 0;
+  color: var(--text-dim);
+  font-size: 9px;
+  line-height: 1.45;
 }
