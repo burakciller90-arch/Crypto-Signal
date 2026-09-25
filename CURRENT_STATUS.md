@@ -38,6 +38,8 @@ Standalone Markets, Capital, Performance, Archive, Learn and System pages are ex
 
 S0 authority freeze is therefore **PASS** after this documentation reconciliation. The active implementation/discovery frontier becomes **S1 — Stream-only backend capability audit**.
 
+Authority supersession and the new Stream V1 roadmap are implemented by documentation-only **PR #1257**.
+
 The deployed GALACTECH V2 interface remains the current production baseline/fallback until a future controlled Stream V1 cutover. No runtime/product code, scientific evidence state, WC2/WC7 verdict or REAL_CAPITAL boundary is changed by this authority update.
 
 ### 2026-09-25 15:02 +0300 — FRONTEND PRODUCT PILLARS CLARIFIED / DORMANT-BACKEND SURFACING AUDIT REQUIRED
