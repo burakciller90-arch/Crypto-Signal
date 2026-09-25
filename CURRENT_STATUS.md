@@ -4,10 +4,51 @@ Updated: 2026-09-25
 Project: Crypto Signal
 Baseline: crypto-signal-full-version-v1.0.0 (immutable)
 Active post-v1.0 program: v1.1 world-class product + market intelligence + Crypto Signal Intelligence Stream V1
-State: WC0_LIVE_PRODUCT_PARITY_ACCEPTED / WC1_24_7_DATA_RELIABILITY_ACCEPTED / WC2_ENGINEERING_FROZEN_EVIDENCE_ACCUMULATION_ACTIVE / WC4_CHAMPION_CHALLENGER_ENGINEERING_ACCEPTED_RESEARCH_ONLY / WC5_ENGINEERING_ACCEPTED_PRODUCT_DEPLOYED_HUMAN_USABILITY_NOT_MEASURED / WC6_SANDBOX_BOUNDARY_ACCEPTED_VENUE_EVIDENCE_EXTERNAL_DEPENDENCY / WC7_CURRENT_FRONTIER_PACKET_ACCEPTED_CURRENT_INSUFFICIENT_EVIDENCE / INTELLIGENCE_STREAM_V1_S0_PASS_S1_PASS_S2_PASS_S3_PASS_S4_PASS_S5_PASS_S6_PASS_S7_PASS_S8_ACTIVE / CONTINUITY_PAUSED_BY_USER
+State: WC0_LIVE_PRODUCT_PARITY_ACCEPTED / WC1_24_7_DATA_RELIABILITY_ACCEPTED / WC2_ENGINEERING_FROZEN_EVIDENCE_ACCUMULATION_ACTIVE / WC4_CHAMPION_CHALLENGER_ENGINEERING_ACCEPTED_RESEARCH_ONLY / WC5_ENGINEERING_ACCEPTED_PRODUCT_DEPLOYED_HUMAN_USABILITY_NOT_MEASURED / WC6_SANDBOX_BOUNDARY_ACCEPTED_VENUE_EVIDENCE_EXTERNAL_DEPENDENCY / WC7_CURRENT_FRONTIER_PACKET_ACCEPTED_CURRENT_INSUFFICIENT_EVIDENCE / INTELLIGENCE_STREAM_V1_S0_PASS_S1_PASS_S2_PASS_S3_PASS_S4_PASS_S5_PASS_S6_PASS_S7_PASS_S8_PASS_S9_ACTIVE / CONTINUITY_PAUSED_BY_USER
 REAL_CAPITAL: 0
 
 ## Active v1.1 frontier — read before historical sections
+
+### 2026-09-25 — STREAM S8 EXPANDABLE MESSAGE EXPERIENCE PASS / S9 EVIDENCE WINDOW MANAGER ACTIVE
+
+S8 is mechanically and visually accepted.
+
+Canonical acceptance record:
+- `docs/CRYPTO_SIGNAL_STREAM_S8_ACCEPTANCE.md`.
+
+Accepted S8 depth:
+- concise collapsed S5 narrative remains the first-read surface;
+- inline expand/collapse in the same message;
+- SIMPLE;
+- PRO / technical;
+- INTELLIGENCE with persisted five-family contribution truth;
+- DECISION;
+- exact trigger/target/invalidation trade geometry;
+- CAPITAL narrative + structured capital consequence;
+- PROOF action bound to exact forecast identity;
+- exact read-only detail projection across persisted Narrative / Analytical View / Fact Bundle / Message Input lineage;
+- digest, identity, schema/engine and cross-lineage fail-closed verification;
+- no historical recompute/current-data substitution;
+- 0px expansion anchor drift on desktop and exact 430px mobile Chromium acceptance.
+
+Merged implementation:
+- PR #1283;
+- main `2518e8fd1fb17fb61b52279ce942fe1be96a8617`.
+
+Exact-head acceptance:
+- head `95ba554e76bbf5147d0126a89e0f27265c447c51`;
+- UID504 run `36173568201` PASS;
+- artifact `stream-s8-visual-snapshot-36173568201`;
+- focused acceptance PASS;
+- whole-repository regression PASS;
+- desktop/mobile rendered expansion PASS;
+- horizontal overflow rejection PASS;
+- expansion anchor drift 0px PASS;
+- Development checkout non-mutation PASS.
+
+The active Stream frontier is now **S9 — Evidence Window Manager**.
+
+S9 must add a reusable evidence-window framework with draggable/resizable windows, minimize/close/pin, multiple simultaneous windows, z-order/focus, session persistence and detach/pop-out while keeping each window tied to the exact message/evidence identity. S10 frozen proof content remains separate.
 
 ### 2026-09-25 — STREAM S7 ONE-PANEL UI SHELL PASS / S8 EXPANDABLE MESSAGE EXPERIENCE ACTIVE
 
