@@ -680,34 +680,51 @@ Possible truthful fields when evidence exists:
 - vault state;
 - allocation explanation.
 
-### 8.3.1 Tactical Paper Execution Rail — mandatory backend/product closure
+### 8.3.1 Canonical Three-Vault Forward Paper Capital — mandatory backend/product closure
 
-The current repository already has:
-- Tactical 1m/5m evidence contract;
-- Smart Capital Allocator Tactical eligibility;
-- vault-aware Position Sizing Bridge;
-- vault-aware R22 Transaction Tape;
-- three-vault R21 Epoch 2 accounting.
+The 1,000 USDT Epoch 2 fund is an experiment only if all three vaults can genuinely participate under their own frozen rules.
 
-The accepted automatic forward execution runtime is currently CORE/4h only.
+Current repository truth:
+- Core has an accepted forward execution rail, currently exact dual-provider 4h and CORE-bound;
+- Tactical has accepted 1m/5m microstructure eligibility;
+- Opportunity Reserve has accepted recovery/dislocation eligibility;
+- Position Sizing Bridge understands all three vaults;
+- R22 Transaction Tape and R21 Epoch 2 accounting are vault-aware;
+- R22 atomic infrastructure can persist one accepted fill together with exact per-vault and consolidated accounting;
+- the current CORE WC2 execution journal does not by itself mean canonical Epoch 2 R22/R21 has advanced.
 
-Therefore a dedicated **Tactical 1m/5m forward-only virtual-paper execution bridge** is a required product closure, not a future nice-to-have.
+Required target is therefore one **canonical forward-only three-vault virtual-paper capital runtime** with vault-specific decision adapters:
 
-Acceptance must prove:
+**Core Rail**
+- reuse accepted conservative/high-evidence Core logic and existing 4h forward-execution engineering where valid;
+- bind accepted Core decisions into canonical Epoch 2 transaction/accounting lineage.
+
+**Tactical Rail**
+- consume canonical 1m/5m liquidity/order-flow/market-quality/CVD/absorption/sweep evidence;
+- when all frozen gates pass, size and execute a simulated trade without a discretionary delay merely because the strategy is short-horizon.
+
+**Opportunity Reserve Rail**
+- consume canonical spread stabilization, liquidity recovery, price-discovery stability and feed-quality recovery evidence;
+- when all recovery/risk/sizing gates pass, execute the simulated opportunity according to policy rather than remaining a decorative 100 USDT reserve.
+
+Common acceptance must prove:
 - forward-only/no historical backfill;
-- exact Tactical evidence lineage;
-- Event Risk gate;
+- exact per-vault evidence lineage;
+- Event Risk and data-quality gates;
 - allocator eligibility;
 - explicit risk/sizing evidence;
-- deterministic simulated cost/fill policy;
-- exact Tactical vault mutation only;
-- R22 + R21 atomic/auditable persistence;
+- deterministic fee/spread/slippage/fill policy;
+- BUY / REDUCE / EXIT where the vault policy allows;
+- exact target-vault mutation while non-target vault financial state remains unchanged;
+- atomic R22 + R21 per-vault and consolidated persistence;
 - restart/idempotence/duplicate prevention;
-- HOLD/BLOCK outcomes persisted/exposed;
-- no leverage, borrowing, martingale or real-order authority;
+- HOLD/BLOCK/REJECT outcomes persisted and exposed;
+- no leverage, borrowing, martingale, cross-vault borrowing or real-order authority;
 - REAL_CAPITAL=0.
 
-The rail must be **capable of trading from its activation day when a canonical eligible setup occurs**. It must not fabricate or force a trade if no setup passes.
+**No-fear / no-forcing rule:** once a live forward candidate satisfies every preregistered gate, the paper runtime must execute according to policy. There is no extra manual caution veto. Conversely, rules are not weakened merely to manufacture a trade.
+
+**Engineering liveness proof:** each vault must have deterministic acceptance scenarios that prove BUY/REDUCE/EXIT, cost application, accounting, replay and failure handling independent of whether live markets happen to produce a qualifying setup. These scenarios are labelled FIXTURE/SANDBOX and never counted as untouched-forward economic evidence.
 
 ### 8.3.2 Capital -> Intelligence timeline
 
@@ -744,10 +761,11 @@ Interruption is reserved for attention states that justify it.
 ### M5 PASS gate
 - archive stable-order/persistence PASS;
 - backend-capability surfacing audit has no unexplained user-relevant omissions;
-- Tactical 1m/5m virtual-paper rail accepted or explicitly blocked by a proven canonical prerequisite rather than deferred;
+- canonical three-vault forward paper-capital runtime accepted, with Core/Tactical/Opportunity each proven executable under its own policy;
 - Capital Center shows exact three-vault state and transaction lineage;
 - Intelligence Feed receives exact capital-event projections;
 - prolonged zero-trade state is diagnosable as genuine HOLD/BLOCK/data issue rather than silent inactivity;
+- deterministic per-vault execution fixtures PASS and are visibly separated from genuine forward economic evidence;
 - THEN/NOW immutability PASS;
 - paper/real authority separation PASS;
 - evidence-class separation PASS;
