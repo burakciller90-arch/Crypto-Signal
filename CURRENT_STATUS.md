@@ -18,13 +18,17 @@ User product direction now makes two capabilities first-class for the from-scrat
 
 Mechanical repo review found an important distinction:
 - many accepted backend intelligence capabilities exist but are not currently exposed as live feed events;
-- Tactical Smart Capital evidence/allocator support exists for 1m/5m;
+- Smart Capital Allocator has explicit Core, Tactical and Opportunity Reserve eligibility logic;
+- Tactical support consumes 1m/5m microstructure evidence; Opportunity Reserve consumes explicit recovery evidence;
 - Position Sizing Bridge, R22 Transaction Tape and R21 Epoch 2 accounting are already three-vault aware;
-- the accepted automatic forward paper-execution runtime is currently bound to **CORE** and exact dual-provider **4h** mode.
+- R22 atomic infrastructure can bind a target-vault fill to exact three-vault + consolidated accounting;
+- the accepted automatic forward paper-execution runtime is currently bound to **CORE** and exact dual-provider **4h** mode, and its WC2 execution journal is distinct from canonical R22/R21 Epoch 2 mutation.
 
 Therefore "frontend has no data" must not be used when the real state is "accepted backend truth exists but product adapter is missing." M1 now requires a complete accepted-capability surfacing audit.
 
-The missing **Tactical 1m/5m forward virtual-paper execution bridge** is elevated to a mandatory product/backend closure. It must reuse accepted allocator/sizing/tape/accounting primitives, remain forward-only, simulate only, fail closed, and preserve REAL_CAPITAL=0. It may trade on its activation day when a real eligible setup appears, but no trade may be forced merely to create activity.
+The missing **canonical three-vault forward virtual-paper capital runtime** is elevated to a mandatory product/backend closure. Core's accepted execution engineering must be reused and bound into canonical Epoch 2 accounting; Tactical needs its 1m/5m execution adapter; Opportunity Reserve needs its recovery-event execution adapter. All three must reuse accepted allocator/sizing/tape/accounting primitives, remain forward-only, simulate only, fail closed and preserve REAL_CAPITAL=0.
+
+When a live forward candidate satisfies every preregistered gate, its vault must execute the simulated policy without an extra discretionary caution veto. No gate is weakened merely to manufacture activity. Separate deterministic per-vault fixtures must prove the machinery can BUY/REDUCE/EXIT and account correctly even during long live periods with no qualifying setup; fixture results never count as forward economic evidence.
 
 Scientific/economic conclusions are unchanged. This product-direction update does not claim profitability, does not change WC2/WC7 evidence sufficiency, and grants no real-order authority.
 
