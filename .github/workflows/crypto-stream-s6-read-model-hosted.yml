@@ -3,7 +3,7 @@ name: Crypto Stream S6 Read Model UID504
 on:
   push:
     branches:
-      - 'stream/s6-*'
+      - 'stream/s6-read-model-*'
   workflow_dispatch:
 
 permissions:
