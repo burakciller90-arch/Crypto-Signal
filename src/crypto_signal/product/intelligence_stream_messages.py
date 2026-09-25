@@ -31,8 +31,10 @@ from crypto_signal.product.intelligence_stream_models import (
 )
 
 STREAM_FACT_BUNDLE_SCHEMA_VERSION = "intelligence-stream-fact-bundle-v1/1"
-STREAM_MESSAGE_INPUT_SCHEMA_VERSION = "intelligence-stream-message-input-v1/1"
+STREAM_MESSAGE_INPUT_SCHEMA_VERSION = "intelligence-stream-message-input-v1/2"
 STREAM_MESSAGE_PROJECTOR_VERSION = "intelligence-stream-message-projector-v1/1"
+STREAM_MATERIALITY_POLICY_VERSION = "intelligence-stream-materiality-policy-v1/1"
+STREAM_PUBLISHED_MESSAGE_SCHEMA_VERSION = "intelligence-stream-published-message-v1/1"
 STREAM_STORY_NAMESPACE_VERSION = "intelligence-stream-story-namespace-v1/1"
 
 
@@ -255,6 +257,7 @@ class StreamMessageInput:
     relations: tuple[StreamMessageRelation, ...]
     supersedes_message_identity: str | None
     search_metadata: StreamSearchMetadata
+    materiality_policy_version: str = STREAM_MATERIALITY_POLICY_VERSION
     projector_version: str = STREAM_MESSAGE_PROJECTOR_VERSION
     analytical_view_version: str | None = None
     narrative_schema_version: str | None = None
@@ -337,6 +340,8 @@ class StreamMessageInput:
             raise ValueError("Stream message/search category mismatch")
         if self.search_metadata.importance is not self.importance:
             raise ValueError("Stream message/search importance mismatch")
+        if self.materiality_policy_version != STREAM_MATERIALITY_POLICY_VERSION:
+            raise ValueError("unsupported Stream materiality policy version")
         if self.projector_version != STREAM_MESSAGE_PROJECTOR_VERSION:
             raise ValueError("unsupported Stream message projector version")
         if any(
@@ -360,6 +365,209 @@ class StreamMessageInput:
         )
         if self.message_identity != canonical_sha256(_message_input_payload(self)):
             raise ValueError("Stream message input identity mismatch")
+
+
+@dataclass(frozen=True, slots=True)
+class StreamPublishedMessage:
+    publication_identity: str
+    message_identity: str
+    source_event_identity: str
+    stream_event_identity: str
+    story_identity: str
+    fact_bundle_identity: str
+    category: StreamCategory
+    subtype: str
+    importance: StreamImportance
+    materiality: StreamMateriality
+    materiality_policy_version: str
+    asset: str
+    symbol: str
+    market: str
+    timeframe: str
+    event_at_ms: int
+    source_as_of_ms: int
+    published_at_ms: int
+    analytical_view_identity: str
+    analytical_view_version: str
+    narrative_plan_identity: str
+    narrative_schema_version: str
+    renderer_version: str
+    collapsed_text: str
+    simple_content: str
+    pro_evidence_reference_identities: tuple[str, ...]
+    capital_reference_identities: tuple[str, ...]
+    relations: tuple[StreamMessageRelation, ...]
+    search_metadata: StreamSearchMetadata
+    original_publication_preserved: bool = True
+    schema_version: str = STREAM_PUBLISHED_MESSAGE_SCHEMA_VERSION
+    engine_version: str = STREAM_ENGINE_VERSION
+    read_only: bool = True
+    production_authority: bool = False
+    real_capital: int = REAL_CAPITAL
+
+    def __post_init__(self) -> None:
+        for value, label in (
+            (self.publication_identity, "Stream publication identity"),
+            (self.message_identity, "Stream publication message identity"),
+            (self.source_event_identity, "Stream publication source-event identity"),
+            (self.stream_event_identity, "Stream publication normalized-event identity"),
+            (self.story_identity, "Stream publication story identity"),
+            (self.fact_bundle_identity, "Stream publication fact-bundle identity"),
+            (self.analytical_view_identity, "Stream publication analytical-view identity"),
+            (self.narrative_plan_identity, "Stream publication narrative-plan identity"),
+        ):
+            _require_sha256(value, label)
+        for value, label in (
+            (self.subtype, "Stream publication subtype"),
+            (self.asset, "Stream publication asset"),
+            (self.symbol, "Stream publication symbol"),
+            (self.market, "Stream publication market"),
+            (self.timeframe, "Stream publication timeframe"),
+            (self.analytical_view_version, "Stream analytical-view version"),
+            (self.narrative_schema_version, "Stream narrative schema version"),
+            (self.renderer_version, "Stream renderer version"),
+            (self.collapsed_text, "Stream collapsed text"),
+            (self.simple_content, "Stream SIMPLE content"),
+        ):
+            if not value.strip():
+                raise ValueError(f"{label} must be non-empty")
+        if not isinstance(self.category, StreamCategory):
+            raise TypeError("Stream publication category must be canonical")
+        if not isinstance(self.importance, StreamImportance):
+            raise TypeError("Stream publication importance must be canonical")
+        if not isinstance(self.materiality, StreamMateriality):
+            raise TypeError("Stream publication materiality must be canonical")
+        if self.materiality_policy_version != STREAM_MATERIALITY_POLICY_VERSION:
+            raise ValueError("unsupported Stream publication materiality policy")
+        if min(self.event_at_ms, self.source_as_of_ms, self.published_at_ms) < 0:
+            raise ValueError("Stream publication timestamps must be non-negative")
+        if self.event_at_ms < self.source_as_of_ms:
+            raise ValueError("Stream publication event cannot predate source-as-of")
+        if self.published_at_ms < self.event_at_ms:
+            raise ValueError("Stream publication cannot predate source event")
+        _require_identity_tuple(
+            self.pro_evidence_reference_identities,
+            "Stream publication PRO evidence reference",
+        )
+        _require_identity_tuple(
+            self.capital_reference_identities,
+            "Stream publication capital reference",
+        )
+        relation_keys = tuple(
+            (item.kind.value, item.target_message_identity, item.reason_code)
+            for item in self.relations
+        )
+        if relation_keys != tuple(sorted(set(relation_keys))):
+            raise ValueError("Stream publication relations must be canonical")
+        if self.search_metadata.asset != self.asset:
+            raise ValueError("Stream publication/search asset mismatch")
+        if self.search_metadata.symbol != self.symbol:
+            raise ValueError("Stream publication/search symbol mismatch")
+        if self.search_metadata.market != self.market:
+            raise ValueError("Stream publication/search market mismatch")
+        if self.search_metadata.timeframe != self.timeframe:
+            raise ValueError("Stream publication/search timeframe mismatch")
+        if self.search_metadata.category is not self.category:
+            raise ValueError("Stream publication/search category mismatch")
+        if self.search_metadata.importance is not self.importance:
+            raise ValueError("Stream publication/search importance mismatch")
+        if not self.original_publication_preserved:
+            raise ValueError("Stream original publication must remain preserved")
+        _require_common_authority(
+            schema_version=self.schema_version,
+            expected_schema=STREAM_PUBLISHED_MESSAGE_SCHEMA_VERSION,
+            engine_version=self.engine_version,
+            read_only=self.read_only,
+            production_authority=self.production_authority,
+            real_capital=self.real_capital,
+        )
+        if self.publication_identity != canonical_sha256(
+            _published_message_payload(self)
+        ):
+            raise ValueError("Stream publication identity mismatch")
+
+
+def build_published_message_record(
+    message: StreamMessageInput,
+    *,
+    published_at_ms: int,
+    analytical_view_identity: str,
+    analytical_view_version: str,
+    narrative_plan_identity: str,
+    narrative_schema_version: str,
+    renderer_version: str,
+    collapsed_text: str,
+    simple_content: str,
+) -> StreamPublishedMessage:
+    if message.ready_for_publication:
+        raise ValueError("S2 message input must remain pre-publication")
+    payload = {
+        "analytical_view_identity": analytical_view_identity,
+        "analytical_view_version": analytical_view_version,
+        "asset": message.asset,
+        "capital_reference_identities": message.capital_reference_identities,
+        "category": message.category,
+        "collapsed_text": collapsed_text,
+        "engine_version": STREAM_ENGINE_VERSION,
+        "event_at_ms": message.event_at_ms,
+        "fact_bundle_identity": message.fact_bundle_identity,
+        "importance": message.importance,
+        "market": message.market,
+        "materiality": message.materiality,
+        "materiality_policy_version": message.materiality_policy_version,
+        "message_identity": message.message_identity,
+        "narrative_plan_identity": narrative_plan_identity,
+        "narrative_schema_version": narrative_schema_version,
+        "original_publication_preserved": True,
+        "pro_evidence_reference_identities": message.evidence_reference_identities,
+        "production_authority": False,
+        "published_at_ms": published_at_ms,
+        "read_only": True,
+        "real_capital": REAL_CAPITAL,
+        "relations": message.relations,
+        "renderer_version": renderer_version,
+        "schema_version": STREAM_PUBLISHED_MESSAGE_SCHEMA_VERSION,
+        "search_metadata": message.search_metadata,
+        "simple_content": simple_content,
+        "source_as_of_ms": message.source_as_of_ms,
+        "source_event_identity": message.source_event_identity,
+        "story_identity": message.story_identity,
+        "stream_event_identity": message.stream_event_identity,
+        "subtype": message.subtype,
+        "symbol": message.symbol,
+        "timeframe": message.timeframe,
+    }
+    return StreamPublishedMessage(
+        publication_identity=canonical_sha256(payload),
+        message_identity=message.message_identity,
+        source_event_identity=message.source_event_identity,
+        stream_event_identity=message.stream_event_identity,
+        story_identity=message.story_identity,
+        fact_bundle_identity=message.fact_bundle_identity,
+        category=message.category,
+        subtype=message.subtype,
+        importance=message.importance,
+        materiality=message.materiality,
+        materiality_policy_version=message.materiality_policy_version,
+        asset=message.asset,
+        symbol=message.symbol,
+        market=message.market,
+        timeframe=message.timeframe,
+        event_at_ms=message.event_at_ms,
+        source_as_of_ms=message.source_as_of_ms,
+        published_at_ms=published_at_ms,
+        analytical_view_identity=analytical_view_identity,
+        analytical_view_version=analytical_view_version,
+        narrative_plan_identity=narrative_plan_identity,
+        narrative_schema_version=narrative_schema_version,
+        renderer_version=renderer_version,
+        collapsed_text=collapsed_text,
+        simple_content=simple_content,
+        pro_evidence_reference_identities=message.evidence_reference_identities,
+        capital_reference_identities=message.capital_reference_identities,
+        relations=message.relations,
+        search_metadata=message.search_metadata,
+    )
 
 
 def build_forecast_story_identity(forecast_identity: str) -> str:
@@ -641,6 +849,7 @@ def build_stream_message_input(
         "importance": source_event.importance,
         "market": fact_bundle.market,
         "materiality": materiality,
+        "materiality_policy_version": STREAM_MATERIALITY_POLICY_VERSION,
         "narrative_schema_version": None,
         "production_authority": False,
         "projector_version": STREAM_MESSAGE_PROJECTOR_VERSION,
@@ -684,6 +893,7 @@ def build_stream_message_input(
         relations=ordered_relations,
         supersedes_message_identity=supersedes_message_identity,
         search_metadata=search,
+        materiality_policy_version=STREAM_MATERIALITY_POLICY_VERSION,
     )
 
 
@@ -763,6 +973,7 @@ def _message_input_payload(value: StreamMessageInput) -> dict[str, object]:
         "importance": value.importance,
         "market": value.market,
         "materiality": value.materiality,
+        "materiality_policy_version": value.materiality_policy_version,
         "narrative_schema_version": value.narrative_schema_version,
         "production_authority": value.production_authority,
         "projector_version": value.projector_version,
@@ -781,6 +992,53 @@ def _message_input_payload(value: StreamMessageInput) -> dict[str, object]:
         "stream_event_identity": value.stream_event_identity,
         "subtype": value.subtype,
         "supersedes_message_identity": value.supersedes_message_identity,
+        "symbol": value.symbol,
+        "timeframe": value.timeframe,
+    }
+
+
+def published_message_payload(
+    value: StreamPublishedMessage,
+) -> dict[str, object]:
+    return _published_message_payload(value)
+
+
+def _published_message_payload(
+    value: StreamPublishedMessage,
+) -> dict[str, object]:
+    return {
+        "analytical_view_identity": value.analytical_view_identity,
+        "analytical_view_version": value.analytical_view_version,
+        "asset": value.asset,
+        "capital_reference_identities": value.capital_reference_identities,
+        "category": value.category,
+        "collapsed_text": value.collapsed_text,
+        "engine_version": value.engine_version,
+        "event_at_ms": value.event_at_ms,
+        "fact_bundle_identity": value.fact_bundle_identity,
+        "importance": value.importance,
+        "market": value.market,
+        "materiality": value.materiality,
+        "materiality_policy_version": value.materiality_policy_version,
+        "message_identity": value.message_identity,
+        "narrative_plan_identity": value.narrative_plan_identity,
+        "narrative_schema_version": value.narrative_schema_version,
+        "original_publication_preserved": value.original_publication_preserved,
+        "pro_evidence_reference_identities": value.pro_evidence_reference_identities,
+        "production_authority": value.production_authority,
+        "published_at_ms": value.published_at_ms,
+        "read_only": value.read_only,
+        "real_capital": value.real_capital,
+        "relations": value.relations,
+        "renderer_version": value.renderer_version,
+        "schema_version": value.schema_version,
+        "search_metadata": value.search_metadata,
+        "simple_content": value.simple_content,
+        "source_as_of_ms": value.source_as_of_ms,
+        "source_event_identity": value.source_event_identity,
+        "story_identity": value.story_identity,
+        "stream_event_identity": value.stream_event_identity,
+        "subtype": value.subtype,
         "symbol": value.symbol,
         "timeframe": value.timeframe,
     }
