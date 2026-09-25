@@ -1,17 +1,17 @@
 # Stream S2 exact-head acceptance gate
-name: Crypto Stream S2 Event Context UID504
+name: Crypto Stream S2 Canonical Backbone UID504
 
 on:
   push:
     branches:
-      - stream/s2-event-context-ledger-slice1
+      - 'stream/s2-*'
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: stream-s2-event-context-${{ github.ref }}
+  group: stream-s2-canonical-backbone-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -31,7 +31,7 @@ jobs:
           set -euo pipefail
           DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
           BASE_PY="$DEV/.venv/bin/python"
-          TEST_VENV="$RUNNER_TEMP/stream-s2-event-context-venv"
+          TEST_VENV="$RUNNER_TEMP/stream-s2-canonical-backbone-venv"
           test "$(id -u)" = "504"
           test -x "$BASE_PY"
           test -z "$(git -C "$DEV" status --porcelain)"
@@ -48,9 +48,9 @@ jobs:
       - name: Focused Stream S2 acceptance
         run: |
           "$TEST_PY" -m pytest -q             tests/test_intelligence_stream_ledger.py             tests/test_confluence_matrix_v2.py             tests/test_decision_ledger.py
-          "$TEST_PY" -m ruff check             src/crypto_signal/product/intelligence_stream_models.py             src/crypto_signal/product/intelligence_stream_ledger.py             tests/test_intelligence_stream_ledger.py
-          "$TEST_PY" -m mypy             src/crypto_signal/product/intelligence_stream_models.py             src/crypto_signal/product/intelligence_stream_ledger.py
-          echo "STREAM_S2_EVENT_CONTEXT_FOCUSED_PASS=YES"
+          "$TEST_PY" -m ruff check             src/crypto_signal/product/intelligence_stream_models.py             src/crypto_signal/product/intelligence_stream_ledger.py             src/crypto_signal/product/intelligence_stream_messages.py             src/crypto_signal/product/intelligence_stream_message_ledger.py             tests/test_intelligence_stream_ledger.py
+          "$TEST_PY" -m mypy             src/crypto_signal/product/intelligence_stream_models.py             src/crypto_signal/product/intelligence_stream_ledger.py             src/crypto_signal/product/intelligence_stream_messages.py             src/crypto_signal/product/intelligence_stream_message_ledger.py
+          echo "STREAM_S2_CANONICAL_BACKBONE_FOCUSED_PASS=YES"
 
       - name: Whole-repository regression
         run: |
@@ -61,7 +61,7 @@ jobs:
           node --check src/crypto_signal/product/static/app.js
           node --check src/crypto_signal/product/galactech/app.js
           node tests/js/test_product_freshness.js
-          echo "STREAM_S2_EVENT_CONTEXT_FULL_PASS=YES"
+          echo "STREAM_S2_CANONICAL_BACKBONE_FULL_PASS=YES"
           echo "REAL_CAPITAL=0"
 
       - name: Prove Development checkout remained untouched
