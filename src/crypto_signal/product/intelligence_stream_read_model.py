@@ -1050,6 +1050,113 @@ class IntelligenceStreamReadModel:
             for row in rows
         )
 
+    def _read_capital_lifecycle_messages(
+        self,
+        connection: sqlite3.Connection,
+        query: StreamMessageQuery,
+    ) -> tuple[dict[str, Any], ...]:
+        if not self._table_exists(
+            connection,
+            "stream_capital_lifecycle_messages",
+        ):
+            return ()
+        if query.effective_stance is not None or query.evidence_domain is not None:
+            return ()
+        if query.category is not None and query.category != "capital":
+            return ()
+        if query.importance is not None and query.importance != "important":
+            return ()
+        if query.source_kind is not None and query.source_kind != "deterministic":
+            return ()
+
+        clauses = ["1 = 1"]
+        params: list[object] = []
+        if query.before is not None:
+            clauses.append(
+                "(event_at_ms < ? OR "
+                "(event_at_ms = ? AND narrative_identity < ?))"
+            )
+            params.extend(
+                (
+                    query.before.event_at_ms,
+                    query.before.event_at_ms,
+                    query.before.narrative_identity,
+                )
+            )
+        if query.after is not None:
+            clauses.append(
+                "(event_at_ms > ? OR "
+                "(event_at_ms = ? AND narrative_identity > ?))"
+            )
+            params.extend(
+                (
+                    query.after.event_at_ms,
+                    query.after.event_at_ms,
+                    query.after.narrative_identity,
+                )
+            )
+        if query.story_identity is not None:
+            clauses.append("story_identity = ?")
+            params.append(query.story_identity)
+        if query.symbol is not None:
+            clauses.append("symbol = ?")
+            params.append(query.symbol)
+        if query.timeframe is not None:
+            clauses.append("timeframe = ?")
+            params.append(query.timeframe)
+        if query.from_ms is not None:
+            clauses.append("event_at_ms >= ?")
+            params.append(query.from_ms)
+        if query.to_ms is not None:
+            clauses.append("event_at_ms <= ?")
+            params.append(query.to_ms)
+        if query.text is not None:
+            needle = f"%{_escape_like(query.text.casefold())}%"
+            text_fields = (
+                "$.text.collapsed_text",
+                "$.text.simple_text",
+                "$.text.technical_text",
+                "$.text.intelligence_text",
+                "$.text.decision_text",
+                "$.text.capital_text",
+            )
+            clauses.append(
+                "("
+                + " OR ".join(
+                    "lower(json_extract(payload_json, ?)) LIKE ? ESCAPE '\\'"
+                    for _ in text_fields
+                )
+                + ")"
+            )
+            for field in text_fields:
+                params.extend((field, needle))
+
+        ascending = query.after is not None
+        order_sql = (
+            "ORDER BY event_at_ms ASC, narrative_identity ASC"
+            if ascending
+            else "ORDER BY event_at_ms DESC, narrative_identity DESC"
+        )
+        rows = connection.execute(
+            f"""
+            SELECT narrative_identity, event_at_ms, payload_json, payload_sha256
+            FROM stream_capital_lifecycle_messages
+            WHERE {" AND ".join(clauses)}
+            {order_sql}
+            LIMIT ?
+            """,
+            (*params, query.limit + 1),
+        ).fetchall()
+        return tuple(
+            self._verified_capital_lifecycle_record(
+                narrative_identity=str(row[0]),
+                event_at_ms=int(str(row[1])),
+                payload_json=str(row[2]),
+                expected_digest=str(row[3]),
+            )
+            for row in rows
+        )
+
     @staticmethod
     def _table_exists(connection: sqlite3.Connection, table: str) -> bool:
         return (
@@ -1288,6 +1395,62 @@ class IntelligenceStreamReadModel:
         if raw.get("real_capital") != REAL_CAPITAL:
             raise StreamReadModelError(
                 "Stream read capital-decision REAL_CAPITAL mismatch"
+            )
+        return raw
+
+    @staticmethod
+    def _verified_capital_lifecycle_record(
+        *,
+        narrative_identity: str,
+        event_at_ms: int,
+        payload_json: str,
+        expected_digest: str,
+    ) -> dict[str, Any]:
+        if sha256_text(payload_json) != expected_digest:
+            raise StreamReadModelError(
+                "Stream read capital-lifecycle payload digest mismatch"
+            )
+        raw = json.loads(payload_json)
+        if not isinstance(raw, dict):
+            raise StreamReadModelError(
+                "Stream read capital-lifecycle payload must decode to object"
+            )
+        if raw.get("narrative_identity") != narrative_identity:
+            raise StreamReadModelError(
+                "Stream read capital-lifecycle identity column mismatch"
+            )
+        if raw.get("event_at_ms") != event_at_ms:
+            raise StreamReadModelError(
+                "Stream read capital-lifecycle event-time column mismatch"
+            )
+        identity_payload = dict(raw)
+        identity_payload.pop("narrative_identity", None)
+        if canonical_sha256(identity_payload) != narrative_identity:
+            raise StreamReadModelError(
+                "Stream read capital-lifecycle canonical identity mismatch"
+            )
+        if (
+            raw.get("schema_version")
+            != STREAM_CAPITAL_LIFECYCLE_MESSAGE_SCHEMA_VERSION
+        ):
+            raise StreamReadModelError(
+                "Stream read capital-lifecycle schema mismatch"
+            )
+        if raw.get("engine_version") != STREAM_ENGINE_VERSION:
+            raise StreamReadModelError(
+                "Stream read capital-lifecycle engine mismatch"
+            )
+        if raw.get("read_only") is not True:
+            raise StreamReadModelError(
+                "Stream read capital-lifecycle read-only mismatch"
+            )
+        if raw.get("production_authority") is not False:
+            raise StreamReadModelError(
+                "Stream read capital-lifecycle production-authority mismatch"
+            )
+        if raw.get("real_capital") != REAL_CAPITAL:
+            raise StreamReadModelError(
+                "Stream read capital-lifecycle REAL_CAPITAL mismatch"
             )
         return raw
 
