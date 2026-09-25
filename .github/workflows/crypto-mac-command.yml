@@ -1851,9 +1851,23 @@ jobs:
             local count=""
 
             dashboard_pids() {
-              ps -axo pid=,command= \
-                | awk -v needle="$PRODUCT/ops/run_dashboard.py" \
-                    'index($0, needle) > 0 {print $1}'
+              DASHBOARD_NEEDLE="$PRODUCT/ops/run_dashboard.py" /usr/bin/python3 - <<'PY'
+              import os
+              import subprocess
+
+              needle = os.environ["DASHBOARD_NEEDLE"]
+              output = subprocess.check_output(
+                  ["ps", "-axo", "pid=,args="],
+                  text=True,
+              )
+              for raw in output.splitlines():
+                  parts = raw.strip().split(maxsplit=1)
+                  if len(parts) != 2:
+                      continue
+                  pid, args = parts
+                  if needle in args and pid.isdigit():
+                      print(pid)
+              PY
             }
 
             terminate_old_dashboards() {
