@@ -1,5 +1,19 @@
 # PROJECT CHRONICLE
 
+## 2026-09-25 — Stream S11 Capital Story Integration accepted; S12 Search/Filters/History becomes active
+
+S11 closes the canonical forward paper-capital story without introducing a separate Capital screen or any real-money authority. PR #1290 adds an exact three-vault Epoch 2 paper runtime that reuses Smart Capital Allocator, Position Sizing, R22 transaction tape and R21 accounting truth rather than inventing a parallel fund system.
+
+Core, Tactical and Opportunity now require exact allocator eligibility lineage before canonical paper execution. Tactical preserves its short-horizon 1m/5m microstructure requirement; Opportunity preserves recovery evidence; HOLD/BLOCK decisions are persisted immutably; fixed-fractional sizing may be promoted into canonical paper notional while Kelly remains research-only. Simulated BUY/reduction/exit actions retain Decision Proof/evidence lineage and restart-safe R22 predecessor chains. Epoch 1 history remains separate from current Epoch 2 truth.
+
+The same Intelligence Stream now carries ten first-class capital lifecycle messages: candidate, eligible, hold, blocked, sized, executed, reduced, exited, accounting updated and outcome. No synthetic five-family analysis is invented for capital-only records; expanded capital detail shows exact vault, sizing/fill/accounting consequence and immutable lineage.
+
+Exact-head UID504 run `36197140443` passed focused S11 tests, whole-repository regression, real Chromium desktop/mobile lifecycle rendering and Development non-mutation at head `4575ab564871c3a333bac4614cd483b6e8295217`. The browser probe verified all ten lifecycle states, all three vaults, exact message identities, outcome/PnL detail, lineage display, Stream continuity and exact 430px no-overflow. Artifact: `stream-s11-visual-snapshot-36197140443`.
+
+S11 introduces no exchange order/credential authority. REAL_CAPITAL=0.
+
+The active frontier is S12 Search, Filters and History UX. S12 should adapt the already-accepted S6 backend query/cursor machinery and S7 discovery drawer, closing the missing discovery controls and exact-message deep-link without creating permanent navigation sections.
+
 ## 2026-09-25 — Stream S10 Frozen Visual Proof accepted; S11 Capital Story Integration becomes active
 
 S10 now provides point-in-time “show me” evidence without substituting current market data into historical decisions. PR #1288 added a read-only visual-proof projection that starts from the exact Stream message, verifies its persisted Decision Proof, resolves the linked immutable signal freeze, verifies the decision-freeze bundle digest and then renders only the candles and geometry that were frozen at decision time.
