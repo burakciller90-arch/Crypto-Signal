@@ -62,15 +62,17 @@ def resolve_stream_resume_cursor(
     On a first connection with no explicit cursor, the transport tails from the
     latest immutable narrative instead of replaying historical messages.
     """
-    if after is not None:
-        decode_stream_cursor(after)
-    if last_event_id is not None:
-        decode_stream_cursor(last_event_id)
-    if after is not None and last_event_id is not None and after != last_event_id:
-        raise StreamReadModelError(
-            "Stream SSE after cursor conflicts with Last-Event-ID"
-        )
-    explicit = after if after is not None else last_event_id
+    after_cursor = None if after is None else decode_stream_cursor(after)
+    last_cursor = (
+        None if last_event_id is None else decode_stream_cursor(last_event_id)
+    )
+    explicit = after
+    if last_cursor is not None and (
+        after_cursor is None
+        or (last_cursor.event_at_ms, last_cursor.narrative_identity)
+        >= (after_cursor.event_at_ms, after_cursor.narrative_identity)
+    ):
+        explicit = last_event_id
     if explicit is not None:
         return explicit
     latest = reader.latest_cursor()
