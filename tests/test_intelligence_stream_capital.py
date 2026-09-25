@@ -20,9 +20,9 @@ from crypto_signal.paper.canonical_capital_runtime import (
 )
 from crypto_signal.paper.canonical_sizing import promote_fixed_fractional_sizing
 from crypto_signal.paper.canonical_vault_eligibility import promote_vault_eligibility
+from crypto_signal.paper.epoch2_accounting import Epoch2CanonicalLedger
 from crypto_signal.paper.epochs import PaperVaultId
 from crypto_signal.paper.execution import build_frozen_execution_snapshot
-from crypto_signal.paper.epoch2_accounting import Epoch2CanonicalLedger
 from crypto_signal.paper.models import PaperAction, PaperSymbol
 from crypto_signal.paper.position_sizing_intelligence import (
     build_position_sizing_risk_context,
