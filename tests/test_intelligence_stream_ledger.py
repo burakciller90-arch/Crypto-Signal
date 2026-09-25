@@ -72,6 +72,15 @@ from crypto_signal.product.intelligence_stream_models import (
     build_stream_activation_boundary,
     build_stream_decision_context,
 )
+from crypto_signal.product.intelligence_stream_narrative import (
+    StreamNarrativeSourceKind,
+    build_stream_narrative_plan,
+    render_stream_narrative,
+)
+from crypto_signal.product.intelligence_stream_narrative_ledger import (
+    IntelligenceStreamNarrativeLedger,
+    StreamNarrativeLedgerWriteDisposition,
+)
 from crypto_signal.product.intelligence_stream_policy import (
     STREAM_MATERIALITY_POLICY_VERSION,
     StreamProjectorImplementationState,
@@ -1972,6 +1981,437 @@ def test_stream_analytical_ledger_rows_are_physically_immutable(tmp_path) -> Non
 def test_query_only_analytical_reads_never_initialize_missing_database(tmp_path) -> None:
     path = tmp_path / "missing-stream-analytical.sqlite3"
     ledger = IntelligenceStreamAnalyticalLedger(path)
+
+    with pytest.raises(FileNotFoundError):
+        ledger.read_status()
+    assert not path.exists()
+
+
+class _ExplodingNarrativeRewriter:
+    def rewrite(self, request):
+        raise RuntimeError("local model unavailable")
+
+
+class _InventingNarrativeRewriter:
+    def rewrite(self, request):
+        return replace(
+            request.deterministic_text,
+            collapsed_text=(
+                request.deterministic_text.collapsed_text
+                + " Ek hedef $999,999."
+            ),
+        )
+
+
+class _SafeNarrativeRewriter:
+    def rewrite(self, request):
+        return replace(
+            request.deterministic_text,
+            collapsed_text=(
+                request.deterministic_text.collapsed_text.replace(
+                    "En belirgin destek",
+                    "Kanıt tarafında en belirgin destek",
+                    1,
+                )
+            ),
+        )
+
+
+class _RepeatingNarrativeRewriter:
+    def rewrite(self, request):
+        return request.deterministic_text
+
+
+def _persist_narrative_fixture(
+    tmp_path,
+    *,
+    seed: str,
+    as_of_ms: int,
+    issued_at_ms: int,
+):
+    _, forecast, proof, context, feed_event = _full_bundle(
+        as_of_ms=as_of_ms,
+        issued_at_ms=issued_at_ms,
+        seed=seed,
+    )
+    activation = build_stream_activation_boundary(activated_at_ms=as_of_ms)
+    issuance = project_forecast_issuance(
+        activation,
+        context,
+        forecast,
+        proof,
+        feed_event,
+    )
+    path = tmp_path / f"{seed}.sqlite3"
+    source_ledger = IntelligenceStreamLedger(path)
+    source_ledger.append_activation(activation)
+    source_ledger.append_issuance_bundle(context, issuance.source_event)
+    message_ledger = IntelligenceStreamMessageLedger(path)
+    message_ledger.append_message_bundle(
+        issuance.fact_bundle,
+        issuance.message_input,
+    )
+    observation = build_story_observation(
+        issuance.message_input,
+        issuance.fact_bundle,
+    )
+    state = build_story_state(observation)
+    change = build_change_set(state)
+    story_ledger = IntelligenceStreamStoryLedger(path)
+    story_ledger.append_transition(observation, state, change)
+    view = compose_stream_analytical_view(
+        build_stream_analytical_policy(),
+        issuance.fact_bundle,
+        state,
+        change,
+        message=issuance.message_input,
+    )
+    analytical_ledger = IntelligenceStreamAnalyticalLedger(path)
+    analytical_ledger.append_view(view)
+    plan = build_stream_narrative_plan(
+        view,
+        issuance.fact_bundle,
+        change,
+    )
+    narrative = render_stream_narrative(
+        plan,
+        view,
+        issuance.fact_bundle,
+        change,
+    )
+    return (
+        path,
+        activation,
+        forecast,
+        proof,
+        context,
+        issuance,
+        state,
+        view,
+        plan,
+        narrative,
+    )
+
+
+def test_stream_narrative_is_deterministic_turkish_and_fact_safe(tmp_path) -> None:
+    (
+        _,
+        _,
+        _,
+        _,
+        _,
+        issuance,
+        _,
+        view,
+        plan,
+        first,
+    ) = _persist_narrative_fixture(
+        tmp_path,
+        seed="narrative-deterministic",
+        as_of_ms=18_000_000,
+        issued_at_ms=18_000_100,
+    )
+    second_plan = build_stream_narrative_plan(
+        view,
+        issuance.fact_bundle,
+        build_change_set(
+            build_story_state(
+                build_story_observation(
+                    issuance.message_input,
+                    issuance.fact_bundle,
+                )
+            )
+        ),
+    )
+    second = render_stream_narrative(
+        second_plan,
+        view,
+        issuance.fact_bundle,
+        build_change_set(
+            build_story_state(
+                build_story_observation(
+                    issuance.message_input,
+                    issuance.fact_bundle,
+                )
+            )
+        ),
+    )
+
+    assert second_plan == plan
+    assert second == first
+    assert first.source_kind is StreamNarrativeSourceKind.DETERMINISTIC
+    assert first.validation.valid is True
+    assert first.validation.violation_codes == ()
+    assert "BTCUSDT" in first.text.collapsed_text
+    assert "4h" in first.text.collapsed_text
+    assert "Likidite" in first.text.collapsed_text
+    assert "Emir akışı" in first.text.collapsed_text
+    assert "kalibre edilmiş bir olasılık yüzdesi değil" in first.text.collapsed_text
+    assert "$" in first.text.decision_text
+    assert len(first.text.collapsed_text) <= 420
+    assert first.original_text_preserved is True
+
+
+def test_stream_narrative_rewriter_failure_never_stops_stream(tmp_path) -> None:
+    (
+        _,
+        _,
+        _,
+        _,
+        _,
+        issuance,
+        state,
+        view,
+        plan,
+        _,
+    ) = _persist_narrative_fixture(
+        tmp_path,
+        seed="narrative-rewriter-failure",
+        as_of_ms=18_500_000,
+        issued_at_ms=18_500_100,
+    )
+    change = build_change_set(state)
+    narrative = render_stream_narrative(
+        plan,
+        view,
+        issuance.fact_bundle,
+        change,
+        rewriter=_ExplodingNarrativeRewriter(),
+    )
+    assert narrative.source_kind is StreamNarrativeSourceKind.DETERMINISTIC_FALLBACK
+    assert narrative.fallback_reason_codes == ("rewriter_exception",)
+    assert narrative.validation.valid is True
+
+
+def test_stream_narrative_rejects_invented_numeric_rewrite(tmp_path) -> None:
+    (
+        _,
+        _,
+        _,
+        _,
+        _,
+        issuance,
+        state,
+        view,
+        plan,
+        deterministic,
+    ) = _persist_narrative_fixture(
+        tmp_path,
+        seed="narrative-invented-number",
+        as_of_ms=19_000_000,
+        issued_at_ms=19_000_100,
+    )
+    change = build_change_set(state)
+    narrative = render_stream_narrative(
+        plan,
+        view,
+        issuance.fact_bundle,
+        change,
+        rewriter=_InventingNarrativeRewriter(),
+    )
+    assert narrative.source_kind is StreamNarrativeSourceKind.DETERMINISTIC_FALLBACK
+    assert narrative.fallback_reason_codes == ("rewriter_validation_rejected",)
+    assert narrative.text == deterministic.text
+    assert "$999,999" not in narrative.text.collapsed_text
+
+
+def test_stream_narrative_accepts_safe_rewrite_and_rejects_repetition(tmp_path) -> None:
+    (
+        _,
+        _,
+        _,
+        _,
+        _,
+        issuance,
+        state,
+        view,
+        plan,
+        deterministic,
+    ) = _persist_narrative_fixture(
+        tmp_path,
+        seed="narrative-safe-rewrite",
+        as_of_ms=19_500_000,
+        issued_at_ms=19_500_100,
+    )
+    change = build_change_set(state)
+    safe = render_stream_narrative(
+        plan,
+        view,
+        issuance.fact_bundle,
+        change,
+        rewriter=_SafeNarrativeRewriter(),
+    )
+    assert safe.source_kind is StreamNarrativeSourceKind.LOCAL_REWRITE
+    assert safe.validation.valid is True
+
+    repeated = render_stream_narrative(
+        plan,
+        view,
+        issuance.fact_bundle,
+        change,
+        rewriter=_RepeatingNarrativeRewriter(),
+        recent_collapsed_texts=(deterministic.text.collapsed_text,),
+    )
+    assert repeated.source_kind is StreamNarrativeSourceKind.DETERMINISTIC_FALLBACK
+    assert repeated.fallback_reason_codes == ("rewriter_similarity_rejected",)
+
+
+def test_stream_narrative_story_outcome_references_previous_expectation(tmp_path) -> None:
+    (
+        path,
+        activation,
+        forecast,
+        proof,
+        context,
+        issuance,
+        root_state,
+        _,
+        root_plan,
+        root_narrative,
+    ) = _persist_narrative_fixture(
+        tmp_path,
+        seed="narrative-outcome",
+        as_of_ms=20_000_000,
+        issued_at_ms=20_000_100,
+    )
+    narrative_ledger = IntelligenceStreamNarrativeLedger(path)
+    assert (
+        narrative_ledger.append_narrative(root_plan, root_narrative)
+        is StreamNarrativeLedgerWriteDisposition.INSERTED
+    )
+
+    resolution = _resolution(
+        forecast,
+        evaluated_at_ms=20_400_000,
+        seed="narrative-outcome",
+    )
+    resolved_event = build_live_intelligence_feed_event(
+        proof,
+        forecast,
+        resolution=resolution,
+    )
+    resolved = project_forecast_resolution(
+        activation,
+        context,
+        forecast,
+        proof,
+        resolved_event,
+        resolution,
+        issuance_message=issuance.message_input,
+    )
+    source_ledger = IntelligenceStreamLedger(path)
+    source_ledger.append_source_event(resolved.source_event)
+    message_ledger = IntelligenceStreamMessageLedger(path)
+    message_ledger.append_message_bundle(
+        resolved.fact_bundle,
+        resolved.message_input,
+    )
+    resolved_observation = build_story_observation(
+        resolved.message_input,
+        resolved.fact_bundle,
+        previous_state_identity=root_state.state_identity,
+    )
+    resolved_state = build_story_state(
+        resolved_observation,
+        previous_state=root_state,
+    )
+    resolved_change = build_change_set(
+        resolved_state,
+        previous_state=root_state,
+    )
+    story_ledger = IntelligenceStreamStoryLedger(path)
+    story_ledger.append_transition(
+        resolved_observation,
+        resolved_state,
+        resolved_change,
+    )
+    resolved_view = compose_stream_analytical_view(
+        build_stream_analytical_policy(),
+        resolved.fact_bundle,
+        resolved_state,
+        resolved_change,
+        message=resolved.message_input,
+    )
+    IntelligenceStreamAnalyticalLedger(path).append_view(resolved_view)
+    resolved_plan = build_stream_narrative_plan(
+        resolved_view,
+        resolved.fact_bundle,
+        resolved_change,
+    )
+    resolved_narrative = render_stream_narrative(
+        resolved_plan,
+        resolved_view,
+        resolved.fact_bundle,
+        resolved_change,
+    )
+    assert "Önceki beklentinin sonucu artık kayda geçti." in (
+        resolved_narrative.text.collapsed_text
+    )
+    assert (
+        narrative_ledger.append_narrative(resolved_plan, resolved_narrative)
+        is StreamNarrativeLedgerWriteDisposition.INSERTED
+    )
+    story = narrative_ledger.read_story(root_plan.story_identity)
+    assert len(story) == 2
+    assert story[0]["narrative_identity"] == root_narrative.narrative_identity
+    assert story[1]["narrative_identity"] == resolved_narrative.narrative_identity
+
+
+def test_stream_narrative_ledger_is_idempotent_and_physically_immutable(tmp_path) -> None:
+    (
+        path,
+        _,
+        _,
+        _,
+        _,
+        _,
+        _,
+        view,
+        plan,
+        narrative,
+    ) = _persist_narrative_fixture(
+        tmp_path,
+        seed="narrative-ledger",
+        as_of_ms=21_000_000,
+        issued_at_ms=21_000_100,
+    )
+    ledger = IntelligenceStreamNarrativeLedger(path)
+    assert (
+        ledger.append_narrative(plan, narrative)
+        is StreamNarrativeLedgerWriteDisposition.INSERTED
+    )
+    assert (
+        ledger.append_narrative(plan, narrative)
+        is StreamNarrativeLedgerWriteDisposition.UNCHANGED
+    )
+
+    stored = ledger.read_for_analytical_view(view.analytical_view_identity)
+    assert stored is not None
+    assert stored["narrative_identity"] == narrative.narrative_identity
+    assert stored["text"]["collapsed_text"] == narrative.text.collapsed_text
+    assert stored["original_text_preserved"] is True
+
+    status = ledger.read_status()
+    assert status.plan_count == 1
+    assert status.narrative_count == 1
+    assert status.story_count == 1
+    assert status.real_capital == 0
+
+    with (
+        sqlite3.connect(path) as connection,
+        pytest.raises(
+            sqlite3.DatabaseError,
+            match="immutable intelligence stream narrative ledger",
+        ),
+    ):
+        connection.execute(
+            "UPDATE stream_narrative_messages SET source_kind = 'tampered'"
+        )
+
+
+def test_query_only_narrative_reads_never_initialize_missing_database(tmp_path) -> None:
+    path = tmp_path / "missing-stream-narrative.sqlite3"
+    ledger = IntelligenceStreamNarrativeLedger(path)
 
     with pytest.raises(FileNotFoundError):
         ledger.read_status()
