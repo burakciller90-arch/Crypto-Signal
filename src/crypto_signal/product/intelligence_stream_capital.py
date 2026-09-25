@@ -902,7 +902,7 @@ def _verify_capital_payload(
         raise ValueError("S11 Capital Story payload digest mismatch")
     raw = json.loads(payload_json)
     if not isinstance(raw, dict):
-        raise ValueError("S11 Capital Story payload must decode to object")
+        raise TypeError("S11 Capital Story payload must decode to object")
     if raw.get("narrative_identity") != narrative_identity:
         raise ValueError("S11 Capital Story identity column mismatch")
     if raw.get("event_at_ms") != event_at_ms:
