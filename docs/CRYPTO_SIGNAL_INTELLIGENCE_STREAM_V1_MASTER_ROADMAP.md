@@ -1415,9 +1415,21 @@ PASS:
 
 Beginning with S7, frontend acceptance must include **actual browser-rendered screenshots**, not source-code inspection alone.
 
+**Reuse existing infrastructure; do not rebuild it from scratch.** The repository already contains the accepted `visualsnapshot` path in `.github/workflows/crypto-mac-command.yml`:
+- physical capture runs on the UID504 self-hosted Crypto runner against `http://127.0.0.1:48700`;
+- it prefers installed Google Chrome / Chromium / Edge / Chrome Canary with `--headless=new`;
+- it currently captures desktop `1440x950` and mobile `430x860` PNGs;
+- it uploads `galactech-visual-snapshot-<run_id>` through `actions/upload-artifact@v4`;
+- it records exact Product HEAD / read-only / REAL_CAPITAL metadata;
+- browser execution is bounded by a 30-second hard timeout, process-group kill, `--renderer-process-limit=2` and exit cleanup after an earlier headless-browser resource incident;
+- Safari/AppleScript remains a fallback;
+- UID501 already provides the narrow maintenance/cleanup bridge for UID504 headless-process cleanup through `visualcleanup504`.
+
+Stream V1 work must **adapt and extend this existing capture path** to deterministic Stream fixture/preview states instead of introducing a second screenshot stack.
+
 Required acceptance mechanism:
 - deterministic UI fixture states rendered in a real browser;
-- screenshots captured as CI/preview artifacts;
+- screenshots captured by the existing UID504 visual-snapshot/artifact path (extended as needed for Stream fixtures);
 - common desktop/laptop viewports plus mobile sanity view;
 - capture after fonts/layout/data fixture settle;
 - screenshot artifact tied to exact commit/run;
