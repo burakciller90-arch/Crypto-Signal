@@ -395,11 +395,13 @@ def _validate_trade_lineage(
         raise ValueError("S11 sizing selection predates allocator eligibility")
     if eligibility_proof.asset != symbol.value:
         raise ValueError("S11 allocator eligibility asset/symbol mismatch")
-    if eligibility_proof.vault_id is PaperVaultId.TACTICAL:
-        if eligibility_proof.tactical_timeframe != forecast.timeframe:
-            raise ValueError(
-                "S11 Tactical execution requires exact 1m/5m eligibility timeframe"
-            )
+    if (
+        eligibility_proof.vault_id is PaperVaultId.TACTICAL
+        and eligibility_proof.tactical_timeframe != forecast.timeframe
+    ):
+        raise ValueError(
+            "S11 Tactical execution requires exact 1m/5m eligibility timeframe"
+        )
     if sizing_selection.vault_id is not current.vault_id:
         raise ValueError("S11 sizing selection vault mismatch")
     if sizing_assessment.assessment_identity != sizing_selection.sizing_assessment_identity:
