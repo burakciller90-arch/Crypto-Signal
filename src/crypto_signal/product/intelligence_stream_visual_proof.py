@@ -11,6 +11,10 @@ from crypto_signal.decision_ledger import (
 )
 from crypto_signal.ledger.serialization import canonical_sha256, sha256_text
 from crypto_signal.ledger.store import ImmutableSignalLedger, LedgerConflictError
+from crypto_signal.product.intelligence_stream_evidence_contract import (
+    StreamEvidenceResolutionState,
+    resolution_state_for_visual_state,
+)
 from crypto_signal.product.intelligence_stream_read_model import (
     IntelligenceStreamReadModel,
     StreamReadModelError,
@@ -152,6 +156,7 @@ class IntelligenceStreamVisualProofReadModel:
         return {
             "schema_version": STREAM_VISUAL_PROOF_SCHEMA_VERSION,
             "status": "ready",
+            "resolution_state": StreamEvidenceResolutionState.READY_EXACT.value,
             "visual_kind": "frozen_ohlc",
             "narrative_identity": narrative_identity,
             "symbol": proof.get("symbol"),
@@ -565,6 +570,9 @@ class IntelligenceStreamVisualProofReadModel:
                 visual_state = "identity_only"
             else:
                 visual_state = "unavailable"
+            resolution_state = resolution_state_for_visual_state(
+                visual_state
+            ).value
 
             domains.append(
                 {
@@ -581,6 +589,7 @@ class IntelligenceStreamVisualProofReadModel:
                     "source_quality": item.get("source_quality"),
                     "summary_codes": item.get("summary_codes"),
                     "visual_state": visual_state,
+                    "resolution_state": resolution_state,
                     "visual_reason": (
                         "exact_frozen_bundle_resolved"
                         if visual_state == "resolved_frozen_bundle"
@@ -632,6 +641,9 @@ class IntelligenceStreamVisualProofReadModel:
         return {
             "schema_version": STREAM_VISUAL_PROOF_SCHEMA_VERSION,
             "status": "unavailable",
+            "resolution_state": (
+                StreamEvidenceResolutionState.UNAVAILABLE_EXPLICIT.value
+            ),
             "reason": reason,
             "narrative_identity": narrative_identity,
             "symbol": fact.get("symbol"),
