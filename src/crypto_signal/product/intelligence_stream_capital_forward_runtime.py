@@ -52,6 +52,9 @@ from crypto_signal.product.intelligence_stream_capital_decisions import (
     IntelligenceStreamCapitalDecisionLedger,
     project_vault_decision_to_stream,
 )
+from crypto_signal.product.intelligence_stream_capital_forward_evidence import (
+    build_capital_forward_auxiliary_evidence,
+)
 from crypto_signal.product.intelligence_stream_capital_lifecycle import (
     IntelligenceStreamCapitalLifecycleLedger,
     project_capital_candidate_to_stream,
@@ -323,11 +326,17 @@ class IntelligenceStreamCapitalForwardRuntime:
         state = Epoch2CanonicalLedger(self.epoch2_path).read_state()
         if state is None:
             raise ValueError("capital forward lost canonical Epoch2 state")
+        auxiliary = build_capital_forward_auxiliary_evidence(
+            issuance,
+            event_context=event_context,
+        )
         capital = assess_unified_decision_capital(
             issuance,
             event_context=event_context,
             base_asset=base_asset,
             assessed_at_ms=assessed_at_ms,
+            tactical_microstructure=auxiliary.tactical,
+            opportunity_recovery=auxiliary.opportunity,
         )
 
         ledger = CanonicalVaultDecisionLedger(self.epoch2_path)
