@@ -166,8 +166,8 @@ This roadmap starts from that evidence.
 Execute exactly in this order:
 
 **F0 Authority + Gap Reconciliation — PASS**  
-→ **F1 WC2 Forward-Liveness Truth — MECHANICAL PASS / LIVE OBSERVABILITY ACTIVATION ACTIVE**  
-→ **F2 Production Source-to-Message Backbone — WAITING FOR F1 LIVE CLOSE**  
+→ **F1 WC2 Forward-Liveness Truth — PASS**  
+→ **F2 Production Source-to-Message Backbone — ACTIVE**  
 → **F3 Five-Family Live Intelligence Projection**  
 → **F4 Risk + System Trust Projection**  
 → **F5 Three-Vault Capital Story Live Closure**  
@@ -313,6 +313,23 @@ or
 
 ### B — Correctness defect
 A specific eligible freeze failed to issue because of a reproducible implementation/runtime defect, and the defect is fixed with exact-source regression + live verification.
+
+---
+
+## F1 final live closure — 2026-09-26
+
+F1 is fully closed.
+
+- exact-source mechanical audit: run `36251560197` → `CORRECT_SILENCE`;
+- merged main: `71ff1ad4f2d1c9f58df65fab12a12c02754acfc6`;
+- physical Development live activation: run `36252043820`;
+- observed real supervisor marker:
+  `wc2_liveness status=SUMMARY contexts=17 status_counts=no_prepared_receipt:17 reason_counts=no_preoutcome_prepared_receipt_for_source_freeze:17 POLICY_UNCHANGED=YES HISTORICAL_BACKFILL=NO REAL_CAPITAL=0`;
+- WC2 policy/protocol hashes unchanged;
+- Product checkout unchanged;
+- no historical backfill, synthetic activity or real-money authority.
+
+Next exact frontier: **F2 — Production Source-to-Message Backbone**.
 
 ---
 
