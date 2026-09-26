@@ -7,7 +7,6 @@ from pathlib import Path
 from typing import Any
 
 from crypto_signal.ledger.serialization import canonical_sha256, sha256_text
-from crypto_signal.ledger.store import ImmutableSignalLedger, LedgerConflictError
 from crypto_signal.product.intelligence_stream_evidence_contract import (
     StreamEvidenceResolutionState,
     resolution_state_for_visual_state,
@@ -757,55 +756,97 @@ def _resolve_signal_objects(
     *,
     source_as_of_ms: int | None,
 ) -> dict[str, dict[str, Any]]:
-    resolved: dict[str, dict[str, Any]] = {}
-    ledger = ImmutableSignalLedger(path)
-    for identity in evidence_identities:
-        try:
-            freeze = ledger.read_freeze_by_signal(identity)
-        except (LedgerConflictError, ValueError) as exc:
-            raise StreamExactEvidenceError(str(exc)) from exc
-        if freeze is None:
-            continue
-        if sha256_text(freeze.bundle_json) != freeze.bundle_identity:
+    if not path.is_file():
+        return {}
+    uri = f"{path.resolve().as_uri()}?mode=ro"
+    try:
+        connection = sqlite3.connect(uri, uri=True)
+    except sqlite3.DatabaseError as exc:
+        raise StreamExactEvidenceError(str(exc)) from exc
+    try:
+        connection.row_factory = sqlite3.Row
+        connection.execute("PRAGMA query_only=ON")
+        quick = connection.execute("PRAGMA quick_check").fetchone()
+        if quick is None or str(quick[0]).lower() != "ok":
             raise StreamExactEvidenceError(
-                "exact evidence signal freeze bundle digest mismatch"
+                "exact evidence signal ledger quick_check failed"
             )
-        if source_as_of_ms is not None and freeze.as_of_ms > source_as_of_ms:
-            raise StreamExactEvidenceError(
-                "exact evidence signal freeze is future evidence"
-            )
-        try:
-            bundle = json.loads(freeze.bundle_json)
-        except json.JSONDecodeError as exc:
-            raise StreamExactEvidenceError(
-                "exact evidence signal freeze bundle JSON invalid"
-            ) from exc
-        if not isinstance(bundle, dict):
-            raise StreamExactEvidenceError(
-                "exact evidence signal freeze bundle must be object"
-            )
-        freeze_projection = {
-            "signal_freeze_identity": freeze.signal_freeze_identity,
-            "decision_freeze_bundle_identity": freeze.bundle_identity,
-            "exchange": freeze.exchange,
-            "market_type": freeze.market_type,
-            "symbol": freeze.symbol,
-            "timeframe": freeze.timeframe,
-            "as_of_ms": freeze.as_of_ms,
-            "frozen_at_ms": freeze.frozen_at_ms,
-            "source_cutoff_open_time_ms": freeze.source_cutoff_open_time_ms,
-            "bundle": bundle,
-        }
-        resolved[freeze.signal_freeze_identity] = {
-            "object_kind": "signal_freeze",
-            "payload": freeze_projection,
-        }
-        resolved[freeze.bundle_identity] = {
-            "object_kind": "decision_freeze_bundle",
-            "payload": freeze_projection,
-        }
-    return resolved
+        table = connection.execute(
+            """
+            SELECT 1
+            FROM sqlite_master
+            WHERE type='table' AND name='signal_freezes'
+            """
+        ).fetchone()
+        if table is None:
+            return {}
 
+        resolved: dict[str, dict[str, Any]] = {}
+        for batch in _batches(evidence_identities, size=300):
+            placeholders = ",".join("?" for _ in batch)
+            rows = connection.execute(
+                f"""
+                SELECT
+                    bundle_identity,
+                    signal_freeze_identity,
+                    exchange,
+                    market_type,
+                    symbol,
+                    timeframe,
+                    as_of_ms,
+                    source_cutoff_open_time_ms,
+                    frozen_at_ms,
+                    bundle_json
+                FROM signal_freezes
+                WHERE signal_freeze_identity IN ({placeholders})
+                   OR bundle_identity IN ({placeholders})
+                """,
+                (*batch, *batch),
+            ).fetchall()
+            for row in rows:
+                bundle_identity = str(row["bundle_identity"])
+                signal_identity = str(row["signal_freeze_identity"])
+                bundle_json = str(row["bundle_json"])
+                if sha256_text(bundle_json) != bundle_identity:
+                    raise StreamExactEvidenceError(
+                        "exact evidence signal freeze bundle digest mismatch"
+                    )
+                as_of_ms = int(row["as_of_ms"])
+                if source_as_of_ms is not None and as_of_ms > source_as_of_ms:
+                    raise StreamExactEvidenceError(
+                        "exact evidence signal freeze is future evidence"
+                    )
+                bundle = _json_object(
+                    bundle_json,
+                    "exact evidence signal freeze bundle",
+                )
+                freeze_projection = {
+                    "signal_freeze_identity": signal_identity,
+                    "decision_freeze_bundle_identity": bundle_identity,
+                    "exchange": str(row["exchange"]),
+                    "market_type": str(row["market_type"]),
+                    "symbol": str(row["symbol"]),
+                    "timeframe": str(row["timeframe"]),
+                    "as_of_ms": as_of_ms,
+                    "frozen_at_ms": int(row["frozen_at_ms"]),
+                    "source_cutoff_open_time_ms": int(
+                        row["source_cutoff_open_time_ms"]
+                    ),
+                    "bundle": bundle,
+                }
+                resolved[signal_identity] = {
+                    "object_kind": "signal_freeze",
+                    "payload": freeze_projection,
+                }
+                resolved[bundle_identity] = {
+                    "object_kind": "decision_freeze_bundle",
+                    "payload": freeze_projection,
+                }
+        return resolved
+    except sqlite3.DatabaseError as exc:
+        raise StreamExactEvidenceError(str(exc)) from exc
+    finally:
+        connection.close()
 
 def _resolve_market_tape_objects(
     path: Path,
