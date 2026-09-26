@@ -35,6 +35,9 @@ jobs:
         run: |
           set -euo pipefail
           /usr/bin/python3 tests/test_wc2_forward_liveness_audit.py
+          PYTHONPATH="$GITHUB_WORKSPACE:$GITHUB_WORKSPACE/src" \
+            /Volumes/Crypto-504/Crypto-Signal/Development/.venv/bin/python \
+            -m pytest tests/test_wc2_live_clock_wiring.py -q
           echo "F1_AUDIT_TEST_PASS=YES"
 
       - name: Read-only live WC2 forward-liveness audit
