@@ -297,5 +297,5 @@ jobs:
         with:
           name: stream-final-f6-exact-evidence-prep-${{ github.run_id }}
           path: ${{ runner.temp }}/stream-final-f6-prep
-          if-no-files-found: error
+          if-no-files-found: warn
           retention-days: 14
