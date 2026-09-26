@@ -175,6 +175,8 @@ def test_local_rewriter_emits_bounded_openai_compatible_request() -> None:
     assert user_payload["symbol"] == "BTCUSDT"
     assert user_payload["timeframe"] == "4h"
     assert user_payload["protected_numeric_values"] == ["0", "82"]
+    assert payload["reasoning_effort"] == "none"
+    assert payload["response_format"] == {"type": "json_object"}
 
 
 @pytest.mark.parametrize(
