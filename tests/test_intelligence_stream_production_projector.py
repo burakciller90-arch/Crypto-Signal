@@ -130,13 +130,13 @@ def test_f2_backbone_reuses_canonical_s3_s4_s5_chain_and_is_idempotent(
     assert first.real_capital == 0
 
 
-def test_f2_backbone_rejects_family_before_registry_implementation(
+def test_f2_backbone_rejects_still_deferred_family_before_implementation(
     tmp_path: Path,
 ) -> None:
     _, _, projected = _projected(tmp_path)
 
     with pytest.raises(ValueError, match="not implemented"):
         build_stream_production_projector_contract(
-            "market_geometry_change",
+            "event_risk_change",
             projected,
         )
