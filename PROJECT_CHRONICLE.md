@@ -1,5 +1,21 @@
 # PROJECT CHRONICLE
 
+## 2026-09-26 — Final Stream F1 proves WC2 correct silence; live observability activation remains
+
+F1 answered the production question that reopened the final Stream completion program: fresh signal freezes continued after the last forecast, but did the forecast/Stream path lose an eligible source?
+
+A new read-only exact-source diagnostic, `ops/audit_wc2_forward_liveness.py`, was tested against synthetic correct-silence and lost-receipt scenarios and then run on UID504 against real production truth. Stable temporary snapshots were used for WC2 sidecars; the canonical multi-GB signal ledger remained query-only and production checkouts remained unchanged.
+
+Accepted run `36251560197` classified 686 freezes after the latest forecast. 525 were WATCH but lacked frozen geometry and 161 were NEUTRAL. The 48 new 4h freezes were 36 geometry-missing WATCH and 12 NEUTRAL. There were zero prepared-required candidates, zero eligible-without-receipt cases, zero prepared-without-forecast cases and zero integrity errors.
+
+This mechanically proves **correct silence**, not a broken forecast path. The project will not weaken signal/WC2 rules merely to manufacture messages.
+
+The current issuance path was also clarified: dual-provider consensus, provider-divergence state and real Event Risk source state are not current pre-receipt issuance gates. The current legacy adapter supplies explicit fail-closed DEGRADED_DATA Event Risk context when PIT Event Source truth is unavailable. That source-integration limitation remains for later roadmap phases; it did not cause the current forecast silence.
+
+The accepted code adds deterministic per-cycle WC2 status/reason summaries while preserving policy, no-backfill and `REAL_CAPITAL=0`.
+
+The liveness truth itself is mechanically accepted, but F1 is not fully closed until the merged code is controlled-synced to the physical Development runtime and one real supervisor cycle proves the new summary marker live. F2 is therefore not active yet.
+
 ## 2026-09-26 — Final Stream F0 source-to-message reconciliation passes
 
 The final completion program completed F0 without changing runtime behavior. The canonical ledger is `docs/CRYPTO_SIGNAL_STREAM_FINAL_F0_SOURCE_MESSAGE_CLOSURE_LEDGER.md`.
