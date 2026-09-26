@@ -1,9 +1,9 @@
-name: Crypto Stream Final F5 Capital Prep UID504
+name: Crypto Stream Final F5 Capital Readiness UID504
 
 on:
   push:
     branches:
-      - 'stream/final-f5-capital-prep'
+      - 'stream/final-f5-capital-live-closure'
 
 permissions:
   contents: read
@@ -32,7 +32,7 @@ jobs:
           test -x "$PY"
           "$PY" -m pytest -q tests/test_stream_f5_capital_readiness_audit.py
           "$PY" -m ruff check             ops/audit_stream_f5_capital_readiness.py             tests/test_stream_f5_capital_readiness_audit.py
-          echo "F5_PREP_TEST_PASS=YES"
+          echo "F5_READINESS_TEST_PASS=YES"
           echo "REAL_CAPITAL=0"
 
       - name: Snapshot live ledgers without mutation
@@ -134,7 +134,7 @@ jobs:
           {
             echo "DEV_HEAD=$DEV_BEFORE"
             echo "PRODUCT_HEAD=$PRODUCT_BEFORE"
-            echo "F5_PREP_NON_MUTATING_PASS=YES"
+            echo "F5_READINESS_NON_MUTATING_PASS=YES"
             echo "HISTORICAL_BACKFILL=NO"
             echo "REAL_CAPITAL=0"
           } | tee "$OUT/checkouts.txt"
