@@ -15,7 +15,12 @@ def test_ssd_supervisor_has_single_wc2_live_owner() -> None:
     assert '"$DEV/ops/run_live_evidence_clock.py"' in text
     assert "--stream-enabled" in text
     assert '--stream-ledger "$stream"' in text
+    assert '--stream-market-tape "$market_tape"' in text
+    assert "--stream-family-symbols BTCUSDT ETHUSDT SOLUSDT" in text
     assert 'local stream="$runtime/stream/intelligence_stream.sqlite3"' in text
+    assert 'local market_tape="$runtime/market_tape/market_tape.sqlite3"' in text
+    assert "run_market_tape_snapshot_clock" in text
+    assert '"$DEV/ops/run_market_tape_snapshot.py"' in text
     assert "--wc2-enabled" in text
     assert '--wc2-policy "$policy"' in text
     assert '--wc2-epoch2 "$epoch2"' in text
