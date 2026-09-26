@@ -819,7 +819,7 @@ def _capture(args: argparse.Namespace) -> dict[str, object]:
   await s12.focusRenderedMessage(rootId);
   await waitFor(() =>
     document.querySelector(
-      `.message[data-identity="${rootId}"].is-expanded .message-detail`
+      `.message[data-identity="${rootId}"].is-expanded [data-evidence-kind="proof"]`
     )
   );
   const expandedRoot = document.querySelector(
@@ -841,7 +841,7 @@ def _capture(args: argparse.Namespace) -> dict[str, object]:
     '[data-evidence-kind="proof"]'
   );
   if (!(proofButton instanceof HTMLButtonElement)) {
-    return { ok: false, reason: "proof_button_missing" };
+    return { ok: false, reason: "proof_button_missing_after_detail_ready" };
   }
   proofButton.click();
   await waitFor(() =>
