@@ -63,6 +63,10 @@ def _connect_read_only(path: Path) -> sqlite3.Connection:
     )
     connection.row_factory = sqlite3.Row
     connection.execute("PRAGMA query_only=ON")
+    # Pin every source-table read to one immutable SQLite snapshot. Without an
+    # explicit transaction, signal_freezes and lifecycle_evaluations can be
+    # observed from different commits while the live writer is appending.
+    connection.execute("BEGIN")
     return connection
 
 

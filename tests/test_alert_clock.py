@@ -9,6 +9,7 @@ import pytest
 
 from crypto_signal.alerts.clock import (
     AlertClockSourceError,
+    _connect_read_only,
     materialize_alert_events,
 )
 from crypto_signal.alerts.models import AlertSourceKind
@@ -367,3 +368,48 @@ def test_missing_required_source_table_fails_closed(tmp_path: Path) -> None:
             source,
             AlertOutbox(tmp_path / "alerts.sqlite3"),
         )
+
+
+def test_clock_read_connection_pins_one_snapshot_across_source_tables(
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "signals.sqlite3"
+    create_source(source)
+    with sqlite3.connect(source) as connection:
+        mode = connection.execute("PRAGMA journal_mode=WAL").fetchone()
+        assert mode is not None
+        assert str(mode[0]).lower() == "wal"
+
+    first = decision("snapshot-first", state=SignalState.ACTIVE)
+    insert_signal(source, first)
+
+    with _connect_read_only(source) as reader:
+        signal_count = int(
+            reader.execute("SELECT COUNT(*) FROM signal_freezes").fetchone()[0]
+        )
+        assert signal_count == 1
+
+        later = decision("snapshot-later", state=SignalState.WATCH)
+        insert_signal(source, later, frozen_at_ms=1_300)
+        insert_lifecycle(
+            source,
+            invalidated(later),
+            appended_at_ms=3_200,
+        )
+
+        # The writer committed after the reader's first SELECT. The alert
+        # clock must not mix that newer lifecycle row into the older signal
+        # snapshot.
+        lifecycle_count = int(
+            reader.execute(
+                "SELECT COUNT(*) FROM lifecycle_evaluations"
+            ).fetchone()[0]
+        )
+        assert lifecycle_count == 0
+
+    with sqlite3.connect(source) as fresh:
+        assert int(
+            fresh.execute(
+                "SELECT COUNT(*) FROM lifecycle_evaluations"
+            ).fetchone()[0]
+        ) == 1
