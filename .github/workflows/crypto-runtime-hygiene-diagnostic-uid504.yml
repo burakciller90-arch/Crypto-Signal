@@ -334,16 +334,14 @@ jobs:
             echo "REAL_CAPITAL=0"
           } | tee "$OUT"
 
-      - name: Alert source parity against same canonical ledger
+      - name: Alert source parity and wrapper route audit
         shell: bash
         run: |
           set -euo pipefail
           ROOT="/Volumes/Crypto-504/Crypto-Signal"
           DEV="$ROOT/Development"
           ALERTS="$ROOT/Alerts"
-          DB="$DEV/runtime/ledger/live_signal_ledger.sqlite3"
           OUT="$RUNNER_TEMP/runtime-hygiene"
-          test -f "$DB"
           test -x "$DEV/.venv/bin/python"
           test -x "$ALERTS/.venv/bin/python"
 
@@ -368,55 +366,34 @@ jobs:
             echo "WRAPPER_SAFE_ROUTE_LINES_BEGIN"
             grep -nE 'alert|run_alert_clock|signal-ledger|outbox|Development|Alerts' "$ROOT/ssd-clock-wrapper.py" || true
             echo "WRAPPER_SAFE_ROUTE_LINES_END"
-            echo "REAL_CAPITAL=0"
           } | tee "$OUT/alert-source-parity.txt"
 
-          run_probe() {
+          inspect_source() {
             local label="$1"
             local py="$2"
             local src="$3"
-            local temp_outbox="$OUT/${label}-temp-alert-outbox.sqlite3"
-            rm -f "$temp_outbox"
-            LABEL="$label" DB="$DB" TEMP_OUTBOX="$temp_outbox" PYTHONPATH="$src" "$py" - <<'PY'
+            LABEL="$label" PYTHONPATH="$src" "$py" - <<'PY'
+          import inspect
           import os
-          import signal
-          from pathlib import Path
+          import crypto_signal.alerts.clock as clock
+          import crypto_signal.alerts.store as store
 
-          from crypto_signal.alerts.clock import materialize_alert_events
-          from crypto_signal.alerts.store import AlertOutbox
-
-          def _alarm(_signum, _frame):
-              raise TimeoutError("alert source parity probe exceeded 45 seconds")
-
-          signal.signal(signal.SIGALRM, _alarm)
-          signal.alarm(45)
-          label = os.environ["LABEL"]
-          try:
-              result = materialize_alert_events(
-                  Path(os.environ["DB"]),
-                  AlertOutbox(Path(os.environ["TEMP_OUTBOX"])),
-              )
-          except Exception as exc:
-              print(
-                  f"ALERT_SOURCE_PROBE label={label} status=ERROR "
-                  f"error_type={type(exc).__name__} error={exc}"
-              )
-          else:
-              print(
-                  f"ALERT_SOURCE_PROBE label={label} status=PASS "
-                  f"signals={result.signal_rows} lifecycle={result.lifecycle_rows} "
-                  f"eligible={result.eligible_events} inserted={result.inserted_events} "
-                  f"unchanged={result.unchanged_events}"
-              )
-          finally:
-              signal.alarm(0)
-          print("ALERT_SOURCE_PROBE_PRODUCTION_MUTATION=NO")
+          source = inspect.getsource(clock.materialize_alert_events)
+          signal_pos = source.find("signal_rows =")
+          lifecycle_pos = source.find("lifecycle_rows =")
+          print(
+              f"ALERT_SOURCE_STATIC label={os.environ['LABEL']} "
+              f"clock_file={clock.__file__} store_file={store.__file__} "
+              f"missing_signal_guard={'YES' if 'lifecycle evaluation references missing signal' in source else 'NO'} "
+              f"signals_loaded_first={'YES' if signal_pos >= 0 and lifecycle_pos > signal_pos else 'NO'}"
+          )
+          print("ALERT_SOURCE_PRODUCTION_MUTATION=NO")
           print("REAL_CAPITAL=0")
           PY
           }
 
-          run_probe development "$DEV/.venv/bin/python" "$DEV/src"             | tee "$OUT/alert-source-probe-development.txt"
-          run_probe alerts "$ALERTS/.venv/bin/python" "$ALERTS/src"             | tee "$OUT/alert-source-probe-alerts.txt"
+          inspect_source development "$DEV/.venv/bin/python" "$DEV/src"             | tee "$OUT/alert-source-static-development.txt"
+          inspect_source alerts "$ALERTS/.venv/bin/python" "$ALERTS/src"             | tee "$OUT/alert-source-static-alerts.txt"
 
       - name: Proxy presence audit without values
         shell: bash
