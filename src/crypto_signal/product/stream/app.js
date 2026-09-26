@@ -94,7 +94,16 @@ const state = {
     fromMs: "",
     toMs: "",
   },
+  virtualStart: 0,
+  virtualEnd: 0,
+  virtualShiftLocked: false,
+  lastRenderDurationMs: 0,
+  drawerReturnFocus: null,
 };
+
+const VIRTUAL_WINDOW_SIZE = 180;
+const VIRTUAL_SHIFT_SIZE = 60;
+const DETAIL_CACHE_LIMIT = 80;
 
 const EVIDENCE_WINDOW_SESSION_KEY = "crypto-signal-stream-v1-s9-windows";
 const EVIDENCE_WINDOW_KINDS = Object.freeze({
@@ -1881,9 +1890,15 @@ function toggleMessageExpansion(item, record) {
   }
 }
 
-function renderMessage(record, { isNew = false } = {}) {
+function renderMessage(
+  record,
+  { isNew = false, absoluteIndex = 0, totalMessages = 1 } = {}
+) {
   const item = document.createElement("li");
   item.className = "message";
+  item.setAttribute("role", "article");
+  item.setAttribute("aria-posinset", String(absoluteIndex + 1));
+  item.setAttribute("aria-setsize", String(totalMessages));
   if (isNew) item.classList.add("is-new");
   const identity = text(record.narrative_identity, "");
   item.dataset.identity = identity;
@@ -1894,7 +1909,15 @@ function renderMessage(record, { isNew = false } = {}) {
   const summary = document.createElement("button");
   summary.type = "button";
   summary.className = "message-summary";
+  const detailId = `message-detail-${identity}`;
   summary.setAttribute("aria-expanded", String(state.expanded.has(identity)));
+  summary.setAttribute("aria-controls", detailId);
+  summary.setAttribute(
+    "aria-label",
+    `${text(record.symbol, "Piyasa")} ${text(record.timeframe, "")} · ${messageState(
+      record
+    )} · detayı ${state.expanded.has(identity) ? "kapat" : "aç"}`
+  );
 
   const meta = document.createElement("div");
   meta.className = "message-meta";
@@ -1934,6 +1957,7 @@ function renderMessage(record, { isNew = false } = {}) {
 
   const detailPanel = document.createElement("div");
   detailPanel.className = "message-detail";
+  detailPanel.id = detailId;
   detailPanel.hidden = !state.expanded.has(identity);
   const cached = state.details.get(identity);
   if (state.expanded.has(identity)) {
@@ -1950,17 +1974,138 @@ function renderMessage(record, { isNew = false } = {}) {
   if (state.expanded.has(identity) && !cached) void loadMessageDetail(item, record);
   return item;
 }
-function renderAll() {
-  if (!ui.list || !ui.empty) return;
-  ui.list.replaceChildren();
-  for (const record of state.messages) {
-    ui.list.append(renderMessage(record));
+function captureViewportAnchor() {
+  if (!ui.viewport || !ui.list) return null;
+  const viewportTop = ui.viewport.getBoundingClientRect().top;
+  const rendered = [...ui.list.querySelectorAll(".message")];
+  const item =
+    rendered.find((node) => node.getBoundingClientRect().bottom > viewportTop + 1)
+    || rendered[0];
+  if (!(item instanceof HTMLElement)) return null;
+  const identity = item.dataset.identity || "";
+  if (!identity) return null;
+  return {
+    identity,
+    top: item.getBoundingClientRect().top,
+  };
+}
+
+function restoreViewportAnchor(anchor) {
+  if (!anchor || !ui.viewport || !ui.list) return;
+  window.requestAnimationFrame(() => {
+    if (!ui.viewport || !ui.list) return;
+    const item = ui.list.querySelector(
+      `.message[data-identity="${CSS.escape(anchor.identity)}"]`
+    );
+    if (!(item instanceof HTMLElement)) return;
+    ui.viewport.scrollTop += item.getBoundingClientRect().top - anchor.top;
+    state.virtualShiftLocked = false;
+  });
+}
+
+function resetVirtualWindow({ pinToBottom = false } = {}) {
+  const total = state.messages.length;
+  if (!total) {
+    state.virtualStart = 0;
+    state.virtualEnd = 0;
+    return;
   }
-  const isEmpty = state.messages.length === 0;
+  if (total <= VIRTUAL_WINDOW_SIZE) {
+    state.virtualStart = 0;
+    state.virtualEnd = total;
+    return;
+  }
+  if (pinToBottom) {
+    state.virtualEnd = total;
+    state.virtualStart = Math.max(0, total - VIRTUAL_WINDOW_SIZE);
+    return;
+  }
+  const start = Math.min(
+    Math.max(0, state.virtualStart),
+    Math.max(0, total - VIRTUAL_WINDOW_SIZE)
+  );
+  state.virtualStart = start;
+  state.virtualEnd = Math.min(total, start + VIRTUAL_WINDOW_SIZE);
+}
+
+function centerVirtualWindow(index) {
+  const total = state.messages.length;
+  if (!total) return;
+  const half = Math.floor(VIRTUAL_WINDOW_SIZE / 2);
+  state.virtualStart = Math.max(
+    0,
+    Math.min(index - half, Math.max(0, total - VIRTUAL_WINDOW_SIZE))
+  );
+  state.virtualEnd = Math.min(total, state.virtualStart + VIRTUAL_WINDOW_SIZE);
+}
+
+function shiftVirtualWindow(direction) {
+  if (
+    state.virtualShiftLocked
+    || state.messages.length <= VIRTUAL_WINDOW_SIZE
+    || !ui.viewport
+  ) {
+    return false;
+  }
+  const anchor = captureViewportAnchor();
+  const total = state.messages.length;
+  const currentStart = state.virtualStart;
+  const maxStart = Math.max(0, total - VIRTUAL_WINDOW_SIZE);
+  const nextStart =
+    direction === "older"
+      ? Math.max(0, currentStart - VIRTUAL_SHIFT_SIZE)
+      : Math.min(maxStart, currentStart + VIRTUAL_SHIFT_SIZE);
+  if (nextStart === currentStart) return false;
+  state.virtualShiftLocked = true;
+  state.virtualStart = nextStart;
+  state.virtualEnd = Math.min(total, nextStart + VIRTUAL_WINDOW_SIZE);
+  renderAll({ anchor });
+  return true;
+}
+
+function rememberDetail(identity, detail) {
+  if (!identity) return;
+  if (state.details.has(identity)) state.details.delete(identity);
+  state.details.set(identity, detail);
+  while (state.details.size > DETAIL_CACHE_LIMIT) {
+    const oldest = state.details.keys().next().value;
+    if (!oldest) break;
+    state.details.delete(oldest);
+  }
+}
+
+function renderAll({ anchor = null, pinToBottom = false } = {}) {
+  if (!ui.list || !ui.empty) return;
+  const started = performance.now();
+  if (pinToBottom) resetVirtualWindow({ pinToBottom: true });
+  else resetVirtualWindow();
+
+  ui.list.setAttribute("aria-busy", "true");
+  ui.list.replaceChildren();
+  const total = state.messages.length;
+  const start = state.virtualStart;
+  const end = state.virtualEnd;
+  for (let index = start; index < end; index += 1) {
+    ui.list.append(
+      renderMessage(state.messages[index], {
+        absoluteIndex: index,
+        totalMessages: total,
+      })
+    );
+  }
+  ui.list.dataset.totalMessages = String(total);
+  ui.list.dataset.renderStart = String(start);
+  ui.list.dataset.renderEnd = String(end);
+  ui.list.dataset.renderedMessages = String(Math.max(0, end - start));
+  ui.list.setAttribute("aria-busy", "false");
+
+  const isEmpty = total === 0;
   ui.empty.hidden = !isEmpty;
   ui.list.hidden = isEmpty;
   if (ui.loadOlder) ui.loadOlder.hidden = !state.hasOlder || isEmpty;
+  state.lastRenderDurationMs = performance.now() - started;
   updateUnread();
+  if (anchor) restoreViewportAnchor(anchor);
 }
 
 function notificationApi() {
