@@ -253,3 +253,25 @@ S13 closed:
 **S13 = PASS. S14 Performance, Accessibility and Long-Session Stability is the active frontier.**
 
 Do not jump to S15. S14 must first prove 1k/10k long-history behavior, responsive reverse pagination/virtualization, memory/reconnect stability and accessibility basics without weakening immutable Stream truth or REAL_CAPITAL=0.
+
+
+## S14 closeout
+
+Canonical S14 acceptance:
+- `docs/CRYPTO_SIGNAL_STREAM_S14_ACCEPTANCE.md`.
+
+S14 closed:
+- 1k/10k long-session virtualization;
+- bounded DOM rendering;
+- reverse-pagination / prepend / newer anchor stability;
+- expanded-message anchor stability;
+- keyboard + focus handling;
+- feed ARIA/accessibility basics;
+- reduced-motion support;
+- responsive desktop/mobile behavior;
+- font-scale no-overflow;
+- exact 430px mobile Chromium acceptance.
+
+**S14 = PASS. S15 End-to-End Product Acceptance is the active frontier.**
+
+Do not jump to S16. S15 must first prove one coherent product story across real backend truth, live delivery, sound semantics, expansion, exact evidence/proof, immutable story continuation and traceable virtual-capital consequence.
