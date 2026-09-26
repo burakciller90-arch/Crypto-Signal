@@ -127,6 +127,16 @@ def test_s16_chromium_acceptance_has_loaded_runner_startup_budget() -> None:
     capture = (
         REPO_ROOT / "ops" / "capture_chromium_viewport.py"
     ).read_text(encoding="utf-8")
+    workflow = (
+        REPO_ROOT
+        / ".github"
+        / "workflows"
+        / "crypto-stream-s16-controlled-cutover-hosted.yml"
+    ).read_text(encoding="utf-8")
 
     assert "timeout_seconds: float = 30.0" in capture
     assert "Chrome DevTools target unavailable after" in capture
+    assert "timeoutMs = 30000" in capture
+    assert "timeout_seconds=90.0" in capture
+    assert "sleep 45" in workflow
+    assert "sleep 8" in workflow
