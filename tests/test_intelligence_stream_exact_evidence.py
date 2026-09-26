@@ -414,4 +414,4 @@ def test_exact_evidence_api_and_ui_contract(
         assert state in evidence_js
         assert state in visual_js
     assert "/evidence" in evidence_js
-    assert "Current market" not in evidence_js
+    assert "current data ile ikame yapılmadı" in evidence_js.lower()
