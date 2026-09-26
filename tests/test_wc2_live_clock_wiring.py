@@ -690,6 +690,41 @@ def test_stream_clock_requires_explicit_enable_and_wc2_owner(tmp_path: Path) -> 
         clock.build_stream_clock_config(_args(stream_enabled=True))
 
 
+def test_stream_market_family_config_requires_explicit_complete_source(
+    tmp_path: Path,
+) -> None:
+    market_tape = tmp_path / "market_tape.sqlite3"
+    stream = tmp_path / "stream.sqlite3"
+
+    with pytest.raises(ValueError, match="explicit --stream-enabled"):
+        clock.build_stream_clock_config(
+            _args(
+                stream_market_tape=market_tape,
+                stream_family_symbols=["BTCUSDT"],
+            )
+        )
+
+    with pytest.raises(ValueError, match="requires family symbols"):
+        clock.build_stream_clock_config(
+            _args(
+                stream_enabled=True,
+                stream_ledger=stream,
+                stream_market_tape=market_tape,
+            )
+        )
+
+    config = clock.build_stream_clock_config(
+        _args(
+            stream_enabled=True,
+            stream_ledger=stream,
+            stream_market_tape=market_tape,
+            stream_family_symbols=["ethusdt", "BTCUSDT", "ethusdt"],
+        )
+    )
+    assert config.market_tape_path == market_tape
+    assert config.family_symbols == ("BTCUSDT", "ETHUSDT")
+
+
 def test_stream_without_wc2_fails_before_network(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

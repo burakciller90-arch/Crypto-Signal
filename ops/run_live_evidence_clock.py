@@ -59,8 +59,16 @@ from crypto_signal.paper.epoch2_accounting import (
 )
 from crypto_signal.paper.shadow_cycle_manifest import R25ShadowCycleManifest
 from crypto_signal.paper.shadow_intent_journal import R25ShadowIntentJournal
+from crypto_signal.product.intelligence_stream_family_sources import (
+    build_geometry_family_snapshot_from_bundle,
+    build_geometry_lifecycle_family_snapshot,
+    build_market_tape_family_snapshots,
+)
 from crypto_signal.product.intelligence_stream_forward_runtime import (
     IntelligenceStreamForwardRuntime,
+)
+from crypto_signal.product.intelligence_stream_production_projector import (
+    IntelligenceStreamProductionProjector,
 )
 
 BASE = Path("/Users/crypto-signal-agent/Crypto-Signal")
@@ -150,13 +158,27 @@ class WC2ClockConfig:
 class StreamClockConfig:
     enabled: bool = False
     ledger_path: Path | None = None
+    market_tape_path: Path | None = None
+    family_symbols: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
         if self.enabled and self.ledger_path is None:
             raise ValueError("enabled Stream clock requires ledger path")
-        if not self.enabled and self.ledger_path is not None:
+        if not self.enabled and (
+            self.ledger_path is not None
+            or self.market_tape_path is not None
+            or self.family_symbols
+        ):
             raise ValueError(
-                "Stream ledger path requires explicit --stream-enabled"
+                "Stream options require explicit --stream-enabled"
+            )
+        if self.market_tape_path is None and self.family_symbols:
+            raise ValueError(
+                "Stream family symbols require --stream-market-tape"
+            )
+        if self.market_tape_path is not None and not self.family_symbols:
+            raise ValueError(
+                "Stream Market Tape projection requires family symbols"
             )
 
 
@@ -193,6 +215,18 @@ def parse_args() -> argparse.Namespace:
         type=Path,
         default=None,
         help="append-only Intelligence Stream SQLite path",
+    )
+    parser.add_argument(
+        "--stream-market-tape",
+        type=Path,
+        default=None,
+        help="persisted Market Tape source for live Stream intelligence families",
+    )
+    parser.add_argument(
+        "--stream-family-symbols",
+        nargs="+",
+        default=None,
+        help="symbols projected from persisted Market Tape into Stream",
     )
     parser.add_argument(
         "--wc2-enabled",
@@ -236,9 +270,25 @@ def parse_args() -> argparse.Namespace:
 
 
 def build_stream_clock_config(args: argparse.Namespace) -> StreamClockConfig:
+    family_symbols_raw = getattr(args, "stream_family_symbols", None)
+    family_symbols = (
+        ()
+        if family_symbols_raw is None
+        else tuple(
+            sorted(
+                {
+                    str(value).upper()
+                    for value in family_symbols_raw
+                    if str(value).strip()
+                }
+            )
+        )
+    )
     return StreamClockConfig(
         enabled=bool(getattr(args, "stream_enabled", False)),
         ledger_path=getattr(args, "stream_ledger", None),
+        market_tape_path=getattr(args, "stream_market_tape", None),
+        family_symbols=family_symbols,
     )
 
 
@@ -433,15 +483,31 @@ async def run(
         )
         return 1
     stream_runtime: IntelligenceStreamForwardRuntime | None = None
+    stream_family_projector: IntelligenceStreamProductionProjector | None = None
     if selected_stream.enabled:
         assert selected_stream.ledger_path is not None
         try:
             stream_runtime = IntelligenceStreamForwardRuntime(
                 selected_stream.ledger_path
             )
-            stream_activation = stream_runtime.ensure_activated(
-                activated_at_ms=time.time_ns() // 1_000_000
+            stream_family_projector = IntelligenceStreamProductionProjector(
+                selected_stream.ledger_path
             )
+            stream_activation_at_ms = time.time_ns() // 1_000_000
+            stream_activation = stream_runtime.ensure_activated(
+                activated_at_ms=stream_activation_at_ms
+            )
+            if selected_stream.market_tape_path is not None:
+                for family_projector_id in (
+                    "market_geometry_change",
+                    "liquidity_change",
+                    "order_flow_change",
+                    "derivatives_change",
+                ):
+                    stream_family_projector.ensure_family_activation(
+                        family_projector_id,
+                        activated_at_ms=stream_activation_at_ms,
+                    )
         except (OSError, TypeError, ValueError, sqlite3.Error) as exc:
             print(
                 "stream status=ERROR "
@@ -506,6 +572,39 @@ async def run(
             f"lifecycle={result.lifecycle_disposition.value if result.lifecycle_disposition else '-'}",
             flush=True,
         )
+
+        if stream_family_projector is not None and result.bundle is not None:
+            assert result.frozen_at_ms is not None
+            try:
+                geometry_snapshot = build_geometry_family_snapshot_from_bundle(
+                    result.bundle,
+                    frozen_at_ms=result.frozen_at_ms,
+                )
+                geometry_projection = stream_family_projector.project_family(
+                    geometry_snapshot,
+                    activated_at_ms=result.frozen_at_ms,
+                )
+            except (OSError, TypeError, ValueError, sqlite3.Error) as exc:
+                print(
+                    f"stream_family projector=market_geometry_change "
+                    f"provider={name} symbol={context.symbol} "
+                    f"timeframe={context.timeframe} status=ERROR "
+                    f"error={type(exc).__name__}:{exc} "
+                    "FAIL_STOP=YES HISTORICAL_BACKFILL=NO REAL_CAPITAL=0",
+                    file=sys.stderr,
+                    flush=True,
+                )
+                return 1
+            print(
+                f"stream_family projector={geometry_projection.projector_id} "
+                f"provider={name} symbol={context.symbol} "
+                f"timeframe={context.timeframe} "
+                f"status={geometry_projection.disposition.value} "
+                f"source={geometry_projection.source_event_identity} "
+                f"narrative={geometry_projection.narrative_identity or '-'} "
+                "HISTORICAL_BACKFILL=NO REAL_CAPITAL=0",
+                flush=True,
+            )
 
         if selected_wc2.enabled:
             assert wc2_policy is not None
@@ -737,6 +836,144 @@ async def run(
                 "CONSENSUS_NOT_INFERRED=YES REAL_CAPITAL=0",
                 flush=True,
             )
+
+    if (
+        stream_family_projector is not None
+        and selected_stream.market_tape_path is not None
+    ):
+        try:
+            geometry_activation_ms = stream_family_projector.family_activation_ms(
+                "market_geometry_change"
+            )
+            lifecycle_dispositions: Counter[str] = Counter()
+            lifecycle_transition_n = 0
+            for lifecycle_record in ledger.list_lifecycle_evaluations():
+                if lifecycle_record.appended_at_ms < geometry_activation_ms:
+                    continue
+                freeze_record = ledger.read_freeze_by_signal(
+                    lifecycle_record.signal_freeze_identity
+                )
+                if freeze_record is None:
+                    raise ValueError(
+                        "Stream lifecycle projection lost parent signal freeze"
+                    )
+                lifecycle_snapshot = build_geometry_lifecycle_family_snapshot(
+                    freeze_record,
+                    lifecycle_record,
+                )
+                if lifecycle_snapshot is None:
+                    continue
+                lifecycle_transition_n += 1
+                lifecycle_projection = stream_family_projector.project_family(
+                    lifecycle_snapshot,
+                    activated_at_ms=geometry_activation_ms,
+                )
+                lifecycle_dispositions[
+                    lifecycle_projection.disposition.value
+                ] += 1
+                print(
+                    "stream_family projector=market_geometry_change "
+                    f"symbol={lifecycle_snapshot.symbol} "
+                    f"timeframe={lifecycle_snapshot.timeframe} "
+                    f"state={lifecycle_snapshot.state_label} "
+                    f"status={lifecycle_projection.disposition.value} "
+                    f"source={lifecycle_projection.source_event_identity} "
+                    f"narrative={lifecycle_projection.narrative_identity or '-'} "
+                    "LIFECYCLE_TRANSITION=YES "
+                    "HISTORICAL_BACKFILL=NO REAL_CAPITAL=0",
+                    flush=True,
+                )
+        except (OSError, TypeError, ValueError, sqlite3.Error) as exc:
+            print(
+                "stream_family lifecycle_status=ERROR "
+                f"error={type(exc).__name__}:{exc} "
+                "FAIL_STOP=YES HISTORICAL_BACKFILL=NO REAL_CAPITAL=0",
+                file=sys.stderr,
+                flush=True,
+            )
+            return 1
+        lifecycle_summary = ",".join(
+            f"{key}:{value}"
+            for key, value in sorted(lifecycle_dispositions.items())
+        ) or "-"
+        print(
+            "stream_family lifecycle_status=SUMMARY "
+            f"transitions={lifecycle_transition_n} "
+            f"dispositions={lifecycle_summary} "
+            f"activation_ms={geometry_activation_ms} "
+            "HISTORICAL_BACKFILL=NO REAL_CAPITAL=0",
+            flush=True,
+        )
+
+    if (
+        stream_family_projector is not None
+        and selected_stream.market_tape_path is not None
+    ):
+        market_tape_path = selected_stream.market_tape_path
+        if not market_tape_path.is_file():
+            print(
+                "stream_family status=ERROR "
+                f"error=MarketTapeMissing:{market_tape_path} "
+                "FAIL_STOP=YES HISTORICAL_BACKFILL=NO REAL_CAPITAL=0",
+                file=sys.stderr,
+                flush=True,
+            )
+            return 1
+        family_observed_at_ms = time.time_ns() // 1_000_000
+        try:
+            family_snapshots = build_market_tape_family_snapshots(
+                market_tape_path,
+                symbols=selected_stream.family_symbols,
+                as_of_ms=family_observed_at_ms,
+            )
+            family_dispositions: Counter[str] = Counter()
+            family_projectors: Counter[str] = Counter()
+            for family_snapshot in family_snapshots:
+                family_projection = stream_family_projector.project_family(
+                    family_snapshot,
+                    activated_at_ms=family_observed_at_ms,
+                )
+                family_dispositions[
+                    family_projection.disposition.value
+                ] += 1
+                family_projectors[family_projection.projector_id] += 1
+                print(
+                    f"stream_family projector={family_projection.projector_id} "
+                    f"symbol={family_snapshot.symbol} "
+                    f"timeframe={family_snapshot.timeframe} "
+                    f"state={family_snapshot.state_label} "
+                    f"status={family_projection.disposition.value} "
+                    f"source={family_projection.source_event_identity} "
+                    f"narrative={family_projection.narrative_identity or '-'} "
+                    "HISTORICAL_BACKFILL=NO REAL_CAPITAL=0",
+                    flush=True,
+                )
+        except (OSError, TypeError, ValueError, sqlite3.Error) as exc:
+            print(
+                "stream_family status=ERROR "
+                f"error={type(exc).__name__}:{exc} "
+                "FAIL_STOP=YES HISTORICAL_BACKFILL=NO REAL_CAPITAL=0",
+                file=sys.stderr,
+                flush=True,
+            )
+            return 1
+        projector_summary = ",".join(
+            f"{key}:{value}"
+            for key, value in sorted(family_projectors.items())
+        ) or "-"
+        disposition_summary = ",".join(
+            f"{key}:{value}"
+            for key, value in sorted(family_dispositions.items())
+        ) or "-"
+        print(
+            "stream_family status=SUMMARY "
+            f"snapshots={len(family_snapshots)} "
+            f"projectors={projector_summary} "
+            f"dispositions={disposition_summary} "
+            "ONCHAIN_STANDALONE=DEFERRED_SOURCE "
+            "HISTORICAL_BACKFILL=NO REAL_CAPITAL=0",
+            flush=True,
+        )
 
     return 1 if failures else 0
 

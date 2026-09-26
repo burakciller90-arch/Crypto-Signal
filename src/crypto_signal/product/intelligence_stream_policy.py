@@ -170,6 +170,46 @@ def build_stream_materiality_policy() -> StreamMaterialityPolicy:
                     materiality=StreamMateriality.MATERIAL,
                     reason_code="canonical_forecast_resolution_is_material",
                 ),
+                StreamMaterialityRule(
+                    category=StreamCategory.MARKET,
+                    subtype="geometry_material_change",
+                    importance=StreamImportance.IMPORTANT,
+                    disposition=StreamPublicationDisposition.PUBLISH,
+                    materiality=StreamMateriality.MATERIAL,
+                    reason_code="material_geometry_state_transition",
+                ),
+                StreamMaterialityRule(
+                    category=StreamCategory.MARKET,
+                    subtype="trigger_transition",
+                    importance=StreamImportance.IMPORTANT,
+                    disposition=StreamPublicationDisposition.PUBLISH,
+                    materiality=StreamMateriality.MATERIAL,
+                    reason_code="material_geometry_trigger_transition",
+                ),
+                StreamMaterialityRule(
+                    category=StreamCategory.INTELLIGENCE,
+                    subtype="liquidity_material_change",
+                    importance=StreamImportance.IMPORTANT,
+                    disposition=StreamPublicationDisposition.PUBLISH,
+                    materiality=StreamMateriality.MATERIAL,
+                    reason_code="material_liquidity_state_transition",
+                ),
+                StreamMaterialityRule(
+                    category=StreamCategory.INTELLIGENCE,
+                    subtype="order_flow_material_change",
+                    importance=StreamImportance.IMPORTANT,
+                    disposition=StreamPublicationDisposition.PUBLISH,
+                    materiality=StreamMateriality.MATERIAL,
+                    reason_code="material_order_flow_state_transition",
+                ),
+                StreamMaterialityRule(
+                    category=StreamCategory.INTELLIGENCE,
+                    subtype="derivatives_material_change",
+                    importance=StreamImportance.IMPORTANT,
+                    disposition=StreamPublicationDisposition.PUBLISH,
+                    materiality=StreamMateriality.MATERIAL,
+                    reason_code="material_derivatives_state_transition",
+                ),
             ),
             key=lambda item: (
                 item.category.value,
@@ -268,7 +308,7 @@ def accepted_stream_projector_registry() -> tuple[StreamProjectorSpec, ...]:
             category=StreamCategory.MARKET,
             subtypes=("geometry_material_change", "trigger_transition"),
             implementation_state=(
-                StreamProjectorImplementationState.REQUIRES_CHANGE_DETECTION
+                StreamProjectorImplementationState.IMPLEMENTED
             ),
             target_phase="S3-S4",
             customer_stream_scope="material geometry/trigger change only",
@@ -279,7 +319,7 @@ def accepted_stream_projector_registry() -> tuple[StreamProjectorSpec, ...]:
             category=StreamCategory.INTELLIGENCE,
             subtypes=("liquidity_material_change",),
             implementation_state=(
-                StreamProjectorImplementationState.REQUIRES_CHANGE_DETECTION
+                StreamProjectorImplementationState.IMPLEMENTED
             ),
             target_phase="S3-S4",
             customer_stream_scope="material liquidity/sweep evidence change only",
@@ -290,7 +330,7 @@ def accepted_stream_projector_registry() -> tuple[StreamProjectorSpec, ...]:
             category=StreamCategory.INTELLIGENCE,
             subtypes=("order_flow_material_change",),
             implementation_state=(
-                StreamProjectorImplementationState.REQUIRES_CHANGE_DETECTION
+                StreamProjectorImplementationState.IMPLEMENTED
             ),
             target_phase="S3-S4",
             customer_stream_scope="material CVD/absorption evidence change only",
@@ -301,7 +341,7 @@ def accepted_stream_projector_registry() -> tuple[StreamProjectorSpec, ...]:
             category=StreamCategory.INTELLIGENCE,
             subtypes=("derivatives_material_change",),
             implementation_state=(
-                StreamProjectorImplementationState.REQUIRES_CHANGE_DETECTION
+                StreamProjectorImplementationState.IMPLEMENTED
             ),
             target_phase="S3-S4",
             customer_stream_scope="material derivatives context change only",
