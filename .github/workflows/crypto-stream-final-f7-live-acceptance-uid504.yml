@@ -1,0 +1,371 @@
+name: Crypto Stream Final F7 Live Acceptance UID504
+# Final exact-main acceptance only; intentionally outside stream/final-f7-* prep fanout.
+
+on:
+  push:
+    branches:
+      - 'accept/f7-live-pass'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: crypto-stream-final-f7-live-acceptance
+  cancel-in-progress: true
+
+jobs:
+  accept:
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          clean: true
+          fetch-depth: 0
+
+      - name: Verify exact merged F7 source
+        shell: bash
+        run: |
+          set -euo pipefail
+          EXPECTED_MAIN="ec17664174a4400130d74ae737615cc5c2652318"
+          test "$(id -u)" = "504"
+          test "$(git merge-base HEAD "$EXPECTED_MAIN")" = "$EXPECTED_MAIN"
+          git diff --quiet "$EXPECTED_MAIN"...HEAD -- .             ':(exclude).github/workflows/crypto-stream-final-f7-ollama-probe-uid504.yml'             ':(exclude).github/workflows/crypto-stream-final-f7-live-acceptance-uid504.yml'
+          echo "F7_EXACT_MERGED_SOURCE_PASS=YES"
+          echo "REAL_CAPITAL=0"
+
+      - name: Install local Ollama and pull bounded multilingual model
+        shell: bash
+        run: |
+          set -euo pipefail
+          OUT="$RUNNER_TEMP/stream-final-f7-live-acceptance"
+          mkdir -p "$OUT"
+
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          TOOL_ROOT="$ROOT/Tools"
+          OLLAMA_BIN="$(command -v ollama || true)"
+          if [ -z "$OLLAMA_BIN" ] && [ -x "$TOOL_ROOT/Ollama.app/Contents/Resources/ollama" ]; then
+            OLLAMA_BIN="$TOOL_ROOT/Ollama.app/Contents/Resources/ollama"
+          fi
+          if [ -z "$OLLAMA_BIN" ]; then
+            mkdir -p "$TOOL_ROOT"
+            ZIP="$RUNNER_TEMP/Ollama-darwin.zip"
+            STAGE="$RUNNER_TEMP/ollama-macos-stage"
+            rm -rf "$STAGE"
+            mkdir -p "$STAGE"
+            curl -fL --retry 3 --retry-delay 2 \
+              https://ollama.com/download/Ollama-darwin.zip \
+              -o "$ZIP"
+            /usr/bin/shasum -a 256 "$ZIP" | tee "$OUT/ollama-package.sha256"
+            /usr/bin/unzip -q "$ZIP" -d "$STAGE"
+            test -x "$STAGE/Ollama.app/Contents/Resources/ollama"
+            rm -rf "$TOOL_ROOT/Ollama.app"
+            mv "$STAGE/Ollama.app" "$TOOL_ROOT/Ollama.app"
+            OLLAMA_BIN="$TOOL_ROOT/Ollama.app/Contents/Resources/ollama"
+          fi
+          test -x "$OLLAMA_BIN"
+
+          if ! curl -fsS --max-time 3 http://127.0.0.1:11434/api/tags > "$OUT/tags-before.json"; then
+            unset RUNNER_TRACKING_ID
+            OLLAMA_HOST=127.0.0.1:11434 nohup "$OLLAMA_BIN" serve               > "$OUT/ollama-serve.log" 2>&1 < /dev/null &
+            for _ in {1..30}; do
+              if curl -fsS --max-time 3 http://127.0.0.1:11434/api/tags > "$OUT/tags-before.json"; then
+                break
+              fi
+              sleep 1
+            done
+          fi
+          test -s "$OUT/tags-before.json"
+
+          MODEL="qwen2.5:1.5b-instruct"
+          "$OLLAMA_BIN" pull "$MODEL" | tee "$OUT/ollama-pull.log"
+          curl -fsS --max-time 5 http://127.0.0.1:11434/api/tags > "$OUT/tags-after.json"
+
+          /usr/bin/python3 - "$OUT/tags-after.json" "$MODEL" <<'PY'
+          import json,sys
+          p=json.load(open(sys.argv[1]))
+          model=sys.argv[2]
+          names=[str(m.get("name") or m.get("model") or "") for m in p.get("models",[])]
+          assert model in names, (model,names)
+          print("F7_OLLAMA_SELECTED_MODEL="+model)
+          print("F7_OLLAMA_LOOPBACK_PASS=YES")
+          print("F7_OLLAMA_CLOUD_DEPENDENCY=NO")
+          print("REAL_CAPITAL=0")
+          PY
+
+          # Prewarm the already-local model so the guarded adapter smoke measures
+          # rewrite latency rather than first-load/model-map latency.
+          /usr/bin/python3 - "$MODEL" <<'PY'
+          import json
+          import sys
+          import urllib.request
+
+          model = sys.argv[1]
+          body = json.dumps(
+              {
+                  "model": model,
+                  "prompt": "Yanıt olarak yalnız OK yaz.",
+                  "stream": False,
+                  "keep_alive": "10m",
+                  "options": {"temperature": 0},
+              }
+          ).encode()
+          req = urllib.request.Request(
+              "http://127.0.0.1:11434/api/generate",
+              data=body,
+              headers={"Content-Type": "application/json"},
+              method="POST",
+          )
+          with urllib.request.urlopen(req, timeout=90) as response:
+              payload = json.loads(response.read().decode())
+          assert isinstance(payload, dict), payload
+          print("F7_OLLAMA_PREWARM_PASS=YES")
+          PY
+
+          echo "F7_MODEL=$MODEL" >> "$GITHUB_ENV"
+          echo "F7_OLLAMA_BIN=$OLLAMA_BIN" >> "$GITHUB_ENV"
+
+      - name: Exact-main F7 regression gate
+        shell: bash
+        env:
+          PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/src:${{ github.workspace }}/tests
+        run: |
+          set -euo pipefail
+          DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
+          PY="$DEV/.venv/bin/python"
+          test -x "$PY"
+          "$PY" -m pytest -q             tests/test_intelligence_stream_local_rewriter.py             tests/test_intelligence_stream_ledger.py             tests/test_intelligence_stream_forward_runtime.py             tests/test_intelligence_stream_production_projector.py             tests/test_wc2_live_clock_wiring.py             tests/test_intelligence_stream_exact_evidence.py
+          "$PY" -m ruff check             src/crypto_signal/product/intelligence_stream_local_rewriter.py             src/crypto_signal/product/intelligence_stream_narrative.py             src/crypto_signal/product/intelligence_stream_forward_runtime.py             src/crypto_signal/product/intelligence_stream_production_projector.py             ops/run_live_evidence_clock.py             tests/test_intelligence_stream_local_rewriter.py             tests/test_intelligence_stream_forward_runtime.py             tests/test_intelligence_stream_production_projector.py             tests/test_wc2_live_clock_wiring.py
+          "$PY" -m mypy             src/crypto_signal/product/intelligence_stream_local_rewriter.py             src/crypto_signal/product/intelligence_stream_narrative.py             src/crypto_signal/product/intelligence_stream_forward_runtime.py             src/crypto_signal/product/intelligence_stream_production_projector.py             ops/run_live_evidence_clock.py
+          echo "F7_EXACT_MAIN_REGRESSION_PASS=YES"
+          echo "REAL_CAPITAL=0"
+
+      - name: Exercise real loopback adapter without production mutation
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
+          OUT="$RUNNER_TEMP/stream-final-f7-live-acceptance"
+          export PYTHONPATH="$GITHUB_WORKSPACE/src"
+          export OUT
+          export F7_MODEL
+
+          "$DEV/.venv/bin/python" - <<'PY' | tee "$OUT/real-adapter-smoke.log"
+          from __future__ import annotations
+
+          import hashlib
+          import json
+          import os
+          import re
+          from decimal import Decimal
+          from pathlib import Path
+
+          from crypto_signal.product.intelligence_stream_local_rewriter import (
+              LocalNarrativeRewriteConfig,
+              OpenAICompatibleLocalNarrativeRewriter,
+          )
+          from crypto_signal.product.intelligence_stream_narrative import (
+              StreamNarrativeRewriteRequest,
+              StreamNarrativeText,
+          )
+
+          def sha(value: str) -> str:
+              return hashlib.sha256(value.encode()).hexdigest()
+
+          baseline = StreamNarrativeText(
+              collapsed_text=(
+                  "BTCUSDT 4h görünüm yukarı yön tarafı; destek puanı 82, ek teyit takip."
+              ),
+              simple_text=(
+                  "BTCUSDT 4h yukarı yön görünüm var. Destek puanı 82. Ek teyit takip sürüyor."
+              ),
+              technical_text="Destek puanı 82, karşı ağırlık 0.",
+              intelligence_text="Intelligence sonucu: duruş=bullish, güç=high.",
+              decision_text="Bir sonraki karar koşulu mevcut tetik bölgesidir.",
+              capital_text="Bu mesajda sanal sermayeye bağlı yeni bir referans yok.",
+          )
+          request = StreamNarrativeRewriteRequest(
+              plan_identity=sha("f7-live-plan"),
+              analytical_view_identity=sha("f7-live-analytical"),
+              deterministic_text=baseline,
+              protected_numeric_values=(Decimal(0), Decimal(82)),
+              symbol="BTCUSDT",
+              timeframe="4h",
+          )
+          config = LocalNarrativeRewriteConfig(
+              model=os.environ["F7_MODEL"],
+              base_url="http://127.0.0.1:11434/v1",
+              timeout_seconds=30.0,
+              temperature=0.2,
+              max_tokens=1400,
+          )
+          rewriter = OpenAICompatibleLocalNarrativeRewriter(config)
+          candidate = rewriter.rewrite(request)
+
+          assert candidate.technical_text == baseline.technical_text
+          assert candidate.intelligence_text == baseline.intelligence_text
+          assert candidate.decision_text == baseline.decision_text
+          assert candidate.capital_text == baseline.capital_text
+          assert candidate.collapsed_text.strip()
+          assert candidate.simple_text.strip()
+          assert candidate != baseline, (
+              "real local model must demonstrate an accepted style rewrite"
+          )
+
+          allowed_numbers={"0","82"}
+          for value in (candidate.collapsed_text, candidate.simple_text):
+              found=set(re.findall(r"(?<![A-Za-z])\d+(?:\.\d+)?", value))
+              assert found <= allowed_numbers, (found,value)
+
+          report={
+              "model": config.model,
+              "rewriter_identity": rewriter.rewriter_identity,
+              "rewriter_version": rewriter.rewriter_version,
+              "loopback_base_url": config.base_url,
+              "temperature": config.temperature,
+              "timeout_seconds": config.timeout_seconds,
+              "max_tokens": config.max_tokens,
+              "protected_sections_unchanged": True,
+              "candidate_differs_from_baseline": candidate != baseline,
+              "production_mutation": False,
+              "real_capital": 0,
+          }
+          Path(os.environ["OUT"],"real-adapter-smoke.json").write_text(
+              json.dumps(report,sort_keys=True,indent=2)+"\n"
+          )
+          print(json.dumps(report,sort_keys=True))
+          print("F7_REAL_OLLAMA_ADAPTER_PASS=YES")
+          print("REAL_CAPITAL=0")
+          PY
+
+      - name: Fast-forward Development and Product to exact merged F7 main
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          DEV="$ROOT/Development"
+          PRODUCT="$ROOT/Product"
+          EXPECTED_MAIN="ec17664174a4400130d74ae737615cc5c2652318"
+
+          test -z "$(git -C "$DEV" status --porcelain)"
+          test -z "$(git -C "$PRODUCT" status --porcelain)"
+          DEV_BEFORE="$(git -C "$DEV" rev-parse HEAD)"
+          PRODUCT_BEFORE="$(git -C "$PRODUCT" rev-parse HEAD)"
+
+          git -C "$DEV" fetch origin main --quiet
+          git -C "$PRODUCT" fetch origin main --quiet
+          test "$(git -C "$DEV" rev-parse origin/main)" = "$EXPECTED_MAIN"
+          test "$(git -C "$PRODUCT" rev-parse origin/main)" = "$EXPECTED_MAIN"
+          git -C "$DEV" merge-base --is-ancestor "$DEV_BEFORE" "$EXPECTED_MAIN"
+          git -C "$PRODUCT" merge-base --is-ancestor "$PRODUCT_BEFORE" "$EXPECTED_MAIN"
+          git -C "$DEV" merge --ff-only "$EXPECTED_MAIN"
+          git -C "$PRODUCT" merge --ff-only "$EXPECTED_MAIN"
+
+          test "$(git -C "$DEV" rev-parse HEAD)" = "$EXPECTED_MAIN"
+          test "$(git -C "$PRODUCT" rev-parse HEAD)" = "$EXPECTED_MAIN"
+          test -z "$(git -C "$DEV" status --porcelain)"
+          test -z "$(git -C "$PRODUCT" status --porcelain)"
+          echo "F7_DEVELOPMENT_EXACT_MAIN_PASS=YES before=$DEV_BEFORE after=$EXPECTED_MAIN"
+          echo "F7_PRODUCT_EXACT_MAIN_PASS=YES before=$PRODUCT_BEFORE after=$EXPECTED_MAIN"
+          echo "REAL_CAPITAL=0"
+
+      - name: Activate guarded local rewrite in canonical supervisor
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          DEV="$ROOT/Development"
+          PRODUCT="$ROOT/Product"
+          EXPECTED_MAIN="ec17664174a4400130d74ae737615cc5c2652318"
+          OUT="$RUNNER_TEMP/stream-final-f7-live-acceptance"
+          mkdir -p "$OUT"
+
+          test "$(git -C "$DEV" rev-parse HEAD)" = "$EXPECTED_MAIN"
+          test "$(git -C "$PRODUCT" rev-parse HEAD)" = "$EXPECTED_MAIN"
+
+          old_sup="$(cat "$ROOT/ssd-service-supervisor.pid" 2>/dev/null || true)"
+          test -n "$old_sup"
+          kill -0 "$old_sup"
+          ps -p "$old_sup" -o command= | grep -F "$ROOT/ssd-service-supervisor.sh" >/dev/null
+
+          old_dashboard="$(cat "$ROOT/dashboard.pid" 2>/dev/null || true)"
+          if [ -n "$old_dashboard" ] && kill -0 "$old_dashboard" >/dev/null 2>&1; then
+            kill -TERM "$old_dashboard"
+            for _ in {1..20}; do
+              if ! kill -0 "$old_dashboard" >/dev/null 2>&1; then
+                break
+              fi
+              sleep 1
+            done
+            rm -f "$ROOT/dashboard.pid"
+          fi
+
+          cp "$DEV/ops/ssd_runtime_supervisor.sh" "$ROOT/ssd-service-supervisor.sh"
+          chmod 700 "$ROOT/ssd-service-supervisor.sh"
+          kill -TERM "$old_sup"
+          for _ in {1..20}; do
+            if ! kill -0 "$old_sup" >/dev/null 2>&1; then
+              break
+            fi
+            sleep 1
+          done
+          rm -f "$ROOT/ssd-service-supervisor.pid"
+
+          CRYPTO_SIGNAL_ROOT="$ROOT"           CRYPTO_SIGNAL_STREAM_LOCAL_REWRITE_ENABLED=1           CRYPTO_SIGNAL_STREAM_LOCAL_REWRITE_MODEL="$F7_MODEL"           CRYPTO_SIGNAL_STREAM_LOCAL_REWRITE_BASE_URL="http://127.0.0.1:11434/v1"           CRYPTO_SIGNAL_STREAM_LOCAL_REWRITE_TIMEOUT_SECONDS=8           CRYPTO_SIGNAL_STREAM_LOCAL_REWRITE_TEMPERATURE=0.2           CRYPTO_SIGNAL_STREAM_LOCAL_REWRITE_MAX_TOKENS=1400             bash "$DEV/ops/r11/start_ssd_runtime.command"
+
+          new_sup="$(cat "$ROOT/ssd-service-supervisor.pid")"
+          test -n "$new_sup"
+          test "$new_sup" != "$old_sup"
+          kill -0 "$new_sup"
+
+          for _ in {1..30}; do
+            if curl -fsS --max-time 5 http://127.0.0.1:48700/api/health > "$OUT/health.json"; then
+              break
+            fi
+            sleep 2
+          done
+          /usr/bin/python3 - "$OUT/health.json" <<'PY'
+          import json,sys
+          p=json.load(open(sys.argv[1]))
+          assert p["status"]=="ok",p
+          assert p["read_only"] is True,p
+          assert p["real_capital"]==0,p
+          PY
+
+          marker=""
+          for _ in {1..60}; do
+            marker="$(grep 'stream_rewrite status=ENABLED transport=loopback' "$ROOT/ServiceLogs/live.out.log" | tail -1 || true)"
+            if [ -n "$marker" ]; then
+              break
+            fi
+            sleep 2
+          done
+          test -n "$marker"
+          printf '%s\n' "$marker" | tee "$OUT/runtime-marker.txt"
+          echo "$marker" | grep -F 'DETERMINISTIC_FALLBACK=YES' >/dev/null
+          echo "$marker" | grep -F 'REAL_CAPITAL=0' >/dev/null
+
+          echo "F7_PHYSICAL_ACTIVATION_PASS=YES old_sup=$old_sup new_sup=$new_sup model=$F7_MODEL"
+          echo "HISTORICAL_BACKFILL=NO"
+          echo "REAL_CAPITAL=0"
+
+      - name: Prove deterministic outage fallback remains publishable
+        shell: bash
+        env:
+          PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/src:${{ github.workspace }}/tests
+        run: |
+          set -euo pipefail
+          DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
+          "$DEV/.venv/bin/python" -m pytest -q             tests/test_intelligence_stream_forward_runtime.py             tests/test_intelligence_stream_production_projector.py             -k 'f7 or rewriter'
+          echo "F7_OUTAGE_FALLBACK_PASS=YES"
+          echo "REAL_CAPITAL=0"
+
+      - name: Upload F7 live acceptance evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stream-final-f7-live-acceptance-${{ github.run_id }}
+          path: ${{ runner.temp }}/stream-final-f7-live-acceptance
+          if-no-files-found: warn
+          retention-days: 14
