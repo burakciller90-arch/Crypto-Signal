@@ -1,0 +1,76 @@
+name: Crypto Stream Final F1 WC2 Liveness UID504
+
+on:
+  push:
+    branches:
+      - 'stream/final-f1-wc2-liveness'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: crypto-stream-final-f1-wc2-liveness
+  cancel-in-progress: true
+
+jobs:
+  audit:
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          clean: true
+          fetch-depth: 1
+
+      - name: Verify exact source
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${GITHUB_SHA}"
+          echo "F1_EXACT_SOURCE_PASS=YES"
+
+      - name: Focused audit unit tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          /usr/bin/python3 tests/test_wc2_forward_liveness_audit.py
+          echo "F1_AUDIT_TEST_PASS=YES"
+
+      - name: Read-only live WC2 forward-liveness audit
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          DEV="$ROOT/Development"
+          PRODUCT="$ROOT/Product"
+          OUT="$RUNNER_TEMP/stream-final-f1"
+          mkdir -p "$OUT"
+
+          test "$(id -u)" = "504"
+          test -z "$(git -C "$DEV" status --porcelain)"
+          test -z "$(git -C "$PRODUCT" status --porcelain)"
+
+          DEV_BEFORE="$(git -C "$DEV" rev-parse HEAD)"
+          PRODUCT_BEFORE="$(git -C "$PRODUCT" rev-parse HEAD)"
+
+          /usr/bin/python3 ops/audit_wc2_forward_liveness.py             --signal "$DEV/runtime/ledger/live_signal_ledger.sqlite3"             --decision "$DEV/runtime/decision/decision_evidence.sqlite3"             --prepared "$DEV/runtime/wc2/wc2.wc2-prepared.sqlite3"             --policy "$DEV/runtime/wc2/wc2_forward_policy.sqlite3"             --protocol "$DEV/runtime/wc2/wc2_collection_protocol.wc2-collection-protocol.sqlite3"             --output "$OUT/wc2-forward-liveness.json"             | tee "$OUT/wc2-forward-liveness.log"
+
+          test -z "$(git -C "$DEV" status --porcelain)"
+          test -z "$(git -C "$PRODUCT" status --porcelain)"
+          test "$(git -C "$DEV" rev-parse HEAD)" = "$DEV_BEFORE"
+          test "$(git -C "$PRODUCT" rev-parse HEAD)" = "$PRODUCT_BEFORE"
+
+          echo "DEV_HEAD=$DEV_BEFORE" | tee "$OUT/checkouts.txt"
+          echo "PRODUCT_HEAD=$PRODUCT_BEFORE" | tee -a "$OUT/checkouts.txt"
+          echo "F1_NON_MUTATING_PASS=YES" | tee -a "$OUT/checkouts.txt"
+          echo "REAL_CAPITAL=0" | tee -a "$OUT/checkouts.txt"
+
+      - name: Upload F1 evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stream-final-f1-wc2-liveness-${{ github.run_id }}
+          path: ${{ runner.temp }}/stream-final-f1
+          if-no-files-found: error
+          retention-days: 14
