@@ -3,9 +3,9 @@ from __future__ import annotations
 import argparse
 import json
 import re
+from collections.abc import Iterable
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Iterable
 
 FINAL_ACCEPTED = "INTELLIGENCE_STREAM_V1_FINAL_COMPLETION_ACCEPTED"
 REAL_CAPITAL_MARKER = "REAL_CAPITAL=0"
