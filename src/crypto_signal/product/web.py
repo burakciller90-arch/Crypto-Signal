@@ -47,6 +47,10 @@ from crypto_signal.product.event_source_runtime import (
     read_event_source_runtime_truth,
 )
 from crypto_signal.product.intelligence_center import build_intelligence_center_payload
+from crypto_signal.product.intelligence_stream_exact_evidence import (
+    IntelligenceStreamExactEvidenceReadModel,
+    StreamExactEvidenceError,
+)
 from crypto_signal.product.intelligence_stream_read_model import (
     IntelligenceStreamReadModel,
     StreamMessageQuery,
@@ -882,6 +886,138 @@ def create_app(
                 "Connection": "keep-alive",
                 "X-Accel-Buffering": "no",
             },
+        )
+
+    @app.get("/api/stream/messages/{narrative_identity}/evidence")
+    def stream_message_exact_evidence(
+        narrative_identity: str,
+    ) -> JSONResponse:
+        if not _is_lower_sha256(narrative_identity):
+            raise HTTPException(
+                status_code=400,
+                detail="narrative_identity must be lowercase SHA256",
+            )
+        if selected_stream_path is None or not selected_stream_path.exists():
+            return _json(
+                {
+                    "status": "unavailable",
+                    "reason": "intelligence_stream_runtime_not_configured",
+                    "narrative_identity": narrative_identity,
+                    "evidence": None,
+                    "read_only": True,
+                    "real_capital": 0,
+                }
+            )
+        try:
+            evidence = IntelligenceStreamExactEvidenceReadModel(
+                stream_ledger_path=selected_stream_path,
+                signal_ledger_path=(
+                    selected_path if selected_path.exists() else None
+                ),
+                decision_evidence_path=(
+                    selected_decision_path
+                    if selected_decision_path is not None
+                    and selected_decision_path.exists()
+                    else None
+                ),
+                market_tape_path=selected_market_tape_path,
+                event_source_runtime_path=selected_event_source_runtime_path,
+                provider_divergence_path=selected_provider_divergence_path,
+            ).read_for_narrative(narrative_identity)
+        except StreamExactEvidenceError as exc:
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
+        if evidence is None:
+            return _json(
+                {
+                    "status": "empty",
+                    "reason": "stream_message_not_found",
+                    "narrative_identity": narrative_identity,
+                    "evidence": None,
+                    "read_only": True,
+                    "real_capital": 0,
+                }
+            )
+        return _json(
+            {
+                "status": "ready",
+                "narrative_identity": narrative_identity,
+                "evidence": evidence,
+                "read_only": True,
+                "real_capital": 0,
+            }
+        )
+
+    @app.get(
+        "/api/stream/messages/{narrative_identity}/evidence/{evidence_identity}"
+    )
+    def stream_message_exact_evidence_reference(
+        narrative_identity: str,
+        evidence_identity: str,
+    ) -> JSONResponse:
+        if not _is_lower_sha256(narrative_identity):
+            raise HTTPException(
+                status_code=400,
+                detail="narrative_identity must be lowercase SHA256",
+            )
+        if not _is_lower_sha256(evidence_identity):
+            raise HTTPException(
+                status_code=400,
+                detail="evidence_identity must be lowercase SHA256",
+            )
+        if selected_stream_path is None or not selected_stream_path.exists():
+            return _json(
+                {
+                    "status": "unavailable",
+                    "reason": "intelligence_stream_runtime_not_configured",
+                    "narrative_identity": narrative_identity,
+                    "evidence_identity": evidence_identity,
+                    "reference": None,
+                    "read_only": True,
+                    "real_capital": 0,
+                }
+            )
+        try:
+            reference = IntelligenceStreamExactEvidenceReadModel(
+                stream_ledger_path=selected_stream_path,
+                signal_ledger_path=(
+                    selected_path if selected_path.exists() else None
+                ),
+                decision_evidence_path=(
+                    selected_decision_path
+                    if selected_decision_path is not None
+                    and selected_decision_path.exists()
+                    else None
+                ),
+                market_tape_path=selected_market_tape_path,
+                event_source_runtime_path=selected_event_source_runtime_path,
+                provider_divergence_path=selected_provider_divergence_path,
+            ).read_reference(
+                narrative_identity=narrative_identity,
+                evidence_identity=evidence_identity,
+            )
+        except StreamExactEvidenceError as exc:
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
+        if reference is None:
+            return _json(
+                {
+                    "status": "empty",
+                    "reason": "stream_message_not_found",
+                    "narrative_identity": narrative_identity,
+                    "evidence_identity": evidence_identity,
+                    "reference": None,
+                    "read_only": True,
+                    "real_capital": 0,
+                }
+            )
+        return _json(
+            {
+                "status": str(reference.get("status", "ready")),
+                "narrative_identity": narrative_identity,
+                "evidence_identity": evidence_identity,
+                "reference": reference,
+                "read_only": True,
+                "real_capital": 0,
+            }
         )
 
     @app.get("/api/stream/messages/{narrative_identity}/visual-proof")
