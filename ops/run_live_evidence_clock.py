@@ -347,7 +347,7 @@ def build_stream_clock_config(
     *,
     environ: Mapping[str, str] | None = None,
 ) -> StreamClockConfig:
-    selected_environ = os.environ if environ is None else environ
+    selected_environ: Mapping[str, str] = {} if environ is None else environ
     local_rewrite_config = build_stream_local_rewrite_config(selected_environ)
     family_symbols_raw = getattr(args, "stream_family_symbols", None)
     family_symbols = (
@@ -1187,7 +1187,7 @@ def main() -> int:
     args = parse_args()
     try:
         wc2_config = build_wc2_clock_config(args)
-        stream_config = build_stream_clock_config(args)
+        stream_config = build_stream_clock_config(args, environ=os.environ)
     except ValueError as exc:
         print(f"LIVE_CLOCK_CONFIG_ERROR={exc}", file=sys.stderr, flush=True)
         return 2
