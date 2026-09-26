@@ -554,6 +554,25 @@ A real provider degradation/recovery and a real or exact forward Event Risk tran
 
 ---
 
+## F4 final live closure — 2026-09-26
+
+F4 is fully accepted and physically live.
+
+- canonical acceptance: `docs/CRYPTO_SIGNAL_STREAM_FINAL_F4_RISK_SYSTEM_TRUST_ACCEPTANCE.md`;
+- PR #1363 merged exact Event Risk and provider/data-quality trust projection through the existing F2/F3 canonical Stream backbone;
+- routine initial `clear` / `healthy` baselines are silent; material caution/degraded/block and later recovery transitions remain publishable;
+- RISK/SYSTEM narrative explicitly states the affected trust layer and restoration condition without inventing market direction, probability or order/capital authority;
+- exact-source gate `36263227400` passed focused tests, broad repository regression, full source/test Ruff, strict mypy over 240 source files and a read-only real persisted provider degradation→recovery audit;
+- real provider history proved `healthy → degraded_provider_stale → healthy` on the persisted Binance↔Bybit divergence source;
+- final physical activation run `36263537425` proved exact Development main `3ec48a3728b919e3783546e57eab7afebab1d18d`, canonical supervisor reload, healthy Event Source/provider-divergence/Stream databases, both immutable F4 activation boundaries and live `stream_trust status=SUMMARY`;
+- live persisted source counts at acceptance: 4 event coverages, 48 structured events, 159 provider-divergence snapshots;
+- canonical F4 Stream source rows existed, including 3 `data_quality_degraded` rows;
+- no synthetic risk/system event, no historical rich-message backfill, no production-authority expansion, `REAL_CAPITAL=0`.
+
+Next exact frontier: **F5 — Three-Vault Capital Story Live Closure**.
+
+---
+
 # 11. F5 — Three-Vault Capital Story Live Closure
 
 ## Goal
