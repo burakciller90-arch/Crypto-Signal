@@ -29,6 +29,7 @@ from crypto_signal.product.intelligence_stream_models import (
     StreamCategory,
     StreamImportance,
 )
+from crypto_signal.signals.models import SignalDecision
 
 
 def build_geometry_family_snapshot(
@@ -82,16 +83,10 @@ def build_geometry_family_snapshot_from_bundle(
 def _build_geometry_snapshot(
     *,
     _bundle_identity: str,
-    bundle_signal: object,
+    bundle_signal: SignalDecision,
     frozen_at_ms: int,
 ) -> StreamFamilySnapshot:
-    # Keep the public helper typed against DecisionFreezeBundle while the
-    # persisted-record adapter first verifies its decoded SignalDecision.
     signal = bundle_signal
-    from crypto_signal.signals.models import SignalDecision
-
-    if not isinstance(signal, SignalDecision):
-        raise TypeError("Stream geometry source requires SignalDecision")
     if frozen_at_ms < signal.as_of_ms:
         raise ValueError("Stream geometry freeze time predates signal as-of")
 
