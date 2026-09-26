@@ -134,13 +134,7 @@ jobs:
           wait_ready
 
           curl -fsS "$BASE_URL/api/stream/messages?limit=20" > "$OUT/initial-messages.json"
-          "$TEST_PY" - <<'PY' "$OUT/initial-messages.json"
-import json, sys
-payload=json.load(open(sys.argv[1], encoding="utf-8"))
-assert payload["status"] == "ready", payload
-assert len(payload["items"]) == 1, payload
-assert payload["real_capital"] == 0, payload
-PY
+          "$TEST_PY" -c 'import json,sys; p=json.load(open(sys.argv[1],encoding="utf-8")); assert p["status"]=="ready",p; assert len(p["items"])==1,p; assert p["real_capital"]==0,p' "$OUT/initial-messages.json"
 
           BROWSER=""
           for candidate in             "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"             "/Applications/Chromium.app/Contents/MacOS/Chromium"             "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge"             "/Applications/Google Chrome Canary.app/Contents/MacOS/Google Chrome Canary"; do
@@ -202,15 +196,7 @@ PY
           start_preview
           wait_ready
           curl -fsS "$BASE_URL/api/stream/messages?limit=20" > "$OUT/after-restart-messages.json"
-          "$TEST_PY" - <<'PY' "$OUT/after-restart-messages.json" "$ROOT_ID" "$RESOLUTION_ID" "$CAPITAL_ID"
-import json, sys
-payload=json.load(open(sys.argv[1], encoding="utf-8"))
-ids={item["narrative_identity"] for item in payload["items"]}
-expected=set(sys.argv[2:])
-assert expected.issubset(ids), (expected, ids)
-assert len(payload["items"]) >= 3, payload
-assert payload["real_capital"] == 0, payload
-PY
+          "$TEST_PY" -c 'import json,sys; p=json.load(open(sys.argv[1],encoding="utf-8")); ids={x["narrative_identity"] for x in p["items"]}; expected=set(sys.argv[2:]); assert expected.issubset(ids),(expected,ids); assert len(p["items"])>=3,p; assert p["real_capital"]==0,p' "$OUT/after-restart-messages.json" "$ROOT_ID" "$RESOLUTION_ID" "$CAPITAL_ID"
           echo "STREAM_S15_REAL_E2E_BROWSER_PASS=YES"
           echo "REAL_CAPITAL=0"
 
