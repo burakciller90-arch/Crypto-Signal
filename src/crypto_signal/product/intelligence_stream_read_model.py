@@ -24,6 +24,11 @@ from crypto_signal.product.intelligence_stream_capital_lifecycle import (
 from crypto_signal.product.intelligence_stream_capital_sizing import (
     STREAM_CAPITAL_SIZING_MESSAGE_SCHEMA_VERSION,
 )
+from crypto_signal.product.intelligence_stream_family import (
+    STREAM_FAMILY_ANALYTICAL_VIEW_SCHEMA_VERSION,
+    STREAM_FAMILY_FACT_SCHEMA_VERSION,
+    STREAM_FAMILY_NARRATIVE_MESSAGE_SCHEMA_VERSION,
+)
 from crypto_signal.product.intelligence_stream_messages import (
     STREAM_FACT_BUNDLE_SCHEMA_VERSION,
     STREAM_MESSAGE_INPUT_SCHEMA_VERSION,
@@ -177,7 +182,10 @@ class IntelligenceStreamReadModel:
             params.append(query.timeframe)
         if query.effective_stance is not None:
             clauses.append(
-                "json_extract(a.payload_json, '$.stance.effective_stance') = ?"
+                "COALESCE("
+                "json_extract(a.payload_json, '$.stance.effective_stance'), "
+                "json_extract(a.payload_json, '$.family_state_label')"
+                ") = ?"
             )
             params.append(query.effective_stance)
         if query.category is not None:
@@ -190,7 +198,10 @@ class IntelligenceStreamReadModel:
             clauses.append("0 = 1")
         if query.state is not None:
             clauses.append(
-                "json_extract(a.payload_json, '$.stance.effective_stance') = ?"
+                "COALESCE("
+                "json_extract(a.payload_json, '$.stance.effective_stance'), "
+                "json_extract(a.payload_json, '$.family_state_label')"
+                ") = ?"
             )
             params.append(query.state)
         if query.evidence_domain is not None:
@@ -643,14 +654,20 @@ class IntelligenceStreamReadModel:
             expected_digest=str(row[6]),
             identity_key="analytical_view_identity",
             expected_identity=str(row[4]),
-            expected_schema=STREAM_ANALYTICAL_VIEW_SCHEMA_VERSION,
+            expected_schema=(
+                STREAM_ANALYTICAL_VIEW_SCHEMA_VERSION,
+                STREAM_FAMILY_ANALYTICAL_VIEW_SCHEMA_VERSION,
+            ),
         )
         fact_bundle = self._verified_linked_record(
             payload_json=str(row[8]),
             expected_digest=str(row[9]),
             identity_key="fact_bundle_identity",
             expected_identity=str(row[7]),
-            expected_schema=STREAM_FACT_BUNDLE_SCHEMA_VERSION,
+            expected_schema=(
+                STREAM_FACT_BUNDLE_SCHEMA_VERSION,
+                STREAM_FAMILY_FACT_SCHEMA_VERSION,
+            ),
         )
         message_input = (
             None
@@ -1260,7 +1277,7 @@ class IntelligenceStreamReadModel:
         expected_digest: str,
         identity_key: str,
         expected_identity: str,
-        expected_schema: str,
+        expected_schema: str | tuple[str, ...],
     ) -> dict[str, Any]:
         if sha256_text(payload_json) != expected_digest:
             raise StreamReadModelError("Stream detail persisted payload digest mismatch")
@@ -1273,7 +1290,12 @@ class IntelligenceStreamReadModel:
         identity_payload.pop(identity_key, None)
         if canonical_sha256(identity_payload) != expected_identity:
             raise StreamReadModelError("Stream detail canonical identity mismatch")
-        if raw.get("schema_version") != expected_schema:
+        allowed_schemas = (
+            (expected_schema,)
+            if isinstance(expected_schema, str)
+            else expected_schema
+        )
+        if raw.get("schema_version") not in allowed_schemas:
             raise StreamReadModelError("Stream detail schema mismatch")
         if raw.get("engine_version") != STREAM_ENGINE_VERSION:
             raise StreamReadModelError("Stream detail engine mismatch")
@@ -1583,7 +1605,10 @@ class IntelligenceStreamReadModel:
             raise StreamReadModelError(
                 "Stream read narrative canonical identity mismatch"
             )
-        if raw.get("schema_version") != STREAM_NARRATIVE_MESSAGE_SCHEMA_VERSION:
+        if raw.get("schema_version") not in {
+            STREAM_NARRATIVE_MESSAGE_SCHEMA_VERSION,
+            STREAM_FAMILY_NARRATIVE_MESSAGE_SCHEMA_VERSION,
+        }:
             raise StreamReadModelError(
                 "Stream read narrative schema mismatch"
             )
