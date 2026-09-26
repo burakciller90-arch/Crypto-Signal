@@ -1,5 +1,20 @@
 # PROJECT CHRONICLE
 
+## 2026-09-26 — Runtime hygiene closed the Alert snapshot race; provider transport reclassified by live evidence
+
+After the post-cutover Stream defect was closed, runtime-hygiene work separated two unrelated log families rather than treating them as one product failure.
+
+The Alert Clock investigation proved that the canonical signal ledger itself was not orphaned. Read-only audit run `36243028098` observed 2,777 signal freezes, 2,777 lifecycle evaluations and zero lifecycle/outcome orphans. The recurring `lifecycle evaluation references missing signal` error was instead a read-consistency race: Alert Clock loaded signal freezes and lifecycle rows through two SQLite autocommit snapshots, so a live writer commit between the two SELECTs could make a newly appended lifecycle visible without its parent being present in the earlier in-memory signal map.
+
+PR #1342 fixed only that race. The read-only Alert source connection now begins one explicit transaction, pinning all source-table reads to one immutable SQLite snapshot. The existing genuine-orphan guard was not removed or softened. Exact-source focused and whole-repository regression run `36243663186` passed. Live activation run `36243940231` then put Development and Alerts on exact main `f0349a70c11046893cbabd88ab56ca4ca8c44a99`; Product remained on accepted S16 `d343c4b2d10489a88f614bd58c9539be76029f80`. A real supervisor Alert cycle advanced the output log while the false-orphan counter stayed `347 -> 347` and canonical lifecycle orphans remained 0. Artifact: `alert-clock-live-activation-36243940231`, digest `sha256:5cb13eb6d07ef197ff41ed667245fbc2f23c7454dcca12a7c5e5a07932f4ef47`.
+
+The provider transport investigation did not reproduce a deterministic application defect. Proxy variables were absent from launchctl, supervisor and market-tape contexts. Binance and Bybit REST/WebSocket probes connected successfully both through normal environment handling and direct mode. UID504 run `36244113503` then exercised the exact REST adapters across BTCUSDT/ETHUSDT/SOLUSDT and 15m/1h/4h using both the production-style fresh-client pattern and a shared-client comparison. All 36 requests passed. Shared clients showed lower bounded average latency but no error-rate improvement because both modes had zero errors. During the same observation window, a real production live cycle advanced with zero new SSL wrong-version, DNS-resolution or ConnectError signatures. Artifact: `provider-transport-diagnostic-36244113503`, digest `sha256:d5369cc9211e9d18d05394adc0ea996082e54a6305b4bba530409bc856d10412`.
+
+The historical Binance/Bybit SSL/DNS failures remain real log evidence of intermittent transport/network incidents, but current evidence does not justify a speculative production client rewrite. Existing fail-closed/gap observability remains the correct behavior unless a reproducible defect appears.
+
+Runtime-hygiene consequence: the Alert false-orphan issue is closed live; provider transport has no current reproducible code blocker; Stream V1 remains closed; the active program frontier returns to untouched-forward WC2 evidence accumulation and evidence-dependent downstream gates. No historical evidence was rewritten and `REAL_CAPITAL=0` remained unchanged.
+
+
 ## 2026-09-26 — Post-cutover Stream production wiring defect closed on the live Product
 
 A real live-Product screenshot taken after the historical S16 cutover exposed a gap that the isolated S15/S16 acceptance fixtures had not proved: the Stream UI was healthy, but the canonical production Stream message ledger had not been activated by the live WC2/Decision path. The UI correctly failed closed instead of fabricating messages.
