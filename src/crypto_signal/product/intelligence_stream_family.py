@@ -270,6 +270,7 @@ class StreamFamilyStoryState:
     family: ConfluenceFamily
     state_label: str
     state_key: str
+    state_components: tuple[StreamFamilyStateComponent, ...]
     event_at_ms: int
     asset: str
     symbol: str
@@ -1454,6 +1455,7 @@ def _build_family_story(
         "real_capital": REAL_CAPITAL,
         "schema_version": STREAM_FAMILY_STORY_STATE_SCHEMA_VERSION,
         "source_event_identity": fact.source_event_identity,
+        "state_components": fact.state_components,
         "state_key": fact.state_key,
         "state_label": fact.state_label,
         "story_identity": fact.story_identity,
@@ -1472,6 +1474,7 @@ def _build_family_story(
         family=snapshot.family,
         state_label=fact.state_label,
         state_key=fact.state_key,
+        state_components=fact.state_components,
         event_at_ms=fact.event_at_ms,
         asset=fact.asset,
         symbol=fact.symbol,
