@@ -23,6 +23,7 @@ from crypto_signal.product.intelligence_stream_exact_evidence import (
     IntelligenceStreamExactEvidenceReadModel,
 )
 from crypto_signal.product.intelligence_stream_family import (
+    StreamFamilySnapshot,
     StreamTrustDomain,
     build_family_snapshot,
 )
@@ -40,18 +41,18 @@ def _project_family(
     stream_path: Path,
     *,
     projector_id: str,
-    snapshot: object,
+    snapshot: StreamFamilySnapshot,
 ) -> str:
     projector = IntelligenceStreamProductionProjector(stream_path)
     projector.ensure_family_activation(projector_id, activated_at_ms=1)
-    result = projector.project_family(snapshot, activated_at_ms=1)  # type: ignore[arg-type]
+    result = projector.project_family(snapshot, activated_at_ms=1)
     assert result.narrative_identity is not None
     return result.narrative_identity
 
 
 def _resolution(payload: dict[str, object], domain: str) -> dict[str, object]:
     items = payload["resolutions"]
-    assert isinstance(items, list | tuple)
+    assert isinstance(items, (list, tuple))
     found = next(
         item
         for item in items
@@ -108,7 +109,7 @@ def test_geometry_exact_coordinates_are_ready_without_fake_chart(
         == "IDENTITY_ONLY_EXACT"
     )
     references = payload["reference_resolutions"]
-    assert isinstance(references, list | tuple)
+    assert isinstance(references, (list, tuple))
     assert references[0]["resolution_state"] == "IDENTITY_ONLY_EXACT"
     assert payload["current_data_substitution"] is False
 
