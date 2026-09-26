@@ -23,6 +23,48 @@ jobs:
           clean: true
           fetch-depth: 2
 
+      - name: Headless reload canonical supervisor
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          DEV="$ROOT/Development"
+          EXPECTED_MAIN="3ec48a3728b919e3783546e57eab7afebab1d18d"
+          test "$(id -u)" = "504"
+          test "$(git -C "$DEV" rev-parse HEAD)" = "$EXPECTED_MAIN"
+          test -z "$(git -C "$DEV" status --porcelain)"
+
+          old_sup="$(cat "$ROOT/ssd-service-supervisor.pid" 2>/dev/null || true)"
+          test -n "$old_sup"
+          kill -0 "$old_sup"
+          ps -p "$old_sup" -o command= | grep -F "$ROOT/ssd-service-supervisor.sh" >/dev/null
+
+          cp "$GITHUB_WORKSPACE/ops/ssd_runtime_supervisor.sh"             "$ROOT/ssd-service-supervisor.sh"
+          chmod 700 "$ROOT/ssd-service-supervisor.sh"
+
+          kill -TERM "$old_sup"
+          stopped=0
+          for _ in {1..20}; do
+            if ! kill -0 "$old_sup" >/dev/null 2>&1; then
+              stopped=1
+              break
+            fi
+            sleep 1
+          done
+          test "$stopped" = "1"
+          rm -f "$ROOT/ssd-service-supervisor.pid"
+
+          CRYPTO_SIGNAL_ROOT="$ROOT"             bash "$GITHUB_WORKSPACE/ops/r11/start_ssd_runtime.command"
+
+          new_sup="$(cat "$ROOT/ssd-service-supervisor.pid")"
+          test -n "$new_sup"
+          test "$new_sup" != "$old_sup"
+          kill -0 "$new_sup"
+          ps -p "$new_sup" -o command= | grep -F "$ROOT/ssd-service-supervisor.sh" >/dev/null
+          curl -fsS --max-time 5 http://127.0.0.1:48700/api/health             | /usr/bin/python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["status"]=="ok"; assert d["real_capital"]==0; assert d["read_only"] is True'
+          echo "F4_HEADLESS_SUPERVISOR_RELOAD_PASS=YES old=$old_sup new=$new_sup"
+          echo "REAL_CAPITAL=0"
+
       - name: Verify physical F4 trust activation
         shell: bash
         run: |
