@@ -79,6 +79,8 @@ It:
 - verifies detail lineage and authority boundaries;
 - verifies category filter/search visibility;
 - checks visual proof is exact or explicitly unavailable rather than fabricated;
+- accepts an explicit `--min-event-ms` observation watermark so final F8 cannot silently reuse pre-observation messages as its forward proof;
+- can read the canonical Stream SQLite ledger in read-only mode to verify no source rows predate activation, no duplicate source/narrative identities exist and one source event does not fan out into duplicate narrative bubbles;
 - checks one-shot SSE replay for duplicate identities;
 - reports missing classes as `OPEN` rather than manufacturing activity;
 - can require full completion only when final F8 closure is actually attempted.
@@ -102,10 +104,12 @@ The browser probe never appends a Stream event.
 
 ### `.github/workflows/crypto-stream-final-f8-production-e2e-prep.yml`
 
-Two-level gate:
+Two-level manual gate:
 
-- push on the F8 prep branch runs only lightweight hosted contract checks;
-- the production read-only UID504 audit is **manual dispatch only** while F5/F6/F7 are active, preventing unnecessary contention with parallel agents.
+- both contract and production jobs are `workflow_dispatch` only, so F8 branch pushes create no extra UID504 contention while F5/F6/F7 are active;
+- the contract job runs first and is non-mutating;
+- the production read-only UID504 audit runs only when `run_production=true`;
+- final `require_complete=true` additionally requires `observation_start_ms > 0`, making the final acceptance window explicitly forward-only.
 
 The production job records artifacts but does not deploy or mutate Development/Product.
 
@@ -160,8 +164,9 @@ F8 cannot be declared PASS until:
 - F7 is accepted if local rewrite is enabled, including deterministic fallback;
 - the F8 branch is rebased onto that accepted main;
 - required genuine forward production classes are present or explicitly classified unavailable/deferred by product authority;
-- the final read-only audit is run against the real Product/runtime;
-- the real Chromium probe passes on a genuine persisted production message;
+- an explicit post-F7 F8 observation watermark is recorded and supplied to the final gate;
+- the final read-only audit is run against the real Product/runtime and canonical Stream ledger;
+- the real Chromium probe passes on a genuine persisted production message at or after that watermark;
 - no historical backfill, synthetic event, policy loosening or real-money authority was used.
 
 ---
