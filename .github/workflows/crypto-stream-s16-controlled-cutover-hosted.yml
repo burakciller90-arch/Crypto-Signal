@@ -1,12 +1,7 @@
 name: Crypto Stream S16 Controlled Cutover UID504
 
+# S16 is accepted/closed. Retained for explicit audit re-runs only.
 on:
-  push:
-    branches:
-      - 'stream/s16-controlled-cutover'
-      - 'stream/s16-product-deploy-handoff'
-      - 'stream/s16-product-deploy-recovery-timeout'
-      - 'main'
   workflow_dispatch:
 
 permissions:
