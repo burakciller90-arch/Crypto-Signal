@@ -275,3 +275,25 @@ S14 closed:
 **S14 = PASS. S15 End-to-End Product Acceptance is the active frontier.**
 
 Do not jump to S16. S15 must first prove one coherent product story across real backend truth, live delivery, sound semantics, expansion, exact evidence/proof, immutable story continuation and traceable virtual-capital consequence.
+
+
+## S15 closeout
+
+Canonical S15 acceptance:
+- `docs/CRYPTO_SIGNAL_STREAM_S15_ACCEPTANCE.md`.
+
+S15 closed:
+- real backend event/message -> automatic live Stream delivery;
+- exactly-once live-new sound according to settings;
+- expandable SIMPLE/PRO/INTELLIGENCE/DECISION/CAPITAL depth;
+- five-family explanation;
+- exact frozen proof with no current-data substitution;
+- immutable story continuation;
+- search/filter + exact deep-link behavior;
+- traceable Epoch 2 virtual-capital consequence;
+- persisted restart recovery;
+- desktop/mobile real Chromium acceptance.
+
+**S15 = PASS. S16 Controlled Cutover is the active frontier.**
+
+S16 must keep GALACTECH V2 as rollback/fallback until exact-main product-root routing, runtime/API parity, Stream persistence/live/sound/search/proof/capital/long-session/accessibility and rollback are mechanically accepted. REAL_CAPITAL=0 remains binding.
