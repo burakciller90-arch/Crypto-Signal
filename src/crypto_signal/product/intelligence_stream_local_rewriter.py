@@ -13,7 +13,7 @@ from crypto_signal.product.intelligence_stream_narrative import (
     StreamNarrativeText,
 )
 
-LOCAL_NARRATIVE_REWRITER_VERSION = "crypto-signal-local-rewriter-v1/2"
+LOCAL_NARRATIVE_REWRITER_VERSION = "crypto-signal-local-rewriter-v1/3"
 _REQUIRED_TEXT_KEYS = frozenset(
     {
         "collapsed_text",
@@ -180,8 +180,9 @@ def _chat_payload(
         "Yeni rakam, fiyat, yüzde, hedef, seviye, neden, kanıt veya kesinlik ekleme. "
         "Yeni teknik kavram, aktör, haber, piyasa nedeni veya kanıt türü icat etme. "
         "Mevcut anlamı ve yönü tersine çevirme. Yalnız collapsed_text ve simple_text "
-        "alanlarını daha doğal, sakin ve profesyonel trader Türkçesiyle yeniden yaz. "
-        "technical_text, intelligence_text, decision_text ve capital_text alanlarını "
+        "alanlarını daha doğal, sakin ve profesyonel trader Türkçesiyle gerçekten yeniden "
+        "ifade et; bu iki alanı kaynak metinden birebir kopyalama. technical_text, "
+        "intelligence_text, decision_text ve capital_text alanlarını "
         "tek karakter dahi değiştirmeden kopyala. collapsed_text tek paragraf ve kısa "
         "kalmalı. Alan adlarını değiştirme. Çıktı yalnızca ham JSON nesnesi olmalı; "
         "markdown veya açıklama ekleme."
