@@ -1,6 +1,9 @@
 name: Crypto Stream Post-R11 Live Acceptance UID504
 
 on:
+  push:
+    branches:
+      - 'ci/visualsnapshot-exact-source'
   workflow_dispatch:
 
 permissions:
