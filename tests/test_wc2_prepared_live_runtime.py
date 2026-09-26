@@ -343,6 +343,10 @@ def test_capital_hook_reuses_exact_prepared_context_on_fresh_and_replay(
     assert calls[0][1] == receipt.source_inputs.event_context.evidence_identity
     assert calls[0][2] == receipt.base_asset
     assert calls[0][3] == receipt.capital_assessed_at_ms
+    assert receipt.capital_assessed_at_ms == observed_at + 1
+    assert receipt.sized_at_ms == observed_at + 2
+    assert receipt.previewed_at_ms == observed_at + 3
+    assert receipt.indexed_at_ms == observed_at + 4
 
 
 def test_post_activation_replay_without_receipt_never_backfills(
