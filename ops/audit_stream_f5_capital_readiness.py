@@ -18,10 +18,13 @@ from typing import Any
 
 REAL_CAPITAL = 0
 
-EPOCH2_TABLES = (
+R21_REQUIRED_TABLES = (
     "r21_epoch2_activation",
     "r21_vault_snapshots",
     "r21_consolidated_snapshots",
+)
+
+CAPITAL_LIFECYCLE_TABLES = (
     "s11_vault_decisions",
     "s11_canonical_sizing_events",
     "r22_epoch2_intents",
@@ -29,6 +32,8 @@ EPOCH2_TABLES = (
     "r22_epoch2_bundles",
     "s11_capital_outcome_evidence",
 )
+
+EPOCH2_TABLES = R21_REQUIRED_TABLES + CAPITAL_LIFECYCLE_TABLES
 
 STREAM_CAPITAL_TABLES = (
     "stream_capital_decision_messages",
@@ -230,16 +235,18 @@ def _canonical_forward_counts(
     connection: sqlite3.Connection,
     *,
     activated_at_ms: int,
-) -> dict[str, dict[str, int]]:
-    result: dict[str, dict[str, int]] = {}
-    for table in (
-        "s11_vault_decisions",
-        "s11_canonical_sizing_events",
-        "r22_epoch2_intents",
-        "r22_epoch2_fills",
-        "r22_epoch2_bundles",
-        "s11_capital_outcome_evidence",
-    ):
+    existing_tables: set[str],
+) -> dict[str, dict[str, int | bool]]:
+    result: dict[str, dict[str, int | bool]] = {}
+    for table in CAPITAL_LIFECYCLE_TABLES:
+        if table not in existing_tables:
+            result[table] = {
+                "table_present": False,
+                "before_stream_activation": 0,
+                "at_or_after_stream_activation": 0,
+                "unknown_event_time": 0,
+            }
+            continue
         rows = _payload_rows(connection, table)
         before = 0
         forward = 0
@@ -253,6 +260,7 @@ def _canonical_forward_counts(
             else:
                 forward += 1
         result[table] = {
+            "table_present": True,
             "before_stream_activation": before,
             "at_or_after_stream_activation": forward,
             "unknown_event_time": unknown,
@@ -301,52 +309,96 @@ def audit(
     ) as stream:
         epoch2_tables = _tables(epoch2)
         stream_tables = _tables(stream)
-        missing_epoch2 = sorted(set(EPOCH2_TABLES) - epoch2_tables)
-        if missing_epoch2:
+        missing_r21 = sorted(set(R21_REQUIRED_TABLES) - epoch2_tables)
+        if missing_r21:
             raise ValueError(
-                "canonical Epoch2 schema incomplete: " + ",".join(missing_epoch2)
+                "canonical R21 Epoch2 schema incomplete: " + ",".join(missing_r21)
             )
+        missing_lifecycle = sorted(
+            set(CAPITAL_LIFECYCLE_TABLES) - epoch2_tables
+        )
         if "stream_activation" not in stream_tables or "stream_source_events" not in stream_tables:
             raise ValueError("Stream schema incomplete for F5 audit")
 
         activation = _stream_activation(stream)
         activated_at_ms = int(activation["activated_at_ms"])
 
-        decisions = _payload_rows(epoch2, "s11_vault_decisions", order_column="event_at_ms")
-        sizing = _payload_rows(
-            epoch2,
-            "s11_canonical_sizing_events",
-            order_column="event_at_ms",
+        decisions = (
+            _payload_rows(
+                epoch2,
+                "s11_vault_decisions",
+                order_column="event_at_ms",
+            )
+            if "s11_vault_decisions" in epoch2_tables
+            else []
         )
-        intents = _payload_rows(epoch2, "r22_epoch2_intents", order_column="event_at_ms")
-        fills = _payload_rows(epoch2, "r22_epoch2_fills", order_column="event_at_ms")
-        bundles = _payload_rows(epoch2, "r22_epoch2_bundles", order_column="event_at_ms")
-        outcomes = _payload_rows(
-            epoch2,
-            "s11_capital_outcome_evidence",
-            order_column="event_at_ms",
+        sizing = (
+            _payload_rows(
+                epoch2,
+                "s11_canonical_sizing_events",
+                order_column="event_at_ms",
+            )
+            if "s11_canonical_sizing_events" in epoch2_tables
+            else []
+        )
+        intents = (
+            _payload_rows(
+                epoch2,
+                "r22_epoch2_intents",
+                order_column="event_at_ms",
+            )
+            if "r22_epoch2_intents" in epoch2_tables
+            else []
+        )
+        fills = (
+            _payload_rows(
+                epoch2,
+                "r22_epoch2_fills",
+                order_column="event_at_ms",
+            )
+            if "r22_epoch2_fills" in epoch2_tables
+            else []
+        )
+        bundles = (
+            _payload_rows(
+                epoch2,
+                "r22_epoch2_bundles",
+                order_column="event_at_ms",
+            )
+            if "r22_epoch2_bundles" in epoch2_tables
+            else []
+        )
+        outcomes = (
+            _payload_rows(
+                epoch2,
+                "s11_capital_outcome_evidence",
+                order_column="event_at_ms",
+            )
+            if "s11_capital_outcome_evidence" in epoch2_tables
+            else []
         )
 
         latest_vaults = _latest_vault_state(epoch2)
         latest_consolidated = _latest_consolidated_state(epoch2)
 
         epoch2_counts = {
-            table: _count(epoch2, table)
+            table: (_count(epoch2, table) if table in epoch2_tables else None)
             for table in EPOCH2_TABLES
         }
         forward = _canonical_forward_counts(
             epoch2,
             activated_at_ms=activated_at_ms,
+            existing_tables=epoch2_tables,
         )
         stream_capital = _stream_capital_sources(stream)
         specialized = _stream_specialized_counts(stream, stream_tables)
 
         forward_total = sum(
-            item["at_or_after_stream_activation"]
+            int(item["at_or_after_stream_activation"])
             for item in forward.values()
         )
         preactivation_total = sum(
-            item["before_stream_activation"]
+            int(item["before_stream_activation"])
             for item in forward.values()
         )
 
@@ -377,6 +429,8 @@ def audit(
                 activation.get("historical_rich_backfill_allowed", False)
             ),
             "epoch2_table_counts": epoch2_counts,
+            "missing_capital_lifecycle_tables": missing_lifecycle,
+            "capital_lifecycle_schema_live": not missing_lifecycle,
             "decision_disposition_counts": _counter_payload(
                 decisions,
                 "disposition",
@@ -406,12 +460,18 @@ def audit(
             ),
             "real_capital_zero_verified": real_capital_ok,
             "f5_current_classification": (
-                "CODE_EXISTS_NOT_LIVE"
-                if stream_capital["count"] == 0
-                else "PARTIALLY_OR_ALREADY_PROJECTED"
+                "CANONICAL_CAPITAL_RUNTIME_NOT_LIVE"
+                if missing_lifecycle
+                else (
+                    "CODE_EXISTS_NOT_LIVE"
+                    if stream_capital["count"] == 0
+                    else "PARTIALLY_OR_ALREADY_PROJECTED"
+                )
             ),
             "f5_safe_next_action": (
-                "WIRE_POST_COMMIT_FORWARD_CALLER_ONLY_NO_BACKFILL"
+                "ACTIVATE_CANONICAL_CAPITAL_RUNTIME_THEN_WIRE_FORWARD_PROJECTOR"
+                if missing_lifecycle
+                else "WIRE_POST_COMMIT_FORWARD_CALLER_ONLY_NO_BACKFILL"
             ),
         }
 
