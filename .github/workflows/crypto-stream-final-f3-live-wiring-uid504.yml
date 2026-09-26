@@ -52,30 +52,15 @@ jobs:
           TMP="$RUNNER_TEMP/f3-live-wiring-$GITHUB_RUN_ID"
           rm -rf "$TMP"
           mkdir -p "$TMP"
-          "$PY" - "$SIGNAL" "$MARKET" "$STREAM" "$TMP" <<'PY'
+          "$PY" - "$MARKET" "$TMP" <<'PY'
           import sqlite3
           import sys
           from pathlib import Path
 
           from crypto_signal.data.market_tape import MarketTapeStore
 
-          signal, market, stream, root = map(Path, sys.argv[1:])
-
-          def backup(source: Path, target: Path) -> None:
-              src = sqlite3.connect(
-                  f"file:{source.resolve()}?mode=ro",
-                  uri=True,
-              )
-              dst = sqlite3.connect(target)
-              try:
-                  src.backup(dst)
-              finally:
-                  dst.close()
-                  src.close()
-
-          backup(signal, root / "signal.sqlite3")
-          backup(stream, root / "stream.sqlite3")
-
+          market = Path(sys.argv[1])
+          root = Path(sys.argv[2])
           target_market = root / "market.sqlite3"
           MarketTapeStore(target_market).initialize()
           source = sqlite3.connect(
@@ -129,7 +114,10 @@ jobs:
                       target.executemany(
                           f"INSERT OR IGNORE INTO {table} ({column_sql}) "
                           f"VALUES ({placeholders})",
-                          [tuple(row[column] for column in columns) for row in rows],
+                          [
+                              tuple(row[column] for column in columns)
+                              for row in rows
+                          ],
                       )
               target.commit()
           finally:
@@ -139,7 +127,8 @@ jobs:
 
           echo "F3_PERSISTED_SOURCE_ONLY_DRY_RUN=YES"
 
-          "$PY" - "$TMP" <<'PY'
+          "$PY" - "$SIGNAL" "$TMP" <<'PY'
+          import sqlite3
           import time
           from pathlib import Path
           import sys
@@ -152,20 +141,42 @@ jobs:
               build_geometry_family_snapshot,
               build_market_tape_family_snapshots,
           )
+          from crypto_signal.product.intelligence_stream_forward_runtime import (
+              IntelligenceStreamForwardRuntime,
+          )
           from crypto_signal.product.intelligence_stream_production_projector import (
               IntelligenceStreamProductionProjector,
           )
 
-          root = Path(sys.argv[1])
-          signal = root / "signal.sqlite3"
+          source_signal = Path(sys.argv[1])
+          root = Path(sys.argv[2])
           market = root / "market.sqlite3"
           stream = root / "stream.sqlite3"
-          projector = IntelligenceStreamProductionProjector(stream)
 
-          freezes = ImmutableSignalLedger(signal).list_freezes()
-          if not freezes:
+          uri = f"file:{source_signal.resolve()}?mode=ro"
+          with sqlite3.connect(uri, uri=True) as connection:
+              connection.execute("PRAGMA query_only=ON")
+              row = connection.execute(
+                  """
+                  SELECT signal_freeze_identity
+                  FROM signal_freezes
+                  ORDER BY frozen_at_ms DESC, bundle_identity DESC
+                  LIMIT 1
+                  """
+              ).fetchone()
+          if row is None:
               raise SystemExit("F3_EXACT_GEOMETRY_SOURCE_MISSING")
-          geometry = build_geometry_family_snapshot(freezes[-1])
+          freeze = ImmutableSignalLedger(source_signal).read_freeze_by_signal(
+              str(row[0])
+          )
+          if freeze is None:
+              raise SystemExit("F3_EXACT_GEOMETRY_SOURCE_LOST")
+          geometry = build_geometry_family_snapshot(freeze)
+
+          IntelligenceStreamForwardRuntime(stream).ensure_activated(
+              activated_at_ms=geometry.event_at_ms,
+          )
+          projector = IntelligenceStreamProductionProjector(stream)
           geometry_result = projector.project_family(
               geometry,
               activated_at_ms=geometry.event_at_ms,
