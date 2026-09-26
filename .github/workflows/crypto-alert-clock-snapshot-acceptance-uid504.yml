@@ -1,9 +1,7 @@
 name: Crypto Alert Clock Snapshot Acceptance UID504
 
 on:
-  push:
-    branches:
-      - 'runtime/alert-clock-consistent-snapshot'
+  workflow_dispatch:
 
 permissions:
   contents: read
