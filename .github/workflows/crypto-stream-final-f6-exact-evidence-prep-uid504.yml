@@ -184,20 +184,45 @@ jobs:
           reference_counts: Counter[str] = Counter()
           read_model = IntelligenceStreamReadModel(stream)
 
+          # Resolve one newest genuine live message per projector family.  The
+          # focused F6 suite exhaustively constrains resolution-state output;
+          # this production audit proves those contracts against real persisted
+          # identities without re-scanning multi-GB evidence stores hundreds
+          # of times.
+          selected: dict[str, str] = {}
           for row in rows:
               narrative_identity = str(row["narrative_identity"])
+              detail = read_model.read_message_detail(narrative_identity)
+              if detail is None:
+                  raise SystemExit("F6_LIVE_AUDIT_DETAIL_MISSING")
+              fact = detail.get("fact_bundle")
+              if not isinstance(fact, dict):
+                  continue
+              projector_id = fact.get("projector_id")
+              if isinstance(projector_id, str):
+                  selected.setdefault(projector_id, narrative_identity)
+
+          required = {
+              "market_geometry_change",
+              "liquidity_change",
+              "order_flow_change",
+              "derivatives_change",
+              "provider_quality_change",
+          }
+          missing = required - set(selected)
+          if missing:
+              raise SystemExit(
+                  "F6_LIVE_AUDIT_REQUIRED_PROJECTOR_MISSING:"
+                  + ",".join(sorted(missing))
+              )
+
+          for projector_id, narrative_identity in sorted(selected.items()):
               payload = resolver.read_for_narrative(narrative_identity)
               if payload is None:
                   raise SystemExit("F6_LIVE_AUDIT_MESSAGE_DISAPPEARED")
               if payload.get("current_data_substitution") is not False:
                   raise SystemExit("F6_CURRENT_DATA_SUBSTITUTION_FORBIDDEN")
-
-              detail = read_model.read_message_detail(narrative_identity)
-              if detail is None:
-                  raise SystemExit("F6_LIVE_AUDIT_DETAIL_MISSING")
-              fact = detail.get("fact_bundle")
-              if isinstance(fact, dict) and isinstance(fact.get("projector_id"), str):
-                  projector_counts[str(fact["projector_id"])] += 1
+              projector_counts[projector_id] += 1
 
               for resolution in payload.get("resolutions", ()):
                   if not isinstance(resolution, dict):
@@ -218,13 +243,6 @@ jobs:
                       raise SystemExit(f"F6_AMBIGUOUS_REFERENCE_STATE:{state}")
                   reference_counts[state] += 1
 
-          required = {
-              "market_geometry_change",
-              "liquidity_change",
-              "order_flow_change",
-              "derivatives_change",
-              "provider_quality_change",
-          }
           missing = required - set(projector_counts)
           if missing:
               raise SystemExit(
@@ -233,7 +251,8 @@ jobs:
               )
 
           summary = {
-              "messages_audited": len(rows),
+              "candidate_messages_scanned": len(rows),
+              "messages_audited": len(selected),
               "projector_counts": dict(sorted(projector_counts.items())),
               "domain_counts": dict(sorted(domain_counts.items())),
               "resolution_state_counts": dict(sorted(state_counts.items())),
