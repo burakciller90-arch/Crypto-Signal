@@ -12,6 +12,8 @@ from crypto_signal.product.web import (
     DEFAULT_CANDLE_CACHE_PATH,
     DEFAULT_LEDGER_PATH,
     DEFAULT_PAPER_LEDGER_PATH,
+    PRODUCT_ROOT_CHOICES,
+    PRODUCT_ROOT_STREAM,
     create_app,
 )
 
@@ -20,6 +22,12 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=48700)
+    parser.add_argument(
+        "--product-root",
+        choices=PRODUCT_ROOT_CHOICES,
+        default=PRODUCT_ROOT_STREAM,
+        help="product root surface; use galactech for immediate rollback",
+    )
     parser.add_argument("--ledger", type=Path, default=DEFAULT_LEDGER_PATH)
     parser.add_argument(
         "--alert-outbox",
@@ -126,6 +134,7 @@ def main() -> None:
         paper_ledger_path=args.paper_ledger,
         candle_cache_path=args.candle_cache,
         learning_memory_path=args.learning_memory,
+        product_root=args.product_root,
         **runtime_paths,
     )
     uvicorn.run(
