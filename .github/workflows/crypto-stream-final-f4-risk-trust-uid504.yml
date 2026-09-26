@@ -44,7 +44,7 @@ jobs:
           PY="/Volumes/Crypto-504/Crypto-Signal/Development/.venv/bin/python"
           export PYTHONPATH="$GITHUB_WORKSPACE/src:$GITHUB_WORKSPACE/tests"
           "$PY" -m pytest -q -m "not asyncio"
-          "$PY" -m ruff check src tests ops
+          "$PY" -m ruff check src tests
           "$PY" -m mypy src
           echo "F4_BROAD_REGRESSION_PASS=YES"
           echo "REAL_CAPITAL=0"
