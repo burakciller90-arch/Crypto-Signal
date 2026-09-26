@@ -33,6 +33,15 @@ jobs:
           EXPECTED_MAIN="115aaf9c97eca012503224c3a64a97526c1bf4dd"
 
           test "$(id -u)" = "504"
+          echo "F6_DIAG_DEV_HEAD=$(git -C "$DEV" rev-parse HEAD)"
+          echo "F6_DIAG_PRODUCT_HEAD=$(git -C "$PRODUCT" rev-parse HEAD)"
+          echo "F6_DIAG_DEV_STATUS_BEGIN"
+          git -C "$DEV" status --porcelain=v1 || true
+          echo "F6_DIAG_DEV_STATUS_END"
+          echo "F6_DIAG_PRODUCT_STATUS_BEGIN"
+          git -C "$PRODUCT" status --porcelain=v1 || true
+          echo "F6_DIAG_PRODUCT_STATUS_END"
+          echo "F6_DIAG_WORKFLOW_MERGE_BASE=$(git merge-base HEAD "$EXPECTED_MAIN" || true)"
           test -z "$(git -C "$DEV" status --porcelain)"
           test -z "$(git -C "$PRODUCT" status --porcelain)"
           test "$(git merge-base HEAD "$EXPECTED_MAIN")" = "$EXPECTED_MAIN"
