@@ -78,7 +78,7 @@ jobs:
           fi
           test -s "$OUT/tags-before.json"
 
-          MODEL="qwen3:1.7b"
+          MODEL="qwen2.5:1.5b-instruct"
           "$OLLAMA_BIN" pull "$MODEL" | tee "$OUT/ollama-pull.log"
           curl -fsS --max-time 5 http://127.0.0.1:11434/api/tags > "$OUT/tags-after.json"
 
