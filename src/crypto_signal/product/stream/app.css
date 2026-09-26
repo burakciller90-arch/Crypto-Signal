@@ -407,6 +407,7 @@ select {
 .message-list {
   width: min(760px, calc(100% - 34px));
   display: grid;
+  contain: style;
   gap: 12px;
   margin: 0 auto;
   padding: 22px 0 34px;
@@ -415,6 +416,7 @@ select {
 
 .message {
   position: relative;
+  contain: layout style;
   border: 1px solid rgba(68, 91, 127, 0.12);
   border-radius: 20px 20px 20px 7px;
   background: rgba(255, 255, 255, 0.86);
@@ -1507,12 +1509,33 @@ body[data-density="compact"] .message-copy {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  html,
+  body,
+  .stream-viewport {
+    scroll-behavior: auto !important;
+  }
+
   *,
   *::before,
   *::after {
-    scroll-behavior: auto !important;
     transition: none !important;
     animation: none !important;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .message,
+  .drawer,
+  .evidence-window,
+  .timeline-shell {
+    border-width: 2px;
+  }
+
+  .message-state,
+  .chip,
+  .notification-status {
+    outline: 1px solid currentColor;
+    outline-offset: 1px;
   }
 }
 

@@ -19,8 +19,8 @@ def test_stream_preview_is_isolated_from_production_root(tmp_path: Path) -> None
     assert root.status_code == 200
     assert preview.status_code == 200
     assert 'data-ui-version="galactech-v2-intelligence-first-tr"' in root.text
-    assert 'data-ui-version="crypto-signal-stream-v1-s13"' in preview.text
-    assert 'data-ui-version="crypto-signal-stream-v1-s13"' not in root.text
+    assert 'data-ui-version="crypto-signal-stream-v1-s14"' in preview.text
+    assert 'data-ui-version="crypto-signal-stream-v1-s14"' not in root.text
 
 
 def test_stream_preview_obeys_one_panel_contract() -> None:
@@ -299,14 +299,45 @@ def test_stream_s13_sound_and_notification_contract() -> None:
     assert "place_order" not in script
 
 
-def test_stream_s13_does_not_jump_to_s14() -> None:
+def test_stream_s14_long_session_and_accessibility_contract() -> None:
+    html = (STREAM_DIR / "index.html").read_text(encoding="utf-8")
+    script = (STREAM_DIR / "app.js").read_text(encoding="utf-8")
+    css = (STREAM_DIR / "app.css").read_text(encoding="utf-8")
+
+    assert 'data-ui-version="crypto-signal-stream-v1-s14"' in html
+    assert 'role="feed"' in html
+    assert 'aria-label="Kalıcı Intelligence Stream mesajları"' in html
+    assert 'role="dialog"' in html
+    assert 'aria-modal="true"' in html
+
+    assert "VIRTUAL_WINDOW_SIZE = 180" in script
+    assert "VIRTUAL_SHIFT_SIZE = 60" in script
+    assert "DETAIL_CACHE_LIMIT = 80" in script
+    assert "shiftVirtualWindow" in script
+    assert "captureViewportAnchor" in script
+    assert "restoreViewportAnchor" in script
+    assert "aria-posinset" in script
+    assert "aria-setsize" in script
+    assert "10_000" in script
+    assert '"long10k"' in script
+    assert '"long1k"' in script
+    assert "handleDrawerKeyboard" in script
+    assert "drawerReturnFocus" in script
+    assert "__cryptoSignalStreamS14" in script
+    assert "prependFixturePage" in script
+
+    assert "@media (prefers-reduced-motion: reduce)" in css
+    assert "@media (prefers-contrast: more)" in css
+    assert "scroll-behavior: auto !important" in css
+
+
+def test_stream_s14_does_not_jump_to_s15_or_real_money() -> None:
     script = (STREAM_DIR / "app.js").read_text(encoding="utf-8")
     notifications = (STREAM_DIR / "notifications.js").read_text(encoding="utf-8")
 
-    assert "virtualized-message-spacer" not in script
-    assert "10_000" not in script
     assert "execute_order" not in script
     assert "place_order" not in script
+    assert "REAL_CAPITAL=1" not in script
     assert "real_capital" not in notifications.lower()
 
 

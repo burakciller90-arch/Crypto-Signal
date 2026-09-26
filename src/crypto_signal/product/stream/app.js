@@ -94,7 +94,16 @@ const state = {
     fromMs: "",
     toMs: "",
   },
+  virtualStart: 0,
+  virtualEnd: 0,
+  virtualShiftLocked: false,
+  lastRenderDurationMs: 0,
+  drawerReturnFocus: null,
 };
+
+const VIRTUAL_WINDOW_SIZE = 180;
+const VIRTUAL_SHIFT_SIZE = 60;
+const DETAIL_CACHE_LIMIT = 80;
 
 const EVIDENCE_WINDOW_SESSION_KEY = "crypto-signal-stream-v1-s9-windows";
 const EVIDENCE_WINDOW_KINDS = Object.freeze({
@@ -1793,7 +1802,7 @@ async function loadMessageDetail(item, record) {
   if (!identity || state.detailRequests.has(identity)) return;
 
   if (record.__fixture_detail && typeof record.__fixture_detail === "object") {
-    state.details.set(identity, record.__fixture_detail);
+    rememberDetail(identity, record.__fixture_detail);
     renderExpandedPanel(item, record, record.__fixture_detail);
     return;
   }
@@ -1802,7 +1811,7 @@ async function loadMessageDetail(item, record) {
   try {
     const payload = await fetchJson(API.detail(identity));
     if (payload.status === "ready" && payload.detail) {
-      state.details.set(identity, payload.detail);
+      rememberDetail(identity, payload.detail);
       if (state.expanded.has(identity)) {
         renderExpandedPanel(item, record, payload.detail);
       }
@@ -1848,7 +1857,7 @@ function toggleMessageExpansion(item, record) {
     && record.__fixture_detail
     && typeof record.__fixture_detail === "object"
   ) {
-    state.details.set(identity, record.__fixture_detail);
+    rememberDetail(identity, record.__fixture_detail);
   }
   preserveMessageAnchor(item, () => {
     if (willOpen) {
@@ -1881,9 +1890,15 @@ function toggleMessageExpansion(item, record) {
   }
 }
 
-function renderMessage(record, { isNew = false } = {}) {
+function renderMessage(
+  record,
+  { isNew = false, absoluteIndex = 0, totalMessages = 1 } = {}
+) {
   const item = document.createElement("li");
   item.className = "message";
+  item.setAttribute("role", "article");
+  item.setAttribute("aria-posinset", String(absoluteIndex + 1));
+  item.setAttribute("aria-setsize", String(totalMessages));
   if (isNew) item.classList.add("is-new");
   const identity = text(record.narrative_identity, "");
   item.dataset.identity = identity;
@@ -1894,7 +1909,15 @@ function renderMessage(record, { isNew = false } = {}) {
   const summary = document.createElement("button");
   summary.type = "button";
   summary.className = "message-summary";
+  const detailId = `message-detail-${identity}`;
   summary.setAttribute("aria-expanded", String(state.expanded.has(identity)));
+  summary.setAttribute("aria-controls", detailId);
+  summary.setAttribute(
+    "aria-label",
+    `${text(record.symbol, "Piyasa")} ${text(record.timeframe, "")} · ${messageState(
+      record
+    )} · detayı ${state.expanded.has(identity) ? "kapat" : "aç"}`
+  );
 
   const meta = document.createElement("div");
   meta.className = "message-meta";
@@ -1934,6 +1957,7 @@ function renderMessage(record, { isNew = false } = {}) {
 
   const detailPanel = document.createElement("div");
   detailPanel.className = "message-detail";
+  detailPanel.id = detailId;
   detailPanel.hidden = !state.expanded.has(identity);
   const cached = state.details.get(identity);
   if (state.expanded.has(identity)) {
@@ -1950,17 +1974,144 @@ function renderMessage(record, { isNew = false } = {}) {
   if (state.expanded.has(identity) && !cached) void loadMessageDetail(item, record);
   return item;
 }
-function renderAll() {
-  if (!ui.list || !ui.empty) return;
-  ui.list.replaceChildren();
-  for (const record of state.messages) {
-    ui.list.append(renderMessage(record));
+function captureViewportAnchor() {
+  if (!ui.viewport || !ui.list) return null;
+  const viewportTop = ui.viewport.getBoundingClientRect().top;
+  const rendered = [...ui.list.querySelectorAll(".message")];
+  const item =
+    rendered.find((node) => node.getBoundingClientRect().bottom > viewportTop + 1)
+    || rendered[0];
+  if (!(item instanceof HTMLElement)) return null;
+  const identity = item.dataset.identity || "";
+  if (!identity) return null;
+  return {
+    identity,
+    top: item.getBoundingClientRect().top,
+  };
+}
+
+function restoreViewportAnchor(anchor) {
+  if (!anchor || !ui.viewport || !ui.list) {
+    state.virtualShiftLocked = false;
+    return;
   }
-  const isEmpty = state.messages.length === 0;
+  window.requestAnimationFrame(() => {
+    try {
+      if (!ui.viewport || !ui.list) return;
+      const item = ui.list.querySelector(
+        `.message[data-identity="${CSS.escape(anchor.identity)}"]`
+      );
+      if (!(item instanceof HTMLElement)) return;
+      ui.viewport.scrollTop += item.getBoundingClientRect().top - anchor.top;
+    } finally {
+      state.virtualShiftLocked = false;
+    }
+  });
+}
+
+function resetVirtualWindow({ pinToBottom = false } = {}) {
+  const total = state.messages.length;
+  if (!total) {
+    state.virtualStart = 0;
+    state.virtualEnd = 0;
+    return;
+  }
+  if (total <= VIRTUAL_WINDOW_SIZE) {
+    state.virtualStart = 0;
+    state.virtualEnd = total;
+    return;
+  }
+  if (pinToBottom) {
+    state.virtualEnd = total;
+    state.virtualStart = Math.max(0, total - VIRTUAL_WINDOW_SIZE);
+    return;
+  }
+  const start = Math.min(
+    Math.max(0, state.virtualStart),
+    Math.max(0, total - VIRTUAL_WINDOW_SIZE)
+  );
+  state.virtualStart = start;
+  state.virtualEnd = Math.min(total, start + VIRTUAL_WINDOW_SIZE);
+}
+
+function centerVirtualWindow(index) {
+  const total = state.messages.length;
+  if (!total) return;
+  const half = Math.floor(VIRTUAL_WINDOW_SIZE / 2);
+  state.virtualStart = Math.max(
+    0,
+    Math.min(index - half, Math.max(0, total - VIRTUAL_WINDOW_SIZE))
+  );
+  state.virtualEnd = Math.min(total, state.virtualStart + VIRTUAL_WINDOW_SIZE);
+}
+
+function shiftVirtualWindow(direction) {
+  if (
+    state.virtualShiftLocked
+    || state.messages.length <= VIRTUAL_WINDOW_SIZE
+    || !ui.viewport
+  ) {
+    return false;
+  }
+  const anchor = captureViewportAnchor();
+  const total = state.messages.length;
+  const currentStart = state.virtualStart;
+  const maxStart = Math.max(0, total - VIRTUAL_WINDOW_SIZE);
+  const nextStart =
+    direction === "older"
+      ? Math.max(0, currentStart - VIRTUAL_SHIFT_SIZE)
+      : Math.min(maxStart, currentStart + VIRTUAL_SHIFT_SIZE);
+  if (nextStart === currentStart) return false;
+  state.virtualShiftLocked = true;
+  state.virtualStart = nextStart;
+  state.virtualEnd = Math.min(total, nextStart + VIRTUAL_WINDOW_SIZE);
+  renderAll({ anchor });
+  return true;
+}
+
+function rememberDetail(identity, detail) {
+  if (!identity) return;
+  if (state.details.has(identity)) state.details.delete(identity);
+  state.details.set(identity, detail);
+  while (state.details.size > DETAIL_CACHE_LIMIT) {
+    const oldest = state.details.keys().next().value;
+    if (!oldest) break;
+    state.details.delete(oldest);
+  }
+}
+
+function renderAll({ anchor = null, pinToBottom = false } = {}) {
+  if (!ui.list || !ui.empty) return;
+  const started = performance.now();
+  if (pinToBottom) resetVirtualWindow({ pinToBottom: true });
+  else resetVirtualWindow();
+
+  ui.list.setAttribute("aria-busy", "true");
+  ui.list.replaceChildren();
+  const total = state.messages.length;
+  const start = state.virtualStart;
+  const end = state.virtualEnd;
+  for (let index = start; index < end; index += 1) {
+    ui.list.append(
+      renderMessage(state.messages[index], {
+        absoluteIndex: index,
+        totalMessages: total,
+      })
+    );
+  }
+  ui.list.dataset.totalMessages = String(total);
+  ui.list.dataset.renderStart = String(start);
+  ui.list.dataset.renderEnd = String(end);
+  ui.list.dataset.renderedMessages = String(Math.max(0, end - start));
+  ui.list.setAttribute("aria-busy", "false");
+
+  const isEmpty = total === 0;
   ui.empty.hidden = !isEmpty;
   ui.list.hidden = isEmpty;
   if (ui.loadOlder) ui.loadOlder.hidden = !state.hasOlder || isEmpty;
+  state.lastRenderDurationMs = performance.now() - started;
   updateUnread();
+  if (anchor) restoreViewportAnchor(anchor);
 }
 
 function notificationApi() {
@@ -2057,6 +2208,11 @@ function updateUnread() {
 
 function scrollToBottom({ smooth = true } = {}) {
   if (!ui.viewport) return;
+  if (state.messages.length > VIRTUAL_WINDOW_SIZE) {
+    const needsTail = state.virtualEnd !== state.messages.length;
+    resetVirtualWindow({ pinToBottom: true });
+    if (needsTail) renderAll();
+  }
   ui.viewport.scrollTo({
     top: ui.viewport.scrollHeight,
     behavior: smooth ? "smooth" : "auto",
@@ -2075,6 +2231,9 @@ function resetMessages() {
   state.expanded = new Set();
   state.details = new Map();
   state.detailRequests = new Set();
+  state.virtualStart = 0;
+  state.virtualEnd = 0;
+  state.virtualShiftLocked = false;
   renderAll();
 }
 
@@ -2088,6 +2247,7 @@ function mergeInitial(records) {
     state.ids.add(id);
     state.messages.push(record);
   }
+  resetVirtualWindow({ pinToBottom: true });
 }
 
 function appendRecord(
@@ -2098,13 +2258,17 @@ function appendRecord(
   const id = text(record && record.narrative_identity, "");
   if (!id || state.ids.has(id)) return false;
   const stayAtBottom = isNearBottom();
+  const anchor = stayAtBottom ? null : captureViewportAnchor();
   state.ids.add(id);
   state.messages.push(record);
 
-  if (ui.list && !ui.list.hidden) {
-    ui.list.append(renderMessage(record, { isNew: fixtureNew || stayAtBottom }));
-  } else {
+  if (stayAtBottom) {
+    resetVirtualWindow({ pinToBottom: true });
     renderAll();
+    const newest = ui.list?.lastElementChild;
+    if (fixtureNew && newest instanceof HTMLElement) newest.classList.add("is-new");
+  } else {
+    renderAll({ anchor });
   }
 
   if (cursor) state.newestCursor = cursor;
@@ -2121,11 +2285,13 @@ function appendRecord(
 
 function focusRenderedMessage(identity) {
   if (!exactSha256(identity)) return false;
-  const record = state.messages.find(
+  const index = state.messages.findIndex(
     (item) => item?.narrative_identity === identity
   );
-  if (!record) return false;
+  if (index < 0) return false;
+  const record = state.messages[index];
   state.expanded.add(identity);
+  centerVirtualWindow(index);
   renderAll();
   const item = ui.list?.querySelector(
     `.message[data-identity="${CSS.escape(identity)}"]`
@@ -2219,8 +2385,7 @@ async function loadOlder() {
   state.loadingHistory = true;
   if (ui.loadOlder) ui.loadOlder.textContent = "Yükleniyor…";
   const before = state.beforeCursor;
-  const oldHeight = ui.viewport ? ui.viewport.scrollHeight : 0;
-  const oldTop = ui.viewport ? ui.viewport.scrollTop : 0;
+  const anchor = captureViewportAnchor();
 
   try {
     const params = queryParams({ before, limit: 50 });
@@ -2235,14 +2400,11 @@ async function loadOlder() {
       additions.push(record);
     }
     state.messages = [...additions, ...state.messages];
+    state.virtualStart += additions.length;
+    state.virtualEnd += additions.length;
     state.beforeCursor = page && typeof page.oldest_cursor === "string" ? page.oldest_cursor : state.beforeCursor;
     state.hasOlder = Boolean(page && page.has_more);
-    renderAll();
-    window.requestAnimationFrame(() => {
-      if (!ui.viewport) return;
-      const delta = ui.viewport.scrollHeight - oldHeight;
-      ui.viewport.scrollTop = oldTop + delta;
-    });
+    renderAll({ anchor });
   } catch {
     setConnection("degraded", "GEÇMİŞ SINIRLI", "eski mesajlar yüklenemedi");
   } finally {
@@ -2333,8 +2495,25 @@ function stopPolling() {
   state.pollingTimer = null;
 }
 
-function openDrawer(drawer) {
-  if (!drawer || !ui.backdrop) return;
+function activeDrawer() {
+  return [ui.discoveryDrawer, ui.settingsDrawer].find(
+    (drawer) => drawer instanceof HTMLElement && !drawer.hidden
+  ) || null;
+}
+
+function drawerFocusable(drawer) {
+  if (!(drawer instanceof HTMLElement)) return [];
+  return [...drawer.querySelectorAll(
+    'button:not([disabled]), input:not([disabled]), select:not([disabled]), '
+      + 'textarea:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])'
+  )].filter((item) => item instanceof HTMLElement && !item.hidden);
+}
+
+function openDrawer(drawer, opener = document.activeElement) {
+  if (!(drawer instanceof HTMLElement) || !ui.backdrop) return;
+  if (opener instanceof HTMLElement && !drawer.contains(opener)) {
+    state.drawerReturnFocus = opener;
+  }
   for (const item of [ui.discoveryDrawer, ui.settingsDrawer]) {
     if (item && item !== drawer) item.hidden = true;
   }
@@ -2344,9 +2523,14 @@ function openDrawer(drawer) {
   if (ui.filterButton) ui.filterButton.setAttribute("aria-expanded", String(drawer === ui.discoveryDrawer));
   if (ui.soundButton) ui.soundButton.setAttribute("aria-expanded", String(drawer === ui.settingsDrawer));
   if (ui.settingsButton) ui.settingsButton.setAttribute("aria-expanded", String(drawer === ui.settingsDrawer));
+  window.requestAnimationFrame(() => {
+    const first = drawerFocusable(drawer)[0];
+    (first || drawer).focus({ preventScroll: true });
+  });
 }
 
-function closeDrawers() {
+function closeDrawers({ restoreFocus = true } = {}) {
+  const wasOpen = activeDrawer();
   for (const drawer of [ui.discoveryDrawer, ui.settingsDrawer]) {
     if (drawer) drawer.hidden = true;
   }
@@ -2354,6 +2538,45 @@ function closeDrawers() {
   for (const button of [ui.searchButton, ui.filterButton, ui.soundButton, ui.settingsButton]) {
     if (button) button.setAttribute("aria-expanded", "false");
   }
+  if (
+    wasOpen
+    && restoreFocus
+    && state.drawerReturnFocus instanceof HTMLElement
+    && state.drawerReturnFocus.isConnected
+  ) {
+    state.drawerReturnFocus.focus({ preventScroll: true });
+  }
+  state.drawerReturnFocus = null;
+}
+
+function handleDrawerKeyboard(event) {
+  const drawer = activeDrawer();
+  if (!drawer) return false;
+  if (event.key === "Escape") {
+    event.preventDefault();
+    closeDrawers();
+    return true;
+  }
+  if (event.key !== "Tab") return false;
+  const focusable = drawerFocusable(drawer);
+  if (!focusable.length) {
+    event.preventDefault();
+    drawer.focus({ preventScroll: true });
+    return true;
+  }
+  const first = focusable[0];
+  const last = focusable[focusable.length - 1];
+  if (event.shiftKey && document.activeElement === first) {
+    event.preventDefault();
+    last.focus({ preventScroll: true });
+    return true;
+  }
+  if (!event.shiftKey && document.activeElement === last) {
+    event.preventDefault();
+    first.focus({ preventScroll: true });
+    return true;
+  }
+  return false;
 }
 
 function fixtureIdentity(index) {
@@ -2430,6 +2653,52 @@ function fixtureRecord(index, symbol, timeframe, stateLabel, copy, minutesAgo, s
       forecastIdentity,
       proofIdentity,
     });
+  }
+  return record;
+}
+
+function longSessionFixtureRecord(index, total) {
+  const symbols = ["BTCUSDT", "ETHUSDT", "SOLUSDT"];
+  const timeframes = ["5m", "15m", "1h", "4h"];
+  const symbol = symbols[index % symbols.length];
+  const timeframe = timeframes[index % timeframes.length];
+  const identity = fixtureIdentity(50_000 + index);
+  const record = {
+    narrative_identity: identity,
+    event_at_ms: 1_790_000_000_000 + index * 60_000,
+    category: index % 11 === 0 ? "capital" : "decision",
+    subtype: index % 11 === 0 ? "capital_hold" : "forecast_updated",
+    importance: index % 17 === 0 ? "critical" : "important",
+    symbol,
+    timeframe,
+    vault_id: index % 11 === 0 ? "TACTICAL" : null,
+    source_kind: "deterministic",
+    original_text_preserved: true,
+    read_only: true,
+    production_authority: false,
+    real_capital: 0,
+    __fixture_state: index % 11 === 0 ? "NAKİTTE BEKLE" : "UZUN OTURUM",
+    text: {
+      collapsed_text:
+        `Uzun oturum fixture mesajı ${index + 1}/${total}. `
+        + "Kalıcı mesaj kimliği korunur; bu kayıt canlı piyasa gerçeği değildir.",
+      simple_text: "S14 uzun oturum kabulü için hafif deterministik fixture.",
+      technical_text: "Windowed feed DOM sınırı ve scroll anchor davranışı ölçülür.",
+      intelligence_text: "Bu fixture yeni piyasa kanıtı veya karar otoritesi üretmez.",
+      decision_text: "Yalnız UI performans ve erişilebilirlik kabulü içindir.",
+      capital_text: "REAL_CAPITAL=0.",
+    },
+  };
+  if (index === total - 40) {
+    const detailSeed = fixtureRecord(
+      40_000,
+      symbol,
+      timeframe,
+      "UZUN OTURUM",
+      "S14 expansion anchor fixture.",
+      1
+    );
+    record.__fixture_detail = detailSeed.__fixture_detail;
   }
   return record;
 }
@@ -2711,17 +2980,24 @@ function applyFixture(name) {
     return;
   }
 
+  const longSessionCount =
+    name === "long10k" ? 10_000 : name === "long1k" ? 1_000 : 0;
   const fixtureCount = name === "long" ? 36 : name === "history" ? 14 : 0;
-  const records = fixtureCount
-    ? Array.from({ length: fixtureCount }, (_, i) => {
-        const seed = base[i % base.length];
-        return {
-          ...seed,
-          narrative_identity: fixtureIdentity(100 + i),
-          event_at_ms: Date.now() - (fixtureCount - i) * 4 * 60_000,
-        };
-      })
-    : base;
+  const records = longSessionCount
+    ? Array.from(
+        { length: longSessionCount },
+        (_, i) => longSessionFixtureRecord(i, longSessionCount)
+      )
+    : fixtureCount
+      ? Array.from({ length: fixtureCount }, (_, i) => {
+          const seed = base[i % base.length];
+          return {
+            ...seed,
+            narrative_identity: fixtureIdentity(100 + i),
+            event_at_ms: Date.now() - (fixtureCount - i) * 4 * 60_000,
+          };
+        })
+      : base;
 
   for (const record of records) {
     state.ids.add(record.narrative_identity);
@@ -2729,6 +3005,7 @@ function applyFixture(name) {
   }
   state.hasOlder = name === "history" || name === "long";
   if (name === "history") state.unread = 3;
+  resetVirtualWindow({ pinToBottom: true });
   renderAll();
   setConnection("live", "CANLI", "fixture · Stream görsel kabul");
   if (ui.transportMode) ui.transportMode.textContent = "SSE CANLI · FIXTURE";
@@ -2840,11 +3117,29 @@ function wireUi() {
   ui.newButton?.addEventListener("click", () => scrollToBottom());
 
   ui.viewport?.addEventListener("scroll", () => {
+    if (!ui.viewport) return;
+    if (
+      ui.viewport.scrollTop < 110
+      && state.virtualStart > 0
+      && !state.virtualShiftLocked
+    ) {
+      shiftVirtualWindow("older");
+      return;
+    }
+    if (
+      ui.viewport.scrollTop + ui.viewport.clientHeight
+        > ui.viewport.scrollHeight - 110
+      && state.virtualEnd < state.messages.length
+      && !state.virtualShiftLocked
+    ) {
+      shiftVirtualWindow("newer");
+      return;
+    }
     if (isNearBottom() && state.unread > 0) {
       state.unread = 0;
       updateUnread();
     }
-    if (ui.viewport && ui.viewport.scrollTop < 70 && state.hasOlder && !state.fixture) {
+    if (ui.viewport.scrollTop < 70 && state.hasOlder && !state.fixture) {
       void loadOlder();
     }
   });
@@ -2939,7 +3234,7 @@ function wireUi() {
   });
 
   document.addEventListener("keydown", (event) => {
-    if (event.key === "Escape") closeDrawers();
+    if (handleDrawerKeyboard(event)) return;
     if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
       event.preventDefault();
       openDrawer(ui.discoveryDrawer);
@@ -3007,6 +3302,45 @@ window.__cryptoSignalStreamS13 = Object.freeze({
     };
     return notificationApi()?.route?.(record, delivery) || null;
   },
+});
+
+window.__cryptoSignalStreamS14 = Object.freeze({
+  snapshot: () => ({
+    totalMessages: state.messages.length,
+    renderedMessages: ui.list?.querySelectorAll(".message").length || 0,
+    renderStart: state.virtualStart,
+    renderEnd: state.virtualEnd,
+    detailCacheSize: state.details.size,
+    expandedCount: state.expanded.size,
+    evidenceWindowCount: state.evidenceWindows.size,
+    lastRenderDurationMs: state.lastRenderDurationMs,
+    activeIdentity:
+      document.activeElement?.closest?.(".message")?.dataset?.identity || "",
+    activeDrawer: activeDrawer()?.id || "",
+    realCapital: 0,
+  }),
+  shiftOlder: () => shiftVirtualWindow("older"),
+  shiftNewer: () => shiftVirtualWindow("newer"),
+  focusMessage: (identity) => focusRenderedMessage(identity),
+  prependFixturePage: (count = 50) => {
+    if (!state.fixture || !Number.isInteger(count) || count < 1 || count > 200) {
+      return { ok: false, reason: "fixture_only_or_invalid_count" };
+    }
+    const anchor = captureViewportAnchor();
+    const existing = state.messages.length;
+    const additions = Array.from(
+      { length: count },
+      (_, i) => longSessionFixtureRecord(20_000 + existing + i, existing + count)
+    );
+    for (const record of additions) state.ids.add(record.narrative_identity);
+    state.messages = [...additions, ...state.messages];
+    state.virtualStart += additions.length;
+    state.virtualEnd += additions.length;
+    renderAll({ anchor });
+    return { ok: true, count: additions.length };
+  },
+  openDiscovery: () => openDrawer(ui.discoveryDrawer, ui.searchButton),
+  closeDrawers,
 });
 
 window.addEventListener("beforeunload", () => {
