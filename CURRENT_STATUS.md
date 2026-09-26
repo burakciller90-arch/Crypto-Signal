@@ -4,10 +4,49 @@ Updated: 2026-09-26
 Project: Crypto Signal
 Baseline: crypto-signal-full-version-v1.0.0 (immutable)
 Active post-v1.0 program: v1.1 world-class product + market intelligence + Crypto Signal Intelligence Stream V1
-State: WC0_LIVE_PRODUCT_PARITY_ACCEPTED / WC1_24_7_DATA_RELIABILITY_ACCEPTED / WC2_ENGINEERING_FROZEN_EVIDENCE_ACCUMULATION_ACTIVE / WC4_CHAMPION_CHALLENGER_ENGINEERING_ACCEPTED_RESEARCH_ONLY / WC5_ENGINEERING_ACCEPTED_PRODUCT_DEPLOYED_HUMAN_USABILITY_NOT_MEASURED / WC6_SANDBOX_BOUNDARY_ACCEPTED_VENUE_EVIDENCE_EXTERNAL_DEPENDENCY / WC7_CURRENT_FRONTIER_PACKET_ACCEPTED_CURRENT_INSUFFICIENT_EVIDENCE / INTELLIGENCE_STREAM_V1_S0_PASS_S1_PASS_S2_PASS_S3_PASS_S4_PASS_S5_PASS_S6_PASS_S7_PASS_S8_PASS_S9_PASS_S10_PASS_S11_PASS_S12_PASS_S13_ACTIVE / CONTINUITY_PAUSED_BY_USER
+State: WC0_LIVE_PRODUCT_PARITY_ACCEPTED / WC1_24_7_DATA_RELIABILITY_ACCEPTED / WC2_ENGINEERING_FROZEN_EVIDENCE_ACCUMULATION_ACTIVE / WC4_CHAMPION_CHALLENGER_ENGINEERING_ACCEPTED_RESEARCH_ONLY / WC5_ENGINEERING_ACCEPTED_PRODUCT_DEPLOYED_HUMAN_USABILITY_NOT_MEASURED / WC6_SANDBOX_BOUNDARY_ACCEPTED_VENUE_EVIDENCE_EXTERNAL_DEPENDENCY / WC7_CURRENT_FRONTIER_PACKET_ACCEPTED_CURRENT_INSUFFICIENT_EVIDENCE / INTELLIGENCE_STREAM_V1_S0_PASS_S1_PASS_S2_PASS_S3_PASS_S4_PASS_S5_PASS_S6_PASS_S7_PASS_S8_PASS_S9_PASS_S10_PASS_S11_PASS_S12_PASS_S13_PASS_S14_ACTIVE / CONTINUITY_PAUSED_BY_USER
 REAL_CAPITAL: 0
 
 ## Active v1.1 frontier — read before historical sections
+
+### 2026-09-26 — STREAM S13 SOUND AND NOTIFICATIONS PASS / S14 HARDENING ACTIVE
+
+S13 is mechanically, behaviorally and visually accepted.
+
+Canonical acceptance record:
+- `docs/CRYPTO_SIGNAL_STREAM_S13_ACCEPTANCE.md`.
+
+Accepted S13 behavior:
+- original synthesized Crypto Signal chime;
+- explicit user-gesture AudioContext unlock;
+- sound ON/OFF, volume and all/important/Decision+Capital/silent modes;
+- local settings persistence;
+- optional browser notifications with explicit permission only;
+- one eligible `live_new` identity -> one chime;
+- duplicate identity -> no second chime;
+- history and reconnect/replay remain silent;
+- notification state never mutates canonical market/evidence/capital truth.
+
+Merged implementation:
+- PR #1294;
+- main `49bab52492133fd61a872abb52f71a85c24ef71f`.
+
+Exact-head acceptance:
+- implementation head `1832714fa93b314b989d2b854bf70c4075812426`;
+- UID504 run `36218194731` PASS;
+- artifact `stream-s13-visual-snapshot-36218194731`;
+- focused S13 acceptance PASS;
+- whole-repository regression PASS;
+- real Chromium audio unlock + exactly-once live-new chime PASS;
+- duplicate/history/replay silence PASS;
+- settings persistence PASS;
+- desktop + exact 430px mobile rendering PASS;
+- whole-page no-overflow PASS;
+- Development checkout non-mutation PASS.
+
+The active Stream frontier is now **S14 — Performance, Accessibility and Long-Session Stability**.
+
+S14 must prove that the one-panel messaging product remains responsive and usable with 1,000+ and 10,000+ messages, reverse pagination, evidence windows, reconnect activity, keyboard/focus/screen-reader use, reduced motion, responsive layout and browser zoom/font scaling. It must reuse accepted Stream truth and must not create a second product surface.
 
 ### 2026-09-26 — STREAM S12 SEARCH, FILTERS AND HISTORY UX PASS / S13 SOUND AND NOTIFICATIONS ACTIVE
 
