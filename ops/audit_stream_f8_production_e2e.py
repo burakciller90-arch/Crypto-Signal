@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import sqlite3
 import sys
 import urllib.error
 import urllib.parse
@@ -326,11 +327,19 @@ def _inspect_message(
     }
 
 
-def _category_candidates(base_url: str, category: str) -> list[dict[str, Any]]:
+def _category_candidates(
+    base_url: str,
+    category: str,
+    *,
+    min_event_ms: int | None,
+) -> list[dict[str, Any]]:
+    params: dict[str, object] = {"category": category, "limit": 200}
+    if min_event_ms is not None:
+        params["from_ms"] = min_event_ms
     payload = _get_json(
         base_url,
         "/api/stream/messages",
-        params={"category": category, "limit": 200},
+        params=params,
     )
     return _page_items(payload, f"category={category}")
 
@@ -339,12 +348,18 @@ def _inspect_group(
     base_url: str,
     name: str,
     categories: Iterable[str],
+    *,
+    min_event_ms: int | None,
 ) -> dict[str, object]:
     errors: list[str] = []
     observed_counts: dict[str, int] = {}
     for category in categories:
         try:
-            items = _category_candidates(base_url, category)
+            items = _category_candidates(
+                base_url,
+                category,
+                min_event_ms=min_event_ms,
+            )
             observed_counts[category] = len(items)
         except AuditError as exc:
             errors.append(f"{category}: {exc}")
@@ -431,10 +446,98 @@ def _audit_sse(base_url: str) -> dict[str, object]:
     }
 
 
+def _audit_stream_ledger(path: Path) -> dict[str, object]:
+    if not path.is_file():
+        raise AuditError(f"Stream ledger missing: {path}")
+    uri = f"file:{path.resolve()}?mode=ro"
+    try:
+        with sqlite3.connect(uri, uri=True) as connection:
+            connection.execute("PRAGMA query_only = ON")
+            quick_check = str(connection.execute("PRAGMA quick_check").fetchone()[0])
+            if quick_check != "ok":
+                raise AuditError(f"Stream ledger quick_check failed: {quick_check}")
+            activation_rows = connection.execute(
+                "SELECT activated_at_ms FROM stream_activation "
+                "ORDER BY activated_at_ms"
+            ).fetchall()
+            if len(activation_rows) != 1:
+                raise AuditError("Stream ledger must contain exactly one activation boundary")
+            activation_ms = int(activation_rows[0][0])
+            historical_source_rows = int(
+                connection.execute(
+                    "SELECT COUNT(*) FROM stream_source_events WHERE event_at_ms < ?",
+                    (activation_ms,),
+                ).fetchone()[0]
+            )
+            duplicate_source_rows = int(
+                connection.execute(
+                    "SELECT COUNT(*) FROM ("
+                    "SELECT source_event_identity FROM stream_source_events "
+                    "GROUP BY source_event_identity HAVING COUNT(*) > 1"
+                    ")"
+                ).fetchone()[0]
+            )
+            duplicate_narrative_rows = int(
+                connection.execute(
+                    "SELECT COUNT(*) FROM ("
+                    "SELECT narrative_identity FROM stream_narrative_messages "
+                    "GROUP BY narrative_identity HAVING COUNT(*) > 1"
+                    ")"
+                ).fetchone()[0]
+            )
+            multi_narrative_source_rows = int(
+                connection.execute(
+                    "SELECT COUNT(*) FROM ("
+                    "SELECT source_event_identity FROM stream_narrative_messages "
+                    "GROUP BY source_event_identity HAVING COUNT(*) > 1"
+                    ")"
+                ).fetchone()[0]
+            )
+            source_count = int(
+                connection.execute(
+                    "SELECT COUNT(*) FROM stream_source_events"
+                ).fetchone()[0]
+            )
+            narrative_count = int(
+                connection.execute(
+                    "SELECT COUNT(*) FROM stream_narrative_messages"
+                ).fetchone()[0]
+            )
+    except sqlite3.Error as exc:
+        raise AuditError(f"Stream ledger read-only audit failed: {exc}") from exc
+
+    status = (
+        "PASS"
+        if (
+            historical_source_rows == 0
+            and duplicate_source_rows == 0
+            and duplicate_narrative_rows == 0
+            and multi_narrative_source_rows == 0
+        )
+        else "FAIL"
+    )
+    return {
+        "status": status,
+        "path": str(path),
+        "quick_check": "ok",
+        "activation_ms": activation_ms,
+        "source_count": source_count,
+        "narrative_count": narrative_count,
+        "historical_source_rows_before_activation": historical_source_rows,
+        "duplicate_source_identity_rows": duplicate_source_rows,
+        "duplicate_narrative_identity_rows": duplicate_narrative_rows,
+        "multi_narrative_rows_for_one_source": multi_narrative_source_rows,
+        "read_only": True,
+        "real_capital": REAL_CAPITAL,
+    }
+
+
 def run_audit(
     base_url: str,
     *,
     require_capital: bool,
+    min_event_ms: int | None,
+    stream_ledger: Path | None,
 ) -> dict[str, object]:
     health = _get_json(base_url, "/api/health")
     if health.get("status") != "ok":
@@ -447,14 +550,26 @@ def run_audit(
         raise AuditError("Intelligence Stream is not the active Product root")
 
     groups = [
-        _inspect_group(base_url, name, categories)
+        _inspect_group(
+            base_url,
+            name,
+            categories,
+            min_event_ms=min_event_ms,
+        )
         for name, categories in REQUIRED_GROUPS
     ]
-    capital = _inspect_group(base_url, *CAPITAL_GROUP)
+    capital = _inspect_group(
+        base_url,
+        *CAPITAL_GROUP,
+        min_event_ms=min_event_ms,
+    )
     capital["required"] = require_capital
     groups.append(capital)
 
     sse = _audit_sse(base_url)
+    ledger_audit = (
+        None if stream_ledger is None else _audit_stream_ledger(stream_ledger)
+    )
     required_open = [
         str(group["name"])
         for group in groups
@@ -465,6 +580,8 @@ def run_audit(
     ]
     if sse.get("status") not in {"PASS", "DEFERRED_NO_STREAM_CURSOR"}:
         required_open.append("sse_duplicate_audit")
+    if ledger_audit is not None and ledger_audit.get("status") != "PASS":
+        required_open.append("stream_ledger_negative_acceptance")
 
     return {
         "schema_version": "stream-final-f8-production-e2e-audit-v1/1",
@@ -476,8 +593,10 @@ def run_audit(
             "read_only": health.get("read_only"),
             "real_capital": health.get("real_capital"),
         },
+        "observation_min_event_ms": min_event_ms,
         "groups": groups,
         "sse": sse,
+        "stream_ledger_negative_acceptance": ledger_audit,
         "open_requirements": required_open,
         "status": "PASS_CANDIDATES_PRESENT" if not required_open else "OPEN",
         "historical_backfill_used": False,
@@ -501,12 +620,18 @@ def main() -> None:
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--require-capital", action="store_true")
     parser.add_argument("--require-complete", action="store_true")
+    parser.add_argument("--min-event-ms", type=int, default=None)
+    parser.add_argument("--stream-ledger", type=Path, default=None)
     args = parser.parse_args()
 
     try:
+        if args.min_event_ms is not None and args.min_event_ms < 0:
+            raise AuditError("--min-event-ms must be non-negative")
         report = run_audit(
             args.base_url,
             require_capital=args.require_capital,
+            min_event_ms=args.min_event_ms,
+            stream_ledger=args.stream_ledger,
         )
     except AuditError as exc:
         report = {
