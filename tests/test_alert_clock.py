@@ -8,7 +8,6 @@ from pathlib import Path
 import pytest
 
 import crypto_signal.alerts.clock as alert_clock_module
-
 from crypto_signal.alerts.clock import (
     AlertClockSourceError,
     materialize_alert_events,
