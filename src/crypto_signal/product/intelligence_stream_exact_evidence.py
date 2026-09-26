@@ -861,16 +861,23 @@ def _resolve_event_source_objects(
             "structured_event_observation",
         ),
     )
-    return _resolve_sqlite_payload_objects(
+    resolved = _resolve_sqlite_payload_objects(
         path,
         evidence_identities,
         table_specs=table_specs,
         source_as_of_ms=source_as_of_ms,
-        identity_payload_key_by_kind={
-            "event_calendar_coverage": "coverage_identity",
-            "structured_event_observation": "event_identity",
-        },
+        identity_payload_key_by_kind={},
     )
+    for identity, item in resolved.items():
+        payload = _mapping(
+            item.get("payload"),
+            "event source exact payload",
+        )
+        if canonical_sha256(payload) != identity:
+            raise StreamExactEvidenceError(
+                "event source exact payload identity mismatch"
+            )
+    return resolved
 
 
 def _resolve_provider_divergence_objects(
