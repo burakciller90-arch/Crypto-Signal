@@ -57,10 +57,15 @@ jobs:
           import sys
           from pathlib import Path
 
+          from crypto_signal.data.market_tape import MarketTapeStore
+
           signal, market, stream, root = map(Path, sys.argv[1:])
 
           def backup(source: Path, target: Path) -> None:
-              src = sqlite3.connect(source)
+              src = sqlite3.connect(
+                  f"file:{source.resolve()}?mode=ro",
+                  uri=True,
+              )
               dst = sqlite3.connect(target)
               try:
                   src.backup(dst)
@@ -69,8 +74,67 @@ jobs:
                   src.close()
 
           backup(signal, root / "signal.sqlite3")
-          backup(market, root / "market.sqlite3")
           backup(stream, root / "stream.sqlite3")
+
+          target_market = root / "market.sqlite3"
+          MarketTapeStore(target_market).initialize()
+          source = sqlite3.connect(
+              f"file:{market.resolve()}?mode=ro",
+              uri=True,
+          )
+          source.row_factory = sqlite3.Row
+          target = sqlite3.connect(target_market)
+          try:
+              source.execute("PRAGMA query_only=ON")
+              for table, limit_per_symbol in (
+                  ("market_tape_orderbooks", 180),
+                  ("market_tape_trades", 1200),
+                  ("market_tape_derivatives", 64),
+              ):
+                  columns = [
+                      row[1]
+                      for row in target.execute(
+                          f"PRAGMA table_info({table})"
+                      ).fetchall()
+                  ]
+                  placeholders = ",".join("?" for _ in columns)
+                  column_sql = ",".join(columns)
+                  for symbol in ("BTCUSDT", "ETHUSDT", "SOLUSDT"):
+                      if table == "market_tape_derivatives":
+                          rows = source.execute(
+                              f"""
+                              SELECT {column_sql}
+                              FROM {table}
+                              WHERE exchange='bybit'
+                                AND instrument_type='linear_perpetual'
+                                AND symbol=?
+                              ORDER BY event_at_ms DESC, rowid DESC
+                              LIMIT ?
+                              """,
+                              (symbol, limit_per_symbol),
+                          ).fetchall()
+                      else:
+                          rows = source.execute(
+                              f"""
+                              SELECT {column_sql}
+                              FROM {table}
+                              WHERE exchange='bybit'
+                                AND market_type='spot'
+                                AND symbol=?
+                              ORDER BY event_at_ms DESC, rowid DESC
+                              LIMIT ?
+                              """,
+                              (symbol, limit_per_symbol),
+                          ).fetchall()
+                      target.executemany(
+                          f"INSERT OR IGNORE INTO {table} ({column_sql}) "
+                          f"VALUES ({placeholders})",
+                          [tuple(row[column] for column in columns) for row in rows],
+                      )
+              target.commit()
+          finally:
+              target.close()
+              source.close()
           PY
 
           echo "F3_PERSISTED_SOURCE_ONLY_DRY_RUN=YES"
