@@ -1,0 +1,41 @@
+name: Crypto Stream Final F3 Broad Regression R2 UID504
+
+on:
+  push:
+    branches:
+      - 'stream/final-f3-broad-regression-r2'
+
+permissions:
+  contents: read
+
+jobs:
+  gate:
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          clean: true
+          fetch-depth: 1
+      - name: Broad repository regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          PY="/Volumes/Crypto-504/Crypto-Signal/Development/.venv/bin/python"
+          export PYTHONPATH="$GITHUB_WORKSPACE:$GITHUB_WORKSPACE/src:$GITHUB_WORKSPACE/tests"
+          "$PY" -m pytest -q -m "not asyncio"
+          "$PY" -m ruff check src tests
+          "$PY" -m mypy src
+          node --check src/crypto_signal/product/static/freshness.js
+          node --check src/crypto_signal/product/static/app.js
+          node --check src/crypto_signal/product/galactech/app.js
+          node --check src/crypto_signal/product/stream/app.js
+          node --check src/crypto_signal/product/stream/evidence.js
+          node --check src/crypto_signal/product/stream/visual_proof.js
+          node --check src/crypto_signal/product/stream/notifications.js
+          node tests/js/test_product_freshness.js
+          echo "F3_BROAD_REPOSITORY_REGRESSION_PASS=YES"
+          echo "HISTORICAL_BACKFILL=NO"
+          echo "REAL_CAPITAL=0"
