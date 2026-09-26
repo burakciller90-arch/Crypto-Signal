@@ -41,24 +41,27 @@ jobs:
           OUT="$RUNNER_TEMP/stream-final-f7-live-acceptance"
           mkdir -p "$OUT"
 
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          TOOL_ROOT="$ROOT/Tools"
           OLLAMA_BIN="$(command -v ollama || true)"
+          if [ -z "$OLLAMA_BIN" ] && [ -x "$TOOL_ROOT/Ollama.app/Contents/Resources/ollama" ]; then
+            OLLAMA_BIN="$TOOL_ROOT/Ollama.app/Contents/Resources/ollama"
+          fi
           if [ -z "$OLLAMA_BIN" ]; then
-            BREW_BIN="$(command -v brew || true)"
-            if [ -z "$BREW_BIN" ] && [ -x /opt/homebrew/bin/brew ]; then
-              BREW_BIN=/opt/homebrew/bin/brew
-            fi
-            if [ -z "$BREW_BIN" ] && [ -x /usr/local/bin/brew ]; then
-              BREW_BIN=/usr/local/bin/brew
-            fi
-            test -n "$BREW_BIN"
-            "$BREW_BIN" install ollama
-            OLLAMA_BIN="$(command -v ollama || true)"
-            if [ -z "$OLLAMA_BIN" ] && [ -x /opt/homebrew/bin/ollama ]; then
-              OLLAMA_BIN=/opt/homebrew/bin/ollama
-            fi
-            if [ -z "$OLLAMA_BIN" ] && [ -x /usr/local/bin/ollama ]; then
-              OLLAMA_BIN=/usr/local/bin/ollama
-            fi
+            mkdir -p "$TOOL_ROOT"
+            ZIP="$RUNNER_TEMP/Ollama-darwin.zip"
+            STAGE="$RUNNER_TEMP/ollama-macos-stage"
+            rm -rf "$STAGE"
+            mkdir -p "$STAGE"
+            curl -fL --retry 3 --retry-delay 2 \
+              https://ollama.com/download/Ollama-darwin.zip \
+              -o "$ZIP"
+            /usr/bin/shasum -a 256 "$ZIP" | tee "$OUT/ollama-package.sha256"
+            /usr/bin/unzip -q "$ZIP" -d "$STAGE"
+            test -x "$STAGE/Ollama.app/Contents/Resources/ollama"
+            rm -rf "$TOOL_ROOT/Ollama.app"
+            mv "$STAGE/Ollama.app" "$TOOL_ROOT/Ollama.app"
+            OLLAMA_BIN="$TOOL_ROOT/Ollama.app/Contents/Resources/ollama"
           fi
           test -x "$OLLAMA_BIN"
 
