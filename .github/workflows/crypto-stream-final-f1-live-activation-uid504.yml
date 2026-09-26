@@ -37,8 +37,8 @@ jobs:
           mkdir -p "$OUT"
 
           test "$(id -u)" = "504"
-          test -d "$DEV/.git"
-          test -d "$PRODUCT/.git"
+          test "$(git -C "$DEV" rev-parse --is-inside-work-tree)" = "true"
+          test "$(git -C "$PRODUCT" rev-parse --is-inside-work-tree)" = "true"
           test -f "$LOG"
           test -z "$(git -C "$DEV" status --porcelain)"
           test -z "$(git -C "$PRODUCT" status --porcelain)"
