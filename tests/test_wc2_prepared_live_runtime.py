@@ -532,5 +532,10 @@ def test_same_cycle_issuance_hook_receives_exact_fresh_and_recovered_issuance(
     assert len(projected) == 2
     assert projected[0].forecast.forecast_identity == first.forecast_identity
     assert projected[1].forecast.forecast_identity == first.forecast_identity
-    assert projected[0] == projected[1]
+    assert projected[0].confluence == projected[1].confluence
+    assert projected[0].forecast == projected[1].forecast
+    assert projected[0].proof == projected[1].proof
+    assert projected[0].feed_event == projected[1].feed_event
+    assert projected[0].ledger_disposition.value == "inserted"
+    assert projected[1].ledger_disposition.value == "unchanged"
 
