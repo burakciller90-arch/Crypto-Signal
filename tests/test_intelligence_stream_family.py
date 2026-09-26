@@ -7,7 +7,7 @@ import pytest
 from test_wc2_live_source_adapter import _bundle
 
 from crypto_signal.intelligence.confluence_matrix_v2 import ConfluenceFamily
-from crypto_signal.ledger.bundle import bundle_json
+from crypto_signal.ledger.bundle import DecisionFreezeBundle, bundle_json
 from crypto_signal.ledger.serialization import canonical_json, canonical_sha256
 from crypto_signal.ledger.store import (
     FreezeRecord,
@@ -272,7 +272,7 @@ def test_family_runtime_replay_returns_unchanged_after_later_transition(
     assert replay.story_identity == first.story_identity
 
 
-def _geometry_freeze() -> tuple[FreezeRecord, object]:
+def _geometry_freeze() -> tuple[FreezeRecord, DecisionFreezeBundle]:
     bundle = _bundle()
     signal = bundle.signal_decision
     freeze = FreezeRecord(
