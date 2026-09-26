@@ -1,0 +1,255 @@
+name: Crypto Stream Final F5 Live Activation UID504
+
+on:
+  push:
+    branches:
+      - 'stream/final-f5-live-activation'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: crypto-stream-final-f5-live-activation
+  cancel-in-progress: true
+
+jobs:
+  activate:
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          clean: true
+          fetch-depth: 2
+
+      - name: Fast-forward Development to exact merged F5 main
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          DEV="$ROOT/Development"
+          PRODUCT="$ROOT/Product"
+          EXPECTED_MAIN="97b2db05711d4b5504c47b4dfb8396d92fcd762f"
+
+          test "$(id -u)" = "504"
+          test -z "$(git -C "$DEV" status --porcelain)"
+          test -z "$(git -C "$PRODUCT" status --porcelain)"
+          test "$(git rev-parse HEAD^)" = "$EXPECTED_MAIN"
+          git diff --quiet "$EXPECTED_MAIN"...HEAD --             . ':(exclude).github/workflows/crypto-stream-final-f5-live-activation-uid504.yml'
+
+          DEV_BEFORE="$(git -C "$DEV" rev-parse HEAD)"
+          git -C "$DEV" fetch origin main --quiet
+          test "$(git -C "$DEV" rev-parse origin/main)" = "$EXPECTED_MAIN"
+          git -C "$DEV" merge-base --is-ancestor "$DEV_BEFORE" "$EXPECTED_MAIN"
+          git -C "$DEV" merge --ff-only "$EXPECTED_MAIN"
+          test "$(git -C "$DEV" rev-parse HEAD)" = "$EXPECTED_MAIN"
+          test -z "$(git -C "$DEV" status --porcelain)"
+          echo "F5_DEVELOPMENT_EXACT_MAIN_PASS=YES before=$DEV_BEFORE after=$EXPECTED_MAIN"
+          echo "REAL_CAPITAL=0"
+
+      - name: Headless reload canonical supervisor
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          DEV="$ROOT/Development"
+          EXPECTED_MAIN="97b2db05711d4b5504c47b4dfb8396d92fcd762f"
+
+          test "$(id -u)" = "504"
+          test "$(git -C "$DEV" rev-parse HEAD)" = "$EXPECTED_MAIN"
+          test -z "$(git -C "$DEV" status --porcelain)"
+
+          old_sup="$(cat "$ROOT/ssd-service-supervisor.pid" 2>/dev/null || true)"
+          test -n "$old_sup"
+          kill -0 "$old_sup"
+          ps -p "$old_sup" -o command= | grep -F "$ROOT/ssd-service-supervisor.sh" >/dev/null
+
+          cp "$DEV/ops/ssd_runtime_supervisor.sh" "$ROOT/ssd-service-supervisor.sh"
+          chmod 700 "$ROOT/ssd-service-supervisor.sh"
+
+          kill -TERM "$old_sup"
+          stopped=0
+          for _ in {1..20}; do
+            if ! kill -0 "$old_sup" >/dev/null 2>&1; then
+              stopped=1
+              break
+            fi
+            sleep 1
+          done
+          test "$stopped" = "1"
+          rm -f "$ROOT/ssd-service-supervisor.pid"
+
+          CRYPTO_SIGNAL_ROOT="$ROOT" bash "$DEV/ops/r11/start_ssd_runtime.command"
+
+          new_sup="$(cat "$ROOT/ssd-service-supervisor.pid")"
+          test -n "$new_sup"
+          test "$new_sup" != "$old_sup"
+          kill -0 "$new_sup"
+          ps -p "$new_sup" -o command= | grep -F "$ROOT/ssd-service-supervisor.sh" >/dev/null
+          curl -fsS --max-time 5 http://127.0.0.1:48700/api/health             | /usr/bin/python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["status"]=="ok"; assert d["real_capital"]==0; assert d["read_only"] is True'
+
+          echo "F5_HEADLESS_SUPERVISOR_RELOAD_PASS=YES old=$old_sup new=$new_sup"
+          echo "REAL_CAPITAL=0"
+
+      - name: Verify physical F5 Capital activation
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          DEV="$ROOT/Development"
+          EXPECTED_MAIN="97b2db05711d4b5504c47b4dfb8396d92fcd762f"
+
+          test "$(git -C "$DEV" rev-parse HEAD)" = "$EXPECTED_MAIN"
+          test -z "$(git -C "$DEV" status --porcelain)"
+          PY="$DEV/.venv/bin/python"
+          export PYTHONPATH="$DEV/src"
+
+          "$PY" - "$ROOT" <<'PY'
+          import json
+          import sqlite3
+          import sys
+          import time
+          from pathlib import Path
+
+          root = Path(sys.argv[1])
+          epoch2 = root / "Development/runtime/paper/paper_fund_epoch2.sqlite3"
+          stream = root / "Development/runtime/stream/intelligence_stream.sqlite3"
+          live_log = root / "ServiceLogs/live.out.log"
+
+          required_epoch2 = {
+              "r21_epoch2_activation",
+              "r21_vault_snapshots",
+              "r21_consolidated_snapshots",
+              "s11_vault_decisions",
+              "s11_canonical_sizing_events",
+              "r22_epoch2_intents",
+              "r22_epoch2_fills",
+              "r22_epoch2_bundles",
+              "s11_capital_outcome_evidence",
+          }
+          required_stream = {
+              "stream_capital_projection_activation",
+              "stream_capital_decision_messages",
+              "stream_capital_lifecycle_messages",
+              "stream_capital_sizing_messages",
+              "stream_capital_messages",
+          }
+
+          def table_names(connection):
+              return {
+                  str(row[0])
+                  for row in connection.execute(
+                      "SELECT name FROM sqlite_master WHERE type='table'"
+                  ).fetchall()
+              }
+
+          def state():
+              with sqlite3.connect(
+                  f"{epoch2.resolve().as_uri()}?mode=ro", uri=True
+              ) as c:
+                  c.execute("PRAGMA query_only=ON")
+                  epoch_quick = str(c.execute("PRAGMA quick_check").fetchone()[0])
+                  epoch_tables = table_names(c)
+                  decision_n = (
+                      int(c.execute("SELECT COUNT(*) FROM s11_vault_decisions").fetchone()[0])
+                      if "s11_vault_decisions" in epoch_tables else 0
+                  )
+                  intent_n = (
+                      int(c.execute("SELECT COUNT(*) FROM r22_epoch2_intents").fetchone()[0])
+                      if "r22_epoch2_intents" in epoch_tables else 0
+                  )
+
+              with sqlite3.connect(
+                  f"{stream.resolve().as_uri()}?mode=ro", uri=True
+              ) as c:
+                  c.execute("PRAGMA query_only=ON")
+                  stream_quick = str(c.execute("PRAGMA quick_check").fetchone()[0])
+                  stream_tables = table_names(c)
+                  real_capital = c.execute(
+                      "SELECT value FROM stream_meta WHERE key='real_capital'"
+                  ).fetchone()
+                  activation = None
+                  if "stream_capital_projection_activation" in stream_tables:
+                      rows = c.execute(
+                          """
+                          SELECT activation_identity, activated_at_ms, payload_json
+                          FROM stream_capital_projection_activation
+                          ORDER BY activated_at_ms, activation_identity
+                          """
+                      ).fetchall()
+                      if len(rows) == 1:
+                          payload = json.loads(str(rows[0][2]))
+                          activation = {
+                              "identity": str(rows[0][0]),
+                              "activated_at_ms": int(rows[0][1]),
+                              "payload_real_capital": payload.get("real_capital"),
+                              "production_authority": payload.get("production_authority"),
+                              "historical_rich_backfill_allowed": payload.get(
+                                  "historical_rich_backfill_allowed"
+                              ),
+                          }
+                  capital_sources = []
+                  if activation is not None:
+                      capital_sources = [
+                          tuple(row)
+                          for row in c.execute(
+                              """
+                              SELECT subtype, COUNT(*), MIN(event_at_ms), MAX(event_at_ms)
+                              FROM stream_source_events
+                              WHERE category='capital' AND event_at_ms >= ?
+                              GROUP BY subtype
+                              ORDER BY subtype
+                              """,
+                              (activation["activated_at_ms"],),
+                          ).fetchall()
+                      ]
+
+              log = live_log.read_text(errors="replace") if live_log.exists() else ""
+              return {
+                  "epoch_quick": epoch_quick,
+                  "stream_quick": stream_quick,
+                  "epoch_tables_ready": required_epoch2.issubset(epoch_tables),
+                  "stream_tables_ready": required_stream.issubset(stream_tables),
+                  "missing_epoch_tables": sorted(required_epoch2 - epoch_tables),
+                  "missing_stream_tables": sorted(required_stream - stream_tables),
+                  "real_capital": None if real_capital is None else str(real_capital[0]),
+                  "activation": activation,
+                  "activation_marker": "stream_capital status=ACTIVATED" in log,
+                  "projected_marker": "stream_capital status=PROJECTED" in log,
+                  "capital_sources": capital_sources,
+                  "decision_count": decision_n,
+                  "r22_intent_count": intent_n,
+              }
+
+          deadline = time.time() + 240
+          last = None
+          while time.time() < deadline:
+              last = state()
+              activation = last["activation"]
+              if (
+                  last["epoch_quick"] == "ok"
+                  and last["stream_quick"] == "ok"
+                  and last["epoch_tables_ready"]
+                  and last["stream_tables_ready"]
+                  and last["real_capital"] == "0"
+                  and activation is not None
+                  and activation["payload_real_capital"] == 0
+                  and activation["production_authority"] is False
+                  and activation["historical_rich_backfill_allowed"] is False
+                  and last["activation_marker"]
+              ):
+                  print(json.dumps(last, sort_keys=True))
+                  print("F5_PHYSICAL_ACTIVATION_PASS=YES")
+                  if last["capital_sources"] and last["projected_marker"]:
+                      print("F5_FORWARD_CAPITAL_EVIDENCE=OBSERVED")
+                  else:
+                      print("F5_FORWARD_CAPITAL_EVIDENCE=PENDING_NATURAL_FORWARD_EVENT")
+                  print("HISTORICAL_BACKFILL=NO")
+                  print("REAL_CAPITAL=0")
+                  raise SystemExit(0)
+              time.sleep(10)
+
+          print(json.dumps(last, sort_keys=True), file=sys.stderr)
+          raise SystemExit("F5_PHYSICAL_ACTIVATION_TIMEOUT")
+          PY
