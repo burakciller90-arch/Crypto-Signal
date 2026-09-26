@@ -464,6 +464,120 @@ jobs:
           asyncio.run(main())
           PY
 
+      - name: Capture wrapper topology and redacted error contexts
+        shell: bash
+        run: |
+          set -euo pipefail
+          OUT="$RUNNER_TEMP/runtime-hygiene"
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          OUT="$OUT" ROOT="$ROOT" /usr/bin/python3 - <<'PY'
+          import hashlib
+          import json
+          import os
+          import re
+          from pathlib import Path
+
+          out = Path(os.environ["OUT"])
+          root = Path(os.environ["ROOT"])
+          wrapper = root / "ssd-clock-wrapper.py"
+          paths = {
+              "wrapper": wrapper,
+              "development_alert_runner": root / "Development/ops/run_alert_clock.py",
+              "alerts_alert_runner": root / "Alerts/ops/run_alert_clock.py",
+              "development_live_runner": root / "Development/ops/run_live_evidence_clock.py",
+          }
+
+          topology = {}
+          for label, path in paths.items():
+              if not path.is_file():
+                  topology[label] = {"exists": False}
+                  continue
+              raw = path.read_bytes()
+              entry = {
+                  "exists": True,
+                  "path": str(path),
+                  "sha256": hashlib.sha256(raw).hexdigest(),
+                  "bytes": len(raw),
+              }
+              if label == "wrapper":
+                  text = raw.decode("utf-8", errors="replace")
+                  safe_lines = []
+                  for line in text.splitlines():
+                      lowered = line.lower()
+                      if any(token in lowered for token in (
+                          "alert", "live", "signal-ledger", "outbox",
+                          "development", "alerts", "run_alert_clock",
+                          "run_live_evidence_clock",
+                      )):
+                          safe_lines.append(line[:1200])
+                  entry["relevant_lines"] = safe_lines[:160]
+              topology[label] = entry
+
+          (out / "wrapper-topology.json").write_text(
+              json.dumps(topology, sort_keys=True, indent=2),
+              encoding="utf-8",
+          )
+
+          patterns = {
+              "alert_orphan": re.compile(
+                  r"lifecycle evaluation references missing signal", re.I
+              ),
+              "ssl_wrong_version": re.compile(r"WRONG_VERSION_NUMBER", re.I),
+              "name_resolution": re.compile(
+                  r"nodename nor servname|name resolution|NameResolutionError", re.I
+              ),
+              "connect_error": re.compile(r"ConnectError", re.I),
+          }
+          log_paths = [
+              root / "ServiceLogs/alert.err.log",
+              root / "ServiceLogs/live.err.log",
+              root / "Development/runtime/alerts/alert_clock.err.log",
+              root / "Development/runtime/ledger/live_clock.err.log",
+          ]
+          contexts = {}
+          sensitive = re.compile(
+              r"(?i)(authorization|token|secret|password|api[_-]?key|cookie)\s*[:=]\s*\S+"
+          )
+          for path in log_paths:
+              if not path.is_file():
+                  continue
+              with path.open("rb") as handle:
+                  try:
+                      handle.seek(-4_000_000, 2)
+                  except OSError:
+                      handle.seek(0)
+                  text = handle.read().decode("utf-8", errors="replace")
+              lines = text.splitlines()
+              file_context = {}
+              for key, pattern in patterns.items():
+                  indices = [i for i, line in enumerate(lines) if pattern.search(line)]
+                  if not indices:
+                      continue
+                  i = indices[-1]
+                  start = max(0, i - 10)
+                  end = min(len(lines), i + 11)
+                  block = []
+                  for line in lines[start:end]:
+                      line = sensitive.sub(r"\1=<REDACTED>", line)
+                      if len(line) > 1800:
+                          line = line[:1800] + "...<TRUNCATED>"
+                      block.append(line)
+                  file_context[key] = {
+                      "match_count_in_window": len(indices),
+                      "last_context": block,
+                  }
+              contexts[str(path)] = file_context
+
+          (out / "error-contexts-redacted.json").write_text(
+              json.dumps(contexts, sort_keys=True, indent=2),
+              encoding="utf-8",
+          )
+          print("RUNTIME_HYGIENE_WRAPPER_TOPOLOGY_CAPTURED=YES")
+          print("RUNTIME_HYGIENE_REDACTED_ERROR_CONTEXTS_CAPTURED=YES")
+          print("RAW_SECRETS_EMITTED=NO")
+          print("REAL_CAPITAL=0")
+          PY
+
       - name: Upload runtime hygiene artifact
         if: always()
         uses: actions/upload-artifact@v4
