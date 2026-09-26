@@ -51,40 +51,58 @@ jobs:
           echo "ALERT_CLOCK_CONSISTENT_SNAPSHOT_FOCUSED_PASS=YES"
           echo "REAL_CAPITAL=0"
 
-      - name: Read-only canonical ledger acceptance
+      - name: Read-only canonical ledger snapshot acceptance
         shell: bash
         run: |
           set -euo pipefail
-          DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
-          DB="$DEV/runtime/ledger/live_signal_ledger.sqlite3"
-          OUT="$RUNNER_TEMP/alert-clock-snapshot-live"
-          mkdir -p "$OUT"
+          DB="/Volumes/Crypto-504/Crypto-Signal/Development/runtime/ledger/live_signal_ledger.sqlite3"
           test -f "$DB"
-
-          DB="$DB" TEMP_OUTBOX="$OUT/alert-outbox.sqlite3"           PYTHONPATH="$GITHUB_WORKSPACE/src" "$TEST_PY" - <<'PY'
+          DB="$DB" "$TEST_PY" - <<'PY'
           import os
+          import sqlite3
           from pathlib import Path
 
-          from crypto_signal.alerts.clock import materialize_alert_events
-          from crypto_signal.alerts.store import AlertOutbox
-
-          source = Path(os.environ["DB"])
-          outbox_path = Path(os.environ["TEMP_OUTBOX"])
-          result = materialize_alert_events(
-              source,
-              AlertOutbox(outbox_path),
+          db = Path(os.environ["DB"])
+          connection = sqlite3.connect(
+              f"file:{db}?mode=ro",
+              uri=True,
+              timeout=10,
           )
-          print(
-              "ALERT_CLOCK_CANONICAL_LEDGER_PASS=YES "
-              f"signals={result.signal_rows} "
-              f"lifecycle={result.lifecycle_rows} "
-              f"eligible={result.eligible_events} "
-              f"inserted={result.inserted_events} "
-              f"unchanged={result.unchanged_events}"
-          )
-          print(f"TEMP_OUTBOX={outbox_path}")
-          print("PRODUCTION_OUTBOX_MUTATION=NO")
-          print("REAL_CAPITAL=0")
+          connection.execute("PRAGMA query_only=ON")
+          try:
+              connection.execute("BEGIN")
+              signal_ids = {
+                  str(row[0])
+                  for row in connection.execute(
+                      "SELECT signal_freeze_identity FROM signal_freezes"
+                  ).fetchall()
+              }
+              lifecycle_rows = connection.execute(
+                  """
+                  SELECT signal_freeze_identity
+                  FROM lifecycle_evaluations
+                  ORDER BY appended_at_ms, evaluation_identity
+                  """
+              ).fetchall()
+              missing = sorted(
+                  {
+                      str(row[0])
+                      for row in lifecycle_rows
+                      if str(row[0]) not in signal_ids
+                  }
+              )
+              assert not missing, missing[:10]
+              print(
+                  "ALERT_CLOCK_CANONICAL_SNAPSHOT_PASS=YES "
+                  f"signals={len(signal_ids)} "
+                  f"lifecycle={len(lifecycle_rows)} "
+                  "missing_parent=0"
+              )
+              print("PRODUCTION_MUTATION=NO")
+              print("REAL_CAPITAL=0")
+          finally:
+              connection.rollback()
+              connection.close()
           PY
 
       - name: Whole-repository regression
