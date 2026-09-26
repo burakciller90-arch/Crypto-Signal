@@ -19,8 +19,8 @@ def test_stream_preview_is_isolated_from_production_root(tmp_path: Path) -> None
     assert root.status_code == 200
     assert preview.status_code == 200
     assert 'data-ui-version="galactech-v2-intelligence-first-tr"' in root.text
-    assert 'data-ui-version="crypto-signal-stream-v1-s12"' in preview.text
-    assert 'data-ui-version="crypto-signal-stream-v1-s12"' not in root.text
+    assert 'data-ui-version="crypto-signal-stream-v1-s13"' in preview.text
+    assert 'data-ui-version="crypto-signal-stream-v1-s13"' not in root.text
 
 
 def test_stream_preview_obeys_one_panel_contract() -> None:
@@ -260,18 +260,54 @@ def test_stream_s12_discovery_and_exact_deep_link_contract() -> None:
     assert "separate" not in html.lower() or "ayrı ekran" in html.lower()
 
 
-def test_stream_s11_does_not_jump_to_s13() -> None:
+def test_stream_s13_sound_and_notification_contract() -> None:
     html = (STREAM_DIR / "index.html").read_text(encoding="utf-8")
     script = (STREAM_DIR / "app.js").read_text(encoding="utf-8")
-    renderer = (STREAM_DIR / "visual_proof.js").read_text(encoding="utf-8")
+    notifications = (STREAM_DIR / "notifications.js").read_text(encoding="utf-8")
 
-    assert "S13’te etkinleşecek" in html
-    assert "new Audio(" not in script
-    assert "AudioContext" not in script
-    assert "Notification.requestPermission" not in script
-    assert "REAL_CAPITAL=0" not in renderer or "real_capital" in renderer
+    for control_id in (
+        "soundEnabledToggle",
+        "soundModeSelect",
+        "soundVolumeInput",
+        "soundUnlockButton",
+        "testChimeButton",
+        "desktopNotificationToggle",
+        "desktopPermissionButton",
+        "soundStatusPill",
+    ):
+        assert f'id="{control_id}"' in html
+
+    assert "crypto-signal-stream-v1-s13-notifications" in notifications
+    assert "AudioContext" in notifications
+    assert "createOscillator" in notifications
+    assert "659.25" in notifications
+    assert "880.0" in notifications
+    assert "1174.66" in notifications
+    assert "Notification.requestPermission" in notifications
+    assert "delivery !== \"live_new\"" in notifications
+    assert "delivered.has(identity)" in notifications
+    assert "decision_capital" in notifications
+    assert "important" in notifications
+    assert "silent" in notifications
+    assert "desktopEnabled" in notifications
+    assert "state.pollingLiveArmed ? \"live_new\" : \"replay\"" in script
+    assert "state.liveNotificationArmed ? \"live_new\" : \"replay\"" in script
+    assert "armAfterReconnectGrace" in script
+    assert "__cryptoSignalStreamS13" in script
+    assert "simulateFixtureDelivery" in script
     assert "execute_order" not in script
     assert "place_order" not in script
+
+
+def test_stream_s13_does_not_jump_to_s14() -> None:
+    script = (STREAM_DIR / "app.js").read_text(encoding="utf-8")
+    notifications = (STREAM_DIR / "notifications.js").read_text(encoding="utf-8")
+
+    assert "virtualized-message-spacer" not in script
+    assert "10_000" not in script
+    assert "execute_order" not in script
+    assert "place_order" not in script
+    assert "real_capital" not in notifications.lower()
 
 
 def test_stream_preview_static_assets_exist_and_are_light_first() -> None:
@@ -283,6 +319,7 @@ def test_stream_preview_static_assets_exist_and_are_light_first() -> None:
     assert (STREAM_DIR / "evidence.js").is_file()
     assert (STREAM_DIR / "evidence.css").is_file()
     assert (STREAM_DIR / "visual_proof.js").is_file()
+    assert (STREAM_DIR / "notifications.js").is_file()
     assert "--bg: #f4f8ff" in css
     assert 'color-scheme" content="light"' in (
         STREAM_DIR / "index.html"

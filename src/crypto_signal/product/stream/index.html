@@ -8,7 +8,7 @@
   <title>Crypto Signal // Intelligence Stream</title>
   <link rel="stylesheet" href="/stream-static/app.css">
 </head>
-<body data-ui-version="crypto-signal-stream-v1-s12">
+<body data-ui-version="crypto-signal-stream-v1-s13">
   <a class="skip-link" href="#streamMain">Akışa geç</a>
 
   <div class="stream-app">
@@ -219,14 +219,57 @@
         <label><input type="radio" name="density" value="comfortable" checked> Rahat</label>
         <label><input type="radio" name="density" value="compact"> Kompakt</label>
       </fieldset>
-      <div class="future-setting" aria-disabled="true">
-        <div>
-          <strong>Bildirim sesi</strong>
-          <span>S13’te etkinleşecek</span>
+      <section class="notification-settings" aria-labelledby="notificationSettingsTitle">
+        <div class="notification-settings-head">
+          <div>
+            <span class="eyebrow">BİLDİRİMLER</span>
+            <strong id="notificationSettingsTitle">Crypto Signal chime</strong>
+          </div>
+          <span id="soundStatusPill" class="notification-status">KAPALI</span>
         </div>
-        <span class="future-pill">KAPALI</span>
-      </div>
-      <p class="drawer-note">Ses kontrol yüzeyi ayrılmıştır; gerçek chime, izin ve replay-silent davranışı S13 kapsamıdır.</p>
+
+        <label class="notification-toggle">
+          <span>
+            <strong>Sesli bildirim</strong>
+            <small>Varsayılan kapalıdır; yalnız yeni canlı mesajlarda çalışır.</small>
+          </span>
+          <input id="soundEnabledToggle" type="checkbox">
+        </label>
+
+        <label>
+          <span>Bildirim modu</span>
+          <select id="soundModeSelect">
+            <option value="important">Önemli mesajlar</option>
+            <option value="decision_capital">Decision + Capital</option>
+            <option value="all">Tüm yeni mesajlar</option>
+            <option value="silent">Sessiz</option>
+          </select>
+        </label>
+
+        <label class="notification-volume">
+          <span>Ses seviyesi <output id="soundVolumeValue">55%</output></span>
+          <input id="soundVolumeInput" type="range" min="0" max="100" step="1" value="55">
+        </label>
+
+        <div class="notification-actions">
+          <button id="soundUnlockButton" class="primary-button" type="button">Sesi aç &amp; test et</button>
+          <button id="testChimeButton" class="secondary-button" type="button">Chime test</button>
+        </div>
+
+        <label class="notification-toggle">
+          <span>
+            <strong>Masaüstü bildirimi</strong>
+            <small>İsteğe bağlıdır; tarayıcı izni yalnız düğmeye basınca istenir.</small>
+          </span>
+          <input id="desktopNotificationToggle" type="checkbox">
+        </label>
+        <button id="desktopPermissionButton" class="secondary-button notification-permission" type="button">
+          Masaüstü izni iste
+        </button>
+        <p id="notificationStatusText" class="drawer-note notification-note">
+          Geçmiş, ilk yükleme ve reconnect replay her zaman sessizdir.
+        </p>
+      </section>
     </aside>
 
     <div id="drawerBackdrop" class="drawer-backdrop" hidden></div>
@@ -235,6 +278,7 @@
   </div>
 
   <script src="/stream-static/visual_proof.js"></script>
+  <script src="/stream-static/notifications.js"></script>
   <script src="/stream-static/app.js"></script>
 </body>
 </html>

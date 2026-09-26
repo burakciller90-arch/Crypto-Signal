@@ -35,6 +35,16 @@ const ui = {
   filterButton: document.getElementById("filterButton"),
   soundButton: document.getElementById("soundButton"),
   settingsButton: document.getElementById("settingsButton"),
+  soundEnabled: document.getElementById("soundEnabledToggle"),
+  soundMode: document.getElementById("soundModeSelect"),
+  soundVolume: document.getElementById("soundVolumeInput"),
+  soundVolumeValue: document.getElementById("soundVolumeValue"),
+  soundUnlock: document.getElementById("soundUnlockButton"),
+  testChime: document.getElementById("testChimeButton"),
+  desktopNotification: document.getElementById("desktopNotificationToggle"),
+  desktopPermission: document.getElementById("desktopPermissionButton"),
+  soundStatusPill: document.getElementById("soundStatusPill"),
+  notificationStatusText: document.getElementById("notificationStatusText"),
   searchInput: document.getElementById("searchInput"),
   symbolFilter: document.getElementById("symbolFilter"),
   categoryFilter: document.getElementById("categoryFilter"),
@@ -60,6 +70,10 @@ const state = {
   unread: 0,
   eventSource: null,
   pollingTimer: null,
+  pollingLiveArmed: false,
+  sseEverOpened: false,
+  liveNotificationArmed: false,
+  notificationRearmTimer: null,
   loadingHistory: false,
   expanded: new Set(),
   details: new Map(),
@@ -1949,6 +1963,92 @@ function renderAll() {
   updateUnread();
 }
 
+function notificationApi() {
+  return window.CryptoSignalNotifications || null;
+}
+
+function notificationSnapshot() {
+  return notificationApi()?.snapshot?.() || {
+    settings: { enabled: false, volume: 0.55, mode: "important", desktopEnabled: false },
+    unlocked: false,
+    audioState: "unavailable",
+    notificationPermission: "unsupported",
+    audit: {},
+  };
+}
+
+function syncNotificationUi(note = "") {
+  const snapshot = notificationSnapshot();
+  const settings = snapshot.settings || {};
+  if (ui.soundEnabled instanceof HTMLInputElement) {
+    ui.soundEnabled.checked = settings.enabled === true;
+  }
+  if (ui.soundMode instanceof HTMLSelectElement) {
+    ui.soundMode.value = text(settings.mode, "important");
+  }
+  if (ui.soundVolume instanceof HTMLInputElement) {
+    ui.soundVolume.value = String(Math.round(Number(settings.volume || 0) * 100));
+  }
+  if (ui.soundVolumeValue) {
+    ui.soundVolumeValue.textContent = `${Math.round(Number(settings.volume || 0) * 100)}%`;
+  }
+  if (ui.desktopNotification instanceof HTMLInputElement) {
+    ui.desktopNotification.checked = settings.desktopEnabled === true;
+  }
+  if (ui.soundButton) {
+    ui.soundButton.dataset.soundEnabled = String(
+      settings.enabled === true && settings.mode !== "silent"
+    );
+  }
+  if (ui.soundStatusPill) {
+    ui.soundStatusPill.classList.remove("is-ready", "is-locked");
+    if (!settings.enabled || settings.mode === "silent") {
+      ui.soundStatusPill.textContent = "KAPALI";
+    } else if (snapshot.unlocked) {
+      ui.soundStatusPill.textContent = "HAZIR";
+      ui.soundStatusPill.classList.add("is-ready");
+    } else {
+      ui.soundStatusPill.textContent = "KİLİTLİ";
+      ui.soundStatusPill.classList.add("is-locked");
+    }
+  }
+  if (ui.notificationStatusText) {
+    const permission = text(snapshot.notificationPermission, "unsupported");
+    ui.notificationStatusText.textContent =
+      note
+      || `Ses ${snapshot.unlocked ? "hazır" : "kullanıcı jesti bekliyor"} · masaüstü izni ${permission} · geçmiş/replay sessiz.`;
+  }
+}
+
+function updateNotificationSettings(patch) {
+  const api = notificationApi();
+  if (!api?.updateSettings) return notificationSnapshot();
+  const snapshot = api.updateSettings(patch);
+  syncNotificationUi();
+  return snapshot;
+}
+
+function routeNotification(record, delivery = "silent") {
+  const result = notificationApi()?.route?.(record, delivery) || null;
+  if (delivery === "live_new") syncNotificationUi();
+  return result;
+}
+
+function clearNotificationRearmTimer() {
+  if (!state.notificationRearmTimer) return;
+  window.clearTimeout(state.notificationRearmTimer);
+  state.notificationRearmTimer = null;
+}
+
+function armAfterReconnectGrace() {
+  clearNotificationRearmTimer();
+  state.liveNotificationArmed = false;
+  state.notificationRearmTimer = window.setTimeout(() => {
+    state.liveNotificationArmed = true;
+    state.notificationRearmTimer = null;
+  }, 1600);
+}
+
 function updateUnread() {
   if (!ui.newButton || !ui.newCount) return;
   ui.newCount.textContent = String(state.unread);
@@ -1990,7 +2090,11 @@ function mergeInitial(records) {
   }
 }
 
-function appendRecord(record, cursor = null, { fixtureNew = false } = {}) {
+function appendRecord(
+  record,
+  cursor = null,
+  { fixtureNew = false, delivery = "silent" } = {}
+) {
   const id = text(record && record.narrative_identity, "");
   if (!id || state.ids.has(id)) return false;
   const stayAtBottom = isNearBottom();
@@ -2004,6 +2108,7 @@ function appendRecord(record, cursor = null, { fixtureNew = false } = {}) {
   }
 
   if (cursor) state.newestCursor = cursor;
+  routeNotification(record, delivery);
   if (stayAtBottom) {
     window.requestAnimationFrame(() => scrollToBottom({ smooth: !state.fixture }));
   } else {
@@ -2168,19 +2273,30 @@ function connectLive() {
   source.addEventListener("open", () => {
     setConnection("live", "CANLI", "SSE bağlı · yeni mesajlar otomatik");
     stopPolling();
+    if (!state.sseEverOpened) {
+      state.sseEverOpened = true;
+      state.liveNotificationArmed = true;
+    } else {
+      armAfterReconnectGrace();
+    }
     if (ui.transportMode) ui.transportMode.textContent = "SSE CANLI";
   });
 
   source.addEventListener("message", (event) => {
     try {
       const record = JSON.parse(event.data);
-      appendRecord(record, event.lastEventId || null);
+      appendRecord(record, event.lastEventId || null, {
+        delivery: state.liveNotificationArmed ? "live_new" : "replay",
+      });
     } catch {
       setConnection("degraded", "AKIŞ HATASI", "geçersiz mesaj güvenle reddedildi");
     }
   });
 
   source.addEventListener("error", () => {
+    clearNotificationRearmTimer();
+    state.liveNotificationArmed = false;
+    state.pollingLiveArmed = false;
     setConnection("degraded", "YENİDEN BAĞLANIYOR", "SSE kesildi · polling fallback aktif");
     if (ui.transportMode) ui.transportMode.textContent = "POLLING FALLBACK";
     startPolling();
@@ -2194,10 +2310,12 @@ async function pollCatchUp() {
     const payload = await fetchJson(`${API.messages}?${params.toString()}`);
     const page = payload && typeof payload.page === "object" ? payload.page : null;
     const items = page && Array.isArray(page.items) ? page.items : [];
-    for (const record of items) appendRecord(record);
+    const delivery = state.pollingLiveArmed ? "live_new" : "replay";
+    for (const record of items) appendRecord(record, null, { delivery });
     if (page && typeof page.newest_cursor === "string" && items.length) {
       state.newestCursor = page.newest_cursor;
     }
+    state.pollingLiveArmed = true;
   } catch {
     setConnection("degraded", "BAĞLANTI SINIRLI", "SSE ve polling yeniden denenecek");
   }
@@ -2680,6 +2798,19 @@ function applyFixture(name) {
     });
   }
 
+  if (name === "sound") {
+    const api = notificationApi();
+    api?.resetSessionAudit?.();
+    api?.updateSettings?.({
+      enabled: true,
+      volume: 0.42,
+      mode: "important",
+      desktopEnabled: false,
+    });
+    syncNotificationUi("Fixture · canlı yeni mesaj sesi açık; history/replay sessiz.");
+    openDrawer(ui.settingsDrawer);
+  }
+
   if (name === "filters") {
     openDrawer(ui.discoveryDrawer);
     if (ui.searchInput) ui.searchInput.value = "likidite";
@@ -2731,6 +2862,66 @@ function wireUi() {
     if (!state.fixture) void loadInitial();
   });
 
+  ui.soundEnabled?.addEventListener("change", () => {
+    if (!(ui.soundEnabled instanceof HTMLInputElement)) return;
+    updateNotificationSettings({ enabled: ui.soundEnabled.checked });
+  });
+
+  ui.soundMode?.addEventListener("change", () => {
+    if (!(ui.soundMode instanceof HTMLSelectElement)) return;
+    updateNotificationSettings({ mode: ui.soundMode.value });
+  });
+
+  ui.soundVolume?.addEventListener("input", () => {
+    if (!(ui.soundVolume instanceof HTMLInputElement)) return;
+    updateNotificationSettings({ volume: Number(ui.soundVolume.value) / 100 });
+  });
+
+  ui.soundUnlock?.addEventListener("click", async () => {
+    const ok = await notificationApi()?.unlock?.({ preview: true });
+    syncNotificationUi(ok ? "Ses açıldı · özgün Crypto Signal chime test edildi." : "Ses açılamadı; tarayıcı audio iznini kontrol et.");
+  });
+
+  ui.testChime?.addEventListener("click", async () => {
+    let snapshot = notificationSnapshot();
+    if (!snapshot.unlocked) {
+      await notificationApi()?.unlock?.();
+      snapshot = notificationSnapshot();
+    }
+    const played = snapshot.unlocked
+      ? notificationApi()?.playPreview?.() === true
+      : false;
+    syncNotificationUi(played ? "Chime test edildi." : "Chime için önce sesi aç.");
+  });
+
+  ui.desktopNotification?.addEventListener("change", () => {
+    if (!(ui.desktopNotification instanceof HTMLInputElement)) return;
+    const snapshot = notificationSnapshot();
+    if (
+      ui.desktopNotification.checked
+      && snapshot.notificationPermission !== "granted"
+    ) {
+      ui.desktopNotification.checked = false;
+      updateNotificationSettings({ desktopEnabled: false });
+      syncNotificationUi("Masaüstü bildirimi için önce açıkça izin iste.");
+      return;
+    }
+    updateNotificationSettings({
+      desktopEnabled: ui.desktopNotification.checked,
+    });
+  });
+
+  ui.desktopPermission?.addEventListener("click", async () => {
+    const permission = await notificationApi()?.requestDesktopPermission?.();
+    if (permission === "granted") {
+      updateNotificationSettings({ desktopEnabled: true });
+      syncNotificationUi("Masaüstü bildirimi izni verildi.");
+    } else {
+      updateNotificationSettings({ desktopEnabled: false });
+      syncNotificationUi(`Masaüstü izni: ${text(permission, "desteklenmiyor")}.`);
+    }
+  });
+
   document.querySelectorAll('input[name="density"]').forEach((radio) => {
     radio.addEventListener("change", (event) => {
       const target = event.target;
@@ -2759,6 +2950,7 @@ function wireUi() {
 
 function init() {
   wireUi();
+  syncNotificationUi();
   if (state.fixture) {
     applyFixture(state.fixture);
     if (exactSha256(state.deepLinkIdentity)) {
@@ -2795,8 +2987,31 @@ window.__cryptoSignalStreamS12 = Object.freeze({
   }),
 });
 
+window.__cryptoSignalStreamS13 = Object.freeze({
+  notificationSnapshot,
+  setNotificationSettings: (patch) => updateNotificationSettings(patch),
+  resetNotificationAudit: () => notificationApi()?.resetSessionAudit?.(),
+  simulateFixtureDelivery: ({
+    identity = fixtureIdentity(9000),
+    category = "decision",
+    importance = "important",
+    delivery = "live_new",
+  } = {}) => {
+    if (!state.fixture) return { ok: false, reason: "fixture_only" };
+    const record = {
+      narrative_identity: identity,
+      symbol: "BTCUSDT",
+      category,
+      importance,
+      text: { collapsed_text: "S13 notification acceptance fixture." },
+    };
+    return notificationApi()?.route?.(record, delivery) || null;
+  },
+});
+
 window.addEventListener("beforeunload", () => {
   persistEvidenceWindows();
+  clearNotificationRearmTimer();
   state.eventSource?.close();
   stopPolling();
 });
