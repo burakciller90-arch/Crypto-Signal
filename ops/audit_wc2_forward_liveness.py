@@ -157,11 +157,26 @@ def _post_forecast_freezes(
     path: Path,
     *,
     latest_forecast_ms: int,
+    latest_forecast_signal_identity: str,
 ) -> list[dict[str, Any]]:
-    # The canonical signal ledger is multi-GB. Its integrity is audited by
-    # dedicated runtime gates; F1 needs only one query-only snapshot and must
-    # not turn this focused liveness check into a full-database integrity scan.
+    # The canonical signal ledger is multi-GB and append-only.
+    # signal_freeze_identity is unique/indexed, so anchor on the exact source
+    # freeze rowid and inspect only later appends. Keep frozen_at_ms >
+    # forecast-issued-at as the temporal gate; rowid is only a bounded scan
+    # accelerator, not a replacement for time semantics.
     with closing(_connect_ro(path, quick_check=False)) as connection:
+        anchor = connection.execute(
+            """
+            SELECT rowid
+            FROM signal_freezes
+            WHERE signal_freeze_identity = ?
+            """,
+            (latest_forecast_signal_identity,),
+        ).fetchone()
+        if anchor is None:
+            raise ValueError(
+                "latest forecast source freeze missing from signal ledger"
+            )
         rows = connection.execute(
             """
             SELECT bundle_identity, signal_freeze_identity, exchange,
@@ -169,10 +184,11 @@ def _post_forecast_freezes(
                    source_cutoff_open_time_ms, signal_state, direction,
                    frozen_at_ms
             FROM signal_freezes
-            WHERE frozen_at_ms > ?
-            ORDER BY frozen_at_ms, signal_freeze_identity
+            WHERE rowid > ?
+              AND frozen_at_ms > ?
+            ORDER BY rowid
             """,
-            (latest_forecast_ms,),
+            (int(anchor["rowid"]), latest_forecast_ms),
         ).fetchall()
     return [{key: row[key] for key in row.keys()} for row in rows]
 
