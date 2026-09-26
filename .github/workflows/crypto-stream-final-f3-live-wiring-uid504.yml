@@ -1,0 +1,150 @@
+name: Crypto Stream Final F3 Live Wiring UID504
+
+on:
+  push:
+    branches:
+      - 'stream/final-f3-live-intelligence'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: crypto-stream-final-f3-live-wiring
+  cancel-in-progress: true
+
+jobs:
+  gate:
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          clean: true
+          fetch-depth: 1
+
+      - name: Focused F3 runtime regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          PY="/Volumes/Crypto-504/Crypto-Signal/Development/.venv/bin/python"
+          export PYTHONPATH="$GITHUB_WORKSPACE:$GITHUB_WORKSPACE/src:$GITHUB_WORKSPACE/tests"
+          "$PY" -m pytest -q             tests/test_intelligence_stream_family.py             tests/test_wc2_live_clock_wiring.py             tests/test_wc2_ssd_supervisor_single_owner.py             tests/test_wc1_ssd_supervisor_market_tape_single_owner.py
+          "$PY" -m ruff check             src/crypto_signal/product/intelligence_stream_family.py             src/crypto_signal/product/intelligence_stream_family_sources.py             src/crypto_signal/product/intelligence_stream_policy.py             src/crypto_signal/product/intelligence_stream_production_projector.py             src/crypto_signal/product/intelligence_stream_read_model.py             ops/run_live_evidence_clock.py             tests/test_intelligence_stream_family.py             tests/test_wc2_live_clock_wiring.py             tests/test_wc2_ssd_supervisor_single_owner.py
+          "$PY" -m mypy             src/crypto_signal/product/intelligence_stream_family.py             src/crypto_signal/product/intelligence_stream_family_sources.py             src/crypto_signal/product/intelligence_stream_production_projector.py
+          bash -n ops/ssd_runtime_supervisor.sh
+          echo "F3_FOCUSED_RUNTIME_GATE_PASS=YES"
+
+      - name: Exact persisted-source dry run
+        shell: bash
+        run: |
+          set -euo pipefail
+          PY="/Volumes/Crypto-504/Crypto-Signal/Development/.venv/bin/python"
+          export PYTHONPATH="$GITHUB_WORKSPACE:$GITHUB_WORKSPACE/src"
+          SOURCE_ROOT="/Volumes/Crypto-504/Crypto-Signal/Development/runtime"
+          SIGNAL="$SOURCE_ROOT/ledger/live_signal_ledger.sqlite3"
+          MARKET="$SOURCE_ROOT/market_tape/market_tape.sqlite3"
+          STREAM="$SOURCE_ROOT/stream/intelligence_stream.sqlite3"
+          for required in "$SIGNAL" "$MARKET" "$STREAM"; do
+            test -f "$required"
+          done
+          TMP="$RUNNER_TEMP/f3-live-wiring-$GITHUB_RUN_ID"
+          rm -rf "$TMP"
+          mkdir -p "$TMP"
+          "$PY" - "$SIGNAL" "$MARKET" "$STREAM" "$TMP" <<'PY'
+          import sqlite3
+          import sys
+          from pathlib import Path
+
+          signal, market, stream, root = map(Path, sys.argv[1:])
+
+          def backup(source: Path, target: Path) -> None:
+              src = sqlite3.connect(source)
+              dst = sqlite3.connect(target)
+              try:
+                  src.backup(dst)
+              finally:
+                  dst.close()
+                  src.close()
+
+          backup(signal, root / "signal.sqlite3")
+          backup(market, root / "market.sqlite3")
+          backup(stream, root / "stream.sqlite3")
+          PY
+
+          "$PY" ops/run_market_tape_snapshot.py             --db "$TMP/market.sqlite3"             --lock-path "$TMP/market-snapshot.lock"             --symbols BTCUSDT ETHUSDT SOLUSDT             --book-depth 50             --trade-limit 60             --oi-interval 15min             --oi-limit 16
+
+          "$PY" - "$TMP" <<'PY'
+          import time
+          from pathlib import Path
+          import sys
+
+          from crypto_signal.ledger.store import ImmutableSignalLedger
+          from crypto_signal.product.intelligence_stream_family import (
+              StreamFamilyProjectionDisposition,
+          )
+          from crypto_signal.product.intelligence_stream_family_sources import (
+              build_geometry_family_snapshot,
+              build_market_tape_family_snapshots,
+          )
+          from crypto_signal.product.intelligence_stream_production_projector import (
+              IntelligenceStreamProductionProjector,
+          )
+
+          root = Path(sys.argv[1])
+          signal = root / "signal.sqlite3"
+          market = root / "market.sqlite3"
+          stream = root / "stream.sqlite3"
+          projector = IntelligenceStreamProductionProjector(stream)
+
+          freezes = ImmutableSignalLedger(signal).list_freezes()
+          if not freezes:
+              raise SystemExit("F3_EXACT_GEOMETRY_SOURCE_MISSING")
+          geometry = build_geometry_family_snapshot(freezes[-1])
+          geometry_result = projector.project_family(
+              geometry,
+              activated_at_ms=geometry.event_at_ms,
+          )
+          if geometry_result.disposition not in {
+              StreamFamilyProjectionDisposition.INSERTED,
+              StreamFamilyProjectionDisposition.UNCHANGED,
+          }:
+              raise SystemExit(
+                  f"F3_GEOMETRY_DRY_RUN_BAD={geometry_result.disposition.value}"
+              )
+
+          now_ms = time.time_ns() // 1_000_000
+          snapshots = build_market_tape_family_snapshots(
+              market,
+              symbols=("BTCUSDT", "ETHUSDT", "SOLUSDT"),
+              as_of_ms=now_ms,
+          )
+          projectors = {item.projector_id for item in snapshots}
+          required = {
+              "liquidity_change",
+              "order_flow_change",
+              "derivatives_change",
+          }
+          missing = required - projectors
+          if missing:
+              raise SystemExit(
+                  "F3_LIVE_FAMILY_SOURCE_MISSING=" + ",".join(sorted(missing))
+              )
+          results = [
+              projector.project_family(item, activated_at_ms=now_ms)
+              for item in snapshots
+          ]
+          if not results:
+              raise SystemExit("F3_FAMILY_DRY_RUN_EMPTY")
+          if any(result.real_capital != 0 for result in results):
+              raise SystemExit("F3_REAL_CAPITAL_VIOLATION")
+          print(
+              "F3_EXACT_SOURCE_DRY_RUN_PASS=YES "
+              f"geometry={geometry_result.disposition.value} "
+              f"market_family_snapshots={len(snapshots)} "
+              f"projectors={','.join(sorted(projectors))} "
+              "ONCHAIN_STANDALONE=DEFERRED_SOURCE "
+              "HISTORICAL_BACKFILL=NO REAL_CAPITAL=0"
+          )
+          PY
