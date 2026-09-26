@@ -50,7 +50,8 @@ def test_r14_root_release_surfaces_match_canonical_ssd_state() -> None:
     assert "S11 Capital Story Integration is PASS" in readme
     assert "S12 Search, Filters and History UX is PASS" in readme
     assert "S13 Sound and Notifications is PASS" in readme
-    assert "S14 Performance, Accessibility and Long-Session Stability is ACTIVE" in readme
+    assert "S14 Performance, Accessibility and Long-Session Stability is PASS" in readme
+    assert "S15 End-to-End Product Acceptance is ACTIVE" in readme
     assert "Runtime owner: `crypto-signal-agent`" in readme
     assert "self-hosted runner: `crypto-signal-uid504`" in registry
     assert "There is no accepted fallback" in registry
