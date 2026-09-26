@@ -70,6 +70,10 @@ from crypto_signal.product.intelligence_stream_forward_runtime import (
 from crypto_signal.product.intelligence_stream_production_projector import (
     IntelligenceStreamProductionProjector,
 )
+from crypto_signal.product.intelligence_stream_trust_sources import (
+    build_event_risk_stream_snapshots,
+    build_provider_quality_stream_snapshots,
+)
 
 BASE = Path("/Users/crypto-signal-agent/Crypto-Signal")
 DEFAULT_DB = BASE / "runtime" / "ledger" / "live_signal_ledger.sqlite3"
@@ -159,6 +163,7 @@ class StreamClockConfig:
     enabled: bool = False
     ledger_path: Path | None = None
     market_tape_path: Path | None = None
+    event_source_path: Path | None = None
     family_symbols: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
@@ -167,6 +172,7 @@ class StreamClockConfig:
         if not self.enabled and (
             self.ledger_path is not None
             or self.market_tape_path is not None
+            or self.event_source_path is not None
             or self.family_symbols
         ):
             raise ValueError(
@@ -229,6 +235,12 @@ def parse_args() -> argparse.Namespace:
         help="symbols projected from persisted Market Tape into Stream",
     )
     parser.add_argument(
+        "--stream-event-source",
+        type=Path,
+        default=None,
+        help="persisted Event Source SQLite path for Event Risk projection",
+    )
+    parser.add_argument(
         "--wc2-enabled",
         action="store_true",
         help="explicitly enable preregistered WC2 untouched-forward indexing",
@@ -288,6 +300,7 @@ def build_stream_clock_config(args: argparse.Namespace) -> StreamClockConfig:
         enabled=bool(getattr(args, "stream_enabled", False)),
         ledger_path=getattr(args, "stream_ledger", None),
         market_tape_path=getattr(args, "stream_market_tape", None),
+        event_source_path=getattr(args, "stream_event_source", None),
         family_symbols=family_symbols,
     )
 
@@ -497,17 +510,24 @@ async def run(
             stream_activation = stream_runtime.ensure_activated(
                 activated_at_ms=stream_activation_at_ms
             )
+            family_projector_ids: list[str] = []
             if selected_stream.market_tape_path is not None:
-                for family_projector_id in (
-                    "market_geometry_change",
-                    "liquidity_change",
-                    "order_flow_change",
-                    "derivatives_change",
-                ):
-                    stream_family_projector.ensure_family_activation(
-                        family_projector_id,
-                        activated_at_ms=stream_activation_at_ms,
+                family_projector_ids.extend(
+                    (
+                        "market_geometry_change",
+                        "liquidity_change",
+                        "order_flow_change",
+                        "derivatives_change",
                     )
+                )
+            family_projector_ids.append("provider_quality_change")
+            if selected_stream.event_source_path is not None:
+                family_projector_ids.append("event_risk_change")
+            for family_projector_id in family_projector_ids:
+                stream_family_projector.ensure_family_activation(
+                    family_projector_id,
+                    activated_at_ms=stream_activation_at_ms,
+                )
         except (OSError, TypeError, ValueError, sqlite3.Error) as exc:
             print(
                 "stream status=ERROR "
