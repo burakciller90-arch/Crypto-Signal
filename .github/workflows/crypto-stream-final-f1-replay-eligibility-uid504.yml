@@ -1,0 +1,53 @@
+name: Crypto Stream Final F1 Replay Eligibility UID504
+
+on:
+  push:
+    branches:
+      - 'stream/final-f1-replay-eligibility'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: crypto-stream-final-f1-replay-eligibility
+  cancel-in-progress: true
+
+jobs:
+  gate:
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          clean: true
+          fetch-depth: 1
+
+      - name: Exact-source focused regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${GITHUB_SHA}"
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          DEV="$ROOT/Development"
+          PRODUCT="$ROOT/Product"
+          test -z "$(git -C "$DEV" status --porcelain)"
+          test -z "$(git -C "$PRODUCT" status --porcelain)"
+          DEV_HEAD="$(git -C "$DEV" rev-parse HEAD)"
+          PRODUCT_HEAD="$(git -C "$PRODUCT" rev-parse HEAD)"
+
+          export PYTHONPATH="$GITHUB_WORKSPACE:$GITHUB_WORKSPACE/src"
+          "$DEV/.venv/bin/python" -m pytest             tests/test_wc2_prepared_live_runtime.py             tests/test_wc2_live_clock_wiring.py -q
+
+          "$DEV/.venv/bin/python" -m ruff check             src/crypto_signal/evaluation/untouched_forward_prepared_runtime.py             tests/test_wc2_prepared_live_runtime.py
+          "$DEV/.venv/bin/python" -m mypy             src/crypto_signal/evaluation/untouched_forward_prepared_runtime.py
+
+          test "$(git -C "$DEV" rev-parse HEAD)" = "$DEV_HEAD"
+          test "$(git -C "$PRODUCT" rev-parse HEAD)" = "$PRODUCT_HEAD"
+          test -z "$(git -C "$DEV" status --porcelain)"
+          test -z "$(git -C "$PRODUCT" status --porcelain)"
+          echo "F1_REPLAY_ELIGIBILITY_GATE_PASS=YES"
+          echo "DEV_HEAD=$DEV_HEAD"
+          echo "PRODUCT_HEAD=$PRODUCT_HEAD"
+          echo "HISTORICAL_BACKFILL=NO"
+          echo "REAL_CAPITAL=0"
