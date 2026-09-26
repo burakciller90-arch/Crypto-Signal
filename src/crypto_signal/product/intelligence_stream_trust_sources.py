@@ -145,12 +145,15 @@ def build_provider_quality_stream_snapshots(
         observed_at_ms=evaluated_at_ms,
     )
     return tuple(
-        _provider_truth_snapshot(item, evaluated_at_ms=evaluated_at_ms)
+        build_provider_quality_stream_snapshot(
+            item,
+            evaluated_at_ms=evaluated_at_ms,
+        )
         for item in truths
     )
 
 
-def _provider_truth_snapshot(
+def build_provider_quality_stream_snapshot(
     truth: ProviderDivergenceRuntimeTruth,
     *,
     evaluated_at_ms: int,
