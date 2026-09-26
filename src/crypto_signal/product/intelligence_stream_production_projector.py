@@ -343,10 +343,10 @@ class IntelligenceStreamProductionProjector:
 
     def project_family(
         self,
-        snapshot: "StreamFamilySnapshot",
+        snapshot: StreamFamilySnapshot,
         *,
         activated_at_ms: int,
-    ) -> "StreamFamilyProjectionResult":
+    ) -> StreamFamilyProjectionResult:
         _require_implemented_projector(snapshot.projector_id)
         from crypto_signal.product.intelligence_stream_family import (
             IntelligenceStreamFamilyRuntime,
