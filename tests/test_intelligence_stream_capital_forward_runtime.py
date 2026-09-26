@@ -94,6 +94,11 @@ def test_f5_forward_runtime_persists_three_vault_decisions_and_stream_story(
     assert dispositions[PaperVaultId.CORE.value] == "eligible"
     assert dispositions[PaperVaultId.TACTICAL.value] == "hold"
     assert dispositions[PaperVaultId.OPPORTUNITY_RESERVE.value] == "hold"
+    assert [item["decided_at_ms"] for item in decisions] == [
+        assessed_at_ms + 1,
+        assessed_at_ms + 2,
+        assessed_at_ms + 3,
+    ]
 
     assert R22Epoch2AtomicTape(epoch2_path).audit_all_read_only() == (2, 0, 0)
 
