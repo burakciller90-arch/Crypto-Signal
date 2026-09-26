@@ -1802,7 +1802,7 @@ async function loadMessageDetail(item, record) {
   if (!identity || state.detailRequests.has(identity)) return;
 
   if (record.__fixture_detail && typeof record.__fixture_detail === "object") {
-    state.details.set(identity, record.__fixture_detail);
+    rememberDetail(identity, record.__fixture_detail);
     renderExpandedPanel(item, record, record.__fixture_detail);
     return;
   }
@@ -1811,7 +1811,7 @@ async function loadMessageDetail(item, record) {
   try {
     const payload = await fetchJson(API.detail(identity));
     if (payload.status === "ready" && payload.detail) {
-      state.details.set(identity, payload.detail);
+      rememberDetail(identity, payload.detail);
       if (state.expanded.has(identity)) {
         renderExpandedPanel(item, record, payload.detail);
       }
@@ -1857,7 +1857,7 @@ function toggleMessageExpansion(item, record) {
     && record.__fixture_detail
     && typeof record.__fixture_detail === "object"
   ) {
-    state.details.set(identity, record.__fixture_detail);
+    rememberDetail(identity, record.__fixture_detail);
   }
   preserveMessageAnchor(item, () => {
     if (willOpen) {
@@ -2202,6 +2202,11 @@ function updateUnread() {
 
 function scrollToBottom({ smooth = true } = {}) {
   if (!ui.viewport) return;
+  if (state.messages.length > VIRTUAL_WINDOW_SIZE) {
+    const needsTail = state.virtualEnd !== state.messages.length;
+    resetVirtualWindow({ pinToBottom: true });
+    if (needsTail) renderAll();
+  }
   ui.viewport.scrollTo({
     top: ui.viewport.scrollHeight,
     behavior: smooth ? "smooth" : "auto",
@@ -2220,6 +2225,9 @@ function resetMessages() {
   state.expanded = new Set();
   state.details = new Map();
   state.detailRequests = new Set();
+  state.virtualStart = 0;
+  state.virtualEnd = 0;
+  state.virtualShiftLocked = false;
   renderAll();
 }
 
@@ -2233,6 +2241,7 @@ function mergeInitial(records) {
     state.ids.add(id);
     state.messages.push(record);
   }
+  resetVirtualWindow({ pinToBottom: true });
 }
 
 function appendRecord(
@@ -2243,13 +2252,17 @@ function appendRecord(
   const id = text(record && record.narrative_identity, "");
   if (!id || state.ids.has(id)) return false;
   const stayAtBottom = isNearBottom();
+  const anchor = stayAtBottom ? null : captureViewportAnchor();
   state.ids.add(id);
   state.messages.push(record);
 
-  if (ui.list && !ui.list.hidden) {
-    ui.list.append(renderMessage(record, { isNew: fixtureNew || stayAtBottom }));
-  } else {
+  if (stayAtBottom) {
+    resetVirtualWindow({ pinToBottom: true });
     renderAll();
+    const newest = ui.list?.lastElementChild;
+    if (fixtureNew && newest instanceof HTMLElement) newest.classList.add("is-new");
+  } else {
+    renderAll({ anchor });
   }
 
   if (cursor) state.newestCursor = cursor;
@@ -2266,11 +2279,13 @@ function appendRecord(
 
 function focusRenderedMessage(identity) {
   if (!exactSha256(identity)) return false;
-  const record = state.messages.find(
+  const index = state.messages.findIndex(
     (item) => item?.narrative_identity === identity
   );
-  if (!record) return false;
+  if (index < 0) return false;
+  const record = state.messages[index];
   state.expanded.add(identity);
+  centerVirtualWindow(index);
   renderAll();
   const item = ui.list?.querySelector(
     `.message[data-identity="${CSS.escape(identity)}"]`
@@ -2364,8 +2379,7 @@ async function loadOlder() {
   state.loadingHistory = true;
   if (ui.loadOlder) ui.loadOlder.textContent = "Yükleniyor…";
   const before = state.beforeCursor;
-  const oldHeight = ui.viewport ? ui.viewport.scrollHeight : 0;
-  const oldTop = ui.viewport ? ui.viewport.scrollTop : 0;
+  const anchor = captureViewportAnchor();
 
   try {
     const params = queryParams({ before, limit: 50 });
@@ -2380,14 +2394,11 @@ async function loadOlder() {
       additions.push(record);
     }
     state.messages = [...additions, ...state.messages];
+    state.virtualStart += additions.length;
+    state.virtualEnd += additions.length;
     state.beforeCursor = page && typeof page.oldest_cursor === "string" ? page.oldest_cursor : state.beforeCursor;
     state.hasOlder = Boolean(page && page.has_more);
-    renderAll();
-    window.requestAnimationFrame(() => {
-      if (!ui.viewport) return;
-      const delta = ui.viewport.scrollHeight - oldHeight;
-      ui.viewport.scrollTop = oldTop + delta;
-    });
+    renderAll({ anchor });
   } catch {
     setConnection("degraded", "GEÇMİŞ SINIRLI", "eski mesajlar yüklenemedi");
   } finally {
@@ -2985,11 +2996,29 @@ function wireUi() {
   ui.newButton?.addEventListener("click", () => scrollToBottom());
 
   ui.viewport?.addEventListener("scroll", () => {
+    if (!ui.viewport) return;
+    if (
+      ui.viewport.scrollTop < 110
+      && state.virtualStart > 0
+      && !state.virtualShiftLocked
+    ) {
+      shiftVirtualWindow("older");
+      return;
+    }
+    if (
+      ui.viewport.scrollTop + ui.viewport.clientHeight
+        > ui.viewport.scrollHeight - 110
+      && state.virtualEnd < state.messages.length
+      && !state.virtualShiftLocked
+    ) {
+      shiftVirtualWindow("newer");
+      return;
+    }
     if (isNearBottom() && state.unread > 0) {
       state.unread = 0;
       updateUnread();
     }
-    if (ui.viewport && ui.viewport.scrollTop < 70 && state.hasOlder && !state.fixture) {
+    if (ui.viewport.scrollTop < 70 && state.hasOlder && !state.fixture) {
       void loadOlder();
     }
   });
