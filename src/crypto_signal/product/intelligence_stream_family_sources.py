@@ -61,7 +61,7 @@ def build_geometry_family_snapshot(
     )
     if actual != expected:
         raise ValueError("Stream geometry freeze row/bundle mismatch")
-    return build_geometry_family_snapshot_from_bundle(
+    return _build_geometry_snapshot(
         _bundle_identity=freeze.bundle_identity,
         bundle_signal=signal,
         frozen_at_ms=freeze.frozen_at_ms,
