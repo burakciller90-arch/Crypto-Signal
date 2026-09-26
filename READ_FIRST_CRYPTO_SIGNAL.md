@@ -33,8 +33,9 @@ Its foundational project-isolation, scientific-truth and REAL_CAPITAL safety bou
 - Current frontend scope is intentionally one primary surface: a persistent, Telegram/WhatsApp-like **Intelligence Stream** with expandable messages, clickable evidence, floating/detachable proof windows, search/filter/history, configurable notification sound and exact capital/evidence lineage.
 - Do not build standalone Markets / Capital / Performance / Archive / Learn / System screens until Intelligence Stream V1 reaches its Definition of Done and the user explicitly opens a new scope.
 - The global scientific, persistence, evidence, replay, capital-safety and production-authority boundaries in the locked v1.1 program remain binding.
+- Intelligence Stream V1 S0-S16 is accepted/complete. This roadmap remains the canonical record for the accepted Stream product, but there is no active Stream V1 implementation frontier; do not invent a post-S16 frontend stage without a new explicit user-approved scope.
 - Historical `docs/GALACTECH_*.md`, older `POST_V1_*.md` acceptance records and all superseded frontend roadmaps remain audit evidence, not current frontend design authority.
-- The currently deployed GALACTECH V2 interface remains the production baseline/fallback until Intelligence Stream V1 controlled cutover.
+- Intelligence Stream V1 is the accepted deployed production root after S16 controlled cutover; GALACTECH V2 remains the explicit rollback/fallback surface at `/galactech`.
 - Paper authority is epoch-specific: **Epoch 1 = immutable historical 100 USDT**; **Epoch 2 = current 1,000 USDT paper-program contract for new activity**. Never combine them into an unlabeled track record.
 
 ## Governing Full Version documents
