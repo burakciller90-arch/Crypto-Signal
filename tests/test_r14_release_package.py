@@ -48,7 +48,8 @@ def test_r14_root_release_surfaces_match_canonical_ssd_state() -> None:
     assert "S9 Evidence Window Manager is PASS" in readme
     assert "S10 Frozen Visual Proof is PASS" in readme
     assert "S11 Capital Story Integration is PASS" in readme
-    assert "S12 Search, Filters and History UX is ACTIVE" in readme
+    assert "S12 Search, Filters and History UX is PASS" in readme
+    assert "S13 Sound and Notifications is ACTIVE" in readme
     assert "Runtime owner: `crypto-signal-agent`" in readme
     assert "self-hosted runner: `crypto-signal-uid504`" in registry
     assert "There is no accepted fallback" in registry

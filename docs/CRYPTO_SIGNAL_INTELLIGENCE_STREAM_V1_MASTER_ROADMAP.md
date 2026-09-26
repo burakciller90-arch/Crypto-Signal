@@ -63,8 +63,9 @@ These decisions are already made and must not be re-opened during ordinary imple
 - **S9 Evidence Window Manager: PASS**.
 - **S10 Frozen Visual Proof: PASS**.
 - **S11 Capital Story Integration: PASS**.
-- **S12 Search, Filters and History UX: ACTIVE FRONTIER**.
-- Do not begin S13 as the active implementation frontier until S12 search/filter/history and exact-message deep-link behavior are browser-rendered and accepted on the same mixed Stream.
+- **S12 Search, Filters and History UX: PASS**.
+- **S13 Sound and Notifications: ACTIVE FRONTIER**.
+- Do not begin S14 as the active implementation frontier until notification settings, single-delivery sound semantics and history/reconnect silence are browser-rendered and accepted.
 - The deployed GALACTECH V2 surface remains production fallback until S16 controlled cutover.
 
 ---

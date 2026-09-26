@@ -1,5 +1,17 @@
 # PROJECT CHRONICLE
 
+## 2026-09-26 — Stream S12 Search, Filters and History UX accepted; S13 Sound and Notifications becomes active
+
+S12 completes scalable discovery without turning Crypto Signal back into a multi-screen dashboard. PR #1292 reuses the accepted S6 cursor/query machinery and S7 temporary discovery drawer to add full-text search plus asset, category, timeframe, vault, evidence-domain, state, importance and date filters.
+
+Exact-message navigation is now tied to immutable narrative identity. A direct `message` URL opens the exact original persisted message, and clicking another collapsed message updates the deep-link to that exact identity while preserving its detail and proof action. Clear filters returns to the same mixed chronological Stream; no standalone Archive, Markets or Capital screen is created.
+
+Exact-head UID504 run `36217335451` passed focused S12 tests, whole-repository regression, real Chromium desktop/mobile discovery rendering and Development non-mutation at head `b655eab2a01a1c0e289b74f19909263636a6da2a`. Browser acceptance verified full query serialization, capital vault/state filtering, clear-filter reset, direct and click-driven deep-link behavior, exact expanded detail/proof action and 430px no-overflow. Artifact: `stream-s12-visual-snapshot-36217335451`.
+
+S12 adds no history-writing or real-money authority. REAL_CAPITAL=0.
+
+The active frontier is S13 Sound and Notifications: optional original chime, unlock/permission, on/off, volume/mode persistence, single-delivery semantics and replay/history silence.
+
 ## 2026-09-25 — Stream S11 Capital Story Integration accepted; S12 Search/Filters/History becomes active
 
 S11 closes the canonical forward paper-capital story without introducing a separate Capital screen or any real-money authority. PR #1290 adds an exact three-vault Epoch 2 paper runtime that reuses Smart Capital Allocator, Position Sizing, R22 transaction tape and R21 accounting truth rather than inventing a parallel fund system.
