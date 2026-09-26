@@ -27,6 +27,9 @@ from crypto_signal.product.intelligence_stream_family import (
     StreamTrustDomain,
     build_family_snapshot,
 )
+from crypto_signal.product.intelligence_stream_forward_runtime import (
+    IntelligenceStreamForwardRuntime,
+)
 from crypto_signal.product.intelligence_stream_models import (
     StreamCategory,
     StreamImportance,
@@ -43,6 +46,9 @@ def _project_family(
     projector_id: str,
     snapshot: StreamFamilySnapshot,
 ) -> str:
+    IntelligenceStreamForwardRuntime(stream_path).ensure_activated(
+        activated_at_ms=1
+    )
     projector = IntelligenceStreamProductionProjector(stream_path)
     projector.ensure_family_activation(projector_id, activated_at_ms=1)
     result = projector.project_family(snapshot, activated_at_ms=1)
