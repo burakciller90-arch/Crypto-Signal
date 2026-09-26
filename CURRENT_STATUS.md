@@ -24,6 +24,16 @@ Accepted evidence:
 - Product remained unchanged at `d343c4b2d10489a88f614bd58c9539be76029f80`;
 - artifact `stream-final-f1-live-activation-36252043820`, id `10909291747`, digest `sha256:3c435fe78bb048d6c9ebb4a2e06e40880971edfae00a1425ae42506cadfbf161`.
 
+Post-close observability reconciliation:
+- PR #1352 merged main `9f747628f4c7b137362e8d184e4b61ce166b39ad` to preserve the same eligibility semantics on replay before prepared-receipt lookup;
+- this fixed a telemetry-only false-gap classification where ineligible replay sources could be reported as `no_prepared_receipt`;
+- UID504 live verify run `36252540997` advanced Development `71ff1ad4f2d1c9f58df65fab12a12c02754acfc6 -> 9f747628f4c7b137362e8d184e4b61ce166b39ad`;
+- the next real supervisor marker was `wc2_liveness status=SUMMARY contexts=17 status_counts=skipped_ineligible_source:17 reason_counts=source_not_directional_with_frozen_geometry:17 POLICY_UNCHANGED=YES HISTORICAL_BACKFILL=NO REAL_CAPITAL=0`;
+- Product remained `d343c4b2d10489a88f614bd58c9539be76029f80`;
+- artifact `stream-final-f1-replay-live-36252540997`, id `10910031464`, digest `sha256:b71d4b4e7d058c7670c287107ef8495ce0675b19a6f3b29712b5a58c8208c893`.
+
+This does not reopen F1 or alter its scientific conclusion: the source is ineligible, the silence is correct, and no policy was weakened.
+
 F1 conclusion remains scientific correct silence, not a reason to loosen issuance policy.
 
 The sole active Stream final-completion frontier is now **F2 — Production Source-to-Message Backbone**. F2 must create one reusable source-projector contract that feeds the already accepted Source Event -> Story -> Analytical -> materiality -> Narrative -> immutable ledger -> SSE chain. It must not create a parallel messaging system.
