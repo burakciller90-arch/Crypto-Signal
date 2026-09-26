@@ -137,12 +137,12 @@ def test_orderbook_identity_resolves_to_exact_persisted_object(
         update_id=7,
         sequence=11,
         bids=(
-            OrderBookLevel(price=Decimal("100"), size=Decimal("2")),
-            OrderBookLevel(price=Decimal("99"), size=Decimal("3")),
+            OrderBookLevel(price=Decimal(100), size=Decimal(2)),
+            OrderBookLevel(price=Decimal(99), size=Decimal(3)),
         ),
         asks=(
-            OrderBookLevel(price=Decimal("101"), size=Decimal("4")),
-            OrderBookLevel(price=Decimal("102"), size=Decimal("5")),
+            OrderBookLevel(price=Decimal(101), size=Decimal(4)),
+            OrderBookLevel(price=Decimal(102), size=Decimal(5)),
         ),
         source=DataSource.REST,
         adapter_version="test-orderbook/1",
