@@ -272,7 +272,7 @@ jobs:
           )
           assert 'data-ui-version="crypto-signal-stream-v1-s10-evidence"' in detached
           assert "evidence.js" in detached
-          evidence_js = get_text("/stream/evidence.js")
+          evidence_js = get_text("/stream-static/evidence.js")
           for state in sorted(allowed):
               assert state in evidence_js
           assert "/evidence" in evidence_js
