@@ -107,8 +107,20 @@ def _build_geometry_snapshot(
     evidence = {
         _bundle_identity,
         signal.freeze_identity,
-        *signal.selected_evidence_ids,
     }
+    for index, source_reference in enumerate(
+        signal.selected_evidence_ids,
+        start=1,
+    ):
+        if _is_sha256(source_reference):
+            evidence.add(source_reference)
+        else:
+            components.append(
+                (
+                    f"source_reference_{index:02d}",
+                    source_reference,
+                )
+            )
     if geometry is not None:
         components.extend(
             (
@@ -135,7 +147,12 @@ def _build_geometry_snapshot(
             )
             for index, target in enumerate(geometry.targets, start=1)
         )
-        evidence.add(geometry.source_evidence_id)
+        if _is_sha256(geometry.source_evidence_id):
+            evidence.add(geometry.source_evidence_id)
+        else:
+            components.append(
+                ("geometry_source_reference", geometry.source_evidence_id)
+            )
     state_label = (
         f"{signal.state.value}:{signal.direction.value}:"
         f"{'geometry' if geometry is not None else 'no_geometry'}"
@@ -437,6 +454,12 @@ def build_market_tape_family_snapshots(
                 item.source_event_identity,
             ),
         )
+    )
+
+
+def _is_sha256(value: str) -> bool:
+    return len(value) == 64 and all(
+        char in "0123456789abcdef" for char in value
     )
 
 def _base_asset(symbol: str) -> str:
