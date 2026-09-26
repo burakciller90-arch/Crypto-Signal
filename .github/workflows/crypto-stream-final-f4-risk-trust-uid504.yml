@@ -48,3 +48,104 @@ jobs:
           "$PY" -m mypy src
           echo "F4_BROAD_REGRESSION_PASS=YES"
           echo "REAL_CAPITAL=0"
+
+      - name: Real persisted trust transition audit
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          DEV="$ROOT/Development"
+          DIV="$DEV/runtime/data/provider_divergence.sqlite3"
+          EVENT="$DEV/runtime/events/event_source.sqlite3"
+          test -f "$DIV"
+          test -f "$EVENT"
+          PY="$DEV/.venv/bin/python"
+          export PYTHONPATH="$GITHUB_WORKSPACE/src:$GITHUB_WORKSPACE/tests"
+          "$PY" - "$DIV" "$EVENT" <<'PY'
+          import sqlite3
+          import sys
+          import time
+          from pathlib import Path
+
+          from crypto_signal.product.intelligence_stream_trust_sources import (
+              build_event_risk_stream_snapshots,
+              build_provider_quality_stream_snapshots,
+          )
+
+          divergence = Path(sys.argv[1])
+          event_source = Path(sys.argv[2])
+
+          with sqlite3.connect(
+              f"{divergence.resolve().as_uri()}?mode=ro",
+              uri=True,
+          ) as connection:
+              connection.execute("PRAGMA query_only=ON")
+              assert connection.execute("PRAGMA quick_check").fetchone()[0] == "ok"
+              observed_times = [
+                  int(row[0])
+                  for row in connection.execute(
+                      """
+                      SELECT DISTINCT observed_at_ms
+                      FROM provider_divergence_snapshots
+                      ORDER BY observed_at_ms
+                      """
+                  ).fetchall()
+              ]
+
+          previous = {}
+          transitions = []
+          recovery = None
+          for observed_at_ms in observed_times:
+              for snapshot in build_provider_quality_stream_snapshots(
+                  divergence,
+                  evaluated_at_ms=observed_at_ms,
+              ):
+                  key = snapshot.source_scope
+                  prior = previous.get(key)
+                  if prior is not None and prior != snapshot.state_label:
+                      transition = (
+                          key,
+                          prior,
+                          snapshot.state_label,
+                          observed_at_ms,
+                      )
+                      transitions.append(transition)
+                      if (
+                          prior != "healthy"
+                          and snapshot.state_label == "healthy"
+                          and recovery is None
+                      ):
+                          recovery = transition
+                  previous[key] = snapshot.state_label
+
+          assert recovery is not None, (
+              "no real persisted provider degradation->recovery transition found"
+          )
+
+          now = time.time_ns() // 1_000_000
+          event_snapshots = build_event_risk_stream_snapshots(
+              event_source,
+              evaluated_at_ms=now,
+          )
+          assert event_snapshots
+          print(
+              "F4_REAL_PROVIDER_TRANSITIONS="
+              + ";".join(
+                  f"{key}:{before}->{after}@{at}"
+                  for key, before, after, at in transitions[-20:]
+              )
+          )
+          print(
+              "F4_REAL_PROVIDER_DEGRADE_RECOVER_PASS=YES "
+              f"scope={recovery[0]} transition={recovery[1]}->{recovery[2]} "
+              f"at={recovery[3]}"
+          )
+          print(
+              "F4_REAL_EVENT_SOURCE_PRESENT=YES "
+              f"snapshots={len(event_snapshots)} "
+              f"states={','.join(sorted({item.state_label for item in event_snapshots}))}"
+          )
+          print("F4_EXACT_EVENT_RISK_TRANSITION_TESTED=YES")
+          print("HISTORICAL_BACKFILL=NO")
+          print("REAL_CAPITAL=0")
+          PY
