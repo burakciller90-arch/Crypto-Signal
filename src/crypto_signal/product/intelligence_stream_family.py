@@ -700,6 +700,7 @@ class IntelligenceStreamFamilyRuntime:
         )
         existing = self._existing_family_projection(
             source_event,
+            projector_id=snapshot.projector_id,
             story_identity=story_identity,
             activation_identity=activation_identity,
         )
@@ -816,6 +817,7 @@ class IntelligenceStreamFamilyRuntime:
         self,
         source_event: StreamSourceEvent,
         *,
+        projector_id: str,
         story_identity: str,
         activation_identity: str,
     ) -> StreamFamilyProjectionResult | None:
@@ -853,9 +855,7 @@ class IntelligenceStreamFamilyRuntime:
         _require_sha256(narrative_identity, "Stream family replay narrative identity")
         return StreamFamilyProjectionResult(
             disposition=StreamFamilyProjectionDisposition.UNCHANGED,
-            projector_id=source_event.subtype.replace("_material_change", "_change")
-            if source_event.subtype.endswith("_material_change")
-            else "",
+            projector_id=projector_id,
             source_event_identity=source_event.source_event_identity,
             stream_event_identity=source_event.stream_event_identity,
             story_identity=story_identity,
