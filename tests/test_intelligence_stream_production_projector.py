@@ -23,6 +23,10 @@ from crypto_signal.product.intelligence_stream_production_projector import (
     StreamProductionProjectionDisposition,
     build_stream_production_projector_contract,
 )
+from crypto_signal.product.intelligence_stream_policy import (
+    build_stream_materiality_policy,
+    evaluate_stream_materiality,
+)
 from crypto_signal.product.intelligence_stream_projectors import (
     project_forecast_issuance,
 )
@@ -92,7 +96,11 @@ def test_f2_contract_captures_required_common_projector_truth(
         == projected.fact_bundle.fact_bundle_identity
     )
     assert contract.previous_state_reference_identity is None
-    assert contract.materiality_reason_codes == projected.source_event.materiality_codes
+    materiality = evaluate_stream_materiality(
+        build_stream_materiality_policy(),
+        projected.source_event,
+    )
+    assert contract.materiality_reason_codes == materiality.reason_codes
     assert (
         contract.materiality_decision_identity
         == projected.message_input.materiality_decision_identity
