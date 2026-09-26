@@ -50,17 +50,22 @@ def _parser() -> argparse.ArgumentParser:
     return parser
 
 
-def _connect_ro(path: Path) -> sqlite3.Connection:
+def _connect_ro(
+    path: Path,
+    *,
+    quick_check: bool = True,
+) -> sqlite3.Connection:
     if not path.is_file():
         raise FileNotFoundError(path)
     uri = f"{path.resolve().as_uri()}?mode=ro"
     connection = sqlite3.connect(uri, uri=True, timeout=10)
     connection.row_factory = sqlite3.Row
     connection.execute("PRAGMA query_only=ON")
-    quick = connection.execute("PRAGMA quick_check").fetchone()
-    if quick is None or str(quick[0]).lower() != "ok":
-        connection.close()
-        raise ValueError(f"SQLite quick_check failed: {path}")
+    if quick_check:
+        quick = connection.execute("PRAGMA quick_check").fetchone()
+        if quick is None or str(quick[0]).lower() != "ok":
+            connection.close()
+            raise ValueError(f"SQLite quick_check failed: {path}")
     connection.execute("BEGIN")
     return connection
 
@@ -153,7 +158,10 @@ def _post_forecast_freezes(
     *,
     latest_forecast_ms: int,
 ) -> list[dict[str, Any]]:
-    with closing(_connect_ro(path)) as connection:
+    # The canonical signal ledger is multi-GB. Its integrity is audited by
+    # dedicated runtime gates; F1 needs only one query-only snapshot and must
+    # not turn this focused liveness check into a full-database integrity scan.
+    with closing(_connect_ro(path, quick_check=False)) as connection:
         rows = connection.execute(
             """
             SELECT bundle_identity, signal_freeze_identity, exchange,
