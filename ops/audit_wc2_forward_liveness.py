@@ -167,7 +167,7 @@ def _post_forecast_freezes(
             SELECT bundle_identity, signal_freeze_identity, exchange,
                    market_type, symbol, timeframe, as_of_ms,
                    source_cutoff_open_time_ms, signal_state, direction,
-                   bundle_json, frozen_at_ms
+                   frozen_at_ms
             FROM signal_freezes
             WHERE frozen_at_ms > ?
             ORDER BY frozen_at_ms, signal_freeze_identity
@@ -196,8 +196,27 @@ def _mapping(value: Any, label: str) -> dict[str, Any]:
     return value
 
 
-def _signal_from_bundle(row: dict[str, Any]) -> dict[str, Any]:
-    bundle = _mapping(json.loads(str(row["bundle_json"])), "signal freeze bundle")
+def _candidate_signal_from_bundle(
+    path: Path,
+    row: dict[str, Any],
+) -> dict[str, Any]:
+    # Full freeze bundles contain consumed candle history and can be large.
+    # Read them only for potential WATCH/ACTIVE directional candidates.
+    with closing(_connect_ro(path, quick_check=False)) as connection:
+        bundle_row = connection.execute(
+            """
+            SELECT bundle_json
+            FROM signal_freezes
+            WHERE signal_freeze_identity = ?
+            """,
+            (str(row["signal_freeze_identity"]),),
+        ).fetchone()
+    if bundle_row is None:
+        raise ValueError("candidate signal freeze disappeared")
+    bundle = _mapping(
+        json.loads(str(bundle_row["bundle_json"])),
+        "signal freeze bundle",
+    )
     signal = _mapping(bundle.get("signal_decision"), "signal decision")
     expected = {
         "freeze_identity": str(row["signal_freeze_identity"]),
@@ -217,7 +236,6 @@ def _signal_from_bundle(row: dict[str, Any]) -> dict[str, Any]:
 
 def _pre_receipt_reason(
     row: dict[str, Any],
-    signal: dict[str, Any],
     *,
     collection_start_ms: int,
     activation_ms: int,
@@ -236,10 +254,8 @@ def _pre_receipt_reason(
     if context not in authorized_contexts:
         return REASON_CONTEXT_NOT_AUTHORIZED
 
-    state = str(signal.get("state"))
-    direction = str(signal.get("direction"))
-    geometry = signal.get("geometry")
-
+    state = str(row["signal_state"])
+    direction = str(row["direction"])
     if state == "no_signal":
         return REASON_NO_SIGNAL
     if state == "neutral":
@@ -248,12 +264,6 @@ def _pre_receipt_reason(
         return REASON_STATE_NOT_ELIGIBLE
     if direction == "none":
         return REASON_NON_DIRECTIONAL
-    if geometry is None:
-        return REASON_MISSING_GEOMETRY
-    geometry_map = _mapping(geometry, "signal geometry")
-    targets = geometry_map.get("targets")
-    if not isinstance(targets, list) or not targets:
-        return REASON_MISSING_TARGET
     return REASON_PREPARED_REQUIRED
 
 
@@ -303,14 +313,22 @@ def audit(
         signal_identity = str(row["signal_freeze_identity"])
 
         try:
-            signal = _signal_from_bundle(row)
             reason = _pre_receipt_reason(
                 row,
-                signal,
                 collection_start_ms=collection_start_ms,
                 activation_ms=activation_ms,
                 authorized_contexts=contexts,
             )
+            if reason == REASON_PREPARED_REQUIRED:
+                signal = _candidate_signal_from_bundle(signal_path, row)
+                geometry = signal.get("geometry")
+                if geometry is None:
+                    reason = REASON_MISSING_GEOMETRY
+                else:
+                    geometry_map = _mapping(geometry, "signal geometry")
+                    targets = geometry_map.get("targets")
+                    if not isinstance(targets, list) or not targets:
+                        reason = REASON_MISSING_TARGET
         except (TypeError, ValueError, json.JSONDecodeError) as exc:
             reason = REASON_ROW_BUNDLE_MISMATCH
             integrity_errors.append(
