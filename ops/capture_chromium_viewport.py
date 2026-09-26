@@ -55,7 +55,13 @@ class CdpSession:
     def close(self) -> None:
         self._socket.close()
 
-    def command(self, method: str, params: dict[str, object] | None = None) -> dict[str, Any]:
+    def command(
+        self,
+        method: str,
+        params: dict[str, object] | None = None,
+        *,
+        timeout_seconds: float = 12.0,
+    ) -> dict[str, Any]:
         command_id = self._next_id
         self._next_id += 1
         self._socket.send(
@@ -68,9 +74,13 @@ class CdpSession:
                 separators=(",", ":"),
             )
         )
-        deadline = time.monotonic() + 12.0
+        deadline = time.monotonic() + timeout_seconds
         while time.monotonic() < deadline:
-            raw = self._socket.recv(timeout=2)
+            remaining = max(0.05, deadline - time.monotonic())
+            try:
+                raw = self._socket.recv(timeout=min(2.0, remaining))
+            except TimeoutError:
+                continue
             message = json.loads(raw)
             if not isinstance(message, dict) or message.get("id") != command_id:
                 continue
@@ -1031,6 +1041,7 @@ def _capture(args: argparse.Namespace) -> dict[str, object]:
                     "returnByValue": True,
                     "userGesture": True,
                 },
+                timeout_seconds=40.0,
             )
             s15_exception = s15_probe_result.get("exceptionDetails")
             if isinstance(s15_exception, dict):
