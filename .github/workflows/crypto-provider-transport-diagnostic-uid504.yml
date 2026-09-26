@@ -1,0 +1,293 @@
+name: Crypto Provider Transport Diagnostic UID504
+
+on:
+  push:
+    branches:
+      - 'runtime/provider-transport-diagnostic'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: provider-transport-diagnostic
+  cancel-in-progress: true
+
+jobs:
+  diagnostic:
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          clean: true
+          fetch-depth: 1
+
+      - name: Capture production log pre-state
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          DEV="$ROOT/Development"
+          PRODUCT="$ROOT/Product"
+          OUT="$RUNNER_TEMP/provider-transport-diagnostic"
+          mkdir -p "$OUT"
+          test "$(id -u)" = "504"
+          test "$(git -C "$DEV" rev-parse HEAD)" = "f0349a70c11046893cbabd88ab56ca4ca8c44a99"
+          test -z "$(git -C "$DEV" status --porcelain)"
+          test -z "$(git -C "$PRODUCT" status --porcelain)"
+          ROOT="$ROOT" OUT="$OUT" /usr/bin/python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          root = Path(os.environ["ROOT"])
+          out = Path(os.environ["OUT"])
+          err = root / "ServiceLogs/live.err.log"
+          stdout = root / "ServiceLogs/live.out.log"
+          raw = err.read_bytes() if err.is_file() else b""
+          state = {
+              "live_err_size_before": len(raw),
+              "ssl_wrong_version_before": raw.count(b"WRONG_VERSION_NUMBER"),
+              "name_resolution_before": (
+                  raw.count(b"nodename nor servname")
+                  + raw.count(b"NameResolutionError")
+                  + raw.count(b"name resolution")
+              ),
+              "connect_error_before": raw.count(b"ConnectError"),
+              "live_out_size_before": stdout.stat().st_size if stdout.is_file() else 0,
+              "live_out_mtime_ns_before": stdout.stat().st_mtime_ns if stdout.is_file() else 0,
+              "real_capital": 0,
+          }
+          (out / "prestate.json").write_text(
+              json.dumps(state, sort_keys=True, indent=2),
+              encoding="utf-8",
+          )
+          print("PROVIDER_TRANSPORT_PRESTATE " + json.dumps(state, sort_keys=True))
+          print("REAL_CAPITAL=0")
+          PY
+
+      - name: Exact adapter fresh-vs-shared transport probe
+        shell: bash
+        env:
+          PYTHONPATH: ${{ github.workspace }}/src
+        run: |
+          set -euo pipefail
+          DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
+          OUT="$RUNNER_TEMP/provider-transport-diagnostic"
+          OUT="$OUT" "$DEV/.venv/bin/python" - <<'PY'
+          import asyncio
+          import json
+          import os
+          import time
+          from pathlib import Path
+
+          import httpx
+
+          from crypto_signal.data.adapters.binance import BinanceSpotAdapter
+          from crypto_signal.data.adapters.bybit import BybitSpotAdapter
+
+          SYMBOLS = ("BTCUSDT", "ETHUSDT", "SOLUSDT")
+          TIMEFRAMES = ("15m", "1h", "4h")
+
+          def classify(exc: BaseException) -> str:
+              chain = []
+              cur = exc
+              seen = set()
+              while cur is not None and id(cur) not in seen and len(chain) < 6:
+                  seen.add(id(cur))
+                  chain.append(f"{type(cur).__name__}:{cur}")
+                  cur = cur.__cause__ or cur.__context__
+              text = " | ".join(chain).lower()
+              if "wrong_version_number" in text:
+                  return "ssl_wrong_version"
+              if "nodename nor servname" in text or "name resolution" in text:
+                  return "name_resolution"
+              if "timeout" in text:
+                  return "timeout"
+              if "connecterror" in text:
+                  return "connect_error"
+              return type(exc).__name__
+
+          async def run_mode(provider: str, mode: str):
+              shared = None
+              if mode == "shared":
+                  shared = httpx.AsyncClient(timeout=10.0)
+              try:
+                  rows = []
+                  for symbol in SYMBOLS:
+                      for timeframe in TIMEFRAMES:
+                          adapter = (
+                              BinanceSpotAdapter(shared)
+                              if provider == "binance"
+                              else BybitSpotAdapter(shared)
+                          )
+                          started = time.monotonic()
+                          try:
+                              candles = await adapter.fetch_candles(
+                                  symbol=symbol,
+                                  timeframe=timeframe,
+                                  limit=3,
+                              )
+                          except Exception as exc:
+                              rows.append({
+                                  "provider": provider,
+                                  "mode": mode,
+                                  "symbol": symbol,
+                                  "timeframe": timeframe,
+                                  "status": "ERROR",
+                                  "category": classify(exc),
+                                  "latency_ms": round((time.monotonic() - started) * 1000, 1),
+                              })
+                          else:
+                              rows.append({
+                                  "provider": provider,
+                                  "mode": mode,
+                                  "symbol": symbol,
+                                  "timeframe": timeframe,
+                                  "status": "PASS",
+                                  "category": "none",
+                                  "latency_ms": round((time.monotonic() - started) * 1000, 1),
+                                  "candles": len(candles),
+                              })
+                  return rows
+              finally:
+                  if shared is not None:
+                      await shared.aclose()
+
+          async def main():
+              all_rows = []
+              for provider in ("binance", "bybit"):
+                  all_rows.extend(await run_mode(provider, "fresh"))
+                  all_rows.extend(await run_mode(provider, "shared"))
+              summary = {}
+              for row in all_rows:
+                  key = f"{row['provider']}:{row['mode']}"
+                  item = summary.setdefault(key, {
+                      "total": 0,
+                      "pass": 0,
+                      "error": 0,
+                      "categories": {},
+                      "latency_ms_total": 0.0,
+                  })
+                  item["total"] += 1
+                  item["latency_ms_total"] += float(row["latency_ms"])
+                  if row["status"] == "PASS":
+                      item["pass"] += 1
+                  else:
+                      item["error"] += 1
+                      cat = row["category"]
+                      item["categories"][cat] = item["categories"].get(cat, 0) + 1
+              for item in summary.values():
+                  item["avg_latency_ms"] = round(
+                      item["latency_ms_total"] / max(item["total"], 1), 1
+                  )
+                  del item["latency_ms_total"]
+
+              payload = {
+                  "rows": all_rows,
+                  "summary": summary,
+                  "read_only": True,
+                  "real_capital": 0,
+              }
+              out = Path(os.environ["OUT"])
+              (out / "adapter-probe.json").write_text(
+                  json.dumps(payload, sort_keys=True, indent=2),
+                  encoding="utf-8",
+              )
+              print("PROVIDER_TRANSPORT_SUMMARY " + json.dumps(summary, sort_keys=True))
+              print("PROVIDER_TRANSPORT_READONLY=YES")
+              print("REAL_CAPITAL=0")
+
+          asyncio.run(main())
+          PY
+
+      - name: Observe one real production live cycle
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          OUT="$RUNNER_TEMP/provider-transport-diagnostic"
+          LIVE_OUT="$ROOT/ServiceLogs/live.out.log"
+
+          before="$(
+            OUT="$OUT" /usr/bin/python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          print(json.loads((Path(os.environ["OUT"]) / "prestate.json").read_text())["live_out_size_before"])
+          PY
+          )"
+
+          progressed=0
+          for _ in {1..42}; do
+            size="$(stat -f %z "$LIVE_OUT" 2>/dev/null || echo 0)"
+            if [ "$size" -gt "$before" ]; then
+              progressed=1
+              break
+            fi
+            sleep 5
+          done
+          test "$progressed" = "1"
+
+          ROOT="$ROOT" OUT="$OUT" /usr/bin/python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          root = Path(os.environ["ROOT"])
+          out = Path(os.environ["OUT"])
+          pre = json.loads((out / "prestate.json").read_text())
+          err = root / "ServiceLogs/live.err.log"
+          stdout = root / "ServiceLogs/live.out.log"
+          raw = err.read_bytes() if err.is_file() else b""
+          post = {
+              "live_err_size_after": len(raw),
+              "ssl_wrong_version_after": raw.count(b"WRONG_VERSION_NUMBER"),
+              "name_resolution_after": (
+                  raw.count(b"nodename nor servname")
+                  + raw.count(b"NameResolutionError")
+                  + raw.count(b"name resolution")
+              ),
+              "connect_error_after": raw.count(b"ConnectError"),
+              "live_out_size_after": stdout.stat().st_size if stdout.is_file() else 0,
+              "live_out_mtime_ns_after": stdout.stat().st_mtime_ns if stdout.is_file() else 0,
+              "delta_ssl_wrong_version": raw.count(b"WRONG_VERSION_NUMBER") - pre["ssl_wrong_version_before"],
+              "delta_name_resolution": (
+                  raw.count(b"nodename nor servname")
+                  + raw.count(b"NameResolutionError")
+                  + raw.count(b"name resolution")
+                  - pre["name_resolution_before"]
+              ),
+              "delta_connect_error": raw.count(b"ConnectError") - pre["connect_error_before"],
+              "real_capital": 0,
+          }
+          (out / "production-cycle-poststate.json").write_text(
+              json.dumps(post, sort_keys=True, indent=2),
+              encoding="utf-8",
+          )
+          print("PROVIDER_PRODUCTION_CYCLE_POSTSTATE " + json.dumps(post, sort_keys=True))
+          print("REAL_CAPITAL=0")
+          PY
+
+      - name: Upload diagnostic evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: provider-transport-diagnostic-${{ github.run_id }}
+          path: ${{ runner.temp }}/provider-transport-diagnostic
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Prove production checkouts untouched
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          DEV="$ROOT/Development"
+          PRODUCT="$ROOT/Product"
+          test "$(git -C "$DEV" rev-parse HEAD)" = "f0349a70c11046893cbabd88ab56ca4ca8c44a99"
+          test -z "$(git -C "$DEV" status --porcelain)"
+          test -z "$(git -C "$PRODUCT" status --porcelain)"
+          echo "PROVIDER_TRANSPORT_NON_MUTATING_PASS=YES"
+          echo "REAL_CAPITAL=0"
