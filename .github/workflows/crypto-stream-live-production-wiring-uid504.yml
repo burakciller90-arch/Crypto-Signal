@@ -51,10 +51,14 @@ jobs:
             tests/test_wc2_prepared_live_runtime.py \
             tests/test_wc2_live_clock_wiring.py \
             tests/test_wc2_ssd_supervisor_single_owner.py \
-            tests/test_intelligence_stream_read_model.py
+            tests/test_intelligence_stream_read_model.py \
+            tests/test_wc2_outcome_resolution_runtime.py \
+            tests/test_decision_proof_live_feed.py
           "$TEST_PY" -m ruff check \
             src/crypto_signal/product/intelligence_stream_forward_runtime.py \
             src/crypto_signal/evaluation/untouched_forward_prepared_runtime.py \
+            src/crypto_signal/evaluation/untouched_forward_resolution_runtime.py \
+            src/crypto_signal/product/decision_proof.py \
             ops/run_live_evidence_clock.py \
             tests/test_intelligence_stream_forward_runtime.py \
             tests/test_wc2_prepared_live_runtime.py \
@@ -63,6 +67,8 @@ jobs:
           "$TEST_PY" -m mypy \
             src/crypto_signal/product/intelligence_stream_forward_runtime.py \
             src/crypto_signal/evaluation/untouched_forward_prepared_runtime.py \
+            src/crypto_signal/evaluation/untouched_forward_resolution_runtime.py \
+            src/crypto_signal/product/decision_proof.py \
             ops/run_live_evidence_clock.py
           bash -n ops/ssd_runtime_supervisor.sh
           echo "STREAM_FORWARD_ACTIVATION_PASS=YES"
