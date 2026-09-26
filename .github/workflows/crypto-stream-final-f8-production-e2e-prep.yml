@@ -1,6 +1,9 @@
 name: Crypto Stream Final F8 Production E2E Prep
 
 on:
+  push:
+    branches:
+      - 'stream/final-f8-production-e2e-prep'
   workflow_dispatch:
     inputs:
       run_production:
