@@ -1,0 +1,254 @@
+name: Crypto Stream S16 Controlled Cutover UID504
+
+on:
+  push:
+    branches:
+      - 'stream/s16-controlled-cutover'
+      - 'main'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: stream-s16-cutover-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  stream-s16-cutover:
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          clean: true
+          fetch-depth: 1
+
+      - name: Verify exact source and create isolated environment
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
+          BASE_PY="$DEV/.venv/bin/python"
+          TEST_VENV="$RUNNER_TEMP/stream-s16-cutover-venv"
+          test "$(id -u)" = "504"
+          test -x "$BASE_PY"
+          test -z "$(git -C "$DEV" status --porcelain)"
+          echo "DEV_HEAD_BEFORE=$(git -C "$DEV" rev-parse HEAD)" >> "$RUNNER_TEMP/stream-s16-dev-state"
+          test "$(git -C "$GITHUB_WORKSPACE" rev-parse HEAD)" = "$GITHUB_SHA"
+          rm -rf "$TEST_VENV"
+          "$BASE_PY" -m venv "$TEST_VENV"
+          "$TEST_VENV/bin/python" -m pip install --upgrade pip
+          "$TEST_VENV/bin/python" -m pip install -e "$GITHUB_WORKSPACE"
+          "$TEST_VENV/bin/python" -m pip install "pytest>=8.4" "pytest-asyncio>=1.2" "ruff>=0.13" "mypy>=1.18"
+          echo "TEST_PY=$TEST_VENV/bin/python" >> "$GITHUB_ENV"
+          echo "STREAM_S16_EXACT_SOURCE_PASS=YES"
+
+      - name: Focused S16 cutover acceptance
+        env:
+          PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/src:${{ github.workspace }}/tests
+        run: |
+          "$TEST_PY" -m pytest -q             tests/test_stream_s16_controlled_cutover.py             tests/test_stream_s15_end_to_end.py             tests/test_intelligence_stream_ui.py             tests/test_intelligence_stream_read_model.py             tests/test_intelligence_stream_visual_proof.py             tests/test_intelligence_stream_capital.py             tests/test_dashboard_web.py
+          "$TEST_PY" -m ruff check             src/crypto_signal/product/web.py             ops/run_dashboard.py             tests/test_stream_s16_controlled_cutover.py             tests/support_stream_s15.py             tests/test_stream_s15_end_to_end.py             ops/capture_chromium_viewport.py
+          "$TEST_PY" -m mypy             src/crypto_signal/product/web.py             ops/run_dashboard.py             ops/capture_chromium_viewport.py
+          node --check src/crypto_signal/product/stream/app.js
+          node --check src/crypto_signal/product/stream/evidence.js
+          node --check src/crypto_signal/product/stream/visual_proof.js
+          node --check src/crypto_signal/product/stream/notifications.js
+          echo "STREAM_S16_FOCUSED_PASS=YES"
+
+      - name: Whole-repository regression
+        run: |
+          "$TEST_PY" -m pytest -q
+          "$TEST_PY" -m ruff check src tests ops/verify_stage10_integrated.py ops/capture_chromium_viewport.py
+          "$TEST_PY" -m mypy src ops/verify_stage10_integrated.py ops/capture_chromium_viewport.py
+          node --check src/crypto_signal/product/static/freshness.js
+          node --check src/crypto_signal/product/static/app.js
+          node --check src/crypto_signal/product/galactech/app.js
+          node --check src/crypto_signal/product/stream/app.js
+          node --check src/crypto_signal/product/stream/evidence.js
+          node --check src/crypto_signal/product/stream/visual_proof.js
+          node --check src/crypto_signal/product/stream/notifications.js
+          node tests/js/test_product_freshness.js
+          echo "STREAM_S16_FULL_PASS=YES"
+          echo "REAL_CAPITAL=0"
+
+      - name: Prove Stream root parity, live product story, long session and rollback
+        shell: bash
+        timeout-minutes: 22
+        env:
+          PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/src:${{ github.workspace }}/tests
+        run: |
+          set -euo pipefail
+          PORT=48716
+          BASE_URL="http://127.0.0.1:$PORT"
+          ROOT="$RUNNER_TEMP/stream-s16-runtime"
+          OUT="$RUNNER_TEMP/stream-s16-cutover-snapshot"
+          mkdir -p "$ROOT" "$OUT"
+
+          "$TEST_PY" "$GITHUB_WORKSPACE/tests/support_stream_s15.py" seed             --root "$ROOT" > "$OUT/seed.json"
+
+          STREAM_PATH="$("$TEST_PY" -c "import json; print(json.load(open('$ROOT/s15-manifest.json'))['stream_path'])")"
+          DECISION_PATH="$("$TEST_PY" -c "import json; print(json.load(open('$ROOT/s15-manifest.json'))['decision_path'])")"
+          SIGNAL_PATH="$("$TEST_PY" -c "import json; print(json.load(open('$ROOT/s15-manifest.json'))['signal_path'])")"
+          EPOCH2_PATH="$("$TEST_PY" -c "import json; print(json.load(open('$ROOT/s15-manifest.json'))['epoch2_path'])")"
+
+          cleanup() {
+            if [ -n "${APPENDER_PID:-}" ]; then
+              kill "$APPENDER_PID" >/dev/null 2>&1 || true
+            fi
+            if [ -n "${PREVIEW_PID:-}" ]; then
+              kill "$PREVIEW_PID" >/dev/null 2>&1 || true
+            fi
+            pkill -TERM -f -- '--headless=new' 2>/dev/null || true
+            sleep 1
+            pkill -KILL -f -- '--headless=new' 2>/dev/null || true
+          }
+          trap cleanup EXIT
+
+          start_product() {
+            PRODUCT_ROOT="$1"
+            (
+              unset RUNNER_TRACKING_ID
+              export PYTHONPATH="$GITHUB_WORKSPACE/src:$GITHUB_WORKSPACE/tests"
+              cd "$GITHUB_WORKSPACE"
+              exec /usr/bin/nice -n 15 "$TEST_PY" "$GITHUB_WORKSPACE/ops/run_dashboard.py"                 --host 127.0.0.1                 --port "$PORT"                 --product-root "$PRODUCT_ROOT"                 --ledger "$SIGNAL_PATH"                 --alert-outbox "$ROOT/alerts.sqlite3"                 --paper-ledger "$ROOT/legacy-paper.sqlite3"                 --candle-cache "$ROOT/candle-cache.sqlite3"                 --decision-evidence "$DECISION_PATH"                 --epoch2-ledger "$EPOCH2_PATH"                 --stream-ledger "$STREAM_PATH"
+            ) >>"$OUT/product.out.log" 2>>"$OUT/product.err.log" < /dev/null &
+            PREVIEW_PID="$!"
+          }
+
+          wait_ready() {
+            ready=0
+            for i in {1..40}; do
+              if curl -fsS --max-time 3 "$BASE_URL/api/health" > "$OUT/health.json" 2>/dev/null; then
+                ready=1
+                break
+              fi
+              sleep 1
+            done
+            if [ "$ready" != "1" ]; then
+              tail -180 "$OUT/product.err.log" || true
+              exit 70
+            fi
+          }
+
+          stop_product() {
+            if [ -n "${PREVIEW_PID:-}" ]; then
+              kill "$PREVIEW_PID"
+              wait "$PREVIEW_PID" 2>/dev/null || true
+              unset PREVIEW_PID
+              sleep 1
+            fi
+          }
+
+          start_product stream
+          wait_ready
+
+          curl -fsS "$BASE_URL/" > "$OUT/root-stream.html"
+          curl -fsS "$BASE_URL/stream-preview" > "$OUT/preview-stream.html"
+          curl -fsS "$BASE_URL/galactech" > "$OUT/fallback-galactech.html"
+          cmp "$OUT/root-stream.html" "$OUT/preview-stream.html"
+          grep -F 'data-ui-version="crypto-signal-stream-v1-s14"' "$OUT/root-stream.html" >/dev/null
+          grep -F 'data-ui-version="galactech-v2-intelligence-first-tr"' "$OUT/fallback-galactech.html" >/dev/null
+          "$TEST_PY" -c 'import json,sys; p=json.load(open(sys.argv[1])); assert p["product_root"]=="stream",p; assert p["stream_root_active"] is True,p; assert p["galactech_fallback_route"]=="/galactech",p; assert p["real_capital"]==0,p' "$OUT/health.json"
+
+          BROWSER=""
+          for candidate in             "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"             "/Applications/Chromium.app/Contents/MacOS/Chromium"             "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge"             "/Applications/Google Chrome Canary.app/Contents/MacOS/Google Chrome Canary"; do
+            if [ -x "$candidate" ]; then
+              BROWSER="$candidate"
+              break
+            fi
+          done
+          test -n "$BROWSER"
+
+          {
+            echo "URL=$BASE_URL/"
+            echo "CAPTURED_AT=$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
+            echo "SOURCE_HEAD=$GITHUB_SHA"
+            echo "BROWSER_CAPTURE_BACKEND=CHROMIUM_CDP"
+            echo "BROWSER_BINARY=$BROWSER"
+            echo "PRODUCT_ROOT=stream"
+            echo "GALACTECH_FALLBACK=/galactech"
+            echo "REAL_CAPITAL=0"
+            echo "S16_REAL_SSE=YES"
+            echo "S16_FIXTURE_QUERY=NO"
+          } > "$OUT/metadata.txt"
+
+          (
+            sleep 7
+            "$TEST_PY" "$GITHUB_WORKSPACE/tests/support_stream_s15.py" append-resolution               --root "$ROOT" > "$OUT/append-resolution.json"
+            sleep 6
+            "$TEST_PY" "$GITHUB_WORKSPACE/tests/support_stream_s15.py" append-capital               --root "$ROOT" > "$OUT/append-capital.json"
+          ) &
+          APPENDER_PID="$!"
+
+          "$TEST_PY" "$GITHUB_WORKSPACE/ops/capture_chromium_viewport.py"             --browser "$BROWSER"             --url "$BASE_URL/"             --output "$OUT/desktop-root-e2e.png"             --metrics-out "$OUT/desktop-root-e2e.metrics.json"             --width 1440             --height 1100             --require-no-horizontal-overflow             --probe-s15-end-to-end
+          wait "$APPENDER_PID"
+          unset APPENDER_PID
+
+          cp "$ROOT/s15-manifest.json" "$OUT/final-manifest.json"
+          CAPITAL_ID="$("$TEST_PY" -c "import json; print(json.load(open('$ROOT/s15-manifest.json'))['capital_narrative_identity'])")"
+          ROOT_ID="$("$TEST_PY" -c "import json; print(json.load(open('$ROOT/s15-manifest.json'))['root_narrative_identity'])")"
+          RESOLUTION_ID="$("$TEST_PY" -c "import json; print(json.load(open('$ROOT/s15-manifest.json'))['resolution_narrative_identity'])")"
+
+          "$TEST_PY" "$GITHUB_WORKSPACE/ops/capture_chromium_viewport.py"             --browser "$BROWSER"             --url "$BASE_URL/?message=$CAPITAL_ID"             --output "$OUT/mobile-root-capital.png"             --metrics-out "$OUT/mobile-root-capital.metrics.json"             --width 430             --height 860             --mobile             --require-no-horizontal-overflow
+          grep -F '"s15_end_to_end_probe"' "$OUT/desktop-root-e2e.metrics.json" >/dev/null
+          grep -F '"innerWidth": 430' "$OUT/mobile-root-capital.metrics.json" >/dev/null
+          grep -F '"scrollWidth": 430' "$OUT/mobile-root-capital.metrics.json" >/dev/null
+
+          # S14 parity at the actual product root, not only /stream-preview.
+          "$TEST_PY" "$GITHUB_WORKSPACE/ops/capture_chromium_viewport.py"             --browser "$BROWSER"             --url "$BASE_URL/?fixture=long10k"             --output "$OUT/desktop-root-long10k.png"             --metrics-out "$OUT/desktop-root-long10k.metrics.json"             --width 1440             --height 1100             --require-no-horizontal-overflow             --probe-long-session
+          grep -F '"totalMessages": 10000' "$OUT/desktop-root-long10k.metrics.json" >/dev/null
+
+          # Roll back the root only. Keep the exact same ledgers and APIs.
+          stop_product
+          start_product galactech
+          wait_ready
+          curl -fsS "$BASE_URL/" > "$OUT/root-rollback.html"
+          curl -fsS "$BASE_URL/galactech" > "$OUT/galactech-rollback.html"
+          curl -fsS "$BASE_URL/stream-preview" > "$OUT/stream-during-rollback.html"
+          cmp "$OUT/root-rollback.html" "$OUT/galactech-rollback.html"
+          grep -F 'data-ui-version="galactech-v2-intelligence-first-tr"' "$OUT/root-rollback.html" >/dev/null
+          grep -F 'data-ui-version="crypto-signal-stream-v1-s14"' "$OUT/stream-during-rollback.html" >/dev/null
+          "$TEST_PY" -c 'import json,sys; p=json.load(open(sys.argv[1])); assert p["product_root"]=="galactech",p; assert p["stream_root_active"] is False,p; assert p["real_capital"]==0,p' "$OUT/health.json"
+          curl -fsS "$BASE_URL/api/stream/messages?limit=20" > "$OUT/rollback-messages.json"
+          "$TEST_PY" -c 'import json,sys; p=json.load(open(sys.argv[1])); ids={x["narrative_identity"] for x in p["page"]["items"]}; exp=set(sys.argv[2:]); assert exp.issubset(ids),(exp,ids); assert p["real_capital"]==0,p' "$OUT/rollback-messages.json" "$ROOT_ID" "$RESOLUTION_ID" "$CAPITAL_ID"
+
+          # Re-apply the accepted cutover and prove forward recovery.
+          stop_product
+          start_product stream
+          wait_ready
+          curl -fsS "$BASE_URL/" > "$OUT/root-reapplied.html"
+          curl -fsS "$BASE_URL/stream-preview" > "$OUT/preview-reapplied.html"
+          cmp "$OUT/root-reapplied.html" "$OUT/preview-reapplied.html"
+          curl -fsS "$BASE_URL/api/stream/messages?limit=20" > "$OUT/reapplied-messages.json"
+          "$TEST_PY" -c 'import json,sys; p=json.load(open(sys.argv[1])); ids={x["narrative_identity"] for x in p["page"]["items"]}; exp=set(sys.argv[2:]); assert exp.issubset(ids),(exp,ids); assert p["real_capital"]==0,p' "$OUT/reapplied-messages.json" "$ROOT_ID" "$RESOLUTION_ID" "$CAPITAL_ID"
+
+          echo "STREAM_S16_ROOT_PARITY_PASS=YES"
+          echo "STREAM_S16_REAL_PRODUCT_STORY_PASS=YES"
+          echo "STREAM_S16_LONG_SESSION_ROOT_PASS=YES"
+          echo "STREAM_S16_ROLLBACK_PASS=YES"
+          echo "STREAM_S16_REAPPLY_PASS=YES"
+          echo "REAL_CAPITAL=0"
+
+      - name: Upload Stream S16 cutover artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stream-s16-cutover-snapshot-${{ github.run_id }}
+          path: ${{ runner.temp }}/stream-s16-cutover-snapshot
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Prove Development checkout remained untouched
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
+          BEFORE="$(sed -n 's/^DEV_HEAD_BEFORE=//p' "$RUNNER_TEMP/stream-s16-dev-state")"
+          AFTER="$(git -C "$DEV" rev-parse HEAD)"
+          test -z "$(git -C "$DEV" status --porcelain)"
+          test "$BEFORE" = "$AFTER"
+          echo "STREAM_S16_UID504_NON_MUTATING_PASS=YES"
