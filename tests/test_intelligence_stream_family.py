@@ -17,6 +17,10 @@ from crypto_signal.product.intelligence_stream_models import (
     StreamCategory,
     StreamImportance,
 )
+from crypto_signal.product.intelligence_stream_read_model import (
+    IntelligenceStreamReadModel,
+    StreamMessageQuery,
+)
 
 
 def _snapshot(*, source: str, event_at_ms: int, state: str):
@@ -146,3 +150,34 @@ def test_family_projector_activation_is_immutable(tmp_path: Path) -> None:
             """
         ).fetchone()
     assert row == (2_000,)
+
+
+def test_family_messages_flow_through_canonical_read_model(tmp_path: Path) -> None:
+    path = _path(tmp_path)
+    runtime = IntelligenceStreamFamilyRuntime(path)
+    result = runtime.project(
+        _snapshot(source="read", event_at_ms=2_100, state="bid_side"),
+        activated_at_ms=2_000,
+    )
+    assert result.narrative_identity is not None
+
+    model = IntelligenceStreamReadModel(path)
+    page = model.read_messages(
+        StreamMessageQuery(
+            category="intelligence",
+            evidence_domain="liquidity",
+            state="bid_side",
+        )
+    )
+    assert len(page.items) == 1
+    assert page.items[0]["narrative_identity"] == result.narrative_identity
+    assert page.items[0]["family"] == ConfluenceFamily.LIQUIDITY.value
+    assert page.items[0]["text"]["collapsed_text"]
+
+    detail = model.read_message_detail(result.narrative_identity)
+    assert detail is not None
+    assert detail["narrative"]["narrative_identity"] == result.narrative_identity
+    assert detail["analytical_view"]["family_state_label"] == "bid_side"
+    assert detail["fact_bundle"]["family"] == ConfluenceFamily.LIQUIDITY.value
+    assert detail["message_input"]["category"] == "intelligence"
+    assert detail["real_capital"] == 0
