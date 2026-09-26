@@ -82,6 +82,7 @@ class StreamFamilyProjectionDisposition(StrEnum):
     INSERTED = "inserted"
     UNCHANGED = "unchanged"
     SILENT_UNCHANGED = "silent_unchanged"
+    SILENT_INITIAL_BASELINE = "silent_initial_baseline"
     SKIPPED_BEFORE_ACTIVATION = "skipped_before_activation"
 
 
@@ -675,6 +676,7 @@ class IntelligenceStreamFamilyRuntime:
         snapshot: StreamFamilySnapshot,
         *,
         activated_at_ms: int,
+        silent_initial_state_labels: tuple[str, ...] = (),
     ) -> StreamFamilyProjectionResult:
         spec = _require_family_projector_spec(snapshot.projector_id)
         if snapshot.category is not spec.category:
@@ -716,6 +718,25 @@ class IntelligenceStreamFamilyRuntime:
             return existing
 
         previous = self._latest_family_state(story_identity)
+        normalized_silent_initial = tuple(
+            sorted(set(silent_initial_state_labels))
+        )
+        if (
+            previous is None
+            and snapshot.state_label in normalized_silent_initial
+        ):
+            return StreamFamilyProjectionResult(
+                disposition=(
+                    StreamFamilyProjectionDisposition.SILENT_INITIAL_BASELINE
+                ),
+                projector_id=snapshot.projector_id,
+                source_event_identity=snapshot.source_event_identity,
+                stream_event_identity=None,
+                story_identity=story_identity,
+                narrative_identity=None,
+                activation_identity=activation_identity,
+            )
+
         state_key = _snapshot_state_key(snapshot)
         if previous is not None and previous.get("state_key") == state_key:
             return StreamFamilyProjectionResult(
