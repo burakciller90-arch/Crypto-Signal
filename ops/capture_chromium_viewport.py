@@ -778,7 +778,7 @@ def _capture(args: argparse.Namespace) -> dict[str, object]:
             s15_probe_expression = r"""
 (async () => {
   const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-  const waitFor = async (predicate, timeoutMs = 16000) => {
+  const waitFor = async (predicate, timeoutMs = 30000) => {
     const started = Date.now();
     while (Date.now() - started < timeoutMs) {
       try {
@@ -1065,7 +1065,7 @@ def _capture(args: argparse.Namespace) -> dict[str, object]:
                     "returnByValue": True,
                     "userGesture": True,
                 },
-                timeout_seconds=40.0,
+                timeout_seconds=90.0,
             )
             s15_exception = s15_probe_result.get("exceptionDetails")
             if isinstance(s15_exception, dict):
