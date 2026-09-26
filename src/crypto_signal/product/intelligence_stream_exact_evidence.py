@@ -766,11 +766,6 @@ def _resolve_signal_objects(
     try:
         connection.row_factory = sqlite3.Row
         connection.execute("PRAGMA query_only=ON")
-        quick = connection.execute("PRAGMA quick_check").fetchone()
-        if quick is None or str(quick[0]).lower() != "ok":
-            raise StreamExactEvidenceError(
-                "exact evidence signal ledger quick_check failed"
-            )
         table = connection.execute(
             """
             SELECT 1
@@ -970,11 +965,6 @@ def _resolve_sqlite_payload_objects(
     try:
         connection.row_factory = sqlite3.Row
         connection.execute("PRAGMA query_only=ON")
-        quick = connection.execute("PRAGMA quick_check").fetchone()
-        if quick is None or str(quick[0]).lower() != "ok":
-            raise StreamExactEvidenceError(
-                f"exact evidence SQLite quick_check failed: {path.name}"
-            )
         tables = {
             str(row[0])
             for row in connection.execute(
