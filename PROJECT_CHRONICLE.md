@@ -1,5 +1,17 @@
 # PROJECT CHRONICLE
 
+## 2026-09-26 — Stream S13 Sound and Notifications accepted; S14 hardening becomes active
+
+S13 completes the “someone sent me a message” delivery layer without changing canonical Stream truth. PR #1294 adds an original synthesized Crypto Signal chime, explicit user-gesture audio unlock, persisted sound settings, all/important/Decision+Capital/silent modes and optional browser notifications that require explicit permission.
+
+Delivery is identity-bound and exactly-once within the live UI session: only an eligible `live_new` message can chime, the same narrative identity cannot chime twice, and history/reconnect replay stays silent. Notification state remains local UI state and never becomes market, evidence or capital truth.
+
+Exact-head UID504 run `36218194731` passed focused S13 acceptance, whole-repository regression, real Chromium desktop/mobile notification rendering and Development non-mutation at head `1832714fa93b314b989d2b854bf70c4075812426`. The browser probe verified AudioContext unlock, exactly one first live-new chime, duplicate suppression, history/replay silence, Important and Decision+Capital filtering, settings persistence, no automatic desktop-permission request, Stream visibility and exact 430px no-overflow. Artifact: `stream-s13-visual-snapshot-36218194731`.
+
+S13 adds no exchange authority and no real capital. REAL_CAPITAL=0.
+
+The active frontier is S14 Performance, Accessibility and Long-Session Stability: 1k/10k feed scale, virtualization/reverse pagination, memory/reconnect stability, keyboard/focus/screen-reader basics, reduced motion, responsive behavior and zoom/font-scaling acceptance.
+
 ## 2026-09-26 — Stream S12 Search, Filters and History UX accepted; S13 Sound and Notifications becomes active
 
 S12 completes scalable discovery without turning Crypto Signal back into a multi-screen dashboard. PR #1292 reuses the accepted S6 cursor/query machinery and S7 temporary discovery drawer to add full-text search plus asset, category, timeframe, vault, evidence-domain, state, importance and date filters.
