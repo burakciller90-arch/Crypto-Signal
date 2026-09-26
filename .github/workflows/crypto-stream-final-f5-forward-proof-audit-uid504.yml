@@ -1,0 +1,247 @@
+name: Crypto Stream Final F5 Forward Proof Audit UID504
+
+on:
+  push:
+    branches:
+      - 'stream/final-f5-forward-proof-audit'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: crypto-stream-final-f5-forward-proof-audit
+  cancel-in-progress: true
+
+jobs:
+  audit:
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          clean: true
+          fetch-depth: 2
+
+      - name: Read-only F5 forward proof diagnosis
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          DEV="$ROOT/Development"
+          test "$(id -u)" = "504"
+          test -z "$(git -C "$DEV" status --porcelain)"
+          test "$(git -C "$DEV" rev-parse HEAD)" = "97b2db05711d4b5504c47b4dfb8396d92fcd762f"
+
+          "$DEV/.venv/bin/python" - "$ROOT" <<'PY'
+          import json
+          import sqlite3
+          import sys
+          from pathlib import Path
+
+          root = Path(sys.argv[1])
+          runtime = root / "Development/runtime"
+          paths = {
+              "decision": runtime / "decision/decision_evidence.sqlite3",
+              "prepared": runtime / "wc2/wc2.wc2-prepared.sqlite3",
+              "epoch2": runtime / "paper/paper_fund_epoch2.sqlite3",
+              "stream": runtime / "stream/intelligence_stream.sqlite3",
+          }
+          live_log = root / "ServiceLogs/live.out.log"
+
+          for name, path in paths.items():
+              if not path.is_file():
+                  raise SystemExit(f"F5_FORWARD_AUDIT_MISSING_DB:{name}:{path}")
+
+          def ro(path):
+              c = sqlite3.connect(f"{path.resolve().as_uri()}?mode=ro", uri=True)
+              c.execute("PRAGMA query_only=ON")
+              return c
+
+          with ro(paths["stream"]) as c:
+              assert str(c.execute("PRAGMA quick_check").fetchone()[0]).lower() == "ok"
+              row = c.execute(
+                  """
+                  SELECT activation_identity, activated_at_ms, payload_json
+                  FROM stream_capital_projection_activation
+                  ORDER BY activated_at_ms, activation_identity
+                  """
+              ).fetchall()
+              if len(row) != 1:
+                  raise SystemExit(f"F5_FORWARD_AUDIT_ACTIVATION_ROWS:{len(row)}")
+              activation_identity = str(row[0][0])
+              activated_at_ms = int(row[0][1])
+              activation_payload = json.loads(str(row[0][2]))
+              stream_sources = [
+                  tuple(x)
+                  for x in c.execute(
+                      """
+                      SELECT subtype, COUNT(*), MIN(event_at_ms), MAX(event_at_ms)
+                      FROM stream_source_events
+                      WHERE category='capital' AND event_at_ms >= ?
+                      GROUP BY subtype
+                      ORDER BY subtype
+                      """,
+                      (activated_at_ms,),
+                  ).fetchall()
+              ]
+              specialized = {}
+              for table in (
+                  "stream_capital_messages",
+                  "stream_capital_lifecycle_messages",
+                  "stream_capital_decision_messages",
+                  "stream_capital_sizing_messages",
+              ):
+                  specialized[table] = int(
+                      c.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
+                  )
+              stream_real_capital = c.execute(
+                  "SELECT value FROM stream_meta WHERE key='real_capital'"
+              ).fetchone()
+
+          with ro(paths["decision"]) as c:
+              assert str(c.execute("PRAGMA quick_check").fetchone()[0]).lower() == "ok"
+              forecast_after = int(
+                  c.execute(
+                      "SELECT COUNT(*) FROM r20_forecasts WHERE issued_at_ms >= ?",
+                      (activated_at_ms,),
+                  ).fetchone()[0]
+              )
+              latest_forecast = c.execute(
+                  """
+                  SELECT forecast_identity, symbol, timeframe, issued_at_ms
+                  FROM r20_forecasts
+                  ORDER BY issued_at_ms DESC, forecast_identity DESC
+                  LIMIT 1
+                  """
+              ).fetchone()
+              latest_post_activation_forecast = c.execute(
+                  """
+                  SELECT forecast_identity, symbol, timeframe, issued_at_ms
+                  FROM r20_forecasts
+                  WHERE issued_at_ms >= ?
+                  ORDER BY issued_at_ms DESC, forecast_identity DESC
+                  LIMIT 1
+                  """,
+                  (activated_at_ms,),
+              ).fetchone()
+
+          with ro(paths["prepared"]) as c:
+              assert str(c.execute("PRAGMA quick_check").fetchone()[0]).lower() == "ok"
+              prepared_after = int(
+                  c.execute(
+                      """
+                      SELECT COUNT(*)
+                      FROM wc2_prepared_cycle_receipts
+                      WHERE issued_at_ms >= ?
+                      """,
+                      (activated_at_ms,),
+                  ).fetchone()[0]
+              )
+              latest_prepared = c.execute(
+                  """
+                  SELECT receipt_identity, signal_freeze_identity, issued_at_ms, previewed_at_ms
+                  FROM wc2_prepared_cycle_receipts
+                  ORDER BY issued_at_ms DESC, receipt_identity DESC
+                  LIMIT 1
+                  """
+              ).fetchone()
+              latest_post_activation_prepared = c.execute(
+                  """
+                  SELECT receipt_identity, signal_freeze_identity, issued_at_ms, previewed_at_ms
+                  FROM wc2_prepared_cycle_receipts
+                  WHERE issued_at_ms >= ?
+                  ORDER BY issued_at_ms DESC, receipt_identity DESC
+                  LIMIT 1
+                  """,
+                  (activated_at_ms,),
+              ).fetchone()
+
+          with ro(paths["epoch2"]) as c:
+              assert str(c.execute("PRAGMA quick_check").fetchone()[0]).lower() == "ok"
+              decisions_after = int(
+                  c.execute(
+                      """
+                      SELECT COUNT(*)
+                      FROM s11_vault_decisions
+                      WHERE decided_at_ms >= ?
+                      """,
+                      (activated_at_ms,),
+                  ).fetchone()[0]
+              )
+              intents_after = int(
+                  c.execute(
+                      """
+                      SELECT COUNT(*)
+                      FROM r22_epoch2_intents
+                      WHERE event_at_ms >= ?
+                      """,
+                      (activated_at_ms,),
+                  ).fetchone()[0]
+              )
+              decision_groups = [
+                  tuple(x)
+                  for x in c.execute(
+                      """
+                      SELECT vault_id, disposition, COUNT(*), MIN(decided_at_ms), MAX(decided_at_ms)
+                      FROM s11_vault_decisions
+                      WHERE decided_at_ms >= ?
+                      GROUP BY vault_id, disposition
+                      ORDER BY vault_id, disposition
+                      """,
+                      (activated_at_ms,),
+                  ).fetchall()
+              ]
+
+          log = live_log.read_text(errors="replace") if live_log.exists() else ""
+          liveness_lines = [
+              line
+              for line in log.splitlines()
+              if "wc2_liveness status=SUMMARY" in line
+          ]
+          capital_lines = [
+              line
+              for line in log.splitlines()
+              if "stream_capital status=" in line
+          ]
+
+          result = {
+              "activation_identity": activation_identity,
+              "activated_at_ms": activated_at_ms,
+              "activation_payload": activation_payload,
+              "stream_real_capital": None if stream_real_capital is None else str(stream_real_capital[0]),
+              "decision_forecasts_after_activation": forecast_after,
+              "prepared_receipts_after_activation": prepared_after,
+              "s11_vault_decisions_after_activation": decisions_after,
+              "r22_intents_after_activation": intents_after,
+              "capital_stream_sources_after_activation": stream_sources,
+              "capital_specialized_counts": specialized,
+              "decision_groups_after_activation": decision_groups,
+              "latest_forecast": None if latest_forecast is None else tuple(latest_forecast),
+              "latest_post_activation_forecast": None if latest_post_activation_forecast is None else tuple(latest_post_activation_forecast),
+              "latest_prepared": None if latest_prepared is None else tuple(latest_prepared),
+              "latest_post_activation_prepared": None if latest_post_activation_prepared is None else tuple(latest_post_activation_prepared),
+              "latest_wc2_liveness": None if not liveness_lines else liveness_lines[-1],
+              "latest_stream_capital": None if not capital_lines else capital_lines[-1],
+              "historical_backfill_allowed": activation_payload.get("historical_rich_backfill_allowed"),
+              "production_authority": activation_payload.get("production_authority"),
+              "real_capital": activation_payload.get("real_capital"),
+          }
+          print("F5_FORWARD_PROOF_AUDIT " + json.dumps(result, sort_keys=True))
+
+          if (
+              stream_sources
+              and decisions_after > 0
+              and prepared_after > 0
+              and forecast_after > 0
+              and result["real_capital"] == 0
+              and result["production_authority"] is False
+              and result["historical_backfill_allowed"] is False
+              and "stream_capital status=PROJECTED" in log
+          ):
+              print("F5_FORWARD_CAPITAL_EVIDENCE=OBSERVED")
+          else:
+              print("F5_FORWARD_CAPITAL_EVIDENCE=PENDING")
+          print("HISTORICAL_BACKFILL=NO")
+          print("REAL_CAPITAL=0")
+          PY
