@@ -1,0 +1,54 @@
+name: Crypto Stream Final F2 Backbone UID504
+
+on:
+  push:
+    branches:
+      - 'stream/final-f2-production-backbone'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: crypto-stream-final-f2-backbone
+  cancel-in-progress: true
+
+jobs:
+  gate:
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          clean: true
+          fetch-depth: 1
+
+      - name: Verify exact branch source
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          echo "F2_EXACT_SOURCE_PASS=YES"
+
+      - name: Focused F2 backbone tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          PY="/Volumes/Crypto-504/Crypto-Signal/Development/.venv/bin/python"
+          test -x "$PY"
+          export PYTHONPATH="$GITHUB_WORKSPACE/src:$GITHUB_WORKSPACE/tests"
+          "$PY" -m pytest -q \
+            tests/test_intelligence_stream_production_projector.py \
+            tests/test_intelligence_stream_forward_runtime.py \
+            tests/test_intelligence_stream_projectors.py \
+            tests/test_intelligence_stream_story.py \
+            tests/test_intelligence_stream_analytical.py \
+            tests/test_intelligence_stream_narrative.py
+          "$PY" -m ruff check \
+            src/crypto_signal/product/intelligence_stream_production_projector.py \
+            tests/test_intelligence_stream_production_projector.py
+          "$PY" -m mypy \
+            src/crypto_signal/product/intelligence_stream_production_projector.py
+          echo "F2_FOCUSED_GATE_PASS=YES"
+          echo "HISTORICAL_BACKFILL=NO"
+          echo "REAL_CAPITAL=0"
