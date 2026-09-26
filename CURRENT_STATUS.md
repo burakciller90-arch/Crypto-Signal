@@ -4,10 +4,33 @@ Updated: 2026-09-26
 Project: Crypto Signal
 Baseline: crypto-signal-full-version-v1.0.0 (immutable)
 Active post-v1.0 program: v1.1 world-class product + market intelligence + Crypto Signal Intelligence Stream V1
-State: WC0_LIVE_PRODUCT_PARITY_ACCEPTED / WC1_24_7_DATA_RELIABILITY_ACCEPTED / WC2_ENGINEERING_FROZEN_EVIDENCE_ACCUMULATION_ACTIVE / WC4_CHAMPION_CHALLENGER_ENGINEERING_ACCEPTED_RESEARCH_ONLY / WC5_ENGINEERING_ACCEPTED_PRODUCT_DEPLOYED_HUMAN_USABILITY_NOT_MEASURED / WC6_SANDBOX_BOUNDARY_ACCEPTED_VENUE_EVIDENCE_EXTERNAL_DEPENDENCY / WC7_CURRENT_FRONTIER_PACKET_ACCEPTED_CURRENT_INSUFFICIENT_EVIDENCE / INTELLIGENCE_STREAM_V1_S0_S16_HISTORICAL_ACCEPTANCE_RETAINED / INTELLIGENCE_STREAM_V1_FINAL_COMPLETION_F0_ACTIVE / CONTINUITY_PAUSED_BY_USER
+State: WC0_LIVE_PRODUCT_PARITY_ACCEPTED / WC1_24_7_DATA_RELIABILITY_ACCEPTED / WC2_ENGINEERING_FROZEN_EVIDENCE_ACCUMULATION_ACTIVE / WC4_CHAMPION_CHALLENGER_ENGINEERING_ACCEPTED_RESEARCH_ONLY / WC5_ENGINEERING_ACCEPTED_PRODUCT_DEPLOYED_HUMAN_USABILITY_NOT_MEASURED / WC6_SANDBOX_BOUNDARY_ACCEPTED_VENUE_EVIDENCE_EXTERNAL_DEPENDENCY / WC7_CURRENT_FRONTIER_PACKET_ACCEPTED_CURRENT_INSUFFICIENT_EVIDENCE / INTELLIGENCE_STREAM_V1_S0_S16_HISTORICAL_ACCEPTANCE_RETAINED / INTELLIGENCE_STREAM_V1_FINAL_F0_PASS_F1_ACTIVE / CONTINUITY_PAUSED_BY_USER
 REAL_CAPITAL: 0
 
 ## Active v1.1 frontier — read before historical sections
+
+### 2026-09-26 — STREAM FINAL F0 PASS / F1 WC2 FORWARD-LIVENESS ACTIVE
+
+Canonical F0 ledger:
+- `docs/CRYPTO_SIGNAL_STREAM_FINAL_F0_SOURCE_MESSAGE_CLOSURE_LEDGER.md`.
+
+F0 mechanically reconciled the original Stream promise against the current production path:
+- Decision issuance: `LIVE_COMPLETE`;
+- Forecast resolution/outcome: `LIVE_COMPLETE`;
+- canonical Capital lifecycle projector: `CODE_EXISTS_NOT_LIVE`;
+- Market/Geometry rich material messages: `PERSISTED_SOURCE_ONLY`;
+- Liquidity: `PERSISTED_SOURCE_ONLY`;
+- Order Flow/CVD/Absorption: `PERSISTED_SOURCE_ONLY`;
+- Derivatives: `PERSISTED_SOURCE_ONLY`;
+- Event Risk: `PERSISTED_SOURCE_ONLY`;
+- Provider/Data Quality/System: `PERSISTED_SOURCE_ONLY`;
+- Bitcoin network always-on Stream source: `NO_LIVE_SOURCE`;
+- continuous liquidation Stream source: `NO_LIVE_SOURCE`;
+- Exchange Flow / Wallet Cohort / Large Transfer live chatter: `RESEARCH_ONLY`.
+
+F0 found no basis to declare the current WC2 stall a correctness defect. F1 must now explain every relevant post-forecast freeze through deterministic eligibility/progress reason codes and prove either correct silence or one exact reproducible defect.
+
+No policy relaxation, no historical backfill, no runtime mutation, and `REAL_CAPITAL=0`.
 
 ### 2026-09-26 — INTELLIGENCE STREAM V1 FINAL COMPLETION ROADMAP OPENED / F0 ACTIVE
 
