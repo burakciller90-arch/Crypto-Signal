@@ -165,7 +165,7 @@ def test_productdeploy_contract_is_exact_main_and_stream_root_with_fallback() ->
     assert "REAL_CAPITAL" not in product_block or "real_capital" in product_block
 
 
-def test_visualsnapshot_command_prefers_headless_and_uploads_artifact() -> None:
+def test_visualsnapshot_command_uses_accepted_cdp_and_uploads_artifact() -> None:
     workflow = Path(
         ".github/workflows/crypto-mac-command.yml"
     ).read_text(encoding="utf-8")
@@ -174,14 +174,20 @@ def test_visualsnapshot_command_prefers_headless_and_uploads_artifact() -> None:
     assert "- name: GALACTECH VISUAL SNAPSHOT UID504" in workflow
     assert "steps.parse.outputs.command == 'visualsnapshot'" in workflow
     assert "/usr/sbin/screencapture -x -l" in workflow
-    assert "BROWSER_CAPTURE_BACKEND=HEADLESS_CHROMIUM" in workflow
+    assert "BROWSER_CAPTURE_BACKEND=CHROMIUM_CDP" in workflow
     assert "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" in workflow
     assert "/Applications/Chromium.app/Contents/MacOS/Chromium" in workflow
-    assert "--headless=new" in workflow
-    assert "--renderer-process-limit=2" in workflow
-    assert "proc.wait(timeout=30)" in workflow
-    assert "capture_headless desktop 1440 950" in workflow
-    assert "capture_headless mobile 430 860" in workflow
+    assert '"$GITHUB_WORKSPACE/ops/capture_chromium_viewport.py"' in workflow
+    assert '--output "$OUT/desktop.png"' in workflow
+    assert '--metrics-out "$OUT/desktop.metrics.json"' in workflow
+    assert "--width 1440" in workflow
+    assert "--height 950" in workflow
+    assert '--output "$OUT/mobile.png"' in workflow
+    assert '--metrics-out "$OUT/mobile.metrics.json"' in workflow
+    assert "--width 430" in workflow
+    assert "--height 860" in workflow
+    assert "--mobile" in workflow
+    assert "--require-no-horizontal-overflow" in workflow
     assert 'tell application "Safari"' in workflow
     assert "capture_window desktop 40 50 1480 1000" in workflow
     assert "capture_window mobile 80 60 510 920" in workflow

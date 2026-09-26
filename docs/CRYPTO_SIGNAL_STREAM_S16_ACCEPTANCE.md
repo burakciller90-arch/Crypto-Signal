@@ -96,6 +96,38 @@ Live acceptance emitted:
 
 The R11 runtime audit verified backup/restore consistency across the canonical runtime SQLite set, including the approximately 10.5 GB signal ledger, while keeping the Product read-only and preserving historical truth.
 
+## Post-cutover production-writer addendum — 2026-09-26
+
+A later fresh check of the **real** Product, rather than an isolated S15/S16 fixture ledger, exposed one post-cutover defect: the Stream root rendered correctly but the live WC2/Decision path had not been projecting new production truth into the canonical Stream ledger. The fail-closed UI showed `RUNTIME HAZIR DEĞİL` instead of inventing content.
+
+The defect was closed by PR #1324:
+- merged main: `a4cbe9eb70a3f8b8e6d69aaa1d09300f1913b4ae`;
+- forward-only issuance + resolution projection only;
+- no historical rich backfill;
+- no synthetic messages;
+- no change to real-money authority.
+
+Because the already-running SSD supervisor still held its old script in memory, the new wiring did not become live merely by changing the file on disk. Controlled R11 recovery run `36239463356` restarted the accepted runtime topology and passed final runtime audit with `REAL_CAPITAL=0`.
+
+Final live proof:
+- UID504 run `36241069023` — **PASS**;
+- artifact `stream-post-r11-live-acceptance-36241069023`;
+- digest `sha256:7abb82b8e92349abc97a0d151c42659cdf58b5e204b09af17042759feb0179b0`;
+- canonical DB: `Development/runtime/stream/intelligence_stream.sqlite3`;
+- SQLite `quick_check=ok` and complete Stream schema present;
+- immutable activation identity `85ad836430e8ed57066ea421eda227fa7457333ff1ee25d9a51cbb56a7201655` at `2026-09-26 14:44:51.403 +0300`;
+- `historical_rich_backfill_allowed=false`;
+- `production_authority=false`, `read_only=true`, `real_capital=0`;
+- at acceptance time, no eligible post-activation message had yet been emitted, so Stream content counts were 0;
+- `/api/stream/messages` returned `status=empty`, proving configured runtime rather than missing runtime;
+- bounded SSE read passed;
+- live Chromium/CDP desktop and exact 430px mobile captures passed with no horizontal overflow and showed the correct `Henüz mesaj yok` / `SSE CANLI` state;
+- the former `RUNTIME HAZIR DEĞİL` / `mesaj deposu yapılandırılmamış` state was absent;
+- the audit was non-mutating: Development remained `a4cbe9eb70a3f8b8e6d69aaa1d09300f1913b4ae`; Product remained `d343c4b2d10489a88f614bd58c9539be76029f80`.
+
+This is a **post-cutover defect closure**, not a new Stream stage. S16's historical acceptance remains valid, and the completed S0-S16 roadmap is not reopened. Future genuine eligible post-activation decisions may populate the Stream normally; zero current messages must not be “fixed” with historical or synthetic backfill.
+
+
 ## S16 roadmap criteria
 
 Roadmap criterion: exact-main preview/runtime parity.  

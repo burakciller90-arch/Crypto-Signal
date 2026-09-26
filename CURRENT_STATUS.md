@@ -9,6 +9,32 @@ REAL_CAPITAL: 0
 
 ## Active v1.1 frontier — read before historical sections
 
+### 2026-09-26 — POST-CUTOVER STREAM PRODUCTION WRITER DEFECT CLOSED LIVE
+
+A fresh real-Product check after the accepted S16 cutover exposed one post-cutover wiring defect: the Stream shell and Product root were healthy, but live WC2/Decision truth was not yet projecting into the canonical production Stream ledger. This did **not** reopen S0-S16; it was a production wiring defect found only by testing the real live Product rather than relying on isolated acceptance fixtures.
+
+Closure evidence:
+- PR #1324 merged the forward-only production Stream projector into main at `a4cbe9eb70a3f8b8e6d69aaa1d09300f1913b4ae`;
+- the controlled R11 runtime recovery run `36239463356` passed after replacing the stale in-memory supervisor process with the current supervisor code; Development ended at exact `a4cbe9eb70a3f8b8e6d69aaa1d09300f1913b4ae` and `REAL_CAPITAL=0` remained intact;
+- post-R11 read-only live acceptance run `36241069023` passed against the real UID504 Product/runtime;
+- canonical Stream DB `Development/runtime/stream/intelligence_stream.sqlite3` exists, passes `PRAGMA quick_check`, and contains the complete accepted Stream schema;
+- exactly one immutable activation boundary exists: `85ad836430e8ed57066ea421eda227fa7457333ff1ee25d9a51cbb56a7201655`, activated at `2026-09-26 14:44:51.403 +0300`;
+- activation truth explicitly preserves `historical_rich_backfill_allowed=false`, `production_authority=false`, `read_only=true`, and `real_capital=0`;
+- no historical messages were synthesized. At the acceptance instant all forward message/story/narrative counts were still 0, which is valid because no eligible post-activation issuance had yet been projected;
+- `/api/stream/messages` returned `status=empty`, not `unavailable`; the bounded SSE probe passed;
+- genuine desktop and exact 430px mobile Chromium/CDP captures rendered the correct ready-empty state (`Henüz mesaj yok` / `SSE CANLI`) and no longer rendered `RUNTIME HAZIR DEĞİL` or `mesaj deposu yapılandırılmamış`;
+- artifact: `stream-post-r11-live-acceptance-36241069023`, digest `sha256:7abb82b8e92349abc97a0d151c42659cdf58b5e204b09af17042759feb0179b0`;
+- the acceptance was non-mutating: Development remained `a4cbe9eb70a3f8b8e6d69aaa1d09300f1913b4ae` and Product remained the accepted deployed S16 checkout `d343c4b2d10489a88f614bd58c9539be76029f80`.
+
+Product consequence:
+- the post-cutover production Stream writer defect is **CLOSED**;
+- zero messages now means “runtime ready, waiting for the first genuine eligible forward message”, not missing runtime;
+- no synthetic message, no historical rich backfill and no Product redeploy were used to obtain the pass;
+- S16 remains accepted/closed; do not invent S17 or reopen completed Stream stages because of this defect history;
+- separate runtime-hygiene findings (intermittent provider SSL/DNS failures and Alert Clock orphan-reference errors) remain independent follow-up items and are not evidence that the Stream writer is still broken;
+- `REAL_CAPITAL=0`.
+
+
 ### 2026-09-26 — INTELLIGENCE STREAM V1 S16 PASS / ROADMAP COMPLETE / PRODUCT ROOT ACCEPTED
 
 **Intelligence Stream V1 is complete and accepted from S0 through S16. There is no remaining active Stream V1 frontend implementation stage.**

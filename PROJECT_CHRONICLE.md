@@ -1,5 +1,32 @@
 # PROJECT CHRONICLE
 
+## 2026-09-26 — Post-cutover Stream production wiring defect closed on the live Product
+
+A real live-Product screenshot taken after the historical S16 cutover exposed a gap that the isolated S15/S16 acceptance fixtures had not proved: the Stream UI was healthy, but the canonical production Stream message ledger had not been activated by the live WC2/Decision path. The UI correctly failed closed instead of fabricating messages.
+
+PR #1324 closed the code gap by wiring accepted same-cycle issuance and resolution truth into a forward-only Stream runtime. Main became `a4cbe9eb70a3f8b8e6d69aaa1d09300f1913b4ae`. Historical rich backfill remained prohibited.
+
+The first post-merge live check then found that the long-running SSD supervisor process still held its old shell code in memory. Controlled R11 recovery run `36239463356` replaced that stale process, revalidated dashboard/supervisor topology and health, and preserved `REAL_CAPITAL=0`.
+
+The decisive read-only live acceptance was UID504 run `36241069023`. It proved:
+- `Development/runtime/stream/intelligence_stream.sqlite3` exists and passes SQLite `quick_check`;
+- the complete Stream source/message/story/analytical/narrative schema is present;
+- one immutable activation boundary exists, identity `85ad836430e8ed57066ea421eda227fa7457333ff1ee25d9a51cbb56a7201655`, activated at `2026-09-26 14:44:51.403 +0300`;
+- `historical_rich_backfill_allowed=false`, `production_authority=false`, `read_only=true`, `real_capital=0`;
+- no pre-activation history was synthesized;
+- no eligible forward message had yet appeared, so all content counts were 0 and `/api/stream/messages` correctly returned `status=empty` rather than `unavailable`;
+- the bounded SSE endpoint was live;
+- accepted Chromium/CDP capture succeeded on desktop and exact 430px mobile with no horizontal overflow;
+- the real Product rendered `Henüz mesaj yok` and `SSE CANLI`, with the old `RUNTIME HAZIR DEĞİL` state absent;
+- Development and Product checkouts were byte-state/non-mutation checked before and after the audit.
+
+Acceptance artifact: `stream-post-r11-live-acceptance-36241069023`, digest `sha256:7abb82b8e92349abc97a0d151c42659cdf58b5e204b09af17042759feb0179b0`.
+
+The generic `visualsnapshot` command itself had separately exposed a harness weakness: its older one-shot headless-Chromium screenshot mode could time out on the persistent SSE page even after health was ready. The follow-up branch hardens that diagnostic by reusing the already accepted S16 Chromium/CDP capture utility instead of inventing a second browser mechanism.
+
+This closes the post-cutover writer defect without creating an S17 stage. Stream V1 S0-S16 remains accepted; the next work belongs to runtime hygiene and evidence-dependent world-class frontiers, not to redoing the completed frontend roadmap. `REAL_CAPITAL=0`.
+
+
 ## 2026-09-26 — Intelligence Stream V1 S16 accepted, deployed and closed
 
 The S16 controlled-cutover program is complete. PR #1300 established explicit Stream/GALACTECH product-root routing, PR #1302 aligned the allowlisted exact-main Product deployment path with the Stream root, and PR #1313 hardened the real deployment/acceptance path discovered during final production cutover.
