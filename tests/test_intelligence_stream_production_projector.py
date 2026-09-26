@@ -18,14 +18,14 @@ from crypto_signal.product.intelligence_stream_ledger import (
 from crypto_signal.product.intelligence_stream_models import (
     build_stream_decision_context,
 )
+from crypto_signal.product.intelligence_stream_policy import (
+    build_stream_materiality_policy,
+    evaluate_stream_materiality,
+)
 from crypto_signal.product.intelligence_stream_production_projector import (
     IntelligenceStreamProductionProjector,
     StreamProductionProjectionDisposition,
     build_stream_production_projector_contract,
-)
-from crypto_signal.product.intelligence_stream_policy import (
-    build_stream_materiality_policy,
-    evaluate_stream_materiality,
 )
 from crypto_signal.product.intelligence_stream_projectors import (
     project_forecast_issuance,
