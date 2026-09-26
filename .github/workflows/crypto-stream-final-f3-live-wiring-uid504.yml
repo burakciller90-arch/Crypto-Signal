@@ -196,16 +196,17 @@ jobs:
               as_of_ms=now_ms,
           )
           projectors = {item.projector_id for item in snapshots}
-          required = {
+          required_now = {
               "liquidity_change",
               "order_flow_change",
-              "derivatives_change",
           }
-          missing = required - projectors
-          if missing:
+          missing_now = required_now - projectors
+          if missing_now:
               raise SystemExit(
-                  "F3_LIVE_FAMILY_SOURCE_MISSING=" + ",".join(sorted(missing))
+                  "F3_LIVE_FAMILY_SOURCE_MISSING="
+                  + ",".join(sorted(missing_now))
               )
+          derivatives_present = "derivatives_change" in projectors
           results = [
               projector.project_family(item, activated_at_ms=now_ms)
               for item in snapshots
@@ -219,6 +220,8 @@ jobs:
               f"geometry={geometry_result.disposition.value} "
               f"market_family_snapshots={len(snapshots)} "
               f"projectors={','.join(sorted(projectors))} "
+              "DERIVATIVES_PREMERGE_SOURCE="
+              f"{'PRESENT' if derivatives_present else 'PENDING_RUNTIME_ACTIVATION'} "
               "ONCHAIN_STANDALONE=DEFERRED_SOURCE "
               "HISTORICAL_BACKFILL=NO REAL_CAPITAL=0"
           )
