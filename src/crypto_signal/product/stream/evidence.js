@@ -275,6 +275,160 @@ function renderCore(config, detail) {
   }
 }
 
+function resolutionLabel(value) {
+  const normalized = text(value, "UNAVAILABLE_EXPLICIT");
+  if (
+    ["READY_EXACT", "IDENTITY_ONLY_EXACT", "UNAVAILABLE_EXPLICIT"].includes(
+      normalized
+    )
+  ) {
+    return normalized;
+  }
+  return "UNAVAILABLE_EXPLICIT";
+}
+
+function renderExactEvidenceManifest(payload) {
+  const root = document.createElement("section");
+  root.className = "evidence-popout-section f6-exact-evidence-manifest";
+  const heading = document.createElement("h2");
+  heading.textContent = "Exact Frozen Evidence · F6";
+  const intro = document.createElement("p");
+  intro.textContent =
+    "Her kanıt referansı yalnız üç mekanik durumda gösterilir: READY_EXACT, IDENTITY_ONLY_EXACT veya UNAVAILABLE_EXPLICIT. Current market verisiyle geçmiş kanıt yeniden kurulmaz.";
+  root.append(heading, intro);
+
+  const counts = payload?.resolution_counts || {};
+  const countLine = document.createElement("p");
+  countLine.textContent =
+    `READY_EXACT ${number(counts.READY_EXACT, "0")} · IDENTITY_ONLY_EXACT ${number(
+      counts.IDENTITY_ONLY_EXACT,
+      "0"
+    )} · UNAVAILABLE_EXPLICIT ${number(counts.UNAVAILABLE_EXPLICIT, "0")}`;
+  root.append(countLine);
+
+  const resolutions = Array.isArray(payload?.resolutions)
+    ? payload.resolutions
+    : [];
+  for (const resolution of resolutions) {
+    const item = document.createElement("div");
+    item.className = "evidence-popout-card";
+    item.dataset.resolutionState = resolutionLabel(
+      resolution?.resolution_state
+    );
+    const label = document.createElement("span");
+    label.textContent = text(resolution?.domain, "evidence").replaceAll("_", " ");
+    const value = document.createElement("strong");
+    value.textContent = resolutionLabel(resolution?.resolution_state);
+    item.append(label, value);
+
+    const reason = document.createElement("small");
+    reason.textContent = text(
+      resolution?.reason,
+      "exact evidence resolution reason unavailable"
+    );
+    item.append(reason);
+
+    const capabilities =
+      resolution?.capabilities && typeof resolution.capabilities === "object"
+        ? resolution.capabilities
+        : {};
+    for (const [capability, state] of Object.entries(capabilities)) {
+      const cap = document.createElement("code");
+      cap.textContent = `${capability}: ${resolutionLabel(state)}`;
+      item.append(cap);
+    }
+    root.append(item);
+  }
+
+  const references = Array.isArray(payload?.reference_resolutions)
+    ? payload.reference_resolutions
+    : [];
+  if (references.length) {
+    const refsHeading = document.createElement("h3");
+    refsHeading.textContent = "Clickable exact identities";
+    root.append(refsHeading);
+  }
+  for (const reference of references.slice(0, 64)) {
+    const row = document.createElement("div");
+    row.className = "evidence-popout-actions";
+    const button = document.createElement("button");
+    button.type = "button";
+    const identity = text(reference?.evidence_identity, "");
+    button.textContent = validSha256(identity)
+      ? `${identity.slice(0, 12)}… · ${resolutionLabel(
+          reference?.resolution_state
+        )}`
+      : "Geçersiz evidence identity";
+    button.disabled = !validSha256(identity);
+    const result = document.createElement("span");
+    result.className = "proof-result";
+    button.addEventListener("click", async () => {
+      button.disabled = true;
+      result.textContent = "Exact persisted nesne doğrulanıyor…";
+      try {
+        const response = await fetchJson(
+          `/api/stream/messages/${encodeURIComponent(
+            narrativeIdentity
+          )}/evidence/${encodeURIComponent(identity)}`
+        );
+        const found = response?.reference || {};
+        const state = resolutionLabel(found?.resolution_state);
+        result.textContent =
+          state === "READY_EXACT"
+            ? `READY_EXACT · ${text(found?.object_kind, "persisted object")}`
+            : state === "IDENTITY_ONLY_EXACT"
+              ? "IDENTITY_ONLY_EXACT · kimlik kesin, bağlı exact nesne resolver'ı yok."
+              : "UNAVAILABLE_EXPLICIT · bu mesaj bu kimliği exact kanıt olarak bağlamıyor.";
+      } catch {
+        result.textContent =
+          "Exact evidence isteği başarısız; current data ile ikame yapılmadı.";
+      } finally {
+        button.disabled = false;
+      }
+    });
+    row.append(button, result);
+    root.append(row);
+  }
+  if (references.length > 64) {
+    const note = document.createElement("p");
+    note.textContent = `${references.length - 64} ek exact identity manifestte kayıtlı; pencere performansı için burada daraltıldı.`;
+    root.append(note);
+  }
+  return root;
+}
+
+async function renderDetachedExactEvidence() {
+  if (!content) return;
+  let exactEvidence;
+  try {
+    const payload = await fetchJson(
+      `/api/stream/messages/${encodeURIComponent(
+        narrativeIdentity
+      )}/evidence`
+    );
+    exactEvidence =
+      payload?.evidence && typeof payload.evidence === "object"
+        ? payload.evidence
+        : null;
+  } catch {
+    exactEvidence = null;
+  }
+  content.querySelector(".f6-exact-evidence-manifest")?.remove();
+  if (!exactEvidence) {
+    const unavailable = document.createElement("section");
+    unavailable.className = "evidence-popout-section f6-exact-evidence-manifest";
+    const h = document.createElement("h2");
+    h.textContent = "Exact Frozen Evidence · F6";
+    const p = document.createElement("p");
+    p.textContent =
+      "UNAVAILABLE_EXPLICIT · exact evidence manifest okunamadı; current data ile kanıt üretilmedi.";
+    unavailable.append(h, p);
+    content.append(unavailable);
+    return;
+  }
+  content.append(renderExactEvidenceManifest(exactEvidence));
+}
+
 async function renderDetachedFrozenVisualProof() {
   if (!["proof", "geometry"].includes(kind) || !content) return;
   const renderer = window.CryptoSignalVisualProof?.renderFrozenVisualProof;
@@ -332,6 +486,7 @@ async function init() {
     }
     if (content) content.replaceChildren();
     renderCore(config, payload.detail);
+    await renderDetachedExactEvidence();
     await renderDetachedFrozenVisualProof();
   } catch {
     if (content) {
