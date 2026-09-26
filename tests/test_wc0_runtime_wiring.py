@@ -127,6 +127,7 @@ def test_productdeploy_contract_is_exact_main_and_stream_root_with_fallback() ->
     ]
 
     assert 'git -C "$REPO" merge --ff-only "$TARGET"' in product_block
+    assert "timeout-minutes: 60" in workflow
     assert 'git -C "$PRODUCT"' in product_block
     assert 'fetch --no-tags origin main' in product_block
     assert 'rev-parse origin/main' in product_block
