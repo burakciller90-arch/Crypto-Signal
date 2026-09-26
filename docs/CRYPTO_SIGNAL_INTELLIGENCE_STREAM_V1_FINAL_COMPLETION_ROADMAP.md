@@ -171,8 +171,8 @@ Execute exactly in this order:
 → **F3 Five-Family Live Intelligence Projection — PASS**  
 → **F4 Risk + System Trust Projection — PASS**  
 → **F5 Three-Vault Capital Story — PASS FOR CURRENT FRONTEND SCOPE; LIVE PORTFOLIO/CAPITAL PROOF DEFERRED**  
-→ **F6 Exact Frozen Evidence Closure — ACTIVE**  
-→ **F7 Guarded Local LLM/Ollama Activation**  
+→ **F6 Exact Frozen Evidence Closure — PASS**  
+→ **F7 Guarded Local LLM/Ollama Activation — ACTIVE**  
 → **F8 Real Production Multi-Category E2E Acceptance**  
 → **F9 Final Real-UI Product Acceptance**  
 → **F10 Authority Freeze / Closeout**
