@@ -24,7 +24,7 @@ jobs:
           set -euo pipefail
           cmd="$(printf '%s\n' "$ISSUE_BODY" | awk -F: 'tolower($1)=="command" {gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2); print tolower($2); exit}')"
           case "$cmd" in
-            status|eventsourcestate|eventsourcesnapshot|blsprobe|fredprobe|wc2epoch2activate|wc2policyregister|wc2protocolregister|wc2executionprotocolregister|wc2executionruntimeregister|wc2executiononce|wc2executionstate|wc2collectonce|wc2state|services|logs|disk|sync|producttest|fulltest|productstate|productdeploy|paperreview|paperinspect|paperfixlint|paperharden|stateplanreview|stateplaninspect|stateplanharden|cursorreview|cursorreviewtail|cursorcleanup|bridgecheck|bridgestate|rollingstate|pausecheck|wakepause|wakeresume|wakearm|waketest|wakeheartbeat|chatbusyprobe|cursorcheck|cursorauthdiag|cursorttycheck|alertclockstate|alertclockpause|alertclockresume|migrationinspect|migrationinventory|ssddashboarddiag|productcrashlogs|ssddashboardwrappertest|ssdtcclaunchtest|ssdbackgroundteststart|ssdbackgroundtestcheck|ssdleftover|runnerpersistinstall|runnerpersistdiag|runnercutoverdiag|dashboardstart504|visualcleanup|visualsnapshot|galactechpreview|runnerterminalwatchdoginstall)
+            status|eventsourcestate|eventsourcesnapshot|blsprobe|fredprobe|wc2epoch2activate|wc2policyregister|wc2protocolregister|wc2executionprotocolregister|wc2executionruntimeregister|wc2executiononce|wc2executionstate|wc2collectonce|wc2state|services|logs|disk|sync|streamreload|producttest|fulltest|productstate|productdeploy|paperreview|paperinspect|paperfixlint|paperharden|stateplanreview|stateplaninspect|stateplanharden|cursorreview|cursorreviewtail|cursorcleanup|bridgecheck|bridgestate|rollingstate|pausecheck|wakepause|wakeresume|wakearm|waketest|wakeheartbeat|chatbusyprobe|cursorcheck|cursorauthdiag|cursorttycheck|alertclockstate|alertclockpause|alertclockresume|migrationinspect|migrationinventory|ssddashboarddiag|productcrashlogs|ssddashboardwrappertest|ssdtcclaunchtest|ssdbackgroundteststart|ssdbackgroundtestcheck|ssdleftover|runnerpersistinstall|runnerpersistdiag|runnercutoverdiag|dashboardstart504|visualcleanup|visualsnapshot|galactechpreview|runnerterminalwatchdoginstall)
               ;;
             *)
               echo "Unsupported command: $cmd"
@@ -1740,6 +1740,169 @@ jobs:
           echo "BEFORE=$BEFORE"
           echo "AFTER=$AFTER"
           git -C "$REPO" status --short --branch
+
+      - name: STREAM SUPERVISOR RELOAD
+        if: steps.parse.outputs.command == 'streamreload'
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          DEV="$ROOT/Development"
+          SOURCE="$DEV/ops/ssd_runtime_supervisor.sh"
+          TARGET="$ROOT/ssd-service-supervisor.sh"
+          STARTER="$DEV/ops/r11/start_ssd_runtime.command"
+          PIDFILE="$ROOT/ssd-service-supervisor.pid"
+          STREAM_DB="$DEV/runtime/stream/intelligence_stream.sqlite3"
+          BACKUP="$RUNNER_TEMP/ssd-service-supervisor.previous.sh"
+          INSTALL_TMP="$ROOT/.ssd-service-supervisor.streamreload.$"
+          API="http://127.0.0.1:48700/api/stream/messages?limit=5"
+
+          test "$(id -u)" = "504"
+          test -z "$(git -C "$DEV" status --porcelain)"
+          DEV_HEAD="$(git -C "$DEV" rev-parse HEAD)"
+          echo "STREAM_RELOAD_DEVELOPMENT_HEAD=$DEV_HEAD"
+          echo "STREAM_RELOAD_WORKFLOW_SHA=$GITHUB_SHA"
+          test "$DEV_HEAD" = "$GITHUB_SHA"
+          test -f "$SOURCE"
+          test -f "$TARGET"
+          test -x "$STARTER"
+          bash -n "$SOURCE"
+          grep -F -- '--stream-enabled' "$SOURCE" >/dev/null
+          grep -F -- '--stream-ledger "$stream"' "$SOURCE" >/dev/null
+
+          find_supervisors() {
+            /bin/ps -axo pid=,comm=,args= 2>/dev/null \
+              | /usr/bin/awk -v needle="$TARGET" \
+                '($2 == "bash" || $2 == "/bin/bash") && index($0, needle) > 0 {print $1}'
+          }
+
+          SUP_PIDS="$(find_supervisors)"
+          SUP_COUNT="$(printf '%s\n' "$SUP_PIDS" | awk 'NF {n++} END {print n+0}')"
+          echo "STREAM_RELOAD_SUPERVISOR_COUNT_BEFORE=$SUP_COUNT"
+          test "$SUP_COUNT" = "1"
+          OLD_PID="$(printf '%s\n' "$SUP_PIDS" | awk 'NF {print $1; exit}')"
+          test -n "$OLD_PID"
+          kill -0 "$OLD_PID"
+
+          cp -p "$TARGET" "$BACKUP"
+          cp "$SOURCE" "$INSTALL_TMP"
+          chmod 755 "$INSTALL_TMP"
+          SOURCE_SHA="$(shasum -a 256 "$SOURCE" | awk '{print $1}')"
+          NEW_SHA="$(shasum -a 256 "$INSTALL_TMP" | awk '{print $1}')"
+          test "$SOURCE_SHA" = "$NEW_SHA"
+          mv "$INSTALL_TMP" "$TARGET"
+
+          rollback() {
+            rc=$?
+            trap - ERR
+            set +e
+            echo "STREAM_SUPERVISOR_RELOAD_ROLLBACK=YES rc=$rc"
+            rm -f "$INSTALL_TMP"
+            if [ -f "$BACKUP" ]; then
+              rollback_tmp="$ROOT/.ssd-service-supervisor.rollback.$"
+              cp -p "$BACKUP" "$rollback_tmp"
+              mv "$rollback_tmp" "$TARGET"
+            fi
+            current_pids="$(find_supervisors)"
+            for pid in $current_pids; do
+              kill -TERM "$pid" >/dev/null 2>&1 || true
+            done
+            sleep 2
+            /bin/bash "$STARTER" >/dev/null 2>&1 || true
+            exit "$rc"
+          }
+          trap rollback ERR
+
+          kill -TERM "$OLD_PID"
+          stopped=0
+          for _ in {1..20}; do
+            if ! kill -0 "$OLD_PID" >/dev/null 2>&1; then
+              stopped=1
+              break
+            fi
+            sleep 1
+          done
+          test "$stopped" = "1"
+
+          /bin/bash "$STARTER"
+          NEW_PID="$(cat "$PIDFILE" 2>/dev/null || true)"
+          test -n "$NEW_PID"
+          test "$NEW_PID" != "$OLD_PID"
+          kill -0 "$NEW_PID"
+          /bin/ps -p "$NEW_PID" -o command= | grep -F "$TARGET" >/dev/null
+
+          TARGET_SHA="$(shasum -a 256 "$TARGET" | awk '{print $1}')"
+          test "$TARGET_SHA" = "$SOURCE_SHA"
+
+          stream_ready=0
+          for _ in {1..90}; do
+            if [ -f "$STREAM_DB" ] \
+              && curl -fsS --max-time 5 "$API" > "$RUNNER_TEMP/stream-live-messages.json" 2>/dev/null; then
+              stream_ready=1
+              break
+            fi
+            sleep 2
+          done
+          test "$stream_ready" = "1"
+
+          PYTHONPATH="$DEV/src" "$DEV/.venv/bin/python" - <<'PY'
+          import json
+          from pathlib import Path
+
+          from crypto_signal.product.intelligence_stream_ledger import IntelligenceStreamLedger
+          from crypto_signal.product.intelligence_stream_narrative_ledger import (
+              IntelligenceStreamNarrativeLedger,
+          )
+
+          path = Path(
+              "/Volumes/Crypto-504/Crypto-Signal/Development/runtime/stream/"
+              "intelligence_stream.sqlite3"
+          )
+          ledger = IntelligenceStreamLedger(path)
+          activation = ledger.read_activation()
+          status = ledger.read_status()
+          assert activation["historical_rich_backfill_allowed"] is False
+          assert activation["production_authority"] is False
+          assert activation["real_capital"] == 0
+          activated_at_ms = int(activation["activated_at_ms"])
+          for event in ledger.read_events(limit=1000):
+              assert int(event["event_at_ms"]) >= activated_at_ms
+          narrative = IntelligenceStreamNarrativeLedger(path).read_status()
+          with open(
+              "/Volumes/Crypto-504/Crypto-Signal/Runner/_work/_temp/"
+              "stream-live-messages.json",
+              "r",
+              encoding="utf-8",
+          ) as handle:
+              payload = json.load(handle)
+          assert payload.get("real_capital") == 0
+          print(f"STREAM_ACTIVATED_AT_MS={activated_at_ms}")
+          print(f"STREAM_SOURCE_EVENT_COUNT={status.source_event_count}")
+          print(f"STREAM_NARRATIVE_COUNT={narrative.narrative_count}")
+          print("STREAM_HISTORICAL_BACKFILL=NO")
+          print("REAL_CAPITAL=0")
+          PY
+
+          curl -fsS --max-time 5 http://127.0.0.1:48700/api/health \
+            > "$RUNNER_TEMP/stream-reload-health.json"
+          python3 - "$RUNNER_TEMP/stream-reload-health.json" <<'PY'
+          import json
+          import sys
+          with open(sys.argv[1], "r", encoding="utf-8") as handle:
+              data = json.load(handle)
+          assert data.get("status") == "ok"
+          assert data.get("product_root") == "stream"
+          assert data.get("stream_root_active") is True
+          assert data.get("real_capital") == 0
+          assert data.get("read_only") is True
+          PY
+
+          trap - ERR
+          rm -f "$BACKUP"
+          echo "STREAM_SUPERVISOR_RELOAD_PASS=YES"
+          echo "STREAM_LIVE_API_PASS=YES"
+          echo "STREAM_HISTORICAL_BACKFILL=NO"
+          echo "REAL_CAPITAL=0"
 
       - name: PRODUCT TEST
         if: steps.parse.outputs.command == 'producttest'
