@@ -73,7 +73,7 @@ jobs:
           backup(stream, root / "stream.sqlite3")
           PY
 
-          "$PY" ops/run_market_tape_snapshot.py             --db "$TMP/market.sqlite3"             --lock-path "$TMP/market-snapshot.lock"             --symbols BTCUSDT ETHUSDT SOLUSDT             --book-depth 50             --trade-limit 60             --oi-interval 15min             --oi-limit 16
+          echo "F3_PERSISTED_SOURCE_ONLY_DRY_RUN=YES"
 
           "$PY" - "$TMP" <<'PY'
           import time
