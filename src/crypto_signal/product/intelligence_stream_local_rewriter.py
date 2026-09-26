@@ -208,6 +208,8 @@ def _chat_payload(
         ],
         "temperature": config.temperature,
         "max_tokens": config.max_tokens,
+        "reasoning_effort": "none",
+        "response_format": {"type": "json_object"},
         "stream": False,
     }
 
