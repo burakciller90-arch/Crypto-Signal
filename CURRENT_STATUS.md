@@ -4,10 +4,53 @@ Updated: 2026-09-26
 Project: Crypto Signal
 Baseline: crypto-signal-full-version-v1.0.0 (immutable)
 Active post-v1.0 program: v1.1 world-class product + market intelligence + Crypto Signal Intelligence Stream V1
-State: WC0_LIVE_PRODUCT_PARITY_ACCEPTED / WC1_24_7_DATA_RELIABILITY_ACCEPTED / WC2_ENGINEERING_FROZEN_EVIDENCE_ACCUMULATION_ACTIVE / WC4_CHAMPION_CHALLENGER_ENGINEERING_ACCEPTED_RESEARCH_ONLY / WC5_ENGINEERING_ACCEPTED_PRODUCT_DEPLOYED_HUMAN_USABILITY_NOT_MEASURED / WC6_SANDBOX_BOUNDARY_ACCEPTED_VENUE_EVIDENCE_EXTERNAL_DEPENDENCY / WC7_CURRENT_FRONTIER_PACKET_ACCEPTED_CURRENT_INSUFFICIENT_EVIDENCE / INTELLIGENCE_STREAM_V1_S0_PASS_S1_PASS_S2_PASS_S3_PASS_S4_PASS_S5_PASS_S6_PASS_S7_PASS_S8_PASS_S9_PASS_S10_PASS_S11_PASS_S12_PASS_S13_PASS_S14_PASS_S15_ACTIVE / CONTINUITY_PAUSED_BY_USER
+State: WC0_LIVE_PRODUCT_PARITY_ACCEPTED / WC1_24_7_DATA_RELIABILITY_ACCEPTED / WC2_ENGINEERING_FROZEN_EVIDENCE_ACCUMULATION_ACTIVE / WC4_CHAMPION_CHALLENGER_ENGINEERING_ACCEPTED_RESEARCH_ONLY / WC5_ENGINEERING_ACCEPTED_PRODUCT_DEPLOYED_HUMAN_USABILITY_NOT_MEASURED / WC6_SANDBOX_BOUNDARY_ACCEPTED_VENUE_EVIDENCE_EXTERNAL_DEPENDENCY / WC7_CURRENT_FRONTIER_PACKET_ACCEPTED_CURRENT_INSUFFICIENT_EVIDENCE / INTELLIGENCE_STREAM_V1_S0_PASS_S1_PASS_S2_PASS_S3_PASS_S4_PASS_S5_PASS_S6_PASS_S7_PASS_S8_PASS_S9_PASS_S10_PASS_S11_PASS_S12_PASS_S13_PASS_S14_PASS_S15_PASS_S16_ACTIVE / CONTINUITY_PAUSED_BY_USER
 REAL_CAPITAL: 0
 
 ## Active v1.1 frontier — read before historical sections
+
+### 2026-09-26 — STREAM S15 END-TO-END PRODUCT ACCEPTANCE PASS / S16 CONTROLLED CUTOVER ACTIVE
+
+S15 is mechanically, behaviorally and visually accepted.
+
+Canonical acceptance record:
+- `docs/CRYPTO_SIGNAL_STREAM_S15_ACCEPTANCE.md`.
+
+Accepted S15 product story:
+- real persisted decision/message opened through the real product server;
+- live resolution/story update delivered automatically through Stream transport;
+- live virtual-capital message delivered through Stream transport;
+- configurable sound unlocked by user gesture and each eligible live-new identity sounded exactly once;
+- original message remained immutable when later story truth arrived;
+- SIMPLE / PRO / INTELLIGENCE / DECISION / CAPITAL depth available;
+- all five supported intelligence families visible;
+- exact frozen proof with no current-data substitution;
+- search + click-driven exact deep link;
+- exact forecast / Decision Proof / R22 / R21 capital lineage;
+- server restart persistence on the same immutable ledgers;
+- desktop + exact 430px mobile no-overflow;
+- REAL_CAPITAL=0 preserved.
+
+Merged implementation:
+- PR #1298;
+- main `9026c8511391884a4d42ae9c991fba31d6f5920c`.
+
+Exact-head acceptance:
+- implementation head `3dd33cf7809c97b6769d319510f67800604525bc`;
+- UID504 run `36226728875` PASS;
+- artifact `stream-s15-e2e-snapshot-36226728875`;
+- focused S15 acceptance PASS;
+- whole-repository regression PASS;
+- real backend-to-browser E2E PASS;
+- exactly-once resolution + capital chime PASS;
+- immutable story continuation PASS;
+- exact proof/capital lineage PASS;
+- restart persistence PASS;
+- Development checkout non-mutation PASS.
+
+The active Stream frontier is now **S16 — Controlled Cutover**.
+
+S16 must prove exact-main preview/runtime parity, persistence/live delivery/sound/search/evidence/capital/long-session/accessibility parity and a tested rollback path before the Intelligence Stream becomes the product root. The legacy GALACTECH V2 surface remains fallback until that gate closes.
 
 ### 2026-09-26 — STREAM S14 HARDENING PASS / S15 END-TO-END PRODUCT ACCEPTANCE ACTIVE
 
