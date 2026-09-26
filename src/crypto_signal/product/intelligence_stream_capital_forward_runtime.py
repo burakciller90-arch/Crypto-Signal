@@ -343,13 +343,18 @@ class IntelligenceStreamCapitalForwardRuntime:
         decisions = []
         inserted_decisions = 0
         hold_intents = 0
-        for vault_id in PaperVaultId:
+        # The allocator assessment is one canonical event.  Vault decisions are
+        # subsequent canonical decisions and therefore receive a deterministic
+        # monotonic millisecond after the assessment in stable vault order.
+        # This preserves the Stream's global forward-only chronology without
+        # weakening its anti-backfill guard or inventing market timestamps.
+        for decision_offset_ms, vault_id in enumerate(PaperVaultId, start=1):
             decision = build_vault_decision(
                 state.activation,
                 capital.candidate,
                 capital.allocation,
                 vault_id=vault_id,
-                decided_at_ms=assessed_at_ms,
+                decided_at_ms=assessed_at_ms + decision_offset_ms,
             )
             existing = ledger.read(decision.decision_identity)
             if existing is None:
