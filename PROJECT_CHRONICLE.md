@@ -1,5 +1,19 @@
 # PROJECT CHRONICLE
 
+## 2026-09-26 — Final Stream F2 production backbone accepted; F3 becomes active
+
+F2 closes the generic production source-to-message backbone gap without claiming any new source family live.
+
+The accepted implementation adds `StreamProductionProjectorContract` and `IntelligenceStreamProductionProjector`. Exact source identity, normalized event identity, category/subtype/importance, market context, source/event time, evidence identities, story/current/previous references and the accepted materiality-decision reason are bound into one deterministic contract with `production_authority=false` and `REAL_CAPITAL=0`.
+
+The backbone reuses the existing source/message, Story, Analytical, materiality and Narrative ledgers/engines; it does not create a parallel customer-message system. Registry entries that are still `REQUIRES_CHANGE_DETECTION` remain fail-closed and cannot be published merely because a projector name exists.
+
+UID504 exact-source run `36253512588` passed focused F2/forward-runtime tests, ruff, strict mypy, broad repository sync regression, full `ruff check src tests`, strict mypy over 237 source files and JavaScript syntax/freshness checks. No historical rich backfill or scientific-policy relaxation occurred.
+
+Canonical acceptance: `docs/CRYPTO_SIGNAL_STREAM_FINAL_F2_PRODUCTION_BACKBONE_ACCEPTANCE.md`.
+
+The sole final-completion frontier is now F3 — Five-Family Live Intelligence Projection. `REAL_CAPITAL=0`.
+
 ## 2026-09-26 — Final Stream F1 closes live; F2 becomes active
 
 F1 WC2 Forward-Liveness Truth is fully accepted and physically live.
@@ -14,6 +28,8 @@ UID504 live activation run `36252043820` observed a new supervisor-cycle marker:
 The marker count advanced from 1 to 2 while the WC2 policy and collection-protocol files remained byte-identical. Product remained untouched at `d343c4b2d10489a88f614bd58c9539be76029f80`. Accepted artifact: `stream-final-f1-live-activation-36252043820`, id `10909291747`, digest `sha256:3c435fe78bb048d6c9ebb4a2e06e40880971edfae00a1425ae42506cadfbf161`.
 
 F1 is therefore closed. The sole active final-completion frontier is F2 — Production Source-to-Message Backbone. F2 must reuse the accepted Stream truth pipeline and provide a common production projector contract for later source families; no parallel message path, historical rich backfill, synthetic activity or real-money authority is permitted. `REAL_CAPITAL=0`.
+
+A post-close replay observability defect was then corrected without changing eligibility policy: PR #1352 merged `9f747628f4c7b137362e8d184e4b61ce166b39ad`, classifying ineligible replay sources before prepared-receipt lookup. UID504 live run `36252540997` proved the next real supervisor summary as `skipped_ineligible_source:17 / source_not_directional_with_frozen_geometry:17`, with policy/protocol unchanged, Product unchanged and `REAL_CAPITAL=0`. Artifact: `stream-final-f1-replay-live-36252540997`, id `10910031464`, digest `sha256:b71d4b4e7d058c7670c287107ef8495ce0675b19a6f3b29712b5a58c8208c893`. The earlier `no_prepared_receipt` live marker is retained only as historical evidence of the telemetry defect and must not be interpreted as an eligibility gap.
 
 ## 2026-09-26 — Final Stream F1 proves WC2 correct silence; live observability activation remains
 

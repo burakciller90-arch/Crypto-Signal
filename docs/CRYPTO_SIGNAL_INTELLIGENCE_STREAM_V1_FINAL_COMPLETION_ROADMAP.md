@@ -167,8 +167,8 @@ Execute exactly in this order:
 
 **F0 Authority + Gap Reconciliation — PASS**  
 → **F1 WC2 Forward-Liveness Truth — PASS**  
-→ **F2 Production Source-to-Message Backbone — ACTIVE**  
-→ **F3 Five-Family Live Intelligence Projection**  
+→ **F2 Production Source-to-Message Backbone — PASS**  
+→ **F3 Five-Family Live Intelligence Projection — ACTIVE**  
 → **F4 Risk + System Trust Projection**  
 → **F5 Three-Vault Capital Story Live Closure**  
 → **F6 Exact Frozen Evidence Closure**  
@@ -391,6 +391,23 @@ Routine summaries remain optional and cannot become spam.
 ## PASS
 
 A reusable production source-projector interface exists and all later families plug into it without bypassing S3/S4/S5 truth controls.
+
+---
+
+## F2 final closure — 2026-09-26
+
+F2 is fully accepted.
+
+- canonical acceptance: `docs/CRYPTO_SIGNAL_STREAM_FINAL_F2_PRODUCTION_BACKBONE_ACCEPTANCE.md`;
+- reusable fail-closed production projector boundary:
+  `src/crypto_signal/product/intelligence_stream_production_projector.py`;
+- common contract binds exact source/event/category/subtype/importance/market/time/evidence/story/current+previous references to the accepted materiality decision;
+- downstream ownership remains the accepted Story → Analytical → materiality → Narrative → immutable ledger chain;
+- unimplemented later-family registry entries remain rejected until their exact source-specific F3/F4 projector is implemented;
+- UID504 exact-source run `36253512588` passed focused tests, ruff, strict mypy, broad repository regression, full source/test ruff, strict mypy over 237 source files and JavaScript freshness/syntax checks;
+- no historical backfill, no synthetic activity, no production-authority expansion, `REAL_CAPITAL=0`.
+
+Next exact frontier: **F3 — Five-Family Live Intelligence Projection**.
 
 ---
 
