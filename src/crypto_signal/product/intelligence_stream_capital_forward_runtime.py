@@ -34,10 +34,7 @@ from crypto_signal.ledger.serialization import (
     canonical_sha256,
     sha256_text,
 )
-from crypto_signal.paper.capital_science_bridge import (
-    CapitalScienceBridgeResult,
-    assess_unified_decision_capital,
-)
+from crypto_signal.paper.capital_science_bridge import assess_unified_decision_capital
 from crypto_signal.paper.canonical_sizing_events import CanonicalSizingEventLedger
 from crypto_signal.paper.canonical_vault_decisions import (
     CanonicalVaultDecisionDisposition,
