@@ -770,3 +770,14 @@ def test_stream_family_projection_precedes_wc2_outcome_fail_stop() -> None:
     assert family_market_tape < wc2_outcomes
     assert family_lifecycle < wc2_execution
     assert family_market_tape < wc2_execution
+
+
+def test_stream_capital_forward_runtime_is_wired_to_prepared_owner() -> None:
+    source = inspect.getsource(clock.run)
+
+    assert "stream_capital_runtime = IntelligenceStreamCapitalForwardRuntime(" in source
+    assert "stream_capital_runtime.ensure_activated(" in source
+    assert "def project_stream_capital(" in source
+    assert "capital_hook=(" in source
+    assert "stream_capital status=ACTIVATED" in source
+    assert "stream_capital status=PROJECTED" in source

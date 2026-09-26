@@ -5,6 +5,7 @@ import json
 from collections.abc import Callable
 from dataclasses import dataclass
 from enum import StrEnum
+from typing import Protocol
 
 from crypto_signal.decision_ledger import (
     DecisionLedgerWriteDisposition,
@@ -30,6 +31,7 @@ from crypto_signal.evaluation.untouched_forward_prepared import (
     WC2PreparedCycleReceipt,
     build_wc2_prepared_cycle_receipt,
 )
+from crypto_signal.intelligence.event_risk_circuit_breaker import CircuitBreakerAnalysis
 from crypto_signal.ledger.coverage import LiveCoverageContext
 from crypto_signal.ledger.deserialization import parse_signal_decision
 from crypto_signal.ledger.live_clock import LiveFreezeResult, LiveFreezeStatus
@@ -94,6 +96,17 @@ class WC2PreparedLiveResult:
             raise ValueError("WC2 prepared live result crossed authority boundary")
 
 
+class WC2CapitalIssuanceHook(Protocol):
+    def __call__(
+        self,
+        issuance: UnifiedDecisionIssuance,
+        *,
+        event_context: CircuitBreakerAnalysis,
+        base_asset: str,
+        assessed_at_ms: int,
+    ) -> object: ...
+
+
 def process_wc2_prepared_live_freeze(
     result: LiveFreezeResult,
     *,
@@ -113,6 +126,7 @@ def process_wc2_prepared_live_freeze(
     collection_protocol_identity: str,
     collection_start_ms: int | None = None,
     issuance_hook: Callable[[UnifiedDecisionIssuance], object] | None = None,
+    capital_hook: WC2CapitalIssuanceHook | None = None,
 ) -> WC2PreparedLiveResult:
     """Process one live freeze with durable pre-R20 crash recovery."""
     if observed_at_ms < 0:
@@ -156,6 +170,7 @@ def process_wc2_prepared_live_freeze(
             collection_protocol_identity=collection_protocol_identity,
             collection_start_ms=effective_collection_start_ms,
             issuance_hook=issuance_hook,
+            capital_hook=capital_hook,
         )
     if result.status is LiveFreezeStatus.ALREADY_FROZEN:
         return _process_replay_prepared(
@@ -172,6 +187,7 @@ def process_wc2_prepared_live_freeze(
             collection_protocol_identity=collection_protocol_identity,
             collection_start_ms=effective_collection_start_ms,
             issuance_hook=issuance_hook,
+            capital_hook=capital_hook,
         )
     raise ValueError("unsupported WC2 prepared live freeze status")
 
@@ -193,6 +209,7 @@ def _process_fresh_prepared(
     collection_protocol_identity: str,
     collection_start_ms: int,
     issuance_hook: Callable[[UnifiedDecisionIssuance], object] | None,
+    capital_hook: WC2CapitalIssuanceHook | None,
 ) -> WC2PreparedLiveResult:
     if result.bundle is None or result.frozen_at_ms is None:
         raise ValueError("fresh WC2 prepared cycle lost exact in-process bundle")
@@ -233,10 +250,10 @@ def _process_fresh_prepared(
         maximum_issuance_delay_ms=maximum_issuance_delay_ms,
         horizon_bars=horizon_bars,
         base_asset=base_asset,
-        capital_assessed_at_ms=observed_at_ms,
-        sized_at_ms=observed_at_ms,
-        previewed_at_ms=observed_at_ms,
-        indexed_at_ms=observed_at_ms,
+        capital_assessed_at_ms=observed_at_ms + 1,
+        sized_at_ms=observed_at_ms + 2,
+        previewed_at_ms=observed_at_ms + 3,
+        indexed_at_ms=observed_at_ms + 4,
     )
     prepared_journal.append(receipt)
     completion = complete_wc2_prepared_cycle(
@@ -248,6 +265,7 @@ def _process_fresh_prepared(
         shadow_journal=shadow_journal,
         shadow_manifest=shadow_manifest,
         issuance_hook=issuance_hook,
+        capital_hook=capital_hook,
     )
     return _prepared_completion_result(
         WC2PreparedLiveStatus.COMPLETED_FRESH,
@@ -273,6 +291,7 @@ def _process_replay_prepared(
     collection_protocol_identity: str,
     collection_start_ms: int,
     issuance_hook: Callable[[UnifiedDecisionIssuance], object] | None,
+    capital_hook: WC2CapitalIssuanceHook | None,
 ) -> WC2PreparedLiveResult:
     freeze = signal_ledger.get_freeze_by_source_cutoff(
         exchange=context.exchange.value,
@@ -328,6 +347,7 @@ def _process_replay_prepared(
         shadow_journal=shadow_journal,
         shadow_manifest=shadow_manifest,
         issuance_hook=issuance_hook,
+        capital_hook=capital_hook,
     )
     return _prepared_completion_result(
         WC2PreparedLiveStatus.COMPLETED_RECOVERED,
@@ -461,6 +481,7 @@ def complete_wc2_prepared_cycle(
     shadow_journal: R25ShadowIntentJournal,
     shadow_manifest: R25ShadowCycleManifest,
     issuance_hook: Callable[[UnifiedDecisionIssuance], object] | None = None,
+    capital_hook: WC2CapitalIssuanceHook | None = None,
 ) -> WC2PreparedCompletionResult:
     """Flush one pre-outcome receipt without any new market-data read."""
     if policy.policy_identity != receipt.policy_identity:
@@ -538,6 +559,13 @@ def complete_wc2_prepared_cycle(
         )
     if issuance_hook is not None:
         issuance_hook(issuance)
+    if capital_hook is not None:
+        capital_hook(
+            issuance,
+            event_context=receipt.source_inputs.event_context,
+            base_asset=receipt.base_asset,
+            assessed_at_ms=receipt.capital_assessed_at_ms,
+        )
 
     return WC2PreparedCompletionResult(
         receipt_identity=receipt.receipt_identity,

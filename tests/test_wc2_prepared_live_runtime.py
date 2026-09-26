@@ -116,6 +116,7 @@ def _call(
     collection_start_ms: int | None = None,
     collection_protocol_identity: str = PROTOCOL_IDENTITY,
     issuance_hook=None,
+    capital_hook=None,
 ):
     return process_wc2_prepared_live_freeze(
         result,
@@ -139,6 +140,7 @@ def _call(
         collection_protocol_identity=collection_protocol_identity,
         collection_start_ms=collection_start_ms,
         issuance_hook=issuance_hook,
+        capital_hook=capital_hook,
     )
 
 
@@ -275,6 +277,76 @@ def test_receipt_is_durable_before_r20_persistence_is_attempted(
     assert not paths["cohort"].exists()
     assert not paths["shadow"].exists()
     assert not paths["manifest"].exists()
+
+
+def test_capital_hook_reuses_exact_prepared_context_on_fresh_and_replay(
+    tmp_path: Path,
+) -> None:
+    bundle = directional_bundle()
+    signal = bundle.signal_decision
+    frozen_at = signal.as_of_ms + 10
+    observed_at = frozen_at + 20
+    paths = _paths(tmp_path)
+    ledger = ImmutableSignalLedger(tmp_path / "signal.sqlite3")
+    _persist_source(ledger, bundle, frozen_at_ms=frozen_at)
+    policy = _policy(bundle)
+    activation = _activation()
+    calls: list[tuple[str, str, str, int]] = []
+
+    def capital_hook(
+        issuance,
+        *,
+        event_context,
+        base_asset,
+        assessed_at_ms,
+    ):
+        calls.append(
+            (
+                issuance.forecast.forecast_identity,
+                event_context.evidence_identity,
+                base_asset,
+                assessed_at_ms,
+            )
+        )
+        return object()
+
+    first = _call(
+        _fresh(bundle, frozen_at),
+        bundle=bundle,
+        signal_ledger=ledger,
+        policy=policy,
+        activation=activation,
+        paths=paths,
+        observed_at_ms=observed_at,
+        capital_hook=capital_hook,
+    )
+    replay = _call(
+        _replay(bundle),
+        bundle=bundle,
+        signal_ledger=ledger,
+        policy=policy,
+        activation=activation,
+        paths=paths,
+        observed_at_ms=observed_at + 50_000,
+        capital_hook=capital_hook,
+    )
+
+    assert first.status is WC2PreparedLiveStatus.COMPLETED_FRESH
+    assert replay.status is WC2PreparedLiveStatus.COMPLETED_RECOVERED
+    assert len(calls) == 2
+    assert calls[0] == calls[1]
+    receipt = WC2PreparedCycleJournal(paths["prepared"]).read_for_signal(
+        signal.freeze_identity
+    )
+    assert receipt is not None
+    assert calls[0][0] == first.forecast_identity
+    assert calls[0][1] == receipt.source_inputs.event_context.evidence_identity
+    assert calls[0][2] == receipt.base_asset
+    assert calls[0][3] == receipt.capital_assessed_at_ms
+    assert receipt.capital_assessed_at_ms == observed_at + 1
+    assert receipt.sized_at_ms == observed_at + 2
+    assert receipt.previewed_at_ms == observed_at + 3
+    assert receipt.indexed_at_ms == observed_at + 4
 
 
 def test_post_activation_replay_without_receipt_never_backfills(
