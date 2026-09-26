@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 from __future__ import annotations
 
 import argparse
@@ -19,7 +18,7 @@ REAL_CAPITAL = 0
 def _value(result: dict[str, Any]) -> object:
     outer = result.get("result", {})
     if not isinstance(outer, dict):
-        raise RuntimeError("CDP Runtime.evaluate missing result")
+        raise TypeError("CDP Runtime.evaluate missing result")
     if "exceptionDetails" in result:
         raise RuntimeError(f"CDP Runtime.evaluate exception: {result['exceptionDetails']!r}")
     return outer.get("value")
@@ -131,7 +130,7 @@ def _interaction_expression(identity: str, search_text: str, category: str) -> s
 
 def _assert_snapshot(snapshot: object, identity: str) -> dict[str, Any]:
     if not isinstance(snapshot, dict):
-        raise RuntimeError("browser snapshot must be object")
+        raise TypeError("browser snapshot must be object")
     if snapshot.get("fixture"):
         raise RuntimeError("F8 browser probe entered fixture mode")
     if snapshot.get("identity") != identity:
@@ -144,10 +143,10 @@ def _assert_snapshot(snapshot: object, identity: str) -> dict[str, Any]:
         raise RuntimeError("browser viewport has horizontal overflow")
     notification = snapshot.get("notification")
     if not isinstance(notification, dict):
-        raise RuntimeError("notification audit snapshot unavailable")
+        raise TypeError("notification audit snapshot unavailable")
     audit = notification.get("audit")
     if not isinstance(audit, dict):
-        raise RuntimeError("notification audit body unavailable")
+        raise TypeError("notification audit body unavailable")
     if int(audit.get("chimePlayed", -1)) != 0:
         raise RuntimeError("historical/deep-link load emitted a chime")
     if int(audit.get("duplicate", -1)) != 0:
@@ -197,7 +196,7 @@ def run_probe(args: argparse.Namespace) -> dict[str, object]:
         target = _wait_target(port, url)
         websocket_url = target.get("webSocketDebuggerUrl")
         if not isinstance(websocket_url, str):
-            raise RuntimeError("Chrome target missing websocket URL")
+            raise TypeError("Chrome target missing websocket URL")
         session = CdpSession(websocket_url)
         session.command("Page.enable")
         session.command("Runtime.enable")
@@ -237,7 +236,7 @@ def run_probe(args: argparse.Namespace) -> dict[str, object]:
             await_promise=True,
         )
         if not isinstance(interaction, dict):
-            raise RuntimeError("browser interaction result must be object")
+            raise TypeError("browser interaction result must be object")
         if interaction.get("error"):
             raise RuntimeError(str(interaction["error"]))
         if interaction.get("expanded") is not True:
