@@ -10,7 +10,6 @@ from typing import Any
 from crypto_signal.intelligence.confluence_matrix_v2 import ConfluenceFamily
 from crypto_signal.ledger.serialization import canonical_json, canonical_sha256, sha256_text
 from crypto_signal.product.intelligence_stream_ledger import IntelligenceStreamLedger
-from crypto_signal.product.intelligence_stream_message_ledger import IntelligenceStreamMessageLedger
 from crypto_signal.product.intelligence_stream_messages import (
     STREAM_MESSAGE_INPUT_SCHEMA_VERSION,
     STREAM_MESSAGE_PROJECTOR_VERSION,
@@ -217,6 +216,7 @@ class StreamFamilyStoryObservation:
     family: ConfluenceFamily
     state_label: str
     state_key: str
+    state_components: tuple[StreamFamilyStateComponent, ...]
     event_at_ms: int
     asset: str
     symbol: str
@@ -297,6 +297,9 @@ class StreamFamilyStoryState:
                 self.previous_state_identity,
                 "family story previous state",
             )
+        component_keys = tuple(item.name for item in self.state_components)
+        if component_keys != tuple(sorted(set(component_keys))):
+            raise ValueError("Stream family story components must be canonical")
         _require_authority(
             self.schema_version,
             STREAM_FAMILY_STORY_STATE_SCHEMA_VERSION,
@@ -1231,8 +1234,7 @@ def _build_family_fact(
     state_key: str,
     previous_fact_bundle_identity: str | None,
 ) -> StreamFamilyFactBundle:
-    draft = StreamFamilyFactBundle(
-        fact_bundle_identity="0" * 64,
+    payload = _family_fact_payload_values(
         stream_event_identity=source_event.stream_event_identity,
         source_event_identity=source_event.source_event_identity,
         story_identity=story_identity,
@@ -1255,14 +1257,30 @@ def _build_family_fact(
         uncertainty_flags=snapshot.uncertainty_flags,
         previous_fact_bundle_identity=previous_fact_bundle_identity,
     )
-    payload = _family_fact_payload(draft)
     return StreamFamilyFactBundle(
-        **{
-            **draft.__dict__,
-            "fact_bundle_identity": canonical_sha256(payload),
-        }
+        fact_bundle_identity=canonical_sha256(payload),
+        stream_event_identity=source_event.stream_event_identity,
+        source_event_identity=source_event.source_event_identity,
+        story_identity=story_identity,
+        projector_id=snapshot.projector_id,
+        family=snapshot.family,
+        source_scope=snapshot.source_scope,
+        asset=snapshot.asset,
+        symbol=snapshot.symbol,
+        market=snapshot.market,
+        timeframe=snapshot.timeframe,
+        event_at_ms=snapshot.event_at_ms,
+        source_as_of_ms=snapshot.source_as_of_ms,
+        evidence_identities=snapshot.evidence_identities,
+        available_evidence_domains=snapshot.evidence_domains,
+        state_label=snapshot.state_label,
+        state_key=state_key,
+        state_components=snapshot.state_components,
+        direction=snapshot.direction,
+        source_quality=snapshot.source_quality,
+        uncertainty_flags=snapshot.uncertainty_flags,
+        previous_fact_bundle_identity=previous_fact_bundle_identity,
     )
-
 
 def _build_family_message_input(
     snapshot: StreamFamilySnapshot,
@@ -1396,6 +1414,7 @@ def _build_family_story(
         "real_capital": REAL_CAPITAL,
         "schema_version": STREAM_FAMILY_STORY_OBSERVATION_SCHEMA_VERSION,
         "source_event_identity": fact.source_event_identity,
+        "state_components": fact.state_components,
         "state_key": fact.state_key,
         "state_label": fact.state_label,
         "story_identity": fact.story_identity,
@@ -1414,6 +1433,7 @@ def _build_family_story(
         family=snapshot.family,
         state_label=fact.state_label,
         state_key=fact.state_key,
+        state_components=fact.state_components,
         event_at_ms=fact.event_at_ms,
         asset=fact.asset,
         symbol=fact.symbol,
@@ -1460,10 +1480,7 @@ def _build_family_story(
     previous_components = (
         {}
         if previous is None
-        else _previous_fact_components(
-            previous,
-            path=None,
-        )
+        else _previous_state_components(previous)
     )
     current_components = {item.name: item.value for item in fact.state_components}
     changed_names = tuple(
@@ -1738,36 +1755,84 @@ def _render_family_text(
     )
 
 
-def _family_fact_payload(value: StreamFamilyFactBundle) -> dict[str, object]:
+def _family_fact_payload_values(
+    *,
+    stream_event_identity: str,
+    source_event_identity: str,
+    story_identity: str,
+    projector_id: str,
+    family: ConfluenceFamily,
+    source_scope: str,
+    asset: str,
+    symbol: str,
+    market: str,
+    timeframe: str,
+    event_at_ms: int,
+    source_as_of_ms: int,
+    evidence_identities: tuple[str, ...],
+    available_evidence_domains: tuple[str, ...],
+    state_label: str,
+    state_key: str,
+    state_components: tuple[StreamFamilyStateComponent, ...],
+    direction: str | None,
+    source_quality: str,
+    uncertainty_flags: tuple[str, ...],
+    previous_fact_bundle_identity: str | None,
+) -> dict[str, object]:
     return {
-        "asset": value.asset,
-        "available_evidence_domains": value.available_evidence_domains,
-        "direction": value.direction,
-        "engine_version": value.engine_version,
-        "event_at_ms": value.event_at_ms,
-        "evidence_identities": value.evidence_identities,
-        "family": value.family,
-        "market": value.market,
-        "previous_fact_bundle_identity": value.previous_fact_bundle_identity,
-        "production_authority": value.production_authority,
-        "projector_id": value.projector_id,
-        "read_only": value.read_only,
-        "real_capital": value.real_capital,
-        "schema_version": value.schema_version,
-        "source_as_of_ms": value.source_as_of_ms,
-        "source_event_identity": value.source_event_identity,
-        "source_quality": value.source_quality,
-        "source_scope": value.source_scope,
-        "state_components": value.state_components,
-        "state_key": value.state_key,
-        "state_label": value.state_label,
-        "story_identity": value.story_identity,
-        "stream_event_identity": value.stream_event_identity,
-        "symbol": value.symbol,
-        "timeframe": value.timeframe,
-        "uncertainty_flags": value.uncertainty_flags,
+        "asset": asset,
+        "available_evidence_domains": available_evidence_domains,
+        "direction": direction,
+        "engine_version": STREAM_ENGINE_VERSION,
+        "event_at_ms": event_at_ms,
+        "evidence_identities": evidence_identities,
+        "family": family,
+        "market": market,
+        "previous_fact_bundle_identity": previous_fact_bundle_identity,
+        "production_authority": False,
+        "projector_id": projector_id,
+        "read_only": True,
+        "real_capital": REAL_CAPITAL,
+        "schema_version": STREAM_FAMILY_FACT_SCHEMA_VERSION,
+        "source_as_of_ms": source_as_of_ms,
+        "source_event_identity": source_event_identity,
+        "source_quality": source_quality,
+        "source_scope": source_scope,
+        "state_components": state_components,
+        "state_key": state_key,
+        "state_label": state_label,
+        "story_identity": story_identity,
+        "stream_event_identity": stream_event_identity,
+        "symbol": symbol,
+        "timeframe": timeframe,
+        "uncertainty_flags": uncertainty_flags,
     }
 
+
+def _family_fact_payload(value: StreamFamilyFactBundle) -> dict[str, object]:
+    return _family_fact_payload_values(
+        stream_event_identity=value.stream_event_identity,
+        source_event_identity=value.source_event_identity,
+        story_identity=value.story_identity,
+        projector_id=value.projector_id,
+        family=value.family,
+        source_scope=value.source_scope,
+        asset=value.asset,
+        symbol=value.symbol,
+        market=value.market,
+        timeframe=value.timeframe,
+        event_at_ms=value.event_at_ms,
+        source_as_of_ms=value.source_as_of_ms,
+        evidence_identities=value.evidence_identities,
+        available_evidence_domains=value.available_evidence_domains,
+        state_label=value.state_label,
+        state_key=value.state_key,
+        state_components=value.state_components,
+        direction=value.direction,
+        source_quality=value.source_quality,
+        uncertainty_flags=value.uncertainty_flags,
+        previous_fact_bundle_identity=value.previous_fact_bundle_identity,
+    )
 
 def _family_observation_payload(
     value: StreamFamilyStoryObservation,
@@ -1785,6 +1850,7 @@ def _family_observation_payload(
         "real_capital": value.real_capital,
         "schema_version": value.schema_version,
         "source_event_identity": value.source_event_identity,
+        "state_components": value.state_components,
         "state_key": value.state_key,
         "state_label": value.state_label,
         "story_identity": value.story_identity,
@@ -1925,17 +1991,24 @@ def _family_narrative_payload(
     }
 
 
-def _previous_fact_components(
-    previous: dict[str, Any],
-    *,
-    path: Path | None,
-) -> dict[str, str]:
-    del path
-    # State rows intentionally store no duplicated fact payload. Only the
-    # previous state label is needed for correctness; component-level deltas
-    # are optional and the exact previous fact remains linked by identity.
-    return {}
-
+def _previous_state_components(previous: dict[str, Any]) -> dict[str, str]:
+    raw = previous.get("state_components")
+    if not isinstance(raw, list):
+        raise TypeError("Stream family previous state components must be a list")
+    result: dict[str, str] = {}
+    for item in raw:
+        if not isinstance(item, dict):
+            raise TypeError("Stream family previous component must be an object")
+        name = item.get("name")
+        value = item.get("value")
+        if not isinstance(name, str) or not name:
+            raise ValueError("Stream family previous component name is invalid")
+        if not isinstance(value, str) or not value:
+            raise ValueError("Stream family previous component value is invalid")
+        if name in result:
+            raise ValueError("Stream family previous component is duplicated")
+        result[name] = value
+    return result
 
 def _text(raw: dict[str, Any], key: str) -> str:
     value = raw.get(key)
