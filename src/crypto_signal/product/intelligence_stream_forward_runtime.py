@@ -215,15 +215,37 @@ class IntelligenceStreamForwardRuntime:
 
 def _activation_from_record(raw: dict[str, object]) -> StreamActivationBoundary:
     return StreamActivationBoundary(
-        activation_identity=str(raw["activation_identity"]),
-        activated_at_ms=int(raw["activated_at_ms"]),
-        activation_label=str(raw["activation_label"]),
-        historical_rich_backfill_allowed=bool(
-            raw["historical_rich_backfill_allowed"]
+        activation_identity=_text_field(raw, "activation_identity"),
+        activated_at_ms=_int_field(raw, "activated_at_ms"),
+        activation_label=_text_field(raw, "activation_label"),
+        historical_rich_backfill_allowed=_bool_field(
+            raw,
+            "historical_rich_backfill_allowed",
         ),
-        schema_version=str(raw["schema_version"]),
-        engine_version=str(raw["engine_version"]),
-        read_only=bool(raw["read_only"]),
-        production_authority=bool(raw["production_authority"]),
-        real_capital=int(raw["real_capital"]),
+        schema_version=_text_field(raw, "schema_version"),
+        engine_version=_text_field(raw, "engine_version"),
+        read_only=_bool_field(raw, "read_only"),
+        production_authority=_bool_field(raw, "production_authority"),
+        real_capital=_int_field(raw, "real_capital"),
     )
+
+
+def _text_field(raw: dict[str, object], key: str) -> str:
+    value = raw.get(key)
+    if not isinstance(value, str) or not value:
+        raise ValueError(f"Stream activation {key} must be non-empty text")
+    return value
+
+
+def _int_field(raw: dict[str, object], key: str) -> int:
+    value = raw.get(key)
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise ValueError(f"Stream activation {key} must be integer")
+    return value
+
+
+def _bool_field(raw: dict[str, object], key: str) -> bool:
+    value = raw.get(key)
+    if not isinstance(value, bool):
+        raise ValueError(f"Stream activation {key} must be boolean")
+    return value
