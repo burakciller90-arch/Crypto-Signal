@@ -357,6 +357,24 @@ class IntelligenceStreamProductionProjector:
             activated_at_ms=activated_at_ms,
         )
 
+    def ensure_family_activation(
+        self,
+        projector_id: str,
+        *,
+        activated_at_ms: int,
+    ) -> str:
+        _require_implemented_projector(projector_id)
+        from crypto_signal.product.intelligence_stream_family import (
+            IntelligenceStreamFamilyRuntime,
+        )
+
+        return IntelligenceStreamFamilyRuntime(
+            self.path
+        ).ensure_projector_activation(
+            projector_id,
+            activated_at_ms=activated_at_ms,
+        )
+
     def family_activation_ms(self, projector_id: str) -> int:
         _require_implemented_projector(projector_id)
         from crypto_signal.product.intelligence_stream_family import (
