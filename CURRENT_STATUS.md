@@ -4,10 +4,17 @@ Updated: 2026-09-26
 Project: Crypto Signal
 Baseline: crypto-signal-full-version-v1.0.0 (immutable)
 Active post-v1.0 program: v1.1 world-class product + market intelligence + Crypto Signal Intelligence Stream V1
-State: WC0_LIVE_PRODUCT_PARITY_ACCEPTED / WC1_24_7_DATA_RELIABILITY_ACCEPTED / WC2_ENGINEERING_FROZEN_EVIDENCE_ACCUMULATION_ACTIVE / WC4_CHAMPION_CHALLENGER_ENGINEERING_ACCEPTED_RESEARCH_ONLY / WC5_ENGINEERING_ACCEPTED_PRODUCT_DEPLOYED_HUMAN_USABILITY_NOT_MEASURED / WC6_SANDBOX_BOUNDARY_ACCEPTED_VENUE_EVIDENCE_EXTERNAL_DEPENDENCY / WC7_CURRENT_FRONTIER_PACKET_ACCEPTED_CURRENT_INSUFFICIENT_EVIDENCE / INTELLIGENCE_STREAM_V1_S0_S16_HISTORICAL_ACCEPTANCE_RETAINED / INTELLIGENCE_STREAM_V1_FINAL_F0_PASS_F1_PASS_F2_PASS_F3_PASS_F4_PASS_F5_ACTIVE / CONTINUITY_PAUSED_BY_USER
+State: WC0_LIVE_PRODUCT_PARITY_ACCEPTED / WC1_24_7_DATA_RELIABILITY_ACCEPTED / WC2_ENGINEERING_FROZEN_EVIDENCE_ACCUMULATION_ACTIVE / WC4_CHAMPION_CHALLENGER_ENGINEERING_ACCEPTED_RESEARCH_ONLY / WC5_ENGINEERING_ACCEPTED_PRODUCT_DEPLOYED_HUMAN_USABILITY_NOT_MEASURED / WC6_SANDBOX_BOUNDARY_ACCEPTED_VENUE_EVIDENCE_EXTERNAL_DEPENDENCY / WC7_CURRENT_FRONTIER_PACKET_ACCEPTED_CURRENT_INSUFFICIENT_EVIDENCE / INTELLIGENCE_STREAM_V1_S0_S16_HISTORICAL_ACCEPTANCE_RETAINED / INTELLIGENCE_STREAM_V1_FINAL_F0_PASS_F1_PASS_F2_PASS_F3_PASS_F4_PASS_F5_DEFERRED_F6_ACTIVE / CONTINUITY_PAUSED_BY_USER
 REAL_CAPITAL: 0
 
 ## Active v1.1 frontier — read before historical sections
+
+### 2026-09-27 — PRODUCT SCOPE DECISION: F5 CAPITAL/PORTFOLIO DEFERRED / F6 FRONTEND EVIDENCE ACTIVE
+
+The user explicitly separated Capital/Portfolio completion from the current frontend completion program. F5 is **not PASS**; its natural forward Capital proof remains outstanding, but it no longer blocks frontend work. The preserved F5 runtime must remain fail-closed, `REAL_CAPITAL=0`, with no synthetic candidate, fake sizing/fill, policy relaxation or historical backfill. Dedicated Portfolio/Capital behavior and UI will be completed later as its own workstream.
+
+Current canonical frontier: **F6 — Exact Frozen Evidence Closure**. F7/F8/F9/F10 preparation may continue behind this frontier, but only accepted stages advance canonical authority.
+
 
 ### 2026-09-26 — STREAM FINAL F5 IMPLEMENTATION MERGED / PHYSICAL CAPITAL ACTIVATION PASS / FORWARD CAPITAL EVIDENCE PENDING
 
@@ -64,9 +71,9 @@ Post-activation read-only forward diagnosis:
   - `HISTORICAL_BACKFILL=NO`;
   - `REAL_CAPITAL=0`.
 
-Therefore F5 remains **ACTIVE**, not PASS. The only remaining F5 closeout condition is one genuine natural forward Capital projection from post-activation canonical truth. Current silence is mechanically explained upstream; do not loosen eligibility, fabricate a candidate, sizing event, fill, execution or historical message merely to close the gate.
+F5 Capital/Portfolio live closure is now **DEFERRED by explicit product-scope decision**, not PASS. The implementation and physical activation remain preserved, but the missing natural Capital projection will be closed later together with the dedicated Portfolio/Capital product work. Do not loosen eligibility, fabricate a candidate, sizing event, fill, execution or historical message merely to close F5.
 
-The sole final-completion frontier remains **F5 — Three-Vault Capital Story Live Closure**.
+F5 is no longer a blocker for frontend completion. The active final-completion frontier is now **F6 — Exact Frozen Evidence Closure**.
 
 ### 2026-09-26 — STREAM FINAL F4 PASS / F5 THREE-VAULT CAPITAL STORY ACTIVE
 
@@ -91,7 +98,7 @@ Implementation PR #1363 and final UID504 evidence proved:
 - canonical F4 trust source rows existed, including 3 `data_quality_degraded` rows;
 - no synthetic risk/system activity, no historical backfill, `REAL_CAPITAL=0`.
 
-The sole final-completion frontier is now **F5 — Three-Vault Capital Story Live Closure**.
+Historical note: F5 became the frontier after F4. It is now explicitly deferred to later Portfolio/Capital work; current frontier is F6.
 
 ### 2026-09-26 — STREAM FINAL F3 PASS / F4 RISK + SYSTEM TRUST ACTIVE
 
