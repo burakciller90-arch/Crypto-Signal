@@ -303,6 +303,21 @@
     return section;
   }
 
+  function canonicalResolutionState(domain) {
+    const explicit = text(domain?.resolution_state, "");
+    if (
+      ["READY_EXACT", "IDENTITY_ONLY_EXACT", "UNAVAILABLE_EXPLICIT"].includes(
+        explicit
+      )
+    ) {
+      return explicit;
+    }
+    const visual = text(domain?.visual_state, "unavailable");
+    if (visual === "resolved_frozen_bundle") return "READY_EXACT";
+    if (visual === "identity_only") return "IDENTITY_ONLY_EXACT";
+    return "UNAVAILABLE_EXPLICIT";
+  }
+
   function renderDomainManifest(payload) {
     const domains = Array.isArray(payload?.domain_evidence) ? payload.domain_evidence : [];
     const section = proofSection(
@@ -316,19 +331,21 @@
       item.className = "frozen-proof-domain";
       item.dataset.domain = text(domain?.domain, "");
       item.dataset.visualState = text(domain?.visual_state, "unavailable");
+      item.dataset.resolutionState = canonicalResolutionState(domain);
       const head = document.createElement("div");
       const label = document.createElement("strong");
       label.textContent = text(domain?.domain, "domain").replaceAll("_", " ");
       const state = document.createElement("span");
-      state.textContent = text(domain?.visual_state, "unavailable").replaceAll("_", " ");
+      state.textContent = canonicalResolutionState(domain);
       head.append(label, state);
       const note = document.createElement("p");
+      const resolutionState = canonicalResolutionState(domain);
       note.textContent =
-        domain?.visual_state === "resolved_frozen_bundle"
-          ? "Exact immutable freeze payload çözüldü."
-          : domain?.visual_state === "identity_only"
+        resolutionState === "READY_EXACT"
+          ? "Exact immutable/persisted kanıt çözüldü."
+          : resolutionState === "IDENTITY_ONLY_EXACT"
             ? "Exact evidence identity var; bound visual payload yok, çizim yapılmadı."
-            : "Bu proof domaini bu mesajda görselleştirilebilir değil.";
+            : "UNAVAILABLE_EXPLICIT: exact görsel kanıt yok; current data ile ikame yapılmadı.";
       item.append(head, note);
       const identities = Array.isArray(domain?.evidence_identities)
         ? domain.evidence_identities
@@ -362,7 +379,11 @@
     copy.append(eyebrow, title);
     const badge = document.createElement("span");
     badge.className = "frozen-proof-badge";
-    badge.textContent = payload?.status === "ready" ? "EXACT PERSISTED" : "UNAVAILABLE";
+    badge.textContent =
+      text(
+        payload?.resolution_state,
+        payload?.status === "ready" ? "READY_EXACT" : "UNAVAILABLE_EXPLICIT"
+      );
     head.append(copy, badge);
     root.append(head);
 
@@ -423,6 +444,7 @@
     return {
       schema_version: "intelligence-stream-visual-proof-v1/1",
       status: "ready",
+      resolution_state: "READY_EXACT",
       visual_kind: "frozen_ohlc",
       narrative_identity: narrativeIdentity,
       symbol,
@@ -508,6 +530,12 @@
         verdict: visual_state === "unavailable" ? "insufficient" : "neutral",
         evidence_identities: evidenceIdentity ? [evidenceIdentity] : [],
         visual_state,
+        resolution_state:
+          visual_state === "resolved_frozen_bundle"
+            ? "READY_EXACT"
+            : visual_state === "identity_only"
+              ? "IDENTITY_ONLY_EXACT"
+              : "UNAVAILABLE_EXPLICIT",
       })),
       read_only: true,
       production_authority: false,

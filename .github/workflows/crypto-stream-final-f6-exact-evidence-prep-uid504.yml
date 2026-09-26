@@ -1,0 +1,282 @@
+name: Crypto Stream Final F6 Exact Evidence Prep UID504
+
+on:
+  push:
+    branches:
+      - 'stream/final-f6-exact-frozen-evidence'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: crypto-stream-final-f6-exact-evidence-prep
+  cancel-in-progress: true
+
+jobs:
+  audit:
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          clean: true
+          fetch-depth: 1
+
+      - name: Verify exact source and focused F6 gates
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${GITHUB_SHA}"
+          PY="/Volumes/Crypto-504/Crypto-Signal/Development/.venv/bin/python"
+          test -x "$PY"
+          export PYTHONPATH="$GITHUB_WORKSPACE/src"
+          "$PY" -m pytest -q             tests/test_intelligence_stream_exact_evidence.py             tests/test_intelligence_stream_visual_proof.py             tests/test_intelligence_stream_ui.py
+          "$PY" -m ruff check             src/crypto_signal/product/intelligence_stream_evidence_contract.py             src/crypto_signal/product/intelligence_stream_exact_evidence.py             src/crypto_signal/product/intelligence_stream_visual_proof.py             src/crypto_signal/product/web.py             tests/test_intelligence_stream_exact_evidence.py
+          "$PY" -m mypy --strict             src/crypto_signal/product/intelligence_stream_evidence_contract.py             src/crypto_signal/product/intelligence_stream_exact_evidence.py
+          node --check src/crypto_signal/product/stream/evidence.js
+          node --check src/crypto_signal/product/stream/visual_proof.js
+          echo "F6_FOCUSED_GATE_PASS=YES"
+          echo "REAL_CAPITAL=0"
+
+      - name: Verify live evidence stores read-only
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          DEV="$ROOT/Development"
+          PRODUCT="$ROOT/Product"
+          OUT="$RUNNER_TEMP/stream-final-f6-prep"
+          mkdir -p "$OUT"
+
+          test "$(id -u)" = "504"
+          test -z "$(git -C "$DEV" status --porcelain)"
+          test -z "$(git -C "$PRODUCT" status --porcelain)"
+
+          DEV_BEFORE="$(git -C "$DEV" rev-parse HEAD)"
+          PRODUCT_BEFORE="$(git -C "$PRODUCT" rev-parse HEAD)"
+
+          export SRC_SIGNAL="$DEV/runtime/ledger/live_signal_ledger.sqlite3"
+          export SRC_DECISION="$DEV/runtime/decision/decision_evidence.sqlite3"
+          export SRC_STREAM="$DEV/runtime/stream/intelligence_stream.sqlite3"
+          export SRC_MARKET="$DEV/runtime/market_tape/market_tape.sqlite3"
+          export SRC_EVENT="$DEV/runtime/events/event_source.sqlite3"
+          export SRC_PROVIDER="$DEV/runtime/data/provider_divergence.sqlite3"
+
+          for required in \
+            "$SRC_SIGNAL" "$SRC_DECISION" "$SRC_STREAM" \
+            "$SRC_MARKET" "$SRC_EVENT" "$SRC_PROVIDER"; do
+            test -f "$required"
+          done
+
+          /Volumes/Crypto-504/Crypto-Signal/Development/.venv/bin/python - <<'PY'
+          from __future__ import annotations
+
+          import os
+          import sqlite3
+          from pathlib import Path
+
+          sources = {
+              "signal": Path(os.environ["SRC_SIGNAL"]),
+              "decision": Path(os.environ["SRC_DECISION"]),
+              "stream": Path(os.environ["SRC_STREAM"]),
+              "market": Path(os.environ["SRC_MARKET"]),
+              "event": Path(os.environ["SRC_EVENT"]),
+              "provider": Path(os.environ["SRC_PROVIDER"]),
+          }
+
+          # These are append-only / identity-addressed evidence stores.  F6
+          # resolves exact persisted identities directly from the live stores,
+          # so copying a multi-GB WAL-backed Market Tape would add latency but
+          # no stronger truth guarantee.  Every source is opened read-only.
+          for label, source in sources.items():
+              uri = f"{source.resolve().as_uri()}?mode=ro"
+              with sqlite3.connect(uri, uri=True, timeout=10.0) as db:
+                  db.execute("PRAGMA query_only=ON")
+                  table_count = db.execute(
+                      "SELECT COUNT(*) FROM sqlite_master WHERE type='table'"
+                  ).fetchone()
+                  if table_count is None or int(table_count[0]) < 1:
+                      raise SystemExit(f"F6_LIVE_SCHEMA_UNAVAILABLE:{label}")
+              print(f"F6_LIVE_READONLY_SOURCE_PASS={label}")
+          PY
+
+          test -z "$(git -C "$DEV" status --porcelain)"
+          test -z "$(git -C "$PRODUCT" status --porcelain)"
+          test "$(git -C "$DEV" rev-parse HEAD)" = "$DEV_BEFORE"
+          test "$(git -C "$PRODUCT" rev-parse HEAD)" = "$PRODUCT_BEFORE"
+
+          {
+            echo "DEV_HEAD=$DEV_BEFORE"
+            echo "PRODUCT_HEAD=$PRODUCT_BEFORE"
+            echo "F6_PREP_NON_MUTATING_PASS=YES"
+            echo "HISTORICAL_BACKFILL=NO"
+            echo "REAL_CAPITAL=0"
+          } | tee "$OUT/checkouts.txt"
+
+      - name: Audit real F3/F4 message evidence states
+        shell: bash
+        run: |
+          set -euo pipefail
+          PY="/Volumes/Crypto-504/Crypto-Signal/Development/.venv/bin/python"
+          DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
+          OUT="$RUNNER_TEMP/stream-final-f6-prep"
+          export PYTHONPATH="$GITHUB_WORKSPACE/src"
+          export DEV OUT
+
+          "$PY" - <<'PY' | tee "$OUT/exact-evidence-audit.log"
+          from __future__ import annotations
+
+          import json
+          import os
+          import sqlite3
+          from collections import Counter
+          from pathlib import Path
+
+          from crypto_signal.product.intelligence_stream_exact_evidence import (
+              IntelligenceStreamExactEvidenceReadModel,
+          )
+          from crypto_signal.product.intelligence_stream_read_model import (
+              IntelligenceStreamReadModel,
+          )
+
+          dev = Path(os.environ["DEV"])
+          runtime = dev / "runtime"
+          stream = runtime / "stream/intelligence_stream.sqlite3"
+          resolver = IntelligenceStreamExactEvidenceReadModel(
+              stream_ledger_path=stream,
+              signal_ledger_path=runtime / "ledger/live_signal_ledger.sqlite3",
+              decision_evidence_path=runtime / "decision/decision_evidence.sqlite3",
+              market_tape_path=runtime / "market_tape/market_tape.sqlite3",
+              event_source_runtime_path=runtime / "events/event_source.sqlite3",
+              provider_divergence_path=runtime / "data/provider_divergence.sqlite3",
+          )
+
+          uri = f"{stream.resolve().as_uri()}?mode=ro"
+          with sqlite3.connect(uri, uri=True) as connection:
+              connection.row_factory = sqlite3.Row
+              connection.execute("PRAGMA query_only=ON")
+              rows = connection.execute(
+                  """
+                  SELECT n.narrative_identity
+                  FROM stream_narrative_messages AS n
+                  JOIN stream_narrative_plans AS p
+                    ON p.plan_identity = n.plan_identity
+                  JOIN stream_fact_bundles AS f
+                    ON f.fact_bundle_identity = p.fact_bundle_identity
+                  WHERE f.payload_json LIKE '%"projector_id"%'
+                  ORDER BY n.event_at_ms DESC, n.narrative_identity DESC
+                  LIMIT 240
+                  """
+              ).fetchall()
+
+          if not rows:
+              raise SystemExit("F6_LIVE_AUDIT_NO_FAMILY_MESSAGES")
+
+          allowed = {
+              "READY_EXACT",
+              "IDENTITY_ONLY_EXACT",
+              "UNAVAILABLE_EXPLICIT",
+          }
+          state_counts: Counter[str] = Counter()
+          domain_counts: Counter[str] = Counter()
+          projector_counts: Counter[str] = Counter()
+          reference_counts: Counter[str] = Counter()
+          read_model = IntelligenceStreamReadModel(stream)
+
+          # Resolve one newest genuine live message per projector family.  The
+          # focused F6 suite exhaustively constrains resolution-state output;
+          # this production audit proves those contracts against real persisted
+          # identities without re-scanning multi-GB evidence stores hundreds
+          # of times.
+          selected: dict[str, str] = {}
+          for row in rows:
+              narrative_identity = str(row["narrative_identity"])
+              detail = read_model.read_message_detail(narrative_identity)
+              if detail is None:
+                  raise SystemExit("F6_LIVE_AUDIT_DETAIL_MISSING")
+              fact = detail.get("fact_bundle")
+              if not isinstance(fact, dict):
+                  continue
+              projector_id = fact.get("projector_id")
+              if isinstance(projector_id, str):
+                  selected.setdefault(projector_id, narrative_identity)
+
+          required = {
+              "market_geometry_change",
+              "liquidity_change",
+              "order_flow_change",
+              "derivatives_change",
+              "provider_quality_change",
+          }
+          missing = required - set(selected)
+          if missing:
+              raise SystemExit(
+                  "F6_LIVE_AUDIT_REQUIRED_PROJECTOR_MISSING:"
+                  + ",".join(sorted(missing))
+              )
+
+          for projector_id, narrative_identity in sorted(selected.items()):
+              payload = resolver.read_for_narrative(narrative_identity)
+              if payload is None:
+                  raise SystemExit("F6_LIVE_AUDIT_MESSAGE_DISAPPEARED")
+              if payload.get("current_data_substitution") is not False:
+                  raise SystemExit("F6_CURRENT_DATA_SUBSTITUTION_FORBIDDEN")
+              projector_counts[projector_id] += 1
+
+              for resolution in payload.get("resolutions", ()):
+                  if not isinstance(resolution, dict):
+                      raise SystemExit("F6_INVALID_RESOLUTION_SHAPE")
+                  state = str(resolution.get("resolution_state"))
+                  if state not in allowed:
+                      raise SystemExit(f"F6_AMBIGUOUS_STATE:{state}")
+                  state_counts[state] += 1
+                  domain_counts[str(resolution.get("domain"))] += 1
+                  if resolution.get("current_data_substitution") is not False:
+                      raise SystemExit("F6_DOMAIN_CURRENT_DATA_SUBSTITUTION")
+
+              for reference in payload.get("reference_resolutions", ()):
+                  if not isinstance(reference, dict):
+                      raise SystemExit("F6_INVALID_REFERENCE_SHAPE")
+                  state = str(reference.get("resolution_state"))
+                  if state not in allowed:
+                      raise SystemExit(f"F6_AMBIGUOUS_REFERENCE_STATE:{state}")
+                  reference_counts[state] += 1
+
+          missing = required - set(projector_counts)
+          if missing:
+              raise SystemExit(
+                  "F6_LIVE_AUDIT_REQUIRED_PROJECTOR_MISSING:"
+                  + ",".join(sorted(missing))
+              )
+
+          summary = {
+              "candidate_messages_scanned": len(rows),
+              "messages_audited": len(selected),
+              "projector_counts": dict(sorted(projector_counts.items())),
+              "domain_counts": dict(sorted(domain_counts.items())),
+              "resolution_state_counts": dict(sorted(state_counts.items())),
+              "reference_state_counts": dict(sorted(reference_counts.items())),
+              "current_data_substitution": False,
+              "historical_backfill": False,
+              "real_capital": 0,
+          }
+          output = Path(os.environ["OUT"]) / "exact-evidence-audit.json"
+          output.write_text(
+              json.dumps(summary, sort_keys=True, indent=2) + "\n",
+              encoding="utf-8",
+          )
+          print(json.dumps(summary, sort_keys=True))
+          print("F6_REAL_F3_F4_EVIDENCE_AUDIT_PASS=YES")
+          print("HISTORICAL_BACKFILL=NO")
+          print("REAL_CAPITAL=0")
+          PY
+
+      - name: Upload F6 prep evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stream-final-f6-exact-evidence-prep-${{ github.run_id }}
+          path: ${{ runner.temp }}/stream-final-f6-prep
+          if-no-files-found: warn
+          retention-days: 14

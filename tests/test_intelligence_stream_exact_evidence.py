@@ -1,0 +1,423 @@
+from __future__ import annotations
+
+import sqlite3
+from decimal import Decimal
+from pathlib import Path
+
+from fastapi.testclient import TestClient
+
+from crypto_signal.data.event_risk import (
+    EventCategory,
+    EventSourceQuality,
+    build_event_calendar_coverage,
+    build_structured_event_observation,
+    event_calendar_coverage_payload,
+    structured_event_payload,
+)
+from crypto_signal.data.market_tape import MarketTapeStore
+from crypto_signal.data.microstructure import OrderBookLevel, build_orderbook_snapshot
+from crypto_signal.data.models import DataSource, Exchange, MarketType
+from crypto_signal.intelligence.confluence_matrix_v2 import ConfluenceFamily
+from crypto_signal.ledger.serialization import canonical_json, canonical_sha256
+from crypto_signal.product.intelligence_stream_exact_evidence import (
+    IntelligenceStreamExactEvidenceReadModel,
+)
+from crypto_signal.product.intelligence_stream_family import (
+    StreamFamilySnapshot,
+    StreamTrustDomain,
+    build_family_snapshot,
+)
+from crypto_signal.product.intelligence_stream_forward_runtime import (
+    IntelligenceStreamForwardRuntime,
+)
+from crypto_signal.product.intelligence_stream_models import (
+    StreamCategory,
+    StreamImportance,
+)
+from crypto_signal.product.intelligence_stream_production_projector import (
+    IntelligenceStreamProductionProjector,
+)
+from crypto_signal.product.web import create_app
+
+
+def _project_family(
+    stream_path: Path,
+    *,
+    projector_id: str,
+    snapshot: StreamFamilySnapshot,
+) -> str:
+    IntelligenceStreamForwardRuntime(stream_path).ensure_activated(
+        activated_at_ms=1
+    )
+    projector = IntelligenceStreamProductionProjector(stream_path)
+    projector.ensure_family_activation(projector_id, activated_at_ms=1)
+    result = projector.project_family(snapshot, activated_at_ms=1)
+    assert result.narrative_identity is not None
+    return result.narrative_identity
+
+
+def _resolution(payload: dict[str, object], domain: str) -> dict[str, object]:
+    items = payload["resolutions"]
+    assert isinstance(items, (list, tuple))
+    found = next(
+        item
+        for item in items
+        if isinstance(item, dict) and item.get("domain") == domain
+    )
+    return found
+
+
+def test_geometry_exact_coordinates_are_ready_without_fake_chart(
+    tmp_path: Path,
+) -> None:
+    stream_path = tmp_path / "stream.sqlite3"
+    evidence_identity = canonical_sha256({"evidence": "geometry"})
+    source_identity = canonical_sha256({"source": "geometry"})
+    snapshot = build_family_snapshot(
+        projector_id="market_geometry_change",
+        family=ConfluenceFamily.GEOMETRY,
+        category=StreamCategory.MARKET,
+        subtype="geometry_material_change",
+        importance=StreamImportance.IMPORTANT,
+        source_event_identity=source_identity,
+        source_scope="test:spot:signal_geometry",
+        asset="BTC",
+        symbol="BTCUSDT",
+        market="BTCUSDT",
+        timeframe="4h",
+        event_at_ms=2_000,
+        source_as_of_ms=1_900,
+        evidence_identities=(evidence_identity,),
+        evidence_domains=("frozen_chart", "geometry"),
+        state_label="watch:long:geometry",
+        state_components=(
+            ("entry_zone_high", "101"),
+            ("entry_zone_low", "99"),
+            ("invalidation_price", "95"),
+            ("target_01_target_1_price", "110"),
+        ),
+        direction="long",
+        source_quality="exact_immutable_signal_freeze",
+    )
+    narrative_identity = _project_family(
+        stream_path,
+        projector_id="market_geometry_change",
+        snapshot=snapshot,
+    )
+
+    payload = IntelligenceStreamExactEvidenceReadModel(
+        stream_ledger_path=stream_path,
+    ).read_for_narrative(narrative_identity)
+    assert payload is not None
+    assert _resolution(payload, "geometry")["resolution_state"] == "READY_EXACT"
+    assert (
+        _resolution(payload, "frozen_chart")["resolution_state"]
+        == "IDENTITY_ONLY_EXACT"
+    )
+    references = payload["reference_resolutions"]
+    assert isinstance(references, (list, tuple))
+    assert references[0]["resolution_state"] == "IDENTITY_ONLY_EXACT"
+    assert payload["current_data_substitution"] is False
+
+
+def test_orderbook_identity_resolves_to_exact_persisted_object(
+    tmp_path: Path,
+) -> None:
+    market_tape_path = tmp_path / "market_tape.sqlite3"
+    stream_path = tmp_path / "stream.sqlite3"
+    event_at_ms = 10_000
+    snapshot = build_orderbook_snapshot(
+        exchange=Exchange.BYBIT,
+        market_type=MarketType.SPOT,
+        symbol="BTCUSDT",
+        event_at_ms=event_at_ms,
+        source_timestamp_ms=event_at_ms,
+        response_time_ms=event_at_ms,
+        ingested_at_ms=event_at_ms,
+        update_id=7,
+        sequence=11,
+        bids=(
+            OrderBookLevel(price=Decimal(100), size=Decimal(2)),
+            OrderBookLevel(price=Decimal(99), size=Decimal(3)),
+        ),
+        asks=(
+            OrderBookLevel(price=Decimal(101), size=Decimal(4)),
+            OrderBookLevel(price=Decimal(102), size=Decimal(5)),
+        ),
+        source=DataSource.REST,
+        adapter_version="test-orderbook/1",
+    )
+    store = MarketTapeStore(market_tape_path)
+    store.initialize()
+    store.append_orderbook(snapshot)
+
+    synthetic_identity = canonical_sha256({"evidence": "liquidity-analysis"})
+    source_identity = canonical_sha256({"source": "liquidity"})
+    family = build_family_snapshot(
+        projector_id="liquidity_change",
+        family=ConfluenceFamily.LIQUIDITY,
+        category=StreamCategory.INTELLIGENCE,
+        subtype="liquidity_material_change",
+        importance=StreamImportance.IMPORTANT,
+        source_event_identity=source_identity,
+        source_scope="bybit:spot:market_tape_liquidity",
+        asset="BTC",
+        symbol="BTCUSDT",
+        market="BTCUSDT",
+        timeframe="microstructure",
+        event_at_ms=10_100,
+        source_as_of_ms=10_100,
+        evidence_identities=(snapshot.snapshot_identity, synthetic_identity),
+        evidence_domains=("liquidity", "order_book"),
+        state_label="measured:none",
+        state_components=(
+            ("liquidity_take_candidate", "none"),
+            ("source_quality", "measured"),
+            ("status", "measured"),
+        ),
+        direction=None,
+        source_quality="measured",
+    )
+    narrative_identity = _project_family(
+        stream_path,
+        projector_id="liquidity_change",
+        snapshot=family,
+    )
+
+    resolver = IntelligenceStreamExactEvidenceReadModel(
+        stream_ledger_path=stream_path,
+        market_tape_path=market_tape_path,
+    )
+    payload = resolver.read_for_narrative(narrative_identity)
+    assert payload is not None
+    assert _resolution(payload, "order_book")["resolution_state"] == "READY_EXACT"
+    assert _resolution(payload, "liquidity")["resolution_state"] == "READY_EXACT"
+
+    references = {
+        item["evidence_identity"]: item
+        for item in payload["reference_resolutions"]
+    }
+    assert references[snapshot.snapshot_identity]["resolution_state"] == "READY_EXACT"
+    assert (
+        references[synthetic_identity]["resolution_state"]
+        == "IDENTITY_ONLY_EXACT"
+    )
+
+    exact = resolver.read_reference(
+        narrative_identity=narrative_identity,
+        evidence_identity=snapshot.snapshot_identity,
+    )
+    assert exact is not None
+    assert exact["resolution_state"] == "READY_EXACT"
+    assert exact["object_kind"] == "market_tape_orderbook"
+    exact_object = exact["exact_object"]
+    assert isinstance(exact_object, dict)
+    assert exact_object["snapshot_identity"] == snapshot.snapshot_identity
+    assert len(exact_object["bids"]) == 2
+    assert len(exact_object["asks"]) == 2
+
+
+def _event_source_path(tmp_path: Path, *, base_ms: int) -> tuple[Path, str, str]:
+    path = tmp_path / "event_source.sqlite3"
+    coverage = build_event_calendar_coverage(
+        coverage_start_ms=base_ms - 3_600_000,
+        coverage_end_ms=base_ms + 3_600_000,
+        categories=(EventCategory.INFLATION,),
+        source_provider="fred.test",
+        source_quality=EventSourceQuality.SECONDARY_AGGREGATOR,
+        source=DataSource.REST,
+        observed_at_ms=base_ms - 100,
+        adapter_version="test-calendar/1",
+    )
+    event = build_structured_event_observation(
+        provider_event_id="cpi-test",
+        title="CPI test",
+        category=EventCategory.INFLATION,
+        scheduled_at_ms=base_ms + 1_000,
+        affected_assets=(),
+        source_provider="fred.test",
+        source_quality=EventSourceQuality.SECONDARY_AGGREGATOR,
+        source=DataSource.REST,
+        source_timestamp_ms=base_ms - 200,
+        ingested_at_ms=base_ms - 100,
+        adapter_version="test-calendar/1",
+    )
+    with sqlite3.connect(path) as connection:
+        connection.executescript(
+            """
+            CREATE TABLE event_calendar_coverages (
+                coverage_identity TEXT PRIMARY KEY,
+                source_provider TEXT NOT NULL,
+                observed_at_ms INTEGER NOT NULL,
+                payload_json TEXT NOT NULL
+            );
+            CREATE TABLE structured_event_observations (
+                event_identity TEXT PRIMARY KEY,
+                provider_event_id TEXT NOT NULL,
+                source_provider TEXT NOT NULL,
+                scheduled_at_ms INTEGER NOT NULL,
+                ingested_at_ms INTEGER NOT NULL,
+                payload_json TEXT NOT NULL
+            );
+            """
+        )
+        connection.execute(
+            "INSERT INTO event_calendar_coverages VALUES (?, ?, ?, ?)",
+            (
+                coverage.coverage_identity,
+                coverage.source_provider,
+                coverage.observed_at_ms,
+                canonical_json(event_calendar_coverage_payload(coverage)),
+            ),
+        )
+        connection.execute(
+            "INSERT INTO structured_event_observations VALUES (?, ?, ?, ?, ?, ?)",
+            (
+                event.event_identity,
+                event.provider_event_id,
+                event.source_provider,
+                event.scheduled_at_ms,
+                event.ingested_at_ms,
+                canonical_json(structured_event_payload(event)),
+            ),
+        )
+    return path, coverage.coverage_identity, event.event_identity
+
+
+def test_event_risk_resolves_exact_event_and_temporal_records(
+    tmp_path: Path,
+) -> None:
+    base_ms = 20_000_000
+    event_path, coverage_identity, event_identity = _event_source_path(
+        tmp_path,
+        base_ms=base_ms,
+    )
+    stream_path = tmp_path / "stream.sqlite3"
+    source_identity = canonical_sha256({"source": "event-risk"})
+    synthetic_freeze = canonical_sha256({"freeze": "event-risk"})
+    family = build_family_snapshot(
+        projector_id="event_risk_change",
+        family=StreamTrustDomain.EVENT_RISK,
+        category=StreamCategory.RISK,
+        subtype="event_risk_change",
+        importance=StreamImportance.IMPORTANT,
+        source_event_identity=source_identity,
+        source_scope="fred.test:inflation:event_risk",
+        asset="GLOBAL_RISK",
+        symbol="GLOBAL_RISK",
+        market="GLOBAL",
+        timeframe="event_window",
+        event_at_ms=base_ms,
+        source_as_of_ms=base_ms,
+        evidence_identities=(
+            coverage_identity,
+            event_identity,
+            synthetic_freeze,
+        ),
+        evidence_domains=("event_calendar", "event_risk"),
+        state_label="pre_event_caution",
+        state_components=(
+            ("coverage_provider", "fred.test"),
+            ("nearest_event_identity", event_identity),
+            ("nearest_event_scheduled_at_ms", str(base_ms + 1_000)),
+            ("risk_state", "pre_event_caution"),
+        ),
+        direction=None,
+        source_quality="secondary_aggregator",
+    )
+    narrative_identity = _project_family(
+        stream_path,
+        projector_id="event_risk_change",
+        snapshot=family,
+    )
+
+    payload = IntelligenceStreamExactEvidenceReadModel(
+        stream_ledger_path=stream_path,
+        event_source_runtime_path=event_path,
+    ).read_for_narrative(narrative_identity)
+    assert payload is not None
+    assert _resolution(payload, "event_calendar")["resolution_state"] == "READY_EXACT"
+    assert _resolution(payload, "event_risk")["resolution_state"] == "READY_EXACT"
+
+    references = {
+        item["evidence_identity"]: item
+        for item in payload["reference_resolutions"]
+    }
+    assert references[coverage_identity]["resolution_state"] == "READY_EXACT"
+    assert references[event_identity]["resolution_state"] == "READY_EXACT"
+    assert references[synthetic_freeze]["resolution_state"] == "IDENTITY_ONLY_EXACT"
+
+
+def test_exact_evidence_api_and_ui_contract(
+    tmp_path: Path,
+) -> None:
+    stream_path = tmp_path / "stream.sqlite3"
+    evidence_identity = canonical_sha256({"evidence": "api"})
+    source_identity = canonical_sha256({"source": "api"})
+    snapshot = build_family_snapshot(
+        projector_id="derivatives_change",
+        family=ConfluenceFamily.DERIVATIVES,
+        category=StreamCategory.INTELLIGENCE,
+        subtype="derivatives_material_change",
+        importance=StreamImportance.IMPORTANT,
+        source_event_identity=source_identity,
+        source_scope="bybit:linear_perpetual:market_tape_derivatives",
+        asset="BTC",
+        symbol="BTCUSDT",
+        market="BTCUSDT",
+        timeframe="15m",
+        event_at_ms=4_000,
+        source_as_of_ms=3_900,
+        evidence_identities=(evidence_identity,),
+        evidence_domains=("derivatives",),
+        state_label="balanced",
+        state_components=(
+            ("basis_state", "neutral"),
+            ("funding_state", "neutral"),
+            ("open_interest_state", "flat"),
+        ),
+        direction=None,
+        source_quality="measured",
+    )
+    narrative_identity = _project_family(
+        stream_path,
+        projector_id="derivatives_change",
+        snapshot=snapshot,
+    )
+
+    client = TestClient(
+        create_app(
+            ledger_path=tmp_path / "missing-ledger.sqlite3",
+            stream_ledger_path=stream_path,
+            product_root="stream",
+        )
+    )
+    response = client.get(
+        f"/api/stream/messages/{narrative_identity}/evidence"
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "ready"
+    assert body["evidence"]["resolution_counts"] == {
+        "READY_EXACT": 0,
+        "IDENTITY_ONLY_EXACT": 1,
+        "UNAVAILABLE_EXPLICIT": 0,
+    }
+    assert body["evidence"]["current_data_substitution"] is False
+
+    root = Path(__file__).resolve().parents[1]
+    evidence_js = (
+        root / "src" / "crypto_signal" / "product" / "stream" / "evidence.js"
+    ).read_text(encoding="utf-8")
+    visual_js = (
+        root / "src" / "crypto_signal" / "product" / "stream" / "visual_proof.js"
+    ).read_text(encoding="utf-8")
+    for state in (
+        "READY_EXACT",
+        "IDENTITY_ONLY_EXACT",
+        "UNAVAILABLE_EXPLICIT",
+    ):
+        assert state in evidence_js
+        assert state in visual_js
+    assert "/evidence" in evidence_js
+    assert "current data ile ikame yapılmadı" in evidence_js.lower()
