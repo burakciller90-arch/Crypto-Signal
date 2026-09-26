@@ -1,0 +1,399 @@
+name: Crypto Runtime Hygiene Diagnostic UID504
+
+on:
+  push:
+    branches:
+      - 'runtime/hygiene-diagnostics'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: runtime-hygiene-diagnostic-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  diagnostic:
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          clean: true
+          fetch-depth: 1
+
+      - name: Capture immutable pre-state
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          DEV="$ROOT/Development"
+          PRODUCT="$ROOT/Product"
+          test "$(id -u)" = "504"
+          git -C "$DEV" rev-parse --git-dir >/dev/null
+          git -C "$PRODUCT" rev-parse --git-dir >/dev/null
+          test -z "$(git -C "$DEV" status --porcelain)"
+          test -z "$(git -C "$PRODUCT" status --porcelain)"
+          mkdir -p "$RUNNER_TEMP/runtime-hygiene"
+          {
+            echo "DEV_HEAD_BEFORE=$(git -C "$DEV" rev-parse HEAD)"
+            echo "PRODUCT_HEAD_BEFORE=$(git -C "$PRODUCT" rev-parse HEAD)"
+          } > "$RUNNER_TEMP/runtime-hygiene-prestate"
+          echo "WORKFLOW_SHA=$GITHUB_SHA"
+          echo "REAL_CAPITAL=0"
+
+      - name: Read-only signal ledger reference audit
+        shell: bash
+        run: |
+          set -euo pipefail
+          DB="/Volumes/Crypto-504/Crypto-Signal/Development/runtime/ledger/live_signal_ledger.sqlite3"
+          OUT="$RUNNER_TEMP/runtime-hygiene"
+          test -f "$DB"
+          DB="$DB" OUT="$OUT" /usr/bin/python3 - <<'PY'
+          import json
+          import os
+          import sqlite3
+          from pathlib import Path
+
+          db = Path(os.environ["DB"])
+          out = Path(os.environ["OUT"])
+          connection = sqlite3.connect(f"file:{db}?mode=ro", uri=True, timeout=10)
+          connection.row_factory = sqlite3.Row
+          connection.execute("PRAGMA query_only=ON")
+          try:
+              tables = {
+                  str(row[0])
+                  for row in connection.execute(
+                      "SELECT name FROM sqlite_master WHERE type='table'"
+                  )
+              }
+              required = {
+                  "signal_freezes",
+                  "lifecycle_evaluations",
+                  "outcome_evaluations",
+              }
+              missing = sorted(required - tables)
+              if missing:
+                  raise SystemExit(f"LEDGER_REQUIRED_TABLES_MISSING:{missing!r}")
+
+              counts = {}
+              for table in sorted(required):
+                  counts[table] = int(
+                      connection.execute(
+                          f"SELECT COUNT(*) FROM {table}"
+                      ).fetchone()[0]
+                  )
+
+              lifecycle_orphans = int(
+                  connection.execute(
+                      """
+                      SELECT COUNT(*)
+                      FROM lifecycle_evaluations AS l
+                      LEFT JOIN signal_freezes AS s
+                        ON s.signal_freeze_identity = l.signal_freeze_identity
+                      WHERE s.signal_freeze_identity IS NULL
+                      """
+                  ).fetchone()[0]
+              )
+              outcome_orphans = int(
+                  connection.execute(
+                      """
+                      SELECT COUNT(*)
+                      FROM outcome_evaluations AS o
+                      LEFT JOIN signal_freezes AS s
+                        ON s.signal_freeze_identity = o.signal_freeze_identity
+                      WHERE s.signal_freeze_identity IS NULL
+                      """
+                  ).fetchone()[0]
+              )
+
+              lifecycle_fk = [
+                  dict(row)
+                  for row in connection.execute(
+                      "PRAGMA foreign_key_list(lifecycle_evaluations)"
+                  )
+              ]
+              outcome_fk = [
+                  dict(row)
+                  for row in connection.execute(
+                      "PRAGMA foreign_key_list(outcome_evaluations)"
+                  )
+              ]
+
+              samples = [
+                  {
+                      "evaluation_identity": str(row["evaluation_identity"]),
+                      "signal_freeze_identity": str(row["signal_freeze_identity"]),
+                      "evaluated_as_of_ms": int(row["evaluated_as_of_ms"]),
+                      "appended_at_ms": int(row["appended_at_ms"]),
+                  }
+                  for row in connection.execute(
+                      """
+                      SELECT
+                        l.evaluation_identity,
+                        l.signal_freeze_identity,
+                        l.evaluated_as_of_ms,
+                        l.appended_at_ms
+                      FROM lifecycle_evaluations AS l
+                      LEFT JOIN signal_freezes AS s
+                        ON s.signal_freeze_identity = l.signal_freeze_identity
+                      WHERE s.signal_freeze_identity IS NULL
+                      ORDER BY l.appended_at_ms, l.evaluation_identity
+                      LIMIT 12
+                      """
+                  )
+              ]
+
+              payload = {
+                  "counts": counts,
+                  "lifecycle_orphans": lifecycle_orphans,
+                  "outcome_orphans": outcome_orphans,
+                  "lifecycle_foreign_keys": lifecycle_fk,
+                  "outcome_foreign_keys": outcome_fk,
+                  "lifecycle_orphan_samples": samples,
+                  "read_only": True,
+                  "real_capital": 0,
+              }
+              (out / "ledger-reference-audit.json").write_text(
+                  json.dumps(payload, sort_keys=True, indent=2),
+                  encoding="utf-8",
+              )
+              print(
+                  "RUNTIME_HYGIENE_LEDGER "
+                  + json.dumps(payload, sort_keys=True, separators=(",", ":"))
+              )
+          finally:
+              connection.close()
+          PY
+
+      - name: Safe runtime error signature audit
+        shell: bash
+        run: |
+          set -euo pipefail
+          OUT="$RUNNER_TEMP/runtime-hygiene"
+          OUT="$OUT" /usr/bin/python3 - <<'PY'
+          import json
+          import os
+          import re
+          from pathlib import Path
+
+          out = Path(os.environ["OUT"])
+          candidates = [
+              Path("/Volumes/Crypto-504/Crypto-Signal/ServiceLogs/live.err.log"),
+              Path("/Volumes/Crypto-504/Crypto-Signal/ServiceLogs/live.out.log"),
+              Path("/Volumes/Crypto-504/Crypto-Signal/ServiceLogs/market-tape.err.log"),
+              Path("/Volumes/Crypto-504/Crypto-Signal/ServiceLogs/market-tape.out.log"),
+              Path("/Volumes/Crypto-504/Crypto-Signal/ServiceLogs/alert.err.log"),
+              Path("/Volumes/Crypto-504/Crypto-Signal/ServiceLogs/alert.out.log"),
+              Path("/Volumes/Crypto-504/Crypto-Signal/Development/runtime/ledger/live_clock.err.log"),
+              Path("/Volumes/Crypto-504/Crypto-Signal/Development/runtime/ledger/live_clock.out.log"),
+              Path("/Volumes/Crypto-504/Crypto-Signal/Development/runtime/alerts/alert_clock.err.log"),
+              Path("/Volumes/Crypto-504/Crypto-Signal/Development/runtime/alerts/alert_clock.out.log"),
+          ]
+          patterns = {
+              "ssl_wrong_version": re.compile(r"WRONG_VERSION_NUMBER", re.I),
+              "certificate_verify": re.compile(r"CERTIFICATE_VERIFY_FAILED", re.I),
+              "name_resolution": re.compile(
+                  r"NameResolutionError|name or service not known|"
+                  r"nodename nor servname|temporary failure in name resolution",
+                  re.I,
+              ),
+              "connect_error": re.compile(r"ConnectError", re.I),
+              "connect_timeout": re.compile(r"ConnectTimeout|TimeoutError", re.I),
+              "alert_orphan": re.compile(
+                  r"lifecycle evaluation references missing signal",
+                  re.I,
+              ),
+              "alert_clock_error": re.compile(r"ALERT_CLOCK_ERROR", re.I),
+          }
+          report = {}
+          for path in candidates:
+              if not path.is_file():
+                  continue
+              with path.open("rb") as handle:
+                  try:
+                      handle.seek(-2_000_000, 2)
+                  except OSError:
+                      handle.seek(0)
+                  text = handle.read().decode("utf-8", errors="replace")
+              report[str(path)] = {
+                  key: len(pattern.findall(text))
+                  for key, pattern in patterns.items()
+              }
+          payload = {
+              "files": report,
+              "window_bytes_per_file": 2_000_000,
+              "raw_log_content_emitted": False,
+              "real_capital": 0,
+          }
+          (out / "error-signatures.json").write_text(
+              json.dumps(payload, sort_keys=True, indent=2),
+              encoding="utf-8",
+          )
+          print(
+              "RUNTIME_HYGIENE_ERROR_SIGNATURES "
+              + json.dumps(payload, sort_keys=True, separators=(",", ":"))
+          )
+          PY
+
+      - name: Proxy presence audit without values
+        shell: bash
+        run: |
+          set -euo pipefail
+          OUT="$RUNNER_TEMP/runtime-hygiene/proxy-presence.txt"
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+
+          check_launchctl() {
+            local key="$1"
+            if [ -n "$(launchctl getenv "$key" 2>/dev/null || true)" ]; then
+              echo "LAUNCHCTL_${key}=SET"
+            else
+              echo "LAUNCHCTL_${key}=UNSET"
+            fi
+          }
+
+          check_process() {
+            local label="$1"
+            local pid="$2"
+            local key="$3"
+            if [ -z "$pid" ] || ! kill -0 "$pid" >/dev/null 2>&1; then
+              echo "${label}_${key}=PROCESS_UNAVAILABLE"
+              return 0
+            fi
+            if ps eww -p "$pid" -o command= 2>/dev/null | grep -qE "(^|[[:space:]])${key}="; then
+              echo "${label}_${key}=SET"
+            else
+              echo "${label}_${key}=UNSET"
+            fi
+          }
+
+          {
+            for key in HTTP_PROXY HTTPS_PROXY ALL_PROXY NO_PROXY http_proxy https_proxy all_proxy no_proxy; do
+              check_launchctl "$key"
+            done
+
+            SUP="$(cat "$ROOT/ssd-service-supervisor.pid" 2>/dev/null || true)"
+            MARKET="$(cat "$ROOT/market-tape-stream.pid" 2>/dev/null || true)"
+            for key in HTTP_PROXY HTTPS_PROXY ALL_PROXY NO_PROXY http_proxy https_proxy all_proxy no_proxy; do
+              check_process SUPERVISOR "$SUP" "$key"
+              check_process MARKET_TAPE "$MARKET" "$key"
+            done
+            echo "PROXY_VALUES_EMITTED=NO"
+            echo "REAL_CAPITAL=0"
+          } | tee "$OUT"
+
+      - name: Read-only REST and WebSocket direct-vs-environment probe
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
+          OUT="$RUNNER_TEMP/runtime-hygiene/network-probe.txt"
+          test -x "$DEV/.venv/bin/python"
+          "$DEV/.venv/bin/python" - <<'PY' | tee "$OUT"
+          import asyncio
+          import httpx
+          from websockets.asyncio.client import connect
+
+          def error_chain(exc: BaseException) -> str:
+              names = []
+              current = exc
+              seen = set()
+              while current is not None and id(current) not in seen and len(names) < 6:
+                  seen.add(id(current))
+                  names.append(type(current).__name__)
+                  current = current.__cause__ or current.__context__
+              return ">".join(names)
+
+          async def rest_probe(label: str, url: str, trust_env: bool) -> None:
+              try:
+                  async with httpx.AsyncClient(
+                      timeout=8.0,
+                      follow_redirects=True,
+                      trust_env=trust_env,
+                  ) as client:
+                      response = await client.get(url)
+                  print(
+                      f"REST_PROBE label={label} trust_env={trust_env} "
+                      f"status={response.status_code} error=NONE"
+                  )
+              except Exception as exc:
+                  print(
+                      f"REST_PROBE label={label} trust_env={trust_env} "
+                      f"status=ERROR error_chain={error_chain(exc)}"
+                  )
+
+          async def ws_probe(label: str, url: str, proxy) -> None:
+              mode = "environment" if proxy is True else "direct"
+              try:
+                  async with connect(
+                      url,
+                      open_timeout=8,
+                      close_timeout=2,
+                      ping_interval=None,
+                      proxy=proxy,
+                  ):
+                      print(
+                          f"WS_PROBE label={label} mode={mode} "
+                          "status=CONNECTED error=NONE"
+                      )
+              except Exception as exc:
+                  print(
+                      f"WS_PROBE label={label} mode={mode} "
+                      f"status=ERROR error_chain={error_chain(exc)}"
+                  )
+
+          async def main() -> None:
+              rest_targets = (
+                  ("binance", "https://api.binance.com/api/v3/time"),
+                  ("bybit", "https://api.bybit.com/v5/market/time"),
+              )
+              for label, url in rest_targets:
+                  await rest_probe(label, url, True)
+                  await rest_probe(label, url, False)
+
+              ws_targets = (
+                  ("binance", "wss://stream.binance.com:9443/ws"),
+                  ("bybit", "wss://stream.bybit.com/v5/public/spot"),
+              )
+              for label, url in ws_targets:
+                  await ws_probe(label, url, True)
+                  await ws_probe(label, url, None)
+
+              print("NETWORK_PROBE_READONLY=YES")
+              print("PROXY_VALUES_EMITTED=NO")
+              print("REAL_CAPITAL=0")
+
+          asyncio.run(main())
+          PY
+
+      - name: Upload runtime hygiene artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: runtime-hygiene-diagnostic-${{ github.run_id }}
+          path: ${{ runner.temp }}/runtime-hygiene
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Prove production checkouts remained untouched
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          DEV="$ROOT/Development"
+          PRODUCT="$ROOT/Product"
+          DEV_BEFORE="$(sed -n 's/^DEV_HEAD_BEFORE=//p' "$RUNNER_TEMP/runtime-hygiene-prestate")"
+          PRODUCT_BEFORE="$(sed -n 's/^PRODUCT_HEAD_BEFORE=//p' "$RUNNER_TEMP/runtime-hygiene-prestate")"
+          DEV_AFTER="$(git -C "$DEV" rev-parse HEAD)"
+          PRODUCT_AFTER="$(git -C "$PRODUCT" rev-parse HEAD)"
+          test "$DEV_BEFORE" = "$DEV_AFTER"
+          test "$PRODUCT_BEFORE" = "$PRODUCT_AFTER"
+          test -z "$(git -C "$DEV" status --porcelain)"
+          test -z "$(git -C "$PRODUCT" status --porcelain)"
+          echo "RUNTIME_HYGIENE_NON_MUTATING_PASS=YES"
+          echo "DEV_HEAD=$DEV_AFTER"
+          echo "PRODUCT_HEAD=$PRODUCT_AFTER"
+          echo "REAL_CAPITAL=0"
