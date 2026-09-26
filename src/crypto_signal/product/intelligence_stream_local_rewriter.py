@@ -13,7 +13,7 @@ from crypto_signal.product.intelligence_stream_narrative import (
     StreamNarrativeText,
 )
 
-LOCAL_NARRATIVE_REWRITER_VERSION = "crypto-signal-local-rewriter-v1/1"
+LOCAL_NARRATIVE_REWRITER_VERSION = "crypto-signal-local-rewriter-v1/2"
 _REQUIRED_TEXT_KEYS = frozenset(
     {
         "collapsed_text",
