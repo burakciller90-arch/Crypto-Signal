@@ -170,6 +170,7 @@ def test_local_rewriter_emits_bounded_openai_compatible_request() -> None:
     assert isinstance(user, dict)
     assert "tek karakter dahi değiştirmeden kopyala" in str(system["content"])
     assert "Yeni teknik kavram" in str(system["content"])
+    assert "birebir kopyalama" in str(system["content"])
     user_payload = json.loads(str(user["content"]))
     assert user_payload["symbol"] == "BTCUSDT"
     assert user_payload["timeframe"] == "4h"
