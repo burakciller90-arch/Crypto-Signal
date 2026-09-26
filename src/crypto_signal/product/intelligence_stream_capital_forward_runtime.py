@@ -320,8 +320,10 @@ class IntelligenceStreamCapitalForwardRuntime:
                 hold_intent_count=0,
                 projected_message_count=0,
             )
-        if assessed_at_ms < forecast.issued_at_ms:
-            raise ValueError("capital forward assessment predates forecast issuance")
+        if assessed_at_ms <= forecast.issued_at_ms:
+            raise ValueError(
+                "capital forward assessment must follow forecast issuance"
+            )
 
         state = Epoch2CanonicalLedger(self.epoch2_path).read_state()
         if state is None:
