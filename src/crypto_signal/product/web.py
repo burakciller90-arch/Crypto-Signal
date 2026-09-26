@@ -130,6 +130,9 @@ DEFAULT_WC2_COHORT_PATH = (
 STATIC_DIR = Path(__file__).with_name("static")
 GALACTECH_DIR = Path(__file__).with_name("galactech")
 STREAM_DIR = Path(__file__).with_name("stream")
+PRODUCT_ROOT_GALACTECH = "galactech"
+PRODUCT_ROOT_STREAM = "stream"
+PRODUCT_ROOT_CHOICES = (PRODUCT_ROOT_GALACTECH, PRODUCT_ROOT_STREAM)
 PRODUCT_VERSION = "full-version-contextual-evidence/1"
 
 
@@ -214,10 +217,24 @@ def create_app(
     event_source_runtime_path: Path | None = None,
     wc2_cohort_path: Path | None = None,
     stream_ledger_path: Path | None = None,
+    product_root: str | None = None,
 ) -> FastAPI:
     selected_path = ledger_path or Path(
         os.environ.get("CRYPTO_SIGNAL_LEDGER_PATH", str(DEFAULT_LEDGER_PATH))
     )
+    selected_product_root = (
+        product_root
+        if product_root is not None
+        else os.environ.get(
+            "CRYPTO_SIGNAL_PRODUCT_ROOT",
+            PRODUCT_ROOT_GALACTECH,
+        )
+    )
+    if selected_product_root not in PRODUCT_ROOT_CHOICES:
+        raise ValueError(
+            "product_root must be one of: "
+            + ", ".join(PRODUCT_ROOT_CHOICES)
+        )
     if alert_outbox_path is not None:
         selected_alert_path: Path | None = alert_outbox_path
     elif ledger_path is None:
@@ -440,6 +457,7 @@ def create_app(
     app.state.provider_divergence_path = selected_provider_divergence_path
     app.state.event_source_runtime_path = selected_event_source_runtime_path
     app.state.wc2_cohort_path = selected_wc2_cohort_path
+    app.state.product_root = selected_product_root
     app.state.reader = reader
 
     app.mount(
@@ -460,7 +478,12 @@ def create_app(
 
     @app.get("/", include_in_schema=False)
     def index() -> FileResponse:
-        return FileResponse(GALACTECH_DIR / "index.html")
+        root_dir = (
+            STREAM_DIR
+            if selected_product_root == PRODUCT_ROOT_STREAM
+            else GALACTECH_DIR
+        )
+        return FileResponse(root_dir / "index.html")
 
     @app.get("/galactech", include_in_schema=False)
     def galactech_preview() -> FileResponse:
@@ -483,6 +506,12 @@ def create_app(
         return {
             "status": "ok",
             "product_version": PRODUCT_VERSION,
+            "product_root": selected_product_root,
+            "stream_root_active": selected_product_root == PRODUCT_ROOT_STREAM,
+            "stream_preview_route": "/stream-preview",
+            "galactech_fallback_route": "/galactech",
+            "legacy_route": "/legacy",
+            "rollback_mode": PRODUCT_ROOT_GALACTECH,
             "real_capital": 0,
             "ledger_present": selected_path.exists(),
             "alert_outbox_present": (
