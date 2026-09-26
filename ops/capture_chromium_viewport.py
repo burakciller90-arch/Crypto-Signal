@@ -774,87 +774,160 @@ def _capture(args: argparse.Namespace) -> dict[str, object]:
                     ]
                 },
             )
+            long_probe_expression = r"""
+(async () => {
+  const wait = () =>
+    new Promise((resolve) =>
+      requestAnimationFrame(() => requestAnimationFrame(resolve))
+    );
+  await new Promise((resolve) => setTimeout(resolve, 260));
+  const api = window.__cryptoSignalStreamS14;
+  const viewport = document.getElementById("streamViewport");
+  const list = document.getElementById("messageList");
+  if (!api || !viewport || !list) {
+    return { ok: false, reason: "s14_surface_missing" };
+  }
+
+  const initial = api.snapshot();
+  const initialMessages = [...list.querySelectorAll(".message")];
+  const ariaOk = initialMessages.every(
+    (node, index) =>
+      node.getAttribute("role") === "article" &&
+      Number(node.getAttribute("aria-setsize")) === initial.totalMessages &&
+      Number(node.getAttribute("aria-posinset")) ===
+        initial.renderStart + index + 1
+  );
+  const feedRole = list.getAttribute("role");
+
+  viewport.scrollTop = 0;
+  const firstInitial = list.querySelector(".message");
+  const firstId = firstInitial?.dataset.identity || "";
+  const firstTop = firstInitial?.getBoundingClientRect().top ?? 0;
+  api.shiftOlder();
+  await wait();
+  await new Promise((resolve) => setTimeout(resolve, 60));
+  const afterOlder = api.snapshot();
+  const retainedOlder = list.querySelector(
+    `.message[data-identity="${firstId}"]`
+  );
+  const olderDrift = retainedOlder
+    ? Math.abs(retainedOlder.getBoundingClientRect().top - firstTop)
+    : 9999;
+
+  viewport.scrollTop = viewport.scrollHeight;
+  const lastBeforeNew = [...list.querySelectorAll(".message")].at(-1);
+  const lastId = lastBeforeNew?.dataset.identity || "";
+  const lastTop = lastBeforeNew?.getBoundingClientRect().top ?? 0;
+  api.shiftNewer();
+  await wait();
+  await new Promise((resolve) => setTimeout(resolve, 60));
+  const afterNewer = api.snapshot();
+  const retainedNew = list.querySelector(
+    `.message[data-identity="${lastId}"]`
+  );
+  const newerDrift = retainedNew
+    ? Math.abs(retainedNew.getBoundingClientRect().top - lastTop)
+    : 9999;
+
+  const visibleMessages = [...list.querySelectorAll(".message")];
+  const anchor = visibleMessages[Math.min(20, visibleMessages.length - 1)];
+  anchor?.scrollIntoView({ block: "center" });
+  await wait();
+  const prependId = anchor?.dataset.identity || "";
+  const prependTop = anchor?.getBoundingClientRect().top ?? 0;
+  const prependResult = api.prependFixturePage(50);
+  await wait();
+  await new Promise((resolve) => setTimeout(resolve, 60));
+  const afterPrepend = api.snapshot();
+  const prependAnchor = list.querySelector(
+    `.message[data-identity="${prependId}"]`
+  );
+  const prependDrift = prependAnchor
+    ? Math.abs(prependAnchor.getBoundingClientRect().top - prependTop)
+    : 9999;
+
+  const expandable = [...list.querySelectorAll(".message")].find(
+    (node) => node.querySelector(".message-summary") && node.dataset.identity
+  );
+  expandable?.scrollIntoView({ block: "center" });
+  await wait();
+  const expansionTop = expandable?.getBoundingClientRect().top ?? 0;
+  expandable?.querySelector(".message-summary")?.click();
+  await wait();
+  await new Promise((resolve) => setTimeout(resolve, 120));
+  const expansionDrift = expandable
+    ? Math.abs(expandable.getBoundingClientRect().top - expansionTop)
+    : 9999;
+  const expanded = Boolean(expandable?.classList.contains("is-expanded"));
+
+  const searchButton = document.getElementById("searchButton");
+  searchButton?.focus();
+  api.openDiscovery();
+  await wait();
+  const drawer = document.getElementById("discoveryDrawer");
+  const focusInside = Boolean(drawer?.contains(document.activeElement));
+  const focusables = drawer
+    ? [
+        ...drawer.querySelectorAll(
+          'button:not([disabled]),input:not([disabled]),select:not([disabled]),' +
+            'textarea:not([disabled]),a[href],[tabindex]:not([tabindex="-1"])'
+        ),
+      ].filter((node) => !node.hidden)
+    : [];
+  const firstFocus = focusables[0];
+  const lastFocus = focusables.at(-1);
+  lastFocus?.focus();
+  document.dispatchEvent(
+    new KeyboardEvent("keydown", { key: "Tab", bubbles: true })
+  );
+  const tabWrapped = document.activeElement === firstFocus;
+  document.dispatchEvent(
+    new KeyboardEvent("keydown", { key: "Escape", bubbles: true })
+  );
+  await wait();
+  const escapeClosed = drawer?.hidden === true;
+  const focusRestored = document.activeElement === searchButton;
+
+  const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const transition = getComputedStyle(
+    list.querySelector(".message")
+  ).transitionDuration;
+  document.documentElement.style.fontSize = "125%";
+  await wait();
+  const fontScaleNoOverflow =
+    document.documentElement.scrollWidth <= window.innerWidth;
+  document.documentElement.style.fontSize = "";
+  const final = api.snapshot();
+
+  return {
+    ok: true,
+    feedRole,
+    ariaOk,
+    initial,
+    afterOlder,
+    afterNewer,
+    olderDrift,
+    newerDrift,
+    prependResult,
+    afterPrepend,
+    prependDrift,
+    expanded,
+    expansionDrift,
+    focusInside,
+    tabWrapped,
+    escapeClosed,
+    focusRestored,
+    reduced,
+    transition,
+    fontScaleNoOverflow,
+    final,
+  };
+})()
+"""
             long_probe_result = session.command(
                 "Runtime.evaluate",
                 {
-                    "expression": (
-                        "(async()=>{"
-                        "const wait=()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));"
-                        "await new Promise(r=>setTimeout(r,260));"
-                        "const api=window.__cryptoSignalStreamS14;"
-                        "const viewport=document.getElementById('streamViewport');"
-                        "const list=document.getElementById('messageList');"
-                        "if(!api||!viewport||!list){return {ok:false,reason:'s14_surface_missing'};}"
-                        "const initial=api.snapshot();"
-                        "const ariaOk=[...list.querySelectorAll('.message')].every((n,i)=>"
-                        "n.getAttribute('role')==='article'&&"
-                        "Number(n.getAttribute('aria-setsize'))===initial.totalMessages&&"
-                        "Number(n.getAttribute('aria-posinset'))===initial.renderStart+i+1);"
-                        "const feedRole=list.getAttribute('role');"
-                        "viewport.scrollTop=0;"
-                        "const firstInitial=list.querySelector('.message');"
-                        "const firstId=firstInitial?.dataset.identity||'';"
-                        "const firstTop=firstInitial?.getBoundingClientRect().top??0;"
-                        "api.shiftOlder();"
-                        "await wait();await new Promise(r=>setTimeout(r,60));"
-                        "const afterOlder=api.snapshot();"
-                        "const retainedOlder=list.querySelector('.message[data-identity="'+firstId+'"]');"
-                        "const olderDrift=retainedOlder?Math.abs(retainedOlder.getBoundingClientRect().top-firstTop):9999;"
-                        "viewport.scrollTop=viewport.scrollHeight;"
-                        "const lastBeforeNew=[...list.querySelectorAll('.message')].at(-1);"
-                        "const lastId=lastBeforeNew?.dataset.identity||'';"
-                        "const lastTop=lastBeforeNew?.getBoundingClientRect().top??0;"
-                        "api.shiftNewer();"
-                        "await wait();await new Promise(r=>setTimeout(r,60));"
-                        "const afterNewer=api.snapshot();"
-                        "const retainedNew=list.querySelector('.message[data-identity="'+lastId+'"]');"
-                        "const newerDrift=retainedNew?Math.abs(retainedNew.getBoundingClientRect().top-lastTop):9999;"
-                        "const anchor=[...list.querySelectorAll('.message')][Math.min(20,list.querySelectorAll('.message').length-1)];"
-                        "anchor?.scrollIntoView({block:'center'});"
-                        "await wait();"
-                        "const prependId=anchor?.dataset.identity||'';"
-                        "const prependTop=anchor?.getBoundingClientRect().top??0;"
-                        "const prependResult=api.prependFixturePage(50);"
-                        "await wait();await new Promise(r=>setTimeout(r,60));"
-                        "const afterPrepend=api.snapshot();"
-                        "const prependAnchor=list.querySelector('.message[data-identity="'+prependId+'"]');"
-                        "const prependDrift=prependAnchor?Math.abs(prependAnchor.getBoundingClientRect().top-prependTop):9999;"
-                        "const expandable=[...list.querySelectorAll('.message')].find(n=>"
-                        "n.querySelector('.message-summary')&&n.dataset.identity);"
-                        "expandable?.scrollIntoView({block:'center'});"
-                        "await wait();"
-                        "const expansionTop=expandable?.getBoundingClientRect().top??0;"
-                        "expandable?.querySelector('.message-summary')?.click();"
-                        "await wait();await new Promise(r=>setTimeout(r,120));"
-                        "const expansionDrift=expandable?Math.abs(expandable.getBoundingClientRect().top-expansionTop):9999;"
-                        "const expanded=!!expandable?.classList.contains('is-expanded');"
-                        "const searchButton=document.getElementById('searchButton');"
-                        "searchButton?.focus();api.openDiscovery();"
-                        "await wait();"
-                        "const drawer=document.getElementById('discoveryDrawer');"
-                        "const focusInside=!!drawer?.contains(document.activeElement);"
-                        "const focusables=drawer?[...drawer.querySelectorAll('button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),a[href],[tabindex]:not([tabindex="-1"])')].filter(n=>!n.hidden):[];"
-                        "const firstFocus=focusables[0],lastFocus=focusables.at(-1);"
-                        "lastFocus?.focus();"
-                        "document.dispatchEvent(new KeyboardEvent('keydown',{key:'Tab',bubbles:true}));"
-                        "const tabWrapped=document.activeElement===firstFocus;"
-                        "document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}));"
-                        "await wait();"
-                        "const escapeClosed=drawer?.hidden===true;"
-                        "const focusRestored=document.activeElement===searchButton;"
-                        "const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;"
-                        "const transition=getComputedStyle(list.querySelector('.message')).transitionDuration;"
-                        "document.documentElement.style.fontSize='125%';"
-                        "await wait();"
-                        "const fontScaleNoOverflow=document.documentElement.scrollWidth<=window.innerWidth;"
-                        "document.documentElement.style.fontSize='';"
-                        "const final=api.snapshot();"
-                        "return {ok:true,feedRole,ariaOk,initial,afterOlder,afterNewer,"
-                        "olderDrift,newerDrift,prependResult,afterPrepend,prependDrift,"
-                        "expanded,expansionDrift,focusInside,tabWrapped,escapeClosed,focusRestored,"
-                        "reduced,transition,fontScaleNoOverflow,final};"
-                        "})()"
-                    ),
+                    "expression": long_probe_expression,
                     "awaitPromise": True,
                     "returnByValue": True,
                 },
