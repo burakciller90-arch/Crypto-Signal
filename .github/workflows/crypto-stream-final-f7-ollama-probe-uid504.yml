@@ -1,0 +1,74 @@
+name: Crypto Stream Final F7 Ollama Probe UID504
+
+on:
+  push:
+    branches:
+      - 'stream/final-f7-live-acceptance'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: crypto-stream-final-f7-ollama-probe
+  cancel-in-progress: true
+
+jobs:
+  probe:
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          clean: true
+          fetch-depth: 0
+
+      - name: Probe loopback Ollama and installed local models
+        shell: bash
+        run: |
+          set -euo pipefail
+          EXPECTED_MAIN="f4487a4db6f2d31fcb5384763a1f958f2678c6bd"
+          test "$(git merge-base HEAD "$EXPECTED_MAIN")" = "$EXPECTED_MAIN"
+          git diff --quiet "$EXPECTED_MAIN"...HEAD -- . ':(exclude).github/workflows/crypto-stream-final-f7-ollama-probe-uid504.yml'
+
+          OUT="$RUNNER_TEMP/f7-ollama-probe"
+          mkdir -p "$OUT"
+          OLLAMA_BIN="$(command -v ollama || true)"
+          echo "F7_OLLAMA_BIN=${OLLAMA_BIN:-MISSING}"
+
+          if ! curl -fsS --max-time 3 http://127.0.0.1:11434/api/tags > "$OUT/tags.json"; then
+            test -n "$OLLAMA_BIN"
+            unset RUNNER_TRACKING_ID
+            nohup "$OLLAMA_BIN" serve > "$OUT/ollama-serve.log" 2>&1 < /dev/null &
+            for _ in {1..20}; do
+              if curl -fsS --max-time 3 http://127.0.0.1:11434/api/tags > "$OUT/tags.json"; then
+                break
+              fi
+              sleep 1
+            done
+          fi
+
+          test -s "$OUT/tags.json"
+          /usr/bin/python3 - "$OUT/tags.json" <<'PY'
+          import json,sys
+          p=json.load(open(sys.argv[1]))
+          models=p.get("models",[])
+          names=[str(m.get("name") or m.get("model") or "") for m in models]
+          names=[n for n in names if n]
+          print("F7_OLLAMA_MODELS="+json.dumps(names,ensure_ascii=False))
+          if not names:
+              raise SystemExit("F7_OLLAMA_NO_LOCAL_MODEL")
+          preferred=next((n for n in names if n == "qwen3:8b"), names[0])
+          print("F7_OLLAMA_SELECTED_MODEL="+preferred)
+          print("F7_OLLAMA_LOOPBACK_PASS=YES")
+          print("REAL_CAPITAL=0")
+          PY
+
+      - name: Upload probe
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stream-final-f7-ollama-probe-${{ github.run_id }}
+          path: ${{ runner.temp }}/f7-ollama-probe
+          if-no-files-found: warn
+          retention-days: 7
