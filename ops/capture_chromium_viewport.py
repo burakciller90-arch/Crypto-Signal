@@ -39,7 +39,9 @@ def _wait_target(port: int, url: str, *, timeout_seconds: float = 30.0) -> dict[
         except (OSError, ValueError, urllib.error.URLError) as exc:
             last_error = exc
             time.sleep(0.15)
-    raise RuntimeError(\n        f"Chrome DevTools target unavailable after {timeout_seconds:.1f}s: {last_error!r}"\n    )
+    raise RuntimeError(
+        f"Chrome DevTools target unavailable after {timeout_seconds:.1f}s: {last_error!r}"
+    )
 
 
 class CdpSession:
