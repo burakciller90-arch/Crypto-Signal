@@ -245,3 +245,121 @@ jobs:
           print("HISTORICAL_BACKFILL=NO")
           print("REAL_CAPITAL=0")
           PY
+
+      - name: Bounded natural F5 forward observation
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          DEV="$ROOT/Development"
+          "$DEV/.venv/bin/python" - "$ROOT" <<'PY'
+          import json
+          import sqlite3
+          import sys
+          import time
+          from pathlib import Path
+
+          root = Path(sys.argv[1])
+          runtime = root / "Development/runtime"
+          decision = runtime / "decision/decision_evidence.sqlite3"
+          prepared = runtime / "wc2/wc2.wc2-prepared.sqlite3"
+          epoch2 = runtime / "paper/paper_fund_epoch2.sqlite3"
+          stream = runtime / "stream/intelligence_stream.sqlite3"
+          live_log = root / "ServiceLogs/live.out.log"
+
+          def ro(path):
+              c = sqlite3.connect(f"{path.resolve().as_uri()}?mode=ro", uri=True)
+              c.execute("PRAGMA query_only=ON")
+              return c
+
+          def state():
+              with ro(stream) as c:
+                  activation = c.execute(
+                      """
+                      SELECT activated_at_ms
+                      FROM stream_capital_projection_activation
+                      ORDER BY activated_at_ms
+                      LIMIT 1
+                      """
+                  ).fetchone()
+                  if activation is None:
+                      raise SystemExit("F5_FORWARD_WATCH_NO_ACTIVATION")
+                  boundary = int(activation[0])
+                  capital_sources = int(
+                      c.execute(
+                          """
+                          SELECT COUNT(*)
+                          FROM stream_source_events
+                          WHERE category='capital' AND event_at_ms >= ?
+                          """,
+                          (boundary,),
+                      ).fetchone()[0]
+                  )
+              with ro(decision) as c:
+                  forecasts = int(
+                      c.execute(
+                          "SELECT COUNT(*) FROM r20_forecasts WHERE issued_at_ms >= ?",
+                          (boundary,),
+                      ).fetchone()[0]
+                  )
+              with ro(prepared) as c:
+                  receipts = int(
+                      c.execute(
+                          """
+                          SELECT COUNT(*) FROM wc2_prepared_cycle_receipts
+                          WHERE issued_at_ms >= ?
+                          """,
+                          (boundary,),
+                      ).fetchone()[0]
+                  )
+              with ro(epoch2) as c:
+                  vault_decisions = int(
+                      c.execute(
+                          """
+                          SELECT COUNT(*) FROM s11_vault_decisions
+                          WHERE event_at_ms >= ?
+                          """,
+                          (boundary,),
+                      ).fetchone()[0]
+                  )
+              log = live_log.read_text(errors="replace") if live_log.exists() else ""
+              liveness = [
+                  line for line in log.splitlines()
+                  if "wc2_liveness status=SUMMARY" in line
+              ]
+              return {
+                  "activated_at_ms": boundary,
+                  "forecasts": forecasts,
+                  "prepared_receipts": receipts,
+                  "vault_decisions": vault_decisions,
+                  "capital_sources": capital_sources,
+                  "projected_marker": "stream_capital status=PROJECTED" in log,
+                  "latest_wc2_liveness": None if not liveness else liveness[-1],
+              }
+
+          latest = None
+          for attempt in range(1, 21):
+              latest = state()
+              print(
+                  "F5_FORWARD_WATCH "
+                  + json.dumps({"attempt": attempt, **latest}, sort_keys=True)
+              )
+              if (
+                  latest["forecasts"] > 0
+                  and latest["prepared_receipts"] > 0
+                  and latest["vault_decisions"] > 0
+                  and latest["capital_sources"] > 0
+                  and latest["projected_marker"]
+              ):
+                  print("F5_FORWARD_CAPITAL_EVIDENCE=OBSERVED")
+                  print("HISTORICAL_BACKFILL=NO")
+                  print("REAL_CAPITAL=0")
+                  raise SystemExit(0)
+              if attempt < 20:
+                  time.sleep(15)
+
+          print("F5_FORWARD_CAPITAL_EVIDENCE=PENDING_CORRECT_SILENCE")
+          print("F5_FORWARD_WATCH_FINAL " + json.dumps(latest, sort_keys=True))
+          print("HISTORICAL_BACKFILL=NO")
+          print("REAL_CAPITAL=0")
+          PY
