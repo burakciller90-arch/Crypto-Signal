@@ -96,39 +96,66 @@ class CdpSession:
 
 
 def _capture(args: argparse.Namespace) -> dict[str, object]:
-    port = _free_port()
-    user_data = args.output.parent / f".chrome-profile-{os.getpid()}"
     log_path = args.output.parent / f"{args.output.stem}.chrome.log"
-    command = [
-        str(args.browser),
-        "--headless=new",
-        "--disable-gpu",
-        "--disable-extensions",
-        "--disable-background-networking",
-        "--disable-component-update",
-        "--disable-sync",
-        "--hide-scrollbars",
-        "--metrics-recording-only",
-        "--no-default-browser-check",
-        "--no-first-run",
-        "--renderer-process-limit=2",
-        "--remote-allow-origins=*",
-        f"--remote-debugging-port={port}",
-        f"--user-data-dir={user_data}",
-        "about:blank",
-    ]
-
     args.output.parent.mkdir(parents=True, exist_ok=True)
-    with log_path.open("wb") as log:
-        process = subprocess.Popen(
-            command,
-            stdout=log,
-            stderr=subprocess.STDOUT,
-            start_new_session=True,
+    log_path.write_bytes(b"")
+
+    process: subprocess.Popen[bytes] | None = None
+    target: dict[str, Any] | None = None
+    startup_error: RuntimeError | None = None
+    for startup_attempt in range(1, 3):
+        port = _free_port()
+        user_data = (
+            args.output.parent
+            / f".chrome-profile-{os.getpid()}-{startup_attempt}"
         )
+        command = [
+            str(args.browser),
+            "--headless=new",
+            "--disable-gpu",
+            "--disable-extensions",
+            "--disable-background-networking",
+            "--disable-component-update",
+            "--disable-sync",
+            "--hide-scrollbars",
+            "--metrics-recording-only",
+            "--no-default-browser-check",
+            "--no-first-run",
+            "--renderer-process-limit=2",
+            "--remote-allow-origins=*",
+            f"--remote-debugging-port={port}",
+            f"--user-data-dir={user_data}",
+            "about:blank",
+        ]
+        with log_path.open("ab") as log:
+            process = subprocess.Popen(
+                command,
+                stdout=log,
+                stderr=subprocess.STDOUT,
+                start_new_session=True,
+            )
+        try:
+            target = _wait_target(port, args.url)
+            break
+        except RuntimeError as exc:
+            startup_error = exc
+            if process.poll() is None:
+                os.killpg(process.pid, signal.SIGTERM)
+                try:
+                    process.wait(timeout=3)
+                except subprocess.TimeoutExpired:
+                    os.killpg(process.pid, signal.SIGKILL)
+                    process.wait(timeout=3)
+            if startup_attempt < 2:
+                time.sleep(1)
+
+    if process is None or target is None:
+        raise RuntimeError(
+            f"Chrome startup failed after 2 attempts: {startup_error!r}"
+        )
+
     session: CdpSession | None = None
     try:
-        target = _wait_target(port, args.url)
         websocket_url = target.get("webSocketDebuggerUrl")
         if not isinstance(websocket_url, str):
             raise TypeError("Chrome target missing websocket URL")
@@ -1416,7 +1443,7 @@ def _capture(args: argparse.Namespace) -> dict[str, object]:
     finally:
         if session is not None:
             session.close()
-        if process.poll() is None:
+        if process is not None and process.poll() is None:
             os.killpg(process.pid, signal.SIGTERM)
             try:
                 process.wait(timeout=3)
