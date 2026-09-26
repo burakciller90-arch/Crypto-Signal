@@ -633,6 +633,43 @@ All three vaults can progress through their own accepted rules on forward paper 
 
 ---
 
+## F5 live activation progress — 2026-09-26
+
+F5 is **not yet PASS**. Implementation and physical activation are accepted; one genuine post-activation Capital projection is still required.
+
+Accepted implementation evidence:
+- PR #1369 merged F5 to main `97b2db05711d4b5504c47b4dfb8396d92fcd762f`;
+- exact-source UID504 gate `36267123088` passed focused tests, whole-repository regression, Ruff, strict mypy, JavaScript checks and read-only live-ledger audit;
+- the earlier Stream chronology failure was preserved as a valid anti-backfill guard and fixed by giving the genuine Decision → Capital assessment → Core → Tactical → Opportunity sequence deterministic forward timestamps;
+- no historical Stream chronology rule was weakened.
+
+Accepted physical activation evidence:
+- UID504 run `36267383692` fast-forwarded Development to exact merged main;
+- canonical supervisor reload passed headlessly;
+- live Epoch2 and Stream SQLite quick checks are `ok`;
+- required S11/R22 Capital lifecycle tables now physically exist;
+- required Stream Capital tables now physically exist;
+- immutable Capital activation identity:
+  `bbd190a8ad282e69ce30edae334dc1cf06103bb86d777931fa5db106ad0ad4a8`;
+- Capital activation time: `1790452197922`;
+- live log marker `stream_capital status=ACTIVATED` observed;
+- `HISTORICAL_BACKFILL=NO`;
+- `REAL_CAPITAL=0`.
+
+At the activation acceptance instant:
+- post-activation CAPITAL source rows: 0;
+- S11 vault decisions: 0;
+- R22 Capital intents: 0;
+- `stream_capital status=PROJECTED`: not yet observed.
+
+Therefore the remaining F5 gate is exactly:
+
+**one natural post-activation canonical forward Capital candidate/decision projection with real persisted lineage**.
+
+Do not create synthetic candidates, sizing, fills, executions or historical Capital messages to satisfy this gate.
+
+---
+
 # 12. F6 — Exact Frozen Evidence Closure
 
 ## Goal
