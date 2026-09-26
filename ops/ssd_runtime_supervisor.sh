@@ -168,6 +168,35 @@ start_market_tape_stream() {
   echo "$(date '+%Y-%m-%d %H:%M:%S %z') market_tape_started pid=$pid REAL_CAPITAL=0"
 }
 
+run_market_tape_snapshot_clock() {
+  local py="$DEV/.venv/bin/python"
+  local runner="$DEV/ops/run_market_tape_snapshot.py"
+  local runtime="$DEV/runtime/market_tape"
+  local db="$runtime/market_tape.sqlite3"
+  local lock="$runtime/market_tape_snapshot.lock"
+
+  for required in "$py" "$runner" "$db"; do
+    if [ ! -e "$required" ]; then
+      echo "$(date '+%Y-%m-%d %H:%M:%S %z') market_tape_snapshot_not_ready missing=$required FAIL_CLOSED=YES REAL_CAPITAL=0"
+      return 0
+    fi
+  done
+
+  (
+    unset RUNNER_TRACKING_ID
+    export PYTHONPATH="$DEV:$DEV/src"
+    cd "$DEV" || exit 75
+    exec "$py" "$runner" \
+      --db "$db" \
+      --lock-path "$lock" \
+      --symbols BTCUSDT ETHUSDT SOLUSDT \
+      --book-depth 50 \
+      --trade-limit 60 \
+      --oi-interval 15min \
+      --oi-limit 16
+  ) >>"$LOGDIR/market-tape-snapshot.out.log" 2>>"$LOGDIR/market-tape-snapshot.err.log" < /dev/null &
+}
+
 run_wc2_live_clock() {
   local runtime="$DEV/runtime"
   local py="$DEV/.venv/bin/python"
@@ -181,6 +210,7 @@ run_wc2_live_clock() {
   local prepared="$runtime/wc2/wc2.wc2-prepared.sqlite3"
   local decision="$runtime/decision/decision_evidence.sqlite3"
   local stream="$runtime/stream/intelligence_stream.sqlite3"
+  local market_tape="$runtime/market_tape/market_tape.sqlite3"
   local cohort="$runtime/wc2/wc2_untouched_forward.sqlite3"
   local shadow_intent="$runtime/wc2/wc2.shadow-intent.sqlite3"
   local shadow_cycle="$runtime/wc2/wc2.shadow-cycle.sqlite3"
@@ -189,7 +219,7 @@ run_wc2_live_clock() {
   local execution_journal="$runtime/wc2/wc2_paper_execution.wc2-paper-execution.sqlite3"
   local venue_rules="$runtime/paper/paper_fund.sqlite3"
 
-  for required in "$py" "$runner" "$ledger" "$candle" "$policy" "$epoch2" "$protocol" "$execution_protocol" "$execution_runtime" "$venue_rules"; do
+  for required in "$py" "$runner" "$ledger" "$candle" "$market_tape" "$policy" "$epoch2" "$protocol" "$execution_protocol" "$execution_runtime" "$venue_rules"; do
     if [ ! -e "$required" ]; then
       echo "$(date '+%Y-%m-%d %H:%M:%S %z') wc2_live_not_ready missing=$required FAIL_CLOSED=YES REAL_CAPITAL=0"
       return 0
@@ -206,6 +236,8 @@ run_wc2_live_clock() {
       --provider-divergence "$divergence" \
       --stream-enabled \
       --stream-ledger "$stream" \
+      --stream-market-tape "$market_tape" \
+      --stream-family-symbols BTCUSDT ETHUSDT SOLUSDT \
       --wc2-enabled \
       --wc2-policy "$policy" \
       --wc2-epoch2 "$epoch2" \
@@ -245,6 +277,7 @@ while true; do
   now="$(date +%s)"
 
   if [ $((now-last_clock)) -ge 120 ]; then
+    run_market_tape_snapshot_clock
     run_wc2_live_clock
     run_clock alert "$ALERTS/.venv/bin/python" "$ALERTS/src"
     run_clock paper "$PAPER/.venv/bin/python" "$PAPER/src"
