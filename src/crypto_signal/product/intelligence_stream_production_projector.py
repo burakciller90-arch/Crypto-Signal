@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from crypto_signal.ledger.serialization import canonical_sha256
 from crypto_signal.product.intelligence_stream_analytical import (
@@ -52,6 +53,12 @@ from crypto_signal.product.intelligence_stream_story import (
 from crypto_signal.product.intelligence_stream_story_ledger import (
     IntelligenceStreamStoryLedger,
 )
+
+if TYPE_CHECKING:
+    from crypto_signal.product.intelligence_stream_family import (
+        StreamFamilyProjectionResult,
+        StreamFamilySnapshot,
+    )
 
 STREAM_PRODUCTION_PROJECTOR_CONTRACT_SCHEMA_VERSION = (
     "intelligence-stream-production-projector-contract-v1/1"
@@ -332,6 +339,22 @@ class IntelligenceStreamProductionProjector:
             projected,
             source_disposition=source_disposition,
             previous_state=previous_state,
+        )
+
+    def project_family(
+        self,
+        snapshot: "StreamFamilySnapshot",
+        *,
+        activated_at_ms: int,
+    ) -> "StreamFamilyProjectionResult":
+        _require_implemented_projector(snapshot.projector_id)
+        from crypto_signal.product.intelligence_stream_family import (
+            IntelligenceStreamFamilyRuntime,
+        )
+
+        return IntelligenceStreamFamilyRuntime(self.path).project(
+            snapshot,
+            activated_at_ms=activated_at_ms,
         )
 
     def _project_after_source_write(
