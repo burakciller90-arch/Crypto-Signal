@@ -211,6 +211,7 @@ run_wc2_live_clock() {
   local decision="$runtime/decision/decision_evidence.sqlite3"
   local stream="$runtime/stream/intelligence_stream.sqlite3"
   local market_tape="$runtime/market_tape/market_tape.sqlite3"
+  local event_source="$runtime/events/event_source.sqlite3"
   local cohort="$runtime/wc2/wc2_untouched_forward.sqlite3"
   local shadow_intent="$runtime/wc2/wc2.shadow-intent.sqlite3"
   local shadow_cycle="$runtime/wc2/wc2.shadow-cycle.sqlite3"
@@ -219,7 +220,7 @@ run_wc2_live_clock() {
   local execution_journal="$runtime/wc2/wc2_paper_execution.wc2-paper-execution.sqlite3"
   local venue_rules="$runtime/paper/paper_fund.sqlite3"
 
-  for required in "$py" "$runner" "$ledger" "$candle" "$market_tape" "$policy" "$epoch2" "$protocol" "$execution_protocol" "$execution_runtime" "$venue_rules"; do
+  for required in "$py" "$runner" "$ledger" "$candle" "$market_tape" "$event_source" "$policy" "$epoch2" "$protocol" "$execution_protocol" "$execution_runtime" "$venue_rules"; do
     if [ ! -e "$required" ]; then
       echo "$(date '+%Y-%m-%d %H:%M:%S %z') wc2_live_not_ready missing=$required FAIL_CLOSED=YES REAL_CAPITAL=0"
       return 0
@@ -237,6 +238,7 @@ run_wc2_live_clock() {
       --stream-enabled \
       --stream-ledger "$stream" \
       --stream-market-tape "$market_tape" \
+      --stream-event-source "$event_source" \
       --stream-family-symbols BTCUSDT ETHUSDT SOLUSDT \
       --wc2-enabled \
       --wc2-policy "$policy" \
