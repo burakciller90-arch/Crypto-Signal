@@ -61,6 +61,7 @@ from crypto_signal.paper.shadow_cycle_manifest import R25ShadowCycleManifest
 from crypto_signal.paper.shadow_intent_journal import R25ShadowIntentJournal
 from crypto_signal.product.intelligence_stream_family_sources import (
     build_geometry_family_snapshot_from_bundle,
+    build_geometry_lifecycle_family_snapshot,
     build_market_tape_family_snapshots,
 )
 from crypto_signal.product.intelligence_stream_forward_runtime import (
@@ -492,9 +493,21 @@ async def run(
             stream_family_projector = IntelligenceStreamProductionProjector(
                 selected_stream.ledger_path
             )
+            stream_activation_at_ms = time.time_ns() // 1_000_000
             stream_activation = stream_runtime.ensure_activated(
-                activated_at_ms=time.time_ns() // 1_000_000
+                activated_at_ms=stream_activation_at_ms
             )
+            if selected_stream.market_tape_path is not None:
+                for family_projector_id in (
+                    "market_geometry_change",
+                    "liquidity_change",
+                    "order_flow_change",
+                    "derivatives_change",
+                ):
+                    stream_family_projector.ensure_family_activation(
+                        family_projector_id,
+                        activated_at_ms=stream_activation_at_ms,
+                    )
         except (OSError, TypeError, ValueError, sqlite3.Error) as exc:
             print(
                 "stream status=ERROR "
@@ -823,6 +836,74 @@ async def run(
                 "CONSENSUS_NOT_INFERRED=YES REAL_CAPITAL=0",
                 flush=True,
             )
+
+    if (
+        stream_family_projector is not None
+        and selected_stream.market_tape_path is not None
+    ):
+        try:
+            geometry_activation_ms = stream_family_projector.family_activation_ms(
+                "market_geometry_change"
+            )
+            lifecycle_dispositions: Counter[str] = Counter()
+            lifecycle_transition_n = 0
+            for lifecycle_record in ledger.list_lifecycle_evaluations():
+                if lifecycle_record.appended_at_ms < geometry_activation_ms:
+                    continue
+                freeze_record = ledger.read_freeze_by_signal(
+                    lifecycle_record.signal_freeze_identity
+                )
+                if freeze_record is None:
+                    raise ValueError(
+                        "Stream lifecycle projection lost parent signal freeze"
+                    )
+                lifecycle_snapshot = build_geometry_lifecycle_family_snapshot(
+                    freeze_record,
+                    lifecycle_record,
+                )
+                if lifecycle_snapshot is None:
+                    continue
+                lifecycle_transition_n += 1
+                lifecycle_projection = stream_family_projector.project_family(
+                    lifecycle_snapshot,
+                    activated_at_ms=geometry_activation_ms,
+                )
+                lifecycle_dispositions[
+                    lifecycle_projection.disposition.value
+                ] += 1
+                print(
+                    "stream_family projector=market_geometry_change "
+                    f"symbol={lifecycle_snapshot.symbol} "
+                    f"timeframe={lifecycle_snapshot.timeframe} "
+                    f"state={lifecycle_snapshot.state_label} "
+                    f"status={lifecycle_projection.disposition.value} "
+                    f"source={lifecycle_projection.source_event_identity} "
+                    f"narrative={lifecycle_projection.narrative_identity or '-'} "
+                    "LIFECYCLE_TRANSITION=YES "
+                    "HISTORICAL_BACKFILL=NO REAL_CAPITAL=0",
+                    flush=True,
+                )
+        except (OSError, TypeError, ValueError, sqlite3.Error) as exc:
+            print(
+                "stream_family lifecycle_status=ERROR "
+                f"error={type(exc).__name__}:{exc} "
+                "FAIL_STOP=YES HISTORICAL_BACKFILL=NO REAL_CAPITAL=0",
+                file=sys.stderr,
+                flush=True,
+            )
+            return 1
+        lifecycle_summary = ",".join(
+            f"{key}:{value}"
+            for key, value in sorted(lifecycle_dispositions.items())
+        ) or "-"
+        print(
+            "stream_family lifecycle_status=SUMMARY "
+            f"transitions={lifecycle_transition_n} "
+            f"dispositions={lifecycle_summary} "
+            f"activation_ms={geometry_activation_ms} "
+            "HISTORICAL_BACKFILL=NO REAL_CAPITAL=0",
+            flush=True,
+        )
 
     if (
         stream_family_projector is not None
