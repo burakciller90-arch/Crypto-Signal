@@ -379,11 +379,17 @@ jobs:
             rm -f "$temp_outbox"
             LABEL="$label" DB="$DB" TEMP_OUTBOX="$temp_outbox" PYTHONPATH="$src" "$py" - <<'PY'
           import os
+          import signal
           from pathlib import Path
 
           from crypto_signal.alerts.clock import materialize_alert_events
           from crypto_signal.alerts.store import AlertOutbox
 
+          def _alarm(_signum, _frame):
+              raise TimeoutError("alert source parity probe exceeded 45 seconds")
+
+          signal.signal(signal.SIGALRM, _alarm)
+          signal.alarm(45)
           label = os.environ["LABEL"]
           try:
               result = materialize_alert_events(
@@ -402,6 +408,8 @@ jobs:
                   f"eligible={result.eligible_events} inserted={result.inserted_events} "
                   f"unchanged={result.unchanged_events}"
               )
+          finally:
+              signal.alarm(0)
           print("ALERT_SOURCE_PROBE_PRODUCTION_MUTATION=NO")
           print("REAL_CAPITAL=0")
           PY
