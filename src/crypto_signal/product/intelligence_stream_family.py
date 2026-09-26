@@ -690,6 +690,22 @@ class IntelligenceStreamFamilyRuntime:
                 activation_identity=activation_identity,
             )
 
+        global_activation = IntelligenceStreamLedger(self.path).read_activation()
+        global_activation_identity = _text(global_activation, "activation_identity")
+        materiality_code = f"{snapshot.projector_id}_state_changed"
+        source_event = _build_family_source_event(
+            snapshot,
+            activation_identity=global_activation_identity,
+            materiality_code=materiality_code,
+        )
+        existing = self._existing_family_projection(
+            source_event,
+            story_identity=story_identity,
+            activation_identity=activation_identity,
+        )
+        if existing is not None:
+            return existing
+
         previous = self._latest_family_state(story_identity)
         state_key = _snapshot_state_key(snapshot)
         if previous is not None and previous.get("state_key") == state_key:
@@ -703,14 +719,6 @@ class IntelligenceStreamFamilyRuntime:
                 activation_identity=activation_identity,
             )
 
-        global_activation = IntelligenceStreamLedger(self.path).read_activation()
-        global_activation_identity = _text(global_activation, "activation_identity")
-        materiality_code = f"{snapshot.projector_id}_state_changed"
-        source_event = _build_family_source_event(
-            snapshot,
-            activation_identity=global_activation_identity,
-            materiality_code=materiality_code,
-        )
         materiality = evaluate_stream_materiality(
             build_stream_materiality_policy(),
             source_event,
@@ -787,6 +795,9 @@ class IntelligenceStreamFamilyRuntime:
             activation_identity=activation_identity,
         )
 
+    def projector_activation_ms(self, projector_id: str) -> int:
+        return self._projector_activation_ms(projector_id)
+
     def _projector_activation_ms(self, projector_id: str) -> int:
         with self._connect_ro() as connection:
             row = connection.execute(
@@ -800,6 +811,57 @@ class IntelligenceStreamFamilyRuntime:
         if row is None:
             raise ValueError("Stream family activation missing")
         return int(str(row[0]))
+
+    def _existing_family_projection(
+        self,
+        source_event: StreamSourceEvent,
+        *,
+        story_identity: str,
+        activation_identity: str,
+    ) -> StreamFamilyProjectionResult | None:
+        with self._connect_ro() as connection:
+            row = connection.execute(
+                """
+                SELECT
+                    s.stream_event_identity,
+                    s.payload_json,
+                    s.payload_sha256,
+                    n.narrative_identity,
+                    n.story_identity
+                FROM stream_source_events AS s
+                LEFT JOIN stream_narrative_messages AS n
+                  ON n.stream_event_identity = s.stream_event_identity
+                WHERE s.source_event_identity = ?
+                """,
+                (source_event.source_event_identity,),
+            ).fetchone()
+        if row is None:
+            return None
+        source_json = canonical_json(source_event)
+        if (
+            str(row[0]) != source_event.stream_event_identity
+            or str(row[1]) != source_json
+            or str(row[2]) != sha256_text(source_json)
+        ):
+            raise ValueError("immutable Stream family source replay conflict")
+        if row[3] is None or row[4] is None:
+            raise ValueError("partial immutable Stream family projection exists")
+        narrative_identity = str(row[3])
+        persisted_story_identity = str(row[4])
+        if persisted_story_identity != story_identity:
+            raise ValueError("Stream family replay story identity mismatch")
+        _require_sha256(narrative_identity, "Stream family replay narrative identity")
+        return StreamFamilyProjectionResult(
+            disposition=StreamFamilyProjectionDisposition.UNCHANGED,
+            projector_id=source_event.subtype.replace("_material_change", "_change")
+            if source_event.subtype.endswith("_material_change")
+            else "",
+            source_event_identity=source_event.source_event_identity,
+            stream_event_identity=source_event.stream_event_identity,
+            story_identity=story_identity,
+            narrative_identity=narrative_identity,
+            activation_identity=activation_identity,
+        )
 
     def _latest_family_state(self, story_identity: str) -> dict[str, Any] | None:
         with self._connect_ro() as connection:
