@@ -54,7 +54,71 @@ jobs:
           DEV_BEFORE="$(git -C "$DEV" rev-parse HEAD)"
           PRODUCT_BEFORE="$(git -C "$PRODUCT" rev-parse HEAD)"
 
-          /usr/bin/python3 ops/audit_wc2_forward_liveness.py             --signal "$DEV/runtime/ledger/live_signal_ledger.sqlite3"             --decision "$DEV/runtime/decision/decision_evidence.sqlite3"             --prepared "$DEV/runtime/wc2/wc2.wc2-prepared.sqlite3"             --policy "$DEV/runtime/wc2/wc2_forward_policy.sqlite3"             --protocol "$DEV/runtime/wc2/wc2_collection_protocol.wc2-collection-protocol.sqlite3"             --output "$OUT/wc2-forward-liveness.json"             | tee "$OUT/wc2-forward-liveness.log"
+          SNAP="$OUT/snapshots"
+          mkdir -p "$SNAP"
+          DEV="$DEV" SNAP="$SNAP" /usr/bin/python3 - <<'PY'
+          from __future__ import annotations
+          import hashlib
+          import os
+          import shutil
+          import sqlite3
+          import time
+          from pathlib import Path
+
+          dev = Path(os.environ["DEV"])
+          snap = Path(os.environ["SNAP"])
+          sources = {
+              "decision.sqlite3": dev / "runtime/decision/decision_evidence.sqlite3",
+              "prepared.sqlite3": dev / "runtime/wc2/wc2.wc2-prepared.sqlite3",
+              "policy.sqlite3": dev / "runtime/wc2/wc2_forward_policy.sqlite3",
+              "protocol.sqlite3": dev / "runtime/wc2/wc2_collection_protocol.wc2-collection-protocol.sqlite3",
+          }
+
+          def digest(path: Path) -> str | None:
+              if not path.is_file():
+                  return None
+              h = hashlib.sha256()
+              with path.open("rb") as handle:
+                  for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+                      h.update(chunk)
+              return h.hexdigest()
+
+          def state(path: Path) -> tuple[str | None, str | None, str | None]:
+              return (
+                  digest(path),
+                  digest(Path(str(path) + "-wal")),
+                  digest(Path(str(path) + "-shm")),
+              )
+
+          for name, source in sources.items():
+              if not source.is_file():
+                  raise SystemExit(f"F1_SNAPSHOT_SOURCE_MISSING:{source}")
+              target = snap / name
+              stable = False
+              for _attempt in range(1, 6):
+                  before = state(source)
+                  for suffix in ("", "-wal", "-shm"):
+                      src = Path(str(source) + suffix)
+                      dst = Path(str(target) + suffix)
+                      if src.is_file():
+                          shutil.copy2(src, dst)
+                      elif dst.exists():
+                          dst.unlink()
+                  after = state(source)
+                  if before == after:
+                      stable = True
+                      break
+                  time.sleep(0.05)
+              if not stable:
+                  raise SystemExit(f"F1_SNAPSHOT_SOURCE_UNSTABLE:{source}")
+              with sqlite3.connect(target, timeout=10) as con:
+                  row = con.execute("PRAGMA quick_check").fetchone()
+                  if row is None or str(row[0]).lower() != "ok":
+                      raise SystemExit(f"F1_SNAPSHOT_QUICK_CHECK_FAIL:{name}")
+              print(f"F1_SNAPSHOT_READY={name}")
+          PY
+
+          /usr/bin/python3 ops/audit_wc2_forward_liveness.py             --signal "$DEV/runtime/ledger/live_signal_ledger.sqlite3"             --decision "$SNAP/decision.sqlite3"             --prepared "$SNAP/prepared.sqlite3"             --policy "$SNAP/policy.sqlite3"             --protocol "$SNAP/protocol.sqlite3"             --output "$OUT/wc2-forward-liveness.json"             | tee "$OUT/wc2-forward-liveness.log"
 
           test -z "$(git -C "$DEV" status --porcelain)"
           test -z "$(git -C "$PRODUCT" status --porcelain)"
