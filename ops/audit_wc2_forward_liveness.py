@@ -291,6 +291,9 @@ def audit(
     rows = _post_forecast_freezes(
         signal_path,
         latest_forecast_ms=latest_forecast_ms,
+        latest_forecast_signal_identity=str(
+            latest_forecast["signal_freeze_identity"]
+        ),
     )
 
     primary_reasons: Counter[str] = Counter()
