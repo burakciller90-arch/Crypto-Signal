@@ -9,6 +9,7 @@
     <string>/Users/crypto-signal-agent/Crypto-Signal-Product/ops/run_dashboard.py</string>
     <string>--host</string><string>127.0.0.1</string>
     <string>--port</string><string>48700</string>
+    <string>--product-root</string><string>stream</string>
     <string>--ledger</string><string>/Users/crypto-signal-agent/Crypto-Signal/runtime/ledger/live_signal_ledger.sqlite3</string>
   </array>
   <key>WorkingDirectory</key><string>/Users/crypto-signal-agent/Crypto-Signal-Product</string>
