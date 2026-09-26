@@ -13,6 +13,10 @@ from crypto_signal.product.intelligence_stream_capital_forward_runtime import (
     IntelligenceStreamCapitalForwardRuntime,
     StreamCapitalForwardDisposition,
 )
+from crypto_signal.product.intelligence_stream_forward_runtime import (
+    IntelligenceStreamForwardRuntime,
+    StreamForwardProjectionDisposition,
+)
 from crypto_signal.product.intelligence_stream_ledger import (
     IntelligenceStreamLedger,
     StreamLedgerWriteDisposition,
@@ -113,6 +117,42 @@ def test_f5_forward_runtime_persists_three_vault_decisions_and_stream_story(
     }
     assert all(item["real_capital"] == 0 for item in page.items)
     assert all(item["production_authority"] is False for item in page.items)
+
+
+def test_f5_capital_follows_decision_issuance_in_global_stream_chronology(
+    tmp_path: Path,
+) -> None:
+    epoch2_path, _ = _initial_state(tmp_path)
+    stream_path = _stream(tmp_path)
+    _, issuance = _issue(tmp_path)
+    assessed_at_ms = issuance.forecast.issued_at_ms + 1
+
+    decision_projection = IntelligenceStreamForwardRuntime(
+        stream_path
+    ).project_issuance(issuance)
+    assert (
+        decision_projection.disposition
+        is StreamForwardProjectionDisposition.INSERTED
+    )
+
+    capital_runtime = IntelligenceStreamCapitalForwardRuntime(
+        epoch2_path=epoch2_path,
+        stream_path=stream_path,
+    )
+    capital_runtime.ensure_activated(
+        activated_at_ms=issuance.forecast.issued_at_ms,
+    )
+    capital_projection = capital_runtime.project_issuance(
+        issuance,
+        event_context=_event_context(),
+        base_asset="BTC",
+        assessed_at_ms=assessed_at_ms,
+    )
+
+    assert capital_projection.disposition is StreamCapitalForwardDisposition.INSERTED
+    assert capital_projection.projected_message_count == 4
+    status = IntelligenceStreamLedger(stream_path).read_status()
+    assert status.source_event_count == 5
 
 
 def test_f5_forward_runtime_skips_issuance_before_f5_activation(
