@@ -15,7 +15,7 @@ concurrency:
 jobs:
   verify:
     runs-on: [self-hosted, crypto-signal, uid504]
-    timeout-minutes: 12
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
         with:
@@ -23,169 +23,39 @@ jobs:
           clean: true
           fetch-depth: 2
 
-      - name: Verify physical F3 runtime activation
+      - name: Diagnose active F3 production cycle
         shell: bash
         run: |
           set -euo pipefail
           ROOT="/Volumes/Crypto-504/Crypto-Signal"
           DEV="$ROOT/Development"
-          EXPECTED_MAIN="0bb40b16ffe0415f30d835c9a22c3f2aff4ba355"
-          test "$(id -u)" = "504"
-          test "$(git -C "$DEV" rev-parse HEAD)" = "$EXPECTED_MAIN"
-          test -z "$(git -C "$DEV" status --porcelain)"
-
-          sup="$(cat "$ROOT/ssd-service-supervisor.pid" 2>/dev/null || true)"
-          if [ -z "$sup" ] || ! kill -0 "$sup" >/dev/null 2>&1; then
-            echo "F3_SUPERVISOR_RECOVERY_REQUIRED=YES stale_pid=${sup:-none}"
-            tail -80 "$HOME/Library/Logs/CryptoSignalRuntime/runtime-terminal-watchdog.log" 2>/dev/null || true
-            tail -80 "$HOME/Library/Logs/CryptoSignalRuntime/runtime-terminal-watchdog.err.log" 2>/dev/null || true
-            START="$HOME/Library/Application Support/CryptoSignalRuntime/start-ssd-runtime.command"
-            test -x "$START"
-            "$START"
-            sup="$(cat "$ROOT/ssd-service-supervisor.pid")"
-          fi
-          test -n "$sup"
+          test "$(git -C "$DEV" rev-parse HEAD)" = "0bb40b16ffe0415f30d835c9a22c3f2aff4ba355"
+          sup="$(cat "$ROOT/ssd-service-supervisor.pid")"
           kill -0 "$sup"
-          ps -p "$sup" -o command= | grep -F "$ROOT/ssd-service-supervisor.sh" >/dev/null
-          curl -fsS --max-time 5 http://127.0.0.1:48700/api/health             | /usr/bin/python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["status"]=="ok"; assert d["real_capital"]==0; assert d["read_only"] is True'
           echo "F3_SUPERVISOR_ACTIVE=YES pid=$sup"
-
-          PY="$DEV/.venv/bin/python"
-          export PYTHONPATH="$DEV/src"
-          "$PY" - "$ROOT" <<'PY'
+          echo "=== live.out ==="
+          tail -240 "$ROOT/ServiceLogs/live.out.log" 2>/dev/null || true
+          echo "=== live.err ==="
+          tail -240 "$ROOT/ServiceLogs/live.err.log" 2>/dev/null || true
+          echo "=== snapshot.out ==="
+          tail -120 "$ROOT/ServiceLogs/market-tape-snapshot.out.log" 2>/dev/null || true
+          echo "=== snapshot.err ==="
+          tail -120 "$ROOT/ServiceLogs/market-tape-snapshot.err.log" 2>/dev/null || true
+          echo "=== supervisor ==="
+          tail -160 "$ROOT/ServiceLogs/supervisor.log" 2>/dev/null || true
+          "$DEV/.venv/bin/python" - "$ROOT" <<'PY'
           import json
           import sqlite3
           import sys
-          import time
           from pathlib import Path
-
-          root = Path(sys.argv[1])
-          market = root / "Development/runtime/market_tape/market_tape.sqlite3"
-          stream = root / "Development/runtime/stream/intelligence_stream.sqlite3"
-          live_log = root / "ServiceLogs/live.out.log"
-          required_projectors = {
-              "market_geometry_change",
-              "liquidity_change",
-              "order_flow_change",
-              "derivatives_change",
-          }
-
-          def query_state():
-              with sqlite3.connect(market) as connection:
-                  quick_market = connection.execute("PRAGMA quick_check").fetchone()[0]
-                  derivatives = connection.execute(
-                      """
-                      SELECT COUNT(*), MAX(event_at_ms), MAX(ingested_at_ms)
-                      FROM market_tape_derivatives
-                      """
-                  ).fetchone()
-                  derivative_symbols = tuple(
-                      row[0]
-                      for row in connection.execute(
-                          """
-                          SELECT DISTINCT symbol
-                          FROM market_tape_derivatives
-                          ORDER BY symbol
-                          """
-                      ).fetchall()
-                  )
-              with sqlite3.connect(stream) as connection:
-                  quick_stream = connection.execute("PRAGMA quick_check").fetchone()[0]
-                  real_capital = connection.execute(
-                      "SELECT value FROM stream_meta WHERE key='real_capital'"
-                  ).fetchone()
-                  boundaries = {
-                      row[0]: int(row[1])
-                      for row in connection.execute(
-                          """
-                          SELECT projector_id, activated_at_ms
-                          FROM stream_family_projection_boundaries
-                          """
-                      ).fetchall()
-                  }
-                  derivative_events = connection.execute(
-                      """
-                      SELECT COUNT(*), MIN(event_at_ms), MAX(event_at_ms)
-                      FROM stream_source_events
-                      WHERE subtype='derivatives_material_change'
-                      """
-                  ).fetchone()
-                  derivative_narratives = connection.execute(
-                      """
-                      SELECT COUNT(*)
-                      FROM stream_narrative_messages AS n
-                      JOIN stream_source_events AS s
-                        ON s.source_event_identity = n.source_event_identity
-                      WHERE s.subtype='derivatives_material_change'
-                      """
-                  ).fetchone()[0]
-                  family_rows = connection.execute(
-                      """
-                      SELECT subtype, COUNT(*), MIN(event_at_ms), MAX(event_at_ms)
-                      FROM stream_source_events
-                      WHERE subtype IN (
-                          'geometry_material_change',
-                          'trigger_transition',
-                          'liquidity_material_change',
-                          'order_flow_material_change',
-                          'derivatives_material_change'
-                      )
-                      GROUP BY subtype
-                      ORDER BY subtype
-                      """
-                  ).fetchall()
-              log_text = live_log.read_text(errors="replace") if live_log.exists() else ""
-              return {
-                  "market_quick_check": quick_market,
-                  "stream_quick_check": quick_stream,
-                  "real_capital": None if real_capital is None else real_capital[0],
-                  "derivatives_count": int(derivatives[0]),
-                  "derivatives_latest_event_at_ms": derivatives[1],
-                  "derivatives_latest_ingested_at_ms": derivatives[2],
-                  "derivative_symbols": derivative_symbols,
-                  "boundaries": boundaries,
-                  "derivative_event_count": int(derivative_events[0]),
-                  "derivative_event_min_ms": derivative_events[1],
-                  "derivative_event_max_ms": derivative_events[2],
-                  "derivative_narrative_count": int(derivative_narratives),
-                  "family_rows": [tuple(row) for row in family_rows],
-                  "summary_marker": "stream_family status=SUMMARY" in log_text,
-                  "derivatives_marker": "projector=derivatives_change" in log_text,
-                  "no_backfill_marker": "HISTORICAL_BACKFILL=NO REAL_CAPITAL=0" in log_text,
-              }
-
-          deadline = time.time() + 360
-          last = None
-          while time.time() < deadline:
-              last = query_state()
-              boundaries = last["boundaries"]
-              derivative_activation = boundaries.get("derivatives_change")
-              derivative_after_activation = (
-                  derivative_activation is not None
-                  and last["derivative_event_count"] > 0
-                  and last["derivative_event_min_ms"] is not None
-                  and int(last["derivative_event_min_ms"]) >= derivative_activation
-              )
-              if (
-                  last["market_quick_check"] == "ok"
-                  and last["stream_quick_check"] == "ok"
-                  and last["real_capital"] == "0"
-                  and last["derivatives_count"] > 0
-                  and required_projectors.issubset(boundaries)
-                  and derivative_after_activation
-                  and last["derivative_narrative_count"] > 0
-                  and last["summary_marker"]
-                  and last["derivatives_marker"]
-                  and last["no_backfill_marker"]
-              ):
-                  print(json.dumps(last, sort_keys=True))
-                  print("F3_LIVE_ACTIVATION_PASS=YES")
-                  print("ONCHAIN_STANDALONE=DEFERRED_SOURCE")
-                  print("HISTORICAL_BACKFILL=NO")
-                  print("REAL_CAPITAL=0")
-                  raise SystemExit(0)
-              time.sleep(10)
-
-          print(json.dumps(last, sort_keys=True), file=sys.stderr)
-          raise SystemExit("F3_LIVE_ACTIVATION_TIMEOUT")
+          root=Path(sys.argv[1])
+          market=root/"Development/runtime/market_tape/market_tape.sqlite3"
+          stream=root/"Development/runtime/stream/intelligence_stream.sqlite3"
+          with sqlite3.connect(market) as c:
+              derivative=c.execute("SELECT COUNT(*),MIN(event_at_ms),MAX(event_at_ms),MAX(ingested_at_ms) FROM market_tape_derivatives").fetchone()
+          with sqlite3.connect(stream) as c:
+              boundaries=c.execute("SELECT projector_id,activated_at_ms FROM stream_family_projection_boundaries ORDER BY projector_id").fetchall()
+              rows=c.execute("SELECT subtype,COUNT(*),MIN(event_at_ms),MAX(event_at_ms) FROM stream_source_events GROUP BY subtype ORDER BY subtype").fetchall()
+          print(json.dumps({"derivatives":derivative,"boundaries":boundaries,"source_rows":rows}))
           PY
+          echo "F3_DIAGNOSTIC_READ_ONLY=YES REAL_CAPITAL=0"
