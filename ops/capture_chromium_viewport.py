@@ -24,7 +24,7 @@ def _free_port() -> int:
         return int(sock.getsockname()[1])
 
 
-def _wait_target(port: int, url: str, *, timeout_seconds: float = 12.0) -> dict[str, Any]:
+def _wait_target(port: int, url: str, *, timeout_seconds: float = 30.0) -> dict[str, Any]:
     deadline = time.monotonic() + timeout_seconds
     encoded = urllib.parse.quote(url, safe="")
     endpoint = f"http://127.0.0.1:{port}/json/new?{encoded}"
@@ -39,7 +39,7 @@ def _wait_target(port: int, url: str, *, timeout_seconds: float = 12.0) -> dict[
         except (OSError, ValueError, urllib.error.URLError) as exc:
             last_error = exc
             time.sleep(0.15)
-    raise RuntimeError(f"Chrome DevTools target unavailable: {last_error!r}")
+    raise RuntimeError(\n        f"Chrome DevTools target unavailable after {timeout_seconds:.1f}s: {last_error!r}"\n    )
 
 
 class CdpSession:
