@@ -1,5 +1,15 @@
 # PROJECT CHRONICLE
 
+## 2026-09-26 — Stream S15 end-to-end product acceptance passed; S16 controlled cutover becomes active
+
+S15 closes the full one-panel user story on the accepted S0-S14 foundations. PR #1298 adds an isolated real-backend acceptance harness that seeds exact persisted Stream/Decision Proof/signal-freeze/Epoch 2 truth, starts the real product server, opens the real Stream preview without fixture query mode, then appends a resolution and a paper-capital action while the browser is open.
+
+Exact-head UID504 run `36226728875` passed focused S15 tests, whole-repository regression, real Chromium backend-to-browser acceptance and Development non-mutation at head `3dd33cf7809c97b6769d319510f67800604525bc`. The browser probe verified five-family depth, 28 frozen candles, three exact annotations, no current-data substitution, exactly-once sound for both eligible live-new messages, immutable original-message preservation, coherent story identity, exact capital Decision Proof/R22/R21 lineage, search, click-driven exact deep-link behavior and persisted restart recovery. Desktop remained at 1440px page width and mobile at exact 430px.
+
+The S15 test seed is isolated deterministic acceptance truth, not a claim about live-market evidence. S15 adds no exchange authority and no real capital. REAL_CAPITAL=0.
+
+The active frontier is S16 Controlled Cutover: validate exact-main runtime parity and rollback, then move the accepted Intelligence Stream to the product root without losing the GALACTECH V2 fallback/recovery path until cutover acceptance is complete.
+
 ## 2026-09-26 — Stream S14 hardening accepted; S15 end-to-end product acceptance becomes active
 
 S14 closes the all-day messaging hardening gate. PR #1296 adds bounded feed virtualization, long-history anchor preservation, keyboard/focus improvements, ARIA feed semantics, reduced-motion behavior and responsive/font-scale hardening without changing immutable Stream truth.
