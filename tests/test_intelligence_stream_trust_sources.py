@@ -14,11 +14,17 @@ from crypto_signal.data.event_risk import (
 )
 from crypto_signal.data.models import DataSource
 from crypto_signal.ledger.serialization import canonical_json
+from crypto_signal.product.intelligence_stream_family import (
+    StreamFamilyProjectionDisposition,
+)
 from crypto_signal.product.intelligence_stream_forward_runtime import (
     IntelligenceStreamForwardRuntime,
 )
 from crypto_signal.product.intelligence_stream_production_projector import (
     IntelligenceStreamProductionProjector,
+)
+from crypto_signal.product.intelligence_stream_read_model import (
+    IntelligenceStreamReadModel,
 )
 from crypto_signal.product.intelligence_stream_trust_sources import (
     build_event_risk_stream_snapshots,
@@ -205,6 +211,15 @@ def test_event_risk_source_scoped_transition_uses_canonical_story(
     assert first.narrative_identity is not None
     assert second.narrative_identity is not None
 
+    detail = IntelligenceStreamReadModel(stream_path).read_message_detail(
+        second.narrative_identity
+    )
+    assert detail is not None
+    text = detail["narrative"]["text"]
+    assert "blok durumunda" in text["intelligence_text"]
+    assert "normal" in text["intelligence_text"].lower()
+    assert "yön" in text["decision_text"].lower()
+
 
 def test_provider_quality_real_freshness_contract_drives_degrade_and_recover(
     tmp_path: Path,
@@ -266,3 +281,83 @@ def test_provider_quality_real_freshness_contract_drives_degrade_and_recover(
     assert first.narrative_identity is not None
     assert second.narrative_identity is not None
     assert third.narrative_identity is not None
+
+
+def test_live_trust_policy_silences_initial_healthy_baseline_then_recovers(
+    tmp_path: Path,
+) -> None:
+    observed_ms = 30_000_000
+    stream_path = _stream_path(tmp_path)
+    projector = IntelligenceStreamProductionProjector(stream_path)
+    projector.ensure_family_activation(
+        "provider_quality_change",
+        activated_at_ms=observed_ms - 1,
+    )
+
+    healthy = build_provider_quality_stream_snapshot(
+        _provider_truth(
+            snapshot_identity="c" * 64,
+            observed_at_ms=observed_ms,
+            observation_age_ms=100_000,
+        ),
+        evaluated_at_ms=observed_ms + 100_000,
+    )
+    baseline = projector.project_family(
+        healthy,
+        activated_at_ms=observed_ms - 1,
+        silent_initial_state_labels=("healthy",),
+    )
+    assert (
+        baseline.disposition
+        is StreamFamilyProjectionDisposition.SILENT_INITIAL_BASELINE
+    )
+    assert baseline.narrative_identity is None
+
+    degraded = build_provider_quality_stream_snapshot(
+        _provider_truth(
+            snapshot_identity="c" * 64,
+            observed_at_ms=observed_ms,
+            observation_age_ms=1_800_001,
+        ),
+        evaluated_at_ms=observed_ms + 1_800_001,
+    )
+    degraded_result = projector.project_family(
+        degraded,
+        activated_at_ms=observed_ms - 1,
+        silent_initial_state_labels=("healthy",),
+    )
+    assert degraded_result.narrative_identity is not None
+
+    recovered = build_provider_quality_stream_snapshot(
+        _provider_truth(
+            snapshot_identity="d" * 64,
+            observed_at_ms=observed_ms + 2_000_000,
+            observation_age_ms=100_000,
+        ),
+        evaluated_at_ms=observed_ms + 2_100_000,
+    )
+    recovered_result = projector.project_family(
+        recovered,
+        activated_at_ms=observed_ms - 1,
+        silent_initial_state_labels=("healthy",),
+    )
+    assert recovered_result.narrative_identity is not None
+    assert recovered_result.story_identity == degraded_result.story_identity
+
+    read_model = IntelligenceStreamReadModel(stream_path)
+    degraded_detail = read_model.read_message_detail(
+        degraded_result.narrative_identity
+    )
+    recovered_detail = read_model.read_message_detail(
+        recovered_result.narrative_identity
+    )
+    assert degraded_detail is not None
+    assert recovered_detail is not None
+
+    degraded_text = degraded_detail["narrative"]["text"]
+    recovered_text = recovered_detail["narrative"]["text"]
+    assert "Cross-provider veri güveni degraded" in degraded_text["intelligence_text"]
+    assert "full-overlap" in degraded_text["intelligence_text"]
+    assert "healthy" in recovered_text["collapsed_text"]
+    assert "normal" in recovered_text["intelligence_text"].lower()
+    assert "REAL_CAPITAL=0" in recovered_text["capital_text"]
