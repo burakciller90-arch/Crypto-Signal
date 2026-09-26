@@ -175,7 +175,25 @@ def test_local_rewriter_emits_bounded_openai_compatible_request() -> None:
     assert user_payload["timeframe"] == "4h"
     assert user_payload["protected_numeric_values"] == ["0", "82"]
     assert payload["reasoning_effort"] == "none"
-    assert payload["response_format"] == {"type": "json_object"}
+    response_format = payload["response_format"]
+    assert isinstance(response_format, dict)
+    assert response_format["type"] == "json_schema"
+    json_schema = response_format["json_schema"]
+    assert isinstance(json_schema, dict)
+    assert json_schema["name"] == "crypto_signal_stream_narrative_rewrite"
+    assert json_schema["strict"] is True
+    schema = json_schema["schema"]
+    assert isinstance(schema, dict)
+    assert schema["type"] == "object"
+    assert schema["additionalProperties"] is False
+    assert set(schema["required"]) == {
+        "collapsed_text",
+        "simple_text",
+        "technical_text",
+        "intelligence_text",
+        "decision_text",
+        "capital_text",
+    }
 
 
 @pytest.mark.parametrize(
