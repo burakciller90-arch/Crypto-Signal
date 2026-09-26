@@ -136,6 +136,8 @@ def test_s16_chromium_acceptance_has_loaded_runner_startup_budget() -> None:
 
     assert "timeout_seconds: float = 30.0" in capture
     assert "Chrome DevTools target unavailable after" in capture
+    assert "for startup_attempt in range(1, 3):" in capture
+    assert "Chrome startup failed after 2 attempts" in capture
     assert "timeoutMs = 60000" in capture
     assert "timeout_seconds=90.0" in capture
     assert "sleep 45" in workflow
