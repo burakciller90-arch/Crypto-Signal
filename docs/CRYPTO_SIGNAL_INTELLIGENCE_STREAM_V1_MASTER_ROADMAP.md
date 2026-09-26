@@ -67,8 +67,10 @@ These decisions are already made and must not be re-opened during ordinary imple
 - **S13 Sound and Notifications: PASS**.
 - **S14 Performance, Accessibility and Long-Session Stability: PASS**.
 - **S15 End-to-End Product Acceptance: PASS**.
-- **S16 Controlled Cutover: ACTIVE FRONTIER**.
-- The deployed GALACTECH V2 surface remains production fallback until exact-main S16 preview/runtime parity, rollback and product-root cutover are mechanically accepted.
+- **S16 Controlled Cutover: PASS**.
+- **Intelligence Stream V1: COMPLETE / ACCEPTED (S0-S16)**.
+- Intelligence Stream is the deployed Product root. GALACTECH V2 remains the explicit rollback/fallback surface at `/galactech`.
+- There is no active Stream V1 implementation frontier after S16; future frontend scope requires a new explicit user-approved roadmap.
 
 ---
 
@@ -1583,6 +1585,8 @@ Execute exactly:
 -> **S15 End-to-End Acceptance**  
 -> **S16 Controlled Cutover**
 
+**Execution status: COMPLETE — S0 through S16 are accepted.**
+
 One frontier at a time.
 
 A later stage does not begin as the active implementation frontier until the current stage's acceptance criteria are met, except for explicitly documented dependency work.
@@ -1617,3 +1621,5 @@ Intelligence Stream V1 is done only when:
 - the stream can remain open all day without degrading.
 
 Only after this definition of done is accepted should Crypto Signal discuss adding another main screen.
+
+**Acceptance status: DONE.** S16 exact-main acceptance and the live Product cutover passed on 2026-09-26. Intelligence Stream V1 is the primary Product root; GALACTECH V2 remains rollback/fallback. Any new main screen is new scope, not an unfinished Stream V1 stage.
