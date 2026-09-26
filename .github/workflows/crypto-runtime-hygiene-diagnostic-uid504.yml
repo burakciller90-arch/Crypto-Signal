@@ -334,6 +334,82 @@ jobs:
             echo "REAL_CAPITAL=0"
           } | tee "$OUT"
 
+      - name: Alert source parity against same canonical ledger
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          DEV="$ROOT/Development"
+          ALERTS="$ROOT/Alerts"
+          DB="$DEV/runtime/ledger/live_signal_ledger.sqlite3"
+          OUT="$RUNNER_TEMP/runtime-hygiene"
+          test -f "$DB"
+          test -x "$DEV/.venv/bin/python"
+          test -x "$ALERTS/.venv/bin/python"
+
+          {
+            echo "DEV_HEAD=$(git -C "$DEV" rev-parse HEAD 2>/dev/null || echo UNKNOWN)"
+            echo "ALERTS_HEAD=$(git -C "$ALERTS" rev-parse HEAD 2>/dev/null || echo UNKNOWN)"
+            echo "DEV_DIRTY=$([ -n "$(git -C "$DEV" status --porcelain 2>/dev/null)" ] && echo YES || echo NO)"
+            echo "ALERTS_DIRTY=$([ -n "$(git -C "$ALERTS" status --porcelain 2>/dev/null)" ] && echo YES || echo NO)"
+            for rel in src/crypto_signal/alerts/clock.py src/crypto_signal/alerts/store.py ops/run_alert_clock.py; do
+              if [ -f "$DEV/$rel" ]; then
+                echo "DEV_SHA256 $rel $(shasum -a 256 "$DEV/$rel" | awk '{print $1}')"
+              else
+                echo "DEV_SHA256 $rel MISSING"
+              fi
+              if [ -f "$ALERTS/$rel" ]; then
+                echo "ALERTS_SHA256 $rel $(shasum -a 256 "$ALERTS/$rel" | awk '{print $1}')"
+              else
+                echo "ALERTS_SHA256 $rel MISSING"
+              fi
+            done
+            echo "WRAPPER_SHA256=$(shasum -a 256 "$ROOT/ssd-clock-wrapper.py" | awk '{print $1}')"
+            echo "WRAPPER_SAFE_ROUTE_LINES_BEGIN"
+            grep -nE 'alert|run_alert_clock|signal-ledger|outbox|Development|Alerts' "$ROOT/ssd-clock-wrapper.py" || true
+            echo "WRAPPER_SAFE_ROUTE_LINES_END"
+            echo "REAL_CAPITAL=0"
+          } | tee "$OUT/alert-source-parity.txt"
+
+          run_probe() {
+            local label="$1"
+            local py="$2"
+            local src="$3"
+            local temp_outbox="$OUT/${label}-temp-alert-outbox.sqlite3"
+            rm -f "$temp_outbox"
+            LABEL="$label" DB="$DB" TEMP_OUTBOX="$temp_outbox" PYTHONPATH="$src" "$py" - <<'PY'
+          import os
+          from pathlib import Path
+
+          from crypto_signal.alerts.clock import materialize_alert_events
+          from crypto_signal.alerts.store import AlertOutbox
+
+          label = os.environ["LABEL"]
+          try:
+              result = materialize_alert_events(
+                  Path(os.environ["DB"]),
+                  AlertOutbox(Path(os.environ["TEMP_OUTBOX"])),
+              )
+          except Exception as exc:
+              print(
+                  f"ALERT_SOURCE_PROBE label={label} status=ERROR "
+                  f"error_type={type(exc).__name__} error={exc}"
+              )
+          else:
+              print(
+                  f"ALERT_SOURCE_PROBE label={label} status=PASS "
+                  f"signals={result.signal_rows} lifecycle={result.lifecycle_rows} "
+                  f"eligible={result.eligible_events} inserted={result.inserted_events} "
+                  f"unchanged={result.unchanged_events}"
+              )
+          print("ALERT_SOURCE_PROBE_PRODUCTION_MUTATION=NO")
+          print("REAL_CAPITAL=0")
+          PY
+          }
+
+          run_probe development "$DEV/.venv/bin/python" "$DEV/src"             | tee "$OUT/alert-source-probe-development.txt"
+          run_probe alerts "$ALERTS/.venv/bin/python" "$ALERTS/src"             | tee "$OUT/alert-source-probe-alerts.txt"
+
       - name: Proxy presence audit without values
         shell: bash
         run: |
