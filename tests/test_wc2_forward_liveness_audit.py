@@ -110,7 +110,7 @@ class WC2ForwardLivenessAuditTest(unittest.TestCase):
             db.execute(
                 """CREATE TABLE signal_freezes(
                 bundle_identity TEXT PRIMARY KEY,
-                signal_freeze_identity TEXT,
+                signal_freeze_identity TEXT UNIQUE,
                 exchange TEXT,
                 market_type TEXT,
                 symbol TEXT,
@@ -122,6 +122,42 @@ class WC2ForwardLivenessAuditTest(unittest.TestCase):
                 bundle_json TEXT,
                 frozen_at_ms INTEGER
                 )"""
+            )
+            anchor_signal = {
+                "freeze_identity": "e" * 64,
+                "exchange": "binance",
+                "market_type": "spot",
+                "symbol": "BTCUSDT",
+                "timeframe": "4h",
+                "as_of_ms": 180,
+                "state": "watch",
+                "direction": "bullish",
+                "geometry": {
+                    "targets": [
+                        {
+                            "label": "T1",
+                            "target_price": "110",
+                            "reference_rr": "2",
+                        }
+                    ]
+                },
+            }
+            db.execute(
+                "INSERT INTO signal_freezes VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+                (
+                    "f" * 64,
+                    "e" * 64,
+                    "binance",
+                    "spot",
+                    "BTCUSDT",
+                    "4h",
+                    180,
+                    100,
+                    "watch",
+                    "bullish",
+                    json.dumps({"signal_decision": anchor_signal}),
+                    190,
+                ),
             )
 
     def _insert_signal(
