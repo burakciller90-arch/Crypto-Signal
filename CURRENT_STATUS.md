@@ -4,10 +4,33 @@ Updated: 2026-09-26
 Project: Crypto Signal
 Baseline: crypto-signal-full-version-v1.0.0 (immutable)
 Active post-v1.0 program: v1.1 world-class product + market intelligence + Crypto Signal Intelligence Stream V1
-State: WC0_LIVE_PRODUCT_PARITY_ACCEPTED / WC1_24_7_DATA_RELIABILITY_ACCEPTED / WC2_ENGINEERING_FROZEN_EVIDENCE_ACCUMULATION_ACTIVE / WC4_CHAMPION_CHALLENGER_ENGINEERING_ACCEPTED_RESEARCH_ONLY / WC5_ENGINEERING_ACCEPTED_PRODUCT_DEPLOYED_HUMAN_USABILITY_NOT_MEASURED / WC6_SANDBOX_BOUNDARY_ACCEPTED_VENUE_EVIDENCE_EXTERNAL_DEPENDENCY / WC7_CURRENT_FRONTIER_PACKET_ACCEPTED_CURRENT_INSUFFICIENT_EVIDENCE / INTELLIGENCE_STREAM_V1_S0_S16_HISTORICAL_ACCEPTANCE_RETAINED / INTELLIGENCE_STREAM_V1_FINAL_F0_PASS_F1_PASS_F2_PASS_F3_PASS_F4_PASS_F5_PASS_CURRENT_SCOPE_F6_ACTIVE / CONTINUITY_PAUSED_BY_USER
+State: WC0_LIVE_PRODUCT_PARITY_ACCEPTED / WC1_24_7_DATA_RELIABILITY_ACCEPTED / WC2_ENGINEERING_FROZEN_EVIDENCE_ACCUMULATION_ACTIVE / WC4_CHAMPION_CHALLENGER_ENGINEERING_ACCEPTED_RESEARCH_ONLY / WC5_ENGINEERING_ACCEPTED_PRODUCT_DEPLOYED_HUMAN_USABILITY_NOT_MEASURED / WC6_SANDBOX_BOUNDARY_ACCEPTED_VENUE_EVIDENCE_EXTERNAL_DEPENDENCY / WC7_CURRENT_FRONTIER_PACKET_ACCEPTED_CURRENT_INSUFFICIENT_EVIDENCE / INTELLIGENCE_STREAM_V1_S0_S16_HISTORICAL_ACCEPTANCE_RETAINED / INTELLIGENCE_STREAM_V1_FINAL_F0_PASS_F1_PASS_F2_PASS_F3_PASS_F4_PASS_F5_PASS_CURRENT_SCOPE_F6_PASS_F7_ACTIVE / CONTINUITY_PAUSED_BY_USER
 REAL_CAPITAL: 0
 
 ## Active v1.1 frontier — read before historical sections
+
+### 2026-09-27 — STREAM FINAL F6 PASS / F7 GUARDED LOCAL LLM ACTIVE
+
+Canonical F6 acceptance:
+- `docs/CRYPTO_SIGNAL_STREAM_FINAL_F6_EXACT_FROZEN_EVIDENCE_ACCEPTANCE.md`.
+
+F6 implementation merged in PR #1372 to exact main `115aaf9c97eca012503224c3a64a97526c1bf4dd`.
+
+Final exact-head preparation run `36273257337` passed focused pytest, Ruff, strict mypy, JavaScript syntax, read-only live source access and genuine real-message exact-evidence resolution. It scanned 240 persisted family messages and physically resolved current real projector-family examples for Geometry, Liquidity, Order Flow, Derivatives and Provider Quality. Every proof state remained `READY_EXACT`, `IDENTITY_ONLY_EXACT` or `UNAVAILABLE_EXPLICIT`; no current-data substitution occurred.
+
+Final UID504 physical acceptance run `36273664348` then:
+- kept Development and Product clean on exact merged F6 main;
+- restarted the canonical supervisor and dashboard process;
+- verified health/read-only/`REAL_CAPITAL=0`;
+- exercised the deployed real Product `/api/stream/messages/<identity>/evidence` endpoint against genuine persisted messages;
+- verified the detached `/stream-evidence` UI and deployed `/stream-static/evidence.js`;
+- observed exact proof only, with no current-data substitution and no historical backfill;
+- emitted `F6_PHYSICAL_LIVE_ACCEPTANCE_PASS=YES`.
+
+F6 is therefore **PASS — PHYSICALLY LIVE**.
+
+The active final-completion frontier is now **F7 — Guarded Local LLM / Ollama Activation**.
+
 
 ### 2026-09-27 — F5 PASS FOR CURRENT FRONTEND SCOPE / CAPITAL-PORTFOLIO LIVE PROOF DEFERRED / F6 ACTIVE
 
