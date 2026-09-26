@@ -130,6 +130,11 @@ def materialize_alert_events(
     unchanged = 0
 
     with _connect_read_only(signal_ledger_path) as connection:
+        # Pin signal + lifecycle reads to one SQLite snapshot. The live writer may
+        # append a new signal and its lifecycle between our two SELECTs; without
+        # an explicit read transaction the second SELECT can observe the new
+        # lifecycle while the in-memory parent map came from an older view.
+        connection.execute("BEGIN")
         _require_table(connection, "signal_freezes")
         _require_table(connection, "lifecycle_evaluations")
 
