@@ -1,5 +1,15 @@
 # PROJECT CHRONICLE
 
+## 2026-09-26 — Final Stream F0 source-to-message reconciliation passes
+
+The final completion program completed F0 without changing runtime behavior. The canonical ledger is `docs/CRYPTO_SIGNAL_STREAM_FINAL_F0_SOURCE_MESSAGE_CLOSURE_LEDGER.md`.
+
+The audit deliberately separated “code exists” from “production customer message exists”. Decision issuance and forecast resolution are the only currently proven `LIVE_COMPLETE` source families through `IntelligenceStreamForwardRuntime` and the live evidence clock. Canonical S11 Capital Story projector/runtime code exists but no production caller is proven, so Capital is `CODE_EXISTS_NOT_LIVE`. Market/Geometry rich changes, Liquidity, Order Flow, Derivatives, Event Risk and Provider/Data Quality have live/persisted source truth but no complete production message projector/hook, so they are `PERSISTED_SOURCE_ONLY`. Bitcoin-network always-on Stream collection and continuous liquidation collection remain `NO_LIVE_SOURCE`. Provider-neutral Exchange Flow / Wallet Cohort / Large Transfer live chatter remains `RESEARCH_ONLY`.
+
+This closes the ambiguity left by historical S0-S16 acceptance: generic Stream architecture remains accepted, while source-specific live completion is now explicit.
+
+The exact active frontier is F1 — WC2 Forward-Liveness Truth. The observed forecast stall is not yet called a bug; F1 must prove correct silence or a reproducible correctness defect. No policy is weakened merely to produce activity. `REAL_CAPITAL=0`.
+
 ## 2026-09-26 — User opens final Intelligence Stream V1 deficiency-closure roadmap
 
 The user explicitly narrowed the next program to one goal: finish the deficiencies of `CRYPTO_SIGNAL_INTELLIGENCE_STREAM_V1_MASTER_ROADMAP.md` and nothing broader.
