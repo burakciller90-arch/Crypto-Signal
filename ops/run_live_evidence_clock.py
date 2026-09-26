@@ -58,6 +58,9 @@ from crypto_signal.paper.epoch2_accounting import (
 )
 from crypto_signal.paper.shadow_cycle_manifest import R25ShadowCycleManifest
 from crypto_signal.paper.shadow_intent_journal import R25ShadowIntentJournal
+from crypto_signal.product.intelligence_stream_forward_runtime import (
+    IntelligenceStreamForwardRuntime,
+)
 
 BASE = Path("/Users/crypto-signal-agent/Crypto-Signal")
 DEFAULT_DB = BASE / "runtime" / "ledger" / "live_signal_ledger.sqlite3"
@@ -142,6 +145,20 @@ class WC2ClockConfig:
             )
 
 
+@dataclass(frozen=True, slots=True)
+class StreamClockConfig:
+    enabled: bool = False
+    ledger_path: Path | None = None
+
+    def __post_init__(self) -> None:
+        if self.enabled and self.ledger_path is None:
+            raise ValueError("enabled Stream clock requires ledger path")
+        if not self.enabled and self.ledger_path is not None:
+            raise ValueError(
+                "Stream ledger path requires explicit --stream-enabled"
+            )
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -164,6 +181,17 @@ def parse_args() -> argparse.Namespace:
             "append-only provider divergence SQLite path; defaults next "
             "to the active candle cache"
         ),
+    )
+    parser.add_argument(
+        "--stream-enabled",
+        action="store_true",
+        help="enable forward-only Intelligence Stream production projection",
+    )
+    parser.add_argument(
+        "--stream-ledger",
+        type=Path,
+        default=None,
+        help="append-only Intelligence Stream SQLite path",
     )
     parser.add_argument(
         "--wc2-enabled",
@@ -204,6 +232,13 @@ def parse_args() -> argparse.Namespace:
         help="rejected when WC2 is enabled; collection protocol owns this",
     )
     return parser.parse_args()
+
+
+def build_stream_clock_config(args: argparse.Namespace) -> StreamClockConfig:
+    return StreamClockConfig(
+        enabled=bool(getattr(args, "stream_enabled", False)),
+        ledger_path=getattr(args, "stream_ledger", None),
+    )
 
 
 def build_wc2_clock_config(args: argparse.Namespace) -> WC2ClockConfig:
@@ -334,12 +369,22 @@ async def run(
     candle_cache_path: Path = DEFAULT_CANDLE_CACHE,
     provider_divergence_path: Path | None = None,
     wc2_config: WC2ClockConfig | None = None,
+    stream_config: StreamClockConfig | None = None,
 ) -> int:
     ledger = ImmutableSignalLedger(db_path)
     candle_store = CandleStore(candle_cache_path)
     failures = 0
     selected_wc2 = wc2_config or WC2ClockConfig()
+    selected_stream = stream_config or StreamClockConfig()
     selected_plan = LiveCoveragePlan.current_pilot() if plan is None else plan
+    if selected_stream.enabled and not selected_wc2.enabled:
+        print(
+            "stream status=ERROR error=StreamRequiresWC2 "
+            "PRE_NETWORK_FAIL_CLOSED=YES REAL_CAPITAL=0",
+            file=sys.stderr,
+            flush=True,
+        )
+        return 1
     try:
         prerequisites = load_wc2_prerequisites(selected_wc2)
         if prerequisites is None:
@@ -386,6 +431,35 @@ async def run(
             flush=True,
         )
         return 1
+    stream_runtime: IntelligenceStreamForwardRuntime | None = None
+    if selected_stream.enabled:
+        assert selected_stream.ledger_path is not None
+        try:
+            stream_runtime = IntelligenceStreamForwardRuntime(
+                selected_stream.ledger_path
+            )
+            stream_activation = stream_runtime.ensure_activated(
+                activated_at_ms=time.time_ns() // 1_000_000
+            )
+        except (OSError, TypeError, ValueError, sqlite3.Error) as exc:
+            print(
+                "stream status=ERROR "
+                f"error={type(exc).__name__}:{exc} "
+                "PRE_NETWORK_FAIL_CLOSED=YES HISTORICAL_BACKFILL=NO "
+                "REAL_CAPITAL=0",
+                file=sys.stderr,
+                flush=True,
+            )
+            return 1
+        print(
+            "stream status=ACTIVATED "
+            f"activation={stream_activation.activation_identity} "
+            f"activated_at_ms={stream_activation.activated_at_ms} "
+            f"ledger={selected_stream.ledger_path} "
+            "HISTORICAL_BACKFILL=NO REAL_CAPITAL=0",
+            flush=True,
+        )
+
     adapters: dict[Exchange, MarketDataAdapter] = {
         Exchange.BYBIT: BybitSpotAdapter(),
         Exchange.BINANCE: BinanceSpotAdapter(),
@@ -463,6 +537,11 @@ async def run(
                         wc2_protocol.protocol_identity
                     ),
                     collection_start_ms=wc2_protocol.collection_start_ms,
+                    issuance_hook=(
+                        None
+                        if stream_runtime is None
+                        else stream_runtime.project_issuance
+                    ),
                 )
             except (OSError, TypeError, ValueError, sqlite3.Error) as exc:
                 print(
@@ -645,8 +724,9 @@ def main() -> int:
     args = parse_args()
     try:
         wc2_config = build_wc2_clock_config(args)
+        stream_config = build_stream_clock_config(args)
     except ValueError as exc:
-        print(f"WC2_CLOCK_CONFIG_ERROR={exc}", file=sys.stderr, flush=True)
+        print(f"LIVE_CLOCK_CONFIG_ERROR={exc}", file=sys.stderr, flush=True)
         return 2
     lock_path = live_clock_lock_path(args.db)
     lock_path.parent.mkdir(parents=True, exist_ok=True)
@@ -665,6 +745,7 @@ def main() -> int:
                 candle_cache_path=args.candle_cache,
                 provider_divergence_path=args.provider_divergence,
                 wc2_config=wc2_config,
+                stream_config=stream_config,
             )
         )
 
