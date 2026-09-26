@@ -1,0 +1,334 @@
+name: Crypto WC2 Forward Progress Diagnostic UID504
+
+on:
+  push:
+    branches:
+      - 'runtime/wc2-forward-progress-diagnostic'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: wc2-forward-progress-diagnostic
+  cancel-in-progress: true
+
+jobs:
+  diagnostic:
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          clean: true
+          fetch-depth: 1
+
+      - name: Read-only WC2 forward progress audit
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          DEV="$ROOT/Development"
+          PRODUCT="$ROOT/Product"
+          OUT="$RUNNER_TEMP/wc2-forward-progress"
+          mkdir -p "$OUT"
+
+          test "$(id -u)" = "504"
+          test -z "$(git -C "$DEV" status --porcelain)"
+          test -z "$(git -C "$PRODUCT" status --porcelain)"
+
+          ROOT="$ROOT" OUT="$OUT" /usr/bin/python3 - <<'PY'
+          from __future__ import annotations
+
+          import json
+          import os
+          import re
+          import sqlite3
+          import time
+          from collections import Counter, defaultdict
+          from pathlib import Path
+
+          root = Path(os.environ["ROOT"])
+          out = Path(os.environ["OUT"])
+          runtime = root / "Development/runtime"
+
+          paths = {
+              "signal": runtime / "ledger/live_signal_ledger.sqlite3",
+              "decision": runtime / "decision/decision_evidence.sqlite3",
+              "cohort": runtime / "wc2/wc2_untouched_forward.sqlite3",
+              "prepared": runtime / "wc2/wc2.wc2-prepared.sqlite3",
+              "execution_runtime": runtime / "wc2/wc2_paper_execution.wc2-paper-execution-runtime.sqlite3",
+              "execution_journal": runtime / "wc2/wc2_paper_execution.wc2-paper-execution.sqlite3",
+          }
+
+          def ro(path: Path) -> sqlite3.Connection:
+              con = sqlite3.connect(f"file:{path}?mode=ro", uri=True, timeout=10)
+              con.row_factory = sqlite3.Row
+              con.execute("PRAGMA query_only=ON")
+              return con
+
+          payload: dict[str, object] = {
+              "observed_at_ms": time.time_ns() // 1_000_000,
+              "real_capital": 0,
+              "read_only": True,
+          }
+
+          for label, path in paths.items():
+              payload[f"{label}_present"] = path.is_file()
+
+          execution_collection_start_ms = None
+          if paths["execution_runtime"].is_file():
+              with ro(paths["execution_runtime"]) as con:
+                  row = con.execute(
+                      """
+                      SELECT collection_start_ms, registered_at_ms
+                      FROM wc2_paper_execution_runtime_activation
+                      WHERE singleton=1
+                      """
+                  ).fetchone()
+                  if row is not None:
+                      execution_collection_start_ms = int(row["collection_start_ms"])
+                      payload["execution_collection_start_ms"] = execution_collection_start_ms
+                      payload["execution_registered_at_ms"] = int(row["registered_at_ms"])
+
+          latest_forecast_ms = None
+          if paths["decision"].is_file():
+              with ro(paths["decision"]) as con:
+                  payload["decision_tables"] = [
+                      str(r[0])
+                      for r in con.execute(
+                          "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name"
+                      )
+                  ]
+                  for table, time_col in (
+                      ("r20_forecasts", "issued_at_ms"),
+                      ("r20_5_decision_proofs", None),
+                      ("r20_resolutions", None),
+                  ):
+                      try:
+                          count = int(con.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0])
+                      except sqlite3.Error:
+                          continue
+                      payload[f"{table}_count"] = count
+                      if time_col:
+                          row = con.execute(
+                              f"SELECT MIN({time_col}), MAX({time_col}) FROM {table}"
+                          ).fetchone()
+                          payload[f"{table}_min_{time_col}"] = None if row[0] is None else int(row[0])
+                          payload[f"{table}_max_{time_col}"] = None if row[1] is None else int(row[1])
+                          latest_forecast_ms = None if row[1] is None else int(row[1])
+                          if execution_collection_start_ms is not None:
+                              payload[f"{table}_post_execution_start"] = int(
+                                  con.execute(
+                                      f"SELECT COUNT(*) FROM {table} WHERE {time_col}>=?",
+                                      (execution_collection_start_ms,),
+                                  ).fetchone()[0]
+                              )
+
+          if paths["cohort"].is_file():
+              with ro(paths["cohort"]) as con:
+                  payload["cohort_tables"] = [
+                      str(r[0])
+                      for r in con.execute(
+                          "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name"
+                      )
+                  ]
+                  for table in (
+                      "wc2_cohort_forecasts",
+                      "wc2_cohort_intents",
+                      "wc2_cohort_executions",
+                      "wc2_cohort_resolutions",
+                  ):
+                      try:
+                          payload[f"{table}_count"] = int(
+                              con.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
+                          )
+                      except sqlite3.Error:
+                          pass
+                  try:
+                      row = con.execute(
+                          "SELECT MIN(issued_at_ms), MAX(issued_at_ms) FROM wc2_cohort_forecasts"
+                      ).fetchone()
+                      payload["cohort_forecast_min_issued_at_ms"] = (
+                          None if row[0] is None else int(row[0])
+                      )
+                      payload["cohort_forecast_max_issued_at_ms"] = (
+                          None if row[1] is None else int(row[1])
+                      )
+                  except sqlite3.Error:
+                      pass
+
+          if paths["prepared"].is_file():
+              with ro(paths["prepared"]) as con:
+                  tables = [
+                      str(r[0])
+                      for r in con.execute(
+                          "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name"
+                      )
+                  ]
+                  payload["prepared_tables"] = tables
+                  prepared_summary = {}
+                  for table in tables:
+                      if table.startswith("sqlite_"):
+                          continue
+                      try:
+                          cols = [
+                              str(r["name"])
+                              for r in con.execute(f"PRAGMA table_info({table})")
+                          ]
+                          count = int(con.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0])
+                      except sqlite3.Error:
+                          continue
+                      item = {"count": count, "columns": cols}
+                      for candidate in (
+                          "observed_at_ms",
+                          "prepared_at_ms",
+                          "issued_at_ms",
+                          "appended_at_ms",
+                          "source_cutoff_open_time_ms",
+                      ):
+                          if candidate in cols:
+                              row = con.execute(
+                                  f"SELECT MIN({candidate}), MAX({candidate}) FROM {table}"
+                              ).fetchone()
+                              item[f"min_{candidate}"] = None if row[0] is None else int(row[0])
+                              item[f"max_{candidate}"] = None if row[1] is None else int(row[1])
+                      prepared_summary[table] = item
+                  payload["prepared_summary"] = prepared_summary
+
+          if paths["signal"].is_file():
+              with ro(paths["signal"]) as con:
+                  total = int(con.execute("SELECT COUNT(*) FROM signal_freezes").fetchone()[0])
+                  payload["signal_freezes_count"] = total
+                  row = con.execute(
+                      "SELECT MIN(frozen_at_ms), MAX(frozen_at_ms) FROM signal_freezes"
+                  ).fetchone()
+                  payload["signal_freezes_min_frozen_at_ms"] = None if row[0] is None else int(row[0])
+                  payload["signal_freezes_max_frozen_at_ms"] = None if row[1] is None else int(row[1])
+
+                  where_start = execution_collection_start_ms or 0
+                  rows = con.execute(
+                      """
+                      SELECT exchange, symbol, source_cutoff_open_time_ms,
+                             as_of_ms, frozen_at_ms, signal_state
+                      FROM signal_freezes
+                      WHERE timeframe='4h'
+                        AND market_type='spot'
+                        AND exchange IN ('binance','bybit')
+                        AND frozen_at_ms>=?
+                      ORDER BY source_cutoff_open_time_ms, symbol, exchange
+                      """,
+                      (where_start,),
+                  ).fetchall()
+                  payload["signal_4h_rows_post_execution_start"] = len(rows)
+                  provider_counts = Counter(str(r["exchange"]) for r in rows)
+                  payload["signal_4h_provider_counts_post_execution_start"] = dict(provider_counts)
+                  groups = defaultdict(set)
+                  latest_4h = {}
+                  for row in rows:
+                      key = (str(row["symbol"]), int(row["source_cutoff_open_time_ms"]))
+                      groups[key].add(str(row["exchange"]))
+                      ex = str(row["exchange"])
+                      latest_4h[ex] = max(
+                          int(row["frozen_at_ms"]),
+                          int(latest_4h.get(ex, 0)),
+                      )
+                  payload["signal_4h_dual_provider_pairs_post_execution_start"] = sum(
+                      1 for providers in groups.values()
+                      if providers == {"binance", "bybit"}
+                  )
+                  payload["signal_4h_latest_frozen_at_ms_by_provider"] = latest_4h
+
+                  if latest_forecast_ms is not None:
+                      payload["signal_freezes_after_latest_forecast"] = int(
+                          con.execute(
+                              "SELECT COUNT(*) FROM signal_freezes WHERE frozen_at_ms>?",
+                              (latest_forecast_ms,),
+                          ).fetchone()[0]
+                      )
+                      payload["signal_4h_after_latest_forecast"] = int(
+                          con.execute(
+                              """
+                              SELECT COUNT(*) FROM signal_freezes
+                              WHERE timeframe='4h' AND market_type='spot'
+                                AND exchange IN ('binance','bybit')
+                                AND frozen_at_ms>?
+                              """,
+                              (latest_forecast_ms,),
+                          ).fetchone()[0]
+                      )
+
+          if paths["execution_journal"].is_file():
+              with ro(paths["execution_journal"]) as con:
+                  tables = [
+                      str(r[0])
+                      for r in con.execute(
+                          "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name"
+                      )
+                  ]
+                  payload["execution_journal_tables"] = tables
+                  for table in tables:
+                      try:
+                          payload[f"execution_journal_{table}_count"] = int(
+                              con.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
+                          )
+                      except sqlite3.Error:
+                          pass
+
+          log = root / "ServiceLogs/live.out.log"
+          if log.is_file():
+              with log.open("rb") as handle:
+                  try:
+                      handle.seek(-8_000_000, 2)
+                  except OSError:
+                      handle.seek(0)
+                  text = handle.read().decode("utf-8", errors="replace")
+              lines = [line.strip() for line in text.splitlines()]
+              prefixes = (
+                  "wc2_",
+                  "stream ",
+                  "provider_divergence status=",
+              )
+              selected = [line for line in lines if line.startswith(prefixes)]
+              by_kind: dict[str, list[str]] = defaultdict(list)
+              for line in selected:
+                  key = line.split(" ", 1)[0]
+                  by_kind[key].append(line)
+              payload["live_log_mtime_ns"] = log.stat().st_mtime_ns
+              payload["live_log_recent_by_kind"] = {
+                  key: values[-8:]
+                  for key, values in sorted(by_kind.items())
+              }
+
+          (out / "wc2-forward-progress.json").write_text(
+              json.dumps(payload, sort_keys=True, indent=2),
+              encoding="utf-8",
+          )
+          print("WC2_FORWARD_PROGRESS " + json.dumps(payload, sort_keys=True))
+          print("WC2_FORWARD_PROGRESS_READONLY_PASS=YES")
+          print("REAL_CAPITAL=0")
+          PY
+
+      - name: Upload diagnostic
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: wc2-forward-progress-${{ github.run_id }}
+          path: ${{ runner.temp }}/wc2-forward-progress
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Prove production checkouts untouched
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          DEV="$ROOT/Development"
+          PRODUCT="$ROOT/Product"
+          test -z "$(git -C "$DEV" status --porcelain)"
+          test -z "$(git -C "$PRODUCT" status --porcelain)"
+          echo "WC2_FORWARD_PROGRESS_NON_MUTATING_PASS=YES"
+          echo "DEV_HEAD=$(git -C "$DEV" rev-parse HEAD)"
+          echo "PRODUCT_HEAD=$(git -C "$PRODUCT" rev-parse HEAD)"
+          echo "REAL_CAPITAL=0"
