@@ -4,10 +4,35 @@ Updated: 2026-09-26
 Project: Crypto Signal
 Baseline: crypto-signal-full-version-v1.0.0 (immutable)
 Active post-v1.0 program: v1.1 world-class product + market intelligence + Crypto Signal Intelligence Stream V1
-State: WC0_LIVE_PRODUCT_PARITY_ACCEPTED / WC1_24_7_DATA_RELIABILITY_ACCEPTED / WC2_ENGINEERING_FROZEN_EVIDENCE_ACCUMULATION_ACTIVE / WC4_CHAMPION_CHALLENGER_ENGINEERING_ACCEPTED_RESEARCH_ONLY / WC5_ENGINEERING_ACCEPTED_PRODUCT_DEPLOYED_HUMAN_USABILITY_NOT_MEASURED / WC6_SANDBOX_BOUNDARY_ACCEPTED_VENUE_EVIDENCE_EXTERNAL_DEPENDENCY / WC7_CURRENT_FRONTIER_PACKET_ACCEPTED_CURRENT_INSUFFICIENT_EVIDENCE / INTELLIGENCE_STREAM_V1_S0_S16_HISTORICAL_ACCEPTANCE_RETAINED / INTELLIGENCE_STREAM_V1_FINAL_F0_PASS_F1_ACTIVE / CONTINUITY_PAUSED_BY_USER
+State: WC0_LIVE_PRODUCT_PARITY_ACCEPTED / WC1_24_7_DATA_RELIABILITY_ACCEPTED / WC2_ENGINEERING_FROZEN_EVIDENCE_ACCUMULATION_ACTIVE / WC4_CHAMPION_CHALLENGER_ENGINEERING_ACCEPTED_RESEARCH_ONLY / WC5_ENGINEERING_ACCEPTED_PRODUCT_DEPLOYED_HUMAN_USABILITY_NOT_MEASURED / WC6_SANDBOX_BOUNDARY_ACCEPTED_VENUE_EVIDENCE_EXTERNAL_DEPENDENCY / WC7_CURRENT_FRONTIER_PACKET_ACCEPTED_CURRENT_INSUFFICIENT_EVIDENCE / INTELLIGENCE_STREAM_V1_S0_S16_HISTORICAL_ACCEPTANCE_RETAINED / INTELLIGENCE_STREAM_V1_FINAL_F0_PASS_F1_PASS_F2_ACTIVE / CONTINUITY_PAUSED_BY_USER
 REAL_CAPITAL: 0
 
 ## Active v1.1 frontier — read before historical sections
+
+### 2026-09-26 — STREAM FINAL F1 PASS / CORRECT SILENCE PROVEN / F2 ACTIVE
+
+Canonical F1 acceptance:
+- `docs/CRYPTO_SIGNAL_STREAM_FINAL_F1_WC2_FORWARD_LIVENESS_ACCEPTANCE.md`.
+
+Exact-source UID504 run `36251560197` passed with artifact `stream-final-f1-wc2-liveness-36251560197` (id `10909311908`, digest `sha256:bd42e8baca06e34ae938a9b00668fd45cbd58b4da39eaf4383e21a78330177a1`).
+
+The live read-only audit classified 686 freezes after the latest accepted forecast:
+- 525 WATCH freezes lacked frozen geometry;
+- 161 freezes were NEUTRAL;
+- 48 were 4h, of which 36 lacked geometry and 12 were neutral;
+- prepared-required candidates: 0;
+- eligible-without-prepared-receipt: 0;
+- prepared-receipt-without-forecast: 0;
+- integrity errors: 0.
+
+Therefore the WC2 forecast/Stream issuance path is not proven broken. F1 conclusion is `CORRECT_SILENCE`: no post-forecast freeze met the actual current prepared-issuance contract. No threshold/policy was loosened and no history was backfilled.
+
+The live evidence clock now emits deterministic WC2 status/reason summaries without changing policy. Product-facing quiet-state UX remains a later projection concern.
+
+The exact active frontier is now:
+**F2 — Production Source-to-Message Backbone**.
+
+`REAL_CAPITAL=0`.
 
 ### 2026-09-26 — STREAM FINAL F0 PASS / F1 WC2 FORWARD-LIVENESS ACTIVE
 
