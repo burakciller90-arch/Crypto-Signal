@@ -4,6 +4,7 @@ import argparse
 import base64
 import json
 import os
+import re
 import signal
 import socket
 import subprocess
@@ -475,6 +476,132 @@ def _capture(args: argparse.Namespace) -> dict[str, object]:
                 raise RuntimeError(f"capital fixture hid Stream surface: {capital_probe!r}")
             metrics["capital_story_probe"] = capital_probe
 
+        if args.probe_discovery:
+            discovery_probe_result = session.command(
+                "Runtime.evaluate",
+                {
+                    "expression": (
+                        "(async()=>{"
+                        "await new Promise(r=>setTimeout(r,260));"
+                        "const api=window.__cryptoSignalStreamS12;"
+                        "if(!api){return {ok:false,reason:'s12_api_missing'};}"
+                        "const ids=['searchInput','symbolFilter','categoryFilter','timeframeFilter','vaultFilter','evidenceFilter','stateFilter','importanceFilter','fromDateFilter','toDateFilter','clearFiltersButton','applyFiltersButton'];"
+                        "const missing=ids.filter(id=>!document.getElementById(id));"
+                        "if(missing.length){return {ok:false,reason:'controls_missing',missing};}"
+                        "const initialMessage=new URL(location.href).searchParams.get('message')||'';"
+                        "const initialExpanded=[...document.querySelectorAll('.message.is-expanded')].some(n=>(n.dataset.identity||'')===initialMessage);"
+                        "document.getElementById('applyFiltersButton').click();"
+                        "await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));"
+                        "const applied=api.discoverySnapshot();"
+                        "const query=api.queryParams({limit:50}).toString();"
+                        "document.getElementById('filterButton').click();"
+                        "document.getElementById('categoryFilter').value='capital';"
+                        "document.getElementById('vaultFilter').value='CORE';"
+                        "document.getElementById('evidenceFilter').value='';"
+                        "document.getElementById('stateFilter').value='capital_executed';"
+                        "document.getElementById('applyFiltersButton').click();"
+                        "await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));"
+                        "const capital=api.discoverySnapshot();"
+                        "const capitalQuery=api.queryParams({limit:50}).toString();"
+                        "document.getElementById('filterButton').click();"
+                        "document.getElementById('clearFiltersButton').click();"
+                        "await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));"
+                        "const cleared=api.discoverySnapshot();"
+                        "const clearedQuery=api.queryParams({limit:50}).toString();"
+                        "const first=document.querySelector('.message:not(.is-expanded) .message-summary');"
+                        "if(!(first instanceof HTMLButtonElement)){return {ok:false,reason:'collapsed_message_missing'};}"
+                        "const target=first.closest('.message');"
+                        "if(!(target instanceof HTMLElement)){return {ok:false,reason:'message_target_missing'};}"
+                        "first.click();"
+                        "await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));"
+                        "const expanded=target.classList.contains('is-expanded')?target:null;"
+                        "const deepLink=new URL(location.href).searchParams.get('message')||'';"
+                        "const detail=expanded?.querySelector('.message-detail');"
+                        "const proofAction=!!expanded?.querySelector('.proof-action');"
+                        "document.getElementById('filterButton').click();"
+                        "document.getElementById('searchInput').value='likidite';"
+                        "document.getElementById('symbolFilter').value='BTCUSDT';"
+                        "document.getElementById('categoryFilter').value='decision';"
+                        "document.getElementById('timeframeFilter').value='4h';"
+                        "document.getElementById('evidenceFilter').value='order_flow_cvd';"
+                        "document.getElementById('stateFilter').value='watch';"
+                        "document.getElementById('importanceFilter').value='important';"
+                        "document.getElementById('fromDateFilter').value='2026-09-20';"
+                        "document.getElementById('toDateFilter').value='2026-09-25';"
+                        "const stream=document.getElementById('streamViewport');"
+                        "return {ok:true,missing,initialMessage,initialExpanded,"
+                        "appliedFilters:applied.filters,query,capitalFilters:capital.filters,capitalQuery,"
+                        "clearedFilters:cleared.filters,clearedQuery,deepLink,"
+                        "expandedIdentity:expanded?.dataset.identity||'',"
+                        "detailVisible:!!detail&&!detail.hidden,"
+                        "detailLength:(detail?.textContent||'').length,"
+                        "proofAction,drawerOpen:!document.getElementById('discoveryDrawer').hidden,"
+                        "streamVisible:!!stream&&stream.getBoundingClientRect().height>100"
+                        "};"
+                        "})()"
+                    ),
+                    "awaitPromise": True,
+                    "returnByValue": True,
+                },
+            )
+            discovery_exception = discovery_probe_result.get("exceptionDetails")
+            if isinstance(discovery_exception, dict):
+                description = discovery_exception.get("text", "unknown JS exception")
+                exception_object = discovery_exception.get("exception", {})
+                if isinstance(exception_object, dict):
+                    description = str(
+                        exception_object.get("description", description)
+                    )
+                raise RuntimeError(
+                    f"CDP discovery probe JavaScript exception: {description}"
+                )
+            raw_discovery_probe = discovery_probe_result.get("result", {})
+            if not isinstance(raw_discovery_probe, dict):
+                raise RuntimeError("CDP discovery probe result missing")
+            discovery_probe = raw_discovery_probe.get("value", {})
+            if not isinstance(discovery_probe, dict):
+                raise RuntimeError("CDP discovery probe value missing")
+            if discovery_probe.get("ok") is not True:
+                raise RuntimeError(f"discovery probe failed: {discovery_probe!r}")
+            if discovery_probe.get("initialExpanded") is not True:
+                raise RuntimeError(f"discovery direct deep-link failed: {discovery_probe!r}")
+            query = str(discovery_probe.get("query", ""))
+            for expected in (
+                "text=likidite",
+                "symbol=BTCUSDT",
+                "category=decision",
+                "timeframe=4h",
+                "evidence_domain=order_flow_cvd",
+                "state=watch",
+                "importance=important",
+                "from_ms=",
+                "to_ms=",
+            ):
+                if expected not in query:
+                    raise RuntimeError(
+                        f"discovery query missing {expected}: {discovery_probe!r}"
+                    )
+            capital_query = str(discovery_probe.get("capitalQuery", ""))
+            if "vault=CORE" not in capital_query or "state=capital_executed" not in capital_query:
+                raise RuntimeError(f"discovery capital filters failed: {discovery_probe!r}")
+            if str(discovery_probe.get("clearedQuery", "")) != "limit=50":
+                raise RuntimeError(f"discovery clear filters failed: {discovery_probe!r}")
+            deep_link = str(discovery_probe.get("deepLink", ""))
+            expanded_identity = str(discovery_probe.get("expandedIdentity", ""))
+            if not re.fullmatch(r"[0-9a-f]{64}", deep_link) or deep_link != expanded_identity:
+                raise RuntimeError(f"discovery exact message link failed: {discovery_probe!r}")
+            if discovery_probe.get("detailVisible") is not True or int(
+                discovery_probe.get("detailLength", 0)
+            ) < 40:
+                raise RuntimeError(f"discovery exact detail failed: {discovery_probe!r}")
+            if discovery_probe.get("proofAction") is not True:
+                raise RuntimeError(f"discovery evidence action failed: {discovery_probe!r}")
+            if discovery_probe.get("drawerOpen") is not True:
+                raise RuntimeError(f"discovery drawer fixture failed: {discovery_probe!r}")
+            if discovery_probe.get("streamVisible") is not True:
+                raise RuntimeError(f"discovery hid Stream surface: {discovery_probe!r}")
+            metrics["discovery_probe"] = discovery_probe
+
         screenshot = session.command(
             "Page.captureScreenshot",
             {
@@ -522,6 +649,7 @@ def main() -> None:
     parser.add_argument("--probe-window-manager", action="store_true")
     parser.add_argument("--probe-frozen-proof", action="store_true")
     parser.add_argument("--probe-capital-story", action="store_true")
+    parser.add_argument("--probe-discovery", action="store_true")
     args = parser.parse_args()
 
     if not args.browser.is_file():
@@ -546,6 +674,7 @@ def main() -> None:
         f"window_manager_probe={'YES' if metrics.get('window_manager_probe') else 'NO'}",
         f"frozen_proof_probe={'YES' if metrics.get('frozen_proof_probe') else 'NO'}",
         f"capital_story_probe={'YES' if metrics.get('capital_story_probe') else 'NO'}",
+        f"discovery_probe={'YES' if metrics.get('discovery_probe') else 'NO'}",
     )
 
 

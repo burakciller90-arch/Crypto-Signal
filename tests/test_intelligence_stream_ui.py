@@ -19,8 +19,8 @@ def test_stream_preview_is_isolated_from_production_root(tmp_path: Path) -> None
     assert root.status_code == 200
     assert preview.status_code == 200
     assert 'data-ui-version="galactech-v2-intelligence-first-tr"' in root.text
-    assert 'data-ui-version="crypto-signal-stream-v1-s11"' in preview.text
-    assert 'data-ui-version="crypto-signal-stream-v1-s11"' not in root.text
+    assert 'data-ui-version="crypto-signal-stream-v1-s12"' in preview.text
+    assert 'data-ui-version="crypto-signal-stream-v1-s12"' not in root.text
 
 
 def test_stream_preview_obeys_one_panel_contract() -> None:
@@ -213,6 +213,51 @@ def test_stream_s11_capital_story_lifecycle_contract() -> None:
     assert "Gerçekleşen PnL" in script
     assert "REAL_CAPITAL=0" in script
     assert "gerçek borsa emri yok" in script
+
+
+def test_stream_s12_discovery_and_exact_deep_link_contract() -> None:
+    html = (STREAM_DIR / "index.html").read_text(encoding="utf-8")
+    script = (STREAM_DIR / "app.js").read_text(encoding="utf-8")
+
+    for control_id in (
+        "searchInput",
+        "symbolFilter",
+        "categoryFilter",
+        "timeframeFilter",
+        "vaultFilter",
+        "evidenceFilter",
+        "stateFilter",
+        "importanceFilter",
+        "fromDateFilter",
+        "toDateFilter",
+        "clearFiltersButton",
+        "applyFiltersButton",
+    ):
+        assert f'id="{control_id}"' in html
+
+    for query_key in (
+        "text",
+        "symbol",
+        "category",
+        "timeframe",
+        "vault",
+        "evidence_domain",
+        "state",
+        "importance",
+        "from_ms",
+        "to_ms",
+    ):
+        assert f'params.set("{query_key}"' in script
+
+    assert "resetDiscoveryState" in script
+    assert "readDiscoveryControls" in script
+    assert "setMessageDeepLink" in script
+    assert 'url.searchParams.set("message", identity)' in script
+    assert "loadExactMessage" in script
+    assert "focusRenderedMessage" in script
+    assert "API.message(identity)" in script
+    assert "__cryptoSignalStreamS12" in script
+    assert "separate" not in html.lower() or "ayrı ekran" in html.lower()
 
 
 def test_stream_s11_does_not_jump_to_s13() -> None:

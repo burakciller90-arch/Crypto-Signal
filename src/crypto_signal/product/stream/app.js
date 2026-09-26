@@ -3,6 +3,7 @@
 const API = Object.freeze({
   messages: "/api/stream/messages",
   live: "/api/stream/live",
+  message: (identity) => `/api/stream/messages/${encodeURIComponent(identity)}`,
   detail: (identity) => `/api/stream/messages/${encodeURIComponent(identity)}/detail`,
   visualProof: (identity) =>
     `/api/stream/messages/${encodeURIComponent(identity)}/visual-proof`,
@@ -36,7 +37,14 @@ const ui = {
   settingsButton: document.getElementById("settingsButton"),
   searchInput: document.getElementById("searchInput"),
   symbolFilter: document.getElementById("symbolFilter"),
+  categoryFilter: document.getElementById("categoryFilter"),
   timeframeFilter: document.getElementById("timeframeFilter"),
+  vaultFilter: document.getElementById("vaultFilter"),
+  evidenceFilter: document.getElementById("evidenceFilter"),
+  stateFilter: document.getElementById("stateFilter"),
+  importanceFilter: document.getElementById("importanceFilter"),
+  fromDateFilter: document.getElementById("fromDateFilter"),
+  toDateFilter: document.getElementById("toDateFilter"),
   clearFilters: document.getElementById("clearFiltersButton"),
   applyFilters: document.getElementById("applyFiltersButton"),
   floatingLayer: document.getElementById("floatingWindowLayer"),
@@ -59,10 +67,18 @@ const state = {
   evidenceWindows: new Map(),
   evidenceWindowZ: 1,
   fixture: new URLSearchParams(window.location.search).get("fixture") || "",
+  deepLinkIdentity: new URLSearchParams(window.location.search).get("message") || "",
   filters: {
     text: "",
     symbol: "",
+    category: "",
     timeframe: "",
+    vault: "",
+    evidenceDomain: "",
+    state: "",
+    importance: "",
+    fromMs: "",
+    toMs: "",
   },
 };
 
@@ -132,8 +148,87 @@ function queryParams({ after = null, before = null, limit = 50 } = {}) {
   if (before) params.set("before", before);
   if (state.filters.text) params.set("text", state.filters.text);
   if (state.filters.symbol) params.set("symbol", state.filters.symbol);
+  if (state.filters.category) params.set("category", state.filters.category);
   if (state.filters.timeframe) params.set("timeframe", state.filters.timeframe);
+  if (state.filters.vault) params.set("vault", state.filters.vault);
+  if (state.filters.evidenceDomain) {
+    params.set("evidence_domain", state.filters.evidenceDomain);
+  }
+  if (state.filters.state) params.set("state", state.filters.state);
+  if (state.filters.importance) params.set("importance", state.filters.importance);
+  if (state.filters.fromMs) params.set("from_ms", state.filters.fromMs);
+  if (state.filters.toMs) params.set("to_ms", state.filters.toMs);
   return params;
+}
+
+function dateBoundaryMs(value, endOfDay = false) {
+  if (!value) return "";
+  const suffix = endOfDay ? "T23:59:59.999" : "T00:00:00.000";
+  const parsed = new Date(`${value}${suffix}`).getTime();
+  return Number.isFinite(parsed) ? String(parsed) : "";
+}
+
+function setMessageDeepLink(identity = "") {
+  const url = new URL(window.location.href);
+  if (identity && exactSha256(identity)) {
+    url.searchParams.set("message", identity);
+    state.deepLinkIdentity = identity;
+  } else {
+    url.searchParams.delete("message");
+    state.deepLinkIdentity = "";
+  }
+  window.history.replaceState({}, "", url);
+}
+
+function clearDiscoveryControls() {
+  for (const control of [
+    ui.searchInput,
+    ui.symbolFilter,
+    ui.categoryFilter,
+    ui.timeframeFilter,
+    ui.vaultFilter,
+    ui.evidenceFilter,
+    ui.stateFilter,
+    ui.importanceFilter,
+    ui.fromDateFilter,
+    ui.toDateFilter,
+  ]) {
+    if (control instanceof HTMLInputElement || control instanceof HTMLSelectElement) {
+      control.value = "";
+    }
+  }
+}
+
+function readDiscoveryControls() {
+  return {
+    text: ui.searchInput?.value.trim() || "",
+    symbol: ui.symbolFilter?.value || "",
+    category: ui.categoryFilter?.value || "",
+    timeframe: ui.timeframeFilter?.value || "",
+    vault: ui.vaultFilter?.value || "",
+    evidenceDomain: ui.evidenceFilter?.value || "",
+    state: ui.stateFilter?.value || "",
+    importance: ui.importanceFilter?.value || "",
+    fromMs: dateBoundaryMs(ui.fromDateFilter?.value || ""),
+    toMs: dateBoundaryMs(ui.toDateFilter?.value || "", true),
+  };
+}
+
+function resetDiscoveryState() {
+  state.filters = {
+    text: "",
+    symbol: "",
+    category: "",
+    timeframe: "",
+    vault: "",
+    evidenceDomain: "",
+    state: "",
+    importance: "",
+    fromMs: "",
+    toMs: "",
+  };
+  clearDiscoveryControls();
+  setMessageDeepLink("");
 }
 
 async function fetchJson(url, timeoutMs = 8000) {
@@ -1744,6 +1839,7 @@ function toggleMessageExpansion(item, record) {
   preserveMessageAnchor(item, () => {
     if (willOpen) {
       state.expanded.add(identity);
+      setMessageDeepLink(identity);
       item.classList.add("is-expanded");
       summary.setAttribute("aria-expanded", "true");
       const cue = summary.querySelector(".message-expand-cue");
@@ -1757,6 +1853,7 @@ function toggleMessageExpansion(item, record) {
       );
     } else {
       state.expanded.delete(identity);
+      if (state.deepLinkIdentity === identity) setMessageDeepLink("");
       item.classList.remove("is-expanded");
       summary.setAttribute("aria-expanded", "false");
       const cue = summary.querySelector(".message-expand-cue");
@@ -1915,6 +2012,65 @@ function appendRecord(record, cursor = null, { fixtureNew = false } = {}) {
     if (ui.announcer) ui.announcer.textContent = `${state.unread} yeni mesaj`;
   }
   return true;
+}
+
+function focusRenderedMessage(identity) {
+  if (!exactSha256(identity)) return false;
+  const record = state.messages.find(
+    (item) => item?.narrative_identity === identity
+  );
+  if (!record) return false;
+  state.expanded.add(identity);
+  renderAll();
+  const item = ui.list?.querySelector(
+    `.message[data-identity="${CSS.escape(identity)}"]`
+  );
+  if (!(item instanceof HTMLElement)) return false;
+  item.classList.add("is-deep-linked");
+  if (!state.details.has(identity)) void loadMessageDetail(item, record);
+  window.requestAnimationFrame(() => {
+    item.scrollIntoView({ block: "center", behavior: "auto" });
+  });
+  return true;
+}
+
+async function loadExactMessage(identity) {
+  if (!exactSha256(identity)) {
+    setMessageDeepLink("");
+    await loadInitial();
+    return;
+  }
+  resetMessages();
+  setConnection("connecting", "MESAJ AÇILIYOR", "exact immutable kayıt okunuyor");
+  try {
+    const payload = await fetchJson(API.message(identity));
+    const record =
+      payload?.status === "ready" && payload?.message
+        ? payload.message
+        : null;
+    if (!record || record.narrative_identity !== identity) {
+      setConnection("degraded", "MESAJ BULUNAMADI", "kimlik için kayıt uydurulmadı");
+      if (ui.emptyTitle) ui.emptyTitle.textContent = "Exact mesaj bulunamadı";
+      if (ui.emptyCopy) {
+        ui.emptyCopy.textContent =
+          "Bu immutable kimlik mevcut Stream deposunda bulunmuyor.";
+      }
+      renderAll();
+      return;
+    }
+    mergeInitial([record]);
+    state.hasOlder = false;
+    state.beforeCursor = null;
+    state.newestCursor = null;
+    state.expanded.add(identity);
+    renderAll();
+    focusRenderedMessage(identity);
+    setConnection("live", "EXACT MESAJ", "orijinal kayıt ve kanıt lineage'ı");
+    if (ui.transportMode) ui.transportMode.textContent = "EXACT MESSAGE";
+  } catch {
+    setConnection("degraded", "MESAJ OKUNAMADI", "exact lookup başarısız; veri uydurulmadı");
+    renderAll();
+  }
 }
 
 async function loadInitial() {
@@ -2528,6 +2684,14 @@ function applyFixture(name) {
     openDrawer(ui.discoveryDrawer);
     if (ui.searchInput) ui.searchInput.value = "likidite";
     if (ui.symbolFilter) ui.symbolFilter.value = "BTCUSDT";
+    if (ui.categoryFilter) ui.categoryFilter.value = "decision";
+    if (ui.timeframeFilter) ui.timeframeFilter.value = "4h";
+    if (ui.vaultFilter) ui.vaultFilter.value = "";
+    if (ui.evidenceFilter) ui.evidenceFilter.value = "order_flow_cvd";
+    if (ui.stateFilter) ui.stateFilter.value = "watch";
+    if (ui.importanceFilter) ui.importanceFilter.value = "important";
+    if (ui.fromDateFilter) ui.fromDateFilter.value = "2026-09-20";
+    if (ui.toDateFilter) ui.toDateFilter.value = "2026-09-25";
   }
 }
 
@@ -2555,15 +2719,14 @@ function wireUi() {
   });
 
   ui.clearFilters?.addEventListener("click", () => {
-    if (ui.searchInput) ui.searchInput.value = "";
-    if (ui.symbolFilter) ui.symbolFilter.value = "";
-    if (ui.timeframeFilter) ui.timeframeFilter.value = "";
+    resetDiscoveryState();
+    closeDrawers();
+    if (!state.fixture) void loadInitial();
   });
 
   ui.applyFilters?.addEventListener("click", () => {
-    state.filters.text = ui.searchInput?.value.trim() || "";
-    state.filters.symbol = ui.symbolFilter?.value || "";
-    state.filters.timeframe = ui.timeframeFilter?.value || "";
+    state.filters = readDiscoveryControls();
+    setMessageDeepLink("");
     closeDrawers();
     if (!state.fixture) void loadInitial();
   });
@@ -2598,10 +2761,18 @@ function init() {
   wireUi();
   if (state.fixture) {
     applyFixture(state.fixture);
+    if (exactSha256(state.deepLinkIdentity)) {
+      window.requestAnimationFrame(() => focusRenderedMessage(state.deepLinkIdentity));
+    }
     return;
   }
   restoreEvidenceWindows();
-  void loadInitial();
+  if (exactSha256(state.deepLinkIdentity)) {
+    void loadExactMessage(state.deepLinkIdentity);
+  } else {
+    if (state.deepLinkIdentity) setMessageDeepLink("");
+    void loadInitial();
+  }
 }
 
 window.__cryptoSignalStreamS9 = Object.freeze({
@@ -2609,6 +2780,19 @@ window.__cryptoSignalStreamS9 = Object.freeze({
   closeAllEvidenceWindows,
   evidenceWindowSnapshot,
   persistEvidenceWindows,
+});
+
+window.__cryptoSignalStreamS12 = Object.freeze({
+  queryParams,
+  readDiscoveryControls,
+  resetDiscoveryState,
+  focusRenderedMessage,
+  discoverySnapshot: () => ({
+    filters: { ...state.filters },
+    deepLinkIdentity: state.deepLinkIdentity,
+    messageCount: state.messages.length,
+    expanded: [...state.expanded],
+  }),
 });
 
 window.addEventListener("beforeunload", () => {

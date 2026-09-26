@@ -8,7 +8,7 @@
   <title>Crypto Signal // Intelligence Stream</title>
   <link rel="stylesheet" href="/stream-static/app.css">
 </head>
-<body data-ui-version="crypto-signal-stream-v1-s11">
+<body data-ui-version="crypto-signal-stream-v1-s12">
   <a class="skip-link" href="#streamMain">Akışa geç</a>
 
   <div class="stream-app">
@@ -109,6 +109,20 @@
           </select>
         </label>
         <label>
+          <span>Kategori</span>
+          <select id="categoryFilter">
+            <option value="">Tümü</option>
+            <option value="market">Market</option>
+            <option value="intelligence">Intelligence</option>
+            <option value="decision">Decision</option>
+            <option value="capital">Capital</option>
+            <option value="risk">Risk</option>
+            <option value="outcome">Outcome</option>
+            <option value="system">System</option>
+            <option value="routine">Routine</option>
+          </select>
+        </label>
+        <label>
           <span>Zaman dilimi</span>
           <select id="timeframeFilter">
             <option value="">Tümü</option>
@@ -119,8 +133,73 @@
             <option value="4h">4h</option>
           </select>
         </label>
+        <label>
+          <span>Vault</span>
+          <select id="vaultFilter">
+            <option value="">Tümü</option>
+            <option value="CORE">Core</option>
+            <option value="TACTICAL">Tactical</option>
+            <option value="OPPORTUNITY_RESERVE">Opportunity</option>
+          </select>
+        </label>
+        <label>
+          <span>Kanıt alanı</span>
+          <select id="evidenceFilter">
+            <option value="">Tümü</option>
+            <option value="frozen_chart">Frozen chart</option>
+            <option value="consumed_candles">Consumed candles</option>
+            <option value="geometry">Geometry</option>
+            <option value="liquidity_map">Liquidity</option>
+            <option value="order_book">Order book</option>
+            <option value="order_flow_cvd">Order flow / CVD</option>
+            <option value="derivatives">Derivatives</option>
+            <option value="onchain">On-chain</option>
+          </select>
+        </label>
+        <label>
+          <span>Önem</span>
+          <select id="importanceFilter">
+            <option value="">Tümü</option>
+            <option value="routine">Routine</option>
+            <option value="important">Important</option>
+            <option value="critical">Critical</option>
+          </select>
+        </label>
+        <label class="drawer-field-wide">
+          <span>Durum</span>
+          <select id="stateFilter">
+            <option value="">Tümü</option>
+            <optgroup label="Analiz">
+              <option value="bullish">Bullish</option>
+              <option value="bearish">Bearish</option>
+              <option value="watch">Watch</option>
+              <option value="blocked">Blocked</option>
+              <option value="resolved">Resolved</option>
+            </optgroup>
+            <optgroup label="Capital lifecycle">
+              <option value="capital_candidate">Candidate</option>
+              <option value="capital_eligible">Eligible</option>
+              <option value="capital_hold">Hold</option>
+              <option value="capital_blocked">Blocked</option>
+              <option value="capital_sized">Sized</option>
+              <option value="capital_executed">Executed</option>
+              <option value="capital_reduced">Reduced</option>
+              <option value="capital_exited">Exited</option>
+              <option value="capital_accounting_updated">Accounting updated</option>
+              <option value="capital_outcome">Outcome</option>
+            </optgroup>
+          </select>
+        </label>
+        <label>
+          <span>Başlangıç tarihi</span>
+          <input id="fromDateFilter" type="date">
+        </label>
+        <label>
+          <span>Bitiş tarihi</span>
+          <input id="toDateFilter" type="date">
+        </label>
       </div>
-      <p class="drawer-note">Keşif yüzeyi geçicidir; tam filtre sözleşmesi S12’de tamamlanır.</p>
+      <p class="drawer-note">Filtreler yalnız mevcut immutable mesajları daraltır; ayrı ekran veya yeniden yazılmış geçmiş oluşturmaz.</p>
       <div class="drawer-actions">
         <button id="clearFiltersButton" class="secondary-button" type="button">Temizle</button>
         <button id="applyFiltersButton" class="primary-button" type="button">Akışa uygula</button>

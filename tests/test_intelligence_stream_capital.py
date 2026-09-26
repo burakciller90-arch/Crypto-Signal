@@ -270,6 +270,25 @@ def test_s11_capital_story_joins_canonical_stream_pagination_and_filters(
     )
     assert len(capital_only.items) == 1
 
+    core_only = reader.read_messages(
+        StreamMessageQuery(limit=20, vault=PaperVaultId.CORE.value)
+    )
+    assert [item["narrative_identity"] for item in core_only.items] == [
+        projected.narrative_identity
+    ]
+
+    tactical_only = reader.read_messages(
+        StreamMessageQuery(limit=20, vault=PaperVaultId.TACTICAL.value)
+    )
+    assert tactical_only.items == ()
+
+    executed_only = reader.read_messages(
+        StreamMessageQuery(limit=20, state="capital_executed")
+    )
+    assert [item["narrative_identity"] for item in executed_only.items] == [
+        projected.narrative_identity
+    ]
+
     decision_only = reader.read_messages(
         StreamMessageQuery(limit=20, category="decision")
     )

@@ -624,6 +624,23 @@ def test_stream_filters_and_exact_lookup(tmp_path) -> None:
     assert len(filtered.items) == 1
     assert filtered.items[0]["narrative_identity"] == identities["btc-flow"]
 
+    state_filtered = reader.read_messages(
+        StreamMessageQuery(limit=20, state="watch")
+    )
+    stance_filtered = reader.read_messages(
+        StreamMessageQuery(limit=20, effective_stance="watch")
+    )
+    assert [
+        item["narrative_identity"] for item in state_filtered.items
+    ] == [
+        item["narrative_identity"] for item in stance_filtered.items
+    ]
+
+    vault_filtered = reader.read_messages(
+        StreamMessageQuery(limit=20, vault="CORE")
+    )
+    assert vault_filtered.items == ()
+
     exact = reader.read_message(identities["eth-outcome"])
     assert exact is not None
     assert exact["symbol"] == "ETHUSDT"
@@ -752,6 +769,23 @@ def test_stream_api_exposes_cursor_history_search_and_lookup(tmp_path) -> None:
         item["narrative_identity"]
         for item in filtered.json()["page"]["items"]
     ] == [identities["btc-flow"]]
+
+    state_filtered = client.get(
+        "/api/stream/messages",
+        params={"state": "watch"},
+    )
+    assert state_filtered.status_code == 200
+    assert identities["btc-flow"] in {
+        item["narrative_identity"]
+        for item in state_filtered.json()["page"]["items"]
+    }
+
+    vault_filtered = client.get(
+        "/api/stream/messages",
+        params={"vault": "CORE"},
+    )
+    assert vault_filtered.status_code == 200
+    assert vault_filtered.json()["page"]["items"] == []
 
     exact = client.get(f"/api/stream/messages/{identities['eth-outcome']}")
     assert exact.status_code == 200
