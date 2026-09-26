@@ -1798,6 +1798,9 @@ def _render_family_text(
     snapshot: StreamFamilySnapshot,
     change: StreamFamilyChangeSet,
 ) -> StreamNarrativeText:
+    if isinstance(snapshot.family, StreamTrustDomain):
+        return _render_trust_family_text(snapshot, change)
+
     family_label = {
         ConfluenceFamily.GEOMETRY: "Market/Geometry",
         ConfluenceFamily.LIQUIDITY: "Liquidity",
@@ -1847,6 +1850,155 @@ def _render_family_text(
     )
     capital = (
         "Bu family mesajı canonical sanal-sermaye durumunu değiştirmez. "
+        "REAL_CAPITAL=0."
+    )
+    return StreamNarrativeText(
+        collapsed_text=collapsed,
+        simple_text=simple,
+        technical_text=technical,
+        intelligence_text=intelligence,
+        decision_text=decision,
+        capital_text=capital,
+    )
+
+
+def _render_trust_family_text(
+    snapshot: StreamFamilySnapshot,
+    change: StreamFamilyChangeSet,
+) -> StreamNarrativeText:
+    components = {
+        item.name: item.value for item in snapshot.state_components
+    }
+    transition = (
+        f"{change.previous_state_label} → {snapshot.state_label}"
+        if change.previous_state_label is not None
+        else snapshot.state_label
+    )
+    changed = ", ".join(change.changed_components)
+    uncertainty = (
+        " Belirsizlik: " + ", ".join(snapshot.uncertainty_flags) + "."
+        if snapshot.uncertainty_flags
+        else ""
+    )
+
+    if snapshot.family is StreamTrustDomain.EVENT_RISK:
+        collapsed = f"Event Risk değişti — {transition}."
+        if snapshot.state_label == "event_block":
+            effect = (
+                "Event-risk katmanı blok durumunda. Accepted circuit-breaker "
+                "composition'da daha yüksek öncelikli bir ABSTAIN koşulu yoksa "
+                "bu durum EVENT_BLOCK bağlamıdır."
+            )
+            restore = (
+                "Normal event-risk durumu, olayın blok/stabilizasyon penceresinden "
+                "çıkması ve accepted takvim kapsamının güncel/geçerli kalmasıyla "
+                "geri gelir."
+            )
+        elif snapshot.state_label == "pre_event_caution":
+            effect = (
+                "Yaklaşan accepted takvim olayı nedeniyle CAUTION uyarısı aktif. "
+                "Bu bir yön sinyali değildir; karar yorumunda event risk daha "
+                "temkinli ele alınmalıdır."
+            )
+            restore = (
+                "Normal event-risk durumu, olay penceresi güvenli biçimde "
+                "geçildiğinde veya source state yeniden CLEAR olduğunda döner."
+            )
+        elif snapshot.state_label == "post_event_stabilization":
+            effect = (
+                "Accepted olay sonrası stabilizasyon penceresi aktif. "
+                "Sistem yön tahmini üretmiyor; event kaynaklı belirsizlik henüz "
+                "tamamen normal sayılmıyor."
+            )
+            restore = (
+                "Normal event-risk durumu stabilizasyon penceresi tamamlanıp "
+                "source state CLEAR olduğunda geri gelir."
+            )
+        elif snapshot.state_label == "degraded_data":
+            effect = (
+                "Event calendar evidence eksik, bayat veya doğrulama açısından "
+                "yetersiz. Bu nedenle event-risk katmanı CLEAR kabul edilemez ve "
+                "trust azaltılır."
+            )
+            restore = (
+                "Normal durum, güncel ve gerekli kategorileri kapsayan accepted "
+                "event-calendar evidence yeniden mevcut olduğunda geri gelir."
+            )
+        else:
+            effect = (
+                "Event-risk katmanı CLEAR. Event kaynaklı ek blok/uyarı şu anda "
+                "aktif değil; diğer bağımsız trust gate'leri yine geçerlidir."
+            )
+            restore = (
+                "Bu normal durum yalnız accepted event-calendar coverage güncel "
+                "ve risk penceresi CLEAR kaldığı sürece geçerlidir."
+            )
+        nearest = components.get("nearest_event_identity", "none")
+        simple = f"{collapsed} {effect} {restore}{uncertainty}"
+        technical = (
+            "Event Risk exact persisted calendar/freeze evidence ile değişti. "
+            f"Nearest event identity: {nearest}. Değişen bileşenler: {changed}. "
+            f"Kaynak kalitesi: {snapshot.source_quality}.{uncertainty}"
+        )
+        intelligence = f"{effect} {restore}"
+        decision = (
+            "Bu RISK mesajı event bağlamının güven/veto durumunu açıklar; "
+            "yön, getiri olasılığı veya exchange-order yetkisi üretmez. "
+            f"{effect}"
+        )
+    else:
+        collapsed = f"Provider/Data Quality değişti — {transition}."
+        degraded_states = {
+            "degraded_provider_unavailable",
+            "degraded_provider_stale",
+            "degraded_no_overlap",
+        }
+        if snapshot.state_label in degraded_states:
+            effect = (
+                "Cross-provider veri güveni degraded. Dual-provider freshness/"
+                "availability/overlap gerektiren analizler tam sağlıklı "
+                "confirmation olarak yorumlanmamalıdır."
+            )
+            restore = (
+                "Normal trust, required provider'lar yeniden available ve fresh "
+                "olduğunda, gap kalmadığında ve ortak grid full-overlap durumuna "
+                "döndüğünde geri gelir."
+            )
+        elif snapshot.state_label == "caution_partial_coverage":
+            effect = (
+                "Provider coverage kısmi; SYSTEM uyarısı aktif. Analiz tamamen "
+                "bloklanmış sayılmaz ancak cross-provider confirmation daha düşük "
+                "güvenle yorumlanmalıdır."
+            )
+            restore = (
+                "Normal trust, gap/partial-overlap ortadan kalkıp iki provider da "
+                "fresh full-overlap coverage sağladığında geri gelir."
+            )
+        else:
+            effect = (
+                "Provider/Data Quality healthy. Required provider availability, "
+                "freshness ve overlap kontrolleri bu snapshot için normal."
+            )
+            restore = (
+                "Bu normal trust yalnız provider'lar fresh/available kaldığı ve "
+                "coverage full-overlap/gap-free olduğu sürece geçerlidir."
+            )
+        simple = f"{collapsed} {effect} {restore}{uncertainty}"
+        technical = (
+            "Provider trust exact persisted divergence snapshot ile değişti. "
+            f"Grid: {components.get('grid_state', 'unknown')}. "
+            f"Değişen bileşenler: {changed}. "
+            f"Kaynak kalitesi: {snapshot.source_quality}.{uncertainty}"
+        )
+        intelligence = f"{effect} {restore}"
+        decision = (
+            "Bu SYSTEM mesajı veri güvenini açıklar; yön, forecast veya order "
+            "yetkisi üretmez. Degraded/caution durumda provider confirmation "
+            "daha düşük güvenle ele alınır."
+        )
+
+    capital = (
+        "Bu trust mesajı canonical sanal-sermaye durumunu değiştirmez. "
         "REAL_CAPITAL=0."
     )
     return StreamNarrativeText(
