@@ -15,6 +15,8 @@ The marker count advanced from 1 to 2 while the WC2 policy and collection-protoc
 
 F1 is therefore closed. The sole active final-completion frontier is F2 — Production Source-to-Message Backbone. F2 must reuse the accepted Stream truth pipeline and provide a common production projector contract for later source families; no parallel message path, historical rich backfill, synthetic activity or real-money authority is permitted. `REAL_CAPITAL=0`.
 
+A post-close replay observability defect was then corrected without changing eligibility policy: PR #1352 merged `9f747628f4c7b137362e8d184e4b61ce166b39ad`, classifying ineligible replay sources before prepared-receipt lookup. UID504 live run `36252540997` proved the next real supervisor summary as `skipped_ineligible_source:17 / source_not_directional_with_frozen_geometry:17`, with policy/protocol unchanged, Product unchanged and `REAL_CAPITAL=0`. Artifact: `stream-final-f1-replay-live-36252540997`, id `10910031464`, digest `sha256:b71d4b4e7d058c7670c287107ef8495ce0675b19a6f3b29712b5a58c8208c893`. The earlier `no_prepared_receipt` live marker is retained only as historical evidence of the telemetry defect and must not be interpreted as an eligibility gap.
+
 ## 2026-09-26 — Final Stream F1 proves WC2 correct silence; live observability activation remains
 
 F1 answered the production question that reopened the final Stream completion program: fresh signal freezes continued after the last forecast, but did the forecast/Stream path lose an eligible source?
