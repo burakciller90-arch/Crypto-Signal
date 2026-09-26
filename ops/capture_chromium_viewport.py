@@ -778,7 +778,7 @@ def _capture(args: argparse.Namespace) -> dict[str, object]:
             s15_probe_expression = r"""
 (async () => {
   const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-  const waitFor = async (predicate, timeoutMs = 30000) => {
+  const waitFor = async (predicate, timeoutMs = 60000) => {
     const started = Date.now();
     while (Date.now() - started < timeoutMs) {
       try {
