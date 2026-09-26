@@ -1,13 +1,51 @@
 # CURRENT STATUS
 
-Updated: 2026-09-25
+Updated: 2026-09-26
 Project: Crypto Signal
 Baseline: crypto-signal-full-version-v1.0.0 (immutable)
 Active post-v1.0 program: v1.1 world-class product + market intelligence + Crypto Signal Intelligence Stream V1
-State: WC0_LIVE_PRODUCT_PARITY_ACCEPTED / WC1_24_7_DATA_RELIABILITY_ACCEPTED / WC2_ENGINEERING_FROZEN_EVIDENCE_ACCUMULATION_ACTIVE / WC4_CHAMPION_CHALLENGER_ENGINEERING_ACCEPTED_RESEARCH_ONLY / WC5_ENGINEERING_ACCEPTED_PRODUCT_DEPLOYED_HUMAN_USABILITY_NOT_MEASURED / WC6_SANDBOX_BOUNDARY_ACCEPTED_VENUE_EVIDENCE_EXTERNAL_DEPENDENCY / WC7_CURRENT_FRONTIER_PACKET_ACCEPTED_CURRENT_INSUFFICIENT_EVIDENCE / INTELLIGENCE_STREAM_V1_S0_PASS_S1_PASS_S2_PASS_S3_PASS_S4_PASS_S5_PASS_S6_PASS_S7_PASS_S8_PASS_S9_PASS_S10_PASS_S11_PASS_S12_ACTIVE / CONTINUITY_PAUSED_BY_USER
+State: WC0_LIVE_PRODUCT_PARITY_ACCEPTED / WC1_24_7_DATA_RELIABILITY_ACCEPTED / WC2_ENGINEERING_FROZEN_EVIDENCE_ACCUMULATION_ACTIVE / WC4_CHAMPION_CHALLENGER_ENGINEERING_ACCEPTED_RESEARCH_ONLY / WC5_ENGINEERING_ACCEPTED_PRODUCT_DEPLOYED_HUMAN_USABILITY_NOT_MEASURED / WC6_SANDBOX_BOUNDARY_ACCEPTED_VENUE_EVIDENCE_EXTERNAL_DEPENDENCY / WC7_CURRENT_FRONTIER_PACKET_ACCEPTED_CURRENT_INSUFFICIENT_EVIDENCE / INTELLIGENCE_STREAM_V1_S0_PASS_S1_PASS_S2_PASS_S3_PASS_S4_PASS_S5_PASS_S6_PASS_S7_PASS_S8_PASS_S9_PASS_S10_PASS_S11_PASS_S12_PASS_S13_ACTIVE / CONTINUITY_PAUSED_BY_USER
 REAL_CAPITAL: 0
 
 ## Active v1.1 frontier — read before historical sections
+
+### 2026-09-26 — STREAM S12 SEARCH, FILTERS AND HISTORY UX PASS / S13 SOUND AND NOTIFICATIONS ACTIVE
+
+S12 is mechanically and visually accepted.
+
+Canonical acceptance record:
+- `docs/CRYPTO_SIGNAL_STREAM_S12_ACCEPTANCE.md`.
+
+Accepted S12 discovery behavior:
+- full-text search;
+- asset/category/timeframe/vault/evidence/state/importance/date filters;
+- clear filters;
+- exact immutable-message deep-link;
+- direct URL deep-link expansion;
+- exact clicked-message deep-link update;
+- persisted detail/proof continuity;
+- same mixed Stream remains the default surface;
+- no permanent Archive/Markets/Capital navigation.
+
+Merged implementation:
+- PR #1292;
+- main `192148e47e83d31fc9153df8cf65fb351c3c81f9`.
+
+Exact-head acceptance:
+- implementation head `b655eab2a01a1c0e289b74f19909263636a6da2a`;
+- UID504 run `36217335451` PASS;
+- artifact `stream-s12-visual-snapshot-36217335451`;
+- focused S12 acceptance PASS;
+- whole-repository regression PASS;
+- desktop Chromium discovery render PASS;
+- exact 430px mobile discovery render PASS;
+- exact message deep-link/detail/proof PASS;
+- whole-page no-overflow PASS;
+- Development checkout non-mutation PASS.
+
+The active Stream frontier is now **S13 — Sound and Notifications**.
+
+S13 must preserve message/history truth while adding optional notification behavior: one eligible new message may emit one chime, history loading and reconnect replay must remain silent, user sound settings must persist, and no notification behavior may create or mutate market/capital truth.
 
 ### 2026-09-25 — STREAM S11 CAPITAL STORY INTEGRATION PASS / S12 SEARCH, FILTERS AND HISTORY UX ACTIVE
 
