@@ -70,6 +70,14 @@ STREAM_FAMILY_ACTIVATION_SCHEMA_VERSION = (
 )
 
 
+class StreamTrustDomain(StrEnum):
+    EVENT_RISK = "event_risk"
+    PROVIDER_QUALITY = "provider_quality"
+
+
+StreamFamilyDomain = ConfluenceFamily | StreamTrustDomain
+
+
 class StreamFamilyProjectionDisposition(StrEnum):
     INSERTED = "inserted"
     UNCHANGED = "unchanged"
@@ -90,7 +98,7 @@ class StreamFamilyStateComponent:
 @dataclass(frozen=True, slots=True)
 class StreamFamilySnapshot:
     projector_id: str
-    family: ConfluenceFamily
+    family: StreamFamilyDomain
     category: StreamCategory
     subtype: str
     importance: StreamImportance
@@ -150,7 +158,7 @@ class StreamFamilyFactBundle:
     source_event_identity: str
     story_identity: str
     projector_id: str
-    family: ConfluenceFamily
+    family: StreamFamilyDomain
     source_scope: str
     asset: str
     symbol: str
@@ -216,7 +224,7 @@ class StreamFamilyStoryObservation:
     message_identity: str
     previous_state_identity: str | None
     current_fact_bundle_identity: str
-    family: ConfluenceFamily
+    family: StreamFamilyDomain
     state_label: str
     state_key: str
     state_components: tuple[StreamFamilyStateComponent, ...]
@@ -270,7 +278,7 @@ class StreamFamilyStoryState:
     current_message_identity: str
     previous_state_identity: str | None
     current_fact_bundle_identity: str
-    family: ConfluenceFamily
+    family: StreamFamilyDomain
     state_label: str
     state_key: str
     state_components: tuple[StreamFamilyStateComponent, ...]
@@ -381,7 +389,7 @@ class StreamFamilyAnalyticalView:
     story_identity: str
     source_event_identity: str
     stream_event_identity: str
-    family: ConfluenceFamily
+    family: StreamFamilyDomain
     family_state_label: str
     previous_family_state_label: str | None
     direction: str | None
@@ -444,7 +452,7 @@ class StreamFamilyNarrativePlan:
     story_identity: str
     source_event_identity: str
     stream_event_identity: str
-    family: ConfluenceFamily
+    family: StreamFamilyDomain
     state_label: str
     previous_state_label: str | None
     changed_components: tuple[str, ...]
@@ -497,7 +505,7 @@ class StreamFamilyNarrativeMessage:
     story_identity: str
     source_event_identity: str
     stream_event_identity: str
-    family: ConfluenceFamily
+    family: StreamFamilyDomain
     state_label: str
     symbol: str
     timeframe: str
@@ -1167,7 +1175,7 @@ class IntelligenceStreamFamilyRuntime:
 def build_family_snapshot(
     *,
     projector_id: str,
-    family: ConfluenceFamily,
+    family: StreamFamilyDomain,
     category: StreamCategory,
     subtype: str,
     importance: StreamImportance,
@@ -1775,6 +1783,8 @@ def _render_family_text(
         ConfluenceFamily.ORDER_FLOW: "Order Flow",
         ConfluenceFamily.DERIVATIVES: "Derivatives",
         ConfluenceFamily.ONCHAIN: "On-chain",
+        StreamTrustDomain.EVENT_RISK: "Event Risk",
+        StreamTrustDomain.PROVIDER_QUALITY: "Provider/Data Quality",
     }[snapshot.family]
     direction = (
         ""
@@ -1834,7 +1844,7 @@ def _family_fact_payload_values(
     source_event_identity: str,
     story_identity: str,
     projector_id: str,
-    family: ConfluenceFamily,
+    family: StreamFamilyDomain,
     source_scope: str,
     asset: str,
     symbol: str,
