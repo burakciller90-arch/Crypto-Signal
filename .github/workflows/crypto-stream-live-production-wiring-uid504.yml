@@ -77,6 +77,24 @@ jobs:
           echo "STREAM_LIVE_CLOCK_WIRING_PASS=YES"
           echo "REAL_CAPITAL=0"
 
+      - name: Whole-repository regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          "$TEST_PY" -m pytest -q
+          "$TEST_PY" -m ruff check src tests ops/verify_stage10_integrated.py ops/capture_chromium_viewport.py
+          "$TEST_PY" -m mypy src ops/verify_stage10_integrated.py ops/capture_chromium_viewport.py
+          node --check src/crypto_signal/product/static/freshness.js
+          node --check src/crypto_signal/product/static/app.js
+          node --check src/crypto_signal/product/galactech/app.js
+          node --check src/crypto_signal/product/stream/app.js
+          node --check src/crypto_signal/product/stream/evidence.js
+          node --check src/crypto_signal/product/stream/visual_proof.js
+          node --check src/crypto_signal/product/stream/notifications.js
+          node tests/js/test_product_freshness.js
+          echo "STREAM_LIVE_WIRING_FULL_REPOSITORY_PASS=YES"
+          echo "REAL_CAPITAL=0"
+
       - name: Prove Development checkout remained untouched
         if: always()
         shell: bash
