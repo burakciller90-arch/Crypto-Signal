@@ -4,10 +4,47 @@ Updated: 2026-09-26
 Project: Crypto Signal
 Baseline: crypto-signal-full-version-v1.0.0 (immutable)
 Active post-v1.0 program: v1.1 world-class product + market intelligence + Crypto Signal Intelligence Stream V1
-State: WC0_LIVE_PRODUCT_PARITY_ACCEPTED / WC1_24_7_DATA_RELIABILITY_ACCEPTED / WC2_ENGINEERING_FROZEN_EVIDENCE_ACCUMULATION_ACTIVE / WC4_CHAMPION_CHALLENGER_ENGINEERING_ACCEPTED_RESEARCH_ONLY / WC5_ENGINEERING_ACCEPTED_PRODUCT_DEPLOYED_HUMAN_USABILITY_NOT_MEASURED / WC6_SANDBOX_BOUNDARY_ACCEPTED_VENUE_EVIDENCE_EXTERNAL_DEPENDENCY / WC7_CURRENT_FRONTIER_PACKET_ACCEPTED_CURRENT_INSUFFICIENT_EVIDENCE / INTELLIGENCE_STREAM_V1_S0_S16_HISTORICAL_ACCEPTANCE_RETAINED / INTELLIGENCE_STREAM_V1_FINAL_F0_PASS_F1_PASS_F2_ACTIVE / CONTINUITY_PAUSED_BY_USER
+State: WC0_LIVE_PRODUCT_PARITY_ACCEPTED / WC1_24_7_DATA_RELIABILITY_ACCEPTED / WC2_ENGINEERING_FROZEN_EVIDENCE_ACCUMULATION_ACTIVE / WC4_CHAMPION_CHALLENGER_ENGINEERING_ACCEPTED_RESEARCH_ONLY / WC5_ENGINEERING_ACCEPTED_PRODUCT_DEPLOYED_HUMAN_USABILITY_NOT_MEASURED / WC6_SANDBOX_BOUNDARY_ACCEPTED_VENUE_EVIDENCE_EXTERNAL_DEPENDENCY / WC7_CURRENT_FRONTIER_PACKET_ACCEPTED_CURRENT_INSUFFICIENT_EVIDENCE / INTELLIGENCE_STREAM_V1_S0_S16_HISTORICAL_ACCEPTANCE_RETAINED / INTELLIGENCE_STREAM_V1_FINAL_F0_PASS_F1_PASS_F2_PASS_F3_ACTIVE / CONTINUITY_PAUSED_BY_USER
 REAL_CAPITAL: 0
 
 ## Active v1.1 frontier — read before historical sections
+
+### 2026-09-26 — STREAM FINAL F2 PASS / F3 FIVE-FAMILY LIVE INTELLIGENCE ACTIVE
+
+Canonical F2 acceptance:
+- `docs/CRYPTO_SIGNAL_STREAM_FINAL_F2_PRODUCTION_BACKBONE_ACCEPTANCE.md`.
+
+F2 added one fail-closed production projector boundary at:
+- `src/crypto_signal/product/intelligence_stream_production_projector.py`.
+
+The accepted common contract binds exact source/event/category/subtype/importance/market/time/evidence/story/current+previous references to the accepted S4 materiality decision and preserves `production_authority=false` / `REAL_CAPITAL=0`.
+
+The backbone owns the accepted downstream path:
+Source Event → Fact/Message → Story Observation/State → Change Set → Analytical View → materiality → Narrative → immutable ledger.
+
+It creates no parallel message/story/materiality/narrative system.
+
+UID504 exact-source run `36253512588` passed:
+- focused F2 + existing forward-runtime tests;
+- ruff;
+- strict mypy;
+- broad repository sync regression;
+- full ruff over `src tests`;
+- strict mypy over 237 source files;
+- JavaScript syntax/freshness regression;
+- `HISTORICAL_BACKFILL=NO`;
+- `REAL_CAPITAL=0`.
+
+Later source families remain fail-closed until their registry entry is genuinely implemented. F2 does not claim them live.
+
+The sole active final-completion frontier is now **F3 — Five-Family Live Intelligence Projection**:
+- Market/Geometry;
+- Liquidity;
+- Order Flow;
+- Derivatives;
+- On-chain/network only where a real accepted live persisted source exists.
+
+Unsupported/research-only sources remain explicitly gated. No historical rich backfill, no synthetic activity, no policy weakening, `REAL_CAPITAL=0`.
 
 ### 2026-09-26 — STREAM FINAL F1 PASS / F2 PRODUCTION SOURCE-TO-MESSAGE BACKBONE ACTIVE
 
