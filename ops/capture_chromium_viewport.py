@@ -762,6 +762,374 @@ def _capture(args: argparse.Namespace) -> dict[str, object]:
                 )
             metrics["notification_probe"] = notification_probe
 
+        if args.probe_s15_end_to_end:
+            s15_probe_expression = r"""
+(async () => {
+  const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+  const waitFor = async (predicate, timeoutMs = 16000) => {
+    const started = Date.now();
+    while (Date.now() - started < timeoutMs) {
+      try {
+        const value = predicate();
+        if (value) return value;
+      } catch {}
+      await sleep(50);
+    }
+    throw new Error("s15_wait_timeout");
+  };
+  const fetchJson = async (url) => {
+    const response = await fetch(url, {
+      headers: { Accept: "application/json" },
+      cache: "no-store",
+    });
+    if (!response.ok) throw new Error(`${url} -> ${response.status}`);
+    return await response.json();
+  };
+
+  await waitFor(
+    () =>
+      window.__cryptoSignalStreamS12 &&
+      window.__cryptoSignalStreamS13 &&
+      document.querySelectorAll(".message[data-identity]").length === 1
+  );
+  const s12 = window.__cryptoSignalStreamS12;
+  const s13 = window.__cryptoSignalStreamS13;
+  const rootCard = document.querySelector(".message[data-identity]");
+  const rootId = rootCard?.dataset.identity || "";
+  if (!/^[0-9a-f]{64}$/.test(rootId)) {
+    return { ok: false, reason: "root_identity_missing", rootId };
+  }
+
+  const rootBeforeEnvelope = await fetchJson(
+    `/api/stream/messages/${encodeURIComponent(rootId)}`
+  );
+  const rootBefore = rootBeforeEnvelope.message;
+  const rootDetailEnvelope = await fetchJson(
+    `/api/stream/messages/${encodeURIComponent(rootId)}/detail`
+  );
+  const rootDetail = rootDetailEnvelope.detail;
+  if (!rootBefore || !rootDetail?.fact_bundle) {
+    return { ok: false, reason: "root_api_truth_missing" };
+  }
+  const rootCollapsed = rootBefore?.text?.collapsed_text || "";
+  const storyIdentity = rootBefore?.story_identity || "";
+  const forecastIdentity = rootDetail.fact_bundle.forecast_identity || "";
+  const proofIdentity = rootDetail.fact_bundle.proof_identity || "";
+
+  await s12.focusRenderedMessage(rootId);
+  await waitFor(() =>
+    document.querySelector(
+      `.message[data-identity="${rootId}"].is-expanded .message-detail`
+    )
+  );
+  const expandedRoot = document.querySelector(
+    `.message[data-identity="${rootId}"].is-expanded`
+  );
+  const detail = expandedRoot?.querySelector(".message-detail");
+  const detailText = detail?.textContent || "";
+  const familyCount = detail?.querySelectorAll(".family-card").length || 0;
+  const depthLabels = [
+    "SIMPLE",
+    "PRO",
+    "INTELLIGENCE",
+    "DECISION",
+    "CAPITAL",
+  ];
+  const depthCoverage = depthLabels.every((label) => detailText.includes(label));
+
+  const proofButton = expandedRoot?.querySelector(
+    '[data-evidence-kind="proof"]'
+  );
+  if (!(proofButton instanceof HTMLButtonElement)) {
+    return { ok: false, reason: "proof_button_missing" };
+  }
+  proofButton.click();
+  await waitFor(() =>
+    document.querySelector(
+      '.evidence-window[data-kind="proof"] .frozen-proof-chart'
+    )
+  );
+  const proofWindow = document.querySelector(
+    '.evidence-window[data-kind="proof"]'
+  );
+  const proofCandles = proofWindow?.querySelectorAll(
+    "[data-candle-identity]"
+  ).length || 0;
+  const proofAnnotations = proofWindow?.querySelectorAll(
+    "[data-annotation-identity]"
+  ).length || 0;
+  const proofText = proofWindow?.textContent || "";
+
+  s13.resetNotificationAudit();
+  s13.setNotificationSettings({
+    enabled: true,
+    volume: 0.28,
+    mode: "decision_capital",
+    desktopEnabled: false,
+  });
+  document.getElementById("soundUnlockButton")?.click();
+  await waitFor(() => s13.notificationSnapshot()?.unlocked === true);
+  const unlocked = s13.notificationSnapshot();
+
+  await waitFor(
+    () => document.querySelectorAll(".message[data-identity]").length >= 2
+  );
+  const afterResolutionAudit = s13.notificationSnapshot();
+  const afterResolutionCards = [
+    ...document.querySelectorAll(".message[data-identity]"),
+  ];
+  const resolutionCard = afterResolutionCards.find(
+    (node) =>
+      node.dataset.identity !== rootId &&
+      node.dataset.category !== "capital"
+  );
+  const resolutionId = resolutionCard?.dataset.identity || "";
+  if (!/^[0-9a-f]{64}$/.test(resolutionId)) {
+    return { ok: false, reason: "resolution_identity_missing", resolutionId };
+  }
+
+  const resolutionEnvelope = await fetchJson(
+    `/api/stream/messages/${encodeURIComponent(resolutionId)}`
+  );
+  const rootAfterResolution = (
+    await fetchJson(`/api/stream/messages/${encodeURIComponent(rootId)}`)
+  ).message;
+  const resolutionMessage = resolutionEnvelope.message;
+
+  await waitFor(
+    () =>
+      [...document.querySelectorAll(".message[data-identity]")].some(
+        (node) => node.dataset.category === "capital"
+      )
+  );
+  const afterCapitalAudit = s13.notificationSnapshot();
+  const capitalCard = [
+    ...document.querySelectorAll(".message[data-identity]"),
+  ].find((node) => node.dataset.category === "capital");
+  const capitalId = capitalCard?.dataset.identity || "";
+  if (!/^[0-9a-f]{64}$/.test(capitalId)) {
+    return { ok: false, reason: "capital_identity_missing", capitalId };
+  }
+  const capitalMessage = (
+    await fetchJson(`/api/stream/messages/${encodeURIComponent(capitalId)}`)
+  ).message;
+
+  const oldMessageUnchanged =
+    rootAfterResolution?.narrative_identity === rootBefore?.narrative_identity &&
+    rootAfterResolution?.text?.collapsed_text === rootCollapsed;
+  const coherentStory =
+    resolutionMessage?.story_identity === storyIdentity &&
+    resolutionMessage?.narrative_identity !== rootId;
+  const exactCapitalLineage =
+    capitalMessage?.forecast_identity === forecastIdentity &&
+    capitalMessage?.proof_identity === proofIdentity &&
+    /^[0-9a-f]{64}$/.test(capitalMessage?.bundle_identity || "") &&
+    /^[0-9a-f]{64}$/.test(capitalMessage?.intent_identity || "") &&
+    /^[0-9a-f]{64}$/.test(capitalMessage?.fill_identity || "") &&
+    capitalMessage?.real_capital === 0 &&
+    capitalMessage?.production_authority === false;
+
+  const searchInput = document.getElementById("searchInput");
+  const symbolFilter = document.getElementById("symbolFilter");
+  const categoryFilter = document.getElementById("categoryFilter");
+  const timeframeFilter = document.getElementById("timeframeFilter");
+  const applyFilters = document.getElementById("applyFiltersButton");
+  const clearFilters = document.getElementById("clearFiltersButton");
+  const searchNeedle = rootCollapsed.slice(0, 36).trim();
+  if (
+    !(searchInput instanceof HTMLInputElement) ||
+    !(symbolFilter instanceof HTMLSelectElement) ||
+    !(categoryFilter instanceof HTMLSelectElement) ||
+    !(timeframeFilter instanceof HTMLSelectElement) ||
+    !(applyFilters instanceof HTMLButtonElement) ||
+    !(clearFilters instanceof HTMLButtonElement)
+  ) {
+    return { ok: false, reason: "discovery_controls_missing" };
+  }
+  searchInput.value = searchNeedle;
+  symbolFilter.value = "BTCUSDT";
+  categoryFilter.value = "decision";
+  timeframeFilter.value = "4h";
+  applyFilters.click();
+  await waitFor(() => {
+    const snapshot = s12.discoverySnapshot();
+    return (
+      snapshot.filters.text === searchNeedle &&
+      document.querySelector(
+        `.message[data-identity="${rootId}"]`
+      )
+    );
+  });
+  const searchFoundRoot = !!document.querySelector(
+    `.message[data-identity="${rootId}"]`
+  );
+  await s12.focusRenderedMessage(rootId);
+  const deepLinkIdentity = new URL(window.location.href).searchParams.get(
+    "message"
+  );
+
+  clearFilters.click();
+  await waitFor(
+    () => document.querySelectorAll(".message[data-identity]").length >= 3
+  );
+  await s12.focusRenderedMessage(capitalId);
+  await waitFor(() =>
+    document.querySelector(
+      `.message[data-identity="${capitalId}"].is-expanded .message-detail`
+    )
+  );
+  const capitalDetail = document.querySelector(
+    `.message[data-identity="${capitalId}"].is-expanded .message-detail`
+  );
+  const capitalDetailText = capitalDetail?.textContent || "";
+  const capitalLineageCodes =
+    capitalDetail?.querySelectorAll(".proof-panel code").length || 0;
+
+  const stream = document.getElementById("streamViewport");
+  return {
+    ok: true,
+    rootId,
+    resolutionId,
+    capitalId,
+    storyIdentity,
+    rootCollapsed,
+    familyCount,
+    depthCoverage,
+    proofCandles,
+    proofAnnotations,
+    proofHasNoSubstitution: proofText.includes(
+      "Current-data substitution: YOK"
+    ),
+    audioUnlocked: unlocked.unlocked,
+    audioState: unlocked.audioState,
+    afterResolutionAudit: afterResolutionAudit.audit,
+    afterResolutionDelivered: afterResolutionAudit.deliveredCount,
+    afterCapitalAudit: afterCapitalAudit.audit,
+    afterCapitalDelivered: afterCapitalAudit.deliveredCount,
+    oldMessageUnchanged,
+    coherentStory,
+    exactCapitalLineage,
+    searchFoundRoot,
+    deepLinkIdentity,
+    capitalDetailHasRealCapital:
+      capitalDetailText.includes("REAL_CAPITAL=0"),
+    capitalLineageCodeCount: capitalLineageCodes,
+    totalMessages:
+      document.querySelectorAll(".message[data-identity]").length,
+    streamVisible:
+      !!stream && stream.getBoundingClientRect().height > 100,
+    connectionLabel:
+      document.getElementById("connectionLabel")?.textContent || "",
+  };
+})()
+"""
+            s15_probe_result = session.command(
+                "Runtime.evaluate",
+                {
+                    "expression": s15_probe_expression,
+                    "awaitPromise": True,
+                    "returnByValue": True,
+                    "userGesture": True,
+                },
+            )
+            s15_exception = s15_probe_result.get("exceptionDetails")
+            if isinstance(s15_exception, dict):
+                description = s15_exception.get(
+                    "text",
+                    "unknown S15 JavaScript exception",
+                )
+                exception_object = s15_exception.get("exception", {})
+                if isinstance(exception_object, dict):
+                    description = str(
+                        exception_object.get("description", description)
+                    )
+                raise RuntimeError(
+                    f"CDP S15 end-to-end JavaScript exception: {description}"
+                )
+            raw_s15_probe = s15_probe_result.get("result", {})
+            if not isinstance(raw_s15_probe, dict):
+                raise RuntimeError("CDP S15 end-to-end probe result missing")
+            s15_probe = raw_s15_probe.get("value", {})
+            if not isinstance(s15_probe, dict):
+                raise RuntimeError("CDP S15 end-to-end probe value missing")
+            if s15_probe.get("ok") is not True:
+                raise RuntimeError(
+                    f"S15 end-to-end probe failed: {s15_probe!r}"
+                )
+            if int(s15_probe.get("familyCount", 0)) != 5:
+                raise RuntimeError(
+                    f"S15 five-family detail failed: {s15_probe!r}"
+                )
+            if s15_probe.get("depthCoverage") is not True:
+                raise RuntimeError(
+                    f"S15 depth explanation failed: {s15_probe!r}"
+                )
+            if int(s15_probe.get("proofCandles", 0)) < 20:
+                raise RuntimeError(
+                    f"S15 frozen candle proof failed: {s15_probe!r}"
+                )
+            if int(s15_probe.get("proofAnnotations", 0)) < 3:
+                raise RuntimeError(
+                    f"S15 frozen annotation proof failed: {s15_probe!r}"
+                )
+            if s15_probe.get("proofHasNoSubstitution") is not True:
+                raise RuntimeError(
+                    f"S15 frozen proof substitution boundary failed: {s15_probe!r}"
+                )
+            if (
+                s15_probe.get("audioUnlocked") is not True
+                or s15_probe.get("audioState") != "running"
+            ):
+                raise RuntimeError(
+                    f"S15 audio unlock failed: {s15_probe!r}"
+                )
+            after_resolution = s15_probe.get("afterResolutionAudit", {})
+            if (
+                not isinstance(after_resolution, dict)
+                or int(after_resolution.get("chimeDispatches", 0)) != 1
+                or int(after_resolution.get("chimePlayed", 0)) != 1
+                or int(s15_probe.get("afterResolutionDelivered", 0)) != 1
+            ):
+                raise RuntimeError(
+                    f"S15 first live exactly-once chime failed: {s15_probe!r}"
+                )
+            after_capital = s15_probe.get("afterCapitalAudit", {})
+            if (
+                not isinstance(after_capital, dict)
+                or int(after_capital.get("chimeDispatches", 0)) != 2
+                or int(after_capital.get("chimePlayed", 0)) != 2
+                or int(after_capital.get("duplicate", 0)) != 0
+                or int(s15_probe.get("afterCapitalDelivered", 0)) != 2
+            ):
+                raise RuntimeError(
+                    f"S15 second live exactly-once chime failed: {s15_probe!r}"
+                )
+            for key in (
+                "oldMessageUnchanged",
+                "coherentStory",
+                "exactCapitalLineage",
+                "searchFoundRoot",
+                "capitalDetailHasRealCapital",
+                "streamVisible",
+            ):
+                if s15_probe.get(key) is not True:
+                    raise RuntimeError(
+                        f"S15 {key} acceptance failed: {s15_probe!r}"
+                    )
+            if s15_probe.get("deepLinkIdentity") != s15_probe.get("rootId"):
+                raise RuntimeError(
+                    f"S15 deep-link acceptance failed: {s15_probe!r}"
+                )
+            if int(s15_probe.get("capitalLineageCodeCount", 0)) < 3:
+                raise RuntimeError(
+                    f"S15 capital lineage detail failed: {s15_probe!r}"
+                )
+            if int(s15_probe.get("totalMessages", 0)) < 3:
+                raise RuntimeError(
+                    f"S15 final Stream message count failed: {s15_probe!r}"
+                )
+            metrics["s15_end_to_end_probe"] = s15_probe
+
         if args.probe_long_session:
             session.command(
                 "Emulation.setEmulatedMedia",
@@ -1040,6 +1408,7 @@ def main() -> None:
     parser.add_argument("--probe-discovery", action="store_true")
     parser.add_argument("--probe-notifications", action="store_true")
     parser.add_argument("--probe-long-session", action="store_true")
+    parser.add_argument("--probe-s15-end-to-end", action="store_true")
     args = parser.parse_args()
 
     if not args.browser.is_file():
@@ -1067,6 +1436,7 @@ def main() -> None:
         f"discovery_probe={'YES' if metrics.get('discovery_probe') else 'NO'}",
         f"notification_probe={'YES' if metrics.get('notification_probe') else 'NO'}",
         f"long_session_probe={'YES' if metrics.get('long_session_probe') else 'NO'}",
+        f"s15_end_to_end_probe={'YES' if metrics.get('s15_end_to_end_probe') else 'NO'}",
     )
 
 
