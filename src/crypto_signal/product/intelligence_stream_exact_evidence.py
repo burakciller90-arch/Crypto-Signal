@@ -138,7 +138,7 @@ class IntelligenceStreamExactEvidenceReadModel:
         )
         raw_index = self._resolve_exact_objects(
             tuple(
-                item.get("evidence_identity")
+                str(item["evidence_identity"])
                 for item in references
                 if isinstance(item, dict)
                 and isinstance(item.get("evidence_identity"), str)
@@ -414,34 +414,34 @@ class IntelligenceStreamExactEvidenceReadModel:
             raw_domains = visual.get("domain_evidence")
             if isinstance(raw_domains, (list, tuple)):
                 for raw_domain in raw_domains:
-                    domain = _mapping(
+                    domain_row = _mapping(
                         raw_domain,
                         "decision exact evidence domain",
                     )
                     identities = _identity_tuple(
-                        domain.get("evidence_identities"),
+                        domain_row.get("evidence_identities"),
                         "decision exact evidence identity",
                         allow_empty=True,
                     )
                     evidence_ids.update(identities)
                     visual_state = str(
-                        domain.get("visual_state") or "unavailable"
+                        domain_row.get("visual_state") or "unavailable"
                     )
                     state = resolution_state_for_visual_state(
                         visual_state
                     )
                     customer_projection: dict[str, Any] = {
-                        "market_available_at_ms": domain.get(
+                        "market_available_at_ms": domain_row.get(
                             "market_available_at_ms"
                         ),
-                        "observed_at_ms": domain.get("observed_at_ms"),
-                        "freshness_0_1": domain.get("freshness_0_1"),
-                        "source_quality": domain.get("source_quality"),
-                        "summary_codes": domain.get("summary_codes"),
+                        "observed_at_ms": domain_row.get("observed_at_ms"),
+                        "freshness_0_1": domain_row.get("freshness_0_1"),
+                        "source_quality": domain_row.get("source_quality"),
+                        "summary_codes": domain_row.get("summary_codes"),
                     }
                     if (
                         state is StreamEvidenceResolutionState.READY_EXACT
-                        and str(domain.get("domain"))
+                        and str(domain_row.get("domain"))
                         in {"frozen_chart", "consumed_candles"}
                     ):
                         customer_projection.update(
@@ -453,9 +453,9 @@ class IntelligenceStreamExactEvidenceReadModel:
                         )
                     resolutions.append(
                         {
-                            "domain": domain.get("domain"),
+                            "domain": domain_row.get("domain"),
                             "resolution_state": state.value,
-                            "reason": domain.get("visual_reason"),
+                            "reason": domain_row.get("visual_reason"),
                             "evidence_identities": identities,
                             "capabilities": {},
                             "customer_projection": customer_projection,
@@ -469,10 +469,10 @@ class IntelligenceStreamExactEvidenceReadModel:
                 "decision exact evidence domain",
                 allow_empty=True,
             )
-            for domain in domains:
+            for domain_name in domains:
                 resolutions.append(
                     {
-                        "domain": domain,
+                        "domain": domain_name,
                         "resolution_state": (
                             StreamEvidenceResolutionState.IDENTITY_ONLY_EXACT.value
                         ),
