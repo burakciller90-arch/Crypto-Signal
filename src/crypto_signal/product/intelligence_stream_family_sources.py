@@ -119,7 +119,7 @@ def build_market_tape_family_snapshots(
 ) -> tuple[StreamFamilySnapshot, ...]:
     store = MarketTapeStore(market_tape_path)
     snapshots: list[StreamFamilySnapshot] = []
-    for symbol in tuple(sorted({value.upper() for value in symbols})):
+    for symbol in tuple(sorted(set(value.upper() for value in symbols))):
         orderbooks = store.recent_orderbooks(
             exchange=Exchange.BYBIT,
             market_type=MarketType.SPOT,
@@ -132,13 +132,14 @@ def build_market_tape_family_snapshots(
             symbol=symbol,
             limit=1200,
         )
+
         if orderbooks:
             liquidity = build_liquidity_dynamics_evidence_freeze(
                 orderbooks,
                 as_of_ms=as_of_ms,
             )
             liquidity_analysis = liquidity.analysis
-            evidence = {
+            liquidity_evidence = {
                 liquidity.freeze_identity,
                 liquidity_analysis.evidence_identity,
                 *(item.snapshot_identity for item in liquidity.snapshots),
@@ -158,14 +159,17 @@ def build_market_tape_family_snapshots(
                     timeframe="microstructure",
                     event_at_ms=as_of_ms,
                     source_as_of_ms=as_of_ms,
-                    evidence_identities=tuple(sorted(evidence)),
+                    evidence_identities=tuple(sorted(liquidity_evidence)),
                     evidence_domains=("liquidity", "order_book"),
                     state_label=(
-                        f"{liquidity_liquidity_analysis.status.value}:"
-                        f"{liquidity_liquidity_analysis.liquidity_take_candidate.value}"
+                        f"{liquidity_analysis.status.value}:"
+                        f"{liquidity_analysis.liquidity_take_candidate.value}"
                     ),
                     state_components=(
-                        ("liquidity_take_candidate", liquidity_analysis.liquidity_take_candidate.value),
+                        (
+                            "liquidity_take_candidate",
+                            liquidity_analysis.liquidity_take_candidate.value,
+                        ),
                         ("source_quality", liquidity_analysis.source_quality.value),
                         ("status", liquidity_analysis.status.value),
                     ),
@@ -174,6 +178,7 @@ def build_market_tape_family_snapshots(
                     uncertainty_flags=liquidity_analysis.uncertainty_flags,
                 )
             )
+
         if orderbooks or trades:
             order_flow = build_order_flow_microstructure_evidence_freeze(
                 orderbooks,
@@ -181,18 +186,19 @@ def build_market_tape_family_snapshots(
                 as_of_ms=as_of_ms,
             )
             order_flow_analysis = order_flow.analysis
-            evidence = {
+            order_flow_evidence = {
                 order_flow.freeze_identity,
-                liquidity_analysis.evidence_identity,
+                order_flow_analysis.evidence_identity,
                 *(item.trade_identity for item in order_flow.trades),
             }
             if order_flow.orderbook is not None:
-                evidence.add(order_flow.orderbook.snapshot_identity)
-            direction = None
+                order_flow_evidence.add(order_flow.orderbook.snapshot_identity)
+            order_flow_direction = None
             if order_flow_analysis.label is OrderFlowMicrostructureLabel.BUY_PRESSURE:
-                direction = "buy_pressure"
+                order_flow_direction = "buy_pressure"
             elif order_flow_analysis.label is OrderFlowMicrostructureLabel.SELL_PRESSURE:
-                direction = "sell_pressure"
+                order_flow_direction = "sell_pressure"
+
             snapshots.append(
                 build_family_snapshot(
                     projector_id="order_flow_change",
@@ -208,21 +214,26 @@ def build_market_tape_family_snapshots(
                     timeframe="microstructure",
                     event_at_ms=as_of_ms,
                     source_as_of_ms=as_of_ms,
-                    evidence_identities=tuple(sorted(evidence)),
-                    evidence_domains=("order_flow", "order_book", "public_trades"),
-                    state_label=order_flow_order_flow_derivatives_analysis.label.value,
+                    evidence_identities=tuple(sorted(order_flow_evidence)),
+                    evidence_domains=(
+                        "order_book",
+                        "order_flow",
+                        "public_trades",
+                    ),
+                    state_label=order_flow_analysis.label.value,
                     state_components=(
                         ("book_pressure", order_flow_analysis.book_pressure.value),
-                        ("label", order_flow_derivatives_analysis.label.value),
+                        ("label", order_flow_analysis.label.value),
                         ("taker_flow", order_flow_analysis.taker_flow.value),
                     ),
-                    direction=direction,
+                    direction=order_flow_direction,
                     source_quality=(
                         "unresolved"
-                        if order_flow_analysis.label is OrderFlowMicrostructureLabel.UNRESOLVED
+                        if order_flow_analysis.label
+                        is OrderFlowMicrostructureLabel.UNRESOLVED
                         else "measured"
                     ),
-                    uncertainty_flags=liquidity_analysis.uncertainty_flags,
+                    uncertainty_flags=order_flow_analysis.uncertainty_flags,
                 )
             )
 
@@ -233,15 +244,18 @@ def build_market_tape_family_snapshots(
             limit=64,
         )
         if derivatives:
-            freeze = build_derivatives_context_evidence_freeze(
+            derivatives_freeze = build_derivatives_context_evidence_freeze(
                 derivatives,
                 as_of_ms=as_of_ms,
             )
-            derivatives_analysis = freeze.analysis
-            evidence = {
-                freeze.freeze_identity,
-                liquidity_analysis.evidence_identity,
-                *(item.observation_identity for item in freeze.observations),
+            derivatives_analysis = derivatives_freeze.analysis
+            derivatives_evidence = {
+                derivatives_freeze.freeze_identity,
+                derivatives_analysis.evidence_identity,
+                *(
+                    item.observation_identity
+                    for item in derivatives_freeze.observations
+                ),
             }
             snapshots.append(
                 build_family_snapshot(
@@ -250,32 +264,42 @@ def build_market_tape_family_snapshots(
                     category=StreamCategory.INTELLIGENCE,
                     subtype="derivatives_material_change",
                     importance=StreamImportance.IMPORTANT,
-                    source_event_identity=freeze.freeze_identity,
-                    source_scope="bybit:linear_perpetual:market_tape_derivatives",
+                    source_event_identity=derivatives_freeze.freeze_identity,
+                    source_scope=(
+                        "bybit:linear_perpetual:market_tape_derivatives"
+                    ),
                     asset=_base_asset(symbol),
                     symbol=symbol,
                     market=symbol,
                     timeframe="15m",
                     event_at_ms=as_of_ms,
                     source_as_of_ms=as_of_ms,
-                    evidence_identities=tuple(sorted(evidence)),
+                    evidence_identities=tuple(sorted(derivatives_evidence)),
                     evidence_domains=("derivatives",),
-                    state_label=order_flow_order_flow_derivatives_analysis.label.value,
+                    state_label=derivatives_analysis.label.value,
                     state_components=(
                         ("basis_state", derivatives_analysis.basis_state.value),
-                        ("funding_state", derivatives_analysis.funding_state.value),
-                        ("label", order_flow_derivatives_analysis.label.value),
-                        ("open_interest_state", derivatives_analysis.open_interest_state.value),
+                        (
+                            "funding_state",
+                            derivatives_analysis.funding_state.value,
+                        ),
+                        ("label", derivatives_analysis.label.value),
+                        (
+                            "open_interest_state",
+                            derivatives_analysis.open_interest_state.value,
+                        ),
                     ),
                     direction=None,
                     source_quality=(
                         "unresolved"
-                        if derivatives_analysis.label is DerivativesContextLabel.UNRESOLVED
+                        if derivatives_analysis.label
+                        is DerivativesContextLabel.UNRESOLVED
                         else "measured"
                     ),
-                    uncertainty_flags=liquidity_analysis.uncertainty_flags,
+                    uncertainty_flags=derivatives_analysis.uncertainty_flags,
                 )
             )
+
     return tuple(
         sorted(
             snapshots,
@@ -287,7 +311,6 @@ def build_market_tape_family_snapshots(
             ),
         )
     )
-
 
 def _base_asset(symbol: str) -> str:
     normalized = symbol.upper()
