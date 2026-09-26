@@ -19,8 +19,15 @@ from crypto_signal.intelligence.order_flow_microstructure import (
     build_order_flow_microstructure_evidence_freeze,
 )
 from crypto_signal.ledger.bundle import DecisionFreezeBundle
-from crypto_signal.ledger.deserialization import parse_signal_decision
-from crypto_signal.ledger.store import FreezeRecord
+from crypto_signal.ledger.deserialization import (
+    parse_lifecycle_evaluation,
+    parse_signal_decision,
+)
+from crypto_signal.ledger.store import (
+    FreezeRecord,
+    LifecycleRecord,
+    lifecycle_evaluation_identity,
+)
 from crypto_signal.product.intelligence_stream_family import (
     StreamFamilySnapshot,
     build_family_snapshot,
@@ -105,10 +112,28 @@ def _build_geometry_snapshot(
     if geometry is not None:
         components.extend(
             (
+                ("entry_reference_price", str(geometry.entry_reference_price)),
+                ("entry_zone_high", str(geometry.entry_zone.high)),
+                ("entry_zone_low", str(geometry.entry_zone.low)),
                 ("geometry_methodology", geometry.source_methodology.value),
+                ("invalidation_price", str(geometry.invalidation_price)),
                 ("invalidation_trigger", geometry.invalidation_trigger.value),
                 ("target_count", str(len(geometry.targets))),
             )
+        )
+        components.extend(
+            (
+                f"target_{index:02d}_{target.label}_price",
+                str(target.target_price),
+            )
+            for index, target in enumerate(geometry.targets, start=1)
+        )
+        components.extend(
+            (
+                f"target_{index:02d}_{target.label}_rr",
+                str(target.reference_rr),
+            )
+            for index, target in enumerate(geometry.targets, start=1)
         )
         evidence.add(geometry.source_evidence_id)
     state_label = (
@@ -138,6 +163,79 @@ def _build_geometry_snapshot(
         direction=signal.direction.value,
         source_quality="exact_immutable_signal_freeze",
         uncertainty_flags=signal.uncertainty_flags,
+    )
+
+
+def build_geometry_lifecycle_family_snapshot(
+    freeze: FreezeRecord,
+    lifecycle: LifecycleRecord,
+) -> StreamFamilySnapshot | None:
+    if lifecycle.signal_freeze_identity != freeze.signal_freeze_identity:
+        raise ValueError("Stream lifecycle/freeze identity mismatch")
+    raw = json.loads(freeze.bundle_json)
+    if not isinstance(raw, dict):
+        raise TypeError("Stream lifecycle freeze bundle must decode to object")
+    signal = parse_signal_decision(raw.get("signal_decision"))
+
+    evaluation_raw = json.loads(lifecycle.evaluation_json)
+    evaluation = parse_lifecycle_evaluation(evaluation_raw)
+    if lifecycle_evaluation_identity(evaluation) != lifecycle.evaluation_identity:
+        raise ValueError("Stream lifecycle evaluation identity mismatch")
+    if evaluation.signal_freeze_identity != signal.freeze_identity:
+        raise ValueError("Stream lifecycle parent signal mismatch")
+    if evaluation.evaluated_as_of_ms != lifecycle.evaluated_as_of_ms:
+        raise ValueError("Stream lifecycle evaluated-as-of mismatch")
+    if evaluation.current_state.value != lifecycle.current_state:
+        raise ValueError("Stream lifecycle current-state mismatch")
+    if evaluation.status.value != lifecycle.status:
+        raise ValueError("Stream lifecycle status mismatch")
+    transition = evaluation.transition
+    if transition is None:
+        return None
+    if transition.signal_freeze_identity != signal.freeze_identity:
+        raise ValueError("Stream lifecycle transition parent mismatch")
+    if lifecycle.appended_at_ms < evaluation.evaluated_as_of_ms:
+        raise ValueError("Stream lifecycle append predates evaluation")
+
+    uncertainty = set(signal.uncertainty_flags)
+    if not transition.first_trigger_candle_certain:
+        uncertainty.add("first_trigger_candle_uncertain")
+    trigger = "|".join(str(item) for item in transition.trigger_candle_identity)
+    return build_family_snapshot(
+        projector_id="market_geometry_change",
+        family=ConfluenceFamily.GEOMETRY,
+        category=StreamCategory.MARKET,
+        subtype="trigger_transition",
+        importance=StreamImportance.IMPORTANT,
+        source_event_identity=lifecycle.evaluation_identity,
+        source_scope=(
+            f"{signal.exchange.value}:{signal.market_type.value}:signal_geometry"
+        ),
+        asset=_base_asset(signal.symbol),
+        symbol=signal.symbol,
+        market=signal.symbol,
+        timeframe=signal.timeframe,
+        event_at_ms=lifecycle.appended_at_ms,
+        source_as_of_ms=evaluation.evaluated_as_of_ms,
+        evidence_identities=(
+            lifecycle.evaluation_identity,
+            signal.freeze_identity,
+            transition.transition_identity,
+        ),
+        evidence_domains=("frozen_chart", "geometry", "signal_lifecycle"),
+        state_label=(
+            f"{transition.to_state.value}:{transition.reason.value}"
+        ),
+        state_components=(
+            ("first_trigger_candle_certain", str(transition.first_trigger_candle_certain).lower()),
+            ("from_state", transition.from_state.value),
+            ("lifecycle_reason", transition.reason.value),
+            ("to_state", transition.to_state.value),
+            ("trigger_candle_identity", trigger),
+        ),
+        direction=signal.direction.value,
+        source_quality="exact_immutable_lifecycle_evaluation",
+        uncertainty_flags=tuple(sorted(uncertainty)),
     )
 
 def build_market_tape_family_snapshots(
