@@ -119,7 +119,7 @@ def build_market_tape_family_snapshots(
 ) -> tuple[StreamFamilySnapshot, ...]:
     store = MarketTapeStore(market_tape_path)
     snapshots: list[StreamFamilySnapshot] = []
-    for symbol in tuple(sorted(set(value.upper() for value in symbols))):
+    for symbol in tuple(sorted({value.upper() for value in symbols})):
         orderbooks = store.recent_orderbooks(
             exchange=Exchange.BYBIT,
             market_type=MarketType.SPOT,
