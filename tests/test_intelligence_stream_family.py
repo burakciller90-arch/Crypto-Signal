@@ -228,3 +228,27 @@ def test_family_runtime_rejects_deferred_onchain_projector(tmp_path: Path) -> No
     )
     with pytest.raises(ValueError, match="not implemented"):
         runtime.project(snapshot, activated_at_ms=2_000)
+
+
+def test_family_runtime_replay_returns_unchanged_after_later_transition(
+    tmp_path: Path,
+) -> None:
+    path = _path(tmp_path)
+    runtime = IntelligenceStreamFamilyRuntime(path)
+    first_snapshot = _snapshot(source="first", event_at_ms=2_100, state="none")
+    changed_snapshot = _snapshot(
+        source="changed",
+        event_at_ms=2_300,
+        state="bid_side",
+    )
+
+    first = runtime.project(first_snapshot, activated_at_ms=2_000)
+    changed = runtime.project(changed_snapshot, activated_at_ms=2_000)
+    replay = runtime.project(first_snapshot, activated_at_ms=99_999)
+
+    assert first.disposition is StreamFamilyProjectionDisposition.INSERTED
+    assert changed.disposition is StreamFamilyProjectionDisposition.INSERTED
+    assert replay.disposition is StreamFamilyProjectionDisposition.UNCHANGED
+    assert replay.narrative_identity == first.narrative_identity
+    assert replay.stream_event_identity == first.stream_event_identity
+    assert replay.story_identity == first.story_identity
