@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - 'stream/s16-controlled-cutover'
+      - 'stream/s16-product-deploy-handoff'
       - 'main'
   workflow_dispatch:
 
