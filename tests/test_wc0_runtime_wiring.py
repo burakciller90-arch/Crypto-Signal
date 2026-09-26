@@ -116,7 +116,7 @@ def test_dashboard_runtime_path_overrides_are_exact_and_not_rebased(
     }
 
 
-def test_productdeploy_contract_is_exact_main_and_current_galactech() -> None:
+def test_productdeploy_contract_is_exact_main_and_stream_root_with_fallback() -> None:
     workflow = Path(
         ".github/workflows/crypto-mac-command.yml"
     ).read_text(encoding="utf-8")
@@ -130,10 +130,16 @@ def test_productdeploy_contract_is_exact_main_and_current_galactech() -> None:
     assert 'git -C "$PRODUCT"' in product_block
     assert 'fetch --no-tags origin main' in product_block
     assert 'rev-parse origin/main' in product_block
+    assert 'data-ui-version="crypto-signal-stream-v1-s14"' in product_block
+    assert 'GALACTECH · INTELLIGENCE STREAM' in product_block
     assert 'data-ui-version="galactech-v2-intelligence-first-tr"' in product_block
     assert 'data-ui-version="galactech-command-center-v1"' in product_block
+    assert "/stream-preview" in product_block
+    assert 'data.get("product_root") == "stream"' in product_block
+    assert 'data.get("stream_root_active") is True' in product_block
     assert "/api/r25/operational-truth" in product_block
-    assert "GALACTECH_ROOT_CUTOVER_LIVE_PASS=YES" in product_block
+    assert "STREAM_ROOT_CUTOVER_LIVE_PASS=YES" in product_block
+    assert "GALACTECH_FALLBACK_LIVE_PASS=YES" in product_block
     assert "WC0_RUNTIME_TOPOLOGY_SQLITE_PASS=YES" in product_block
     assert "WC0_CONTINUITY_PAUSE_PRESERVED=YES" in product_block
     assert "DASHBOARD_RESTART_MODE=supervisor-managed" in product_block
