@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import fcntl
 import sqlite3
 import sys
 import time
@@ -26,6 +27,10 @@ DEFAULT_STREAM_LEDGER = Path(
     "/Volumes/Crypto-504/Crypto-Signal/Development/runtime/"
     "stream/intelligence_stream.sqlite3"
 )
+DEFAULT_LOCK = Path(
+    "/Volumes/Crypto-504/Crypto-Signal/Development/runtime/"
+    "stream/intelligence_stream_family_clock.lock"
+)
 DEFAULT_SYMBOLS = ("BTCUSDT", "ETHUSDT", "SOLUSDT")
 
 
@@ -33,6 +38,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--market-tape", type=Path, default=DEFAULT_MARKET_TAPE)
     parser.add_argument("--stream-ledger", type=Path, default=DEFAULT_STREAM_LEDGER)
+    parser.add_argument("--lock-path", type=Path, default=DEFAULT_LOCK)
     parser.add_argument(
         "--symbols",
         nargs="+",
@@ -110,22 +116,42 @@ def run(
 
 def main() -> int:
     args = parse_args()
-    try:
-        return run(
-            market_tape_path=args.market_tape,
-            stream_ledger_path=args.stream_ledger,
-            symbols=tuple(str(value) for value in args.symbols),
-            observed_at_ms=time.time_ns() // 1_000_000,
-        )
-    except (FileNotFoundError, OSError, TypeError, ValueError, sqlite3.Error) as exc:
-        print(
-            "STREAM_FAMILY_CLOCK_ERROR "
-            f"error={type(exc).__name__}:{exc} "
-            "FAIL_CLOSED=YES HISTORICAL_BACKFILL=NO REAL_CAPITAL=0",
-            file=sys.stderr,
-            flush=True,
-        )
-        return 1
+    args.lock_path.parent.mkdir(parents=True, exist_ok=True)
+    with args.lock_path.open("a+") as lock_handle:
+        try:
+            fcntl.flock(
+                lock_handle.fileno(),
+                fcntl.LOCK_EX | fcntl.LOCK_NB,
+            )
+        except BlockingIOError:
+            print(
+                "STREAM_FAMILY_CLOCK_ALREADY_RUNNING "
+                "HISTORICAL_BACKFILL=NO REAL_CAPITAL=0",
+                flush=True,
+            )
+            return 0
+        try:
+            return run(
+                market_tape_path=args.market_tape,
+                stream_ledger_path=args.stream_ledger,
+                symbols=tuple(str(value) for value in args.symbols),
+                observed_at_ms=time.time_ns() // 1_000_000,
+            )
+        except (
+            FileNotFoundError,
+            OSError,
+            TypeError,
+            ValueError,
+            sqlite3.Error,
+        ) as exc:
+            print(
+                "STREAM_FAMILY_CLOCK_ERROR "
+                f"error={type(exc).__name__}:{exc} "
+                "FAIL_CLOSED=YES HISTORICAL_BACKFILL=NO REAL_CAPITAL=0",
+                file=sys.stderr,
+                flush=True,
+            )
+            return 1
 
 
 if __name__ == "__main__":
