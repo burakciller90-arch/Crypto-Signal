@@ -38,7 +38,7 @@ jobs:
           "$BASE_PY" -m venv "$VENV"
           "$VENV/bin/python" -m pip install --upgrade pip
           "$VENV/bin/python" -m pip install -e "$GITHUB_WORKSPACE"
-          "$VENV/bin/python" -m pip install "pytest>=8.4" "ruff>=0.13" "mypy>=1.18"
+          "$VENV/bin/python" -m pip install "pytest>=8.4" "pytest-asyncio>=1.2" "ruff>=0.13" "mypy>=1.18"
           echo "TEST_PY=$VENV/bin/python" >> "$GITHUB_ENV"
 
       - name: Focused Alert Clock acceptance
