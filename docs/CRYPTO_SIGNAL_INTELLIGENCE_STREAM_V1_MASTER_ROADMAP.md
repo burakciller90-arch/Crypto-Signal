@@ -66,9 +66,9 @@ These decisions are already made and must not be re-opened during ordinary imple
 - **S12 Search, Filters and History UX: PASS**.
 - **S13 Sound and Notifications: PASS**.
 - **S14 Performance, Accessibility and Long-Session Stability: PASS**.
-- **S15 End-to-End Product Acceptance: ACTIVE FRONTIER**.
-- Do not begin S16 as the active implementation frontier until the complete backend-event -> live message -> evidence/proof -> immutable story update -> virtual-capital story is accepted end to end.
-- The deployed GALACTECH V2 surface remains production fallback until S16 controlled cutover.
+- **S15 End-to-End Product Acceptance: PASS**.
+- **S16 Controlled Cutover: ACTIVE FRONTIER**.
+- The deployed GALACTECH V2 surface remains production fallback until exact-main S16 preview/runtime parity, rollback and product-root cutover are mechanically accepted.
 
 ---
 
