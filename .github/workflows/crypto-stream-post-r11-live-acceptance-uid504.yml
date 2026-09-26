@@ -1,0 +1,301 @@
+name: Crypto Stream Post-R11 Live Acceptance UID504
+
+on:
+  push:
+    branches:
+      - 'stream/post-r11-live-acceptance'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: stream-post-r11-live-acceptance-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  live-acceptance:
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          clean: true
+          fetch-depth: 1
+
+      - name: Capture pre-state
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          DEV="$ROOT/Development"
+          PRODUCT="$ROOT/Product"
+          test "$(id -u)" = "504"
+          test -d "$DEV/.git"
+          test -d "$PRODUCT/.git"
+          test -z "$(git -C "$DEV" status --porcelain)"
+          test -z "$(git -C "$PRODUCT" status --porcelain)"
+          echo "DEV_HEAD_BEFORE=$(git -C "$DEV" rev-parse HEAD)" | tee "$RUNNER_TEMP/post-r11-prestate"
+          echo "PRODUCT_HEAD_BEFORE=$(git -C "$PRODUCT" rev-parse HEAD)" | tee -a "$RUNNER_TEMP/post-r11-prestate"
+          echo "WORKFLOW_SHA=$GITHUB_SHA"
+          echo "REAL_CAPITAL=0"
+
+      - name: Read-only Stream ledger and API acceptance
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          DEV="$ROOT/Development"
+          PRODUCT="$ROOT/Product"
+          DB="$DEV/runtime/stream/intelligence_stream.sqlite3"
+          OUT="$RUNNER_TEMP/stream-post-r11-live-acceptance"
+          URL="http://127.0.0.1:48700"
+          mkdir -p "$OUT"
+
+          test -f "$DB"
+          test -s "$DB"
+
+          curl -fsS --max-time 8 "$URL/api/health" > "$OUT/health.json"
+          curl -fsS --max-time 8 "$URL/api/stream/messages?limit=5" > "$OUT/messages.json"
+          curl -fsS --max-time 8 "$URL/api/stream/live?batch_limit=5&follow=false" > "$OUT/live.sse"
+          curl -fsS --max-time 8 "$URL/" > "$OUT/root.html"
+
+          DB="$DB" OUT="$OUT" /usr/bin/python3 - <<'PY'
+          import json
+          import os
+          import sqlite3
+          from pathlib import Path
+
+          db_path = Path(os.environ["DB"])
+          out = Path(os.environ["OUT"])
+
+          required_tables = {
+              "stream_meta",
+              "stream_activation",
+              "stream_decision_contexts",
+              "stream_source_events",
+              "stream_message_meta",
+              "stream_fact_bundles",
+              "stream_message_inputs",
+              "stream_story_meta",
+              "stream_story_observations",
+              "stream_story_states",
+              "stream_story_change_sets",
+              "stream_analytical_meta",
+              "stream_analytical_views",
+              "stream_narrative_meta",
+              "stream_narrative_plans",
+              "stream_narrative_messages",
+          }
+
+          uri = f"file:{db_path}?mode=ro"
+          connection = sqlite3.connect(uri, uri=True)
+          try:
+              connection.execute("PRAGMA query_only=ON")
+              connection.execute("BEGIN")
+              quick = connection.execute("PRAGMA quick_check").fetchone()
+              if quick is None or quick[0] != "ok":
+                  raise SystemExit(f"STREAM_DB_QUICK_CHECK_FAILED:{quick!r}")
+
+              tables = {
+                  row[0]
+                  for row in connection.execute(
+                      "SELECT name FROM sqlite_master WHERE type='table'"
+                  )
+              }
+              missing = sorted(required_tables - tables)
+              if missing:
+                  raise SystemExit(f"STREAM_DB_SCHEMA_MISSING:{missing!r}")
+
+              activation_rows = connection.execute(
+                  "SELECT activation_identity, activated_at_ms, payload_json "
+                  "FROM stream_activation ORDER BY activated_at_ms, activation_identity"
+              ).fetchall()
+              if len(activation_rows) != 1:
+                  raise SystemExit(
+                      f"STREAM_ACTIVATION_COUNT_INVALID:{len(activation_rows)}"
+                  )
+              activation_identity, activated_at_ms, payload_json = activation_rows[0]
+              payload = json.loads(payload_json)
+              assert payload["historical_rich_backfill_allowed"] is False, payload
+              assert payload["read_only"] is True, payload
+              assert payload["production_authority"] is False, payload
+              assert payload["real_capital"] == 0, payload
+
+              count_tables = (
+                  "stream_decision_contexts",
+                  "stream_source_events",
+                  "stream_fact_bundles",
+                  "stream_message_inputs",
+                  "stream_story_observations",
+                  "stream_story_states",
+                  "stream_story_change_sets",
+                  "stream_analytical_views",
+                  "stream_narrative_plans",
+                  "stream_narrative_messages",
+              )
+              counts = {
+                  table: int(
+                      connection.execute(
+                          f"SELECT COUNT(*) FROM {table}"
+                      ).fetchone()[0]
+                  )
+                  for table in count_tables
+              }
+              min_event = connection.execute(
+                  "SELECT MIN(event_at_ms) FROM stream_source_events"
+              ).fetchone()[0]
+              if min_event is not None and int(min_event) < int(activated_at_ms):
+                  raise SystemExit(
+                      "STREAM_HISTORICAL_BACKFILL_BOUNDARY_VIOLATION:"
+                      f"{min_event}<{activated_at_ms}"
+                  )
+
+              meta = dict(connection.execute("SELECT key, value FROM stream_meta"))
+              if meta.get("real_capital") != "0":
+                  raise SystemExit(f"STREAM_REAL_CAPITAL_META_INVALID:{meta!r}")
+
+              state = {
+                  "activation_identity": activation_identity,
+                  "activated_at_ms": int(activated_at_ms),
+                  "activation_payload": payload,
+                  "counts": counts,
+                  "min_source_event_at_ms": (
+                      None if min_event is None else int(min_event)
+                  ),
+                  "tables": sorted(tables),
+                  "quick_check": "ok",
+                  "read_only_probe": True,
+                  "real_capital": 0,
+              }
+              (out / "stream-state.json").write_text(
+                  json.dumps(state, sort_keys=True, indent=2),
+                  encoding="utf-8",
+              )
+              print(
+                  "STREAM_LEDGER_STATE "
+                  + json.dumps(state, sort_keys=True, separators=(",", ":"))
+              )
+          finally:
+              connection.rollback()
+              connection.close()
+
+          health = json.loads((out / "health.json").read_text())
+          assert health["status"] == "ok", health
+          assert health["product_root"] == "stream", health
+          assert health["stream_root_active"] is True, health
+          assert health["read_only"] is True, health
+          assert health["real_capital"] == 0, health
+
+          messages = json.loads((out / "messages.json").read_text())
+          assert messages["status"] in {"ready", "empty"}, messages
+          assert isinstance(messages.get("page"), dict), messages
+          assert messages["read_only"] is True, messages
+          assert messages["real_capital"] == 0, messages
+          if messages["status"] == "unavailable":
+              raise AssertionError(messages)
+
+          state = json.loads((out / "stream-state.json").read_text())
+          narrative_count = state["counts"]["stream_narrative_messages"]
+          items = messages["page"].get("items", [])
+          if narrative_count > 0:
+              assert messages["status"] == "ready", (narrative_count, messages)
+              assert len(items) > 0, (narrative_count, messages)
+          else:
+              assert messages["status"] == "empty", (narrative_count, messages)
+
+          sse = (out / "live.sse").read_text()
+          assert "retry:" in sse, sse
+          root = (out / "root.html").read_text()
+          assert 'data-ui-version="crypto-signal-stream-v1-s14"' in root, root[:500]
+
+          print(
+              "STREAM_API_RUNTIME_CONFIGURED_PASS=YES "
+              f"status={messages['status']} item_count={len(items)}"
+          )
+          print("STREAM_SSE_READONLY_PASS=YES")
+          print("STREAM_NO_HISTORICAL_BACKFILL_PASS=YES")
+          print("REAL_CAPITAL=0")
+          PY
+
+      - name: Capture live Product with accepted Chromium CDP harness
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          DEV="$ROOT/Development"
+          PRODUCT="$ROOT/Product"
+          OUT="$RUNNER_TEMP/stream-post-r11-live-acceptance"
+          URL="http://127.0.0.1:48700"
+
+          BROWSER=""
+          for candidate in             "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"             "/Applications/Chromium.app/Contents/MacOS/Chromium"             "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge"             "/Applications/Google Chrome Canary.app/Contents/MacOS/Google Chrome Canary"; do
+            if [ -x "$candidate" ]; then
+              BROWSER="$candidate"
+              break
+            fi
+          done
+          test -n "$BROWSER"
+
+          CAPTURE_PY=""
+          for candidate in "$DEV/.venv/bin/python" "$PRODUCT/.venv/bin/python"; do
+            if [ -x "$candidate" ] && "$candidate" -c 'import websockets' >/dev/null 2>&1; then
+              CAPTURE_PY="$candidate"
+              break
+            fi
+          done
+          test -n "$CAPTURE_PY"
+
+          "$CAPTURE_PY" "$GITHUB_WORKSPACE/ops/capture_chromium_viewport.py"             --browser "$BROWSER"             --url "$URL/"             --output "$OUT/desktop.png"             --metrics-out "$OUT/desktop.metrics.json"             --width 1440             --height 950             --require-no-horizontal-overflow
+
+          "$CAPTURE_PY" "$GITHUB_WORKSPACE/ops/capture_chromium_viewport.py"             --browser "$BROWSER"             --url "$URL/"             --output "$OUT/mobile.png"             --metrics-out "$OUT/mobile.metrics.json"             --width 430             --height 860             --mobile             --require-no-horizontal-overflow
+
+          test -s "$OUT/desktop.png"
+          test -s "$OUT/mobile.png"
+          /usr/bin/python3 - "$OUT/desktop.metrics.json" "$OUT/mobile.metrics.json" <<'PY'
+          import json
+          import sys
+          from pathlib import Path
+
+          desktop = json.loads(Path(sys.argv[1]).read_text())
+          mobile = json.loads(Path(sys.argv[2]).read_text())
+          assert desktop["innerWidth"] == 1440, desktop
+          assert desktop["scrollWidth"] <= 1440, desktop
+          assert mobile["innerWidth"] == 430, mobile
+          assert mobile["scrollWidth"] <= 430, mobile
+          print("STREAM_LIVE_UI_CDP_CAPTURE_PASS=YES")
+          print("STREAM_LIVE_UI_DESKTOP_NO_OVERFLOW_PASS=YES")
+          print("STREAM_LIVE_UI_MOBILE_NO_OVERFLOW_PASS=YES")
+          print("REAL_CAPITAL=0")
+          PY
+
+      - name: Upload live acceptance artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stream-post-r11-live-acceptance-${{ github.run_id }}
+          path: ${{ runner.temp }}/stream-post-r11-live-acceptance
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Prove production checkouts remained untouched
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          DEV="$ROOT/Development"
+          PRODUCT="$ROOT/Product"
+          DEV_BEFORE="$(sed -n 's/^DEV_HEAD_BEFORE=//p' "$RUNNER_TEMP/post-r11-prestate")"
+          PRODUCT_BEFORE="$(sed -n 's/^PRODUCT_HEAD_BEFORE=//p' "$RUNNER_TEMP/post-r11-prestate")"
+          DEV_AFTER="$(git -C "$DEV" rev-parse HEAD)"
+          PRODUCT_AFTER="$(git -C "$PRODUCT" rev-parse HEAD)"
+          test "$DEV_BEFORE" = "$DEV_AFTER"
+          test "$PRODUCT_BEFORE" = "$PRODUCT_AFTER"
+          test -z "$(git -C "$DEV" status --porcelain)"
+          test -z "$(git -C "$PRODUCT" status --porcelain)"
+          echo "STREAM_POST_R11_LIVE_ACCEPTANCE_NON_MUTATING_PASS=YES"
+          echo "DEV_HEAD=$DEV_AFTER"
+          echo "PRODUCT_HEAD=$PRODUCT_AFTER"
+          echo "REAL_CAPITAL=0"
