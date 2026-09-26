@@ -23,7 +23,7 @@ jobs:
           clean: true
           fetch-depth: 2
 
-      - name: Fast-forward Development to exact merged F6 main
+      - name: Fast-forward Development and Product to exact merged F6 main
         shell: bash
         run: |
           set -euo pipefail
@@ -35,17 +35,28 @@ jobs:
           test "$(id -u)" = "504"
           test -z "$(git -C "$DEV" status --porcelain)"
           test -z "$(git -C "$PRODUCT" status --porcelain)"
-          test "$(git rev-parse HEAD^)" = "$EXPECTED_MAIN"
+          test "$(git merge-base HEAD "$EXPECTED_MAIN")" = "$EXPECTED_MAIN"
           git diff --quiet "$EXPECTED_MAIN"...HEAD -- . ':(exclude).github/workflows/crypto-stream-final-f6-live-acceptance-uid504.yml'
 
           DEV_BEFORE="$(git -C "$DEV" rev-parse HEAD)"
+          PRODUCT_BEFORE="$(git -C "$PRODUCT" rev-parse HEAD)"
+
           git -C "$DEV" fetch origin main --quiet
+          git -C "$PRODUCT" fetch origin main --quiet
           test "$(git -C "$DEV" rev-parse origin/main)" = "$EXPECTED_MAIN"
+          test "$(git -C "$PRODUCT" rev-parse origin/main)" = "$EXPECTED_MAIN"
+
           git -C "$DEV" merge-base --is-ancestor "$DEV_BEFORE" "$EXPECTED_MAIN"
+          git -C "$PRODUCT" merge-base --is-ancestor "$PRODUCT_BEFORE" "$EXPECTED_MAIN"
           git -C "$DEV" merge --ff-only "$EXPECTED_MAIN"
+          git -C "$PRODUCT" merge --ff-only "$EXPECTED_MAIN"
+
           test "$(git -C "$DEV" rev-parse HEAD)" = "$EXPECTED_MAIN"
+          test "$(git -C "$PRODUCT" rev-parse HEAD)" = "$EXPECTED_MAIN"
           test -z "$(git -C "$DEV" status --porcelain)"
+          test -z "$(git -C "$PRODUCT" status --porcelain)"
           echo "F6_DEVELOPMENT_EXACT_MAIN_PASS=YES before=$DEV_BEFORE after=$EXPECTED_MAIN"
+          echo "F6_PRODUCT_EXACT_MAIN_PASS=YES before=$PRODUCT_BEFORE after=$EXPECTED_MAIN"
           echo "REAL_CAPITAL=0"
 
       - name: Headless reload canonical supervisor
@@ -64,6 +75,22 @@ jobs:
           test -n "$old_sup"
           kill -0 "$old_sup"
           ps -p "$old_sup" -o command= | grep -F "$ROOT/ssd-service-supervisor.sh" >/dev/null
+
+          old_dashboard="$(cat "$ROOT/dashboard.pid" 2>/dev/null || true)"
+          test -n "$old_dashboard"
+          kill -0 "$old_dashboard"
+          ps -p "$old_dashboard" -o command= | grep -F "$ROOT/Product/ops/run_dashboard.py" >/dev/null
+          kill -TERM "$old_dashboard"
+          dashboard_stopped=0
+          for _ in {1..20}; do
+            if ! kill -0 "$old_dashboard" >/dev/null 2>&1; then
+              dashboard_stopped=1
+              break
+            fi
+            sleep 1
+          done
+          test "$dashboard_stopped" = "1"
+          rm -f "$ROOT/dashboard.pid"
 
           cp "$DEV/ops/ssd_runtime_supervisor.sh" "$ROOT/ssd-service-supervisor.sh"
           chmod 700 "$ROOT/ssd-service-supervisor.sh"
@@ -105,7 +132,14 @@ jobs:
           assert p.get("product_root") == "stream", p
           PY
 
+          new_dashboard="$(cat "$ROOT/dashboard.pid")"
+          test -n "$new_dashboard"
+          test "$new_dashboard" != "$old_dashboard"
+          kill -0 "$new_dashboard"
+          ps -p "$new_dashboard" -o command= | grep -F "$ROOT/Product/ops/run_dashboard.py" >/dev/null
+
           echo "F6_HEADLESS_SUPERVISOR_RELOAD_PASS=YES old=$old_sup new=$new_sup"
+          echo "F6_DASHBOARD_RESTART_PASS=YES old=$old_dashboard new=$new_dashboard"
           echo "REAL_CAPITAL=0"
 
       - name: Verify real live exact-evidence API and detached UI
