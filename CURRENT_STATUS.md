@@ -4,10 +4,35 @@ Updated: 2026-09-26
 Project: Crypto Signal
 Baseline: crypto-signal-full-version-v1.0.0 (immutable)
 Active post-v1.0 program: v1.1 world-class product + market intelligence + Crypto Signal Intelligence Stream V1
-State: WC0_LIVE_PRODUCT_PARITY_ACCEPTED / WC1_24_7_DATA_RELIABILITY_ACCEPTED / WC2_ENGINEERING_FROZEN_EVIDENCE_ACCUMULATION_ACTIVE / WC4_CHAMPION_CHALLENGER_ENGINEERING_ACCEPTED_RESEARCH_ONLY / WC5_ENGINEERING_ACCEPTED_PRODUCT_DEPLOYED_HUMAN_USABILITY_NOT_MEASURED / WC6_SANDBOX_BOUNDARY_ACCEPTED_VENUE_EVIDENCE_EXTERNAL_DEPENDENCY / WC7_CURRENT_FRONTIER_PACKET_ACCEPTED_CURRENT_INSUFFICIENT_EVIDENCE / INTELLIGENCE_STREAM_V1_S0_S16_HISTORICAL_ACCEPTANCE_RETAINED / INTELLIGENCE_STREAM_V1_FINAL_F0_PASS_F1_PASS_F2_PASS_F3_PASS_F4_ACTIVE / CONTINUITY_PAUSED_BY_USER
+State: WC0_LIVE_PRODUCT_PARITY_ACCEPTED / WC1_24_7_DATA_RELIABILITY_ACCEPTED / WC2_ENGINEERING_FROZEN_EVIDENCE_ACCUMULATION_ACTIVE / WC4_CHAMPION_CHALLENGER_ENGINEERING_ACCEPTED_RESEARCH_ONLY / WC5_ENGINEERING_ACCEPTED_PRODUCT_DEPLOYED_HUMAN_USABILITY_NOT_MEASURED / WC6_SANDBOX_BOUNDARY_ACCEPTED_VENUE_EVIDENCE_EXTERNAL_DEPENDENCY / WC7_CURRENT_FRONTIER_PACKET_ACCEPTED_CURRENT_INSUFFICIENT_EVIDENCE / INTELLIGENCE_STREAM_V1_S0_S16_HISTORICAL_ACCEPTANCE_RETAINED / INTELLIGENCE_STREAM_V1_FINAL_F0_PASS_F1_PASS_F2_PASS_F3_PASS_F4_PASS_F5_ACTIVE / CONTINUITY_PAUSED_BY_USER
 REAL_CAPITAL: 0
 
 ## Active v1.1 frontier — read before historical sections
+
+### 2026-09-26 — STREAM FINAL F4 PASS / F5 THREE-VAULT CAPITAL STORY ACTIVE
+
+Canonical F4 acceptance:
+- `docs/CRYPTO_SIGNAL_STREAM_FINAL_F4_RISK_SYSTEM_TRUST_ACCEPTANCE.md`.
+
+F4 is physically live on exact merged main `3ec48a3728b919e3783546e57eab7afebab1d18d`.
+
+Implementation PR #1363 and final UID504 evidence proved:
+- exact persisted Event Risk and provider/data-quality sources feed the existing canonical Stream backbone;
+- initial `clear` / `healthy` baselines are silent to prevent routine maintenance chatter;
+- material caution/degraded/block transitions and later recovery remain publishable;
+- deterministic RISK/SYSTEM narrative states the affected trust layer and restoration condition without inventing market direction, probability or authority;
+- exact-source implementation run `36263227400` passed focused tests, broad non-async repository pytest, full `ruff check src tests`, strict mypy over 240 source files and a real persisted provider transition audit;
+- real persisted provider history includes `healthy -> degraded_provider_stale -> healthy` transitions on `binance:bybit:spot:provider_divergence`;
+- physical live activation run `36263537425` reloaded the canonical supervisor headlessly and proved Event Source / provider-divergence / Stream quick checks `ok`;
+- live persisted counts at acceptance: 4 event coverages, 48 structured event observations, 159 provider-divergence snapshots;
+- immutable activation boundaries:
+  - `provider_quality_change=1790448206598`;
+  - `event_risk_change=1790448237694`;
+- production `stream_trust status=SUMMARY` marker observed;
+- canonical F4 trust source rows existed, including 3 `data_quality_degraded` rows;
+- no synthetic risk/system activity, no historical backfill, `REAL_CAPITAL=0`.
+
+The sole final-completion frontier is now **F5 — Three-Vault Capital Story Live Closure**.
 
 ### 2026-09-26 — STREAM FINAL F3 PASS / F4 RISK + SYSTEM TRUST ACTIVE
 
