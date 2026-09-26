@@ -1,0 +1,84 @@
+name: Crypto Stream Live Production Wiring UID504
+
+on:
+  push:
+    branches:
+      - 'stream/live-production-wiring-postcutover'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: stream-live-production-wiring-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  stream-live-production-wiring:
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          clean: true
+          fetch-depth: 1
+
+      - name: Prepare isolated environment
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
+          BASE_PY="$DEV/.venv/bin/python"
+          TEST_VENV="$RUNNER_TEMP/stream-live-production-wiring-venv"
+          test "$(id -u)" = "504"
+          test -x "$BASE_PY"
+          test -z "$(git -C "$DEV" status --porcelain)"
+          echo "DEV_HEAD_BEFORE=$(git -C "$DEV" rev-parse HEAD)" >> "$RUNNER_TEMP/stream-live-production-wiring-dev-state"
+          rm -rf "$TEST_VENV"
+          "$BASE_PY" -m venv "$TEST_VENV"
+          "$TEST_VENV/bin/python" -m pip install --upgrade pip
+          "$TEST_VENV/bin/python" -m pip install -e "$GITHUB_WORKSPACE"
+          "$TEST_VENV/bin/python" -m pip install "pytest>=8.4" "pytest-asyncio>=1.2" "ruff>=0.13" "mypy>=1.18"
+          echo "TEST_PY=$TEST_VENV/bin/python" >> "$GITHUB_ENV"
+
+      - name: Focused production Stream wiring acceptance
+        shell: bash
+        run: |
+          set -euo pipefail
+          "$TEST_PY" -m pytest -q \
+            tests/test_intelligence_stream_forward_runtime.py \
+            tests/test_wc2_prepared_live_runtime.py \
+            tests/test_wc2_live_clock_wiring.py \
+            tests/test_wc2_ssd_supervisor_single_owner.py \
+            tests/test_intelligence_stream_read_model.py
+          "$TEST_PY" -m ruff check \
+            src/crypto_signal/product/intelligence_stream_forward_runtime.py \
+            src/crypto_signal/evaluation/untouched_forward_prepared_runtime.py \
+            ops/run_live_evidence_clock.py \
+            tests/test_intelligence_stream_forward_runtime.py \
+            tests/test_wc2_prepared_live_runtime.py \
+            tests/test_wc2_live_clock_wiring.py \
+            tests/test_wc2_ssd_supervisor_single_owner.py
+          "$TEST_PY" -m mypy \
+            src/crypto_signal/product/intelligence_stream_forward_runtime.py \
+            src/crypto_signal/evaluation/untouched_forward_prepared_runtime.py \
+            ops/run_live_evidence_clock.py
+          bash -n ops/ssd_runtime_supervisor.sh
+          echo "STREAM_FORWARD_ACTIVATION_PASS=YES"
+          echo "STREAM_FORWARD_NO_BACKFILL_PASS=YES"
+          echo "STREAM_FORWARD_REPLAY_IDEMPOTENCE_PASS=YES"
+          echo "STREAM_LIVE_CLOCK_WIRING_PASS=YES"
+          echo "REAL_CAPITAL=0"
+
+      - name: Prove Development checkout remained untouched
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
+          BEFORE="$(sed -n 's/^DEV_HEAD_BEFORE=//p' "$RUNNER_TEMP/stream-live-production-wiring-dev-state")"
+          AFTER="$(git -C "$DEV" rev-parse HEAD)"
+          test -z "$(git -C "$DEV" status --porcelain)"
+          test "$BEFORE" = "$AFTER"
+          echo "STREAM_LIVE_WIRING_UID504_NON_MUTATING_PASS=YES"
