@@ -18,6 +18,7 @@ from crypto_signal.intelligence.order_flow_microstructure import (
     OrderFlowMicrostructureLabel,
     build_order_flow_microstructure_evidence_freeze,
 )
+from crypto_signal.ledger.bundle import DecisionFreezeBundle
 from crypto_signal.ledger.deserialization import parse_signal_decision
 from crypto_signal.ledger.store import FreezeRecord
 from crypto_signal.product.intelligence_stream_family import (
@@ -59,6 +60,40 @@ def build_geometry_family_snapshot(
     )
     if actual != expected:
         raise ValueError("Stream geometry freeze row/bundle mismatch")
+    return build_geometry_family_snapshot_from_bundle(
+        _bundle_identity=freeze.bundle_identity,
+        bundle_signal=signal,
+        frozen_at_ms=freeze.frozen_at_ms,
+    )
+
+
+def build_geometry_family_snapshot_from_bundle(
+    bundle: DecisionFreezeBundle,
+    *,
+    frozen_at_ms: int,
+) -> StreamFamilySnapshot:
+    return _build_geometry_snapshot(
+        _bundle_identity=bundle.bundle_identity,
+        bundle_signal=bundle.signal_decision,
+        frozen_at_ms=frozen_at_ms,
+    )
+
+
+def _build_geometry_snapshot(
+    *,
+    _bundle_identity: str,
+    bundle_signal: object,
+    frozen_at_ms: int,
+) -> StreamFamilySnapshot:
+    # Keep the public helper typed against DecisionFreezeBundle while the
+    # persisted-record adapter first verifies its decoded SignalDecision.
+    signal = bundle_signal
+    from crypto_signal.signals.models import SignalDecision
+
+    if not isinstance(signal, SignalDecision):
+        raise TypeError("Stream geometry source requires SignalDecision")
+    if frozen_at_ms < signal.as_of_ms:
+        raise ValueError("Stream geometry freeze time predates signal as-of")
 
     geometry = signal.geometry
     components: list[tuple[str, str]] = [
@@ -68,8 +103,8 @@ def build_geometry_family_snapshot(
         ("signal_state", signal.state.value),
     ]
     evidence = {
-        freeze.bundle_identity,
-        freeze.signal_freeze_identity,
+        _bundle_identity,
+        signal.freeze_identity,
         *signal.selected_evidence_ids,
     }
     if geometry is not None:
@@ -91,25 +126,24 @@ def build_geometry_family_snapshot(
         category=StreamCategory.MARKET,
         subtype="geometry_material_change",
         importance=StreamImportance.IMPORTANT,
-        source_event_identity=freeze.signal_freeze_identity,
+        source_event_identity=signal.freeze_identity,
         source_scope=(
-            f"{freeze.exchange}:{freeze.market_type}:signal_geometry"
+            f"{signal.exchange.value}:{signal.market_type.value}:signal_geometry"
         ),
         asset=_base_asset(signal.symbol),
         symbol=signal.symbol,
         market=signal.symbol,
         timeframe=signal.timeframe,
-        event_at_ms=freeze.frozen_at_ms,
+        event_at_ms=frozen_at_ms,
         source_as_of_ms=signal.as_of_ms,
         evidence_identities=tuple(sorted(evidence)),
-        evidence_domains=("geometry", "frozen_chart"),
+        evidence_domains=("frozen_chart", "geometry"),
         state_label=state_label,
         state_components=tuple(components),
         direction=signal.direction.value,
         source_quality="exact_immutable_signal_freeze",
         uncertainty_flags=signal.uncertainty_flags,
     )
-
 
 def build_market_tape_family_snapshots(
     market_tape_path: Path,
