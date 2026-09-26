@@ -1,6 +1,9 @@
 name: Crypto Stream Post-R11 Live Acceptance UID504
 
 on:
+  push:
+    branches:
+      - 'stream/post-r11-live-acceptance'
   workflow_dispatch:
 
 permissions:
@@ -38,6 +41,15 @@ jobs:
           echo "PRODUCT_HEAD_BEFORE=$(git -C "$PRODUCT" rev-parse HEAD)" | tee -a "$RUNNER_TEMP/post-r11-prestate"
           echo "WORKFLOW_SHA=$GITHUB_SHA"
           echo "REAL_CAPITAL=0"
+
+      - name: Focused visualsnapshot contract regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
+          cd "$GITHUB_WORKSPACE"
+          "$DEV/.venv/bin/python" -m pytest -q tests/test_wc0_runtime_wiring.py
+          echo "STREAM_POST_R11_VISUALSNAPSHOT_CONTRACT_PASS=YES"
 
       - name: Read-only Stream ledger and API acceptance
         shell: bash
