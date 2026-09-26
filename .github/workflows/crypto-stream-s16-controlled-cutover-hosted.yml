@@ -5,6 +5,7 @@ on:
     branches:
       - 'stream/s16-controlled-cutover'
       - 'stream/s16-product-deploy-handoff'
+      - 'stream/s16-product-deploy-recovery-timeout'
       - 'main'
   workflow_dispatch:
 
