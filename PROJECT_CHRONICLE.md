@@ -1,5 +1,25 @@
 # PROJECT CHRONICLE
 
+## 2026-09-26 — User opens final Intelligence Stream V1 deficiency-closure roadmap
+
+The user explicitly narrowed the next program to one goal: finish the deficiencies of `CRYPTO_SIGNAL_INTELLIGENCE_STREAM_V1_MASTER_ROADMAP.md` and nothing broader.
+
+This new authority does not discard the substantial S0-S16 work. Those phases remain historical acceptance evidence for the schema, story engine, analytical composer, narrative engine, realtime transport, one-panel UI, evidence-window framework, frozen proof path, search/history/sound, long-session behavior, capital projector primitives and controlled Product-root cutover.
+
+The reason a final completion authority is necessary is newer mechanical evidence that the earlier word “complete” was too broad for production coverage:
+- the original S1 source-message audit explicitly recorded missing or gated projectors for several Market/Liquidity/Order-Flow/Derivatives/Event-Risk/System source families;
+- post-cutover live use later required PR #1324 to add a missing production bridge for WC2 issuance/resolution;
+- the accepted production forward runtime currently exposes issuance/resolution projection but does not by itself prove all original source families are wired into the live Stream;
+- read-only WC2 forward-progress run `36244819758` observed 2,794 signal freezes, 28 forecasts, 5 resolutions, 628 signal freezes after the latest forecast and 48 new 4h signal freezes after the latest forecast, so prolonged Stream silence now requires explicit eligibility/progress diagnosis rather than a frontend explanation;
+- the optional local Ollama-compatible narrative adapter exists, but current live supervisor/forward wiring does not configure it; deterministic Turkish fallback remains authoritative.
+
+The canonical final execution document is:
+`docs/CRYPTO_SIGNAL_INTELLIGENCE_STREAM_V1_FINAL_COMPLETION_ROADMAP.md`.
+
+Its sequence is F0-F10 and is intentionally bounded to original Stream intent: authority/gap reconciliation; WC2 forward-liveness truth; production source-to-message backbone; live five-family intelligence; Risk/System trust messages; canonical three-vault capital story; exact frozen evidence; guarded local LLM/Ollama activation; real production multi-category E2E; real Product UI acceptance; final authority freeze.
+
+No historical rich backfill, no synthetic message activity, no loosening of scientific policy merely to make the feed busy, and no real-money authority are introduced. `REAL_CAPITAL=0` remains binding.
+
 ## 2026-09-26 — Runtime hygiene closed the Alert snapshot race; provider transport reclassified by live evidence
 
 After the post-cutover Stream defect was closed, runtime-hygiene work separated two unrelated log families rather than treating them as one product failure.

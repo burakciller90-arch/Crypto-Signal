@@ -1,11 +1,14 @@
 # Crypto Signal — Intelligence Stream V1 Master Roadmap
 
-Status: **CANONICAL CURRENT FRONTEND / PRODUCT EXECUTION AUTHORITY**  
+Status: **CANONICAL PRODUCT VISION / HISTORICAL S0-S16 ACCEPTANCE RECORD**  
+Final completion execution authority: `docs/CRYPTO_SIGNAL_INTELLIGENCE_STREAM_V1_FINAL_COMPLETION_ROADMAP.md`  
 Company: GALACTECH  
 Product: Crypto Signal  
 Current frontend scope: **ONE PANEL / ONE LIVE INTELLIGENCE STREAM**  
 Safety: REAL_CAPITAL=0  
 Supersession date: 2026-09-25
+
+> **2026-09-26 completion-authority update:** S0-S16 remain valid historical acceptance records for the components and isolated/live scenarios they actually proved. Later real-production evidence showed that not every source family promised by this document had a complete 24/7 production source→message hook, and that WC2 forward issuance had stopped advancing while fresh signal freezes continued. The user explicitly opened one final deficiency-closure scope. Execute `docs/CRYPTO_SIGNAL_INTELLIGENCE_STREAM_V1_FINAL_COMPLETION_ROADMAP.md` for all remaining Stream V1 completion work. This document remains authoritative for product thesis, one-screen IA, interaction design and original Definition of Done.
 
 ---
 

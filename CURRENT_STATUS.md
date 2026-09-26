@@ -4,10 +4,34 @@ Updated: 2026-09-26
 Project: Crypto Signal
 Baseline: crypto-signal-full-version-v1.0.0 (immutable)
 Active post-v1.0 program: v1.1 world-class product + market intelligence + Crypto Signal Intelligence Stream V1
-State: WC0_LIVE_PRODUCT_PARITY_ACCEPTED / WC1_24_7_DATA_RELIABILITY_ACCEPTED / WC2_ENGINEERING_FROZEN_EVIDENCE_ACCUMULATION_ACTIVE / WC4_CHAMPION_CHALLENGER_ENGINEERING_ACCEPTED_RESEARCH_ONLY / WC5_ENGINEERING_ACCEPTED_PRODUCT_DEPLOYED_HUMAN_USABILITY_NOT_MEASURED / WC6_SANDBOX_BOUNDARY_ACCEPTED_VENUE_EVIDENCE_EXTERNAL_DEPENDENCY / WC7_CURRENT_FRONTIER_PACKET_ACCEPTED_CURRENT_INSUFFICIENT_EVIDENCE / INTELLIGENCE_STREAM_V1_COMPLETE_S0_PASS_S1_PASS_S2_PASS_S3_PASS_S4_PASS_S5_PASS_S6_PASS_S7_PASS_S8_PASS_S9_PASS_S10_PASS_S11_PASS_S12_PASS_S13_PASS_S14_PASS_S15_PASS_S16_PASS / CONTINUITY_PAUSED_BY_USER
+State: WC0_LIVE_PRODUCT_PARITY_ACCEPTED / WC1_24_7_DATA_RELIABILITY_ACCEPTED / WC2_ENGINEERING_FROZEN_EVIDENCE_ACCUMULATION_ACTIVE / WC4_CHAMPION_CHALLENGER_ENGINEERING_ACCEPTED_RESEARCH_ONLY / WC5_ENGINEERING_ACCEPTED_PRODUCT_DEPLOYED_HUMAN_USABILITY_NOT_MEASURED / WC6_SANDBOX_BOUNDARY_ACCEPTED_VENUE_EVIDENCE_EXTERNAL_DEPENDENCY / WC7_CURRENT_FRONTIER_PACKET_ACCEPTED_CURRENT_INSUFFICIENT_EVIDENCE / INTELLIGENCE_STREAM_V1_S0_S16_HISTORICAL_ACCEPTANCE_RETAINED / INTELLIGENCE_STREAM_V1_FINAL_COMPLETION_F0_ACTIVE / CONTINUITY_PAUSED_BY_USER
 REAL_CAPITAL: 0
 
 ## Active v1.1 frontier — read before historical sections
+
+### 2026-09-26 — INTELLIGENCE STREAM V1 FINAL COMPLETION ROADMAP OPENED / F0 ACTIVE
+
+The user explicitly requested one final roadmap whose only purpose is to close deficiencies of `docs/CRYPTO_SIGNAL_INTELLIGENCE_STREAM_V1_MASTER_ROADMAP.md`.
+
+Canonical active execution authority:
+- `docs/CRYPTO_SIGNAL_INTELLIGENCE_STREAM_V1_FINAL_COMPLETION_ROADMAP.md`.
+
+Scope is locked:
+- preserve the one-panel Telegram/WhatsApp-like Intelligence Stream;
+- preserve S0-S16 historical acceptance evidence;
+- do not create unrelated screens or features;
+- reconcile production source→message truth;
+- explain WC2 forward silence mechanically before changing anything;
+- connect exact live Market/Geometry, Liquidity, Order Flow, Derivatives, Risk/System and canonical Capital truth where supported;
+- complete exact frozen evidence resolvers;
+- activate the optional local LLM/Ollama rewrite path only after deterministic live messaging is healthy;
+- finish with real production multi-category E2E and real-browser acceptance;
+- no synthetic history, no policy loosening for activity, no fabricated evidence, REAL_CAPITAL=0.
+
+Execution order:
+`F0 Authority + Gap Reconciliation → F1 WC2 Forward-Liveness Truth → F2 Production Source-to-Message Backbone → F3 Five-Family Live Intelligence Projection → F4 Risk + System Trust Projection → F5 Three-Vault Capital Story Live Closure → F6 Exact Frozen Evidence Closure → F7 Guarded Local LLM/Ollama Activation → F8 Real Production Multi-Category E2E → F9 Final Real-UI Acceptance → F10 Closeout`.
+
+The old statement “Stream V1 has no active frontier” is now historical. It was valid under the prior S16 acceptance interpretation but is superseded for completion execution by the user's explicit 2026-09-26 scope.
 
 ### 2026-09-26 — RUNTIME HYGIENE RECONCILED / ALERT CLOCK FALSE-ORPHAN RACE CLOSED LIVE
 
