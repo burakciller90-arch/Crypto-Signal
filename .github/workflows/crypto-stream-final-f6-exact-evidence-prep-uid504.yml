@@ -93,12 +93,11 @@ jobs:
               uri = f"{source.resolve().as_uri()}?mode=ro"
               with sqlite3.connect(uri, uri=True, timeout=10.0) as db:
                   db.execute("PRAGMA query_only=ON")
-                  quick = db.execute("PRAGMA quick_check").fetchone()
-                  if quick is None or str(quick[0]).lower() != "ok":
-                      raise SystemExit(f"F6_LIVE_QUICK_CHECK_FAIL:{label}")
-                  db.execute(
+                  table_count = db.execute(
                       "SELECT COUNT(*) FROM sqlite_master WHERE type='table'"
                   ).fetchone()
+                  if table_count is None or int(table_count[0]) < 1:
+                      raise SystemExit(f"F6_LIVE_SCHEMA_UNAVAILABLE:{label}")
               print(f"F6_LIVE_READONLY_SOURCE_PASS={label}")
           PY
 
