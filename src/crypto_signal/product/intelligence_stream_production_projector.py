@@ -357,6 +357,16 @@ class IntelligenceStreamProductionProjector:
             activated_at_ms=activated_at_ms,
         )
 
+    def family_activation_ms(self, projector_id: str) -> int:
+        _require_implemented_projector(projector_id)
+        from crypto_signal.product.intelligence_stream_family import (
+            IntelligenceStreamFamilyRuntime,
+        )
+
+        return IntelligenceStreamFamilyRuntime(
+            self.path
+        ).projector_activation_ms(projector_id)
+
     def _project_after_source_write(
         self,
         contract: StreamProductionProjectorContract,
