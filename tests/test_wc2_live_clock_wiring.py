@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import inspect
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -753,3 +754,19 @@ def test_stream_without_wc2_fails_before_network(
     assert called["network"] == 0
     assert not (tmp_path / "stream.sqlite3").exists()
 
+
+
+def test_stream_family_projection_precedes_wc2_outcome_fail_stop() -> None:
+    source = inspect.getsource(clock.run)
+
+    family_market_tape = source.index("build_market_tape_family_snapshots(")
+    family_lifecycle = source.index(
+        "build_geometry_lifecycle_family_snapshot("
+    )
+    wc2_outcomes = source.index("resolve_wc2_outcomes_once(")
+    wc2_execution = source.index("process_wc2_paper_execution_cycle(")
+
+    assert family_lifecycle < wc2_outcomes
+    assert family_market_tape < wc2_outcomes
+    assert family_lifecycle < wc2_execution
+    assert family_market_tape < wc2_execution

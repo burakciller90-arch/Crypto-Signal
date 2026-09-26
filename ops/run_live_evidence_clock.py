@@ -704,139 +704,6 @@ async def run(
             flush=True,
         )
 
-    if selected_wc2.enabled:
-        assert wc2_decision is not None
-        assert wc2_cohort is not None
-        try:
-            outcome_cycle = resolve_wc2_outcomes_once(
-                signal_ledger=ledger,
-                candle_store=candle_store,
-                decision_ledger=wc2_decision,
-                cohort_journal=wc2_cohort,
-                observed_at_ms=time.time_ns() // 1_000_000,
-                resolution_hook=(
-                    None
-                    if stream_runtime is None
-                    else stream_runtime.project_resolution
-                ),
-            )
-        except (OSError, TypeError, ValueError, sqlite3.Error) as exc:
-            print(
-                "wc2_outcomes status=ERROR "
-                f"error={type(exc).__name__}:{exc} "
-                "FAIL_STOP=YES HISTORICAL_BACKFILL=NO REAL_CAPITAL=0",
-                file=sys.stderr,
-                flush=True,
-            )
-            return 1
-        print(
-            "wc2_outcomes status=COMPLETE "
-            f"scanned={outcome_cycle.scanned} "
-            f"pending={outcome_cycle.pending} "
-            f"resolved_fresh={outcome_cycle.resolved_fresh} "
-            f"recovered={outcome_cycle.recovered} "
-            f"cohort_idempotent={outcome_cycle.cohort_idempotent} "
-            "HISTORICAL_BACKFILL=NO REAL_CAPITAL=0",
-            flush=True,
-        )
-
-    if selected_wc2.execution_enabled:
-        assert selected_wc2.decision_evidence_path is not None
-        assert selected_wc2.cohort_path is not None
-        assert selected_wc2.epoch2_path is not None
-        assert selected_wc2.execution_protocol_path is not None
-        assert selected_wc2.execution_runtime_path is not None
-        assert selected_wc2.execution_journal_path is not None
-        assert selected_wc2.venue_rule_store_path is not None
-        try:
-            execution_cycle = process_wc2_paper_execution_cycle(
-                signal_ledger_path=db_path,
-                decision_evidence_path=selected_wc2.decision_evidence_path,
-                cohort_journal_path=selected_wc2.cohort_path,
-                epoch2_path=selected_wc2.epoch2_path,
-                execution_protocol_path=selected_wc2.execution_protocol_path,
-                runtime_activation_path=selected_wc2.execution_runtime_path,
-                execution_journal_path=selected_wc2.execution_journal_path,
-                candle_cache_path=candle_cache_path,
-                venue_rule_store_path=selected_wc2.venue_rule_store_path,
-                observed_at_ms=time.time_ns() // 1_000_000,
-            )
-        except (OSError, RuntimeError, TypeError, ValueError, sqlite3.Error) as exc:
-            print(
-                "wc2_execution status=ERROR "
-                f"error={type(exc).__name__}:{exc} "
-                "FAIL_STOP=YES HISTORICAL_BACKFILL=NO REAL_CAPITAL=0",
-                file=sys.stderr,
-                flush=True,
-            )
-            return 1
-        print(
-            "wc2_execution status=COMPLETE "
-            f"scanned_pair_n={execution_cycle.scanned_pair_n} "
-            f"eligible_event_n={execution_cycle.eligible_event_n} "
-            f"already_terminal_n={execution_cycle.already_terminal_n} "
-            f"expired_gap_n={execution_cycle.expired_gap_n} "
-            f"waiting_lineage_n={execution_cycle.waiting_lineage_n} "
-            f"waiting_execution_input_n={execution_cycle.waiting_execution_input_n} "
-            f"waiting_venue_rules_n={execution_cycle.waiting_venue_rules_n} "
-            f"hold_cash_n={execution_cycle.hold_cash_n} "
-            f"sizing_rejected_n={execution_cycle.sizing_rejected_n} "
-            f"pretrade_rejected_n={execution_cycle.pretrade_rejected_n} "
-            f"executed_n={execution_cycle.executed_n} "
-            f"appended_n={len(execution_cycle.appended_record_identities)} "
-            "PERSISTENT_SINGLE_OWNER=YES "
-            "HISTORICAL_BACKFILL=NO REAL_CAPITAL=0",
-            flush=True,
-        )
-
-    selected_divergence_path = (
-        provider_divergence_path
-        if provider_divergence_path is not None
-        else candle_cache_path.with_name("provider_divergence.sqlite3")
-    )
-    try:
-        divergence = persist_provider_divergence_for_plan(
-            plan=selected_plan,
-            candle_cache_path=candle_cache_path,
-            provider_divergence_path=selected_divergence_path,
-            observed_at_ms=time.time_ns() // 1_000_000,
-        )
-    except (OSError, ValueError, sqlite3.Error) as exc:
-        failures += 1
-        print(
-            "provider_divergence status=ERROR "
-            f"error={type(exc).__name__}:{exc}",
-            file=sys.stderr,
-            flush=True,
-        )
-    else:
-        if divergence is None:
-            print(
-                "provider_divergence status=SKIPPED "
-                "reason=no_shared_binance_bybit_15m_context "
-                "CONSENSUS_NOT_INFERRED=YES REAL_CAPITAL=0",
-                flush=True,
-            )
-        else:
-            for snapshot in divergence.snapshots:
-                print(
-                    "provider_divergence "
-                    f"symbol={snapshot.symbol} "
-                    f"status=PERSISTED "
-                    f"grid={snapshot.grid_state.value} "
-                    f"overlap={snapshot.overlap_count} "
-                    f"binance_stale={snapshot.left_quality.stale} "
-                    f"bybit_stale={snapshot.right_quality.stale} "
-                    f"snapshot={snapshot.snapshot_identity}",
-                    flush=True,
-                )
-            print(
-                "provider_divergence status=COMPLETE "
-                f"snapshots={len(divergence.snapshots)} "
-                "CONSENSUS_NOT_INFERRED=YES REAL_CAPITAL=0",
-                flush=True,
-            )
-
     if (
         stream_family_projector is not None
         and selected_stream.market_tape_path is not None
@@ -974,6 +841,140 @@ async def run(
             "HISTORICAL_BACKFILL=NO REAL_CAPITAL=0",
             flush=True,
         )
+
+
+    if selected_wc2.enabled:
+        assert wc2_decision is not None
+        assert wc2_cohort is not None
+        try:
+            outcome_cycle = resolve_wc2_outcomes_once(
+                signal_ledger=ledger,
+                candle_store=candle_store,
+                decision_ledger=wc2_decision,
+                cohort_journal=wc2_cohort,
+                observed_at_ms=time.time_ns() // 1_000_000,
+                resolution_hook=(
+                    None
+                    if stream_runtime is None
+                    else stream_runtime.project_resolution
+                ),
+            )
+        except (OSError, TypeError, ValueError, sqlite3.Error) as exc:
+            print(
+                "wc2_outcomes status=ERROR "
+                f"error={type(exc).__name__}:{exc} "
+                "FAIL_STOP=YES HISTORICAL_BACKFILL=NO REAL_CAPITAL=0",
+                file=sys.stderr,
+                flush=True,
+            )
+            return 1
+        print(
+            "wc2_outcomes status=COMPLETE "
+            f"scanned={outcome_cycle.scanned} "
+            f"pending={outcome_cycle.pending} "
+            f"resolved_fresh={outcome_cycle.resolved_fresh} "
+            f"recovered={outcome_cycle.recovered} "
+            f"cohort_idempotent={outcome_cycle.cohort_idempotent} "
+            "HISTORICAL_BACKFILL=NO REAL_CAPITAL=0",
+            flush=True,
+        )
+
+    if selected_wc2.execution_enabled:
+        assert selected_wc2.decision_evidence_path is not None
+        assert selected_wc2.cohort_path is not None
+        assert selected_wc2.epoch2_path is not None
+        assert selected_wc2.execution_protocol_path is not None
+        assert selected_wc2.execution_runtime_path is not None
+        assert selected_wc2.execution_journal_path is not None
+        assert selected_wc2.venue_rule_store_path is not None
+        try:
+            execution_cycle = process_wc2_paper_execution_cycle(
+                signal_ledger_path=db_path,
+                decision_evidence_path=selected_wc2.decision_evidence_path,
+                cohort_journal_path=selected_wc2.cohort_path,
+                epoch2_path=selected_wc2.epoch2_path,
+                execution_protocol_path=selected_wc2.execution_protocol_path,
+                runtime_activation_path=selected_wc2.execution_runtime_path,
+                execution_journal_path=selected_wc2.execution_journal_path,
+                candle_cache_path=candle_cache_path,
+                venue_rule_store_path=selected_wc2.venue_rule_store_path,
+                observed_at_ms=time.time_ns() // 1_000_000,
+            )
+        except (OSError, RuntimeError, TypeError, ValueError, sqlite3.Error) as exc:
+            print(
+                "wc2_execution status=ERROR "
+                f"error={type(exc).__name__}:{exc} "
+                "FAIL_STOP=YES HISTORICAL_BACKFILL=NO REAL_CAPITAL=0",
+                file=sys.stderr,
+                flush=True,
+            )
+            return 1
+        print(
+            "wc2_execution status=COMPLETE "
+            f"scanned_pair_n={execution_cycle.scanned_pair_n} "
+            f"eligible_event_n={execution_cycle.eligible_event_n} "
+            f"already_terminal_n={execution_cycle.already_terminal_n} "
+            f"expired_gap_n={execution_cycle.expired_gap_n} "
+            f"waiting_lineage_n={execution_cycle.waiting_lineage_n} "
+            f"waiting_execution_input_n={execution_cycle.waiting_execution_input_n} "
+            f"waiting_venue_rules_n={execution_cycle.waiting_venue_rules_n} "
+            f"hold_cash_n={execution_cycle.hold_cash_n} "
+            f"sizing_rejected_n={execution_cycle.sizing_rejected_n} "
+            f"pretrade_rejected_n={execution_cycle.pretrade_rejected_n} "
+            f"executed_n={execution_cycle.executed_n} "
+            f"appended_n={len(execution_cycle.appended_record_identities)} "
+            "PERSISTENT_SINGLE_OWNER=YES "
+            "HISTORICAL_BACKFILL=NO REAL_CAPITAL=0",
+            flush=True,
+        )
+
+    selected_divergence_path = (
+        provider_divergence_path
+        if provider_divergence_path is not None
+        else candle_cache_path.with_name("provider_divergence.sqlite3")
+    )
+    try:
+        divergence = persist_provider_divergence_for_plan(
+            plan=selected_plan,
+            candle_cache_path=candle_cache_path,
+            provider_divergence_path=selected_divergence_path,
+            observed_at_ms=time.time_ns() // 1_000_000,
+        )
+    except (OSError, ValueError, sqlite3.Error) as exc:
+        failures += 1
+        print(
+            "provider_divergence status=ERROR "
+            f"error={type(exc).__name__}:{exc}",
+            file=sys.stderr,
+            flush=True,
+        )
+    else:
+        if divergence is None:
+            print(
+                "provider_divergence status=SKIPPED "
+                "reason=no_shared_binance_bybit_15m_context "
+                "CONSENSUS_NOT_INFERRED=YES REAL_CAPITAL=0",
+                flush=True,
+            )
+        else:
+            for snapshot in divergence.snapshots:
+                print(
+                    "provider_divergence "
+                    f"symbol={snapshot.symbol} "
+                    f"status=PERSISTED "
+                    f"grid={snapshot.grid_state.value} "
+                    f"overlap={snapshot.overlap_count} "
+                    f"binance_stale={snapshot.left_quality.stale} "
+                    f"bybit_stale={snapshot.right_quality.stale} "
+                    f"snapshot={snapshot.snapshot_identity}",
+                    flush=True,
+                )
+            print(
+                "provider_divergence status=COMPLETE "
+                f"snapshots={len(divergence.snapshots)} "
+                "CONSENSUS_NOT_INFERRED=YES REAL_CAPITAL=0",
+                flush=True,
+            )
 
     return 1 if failures else 0
 
