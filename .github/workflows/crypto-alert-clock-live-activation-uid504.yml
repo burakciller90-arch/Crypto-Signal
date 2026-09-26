@@ -1,0 +1,288 @@
+name: Crypto Alert Clock Live Activation UID504
+
+on:
+  push:
+    branches:
+      - 'runtime/alert-clock-live-activation'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: alert-clock-live-activation
+  cancel-in-progress: false
+
+jobs:
+  activate:
+    name: Alert Clock exact-main live activation
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 12
+    env:
+      TARGET_MAIN_SHA: f0349a70c11046893cbabd88ab56ca4ca8c44a99
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          clean: true
+          fetch-depth: 1
+
+      - name: Guard production topology and capture pre-state
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          DEV="$ROOT/Development"
+          ALERTS="$ROOT/Alerts"
+          PRODUCT="$ROOT/Product"
+          OUT="$RUNNER_TEMP/alert-clock-live-activation"
+          mkdir -p "$OUT"
+
+          test "$(id -u)" = "504"
+          test -x "$DEV/.venv/bin/python"
+          test -x "$ALERTS/.venv/bin/python"
+          test -f "$ROOT/ssd-clock-wrapper.py"
+          test -f "$DEV/runtime/ledger/live_signal_ledger.sqlite3"
+          test -f "$DEV/runtime/alerts/alert_outbox.sqlite3"
+
+          test -z "$(git -C "$DEV" status --porcelain)"
+          test -z "$(git -C "$ALERTS" status --porcelain)"
+          test -z "$(git -C "$PRODUCT" status --porcelain)"
+
+          {
+            echo "DEV_HEAD_BEFORE=$(git -C "$DEV" rev-parse HEAD)"
+            echo "DEV_BRANCH_BEFORE=$(git -C "$DEV" branch --show-current || true)"
+            echo "ALERTS_HEAD_BEFORE=$(git -C "$ALERTS" rev-parse HEAD)"
+            echo "ALERTS_BRANCH_BEFORE=$(git -C "$ALERTS" branch --show-current || true)"
+            echo "PRODUCT_HEAD_BEFORE=$(git -C "$PRODUCT" rev-parse HEAD)"
+            echo "WORKFLOW_SHA=$GITHUB_SHA"
+            echo "TARGET_MAIN_SHA=$TARGET_MAIN_SHA"
+            echo "REAL_CAPITAL=0"
+          } | tee "$OUT/prestate.txt"
+
+          OUT="$OUT" ROOT="$ROOT" /usr/bin/python3 - <<'PY'
+          import json
+          import os
+          import sqlite3
+          from pathlib import Path
+
+          root = Path(os.environ["ROOT"])
+          out = Path(os.environ["OUT"])
+          db = root / "Development/runtime/ledger/live_signal_ledger.sqlite3"
+          err = root / "ServiceLogs/alert.err.log"
+          stdout = root / "ServiceLogs/alert.out.log"
+
+          con = sqlite3.connect(f"file:{db}?mode=ro", uri=True, timeout=10)
+          try:
+              con.execute("PRAGMA query_only=ON")
+              orphan = int(
+                  con.execute(
+                      """
+                      SELECT COUNT(*)
+                      FROM lifecycle_evaluations l
+                      LEFT JOIN signal_freezes s
+                        ON s.signal_freeze_identity = l.signal_freeze_identity
+                      WHERE s.signal_freeze_identity IS NULL
+                      """
+                  ).fetchone()[0]
+              )
+              signals = int(con.execute("SELECT COUNT(*) FROM signal_freezes").fetchone()[0])
+              lifecycle = int(
+                  con.execute("SELECT COUNT(*) FROM lifecycle_evaluations").fetchone()[0]
+              )
+          finally:
+              con.close()
+
+          phrase = b"lifecycle evaluation references missing signal"
+          err_bytes = err.read_bytes() if err.is_file() else b""
+          state = {
+              "signals": signals,
+              "lifecycle": lifecycle,
+              "lifecycle_orphans": orphan,
+              "alert_orphan_error_count_before": err_bytes.count(phrase),
+              "alert_err_size_before": len(err_bytes),
+              "alert_out_size_before": stdout.stat().st_size if stdout.is_file() else 0,
+              "alert_out_mtime_ns_before": stdout.stat().st_mtime_ns if stdout.is_file() else 0,
+              "real_capital": 0,
+          }
+          if orphan != 0:
+              raise SystemExit(f"CANONICAL_LEDGER_ORPHAN_PREEXISTS:{orphan}")
+          (out / "runtime-prestate.json").write_text(
+              json.dumps(state, sort_keys=True, indent=2),
+              encoding="utf-8",
+          )
+          print("ALERT_CLOCK_LIVE_PRESTATE " + json.dumps(state, sort_keys=True))
+          PY
+
+      - name: Sync Development and activate Alerts exact-main
+        shell: bash
+        env:
+          GH_JOB_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          DEV="$ROOT/Development"
+          ALERTS="$ROOT/Alerts"
+
+          BASIC="$(printf 'x-access-token:%s' "$GH_JOB_TOKEN" | base64)"
+          git -C "$DEV" -c http.extraheader="AUTHORIZATION: Basic $BASIC" fetch --no-tags origin main
+          test "$(git -C "$DEV" rev-parse origin/main)" = "$TARGET_MAIN_SHA"
+
+          git -C "$DEV" merge --ff-only "$TARGET_MAIN_SHA"
+          test "$(git -C "$DEV" rev-parse HEAD)" = "$TARGET_MAIN_SHA"
+          test -z "$(git -C "$DEV" status --porcelain)"
+
+          git -C "$ALERTS" checkout --detach "$TARGET_MAIN_SHA"
+          test "$(git -C "$ALERTS" rev-parse HEAD)" = "$TARGET_MAIN_SHA"
+          test -z "$(git -C "$ALERTS" status --porcelain)"
+
+          test "$(shasum -a 256 "$DEV/src/crypto_signal/alerts/clock.py" | awk '{print $1}')" =                "$(shasum -a 256 "$ALERTS/src/crypto_signal/alerts/clock.py" | awk '{print $1}')"
+
+          echo "ALERT_CLOCK_DEVELOPMENT_EXACT_MAIN_PASS=YES"
+          echo "ALERT_CLOCK_ALERTS_EXACT_MAIN_PASS=YES"
+          echo "REAL_CAPITAL=0"
+
+      - name: Execute one canonical Alert Clock cycle
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          ALERTS="$ROOT/Alerts"
+          OUT="$RUNNER_TEMP/alert-clock-live-activation"
+
+          rc=0
+          PYTHONPATH="$ALERTS/src"             "$ALERTS/.venv/bin/python" "$ROOT/ssd-clock-wrapper.py" alert             >"$OUT/manual-alert.out" 2>"$OUT/manual-alert.err" || rc=$?
+
+          cat "$OUT/manual-alert.out"
+          cat "$OUT/manual-alert.err" >&2
+          test "$rc" = "0"
+
+          if grep -F "ALERT_CLOCK_ALREADY_RUNNING" "$OUT/manual-alert.out" >/dev/null 2>&1; then
+            echo "ALERT_CLOCK_MANUAL_CYCLE_OVERLAPPED=YES"
+          else
+            grep -F "ALERT_CLOCK_MATERIALIZED" "$OUT/manual-alert.out" >/dev/null
+            grep -F "ALERT_CLOCK_OUTBOX" "$OUT/manual-alert.out" >/dev/null
+            echo "ALERT_CLOCK_MANUAL_CYCLE_PASS=YES"
+          fi
+          echo "REAL_CAPITAL=0"
+
+      - name: Observe one supervisor Alert Clock cycle
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          OUT="$RUNNER_TEMP/alert-clock-live-activation"
+          ALERT_OUT="$ROOT/ServiceLogs/alert.out.log"
+          ALERT_ERR="$ROOT/ServiceLogs/alert.err.log"
+
+          before_size="$(
+            /usr/bin/python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          p=Path(os.environ["RUNNER_TEMP"]) / "alert-clock-live-activation/runtime-prestate.json"
+          print(json.loads(p.read_text())["alert_out_size_before"])
+          PY
+          )"
+
+          progressed=0
+          for _ in {1..42}; do
+            current_size="$(stat -f %z "$ALERT_OUT" 2>/dev/null || echo 0)"
+            if [ "$current_size" -gt "$before_size" ]; then
+              progressed=1
+              break
+            fi
+            sleep 5
+          done
+          test "$progressed" = "1"
+
+          OUT="$OUT" ROOT="$ROOT" /usr/bin/python3 - <<'PY'
+          import json
+          import os
+          import sqlite3
+          from pathlib import Path
+
+          root = Path(os.environ["ROOT"])
+          out = Path(os.environ["OUT"])
+          pre = json.loads((out / "runtime-prestate.json").read_text())
+          err = root / "ServiceLogs/alert.err.log"
+          stdout = root / "ServiceLogs/alert.out.log"
+          phrase = b"lifecycle evaluation references missing signal"
+          err_bytes = err.read_bytes() if err.is_file() else b""
+          orphan_after = err_bytes.count(phrase)
+
+          db = root / "Development/runtime/ledger/live_signal_ledger.sqlite3"
+          con = sqlite3.connect(f"file:{db}?mode=ro", uri=True, timeout=10)
+          try:
+              con.execute("PRAGMA query_only=ON")
+              canonical_orphans = int(
+                  con.execute(
+                      """
+                      SELECT COUNT(*)
+                      FROM lifecycle_evaluations l
+                      LEFT JOIN signal_freezes s
+                        ON s.signal_freeze_identity = l.signal_freeze_identity
+                      WHERE s.signal_freeze_identity IS NULL
+                      """
+                  ).fetchone()[0]
+              )
+          finally:
+              con.close()
+
+          state = {
+              "alert_orphan_error_count_before": pre["alert_orphan_error_count_before"],
+              "alert_orphan_error_count_after": orphan_after,
+              "alert_err_size_after": len(err_bytes),
+              "alert_out_size_after": stdout.stat().st_size if stdout.is_file() else 0,
+              "alert_out_mtime_ns_after": stdout.stat().st_mtime_ns if stdout.is_file() else 0,
+              "canonical_lifecycle_orphans_after": canonical_orphans,
+              "real_capital": 0,
+          }
+          if orphan_after != int(pre["alert_orphan_error_count_before"]):
+              raise SystemExit(
+                  "ALERT_ORPHAN_ERROR_GREW:"
+                  f"{pre['alert_orphan_error_count_before']}->{orphan_after}"
+              )
+          if canonical_orphans != 0:
+              raise SystemExit(f"CANONICAL_LEDGER_ORPHAN_AFTER:{canonical_orphans}")
+          (out / "runtime-poststate.json").write_text(
+              json.dumps(state, sort_keys=True, indent=2),
+              encoding="utf-8",
+          )
+          print("ALERT_CLOCK_LIVE_POSTSTATE " + json.dumps(state, sort_keys=True))
+          print("ALERT_CLOCK_SUPERVISOR_CYCLE_NO_FALSE_ORPHAN_PASS=YES")
+          print("REAL_CAPITAL=0")
+          PY
+
+      - name: Upload live activation evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: alert-clock-live-activation-${{ github.run_id }}
+          path: ${{ runner.temp }}/alert-clock-live-activation
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Final topology proof
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          DEV="$ROOT/Development"
+          ALERTS="$ROOT/Alerts"
+          PRODUCT="$ROOT/Product"
+          OUT="$RUNNER_TEMP/alert-clock-live-activation"
+
+          PRODUCT_BEFORE="$(sed -n 's/^PRODUCT_HEAD_BEFORE=//p' "$OUT/prestate.txt")"
+
+          test "$(git -C "$DEV" rev-parse HEAD)" = "$TARGET_MAIN_SHA"
+          test "$(git -C "$ALERTS" rev-parse HEAD)" = "$TARGET_MAIN_SHA"
+          test "$(git -C "$PRODUCT" rev-parse HEAD)" = "$PRODUCT_BEFORE"
+          test -z "$(git -C "$DEV" status --porcelain)"
+          test -z "$(git -C "$ALERTS" status --porcelain)"
+          test -z "$(git -C "$PRODUCT" status --porcelain)"
+
+          echo "ALERT_CLOCK_LIVE_ACTIVATION_PASS=YES"
+          echo "DEV_HEAD=$(git -C "$DEV" rev-parse HEAD)"
+          echo "ALERTS_HEAD=$(git -C "$ALERTS" rev-parse HEAD)"
+          echo "PRODUCT_HEAD=$(git -C "$PRODUCT" rev-parse HEAD)"
+          echo "REAL_CAPITAL=0"
