@@ -1,0 +1,193 @@
+name: Crypto Stream Final F3 Closeout UID504
+
+on:
+  push:
+    branches:
+      - 'stream/final-f3-closeout'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: crypto-stream-final-f3-closeout
+  cancel-in-progress: true
+
+jobs:
+  closeout:
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          clean: true
+          fetch-depth: 2
+
+      - name: Activate merged F3 runtime fix and verify live families
+        shell: bash
+        env:
+          GH_JOB_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          DEV="$ROOT/Development"
+          TARGET="a589efa4a8a4040bec56bfa81611c7f9e3e30517"
+          test "$(id -u)" = "504"
+          test -z "$(git -C "$DEV" status --porcelain)"
+          BASIC="$(printf 'x-access-token:%s' "$GH_JOB_TOKEN" | base64)"
+          git -C "$DEV" -c http.extraheader="AUTHORIZATION: Basic $BASIC" fetch --no-tags origin main
+          test "$(git -C "$DEV" rev-parse origin/main)" = "$TARGET"
+          git -C "$DEV" merge --ff-only "$TARGET"
+          test "$(git -C "$DEV" rev-parse HEAD)" = "$TARGET"
+          echo "F3_DEVELOPMENT_SYNC_PASS=YES"
+
+          sup="$(cat "$ROOT/ssd-service-supervisor.pid" 2>/dev/null || true)"
+          if [ -z "$sup" ] || ! kill -0 "$sup" >/dev/null 2>&1; then
+            START="$HOME/Library/Application Support/CryptoSignalRuntime/start-ssd-runtime.command"
+            test -x "$START"
+            "$START"
+            sup="$(cat "$ROOT/ssd-service-supervisor.pid")"
+          fi
+          kill -0 "$sup"
+          ps -p "$sup" -o command= | grep -F "$ROOT/ssd-service-supervisor.sh" >/dev/null
+          echo "F3_SUPERVISOR_ACTIVE=YES pid=$sup"
+
+          PY="$DEV/.venv/bin/python"
+          "$PY" - "$ROOT" <<'PY'
+          import json
+          import sqlite3
+          import sys
+          import time
+          from pathlib import Path
+
+          root = Path(sys.argv[1])
+          market = root / "Development/runtime/market_tape/market_tape.sqlite3"
+          stream = root / "Development/runtime/stream/intelligence_stream.sqlite3"
+          live_log = root / "ServiceLogs/live.out.log"
+          required_projectors = {
+              "market_geometry_change",
+              "liquidity_change",
+              "order_flow_change",
+              "derivatives_change",
+          }
+          required_subtypes = {
+              "geometry_material_change",
+              "liquidity_material_change",
+              "order_flow_material_change",
+              "derivatives_material_change",
+          }
+
+          deadline = time.time() + 360
+          last = {}
+          while time.time() < deadline:
+              with sqlite3.connect(market) as c:
+                  market_quick = c.execute("PRAGMA quick_check").fetchone()[0]
+                  derivatives = c.execute(
+                      """
+                      SELECT COUNT(*), MAX(event_at_ms), MAX(ingested_at_ms)
+                      FROM market_tape_derivatives
+                      """
+                  ).fetchone()
+              with sqlite3.connect(stream) as c:
+                  stream_quick = c.execute("PRAGMA quick_check").fetchone()[0]
+                  real_capital = c.execute(
+                      "SELECT value FROM stream_meta WHERE key='real_capital'"
+                  ).fetchone()
+                  boundaries = {
+                      row[0]: int(row[1])
+                      for row in c.execute(
+                          """
+                          SELECT projector_id, activated_at_ms
+                          FROM stream_family_projection_boundaries
+                          """
+                      )
+                  }
+                  source_rows = {
+                      row[0]: {
+                          "count": int(row[1]),
+                          "min_ms": row[2],
+                          "max_ms": row[3],
+                      }
+                      for row in c.execute(
+                          """
+                          SELECT subtype, COUNT(*), MIN(event_at_ms), MAX(event_at_ms)
+                          FROM stream_source_events
+                          WHERE subtype IN (
+                              'geometry_material_change',
+                              'trigger_transition',
+                              'liquidity_material_change',
+                              'order_flow_material_change',
+                              'derivatives_material_change'
+                          )
+                          GROUP BY subtype
+                          """
+                      )
+                  }
+                  narrative_rows = {
+                      row[0]: int(row[1])
+                      for row in c.execute(
+                          """
+                          SELECT s.subtype, COUNT(*)
+                          FROM stream_narrative_messages AS n
+                          JOIN stream_source_events AS s
+                            ON s.source_event_identity = n.source_event_identity
+                          WHERE s.subtype IN (
+                              'geometry_material_change',
+                              'trigger_transition',
+                              'liquidity_material_change',
+                              'order_flow_material_change',
+                              'derivatives_material_change'
+                          )
+                          GROUP BY s.subtype
+                          """
+                      )
+                  }
+              log_text = live_log.read_text(errors="replace") if live_log.exists() else ""
+              derivative_boundary = boundaries.get("derivatives_change")
+              derivative_row = source_rows.get("derivatives_material_change")
+              derivative_forward = (
+                  derivative_boundary is not None
+                  and derivative_row is not None
+                  and derivative_row["min_ms"] is not None
+                  and int(derivative_row["min_ms"]) >= derivative_boundary
+              )
+              last = {
+                  "market_quick_check": market_quick,
+                  "stream_quick_check": stream_quick,
+                  "real_capital": None if real_capital is None else real_capital[0],
+                  "derivatives_count": int(derivatives[0]),
+                  "derivatives_latest_event_at_ms": derivatives[1],
+                  "derivatives_latest_ingested_at_ms": derivatives[2],
+                  "boundaries": boundaries,
+                  "source_rows": source_rows,
+                  "narrative_rows": narrative_rows,
+                  "summary_marker": "stream_family status=SUMMARY" in log_text,
+                  "no_backfill_marker": "HISTORICAL_BACKFILL=NO REAL_CAPITAL=0" in log_text,
+                  "derivative_forward": derivative_forward,
+              }
+              if (
+                  market_quick == "ok"
+                  and stream_quick == "ok"
+                  and last["real_capital"] == "0"
+                  and int(derivatives[0]) > 0
+                  and required_projectors.issubset(boundaries)
+                  and required_subtypes.issubset(source_rows)
+                  and all(narrative_rows.get(name, 0) > 0 for name in required_subtypes)
+                  and derivative_forward
+                  and last["summary_marker"]
+                  and last["no_backfill_marker"]
+              ):
+                  print(json.dumps(last, sort_keys=True))
+                  print("F3_FINAL_LIVE_CLOSEOUT_PASS=YES")
+                  print("ONCHAIN_STANDALONE=DEFERRED_SOURCE")
+                  print("HISTORICAL_BACKFILL=NO")
+                  print("REAL_CAPITAL=0")
+                  raise SystemExit(0)
+              time.sleep(10)
+
+          print(json.dumps(last, sort_keys=True), file=sys.stderr)
+          print("=== live.out tail ===", file=sys.stderr)
+          if live_log.exists():
+              print("\n".join(live_log.read_text(errors="replace").splitlines()[-180:]), file=sys.stderr)
+          raise SystemExit("F3_FINAL_LIVE_CLOSEOUT_TIMEOUT")
+          PY
