@@ -52,7 +52,8 @@ def test_r14_root_release_surfaces_match_canonical_ssd_state() -> None:
     assert "S13 Sound and Notifications is PASS" in readme
     assert "S14 Performance, Accessibility and Long-Session Stability is PASS" in readme
     assert "S15 End-to-End Product Acceptance is PASS" in readme
-    assert "S16 Controlled Cutover is ACTIVE" in readme
+    assert "S16 Controlled Cutover is PASS" in readme
+    assert "Intelligence Stream V1 S0-S16 is COMPLETE / ACCEPTED" in readme
     assert "Runtime owner: `crypto-signal-agent`" in readme
     assert "self-hosted runner: `crypto-signal-uid504`" in registry
     assert "There is no accepted fallback" in registry
