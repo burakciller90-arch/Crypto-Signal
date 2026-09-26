@@ -9,6 +9,50 @@ REAL_CAPITAL: 0
 
 ## Active v1.1 frontier — read before historical sections
 
+### 2026-09-26 — STREAM FINAL F5 IMPLEMENTATION MERGED / PHYSICAL CAPITAL ACTIVATION PASS / FORWARD CAPITAL EVIDENCE PENDING
+
+F5 implementation is merged to exact main `97b2db05711d4b5504c47b4dfb8396d92fcd762f` via PR #1369.
+
+Exact-source UID504 implementation gate `36267123088` passed:
+- focused F5 tests;
+- whole-repository pytest regression;
+- full Ruff / strict mypy / JavaScript checks;
+- stable read-only snapshots of live Epoch2 + Stream ledgers;
+- non-mutation of Development and Product;
+- `HISTORICAL_BACKFILL=NO`;
+- `REAL_CAPITAL=0`.
+
+The accepted chronology defect is closed without weakening Stream anti-backfill protection:
+- Decision issuance occurs first;
+- Capital assessment follows;
+- Core, Tactical and Opportunity Reserve decisions receive deterministic forward ordering;
+- test coverage proves the real Decision → Capital production sequence;
+- no old Capital truth is relabeled as a new message.
+
+Physical UID504 activation run `36267383692` passed:
+- Development fast-forwarded cleanly to exact merged main `97b2db05711d4b5504c47b4dfb8396d92fcd762f`;
+- canonical SSD supervisor reloaded headlessly;
+- dashboard health remained `ok`, read-only and `REAL_CAPITAL=0`;
+- live Epoch2 + Stream SQLite quick checks are `ok`;
+- canonical S11/R22 Capital lifecycle tables are physically present;
+- canonical Stream Capital tables are physically present;
+- immutable Capital projection activation:
+  - identity `bbd190a8ad282e69ce30edae334dc1cf06103bb86d777931fa5db106ad0ad4a8`;
+  - activated_at_ms `1790452197922`;
+- production log contains `stream_capital status=ACTIVATED`;
+- historical rich backfill remains disabled;
+- production authority remains false.
+
+At the activation proof instant there were still:
+- 0 post-activation CAPITAL source events;
+- 0 canonical S11 vault decisions;
+- 0 R22 Capital intents;
+- no `stream_capital status=PROJECTED` marker.
+
+Therefore F5 remains **ACTIVE**, not PASS. The only remaining F5 closeout condition is one genuine natural forward Capital projection from post-activation canonical truth. Do not fabricate a candidate, sizing event, fill, execution or historical message merely to close the gate.
+
+The sole final-completion frontier remains **F5 — Three-Vault Capital Story Live Closure**.
+
 ### 2026-09-26 — STREAM FINAL F4 PASS / F5 THREE-VAULT CAPITAL STORY ACTIVE
 
 Canonical F4 acceptance:
