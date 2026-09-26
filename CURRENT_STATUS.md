@@ -49,7 +49,22 @@ At the activation proof instant there were still:
 - 0 R22 Capital intents;
 - no `stream_capital status=PROJECTED` marker.
 
-Therefore F5 remains **ACTIVE**, not PASS. The only remaining F5 closeout condition is one genuine natural forward Capital projection from post-activation canonical truth. Do not fabricate a candidate, sizing event, fill, execution or historical message merely to close the gate.
+Post-activation read-only forward diagnosis:
+- immediate audit run `36267782394` confirmed 0 post-activation R20 forecasts, 0 WC2 prepared receipts, 0 S11 vault decisions, 0 R22 intents and 0 CAPITAL Stream sources;
+- the latest pre-existing accepted forecast/prepared receipt remained the older ETHUSDT 15m issuance at `1790295411622`, before the F5 activation boundary;
+- the corresponding live WC2 liveness reason was `source_not_directional_with_frozen_geometry`, so the absence of a Capital candidate was upstream eligibility silence, not a broken Capital hook;
+- bounded read-only watch run `36267847177` then observed multiple live-clock opportunities without mutation and ended with:
+  - post-activation forecasts: 0;
+  - prepared receipts: 0;
+  - vault decisions: 0;
+  - CAPITAL sources: 0;
+  - `stream_capital status=PROJECTED`: absent;
+  - final marker `F5_FORWARD_CAPITAL_EVIDENCE=PENDING_CORRECT_SILENCE`;
+  - `POLICY_UNCHANGED=YES`;
+  - `HISTORICAL_BACKFILL=NO`;
+  - `REAL_CAPITAL=0`.
+
+Therefore F5 remains **ACTIVE**, not PASS. The only remaining F5 closeout condition is one genuine natural forward Capital projection from post-activation canonical truth. Current silence is mechanically explained upstream; do not loosen eligibility, fabricate a candidate, sizing event, fill, execution or historical message merely to close the gate.
 
 The sole final-completion frontier remains **F5 — Three-Vault Capital Story Live Closure**.
 
