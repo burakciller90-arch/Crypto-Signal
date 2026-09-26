@@ -70,6 +70,10 @@ from crypto_signal.product.intelligence_stream_forward_runtime import (
 from crypto_signal.product.intelligence_stream_production_projector import (
     IntelligenceStreamProductionProjector,
 )
+from crypto_signal.product.intelligence_stream_trust_sources import (
+    build_event_risk_stream_snapshots,
+    build_provider_quality_stream_snapshots,
+)
 
 BASE = Path("/Users/crypto-signal-agent/Crypto-Signal")
 DEFAULT_DB = BASE / "runtime" / "ledger" / "live_signal_ledger.sqlite3"
@@ -159,6 +163,7 @@ class StreamClockConfig:
     enabled: bool = False
     ledger_path: Path | None = None
     market_tape_path: Path | None = None
+    event_source_path: Path | None = None
     family_symbols: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
@@ -167,6 +172,7 @@ class StreamClockConfig:
         if not self.enabled and (
             self.ledger_path is not None
             or self.market_tape_path is not None
+            or self.event_source_path is not None
             or self.family_symbols
         ):
             raise ValueError(
@@ -229,6 +235,12 @@ def parse_args() -> argparse.Namespace:
         help="symbols projected from persisted Market Tape into Stream",
     )
     parser.add_argument(
+        "--stream-event-source",
+        type=Path,
+        default=None,
+        help="persisted Event Source SQLite path for Event Risk projection",
+    )
+    parser.add_argument(
         "--wc2-enabled",
         action="store_true",
         help="explicitly enable preregistered WC2 untouched-forward indexing",
@@ -288,6 +300,7 @@ def build_stream_clock_config(args: argparse.Namespace) -> StreamClockConfig:
         enabled=bool(getattr(args, "stream_enabled", False)),
         ledger_path=getattr(args, "stream_ledger", None),
         market_tape_path=getattr(args, "stream_market_tape", None),
+        event_source_path=getattr(args, "stream_event_source", None),
         family_symbols=family_symbols,
     )
 
@@ -497,17 +510,24 @@ async def run(
             stream_activation = stream_runtime.ensure_activated(
                 activated_at_ms=stream_activation_at_ms
             )
+            family_projector_ids: list[str] = []
             if selected_stream.market_tape_path is not None:
-                for family_projector_id in (
-                    "market_geometry_change",
-                    "liquidity_change",
-                    "order_flow_change",
-                    "derivatives_change",
-                ):
-                    stream_family_projector.ensure_family_activation(
-                        family_projector_id,
-                        activated_at_ms=stream_activation_at_ms,
+                family_projector_ids.extend(
+                    (
+                        "market_geometry_change",
+                        "liquidity_change",
+                        "order_flow_change",
+                        "derivatives_change",
                     )
+                )
+            family_projector_ids.append("provider_quality_change")
+            if selected_stream.event_source_path is not None:
+                family_projector_ids.append("event_risk_change")
+            for family_projector_id in family_projector_ids:
+                stream_family_projector.ensure_family_activation(
+                    family_projector_id,
+                    activated_at_ms=stream_activation_at_ms,
+                )
         except (OSError, TypeError, ValueError, sqlite3.Error) as exc:
             print(
                 "stream status=ERROR "
@@ -701,6 +721,136 @@ async def run(
             f"status_counts={status_summary} "
             f"reason_counts={reason_summary} "
             "POLICY_UNCHANGED=YES HISTORICAL_BACKFILL=NO REAL_CAPITAL=0",
+            flush=True,
+        )
+
+    selected_divergence_path = (
+        provider_divergence_path
+        if provider_divergence_path is not None
+        else candle_cache_path.with_name("provider_divergence.sqlite3")
+    )
+    try:
+        divergence = persist_provider_divergence_for_plan(
+            plan=selected_plan,
+            candle_cache_path=candle_cache_path,
+            provider_divergence_path=selected_divergence_path,
+            observed_at_ms=time.time_ns() // 1_000_000,
+        )
+    except (OSError, ValueError, sqlite3.Error) as exc:
+        failures += 1
+        print(
+            "provider_divergence status=ERROR "
+            f"error={type(exc).__name__}:{exc} "
+            "F4_TRUST_SOURCE_DEGRADED=YES REAL_CAPITAL=0",
+            file=sys.stderr,
+            flush=True,
+        )
+    else:
+        if divergence is None:
+            print(
+                "provider_divergence status=SKIPPED "
+                "reason=no_shared_binance_bybit_15m_context "
+                "CONSENSUS_NOT_INFERRED=YES REAL_CAPITAL=0",
+                flush=True,
+            )
+        else:
+            for snapshot in divergence.snapshots:
+                print(
+                    "provider_divergence "
+                    f"symbol={snapshot.symbol} "
+                    f"status=PERSISTED "
+                    f"grid={snapshot.grid_state.value} "
+                    f"overlap={snapshot.overlap_count} "
+                    f"binance_stale={snapshot.left_quality.stale} "
+                    f"bybit_stale={snapshot.right_quality.stale} "
+                    f"snapshot={snapshot.snapshot_identity}",
+                    flush=True,
+                )
+            print(
+                "provider_divergence status=COMPLETE "
+                f"snapshots={len(divergence.snapshots)} "
+                "CONSENSUS_NOT_INFERRED=YES REAL_CAPITAL=0",
+                flush=True,
+            )
+
+    if stream_family_projector is not None:
+        trust_observed_at_ms = time.time_ns() // 1_000_000
+        try:
+            trust_snapshots = list(
+                build_provider_quality_stream_snapshots(
+                    selected_divergence_path,
+                    evaluated_at_ms=trust_observed_at_ms,
+                )
+            )
+            if selected_stream.event_source_path is not None:
+                trust_snapshots.extend(
+                    build_event_risk_stream_snapshots(
+                        selected_stream.event_source_path,
+                        evaluated_at_ms=trust_observed_at_ms,
+                    )
+                )
+            trust_dispositions: Counter[str] = Counter()
+            trust_projectors: Counter[str] = Counter()
+            for trust_snapshot in sorted(
+                trust_snapshots,
+                key=lambda item: (
+                    item.projector_id,
+                    item.source_scope,
+                    item.source_event_identity,
+                ),
+            ):
+                silent_initial_states = (
+                    ("healthy",)
+                    if trust_snapshot.projector_id == "provider_quality_change"
+                    else ("clear",)
+                    if trust_snapshot.projector_id == "event_risk_change"
+                    else ()
+                )
+                trust_projection = stream_family_projector.project_family(
+                    trust_snapshot,
+                    activated_at_ms=trust_observed_at_ms,
+                    silent_initial_state_labels=silent_initial_states,
+                )
+                trust_dispositions[
+                    trust_projection.disposition.value
+                ] += 1
+                trust_projectors[trust_projection.projector_id] += 1
+                print(
+                    "stream_trust "
+                    f"projector={trust_projection.projector_id} "
+                    f"symbol={trust_snapshot.symbol} "
+                    f"timeframe={trust_snapshot.timeframe} "
+                    f"state={trust_snapshot.state_label} "
+                    f"status={trust_projection.disposition.value} "
+                    f"source={trust_projection.source_event_identity} "
+                    f"narrative={trust_projection.narrative_identity or '-'} "
+                    "HISTORICAL_BACKFILL=NO REAL_CAPITAL=0",
+                    flush=True,
+                )
+        except (OSError, TypeError, ValueError, sqlite3.Error) as exc:
+            print(
+                "stream_trust status=ERROR "
+                f"error={type(exc).__name__}:{exc} "
+                "FAIL_STOP=YES HISTORICAL_BACKFILL=NO REAL_CAPITAL=0",
+                file=sys.stderr,
+                flush=True,
+            )
+            return 1
+        trust_projector_summary = ",".join(
+            f"{key}:{value}"
+            for key, value in sorted(trust_projectors.items())
+        ) or "-"
+        trust_disposition_summary = ",".join(
+            f"{key}:{value}"
+            for key, value in sorted(trust_dispositions.items())
+        ) or "-"
+        print(
+            "stream_trust status=SUMMARY "
+            f"snapshots={len(trust_snapshots)} "
+            f"projectors={trust_projector_summary} "
+            f"dispositions={trust_disposition_summary} "
+            "CONSENSUS_NOT_INFERRED=YES "
+            "HISTORICAL_BACKFILL=NO REAL_CAPITAL=0",
             flush=True,
         )
 
@@ -928,53 +1078,6 @@ async def run(
             flush=True,
         )
 
-    selected_divergence_path = (
-        provider_divergence_path
-        if provider_divergence_path is not None
-        else candle_cache_path.with_name("provider_divergence.sqlite3")
-    )
-    try:
-        divergence = persist_provider_divergence_for_plan(
-            plan=selected_plan,
-            candle_cache_path=candle_cache_path,
-            provider_divergence_path=selected_divergence_path,
-            observed_at_ms=time.time_ns() // 1_000_000,
-        )
-    except (OSError, ValueError, sqlite3.Error) as exc:
-        failures += 1
-        print(
-            "provider_divergence status=ERROR "
-            f"error={type(exc).__name__}:{exc}",
-            file=sys.stderr,
-            flush=True,
-        )
-    else:
-        if divergence is None:
-            print(
-                "provider_divergence status=SKIPPED "
-                "reason=no_shared_binance_bybit_15m_context "
-                "CONSENSUS_NOT_INFERRED=YES REAL_CAPITAL=0",
-                flush=True,
-            )
-        else:
-            for snapshot in divergence.snapshots:
-                print(
-                    "provider_divergence "
-                    f"symbol={snapshot.symbol} "
-                    f"status=PERSISTED "
-                    f"grid={snapshot.grid_state.value} "
-                    f"overlap={snapshot.overlap_count} "
-                    f"binance_stale={snapshot.left_quality.stale} "
-                    f"bybit_stale={snapshot.right_quality.stale} "
-                    f"snapshot={snapshot.snapshot_identity}",
-                    flush=True,
-                )
-            print(
-                "provider_divergence status=COMPLETE "
-                f"snapshots={len(divergence.snapshots)} "
-                "CONSENSUS_NOT_INFERRED=YES REAL_CAPITAL=0",
-                flush=True,
-            )
 
     return 1 if failures else 0
 

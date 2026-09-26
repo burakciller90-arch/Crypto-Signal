@@ -804,11 +804,11 @@ def test_stream_materiality_policy_and_projector_registry_are_versioned() -> Non
     )
     assert (
         registry["event_risk_change"].implementation_state
-        is StreamProjectorImplementationState.REQUIRES_CHANGE_DETECTION
+        is StreamProjectorImplementationState.IMPLEMENTED
     )
     assert (
         registry["provider_quality_change"].implementation_state
-        is StreamProjectorImplementationState.REQUIRES_CHANGE_DETECTION
+        is StreamProjectorImplementationState.IMPLEMENTED
     )
     assert (
         registry["bitcoin_network_context"].implementation_state

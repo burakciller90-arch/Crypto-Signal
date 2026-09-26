@@ -346,6 +346,7 @@ class IntelligenceStreamProductionProjector:
         snapshot: StreamFamilySnapshot,
         *,
         activated_at_ms: int,
+        silent_initial_state_labels: tuple[str, ...] = (),
     ) -> StreamFamilyProjectionResult:
         _require_implemented_projector(snapshot.projector_id)
         from crypto_signal.product.intelligence_stream_family import (
@@ -355,6 +356,7 @@ class IntelligenceStreamProductionProjector:
         return IntelligenceStreamFamilyRuntime(self.path).project(
             snapshot,
             activated_at_ms=activated_at_ms,
+            silent_initial_state_labels=silent_initial_state_labels,
         )
 
     def ensure_family_activation(
