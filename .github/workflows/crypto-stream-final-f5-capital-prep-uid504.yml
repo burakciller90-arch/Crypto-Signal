@@ -15,41 +15,70 @@ concurrency:
 jobs:
   audit:
     runs-on: [self-hosted, crypto-signal, uid504]
-    timeout-minutes: 10
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.sha }}
           clean: true
-          fetch-depth: 1
+          fetch-depth: 0
 
-      - name: Verify exact source and focused tests
+      - name: Verify exact source and create isolated environment
         shell: bash
         run: |
           set -euo pipefail
-          test "$(git rev-parse HEAD)" = "${GITHUB_SHA}"
-          PY="/Volumes/Crypto-504/Crypto-Signal/Development/.venv/bin/python"
-          test -x "$PY"
-          "$PY" -m pytest -q \
-            tests/test_stream_f5_capital_readiness_audit.py \
-            tests/test_intelligence_stream_capital_forward_runtime.py \
-            tests/test_wc2_prepared_live_runtime.py \
-            tests/test_wc2_live_clock_wiring.py
-          "$PY" -m ruff check \
-            ops/audit_stream_f5_capital_readiness.py \
-            src/crypto_signal/product/intelligence_stream_capital_forward_runtime.py \
-            src/crypto_signal/product/intelligence_stream_capital_forward_evidence.py \
-            src/crypto_signal/evaluation/untouched_forward_prepared_runtime.py \
-            ops/run_live_evidence_clock.py \
-            tests/test_stream_f5_capital_readiness_audit.py \
-            tests/test_intelligence_stream_capital_forward_runtime.py \
-            tests/test_wc2_prepared_live_runtime.py
-          "$PY" -m mypy \
-            src/crypto_signal/product/intelligence_stream_capital_forward_runtime.py \
-            src/crypto_signal/product/intelligence_stream_capital_forward_evidence.py \
-            src/crypto_signal/evaluation/untouched_forward_prepared_runtime.py \
-            ops/run_live_evidence_clock.py
-          echo "F5_READINESS_TEST_PASS=YES"
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          DEV="$ROOT/Development"
+          PRODUCT="$ROOT/Product"
+          BASE_PY="$DEV/.venv/bin/python"
+          TEST_VENV="$RUNNER_TEMP/stream-final-f5-venv"
+
+          test "$(id -u)" = "504"
+          test -x "$BASE_PY"
+          test -z "$(git -C "$DEV" status --porcelain)"
+          test -z "$(git -C "$PRODUCT" status --porcelain)"
+          test "$(git -C "$GITHUB_WORKSPACE" rev-parse HEAD)" = "$GITHUB_SHA"
+
+          {
+            echo "DEV_HEAD_BEFORE=$(git -C "$DEV" rev-parse HEAD)"
+            echo "PRODUCT_HEAD_BEFORE=$(git -C "$PRODUCT" rev-parse HEAD)"
+          } > "$RUNNER_TEMP/stream-f5-checkout-state"
+
+          rm -rf "$TEST_VENV"
+          "$BASE_PY" -m venv "$TEST_VENV"
+          "$TEST_VENV/bin/python" -m pip install --upgrade pip
+          "$TEST_VENV/bin/python" -m pip install -e "$GITHUB_WORKSPACE"
+          "$TEST_VENV/bin/python" -m pip install             "pytest>=8.4" "pytest-asyncio>=1.2" "ruff>=0.13" "mypy>=1.18"
+          echo "TEST_PY=$TEST_VENV/bin/python" >> "$GITHUB_ENV"
+
+          echo "F5_EXACT_SOURCE_PASS=YES"
+          echo "F5_ISOLATED_ENV_PASS=YES"
+          echo "HISTORICAL_BACKFILL=NO"
+          echo "REAL_CAPITAL=0"
+
+      - name: Focused F5 Capital acceptance
+        shell: bash
+        run: |
+          set -euo pipefail
+          "$TEST_PY" -m pytest -q             tests/test_stream_f5_capital_readiness_audit.py             tests/test_intelligence_stream_capital_forward_runtime.py             tests/test_wc2_prepared_live_runtime.py             tests/test_wc2_live_clock_wiring.py
+          "$TEST_PY" -m ruff check             ops/audit_stream_f5_capital_readiness.py             src/crypto_signal/product/intelligence_stream_capital_forward_runtime.py             src/crypto_signal/product/intelligence_stream_capital_forward_evidence.py             src/crypto_signal/evaluation/untouched_forward_prepared_runtime.py             ops/run_live_evidence_clock.py             tests/test_stream_f5_capital_readiness_audit.py             tests/test_intelligence_stream_capital_forward_runtime.py             tests/test_wc2_prepared_live_runtime.py             tests/test_wc2_live_clock_wiring.py
+          "$TEST_PY" -m mypy             src/crypto_signal/product/intelligence_stream_capital_forward_runtime.py             src/crypto_signal/product/intelligence_stream_capital_forward_evidence.py             src/crypto_signal/evaluation/untouched_forward_prepared_runtime.py             ops/run_live_evidence_clock.py
+          echo "F5_READINESS_FOCUSED_PASS=YES"
+          echo "HISTORICAL_BACKFILL=NO"
+          echo "REAL_CAPITAL=0"
+
+      - name: Whole-repository regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          "$TEST_PY" -m pytest -q
+          "$TEST_PY" -m ruff check src tests ops/verify_stage10_integrated.py
+          "$TEST_PY" -m mypy src ops/verify_stage10_integrated.py
+          node --check src/crypto_signal/product/static/freshness.js
+          node --check src/crypto_signal/product/static/app.js
+          node --check src/crypto_signal/product/galactech/app.js
+          node tests/js/test_product_freshness.js
+          echo "F5_READINESS_FULL_PASS=YES"
           echo "REAL_CAPITAL=0"
 
       - name: Snapshot live ledgers without mutation
@@ -67,15 +96,15 @@ jobs:
           test -z "$(git -C "$DEV" status --porcelain)"
           test -z "$(git -C "$PRODUCT" status --porcelain)"
 
-          DEV_BEFORE="$(git -C "$DEV" rev-parse HEAD)"
-          PRODUCT_BEFORE="$(git -C "$PRODUCT" rev-parse HEAD)"
+          DEV_BEFORE="$(sed -n 's/^DEV_HEAD_BEFORE=//p' "$RUNNER_TEMP/stream-f5-checkout-state")"
+          PRODUCT_BEFORE="$(sed -n 's/^PRODUCT_HEAD_BEFORE=//p' "$RUNNER_TEMP/stream-f5-checkout-state")"
 
           SRC_EPOCH2="$DEV/runtime/paper/paper_fund_epoch2.sqlite3"
           SRC_STREAM="$DEV/runtime/stream/intelligence_stream.sqlite3"
           test -f "$SRC_EPOCH2"
           test -f "$SRC_STREAM"
 
-          SRC_EPOCH2="$SRC_EPOCH2" SRC_STREAM="$SRC_STREAM" SNAP="$SNAP"           /Volumes/Crypto-504/Crypto-Signal/Development/.venv/bin/python - <<'PY'
+          SRC_EPOCH2="$SRC_EPOCH2" SRC_STREAM="$SRC_STREAM" SNAP="$SNAP" "$TEST_PY" - <<'PY'
           from __future__ import annotations
           import hashlib
           import os
@@ -141,7 +170,7 @@ jobs:
               print(f"F5_STABLE_SNAPSHOT_PASS={label}")
           PY
 
-          /Volumes/Crypto-504/Crypto-Signal/Development/.venv/bin/python ops/audit_stream_f5_capital_readiness.py             --epoch2 "$SNAP/epoch2.sqlite3"             --stream "$SNAP/stream.sqlite3"             --output "$OUT/capital-readiness.json"             | tee "$OUT/capital-readiness.log"
+          "$TEST_PY" ops/audit_stream_f5_capital_readiness.py             --epoch2 "$SNAP/epoch2.sqlite3"             --stream "$SNAP/stream.sqlite3"             --output "$OUT/capital-readiness.json"             | tee "$OUT/capital-readiness.log"
 
           test -z "$(git -C "$DEV" status --porcelain)"
           test -z "$(git -C "$PRODUCT" status --porcelain)"
@@ -155,6 +184,25 @@ jobs:
             echo "HISTORICAL_BACKFILL=NO"
             echo "REAL_CAPITAL=0"
           } | tee "$OUT/checkouts.txt"
+
+      - name: Prove Development and Product checkouts remained untouched
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          DEV="$ROOT/Development"
+          PRODUCT="$ROOT/Product"
+          STATE="$RUNNER_TEMP/stream-f5-checkout-state"
+          test -f "$STATE"
+          DEV_BEFORE="$(sed -n 's/^DEV_HEAD_BEFORE=//p' "$STATE")"
+          PRODUCT_BEFORE="$(sed -n 's/^PRODUCT_HEAD_BEFORE=//p' "$STATE")"
+          test -z "$(git -C "$DEV" status --porcelain)"
+          test -z "$(git -C "$PRODUCT" status --porcelain)"
+          test "$(git -C "$DEV" rev-parse HEAD)" = "$DEV_BEFORE"
+          test "$(git -C "$PRODUCT" rev-parse HEAD)" = "$PRODUCT_BEFORE"
+          echo "F5_UID504_NON_MUTATING_PASS=YES"
+          echo "REAL_CAPITAL=0"
 
       - name: Upload F5 prep evidence
         if: always()
