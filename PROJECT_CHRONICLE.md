@@ -1,5 +1,21 @@
 # PROJECT CHRONICLE
 
+## 2026-09-26 — Final Stream F3 physically live; F4 becomes active
+
+F3 Five-Family Live Intelligence Projection is fully accepted for the source families with exact persistent production truth.
+
+PR #1355 introduced canonical Market/Geometry, Liquidity, Order Flow and Derivatives family projection through the F2 backbone. Physical activation then exposed one ordering defect: the existing WC2 outcome chronology fail-stop could terminate the live clock before the independent family blocks ran. PR #1358 fixed only that ordering and preserved the WC2 fail-stop unchanged.
+
+Exact merged main: `a589efa4a8a4040bec56bfa81611c7f9e3e30517`.
+
+UID504 final closeout run `36260544411` passed on the physical Development runtime. Market Tape and Stream quick checks were `ok`; 69 derivatives observations existed; all four immutable family activation boundaries were present; canonical source/narrative rows were Geometry 7, Liquidity 3, Order Flow 3 and Derivatives 3; derivatives events were forward of activation; and the production log contained `stream_family status=SUMMARY`.
+
+Unsupported standalone on-chain/network sources remain fail-closed. No historical rich backfill or synthetic family activity was used. `REAL_CAPITAL=0`.
+
+Canonical acceptance: `docs/CRYPTO_SIGNAL_STREAM_FINAL_F3_LIVE_INTELLIGENCE_ACCEPTANCE.md`.
+
+The sole final-completion frontier is now F4 — Risk + System Trust Projection.
+
 ## 2026-09-26 — Final Stream F2 production backbone accepted; F3 becomes active
 
 F2 closes the generic production source-to-message backbone gap without claiming any new source family live.
