@@ -65,7 +65,17 @@ jobs:
           }
 
           def ro(path: Path) -> sqlite3.Connection:
-              con = sqlite3.connect(f"file:{path}?mode=ro", uri=True, timeout=10)
+              if path == paths["signal"]:
+                  con = sqlite3.connect(
+                      f"file:{path}?mode=ro",
+                      uri=True,
+                      timeout=10,
+                  )
+              else:
+                  # All WC2 sidecars below are byte-stable temp copies.
+                  # Opening the copy normally lets SQLite reconcile copied
+                  # WAL/SHM state; query_only still prevents diagnostic writes.
+                  con = sqlite3.connect(path, timeout=10)
               con.row_factory = sqlite3.Row
               con.execute("PRAGMA query_only=ON")
               return con
