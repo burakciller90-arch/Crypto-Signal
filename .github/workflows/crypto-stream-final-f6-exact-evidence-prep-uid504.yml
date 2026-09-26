@@ -1,0 +1,301 @@
+name: Crypto Stream Final F6 Exact Evidence Prep UID504
+
+on:
+  push:
+    branches:
+      - 'stream/final-f6-exact-frozen-evidence'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: crypto-stream-final-f6-exact-evidence-prep
+  cancel-in-progress: true
+
+jobs:
+  audit:
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          clean: true
+          fetch-depth: 1
+
+      - name: Verify exact source and focused F6 gates
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${GITHUB_SHA}"
+          PY="/Volumes/Crypto-504/Crypto-Signal/Development/.venv/bin/python"
+          test -x "$PY"
+          export PYTHONPATH="$GITHUB_WORKSPACE/src"
+          "$PY" -m pytest -q             tests/test_intelligence_stream_exact_evidence.py             tests/test_intelligence_stream_visual_proof.py             tests/test_intelligence_stream_ui.py
+          "$PY" -m ruff check             src/crypto_signal/product/intelligence_stream_evidence_contract.py             src/crypto_signal/product/intelligence_stream_exact_evidence.py             src/crypto_signal/product/intelligence_stream_visual_proof.py             src/crypto_signal/product/web.py             tests/test_intelligence_stream_exact_evidence.py
+          "$PY" -m mypy --strict             src/crypto_signal/product/intelligence_stream_evidence_contract.py             src/crypto_signal/product/intelligence_stream_exact_evidence.py
+          node --check src/crypto_signal/product/stream/evidence.js
+          node --check src/crypto_signal/product/stream/visual_proof.js
+          echo "F6_FOCUSED_GATE_PASS=YES"
+          echo "REAL_CAPITAL=0"
+
+      - name: Snapshot live evidence stores without mutation
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          DEV="$ROOT/Development"
+          PRODUCT="$ROOT/Product"
+          OUT="$RUNNER_TEMP/stream-final-f6-prep"
+          SNAP="$OUT/db-snapshots"
+          mkdir -p "$SNAP"
+
+          test "$(id -u)" = "504"
+          test -z "$(git -C "$DEV" status --porcelain)"
+          test -z "$(git -C "$PRODUCT" status --porcelain)"
+
+          DEV_BEFORE="$(git -C "$DEV" rev-parse HEAD)"
+          PRODUCT_BEFORE="$(git -C "$PRODUCT" rev-parse HEAD)"
+
+          export SRC_SIGNAL="$DEV/runtime/ledger/live_signal_ledger.sqlite3"
+          export SRC_DECISION="$DEV/runtime/decision/decision_evidence.sqlite3"
+          export SRC_STREAM="$DEV/runtime/stream/intelligence_stream.sqlite3"
+          export SRC_MARKET="$DEV/runtime/market_tape/market_tape.sqlite3"
+          export SRC_EVENT="$DEV/runtime/events/event_source.sqlite3"
+          export SRC_PROVIDER="$DEV/runtime/data/provider_divergence.sqlite3"
+          export SNAP
+
+          for required in             "$SRC_SIGNAL" "$SRC_DECISION" "$SRC_STREAM"             "$SRC_MARKET" "$SRC_EVENT" "$SRC_PROVIDER"; do
+            test -f "$required"
+          done
+
+          /Volumes/Crypto-504/Crypto-Signal/Development/.venv/bin/python - <<'PY'
+          from __future__ import annotations
+
+          import hashlib
+          import os
+          import shutil
+          import sqlite3
+          import time
+          from pathlib import Path
+
+          snap = Path(os.environ["SNAP"])
+          sources = {
+              "signal": Path(os.environ["SRC_SIGNAL"]),
+              "decision": Path(os.environ["SRC_DECISION"]),
+              "stream": Path(os.environ["SRC_STREAM"]),
+              "market": Path(os.environ["SRC_MARKET"]),
+              "event": Path(os.environ["SRC_EVENT"]),
+              "provider": Path(os.environ["SRC_PROVIDER"]),
+          }
+
+          def digest(path: Path) -> str | None:
+              if not path.is_file():
+                  return None
+              h = hashlib.sha256()
+              with path.open("rb") as handle:
+                  for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+                      h.update(chunk)
+              return h.hexdigest()
+
+          def state(path: Path) -> dict[str, str | None]:
+              return {
+                  suffix: digest(Path(str(path) + suffix))
+                  for suffix in ("", "-wal", "-shm")
+              }
+
+          for label, source in sources.items():
+              raw = snap / f"{label}.raw.sqlite3"
+              stable = False
+              for _attempt in range(1, 8):
+                  before = state(source)
+                  for suffix in ("", "-wal", "-shm"):
+                      src = Path(str(source) + suffix)
+                      dst = Path(str(raw) + suffix)
+                      if src.is_file():
+                          shutil.copy2(src, dst)
+                      elif dst.exists():
+                          dst.unlink()
+                  after = state(source)
+                  if before == after:
+                      stable = True
+                      break
+                  time.sleep(0.05)
+              if not stable:
+                  raise SystemExit(f"F6_SNAPSHOT_SOURCE_UNSTABLE:{label}")
+
+              final = snap / f"{label}.sqlite3"
+              if final.exists():
+                  final.unlink()
+              with sqlite3.connect(raw) as src, sqlite3.connect(final) as dst:
+                  src.backup(dst)
+                  quick = dst.execute("PRAGMA quick_check").fetchone()
+                  if quick is None or str(quick[0]).lower() != "ok":
+                      raise SystemExit(f"F6_SNAPSHOT_QUICK_CHECK_FAIL:{label}")
+
+              for suffix in ("", "-wal", "-shm"):
+                  candidate = Path(str(raw) + suffix)
+                  if candidate.exists():
+                      candidate.unlink()
+              print(f"F6_STABLE_SNAPSHOT_PASS={label}")
+          PY
+
+          test -z "$(git -C "$DEV" status --porcelain)"
+          test -z "$(git -C "$PRODUCT" status --porcelain)"
+          test "$(git -C "$DEV" rev-parse HEAD)" = "$DEV_BEFORE"
+          test "$(git -C "$PRODUCT" rev-parse HEAD)" = "$PRODUCT_BEFORE"
+
+          {
+            echo "DEV_HEAD=$DEV_BEFORE"
+            echo "PRODUCT_HEAD=$PRODUCT_BEFORE"
+            echo "F6_PREP_NON_MUTATING_PASS=YES"
+            echo "HISTORICAL_BACKFILL=NO"
+            echo "REAL_CAPITAL=0"
+          } | tee "$OUT/checkouts.txt"
+
+      - name: Audit real F3/F4 message evidence states
+        shell: bash
+        run: |
+          set -euo pipefail
+          PY="/Volumes/Crypto-504/Crypto-Signal/Development/.venv/bin/python"
+          OUT="$RUNNER_TEMP/stream-final-f6-prep"
+          SNAP="$OUT/db-snapshots"
+          export PYTHONPATH="$GITHUB_WORKSPACE/src"
+          export SNAP OUT
+
+          "$PY" - <<'PY' | tee "$OUT/exact-evidence-audit.log"
+          from __future__ import annotations
+
+          import json
+          import os
+          import sqlite3
+          from collections import Counter
+          from pathlib import Path
+
+          from crypto_signal.product.intelligence_stream_exact_evidence import (
+              IntelligenceStreamExactEvidenceReadModel,
+          )
+          from crypto_signal.product.intelligence_stream_read_model import (
+              IntelligenceStreamReadModel,
+          )
+
+          snap = Path(os.environ["SNAP"])
+          stream = snap / "stream.sqlite3"
+          resolver = IntelligenceStreamExactEvidenceReadModel(
+              stream_ledger_path=stream,
+              signal_ledger_path=snap / "signal.sqlite3",
+              decision_evidence_path=snap / "decision.sqlite3",
+              market_tape_path=snap / "market.sqlite3",
+              event_source_runtime_path=snap / "event.sqlite3",
+              provider_divergence_path=snap / "provider.sqlite3",
+          )
+
+          uri = f"{stream.resolve().as_uri()}?mode=ro"
+          with sqlite3.connect(uri, uri=True) as connection:
+              connection.row_factory = sqlite3.Row
+              connection.execute("PRAGMA query_only=ON")
+              rows = connection.execute(
+                  """
+                  SELECT n.narrative_identity
+                  FROM stream_narrative_messages AS n
+                  JOIN stream_narrative_plans AS p
+                    ON p.plan_identity = n.plan_identity
+                  JOIN stream_fact_bundles AS f
+                    ON f.fact_bundle_identity = p.fact_bundle_identity
+                  WHERE f.payload_json LIKE '%"projector_id"%'
+                  ORDER BY n.event_at_ms DESC, n.narrative_identity DESC
+                  LIMIT 240
+                  """
+              ).fetchall()
+
+          if not rows:
+              raise SystemExit("F6_LIVE_AUDIT_NO_FAMILY_MESSAGES")
+
+          allowed = {
+              "READY_EXACT",
+              "IDENTITY_ONLY_EXACT",
+              "UNAVAILABLE_EXPLICIT",
+          }
+          state_counts: Counter[str] = Counter()
+          domain_counts: Counter[str] = Counter()
+          projector_counts: Counter[str] = Counter()
+          reference_counts: Counter[str] = Counter()
+          read_model = IntelligenceStreamReadModel(stream)
+
+          for row in rows:
+              narrative_identity = str(row["narrative_identity"])
+              payload = resolver.read_for_narrative(narrative_identity)
+              if payload is None:
+                  raise SystemExit("F6_LIVE_AUDIT_MESSAGE_DISAPPEARED")
+              if payload.get("current_data_substitution") is not False:
+                  raise SystemExit("F6_CURRENT_DATA_SUBSTITUTION_FORBIDDEN")
+
+              detail = read_model.read_message_detail(narrative_identity)
+              if detail is None:
+                  raise SystemExit("F6_LIVE_AUDIT_DETAIL_MISSING")
+              fact = detail.get("fact_bundle")
+              if isinstance(fact, dict) and isinstance(fact.get("projector_id"), str):
+                  projector_counts[str(fact["projector_id"])] += 1
+
+              for resolution in payload.get("resolutions", ()):
+                  if not isinstance(resolution, dict):
+                      raise SystemExit("F6_INVALID_RESOLUTION_SHAPE")
+                  state = str(resolution.get("resolution_state"))
+                  if state not in allowed:
+                      raise SystemExit(f"F6_AMBIGUOUS_STATE:{state}")
+                  state_counts[state] += 1
+                  domain_counts[str(resolution.get("domain"))] += 1
+                  if resolution.get("current_data_substitution") is not False:
+                      raise SystemExit("F6_DOMAIN_CURRENT_DATA_SUBSTITUTION")
+
+              for reference in payload.get("reference_resolutions", ()):
+                  if not isinstance(reference, dict):
+                      raise SystemExit("F6_INVALID_REFERENCE_SHAPE")
+                  state = str(reference.get("resolution_state"))
+                  if state not in allowed:
+                      raise SystemExit(f"F6_AMBIGUOUS_REFERENCE_STATE:{state}")
+                  reference_counts[state] += 1
+
+          required = {
+              "market_geometry_change",
+              "liquidity_change",
+              "order_flow_change",
+              "derivatives_change",
+              "provider_quality_change",
+          }
+          missing = required - set(projector_counts)
+          if missing:
+              raise SystemExit(
+                  "F6_LIVE_AUDIT_REQUIRED_PROJECTOR_MISSING:"
+                  + ",".join(sorted(missing))
+              )
+
+          summary = {
+              "messages_audited": len(rows),
+              "projector_counts": dict(sorted(projector_counts.items())),
+              "domain_counts": dict(sorted(domain_counts.items())),
+              "resolution_state_counts": dict(sorted(state_counts.items())),
+              "reference_state_counts": dict(sorted(reference_counts.items())),
+              "current_data_substitution": False,
+              "historical_backfill": False,
+              "real_capital": 0,
+          }
+          output = Path(os.environ["OUT"]) / "exact-evidence-audit.json"
+          output.write_text(
+              json.dumps(summary, sort_keys=True, indent=2) + "\n",
+              encoding="utf-8",
+          )
+          print(json.dumps(summary, sort_keys=True))
+          print("F6_REAL_F3_F4_EVIDENCE_AUDIT_PASS=YES")
+          print("HISTORICAL_BACKFILL=NO")
+          print("REAL_CAPITAL=0")
+          PY
+
+      - name: Upload F6 prep evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stream-final-f6-exact-evidence-prep-${{ github.run_id }}
+          path: ${{ runner.temp }}/stream-final-f6-prep
+          if-no-files-found: error
+          retention-days: 14
