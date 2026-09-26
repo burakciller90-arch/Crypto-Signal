@@ -35,6 +35,7 @@ from crypto_signal.product.intelligence_stream_narrative_ledger import (
 )
 from crypto_signal.product.intelligence_stream_policy import (
     StreamProjectorImplementationState,
+    StreamProjectorSpec,
     accepted_stream_projector_registry,
 )
 from crypto_signal.product.intelligence_stream_projectors import (
@@ -416,7 +417,7 @@ class IntelligenceStreamProductionProjector:
         )
 
 
-def _require_implemented_projector(projector_id: str):
+def _require_implemented_projector(projector_id: str) -> StreamProjectorSpec:
     selected = next(
         (
             item
