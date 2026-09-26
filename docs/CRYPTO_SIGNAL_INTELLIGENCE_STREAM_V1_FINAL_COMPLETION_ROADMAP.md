@@ -169,8 +169,8 @@ Execute exactly in this order:
 → **F1 WC2 Forward-Liveness Truth — PASS**  
 → **F2 Production Source-to-Message Backbone — PASS**  
 → **F3 Five-Family Live Intelligence Projection — PASS**  
-→ **F4 Risk + System Trust Projection — ACTIVE**  
-→ **F5 Three-Vault Capital Story Live Closure**  
+→ **F4 Risk + System Trust Projection — PASS**  
+→ **F5 Three-Vault Capital Story Live Closure — ACTIVE**  
 → **F6 Exact Frozen Evidence Closure**  
 → **F7 Guarded Local LLM/Ollama Activation**  
 → **F8 Real Production Multi-Category E2E Acceptance**  
