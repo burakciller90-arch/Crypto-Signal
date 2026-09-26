@@ -240,12 +240,12 @@ def _text_field(raw: dict[str, object], key: str) -> str:
 def _int_field(raw: dict[str, object], key: str) -> int:
     value = raw.get(key)
     if isinstance(value, bool) or not isinstance(value, int):
-        raise ValueError(f"Stream activation {key} must be integer")
+        raise TypeError(f"Stream activation {key} must be integer")
     return value
 
 
 def _bool_field(raw: dict[str, object], key: str) -> bool:
     value = raw.get(key)
     if not isinstance(value, bool):
-        raise ValueError(f"Stream activation {key} must be boolean")
+        raise TypeError(f"Stream activation {key} must be boolean")
     return value
