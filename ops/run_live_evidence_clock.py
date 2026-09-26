@@ -45,6 +45,7 @@ from crypto_signal.evaluation.untouched_forward_prepared_runtime import (
 from crypto_signal.evaluation.untouched_forward_resolution_runtime import (
     resolve_wc2_outcomes_once,
 )
+from crypto_signal.intelligence.event_risk_circuit_breaker import CircuitBreakerAnalysis
 from crypto_signal.ledger.coverage import (
     LiveCoveragePlan,
 )
@@ -59,6 +60,10 @@ from crypto_signal.paper.epoch2_accounting import (
 )
 from crypto_signal.paper.shadow_cycle_manifest import R25ShadowCycleManifest
 from crypto_signal.paper.shadow_intent_journal import R25ShadowIntentJournal
+from crypto_signal.product.intelligence_stream_capital_forward_runtime import (
+    IntelligenceStreamCapitalForwardRuntime,
+    StreamCapitalForwardResult,
+)
 from crypto_signal.product.intelligence_stream_family_sources import (
     build_geometry_family_snapshot_from_bundle,
     build_geometry_lifecycle_family_snapshot,
@@ -74,6 +79,7 @@ from crypto_signal.product.intelligence_stream_trust_sources import (
     build_event_risk_stream_snapshots,
     build_provider_quality_stream_snapshots,
 )
+from crypto_signal.unified_decision_runtime import UnifiedDecisionIssuance
 
 BASE = Path("/Users/crypto-signal-agent/Crypto-Signal")
 DEFAULT_DB = BASE / "runtime" / "ledger" / "live_signal_ledger.sqlite3"
@@ -497,6 +503,8 @@ async def run(
         return 1
     stream_runtime: IntelligenceStreamForwardRuntime | None = None
     stream_family_projector: IntelligenceStreamProductionProjector | None = None
+    stream_capital_runtime: IntelligenceStreamCapitalForwardRuntime | None = None
+    stream_capital_activation_identity: str | None = None
     if selected_stream.enabled:
         assert selected_stream.ledger_path is not None
         try:
@@ -528,6 +536,17 @@ async def run(
                     family_projector_id,
                     activated_at_ms=stream_activation_at_ms,
                 )
+            if selected_wc2.enabled:
+                assert selected_wc2.epoch2_path is not None
+                stream_capital_runtime = IntelligenceStreamCapitalForwardRuntime(
+                    epoch2_path=selected_wc2.epoch2_path,
+                    stream_path=selected_stream.ledger_path,
+                )
+                stream_capital_activation_identity = (
+                    stream_capital_runtime.ensure_activated(
+                        activated_at_ms=stream_activation_at_ms,
+                    )
+                )
         except (OSError, TypeError, ValueError, sqlite3.Error) as exc:
             print(
                 "stream status=ERROR "
@@ -546,6 +565,47 @@ async def run(
             "HISTORICAL_BACKFILL=NO REAL_CAPITAL=0",
             flush=True,
         )
+
+        if stream_capital_activation_identity is not None:
+            assert selected_wc2.epoch2_path is not None
+            print(
+                "stream_capital status=ACTIVATED "
+                f"activation={stream_capital_activation_identity} "
+                f"epoch2={selected_wc2.epoch2_path} "
+                f"ledger={selected_stream.ledger_path} "
+                "HISTORICAL_BACKFILL=NO REAL_CAPITAL=0",
+                flush=True,
+            )
+
+    def project_stream_capital(
+        issuance: UnifiedDecisionIssuance,
+        *,
+        event_context: CircuitBreakerAnalysis,
+        base_asset: str,
+        assessed_at_ms: int,
+    ) -> StreamCapitalForwardResult:
+        if stream_capital_runtime is None:
+            raise RuntimeError("Stream Capital runtime is not activated")
+        projection = stream_capital_runtime.project_issuance(
+            issuance,
+            event_context=event_context,
+            base_asset=base_asset,
+            assessed_at_ms=assessed_at_ms,
+        )
+        print(
+            "stream_capital status=PROJECTED "
+            f"disposition={projection.disposition.value} "
+            f"forecast={projection.forecast_identity} "
+            f"candidate={projection.allocator_candidate_identity or '-'} "
+            f"assessment={projection.allocator_assessment_identity or '-'} "
+            f"decisions={len(projection.decision_identities)} "
+            f"decision_inserts={projection.inserted_decision_count} "
+            f"hold_intents={projection.hold_intent_count} "
+            f"messages={projection.projected_message_count} "
+            "HISTORICAL_BACKFILL=NO REAL_CAPITAL=0",
+            flush=True,
+        )
+        return projection
 
     adapters: dict[Exchange, MarketDataAdapter] = {
         Exchange.BYBIT: BybitSpotAdapter(),
@@ -663,6 +723,11 @@ async def run(
                         None
                         if stream_runtime is None
                         else stream_runtime.project_issuance
+                    ),
+                    capital_hook=(
+                        None
+                        if stream_capital_runtime is None
+                        else project_stream_capital
                     ),
                 )
             except (OSError, TypeError, ValueError, sqlite3.Error) as exc:
