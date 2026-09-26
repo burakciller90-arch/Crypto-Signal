@@ -709,6 +709,228 @@ def build_live_intelligence_feed_event(
     )
 
 
+
+def parse_decision_proof_snapshot(value: object) -> DecisionProofSnapshot:
+    """Rehydrate one verified immutable Decision Proof payload.
+
+    The returned dataclass re-runs all canonical identity and authority
+    validation. This parser never creates or upgrades evidence.
+    """
+    raw = _persisted_mapping(value, "Decision Proof")
+    trigger = _persisted_mapping(raw.get("trigger_zone"), "Decision Proof trigger")
+    target = _persisted_mapping(raw.get("target_zone"), "Decision Proof target")
+    slices_raw = _persisted_list(raw.get("evidence_slices"), "Decision Proof slices")
+    slices = tuple(
+        DecisionProofEvidenceSlice(
+            slice_identity=_persisted_text(item, "slice_identity"),
+            schema_version=_persisted_text(item, "schema_version"),
+            engine_version=_persisted_text(item, "engine_version"),
+            domain=ProofEvidenceDomain(_persisted_text(item, "domain")),
+            availability=ProofEvidenceAvailability(
+                _persisted_text(item, "availability")
+            ),
+            verdict=ProofEvidenceVerdict(_persisted_text(item, "verdict")),
+            evidence_identities=_persisted_text_tuple(
+                item.get("evidence_identities"),
+                "Decision Proof evidence identities",
+            ),
+            market_available_at_ms=_persisted_optional_int(
+                item.get("market_available_at_ms"),
+                "Decision Proof market availability",
+            ),
+            observed_at_ms=_persisted_optional_int(
+                item.get("observed_at_ms"),
+                "Decision Proof observed at",
+            ),
+            freshness_0_1=_persisted_optional_decimal(
+                item.get("freshness_0_1"),
+                "Decision Proof slice freshness",
+            ),
+            source_quality=_persisted_optional_text(
+                item.get("source_quality"),
+                "Decision Proof source quality",
+            ),
+            summary_codes=_persisted_text_tuple(
+                item.get("summary_codes"),
+                "Decision Proof summary codes",
+            ),
+        )
+        for item in (
+            _persisted_mapping(item, "Decision Proof slice")
+            for item in slices_raw
+        )
+    )
+    summary_raw = _persisted_mapping(
+        raw.get("evidence_summary"),
+        "Decision Proof evidence summary",
+    )
+    summary = DecisionProofEvidenceSummary(
+        support_count=_persisted_int(summary_raw, "support_count"),
+        contradict_count=_persisted_int(summary_raw, "contradict_count"),
+        neutral_count=_persisted_int(summary_raw, "neutral_count"),
+        insufficient_count=_persisted_int(summary_raw, "insufficient_count"),
+        available_count=_persisted_int(summary_raw, "available_count"),
+        total_domain_count=_persisted_int(summary_raw, "total_domain_count"),
+    )
+    return DecisionProofSnapshot(
+        proof_identity=_persisted_text(raw, "proof_identity"),
+        schema_version=_persisted_text(raw, "schema_version"),
+        engine_version=_persisted_text(raw, "engine_version"),
+        forecast_identity=_persisted_text(raw, "forecast_identity"),
+        signal_freeze_identity=_persisted_text(raw, "signal_freeze_identity"),
+        confluence_identity=_persisted_text(raw, "confluence_identity"),
+        event_context_identity=_persisted_text(raw, "event_context_identity"),
+        probability_authorization_identity=_persisted_optional_text(
+            raw.get("probability_authorization_identity"),
+            "Decision Proof probability authorization",
+        ),
+        probability_calibration_evidence_identity=_persisted_optional_text(
+            raw.get("probability_calibration_evidence_identity"),
+            "Decision Proof probability calibration",
+        ),
+        asset=_persisted_text(raw, "asset"),
+        symbol=_persisted_text(raw, "symbol"),
+        timeframe=_persisted_text(raw, "timeframe"),
+        issued_at_ms=_persisted_int(raw, "issued_at_ms"),
+        source_as_of_ms=_persisted_int(raw, "source_as_of_ms"),
+        signal_state=_persisted_text(raw, "signal_state"),
+        direction=_persisted_text(raw, "direction"),
+        conditional_thesis=_persisted_text(raw, "conditional_thesis"),
+        trigger_zone=PriceZone(
+            low=_persisted_decimal(trigger, "low"),
+            high=_persisted_decimal(trigger, "high"),
+        ),
+        target_zone=PriceZone(
+            low=_persisted_decimal(target, "low"),
+            high=_persisted_decimal(target, "high"),
+        ),
+        invalidation_price=_persisted_decimal(raw, "invalidation_price"),
+        horizon_bars=_persisted_int(raw, "horizon_bars"),
+        confluence_support_score_0_100=_persisted_decimal(
+            raw,
+            "confluence_support_score_0_100",
+        ),
+        confluence_opposition_score_0_100=_persisted_decimal(
+            raw,
+            "confluence_opposition_score_0_100",
+        ),
+        probability_status=_persisted_text(raw, "probability_status"),
+        calibrated_probability_0_1=_persisted_optional_decimal(
+            raw.get("calibrated_probability_0_1"),
+            "Decision Proof calibrated probability",
+        ),
+        event_context_state=_persisted_text(raw, "event_context_state"),
+        authority=_persisted_text(raw, "authority"),
+        freshness_0_1=_persisted_optional_decimal(
+            raw.get("freshness_0_1"),
+            "Decision Proof freshness",
+        ),
+        uncertainty_flags=_persisted_text_tuple(
+            raw.get("uncertainty_flags"),
+            "Decision Proof uncertainty flags",
+        ),
+        forecast_source_evidence_identities=_persisted_text_tuple(
+            raw.get("forecast_source_evidence_identities"),
+            "Decision Proof forecast source identities",
+        ),
+        evidence_slices=slices,
+        evidence_summary=summary,
+        private_reasoning_exposed=_persisted_bool(
+            raw,
+            "private_reasoning_exposed",
+        ),
+        read_only=_persisted_bool(raw, "read_only"),
+        production_authority=_persisted_bool(raw, "production_authority"),
+        real_capital=_persisted_int(raw, "real_capital"),
+    )
+
+
+def _persisted_mapping(value: object, label: str) -> dict[str, object]:
+    if not isinstance(value, dict):
+        raise TypeError(f"{label} must be object")
+    return {str(key): item for key, item in value.items()}
+
+
+def _persisted_list(value: object, label: str) -> list[object]:
+    if not isinstance(value, list):
+        raise TypeError(f"{label} must be array")
+    return value
+
+
+def _persisted_text(raw: dict[str, object], key: str) -> str:
+    value = raw.get(key)
+    if not isinstance(value, str) or not value:
+        raise TypeError(f"persisted {key} must be non-empty text")
+    return value
+
+
+def _persisted_optional_text(value: object, label: str) -> str | None:
+    if value is None:
+        return None
+    if not isinstance(value, str) or not value:
+        raise TypeError(f"{label} must be non-empty text or null")
+    return value
+
+
+def _persisted_int(raw: dict[str, object], key: str) -> int:
+    value = raw.get(key)
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise TypeError(f"persisted {key} must be integer")
+    return value
+
+
+def _persisted_optional_int(value: object, label: str) -> int | None:
+    if value is None:
+        return None
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise TypeError(f"{label} must be integer or null")
+    return value
+
+
+def _persisted_bool(raw: dict[str, object], key: str) -> bool:
+    value = raw.get(key)
+    if not isinstance(value, bool):
+        raise TypeError(f"persisted {key} must be boolean")
+    return value
+
+
+def _persisted_decimal(raw: dict[str, object], key: str) -> Decimal:
+    value = raw.get(key)
+    if isinstance(value, bool) or value is None:
+        raise TypeError(f"persisted {key} must be decimal-compatible")
+    try:
+        result = Decimal(str(value))
+    except Exception as exc:
+        raise TypeError(f"persisted {key} must be decimal-compatible") from exc
+    if not result.is_finite():
+        raise ValueError(f"persisted {key} must be finite")
+    return result
+
+
+def _persisted_optional_decimal(value: object, label: str) -> Decimal | None:
+    if value is None:
+        return None
+    if isinstance(value, bool):
+        raise TypeError(f"{label} must be decimal-compatible or null")
+    try:
+        result = Decimal(str(value))
+    except Exception as exc:
+        raise TypeError(f"{label} must be decimal-compatible or null") from exc
+    if not result.is_finite():
+        raise ValueError(f"{label} must be finite")
+    return result
+
+
+def _persisted_text_tuple(value: object, label: str) -> tuple[str, ...]:
+    raw = _persisted_list(value, label)
+    result: list[str] = []
+    for item in raw:
+        if not isinstance(item, str) or not item:
+            raise TypeError(f"{label} must contain non-empty text")
+        result.append(item)
+    return tuple(result)
+
+
 def empty_live_intelligence_feed() -> LiveIntelligenceFeedSnapshot:
     return _feed_snapshot(())
 
