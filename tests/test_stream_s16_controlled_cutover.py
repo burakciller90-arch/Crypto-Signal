@@ -130,4 +130,3 @@ def test_s16_chromium_acceptance_has_loaded_runner_startup_budget() -> None:
 
     assert "timeout_seconds: float = 30.0" in capture
     assert "Chrome DevTools target unavailable after" in capture
-\n
