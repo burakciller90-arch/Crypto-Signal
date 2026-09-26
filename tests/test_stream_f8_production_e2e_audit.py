@@ -4,7 +4,6 @@ import sqlite3
 from pathlib import Path
 
 import pytest
-
 from ops import audit_stream_f8_production_e2e as audit
 
 
