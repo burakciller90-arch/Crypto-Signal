@@ -8,7 +8,7 @@
   <title>Crypto Signal // Intelligence Stream</title>
   <link rel="stylesheet" href="/stream-static/app.css">
 </head>
-<body data-ui-version="crypto-signal-stream-v1-s13">
+<body data-ui-version="crypto-signal-stream-v1-s14">
   <a class="skip-link" href="#streamMain">Akışa geç</a>
 
   <div class="stream-app">
@@ -65,8 +65,8 @@
             ↑ Daha eski mesajları yükle
           </button>
 
-          <div id="streamViewport" class="stream-viewport" aria-label="Intelligence Stream" tabindex="0">
-            <ol id="messageList" class="message-list" aria-live="polite" aria-relevant="additions"></ol>
+          <div id="streamViewport" class="stream-viewport" role="region" aria-label="Intelligence Stream" tabindex="0">
+            <ol id="messageList" class="message-list" role="feed" aria-label="Kalıcı Intelligence Stream mesajları" aria-busy="false"></ol>
             <div id="emptyState" class="empty-state" hidden>
               <span class="empty-glyph" aria-hidden="true">◉</span>
               <strong id="emptyTitle">Henüz mesaj yok</strong>
@@ -86,7 +86,7 @@
       </section>
     </main>
 
-    <aside id="discoveryDrawer" class="drawer" aria-labelledby="discoveryTitle" hidden>
+    <aside id="discoveryDrawer" class="drawer" role="dialog" aria-modal="true" aria-labelledby="discoveryTitle" tabindex="-1" hidden>
       <div class="drawer-head">
         <div>
           <span class="eyebrow">GEÇİCİ KEŞİF</span>
@@ -206,7 +206,7 @@
       </div>
     </aside>
 
-    <aside id="settingsDrawer" class="drawer" aria-labelledby="settingsTitle" hidden>
+    <aside id="settingsDrawer" class="drawer" role="dialog" aria-modal="true" aria-labelledby="settingsTitle" tabindex="-1" hidden>
       <div class="drawer-head">
         <div>
           <span class="eyebrow">GÖRÜNÜM</span>
