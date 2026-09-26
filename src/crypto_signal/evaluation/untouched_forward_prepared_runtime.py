@@ -486,8 +486,6 @@ def complete_wc2_prepared_cycle(
         indexed_at_ms=receipt.indexed_at_ms,
     )
     _validate_paper(receipt, paper)
-    if issuance_hook is not None:
-        issuance_hook(issuance)
     if (
         receipt.sizing_policy is None
         and (paper.explicit_review_used or paper.simulated_execution_created)
@@ -495,6 +493,8 @@ def complete_wc2_prepared_cycle(
         raise ValueError(
             "policy-free WC2 completion cannot create reviewed execution"
         )
+    if issuance_hook is not None:
+        issuance_hook(issuance)
 
     return WC2PreparedCompletionResult(
         receipt_identity=receipt.receipt_identity,
