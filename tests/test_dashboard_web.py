@@ -194,6 +194,12 @@ def test_health_and_static_shell_without_ledger(tmp_path: Path) -> None:
     assert health.json() == {
         "status": "ok",
         "product_version": "full-version-contextual-evidence/1",
+        "product_root": "galactech",
+        "stream_root_active": False,
+        "stream_preview_route": "/stream-preview",
+        "galactech_fallback_route": "/galactech",
+        "legacy_route": "/legacy",
+        "rollback_mode": "galactech",
         "real_capital": 0,
         "ledger_present": False,
         "alert_outbox_present": False,
