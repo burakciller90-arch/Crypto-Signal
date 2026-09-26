@@ -1,6 +1,6 @@
 # Crypto Signal — Final F1 WC2 Forward-Liveness Acceptance
 
-Status: **MECHANICAL LIVENESS TRUTH PASS / LIVE OBSERVABILITY ACTIVATION PENDING**  
+Status: **PASS — MECHANICAL TRUTH + LIVE OBSERVABILITY ACTIVATED**  
 Roadmap: `CRYPTO_SIGNAL_INTELLIGENCE_STREAM_V1_FINAL_COMPLETION_ROADMAP.md`  
 Phase: **F1 — WC2 Forward-Liveness Truth**  
 Date: 2026-09-26  
@@ -211,20 +211,59 @@ This telemetry changes no policy and no canonical scientific truth.
 
 ---
 
-## 8. F1 closure boundary
+## 8. Live activation proof
 
-Mechanical liveness truth is accepted:
+The accepted observability/audit code merged through PR #1348 to main:
+
+`71ff1ad4f2d1c9f58df65fab12a12c02754acfc6`
+
+The physical Development checkout was then cleanly fast-forwarded from:
+
+`f0349a70c11046893cbabd88ab56ca4ca8c44a99`
+
+to exact merged main:
+
+`71ff1ad4f2d1c9f58df65fab12a12c02754acfc6`.
+
+UID504 live activation run:
+
+**36252043820**
+
+Artifact:
+
+- `stream-final-f1-live-activation-36252043820`
+- artifact id: `10909291747`
+- digest: `sha256:3c435fe78bb048d6c9ebb4a2e06e40880971edfae00a1425ae42506cadfbf161`
+
+A fresh real supervisor cycle produced:
+
+`wc2_liveness status=SUMMARY contexts=17 status_counts=no_prepared_receipt:17 reason_counts=no_preoutcome_prepared_receipt_for_source_freeze:17 POLICY_UNCHANGED=YES HISTORICAL_BACKFILL=NO REAL_CAPITAL=0`
+
+The marker count advanced from **1 to 2** during the acceptance window.
+
+The WC2 forward-policy and collection-protocol files were SHA256-identical before and after the live proof.
+
+Product remained unchanged at:
+
+`d343c4b2d10489a88f614bd58c9539be76029f80`.
+
+No Product deployment, historical rich backfill, synthetic forecast/message activity, policy relaxation or real-money authority was used.
+
+---
+
+## 9. F1 closure boundary
+
+F1 is fully closed.
+
+The accepted conclusion is:
 
 **WC2 forecast silence is currently correct, not a proven issuance bug.**
 
-Remaining F1 operation before full phase close:
+Production now exposes deterministic reason telemetry that explains the silence without changing the issuance contract.
 
-- merge the accepted observability/audit code to main;
-- fast-forward the physical Development runtime owner through the accepted controlled sync path;
-- observe one real supervisor cycle containing the new `wc2_liveness status=SUMMARY` marker;
-- prove no unexpected forecast/message/backfill or REAL_CAPITAL change.
+The next exact frontier is:
 
-Only after that live observability activation is proven does F1 become fully closed and F2 become active.
+**F2 — Production Source-to-Message Backbone**
 
 No policy relaxation is authorized.  
 No historical backfill is authorized.  

@@ -4,10 +4,31 @@ Updated: 2026-09-26
 Project: Crypto Signal
 Baseline: crypto-signal-full-version-v1.0.0 (immutable)
 Active post-v1.0 program: v1.1 world-class product + market intelligence + Crypto Signal Intelligence Stream V1
-State: WC0_LIVE_PRODUCT_PARITY_ACCEPTED / WC1_24_7_DATA_RELIABILITY_ACCEPTED / WC2_ENGINEERING_FROZEN_EVIDENCE_ACCUMULATION_ACTIVE / WC4_CHAMPION_CHALLENGER_ENGINEERING_ACCEPTED_RESEARCH_ONLY / WC5_ENGINEERING_ACCEPTED_PRODUCT_DEPLOYED_HUMAN_USABILITY_NOT_MEASURED / WC6_SANDBOX_BOUNDARY_ACCEPTED_VENUE_EVIDENCE_EXTERNAL_DEPENDENCY / WC7_CURRENT_FRONTIER_PACKET_ACCEPTED_CURRENT_INSUFFICIENT_EVIDENCE / INTELLIGENCE_STREAM_V1_S0_S16_HISTORICAL_ACCEPTANCE_RETAINED / INTELLIGENCE_STREAM_V1_FINAL_F0_PASS_F1_LIVE_ACTIVATION_PENDING / CONTINUITY_PAUSED_BY_USER
+State: WC0_LIVE_PRODUCT_PARITY_ACCEPTED / WC1_24_7_DATA_RELIABILITY_ACCEPTED / WC2_ENGINEERING_FROZEN_EVIDENCE_ACCUMULATION_ACTIVE / WC4_CHAMPION_CHALLENGER_ENGINEERING_ACCEPTED_RESEARCH_ONLY / WC5_ENGINEERING_ACCEPTED_PRODUCT_DEPLOYED_HUMAN_USABILITY_NOT_MEASURED / WC6_SANDBOX_BOUNDARY_ACCEPTED_VENUE_EVIDENCE_EXTERNAL_DEPENDENCY / WC7_CURRENT_FRONTIER_PACKET_ACCEPTED_CURRENT_INSUFFICIENT_EVIDENCE / INTELLIGENCE_STREAM_V1_S0_S16_HISTORICAL_ACCEPTANCE_RETAINED / INTELLIGENCE_STREAM_V1_FINAL_F0_PASS_F1_PASS_F2_ACTIVE / CONTINUITY_PAUSED_BY_USER
 REAL_CAPITAL: 0
 
 ## Active v1.1 frontier — read before historical sections
+
+### 2026-09-26 — STREAM FINAL F1 PASS / F2 PRODUCTION SOURCE-TO-MESSAGE BACKBONE ACTIVE
+
+F1 is now fully closed, including physical live activation.
+
+Accepted evidence:
+- mechanical exact-source run `36251560197` proved `CORRECT_SILENCE` with 686 post-latest-forecast freezes, 0 prepared-required candidates, 0 candidate defects and 0 integrity errors;
+- PR #1348 merged the read-only audit plus deterministic `wc2_liveness` reason telemetry to main `71ff1ad4f2d1c9f58df65fab12a12c02754acfc6`;
+- controlled physical Development sync advanced `f0349a70c11046893cbabd88ab56ca4ca8c44a99 -> 71ff1ad4f2d1c9f58df65fab12a12c02754acfc6` with a clean fast-forward;
+- UID504 live activation run `36252043820` passed and observed a new real supervisor marker:
+  `wc2_liveness status=SUMMARY contexts=17 status_counts=no_prepared_receipt:17 reason_counts=no_preoutcome_prepared_receipt_for_source_freeze:17 POLICY_UNCHANGED=YES HISTORICAL_BACKFILL=NO REAL_CAPITAL=0`;
+- marker count advanced `1 -> 2`;
+- WC2 policy and collection-protocol hashes remained byte-identical across the live proof;
+- Product remained unchanged at `d343c4b2d10489a88f614bd58c9539be76029f80`;
+- artifact `stream-final-f1-live-activation-36252043820`, id `10909291747`, digest `sha256:3c435fe78bb048d6c9ebb4a2e06e40880971edfae00a1425ae42506cadfbf161`.
+
+F1 conclusion remains scientific correct silence, not a reason to loosen issuance policy.
+
+The sole active Stream final-completion frontier is now **F2 — Production Source-to-Message Backbone**. F2 must create one reusable source-projector contract that feeds the already accepted Source Event -> Story -> Analytical -> materiality -> Narrative -> immutable ledger -> SSE chain. It must not create a parallel messaging system.
+
+No historical rich backfill, no synthetic activity, no production-authority expansion. `REAL_CAPITAL=0`.
 
 ### 2026-09-26 — STREAM FINAL F1 MECHANICAL TRUTH PASS / LIVE OBSERVABILITY ACTIVATION PENDING
 
