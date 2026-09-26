@@ -7,6 +7,7 @@ import fcntl
 import sqlite3
 import sys
 import time
+from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -464,6 +465,8 @@ async def run(
         Exchange.BYBIT: BybitSpotAdapter(),
         Exchange.BINANCE: BinanceSpotAdapter(),
     }
+    wc2_status_counts: Counter[str] = Counter()
+    wc2_reason_counts: Counter[str] = Counter()
 
     for context in selected_plan.enabled_contexts:
         name = context.exchange.value
@@ -554,10 +557,17 @@ async def run(
                 )
                 return 1
 
+            reason_codes = tuple(
+                sorted(set(getattr(wc2_result, "reason_codes", ())))
+            )
+            wc2_status_counts[wc2_result.status.value] += 1
+            wc2_reason_counts.update(reason_codes)
+            reasons_text = ",".join(reason_codes) if reason_codes else "-"
             print(
                 f"wc2 provider={name} symbol={context.symbol} "
                 f"timeframe={context.timeframe} "
                 f"status={wc2_result.status.value} "
+                f"reasons={reasons_text} "
                 f"receipt={wc2_result.receipt_identity or '-'} "
                 f"forecast={wc2_result.forecast_identity or '-'} "
                 f"cohort={wc2_result.cohort_forecast_identity or '-'} "
@@ -578,6 +588,22 @@ async def run(
                     flush=True,
                 )
                 continue
+
+    if selected_wc2.enabled:
+        status_summary = ",".join(
+            f"{key}:{value}" for key, value in sorted(wc2_status_counts.items())
+        ) or "-"
+        reason_summary = ",".join(
+            f"{key}:{value}" for key, value in sorted(wc2_reason_counts.items())
+        ) or "-"
+        print(
+            "wc2_liveness status=SUMMARY "
+            f"contexts={sum(wc2_status_counts.values())} "
+            f"status_counts={status_summary} "
+            f"reason_counts={reason_summary} "
+            "POLICY_UNCHANGED=YES HISTORICAL_BACKFILL=NO REAL_CAPITAL=0",
+            flush=True,
+        )
 
     if selected_wc2.enabled:
         assert wc2_decision is not None
