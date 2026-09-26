@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Read-only F5 canonical Capital Story readiness audit.
 
 The audit inspects snapshot copies of canonical R21/R22 Epoch 2 paper truth and
@@ -14,7 +13,6 @@ import json
 import sqlite3
 from collections import Counter
 from contextlib import closing
-from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
