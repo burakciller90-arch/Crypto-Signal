@@ -1,5 +1,15 @@
 # PROJECT CHRONICLE
 
+## 2026-09-26 — Stream S14 hardening accepted; S15 end-to-end product acceptance becomes active
+
+S14 closes the all-day messaging hardening gate. PR #1296 adds bounded feed virtualization, long-history anchor preservation, keyboard/focus improvements, ARIA feed semantics, reduced-motion behavior and responsive/font-scale hardening without changing immutable Stream truth.
+
+Exact-head UID504 run `36220217282` passed focused S14 acceptance, whole-repository regression, real Chromium 10,000-message desktop/mobile rendering and Development non-mutation at head `78baab8a9ed8b9b2b019c427455c5a587a40976c`. The accepted browser probe held 10,000 total messages while rendering only 180 message nodes, preserved prepend and expanded-message anchors, restored focus, honored reduced motion and kept exact 430px mobile whole-page width. Artifact: `stream-s14-visual-snapshot-36220217282`.
+
+The 10k fixture is explicit non-live UI acceptance and creates no market truth. S14 adds no exchange authority and no real capital. REAL_CAPITAL=0.
+
+The active frontier is S15 End-to-End Product Acceptance: prove one coherent live product story from backend event -> automatic message -> optional exactly-once sound -> expansion -> evidence/proof -> immutable story update -> traceable virtual-capital consequence.
+
 ## 2026-09-26 — Stream S13 Sound and Notifications accepted; S14 hardening becomes active
 
 S13 completes the “someone sent me a message” delivery layer without changing canonical Stream truth. PR #1294 adds an original synthesized Crypto Signal chime, explicit user-gesture audio unlock, persisted sound settings, all/important/Decision+Capital/silent modes and optional browser notifications that require explicit permission.
