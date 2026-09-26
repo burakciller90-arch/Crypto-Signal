@@ -147,7 +147,7 @@ def _seed_signal_freeze(
             }
         )
 
-    signal_identity = str(getattr(forecast, "signal_freeze_identity"))
+    signal_identity = str(forecast.signal_freeze_identity)
     geometry_identity = _sha("s15-geometry")
     bundle = {
         "schema_version": "decision-freeze-v1/1",
