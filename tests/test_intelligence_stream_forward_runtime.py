@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+import sqlite3
 from pathlib import Path
 
 from test_wc2_live_source_adapter import _bundle
@@ -13,6 +15,10 @@ from crypto_signal.product.intelligence_stream_forward_runtime import (
     StreamForwardProjectionDisposition,
 )
 from crypto_signal.product.intelligence_stream_ledger import IntelligenceStreamLedger
+from crypto_signal.product.intelligence_stream_narrative import (
+    StreamNarrativeRewriteRequest,
+    StreamNarrativeText,
+)
 from crypto_signal.product.intelligence_stream_narrative_ledger import (
     IntelligenceStreamNarrativeLedger,
 )
@@ -20,6 +26,28 @@ from crypto_signal.product.intelligence_stream_read_model import (
     IntelligenceStreamReadModel,
     StreamMessageQuery,
 )
+
+
+class _PassthroughLocalRewriter:
+    rewriter_identity = "f" * 64
+    rewriter_version = "stream-f7-test-rewriter/1"
+
+    def rewrite(
+        self,
+        request: StreamNarrativeRewriteRequest,
+    ) -> StreamNarrativeText:
+        return request.deterministic_text
+
+
+class _ExplodingLocalRewriter:
+    rewriter_identity = "d" * 64
+    rewriter_version = "stream-f7-test-rewriter/1"
+
+    def rewrite(
+        self,
+        request: StreamNarrativeRewriteRequest,
+    ) -> StreamNarrativeText:
+        raise RuntimeError("simulated local model outage")
 
 
 def _issuance(tmp_path: Path, *, issued_at_ms: int):
@@ -67,6 +95,74 @@ def test_forward_runtime_initializes_full_schema_and_publishes_same_cycle(
     assert page.items[0]["symbol"] == issuance.forecast.symbol
     assert page.items[0]["narrative_identity"] == result.narrative_identity
     assert page.real_capital == 0
+
+
+def test_forward_runtime_persists_guarded_local_rewrite_provenance(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / "stream-local-rewrite.sqlite3"
+    rewriter = _PassthroughLocalRewriter()
+    runtime = IntelligenceStreamForwardRuntime(path, rewriter=rewriter)
+    issuance = _issuance(
+        tmp_path,
+        issued_at_ms=_bundle().signal_decision.as_of_ms + 100,
+    )
+    runtime.ensure_activated(activated_at_ms=issuance.forecast.issued_at_ms - 1)
+
+    result = runtime.project_issuance(issuance)
+
+    assert result.narrative_identity is not None
+    with sqlite3.connect(path) as connection:
+        row = connection.execute(
+            """
+            SELECT source_kind, payload_json
+            FROM stream_narrative_messages
+            WHERE narrative_identity = ?
+            """,
+            (result.narrative_identity,),
+        ).fetchone()
+    assert row is not None
+    assert row[0] == "local_rewrite"
+    payload = json.loads(str(row[1]))
+    assert payload["rewrite_engine_identity"] == rewriter.rewriter_identity
+    assert payload["rewrite_engine_version"] == rewriter.rewriter_version
+    assert payload["original_text_preserved"] is True
+    assert payload["production_authority"] is False
+    assert payload["real_capital"] == 0
+
+
+def test_forward_runtime_model_outage_publishes_deterministic_fallback(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / "stream-local-rewrite-outage.sqlite3"
+    rewriter = _ExplodingLocalRewriter()
+    runtime = IntelligenceStreamForwardRuntime(path, rewriter=rewriter)
+    issuance = _issuance(
+        tmp_path,
+        issued_at_ms=_bundle().signal_decision.as_of_ms + 100,
+    )
+    runtime.ensure_activated(activated_at_ms=issuance.forecast.issued_at_ms - 1)
+
+    result = runtime.project_issuance(issuance)
+
+    assert result.narrative_identity is not None
+    with sqlite3.connect(path) as connection:
+        row = connection.execute(
+            """
+            SELECT source_kind, payload_json
+            FROM stream_narrative_messages
+            WHERE narrative_identity = ?
+            """,
+            (result.narrative_identity,),
+        ).fetchone()
+    assert row is not None
+    assert row[0] == "deterministic_fallback"
+    payload = json.loads(str(row[1]))
+    assert payload["fallback_reason_codes"] == ["rewriter_exception"]
+    assert payload["rewrite_engine_identity"] == rewriter.rewriter_identity
+    assert payload["validation"]["valid"] is True
+    assert payload["production_authority"] is False
+    assert payload["real_capital"] == 0
 
 
 def test_forward_runtime_replay_is_idempotent(tmp_path: Path) -> None:

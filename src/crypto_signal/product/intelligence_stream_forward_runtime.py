@@ -50,6 +50,7 @@ from crypto_signal.product.intelligence_stream_models import (
     build_stream_decision_context,
 )
 from crypto_signal.product.intelligence_stream_narrative import (
+    StreamNarrativeRewriter,
     build_stream_narrative_plan,
     render_stream_narrative,
 )
@@ -106,8 +107,14 @@ class IntelligenceStreamForwardRuntime:
     boundary may become Stream narratives.
     """
 
-    def __init__(self, path: Path) -> None:
+    def __init__(
+        self,
+        path: Path,
+        *,
+        rewriter: StreamNarrativeRewriter | None = None,
+    ) -> None:
         self.path = path
+        self.rewriter = rewriter
         self.source_ledger = IntelligenceStreamLedger(path)
         self.message_ledger = IntelligenceStreamMessageLedger(path)
         self.story_ledger = IntelligenceStreamStoryLedger(path)
@@ -214,6 +221,7 @@ class IntelligenceStreamForwardRuntime:
             view,
             projected.fact_bundle,
             change_set,
+            rewriter=self.rewriter,
         )
         narrative_disposition = self.narrative_ledger.append_narrative(
             plan,
@@ -403,6 +411,7 @@ class IntelligenceStreamForwardRuntime:
             view,
             fact_bundle,
             change_set,
+            rewriter=self.rewriter,
         )
         narrative_disposition = self.narrative_ledger.append_narrative(
             plan,

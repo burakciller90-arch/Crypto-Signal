@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+import sqlite3
 from pathlib import Path
 
 import pytest
@@ -18,6 +20,10 @@ from crypto_signal.product.intelligence_stream_ledger import (
 from crypto_signal.product.intelligence_stream_models import (
     build_stream_decision_context,
 )
+from crypto_signal.product.intelligence_stream_narrative import (
+    StreamNarrativeRewriteRequest,
+    StreamNarrativeText,
+)
 from crypto_signal.product.intelligence_stream_policy import (
     build_stream_materiality_policy,
     evaluate_stream_materiality,
@@ -30,6 +36,17 @@ from crypto_signal.product.intelligence_stream_production_projector import (
 from crypto_signal.product.intelligence_stream_projectors import (
     project_forecast_issuance,
 )
+
+
+class _PassthroughLocalRewriter:
+    rewriter_identity = "e" * 64
+    rewriter_version = "stream-f7-test-rewriter/1"
+
+    def rewrite(
+        self,
+        request: StreamNarrativeRewriteRequest,
+    ) -> StreamNarrativeText:
+        return request.deterministic_text
 
 
 def _issuance(tmp_path: Path):
@@ -107,6 +124,39 @@ def test_f2_contract_captures_required_common_projector_truth(
     )
     assert contract.production_authority is False
     assert contract.real_capital == 0
+
+
+def test_f7_rewriter_flows_through_generic_production_backbone(
+    tmp_path: Path,
+) -> None:
+    path, context, projected = _projected(tmp_path)
+    rewriter = _PassthroughLocalRewriter()
+
+    source = IntelligenceStreamLedger(path)
+    source.append_issuance_bundle(context, projected.source_event)
+    result = IntelligenceStreamProductionProjector(
+        path,
+        rewriter=rewriter,
+    ).project("r20_5_forecast_issued", projected)
+
+    assert result.narrative_identity is not None
+    with sqlite3.connect(path) as connection:
+        row = connection.execute(
+            """
+            SELECT source_kind, payload_json
+            FROM stream_narrative_messages
+            WHERE narrative_identity = ?
+            """,
+            (result.narrative_identity,),
+        ).fetchone()
+    assert row is not None
+    assert row[0] == "local_rewrite"
+    payload = json.loads(str(row[1]))
+    assert payload["rewrite_engine_identity"] == rewriter.rewriter_identity
+    assert payload["rewrite_engine_version"] == rewriter.rewriter_version
+    assert payload["original_text_preserved"] is True
+    assert payload["production_authority"] is False
+    assert payload["real_capital"] == 0
 
 
 def test_f2_backbone_reuses_canonical_s3_s4_s5_chain_and_is_idempotent(

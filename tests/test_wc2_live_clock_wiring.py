@@ -691,6 +691,68 @@ def test_stream_clock_requires_explicit_enable_and_wc2_owner(tmp_path: Path) -> 
         clock.build_stream_clock_config(_args(stream_enabled=True))
 
 
+def test_stream_local_rewrite_requires_explicit_safe_runtime_config(
+    tmp_path: Path,
+) -> None:
+    stream = tmp_path / "stream.sqlite3"
+    args = _args(stream_enabled=True, stream_ledger=stream)
+
+    deterministic = clock.build_stream_clock_config(args, environ={})
+    assert deterministic.local_rewrite_config is None
+
+    enabled = clock.build_stream_clock_config(
+        args,
+        environ={
+            clock.STREAM_LOCAL_REWRITE_ENABLED_ENV: "1",
+            clock.STREAM_LOCAL_REWRITE_MODEL_ENV: "qwen3:8b",
+        },
+    )
+    assert enabled.local_rewrite_config is not None
+    assert (
+        enabled.local_rewrite_config.base_url
+        == "http://127.0.0.1:11434/v1"
+    )
+    assert enabled.local_rewrite_config.temperature == 0.25
+    assert len(enabled.local_rewrite_config.rewriter_identity) == 64
+
+    with pytest.raises(ValueError, match="explicit local model"):
+        clock.build_stream_clock_config(
+            args,
+            environ={clock.STREAM_LOCAL_REWRITE_ENABLED_ENV: "1"},
+        )
+
+    with pytest.raises(ValueError, match="loopback-only"):
+        clock.build_stream_clock_config(
+            args,
+            environ={
+                clock.STREAM_LOCAL_REWRITE_ENABLED_ENV: "1",
+                clock.STREAM_LOCAL_REWRITE_MODEL_ENV: "qwen3:8b",
+                clock.STREAM_LOCAL_REWRITE_BASE_URL_ENV: (
+                    "https://example.com/v1"
+                ),
+            },
+        )
+
+    with pytest.raises(ValueError, match="temperature"):
+        clock.build_stream_clock_config(
+            args,
+            environ={
+                clock.STREAM_LOCAL_REWRITE_ENABLED_ENV: "1",
+                clock.STREAM_LOCAL_REWRITE_MODEL_ENV: "qwen3:8b",
+                clock.STREAM_LOCAL_REWRITE_TEMPERATURE_ENV: "0.31",
+            },
+        )
+
+    with pytest.raises(ValueError, match="explicit --stream-enabled"):
+        clock.build_stream_clock_config(
+            _args(),
+            environ={
+                clock.STREAM_LOCAL_REWRITE_ENABLED_ENV: "1",
+                clock.STREAM_LOCAL_REWRITE_MODEL_ENV: "qwen3:8b",
+            },
+        )
+
+
 def test_stream_market_family_config_requires_explicit_complete_source(
     tmp_path: Path,
 ) -> None:

@@ -4,10 +4,12 @@ from __future__ import annotations
 import argparse
 import asyncio
 import fcntl
+import os
 import sqlite3
 import sys
 import time
 from collections import Counter
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -72,6 +74,10 @@ from crypto_signal.product.intelligence_stream_family_sources import (
 from crypto_signal.product.intelligence_stream_forward_runtime import (
     IntelligenceStreamForwardRuntime,
 )
+from crypto_signal.product.intelligence_stream_local_rewriter import (
+    LocalNarrativeRewriteConfig,
+    OpenAICompatibleLocalNarrativeRewriter,
+)
 from crypto_signal.product.intelligence_stream_production_projector import (
     IntelligenceStreamProductionProjector,
 )
@@ -85,6 +91,12 @@ BASE = Path("/Users/crypto-signal-agent/Crypto-Signal")
 DEFAULT_DB = BASE / "runtime" / "ledger" / "live_signal_ledger.sqlite3"
 DEFAULT_CANDLE_CACHE = BASE / "runtime" / "data" / "live_base_15m_cache.sqlite3"
 PROVIDER_DIVERGENCE_LOOKBACK = 96
+STREAM_LOCAL_REWRITE_ENABLED_ENV = "CRYPTO_SIGNAL_STREAM_LOCAL_REWRITE_ENABLED"
+STREAM_LOCAL_REWRITE_MODEL_ENV = "CRYPTO_SIGNAL_STREAM_LOCAL_REWRITE_MODEL"
+STREAM_LOCAL_REWRITE_BASE_URL_ENV = "CRYPTO_SIGNAL_STREAM_LOCAL_REWRITE_BASE_URL"
+STREAM_LOCAL_REWRITE_TIMEOUT_ENV = "CRYPTO_SIGNAL_STREAM_LOCAL_REWRITE_TIMEOUT_SECONDS"
+STREAM_LOCAL_REWRITE_TEMPERATURE_ENV = "CRYPTO_SIGNAL_STREAM_LOCAL_REWRITE_TEMPERATURE"
+STREAM_LOCAL_REWRITE_MAX_TOKENS_ENV = "CRYPTO_SIGNAL_STREAM_LOCAL_REWRITE_MAX_TOKENS"
 
 
 @dataclass(frozen=True, slots=True)
@@ -171,6 +183,7 @@ class StreamClockConfig:
     market_tape_path: Path | None = None
     event_source_path: Path | None = None
     family_symbols: tuple[str, ...] = ()
+    local_rewrite_config: LocalNarrativeRewriteConfig | None = None
 
     def __post_init__(self) -> None:
         if self.enabled and self.ledger_path is None:
@@ -180,6 +193,7 @@ class StreamClockConfig:
             or self.market_tape_path is not None
             or self.event_source_path is not None
             or self.family_symbols
+            or self.local_rewrite_config is not None
         ):
             raise ValueError(
                 "Stream options require explicit --stream-enabled"
@@ -287,7 +301,60 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def build_stream_clock_config(args: argparse.Namespace) -> StreamClockConfig:
+def build_stream_local_rewrite_config(
+    environ: Mapping[str, str],
+) -> LocalNarrativeRewriteConfig | None:
+    enabled_raw = environ.get(STREAM_LOCAL_REWRITE_ENABLED_ENV, "").strip().lower()
+    if enabled_raw in {"", "0", "false", "no", "off"}:
+        return None
+    if enabled_raw not in {"1", "true", "yes", "on"}:
+        raise ValueError(
+            "Stream local rewrite enable flag must be an explicit boolean"
+        )
+
+    model = environ.get(STREAM_LOCAL_REWRITE_MODEL_ENV, "").strip()
+    if not model:
+        raise ValueError(
+            "enabled Stream local rewrite requires explicit local model"
+        )
+    base_url = environ.get(
+        STREAM_LOCAL_REWRITE_BASE_URL_ENV,
+        "http://127.0.0.1:11434/v1",
+    ).strip()
+    try:
+        timeout_seconds = float(
+            environ.get(STREAM_LOCAL_REWRITE_TIMEOUT_ENV, "8.0")
+        )
+        temperature = float(
+            environ.get(STREAM_LOCAL_REWRITE_TEMPERATURE_ENV, "0.25")
+        )
+        max_tokens = int(
+            environ.get(STREAM_LOCAL_REWRITE_MAX_TOKENS_ENV, "1400")
+        )
+    except ValueError as exc:
+        raise ValueError(
+            "invalid Stream local rewrite numeric configuration"
+        ) from exc
+    if temperature > 0.3:
+        raise ValueError(
+            "Stream local rewrite runtime temperature must remain <= 0.3"
+        )
+    return LocalNarrativeRewriteConfig(
+        model=model,
+        base_url=base_url,
+        timeout_seconds=timeout_seconds,
+        temperature=temperature,
+        max_tokens=max_tokens,
+    )
+
+
+def build_stream_clock_config(
+    args: argparse.Namespace,
+    *,
+    environ: Mapping[str, str] | None = None,
+) -> StreamClockConfig:
+    selected_environ: Mapping[str, str] = {} if environ is None else environ
+    local_rewrite_config = build_stream_local_rewrite_config(selected_environ)
     family_symbols_raw = getattr(args, "stream_family_symbols", None)
     family_symbols = (
         ()
@@ -308,6 +375,7 @@ def build_stream_clock_config(args: argparse.Namespace) -> StreamClockConfig:
         market_tape_path=getattr(args, "stream_market_tape", None),
         event_source_path=getattr(args, "stream_event_source", None),
         family_symbols=family_symbols,
+        local_rewrite_config=local_rewrite_config,
     )
 
 
@@ -507,12 +575,21 @@ async def run(
     stream_capital_activation_identity: str | None = None
     if selected_stream.enabled:
         assert selected_stream.ledger_path is not None
+        local_rewriter = (
+            None
+            if selected_stream.local_rewrite_config is None
+            else OpenAICompatibleLocalNarrativeRewriter(
+                selected_stream.local_rewrite_config
+            )
+        )
         try:
             stream_runtime = IntelligenceStreamForwardRuntime(
-                selected_stream.ledger_path
+                selected_stream.ledger_path,
+                rewriter=local_rewriter,
             )
             stream_family_projector = IntelligenceStreamProductionProjector(
-                selected_stream.ledger_path
+                selected_stream.ledger_path,
+                rewriter=local_rewriter,
             )
             stream_activation_at_ms = time.time_ns() // 1_000_000
             stream_activation = stream_runtime.ensure_activated(
@@ -565,6 +642,20 @@ async def run(
             "HISTORICAL_BACKFILL=NO REAL_CAPITAL=0",
             flush=True,
         )
+        if local_rewriter is None:
+            print(
+                "stream_rewrite status=DISABLED mode=deterministic "
+                "REAL_CAPITAL=0",
+                flush=True,
+            )
+        else:
+            print(
+                "stream_rewrite status=ENABLED transport=loopback "
+                f"rewriter_identity={local_rewriter.rewriter_identity} "
+                f"rewriter_version={local_rewriter.rewriter_version} "
+                "DETERMINISTIC_FALLBACK=YES REAL_CAPITAL=0",
+                flush=True,
+            )
 
         if stream_capital_activation_identity is not None:
             assert selected_wc2.epoch2_path is not None
@@ -1161,7 +1252,7 @@ def main() -> int:
     args = parse_args()
     try:
         wc2_config = build_wc2_clock_config(args)
-        stream_config = build_stream_clock_config(args)
+        stream_config = build_stream_clock_config(args, environ=os.environ)
     except ValueError as exc:
         print(f"LIVE_CLOCK_CONFIG_ERROR={exc}", file=sys.stderr, flush=True)
         return 2
