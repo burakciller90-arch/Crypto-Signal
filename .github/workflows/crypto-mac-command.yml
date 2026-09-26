@@ -96,6 +96,26 @@ jobs:
           test "$WORKSPACE_HEAD" = "$GITHUB_SHA"
           echo "WC2_POLICY_EXACT_WORKFLOW_SOURCE_PASS=YES"
 
+      - name: CHECKOUT EXACT VISUAL SNAPSHOT SOURCE
+        if: steps.parse.outputs.command == 'visualsnapshot'
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          clean: true
+          fetch-depth: 1
+
+      - name: VERIFY EXACT VISUAL SNAPSHOT SOURCE
+        if: steps.parse.outputs.command == 'visualsnapshot'
+        shell: bash
+        run: |
+          set -euo pipefail
+          WORKSPACE_HEAD="$(git -C "$GITHUB_WORKSPACE" rev-parse HEAD)"
+          echo "VISUAL_SNAPSHOT_WORKSPACE_HEAD=$WORKSPACE_HEAD"
+          echo "VISUAL_SNAPSHOT_WORKFLOW_SHA=$GITHUB_SHA"
+          test "$WORKSPACE_HEAD" = "$GITHUB_SHA"
+          test -f "$GITHUB_WORKSPACE/ops/capture_chromium_viewport.py"
+          echo "VISUAL_SNAPSHOT_EXACT_SOURCE_PASS=YES"
+
       - name: CHECKOUT EXACT GALACTECH PREVIEW SOURCE
         if: steps.parse.outputs.command == 'galactechpreview'
         uses: actions/checkout@v4

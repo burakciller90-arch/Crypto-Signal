@@ -173,6 +173,11 @@ def test_visualsnapshot_command_uses_accepted_cdp_and_uploads_artifact() -> None
     assert "dashboardstart504|visualcleanup|visualsnapshot|galactechpreview" in workflow
     assert "- name: GALACTECH VISUAL SNAPSHOT UID504" in workflow
     assert "steps.parse.outputs.command == 'visualsnapshot'" in workflow
+    assert "- name: CHECKOUT EXACT VISUAL SNAPSHOT SOURCE" in workflow
+    assert "- name: VERIFY EXACT VISUAL SNAPSHOT SOURCE" in workflow
+    assert 'ref: ${{ github.sha }}' in workflow
+    assert "VISUAL_SNAPSHOT_EXACT_SOURCE_PASS=YES" in workflow
+    assert 'test -f "$GITHUB_WORKSPACE/ops/capture_chromium_viewport.py"' in workflow
     assert "/usr/sbin/screencapture -x -l" in workflow
     assert "BROWSER_CAPTURE_BACKEND=CHROMIUM_CDP" in workflow
     assert "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" in workflow
