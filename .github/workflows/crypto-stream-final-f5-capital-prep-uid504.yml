@@ -28,7 +28,7 @@ jobs:
         run: |
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "${GITHUB_SHA}"
-          PY="/opt/homebrew/bin/python3.12"
+          PY="/Volumes/Crypto-504/Crypto-Signal/Development/.venv/bin/python"
           test -x "$PY"
           "$PY" -m pytest -q tests/test_stream_f5_capital_readiness_audit.py
           "$PY" -m ruff check             ops/audit_stream_f5_capital_readiness.py             tests/test_stream_f5_capital_readiness_audit.py
@@ -58,7 +58,7 @@ jobs:
           test -f "$SRC_EPOCH2"
           test -f "$SRC_STREAM"
 
-          SRC_EPOCH2="$SRC_EPOCH2" SRC_STREAM="$SRC_STREAM" SNAP="$SNAP"           /opt/homebrew/bin/python3.12 - <<'PY'
+          SRC_EPOCH2="$SRC_EPOCH2" SRC_STREAM="$SRC_STREAM" SNAP="$SNAP"           /Volumes/Crypto-504/Crypto-Signal/Development/.venv/bin/python - <<'PY'
           from __future__ import annotations
           import hashlib
           import os
@@ -124,7 +124,7 @@ jobs:
               print(f"F5_STABLE_SNAPSHOT_PASS={label}")
           PY
 
-          /opt/homebrew/bin/python3.12 ops/audit_stream_f5_capital_readiness.py             --epoch2 "$SNAP/epoch2.sqlite3"             --stream "$SNAP/stream.sqlite3"             --output "$OUT/capital-readiness.json"             | tee "$OUT/capital-readiness.log"
+          /Volumes/Crypto-504/Crypto-Signal/Development/.venv/bin/python ops/audit_stream_f5_capital_readiness.py             --epoch2 "$SNAP/epoch2.sqlite3"             --stream "$SNAP/stream.sqlite3"             --output "$OUT/capital-readiness.json"             | tee "$OUT/capital-readiness.log"
 
           test -z "$(git -C "$DEV" status --porcelain)"
           test -z "$(git -C "$PRODUCT" status --porcelain)"
