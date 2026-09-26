@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import sqlite3
+from pathlib import Path
 
 import pytest
-from pathlib import Path
 
 from crypto_signal.intelligence.confluence_matrix_v2 import ConfluenceFamily
 from crypto_signal.ledger.serialization import canonical_sha256
@@ -19,12 +19,12 @@ from crypto_signal.product.intelligence_stream_models import (
     StreamCategory,
     StreamImportance,
 )
+from crypto_signal.product.intelligence_stream_production_projector import (
+    IntelligenceStreamProductionProjector,
+)
 from crypto_signal.product.intelligence_stream_read_model import (
     IntelligenceStreamReadModel,
     StreamMessageQuery,
-)
-from crypto_signal.product.intelligence_stream_production_projector import (
-    IntelligenceStreamProductionProjector,
 )
 
 
