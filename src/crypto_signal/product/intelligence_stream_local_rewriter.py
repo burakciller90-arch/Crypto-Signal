@@ -209,7 +209,22 @@ def _chat_payload(
         "temperature": config.temperature,
         "max_tokens": config.max_tokens,
         "reasoning_effort": "none",
-        "response_format": {"type": "json_object"},
+        "response_format": {
+            "type": "json_schema",
+            "json_schema": {
+                "name": "stream_narrative_text",
+                "strict": True,
+                "schema": {
+                    "type": "object",
+                    "properties": {
+                        key: {"type": "string"}
+                        for key in sorted(_REQUIRED_TEXT_KEYS)
+                    },
+                    "required": sorted(_REQUIRED_TEXT_KEYS),
+                    "additionalProperties": False,
+                },
+            },
+        },
         "stream": False,
     }
 
