@@ -9,8 +9,9 @@ The immutable release baseline is `crypto-signal-full-version-v1.0.0`. Active de
 For exact current state, **do not treat this README as the authoritative HEAD/runtime snapshot**. Read `READ_FIRST_CRYPTO_SIGNAL.md`, then `CURRENT_STATUS.md`, the newest relevant `PROJECT_CHRONICLE.md` entry, and mechanically inspect Git/runtime state.
 
 Current program facts recorded by the canonical state documents:
-- the existing GALACTECH V2 interface is the deployed Product baseline/fallback;
-- the sole current frontend/product program is **Intelligence Stream V1**;
+- **Intelligence Stream V1 is the deployed Product root**;
+- GALACTECH V2 remains the explicit rollback/fallback surface at `/galactech`;
+- the accepted frontend/product program is **Intelligence Stream V1**;
 - **S0 authority/supersession freeze is PASS**;
 - **S1 Stream-only backend capability audit is PASS**;
 - **S2 Canonical Stream Event & Message Model is PASS**;
@@ -27,7 +28,8 @@ Current program facts recorded by the canonical state documents:
 - **S13 Sound and Notifications is PASS**;
 - **S14 Performance, Accessibility and Long-Session Stability is PASS**;
 - **S15 End-to-End Product Acceptance is PASS**;
-- **S16 Controlled Cutover is ACTIVE**;
+- **S16 Controlled Cutover is PASS**;
+- **Intelligence Stream V1 S0-S16 is COMPLETE / ACCEPTED**; there is no remaining active Stream V1 frontend stage;
 - the previous M0→M7 multi-screen frontend roadmap is historical/superseded;
 - WC2 frozen evidence accumulation remains active;
 - WC5 broad human <=10-second usability remains `NOT_MEASURED` until actually measured;
