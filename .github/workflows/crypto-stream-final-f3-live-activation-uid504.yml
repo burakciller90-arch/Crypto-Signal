@@ -13,7 +13,37 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  diagnose:
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          clean: true
+          fetch-depth: 2
+      - name: Read F3 runtime diagnostics
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          echo "=== supervisor pid ==="
+          cat "$ROOT/ssd-service-supervisor.pid" 2>/dev/null || true
+          echo "=== supervisor tail ==="
+          tail -120 "$ROOT/ServiceLogs/supervisor.log" 2>/dev/null || true
+          echo "=== live out tail ==="
+          tail -160 "$ROOT/ServiceLogs/live.out.log" 2>/dev/null || true
+          echo "=== live err tail ==="
+          tail -160 "$ROOT/ServiceLogs/live.err.log" 2>/dev/null || true
+          echo "=== snapshot out tail ==="
+          tail -80 "$ROOT/ServiceLogs/market-tape-snapshot.out.log" 2>/dev/null || true
+          echo "=== snapshot err tail ==="
+          tail -80 "$ROOT/ServiceLogs/market-tape-snapshot.err.log" 2>/dev/null || true
+          echo "F3_RUNTIME_DIAGNOSTIC_READ_ONLY=YES"
+          echo "REAL_CAPITAL=0"
+
   verify:
+    needs: diagnose
     runs-on: [self-hosted, crypto-signal, uid504]
     timeout-minutes: 5
     steps:
