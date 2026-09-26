@@ -1974,6 +1974,11 @@ jobs:
           from pathlib import Path
           data=json.loads(Path("/tmp/crypto-product-health.json").read_text())
           assert data.get("status") == "ok"
+          assert data.get("product_root") == "stream"
+          assert data.get("stream_root_active") is True
+          assert data.get("stream_preview_route") == "/stream-preview"
+          assert data.get("galactech_fallback_route") == "/galactech"
+          assert data.get("rollback_mode") == "galactech"
           assert data.get("real_capital") == 0
           assert data.get("read_only") is True
           assert data.get("ledger_present") is True
@@ -2011,13 +2016,15 @@ jobs:
           assert data.get("probability_status") == "not_calibrated"
           PY
           curl -fsS --max-time 5 http://127.0.0.1:48700/ > /tmp/crypto-product-index.html
+          curl -fsS --max-time 5 http://127.0.0.1:48700/stream-preview > /tmp/crypto-product-stream.html
           curl -fsS --max-time 5 http://127.0.0.1:48700/galactech > /tmp/crypto-product-galactech.html
           curl -fsS --max-time 5 http://127.0.0.1:48700/legacy > /tmp/crypto-product-legacy.html
-          cmp /tmp/crypto-product-index.html /tmp/crypto-product-galactech.html
-          grep -F 'data-ui-version="galactech-v2-intelligence-first-tr"' /tmp/crypto-product-index.html >/dev/null
+          cmp /tmp/crypto-product-index.html /tmp/crypto-product-stream.html
+          grep -F 'data-ui-version="crypto-signal-stream-v1-s14"' /tmp/crypto-product-index.html >/dev/null
+          grep -F 'GALACTECH · INTELLIGENCE STREAM' /tmp/crypto-product-index.html >/dev/null
+          grep -F '<span>REAL_CAPITAL</span><strong>0</strong>' /tmp/crypto-product-index.html >/dev/null
+          grep -F 'data-ui-version="galactech-v2-intelligence-first-tr"' /tmp/crypto-product-galactech.html >/dev/null
           grep -F 'data-ui-version="galactech-command-center-v1"' /tmp/crypto-product-legacy.html >/dev/null
-          grep -F 'R25 / OPERASYONEL DOĞRULUK' /tmp/crypto-product-index.html >/dev/null
-          grep -F 'REAL_CAPITAL=0' /tmp/crypto-product-index.html >/dev/null
 
           fetch_live_json http://127.0.0.1:48700/api/r25/operational-truth /tmp/crypto-r25-operational.json
           /usr/bin/python3 - <<'PY'
@@ -2031,7 +2038,8 @@ jobs:
           assert data.get("canonical_epoch2_mutation_authorized") is False
           PY
           echo "INTELLIGENCE_CENTER_LIVE_PASS=YES"
-          echo "GALACTECH_ROOT_CUTOVER_LIVE_PASS=YES"
+          echo "STREAM_ROOT_CUTOVER_LIVE_PASS=YES"
+          echo "GALACTECH_FALLBACK_LIVE_PASS=YES"
           echo "R25_OPERATIONAL_TRUTH_LIVE_PASS=YES"
 
           PYTHONPATH="$REPO/src" "$REPO/.venv/bin/python" "$REPO/ops/r11_runtime_acceptance.py"             --root "$ROOT" --min-free-bytes 1073741824             | tee /tmp/crypto-wc0-r11-runtime.log
