@@ -249,6 +249,34 @@ Product remained unchanged at:
 
 No Product deployment, historical rich backfill, synthetic forecast/message activity, policy relaxation or real-money authority was used.
 
+### 8.1 Replay-semantic live reconciliation
+
+The first live observability marker after activation exposed one telemetry-only defect: an already-frozen replay source could reach prepared-receipt lookup before the same eligibility predicate used for a fresh source, so an ineligible source could be labelled `no_prepared_receipt`.
+
+PR #1352 corrected this ordering without changing the eligibility predicate or any scientific threshold.
+
+Merged main:
+
+`9f747628f4c7b137362e8d184e4b61ce166b39ad`
+
+UID504 live verification:
+
+**36252540997**
+
+Fresh real supervisor summary:
+
+`wc2_liveness status=SUMMARY contexts=17 status_counts=skipped_ineligible_source:17 reason_counts=source_not_directional_with_frozen_geometry:17 POLICY_UNCHANGED=YES HISTORICAL_BACKFILL=NO REAL_CAPITAL=0`
+
+The physical Development checkout advanced from `71ff1ad4f2d1c9f58df65fab12a12c02754acfc6` to `9f747628f4c7b137362e8d184e4b61ce166b39ad`; Product remained `d343c4b2d10489a88f614bd58c9539be76029f80`.
+
+Artifact:
+
+- `stream-final-f1-replay-live-36252540997`
+- artifact id: `10910031464`
+- digest: `sha256:b71d4b4e7d058c7670c287107ef8495ce0675b19a6f3b29712b5a58c8208c893`
+
+The earlier live `no_prepared_receipt` marker is therefore historical evidence of the observability bug, not evidence of an eligible forecast gap. F1 remains `CORRECT_SILENCE`.
+
 ---
 
 ## 9. F1 closure boundary
