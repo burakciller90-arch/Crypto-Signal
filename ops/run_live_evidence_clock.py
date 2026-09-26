@@ -59,8 +59,14 @@ from crypto_signal.paper.epoch2_accounting import (
 )
 from crypto_signal.paper.shadow_cycle_manifest import R25ShadowCycleManifest
 from crypto_signal.paper.shadow_intent_journal import R25ShadowIntentJournal
+from crypto_signal.product.intelligence_stream_family_sources import (
+    build_geometry_family_snapshot_from_bundle,
+)
 from crypto_signal.product.intelligence_stream_forward_runtime import (
     IntelligenceStreamForwardRuntime,
+)
+from crypto_signal.product.intelligence_stream_production_projector import (
+    IntelligenceStreamProductionProjector,
 )
 
 BASE = Path("/Users/crypto-signal-agent/Crypto-Signal")
@@ -433,10 +439,14 @@ async def run(
         )
         return 1
     stream_runtime: IntelligenceStreamForwardRuntime | None = None
+    stream_family_projector: IntelligenceStreamProductionProjector | None = None
     if selected_stream.enabled:
         assert selected_stream.ledger_path is not None
         try:
             stream_runtime = IntelligenceStreamForwardRuntime(
+                selected_stream.ledger_path
+            )
+            stream_family_projector = IntelligenceStreamProductionProjector(
                 selected_stream.ledger_path
             )
             stream_activation = stream_runtime.ensure_activated(
@@ -506,6 +516,39 @@ async def run(
             f"lifecycle={result.lifecycle_disposition.value if result.lifecycle_disposition else '-'}",
             flush=True,
         )
+
+        if stream_family_projector is not None and result.bundle is not None:
+            assert result.frozen_at_ms is not None
+            try:
+                geometry_snapshot = build_geometry_family_snapshot_from_bundle(
+                    result.bundle,
+                    frozen_at_ms=result.frozen_at_ms,
+                )
+                geometry_projection = stream_family_projector.project_family(
+                    geometry_snapshot,
+                    activated_at_ms=result.frozen_at_ms,
+                )
+            except (OSError, TypeError, ValueError, sqlite3.Error) as exc:
+                print(
+                    f"stream_family projector=market_geometry_change "
+                    f"provider={name} symbol={context.symbol} "
+                    f"timeframe={context.timeframe} status=ERROR "
+                    f"error={type(exc).__name__}:{exc} "
+                    "FAIL_STOP=YES HISTORICAL_BACKFILL=NO REAL_CAPITAL=0",
+                    file=sys.stderr,
+                    flush=True,
+                )
+                return 1
+            print(
+                f"stream_family projector={geometry_projection.projector_id} "
+                f"provider={name} symbol={context.symbol} "
+                f"timeframe={context.timeframe} "
+                f"status={geometry_projection.disposition.value} "
+                f"source={geometry_projection.source_event_identity} "
+                f"narrative={geometry_projection.narrative_identity or '-'} "
+                "HISTORICAL_BACKFILL=NO REAL_CAPITAL=0",
+                flush=True,
+            )
 
         if selected_wc2.enabled:
             assert wc2_policy is not None
