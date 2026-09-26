@@ -1,4 +1,5 @@
 name: Crypto Stream Final F7 Live Acceptance UID504
+# Final exact-main acceptance only; intentionally outside stream/final-f7-* prep fanout.
 
 on:
   push:
