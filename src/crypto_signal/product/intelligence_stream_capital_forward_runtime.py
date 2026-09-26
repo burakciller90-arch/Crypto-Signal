@@ -34,7 +34,6 @@ from crypto_signal.ledger.serialization import (
     canonical_sha256,
     sha256_text,
 )
-from crypto_signal.paper.capital_science_bridge import assess_unified_decision_capital
 from crypto_signal.paper.canonical_sizing_events import CanonicalSizingEventLedger
 from crypto_signal.paper.canonical_vault_decisions import (
     CanonicalVaultDecisionDisposition,
@@ -42,6 +41,7 @@ from crypto_signal.paper.canonical_vault_decisions import (
     build_vault_decision,
     commit_canonical_hold,
 )
+from crypto_signal.paper.capital_science_bridge import assess_unified_decision_capital
 from crypto_signal.paper.epoch2_accounting import Epoch2CanonicalLedger
 from crypto_signal.paper.epochs import PaperVaultId
 from crypto_signal.paper.transaction_tape_atomic import R22Epoch2AtomicTape
