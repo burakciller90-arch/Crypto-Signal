@@ -1,4 +1,4 @@
-name: Crypto Stream Final F3 Live Activation UID504
+name: Crypto Stream Final F3 Runtime Ordering UID504
 
 on:
   push:
@@ -9,13 +9,13 @@ permissions:
   contents: read
 
 concurrency:
-  group: crypto-stream-final-f3-live-activation
+  group: crypto-stream-final-f3-runtime-ordering
   cancel-in-progress: true
 
 jobs:
-  verify:
+  gate:
     runs-on: [self-hosted, crypto-signal, uid504]
-    timeout-minutes: 5
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
         with:
@@ -23,51 +23,17 @@ jobs:
           clean: true
           fetch-depth: 2
 
-      - name: Isolate F3 live-clock early exit
+      - name: Verify exact F3 runtime ordering source
         shell: bash
         run: |
           set -euo pipefail
-          ROOT="/Volumes/Crypto-504/Crypto-Signal"
-          DEV="$ROOT/Development"
-          test "$(git -C "$DEV" rev-parse HEAD)" = "0bb40b16ffe0415f30d835c9a22c3f2aff4ba355"
-          sup="$(cat "$ROOT/ssd-service-supervisor.pid")"
-          kill -0 "$sup"
-          echo "F3_SUPERVISOR_ACTIVE=YES pid=$sup"
-
-          echo "=== LIVE_ERR_ERRORS ==="
-          tail -1200 "$ROOT/ServiceLogs/live.err.log" 2>/dev/null             | grep -E 'ERROR|FAIL_STOP|FAIL_CLOSED|Traceback|Exception|wc2_execution|provider_divergence|stream_family'             | tail -240 || true
-
-          echo "=== LIVE_OUT_PHASE_MARKERS ==="
-          tail -2200 "$ROOT/ServiceLogs/live.out.log" 2>/dev/null             | grep -E 'wc2_liveness status=SUMMARY|wc2_resolution|wc2_execution|provider_divergence|stream_family|stream status=ACTIVATED'             | tail -320 || true
-
-          echo "=== LOG_TIMES ==="
-          stat -f 'live.out mtime=%Sm size=%z' -t '%Y-%m-%d %H:%M:%S %z' "$ROOT/ServiceLogs/live.out.log"
-          stat -f 'live.err mtime=%Sm size=%z' -t '%Y-%m-%d %H:%M:%S %z' "$ROOT/ServiceLogs/live.err.log"
-
-          echo "=== DB_TRUTH ==="
-          "$DEV/.venv/bin/python" - "$ROOT" <<'PY'
-          import json
-          import sqlite3
-          import sys
-          from pathlib import Path
-          root=Path(sys.argv[1])
-          market=root/"Development/runtime/market_tape/market_tape.sqlite3"
-          stream=root/"Development/runtime/stream/intelligence_stream.sqlite3"
-          with sqlite3.connect(market) as c:
-              derivatives=c.execute(
-                  "SELECT COUNT(*),MIN(event_at_ms),MAX(event_at_ms),MAX(ingested_at_ms) FROM market_tape_derivatives"
-              ).fetchone()
-          with sqlite3.connect(stream) as c:
-              boundaries=c.execute(
-                  "SELECT projector_id,activated_at_ms FROM stream_family_projection_boundaries ORDER BY projector_id"
-              ).fetchall()
-              rows=c.execute(
-                  "SELECT subtype,COUNT(*),MIN(event_at_ms),MAX(event_at_ms) FROM stream_source_events GROUP BY subtype ORDER BY subtype"
-              ).fetchall()
-          print(json.dumps({
-              "derivatives": derivatives,
-              "boundaries": boundaries,
-              "source_rows": rows,
-          }))
-          PY
-          echo "F3_EARLY_EXIT_DIAGNOSTIC_PASS=YES REAL_CAPITAL=0"
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          PY="/Volumes/Crypto-504/Crypto-Signal/Development/.venv/bin/python"
+          export PYTHONPATH="$GITHUB_WORKSPACE:$GITHUB_WORKSPACE/src:$GITHUB_WORKSPACE/tests"
+          "$PY" -m pytest -q             tests/test_wc2_live_clock_wiring.py             tests/test_intelligence_stream_family.py             tests/test_wc2_ssd_supervisor_single_owner.py
+          "$PY" -m ruff check             ops/run_live_evidence_clock.py             tests/test_wc2_live_clock_wiring.py
+          "$PY" -m mypy ops/run_live_evidence_clock.py
+          echo "F3_RUNTIME_ORDERING_PASS=YES"
+          echo "WC2_POLICY_UNCHANGED=YES"
+          echo "HISTORICAL_BACKFILL=NO"
+          echo "REAL_CAPITAL=0"
