@@ -1,6 +1,6 @@
 # Crypto Signal — Stream S1 Gap Ledger
 
-Status: **CANONICAL STREAM GAP LEDGER / S9 CLOSEOUT APPLIED**  
+Status: **CANONICAL STREAM GAP LEDGER / S13 CLOSEOUT APPLIED**  
 Authority: `docs/CRYPTO_SIGNAL_INTELLIGENCE_STREAM_V1_MASTER_ROADMAP.md`  
 Baseline: `2a61ad47e1f09640f3b36e4ccf09f6ed46dde7ef`
 
@@ -43,12 +43,12 @@ Classification:
 | S1-G025 | Compact expandable bubble | **CLOSED S8** — same immutable message now expands inline to SIMPLE/PRO/INTELLIGENCE/DECISION/geometry/CAPITAL/PROOF; exact persisted detail projection is fail-closed and Chromium proves 0px anchor drift | preserve inline-depth contract through S9-S16 | ACCEPTANCE | S8 PASS |
 | S1-G026 | Evidence Window Manager | **CLOSED S9** — reusable exact-message windows support drag/resize/minimize/close/pin, multi-window focus/z-order, session restore and detach | preserve framework while S10 adds frozen visual payloads | ACCEPTANCE | S9 PASS |
 | S1-G027 | Context education in evidence windows | **CLOSED S9** — deterministic education concepts are bound to window kinds; message-specific importance text is derived only from exact persisted detail | preserve non-generative education boundary | ACCEPTANCE | S9 PASS |
-| S1-G028 | Notification chime/settings | not implemented | original sound + unlock/volume/mode/persistence; replay must be silent | UI | S13 |
+| S1-G028 | Notification chime/settings | **CLOSED S13** — original Web Audio chime, explicit unlock, on/off, volume, all/important/Decision+Capital/silent modes, local persistence, optional desktop permission and identity de-duplication are browser-rendered; history/reconnect replay is silent | preserve exactly-once live-new delivery semantics through long-session/cutover | ACCEPTANCE | S13 PASS |
 | S1-G029 | Unread/new-message behavior | **CLOSED S7** — bottom anchor, no forced scroll while reading history, and buffered `N yeni mesaj` affordance are browser-rendered and accepted | preserve semantics through virtualization/reconnect/sound phases | ACCEPTANCE | S7 PASS |
-| S1-G030 | Long-session feed performance | current UI not designed as all-day message stream | virtualization/reverse pagination/memory/reconnect tests | UI/ACCEPTANCE | S14 |
-| S1-G031 | Stream visual-snapshot coverage | **CLOSED THROUGH S12** — UID504 Chromium covers one-panel Stream, evidence windows, frozen proof, ten-state Capital Story and full discovery/deep-link UX on desktop plus exact 430px mobile no-overflow | extend same path for sound, long-history and cutover states | ADAPT/ACCEPTANCE | S13-S16 |
+| S1-G030 | Long-session feed performance | **ACTIVE S14** — S7-S13 messaging behavior is accepted but 1k/10k virtualization, memory growth and all-day interaction stability remain to be measured | virtualization/reverse pagination/memory/reconnect/accessibility acceptance | UI/ACCEPTANCE | S14 |
+| S1-G031 | Stream visual-snapshot coverage | **CLOSED THROUGH S13** — UID504 Chromium now covers one-panel Stream, evidence windows, frozen proof, ten-state Capital Story, discovery/deep-link and notification/settings delivery semantics on desktop plus exact 430px mobile no-overflow | extend same path for long-history/accessibility and cutover states | ADAPT/ACCEPTANCE | S14-S16 |
 | S1-G032 | Detached proof / second-monitor workflow | **S9 FRAMEWORK CLOSED** — detached evidence route is tied to exact narrative identity + evidence kind and re-reads persisted detail; frozen proof rendering remains S10 | add frozen visual payload to the exact detached proof window | ADAPT | S10 |
-| S1-G033 | Historical activation boundary | **CLOSED THROUGH S12** — discovery/search reads only persisted immutable Stream truth and exact deep-links; no history rewrite, paper backfill/rescaling or current-data substitution is introduced | preserve no-synthesis/no-backfill rule through sound/cutover | ACCEPTANCE | S12 PASS |
+| S1-G033 | Historical activation boundary | **CLOSED THROUGH S13** — notification delivery is local side-effect state only; history/replay remains silent and canonical messages are not rewritten or synthesized | preserve no-synthesis/no-backfill rule through hardening/cutover | ACCEPTANCE | S13 PASS |
 | S1-G034 | Message materiality policy | **CLOSED S4 CORE** — versioned Analytical Policy deterministically maps exact S3 changes to PUBLISH/SILENT + reason codes | future source-specific projectors must consume this contract rather than invent ad-hoc spam thresholds | ACCEPTANCE | S4 PASS |
 | S1-G035 | Secondary-engine Stream classification | **CLOSED THROUGH S11** — paper_capital_transition is now IMPLEMENTED with the exact ten-state lifecycle while deferred/research-only sources remain gated; no shadow/research evidence is silently promoted | maintain classification as later sources are activated | ACCEPTANCE | S11 PASS / ongoing invariant |
 
@@ -232,3 +232,24 @@ S12 closed:
 **S12 = PASS. S13 Sound and Notifications is the active frontier.**
 
 Do not jump to S14. S13 must first prove optional sound/notification behavior, user settings persistence, exactly-once sound for eligible new messages, and silence for history loading/reconnect replay.
+
+
+## S13 closeout
+
+Canonical S13 acceptance:
+- `docs/CRYPTO_SIGNAL_STREAM_S13_ACCEPTANCE.md`.
+
+S13 closed:
+- original synthesized chime;
+- explicit audio unlock;
+- sound on/off, volume and delivery modes;
+- local settings persistence;
+- optional desktop/browser notification permission;
+- exactly-once eligible live-new sound;
+- duplicate suppression;
+- silent history and reconnect/replay;
+- desktop/mobile Chromium settings acceptance.
+
+**S13 = PASS. S14 Performance, Accessibility and Long-Session Stability is the active frontier.**
+
+Do not jump to S15. S14 must first prove 1k/10k long-history behavior, responsive reverse pagination/virtualization, memory/reconnect stability and accessibility basics without weakening immutable Stream truth or REAL_CAPITAL=0.
