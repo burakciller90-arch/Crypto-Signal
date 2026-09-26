@@ -5,6 +5,7 @@ on:
     branches:
       - 'stream/s16-controlled-cutover'
       - 'stream/s16-product-deploy-handoff'
+      - 'stream/s16-product-deploy-recovery-timeout'
       - 'main'
   workflow_dispatch:
 
@@ -177,9 +178,12 @@ jobs:
           } > "$OUT/metadata.txt"
 
           (
-            sleep 7
+            # Give the loaded UID504 browser enough time to attach, render the
+            # single root message, open frozen proof, and arm notification
+            # auditing before the real SSE story advances.
+            sleep 45
             "$TEST_PY" "$GITHUB_WORKSPACE/tests/support_stream_s15.py" append-resolution               --root "$ROOT" > "$OUT/append-resolution.json"
-            sleep 6
+            sleep 8
             "$TEST_PY" "$GITHUB_WORKSPACE/tests/support_stream_s15.py" append-capital               --root "$ROOT" > "$OUT/append-capital.json"
           ) &
           APPENDER_PID="$!"

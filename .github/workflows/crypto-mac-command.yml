@@ -13,7 +13,7 @@ jobs:
     if: github.actor == 'burakciller90-arch' && startsWith(github.event.issue.title, '[MAC] ')
     name: UID504 Allowlisted Command
     runs-on: [self-hosted, crypto-signal, uid504]
-    timeout-minutes: 20
+    timeout-minutes: 60
     steps:
       - name: Parse allowlisted command
         id: parse

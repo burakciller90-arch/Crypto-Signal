@@ -121,3 +121,24 @@ def test_s16_runtime_launcher_and_launchd_declare_stream_root_with_one_flag_roll
 
     assert "<string>--product-root</string><string>stream</string>" in plist
     assert "REAL_CAPITAL" not in plist
+
+
+def test_s16_chromium_acceptance_has_loaded_runner_startup_budget() -> None:
+    capture = (
+        REPO_ROOT / "ops" / "capture_chromium_viewport.py"
+    ).read_text(encoding="utf-8")
+    workflow = (
+        REPO_ROOT
+        / ".github"
+        / "workflows"
+        / "crypto-stream-s16-controlled-cutover-hosted.yml"
+    ).read_text(encoding="utf-8")
+
+    assert "timeout_seconds: float = 30.0" in capture
+    assert "Chrome DevTools target unavailable after" in capture
+    assert "for startup_attempt in range(1, 3):" in capture
+    assert "Chrome startup failed after 2 attempts" in capture
+    assert "timeoutMs = 60000" in capture
+    assert "timeout_seconds=90.0" in capture
+    assert "sleep 45" in workflow
+    assert "sleep 8" in workflow
