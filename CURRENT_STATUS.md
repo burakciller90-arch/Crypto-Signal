@@ -9,6 +9,39 @@ REAL_CAPITAL: 0
 
 ## Active v1.1 frontier — read before historical sections
 
+### 2026-09-26 — RUNTIME HYGIENE RECONCILED / ALERT CLOCK FALSE-ORPHAN RACE CLOSED LIVE
+
+The post-Stream runtime-hygiene investigation is reconciled against the real UID504 runtime. The Stream V1 roadmap remains closed; this work did not reopen S0-S16.
+
+Alert Clock closure:
+- read-only hygiene run `36243028098` proved the canonical signal ledger was structurally consistent (2,777 signal freezes / 2,777 lifecycle evaluations / 0 lifecycle orphans / 0 outcome orphans at that audit instant);
+- the recurring `lifecycle evaluation references missing signal` log was traced to a reader race, not a persistent orphan: Alert Clock read `signal_freezes` and `lifecycle_evaluations` in separate SQLite autocommit snapshots while the live writer could append between those reads;
+- PR #1342 merged the fix at main `f0349a70c11046893cbabd88ab56ca4ca8c44a99`: the read-only connection now begins one explicit transaction so both source tables are observed from one immutable SQLite snapshot; the genuine missing-parent guard remains fail-closed;
+- exact-source focused + whole-repository regression run `36243663186` passed before merge;
+- live activation run `36243940231` moved Development and the Alert runtime checkout to exact `f0349a70c11046893cbabd88ab56ca4ca8c44a99` while leaving Product at the accepted S16 checkout `d343c4b2d10489a88f614bd58c9539be76029f80`;
+- the real supervisor Alert cycle ran after activation, `alert.out` advanced, canonical lifecycle orphans remained 0, and the historical false-orphan error counter remained exactly `347 -> 347`;
+- artifact `alert-clock-live-activation-36243940231`, digest `sha256:5cb13eb6d07ef197ff41ed667245fbc2f23c7454dcca12a7c5e5a07932f4ef47`;
+- `REAL_CAPITAL=0` remained binding.
+
+Provider transport reconciliation:
+- historical/live logs contain intermittent Binance/Bybit transport failures including `WRONG_VERSION_NUMBER`, DNS-resolution failures and occasional timeouts; fail-closed behavior remains intact;
+- proxy-presence audit found HTTP/HTTPS/ALL proxy variables unset in launchctl, supervisor and market-tape runtime;
+- current direct/environment REST + WebSocket probes passed for both Binance and Bybit;
+- provider diagnostic run `36244113503` tested the exact adapters over BTCUSDT/ETHUSDT/SOLUSDT x 15m/1h/4h with both fresh-client and shared-client modes: all 36 fetches passed with 0 transport errors;
+- shared clients were faster in that bounded probe (Binance average 391.0 ms -> 292.9 ms; Bybit 289.8 ms -> 218.9 ms), but no error-rate difference was observed, so this does not justify changing production transport semantics by itself;
+- the simultaneously observed real production live cycle advanced normally and added `0` SSL wrong-version, `0` DNS-resolution and `0` ConnectError signatures;
+- artifact `provider-transport-diagnostic-36244113503`, digest `sha256:d5369cc9211e9d18d05394adc0ea996082e54a6305b4bba530409bc856d10412`;
+- therefore the historical provider failures are classified as intermittent transport/network incidents that are not currently reproducible as a deterministic application defect. Do not mask them with synthetic data or a speculative transport rewrite; preserve gap/fail-closed observability and reopen only with reproducible evidence.
+
+Active consequence:
+- Stream production wiring: **CLOSED**;
+- generic visual snapshot/CDP acceptance: **CLOSED**;
+- Alert Clock false-orphan race: **CLOSED LIVE**;
+- provider SSL/DNS investigation: **NO CURRENT REPRODUCIBLE CODE DEFECT; OBSERVABILITY/FAIL-CLOSED ONLY**;
+- the active engineering/scientific frontier returns to `WC2_ENGINEERING_FROZEN_EVIDENCE_ACCUMULATION_ACTIVE` and its evidence-dependent downstream gates. Do not manufacture historical evidence to accelerate them;
+- continuity remains paused by user; `REAL_CAPITAL=0`.
+
+
 ### 2026-09-26 — POST-CUTOVER STREAM PRODUCTION WRITER DEFECT CLOSED LIVE
 
 A fresh real-Product check after the accepted S16 cutover exposed one post-cutover wiring defect: the Stream shell and Product root were healthy, but live WC2/Decision truth was not yet projecting into the canonical production Stream ledger. This did **not** reopen S0-S16; it was a production wiring defect found only by testing the real live Product rather than relying on isolated acceptance fixtures.
