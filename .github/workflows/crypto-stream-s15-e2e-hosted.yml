@@ -1,0 +1,236 @@
+name: Crypto Stream S15 End-to-End UID504
+
+on:
+  push:
+    branches:
+      - 'stream/s15-end-to-end-product-acceptance'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: stream-s15-e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  stream-s15-e2e:
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          clean: true
+          fetch-depth: 1
+
+      - name: Verify exact source and create isolated environment
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
+          BASE_PY="$DEV/.venv/bin/python"
+          TEST_VENV="$RUNNER_TEMP/stream-s15-e2e-venv"
+          test "$(id -u)" = "504"
+          test -x "$BASE_PY"
+          test -z "$(git -C "$DEV" status --porcelain)"
+          echo "DEV_HEAD_BEFORE=$(git -C "$DEV" rev-parse HEAD)" >> "$RUNNER_TEMP/stream-s15-dev-state"
+          test "$(git -C "$GITHUB_WORKSPACE" rev-parse HEAD)" = "$GITHUB_SHA"
+          rm -rf "$TEST_VENV"
+          "$BASE_PY" -m venv "$TEST_VENV"
+          "$TEST_VENV/bin/python" -m pip install --upgrade pip
+          "$TEST_VENV/bin/python" -m pip install -e "$GITHUB_WORKSPACE"
+          "$TEST_VENV/bin/python" -m pip install "pytest>=8.4" "pytest-asyncio>=1.2" "ruff>=0.13" "mypy>=1.18"
+          echo "TEST_PY=$TEST_VENV/bin/python" >> "$GITHUB_ENV"
+          echo "STREAM_S15_EXACT_SOURCE_PASS=YES"
+
+      - name: Focused S15 end-to-end acceptance
+        env:
+          PYTHONPATH: ${{ github.workspace }}/src:${{ github.workspace }}/tests
+        run: |
+          "$TEST_PY" -m pytest -q             tests/test_stream_s15_end_to_end.py             tests/test_intelligence_stream_read_model.py             tests/test_intelligence_stream_visual_proof.py             tests/test_intelligence_stream_capital.py             tests/test_intelligence_stream_ui.py
+          "$TEST_PY" -m ruff check             tests/support_stream_s15.py             tests/test_stream_s15_end_to_end.py             ops/capture_chromium_viewport.py
+          "$TEST_PY" -m mypy ops/capture_chromium_viewport.py
+          node --check src/crypto_signal/product/stream/app.js
+          node --check src/crypto_signal/product/stream/notifications.js
+          node --check src/crypto_signal/product/stream/visual_proof.js
+          echo "STREAM_S15_FOCUSED_PASS=YES"
+
+      - name: Whole-repository regression
+        run: |
+          "$TEST_PY" -m pytest -q
+          "$TEST_PY" -m ruff check src tests ops/verify_stage10_integrated.py ops/capture_chromium_viewport.py
+          "$TEST_PY" -m mypy src ops/verify_stage10_integrated.py ops/capture_chromium_viewport.py
+          node --check src/crypto_signal/product/static/freshness.js
+          node --check src/crypto_signal/product/static/app.js
+          node --check src/crypto_signal/product/galactech/app.js
+          node --check src/crypto_signal/product/stream/app.js
+          node --check src/crypto_signal/product/stream/evidence.js
+          node --check src/crypto_signal/product/stream/visual_proof.js
+          node --check src/crypto_signal/product/stream/notifications.js
+          node tests/js/test_product_freshness.js
+          echo "STREAM_S15_FULL_PASS=YES"
+          echo "REAL_CAPITAL=0"
+
+      - name: Run real backend to browser end-to-end story
+        shell: bash
+        timeout-minutes: 15
+        env:
+          PYTHONPATH: ${{ github.workspace }}/src:${{ github.workspace }}/tests
+        run: |
+          set -euo pipefail
+          PORT=48715
+          BASE_URL="http://127.0.0.1:$PORT"
+          ROOT="$RUNNER_TEMP/stream-s15-runtime"
+          OUT="$RUNNER_TEMP/stream-s15-visual-snapshot"
+          mkdir -p "$ROOT" "$OUT"
+
+          "$TEST_PY" "$GITHUB_WORKSPACE/tests/support_stream_s15.py" seed             --root "$ROOT" > "$OUT/seed.json"
+
+          STREAM_PATH="$("$TEST_PY" -c "import json; print(json.load(open('$ROOT/s15-manifest.json'))['stream_path'])")"
+          DECISION_PATH="$("$TEST_PY" -c "import json; print(json.load(open('$ROOT/s15-manifest.json'))['decision_path'])")"
+          SIGNAL_PATH="$("$TEST_PY" -c "import json; print(json.load(open('$ROOT/s15-manifest.json'))['signal_path'])")"
+          EPOCH2_PATH="$("$TEST_PY" -c "import json; print(json.load(open('$ROOT/s15-manifest.json'))['epoch2_path'])")"
+
+          cleanup() {
+            if [ -n "${APPENDER_PID:-}" ]; then
+              kill "$APPENDER_PID" >/dev/null 2>&1 || true
+            fi
+            if [ -n "${PREVIEW_PID:-}" ]; then
+              kill "$PREVIEW_PID" >/dev/null 2>&1 || true
+            fi
+            pkill -TERM -f -- '--headless=new' 2>/dev/null || true
+            sleep 1
+            pkill -KILL -f -- '--headless=new' 2>/dev/null || true
+          }
+          trap cleanup EXIT
+
+          start_preview() {
+            (
+              unset RUNNER_TRACKING_ID
+              export PYTHONPATH="$GITHUB_WORKSPACE/src:$GITHUB_WORKSPACE/tests"
+              cd "$GITHUB_WORKSPACE"
+              exec /usr/bin/nice -n 15 "$TEST_PY" "$GITHUB_WORKSPACE/ops/run_dashboard.py"                 --host 127.0.0.1                 --port "$PORT"                 --ledger "$SIGNAL_PATH"                 --alert-outbox "$ROOT/alerts.sqlite3"                 --paper-ledger "$ROOT/legacy-paper.sqlite3"                 --candle-cache "$ROOT/candle-cache.sqlite3"                 --decision-evidence "$DECISION_PATH"                 --epoch2-ledger "$EPOCH2_PATH"                 --stream-ledger "$STREAM_PATH"
+            ) >>"$OUT/preview.out.log" 2>>"$OUT/preview.err.log" < /dev/null &
+            PREVIEW_PID="$!"
+          }
+
+          wait_ready() {
+            ready=0
+            for i in {1..40}; do
+              if curl -fsS --max-time 3 "$BASE_URL/api/health" > "$OUT/health.json" 2>/dev/null; then
+                ready=1
+                break
+              fi
+              sleep 1
+            done
+            if [ "$ready" != "1" ]; then
+              tail -160 "$OUT/preview.err.log" || true
+              exit 70
+            fi
+          }
+
+          start_preview
+          wait_ready
+
+          curl -fsS "$BASE_URL/api/stream/messages?limit=20" > "$OUT/initial-messages.json"
+          "$TEST_PY" - <<'PY' "$OUT/initial-messages.json"
+import json, sys
+payload=json.load(open(sys.argv[1], encoding="utf-8"))
+assert payload["status"] == "ready", payload
+assert len(payload["items"]) == 1, payload
+assert payload["real_capital"] == 0, payload
+PY
+
+          BROWSER=""
+          for candidate in             "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"             "/Applications/Chromium.app/Contents/MacOS/Chromium"             "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge"             "/Applications/Google Chrome Canary.app/Contents/MacOS/Google Chrome Canary"; do
+            if [ -x "$candidate" ]; then
+              BROWSER="$candidate"
+              break
+            fi
+          done
+          test -n "$BROWSER"
+
+          {
+            echo "URL=$BASE_URL/stream-preview"
+            echo "CAPTURED_AT=$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
+            echo "SOURCE_HEAD=$GITHUB_SHA"
+            echo "BROWSER_CAPTURE_BACKEND=CHROMIUM_CDP"
+            echo "BROWSER_BINARY=$BROWSER"
+            echo "REAL_CAPITAL=0"
+            echo "READ_ONLY_PRODUCT_UI=YES"
+            echo "S15_REAL_SSE=YES"
+            echo "S15_FIXTURE_QUERY=NO"
+          } > "$OUT/metadata.txt"
+
+          (
+            sleep 7
+            "$TEST_PY" "$GITHUB_WORKSPACE/tests/support_stream_s15.py" append-resolution               --root "$ROOT" > "$OUT/append-resolution.json"
+            sleep 6
+            "$TEST_PY" "$GITHUB_WORKSPACE/tests/support_stream_s15.py" append-capital               --root "$ROOT" > "$OUT/append-capital.json"
+          ) &
+          APPENDER_PID="$!"
+
+          "$TEST_PY" "$GITHUB_WORKSPACE/ops/capture_chromium_viewport.py"             --browser "$BROWSER"             --url "$BASE_URL/stream-preview"             --output "$OUT/desktop-e2e.png"             --metrics-out "$OUT/desktop-e2e.metrics.json"             --width 1440             --height 1100             --require-no-horizontal-overflow             --probe-s15-end-to-end
+          wait "$APPENDER_PID"
+          unset APPENDER_PID
+
+          cp "$ROOT/s15-manifest.json" "$OUT/final-manifest.json"
+          CAPITAL_ID="$("$TEST_PY" -c "import json; print(json.load(open('$ROOT/s15-manifest.json'))['capital_narrative_identity'])")"
+          ROOT_ID="$("$TEST_PY" -c "import json; print(json.load(open('$ROOT/s15-manifest.json'))['root_narrative_identity'])")"
+          RESOLUTION_ID="$("$TEST_PY" -c "import json; print(json.load(open('$ROOT/s15-manifest.json'))['resolution_narrative_identity'])")"
+
+          curl -fsS "$BASE_URL/api/stream/messages/$ROOT_ID" > "$OUT/root-exact.json"
+          curl -fsS "$BASE_URL/api/stream/messages/$RESOLUTION_ID" > "$OUT/resolution-exact.json"
+          curl -fsS "$BASE_URL/api/stream/messages/$CAPITAL_ID" > "$OUT/capital-exact.json"
+          curl -fsS "$BASE_URL/api/stream/messages?category=capital&limit=20" > "$OUT/capital-filter.json"
+          curl -fsS "$BASE_URL/api/stream/messages?text=BTCUSDT&limit=20" > "$OUT/search-btcusdt.json"
+
+          "$TEST_PY" "$GITHUB_WORKSPACE/ops/capture_chromium_viewport.py"             --browser "$BROWSER"             --url "$BASE_URL/stream-preview?message=$CAPITAL_ID"             --output "$OUT/mobile-persisted-capital.png"             --metrics-out "$OUT/mobile-persisted-capital.metrics.json"             --width 430             --height 860             --mobile             --require-no-horizontal-overflow
+          test -s "$OUT/desktop-e2e.png"
+          test -s "$OUT/mobile-persisted-capital.png"
+
+          grep -F '"s15_end_to_end_probe"' "$OUT/desktop-e2e.metrics.json" >/dev/null
+          grep -F '"innerWidth": 430' "$OUT/mobile-persisted-capital.metrics.json" >/dev/null
+          grep -F '"scrollWidth": 430' "$OUT/mobile-persisted-capital.metrics.json" >/dev/null
+
+          # Restart the real server on the exact same immutable ledgers and prove persistence.
+          kill "$PREVIEW_PID"
+          wait "$PREVIEW_PID" 2>/dev/null || true
+          unset PREVIEW_PID
+          sleep 1
+          start_preview
+          wait_ready
+          curl -fsS "$BASE_URL/api/stream/messages?limit=20" > "$OUT/after-restart-messages.json"
+          "$TEST_PY" - <<'PY' "$OUT/after-restart-messages.json" "$ROOT_ID" "$RESOLUTION_ID" "$CAPITAL_ID"
+import json, sys
+payload=json.load(open(sys.argv[1], encoding="utf-8"))
+ids={item["narrative_identity"] for item in payload["items"]}
+expected=set(sys.argv[2:])
+assert expected.issubset(ids), (expected, ids)
+assert len(payload["items"]) >= 3, payload
+assert payload["real_capital"] == 0, payload
+PY
+          echo "STREAM_S15_REAL_E2E_BROWSER_PASS=YES"
+          echo "REAL_CAPITAL=0"
+
+      - name: Upload Stream S15 acceptance artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stream-s15-e2e-snapshot-${{ github.run_id }}
+          path: ${{ runner.temp }}/stream-s15-visual-snapshot
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Prove Development checkout remained untouched
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
+          BEFORE="$(sed -n 's/^DEV_HEAD_BEFORE=//p' "$RUNNER_TEMP/stream-s15-dev-state")"
+          AFTER="$(git -C "$DEV" rev-parse HEAD)"
+          test -z "$(git -C "$DEV" status --porcelain)"
+          test "$BEFORE" = "$AFTER"
+          echo "STREAM_S15_UID504_NON_MUTATING_PASS=YES"
