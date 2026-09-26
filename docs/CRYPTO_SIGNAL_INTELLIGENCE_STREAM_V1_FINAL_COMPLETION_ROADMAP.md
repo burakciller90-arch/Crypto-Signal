@@ -166,8 +166,8 @@ This roadmap starts from that evidence.
 Execute exactly in this order:
 
 **F0 Authority + Gap Reconciliation — PASS**  
-→ **F1 WC2 Forward-Liveness Truth — ACTIVE**  
-→ **F2 Production Source-to-Message Backbone**  
+→ **F1 WC2 Forward-Liveness Truth — PASS (CORRECT SILENCE PROVEN)**  
+→ **F2 Production Source-to-Message Backbone — ACTIVE**  
 → **F3 Five-Family Live Intelligence Projection**  
 → **F4 Risk + System Trust Projection**  
 → **F5 Three-Vault Capital Story Live Closure**  
