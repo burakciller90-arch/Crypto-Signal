@@ -210,6 +210,46 @@ def build_stream_materiality_policy() -> StreamMaterialityPolicy:
                     materiality=StreamMateriality.MATERIAL,
                     reason_code="material_derivatives_state_transition",
                 ),
+                StreamMaterialityRule(
+                    category=StreamCategory.RISK,
+                    subtype="event_risk_block",
+                    importance=StreamImportance.IMPORTANT,
+                    disposition=StreamPublicationDisposition.PUBLISH,
+                    materiality=StreamMateriality.MATERIAL,
+                    reason_code="material_event_risk_block",
+                ),
+                StreamMaterialityRule(
+                    category=StreamCategory.RISK,
+                    subtype="event_risk_change",
+                    importance=StreamImportance.IMPORTANT,
+                    disposition=StreamPublicationDisposition.PUBLISH,
+                    materiality=StreamMateriality.MATERIAL,
+                    reason_code="material_event_risk_state_transition",
+                ),
+                StreamMaterialityRule(
+                    category=StreamCategory.RISK,
+                    subtype="event_risk_recovery",
+                    importance=StreamImportance.IMPORTANT,
+                    disposition=StreamPublicationDisposition.PUBLISH,
+                    materiality=StreamMateriality.MATERIAL,
+                    reason_code="material_event_risk_recovery",
+                ),
+                StreamMaterialityRule(
+                    category=StreamCategory.SYSTEM,
+                    subtype="data_quality_degraded",
+                    importance=StreamImportance.IMPORTANT,
+                    disposition=StreamPublicationDisposition.PUBLISH,
+                    materiality=StreamMateriality.MATERIAL,
+                    reason_code="decision_relevant_provider_quality_degraded",
+                ),
+                StreamMaterialityRule(
+                    category=StreamCategory.SYSTEM,
+                    subtype="data_quality_recovered",
+                    importance=StreamImportance.IMPORTANT,
+                    disposition=StreamPublicationDisposition.PUBLISH,
+                    materiality=StreamMateriality.MATERIAL,
+                    reason_code="decision_relevant_provider_quality_recovered",
+                ),
             ),
             key=lambda item: (
                 item.category.value,
@@ -352,7 +392,7 @@ def accepted_stream_projector_registry() -> tuple[StreamProjectorSpec, ...]:
             category=StreamCategory.RISK,
             subtypes=("event_risk_block", "event_risk_change", "event_risk_recovery"),
             implementation_state=(
-                StreamProjectorImplementationState.REQUIRES_CHANGE_DETECTION
+                StreamProjectorImplementationState.IMPLEMENTED
             ),
             target_phase="S3-S4",
             customer_stream_scope="material approach/block/recovery only",
@@ -363,7 +403,7 @@ def accepted_stream_projector_registry() -> tuple[StreamProjectorSpec, ...]:
             category=StreamCategory.SYSTEM,
             subtypes=("data_quality_degraded", "data_quality_recovered"),
             implementation_state=(
-                StreamProjectorImplementationState.REQUIRES_CHANGE_DETECTION
+                StreamProjectorImplementationState.IMPLEMENTED
             ),
             target_phase="S3-S4",
             customer_stream_scope="decision-relevant degradation/recovery only",
