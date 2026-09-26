@@ -7,6 +7,8 @@ from pathlib import Path
 
 import pytest
 
+import crypto_signal.alerts.clock as alert_clock_module
+
 from crypto_signal.alerts.clock import (
     AlertClockSourceError,
     materialize_alert_events,
@@ -289,6 +291,58 @@ def test_watch_only_source_has_no_default_initial_alert(
     assert result.eligible_events == 0
     assert result.inserted_events == 0
     assert outbox.count_events() == 0
+
+
+def test_clock_uses_one_snapshot_across_signal_and_lifecycle_reads(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    source = tmp_path / "signals.sqlite3"
+    create_source(source)
+    with sqlite3.connect(source) as connection:
+        connection.execute("PRAGMA journal_mode=WAL")
+
+    first = decision("snapshot-first", state=SignalState.ACTIVE)
+    concurrent = decision("snapshot-concurrent", state=SignalState.WATCH)
+    insert_signal(source, first)
+    outbox = AlertOutbox(tmp_path / "alerts.sqlite3")
+
+    original_parse = alert_clock_module._parse_signal_row
+    appended = False
+
+    def parse_and_append(row: sqlite3.Row) -> SignalDecision:
+        nonlocal appended
+        parsed = original_parse(row)
+        if not appended:
+            appended = True
+            insert_signal(source, concurrent, frozen_at_ms=1_300)
+            insert_lifecycle(
+                source,
+                invalidated(concurrent),
+                appended_at_ms=3_300,
+            )
+        return parsed
+
+    monkeypatch.setattr(
+        alert_clock_module,
+        "_parse_signal_row",
+        parse_and_append,
+    )
+
+    first_run = materialize_alert_events(source, outbox)
+    assert first_run.signal_rows == 1
+    assert first_run.lifecycle_rows == 0
+
+    monkeypatch.setattr(
+        alert_clock_module,
+        "_parse_signal_row",
+        original_parse,
+    )
+    second_run = materialize_alert_events(source, outbox)
+    assert second_run.signal_rows == 2
+    assert second_run.lifecycle_rows == 1
+    assert second_run.inserted_events == 1
+    assert outbox.count_events() == 2
 
 
 def test_clock_does_not_mutate_source_ledger(tmp_path: Path) -> None:
