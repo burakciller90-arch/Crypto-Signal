@@ -602,6 +602,166 @@ def _capture(args: argparse.Namespace) -> dict[str, object]:
                 raise RuntimeError(f"discovery hid Stream surface: {discovery_probe!r}")
             metrics["discovery_probe"] = discovery_probe
 
+        if args.probe_notifications:
+            notification_probe_result = session.command(
+                "Runtime.evaluate",
+                {
+                    "expression": (
+                        "(async()=>{"
+                        "await new Promise(r=>setTimeout(r,260));"
+                        "const api=window.__cryptoSignalStreamS13;"
+                        "if(!api){return {ok:false,reason:'s13_api_missing'};}"
+                        "const ids=['soundEnabledToggle','soundModeSelect','soundVolumeInput',"
+                        "'soundUnlockButton','testChimeButton','desktopNotificationToggle',"
+                        "'desktopPermissionButton','soundStatusPill'];"
+                        "const missing=ids.filter(id=>!document.getElementById(id));"
+                        "if(missing.length){return {ok:false,reason:'controls_missing',missing};}"
+                        "api.resetNotificationAudit();"
+                        "api.setNotificationSettings({enabled:true,volume:0.33,mode:'important',desktopEnabled:false});"
+                        "document.getElementById('soundUnlockButton').click();"
+                        "await new Promise(r=>setTimeout(r,120));"
+                        "const unlocked=api.notificationSnapshot();"
+                        "const hex=n=>n.toString(16).padStart(64,'0');"
+                        "const first=api.simulateFixtureDelivery({identity:hex(9101),category:'decision',importance:'important',delivery:'live_new'});"
+                        "const afterFirst=api.notificationSnapshot();"
+                        "const duplicate=api.simulateFixtureDelivery({identity:hex(9101),category:'decision',importance:'important',delivery:'live_new'});"
+                        "const history=api.simulateFixtureDelivery({identity:hex(9102),category:'decision',importance:'important',delivery:'history'});"
+                        "const replay=api.simulateFixtureDelivery({identity:hex(9103),category:'capital',importance:'important',delivery:'replay'});"
+                        "const routine=api.simulateFixtureDelivery({identity:hex(9104),category:'decision',importance:'routine',delivery:'live_new'});"
+                        "api.setNotificationSettings({enabled:true,volume:0.33,mode:'decision_capital',desktopEnabled:false});"
+                        "const capital=api.simulateFixtureDelivery({identity:hex(9105),category:'capital',importance:'routine',delivery:'live_new'});"
+                        "api.setNotificationSettings({enabled:false,volume:0.33,mode:'decision_capital',desktopEnabled:false});"
+                        "const disabled=api.simulateFixtureDelivery({identity:hex(9106),category:'decision',importance:'important',delivery:'live_new'});"
+                        "const final=api.notificationSnapshot();"
+                        "let persisted=null;"
+                        "try{persisted=JSON.parse(localStorage.getItem(final.storageKey)||'null');}catch{}"
+                        "const stream=document.getElementById('streamViewport');"
+                        "return {ok:true,missing,"
+                        "unlocked:unlocked.unlocked,audioState:unlocked.audioState,"
+                        "first,afterFirst:afterFirst.audit,duplicate,history,replay,routine,capital,disabled,"
+                        "final:final.audit,persisted,"
+                        "permissionRequests:final.audit.permissionRequests,"
+                        "statusText:document.getElementById('soundStatusPill')?.textContent||'',"
+                        "drawerOpen:!document.getElementById('settingsDrawer').hidden,"
+                        "streamVisible:!!stream&&stream.getBoundingClientRect().height>100"
+                        "};"
+                        "})()"
+                    ),
+                    "awaitPromise": True,
+                    "returnByValue": True,
+                    "userGesture": True,
+                },
+            )
+            notification_exception = notification_probe_result.get("exceptionDetails")
+            if isinstance(notification_exception, dict):
+                description = notification_exception.get(
+                    "text",
+                    "unknown notification JS exception",
+                )
+                exception_object = notification_exception.get("exception", {})
+                if isinstance(exception_object, dict):
+                    description = str(
+                        exception_object.get("description", description)
+                    )
+                raise RuntimeError(
+                    f"CDP notification probe JavaScript exception: {description}"
+                )
+            raw_notification_probe = notification_probe_result.get("result", {})
+            if not isinstance(raw_notification_probe, dict):
+                raise RuntimeError("CDP notification probe result missing")
+            notification_probe = raw_notification_probe.get("value", {})
+            if not isinstance(notification_probe, dict):
+                raise RuntimeError("CDP notification probe value missing")
+            if notification_probe.get("ok") is not True:
+                raise RuntimeError(
+                    f"notification probe failed: {notification_probe!r}"
+                )
+            if notification_probe.get("unlocked") is not True:
+                raise RuntimeError(
+                    f"notification audio unlock failed: {notification_probe!r}"
+                )
+            if notification_probe.get("audioState") != "running":
+                raise RuntimeError(
+                    f"notification audio state failed: {notification_probe!r}"
+                )
+            first = notification_probe.get("first", {})
+            after_first = notification_probe.get("afterFirst", {})
+            if (
+                not isinstance(first, dict)
+                or first.get("eligible") is not True
+                or first.get("sounded") is not True
+                or int(after_first.get("chimePlayed", 0)) != 1
+            ):
+                raise RuntimeError(
+                    f"notification single live chime failed: {notification_probe!r}"
+                )
+            duplicate = notification_probe.get("duplicate", {})
+            if (
+                not isinstance(duplicate, dict)
+                or duplicate.get("reason") != "duplicate"
+            ):
+                raise RuntimeError(
+                    f"notification identity dedupe failed: {notification_probe!r}"
+                )
+            for key in ("history", "replay"):
+                item = notification_probe.get(key, {})
+                if (
+                    not isinstance(item, dict)
+                    or item.get("reason") != "delivery_silent"
+                ):
+                    raise RuntimeError(
+                        f"notification {key} silence failed: {notification_probe!r}"
+                    )
+            routine = notification_probe.get("routine", {})
+            disabled = notification_probe.get("disabled", {})
+            if (
+                not isinstance(routine, dict)
+                or routine.get("reason") != "mode_filtered"
+                or not isinstance(disabled, dict)
+                or disabled.get("reason") != "mode_filtered"
+            ):
+                raise RuntimeError(
+                    f"notification optional/mode filter failed: {notification_probe!r}"
+                )
+            capital = notification_probe.get("capital", {})
+            if (
+                not isinstance(capital, dict)
+                or capital.get("eligible") is not True
+                or capital.get("sounded") is not True
+            ):
+                raise RuntimeError(
+                    f"notification Decision+Capital mode failed: {notification_probe!r}"
+                )
+            final_audit = notification_probe.get("final", {})
+            if (
+                int(final_audit.get("chimePlayed", 0)) != 2
+                or int(final_audit.get("duplicate", 0)) != 1
+                or int(final_audit.get("suppressedDelivery", 0)) != 2
+                or int(notification_probe.get("permissionRequests", -1)) != 0
+            ):
+                raise RuntimeError(
+                    f"notification delivery accounting failed: {notification_probe!r}"
+                )
+            persisted = notification_probe.get("persisted", {})
+            if (
+                not isinstance(persisted, dict)
+                or persisted.get("enabled") is not False
+                or persisted.get("mode") != "decision_capital"
+                or abs(float(persisted.get("volume", -1)) - 0.33) > 0.001
+            ):
+                raise RuntimeError(
+                    f"notification settings persistence failed: {notification_probe!r}"
+                )
+            if notification_probe.get("drawerOpen") is not True:
+                raise RuntimeError(
+                    f"notification settings drawer failed: {notification_probe!r}"
+                )
+            if notification_probe.get("streamVisible") is not True:
+                raise RuntimeError(
+                    f"notification fixture hid Stream: {notification_probe!r}"
+                )
+            metrics["notification_probe"] = notification_probe
+
         screenshot = session.command(
             "Page.captureScreenshot",
             {
@@ -650,6 +810,7 @@ def main() -> None:
     parser.add_argument("--probe-frozen-proof", action="store_true")
     parser.add_argument("--probe-capital-story", action="store_true")
     parser.add_argument("--probe-discovery", action="store_true")
+    parser.add_argument("--probe-notifications", action="store_true")
     args = parser.parse_args()
 
     if not args.browser.is_file():
@@ -675,6 +836,7 @@ def main() -> None:
         f"frozen_proof_probe={'YES' if metrics.get('frozen_proof_probe') else 'NO'}",
         f"capital_story_probe={'YES' if metrics.get('capital_story_probe') else 'NO'}",
         f"discovery_probe={'YES' if metrics.get('discovery_probe') else 'NO'}",
+        f"notification_probe={'YES' if metrics.get('notification_probe') else 'NO'}",
     )
 
 
