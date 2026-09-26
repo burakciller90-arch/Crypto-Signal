@@ -18,6 +18,11 @@ on:
         required: true
         default: false
         type: boolean
+      observation_start_ms:
+        description: 'Forward-only F8 watermark; final require_complete runs must set this > 0'
+        required: true
+        default: '0'
+        type: string
 
 permissions:
   contents: read
@@ -118,7 +123,22 @@ jobs:
           ARGS=(
             --base-url http://127.0.0.1:48700
             --output "$OUT/audit.json"
+            --stream-ledger "/Volumes/Crypto-504/Crypto-Signal/Development/runtime/stream/intelligence_stream.sqlite3"
           )
+          OBSERVATION_START_MS="${{ inputs.observation_start_ms }}"
+          case "$OBSERVATION_START_MS" in
+            ''|*[!0-9]*)
+              echo "observation_start_ms must be a non-negative integer" >&2
+              exit 64
+              ;;
+          esac
+          if [ "$OBSERVATION_START_MS" -gt 0 ]; then
+            ARGS+=(--min-event-ms "$OBSERVATION_START_MS")
+          fi
+          if [ "${{ inputs.require_complete }}" = "true" ] && [ "$OBSERVATION_START_MS" -le 0 ]; then
+            echo "Final F8 require_complete run requires observation_start_ms > 0" >&2
+            exit 65
+          fi
           if [ "${{ inputs.require_capital }}" = "true" ]; then
             ARGS+=(--require-capital)
           fi
