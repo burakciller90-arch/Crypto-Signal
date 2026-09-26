@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from dataclasses import dataclass
 
 from crypto_signal.confluence.models import InvalidationTrigger, PriceZone
@@ -50,6 +51,10 @@ from crypto_signal.outcomes.models import (
     OutcomeResolutionStatus,
     OutcomeState,
 )
+from crypto_signal.product.decision_proof import (
+    DecisionProofSnapshot,
+    parse_decision_proof_snapshot,
+)
 from crypto_signal.signals.models import SignalDecision, SignalDirection, SignalState
 
 REAL_CAPITAL = 0
@@ -93,6 +98,13 @@ def resolve_wc2_outcomes_once(
     cohort_journal: WC2CohortJournal,
     observed_at_ms: int,
     limit: int = 1000,
+    resolution_hook: (
+        Callable[
+            [ImmutableForecast, DecisionProofSnapshot, ForecastResolution],
+            object,
+        ]
+        | None
+    ) = None,
 ) -> WC2OutcomeResolutionCycle:
     """Resolve matured untouched-forward forecasts from already persisted evidence.
 
@@ -114,6 +126,11 @@ def resolve_wc2_outcomes_once(
         forecast = _read_exact_forecast(
             decision_ledger,
             cohort_forecast,
+        )
+        proof = _read_exact_proof(
+            decision_ledger,
+            cohort_forecast,
+            forecast,
         )
 
         persisted_resolution = decision_ledger.read_resolution_for_forecast(
@@ -137,6 +154,8 @@ def resolve_wc2_outcomes_once(
             cohort_idempotent += (
                 disposition is WC2CohortAppendDisposition.IDEMPOTENT
             )
+            if resolution_hook is not None:
+                resolution_hook(forecast, proof, resolution)
             continue
 
         persisted_outcome = signal_ledger.read_closed_outcome_record(
@@ -162,6 +181,8 @@ def resolve_wc2_outcomes_once(
             cohort_idempotent += (
                 disposition is WC2CohortAppendDisposition.IDEMPOTENT
             )
+            if resolution_hook is not None:
+                resolution_hook(forecast, proof, resolution)
             continue
 
         decision = _read_exact_signal_decision(
@@ -200,6 +221,8 @@ def resolve_wc2_outcomes_once(
         cohort_idempotent += (
             disposition is WC2CohortAppendDisposition.IDEMPOTENT
         )
+        if resolution_hook is not None:
+            resolution_hook(forecast, proof, resolution)
 
     return WC2OutcomeResolutionCycle(
         scanned=len(unresolved),
@@ -229,6 +252,24 @@ def _read_exact_forecast(
     if forecast.timeframe != cohort_forecast.timeframe:
         raise ValueError("WC2 cohort/R20 timeframe mismatch")
     return forecast
+
+
+def _read_exact_proof(
+    decision_ledger: ImmutableDecisionEvidenceLedger,
+    cohort_forecast: WC2CohortForecast,
+    forecast: ImmutableForecast,
+) -> DecisionProofSnapshot:
+    raw = decision_ledger.read_proof_for_forecast(forecast.forecast_identity)
+    if raw is None:
+        raise ValueError("WC2 cohort forecast missing persisted Decision Proof")
+    proof = parse_decision_proof_snapshot(raw)
+    if proof.proof_identity != cohort_forecast.proof_identity:
+        raise ValueError("WC2 cohort/Decision Proof identity mismatch")
+    if proof.forecast_identity != forecast.forecast_identity:
+        raise ValueError("WC2 Decision Proof/forecast identity mismatch")
+    if proof.signal_freeze_identity != forecast.signal_freeze_identity:
+        raise ValueError("WC2 Decision Proof/forecast signal mismatch")
+    return proof
 
 
 def _read_exact_signal_decision(

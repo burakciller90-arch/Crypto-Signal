@@ -180,6 +180,7 @@ run_wc2_live_clock() {
   local protocol="$runtime/wc2/wc2_collection_protocol.wc2-collection-protocol.sqlite3"
   local prepared="$runtime/wc2/wc2.wc2-prepared.sqlite3"
   local decision="$runtime/decision/decision_evidence.sqlite3"
+  local stream="$runtime/stream/intelligence_stream.sqlite3"
   local cohort="$runtime/wc2/wc2_untouched_forward.sqlite3"
   local shadow_intent="$runtime/wc2/wc2.shadow-intent.sqlite3"
   local shadow_cycle="$runtime/wc2/wc2.shadow-cycle.sqlite3"
@@ -203,6 +204,8 @@ run_wc2_live_clock() {
       --db "$ledger" \
       --candle-cache "$candle" \
       --provider-divergence "$divergence" \
+      --stream-enabled \
+      --stream-ledger "$stream" \
       --wc2-enabled \
       --wc2-policy "$policy" \
       --wc2-epoch2 "$epoch2" \

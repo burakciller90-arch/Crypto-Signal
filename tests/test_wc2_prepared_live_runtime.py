@@ -115,6 +115,7 @@ def _call(
     decision_ledger: ImmutableDecisionEvidenceLedger | None = None,
     collection_start_ms: int | None = None,
     collection_protocol_identity: str = PROTOCOL_IDENTITY,
+    issuance_hook=None,
 ):
     return process_wc2_prepared_live_freeze(
         result,
@@ -137,6 +138,7 @@ def _call(
         base_asset="BTC",
         collection_protocol_identity=collection_protocol_identity,
         collection_start_ms=collection_start_ms,
+        issuance_hook=issuance_hook,
     )
 
 
@@ -489,3 +491,51 @@ def test_ineligible_fresh_source_creates_no_wc2_runtime_evidence(
     assert not paths["cohort"].exists()
     assert not paths["shadow"].exists()
     assert not paths["manifest"].exists()
+
+def test_same_cycle_issuance_hook_receives_exact_fresh_and_recovered_issuance(
+    tmp_path: Path,
+) -> None:
+    bundle = directional_bundle()
+    signal = bundle.signal_decision
+    frozen_at = signal.as_of_ms + 10
+    observed_at = frozen_at + 20
+    paths = _paths(tmp_path)
+    ledger = ImmutableSignalLedger(tmp_path / "signal.sqlite3")
+    _persist_source(ledger, bundle, frozen_at_ms=frozen_at)
+    policy = _policy(bundle)
+    activation = _activation()
+    projected = []
+
+    first = _call(
+        _fresh(bundle, frozen_at),
+        bundle=bundle,
+        signal_ledger=ledger,
+        policy=policy,
+        activation=activation,
+        paths=paths,
+        observed_at_ms=observed_at,
+        issuance_hook=projected.append,
+    )
+    replay = _call(
+        _replay(bundle),
+        bundle=bundle,
+        signal_ledger=ledger,
+        policy=policy,
+        activation=activation,
+        paths=paths,
+        observed_at_ms=observed_at + 50_000,
+        issuance_hook=projected.append,
+    )
+
+    assert first.status is WC2PreparedLiveStatus.COMPLETED_FRESH
+    assert replay.status is WC2PreparedLiveStatus.COMPLETED_RECOVERED
+    assert len(projected) == 2
+    assert projected[0].forecast.forecast_identity == first.forecast_identity
+    assert projected[1].forecast.forecast_identity == first.forecast_identity
+    assert projected[0].confluence == projected[1].confluence
+    assert projected[0].forecast == projected[1].forecast
+    assert projected[0].proof == projected[1].proof
+    assert projected[0].feed_event == projected[1].feed_event
+    assert projected[0].ledger_disposition.value == "inserted"
+    assert projected[1].ledger_disposition.value == "unchanged"
+

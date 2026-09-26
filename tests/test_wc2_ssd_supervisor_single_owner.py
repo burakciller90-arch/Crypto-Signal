@@ -13,6 +13,9 @@ def test_ssd_supervisor_has_single_wc2_live_owner() -> None:
     assert 'run_clock live "$LIVE/.venv/bin/python" "$LIVE/src"' not in text
     assert 'export PYTHONPATH="$DEV:$DEV/src"' in text
     assert '"$DEV/ops/run_live_evidence_clock.py"' in text
+    assert "--stream-enabled" in text
+    assert '--stream-ledger "$stream"' in text
+    assert 'local stream="$runtime/stream/intelligence_stream.sqlite3"' in text
     assert "--wc2-enabled" in text
     assert '--wc2-policy "$policy"' in text
     assert '--wc2-epoch2 "$epoch2"' in text

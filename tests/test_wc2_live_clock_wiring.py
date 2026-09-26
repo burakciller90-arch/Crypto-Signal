@@ -69,6 +69,8 @@ def _replay_result() -> LiveFreezeResult:
 
 def _args(**overrides):
     values = {
+        "stream_enabled": False,
+        "stream_ledger": None,
         "wc2_enabled": False,
         "wc2_policy": None,
         "wc2_epoch2": None,
@@ -675,3 +677,44 @@ def test_wc2_base_asset_is_explicit_usdt_only() -> None:
 
     with pytest.raises(ValueError, match="USDT"):
         clock.wc2_base_asset("BTCUSD")
+
+def test_stream_clock_requires_explicit_enable_and_wc2_owner(tmp_path: Path) -> None:
+    assert clock.build_stream_clock_config(_args()) == clock.StreamClockConfig()
+
+    with pytest.raises(ValueError, match="explicit --stream-enabled"):
+        clock.build_stream_clock_config(
+            _args(stream_ledger=tmp_path / "stream.sqlite3")
+        )
+
+    with pytest.raises(ValueError, match="requires ledger path"):
+        clock.build_stream_clock_config(_args(stream_enabled=True))
+
+
+def test_stream_without_wc2_fails_before_network(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    called = {"network": 0}
+
+    async def forbidden_freeze(**kwargs):
+        called["network"] += 1
+        raise AssertionError("network must not start")
+
+    monkeypatch.setattr(clock, "freeze_coverage_context", forbidden_freeze)
+    status = asyncio.run(
+        clock.run(
+            tmp_path / "signal.sqlite3",
+            plan=_plan(),
+            candle_cache_path=tmp_path / "candles.sqlite3",
+            wc2_config=clock.WC2ClockConfig(),
+            stream_config=clock.StreamClockConfig(
+                enabled=True,
+                ledger_path=tmp_path / "stream.sqlite3",
+            ),
+        )
+    )
+
+    assert status == 1
+    assert called["network"] == 0
+    assert not (tmp_path / "stream.sqlite3").exists()
+
