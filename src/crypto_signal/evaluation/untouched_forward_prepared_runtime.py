@@ -1,6 +1,7 @@
 """Replay-safe completion of one pre-outcome WC2 prepared cycle."""
 from __future__ import annotations
 
+import json
 from collections.abc import Callable
 from dataclasses import dataclass
 from enum import StrEnum
@@ -30,13 +31,14 @@ from crypto_signal.evaluation.untouched_forward_prepared import (
     build_wc2_prepared_cycle_receipt,
 )
 from crypto_signal.ledger.coverage import LiveCoverageContext
+from crypto_signal.ledger.deserialization import parse_signal_decision
 from crypto_signal.ledger.live_clock import LiveFreezeResult, LiveFreezeStatus
-from crypto_signal.ledger.store import ImmutableSignalLedger
+from crypto_signal.ledger.store import FreezeRecord, ImmutableSignalLedger
 from crypto_signal.paper.epoch2_accounting import Epoch2ActivationRecord
 from crypto_signal.paper.models import PaperAction
 from crypto_signal.paper.shadow_cycle_manifest import R25ShadowCycleManifest
 from crypto_signal.paper.shadow_intent_journal import R25ShadowIntentJournal
-from crypto_signal.signals.models import SignalDirection, SignalState
+from crypto_signal.signals.models import SignalDecision, SignalDirection, SignalState
 from crypto_signal.unified_decision_runtime import UnifiedDecisionIssuance
 
 WC2_PREPARED_COMPLETION_ENGINE_VERSION = "wc2-prepared-completion-v1/1"
@@ -213,11 +215,7 @@ def _process_fresh_prepared(
             signal_identity=signal.freeze_identity,
             reasons=("source_freeze_predates_epoch2_activation",),
         )
-    if (
-        signal.state not in {SignalState.WATCH, SignalState.ACTIVE}
-        or signal.direction is SignalDirection.NONE
-        or signal.geometry is None
-    ):
+    if not _source_is_prepared_eligible(signal):
         return _prepared_live_result(
             WC2PreparedLiveStatus.SKIPPED_INELIGIBLE_SOURCE,
             signal_identity=signal.freeze_identity,
@@ -299,6 +297,13 @@ def _process_replay_prepared(
             signal_identity=freeze.signal_freeze_identity,
             reasons=("source_freeze_predates_epoch2_activation",),
         )
+    signal = _signal_from_freeze_record(freeze)
+    if not _source_is_prepared_eligible(signal):
+        return _prepared_live_result(
+            WC2PreparedLiveStatus.SKIPPED_INELIGIBLE_SOURCE,
+            signal_identity=freeze.signal_freeze_identity,
+            reasons=("source_not_directional_with_frozen_geometry",),
+        )
     receipt = prepared_journal.read_for_signal(
         freeze.signal_freeze_identity
     )
@@ -331,6 +336,44 @@ def _process_replay_prepared(
         completion=completion,
         reasons=("prepared_receipt_recovered_without_market_read",),
     )
+
+
+def _source_is_prepared_eligible(signal: SignalDecision) -> bool:
+    return (
+        signal.state in {SignalState.WATCH, SignalState.ACTIVE}
+        and signal.direction is not SignalDirection.NONE
+        and signal.geometry is not None
+    )
+
+
+def _signal_from_freeze_record(freeze: FreezeRecord) -> SignalDecision:
+    raw = json.loads(freeze.bundle_json)
+    if not isinstance(raw, dict):
+        raise TypeError("WC2 replay freeze bundle must be an object")
+    signal = parse_signal_decision(raw.get("signal_decision"))
+    expected = (
+        freeze.signal_freeze_identity,
+        freeze.exchange,
+        freeze.market_type,
+        freeze.symbol,
+        freeze.timeframe,
+        freeze.as_of_ms,
+        freeze.signal_state,
+        freeze.direction,
+    )
+    actual = (
+        signal.freeze_identity,
+        signal.exchange.value,
+        signal.market_type.value,
+        signal.symbol,
+        signal.timeframe,
+        signal.as_of_ms,
+        signal.state.value,
+        signal.direction.value,
+    )
+    if actual != expected:
+        raise ValueError("WC2 replay freeze row/bundle signal mismatch")
+    return signal
 
 
 def _prepared_completion_result(
