@@ -170,14 +170,14 @@ Execute exactly in this order:
 → **F2 Production Source-to-Message Backbone — PASS**  
 → **F3 Five-Family Live Intelligence Projection — PASS**  
 → **F4 Risk + System Trust Projection — PASS**  
-→ **F5 Three-Vault Capital Story Live Closure — DEFERRED TO PORTFOLIO/CAPITAL FOLLOW-UP (NOT PASS)**  
+→ **F5 Three-Vault Capital Story — PASS FOR CURRENT FRONTEND SCOPE; LIVE PORTFOLIO/CAPITAL PROOF DEFERRED**  
 → **F6 Exact Frozen Evidence Closure — ACTIVE**  
 → **F7 Guarded Local LLM/Ollama Activation**  
 → **F8 Real Production Multi-Category E2E Acceptance**  
 → **F9 Final Real-UI Product Acceptance**  
 → **F10 Authority Freeze / Closeout**
 
-Do not jump ahead across accepted frontend stages. Exception: F5 Capital/Portfolio live closure is explicitly deferred by product-scope decision and no longer blocks F6–F10 frontend completion. F5 must not be mislabeled PASS; its remaining natural Capital proof stays open for the later Portfolio/Capital workstream.
+Do not jump ahead across accepted frontend stages. F5 is accepted only under the revised frontend scope: its implementation and physical activation are complete, while natural live Portfolio/Capital behavior is explicitly deferred to a later dedicated workstream. Do not represent the deferred Capital proof as observed or tested.
 
 ---
 
