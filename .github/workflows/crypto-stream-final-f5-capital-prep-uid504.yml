@@ -30,8 +30,22 @@ jobs:
           test "$(git rev-parse HEAD)" = "${GITHUB_SHA}"
           PY="/Volumes/Crypto-504/Crypto-Signal/Development/.venv/bin/python"
           test -x "$PY"
-          "$PY" -m pytest -q tests/test_stream_f5_capital_readiness_audit.py tests/test_intelligence_stream_capital_forward_runtime.py tests/test_wc2_prepared_live_runtime.py
-          "$PY" -m ruff check             ops/audit_stream_f5_capital_readiness.py             tests/test_stream_f5_capital_readiness_audit.py
+          "$PY" -m pytest -q \
+            tests/test_stream_f5_capital_readiness_audit.py \
+            tests/test_intelligence_stream_capital_forward_runtime.py \
+            tests/test_wc2_prepared_live_runtime.py
+          "$PY" -m ruff check \
+            ops/audit_stream_f5_capital_readiness.py \
+            src/crypto_signal/product/intelligence_stream_capital_forward_runtime.py \
+            src/crypto_signal/product/intelligence_stream_capital_forward_evidence.py \
+            src/crypto_signal/evaluation/untouched_forward_prepared_runtime.py \
+            tests/test_stream_f5_capital_readiness_audit.py \
+            tests/test_intelligence_stream_capital_forward_runtime.py \
+            tests/test_wc2_prepared_live_runtime.py
+          "$PY" -m mypy \
+            src/crypto_signal/product/intelligence_stream_capital_forward_runtime.py \
+            src/crypto_signal/product/intelligence_stream_capital_forward_evidence.py \
+            src/crypto_signal/evaluation/untouched_forward_prepared_runtime.py
           echo "F5_READINESS_TEST_PASS=YES"
           echo "REAL_CAPITAL=0"
 
