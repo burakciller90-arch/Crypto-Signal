@@ -1,5 +1,19 @@
 # PROJECT CHRONICLE
 
+## 2026-09-26 — Final Stream F2 production backbone accepted; F3 becomes active
+
+F2 closes the generic production source-to-message backbone gap without claiming any new source family live.
+
+The accepted implementation adds `StreamProductionProjectorContract` and `IntelligenceStreamProductionProjector`. Exact source identity, normalized event identity, category/subtype/importance, market context, source/event time, evidence identities, story/current/previous references and the accepted materiality-decision reason are bound into one deterministic contract with `production_authority=false` and `REAL_CAPITAL=0`.
+
+The backbone reuses the existing source/message, Story, Analytical, materiality and Narrative ledgers/engines; it does not create a parallel customer-message system. Registry entries that are still `REQUIRES_CHANGE_DETECTION` remain fail-closed and cannot be published merely because a projector name exists.
+
+UID504 exact-source run `36253512588` passed focused F2/forward-runtime tests, ruff, strict mypy, broad repository sync regression, full `ruff check src tests`, strict mypy over 237 source files and JavaScript syntax/freshness checks. No historical rich backfill or scientific-policy relaxation occurred.
+
+Canonical acceptance: `docs/CRYPTO_SIGNAL_STREAM_FINAL_F2_PRODUCTION_BACKBONE_ACCEPTANCE.md`.
+
+The sole final-completion frontier is now F3 — Five-Family Live Intelligence Projection. `REAL_CAPITAL=0`.
+
 ## 2026-09-26 — Final Stream F1 closes live; F2 becomes active
 
 F1 WC2 Forward-Liveness Truth is fully accepted and physically live.
