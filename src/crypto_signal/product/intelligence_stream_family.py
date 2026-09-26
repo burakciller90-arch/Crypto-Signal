@@ -1879,6 +1879,7 @@ def _family_state_payload(value: StreamFamilyStoryState) -> dict[str, object]:
         "real_capital": value.real_capital,
         "schema_version": value.schema_version,
         "source_event_identity": value.source_event_identity,
+        "state_components": value.state_components,
         "state_key": value.state_key,
         "state_label": value.state_label,
         "story_identity": value.story_identity,
