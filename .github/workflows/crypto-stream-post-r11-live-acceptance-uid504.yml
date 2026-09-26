@@ -32,8 +32,9 @@ jobs:
           DEV="$ROOT/Development"
           PRODUCT="$ROOT/Product"
           test "$(id -u)" = "504"
-          test -d "$DEV/.git"
-          test -d "$PRODUCT/.git"
+          git -C "$DEV" rev-parse --git-dir >/dev/null
+          git -C "$PRODUCT" rev-parse --git-dir >/dev/null
+          mkdir -p "$RUNNER_TEMP/stream-post-r11-live-acceptance"
           test -z "$(git -C "$DEV" status --porcelain)"
           test -z "$(git -C "$PRODUCT" status --porcelain)"
           echo "DEV_HEAD_BEFORE=$(git -C "$DEV" rev-parse HEAD)" | tee "$RUNNER_TEMP/post-r11-prestate"
