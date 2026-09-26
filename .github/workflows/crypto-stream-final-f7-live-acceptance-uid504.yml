@@ -94,6 +94,35 @@ jobs:
           print("REAL_CAPITAL=0")
           PY
 
+          # Prewarm the already-local model so the guarded adapter smoke measures
+          # rewrite latency rather than first-load/model-map latency.
+          /usr/bin/python3 - "$MODEL" <<'PY'
+          import json
+          import sys
+          import urllib.request
+
+          model = sys.argv[1]
+          body = json.dumps(
+              {
+                  "model": model,
+                  "prompt": "Yanıt olarak yalnız OK yaz.",
+                  "stream": False,
+                  "keep_alive": "10m",
+                  "options": {"temperature": 0},
+              }
+          ).encode()
+          req = urllib.request.Request(
+              "http://127.0.0.1:11434/api/generate",
+              data=body,
+              headers={"Content-Type": "application/json"},
+              method="POST",
+          )
+          with urllib.request.urlopen(req, timeout=90) as response:
+              payload = json.loads(response.read().decode())
+          assert isinstance(payload, dict), payload
+          print("F7_OLLAMA_PREWARM_PASS=YES")
+          PY
+
           echo "F7_MODEL=$MODEL" >> "$GITHUB_ENV"
           echo "F7_OLLAMA_BIN=$OLLAMA_BIN" >> "$GITHUB_ENV"
 
@@ -167,7 +196,7 @@ jobs:
           config = LocalNarrativeRewriteConfig(
               model=os.environ["F7_MODEL"],
               base_url="http://127.0.0.1:11434/v1",
-              timeout_seconds=20.0,
+              timeout_seconds=30.0,
               temperature=0.2,
               max_tokens=1400,
           )
