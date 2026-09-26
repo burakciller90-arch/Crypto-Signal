@@ -64,8 +64,8 @@ def test_forward_runtime_initializes_full_schema_and_publishes_same_cycle(
 
     page = IntelligenceStreamReadModel(path).read_messages(StreamMessageQuery())
     assert len(page.items) == 1
-    assert page.items[0]["forecast_identity"] == issuance.forecast.forecast_identity
     assert page.items[0]["symbol"] == issuance.forecast.symbol
+    assert page.items[0]["narrative_identity"] == result.narrative_identity
     assert page.real_capital == 0
 
 
