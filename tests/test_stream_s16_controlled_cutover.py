@@ -122,6 +122,7 @@ def test_s16_runtime_launcher_and_launchd_declare_stream_root_with_one_flag_roll
     assert "<string>--product-root</string><string>stream</string>" in plist
     assert "REAL_CAPITAL" not in plist
 
+
 def test_s16_chromium_acceptance_has_loaded_runner_startup_budget() -> None:
     capture = (
         REPO_ROOT / "ops" / "capture_chromium_viewport.py"
