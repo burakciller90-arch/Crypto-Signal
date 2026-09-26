@@ -13,37 +13,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  diagnose:
-    runs-on: [self-hosted, crypto-signal, uid504]
-    timeout-minutes: 3
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.sha }}
-          clean: true
-          fetch-depth: 2
-      - name: Read F3 runtime diagnostics
-        shell: bash
-        run: |
-          set -euo pipefail
-          ROOT="/Volumes/Crypto-504/Crypto-Signal"
-          echo "=== supervisor pid ==="
-          cat "$ROOT/ssd-service-supervisor.pid" 2>/dev/null || true
-          echo "=== supervisor tail ==="
-          tail -120 "$ROOT/ServiceLogs/supervisor.log" 2>/dev/null || true
-          echo "=== live out tail ==="
-          tail -160 "$ROOT/ServiceLogs/live.out.log" 2>/dev/null || true
-          echo "=== live err tail ==="
-          tail -160 "$ROOT/ServiceLogs/live.err.log" 2>/dev/null || true
-          echo "=== snapshot out tail ==="
-          tail -80 "$ROOT/ServiceLogs/market-tape-snapshot.out.log" 2>/dev/null || true
-          echo "=== snapshot err tail ==="
-          tail -80 "$ROOT/ServiceLogs/market-tape-snapshot.err.log" 2>/dev/null || true
-          echo "F3_RUNTIME_DIAGNOSTIC_READ_ONLY=YES"
-          echo "REAL_CAPITAL=0"
-
   verify:
-    needs: diagnose
     runs-on: [self-hosted, crypto-signal, uid504]
     timeout-minutes: 5
     steps:
@@ -53,7 +23,7 @@ jobs:
           clean: true
           fetch-depth: 2
 
-      - name: Diagnose active F3 production cycle
+      - name: Isolate F3 live-clock early exit
         shell: bash
         run: |
           set -euo pipefail
@@ -63,16 +33,18 @@ jobs:
           sup="$(cat "$ROOT/ssd-service-supervisor.pid")"
           kill -0 "$sup"
           echo "F3_SUPERVISOR_ACTIVE=YES pid=$sup"
-          echo "=== live.out ==="
-          tail -240 "$ROOT/ServiceLogs/live.out.log" 2>/dev/null || true
-          echo "=== live.err ==="
-          tail -240 "$ROOT/ServiceLogs/live.err.log" 2>/dev/null || true
-          echo "=== snapshot.out ==="
-          tail -120 "$ROOT/ServiceLogs/market-tape-snapshot.out.log" 2>/dev/null || true
-          echo "=== snapshot.err ==="
-          tail -120 "$ROOT/ServiceLogs/market-tape-snapshot.err.log" 2>/dev/null || true
-          echo "=== supervisor ==="
-          tail -160 "$ROOT/ServiceLogs/supervisor.log" 2>/dev/null || true
+
+          echo "=== LIVE_ERR_ERRORS ==="
+          tail -1200 "$ROOT/ServiceLogs/live.err.log" 2>/dev/null             | grep -E 'ERROR|FAIL_STOP|FAIL_CLOSED|Traceback|Exception|wc2_execution|provider_divergence|stream_family'             | tail -240 || true
+
+          echo "=== LIVE_OUT_PHASE_MARKERS ==="
+          tail -2200 "$ROOT/ServiceLogs/live.out.log" 2>/dev/null             | grep -E 'wc2_liveness status=SUMMARY|wc2_resolution|wc2_execution|provider_divergence|stream_family|stream status=ACTIVATED'             | tail -320 || true
+
+          echo "=== LOG_TIMES ==="
+          stat -f 'live.out mtime=%Sm size=%z' -t '%Y-%m-%d %H:%M:%S %z' "$ROOT/ServiceLogs/live.out.log"
+          stat -f 'live.err mtime=%Sm size=%z' -t '%Y-%m-%d %H:%M:%S %z' "$ROOT/ServiceLogs/live.err.log"
+
+          echo "=== DB_TRUTH ==="
           "$DEV/.venv/bin/python" - "$ROOT" <<'PY'
           import json
           import sqlite3
@@ -82,10 +54,20 @@ jobs:
           market=root/"Development/runtime/market_tape/market_tape.sqlite3"
           stream=root/"Development/runtime/stream/intelligence_stream.sqlite3"
           with sqlite3.connect(market) as c:
-              derivative=c.execute("SELECT COUNT(*),MIN(event_at_ms),MAX(event_at_ms),MAX(ingested_at_ms) FROM market_tape_derivatives").fetchone()
+              derivatives=c.execute(
+                  "SELECT COUNT(*),MIN(event_at_ms),MAX(event_at_ms),MAX(ingested_at_ms) FROM market_tape_derivatives"
+              ).fetchone()
           with sqlite3.connect(stream) as c:
-              boundaries=c.execute("SELECT projector_id,activated_at_ms FROM stream_family_projection_boundaries ORDER BY projector_id").fetchall()
-              rows=c.execute("SELECT subtype,COUNT(*),MIN(event_at_ms),MAX(event_at_ms) FROM stream_source_events GROUP BY subtype ORDER BY subtype").fetchall()
-          print(json.dumps({"derivatives":derivative,"boundaries":boundaries,"source_rows":rows}))
+              boundaries=c.execute(
+                  "SELECT projector_id,activated_at_ms FROM stream_family_projection_boundaries ORDER BY projector_id"
+              ).fetchall()
+              rows=c.execute(
+                  "SELECT subtype,COUNT(*),MIN(event_at_ms),MAX(event_at_ms) FROM stream_source_events GROUP BY subtype ORDER BY subtype"
+              ).fetchall()
+          print(json.dumps({
+              "derivatives": derivatives,
+              "boundaries": boundaries,
+              "source_rows": rows,
+          }))
           PY
-          echo "F3_DIAGNOSTIC_READ_ONLY=YES REAL_CAPITAL=0"
+          echo "F3_EARLY_EXIT_DIAGNOSTIC_PASS=YES REAL_CAPITAL=0"
