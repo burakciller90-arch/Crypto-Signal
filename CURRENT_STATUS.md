@@ -4,10 +4,49 @@ Updated: 2026-09-26
 Project: Crypto Signal
 Baseline: crypto-signal-full-version-v1.0.0 (immutable)
 Active post-v1.0 program: v1.1 world-class product + market intelligence + Crypto Signal Intelligence Stream V1
-State: WC0_LIVE_PRODUCT_PARITY_ACCEPTED / WC1_24_7_DATA_RELIABILITY_ACCEPTED / WC2_ENGINEERING_FROZEN_EVIDENCE_ACCUMULATION_ACTIVE / WC4_CHAMPION_CHALLENGER_ENGINEERING_ACCEPTED_RESEARCH_ONLY / WC5_ENGINEERING_ACCEPTED_PRODUCT_DEPLOYED_HUMAN_USABILITY_NOT_MEASURED / WC6_SANDBOX_BOUNDARY_ACCEPTED_VENUE_EVIDENCE_EXTERNAL_DEPENDENCY / WC7_CURRENT_FRONTIER_PACKET_ACCEPTED_CURRENT_INSUFFICIENT_EVIDENCE / INTELLIGENCE_STREAM_V1_S0_PASS_S1_PASS_S2_PASS_S3_PASS_S4_PASS_S5_PASS_S6_PASS_S7_PASS_S8_PASS_S9_PASS_S10_PASS_S11_PASS_S12_PASS_S13_PASS_S14_ACTIVE / CONTINUITY_PAUSED_BY_USER
+State: WC0_LIVE_PRODUCT_PARITY_ACCEPTED / WC1_24_7_DATA_RELIABILITY_ACCEPTED / WC2_ENGINEERING_FROZEN_EVIDENCE_ACCUMULATION_ACTIVE / WC4_CHAMPION_CHALLENGER_ENGINEERING_ACCEPTED_RESEARCH_ONLY / WC5_ENGINEERING_ACCEPTED_PRODUCT_DEPLOYED_HUMAN_USABILITY_NOT_MEASURED / WC6_SANDBOX_BOUNDARY_ACCEPTED_VENUE_EVIDENCE_EXTERNAL_DEPENDENCY / WC7_CURRENT_FRONTIER_PACKET_ACCEPTED_CURRENT_INSUFFICIENT_EVIDENCE / INTELLIGENCE_STREAM_V1_S0_PASS_S1_PASS_S2_PASS_S3_PASS_S4_PASS_S5_PASS_S6_PASS_S7_PASS_S8_PASS_S9_PASS_S10_PASS_S11_PASS_S12_PASS_S13_PASS_S14_PASS_S15_ACTIVE / CONTINUITY_PAUSED_BY_USER
 REAL_CAPITAL: 0
 
 ## Active v1.1 frontier — read before historical sections
+
+### 2026-09-26 — STREAM S14 HARDENING PASS / S15 END-TO-END PRODUCT ACCEPTANCE ACTIVE
+
+S14 is mechanically, behaviorally and visually accepted.
+
+Canonical acceptance record:
+- `docs/CRYPTO_SIGNAL_STREAM_S14_ACCEPTANCE.md`.
+
+Accepted S14 hardening:
+- bounded virtualization for 1k/10k long sessions;
+- 10,000 total messages with 180 rendered DOM messages;
+- stable older/newer/prepend scroll anchoring;
+- stable expanded-message anchoring;
+- keyboard/focus handling;
+- feed ARIA/accessibility basics;
+- reduced-motion support;
+- responsive desktop/mobile behavior;
+- font scaling without whole-page overflow;
+- exact 430px mobile width;
+- REAL_CAPITAL=0 preserved.
+
+Merged implementation:
+- PR #1296;
+- main `cc0235e12e1207ce1b10712ce7eced141ae5fe6f`.
+
+Exact-head acceptance:
+- implementation head `78baab8a9ed8b9b2b019c427455c5a587a40976c`;
+- UID504 run `36220217282` PASS;
+- artifact `stream-s14-visual-snapshot-36220217282`;
+- focused S14 acceptance PASS;
+- whole-repository regression PASS;
+- real Chromium 10k desktop/mobile acceptance PASS;
+- prepend/older/newer/expansion anchor stability PASS;
+- keyboard/focus/reduced-motion/font-scale acceptance PASS;
+- Development checkout non-mutation PASS.
+
+The active Stream frontier is now **S15 — End-to-End Product Acceptance**.
+
+S15 must prove the complete user story across a real backend event/message, exactly-once live delivery/sound semantics, expandable depth, exact proof/evidence, immutable history/story continuation and a traceable virtual-capital action. It must not claim S16 production-root cutover.
 
 ### 2026-09-26 — STREAM S13 SOUND AND NOTIFICATIONS PASS / S14 HARDENING ACTIVE
 
