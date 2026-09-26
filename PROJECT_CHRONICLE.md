@@ -1,5 +1,20 @@
 # PROJECT CHRONICLE
 
+## 2026-09-26 — Final Stream F1 closes live; F2 becomes active
+
+F1 WC2 Forward-Liveness Truth is fully accepted and physically live.
+
+The mechanical audit proved `CORRECT_SILENCE`: the accepted read-only run `36251560197` classified 686 freezes after the latest forecast, with 525 directional WATCH freezes lacking frozen geometry, 161 NEUTRAL freezes, 0 prepared-required candidates, 0 candidate defects and 0 integrity errors. No WC2 rule was loosened.
+
+PR #1348 merged the audit and bounded reason telemetry at main `71ff1ad4f2d1c9f58df65fab12a12c02754acfc6`. Development was then cleanly fast-forwarded from `f0349a70c11046893cbabd88ab56ca4ca8c44a99` to that exact main.
+
+UID504 live activation run `36252043820` observed a new supervisor-cycle marker:
+`wc2_liveness status=SUMMARY contexts=17 status_counts=no_prepared_receipt:17 reason_counts=no_preoutcome_prepared_receipt_for_source_freeze:17 POLICY_UNCHANGED=YES HISTORICAL_BACKFILL=NO REAL_CAPITAL=0`.
+
+The marker count advanced from 1 to 2 while the WC2 policy and collection-protocol files remained byte-identical. Product remained untouched at `d343c4b2d10489a88f614bd58c9539be76029f80`. Accepted artifact: `stream-final-f1-live-activation-36252043820`, id `10909291747`, digest `sha256:3c435fe78bb048d6c9ebb4a2e06e40880971edfae00a1425ae42506cadfbf161`.
+
+F1 is therefore closed. The sole active final-completion frontier is F2 — Production Source-to-Message Backbone. F2 must reuse the accepted Stream truth pipeline and provide a common production projector contract for later source families; no parallel message path, historical rich backfill, synthetic activity or real-money authority is permitted. `REAL_CAPITAL=0`.
+
 ## 2026-09-26 — Final Stream F1 proves WC2 correct silence; live observability activation remains
 
 F1 answered the production question that reopened the final Stream completion program: fresh signal freezes continued after the last forecast, but did the forecast/Stream path lose an eligible source?
