@@ -799,9 +799,17 @@ async def run(
                     item.source_event_identity,
                 ),
             ):
+                silent_initial_states = (
+                    ("healthy",)
+                    if trust_snapshot.projector_id == "provider_quality_change"
+                    else ("clear",)
+                    if trust_snapshot.projector_id == "event_risk_change"
+                    else ()
+                )
                 trust_projection = stream_family_projector.project_family(
                     trust_snapshot,
                     activated_at_ms=trust_observed_at_ms,
+                    silent_initial_state_labels=silent_initial_states,
                 )
                 trust_dispositions[
                     trust_projection.disposition.value
