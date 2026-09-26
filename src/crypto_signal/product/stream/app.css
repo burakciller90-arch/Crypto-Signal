@@ -1803,3 +1803,106 @@ body[data-density="compact"] .message-copy {
   font-size: 9px;
   line-height: 1.45;
 }
+
+.notification-settings {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: linear-gradient(180deg, rgba(247, 252, 255, 0.96), rgba(255, 255, 255, 0.96));
+}
+
+.notification-settings-head,
+.notification-toggle,
+.notification-volume > span {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.notification-settings-head > div,
+.notification-toggle > span {
+  display: grid;
+  gap: 3px;
+}
+
+.notification-settings-head strong,
+.notification-toggle strong {
+  font-size: 11px;
+}
+
+.notification-toggle small {
+  max-width: 245px;
+  color: var(--text-dim);
+  font-size: 8px;
+  line-height: 1.35;
+}
+
+.drawer .notification-toggle input[type="checkbox"] {
+  width: 36px;
+  min-height: 20px;
+  height: 20px;
+  accent-color: var(--cyan);
+}
+
+.drawer .notification-volume input[type="range"] {
+  min-height: 24px;
+  height: 24px;
+  padding: 0;
+  accent-color: var(--cyan);
+}
+
+.notification-volume output {
+  color: var(--cyan);
+  font-family: var(--mono);
+  font-size: 9px;
+}
+
+.notification-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.notification-permission {
+  width: 100%;
+}
+
+.notification-status {
+  flex: 0 0 auto;
+  padding: 5px 7px;
+  border-radius: 999px;
+  background: rgba(139, 152, 171, 0.12);
+  color: var(--text-dim);
+  font-family: var(--mono);
+  font-size: 8px;
+  font-weight: 900;
+}
+
+.notification-status.is-ready {
+  background: var(--safe-soft);
+  color: var(--safe);
+}
+
+.notification-status.is-locked {
+  background: var(--indigo-soft);
+  color: var(--indigo);
+}
+
+.notification-note {
+  margin: 0;
+}
+
+#soundButton[data-sound-enabled="true"] {
+  border-color: rgba(10, 168, 207, 0.35);
+  background: rgba(10, 168, 207, 0.08);
+  color: var(--cyan);
+}
+
+@media (max-width: 560px) {
+  .notification-actions {
+    grid-template-columns: 1fr;
+  }
+}
