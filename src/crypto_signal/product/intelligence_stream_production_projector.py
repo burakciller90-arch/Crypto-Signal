@@ -37,6 +37,8 @@ from crypto_signal.product.intelligence_stream_policy import (
     StreamProjectorImplementationState,
     StreamProjectorSpec,
     accepted_stream_projector_registry,
+    build_stream_materiality_policy,
+    evaluate_stream_materiality,
 )
 from crypto_signal.product.intelligence_stream_projectors import (
     StreamProjectedMessage,
@@ -227,6 +229,17 @@ def build_stream_production_projector_contract(
     if previous_state is not None and previous_state.story_identity != fact_bundle.story_identity:
         raise ValueError("Stream production previous state/story mismatch")
 
+    materiality_decision = evaluate_stream_materiality(
+        build_stream_materiality_policy(),
+        source_event,
+    )
+    if materiality_decision.decision_identity != message_input.materiality_decision_identity:
+        raise ValueError("Stream production materiality decision mismatch")
+    if materiality_decision.disposition is not message_input.publication_disposition:
+        raise ValueError("Stream production publication disposition mismatch")
+    if materiality_decision.materiality is not message_input.materiality:
+        raise ValueError("Stream production materiality classification mismatch")
+
     previous_state_identity = (
         None if previous_state is None else previous_state.state_identity
     )
@@ -240,7 +253,7 @@ def build_stream_production_projector_contract(
         "importance": source_event.importance,
         "market": fact_bundle.market,
         "materiality_decision_identity": message_input.materiality_decision_identity,
-        "materiality_reason_codes": source_event.materiality_codes,
+        "materiality_reason_codes": materiality_decision.reason_codes,
         "previous_state_reference_identity": previous_state_identity,
         "production_authority": False,
         "projector_id": projector_id,
@@ -273,7 +286,7 @@ def build_stream_production_projector_contract(
         story_identity=fact_bundle.story_identity,
         current_fact_reference_identity=fact_bundle.fact_bundle_identity,
         previous_state_reference_identity=previous_state_identity,
-        materiality_reason_codes=source_event.materiality_codes,
+        materiality_reason_codes=materiality_decision.reason_codes,
         materiality_decision_identity=message_input.materiality_decision_identity,
     )
 
