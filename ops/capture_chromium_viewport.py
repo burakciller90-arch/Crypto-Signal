@@ -762,6 +762,162 @@ def _capture(args: argparse.Namespace) -> dict[str, object]:
                 )
             metrics["notification_probe"] = notification_probe
 
+        if args.probe_long_session:
+            session.command(
+                "Emulation.setEmulatedMedia",
+                {
+                    "features": [
+                        {
+                            "name": "prefers-reduced-motion",
+                            "value": "reduce",
+                        }
+                    ]
+                },
+            )
+            long_probe_result = session.command(
+                "Runtime.evaluate",
+                {
+                    "expression": (
+                        "(async()=>{"
+                        "const wait=()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));"
+                        "await new Promise(r=>setTimeout(r,260));"
+                        "const api=window.__cryptoSignalStreamS14;"
+                        "const viewport=document.getElementById('streamViewport');"
+                        "const list=document.getElementById('messageList');"
+                        "if(!api||!viewport||!list){return {ok:false,reason:'s14_surface_missing'};}"
+                        "const initial=api.snapshot();"
+                        "const firstInitial=list.querySelector('.message');"
+                        "const lastInitial=[...list.querySelectorAll('.message')].at(-1);"
+                        "const ariaOk=[...list.querySelectorAll('.message')].every((n,i)=>"
+                        "n.getAttribute('role')==='article'&&"
+                        "Number(n.getAttribute('aria-setsize'))===initial.totalMessages&&"
+                        "Number(n.getAttribute('aria-posinset'))===initial.renderStart+i+1);"
+                        "const feedRole=list.getAttribute('role');"
+                        "const firstId=firstInitial?.dataset.identity||'';"
+                        "const firstTop=firstInitial?.getBoundingClientRect().top??0;"
+                        "viewport.scrollTop=0;"
+                        "viewport.dispatchEvent(new Event('scroll'));"
+                        "await wait();await new Promise(r=>setTimeout(r,60));"
+                        "const afterOlder=api.snapshot();"
+                        "const retainedOlder=list.querySelector('.message[data-identity="'+firstId+'"]');"
+                        "const olderDrift=retainedOlder?Math.abs(retainedOlder.getBoundingClientRect().top-firstTop):9999;"
+                        "const lastBeforeNew=[...list.querySelectorAll('.message')].at(-1);"
+                        "const lastId=lastBeforeNew?.dataset.identity||'';"
+                        "const lastTop=lastBeforeNew?.getBoundingClientRect().top??0;"
+                        "viewport.scrollTop=viewport.scrollHeight;"
+                        "viewport.dispatchEvent(new Event('scroll'));"
+                        "await wait();await new Promise(r=>setTimeout(r,60));"
+                        "const afterNewer=api.snapshot();"
+                        "const retainedNew=list.querySelector('.message[data-identity="'+lastId+'"]');"
+                        "const newerDrift=retainedNew?Math.abs(retainedNew.getBoundingClientRect().top-lastTop):9999;"
+                        "const anchor=[...list.querySelectorAll('.message')][Math.min(20,list.querySelectorAll('.message').length-1)];"
+                        "anchor?.scrollIntoView({block:'center'});"
+                        "await wait();"
+                        "const prependId=anchor?.dataset.identity||'';"
+                        "const prependTop=anchor?.getBoundingClientRect().top??0;"
+                        "const prependResult=api.prependFixturePage(50);"
+                        "await wait();await new Promise(r=>setTimeout(r,60));"
+                        "const afterPrepend=api.snapshot();"
+                        "const prependAnchor=list.querySelector('.message[data-identity="'+prependId+'"]');"
+                        "const prependDrift=prependAnchor?Math.abs(prependAnchor.getBoundingClientRect().top-prependTop):9999;"
+                        "const expandable=[...list.querySelectorAll('.message')].find(n=>"
+                        "n.querySelector('.message-summary')&&n.dataset.identity);"
+                        "expandable?.scrollIntoView({block:'center'});"
+                        "await wait();"
+                        "const expansionTop=expandable?.getBoundingClientRect().top??0;"
+                        "expandable?.querySelector('.message-summary')?.click();"
+                        "await wait();await new Promise(r=>setTimeout(r,120));"
+                        "const expansionDrift=expandable?Math.abs(expandable.getBoundingClientRect().top-expansionTop):9999;"
+                        "const expanded=!!expandable?.classList.contains('is-expanded');"
+                        "const searchButton=document.getElementById('searchButton');"
+                        "searchButton?.focus();api.openDiscovery();"
+                        "await wait();"
+                        "const drawer=document.getElementById('discoveryDrawer');"
+                        "const focusInside=!!drawer?.contains(document.activeElement);"
+                        "const focusables=drawer?[...drawer.querySelectorAll('button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),a[href],[tabindex]:not([tabindex="-1"])')].filter(n=>!n.hidden):[];"
+                        "const firstFocus=focusables[0],lastFocus=focusables.at(-1);"
+                        "lastFocus?.focus();"
+                        "document.dispatchEvent(new KeyboardEvent('keydown',{key:'Tab',bubbles:true}));"
+                        "const tabWrapped=document.activeElement===firstFocus;"
+                        "document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}));"
+                        "await wait();"
+                        "const escapeClosed=drawer?.hidden===true;"
+                        "const focusRestored=document.activeElement===searchButton;"
+                        "const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;"
+                        "const transition=getComputedStyle(list.querySelector('.message')).transitionDuration;"
+                        "document.documentElement.style.fontSize='125%';"
+                        "await wait();"
+                        "const fontScaleNoOverflow=document.documentElement.scrollWidth<=window.innerWidth;"
+                        "document.documentElement.style.fontSize='';"
+                        "const final=api.snapshot();"
+                        "return {ok:true,feedRole,ariaOk,initial,afterOlder,afterNewer,"
+                        "olderDrift,newerDrift,prependResult,afterPrepend,prependDrift,"
+                        "expanded,expansionDrift,focusInside,tabWrapped,escapeClosed,focusRestored,"
+                        "reduced,transition,fontScaleNoOverflow,final};"
+                        "})()"
+                    ),
+                    "awaitPromise": True,
+                    "returnByValue": True,
+                },
+            )
+            raw_long_probe = long_probe_result.get("result", {})
+            if not isinstance(raw_long_probe, dict):
+                raise RuntimeError("CDP long-session probe result missing")
+            long_probe = raw_long_probe.get("value", {})
+            if not isinstance(long_probe, dict) or long_probe.get("ok") is not True:
+                raise RuntimeError(f"long-session probe failed: {long_probe!r}")
+            initial = long_probe.get("initial", {})
+            after_older = long_probe.get("afterOlder", {})
+            after_newer = long_probe.get("afterNewer", {})
+            after_prepend = long_probe.get("afterPrepend", {})
+            final = long_probe.get("final", {})
+            if int(initial.get("totalMessages", 0)) != 10_000:
+                raise RuntimeError(f"10k fixture state failed: {long_probe!r}")
+            if not 1 <= int(initial.get("renderedMessages", 0)) <= 180:
+                raise RuntimeError(f"bounded DOM window failed: {long_probe!r}")
+            if long_probe.get("feedRole") != "feed" or long_probe.get("ariaOk") is not True:
+                raise RuntimeError(f"feed accessibility semantics failed: {long_probe!r}")
+            if int(after_older.get("renderStart", -1)) >= int(initial.get("renderStart", -1)):
+                raise RuntimeError(f"virtual older shift failed: {long_probe!r}")
+            if float(long_probe.get("olderDrift", 9999)) > 6:
+                raise RuntimeError(f"virtual older anchor drift failed: {long_probe!r}")
+            if int(after_newer.get("renderStart", -1)) <= int(after_older.get("renderStart", -1)):
+                raise RuntimeError(f"virtual newer shift failed: {long_probe!r}")
+            if float(long_probe.get("newerDrift", 9999)) > 6:
+                raise RuntimeError(f"virtual newer anchor drift failed: {long_probe!r}")
+            prepend_result = long_probe.get("prependResult", {})
+            if prepend_result.get("ok") is not True or int(prepend_result.get("count", 0)) != 50:
+                raise RuntimeError(f"reverse-prepend fixture failed: {long_probe!r}")
+            if int(after_prepend.get("totalMessages", 0)) != 10_050:
+                raise RuntimeError(f"reverse-prepend state count failed: {long_probe!r}")
+            if float(long_probe.get("prependDrift", 9999)) > 6:
+                raise RuntimeError(f"reverse-prepend anchor drift failed: {long_probe!r}")
+            if long_probe.get("expanded") is not True:
+                raise RuntimeError(f"long-session expansion failed: {long_probe!r}")
+            if float(long_probe.get("expansionDrift", 9999)) > 6:
+                raise RuntimeError(f"long-session expansion anchor drift failed: {long_probe!r}")
+            for key in ("focusInside", "tabWrapped", "escapeClosed", "focusRestored"):
+                if long_probe.get(key) is not True:
+                    raise RuntimeError(f"drawer keyboard accessibility failed: {long_probe!r}")
+            if long_probe.get("reduced") is not True or long_probe.get("transition") not in {"0s", "0s, 0s, 0s"}:
+                raise RuntimeError(f"reduced-motion acceptance failed: {long_probe!r}")
+            if long_probe.get("fontScaleNoOverflow") is not True:
+                raise RuntimeError(f"font scaling overflow failed: {long_probe!r}")
+            if int(final.get("renderedMessages", 9999)) > 180:
+                raise RuntimeError(f"final bounded DOM failed: {long_probe!r}")
+            if int(final.get("detailCacheSize", 9999)) > 80:
+                raise RuntimeError(f"detail-cache bound failed: {long_probe!r}")
+            if float(final.get("lastRenderDurationMs", 9999)) > 1000:
+                raise RuntimeError(f"long-session render latency failed: {long_probe!r}")
+            heap_usage = session.command("Runtime.getHeapUsage")
+            used_heap = float(heap_usage.get("usedSize", -1))
+            if used_heap < 0 or used_heap > 160 * 1024 * 1024:
+                raise RuntimeError(
+                    f"long-session JS heap outside acceptance bound: {used_heap}"
+                )
+            long_probe["jsHeapUsedBytes"] = used_heap
+            metrics["long_session_probe"] = long_probe
+
         screenshot = session.command(
             "Page.captureScreenshot",
             {
@@ -811,6 +967,7 @@ def main() -> None:
     parser.add_argument("--probe-capital-story", action="store_true")
     parser.add_argument("--probe-discovery", action="store_true")
     parser.add_argument("--probe-notifications", action="store_true")
+    parser.add_argument("--probe-long-session", action="store_true")
     args = parser.parse_args()
 
     if not args.browser.is_file():
@@ -837,6 +994,7 @@ def main() -> None:
         f"capital_story_probe={'YES' if metrics.get('capital_story_probe') else 'NO'}",
         f"discovery_probe={'YES' if metrics.get('discovery_probe') else 'NO'}",
         f"notification_probe={'YES' if metrics.get('notification_probe') else 'NO'}",
+        f"long_session_probe={'YES' if metrics.get('long_session_probe') else 'NO'}",
     )
 
 
