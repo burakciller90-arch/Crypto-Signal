@@ -42,7 +42,7 @@ STREAM_CAPITAL_TABLES = (
     "stream_capital_lifecycle_messages",
 )
 
-CANONICAL_VAULTS = ("core", "opportunity_reserve", "tactical")
+CANONICAL_VAULTS = ("CORE", "OPPORTUNITY_RESERVE", "TACTICAL")
 
 
 def _parser() -> argparse.ArgumentParser:
