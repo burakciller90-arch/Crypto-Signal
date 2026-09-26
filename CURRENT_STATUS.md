@@ -4,10 +4,46 @@ Updated: 2026-09-26
 Project: Crypto Signal
 Baseline: crypto-signal-full-version-v1.0.0 (immutable)
 Active post-v1.0 program: v1.1 world-class product + market intelligence + Crypto Signal Intelligence Stream V1
-State: WC0_LIVE_PRODUCT_PARITY_ACCEPTED / WC1_24_7_DATA_RELIABILITY_ACCEPTED / WC2_ENGINEERING_FROZEN_EVIDENCE_ACCUMULATION_ACTIVE / WC4_CHAMPION_CHALLENGER_ENGINEERING_ACCEPTED_RESEARCH_ONLY / WC5_ENGINEERING_ACCEPTED_PRODUCT_DEPLOYED_HUMAN_USABILITY_NOT_MEASURED / WC6_SANDBOX_BOUNDARY_ACCEPTED_VENUE_EVIDENCE_EXTERNAL_DEPENDENCY / WC7_CURRENT_FRONTIER_PACKET_ACCEPTED_CURRENT_INSUFFICIENT_EVIDENCE / INTELLIGENCE_STREAM_V1_S0_S16_HISTORICAL_ACCEPTANCE_RETAINED / INTELLIGENCE_STREAM_V1_FINAL_F0_PASS_F1_PASS_F2_PASS_F3_ACTIVE / CONTINUITY_PAUSED_BY_USER
+State: WC0_LIVE_PRODUCT_PARITY_ACCEPTED / WC1_24_7_DATA_RELIABILITY_ACCEPTED / WC2_ENGINEERING_FROZEN_EVIDENCE_ACCUMULATION_ACTIVE / WC4_CHAMPION_CHALLENGER_ENGINEERING_ACCEPTED_RESEARCH_ONLY / WC5_ENGINEERING_ACCEPTED_PRODUCT_DEPLOYED_HUMAN_USABILITY_NOT_MEASURED / WC6_SANDBOX_BOUNDARY_ACCEPTED_VENUE_EVIDENCE_EXTERNAL_DEPENDENCY / WC7_CURRENT_FRONTIER_PACKET_ACCEPTED_CURRENT_INSUFFICIENT_EVIDENCE / INTELLIGENCE_STREAM_V1_S0_S16_HISTORICAL_ACCEPTANCE_RETAINED / INTELLIGENCE_STREAM_V1_FINAL_F0_PASS_F1_PASS_F2_PASS_F3_PASS_F4_ACTIVE / CONTINUITY_PAUSED_BY_USER
 REAL_CAPITAL: 0
 
 ## Active v1.1 frontier — read before historical sections
+
+### 2026-09-26 — STREAM FINAL F3 PASS / F4 RISK + SYSTEM TRUST ACTIVE
+
+Canonical F3 acceptance:
+- `docs/CRYPTO_SIGNAL_STREAM_FINAL_F3_LIVE_INTELLIGENCE_ACCEPTANCE.md`.
+
+F3 is physically live on exact merged main `a589efa4a8a4040bec56bfa81611c7f9e3e30517`.
+
+Final UID504 closeout run `36260544411` proved:
+- Development exact main sync;
+- active canonical supervisor;
+- Market Tape and Stream SQLite quick checks `ok`;
+- 69 persisted derivatives observations at acceptance;
+- all four immutable family activation boundaries present;
+- canonical source + narrative rows after activation:
+  - Geometry: 7;
+  - Liquidity: 3;
+  - Order Flow: 3;
+  - Derivatives: 3;
+- derivatives family events are forward of the immutable derivatives activation boundary;
+- live `stream_family status=SUMMARY` marker present;
+- `HISTORICAL_BACKFILL=NO`;
+- `REAL_CAPITAL=0`;
+- `F3_FINAL_LIVE_CLOSEOUT_PASS=YES`.
+
+PR #1358 preserved the existing WC2 outcome chronology fail-stop but moved independent F3 family projection ahead of that fail-stop so a WC2 outcome defect cannot suppress unrelated material family truth. No WC2 rule or threshold was weakened.
+
+Standalone on-chain/network messaging remains explicitly gated where no accepted persistent live provider exists.
+
+The sole final-completion frontier is now **F4 — Risk + System Trust Projection**:
+- exact persisted Event Risk transitions only;
+- decision-relevant provider/data-quality degradation and recovery only;
+- canonical F2 message chain;
+- no routine maintenance spam;
+- no synthetic news/risk/system events;
+- `REAL_CAPITAL=0`.
 
 ### 2026-09-26 — STREAM FINAL F2 PASS / F3 FIVE-FAMILY LIVE INTELLIGENCE ACTIVE
 

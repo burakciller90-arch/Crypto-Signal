@@ -168,8 +168,8 @@ Execute exactly in this order:
 **F0 Authority + Gap Reconciliation — PASS**  
 → **F1 WC2 Forward-Liveness Truth — PASS**  
 → **F2 Production Source-to-Message Backbone — PASS**  
-→ **F3 Five-Family Live Intelligence Projection — ACTIVE**  
-→ **F4 Risk + System Trust Projection**  
+→ **F3 Five-Family Live Intelligence Projection — PASS**  
+→ **F4 Risk + System Trust Projection — ACTIVE**  
 → **F5 Three-Vault Capital Story Live Closure**  
 → **F6 Exact Frozen Evidence Closure**  
 → **F7 Guarded Local LLM/Ollama Activation**  
@@ -479,6 +479,33 @@ A message is emitted only when a change matters to user interpretation.
 At least Market/Geometry + Liquidity + Order Flow + Derivatives have complete source→projector→runtime wiring wherever exact live persisted source truth already exists.
 
 Unsupported sources remain visibly gated rather than fabricated.
+
+---
+
+## F3 final live closure — 2026-09-26
+
+F3 is fully accepted and physically live.
+
+- canonical acceptance: `docs/CRYPTO_SIGNAL_STREAM_FINAL_F3_LIVE_INTELLIGENCE_ACCEPTANCE.md`;
+- PR #1355 merged canonical Market/Geometry, Liquidity, Order Flow and Derivatives family projection through the F2 backbone;
+- PR #1358 fixed the post-merge ordering defect by moving independent family projection before the existing WC2 outcome chronology fail-stop without weakening that fail-stop;
+- exact merged main: `a589efa4a8a4040bec56bfa81611c7f9e3e30517`;
+- UID504 final live closeout run `36260544411` passed;
+- Development exact-main sync and canonical supervisor were live;
+- persisted derivatives observations: 69 at acceptance;
+- all four immutable family activation boundaries were present;
+- canonical source/narrative counts after activation:
+  - Geometry 7;
+  - Liquidity 3;
+  - Order Flow 3;
+  - Derivatives 3;
+- derivatives family events were forward of the immutable activation boundary;
+- live `stream_family status=SUMMARY` was observed;
+- unsupported standalone on-chain/network sources remain explicitly gated;
+- no historical rich backfill, no synthetic activity, no real-money authority;
+- `REAL_CAPITAL=0`.
+
+Next exact frontier: **F4 — Risk + System Trust Projection**.
 
 ---
 
