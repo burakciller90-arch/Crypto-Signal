@@ -297,3 +297,31 @@ S15 closed:
 **S15 = PASS. S16 Controlled Cutover is the active frontier.**
 
 S16 must keep GALACTECH V2 as rollback/fallback until exact-main product-root routing, runtime/API parity, Stream persistence/live/sound/search/proof/capital/long-session/accessibility and rollback are mechanically accepted. REAL_CAPITAL=0 remains binding.
+
+## S16 closeout
+
+Canonical S16 acceptance:
+- `docs/CRYPTO_SIGNAL_STREAM_S16_ACCEPTANCE.md`.
+
+S16 closed:
+- explicit `stream` / `galactech` product-root selector;
+- Intelligence Stream at the real Product root;
+- byte parity between `/` and `/stream-preview` while Stream root is active;
+- GALACTECH V2 retained at `/galactech` for immediate rollback;
+- exact-main real Chromium end-to-end Stream story;
+- real SSE resolution + capital delivery;
+- exactly-once sound semantics retained;
+- exact 430px mobile acceptance;
+- 10,000-message root long-session acceptance;
+- rollback to GALACTECH with the same immutable ledgers;
+- Stream reapply with persisted identities intact;
+- Stream-aware exact-main `productdeploy`;
+- real R11 backup/restore runtime audit;
+- R25 operational truth;
+- continuity pause preservation;
+- REAL_CAPITAL=0.
+
+**S16 = PASS. INTELLIGENCE STREAM V1 S0-S16 = COMPLETE / ACCEPTED.**
+
+There is no remaining Stream V1 frontend implementation frontier. WC2/WC3/WC5/WC6/WC7 evidence/research dependencies remain separate broader-program work and must not be relabeled as unfinished frontend stages.
+
