@@ -250,10 +250,10 @@ def _process_fresh_prepared(
         maximum_issuance_delay_ms=maximum_issuance_delay_ms,
         horizon_bars=horizon_bars,
         base_asset=base_asset,
-        capital_assessed_at_ms=observed_at_ms,
-        sized_at_ms=observed_at_ms,
-        previewed_at_ms=observed_at_ms,
-        indexed_at_ms=observed_at_ms,
+        capital_assessed_at_ms=observed_at_ms + 1,
+        sized_at_ms=observed_at_ms + 2,
+        previewed_at_ms=observed_at_ms + 3,
+        indexed_at_ms=observed_at_ms + 4,
     )
     prepared_journal.append(receipt)
     completion = complete_wc2_prepared_cycle(
