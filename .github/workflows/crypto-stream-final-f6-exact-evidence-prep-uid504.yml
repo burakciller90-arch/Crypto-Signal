@@ -39,7 +39,7 @@ jobs:
           echo "F6_FOCUSED_GATE_PASS=YES"
           echo "REAL_CAPITAL=0"
 
-      - name: Snapshot live evidence stores without mutation
+      - name: Verify live evidence stores read-only
         shell: bash
         run: |
           set -euo pipefail
@@ -47,8 +47,7 @@ jobs:
           DEV="$ROOT/Development"
           PRODUCT="$ROOT/Product"
           OUT="$RUNNER_TEMP/stream-final-f6-prep"
-          SNAP="$OUT/db-snapshots"
-          mkdir -p "$SNAP"
+          mkdir -p "$OUT"
 
           test "$(id -u)" = "504"
           test -z "$(git -C "$DEV" status --porcelain)"
@@ -63,9 +62,10 @@ jobs:
           export SRC_MARKET="$DEV/runtime/market_tape/market_tape.sqlite3"
           export SRC_EVENT="$DEV/runtime/events/event_source.sqlite3"
           export SRC_PROVIDER="$DEV/runtime/data/provider_divergence.sqlite3"
-          export SNAP
 
-          for required in             "$SRC_SIGNAL" "$SRC_DECISION" "$SRC_STREAM"             "$SRC_MARKET" "$SRC_EVENT" "$SRC_PROVIDER"; do
+          for required in \
+            "$SRC_SIGNAL" "$SRC_DECISION" "$SRC_STREAM" \
+            "$SRC_MARKET" "$SRC_EVENT" "$SRC_PROVIDER"; do
             test -f "$required"
           done
 
@@ -74,10 +74,8 @@ jobs:
 
           import os
           import sqlite3
-          import time
           from pathlib import Path
 
-          snap = Path(os.environ["SNAP"])
           sources = {
               "signal": Path(os.environ["SRC_SIGNAL"]),
               "decision": Path(os.environ["SRC_DECISION"]),
@@ -87,47 +85,21 @@ jobs:
               "provider": Path(os.environ["SRC_PROVIDER"]),
           }
 
-          # SQLite's online backup API provides a transactionally consistent
-          # snapshot while the live WAL-backed source continues to receive
-          # writes.  The source is opened mode=ro + query_only, so this gate
-          # never checkpoints, mutates or requires byte-stable WAL/SHM files.
+          # These are append-only / identity-addressed evidence stores.  F6
+          # resolves exact persisted identities directly from the live stores,
+          # so copying a multi-GB WAL-backed Market Tape would add latency but
+          # no stronger truth guarantee.  Every source is opened read-only.
           for label, source in sources.items():
-              final = snap / f"{label}.sqlite3"
-              if final.exists():
-                  final.unlink()
-
-              last_error: Exception | None = None
-              for attempt in range(1, 8):
-                  try:
-                      uri = f"{source.resolve().as_uri()}?mode=ro"
-                      with sqlite3.connect(uri, uri=True, timeout=5.0) as src:
-                          src.execute("PRAGMA query_only=ON")
-                          # Pin one WAL snapshot for the full backup.  Writers
-                          # continue normally in WAL mode, while this read
-                          # transaction prevents the backup view from moving.
-                          src.execute("BEGIN")
-                          src.execute("SELECT name FROM sqlite_master LIMIT 1").fetchone()
-                          with sqlite3.connect(final) as dst:
-                              src.backup(dst)
-                              quick = dst.execute("PRAGMA quick_check").fetchone()
-                              if quick is None or str(quick[0]).lower() != "ok":
-                                  raise RuntimeError(
-                                      f"F6_SNAPSHOT_QUICK_CHECK_FAIL:{label}"
-                                  )
-                          src.rollback()
-                      last_error = None
-                      break
-                  except sqlite3.OperationalError as exc:
-                      last_error = exc
-                      if final.exists():
-                          final.unlink()
-                      if attempt < 7:
-                          time.sleep(0.15)
-              if last_error is not None:
-                  raise SystemExit(
-                      f"F6_SNAPSHOT_READONLY_BACKUP_FAIL:{label}:{last_error}"
-                  )
-              print(f"F6_READONLY_SQLITE_BACKUP_PASS={label}")
+              uri = f"{source.resolve().as_uri()}?mode=ro"
+              with sqlite3.connect(uri, uri=True, timeout=10.0) as db:
+                  db.execute("PRAGMA query_only=ON")
+                  quick = db.execute("PRAGMA quick_check").fetchone()
+                  if quick is None or str(quick[0]).lower() != "ok":
+                      raise SystemExit(f"F6_LIVE_QUICK_CHECK_FAIL:{label}")
+                  db.execute(
+                      "SELECT COUNT(*) FROM sqlite_master WHERE type='table'"
+                  ).fetchone()
+              print(f"F6_LIVE_READONLY_SOURCE_PASS={label}")
           PY
 
           test -z "$(git -C "$DEV" status --porcelain)"
@@ -148,10 +120,10 @@ jobs:
         run: |
           set -euo pipefail
           PY="/Volumes/Crypto-504/Crypto-Signal/Development/.venv/bin/python"
+          DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
           OUT="$RUNNER_TEMP/stream-final-f6-prep"
-          SNAP="$OUT/db-snapshots"
           export PYTHONPATH="$GITHUB_WORKSPACE/src"
-          export SNAP OUT
+          export DEV OUT
 
           "$PY" - <<'PY' | tee "$OUT/exact-evidence-audit.log"
           from __future__ import annotations
@@ -169,15 +141,16 @@ jobs:
               IntelligenceStreamReadModel,
           )
 
-          snap = Path(os.environ["SNAP"])
-          stream = snap / "stream.sqlite3"
+          dev = Path(os.environ["DEV"])
+          runtime = dev / "runtime"
+          stream = runtime / "stream/intelligence_stream.sqlite3"
           resolver = IntelligenceStreamExactEvidenceReadModel(
               stream_ledger_path=stream,
-              signal_ledger_path=snap / "signal.sqlite3",
-              decision_evidence_path=snap / "decision.sqlite3",
-              market_tape_path=snap / "market.sqlite3",
-              event_source_runtime_path=snap / "event.sqlite3",
-              provider_divergence_path=snap / "provider.sqlite3",
+              signal_ledger_path=runtime / "ledger/live_signal_ledger.sqlite3",
+              decision_evidence_path=runtime / "decision/decision_evidence.sqlite3",
+              market_tape_path=runtime / "market_tape/market_tape.sqlite3",
+              event_source_runtime_path=runtime / "events/event_source.sqlite3",
+              provider_divergence_path=runtime / "data/provider_divergence.sqlite3",
           )
 
           uri = f"{stream.resolve().as_uri()}?mode=ro"
