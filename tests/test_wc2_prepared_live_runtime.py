@@ -492,6 +492,41 @@ def test_ineligible_fresh_source_creates_no_wc2_runtime_evidence(
     assert not paths["shadow"].exists()
     assert not paths["manifest"].exists()
 
+def test_ineligible_replay_without_receipt_is_expected_skip_not_gap(
+    tmp_path: Path,
+) -> None:
+    bundle = build_bundle(candles())
+    signal = bundle.signal_decision
+    frozen_at = signal.as_of_ms + 10
+    paths = _paths(tmp_path)
+    ledger = ImmutableSignalLedger(tmp_path / "signal.sqlite3")
+    _persist_source(ledger, bundle, frozen_at_ms=frozen_at)
+
+    result = _call(
+        _replay(bundle),
+        bundle=bundle,
+        signal_ledger=ledger,
+        policy=_policy(bundle),
+        activation=_activation(),
+        paths=paths,
+        observed_at_ms=frozen_at + 10_000,
+    )
+
+    assert result.status is WC2PreparedLiveStatus.SKIPPED_INELIGIBLE_SOURCE
+    assert result.reason_codes == (
+        "source_not_directional_with_frozen_geometry",
+    )
+    assert result.receipt_identity is None
+    assert result.forecast_identity is None
+    assert result.historical_market_read_performed is False
+    assert result.historical_backfill_authority is False
+    assert not paths["prepared"].exists()
+    assert not paths["decision"].exists()
+    assert not paths["cohort"].exists()
+    assert not paths["shadow"].exists()
+    assert not paths["manifest"].exists()
+
+
 def test_same_cycle_issuance_hook_receives_exact_fresh_and_recovered_issuance(
     tmp_path: Path,
 ) -> None:
