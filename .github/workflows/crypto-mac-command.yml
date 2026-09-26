@@ -3622,74 +3622,38 @@ jobs:
             fi
           done
 
-          cleanup_headless() {
-            pkill -TERM -f -- '--headless=new' 2>/dev/null || true
-            sleep 1
-            pkill -KILL -f -- '--headless=new' 2>/dev/null || true
-          }
-          trap cleanup_headless EXIT
-
-          capture_headless() {
-            local name="$1"
-            local width="$2"
-            local height="$3"
-            BROWSER="$BROWSER" URL="$URL/" OUTFILE="$OUT/$name.png" NAME="$name" WIDTH="$width" HEIGHT="$height" \
-              /usr/bin/python3 - <<'PY'
-          import os
-          import signal
-          import subprocess
-          from pathlib import Path
-
-          browser = os.environ["BROWSER"]
-          url = os.environ["URL"]
-          outfile = os.environ["OUTFILE"]
-          name = os.environ["NAME"]
-          width = os.environ["WIDTH"]
-          height = os.environ["HEIGHT"]
-          log_path = Path("/tmp") / f"galactech-visual-{name}.log"
-          cmd = [
-              browser,
-              "--headless=new",
-              "--disable-gpu",
-              "--disable-extensions",
-              "--disable-background-networking",
-              "--disable-component-update",
-              "--disable-sync",
-              "--hide-scrollbars",
-              "--metrics-recording-only",
-              "--no-default-browser-check",
-              "--no-first-run",
-              "--renderer-process-limit=2",
-              f"--window-size={width},{height}",
-              "--virtual-time-budget=8000",
-              f"--screenshot={outfile}",
-              url,
-          ]
-          with log_path.open("wb") as log:
-              proc = subprocess.Popen(
-                  cmd,
-                  stdout=log,
-                  stderr=subprocess.STDOUT,
-                  start_new_session=True,
-              )
-              try:
-                  rc = proc.wait(timeout=30)
-              except subprocess.TimeoutExpired:
-                  os.killpg(proc.pid, signal.SIGKILL)
-                  proc.wait(timeout=5)
-                  raise SystemExit("HEADLESS_BROWSER_TIMEOUT")
-          if rc != 0:
-              raise SystemExit(f"HEADLESS_BROWSER_EXIT={rc}")
-          PY
-            test -s "$OUT/$name.png"
-            /usr/bin/sips -g pixelWidth -g pixelHeight "$OUT/$name.png" || true
-          }
-
           if [ -n "$BROWSER" ]; then
-            echo "BROWSER_CAPTURE_BACKEND=HEADLESS_CHROMIUM" >> "$OUT/metadata.txt"
+            CAPTURE_PY=""
+            for candidate in \
+              "/Volumes/Crypto-504/Crypto-Signal/Development/.venv/bin/python" \
+              "/Volumes/Crypto-504/Crypto-Signal/Product/.venv/bin/python"; do
+              if [ -x "$candidate" ] && "$candidate" -c 'import websockets' >/dev/null 2>&1; then
+                CAPTURE_PY="$candidate"
+                break
+              fi
+            done
+            test -n "$CAPTURE_PY"
+            echo "BROWSER_CAPTURE_BACKEND=CHROMIUM_CDP" >> "$OUT/metadata.txt"
             echo "BROWSER_BINARY=$BROWSER" >> "$OUT/metadata.txt"
-            capture_headless desktop 1440 950
-            capture_headless mobile 430 860
+
+            "$CAPTURE_PY" "$GITHUB_WORKSPACE/ops/capture_chromium_viewport.py" \
+              --browser "$BROWSER" \
+              --url "$URL/" \
+              --output "$OUT/desktop.png" \
+              --metrics-out "$OUT/desktop.metrics.json" \
+              --width 1440 \
+              --height 950 \
+              --require-no-horizontal-overflow
+
+            "$CAPTURE_PY" "$GITHUB_WORKSPACE/ops/capture_chromium_viewport.py" \
+              --browser "$BROWSER" \
+              --url "$URL/" \
+              --output "$OUT/mobile.png" \
+              --metrics-out "$OUT/mobile.metrics.json" \
+              --width 430 \
+              --height 860 \
+              --mobile \
+              --require-no-horizontal-overflow
           else
             echo "BROWSER_CAPTURE_BACKEND=SAFARI_APPLESCRIPT_FALLBACK" >> "$OUT/metadata.txt"
             /usr/bin/open -a Safari "$URL/"
