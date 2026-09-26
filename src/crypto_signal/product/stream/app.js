@@ -1991,15 +1991,21 @@ function captureViewportAnchor() {
 }
 
 function restoreViewportAnchor(anchor) {
-  if (!anchor || !ui.viewport || !ui.list) return;
-  window.requestAnimationFrame(() => {
-    if (!ui.viewport || !ui.list) return;
-    const item = ui.list.querySelector(
-      `.message[data-identity="${CSS.escape(anchor.identity)}"]`
-    );
-    if (!(item instanceof HTMLElement)) return;
-    ui.viewport.scrollTop += item.getBoundingClientRect().top - anchor.top;
+  if (!anchor || !ui.viewport || !ui.list) {
     state.virtualShiftLocked = false;
+    return;
+  }
+  window.requestAnimationFrame(() => {
+    try {
+      if (!ui.viewport || !ui.list) return;
+      const item = ui.list.querySelector(
+        `.message[data-identity="${CSS.escape(anchor.identity)}"]`
+      );
+      if (!(item instanceof HTMLElement)) return;
+      ui.viewport.scrollTop += item.getBoundingClientRect().top - anchor.top;
+    } finally {
+      state.virtualShiftLocked = false;
+    }
   });
 }
 
@@ -2489,8 +2495,25 @@ function stopPolling() {
   state.pollingTimer = null;
 }
 
-function openDrawer(drawer) {
-  if (!drawer || !ui.backdrop) return;
+function activeDrawer() {
+  return [ui.discoveryDrawer, ui.settingsDrawer].find(
+    (drawer) => drawer instanceof HTMLElement && !drawer.hidden
+  ) || null;
+}
+
+function drawerFocusable(drawer) {
+  if (!(drawer instanceof HTMLElement)) return [];
+  return [...drawer.querySelectorAll(
+    'button:not([disabled]), input:not([disabled]), select:not([disabled]), '
+      + 'textarea:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])'
+  )].filter((item) => item instanceof HTMLElement && !item.hidden);
+}
+
+function openDrawer(drawer, opener = document.activeElement) {
+  if (!(drawer instanceof HTMLElement) || !ui.backdrop) return;
+  if (opener instanceof HTMLElement && !drawer.contains(opener)) {
+    state.drawerReturnFocus = opener;
+  }
   for (const item of [ui.discoveryDrawer, ui.settingsDrawer]) {
     if (item && item !== drawer) item.hidden = true;
   }
@@ -2500,9 +2523,14 @@ function openDrawer(drawer) {
   if (ui.filterButton) ui.filterButton.setAttribute("aria-expanded", String(drawer === ui.discoveryDrawer));
   if (ui.soundButton) ui.soundButton.setAttribute("aria-expanded", String(drawer === ui.settingsDrawer));
   if (ui.settingsButton) ui.settingsButton.setAttribute("aria-expanded", String(drawer === ui.settingsDrawer));
+  window.requestAnimationFrame(() => {
+    const first = drawerFocusable(drawer)[0];
+    (first || drawer).focus({ preventScroll: true });
+  });
 }
 
-function closeDrawers() {
+function closeDrawers({ restoreFocus = true } = {}) {
+  const wasOpen = activeDrawer();
   for (const drawer of [ui.discoveryDrawer, ui.settingsDrawer]) {
     if (drawer) drawer.hidden = true;
   }
@@ -2510,6 +2538,45 @@ function closeDrawers() {
   for (const button of [ui.searchButton, ui.filterButton, ui.soundButton, ui.settingsButton]) {
     if (button) button.setAttribute("aria-expanded", "false");
   }
+  if (
+    wasOpen
+    && restoreFocus
+    && state.drawerReturnFocus instanceof HTMLElement
+    && state.drawerReturnFocus.isConnected
+  ) {
+    state.drawerReturnFocus.focus({ preventScroll: true });
+  }
+  state.drawerReturnFocus = null;
+}
+
+function handleDrawerKeyboard(event) {
+  const drawer = activeDrawer();
+  if (!drawer) return false;
+  if (event.key === "Escape") {
+    event.preventDefault();
+    closeDrawers();
+    return true;
+  }
+  if (event.key !== "Tab") return false;
+  const focusable = drawerFocusable(drawer);
+  if (!focusable.length) {
+    event.preventDefault();
+    drawer.focus({ preventScroll: true });
+    return true;
+  }
+  const first = focusable[0];
+  const last = focusable[focusable.length - 1];
+  if (event.shiftKey && document.activeElement === first) {
+    event.preventDefault();
+    last.focus({ preventScroll: true });
+    return true;
+  }
+  if (!event.shiftKey && document.activeElement === last) {
+    event.preventDefault();
+    first.focus({ preventScroll: true });
+    return true;
+  }
+  return false;
 }
 
 function fixtureIdentity(index) {
@@ -2586,6 +2653,52 @@ function fixtureRecord(index, symbol, timeframe, stateLabel, copy, minutesAgo, s
       forecastIdentity,
       proofIdentity,
     });
+  }
+  return record;
+}
+
+function longSessionFixtureRecord(index, total) {
+  const symbols = ["BTCUSDT", "ETHUSDT", "SOLUSDT"];
+  const timeframes = ["5m", "15m", "1h", "4h"];
+  const symbol = symbols[index % symbols.length];
+  const timeframe = timeframes[index % timeframes.length];
+  const identity = fixtureIdentity(50_000 + index);
+  const record = {
+    narrative_identity: identity,
+    event_at_ms: 1_790_000_000_000 + index * 60_000,
+    category: index % 11 === 0 ? "capital" : "decision",
+    subtype: index % 11 === 0 ? "capital_hold" : "forecast_updated",
+    importance: index % 17 === 0 ? "critical" : "important",
+    symbol,
+    timeframe,
+    vault_id: index % 11 === 0 ? "TACTICAL" : null,
+    source_kind: "deterministic",
+    original_text_preserved: true,
+    read_only: true,
+    production_authority: false,
+    real_capital: 0,
+    __fixture_state: index % 11 === 0 ? "NAKİTTE BEKLE" : "UZUN OTURUM",
+    text: {
+      collapsed_text:
+        `Uzun oturum fixture mesajı ${index + 1}/${total}. `
+        + "Kalıcı mesaj kimliği korunur; bu kayıt canlı piyasa gerçeği değildir.",
+      simple_text: "S14 uzun oturum kabulü için hafif deterministik fixture.",
+      technical_text: "Windowed feed DOM sınırı ve scroll anchor davranışı ölçülür.",
+      intelligence_text: "Bu fixture yeni piyasa kanıtı veya karar otoritesi üretmez.",
+      decision_text: "Yalnız UI performans ve erişilebilirlik kabulü içindir.",
+      capital_text: "REAL_CAPITAL=0.",
+    },
+  };
+  if (index === total - 40) {
+    const detailSeed = fixtureRecord(
+      40_000,
+      symbol,
+      timeframe,
+      "UZUN OTURUM",
+      "S14 expansion anchor fixture.",
+      1
+    );
+    record.__fixture_detail = detailSeed.__fixture_detail;
   }
   return record;
 }
@@ -2867,17 +2980,24 @@ function applyFixture(name) {
     return;
   }
 
+  const longSessionCount =
+    name === "long10k" ? 10_000 : name === "long1k" ? 1_000 : 0;
   const fixtureCount = name === "long" ? 36 : name === "history" ? 14 : 0;
-  const records = fixtureCount
-    ? Array.from({ length: fixtureCount }, (_, i) => {
-        const seed = base[i % base.length];
-        return {
-          ...seed,
-          narrative_identity: fixtureIdentity(100 + i),
-          event_at_ms: Date.now() - (fixtureCount - i) * 4 * 60_000,
-        };
-      })
-    : base;
+  const records = longSessionCount
+    ? Array.from(
+        { length: longSessionCount },
+        (_, i) => longSessionFixtureRecord(i, longSessionCount)
+      )
+    : fixtureCount
+      ? Array.from({ length: fixtureCount }, (_, i) => {
+          const seed = base[i % base.length];
+          return {
+            ...seed,
+            narrative_identity: fixtureIdentity(100 + i),
+            event_at_ms: Date.now() - (fixtureCount - i) * 4 * 60_000,
+          };
+        })
+      : base;
 
   for (const record of records) {
     state.ids.add(record.narrative_identity);
@@ -2885,6 +3005,7 @@ function applyFixture(name) {
   }
   state.hasOlder = name === "history" || name === "long";
   if (name === "history") state.unread = 3;
+  resetVirtualWindow({ pinToBottom: true });
   renderAll();
   setConnection("live", "CANLI", "fixture · Stream görsel kabul");
   if (ui.transportMode) ui.transportMode.textContent = "SSE CANLI · FIXTURE";
@@ -3113,7 +3234,7 @@ function wireUi() {
   });
 
   document.addEventListener("keydown", (event) => {
-    if (event.key === "Escape") closeDrawers();
+    if (handleDrawerKeyboard(event)) return;
     if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
       event.preventDefault();
       openDrawer(ui.discoveryDrawer);
@@ -3181,6 +3302,45 @@ window.__cryptoSignalStreamS13 = Object.freeze({
     };
     return notificationApi()?.route?.(record, delivery) || null;
   },
+});
+
+window.__cryptoSignalStreamS14 = Object.freeze({
+  snapshot: () => ({
+    totalMessages: state.messages.length,
+    renderedMessages: ui.list?.querySelectorAll(".message").length || 0,
+    renderStart: state.virtualStart,
+    renderEnd: state.virtualEnd,
+    detailCacheSize: state.details.size,
+    expandedCount: state.expanded.size,
+    evidenceWindowCount: state.evidenceWindows.size,
+    lastRenderDurationMs: state.lastRenderDurationMs,
+    activeIdentity:
+      document.activeElement?.closest?.(".message")?.dataset?.identity || "",
+    activeDrawer: activeDrawer()?.id || "",
+    realCapital: 0,
+  }),
+  shiftOlder: () => shiftVirtualWindow("older"),
+  shiftNewer: () => shiftVirtualWindow("newer"),
+  focusMessage: (identity) => focusRenderedMessage(identity),
+  prependFixturePage: (count = 50) => {
+    if (!state.fixture || !Number.isInteger(count) || count < 1 || count > 200) {
+      return { ok: false, reason: "fixture_only_or_invalid_count" };
+    }
+    const anchor = captureViewportAnchor();
+    const existing = state.messages.length;
+    const additions = Array.from(
+      { length: count },
+      (_, i) => longSessionFixtureRecord(20_000 + existing + i, existing + count)
+    );
+    for (const record of additions) state.ids.add(record.narrative_identity);
+    state.messages = [...additions, ...state.messages];
+    state.virtualStart += additions.length;
+    state.virtualEnd += additions.length;
+    renderAll({ anchor });
+    return { ok: true, count: additions.length };
+  },
+  openDiscovery: () => openDrawer(ui.discoveryDrawer, ui.searchButton),
+  closeDrawers,
 });
 
 window.addEventListener("beforeunload", () => {
