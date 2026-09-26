@@ -238,6 +238,102 @@ jobs:
           )
           PY
 
+      - name: Safe last-occurrence timing audit
+        shell: bash
+        run: |
+          set -euo pipefail
+          OUT="$RUNNER_TEMP/runtime-hygiene"
+          OUT="$OUT" /usr/bin/python3 - <<'PY'
+          import json
+          import os
+          import re
+          from datetime import datetime, timezone
+          from pathlib import Path
+
+          out = Path(os.environ["OUT"])
+          candidates = [
+              Path("/Volumes/Crypto-504/Crypto-Signal/ServiceLogs/live.err.log"),
+              Path("/Volumes/Crypto-504/Crypto-Signal/ServiceLogs/alert.err.log"),
+              Path("/Volumes/Crypto-504/Crypto-Signal/Development/runtime/ledger/live_clock.err.log"),
+              Path("/Volumes/Crypto-504/Crypto-Signal/Development/runtime/alerts/alert_clock.err.log"),
+          ]
+          patterns = {
+              "ssl_wrong_version": re.compile(r"WRONG_VERSION_NUMBER", re.I),
+              "name_resolution": re.compile(
+                  r"NameResolutionError|name or service not known|"
+                  r"nodename nor servname|temporary failure in name resolution",
+                  re.I,
+              ),
+              "connect_error": re.compile(r"ConnectError", re.I),
+              "alert_orphan": re.compile(
+                  r"lifecycle evaluation references missing signal",
+                  re.I,
+              ),
+          }
+          timestamp = re.compile(
+              r"(20\d{2}-\d{2}-\d{2}[T ][0-2]\d:[0-5]\d:[0-5]\d"
+              r"(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})?)"
+          )
+          report = {}
+          for path in candidates:
+              if not path.is_file():
+                  continue
+              with path.open("rb") as handle:
+                  try:
+                      handle.seek(-4_000_000, 2)
+                  except OSError:
+                      handle.seek(0)
+                  text = handle.read().decode("utf-8", errors="replace")
+              last_context_ts = None
+              found = {key: None for key in patterns}
+              counts = {key: 0 for key in patterns}
+              for line in text.splitlines():
+                  ts = timestamp.search(line)
+                  if ts:
+                      last_context_ts = ts.group(1)
+                  for key, pattern in patterns.items():
+                      if pattern.search(line):
+                          counts[key] += 1
+                          found[key] = last_context_ts
+              report[str(path)] = {
+                  "file_mtime_utc": datetime.fromtimestamp(
+                      path.stat().st_mtime, tz=timezone.utc
+                  ).isoformat(),
+                  "signature_counts": counts,
+                  "last_context_timestamp": found,
+              }
+          payload = {
+              "files": report,
+              "raw_log_content_emitted": False,
+              "real_capital": 0,
+          }
+          (out / "last-occurrence-timing.json").write_text(
+              json.dumps(payload, sort_keys=True, indent=2),
+              encoding="utf-8",
+          )
+          print(
+              "RUNTIME_HYGIENE_LAST_OCCURRENCE "
+              + json.dumps(payload, sort_keys=True, separators=(",", ":"))
+          )
+          PY
+
+      - name: Alert clock service state summary
+        shell: bash
+        run: |
+          set +e
+          OUT="$RUNNER_TEMP/runtime-hygiene/alert-clock-state.txt"
+          LABEL="com.cryptosignal.alertclock"
+          TARGET="gui/$(id -u)/$LABEL"
+          {
+            echo "ALERT_CLOCK_LAUNCHCTL_PRESENT=$(
+              launchctl print "$TARGET" >/dev/null 2>&1 && echo YES || echo NO
+            )"
+            launchctl print "$TARGET" 2>/dev/null               | egrep 'state =|runs =|pid =|last exit code =|run interval ='               | head -40 || true
+            echo "ALERT_CLOCK_PROCESS_COUNT=$(pgrep -f 'run_alert_clock.py' 2>/dev/null | wc -l | tr -d ' ')"
+            echo "RAW_LOG_CONTENT_EMITTED=NO"
+            echo "REAL_CAPITAL=0"
+          } | tee "$OUT"
+
       - name: Proxy presence audit without values
         shell: bash
         run: |
