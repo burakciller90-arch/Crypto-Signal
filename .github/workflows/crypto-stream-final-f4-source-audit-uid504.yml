@@ -1,0 +1,138 @@
+name: Crypto Stream Final F4 Source Audit UID504
+
+on:
+  push:
+    branches:
+      - 'stream/final-f4-risk-system'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: crypto-stream-final-f4-source-audit
+  cancel-in-progress: true
+
+jobs:
+  audit:
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          clean: true
+          fetch-depth: 2
+      - name: Audit exact F4 persisted sources read only
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          DEV="$ROOT/Development"
+          EVENT_DB="$DEV/runtime/events/event_source.sqlite3"
+          DIVERGENCE_DB="$DEV/runtime/data/provider_divergence.sqlite3"
+          test -f "$EVENT_DB"
+          test -f "$DIVERGENCE_DB"
+          PY="$DEV/.venv/bin/python"
+          export PYTHONPATH="$GITHUB_WORKSPACE/src"
+          "$PY" - "$EVENT_DB" "$DIVERGENCE_DB" <<'PY'
+          import json
+          import sqlite3
+          import sys
+          import time
+          from dataclasses import asdict
+          from pathlib import Path
+
+          from crypto_signal.product.event_source_runtime import (
+              read_event_source_runtime_truth,
+          )
+          from crypto_signal.product.provider_divergence_runtime import (
+              read_provider_divergence_runtime_truth,
+          )
+
+          event_db = Path(sys.argv[1])
+          divergence_db = Path(sys.argv[2])
+          now = time.time_ns() // 1_000_000
+
+          event_truth = read_event_source_runtime_truth(
+              event_db,
+              observed_at_ms=now,
+          )
+          divergence_truth = read_provider_divergence_runtime_truth(
+              divergence_db,
+              observed_at_ms=now,
+          )
+
+          with sqlite3.connect(f"{event_db.resolve().as_uri()}?mode=ro", uri=True) as c:
+              c.row_factory = sqlite3.Row
+              c.execute("PRAGMA query_only=ON")
+              event_quick = c.execute("PRAGMA quick_check").fetchone()[0]
+              latest_fetches = [
+                  dict(row)
+                  for row in c.execute(
+                      """
+                      SELECT source_provider, source_kind, fetched_at_ms,
+                             outcome, reason_code, fetch_identity
+                      FROM event_source_fetches
+                      ORDER BY fetched_at_ms DESC, sequence_id DESC
+                      LIMIT 20
+                      """
+                  )
+              ]
+              coverages = [
+                  dict(row)
+                  for row in c.execute(
+                      """
+                      SELECT coverage_identity, source_provider, observed_at_ms,
+                             payload_json
+                      FROM event_calendar_coverages
+                      ORDER BY observed_at_ms DESC
+                      """
+                  )
+              ]
+              structured = [
+                  dict(row)
+                  for row in c.execute(
+                      """
+                      SELECT event_identity, provider_event_id, source_provider,
+                             scheduled_at_ms, ingested_at_ms, payload_json
+                      FROM structured_event_observations
+                      ORDER BY scheduled_at_ms, event_identity
+                      """
+                  )
+              ]
+
+          with sqlite3.connect(
+              f"{divergence_db.resolve().as_uri()}?mode=ro", uri=True
+          ) as c:
+              c.row_factory = sqlite3.Row
+              c.execute("PRAGMA query_only=ON")
+              divergence_quick = c.execute("PRAGMA quick_check").fetchone()[0]
+              latest_divergence = [
+                  dict(row)
+                  for row in c.execute(
+                      """
+                      SELECT sequence_id, snapshot_identity, market_type, symbol,
+                             timeframe, observed_at_ms, payload_json
+                      FROM provider_divergence_snapshots
+                      ORDER BY observed_at_ms DESC, sequence_id DESC
+                      LIMIT 20
+                      """
+                  )
+              ]
+
+          payload = {
+              "observed_at_ms": now,
+              "event_quick_check": event_quick,
+              "event_truth": asdict(event_truth),
+              "latest_fetches": latest_fetches,
+              "coverages": coverages,
+              "structured_event_count": len(structured),
+              "structured_events": structured[-40:],
+              "divergence_quick_check": divergence_quick,
+              "divergence_truth": [asdict(item) for item in divergence_truth],
+              "latest_divergence_rows": latest_divergence,
+          }
+          print(json.dumps(payload, sort_keys=True, default=str))
+          print("F4_SOURCE_AUDIT_READ_ONLY=YES")
+          print("REAL_CAPITAL=0")
+          PY
