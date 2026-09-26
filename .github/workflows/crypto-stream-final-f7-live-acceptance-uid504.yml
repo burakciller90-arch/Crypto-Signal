@@ -146,10 +146,10 @@ jobs:
 
           baseline = StreamNarrativeText(
               collapsed_text=(
-                  "BTCUSDT görünüm yukarı yönlü durumdadır; destek puanı 82 olarak vardır."
+                  "BTCUSDT 4h görünüm yukarı yön tarafı; destek puanı 82, ek teyit takip."
               ),
               simple_text=(
-                  "Yukarı yön görünümü bulunmaktadır. Destek puanı 82 ve ek teyit takibi yapılmaktadır."
+                  "BTCUSDT 4h yukarı yön görünüm var. Destek puanı 82. Ek teyit takip sürüyor."
               ),
               technical_text="Destek puanı 82, karşı ağırlık 0.",
               intelligence_text="Intelligence sonucu: duruş=bullish, güç=high.",
