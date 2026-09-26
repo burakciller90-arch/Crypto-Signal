@@ -21,7 +21,7 @@ jobs:
         with:
           ref: ${{ github.sha }}
           clean: true
-          fetch-depth: 2
+          fetch-depth: 0
 
       - name: Fast-forward Development and Product to exact merged F6 main
         shell: bash
