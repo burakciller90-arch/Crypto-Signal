@@ -13,7 +13,7 @@ from crypto_signal.product.intelligence_stream_narrative import (
     StreamNarrativeText,
 )
 
-LOCAL_NARRATIVE_REWRITER_VERSION = "crypto-signal-local-rewriter-v1/1"
+LOCAL_NARRATIVE_REWRITER_VERSION = "crypto-signal-local-rewriter-v1/2"
 _REQUIRED_TEXT_KEYS = frozenset(
     {
         "collapsed_text",
@@ -209,7 +209,22 @@ def _chat_payload(
         "temperature": config.temperature,
         "max_tokens": config.max_tokens,
         "reasoning_effort": "none",
-        "response_format": {"type": "json_object"},
+        "response_format": {
+            "type": "json_schema",
+            "json_schema": {
+                "name": "crypto_signal_stream_narrative_rewrite",
+                "strict": True,
+                "schema": {
+                    "type": "object",
+                    "additionalProperties": False,
+                    "properties": {
+                        key: {"type": "string", "minLength": 1}
+                        for key in sorted(_REQUIRED_TEXT_KEYS)
+                    },
+                    "required": sorted(_REQUIRED_TEXT_KEYS),
+                },
+            },
+        },
         "stream": False,
     }
 
