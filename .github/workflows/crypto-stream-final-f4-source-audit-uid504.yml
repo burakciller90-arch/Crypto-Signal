@@ -71,7 +71,7 @@ jobs:
                   for row in c.execute(
                       """
                       SELECT source_provider, source_kind, fetched_at_ms,
-                             outcome, reason_code, fetch_identity
+                             outcome, fetch_identity, payload_json
                       FROM event_source_fetches
                       ORDER BY fetched_at_ms DESC, sequence_id DESC
                       LIMIT 20
