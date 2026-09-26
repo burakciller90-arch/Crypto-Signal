@@ -874,7 +874,7 @@ def _capture(args: argparse.Namespace) -> dict[str, object]:
   s13.setNotificationSettings({
     enabled: true,
     volume: 0.28,
-    mode: "decision_capital",
+    mode: "all",
     desktopEnabled: false,
   });
   document.getElementById("soundUnlockButton")?.click();
@@ -970,10 +970,22 @@ def _capture(args: argparse.Namespace) -> dict[str, object]:
       )
     );
   });
-  const searchFoundRoot = !!document.querySelector(
+  const rootSearchCard = document.querySelector(
     `.message[data-identity="${rootId}"]`
   );
-  await s12.focusRenderedMessage(rootId);
+  const searchFoundRoot = !!rootSearchCard;
+  const rootSummary = rootSearchCard?.querySelector(".message-summary");
+  if (!(rootSummary instanceof HTMLButtonElement)) {
+    return { ok: false, reason: "root_summary_missing_after_search" };
+  }
+  rootSummary.click();
+  await waitFor(() => {
+    const active = document.querySelector(
+      `.message[data-identity="${rootId}"].is-expanded`
+    );
+    const linked = new URL(window.location.href).searchParams.get("message");
+    return !!active && linked === rootId;
+  });
   const deepLinkIdentity = new URL(window.location.href).searchParams.get(
     "message"
   );
@@ -982,12 +994,22 @@ def _capture(args: argparse.Namespace) -> dict[str, object]:
   await waitFor(
     () => document.querySelectorAll(".message[data-identity]").length >= 3
   );
-  await s12.focusRenderedMessage(capitalId);
-  await waitFor(() =>
-    document.querySelector(
-      `.message[data-identity="${capitalId}"].is-expanded .message-detail`
-    )
+  const capitalRendered = document.querySelector(
+    `.message[data-identity="${capitalId}"]`
   );
+  const capitalSummary = capitalRendered?.querySelector(".message-summary");
+  if (!(capitalSummary instanceof HTMLButtonElement)) {
+    return { ok: false, reason: "capital_summary_missing_after_clear" };
+  }
+  capitalSummary.click();
+  await waitFor(() => {
+    const detail = document.querySelector(
+      `.message[data-identity="${capitalId}"].is-expanded .message-detail`
+    );
+    const detailText = detail?.textContent || "";
+    const lineageCount = detail?.querySelectorAll(".proof-panel code").length || 0;
+    return detailText.includes("REAL_CAPITAL=0") && lineageCount >= 3;
+  });
   const capitalDetail = document.querySelector(
     `.message[data-identity="${capitalId}"].is-expanded .message-detail`
   );
