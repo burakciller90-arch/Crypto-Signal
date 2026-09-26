@@ -1,9 +1,6 @@
 name: Crypto Stream Post-R11 Live Acceptance UID504
 
 on:
-  push:
-    branches:
-      - 'stream/post-r11-live-acceptance'
   workflow_dispatch:
 
 permissions:
