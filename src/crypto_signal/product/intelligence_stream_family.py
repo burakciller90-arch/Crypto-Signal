@@ -36,7 +36,10 @@ from crypto_signal.product.intelligence_stream_narrative_ledger import (
 )
 from crypto_signal.product.intelligence_stream_policy import (
     StreamMateriality,
+    StreamProjectorImplementationState,
+    StreamProjectorSpec,
     StreamPublicationDisposition,
+    accepted_stream_projector_registry,
     build_stream_materiality_policy,
     evaluate_stream_materiality,
 )
@@ -665,6 +668,11 @@ class IntelligenceStreamFamilyRuntime:
         *,
         activated_at_ms: int,
     ) -> StreamFamilyProjectionResult:
+        spec = _require_family_projector_spec(snapshot.projector_id)
+        if snapshot.category is not spec.category:
+            raise ValueError("Stream family projector/category mismatch")
+        if snapshot.subtype not in spec.subtypes:
+            raise ValueError("Stream family projector/subtype mismatch")
         activation_identity = self.ensure_projector_activation(
             snapshot.projector_id,
             activated_at_ms=activated_at_ms,
@@ -2013,6 +2021,25 @@ def _previous_state_components(previous: dict[str, Any]) -> dict[str, str]:
             raise ValueError("Stream family previous component is duplicated")
         result[name] = value
     return result
+
+def _require_family_projector_spec(projector_id: str) -> StreamProjectorSpec:
+    selected = next(
+        (
+            item
+            for item in accepted_stream_projector_registry()
+            if item.projector_id == projector_id
+        ),
+        None,
+    )
+    if selected is None:
+        raise ValueError("Stream family projector is not in accepted registry")
+    if (
+        selected.implementation_state
+        is not StreamProjectorImplementationState.IMPLEMENTED
+    ):
+        raise ValueError("Stream family projector is not implemented")
+    return selected
+
 
 def _text(raw: dict[str, Any], key: str) -> str:
     value = raw.get(key)
