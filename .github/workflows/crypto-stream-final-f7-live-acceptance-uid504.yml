@@ -145,9 +145,11 @@ jobs:
               return hashlib.sha256(value.encode()).hexdigest()
 
           baseline = StreamNarrativeText(
-              collapsed_text="BTCUSDT görünümü yukarı yönlü; 82 destek puanı korunuyor.",
+              collapsed_text=(
+                  "BTCUSDT görünüm yukarı yönlü durumdadır; destek puanı 82 olarak vardır."
+              ),
               simple_text=(
-                  "Görünüm yukarı yönlü. 82 destek puanı var ve ek teyit izleniyor."
+                  "Yukarı yön görünümü bulunmaktadır. Destek puanı 82 ve ek teyit takibi yapılmaktadır."
               ),
               technical_text="Destek puanı 82, karşı ağırlık 0.",
               intelligence_text="Intelligence sonucu: duruş=bullish, güç=high.",
@@ -178,6 +180,9 @@ jobs:
           assert candidate.capital_text == baseline.capital_text
           assert candidate.collapsed_text.strip()
           assert candidate.simple_text.strip()
+          assert candidate != baseline, (
+              "real local model must demonstrate an accepted style rewrite"
+          )
 
           allowed_numbers={"0","82"}
           for value in (candidate.collapsed_text, candidate.simple_text):
