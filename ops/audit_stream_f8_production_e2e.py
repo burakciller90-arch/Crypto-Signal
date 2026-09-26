@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 from __future__ import annotations
 
 import argparse
@@ -9,8 +8,9 @@ import sys
 import urllib.error
 import urllib.parse
 import urllib.request
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 REAL_CAPITAL = 0
 SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
