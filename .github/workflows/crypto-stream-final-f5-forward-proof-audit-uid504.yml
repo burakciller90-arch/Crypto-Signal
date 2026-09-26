@@ -164,7 +164,7 @@ jobs:
                       """
                       SELECT COUNT(*)
                       FROM s11_vault_decisions
-                      WHERE decided_at_ms >= ?
+                      WHERE event_at_ms >= ?
                       """,
                       (activated_at_ms,),
                   ).fetchone()[0]
@@ -183,9 +183,9 @@ jobs:
                   tuple(x)
                   for x in c.execute(
                       """
-                      SELECT vault_id, disposition, COUNT(*), MIN(decided_at_ms), MAX(decided_at_ms)
+                      SELECT vault_id, disposition, COUNT(*), MIN(event_at_ms), MAX(event_at_ms)
                       FROM s11_vault_decisions
-                      WHERE decided_at_ms >= ?
+                      WHERE event_at_ms >= ?
                       GROUP BY vault_id, disposition
                       ORDER BY vault_id, disposition
                       """,
