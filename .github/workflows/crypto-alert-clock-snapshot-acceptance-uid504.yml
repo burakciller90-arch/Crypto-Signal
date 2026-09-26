@@ -1,0 +1,112 @@
+name: Crypto Alert Clock Snapshot Acceptance UID504
+
+on:
+  push:
+    branches:
+      - 'runtime/alert-clock-consistent-snapshot'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: alert-clock-snapshot-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  acceptance:
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          clean: true
+          fetch-depth: 1
+
+      - name: Prepare isolated environment
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
+          BASE_PY="$DEV/.venv/bin/python"
+          VENV="$RUNNER_TEMP/alert-clock-snapshot-venv"
+          test "$(id -u)" = "504"
+          test -x "$BASE_PY"
+          test -z "$(git -C "$DEV" status --porcelain)"
+          echo "DEV_HEAD_BEFORE=$(git -C "$DEV" rev-parse HEAD)" > "$RUNNER_TEMP/alert-clock-snapshot-prestate"
+          rm -rf "$VENV"
+          "$BASE_PY" -m venv "$VENV"
+          "$VENV/bin/python" -m pip install --upgrade pip
+          "$VENV/bin/python" -m pip install -e "$GITHUB_WORKSPACE"
+          "$VENV/bin/python" -m pip install "pytest>=8.4" "ruff>=0.13" "mypy>=1.18"
+          echo "TEST_PY=$VENV/bin/python" >> "$GITHUB_ENV"
+
+      - name: Focused Alert Clock acceptance
+        shell: bash
+        run: |
+          set -euo pipefail
+          "$TEST_PY" -m pytest -q tests/test_alert_clock.py
+          "$TEST_PY" -m ruff check             src/crypto_signal/alerts/clock.py             tests/test_alert_clock.py
+          "$TEST_PY" -m mypy src/crypto_signal/alerts/clock.py
+          echo "ALERT_CLOCK_CONSISTENT_SNAPSHOT_FOCUSED_PASS=YES"
+          echo "REAL_CAPITAL=0"
+
+      - name: Read-only canonical ledger acceptance
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
+          DB="$DEV/runtime/ledger/live_signal_ledger.sqlite3"
+          OUT="$RUNNER_TEMP/alert-clock-snapshot-live"
+          mkdir -p "$OUT"
+          test -f "$DB"
+
+          DB="$DB" TEMP_OUTBOX="$OUT/alert-outbox.sqlite3"           PYTHONPATH="$GITHUB_WORKSPACE/src" "$TEST_PY" - <<'PY'
+          import os
+          from pathlib import Path
+
+          from crypto_signal.alerts.clock import materialize_alert_events
+          from crypto_signal.alerts.store import AlertOutbox
+
+          source = Path(os.environ["DB"])
+          outbox_path = Path(os.environ["TEMP_OUTBOX"])
+          result = materialize_alert_events(
+              source,
+              AlertOutbox(outbox_path),
+          )
+          print(
+              "ALERT_CLOCK_CANONICAL_LEDGER_PASS=YES "
+              f"signals={result.signal_rows} "
+              f"lifecycle={result.lifecycle_rows} "
+              f"eligible={result.eligible_events} "
+              f"inserted={result.inserted_events} "
+              f"unchanged={result.unchanged_events}"
+          )
+          print(f"TEMP_OUTBOX={outbox_path}")
+          print("PRODUCTION_OUTBOX_MUTATION=NO")
+          print("REAL_CAPITAL=0")
+          PY
+
+      - name: Whole-repository regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          "$TEST_PY" -m pytest -q
+          "$TEST_PY" -m ruff check src tests ops/verify_stage10_integrated.py ops/capture_chromium_viewport.py
+          "$TEST_PY" -m mypy src ops/verify_stage10_integrated.py ops/capture_chromium_viewport.py
+          echo "ALERT_CLOCK_CONSISTENT_SNAPSHOT_FULL_REPOSITORY_PASS=YES"
+          echo "REAL_CAPITAL=0"
+
+      - name: Prove Development checkout remained untouched
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
+          BEFORE="$(sed -n 's/^DEV_HEAD_BEFORE=//p' "$RUNNER_TEMP/alert-clock-snapshot-prestate")"
+          AFTER="$(git -C "$DEV" rev-parse HEAD)"
+          test "$BEFORE" = "$AFTER"
+          test -z "$(git -C "$DEV" status --porcelain)"
+          echo "ALERT_CLOCK_SNAPSHOT_UID504_NON_MUTATING_PASS=YES"
+          echo "DEV_HEAD=$AFTER"
+          echo "REAL_CAPITAL=0"
