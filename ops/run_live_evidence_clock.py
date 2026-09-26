@@ -589,6 +589,11 @@ async def run(
                 decision_ledger=wc2_decision,
                 cohort_journal=wc2_cohort,
                 observed_at_ms=time.time_ns() // 1_000_000,
+                resolution_hook=(
+                    None
+                    if stream_runtime is None
+                    else stream_runtime.project_resolution
+                ),
             )
         except (OSError, TypeError, ValueError, sqlite3.Error) as exc:
             print(
