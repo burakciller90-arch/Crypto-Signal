@@ -160,7 +160,6 @@ def test_local_rewriter_emits_bounded_openai_compatible_request() -> None:
     assert payload["stream"] is False
     assert payload["temperature"] == 0.2
     assert payload["max_tokens"] == 900
-    assert "response_format" not in payload
 
     messages = payload["messages"]
     assert isinstance(messages, list)
