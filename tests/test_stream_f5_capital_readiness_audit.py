@@ -94,7 +94,7 @@ class StreamF5CapitalReadinessAuditTest(unittest.TestCase):
                 )
 
             for index, vault in enumerate(
-                ("core", "opportunity_reserve", "tactical"),
+                ("CORE", "OPPORTUNITY_RESERVE", "TACTICAL"),
                 start=1,
             ):
                 snapshot = {
@@ -180,7 +180,7 @@ class StreamF5CapitalReadinessAuditTest(unittest.TestCase):
     def _insert_decision(self, *, event_at_ms: int) -> None:
         payload = {
             "decision_identity": _identity("d"),
-            "vault_id": "core",
+            "vault_id": "CORE",
             "disposition": "hold",
             "candidate_as_of_ms": event_at_ms - 20,
             "assessed_at_ms": event_at_ms - 10,
