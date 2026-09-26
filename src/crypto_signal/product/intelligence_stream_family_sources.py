@@ -137,10 +137,10 @@ def build_market_tape_family_snapshots(
                 orderbooks,
                 as_of_ms=as_of_ms,
             )
-            analysis = liquidity.analysis
+            liquidity_analysis = liquidity.analysis
             evidence = {
                 liquidity.freeze_identity,
-                analysis.evidence_identity,
+                liquidity_analysis.evidence_identity,
                 *(item.snapshot_identity for item in liquidity.snapshots),
             }
             snapshots.append(
@@ -161,17 +161,17 @@ def build_market_tape_family_snapshots(
                     evidence_identities=tuple(sorted(evidence)),
                     evidence_domains=("liquidity", "order_book"),
                     state_label=(
-                        f"{analysis.status.value}:"
-                        f"{analysis.liquidity_take_candidate.value}"
+                        f"{liquidity_liquidity_analysis.status.value}:"
+                        f"{liquidity_liquidity_analysis.liquidity_take_candidate.value}"
                     ),
                     state_components=(
-                        ("liquidity_take_candidate", analysis.liquidity_take_candidate.value),
-                        ("source_quality", analysis.source_quality.value),
-                        ("status", analysis.status.value),
+                        ("liquidity_take_candidate", liquidity_analysis.liquidity_take_candidate.value),
+                        ("source_quality", liquidity_analysis.source_quality.value),
+                        ("status", liquidity_analysis.status.value),
                     ),
                     direction=None,
-                    source_quality=analysis.source_quality.value,
-                    uncertainty_flags=analysis.uncertainty_flags,
+                    source_quality=liquidity_analysis.source_quality.value,
+                    uncertainty_flags=liquidity_analysis.uncertainty_flags,
                 )
             )
         if orderbooks or trades:
@@ -180,18 +180,18 @@ def build_market_tape_family_snapshots(
                 trades,
                 as_of_ms=as_of_ms,
             )
-            analysis = order_flow.analysis
+            order_flow_analysis = order_flow.analysis
             evidence = {
                 order_flow.freeze_identity,
-                analysis.evidence_identity,
+                liquidity_analysis.evidence_identity,
                 *(item.trade_identity for item in order_flow.trades),
             }
             if order_flow.orderbook is not None:
                 evidence.add(order_flow.orderbook.snapshot_identity)
             direction = None
-            if analysis.label is OrderFlowMicrostructureLabel.BUY_PRESSURE:
+            if order_flow_analysis.label is OrderFlowMicrostructureLabel.BUY_PRESSURE:
                 direction = "buy_pressure"
-            elif analysis.label is OrderFlowMicrostructureLabel.SELL_PRESSURE:
+            elif order_flow_analysis.label is OrderFlowMicrostructureLabel.SELL_PRESSURE:
                 direction = "sell_pressure"
             snapshots.append(
                 build_family_snapshot(
@@ -210,19 +210,19 @@ def build_market_tape_family_snapshots(
                     source_as_of_ms=as_of_ms,
                     evidence_identities=tuple(sorted(evidence)),
                     evidence_domains=("order_flow", "order_book", "public_trades"),
-                    state_label=analysis.label.value,
+                    state_label=order_flow_order_flow_derivatives_analysis.label.value,
                     state_components=(
-                        ("book_pressure", analysis.book_pressure.value),
-                        ("label", analysis.label.value),
-                        ("taker_flow", analysis.taker_flow.value),
+                        ("book_pressure", order_flow_analysis.book_pressure.value),
+                        ("label", order_flow_derivatives_analysis.label.value),
+                        ("taker_flow", order_flow_analysis.taker_flow.value),
                     ),
                     direction=direction,
                     source_quality=(
                         "unresolved"
-                        if analysis.label is OrderFlowMicrostructureLabel.UNRESOLVED
+                        if order_flow_analysis.label is OrderFlowMicrostructureLabel.UNRESOLVED
                         else "measured"
                     ),
-                    uncertainty_flags=analysis.uncertainty_flags,
+                    uncertainty_flags=liquidity_analysis.uncertainty_flags,
                 )
             )
 
@@ -237,10 +237,10 @@ def build_market_tape_family_snapshots(
                 derivatives,
                 as_of_ms=as_of_ms,
             )
-            analysis = freeze.analysis
+            derivatives_analysis = freeze.analysis
             evidence = {
                 freeze.freeze_identity,
-                analysis.evidence_identity,
+                liquidity_analysis.evidence_identity,
                 *(item.observation_identity for item in freeze.observations),
             }
             snapshots.append(
@@ -260,20 +260,20 @@ def build_market_tape_family_snapshots(
                     source_as_of_ms=as_of_ms,
                     evidence_identities=tuple(sorted(evidence)),
                     evidence_domains=("derivatives",),
-                    state_label=analysis.label.value,
+                    state_label=order_flow_order_flow_derivatives_analysis.label.value,
                     state_components=(
-                        ("basis_state", analysis.basis_state.value),
-                        ("funding_state", analysis.funding_state.value),
-                        ("label", analysis.label.value),
-                        ("open_interest_state", analysis.open_interest_state.value),
+                        ("basis_state", derivatives_analysis.basis_state.value),
+                        ("funding_state", derivatives_analysis.funding_state.value),
+                        ("label", order_flow_derivatives_analysis.label.value),
+                        ("open_interest_state", derivatives_analysis.open_interest_state.value),
                     ),
                     direction=None,
                     source_quality=(
                         "unresolved"
-                        if analysis.label is DerivativesContextLabel.UNRESOLVED
+                        if derivatives_analysis.label is DerivativesContextLabel.UNRESOLVED
                         else "measured"
                     ),
-                    uncertainty_flags=analysis.uncertainty_flags,
+                    uncertainty_flags=liquidity_analysis.uncertainty_flags,
                 )
             )
     return tuple(
