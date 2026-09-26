@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import sqlite3
+
+import pytest
 from pathlib import Path
 
 from crypto_signal.intelligence.confluence_matrix_v2 import ConfluenceFamily
@@ -20,6 +22,9 @@ from crypto_signal.product.intelligence_stream_models import (
 from crypto_signal.product.intelligence_stream_read_model import (
     IntelligenceStreamReadModel,
     StreamMessageQuery,
+)
+from crypto_signal.product.intelligence_stream_production_projector import (
+    IntelligenceStreamProductionProjector,
 )
 
 
@@ -181,3 +186,45 @@ def test_family_messages_flow_through_canonical_read_model(tmp_path: Path) -> No
     assert detail["fact_bundle"]["family"] == ConfluenceFamily.LIQUIDITY.value
     assert detail["message_input"]["category"] == "intelligence"
     assert detail["real_capital"] == 0
+
+
+def test_family_projection_routes_through_f2_production_backbone(
+    tmp_path: Path,
+) -> None:
+    path = _path(tmp_path)
+    result = IntelligenceStreamProductionProjector(path).project_family(
+        _snapshot(source="f2-backbone", event_at_ms=2_100, state="none"),
+        activated_at_ms=2_000,
+    )
+    assert result.disposition is StreamFamilyProjectionDisposition.INSERTED
+    assert result.projector_id == "liquidity_change"
+    assert result.real_capital == 0
+
+
+def test_family_runtime_rejects_deferred_onchain_projector(tmp_path: Path) -> None:
+    path = _path(tmp_path)
+    runtime = IntelligenceStreamFamilyRuntime(path)
+    source_identity = canonical_sha256({"source": "onchain-deferred"})
+    snapshot = build_family_snapshot(
+        projector_id="bitcoin_network_context",
+        family=ConfluenceFamily.ONCHAIN,
+        category=StreamCategory.INTELLIGENCE,
+        subtype="bitcoin_network_material_change",
+        importance=StreamImportance.IMPORTANT,
+        source_event_identity=source_identity,
+        source_scope="blockstream:bitcoin:deferred",
+        asset="BTC",
+        symbol="BTCUSDT",
+        market="BTCUSDT",
+        timeframe="network",
+        event_at_ms=2_100,
+        source_as_of_ms=2_100,
+        evidence_identities=(source_identity,),
+        evidence_domains=("onchain",),
+        state_label="available",
+        state_components=(("state", "available"),),
+        direction=None,
+        source_quality="deferred_source",
+    )
+    with pytest.raises(ValueError, match="not implemented"):
+        runtime.project(snapshot, activated_at_ms=2_000)
