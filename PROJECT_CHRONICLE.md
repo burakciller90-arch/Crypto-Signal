@@ -1,5 +1,18 @@
 # PROJECT CHRONICLE
 
+## 2026-09-26 — Intelligence Stream V1 S16 accepted, deployed and closed
+
+The S16 controlled-cutover program is complete. PR #1300 established explicit Stream/GALACTECH product-root routing, PR #1302 aligned the allowlisted exact-main Product deployment path with the Stream root, and PR #1313 hardened the real deployment/acceptance path discovered during final production cutover.
+
+The final recovery hardening did not relax product acceptance. It raised the Product command timeout from 20 to 60 minutes so the real R11 multi-GB SQLite backup/restore audit could complete, aligned the browser's bounded SSE wait with the deliberate resolution/capital appender timing, and added at-most-one Chromium startup retry without replaying product probes. Exact-head branch run `36233268729` passed the full S16 gate before PR #1313 merged.
+
+After merge, exact-main UID504 run `36233635078` passed focused S16 acceptance, whole-repository regression, real Chromium/SSE product-root story, exact mobile rendering, 10,000-message long-session behavior, GALACTECH rollback, Stream reapply and Development non-mutation at main `d343c4b2d10489a88f614bd58c9539be76029f80`.
+
+The final live Product deploy was issued through #1318 and Crypto Mac Command run `36234907358`. The live acceptance emitted `STREAM_ROOT_CUTOVER_LIVE_PASS=YES`, `GALACTECH_FALLBACK_LIVE_PASS=YES`, `R25_OPERATIONAL_TRUTH_LIVE_PASS=YES`, `R11_RUNTIME_AUDIT_PASS=YES`, `WC0_RUNTIME_TOPOLOGY_SQLITE_PASS=YES`, `WC0_CONTINUITY_PAUSE_PRESERVED=YES` and `PRODUCT_DEPLOY_PASS=YES`. Intelligence Stream is now the Product root; GALACTECH V2 remains explicit rollback/fallback. REAL_CAPITAL=0 remains binding.
+
+**Stream V1 S0-S16 is complete. No Stream V1 frontend implementation frontier remains.** Broader world-class scientific/evidence frontiers remain governed separately and must not be represented as unfinished frontend work.
+
+
 ## 2026-09-26 — Stream S15 end-to-end product acceptance passed; S16 controlled cutover becomes active
 
 S15 closes the full one-panel user story on the accepted S0-S14 foundations. PR #1298 adds an isolated real-backend acceptance harness that seeds exact persisted Stream/Decision Proof/signal-freeze/Epoch 2 truth, starts the real product server, opens the real Stream preview without fixture query mode, then appends a resolution and a paper-capital action while the browser is open.

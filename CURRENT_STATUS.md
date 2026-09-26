@@ -4,10 +4,64 @@ Updated: 2026-09-26
 Project: Crypto Signal
 Baseline: crypto-signal-full-version-v1.0.0 (immutable)
 Active post-v1.0 program: v1.1 world-class product + market intelligence + Crypto Signal Intelligence Stream V1
-State: WC0_LIVE_PRODUCT_PARITY_ACCEPTED / WC1_24_7_DATA_RELIABILITY_ACCEPTED / WC2_ENGINEERING_FROZEN_EVIDENCE_ACCUMULATION_ACTIVE / WC4_CHAMPION_CHALLENGER_ENGINEERING_ACCEPTED_RESEARCH_ONLY / WC5_ENGINEERING_ACCEPTED_PRODUCT_DEPLOYED_HUMAN_USABILITY_NOT_MEASURED / WC6_SANDBOX_BOUNDARY_ACCEPTED_VENUE_EVIDENCE_EXTERNAL_DEPENDENCY / WC7_CURRENT_FRONTIER_PACKET_ACCEPTED_CURRENT_INSUFFICIENT_EVIDENCE / INTELLIGENCE_STREAM_V1_S0_PASS_S1_PASS_S2_PASS_S3_PASS_S4_PASS_S5_PASS_S6_PASS_S7_PASS_S8_PASS_S9_PASS_S10_PASS_S11_PASS_S12_PASS_S13_PASS_S14_PASS_S15_PASS_S16_ACTIVE / CONTINUITY_PAUSED_BY_USER
+State: WC0_LIVE_PRODUCT_PARITY_ACCEPTED / WC1_24_7_DATA_RELIABILITY_ACCEPTED / WC2_ENGINEERING_FROZEN_EVIDENCE_ACCUMULATION_ACTIVE / WC4_CHAMPION_CHALLENGER_ENGINEERING_ACCEPTED_RESEARCH_ONLY / WC5_ENGINEERING_ACCEPTED_PRODUCT_DEPLOYED_HUMAN_USABILITY_NOT_MEASURED / WC6_SANDBOX_BOUNDARY_ACCEPTED_VENUE_EVIDENCE_EXTERNAL_DEPENDENCY / WC7_CURRENT_FRONTIER_PACKET_ACCEPTED_CURRENT_INSUFFICIENT_EVIDENCE / INTELLIGENCE_STREAM_V1_COMPLETE_S0_PASS_S1_PASS_S2_PASS_S3_PASS_S4_PASS_S5_PASS_S6_PASS_S7_PASS_S8_PASS_S9_PASS_S10_PASS_S11_PASS_S12_PASS_S13_PASS_S14_PASS_S15_PASS_S16_PASS / CONTINUITY_PAUSED_BY_USER
 REAL_CAPITAL: 0
 
 ## Active v1.1 frontier — read before historical sections
+
+### 2026-09-26 — INTELLIGENCE STREAM V1 S16 PASS / ROADMAP COMPLETE / PRODUCT ROOT ACCEPTED
+
+**Intelligence Stream V1 is complete and accepted from S0 through S16. There is no remaining active Stream V1 frontend implementation stage.**
+
+Canonical S16 acceptance record:
+- `docs/CRYPTO_SIGNAL_STREAM_S16_ACCEPTANCE.md`.
+
+Accepted production state:
+- Intelligence Stream is the primary Product root at `http://127.0.0.1:48700/`;
+- `/stream-preview` remains the parity/reference Stream route;
+- GALACTECH V2 remains available at `/galactech` as the immediate rollback/fallback surface;
+- `/legacy` remains historical audit access;
+- the Product surface is read-only and `REAL_CAPITAL=0`.
+
+Accepted implementation and recovery hardening:
+- PR #1300 — controlled product-root cutover;
+- PR #1302 — Stream-aware exact-main `productdeploy` handoff;
+- PR #1313 — 60-minute R11 recovery budget + loaded-runner Chromium/SSE acceptance hardening;
+- accepted main/runtime code SHA: `d343c4b2d10489a88f614bd58c9539be76029f80`.
+
+Exact-main S16 acceptance:
+- UID504 run `36233635078` — PASS;
+- artifact `stream-s16-cutover-snapshot-36233635078`;
+- artifact digest `sha256:7f3f8f13ab468153c126cb64d510e2bbb6780a739d549adc4180af604f74b01a`;
+- focused S16 acceptance PASS;
+- whole-repository regression PASS;
+- real Chromium Stream-root E2E PASS;
+- real SSE resolution + capital delivery PASS;
+- exact 430px mobile PASS;
+- 10,000-message long-session PASS;
+- GALACTECH rollback + Stream reapply PASS;
+- Development checkout non-mutation PASS.
+
+Live Product deployment acceptance:
+- command issue #1318 targeted exact main `d343c4b2d10489a88f614bd58c9539be76029f80`;
+- Crypto Mac Command run `36234907358` — PASS;
+- `STREAM_ROOT_CUTOVER_LIVE_PASS=YES`;
+- `GALACTECH_FALLBACK_LIVE_PASS=YES`;
+- `R25_OPERATIONAL_TRUTH_LIVE_PASS=YES`;
+- `R11_RUNTIME_AUDIT_PASS=YES`;
+- `WC0_RUNTIME_TOPOLOGY_SQLITE_PASS=YES`;
+- `WC0_CONTINUITY_PAUSE_PRESERVED=YES`;
+- `PRODUCT_DEPLOY_PASS=YES`;
+- live R11 recovery verified the canonical multi-GB SQLite set, including the ~10.5 GB signal ledger, without rewriting history.
+
+Frontend/product consequence:
+- the Stream V1 roadmap is closed;
+- the superseded M0→M7 multi-screen frontend chain remains historical only;
+- no new standalone frontend screen becomes active automatically;
+- any post-Stream-V1 frontend scope requires a new explicit user-approved scope/roadmap.
+
+The broader v1.1 program remains open where its scientific/evidence dependencies remain open: WC2 evidence accumulation continues, WC3 remains evidence-dependent, WC5 human timing remains not measured, WC6 venue evidence remains external, and WC7 remains `INSUFFICIENT_EVIDENCE`. These are not unfinished Stream V1 frontend stages.
+
 
 ### 2026-09-26 — STREAM S15 END-TO-END PRODUCT ACCEPTANCE PASS / S16 CONTROLLED CUTOVER ACTIVE
 
