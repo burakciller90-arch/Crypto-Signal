@@ -825,8 +825,8 @@ function familyExactEvidenceSection(kind, detail, exactEvidence) {
   const sourceIds = Array.isArray(contribution?.source_evidence_identities)
     ? contribution.source_evidence_identities
     : [];
-  const resolutions = Array.isArray(exactEvidence?.domain_resolutions)
-    ? exactEvidence.domain_resolutions
+  const resolutions = Array.isArray(exactEvidence?.resolutions)
+    ? exactEvidence.resolutions
     : [];
   const acceptedDomains = new Set(familyEvidenceDomains(kind));
   const selected = resolutions.filter((item) =>
