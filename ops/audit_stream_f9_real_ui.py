@@ -31,7 +31,7 @@ def _get_json(
         url += "?" + urllib.parse.urlencode(
             {key: str(value) for key, value in params.items()}
         )
-    with urllib.request.urlopen(url, timeout=10) as response:  # noqa: S310
+    with urllib.request.urlopen(url, timeout=10) as response:
         raw = json.loads(response.read().decode("utf-8"))
     if not isinstance(raw, dict):
         raise F9AuditError(f"{path} did not return an object")
