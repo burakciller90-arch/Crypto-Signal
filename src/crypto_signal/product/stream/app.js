@@ -773,7 +773,143 @@ function evidenceWindowSection(label, body = "") {
   return section;
 }
 
-function buildEvidenceWindowData(kind, detail) {
+function familyEvidenceDomains(kind) {
+  const domains = {
+    geometry: ["geometry", "frozen_chart", "consumed_candles"],
+    liquidity: ["liquidity", "liquidity_map", "order_book"],
+    order_flow: ["order_flow", "order_flow_cvd", "public_trades", "order_book"],
+    derivatives: ["derivatives"],
+    onchain: ["onchain"],
+  };
+  return domains[kind] || [];
+}
+
+function evidenceResolutionLabel(value) {
+  const stateValue = text(value, "UNAVAILABLE_EXPLICIT");
+  if (stateValue === "READY_EXACT") return "DONDURULMUŞ KANIT HAZIR";
+  if (stateValue === "IDENTITY_ONLY_EXACT") {
+    return "KANIT KİMLİĞİ KESİN · GÖRSEL/HAM NESNE ÇÖZÜMLENEMEDİ";
+  }
+  return "KANIT MEVCUT DEĞİL";
+}
+
+function evidenceDomainLabel(value) {
+  const labels = {
+    geometry: "Geometri",
+    frozen_chart: "Dondurulmuş grafik",
+    consumed_candles: "Kullanılan mumlar",
+    liquidity: "Likidite",
+    liquidity_map: "Likidite haritası",
+    order_book: "Emir tahtası",
+    order_flow: "Emir akışı",
+    order_flow_cvd: "CVD / akış",
+    public_trades: "Gerçekleşen işlemler",
+    derivatives: "Türevler",
+    onchain: "On-chain",
+  };
+  const key = text(value, "").toLowerCase();
+  return labels[key] || text(value, "Kanıt");
+}
+
+function familyExactEvidenceSection(kind, detail, exactEvidence) {
+  const section = document.createElement("section");
+  section.className = "window-section family-exact-proof";
+  const heading = document.createElement("h4");
+  heading.textContent = "Exact / dondurulmuş kanıt";
+  section.append(heading);
+
+  const contribution = familyContribution(
+    detail,
+    EVIDENCE_WINDOW_KINDS[kind]?.family || kind
+  );
+  const sourceIds = Array.isArray(contribution?.source_evidence_identities)
+    ? contribution.source_evidence_identities
+    : [];
+  const resolutions = Array.isArray(exactEvidence?.domain_resolutions)
+    ? exactEvidence.domain_resolutions
+    : [];
+  const acceptedDomains = new Set(familyEvidenceDomains(kind));
+  const selected = resolutions.filter((item) =>
+    acceptedDomains.has(text(item?.domain, "").toLowerCase())
+  );
+
+  if (!selected.length) {
+    const unavailable = document.createElement("p");
+    unavailable.className = "family-exact-unavailable";
+    unavailable.textContent =
+      "UNAVAILABLE_EXPLICIT · Bu aile için exact domain kanıtı çözümlenemedi; güncel veri ile ikame yapılmadı.";
+    section.append(unavailable);
+  } else {
+    const list = document.createElement("div");
+    list.className = "family-exact-domain-list";
+    for (const item of selected) {
+      const row = document.createElement("div");
+      row.className = "family-exact-domain";
+      row.dataset.resolutionState = text(
+        item?.resolution_state,
+        "UNAVAILABLE_EXPLICIT"
+      );
+      const name = document.createElement("strong");
+      name.textContent = evidenceDomainLabel(item?.domain);
+      const stateLabel = document.createElement("span");
+      stateLabel.textContent = evidenceResolutionLabel(item?.resolution_state);
+      row.append(name, stateLabel);
+
+      const identities = Array.isArray(item?.evidence_identities)
+        ? item.evidence_identities
+        : [];
+      for (const identity of identities.slice(0, 3)) {
+        if (!exactSha256(identity)) continue;
+        const code = document.createElement("code");
+        code.className = "window-identity";
+        code.textContent = identity;
+        row.append(code);
+      }
+      list.append(row);
+    }
+    section.append(list);
+  }
+
+  if (sourceIds.length) {
+    const refs = Array.isArray(exactEvidence?.reference_resolutions)
+      ? exactEvidence.reference_resolutions
+      : [];
+    const byIdentity = new Map(
+      refs
+        .filter((item) => exactSha256(item?.evidence_identity))
+        .map((item) => [item.evidence_identity, item])
+    );
+    const bound = document.createElement("div");
+    bound.className = "family-exact-bound-identities";
+    const label = document.createElement("span");
+    label.textContent = "Bu aileye bağlı exact kimlikler";
+    bound.append(label);
+    for (const identity of sourceIds.slice(0, 6)) {
+      if (!exactSha256(identity)) continue;
+      const row = document.createElement("div");
+      const code = document.createElement("code");
+      code.textContent = identity;
+      const stateLabel = document.createElement("small");
+      stateLabel.textContent = evidenceResolutionLabel(
+        byIdentity.get(identity)?.resolution_state
+      );
+      row.append(code, stateLabel);
+      bound.append(row);
+    }
+    section.append(bound);
+  }
+
+  const noSubstitution = document.createElement("small");
+  noSubstitution.className = "family-exact-no-substitution";
+  noSubstitution.textContent =
+    exactEvidence?.current_data_substitution === false
+      ? "Güncel veri ikamesi yok · yalnız bu mesajın exact lineage'ı."
+      : "Current-data substitution yetkisi yok; kanıt fail-closed gösterilir.";
+  section.append(noSubstitution);
+  return section;
+}
+
+function buildEvidenceWindowData(kind, detail, exactEvidence = null) {
   const config = EVIDENCE_WINDOW_KINDS[kind];
   const narrative = detail?.narrative || {};
   const fact = detail?.fact_bundle || {};
@@ -935,6 +1071,10 @@ function buildEvidenceWindowData(kind, detail) {
     });
     proof.append(verify, result);
     fragment.append(proof);
+  }
+
+  if (DECISION_EVIDENCE_FAMILIES.some((item) => item.evidenceKind === kind)) {
+    fragment.append(familyExactEvidenceSection(kind, detail, exactEvidence));
   }
 
   fragment.append(
@@ -1166,11 +1306,12 @@ async function hydrateFrozenVisualProof(model) {
   currentBody.prepend(renderer(visualProof));
 }
 
-function renderEvidenceWindowBody(model, detail) {
+function renderEvidenceWindowBody(model, detail, exactEvidence = null) {
   const body = model.element?.querySelector(".evidence-window-body");
   if (!(body instanceof HTMLElement)) return;
-  body.replaceChildren(buildEvidenceWindowData(model.kind, detail));
+  body.replaceChildren(buildEvidenceWindowData(model.kind, detail, exactEvidence));
   model.detail = detail;
+  model.exactEvidence = exactEvidence;
   const narrative = detail?.narrative || {};
   const subtitle = model.element?.querySelector(".evidence-window-subtitle");
   if (subtitle) {
@@ -1184,17 +1325,40 @@ function renderEvidenceWindowBody(model, detail) {
 }
 
 async function hydrateEvidenceWindow(model, detail = null) {
-  if (detail && typeof detail === "object") {
-    renderEvidenceWindowBody(model, detail);
-    return;
-  }
+  let resolvedDetail = detail;
   try {
-    const payload = await fetchJson(API.detail(model.narrativeIdentity));
-    if (payload.status === "ready" && payload.detail) {
-      renderEvidenceWindowBody(model, payload.detail);
-      return;
+    if (!resolvedDetail || typeof resolvedDetail !== "object") {
+      const detailPayload = await fetchJson(API.detail(model.narrativeIdentity));
+      if (detailPayload.status !== "ready" || !detailPayload.detail) {
+        throw new Error("detail unavailable");
+      }
+      resolvedDetail = detailPayload.detail;
     }
-    throw new Error("detail unavailable");
+
+    const record = state.messages.find(
+      (item) => item?.narrative_identity === model.narrativeIdentity
+    );
+    let exactEvidence =
+      record?.__fixture_exact_evidence
+      && typeof record.__fixture_exact_evidence === "object"
+        ? record.__fixture_exact_evidence
+        : null;
+
+    if (!exactEvidence) {
+      try {
+        const evidencePayload = await fetchJson(
+          API.exactEvidence(model.narrativeIdentity)
+        );
+        exactEvidence =
+          evidencePayload?.evidence && typeof evidencePayload.evidence === "object"
+            ? evidencePayload.evidence
+            : null;
+      } catch {
+        exactEvidence = null;
+      }
+    }
+
+    renderEvidenceWindowBody(model, resolvedDetail, exactEvidence);
   } catch {
     const body = model.element?.querySelector(".evidence-window-body");
     if (body instanceof HTMLElement) {
@@ -1314,7 +1478,7 @@ function openEvidenceWindow(record, detail, kind) {
   const existing = state.evidenceWindows.get(id);
   if (existing) {
     focusEvidenceWindow(id);
-    if (detail) renderEvidenceWindowBody(existing, detail);
+    if (detail) void hydrateEvidenceWindow(existing, detail);
     return existing;
   }
 
