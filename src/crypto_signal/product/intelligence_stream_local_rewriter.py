@@ -13,7 +13,7 @@ from crypto_signal.product.intelligence_stream_narrative import (
     StreamNarrativeText,
 )
 
-LOCAL_NARRATIVE_REWRITER_VERSION = "crypto-signal-local-rewriter-v1/4"
+LOCAL_NARRATIVE_REWRITER_VERSION = "crypto-signal-local-rewriter-v1/5"
 _REWRITE_TEXT_KEYS = frozenset({"collapsed_text", "simple_text"})
 _ALLOWED_LOOPBACK_HOSTS = frozenset({"localhost", "127.0.0.1", "::1"})
 
@@ -168,12 +168,17 @@ def _chat_payload(
         "Yeni teknik kavram, aktör, haber, piyasa nedeni veya kanıt türü icat etme. "
         "Mevcut anlamı ve yönü tersine çevirme. Yalnız collapsed_text ve simple_text "
         "alanlarını daha doğal, sakin ve profesyonel trader Türkçesiyle gerçekten yeniden "
-        "ifade et; bu iki alanı kaynak metinden birebir kopyalama. Sana yalnız bu iki "
-        "alan verilir ve yalnız bu iki alanı döndürmelisin. collapsed_text tek paragraf "
+        "ifade et. Bu bir dil editidir; aynı metni geri döndürmek başarısızlıktır. En az "
+        "bir alanın kelime dizimini değiştir; iki alanı birlikte kaynak metinden birebir "
+        "kopyalama. Sana yalnız bu iki alan verilir ve yalnız bu iki alanı döndürmelisin. "
+        "collapsed_text tek paragraf "
         "ve kısa kalmalı. Alan adlarını değiştirme. Çıktı yalnızca ham JSON nesnesi olmalı; "
         "markdown veya açıklama ekleme."
     )
     user_payload = {
+        "task": "safe_turkish_style_rewrite",
+        "rewrite_required": True,
+        "rewrite_scope": ["collapsed_text", "simple_text"],
         "symbol": request.symbol,
         "timeframe": request.timeframe,
         "protected_numeric_values": protected_values,
