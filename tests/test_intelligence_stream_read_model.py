@@ -840,23 +840,6 @@ def test_stream_api_exposes_cursor_history_search_and_lookup(tmp_path) -> None:
         )
     )
 
-    family_identity = _insert_family_surface_fixture(
-        stream_path,
-        source_narrative_identity=identities["btc-flow"],
-    )
-
-    primary = client.get(
-        "/api/stream/messages",
-        params={"limit": 20, "surface": "primary"},
-    )
-    assert primary.status_code == 200
-    primary_ids = {
-        item["narrative_identity"]
-        for item in primary.json()["page"]["items"]
-    }
-    assert family_identity not in primary_ids
-    assert identities["btc-issued"] in primary_ids
-
     first = client.get("/api/stream/messages?limit=2")
     assert first.status_code == 200
     payload = first.json()
@@ -919,6 +902,32 @@ def test_stream_api_exposes_cursor_history_search_and_lookup(tmp_path) -> None:
 
     invalid = client.get("/api/stream/messages?before=not-a-cursor")
     assert invalid.status_code == 400
+
+    family_identity = _insert_family_surface_fixture(
+        stream_path,
+        source_narrative_identity=identities["btc-flow"],
+    )
+    all_surface = client.get(
+        "/api/stream/messages",
+        params={"limit": 20, "surface": "all"},
+    )
+    assert all_surface.status_code == 200
+    assert family_identity in {
+        item["narrative_identity"]
+        for item in all_surface.json()["page"]["items"]
+    }
+
+    primary = client.get(
+        "/api/stream/messages",
+        params={"limit": 20, "surface": "primary"},
+    )
+    assert primary.status_code == 200
+    primary_ids = {
+        item["narrative_identity"]
+        for item in primary.json()["page"]["items"]
+    }
+    assert family_identity not in primary_ids
+    assert identities["btc-issued"] in primary_ids
 
 
 def test_stream_api_fails_closed_when_runtime_not_configured(tmp_path) -> None:
