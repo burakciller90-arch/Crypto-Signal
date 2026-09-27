@@ -13,17 +13,8 @@ from crypto_signal.product.intelligence_stream_narrative import (
     StreamNarrativeText,
 )
 
-LOCAL_NARRATIVE_REWRITER_VERSION = "crypto-signal-local-rewriter-v1/3"
-_REQUIRED_TEXT_KEYS = frozenset(
-    {
-        "collapsed_text",
-        "simple_text",
-        "technical_text",
-        "intelligence_text",
-        "decision_text",
-        "capital_text",
-    }
-)
+LOCAL_NARRATIVE_REWRITER_VERSION = "crypto-signal-local-rewriter-v1/4"
+_REWRITE_TEXT_KEYS = frozenset({"collapsed_text", "simple_text"})
 _ALLOWED_LOOPBACK_HOSTS = frozenset({"localhost", "127.0.0.1", "::1"})
 
 
@@ -156,7 +147,7 @@ class OpenAICompatibleLocalNarrativeRewriter:
             timeout_seconds=self.config.timeout_seconds,
         )
         content = _assistant_content(response)
-        return _parse_rewrite_content(content)
+        return _parse_rewrite_content(content, request=request)
 
 
 def _chat_payload(
@@ -170,10 +161,6 @@ def _chat_payload(
     source_text = {
         "collapsed_text": request.deterministic_text.collapsed_text,
         "simple_text": request.deterministic_text.simple_text,
-        "technical_text": request.deterministic_text.technical_text,
-        "intelligence_text": request.deterministic_text.intelligence_text,
-        "decision_text": request.deterministic_text.decision_text,
-        "capital_text": request.deterministic_text.capital_text,
     }
     system = (
         "Sen Crypto Signal'in yerel Türkçe editörüsün. Yeni piyasa analizi yapma. "
@@ -181,10 +168,9 @@ def _chat_payload(
         "Yeni teknik kavram, aktör, haber, piyasa nedeni veya kanıt türü icat etme. "
         "Mevcut anlamı ve yönü tersine çevirme. Yalnız collapsed_text ve simple_text "
         "alanlarını daha doğal, sakin ve profesyonel trader Türkçesiyle gerçekten yeniden "
-        "ifade et; bu iki alanı kaynak metinden birebir kopyalama. technical_text, "
-        "intelligence_text, decision_text ve capital_text alanlarını "
-        "tek karakter dahi değiştirmeden kopyala. collapsed_text tek paragraf ve kısa "
-        "kalmalı. Alan adlarını değiştirme. Çıktı yalnızca ham JSON nesnesi olmalı; "
+        "ifade et; bu iki alanı kaynak metinden birebir kopyalama. Sana yalnız bu iki "
+        "alan verilir ve yalnız bu iki alanı döndürmelisin. collapsed_text tek paragraf "
+        "ve kısa kalmalı. Alan adlarını değiştirme. Çıktı yalnızca ham JSON nesnesi olmalı; "
         "markdown veya açıklama ekleme."
     )
     user_payload = {
@@ -219,9 +205,9 @@ def _chat_payload(
                     "type": "object",
                     "properties": {
                         key: {"type": "string"}
-                        for key in sorted(_REQUIRED_TEXT_KEYS)
+                        for key in sorted(_REWRITE_TEXT_KEYS)
                     },
-                    "required": sorted(_REQUIRED_TEXT_KEYS),
+                    "required": sorted(_REWRITE_TEXT_KEYS),
                     "additionalProperties": False,
                 },
             },
@@ -258,7 +244,11 @@ def _assistant_content(response: dict[str, object]) -> str:
     return content.strip()
 
 
-def _parse_rewrite_content(content: str) -> StreamNarrativeText:
+def _parse_rewrite_content(
+    content: str,
+    *,
+    request: StreamNarrativeRewriteRequest,
+) -> StreamNarrativeText:
     fence = chr(96) * 3
     if content.startswith(fence) or content.endswith(fence):
         raise LocalNarrativeRewriteError(
@@ -275,13 +265,13 @@ def _parse_rewrite_content(content: str) -> StreamNarrativeText:
             "local narrative content must decode to an object"
         )
     keys = frozenset(str(key) for key in raw)
-    if keys != _REQUIRED_TEXT_KEYS:
+    if keys != _REWRITE_TEXT_KEYS:
         raise LocalNarrativeRewriteError(
-            "local narrative content must contain exactly six text fields"
+            "local narrative content must contain exactly two rewrite text fields"
         )
 
     values: dict[str, str] = {}
-    for key in sorted(_REQUIRED_TEXT_KEYS):
+    for key in sorted(_REWRITE_TEXT_KEYS):
         value = raw.get(key)
         if not isinstance(value, str) or not value.strip():
             raise LocalNarrativeRewriteError(
@@ -289,13 +279,22 @@ def _parse_rewrite_content(content: str) -> StreamNarrativeText:
             )
         values[key] = value.strip()
 
+    baseline = request.deterministic_text
+    if (
+        values["collapsed_text"] == baseline.collapsed_text
+        and values["simple_text"] == baseline.simple_text
+    ):
+        raise LocalNarrativeRewriteError(
+            "local narrative rewrite must change at least one polishable field"
+        )
+
     return StreamNarrativeText(
         collapsed_text=values["collapsed_text"],
         simple_text=values["simple_text"],
-        technical_text=values["technical_text"],
-        intelligence_text=values["intelligence_text"],
-        decision_text=values["decision_text"],
-        capital_text=values["capital_text"],
+        technical_text=baseline.technical_text,
+        intelligence_text=baseline.intelligence_text,
+        decision_text=baseline.decision_text,
+        capital_text=baseline.capital_text,
     )
 
 
