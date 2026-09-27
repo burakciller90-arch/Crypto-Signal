@@ -29,6 +29,8 @@ from crypto_signal.product.intelligence_stream_family import (
     STREAM_FAMILY_ANALYTICAL_VIEW_SCHEMA_VERSION,
     STREAM_FAMILY_FACT_SCHEMA_VERSION,
     STREAM_FAMILY_NARRATIVE_MESSAGE_SCHEMA_VERSION,
+    STREAM_FAMILY_NARRATIVE_RENDERER_VERSION,
+    StreamTrustDomain,
 )
 from crypto_signal.product.intelligence_stream_messages import (
     STREAM_FACT_BUNDLE_SCHEMA_VERSION,
@@ -55,6 +57,7 @@ _PRIMARY_HIDDEN_FAMILIES = (
     "onchain",
     *(family.value for family in ConfluenceFamily),
 )
+_PRIMARY_TRUST_FAMILIES = tuple(domain.value for domain in StreamTrustDomain)
 
 
 class StreamReadModelError(ValueError):
@@ -155,17 +158,33 @@ class IntelligenceStreamReadModel:
         clauses = ["1 = 1"]
 
         if query.primary_surface:
-            placeholders = ", ".join("?" for _ in _PRIMARY_HIDDEN_FAMILIES)
-            clauses.append(
+            family_expr = (
                 "COALESCE("
                 "json_extract(n.payload_json, '$.family'), "
                 "json_extract(f.payload_json, '$.family'), "
                 "''"
-                ") NOT IN ("
-                + placeholders
-                + ")"
+                ")"
+            )
+            hidden_placeholders = ", ".join(
+                "?" for _ in _PRIMARY_HIDDEN_FAMILIES
+            )
+            trust_placeholders = ", ".join(
+                "?" for _ in _PRIMARY_TRUST_FAMILIES
+            )
+            clauses.append(
+                "("
+                + family_expr
+                + " NOT IN ("
+                + hidden_placeholders
+                + ")) AND ("
+                + family_expr
+                + " NOT IN ("
+                + trust_placeholders
+                + ") OR json_extract(n.payload_json, '$.renderer_version') = ?)"
             )
             params.extend(_PRIMARY_HIDDEN_FAMILIES)
+            params.extend(_PRIMARY_TRUST_FAMILIES)
+            params.append(STREAM_FAMILY_NARRATIVE_RENDERER_VERSION)
 
         if query.before is not None:
             clauses.append(
