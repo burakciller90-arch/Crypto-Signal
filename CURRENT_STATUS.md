@@ -4,10 +4,41 @@ Updated: 2026-09-27
 Project: Crypto Signal
 Baseline: crypto-signal-full-version-v1.0.0 (immutable)
 Active post-v1.0 program: v1.1 world-class product + market intelligence + Crypto Signal Intelligence Stream V1
-State: WC0_LIVE_PRODUCT_PARITY_ACCEPTED / WC1_24_7_DATA_RELIABILITY_ACCEPTED / WC2_ENGINEERING_FROZEN_EVIDENCE_ACCUMULATION_ACTIVE / WC4_CHAMPION_CHALLENGER_ENGINEERING_ACCEPTED_RESEARCH_ONLY / WC5_ENGINEERING_ACCEPTED_PRODUCT_DEPLOYED_HUMAN_USABILITY_NOT_MEASURED / WC6_SANDBOX_BOUNDARY_ACCEPTED_VENUE_EVIDENCE_EXTERNAL_DEPENDENCY / WC7_CURRENT_FRONTIER_PACKET_ACCEPTED_CURRENT_INSUFFICIENT_EVIDENCE / INTELLIGENCE_STREAM_V1_S0_S16_HISTORICAL_ACCEPTANCE_RETAINED / INTELLIGENCE_STREAM_V1_FINAL_F0_PASS_F1_PASS_F2_PASS_F3_PASS_F4_PASS_F5_PASS_CURRENT_SCOPE_F6_PASS_F7_PASS_F8_ACTIVE / CONTINUITY_PAUSED_BY_USER
+State: WC0_LIVE_PRODUCT_PARITY_ACCEPTED / WC1_24_7_DATA_RELIABILITY_ACCEPTED / WC2_ENGINEERING_FROZEN_EVIDENCE_ACCUMULATION_ACTIVE / WC4_CHAMPION_CHALLENGER_ENGINEERING_ACCEPTED_RESEARCH_ONLY / WC5_ENGINEERING_ACCEPTED_PRODUCT_DEPLOYED_HUMAN_USABILITY_NOT_MEASURED / WC6_SANDBOX_BOUNDARY_ACCEPTED_VENUE_EVIDENCE_EXTERNAL_DEPENDENCY / WC7_CURRENT_FRONTIER_PACKET_ACCEPTED_CURRENT_INSUFFICIENT_EVIDENCE / INTELLIGENCE_STREAM_V1_S0_S16_HISTORICAL_ACCEPTANCE_RETAINED / INTELLIGENCE_STREAM_V1_FINAL_F0_PASS_F1_PASS_F2_PASS_F3_PASS_F4_PASS_F5_PASS_CURRENT_SCOPE_F6_PASS_F7_PASS_F8_PASS_F9_ACTIVE / CONTINUITY_PAUSED_BY_USER
 REAL_CAPITAL: 0
 
 ## Active v1.1 frontier — read before historical sections
+
+### 2026-09-27 — STREAM FINAL F8 PASS / F9 FINAL REAL-UI ACTIVE
+
+Canonical F8 acceptance:
+- `docs/CRYPTO_SIGNAL_STREAM_FINAL_F8_PRODUCTION_E2E_ACCEPTANCE.md`.
+
+Accepted F8 implementation main:
+- `babd91393eaceffc2e4631b1a29f14c1ac7a4063`.
+
+Final UID504 physical acceptance run `36309732931` passed:
+- exact accepted source lineage;
+- Development + Product exact accepted main;
+- dashboard restart while preserving the F7 supervisor;
+- genuine production MARKET/INTELLIGENCE acceptance;
+- genuine production RISK/SYSTEM acceptance;
+- canonical F6 exact-evidence proof surface;
+- SSE duplicate negative acceptance;
+- Stream-ledger negative acceptance;
+- real Chromium deep-link / expansion / evidence / search-filter round-trip;
+- exact persisted message retained after real filtered reload;
+- non-mutating deployed checkouts;
+- no historical backfill;
+- no synthetic activity;
+- `REAL_CAPITAL=0`.
+
+Decision and Outcome remain explicit operational-evidence deferrals because production Stream currently has zero genuine events in those classes. F8 does not claim those classes live. Capital remains deferred to the dedicated Portfolio/Capital workstream.
+
+F8 is therefore **PASS — PHYSICALLY LIVE FOR THE CURRENT CLAIMED SCOPE**.
+
+The active final-completion frontier is now **F9 — Final Real-UI Product Acceptance**.
+
 
 ### 2026-09-27 — STREAM FINAL F7 PASS / F8 PRODUCTION E2E ACTIVE
 
