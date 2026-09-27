@@ -668,7 +668,7 @@
     const resolution = exactFamilyResolution(payload, config, familyContribution);
     const root = document.createElement("article");
     root.className = "frozen-visual-proof family-frozen-proof exact-family-proof";
-    root.dataset.visualProofStatus = text(payload?.status, "unavailable");
+    root.dataset.visualProofStatus = resolution === "READY_EXACT" ? "ready" : "unavailable";
     root.dataset.familyKind = kind;
     root.dataset.resolutionState = resolution;
     root.dataset.narrativeIdentity = text(payload?.narrative_identity, "");
@@ -705,8 +705,19 @@
     summary.textContent = "Provenance / teknik kimlikler";
     const ids = document.createElement("div");
     ids.className = "frozen-proof-identities";
-    for (const identity of Array.isArray(familyContribution?.source_evidence_identities)
-      ? familyContribution.source_evidence_identities.slice(0, 16) : []) {
+    const identities = new Set(
+      Array.isArray(familyContribution?.source_evidence_identities)
+        ? familyContribution.source_evidence_identities
+        : []
+    );
+    for (const resolutionItem of exactFamilyResolutions(payload, config)) {
+      for (const identity of Array.isArray(resolutionItem?.evidence_identities)
+        ? resolutionItem.evidence_identities
+        : []) {
+        identities.add(identity);
+      }
+    }
+    for (const identity of [...identities].slice(0, 16)) {
       const code = document.createElement("code");
       code.textContent = identity;
       ids.append(code);
