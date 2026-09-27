@@ -14,6 +14,7 @@ from crypto_signal.confluence.agreement import analyze_confluence
 from crypto_signal.data.adapters.base import MarketDataAdapter
 from crypto_signal.data.health import detect_gaps
 from crypto_signal.data.models import Candle
+from crypto_signal.data.store import CandleStore
 from crypto_signal.ledger.bundle import DecisionFreezeBundle, build_decision_freeze_bundle
 from crypto_signal.ledger.store import (
     ImmutableSignalLedger,
@@ -198,6 +199,7 @@ async def freeze_live_provider(
     *,
     adapter: MarketDataAdapter,
     ledger: ImmutableSignalLedger,
+    candle_store: CandleStore | None = None,
     symbol: str = "BTCUSDT",
     timeframe: str = "15m",
     limit: int = 500,
@@ -211,6 +213,9 @@ async def freeze_live_provider(
             limit=limit,
         )
     )
+    if candle_store is not None:
+        for candle in raw:
+            candle_store.upsert(candle)
     return freeze_live_candles(
         candles=raw,
         ledger=ledger,
