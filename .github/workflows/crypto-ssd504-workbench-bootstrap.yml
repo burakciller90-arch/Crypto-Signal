@@ -6,6 +6,10 @@ on:
     paths:
       - ".github/workflows/crypto-ssd504-workbench-bootstrap.yml"
       - "docs/CRYPTO_SIGNAL_SSD504_WORKBENCH.md"
+      - "docs/CRYPTO_SIGNAL_REALITY_BACKED_EVIDENCE_DATA_PLANE_V1.md"
+      - "READ_FIRST_CRYPTO_SIGNAL.md"
+      - "CURRENT_STATUS.md"
+      - "PROJECT_CHRONICLE.md"
   workflow_dispatch:
 
 permissions:
@@ -25,6 +29,8 @@ jobs:
 
       - name: Create and verify SSD504 workbench
         shell: bash
+        env:
+          GH_JOB_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
 
@@ -68,8 +74,15 @@ jobs:
             if [ -n "$(git -C "$REPO" status --porcelain)" ]; then
               echo "WORKBENCH_REPO_DIRTY=YES"
               git -C "$REPO" status --short
+              echo "Refusing automatic workbench sync over local changes." >&2
+              exit 1
             else
               echo "WORKBENCH_REPO_DIRTY=NO"
+              BASIC="$(printf 'x-access-token:%s' "$GH_JOB_TOKEN" | base64)"
+              git -C "$REPO" -c http.extraheader="AUTHORIZATION: Basic $BASIC" fetch --no-tags origin main
+              git -C "$REPO" merge --ff-only FETCH_HEAD
+              test "$(git -C "$REPO" rev-parse HEAD)" = "$GITHUB_SHA"
+              echo "WORKBENCH_REPO_SYNCED_TO_MAIN=YES"
             fi
           fi
 
@@ -93,7 +106,8 @@ jobs:
           - Do not touch Durdurulmaz or Quantum Capital.
           - REAL_CAPITAL=0.
 
-          Current sequencing is intentionally not encoded here beyond the active canonical repo status; the user will explicitly choose the next implementation work.
+          Active Evidence execution roadmap: `01_EVIDENCE_DEPTH/ACTIVE_ROADMAP.md`.
+          Current exact frontier: RDP1 — Collector and runtime reliability. Paper Portfolio follows Evidence Data Plane PASS unless the user explicitly authorizes parallel preparatory work.
           EOF
 
           cat > "$ROOT/00_INBOX/README.md" <<'EOF'
@@ -150,6 +164,7 @@ jobs:
           ln -sfn ../repo/CURRENT_STATUS.md "$ROOT/00_CONTEXT/CURRENT_STATUS.md"
           ln -sfn ../repo/PROJECT_CHRONICLE.md "$ROOT/00_CONTEXT/PROJECT_CHRONICLE.md"
           ln -sfn ../repo/docs/CRYPTO_SIGNAL_EVIDENCE_DEPTH_VISUAL_PROOF_FRONTIER_V1.md "$ROOT/00_CONTEXT/EVIDENCE_DEPTH_FRONTIER.md"
+          ln -sfn ../repo/docs/CRYPTO_SIGNAL_REALITY_BACKED_EVIDENCE_DATA_PLANE_V1.md "$ROOT/01_EVIDENCE_DEPTH/ACTIVE_ROADMAP.md"
           ln -sfn ../repo/docs/PAPER_FUND_EPOCH2_V1_SPEC.md "$ROOT/00_CONTEXT/PAPER_FUND_EPOCH2_V1_SPEC.md"
           ln -sfn ../repo/docs/CRYPTO_SIGNAL_INTELLIGENCE_STREAM_V1_MASTER_ROADMAP.md "$ROOT/00_CONTEXT/STREAM_MASTER_ROADMAP.md"
           ln -sfn ../repo/docs/CRYPTO_SIGNAL_INTELLIGENCE_STREAM_V1_FINAL_COMPLETION_ROADMAP.md "$ROOT/00_CONTEXT/STREAM_FINAL_COMPLETION_ROADMAP.md"
@@ -183,6 +198,7 @@ jobs:
           test -L "$ROOT/00_CONTEXT/READ_FIRST_CRYPTO_SIGNAL.md"
           test -L "$ROOT/00_CONTEXT/CURRENT_STATUS.md"
           test -L "$ROOT/00_CONTEXT/EVIDENCE_DEPTH_FRONTIER.md"
+          test -L "$ROOT/01_EVIDENCE_DEPTH/ACTIVE_ROADMAP.md"
 
       - name: Upload bootstrap report
         uses: actions/upload-artifact@v4
