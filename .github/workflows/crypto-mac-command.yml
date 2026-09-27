@@ -24,7 +24,7 @@ jobs:
           set -euo pipefail
           cmd="$(printf '%s\n' "$ISSUE_BODY" | awk -F: 'tolower($1)=="command" {gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2); print tolower($2); exit}')"
           case "$cmd" in
-            status|eventsourcestate|eventsourcesnapshot|blsprobe|fredprobe|wc2epoch2activate|wc2policyregister|wc2protocolregister|wc2executionprotocolregister|wc2executionruntimeregister|wc2executiononce|wc2executionstate|wc2collectonce|wc2state|services|logs|netdiag|disk|sync|producttest|fulltest|productstate|productdeploy|paperreview|paperinspect|paperfixlint|paperharden|stateplanreview|stateplaninspect|stateplanharden|cursorreview|cursorreviewtail|cursorcleanup|bridgecheck|bridgestate|rollingstate|pausecheck|wakepause|wakeresume|wakearm|waketest|wakeheartbeat|chatbusyprobe|cursorcheck|cursorauthdiag|cursorttycheck|alertclockstate|alertclockpause|alertclockresume|migrationinspect|migrationinventory|ssddashboarddiag|productcrashlogs|ssddashboardwrappertest|ssdtcclaunchtest|ssdbackgroundteststart|ssdbackgroundtestcheck|ssdleftover|runnerpersistinstall|runnerpersistdiag|runnercutoverdiag|dashboardstart504|visualcleanup|visualsnapshot|galactechpreview|runnerterminalwatchdoginstall)
+            status|eventsourcestate|eventsourcesnapshot|blsprobe|fredprobe|wc2epoch2activate|wc2policyregister|wc2protocolregister|wc2executionprotocolregister|wc2executionruntimeregister|wc2executiononce|wc2executionstate|wc2collectonce|wc2state|services|logs|netdiag|freshnessdiag|disk|sync|producttest|fulltest|productstate|productdeploy|paperreview|paperinspect|paperfixlint|paperharden|stateplanreview|stateplaninspect|stateplanharden|cursorreview|cursorreviewtail|cursorcleanup|bridgecheck|bridgestate|rollingstate|pausecheck|wakepause|wakeresume|wakearm|waketest|wakeheartbeat|chatbusyprobe|cursorcheck|cursorauthdiag|cursorttycheck|alertclockstate|alertclockpause|alertclockresume|migrationinspect|migrationinventory|ssddashboarddiag|productcrashlogs|ssddashboardwrappertest|ssdtcclaunchtest|ssdbackgroundteststart|ssdbackgroundtestcheck|ssdleftover|runnerpersistinstall|runnerpersistdiag|runnercutoverdiag|dashboardstart504|visualcleanup|visualsnapshot|galactechpreview|runnerterminalwatchdoginstall)
               ;;
             *)
               echo "Unsupported command: $cmd"
@@ -1877,6 +1877,174 @@ jobs:
           echo "REAL_CAPITAL=0"
           exit 0
 
+      - name: FRESHNESS DIAG
+        if: steps.parse.outputs.command == 'freshnessdiag'
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          DEV="$ROOT/Development"
+          PY="$DEV/.venv/bin/python"
+
+          "$PY" - <<'PY'
+          import json
+          import sqlite3
+          import time
+          import urllib.request
+          from datetime import datetime, timezone
+          from pathlib import Path
+
+          ROOT = Path("/Volumes/Crypto-504/Crypto-Signal")
+          DEV = ROOT / "Development"
+          now_ms = time.time_ns() // 1_000_000
+
+          def iso(ms):
+              if ms is None:
+                  return "NONE"
+              return datetime.fromtimestamp(ms / 1000, tz=timezone.utc).isoformat()
+
+          def age(ms):
+              return None if ms is None else max(0, now_ms - int(ms))
+
+          def ro(path: Path):
+              return sqlite3.connect(
+                  f"file:{path}?mode=ro",
+                  uri=True,
+              )
+
+          print(f"FRESHNESS_NOW_MS={now_ms}")
+          print(f"FRESHNESS_NOW_UTC={iso(now_ms)}")
+          print("DEVELOPMENT_HEAD=" + __import__("subprocess").check_output(
+              ["git","-C",str(DEV),"rev-parse","HEAD"], text=True
+          ).strip())
+
+          market = DEV / "runtime/market_tape/market_tape.sqlite3"
+          print(f"MARKET_TAPE_DB_PRESENT={market.is_file()}")
+          if market.is_file():
+              with ro(market) as db:
+                  db.execute("PRAGMA query_only=ON")
+                  for table, col in (
+                      ("market_tape_orderbooks","event_at_ms"),
+                      ("market_tape_trades","event_at_ms"),
+                      ("market_tape_derivatives","event_at_ms"),
+                      ("market_tape_liquidations","event_at_ms"),
+                      ("market_tape_liquidation_coverage","coverage_end_ms"),
+                  ):
+                      try:
+                          row=db.execute(f"SELECT MAX({col}), COUNT(*) FROM {table}").fetchone()
+                          ms=None if row is None or row[0] is None else int(row[0])
+                          count=0 if row is None else int(row[1])
+                          print(
+                              f"MARKET_TAPE {table} count={count} max_ms={ms} "
+                              f"max_utc={iso(ms)} age_ms={age(ms)}"
+                          )
+                      except sqlite3.Error as exc:
+                          print(f"MARKET_TAPE {table} error={type(exc).__name__}:{exc}")
+
+          collector = DEV / "runtime/market_tape/collector_runtime.sqlite3"
+          print(f"COLLECTOR_RUNTIME_DB_PRESENT={collector.is_file()}")
+          if collector.is_file():
+              with ro(collector) as db:
+                  db.execute("PRAGMA query_only=ON")
+                  try:
+                      row=db.execute(
+                          "SELECT observed_at_ms,last_successful_ingestion_ms,"
+                          "sequence_no,payload_json "
+                          "FROM collector_heartbeats "
+                          "ORDER BY observed_at_ms DESC LIMIT 1"
+                      ).fetchone()
+                      if row:
+                          observed=int(row[0]); ing=None if row[1] is None else int(row[1])
+                          payload=json.loads(str(row[3]))
+                          print(
+                              "COLLECTOR_LATEST "
+                              f"observed_ms={observed} observed_utc={iso(observed)} "
+                              f"observed_age_ms={age(observed)} "
+                              f"ingestion_ms={ing} ingestion_utc={iso(ing)} "
+                              f"ingestion_age_ms={age(ing)} sequence={int(row[2])} "
+                              f"observed_messages_total={payload.get('observed_messages_total')} "
+                              f"normalized_rows_total={payload.get('normalized_rows_total')}"
+                          )
+                  except sqlite3.Error as exc:
+                      print(f"COLLECTOR_LATEST error={type(exc).__name__}:{exc}")
+
+          candle = DEV / "runtime/data/live_base_15m_cache.sqlite3"
+          print(f"CANDLE_CACHE_DB_PRESENT={candle.is_file()}")
+          if candle.is_file():
+              with ro(candle) as db:
+                  db.execute("PRAGMA query_only=ON")
+                  tables=[str(r[0]) for r in db.execute(
+                      "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name"
+                  )]
+                  for table in tables:
+                      cols=[str(r[1]) for r in db.execute(f"PRAGMA table_info({table})")]
+                      time_cols=[x for x in cols if x in {
+                          "event_at_ms","open_time_ms","close_time_ms","opened_at_ms",
+                          "closed_at_ms","source_timestamp_ms","ingested_at_ms",
+                          "observed_at_ms","cutoff_ms"
+                      }]
+                      for col in time_cols:
+                          try:
+                              row=db.execute(f"SELECT MAX({col}), COUNT(*) FROM {table}").fetchone()
+                              ms=None if row is None or row[0] is None else int(row[0])
+                              print(
+                                  f"CANDLE_CACHE {table}.{col} max_ms={ms} "
+                                  f"max_utc={iso(ms)} age_ms={age(ms)} rows={0 if row is None else int(row[1])}"
+                              )
+                          except sqlite3.Error:
+                              pass
+
+          stream = DEV / "runtime/stream/intelligence_stream.sqlite3"
+          print(f"STREAM_DB_PRESENT={stream.is_file()}")
+          if stream.is_file():
+              with ro(stream) as db:
+                  db.execute("PRAGMA query_only=ON")
+                  tables=[str(r[0]) for r in db.execute(
+                      "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name"
+                  )]
+                  for table in tables:
+                      cols=[str(r[1]) for r in db.execute(f"PRAGMA table_info({table})")]
+                      time_cols=[x for x in cols if x in {
+                          "event_at_ms","created_at_ms","persisted_at_ms","published_at_ms",
+                          "observed_at_ms","ingested_at_ms","source_timestamp_ms"
+                      }]
+                      for col in time_cols:
+                          try:
+                              row=db.execute(f"SELECT MAX({col}), COUNT(*) FROM {table}").fetchone()
+                              ms=None if row is None or row[0] is None else int(row[0])
+                              print(
+                                  f"STREAM_DB {table}.{col} max_ms={ms} "
+                                  f"max_utc={iso(ms)} age_ms={age(ms)} rows={0 if row is None else int(row[1])}"
+                              )
+                          except sqlite3.Error:
+                              pass
+
+          try:
+              with urllib.request.urlopen(
+                  "http://127.0.0.1:48700/api/stream/messages?limit=5",
+                  timeout=5,
+              ) as response:
+                  payload=json.loads(response.read().decode("utf-8"))
+              print("PRODUCT_STREAM_HTTP=200")
+              items = payload if isinstance(payload, list) else payload.get("messages", [])
+              print(f"PRODUCT_STREAM_COUNT={len(items) if isinstance(items,list) else -1}")
+              if isinstance(items,list):
+                  for idx,item in enumerate(items[:5]):
+                      if not isinstance(item,dict):
+                          continue
+                      compact={
+                          k:item.get(k) for k in (
+                              "identity","category","message","symbol","timeframe",
+                              "event_at_ms","created_at_ms","persisted_at_ms","published_at_ms"
+                          ) if k in item
+                      }
+                      print(f"PRODUCT_STREAM_ITEM_{idx}="+json.dumps(compact,ensure_ascii=False,separators=(",",":")))
+          except Exception as exc:
+              print(f"PRODUCT_STREAM_ERROR={type(exc).__name__}:{exc}")
+
+          print("FRESHNESS_DIAG_READONLY_PASS=YES")
+          print("REAL_CAPITAL=0")
+          PY
       - name: SERVICES
         if: steps.parse.outputs.command == 'services'
         shell: bash
