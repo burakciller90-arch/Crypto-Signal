@@ -56,7 +56,10 @@ launchctl bootstrap "gui/$(id -u)" "$PLIST"
 /bin/rm -f "$HOME/Library/LaunchAgents/com.cryptosignal.dashboard.ssdtest.plist"
 launchctl bootout "gui/$(id -u)/com.cryptosignal.dashboard.ssdtest" >/dev/null 2>&1 || true
 
-/usr/bin/open -gj -a Terminal "$LOCAL_ROOT/start-ssd-runtime.command"
+if ! /usr/bin/open -gj -a Terminal "$LOCAL_ROOT/start-ssd-runtime.command"; then
+  echo "R11_TERMINAL_OPEN_FAILED_FALLBACK_DIRECT=YES"
+  "$LOCAL_ROOT/start-ssd-runtime.command"
+fi
 /bin/sleep 4
 
 launchctl print "$TARGET" >/dev/null

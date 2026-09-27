@@ -40,3 +40,11 @@ def test_r11_acceptance_ps_contract_exposes_comm_and_args() -> None:
     text = Path("ops/r11_runtime_acceptance.py").read_text(encoding="utf-8")
     assert '"pid=,ppid=,user=,comm=,args="' in text
     assert 'frozenset({"bash", "/bin/bash"})' in text
+
+
+def test_runtime_watchdog_installer_falls_back_when_terminal_open_fails() -> None:
+    text = Path("ops/r11/install_runtime_watchdog.sh").read_text(encoding="utf-8")
+
+    assert 'if ! /usr/bin/open -gj -a Terminal "$LOCAL_ROOT/start-ssd-runtime.command"; then' in text
+    assert 'R11_TERMINAL_OPEN_FAILED_FALLBACK_DIRECT=YES' in text
+    assert '"$LOCAL_ROOT/start-ssd-runtime.command"' in text
