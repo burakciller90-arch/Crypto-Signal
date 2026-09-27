@@ -22,8 +22,17 @@ class BybitSpotMicrostructureAdapter:
     BASE_URL = "https://api.bybit.com"
     ADAPTER_VERSION = "bybit-v5-spot-microstructure/1"
 
-    def __init__(self, client: httpx.AsyncClient | None = None) -> None:
+    def __init__(
+        self,
+        client: httpx.AsyncClient | None = None,
+        *,
+        base_url: str | None = None,
+    ) -> None:
+        selected_base_url = (base_url or self.BASE_URL).rstrip("/")
+        if not selected_base_url.startswith("https://"):
+            raise ValueError("Bybit microstructure REST base URL must use https")
         self._client = client
+        self._base_url = selected_base_url
 
     async def fetch_snapshot(
         self,
@@ -54,11 +63,11 @@ class BybitSpotMicrostructureAdapter:
         client = self._client or httpx.AsyncClient(timeout=10.0)
         try:
             book_task = client.get(
-                f"{self.BASE_URL}/v5/market/orderbook",
+                f"{self._base_url}/v5/market/orderbook",
                 params=book_params,
             )
             trade_task = client.get(
-                f"{self.BASE_URL}/v5/market/recent-trade",
+                f"{self._base_url}/v5/market/recent-trade",
                 params=trade_params,
             )
             book_response, trade_response = await asyncio.gather(
