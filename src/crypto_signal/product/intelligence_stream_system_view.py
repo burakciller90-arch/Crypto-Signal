@@ -467,9 +467,10 @@ class IntelligenceStreamSystemViewRuntime:
         snapshot: StreamFamilySnapshot | None,
     ) -> dict[str, Any]:
         weight = _FAMILY_WEIGHTS[family]
-        source_narrative_identity = self._latest_family_narrative_identity(
-            family=family,
-            symbol=None if snapshot is None else snapshot.symbol,
+        source_narrative_identity = (
+            None
+            if snapshot is None
+            else self._family_narrative_identity_for_snapshot(snapshot)
         )
         if snapshot is None:
             return {
@@ -689,14 +690,10 @@ class IntelligenceStreamSystemViewRuntime:
             return None
         return max(candidates, key=lambda value: (severity.get(value, 99), value))
 
-    def _latest_family_narrative_identity(
+    def _family_narrative_identity_for_snapshot(
         self,
-        *,
-        family: ConfluenceFamily,
-        symbol: str | None,
+        snapshot: StreamFamilySnapshot,
     ) -> str | None:
-        if symbol is None:
-            return None
         with self._connect_ro() as connection:
             row = connection.execute(
                 """
@@ -708,10 +705,15 @@ class IntelligenceStreamSystemViewRuntime:
                   ON f.fact_bundle_identity = p.fact_bundle_identity
                 WHERE json_extract(f.payload_json, '$.family') = ?
                   AND json_extract(f.payload_json, '$.symbol') = ?
+                  AND json_extract(f.payload_json, '$.source_event_identity') = ?
                 ORDER BY n.event_at_ms DESC, n.narrative_identity DESC
                 LIMIT 1
                 """,
-                (family.value, symbol),
+                (
+                    snapshot.family.value,
+                    snapshot.symbol,
+                    snapshot.source_event_identity,
+                ),
             ).fetchone()
         if row is None:
             return None
