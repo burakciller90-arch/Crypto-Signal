@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import quote
 
+from crypto_signal.intelligence.confluence_matrix_v2 import ConfluenceFamily
 from crypto_signal.ledger.serialization import canonical_json, canonical_sha256, sha256_text
 from crypto_signal.product.intelligence_stream_analytical import (
     STREAM_ANALYTICAL_VIEW_SCHEMA_VERSION,
@@ -46,12 +47,8 @@ STREAM_CURSOR_SCHEMA_VERSION = "intelligence-stream-cursor-v1/1"
 STREAM_MESSAGE_DETAIL_SCHEMA_VERSION = "intelligence-stream-message-detail-v1/1"
 DEFAULT_STREAM_PAGE_LIMIT = 50
 MAX_STREAM_PAGE_LIMIT = 200
-_PRIMARY_HIDDEN_FAMILIES = (
-    "geometry",
-    "liquidity",
-    "order_flow",
-    "derivatives",
-    "onchain",
+_PRIMARY_HIDDEN_FAMILIES = tuple(
+    family.value for family in ConfluenceFamily
 )
 
 
