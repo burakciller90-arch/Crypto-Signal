@@ -530,8 +530,12 @@ function currentViewSummary(analytical, fact) {
   const contradiction = analytical?.main_contradiction?.family
     ? familyLabel(analytical.main_contradiction.family)
     : "Belirgin karşı ağırlık yok";
+  const supportLabel =
+    fact?.score_semantic === "weighted_directional_family_vote_not_probability"
+      ? "Yön desteği"
+      : "Karar desteği";
   metrics.append(
-    decisionMetric("Karar desteği", `${displayNumber(support)} / 100`),
+    decisionMetric(supportLabel, `${displayNumber(support)} / 100`),
     decisionMetric("Kanıt kapsamı", `${displayNumber(evidenceCoveragePoints(fact))} / 100`),
     decisionMetric("Tetik", decisionZoneLabel(fact?.trigger_zone)),
     decisionMetric("Hedef", decisionZoneLabel(fact?.target_zone)),
@@ -541,7 +545,10 @@ function currentViewSummary(analytical, fact) {
 
   const note = document.createElement("p");
   note.className = "decision-summary-note";
-  note.textContent = "Karar desteği ve kanıt kapsamı puandır; yükseliş/düşüş olasılığı değildir.";
+  note.textContent =
+    fact?.score_semantic === "weighted_directional_family_vote_not_probability"
+      ? "Yön desteği sabit family ağırlıklarının gözlenen yön dengesidir; forecast veya olasılık değildir."
+      : "Karar desteği ve kanıt kapsamı puandır; yükseliş/düşüş olasılığı değildir.";
 
   wrap.append(stance, metrics, note);
   return wrap;
@@ -1327,12 +1334,26 @@ function createEvidenceWindowShell(model) {
   return node;
 }
 
+function systemViewFamilyProofIdentity(detail, kind) {
+  if (!detail?.system_view) return "";
+  const contribution = familyContribution(detail, kind);
+  const identity = text(contribution?.source_narrative_identity, "");
+  return exactSha256(identity) ? identity : "";
+}
+
 function openEvidenceWindow(record, detail, kind) {
   const config = EVIDENCE_WINDOW_KINDS[kind];
-  const narrativeIdentity = text(record?.narrative_identity ?? detail?.narrative?.narrative_identity, "");
-  if (!config || !exactSha256(narrativeIdentity)) return null;
+  const ownerIdentity = text(
+    record?.narrative_identity ?? detail?.narrative?.narrative_identity,
+    ""
+  );
+  const sourceIdentity = systemViewFamilyProofIdentity(detail, kind);
+  const narrativeIdentity = sourceIdentity || ownerIdentity;
+  if (!config || !exactSha256(ownerIdentity) || !exactSha256(narrativeIdentity)) {
+    return null;
+  }
 
-  const id = evidenceWindowId(narrativeIdentity, kind);
+  const id = evidenceWindowId(ownerIdentity, kind);
   const existing = state.evidenceWindows.get(id);
   if (existing) {
     focusEvidenceWindow(id);
