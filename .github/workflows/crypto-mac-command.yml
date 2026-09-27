@@ -24,7 +24,7 @@ jobs:
           set -euo pipefail
           cmd="$(printf '%s\n' "$ISSUE_BODY" | awk -F: 'tolower($1)=="command" {gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2); print tolower($2); exit}')"
           case "$cmd" in
-            status|eventsourcestate|eventsourcesnapshot|blsprobe|fredprobe|wc2epoch2activate|wc2policyregister|wc2protocolregister|wc2executionprotocolregister|wc2executionruntimeregister|wc2executiononce|wc2executionstate|wc2collectonce|wc2state|services|logs|disk|sync|producttest|fulltest|productstate|productdeploy|paperreview|paperinspect|paperfixlint|paperharden|stateplanreview|stateplaninspect|stateplanharden|cursorreview|cursorreviewtail|cursorcleanup|bridgecheck|bridgestate|rollingstate|pausecheck|wakepause|wakeresume|wakearm|waketest|wakeheartbeat|chatbusyprobe|cursorcheck|cursorauthdiag|cursorttycheck|alertclockstate|alertclockpause|alertclockresume|migrationinspect|migrationinventory|ssddashboarddiag|productcrashlogs|ssddashboardwrappertest|ssdtcclaunchtest|ssdbackgroundteststart|ssdbackgroundtestcheck|ssdleftover|runnerpersistinstall|runnerpersistdiag|runnercutoverdiag|dashboardstart504|visualcleanup|visualsnapshot|galactechpreview|runnerterminalwatchdoginstall)
+            status|eventsourcestate|eventsourcesnapshot|blsprobe|fredprobe|wc2epoch2activate|wc2policyregister|wc2protocolregister|wc2executionprotocolregister|wc2executionruntimeregister|wc2executiononce|wc2executionstate|wc2collectonce|wc2state|services|logs|netdiag|disk|sync|producttest|fulltest|productstate|productdeploy|paperreview|paperinspect|paperfixlint|paperharden|stateplanreview|stateplaninspect|stateplanharden|cursorreview|cursorreviewtail|cursorcleanup|bridgecheck|bridgestate|rollingstate|pausecheck|wakepause|wakeresume|wakearm|waketest|wakeheartbeat|chatbusyprobe|cursorcheck|cursorauthdiag|cursorttycheck|alertclockstate|alertclockpause|alertclockresume|migrationinspect|migrationinventory|ssddashboarddiag|productcrashlogs|ssddashboardwrappertest|ssdtcclaunchtest|ssdbackgroundteststart|ssdbackgroundtestcheck|ssdleftover|runnerpersistinstall|runnerpersistdiag|runnercutoverdiag|dashboardstart504|visualcleanup|visualsnapshot|galactechpreview|runnerterminalwatchdoginstall)
               ;;
             *)
               echo "Unsupported command: $cmd"
@@ -1709,6 +1709,106 @@ jobs:
           print("FRED_PROBE_READONLY_PASS=YES")
           print("REAL_CAPITAL=0")
           PY
+
+      - name: NETWORK DIAG
+        if: steps.parse.outputs.command == 'netdiag'
+        shell: bash
+        run: |
+          set +e
+          echo "=== PROXY ENVIRONMENT (REDACTED) ==="
+          /usr/bin/python3 - <<'PY'
+          import os
+          from urllib.parse import urlsplit
+
+          for key in ("HTTP_PROXY","HTTPS_PROXY","ALL_PROXY","NO_PROXY",
+                      "http_proxy","https_proxy","all_proxy","no_proxy"):
+              value = os.environ.get(key)
+              if value is None:
+                  print(f"{key}=UNSET")
+                  continue
+              if key.lower() == "no_proxy":
+                  print(f"{key}=SET entries={len([x for x in value.split(',') if x.strip()])}")
+                  continue
+              try:
+                  parsed = urlsplit(value)
+                  host = parsed.hostname or "MISSING"
+                  port = parsed.port or "DEFAULT"
+                  scheme = parsed.scheme or "MISSING"
+                  auth = "YES" if (parsed.username or parsed.password) else "NO"
+                  print(f"{key}=SET scheme={scheme} host={host} port={port} auth={auth}")
+              except Exception as exc:
+                  print(f"{key}=SET parse_error={type(exc).__name__}")
+          PY
+
+          echo "=== SYSTEM PROXY ==="
+          /usr/sbin/scutil --proxy 2>&1 | sed -E             -e 's/(Proxy = ).*/\1REDACTED/'             -e 's/(ExceptionsList : <array> \{)/\1/'             | head -120
+
+          echo "=== DNS ==="
+          for host in api.binance.com api.bybit.com stream.bybit.com; do
+            echo "--- $host"
+            /usr/bin/dscacheutil -q host -a name "$host" 2>&1 | head -20
+          done
+
+          echo "=== CURL DEFAULT ENV ==="
+          for url in             'https://api.binance.com/api/v3/time'             'https://api.bybit.com/v5/market/time'
+          do
+            echo "--- $url"
+            /usr/bin/curl -sS -o /tmp/crypto-netdiag-body               -w 'http_code=%{http_code} remote_ip=%{remote_ip} ssl_verify=%{ssl_verify_result} time_total=%{time_total}\n'               --connect-timeout 8 --max-time 12 "$url"
+            rc=$?
+            echo "curl_rc=$rc"
+            head -c 300 /tmp/crypto-netdiag-body 2>/dev/null; echo
+          done
+
+          echo "=== CURL BYPASS ALL PROXIES ==="
+          for url in             'https://api.binance.com/api/v3/time'             'https://api.bybit.com/v5/market/time'
+          do
+            echo "--- $url"
+            /usr/bin/curl --noproxy '*' -sS -o /tmp/crypto-netdiag-body               -w 'http_code=%{http_code} remote_ip=%{remote_ip} ssl_verify=%{ssl_verify_result} time_total=%{time_total}\n'               --connect-timeout 8 --max-time 12 "$url"
+            rc=$?
+            echo "curl_rc=$rc"
+            head -c 300 /tmp/crypto-netdiag-body 2>/dev/null; echo
+          done
+
+          echo "=== HTTPX TRUST_ENV COMPARISON ==="
+          PY="/Volumes/Crypto-504/Crypto-Signal/Development/.venv/bin/python"
+          "$PY" - <<'PY'
+          import asyncio
+          import httpx
+
+          URLS = (
+              "https://api.binance.com/api/v3/time",
+              "https://api.bybit.com/v5/market/time",
+          )
+
+          async def main():
+              for trust_env in (True, False):
+                  async with httpx.AsyncClient(
+                      timeout=10.0,
+                      trust_env=trust_env,
+                  ) as client:
+                      for url in URLS:
+                          try:
+                              response = await client.get(url)
+                              print(
+                                  "HTTPX "
+                                  f"trust_env={trust_env} "
+                                  f"url={url} "
+                                  f"status={response.status_code} "
+                                  f"bytes={len(response.content)}"
+                              )
+                          except Exception as exc:
+                              print(
+                                  "HTTPX "
+                                  f"trust_env={trust_env} "
+                                  f"url={url} "
+                                  f"error={type(exc).__name__}:{exc}"
+                              )
+          asyncio.run(main())
+          PY
+
+          echo "NETWORK_DIAG_READONLY_PASS=YES"
+          echo "REAL_CAPITAL=0"
+          exit 0
 
       - name: SERVICES
         if: steps.parse.outputs.command == 'services'
