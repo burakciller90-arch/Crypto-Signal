@@ -1,5 +1,20 @@
 # PROJECT CHRONICLE
 
+
+## 2026-09-27 — MI1 user-facing message composer accepted; MI2 becomes active
+
+MI1 is mechanically accepted without reopening F0-F10 or changing trading policy.
+
+Accepted main:
+- PR #1453 / `a2c317bbee1b325500b909bbe970750370a17eda`: raw family state-machine labels/arrows were removed from normal customer copy while exact technical evidence stayed available.
+- PR #1454 / `28fa1c208e9e66173214a8bdfaa33cea4bbfe935`: Product history/SSE now requests the primary customer surface. The five market-family telemetry narratives remain immutable/searchable/debuggable but no longer become default customer bubbles. Event Risk and provider-quality trust alerts remain visible.
+- canonical decision narrative collapsed copy is now one fact-bound Turkish system view using exact stance/trigger/target/invalidation only when persisted facts support them.
+
+Exact UID504 acceptance run `36330349505` passed 99 focused tests, Ruff, mypy, Node syntax, canonical Development/Product non-mutation and a fail-closed cross-project diff guard. `REAL_CAPITAL=0`.
+
+MI1 is therefore PASS. The sole Message Intelligence frontier is now **MI2 — Guarded natural Turkish layer**: feed the local rewriter a fact-locked analyst brief, materially improve Turkish, preserve deterministic fallback and grant the model no factual/directional/numeric/trading authority.
+
+
 ## 2026-09-27 — User opens Message Intelligence & Family Evidence UX frontier
 
 The user explicitly opened a new narrow post-F10 product-refinement scope after reviewing the live Stream. Delivery is active, but the visible language still exposes low-level family telemetry such as raw state labels/transitions instead of presenting one coherent system view.
