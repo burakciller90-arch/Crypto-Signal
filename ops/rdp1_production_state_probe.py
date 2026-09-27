@@ -20,6 +20,7 @@ def ro(path: Path) -> sqlite3.Connection:
 
 def main() -> int:
     now_ms = time.time_ns() // 1_000_000
+    print(f"RDP1_PROD_ROOT={ROOT}")
     print(f"RDP1_PROD_NOW_MS={now_ms}")
 
     ps = subprocess.run(
