@@ -530,7 +530,7 @@ Acceptance evidence:
 
 ## RDP1 — Collector and runtime reliability
 
-Status: **ACTIVE**
+Status: **PASS**
 
 Goal:
 - make the existing data substrate continuously trustworthy before expanding it.
@@ -551,7 +551,16 @@ PASS:
 - book/trade continuity proven across restart;
 - read-only soak reports persist explicit gaps.
 
+Acceptance evidence:
+- cadence merge PR #1548 / main `fabaa8830bd599e564bf76c1e0adbee89ec9b5f3`;
+- UID504 R11 exact-main recovery `36357042192`: Product healthy/read-only, collector alive, ingestion fresh, REAL_CAPITAL=0;
+- UID504 post-boundary freshness `36357255060`: orderbook 0.339s, trades 0.058s, derivatives 12.464s, collector ingestion 24.872s, Stream/Product live; latest closed 15m candle present 83.680s after close;
+- UID504 six-context read-only acceptance `36357353548`: Bybit BTC/ETH/SOL availability lag 8.958s / 11.406s / 13.663s; Binance BTC/ETH/SOL 16.163s / 20.413s / 24.332s; `RDP1_CLOSED_CANDLE_SLO_PASS=YES`;
+- liquidation coverage may remain zero/unsupported at this phase and is not an RDP1 blocker.
+
 ## RDP2 — Canonical source envelope + coverage ledger
+
+Status: **ACTIVE**
 
 Goal:
 - enforce one professional contract across every evidence rail.
@@ -844,7 +853,7 @@ Every new agent working on this program must read, in order:
 
 Current exact frontier:
 
-**RDP1 — Collector and runtime reliability**
+**RDP2 — Canonical source envelope + coverage ledger**
 
 Do not skip forward to Portfolio or frontend implementation while RDP1–RDP11 remain open unless the user explicitly authorizes parallel preparatory work.
 
