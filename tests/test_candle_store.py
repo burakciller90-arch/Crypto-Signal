@@ -110,3 +110,66 @@ def test_finalized_candle_cannot_reopen_or_silently_change(tmp_path: Path) -> No
     conflicting = candle(close="106", high="112", is_closed=True, source_timestamp_ms=4000)
     with pytest.raises(CandleConflictError, match="finalized candle conflict"):
         db.upsert(conflicting)
+
+
+
+def test_batch_upsert_is_atomic_on_late_finalized_conflict(
+    tmp_path: Path,
+) -> None:
+    db = store(tmp_path)
+    first = candle(
+        open_time_ms=1_710_000_000_000,
+        close="101",
+        is_closed=True,
+        source_timestamp_ms=2_000,
+    )
+    original = candle(
+        open_time_ms=1_710_000_900_000,
+        close="104",
+        is_closed=True,
+        source_timestamp_ms=2_000,
+    )
+    conflicting = candle(
+        open_time_ms=original.open_time_ms,
+        close="106",
+        high="112",
+        is_closed=True,
+        source_timestamp_ms=3_000,
+    )
+    assert db.upsert(original) is WriteDisposition.INSERTED
+
+    with pytest.raises(CandleConflictError, match="finalized candle conflict"):
+        db.upsert_many((first, conflicting))
+
+    loaded = db.list_candles(
+        exchange=Exchange.BYBIT,
+        market_type=MarketType.SPOT,
+        symbol="BTCUSDT",
+        timeframe="15m",
+    )
+    assert loaded == (original,)
+
+
+def test_batch_upsert_preserves_ordered_dispositions(tmp_path: Path) -> None:
+    db = store(tmp_path)
+    first = candle(
+        open_time_ms=1_710_000_000_000,
+        close="101",
+        is_closed=True,
+        source_timestamp_ms=2_000,
+    )
+    second = candle(
+        open_time_ms=1_710_000_900_000,
+        close="102",
+        is_closed=True,
+        source_timestamp_ms=2_000,
+    )
+
+    assert db.upsert_many((first, second)) == (
+        WriteDisposition.INSERTED,
+        WriteDisposition.INSERTED,
+    )
+    assert db.upsert_many((first, second)) == (
+        WriteDisposition.UNCHANGED,
+        WriteDisposition.UNCHANGED,
+    )
