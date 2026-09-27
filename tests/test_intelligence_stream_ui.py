@@ -144,6 +144,51 @@ def test_mi3_default_decision_detail_is_compact_five_family_summary() -> None:
     assert '[data-evidence-state="unavailable"]' in css
 
 
+def test_mi4_family_rows_open_only_their_exact_proof_windows() -> None:
+    script = (STREAM_DIR / "app.js").read_text(encoding="utf-8")
+    detached = (STREAM_DIR / "evidence.js").read_text(encoding="utf-8")
+    css = (STREAM_DIR / "app.css").read_text(encoding="utf-8")
+
+    assert "familyEvidenceSummaryTable(record, detail)" in script
+    assert 'row.className = "family-evidence-row family-evidence-action"' in script
+    assert "openEvidenceWindow(record, detail, config.evidenceKind)" in script
+    assert "API.exactEvidence(model.narrativeIdentity)" in script
+    assert "familyEvidenceDomains" in script
+    assert "familyExactEvidenceSection" in script
+    assert "READY_EXACT" in script
+    assert "IDENTITY_ONLY_EXACT" in script
+    assert "UNAVAILABLE_EXPLICIT" in script
+    assert "current_data_substitution === false" in script
+    assert "renderEvidenceWindowBody(model, resolvedDetail, exactEvidence)" in script
+
+    for family, kind in (
+        ("geometry_pa_elliott_harmonic", "geometry"),
+        ("liquidity", "liquidity"),
+        ("order_flow_absorption", "order_flow"),
+        ("derivatives", "derivatives"),
+        ("onchain_smart_money", "onchain"),
+    ):
+        assert family in script
+        assert f'evidenceKind: "{kind}"' in script
+
+    decision_start = script.index("if (hasDecisionEvidenceMatrix(fact))")
+    decision_return = script.index("return decisionGrid;", decision_start)
+    decision_slice = script[decision_start:decision_return]
+    assert "proofPanel(" not in decision_slice
+    assert "evidenceWindowLauncher(" not in decision_slice
+
+    assert "FAMILY_ALIASES" in detached
+    assert "FAMILY_EVIDENCE_DOMAINS" in detached
+    assert "renderExactEvidenceManifest(payload, detail = null)" in detached
+    assert "acceptedDomains.has" in detached
+    assert "current data ile ikame yapılmadı" in detached
+
+    assert ".family-evidence-action" in css
+    assert ".family-exact-proof" in css
+    assert '[data-resolution-state="READY_EXACT"]' in css
+    assert '[data-resolution-state="UNAVAILABLE_EXPLICIT"]' in css
+
+
 def test_stream_s9_evidence_window_manager_contract() -> None:
     html = (STREAM_DIR / "index.html").read_text(encoding="utf-8")
     script = (STREAM_DIR / "app.js").read_text(encoding="utf-8")
