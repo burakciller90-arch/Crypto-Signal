@@ -211,3 +211,29 @@ def test_bybit_microstructure_rejects_unknown_trade_side() -> None:
 
     with pytest.raises(ValueError, match="side"):
         asyncio.run(run())
+
+
+def test_bybit_microstructure_uses_explicit_regional_base_url() -> None:
+    seen_hosts: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen_hosts.append(str(request.url.host))
+        if request.url.path.endswith("/orderbook"):
+            return httpx.Response(200, json=_book_payload())
+        return httpx.Response(200, json=_trade_payload())
+
+    async def run() -> None:
+        transport = httpx.MockTransport(handler)
+        async with httpx.AsyncClient(transport=transport) as client:
+            await BybitSpotMicrostructureAdapter(
+                client,
+                base_url="https://api.bybit.tr/",
+            ).fetch_snapshot(symbol="BTCUSDT")
+
+    asyncio.run(run())
+    assert seen_hosts == ["api.bybit.tr", "api.bybit.tr"]
+
+
+def test_bybit_microstructure_rejects_non_https_base_url() -> None:
+    with pytest.raises(ValueError, match="must use https"):
+        BybitSpotMicrostructureAdapter(base_url="http://api.bybit.tr")

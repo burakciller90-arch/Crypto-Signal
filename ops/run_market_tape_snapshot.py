@@ -36,6 +36,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--db", type=Path, default=DEFAULT_DB)
     parser.add_argument("--lock-path", type=Path, default=DEFAULT_LOCK)
     parser.add_argument(
+        "--bybit-base-url",
+        default="https://api.bybit.tr",
+        help="explicit regional Bybit REST base URL",
+    )
+    parser.add_argument(
         "--symbols",
         nargs="+",
         default=list(DEFAULT_SYMBOLS),
@@ -58,8 +63,26 @@ async def run(args: argparse.Namespace) -> int:
 
     store = MarketTapeStore(args.db)
     failures = 0
-    microstructure = BybitSpotMicrostructureAdapter()
-    derivatives = BybitLinearDerivativesAdapter()
+    if not str(args.bybit_base_url).startswith("https://"):
+        print(
+            "MARKET_TAPE_ERROR=INVALID_BYBIT_REST_URL",
+            file=sys.stderr,
+            flush=True,
+        )
+        return 2
+
+    microstructure = BybitSpotMicrostructureAdapter(
+        base_url=args.bybit_base_url,
+    )
+    derivatives = BybitLinearDerivativesAdapter(
+        base_url=args.bybit_base_url,
+    )
+    cycle_orderbook_inserted = 0
+    cycle_trade_inserted = 0
+    cycle_trade_unchanged = 0
+    cycle_derivatives_inserted = 0
+    cycle_derivatives_unchanged = 0
+    successful_symbols = 0
 
     for symbol in tuple(str(value).upper() for value in args.symbols):
         try:
@@ -89,6 +112,14 @@ async def run(args: argparse.Namespace) -> int:
             )
             continue
 
+        successful_symbols += 1
+        cycle_orderbook_inserted += int(
+            result.orderbook_disposition.value == "inserted"
+        )
+        cycle_trade_inserted += result.trade_inserted
+        cycle_trade_unchanged += result.trade_unchanged
+        cycle_derivatives_inserted += result.derivatives_inserted
+        cycle_derivatives_unchanged += result.derivatives_unchanged
         print(
             "MARKET_TAPE_SYMBOL_OK "
             f"symbol={result.symbol} "
@@ -100,15 +131,16 @@ async def run(args: argparse.Namespace) -> int:
             flush=True,
         )
 
-    counts = store.counts()
     print(
         "MARKET_TAPE_SNAPSHOT_COMPLETE "
-        f"orderbooks={counts.orderbooks} "
-        f"trades={counts.trades} "
-        f"derivatives={counts.derivatives} "
-        f"total={counts.total} "
-        f"latest_event_at_ms={store.latest_event_at_ms() or '-'} "
-        f"quick_check={'YES' if store.quick_check() else 'NO'} "
+        f"successful_symbols={successful_symbols} "
+        f"failed_symbols={failures} "
+        f"cycle_orderbooks_inserted={cycle_orderbook_inserted} "
+        f"cycle_trades_inserted={cycle_trade_inserted} "
+        f"cycle_trades_unchanged={cycle_trade_unchanged} "
+        f"cycle_derivatives_inserted={cycle_derivatives_inserted} "
+        f"cycle_derivatives_unchanged={cycle_derivatives_unchanged} "
+        "FULL_DB_INTEGRITY_DELEGATED=YES "
         "REAL_CAPITAL=0",
         flush=True,
     )

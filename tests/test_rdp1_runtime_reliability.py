@@ -200,3 +200,26 @@ def test_restart_path_prefers_previous_heartbeat_before_heavy_counts() -> None:
     assert "previous_heartbeat.normalized_rows_total" in runner
     assert "previous_heartbeat.raw_rows_total" in runner
     assert "if previous_heartbeat is None:" in runner
+
+
+def test_market_tape_snapshot_hot_path_avoids_full_db_scans() -> None:
+    runner = (
+        Path(__file__).resolve().parents[1]
+        / "ops"
+        / "run_market_tape_snapshot.py"
+    ).read_text(encoding="utf-8")
+
+    assert "store.counts()" not in runner
+    assert "store.quick_check()" not in runner
+    assert "FULL_DB_INTEGRITY_DELEGATED=YES" in runner
+    assert "--bybit-base-url" in runner
+
+
+def test_runtime_supervisor_binds_snapshot_to_regional_bybit_rest() -> None:
+    supervisor = (
+        Path(__file__).resolve().parents[1]
+        / "ops"
+        / "ssd_runtime_supervisor.sh"
+    ).read_text(encoding="utf-8")
+
+    assert '--bybit-base-url "$BYBIT_REST_BASE_URL"' in supervisor

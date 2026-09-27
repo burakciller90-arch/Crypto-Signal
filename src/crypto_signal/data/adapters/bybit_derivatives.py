@@ -20,8 +20,17 @@ class BybitLinearDerivativesAdapter:
     ADAPTER_VERSION = "bybit-v5-linear-derivatives/1"
     _OI_INTERVALS = frozenset({"5min", "15min", "30min", "1h", "4h", "1d"})
 
-    def __init__(self, client: httpx.AsyncClient | None = None) -> None:
+    def __init__(
+        self,
+        client: httpx.AsyncClient | None = None,
+        *,
+        base_url: str | None = None,
+    ) -> None:
+        selected_base_url = (base_url or self.BASE_URL).rstrip("/")
+        if not selected_base_url.startswith("https://"):
+            raise ValueError("Bybit derivatives REST base URL must use https")
         self._client = client
+        self._base_url = selected_base_url
 
     async def fetch_observations(
         self,
@@ -58,11 +67,11 @@ class BybitLinearDerivativesAdapter:
         client = self._client or httpx.AsyncClient(timeout=10.0)
         try:
             oi_task = client.get(
-                f"{self.BASE_URL}/v5/market/open-interest",
+                f"{self._base_url}/v5/market/open-interest",
                 params=oi_params,
             )
             ticker_task = client.get(
-                f"{self.BASE_URL}/v5/market/tickers",
+                f"{self._base_url}/v5/market/tickers",
                 params=ticker_params,
             )
             oi_response, ticker_response = await asyncio.gather(
