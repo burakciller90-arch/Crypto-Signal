@@ -66,6 +66,7 @@ from crypto_signal.product.intelligence_stream_capital_forward_runtime import (
     IntelligenceStreamCapitalForwardRuntime,
     StreamCapitalForwardResult,
 )
+from crypto_signal.product.intelligence_stream_family import StreamFamilySnapshot
 from crypto_signal.product.intelligence_stream_family_sources import (
     build_geometry_family_snapshot_from_bundle,
     build_geometry_lifecycle_family_snapshot,
@@ -74,7 +75,6 @@ from crypto_signal.product.intelligence_stream_family_sources import (
 from crypto_signal.product.intelligence_stream_forward_runtime import (
     IntelligenceStreamForwardRuntime,
 )
-from crypto_signal.product.intelligence_stream_family import StreamFamilySnapshot
 from crypto_signal.product.intelligence_stream_local_rewriter import (
     LocalNarrativeRewriteConfig,
     OpenAICompatibleLocalNarrativeRewriter,
