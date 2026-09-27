@@ -193,10 +193,42 @@ class MarketTapeCollectorRuntimeStore:
         db.execute("PRAGMA foreign_keys=ON")
         return db
 
+    def _existing_schema_ready(self) -> bool:
+        if not self.path.is_file():
+            return False
+        with self._connect() as db:
+            tables = {
+                str(row[0])
+                for row in db.execute(
+                    """
+                    SELECT name FROM sqlite_master
+                    WHERE type='table' AND name NOT LIKE 'sqlite_%'
+                    """
+                ).fetchall()
+            }
+            required = {
+                "collector_runtime_meta",
+                "collector_instances",
+                "collector_heartbeats",
+            }
+            if not required.issubset(tables):
+                return False
+            row = db.execute(
+                "SELECT value FROM collector_runtime_meta WHERE key='schema_version'"
+            ).fetchone()
+            if row is None:
+                return False
+            if str(row[0]) != MARKET_TAPE_COLLECTOR_RUNTIME_SCHEMA_VERSION:
+                raise ValueError("collector runtime schema mismatch")
+        return True
+
     def initialize(self) -> None:
         if self._initialized:
             return
         self.path.parent.mkdir(parents=True, exist_ok=True)
+        if self._existing_schema_ready():
+            self._initialized = True
+            return
         with self._connect() as db:
             db.execute("PRAGMA journal_mode=DELETE")
             db.execute("PRAGMA synchronous=FULL")
