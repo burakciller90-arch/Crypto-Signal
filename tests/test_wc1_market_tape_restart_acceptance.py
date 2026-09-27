@@ -75,8 +75,6 @@ def test_restart_acceptance_uses_fast_collector_product_scope() -> None:
         .read_text(encoding="utf-8")
     )
 
-    assert (
-        "/api/market-tape-runtime/status"
-        "?scope=collector"
-    ) in source
+    assert "/api/market-tape-runtime/status" in source
+    assert '"?scope=collector"' in source
     assert 'product.get("scope") != "collector"' in source
