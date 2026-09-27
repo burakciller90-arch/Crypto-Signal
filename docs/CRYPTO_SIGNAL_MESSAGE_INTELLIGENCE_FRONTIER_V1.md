@@ -1,6 +1,6 @@
 # Crypto Signal — Message Intelligence & Family Evidence UX Frontier V1
 
-Status: **ACTIVE USER-APPROVED FRONTIER**
+Status: **ACCEPTED / CLOSED**
 Date opened: 2026-09-27
 Company: GALACTECH
 Product: Crypto Signal
@@ -416,7 +416,7 @@ PASS:
 
 ### MI5 — Real desktop/mobile acceptance
 
-Status: **ACTIVE FRONTIER**
+Status: **PASS — implementation main `93d9b1edfaf0267b6873f3aaaa2eb9e6dd455af0`; Product deploy run `36337341847`; final post-deploy UID504 browser acceptance run `36338498776`.**
 
 Goal:
 - verify live Product behavior with real new Stream messages.
@@ -430,6 +430,8 @@ PASS:
 - REAL_CAPITAL=0.
 
 ### MI6 — Authority freeze
+
+Status: **PASS — canonical final authority is `docs/CRYPTO_SIGNAL_MESSAGE_INTELLIGENCE_FINAL_ACCEPTANCE.md`.**
 
 Goal:
 - record exact accepted behavior and close this refinement frontier.
@@ -482,37 +484,32 @@ The same project-isolation rules continue to apply to all other repositories.
 
 ---
 
-## 14. Immediate frontier
+## 14. Final accepted state
 
-MI1 is accepted. Its exact accepted behavior is:
-- the normal Product feed is a primary customer surface;
-- five market-family telemetry narratives remain persisted/auditable but are not default customer bubbles;
-- Event Risk/provider-quality trust alerts remain visible;
-- deterministic collapsed decision copy is one fact-bound Turkish system view;
+MI1-MI6 are accepted.
+
+Final authority:
+
+`docs/CRYPTO_SIGNAL_MESSAGE_INTELLIGENCE_FINAL_ACCEPTANCE.md`
+
+Final mechanical MI5 evidence:
+- implementation main `93d9b1edfaf0267b6873f3aaaa2eb9e6dd455af0`;
+- Product deploy run `36337341847`;
+- final UID504 post-deploy browser acceptance run `36338498776`;
+- artifact `message-intelligence-mi5-probe-36338498776`, id `10937634080`, digest `sha256:8cb546390232c22321e0e33334bd50c78f36cb48580b4258c2d532221aeb3909`.
+
+Accepted runtime/product meaning:
+- raw five-family telemetry remains persisted/auditable but is not the default customer feed;
+- forward-only `system_view_updated` messages provide the customer evidence view;
+- the directional support score is explicitly not probability;
+- each of the five family rows owns its own exact/fail-closed proof interaction;
+- current data is never substituted for missing frozen proof;
+- local Ollama remains presentation-only;
 - historical rows were not rewritten;
+- Capital/Portfolio remains outside this scope;
+- Durdurulmaz and all other projects remain isolated;
 - `REAL_CAPITAL=0`.
 
-MI2 is accepted. The local model remains presentation-only and is now constrained by a deterministic fact-locked analyst brief plus deterministic post-rewrite guards.
+There is **no remaining active MI frontier**.
 
-MI3 is accepted. Canonical five-family decision messages now use the compact evidence-first expanded hierarchy with exact 20/25/25/15/15 weights and fail-closed unavailable states.
-
-MI4 is accepted. Each canonical family row now owns its exact/frozen proof interaction; family proof is fail-closed and only Geometry may draw the bound frozen chart.
-
-The exact next implementation frontier is:
-
-**MI5 — Real desktop/mobile acceptance**
-
-Before coding MI4, mechanically re-check current `main`, open PRs, runtime state and any newer authority update.
-
-Reuse the existing:
-
-- five-family confluence matrix;
-- analytical view/story system;
-- exact evidence contracts;
-- visual proof framework;
-- local guarded Ollama adapter;
-- Stream transport and UI.
-
-Do not create a parallel intelligence engine.
-
-**REAL_CAPITAL=0**
+Any future frontend/message architecture, new product screen, Capital/Portfolio completion, trading-policy change, calibration change or new evidence-source work is new scope and requires its own authority.
