@@ -1,0 +1,51 @@
+name: Crypto Stream Final F8 Search Probe Wait Gate
+
+on:
+  push:
+    branches:
+      - 'stream/final-f8-search-probe-wait'
+
+permissions:
+  contents: read
+
+jobs:
+  gate:
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          clean: true
+      - name: Static probe gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
+          PY="$DEV/.venv/bin/python"
+          export PYTHONPATH="$GITHUB_WORKSPACE:$GITHUB_WORKSPACE/src:$GITHUB_WORKSPACE/ops"
+          "$PY" -m py_compile ops/probe_stream_f8_browser.py
+          "$PY" -m ruff check ops/probe_stream_f8_browser.py
+          echo "F8_SEARCH_PROBE_STATIC_PASS=YES"
+      - name: Real Chromium search retention gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
+          PY="$DEV/.venv/bin/python"
+          OUT="$RUNNER_TEMP/f8-search-probe-wait"
+          mkdir -p "$OUT"
+          BROWSER="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+          test -x "$BROWSER"
+          export PYTHONPATH="$GITHUB_WORKSPACE:$GITHUB_WORKSPACE/src:$GITHUB_WORKSPACE/ops"
+          "$PY" "$GITHUB_WORKSPACE/ops/probe_stream_f8_browser.py"             --browser "$BROWSER"             --base-url http://127.0.0.1:48700             --narrative-identity 292fff32aef2df8a30eea66069f2a36c9c8ccfcd8042d1518f0b7e7526271d74             --category market             --search-text "SOLUSDT 4h: Market/Geometry için ilk forward state kaydedildi — watch:bullish:no_geometry. Yön: bullish."             --output "$OUT/browser.json"             --screenshot "$OUT/browser.png"             --width 1440 --height 1000
+          echo "F8_SEARCH_PROBE_REAL_PASS=YES"
+          echo "REAL_CAPITAL=0"
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stream-final-f8-search-probe-wait-${{ github.run_id }}
+          path: ${{ runner.temp }}/f8-search-probe-wait
+          if-no-files-found: warn
+          retention-days: 7
