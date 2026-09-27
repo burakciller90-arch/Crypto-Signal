@@ -66,3 +66,15 @@ def test_supervisor_requires_real_dashboard_health_before_reuse() -> None:
     assert "dashboard_unhealthy pid=$pid action=restart" in text
     assert 'curl -fsS --max-time 3 http://127.0.0.1:48700/api/health' in text
     assert 'stop_dashboard_pid "$pid"' in text
+
+
+def test_r11_installer_supervisor_probe_is_pipefail_safe() -> None:
+    text = Path("ops/r11/install_runtime_watchdog.sh").read_text(encoding="utf-8")
+
+    start = text.index('existing_sup="$(')
+    end = text.index(')"', start) + 2
+    block = text[start:end]
+    assert 'first == ""' in block
+    assert 'END {' in block
+    assert 'if (first != "") print first' in block
+    assert '\n          exit\n' not in block
