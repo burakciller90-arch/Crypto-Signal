@@ -682,7 +682,7 @@ class IntelligenceStreamSystemViewRuntime:
         candidates = [
             item.state_label
             for item in snapshots
-            if item.family is family
+            if item.family == family
             and (symbol is None or item.symbol in {symbol, "CRYPTO"})
         ]
         if not candidates:
