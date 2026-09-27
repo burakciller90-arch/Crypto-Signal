@@ -1,0 +1,52 @@
+name: UID501 Live Product Snapshot
+
+on:
+  push:
+    branches:
+      - diag/uid501-live-snapshot
+    paths:
+      - ".github/workflows/uid501-live-product-snapshot.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  snapshot:
+    runs-on: [self-hosted, crypto-signal, uid501]
+    timeout-minutes: 8
+    steps:
+      - name: Capture live Product with Chromium
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(id -u)" = "501"
+          URL="http://127.0.0.1:48700/"
+          curl -fsS --max-time 5 http://127.0.0.1:48700/api/health | tee /tmp/crypto-product-health.json
+          BROWSER=""
+          for candidate in             "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"             "/Applications/Chromium.app/Contents/MacOS/Chromium"             "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge"; do
+            if [ -x "$candidate" ]; then BROWSER="$candidate"; break; fi
+          done
+          test -n "$BROWSER"
+          OUT="$RUNNER_TEMP/crypto-live-snapshot"
+          mkdir -p "$OUT"
+          PROFILE="$RUNNER_TEMP/crypto-snapshot-profile"
+          rm -rf "$PROFILE"
+          "$BROWSER" --headless=new --disable-gpu --no-first-run --no-default-browser-check             --hide-scrollbars --user-data-dir="$PROFILE" --window-size=1440,1000             --screenshot="$OUT/desktop.png" "$URL"
+          rm -rf "$PROFILE"
+          PROFILE="$RUNNER_TEMP/crypto-snapshot-profile-mobile"
+          "$BROWSER" --headless=new --disable-gpu --no-first-run --no-default-browser-check             --hide-scrollbars --user-data-dir="$PROFILE" --window-size=430,860             --screenshot="$OUT/mobile.png" "$URL"
+          cp /tmp/crypto-product-health.json "$OUT/health.json"
+          file "$OUT/desktop.png" "$OUT/mobile.png"
+          echo "UID501_LIVE_PRODUCT_SNAPSHOT_PASS=YES"
+          echo "REAL_CAPITAL=0"
+
+      - name: Upload snapshot artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: uid501-live-product-snapshot
+          path: |
+            ${{ runner.temp }}/crypto-live-snapshot/desktop.png
+            ${{ runner.temp }}/crypto-live-snapshot/mobile.png
+            ${{ runner.temp }}/crypto-live-snapshot/health.json
+          if-no-files-found: error
+          retention-days: 1
