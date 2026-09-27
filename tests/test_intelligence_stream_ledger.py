@@ -2046,6 +2046,61 @@ class _RepeatingNarrativeRewriter(_NarrativeTestRewriter):
         return request.deterministic_text
 
 
+class _DirectionReversingNarrativeRewriter(_NarrativeTestRewriter):
+    def rewrite(self, request):
+        return replace(
+            request.deterministic_text,
+            collapsed_text=request.deterministic_text.collapsed_text.replace(
+                "Yükseliş",
+                "Düşüş",
+                1,
+            ),
+            simple_text=request.deterministic_text.simple_text.replace(
+                "Yükseliş",
+                "Düşüş",
+                1,
+            ),
+        )
+
+
+class _NumericDroppingNarrativeRewriter(_NarrativeTestRewriter):
+    def rewrite(self, request):
+        return replace(
+            request.deterministic_text,
+            collapsed_text=(
+                "Yükseliş beklentim sürüyor; $100–$102 tetik bölgesi çalışırsa "
+                "$108 hedef bölgesini izliyorum."
+            ),
+        )
+
+
+class _UnbriefedFamilyNarrativeRewriter(_NarrativeTestRewriter):
+    def rewrite(self, request):
+        return replace(
+            request.deterministic_text,
+            collapsed_text=(
+                request.deterministic_text.collapsed_text
+                + " On-chain tarafı da bu görüşü destekliyor."
+            ),
+        )
+
+
+class _CapturingAnalystBriefNarrativeRewriter(_NarrativeTestRewriter):
+    def __init__(self) -> None:
+        self.request = None
+
+    def rewrite(self, request):
+        self.request = request
+        return replace(
+            request.deterministic_text,
+            collapsed_text=request.deterministic_text.collapsed_text.replace(
+                "beklentim var",
+                "beklentim sürüyor",
+                1,
+            ),
+        )
+
+
 class _ProtectedSectionMutatingRewriter(_NarrativeTestRewriter):
     def rewrite(self, request):
         return replace(
@@ -2312,6 +2367,147 @@ def test_stream_narrative_accepts_safe_rewrite_and_rejects_repetition(tmp_path) 
     )
     assert repeated.source_kind is StreamNarrativeSourceKind.DETERMINISTIC_FALLBACK
     assert repeated.fallback_reason_codes == ("rewriter_similarity_rejected",)
+
+
+def test_stream_narrative_rewriter_receives_fact_locked_analyst_brief(
+    tmp_path,
+) -> None:
+    (
+        _,
+        _,
+        _,
+        _,
+        _,
+        issuance,
+        state,
+        view,
+        plan,
+        _,
+    ) = _persist_narrative_fixture(
+        tmp_path,
+        seed="narrative-analyst-brief",
+        as_of_ms=19_600_000,
+        issued_at_ms=19_600_100,
+    )
+    rewriter = _CapturingAnalystBriefNarrativeRewriter()
+    narrative = render_stream_narrative(
+        plan,
+        view,
+        issuance.fact_bundle,
+        build_change_set(state),
+        rewriter=rewriter,
+    )
+
+    assert narrative.source_kind is StreamNarrativeSourceKind.LOCAL_REWRITE
+    assert rewriter.request is not None
+    brief = rewriter.request.analyst_brief
+    assert brief.stance == "bullish"
+    assert brief.trigger_zone == "$100–$102"
+    assert brief.target_zone == "$108"
+    assert brief.invalidation == "$95"
+    assert brief.probability_calibrated is False
+    assert brief.event_risk_state == "clear"
+    assert brief.dominant_support in {"Likidite", "Emir akışı"}
+    assert brief.secondary_support in {"Likidite", "Emir akışı", "Geometri"}
+    assert brief.dominant_support != brief.secondary_support
+
+
+def test_stream_narrative_rejects_direction_reversal_rewrite(tmp_path) -> None:
+    (
+        _,
+        _,
+        _,
+        _,
+        _,
+        issuance,
+        state,
+        view,
+        plan,
+        deterministic,
+    ) = _persist_narrative_fixture(
+        tmp_path,
+        seed="narrative-direction-reversal",
+        as_of_ms=19_610_000,
+        issued_at_ms=19_610_100,
+    )
+    narrative = render_stream_narrative(
+        plan,
+        view,
+        issuance.fact_bundle,
+        build_change_set(state),
+        rewriter=_DirectionReversingNarrativeRewriter(),
+    )
+
+    assert narrative.source_kind is StreamNarrativeSourceKind.DETERMINISTIC_FALLBACK
+    assert narrative.fallback_reason_codes == ("rewriter_stance_guard_rejected",)
+    assert narrative.text == deterministic.text
+    assert "Düşüş" not in narrative.text.collapsed_text
+
+
+def test_stream_narrative_rejects_dropped_surface_number_rewrite(tmp_path) -> None:
+    (
+        _,
+        _,
+        _,
+        _,
+        _,
+        issuance,
+        state,
+        view,
+        plan,
+        deterministic,
+    ) = _persist_narrative_fixture(
+        tmp_path,
+        seed="narrative-number-drop",
+        as_of_ms=19_620_000,
+        issued_at_ms=19_620_100,
+    )
+    narrative = render_stream_narrative(
+        plan,
+        view,
+        issuance.fact_bundle,
+        build_change_set(state),
+        rewriter=_NumericDroppingNarrativeRewriter(),
+    )
+
+    assert narrative.source_kind is StreamNarrativeSourceKind.DETERMINISTIC_FALLBACK
+    assert narrative.fallback_reason_codes == (
+        "rewriter_numeric_preservation_rejected",
+    )
+    assert narrative.text == deterministic.text
+    assert "$95" in narrative.text.collapsed_text
+
+
+def test_stream_narrative_rejects_new_family_claim_rewrite(tmp_path) -> None:
+    (
+        _,
+        _,
+        _,
+        _,
+        _,
+        issuance,
+        state,
+        view,
+        plan,
+        deterministic,
+    ) = _persist_narrative_fixture(
+        tmp_path,
+        seed="narrative-family-hallucination",
+        as_of_ms=19_630_000,
+        issued_at_ms=19_630_100,
+    )
+    narrative = render_stream_narrative(
+        plan,
+        view,
+        issuance.fact_bundle,
+        build_change_set(state),
+        rewriter=_UnbriefedFamilyNarrativeRewriter(),
+    )
+
+    assert narrative.source_kind is StreamNarrativeSourceKind.DETERMINISTIC_FALLBACK
+    assert narrative.fallback_reason_codes == ("rewriter_family_guard_rejected",)
+    assert narrative.text == deterministic.text
+    assert "On-chain" not in narrative.text.collapsed_text
 
 
 def test_stream_narrative_rejects_protected_section_mutation(tmp_path) -> None:
