@@ -547,7 +547,10 @@ function currentViewSummary(analytical, fact) {
   return wrap;
 }
 
-function familyEvidenceSummaryTable(fact) {
+function familyEvidenceSummaryTable(record, detail) {
+  const fact = detail && typeof detail.fact_bundle === "object"
+    ? detail.fact_bundle
+    : {};
   const table = document.createElement("div");
   table.className = "family-evidence-table";
   table.setAttribute("role", "table");
@@ -567,34 +570,40 @@ function familyEvidenceSummaryTable(fact) {
   for (const config of DECISION_EVIDENCE_FAMILIES) {
     const contribution = decisionEvidenceContribution(fact, config);
     const presentation = familyEvidencePresentation(contribution, config);
-    const row = document.createElement("div");
-    row.className = "family-evidence-row";
+    const row = document.createElement("button");
+    row.type = "button";
+    row.className = "family-evidence-row family-evidence-action";
     row.dataset.family = config.evidenceKind;
+    row.dataset.evidenceKind = config.evidenceKind;
     row.dataset.evidenceState = presentation.state;
-    row.setAttribute("role", "row");
+    row.setAttribute(
+      "aria-label",
+      `${config.label} kanıtını aç · ${presentation.score} · ${presentation.status}`
+    );
 
     const label = document.createElement("strong");
-    label.setAttribute("role", "cell");
     label.textContent = config.label;
 
     const score = document.createElement("span");
     score.className = "family-evidence-score";
-    score.setAttribute("role", "cell");
     score.textContent = presentation.score;
 
     const status = document.createElement("span");
     status.className = "family-evidence-status";
-    status.setAttribute("role", "cell");
     status.textContent = presentation.status;
 
     row.append(label, score, status);
+    row.addEventListener("click", (event) => {
+      event.stopPropagation();
+      openEvidenceWindow(record, detail, config.evidenceKind);
+    });
     table.append(row);
   }
   return table;
 }
 
 function evidenceFamilyGrid(fact) {
-  return familyEvidenceSummaryTable(fact);
+  return familyEvidenceSummaryTable(null, { fact_bundle: fact });
 }
 
 function geometryGrid(fact) {
@@ -675,42 +684,64 @@ function exactSha256(value) {
 
 function familyContribution(detail, family) {
   const fact = detail && typeof detail.fact_bundle === "object" ? detail.fact_bundle : {};
-  const families = Array.isArray(fact?.family_contributions) ? fact.family_contributions : [];
-  return families.find((item) => item && item.family === family) || null;
+  const config =
+    DECISION_EVIDENCE_FAMILIES.find((item) => item.evidenceKind === family)
+    || decisionEvidenceFamilyConfig(family);
+  if (!config) return null;
+  return decisionEvidenceContribution(fact, config);
+}
+
+function familyEvidenceExplanation(kind, detail) {
+  const config =
+    DECISION_EVIDENCE_FAMILIES.find((item) => item.evidenceKind === kind)
+    || null;
+  if (!config) {
+    return "Bu pencere yalnız exact persisted message detail üzerinden okunur.";
+  }
+  const contribution = familyContribution(detail, kind);
+  const presentation = familyEvidencePresentation(contribution, config);
+  if (!contribution || presentation.state === "unavailable") {
+    return `${config.label} için bu mesajda kabul edilmiş exact kanıt yok. Yönlü katkı üretilmedi ve current data ile kanıt uydurulmadı.`;
+  }
+  const maximum = familyWeightPoints(contribution, config);
+  const support = Number(contribution?.support_points);
+  const opposition = Number(contribution?.opposition_points);
+  const safeSupport = Number.isFinite(support) ? support : 0;
+  const safeOpposition = Number.isFinite(opposition) ? opposition : 0;
+  let sentence;
+  if (safeSupport > safeOpposition && safeSupport > 0) {
+    sentence = `${config.label}, mevcut karar yönünü ${displayNumber(safeSupport)} / ${displayNumber(maximum)} puanla destekliyor.`;
+  } else if (safeOpposition > safeSupport && safeOpposition > 0) {
+    sentence = `${config.label}, mevcut karar yönüne ${displayNumber(safeOpposition)} / ${displayNumber(maximum)} puanlık karşı ağırlık taşıyor.`;
+  } else {
+    sentence = `${config.label} ölçüldü ancak bu mesajda yönlü katkı üretmedi.`;
+  }
+  if (Number(contribution?.material_conflict_count) > 0) {
+    sentence += " Bu ailede ayrıca persisted çelişki kaydı var.";
+  }
+  return sentence;
 }
 
 function evidenceWindowSpecificWhy(kind, detail) {
-  const config = EVIDENCE_WINDOW_KINDS[kind];
   const fact = detail?.fact_bundle || {};
   const analytical = detail?.analytical_view || {};
-  if (config?.family && kind !== "geometry") {
-    const contribution = familyContribution(detail, config.family);
-    if (!contribution) return "Bu exact mesajda bu aile için persisted katkı yok.";
-    return `Bu mesajda destek +${displayNumber(contribution.support_points, "0")}, karşıt -${displayNumber(
-      contribution.opposition_points,
-      "0"
-    )}. Pencere yalnız bu mesajın dondurulmuş katkısını gösterir.`;
-  }
-  if (kind === "geometry") {
-    return `Tetik ${displayNumber(fact?.trigger_zone?.low)}–${displayNumber(
-      fact?.trigger_zone?.high
-    )}, hedef ${displayNumber(fact?.target_zone?.low)}–${displayNumber(
-      fact?.target_zone?.high
-    )}, geçersizleşme ${displayNumber(fact?.invalidation_price)}.`;
-  }
+  const familyConfig = DECISION_EVIDENCE_FAMILIES.find(
+    (item) => item.evidenceKind === kind
+  );
+  if (familyConfig) return familyEvidenceExplanation(kind, detail);
   if (kind === "decision") {
-    return `Stance ${text(analytical?.stance?.effective_stance)}, sonraki koşul ${text(
-      analytical?.next_condition?.state
-    )}. Bu pencere aynı immutable karar lineage'ına bağlıdır.`;
+    return `Beklenti ${customerStanceLabel(
+      analytical?.stance?.effective_stance
+    )}; sonraki koşul ${text(analytical?.next_condition?.state)}. Bu pencere aynı immutable karar lineage'ına bağlıdır.`;
   }
   if (kind === "capital") {
-    return `Capital consequence ${text(
+    return `Sanal sermaye sonucu ${text(
       analytical?.capital_consequence?.state,
       "not_bound"
     )}. REAL_CAPITAL=0; burada gerçek para emri yoktur.`;
   }
   if (kind === "event_risk") {
-    return `Event context ${text(fact?.event_context_state)}. Bu mevcut persisted karar bağlamıdır; yeni haber yorumu üretilmez.`;
+    return `Event Risk durumu ${text(fact?.event_context_state)}. Bu persisted karar bağlamıdır; yeni haber yorumu üretilmez.`;
   }
   if (kind === "proof") {
     return `Forecast ${text(fact?.forecast_identity, "").slice(0, 12)}… ve proof ${text(
@@ -759,77 +790,66 @@ function buildEvidenceWindowData(kind, detail) {
   );
   fragment.append(context);
 
-  if (kind === "geometry") {
-    const geometry = document.createElement("div");
-    geometry.className = "window-context-grid";
-    geometry.append(
-      evidenceMetric(
-        "Tetik",
-        `${displayNumber(fact?.trigger_zone?.low)}–${displayNumber(fact?.trigger_zone?.high)}`
-      ),
-      evidenceMetric(
-        "Hedef",
-        `${displayNumber(fact?.target_zone?.low)}–${displayNumber(fact?.target_zone?.high)}`
-      ),
-      evidenceMetric("Geçersiz", displayNumber(fact?.invalidation_price))
+  const familyConfig = DECISION_EVIDENCE_FAMILIES.find(
+    (item) => item.evidenceKind === kind
+  );
+  if (familyConfig) {
+    const family = familyContribution(detail, kind);
+    const presentation = familyEvidencePresentation(family, familyConfig);
+    fragment.append(
+      evidenceWindowSection(
+        "BU MESAJDA NE ANLAMA GELİYOR?",
+        familyEvidenceExplanation(kind, detail)
+      )
     );
-    fragment.append(evidenceWindowSection("Exact trade geometry"));
-    fragment.append(geometry);
-    const family = familyContribution(detail, "geometry");
-    if (family) {
-      fragment.append(
-        evidenceWindowSection(
-          "Geometry contribution",
-          `Destek +${displayNumber(family.support_points, "0")} / karşıt -${displayNumber(
-            family.opposition_points,
-            "0"
-          )} · ${text(family.state)}`
-        )
-      );
-    }
-  } else if (config?.family) {
-    const family = familyContribution(detail, config.family);
-    if (family) {
-      const quality = Number(family.evidence_quality_0_1);
-      const freshness = Number(family.freshness_0_1);
-      const grid = document.createElement("div");
-      grid.className = "window-context-grid";
-      grid.append(
-        evidenceMetric("Destek", `+${displayNumber(family.support_points, "0")}`),
-        evidenceMetric("Karşıt", `-${displayNumber(family.opposition_points, "0")}`),
+
+    if (kind === "geometry") {
+      const geometry = document.createElement("div");
+      geometry.className = "window-context-grid";
+      geometry.append(
         evidenceMetric(
-          "Kalite",
-          Number.isFinite(quality) ? `%${Math.round(quality * 100)}` : text(family.state)
+          "Tetik",
+          `${displayNumber(fact?.trigger_zone?.low)}–${displayNumber(fact?.trigger_zone?.high)}`
         ),
         evidenceMetric(
-          "Fresh",
-          Number.isFinite(freshness) ? `%${Math.round(freshness * 100)}` : "—"
-        )
+          "Hedef",
+          `${displayNumber(fact?.target_zone?.low)}–${displayNumber(fact?.target_zone?.high)}`
+        ),
+        evidenceMetric("Geçersiz", displayNumber(fact?.invalidation_price))
       );
-      fragment.append(grid);
-
-      const refs = Array.isArray(family.source_evidence_identities)
-        ? family.source_evidence_identities
-        : [];
-      const refsSection = evidenceWindowSection(
-        "Exact source evidence identities",
-        refs.length ? `${refs.length} persisted source identity bağlı.` : "Persisted source identity listesi yok."
-      );
-      for (const ref of refs) {
-        const code = document.createElement("code");
-        code.className = "window-identity";
-        code.textContent = ref;
-        refsSection.append(code);
-      }
-      fragment.append(refsSection);
-    } else {
-      fragment.append(
-        evidenceWindowSection(
-          "Persisted evidence",
-          "Bu exact mesajda bu kanıt ailesi için katkı kaydı yok; veri uydurulmadı."
-        )
-      );
+      fragment.append(geometry);
     }
+
+    const grid = document.createElement("div");
+    grid.className = "window-context-grid";
+    grid.append(
+      evidenceMetric("Katkı", presentation.score),
+      evidenceMetric("Durum", presentation.status),
+      evidenceMetric(
+        "Kanıt kimliği",
+        Array.isArray(family?.source_evidence_identities)
+          ? String(family.source_evidence_identities.length)
+          : "0"
+      )
+    );
+    fragment.append(grid);
+
+    const refs = Array.isArray(family?.source_evidence_identities)
+      ? family.source_evidence_identities
+      : [];
+    const refsSection = evidenceWindowSection(
+      "EXACT SOURCE EVIDENCE",
+      refs.length
+        ? `${refs.length} persisted source identity bu aileye bağlı.`
+        : "Bu aile için exact source identity yok; veri uydurulmadı."
+    );
+    for (const ref of refs) {
+      const code = document.createElement("code");
+      code.className = "window-identity";
+      code.textContent = ref;
+      refsSection.append(code);
+    }
+    fragment.append(refsSection);
   } else if (kind === "decision") {
     fragment.append(
       evidenceWindowSection(
@@ -1095,11 +1115,17 @@ function startEvidenceWindowResize(event, model) {
 }
 
 async function hydrateFrozenVisualProof(model) {
-  if (!["proof", "geometry"].includes(model.kind)) return;
+  const familyKind = DECISION_EVIDENCE_FAMILIES.some(
+    (item) => item.evidenceKind === model.kind
+  );
+  if (!familyKind && model.kind !== "proof") return;
   const body = model.element?.querySelector(".evidence-window-body");
   if (!(body instanceof HTMLElement)) return;
-  const renderer = window.CryptoSignalVisualProof?.renderFrozenVisualProof;
-  if (typeof renderer !== "function") return;
+
+  const fullRenderer = window.CryptoSignalVisualProof?.renderFrozenVisualProof;
+  const familyRenderer = window.CryptoSignalVisualProof?.renderFamilyFrozenProof;
+  if (model.kind === "proof" && typeof fullRenderer !== "function") return;
+  if (familyKind && typeof familyRenderer !== "function") return;
 
   const record = state.messages.find(
     (item) => item?.narrative_identity === model.narrativeIdentity
@@ -1133,7 +1159,18 @@ async function hydrateFrozenVisualProof(model) {
   const currentBody = model.element.querySelector(".evidence-window-body");
   if (!(currentBody instanceof HTMLElement)) return;
   currentBody.querySelector(".frozen-visual-proof")?.remove();
-  currentBody.prepend(renderer(visualProof));
+
+  if (familyKind) {
+    const contribution = familyContribution(model.detail, model.kind);
+    currentBody.prepend(
+      familyRenderer(visualProof, {
+        kind: model.kind,
+        contribution,
+      })
+    );
+  } else {
+    currentBody.prepend(fullRenderer(visualProof));
+  }
 }
 
 function renderEvidenceWindowBody(model, detail) {
@@ -1148,7 +1185,10 @@ function renderEvidenceWindowBody(model, detail) {
       narrative.timeframe
     )} · ${model.narrativeIdentity.slice(0, 8)}…`;
   }
-  if (["proof", "geometry"].includes(model.kind)) {
+  if (
+    model.kind === "proof"
+    || DECISION_EVIDENCE_FAMILIES.some((item) => item.evidenceKind === model.kind)
+  ) {
     void hydrateFrozenVisualProof(model);
   }
 }
@@ -1917,7 +1957,7 @@ function buildExpandedContent(record, detail) {
       }),
       depthSection("5 KANIT AİLESİ", "", {
         className: "depth-intelligence depth-wide",
-        content: familyEvidenceSummaryTable(fact),
+        content: familyEvidenceSummaryTable(record, detail),
       })
     );
     return decisionGrid;
