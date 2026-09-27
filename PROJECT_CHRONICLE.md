@@ -1,5 +1,19 @@
 # PROJECT CHRONICLE
 
+## 2026-09-27 — MI1 accepted; primary Stream becomes one system-view surface
+
+Message Intelligence MI1 is mechanically accepted.
+
+Two scoped implementation merges completed the user-facing composer:
+- PR #1453 -> main `a2c317bbee1b325500b909bbe970750370a17eda`: family-state telemetry is deterministically translated into plain Turkish when inspected, while raw labels remain only in technical evidence;
+- PR #1454 -> main `28fa1c208e9e66173214a8bdfaa33cea4bbfe935`: the Product Stream now requests `surface=primary` for history, SSE and polling. Geometry/Liquidity/Order Flow/Derivatives/On-chain family telemetry remains immutable and available on `surface=all` and exact lookup, but is no longer emitted as default customer-feed noise. Event Risk and Provider/Data Quality trust alerts are deliberately retained on the primary surface.
+
+The canonical combined Decision/Forecast narrative now uses one concise Turkish collapsed system sentence derived only from persisted stance, trigger, target and invalidation facts. Raw state-machine language such as `state değişti`, `sell_pressure`, `measured:` and arrow transitions is rejected from collapsed copy. Story-change details, probability caveats and deeper engineering language remain outside the one-sentence primary bubble.
+
+Final UID504 MI1 gate run `36330349505` passed focused pytest, Ruff, strict mypy, Node syntax, canonical Development/Product non-mutation and a corrected fail-closed project-isolation guard. The guard explicitly verified no Durdurulmaz or Quantum Capital path changed. REAL_CAPITAL=0.
+
+MI1 is **PASS**. The exact active frontier is now **MI2 — Guarded natural Turkish layer**. MI2 must improve fluency only; it may not invent market truth, direction, prices, targets, trigger/invalidation, probability, time horizon or trading authority.
+
 ## 2026-09-27 — User opens Message Intelligence & Family Evidence UX frontier
 
 The user explicitly opened a new narrow post-F10 product-refinement scope after reviewing the live Stream. Delivery is active, but the visible language still exposes low-level family telemetry such as raw state labels/transitions instead of presenting one coherent system view.
