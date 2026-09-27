@@ -36,12 +36,12 @@ def test_ssd_supervisor_owns_market_tape_stream_once() -> None:
     assert "market_tape_started pid=$pid REAL_CAPITAL=0" in text
 
 
-def test_market_tape_adoption_requires_lock_holder_and_exact_python_script() -> None:
+def test_market_tape_adoption_requires_lock_holder_uid_and_exact_runner() -> None:
     text = SUPERVISOR.read_text(encoding="utf-8")
 
-    assert 'local py="$DEV/.venv/bin/python"' in text
     assert '/bin/ps -ww -p "$pid" -o uid=,args=' in text
-    assert 'exit($1 == 504 && $2 == py && $3 == runner ? 0 : 1)' in text
+    assert 'if ($1 != 504)' in text
+    assert 'if ($i == runner)' in text
     assert 'comm=tolower($1)' not in text
     assert 'if ! market_tape_pid_is_expected "$pid"; then' in text
     assert 'market_tape_pid_is_owned "$pid"; then' in text
@@ -52,7 +52,27 @@ def test_market_tape_owner_requires_current_bybit_ws_endpoint() -> None:
     text = SUPERVISOR.read_text(encoding="utf-8")
 
     assert "market_tape_pid_is_owned()" in text
-    assert 'awk -v py="$py" -v runner="$runner" -v ws="$BYBIT_WS_URL"' in text
-    assert 'if ($i == "--bybit-ws-url" && $(i + 1) == ws)' in text
+    assert 'awk -v runner="$runner" -v ws="$BYBIT_WS_URL"' in text
+    assert 'if ($i == "--bybit-ws-url" && i < NF && $(i + 1) == ws)' in text
     assert "market_tape_stale_config pid=$pid action=restart" in text
     assert 'stop_market_tape_pid "$pid"' in text
+
+
+def test_live_clock_uses_region_appropriate_rest_endpoints() -> None:
+    text = SUPERVISOR.read_text(encoding="utf-8")
+
+    assert (
+        'BYBIT_REST_BASE_URL="${CRYPTO_SIGNAL_BYBIT_REST_BASE_URL:-'
+        'https://api.bybit.tr}"'
+    ) in text
+    assert (
+        'BINANCE_REST_BASE_URL="${CRYPTO_SIGNAL_BINANCE_REST_BASE_URL:-'
+        'https://api.binance.me}"'
+    ) in text
+    assert (
+        'BINANCE_API_VARIANT="${CRYPTO_SIGNAL_BINANCE_API_VARIANT:-tr_main}"'
+        in text
+    )
+    assert '--bybit-base-url "$BYBIT_REST_BASE_URL"' in text
+    assert '--binance-base-url "$BINANCE_REST_BASE_URL"' in text
+    assert '--binance-api-variant "$BINANCE_API_VARIANT"' in text
