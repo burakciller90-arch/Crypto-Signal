@@ -348,6 +348,71 @@ function familyLabel(value) {
   return labels[key] || text(value, "Kanıt");
 }
 
+function stanceLabel(value) {
+  const stance = text(value, "").toLowerCase();
+  if (stance === "bullish") return "🟢 YÜKSELİŞ";
+  if (stance === "bearish") return "🔴 DÜŞÜŞ";
+  if (stance === "blocked") return "⚠️ RİSK NEDENİYLE BLOKLU";
+  if (stance === "resolved") return "✅ BEKLENTİ SONUÇLANDI";
+  return "🟡 NÖTR / BEKLİYORUM";
+}
+
+function directionLabel(value) {
+  const direction = text(value, "").toLowerCase();
+  if (direction === "bullish") return "YÜKSELİŞİ DESTEKLİYOR";
+  if (direction === "bearish") return "DÜŞÜŞÜ DESTEKLİYOR";
+  if (direction === "neutral") return "NÖTR";
+  return "YÖN TEYİDİ YOK";
+}
+
+function evidenceCoverage0To100(fact) {
+  const families = Array.isArray(fact?.family_contributions)
+    ? fact.family_contributions
+    : [];
+  let covered = 0;
+  for (const family of families) {
+    const stateValue = text(family?.state, "").toLowerCase();
+    if (!["observed", "abstain"].includes(stateValue)) continue;
+    const prior = Number(family?.prior_weight);
+    if (Number.isFinite(prior) && prior > 0) covered += prior * 100;
+  }
+  return Math.max(0, Math.min(100, covered));
+}
+
+function familyContributionMagnitude(family) {
+  const support = Number(family?.support_points);
+  const opposition = Number(family?.opposition_points);
+  return Math.max(
+    Number.isFinite(support) ? support : 0,
+    Number.isFinite(opposition) ? opposition : 0
+  );
+}
+
+function familySummaryState(family, fallbackMax) {
+  const stateValue = text(family?.state, "").toLowerCase();
+  const prior = Number(family?.prior_weight);
+  const maxPoints = Number.isFinite(prior) && prior > 0
+    ? Math.round(prior * 100)
+    : fallbackMax;
+  if (!family || ["no_evidence", "not_evaluable"].includes(stateValue)) {
+    return { score: "— / " + maxPoints, label: "VERİ YOK", tone: "unavailable" };
+  }
+  if (stateValue === "abstain") {
+    return { score: "— / " + maxPoints, label: "ÇEKİMSER", tone: "neutral" };
+  }
+  const direction = text(family?.direction, "").toLowerCase();
+  const magnitude = familyContributionMagnitude(family);
+  return {
+    score: displayNumber(magnitude, "0") + " / " + maxPoints,
+    label: directionLabel(direction),
+    tone: direction === "bullish"
+      ? "bullish"
+      : direction === "bearish"
+        ? "bearish"
+        : "neutral",
+  };
+}
+
 function preserveMessageAnchor(item, mutate) {
   if (!ui.viewport) {
     mutate();
@@ -383,37 +448,94 @@ function depthSection(label, body, { className = "", content = null } = {}) {
   return section;
 }
 
-function evidenceFamilyGrid(fact) {
+function evidenceFamilyGrid(record, detail) {
   const grid = document.createElement("div");
-  grid.className = "family-grid";
-  const families = Array.isArray(fact?.family_contributions)
-    ? fact.family_contributions
-    : [];
-  for (const family of families) {
-    const card = document.createElement("div");
-    card.className = "family-card";
-    const label = document.createElement("span");
-    label.textContent = familyLabel(family?.family);
+  grid.className = "family-grid family-evidence-list";
+  for (const spec of FAMILY_EVIDENCE_SUMMARY) {
+    const family = familyContribution(detail, spec.kind);
+    const stateSummary = familySummaryState(family, spec.maxPoints);
+    const row = document.createElement("button");
+    row.type = "button";
+    row.className = "family-card family-evidence-row";
+    row.dataset.evidenceKind = spec.kind;
+    row.dataset.evidenceState = stateSummary.tone;
+    row.setAttribute(
+      "aria-label",
+      spec.label + ": " + stateSummary.score + ", " + stateSummary.label + ". Kanıtı aç."
+    );
+    const heading = document.createElement("span");
+    heading.className = "family-evidence-name";
+    heading.textContent = spec.label;
     const score = document.createElement("strong");
-    score.textContent = `+${displayNumber(family?.support_points, "0")} / -${displayNumber(
-      family?.opposition_points,
-      "0"
-    )}`;
+    score.className = "family-evidence-score";
+    score.textContent = stateSummary.score;
     const note = document.createElement("small");
-    const quality = Number(family?.evidence_quality_0_1);
-    note.textContent = Number.isFinite(quality)
-      ? `kanıt kalitesi %${Math.round(quality * 100)}`
-      : text(family?.state, "ölçülmedi");
-    card.append(label, score, note);
-    grid.append(card);
+    note.className = "family-evidence-state";
+    note.textContent = stateSummary.label;
+    const cue = document.createElement("span");
+    cue.className = "family-evidence-cue";
+    cue.setAttribute("aria-hidden", "true");
+    cue.textContent = "›";
+    row.append(heading, score, note, cue);
+    row.addEventListener("click", (event) => {
+      event.stopPropagation();
+      openEvidenceWindow(record, detail, spec.kind);
+    });
+    grid.append(row);
   }
-  if (!families.length) {
-    const note = document.createElement("p");
-    note.className = "depth-muted";
-    note.textContent = "Beş-aile katkısı bu kayıtta mevcut değil.";
-    grid.append(note);
-  }
+  const note = document.createElement("p");
+  note.className = "family-score-note";
+  note.textContent = "Katkı puanları 100 puanlık kanıt matrisidir; kazanma olasılığı değildir.";
+  grid.append(note);
   return grid;
+}
+
+function decisionSummaryPanel(detail) {
+  const fact = detail && typeof detail.fact_bundle === "object" ? detail.fact_bundle : {};
+  const analytical = detail && typeof detail.analytical_view === "object" ? detail.analytical_view : {};
+  const panel = document.createElement("div");
+  panel.className = "decision-summary";
+  const metrics = document.createElement("div");
+  metrics.className = "decision-summary-metrics";
+  const coverage = evidenceCoverage0To100(fact);
+  const support = Number(fact?.confluence_support_score_0_100);
+  const rows = [
+    ["Beklenti", stanceLabel(analytical?.stance?.effective_stance)],
+    ["Karar desteği", Number.isFinite(support) ? displayNumber(support) + " / 100" : "—"],
+    ["Kanıt kapsamı", displayNumber(coverage) + " / 100"],
+  ];
+  for (const [labelText, valueText] of rows) {
+    const cell = document.createElement("div");
+    const label = document.createElement("span");
+    label.textContent = labelText;
+    const value = document.createElement("strong");
+    value.textContent = valueText;
+    cell.append(label, value);
+    metrics.append(cell);
+  }
+  panel.append(metrics);
+  const conditions = document.createElement("div");
+  conditions.className = "decision-summary-conditions";
+  const trigger = document.createElement("span");
+  trigger.textContent = "Tetik · " + displayNumber(fact?.trigger_zone?.low) + "–" + displayNumber(fact?.trigger_zone?.high);
+  const target = document.createElement("span");
+  target.textContent = "Hedef · " + displayNumber(fact?.target_zone?.low) + "–" + displayNumber(fact?.target_zone?.high);
+  const invalidation = document.createElement("span");
+  invalidation.textContent = "Geçersizlik · " + displayNumber(fact?.invalidation_price);
+  conditions.append(trigger, target, invalidation);
+  panel.append(conditions);
+  const contradiction = document.createElement("p");
+  contradiction.className = "decision-summary-contradiction";
+  const mainContradiction = analytical?.main_contradiction;
+  contradiction.textContent = mainContradiction
+    ? "Ana çekince · " + familyLabel(mainContradiction.family) + " tarafında " + displayNumber(mainContradiction.opposition_points, "0") + " puan karşı ağırlık."
+    : "Ana çekince · Belirgin karşı ağırlık kaydı yok.";
+  panel.append(contradiction);
+  const semantic = document.createElement("small");
+  semantic.className = "decision-summary-semantic";
+  semantic.textContent = "Karar desteği kanıt uyumunu gösterir; kalibre edilmiş yükselme/düşme olasılığı değildir.";
+  panel.append(semantic);
+  return panel;
 }
 
 function geometryGrid(fact) {
