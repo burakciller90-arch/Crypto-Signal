@@ -1,0 +1,107 @@
+name: RDP1 Live Candle Clock Diagnostic UID504
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/crypto-rdp1-live-clock-diag-uid504.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          clean: true
+          fetch-depth: 1
+
+      - name: Inspect current supervisor-managed live candle rail
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          DEV="$ROOT/Development"
+          RT="$DEV/runtime"
+          PY="$DEV/.venv/bin/python"
+          LOCK="$RT/ledger/live_clock.lock"
+          CACHE="$RT/data/live_base_15m_cache.sqlite3"
+
+          test "$(id -u)" = "504"
+          echo "RDP1_LIVE_CLOCK_DIAG_NOW=$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
+          echo "RDP1_DEVELOPMENT_HEAD=$(git -C "$DEV" rev-parse HEAD 2>/dev/null || true)"
+
+          echo "=== SUPERVISOR / LIVE CLOCK PROCESSES ==="
+          ps -axo pid=,ppid=,uid=,etime=,state=,command=             | grep -E '[s]sd_runtime_supervisor.sh|[r]un_live_evidence_clock.py' || true
+
+          echo "=== LIVE CLOCK LOCK OWNER ==="
+          if [ -e "$LOCK" ]; then
+            /usr/sbin/lsof "$LOCK" 2>/dev/null || true
+          else
+            echo "LOCK_MISSING"
+          fi
+
+          echo "=== CURRENT SUPERVISOR LIVE ERR ==="
+          tail -n 240 "$ROOT/ServiceLogs/live.err" 2>/dev/null || echo "MISSING"
+
+          echo "=== CURRENT SUPERVISOR LIVE OUT ==="
+          tail -n 280 "$ROOT/ServiceLogs/live.out" 2>/dev/null || echo "MISSING"
+
+          echo "=== RECENT SUPERVISOR CLOCK EVENTS ==="
+          tail -n 420 "$ROOT/ServiceLogs/supervisor.log" 2>/dev/null             | grep -E 'supervisor_r11_|clock_|wc2_live|dashboard_|market_tape_'             | tail -n 220 || true
+
+          echo "=== CANDLE CACHE READ-ONLY SNAPSHOT ==="
+          "$PY" - "$CACHE" <<'PY'
+          import sqlite3
+          import sys
+          import time
+          from pathlib import Path
+
+          path = Path(sys.argv[1])
+          now_ms = time.time_ns() // 1_000_000
+          print(f"CACHE_EXISTS={path.is_file()}")
+          if not path.is_file():
+              raise SystemExit(0)
+
+          uri = f"{path.resolve().as_uri()}?mode=ro"
+          with sqlite3.connect(uri, uri=True, timeout=5.0) as db:
+              db.row_factory = sqlite3.Row
+              db.execute("PRAGMA query_only=ON")
+              print("CACHE_JOURNAL_MODE=" + str(db.execute("PRAGMA journal_mode").fetchone()[0]))
+              cols = {str(r["name"]) for r in db.execute("PRAGMA table_info(candles)")}
+              print("CACHE_COLUMNS=" + ",".join(sorted(cols)))
+              rows = db.execute(
+                  """
+                  SELECT exchange, symbol, timeframe,
+                         COUNT(*) AS n,
+                         MAX(close_time_ms) AS close_ms,
+                         MAX(source_timestamp_ms) AS source_ms,
+                         MAX(ingested_at_ms) AS ingested_ms
+                  FROM candles
+                  GROUP BY exchange, symbol, timeframe
+                  ORDER BY exchange, symbol, timeframe
+                  """
+              ).fetchall()
+              for row in rows:
+                  close_ms = row["close_ms"]
+                  source_ms = row["source_ms"]
+                  ingested_ms = row["ingested_ms"]
+                  print(
+                      "RDP1_CACHE_CONTEXT "
+                      f"exchange={row['exchange']} symbol={row['symbol']} timeframe={row['timeframe']} "
+                      f"rows={row['n']} close_ms={close_ms} "
+                      f"close_age_ms={None if close_ms is None else now_ms-int(close_ms)} "
+                      f"source_ms={source_ms} "
+                      f"source_age_ms={None if source_ms is None else now_ms-int(source_ms)} "
+                      f"ingested_ms={ingested_ms} "
+                      f"ingested_age_ms={None if ingested_ms is None else now_ms-int(ingested_ms)}"
+                  )
+          PY
+
+          echo "RDP1_LIVE_CLOCK_DIAG_PASS=YES"
+          echo "REAL_CAPITAL=0"
