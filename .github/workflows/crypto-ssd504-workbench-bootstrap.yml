@@ -107,7 +107,7 @@ jobs:
           - REAL_CAPITAL=0.
 
           Active Evidence execution roadmap: `01_EVIDENCE_DEPTH/ACTIVE_ROADMAP.md`.
-          Current exact frontier: RDP1 — Collector and runtime reliability. Paper Portfolio follows Evidence Data Plane PASS unless the user explicitly authorizes parallel preparatory work.
+          Current exact frontier is defined by `00_CONTEXT/CURRENT_STATUS.md` and `01_EVIDENCE_DEPTH/ACTIVE_ROADMAP.md`; do not hard-code or replay an older phase label. Before starting implementation, inspect current main plus open PRs/branches so completed, stale or duplicate work is not repeated. Paper Portfolio follows Evidence Data Plane PASS unless the user explicitly authorizes parallel preparatory work.
           EOF
 
           cat > "$ROOT/00_INBOX/README.md" <<'EOF'
