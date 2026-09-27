@@ -1,0 +1,46 @@
+name: Crypto Stream Final F8 Search Rank Diagnosis UID504
+
+on:
+  push:
+    branches:
+      - 'accept/f8-search-rank-diagnosis'
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          clean: true
+
+      - name: Diagnose real Product search rank
+        shell: bash
+        run: |
+          set -euo pipefail
+          ID="292fff32aef2df8a30eea66069f2a36c9c8ccfcd8042d1518f0b7e7526271d74"
+          TEXT="SOLUSDT 4h: Market/Geometry için ilk forward state kaydedildi — watch:bullish:no_geometry. Yön: bullish."
+          /usr/bin/python3 - "$ID" "$TEXT" <<'PY'
+          import json,sys,urllib.parse,urllib.request
+          identity,text=sys.argv[1],sys.argv[2]
+          base="http://127.0.0.1:48700/api/stream/messages"
+          cases=[
+              ("text_category_50",{"text":text,"category":"market","limit":50}),
+              ("text_category_200",{"text":text,"category":"market","limit":200}),
+              ("text_cat_symbol_tf_50",{"text":text,"category":"market","symbol":"SOLUSDT","timeframe":"4h","limit":50}),
+              ("text_cat_symbol_tf_200",{"text":text,"category":"market","symbol":"SOLUSDT","timeframe":"4h","limit":200}),
+          ]
+          for name,params in cases:
+              url=base+"?"+urllib.parse.urlencode(params)
+              with urllib.request.urlopen(url,timeout=8) as r:
+                  p=json.loads(r.read().decode())
+              rows=p.get("page",{}).get("items",[])
+              ids=[x.get("narrative_identity") for x in rows]
+              rank=ids.index(identity)+1 if identity in ids else None
+              print(f"F8_SEARCH_CASE={name}:count={len(rows)}:rank={rank}:has={identity in ids}")
+          print("REAL_CAPITAL=0")
+          PY
