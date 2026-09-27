@@ -76,3 +76,15 @@ def test_live_clock_uses_region_appropriate_rest_endpoints() -> None:
     assert '--bybit-base-url "$BYBIT_REST_BASE_URL"' in text
     assert '--binance-base-url "$BINANCE_REST_BASE_URL"' in text
     assert '--binance-api-variant "$BINANCE_API_VARIANT"' in text
+
+
+def test_market_tape_supervisor_requires_fresh_heartbeat_after_startup_grace() -> None:
+    text = SUPERVISOR.read_text(encoding="utf-8")
+
+    assert "market_tape_pid_is_healthy()" in text
+    assert "market_tape_pidfile_age_seconds()" in text
+    assert 'if market_tape_pid_is_healthy "$pid"; then' in text
+    assert 'if [ "$age" -le 45 ]; then' in text
+    assert "market_tape_startup_grace pid=$pid age_s=$age" in text
+    assert "market_tape_unhealthy pid=$pid age_s=$age action=restart" in text
+    assert 'now_ms - observed_at_ms > 30_000' in text
