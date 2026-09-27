@@ -1,0 +1,67 @@
+name: MI5 UID501 Live API Diagnostic
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/mi5-uid501-live-api.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  live-api:
+    runs-on: [self-hosted, crypto-signal, uid501]
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+
+      - name: Read live Product system-view state
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(id -u)" = "501"
+          OUT="$RUNNER_TEMP/mi5-uid501"
+          mkdir -p "$OUT"
+          curl -fsS --max-time 8 http://127.0.0.1:48700/api/health > "$OUT/health.json"
+          curl -fsS --max-time 8 'http://127.0.0.1:48700/api/stream/messages?surface=primary&limit=100' > "$OUT/primary.json"
+          python3 - "$OUT/health.json" "$OUT/primary.json" <<'PY'
+          import json, sys, time
+          health=json.load(open(sys.argv[1],encoding="utf-8"))
+          payload=json.load(open(sys.argv[2],encoding="utf-8"))
+          items=payload.get("page",{}).get("items",[])
+          now=int(time.time()*1000)
+          system=[
+              item for item in items
+              if item.get("subtype")=="system_view_updated"
+              or item.get("schema_version")=="intelligence-stream-system-view-message-v1/1"
+          ]
+          print("UID501_HEALTH_STATUS="+str(health.get("status")))
+          print("UID501_PRODUCT_ROOT="+str(health.get("product_root")))
+          print("UID501_REAL_CAPITAL="+str(health.get("real_capital")))
+          print("UID501_PRIMARY_COUNT="+str(len(items)))
+          print("UID501_SYSTEM_VIEW_COUNT="+str(len(system)))
+          if system:
+              latest=system[0]
+              age=max(0,now-int(latest.get("event_at_ms",0)))
+              print("UID501_SYSTEM_VIEW_ID="+str(latest.get("narrative_identity")))
+              print("UID501_SYSTEM_VIEW_AGE_MS="+str(age))
+              print("UID501_SYSTEM_VIEW_TEXT="+str((latest.get("text") or {}).get("collapsed_text","")))
+              print("UID501_SYSTEM_VIEW_SCHEMA="+str(latest.get("schema_version")))
+          assert health.get("status")=="ok"
+          assert health.get("real_capital")==0
+          print("UID501_MI5_LIVE_API_READONLY_PASS=YES")
+          print("REAL_CAPITAL=0")
+          PY
+
+      - name: Upload diagnostic
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mi5-uid501-live-api-${{ github.run_id }}
+          path: ${{ runner.temp }}/mi5-uid501
+          if-no-files-found: warn
+          retention-days: 3
