@@ -198,8 +198,8 @@ class MarketTapeCollectorRuntimeStore:
             return
         self.path.parent.mkdir(parents=True, exist_ok=True)
         with self._connect() as db:
-            db.execute("PRAGMA journal_mode=WAL")
-            db.execute("PRAGMA synchronous=NORMAL")
+            db.execute("PRAGMA journal_mode=DELETE")
+            db.execute("PRAGMA synchronous=FULL")
             db.executescript(
                 """
                 CREATE TABLE IF NOT EXISTS collector_runtime_meta (
