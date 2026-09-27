@@ -58,6 +58,7 @@ MI5 accepted evidence:
 - exact Product deploy run `36337341847`;
 - final UID504 post-deploy real-browser acceptance run `36338498776`;
 - final artifact `message-intelligence-mi5-probe-36338498776`, id `10937634080`, digest `sha256:8cb546390232c22321e0e33334bd50c78f36cb48580b4258c2d532221aeb3909`;
+- exact UID501 live SSE run `36339042617`: baseline-cursor-forward `system_view_updated` delivery PASS; BTC system view arrived after 72.592 seconds with a new event identity and no replay/backfill;
 - live `system_view_updated` delivery PASS;
 - desktop/mobile Chromium family-proof interaction PASS;
 - raw customer telemetry leak = NO;
