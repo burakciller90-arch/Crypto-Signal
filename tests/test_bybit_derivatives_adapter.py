@@ -220,3 +220,60 @@ def test_bybit_derivatives_rejects_missing_matching_ticker() -> None:
 
     with pytest.raises(ValueError, match="exactly one matching symbol"):
         asyncio.run(run())
+
+
+def test_bybit_derivatives_uses_explicit_regional_base_url() -> None:
+    oi_payload = {
+        "retCode": 0,
+        "retMsg": "OK",
+        "result": {
+            "category": "linear",
+            "symbol": "BTCUSDT",
+            "list": [
+                {"openInterest": "100", "timestamp": "1710000000000"},
+                {"openInterest": "101", "timestamp": "1710000900000"},
+            ],
+        },
+        "time": 1710001000000,
+    }
+    ticker_payload = {
+        "retCode": 0,
+        "retMsg": "OK",
+        "result": {
+            "category": "linear",
+            "list": [
+                {
+                    "symbol": "BTCUSDT",
+                    "markPrice": "100",
+                    "indexPrice": "100",
+                    "openInterest": "101",
+                    "fundingRate": "0",
+                    "fundingIntervalHour": "8",
+                }
+            ],
+        },
+        "time": 1710001000000,
+    }
+    seen_hosts: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen_hosts.append(str(request.url.host))
+        if request.url.path.endswith("/open-interest"):
+            return httpx.Response(200, json=oi_payload)
+        return httpx.Response(200, json=ticker_payload)
+
+    async def run() -> None:
+        transport = httpx.MockTransport(handler)
+        async with httpx.AsyncClient(transport=transport) as client:
+            await BybitLinearDerivativesAdapter(
+                client,
+                base_url="https://api.bybit.tr/",
+            ).fetch_observations(symbol="BTCUSDT")
+
+    asyncio.run(run())
+    assert seen_hosts == ["api.bybit.tr", "api.bybit.tr"]
+
+
+def test_bybit_derivatives_rejects_non_https_base_url() -> None:
+    with pytest.raises(ValueError, match="must use https"):
+        BybitLinearDerivativesAdapter(base_url="http://api.bybit.tr")
