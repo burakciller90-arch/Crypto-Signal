@@ -150,6 +150,145 @@ def test_family_runtime_persists_material_transition_in_canonical_tables(
         assert states == [("none",), ("bid_side",)]
 
 
+def test_mi1_customer_copy_hides_raw_family_state_machine_language(
+    tmp_path: Path,
+) -> None:
+    path = _path(tmp_path)
+    runtime = IntelligenceStreamFamilyRuntime(path)
+
+    runtime.project(
+        _family_snapshot(
+            projector_id="order_flow_change",
+            family=ConfluenceFamily.ORDER_FLOW,
+            category=StreamCategory.INTELLIGENCE,
+            subtype="order_flow_material_change",
+            evidence_domain="order_flow",
+            source="order-flow-sell",
+            event_at_ms=2_100,
+            state_label="sell_pressure",
+            state_components=(
+                ("book_pressure", "ask_heavy"),
+                ("label", "sell_pressure"),
+                ("taker_flow", "sell_dominant"),
+            ),
+            direction="sell_pressure",
+        ),
+        activated_at_ms=2_000,
+    )
+    runtime.project(
+        _family_snapshot(
+            projector_id="order_flow_change",
+            family=ConfluenceFamily.ORDER_FLOW,
+            category=StreamCategory.INTELLIGENCE,
+            subtype="order_flow_material_change",
+            evidence_domain="order_flow",
+            source="order-flow-mixed",
+            event_at_ms=2_200,
+            state_label="mixed",
+            state_components=(
+                ("book_pressure", "bid_heavy"),
+                ("label", "mixed"),
+                ("taker_flow", "sell_dominant"),
+            ),
+        ),
+        activated_at_ms=2_000,
+    )
+    runtime.project(
+        _family_snapshot(
+            projector_id="liquidity_change",
+            family=ConfluenceFamily.LIQUIDITY,
+            category=StreamCategory.INTELLIGENCE,
+            subtype="liquidity_material_change",
+            evidence_domain="liquidity",
+            source="liquidity-bid-side",
+            event_at_ms=2_300,
+            state_label="measured:bid_side_liquidity_take_candidate",
+            state_components=(
+                ("liquidity_take_candidate", "bid_side_liquidity_take_candidate"),
+                ("source_quality", "good"),
+                ("status", "measured"),
+            ),
+            source_quality="good",
+        ),
+        activated_at_ms=2_000,
+    )
+    runtime.project(
+        _family_snapshot(
+            projector_id="derivatives_change",
+            family=ConfluenceFamily.DERIVATIVES,
+            category=StreamCategory.INTELLIGENCE,
+            subtype="derivatives_material_change",
+            evidence_domain="derivatives",
+            source="derivatives-crowded-long",
+            event_at_ms=2_400,
+            state_label="crowded_long",
+            state_components=(
+                ("basis_state", "premium"),
+                ("funding_state", "positive_extreme"),
+                ("label", "crowded_long"),
+                ("open_interest_state", "rising"),
+            ),
+            timeframe="15m",
+        ),
+        activated_at_ms=2_000,
+    )
+    runtime.project(
+        _family_snapshot(
+            projector_id="market_geometry_change",
+            family=ConfluenceFamily.GEOMETRY,
+            category=StreamCategory.MARKET,
+            subtype="geometry_material_change",
+            evidence_domain="geometry",
+            source="geometry-bullish-watch",
+            event_at_ms=2_500,
+            state_label="watch:bullish:geometry",
+            state_components=(
+                ("direction", "bullish"),
+                ("geometry_present", "yes"),
+                ("setup_type", "price_action"),
+                ("signal_state", "watch"),
+            ),
+            direction="bullish",
+            timeframe="15m",
+            source_quality="exact_immutable_signal_freeze",
+        ),
+        activated_at_ms=2_000,
+    )
+
+    model = IntelligenceStreamReadModel(path)
+    page = model.read_messages(StreamMessageQuery(limit=20))
+    by_family = {item["family"]: item["text"] for item in page.items}
+
+    order_flow = by_family[ConfluenceFamily.ORDER_FLOW.value]
+    assert order_flow["collapsed_text"] == (
+        "Önceki satış baskısı zayıfladı; emir akışı şu an net bir yön "
+        "teyidi vermiyor."
+    )
+    assert "sell_pressure" not in order_flow["collapsed_text"]
+    assert "mixed" not in order_flow["collapsed_text"]
+    assert "→" not in order_flow["collapsed_text"]
+    assert "state değişti" not in order_flow["collapsed_text"]
+
+    liquidity = by_family[ConfluenceFamily.LIQUIDITY.value]
+    assert "alış tarafındaki bekleyen emirlerde belirgin azalma" in (
+        liquidity["collapsed_text"]
+    )
+    assert "bid_side_liquidity_take_candidate" not in liquidity["collapsed_text"]
+
+    derivatives = by_family[ConfluenceFamily.DERIVATIVES.value]
+    assert "long tarafı kalabalıklaşıyor" in derivatives["collapsed_text"]
+    assert "crowded_long" not in derivatives["collapsed_text"]
+
+    geometry = by_family[ConfluenceFamily.GEOMETRY.value]
+    assert "Yukarı yönlü bir senaryoyu izliyorum" in geometry["collapsed_text"]
+    assert "watch:bullish:geometry" not in geometry["collapsed_text"]
+
+    for value in by_family.values():
+        assert "state değişti" not in value["collapsed_text"]
+        assert " → " not in value["collapsed_text"]
+        assert "state değişti" not in value["simple_text"]
+
+
 def test_family_projector_activation_is_immutable(tmp_path: Path) -> None:
     path = _path(tmp_path)
     runtime = IntelligenceStreamFamilyRuntime(path)
