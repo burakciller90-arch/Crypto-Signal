@@ -372,3 +372,70 @@ def test_incoming_probe_contract_is_separate_from_exact_message_probe(
     assert len(live_calls) == 1
     assert report["incoming_live"]["observed"] is True
     assert report["open_requirements"] == []
+
+
+def test_genuine_replay_plan_uses_exact_real_page_cursor(monkeypatch) -> None:
+    newest = _message("1" * 64, "market")
+    newest["event_at_ms"] = 200
+    older = _message("0" * 64, "system")
+    older["event_at_ms"] = 100
+
+    def fake_get(base_url, path, params=None):
+        assert base_url == "http://127.0.0.1:48700"
+        assert path == "/api/stream/messages"
+        assert params == {"limit": 2}
+        return {
+            "status": "ready",
+            "page": {
+                "items": [newest, older],
+                "order": "newest_to_oldest",
+                "newest_cursor": "cursor-new",
+                "oldest_cursor": "cursor-old",
+            },
+            "read_only": True,
+            "real_capital": 0,
+        }
+
+    monkeypatch.setattr(f9, "_get_json", fake_get)
+    plan = f9.genuine_replay_plan("http://127.0.0.1:48700")
+
+    assert plan == {
+        "candidate_identity": "1" * 64,
+        "candidate_event_at_ms": 200,
+        "older_identity": "0" * 64,
+        "after_cursor": "cursor-old",
+    }
+
+
+def test_genuine_replay_plan_fails_closed_without_two_real_messages(
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(
+        f9,
+        "_get_json",
+        lambda base_url, path, params=None: {
+            "page": {
+                "items": [_message("1" * 64, "market")],
+                "order": "newest_to_oldest",
+                "oldest_cursor": "cursor-only",
+            }
+        },
+    )
+
+    assert f9.genuine_replay_plan("http://127.0.0.1:48700") is None
+
+
+def test_genuine_replay_expression_uses_product_sse_without_server_write() -> None:
+    expression = f9._genuine_replay_expression(
+        candidate_identity="a" * 64,
+        after_cursor="exact-real-cursor",
+    )
+
+    assert "connectLive()" in expression
+    assert "state.newestCursor=after" in expression
+    assert "state.ids.delete(id)" in expression
+    assert "newMessageButton" in expression
+    assert "SSE CANLI" in expression
+    assert "fetch(" not in expression
+    assert "XMLHttpRequest" not in expression
+    assert "POST" not in expression
