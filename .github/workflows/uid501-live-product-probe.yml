@@ -1,0 +1,30 @@
+name: UID501 Live Product Probe
+
+on:
+  push:
+    branches:
+      - diag/uid501-live-snapshot
+    paths:
+      - ".github/workflows/uid501-live-product-probe.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: [self-hosted, crypto-signal, uid501]
+    timeout-minutes: 5
+    steps:
+      - name: Probe live Product
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(id -u)" = "501"
+          echo "=== HEALTH ==="
+          curl -fsS --max-time 5 http://127.0.0.1:48700/api/health
+          echo
+          echo "=== LATEST STREAM ==="
+          curl -fsS --max-time 8 'http://127.0.0.1:48700/api/stream/messages?limit=5'
+          echo
+          echo "UID501_LIVE_PRODUCT_PROBE_PASS=YES"
+          echo "REAL_CAPITAL=0"
