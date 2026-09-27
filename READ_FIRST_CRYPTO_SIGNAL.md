@@ -3,39 +3,44 @@
 This repository originates from the user's **CRYPTO SIGNAL PLATFORM — MASTER HANDOFF v1.0 (2026-09-19)**.
 Its foundational project-isolation, scientific-truth and REAL_CAPITAL safety boundaries remain binding. Later **explicit user-approved canonical documents and state updates may supersede scoped product/frontend/roadmap decisions where they say so**. Never use older handoff or roadmap wording to undo a newer explicit supersession. Current execution state is established by `CURRENT_STATUS.md`, the newest Chronicle entry and mechanically observed Git/runtime truth.
 
-## ACTIVE FRONTIER — Message Intelligence & Family Evidence UX V1 — 2026-09-27
+## ACCEPTED / CLOSED — Message Intelligence & Family Evidence UX V1 — 2026-09-27
 
-The user has explicitly opened a new, narrow post-F10 frontend/message-intelligence refinement authority:
+The user-approved post-F10 frontend/message-intelligence refinement is complete.
 
-**`docs/CRYPTO_SIGNAL_MESSAGE_INTELLIGENCE_FRONTIER_V1.md`**
+Canonical authority and final acceptance:
+- `docs/CRYPTO_SIGNAL_MESSAGE_INTELLIGENCE_FRONTIER_V1.md`;
+- `docs/CRYPTO_SIGNAL_MESSAGE_INTELLIGENCE_V1_FINAL_ACCEPTANCE.md`.
 
-Read it **before** any historical Stream roadmap when doing current frontend/message work.
+Accepted state:
 
-Locked current direction:
+**MESSAGE_INTELLIGENCE_FAMILY_EVIDENCE_UX_V1_ACCEPTED — MI1 / MI2 / MI3 / MI4 / MI5 / MI6 PASS**
+
+Locked accepted behavior:
 - F0-F10 remains complete and must not be replayed;
-- normal user-facing Stream messages must become one concise, natural Turkish system view rather than raw family telemetry;
+- normal user-facing Stream messages use a concise deterministic Turkish system view rather than raw family telemetry;
 - the five-family matrix remains Geometry 20 / Liquidity 25 / Order Flow 25 / Derivatives 15 / On-chain 15; Event Risk remains outside the 100-point matrix;
-- each of the five family rows in expanded detail must be individually clickable and must open only that family's short explanation + exact/frozen proof;
-- there is **no generic bottom "KANIT GRAFİĞİNİ / DONDURULMUŞ KANITI GÖR" CTA** in the target UX;
-- unavailable proof must fail closed explicitly; never substitute current evidence for historical/frozen evidence;
+- each family row is individually clickable and opens only that family's short explanation + exact/frozen proof;
+- there is no generic bottom proof CTA in the accepted expanded-message UX;
+- proof remains fail-closed as `READY_EXACT`, `IDENTITY_ONLY_EXACT` or `UNAVAILABLE_EXPLICIT`;
+- only Geometry may render its exact bound frozen chart;
+- missing evidence is never replaced with current evidence;
+- the weighted family vote is not calibrated probability and is not Decision issuance;
 - local Ollama remains presentation-only and receives no factual, directional, numeric or trading authority;
-- historical messages remain immutable; this refinement is forward-only;
+- historical messages remain immutable and no rich-message backfill is authorized;
 - dedicated Capital/Portfolio work is not reopened by this scope;
-- this authority applies only to `burakciller90-arch/Crypto-Signal`; the separate **Durdurulmaz** project must not be touched;
+- this authority applies only to `burakciller90-arch/Crypto-Signal`; Durdurulmaz and Quantum Capital remain isolated;
 - **REAL_CAPITAL=0** remains binding.
 
-MI1 is mechanically accepted on main through:
-- PR #1453 / merge `a2c317bbee1b325500b909bbe970750370a17eda` — customer-facing family copy no longer leaks raw state-machine language;
-- PR #1454 / merge `28fa1c208e9e66173214a8bdfaa33cea4bbfe935` — Product history/SSE uses a primary customer surface, hides only the five market-family telemetry bubbles, preserves exact/debug records and keeps Event Risk/provider-quality alerts visible;
-- UID504 MI1 primary-surface acceptance run `36330349505` — focused tests, Ruff, mypy, Node syntax, non-mutating canonical checkouts, real project-isolation diff, REAL_CAPITAL=0.
+Mechanical acceptance chain:
+- MI1 accepted through merges `a2c317bbee1b325500b909bbe970750370a17eda` and `28fa1c208e9e66173214a8bdfaa33cea4bbfe935`; UID504 run `36330349505`.
+- MI2 accepted through merge `20c1c18c3253254555708e0cbcc0c52cc04ae784`; UID504 run `36331471395`.
+- MI3 accepted through merge `4dc3c2a4ebdda513f2150313f74f0f06a3a47ec6`; UID504 run `36332071137`.
+- MI4 accepted through PR #1463 / merge `caeaf41256fe9f5d878d78f08374224e571798e4`; UID504 run `36332851225`.
+- MI5 implementation merged through PR #1467 and deployed at main `93d9b1edfaf0267b6873f3aaaa2eb9e6dd455af0`; allowlisted Product deploy run `36337341847` passed.
+- MI5 post-deploy real desktop/mobile Chromium acceptance run `36338496994` passed on genuine forward `system_view_updated` messages, opened all five family proof windows, preserved controls, had no raw telemetry leak or horizontal overflow and kept `REAL_CAPITAL=0`.
+- MI6 final acceptance is frozen in `docs/CRYPTO_SIGNAL_MESSAGE_INTELLIGENCE_V1_FINAL_ACCEPTANCE.md`.
 
-MI2 is mechanically accepted on main through PR #1457 / merge `20c1c18c3253254555708e0cbcc0c52cc04ae784`. Exact UID504 acceptance run `36331471395` proved focused fact-lock tests, Ruff, mypy, real loopback `qwen2.5:3b-instruct` rewrite, canonical checkout non-mutation and project isolation. The model receives a deterministic fact-locked analyst brief but cannot add new market facts, scores, family claims, direction changes or visible numeric changes.
-
-MI3 is mechanically accepted on main through PR #1459 / merge `4dc3c2a4ebdda513f2150313f74f0f06a3a47ec6`. UID504 acceptance run `36332071137` proved the compact current-view summary plus the canonical Geometry 20 / Liquidity 25 / Order Flow 25 / Derivatives 15 / On-chain 15 evidence table, explicit unavailable evidence, non-probability score semantics, non-mutating checkouts and project isolation.
-
-MI4 is mechanically accepted on main through PR #1463 / merge `caeaf41256fe9f5d878d78f08374224e571798e4`. UID504 acceptance run `36332851225` proved that each of the five family rows owns its family-scoped exact proof, only Geometry may draw its bound frozen chart, unavailable/identity-only families fail closed, canonical checkouts stayed untouched, project isolation passed and REAL_CAPITAL=0.
-
-Exact implementation frontier: **MI5 — Real desktop/mobile acceptance**.
+There is **no remaining MI1-MI6 implementation frontier**. Do not reopen it from stale roadmap wording. Any later frontend/message refinement is new scope and must first reconcile current main/runtime truth.
 
 ## Intelligence Stream V1 final completion acceptance — 2026-09-27
 
