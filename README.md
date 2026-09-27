@@ -30,6 +30,7 @@ Current program facts recorded by the canonical state documents:
 - **S15 End-to-End Product Acceptance is PASS**;
 - **S16 Controlled Cutover is PASS**;
 - **Intelligence Stream V1 S0-S16 is COMPLETE / ACCEPTED**; there is no remaining active Stream V1 frontend stage;
+- **Message Intelligence & Family Evidence UX V1 is ACCEPTED**; the normal Stream uses forward-only system-view messages, five clickable family rows with family-owned fail-closed proof, guarded local Turkish polish, and real desktop/mobile Chromium acceptance; there is no remaining active MI phase;
 - the previous M0→M7 multi-screen frontend roadmap is historical/superseded;
 - WC2 frozen evidence accumulation remains active;
 - WC5 broad human <=10-second usability remains `NOT_MEASURED` until actually measured;

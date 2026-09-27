@@ -3,13 +3,13 @@
 This repository originates from the user's **CRYPTO SIGNAL PLATFORM — MASTER HANDOFF v1.0 (2026-09-19)**.
 Its foundational project-isolation, scientific-truth and REAL_CAPITAL safety boundaries remain binding. Later **explicit user-approved canonical documents and state updates may supersede scoped product/frontend/roadmap decisions where they say so**. Never use older handoff or roadmap wording to undo a newer explicit supersession. Current execution state is established by `CURRENT_STATUS.md`, the newest Chronicle entry and mechanically observed Git/runtime truth.
 
-## ACTIVE FRONTIER — Message Intelligence & Family Evidence UX V1 — 2026-09-27
+## ACCEPTED — Message Intelligence & Family Evidence UX V1 — 2026-09-27
 
-The user has explicitly opened a new, narrow post-F10 frontend/message-intelligence refinement authority:
+The user-approved post-F10 frontend/message-intelligence refinement is mechanically complete and accepted:
 
 **`docs/CRYPTO_SIGNAL_MESSAGE_INTELLIGENCE_FRONTIER_V1.md`**
 
-Read it **before** any historical Stream roadmap when doing current frontend/message work.
+For the exact accepted behavior, read it together with `docs/CRYPTO_SIGNAL_MESSAGE_INTELLIGENCE_FINAL_ACCEPTANCE.md` before changing the accepted message/proof UX.
 
 Locked current direction:
 - F0-F10 remains complete and must not be replayed;
@@ -35,7 +35,11 @@ MI3 is mechanically accepted on main through PR #1459 / merge `4dc3c2a4ebdda513f
 
 MI4 is mechanically accepted on main through PR #1463 / merge `caeaf41256fe9f5d878d78f08374224e571798e4`. UID504 acceptance run `36332851225` proved that each of the five family rows owns its family-scoped exact proof, only Geometry may draw its bound frozen chart, unavailable/identity-only families fail closed, canonical checkouts stayed untouched, project isolation passed and REAL_CAPITAL=0.
 
-Exact implementation frontier: **MI5 — Real desktop/mobile acceptance**.
+MI5 is mechanically accepted through implementation merge `93d9b1edfaf0267b6873f3aaaa2eb9e6dd455af0`, Product deploy run `36337341847`, and post-deploy real-browser acceptance run `36338498776`. The final artifact is `message-intelligence-mi5-probe-36338498776` / id `10937634080`.
+
+Canonical final status: **MESSAGE_INTELLIGENCE_FAMILY_EVIDENCE_UX_V1_ACCEPTED**.
+
+There is no remaining MI implementation phase. Any future frontend/message redesign is new scope.
 
 ## Intelligence Stream V1 final completion acceptance — 2026-09-27
 
