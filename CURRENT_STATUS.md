@@ -4,10 +4,50 @@ Updated: 2026-09-27
 Project: Crypto Signal
 Baseline: crypto-signal-full-version-v1.0.0 (immutable)
 Active post-v1.0 program: v1.1 world-class product + market intelligence + Crypto Signal Intelligence Stream V1
-State: WC0_LIVE_PRODUCT_PARITY_ACCEPTED / WC1_24_7_DATA_RELIABILITY_ACCEPTED / WC2_ENGINEERING_FROZEN_EVIDENCE_ACCUMULATION_ACTIVE / WC4_CHAMPION_CHALLENGER_ENGINEERING_ACCEPTED_RESEARCH_ONLY / WC5_ENGINEERING_ACCEPTED_PRODUCT_DEPLOYED_HUMAN_USABILITY_NOT_MEASURED / WC6_SANDBOX_BOUNDARY_ACCEPTED_VENUE_EVIDENCE_EXTERNAL_DEPENDENCY / WC7_CURRENT_FRONTIER_PACKET_ACCEPTED_CURRENT_INSUFFICIENT_EVIDENCE / INTELLIGENCE_STREAM_V1_S0_S16_HISTORICAL_ACCEPTANCE_RETAINED / INTELLIGENCE_STREAM_V1_FINAL_F0_PASS_F1_PASS_F2_PASS_F3_PASS_F4_PASS_F5_PASS_CURRENT_SCOPE_F6_PASS_F7_PASS_F8_PASS_F9_ACTIVE / CONTINUITY_PAUSED_BY_USER
+State: WC0_LIVE_PRODUCT_PARITY_ACCEPTED / WC1_24_7_DATA_RELIABILITY_ACCEPTED / WC2_ENGINEERING_FROZEN_EVIDENCE_ACCUMULATION_ACTIVE / WC4_CHAMPION_CHALLENGER_ENGINEERING_ACCEPTED_RESEARCH_ONLY / WC5_ENGINEERING_ACCEPTED_PRODUCT_DEPLOYED_HUMAN_USABILITY_NOT_MEASURED / WC6_SANDBOX_BOUNDARY_ACCEPTED_VENUE_EVIDENCE_EXTERNAL_DEPENDENCY / WC7_CURRENT_FRONTIER_PACKET_ACCEPTED_CURRENT_INSUFFICIENT_EVIDENCE / INTELLIGENCE_STREAM_V1_S0_S16_HISTORICAL_ACCEPTANCE_RETAINED / INTELLIGENCE_STREAM_V1_FINAL_F0_PASS_F1_PASS_F2_PASS_F3_PASS_F4_PASS_F5_PASS_CURRENT_SCOPE_F6_PASS_F7_PASS_F8_PASS_F9_PASS_F10_ACTIVE / CONTINUITY_PAUSED_BY_USER
 REAL_CAPITAL: 0
 
 ## Active v1.1 frontier — read before historical sections
+
+### 2026-09-27 — STREAM FINAL F9 PASS / F10 AUTHORITY FREEZE ACTIVE
+
+Canonical F9 acceptance:
+- `docs/CRYPTO_SIGNAL_STREAM_FINAL_F9_REAL_UI_ACCEPTANCE.md`.
+
+Accepted F9 tooling/main:
+- `758b3e3c56f35e08bf9a62e367e3e5bf585f817d`.
+
+Final isolated UID504 acceptance run `36315704622` passed:
+- exact post-F8 source validation;
+- focused F9 product acceptance;
+- whole-repository regression;
+- live Product boundary;
+- genuine production desktop 1440×1000 and exact-mobile 430×860 browser acceptance;
+- real MARKET/INTELLIGENCE and RISK/SYSTEM inventory;
+- message expansion and SIMPLE / PRO / INTELLIGENCE / DECISION / CAPITAL depth;
+- multiple exact evidence windows and detached proof;
+- real search/filter/deep-link and sound controls;
+- all six 10-second comprehension checks;
+- canonical live-root SSE delivery and unread/new-message affordance;
+- deterministic expansion/window/discovery/notification/10k long-session mechanics;
+- Development and Product non-mutation;
+- no historical backfill;
+- no synthetic activity;
+- `REAL_CAPITAL=0`.
+
+No natural forward event occurred during the bounded 30-second incoming observation window. F9 does not claim otherwise. Incoming/unread UI semantics were accepted by resuming the canonical read-only SSE stream from an exact real production cursor and redelivering a genuine persisted production identity, with no server mutation, synthetic activity or historical backfill. Genuine forward production generation was already proven by F8.
+
+Final F9 artifact:
+- `stream-final-f9-real-ui-36315704622`;
+- artifact ID `10930817015`;
+- SHA256 `58e94cf5f280dca3e0029258967a21635c97b90bf61d0143bbe64276bc3ef288`.
+
+Decision and Outcome retain the explicit F8 operational-evidence deferrals. Capital/Portfolio live proof remains deferred to the dedicated later workstream and is not falsely relabeled as observed.
+
+F9 is therefore **PASS — REAL PRODUCT UI ACCEPTED FOR THE CURRENT CLAIMED SCOPE**.
+
+The active final-completion frontier is now **F10 — Authority Freeze / Final Closeout**.
+
 
 ### 2026-09-27 — STREAM FINAL F8 PASS / F9 FINAL REAL-UI ACTIVE
 
