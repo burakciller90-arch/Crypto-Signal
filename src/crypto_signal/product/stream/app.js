@@ -890,9 +890,10 @@ function familyExactEvidenceSection(kind, detail, exactEvidence) {
       const code = document.createElement("code");
       code.textContent = identity;
       const stateLabel = document.createElement("small");
-      stateLabel.textContent = evidenceResolutionLabel(
-        byIdentity.get(identity)?.resolution_state
-      );
+      const exactReference = byIdentity.get(identity);
+      stateLabel.textContent = exactReference
+        ? evidenceResolutionLabel(exactReference.resolution_state)
+        : "KİMLİK MESAJDA BAĞLI · EXACT RESOLVER DURUMU YOK";
       row.append(code, stateLabel);
       bound.append(row);
     }
