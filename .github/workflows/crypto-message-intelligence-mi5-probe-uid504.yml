@@ -147,6 +147,15 @@ jobs:
           assert health["read_only"] is True, health
           assert health["real_capital"] == 0, health
 
+          try:
+              decision_status = get("/api/decision-evidence/status")
+          except Exception as exc:
+              decision_status = {"request_error": repr(exc)}
+          try:
+              intelligence_feed = get("/api/intelligence-feed", {"limit": 50})
+          except Exception as exc:
+              intelligence_feed = {"request_error": repr(exc)}
+
           primary_payload = get(
               "/api/stream/messages",
               {"surface": "primary", "limit": 200},
@@ -290,6 +299,8 @@ jobs:
 
           report = {
               "health": health,
+              "decision_evidence_status": decision_status,
+              "intelligence_feed": intelligence_feed,
               "selected_decision": selected_decision,
               "primary_count": len(primary),
               "all_count": len(all_items),
@@ -346,6 +357,20 @@ jobs:
               print(json.dumps(leak_samples, ensure_ascii=False, indent=2))
               raise AssertionError(leaks)
 
+          def _feed_item_count(payload):
+              if not isinstance(payload, dict):
+                  return None
+              for key in ("items", "events", "feed"):
+                  value = payload.get(key)
+                  if isinstance(value, list):
+                      return len(value)
+              page = payload.get("page")
+              if isinstance(page, dict) and isinstance(page.get("items"), list):
+                  return len(page["items"])
+              return None
+
+          print("MI5_DECISION_EVIDENCE_STATUS=" + json.dumps(decision_status, ensure_ascii=False, sort_keys=True))
+          print("MI5_INTELLIGENCE_FEED_ITEM_COUNT=" + str(_feed_item_count(intelligence_feed)))
           print("MI5_PRIMARY_COUNT=" + str(len(primary)))
           print("MI5_ALL_COUNT=" + str(len(all_items)))
           if primary:
