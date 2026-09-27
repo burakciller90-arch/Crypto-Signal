@@ -1,0 +1,862 @@
+# Crypto Signal — Reality-Backed Evidence Data Plane V1
+
+Status: **ACTIVE EXECUTION ROADMAP**
+Date opened: 2026-09-27
+Company: GALACTECH
+Product: Crypto Signal
+Repository: `burakciller90-arch/Crypto-Signal`
+Canonical work root: `/Volumes/Crypto-504/Crypto-Signal-Workbench`
+Primary workstream: `01_EVIDENCE_DEPTH`
+Safety: **REAL_CAPITAL=0**
+
+## 0. Purpose
+
+Crypto Signal already contains substantial signal, market-structure, microstructure, derivatives, on-chain, event-risk and proof infrastructure. The remaining problem is not "invent more indicators." The problem is to make every accepted evidence family **reality-backed, continuously collected, PIT-safe, freshness-gated, immutable when used, and directly inspectable**.
+
+This roadmap is the execution authority for that data-plane completion.
+
+It sits under the accepted umbrella:
+
+`docs/CRYPTO_SIGNAL_EVIDENCE_DEPTH_VISUAL_PROOF_FRONTIER_V1.md`
+
+The five-family decision matrix remains:
+
+- Geometry — 20
+- Liquidity — 25
+- Order Flow — 25
+- Derivatives — 15
+- On-chain — 15
+
+Event Risk remains outside the 100-point matrix.
+
+No new family is added merely because a new dataset exists. New evidence must either:
+1. enrich an existing family without double counting, or
+2. remain a score-external context / quality / veto layer.
+
+Confluence remains weighted evidence support/opposition, **not probability**.
+
+## 1. Locked product truth
+
+The target system must be able to answer, for any new forward signal:
+
+1. **What did the system actually observe?**
+2. **From which source/provider/venue?**
+3. **At what source time, observation time and ingestion time?**
+4. **Was the observation fresh enough for that evidence family?**
+5. **Which engine transformed the observation into evidence?**
+6. **Was that evidence directional, contextual, contradictory, stale or unavailable?**
+7. **Which exact payloads were frozen when the decision was made?**
+8. **Can a customer inspect those frozen measurements visually without reading hashes?**
+9. **Can the system prove no future information was used?**
+10. **Can the system fail closed when a source is stale, missing or contradictory?**
+
+If the answer to any required item is no, that evidence rail is not production-ready.
+
+## 2. Current reality baseline — 2026-09-27
+
+This roadmap is based on live UID504 read-only audits, not repository assumptions.
+
+### 2.1 Latest Market Tape / Stream audit
+
+UID504 run: `36345746684`
+
+Observed at `2026-09-27T19:49:40.187Z`:
+
+- order books: 457,710 rows; latest source event age ~34.1s;
+- public trades: 2,124,933 rows; latest source event age ~34.7s;
+- derivatives: 195 rows; latest observation age ~23.7h;
+- liquidations: 0 rows;
+- liquidation coverage: 0 rows;
+- collector heartbeat: live; latest successful ingestion age effectively 0;
+- normalized Market Tape rows: 2,582,913;
+- checked 15m candle cache close: ~49.7m old;
+- Stream system-view latest event: ~36.2s old;
+- Product Stream HTTP: 200;
+- REAL_CAPITAL=0.
+
+Interpretation:
+- the Market Tape collector is alive;
+- order-book/trade truth is genuinely being accumulated;
+- derivatives is stale;
+- liquidation truth is absent;
+- one checked candle-cache rail is stale and must be diagnosed even though live signal freezing continued in runtime logs.
+
+### 2.2 Event-source audit
+
+UID504 run: `36345747792`
+
+Observed truth:
+
+- persisted event DB exists;
+- `runtime_status=PERSISTED_EVIDENCE_ONLY`;
+- `online_status=NOT_ASSERTED`;
+- `process_status=NOT_MEASURED`;
+- `coverage_claim=SOURCE_SCOPED_ONLY`;
+- latest successful source fetch age ~25.7h;
+- Fed RSS and FRED CPI/employment persistence exist;
+- BLS source returned HTTP 403;
+- REAL_CAPITAL=0.
+
+Event Risk code exists, but continuous fresh operation is not yet accepted.
+
+### 2.3 Runtime error audit
+
+UID504 run: `36346024642`
+
+Observed examples:
+
+- REST candle calls with SSL `WRONG_VERSION_NUMBER`;
+- DNS resolution failures;
+- request timeout;
+- Market Tape heartbeat/database `database is locked`;
+- gap-monitor ingestion-time regression errors;
+- async close errors after collector failures.
+
+The live system is functioning, but the data plane is not yet robust enough to claim uninterrupted professional evidence coverage.
+
+## 3. Architecture to build
+
+Every evidence rail must follow the same controlled chain:
+
+```text
+External source / venue
+        ↓
+Read-only collector
+        ↓
+Raw source envelope
+        ↓
+Normalization
+        ↓
+Coverage + gap ledger
+        ↓
+Freshness / quality gate
+        ↓
+PIT evidence engine
+        ↓
+Family evidence adapter
+        ↓
+Immutable decision freeze
+        ↓
+Exact customer proof projection
+        ↓
+Visual renderer / Portfolio provenance
+```
+
+### 3.1 Raw source envelope
+
+Every accepted observation must retain, where available:
+
+- provider;
+- venue;
+- market/instrument type;
+- symbol / asset / network;
+- provider-native event identity;
+- provider/source timestamp;
+- local observed timestamp;
+- local ingested timestamp;
+- sequence/update identity when the source provides one;
+- adapter version;
+- normalized payload;
+- raw payload identity or raw-body digest where legally/technically appropriate.
+
+A normalized value without source timing/coverage truth is not enough.
+
+### 3.2 Coverage ledger
+
+Every live rail must persist explicit coverage:
+
+- collection start/end;
+- connected/disconnected periods;
+- provider gaps;
+- sequence gaps;
+- REST recovery windows;
+- source-specific failures;
+- stale intervals;
+- unsupported symbols/instruments.
+
+"No rows" and "no activity" must never be confused.
+
+### 3.3 Fail-closed rule
+
+Stale or missing input cannot silently retain its previous vote.
+
+Allowed outcomes include:
+
+- OBSERVED;
+- PARTIAL;
+- STALE;
+- UNAVAILABLE;
+- CONFLICT;
+- NOT_EVALUABLE.
+
+The customer can receive an explanation, but no fabricated measurement.
+
+## 4. Evidence model — what is required
+
+## 4.1 Geometry — 20 points
+
+Geometry is the chart/structure family and canonically contains:
+
+- Price Action;
+- Elliott Wave;
+- Harmonic Patterns.
+
+Target collection/input:
+
+- closed candles for accepted symbols/timeframes;
+- provider timestamps;
+- source completeness;
+- multi-timeframe context;
+- provider divergence where available.
+
+Target frozen evidence:
+
+- exact consumed OHLC candles;
+- Price Action structures/levels/displacement/imbalances actually used;
+- Elliott count/candidate/state actually used;
+- Harmonic candidate/pattern/PRZ actually used;
+- entry/trigger zone;
+- invalidation;
+- targets;
+- methodology versions;
+- conflict/absence between methodologies.
+
+Important:
+- an Elliott/Harmonic/PA engine returning "no accepted candidate" is valid evidence state;
+- a signal must never reconstruct an old geometry chart from current candles.
+
+## 4.2 Liquidity — 25 points
+
+Current live baseline:
+- order-book snapshots;
+- `liquidity_dynamics`.
+
+Promote, when source quality permits:
+
+- persistent liquidity-pool candidates;
+- depth addition/removal;
+- depletion;
+- replenishment;
+- sweep candidates;
+- spoofing candidates;
+- hidden-liquidity candidates;
+- observed liquidation context when real coverage exists.
+
+Required source truth:
+
+- L2 depth;
+- provider sequence/update IDs where available;
+- bids/asks and quantities;
+- source/ingest time;
+- explicit depth level coverage.
+
+Scientific boundaries:
+
+- spoofing = candidate behavior, never intent attribution;
+- hidden liquidity = candidate, never proof of a specific actor;
+- liquidity levels are measurements/candidates, not guaranteed "magnets."
+
+## 4.3 Order Flow — 25 points
+
+Current live baseline:
+- public trades;
+- order-book pressure;
+- taker-flow state.
+
+Promote:
+
+- exact buy/sell delta;
+- window-local CVD;
+- temporal flow;
+- price/CVD divergence candidate;
+- bounded absorption candidate;
+- price-response context.
+
+Required source truth:
+
+- provider trade identity;
+- event timestamp;
+- price;
+- quantity/notional;
+- aggressor/taker side where source semantics support it;
+- exact associated order-book context.
+
+Important:
+- CVD is explicitly local to the accepted window/source, not "global market CVD";
+- absorption does not prove iceberg/manipulation/actor identity.
+
+## 4.4 Derivatives — 15 points
+
+Required live baseline:
+
+- mark/index price;
+- open interest;
+- funding rate;
+- basis;
+- timestamped instrument metadata.
+
+Promote after freshness restoration:
+
+- price/OI dynamics;
+- funding percentile;
+- funding acceleration;
+- basis dynamics;
+- crowding;
+- squeeze-risk context;
+- observed liquidation context.
+
+### New required enrichment: Options / volatility positioning
+
+Options belong inside **Derivatives**, not as a sixth family.
+
+Priority coverage for BTC/ETH:
+
+- ATM implied volatility;
+- volatility index where a provider supplies it;
+- IV term structure;
+- call/put skew such as 25-delta skew when correctly computable;
+- option open interest by expiry/strike;
+- volume by expiry/strike where source quality permits;
+- put/call OI and volume context;
+- major expiry concentration.
+
+Provider candidates may include crypto-native options venues and institutional futures/options markets, subject to licensing and source-contract acceptance.
+
+Do not claim:
+- dealer gamma positioning unless the required positions/assumptions are explicit and defensible;
+- max-pain as a deterministic price target;
+- options OI as directional proof by itself.
+
+## 4.5 On-chain — 15 points
+
+No standalone live on-chain vote is authorized until a real accepted provider/source exists.
+
+Required priority evidence:
+
+1. exchange inflow/outflow;
+2. large-transfer observations with provider-backed attribution;
+3. exchange/non-exchange cluster role where evidence supports it;
+4. wallet cohorts with PIT admission rules;
+5. stablecoin capital/liquidity flow context.
+
+### New required enrichment: Stablecoin liquidity
+
+Inside On-chain / capital-flow context:
+
+- exchange stablecoin inflow/outflow where reliable;
+- large mint/burn events where source semantics are exact;
+- supply changes;
+- major bridge/chain flow only if provider/network coverage is explicit.
+
+Important:
+- a stablecoin mint is not automatically bullish;
+- an exchange transfer is not automatically a sell/buy;
+- wallet clusters are not "insiders" or "institutions" unless the provider explicitly and defensibly attributes them.
+
+Bitcoin network cadence/utilization may remain contextual but is not a substitute for real capital-flow evidence.
+
+## 4.6 Event Risk — score external
+
+Required:
+
+- economic calendar;
+- central-bank events;
+- inflation/employment releases;
+- high-impact news/event observations;
+- event countdown;
+- source timestamp;
+- update process health.
+
+Event Risk can:
+
+- WAIT;
+- REDUCE;
+- VETO new exposure;
+- mark high uncertainty.
+
+It does not receive points in the 100-point directional matrix.
+
+## 4.7 Cross-market / macro regime — score external
+
+Existing code already supports VIX / Treasury context.
+
+Professional target may extend to additional accepted macro references such as:
+
+- USD regime / dollar index source;
+- real/nominal rates where source semantics are stable;
+- broad risk-stress context.
+
+This is regime/context, not an automatic long/short vote.
+
+## 4.8 New required layer: Cross-venue confirmation and dislocation
+
+This is **not a sixth family**.
+
+Purpose:
+
+- detect whether a claimed market event is venue-local or broad;
+- compare spot/perpetual prices;
+- compare spreads/depth where comparable;
+- compare funding/OI when multiple accepted venues expose compatible semantics;
+- detect provider divergence/data anomalies.
+
+Examples:
+
+- Bybit order-flow shock with no confirmation elsewhere → reduce confidence / mark venue-local;
+- price dislocation between venues → explicit context;
+- one provider stale while another is fresh → no silent substitution.
+
+Existing provider-divergence infrastructure should be extended rather than replaced.
+
+## 4.9 Sentiment / attention — research context only
+
+Existing Fear & Greed / attention code may remain useful for regime narration and research.
+
+It is **not mandatory directional evidence** for V1 closure because:
+
+- source cadence is slow;
+- semantics are broad;
+- overlap with price/regime can be high.
+
+It must not dilute stronger market microstructure evidence.
+
+## 4.10 ETF / institutional flow — later context, not closure blocker
+
+Spot BTC/ETH ETF flows may become useful medium-horizon context if a reliable timestamped source contract is accepted.
+
+For V1:
+- optional;
+- slow context;
+- no intraday directional shortcut;
+- not a blocker for evidence-data-plane PASS.
+
+## 5. Evidence dependency / double-counting control
+
+This is mandatory.
+
+The system must know when two claims derive from the same underlying observation.
+
+Examples:
+
+- liquidity replenishment and order-flow absorption may share the same L2 book;
+- taker flow and CVD share the same public trades;
+- derivatives crowding may depend on funding + OI + liquidation evidence;
+- exchange flow and large-transfer clusters may overlap.
+
+Each family freeze must carry an **evidence dependency graph** or equivalent lineage grouping.
+
+Confluence must not treat correlated derivatives of the same source event as independent votes.
+
+Rules:
+
+- enrichment can improve evidence quality/context without automatically increasing directional points;
+- one raw observation may support multiple visual explanations but must not create duplicated statistical confidence;
+- cross-family overlap must be explicit in acceptance tests.
+
+## 6. Initial engineering freshness SLOs
+
+These are versioned engineering targets, **not claims about market predictability or universal provider guarantees**.
+
+| Rail | Initial target |
+|---|---|
+| collector heartbeat | <= 5s |
+| spot order book / public trades | <= 10s at family evaluation |
+| liquidation events | <= 10s when venue feed is connected |
+| derivatives OI/mark/basis | <= 120s |
+| funding observation | <= 5m unless provider updates more frequently |
+| BTC/ETH options surface | <= 120s where real-time provider permits |
+| closed 15m candle availability | <= 90s after close |
+| higher-timeframe candle | <= 120s after close |
+| event calendar process | scheduled refresh <= 15m plus exact event timestamps |
+| breaking/news event source | <= 120s where source supports it |
+| on-chain exchange/transfer feeds | provider-specific, target <= 10m |
+| cross-market daily sources | source-session aware; no false intraday freshness |
+
+A rail outside its accepted freshness budget is stale and cannot masquerade as current.
+
+## 7. Source strategy
+
+### 7.1 Prefer streaming for high-frequency truth
+
+Primary streaming candidates:
+
+- order books;
+- public trades;
+- liquidations;
+- real-time derivatives updates;
+- real-time options surface where available.
+
+REST may be used for:
+
+- bootstrap snapshots;
+- reconciliation;
+- gap repair;
+- lower-frequency context.
+
+### 7.2 Multi-provider truth
+
+Use multiple providers only when semantics can be normalized honestly.
+
+Provider disagreement is evidence about data quality/venue state, not something to average away automatically.
+
+### 7.3 Read-only authority
+
+All evidence collectors are read-only.
+
+If provider credentials are needed:
+- market-data/read scopes only;
+- secrets outside repository;
+- no order permissions;
+- no withdrawal permissions;
+- no REAL_CAPITAL authority.
+
+## 8. Execution phases
+
+## RDP0 — Authority + live audit
+
+Status: **PASS**
+
+Completed:
+- repository capability audit;
+- live Market Tape freshness audit;
+- event-source state audit;
+- runtime-error audit;
+- evidence gaps classified as source, runtime, wiring, proof or UI.
+
+Acceptance evidence:
+- UID504 `36345746684`;
+- UID504 `36345747792`;
+- UID504 `36346024642`.
+
+## RDP1 — Collector and runtime reliability
+
+Status: **ACTIVE**
+
+Goal:
+- make the existing data substrate continuously trustworthy before expanding it.
+
+Work:
+- diagnose/fix SSL/proxy/DNS failures;
+- remove Market Tape writer-lock/gap-time regression failure modes;
+- verify single-writer/transaction behavior;
+- prove supervisor recovery after process/provider failure;
+- diagnose stale candle-cache rail;
+- add rail-specific heartbeat/freshness/coverage checks;
+- distinguish "collector process alive" from "source truth fresh."
+
+PASS:
+- no silent stale rail;
+- no repeated DB-lock collector crash;
+- closed-candle SLO accepted;
+- book/trade continuity proven across restart;
+- read-only soak reports persist explicit gaps.
+
+## RDP2 — Canonical source envelope + coverage ledger
+
+Goal:
+- enforce one professional contract across every evidence rail.
+
+Work:
+- canonical source/observed/ingested timestamps;
+- provider-native IDs and sequence semantics;
+- raw/normalized identity;
+- coverage ledger;
+- gap/recovery ledger;
+- source capability registry;
+- explicit freshness state.
+
+PASS:
+- every family can explain what data existed and what data did not exist at an as-of time.
+
+## RDP3 — Geometry production truth
+
+Goal:
+- make PA + Elliott + Harmonic jointly inspectable as Geometry.
+
+Work:
+- restore/prove candle continuity;
+- exact consumed candles;
+- freeze each methodology result, including no-candidate state;
+- preserve methodology conflicts;
+- generate exact geometry annotations from the frozen decision.
+
+PASS:
+- new forward signal can replay its exact Geometry evidence with no current-data substitution.
+
+## RDP4 — Rich Liquidity + Order Flow live wiring
+
+Goal:
+- promote existing rich M2/M3 engines into the forward-only family path.
+
+Liquidity:
+- dynamics;
+- structure;
+- persistent pool candidate;
+- sweep;
+- spoofing candidate;
+- hidden-liquidity candidate.
+
+Order Flow:
+- microstructure;
+- temporal delta;
+- window-local CVD;
+- divergence;
+- absorption.
+
+PASS:
+- exact PIT freezes;
+- dependency/overlap lineage;
+- rich evidence appears in family proof;
+- no actor-intent claims;
+- no direction invented from context-only engines.
+
+## RDP5 — Derivatives + liquidation restoration
+
+Goal:
+- make M4 continuously fresh.
+
+Work:
+- repair live derivatives source;
+- mark/index/OI/funding/basis;
+- dynamics;
+- crowding;
+- liquidation public-feed collection;
+- liquidation coverage ledger;
+- exact observed liquidation evidence.
+
+PASS:
+- derivatives inside freshness budget;
+- liquidation feed has explicit connected coverage;
+- stale or missing feed fails closed.
+
+## RDP6 — Options / volatility intelligence
+
+Goal:
+- add the most important missing BTC/ETH derivatives context.
+
+Work:
+- accepted options provider contract;
+- IV / term structure;
+- skew;
+- expiry/strike OI;
+- volume;
+- volatility index where available;
+- expiry concentration;
+- exact freezes.
+
+PASS:
+- data-source semantics documented;
+- no unsupported dealer-gamma/max-pain claim;
+- evidence enriches Derivatives without creating a new score family.
+
+## RDP7 — Real On-chain / capital-flow rail
+
+Goal:
+- remove `ONCHAIN_STANDALONE=DEFERRED_SOURCE` only when justified.
+
+Work:
+- accepted provider/source;
+- exchange flows;
+- large transfers;
+- wallet-cohort admission/forward measurement;
+- stablecoin capital-flow context;
+- provider attribution/version;
+- source coverage.
+
+PASS:
+- real forward observations exist;
+- no synthetic whale/institution claims;
+- On-chain can be OBSERVED only from accepted fresh provider evidence.
+
+If no acceptable provider is available, On-chain remains explicitly unavailable and the project does not fabricate a replacement.
+
+## RDP8 — Event Risk + cross-market runtime
+
+Goal:
+- make score-external risk/context continuously trustworthy.
+
+Work:
+- fresh event-source scheduler;
+- BLS failure handling / alternate official route where appropriate;
+- Fed/FRED health;
+- VIX/Treasury cross-market refresh;
+- optional USD-regime source;
+- news/event freshness and circuit-breaker behavior.
+
+PASS:
+- process state measured;
+- online state asserted only when proven;
+- stale event data cannot gate a trade as if fresh.
+
+## RDP9 — Cross-venue quality + evidence-overlap engine
+
+Goal:
+- stop local anomalies and duplicate evidence from masquerading as broad confirmation.
+
+Work:
+- provider-divergence expansion;
+- venue-local/broad classification;
+- family dependency lineage;
+- overlap detection;
+- confluence integration without weight inflation.
+
+PASS:
+- same raw truth cannot silently create duplicate confidence;
+- material venue disagreement is visible to the decision layer.
+
+## RDP10 — Exact frozen customer-proof contract
+
+Goal:
+- finish the backend contract required by the later frontend.
+
+Every family must return, when available:
+
+- human-readable state;
+- exact frozen measurements;
+- exact source objects;
+- visualization-ready series/levels;
+- source time;
+- as-of time;
+- freshness;
+- uncertainty;
+- source/provider label;
+- explicit unavailable/stale state.
+
+Hashes remain internal provenance/debug metadata and are not required customer UI.
+
+PASS:
+- Geometry, Liquidity, Order Flow, Derivatives and On-chain each expose the strongest exact proof actually available;
+- Event Risk/context exposes exact source records;
+- historical proof never reads current live data.
+
+## RDP11 — Continuous soak + final Evidence PASS
+
+Goal:
+- prove the system survives real time, not only tests.
+
+Minimum engineering soak:
+- 72 hours of UID504 observation before final closure.
+
+Monitor:
+- uptime;
+- freshness;
+- source gaps;
+- reconnections;
+- database locks;
+- sequence/gap behavior;
+- service restarts;
+- frozen-proof integrity;
+- no-future violations;
+- Stream/Product continuity.
+
+PASS:
+- all mandatory rails meet their accepted SLO or fail closed;
+- unresolved source limitations are explicitly documented;
+- rich engines consume only accepted source truth;
+- real Product proof is inspectable;
+- REAL_CAPITAL=0.
+
+Only after **RDP11 PASS** may Evidence Data Plane V1 be marked complete.
+
+## 9. Portfolio gate
+
+Paper Capital / Portfolio implementation follows this program.
+
+Portfolio may be designed in parallel, but full integration must not treat an evidence rail as trustworthy until its RDP acceptance gate is passed.
+
+Required sequence:
+
+```text
+Reality-Backed Evidence Data Plane PASS
+        ↓
+Paper Capital / Portfolio
+        ↓
+New Command Center frontend
+```
+
+The later Portfolio must be able to freeze, for every paper trade, the exact accepted evidence bundle that existed when the capital decision was made.
+
+## 10. Priority classification
+
+### P0 — mandatory for Evidence PASS
+
+- collector/runtime reliability;
+- Geometry candle truth;
+- rich Liquidity;
+- rich Order Flow;
+- fresh Derivatives;
+- real liquidation coverage or explicit unsupported state;
+- Event Risk runtime health;
+- exact frozen proof contract;
+- overlap/double-counting protection;
+- cross-venue/data-quality context.
+
+### P0 provider-dependent
+
+- real On-chain exchange/capital flows;
+- BTC/ETH Options intelligence.
+
+These are architecturally required targets, but may remain explicit unavailable until a legally/technically acceptable source is active. No fake substitute is allowed.
+
+### P1
+
+- stablecoin capital-flow enrichment;
+- broader macro/FX regime context;
+- additional derivatives venues;
+- richer options surface.
+
+### P2 / research-only unless separately accepted
+
+- ETF flow context;
+- sentiment/attention as directional evidence;
+- social-media scores;
+- inferred dealer gamma without defensible source;
+- "smart money" identity labels;
+- predictive liquidation maps built from estimates only.
+
+## 11. Non-negotiable scientific boundaries
+
+Never claim:
+
+- 80 points = 80% win probability;
+- achieved 80%+ accuracy without forward evidence;
+- market-maker/institution intent from order-book patterns;
+- spoofing as proven manipulation;
+- absorption as proven hidden actor;
+- large transfer = impending buy/sell;
+- stablecoin mint = bullish;
+- funding extreme = next move;
+- option OI/max-pain = deterministic target;
+- observed liquidation map = future liquidation map;
+- cross-venue agreement = guaranteed outcome;
+- LLM narration = market evidence.
+
+## 12. New-agent handoff
+
+Every new agent working on this program must read, in order:
+
+1. `/Volumes/Crypto-504/Crypto-Signal-Workbench/WORKSPACE_READ_FIRST.md`
+2. `00_CONTEXT/READ_FIRST_CRYPTO_SIGNAL.md`
+3. `00_CONTEXT/CURRENT_STATUS.md`
+4. `00_CONTEXT/PROJECT_CHRONICLE.md`
+5. `01_EVIDENCE_DEPTH/ACTIVE_ROADMAP.md`
+6. `00_CONTEXT/EVIDENCE_DEPTH_FRONTIER.md`
+
+Current exact frontier:
+
+**RDP1 — Collector and runtime reliability**
+
+Do not skip forward to Portfolio or frontend implementation while RDP1–RDP11 remain open unless the user explicitly authorizes parallel preparatory work.
+
+## 13. Project isolation
+
+Only Crypto Signal is in scope.
+
+Do not modify:
+- Durdurulmaz;
+- Quantum Capital;
+- their private volumes/data.
+
+Shared host tooling may only be changed when explicitly authorized.
+
+**REAL_CAPITAL=0**
