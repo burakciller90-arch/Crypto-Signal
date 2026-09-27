@@ -33,7 +33,9 @@ MI2 is mechanically accepted on main through PR #1457 / merge `20c1c18c325325455
 
 MI3 is mechanically accepted on main through PR #1459 / merge `4dc3c2a4ebdda513f2150313f74f0f06a3a47ec6`. UID504 acceptance run `36332071137` proved the compact current-view summary plus the canonical Geometry 20 / Liquidity 25 / Order Flow 25 / Derivatives 15 / On-chain 15 evidence table, explicit unavailable evidence, non-probability score semantics, non-mutating checkouts and project isolation.
 
-Exact implementation frontier: **MI4 — Family-specific clickable proof windows**.
+MI4 is mechanically accepted on main through PR #1463 / merge `caeaf41256fe9f5d878d78f08374224e571798e4`. UID504 acceptance run `36332851225` proved that each of the five family rows owns its family-scoped exact proof, only Geometry may draw its bound frozen chart, unavailable/identity-only families fail closed, canonical checkouts stayed untouched, project isolation passed and REAL_CAPITAL=0.
+
+Exact implementation frontier: **MI5 — Real desktop/mobile acceptance**.
 
 ## Intelligence Stream V1 final completion acceptance — 2026-09-27
 
