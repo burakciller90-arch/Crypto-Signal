@@ -462,6 +462,8 @@ def _insert_family_surface_fixture(
     path: Path,
     *,
     source_narrative_identity: str,
+    family: str = "order_flow",
+    state_label: str = "mixed",
 ) -> str:
     with sqlite3.connect(path) as connection:
         row = connection.execute(
@@ -485,8 +487,8 @@ def _insert_family_surface_fixture(
         payload.pop("narrative_identity", None)
         payload["schema_version"] = STREAM_FAMILY_NARRATIVE_MESSAGE_SCHEMA_VERSION
         payload["source_kind"] = "deterministic"
-        payload["family"] = "order_flow"
-        payload["state_label"] = "mixed"
+        payload["family"] = family
+        payload["state_label"] = state_label
         family_identity = canonical_sha256(payload)
         encoded = canonical_json({"narrative_identity": family_identity, **payload})
         connection.execute(
@@ -814,6 +816,19 @@ def test_stream_primary_surface_hides_family_telemetry_without_deleting_it(
     assert identities["eth-outcome"] in primary_ids
     assert identities["btc-flow"] in primary_ids
 
+    trust_identity = _insert_family_surface_fixture(
+        path,
+        source_narrative_identity=identities["eth-outcome"],
+        family="event_risk",
+        state_label="event_block",
+    )
+    primary_with_trust = reader.read_messages(
+        StreamMessageQuery(limit=20, primary_surface=True)
+    )
+    assert trust_identity in {
+        item["narrative_identity"] for item in primary_with_trust.items
+    }
+
     family_record = reader.read_message(family_identity)
     assert family_record is not None
     assert (
@@ -869,6 +884,22 @@ def test_stream_api_primary_surface_hides_family_telemetry(
     assert family_identity not in primary_ids
     assert identities["btc-issued"] in primary_ids
     assert identities["btc-flow"] in primary_ids
+
+
+    trust_identity = _insert_family_surface_fixture(
+        stream_path,
+        source_narrative_identity=identities["eth-outcome"],
+        family="provider_quality",
+        state_label="degraded_provider_stale",
+    )
+    primary_after_trust = client.get(
+        "/api/stream/messages",
+        params={"limit": 20, "surface": "primary"},
+    )
+    assert trust_identity in {
+        item["narrative_identity"]
+        for item in primary_after_trust.json()["page"]["items"]
+    }
 
 
 def test_stream_api_exposes_cursor_history_search_and_lookup(tmp_path) -> None:
