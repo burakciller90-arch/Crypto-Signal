@@ -56,6 +56,14 @@ DEFAULT_GAP_LEDGER_DB = Path(
 )
 DEFAULT_MAX_INGESTION_SILENCE_MS = 60_000
 DEFAULT_SYMBOLS = ("BTCUSDT", "ETHUSDT", "SOLUSDT")
+HEARTBEAT_DB_TIMEOUT_SECONDS = 1.0
+HEARTBEAT_DB_RETRY_ATTEMPTS = 3
+HEARTBEAT_DB_RETRY_DELAY_SECONDS = 0.25
+
+
+def _is_transient_sqlite_lock(exc: sqlite3.OperationalError) -> bool:
+    message = str(exc).lower()
+    return "locked" in message or "busy" in message
 
 
 def monitor_ingestion_time(
@@ -317,6 +325,9 @@ async def run(args: argparse.Namespace) -> int:
     normalized_rows_total = baseline_normalized_rows_total
     raw_rows_total = baseline_raw_rows_total
     heartbeat_stop = asyncio.Event()
+    heartbeat_db_retries = 0
+    heartbeat_db_deferrals = 0
+    gap_heartbeat_db_deferrals = 0
 
     def runtime_now_ms() -> int:
         nonlocal runtime_clock_floor_ms
@@ -327,8 +338,12 @@ async def run(args: argparse.Namespace) -> int:
         )
         return runtime_clock_floor_ms
 
-    def emit_heartbeat() -> None:
+    async def emit_heartbeat() -> bool:
         nonlocal heartbeat_sequence
+        nonlocal heartbeat_db_retries
+        nonlocal heartbeat_db_deferrals
+        nonlocal gap_heartbeat_db_deferrals
+
         observed_at_ms = runtime_now_ms()
         heartbeat_sequence += 1
         heartbeat = build_collector_heartbeat(
@@ -340,11 +355,60 @@ async def run(args: argparse.Namespace) -> int:
             normalized_rows_total=normalized_rows_total,
             raw_rows_total=raw_rows_total,
         )
-        runtime_store.append_heartbeat(heartbeat)
-        gap_monitor.check_silence(
-            observed_at_ms=observed_at_ms,
-            source_evidence_identities=(heartbeat.heartbeat_identity,),
-        )
+
+        persisted = False
+        for attempt in range(1, HEARTBEAT_DB_RETRY_ATTEMPTS + 1):
+            try:
+                await asyncio.to_thread(
+                    runtime_store.append_heartbeat,
+                    heartbeat,
+                    timeout_seconds=HEARTBEAT_DB_TIMEOUT_SECONDS,
+                )
+                persisted = True
+                break
+            except sqlite3.OperationalError as exc:
+                if not _is_transient_sqlite_lock(exc):
+                    raise
+                heartbeat_db_retries += 1
+                print(
+                    "MARKET_TAPE_HEARTBEAT_DB_LOCK "
+                    f"sequence={heartbeat.sequence_no} "
+                    f"attempt={attempt} "
+                    f"error={type(exc).__name__}:{exc}",
+                    file=sys.stderr,
+                    flush=True,
+                )
+                if attempt < HEARTBEAT_DB_RETRY_ATTEMPTS:
+                    await asyncio.sleep(HEARTBEAT_DB_RETRY_DELAY_SECONDS)
+
+        if not persisted:
+            heartbeat_db_deferrals += 1
+            print(
+                "MARKET_TAPE_HEARTBEAT_DB_DEFERRED "
+                f"sequence={heartbeat.sequence_no} "
+                f"attempts={HEARTBEAT_DB_RETRY_ATTEMPTS}",
+                file=sys.stderr,
+                flush=True,
+            )
+            return False
+
+        try:
+            gap_monitor.check_silence(
+                observed_at_ms=observed_at_ms,
+                source_evidence_identities=(heartbeat.heartbeat_identity,),
+            )
+        except sqlite3.OperationalError as exc:
+            if not _is_transient_sqlite_lock(exc):
+                raise
+            gap_heartbeat_db_deferrals += 1
+            print(
+                "MARKET_TAPE_GAP_HEARTBEAT_DB_DEFERRED "
+                f"sequence={heartbeat.sequence_no} "
+                f"error={type(exc).__name__}:{exc}",
+                file=sys.stderr,
+                flush=True,
+            )
+        return True
 
     async def heartbeat_loop() -> None:
         interval_seconds = args.heartbeat_interval_ms / 1_000
@@ -355,7 +419,7 @@ async def run(args: argparse.Namespace) -> int:
                     timeout=interval_seconds,
                 )
             except TimeoutError:
-                emit_heartbeat()
+                await emit_heartbeat()
                 continue
             return
 
@@ -409,7 +473,7 @@ async def run(args: argparse.Namespace) -> int:
             source_evidence_identities=(raw_event.event_identity,),
         )
 
-    emit_heartbeat()
+    await emit_heartbeat()
     heartbeat_task = asyncio.create_task(heartbeat_loop())
     stream = BybitSpotMicrostructureStream(
         url=args.bybit_ws_url,
@@ -430,7 +494,7 @@ async def run(args: argparse.Namespace) -> int:
             persisted_event_callback=persist_raw_event,
             collection_progress_callback=persist_collection_progress,
         )
-        emit_heartbeat()
+        await emit_heartbeat()
     except (OSError, sqlite3.Error, ValueError) as exc:
         print(
             "MARKET_TAPE_STREAM_ERROR "
@@ -468,6 +532,9 @@ async def run(args: argparse.Namespace) -> int:
         f"gap_ledger_quick_check={'YES' if gap_ledger.quick_check() else 'NO'} "
         f"gap_silence_policy_ms={args.max_ingestion_silence_ms} "
         f"ingestion_clock_regressions={ingestion_clock_regressions} "
+        f"heartbeat_db_retries={heartbeat_db_retries} "
+        f"heartbeat_db_deferrals={heartbeat_db_deferrals} "
+        f"gap_heartbeat_db_deferrals={gap_heartbeat_db_deferrals} "
         "REAL_CAPITAL=0",
         flush=True,
     )
