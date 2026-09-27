@@ -679,13 +679,54 @@ select {
 
 .family-evidence-row {
   display: grid;
-  grid-template-columns: minmax(120px, 1.2fr) minmax(90px, 0.8fr) minmax(120px, 1fr);
+  grid-template-columns: minmax(120px, 1.2fr) minmax(90px, 0.8fr) minmax(120px, 1fr) 18px;
   align-items: center;
   gap: 10px;
   min-width: 0;
   padding: 10px 12px;
   border-top: 1px solid var(--line);
   background: rgba(255, 255, 255, 0.72);
+}
+
+.family-evidence-action {
+  width: 100%;
+  border-right: 0;
+  border-bottom: 0;
+  border-left: 0;
+  border-radius: 0;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  appearance: none;
+}
+
+.family-evidence-action:hover {
+  background: rgba(239, 247, 255, 0.94);
+}
+
+.family-evidence-action:focus-visible {
+  position: relative;
+  z-index: 1;
+  outline: 2px solid var(--cyan);
+  outline-offset: -2px;
+}
+
+.family-evidence-open {
+  color: var(--indigo);
+  font-size: 17px;
+  font-weight: 850;
+  line-height: 1;
+  text-align: right;
+}
+
+.family-evidence-table-note {
+  margin: 0;
+  padding: 9px 12px 10px;
+  border-top: 1px solid var(--line);
+  color: var(--text-dim);
+  font-size: 9px;
+  line-height: 1.45;
 }
 
 .family-evidence-row:first-child {
@@ -742,6 +783,61 @@ select {
 .family-evidence-row[data-evidence-state="unavailable"] .family-evidence-score,
 .family-evidence-row[data-evidence-state="unavailable"] .family-evidence-status {
   color: var(--text-soft);
+}
+
+
+.family-exact-proof {
+  display: grid;
+  gap: 9px;
+}
+
+.family-exact-domain-list,
+.family-exact-bound-identities {
+  display: grid;
+  gap: 7px;
+}
+
+.family-exact-domain,
+.family-exact-bound-identities > div {
+  display: grid;
+  gap: 4px;
+  padding: 9px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface-soft);
+}
+
+.family-exact-domain > strong,
+.family-exact-bound-identities > span {
+  color: var(--text);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.family-exact-domain > span,
+.family-exact-bound-identities small,
+.family-exact-no-substitution,
+.family-exact-unavailable {
+  color: var(--text-dim);
+  font-size: 9px;
+  line-height: 1.45;
+}
+
+.family-exact-domain[data-resolution-state="READY_EXACT"] > span {
+  color: var(--safe);
+}
+
+.family-exact-domain[data-resolution-state="UNAVAILABLE_EXPLICIT"] > span,
+.family-exact-unavailable {
+  color: var(--risk);
+}
+
+.family-exact-domain code,
+.family-exact-bound-identities code {
+  overflow-wrap: anywhere;
+  color: var(--text-soft);
+  font-family: var(--mono);
+  font-size: 8px;
 }
 
 .depth-muted {
