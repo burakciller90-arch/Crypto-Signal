@@ -193,7 +193,7 @@ def test_mi4_family_rows_open_only_their_exact_fail_closed_proof() -> None:
     assert "evidenceWindowLauncher(record, detail)" not in standard_decision
 
     geometry_guard = script.index('model.kind === "geometry"')
-    geometry_visual = script.index("hydrateFrozenVisualProof(model)")
+    geometry_visual = script.index("void hydrateFrozenVisualProof(model);")
     assert geometry_guard < geometry_visual
 
 
