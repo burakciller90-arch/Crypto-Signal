@@ -167,6 +167,7 @@ function setConnection(kind, label, note) {
 function queryParams({ after = null, before = null, limit = 50 } = {}) {
   const params = new URLSearchParams();
   params.set("limit", String(limit));
+  params.set("include_family_telemetry", "false");
   if (after) params.set("after", after);
   if (before) params.set("before", before);
   if (state.filters.text) params.set("text", state.filters.text);
