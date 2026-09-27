@@ -101,6 +101,7 @@ jobs:
           PY
 
       - name: Upload visual audit artifact
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: crypto-shared-visual-audit-${{ github.run_id }}
