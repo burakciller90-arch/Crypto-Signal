@@ -18,6 +18,7 @@ concurrency:
 
 jobs:
   stream-final-f7-prep:
+    if: github.event_name != 'pull_request' || startsWith(github.head_ref, 'stream/final-f7-')
     runs-on: [self-hosted, crypto-signal, uid504]
     timeout-minutes: 45
     steps:

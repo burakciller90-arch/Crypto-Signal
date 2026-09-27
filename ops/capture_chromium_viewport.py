@@ -223,12 +223,17 @@ def _capture(args: argparse.Namespace) -> dict[str, object]:
                         "const items=[...document.querySelectorAll('.message')];"
                         "const item=items[Math.min(2,Math.max(0,items.length-1))];"
                         "if(!viewport||!item){return {ok:false,reason:'missing_target'};}"
+                        "const button=item.querySelector('.message-summary');"
+                        "if(!button){return {ok:false,reason:'missing_summary'};}"
+                        "if(item.classList.contains('is-expanded')){"
+                        "button.click();"
+                        "await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));"
+                        "await new Promise(r=>setTimeout(r,80));"
+                        "}"
                         "item.scrollIntoView({block:'center'});"
                         "await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));"
                         "const beforeTop=item.getBoundingClientRect().top;"
                         "const beforeScroll=viewport.scrollTop;"
-                        "const button=item.querySelector('.message-summary');"
-                        "if(!button){return {ok:false,reason:'missing_summary'};}"
                         "button.click();"
                         "await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(()=>requestAnimationFrame(r))));"
                         "await new Promise(r=>setTimeout(r,120));"
@@ -602,7 +607,8 @@ def _capture(args: argparse.Namespace) -> dict[str, object]:
                 raise RuntimeError("CDP discovery probe value missing")
             if discovery_probe.get("ok") is not True:
                 raise RuntimeError(f"discovery probe failed: {discovery_probe!r}")
-            if discovery_probe.get("initialExpanded") is not True:
+            initial_message = str(discovery_probe.get("initialMessage", ""))
+            if initial_message and discovery_probe.get("initialExpanded") is not True:
                 raise RuntimeError(f"discovery direct deep-link failed: {discovery_probe!r}")
             query = str(discovery_probe.get("query", ""))
             for expected in (
