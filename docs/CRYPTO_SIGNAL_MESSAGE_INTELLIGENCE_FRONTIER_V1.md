@@ -376,7 +376,7 @@ PASS:
 
 ### MI2 — Guarded natural Turkish layer
 
-Status: **ACTIVE FRONTIER**
+Status: **PASS — accepted on main at `20c1c18c3253254555708e0cbcc0c52cc04ae784`; UID504 acceptance run `36331471395`.**
 
 Goal:
 - feed the local rewriter a fact-locked analyst brief;
@@ -388,6 +388,8 @@ PASS:
 - deterministic fallback still publishes safely.
 
 ### MI3 — Five-family evidence summary UI
+
+Status: **ACTIVE FRONTIER**
 
 Goal:
 - expanded message shows the decision view plus the five weighted family rows.
@@ -486,11 +488,13 @@ MI1 is accepted. Its exact accepted behavior is:
 - historical rows were not rewritten;
 - `REAL_CAPITAL=0`.
 
+MI2 is accepted. The local model remains presentation-only and is now constrained by a deterministic fact-locked analyst brief plus deterministic post-rewrite guards.
+
 The exact next implementation frontier is:
 
-**MI2 — Guarded natural Turkish layer**
+**MI3 — Five-family evidence summary UI**
 
-Before coding MI2, mechanically re-check current `main`, open PRs, runtime state and any newer authority update.
+Before coding MI3, mechanically re-check current `main`, open PRs, runtime state and any newer authority update.
 
 Reuse the existing:
 
