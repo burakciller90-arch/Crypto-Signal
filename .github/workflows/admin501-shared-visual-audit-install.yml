@@ -41,6 +41,8 @@ jobs:
           PY_SRC="$GITHUB_WORKSPACE/tools/visual-audit/galactech_visual_audit.py"
 
           mkdir -p "$ROOT/current" "$BIN"
+          chmod 755 "/Users/Shared/Galactech" "$ROOT" "$ROOT/current" "$BIN"
+          chmod u+w "$ROOT/current/galactech_visual_audit.py" 2>/dev/null || true
           cp "$PY_SRC" "$ROOT/current/galactech_visual_audit.py"
           printf '%s\n' "$GITHUB_SHA" > "$ROOT/current/VERSION"
 
