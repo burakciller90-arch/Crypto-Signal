@@ -1,5 +1,40 @@
 # PROJECT CHRONICLE
 
+## 2026-09-27 — Intelligence Stream V1 final completion accepted
+
+The final deficiency-closure program reached F10 after F0-F9 were mechanically accepted on canonical main.
+
+Binding final state:
+
+`INTELLIGENCE_STREAM_V1_FINAL_COMPLETION_ACCEPTED`
+
+F10 readiness was accepted on UID504 run `36316514519` with:
+- `F0_F9_ACCEPTED=YES`;
+- `READY_FOR_AUTHORITY_MUTATION=YES`;
+- `PREMATURE_FINAL_CLAIMS=0`;
+- `REAL_CAPITAL_ZERO=YES`;
+- canonical Development/Product checkouts unchanged.
+
+The final authority freeze adds:
+- `docs/CRYPTO_SIGNAL_STREAM_V1_FINAL_SOURCE_TO_MESSAGE_LEDGER.md`;
+- `docs/CRYPTO_SIGNAL_STREAM_V1_FINAL_ACCEPTANCE.md`;
+- synchronized READ_FIRST, CURRENT_STATUS and Stream roadmap authority language.
+
+The final source truth remains deliberately narrower than “everything in the repository is live”:
+- Market/Geometry, Liquidity, Order Flow and Derivatives have genuine production Stream projection evidence;
+- Event Risk and Provider/Data Quality/System have genuine production projection evidence;
+- Decision issuance and Outcome runtime paths remain accepted, while the F8 evidence window contained zero genuine Stream events in those classes;
+- three-vault Capital implementation/activation is accepted for the current frontend scope, while natural live Portfolio/Capital proof remains deferred;
+- unsupported standalone On-chain/provider-gated research sources remain explicitly unavailable/research-only.
+
+F9 final real-UI run `36315704622` passed desktop/mobile production acceptance and same-code UI mechanics. Its incoming/unread check did not invent a new market event: canonical read-only SSE resume redelivered genuine persisted production truth with no server mutation.
+
+No historical rich-message backfill, synthetic market activity or scientific-policy loosening was used. No exchange-order or real-money authority was added.
+
+`REAL_CAPITAL=0`.
+
+The Intelligence Stream V1 final completion roadmap has no remaining implementation frontier. Future standalone screens, provider activations and dedicated Portfolio/Capital work are new scope.
+
 ## 2026-09-26 — Final Stream F3 physically live; F4 becomes active
 
 F3 Five-Family Live Intelligence Projection is fully accepted for the source families with exact persistent production truth.
