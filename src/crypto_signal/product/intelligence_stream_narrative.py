@@ -22,8 +22,8 @@ from crypto_signal.product.intelligence_stream_story import StreamChangeSet
 STREAM_NARRATIVE_PLAN_SCHEMA_VERSION = "intelligence-stream-narrative-plan-v1/1"
 STREAM_NARRATIVE_MESSAGE_SCHEMA_VERSION = "intelligence-stream-narrative-message-v1/2"
 STREAM_NARRATIVE_VOICE_VERSION = "crypto-signal-turkish-analyst-v1/1"
-STREAM_NARRATIVE_RENDERER_VERSION = "crypto-signal-deterministic-tr-v1/1"
-STREAM_NARRATIVE_VALIDATOR_VERSION = "crypto-signal-narrative-validator-v1/2"
+STREAM_NARRATIVE_RENDERER_VERSION = "crypto-signal-customer-system-view-tr-v2/1"
+STREAM_NARRATIVE_VALIDATOR_VERSION = "crypto-signal-narrative-validator-v1/3"
 
 COLLAPSED_MAX_CHARS = 420
 SIMPLE_MAX_CHARS = 900
@@ -505,10 +505,19 @@ def validate_stream_narrative(
     ):
         violations.add("uncalibrated_probability_language")
 
-    if view.symbol not in text.collapsed_text:
-        violations.add("collapsed_symbol_missing")
-    if view.timeframe not in text.collapsed_text:
-        violations.add("collapsed_timeframe_missing")
+    collapsed_lowered = text.collapsed_text.casefold()
+    if any(
+        token in collapsed_lowered
+        for token in (
+            "state değişti",
+            "sell_pressure",
+            "buy_pressure",
+            "measured:",
+            "bid_side_liquidity_take_candidate",
+            "ask_side_liquidity_take_candidate",
+        )
+    ) or "→" in text.collapsed_text:
+        violations.add("collapsed_internal_telemetry_language")
 
     return StreamNarrativeValidation(
         valid=not violations,
@@ -527,25 +536,15 @@ def _render_deterministic(
     fact: StreamFactBundle,
     change_set: StreamChangeSet,
 ) -> StreamNarrativeText:
-    opening = _opening_sentence(plan.voice_variant, view)
-    support = _support_sentence(view)
+    collapsed = _customer_system_sentence(view, fact)
     change = _change_sentence(plan, change_set)
     uncertainty = _uncertainty_sentence(view)
-    collapsed_parts = [f"{view.symbol} {view.timeframe}:", opening]
-    if change:
-        collapsed_parts.append(change)
-    if support:
-        collapsed_parts.append(support)
-    if uncertainty:
-        collapsed_parts.append(uncertainty)
-    collapsed = " ".join(collapsed_parts)
 
     simple = " ".join(
         part
         for part in (
-            opening,
+            collapsed,
             change,
-            _simple_condition_sentence(fact),
             uncertainty,
         )
         if part
@@ -571,6 +570,42 @@ def _render_deterministic(
         capital_text=capital,
     )
 
+
+def _customer_system_sentence(
+    view: StreamAnalyticalView,
+    fact: StreamFactBundle,
+) -> str:
+    stance = view.stance.effective_stance
+    if stance is StreamEffectiveStance.RESOLVED:
+        return (
+            "Önceki beklenti sonuçlandı; ilk görüşü geriye dönük değiştirmeden "
+            "sonucu ayrı bir kayıt olarak tutuyorum."
+        )
+    if stance is StreamEffectiveStance.BLOCKED:
+        return (
+            "Risk veya veri koşulu nedeniyle şu anda yeni bir işlem yönü "
+            "üretmiyorum; koşullar temizlenmeden bekliyorum."
+        )
+
+    trigger = _format_zone(fact.trigger_zone.low, fact.trigger_zone.high)
+    if stance is StreamEffectiveStance.WATCH:
+        return (
+            f"Henüz net bir yön teyidi yok; {trigger} tetik bölgesinde ek teyit "
+            "bekliyorum."
+        )
+
+    target = _format_zone(fact.target_zone.low, fact.target_zone.high)
+    invalidation = _format_price(fact.invalidation_price)
+    expectation = (
+        "Yükseliş"
+        if stance is StreamEffectiveStance.BULLISH
+        else "Düşüş"
+    )
+    return (
+        f"{expectation} beklentim var; {trigger} tetik bölgesi çalışırsa "
+        f"{target} hedef bölgesini izliyorum, {invalidation} seviyesi bu görüşün "
+        "geçersizlik sınırı."
+    )
 
 def _opening_sentence(variant: int, view: StreamAnalyticalView) -> str:
     stance = view.stance.effective_stance
