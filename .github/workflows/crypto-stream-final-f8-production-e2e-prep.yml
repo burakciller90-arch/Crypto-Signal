@@ -1,0 +1,248 @@
+name: Crypto Stream Final F8 Production E2E Prep
+
+on:
+  push:
+    branches:
+      - 'stream/final-f8-production-e2e-current'
+  workflow_dispatch:
+    inputs:
+      run_production:
+        description: 'After contract checks, run the read-only audit against the live Product'
+        required: true
+        default: false
+        type: boolean
+      require_complete:
+        description: 'Fail unless all currently required F8 real production classes are present'
+        required: true
+        default: false
+        type: boolean
+      require_capital:
+        description: 'Require a genuine canonical CAPITAL production event'
+        required: true
+        default: false
+        type: boolean
+      observation_start_ms:
+        description: 'Forward-only F8 watermark; final require_complete runs must set this > 0'
+        required: true
+        default: '0'
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: stream-final-f8-production-e2e-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  contract:
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          clean: true
+          fetch-depth: 1
+
+      - name: Verify exact source and preserve Development state
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
+          BASE_PY="$DEV/.venv/bin/python"
+          test "$(id -u)" = "504"
+          test -x "$BASE_PY"
+          test -z "$(git -C "$DEV" status --porcelain)"
+          test "$(git -C "$GITHUB_WORKSPACE" rev-parse HEAD)" = "$GITHUB_SHA"
+          echo "DEV_HEAD_BEFORE=$(git -C "$DEV" rev-parse HEAD)" >> "$RUNNER_TEMP/stream-f8-contract-dev-state"
+          echo "BASE_PY=$BASE_PY" >> "$GITHUB_ENV"
+          echo "F8_UID504_EXACT_SOURCE_PASS=YES"
+
+      - name: F8 additive acceptance contract checks
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: |
+          set -euo pipefail
+          "$BASE_PY" -m py_compile \
+            ops/audit_stream_f8_production_e2e.py \
+            ops/probe_stream_f8_browser.py
+          "$BASE_PY" -m pytest -q tests/test_stream_f8_production_e2e_audit.py
+          "$BASE_PY" -m ruff check \
+            ops/audit_stream_f8_production_e2e.py \
+            ops/probe_stream_f8_browser.py \
+            tests/test_stream_f8_production_e2e_audit.py
+          echo "F8_PREP_CONTRACT_PASS=YES"
+          echo "HISTORICAL_BACKFILL=NO"
+          echo "SYNTHETIC_ACTIVITY=NO"
+          echo "REAL_CAPITAL=0"
+
+      - name: Prove Development checkout remained untouched
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
+          BEFORE="$(sed -n 's/^DEV_HEAD_BEFORE=//p' "$RUNNER_TEMP/stream-f8-contract-dev-state")"
+          AFTER="$(git -C "$DEV" rev-parse HEAD)"
+          test -z "$(git -C "$DEV" status --porcelain)"
+          test "$BEFORE" = "$AFTER"
+          echo "F8_CONTRACT_UID504_NON_MUTATING_PASS=YES"
+
+  production-read-only:
+    if: inputs.run_production == true
+    needs: contract
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          clean: true
+          fetch-depth: 1
+
+      - name: Verify exact source and preserve Development state
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
+          BASE_PY="$DEV/.venv/bin/python"
+          test "$(id -u)" = "504"
+          test -x "$BASE_PY"
+          test -z "$(git -C "$DEV" status --porcelain)"
+          test "$(git -C "$GITHUB_WORKSPACE" rev-parse HEAD)" = "$GITHUB_SHA"
+          echo "DEV_HEAD_BEFORE=$(git -C "$DEV" rev-parse HEAD)" >> "$RUNNER_TEMP/stream-f8-production-dev-state"
+          echo "BASE_PY=$BASE_PY" >> "$GITHUB_ENV"
+          echo "F8_UID504_EXACT_SOURCE_PASS=YES"
+
+      - name: Read-only production API audit
+        shell: bash
+        run: |
+          set -euo pipefail
+          OUT="$RUNNER_TEMP/stream-f8-production-e2e"
+          mkdir -p "$OUT"
+          curl -fsS --max-time 5 http://127.0.0.1:48700/api/health > "$OUT/health.json"
+
+          ARGS=(
+            --base-url http://127.0.0.1:48700
+            --output "$OUT/audit.json"
+            --stream-ledger "/Volumes/Crypto-504/Crypto-Signal/Development/runtime/stream/intelligence_stream.sqlite3"
+          )
+          OBSERVATION_START_MS="${{ inputs.observation_start_ms }}"
+          case "$OBSERVATION_START_MS" in
+            ''|*[!0-9]*)
+              echo "observation_start_ms must be a non-negative integer" >&2
+              exit 64
+              ;;
+          esac
+          if [ "$OBSERVATION_START_MS" -gt 0 ]; then
+            ARGS+=(--min-event-ms "$OBSERVATION_START_MS")
+          fi
+          if [ "${{ inputs.require_complete }}" = "true" ] && [ "$OBSERVATION_START_MS" -le 0 ]; then
+            echo "Final F8 require_complete run requires observation_start_ms > 0" >&2
+            exit 65
+          fi
+          if [ "${{ inputs.require_capital }}" = "true" ]; then
+            ARGS+=(--require-capital)
+          fi
+          if [ "${{ inputs.require_complete }}" = "true" ]; then
+            ARGS+=(--require-complete)
+          fi
+
+          "$BASE_PY" "$GITHUB_WORKSPACE/ops/audit_stream_f8_production_e2e.py" "${ARGS[@]}"
+
+          "$BASE_PY" - "$OUT/audit.json" "$OUT/browser-selection.env" <<'PY'
+          import json
+          import shlex
+          import sys
+          from pathlib import Path
+
+          audit = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+          groups = audit.get("groups", [])
+          preferred = ["market_or_intelligence", "decision", "outcome", "risk_or_system", "capital"]
+          selected = None
+          for name in preferred:
+              for group in groups:
+                  if group.get("name") != name or group.get("status") != "ACCEPTED_CANDIDATE":
+                      continue
+                  representative = group.get("representative")
+                  if not isinstance(representative, dict):
+                      continue
+                  if representative.get("search_text"):
+                      selected = representative
+                      break
+              if selected is not None:
+                  break
+          if selected is None:
+              raise SystemExit("No accepted real production message with searchable exact identity")
+          values = {
+              "F8_BROWSER_ID": selected["narrative_identity"],
+              "F8_BROWSER_CATEGORY": selected["category"],
+              "F8_BROWSER_SEARCH": selected["search_text"],
+          }
+          Path(sys.argv[2]).write_text(
+              "".join(f"{key}={shlex.quote(str(value))}\n" for key, value in values.items()),
+              encoding="utf-8",
+          )
+          PY
+          cat "$OUT/browser-selection.env" >> "$GITHUB_ENV"
+          echo "F8_PRODUCTION_API_AUDIT_COMPLETE=YES"
+
+      - name: Real Product Chromium deep-link and evidence probe
+        shell: bash
+        run: |
+          set -euo pipefail
+          OUT="$RUNNER_TEMP/stream-f8-production-e2e"
+
+          BROWSER=""
+          for candidate in \
+            "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" \
+            "/Applications/Chromium.app/Contents/MacOS/Chromium" \
+            "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge" \
+            "/Applications/Google Chrome Canary.app/Contents/MacOS/Google Chrome Canary"; do
+            if [ -x "$candidate" ]; then
+              BROWSER="$candidate"
+              break
+            fi
+          done
+          test -n "$BROWSER"
+
+          export PYTHONPATH="$GITHUB_WORKSPACE/ops:$GITHUB_WORKSPACE/src:$GITHUB_WORKSPACE"
+          "$BASE_PY" "$GITHUB_WORKSPACE/ops/probe_stream_f8_browser.py" \
+            --browser "$BROWSER" \
+            --base-url http://127.0.0.1:48700 \
+            --narrative-identity "$F8_BROWSER_ID" \
+            --category "$F8_BROWSER_CATEGORY" \
+            --search-text "$F8_BROWSER_SEARCH" \
+            --output "$OUT/browser.json" \
+            --screenshot "$OUT/browser.png" \
+            --width 1440 \
+            --height 1000
+
+          test -s "$OUT/browser.json"
+          test -s "$OUT/browser.png"
+          echo "F8_PRODUCTION_REAL_BROWSER_COMPLETE=YES"
+          echo "HISTORICAL_BACKFILL=NO"
+          echo "SYNTHETIC_ACTIVITY=NO"
+          echo "REAL_CAPITAL=0"
+
+      - name: Upload F8 production acceptance preparation artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stream-final-f8-production-e2e-${{ github.run_id }}
+          path: ${{ runner.temp }}/stream-f8-production-e2e
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Prove Development checkout remained untouched
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
+          BEFORE="$(sed -n 's/^DEV_HEAD_BEFORE=//p' "$RUNNER_TEMP/stream-f8-production-dev-state")"
+          AFTER="$(git -C "$DEV" rev-parse HEAD)"
+          test -z "$(git -C "$DEV" status --porcelain)"
+          test "$BEFORE" = "$AFTER"
+          echo "F8_PRODUCTION_UID504_NON_MUTATING_PASS=YES"
