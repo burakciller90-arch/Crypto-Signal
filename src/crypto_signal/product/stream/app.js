@@ -558,18 +558,16 @@ function currentViewSummary(analytical, fact) {
   return wrap;
 }
 
-function familyEvidenceSummaryTable(fact) {
+function familyEvidenceSummaryTable(record, detail) {
+  const fact = detail && typeof detail.fact_bundle === "object" ? detail.fact_bundle : {};
   const table = document.createElement("div");
   table.className = "family-evidence-table";
-  table.setAttribute("role", "table");
   table.setAttribute("aria-label", "Beş kanıt ailesi");
 
   const header = document.createElement("div");
   header.className = "family-evidence-row family-evidence-header";
-  header.setAttribute("role", "row");
   for (const headingText of ["KANIT", "KATKI", "DURUM"]) {
     const heading = document.createElement("span");
-    heading.setAttribute("role", "columnheader");
     heading.textContent = headingText;
     header.append(heading);
   }
@@ -578,34 +576,66 @@ function familyEvidenceSummaryTable(fact) {
   for (const config of DECISION_EVIDENCE_FAMILIES) {
     const contribution = decisionEvidenceContribution(fact, config);
     const presentation = familyEvidencePresentation(contribution, config);
-    const row = document.createElement("div");
-    row.className = "family-evidence-row";
+    const row = document.createElement("button");
+    row.type = "button";
+    row.className = "family-evidence-row family-evidence-open";
     row.dataset.family = config.evidenceKind;
     row.dataset.evidenceState = presentation.state;
-    row.setAttribute("role", "row");
+    row.setAttribute(
+      "aria-label",
+      `${config.label}: ${presentation.score}, ${presentation.status}. Kanıt penceresini aç.`
+    );
 
     const label = document.createElement("strong");
-    label.setAttribute("role", "cell");
     label.textContent = config.label;
 
     const score = document.createElement("span");
     score.className = "family-evidence-score";
-    score.setAttribute("role", "cell");
     score.textContent = presentation.score;
 
     const status = document.createElement("span");
     status.className = "family-evidence-status";
-    status.setAttribute("role", "cell");
     status.textContent = presentation.status;
 
-    row.append(label, score, status);
+    const cue = document.createElement("span");
+    cue.className = "family-evidence-cue";
+    cue.setAttribute("aria-hidden", "true");
+    cue.textContent = "›";
+
+    row.append(label, score, status, cue);
+    row.addEventListener("click", (event) => {
+      event.stopPropagation();
+      openEvidenceWindow(record, detail, config.evidenceKind);
+    });
     table.append(row);
   }
   return table;
 }
 
 function evidenceFamilyGrid(fact) {
-  return familyEvidenceSummaryTable(fact);
+  const syntheticDetail = { fact_bundle: fact };
+  const table = document.createElement("div");
+  table.className = "family-evidence-table family-evidence-table-readonly";
+  for (const config of DECISION_EVIDENCE_FAMILIES) {
+    const contribution = decisionEvidenceContribution(fact, config);
+    const presentation = familyEvidencePresentation(contribution, config);
+    const row = document.createElement("div");
+    row.className = "family-evidence-row";
+    row.dataset.evidenceState = presentation.state;
+
+    const label = document.createElement("strong");
+    label.textContent = config.label;
+    const score = document.createElement("span");
+    score.className = "family-evidence-score";
+    score.textContent = presentation.score;
+    const status = document.createElement("span");
+    status.className = "family-evidence-status";
+    status.textContent = presentation.status;
+    row.append(label, score, status);
+    table.append(row);
+  }
+  void syntheticDetail;
+  return table;
 }
 
 function geometryGrid(fact) {
@@ -1941,7 +1971,7 @@ function buildExpandedContent(record, detail) {
       }),
       depthSection("5 KANIT AİLESİ", "", {
         className: "depth-intelligence depth-wide",
-        content: familyEvidenceSummaryTable(fact),
+        content: familyEvidenceSummaryTable(record, detail),
       })
     );
     return decisionGrid;
