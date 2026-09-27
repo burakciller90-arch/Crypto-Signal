@@ -3,6 +3,39 @@
 (() => {
   const SVG_NS = "http://www.w3.org/2000/svg";
 
+  const FAMILY_PROOF_CONFIG = Object.freeze({
+    geometry: Object.freeze({
+      label: "Geometri",
+      aliases: Object.freeze(["geometry", "geometry_pa_elliott_harmonic"]),
+      domains: Object.freeze(["frozen_chart", "consumed_candles"]),
+      visual: true,
+    }),
+    liquidity: Object.freeze({
+      label: "Likidite",
+      aliases: Object.freeze(["liquidity"]),
+      domains: Object.freeze(["liquidity_map", "liquidation_map"]),
+      visual: false,
+    }),
+    order_flow: Object.freeze({
+      label: "Emir Akışı",
+      aliases: Object.freeze(["order_flow", "order_flow_absorption"]),
+      domains: Object.freeze(["order_book", "order_flow_cvd"]),
+      visual: false,
+    }),
+    derivatives: Object.freeze({
+      label: "Türevler",
+      aliases: Object.freeze(["derivatives"]),
+      domains: Object.freeze(["derivatives"]),
+      visual: false,
+    }),
+    onchain: Object.freeze({
+      label: "On-chain",
+      aliases: Object.freeze(["onchain", "onchain_smart_money"]),
+      domains: Object.freeze(["onchain"]),
+      visual: false,
+    }),
+  });
+
   function text(value, fallback = "—") {
     if (value === null || value === undefined || value === "") return fallback;
     return String(value);
@@ -318,8 +351,12 @@
     return "UNAVAILABLE_EXPLICIT";
   }
 
-  function renderDomainManifest(payload) {
-    const domains = Array.isArray(payload?.domain_evidence) ? payload.domain_evidence : [];
+  function renderDomainManifest(payload, allowedDomains = null) {
+    const allDomains = Array.isArray(payload?.domain_evidence) ? payload.domain_evidence : [];
+    const allowed = Array.isArray(allowedDomains) ? new Set(allowedDomains) : null;
+    const domains = allowed
+      ? allDomains.filter((domain) => allowed.has(text(domain?.domain, "")))
+      : allDomains;
     const section = proofSection(
       "EVIDENCE DOMAINS",
       "Görsel payload yalnız exact bound store varsa çizilir; identity-only kanıt current data ile yeniden kurulmaz."
@@ -359,6 +396,137 @@
     }
     section.append(grid);
     return section;
+  }
+
+  function familyContributionForProof(payload, config, explicitContribution = null) {
+    if (explicitContribution && typeof explicitContribution === "object") {
+      return explicitContribution;
+    }
+    const families = Array.isArray(payload?.score_components?.family_contributions)
+      ? payload.score_components.family_contributions
+      : [];
+    return families.find((item) =>
+      config.aliases.includes(text(item?.family, "").toLowerCase())
+    ) || null;
+  }
+
+  function familyProofResolution(payload, config, contribution) {
+    const domains = Array.isArray(payload?.domain_evidence)
+      ? payload.domain_evidence.filter((domain) =>
+          config.domains.includes(text(domain?.domain, ""))
+        )
+      : [];
+    const states = domains.map(canonicalResolutionState);
+    if (
+      config.visual
+      && payload?.status === "ready"
+      && states.includes("READY_EXACT")
+    ) {
+      return "READY_EXACT";
+    }
+    if (states.includes("READY_EXACT")) return "READY_EXACT";
+    const refs = Array.isArray(contribution?.source_evidence_identities)
+      ? contribution.source_evidence_identities
+      : [];
+    if (states.includes("IDENTITY_ONLY_EXACT") || refs.length) {
+      return "IDENTITY_ONLY_EXACT";
+    }
+    return "UNAVAILABLE_EXPLICIT";
+  }
+
+  function familyProofIdentitySection(payload, config, contribution) {
+    const section = proofSection(
+      "EXACT KANIT KİMLİKLERİ",
+      "Yalnız bu kanıt ailesine bağlı persisted kimlikler gösterilir."
+    );
+    const identities = new Set(
+      Array.isArray(contribution?.source_evidence_identities)
+        ? contribution.source_evidence_identities
+        : []
+    );
+    const domains = Array.isArray(payload?.domain_evidence)
+      ? payload.domain_evidence
+      : [];
+    for (const domain of domains) {
+      if (!config.domains.includes(text(domain?.domain, ""))) continue;
+      for (const identity of Array.isArray(domain?.evidence_identities)
+        ? domain.evidence_identities
+        : []) {
+        identities.add(identity);
+      }
+    }
+    if (!identities.size) {
+      const note = document.createElement("p");
+      note.textContent =
+        "Bu aile için exact source identity yok; kanıt uydurulmadı.";
+      section.append(note);
+      return section;
+    }
+    const list = document.createElement("div");
+    list.className = "frozen-proof-identities";
+    for (const identity of [...identities].slice(0, 12)) {
+      const code = document.createElement("code");
+      code.textContent = identity;
+      list.append(code);
+    }
+    section.append(list);
+    return section;
+  }
+
+  function renderFamilyFrozenProof(
+    payload,
+    { kind, contribution = null } = {}
+  ) {
+    const config = FAMILY_PROOF_CONFIG[kind];
+    if (!config) return renderFrozenVisualProof(payload);
+
+    const familyContribution = familyContributionForProof(
+      payload,
+      config,
+      contribution
+    );
+    const resolution = familyProofResolution(
+      payload,
+      config,
+      familyContribution
+    );
+    const root = document.createElement("article");
+    root.className = "frozen-visual-proof family-frozen-proof";
+    root.dataset.visualProofStatus = text(payload?.status, "unavailable");
+    root.dataset.familyKind = kind;
+    root.dataset.resolutionState = resolution;
+    root.dataset.narrativeIdentity = text(payload?.narrative_identity, "");
+
+    const head = document.createElement("header");
+    head.className = "frozen-proof-head";
+    const copy = document.createElement("div");
+    const eyebrow = document.createElement("span");
+    eyebrow.textContent = "AİLEYE ÖZGÜ KANIT · POINT-IN-TIME";
+    const title = document.createElement("strong");
+    title.textContent = `${config.label} · Exact kanıt`;
+    copy.append(eyebrow, title);
+    const badge = document.createElement("span");
+    badge.className = "frozen-proof-badge";
+    badge.textContent = resolution;
+    head.append(copy, badge);
+    root.append(head);
+
+    const stateCopy =
+      resolution === "READY_EXACT"
+        ? "Bu aile için exact frozen görsel/persisted kanıt çözüldü."
+        : resolution === "IDENTITY_ONLY_EXACT"
+          ? "Exact kanıt kimliği var; bu aile için bound görsel payload yok. Current data ile çizim yapılmadı."
+          : "Bu aile için exact görsel/identity kanıtı mevcut değil. Current data ile ikame yapılmadı.";
+    root.append(proofSection("KANIT DURUMU", stateCopy));
+
+    if (config.visual && resolution === "READY_EXACT") {
+      root.append(renderChart(payload), renderProvenance(payload));
+    }
+    root.append(
+      familyProofIdentitySection(payload, config, familyContribution),
+      renderDomainManifest(payload, config.domains)
+    );
+    return root;
   }
 
   function renderFrozenVisualProof(payload) {
@@ -510,10 +678,12 @@
           ["order_flow", 65, 18],
           ["derivatives", 44, 31],
           ["onchain", 36, 22],
-        ].map(([family, support, opposition]) => ({
+        ].map(([family, support, opposition], index) => ({
           family,
           support_points: support,
           opposition_points: opposition,
+          source_evidence_identities:
+            family === "onchain" ? [] : [identity(970 + index)],
         })),
       },
       domain_evidence: [
@@ -522,6 +692,8 @@
         ["order_book", "identity_only", identity(942)],
         ["liquidity_map", "identity_only", identity(943)],
         ["order_flow_cvd", "identity_only", identity(944)],
+        ["derivatives", "identity_only", identity(945)],
+        ["liquidation_map", "identity_only", identity(946)],
         ["onchain", "unavailable", null],
       ].map(([domain, visual_state, evidenceIdentity], index) => ({
         slice_identity: identity(950 + index),
@@ -546,6 +718,7 @@
 
   window.CryptoSignalVisualProof = Object.freeze({
     renderFrozenVisualProof,
+    renderFamilyFrozenProof,
     fixtureVisualProof,
   });
 })();

@@ -144,6 +144,57 @@ def test_mi3_default_decision_detail_is_compact_five_family_summary() -> None:
     assert '[data-evidence-state="unavailable"]' in css
 
 
+def test_mi4_each_family_row_owns_its_exact_proof_window() -> None:
+    script = (STREAM_DIR / "app.js").read_text(encoding="utf-8")
+    css = (STREAM_DIR / "app.css").read_text(encoding="utf-8")
+    detached = (STREAM_DIR / "evidence.js").read_text(encoding="utf-8")
+    renderer = (STREAM_DIR / "visual_proof.js").read_text(encoding="utf-8")
+
+    assert 'document.createElement(interactive ? "button" : "div")' in script
+    assert "family-evidence-action" in script
+    assert "data.evidenceKind" not in script
+    assert "row.dataset.evidenceKind = config.evidenceKind" in script
+    assert "openEvidenceWindow(record, detail, config.evidenceKind)" in script
+    assert "kanıtını aç" in script
+    assert ".family-evidence-action:focus-visible" in css
+
+    for kind in ("geometry", "liquidity", "order_flow", "derivatives", "onchain"):
+        assert f'evidenceKind: "{kind}"' in script
+
+    assert "familyEvidenceExplanation" in script
+    assert "BU MESAJDA NE ANLAMA GELİYOR?" in script
+    assert "current data ile kanıt uydurulmadı" in script
+    assert "renderFamilyFrozenProof" in script
+    assert "renderFamilyFrozenProof" in detached
+    assert "renderFamilyFrozenProof" in renderer
+    assert "FAMILY_PROOF_CONFIG" in renderer
+
+    # Only Geometry is allowed to claim the bound frozen chart.
+    assert 'geometry: Object.freeze({' in renderer
+    assert "visual: true" in renderer
+    assert renderer.count("visual: true") == 1
+    assert 'domains: Object.freeze(["frozen_chart", "consumed_candles"])' in renderer
+    assert 'domains: Object.freeze(["liquidity_map", "liquidation_map"])' in renderer
+    assert 'domains: Object.freeze(["order_book", "order_flow_cvd"])' in renderer
+    assert 'domains: Object.freeze(["derivatives"])' in renderer
+    assert 'domains: Object.freeze(["onchain"])' in renderer
+    for state in ("READY_EXACT", "IDENTITY_ONLY_EXACT", "UNAVAILABLE_EXPLICIT"):
+        assert state in renderer
+
+    # Canonical five-family decision detail returns before the legacy generic launcher.
+    decision_start = script.index("if (hasDecisionEvidenceMatrix(fact))")
+    decision_return = script.index("return decisionGrid;", decision_start)
+    generic_launcher = script.index("evidenceWindowLauncher(record, detail)", decision_start)
+    assert decision_return < generic_launcher
+
+    # Detached proof uses canonical aliases and remains fail-closed.
+    assert '"order_flow_absorption"' in detached
+    assert '"onchain_smart_money"' in detached
+    assert "familyExplanation" in detached
+    assert "UNAVAILABLE_EXPLICIT" in renderer
+    assert "Current data ile ikame yapılmadı" in renderer
+
+
 def test_stream_s9_evidence_window_manager_contract() -> None:
     html = (STREAM_DIR / "index.html").read_text(encoding="utf-8")
     script = (STREAM_DIR / "app.js").read_text(encoding="utf-8")

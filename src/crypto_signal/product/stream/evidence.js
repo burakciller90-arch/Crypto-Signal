@@ -5,11 +5,41 @@ const narrativeIdentity = params.get("narrative") || "";
 const kind = params.get("kind") || "";
 
 const KIND_CONFIG = Object.freeze({
-  liquidity: { label: "Likidite", family: "liquidity", concept: "liquidity_sweep" },
-  order_flow: { label: "Emir Akışı", family: "order_flow", concept: "cvd" },
-  derivatives: { label: "Türevler", family: "derivatives", concept: "liquidation_heatmap" },
-  onchain: { label: "On-chain", family: "onchain", concept: null },
-  geometry: { label: "Geometri", family: "geometry", concept: "invalidation" },
+  liquidity: {
+    label: "Likidite",
+    family: "liquidity",
+    aliases: Object.freeze(["liquidity"]),
+    weight: 25,
+    concept: "liquidity_sweep",
+  },
+  order_flow: {
+    label: "Emir Akışı",
+    family: "order_flow_absorption",
+    aliases: Object.freeze(["order_flow_absorption", "order_flow"]),
+    weight: 25,
+    concept: "cvd",
+  },
+  derivatives: {
+    label: "Türevler",
+    family: "derivatives",
+    aliases: Object.freeze(["derivatives"]),
+    weight: 15,
+    concept: "liquidation_heatmap",
+  },
+  onchain: {
+    label: "On-chain",
+    family: "onchain_smart_money",
+    aliases: Object.freeze(["onchain_smart_money", "onchain"]),
+    weight: 15,
+    concept: null,
+  },
+  geometry: {
+    label: "Geometri",
+    family: "geometry_pa_elliott_harmonic",
+    aliases: Object.freeze(["geometry_pa_elliott_harmonic", "geometry"]),
+    weight: 20,
+    concept: "invalidation",
+  },
   decision: { label: "Karar", family: null, concept: "agreement_vs_probability" },
   capital: { label: "Sermaye", family: null, concept: "paper_trading" },
   event_risk: { label: "Event Risk", family: null, concept: "abstain" },
@@ -66,63 +96,58 @@ function section(label, body) {
   return node;
 }
 
-function familyContribution(fact, family) {
+function familyContribution(fact, config) {
   const items = Array.isArray(fact?.family_contributions) ? fact.family_contributions : [];
-  return items.find((item) => item && item.family === family) || null;
+  const aliases = Array.isArray(config?.aliases) ? config.aliases : [];
+  return items.find((item) =>
+    item && aliases.includes(text(item.family, "").toLowerCase())
+  ) || null;
+}
+
+function familyExplanation(config, fact) {
+  const contribution = familyContribution(fact, config);
+  const state = text(contribution?.state, "").toLowerCase();
+  if (!contribution || ["no_evidence", "not_evaluable"].includes(state)) {
+    return `${config.label} için bu mesajda kabul edilmiş exact kanıt yok. Yönlü katkı üretilmedi ve current data ile kanıt uydurulmadı.`;
+  }
+  if (state === "abstain") {
+    return `${config.label} ölçüldü ancak bu mesajda yönlü katkı üretmedi.`;
+  }
+  const support = Number(contribution?.support_points);
+  const opposition = Number(contribution?.opposition_points);
+  const safeSupport = Number.isFinite(support) ? support : 0;
+  const safeOpposition = Number.isFinite(opposition) ? opposition : 0;
+  let sentence;
+  if (safeSupport > safeOpposition && safeSupport > 0) {
+    sentence = `${config.label}, mevcut karar yönünü ${number(safeSupport)} / ${number(config.weight)} puanla destekliyor.`;
+  } else if (safeOpposition > safeSupport && safeOpposition > 0) {
+    sentence = `${config.label}, mevcut karar yönüne ${number(safeOpposition)} / ${number(config.weight)} puanlık karşı ağırlık taşıyor.`;
+  } else {
+    sentence = `${config.label} ölçüldü ancak bu mesajda yönlü katkı üretmedi.`;
+  }
+  if (Number(contribution?.material_conflict_count) > 0) {
+    sentence += " Bu ailede ayrıca persisted çelişki kaydı var.";
+  }
+  return sentence;
 }
 
 function exactWhy(config, detail) {
   const fact = detail?.fact_bundle || {};
   const analytical = detail?.analytical_view || {};
-  if (kind === "geometry") {
-    content.append(
-      section(
-        "Trade geometry",
-        `Tetik ${number(fact?.trigger_zone?.low)}–${number(
-          fact?.trigger_zone?.high
-        )} · hedef ${number(fact?.target_zone?.low)}–${number(
-          fact?.target_zone?.high
-        )} · geçersizleşme ${number(fact?.invalidation_price)}`
-      )
-    );
-    const contribution = familyContribution(fact, "geometry");
-    if (contribution) {
-      content.append(
-        section(
-          "Geometry contribution",
-          `Destek +${number(contribution.support_points, "0")} / karşıt -${number(
-            contribution.opposition_points,
-            "0"
-          )} · ${text(contribution.state)}`
-        )
-      );
-    }
-  } else if (config.family) {
-    const contribution = familyContribution(fact, config.family);
-    if (!contribution) return "Bu mesajda bu aile için persisted katkı bulunmuyor.";
-    return `Bu mesajda destek ${number(contribution.support_points, "0")}, karşıt ${number(
-      contribution.opposition_points,
-      "0"
-    )}. Pencere yalnız bu exact message snapshot içindeki katkıyı gösterir.`;
-  }
-  if (kind === "geometry") {
-    return `Tetik ${number(fact?.trigger_zone?.low)}–${number(
-      fact?.trigger_zone?.high
-    )}; geçersizleşme ${number(fact?.invalidation_price)}. Bu seviyeler mesaj yayınlandığı andaki persisted geometridir.`;
-  }
+  if (config.family) return familyExplanation(config, fact);
   if (kind === "decision") {
-    return `Effective stance: ${text(analytical?.stance?.effective_stance)}; sonraki koşul: ${text(
+    return `Karar durumu ${text(analytical?.stance?.effective_stance)}; sonraki koşul ${text(
       analytical?.next_condition?.state
     )}. Pencere bu kararın exact lineage'ını korur.`;
   }
   if (kind === "capital") {
-    return `Capital consequence: ${text(
+    return `Sanal sermaye sonucu ${text(
       analytical?.capital_consequence?.state,
       "not_bound"
     )}. REAL_CAPITAL=0; bu yalnız sanal/analitik sermaye bağlamıdır.`;
   }
   if (kind === "event_risk") {
-    return `Event context: ${text(fact?.event_context_state)}. Bu durum kararın event-risk bağlamını gösterir; yeni haber yorumu üretmez.`;
+    return `Event Risk durumu ${text(fact?.event_context_state)}. Bu persisted bağlamdır; yeni haber yorumu üretmez.`;
   }
   if (kind === "proof") {
     return `Forecast ${text(fact?.forecast_identity).slice(0, 12)}… ve proof ${text(
@@ -147,33 +172,40 @@ function renderCore(config, detail) {
   content.append(summary);
 
   if (config.family) {
-    const contribution = familyContribution(fact, config.family);
-    if (contribution) {
+    const contribution = familyContribution(fact, config);
+    content.append(
+      section(
+        "BU MESAJDA NE ANLAMA GELİYOR?",
+        familyExplanation(config, fact)
+      )
+    );
+    if (kind === "geometry") {
       content.append(
         section(
-          "Persisted aile katkısı",
-          `Destek +${number(contribution.support_points, "0")} / karşıt -${number(
-            contribution.opposition_points,
-            "0"
-          )} · durum ${text(contribution.state)} · yön ${text(contribution.direction)}`
+          "Exact trade geometry",
+          `Tetik ${number(fact?.trigger_zone?.low)}–${number(
+            fact?.trigger_zone?.high
+          )} · hedef ${number(fact?.target_zone?.low)}–${number(
+            fact?.target_zone?.high
+          )} · geçersizleşme ${number(fact?.invalidation_price)}`
         )
       );
-      const refs = Array.isArray(contribution.source_evidence_identities)
-        ? contribution.source_evidence_identities
-        : [];
-      const refsSection = section(
-        "Exact source evidence identities",
-        refs.length ? `${refs.length} kaynak identity bağlı.` : "Bu aile için source evidence identity listesi yok."
-      );
-      for (const ref of refs) {
-        const code = document.createElement("code");
-        code.textContent = ref;
-        refsSection.append(code);
-      }
-      content.append(refsSection);
-    } else {
-      content.append(section("Persisted aile katkısı", "Bu exact mesajda bu aile için katkı kaydı yok."));
     }
+    const refs = Array.isArray(contribution?.source_evidence_identities)
+      ? contribution.source_evidence_identities
+      : [];
+    const refsSection = section(
+      "EXACT SOURCE EVIDENCE",
+      refs.length
+        ? `${refs.length} persisted source identity bu aileye bağlı.`
+        : "Bu aile için exact source identity yok; veri uydurulmadı."
+    );
+    for (const ref of refs) {
+      const code = document.createElement("code");
+      code.textContent = ref;
+      refsSection.append(code);
+    }
+    content.append(refsSection);
   } else if (kind === "decision") {
     content.append(
       section(
@@ -429,10 +461,17 @@ async function renderDetachedExactEvidence() {
   content.append(renderExactEvidenceManifest(exactEvidence));
 }
 
-async function renderDetachedFrozenVisualProof() {
-  if (!["proof", "geometry"].includes(kind) || !content) return;
-  const renderer = window.CryptoSignalVisualProof?.renderFrozenVisualProof;
-  if (typeof renderer !== "function") return;
+async function renderDetachedFrozenVisualProof(detail) {
+  if (!content) return;
+  const config = KIND_CONFIG[kind];
+  const isFamily = Boolean(config?.family);
+  if (!isFamily && kind !== "proof") return;
+
+  const fullRenderer = window.CryptoSignalVisualProof?.renderFrozenVisualProof;
+  const familyRenderer = window.CryptoSignalVisualProof?.renderFamilyFrozenProof;
+  if (kind === "proof" && typeof fullRenderer !== "function") return;
+  if (isFamily && typeof familyRenderer !== "function") return;
+
   let visualProof;
   try {
     const payload = await fetchJson(
@@ -454,7 +493,16 @@ async function renderDetachedFrozenVisualProof() {
     };
   }
   content.querySelector(".frozen-visual-proof")?.remove();
-  content.prepend(renderer(visualProof));
+  if (isFamily) {
+    content.prepend(
+      familyRenderer(visualProof, {
+        kind,
+        contribution: familyContribution(detail?.fact_bundle || {}, config),
+      })
+    );
+  } else {
+    content.prepend(fullRenderer(visualProof));
+  }
 }
 
 async function init() {
@@ -486,8 +534,10 @@ async function init() {
     }
     if (content) content.replaceChildren();
     renderCore(config, payload.detail);
-    await renderDetachedExactEvidence();
-    await renderDetachedFrozenVisualProof();
+    if (!config.family) {
+      await renderDetachedExactEvidence();
+    }
+    await renderDetachedFrozenVisualProof(payload.detail);
   } catch {
     if (content) {
       content.replaceChildren();
