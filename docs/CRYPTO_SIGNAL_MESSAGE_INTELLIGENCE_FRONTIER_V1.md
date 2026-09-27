@@ -416,7 +416,7 @@ PASS:
 
 ### MI5 — Real desktop/mobile acceptance
 
-Status: **PASS — implementation main `93d9b1edfaf0267b6873f3aaaa2eb9e6dd455af0`; Product deploy run `36337341847`; final post-deploy UID504 browser acceptance run `36338498776`.**
+Status: **PASS — implementation main `93d9b1edfaf0267b6873f3aaaa2eb9e6dd455af0`; Product deploy run `36337341847`; final post-deploy UID504 browser acceptance run `36338498776`; exact forward-only live SSE run `36339042617`.**
 
 Goal:
 - verify live Product behavior with real new Stream messages.

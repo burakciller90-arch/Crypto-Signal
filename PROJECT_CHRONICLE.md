@@ -29,6 +29,8 @@ A natural post-deploy live cycle produced `system_view_updated` rows. Final UID5
 
 Artifact: `message-intelligence-mi5-probe-36338498776`, id `10937634080`, digest `sha256:8cb546390232c22321e0e33334bd50c78f36cb48580b4258c2d532221aeb3909`.
 
+A final independent UID501 SSE gate, run `36339042617`, then closed the remaining live-delivery criterion without replay: it captured the newest primary cursor, waited for a strictly newer event, and received natural BTC `system_view_updated` narrative `4ee2fcdf74509834ff998ec6cdcd38f362528046749d160076fd3c60081fdb94` after 72.592 seconds. The delivered sentence contained no raw family-state vocabulary, retained the five-family system-view contract, carried no production authority and kept `REAL_CAPITAL=0`.
+
 Canonical final authority: `docs/CRYPTO_SIGNAL_MESSAGE_INTELLIGENCE_FINAL_ACCEPTANCE.md`.
 
 Final status: **MESSAGE_INTELLIGENCE_FAMILY_EVIDENCE_UX_V1_ACCEPTED**.

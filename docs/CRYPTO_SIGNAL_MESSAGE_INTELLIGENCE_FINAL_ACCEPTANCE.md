@@ -133,9 +133,23 @@ Accepted MI2 behavior:
   - rollback not triggered;
   - `REAL_CAPITAL=0`.
 
-### Natural live production proof
+### Natural live production + SSE proof
 
 A natural supervisor/live-family cycle after deploy produced forward-only `system_view_updated` rows for live symbols. A separate UID501 read-only Product probe confirmed live Product API delivery after deployment.
+
+The remaining SSE-specific criterion was then closed by exact UID501 run `36339042617`. That run:
+- read the then-newest primary Stream cursor as its baseline;
+- opened the canonical read-only `/api/stream/live?surface=primary` SSE transport from that cursor;
+- rejected replay/non-forward records;
+- waited for a strictly newer natural `system_view_updated`;
+- received BTC narrative `4ee2fcdf74509834ff998ec6cdcd38f362528046749d160076fd3c60081fdb94` after 72.592 seconds;
+- received customer copy: “Bitcoin için kanıt dengesi yükseliş yönüne eğiliyor; exact tetik/hedef koşulu olmadığı için fiyat hedefi vermiyorum. Veri güveni tam olmadığı için bu görünümün teyit gücü azaltıldı.”;
+- proved five family contributions, `weighted_directional_family_vote_not_probability`, no raw family-state vocabulary, `production_authority=false`, and `REAL_CAPITAL=0`.
+
+Markers:
+- `MI5_LIVE_SSE_FORWARD_ONLY_PASS=YES`;
+- `MI5_LIVE_SSE_NEW_PRESENTATION_PASS=YES`;
+- `REAL_CAPITAL=0`.
 
 No historical system-view backfill was used.
 
