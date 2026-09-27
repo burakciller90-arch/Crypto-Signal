@@ -188,7 +188,7 @@ jobs:
           BROWSER="$(sed -n 's/^BROWSER=//p' "$OUT/checkouts.txt")"
           test -n "$BROWSER"
 
-          "$PY" "$GITHUB_WORKSPACE/ops/capture_chromium_viewport.py"             --browser "$BROWSER"             --url "$BASE_URL/?fixture=expanded"             --output "$OUT/desktop-expanded.png"             --metrics-out "$OUT/desktop-expanded.json"             --width 1440 --height 1000             --require-no-horizontal-overflow             --probe-expansion-anchor
+          "$PY" "$GITHUB_WORKSPACE/ops/capture_chromium_viewport.py"             --browser "$BROWSER"             --url "$BASE_URL/?fixture=mixed"             --output "$OUT/desktop-expanded.png"             --metrics-out "$OUT/desktop-expanded.json"             --width 1440 --height 1000             --require-no-horizontal-overflow             --probe-expansion-anchor
 
           "$PY" "$GITHUB_WORKSPACE/ops/capture_chromium_viewport.py"             --browser "$BROWSER"             --url "$BASE_URL/?fixture=windows"             --output "$OUT/desktop-windows.png"             --metrics-out "$OUT/desktop-windows.json"             --width 1440 --height 1000             --require-no-horizontal-overflow             --probe-window-manager
 
