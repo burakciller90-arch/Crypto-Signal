@@ -1,0 +1,543 @@
+name: Crypto Message Intelligence MI5 Probe UID504
+
+on:
+  push:
+    branches:
+      - 'feat/message-intelligence-mi5-*'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'src/crypto_signal/product/intelligence_stream_read_model.py'
+      - 'tests/test_intelligence_stream_read_model.py'
+      - 'ops/probe_message_intelligence_mi5_browser.py'
+      - '.github/workflows/crypto-message-intelligence-mi5-probe-uid504.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: crypto-message-intelligence-mi5-probe-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  live-readonly-probe:
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+
+      - name: Start exact-head ephemeral Product on real runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          DEV="$ROOT/Development"
+          PRODUCT="$ROOT/Product"
+          RUNTIME="$DEV/runtime"
+          BASE_PY="$DEV/.venv/bin/python"
+          VENV="$RUNNER_TEMP/mi5-probe-venv"
+          PORT=48750
+          OUT="$RUNNER_TEMP/mi5-probe"
+          mkdir -p "$OUT"
+
+          test "$(id -u)" = "504"
+          test -x "$BASE_PY"
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test -z "$(git -C "$DEV" status --porcelain)"
+          test -z "$(git -C "$PRODUCT" status --porcelain)"
+          echo "DEV_HEAD_BEFORE=$(git -C "$DEV" rev-parse HEAD)" > "$OUT/state.txt"
+          echo "PRODUCT_HEAD_BEFORE=$(git -C "$PRODUCT" rev-parse HEAD)" >> "$OUT/state.txt"
+
+          if /usr/sbin/lsof -nP -iTCP:$PORT -sTCP:LISTEN >/dev/null 2>&1; then
+            echo "MI5_PROBE_PORT_ALREADY_IN_USE=$PORT"
+            exit 79
+          fi
+
+          rm -rf "$VENV"
+          "$BASE_PY" -m venv "$VENV"
+          "$VENV/bin/python" -m pip install --upgrade pip
+          "$VENV/bin/python" -m pip install -e "$GITHUB_WORKSPACE"
+
+          (
+            export PYTHONPATH="$GITHUB_WORKSPACE:$GITHUB_WORKSPACE/src"
+            exec "$VENV/bin/python" "$GITHUB_WORKSPACE/ops/run_dashboard.py" \
+              --host 127.0.0.1 \
+              --port "$PORT" \
+              --product-root stream \
+              --ledger "$RUNTIME/ledger/live_signal_ledger.sqlite3" \
+              --alert-outbox "$RUNTIME/alerts/alert_outbox.sqlite3" \
+              --paper-ledger "$RUNTIME/paper/paper_fund.sqlite3" \
+              --candle-cache "$RUNTIME/data/live_base_15m_cache.sqlite3" \
+              --decision-evidence "$RUNTIME/decision/decision_evidence.sqlite3" \
+              --epoch2-ledger "$RUNTIME/paper/paper_fund_epoch2.sqlite3" \
+              --market-tape "$RUNTIME/market_tape/market_tape.sqlite3" \
+              --market-tape-collector-runtime "$RUNTIME/market_tape/collector_runtime.sqlite3" \
+              --provider-divergence "$RUNTIME/data/provider_divergence.sqlite3" \
+              --event-source-runtime "$RUNTIME/events/event_source.sqlite3" \
+              --wc2-cohort "$RUNTIME/wc2/wc2_untouched_forward.sqlite3" \
+              --stream-ledger "$RUNTIME/stream/intelligence_stream.sqlite3" \
+              >"$OUT/server.out" 2>"$OUT/server.err"
+          ) &
+          PID=$!
+          echo "SERVER_PID=$PID" >> "$OUT/state.txt"
+          echo "MI5_PROBE_PORT=$PORT" >> "$GITHUB_ENV"
+          echo "MI5_PROBE_OUT=$OUT" >> "$GITHUB_ENV"
+          echo "MI5_PROBE_VENV=$VENV" >> "$GITHUB_ENV"
+
+          for _ in {1..80}; do
+            if curl -fsS --max-time 2 "http://127.0.0.1:$PORT/api/health" > "$OUT/health.json"; then
+              break
+            fi
+            kill -0 "$PID" 2>/dev/null || {
+              cat "$OUT/server.err" >&2 || true
+              exit 79
+            }
+            sleep 0.25
+          done
+          curl -fsS --max-time 3 "http://127.0.0.1:$PORT/api/health" >/dev/null
+
+          echo "MI5_EPHEMERAL_EXACT_HEAD_SERVER_PASS=YES"
+          echo "REAL_CAPITAL=0"
+
+      - name: Focused MI5 canonical primary-surface regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          "$MI5_PROBE_VENV/bin/python" -m pip install "pytest>=8.4" "ruff>=0.13"
+          "$MI5_PROBE_VENV/bin/python" -m pytest -q             tests/test_intelligence_stream_read_model.py             tests/test_intelligence_stream_system_view.py
+          "$MI5_PROBE_VENV/bin/python" -m ruff check             src/crypto_signal/product/intelligence_stream_read_model.py             src/crypto_signal/product/intelligence_stream_system_view.py             tests/test_intelligence_stream_read_model.py             tests/test_intelligence_stream_system_view.py             ops/probe_message_intelligence_mi5_browser.py
+          node --check src/crypto_signal/product/stream/app.js
+          node --check src/crypto_signal/product/stream/evidence.js
+          node --check src/crypto_signal/product/stream/visual_proof.js
+          echo "MI5_CANONICAL_PRIMARY_REGRESSION_PASS=YES"
+          echo "REAL_CAPITAL=0"
+
+      - name: Probe real primary Stream and genuine decision inventory
+        shell: bash
+        run: |
+          set -euo pipefail
+          PORT="$MI5_PROBE_PORT"
+          OUT="$MI5_PROBE_OUT"
+          "$MI5_PROBE_VENV/bin/python" - "$PORT" "$OUT/report.json" <<'PY'
+          import json
+          import sys
+          import time
+          import urllib.parse
+          import urllib.request
+
+          port = int(sys.argv[1])
+          output = sys.argv[2]
+          base = f"http://127.0.0.1:{port}"
+
+          def get(path, params=None):
+              url = base + path
+              if params:
+                  url += "?" + urllib.parse.urlencode(params)
+              with urllib.request.urlopen(url, timeout=10) as response:
+                  return json.loads(response.read().decode("utf-8"))
+
+          health = get("/api/health")
+          assert health["status"] == "ok", health
+          assert health["stream_root_active"] is True, health
+          assert health["read_only"] is True, health
+          assert health["real_capital"] == 0, health
+
+          try:
+              decision_status = get("/api/decision-evidence/status")
+          except Exception as exc:
+              decision_status = {"request_error": repr(exc)}
+          try:
+              intelligence_feed = get("/api/intelligence-feed", {"limit": 50})
+          except Exception as exc:
+              intelligence_feed = {"request_error": repr(exc)}
+
+          primary_payload = get(
+              "/api/stream/messages",
+              {"surface": "primary", "limit": 200},
+          )
+          all_payload = get(
+              "/api/stream/messages",
+              {"surface": "all", "limit": 200},
+          )
+          decision_payload = get(
+              "/api/stream/messages",
+              {"surface": "all", "category": "decision", "limit": 200},
+          )
+          primary = primary_payload.get("page", {}).get("items", [])
+          all_items = all_payload.get("page", {}).get("items", [])
+          decision_items = decision_payload.get("page", {}).get("items", [])
+          now_ms = int(time.time() * 1000)
+
+          from collections import Counter
+          category_counts = Counter(str(item.get("category")) for item in all_items)
+          subtype_counts = Counter(str(item.get("subtype")) for item in all_items)
+          schema_counts = Counter(str(item.get("schema_version")) for item in all_items)
+          family_counts = Counter(str(item.get("family")) for item in all_items)
+
+          def age_ms(item):
+              try:
+                  return max(0, now_ms - int(item.get("event_at_ms", 0)))
+              except Exception:
+                  return None
+
+          raw_tokens = (
+              "sell_pressure",
+              "buy_pressure",
+              "state değişti",
+              "measured:",
+              "bid_side_liquidity_take_candidate",
+              "ask_side_liquidity_take_candidate",
+              "→",
+          )
+          leaks = []
+          leak_samples = []
+          for item in primary:
+              text_payload = item.get("text") if isinstance(item.get("text"), dict) else {}
+              collapsed_raw = str(text_payload.get("collapsed_text", ""))
+              collapsed = collapsed_raw.casefold()
+              if any(token.casefold() in collapsed for token in raw_tokens):
+                  identity = str(item.get("narrative_identity", ""))
+                  leaks.append(identity)
+                  detail = None
+                  if len(identity) == 64:
+                      try:
+                          detail = get(f"/api/stream/messages/{identity}/detail").get("detail")
+                      except Exception:
+                          detail = None
+                  narrative = (
+                      detail.get("narrative")
+                      if isinstance(detail, dict)
+                      and isinstance(detail.get("narrative"), dict)
+                      else {}
+                  )
+                  leak_samples.append({
+                      "narrative_identity": identity,
+                      "event_at_ms": item.get("event_at_ms"),
+                      "category": item.get("category"),
+                      "subtype": item.get("subtype"),
+                      "source_kind": item.get("source_kind"),
+                      "schema_version": item.get("schema_version"),
+                      "family": item.get("family"),
+                      "collapsed_text": collapsed_raw,
+                      "detail_schema_version": (
+                          detail.get("schema_version")
+                          if isinstance(detail, dict)
+                          else None
+                      ),
+                      "narrative_schema_version": narrative.get("schema_version"),
+                      "narrative_family": narrative.get("family"),
+                      "narrative_state_label": narrative.get("state_label"),
+                  })
+                  if len(leak_samples) >= 20:
+                      break
+
+          genuine_system_views = []
+          for item in primary:
+              if item.get("subtype") != "system_view_updated":
+                  continue
+              identity = str(item.get("narrative_identity", ""))
+              if len(identity) != 64:
+                  continue
+              detail_payload = get(f"/api/stream/messages/{identity}/detail")
+              detail = detail_payload.get("detail")
+              if not isinstance(detail, dict):
+                  continue
+              fact = detail.get("fact_bundle")
+              analytical = detail.get("analytical_view")
+              if not isinstance(fact, dict) or not isinstance(analytical, dict):
+                  continue
+              families = fact.get("family_contributions")
+              if not isinstance(families, list) or len(families) != 5:
+                  continue
+              genuine_system_views.append({
+                  "narrative_identity": identity,
+                  "event_at_ms": item.get("event_at_ms"),
+                  "age_ms": age_ms(item),
+                  "category": item.get("category"),
+                  "subtype": item.get("subtype"),
+                  "symbol": item.get("symbol"),
+                  "timeframe": item.get("timeframe"),
+                  "family_count": len(families),
+                  "stance": (
+                      analytical.get("stance", {}).get("effective_stance")
+                      if isinstance(analytical.get("stance"), dict)
+                      else None
+                  ),
+                  "score_semantic": fact.get("score_semantic"),
+              })
+              if len(genuine_system_views) >= 10:
+                  break
+
+          selected_system_view = (
+              genuine_system_views[0] if genuine_system_views else None
+          )
+
+          genuine_decisions = []
+          for item in decision_items:
+              identity = str(item.get("narrative_identity", ""))
+              if len(identity) != 64:
+                  continue
+              detail_payload = get(f"/api/stream/messages/{identity}/detail")
+              detail = detail_payload.get("detail")
+              if not isinstance(detail, dict):
+                  continue
+              fact = detail.get("fact_bundle")
+              if not isinstance(fact, dict):
+                  continue
+              families = fact.get("family_contributions")
+              if not isinstance(families, list) or len(families) < 5:
+                  continue
+              analytical = detail.get("analytical_view")
+              if not isinstance(analytical, dict):
+                  continue
+              try:
+                  visual_payload = get(f"/api/stream/messages/{identity}/visual-proof")
+              except Exception:
+                  visual_payload = {}
+              visual_proof = (
+                  visual_payload.get("visual_proof")
+                  if isinstance(visual_payload, dict)
+                  and isinstance(visual_payload.get("visual_proof"), dict)
+                  else {}
+              )
+              genuine_decisions.append({
+                  "narrative_identity": identity,
+                  "event_at_ms": item.get("event_at_ms"),
+                  "age_ms": age_ms(item),
+                  "category": item.get("category"),
+                  "subtype": item.get("subtype"),
+                  "symbol": item.get("symbol"),
+                  "timeframe": item.get("timeframe"),
+                  "family_count": len(families),
+                  "stance": (
+                      analytical.get("stance", {}).get("effective_stance")
+                      if isinstance(analytical.get("stance"), dict)
+                      else None
+                  ),
+                  "visual_status": visual_proof.get("status"),
+                  "geometry_frozen_ready": (
+                      visual_proof.get("status") == "ready"
+                      and isinstance(visual_proof.get("candles"), list)
+                      and len(visual_proof.get("candles")) > 0
+                  ),
+              })
+              if len(genuine_decisions) >= 10:
+                  break
+
+          selected_decision = next(
+              (
+                  item
+                  for item in genuine_decisions
+                  if item.get("geometry_frozen_ready") is True
+              ),
+              genuine_decisions[0] if genuine_decisions else None,
+          )
+
+          report = {
+              "health": health,
+              "decision_evidence_status": decision_status,
+              "intelligence_feed": intelligence_feed,
+              "selected_decision": selected_decision,
+              "selected_system_view": selected_system_view,
+              "primary_count": len(primary),
+              "all_count": len(all_items),
+              "decision_surface_count": len(decision_items),
+              "all_category_counts": dict(category_counts),
+              "all_subtype_counts": dict(subtype_counts),
+              "all_schema_counts": dict(schema_counts),
+              "all_family_counts": dict(family_counts),
+              "all_latest": [
+                  {
+                      "narrative_identity": item.get("narrative_identity"),
+                      "event_at_ms": item.get("event_at_ms"),
+                      "category": item.get("category"),
+                      "subtype": item.get("subtype"),
+                      "schema_version": item.get("schema_version"),
+                      "family": item.get("family"),
+                      "state_label": item.get("state_label"),
+                      "collapsed_text": (
+                          item.get("text", {}).get("collapsed_text")
+                          if isinstance(item.get("text"), dict)
+                          else None
+                      ),
+                  }
+                  for item in all_items[:20]
+              ],
+              "primary_latest": [
+                  {
+                      "narrative_identity": item.get("narrative_identity"),
+                      "event_at_ms": item.get("event_at_ms"),
+                      "age_ms": age_ms(item),
+                      "category": item.get("category"),
+                      "subtype": item.get("subtype"),
+                      "symbol": item.get("symbol"),
+                      "timeframe": item.get("timeframe"),
+                      "collapsed_text": (
+                          item.get("text", {}).get("collapsed_text")
+                          if isinstance(item.get("text"), dict)
+                          else None
+                      ),
+                  }
+                  for item in primary[:12]
+              ],
+              "raw_primary_leaks": leaks,
+              "raw_primary_leak_samples": leak_samples,
+              "genuine_decisions": genuine_decisions,
+              "genuine_decision_count_scanned": len(genuine_decisions),
+              "genuine_system_views": genuine_system_views,
+              "genuine_system_view_count_scanned": len(genuine_system_views),
+              "real_capital": 0,
+          }
+          with open(output, "w", encoding="utf-8") as handle:
+              json.dump(report, handle, ensure_ascii=False, indent=2)
+
+          if leaks:
+              print("MI5_PRIMARY_RAW_TELEMETRY_LEAK_COUNT=" + str(len(leaks)))
+              print(json.dumps(leak_samples, ensure_ascii=False, indent=2))
+              raise AssertionError(leaks)
+
+          def _feed_item_count(payload):
+              if not isinstance(payload, dict):
+                  return None
+              for key in ("items", "events", "feed"):
+                  value = payload.get(key)
+                  if isinstance(value, list):
+                      return len(value)
+              page = payload.get("page")
+              if isinstance(page, dict) and isinstance(page.get("items"), list):
+                  return len(page["items"])
+              return None
+
+          print("MI5_DECISION_EVIDENCE_STATUS=" + json.dumps(decision_status, ensure_ascii=False, sort_keys=True))
+          print("MI5_INTELLIGENCE_FEED_ITEM_COUNT=" + str(_feed_item_count(intelligence_feed)))
+          print("MI5_PRIMARY_COUNT=" + str(len(primary)))
+          print("MI5_ALL_COUNT=" + str(len(all_items)))
+          if primary:
+              print("MI5_PRIMARY_LATEST_AGE_MS=" + str(age_ms(primary[0])))
+              print("MI5_PRIMARY_LATEST_TEXT=" + str(
+                  primary[0].get("text", {}).get("collapsed_text", "")
+                  if isinstance(primary[0].get("text"), dict)
+                  else ""
+              ))
+          else:
+              print("MI5_PRIMARY_LATEST_AGE_MS=NONE")
+          print("MI5_GENUINE_SYSTEM_VIEW_COUNT=" + str(len(genuine_system_views)))
+          if selected_system_view:
+              print("MI5_GENUINE_SYSTEM_VIEW_ID=" + selected_system_view["narrative_identity"])
+              print("MI5_GENUINE_SYSTEM_VIEW_AGE_MS=" + str(selected_system_view["age_ms"]))
+              print("MI5_GENUINE_SYSTEM_VIEW_STANCE=" + str(selected_system_view.get("stance")))
+              print("MI5_GENUINE_SYSTEM_VIEW_SCORE_SEMANTIC=" + str(selected_system_view.get("score_semantic")))
+          print("MI5_GENUINE_DECISION_COUNT=" + str(len(genuine_decisions)))
+          if selected_decision:
+              print("MI5_GENUINE_DECISION_ID=" + selected_decision["narrative_identity"])
+              print("MI5_GENUINE_DECISION_AGE_MS=" + str(selected_decision["age_ms"]))
+              print("MI5_GEOMETRY_FROZEN_READY=" + str(bool(selected_decision.get("geometry_frozen_ready"))).upper())
+          print("MI5_PRIMARY_RAW_TELEMETRY_LEAK=NO")
+          print("MI5_READONLY_PROBE_PASS=YES")
+          print("REAL_CAPITAL=0")
+          PY
+
+          cat "$OUT/report.json"
+
+          SYSTEM_VIEW_ID="$("$MI5_PROBE_VENV/bin/python" - "$OUT/report.json" <<'PY'
+          import json
+          import sys
+
+          report = json.load(open(sys.argv[1], encoding="utf-8"))
+          selected = report.get("selected_system_view")
+          if not isinstance(selected, dict):
+              print("")
+              raise SystemExit(0)
+          identity = str(selected.get("narrative_identity", ""))
+          if len(identity) != 64:
+              raise SystemExit("invalid_system_view_identity")
+          print(identity)
+          PY
+          )"
+          if [[ -n "$SYSTEM_VIEW_ID" ]]; then
+            echo "MI5_SYSTEM_VIEW_ID=$SYSTEM_VIEW_ID" >> "$GITHUB_ENV"
+            echo "MI5_SYSTEM_VIEW_RUNTIME_PRESENT=YES"
+          else
+            echo "MI5_SYSTEM_VIEW_RUNTIME_PRESENT=NO"
+            echo "MI5_POSTDEPLOY_BROWSER_REQUIRED=YES"
+          fi
+
+      - name: Real Chromium desktop and mobile acceptance
+        shell: bash
+        timeout-minutes: 8
+        run: |
+          set -euo pipefail
+          OUT="$MI5_PROBE_OUT/browser"
+          mkdir -p "$OUT"
+
+          BROWSER=""
+          for candidate in             "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"             "/Applications/Chromium.app/Contents/MacOS/Chromium"             "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge"             "/Applications/Google Chrome Canary.app/Contents/MacOS/Google Chrome Canary"; do
+            if [ -x "$candidate" ]; then
+              BROWSER="$candidate"
+              break
+            fi
+          done
+          test -n "$BROWSER"
+          echo "MI5_BROWSER=$BROWSER"
+
+          if [[ -z "${MI5_SYSTEM_VIEW_ID:-}" ]]; then
+            echo "MI5_BROWSER_ACCEPTANCE_DEFERRED=system_view_not_deployed"
+            echo "MI5_PREDEPLOY_ACCEPTANCE_PASS=YES"
+            echo "REAL_CAPITAL=0"
+            exit 0
+          fi
+          URL="http://127.0.0.1:$MI5_PROBE_PORT/?message=$MI5_SYSTEM_VIEW_ID"
+
+          "$MI5_PROBE_VENV/bin/python" ops/capture_chromium_viewport.py             --browser "$BROWSER"             --url "$URL"             --output "$OUT/desktop.png"             --metrics-out "$OUT/desktop.metrics.json"             --width 1440             --height 950             --require-no-horizontal-overflow
+
+          "$MI5_PROBE_VENV/bin/python" ops/capture_chromium_viewport.py             --browser "$BROWSER"             --url "$URL"             --output "$OUT/mobile.png"             --metrics-out "$OUT/mobile.metrics.json"             --width 430             --height 860             --mobile             --require-no-horizontal-overflow
+
+          "$MI5_PROBE_VENV/bin/python" ops/probe_message_intelligence_mi5_browser.py             --browser "$BROWSER"             --url "$URL"             --output "$OUT/desktop-proof.png"             --metrics-out "$OUT/desktop-proof.metrics.json"             --width 1440             --height 950
+
+          "$MI5_PROBE_VENV/bin/python" ops/probe_message_intelligence_mi5_browser.py             --browser "$BROWSER"             --url "$URL"             --output "$OUT/mobile-proof.png"             --metrics-out "$OUT/mobile-proof.metrics.json"             --width 430             --height 860             --mobile
+
+          echo "MI5_REAL_DESKTOP_MOBILE_BROWSER_PASS=YES"
+          echo "MI5_POSTDEPLOY_ACCEPTANCE_PASS=YES"
+          echo "REAL_CAPITAL=0"
+
+      - name: Upload probe artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: message-intelligence-mi5-probe-${{ github.run_id }}
+          path: ${{ env.MI5_PROBE_OUT }}
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Stop ephemeral server and prove no canonical mutation
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          OUT="$MI5_PROBE_OUT"
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          DEV="$ROOT/Development"
+          PRODUCT="$ROOT/Product"
+          PID="$(sed -n 's/^SERVER_PID=//p' "$OUT/state.txt")"
+          if [[ -n "$PID" ]]; then
+            kill "$PID" 2>/dev/null || true
+            for _ in {1..20}; do
+              kill -0 "$PID" 2>/dev/null || break
+              sleep 0.1
+            done
+            kill -KILL "$PID" 2>/dev/null || true
+          fi
+
+          DEV_BEFORE="$(sed -n 's/^DEV_HEAD_BEFORE=//p' "$OUT/state.txt")"
+          PRODUCT_BEFORE="$(sed -n 's/^PRODUCT_HEAD_BEFORE=//p' "$OUT/state.txt")"
+          test -z "$(git -C "$DEV" status --porcelain)"
+          test -z "$(git -C "$PRODUCT" status --porcelain)"
+          test "$(git -C "$DEV" rev-parse HEAD)" = "$DEV_BEFORE"
+          test "$(git -C "$PRODUCT" rev-parse HEAD)" = "$PRODUCT_BEFORE"
+          echo "MI5_PROBE_NON_MUTATING_PASS=YES"
+          echo "REAL_CAPITAL=0"

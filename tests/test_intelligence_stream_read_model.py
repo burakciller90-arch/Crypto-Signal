@@ -18,6 +18,7 @@ from crypto_signal.product.intelligence_stream_analytical import (
 )
 from crypto_signal.product.intelligence_stream_family import (
     STREAM_FAMILY_NARRATIVE_MESSAGE_SCHEMA_VERSION,
+    STREAM_FAMILY_NARRATIVE_RENDERER_VERSION,
 )
 from crypto_signal.product.intelligence_stream_messages import (
     STREAM_FACT_BUNDLE_SCHEMA_VERSION,
@@ -464,6 +465,8 @@ def _insert_family_surface_fixture(
     source_narrative_identity: str,
     family: str = "order_flow",
     state_label: str = "mixed",
+    preserve_narrative_schema: bool = False,
+    renderer_version: str | None = None,
 ) -> str:
     with sqlite3.connect(path) as connection:
         row = connection.execute(
@@ -485,10 +488,13 @@ def _insert_family_surface_fixture(
         payload = json.loads(str(row[6]))
         assert isinstance(payload, dict)
         payload.pop("narrative_identity", None)
-        payload["schema_version"] = STREAM_FAMILY_NARRATIVE_MESSAGE_SCHEMA_VERSION
+        if not preserve_narrative_schema:
+            payload["schema_version"] = STREAM_FAMILY_NARRATIVE_MESSAGE_SCHEMA_VERSION
         payload["source_kind"] = "deterministic"
         payload["family"] = family
         payload["state_label"] = state_label
+        if renderer_version is not None:
+            payload["renderer_version"] = renderer_version
         family_identity = canonical_sha256(payload)
         encoded = canonical_json({"narrative_identity": family_identity, **payload})
         connection.execute(
@@ -821,6 +827,7 @@ def test_stream_primary_surface_hides_family_telemetry_without_deleting_it(
         source_narrative_identity=identities["eth-outcome"],
         family="event_risk",
         state_label="event_block",
+        renderer_version=STREAM_FAMILY_NARRATIVE_RENDERER_VERSION,
     )
     primary_with_trust = reader.read_messages(
         StreamMessageQuery(limit=20, primary_surface=True)
@@ -835,6 +842,128 @@ def test_stream_primary_surface_hides_family_telemetry_without_deleting_it(
         family_record["schema_version"]
         == STREAM_FAMILY_NARRATIVE_MESSAGE_SCHEMA_VERSION
     )
+
+
+def test_stream_primary_surface_hides_family_even_with_legacy_narrative_schema(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / "stream.sqlite3"
+    identities = _create_read_fixture(path)
+    family_identity = _insert_family_surface_fixture(
+        path,
+        source_narrative_identity=identities["btc-flow"],
+        family="order_flow_absorption",
+        state_label="sell_pressure",
+        preserve_narrative_schema=True,
+    )
+    reader = IntelligenceStreamReadModel(path)
+
+    all_ids = {
+        item["narrative_identity"]
+        for item in reader.read_messages(StreamMessageQuery(limit=20)).items
+    }
+    assert family_identity in all_ids
+
+    primary_ids = {
+        item["narrative_identity"]
+        for item in reader.read_messages(
+            StreamMessageQuery(limit=20, primary_surface=True)
+        ).items
+    }
+    assert family_identity not in primary_ids
+    assert identities["btc-flow"] in primary_ids
+
+
+def test_stream_primary_surface_hides_legacy_raw_trust_alert_but_keeps_current_customer_copy(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / "stream.sqlite3"
+    identities = _create_read_fixture(path)
+    legacy_trust = _insert_family_surface_fixture(
+        path,
+        source_narrative_identity=identities["btc-flow"],
+        family="provider_quality",
+        state_label="degraded_provider_stale",
+        renderer_version="crypto-signal-family-narrative-v1/1",
+    )
+    current_trust = _insert_family_surface_fixture(
+        path,
+        source_narrative_identity=identities["eth-outcome"],
+        family="provider_quality",
+        state_label="degraded_provider_stale",
+        renderer_version=STREAM_FAMILY_NARRATIVE_RENDERER_VERSION,
+    )
+    reader = IntelligenceStreamReadModel(path)
+
+    all_ids = {
+        item["narrative_identity"]
+        for item in reader.read_messages(StreamMessageQuery(limit=30)).items
+    }
+    assert legacy_trust in all_ids
+    assert current_trust in all_ids
+
+    primary_ids = {
+        item["narrative_identity"]
+        for item in reader.read_messages(
+            StreamMessageQuery(limit=30, primary_surface=True)
+        ).items
+    }
+    assert legacy_trust not in primary_ids
+    assert current_trust in primary_ids
+
+
+def test_stream_primary_surface_hides_canonical_production_family_values(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / "stream.sqlite3"
+    identities = _create_read_fixture(path)
+    canonical_families = (
+        "geometry_pa_elliott_harmonic",
+        "liquidity",
+        "order_flow_absorption",
+        "derivatives",
+        "onchain_smart_money",
+    )
+    family_ids = {
+        _insert_family_surface_fixture(
+            path,
+            source_narrative_identity=identities["btc-flow"],
+            family=family,
+            state_label="mixed",
+        )
+        for family in canonical_families
+    }
+
+    reader = IntelligenceStreamReadModel(path)
+    all_ids = {
+        item["narrative_identity"]
+        for item in reader.read_messages(StreamMessageQuery(limit=20)).items
+    }
+    assert family_ids <= all_ids
+
+    primary_ids = {
+        item["narrative_identity"]
+        for item in reader.read_messages(
+            StreamMessageQuery(limit=20, primary_surface=True)
+        ).items
+    }
+    assert family_ids.isdisjoint(primary_ids)
+
+    trust_id = _insert_family_surface_fixture(
+        path,
+        source_narrative_identity=identities["eth-outcome"],
+        family="provider_quality",
+        state_label="degraded_provider_stale",
+        renderer_version=STREAM_FAMILY_NARRATIVE_RENDERER_VERSION,
+    )
+    primary_with_trust = {
+        item["narrative_identity"]
+        for item in reader.read_messages(
+            StreamMessageQuery(limit=20, primary_surface=True)
+        ).items
+    }
+    assert trust_id in primary_with_trust
+
 
 
 def test_stream_read_model_is_read_only_and_missing_db_is_not_initialized(tmp_path) -> None:
@@ -891,6 +1020,7 @@ def test_stream_api_primary_surface_hides_family_telemetry(
         source_narrative_identity=identities["eth-outcome"],
         family="provider_quality",
         state_label="degraded_provider_stale",
+        renderer_version=STREAM_FAMILY_NARRATIVE_RENDERER_VERSION,
     )
     primary_after_trust = client.get(
         "/api/stream/messages",
