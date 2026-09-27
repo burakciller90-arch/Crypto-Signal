@@ -1,0 +1,53 @@
+name: Crypto Stream Final F8 Auditor Rejection Diagnosis UID504
+
+on:
+  push:
+    branches:
+      - 'accept/f8-auditor-rejection-diagnosis'
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          clean: true
+
+      - name: Print real F8 rejection reasons and F6 evidence envelope
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
+          PY="$DEV/.venv/bin/python"
+          export PYTHONPATH="$GITHUB_WORKSPACE:$GITHUB_WORKSPACE/src:$GITHUB_WORKSPACE/ops"
+          "$PY" - <<'PY'
+          import json
+          import urllib.request
+          from ops import audit_stream_f8_production_e2e as audit
+
+          base="http://127.0.0.1:48700"
+          report=audit.run_audit(
+              base,
+              require_capital=False,
+              min_event_ms=None,
+              stream_ledger=__import__("pathlib").Path(
+                  "/Volumes/Crypto-504/Crypto-Signal/Development/runtime/stream/intelligence_stream.sqlite3"
+              ),
+          )
+          for group in report["groups"]:
+              print("F8_DIAG_GROUP="+json.dumps(group,sort_keys=True,ensure_ascii=False))
+
+          known="d10b0173cae69436dae900a569a44b98ba16763c02f86d283c4781d26401b011"
+          for suffix in ["/evidence","/visual-proof","/detail"]:
+              with urllib.request.urlopen(base+f"/api/stream/messages/{known}"+suffix,timeout=8) as r:
+                  payload=json.loads(r.read().decode())
+              print("F8_DIAG_ENDPOINT="+suffix+":"+json.dumps(payload,sort_keys=True,ensure_ascii=False))
+
+          print("F8_AUDITOR_REJECTION_DIAGNOSIS_PASS=YES")
+          print("REAL_CAPITAL=0")
+          PY
