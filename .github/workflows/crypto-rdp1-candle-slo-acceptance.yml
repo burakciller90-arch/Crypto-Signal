@@ -1,0 +1,43 @@
+name: RDP1 Closed Candle SLO Acceptance
+
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  contents: read
+  issues: read
+
+jobs:
+  accept:
+    if: >-
+      github.actor == 'burakciller90-arch' &&
+      github.event.issue.title == '[RDP1] CANDLE SLO ACCEPTANCE'
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          clean: true
+          fetch-depth: 1
+      - name: Verify exact runtime source
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
+          test "$(id -u)" = "504"
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$(git -C "$DEV" rev-parse HEAD)" = "$GITHUB_SHA"
+          test -z "$(git -C "$DEV" status --porcelain)"
+          echo "RDP1_CANDLE_SLO_EXACT_SOURCE_PASS=YES"
+      - name: Read-only closed candle SLO
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          DEV="$ROOT/Development"
+          PY="$DEV/.venv/bin/python"
+          export PYTHONPATH="$GITHUB_WORKSPACE/src:$GITHUB_WORKSPACE"
+          "$PY" "$GITHUB_WORKSPACE/ops/rdp1_candle_cache_slo_probe.py" \
+            --cache "$DEV/runtime/data/live_base_15m_cache.sqlite3"
