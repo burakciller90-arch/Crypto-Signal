@@ -23,6 +23,13 @@ def test_inventory_selects_current_live_scope_without_fabrication(
     market = _message("a" * 64, "market")
     risk = _message("b" * 64, "system")
 
+    market_family = dict(market)
+    market_family.pop("category")
+    market_family["family"] = "geometry"
+    risk_family = dict(risk)
+    risk_family.pop("category")
+    risk_family["family"] = "event_risk"
+
     def fake_get(base_url, path, params=None):
         assert base_url == "http://127.0.0.1:48700"
         if path == "/api/health":
@@ -34,14 +41,34 @@ def test_inventory_selects_current_live_scope_without_fabrication(
                 "real_capital": 0,
             }
         assert path == "/api/stream/messages"
-        return {"page": {"items": [risk, market]}}
+        category = (params or {}).get("category")
+        if category == "market":
+            return {"page": {"items": [market_family]}}
+        if category == "system":
+            return {"page": {"items": [risk_family]}}
+        if category in {"intelligence", "risk", "capital"}:
+            return {"page": {"items": []}}
+        return {"page": {"items": [risk_family, market_family]}}
 
     monkeypatch.setattr(f9, "_get_json", fake_get)
     result = f9.inventory("http://127.0.0.1:48700")
 
-    assert result["primary"] == market
-    assert result["degraded"] == risk
+    primary = result["primary"]
+    degraded = result["degraded"]
+    assert isinstance(primary, dict)
+    assert isinstance(degraded, dict)
+    assert primary["narrative_identity"] == "a" * 64
+    assert primary["_f9_observed_category"] == "market"
+    assert degraded["narrative_identity"] == "b" * 64
+    assert degraded["_f9_observed_category"] == "system"
     assert result["categories"] == ["market", "system"]
+    assert result["observed_counts"] == {
+        "market": 1,
+        "intelligence": 0,
+        "risk": 0,
+        "system": 1,
+        "capital": 0,
+    }
 
 
 def test_no_real_message_remains_open_without_browser(
