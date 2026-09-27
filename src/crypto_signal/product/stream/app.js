@@ -1842,92 +1842,27 @@ function buildExpandedContent(record, detail) {
   ) {
     return buildCapitalExpandedContent(record, detail);
   }
-  const textBundle =
-    record && typeof record.text === "object" && record.text ? record.text : {};
   const fact = detail && typeof detail.fact_bundle === "object"
     ? detail.fact_bundle
     : {};
-  const analytical = detail && typeof detail.analytical_view === "object"
-    ? detail.analytical_view
-    : {};
-
   const grid = document.createElement("div");
-  grid.className = "message-depth-grid";
-
+  grid.className = "message-depth-grid message-intelligence-summary";
   grid.append(
-    depthSection("SIMPLE", textBundle.simple_text, { className: "depth-simple depth-wide" }),
-    depthSection("PRO", textBundle.technical_text, { className: "depth-pro" })
-  );
-
-  const intelligence = document.createElement("div");
-  intelligence.className = "depth-composite";
-  const intelligenceCopy = document.createElement("p");
-  intelligenceCopy.textContent = text(
-    textBundle.intelligence_text,
-    "Structured intelligence anlatımı mevcut değil."
-  );
-  intelligence.append(intelligenceCopy, evidenceFamilyGrid(fact));
-  grid.append(
-    depthSection("INTELLIGENCE", "", {
-      className: "depth-intelligence depth-wide",
-      content: intelligence,
-    })
-  );
-
-  const decision = document.createElement("div");
-  decision.className = "depth-composite";
-  const decisionCopy = document.createElement("p");
-  decisionCopy.textContent = text(
-    textBundle.decision_text,
-    "Karar anlatımı mevcut değil."
-  );
-  const conditions = document.createElement("div");
-  conditions.className = "condition-row";
-  const next = document.createElement("span");
-  next.textContent = `Sonraki koşul · ${text(analytical?.next_condition?.state, "ölçülmedi")}`;
-  const invalidation = document.createElement("span");
-  invalidation.textContent = `Geçersizleşme · ${displayNumber(
-    analytical?.invalidation_condition?.price ?? fact?.invalidation_price
-  )}`;
-  conditions.append(next, invalidation);
-  decision.append(decisionCopy, conditions);
-  grid.append(
-    depthSection("DECISION", "", {
-      className: "depth-decision",
-      content: decision,
+    depthSection("SİSTEM GÖRÜŞÜ", "", {
+      className: "depth-decision-summary depth-wide",
+      content: decisionSummaryPanel(detail),
     }),
-    depthSection("TRADE GEOMETRY", "", {
-      className: "depth-geometry",
-      content: geometryGrid(fact),
+    depthSection("5 KANIT AİLESİ", "", {
+      className: "depth-family-summary depth-wide",
+      content: evidenceFamilyGrid(record, detail),
     })
   );
-
-  const capital = document.createElement("div");
-  capital.className = "depth-composite";
-  const capitalCopy = document.createElement("p");
-  capitalCopy.textContent = text(
-    textBundle.capital_text,
-    "Bu mesajda sermaye anlatımı mevcut değil."
-  );
-  const capitalState = document.createElement("span");
-  capitalState.className = "capital-state";
-  capitalState.textContent = `Sanal sermaye sonucu · ${text(
-    analytical?.capital_consequence?.state,
-    "not_bound"
-  ).replaceAll("_", " ")} · REAL_CAPITAL=0`;
-  capital.append(capitalCopy, capitalState);
-  grid.append(
-    depthSection("CAPITAL", "", {
-      className: "depth-capital",
-      content: capital,
-    }),
-    depthSection("PROOF", "", {
-      className: "depth-proof",
-      content: proofPanel(fact),
-    })
-  );
-
-  grid.append(evidenceWindowLauncher(record, detail));
+  if (!Array.isArray(fact?.family_contributions)) {
+    const note = document.createElement("p");
+    note.className = "depth-muted";
+    note.textContent = "Bu exact mesajda beş-aile katkı kaydı okunamadı; veri uydurulmadı.";
+    grid.append(note);
+  }
   return grid;
 }
 
