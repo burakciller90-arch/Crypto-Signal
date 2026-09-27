@@ -232,6 +232,14 @@ def parse_args() -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "--bybit-base-url",
+        default=None,
+        help=(
+            "explicit Bybit REST base URL for the deployment region; "
+            "defaults to the adapter global endpoint"
+        ),
+    )
+    parser.add_argument(
         "--stream-enabled",
         action="store_true",
         help="enable forward-only Intelligence Stream production projection",
@@ -508,6 +516,7 @@ async def run(
     provider_divergence_path: Path | None = None,
     wc2_config: WC2ClockConfig | None = None,
     stream_config: StreamClockConfig | None = None,
+    bybit_base_url: str | None = None,
 ) -> int:
     ledger = ImmutableSignalLedger(db_path)
     candle_store = CandleStore(candle_cache_path)
@@ -699,7 +708,7 @@ async def run(
         return projection
 
     adapters: dict[Exchange, MarketDataAdapter] = {
-        Exchange.BYBIT: BybitSpotAdapter(),
+        Exchange.BYBIT: BybitSpotAdapter(base_url=bybit_base_url),
         Exchange.BINANCE: BinanceSpotAdapter(),
     }
     wc2_status_counts: Counter[str] = Counter()
@@ -1274,6 +1283,7 @@ def main() -> int:
                 provider_divergence_path=args.provider_divergence,
                 wc2_config=wc2_config,
                 stream_config=stream_config,
+                bybit_base_url=args.bybit_base_url,
             )
         )
 
