@@ -21,7 +21,7 @@ Every run can produce:
 - initial/final/full-page PNG screenshots;
 - per-step screenshots;
 - Chrome screencast JPEG frames;
-- `audit.mp4` when `ffmpeg` is available on the host;
+- `audit.mp4` via system ffmpeg when present, otherwise the isolated bundled `imageio-ffmpeg` encoder;
 - DOM snapshot;
 - accessibility tree;
 - interactive-element inventory;

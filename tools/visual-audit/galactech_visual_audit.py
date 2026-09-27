@@ -174,9 +174,21 @@ def _load_scenario(path: Path | None) -> list[dict[str, Any]]:
     return result
 
 
+def _resolve_ffmpeg() -> str | None:
+    system = shutil.which("ffmpeg")
+    if system:
+        return system
+    try:
+        import imageio_ffmpeg
+        bundled = imageio_ffmpeg.get_ffmpeg_exe()
+        return bundled if bundled and Path(bundled).is_file() else None
+    except Exception:
+        return None
+
+
 def _finalize_video(frames_dir: Path, output: Path) -> dict[str, Any]:
     frames = sorted(frames_dir.glob("*.jpg"))
-    ffmpeg = shutil.which("ffmpeg")
+    ffmpeg = _resolve_ffmpeg()
     result: dict[str, Any] = {"frame_count": len(frames), "ffmpeg": ffmpeg, "video": None}
     if not frames or not ffmpeg:
         return result
@@ -346,7 +358,7 @@ def main() -> None:
             "tool": "galactech-visual-audit",
             "schema_version": 1,
             "browser": str(_browser(args.browser)),
-            "ffmpeg": shutil.which("ffmpeg"),
+            "ffmpeg": _resolve_ffmpeg(),
             "safe_actions": ["wait", "scroll", "click", "screenshot"],
         }, indent=2))
         return

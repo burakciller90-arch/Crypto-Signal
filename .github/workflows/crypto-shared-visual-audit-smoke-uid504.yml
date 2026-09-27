@@ -1,0 +1,109 @@
+name: Crypto Shared Visual Audit Smoke UID504
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/crypto-shared-visual-audit-smoke-uid504.yml"
+      - "tools/visual-audit/**"
+      - ".github/workflows/admin501-shared-visual-audit-install.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    name: UID504 consumes UID501-managed visual audit
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 15
+    steps:
+      - name: Wait for exact shared tool version
+        shell: bash
+        run: |
+          set -euo pipefail
+          BIN="/Users/Shared/Galactech/bin/galactech-visual-audit"
+          VERSION="/Users/Shared/Galactech/visual-audit/current/VERSION"
+          for i in {1..90}; do
+            if [ -x "$BIN" ] && [ -r "$VERSION" ] && [ "$(cat "$VERSION")" = "$GITHUB_SHA" ]; then
+              break
+            fi
+            sleep 2
+          done
+          test -x "$BIN"
+          test -r "$VERSION"
+          test "$(cat "$VERSION")" = "$GITHUB_SHA"
+          echo "CONSUMER_UID=$(id -u)"
+          test "$(id -u)" = "504"
+          "$BIN" --capabilities
+          echo "SHARED_VISUAL_AUDIT_EXACT_VERSION_PASS=YES"
+
+      - name: Verify Crypto Product is reachable
+        shell: bash
+        run: |
+          set -euo pipefail
+          for i in {1..20}; do
+            if curl -fsS --max-time 3 http://127.0.0.1:48700/api/health >/tmp/shared-visual-audit-health.json 2>/dev/null; then
+              cat /tmp/shared-visual-audit-health.json
+              echo
+              echo "CRYPTO_PRODUCT_REACHABLE_PASS=YES"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Crypto Product is not reachable on 127.0.0.1:48700" >&2
+          exit 70
+
+      - name: Capture real Product UI
+        shell: bash
+        run: |
+          set -euo pipefail
+          OUT="$RUNNER_TEMP/shared-visual-audit"
+          SCENARIO="$RUNNER_TEMP/shared-visual-audit-scenario.json"
+          cat > "$SCENARIO" <<'JSON'
+          {
+            "actions": [
+              {"type": "wait", "seconds": 1.0, "name": "settle"},
+              {"type": "scroll", "selector": "#streamViewport", "delta_y": 620, "name": "stream-down", "optional": true},
+              {"type": "click", "selector": ".message-summary", "index": 0, "name": "open-first-message", "optional": true},
+              {"type": "wait", "seconds": 0.8, "name": "expanded-settle"},
+              {"type": "screenshot", "name": "expanded-message"}
+            ]
+          }
+          JSON
+
+          /Users/Shared/Galactech/bin/galactech-visual-audit \
+            --url http://127.0.0.1:48700/ \
+            --scenario "$SCENARIO" \
+            --output-dir "$OUT" \
+            --width 1440 \
+            --height 900
+
+          test -s "$OUT/manifest.json"
+          test -s "$OUT/screenshots/000-initial.png"
+          test -s "$OUT/screenshots/999-final.png"
+          test -s "$OUT/dom.html"
+          test -s "$OUT/accessibility-tree.json"
+          test -s "$OUT/interactive-elements.json"
+          python3 - "$OUT/manifest.json" <<'PY'
+          import json, sys
+          from pathlib import Path
+          p = Path(sys.argv[1])
+          m = json.loads(p.read_text())
+          assert m["tool"] == "galactech-visual-audit"
+          assert m["viewport"] == {"width": 1440, "height": 900}
+          assert m["video"]["frame_count"] > 0
+          assert m["video"]["video"] == "audit.mp4", m["video"]
+          assert (p.parent / "audit.mp4").stat().st_size > 0
+          print("UID504_SHARED_VISUAL_AUDIT_SMOKE_PASS=YES")
+          print("VIDEO_FRAMES=", m["video"]["frame_count"])
+          print("VIDEO_FILE=", m["video"]["video"])
+          PY
+
+      - name: Upload visual audit artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: crypto-shared-visual-audit-${{ github.run_id }}
+          path: ${{ runner.temp }}/shared-visual-audit
+          if-no-files-found: error
+          retention-days: 14
