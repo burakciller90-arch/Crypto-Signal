@@ -2186,14 +2186,9 @@ function buildExpandedContent(record, detail) {
     depthSection("CAPITAL", "", {
       className: "depth-capital",
       content: capital,
-    }),
-    depthSection("PROOF", "", {
-      className: "depth-proof",
-      content: proofPanel(fact),
     })
   );
 
-  grid.append(evidenceWindowLauncher(record, detail));
   return grid;
 }
 
