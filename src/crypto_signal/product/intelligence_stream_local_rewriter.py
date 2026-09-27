@@ -13,7 +13,7 @@ from crypto_signal.product.intelligence_stream_narrative import (
     StreamNarrativeText,
 )
 
-LOCAL_NARRATIVE_REWRITER_VERSION = "crypto-signal-local-rewriter-v1/5"
+LOCAL_NARRATIVE_REWRITER_VERSION = "crypto-signal-local-rewriter-v1/6"
 _REWRITE_TEXT_KEYS = frozenset({"collapsed_text", "simple_text"})
 _ALLOWED_LOOPBACK_HOSTS = frozenset({"localhost", "127.0.0.1", "::1"})
 
@@ -163,25 +163,48 @@ def _chat_payload(
         "simple_text": request.deterministic_text.simple_text,
     }
     system = (
-        "Sen Crypto Signal'in yerel Türkçe editörüsün. Yeni piyasa analizi yapma. "
-        "Yeni rakam, fiyat, yüzde, hedef, seviye, neden, kanıt veya kesinlik ekleme. "
-        "Yeni teknik kavram, aktör, haber, piyasa nedeni veya kanıt türü icat etme. "
-        "Mevcut anlamı ve yönü tersine çevirme. Yalnız collapsed_text ve simple_text "
-        "alanlarını daha doğal, sakin ve profesyonel trader Türkçesiyle gerçekten yeniden "
-        "ifade et. Bu bir dil editidir; aynı metni geri döndürmek başarısızlıktır. En az "
-        "bir alanın kelime dizimini değiştir; iki alanı birlikte kaynak metinden birebir "
-        "kopyalama. Sana yalnız bu iki "
-        "alan verilir ve yalnız bu iki alanı döndürmelisin. collapsed_text tek paragraf "
-        "ve kısa kalmalı. Alan adlarını değiştirme. Çıktı yalnızca ham JSON nesnesi olmalı; "
-        "markdown veya açıklama ekleme."
+        "Sen Crypto Signal'in yerel Türkçe editörüsün; piyasa analisti değilsin. "
+        "analyst_brief canonical ve fact-locked bağlamdır; yeni analiz üretme emri değildir. "
+        "Yönü değiştirme. Kaynak metindeki sayı setini birebir koru: bulunan tetik, hedef "
+        "ve geçersizlik rakamlarını silme veya değiştirme; canonical olsa bile source_text'te "
+        "olmayan yeni skor, fiyat, yüzde veya seviye ekleme. analyst_brief dışında yeni zaman ufku, "
+        "neden, aktör, haber, teknik indikatör veya kanıt mekanizması icat etme. "
+        "analyst_brief source_text'i anlaman için referanstır; brief içinde dolu olan "
+        "dominant/secondary support veya main_contradiction bile source_text'te söylenmiyorsa "
+        "müşteri metnine yeni family/kanıt iddiası olarak eklenemez. CVD, sweep, absorption, "
+        "funding, OI, balina gibi ayrıntılı mekanizma isimlerini source_text'te yoksa ekleme. "
+        "Destek skorunu olasılık gibi anlatma. Raw state/reason-code "
+        "dili kullanma. Yalnız collapsed_text ve simple_text alanlarını daha doğal, sakin, "
+        "açık ve profesyonel trader Türkçesiyle gerçekten yeniden ifade et. Bu bir dil "
+        "editidir; aynı metni geri döndürmek başarısızlıktır. En az bir alanın kelime "
+        "dizimini değiştir; iki alanı birlikte kaynak metinden birebir kopyalama. Yalnız "
+        "bu iki alanı döndür. collapsed_text tek kısa paragraf olarak kalmalı. Alan "
+        "adlarını değiştirme. Çıktı yalnızca ham JSON nesnesi olmalı; markdown veya "
+        "açıklama ekleme."
     )
+    brief = request.analyst_brief
     user_payload = {
-        "task": "safe_turkish_style_rewrite",
+        "task": "fact_locked_turkish_analyst_rewrite",
         "rewrite_required": True,
         "rewrite_scope": ["collapsed_text", "simple_text"],
         "symbol": request.symbol,
         "timeframe": request.timeframe,
         "protected_numeric_values": protected_values,
+        "analyst_brief": {
+            "schema_version": brief.schema_version,
+            "stance": brief.stance,
+            "strength": brief.strength,
+            "trigger_zone": brief.trigger_zone,
+            "target_zone": brief.target_zone,
+            "invalidation": brief.invalidation,
+            "dominant_support": brief.dominant_support,
+            "secondary_support": brief.secondary_support,
+            "main_contradiction": brief.main_contradiction,
+            "evidence_incomplete": brief.evidence_incomplete,
+            "evidence_contradiction": brief.evidence_contradiction,
+            "probability_calibrated": brief.probability_calibrated,
+            "event_risk_state": brief.event_risk_state,
+        },
         "text": source_text,
     }
     return {
@@ -191,15 +214,25 @@ def _chat_payload(
             {
                 "role": "user",
                 "content": (
-                    '{"text":{"collapsed_text":"Piyasa durum takip; ek teyit takip.",'
-                    '"simple_text":"Durum takip var. Ek teyit takip sürüyor."}}'
+                    '{"analyst_brief":{"stance":"watch","strength":"low",'
+                    '"trigger_zone":"$100–$102","target_zone":"$108",'
+                    '"invalidation":"$95","dominant_support":null,'
+                    '"secondary_support":null,"main_contradiction":null,'
+                    '"evidence_incomplete":true,"evidence_contradiction":false,'
+                    '"probability_calibrated":false,"event_risk_state":"clear"},'
+                    '"text":{"collapsed_text":"Henüz net yön teyidi yok; '
+                    '$100–$102 bölgesinde ek teyit bekliyorum.",'
+                    '"simple_text":"Henüz net yön teyidi yok; $100–$102 '
+                    'bölgesinde ek teyit bekliyorum."}}'
                 ),
             },
             {
                 "role": "assistant",
                 "content": (
-                    '{"collapsed_text":"Piyasa durumu izleniyor; ek teyit bekleniyor.",'
-                    '"simple_text":"Durum izleniyor. Ek teyit beklenmeye devam ediyor."}'
+                    '{"collapsed_text":"Şimdilik yön teyidi yok; $100–$102 '
+                    'bölgesinde yeni teyit bekliyorum.",'
+                    '"simple_text":"Net yön oluşmadı; $100–$102 bölgesinde '
+                    'teyit gelmeden acele etmiyorum."}'
                 ),
             },
             {

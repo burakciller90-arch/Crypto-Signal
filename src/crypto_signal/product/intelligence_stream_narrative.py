@@ -20,6 +20,9 @@ from crypto_signal.product.intelligence_stream_models import REAL_CAPITAL, STREA
 from crypto_signal.product.intelligence_stream_story import StreamChangeSet
 
 STREAM_NARRATIVE_PLAN_SCHEMA_VERSION = "intelligence-stream-narrative-plan-v1/1"
+STREAM_NARRATIVE_ANALYST_BRIEF_SCHEMA_VERSION = (
+    "intelligence-stream-narrative-analyst-brief-v1/1"
+)
 STREAM_NARRATIVE_MESSAGE_SCHEMA_VERSION = "intelligence-stream-narrative-message-v1/2"
 STREAM_NARRATIVE_VOICE_VERSION = "crypto-signal-turkish-analyst-v1/1"
 STREAM_NARRATIVE_RENDERER_VERSION = "crypto-signal-customer-system-view-tr-v2/1"
@@ -45,8 +48,14 @@ _PROTECTED_REWRITE_FIELDS = (
 _QUALITATIVE_CLAIM_TERMS = frozenset(
     {
         "absorption",
+        "alıcı",
+        "alıcılar",
         "balina",
         "balinalar",
+        "büyük alıcı",
+        "büyük alıcılar",
+        "büyük satıcı",
+        "büyük satıcılar",
         "basis",
         "buzdağı",
         "cpi",
@@ -58,14 +67,22 @@ _QUALITATIVE_CLAIM_TERMS = frozenset(
         "heatmap",
         "iceberg",
         "likidasyon",
+        "kurumsal",
         "manipülasyon",
+        "market maker",
         "oi",
         "order book",
+        "satıcı",
+        "satıcılar",
         "short squeeze",
+        "smart money",
         "spoof",
         "sweep",
         "süpürme",
         "tahta",
+        "pes etti",
+        "pes ediyor",
+        "piyasa istiyor",
     }
 )
 
@@ -276,10 +293,49 @@ class StreamNarrativeMessage:
 
 
 @dataclass(frozen=True, slots=True)
+class StreamNarrativeAnalystBrief:
+    stance: str
+    strength: str
+    trigger_zone: str
+    target_zone: str
+    invalidation: str
+    dominant_support: str | None
+    secondary_support: str | None
+    main_contradiction: str | None
+    evidence_incomplete: bool
+    evidence_contradiction: bool
+    probability_calibrated: bool
+    event_risk_state: str
+    schema_version: str = STREAM_NARRATIVE_ANALYST_BRIEF_SCHEMA_VERSION
+
+    def __post_init__(self) -> None:
+        for value, label in (
+            (self.stance, "stance"),
+            (self.strength, "strength"),
+            (self.trigger_zone, "trigger zone"),
+            (self.target_zone, "target zone"),
+            (self.invalidation, "invalidation"),
+            (self.event_risk_state, "event risk state"),
+        ):
+            if not value.strip():
+                raise ValueError(f"Stream analyst brief {label} must be non-empty")
+        for optional_value, label in (
+            (self.dominant_support, "dominant support"),
+            (self.secondary_support, "secondary support"),
+            (self.main_contradiction, "main contradiction"),
+        ):
+            if optional_value is not None and not optional_value.strip():
+                raise ValueError(f"Stream analyst brief {label} cannot be blank")
+        if self.schema_version != STREAM_NARRATIVE_ANALYST_BRIEF_SCHEMA_VERSION:
+            raise ValueError("unsupported Stream analyst brief schema")
+
+
+@dataclass(frozen=True, slots=True)
 class StreamNarrativeRewriteRequest:
     plan_identity: str
     analytical_view_identity: str
     deterministic_text: StreamNarrativeText
+    analyst_brief: StreamNarrativeAnalystBrief
     protected_numeric_values: tuple[Decimal, ...]
     symbol: str
     timeframe: str
@@ -410,6 +466,7 @@ def render_stream_narrative(
         plan_identity=plan.plan_identity,
         analytical_view_identity=view.analytical_view_identity,
         deterministic_text=deterministic,
+        analyst_brief=_build_rewrite_analyst_brief(view, fact),
         protected_numeric_values=_allowed_numeric_values(view, fact),
         symbol=view.symbol,
         timeframe=view.timeframe,
@@ -455,6 +512,36 @@ def render_stream_narrative(
             validation=deterministic_validation,
             source_kind=StreamNarrativeSourceKind.DETERMINISTIC_FALLBACK,
             fallback_reason_codes=("rewriter_semantic_guard_rejected",),
+            rewrite_engine_identity=rewrite_engine_identity,
+            rewrite_engine_version=rewrite_engine_version,
+        )
+    if not _rewrite_preserves_stance(view, deterministic, candidate):
+        return _build_message(
+            plan=plan,
+            text=deterministic,
+            validation=deterministic_validation,
+            source_kind=StreamNarrativeSourceKind.DETERMINISTIC_FALLBACK,
+            fallback_reason_codes=("rewriter_stance_guard_rejected",),
+            rewrite_engine_identity=rewrite_engine_identity,
+            rewrite_engine_version=rewrite_engine_version,
+        )
+    if not _rewrite_preserves_surface_numbers(deterministic, candidate):
+        return _build_message(
+            plan=plan,
+            text=deterministic,
+            validation=deterministic_validation,
+            source_kind=StreamNarrativeSourceKind.DETERMINISTIC_FALLBACK,
+            fallback_reason_codes=("rewriter_numeric_preservation_rejected",),
+            rewrite_engine_identity=rewrite_engine_identity,
+            rewrite_engine_version=rewrite_engine_version,
+        )
+    if _introduces_unbriefed_family_claim(view, deterministic, candidate):
+        return _build_message(
+            plan=plan,
+            text=deterministic,
+            validation=deterministic_validation,
+            source_kind=StreamNarrativeSourceKind.DETERMINISTIC_FALLBACK,
+            fallback_reason_codes=("rewriter_family_guard_rejected",),
             rewrite_engine_identity=rewrite_engine_identity,
             rewrite_engine_version=rewrite_engine_version,
         )
@@ -901,6 +988,130 @@ def _extract_numeric_values(text: str) -> tuple[Decimal, ...]:
             continue
         values.append(value)
     return tuple(values)
+
+
+def _build_rewrite_analyst_brief(
+    view: StreamAnalyticalView,
+    fact: StreamFactBundle,
+) -> StreamNarrativeAnalystBrief:
+    uncertainty_codes = set(view.uncertainty.codes)
+    return StreamNarrativeAnalystBrief(
+        stance=view.stance.effective_stance.value,
+        strength=view.stance.strength.value,
+        trigger_zone=_format_zone(fact.trigger_zone.low, fact.trigger_zone.high),
+        target_zone=_format_zone(fact.target_zone.low, fact.target_zone.high),
+        invalidation=_format_price(fact.invalidation_price),
+        dominant_support=(
+            None
+            if view.dominant_support is None
+            else _family_label(view.dominant_support.family)
+        ),
+        secondary_support=(
+            None
+            if view.secondary_support is None
+            else _family_label(view.secondary_support.family)
+        ),
+        main_contradiction=(
+            None
+            if view.main_contradiction is None
+            else _family_label(view.main_contradiction.family)
+        ),
+        evidence_incomplete="accepted_evidence_incomplete" in uncertainty_codes,
+        evidence_contradiction=(
+            "accepted_evidence_contradiction" in uncertainty_codes
+        ),
+        probability_calibrated=fact.calibrated_probability_0_1 is not None,
+        event_risk_state=fact.event_context_state,
+    )
+
+
+_DIRECTION_TERMS = {
+    "bullish": ("yükseliş", "yukarı", "bullish"),
+    "bearish": ("düşüş", "aşağı", "bearish"),
+}
+_FAMILY_TERMS = {
+    ConfluenceFamily.GEOMETRY: ("geometri", "piyasa yapısı"),
+    ConfluenceFamily.LIQUIDITY: ("likidite",),
+    ConfluenceFamily.ORDER_FLOW: ("emir akışı",),
+    ConfluenceFamily.DERIVATIVES: ("türev",),
+    ConfluenceFamily.ONCHAIN: ("on-chain", "onchain", "zincir üstü"),
+}
+
+
+def _rewrite_preserves_stance(
+    view: StreamAnalyticalView,
+    baseline: StreamNarrativeText,
+    candidate: StreamNarrativeText,
+) -> bool:
+    baseline_text = f"{baseline.collapsed_text} {baseline.simple_text}".casefold()
+    candidate_text = f"{candidate.collapsed_text} {candidate.simple_text}".casefold()
+    baseline_directions = {
+        direction
+        for direction, terms in _DIRECTION_TERMS.items()
+        if any(term in baseline_text for term in terms)
+    }
+    candidate_directions = {
+        direction
+        for direction, terms in _DIRECTION_TERMS.items()
+        if any(term in candidate_text for term in terms)
+    }
+
+    stance = view.stance.effective_stance
+    if stance is StreamEffectiveStance.BULLISH:
+        return (
+            "bearish" not in candidate_directions
+            and (
+                "bullish" not in baseline_directions
+                or "bullish" in candidate_directions
+            )
+        )
+    if stance is StreamEffectiveStance.BEARISH:
+        return (
+            "bullish" not in candidate_directions
+            and (
+                "bearish" not in baseline_directions
+                or "bearish" in candidate_directions
+            )
+        )
+    return candidate_directions <= baseline_directions
+
+
+def _rewrite_preserves_surface_numbers(
+    baseline: StreamNarrativeText,
+    candidate: StreamNarrativeText,
+) -> bool:
+    baseline_collapsed = set(_extract_numeric_values(baseline.collapsed_text))
+    candidate_collapsed = set(_extract_numeric_values(candidate.collapsed_text))
+    baseline_simple = set(_extract_numeric_values(baseline.simple_text))
+    candidate_simple = set(_extract_numeric_values(candidate.simple_text))
+    return (
+        candidate_collapsed == baseline_collapsed
+        and candidate_simple == baseline_simple
+    )
+
+
+def _mentioned_families(text: str) -> set[ConfluenceFamily]:
+    lowered = text.casefold()
+    return {
+        family
+        for family, terms in _FAMILY_TERMS.items()
+        if any(term in lowered for term in terms)
+    }
+
+
+def _introduces_unbriefed_family_claim(
+    view: StreamAnalyticalView,
+    baseline: StreamNarrativeText,
+    candidate: StreamNarrativeText,
+) -> bool:
+    del view  # The brief explains context but never authorizes a new customer claim.
+    baseline_mentions = _mentioned_families(
+        f"{baseline.collapsed_text} {baseline.simple_text}"
+    )
+    candidate_mentions = _mentioned_families(
+        f"{candidate.collapsed_text} {candidate.simple_text}"
+    )
+    return bool(candidate_mentions - baseline_mentions)
 
 
 def _protected_rewrite_sections_unchanged(
