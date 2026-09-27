@@ -59,7 +59,7 @@ Current active execution authority is exposed inside the physical workbench as:
 
 `01_EVIDENCE_DEPTH/ACTIVE_ROADMAP.md`
 
-It points to `docs/CRYPTO_SIGNAL_REALITY_BACKED_EVIDENCE_DATA_PLANE_V1.md`. Current frontier: **RDP1 — Collector and runtime reliability**.
+It points to `docs/CRYPTO_SIGNAL_REALITY_BACKED_EVIDENCE_DATA_PLANE_V1.md`. The exact current frontier must be read from `00_CONTEXT/CURRENT_STATUS.md` and `01_EVIDENCE_DEPTH/ACTIVE_ROADMAP.md`; do not hard-code or replay an older phase label.
 
 ### 02_PAPER_CAPITAL
 Owns paper-only capital allocation, execution simulation, immutable trade lifecycle, portfolio accounting and archive. No real-money authority.
