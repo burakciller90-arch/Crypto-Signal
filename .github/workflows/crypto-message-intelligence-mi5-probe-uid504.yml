@@ -164,6 +164,12 @@ jobs:
           decision_items = decision_payload.get("page", {}).get("items", [])
           now_ms = int(time.time() * 1000)
 
+          from collections import Counter
+          category_counts = Counter(str(item.get("category")) for item in all_items)
+          subtype_counts = Counter(str(item.get("subtype")) for item in all_items)
+          schema_counts = Counter(str(item.get("schema_version")) for item in all_items)
+          family_counts = Counter(str(item.get("family")) for item in all_items)
+
           def age_ms(item):
               try:
                   return max(0, now_ms - int(item.get("event_at_ms", 0)))
@@ -288,6 +294,27 @@ jobs:
               "primary_count": len(primary),
               "all_count": len(all_items),
               "decision_surface_count": len(decision_items),
+              "all_category_counts": dict(category_counts),
+              "all_subtype_counts": dict(subtype_counts),
+              "all_schema_counts": dict(schema_counts),
+              "all_family_counts": dict(family_counts),
+              "all_latest": [
+                  {
+                      "narrative_identity": item.get("narrative_identity"),
+                      "event_at_ms": item.get("event_at_ms"),
+                      "category": item.get("category"),
+                      "subtype": item.get("subtype"),
+                      "schema_version": item.get("schema_version"),
+                      "family": item.get("family"),
+                      "state_label": item.get("state_label"),
+                      "collapsed_text": (
+                          item.get("text", {}).get("collapsed_text")
+                          if isinstance(item.get("text"), dict)
+                          else None
+                      ),
+                  }
+                  for item in all_items[:20]
+              ],
               "primary_latest": [
                   {
                       "narrative_identity": item.get("narrative_identity"),
@@ -349,14 +376,20 @@ jobs:
           report = json.load(open(sys.argv[1], encoding="utf-8"))
           selected = report.get("selected_decision")
           if not isinstance(selected, dict):
-              raise SystemExit("no_genuine_decision_available")
+              print("")
+              raise SystemExit(0)
           identity = str(selected.get("narrative_identity", ""))
           if len(identity) != 64:
               raise SystemExit("invalid_genuine_decision_identity")
           print(identity)
           PY
           )"
-          echo "MI5_DECISION_ID=$DECISION_ID" >> "$GITHUB_ENV"
+          if [[ -n "$DECISION_ID" ]]; then
+            echo "MI5_DECISION_ID=$DECISION_ID" >> "$GITHUB_ENV"
+            echo "MI5_DECISION_RUNTIME_PRESENT=YES"
+          else
+            echo "MI5_DECISION_RUNTIME_PRESENT=NO"
+          fi
 
       - name: Real Chromium desktop and mobile acceptance
         shell: bash
@@ -376,6 +409,10 @@ jobs:
           test -n "$BROWSER"
           echo "MI5_BROWSER=$BROWSER"
 
+          if [[ -z "${MI5_DECISION_ID:-}" ]]; then
+            echo "MI5_BROWSER_ACCEPTANCE_BLOCKED=no_genuine_decision_runtime"
+            exit 78
+          fi
           URL="http://127.0.0.1:$MI5_PROBE_PORT/?message=$MI5_DECISION_ID"
 
           "$MI5_PROBE_VENV/bin/python" ops/capture_chromium_viewport.py             --browser "$BROWSER"             --url "$URL"             --output "$OUT/desktop.png"             --metrics-out "$OUT/desktop.metrics.json"             --width 1440             --height 950             --require-no-horizontal-overflow
