@@ -69,6 +69,7 @@ class CDP:
             origin=Origin("http://127.0.0.1"),
             open_timeout=5,
             close_timeout=2,
+            max_size=64 * 1024 * 1024,
         )
         self.next_id = 1
         self.events: list[dict[str, Any]] = []
