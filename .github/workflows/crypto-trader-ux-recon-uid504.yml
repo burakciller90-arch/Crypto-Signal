@@ -1,0 +1,122 @@
+name: Crypto Trader UX Recon UID504
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/crypto-trader-ux-recon-uid504.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  recon:
+    name: Trader UX reconnaissance on real Product
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 20
+    steps:
+      - name: Verify shared audit and Product
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(id -u)" = "504"
+          BIN="/Users/Shared/Galactech/bin/galactech-visual-audit"
+          test -x "$BIN"
+          "$BIN" --capabilities
+          curl -fsS --max-time 5 http://127.0.0.1:48700/api/health | tee "$RUNNER_TEMP/product-health.json"
+          echo
+          echo "TRADER_UX_PREFLIGHT_PASS=YES"
+
+      - name: Desktop trader journey 1440x900
+        shell: bash
+        run: |
+          set -euo pipefail
+          OUT="$RUNNER_TEMP/trader-ux-1440"
+          SCENARIO="$RUNNER_TEMP/trader-ux-1440.json"
+          cat > "$SCENARIO" <<'JSON'
+          {
+            "actions": [
+              {"type":"wait","seconds":2.0,"name":"home-settle"},
+              {"type":"screenshot","name":"home-first-impression"},
+
+              {"type":"click","selector":".message-summary","index":0,"name":"open-first-message","optional":false,"settle_seconds":1.8},
+              {"type":"screenshot","name":"message-expanded"},
+
+              {"type":"click","selector":".family-evidence-action[data-evidence-kind='geometry']","name":"open-geometry","optional":true,"settle_seconds":1.8},
+              {"type":"screenshot","name":"geometry-top"},
+              {"type":"scroll","selector":".evidence-window-body","delta_y":520,"name":"geometry-scroll","optional":true,"settle_seconds":0.8},
+              {"type":"screenshot","name":"geometry-bottom"},
+              {"type":"click","selector":".evidence-window [data-window-action='close']","name":"close-geometry","optional":true,"settle_seconds":0.4},
+
+              {"type":"click","selector":".family-evidence-action[data-evidence-kind='liquidity']","name":"open-liquidity","optional":true,"settle_seconds":1.8},
+              {"type":"screenshot","name":"liquidity-top"},
+              {"type":"scroll","selector":".evidence-window-body","delta_y":620,"name":"liquidity-scroll","optional":true,"settle_seconds":0.8},
+              {"type":"screenshot","name":"liquidity-bottom"},
+              {"type":"click","selector":".evidence-window [data-window-action='close']","name":"close-liquidity","optional":true,"settle_seconds":0.4},
+
+              {"type":"click","selector":".family-evidence-action[data-evidence-kind='order_flow']","name":"open-order-flow","optional":true,"settle_seconds":1.8},
+              {"type":"screenshot","name":"order-flow-top"},
+              {"type":"scroll","selector":".evidence-window-body","delta_y":620,"name":"order-flow-scroll","optional":true,"settle_seconds":0.8},
+              {"type":"screenshot","name":"order-flow-bottom"},
+              {"type":"click","selector":".evidence-window [data-window-action='close']","name":"close-order-flow","optional":true,"settle_seconds":0.4},
+
+              {"type":"click","selector":".family-evidence-action[data-evidence-kind='derivatives']","name":"open-derivatives","optional":true,"settle_seconds":1.8},
+              {"type":"screenshot","name":"derivatives-top"},
+              {"type":"scroll","selector":".evidence-window-body","delta_y":620,"name":"derivatives-scroll","optional":true,"settle_seconds":0.8},
+              {"type":"screenshot","name":"derivatives-bottom"},
+              {"type":"click","selector":".evidence-window [data-window-action='close']","name":"close-derivatives","optional":true,"settle_seconds":0.4},
+
+              {"type":"click","selector":".family-evidence-action[data-evidence-kind='onchain']","name":"open-onchain","optional":true,"settle_seconds":1.8},
+              {"type":"screenshot","name":"onchain-top"},
+              {"type":"scroll","selector":".evidence-window-body","delta_y":620,"name":"onchain-scroll","optional":true,"settle_seconds":0.8},
+              {"type":"screenshot","name":"onchain-bottom"},
+              {"type":"click","selector":".evidence-window [data-window-action='close']","name":"close-onchain","optional":true,"settle_seconds":0.4},
+
+              {"type":"click","selector":"#searchButton","name":"open-search","optional":true,"settle_seconds":0.7},
+              {"type":"screenshot","name":"search-drawer"},
+              {"type":"click","selector":"#drawerBackdrop","name":"close-search","optional":true,"settle_seconds":0.4},
+
+              {"type":"click","selector":"#filterButton","name":"open-filter","optional":true,"settle_seconds":0.7},
+              {"type":"screenshot","name":"filter-drawer"},
+              {"type":"click","selector":"#drawerBackdrop","name":"close-filter","optional":true,"settle_seconds":0.4},
+
+              {"type":"click","selector":"#settingsButton","name":"open-settings","optional":true,"settle_seconds":0.7},
+              {"type":"screenshot","name":"settings-drawer"},
+              {"type":"click","selector":"#drawerBackdrop","name":"close-settings","optional":true,"settle_seconds":0.4}
+            ]
+          }
+          JSON
+          /Users/Shared/Galactech/bin/galactech-visual-audit             --url http://127.0.0.1:48700/             --scenario "$SCENARIO"             --output-dir "$OUT"             --width 1440 --height 900
+
+      - name: Compact trader journey 1280x800
+        shell: bash
+        run: |
+          set -euo pipefail
+          OUT="$RUNNER_TEMP/trader-ux-1280"
+          SCENARIO="$RUNNER_TEMP/trader-ux-1280.json"
+          cat > "$SCENARIO" <<'JSON'
+          {
+            "actions": [
+              {"type":"wait","seconds":1.5,"name":"compact-home-settle"},
+              {"type":"screenshot","name":"compact-home"},
+              {"type":"click","selector":".message-summary","index":0,"name":"compact-open-first-message","optional":true,"settle_seconds":1.5},
+              {"type":"screenshot","name":"compact-expanded"},
+              {"type":"click","selector":".family-evidence-action[data-evidence-kind='liquidity']","name":"compact-liquidity","optional":true,"settle_seconds":1.4},
+              {"type":"screenshot","name":"compact-liquidity-window"}
+            ]
+          }
+          JSON
+          /Users/Shared/Galactech/bin/galactech-visual-audit             --url http://127.0.0.1:48700/             --scenario "$SCENARIO"             --output-dir "$OUT"             --width 1280 --height 800
+
+      - name: Upload trader UX recon
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: crypto-trader-ux-recon-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/trader-ux-1440
+            ${{ runner.temp }}/trader-ux-1280
+            ${{ runner.temp }}/product-health.json
+          if-no-files-found: error
+          retention-days: 14
