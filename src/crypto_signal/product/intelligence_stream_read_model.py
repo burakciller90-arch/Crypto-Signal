@@ -46,6 +46,13 @@ STREAM_CURSOR_SCHEMA_VERSION = "intelligence-stream-cursor-v1/1"
 STREAM_MESSAGE_DETAIL_SCHEMA_VERSION = "intelligence-stream-message-detail-v1/1"
 DEFAULT_STREAM_PAGE_LIMIT = 50
 MAX_STREAM_PAGE_LIMIT = 200
+_PRIMARY_HIDDEN_FAMILIES = (
+    "geometry",
+    "liquidity",
+    "order_flow",
+    "derivatives",
+    "onchain",
+)
 
 
 class StreamReadModelError(ValueError):
@@ -146,10 +153,17 @@ class IntelligenceStreamReadModel:
         clauses = ["1 = 1"]
 
         if query.primary_surface:
+            placeholders = ", ".join("?" for _ in _PRIMARY_HIDDEN_FAMILIES)
             clauses.append(
-                "json_extract(n.payload_json, '$.schema_version') != ?"
+                "("
+                "json_extract(n.payload_json, '$.schema_version') != ? "
+                "OR json_extract(n.payload_json, '$.family') NOT IN ("
+                + placeholders
+                + ")"
+                ")"
             )
             params.append(STREAM_FAMILY_NARRATIVE_MESSAGE_SCHEMA_VERSION)
+            params.extend(_PRIMARY_HIDDEN_FAMILIES)
 
         if query.before is not None:
             clauses.append(
