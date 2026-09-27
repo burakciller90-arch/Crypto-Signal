@@ -48,3 +48,21 @@ def test_runtime_watchdog_installer_falls_back_when_terminal_open_fails() -> Non
     assert 'if ! /usr/bin/open -gj -a Terminal "$LOCAL_ROOT/start-ssd-runtime.command"; then' in text
     assert 'R11_TERMINAL_OPEN_FAILED_FALLBACK_DIRECT=YES' in text
     assert '"$LOCAL_ROOT/start-ssd-runtime.command"' in text
+
+
+def test_r11_installer_refreshes_existing_supervisor_before_start() -> None:
+    text = Path("ops/r11/install_runtime_watchdog.sh").read_text(encoding="utf-8")
+
+    assert "R11_REFRESHING_EXISTING_SUPERVISOR=YES" in text
+    assert 'kill "$existing_sup"' in text or '/bin/kill "$existing_sup"' in text
+    assert 'rm -f "$ROOT/ssd-service-supervisor.pid"' in text or '/bin/rm -f "$ROOT/ssd-service-supervisor.pid"' in text
+    assert "R11_TERMINAL_START_MISSING_FALLBACK_DIRECT=YES" in text
+
+
+def test_supervisor_requires_real_dashboard_health_before_reuse() -> None:
+    text = Path("ops/ssd_runtime_supervisor.sh").read_text(encoding="utf-8")
+
+    assert "dashboard_health_ok()" in text
+    assert "dashboard_unhealthy pid=$pid action=restart" in text
+    assert 'curl -fsS --max-time 3 http://127.0.0.1:48700/api/health' in text
+    assert 'stop_dashboard_pid "$pid"' in text
