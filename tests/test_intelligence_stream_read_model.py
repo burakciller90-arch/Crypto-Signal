@@ -16,6 +16,9 @@ from crypto_signal.ledger.serialization import (
 from crypto_signal.product.intelligence_stream_analytical import (
     STREAM_ANALYTICAL_VIEW_SCHEMA_VERSION,
 )
+from crypto_signal.product.intelligence_stream_family import (
+    STREAM_FAMILY_NARRATIVE_MESSAGE_SCHEMA_VERSION,
+)
 from crypto_signal.product.intelligence_stream_messages import (
     STREAM_FACT_BUNDLE_SCHEMA_VERSION,
     STREAM_MESSAGE_INPUT_SCHEMA_VERSION,
@@ -455,6 +458,69 @@ def _create_read_fixture(path: Path) -> dict[str, str]:
         connection.close()
 
 
+def _insert_family_surface_fixture(
+    path: Path,
+    *,
+    source_narrative_identity: str,
+) -> str:
+    with sqlite3.connect(path) as connection:
+        row = connection.execute(
+            """
+            SELECT
+                plan_identity,
+                analytical_view_identity,
+                story_identity,
+                source_event_identity,
+                stream_event_identity,
+                event_at_ms,
+                payload_json
+            FROM stream_narrative_messages
+            WHERE narrative_identity = ?
+            """,
+            (source_narrative_identity,),
+        ).fetchone()
+        assert row is not None
+        payload = json.loads(str(row[6]))
+        assert isinstance(payload, dict)
+        payload.pop("narrative_identity", None)
+        payload["schema_version"] = STREAM_FAMILY_NARRATIVE_MESSAGE_SCHEMA_VERSION
+        payload["source_kind"] = "deterministic"
+        payload["family"] = "order_flow"
+        payload["state_label"] = "mixed"
+        family_identity = canonical_sha256(payload)
+        encoded = canonical_json({"narrative_identity": family_identity, **payload})
+        connection.execute(
+            """
+            INSERT INTO stream_narrative_messages (
+                narrative_identity,
+                plan_identity,
+                analytical_view_identity,
+                story_identity,
+                source_event_identity,
+                stream_event_identity,
+                event_at_ms,
+                source_kind,
+                payload_json,
+                payload_sha256
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                family_identity,
+                str(row[0]),
+                str(row[1]),
+                str(row[2]),
+                str(row[3]),
+                str(row[4]),
+                int(str(row[5])),
+                "deterministic",
+                encoded,
+                sha256_text(encoded),
+            ),
+        )
+        connection.commit()
+    return family_identity
+
+
 def test_stream_cursor_round_trip_is_exact() -> None:
     from crypto_signal.product.intelligence_stream_read_model import StreamCursor
 
@@ -724,6 +790,38 @@ def test_stream_exact_detail_fails_closed_on_persisted_tamper(tmp_path) -> None:
         reader.read_message_detail(identities["btc-issued"])
 
 
+def test_stream_primary_surface_hides_family_telemetry_without_deleting_it(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / "stream.sqlite3"
+    identities = _create_read_fixture(path)
+    family_identity = _insert_family_surface_fixture(
+        path,
+        source_narrative_identity=identities["btc-flow"],
+    )
+    reader = IntelligenceStreamReadModel(path)
+
+    all_page = reader.read_messages(StreamMessageQuery(limit=20))
+    all_ids = {item["narrative_identity"] for item in all_page.items}
+    assert family_identity in all_ids
+
+    primary_page = reader.read_messages(
+        StreamMessageQuery(limit=20, primary_surface=True)
+    )
+    primary_ids = {item["narrative_identity"] for item in primary_page.items}
+    assert family_identity not in primary_ids
+    assert identities["btc-issued"] in primary_ids
+    assert identities["eth-outcome"] in primary_ids
+    assert identities["btc-flow"] in primary_ids
+
+    family_record = reader.read_message(family_identity)
+    assert family_record is not None
+    assert (
+        family_record["schema_version"]
+        == STREAM_FAMILY_NARRATIVE_MESSAGE_SCHEMA_VERSION
+    )
+
+
 def test_stream_read_model_is_read_only_and_missing_db_is_not_initialized(tmp_path) -> None:
     missing = tmp_path / "missing.sqlite3"
     reader = IntelligenceStreamReadModel(missing)
@@ -741,6 +839,23 @@ def test_stream_api_exposes_cursor_history_search_and_lookup(tmp_path) -> None:
             stream_ledger_path=stream_path,
         )
     )
+
+    family_identity = _insert_family_surface_fixture(
+        stream_path,
+        source_narrative_identity=identities["btc-flow"],
+    )
+
+    primary = client.get(
+        "/api/stream/messages",
+        params={"limit": 20, "surface": "primary"},
+    )
+    assert primary.status_code == 200
+    primary_ids = {
+        item["narrative_identity"]
+        for item in primary.json()["page"]["items"]
+    }
+    assert family_identity not in primary_ids
+    assert identities["btc-issued"] in primary_ids
 
     first = client.get("/api/stream/messages?limit=2")
     assert first.status_code == 200
