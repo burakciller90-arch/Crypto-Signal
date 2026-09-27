@@ -159,11 +159,18 @@ def test_local_rewriter_emits_bounded_openai_compatible_request() -> None:
 
     messages = payload["messages"]
     assert isinstance(messages, list)
-    assert len(messages) == 2
+    assert len(messages) == 4
     system = messages[0]
-    user = messages[1]
+    example_user = messages[1]
+    example_assistant = messages[2]
+    user = messages[3]
     assert isinstance(system, dict)
+    assert isinstance(example_user, dict)
+    assert isinstance(example_assistant, dict)
     assert isinstance(user, dict)
+    assert example_user["role"] == "user"
+    assert example_assistant["role"] == "assistant"
+    assert "Görünüm yukarı yönlü" in str(example_assistant["content"])
     assert "yalnız bu iki alanı döndürmelisin" in str(system["content"])
     assert "Yeni teknik kavram" in str(system["content"])
     assert "birebir kopyalama" in str(system["content"])
