@@ -1,0 +1,243 @@
+name: Crypto Stream Final F9 Real UI Acceptance
+
+on:
+  push:
+    branches:
+      - 'stream/final-f9-*'
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: stream-final-f9-real-ui-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  prep:
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          clean: true
+          fetch-depth: 0
+
+      - name: Verify exact post-F8 source and isolated environment
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          DEV="$ROOT/Development"
+          BASE_PY="$DEV/.venv/bin/python"
+          TEST_VENV="$RUNNER_TEMP/stream-final-f9-venv"
+
+          test "$(id -u)" = "504"
+          test -x "$BASE_PY"
+          test -z "$(git -C "$DEV" status --porcelain)"
+          echo "DEV_HEAD_BEFORE=$(git -C "$DEV" rev-parse HEAD)" > "$RUNNER_TEMP/f9-dev-state"
+
+          test "$(git -C "$GITHUB_WORKSPACE" rev-parse HEAD)" = "$GITHUB_SHA"
+          git fetch origin main --quiet
+          MERGE_BASE="$(git merge-base origin/main HEAD)"
+          test "$MERGE_BASE" = "$(git rev-parse origin/main)"
+
+          git diff --quiet origin/main...HEAD --             CURRENT_STATUS.md             PROJECT_CHRONICLE.md             READ_FIRST_CRYPTO_SIGNAL.md             docs/CRYPTO_SIGNAL_INTELLIGENCE_STREAM_V1_FINAL_COMPLETION_ROADMAP.md             ops/ssd_runtime_supervisor.sh
+
+          rm -rf "$TEST_VENV"
+          "$BASE_PY" -m venv "$TEST_VENV"
+          "$TEST_VENV/bin/python" -m pip install --upgrade pip
+          "$TEST_VENV/bin/python" -m pip install -e "$GITHUB_WORKSPACE"
+          "$TEST_VENV/bin/python" -m pip install             "pytest>=8.4" "pytest-asyncio>=1.2" "ruff>=0.13" "mypy>=1.18"
+          echo "TEST_PY=$TEST_VENV/bin/python" >> "$GITHUB_ENV"
+          echo "F9_EXACT_POST_F8_SOURCE_PASS=YES"
+          echo "REAL_CAPITAL=0"
+
+      - name: Focused F9 product acceptance contract
+        env:
+          PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/src:${{ github.workspace }}/tests
+          MYPYPATH: ${{ github.workspace }}:${{ github.workspace }}/src
+        run: |
+          set -euo pipefail
+          "$TEST_PY" -m pytest -q             tests/test_stream_f9_real_ui_audit.py             tests/test_intelligence_stream_ui.py             tests/test_intelligence_stream_read_model.py             tests/test_stream_s15_end_to_end.py             tests/test_stream_s16_controlled_cutover.py             tests/test_dashboard_web.py
+
+          "$TEST_PY" -m ruff check             ops/audit_stream_f9_real_ui.py             ops/capture_chromium_viewport.py             tests/test_stream_f9_real_ui_audit.py             tests/test_intelligence_stream_ui.py
+
+          "$TEST_PY" -m mypy --explicit-package-bases             ops/audit_stream_f9_real_ui.py             ops/capture_chromium_viewport.py
+
+          node --check src/crypto_signal/product/stream/app.js
+          node --check src/crypto_signal/product/stream/evidence.js
+          node --check src/crypto_signal/product/stream/visual_proof.js
+          node --check src/crypto_signal/product/stream/notifications.js
+
+          echo "F9_FOCUSED_ACCEPTANCE_PASS=YES"
+          echo "REAL_CAPITAL=0"
+
+      - name: Whole-repository regression
+        env:
+          MYPYPATH: ${{ github.workspace }}:${{ github.workspace }}/src
+        run: |
+          set -euo pipefail
+          "$TEST_PY" -m pytest -q
+          "$TEST_PY" -m ruff check             src tests ops/verify_stage10_integrated.py             ops/capture_chromium_viewport.py             ops/audit_stream_f9_real_ui.py
+          "$TEST_PY" -m mypy --explicit-package-bases             src             ops/verify_stage10_integrated.py             ops/capture_chromium_viewport.py             ops/audit_stream_f9_real_ui.py
+          node --check src/crypto_signal/product/static/freshness.js
+          node --check src/crypto_signal/product/static/app.js
+          node --check src/crypto_signal/product/galactech/app.js
+          node --check src/crypto_signal/product/stream/app.js
+          node --check src/crypto_signal/product/stream/evidence.js
+          node --check src/crypto_signal/product/stream/visual_proof.js
+          node --check src/crypto_signal/product/stream/notifications.js
+          node tests/js/test_product_freshness.js
+
+          echo "F9_WHOLE_REPOSITORY_PASS=YES"
+          echo "REAL_CAPITAL=0"
+
+      - name: Prove Development checkout remained untouched
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
+          BEFORE="$(sed -n 's/^DEV_HEAD_BEFORE=//p' "$RUNNER_TEMP/f9-dev-state")"
+          AFTER="$(git -C "$DEV" rev-parse HEAD)"
+          test -z "$(git -C "$DEV" status --porcelain)"
+          test "$BEFORE" = "$AFTER"
+          echo "F9_PREP_NON_MUTATING_PASS=YES"
+
+  physical:
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    needs: prep
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          clean: true
+          fetch-depth: 0
+
+      - name: Verify live Product boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          DEV="$ROOT/Development"
+          PRODUCT="$ROOT/Product"
+          OUT="$RUNNER_TEMP/stream-final-f9-real-ui"
+          mkdir -p "$OUT"
+
+          test -z "$(git -C "$DEV" status --porcelain)"
+          test -z "$(git -C "$PRODUCT" status --porcelain)"
+          echo "DEV_HEAD_BEFORE=$(git -C "$DEV" rev-parse HEAD)" > "$OUT/checkouts.txt"
+          echo "PRODUCT_HEAD_BEFORE=$(git -C "$PRODUCT" rev-parse HEAD)" >> "$OUT/checkouts.txt"
+
+          git fetch origin main --quiet
+          git merge-base --is-ancestor "$(git -C "$DEV" rev-parse HEAD)" origin/main
+          git merge-base --is-ancestor "$(git -C "$PRODUCT" rev-parse HEAD)" origin/main
+
+          curl -fsS --max-time 5 http://127.0.0.1:48700/api/health > "$OUT/health.json"
+          /usr/bin/python3 - "$OUT/health.json" <<'PY'
+          import json, sys
+          payload = json.load(open(sys.argv[1]))
+          assert payload["status"] == "ok", payload
+          assert payload["read_only"] is True, payload
+          assert payload["product_root"] == "stream", payload
+          assert payload["stream_root_active"] is True, payload
+          assert payload["real_capital"] == 0, payload
+          PY
+
+          echo "F9_LIVE_PRODUCT_BOUNDARY_PASS=YES"
+          echo "REAL_CAPITAL=0"
+
+      - name: Run genuine production desktop and exact-mobile F9 audit
+        shell: bash
+        env:
+          PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/src
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          DEV="$ROOT/Development"
+          PY="$DEV/.venv/bin/python"
+          OUT="$RUNNER_TEMP/stream-final-f9-real-ui"
+          BASE_URL="http://127.0.0.1:48700"
+
+          BROWSER=""
+          for candidate in             "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"             "/Applications/Chromium.app/Contents/MacOS/Chromium"             "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge"             "/Applications/Google Chrome Canary.app/Contents/MacOS/Google Chrome Canary"; do
+            if [ -x "$candidate" ]; then
+              BROWSER="$candidate"
+              break
+            fi
+          done
+          test -n "$BROWSER"
+          echo "BROWSER=$BROWSER" >> "$OUT/checkouts.txt"
+
+          "$PY" "$GITHUB_WORKSPACE/ops/audit_stream_f9_real_ui.py"             --browser "$BROWSER"             --base-url "$BASE_URL"             --output "$OUT/f9-real-ui-report.json"             --require-complete             --require-incoming             --incoming-wait-seconds 900
+
+          echo "F9_GENUINE_PRODUCTION_BROWSER_PASS=YES"
+          echo "REAL_CAPITAL=0"
+
+      - name: Run same-code deterministic UI mechanics
+        shell: bash
+        env:
+          PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/src
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          DEV="$ROOT/Development"
+          PY="$DEV/.venv/bin/python"
+          OUT="$RUNNER_TEMP/stream-final-f9-real-ui"
+          BASE_URL="http://127.0.0.1:48700"
+
+          BROWSER="$(sed -n 's/^BROWSER=//p' "$OUT/checkouts.txt")"
+          test -n "$BROWSER"
+
+          "$PY" "$GITHUB_WORKSPACE/ops/capture_chromium_viewport.py"             --browser "$BROWSER"             --url "$BASE_URL/?fixture=expanded"             --output "$OUT/desktop-expanded.png"             --metrics-out "$OUT/desktop-expanded.json"             --width 1440 --height 1000             --require-no-horizontal-overflow             --probe-expansion-anchor
+
+          "$PY" "$GITHUB_WORKSPACE/ops/capture_chromium_viewport.py"             --browser "$BROWSER"             --url "$BASE_URL/?fixture=windows"             --output "$OUT/desktop-windows.png"             --metrics-out "$OUT/desktop-windows.json"             --width 1440 --height 1000             --require-no-horizontal-overflow             --probe-window-manager
+
+          "$PY" "$GITHUB_WORKSPACE/ops/capture_chromium_viewport.py"             --browser "$BROWSER"             --url "$BASE_URL/?fixture=sound"             --output "$OUT/desktop-sound.png"             --metrics-out "$OUT/desktop-sound.json"             --width 1440 --height 1000             --require-no-horizontal-overflow             --probe-notifications
+
+          "$PY" "$GITHUB_WORKSPACE/ops/capture_chromium_viewport.py"             --browser "$BROWSER"             --url "$BASE_URL/?fixture=filters"             --output "$OUT/desktop-discovery.png"             --metrics-out "$OUT/desktop-discovery.json"             --width 1440 --height 1000             --require-no-horizontal-overflow             --probe-discovery
+
+          "$PY" "$GITHUB_WORKSPACE/ops/capture_chromium_viewport.py"             --browser "$BROWSER"             --url "$BASE_URL/?fixture=long10k"             --output "$OUT/desktop-long10k.png"             --metrics-out "$OUT/desktop-long10k.json"             --width 1440 --height 1100             --require-no-horizontal-overflow             --probe-long-session
+
+          "$PY" "$GITHUB_WORKSPACE/ops/capture_chromium_viewport.py"             --browser "$BROWSER"             --url "$BASE_URL/?fixture=long10k"             --output "$OUT/mobile-long10k.png"             --metrics-out "$OUT/mobile-long10k.json"             --width 430 --height 860 --mobile             --require-no-horizontal-overflow             --probe-long-session
+
+          echo "F9_DETERMINISTIC_UI_MECHANICS_PASS=YES"
+          echo "REAL_CAPITAL=0"
+
+      - name: Verify deployed checkouts remained untouched
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          DEV="$ROOT/Development"
+          PRODUCT="$ROOT/Product"
+          OUT="$RUNNER_TEMP/stream-final-f9-real-ui"
+
+          DEV_BEFORE="$(sed -n 's/^DEV_HEAD_BEFORE=//p' "$OUT/checkouts.txt")"
+          PRODUCT_BEFORE="$(sed -n 's/^PRODUCT_HEAD_BEFORE=//p' "$OUT/checkouts.txt")"
+          test -z "$(git -C "$DEV" status --porcelain)"
+          test -z "$(git -C "$PRODUCT" status --porcelain)"
+          test "$(git -C "$DEV" rev-parse HEAD)" = "$DEV_BEFORE"
+          test "$(git -C "$PRODUCT" rev-parse HEAD)" = "$PRODUCT_BEFORE"
+
+          echo "F9_PHYSICAL_NON_MUTATING_PASS=YES"
+          echo "HISTORICAL_BACKFILL=NO"
+          echo "SYNTHETIC_ACTIVITY=NO"
+          echo "REAL_CAPITAL=0"
+
+      - name: Upload F9 physical evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stream-final-f9-real-ui-${{ github.run_id }}
+          path: ${{ runner.temp }}/stream-final-f9-real-ui
+          if-no-files-found: warn
+          retention-days: 14
