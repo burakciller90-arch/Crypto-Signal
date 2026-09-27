@@ -63,7 +63,7 @@ jobs:
           echo "=== INSTALL LATEST WATCHDOG/SUPERVISOR ==="
           bash "$GITHUB_WORKSPACE/ops/r11/install_runtime_watchdog.sh"
 
-          old_sup="$(ps -axo pid=,comm=,args= | awk -v needle="$ROOT/ssd-service-supervisor.sh" '($2 == "bash" || $2 == "/bin/bash") && index($0, needle) > 0 {print $1; exit}')"
+          old_sup="$(ps -axo pid=,comm=,args= | awk -v needle="$ROOT/ssd-service-supervisor.sh" '($2 == "bash" || $2 == "/bin/bash") && index($0, needle) > 0 && first == "" {first=$1} END {if (first != "") print first}')"
           echo "OLD_SUPERVISOR_PID=${old_sup:-NONE}"
           if [ -n "$old_sup" ] && kill -0 "$old_sup" >/dev/null 2>&1; then
             kill "$old_sup"
@@ -81,7 +81,7 @@ jobs:
 
           new_sup=""
           for _ in {1..60}; do
-            new_sup="$(ps -axo pid=,comm=,args= | awk -v needle="$ROOT/ssd-service-supervisor.sh" '($2 == "bash" || $2 == "/bin/bash") && index($0, needle) > 0 {print $1; exit}')"
+            new_sup="$(ps -axo pid=,comm=,args= | awk -v needle="$ROOT/ssd-service-supervisor.sh" '($2 == "bash" || $2 == "/bin/bash") && index($0, needle) > 0 && first == "" {first=$1} END {if (first != "") print first}')"
             if [ -n "$new_sup" ] && kill -0 "$new_sup" >/dev/null 2>&1; then
               break
             fi
@@ -115,7 +115,7 @@ jobs:
           echo "=== MARKET TAPE PROCESS ==="
           tape_pid=""
           for _ in {1..60}; do
-            tape_pid="$(ps -axo pid=,args= | awk '/run_market_tape_stream.py/ && /stream.bybit.tr\/v5\/public\/spot/ {print $1; exit}')"
+            tape_pid="$(ps -axo pid=,args= | awk '/run_market_tape_stream.py/ && /stream.bybit.tr\/v5\/public\/spot/ && first == "" {first=$1} END {if (first != "") print first}')"
             if [ -n "$tape_pid" ] && kill -0 "$tape_pid" >/dev/null 2>&1; then
               break
             fi
