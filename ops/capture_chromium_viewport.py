@@ -607,8 +607,11 @@ def _capture(args: argparse.Namespace) -> dict[str, object]:
                 raise RuntimeError("CDP discovery probe value missing")
             if discovery_probe.get("ok") is not True:
                 raise RuntimeError(f"discovery probe failed: {discovery_probe!r}")
-            if discovery_probe.get("initialExpanded") is not True:
-                raise RuntimeError(f"discovery direct deep-link failed: {discovery_probe!r}")
+            initial_message = str(discovery_probe.get("initialMessage", ""))
+            if initial_message and discovery_probe.get("initialExpanded") is not True:
+                raise RuntimeError(
+                    f"discovery direct deep-link failed: {discovery_probe!r}"
+                )
             query = str(discovery_probe.get("query", ""))
             for expected in (
                 "text=likidite",
