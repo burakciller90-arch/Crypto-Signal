@@ -65,25 +65,22 @@ class CandleStore:
         self.initialize()
         with closing(self._connect()) as connection, connection:
             connection.execute("BEGIN IMMEDIATE")
-            existing = self._get_one(connection, candle)
-            if existing is None:
-                self._write(connection, candle)
-                return WriteDisposition.INSERTED
+            return self._upsert_one(connection, candle)
 
-            if existing.is_closed:
-                if not candle.is_closed:
-                    return WriteDisposition.IGNORED_FINALIZED
-                if self._market_equal(existing, candle):
-                    return WriteDisposition.UNCHANGED
-                raise CandleConflictError(f"finalized candle conflict: {candle.identity!r}")
+    def upsert_many(
+        self,
+        candles: tuple[Candle, ...],
+    ) -> tuple[WriteDisposition, ...]:
+        if not candles:
+            return ()
+        self.initialize()
+        with closing(self._connect()) as connection, connection:
+            connection.execute("BEGIN IMMEDIATE")
+            return tuple(
+                self._upsert_one(connection, candle)
+                for candle in candles
+            )
 
-            if not candle.is_closed and candle.source_timestamp_ms < existing.source_timestamp_ms:
-                return WriteDisposition.IGNORED_STALE
-            if self._market_equal(existing, candle) and existing.is_closed == candle.is_closed:
-                return WriteDisposition.UNCHANGED
-
-            self._write(connection, candle)
-            return WriteDisposition.UPDATED
     def list_candles(
         self,
         *,
@@ -144,6 +141,39 @@ class CandleStore:
         connection = sqlite3.connect(self.path, timeout=5.0)
         connection.row_factory = sqlite3.Row
         return connection
+
+    def _upsert_one(
+        self,
+        connection: sqlite3.Connection,
+        candle: Candle,
+    ) -> WriteDisposition:
+        existing = self._get_one(connection, candle)
+        if existing is None:
+            self._write(connection, candle)
+            return WriteDisposition.INSERTED
+
+        if existing.is_closed:
+            if not candle.is_closed:
+                return WriteDisposition.IGNORED_FINALIZED
+            if self._market_equal(existing, candle):
+                return WriteDisposition.UNCHANGED
+            raise CandleConflictError(
+                f"finalized candle conflict: {candle.identity!r}"
+            )
+
+        if (
+            not candle.is_closed
+            and candle.source_timestamp_ms < existing.source_timestamp_ms
+        ):
+            return WriteDisposition.IGNORED_STALE
+        if (
+            self._market_equal(existing, candle)
+            and existing.is_closed == candle.is_closed
+        ):
+            return WriteDisposition.UNCHANGED
+
+        self._write(connection, candle)
+        return WriteDisposition.UPDATED
 
     def _get_one(self, connection: sqlite3.Connection, candle: Candle) -> Candle | None:
         row = connection.execute(
