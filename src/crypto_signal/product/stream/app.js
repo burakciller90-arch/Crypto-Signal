@@ -2828,17 +2828,63 @@ function fixtureRecord(index, symbol, timeframe, stateLabel, copy, minutesAgo, s
   const narrativeIdentity = fixtureIdentity(index + 1);
   const forecastIdentity = fixtureIdentity(700 + index);
   const proofIdentity = fixtureIdentity(800 + index);
-  const familyNames = ["geometry", "liquidity", "order_flow", "derivatives", "onchain"];
-  const familyContributions = familyNames.map((family, offset) => ({
-    family,
-    state: "observed",
-    direction: offset === 3 ? "mixed" : "support",
-    support_points: 74 - offset * 8,
-    opposition_points: 8 + offset * 4,
-    evidence_quality_0_1: 0.94 - offset * 0.07,
-    freshness_0_1: 0.97 - offset * 0.06,
-    material_conflict_count: offset === 3 ? 1 : 0,
-  }));
+  const familyContributions = [
+    {
+      family: "geometry_pa_elliott_harmonic",
+      state: "observed",
+      direction: "bullish",
+      prior_weight: 0.20,
+      support_points: 16,
+      opposition_points: 0,
+      evidence_quality_0_1: 0.92,
+      freshness_0_1: 0.95,
+      material_conflict_count: 0,
+    },
+    {
+      family: "liquidity",
+      state: "observed",
+      direction: "bullish",
+      prior_weight: 0.25,
+      support_points: 21,
+      opposition_points: 0,
+      evidence_quality_0_1: 0.91,
+      freshness_0_1: 0.93,
+      material_conflict_count: 0,
+    },
+    {
+      family: "order_flow_absorption",
+      state: "observed",
+      direction: "bullish",
+      prior_weight: 0.25,
+      support_points: 22,
+      opposition_points: 0,
+      evidence_quality_0_1: 0.90,
+      freshness_0_1: 0.92,
+      material_conflict_count: 0,
+    },
+    {
+      family: "derivatives",
+      state: "observed",
+      direction: "bearish",
+      prior_weight: 0.15,
+      support_points: 0,
+      opposition_points: 10,
+      evidence_quality_0_1: 0.82,
+      freshness_0_1: 0.88,
+      material_conflict_count: 1,
+    },
+    {
+      family: "onchain_smart_money",
+      state: "no_evidence",
+      direction: null,
+      prior_weight: 0.15,
+      support_points: 0,
+      opposition_points: 0,
+      evidence_quality_0_1: null,
+      freshness_0_1: null,
+      material_conflict_count: 0,
+    },
+  ];
   const record = {
     narrative_identity: narrativeIdentity,
     event_at_ms: Date.now() - minutesAgo * 60_000,
@@ -2861,9 +2907,9 @@ function fixtureRecord(index, symbol, timeframe, stateLabel, copy, minutesAgo, s
         stance: {
           effective_stance: stateLabel.toLowerCase(),
           strength: "moderate",
-          support_score_0_100: 74,
-          opposition_score_0_100: 19,
-          net_support_points: 55,
+          support_score_0_100: 59,
+          opposition_score_0_100: 10,
+          net_support_points: 49,
         },
         next_condition: { state: "entry_zone_watch" },
         invalidation_condition: { price: 60750 },
@@ -2872,8 +2918,8 @@ function fixtureRecord(index, symbol, timeframe, stateLabel, copy, minutesAgo, s
       fact_bundle: {
         forecast_identity: forecastIdentity,
         proof_identity: proofIdentity,
-        confluence_support_score_0_100: 74,
-        confluence_opposition_score_0_100: 19,
+        confluence_support_score_0_100: 59,
+        confluence_opposition_score_0_100: 10,
         family_contributions: familyContributions,
         trigger_zone: { low: 62000, high: 62500 },
         target_zone: { low: 65000, high: 66000 },
