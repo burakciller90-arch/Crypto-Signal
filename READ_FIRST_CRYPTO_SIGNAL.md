@@ -29,7 +29,9 @@ MI1 is mechanically accepted on main through:
 - PR #1454 / merge `28fa1c208e9e66173214a8bdfaa33cea4bbfe935` — Product history/SSE uses a primary customer surface, hides only the five market-family telemetry bubbles, preserves exact/debug records and keeps Event Risk/provider-quality alerts visible;
 - UID504 MI1 primary-surface acceptance run `36330349505` — focused tests, Ruff, mypy, Node syntax, non-mutating canonical checkouts, real project-isolation diff, REAL_CAPITAL=0.
 
-Exact implementation frontier: **MI2 — Guarded natural Turkish layer**.
+MI2 is mechanically accepted on main through PR #1457 / merge `20c1c18c3253254555708e0cbcc0c52cc04ae784`. Exact UID504 acceptance run `36331471395` proved focused fact-lock tests, Ruff, mypy, real loopback `qwen2.5:3b-instruct` rewrite, canonical checkout non-mutation and project isolation. The model receives a deterministic fact-locked analyst brief but cannot add new market facts, scores, family claims, direction changes or visible numeric changes.
+
+Exact implementation frontier: **MI3 — Five-family evidence summary UI**.
 
 ## Intelligence Stream V1 final completion acceptance — 2026-09-27
 
