@@ -4,7 +4,7 @@ Status: **ACTIVE — REBASED ON ACCEPTED F8 MAIN, PHYSICAL ACCEPTANCE REQUIRED**
 Roadmap: `CRYPTO_SIGNAL_INTELLIGENCE_STREAM_V1_FINAL_COMPLETION_ROADMAP.md`  
 Phase: **F9 — Final Real-UI Product Acceptance**  
 Rebased from main: `1692e62ce676720ef6f7da287a0a794907f7f5fc`  
-Safety: **REAL_CAPITAL=0**
+Safety: **REAL_CAPITAL=0**\nAcceptance trigger: **post-F8 exact-source physical run enabled**
 
 ## 1. Canonical scope entering F9
 
