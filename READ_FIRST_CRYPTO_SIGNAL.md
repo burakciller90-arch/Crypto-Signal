@@ -8,6 +8,18 @@ Read `docs/CRYPTO_SIGNAL_SSD504_WORKBENCH.md` before starting new implementation
 
 ---
 
+# ACTIVE EXECUTION ROADMAP — Reality-Backed Evidence Data Plane V1 — 2026-09-27
+
+Canonical execution authority for the five-family source/runtime completion:
+
+**`docs/CRYPTO_SIGNAL_REALITY_BACKED_EVIDENCE_DATA_PLANE_V1.md`**
+
+Current state: **RDP0 PASS / RDP1 ACTIVE — Collector and runtime reliability**.
+
+This execution roadmap sits under the accepted Evidence Depth & Visual Proof frontier. It adds the concrete data-plane completion order: collector reliability, source envelopes/coverage, Geometry truth, rich Liquidity/Order Flow wiring, fresh Derivatives/Liquidations, BTC/ETH Options inside Derivatives, real On-chain/stablecoin capital-flow sources, Event/Cross-market runtime, cross-venue quality + overlap protection, exact frozen proof, then a continuous soak. The five-family 20/25/25/15/15 matrix remains unchanged; no new family is created. Portfolio implementation follows Evidence Data Plane PASS unless the user explicitly authorizes parallel preparatory work. **REAL_CAPITAL=0**.
+
+---
+
 # READ FIRST — Crypto Signal
 
 ## ACTIVE FRONTIER — Evidence Depth & Visual Proof V1 — 2026-09-27
