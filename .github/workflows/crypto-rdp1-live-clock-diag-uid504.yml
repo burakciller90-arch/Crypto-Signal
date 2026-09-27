@@ -52,6 +52,49 @@ jobs:
           echo "=== CURRENT SUPERVISOR LIVE OUT ==="
           tail -n 280 "$ROOT/ServiceLogs/live.out" 2>/dev/null || echo "MISSING"
 
+          echo "=== CURRENT SNAPSHOT ERR ==="
+          tail -n 220 "$ROOT/ServiceLogs/market-tape-snapshot.err.log" 2>/dev/null || echo "MISSING"
+
+          echo "=== CURRENT SNAPSHOT OUT ==="
+          tail -n 260 "$ROOT/ServiceLogs/market-tape-snapshot.out.log" 2>/dev/null || echo "MISSING"
+
+          echo "=== CURRENT COLLECTOR TRUTH ==="
+          "$PY" - "$RT/market_tape/collector_runtime.sqlite3" <<'PY'
+          import json
+          import sqlite3
+          import sys
+          import time
+          from pathlib import Path
+
+          path = Path(sys.argv[1])
+          now_ms = time.time_ns() // 1_000_000
+          uri = f"{path.resolve().as_uri()}?mode=ro"
+          with sqlite3.connect(uri, uri=True, timeout=5.0) as db:
+              db.row_factory = sqlite3.Row
+              db.execute("PRAGMA query_only=ON")
+              inst = db.execute(
+                  "SELECT instance_identity, process_id, started_at_ms, payload_json "
+                  "FROM collector_instances ORDER BY started_at_ms DESC, instance_identity DESC LIMIT 1"
+              ).fetchone()
+              if inst is None:
+                  print("RDP1_COLLECTOR_INSTANCE=NONE")
+              else:
+                  hb = db.execute(
+                      "SELECT sequence_no, observed_at_ms, last_successful_ingestion_ms, payload_json "
+                      "FROM collector_heartbeats WHERE instance_identity=? "
+                      "ORDER BY sequence_no DESC LIMIT 1",
+                      (str(inst["instance_identity"]),),
+                  ).fetchone()
+                  print(
+                      "RDP1_COLLECTOR "
+                      f"instance={inst['instance_identity']} pid={inst['process_id']} "
+                      f"started_at_ms={inst['started_at_ms']} "
+                      f"heartbeat_seq={None if hb is None else hb['sequence_no']} "
+                      f"heartbeat_age_ms={None if hb is None else now_ms-int(hb['observed_at_ms'])} "
+                      f"ingestion_age_ms={None if hb is None or hb['last_successful_ingestion_ms'] is None else now_ms-int(hb['last_successful_ingestion_ms'])}"
+                  )
+          PY
+
           echo "=== RECENT SUPERVISOR CLOCK EVENTS ==="
           tail -n 420 "$ROOT/ServiceLogs/supervisor.log" 2>/dev/null             | grep -E 'supervisor_r11_|clock_|wc2_live|dashboard_|market_tape_'             | tail -n 220 || true
 
