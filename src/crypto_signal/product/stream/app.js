@@ -118,6 +118,44 @@ const EVIDENCE_WINDOW_KINDS = Object.freeze({
   proof: { label: "Proof", family: null, concept: "calibration" },
 });
 
+const DECISION_EVIDENCE_FAMILIES = Object.freeze([
+  Object.freeze({
+    key: "geometry_pa_elliott_harmonic",
+    aliases: Object.freeze(["geometry_pa_elliott_harmonic", "geometry"]),
+    label: "Geometri",
+    weight: 20,
+    evidenceKind: "geometry",
+  }),
+  Object.freeze({
+    key: "liquidity",
+    aliases: Object.freeze(["liquidity"]),
+    label: "Likidite",
+    weight: 25,
+    evidenceKind: "liquidity",
+  }),
+  Object.freeze({
+    key: "order_flow_absorption",
+    aliases: Object.freeze(["order_flow_absorption", "order_flow"]),
+    label: "Emir Akışı",
+    weight: 25,
+    evidenceKind: "order_flow",
+  }),
+  Object.freeze({
+    key: "derivatives",
+    aliases: Object.freeze(["derivatives"]),
+    label: "Türevler",
+    weight: 15,
+    evidenceKind: "derivatives",
+  }),
+  Object.freeze({
+    key: "onchain_smart_money",
+    aliases: Object.freeze(["onchain_smart_money", "onchain"]),
+    label: "On-chain",
+    weight: 15,
+    evidenceKind: "onchain",
+  }),
+]);
+
 function text(value, fallback = "—") {
   if (value === null || value === undefined || value === "") return fallback;
   return String(value);
@@ -312,16 +350,13 @@ function displayNumber(value, fallback = "—") {
   return new Intl.NumberFormat("tr-TR", { maximumFractionDigits: 2 }).format(n);
 }
 
-function familyLabel(value) {
-  const labels = {
-    geometry: "Geometri",
-    liquidity: "Likidite",
-    order_flow: "Emir akışı",
-    derivatives: "Türevler",
-    onchain: "On-chain",
-  };
+function decisionEvidenceFamilyConfig(value) {
   const key = text(value, "").toLowerCase();
-  return labels[key] || text(value, "Kanıt");
+  return DECISION_EVIDENCE_FAMILIES.find((item) => item.aliases.includes(key)) || null;
+}
+
+function familyLabel(value) {
+  return decisionEvidenceFamilyConfig(value)?.label || text(value, "Kanıt");
 }
 
 function preserveMessageAnchor(item, mutate) {
@@ -359,37 +394,207 @@ function depthSection(label, body, { className = "", content = null } = {}) {
   return section;
 }
 
-function evidenceFamilyGrid(fact) {
-  const grid = document.createElement("div");
-  grid.className = "family-grid";
+function decisionEvidenceContribution(fact, config) {
   const families = Array.isArray(fact?.family_contributions)
     ? fact.family_contributions
     : [];
-  for (const family of families) {
-    const card = document.createElement("div");
-    card.className = "family-card";
-    const label = document.createElement("span");
-    label.textContent = familyLabel(family?.family);
-    const score = document.createElement("strong");
-    score.textContent = `+${displayNumber(family?.support_points, "0")} / -${displayNumber(
-      family?.opposition_points,
-      "0"
-    )}`;
-    const note = document.createElement("small");
-    const quality = Number(family?.evidence_quality_0_1);
-    note.textContent = Number.isFinite(quality)
-      ? `kanıt kalitesi %${Math.round(quality * 100)}`
-      : text(family?.state, "ölçülmedi");
-    card.append(label, score, note);
-    grid.append(card);
+  return (
+    families.find((item) => {
+      const family = text(item?.family, "").toLowerCase();
+      return config.aliases.includes(family);
+    }) || null
+  );
+}
+
+function hasDecisionEvidenceMatrix(fact) {
+  return DECISION_EVIDENCE_FAMILIES.every(
+    (config) => decisionEvidenceContribution(fact, config) !== null
+  );
+}
+
+function familyWeightPoints(contribution, config) {
+  const prior = Number(contribution?.prior_weight);
+  if (Number.isFinite(prior) && prior > 0) {
+    return Math.round(prior * 10000) / 100;
   }
-  if (!families.length) {
-    const note = document.createElement("p");
-    note.className = "depth-muted";
-    note.textContent = "Beş-aile katkısı bu kayıtta mevcut değil.";
-    grid.append(note);
+  return config.weight;
+}
+
+function familyEvidencePresentation(contribution, config) {
+  const maximum = familyWeightPoints(contribution, config);
+  const stateValue = text(contribution?.state, "").toLowerCase();
+  if (!contribution || ["no_evidence", "not_evaluable"].includes(stateValue)) {
+    return {
+      score: `— / ${displayNumber(maximum)}`,
+      status: "VERİ YOK",
+      state: "unavailable",
+      covered: false,
+    };
   }
-  return grid;
+  if (stateValue === "abstain") {
+    return {
+      score: `0 / ${displayNumber(maximum)}`,
+      status: "NÖTR / ÇEKİMSER",
+      state: "neutral",
+      covered: true,
+    };
+  }
+
+  const support = Number(contribution?.support_points);
+  const opposition = Number(contribution?.opposition_points);
+  const safeSupport = Number.isFinite(support) ? support : 0;
+  const safeOpposition = Number.isFinite(opposition) ? opposition : 0;
+  const conflicts = Number(contribution?.material_conflict_count);
+  let score = `0 / ${displayNumber(maximum)}`;
+  let status = "NÖTR";
+  let state = "neutral";
+
+  if (safeSupport > safeOpposition && safeSupport > 0) {
+    score = `${displayNumber(safeSupport)} / ${displayNumber(maximum)}`;
+    status = "DESTEKLİYOR";
+    state = "support";
+  } else if (safeOpposition > safeSupport && safeOpposition > 0) {
+    score = `${displayNumber(safeOpposition)} / ${displayNumber(maximum)}`;
+    status = "KARŞI AĞIRLIK";
+    state = "opposition";
+  }
+  if (Number.isFinite(conflicts) && conflicts > 0) {
+    status += " · ÇELİŞKİ";
+    state = "conflict";
+  }
+  return { score, status, state, covered: true };
+}
+
+function evidenceCoveragePoints(fact) {
+  let total = 0;
+  for (const config of DECISION_EVIDENCE_FAMILIES) {
+    const contribution = decisionEvidenceContribution(fact, config);
+    const presentation = familyEvidencePresentation(contribution, config);
+    if (presentation.covered) {
+      total += familyWeightPoints(contribution, config);
+    }
+  }
+  return Math.round(total * 100) / 100;
+}
+
+function customerStanceLabel(value) {
+  const labels = {
+    bullish: "YÜKSELİŞ BEKLENTİSİ",
+    bearish: "DÜŞÜŞ BEKLENTİSİ",
+    watch: "NÖTR / BEKLİYORUM",
+    blocked: "RİSK NEDENİYLE BLOKLU",
+    resolved: "BEKLENTİ SONUÇLANDI",
+  };
+  const key = text(value, "").toLowerCase();
+  return labels[key] || text(value, "BEKLENTİ YOK").replaceAll("_", " ").toUpperCase();
+}
+
+function decisionZoneLabel(zone) {
+  if (!zone || typeof zone !== "object") return "—";
+  const low = Number(zone.low);
+  const high = Number(zone.high);
+  if (!Number.isFinite(low) || !Number.isFinite(high)) return "—";
+  return low === high
+    ? displayNumber(low)
+    : `${displayNumber(low)} – ${displayNumber(high)}`;
+}
+
+function decisionMetric(labelText, valueText, { className = "" } = {}) {
+  const metric = document.createElement("div");
+  metric.className = `decision-summary-metric ${className}`.trim();
+  const label = document.createElement("span");
+  label.textContent = labelText;
+  const value = document.createElement("strong");
+  value.textContent = text(valueText);
+  metric.append(label, value);
+  return metric;
+}
+
+function currentViewSummary(analytical, fact) {
+  const wrap = document.createElement("div");
+  wrap.className = "decision-summary";
+
+  const stance = document.createElement("div");
+  stance.className = "decision-summary-stance";
+  const stanceLabel = document.createElement("span");
+  stanceLabel.textContent = "BEKLENTİ";
+  const stanceValue = document.createElement("strong");
+  stanceValue.textContent = customerStanceLabel(analytical?.stance?.effective_stance);
+  stance.append(stanceLabel, stanceValue);
+
+  const metrics = document.createElement("div");
+  metrics.className = "decision-summary-grid";
+  const support =
+    fact?.confluence_support_score_0_100
+    ?? analytical?.stance?.support_score_0_100;
+  const contradiction = analytical?.main_contradiction?.family
+    ? familyLabel(analytical.main_contradiction.family)
+    : "Belirgin karşı ağırlık yok";
+  metrics.append(
+    decisionMetric("Karar desteği", `${displayNumber(support)} / 100`),
+    decisionMetric("Kanıt kapsamı", `${displayNumber(evidenceCoveragePoints(fact))} / 100`),
+    decisionMetric("Tetik", decisionZoneLabel(fact?.trigger_zone)),
+    decisionMetric("Hedef", decisionZoneLabel(fact?.target_zone)),
+    decisionMetric("Geçersizlik", displayNumber(fact?.invalidation_price)),
+    decisionMetric("Ana çekince", contradiction, { className: "decision-summary-reservation" })
+  );
+
+  const note = document.createElement("p");
+  note.className = "decision-summary-note";
+  note.textContent = "Karar desteği ve kanıt kapsamı puandır; yükseliş/düşüş olasılığı değildir.";
+
+  wrap.append(stance, metrics, note);
+  return wrap;
+}
+
+function familyEvidenceSummaryTable(fact) {
+  const table = document.createElement("div");
+  table.className = "family-evidence-table";
+  table.setAttribute("role", "table");
+  table.setAttribute("aria-label", "Beş kanıt ailesi");
+
+  const header = document.createElement("div");
+  header.className = "family-evidence-row family-evidence-header";
+  header.setAttribute("role", "row");
+  for (const headingText of ["KANIT", "KATKI", "DURUM"]) {
+    const heading = document.createElement("span");
+    heading.setAttribute("role", "columnheader");
+    heading.textContent = headingText;
+    header.append(heading);
+  }
+  table.append(header);
+
+  for (const config of DECISION_EVIDENCE_FAMILIES) {
+    const contribution = decisionEvidenceContribution(fact, config);
+    const presentation = familyEvidencePresentation(contribution, config);
+    const row = document.createElement("div");
+    row.className = "family-evidence-row";
+    row.dataset.family = config.evidenceKind;
+    row.dataset.evidenceState = presentation.state;
+    row.setAttribute("role", "row");
+
+    const label = document.createElement("strong");
+    label.setAttribute("role", "cell");
+    label.textContent = config.label;
+
+    const score = document.createElement("span");
+    score.className = "family-evidence-score";
+    score.setAttribute("role", "cell");
+    score.textContent = presentation.score;
+
+    const status = document.createElement("span");
+    status.className = "family-evidence-status";
+    status.setAttribute("role", "cell");
+    status.textContent = presentation.status;
+
+    row.append(label, score, status);
+    table.append(row);
+  }
+  return table;
+}
+
+function evidenceFamilyGrid(fact) {
+  return familyEvidenceSummaryTable(fact);
 }
 
 function geometryGrid(fact) {
@@ -1702,6 +1907,22 @@ function buildExpandedContent(record, detail) {
     ? detail.analytical_view
     : {};
 
+  if (hasDecisionEvidenceMatrix(fact)) {
+    const decisionGrid = document.createElement("div");
+    decisionGrid.className = "message-depth-grid message-decision-evidence-grid";
+    decisionGrid.append(
+      depthSection("KARAR ÖZETİ", "", {
+        className: "depth-decision depth-wide",
+        content: currentViewSummary(analytical, fact),
+      }),
+      depthSection("5 KANIT AİLESİ", "", {
+        className: "depth-intelligence depth-wide",
+        content: familyEvidenceSummaryTable(fact),
+      })
+    );
+    return decisionGrid;
+  }
+
   const grid = document.createElement("div");
   grid.className = "message-depth-grid";
 
@@ -2607,17 +2828,63 @@ function fixtureRecord(index, symbol, timeframe, stateLabel, copy, minutesAgo, s
   const narrativeIdentity = fixtureIdentity(index + 1);
   const forecastIdentity = fixtureIdentity(700 + index);
   const proofIdentity = fixtureIdentity(800 + index);
-  const familyNames = ["geometry", "liquidity", "order_flow", "derivatives", "onchain"];
-  const familyContributions = familyNames.map((family, offset) => ({
-    family,
-    state: "observed",
-    direction: offset === 3 ? "mixed" : "support",
-    support_points: 74 - offset * 8,
-    opposition_points: 8 + offset * 4,
-    evidence_quality_0_1: 0.94 - offset * 0.07,
-    freshness_0_1: 0.97 - offset * 0.06,
-    material_conflict_count: offset === 3 ? 1 : 0,
-  }));
+  const familyContributions = [
+    {
+      family: "geometry_pa_elliott_harmonic",
+      state: "observed",
+      direction: "bullish",
+      prior_weight: 0.20,
+      support_points: 16,
+      opposition_points: 0,
+      evidence_quality_0_1: 0.92,
+      freshness_0_1: 0.95,
+      material_conflict_count: 0,
+    },
+    {
+      family: "liquidity",
+      state: "observed",
+      direction: "bullish",
+      prior_weight: 0.25,
+      support_points: 21,
+      opposition_points: 0,
+      evidence_quality_0_1: 0.91,
+      freshness_0_1: 0.93,
+      material_conflict_count: 0,
+    },
+    {
+      family: "order_flow_absorption",
+      state: "observed",
+      direction: "bullish",
+      prior_weight: 0.25,
+      support_points: 22,
+      opposition_points: 0,
+      evidence_quality_0_1: 0.90,
+      freshness_0_1: 0.92,
+      material_conflict_count: 0,
+    },
+    {
+      family: "derivatives",
+      state: "observed",
+      direction: "bearish",
+      prior_weight: 0.15,
+      support_points: 0,
+      opposition_points: 10,
+      evidence_quality_0_1: 0.82,
+      freshness_0_1: 0.88,
+      material_conflict_count: 1,
+    },
+    {
+      family: "onchain_smart_money",
+      state: "no_evidence",
+      direction: null,
+      prior_weight: 0.15,
+      support_points: 0,
+      opposition_points: 0,
+      evidence_quality_0_1: null,
+      freshness_0_1: null,
+      material_conflict_count: 0,
+    },
+  ];
   const record = {
     narrative_identity: narrativeIdentity,
     event_at_ms: Date.now() - minutesAgo * 60_000,
@@ -2640,9 +2907,9 @@ function fixtureRecord(index, symbol, timeframe, stateLabel, copy, minutesAgo, s
         stance: {
           effective_stance: stateLabel.toLowerCase(),
           strength: "moderate",
-          support_score_0_100: 74,
-          opposition_score_0_100: 19,
-          net_support_points: 55,
+          support_score_0_100: 59,
+          opposition_score_0_100: 10,
+          net_support_points: 49,
         },
         next_condition: { state: "entry_zone_watch" },
         invalidation_condition: { price: 60750 },
@@ -2651,8 +2918,8 @@ function fixtureRecord(index, symbol, timeframe, stateLabel, copy, minutesAgo, s
       fact_bundle: {
         forecast_identity: forecastIdentity,
         proof_identity: proofIdentity,
-        confluence_support_score_0_100: 74,
-        confluence_opposition_score_0_100: 19,
+        confluence_support_score_0_100: 59,
+        confluence_opposition_score_0_100: 10,
         family_contributions: familyContributions,
         trigger_zone: { low: 62000, high: 62500 },
         target_zone: { low: 65000, high: 66000 },
