@@ -30,6 +30,7 @@ Current program facts recorded by the canonical state documents:
 - **S15 End-to-End Product Acceptance is PASS**;
 - **S16 Controlled Cutover is PASS**;
 - **Intelligence Stream V1 S0-S16 is COMPLETE / ACCEPTED**; there is no remaining active Stream V1 frontend stage;
+- **Message Intelligence & Family Evidence UX V1 MI1-MI6 is COMPLETE / ACCEPTED**; the primary Stream uses deterministic Turkish system views with five individually clickable fail-closed family proofs, and there is no remaining MI implementation stage;
 - the previous M0→M7 multi-screen frontend roadmap is historical/superseded;
 - WC2 frozen evidence accumulation remains active;
 - WC5 broad human <=10-second usability remains `NOT_MEASURED` until actually measured;
@@ -74,6 +75,9 @@ Always start with:
 
 For **new frontend work**, then read:
 5. `docs/CRYPTO_SIGNAL_INTELLIGENCE_STREAM_V1_MASTER_ROADMAP.md`
+6. `docs/CRYPTO_SIGNAL_MESSAGE_INTELLIGENCE_FRONTIER_V1.md` and `docs/CRYPTO_SIGNAL_MESSAGE_INTELLIGENCE_V1_FINAL_ACCEPTANCE.md` for the accepted post-F10 message/evidence refinement contract.
+
+The Message Intelligence MI1-MI6 program is closed. Do not treat its roadmap as an active implementation queue; any later frontend/message refinement is new scope.
 
 The older `CRYPTO_SIGNAL_FRONTEND_MASTER_ROADMAP_V1.md`, M0 Constitution and M1 Capability/Gap Ledger are retained only as historical/discovery records and must not drive current scope or sequencing.
 
