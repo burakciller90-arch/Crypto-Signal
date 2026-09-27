@@ -6,7 +6,7 @@ WORKFLOW = Path(".github/workflows/crypto-mac-command.yml")
 def _fred_probe_block() -> str:
     text = WORKFLOW.read_text(encoding="utf-8")
     start = text.index("      - name: FRED CALENDAR PROBE")
-    end = text.index("      - name: SERVICES", start)
+    end = text.index("      - name: NETWORK DIAG", start)
     return text[start:end]
 
 
