@@ -43,6 +43,10 @@ from crypto_signal.product.intelligence_stream_models import (
 from crypto_signal.product.intelligence_stream_narrative import (
     STREAM_NARRATIVE_MESSAGE_SCHEMA_VERSION,
 )
+from crypto_signal.product.intelligence_stream_system_view import (
+    STREAM_SYSTEM_VIEW_SCHEMA_VERSION,
+    verified_system_view_record,
+)
 
 STREAM_READ_MODEL_SCHEMA_VERSION = "intelligence-stream-read-model-v1/1"
 STREAM_CURSOR_SCHEMA_VERSION = "intelligence-stream-cursor-v1/1"
@@ -326,6 +330,10 @@ class IntelligenceStreamReadModel:
                 connection,
                 query,
             )
+            system_view_items = self._read_system_view_messages(
+                connection,
+                query,
+            )
 
         regular_items = tuple(
             self._verified_narrative_record(
@@ -342,6 +350,7 @@ class IntelligenceStreamReadModel:
             *capital_decision_items,
             *capital_sizing_items,
             *capital_lifecycle_items,
+            *system_view_items,
         ]
         combined.sort(
             key=lambda item: (
@@ -392,6 +401,25 @@ class IntelligenceStreamReadModel:
 
     def read_message(self, narrative_identity: str) -> dict[str, Any] | None:
         _require_sha256(narrative_identity, "Stream narrative lookup identity")
+        with self._connect_ro() as connection:
+            if self._table_exists(connection, "stream_system_view_messages"):
+                system_row = connection.execute(
+                    """
+                    SELECT narrative_identity, event_at_ms, payload_json, payload_sha256
+                    FROM stream_system_view_messages
+                    WHERE narrative_identity = ?
+                    """,
+                    (narrative_identity,),
+                ).fetchone()
+            else:
+                system_row = None
+        if system_row is not None:
+            return verified_system_view_record(
+                narrative_identity=str(system_row[0]),
+                event_at_ms=int(str(system_row[1])),
+                payload_json=str(system_row[2]),
+                expected_digest=str(system_row[3]),
+            )
         with self._connect_ro() as connection:
             self._require_schema(connection)
             row = connection.execute(
@@ -529,6 +557,35 @@ class IntelligenceStreamReadModel:
         narrative_identity: str,
     ) -> dict[str, Any] | None:
         _require_sha256(narrative_identity, "Stream detail narrative identity")
+        with self._connect_ro() as connection:
+            if self._table_exists(connection, "stream_system_view_messages"):
+                system_row = connection.execute(
+                    """
+                    SELECT narrative_identity, event_at_ms, payload_json, payload_sha256
+                    FROM stream_system_view_messages
+                    WHERE narrative_identity = ?
+                    """,
+                    (narrative_identity,),
+                ).fetchone()
+            else:
+                system_row = None
+        if system_row is not None:
+            system_view = verified_system_view_record(
+                narrative_identity=str(system_row[0]),
+                event_at_ms=int(str(system_row[1])),
+                payload_json=str(system_row[2]),
+                expected_digest=str(system_row[3]),
+            )
+            return {
+                "narrative": system_view,
+                "system_view": system_view,
+                "analytical_view": system_view["analytical_view"],
+                "fact_bundle": system_view["fact_bundle"],
+                "schema_version": STREAM_MESSAGE_DETAIL_SCHEMA_VERSION,
+                "read_only": True,
+                "production_authority": False,
+                "real_capital": REAL_CAPITAL,
+            }
         with self._connect_ro() as connection:
             self._require_schema(connection)
             row = connection.execute(
@@ -799,6 +856,16 @@ class IntelligenceStreamReadModel:
                     LIMIT 1
                     """
                 ).fetchone()
+            system_view_row = None
+            if self._table_exists(connection, "stream_system_view_messages"):
+                system_view_row = connection.execute(
+                    """
+                    SELECT event_at_ms, narrative_identity
+                    FROM stream_system_view_messages
+                    ORDER BY event_at_ms DESC, narrative_identity DESC
+                    LIMIT 1
+                    """
+                ).fetchone()
         candidates = tuple(
             (int(str(item[0])), str(item[1]))
             for item in (
@@ -807,6 +874,7 @@ class IntelligenceStreamReadModel:
                 capital_decision_row,
                 capital_sizing_row,
                 capital_lifecycle_row,
+                system_view_row,
             )
             if item is not None
         )
@@ -818,6 +886,107 @@ class IntelligenceStreamReadModel:
                 event_at_ms=event_at_ms,
                 narrative_identity=narrative_identity,
             )
+        )
+
+    def _read_system_view_messages(
+        self,
+        connection: sqlite3.Connection,
+        query: StreamMessageQuery,
+    ) -> tuple[dict[str, Any], ...]:
+        if not self._table_exists(connection, "stream_system_view_messages"):
+            return ()
+        if query.story_identity is not None or query.vault is not None:
+            return ()
+        if query.evidence_domain is not None:
+            return ()
+        if query.category is not None and query.category != "intelligence":
+            return ()
+        if query.source_kind is not None and query.source_kind != "deterministic":
+            return ()
+
+        clauses = ["1 = 1"]
+        params: list[object] = []
+        if query.before is not None:
+            clauses.append(
+                "(event_at_ms < ? OR "
+                "(event_at_ms = ? AND narrative_identity < ?))"
+            )
+            params.extend(
+                (
+                    query.before.event_at_ms,
+                    query.before.event_at_ms,
+                    query.before.narrative_identity,
+                )
+            )
+        if query.after is not None:
+            clauses.append(
+                "(event_at_ms > ? OR "
+                "(event_at_ms = ? AND narrative_identity > ?))"
+            )
+            params.extend(
+                (
+                    query.after.event_at_ms,
+                    query.after.event_at_ms,
+                    query.after.narrative_identity,
+                )
+            )
+        if query.symbol is not None:
+            clauses.append("symbol = ?")
+            params.append(query.symbol)
+        if query.timeframe is not None:
+            clauses.append("timeframe = ?")
+            params.append(query.timeframe)
+        if query.effective_stance is not None:
+            clauses.append("json_extract(payload_json, '$.state') = ?")
+            params.append(query.effective_stance)
+        if query.state is not None:
+            clauses.append("json_extract(payload_json, '$.state') = ?")
+            params.append(query.state)
+        if query.importance is not None:
+            clauses.append("json_extract(payload_json, '$.importance') = ?")
+            params.append(query.importance)
+        if query.from_ms is not None:
+            clauses.append("event_at_ms >= ?")
+            params.append(query.from_ms)
+        if query.to_ms is not None:
+            clauses.append("event_at_ms <= ?")
+            params.append(query.to_ms)
+        if query.text is not None:
+            needle = f"%{_escape_like(query.text.casefold())}%"
+            clauses.append(
+                "("
+                "lower(json_extract(payload_json, '$.text.collapsed_text')) "
+                "LIKE ? ESCAPE '\\' OR "
+                "lower(json_extract(payload_json, '$.text.simple_text')) "
+                "LIKE ? ESCAPE '\\'"
+                ")"
+            )
+            params.extend((needle, needle))
+
+        ascending = query.after is not None
+        order_sql = (
+            "ORDER BY event_at_ms ASC, narrative_identity ASC"
+            if ascending
+            else "ORDER BY event_at_ms DESC, narrative_identity DESC"
+        )
+        rows = connection.execute(
+            f"""
+            SELECT narrative_identity, event_at_ms, payload_json, payload_sha256
+            FROM stream_system_view_messages
+            WHERE {" AND ".join(clauses)}
+            {order_sql}
+            LIMIT ?
+            """,
+            (*params, query.limit + 1),
+        ).fetchall()
+        return tuple(
+            verified_system_view_record(
+                narrative_identity=str(row[0]),
+                event_at_ms=int(str(row[1])),
+                payload_json=str(row[2]),
+                expected_digest=str(row[3]),
+            )
+            for row in rows
         )
 
     def _read_capital_messages(
