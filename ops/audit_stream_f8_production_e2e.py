@@ -151,28 +151,67 @@ def _page_items(payload: dict[str, Any], label: str) -> list[dict[str, Any]]:
 
 
 def _proof_result(payload: dict[str, Any]) -> dict[str, object]:
-    _require_read_only(payload, "visual proof response")
-    status = str(payload.get("status", "")).strip().lower()
-    visual = payload.get("visual_proof")
-    reason = str(payload.get("reason", "") or "").strip()
-    if isinstance(visual, dict):
-        nested_status = str(visual.get("status", "") or "").strip().lower()
-        if nested_status:
-            status = nested_status
-        if not reason:
-            reason = str(visual.get("reason", "") or "").strip()
-        provenance = visual.get("provenance")
-        if isinstance(provenance, dict) and provenance.get("current_data_substitution") is True:
-            raise AuditError("visual proof substituted current data")
-    exact = status in EXACT_PROOF_STATUSES
-    explicit_unavailable = status == "unavailable" and bool(reason)
-    accepted = exact or explicit_unavailable
-    return {
-        "status": status or "unknown",
-        "reason": reason or None,
-        "accepted_fail_closed": accepted,
-    }
+    """Validate the accepted F6 exact-evidence contract.
 
+    F8 is intentionally downstream of F6. The canonical proof surface is
+    /api/stream/messages/<identity>/evidence, not the older decision-only
+    /visual-proof endpoint.
+    """
+
+    _require_read_only(payload, "exact evidence response")
+    if payload.get("status") != "ready":
+        return {
+            "status": str(payload.get("status") or "unknown").lower(),
+            "reason": str(payload.get("reason") or "") or None,
+            "accepted_fail_closed": False,
+            "resolution_states": [],
+        }
+
+    evidence = payload.get("evidence")
+    if not isinstance(evidence, dict):
+        raise AuditError("exact evidence response missing evidence body")
+    if evidence.get("read_only") is not True:
+        raise AuditError("exact evidence body is not read-only")
+    if evidence.get("production_authority") is not False:
+        raise AuditError("exact evidence crossed production authority boundary")
+    if int(evidence.get("real_capital", -1)) != REAL_CAPITAL:
+        raise AuditError("exact evidence crossed REAL_CAPITAL boundary")
+    if evidence.get("current_data_substitution") is True:
+        raise AuditError("exact evidence substituted current data")
+
+    resolutions = evidence.get("resolutions")
+    if not isinstance(resolutions, (list, tuple)):
+        raise AuditError("exact evidence resolutions must be a list")
+    if not resolutions:
+        return {
+            "status": "ready",
+            "reason": "no_exact_evidence_resolutions",
+            "accepted_fail_closed": False,
+            "resolution_states": [],
+        }
+
+    states: list[str] = []
+    for row in resolutions:
+        if not isinstance(row, dict):
+            raise AuditError("exact evidence resolution must be an object")
+        if row.get("current_data_substitution") is True:
+            raise AuditError("exact evidence resolution substituted current data")
+        state = str(row.get("resolution_state") or "").strip().lower()
+        states.append(state)
+        if state not in EXACT_PROOF_STATUSES:
+            return {
+                "status": "ready",
+                "reason": f"unsupported_resolution_state:{state or 'missing'}",
+                "accepted_fail_closed": False,
+                "resolution_states": states,
+            }
+
+    return {
+        "status": "ready",
+        "reason": None,
+        "accepted_fail_closed": True,
+        "resolution_states": states,
+    }
 
 def _message_identity(item: dict[str, Any]) -> str:
     return _require_sha256(item.get("narrative_identity"), "narrative identity")
@@ -259,7 +298,7 @@ def _inspect_message(
 
     detail = _detail_lookup(base_url, identity)
     proof = _proof_result(
-        _get_json(base_url, f"/api/stream/messages/{identity}/visual-proof")
+        _get_json(base_url, f"/api/stream/messages/{identity}/evidence")
     )
 
     story_values = {
