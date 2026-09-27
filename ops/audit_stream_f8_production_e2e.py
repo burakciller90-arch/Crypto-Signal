@@ -340,11 +340,13 @@ def _inspect_message(
     }
 
     search_text = (
-        _first_text(exact, "symbol")
-        or _first_text(detail, "symbol")
-        or _first_text(exact, "asset")
-        or _first_text(detail, "asset")
+        _first_text(exact, "collapsed_text")
+        or _first_text(detail, "collapsed_text")
+        or _first_text(exact, "simple_text")
+        or _first_text(detail, "simple_text")
     )
+    if search_text is not None:
+        search_text = search_text[:120]
 
     return {
         "category": category,
