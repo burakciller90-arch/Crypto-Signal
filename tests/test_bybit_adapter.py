@@ -64,3 +64,41 @@ def test_bybit_limit_is_bounded(limit: int) -> None:
     adapter = BybitSpotAdapter()
     with pytest.raises(ValueError, match="limit"):
         asyncio.run(adapter.fetch_candles(symbol="BTCUSDT", timeframe="15m", limit=limit))
+
+
+def test_bybit_rest_accepts_explicit_regional_base_url() -> None:
+    payload = {
+        "retCode": 0,
+        "retMsg": "OK",
+        "result": {
+            "category": "spot",
+            "symbol": "BTCUSDT",
+            "list": [],
+        },
+        "time": 1710001000000,
+    }
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.url.host == "api.bybit.tr"
+        assert request.url.path == "/v5/market/kline"
+        return httpx.Response(200, json=payload)
+
+    async def run() -> tuple[Candle, ...]:
+        transport = httpx.MockTransport(handler)
+        async with httpx.AsyncClient(transport=transport) as client:
+            adapter = BybitSpotAdapter(
+                client,
+                base_url="https://api.bybit.tr/",
+            )
+            return await adapter.fetch_candles(
+                symbol="BTCUSDT",
+                timeframe="15m",
+                limit=2,
+            )
+
+    assert asyncio.run(run()) == ()
+
+
+def test_bybit_rest_rejects_non_https_base_url() -> None:
+    with pytest.raises(ValueError, match="must use https"):
+        BybitSpotAdapter(base_url="http://api.bybit.tr")
