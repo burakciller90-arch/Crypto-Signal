@@ -14,8 +14,17 @@ from crypto_signal.data.event_risk import (
     event_calendar_coverage_payload,
     structured_event_payload,
 )
+from crypto_signal.data.derivatives import (
+    DerivativesInstrumentType,
+    build_derivatives_observation,
+)
 from crypto_signal.data.market_tape import MarketTapeStore
-from crypto_signal.data.microstructure import OrderBookLevel, build_orderbook_snapshot
+from crypto_signal.data.microstructure import (
+    AggressorSide,
+    OrderBookLevel,
+    build_orderbook_snapshot,
+    build_public_trade_observation,
+)
 from crypto_signal.data.models import DataSource, Exchange, MarketType
 from crypto_signal.intelligence.confluence_matrix_v2 import ConfluenceFamily
 from crypto_signal.ledger.serialization import canonical_json, canonical_sha256
@@ -215,6 +224,166 @@ def test_orderbook_identity_resolves_to_exact_persisted_object(
     assert exact_object["snapshot_identity"] == snapshot.snapshot_identity
     assert len(exact_object["bids"]) == 2
     assert len(exact_object["asks"]) == 2
+
+
+def test_order_flow_exact_payload_contains_book_and_trade_objects(
+    tmp_path: Path,
+) -> None:
+    market_tape_path = tmp_path / "market_tape.sqlite3"
+    stream_path = tmp_path / "stream.sqlite3"
+    store = MarketTapeStore(market_tape_path)
+    store.initialize()
+    book = build_orderbook_snapshot(
+        exchange=Exchange.BYBIT,
+        market_type=MarketType.SPOT,
+        symbol="BTCUSDT",
+        event_at_ms=20_000,
+        source_timestamp_ms=20_000,
+        response_time_ms=20_000,
+        ingested_at_ms=20_000,
+        update_id=10,
+        sequence=10,
+        bids=(OrderBookLevel(price=Decimal(100), size=Decimal(4)),),
+        asks=(OrderBookLevel(price=Decimal(101), size=Decimal(3)),),
+        source=DataSource.WEBSOCKET,
+        adapter_version="test-order-flow/1",
+    )
+    trade = build_public_trade_observation(
+        exchange=Exchange.BYBIT,
+        market_type=MarketType.SPOT,
+        symbol="BTCUSDT",
+        exec_id="trade-1",
+        sequence=11,
+        aggressor_side=AggressorSide.BUY,
+        price=Decimal("100.5"),
+        size=Decimal("2"),
+        event_at_ms=20_010,
+        source_timestamp_ms=20_010,
+        ingested_at_ms=20_010,
+        is_block_trade=False,
+        is_rpi_trade=False,
+        source=DataSource.WEBSOCKET,
+        adapter_version="test-order-flow/1",
+    )
+    store.append_orderbook(book)
+    store.append_trade(trade)
+    family = build_family_snapshot(
+        projector_id="order_flow_change",
+        family=ConfluenceFamily.ORDER_FLOW,
+        category=StreamCategory.INTELLIGENCE,
+        subtype="order_flow_material_change",
+        importance=StreamImportance.IMPORTANT,
+        source_event_identity=canonical_sha256({"source": "order-flow"}),
+        source_scope="bybit:spot:market_tape_order_flow",
+        asset="BTC",
+        symbol="BTCUSDT",
+        market="BTCUSDT",
+        timeframe="microstructure",
+        event_at_ms=20_100,
+        source_as_of_ms=20_100,
+        evidence_identities=(book.snapshot_identity, trade.trade_identity),
+        evidence_domains=("order_book", "public_trades", "order_flow"),
+        state_label="buy_pressure",
+        state_components=(
+            ("book_pressure", "buy_pressure"),
+            ("taker_flow", "buy_pressure"),
+            ("status", "measured"),
+        ),
+        direction="long",
+        source_quality="measured",
+    )
+    narrative_identity = _project_family(
+        stream_path,
+        projector_id="order_flow_change",
+        snapshot=family,
+    )
+    payload = IntelligenceStreamExactEvidenceReadModel(
+        stream_ledger_path=stream_path,
+        market_tape_path=market_tape_path,
+    ).read_for_narrative(narrative_identity)
+    assert payload is not None
+    resolution = _resolution(payload, "order_flow")
+    assert resolution["resolution_state"] == "READY_EXACT"
+    projection = resolution["customer_projection"]
+    assert isinstance(projection, dict)
+    objects = projection["exact_source_objects"]
+    assert isinstance(objects, (tuple, list))
+    assert any(isinstance(item, dict) and "bids" in item for item in objects)
+    assert any(
+        isinstance(item, dict) and item.get("aggressor_side") == "buy"
+        for item in objects
+    )
+
+
+def test_derivatives_exact_payload_contains_persisted_observation(
+    tmp_path: Path,
+) -> None:
+    market_tape_path = tmp_path / "market_tape.sqlite3"
+    stream_path = tmp_path / "stream.sqlite3"
+    store = MarketTapeStore(market_tape_path)
+    store.initialize()
+    observation = build_derivatives_observation(
+        exchange=Exchange.BYBIT,
+        instrument_type=DerivativesInstrumentType.LINEAR_PERPETUAL,
+        symbol="BTCUSDT",
+        event_at_ms=30_000,
+        funding_rate=Decimal("0.0001"),
+        open_interest=Decimal("1234567"),
+        mark_price=Decimal("100.5"),
+        index_price=Decimal("100"),
+        funding_interval_hours=8,
+        source=DataSource.REST,
+        source_timestamp_ms=30_000,
+        ingested_at_ms=30_000,
+        adapter_version="test-derivatives/1",
+    )
+    store.append_derivatives(observation)
+    family = build_family_snapshot(
+        projector_id="derivatives_change",
+        family=ConfluenceFamily.DERIVATIVES,
+        category=StreamCategory.INTELLIGENCE,
+        subtype="derivatives_material_change",
+        importance=StreamImportance.IMPORTANT,
+        source_event_identity=canonical_sha256({"source": "derivatives"}),
+        source_scope="bybit:linear_perpetual:market_tape_derivatives",
+        asset="BTC",
+        symbol="BTCUSDT",
+        market="BTCUSDT",
+        timeframe="microstructure",
+        event_at_ms=30_100,
+        source_as_of_ms=30_100,
+        evidence_identities=(observation.observation_identity,),
+        evidence_domains=("derivatives",),
+        state_label="measured",
+        state_components=(
+            ("basis_state", "positive"),
+            ("funding_state", "positive"),
+            ("open_interest_state", "elevated"),
+        ),
+        direction="long",
+        source_quality="measured",
+    )
+    narrative_identity = _project_family(
+        stream_path,
+        projector_id="derivatives_change",
+        snapshot=family,
+    )
+    payload = IntelligenceStreamExactEvidenceReadModel(
+        stream_ledger_path=stream_path,
+        market_tape_path=market_tape_path,
+    ).read_for_narrative(narrative_identity)
+    assert payload is not None
+    resolution = _resolution(payload, "derivatives")
+    assert resolution["resolution_state"] == "READY_EXACT"
+    projection = resolution["customer_projection"]
+    assert isinstance(projection, dict)
+    objects = projection["exact_source_objects"]
+    assert isinstance(objects, (tuple, list))
+    exact = next(item for item in objects if isinstance(item, dict))
+    assert exact["open_interest"] == "1234567"
+    assert exact["funding_rate"] == "0.0001"
+    assert exact["mark_price"] == "100.5"
+    assert exact["index_price"] == "100"
 
 
 def _event_source_path(tmp_path: Path, *, base_ms: int) -> tuple[Path, str, str]:
@@ -421,3 +590,12 @@ def test_exact_evidence_api_and_ui_contract(
         assert state in visual_js
     assert "/evidence" in evidence_js
     assert "current data ile ikame yapılmadı" in evidence_js.lower()
+    app_js = (
+        root / "src" / "crypto_signal" / "product" / "stream" / "app.js"
+    ).read_text(encoding="utf-8")
+    assert "exactEvidence" in app_js
+    assert "renderFamilyExactEvidence" in app_js
+    assert "renderFamilyExactEvidence" in visual_js
+    assert "DONDURULMUŞ EMİR TAHTASI" in visual_js
+    assert "DONDURULMUŞ EMİR AKIŞI" in visual_js
+    assert "DONDURULMUŞ TÜREV GÖZLEMİ" in visual_js
