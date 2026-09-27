@@ -1,0 +1,81 @@
+name: Crypto Stream Final F8 F6 Evidence Gate
+
+on:
+  push:
+    branches:
+      - 'stream/final-f8-f6-evidence-contract'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: crypto-stream-final-f8-f6-evidence-gate
+  cancel-in-progress: true
+
+jobs:
+  gate:
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          clean: true
+          fetch-depth: 1
+
+      - name: Verify exact source
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
+          test "$(id -u)" = "504"
+          test -z "$(git -C "$DEV" status --porcelain)"
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          echo "F8_F6_EVIDENCE_EXACT_SOURCE_PASS=YES"
+
+      - name: Focused F8 contract gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
+          PY="$DEV/.venv/bin/python"
+          export PYTHONPATH="$GITHUB_WORKSPACE:$GITHUB_WORKSPACE/src:$GITHUB_WORKSPACE/ops"
+          "$PY" -m py_compile ops/audit_stream_f8_production_e2e.py
+          "$PY" -m pytest -q tests/test_stream_f8_production_e2e_audit.py
+          "$PY" -m ruff check             ops/audit_stream_f8_production_e2e.py             tests/test_stream_f8_production_e2e_audit.py
+          echo "F8_F6_EVIDENCE_FOCUSED_PASS=YES"
+          echo "HISTORICAL_BACKFILL=NO"
+          echo "SYNTHETIC_ACTIVITY=NO"
+          echo "REAL_CAPITAL=0"
+
+      - name: Read-only genuine production audit
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
+          PY="$DEV/.venv/bin/python"
+          OUT="$RUNNER_TEMP/f8-f6-evidence-gate"
+          mkdir -p "$OUT"
+          export PYTHONPATH="$GITHUB_WORKSPACE:$GITHUB_WORKSPACE/src:$GITHUB_WORKSPACE/ops"
+          "$PY" "$GITHUB_WORKSPACE/ops/audit_stream_f8_production_e2e.py"             --base-url http://127.0.0.1:48700             --output "$OUT/audit.json"             --stream-ledger "$DEV/runtime/stream/intelligence_stream.sqlite3"
+          "$PY" - "$OUT/audit.json" <<'PY'
+          import json,sys
+          from pathlib import Path
+          r=json.loads(Path(sys.argv[1]).read_text())
+          print("F8_F6_EVIDENCE_LIVE_STATUS="+str(r.get("status")))
+          print("F8_F6_EVIDENCE_OPEN="+",".join(r.get("open_requirements",[])))
+          for g in r.get("groups",[]):
+              rep=g.get("representative")
+              print("F8_F6_EVIDENCE_GROUP="+str(g.get("name"))+":"+str(g.get("status"))+":counts="+json.dumps(g.get("observed_counts",{}),sort_keys=True)+":id="+str(rep.get("narrative_identity") if isinstance(rep,dict) else None))
+          PY
+          echo "F8_F6_EVIDENCE_LIVE_AUDIT_COMPLETE=YES"
+          echo "REAL_CAPITAL=0"
+
+      - name: Upload audit
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stream-final-f8-f6-evidence-gate-${{ github.run_id }}
+          path: ${{ runner.temp }}/f8-f6-evidence-gate
+          if-no-files-found: warn
+          retention-days: 14
