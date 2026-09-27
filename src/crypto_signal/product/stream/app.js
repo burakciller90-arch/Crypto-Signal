@@ -5,6 +5,12 @@ const API = Object.freeze({
   live: "/api/stream/live",
   message: (identity) => `/api/stream/messages/${encodeURIComponent(identity)}`,
   detail: (identity) => `/api/stream/messages/${encodeURIComponent(identity)}/detail`,
+  exactEvidence: (identity) =>
+    `/api/stream/messages/${encodeURIComponent(identity)}/evidence`,
+  evidenceReference: (identity, evidenceIdentity) =>
+    `/api/stream/messages/${encodeURIComponent(identity)}/evidence/${encodeURIComponent(
+      evidenceIdentity
+    )}`,
   visualProof: (identity) =>
     `/api/stream/messages/${encodeURIComponent(identity)}/visual-proof`,
   decisionProofForForecast: (identity) =>
@@ -125,6 +131,7 @@ const DECISION_EVIDENCE_FAMILIES = Object.freeze([
     label: "Geometri",
     weight: 20,
     evidenceKind: "geometry",
+    exactDomains: Object.freeze(["geometry", "frozen_chart", "consumed_candles"]),
   }),
   Object.freeze({
     key: "liquidity",
@@ -132,6 +139,7 @@ const DECISION_EVIDENCE_FAMILIES = Object.freeze([
     label: "Likidite",
     weight: 25,
     evidenceKind: "liquidity",
+    exactDomains: Object.freeze(["liquidity", "liquidity_map", "order_book"]),
   }),
   Object.freeze({
     key: "order_flow_absorption",
@@ -139,6 +147,7 @@ const DECISION_EVIDENCE_FAMILIES = Object.freeze([
     label: "Emir Akışı",
     weight: 25,
     evidenceKind: "order_flow",
+    exactDomains: Object.freeze(["order_flow", "order_flow_cvd", "order_book", "public_trades"]),
   }),
   Object.freeze({
     key: "derivatives",
@@ -146,6 +155,7 @@ const DECISION_EVIDENCE_FAMILIES = Object.freeze([
     label: "Türevler",
     weight: 15,
     evidenceKind: "derivatives",
+    exactDomains: Object.freeze(["derivatives"]),
   }),
   Object.freeze({
     key: "onchain_smart_money",
@@ -153,6 +163,7 @@ const DECISION_EVIDENCE_FAMILIES = Object.freeze([
     label: "On-chain",
     weight: 15,
     evidenceKind: "onchain",
+    exactDomains: Object.freeze(["onchain", "onchain_smart_money"]),
   }),
 ]);
 
@@ -676,7 +687,20 @@ function exactSha256(value) {
 function familyContribution(detail, family) {
   const fact = detail && typeof detail.fact_bundle === "object" ? detail.fact_bundle : {};
   const families = Array.isArray(fact?.family_contributions) ? fact.family_contributions : [];
-  return families.find((item) => item && item.family === family) || null;
+  const config =
+    DECISION_EVIDENCE_FAMILIES.find(
+      (item) => item.evidenceKind === family || item.aliases.includes(family)
+    ) || null;
+  if (!config) {
+    return families.find((item) => item && item.family === family) || null;
+  }
+  return (
+    families.find(
+      (item) =>
+        item
+        && config.aliases.includes(text(item.family, "").toLowerCase())
+    ) || null
+  );
 }
 
 function evidenceWindowSpecificWhy(kind, detail) {
