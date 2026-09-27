@@ -567,19 +567,29 @@ function familyEvidenceSummaryTable(record, detail) {
   }
   table.append(header);
 
+  const narrativeIdentity = text(
+    record?.narrative_identity ?? detail?.narrative?.narrative_identity,
+    ""
+  );
+  const interactive = exactSha256(narrativeIdentity);
+
   for (const config of DECISION_EVIDENCE_FAMILIES) {
     const contribution = decisionEvidenceContribution(fact, config);
     const presentation = familyEvidencePresentation(contribution, config);
-    const row = document.createElement("button");
-    row.type = "button";
-    row.className = "family-evidence-row family-evidence-action";
+    const row = document.createElement(interactive ? "button" : "div");
+    if (row instanceof HTMLButtonElement) row.type = "button";
+    row.className = interactive
+      ? "family-evidence-row family-evidence-action"
+      : "family-evidence-row";
     row.dataset.family = config.evidenceKind;
     row.dataset.evidenceKind = config.evidenceKind;
     row.dataset.evidenceState = presentation.state;
-    row.setAttribute(
-      "aria-label",
-      `${config.label} kanıtını aç · ${presentation.score} · ${presentation.status}`
-    );
+    if (interactive) {
+      row.setAttribute(
+        "aria-label",
+        `${config.label} kanıtını aç · ${presentation.score} · ${presentation.status}`
+      );
+    }
 
     const label = document.createElement("strong");
     label.textContent = config.label;
@@ -593,10 +603,12 @@ function familyEvidenceSummaryTable(record, detail) {
     status.textContent = presentation.status;
 
     row.append(label, score, status);
-    row.addEventListener("click", (event) => {
-      event.stopPropagation();
-      openEvidenceWindow(record, detail, config.evidenceKind);
-    });
+    if (interactive) {
+      row.addEventListener("click", (event) => {
+        event.stopPropagation();
+        openEvidenceWindow(record, detail, config.evidenceKind);
+      });
+    }
     table.append(row);
   }
   return table;
