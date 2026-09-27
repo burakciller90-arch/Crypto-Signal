@@ -69,6 +69,55 @@ def monitor_ingestion_time(
     return previous_ms, True
 
 
+def _restart_seed_events(
+    raw_db: Path,
+    *,
+    symbols: tuple[str, ...],
+    depth: int,
+) -> tuple[RawMarketEvent, ...]:
+    if not raw_db.is_file():
+        return ()
+    uri = f"{raw_db.resolve().as_uri()}?mode=ro"
+    events: list[RawMarketEvent] = []
+    with sqlite3.connect(uri, uri=True, timeout=5.0) as db:
+        db.row_factory = sqlite3.Row
+        db.execute("PRAGMA query_only=ON")
+        for symbol in symbols:
+            for channel in (f"orderbook.{depth}", "publicTrade"):
+                row = db.execute(
+                    """
+                    SELECT event_identity, channel, symbol, event_kind,
+                           source_timestamp_ms, event_at_ms, ingested_at_ms,
+                           sequence, update_id, payload_json
+                    FROM raw_market_events
+                    WHERE exchange=? AND channel=? AND symbol=?
+                    ORDER BY event_at_ms DESC, sequence DESC, update_id DESC
+                    LIMIT 1
+                    """,
+                    (Exchange.BYBIT.value, channel, symbol),
+                ).fetchone()
+                if row is None:
+                    continue
+                events.append(
+                    RawMarketEvent(
+                        event_identity=str(row["event_identity"]),
+                        exchange=Exchange.BYBIT,
+                        channel=str(row["channel"]),
+                        symbol=str(row["symbol"]),
+                        event_kind=str(row["event_kind"]),
+                        source_timestamp_ms=int(row["source_timestamp_ms"]),
+                        event_at_ms=int(row["event_at_ms"]),
+                        ingested_at_ms=int(row["ingested_at_ms"]),
+                        sequence=int(row["sequence"]),
+                        update_id=int(row["update_id"]),
+                        payload_json=str(row["payload_json"]),
+                    )
+                )
+    return tuple(
+        sorted(events, key=lambda event: (event.channel, event.symbol))
+    )
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--db", type=Path, default=DEFAULT_DB)
@@ -188,17 +237,33 @@ async def run(args: argparse.Namespace) -> int:
 
     store = MarketTapeStore(args.db)
     raw_store = RawMarketTapeStore(args.raw_db)
-    if not store.quick_check() or not raw_store.quick_check():
-        print(
-            "MARKET_TAPE_STREAM_ERROR=SQLITE_QUICK_CHECK_FAIL",
-            file=sys.stderr,
-            flush=True,
-        )
-        return 3
-    baseline_normalized_rows_total = store.counts().total
-    baseline_raw_rows_total = raw_store.count()
-
     runtime_store = MarketTapeCollectorRuntimeStore(args.runtime_status_db)
+
+    previous = runtime_store.latest_instance(
+        provider="bybit",
+        source="market_tape_stream",
+    )
+    previous_heartbeat = (
+        None
+        if previous is None
+        else runtime_store.latest_heartbeat(previous.instance_identity)
+    )
+    if previous_heartbeat is None:
+        if not store.quick_check() or not raw_store.quick_check():
+            print(
+                "MARKET_TAPE_STREAM_ERROR=SQLITE_QUICK_CHECK_FAIL",
+                file=sys.stderr,
+                flush=True,
+            )
+            return 3
+        baseline_normalized_rows_total = store.counts().total
+        baseline_raw_rows_total = raw_store.count()
+    else:
+        baseline_normalized_rows_total = (
+            previous_heartbeat.normalized_rows_total
+        )
+        baseline_raw_rows_total = previous_heartbeat.raw_rows_total
+
     gap_ledger = MarketDataGapLedger(args.gap_ledger_db)
     gap_ledger.initialize()
     gap_monitor = IngestionSilenceGapMonitor(
@@ -207,8 +272,16 @@ async def run(args: argparse.Namespace) -> int:
         source="market_tape_stream",
         max_ingestion_silence_ms=args.max_ingestion_silence_ms,
     )
-    seed_events = raw_store.latest_by_context(exchange=Exchange.BYBIT)
-    seed_ingestion_floor_ms: int | None = None
+    seed_events = _restart_seed_events(
+        args.raw_db,
+        symbols=symbols,
+        depth=args.depth,
+    )
+    seed_ingestion_floor_ms: int | None = (
+        None
+        if previous_heartbeat is None
+        else previous_heartbeat.last_successful_ingestion_ms
+    )
     for raw_event in seed_events:
         gap_monitor.seed_persisted_event(
             channel=raw_event.channel,
@@ -221,10 +294,6 @@ async def run(args: argparse.Namespace) -> int:
             seed_ingestion_floor_ms or raw_event.ingested_at_ms,
         )
 
-    previous = runtime_store.latest_instance(
-        provider="bybit",
-        source="market_tape_stream",
-    )
     instance = build_collector_instance(
         provider="bybit",
         source="market_tape_stream",
