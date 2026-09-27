@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - "ops/rdp1_bybit_wire_probe.py"
+      - "ops/rdp1_market_tape_temp_probe.py"
       - ".github/workflows/crypto-rdp1-bybit-wire-probe-uid504.yml"
   workflow_dispatch:
 
@@ -41,11 +42,22 @@ jobs:
           "$PY" -m py_compile "$GITHUB_WORKSPACE/ops/rdp1_bybit_wire_probe.py"
           "$PY" "$GITHUB_WORKSPACE/ops/rdp1_bybit_wire_probe.py"             --url wss://stream.bybit.tr/v5/public/spot             --timeout-seconds 60             --depth 50             | tee "$RUNNER_TEMP/rdp1-bybit-wire-probe.log"
 
+      - name: Probe temp DB persistence
+        shell: bash
+        run: |
+          set -euo pipefail
+          PY="/Volumes/Crypto-504/Crypto-Signal/Development/.venv/bin/python"
+          export PYTHONPATH="$GITHUB_WORKSPACE/src:$GITHUB_WORKSPACE"
+          "$PY" -m py_compile "$GITHUB_WORKSPACE/ops/rdp1_market_tape_temp_probe.py"
+          "$PY" "$GITHUB_WORKSPACE/ops/rdp1_market_tape_temp_probe.py"             --output-dir "$RUNNER_TEMP/rdp1-temp-persistence"             --max-messages 200             --timeout-seconds 60             | tee "$RUNNER_TEMP/rdp1-market-tape-temp-probe.log"
+
       - name: Upload probe log
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: rdp1-bybit-wire-probe-${{ github.run_id }}
-          path: ${{ runner.temp }}/rdp1-bybit-wire-probe.log
+          path: |
+            ${{ runner.temp }}/rdp1-bybit-wire-probe.log
+            ${{ runner.temp }}/rdp1-market-tape-temp-probe.log
           if-no-files-found: warn
           retention-days: 14
