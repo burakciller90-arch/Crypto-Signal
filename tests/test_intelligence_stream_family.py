@@ -76,6 +76,52 @@ def _snapshot(*, source: str, event_at_ms: int, state: str):
     )
 
 
+
+def _family_snapshot(
+    *,
+    projector_id: str,
+    family: ConfluenceFamily,
+    category: StreamCategory,
+    subtype: str,
+    evidence_domain: str,
+    source: str,
+    event_at_ms: int,
+    state_label: str,
+    state_components: tuple[tuple[str, str], ...],
+    direction: str | None = None,
+    timeframe: str = "microstructure",
+    source_quality: str = "measured",
+):
+    source_identity = canonical_sha256(
+        {
+            "source": source,
+            "event_at_ms": event_at_ms,
+            "state_label": state_label,
+            "projector_id": projector_id,
+        }
+    )
+    return build_family_snapshot(
+        projector_id=projector_id,
+        family=family,
+        category=category,
+        subtype=subtype,
+        importance=StreamImportance.IMPORTANT,
+        source_event_identity=source_identity,
+        source_scope="bybit:test:mi1",
+        asset="BTC",
+        symbol="BTCUSDT",
+        market="BTCUSDT",
+        timeframe=timeframe,
+        event_at_ms=event_at_ms,
+        source_as_of_ms=event_at_ms,
+        evidence_identities=(source_identity,),
+        evidence_domains=(evidence_domain,),
+        state_label=state_label,
+        state_components=state_components,
+        direction=direction,
+        source_quality=source_quality,
+    )
+
 def _path(tmp_path: Path) -> Path:
     path = tmp_path / "stream.sqlite3"
     IntelligenceStreamForwardRuntime(path).ensure_activated(activated_at_ms=1_000)
@@ -256,10 +302,16 @@ def test_mi1_customer_copy_hides_raw_family_state_machine_language(
     )
 
     model = IntelligenceStreamReadModel(path)
-    page = model.read_messages(StreamMessageQuery(limit=20))
-    by_family = {item["family"]: item["text"] for item in page.items}
 
-    order_flow = by_family[ConfluenceFamily.ORDER_FLOW.value]
+    order_flow_page = model.read_messages(
+        StreamMessageQuery(
+            category="intelligence",
+            evidence_domain="order_flow",
+            state="mixed",
+        )
+    )
+    assert len(order_flow_page.items) == 1
+    order_flow = order_flow_page.items[0]["text"]
     assert order_flow["collapsed_text"] == (
         "Önceki satış baskısı zayıfladı; emir akışı şu an net bir yön "
         "teyidi vermiyor."
@@ -269,21 +321,45 @@ def test_mi1_customer_copy_hides_raw_family_state_machine_language(
     assert "→" not in order_flow["collapsed_text"]
     assert "state değişti" not in order_flow["collapsed_text"]
 
-    liquidity = by_family[ConfluenceFamily.LIQUIDITY.value]
+    liquidity_page = model.read_messages(
+        StreamMessageQuery(
+            category="intelligence",
+            evidence_domain="liquidity",
+            state="measured:bid_side_liquidity_take_candidate",
+        )
+    )
+    assert len(liquidity_page.items) == 1
+    liquidity = liquidity_page.items[0]["text"]
     assert "alış tarafındaki bekleyen emirlerde belirgin azalma" in (
         liquidity["collapsed_text"]
     )
     assert "bid_side_liquidity_take_candidate" not in liquidity["collapsed_text"]
 
-    derivatives = by_family[ConfluenceFamily.DERIVATIVES.value]
+    derivatives_page = model.read_messages(
+        StreamMessageQuery(
+            category="intelligence",
+            evidence_domain="derivatives",
+            state="crowded_long",
+        )
+    )
+    assert len(derivatives_page.items) == 1
+    derivatives = derivatives_page.items[0]["text"]
     assert "long tarafı kalabalıklaşıyor" in derivatives["collapsed_text"]
     assert "crowded_long" not in derivatives["collapsed_text"]
 
-    geometry = by_family[ConfluenceFamily.GEOMETRY.value]
+    geometry_page = model.read_messages(
+        StreamMessageQuery(
+            category="market",
+            evidence_domain="geometry",
+            state="watch:bullish:geometry",
+        )
+    )
+    assert len(geometry_page.items) == 1
+    geometry = geometry_page.items[0]["text"]
     assert "Yukarı yönlü bir senaryoyu izliyorum" in geometry["collapsed_text"]
     assert "watch:bullish:geometry" not in geometry["collapsed_text"]
 
-    for value in by_family.values():
+    for value in (order_flow, liquidity, derivatives, geometry):
         assert "state değişti" not in value["collapsed_text"]
         assert " → " not in value["collapsed_text"]
         assert "state değişti" not in value["simple_text"]
