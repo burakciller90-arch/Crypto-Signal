@@ -88,3 +88,35 @@ def test_market_tape_supervisor_requires_fresh_heartbeat_after_startup_grace() -
     assert "market_tape_startup_grace pid=$pid age_s=$age" in text
     assert "market_tape_unhealthy pid=$pid age_s=$age action=restart" in text
     assert 'now_ms - observed_at_ms > 30_000' in text
+
+
+
+def test_live_evidence_clock_runs_every_60_seconds_without_doubling_aux_clocks() -> None:
+    text = SUPERVISOR.read_text(encoding="utf-8")
+
+    assert "last_live_clock=0" in text
+    assert "last_aux_clock=0" in text
+    assert 'if [ $((now-last_live_clock)) -ge 60 ]; then' in text
+    assert 'if [ $((now-last_aux_clock)) -ge 120 ]; then' in text
+
+    live_start = text.index(
+        'if [ $((now-last_live_clock)) -ge 60 ]; then'
+    )
+    live_end = text.index("  fi", live_start)
+    live_block = text[live_start:live_end]
+    assert "run_wc2_live_clock" in live_block
+    assert "run_clock alert" not in live_block
+    assert "run_clock paper" not in live_block
+    assert "run_clock dry" not in live_block
+    assert "run_market_tape_snapshot_clock" not in live_block
+
+    aux_start = text.index(
+        'if [ $((now-last_aux_clock)) -ge 120 ]; then'
+    )
+    aux_end = text.index("  fi", aux_start)
+    aux_block = text[aux_start:aux_end]
+    assert "run_market_tape_snapshot_clock" in aux_block
+    assert "run_clock alert" in aux_block
+    assert "run_clock paper" in aux_block
+    assert "run_clock dry" in aux_block
+    assert "run_wc2_live_clock" not in aux_block
