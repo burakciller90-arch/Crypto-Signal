@@ -92,3 +92,17 @@ def test_freshnessdiag_reads_canonical_product_page_items() -> None:
     assert 'page = payload.get("page", {})' in block
     assert 'items = page.get("items", []) if isinstance(page, dict) else []' in block
     assert 'payload.get("messages", [])' not in block
+
+
+def test_runtime_restart_normalizes_duplicate_product_dashboard_owners() -> None:
+    text = Path(".github/workflows/crypto-r11-runtime-recovery.yml").read_text(
+        encoding="utf-8"
+    )
+    start = text.index("      - name: Runtime restart only")
+    end = text.index("      - name: Runtime watchdog and recovery acceptance", start)
+    block = text[start:end]
+
+    assert "=== NORMALIZE DASHBOARD OWNERSHIP ===" in block
+    assert '$ROOT/Product/ops/run_dashboard.py' in block
+    assert 'index($0, "--port 48700") > 0' in block
+    assert 'rm -f "$ROOT/dashboard.pid"' in block
