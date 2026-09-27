@@ -5,6 +5,8 @@ const API = Object.freeze({
   live: "/api/stream/live",
   message: (identity) => `/api/stream/messages/${encodeURIComponent(identity)}`,
   detail: (identity) => `/api/stream/messages/${encodeURIComponent(identity)}/detail`,
+  exactEvidence: (identity) =>
+    `/api/stream/messages/${encodeURIComponent(identity)}/evidence`,
   visualProof: (identity) =>
     `/api/stream/messages/${encodeURIComponent(identity)}/visual-proof`,
   decisionProofForForecast: (identity) =>
@@ -547,7 +549,10 @@ function currentViewSummary(analytical, fact) {
   return wrap;
 }
 
-function familyEvidenceSummaryTable(fact) {
+function familyEvidenceSummaryTable(record, detail) {
+  const fact = detail && typeof detail.fact_bundle === "object"
+    ? detail.fact_bundle
+    : {};
   const table = document.createElement("div");
   table.className = "family-evidence-table";
   table.setAttribute("role", "table");
@@ -556,7 +561,7 @@ function familyEvidenceSummaryTable(fact) {
   const header = document.createElement("div");
   header.className = "family-evidence-row family-evidence-header";
   header.setAttribute("role", "row");
-  for (const headingText of ["KANIT", "KATKI", "DURUM"]) {
+  for (const headingText of ["KANIT", "KATKI", "DURUM", ""]) {
     const heading = document.createElement("span");
     heading.setAttribute("role", "columnheader");
     heading.textContent = headingText;
@@ -567,34 +572,52 @@ function familyEvidenceSummaryTable(fact) {
   for (const config of DECISION_EVIDENCE_FAMILIES) {
     const contribution = decisionEvidenceContribution(fact, config);
     const presentation = familyEvidencePresentation(contribution, config);
-    const row = document.createElement("div");
-    row.className = "family-evidence-row";
+
+    const row = document.createElement("button");
+    row.type = "button";
+    row.className = "family-evidence-row family-evidence-action";
     row.dataset.family = config.evidenceKind;
     row.dataset.evidenceState = presentation.state;
-    row.setAttribute("role", "row");
+    row.setAttribute(
+      "aria-label",
+      `${config.label}: ${presentation.score}, ${presentation.status}. Kanıtı aç.`
+    );
 
     const label = document.createElement("strong");
-    label.setAttribute("role", "cell");
     label.textContent = config.label;
 
     const score = document.createElement("span");
     score.className = "family-evidence-score";
-    score.setAttribute("role", "cell");
     score.textContent = presentation.score;
 
     const status = document.createElement("span");
     status.className = "family-evidence-status";
-    status.setAttribute("role", "cell");
     status.textContent = presentation.status;
 
-    row.append(label, score, status);
+    const cue = document.createElement("span");
+    cue.className = "family-evidence-open";
+    cue.setAttribute("aria-hidden", "true");
+    cue.textContent = "›";
+
+    row.append(label, score, status, cue);
+    row.addEventListener("click", (event) => {
+      event.stopPropagation();
+      openEvidenceWindow(record, detail, config.evidenceKind);
+    });
     table.append(row);
   }
+
+  const note = document.createElement("p");
+  note.className = "family-evidence-table-note";
+  note.textContent =
+    "Her satır kendi exact kanıtını açar. Katkı puanı kazanma olasılığı değildir.";
+  table.append(note);
   return table;
 }
 
-function evidenceFamilyGrid(fact) {
-  return familyEvidenceSummaryTable(fact);
+
+function evidenceFamilyGrid(record, detail) {
+  return familyEvidenceSummaryTable(record, detail);
 }
 
 function geometryGrid(fact) {
@@ -675,8 +698,15 @@ function exactSha256(value) {
 
 function familyContribution(detail, family) {
   const fact = detail && typeof detail.fact_bundle === "object" ? detail.fact_bundle : {};
+  const config = decisionEvidenceFamilyConfig(family);
   const families = Array.isArray(fact?.family_contributions) ? fact.family_contributions : [];
-  return families.find((item) => item && item.family === family) || null;
+  if (!config) return families.find((item) => item && item.family === family) || null;
+  return (
+    families.find((item) => {
+      const candidate = text(item?.family, "").toLowerCase();
+      return config.aliases.includes(candidate);
+    }) || null
+  );
 }
 
 function evidenceWindowSpecificWhy(kind, detail) {
@@ -1917,7 +1947,7 @@ function buildExpandedContent(record, detail) {
       }),
       depthSection("5 KANIT AİLESİ", "", {
         className: "depth-intelligence depth-wide",
-        content: familyEvidenceSummaryTable(fact),
+        content: familyEvidenceSummaryTable(record, detail),
       })
     );
     return decisionGrid;
@@ -1938,7 +1968,7 @@ function buildExpandedContent(record, detail) {
     textBundle.intelligence_text,
     "Structured intelligence anlatımı mevcut değil."
   );
-  intelligence.append(intelligenceCopy, evidenceFamilyGrid(fact));
+  intelligence.append(intelligenceCopy, evidenceFamilyGrid(record, detail));
   grid.append(
     depthSection("INTELLIGENCE", "", {
       className: "depth-intelligence depth-wide",
