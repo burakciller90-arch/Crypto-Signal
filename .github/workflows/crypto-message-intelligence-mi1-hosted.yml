@@ -112,6 +112,7 @@ jobs:
             ${{ runner.temp }}/mi1-ruff.log
             ${{ runner.temp }}/mi1-mypy.log
             ${{ runner.temp }}/mi1-node.log
+            ${{ runner.temp }}/mi1-changed-files.log
           if-no-files-found: warn
           retention-days: 7
 
@@ -140,6 +141,20 @@ jobs:
           set -euo pipefail
           git diff --exit-code
           git diff --cached --exit-code
-          ! git diff --name-only ${{ github.event.pull_request.base.sha || 'HEAD^' }}...HEAD | grep -Ei 'durdurulmaz|quantum-capital'
+
+          BASE_SHA="${{ github.event.pull_request.base.sha || github.event.before }}"
+          ZERO_SHA="0000000000000000000000000000000000000000"
+          if [[ -n "$BASE_SHA" && "$BASE_SHA" != "$ZERO_SHA" ]]; then
+            git fetch --no-tags --depth=1 origin "$BASE_SHA"
+            CHANGED_FILES="$(git diff --name-only "$BASE_SHA" "$GITHUB_SHA")"
+          else
+            CHANGED_FILES="$(git show --format= --name-only "$GITHUB_SHA")"
+          fi
+
+          printf '%s\n' "$CHANGED_FILES" | tee "$RUNNER_TEMP/mi1-changed-files.log"
+          if printf '%s\n' "$CHANGED_FILES" | grep -Eiq 'durdurulmaz|quantum-capital'; then
+            echo "PROJECT_ISOLATION_PASS=NO"
+            exit 1
+          fi
           echo "PROJECT_ISOLATION_PASS=YES"
           echo "REAL_CAPITAL=0"
