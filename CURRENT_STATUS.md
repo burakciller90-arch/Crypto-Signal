@@ -4,10 +4,42 @@ Updated: 2026-09-27
 Project: Crypto Signal
 Baseline: crypto-signal-full-version-v1.0.0 (immutable)
 Active post-v1.0 program: v1.1 world-class product + market intelligence + Crypto Signal Intelligence Stream V1
-State: WC0_LIVE_PRODUCT_PARITY_ACCEPTED / WC1_24_7_DATA_RELIABILITY_ACCEPTED / WC2_ENGINEERING_FROZEN_EVIDENCE_ACCUMULATION_ACTIVE / WC4_CHAMPION_CHALLENGER_ENGINEERING_ACCEPTED_RESEARCH_ONLY / WC5_ENGINEERING_ACCEPTED_PRODUCT_DEPLOYED_HUMAN_USABILITY_NOT_MEASURED / WC6_SANDBOX_BOUNDARY_ACCEPTED_VENUE_EVIDENCE_EXTERNAL_DEPENDENCY / WC7_CURRENT_FRONTIER_PACKET_ACCEPTED_CURRENT_INSUFFICIENT_EVIDENCE / INTELLIGENCE_STREAM_V1_S0_S16_HISTORICAL_ACCEPTANCE_RETAINED / INTELLIGENCE_STREAM_V1_FINAL_F0_PASS_F1_PASS_F2_PASS_F3_PASS_F4_PASS_F5_PASS_CURRENT_SCOPE_F6_PASS_F7_PASS_F8_PASS_F9_PASS_F10_ACTIVE / CONTINUITY_PAUSED_BY_USER
+State: WC0_LIVE_PRODUCT_PARITY_ACCEPTED / WC1_24_7_DATA_RELIABILITY_ACCEPTED / WC2_ENGINEERING_FROZEN_EVIDENCE_ACCUMULATION_ACTIVE / WC4_CHAMPION_CHALLENGER_ENGINEERING_ACCEPTED_RESEARCH_ONLY / WC5_ENGINEERING_ACCEPTED_PRODUCT_DEPLOYED_HUMAN_USABILITY_NOT_MEASURED / WC6_SANDBOX_BOUNDARY_ACCEPTED_VENUE_EVIDENCE_EXTERNAL_DEPENDENCY / WC7_CURRENT_FRONTIER_PACKET_ACCEPTED_CURRENT_INSUFFICIENT_EVIDENCE / INTELLIGENCE_STREAM_V1_S0_S16_HISTORICAL_ACCEPTANCE_RETAINED / INTELLIGENCE_STREAM_V1_FINAL_F0_PASS_F1_PASS_F2_PASS_F3_PASS_F4_PASS_F5_PASS_CURRENT_SCOPE_F6_PASS_F7_PASS_F8_PASS_F9_PASS_F10_PASS / INTELLIGENCE_STREAM_V1_FINAL_COMPLETION_ACCEPTED / CONTINUITY_PAUSED_BY_USER
 REAL_CAPITAL: 0
 
 ## Active v1.1 frontier — read before historical sections
+
+### 2026-09-27 — INTELLIGENCE STREAM V1 FINAL COMPLETION ACCEPTED
+
+Canonical final status:
+
+**INTELLIGENCE_STREAM_V1_FINAL_COMPLETION_ACCEPTED**
+
+Final closeout authority:
+- `docs/CRYPTO_SIGNAL_STREAM_V1_FINAL_SOURCE_TO_MESSAGE_LEDGER.md`;
+- `docs/CRYPTO_SIGNAL_STREAM_V1_FINAL_ACCEPTANCE.md`.
+
+Mechanical pre-freeze readiness run `36316450265` proved:
+- F0-F9 accepted;
+- `READY_FOR_AUTHORITY_MUTATION=YES`;
+- no premature final claim;
+- safety marker intact;
+- Development and Product checkouts untouched.
+
+The final accepted meaning remains scope-exact:
+- MARKET/INTELLIGENCE and RISK/SYSTEM have genuine production E2E evidence;
+- production silence is diagnosable and policy was not loosened merely to create activity;
+- Decision issuance/resolution remain accepted immutable product capabilities, while the F8/F9 current-window Decision/Outcome operational-evidence deferrals remain explicit;
+- Core/Tactical/Opportunity paper-capital truth is narratable from exact lineage, while natural live Capital/Portfolio proof remains deferred to its dedicated later workstream;
+- exact proof is READY_EXACT, IDENTITY_ONLY_EXACT or UNAVAILABLE_EXPLICIT;
+- guarded local Ollama rewriting is bounded by deterministic truth and deterministic fallback;
+- real desktop/mobile Product acceptance is complete;
+- no historical rich-message backfill, synthetic activity, server-side fabrication or real-money authority was used.
+
+**REAL_CAPITAL=0**
+
+There is no remaining active phase in the Intelligence Stream V1 final-completion roadmap. Any new frontend or Portfolio/Capital work is new scope and must receive its own authority.
+
 
 ### 2026-09-27 — STREAM FINAL F9 PASS / F10 AUTHORITY FREEZE ACTIVE
 
