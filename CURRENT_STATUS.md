@@ -1,10 +1,10 @@
 # CURRENT STATUS
 
-Updated: 2026-09-27
+Updated: 2026-09-28
 Project: Crypto Signal
 Baseline: crypto-signal-full-version-v1.0.0 (immutable)
 Active post-v1.0 program: v1.1 world-class product + market intelligence + Crypto Signal Intelligence Stream V1
-State: WC0_LIVE_PRODUCT_PARITY_ACCEPTED / WC1_24_7_DATA_RELIABILITY_ACCEPTED / WC2_ENGINEERING_FROZEN_EVIDENCE_ACCUMULATION_ACTIVE / WC4_CHAMPION_CHALLENGER_ENGINEERING_ACCEPTED_RESEARCH_ONLY / WC5_ENGINEERING_ACCEPTED_PRODUCT_DEPLOYED_HUMAN_USABILITY_NOT_MEASURED / WC6_SANDBOX_BOUNDARY_ACCEPTED_VENUE_EVIDENCE_EXTERNAL_DEPENDENCY / WC7_CURRENT_FRONTIER_PACKET_ACCEPTED_CURRENT_INSUFFICIENT_EVIDENCE / INTELLIGENCE_STREAM_V1_S0_S16_HISTORICAL_ACCEPTANCE_RETAINED / INTELLIGENCE_STREAM_V1_FINAL_F0_PASS_F1_PASS_F2_PASS_F3_PASS_F4_PASS_F5_PASS_CURRENT_SCOPE_F6_PASS_F7_PASS_F8_PASS_F9_PASS_F10_PASS / INTELLIGENCE_STREAM_V1_FINAL_COMPLETION_ACCEPTED / MESSAGE_INTELLIGENCE_FAMILY_EVIDENCE_UX_V1_ACCEPTED / EVIDENCE_DEPTH_VISUAL_PROOF_V1_ED0_PASS_ED1_ACTIVE / REALITY_BACKED_EVIDENCE_DATA_PLANE_V1_RDP0_PASS_RDP1_ACTIVE / CONTINUITY_PAUSED_BY_USER
+State: WC0_LIVE_PRODUCT_PARITY_ACCEPTED / WC1_24_7_DATA_RELIABILITY_ACCEPTED / WC2_ENGINEERING_FROZEN_EVIDENCE_ACCUMULATION_ACTIVE / WC4_CHAMPION_CHALLENGER_ENGINEERING_ACCEPTED_RESEARCH_ONLY / WC5_ENGINEERING_ACCEPTED_PRODUCT_DEPLOYED_HUMAN_USABILITY_NOT_MEASURED / WC6_SANDBOX_BOUNDARY_ACCEPTED_VENUE_EVIDENCE_EXTERNAL_DEPENDENCY / WC7_CURRENT_FRONTIER_PACKET_ACCEPTED_CURRENT_INSUFFICIENT_EVIDENCE / INTELLIGENCE_STREAM_V1_S0_S16_HISTORICAL_ACCEPTANCE_RETAINED / INTELLIGENCE_STREAM_V1_FINAL_F0_PASS_F1_PASS_F2_PASS_F3_PASS_F4_PASS_F5_PASS_CURRENT_SCOPE_F6_PASS_F7_PASS_F8_PASS_F9_PASS_F10_PASS / INTELLIGENCE_STREAM_V1_FINAL_COMPLETION_ACCEPTED / MESSAGE_INTELLIGENCE_FAMILY_EVIDENCE_UX_V1_ACCEPTED / EVIDENCE_DEPTH_VISUAL_PROOF_V1_ED0_PASS_ED1_ACTIVE / REALITY_BACKED_EVIDENCE_DATA_PLANE_V1_RDP0_PASS_RDP1_PASS_RDP2_ACTIVE / CONTINUITY_PAUSED_BY_USER
 REAL_CAPITAL: 0
 
 ## Active v1.1 frontier — read before historical sections
@@ -17,12 +17,14 @@ Canonical execution authority:
 
 Current state:
 
-**RDP0 PASS / RDP1 ACTIVE — Collector and runtime reliability**
+**RDP0 PASS / RDP1 PASS / RDP2 ACTIVE — Canonical source envelope + coverage ledger**
 
-Latest live audit evidence:
-- UID504 `36345746684`: Market Tape collector alive; order books/trades accumulating; derivatives ~23.7h stale; liquidations/coverage = 0; checked 15m candle cache ~49.7m behind; Stream/Product live; REAL_CAPITAL=0;
-- UID504 `36345747792`: Event Source remains `PERSISTED_EVIDENCE_ONLY`, online not asserted, process not measured, latest successful fetch ~25.7h old;
-- UID504 `36346024642`: runtime logs show SSL/DNS/timeout failures plus Market Tape DB-lock / ingestion-regression errors that must be closed before professional continuous-data claims.
+Latest RDP1 closure evidence:
+- PR #1548 merged as exact main `fabaa8830bd599e564bf76c1e0adbee89ec9b5f3`: Market Tape snapshot + WC2 live clock cadence tightened to 60s; focused ownership acceptance passed; unrelated legacy Stream whole-repo text/hash failures were not treated as cadence failures;
+- UID504 R11 recovery `36357042192`: Development fast-forwarded to exact `fabaa883...`, supervisor replaced cleanly, Product health `status=ok / read_only=true / REAL_CAPITAL=0`, Bybit TR collector alive, fresh ingestion age 19.992s;
+- UID504 freshness `36357255060` at 2026-09-27T23:01:23.679Z: orderbook 0.339s, trades 0.058s, derivatives 12.464s, collector ingestion 24.872s, Stream ~51s, Product Stream HTTP 200; the 22:59:59.999Z closed 15m candle was already present at age 83.680s, inside the locked <=90s SLO;
+- UID504 six-context read-only diagnostic `36357353548`: Bybit BTC 8.958s / ETH 11.406s / SOL 13.663s; Binance BTC 16.163s / ETH 20.413s / SOL 24.332s availability lag; failures=0; temporary diagnostic PR #1552 was closed unmerged after evidence capture;
+- liquidation rows/coverage remain 0 and are an explicit unsupported/deferred rail, not an RDP1 blocker; Capital/Portfolio and standalone On-chain remain deferred; REAL_CAPITAL=0.
 
 Locked execution sequence:
 `RDP1 runtime reliability → RDP2 source envelope/coverage → RDP3 Geometry → RDP4 rich Liquidity/Order Flow → RDP5 Derivatives/Liquidations → RDP6 BTC/ETH Options → RDP7 real On-chain/stablecoin capital flows → RDP8 Event/Cross-market → RDP9 cross-venue + overlap control → RDP10 frozen proof contract → RDP11 soak/acceptance → Paper Portfolio → new frontend`.
