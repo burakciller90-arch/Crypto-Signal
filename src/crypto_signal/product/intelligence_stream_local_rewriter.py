@@ -13,7 +13,7 @@ from crypto_signal.product.intelligence_stream_narrative import (
     StreamNarrativeText,
 )
 
-LOCAL_NARRATIVE_REWRITER_VERSION = "crypto-signal-local-rewriter-v1/4"
+LOCAL_NARRATIVE_REWRITER_VERSION = "crypto-signal-local-rewriter-v1/5"
 _REWRITE_TEXT_KEYS = frozenset({"collapsed_text", "simple_text"})
 _ALLOWED_LOOPBACK_HOSTS = frozenset({"localhost", "127.0.0.1", "::1"})
 
@@ -183,6 +183,20 @@ def _chat_payload(
         "model": config.model,
         "messages": [
             {"role": "system", "content": system},
+            {
+                "role": "user",
+                "content": (
+                    '{"text":{"collapsed_text":"Görünüm yukarı yön tarafı; teyit takip.",'
+                    '"simple_text":"Yukarı yön görünüm var. Teyit takip sürüyor."}}'
+                ),
+            },
+            {
+                "role": "assistant",
+                "content": (
+                    '{"collapsed_text":"Görünüm yukarı yönlü; teyit izleniyor.",'
+                    '"simple_text":"Yukarı yönlü görünüm korunuyor. Teyit izlenmeye devam ediyor."}'
+                ),
+            },
             {
                 "role": "user",
                 "content": json.dumps(
