@@ -88,3 +88,17 @@ def test_market_tape_supervisor_requires_fresh_heartbeat_after_startup_grace() -
     assert "market_tape_startup_grace pid=$pid age_s=$age" in text
     assert "market_tape_unhealthy pid=$pid age_s=$age action=restart" in text
     assert 'now_ms - observed_at_ms > 30_000' in text
+
+
+
+def test_market_data_clocks_run_inside_closed_candle_freshness_budget() -> None:
+    text = SUPERVISOR.read_text(encoding="utf-8")
+
+    assert "last_data_clock=0" in text
+    assert "last_aux_clock=0" in text
+    assert "if [ $((now-last_data_clock)) -ge 60 ]; then" in text
+    assert "run_market_tape_snapshot_clock" in text
+    assert "run_wc2_live_clock" in text
+    assert 'last_data_clock="$now"' in text
+    assert "if [ $((now-last_aux_clock)) -ge 120 ]; then" in text
+    assert 'last_aux_clock="$now"' in text
