@@ -4,10 +4,39 @@ Updated: 2026-09-27
 Project: Crypto Signal
 Baseline: crypto-signal-full-version-v1.0.0 (immutable)
 Active post-v1.0 program: v1.1 world-class product + market intelligence + Crypto Signal Intelligence Stream V1
-State: WC0_LIVE_PRODUCT_PARITY_ACCEPTED / WC1_24_7_DATA_RELIABILITY_ACCEPTED / WC2_ENGINEERING_FROZEN_EVIDENCE_ACCUMULATION_ACTIVE / WC4_CHAMPION_CHALLENGER_ENGINEERING_ACCEPTED_RESEARCH_ONLY / WC5_ENGINEERING_ACCEPTED_PRODUCT_DEPLOYED_HUMAN_USABILITY_NOT_MEASURED / WC6_SANDBOX_BOUNDARY_ACCEPTED_VENUE_EVIDENCE_EXTERNAL_DEPENDENCY / WC7_CURRENT_FRONTIER_PACKET_ACCEPTED_CURRENT_INSUFFICIENT_EVIDENCE / INTELLIGENCE_STREAM_V1_S0_S16_HISTORICAL_ACCEPTANCE_RETAINED / INTELLIGENCE_STREAM_V1_FINAL_F0_PASS_F1_PASS_F2_PASS_F3_PASS_F4_PASS_F5_PASS_CURRENT_SCOPE_F6_PASS_F7_PASS_F8_PASS_F9_PASS_F10_PASS / INTELLIGENCE_STREAM_V1_FINAL_COMPLETION_ACCEPTED / CONTINUITY_PAUSED_BY_USER
+State: WC0_LIVE_PRODUCT_PARITY_ACCEPTED / WC1_24_7_DATA_RELIABILITY_ACCEPTED / WC2_ENGINEERING_FROZEN_EVIDENCE_ACCUMULATION_ACTIVE / WC4_CHAMPION_CHALLENGER_ENGINEERING_ACCEPTED_RESEARCH_ONLY / WC5_ENGINEERING_ACCEPTED_PRODUCT_DEPLOYED_HUMAN_USABILITY_NOT_MEASURED / WC6_SANDBOX_BOUNDARY_ACCEPTED_VENUE_EVIDENCE_EXTERNAL_DEPENDENCY / WC7_CURRENT_FRONTIER_PACKET_ACCEPTED_CURRENT_INSUFFICIENT_EVIDENCE / INTELLIGENCE_STREAM_V1_S0_S16_HISTORICAL_ACCEPTANCE_RETAINED / INTELLIGENCE_STREAM_V1_FINAL_F0_PASS_F1_PASS_F2_PASS_F3_PASS_F4_PASS_F5_PASS_CURRENT_SCOPE_F6_PASS_F7_PASS_F8_PASS_F9_PASS_F10_PASS / INTELLIGENCE_STREAM_V1_FINAL_COMPLETION_ACCEPTED / MESSAGE_INTELLIGENCE_FAMILY_EVIDENCE_UX_V1_ACTIVE_MI1 / CONTINUITY_PAUSED_BY_USER
 REAL_CAPITAL: 0
 
 ## Active v1.1 frontier — read before historical sections
+
+## ACTIVE FRONTEND/MESSAGE FRONTIER — 2026-09-27
+
+Canonical authority:
+
+**`docs/CRYPTO_SIGNAL_MESSAGE_INTELLIGENCE_FRONTIER_V1.md`**
+
+User-approved state:
+
+**MESSAGE_INTELLIGENCE_FAMILY_EVIDENCE_UX_V1_ACTIVE — MI1**
+
+This is a new post-F10 refinement scope. It does not reopen F0-F10.
+
+Locked outcome:
+- one natural Turkish system-view sentence is the default Stream message;
+- low-level family state-machine prose is not default customer copy;
+- expanded detail centers on current stance, support/coverage, exact trigger/target/invalidation where available, main contradiction, and the five-family evidence table;
+- Geometry / Liquidity / Order Flow / Derivatives / On-chain rows are each individually clickable;
+- clicking a row opens that family's own concise explanation and exact/frozen proof;
+- **no generic global proof button is part of the target expanded message**;
+- missing family evidence is shown explicitly as unavailable, never as fabricated zero support;
+- Ollama remains guarded presentation-only polish;
+- historical messages are not rewritten/backfilled;
+- Capital/Portfolio remains deferred dedicated scope;
+- Durdurulmaz and all other projects remain isolated and untouched;
+- **REAL_CAPITAL=0**.
+
+Exact next implementation frontier: **MI1 — User-facing message composer**.
+
 
 ### 2026-09-27 — INTELLIGENCE STREAM V1 FINAL COMPLETION ACCEPTED
 
