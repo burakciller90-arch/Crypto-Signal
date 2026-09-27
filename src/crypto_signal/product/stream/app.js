@@ -1345,8 +1345,60 @@ function startEvidenceWindowResize(event, model) {
   event.preventDefault();
 }
 
+function unavailableExactEvidence(narrativeIdentity, reason) {
+  return {
+    status: "unavailable",
+    narrative_identity: narrativeIdentity,
+    reason,
+    resolutions: [],
+    reference_resolutions: [],
+    current_data_substitution: false,
+    read_only: true,
+    real_capital: 0,
+  };
+}
+
+async function loadExactEvidenceForWindow(model) {
+  const record = state.messages.find(
+    (item) => item?.narrative_identity === model.narrativeIdentity
+  );
+  if (
+    record?.__fixture_exact_evidence
+    && typeof record.__fixture_exact_evidence === "object"
+  ) {
+    return record.__fixture_exact_evidence;
+  }
+  try {
+    const payload = await fetchJson(API.exactEvidence(model.narrativeIdentity));
+    if (
+      payload?.status === "ready"
+      && payload?.evidence
+      && typeof payload.evidence === "object"
+    ) {
+      return payload.evidence;
+    }
+    return unavailableExactEvidence(
+      model.narrativeIdentity,
+      payload?.reason || "exact_evidence_unavailable"
+    );
+  } catch {
+    return unavailableExactEvidence(
+      model.narrativeIdentity,
+      "exact_evidence_request_failed"
+    );
+  }
+}
+
 async function hydrateFrozenVisualProof(model) {
   if (!["proof", "geometry"].includes(model.kind)) return;
+  if (
+    model.kind === "geometry"
+    && strongestExactEvidenceState(
+      familyExactResolutions("geometry", model.exactEvidence)
+    ) !== "READY_EXACT"
+  ) {
+    return;
+  }
   const body = model.element?.querySelector(".evidence-window-body");
   if (!(body instanceof HTMLElement)) return;
   const renderer = window.CryptoSignalVisualProof?.renderFrozenVisualProof;
@@ -1387,11 +1439,14 @@ async function hydrateFrozenVisualProof(model) {
   currentBody.prepend(renderer(visualProof));
 }
 
-function renderEvidenceWindowBody(model, detail) {
+function renderEvidenceWindowBody(model, detail, exactEvidence = null) {
   const body = model.element?.querySelector(".evidence-window-body");
   if (!(body instanceof HTMLElement)) return;
-  body.replaceChildren(buildEvidenceWindowData(model.kind, detail));
+  body.replaceChildren(
+    buildEvidenceWindowData(model.kind, detail, exactEvidence)
+  );
   model.detail = detail;
+  model.exactEvidence = exactEvidence;
   const narrative = detail?.narrative || {};
   const subtitle = model.element?.querySelector(".evidence-window-subtitle");
   if (subtitle) {
@@ -1405,25 +1460,32 @@ function renderEvidenceWindowBody(model, detail) {
 }
 
 async function hydrateEvidenceWindow(model, detail = null) {
-  if (detail && typeof detail === "object") {
-    renderEvidenceWindowBody(model, detail);
-    return;
-  }
-  try {
-    const payload = await fetchJson(API.detail(model.narrativeIdentity));
-    if (payload.status === "ready" && payload.detail) {
-      renderEvidenceWindowBody(model, payload.detail);
-      return;
+  let resolvedDetail = detail && typeof detail === "object" ? detail : null;
+  if (!resolvedDetail) {
+    try {
+      const payload = await fetchJson(API.detail(model.narrativeIdentity));
+      if (payload.status === "ready" && payload.detail) {
+        resolvedDetail = payload.detail;
+      }
+    } catch {
+      resolvedDetail = null;
     }
-    throw new Error("detail unavailable");
-  } catch {
+  }
+
+  if (!resolvedDetail) {
     const body = model.element?.querySelector(".evidence-window-body");
     if (body instanceof HTMLElement) {
       body.replaceChildren(
         detailPlaceholder("Exact persisted evidence detail okunamadı; veri uydurulmadı.")
       );
     }
+    return;
   }
+
+  const exactEvidence = evidenceFamilyConfig(model.kind)
+    ? await loadExactEvidenceForWindow(model)
+    : null;
+  renderEvidenceWindowBody(model, resolvedDetail, exactEvidence);
 }
 
 function createEvidenceWindowShell(model) {
