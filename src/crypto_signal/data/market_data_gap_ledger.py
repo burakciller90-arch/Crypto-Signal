@@ -256,10 +256,41 @@ class MarketDataGapLedger:
         db.execute("PRAGMA busy_timeout=10000")
         return db
 
+    def _existing_schema_ready(self) -> bool:
+        if not self.path.is_file():
+            return False
+        with self._connect() as db:
+            tables = {
+                str(row[0])
+                for row in db.execute(
+                    """
+                    SELECT name FROM sqlite_master
+                    WHERE type='table' AND name NOT LIKE 'sqlite_%'
+                    """
+                ).fetchall()
+            }
+            required = {
+                "market_data_gap_meta",
+                "market_data_gap_events",
+            }
+            if not required.issubset(tables):
+                return False
+            row = db.execute(
+                "SELECT value FROM market_data_gap_meta WHERE key='schema_version'"
+            ).fetchone()
+            if row is None:
+                return False
+            if str(row[0]) != MARKET_DATA_GAP_SCHEMA_VERSION:
+                raise ValueError("market-data gap schema mismatch")
+        return True
+
     def initialize(self) -> None:
         if self._initialized:
             return
         self.path.parent.mkdir(parents=True, exist_ok=True)
+        if self._existing_schema_ready():
+            self._initialized = True
+            return
         with self._connect() as db:
             db.execute("PRAGMA journal_mode=DELETE")
             db.execute("PRAGMA synchronous=FULL")
