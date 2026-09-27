@@ -137,7 +137,7 @@ jobs:
           "$PY" "$GITHUB_WORKSPACE/ops/audit_stream_f8_production_e2e.py"             --base-url http://127.0.0.1:48700             --output "$OUT/audit.json"             --stream-ledger "$DEV/runtime/stream/intelligence_stream.sqlite3"
 
           "$PY" - "$OUT/audit.json" "$OUT/classification.json" "$OUT/browser.env" <<'PY'
-          import json,shlex,sys
+          import json,sys
           from pathlib import Path
 
           audit=json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
@@ -200,7 +200,7 @@ jobs:
               "F8_BROWSER_SEARCH":market["search_text"],
           }
           Path(sys.argv[3]).write_text(
-              "".join(f"{k}={shlex.quote(str(v))}\n" for k,v in env.items())
+              "".join(f"{k}={str(v)}\n" for k,v in env.items())
           )
 
           print("F8_AUDIT_MARKET_OR_INTELLIGENCE=PASS")
