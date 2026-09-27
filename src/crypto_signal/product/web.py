@@ -1610,6 +1610,7 @@ def create_app(
     @app.get("/api/market-tape-runtime/status")
     def market_tape_runtime_status(
         observed_at_ms: int | None = Query(default=None, ge=0),
+        scope: Literal["full", "collector"] = Query(default="full"),
     ) -> JSONResponse:
         requested_observation = observed_at_ms
         collector_runtime = None
@@ -1640,6 +1641,24 @@ def create_app(
                 collection_process_status = (
                     collector_runtime.process_evidence_status
                 )
+        if scope == "collector":
+            return _json(
+                {
+                    "status": (
+                        "ready"
+                        if collector_runtime is not None
+                        else "unavailable"
+                    ),
+                    "scope": "collector",
+                    "collection_process_status": collection_process_status,
+                    "collector_runtime": collector_runtime,
+                    "collector_runtime_reason": collector_reason,
+                    "online_status": "NOT_ASSERTED",
+                    "read_only": True,
+                    "real_capital": 0,
+                }
+            )
+
         if selected_market_tape_path is None:
             return _json(
                 {

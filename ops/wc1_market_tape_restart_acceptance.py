@@ -208,7 +208,10 @@ def _verify_gap_chain(gap_ledger: MarketDataGapLedger) -> tuple[int, int]:
 
 def _read_product_truth(timeout_seconds: int) -> dict[str, Any]:
     with urllib.request.urlopen(
-        "http://127.0.0.1:48700/api/market-tape-runtime/status",
+        (
+            "http://127.0.0.1:48700/api/market-tape-runtime/status"
+            "?scope=collector"
+        ),
         timeout=timeout_seconds,
     ) as response:
         body = json.loads(response.read().decode("utf-8"))
@@ -277,6 +280,8 @@ def main() -> int:
     product = _read_product_truth(args.product_timeout_seconds)
     if product.get("status") != "ready":
         raise RuntimeError("WC1 Product Market Tape status is not ready")
+    if product.get("scope") != "collector":
+        raise RuntimeError("WC1 Product Market Tape collector scope missing")
     if product.get("online_status") != "NOT_ASSERTED":
         raise RuntimeError("WC1 Product must not infer Market Tape ONLINE")
     if product.get("read_only") is not True or product.get("real_capital") != 0:

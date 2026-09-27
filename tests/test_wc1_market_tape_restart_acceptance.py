@@ -67,3 +67,14 @@ def test_process_identity_parser_does_not_depend_on_macos_comm(
     assert uid == 504
     assert argv[0].endswith("/Development/.venv/bin/python")
     assert argv[1].endswith("/Development/ops/run_market_tape_stream.py")
+
+
+def test_restart_acceptance_uses_fast_collector_product_scope() -> None:
+    source = (
+        Path(restart_acceptance.__file__)
+        .read_text(encoding="utf-8")
+    )
+
+    assert "/api/market-tape-runtime/status" in source
+    assert '"?scope=collector"' in source
+    assert 'product.get("scope") != "collector"' in source
