@@ -621,10 +621,10 @@
     const metrics = document.createElement("div");
     metrics.className = "exact-proof-metrics";
     for (const pair of [
-      ["Open Interest", formatNumber(latest.open_interest)],
-      ["Funding", formatNumber(latest.funding_rate)],
-      ["Mark", formatNumber(latest.mark_price)],
-      ["Index", formatNumber(latest.index_price)],
+      ["Open Interest", latest.open_interest == null ? "—" : formatNumber(latest.open_interest)],
+      ["Funding", latest.funding_rate == null ? "—" : formatNumber(latest.funding_rate)],
+      ["Mark", latest.mark_price == null ? "—" : formatNumber(latest.mark_price)],
+      ["Index", latest.index_price == null ? "—" : formatNumber(latest.index_price)],
       ["OI state", text(components.open_interest_state)],
       ["Funding state", text(components.funding_state)],
       ["Basis state", text(components.basis_state)]
