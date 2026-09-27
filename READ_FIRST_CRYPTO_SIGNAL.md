@@ -24,7 +24,14 @@ Locked current direction:
 - this authority applies only to `burakciller90-arch/Crypto-Signal`; the separate **Durdurulmaz** project must not be touched;
 - **REAL_CAPITAL=0** remains binding.
 
-Exact implementation frontier after authority recording: **MI1 — User-facing message composer**.
+MI1 is mechanically accepted on main.
+
+Accepted MI1 implementation:
+- PR #1453 / main `a2c317bbee1b325500b909bbe970750370a17eda`: raw family state labels/arrows removed from normal customer copy while exact raw state remains in technical evidence;
+- PR #1454 / main `28fa1c208e9e66173214a8bdfaa33cea4bbfe935`: Product history/SSE/polling now request an explicit primary customer surface; five M6 family telemetry narratives remain immutable/searchable on `surface=all` but are excluded from the default Product feed; Event Risk and Provider/Data Quality trust alerts remain visible; combined Decision/Forecast collapsed copy is one fact-bound Turkish system sentence;
+- final MI1 UID504 gate run `36330349505`: focused pytest, Ruff, strict mypy, Node syntax, Development/Product non-mutation and fail-closed project-isolation guard all PASS.
+
+Exact active implementation frontier: **MI2 — Guarded natural Turkish layer**.
 
 ## Intelligence Stream V1 final completion acceptance — 2026-09-27
 
