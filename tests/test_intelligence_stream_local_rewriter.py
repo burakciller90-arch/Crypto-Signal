@@ -66,12 +66,8 @@ class _CapturingTransport:
 def _completion_response(text: StreamNarrativeText) -> dict[str, object]:
     content = json.dumps(
         {
-            "capital_text": text.capital_text,
             "collapsed_text": text.collapsed_text,
-            "decision_text": text.decision_text,
-            "intelligence_text": text.intelligence_text,
             "simple_text": text.simple_text,
-            "technical_text": text.technical_text,
         },
         ensure_ascii=False,
         separators=(",", ":"),
@@ -168,7 +164,7 @@ def test_local_rewriter_emits_bounded_openai_compatible_request() -> None:
     user = messages[1]
     assert isinstance(system, dict)
     assert isinstance(user, dict)
-    assert "tek karakter dahi değiştirmeden kopyala" in str(system["content"])
+    assert "yalnız bu iki alanı döndürmelisin" in str(system["content"])
     assert "Yeni teknik kavram" in str(system["content"])
     assert "birebir kopyalama" in str(system["content"])
     user_payload = json.loads(str(user["content"]))
@@ -187,13 +183,24 @@ def test_local_rewriter_emits_bounded_openai_compatible_request() -> None:
     assert schema["type"] == "object"
     assert schema["additionalProperties"] is False
     assert set(schema["required"]) == {
-        "capital_text",
         "collapsed_text",
-        "decision_text",
-        "intelligence_text",
         "simple_text",
-        "technical_text",
     }
+
+
+def test_local_rewriter_rejects_noop_rewrite() -> None:
+    baseline = _baseline_text()
+    transport = _CapturingTransport(_completion_response(baseline))
+    rewriter = OpenAICompatibleLocalNarrativeRewriter(
+        LocalNarrativeRewriteConfig(model="qwen3:8b"),
+        transport=transport,
+    )
+
+    with pytest.raises(
+        LocalNarrativeRewriteError,
+        match="must change at least one polishable field",
+    ):
+        rewriter.rewrite(_request())
 
 
 @pytest.mark.parametrize(
@@ -220,10 +227,6 @@ def test_local_rewriter_emits_bounded_openai_compatible_request() -> None:
                             {
                                 "collapsed_text": "x",
                                 "simple_text": "x",
-                                "technical_text": "x",
-                                "intelligence_text": "x",
-                                "decision_text": "x",
-                                "capital_text": "x",
                                 "extra": "not-allowed",
                             }
                         )
