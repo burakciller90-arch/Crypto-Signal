@@ -1,0 +1,299 @@
+name: Crypto Message Intelligence MI2 UID504
+
+on:
+  push:
+    branches:
+      - 'feat/message-intelligence-mi2-*'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'src/crypto_signal/product/intelligence_stream_narrative.py'
+      - 'src/crypto_signal/product/intelligence_stream_local_rewriter.py'
+      - 'src/crypto_signal/product/intelligence_stream_forward_runtime.py'
+      - 'src/crypto_signal/product/intelligence_stream_production_projector.py'
+      - 'tests/test_intelligence_stream_local_rewriter.py'
+      - 'tests/test_intelligence_stream_ledger.py'
+      - 'tests/test_intelligence_stream_forward_runtime.py'
+      - 'tests/test_intelligence_stream_production_projector.py'
+      - '.github/workflows/crypto-message-intelligence-mi2-uid504.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: crypto-message-intelligence-mi2-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  mi2-guarded-language:
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+
+      - name: Verify exact source and create isolated test environment
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          DEV="$ROOT/Development"
+          PRODUCT="$ROOT/Product"
+          BASE_PY="$DEV/.venv/bin/python"
+          TEST_VENV="$RUNNER_TEMP/message-intelligence-mi2-venv"
+
+          test "$(id -u)" = "504"
+          test -x "$BASE_PY"
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test -z "$(git -C "$DEV" status --porcelain)"
+          test -z "$(git -C "$PRODUCT" status --porcelain)"
+
+          {
+            echo "DEV_HEAD_BEFORE=$(git -C "$DEV" rev-parse HEAD)"
+            echo "PRODUCT_HEAD_BEFORE=$(git -C "$PRODUCT" rev-parse HEAD)"
+          } > "$RUNNER_TEMP/mi2-checkout-state"
+
+          rm -rf "$TEST_VENV"
+          "$BASE_PY" -m venv "$TEST_VENV"
+          "$TEST_VENV/bin/python" -m pip install --upgrade pip
+          "$TEST_VENV/bin/python" -m pip install -e "$GITHUB_WORKSPACE"
+          "$TEST_VENV/bin/python" -m pip install "pytest>=8.4" "ruff>=0.13" "mypy>=1.18"
+
+          echo "TEST_PY=$TEST_VENV/bin/python" >> "$GITHUB_ENV"
+          echo "MESSAGE_INTELLIGENCE_MI2_EXACT_SOURCE_PASS=YES"
+          echo "REAL_CAPITAL=0"
+
+      - name: MI2 focused fact-lock acceptance
+        shell: bash
+        run: |
+          set -euo pipefail
+          "$TEST_PY" -m pytest -q \
+            tests/test_intelligence_stream_local_rewriter.py \
+            tests/test_intelligence_stream_ledger.py \
+            tests/test_intelligence_stream_forward_runtime.py \
+            tests/test_intelligence_stream_production_projector.py \
+            2>&1 | tee "$RUNNER_TEMP/mi2-pytest.log"
+
+          "$TEST_PY" -m ruff check \
+            src/crypto_signal/product/intelligence_stream_narrative.py \
+            src/crypto_signal/product/intelligence_stream_local_rewriter.py \
+            src/crypto_signal/product/intelligence_stream_forward_runtime.py \
+            src/crypto_signal/product/intelligence_stream_production_projector.py \
+            tests/test_intelligence_stream_local_rewriter.py \
+            tests/test_intelligence_stream_ledger.py \
+            tests/test_intelligence_stream_forward_runtime.py \
+            tests/test_intelligence_stream_production_projector.py \
+            2>&1 | tee "$RUNNER_TEMP/mi2-ruff.log"
+
+          "$TEST_PY" -m mypy \
+            src/crypto_signal/product/intelligence_stream_narrative.py \
+            src/crypto_signal/product/intelligence_stream_local_rewriter.py \
+            src/crypto_signal/product/intelligence_stream_forward_runtime.py \
+            src/crypto_signal/product/intelligence_stream_production_projector.py \
+            2>&1 | tee "$RUNNER_TEMP/mi2-mypy.log"
+
+          echo "MESSAGE_INTELLIGENCE_MI2_FACT_LOCK_PASS=YES"
+          echo "REAL_CAPITAL=0"
+
+      - name: Real loopback Ollama analyst-brief smoke
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error --max-time 5 \
+            http://127.0.0.1:11434/api/tags > "$RUNNER_TEMP/mi2-ollama-tags.json"
+
+          MODEL="$("$TEST_PY" - "$RUNNER_TEMP/mi2-ollama-tags.json" <<'PY'
+          import json
+          import sys
+
+          payload = json.load(open(sys.argv[1], encoding="utf-8"))
+          names = [
+              item.get("name", "")
+              for item in payload.get("models", [])
+              if isinstance(item, dict) and item.get("name")
+          ]
+          preferred = [
+              name for name in names
+              if name == "qwen2.5:3b-instruct"
+          ]
+          if not preferred:
+              preferred = [name for name in names if name.lower().startswith("qwen")]
+          if not preferred:
+              preferred = names
+          if not preferred:
+              raise SystemExit("no_local_ollama_model_available")
+          print(preferred[0])
+          PY
+          )"
+          test -n "$MODEL"
+          echo "MI2_ACCEPTANCE_MODEL=$MODEL"
+
+          MI2_MODEL="$MODEL" "$TEST_PY" - <<'PY' \
+            2>&1 | tee "$RUNNER_TEMP/mi2-real-ollama.log"
+          import os
+          import re
+          from decimal import Decimal
+
+          from crypto_signal.product.intelligence_stream_local_rewriter import (
+              LocalNarrativeRewriteConfig,
+              OpenAICompatibleLocalNarrativeRewriter,
+          )
+          from crypto_signal.product.intelligence_stream_narrative import (
+              StreamNarrativeAnalystBrief,
+              StreamNarrativeRewriteRequest,
+              StreamNarrativeText,
+          )
+
+          baseline = StreamNarrativeText(
+              collapsed_text=(
+                  "Yükseliş beklentim var; $100–$102 tetik bölgesi çalışırsa "
+                  "$108 hedef bölgesini izliyorum, $95 seviyesi bu görüşün "
+                  "geçersizlik sınırı."
+              ),
+              simple_text=(
+                  "Yükseliş beklentim var; $100–$102 tetik bölgesi çalışırsa "
+                  "$108 hedef bölgesini izliyorum, $95 seviyesi bu görüşün "
+                  "geçersizlik sınırı. Bu değerlendirme kalibre edilmiş bir "
+                  "olasılık yüzdesi değil."
+              ),
+              technical_text="Exact teknik kanıt deterministik olarak korunur.",
+              intelligence_text="Exact analytical view deterministik olarak korunur.",
+              decision_text="Exact karar koşulları deterministik olarak korunur.",
+              capital_text="REAL_CAPITAL=0.",
+          )
+          request = StreamNarrativeRewriteRequest(
+              plan_identity="a" * 64,
+              analytical_view_identity="b" * 64,
+              deterministic_text=baseline,
+              analyst_brief=StreamNarrativeAnalystBrief(
+                  stance="bullish",
+                  strength="moderate",
+                  trigger_zone="$100–$102",
+                  target_zone="$108",
+                  invalidation="$95",
+                  dominant_support="Likidite",
+                  secondary_support="Emir akışı",
+                  main_contradiction="Türevler",
+                  evidence_incomplete=False,
+                  evidence_contradiction=True,
+                  probability_calibrated=False,
+                  event_risk_state="clear",
+              ),
+              protected_numeric_values=(
+                  Decimal("95"),
+                  Decimal("100"),
+                  Decimal("102"),
+                  Decimal("108"),
+              ),
+              symbol="BTCUSDT",
+              timeframe="4h",
+          )
+          rewriter = OpenAICompatibleLocalNarrativeRewriter(
+              LocalNarrativeRewriteConfig(
+                  model=os.environ["MI2_MODEL"],
+                  timeout_seconds=25.0,
+                  temperature=0.2,
+                  max_tokens=700,
+              )
+          )
+          candidate = rewriter.rewrite(request)
+          if candidate == baseline:
+              raise SystemExit("real_ollama_noop_rewrite")
+          if candidate.technical_text != baseline.technical_text:
+              raise SystemExit("protected_technical_mutated")
+          if candidate.intelligence_text != baseline.intelligence_text:
+              raise SystemExit("protected_intelligence_mutated")
+          if candidate.decision_text != baseline.decision_text:
+              raise SystemExit("protected_decision_mutated")
+          if candidate.capital_text != baseline.capital_text:
+              raise SystemExit("protected_capital_mutated")
+
+          def numbers(value: str) -> set[str]:
+              return set(re.findall(r"(?<![A-Za-z0-9_])-?\d[\d,]*(?:\.\d+)?", value))
+
+          if numbers(candidate.collapsed_text) != numbers(baseline.collapsed_text):
+              raise SystemExit("collapsed_numbers_changed")
+          if numbers(candidate.simple_text) != numbers(baseline.simple_text):
+              raise SystemExit("simple_numbers_changed")
+
+          lowered = f"{candidate.collapsed_text} {candidate.simple_text}".casefold()
+          if any(term in lowered for term in ("düşüş", "aşağı", "bearish")):
+              raise SystemExit("stance_reversed")
+          if not any(term in lowered for term in ("yükseliş", "yukarı", "bullish")):
+              raise SystemExit("bullish_stance_dropped")
+          if any(
+              token in lowered
+              for token in (
+                  "sell_pressure",
+                  "buy_pressure",
+                  "state_label",
+                  "measured:",
+              )
+          ) or "→" in lowered:
+              raise SystemExit("internal_telemetry_leaked")
+
+          print("MI2_REAL_OLLAMA_BASELINE=" + baseline.collapsed_text)
+          print("MI2_REAL_OLLAMA_CANDIDATE=" + candidate.collapsed_text)
+          print("MI2_REAL_OLLAMA_ADAPTER_PASS=YES")
+          print("REAL_CAPITAL=0")
+          PY
+
+      - name: Upload MI2 diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: message-intelligence-mi2-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/mi2-pytest.log
+            ${{ runner.temp }}/mi2-ruff.log
+            ${{ runner.temp }}/mi2-mypy.log
+            ${{ runner.temp }}/mi2-real-ollama.log
+            ${{ runner.temp }}/mi2-ollama-tags.json
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Prove canonical checkouts remained untouched
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          DEV="$ROOT/Development"
+          PRODUCT="$ROOT/Product"
+          STATE="$RUNNER_TEMP/mi2-checkout-state"
+
+          DEV_BEFORE="$(sed -n 's/^DEV_HEAD_BEFORE=//p' "$STATE")"
+          PRODUCT_BEFORE="$(sed -n 's/^PRODUCT_HEAD_BEFORE=//p' "$STATE")"
+          test -z "$(git -C "$DEV" status --porcelain)"
+          test -z "$(git -C "$PRODUCT" status --porcelain)"
+          test "$(git -C "$DEV" rev-parse HEAD)" = "$DEV_BEFORE"
+          test "$(git -C "$PRODUCT" rev-parse HEAD)" = "$PRODUCT_BEFORE"
+          echo "MESSAGE_INTELLIGENCE_MI2_NON_MUTATING_PASS=YES"
+
+      - name: Guard project and authority boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --exit-code
+          git diff --cached --exit-code
+
+          BASE_SHA="${{ github.event.pull_request.base.sha || github.event.before }}"
+          ZERO_SHA="0000000000000000000000000000000000000000"
+          if [[ -n "$BASE_SHA" && "$BASE_SHA" != "$ZERO_SHA" ]]; then
+            git fetch --no-tags origin "$BASE_SHA"
+            git merge-base "$BASE_SHA" HEAD >/dev/null
+            CHANGED_FILES="$(git diff --name-only "$BASE_SHA"...HEAD)"
+          else
+            CHANGED_FILES="$(git show --format= --name-only "$GITHUB_SHA")"
+          fi
+          printf '%s\n' "$CHANGED_FILES" | tee "$RUNNER_TEMP/mi2-changed-files.log"
+          if printf '%s\n' "$CHANGED_FILES" | grep -Eiq 'durdurulmaz|quantum-capital'; then
+            echo "PROJECT_ISOLATION_PASS=NO"
+            exit 1
+          fi
+          echo "PROJECT_ISOLATION_PASS=YES"
+          echo "REAL_CAPITAL=0"
