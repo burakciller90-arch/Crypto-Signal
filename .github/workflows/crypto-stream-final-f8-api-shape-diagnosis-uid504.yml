@@ -1,0 +1,93 @@
+name: Crypto Stream Final F8 API Shape Diagnosis UID504
+
+on:
+  push:
+    branches:
+      - 'accept/f8-api-shape-diagnosis'
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          clean: true
+
+      - name: Read Product Stream API shapes
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
+          PY="$DEV/.venv/bin/python"
+          export PYTHONPATH="$GITHUB_WORKSPACE:$GITHUB_WORKSPACE/src"
+          "$PY" - <<'PY'
+          import json
+          import urllib.parse
+          import urllib.request
+
+          base="http://127.0.0.1:48700"
+          known=[
+            "d10b0173cae69436dae900a569a44b98ba16763c02f86d283c4781d26401b011",
+            "f39ce20e95d07924c0d393a91f5da59a1f920cdd682a5692ca1a6220f0f364e0",
+            "292fff32aef2df8a30eea66069f2a36c9c8ccfcd8042d1518f0b7e7526271d74",
+            "3246450aaeccb1c45f9e1ba8bd830503cd0304e4c32ea614e4219a665664d80e",
+            "d1a5b938479608764146086869ccd6c0fe772b27b48a92eaedc91cd966e3b62f",
+          ]
+
+          def get(path, params=None):
+              url=base+path
+              if params:
+                  url += "?" + urllib.parse.urlencode(params)
+              with urllib.request.urlopen(url, timeout=8) as r:
+                  return json.loads(r.read().decode())
+
+          page=get("/api/stream/messages",{"limit":200})
+          items=page.get("page",{}).get("items",[])
+          print("F8_API_TOTAL_ITEMS="+str(len(items)))
+          for item in items[:20]:
+              print("F8_API_ITEM="+json.dumps({
+                  "id":item.get("narrative_identity"),
+                  "category":item.get("category"),
+                  "event_at_ms":item.get("event_at_ms"),
+                  "source_kind":item.get("source_kind"),
+                  "subtype":item.get("subtype"),
+                  "symbol":item.get("symbol"),
+              },sort_keys=True))
+
+          for value in [
+              "market","MARKET","intelligence","INTELLIGENCE",
+              "decision","DECISION","outcome","OUTCOME",
+              "risk","RISK","system","SYSTEM"
+          ]:
+              payload=get("/api/stream/messages",{"category":value,"limit":200})
+              rows=payload.get("page",{}).get("items",[])
+              print(f"F8_CATEGORY_QUERY={value}:count={len(rows)}")
+
+          for identity in known:
+              try:
+                  payload=get(f"/api/stream/messages/{identity}")
+                  msg=payload.get("message")
+                  print("F8_KNOWN_MESSAGE="+json.dumps({
+                      "id":identity,
+                      "status":payload.get("status"),
+                      "message_category":msg.get("category") if isinstance(msg,dict) else None,
+                      "event_at_ms":msg.get("event_at_ms") if isinstance(msg,dict) else None,
+                      "symbol":msg.get("symbol") if isinstance(msg,dict) else None,
+                  },sort_keys=True))
+                  detail=get(f"/api/stream/messages/{identity}/detail")
+                  print("F8_KNOWN_DETAIL="+json.dumps({
+                      "id":identity,
+                      "status":detail.get("status"),
+                      "detail_keys":sorted(detail.get("detail",{}).keys()) if isinstance(detail.get("detail"),dict) else [],
+                  },sort_keys=True))
+              except Exception as exc:
+                  print(f"F8_KNOWN_ERROR={identity}:{exc!r}")
+
+          print("F8_API_SHAPE_DIAGNOSIS_PASS=YES")
+          print("REAL_CAPITAL=0")
+          PY
