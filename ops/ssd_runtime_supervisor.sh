@@ -188,6 +188,65 @@ market_tape_pid_is_expected() {
       '
 }
 
+market_tape_pidfile_age_seconds() {
+  local pidfile="$1"
+  local modified=""
+  [ -f "$pidfile" ] || return 1
+  modified="$(stat -f '%m' "$pidfile" 2>/dev/null || true)"
+  [ -n "$modified" ] || return 1
+  echo $(( $(date +%s) - modified ))
+}
+
+market_tape_pid_is_healthy() {
+  local pid="$1"
+  local py="$DEV/.venv/bin/python"
+  local runtime_db="$DEV/runtime/market_tape/collector_runtime.sqlite3"
+  [ -x "$py" ] || return 1
+  [ -f "$runtime_db" ] || return 1
+  "$py" - "$runtime_db" "$pid" <<'PY' >/dev/null 2>&1
+import json
+import sqlite3
+import sys
+import time
+from pathlib import Path
+
+path = Path(sys.argv[1])
+pid = int(sys.argv[2])
+now_ms = time.time_ns() // 1_000_000
+uri = f"{path.resolve().as_uri()}?mode=ro"
+with sqlite3.connect(uri, uri=True, timeout=5.0) as db:
+    db.row_factory = sqlite3.Row
+    db.execute("PRAGMA query_only=ON")
+    row = db.execute(
+        """
+        SELECT instance_identity, process_id, payload_json
+        FROM collector_instances
+        ORDER BY started_at_ms DESC, instance_identity DESC
+        LIMIT 1
+        """
+    ).fetchone()
+    if row is None or int(row["process_id"]) != pid:
+        raise SystemExit(1)
+    heartbeat = db.execute(
+        """
+        SELECT payload_json
+        FROM collector_heartbeats
+        WHERE instance_identity=?
+        ORDER BY sequence_no DESC
+        LIMIT 1
+        """,
+        (str(row["instance_identity"]),),
+    ).fetchone()
+    if heartbeat is None:
+        raise SystemExit(1)
+payload = json.loads(str(heartbeat["payload_json"]))
+observed_at_ms = int(payload["observed_at_ms"])
+if observed_at_ms > now_ms or now_ms - observed_at_ms > 30_000:
+    raise SystemExit(1)
+raise SystemExit(0)
+PY
+}
+
 stop_market_tape_pid() {
   local pid="$1"
   market_tape_pid_is_owned "$pid" || return 0
@@ -231,9 +290,17 @@ start_market_tape_stream() {
   if [ -f "$pidfile" ]; then
     pid="$(cat "$pidfile" 2>/dev/null || true)"
     if market_tape_pid_is_expected "$pid"; then
-      return 0
-    fi
-    if market_tape_pid_is_owned "$pid"; then
+      if market_tape_pid_is_healthy "$pid"; then
+        return 0
+      fi
+      age="$(market_tape_pidfile_age_seconds "$pidfile" || echo 999999)"
+      if [ "$age" -le 45 ]; then
+        echo "$(date '+%Y-%m-%d %H:%M:%S %z') market_tape_startup_grace pid=$pid age_s=$age"
+        return 0
+      fi
+      echo "$(date '+%Y-%m-%d %H:%M:%S %z') market_tape_unhealthy pid=$pid age_s=$age action=restart"
+      stop_market_tape_pid "$pid"
+    elif market_tape_pid_is_owned "$pid"; then
       echo "$(date '+%Y-%m-%d %H:%M:%S %z') market_tape_stale_config pid=$pid action=restart"
       stop_market_tape_pid "$pid"
     fi
