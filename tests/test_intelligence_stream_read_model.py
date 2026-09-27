@@ -830,6 +830,47 @@ def test_stream_read_model_is_read_only_and_missing_db_is_not_initialized(tmp_pa
     assert not missing.exists()
 
 
+def test_stream_api_primary_surface_hides_family_telemetry(
+    tmp_path: Path,
+) -> None:
+    stream_path = tmp_path / "stream.sqlite3"
+    identities = _create_read_fixture(stream_path)
+    family_identity = _insert_family_surface_fixture(
+        stream_path,
+        source_narrative_identity=identities["btc-flow"],
+    )
+    client = TestClient(
+        create_app(
+            tmp_path / "missing-signal-ledger.sqlite3",
+            stream_ledger_path=stream_path,
+        )
+    )
+
+    all_response = client.get(
+        "/api/stream/messages",
+        params={"limit": 20, "surface": "all"},
+    )
+    assert all_response.status_code == 200
+    all_ids = {
+        item["narrative_identity"]
+        for item in all_response.json()["page"]["items"]
+    }
+    assert family_identity in all_ids
+
+    primary = client.get(
+        "/api/stream/messages",
+        params={"limit": 20, "surface": "primary"},
+    )
+    assert primary.status_code == 200
+    primary_ids = {
+        item["narrative_identity"]
+        for item in primary.json()["page"]["items"]
+    }
+    assert family_identity not in primary_ids
+    assert identities["btc-issued"] in primary_ids
+    assert identities["btc-flow"] in primary_ids
+
+
 def test_stream_api_exposes_cursor_history_search_and_lookup(tmp_path) -> None:
     stream_path = tmp_path / "stream.sqlite3"
     identities = _create_read_fixture(stream_path)
