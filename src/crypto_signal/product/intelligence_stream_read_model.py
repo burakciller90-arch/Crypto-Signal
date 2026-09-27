@@ -84,6 +84,7 @@ class StreamMessageQuery:
     from_ms: int | None = None
     to_ms: int | None = None
     text: str | None = None
+    primary_surface: bool = False
 
     def __post_init__(self) -> None:
         if self.limit < 1 or self.limit > MAX_STREAM_PAGE_LIMIT:
@@ -143,6 +144,12 @@ class IntelligenceStreamReadModel:
     def read_messages(self, query: StreamMessageQuery) -> StreamReadPage:
         params: list[object] = []
         clauses = ["1 = 1"]
+
+        if query.primary_surface:
+            clauses.append(
+                "json_extract(n.payload_json, '$.schema_version') != ?"
+            )
+            params.append(STREAM_FAMILY_NARRATIVE_MESSAGE_SCHEMA_VERSION)
 
         if query.before is not None:
             clauses.append(
