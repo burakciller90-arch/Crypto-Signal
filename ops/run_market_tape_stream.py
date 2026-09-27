@@ -58,6 +58,17 @@ DEFAULT_MAX_INGESTION_SILENCE_MS = 60_000
 DEFAULT_SYMBOLS = ("BTCUSDT", "ETHUSDT", "SOLUSDT")
 
 
+def monitor_ingestion_time(
+    previous_ms: int | None,
+    raw_ingested_at_ms: int,
+) -> tuple[int, bool]:
+    if raw_ingested_at_ms < 0:
+        raise ValueError("raw ingestion time cannot be negative")
+    if previous_ms is None or raw_ingested_at_ms >= previous_ms:
+        return raw_ingested_at_ms, False
+    return previous_ms, True
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--db", type=Path, default=DEFAULT_DB)
@@ -304,11 +315,11 @@ async def run(args: argparse.Namespace) -> int:
         nonlocal last_ingestion_ms
         nonlocal last_observed_messages
         nonlocal ingestion_clock_regressions
-        effective_ingestion_ms = raw_event.ingested_at_ms
-        if (
-            last_ingestion_ms is not None
-            and effective_ingestion_ms < last_ingestion_ms
-        ):
+        effective_ingestion_ms, regressed = monitor_ingestion_time(
+            last_ingestion_ms,
+            raw_event.ingested_at_ms,
+        )
+        if regressed:
             ingestion_clock_regressions += 1
             print(
                 "MARKET_TAPE_INGESTION_CLOCK_REGRESSION "
