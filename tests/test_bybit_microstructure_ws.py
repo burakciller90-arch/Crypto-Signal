@@ -227,3 +227,13 @@ async def test_market_tape_stream_persistence_is_bounded_and_append_only(tmp_pat
     assert store.counts().orderbooks == 1
     assert store.counts().trades == 2
     assert store.quick_check() is True
+
+
+def test_bybit_microstructure_accepts_explicit_regional_ws_url() -> None:
+    stream = BybitSpotMicrostructureStream(
+        url="wss://stream.bybit.tr/v5/public/spot",
+        proxy=None,
+    )
+
+    assert stream.url == "wss://stream.bybit.tr/v5/public/spot"
+    assert stream.proxy is None
