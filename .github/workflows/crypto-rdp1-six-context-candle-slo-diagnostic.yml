@@ -1,0 +1,77 @@
+name: RDP1 Six Context Candle SLO Diagnostic
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/crypto-rdp1-six-context-candle-slo-diagnostic.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  diagnostic:
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          clean: true
+          fetch-depth: 1
+      - name: Read-only six-context closed-candle SLO
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
+          CACHE="$DEV/runtime/data/live_base_15m_cache.sqlite3"
+          test "$(id -u)" = "504"
+          test "$(git -C "$DEV" rev-parse HEAD)" = "fabaa8830bd599e564bf76c1e0adbee89ec9b5f3"
+          test -z "$(git -C "$DEV" status --porcelain)"
+          /usr/bin/python3 - "$CACHE" <<'PY'
+          import sqlite3, sys, time
+          from pathlib import Path
+
+          cache=Path(sys.argv[1])
+          assert cache.is_file(), cache
+          contexts=(
+              ("bybit","BTCUSDT"),("bybit","ETHUSDT"),("bybit","SOLUSDT"),
+              ("binance","BTCUSDT"),("binance","ETHUSDT"),("binance","SOLUSDT"),
+          )
+          now_ms=time.time_ns()//1_000_000
+          uri=f"{cache.resolve().as_uri()}?mode=ro"
+          failures=0
+          with sqlite3.connect(uri, uri=True, timeout=5.0) as db:
+              db.row_factory=sqlite3.Row
+              db.execute("PRAGMA query_only=ON")
+              for exchange,symbol in contexts:
+                  row=db.execute(
+                      """
+                      SELECT open_time_ms,close_time_ms,source_timestamp_ms,ingested_at_ms,adapter_version
+                      FROM candles
+                      WHERE exchange=? AND market_type='spot' AND symbol=? AND timeframe='15m' AND is_closed=1
+                      ORDER BY close_time_ms DESC LIMIT 1
+                      """,
+                      (exchange,symbol),
+                  ).fetchone()
+                  if row is None:
+                      failures += 1
+                      print(f"RDP1_CANDLE_SLO exchange={exchange} symbol={symbol} status=MISSING")
+                      continue
+                  close_ms=int(row["close_time_ms"])
+                  ingested_ms=int(row["ingested_at_ms"])
+                  source_ms=int(row["source_timestamp_ms"])
+                  lag=ingested_ms-close_ms
+                  status="PASS" if 0 <= lag <= 90000 else "FAIL"
+                  failures += status != "PASS"
+                  print(
+                      f"RDP1_CANDLE_SLO exchange={exchange} symbol={symbol} status={status} "
+                      f"close_ms={close_ms} age_ms={now_ms-close_ms} "
+                      f"source_lag_ms={source_ms-close_ms} availability_lag_ms={lag} "
+                      f"adapter={row['adapter_version']}"
+                  )
+          print(f"RDP1_CANDLE_SLO_FAILURES={failures}")
+          print("RDP1_CLOSED_CANDLE_SLO_PASS=" + ("YES" if failures == 0 else "NO"))
+          print("REAL_CAPITAL=0")
+          raise SystemExit(0 if failures == 0 else 2)
+          PY
