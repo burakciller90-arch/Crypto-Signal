@@ -118,6 +118,44 @@ const EVIDENCE_WINDOW_KINDS = Object.freeze({
   proof: { label: "Proof", family: null, concept: "calibration" },
 });
 
+const DECISION_EVIDENCE_FAMILIES = Object.freeze([
+  Object.freeze({
+    key: "geometry_pa_elliott_harmonic",
+    aliases: Object.freeze(["geometry_pa_elliott_harmonic", "geometry"]),
+    label: "Geometri",
+    weight: 20,
+    evidenceKind: "geometry",
+  }),
+  Object.freeze({
+    key: "liquidity",
+    aliases: Object.freeze(["liquidity"]),
+    label: "Likidite",
+    weight: 25,
+    evidenceKind: "liquidity",
+  }),
+  Object.freeze({
+    key: "order_flow_absorption",
+    aliases: Object.freeze(["order_flow_absorption", "order_flow"]),
+    label: "Emir Akışı",
+    weight: 25,
+    evidenceKind: "order_flow",
+  }),
+  Object.freeze({
+    key: "derivatives",
+    aliases: Object.freeze(["derivatives"]),
+    label: "Türevler",
+    weight: 15,
+    evidenceKind: "derivatives",
+  }),
+  Object.freeze({
+    key: "onchain_smart_money",
+    aliases: Object.freeze(["onchain_smart_money", "onchain"]),
+    label: "On-chain",
+    weight: 15,
+    evidenceKind: "onchain",
+  }),
+]);
+
 function text(value, fallback = "—") {
   if (value === null || value === undefined || value === "") return fallback;
   return String(value);
@@ -312,16 +350,13 @@ function displayNumber(value, fallback = "—") {
   return new Intl.NumberFormat("tr-TR", { maximumFractionDigits: 2 }).format(n);
 }
 
-function familyLabel(value) {
-  const labels = {
-    geometry: "Geometri",
-    liquidity: "Likidite",
-    order_flow: "Emir akışı",
-    derivatives: "Türevler",
-    onchain: "On-chain",
-  };
+function decisionEvidenceFamilyConfig(value) {
   const key = text(value, "").toLowerCase();
-  return labels[key] || text(value, "Kanıt");
+  return DECISION_EVIDENCE_FAMILIES.find((item) => item.aliases.includes(key)) || null;
+}
+
+function familyLabel(value) {
+  return decisionEvidenceFamilyConfig(value)?.label || text(value, "Kanıt");
 }
 
 function preserveMessageAnchor(item, mutate) {
