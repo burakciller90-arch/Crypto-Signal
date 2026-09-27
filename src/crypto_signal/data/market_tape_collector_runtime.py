@@ -187,9 +187,17 @@ class MarketTapeCollectorRuntimeStore:
         self.path = path
         self._initialized = False
 
-    def _connect(self) -> sqlite3.Connection:
-        db = sqlite3.connect(self.path, timeout=10.0)
-        db.execute("PRAGMA busy_timeout=10000")
+    def _connect(
+        self,
+        *,
+        timeout_seconds: float = 10.0,
+    ) -> sqlite3.Connection:
+        if timeout_seconds <= 0:
+            raise ValueError("collector runtime SQLite timeout must be positive")
+        db = sqlite3.connect(self.path, timeout=timeout_seconds)
+        db.execute(
+            f"PRAGMA busy_timeout={max(1, int(timeout_seconds * 1000))}"
+        )
         db.execute("PRAGMA foreign_keys=ON")
         return db
 
@@ -311,10 +319,15 @@ class MarketTapeCollectorRuntimeStore:
                 ),
             )
 
-    def append_heartbeat(self, heartbeat: MarketTapeCollectorHeartbeat) -> None:
+    def append_heartbeat(
+        self,
+        heartbeat: MarketTapeCollectorHeartbeat,
+        *,
+        timeout_seconds: float = 10.0,
+    ) -> None:
         self.initialize()
         payload = canonical_json(_heartbeat_payload(heartbeat))
-        with self._connect() as db:
+        with self._connect(timeout_seconds=timeout_seconds) as db:
             db.execute("BEGIN IMMEDIATE")
             parent = db.execute(
                 "SELECT 1 FROM collector_instances WHERE instance_identity=?",

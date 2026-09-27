@@ -6,6 +6,7 @@ from pathlib import Path
 import pytest
 
 from ops.run_market_tape_stream import (
+    _is_transient_sqlite_lock,
     _restart_seed_events,
     monitor_ingestion_time,
 )
@@ -223,3 +224,43 @@ def test_runtime_supervisor_binds_snapshot_to_regional_bybit_rest() -> None:
     ).read_text(encoding="utf-8")
 
     assert '--bybit-base-url "$BYBIT_REST_BASE_URL"' in supervisor
+
+
+
+def test_transient_sqlite_lock_classifier_is_narrow() -> None:
+    assert _is_transient_sqlite_lock(
+        sqlite3.OperationalError("database is locked")
+    )
+    assert _is_transient_sqlite_lock(
+        sqlite3.OperationalError("database table is locked")
+    )
+    assert _is_transient_sqlite_lock(
+        sqlite3.OperationalError("database is busy")
+    )
+    assert not _is_transient_sqlite_lock(
+        sqlite3.OperationalError("no such table: collector_heartbeats")
+    )
+
+
+def test_collector_runtime_rejects_nonpositive_sqlite_timeout(tmp_path) -> None:
+    store = MarketTapeCollectorRuntimeStore(tmp_path / "collector.sqlite3")
+
+    with pytest.raises(ValueError, match="timeout must be positive"):
+        store._connect(timeout_seconds=0)
+
+
+def test_heartbeat_loop_retries_transient_lock_without_killing_stream() -> None:
+    runner = (
+        Path(__file__).resolve().parents[1]
+        / "ops"
+        / "run_market_tape_stream.py"
+    ).read_text(encoding="utf-8")
+
+    assert "HEARTBEAT_DB_TIMEOUT_SECONDS = 1.0" in runner
+    assert "HEARTBEAT_DB_RETRY_ATTEMPTS = 3" in runner
+    assert "await asyncio.to_thread(" in runner
+    assert "runtime_store.append_heartbeat," in runner
+    assert "MARKET_TAPE_HEARTBEAT_DB_LOCK" in runner
+    assert "MARKET_TAPE_HEARTBEAT_DB_DEFERRED" in runner
+    assert "MARKET_TAPE_GAP_HEARTBEAT_DB_DEFERRED" in runner
+    assert "await emit_heartbeat()" in runner
