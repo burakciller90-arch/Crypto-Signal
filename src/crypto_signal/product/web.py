@@ -6,7 +6,7 @@ import sqlite3
 import time
 from collections.abc import AsyncIterator
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import FastAPI, Header, HTTPException, Query, Request
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
@@ -727,6 +727,7 @@ def create_app(
         from_ms: int | None = Query(default=None, ge=0),
         to_ms: int | None = Query(default=None, ge=0),
         text: str | None = Query(default=None, min_length=1, max_length=200),
+        surface: Literal["all", "primary"] = Query(default="all"),
     ) -> JSONResponse:
         if selected_stream_path is None or not selected_stream_path.exists():
             return _json(
@@ -769,6 +770,7 @@ def create_app(
                 from_ms=from_ms,
                 to_ms=to_ms,
                 text=text,
+                primary_surface=surface == "primary",
             )
         except (StreamReadModelError, ValueError) as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -808,6 +810,7 @@ def create_app(
         from_ms: int | None = Query(default=None, ge=0),
         to_ms: int | None = Query(default=None, ge=0),
         text: str | None = Query(default=None, min_length=1, max_length=200),
+        surface: Literal["all", "primary"] = Query(default="all"),
         follow: bool = Query(default=True),
     ) -> StreamingResponse:
         if selected_stream_path is None or not selected_stream_path.exists():
@@ -832,6 +835,7 @@ def create_app(
                 from_ms=from_ms,
                 to_ms=to_ms,
                 text=text,
+                primary_surface=surface == "primary",
             )
             initial_cursor = resolve_stream_resume_cursor(
                 reader=reader,

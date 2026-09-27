@@ -2033,8 +2033,8 @@ class _SafeNarrativeRewriter(_NarrativeTestRewriter):
             request.deterministic_text,
             collapsed_text=(
                 request.deterministic_text.collapsed_text.replace(
-                    "En belirgin destek",
-                    "Kanıt tarafında en belirgin destek",
+                    "beklentim var",
+                    "beklentim sürüyor",
                     1,
                 )
             ),
@@ -2187,11 +2187,18 @@ def test_stream_narrative_is_deterministic_turkish_and_fact_safe(tmp_path) -> No
     assert first.rewrite_engine_version is None
     assert first.validation.valid is True
     assert first.validation.violation_codes == ()
-    assert "BTCUSDT" in first.text.collapsed_text
-    assert "4h" in first.text.collapsed_text
-    assert "Likidite" in first.text.collapsed_text
-    assert "Emir akışı" in first.text.collapsed_text
-    assert "kalibre edilmiş bir olasılık yüzdesi değil" in first.text.collapsed_text
+    assert first.text.collapsed_text == (
+        "Yükseliş beklentim var; $100–$102 tetik bölgesi çalışırsa "
+        "$108 hedef bölgesini izliyorum, $95 seviyesi bu görüşün "
+        "geçersizlik sınırı."
+    )
+    assert "BTCUSDT" not in first.text.collapsed_text
+    assert "4h" not in first.text.collapsed_text
+    assert "Likidite" not in first.text.collapsed_text
+    assert "Emir akışı" not in first.text.collapsed_text
+    assert "state değişti" not in first.text.collapsed_text
+    assert "→" not in first.text.collapsed_text
+    assert "kalibre edilmiş bir olasılık yüzdesi değil" in first.text.simple_text
     assert "$" in first.text.decision_text
     assert len(first.text.collapsed_text) <= 420
     assert first.original_text_preserved is True
@@ -2481,8 +2488,9 @@ def test_stream_narrative_missing_confirmation_requires_exact_story_transition(
     )
 
     assert "missing_confirmation_arrived" in plan.story_awareness_codes
-    assert "Önce eksik olan teyitlerden biri geldi" in narrative.text.collapsed_text
-    assert "Emir akışı" in narrative.text.collapsed_text
+    assert "Önce eksik olan teyitlerden biri geldi" in narrative.text.simple_text
+    assert "Emir akışı" in narrative.text.simple_text
+    assert "Emir akışı" not in narrative.text.collapsed_text
 
     root_observation = build_story_observation(
         issuance.message_input,
@@ -2510,7 +2518,7 @@ def test_stream_narrative_missing_confirmation_requires_exact_story_transition(
     )
     assert "missing_confirmation_arrived" not in root_plan.story_awareness_codes
     assert "Önce eksik olan teyitlerden biri geldi" not in (
-        root_narrative.text.collapsed_text
+        root_narrative.text.simple_text
     )
 
 
@@ -2602,8 +2610,12 @@ def test_stream_narrative_story_outcome_references_previous_expectation(tmp_path
         resolved.fact_bundle,
         resolved_change,
     )
+    assert resolved_narrative.text.collapsed_text == (
+        "Önceki beklenti sonuçlandı; ilk görüşü geriye dönük değiştirmeden "
+        "sonucu ayrı bir kayıt olarak tutuyorum."
+    )
     assert "Önceki beklentinin sonucu artık kayda geçti." in (
-        resolved_narrative.text.collapsed_text
+        resolved_narrative.text.simple_text
     )
     assert (
         narrative_ledger.append_narrative(resolved_plan, resolved_narrative)

@@ -51,6 +51,7 @@ def test_stream_shell_uses_s6_live_and_polling_contracts() -> None:
 
     assert 'messages: "/api/stream/messages"' in script
     assert 'live: "/api/stream/live"' in script
+    assert 'params.set("surface", "primary")' in script
     assert "new EventSource(" in script
     assert "Last-Event-ID" not in script
     assert "pollCatchUp" in script
@@ -59,6 +60,15 @@ def test_stream_shell_uses_s6_live_and_polling_contracts() -> None:
     assert "newestCursor" in script
     assert "state.unread" in script
     assert "fixture" in script
+
+
+def test_mi1_product_stream_uses_primary_customer_surface() -> None:
+    script = (STREAM_DIR / "app.js").read_text(encoding="utf-8")
+
+    assert 'params.set("surface", "primary")' in script
+    assert "queryParams({ limit: 50 })" in script
+    assert "queryParams({ after: state.newestCursor, limit: 200 })" in script
+    assert "queryParams({ after: state.newestCursor, limit: 100 })" in script
 
 
 def test_stream_fixture_mode_is_explicitly_non_live_truth() -> None:

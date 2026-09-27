@@ -46,6 +46,13 @@ STREAM_CURSOR_SCHEMA_VERSION = "intelligence-stream-cursor-v1/1"
 STREAM_MESSAGE_DETAIL_SCHEMA_VERSION = "intelligence-stream-message-detail-v1/1"
 DEFAULT_STREAM_PAGE_LIMIT = 50
 MAX_STREAM_PAGE_LIMIT = 200
+_PRIMARY_HIDDEN_FAMILIES = (
+    "geometry",
+    "liquidity",
+    "order_flow",
+    "derivatives",
+    "onchain",
+)
 
 
 class StreamReadModelError(ValueError):
@@ -84,6 +91,7 @@ class StreamMessageQuery:
     from_ms: int | None = None
     to_ms: int | None = None
     text: str | None = None
+    primary_surface: bool = False
 
     def __post_init__(self) -> None:
         if self.limit < 1 or self.limit > MAX_STREAM_PAGE_LIMIT:
@@ -143,6 +151,19 @@ class IntelligenceStreamReadModel:
     def read_messages(self, query: StreamMessageQuery) -> StreamReadPage:
         params: list[object] = []
         clauses = ["1 = 1"]
+
+        if query.primary_surface:
+            placeholders = ", ".join("?" for _ in _PRIMARY_HIDDEN_FAMILIES)
+            clauses.append(
+                "("
+                "json_extract(n.payload_json, '$.schema_version') != ? "
+                "OR json_extract(n.payload_json, '$.family') NOT IN ("
+                + placeholders
+                + ")"
+                ")"
+            )
+            params.append(STREAM_FAMILY_NARRATIVE_MESSAGE_SCHEMA_VERSION)
+            params.extend(_PRIMARY_HIDDEN_FAMILIES)
 
         if query.before is not None:
             clauses.append(
