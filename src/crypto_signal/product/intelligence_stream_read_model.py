@@ -46,6 +46,7 @@ STREAM_CURSOR_SCHEMA_VERSION = "intelligence-stream-cursor-v1/1"
 STREAM_MESSAGE_DETAIL_SCHEMA_VERSION = "intelligence-stream-message-detail-v1/1"
 DEFAULT_STREAM_PAGE_LIMIT = 50
 MAX_STREAM_PAGE_LIMIT = 200
+_CUSTOMER_VISIBLE_FAMILY_DOMAINS = ("event_risk", "provider_quality")
 
 
 class StreamReadModelError(ValueError):
@@ -81,6 +82,7 @@ class StreamMessageQuery:
     vault: str | None = None
     state: str | None = None
     evidence_domain: str | None = None
+    include_family_telemetry: bool = True
     from_ms: int | None = None
     to_ms: int | None = None
     text: str | None = None
@@ -174,6 +176,18 @@ class IntelligenceStreamReadModel:
         if query.source_kind is not None:
             clauses.append("n.source_kind = ?")
             params.append(query.source_kind)
+        if not query.include_family_telemetry:
+            placeholders = ", ".join(
+                "?" for _ in _CUSTOMER_VISIBLE_FAMILY_DOMAINS
+            )
+            clauses.append(
+                "("
+                "json_extract(a.payload_json, '$.family_state_label') IS NULL "
+                "OR json_extract(a.payload_json, '$.family') "
+                f"IN ({placeholders})"
+                ")"
+            )
+            params.extend(_CUSTOMER_VISIBLE_FAMILY_DOMAINS)
         if query.symbol is not None:
             clauses.append("json_extract(n.payload_json, '$.symbol') = ?")
             params.append(query.symbol)
