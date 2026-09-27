@@ -1,0 +1,85 @@
+name: Crypto Stream Final F8 Deferred Decision Outcome Proof UID504
+
+on:
+  push:
+    branches:
+      - 'accept/f8-deferred-decision-outcome-proof'
+
+permissions:
+  contents: read
+
+jobs:
+  proof:
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          clean: true
+
+      - name: Prove Decision and Outcome correct silence after Stream activation
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
+          PY="$DEV/.venv/bin/python"
+          "$PY" - <<'PY'
+          import json
+          import sqlite3
+          from pathlib import Path
+
+          stream=Path("/Volumes/Crypto-504/Crypto-Signal/Development/runtime/stream/intelligence_stream.sqlite3")
+          decision=Path("/Volumes/Crypto-504/Crypto-Signal/Development/runtime/decision/decision_evidence.sqlite3")
+
+          with sqlite3.connect(f"file:{stream.resolve()}?mode=ro",uri=True) as conn:
+              conn.execute("PRAGMA query_only=ON")
+              activation=int(conn.execute(
+                  "SELECT activated_at_ms FROM stream_activation ORDER BY activated_at_ms LIMIT 1"
+              ).fetchone()[0])
+
+          with sqlite3.connect(f"file:{decision.resolve()}?mode=ro",uri=True) as conn:
+              conn.execute("PRAGMA query_only=ON")
+              f_total=int(conn.execute("SELECT COUNT(*) FROM r20_forecasts").fetchone()[0])
+              f_after=int(conn.execute(
+                  "SELECT COUNT(*) FROM r20_forecasts WHERE issued_at_ms >= ?",
+                  (activation,),
+              ).fetchone()[0])
+              f_latest=conn.execute(
+                  "SELECT forecast_identity,asset,timeframe,issued_at_ms "
+                  "FROM r20_forecasts ORDER BY issued_at_ms DESC LIMIT 1"
+              ).fetchone()
+
+              r_total=int(conn.execute("SELECT COUNT(*) FROM r20_resolutions").fetchone()[0])
+              r_after=int(conn.execute(
+                  "SELECT COUNT(*) FROM r20_resolutions WHERE evaluated_at_ms >= ?",
+                  (activation,),
+              ).fetchone()[0])
+              r_latest=conn.execute(
+                  "SELECT resolution_identity,forecast_identity,evaluated_at_ms "
+                  "FROM r20_resolutions ORDER BY evaluated_at_ms DESC LIMIT 1"
+              ).fetchone()
+
+          print("F8_STREAM_ACTIVATION_MS="+str(activation))
+          print("F8_DECISION_FORECAST_TOTAL="+str(f_total))
+          print("F8_DECISION_FORECAST_AFTER_ACTIVATION="+str(f_after))
+          print("F8_DECISION_FORECAST_LATEST="+json.dumps(f_latest))
+          print("F8_OUTCOME_RESOLUTION_TOTAL="+str(r_total))
+          print("F8_OUTCOME_RESOLUTION_AFTER_ACTIVATION="+str(r_after))
+          print("F8_OUTCOME_RESOLUTION_LATEST="+json.dumps(r_latest))
+
+          assert f_total > 0
+          assert r_total > 0
+          assert f_after == 0
+          assert r_after == 0
+          if f_latest is not None:
+              assert int(f_latest[3]) < activation
+          if r_latest is not None:
+              assert int(r_latest[2]) < activation
+
+          print("F8_DECISION_DEFERRED_CORRECT_SILENCE=YES")
+          print("F8_OUTCOME_DEFERRED_CORRECT_SILENCE=YES")
+          print("HISTORICAL_BACKFILL=NO")
+          print("SYNTHETIC_ACTIVITY=NO")
+          print("REAL_CAPITAL=0")
+          PY
