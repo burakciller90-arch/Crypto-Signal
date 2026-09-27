@@ -180,12 +180,46 @@ jobs:
               "→",
           )
           leaks = []
+          leak_samples = []
           for item in primary:
               text_payload = item.get("text") if isinstance(item.get("text"), dict) else {}
-              collapsed = str(text_payload.get("collapsed_text", "")).casefold()
+              collapsed_raw = str(text_payload.get("collapsed_text", ""))
+              collapsed = collapsed_raw.casefold()
               if any(token.casefold() in collapsed for token in raw_tokens):
-                  leaks.append(item.get("narrative_identity"))
-          assert not leaks, leaks
+                  identity = str(item.get("narrative_identity", ""))
+                  leaks.append(identity)
+                  detail = None
+                  if len(identity) == 64:
+                      try:
+                          detail = get(f"/api/stream/messages/{identity}/detail").get("detail")
+                      except Exception:
+                          detail = None
+                  narrative = (
+                      detail.get("narrative")
+                      if isinstance(detail, dict)
+                      and isinstance(detail.get("narrative"), dict)
+                      else {}
+                  )
+                  leak_samples.append({
+                      "narrative_identity": identity,
+                      "event_at_ms": item.get("event_at_ms"),
+                      "category": item.get("category"),
+                      "subtype": item.get("subtype"),
+                      "source_kind": item.get("source_kind"),
+                      "schema_version": item.get("schema_version"),
+                      "family": item.get("family"),
+                      "collapsed_text": collapsed_raw,
+                      "detail_schema_version": (
+                          detail.get("schema_version")
+                          if isinstance(detail, dict)
+                          else None
+                      ),
+                      "narrative_schema_version": narrative.get("schema_version"),
+                      "narrative_family": narrative.get("family"),
+                      "narrative_state_label": narrative.get("state_label"),
+                  })
+                  if len(leak_samples) >= 20:
+                      break
 
           genuine_decisions = []
           for item in decision_items:
@@ -272,12 +306,18 @@ jobs:
                   for item in primary[:12]
               ],
               "raw_primary_leaks": leaks,
+              "raw_primary_leak_samples": leak_samples,
               "genuine_decisions": genuine_decisions,
               "genuine_decision_count_scanned": len(genuine_decisions),
               "real_capital": 0,
           }
           with open(output, "w", encoding="utf-8") as handle:
               json.dump(report, handle, ensure_ascii=False, indent=2)
+
+          if leaks:
+              print("MI5_PRIMARY_RAW_TELEMETRY_LEAK_COUNT=" + str(len(leaks)))
+              print(json.dumps(leak_samples, ensure_ascii=False, indent=2))
+              raise AssertionError(leaks)
 
           print("MI5_PRIMARY_COUNT=" + str(len(primary)))
           print("MI5_ALL_COUNT=" + str(len(all_items)))
