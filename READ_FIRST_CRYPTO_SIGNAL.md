@@ -3,6 +3,16 @@
 This repository originates from the user's **CRYPTO SIGNAL PLATFORM — MASTER HANDOFF v1.0 (2026-09-19)**.
 Its foundational project-isolation, scientific-truth and REAL_CAPITAL safety boundaries remain binding. Later **explicit user-approved canonical documents and state updates may supersede scoped product/frontend/roadmap decisions where they say so**. Never use older handoff or roadmap wording to undo a newer explicit supersession. Current execution state is established by `CURRENT_STATUS.md`, the newest Chronicle entry and mechanically observed Git/runtime truth.
 
+## Intelligence Stream V1 final completion acceptance — 2026-09-27
+
+- Final deficiency-closure phases F0-F10 are mechanically complete.
+- Canonical final status: **INTELLIGENCE_STREAM_V1_FINAL_COMPLETION_ACCEPTED**.
+- The original S0-S16 acceptance remains historical component evidence; the later F0-F10 program is the accepted production-deficiency closure.
+- Current claimed live production scope is accepted without fabricating rare/deferred classes: MARKET/INTELLIGENCE and RISK/SYSTEM have genuine production proof; Decision/Outcome retain their explicit current-window operational-evidence deferrals; live Capital/Portfolio proof remains deferred to the dedicated later workstream.
+- Three-vault canonical paper truth, exact/fail-closed evidence, guarded local Ollama rewrite, real Product browser acceptance and deterministic long-session mechanics remain accepted under their recorded boundaries.
+- This final status authorizes no new main screens, exchange credentials, leverage, real-money trading, historical rich-message backfill, scientific-policy loosening or LLM truth authority.
+- **REAL_CAPITAL=0** remains binding.
+
 ## Hard boundaries
 - This project is separate from Durdurulmaz and Quantum Capital.
 - Do not share repos, runtime state, DBs, credentials, ports, launchd labels, supervisors, brokers, chat state, or roadmaps.
