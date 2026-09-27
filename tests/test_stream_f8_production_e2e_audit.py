@@ -12,22 +12,31 @@ IDENTITY = "a" * 64
 
 def _proof_payload(
     *,
-    status: str,
-    reason: str | None = None,
+    state: str = "READY_EXACT",
     current_data_substitution: bool = False,
+    production_authority: bool = False,
+    top_status: str = "ready",
 ) -> dict[str, object]:
-    visual: dict[str, object] = {
-        "status": status,
-        "provenance": {
-            "current_data_substitution": current_data_substitution,
-        },
-    }
-    if reason is not None:
-        visual["reason"] = reason
     return {
-        "status": status,
+        "status": top_status,
         "narrative_identity": IDENTITY,
-        "visual_proof": visual,
+        "evidence": {
+            "status": "ready",
+            "narrative_identity": IDENTITY,
+            "resolutions": [
+                {
+                    "domain": "geometry",
+                    "resolution_state": state,
+                    "reason": "test_exact_resolution",
+                    "current_data_substitution": current_data_substitution,
+                }
+            ],
+            "reference_resolutions": [],
+            "current_data_substitution": current_data_substitution,
+            "read_only": True,
+            "production_authority": production_authority,
+            "real_capital": 0,
+        },
         "read_only": True,
         "real_capital": 0,
     }
@@ -65,42 +74,39 @@ def test_require_sha256_is_strict_lowercase() -> None:
 
 
 @pytest.mark.parametrize(
-    "status",
+    "state",
     [
-        "ready",
-        "ready_exact",
-        "identity_only_exact",
-        "unavailable_explicit",
+        "READY_EXACT",
+        "IDENTITY_ONLY_EXACT",
+        "UNAVAILABLE_EXPLICIT",
     ],
 )
-def test_proof_result_accepts_exact_f6_style_statuses(status: str) -> None:
-    result = audit._proof_result(_proof_payload(status=status))
-    assert result["status"] == status
+def test_proof_result_accepts_f6_exact_resolution_states(state: str) -> None:
+    result = audit._proof_result(_proof_payload(state=state))
+    assert result["status"] == "ready"
     assert result["accepted_fail_closed"] is True
+    assert result["resolution_states"] == [state.lower()]
 
 
-def test_proof_result_accepts_legacy_unavailable_only_when_reason_is_explicit() -> None:
-    accepted = audit._proof_result(
-        _proof_payload(
-            status="unavailable",
-            reason="visual_coordinates_not_persisted",
-        )
-    )
-    assert accepted["accepted_fail_closed"] is True
+def test_proof_result_rejects_non_ready_top_level_response() -> None:
+    result = audit._proof_result(_proof_payload(top_status="unavailable"))
+    assert result["accepted_fail_closed"] is False
 
-    rejected = audit._proof_result(_proof_payload(status="unavailable"))
-    assert rejected["accepted_fail_closed"] is False
+
+def test_proof_result_rejects_unknown_resolution_state() -> None:
+    result = audit._proof_result(_proof_payload(state="SYNTHETIC_READY"))
+    assert result["accepted_fail_closed"] is False
+    assert "unsupported_resolution_state" in str(result["reason"])
 
 
 def test_proof_result_rejects_current_data_substitution() -> None:
     with pytest.raises(audit.AuditError, match="substituted current data"):
-        audit._proof_result(
-            _proof_payload(
-                status="ready",
-                current_data_substitution=True,
-            )
-        )
+        audit._proof_result(_proof_payload(current_data_substitution=True))
 
+
+def test_proof_result_rejects_production_authority() -> None:
+    with pytest.raises(audit.AuditError, match="production authority"):
+        audit._proof_result(_proof_payload(production_authority=True))
 
 def test_walk_values_collects_nested_lineage() -> None:
     payload = {
