@@ -106,3 +106,16 @@ def test_runtime_restart_normalizes_duplicate_product_dashboard_owners() -> None
     assert '$ROOT/Product/ops/run_dashboard.py' in block
     assert 'index($0, "--port 48700") > 0' in block
     assert 'rm -f "$ROOT/dashboard.pid"' in block
+
+
+def test_runtime_restart_invokes_non_executable_source_script_with_bash() -> None:
+    text = Path(".github/workflows/crypto-r11-runtime-recovery.yml").read_text(
+        encoding="utf-8"
+    )
+    start = text.index("      - name: Runtime restart only")
+    end = text.index("      - name: Runtime watchdog and recovery acceptance", start)
+    block = text[start:end]
+
+    assert 'test -f "$START"' in block
+    assert 'test -x "$START"' not in block
+    assert 'bash "$START"' in block

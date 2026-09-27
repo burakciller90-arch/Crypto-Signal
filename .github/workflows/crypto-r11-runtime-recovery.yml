@@ -58,7 +58,7 @@ jobs:
           START="$DEV/ops/r11/start_ssd_runtime.command"
           test "$(id -u)" = "504"
           test -z "$(git -C "$DEV" status --porcelain)"
-          test -x "$START"
+          test -f "$START"
           test -f "$DEV/ops/ssd_runtime_supervisor.sh"
 
           echo "=== INSTALL EXACT SUPERVISOR SOURCE ==="
@@ -115,7 +115,7 @@ jobs:
           fi
           rm -f "$ROOT/dashboard.pid"
 
-          "$START"
+          bash "$START"
 
           new_sup=""
           for _ in {1..60}; do
