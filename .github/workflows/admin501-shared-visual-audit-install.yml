@@ -1,0 +1,80 @@
+name: Admin501 Shared Visual Audit Install
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/admin501-shared-visual-audit-install.yml"
+      - "tools/visual-audit/**"
+      - "docs/GALACTECH_SHARED_VISUAL_AUDIT.md"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  install:
+    name: Install shared visual audit on UID501
+    runs-on: [self-hosted, crypto-signal, uid501]
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          clean: true
+          fetch-depth: 1
+
+      - name: Verify administrator runner
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(id -u)" = "501"
+          echo "USER=$(whoami)"
+          echo "UID=$(id -u)"
+          echo "RUNNER_NAME=${RUNNER_NAME:-unknown}"
+
+      - name: Install isolated shared runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Users/Shared/Galactech/visual-audit"
+          BIN="/Users/Shared/Galactech/bin"
+          PY_SRC="$GITHUB_WORKSPACE/tools/visual-audit/galactech_visual_audit.py"
+
+          mkdir -p "$ROOT/current" "$BIN"
+          cp "$PY_SRC" "$ROOT/current/galactech_visual_audit.py"
+          printf '%s\n' "$GITHUB_SHA" > "$ROOT/current/VERSION"
+
+          if [ ! -x "$ROOT/venv/bin/python" ]; then
+            rm -rf "$ROOT/venv"
+            /usr/bin/python3 -m venv "$ROOT/venv"
+          fi
+          "$ROOT/venv/bin/python" -m pip install --disable-pip-version-check --quiet --upgrade pip
+          "$ROOT/venv/bin/python" -m pip install --disable-pip-version-check --quiet "websockets>=14,<16"
+
+          cat > "$BIN/galactech-visual-audit" <<'EOF'
+          #!/bin/bash
+          set -euo pipefail
+          ROOT="/Users/Shared/Galactech/visual-audit"
+          exec "$ROOT/venv/bin/python" "$ROOT/current/galactech_visual_audit.py" "$@"
+          EOF
+
+          chmod 755 "$BIN/galactech-visual-audit"
+          chmod 755 "$ROOT" "$ROOT/current" "$ROOT/venv" "$BIN"
+          chmod 644 "$ROOT/current/galactech_visual_audit.py" "$ROOT/current/VERSION"
+          chmod -R a+rX "$ROOT/venv"
+
+          "$BIN/galactech-visual-audit" --capabilities | tee "$RUNNER_TEMP/visual-audit-capabilities.json"
+          test -x "$BIN/galactech-visual-audit"
+          test ! -w "$ROOT/current/galactech_visual_audit.py" || chmod a-w "$ROOT/current/galactech_visual_audit.py"
+
+          echo "SHARED_VISUAL_AUDIT_INSTALL_PASS=YES"
+          echo "SHARED_VISUAL_AUDIT_BIN=$BIN/galactech-visual-audit"
+          echo "SHARED_VISUAL_AUDIT_VERSION=$GITHUB_SHA"
+
+      - name: Upload install report
+        uses: actions/upload-artifact@v4
+        with:
+          name: admin501-shared-visual-audit-install-${{ github.run_id }}
+          path: ${{ runner.temp }}/visual-audit-capabilities.json
+          if-no-files-found: error
+          retention-days: 14
