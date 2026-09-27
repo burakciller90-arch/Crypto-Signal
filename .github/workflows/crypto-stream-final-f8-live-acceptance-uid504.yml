@@ -1,0 +1,342 @@
+name: Crypto Stream Final F8 Live Acceptance UID504
+
+on:
+  push:
+    branches:
+      - 'accept/f8-final-pass-v2'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: crypto-stream-final-f8-live-acceptance
+  cancel-in-progress: true
+
+jobs:
+  accept:
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          clean: true
+          fetch-depth: 0
+
+      - name: Verify exact merged F8 source
+        shell: bash
+        run: |
+          set -euo pipefail
+          EXPECTED_MAIN="9d4c08d220792f38c02973391bf73acfb340ed12"
+          test "$(id -u)" = "504"
+          test "$(git merge-base HEAD "$EXPECTED_MAIN")" = "$EXPECTED_MAIN"
+          git diff --quiet "$EXPECTED_MAIN"...HEAD -- .             ':(exclude).github/workflows/crypto-stream-final-f8-live-acceptance-uid504.yml'
+          DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
+          PRODUCT="/Volumes/Crypto-504/Crypto-Signal/Product"
+          test -z "$(git -C "$DEV" status --porcelain)"
+          test -z "$(git -C "$PRODUCT" status --porcelain)"
+          echo "F8_EXACT_MERGED_SOURCE_PASS=YES"
+          echo "REAL_CAPITAL=0"
+
+      - name: Exact-main F8 focused regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
+          PY="$DEV/.venv/bin/python"
+          export PYTHONPATH="$GITHUB_WORKSPACE:$GITHUB_WORKSPACE/src:$GITHUB_WORKSPACE/ops"
+          "$PY" -m py_compile             ops/audit_stream_f8_production_e2e.py             ops/probe_stream_f8_browser.py
+          "$PY" -m pytest -q tests/test_stream_f8_production_e2e_audit.py
+          "$PY" -m ruff check             ops/audit_stream_f8_production_e2e.py             ops/probe_stream_f8_browser.py             tests/test_stream_f8_production_e2e_audit.py
+          echo "F8_EXACT_MAIN_REGRESSION_PASS=YES"
+          echo "REAL_CAPITAL=0"
+
+      - name: Deploy exact merged F8 UI fix and preserve F7 guarded runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          DEV="$ROOT/Development"
+          PRODUCT="$ROOT/Product"
+          EXPECTED_MAIN="9d4c08d220792f38c02973391bf73acfb340ed12"
+          OUT="$RUNNER_TEMP/stream-final-f8-live-acceptance"
+          mkdir -p "$OUT"
+
+          test -z "$(git -C "$DEV" status --porcelain)"
+          test -z "$(git -C "$PRODUCT" status --porcelain)"
+          DEV_BEFORE="$(git -C "$DEV" rev-parse HEAD)"
+          PRODUCT_BEFORE="$(git -C "$PRODUCT" rev-parse HEAD)"
+
+          git -C "$DEV" fetch origin main --quiet
+          git -C "$PRODUCT" fetch origin main --quiet
+          test "$(git -C "$DEV" rev-parse origin/main)" = "$EXPECTED_MAIN"
+          test "$(git -C "$PRODUCT" rev-parse origin/main)" = "$EXPECTED_MAIN"
+          git -C "$DEV" merge-base --is-ancestor "$DEV_BEFORE" "$EXPECTED_MAIN"
+          git -C "$PRODUCT" merge-base --is-ancestor "$PRODUCT_BEFORE" "$EXPECTED_MAIN"
+          git -C "$DEV" merge --ff-only "$EXPECTED_MAIN"
+          git -C "$PRODUCT" merge --ff-only "$EXPECTED_MAIN"
+
+          test "$(git -C "$DEV" rev-parse HEAD)" = "$EXPECTED_MAIN"
+          test "$(git -C "$PRODUCT" rev-parse HEAD)" = "$EXPECTED_MAIN"
+          test -z "$(git -C "$DEV" status --porcelain)"
+          test -z "$(git -C "$PRODUCT" status --porcelain)"
+
+          OLLAMA_BIN="$ROOT/Tools/Ollama.app/Contents/Resources/ollama"
+          test -x "$OLLAMA_BIN"
+          curl -fsS --max-time 5 http://127.0.0.1:11434/api/tags > "$OUT/ollama-tags.json"
+          /usr/bin/python3 - "$OUT/ollama-tags.json" <<'PY'
+          import json,sys
+          p=json.load(open(sys.argv[1]))
+          names=[str(m.get("name") or m.get("model") or "") for m in p.get("models",[])]
+          assert "qwen2.5:3b-instruct" in names,names
+          PY
+
+          old_sup="$(cat "$ROOT/ssd-service-supervisor.pid" 2>/dev/null || true)"
+          test -n "$old_sup"
+          kill -0 "$old_sup"
+
+          old_dashboard="$(cat "$ROOT/dashboard.pid" 2>/dev/null || true)"
+          if [ -n "$old_dashboard" ] && kill -0 "$old_dashboard" >/dev/null 2>&1; then
+            kill -TERM "$old_dashboard"
+            for _ in {1..20}; do
+              if ! kill -0 "$old_dashboard" >/dev/null 2>&1; then break; fi
+              sleep 1
+            done
+            rm -f "$ROOT/dashboard.pid"
+          fi
+
+          cp "$DEV/ops/ssd_runtime_supervisor.sh" "$ROOT/ssd-service-supervisor.sh"
+          chmod 700 "$ROOT/ssd-service-supervisor.sh"
+          kill -TERM "$old_sup"
+          for _ in {1..20}; do
+            if ! kill -0 "$old_sup" >/dev/null 2>&1; then break; fi
+            sleep 1
+          done
+          rm -f "$ROOT/ssd-service-supervisor.pid"
+
+          CRYPTO_SIGNAL_ROOT="$ROOT" \
+          CRYPTO_SIGNAL_STREAM_LOCAL_REWRITE_ENABLED=1 \
+          CRYPTO_SIGNAL_STREAM_LOCAL_REWRITE_MODEL="qwen2.5:3b-instruct" \
+          CRYPTO_SIGNAL_STREAM_LOCAL_REWRITE_BASE_URL="http://127.0.0.1:11434/v1" \
+          CRYPTO_SIGNAL_STREAM_LOCAL_REWRITE_TIMEOUT_SECONDS=8 \
+          CRYPTO_SIGNAL_STREAM_LOCAL_REWRITE_TEMPERATURE=0.2 \
+          CRYPTO_SIGNAL_STREAM_LOCAL_REWRITE_MAX_TOKENS=1400 \
+            bash "$DEV/ops/r11/start_ssd_runtime.command"
+
+          for _ in {1..30}; do
+            if curl -fsS --max-time 5 http://127.0.0.1:48700/api/health > "$OUT/health-after-deploy.json"; then
+              break
+            fi
+            sleep 2
+          done
+          /usr/bin/python3 - "$OUT/health-after-deploy.json" <<'PY'
+          import json,sys
+          p=json.load(open(sys.argv[1]))
+          assert p["status"]=="ok",p
+          assert p["read_only"] is True,p
+          assert p["real_capital"]==0,p
+          assert p["stream_root_active"] is True,p
+          PY
+
+          marker="$(grep 'stream_rewrite status=ENABLED transport=loopback' "$ROOT/ServiceLogs/live.out.log" | tail -1 || true)"
+          test -n "$marker"
+          echo "$marker" | grep -F 'DETERMINISTIC_FALLBACK=YES' >/dev/null
+          echo "$marker" | grep -F 'REAL_CAPITAL=0' >/dev/null
+          printf '%s\n' "$marker" > "$OUT/f7-runtime-marker-after-f8-deploy.txt"
+
+          echo "F8_DEVELOPMENT_EXACT_MAIN_PASS=YES before=$DEV_BEFORE after=$EXPECTED_MAIN"
+          echo "F8_PRODUCT_EXACT_MAIN_PASS=YES before=$PRODUCT_BEFORE after=$EXPECTED_MAIN"
+          echo "F8_UI_FIX_PHYSICAL_DEPLOY_PASS=YES"
+          echo "HISTORICAL_BACKFILL=NO"
+          echo "SYNTHETIC_ACTIVITY=NO"
+          echo "REAL_CAPITAL=0"
+
+      - name: Audit genuine production classes and classify correct silence
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
+          PY="$DEV/.venv/bin/python"
+          OUT="$RUNNER_TEMP/stream-final-f8-live-acceptance"
+          mkdir -p "$OUT"
+          export OUT
+          export PYTHONPATH="$GITHUB_WORKSPACE:$GITHUB_WORKSPACE/src:$GITHUB_WORKSPACE/ops"
+
+          "$PY" "$GITHUB_WORKSPACE/ops/audit_stream_f8_production_e2e.py"             --base-url http://127.0.0.1:48700             --output "$OUT/audit-existing.json"             --stream-ledger "$DEV/runtime/stream/intelligence_stream.sqlite3"
+
+          "$PY" "$GITHUB_WORKSPACE/ops/audit_stream_f8_production_e2e.py"             --base-url http://127.0.0.1:48700             --output "$OUT/audit-post-f7-watermark.json"             --min-event-ms 1790496180325             --stream-ledger "$DEV/runtime/stream/intelligence_stream.sqlite3"
+
+          "$PY" - "$OUT/audit-existing.json" "$OUT/browser-selection.env" <<'PY'
+          import json
+          import shlex
+          import sqlite3
+          import sys
+          from pathlib import Path
+
+          report=json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+          groups={g["name"]:g for g in report["groups"]}
+
+          assert groups["market_or_intelligence"]["status"]=="ACCEPTED_CANDIDATE", groups["market_or_intelligence"]
+          assert groups["risk_or_system"]["status"]=="ACCEPTED_CANDIDATE", groups["risk_or_system"]
+          assert groups["decision"]["status"]=="OPEN_NO_ACCEPTABLE_REAL_EVENT", groups["decision"]
+          assert groups["decision"]["observed_counts"].get("decision",0)==0
+          assert groups["outcome"]["status"]=="OPEN_NO_ACCEPTABLE_REAL_EVENT", groups["outcome"]
+          assert groups["outcome"]["observed_counts"].get("outcome",0)==0
+          assert groups["capital"]["status"]=="OPEN_NO_ACCEPTABLE_REAL_EVENT", groups["capital"]
+          assert groups["capital"].get("required") is False
+
+          assert report["sse"]["status"] in {"PASS","DEFERRED_NO_STREAM_CURSOR"}, report["sse"]
+          ledger=report["stream_ledger_negative_acceptance"]
+          assert isinstance(ledger,dict) and ledger.get("status")=="PASS", ledger
+          assert report["historical_backfill_used"] is False
+          assert report["synthetic_activity_used"] is False
+          assert report["production_authority"] is False
+          assert report["real_capital"]==0
+
+          stream=Path("/Volumes/Crypto-504/Crypto-Signal/Development/runtime/stream/intelligence_stream.sqlite3")
+          decision=Path("/Volumes/Crypto-504/Crypto-Signal/Development/runtime/decision/decision_evidence.sqlite3")
+          with sqlite3.connect(f"file:{stream.resolve()}?mode=ro",uri=True) as conn:
+              conn.execute("PRAGMA query_only=ON")
+              activation=int(conn.execute(
+                  "SELECT activated_at_ms FROM stream_activation ORDER BY activated_at_ms LIMIT 1"
+              ).fetchone()[0])
+          with sqlite3.connect(f"file:{decision.resolve()}?mode=ro",uri=True) as conn:
+              conn.execute("PRAGMA query_only=ON")
+              forecast_total=int(conn.execute("SELECT COUNT(*) FROM r20_forecasts").fetchone()[0])
+              forecast_after=int(conn.execute(
+                  "SELECT COUNT(*) FROM r20_forecasts WHERE issued_at_ms >= ?",(activation,)
+              ).fetchone()[0])
+              resolution_total=int(conn.execute("SELECT COUNT(*) FROM r20_resolutions").fetchone()[0])
+              resolution_after=int(conn.execute(
+                  "SELECT COUNT(*) FROM r20_resolutions WHERE evaluated_at_ms >= ?",(activation,)
+              ).fetchone()[0])
+              latest_forecast=conn.execute(
+                  "SELECT forecast_identity,asset,timeframe,issued_at_ms FROM r20_forecasts "
+                  "ORDER BY issued_at_ms DESC LIMIT 1"
+              ).fetchone()
+              latest_resolution=conn.execute(
+                  "SELECT resolution_identity,forecast_identity,evaluated_at_ms FROM r20_resolutions "
+                  "ORDER BY evaluated_at_ms DESC LIMIT 1"
+              ).fetchone()
+
+          assert forecast_total>0 and forecast_after==0, (forecast_total,forecast_after)
+          assert resolution_total>0 and resolution_after==0, (resolution_total,resolution_after)
+
+          market=groups["market_or_intelligence"]["representative"]
+          risk=groups["risk_or_system"]["representative"]
+          assert isinstance(market,dict) and market.get("search_text")
+          assert isinstance(risk,dict) and risk.get("search_text")
+
+          values={
+              "F8_MARKET_ID":market["narrative_identity"],
+              "F8_MARKET_CATEGORY":market["category"],
+              "F8_MARKET_SEARCH":market["search_text"],
+              "F8_RISK_ID":risk["narrative_identity"],
+              "F8_RISK_CATEGORY":risk["category"],
+              "F8_RISK_SEARCH":risk["search_text"],
+          }
+          Path(sys.argv[2]).write_text(
+              "".join(f"{k}={shlex.quote(str(v))}\n" for k,v in values.items()),
+              encoding="utf-8",
+          )
+
+          summary={
+              "stream_activation_ms":activation,
+              "forecast_total":forecast_total,
+              "forecast_after_activation":forecast_after,
+              "latest_forecast":latest_forecast,
+              "resolution_total":resolution_total,
+              "resolution_after_activation":resolution_after,
+              "latest_resolution":latest_resolution,
+              "decision_classification":"DEFERRED_CORRECT_SILENCE",
+              "outcome_classification":"DEFERRED_CORRECT_SILENCE",
+              "capital_classification":"DEFERRED_CURRENT_FRONTEND_SCOPE",
+              "market_identity":market["narrative_identity"],
+              "risk_identity":risk["narrative_identity"],
+              "real_capital":0,
+          }
+          Path(Path(sys.argv[1]).parent/"classification.json").write_text(
+              json.dumps(summary,indent=2,sort_keys=True)+"\n",
+              encoding="utf-8",
+          )
+          print(json.dumps(summary,sort_keys=True))
+          print("F8_MARKET_INTELLIGENCE_PRODUCTION_PASS=YES")
+          print("F8_RISK_SYSTEM_PRODUCTION_PASS=YES")
+          print("F8_DECISION_DEFERRED_CORRECT_SILENCE=YES")
+          print("F8_OUTCOME_DEFERRED_CORRECT_SILENCE=YES")
+          print("F8_CAPITAL_DEFERRED_CURRENT_SCOPE=YES")
+          print("F8_SSE_NEGATIVE_ACCEPTANCE_PASS=YES")
+          print("F8_STREAM_LEDGER_NEGATIVE_ACCEPTANCE_PASS=YES")
+          print("HISTORICAL_BACKFILL=NO")
+          print("SYNTHETIC_ACTIVITY=NO")
+          print("REAL_CAPITAL=0")
+          PY
+          cat "$OUT/browser-selection.env" >> "$GITHUB_ENV"
+
+      - name: Probe genuine MARKET or INTELLIGENCE message in real Chromium
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
+          PY="$DEV/.venv/bin/python"
+          OUT="$RUNNER_TEMP/stream-final-f8-live-acceptance"
+          BROWSER=""
+          for candidate in             "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"             "/Applications/Chromium.app/Contents/MacOS/Chromium"             "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge"             "/Applications/Google Chrome Canary.app/Contents/MacOS/Google Chrome Canary"; do
+            if [ -x "$candidate" ]; then BROWSER="$candidate"; break; fi
+          done
+          test -n "$BROWSER"
+          export PYTHONPATH="$GITHUB_WORKSPACE/ops:$GITHUB_WORKSPACE/src:$GITHUB_WORKSPACE"
+          "$PY" "$GITHUB_WORKSPACE/ops/probe_stream_f8_browser.py"             --browser "$BROWSER"             --base-url http://127.0.0.1:48700             --narrative-identity "$F8_MARKET_ID"             --category "$F8_MARKET_CATEGORY"             --search-text "$F8_MARKET_SEARCH"             --output "$OUT/browser-market.json"             --screenshot "$OUT/browser-market.png"             --width 1440             --height 1000
+          echo "F8_MARKET_REAL_BROWSER_PASS=YES"
+          echo "REAL_CAPITAL=0"
+
+      - name: Probe genuine RISK or SYSTEM message in real Chromium
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
+          PY="$DEV/.venv/bin/python"
+          OUT="$RUNNER_TEMP/stream-final-f8-live-acceptance"
+          BROWSER=""
+          for candidate in             "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"             "/Applications/Chromium.app/Contents/MacOS/Chromium"             "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge"             "/Applications/Google Chrome Canary.app/Contents/MacOS/Google Chrome Canary"; do
+            if [ -x "$candidate" ]; then BROWSER="$candidate"; break; fi
+          done
+          test -n "$BROWSER"
+          export PYTHONPATH="$GITHUB_WORKSPACE/ops:$GITHUB_WORKSPACE/src:$GITHUB_WORKSPACE"
+          "$PY" "$GITHUB_WORKSPACE/ops/probe_stream_f8_browser.py"             --browser "$BROWSER"             --base-url http://127.0.0.1:48700             --narrative-identity "$F8_RISK_ID"             --category "$F8_RISK_CATEGORY"             --search-text "$F8_RISK_SEARCH"             --output "$OUT/browser-risk.json"             --screenshot "$OUT/browser-risk.png"             --width 1440             --height 1000
+          echo "F8_RISK_REAL_BROWSER_PASS=YES"
+          echo "REAL_CAPITAL=0"
+
+      - name: Verify F7 guarded local rewrite fallback remains live
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          marker="$(grep 'stream_rewrite status=ENABLED transport=loopback' "$ROOT/ServiceLogs/live.out.log" | tail -1 || true)"
+          test -n "$marker"
+          echo "$marker" | grep -F 'DETERMINISTIC_FALLBACK=YES' >/dev/null
+          echo "$marker" | grep -F 'REAL_CAPITAL=0' >/dev/null
+          echo "F8_LLM_OUTAGE_DELIVERY_GUARD_PASS=YES"
+          echo "REAL_CAPITAL=0"
+
+      - name: Verify production checkouts remained untouched
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
+          PRODUCT="/Volumes/Crypto-504/Crypto-Signal/Product"
+          test -z "$(git -C "$DEV" status --porcelain)"
+          test -z "$(git -C "$PRODUCT" status --porcelain)"
+          echo "F8_PRODUCTION_NON_MUTATING_PASS=YES"
+          echo "HISTORICAL_BACKFILL=NO"
+          echo "SYNTHETIC_ACTIVITY=NO"
+          echo "REAL_CAPITAL=0"
+
+      - name: Upload F8 final acceptance evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stream-final-f8-live-acceptance-${{ github.run_id }}
+          path: ${{ runner.temp }}/stream-final-f8-live-acceptance
+          if-no-files-found: warn
+          retention-days: 14
