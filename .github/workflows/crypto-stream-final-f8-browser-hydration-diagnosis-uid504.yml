@@ -1,0 +1,88 @@
+name: Crypto Stream Final F8 Browser Hydration Diagnosis UID504
+
+on:
+  push:
+    branches:
+      - 'accept/f8-browser-hydration-diagnosis'
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          clean: true
+
+      - name: Diagnose deployed Product and browser detail hydration
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          DEV="$ROOT/Development"
+          PRODUCT="$ROOT/Product"
+          echo "F8_DIAG_DEV_HEAD=$(git -C "$DEV" rev-parse HEAD)"
+          echo "F8_DIAG_PRODUCT_HEAD=$(git -C "$PRODUCT" rev-parse HEAD)"
+          echo "F8_DIAG_DEV_STATUS=$(git -C "$DEV" status --porcelain | wc -l | tr -d ' ')"
+          echo "F8_DIAG_PRODUCT_STATUS=$(git -C "$PRODUCT" status --porcelain | wc -l | tr -d ' ')"
+
+          ID="292fff32aef2df8a30eea66069f2a36c9c8ccfcd8042d1518f0b7e7526271d74"
+          curl -fsS --max-time 8 "http://127.0.0.1:48700/api/stream/messages/$ID/detail" > "$RUNNER_TEMP/f8-detail.json"
+          /usr/bin/python3 - "$RUNNER_TEMP/f8-detail.json" <<'PY'
+          import json,sys
+          p=json.load(open(sys.argv[1]))
+          print("F8_DIAG_DETAIL_STATUS="+str(p.get("status")))
+          detail=p.get("detail")
+          print("F8_DIAG_DETAIL_KEYS="+(",".join(sorted(detail.keys())) if isinstance(detail,dict) else "NONE"))
+          PY
+
+          BROWSER="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+          test -x "$BROWSER"
+          PORT=9339
+          PROFILE="$RUNNER_TEMP/f8-hydration-profile"
+          rm -rf "$PROFILE"
+          "$BROWSER" --headless=new --disable-gpu --no-first-run --no-default-browser-check             --remote-debugging-port=$PORT --user-data-dir="$PROFILE"             "http://127.0.0.1:48700/stream-preview?message=$ID"             > "$RUNNER_TEMP/f8-chrome.log" 2>&1 &
+          CPID=$!
+          trap 'kill "$CPID" >/dev/null 2>&1 || true' EXIT
+
+          for _ in {1..40}; do
+            if curl -fsS --max-time 2 "http://127.0.0.1:$PORT/json" > "$RUNNER_TEMP/f8-targets.json"; then break; fi
+            sleep 0.2
+          done
+
+          export PYTHONPATH="$GITHUB_WORKSPACE/ops:$GITHUB_WORKSPACE/src:$GITHUB_WORKSPACE"
+          "$DEV/.venv/bin/python" - "$PORT" "$ID" <<'PY'
+          import json,sys,time,urllib.request
+          from ops.probe_stream_f8_browser import _cdp_call
+
+          port=int(sys.argv[1]); identity=sys.argv[2]
+          targets=json.load(urllib.request.urlopen(f"http://127.0.0.1:{port}/json"))
+          target=next(t for t in targets if t.get("type")=="page")
+          ws=target["webSocketDebuggerUrl"]
+          for attempt in range(1,61):
+              expr=f"""(()=>{{
+                const node=[...document.querySelectorAll('.message')].find(n=>n.dataset.identity==={json.dumps(identity)})||null;
+                const panel=node?.querySelector('.message-detail')||null;
+                return {{
+                  attempt:{attempt},
+                  ready:document.readyState,
+                  uiVersion:document.body?.dataset?.uiVersion||'',
+                  identity:node?.dataset?.identity||'',
+                  expanded:node?.querySelector('.message-summary')?.getAttribute('aria-expanded')||'',
+                  hidden:panel?.hidden,
+                  detailText:(panel?.textContent||'').trim().slice(0,1200),
+                  evidenceButtons:node?.querySelectorAll('[data-evidence-kind]')?.length||0,
+                  appApi:Boolean(window.__cryptoSignalStreamS9)
+                }};
+              }})()"""
+              result=_cdp_call(ws,"Runtime.evaluate",{"expression":expr,"returnByValue":True},timeout_seconds=10)
+              value=result.get("result",{}).get("value",{})
+              print("F8_HYDRATION="+json.dumps(value,sort_keys=True,ensure_ascii=False))
+              if int(value.get("evidenceButtons",0))>0: break
+              time.sleep(0.2)
+          PY
+          echo "REAL_CAPITAL=0"
