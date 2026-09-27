@@ -1,6 +1,18 @@
 # PROJECT CHRONICLE
 
 
+## 2026-09-27 — MI2 guarded natural Turkish accepted; MI3 becomes active
+
+MI2 is mechanically accepted on main at `20c1c18c3253254555708e0cbcc0c52cc04ae784` through PR #1457.
+
+The local loopback rewriter now receives a deterministic fact-locked analyst brief derived from canonical Analytical View + Fact Bundle truth. The brief is reference-only: it cannot authorize a new customer-facing score, family claim, trigger/target/invalidation value, direction, causal explanation or technical mechanism. Deterministic guards reject stance reversal, visible numeric changes/drops, new family claims, protected-section mutation and unsupported qualitative claims; any failure still falls back to deterministic copy.
+
+Exact UID504 acceptance run `36331471395` passed focused fact-lock tests, Ruff, mypy and a real non-mutating `qwen2.5:3b-instruct` loopback smoke. The model changed the Turkish phrasing while preserving the bullish stance and exact `$100–$102 / $108 / $95` surface truth. Canonical Development/Product remained untouched; project isolation passed; `REAL_CAPITAL=0`.
+
+MI2 is therefore PASS. The sole Message Intelligence frontier is now **MI3 — Five-family evidence summary UI**.
+
+
+
 ## 2026-09-27 — MI1 user-facing message composer accepted; MI2 becomes active
 
 MI1 is mechanically accepted without reopening F0-F10 or changing trading policy.
