@@ -29,6 +29,11 @@ EXACT_PROOF_STATUSES = {
     "identity_only_exact",
     "unavailable_explicit",
 }
+EXACT_EVIDENCE_RESOLUTION_STATES = {
+    "READY_EXACT",
+    "IDENTITY_ONLY_EXACT",
+    "UNAVAILABLE_EXPLICIT",
+}
 
 
 class AuditError(RuntimeError):
@@ -174,6 +179,50 @@ def _proof_result(payload: dict[str, Any]) -> dict[str, object]:
     }
 
 
+def _exact_evidence_result(payload: dict[str, Any]) -> dict[str, object]:
+    _require_read_only(payload, "exact evidence response")
+    if payload.get("status") != "ready":
+        return {
+            "status": str(payload.get("status") or "unknown"),
+            "resolution_states": [],
+            "accepted_fail_closed": False,
+        }
+    evidence = payload.get("evidence")
+    if not isinstance(evidence, dict):
+        raise AuditError("exact evidence response missing evidence body")
+    if evidence.get("read_only") is not True:
+        raise AuditError("exact evidence body is not read-only")
+    if evidence.get("production_authority") is not False:
+        raise AuditError("exact evidence crossed production authority boundary")
+    if int(evidence.get("real_capital", -1)) != REAL_CAPITAL:
+        raise AuditError("exact evidence crossed REAL_CAPITAL boundary")
+    if evidence.get("current_data_substitution") is not False:
+        raise AuditError("exact evidence substituted current data")
+
+    states: list[str] = []
+    for key in ("resolutions", "reference_resolutions"):
+        rows = evidence.get(key, [])
+        if not isinstance(rows, (list, tuple)):
+            raise AuditError(f"exact evidence {key} must be a list")
+        for row in rows:
+            if not isinstance(row, dict):
+                raise AuditError(f"exact evidence {key} contains non-object row")
+            state = str(row.get("resolution_state") or "")
+            if state not in EXACT_EVIDENCE_RESOLUTION_STATES:
+                raise AuditError(
+                    f"exact evidence contains unsupported resolution state: {state!r}"
+                )
+            if row.get("current_data_substitution") is True:
+                raise AuditError("exact evidence resolution substituted current data")
+            states.append(state)
+
+    return {
+        "status": "ready",
+        "resolution_states": states,
+        "accepted_fail_closed": bool(states),
+    }
+
+
 def _message_identity(item: dict[str, Any]) -> str:
     return _require_sha256(item.get("narrative_identity"), "narrative identity")
 
@@ -258,8 +307,8 @@ def _inspect_message(
         raise AuditError("repeated exact lookup changed immutable message")
 
     detail = _detail_lookup(base_url, identity)
-    proof = _proof_result(
-        _get_json(base_url, f"/api/stream/messages/{identity}/visual-proof")
+    proof = _exact_evidence_result(
+        _get_json(base_url, f"/api/stream/messages/{identity}/evidence")
     )
 
     story_values = {
