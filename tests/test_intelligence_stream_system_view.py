@@ -1,12 +1,17 @@
 from __future__ import annotations
 
 import sqlite3
+from dataclasses import replace
 
 from crypto_signal.intelligence.confluence_matrix_v2 import ConfluenceFamily
 from crypto_signal.ledger.serialization import canonical_sha256
 from crypto_signal.product.intelligence_stream_family import (
+    IntelligenceStreamFamilyRuntime,
     StreamTrustDomain,
     build_family_snapshot,
+)
+from crypto_signal.product.intelligence_stream_forward_runtime import (
+    IntelligenceStreamForwardRuntime,
 )
 from crypto_signal.product.intelligence_stream_models import (
     StreamCategory,
@@ -301,6 +306,78 @@ def test_system_view_event_risk_blocks_direction_without_changing_family_score(t
     assert "blokluyorum" in detail["narrative"]["text"]["collapsed_text"]
     assert detail["narrative"]["production_authority"] is False
     assert detail["narrative"]["real_capital"] == 0
+
+
+def test_system_view_family_proof_identity_matches_exact_selected_snapshot(
+    tmp_path,
+) -> None:
+    path = tmp_path / "stream.sqlite3"
+    IntelligenceStreamForwardRuntime(path).ensure_activated(activated_at_ms=1_000)
+    family_runtime = IntelligenceStreamFamilyRuntime(path)
+
+    selected = _market_family(
+        ConfluenceFamily.LIQUIDITY,
+        direction=None,
+        state_label="measured:none",
+        suffix="selected-bybit",
+        timeframe="microstructure",
+    )
+    selected = replace(
+        selected,
+        source_scope="bybit:spot:liquidity",
+        event_at_ms=2_100,
+        source_as_of_ms=2_100,
+    )
+    newer_but_lower_priority = _market_family(
+        ConfluenceFamily.LIQUIDITY,
+        direction=None,
+        state_label="measured:bid_side_liquidity_take_candidate",
+        suffix="newer-fixture",
+        timeframe="microstructure",
+    )
+    newer_but_lower_priority = replace(
+        newer_but_lower_priority,
+        source_scope="fixture:liquidity",
+        event_at_ms=2_200,
+        source_as_of_ms=2_200,
+    )
+
+    selected_result = family_runtime.project(
+        selected,
+        activated_at_ms=1_000,
+    )
+    newer_result = family_runtime.project(
+        newer_but_lower_priority,
+        activated_at_ms=1_000,
+    )
+    assert selected_result.narrative_identity is not None
+    assert newer_result.narrative_identity is not None
+    assert selected_result.narrative_identity != newer_result.narrative_identity
+
+    system_runtime = IntelligenceStreamSystemViewRuntime(path)
+    system_result = system_runtime.compose_and_append(
+        symbol="BTCUSDT",
+        event_at_ms=3_000,
+        family_snapshots=(selected, newer_but_lower_priority),
+    )
+    assert system_result.narrative_identity is not None
+
+    detail = IntelligenceStreamReadModel(path).read_message_detail(
+        system_result.narrative_identity
+    )
+    assert detail is not None
+    rows = {
+        item["family"]: item
+        for item in detail["fact_bundle"]["family_contributions"]
+    }
+    liquidity = rows["liquidity"]
+    assert liquidity["source_narrative_identity"] == (
+        selected_result.narrative_identity
+    )
+    assert liquidity["source_narrative_identity"] != newer_result.narrative_identity
+    assert tuple(liquidity["source_evidence_identities"]) == (
+        selected.evidence_identities
+    )
 
 
 def test_system_view_ledger_is_append_only(tmp_path) -> None:
