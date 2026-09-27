@@ -363,6 +363,8 @@ PASS:
 
 ### MI1 — User-facing message composer
 
+Status: **PASS — accepted on main at `28fa1c208e9e66173214a8bdfaa33cea4bbfe935`; UID504 acceptance run `36330349505`.**
+
 Goal:
 - stop low-level family telemetry from being the default customer sentence;
 - compose one deterministic system-view message from canonical analytical/confluence facts.
@@ -373,6 +375,8 @@ PASS:
 - missing evidence remains explicit.
 
 ### MI2 — Guarded natural Turkish layer
+
+Status: **ACTIVE FRONTIER**
 
 Goal:
 - feed the local rewriter a fact-locked analyst brief;
@@ -474,11 +478,19 @@ The same project-isolation rules continue to apply to all other repositories.
 
 ## 14. Immediate frontier
 
+MI1 is accepted. Its exact accepted behavior is:
+- the normal Product feed is a primary customer surface;
+- five market-family telemetry narratives remain persisted/auditable but are not default customer bubbles;
+- Event Risk/provider-quality trust alerts remain visible;
+- deterministic collapsed decision copy is one fact-bound Turkish system view;
+- historical rows were not rewritten;
+- `REAL_CAPITAL=0`.
+
 The exact next implementation frontier is:
 
-**MI1 — User-facing message composer**
+**MI2 — Guarded natural Turkish layer**
 
-Before coding MI1, mechanically re-check current `main`, open PRs, runtime state and any newer authority update.
+Before coding MI2, mechanically re-check current `main`, open PRs, runtime state and any newer authority update.
 
 Reuse the existing:
 
