@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import time
 from decimal import Decimal
+from email.utils import parsedate_to_datetime
 from typing import cast
 
 import httpx
@@ -67,15 +68,30 @@ class BinanceSpotAdapter:
                     params=params,
                 )
                 response.raise_for_status()
-                payload = cast(dict[str, object], response.json())
-                if int(cast(int | str, payload.get("code", -1))) != 0:
-                    raise ValueError(
-                        f"Binance TR API error: {payload.get('msg')!r}"
+                payload = response.json()
+                ingested_at_ms = time.time_ns() // 1_000_000
+                if isinstance(payload, dict):
+                    if int(cast(int | str, payload.get("code", -1))) != 0:
+                        raise ValueError(
+                            f"Binance TR API error: {payload.get('msg')!r}"
+                        )
+                    data = payload.get("data")
+                    if not isinstance(data, list):
+                        raise TypeError("Binance TR kline data must be array")
+                    raw_rows = cast(list[list[object]], data)
+                    server_time_ms = int(
+                        cast(int | str, payload["timestamp"])
                     )
-                raw_rows = cast(list[list[object]], payload["data"])
-                server_time_ms = int(
-                    cast(int | str, payload["timestamp"])
-                )
+                elif isinstance(payload, list):
+                    raw_rows = cast(list[list[object]], payload)
+                    server_time_ms = self._http_source_time_ms(
+                        response,
+                        fallback_ms=ingested_at_ms,
+                    )
+                else:
+                    raise TypeError(
+                        "Binance TR kline response must be object or array"
+                    )
             else:
                 klines_task = client.get(
                     f"{self._base_url}/api/v3/klines",
@@ -93,7 +109,8 @@ class BinanceSpotAdapter:
                     dict[str, object], time_response.json()
                 )["serverTime"]
                 server_time_ms = int(cast(int | str, server_time_raw))
-            ingested_at_ms = time.time_ns() // 1_000_000
+            if self._api_variant != "tr_main":
+                ingested_at_ms = time.time_ns() // 1_000_000
         finally:
             if owns_client:
                 await client.aclose()
@@ -110,6 +127,21 @@ class BinanceSpotAdapter:
         ]
         candles.sort(key=lambda candle: candle.open_time_ms)
         return tuple(candles)
+
+    @staticmethod
+    def _http_source_time_ms(
+        response: httpx.Response,
+        *,
+        fallback_ms: int,
+    ) -> int:
+        date_header = response.headers.get("date")
+        if date_header:
+            try:
+                parsed = parsedate_to_datetime(date_header)
+                return int(parsed.timestamp() * 1_000)
+            except (TypeError, ValueError, OverflowError):
+                pass
+        return fallback_ms
 
     def _normalize_row(
         self,

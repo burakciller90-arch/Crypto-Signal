@@ -1,0 +1,51 @@
+name: RDP1 Regional Candle Probe UID504
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "ops/rdp1_regional_candle_probe.py"
+      - ".github/workflows/crypto-rdp1-regional-candle-probe-uid504.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  candle-probe:
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          clean: true
+          fetch-depth: 1
+
+      - name: Verify exact source
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(id -u)" = "504"
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+          fi
+          echo "RDP1_CANDLE_PROBE_EXACT_SOURCE_PASS=YES"
+
+      - name: Probe Bybit TR and Binance TR candles
+        shell: bash
+        run: |
+          set -euo pipefail
+          PY="/Volumes/Crypto-504/Crypto-Signal/Development/.venv/bin/python"
+          export PYTHONPATH="$GITHUB_WORKSPACE/src:$GITHUB_WORKSPACE"
+          "$PY" -m py_compile "$GITHUB_WORKSPACE/ops/rdp1_regional_candle_probe.py"
+          "$PY" "$GITHUB_WORKSPACE/ops/rdp1_regional_candle_probe.py" --limit 5             | tee "$RUNNER_TEMP/rdp1-regional-candle-probe.log"
+
+      - name: Upload probe log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rdp1-regional-candle-probe-${{ github.run_id }}
+          path: ${{ runner.temp }}/rdp1-regional-candle-probe.log
+          if-no-files-found: warn
+          retention-days: 14
