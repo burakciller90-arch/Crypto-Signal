@@ -185,12 +185,21 @@ def build_collector_heartbeat(
 class MarketTapeCollectorRuntimeStore:
     def __init__(self, path: Path) -> None:
         self.path = path
+        self._initialized = False
+
+    def _connect(self) -> sqlite3.Connection:
+        db = sqlite3.connect(self.path, timeout=10.0)
+        db.execute("PRAGMA busy_timeout=10000")
+        db.execute("PRAGMA foreign_keys=ON")
+        return db
 
     def initialize(self) -> None:
+        if self._initialized:
+            return
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        with sqlite3.connect(self.path) as db:
-            db.execute("PRAGMA journal_mode=DELETE")
-            db.execute("PRAGMA synchronous=FULL")
+        with self._connect() as db:
+            db.execute("PRAGMA journal_mode=WAL")
+            db.execute("PRAGMA synchronous=NORMAL")
             db.executescript(
                 """
                 CREATE TABLE IF NOT EXISTS collector_runtime_meta (
@@ -235,11 +244,13 @@ class MarketTapeCollectorRuntimeStore:
                 )
             elif str(row[0]) != MARKET_TAPE_COLLECTOR_RUNTIME_SCHEMA_VERSION:
                 raise ValueError("collector runtime schema mismatch")
+        self._initialized = True
 
     def append_instance(self, instance: MarketTapeCollectorInstance) -> None:
         self.initialize()
         payload = canonical_json(_instance_payload(instance))
-        with sqlite3.connect(self.path) as db:
+        with self._connect() as db:
+            db.execute("BEGIN IMMEDIATE")
             existing = db.execute(
                 "SELECT payload_json FROM collector_instances "
                 "WHERE instance_identity=?",
@@ -271,7 +282,8 @@ class MarketTapeCollectorRuntimeStore:
     def append_heartbeat(self, heartbeat: MarketTapeCollectorHeartbeat) -> None:
         self.initialize()
         payload = canonical_json(_heartbeat_payload(heartbeat))
-        with sqlite3.connect(self.path) as db:
+        with self._connect() as db:
+            db.execute("BEGIN IMMEDIATE")
             parent = db.execute(
                 "SELECT 1 FROM collector_instances WHERE instance_identity=?",
                 (heartbeat.instance_identity,),
@@ -341,7 +353,7 @@ class MarketTapeCollectorRuntimeStore:
     ) -> MarketTapeCollectorInstance | None:
         if not self.path.is_file():
             return None
-        with sqlite3.connect(self.path) as db:
+        with self._connect() as db:
             row = db.execute(
                 """
                 SELECT payload_json
@@ -360,7 +372,7 @@ class MarketTapeCollectorRuntimeStore:
     ) -> MarketTapeCollectorHeartbeat | None:
         if not self.path.is_file():
             return None
-        with sqlite3.connect(self.path) as db:
+        with self._connect() as db:
             row = db.execute(
                 """
                 SELECT payload_json
@@ -376,7 +388,7 @@ class MarketTapeCollectorRuntimeStore:
     def quick_check(self) -> bool:
         if not self.path.is_file():
             return False
-        with sqlite3.connect(self.path) as db:
+        with self._connect() as db:
             row = db.execute("PRAGMA quick_check").fetchone()
         return row is not None and str(row[0]).lower() == "ok"
 
