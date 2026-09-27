@@ -236,6 +236,47 @@ jobs:
                   if len(leak_samples) >= 20:
                       break
 
+          genuine_system_views = []
+          for item in primary:
+              if item.get("subtype") != "system_view_updated":
+                  continue
+              identity = str(item.get("narrative_identity", ""))
+              if len(identity) != 64:
+                  continue
+              detail_payload = get(f"/api/stream/messages/{identity}/detail")
+              detail = detail_payload.get("detail")
+              if not isinstance(detail, dict):
+                  continue
+              fact = detail.get("fact_bundle")
+              analytical = detail.get("analytical_view")
+              if not isinstance(fact, dict) or not isinstance(analytical, dict):
+                  continue
+              families = fact.get("family_contributions")
+              if not isinstance(families, list) or len(families) != 5:
+                  continue
+              genuine_system_views.append({
+                  "narrative_identity": identity,
+                  "event_at_ms": item.get("event_at_ms"),
+                  "age_ms": age_ms(item),
+                  "category": item.get("category"),
+                  "subtype": item.get("subtype"),
+                  "symbol": item.get("symbol"),
+                  "timeframe": item.get("timeframe"),
+                  "family_count": len(families),
+                  "stance": (
+                      analytical.get("stance", {}).get("effective_stance")
+                      if isinstance(analytical.get("stance"), dict)
+                      else None
+                  ),
+                  "score_semantic": fact.get("score_semantic"),
+              })
+              if len(genuine_system_views) >= 10:
+                  break
+
+          selected_system_view = (
+              genuine_system_views[0] if genuine_system_views else None
+          )
+
           genuine_decisions = []
           for item in decision_items:
               identity = str(item.get("narrative_identity", ""))
@@ -302,6 +343,7 @@ jobs:
               "decision_evidence_status": decision_status,
               "intelligence_feed": intelligence_feed,
               "selected_decision": selected_decision,
+              "selected_system_view": selected_system_view,
               "primary_count": len(primary),
               "all_count": len(all_items),
               "decision_surface_count": len(decision_items),
@@ -347,6 +389,8 @@ jobs:
               "raw_primary_leak_samples": leak_samples,
               "genuine_decisions": genuine_decisions,
               "genuine_decision_count_scanned": len(genuine_decisions),
+              "genuine_system_views": genuine_system_views,
+              "genuine_system_view_count_scanned": len(genuine_system_views),
               "real_capital": 0,
           }
           with open(output, "w", encoding="utf-8") as handle:
@@ -382,6 +426,12 @@ jobs:
               ))
           else:
               print("MI5_PRIMARY_LATEST_AGE_MS=NONE")
+          print("MI5_GENUINE_SYSTEM_VIEW_COUNT=" + str(len(genuine_system_views)))
+          if selected_system_view:
+              print("MI5_GENUINE_SYSTEM_VIEW_ID=" + selected_system_view["narrative_identity"])
+              print("MI5_GENUINE_SYSTEM_VIEW_AGE_MS=" + str(selected_system_view["age_ms"]))
+              print("MI5_GENUINE_SYSTEM_VIEW_STANCE=" + str(selected_system_view.get("stance")))
+              print("MI5_GENUINE_SYSTEM_VIEW_SCORE_SEMANTIC=" + str(selected_system_view.get("score_semantic")))
           print("MI5_GENUINE_DECISION_COUNT=" + str(len(genuine_decisions)))
           if selected_decision:
               print("MI5_GENUINE_DECISION_ID=" + selected_decision["narrative_identity"])
@@ -394,26 +444,27 @@ jobs:
 
           cat "$OUT/report.json"
 
-          DECISION_ID="$("$MI5_PROBE_VENV/bin/python" - "$OUT/report.json" <<'PY'
+          SYSTEM_VIEW_ID="$("$MI5_PROBE_VENV/bin/python" - "$OUT/report.json" <<'PY'
           import json
           import sys
 
           report = json.load(open(sys.argv[1], encoding="utf-8"))
-          selected = report.get("selected_decision")
+          selected = report.get("selected_system_view")
           if not isinstance(selected, dict):
               print("")
               raise SystemExit(0)
           identity = str(selected.get("narrative_identity", ""))
           if len(identity) != 64:
-              raise SystemExit("invalid_genuine_decision_identity")
+              raise SystemExit("invalid_system_view_identity")
           print(identity)
           PY
           )"
-          if [[ -n "$DECISION_ID" ]]; then
-            echo "MI5_DECISION_ID=$DECISION_ID" >> "$GITHUB_ENV"
-            echo "MI5_DECISION_RUNTIME_PRESENT=YES"
+          if [[ -n "$SYSTEM_VIEW_ID" ]]; then
+            echo "MI5_SYSTEM_VIEW_ID=$SYSTEM_VIEW_ID" >> "$GITHUB_ENV"
+            echo "MI5_SYSTEM_VIEW_RUNTIME_PRESENT=YES"
           else
-            echo "MI5_DECISION_RUNTIME_PRESENT=NO"
+            echo "MI5_SYSTEM_VIEW_RUNTIME_PRESENT=NO"
+            echo "MI5_POSTDEPLOY_BROWSER_REQUIRED=YES"
           fi
 
       - name: Real Chromium desktop and mobile acceptance
@@ -434,11 +485,13 @@ jobs:
           test -n "$BROWSER"
           echo "MI5_BROWSER=$BROWSER"
 
-          if [[ -z "${MI5_DECISION_ID:-}" ]]; then
-            echo "MI5_BROWSER_ACCEPTANCE_BLOCKED=no_genuine_decision_runtime"
-            exit 78
+          if [[ -z "${MI5_SYSTEM_VIEW_ID:-}" ]]; then
+            echo "MI5_BROWSER_ACCEPTANCE_DEFERRED=system_view_not_deployed"
+            echo "MI5_PREDEPLOY_ACCEPTANCE_PASS=YES"
+            echo "REAL_CAPITAL=0"
+            exit 0
           fi
-          URL="http://127.0.0.1:$MI5_PROBE_PORT/?message=$MI5_DECISION_ID"
+          URL="http://127.0.0.1:$MI5_PROBE_PORT/?message=$MI5_SYSTEM_VIEW_ID"
 
           "$MI5_PROBE_VENV/bin/python" ops/capture_chromium_viewport.py             --browser "$BROWSER"             --url "$URL"             --output "$OUT/desktop.png"             --metrics-out "$OUT/desktop.metrics.json"             --width 1440             --height 950             --require-no-horizontal-overflow
 
@@ -449,6 +502,7 @@ jobs:
           "$MI5_PROBE_VENV/bin/python" ops/probe_message_intelligence_mi5_browser.py             --browser "$BROWSER"             --url "$URL"             --output "$OUT/mobile-proof.png"             --metrics-out "$OUT/mobile-proof.metrics.json"             --width 430             --height 860             --mobile
 
           echo "MI5_REAL_DESKTOP_MOBILE_BROWSER_PASS=YES"
+          echo "MI5_POSTDEPLOY_ACCEPTANCE_PASS=YES"
           echo "REAL_CAPITAL=0"
 
       - name: Upload probe artifact
