@@ -534,7 +534,9 @@ async function init() {
     }
     if (content) content.replaceChildren();
     renderCore(config, payload.detail);
-    await renderDetachedExactEvidence();
+    if (!config.family) {
+      await renderDetachedExactEvidence();
+    }
     await renderDetachedFrozenVisualProof(payload.detail);
   } catch {
     if (content) {
