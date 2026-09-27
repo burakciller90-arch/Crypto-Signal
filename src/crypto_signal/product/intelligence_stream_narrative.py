@@ -48,8 +48,14 @@ _PROTECTED_REWRITE_FIELDS = (
 _QUALITATIVE_CLAIM_TERMS = frozenset(
     {
         "absorption",
+        "alıcı",
+        "alıcılar",
         "balina",
         "balinalar",
+        "büyük alıcı",
+        "büyük alıcılar",
+        "büyük satıcı",
+        "büyük satıcılar",
         "basis",
         "buzdağı",
         "cpi",
@@ -61,14 +67,22 @@ _QUALITATIVE_CLAIM_TERMS = frozenset(
         "heatmap",
         "iceberg",
         "likidasyon",
+        "kurumsal",
         "manipülasyon",
+        "market maker",
         "oi",
         "order book",
+        "satıcı",
+        "satıcılar",
         "short squeeze",
+        "smart money",
         "spoof",
         "sweep",
         "süpürme",
         "tahta",
+        "pes etti",
+        "pes ediyor",
+        "piyasa istiyor",
     }
 )
 
@@ -1066,9 +1080,14 @@ def _rewrite_preserves_surface_numbers(
     baseline: StreamNarrativeText,
     candidate: StreamNarrativeText,
 ) -> bool:
-    baseline_values = set(_extract_numeric_values(baseline.collapsed_text))
-    candidate_values = set(_extract_numeric_values(candidate.collapsed_text))
-    return baseline_values <= candidate_values
+    baseline_collapsed = set(_extract_numeric_values(baseline.collapsed_text))
+    candidate_collapsed = set(_extract_numeric_values(candidate.collapsed_text))
+    baseline_simple = set(_extract_numeric_values(baseline.simple_text))
+    candidate_simple = set(_extract_numeric_values(candidate.simple_text))
+    return (
+        candidate_collapsed == baseline_collapsed
+        and candidate_simple == baseline_simple
+    )
 
 
 def _mentioned_families(text: str) -> set[ConfluenceFamily]:
@@ -1085,22 +1104,14 @@ def _introduces_unbriefed_family_claim(
     baseline: StreamNarrativeText,
     candidate: StreamNarrativeText,
 ) -> bool:
+    del view  # The brief explains context but never authorizes a new customer claim.
     baseline_mentions = _mentioned_families(
         f"{baseline.collapsed_text} {baseline.simple_text}"
     )
     candidate_mentions = _mentioned_families(
         f"{candidate.collapsed_text} {candidate.simple_text}"
     )
-    highlighted = {
-        item.family
-        for item in (
-            view.dominant_support,
-            view.secondary_support,
-            view.main_contradiction,
-        )
-        if item is not None
-    }
-    return bool(candidate_mentions - baseline_mentions - highlighted)
+    return bool(candidate_mentions - baseline_mentions)
 
 
 def _protected_rewrite_sections_unchanged(
