@@ -1,5 +1,17 @@
 # PROJECT CHRONICLE
 
+## 2026-09-28 — RDP1 accepted; RDP2 source envelope & coverage activated
+
+RDP1 Collector and runtime reliability is mechanically accepted. PR #1548 merged the 60-second Market Tape snapshot + WC2 live-clock cadence as main `fabaa8830bd599e564bf76c1e0adbee89ec9b5f3`; the focused ownership gate passed, while unrelated historical Stream text/hash regressions were kept out of the cadence verdict.
+
+UID504 R11 recovery `36357042192` fast-forwarded Development to exact main, replaced the supervisor, restored Product `status=ok / read_only=true / REAL_CAPITAL=0`, kept the Bybit TR Market Tape collector alive, and observed fresh ingestion at 19.992s.
+
+Post-boundary freshness run `36357255060` proved orderbook 0.339s, trades 0.058s, derivatives 12.464s, collector ingestion 24.872s, live Stream/Product, and the 22:59:59.999Z closed 15m candle already persisted by 23:01:23.679Z (83.680s upper bound).
+
+A separate read-only six-context UID504 diagnostic `36357353548` measured actual cache availability lag as Bybit BTC 8.958s, ETH 11.406s, SOL 13.663s; Binance BTC 16.163s, ETH 20.413s, SOL 24.332s. All six passed the locked <=90s SLO with zero failures. The temporary diagnostic PR #1552 was closed unmerged; duplicate PR #1547 was not merged.
+
+Liquidation coverage may still be zero and standalone On-chain remains provider-deferred; neither is an RDP1 blocker. Capital/Portfolio remains deferred. Exact frontier is now **RDP2 — Canonical source envelope + coverage ledger**. REAL_CAPITAL=0.
+
 ## 2026-09-27 — Reality-Backed Evidence Data Plane V1 opened; RDP1 active
 
 The user approved completing professional evidence collection before Paper Portfolio and the new frontend.
