@@ -110,8 +110,11 @@ jobs:
           echo "MESSAGE_INTELLIGENCE_MI1_NON_MUTATING_PASS=YES"
 
       - name: Guard project and authority boundary
+        shell: bash
         run: |
-          test "$(git status --porcelain)" = ""
+          set -euo pipefail
+          git diff --exit-code
+          git diff --cached --exit-code
           ! git diff --name-only ${{ github.event.pull_request.base.sha || 'HEAD^' }}...HEAD | grep -Ei 'durdurulmaz|quantum-capital'
           echo "PROJECT_ISOLATION_PASS=YES"
           echo "REAL_CAPITAL=0"
