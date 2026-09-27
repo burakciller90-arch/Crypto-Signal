@@ -13,6 +13,11 @@ def test_ssd_supervisor_has_single_wc2_live_owner() -> None:
     assert 'run_clock live "$LIVE/.venv/bin/python" "$LIVE/src"' not in text
     assert 'export PYTHONPATH="$DEV:$DEV/src"' in text
     assert '"$DEV/ops/run_live_evidence_clock.py"' in text
+    assert (
+        'BYBIT_REST_BASE_URL="${CRYPTO_SIGNAL_BYBIT_REST_BASE_URL:-'
+        'https://api.bybit.tr}"'
+    ) in text
+    assert '--bybit-base-url "$BYBIT_REST_BASE_URL"' in text
     assert "--stream-enabled" in text
     assert '--stream-ledger "$stream"' in text
     assert '--stream-market-tape "$market_tape"' in text
