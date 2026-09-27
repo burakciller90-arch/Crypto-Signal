@@ -1035,7 +1035,7 @@ function evidenceWindowSection(label, body = "") {
   return section;
 }
 
-function buildEvidenceWindowData(kind, detail) {
+function buildEvidenceWindowData(kind, detail, exactEvidence = null) {
   const config = EVIDENCE_WINDOW_KINDS[kind];
   const narrative = detail?.narrative || {};
   const fact = detail?.fact_bundle || {};
@@ -1051,77 +1051,36 @@ function buildEvidenceWindowData(kind, detail) {
   );
   fragment.append(context);
 
-  if (kind === "geometry") {
-    const geometry = document.createElement("div");
-    geometry.className = "window-context-grid";
-    geometry.append(
-      evidenceMetric(
-        "Tetik",
-        `${displayNumber(fact?.trigger_zone?.low)}–${displayNumber(fact?.trigger_zone?.high)}`
-      ),
-      evidenceMetric(
-        "Hedef",
-        `${displayNumber(fact?.target_zone?.low)}–${displayNumber(fact?.target_zone?.high)}`
-      ),
-      evidenceMetric("Geçersiz", displayNumber(fact?.invalidation_price))
-    );
-    fragment.append(evidenceWindowSection("Exact trade geometry"));
-    fragment.append(geometry);
-    const family = familyContribution(detail, "geometry");
-    if (family) {
-      fragment.append(
-        evidenceWindowSection(
-          "Geometry contribution",
-          `Destek +${displayNumber(family.support_points, "0")} / karşıt -${displayNumber(
-            family.opposition_points,
-            "0"
-          )} · ${text(family.state)}`
-        )
-      );
-    }
-  } else if (config?.family) {
-    const family = familyContribution(detail, config.family);
-    if (family) {
-      const quality = Number(family.evidence_quality_0_1);
-      const freshness = Number(family.freshness_0_1);
-      const grid = document.createElement("div");
-      grid.className = "window-context-grid";
-      grid.append(
-        evidenceMetric("Destek", `+${displayNumber(family.support_points, "0")}`),
-        evidenceMetric("Karşıt", `-${displayNumber(family.opposition_points, "0")}`),
+  if (evidenceFamilyConfig(kind)) {
+    if (kind === "geometry") {
+      const geometry = document.createElement("div");
+      geometry.className = "window-context-grid";
+      geometry.append(
         evidenceMetric(
-          "Kalite",
-          Number.isFinite(quality) ? `%${Math.round(quality * 100)}` : text(family.state)
+          "Tetik",
+          `${displayNumber(fact?.trigger_zone?.low)}–${displayNumber(
+            fact?.trigger_zone?.high
+          )}`
         ),
         evidenceMetric(
-          "Fresh",
-          Number.isFinite(freshness) ? `%${Math.round(freshness * 100)}` : "—"
-        )
+          "Hedef",
+          `${displayNumber(fact?.target_zone?.low)}–${displayNumber(
+            fact?.target_zone?.high
+          )}`
+        ),
+        evidenceMetric("Geçersiz", displayNumber(fact?.invalidation_price))
       );
-      fragment.append(grid);
-
-      const refs = Array.isArray(family.source_evidence_identities)
-        ? family.source_evidence_identities
-        : [];
-      const refsSection = evidenceWindowSection(
-        "Exact source evidence identities",
-        refs.length ? `${refs.length} persisted source identity bağlı.` : "Persisted source identity listesi yok."
-      );
-      for (const ref of refs) {
-        const code = document.createElement("code");
-        code.className = "window-identity";
-        code.textContent = ref;
-        refsSection.append(code);
-      }
-      fragment.append(refsSection);
-    } else {
-      fragment.append(
-        evidenceWindowSection(
-          "Persisted evidence",
-          "Bu exact mesajda bu kanıt ailesi için katkı kaydı yok; veri uydurulmadı."
-        )
-      );
+      fragment.append(geometry);
     }
+    fragment.append(
+      familyExactEvidencePanel(
+        kind,
+        detail,
+        exactEvidence,
+        text(narrative?.narrative_identity, "")
+      )
+    );
+    return fragment;
   } else if (kind === "decision") {
     fragment.append(
       evidenceWindowSection(
@@ -1206,7 +1165,7 @@ function buildEvidenceWindowData(kind, detail) {
     )
   );
 
-  if (config?.concept) {
+  if (config?.concept && !evidenceFamilyConfig(kind)) {
     const education = evidenceWindowSection(
       "Bu nedir?",
       "Deterministik eğitim açıklaması yalnız istek üzerine yüklenir."
