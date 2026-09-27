@@ -4,6 +4,14 @@ on:
   push:
     branches:
       - 'feat/message-intelligence-mi5-*'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'src/crypto_signal/product/intelligence_stream_read_model.py'
+      - 'tests/test_intelligence_stream_read_model.py'
+      - 'ops/probe_message_intelligence_mi5_browser.py'
+      - '.github/workflows/crypto-message-intelligence-mi5-probe-uid504.yml'
   workflow_dispatch:
 
 permissions:
@@ -96,6 +104,19 @@ jobs:
           echo "MI5_EPHEMERAL_EXACT_HEAD_SERVER_PASS=YES"
           echo "REAL_CAPITAL=0"
 
+      - name: Focused MI5 canonical primary-surface regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          "$MI5_PROBE_VENV/bin/python" -m pip install "pytest>=8.4" "ruff>=0.13"
+          "$MI5_PROBE_VENV/bin/python" -m pytest -q             tests/test_intelligence_stream_read_model.py
+          "$MI5_PROBE_VENV/bin/python" -m ruff check             src/crypto_signal/product/intelligence_stream_read_model.py             tests/test_intelligence_stream_read_model.py             ops/probe_message_intelligence_mi5_browser.py
+          /usr/bin/node --check src/crypto_signal/product/stream/app.js
+          /usr/bin/node --check src/crypto_signal/product/stream/evidence.js
+          /usr/bin/node --check src/crypto_signal/product/stream/visual_proof.js
+          echo "MI5_CANONICAL_PRIMARY_REGRESSION_PASS=YES"
+          echo "REAL_CAPITAL=0"
+
       - name: Probe real primary Stream and genuine decision inventory
         shell: bash
         run: |
@@ -179,6 +200,16 @@ jobs:
               analytical = detail.get("analytical_view")
               if not isinstance(analytical, dict):
                   continue
+              try:
+                  visual_payload = get(f"/api/stream/messages/{identity}/visual-proof")
+              except Exception:
+                  visual_payload = {}
+              visual_proof = (
+                  visual_payload.get("visual_proof")
+                  if isinstance(visual_payload, dict)
+                  and isinstance(visual_payload.get("visual_proof"), dict)
+                  else {}
+              )
               genuine_decisions.append({
                   "narrative_identity": identity,
                   "event_at_ms": item.get("event_at_ms"),
@@ -193,12 +224,28 @@ jobs:
                       if isinstance(analytical.get("stance"), dict)
                       else None
                   ),
+                  "visual_status": visual_proof.get("status"),
+                  "geometry_frozen_ready": (
+                      visual_proof.get("status") == "ready"
+                      and isinstance(visual_proof.get("candles"), list)
+                      and len(visual_proof.get("candles")) > 0
+                  ),
               })
               if len(genuine_decisions) >= 10:
                   break
 
+          selected_decision = next(
+              (
+                  item
+                  for item in genuine_decisions
+                  if item.get("geometry_frozen_ready") is True
+              ),
+              genuine_decisions[0] if genuine_decisions else None,
+          )
+
           report = {
               "health": health,
+              "selected_decision": selected_decision,
               "primary_count": len(primary),
               "all_count": len(all_items),
               "primary_latest": [
@@ -238,15 +285,63 @@ jobs:
           else:
               print("MI5_PRIMARY_LATEST_AGE_MS=NONE")
           print("MI5_GENUINE_DECISION_COUNT=" + str(len(genuine_decisions)))
-          if genuine_decisions:
-              print("MI5_GENUINE_DECISION_ID=" + genuine_decisions[0]["narrative_identity"])
-              print("MI5_GENUINE_DECISION_AGE_MS=" + str(genuine_decisions[0]["age_ms"]))
+          if selected_decision:
+              print("MI5_GENUINE_DECISION_ID=" + selected_decision["narrative_identity"])
+              print("MI5_GENUINE_DECISION_AGE_MS=" + str(selected_decision["age_ms"]))
+              print("MI5_GEOMETRY_FROZEN_READY=" + str(bool(selected_decision.get("geometry_frozen_ready"))).upper())
           print("MI5_PRIMARY_RAW_TELEMETRY_LEAK=NO")
           print("MI5_READONLY_PROBE_PASS=YES")
           print("REAL_CAPITAL=0")
           PY
 
           cat "$OUT/report.json"
+
+          DECISION_ID="$("$MI5_PROBE_VENV/bin/python" - "$OUT/report.json" <<'PY'
+          import json
+          import sys
+
+          report = json.load(open(sys.argv[1], encoding="utf-8"))
+          selected = report.get("selected_decision")
+          if not isinstance(selected, dict):
+              raise SystemExit("no_genuine_decision_available")
+          identity = str(selected.get("narrative_identity", ""))
+          if len(identity) != 64:
+              raise SystemExit("invalid_genuine_decision_identity")
+          print(identity)
+          PY
+          )"
+          echo "MI5_DECISION_ID=$DECISION_ID" >> "$GITHUB_ENV"
+
+      - name: Real Chromium desktop and mobile acceptance
+        shell: bash
+        timeout-minutes: 8
+        run: |
+          set -euo pipefail
+          OUT="$MI5_PROBE_OUT/browser"
+          mkdir -p "$OUT"
+
+          BROWSER=""
+          for candidate in             "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"             "/Applications/Chromium.app/Contents/MacOS/Chromium"             "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge"             "/Applications/Google Chrome Canary.app/Contents/MacOS/Google Chrome Canary"; do
+            if [ -x "$candidate" ]; then
+              BROWSER="$candidate"
+              break
+            fi
+          done
+          test -n "$BROWSER"
+          echo "MI5_BROWSER=$BROWSER"
+
+          URL="http://127.0.0.1:$MI5_PROBE_PORT/?message=$MI5_DECISION_ID"
+
+          "$MI5_PROBE_VENV/bin/python" ops/capture_chromium_viewport.py             --browser "$BROWSER"             --url "$URL"             --output "$OUT/desktop.png"             --metrics-out "$OUT/desktop.metrics.json"             --width 1440             --height 950             --require-no-horizontal-overflow
+
+          "$MI5_PROBE_VENV/bin/python" ops/capture_chromium_viewport.py             --browser "$BROWSER"             --url "$URL"             --output "$OUT/mobile.png"             --metrics-out "$OUT/mobile.metrics.json"             --width 430             --height 860             --mobile             --require-no-horizontal-overflow
+
+          "$MI5_PROBE_VENV/bin/python" ops/probe_message_intelligence_mi5_browser.py             --browser "$BROWSER"             --url "$URL"             --output "$OUT/desktop-proof.png"             --metrics-out "$OUT/desktop-proof.metrics.json"             --width 1440             --height 950
+
+          "$MI5_PROBE_VENV/bin/python" ops/probe_message_intelligence_mi5_browser.py             --browser "$BROWSER"             --url "$URL"             --output "$OUT/mobile-proof.png"             --metrics-out "$OUT/mobile-proof.metrics.json"             --width 430             --height 860             --mobile
+
+          echo "MI5_REAL_DESKTOP_MOBILE_BROWSER_PASS=YES"
+          echo "REAL_CAPITAL=0"
 
       - name: Upload probe artifact
         if: always()
