@@ -89,7 +89,7 @@ def _interaction_expression(identity: str, search_text: str, category: str) -> s
         f"const identity={identity_js};"
         f"const searchText={search_js};"
         f"const category={category_js};"
-        "const find=()=>document.querySelector('.message[data-identity="'+identity+'"]');"
+        "const find=()=>[...document.querySelectorAll('.message')].find(n=>n.dataset.identity===identity)||null;"
         "let node=find();"
         "if(!node)return {error:'message_missing_before_interaction'};"
         "node.querySelector('.message-summary')?.click();"
