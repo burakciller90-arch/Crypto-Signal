@@ -96,7 +96,7 @@ def test_stream_s8_expands_supported_depth_inline_and_preserves_anchor() -> None
     assert "DECISION" in script
     assert "TRADE GEOMETRY" in script
     assert "CAPITAL" in script
-    assert "PROOF" in script
+    # MI4 supersedes the old generic bottom PROOF CTA with family-specific proof rows.
     assert "family_contributions" in script
     assert "trigger_zone" in script
     assert "target_zone" in script
