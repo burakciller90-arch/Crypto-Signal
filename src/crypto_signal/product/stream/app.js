@@ -1797,6 +1797,14 @@ function renderExpandedPanel(item, record, detail) {
   });
 }
 
+function currentRenderedMessage(identity, fallback = null) {
+  if (!identity || !ui.list) return fallback;
+  const current = ui.list.querySelector(
+    `.message[data-identity="${CSS.escape(identity)}"]`
+  );
+  return current instanceof HTMLElement ? current : fallback;
+}
+
 async function loadMessageDetail(item, record) {
   const identity = text(record?.narrative_identity, "");
   if (!identity || state.detailRequests.has(identity)) return;
@@ -1812,13 +1820,19 @@ async function loadMessageDetail(item, record) {
     const payload = await fetchJson(API.detail(identity));
     if (payload.status === "ready" && payload.detail) {
       rememberDetail(identity, payload.detail);
-      if (state.expanded.has(identity)) {
-        renderExpandedPanel(item, record, payload.detail);
+      const target = currentRenderedMessage(identity, item);
+      if (target instanceof HTMLElement && state.expanded.has(identity)) {
+        renderExpandedPanel(target, record, payload.detail);
       }
     } else {
-      const panel = item.querySelector(".message-detail");
-      if (panel instanceof HTMLElement && state.expanded.has(identity)) {
-        preserveMessageAnchor(item, () => {
+      const target = currentRenderedMessage(identity, item);
+      const panel = target?.querySelector(".message-detail");
+      if (
+        target instanceof HTMLElement
+        && panel instanceof HTMLElement
+        && state.expanded.has(identity)
+      ) {
+        preserveMessageAnchor(target, () => {
           panel.replaceChildren(
             detailPlaceholder(
               payload.status === "unavailable"
@@ -1830,9 +1844,14 @@ async function loadMessageDetail(item, record) {
       }
     }
   } catch {
-    const panel = item.querySelector(".message-detail");
-    if (panel instanceof HTMLElement && state.expanded.has(identity)) {
-      preserveMessageAnchor(item, () => {
+    const target = currentRenderedMessage(identity, item);
+    const panel = target?.querySelector(".message-detail");
+    if (
+      target instanceof HTMLElement
+      && panel instanceof HTMLElement
+      && state.expanded.has(identity)
+    ) {
+      preserveMessageAnchor(target, () => {
         panel.replaceChildren(
           detailPlaceholder("Structured detail okunamadı; içerik uydurulmadı.")
         );
