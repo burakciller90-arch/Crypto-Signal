@@ -12,6 +12,8 @@ WRAPPER="$ROOT/ssd-clock-wrapper.py"
 LOGDIR="$ROOT/ServiceLogs"
 BYBIT_REST_BASE_URL="${CRYPTO_SIGNAL_BYBIT_REST_BASE_URL:-https://api.bybit.tr}"
 BYBIT_WS_URL="${CRYPTO_SIGNAL_BYBIT_WS_URL:-wss://stream.bybit.tr/v5/public/spot}"
+BINANCE_REST_BASE_URL="${CRYPTO_SIGNAL_BINANCE_REST_BASE_URL:-https://api.binance.me}"
+BINANCE_API_VARIANT="${CRYPTO_SIGNAL_BINANCE_API_VARIANT:-tr_main}"
 
 case "$BYBIT_REST_BASE_URL" in
   https://*) ;;
@@ -24,6 +26,20 @@ case "$BYBIT_WS_URL" in
   wss://*) ;;
   *)
     echo "RUNTIME_INVALID_BYBIT_WS_URL=YES FAIL_CLOSED=YES REAL_CAPITAL=0" >&2
+    exit 75
+    ;;
+esac
+case "$BINANCE_REST_BASE_URL" in
+  https://*) ;;
+  *)
+    echo "RUNTIME_INVALID_BINANCE_REST_URL=YES FAIL_CLOSED=YES REAL_CAPITAL=0" >&2
+    exit 75
+    ;;
+esac
+case "$BINANCE_API_VARIANT" in
+  global|tr_main) ;;
+  *)
+    echo "RUNTIME_INVALID_BINANCE_API_VARIANT=YES FAIL_CLOSED=YES REAL_CAPITAL=0" >&2
     exit 75
     ;;
 esac
@@ -44,7 +60,7 @@ done
 mkdir -p "$LOGDIR"
 exec >>"$LOGDIR/supervisor.log" 2>&1
 
-echo "$(date '+%Y-%m-%d %H:%M:%S %z') supervisor_r11_start pid=$ root=$ROOT bybit_rest=$BYBIT_REST_BASE_URL bybit_ws=$BYBIT_WS_URL"
+echo "$(date '+%Y-%m-%d %H:%M:%S %z') supervisor_r11_start pid=$ root=$ROOT bybit_rest=$BYBIT_REST_BASE_URL bybit_ws=$BYBIT_WS_URL binance_rest=$BINANCE_REST_BASE_URL binance_variant=$BINANCE_API_VARIANT"
 
 dashboard_pid_is_expected() {
   local pid="$1"
@@ -127,36 +143,47 @@ run_clock() {
 
 market_tape_pid_is_owned() {
   local pid="$1"
-  local py="$DEV/.venv/bin/python"
   local runner="$DEV/ops/run_market_tape_stream.py"
   [ -n "$pid" ] || return 1
   kill -0 "$pid" >/dev/null 2>&1 || return 1
   /bin/ps -ww -p "$pid" -o uid=,args= 2>/dev/null \
-    | /usr/bin/awk -v py="$py" -v runner="$runner" '
+    | /usr/bin/awk -v runner="$runner" '
         {
-          exit($1 == 504 && $2 == py && $3 == runner ? 0 : 1)
+          if ($1 != 504) {
+            exit 1
+          }
+          for (i = 2; i <= NF; i++) {
+            if ($i == runner) {
+              exit 0
+            }
+          }
+          exit 1
         }
       '
 }
 
 market_tape_pid_is_expected() {
   local pid="$1"
-  local py="$DEV/.venv/bin/python"
   local runner="$DEV/ops/run_market_tape_stream.py"
   [ -n "$pid" ] || return 1
   kill -0 "$pid" >/dev/null 2>&1 || return 1
   /bin/ps -ww -p "$pid" -o uid=,args= 2>/dev/null \
-    | /usr/bin/awk -v py="$py" -v runner="$runner" -v ws="$BYBIT_WS_URL" '
+    | /usr/bin/awk -v runner="$runner" -v ws="$BYBIT_WS_URL" '
         {
-          if ($1 != 504 || $2 != py || $3 != runner) {
+          if ($1 != 504) {
             exit 1
           }
-          for (i = 4; i < NF; i++) {
-            if ($i == "--bybit-ws-url" && $(i + 1) == ws) {
-              exit 0
+          runner_ok = 0
+          ws_ok = 0
+          for (i = 2; i <= NF; i++) {
+            if ($i == runner) {
+              runner_ok = 1
+            }
+            if ($i == "--bybit-ws-url" && i < NF && $(i + 1) == ws) {
+              ws_ok = 1
             }
           }
-          exit 1
+          exit(runner_ok && ws_ok ? 0 : 1)
         }
       '
 }
@@ -315,6 +342,8 @@ run_wc2_live_clock() {
       --candle-cache "$candle" \
       --provider-divergence "$divergence" \
       --bybit-base-url "$BYBIT_REST_BASE_URL" \
+      --binance-base-url "$BINANCE_REST_BASE_URL" \
+      --binance-api-variant "$BINANCE_API_VARIANT" \
       --stream-enabled \
       --stream-ledger "$stream" \
       --stream-market-tape "$market_tape" \
