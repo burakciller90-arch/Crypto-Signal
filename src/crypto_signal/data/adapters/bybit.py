@@ -14,8 +14,17 @@ class BybitSpotAdapter:
     BASE_URL = "https://api.bybit.com"
     ADAPTER_VERSION = "bybit-v5-spot/1"
 
-    def __init__(self, client: httpx.AsyncClient | None = None) -> None:
+    def __init__(
+        self,
+        client: httpx.AsyncClient | None = None,
+        *,
+        base_url: str | None = None,
+    ) -> None:
+        selected_base_url = (base_url or self.BASE_URL).rstrip("/")
+        if not selected_base_url.startswith("https://"):
+            raise ValueError("Bybit REST base URL must use https")
         self._client = client
+        self._base_url = selected_base_url
 
     async def fetch_candles(
         self,
@@ -46,7 +55,10 @@ class BybitSpotAdapter:
         owns_client = self._client is None
         client = self._client or httpx.AsyncClient(timeout=10.0)
         try:
-            response = await client.get(f"{self.BASE_URL}/v5/market/kline", params=params)
+            response = await client.get(
+                f"{self._base_url}/v5/market/kline",
+                params=params,
+            )
             response.raise_for_status()
             payload = cast(dict[str, object], response.json())
         finally:
