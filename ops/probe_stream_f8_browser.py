@@ -125,6 +125,8 @@ def _interaction_expression(identity: str, search_text: str, category: str) -> s
         "expanded,"
         "evidenceButtonCount:evidenceButtons.length,"
         "evidenceWindowCount,"
+        "detailText:(detail?.textContent||'').trim().slice(0,1000),"
+        "detailHtml:(detail?.innerHTML||'').slice(0,3000),"
         "searchRetainedExact:Boolean(node),"
         "searchResultCount:document.querySelectorAll('.message').length,"
         "notification:window.CryptoSignalNotifications?.snapshot?.()||null"
@@ -244,6 +246,10 @@ def run_probe(args: argparse.Namespace) -> dict[str, object]:
             raise TypeError("browser interaction result must be object")
         if interaction.get("error"):
             raise RuntimeError(str(interaction["error"]))
+        print(
+            "F8_BROWSER_INTERACTION_DEBUG="
+            + json.dumps(interaction, ensure_ascii=False, sort_keys=True)
+        )
         if interaction.get("expanded") is not True:
             raise RuntimeError("real production message did not expand")
         if int(interaction.get("evidenceButtonCount", 0)) < 1:
