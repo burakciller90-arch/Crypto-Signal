@@ -249,12 +249,20 @@ def build_gap_recovered(
 class MarketDataGapLedger:
     def __init__(self, path: Path) -> None:
         self.path = path
+        self._initialized = False
+
+    def _connect(self) -> sqlite3.Connection:
+        db = sqlite3.connect(self.path, timeout=10.0)
+        db.execute("PRAGMA busy_timeout=10000")
+        return db
 
     def initialize(self) -> None:
+        if self._initialized:
+            return
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        with sqlite3.connect(self.path) as db:
-            db.execute("PRAGMA journal_mode=DELETE")
-            db.execute("PRAGMA synchronous=FULL")
+        with self._connect() as db:
+            db.execute("PRAGMA journal_mode=WAL")
+            db.execute("PRAGMA synchronous=NORMAL")
             db.executescript(
                 """
                 CREATE TABLE IF NOT EXISTS market_data_gap_meta (
@@ -292,11 +300,13 @@ class MarketDataGapLedger:
                 )
             elif str(row[0]) != MARKET_DATA_GAP_SCHEMA_VERSION:
                 raise ValueError("market-data gap schema mismatch")
+        self._initialized = True
 
     def append(self, event: MarketDataGapEvent) -> None:
         self.initialize()
         payload = canonical_json(_event_payload(event))
-        with sqlite3.connect(self.path) as db:
+        with self._connect() as db:
+            db.execute("BEGIN IMMEDIATE")
             existing = db.execute(
                 "SELECT payload_json FROM market_data_gap_events "
                 "WHERE event_identity=?",
@@ -350,7 +360,7 @@ class MarketDataGapLedger:
     def latest_for_gap(self, gap_identity: str) -> MarketDataGapEvent | None:
         if not self.path.is_file():
             return None
-        with sqlite3.connect(self.path) as db:
+        with self._connect() as db:
             row = db.execute(
                 """SELECT payload_json FROM market_data_gap_events
                 WHERE gap_identity=?
@@ -362,7 +372,7 @@ class MarketDataGapLedger:
     def events(self) -> tuple[MarketDataGapEvent, ...]:
         if not self.path.is_file():
             return ()
-        with sqlite3.connect(self.path) as db:
+        with self._connect() as db:
             rows = db.execute(
                 "SELECT payload_json FROM market_data_gap_events ORDER BY sequence_id"
             ).fetchall()
@@ -409,7 +419,7 @@ class MarketDataGapLedger:
     def quick_check(self) -> bool:
         if not self.path.is_file():
             return False
-        with sqlite3.connect(self.path) as db:
+        with self._connect() as db:
             row = db.execute("PRAGMA quick_check").fetchone()
         return row is not None and str(row[0]).lower() == "ok"
 
