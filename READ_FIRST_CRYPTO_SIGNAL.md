@@ -31,7 +31,9 @@ MI1 is mechanically accepted on main through:
 
 MI2 is mechanically accepted on main through PR #1457 / merge `20c1c18c3253254555708e0cbcc0c52cc04ae784`. Exact UID504 acceptance run `36331471395` proved focused fact-lock tests, Ruff, mypy, real loopback `qwen2.5:3b-instruct` rewrite, canonical checkout non-mutation and project isolation. The model receives a deterministic fact-locked analyst brief but cannot add new market facts, scores, family claims, direction changes or visible numeric changes.
 
-Exact implementation frontier: **MI3 — Five-family evidence summary UI**.
+MI3 is mechanically accepted on main through PR #1459 / merge `4dc3c2a4ebdda513f2150313f74f0f06a3a47ec6`. UID504 acceptance run `36332071137` proved the compact current-view summary plus the canonical Geometry 20 / Liquidity 25 / Order Flow 25 / Derivatives 15 / On-chain 15 evidence table, explicit unavailable evidence, non-probability score semantics, non-mutating checkouts and project isolation.
+
+Exact implementation frontier: **MI4 — Family-specific clickable proof windows**.
 
 ## Intelligence Stream V1 final completion acceptance — 2026-09-27
 
