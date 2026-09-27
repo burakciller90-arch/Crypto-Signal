@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import sqlite3
+from pathlib import Path
 
 import pytest
 
@@ -110,3 +111,19 @@ def test_existing_gap_schema_initialization_is_read_only_under_reader(
         reader.close()
 
     assert gap_path.read_bytes() == before
+
+
+def test_market_tape_runner_keeps_environment_aware_websocket_proxy() -> None:
+    runner = (
+        Path(__file__).resolve().parents[1]
+        / "ops"
+        / "run_market_tape_stream.py"
+    )
+    text = runner.read_text(encoding="utf-8")
+
+    assert "proxy=None" not in text
+    assert (
+        "BybitSpotMicrostructureStream(\n"
+        "        url=args.bybit_ws_url,\n"
+        "    )"
+    ) in text
