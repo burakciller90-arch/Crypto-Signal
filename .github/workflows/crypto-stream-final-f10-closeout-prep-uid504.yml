@@ -1,6 +1,9 @@
 name: Crypto Stream Final F10 Authority Freeze UID504
 
 on:
+  push:
+    branches:
+      - 'stream/final-f10-final'
   pull_request:
     branches:
       - main
