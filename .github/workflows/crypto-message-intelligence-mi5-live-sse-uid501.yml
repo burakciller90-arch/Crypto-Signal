@@ -1,0 +1,154 @@
+name: Crypto Message Intelligence MI5 Live SSE UID501
+
+on:
+  push:
+    branches:
+      - 'feat/message-intelligence-mi5-postdeploy-acceptance'
+    paths:
+      - '.github/workflows/crypto-message-intelligence-mi5-live-sse-uid501.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: crypto-message-intelligence-mi5-live-sse-uid501
+  cancel-in-progress: true
+
+jobs:
+  live-sse-system-view:
+    runs-on: [self-hosted, crypto-signal, uid501]
+    timeout-minutes: 5
+    steps:
+      - name: Prove natural forward system-view delivery over live SSE
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(id -u)" = "501"
+          /usr/bin/python3 - <<'PY'
+          import json
+          import time
+          import urllib.parse
+          import urllib.request
+
+          BASE = "http://127.0.0.1:48700"
+          RAW_TOKENS = (
+              "sell_pressure",
+              "buy_pressure",
+              "state değişti",
+              "measured:",
+              "bid_side_liquidity_take_candidate",
+              "ask_side_liquidity_take_candidate",
+              "→",
+          )
+
+          def get_json(path):
+              with urllib.request.urlopen(BASE + path, timeout=10) as response:
+                  return json.load(response)
+
+          health = get_json("/api/health")
+          assert health["status"] == "ok", health
+          assert health["stream_root_active"] is True, health
+          assert health["read_only"] is True, health
+          assert health["real_capital"] == 0, health
+
+          initial = get_json("/api/stream/messages?surface=primary&limit=1")
+          page = initial["page"]
+          items = page["items"]
+          assert items, initial
+          baseline = items[0]
+          baseline_id = baseline["narrative_identity"]
+          baseline_ms = int(baseline["event_at_ms"])
+          cursor = page["newest_cursor"]
+          assert isinstance(cursor, str) and cursor
+
+          query = urllib.parse.urlencode(
+              {
+                  "surface": "primary",
+                  "after": cursor,
+                  "batch_limit": 200,
+                  "follow": "true",
+              }
+          )
+          request = urllib.request.Request(
+              BASE + "/api/stream/live?" + query,
+              headers={"Accept": "text/event-stream"},
+          )
+
+          started = time.monotonic()
+          deadline = started + 210.0
+          current_event = None
+          current_id = None
+          received = None
+
+          with urllib.request.urlopen(request, timeout=225) as response:
+              assert response.headers.get_content_type() == "text/event-stream"
+              while time.monotonic() < deadline:
+                  raw = response.readline()
+                  if not raw:
+                      break
+                  line = raw.decode("utf-8", errors="strict").rstrip("\r\n")
+                  if not line:
+                      current_event = None
+                      current_id = None
+                      continue
+                  if line.startswith(":"):
+                      continue
+                  if line.startswith("retry:"):
+                      continue
+                  if line.startswith("id:"):
+                      current_id = line[3:].strip()
+                      continue
+                  if line.startswith("event:"):
+                      current_event = line[6:].strip()
+                      continue
+                  if not line.startswith("data:"):
+                      continue
+                  if current_event != "message":
+                      continue
+
+                  record = json.loads(line[5:].strip())
+                  event_id = record.get("narrative_identity")
+                  event_ms = int(record.get("event_at_ms", -1))
+                  if event_id == baseline_id or event_ms <= baseline_ms:
+                      raise AssertionError(
+                          f"SSE replayed/non-forward record baseline={baseline_id} got={event_id}"
+                      )
+                  if record.get("subtype") != "system_view_updated":
+                      continue
+
+                  text = record.get("text")
+                  assert isinstance(text, dict), record
+                  collapsed = str(text.get("collapsed_text", ""))
+                  lowered = collapsed.casefold()
+                  leaks = [token for token in RAW_TOKENS if token in lowered]
+                  assert not leaks, leaks
+
+                  fact = record.get("fact_bundle")
+                  assert isinstance(fact, dict), record
+                  families = fact.get("family_contributions")
+                  assert isinstance(families, list) and len(families) == 5, fact
+                  assert fact.get("score_semantic") == (
+                      "weighted_directional_family_vote_not_probability"
+                  ), fact
+                  assert record.get("production_authority") is False, record
+                  assert record.get("real_capital") == 0, record
+                  assert current_id, "SSE Last-Event-ID missing"
+                  received = {
+                      "narrative_identity": event_id,
+                      "event_at_ms": event_ms,
+                      "symbol": record.get("symbol"),
+                      "collapsed_text": collapsed,
+                      "sse_event_id": current_id,
+                      "elapsed_seconds": round(time.monotonic() - started, 3),
+                  }
+                  break
+
+          if received is None:
+              raise SystemExit("MI5_LIVE_SSE_SYSTEM_VIEW_TIMEOUT")
+
+          print("MI5_LIVE_SSE_SYSTEM_VIEW=" + json.dumps(received, ensure_ascii=False))
+          print("MI5_LIVE_SSE_FORWARD_ONLY_PASS=YES")
+          print("MI5_LIVE_SSE_NEW_PRESENTATION_PASS=YES")
+          print("REAL_CAPITAL=0")
+          PY
