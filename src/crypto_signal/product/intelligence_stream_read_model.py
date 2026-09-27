@@ -47,8 +47,13 @@ STREAM_CURSOR_SCHEMA_VERSION = "intelligence-stream-cursor-v1/1"
 STREAM_MESSAGE_DETAIL_SCHEMA_VERSION = "intelligence-stream-message-detail-v1/1"
 DEFAULT_STREAM_PAGE_LIMIT = 50
 MAX_STREAM_PAGE_LIMIT = 200
-_PRIMARY_HIDDEN_FAMILIES = tuple(
-    family.value for family in ConfluenceFamily
+_PRIMARY_HIDDEN_FAMILIES = (
+    "geometry",
+    "liquidity",
+    "order_flow",
+    "derivatives",
+    "onchain",
+    *(family.value for family in ConfluenceFamily),
 )
 
 
