@@ -1020,6 +1020,7 @@ def test_stream_api_primary_surface_hides_family_telemetry(
         source_narrative_identity=identities["eth-outcome"],
         family="provider_quality",
         state_label="degraded_provider_stale",
+        renderer_version=STREAM_FAMILY_NARRATIVE_RENDERER_VERSION,
     )
     primary_after_trust = client.get(
         "/api/stream/messages",
