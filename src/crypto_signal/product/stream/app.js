@@ -7,6 +7,8 @@ const API = Object.freeze({
   detail: (identity) => `/api/stream/messages/${encodeURIComponent(identity)}/detail`,
   visualProof: (identity) =>
     `/api/stream/messages/${encodeURIComponent(identity)}/visual-proof`,
+  exactEvidence: (identity) =>
+    `/api/stream/messages/${encodeURIComponent(identity)}/evidence`,
   decisionProofForForecast: (identity) =>
     `/api/decision-proof/forecast/${encodeURIComponent(identity)}`,
   education: (concept) => `/api/education/${encodeURIComponent(concept)}`,
@@ -1142,18 +1144,61 @@ async function hydrateFrozenVisualProof(model) {
   if (!(body instanceof HTMLElement)) return;
 
   const fullRenderer = window.CryptoSignalVisualProof?.renderFrozenVisualProof;
-  const familyRenderer = window.CryptoSignalVisualProof?.renderFamilyFrozenProof;
+  const familyExactRenderer =
+    window.CryptoSignalVisualProof?.renderFamilyExactEvidence;
   if (model.kind === "proof" && typeof fullRenderer !== "function") return;
-  if (familyKind && typeof familyRenderer !== "function") return;
+  if (familyKind && typeof familyExactRenderer !== "function") return;
 
   const record = state.messages.find(
     (item) => item?.narrative_identity === model.narrativeIdentity
   );
+
+  if (familyKind) {
+    let exactEvidence =
+      record?.__fixture_exact_evidence &&
+      typeof record.__fixture_exact_evidence === "object"
+        ? record.__fixture_exact_evidence
+        : null;
+    if (!exactEvidence) {
+      try {
+        const payload = await fetchJson(API.exactEvidence(model.narrativeIdentity));
+        exactEvidence =
+          payload?.evidence && typeof payload.evidence === "object"
+            ? payload.evidence
+            : {
+                status: payload?.status || "unavailable",
+                reason: payload?.reason || "exact_family_evidence_unavailable",
+                narrative_identity: model.narrativeIdentity,
+                current_data_substitution: false,
+              };
+      } catch {
+        exactEvidence = {
+          status: "unavailable",
+          reason: "exact_family_evidence_request_failed",
+          narrative_identity: model.narrativeIdentity,
+          current_data_substitution: false,
+        };
+      }
+    }
+    if (!model.element?.isConnected) return;
+    const currentBody = model.element.querySelector(".evidence-window-body");
+    if (!(currentBody instanceof HTMLElement)) return;
+    currentBody.querySelector(".frozen-visual-proof")?.remove();
+    const contribution = familyContribution(model.detail, model.kind);
+    currentBody.prepend(
+      familyExactRenderer(exactEvidence, {
+        kind: model.kind,
+        contribution,
+      })
+    );
+    return;
+  }
+
   let visualProof =
-    record?.__fixture_visual_proof && typeof record.__fixture_visual_proof === "object"
+    record?.__fixture_visual_proof &&
+    typeof record.__fixture_visual_proof === "object"
       ? record.__fixture_visual_proof
       : null;
-
   if (!visualProof) {
     try {
       const payload = await fetchJson(API.visualProof(model.narrativeIdentity));
@@ -1178,18 +1223,7 @@ async function hydrateFrozenVisualProof(model) {
   const currentBody = model.element.querySelector(".evidence-window-body");
   if (!(currentBody instanceof HTMLElement)) return;
   currentBody.querySelector(".frozen-visual-proof")?.remove();
-
-  if (familyKind) {
-    const contribution = familyContribution(model.detail, model.kind);
-    currentBody.prepend(
-      familyRenderer(visualProof, {
-        kind: model.kind,
-        contribution,
-      })
-    );
-  } else {
-    currentBody.prepend(fullRenderer(visualProof));
-  }
+  currentBody.prepend(fullRenderer(visualProof));
 }
 
 function renderEvidenceWindowBody(model, detail) {
