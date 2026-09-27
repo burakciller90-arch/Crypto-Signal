@@ -12,6 +12,7 @@ from crypto_signal.product.intelligence_stream_local_rewriter import (
     OpenAICompatibleLocalNarrativeRewriter,
 )
 from crypto_signal.product.intelligence_stream_narrative import (
+    StreamNarrativeAnalystBrief,
     StreamNarrativeRewriteRequest,
     StreamNarrativeText,
 )
@@ -41,6 +42,20 @@ def _request() -> StreamNarrativeRewriteRequest:
         plan_identity=_sha("plan"),
         analytical_view_identity=_sha("analytical"),
         deterministic_text=_baseline_text(),
+        analyst_brief=StreamNarrativeAnalystBrief(
+            stance="bullish",
+            strength="high",
+            trigger_zone="$100–$102",
+            target_zone="$108",
+            invalidation="$95",
+            dominant_support="Likidite",
+            secondary_support="Emir akışı",
+            main_contradiction="Türevler",
+            evidence_incomplete=False,
+            evidence_contradiction=True,
+            probability_calibrated=False,
+            event_risk_state="clear",
+        ),
         protected_numeric_values=(Decimal(0), Decimal(82)),
         symbol="BTCUSDT",
         timeframe="4h",
@@ -170,18 +185,36 @@ def test_local_rewriter_emits_bounded_openai_compatible_request() -> None:
     assert isinstance(user, dict)
     assert example_user["role"] == "user"
     assert example_assistant["role"] == "assistant"
-    assert "Piyasa durumu izleniyor" in str(example_assistant["content"])
-    assert "yalnız bu iki alanı döndürmelisin" in str(system["content"])
-    assert "Yeni teknik kavram" in str(system["content"])
+    assert "Şimdilik yön teyidi yok" in str(example_assistant["content"])
+    assert "Yalnız bu iki alanı döndür" in str(system["content"])
+    assert "analyst_brief canonical ve fact-locked bağlamdır" in str(system["content"])
+    assert "Yönü değiştirme" in str(system["content"])
+    assert "Destek skorunu olasılık gibi anlatma" in str(system["content"])
     assert "aynı metni geri döndürmek başarısızlıktır" in str(system["content"])
     assert "birebir" in str(system["content"])
     user_payload = json.loads(str(user["content"]))
-    assert user_payload["task"] == "safe_turkish_style_rewrite"
+    assert user_payload["task"] == "fact_locked_turkish_analyst_rewrite"
     assert user_payload["rewrite_required"] is True
     assert user_payload["rewrite_scope"] == ["collapsed_text", "simple_text"]
     assert user_payload["symbol"] == "BTCUSDT"
     assert user_payload["timeframe"] == "4h"
     assert user_payload["protected_numeric_values"] == ["0", "82"]
+    brief = user_payload["analyst_brief"]
+    assert brief == {
+        "schema_version": "intelligence-stream-narrative-analyst-brief-v1/1",
+        "stance": "bullish",
+        "strength": "high",
+        "trigger_zone": "$100–$102",
+        "target_zone": "$108",
+        "invalidation": "$95",
+        "dominant_support": "Likidite",
+        "secondary_support": "Emir akışı",
+        "main_contradiction": "Türevler",
+        "evidence_incomplete": False,
+        "evidence_contradiction": True,
+        "probability_calibrated": False,
+        "event_risk_state": "clear",
+    }
     assert payload["reasoning_effort"] == "none"
     response_format = payload["response_format"]
     assert isinstance(response_format, dict)
