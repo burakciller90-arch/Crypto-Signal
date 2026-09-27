@@ -62,7 +62,7 @@ def _snapshot_expression(identity: str) -> str:
     return (
         "(()=>{"
         f"const identity={encoded};"
-        "const node=document.querySelector('.message[data-identity="'+identity+'"]');"
+        "const node=[...document.querySelectorAll('.message')].find(n=>n.dataset.identity===identity)||null;"
         "const notification=window.CryptoSignalNotifications?.snapshot?.()||null;"
         "return {"
         "href:location.href,"
