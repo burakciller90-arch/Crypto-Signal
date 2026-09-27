@@ -4,10 +4,31 @@ Updated: 2026-09-27
 Project: Crypto Signal
 Baseline: crypto-signal-full-version-v1.0.0 (immutable)
 Active post-v1.0 program: v1.1 world-class product + market intelligence + Crypto Signal Intelligence Stream V1
-State: WC0_LIVE_PRODUCT_PARITY_ACCEPTED / WC1_24_7_DATA_RELIABILITY_ACCEPTED / WC2_ENGINEERING_FROZEN_EVIDENCE_ACCUMULATION_ACTIVE / WC4_CHAMPION_CHALLENGER_ENGINEERING_ACCEPTED_RESEARCH_ONLY / WC5_ENGINEERING_ACCEPTED_PRODUCT_DEPLOYED_HUMAN_USABILITY_NOT_MEASURED / WC6_SANDBOX_BOUNDARY_ACCEPTED_VENUE_EVIDENCE_EXTERNAL_DEPENDENCY / WC7_CURRENT_FRONTIER_PACKET_ACCEPTED_CURRENT_INSUFFICIENT_EVIDENCE / INTELLIGENCE_STREAM_V1_S0_S16_HISTORICAL_ACCEPTANCE_RETAINED / INTELLIGENCE_STREAM_V1_FINAL_F0_PASS_F1_PASS_F2_PASS_F3_PASS_F4_PASS_F5_PASS_CURRENT_SCOPE_F6_PASS_F7_PASS_F8_PASS_F9_PASS_F10_PASS / INTELLIGENCE_STREAM_V1_FINAL_COMPLETION_ACCEPTED / MESSAGE_INTELLIGENCE_FAMILY_EVIDENCE_UX_V1_ACCEPTED / EVIDENCE_DEPTH_VISUAL_PROOF_V1_ED0_PASS_ED1_ACTIVE / CONTINUITY_PAUSED_BY_USER
+State: WC0_LIVE_PRODUCT_PARITY_ACCEPTED / WC1_24_7_DATA_RELIABILITY_ACCEPTED / WC2_ENGINEERING_FROZEN_EVIDENCE_ACCUMULATION_ACTIVE / WC4_CHAMPION_CHALLENGER_ENGINEERING_ACCEPTED_RESEARCH_ONLY / WC5_ENGINEERING_ACCEPTED_PRODUCT_DEPLOYED_HUMAN_USABILITY_NOT_MEASURED / WC6_SANDBOX_BOUNDARY_ACCEPTED_VENUE_EVIDENCE_EXTERNAL_DEPENDENCY / WC7_CURRENT_FRONTIER_PACKET_ACCEPTED_CURRENT_INSUFFICIENT_EVIDENCE / INTELLIGENCE_STREAM_V1_S0_S16_HISTORICAL_ACCEPTANCE_RETAINED / INTELLIGENCE_STREAM_V1_FINAL_F0_PASS_F1_PASS_F2_PASS_F3_PASS_F4_PASS_F5_PASS_CURRENT_SCOPE_F6_PASS_F7_PASS_F8_PASS_F9_PASS_F10_PASS / INTELLIGENCE_STREAM_V1_FINAL_COMPLETION_ACCEPTED / MESSAGE_INTELLIGENCE_FAMILY_EVIDENCE_UX_V1_ACCEPTED / EVIDENCE_DEPTH_VISUAL_PROOF_V1_ED0_PASS_ED1_ACTIVE / REALITY_BACKED_EVIDENCE_DATA_PLANE_V1_RDP0_PASS_RDP1_ACTIVE / CONTINUITY_PAUSED_BY_USER
 REAL_CAPITAL: 0
 
 ## Active v1.1 frontier — read before historical sections
+
+## ACTIVE REALITY-BACKED EVIDENCE DATA PLANE — 2026-09-27
+
+Canonical execution authority:
+
+**`docs/CRYPTO_SIGNAL_REALITY_BACKED_EVIDENCE_DATA_PLANE_V1.md`**
+
+Current state:
+
+**RDP0 PASS / RDP1 ACTIVE — Collector and runtime reliability**
+
+Latest live audit evidence:
+- UID504 `36345746684`: Market Tape collector alive; order books/trades accumulating; derivatives ~23.7h stale; liquidations/coverage = 0; checked 15m candle cache ~49.7m behind; Stream/Product live; REAL_CAPITAL=0;
+- UID504 `36345747792`: Event Source remains `PERSISTED_EVIDENCE_ONLY`, online not asserted, process not measured, latest successful fetch ~25.7h old;
+- UID504 `36346024642`: runtime logs show SSL/DNS/timeout failures plus Market Tape DB-lock / ingestion-regression errors that must be closed before professional continuous-data claims.
+
+Locked execution sequence:
+`RDP1 runtime reliability → RDP2 source envelope/coverage → RDP3 Geometry → RDP4 rich Liquidity/Order Flow → RDP5 Derivatives/Liquidations → RDP6 BTC/ETH Options → RDP7 real On-chain/stablecoin capital flows → RDP8 Event/Cross-market → RDP9 cross-venue + overlap control → RDP10 frozen proof contract → RDP11 soak/acceptance → Paper Portfolio → new frontend`.
+
+The five-family score remains Geometry 20 / Liquidity 25 / Order Flow 25 / Derivatives 15 / On-chain 15. Options enrich Derivatives; stablecoin flows enrich On-chain; cross-venue confirmation is score-external quality/context. No new score family is authorized. Confluence is not probability.
+
 
 ## ACTIVE EVIDENCE DEPTH / VISUAL PROOF FRONTIER — 2026-09-27
 

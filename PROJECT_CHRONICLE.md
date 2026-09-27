@@ -1,5 +1,29 @@
 # PROJECT CHRONICLE
 
+## 2026-09-27 — Reality-Backed Evidence Data Plane V1 opened; RDP1 active
+
+The user approved completing professional evidence collection before Paper Portfolio and the new frontend.
+
+Canonical execution roadmap:
+`docs/CRYPTO_SIGNAL_REALITY_BACKED_EVIDENCE_DATA_PLANE_V1.md`
+
+New UID504 read-only audits established the execution baseline:
+- `36345746684`: Market Tape collector alive; order books/trades accumulating; derivatives ~23.7h stale; liquidation rows/coverage = 0; checked 15m candle cache ~49.7m behind; Stream/Product live;
+- `36345747792`: Event Source = `PERSISTED_EVIDENCE_ONLY`; online not asserted; process not measured; latest successful fetch ~25.7h old;
+- `36346024642`: runtime logs include SSL/DNS/timeout failures and Market Tape DB-lock / ingestion-regression errors.
+
+Repository truth was also re-checked. Rich Liquidity Structure/Sweep, local CVD/divergence/absorption, Derivatives Dynamics/Crowding, exchange-flow, large-transfer and wallet-cohort infrastructure exists, but code capability is not automatically live Product wiring.
+
+The five-family matrix remains unchanged. Three evidence enrichments were added without creating new score families:
+- BTC/ETH options/volatility positioning inside Derivatives;
+- stablecoin/capital-flow evidence inside On-chain;
+- cross-venue confirmation/provider-divergence as score-external data-quality/context.
+
+Cross-market macro context and sentiment/attention remain score-external. ETF flows remain optional later context. Evidence overlap/double-counting control is now a mandatory acceptance requirement.
+
+RDP0 is PASS. Exact current frontier is **RDP1 — Collector and runtime reliability**. Evidence completion precedes full Paper Portfolio integration, then the new Command Center frontend. REAL_CAPITAL=0.
+
+
 ## 2026-09-27 — User opens Evidence Depth & Visual Proof V1 after live proof audit
 
 The accepted MI0-MI6 interaction contract remains valid, but the user correctly identified that a family-owned proof window is not product-complete when the customer mainly sees SHA256 identities instead of the frozen measurement itself.

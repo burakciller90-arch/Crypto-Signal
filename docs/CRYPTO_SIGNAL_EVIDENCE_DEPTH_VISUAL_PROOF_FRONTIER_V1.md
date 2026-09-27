@@ -7,6 +7,16 @@ Product: Crypto Signal
 Repository: `burakciller90-arch/Crypto-Signal`
 Safety: **REAL_CAPITAL=0**
 
+## Active execution sub-roadmap
+
+The concrete source/runtime completion order for this frontier is now governed by:
+
+**`docs/CRYPTO_SIGNAL_REALITY_BACKED_EVIDENCE_DATA_PLANE_V1.md`**
+
+Current execution state: **RDP0 PASS / RDP1 ACTIVE — Collector and runtime reliability**.
+
+That roadmap does not replace the scientific boundaries in this document. It operationalizes ED1–ED7 into a source-to-proof program and adds accepted evidence enrichments without adding a sixth score family: BTC/ETH options inside Derivatives, stablecoin/capital-flow context inside On-chain, and cross-venue confirmation/data-quality as a score-external layer.
+
 ## 0. Why this frontier exists
 
 Message Intelligence & Family Evidence UX V1 remains accepted and must not be replayed.

@@ -24,7 +24,7 @@ The workbench separates those workstreams while keeping one canonical repository
 ├── repo/                       # stable Crypto-Signal Git working copy
 ├── 00_INBOX/                   # user-supplied roadmap/spec inputs before triage
 ├── 00_CONTEXT/                 # symlinks to canonical repo context
-├── 01_EVIDENCE_DEPTH/          # evidence/proof workstream notes and handoffs
+├── 01_EVIDENCE_DEPTH/          # evidence/proof workstream notes and handoffs; ACTIVE_ROADMAP.md
 ├── 02_PAPER_CAPITAL/           # portfolio/capital workstream notes and handoffs
 ├── 03_PRODUCT_UI/              # frontend/Command Center workstream notes and handoffs
 ├── 04_SHARED_CONTRACTS/        # cross-workstream API/data contracts
@@ -54,6 +54,12 @@ The workbench separates those workstreams while keeping one canonical repository
 
 ### 01_EVIDENCE_DEPTH
 Owns exact frozen family payloads, visual proof, five-family evidence UX contracts and source-completeness work.
+
+Current active execution authority is exposed inside the physical workbench as:
+
+`01_EVIDENCE_DEPTH/ACTIVE_ROADMAP.md`
+
+It points to `docs/CRYPTO_SIGNAL_REALITY_BACKED_EVIDENCE_DATA_PLANE_V1.md`. Current frontier: **RDP1 — Collector and runtime reliability**.
 
 ### 02_PAPER_CAPITAL
 Owns paper-only capital allocation, execution simulation, immutable trade lifecycle, portfolio accounting and archive. No real-money authority.
