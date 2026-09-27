@@ -53,6 +53,22 @@ dashboard_pid_is_expected() {
   ps -p "$pid" -o command= 2>/dev/null     | grep -F "$PRODUCT/ops/run_dashboard.py"     | grep -F -- "--port 48700" >/dev/null 2>&1
 }
 
+dashboard_health_ok() {
+  curl -fsS --max-time 3 http://127.0.0.1:48700/api/health >/dev/null 2>&1
+}
+
+stop_dashboard_pid() {
+  local pid="$1"
+  [ -n "$pid" ] || return 0
+  dashboard_pid_is_expected "$pid" || return 0
+  kill "$pid" >/dev/null 2>&1 || true
+  for _ in {1..10}; do
+    kill -0 "$pid" >/dev/null 2>&1 || return 0
+    sleep 0.2
+  done
+  kill -KILL "$pid" >/dev/null 2>&1 || true
+}
+
 adopt_healthy_dashboard() {
   curl -fsS --max-time 3 http://127.0.0.1:48700/api/health >/dev/null 2>&1 || return 1
   local pid=""
@@ -69,10 +85,12 @@ start_dashboard() {
     pid="$(cat "$ROOT/dashboard.pid" 2>/dev/null || true)"
   fi
   if dashboard_pid_is_expected "$pid"; then
-    return 0
-  fi
-
-  if [ -n "$pid" ]; then
+    if dashboard_health_ok; then
+      return 0
+    fi
+    echo "$(date '+%Y-%m-%d %H:%M:%S %z') dashboard_unhealthy pid=$pid action=restart"
+    stop_dashboard_pid "$pid"
+  elif [ -n "$pid" ]; then
     echo "$(date '+%Y-%m-%d %H:%M:%S %z') stale_dashboard_pid=$pid"
   fi
   rm -f "$ROOT/dashboard.pid"
@@ -107,7 +125,7 @@ run_clock() {
   ) >>"$LOGDIR/$kind.out.log" 2>>"$LOGDIR/$kind.err.log" < /dev/null &
 }
 
-market_tape_pid_is_expected() {
+market_tape_pid_is_owned() {
   local pid="$1"
   local py="$DEV/.venv/bin/python"
   local runner="$DEV/ops/run_market_tape_stream.py"
@@ -121,12 +139,51 @@ market_tape_pid_is_expected() {
       '
 }
 
+market_tape_pid_is_expected() {
+  local pid="$1"
+  local py="$DEV/.venv/bin/python"
+  local runner="$DEV/ops/run_market_tape_stream.py"
+  [ -n "$pid" ] || return 1
+  kill -0 "$pid" >/dev/null 2>&1 || return 1
+  /bin/ps -ww -p "$pid" -o uid=,args= 2>/dev/null \
+    | /usr/bin/awk -v py="$py" -v runner="$runner" -v ws="$BYBIT_WS_URL" '
+        {
+          if ($1 != 504 || $2 != py || $3 != runner) {
+            exit 1
+          }
+          for (i = 4; i < NF; i++) {
+            if ($i == "--bybit-ws-url" && $(i + 1) == ws) {
+              exit 0
+            }
+          }
+          exit 1
+        }
+      '
+}
+
+stop_market_tape_pid() {
+  local pid="$1"
+  market_tape_pid_is_owned "$pid" || return 0
+  kill "$pid" >/dev/null 2>&1 || true
+  for _ in {1..20}; do
+    kill -0 "$pid" >/dev/null 2>&1 || return 0
+    sleep 0.1
+  done
+  kill -KILL "$pid" >/dev/null 2>&1 || true
+}
+
 adopt_market_tape_stream() {
   local lock="$DEV/runtime/market_tape/market_tape_stream.lock"
   local pid=""
   [ -f "$lock" ] || return 1
   pid="$(/usr/sbin/lsof -t "$lock" 2>/dev/null | head -1 || true)"
-  market_tape_pid_is_expected "$pid" || return 1
+  if ! market_tape_pid_is_expected "$pid"; then
+    if market_tape_pid_is_owned "$pid"; then
+      echo "$(date '+%Y-%m-%d %H:%M:%S %z') market_tape_stale_config pid=$pid action=restart"
+      stop_market_tape_pid "$pid"
+    fi
+    return 1
+  fi
   echo "$pid" > "$ROOT/market-tape-stream.pid"
   echo "$(date '+%Y-%m-%d %H:%M:%S %z') market_tape_adopted pid=$pid"
   return 0
@@ -148,6 +205,10 @@ start_market_tape_stream() {
     pid="$(cat "$pidfile" 2>/dev/null || true)"
     if market_tape_pid_is_expected "$pid"; then
       return 0
+    fi
+    if market_tape_pid_is_owned "$pid"; then
+      echo "$(date '+%Y-%m-%d %H:%M:%S %z') market_tape_stale_config pid=$pid action=restart"
+      stop_market_tape_pid "$pid"
     fi
     rm -f "$pidfile"
   fi

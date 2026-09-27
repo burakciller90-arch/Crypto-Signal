@@ -43,5 +43,16 @@ def test_market_tape_adoption_requires_lock_holder_and_exact_python_script() -> 
     assert '/bin/ps -ww -p "$pid" -o uid=,args=' in text
     assert 'exit($1 == 504 && $2 == py && $3 == runner ? 0 : 1)' in text
     assert 'comm=tolower($1)' not in text
-    assert 'market_tape_pid_is_expected "$pid" || return 1' in text
+    assert 'if ! market_tape_pid_is_expected "$pid"; then' in text
+    assert 'market_tape_pid_is_owned "$pid"; then' in text
     assert 'market_tape_pid_is_expected "$pid"; then' in text
+
+
+def test_market_tape_owner_requires_current_bybit_ws_endpoint() -> None:
+    text = SUPERVISOR.read_text(encoding="utf-8")
+
+    assert "market_tape_pid_is_owned()" in text
+    assert 'awk -v py="$py" -v runner="$runner" -v ws="$BYBIT_WS_URL"' in text
+    assert 'if ($i == "--bybit-ws-url" && $(i + 1) == ws)' in text
+    assert "market_tape_stale_config pid=$pid action=restart" in text
+    assert 'stop_market_tape_pid "$pid"' in text

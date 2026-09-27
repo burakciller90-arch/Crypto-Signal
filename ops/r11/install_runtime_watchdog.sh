@@ -22,6 +22,29 @@ cp "$REPO_ROOT/ops/r11/start_ssd_runtime.command" "$LOCAL_ROOT/start-ssd-runtime
 cp "$REPO_ROOT/ops/r11/runtime_terminal_watchdog.sh" "$LOCAL_ROOT/runtime-terminal-watchdog.sh"
 chmod 700   "$ROOT/ssd-service-supervisor.sh"   "$LOCAL_ROOT/start-ssd-runtime.command"   "$LOCAL_ROOT/runtime-terminal-watchdog.sh"
 
+existing_sup="$(
+  /bin/ps -axo pid=,comm=,args= 2>/dev/null     | /usr/bin/awk -v needle="$ROOT/ssd-service-supervisor.sh" '
+        ($2 == "bash" || $2 == "/bin/bash") && index($0, needle) > 0 {
+          print $1
+          exit
+        }
+      '
+)"
+if [ -n "$existing_sup" ] && /bin/kill -0 "$existing_sup" >/dev/null 2>&1; then
+  echo "R11_REFRESHING_EXISTING_SUPERVISOR=YES pid=$existing_sup"
+  /bin/kill "$existing_sup" >/dev/null 2>&1 || true
+  for _ in {1..20}; do
+    /bin/kill -0 "$existing_sup" >/dev/null 2>&1 || break
+    /bin/sleep 0.25
+  done
+  if /bin/kill -0 "$existing_sup" >/dev/null 2>&1; then
+    /bin/kill -KILL "$existing_sup" >/dev/null 2>&1 || true
+  fi
+  if [ "$(cat "$ROOT/ssd-service-supervisor.pid" 2>/dev/null || true)" = "$existing_sup" ]; then
+    /bin/rm -f "$ROOT/ssd-service-supervisor.pid"
+  fi
+fi
+
 cat > "$PLIST" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -61,6 +84,11 @@ if ! /usr/bin/open -gj -a Terminal "$LOCAL_ROOT/start-ssd-runtime.command"; then
   "$LOCAL_ROOT/start-ssd-runtime.command"
 fi
 /bin/sleep 4
+
+if ! /bin/ps -axo command= 2>/dev/null   | /usr/bin/grep -F "$ROOT/ssd-service-supervisor.sh"   | /usr/bin/grep -v grep >/dev/null 2>&1; then
+  echo "R11_TERMINAL_START_MISSING_FALLBACK_DIRECT=YES"
+  "$LOCAL_ROOT/start-ssd-runtime.command"
+fi
 
 launchctl print "$TARGET" >/dev/null
 /bin/ps -axo command=   | /usr/bin/grep -F "$ROOT/ssd-service-supervisor.sh"   | /usr/bin/grep -v grep >/dev/null
