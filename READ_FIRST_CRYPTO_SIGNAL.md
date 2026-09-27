@@ -35,7 +35,7 @@ MI3 is mechanically accepted on main through PR #1459 / merge `4dc3c2a4ebdda513f
 
 MI4 is mechanically accepted on main through PR #1463 / merge `caeaf41256fe9f5d878d78f08374224e571798e4`. UID504 acceptance run `36332851225` proved that each of the five family rows owns its family-scoped exact proof, only Geometry may draw its bound frozen chart, unavailable/identity-only families fail closed, canonical checkouts stayed untouched, project isolation passed and REAL_CAPITAL=0.
 
-MI5 is mechanically accepted through implementation merge `93d9b1edfaf0267b6873f3aaaa2eb9e6dd455af0`, Product deploy run `36337341847`, and post-deploy real-browser acceptance run `36338498776`. The final artifact is `message-intelligence-mi5-probe-36338498776` / id `10937634080`.
+MI5 is mechanically accepted through implementation merge `93d9b1edfaf0267b6873f3aaaa2eb9e6dd455af0`, Product deploy run `36337341847`, post-deploy real-browser acceptance run `36338498776`, and exact UID501 forward-only live SSE run `36339042617`. The final browser artifact is `message-intelligence-mi5-probe-36338498776` / id `10937634080`. The SSE run started from the then-newest primary cursor and accepted only a strictly newer natural `system_view_updated`; BTC arrived after 72.592 seconds, with no replay/backfill and `REAL_CAPITAL=0`.
 
 Canonical final status: **MESSAGE_INTELLIGENCE_FAMILY_EVIDENCE_UX_V1_ACCEPTED**.
 
