@@ -56,41 +56,63 @@ def _identity(item: dict[str, Any]) -> str:
     return value
 
 
+def _category_items(base_url: str, category: str) -> list[dict[str, Any]]:
+    payload = _get_json(
+        base_url,
+        "/api/stream/messages",
+        {"category": category, "limit": 200},
+    )
+    return _items(payload)
+
+
+def _annotated_category_item(
+    items: dict[str, list[dict[str, Any]]],
+    categories: tuple[str, ...],
+) -> dict[str, Any] | None:
+    for category in categories:
+        values = items.get(category, [])
+        if not values:
+            continue
+        item = dict(values[0])
+        item["_f9_observed_category"] = category
+        return item
+    return None
+
+
 def inventory(base_url: str) -> dict[str, object]:
     health = _get_json(base_url, "/api/health")
     page = _get_json(base_url, "/api/stream/messages", {"limit": 200})
     messages = _items(page)
+    by_category = {
+        category: _category_items(base_url, category)
+        for category in (
+            "market",
+            "intelligence",
+            "risk",
+            "system",
+            "capital",
+        )
+    }
     categories = sorted(
-        {
-            str(item.get("category", ""))
-            for item in messages
-            if item.get("category")
-        }
+        category for category, values in by_category.items() if values
     )
-    primary = next(
-        (
-            item
-            for item in messages
-            if str(item.get("category", "")) in {"market", "intelligence"}
-        ),
-        messages[0] if messages else None,
+    primary = _annotated_category_item(
+        by_category,
+        ("market", "intelligence"),
     )
-    degraded = next(
-        (
-            item
-            for item in messages
-            if str(item.get("category", "")) in {"risk", "system"}
-        ),
-        None,
+    degraded = _annotated_category_item(
+        by_category,
+        ("risk", "system"),
     )
-    capital = next(
-        (item for item in messages if str(item.get("category", "")) == "capital"),
-        None,
-    )
+    capital = _annotated_category_item(by_category, ("capital",))
     return {
         "health": health,
         "message_count": len(messages),
         "categories": categories,
+        "observed_counts": {
+            category: len(values)
+            for category, values in by_category.items()
+        },
         "primary": primary,
         "degraded": degraded,
         "capital": capital,
@@ -314,7 +336,11 @@ def browser_probe(
     incoming_wait_seconds: int = 0,
 ) -> dict[str, object]:
     identity = _identity(item)
-    category = str(item.get("category", ""))
+    category = str(
+        item.get("category")
+        or item.get("_f9_observed_category")
+        or ""
+    )
     symbol = str(item.get("symbol", "")).strip()
     timeframe = str(item.get("timeframe", "")).strip()
     text_bundle = item.get("text")
