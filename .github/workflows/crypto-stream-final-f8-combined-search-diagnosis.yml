@@ -1,0 +1,41 @@
+name: Crypto Stream Final F8 Combined Search Diagnosis
+on:
+  push:
+    branches:
+      - 'accept/f8-combined-search-diagnosis'
+permissions:
+  contents: read
+jobs:
+  diagnose:
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          clean: true
+      - name: Query combined real Product filters
+        shell: bash
+        run: |
+          set -euo pipefail
+          PY="/Volumes/Crypto-504/Crypto-Signal/Development/.venv/bin/python"
+          "$PY" - <<'PY'
+          import json
+          import urllib.parse
+          import urllib.request
+
+          identity="292fff32aef2df8a30eea66069f2a36c9c8ccfcd8042d1518f0b7e7526271d74"
+          search="SOLUSDT 4h: Market/Geometry için ilk forward state kaydedildi — watch:bullish:no_geometry. Yön: bullish."
+          params=urllib.parse.urlencode({"text":search,"category":"market","limit":200})
+          url="http://127.0.0.1:48700/api/stream/messages?"+params
+          with urllib.request.urlopen(url,timeout=8) as response:
+              payload=json.loads(response.read().decode())
+          items=payload.get("page",{}).get("items",[])
+          ids=[row.get("narrative_identity") for row in items]
+          print("F8_COMBINED_QUERY_COUNT="+str(len(items)))
+          print("F8_COMBINED_QUERY_HAS_EXACT="+str(identity in ids))
+          print("F8_COMBINED_QUERY_IDS="+json.dumps(ids[:10]))
+          assert identity in ids,(url,ids)
+          print("F8_COMBINED_BACKEND_FILTER_PASS=YES")
+          print("REAL_CAPITAL=0")
+          PY
