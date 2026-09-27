@@ -185,19 +185,28 @@ class IntelligenceStreamSystemViewRuntime:
             for family in sorted(ConfluenceFamily, key=lambda item: item.value)
         )
         bullish_points = sum(
-            Decimal(str(item["weight_points"]))
-            for item in family_rows
-            if item["state"] == "observed" and item["direction"] == "bullish"
+            (
+                Decimal(str(item["weight_points"]))
+                for item in family_rows
+                if item["state"] == "observed" and item["direction"] == "bullish"
+            ),
+            Decimal("0"),
         )
         bearish_points = sum(
-            Decimal(str(item["weight_points"]))
-            for item in family_rows
-            if item["state"] == "observed" and item["direction"] == "bearish"
+            (
+                Decimal(str(item["weight_points"]))
+                for item in family_rows
+                if item["state"] == "observed" and item["direction"] == "bearish"
+            ),
+            Decimal("0"),
         )
         coverage_points = sum(
-            Decimal(str(item["weight_points"]))
-            for item in family_rows
-            if item["state"] in {"observed", "abstain"}
+            (
+                Decimal(str(item["weight_points"]))
+                for item in family_rows
+                if item["state"] in {"observed", "abstain"}
+            ),
+            Decimal("0"),
         )
 
         if event_risk_state == "event_block":
