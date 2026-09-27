@@ -16,6 +16,22 @@ const KIND_CONFIG = Object.freeze({
   proof: { label: "Proof", family: null, concept: "calibration" },
 });
 
+const FAMILY_ALIASES = Object.freeze({
+  geometry: Object.freeze(["geometry", "geometry_pa_elliott_harmonic"]),
+  liquidity: Object.freeze(["liquidity"]),
+  order_flow: Object.freeze(["order_flow", "order_flow_absorption"]),
+  derivatives: Object.freeze(["derivatives"]),
+  onchain: Object.freeze(["onchain", "onchain_smart_money"]),
+});
+
+const FAMILY_EVIDENCE_DOMAINS = Object.freeze({
+  geometry: Object.freeze(["geometry", "frozen_chart", "consumed_candles"]),
+  liquidity: Object.freeze(["liquidity", "liquidity_map", "order_book"]),
+  order_flow: Object.freeze(["order_flow", "order_flow_cvd", "public_trades", "order_book"]),
+  derivatives: Object.freeze(["derivatives"]),
+  onchain: Object.freeze(["onchain"]),
+});
+
 const title = document.getElementById("evidenceTitle");
 const identity = document.getElementById("evidenceIdentity");
 const content = document.getElementById("evidenceContent");
@@ -68,7 +84,12 @@ function section(label, body) {
 
 function familyContribution(fact, family) {
   const items = Array.isArray(fact?.family_contributions) ? fact.family_contributions : [];
-  return items.find((item) => item && item.family === family) || null;
+  const aliases = FAMILY_ALIASES[family] || [family];
+  return (
+    items.find(
+      (item) => item && aliases.includes(text(item.family, "").toLowerCase())
+    ) || null
+  );
 }
 
 function exactWhy(config, detail) {
@@ -287,7 +308,7 @@ function resolutionLabel(value) {
   return "UNAVAILABLE_EXPLICIT";
 }
 
-function renderExactEvidenceManifest(payload) {
+function renderExactEvidenceManifest(payload, detail = null) {
   const root = document.createElement("section");
   root.className = "evidence-popout-section f6-exact-evidence-manifest";
   const heading = document.createElement("h2");
@@ -306,9 +327,21 @@ function renderExactEvidenceManifest(payload) {
     )} · UNAVAILABLE_EXPLICIT ${number(counts.UNAVAILABLE_EXPLICIT, "0")}`;
   root.append(countLine);
 
-  const resolutions = Array.isArray(payload?.resolutions)
+  const allResolutions = Array.isArray(payload?.resolutions)
     ? payload.resolutions
     : [];
+  const acceptedDomains = new Set(FAMILY_EVIDENCE_DOMAINS[kind] || []);
+  const resolutions = acceptedDomains.size
+    ? allResolutions.filter((resolution) =>
+        acceptedDomains.has(text(resolution?.domain, "").toLowerCase())
+      )
+    : allResolutions;
+  if (acceptedDomains.size && !resolutions.length) {
+    const unavailable = document.createElement("p");
+    unavailable.textContent =
+      "UNAVAILABLE_EXPLICIT · Bu aile için exact domain kanıtı yok; current data ile ikame yapılmadı.";
+    root.append(unavailable);
+  }
   for (const resolution of resolutions) {
     const item = document.createElement("div");
     item.className = "evidence-popout-card";
@@ -340,9 +373,23 @@ function renderExactEvidenceManifest(payload) {
     root.append(item);
   }
 
-  const references = Array.isArray(payload?.reference_resolutions)
+  const allReferences = Array.isArray(payload?.reference_resolutions)
     ? payload.reference_resolutions
     : [];
+  const config = KIND_CONFIG[kind];
+  const family = config?.family
+    ? familyContribution(detail?.fact_bundle || {}, config.family)
+    : null;
+  const sourceIds = new Set(
+    Array.isArray(family?.source_evidence_identities)
+      ? family.source_evidence_identities
+      : []
+  );
+  const references = sourceIds.size
+    ? allReferences.filter((item) => sourceIds.has(item?.evidence_identity))
+    : acceptedDomains.size
+      ? []
+      : allReferences;
   if (references.length) {
     const refsHeading = document.createElement("h3");
     refsHeading.textContent = "Clickable exact identities";
@@ -397,7 +444,7 @@ function renderExactEvidenceManifest(payload) {
   return root;
 }
 
-async function renderDetachedExactEvidence() {
+async function renderDetachedExactEvidence(detail = null) {
   if (!content) return;
   let exactEvidence;
   try {
@@ -426,7 +473,7 @@ async function renderDetachedExactEvidence() {
     content.append(unavailable);
     return;
   }
-  content.append(renderExactEvidenceManifest(exactEvidence));
+  content.append(renderExactEvidenceManifest(exactEvidence, detail));
 }
 
 async function renderDetachedFrozenVisualProof() {
@@ -486,7 +533,7 @@ async function init() {
     }
     if (content) content.replaceChildren();
     renderCore(config, payload.detail);
-    await renderDetachedExactEvidence();
+    await renderDetachedExactEvidence(payload.detail);
     await renderDetachedFrozenVisualProof();
   } catch {
     if (content) {
