@@ -78,6 +78,14 @@ def parse_args() -> argparse.Namespace:
         nargs="+",
         default=list(DEFAULT_SYMBOLS),
     )
+    parser.add_argument(
+        "--bybit-ws-url",
+        default=None,
+        help=(
+            "explicit Bybit public spot WebSocket URL for the deployment "
+            "region; defaults to the adapter global endpoint"
+        ),
+    )
     parser.add_argument("--depth", type=int, default=50)
     parser.add_argument(
         "--orderbook-snapshot-interval-ms",
@@ -118,6 +126,16 @@ async def run(args: argparse.Namespace) -> int:
                 flush=True,
             )
             return 2
+
+    if args.bybit_ws_url is not None and not str(
+        args.bybit_ws_url
+    ).startswith("wss://"):
+        print(
+            "MARKET_TAPE_STREAM_ERROR=INVALID_BYBIT_WS_URL",
+            file=sys.stderr,
+            flush=True,
+        )
+        return 2
 
     if args.max_events < 0:
         print(
@@ -276,7 +294,9 @@ async def run(args: argparse.Namespace) -> int:
 
     emit_heartbeat()
     heartbeat_task = asyncio.create_task(heartbeat_loop())
-    stream = BybitSpotMicrostructureStream()
+    stream = BybitSpotMicrostructureStream(
+        url=args.bybit_ws_url,
+    )
     try:
         result = await persist_bybit_wire_stream(
             store=store,
