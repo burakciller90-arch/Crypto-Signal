@@ -401,7 +401,7 @@ PASS:
 
 ### MI4 — Family-specific clickable proof windows
 
-Status: **ACTIVE FRONTIER**
+Status: **PASS — accepted on main at `caeaf41256fe9f5d878d78f08374224e571798e4`; UID504 acceptance run `36332851225`.**
 
 Goal:
 - each family row opens its own proof/explanation window;
@@ -415,6 +415,8 @@ PASS:
 - no global bottom proof button remains.
 
 ### MI5 — Real desktop/mobile acceptance
+
+Status: **ACTIVE FRONTIER**
 
 Goal:
 - verify live Product behavior with real new Stream messages.
@@ -494,9 +496,11 @@ MI2 is accepted. The local model remains presentation-only and is now constraine
 
 MI3 is accepted. Canonical five-family decision messages now use the compact evidence-first expanded hierarchy with exact 20/25/25/15/15 weights and fail-closed unavailable states.
 
+MI4 is accepted. Each canonical family row now owns its exact/frozen proof interaction; family proof is fail-closed and only Geometry may draw the bound frozen chart.
+
 The exact next implementation frontier is:
 
-**MI4 — Family-specific clickable proof windows**
+**MI5 — Real desktop/mobile acceptance**
 
 Before coding MI4, mechanically re-check current `main`, open PRs, runtime state and any newer authority update.
 

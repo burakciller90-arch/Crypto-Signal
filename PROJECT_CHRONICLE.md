@@ -1,6 +1,23 @@
 # PROJECT CHRONICLE
 
 
+## 2026-09-27 — MI4 family-owned exact proof accepted; MI5 becomes active
+
+MI4 is mechanically accepted on main at `caeaf41256fe9f5d878d78f08374224e571798e4` through PR #1463.
+
+Each of the five canonical evidence rows is now the proof entry point for its own family. Geometry / Liquidity / Order Flow / Derivatives / On-chain no longer depend on a generic bottom proof CTA. Family proof rendering is fail-closed:
+- `READY_EXACT` when the selected family has exact bound proof;
+- `IDENTITY_ONLY_EXACT` when the exact identity exists but a bound visual/raw object is unavailable;
+- `UNAVAILABLE_EXPLICIT` when that family has no exact proof.
+
+Only Geometry is authorized to render the bound frozen OHLC chart. Other families show only their own scoped persisted identities/domain evidence and never substitute an unrelated current chart. Missing On-chain/other proof remains explicit and no chart is invented.
+
+Exact UID504 acceptance run `36332851225` passed the full Stream UI + visual-proof contract, Node syntax, canonical Development/Product non-mutation and project isolation. `REAL_CAPITAL=0`.
+
+MI4 is therefore PASS. The sole Message Intelligence frontier is now **MI5 — Real desktop/mobile acceptance**: prove the accepted hierarchy against real live Stream behavior in Chromium on desktop/mobile, including family-row interaction, exact proof opening, search/history/reconnect/sound continuity and no raw state-machine leakage.
+
+
+
 ## 2026-09-27 — MI3 five-family evidence summary accepted; MI4 becomes active
 
 MI3 is mechanically accepted on main at `4dc3c2a4ebdda513f2150313f74f0f06a3a47ec6` through PR #1459.
