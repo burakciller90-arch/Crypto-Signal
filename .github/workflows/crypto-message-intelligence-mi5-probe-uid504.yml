@@ -155,8 +155,13 @@ jobs:
               "/api/stream/messages",
               {"surface": "all", "limit": 200},
           )
+          decision_payload = get(
+              "/api/stream/messages",
+              {"surface": "all", "category": "decision", "limit": 200},
+          )
           primary = primary_payload.get("page", {}).get("items", [])
           all_items = all_payload.get("page", {}).get("items", [])
+          decision_items = decision_payload.get("page", {}).get("items", [])
           now_ms = int(time.time() * 1000)
 
           def age_ms(item):
@@ -183,7 +188,7 @@ jobs:
           assert not leaks, leaks
 
           genuine_decisions = []
-          for item in all_items:
+          for item in decision_items:
               identity = str(item.get("narrative_identity", ""))
               if len(identity) != 64:
                   continue
@@ -248,6 +253,7 @@ jobs:
               "selected_decision": selected_decision,
               "primary_count": len(primary),
               "all_count": len(all_items),
+              "decision_surface_count": len(decision_items),
               "primary_latest": [
                   {
                       "narrative_identity": item.get("narrative_identity"),
