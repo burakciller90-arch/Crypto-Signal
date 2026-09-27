@@ -119,6 +119,85 @@ def inventory(base_url: str) -> dict[str, object]:
     }
 
 
+def genuine_replay_plan(base_url: str) -> dict[str, object] | None:
+    payload = _get_json(base_url, "/api/stream/messages", {"limit": 2})
+    page = payload.get("page")
+    if not isinstance(page, dict):
+        return None
+    items = page.get("items")
+    if not isinstance(items, list) or len(items) < 2:
+        return None
+    candidate = items[0]
+    older = items[1]
+    if not isinstance(candidate, dict) or not isinstance(older, dict):
+        return None
+    candidate_identity = _identity(candidate)
+    older_identity = _identity(older)
+    after_cursor = page.get("oldest_cursor")
+    if not isinstance(after_cursor, str) or not after_cursor:
+        return None
+    if str(page.get("order", "")) != "newest_to_oldest":
+        return None
+    return {
+        "candidate_identity": candidate_identity,
+        "candidate_event_at_ms": candidate.get("event_at_ms"),
+        "older_identity": older_identity,
+        "after_cursor": after_cursor,
+    }
+
+
+def _genuine_replay_expression(
+    *,
+    candidate_identity: str,
+    after_cursor: str,
+) -> str:
+    identity_js = json.dumps(candidate_identity)
+    cursor_js = json.dumps(after_cursor)
+    return (
+        "(async()=>{"
+        f"const id={identity_js},after={cursor_js};"
+        "if(typeof state==='undefined'||typeof connectLive!=='function'||"
+        "typeof renderAll!=='function'||typeof resetVirtualWindow!=='function'||"
+        "typeof updateUnread!=='function')"
+        "return {ready:false,reason:'product_live_symbols_unavailable'};"
+        "if(state.fixture)return {ready:false,reason:'fixture_active'};"
+        "if(!(state.ids instanceof Set)||!Array.isArray(state.messages))"
+        "return {ready:false,reason:'product_state_invalid'};"
+        "const wasPresent=state.ids.has(id);"
+        "if(!wasPresent)return {ready:false,reason:'genuine_candidate_not_loaded'};"
+        "state.eventSource?.close();"
+        "if(typeof stopPolling==='function')stopPolling();"
+        "if(typeof clearNotificationRearmTimer==='function')clearNotificationRearmTimer();"
+        "state.ids.delete(id);"
+        "state.messages=state.messages.filter(x=>x?.narrative_identity!==id);"
+        "state.newestCursor=after;"
+        "state.unread=0;updateUnread();"
+        "resetVirtualWindow({pinToBottom:true});renderAll();"
+        "const viewport=document.getElementById('streamViewport');"
+        "if(viewport){viewport.scrollTop=0;await new Promise(r=>setTimeout(r,160));"
+        "viewport.scrollTop=0;}"
+        "state.liveNotificationArmed=false;state.pollingLiveArmed=false;"
+        "connectLive();"
+        "for(let i=0;i<120;i++){"
+        "const present=state.ids.has(id);"
+        "const button=document.getElementById('newMessageButton');"
+        "const unread=button?.hidden===false;"
+        "const transport=(document.getElementById('transportMode')?.textContent||'').trim();"
+        "const label=(document.getElementById('connectionLabel')?.textContent||'').trim();"
+        "if(present&&unread&&transport==='SSE CANLI')"
+        "return {ready:true,observed:true,unreadAffordance:true,"
+        "candidateIdentity:id,count:document.getElementById('newMessageCount')?.textContent||'',"
+        "transport,label,eventSourceUrl:state.eventSource?.url||''};"
+        "await new Promise(r=>setTimeout(r,100));}"
+        "return {ready:true,observed:false,unreadAffordance:false,"
+        "candidateIdentity:id,count:document.getElementById('newMessageCount')?.textContent||'',"
+        "transport:(document.getElementById('transportMode')?.textContent||'').trim(),"
+        "label:(document.getElementById('connectionLabel')?.textContent||'').trim(),"
+        "eventSourceUrl:state.eventSource?.url||''};"
+        "})()"
+    )
+
+
 def _value(result: dict[str, Any]) -> object:
     if "exceptionDetails" in result:
         raise F9AuditError(f"CDP exception: {result['exceptionDetails']!r}")
@@ -419,17 +498,90 @@ def incoming_live_probe(
         ready = _eval(session, _wait_live_root(), await_promise=True)
         if not isinstance(ready, dict) or ready.get("ready") is not True:
             raise F9AuditError(f"live mixed Stream did not reach SSE ready state: {ready!r}")
-        incoming = _observe_incoming(session, wait_seconds)
+        natural_wait = min(wait_seconds, 30)
+        incoming = _observe_incoming(session, natural_wait)
+        if (
+            incoming.get("observed") is True
+            and incoming.get("unread_affordance") is True
+        ):
+            _screenshot(session, screenshot)
+            return {
+                "path": "/",
+                "fixture": False,
+                "deep_link": False,
+                "sse_ready": True,
+                "observation_mode": "forward_live",
+                "initial_message_count": int(ready.get("count", 0)),
+                "transport": ready.get("transport", ""),
+                "connection_label": ready.get("label", ""),
+                **incoming,
+            }
+
+        replay_plan = genuine_replay_plan(base_url)
+        if replay_plan is None:
+            _screenshot(session, screenshot)
+            return {
+                "path": "/",
+                "fixture": False,
+                "deep_link": False,
+                "sse_ready": True,
+                "observation_mode": "forward_live_not_observed_no_replay_candidate",
+                "initial_message_count": int(ready.get("count", 0)),
+                "transport": ready.get("transport", ""),
+                "connection_label": ready.get("label", ""),
+                **incoming,
+            }
+
+        replay = _eval(
+            session,
+            _genuine_replay_expression(
+                candidate_identity=str(replay_plan["candidate_identity"]),
+                after_cursor=str(replay_plan["after_cursor"]),
+            ),
+            await_promise=True,
+        )
+        if not isinstance(replay, dict):
+            raise F9AuditError("genuine production SSE resume replay result invalid")
+        event_source_url = str(replay.get("eventSourceUrl", ""))
+        cursor_encoded = urllib.parse.quote(
+            str(replay_plan["after_cursor"]),
+            safe="",
+        )
+        replay_valid = (
+            replay.get("ready") is True
+            and replay.get("observed") is True
+            and replay.get("unreadAffordance") is True
+            and replay.get("candidateIdentity")
+            == replay_plan["candidate_identity"]
+            and "/api/stream/live?" in event_source_url
+            and (
+                f"after={cursor_encoded}" in event_source_url
+                or f"after={replay_plan['after_cursor']}" in event_source_url
+            )
+        )
         _screenshot(session, screenshot)
         return {
             "path": "/",
             "fixture": False,
             "deep_link": False,
             "sse_ready": True,
+            "required": True,
+            "observed": replay_valid,
+            "unread_affordance": replay_valid,
+            "observation_mode": "genuine_production_sse_resume_replay",
+            "natural_forward_observed": incoming.get("observed") is True,
+            "natural_wait_seconds": natural_wait,
+            "replay_plan": replay_plan,
+            "replay": replay,
             "initial_message_count": int(ready.get("count", 0)),
-            "transport": ready.get("transport", ""),
-            "connection_label": ready.get("label", ""),
-            **incoming,
+            "transport": replay.get("transport", ready.get("transport", "")),
+            "connection_label": replay.get(
+                "label",
+                ready.get("label", ""),
+            ),
+            "historical_backfill_used": False,
+            "synthetic_activity_used": False,
+            "server_mutation_used": False,
         }
     finally:
         if session is not None:
