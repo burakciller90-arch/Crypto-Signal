@@ -215,7 +215,7 @@ jobs:
 
           allowed_numbers={"0","82"}
           numeric_re = re.compile(
-              r"(?<![A-Za-z0-9_])\\$?(-?\\d[\\d,]*(?:\\.\\d+)?)(?:%)?(?![A-Za-z_])"
+              r"(?<![A-Za-z0-9_])\$?(-?\d[\d,]*(?:\.\d+)?)(?:%)?(?![A-Za-z_])"
           )
           for value in (candidate.collapsed_text, candidate.simple_text):
               found={
