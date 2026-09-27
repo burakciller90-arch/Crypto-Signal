@@ -5,7 +5,10 @@ from pathlib import Path
 
 import pytest
 
-from ops.run_market_tape_stream import monitor_ingestion_time
+from ops.run_market_tape_stream import (
+    _restart_seed_events,
+    monitor_ingestion_time,
+)
 from crypto_signal.data.market_data_gap_ledger import MarketDataGapLedger
 from crypto_signal.data.market_tape_collector_runtime import (
     MarketTapeCollectorRuntimeStore,
@@ -127,3 +130,73 @@ def test_market_tape_runner_keeps_environment_aware_websocket_proxy() -> None:
         "        url=args.bybit_ws_url,\n"
         "    )"
     ) in text
+
+
+def test_restart_seed_events_reads_only_latest_indexed_context(tmp_path) -> None:
+    raw = tmp_path / "raw.sqlite3"
+    with sqlite3.connect(raw) as db:
+        db.execute(
+            """
+            CREATE TABLE raw_market_events (
+                event_identity TEXT PRIMARY KEY,
+                exchange TEXT NOT NULL,
+                channel TEXT NOT NULL,
+                symbol TEXT NOT NULL,
+                event_kind TEXT NOT NULL,
+                source_timestamp_ms INTEGER NOT NULL,
+                event_at_ms INTEGER NOT NULL,
+                ingested_at_ms INTEGER NOT NULL,
+                sequence INTEGER NOT NULL,
+                update_id INTEGER NOT NULL,
+                payload_json TEXT NOT NULL
+            )
+            """
+        )
+        db.execute(
+            """
+            CREATE INDEX idx_raw_market_events_context
+            ON raw_market_events(
+                exchange, channel, symbol, event_at_ms, sequence, update_id
+            )
+            """
+        )
+        rows = [
+            ("1" * 64, "bybit", "orderbook.50", "BTCUSDT", "snapshot", 100, 100, 101, 1, 1, "{}"),
+            ("2" * 64, "bybit", "orderbook.50", "BTCUSDT", "delta", 200, 200, 201, 2, 2, "{}"),
+            ("3" * 64, "bybit", "publicTrade", "BTCUSDT", "trade_batch", 150, 150, 151, 3, 0, "{}"),
+        ]
+        db.executemany(
+            """
+            INSERT INTO raw_market_events(
+                event_identity, exchange, channel, symbol, event_kind,
+                source_timestamp_ms, event_at_ms, ingested_at_ms,
+                sequence, update_id, payload_json
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            rows,
+        )
+
+    events = _restart_seed_events(
+        raw,
+        symbols=("BTCUSDT",),
+        depth=50,
+    )
+
+    assert {(event.channel, event.event_at_ms) for event in events} == {
+        ("orderbook.50", 200),
+        ("publicTrade", 150),
+    }
+
+
+def test_restart_path_prefers_previous_heartbeat_before_heavy_counts() -> None:
+    runner = (
+        Path(__file__).resolve().parents[1]
+        / "ops"
+        / "run_market_tape_stream.py"
+    ).read_text(encoding="utf-8")
+
+    assert "previous_heartbeat = (" in runner
+    assert "baseline_normalized_rows_total = (" in runner
+    assert "previous_heartbeat.normalized_rows_total" in runner
+    assert "previous_heartbeat.raw_rows_total" in runner
+    assert "if previous_heartbeat is None:" in runner
