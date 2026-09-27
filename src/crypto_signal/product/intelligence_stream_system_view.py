@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import sqlite3
 from dataclasses import dataclass
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from enum import StrEnum
 from pathlib import Path
 from typing import Any
@@ -14,10 +14,10 @@ from crypto_signal.product.intelligence_stream_family import (
     StreamFamilySnapshot,
     StreamTrustDomain,
 )
+from crypto_signal.product.intelligence_stream_models import REAL_CAPITAL
 from crypto_signal.product.intelligence_stream_narrative_ledger import (
     IntelligenceStreamNarrativeLedger,
 )
-from crypto_signal.product.intelligence_stream_models import REAL_CAPITAL
 
 STREAM_SYSTEM_VIEW_SCHEMA_VERSION = "intelligence-stream-system-view-message-v1/1"
 STREAM_SYSTEM_VIEW_LEDGER_SCHEMA_VERSION = "intelligence-stream-system-view-ledger-v1/1"
@@ -190,7 +190,7 @@ class IntelligenceStreamSystemViewRuntime:
                 for item in family_rows
                 if item["state"] == "observed" and item["direction"] == "bullish"
             ),
-            Decimal("0"),
+            Decimal(0),
         )
         bearish_points = sum(
             (
@@ -198,7 +198,7 @@ class IntelligenceStreamSystemViewRuntime:
                 for item in family_rows
                 if item["state"] == "observed" and item["direction"] == "bearish"
             ),
-            Decimal("0"),
+            Decimal(0),
         )
         coverage_points = sum(
             (
@@ -206,7 +206,7 @@ class IntelligenceStreamSystemViewRuntime:
                 for item in family_rows
                 if item["state"] in {"observed", "abstain"}
             ),
-            Decimal("0"),
+            Decimal(0),
         )
 
         if event_risk_state == "event_block":
@@ -782,7 +782,7 @@ def verified_system_view_record(
         raise ValueError("Stream system view REAL_CAPITAL mismatch")
     semantic_identity = payload.get("semantic_identity")
     if not isinstance(semantic_identity, str):
-        raise ValueError("Stream system-view semantic identity missing")
+        raise TypeError("Stream system-view semantic identity missing")
     _require_sha256(semantic_identity, "system-view semantic identity")
     return payload
 
@@ -818,7 +818,7 @@ def _zone_text(zone: dict[str, Any]) -> str:
 def _price_text(value: Any) -> str:
     try:
         decimal = Decimal(str(value))
-    except Exception:
+    except InvalidOperation:
         return "—"
     if decimal == decimal.to_integral():
         return f"${decimal:,.0f}"
