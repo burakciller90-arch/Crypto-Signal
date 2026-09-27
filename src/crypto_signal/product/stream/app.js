@@ -733,6 +733,244 @@ function familyContribution(detail, family) {
   );
 }
 
+const EXACT_EVIDENCE_STATES = Object.freeze([
+  "READY_EXACT",
+  "IDENTITY_ONLY_EXACT",
+  "UNAVAILABLE_EXPLICIT",
+]);
+
+function exactEvidenceState(value) {
+  const normalized = text(value, "UNAVAILABLE_EXPLICIT");
+  return EXACT_EVIDENCE_STATES.includes(normalized)
+    ? normalized
+    : "UNAVAILABLE_EXPLICIT";
+}
+
+function exactEvidenceStateLabel(value) {
+  const stateValue = exactEvidenceState(value);
+  if (stateValue === "READY_EXACT") return "HAZIR EXACT KANIT";
+  if (stateValue === "IDENTITY_ONLY_EXACT") return "EXACT KİMLİK VAR";
+  return "KANIT MEVCUT DEĞİL";
+}
+
+function evidenceFamilyConfig(kind) {
+  return DECISION_EVIDENCE_FAMILIES.find(
+    (item) => item.evidenceKind === kind
+  ) || null;
+}
+
+function familyExactResolutions(kind, exactEvidence) {
+  const config = evidenceFamilyConfig(kind);
+  if (!config) return [];
+  const resolutions = Array.isArray(exactEvidence?.resolutions)
+    ? exactEvidence.resolutions
+    : [];
+  return resolutions.filter((item) =>
+    config.exactDomains.includes(text(item?.domain, "").toLowerCase())
+  );
+}
+
+function strongestExactEvidenceState(resolutions) {
+  const states = new Set(
+    resolutions.map((item) => exactEvidenceState(item?.resolution_state))
+  );
+  if (states.has("READY_EXACT")) return "READY_EXACT";
+  if (states.has("IDENTITY_ONLY_EXACT")) return "IDENTITY_ONLY_EXACT";
+  return "UNAVAILABLE_EXPLICIT";
+}
+
+function exactDomainLabel(value) {
+  const labels = {
+    geometry: "Piyasa yapısı",
+    frozen_chart: "Dondurulmuş grafik",
+    consumed_candles: "Dondurulmuş mumlar",
+    liquidity: "Likidite",
+    liquidity_map: "Likidite haritası",
+    order_book: "Order Book",
+    order_flow: "Emir Akışı",
+    order_flow_cvd: "CVD / emir akışı",
+    public_trades: "Gerçekleşen işlemler",
+    derivatives: "Türevler",
+    onchain: "On-chain",
+    onchain_smart_money: "On-chain",
+  };
+  const key = text(value, "").toLowerCase();
+  return labels[key] || text(value, "Kanıt").replaceAll("_", " ");
+}
+
+function exactObjectKindLabel(value) {
+  const labels = {
+    market_tape_orderbook: "Dondurulmuş Order Book",
+    market_tape_trade: "Dondurulmuş gerçekleşen işlem",
+    market_tape_derivatives: "Dondurulmuş türev gözlemi",
+    signal_freeze: "Dondurulmuş sinyal",
+    decision_freeze_bundle: "Dondurulmuş karar paketi",
+  };
+  return labels[text(value, "").toLowerCase()] || "Persisted exact nesne";
+}
+
+function familyEvidencePlainExplanation(kind, detail, exactEvidence) {
+  const config = evidenceFamilyConfig(kind);
+  if (!config) return "Bu pencere yalnız exact persisted kanıtı gösterir.";
+  const fact = detail?.fact_bundle || {};
+  const contribution = decisionEvidenceContribution(fact, config);
+  const presentation = familyEvidencePresentation(contribution, config);
+  const resolutions = familyExactResolutions(kind, exactEvidence);
+  const exactState = strongestExactEvidenceState(resolutions);
+
+  if (presentation.state === "unavailable") {
+    return config.label
+      + " için bu mesajda ölçülmüş aile katkısı yok. Kanıt üretilmedi veya güncel veriyle geçmiş kanıt taklit edilmedi.";
+  }
+  if (exactState === "READY_EXACT") {
+    return config.label
+      + " bu mesajda " + presentation.score
+      + " katkı gösteriyor. Aşağıda yalnız bu mesaja bağlı dondurulmuş/exact kaynaklar gösteriliyor.";
+  }
+  if (exactState === "IDENTITY_ONLY_EXACT") {
+    return config.label
+      + " bu mesajda " + presentation.score
+      + " katkı gösteriyor. Exact kanıt kimliği bağlı, ancak bu runtime kaynak nesneyi görselleştiremiyor.";
+  }
+  return config.label
+    + " bu mesajda " + presentation.score
+    + " katkı gösteriyor; fakat aileye özgü exact kaynak bu runtime'da mevcut değil. Grafik veya kanıt uydurulmadı.";
+}
+
+function familyExactEvidencePanel(kind, detail, exactEvidence, narrativeIdentity) {
+  const config = evidenceFamilyConfig(kind);
+  const panel = document.createElement("section");
+  panel.className = "window-section family-exact-evidence";
+  if (!config) return panel;
+
+  const heading = document.createElement("h4");
+  heading.textContent = config.label + " · exact kanıt";
+  const explanation = document.createElement("p");
+  explanation.textContent = familyEvidencePlainExplanation(
+    kind,
+    detail,
+    exactEvidence
+  );
+  panel.append(heading, explanation);
+
+  const resolutions = familyExactResolutions(kind, exactEvidence);
+  const rows = resolutions.length
+    ? resolutions
+    : [{
+        domain: config.key,
+        resolution_state: "UNAVAILABLE_EXPLICIT",
+        evidence_identities: [],
+        capabilities: {},
+      }];
+
+  const manifest = document.createElement("div");
+  manifest.className = "family-exact-manifest";
+  for (const resolution of rows) {
+    const row = document.createElement("div");
+    row.className = "family-exact-resolution";
+    const stateValue = exactEvidenceState(resolution?.resolution_state);
+    row.dataset.resolutionState = stateValue;
+
+    const domain = document.createElement("span");
+    domain.textContent = exactDomainLabel(resolution?.domain);
+    const stateLabel = document.createElement("strong");
+    stateLabel.textContent = exactEvidenceStateLabel(stateValue);
+    row.append(domain, stateLabel);
+
+    const capabilities =
+      resolution?.capabilities && typeof resolution.capabilities === "object"
+        ? resolution.capabilities
+        : {};
+    const unavailableCapabilities = Object.entries(capabilities)
+      .filter(([, capabilityState]) =>
+        exactEvidenceState(capabilityState) === "UNAVAILABLE_EXPLICIT"
+      )
+      .map(([name]) => name.replaceAll("_", " "));
+    if (unavailableCapabilities.length) {
+      const note = document.createElement("small");
+      note.textContent =
+        "Bu kanıtta mevcut değil: "
+        + unavailableCapabilities.join(", ")
+        + ".";
+      row.append(note);
+    }
+    manifest.append(row);
+  }
+  panel.append(manifest);
+
+  const selectedIds = [
+    ...new Set(
+      rows.flatMap((item) =>
+        Array.isArray(item?.evidence_identities)
+          ? item.evidence_identities.filter(exactSha256)
+          : []
+      )
+    ),
+  ];
+  const references = Array.isArray(exactEvidence?.reference_resolutions)
+    ? exactEvidence.reference_resolutions
+    : [];
+  const byIdentity = new Map(
+    references
+      .filter((item) => exactSha256(item?.evidence_identity))
+      .map((item) => [item.evidence_identity, item])
+  );
+
+  if (selectedIds.length) {
+    const sources = document.createElement("div");
+    sources.className = "family-exact-sources";
+    for (const [index, evidenceIdentity] of selectedIds.slice(0, 8).entries()) {
+      const reference = byIdentity.get(evidenceIdentity) || {};
+      const line = document.createElement("div");
+      line.className = "family-exact-source";
+
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "window-secondary-action";
+      button.textContent =
+        "Kaynak " + (index + 1) + " · "
+        + exactEvidenceStateLabel(reference?.resolution_state);
+      const result = document.createElement("span");
+      result.className = "window-action-result";
+
+      button.addEventListener("click", async () => {
+        button.disabled = true;
+        result.textContent = "Exact persisted kaynak doğrulanıyor…";
+        try {
+          const payload = await fetchJson(
+            API.evidenceReference(narrativeIdentity, evidenceIdentity)
+          );
+          const found = payload?.reference || {};
+          const foundState = exactEvidenceState(found?.resolution_state);
+          result.textContent =
+            foundState === "READY_EXACT"
+              ? exactEvidenceStateLabel(foundState)
+                + " · " + exactObjectKindLabel(found?.object_kind)
+              : foundState === "IDENTITY_ONLY_EXACT"
+                ? "EXACT KİMLİK VAR · kaynak nesne resolver'ı bu runtime'da bağlı değil."
+                : "KANIT MEVCUT DEĞİL · bu kimlik aile kanıtı olarak çözülemedi.";
+        } catch {
+          result.textContent =
+            "Exact kaynak okunamadı; current data ile ikame yapılmadı.";
+        } finally {
+          button.disabled = false;
+        }
+      });
+      line.append(button, result);
+      sources.append(line);
+    }
+    panel.append(sources);
+  } else {
+    const unavailable = document.createElement("div");
+    unavailable.className = "family-exact-unavailable";
+    unavailable.textContent =
+      "UNAVAILABLE_EXPLICIT · Bu aile için bağlı exact kaynak kimliği yok; kanıt üretilmedi.";
+    panel.append(unavailable);
+  }
+
+  return panel;
+}
+
 function evidenceWindowSpecificWhy(kind, detail) {
   const config = EVIDENCE_WINDOW_KINDS[kind];
   const fact = detail?.fact_bundle || {};
