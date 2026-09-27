@@ -331,7 +331,6 @@ async def run(args: argparse.Namespace) -> int:
                 file=sys.stderr,
                 flush=True,
             )
-            effective_ingestion_ms = last_ingestion_ms
         last_ingestion_ms = effective_ingestion_ms
         last_observed_messages = observed_messages
         gap_monitor.observe_persisted_event(
