@@ -118,6 +118,25 @@ const EVIDENCE_WINDOW_KINDS = Object.freeze({
   proof: { label: "Proof", family: null, concept: "calibration" },
 });
 
+const FAMILY_EVIDENCE_SUMMARY = Object.freeze([
+  { kind: "geometry", family: "geometry_pa_elliott_harmonic", label: "Geometri", maxPoints: 20 },
+  { kind: "liquidity", family: "liquidity", label: "Likidite", maxPoints: 25 },
+  { kind: "order_flow", family: "order_flow_absorption", label: "Emir Akışı", maxPoints: 25 },
+  { kind: "derivatives", family: "derivatives", label: "Türevler", maxPoints: 15 },
+  { kind: "onchain", family: "onchain_smart_money", label: "On-chain", maxPoints: 15 },
+]);
+
+const FAMILY_ALIASES = Object.freeze({
+  geometry: "geometry",
+  geometry_pa_elliott_harmonic: "geometry",
+  liquidity: "liquidity",
+  order_flow: "order_flow",
+  order_flow_absorption: "order_flow",
+  derivatives: "derivatives",
+  onchain: "onchain",
+  onchain_smart_money: "onchain",
+});
+
 function text(value, fallback = "—") {
   if (value === null || value === undefined || value === "") return fallback;
   return String(value);
@@ -312,15 +331,20 @@ function displayNumber(value, fallback = "—") {
   return new Intl.NumberFormat("tr-TR", { maximumFractionDigits: 2 }).format(n);
 }
 
+function normalizeFamilyKind(value) {
+  const raw = text(value, "").toLowerCase();
+  return FAMILY_ALIASES[raw] || raw;
+}
+
 function familyLabel(value) {
   const labels = {
     geometry: "Geometri",
     liquidity: "Likidite",
-    order_flow: "Emir akışı",
+    order_flow: "Emir Akışı",
     derivatives: "Türevler",
     onchain: "On-chain",
   };
-  const key = text(value, "").toLowerCase();
+  const key = normalizeFamilyKind(value);
   return labels[key] || text(value, "Kanıt");
 }
 
@@ -471,7 +495,10 @@ function exactSha256(value) {
 function familyContribution(detail, family) {
   const fact = detail && typeof detail.fact_bundle === "object" ? detail.fact_bundle : {};
   const families = Array.isArray(fact?.family_contributions) ? fact.family_contributions : [];
-  return families.find((item) => item && item.family === family) || null;
+  const expected = normalizeFamilyKind(family);
+  return families.find(
+    (item) => item && normalizeFamilyKind(item.family) === expected
+  ) || null;
 }
 
 function evidenceWindowSpecificWhy(kind, detail) {
