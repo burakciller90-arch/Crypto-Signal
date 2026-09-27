@@ -57,6 +57,7 @@ async def freeze_coverage_context(
         return await freeze_live_provider(
             adapter=adapter,
             ledger=ledger,
+            candle_store=candle_store,
             symbol=context.symbol,
             timeframe=context.timeframe,
             limit=context.freeze_limit,
