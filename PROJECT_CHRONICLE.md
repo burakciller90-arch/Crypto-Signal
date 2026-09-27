@@ -1,6 +1,42 @@
 # PROJECT CHRONICLE
 
 
+## 2026-09-27 — Message Intelligence & Family Evidence UX V1 accepted; MI frontier closed
+
+The user-approved MI0-MI6 refinement is mechanically complete.
+
+Final implementation main:
+- MI1 customer composition / primary surface: `a2c317bbee1b325500b909bbe970750370a17eda` and `28fa1c208e9e66173214a8bdfaa33cea4bbfe935`;
+- MI2 guarded analyst-brief rewrite: `20c1c18c3253254555708e0cbcc0c52cc04ae784`;
+- MI3 compact five-family summary: `4dc3c2a4ebdda513f2150313f74f0f06a3a47ec6`;
+- MI4 family-owned proof windows: `caeaf41256fe9f5d878d78f08374224e571798e4`;
+- MI5 forward-only live system-view + exact source-family lineage + browser acceptance tooling: `93d9b1edfaf0267b6873f3aaaa2eb9e6dd455af0`.
+
+Product deploy run `36337341847` moved Development/Product to the exact MI5 main and passed health/runtime-topology checks with no rollback.
+
+A natural post-deploy live cycle produced `system_view_updated` rows. Final UID504 run `36338498776` then proved:
+- live primary system-view present;
+- exactly five family rows;
+- score semantic `weighted_directional_family_vote_not_probability`;
+- no raw state-machine vocabulary leak;
+- desktop and mobile real Chromium acceptance;
+- all five rows open their own family proof context;
+- no generic global proof button;
+- search/filter/sound/settings/history controls remain;
+- fail-closed exact proof semantics;
+- canonical checkouts non-mutating;
+- `REAL_CAPITAL=0`.
+
+Artifact: `message-intelligence-mi5-probe-36338498776`, id `10937634080`, digest `sha256:8cb546390232c22321e0e33334bd50c78f36cb48580b4258c2d532221aeb3909`.
+
+Canonical final authority: `docs/CRYPTO_SIGNAL_MESSAGE_INTELLIGENCE_FINAL_ACCEPTANCE.md`.
+
+Final status: **MESSAGE_INTELLIGENCE_FAMILY_EVIDENCE_UX_V1_ACCEPTED**.
+
+There is no remaining active MI phase. Capital/Portfolio, new screens, calibration/policy changes or other frontend redesign are new scope. Durdurulmaz and all other projects remain untouched.
+
+
+
 ## 2026-09-27 — MI4 family-owned exact proof accepted; MI5 becomes active
 
 MI4 is mechanically accepted on main at `caeaf41256fe9f5d878d78f08374224e571798e4` through PR #1463.
