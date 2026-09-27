@@ -318,15 +318,6 @@ function renderExactEvidenceManifest(payload, detail = null) {
     "Her kanıt referansı yalnız üç mekanik durumda gösterilir: READY_EXACT, IDENTITY_ONLY_EXACT veya UNAVAILABLE_EXPLICIT. Current market verisiyle geçmiş kanıt yeniden kurulmaz.";
   root.append(heading, intro);
 
-  const counts = payload?.resolution_counts || {};
-  const countLine = document.createElement("p");
-  countLine.textContent =
-    `READY_EXACT ${number(counts.READY_EXACT, "0")} · IDENTITY_ONLY_EXACT ${number(
-      counts.IDENTITY_ONLY_EXACT,
-      "0"
-    )} · UNAVAILABLE_EXPLICIT ${number(counts.UNAVAILABLE_EXPLICIT, "0")}`;
-  root.append(countLine);
-
   const allResolutions = Array.isArray(payload?.resolutions)
     ? payload.resolutions
     : [];
@@ -336,6 +327,20 @@ function renderExactEvidenceManifest(payload, detail = null) {
         acceptedDomains.has(text(resolution?.domain, "").toLowerCase())
       )
     : allResolutions;
+  const scopedCounts = {
+    READY_EXACT: 0,
+    IDENTITY_ONLY_EXACT: 0,
+    UNAVAILABLE_EXPLICIT: 0,
+  };
+  for (const resolution of resolutions) {
+    const state = resolutionLabel(resolution?.resolution_state);
+    scopedCounts[state] += 1;
+  }
+  const countLine = document.createElement("p");
+  countLine.textContent =
+    `READY_EXACT ${scopedCounts.READY_EXACT} · IDENTITY_ONLY_EXACT ${scopedCounts.IDENTITY_ONLY_EXACT} · UNAVAILABLE_EXPLICIT ${scopedCounts.UNAVAILABLE_EXPLICIT}`;
+  root.append(countLine);
+
   if (acceptedDomains.size && !resolutions.length) {
     const unavailable = document.createElement("p");
     unavailable.textContent =
@@ -392,7 +397,7 @@ function renderExactEvidenceManifest(payload, detail = null) {
       : allReferences;
   if (references.length) {
     const refsHeading = document.createElement("h3");
-    refsHeading.textContent = "Clickable exact identities";
+    refsHeading.textContent = "Bu aileye bağlı exact kimlikler";
     root.append(refsHeading);
   }
   for (const reference of references.slice(0, 64)) {
