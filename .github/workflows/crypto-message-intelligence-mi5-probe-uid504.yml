@@ -1,0 +1,286 @@
+name: Crypto Message Intelligence MI5 Probe UID504
+
+on:
+  push:
+    branches:
+      - 'feat/message-intelligence-mi5-*'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: crypto-message-intelligence-mi5-probe-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  live-readonly-probe:
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+
+      - name: Start exact-head ephemeral Product on real runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          DEV="$ROOT/Development"
+          PRODUCT="$ROOT/Product"
+          RUNTIME="$DEV/runtime"
+          BASE_PY="$DEV/.venv/bin/python"
+          VENV="$RUNNER_TEMP/mi5-probe-venv"
+          PORT=48750
+          OUT="$RUNNER_TEMP/mi5-probe"
+          mkdir -p "$OUT"
+
+          test "$(id -u)" = "504"
+          test -x "$BASE_PY"
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test -z "$(git -C "$DEV" status --porcelain)"
+          test -z "$(git -C "$PRODUCT" status --porcelain)"
+          echo "DEV_HEAD_BEFORE=$(git -C "$DEV" rev-parse HEAD)" > "$OUT/state.txt"
+          echo "PRODUCT_HEAD_BEFORE=$(git -C "$PRODUCT" rev-parse HEAD)" >> "$OUT/state.txt"
+
+          if /usr/sbin/lsof -nP -iTCP:$PORT -sTCP:LISTEN >/dev/null 2>&1; then
+            echo "MI5_PROBE_PORT_ALREADY_IN_USE=$PORT"
+            exit 79
+          fi
+
+          rm -rf "$VENV"
+          "$BASE_PY" -m venv "$VENV"
+          "$VENV/bin/python" -m pip install --upgrade pip
+          "$VENV/bin/python" -m pip install -e "$GITHUB_WORKSPACE"
+
+          (
+            export PYTHONPATH="$GITHUB_WORKSPACE:$GITHUB_WORKSPACE/src"
+            exec "$VENV/bin/python" "$GITHUB_WORKSPACE/ops/run_dashboard.py" \
+              --host 127.0.0.1 \
+              --port "$PORT" \
+              --product-root stream \
+              --ledger "$RUNTIME/ledger/live_signal_ledger.sqlite3" \
+              --alert-outbox "$RUNTIME/alerts/alert_outbox.sqlite3" \
+              --paper-ledger "$RUNTIME/paper/paper_fund.sqlite3" \
+              --candle-cache "$RUNTIME/data/live_base_15m_cache.sqlite3" \
+              --decision-evidence "$RUNTIME/decision/decision_evidence.sqlite3" \
+              --epoch2-ledger "$RUNTIME/paper/paper_fund_epoch2.sqlite3" \
+              --market-tape "$RUNTIME/market_tape/market_tape.sqlite3" \
+              --market-tape-collector-runtime "$RUNTIME/market_tape/collector_runtime.sqlite3" \
+              --provider-divergence "$RUNTIME/data/provider_divergence.sqlite3" \
+              --event-source-runtime "$RUNTIME/events/event_source.sqlite3" \
+              --wc2-cohort "$RUNTIME/wc2/wc2_untouched_forward.sqlite3" \
+              --stream-ledger "$RUNTIME/stream/intelligence_stream.sqlite3" \
+              >"$OUT/server.out" 2>"$OUT/server.err"
+          ) &
+          PID=$!
+          echo "SERVER_PID=$PID" >> "$OUT/state.txt"
+          echo "MI5_PROBE_PORT=$PORT" >> "$GITHUB_ENV"
+          echo "MI5_PROBE_OUT=$OUT" >> "$GITHUB_ENV"
+          echo "MI5_PROBE_VENV=$VENV" >> "$GITHUB_ENV"
+
+          for _ in {1..80}; do
+            if curl -fsS --max-time 2 "http://127.0.0.1:$PORT/api/health" > "$OUT/health.json"; then
+              break
+            fi
+            kill -0 "$PID" 2>/dev/null || {
+              cat "$OUT/server.err" >&2 || true
+              exit 79
+            }
+            sleep 0.25
+          done
+          curl -fsS --max-time 3 "http://127.0.0.1:$PORT/api/health" >/dev/null
+
+          echo "MI5_EPHEMERAL_EXACT_HEAD_SERVER_PASS=YES"
+          echo "REAL_CAPITAL=0"
+
+      - name: Probe real primary Stream and genuine decision inventory
+        shell: bash
+        run: |
+          set -euo pipefail
+          PORT="$MI5_PROBE_PORT"
+          OUT="$MI5_PROBE_OUT"
+          "$MI5_PROBE_VENV/bin/python" - "$PORT" "$OUT/report.json" <<'PY'
+          import json
+          import sys
+          import time
+          import urllib.parse
+          import urllib.request
+
+          port = int(sys.argv[1])
+          output = sys.argv[2]
+          base = f"http://127.0.0.1:{port}"
+
+          def get(path, params=None):
+              url = base + path
+              if params:
+                  url += "?" + urllib.parse.urlencode(params)
+              with urllib.request.urlopen(url, timeout=10) as response:
+                  return json.loads(response.read().decode("utf-8"))
+
+          health = get("/api/health")
+          assert health["status"] == "ok", health
+          assert health["stream_root_active"] is True, health
+          assert health["read_only"] is True, health
+          assert health["real_capital"] == 0, health
+
+          primary_payload = get(
+              "/api/stream/messages",
+              {"surface": "primary", "limit": 200},
+          )
+          all_payload = get(
+              "/api/stream/messages",
+              {"surface": "all", "limit": 200},
+          )
+          primary = primary_payload.get("page", {}).get("items", [])
+          all_items = all_payload.get("page", {}).get("items", [])
+          now_ms = int(time.time() * 1000)
+
+          def age_ms(item):
+              try:
+                  return max(0, now_ms - int(item.get("event_at_ms", 0)))
+              except Exception:
+                  return None
+
+          raw_tokens = (
+              "sell_pressure",
+              "buy_pressure",
+              "state değişti",
+              "measured:",
+              "bid_side_liquidity_take_candidate",
+              "ask_side_liquidity_take_candidate",
+              "→",
+          )
+          leaks = []
+          for item in primary:
+              text_payload = item.get("text") if isinstance(item.get("text"), dict) else {}
+              collapsed = str(text_payload.get("collapsed_text", "")).casefold()
+              if any(token.casefold() in collapsed for token in raw_tokens):
+                  leaks.append(item.get("narrative_identity"))
+          assert not leaks, leaks
+
+          genuine_decisions = []
+          for item in all_items:
+              identity = str(item.get("narrative_identity", ""))
+              if len(identity) != 64:
+                  continue
+              detail_payload = get(f"/api/stream/messages/{identity}/detail")
+              detail = detail_payload.get("detail")
+              if not isinstance(detail, dict):
+                  continue
+              fact = detail.get("fact_bundle")
+              if not isinstance(fact, dict):
+                  continue
+              families = fact.get("family_contributions")
+              if not isinstance(families, list) or len(families) < 5:
+                  continue
+              analytical = detail.get("analytical_view")
+              if not isinstance(analytical, dict):
+                  continue
+              genuine_decisions.append({
+                  "narrative_identity": identity,
+                  "event_at_ms": item.get("event_at_ms"),
+                  "age_ms": age_ms(item),
+                  "category": item.get("category"),
+                  "subtype": item.get("subtype"),
+                  "symbol": item.get("symbol"),
+                  "timeframe": item.get("timeframe"),
+                  "family_count": len(families),
+                  "stance": (
+                      analytical.get("stance", {}).get("effective_stance")
+                      if isinstance(analytical.get("stance"), dict)
+                      else None
+                  ),
+              })
+              if len(genuine_decisions) >= 10:
+                  break
+
+          report = {
+              "health": health,
+              "primary_count": len(primary),
+              "all_count": len(all_items),
+              "primary_latest": [
+                  {
+                      "narrative_identity": item.get("narrative_identity"),
+                      "event_at_ms": item.get("event_at_ms"),
+                      "age_ms": age_ms(item),
+                      "category": item.get("category"),
+                      "subtype": item.get("subtype"),
+                      "symbol": item.get("symbol"),
+                      "timeframe": item.get("timeframe"),
+                      "collapsed_text": (
+                          item.get("text", {}).get("collapsed_text")
+                          if isinstance(item.get("text"), dict)
+                          else None
+                      ),
+                  }
+                  for item in primary[:12]
+              ],
+              "raw_primary_leaks": leaks,
+              "genuine_decisions": genuine_decisions,
+              "genuine_decision_count_scanned": len(genuine_decisions),
+              "real_capital": 0,
+          }
+          with open(output, "w", encoding="utf-8") as handle:
+              json.dump(report, handle, ensure_ascii=False, indent=2)
+
+          print("MI5_PRIMARY_COUNT=" + str(len(primary)))
+          print("MI5_ALL_COUNT=" + str(len(all_items)))
+          if primary:
+              print("MI5_PRIMARY_LATEST_AGE_MS=" + str(age_ms(primary[0])))
+              print("MI5_PRIMARY_LATEST_TEXT=" + str(
+                  primary[0].get("text", {}).get("collapsed_text", "")
+                  if isinstance(primary[0].get("text"), dict)
+                  else ""
+              ))
+          else:
+              print("MI5_PRIMARY_LATEST_AGE_MS=NONE")
+          print("MI5_GENUINE_DECISION_COUNT=" + str(len(genuine_decisions)))
+          if genuine_decisions:
+              print("MI5_GENUINE_DECISION_ID=" + genuine_decisions[0]["narrative_identity"])
+              print("MI5_GENUINE_DECISION_AGE_MS=" + str(genuine_decisions[0]["age_ms"]))
+          print("MI5_PRIMARY_RAW_TELEMETRY_LEAK=NO")
+          print("MI5_READONLY_PROBE_PASS=YES")
+          print("REAL_CAPITAL=0")
+          PY
+
+          cat "$OUT/report.json"
+
+      - name: Upload probe artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: message-intelligence-mi5-probe-${{ github.run_id }}
+          path: ${{ env.MI5_PROBE_OUT }}
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Stop ephemeral server and prove no canonical mutation
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          OUT="$MI5_PROBE_OUT"
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          DEV="$ROOT/Development"
+          PRODUCT="$ROOT/Product"
+          PID="$(sed -n 's/^SERVER_PID=//p' "$OUT/state.txt")"
+          if [[ -n "$PID" ]]; then
+            kill "$PID" 2>/dev/null || true
+            for _ in {1..20}; do
+              kill -0 "$PID" 2>/dev/null || break
+              sleep 0.1
+            done
+            kill -KILL "$PID" 2>/dev/null || true
+          fi
+
+          DEV_BEFORE="$(sed -n 's/^DEV_HEAD_BEFORE=//p' "$OUT/state.txt")"
+          PRODUCT_BEFORE="$(sed -n 's/^PRODUCT_HEAD_BEFORE=//p' "$OUT/state.txt")"
+          test -z "$(git -C "$DEV" status --porcelain)"
+          test -z "$(git -C "$PRODUCT" status --porcelain)"
+          test "$(git -C "$DEV" rev-parse HEAD)" = "$DEV_BEFORE"
+          test "$(git -C "$PRODUCT" rev-parse HEAD)" = "$PRODUCT_BEFORE"
+          echo "MI5_PROBE_NON_MUTATING_PASS=YES"
+          echo "REAL_CAPITAL=0"
