@@ -1907,6 +1907,22 @@ function buildExpandedContent(record, detail) {
     ? detail.analytical_view
     : {};
 
+  if (hasDecisionEvidenceMatrix(fact)) {
+    const decisionGrid = document.createElement("div");
+    decisionGrid.className = "message-depth-grid message-decision-evidence-grid";
+    decisionGrid.append(
+      depthSection("KARAR ÖZETİ", "", {
+        className: "depth-decision depth-wide",
+        content: currentViewSummary(analytical, fact),
+      }),
+      depthSection("5 KANIT AİLESİ", "", {
+        className: "depth-intelligence depth-wide",
+        content: familyEvidenceSummaryTable(fact),
+      })
+    );
+    return decisionGrid;
+  }
+
   const grid = document.createElement("div");
   grid.className = "message-depth-grid";
 
