@@ -188,6 +188,21 @@ def test_local_rewriter_emits_bounded_openai_compatible_request() -> None:
     }
 
 
+def test_local_rewriter_rejects_noop_rewrite() -> None:
+    baseline = _baseline_text()
+    transport = _CapturingTransport(_completion_response(baseline))
+    rewriter = OpenAICompatibleLocalNarrativeRewriter(
+        LocalNarrativeRewriteConfig(model="qwen3:8b"),
+        transport=transport,
+    )
+
+    with pytest.raises(
+        LocalNarrativeRewriteError,
+        match="must change at least one polishable field",
+    ):
+        rewriter.rewrite(_request())
+
+
 @pytest.mark.parametrize(
     "response",
     (
@@ -221,24 +236,6 @@ def test_local_rewriter_emits_bounded_openai_compatible_request() -> None:
         },
     ),
 )
-
-
-
-def test_local_rewriter_rejects_noop_rewrite() -> None:
-    baseline = _baseline_text()
-    transport = _CapturingTransport(_completion_response(baseline))
-    rewriter = OpenAICompatibleLocalNarrativeRewriter(
-        LocalNarrativeRewriteConfig(model="qwen3:8b"),
-        transport=transport,
-    )
-
-    with pytest.raises(
-        LocalNarrativeRewriteError,
-        match="must change at least one polishable field",
-    ):
-        rewriter.rewrite(_request())
-
-
 def test_local_rewriter_rejects_malformed_or_unbounded_response(
     response: dict[str, object],
 ) -> None:
