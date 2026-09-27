@@ -74,12 +74,16 @@ from crypto_signal.product.intelligence_stream_family_sources import (
 from crypto_signal.product.intelligence_stream_forward_runtime import (
     IntelligenceStreamForwardRuntime,
 )
+from crypto_signal.product.intelligence_stream_family import StreamFamilySnapshot
 from crypto_signal.product.intelligence_stream_local_rewriter import (
     LocalNarrativeRewriteConfig,
     OpenAICompatibleLocalNarrativeRewriter,
 )
 from crypto_signal.product.intelligence_stream_production_projector import (
     IntelligenceStreamProductionProjector,
+)
+from crypto_signal.product.intelligence_stream_system_view import (
+    IntelligenceStreamSystemViewRuntime,
 )
 from crypto_signal.product.intelligence_stream_trust_sources import (
     build_event_risk_stream_snapshots,
@@ -580,6 +584,7 @@ async def run(
         return 1
     stream_runtime: IntelligenceStreamForwardRuntime | None = None
     stream_family_projector: IntelligenceStreamProductionProjector | None = None
+    stream_system_view_runtime: IntelligenceStreamSystemViewRuntime | None = None
     stream_capital_runtime: IntelligenceStreamCapitalForwardRuntime | None = None
     stream_capital_activation_identity: str | None = None
     if selected_stream.enabled:
@@ -600,6 +605,10 @@ async def run(
                 selected_stream.ledger_path,
                 rewriter=local_rewriter,
             )
+            stream_system_view_runtime = IntelligenceStreamSystemViewRuntime(
+                selected_stream.ledger_path
+            )
+            stream_system_view_runtime.initialize()
             stream_activation_at_ms = time.time_ns() // 1_000_000
             stream_activation = stream_runtime.ensure_activated(
                 activated_at_ms=stream_activation_at_ms
@@ -713,6 +722,8 @@ async def run(
     }
     wc2_status_counts: Counter[str] = Counter()
     wc2_reason_counts: Counter[str] = Counter()
+    system_view_family_snapshots: list[StreamFamilySnapshot] = []
+    system_view_trust_snapshots: list[StreamFamilySnapshot] = []
 
     for context in selected_plan.enabled_contexts:
         name = context.exchange.value
@@ -760,6 +771,7 @@ async def run(
                     result.bundle,
                     frozen_at_ms=result.frozen_at_ms,
                 )
+                system_view_family_snapshots.append(geometry_snapshot)
                 geometry_projection = stream_family_projector.project_family(
                     geometry_snapshot,
                     activated_at_ms=result.frozen_at_ms,
@@ -954,6 +966,7 @@ async def run(
                         evaluated_at_ms=trust_observed_at_ms,
                     )
                 )
+            system_view_trust_snapshots.extend(trust_snapshots)
             trust_dispositions: Counter[str] = Counter()
             trust_projectors: Counter[str] = Counter()
             for trust_snapshot in sorted(
@@ -1108,6 +1121,7 @@ async def run(
                 symbols=selected_stream.family_symbols,
                 as_of_ms=family_observed_at_ms,
             )
+            system_view_family_snapshots.extend(family_snapshots)
             family_dispositions: Counter[str] = Counter()
             family_projectors: Counter[str] = Counter()
             for family_snapshot in family_snapshots:
@@ -1157,6 +1171,43 @@ async def run(
             flush=True,
         )
 
+
+    if stream_system_view_runtime is not None and system_view_family_snapshots:
+        system_view_event_at_ms = time.time_ns() // 1_000_000
+        try:
+            for system_view_symbol in selected_stream.family_symbols:
+                if not any(
+                    item.symbol == system_view_symbol
+                    for item in system_view_family_snapshots
+                ):
+                    continue
+                system_view_result = stream_system_view_runtime.compose_and_append(
+                    symbol=system_view_symbol,
+                    event_at_ms=system_view_event_at_ms,
+                    family_snapshots=tuple(system_view_family_snapshots),
+                    trust_snapshots=tuple(system_view_trust_snapshots),
+                )
+                print(
+                    "stream_system_view "
+                    f"symbol={system_view_result.symbol} "
+                    f"stance={system_view_result.stance} "
+                    f"status={system_view_result.disposition.value} "
+                    f"semantic={system_view_result.semantic_identity} "
+                    f"narrative={system_view_result.narrative_identity or '-'} "
+                    "FORECAST_AUTHORITY=NO PROBABILITY=NO "
+                    "HISTORICAL_BACKFILL=NO REAL_CAPITAL=0",
+                    flush=True,
+                )
+        except (OSError, TypeError, ValueError, sqlite3.Error) as exc:
+            print(
+                "stream_system_view status=ERROR "
+                f"error={type(exc).__name__}:{exc} "
+                "FAIL_STOP=YES FORECAST_AUTHORITY=NO "
+                "HISTORICAL_BACKFILL=NO REAL_CAPITAL=0",
+                file=sys.stderr,
+                flush=True,
+            )
+            return 1
 
     if selected_wc2.enabled:
         assert wc2_decision is not None
