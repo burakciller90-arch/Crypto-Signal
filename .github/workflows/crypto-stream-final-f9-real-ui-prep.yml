@@ -11,7 +11,7 @@ permissions:
 
 concurrency:
   group: stream-final-f9-real-ui-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   acceptance:
