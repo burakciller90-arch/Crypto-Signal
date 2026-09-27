@@ -110,7 +110,7 @@ jobs:
           echo "F9_PREP_NON_MUTATING_PASS=YES"
 
   physical:
-    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'push' || github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
     needs: prep
     runs-on: [self-hosted, crypto-signal, uid504]
     timeout-minutes: 45
