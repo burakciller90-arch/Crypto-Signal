@@ -200,3 +200,31 @@ def test_missing_current_live_scope_is_reported_not_fabricated(
     assert "desktop:ten_second_comprehension" in open_requirements
     assert "mobile:ten_second_comprehension" in open_requirements
     assert report["synthetic_activity_used"] is False
+
+
+def test_incoming_observation_polls_without_long_cdp_promise(monkeypatch) -> None:
+    class FakeSession:
+        def __init__(self) -> None:
+            self.calls = 0
+
+        def command(self, method, params, timeout_seconds=30.0):
+            assert method == "Runtime.evaluate"
+            self.calls += 1
+            value = (
+                ["a" * 64]
+                if self.calls == 1
+                else {
+                    "ids": ["a" * 64, "b" * 64],
+                    "unreadAffordance": True,
+                    "count": "1",
+                }
+            )
+            return {"result": {"value": value}}
+
+    monkeypatch.setattr(f9.time, "sleep", lambda seconds: None)
+    result = f9._observe_incoming(FakeSession(), 1)
+
+    assert result["observed"] is True
+    assert result["unread_affordance"] is True
+    assert result["fresh_identities"] == ["b" * 64]
+    assert result["unread_count"] == "1"
