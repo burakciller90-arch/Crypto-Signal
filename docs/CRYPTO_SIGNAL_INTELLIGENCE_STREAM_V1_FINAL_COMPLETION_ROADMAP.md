@@ -9,6 +9,8 @@ User approval: 2026-09-26
 
 ---
 
+> **POST-CLOSEOUT AUTHORITY NOTE — 2026-09-27:** This F0-F10 roadmap is complete/accepted and must not be replayed. The user has opened a new scoped frontend/message refinement authority at `docs/CRYPTO_SIGNAL_MESSAGE_INTELLIGENCE_FRONTIER_V1.md`. Current frontend work starts there at MI1. This does not reopen Capital/Portfolio or authorize changes to Durdurulmaz. REAL_CAPITAL=0.
+
 ## 0. Why this document exists
 
 The original `CRYPTO_SIGNAL_INTELLIGENCE_STREAM_V1_MASTER_ROADMAP.md` remains the canonical product-design and interaction vision for Intelligence Stream V1.

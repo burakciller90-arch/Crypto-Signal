@@ -1,5 +1,30 @@
 # PROJECT CHRONICLE
 
+## 2026-09-27 — User opens Message Intelligence & Family Evidence UX frontier
+
+The user explicitly opened a new narrow post-F10 product-refinement scope after reviewing the live Stream. Delivery is active, but the visible language still exposes low-level family telemetry such as raw state labels/transitions instead of presenting one coherent system view.
+
+Canonical new authority:
+
+`docs/CRYPTO_SIGNAL_MESSAGE_INTELLIGENCE_FRONTIER_V1.md`
+
+The user locked the intended hierarchy:
+- default feed = timestamp/symbol/timeframe/stance badge + one concise natural Turkish system sentence;
+- the five-family matrix remains Geometry 20, Liquidity 25, Order Flow 25, Derivatives 15, On-chain 15; Event Risk stays outside the matrix;
+- expanded detail contains the five evidence families as individually clickable rows;
+- **each family row owns its own proof interaction**;
+- clicking a family opens a family-specific window containing a short plain-Turkish explanation and that exact family's frozen/evidence-bound proof;
+- there is no generic bottom "show proof graph/frozen proof" button in the target UX;
+- unavailable evidence fails closed and may open an explicit unavailable state, but no chart/proof is invented;
+- raw family events remain persisted/auditable but should not automatically become customer-facing telemetry bubbles;
+- local Ollama remains a guarded language layer, never market-truth authority;
+- historical Stream messages remain immutable;
+- Capital/Portfolio remains outside this new scope;
+- project isolation is explicit: only `burakciller90-arch/Crypto-Signal` is authorized; **Durdurulmaz must not be touched**;
+- REAL_CAPITAL=0.
+
+F0-F10 remains accepted historical/current production evidence and is not reopened. The exact next frontier is **MI1 — User-facing message composer**.
+
 ## 2026-09-27 — Intelligence Stream V1 final completion accepted
 
 The F0-F10 deficiency-closure program is mechanically complete.

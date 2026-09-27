@@ -3,6 +3,29 @@
 This repository originates from the user's **CRYPTO SIGNAL PLATFORM — MASTER HANDOFF v1.0 (2026-09-19)**.
 Its foundational project-isolation, scientific-truth and REAL_CAPITAL safety boundaries remain binding. Later **explicit user-approved canonical documents and state updates may supersede scoped product/frontend/roadmap decisions where they say so**. Never use older handoff or roadmap wording to undo a newer explicit supersession. Current execution state is established by `CURRENT_STATUS.md`, the newest Chronicle entry and mechanically observed Git/runtime truth.
 
+## ACTIVE FRONTIER — Message Intelligence & Family Evidence UX V1 — 2026-09-27
+
+The user has explicitly opened a new, narrow post-F10 frontend/message-intelligence refinement authority:
+
+**`docs/CRYPTO_SIGNAL_MESSAGE_INTELLIGENCE_FRONTIER_V1.md`**
+
+Read it **before** any historical Stream roadmap when doing current frontend/message work.
+
+Locked current direction:
+- F0-F10 remains complete and must not be replayed;
+- normal user-facing Stream messages must become one concise, natural Turkish system view rather than raw family telemetry;
+- the five-family matrix remains Geometry 20 / Liquidity 25 / Order Flow 25 / Derivatives 15 / On-chain 15; Event Risk remains outside the 100-point matrix;
+- each of the five family rows in expanded detail must be individually clickable and must open only that family's short explanation + exact/frozen proof;
+- there is **no generic bottom "KANIT GRAFİĞİNİ / DONDURULMUŞ KANITI GÖR" CTA** in the target UX;
+- unavailable proof must fail closed explicitly; never substitute current evidence for historical/frozen evidence;
+- local Ollama remains presentation-only and receives no factual, directional, numeric or trading authority;
+- historical messages remain immutable; this refinement is forward-only;
+- dedicated Capital/Portfolio work is not reopened by this scope;
+- this authority applies only to `burakciller90-arch/Crypto-Signal`; the separate **Durdurulmaz** project must not be touched;
+- **REAL_CAPITAL=0** remains binding.
+
+Exact implementation frontier after authority recording: **MI1 — User-facing message composer**.
+
 ## Intelligence Stream V1 final completion acceptance — 2026-09-27
 
 - Final deficiency-closure phases F0-F10 are mechanically complete.
