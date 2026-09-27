@@ -170,3 +170,70 @@ def test_binance_tr_main_rejects_exchange_error() -> None:
 
     with pytest.raises(ValueError, match="Binance TR API error"):
         asyncio.run(run())
+
+
+def test_binance_tr_main_accepts_direct_array_response_with_http_date() -> None:
+    rows = [
+        [
+            1710000000000,
+            "100.1",
+            "102.2",
+            "99.9",
+            "101.5",
+            "3.25",
+            1710000899999,
+            "328.75",
+            42,
+            "0",
+            "0",
+            "0",
+        ]
+    ]
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            json=rows,
+            headers={"Date": "Sat, 09 Mar 2024 16:16:40 GMT"},
+        )
+
+    async def run() -> tuple[Candle, ...]:
+        transport = httpx.MockTransport(handler)
+        async with httpx.AsyncClient(transport=transport) as client:
+            adapter = BinanceSpotAdapter(
+                client,
+                base_url="https://api.binance.me",
+                api_variant="tr_main",
+            )
+            return await adapter.fetch_candles(
+                symbol="BTCUSDT",
+                timeframe="15m",
+                limit=1,
+            )
+
+    candles = asyncio.run(run())
+    assert len(candles) == 1
+    assert candles[0].is_closed is True
+    assert candles[0].source_timestamp_ms == 1710001000000
+
+
+def test_binance_tr_main_rejects_unknown_response_shape() -> None:
+    def handler(_: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json="unexpected")
+
+    async def run() -> None:
+        transport = httpx.MockTransport(handler)
+        async with httpx.AsyncClient(transport=transport) as client:
+            adapter = BinanceSpotAdapter(
+                client,
+                base_url="https://api.binance.me",
+                api_variant="tr_main",
+            )
+            await adapter.fetch_candles(
+                symbol="BTCUSDT",
+                timeframe="15m",
+                limit=1,
+            )
+
+    with pytest.raises(TypeError, match="object or array"):
+        asyncio.run(run())
