@@ -1,5 +1,23 @@
 # PROJECT CHRONICLE
 
+## 2026-09-27 — Intelligence Stream V1 final completion accepted
+
+The F0-F10 deficiency-closure program is mechanically complete.
+
+Canonical final status: **INTELLIGENCE_STREAM_V1_FINAL_COMPLETION_ACCEPTED**.
+
+F10 readiness run `36316450265` proved every F0-F9 stage has canonical accepted evidence, `READY_FOR_AUTHORITY_MUTATION=YES`, zero premature final claims, intact `REAL_CAPITAL=0`, and non-mutating Development/Product checkouts.
+
+The final authority freeze records production reality rather than expanding it. MARKET/INTELLIGENCE and RISK/SYSTEM have genuine production evidence. Decision/Outcome remain explicit current-window operational-evidence deferrals where F8 observed no genuine events, without undoing their accepted immutable product paths. F5 remains PASS for the current frontend scope while natural live Capital/Portfolio proof stays deferred to its dedicated workstream. Unsupported On-chain/provider-gated sources remain explicit rather than fabricated.
+
+Exact evidence stays fail-closed; local Ollama rewrite stays bounded by deterministic truth; real desktop/mobile Product acceptance remains accepted; historical rich-message backfill, synthetic activity, scientific-policy loosening and real-money authority remain prohibited.
+
+Final records:
+- `docs/CRYPTO_SIGNAL_STREAM_V1_FINAL_SOURCE_TO_MESSAGE_LEDGER.md`;
+- `docs/CRYPTO_SIGNAL_STREAM_V1_FINAL_ACCEPTANCE.md`.
+
+**REAL_CAPITAL=0**.
+
 ## 2026-09-26 — Final Stream F3 physically live; F4 becomes active
 
 F3 Five-Family Live Intelligence Projection is fully accepted for the source families with exact persistent production truth.
