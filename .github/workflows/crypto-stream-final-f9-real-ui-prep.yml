@@ -17,9 +17,9 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  prep:
+  acceptance:
     runs-on: [self-hosted, crypto-signal, uid504]
-    timeout-minutes: 45
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
         with:
@@ -109,12 +109,7 @@ jobs:
           test "$BEFORE" = "$AFTER"
           echo "F9_PREP_NON_MUTATING_PASS=YES"
 
-  physical:
-    if: github.event_name == 'push' || github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
-    needs: prep
-    runs-on: [self-hosted, crypto-signal, uid504]
-    timeout-minutes: 45
-    steps:
+
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.sha }}
