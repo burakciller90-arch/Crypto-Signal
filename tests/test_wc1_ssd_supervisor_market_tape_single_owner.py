@@ -43,7 +43,8 @@ def test_market_tape_adoption_requires_lock_holder_and_exact_python_script() -> 
     assert '/bin/ps -ww -p "$pid" -o uid=,args=' in text
     assert 'exit($1 == 504 && $2 == py && $3 == runner ? 0 : 1)' in text
     assert 'comm=tolower($1)' not in text
-    assert 'market_tape_pid_is_expected "$pid" || return 1' in text
+    assert 'if ! market_tape_pid_is_expected "$pid"; then' in text
+    assert 'market_tape_pid_is_owned "$pid"; then' in text
     assert 'market_tape_pid_is_expected "$pid"; then' in text
 
 
