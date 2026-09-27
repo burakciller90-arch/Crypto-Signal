@@ -6,7 +6,6 @@ import json
 import os
 import signal
 import subprocess
-import time
 from pathlib import Path
 from typing import Any
 
@@ -47,7 +46,7 @@ def _start_browser(browser: Path, url: str, out_dir: Path) -> tuple[subprocess.P
         target = _wait_target(port, url, timeout_seconds=30.0)
         websocket_url = target.get("webSocketDebuggerUrl")
         if not isinstance(websocket_url, str):
-            raise RuntimeError("Chrome target missing websocket URL")
+            raise TypeError("Chrome target missing websocket URL")
         return process, CdpSession(websocket_url)
     except Exception:
         if process.poll() is None:
@@ -111,7 +110,7 @@ def _capture(
         )
         metrics = settle.get("result", {}).get("value", {})
         if not isinstance(metrics, dict):
-            raise RuntimeError("MI5 browser metrics missing")
+            raise TypeError("MI5 browser metrics missing")
         if int(metrics.get("innerWidth", -1)) != width:
             raise RuntimeError(f"MI5 viewport width mismatch: {metrics!r}")
         if int(metrics.get("scrollWidth", width + 1)) > width:
