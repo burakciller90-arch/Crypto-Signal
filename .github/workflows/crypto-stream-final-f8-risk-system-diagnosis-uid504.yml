@@ -1,0 +1,72 @@
+name: Crypto Stream Final F8 Risk System Diagnosis UID504
+
+on:
+  push:
+    branches:
+      - 'accept/f8-risk-system-diagnosis'
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          clean: true
+
+      - name: Print F8 risk/system rejection reasons and decision/outcome liveness
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
+          PY="$DEV/.venv/bin/python"
+          export PYTHONPATH="$GITHUB_WORKSPACE:$GITHUB_WORKSPACE/src:$GITHUB_WORKSPACE/ops"
+          "$PY" - <<'PY'
+          import json
+          import sqlite3
+          from pathlib import Path
+          from ops import audit_stream_f8_production_e2e as audit
+
+          base="http://127.0.0.1:48700"
+          report=audit.run_audit(
+              base,
+              require_capital=False,
+              min_event_ms=None,
+              stream_ledger=Path("/Volumes/Crypto-504/Crypto-Signal/Development/runtime/stream/intelligence_stream.sqlite3"),
+          )
+          for group in report["groups"]:
+              if group["name"] in {"risk_or_system","decision","outcome"}:
+                  print("F8_RS_GROUP="+json.dumps(group,sort_keys=True,ensure_ascii=False))
+
+          decision_db=Path("/Volumes/Crypto-504/Crypto-Signal/Development/runtime/decision/decision_evidence.sqlite3")
+          with sqlite3.connect(f"file:{decision_db.resolve()}?mode=ro",uri=True) as conn:
+              conn.execute("PRAGMA query_only=ON")
+              rows=conn.execute(
+                  "SELECT forecast_identity, asset, timeframe, issued_at_ms "
+                  "FROM r20_forecasts ORDER BY issued_at_ms DESC LIMIT 10"
+              ).fetchall()
+              print("F8_DECISION_LATEST="+json.dumps(rows))
+              total=conn.execute("SELECT COUNT(*) FROM r20_forecasts").fetchone()[0]
+              print("F8_DECISION_TOTAL="+str(total))
+
+          stream_db=Path("/Volumes/Crypto-504/Crypto-Signal/Development/runtime/stream/intelligence_stream.sqlite3")
+          with sqlite3.connect(f"file:{stream_db.resolve()}?mode=ro",uri=True) as conn:
+              conn.execute("PRAGMA query_only=ON")
+              cats=conn.execute(
+                  "SELECT json_extract(payload_json,'$.category'), COUNT(*) "
+                  "FROM stream_narrative_messages GROUP BY 1 ORDER BY 1"
+              ).fetchall()
+              print("F8_STREAM_CATEGORY_COUNTS="+json.dumps(cats))
+              activation=conn.execute(
+                  "SELECT activated_at_ms FROM stream_activation ORDER BY activated_at_ms LIMIT 1"
+              ).fetchone()
+              print("F8_STREAM_ACTIVATION_MS="+str(activation[0] if activation else None))
+
+          print("HISTORICAL_BACKFILL=NO")
+          print("SYNTHETIC_ACTIVITY=NO")
+          print("REAL_CAPITAL=0")
+          PY
