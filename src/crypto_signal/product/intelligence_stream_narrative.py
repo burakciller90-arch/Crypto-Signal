@@ -319,12 +319,12 @@ class StreamNarrativeAnalystBrief:
         ):
             if not value.strip():
                 raise ValueError(f"Stream analyst brief {label} must be non-empty")
-        for value, label in (
+        for optional_value, label in (
             (self.dominant_support, "dominant support"),
             (self.secondary_support, "secondary support"),
             (self.main_contradiction, "main contradiction"),
         ):
-            if value is not None and not value.strip():
+            if optional_value is not None and not optional_value.strip():
                 raise ValueError(f"Stream analyst brief {label} cannot be blank")
         if self.schema_version != STREAM_NARRATIVE_ANALYST_BRIEF_SCHEMA_VERSION:
             raise ValueError("unsupported Stream analyst brief schema")
