@@ -362,6 +362,7 @@ run_market_tape_snapshot_clock() {
     exec "$py" "$runner" \
       --db "$db" \
       --lock-path "$lock" \
+      --bybit-base-url "$BYBIT_REST_BASE_URL" \
       --symbols BTCUSDT ETHUSDT SOLUSDT \
       --book-depth 50 \
       --trade-limit 60 \
