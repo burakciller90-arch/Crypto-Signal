@@ -116,7 +116,7 @@ def _interaction_expression(identity: str, search_text: str, category: str) -> s
         "const select=document.getElementById('categoryFilter');"
         "if(select){select.value=category;select.dispatchEvent(new Event('change',{bubbles:true}));}"
         "document.getElementById('applyFiltersButton')?.click();"
-        "for(let i=0;i<40;i++){"
+        "for(let i=0;i<100;i++){"
         "if(find())break;"
         "await new Promise(r=>setTimeout(r,120));"
         "}"
