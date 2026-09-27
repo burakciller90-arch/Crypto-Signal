@@ -1,6 +1,25 @@
 # PROJECT CHRONICLE
 
 
+## 2026-09-27 — MI3 five-family evidence summary accepted; MI4 becomes active
+
+MI3 is mechanically accepted on main at `4dc3c2a4ebdda513f2150313f74f0f06a3a47ec6` through PR #1459.
+
+Canonical five-family decision messages now expand into a compact current-view summary rather than the legacy SIMPLE / PRO / INTELLIGENCE / DECISION / CAPITAL stack. The default decision detail shows expectation, decision-support score, weighted evidence coverage, exact trigger/target/invalidation, main contradiction and the five locked evidence rows:
+- Geometry 20;
+- Liquidity 25;
+- Order Flow 25;
+- Derivatives 15;
+- On-chain 15.
+
+Unavailable evidence is explicit `VERİ YOK`, and support/coverage points are explicitly not presented as directional probability.
+
+Exact UID504 acceptance run `36332071137` passed UI contract tests, Ruff, Node syntax, canonical Development/Product non-mutation and project isolation. `REAL_CAPITAL=0`.
+
+MI3 is therefore PASS. The sole Message Intelligence frontier is now **MI4 — Family-specific clickable proof windows**: every family row itself must open only that exact family's explanation + exact/frozen evidence; no generic bottom proof CTA is part of the target decision detail.
+
+
+
 ## 2026-09-27 — MI2 guarded natural Turkish accepted; MI3 becomes active
 
 MI2 is mechanically accepted on main at `20c1c18c3253254555708e0cbcc0c52cc04ae784` through PR #1457.

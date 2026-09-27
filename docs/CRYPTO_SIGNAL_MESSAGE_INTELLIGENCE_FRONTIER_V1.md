@@ -389,7 +389,7 @@ PASS:
 
 ### MI3 — Five-family evidence summary UI
 
-Status: **ACTIVE FRONTIER**
+Status: **PASS — accepted on main at `4dc3c2a4ebdda513f2150313f74f0f06a3a47ec6`; UID504 acceptance run `36332071137`.**
 
 Goal:
 - expanded message shows the decision view plus the five weighted family rows.
@@ -400,6 +400,8 @@ PASS:
 - support score is not labeled probability.
 
 ### MI4 — Family-specific clickable proof windows
+
+Status: **ACTIVE FRONTIER**
 
 Goal:
 - each family row opens its own proof/explanation window;
@@ -490,11 +492,13 @@ MI1 is accepted. Its exact accepted behavior is:
 
 MI2 is accepted. The local model remains presentation-only and is now constrained by a deterministic fact-locked analyst brief plus deterministic post-rewrite guards.
 
+MI3 is accepted. Canonical five-family decision messages now use the compact evidence-first expanded hierarchy with exact 20/25/25/15/15 weights and fail-closed unavailable states.
+
 The exact next implementation frontier is:
 
-**MI3 — Five-family evidence summary UI**
+**MI4 — Family-specific clickable proof windows**
 
-Before coding MI3, mechanically re-check current `main`, open PRs, runtime state and any newer authority update.
+Before coding MI4, mechanically re-check current `main`, open PRs, runtime state and any newer authority update.
 
 Reuse the existing:
 
