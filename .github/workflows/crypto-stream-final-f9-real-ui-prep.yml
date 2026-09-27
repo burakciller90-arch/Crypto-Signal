@@ -10,7 +10,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: stream-final-f9-real-ui-${{ github.ref }}
+  group: stream-final-f9-real-ui-${{ github.event_name == 'pull_request' && format('refs/heads/{0}', github.head_ref) || github.ref }}
   cancel-in-progress: true
 
 jobs:
