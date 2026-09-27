@@ -492,10 +492,6 @@ jobs:
           fi
           URL="http://127.0.0.1:$MI5_PROBE_PORT/?message=$MI5_SYSTEM_VIEW_ID"
 
-          "$MI5_PROBE_VENV/bin/python" ops/capture_chromium_viewport.py             --browser "$BROWSER"             --url "$URL"             --output "$OUT/desktop.png"             --metrics-out "$OUT/desktop.metrics.json"             --width 1440             --height 950             --require-no-horizontal-overflow
-
-          "$MI5_PROBE_VENV/bin/python" ops/capture_chromium_viewport.py             --browser "$BROWSER"             --url "$URL"             --output "$OUT/mobile.png"             --metrics-out "$OUT/mobile.metrics.json"             --width 430             --height 860             --mobile             --require-no-horizontal-overflow
-
           "$MI5_PROBE_VENV/bin/python" ops/probe_message_intelligence_mi5_browser.py             --browser "$BROWSER"             --url "$URL"             --output "$OUT/desktop-proof.png"             --metrics-out "$OUT/desktop-proof.metrics.json"             --width 1440             --height 950
 
           "$MI5_PROBE_VENV/bin/python" ops/probe_message_intelligence_mi5_browser.py             --browser "$BROWSER"             --url "$URL"             --output "$OUT/mobile-proof.png"             --metrics-out "$OUT/mobile-proof.metrics.json"             --width 430             --height 860             --mobile
