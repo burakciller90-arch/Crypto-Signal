@@ -168,12 +168,17 @@ def _chat_payload(
         "Yeni teknik kavram, aktör, haber, piyasa nedeni veya kanıt türü icat etme. "
         "Mevcut anlamı ve yönü tersine çevirme. Yalnız collapsed_text ve simple_text "
         "alanlarını daha doğal, sakin ve profesyonel trader Türkçesiyle gerçekten yeniden "
-        "ifade et; bu iki alanı kaynak metinden birebir kopyalama. Sana yalnız bu iki "
+        "ifade et. Bu bir dil editidir; aynı metni geri döndürmek başarısızlıktır. En az "
+        "bir alanın kelime dizimini değiştir; iki alanı birlikte kaynak metinden birebir "
+        "kopyalama. Sana yalnız bu iki "
         "alan verilir ve yalnız bu iki alanı döndürmelisin. collapsed_text tek paragraf "
         "ve kısa kalmalı. Alan adlarını değiştirme. Çıktı yalnızca ham JSON nesnesi olmalı; "
         "markdown veya açıklama ekleme."
     )
     user_payload = {
+        "task": "safe_turkish_style_rewrite",
+        "rewrite_required": True,
+        "rewrite_scope": ["collapsed_text", "simple_text"],
         "symbol": request.symbol,
         "timeframe": request.timeframe,
         "protected_numeric_values": protected_values,
@@ -186,15 +191,15 @@ def _chat_payload(
             {
                 "role": "user",
                 "content": (
-                    '{"text":{"collapsed_text":"Görünüm yukarı yön tarafı; teyit takip.",'
-                    '"simple_text":"Yukarı yön görünüm var. Teyit takip sürüyor."}}'
+                    '{"text":{"collapsed_text":"Piyasa durum takip; ek teyit takip.",'
+                    '"simple_text":"Durum takip var. Ek teyit takip sürüyor."}}'
                 ),
             },
             {
                 "role": "assistant",
                 "content": (
-                    '{"collapsed_text":"Görünüm yukarı yönlü; teyit izleniyor.",'
-                    '"simple_text":"Yukarı yönlü görünüm korunuyor. Teyit izlenmeye devam ediyor."}'
+                    '{"collapsed_text":"Piyasa durumu izleniyor; ek teyit bekleniyor.",'
+                    '"simple_text":"Durum izleniyor. Ek teyit beklenmeye devam ediyor."}'
                 ),
             },
             {
