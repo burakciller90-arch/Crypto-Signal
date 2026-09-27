@@ -5,7 +5,6 @@ import sqlite3
 from crypto_signal.intelligence.confluence_matrix_v2 import ConfluenceFamily
 from crypto_signal.ledger.serialization import canonical_sha256
 from crypto_signal.product.intelligence_stream_family import (
-    STREAM_FAMILY_NARRATIVE_RENDERER_VERSION,
     StreamTrustDomain,
     build_family_snapshot,
 )
