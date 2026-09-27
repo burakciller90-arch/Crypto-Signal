@@ -843,3 +843,11 @@ def test_stream_capital_forward_runtime_is_wired_to_prepared_owner() -> None:
     assert "capital_hook=(" in source
     assert "stream_capital status=ACTIVATED" in source
     assert "stream_capital status=PROJECTED" in source
+
+
+def test_live_clock_bybit_rest_endpoint_is_explicit_runtime_input() -> None:
+    run_source = inspect.getsource(clock.run)
+    parser_source = inspect.getsource(clock.parse_args)
+
+    assert "BybitSpotAdapter(base_url=bybit_base_url)" in run_source
+    assert '"--bybit-base-url"' in parser_source
