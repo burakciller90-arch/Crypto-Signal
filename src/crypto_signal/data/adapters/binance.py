@@ -13,10 +13,25 @@ from crypto_signal.data.timeframes import spec
 
 class BinanceSpotAdapter:
     BASE_URL = "https://api.binance.com"
+    REGIONAL_TR_BASE_URL = "https://api.binance.me"
     ADAPTER_VERSION = "binance-spot/1"
+    REGIONAL_TR_ADAPTER_VERSION = "binance-tr-main-market-data/1"
 
-    def __init__(self, client: httpx.AsyncClient | None = None) -> None:
+    def __init__(
+        self,
+        client: httpx.AsyncClient | None = None,
+        *,
+        base_url: str | None = None,
+        api_variant: str = "global",
+    ) -> None:
+        if api_variant not in {"global", "tr_main"}:
+            raise ValueError("unsupported Binance API variant")
+        selected_base_url = (base_url or self.BASE_URL).rstrip("/")
+        if not selected_base_url.startswith("https://"):
+            raise ValueError("Binance REST base URL must use https")
         self._client = client
+        self._base_url = selected_base_url
+        self._api_variant = api_variant
 
     async def fetch_candles(
         self,
@@ -46,14 +61,38 @@ class BinanceSpotAdapter:
         owns_client = self._client is None
         client = self._client or httpx.AsyncClient(timeout=10.0)
         try:
-            klines_task = client.get(f"{self.BASE_URL}/api/v3/klines", params=params)
-            time_task = client.get(f"{self.BASE_URL}/api/v3/time")
-            klines_response, time_response = await asyncio.gather(klines_task, time_task)
-            klines_response.raise_for_status()
-            time_response.raise_for_status()
-            raw_rows = cast(list[list[object]], klines_response.json())
-            server_time_raw = cast(dict[str, object], time_response.json())["serverTime"]
-            server_time_ms = int(cast(int | str, server_time_raw))
+            if self._api_variant == "tr_main":
+                response = await client.get(
+                    f"{self._base_url}/api/v1/klines",
+                    params=params,
+                )
+                response.raise_for_status()
+                payload = cast(dict[str, object], response.json())
+                if int(cast(int | str, payload.get("code", -1))) != 0:
+                    raise ValueError(
+                        f"Binance TR API error: {payload.get('msg')!r}"
+                    )
+                raw_rows = cast(list[list[object]], payload["data"])
+                server_time_ms = int(
+                    cast(int | str, payload["timestamp"])
+                )
+            else:
+                klines_task = client.get(
+                    f"{self._base_url}/api/v3/klines",
+                    params=params,
+                )
+                time_task = client.get(f"{self._base_url}/api/v3/time")
+                klines_response, time_response = await asyncio.gather(
+                    klines_task,
+                    time_task,
+                )
+                klines_response.raise_for_status()
+                time_response.raise_for_status()
+                raw_rows = cast(list[list[object]], klines_response.json())
+                server_time_raw = cast(
+                    dict[str, object], time_response.json()
+                )["serverTime"]
+                server_time_ms = int(cast(int | str, server_time_raw))
             ingested_at_ms = time.time_ns() // 1_000_000
         finally:
             if owns_client:
@@ -104,5 +143,9 @@ class BinanceSpotAdapter:
             source=DataSource.REST,
             source_timestamp_ms=server_time_ms,
             ingested_at_ms=ingested_at_ms,
-            adapter_version=self.ADAPTER_VERSION,
+            adapter_version=(
+                self.REGIONAL_TR_ADAPTER_VERSION
+                if self._api_variant == "tr_main"
+                else self.ADAPTER_VERSION
+            ),
         )

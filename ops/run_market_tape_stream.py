@@ -58,6 +58,17 @@ DEFAULT_MAX_INGESTION_SILENCE_MS = 60_000
 DEFAULT_SYMBOLS = ("BTCUSDT", "ETHUSDT", "SOLUSDT")
 
 
+def monitor_ingestion_time(
+    previous_ms: int | None,
+    raw_ingested_at_ms: int,
+) -> tuple[int, bool]:
+    if raw_ingested_at_ms < 0:
+        raise ValueError("raw ingestion time cannot be negative")
+    if previous_ms is None or raw_ingested_at_ms >= previous_ms:
+        return raw_ingested_at_ms, False
+    return previous_ms, True
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--db", type=Path, default=DEFAULT_DB)
@@ -196,12 +207,18 @@ async def run(args: argparse.Namespace) -> int:
         source="market_tape_stream",
         max_ingestion_silence_ms=args.max_ingestion_silence_ms,
     )
-    for raw_event in raw_store.latest_by_context(exchange=Exchange.BYBIT):
+    seed_events = raw_store.latest_by_context(exchange=Exchange.BYBIT)
+    seed_ingestion_floor_ms: int | None = None
+    for raw_event in seed_events:
         gap_monitor.seed_persisted_event(
             channel=raw_event.channel,
             symbol=raw_event.symbol,
             ingested_at_ms=raw_event.ingested_at_ms,
             source_evidence_identities=(raw_event.event_identity,),
+        )
+        seed_ingestion_floor_ms = max(
+            raw_event.ingested_at_ms,
+            seed_ingestion_floor_ms or raw_event.ingested_at_ms,
         )
 
     previous = runtime_store.latest_instance(
@@ -221,15 +238,29 @@ async def run(args: argparse.Namespace) -> int:
     )
     runtime_store.append_instance(instance)
     heartbeat_sequence = 0
-    last_ingestion_ms: int | None = None
+    last_ingestion_ms: int | None = seed_ingestion_floor_ms
     last_observed_messages = 0
+    ingestion_clock_regressions = 0
+    runtime_clock_floor_ms = max(
+        time.time_ns() // 1_000_000,
+        last_ingestion_ms or 0,
+    )
     normalized_rows_total = baseline_normalized_rows_total
     raw_rows_total = baseline_raw_rows_total
     heartbeat_stop = asyncio.Event()
 
+    def runtime_now_ms() -> int:
+        nonlocal runtime_clock_floor_ms
+        runtime_clock_floor_ms = max(
+            runtime_clock_floor_ms,
+            time.time_ns() // 1_000_000,
+            last_ingestion_ms or 0,
+        )
+        return runtime_clock_floor_ms
+
     def emit_heartbeat() -> None:
         nonlocal heartbeat_sequence
-        observed_at_ms = time.time_ns() // 1_000_000
+        observed_at_ms = runtime_now_ms()
         heartbeat_sequence += 1
         heartbeat = build_collector_heartbeat(
             instance_identity=instance.instance_identity,
@@ -283,12 +314,29 @@ async def run(args: argparse.Namespace) -> int:
     ) -> None:
         nonlocal last_ingestion_ms
         nonlocal last_observed_messages
-        last_ingestion_ms = raw_event.ingested_at_ms
+        nonlocal ingestion_clock_regressions
+        effective_ingestion_ms, regressed = monitor_ingestion_time(
+            last_ingestion_ms,
+            raw_event.ingested_at_ms,
+        )
+        if regressed:
+            ingestion_clock_regressions += 1
+            print(
+                "MARKET_TAPE_INGESTION_CLOCK_REGRESSION "
+                f"raw_ingested_at_ms={raw_event.ingested_at_ms} "
+                f"monitor_floor_ms={last_ingestion_ms} "
+                f"channel={raw_event.channel} "
+                f"symbol={raw_event.symbol} "
+                "RAW_EVENT_PRESERVED=YES",
+                file=sys.stderr,
+                flush=True,
+            )
+        last_ingestion_ms = effective_ingestion_ms
         last_observed_messages = observed_messages
         gap_monitor.observe_persisted_event(
             channel=raw_event.channel,
             symbol=raw_event.symbol,
-            ingested_at_ms=raw_event.ingested_at_ms,
+            ingested_at_ms=effective_ingestion_ms,
             source_evidence_identities=(raw_event.event_identity,),
         )
 
@@ -296,6 +344,7 @@ async def run(args: argparse.Namespace) -> int:
     heartbeat_task = asyncio.create_task(heartbeat_loop())
     stream = BybitSpotMicrostructureStream(
         url=args.bybit_ws_url,
+        proxy=None,
     )
     try:
         result = await persist_bybit_wire_stream(
@@ -350,6 +399,7 @@ async def run(args: argparse.Namespace) -> int:
         f"gap_ledger_events={len(gap_ledger.events())} "
         f"gap_ledger_quick_check={'YES' if gap_ledger.quick_check() else 'NO'} "
         f"gap_silence_policy_ms={args.max_ingestion_silence_ms} "
+        f"ingestion_clock_regressions={ingestion_clock_regressions} "
         "REAL_CAPITAL=0",
         flush=True,
     )

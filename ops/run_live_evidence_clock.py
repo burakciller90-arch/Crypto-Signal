@@ -66,6 +66,7 @@ from crypto_signal.product.intelligence_stream_capital_forward_runtime import (
     IntelligenceStreamCapitalForwardRuntime,
     StreamCapitalForwardResult,
 )
+from crypto_signal.product.intelligence_stream_family import StreamFamilySnapshot
 from crypto_signal.product.intelligence_stream_family_sources import (
     build_geometry_family_snapshot_from_bundle,
     build_geometry_lifecycle_family_snapshot,
@@ -74,7 +75,6 @@ from crypto_signal.product.intelligence_stream_family_sources import (
 from crypto_signal.product.intelligence_stream_forward_runtime import (
     IntelligenceStreamForwardRuntime,
 )
-from crypto_signal.product.intelligence_stream_family import StreamFamilySnapshot
 from crypto_signal.product.intelligence_stream_local_rewriter import (
     LocalNarrativeRewriteConfig,
     OpenAICompatibleLocalNarrativeRewriter,
@@ -242,6 +242,20 @@ def parse_args() -> argparse.Namespace:
             "explicit Bybit REST base URL for the deployment region; "
             "defaults to the adapter global endpoint"
         ),
+    )
+    parser.add_argument(
+        "--binance-base-url",
+        default=None,
+        help=(
+            "explicit Binance REST base URL for the deployment region; "
+            "defaults to the adapter global endpoint"
+        ),
+    )
+    parser.add_argument(
+        "--binance-api-variant",
+        choices=("global", "tr_main"),
+        default="global",
+        help="response contract for the selected Binance REST endpoint",
     )
     parser.add_argument(
         "--stream-enabled",
@@ -521,6 +535,8 @@ async def run(
     wc2_config: WC2ClockConfig | None = None,
     stream_config: StreamClockConfig | None = None,
     bybit_base_url: str | None = None,
+    binance_base_url: str | None = None,
+    binance_api_variant: str = "global",
 ) -> int:
     ledger = ImmutableSignalLedger(db_path)
     candle_store = CandleStore(candle_cache_path)
@@ -718,7 +734,10 @@ async def run(
 
     adapters: dict[Exchange, MarketDataAdapter] = {
         Exchange.BYBIT: BybitSpotAdapter(base_url=bybit_base_url),
-        Exchange.BINANCE: BinanceSpotAdapter(),
+        Exchange.BINANCE: BinanceSpotAdapter(
+            base_url=binance_base_url,
+            api_variant=binance_api_variant,
+        ),
     }
     wc2_status_counts: Counter[str] = Counter()
     wc2_reason_counts: Counter[str] = Counter()
@@ -1335,6 +1354,8 @@ def main() -> int:
                 wc2_config=wc2_config,
                 stream_config=stream_config,
                 bybit_base_url=args.bybit_base_url,
+                binance_base_url=args.binance_base_url,
+                binance_api_variant=args.binance_api_variant,
             )
         )
 
