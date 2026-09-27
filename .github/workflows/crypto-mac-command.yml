@@ -1991,6 +1991,20 @@ jobs:
                                   f"CANDLE_CACHE {table}.{col} max_ms={ms} "
                                   f"max_utc={iso(ms)} age_ms={age(ms)} rows={0 if row is None else int(row[1])}"
                               )
+                              if "is_closed" in cols and col in {"open_time_ms","close_time_ms"}:
+                                  closed=db.execute(
+                                      f"SELECT MAX({col}), COUNT(*) FROM {table} WHERE is_closed=1"
+                                  ).fetchone()
+                                  closed_ms=(
+                                      None
+                                      if closed is None or closed[0] is None
+                                      else int(closed[0])
+                                  )
+                                  print(
+                                      f"CANDLE_CACHE_CLOSED {table}.{col} max_ms={closed_ms} "
+                                      f"max_utc={iso(closed_ms)} age_ms={age(closed_ms)} "
+                                      f"rows={0 if closed is None else int(closed[1])}"
+                                  )
                           except sqlite3.Error:
                               pass
 
