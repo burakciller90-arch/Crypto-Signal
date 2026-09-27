@@ -6,6 +6,7 @@ import json
 import os
 import signal
 import subprocess
+import time
 import urllib.parse
 import urllib.request
 from pathlib import Path
@@ -228,24 +229,66 @@ def _interaction(identity: str, category: str, search_text: str) -> str:
     )
 
 
-def _incoming_probe(wait_seconds: int) -> str:
-    return (
-        "(async()=>{"
-        "const before=new Set([...document.querySelectorAll('.message')]"
-        ".map(n=>n.dataset.identity||''));"
-        "const viewport=document.getElementById('streamViewport');"
-        "if(viewport)viewport.scrollTop=0;"
-        f"const deadline=Date.now()+{wait_seconds * 1000};"
-        "while(Date.now()<deadline){await new Promise(r=>setTimeout(r,500));"
-        "const ids=[...document.querySelectorAll('.message')]"
-        ".map(n=>n.dataset.identity||'');"
-        "const fresh=ids.filter(id=>id&&!before.has(id));"
-        "const button=document.getElementById('newMessageButton');"
-        "if(fresh.length||button?.hidden===false)return {observed:true,fresh,"
-        "unreadAffordance:button?.hidden===false,"
-        "count:document.getElementById('newMessageCount')?.textContent||''};}"
-        "return {observed:false,fresh:[],unreadAffordance:false,count:''};})()"
+def _observe_incoming(
+    session: CdpSession,
+    wait_seconds: int,
+) -> dict[str, object]:
+    baseline = _eval(
+        session,
+        (
+            "(()=>{"
+            "const viewport=document.getElementById('streamViewport');"
+            "if(viewport)viewport.scrollTop=0;"
+            "return [...document.querySelectorAll('.message')]"
+            ".map(n=>n.dataset.identity||'').filter(Boolean);"
+            "})()"
+        ),
     )
+    before = (
+        {str(value) for value in baseline}
+        if isinstance(baseline, list)
+        else set()
+    )
+    deadline = time.monotonic() + wait_seconds
+    while time.monotonic() < deadline:
+        time.sleep(0.5)
+        current = _eval(
+            session,
+            (
+                "(()=>{"
+                "const ids=[...document.querySelectorAll('.message')]"
+                ".map(n=>n.dataset.identity||'').filter(Boolean);"
+                "const button=document.getElementById('newMessageButton');"
+                "return {ids,unreadAffordance:button?.hidden===false,"
+                "count:document.getElementById('newMessageCount')?.textContent||''};"
+                "})()"
+            ),
+        )
+        if not isinstance(current, dict):
+            continue
+        raw_ids = current.get("ids")
+        ids = (
+            [str(value) for value in raw_ids]
+            if isinstance(raw_ids, list)
+            else []
+        )
+        fresh = [value for value in ids if value not in before]
+        unread = current.get("unreadAffordance") is True
+        if fresh or unread:
+            return {
+                "required": True,
+                "observed": True,
+                "unread_affordance": unread,
+                "fresh_identities": fresh,
+                "unread_count": current.get("count", ""),
+            }
+    return {
+        "required": True,
+        "observed": False,
+        "unread_affordance": False,
+        "fresh_identities": [],
+        "unread_count": "",
+    }
 
 
 def _screenshot(session: CdpSession, path: Path) -> None:
@@ -342,20 +385,7 @@ def browser_probe(
             "unread_affordance": False,
         }
         if incoming_wait_seconds > 0:
-            incoming_result = _eval(
-                session,
-                _incoming_probe(incoming_wait_seconds),
-                await_promise=True,
-            )
-            if isinstance(incoming_result, dict):
-                incoming = {
-                    "required": True,
-                    "observed": incoming_result.get("observed") is True,
-                    "unread_affordance": incoming_result.get("unreadAffordance")
-                    is True,
-                    "fresh_identities": incoming_result.get("fresh", []),
-                    "unread_count": incoming_result.get("count", ""),
-                }
+            incoming = _observe_incoming(session, incoming_wait_seconds)
 
         interaction = _eval(
             session,
