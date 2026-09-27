@@ -166,8 +166,12 @@ def test_local_rewriter_emits_bounded_openai_compatible_request() -> None:
     assert isinstance(user, dict)
     assert "yalnız bu iki alanı döndürmelisin" in str(system["content"])
     assert "Yeni teknik kavram" in str(system["content"])
-    assert "birebir kopyalama" in str(system["content"])
+    assert "aynı metni geri döndürmek başarısızlıktır" in str(system["content"])
+    assert "birebir" in str(system["content"])
     user_payload = json.loads(str(user["content"]))
+    assert user_payload["task"] == "safe_turkish_style_rewrite"
+    assert user_payload["rewrite_required"] is True
+    assert user_payload["rewrite_scope"] == ["collapsed_text", "simple_text"]
     assert user_payload["symbol"] == "BTCUSDT"
     assert user_payload["timeframe"] == "4h"
     assert user_payload["protected_numeric_values"] == ["0", "82"]
