@@ -1,6 +1,6 @@
 # Crypto Signal — Intelligence Stream V1 Master Roadmap
 
-Status: **CANONICAL PRODUCT VISION / HISTORICAL S0-S16 ACCEPTANCE RECORD**  
+Status: **CANONICAL PRODUCT VISION / HISTORICAL S0-S16 ACCEPTANCE RECORD / FINAL DEFICIENCY CLOSURE ACCEPTED**  
 Final completion execution authority: `docs/CRYPTO_SIGNAL_INTELLIGENCE_STREAM_V1_FINAL_COMPLETION_ROADMAP.md`  
 Company: GALACTECH  
 Product: Crypto Signal  
@@ -9,6 +9,8 @@ Safety: REAL_CAPITAL=0
 Supersession date: 2026-09-25
 
 > **2026-09-26 completion-authority update:** S0-S16 remain valid historical acceptance records for the components and isolated/live scenarios they actually proved. Later real-production evidence showed that not every source family promised by this document had a complete 24/7 production source→message hook, and that WC2 forward issuance had stopped advancing while fresh signal freezes continued. The user explicitly opened one final deficiency-closure scope. Execute `docs/CRYPTO_SIGNAL_INTELLIGENCE_STREAM_V1_FINAL_COMPLETION_ROADMAP.md` for all remaining Stream V1 completion work. This document remains authoritative for product thesis, one-screen IA, interaction design and original Definition of Done.
+
+> **2026-09-27 final-completion update:** The later F0-F10 production-deficiency closure program has now passed its mechanical readiness and final authority-freeze gates. Canonical final status: **INTELLIGENCE_STREAM_V1_FINAL_COMPLETION_ACCEPTED**. This does not erase historical S0-S16 evidence and does not convert deferred/unsupported sources into live claims. The final source ledger and acceptance record define the exact accepted production boundary. **REAL_CAPITAL=0**.
 
 ---
 
@@ -73,7 +75,9 @@ These decisions are already made and must not be re-opened during ordinary imple
 - **S16 Controlled Cutover: PASS**.
 - **Intelligence Stream V1: COMPLETE / ACCEPTED (S0-S16)**.
 - Intelligence Stream is the deployed Product root. GALACTECH V2 remains the explicit rollback/fallback surface at `/galactech`.
-- There is no active Stream V1 implementation frontier after S16; future frontend scope requires a new explicit user-approved roadmap.
+- Historical S0-S16 has no active implementation frontier. The later F0-F10 deficiency-closure program is also accepted under **INTELLIGENCE_STREAM_V1_FINAL_COMPLETION_ACCEPTED**.
+- Future frontend or live Portfolio/Capital scope requires a new explicit user-approved authority.
+- **REAL_CAPITAL=0**.
 
 ---
 
