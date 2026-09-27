@@ -24,7 +24,6 @@ from crypto_signal.product.intelligence_stream_models import (
     StreamSourceEvent,
 )
 from crypto_signal.product.intelligence_stream_narrative import (
-    STREAM_NARRATIVE_RENDERER_VERSION,
     STREAM_NARRATIVE_VALIDATOR_VERSION,
     STREAM_NARRATIVE_VOICE_VERSION,
     StreamNarrativeSourceKind,
@@ -62,6 +61,9 @@ STREAM_FAMILY_NARRATIVE_PLAN_SCHEMA_VERSION = (
 )
 STREAM_FAMILY_NARRATIVE_MESSAGE_SCHEMA_VERSION = (
     "intelligence-stream-family-narrative-message-v1/1"
+)
+STREAM_FAMILY_NARRATIVE_RENDERER_VERSION = (
+    "crypto-signal-family-customer-tr-v2/1"
 )
 STREAM_FAMILY_PROJECTOR_VERSION = "stream-final-f3-family-projector/1"
 STREAM_FAMILY_ANALYTICAL_POLICY_VERSION = "stream-final-f3-family-analytical/1"
@@ -516,7 +518,7 @@ class StreamFamilyNarrativeMessage:
     validation: StreamNarrativeValidation
     original_text_preserved: bool = True
     schema_version: str = STREAM_FAMILY_NARRATIVE_MESSAGE_SCHEMA_VERSION
-    renderer_version: str = STREAM_NARRATIVE_RENDERER_VERSION
+    renderer_version: str = STREAM_FAMILY_NARRATIVE_RENDERER_VERSION
     voice_version: str = STREAM_NARRATIVE_VOICE_VERSION
     engine_version: str = STREAM_ENGINE_VERSION
     read_only: bool = True
@@ -547,7 +549,7 @@ class StreamFamilyNarrativeMessage:
             self.production_authority,
             self.real_capital,
         )
-        if self.renderer_version != STREAM_NARRATIVE_RENDERER_VERSION:
+        if self.renderer_version != STREAM_FAMILY_NARRATIVE_RENDERER_VERSION:
             raise ValueError("unsupported family narrative renderer")
         if self.voice_version != STREAM_NARRATIVE_VOICE_VERSION:
             raise ValueError("unsupported family narrative voice")
@@ -1760,7 +1762,7 @@ def _build_family_narrative(
         "production_authority": False,
         "read_only": True,
         "real_capital": REAL_CAPITAL,
-        "renderer_version": STREAM_NARRATIVE_RENDERER_VERSION,
+        "renderer_version": STREAM_FAMILY_NARRATIVE_RENDERER_VERSION,
         "schema_version": STREAM_FAMILY_NARRATIVE_MESSAGE_SCHEMA_VERSION,
         "source_event_identity": fact.source_event_identity,
         "source_kind": StreamNarrativeSourceKind.DETERMINISTIC,
@@ -1802,55 +1804,42 @@ def _render_family_text(
         return _render_trust_family_text(snapshot, change)
 
     family_label = {
-        ConfluenceFamily.GEOMETRY: "Market/Geometry",
-        ConfluenceFamily.LIQUIDITY: "Liquidity",
-        ConfluenceFamily.ORDER_FLOW: "Order Flow",
-        ConfluenceFamily.DERIVATIVES: "Derivatives",
+        ConfluenceFamily.GEOMETRY: "Geometri / Piyasa Yapısı",
+        ConfluenceFamily.LIQUIDITY: "Likidite",
+        ConfluenceFamily.ORDER_FLOW: "Emir Akışı",
+        ConfluenceFamily.DERIVATIVES: "Türevler",
         ConfluenceFamily.ONCHAIN: "On-chain",
-        StreamTrustDomain.EVENT_RISK: "Event Risk",
-        StreamTrustDomain.PROVIDER_QUALITY: "Provider/Data Quality",
     }[snapshot.family]
-    direction = (
-        ""
-        if snapshot.direction is None
-        else f" Yön: {snapshot.direction}."
+    collapsed = _family_customer_summary(snapshot, change)
+    simple = (
+        f"{collapsed} Bu katman toplam sistem görüşünün yalnızca bir parçasıdır; "
+        "tek başına işlem kararı değildir."
     )
-    if change.story_started:
-        collapsed = (
-            f"{snapshot.symbol} {snapshot.timeframe}: {family_label} için "
-            f"ilk forward state kaydedildi — {snapshot.state_label}.{direction}"
-        )
-        change_sentence = "Bu, family projector aktivasyonundan sonraki ilk exact state."
-    else:
-        collapsed = (
-            f"{snapshot.symbol} {snapshot.timeframe}: {family_label} state değişti — "
-            f"{change.previous_state_label} → {snapshot.state_label}.{direction}"
-        )
-        change_sentence = (
-            "Değişen bileşenler: " + ", ".join(change.changed_components) + "."
-        )
-    quality = f"Kaynak kalitesi: {snapshot.source_quality}."
+    changed = (
+        "ilk kayıt"
+        if change.story_started
+        else ", ".join(change.changed_components)
+    )
     uncertainty = (
-        " Belirsizlik: " + ", ".join(snapshot.uncertainty_flags) + "."
+        " Belirsizlik kodları: " + ", ".join(snapshot.uncertainty_flags) + "."
         if snapshot.uncertainty_flags
         else ""
     )
-    simple = f"{collapsed} {quality}{uncertainty}"
     technical = (
-        f"{family_label} exact persisted evidence kimliğiyle değişti. "
-        f"{change_sentence} {quality}{uncertainty}"
+        f"{family_label} exact persisted evidence ile güncellendi. "
+        f"Raw durum: {snapshot.state_label}. "
+        f"Değişen bileşenler: {changed}. "
+        f"Kaynak kalitesi: {snapshot.source_quality}.{uncertainty}"
     )
-    intelligence = (
-        f"{family_label} katmanı şu anda {snapshot.state_label}. "
-        f"{change_sentence}"
-    )
+    intelligence = simple
     decision = (
-        "Bu mesaj family evidence değişimini bildirir; tek başına yeni forecast, "
-        "işlem yetkisi veya olasılık iddiası değildir."
+        "Bu tek kanıt ailesindeki değişimi bildirir. Toplam yön görüşü; "
+        "Geometri, Likidite, Emir Akışı, Türevler ve mevcutsa On-chain kanıtları "
+        "birlikte değerlendirilmeden çıkarılmaz."
     )
     capital = (
-        "Bu family mesajı canonical sanal-sermaye durumunu değiştirmez. "
-        "REAL_CAPITAL=0."
+        "Bu kanıt ailesi mesajı canonical sanal-sermaye durumunu tek başına "
+        "değiştirmez. REAL_CAPITAL=0."
     )
     return StreamNarrativeText(
         collapsed_text=collapsed,
@@ -1862,143 +1851,340 @@ def _render_family_text(
     )
 
 
+def _family_customer_summary(
+    snapshot: StreamFamilySnapshot,
+    change: StreamFamilyChangeSet,
+) -> str:
+    if snapshot.family is ConfluenceFamily.GEOMETRY:
+        return _geometry_customer_summary(snapshot)
+    if snapshot.family is ConfluenceFamily.LIQUIDITY:
+        return _liquidity_customer_summary(snapshot)
+    if snapshot.family is ConfluenceFamily.ORDER_FLOW:
+        return _order_flow_customer_summary(snapshot, change)
+    if snapshot.family is ConfluenceFamily.DERIVATIVES:
+        return _derivatives_customer_summary(snapshot)
+    return (
+        "On-chain tarafında kullanıcıya yön gösterecek kabul edilmiş canlı kanıt "
+        "bulunmuyor; bu katmanı yön görüşüne eklemiyorum."
+    )
+
+
+def _snapshot_components(snapshot: StreamFamilySnapshot) -> dict[str, str]:
+    return {item.name: item.value for item in snapshot.state_components}
+
+
+def _direction_phrase(direction: str | None) -> str | None:
+    if direction == "bullish":
+        return "yukarı yönlü"
+    if direction == "bearish":
+        return "aşağı yönlü"
+    return None
+
+
+def _geometry_customer_summary(snapshot: StreamFamilySnapshot) -> str:
+    components = _snapshot_components(snapshot)
+    direction = _direction_phrase(snapshot.direction)
+    signal_state = components.get("signal_state", "")
+    to_state = components.get("to_state", "")
+
+    if snapshot.subtype == "trigger_transition" or to_state == "invalidated":
+        if direction is not None:
+            return (
+                f"Önceki {direction} senaryo geçersizleşti; takip ettiğim piyasa "
+                "yapısı artık korunmuyor."
+            )
+        return (
+            "Önceki piyasa senaryosu geçersizleşti; takip ettiğim yapı artık "
+            "korunmuyor."
+        )
+
+    if signal_state in {"no_signal", "neutral"} or snapshot.direction in {None, "none"}:
+        return (
+            "Piyasa yapısı şu anda net bir yön beklentisi üretmiyor; yeni bir "
+            "teyit oluşmasını bekliyorum."
+        )
+
+    if signal_state == "active" and direction is not None:
+        return (
+            f"{direction.capitalize()} senaryo aktif; tanımlı piyasa yapısı ve "
+            "geçersizlik sınırı korunuyor."
+        )
+
+    if direction is not None:
+        return (
+            f"{direction.capitalize()} bir senaryoyu izliyorum; görüşü "
+            "güçlendirmek için ek teyit bekliyorum."
+        )
+
+    return (
+        "Piyasa yapısında yeni bir değişim var ancak bu değişim tek başına net "
+        "bir yön beklentisi üretmiyor."
+    )
+
+
+def _liquidity_customer_summary(snapshot: StreamFamilySnapshot) -> str:
+    components = _snapshot_components(snapshot)
+    candidate = (
+        components.get("liquidity_take_candidate")
+        or components.get("candidate")
+        or snapshot.state_label
+    ).lower()
+    state = snapshot.state_label.lower()
+    quality = snapshot.source_quality.lower()
+
+    if (
+        "unavailable" in candidate
+        or "unresolved" in state
+        or quality in {"degraded", "unavailable", "unresolved"}
+    ):
+        return (
+            "Likidite görünümü için yeterli güncel ve güvenilir kanıt yok; bu "
+            "katmanda yön teyidi vermiyorum."
+        )
+    if "both_sides" in candidate:
+        return (
+            "Tahtanın iki tarafındaki bekleyen emirlerde belirgin azalma "
+            "ölçüldü; kısa vadeli yapı karışık ve ek teyit gerekiyor."
+        )
+    if "bid_side" in candidate:
+        return (
+            "Tahtanın alış tarafındaki bekleyen emirlerde belirgin azalma "
+            "ölçüldü; bunu tek başına yön sinyali olarak kullanmıyorum."
+        )
+    if "ask_side" in candidate:
+        return (
+            "Tahtanın satış tarafındaki bekleyen emirlerde belirgin azalma "
+            "ölçüldü; bunu tek başına yön sinyali olarak kullanmıyorum."
+        )
+    return (
+        "Likidite tarafında belirgin bir hızlı çekilme ölçülmedi; ana görüş için "
+        "diğer kanıtların teyidini bekliyorum."
+    )
+
+
+def _order_flow_customer_summary(
+    snapshot: StreamFamilySnapshot,
+    change: StreamFamilyChangeSet,
+) -> str:
+    current = snapshot.state_label.lower()
+    previous = (change.previous_state_label or "").lower()
+
+    if current == "buy_pressure":
+        if previous and previous != current:
+            return (
+                "Emir akışı alıcılar lehine netleşti; kısa vadede yukarı yönlü "
+                "baskı güçlendi."
+            )
+        return (
+            "Alıcı baskısı korunuyor; emir akışı kısa vadede yukarı yönü "
+            "destekliyor."
+        )
+
+    if current == "sell_pressure":
+        if previous and previous != current:
+            return (
+                "Emir akışı satıcılar lehine netleşti; kısa vadede aşağı yönlü "
+                "baskı güçlendi."
+            )
+        return (
+            "Satıcı baskısı korunuyor; emir akışı kısa vadede aşağı yönü "
+            "destekliyor."
+        )
+
+    if current in {"mixed", "balanced"}:
+        if previous == "sell_pressure":
+            return (
+                "Önceki satış baskısı zayıfladı; emir akışı şu an net bir yön "
+                "teyidi vermiyor."
+            )
+        if previous == "buy_pressure":
+            return (
+                "Önceki alım baskısı zayıfladı; emir akışı şu an net bir yön "
+                "teyidi vermiyor."
+            )
+        if current == "balanced":
+            return (
+                "Alım ve satım baskısı dengede; emir akışı şu an net bir yön "
+                "teyidi vermiyor."
+            )
+        return (
+            "Tahta ile gerçekleşen işlemler aynı yöne işaret etmiyor; emir "
+            "akışında net teyit yok."
+        )
+
+    return (
+        "Emir akışı için yeterli güncel kanıt yok; bu katmanda yön teyidi "
+        "vermiyorum."
+    )
+
+
+def _derivatives_customer_summary(snapshot: StreamFamilySnapshot) -> str:
+    state = snapshot.state_label.lower()
+    if state == "crowded_long":
+        return (
+            "Vadeli piyasada long tarafı kalabalıklaşıyor; ters yönde sert "
+            "hareket riski arttı."
+        )
+    if state == "crowded_short":
+        return (
+            "Vadeli piyasada short tarafı kalabalıklaşıyor; ters yönde sert "
+            "hareket riski arttı."
+        )
+    if state == "leverage_buildup":
+        return (
+            "Vadeli piyasada açık pozisyon yükü büyüyor; kaldıraç birikimi "
+            "arttığı için hareketin kırılganlığı yükseliyor."
+        )
+    if state == "deleveraging":
+        return (
+            "Vadeli piyasada kaldıraç çözülüyor; açık pozisyon yükü azalıyor."
+        )
+    if state == "balanced":
+        return (
+            "Türev göstergeleri dengeli; belirgin bir kalabalıklaşma veya "
+            "kaldıraç baskısı yok."
+        )
+    if state == "mixed":
+        return (
+            "Türev göstergeleri aynı yönde birleşmiyor; bu katman şu an net "
+            "teyit vermiyor."
+        )
+    return (
+        "Türev görünümü için yeterli güncel kanıt yok; bu katmanda yön teyidi "
+        "vermiyorum."
+    )
+
+
 def _render_trust_family_text(
     snapshot: StreamFamilySnapshot,
     change: StreamFamilyChangeSet,
 ) -> StreamNarrativeText:
-    components = {
-        item.name: item.value for item in snapshot.state_components
-    }
-    transition = (
-        f"{change.previous_state_label} → {snapshot.state_label}"
-        if change.previous_state_label is not None
-        else snapshot.state_label
+    components = _snapshot_components(snapshot)
+    previous = change.previous_state_label
+    changed = (
+        "ilk kayıt"
+        if change.story_started
+        else ", ".join(change.changed_components)
     )
-    changed = ", ".join(change.changed_components)
     uncertainty = (
-        " Belirsizlik: " + ", ".join(snapshot.uncertainty_flags) + "."
+        " Belirsizlik kodları: " + ", ".join(snapshot.uncertainty_flags) + "."
         if snapshot.uncertainty_flags
         else ""
     )
 
     if snapshot.family is StreamTrustDomain.EVENT_RISK:
-        collapsed = f"Event Risk değişti — {transition}."
         if snapshot.state_label == "event_block":
-            effect = (
-                "Event-risk katmanı blok durumunda. Accepted circuit-breaker "
-                "composition'da daha yüksek öncelikli bir ABSTAIN koşulu yoksa "
-                "bu durum EVENT_BLOCK bağlamıdır."
+            collapsed = (
+                "Yakın dönem olay riski nedeniyle yeni işlem görüşünü "
+                "blokluyorum."
             )
             restore = (
-                "Normal event-risk durumu, olayın blok/stabilizasyon penceresinden "
-                "çıkması ve accepted takvim kapsamının güncel/geçerli kalmasıyla "
-                "geri gelir."
+                "Olayın blok ve stabilizasyon penceresi güvenli biçimde "
+                "tamamlandığında normal değerlendirmeye dönebilirim."
             )
         elif snapshot.state_label == "pre_event_caution":
-            effect = (
-                "Yaklaşan accepted takvim olayı nedeniyle CAUTION uyarısı aktif. "
-                "Bu bir yön sinyali değildir; karar yorumunda event risk daha "
-                "temkinli ele alınmalıdır."
+            collapsed = (
+                "Yaklaşan önemli olay nedeniyle temkinliyim; yön görüşünü daha "
+                "düşük güvenle değerlendiriyorum."
             )
             restore = (
-                "Normal event-risk durumu, olay penceresi güvenli biçimde "
-                "geçildiğinde veya source state yeniden CLEAR olduğunda döner."
+                "Olay penceresi güvenli biçimde geçildiğinde bu ek temkin "
+                "kalkabilir."
             )
         elif snapshot.state_label == "post_event_stabilization":
-            effect = (
-                "Accepted olay sonrası stabilizasyon penceresi aktif. "
-                "Sistem yön tahmini üretmiyor; event kaynaklı belirsizlik henüz "
-                "tamamen normal sayılmıyor."
+            collapsed = (
+                "Önemli olay sonrası piyasanın sakinleşmesini bekliyorum; henüz "
+                "normal risk durumuna dönmedim."
             )
             restore = (
-                "Normal event-risk durumu stabilizasyon penceresi tamamlanıp "
-                "source state CLEAR olduğunda geri gelir."
+                "Stabilizasyon penceresi tamamlanıp olay riski temizlendiğinde "
+                "normal değerlendirmeye dönebilirim."
             )
         elif snapshot.state_label == "degraded_data":
-            effect = (
-                "Event calendar evidence eksik, bayat veya doğrulama açısından "
-                "yetersiz. Bu nedenle event-risk katmanı CLEAR kabul edilemez ve "
-                "trust azaltılır."
+            collapsed = (
+                "Olay takvimi verisi yeterince güvenilir değil; risk durumunu "
+                "temiz kabul etmiyorum."
             )
             restore = (
-                "Normal durum, güncel ve gerekli kategorileri kapsayan accepted "
-                "event-calendar evidence yeniden mevcut olduğunda geri gelir."
+                "Güncel ve yeterli olay takvimi kanıtı yeniden geldiğinde risk "
+                "durumu tekrar değerlendirilecek."
             )
         else:
-            effect = (
-                "Event-risk katmanı CLEAR. Event kaynaklı ek blok/uyarı şu anda "
-                "aktif değil; diğer bağımsız trust gate'leri yine geçerlidir."
+            collapsed = (
+                "Olay riski tarafı şu an temiz; ek bir takvim engeli görünmüyor."
             )
             restore = (
-                "Bu normal durum yalnız accepted event-calendar coverage güncel "
-                "ve risk penceresi CLEAR kaldığı sürece geçerlidir."
+                "Bu durum yalnız olay takvimi kapsamı güncel kaldığı sürece "
+                "geçerlidir."
             )
-        nearest = components.get("nearest_event_identity", "none")
-        simple = f"{collapsed} {effect} {restore}{uncertainty}"
         technical = (
-            "Event Risk exact persisted calendar/freeze evidence ile değişti. "
-            f"Nearest event identity: {nearest}. Değişen bileşenler: {changed}. "
+            "Event Risk exact persisted calendar/freeze evidence ile güncellendi. "
+            f"Raw durum: {snapshot.state_label}; önceki durum: {previous or 'none'}. "
+            f"Nearest event identity: {components.get('nearest_event_identity', 'none')}. "
+            f"Değişen bileşenler: {changed}. "
             f"Kaynak kalitesi: {snapshot.source_quality}.{uncertainty}"
         )
-        intelligence = f"{effect} {restore}"
         decision = (
-            "Bu RISK mesajı event bağlamının güven/veto durumunu açıklar; "
-            "yön, getiri olasılığı veya exchange-order yetkisi üretmez. "
-            f"{effect}"
+            "Bu risk mesajı yön veya getiri olasılığı üretmez; yalnızca mevcut "
+            "olay riskinin karar güvenine etkisini açıklar."
         )
     else:
-        collapsed = f"Provider/Data Quality değişti — {transition}."
-        degraded_states = {
+        if snapshot.state_label in {
             "degraded_provider_unavailable",
             "degraded_provider_stale",
-            "degraded_no_overlap",
-        }
-        if snapshot.state_label in degraded_states:
-            effect = (
-                "Cross-provider veri güveni degraded. Dual-provider freshness/"
-                "availability/overlap gerektiren analizler tam sağlıklı "
-                "confirmation olarak yorumlanmamalıdır."
+        }:
+            collapsed = (
+                "Piyasa verisi sağlayıcılarından biri yeterince güvenilir değil; "
+                "bu nedenle teyit gücünü düşürüyorum."
             )
             restore = (
-                "Normal trust, required provider'lar yeniden available ve fresh "
-                "olduğunda, gap kalmadığında ve ortak grid full-overlap durumuna "
-                "döndüğünde geri gelir."
+                "Gerekli sağlayıcılar yeniden güncel ve erişilebilir olduğunda "
+                "normal veri güvenine dönebilirim."
+            )
+        elif snapshot.state_label == "degraded_no_overlap":
+            collapsed = (
+                "Veri sağlayıcıları aynı piyasa penceresini yeterince "
+                "doğrulamıyor; teyit gücünü düşürüyorum."
+            )
+            restore = (
+                "Sağlayıcılar yeniden aynı veri aralığını eksiksiz doğruladığında "
+                "normal güvene dönebilirim."
             )
         elif snapshot.state_label == "caution_partial_coverage":
-            effect = (
-                "Provider coverage kısmi; SYSTEM uyarısı aktif. Analiz tamamen "
-                "bloklanmış sayılmaz ancak cross-provider confirmation daha düşük "
-                "güvenle yorumlanmalıdır."
+            collapsed = (
+                "Piyasa verisi kısmi; sistem çalışıyor ancak teyit gücü şu an "
+                "daha düşük."
             )
             restore = (
-                "Normal trust, gap/partial-overlap ortadan kalkıp iki provider da "
-                "fresh full-overlap coverage sağladığında geri gelir."
+                "Eksik kapsam kapanıp sağlayıcılar yeniden tam örtüştüğünde "
+                "normal güvene dönebilirim."
             )
         else:
-            effect = (
-                "Provider/Data Quality healthy. Required provider availability, "
-                "freshness ve overlap kontrolleri bu snapshot için normal."
+            collapsed = (
+                "Piyasa verisi sağlıklı; gerekli sağlayıcılar birbirini yeterince "
+                "doğruluyor."
             )
             restore = (
-                "Bu normal trust yalnız provider'lar fresh/available kaldığı ve "
-                "coverage full-overlap/gap-free olduğu sürece geçerlidir."
+                "Bu durum sağlayıcılar güncel ve kapsama alanı eksiksiz kaldığı "
+                "sürece geçerlidir."
             )
-        simple = f"{collapsed} {effect} {restore}{uncertainty}"
         technical = (
-            "Provider trust exact persisted divergence snapshot ile değişti. "
+            "Provider trust exact persisted divergence snapshot ile güncellendi. "
+            f"Raw durum: {snapshot.state_label}; önceki durum: {previous or 'none'}. "
             f"Grid: {components.get('grid_state', 'unknown')}. "
             f"Değişen bileşenler: {changed}. "
             f"Kaynak kalitesi: {snapshot.source_quality}.{uncertainty}"
         )
-        intelligence = f"{effect} {restore}"
         decision = (
-            "Bu SYSTEM mesajı veri güvenini açıklar; yön, forecast veya order "
-            "yetkisi üretmez. Degraded/caution durumda provider confirmation "
-            "daha düşük güvenle ele alınır."
+            "Bu sistem mesajı veri güvenini açıklar; yön veya forecast üretmez. "
+            "Veri güveni düştüğünde diğer analizlerin teyit gücü de daha temkinli "
+            "yorumlanır."
         )
 
+    simple = f"{collapsed} {restore}"
+    intelligence = simple
     capital = (
-        "Bu trust mesajı canonical sanal-sermaye durumunu değiştirmez. "
+        "Bu güven mesajı canonical sanal-sermaye durumunu tek başına değiştirmez. "
         "REAL_CAPITAL=0."
     )
     return StreamNarrativeText(

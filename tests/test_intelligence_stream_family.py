@@ -76,6 +76,52 @@ def _snapshot(*, source: str, event_at_ms: int, state: str):
     )
 
 
+
+def _family_snapshot(
+    *,
+    projector_id: str,
+    family: ConfluenceFamily,
+    category: StreamCategory,
+    subtype: str,
+    evidence_domain: str,
+    source: str,
+    event_at_ms: int,
+    state_label: str,
+    state_components: tuple[tuple[str, str], ...],
+    direction: str | None = None,
+    timeframe: str = "microstructure",
+    source_quality: str = "measured",
+):
+    source_identity = canonical_sha256(
+        {
+            "source": source,
+            "event_at_ms": event_at_ms,
+            "state_label": state_label,
+            "projector_id": projector_id,
+        }
+    )
+    return build_family_snapshot(
+        projector_id=projector_id,
+        family=family,
+        category=category,
+        subtype=subtype,
+        importance=StreamImportance.IMPORTANT,
+        source_event_identity=source_identity,
+        source_scope="bybit:test:mi1",
+        asset="BTC",
+        symbol="BTCUSDT",
+        market="BTCUSDT",
+        timeframe=timeframe,
+        event_at_ms=event_at_ms,
+        source_as_of_ms=event_at_ms,
+        evidence_identities=(source_identity,),
+        evidence_domains=(evidence_domain,),
+        state_label=state_label,
+        state_components=state_components,
+        direction=direction,
+        source_quality=source_quality,
+    )
+
 def _path(tmp_path: Path) -> Path:
     path = tmp_path / "stream.sqlite3"
     IntelligenceStreamForwardRuntime(path).ensure_activated(activated_at_ms=1_000)
@@ -148,6 +194,175 @@ def test_family_runtime_persists_material_transition_in_canonical_tables(
             """
         ).fetchall()
         assert states == [("none",), ("bid_side",)]
+
+
+def test_mi1_customer_copy_hides_raw_family_state_machine_language(
+    tmp_path: Path,
+) -> None:
+    path = _path(tmp_path)
+    runtime = IntelligenceStreamFamilyRuntime(path)
+
+    runtime.project(
+        _family_snapshot(
+            projector_id="order_flow_change",
+            family=ConfluenceFamily.ORDER_FLOW,
+            category=StreamCategory.INTELLIGENCE,
+            subtype="order_flow_material_change",
+            evidence_domain="order_flow",
+            source="order-flow-sell",
+            event_at_ms=2_100,
+            state_label="sell_pressure",
+            state_components=(
+                ("book_pressure", "ask_heavy"),
+                ("label", "sell_pressure"),
+                ("taker_flow", "sell_dominant"),
+            ),
+            direction="sell_pressure",
+        ),
+        activated_at_ms=2_000,
+    )
+    runtime.project(
+        _family_snapshot(
+            projector_id="order_flow_change",
+            family=ConfluenceFamily.ORDER_FLOW,
+            category=StreamCategory.INTELLIGENCE,
+            subtype="order_flow_material_change",
+            evidence_domain="order_flow",
+            source="order-flow-mixed",
+            event_at_ms=2_200,
+            state_label="mixed",
+            state_components=(
+                ("book_pressure", "bid_heavy"),
+                ("label", "mixed"),
+                ("taker_flow", "sell_dominant"),
+            ),
+        ),
+        activated_at_ms=2_000,
+    )
+    runtime.project(
+        _family_snapshot(
+            projector_id="liquidity_change",
+            family=ConfluenceFamily.LIQUIDITY,
+            category=StreamCategory.INTELLIGENCE,
+            subtype="liquidity_material_change",
+            evidence_domain="liquidity",
+            source="liquidity-bid-side",
+            event_at_ms=2_300,
+            state_label="measured:bid_side_liquidity_take_candidate",
+            state_components=(
+                ("liquidity_take_candidate", "bid_side_liquidity_take_candidate"),
+                ("source_quality", "good"),
+                ("status", "measured"),
+            ),
+            source_quality="good",
+        ),
+        activated_at_ms=2_000,
+    )
+    runtime.project(
+        _family_snapshot(
+            projector_id="derivatives_change",
+            family=ConfluenceFamily.DERIVATIVES,
+            category=StreamCategory.INTELLIGENCE,
+            subtype="derivatives_material_change",
+            evidence_domain="derivatives",
+            source="derivatives-crowded-long",
+            event_at_ms=2_400,
+            state_label="crowded_long",
+            state_components=(
+                ("basis_state", "premium"),
+                ("funding_state", "positive_extreme"),
+                ("label", "crowded_long"),
+                ("open_interest_state", "rising"),
+            ),
+            timeframe="15m",
+        ),
+        activated_at_ms=2_000,
+    )
+    runtime.project(
+        _family_snapshot(
+            projector_id="market_geometry_change",
+            family=ConfluenceFamily.GEOMETRY,
+            category=StreamCategory.MARKET,
+            subtype="geometry_material_change",
+            evidence_domain="geometry",
+            source="geometry-bullish-watch",
+            event_at_ms=2_500,
+            state_label="watch:bullish:geometry",
+            state_components=(
+                ("direction", "bullish"),
+                ("geometry_present", "yes"),
+                ("setup_type", "price_action"),
+                ("signal_state", "watch"),
+            ),
+            direction="bullish",
+            timeframe="15m",
+            source_quality="exact_immutable_signal_freeze",
+        ),
+        activated_at_ms=2_000,
+    )
+
+    model = IntelligenceStreamReadModel(path)
+
+    order_flow_page = model.read_messages(
+        StreamMessageQuery(
+            category="intelligence",
+            evidence_domain="order_flow",
+            state="mixed",
+        )
+    )
+    assert len(order_flow_page.items) == 1
+    order_flow = order_flow_page.items[0]["text"]
+    assert order_flow["collapsed_text"] == (
+        "Önceki satış baskısı zayıfladı; emir akışı şu an net bir yön "
+        "teyidi vermiyor."
+    )
+    assert "sell_pressure" not in order_flow["collapsed_text"]
+    assert "mixed" not in order_flow["collapsed_text"]
+    assert "→" not in order_flow["collapsed_text"]
+    assert "state değişti" not in order_flow["collapsed_text"]
+
+    liquidity_page = model.read_messages(
+        StreamMessageQuery(
+            category="intelligence",
+            evidence_domain="liquidity",
+            state="measured:bid_side_liquidity_take_candidate",
+        )
+    )
+    assert len(liquidity_page.items) == 1
+    liquidity = liquidity_page.items[0]["text"]
+    assert "alış tarafındaki bekleyen emirlerde belirgin azalma" in (
+        liquidity["collapsed_text"]
+    )
+    assert "bid_side_liquidity_take_candidate" not in liquidity["collapsed_text"]
+
+    derivatives_page = model.read_messages(
+        StreamMessageQuery(
+            category="intelligence",
+            evidence_domain="derivatives",
+            state="crowded_long",
+        )
+    )
+    assert len(derivatives_page.items) == 1
+    derivatives = derivatives_page.items[0]["text"]
+    assert "long tarafı kalabalıklaşıyor" in derivatives["collapsed_text"]
+    assert "crowded_long" not in derivatives["collapsed_text"]
+
+    geometry_page = model.read_messages(
+        StreamMessageQuery(
+            category="market",
+            evidence_domain="geometry",
+            state="watch:bullish:geometry",
+        )
+    )
+    assert len(geometry_page.items) == 1
+    geometry = geometry_page.items[0]["text"]
+    assert "Yukarı yönlü bir senaryoyu izliyorum" in geometry["collapsed_text"]
+    assert "watch:bullish:geometry" not in geometry["collapsed_text"]
+
+    for value in (order_flow, liquidity, derivatives, geometry):
+        assert "state değişti" not in value["collapsed_text"]
+        assert " → " not in value["collapsed_text"]
+        assert "state değişti" not in value["simple_text"]
 
 
 def test_family_projector_activation_is_immutable(tmp_path: Path) -> None:
