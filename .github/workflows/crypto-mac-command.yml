@@ -1769,6 +1769,73 @@ jobs:
             head -c 300 /tmp/crypto-netdiag-body 2>/dev/null; echo
           done
 
+          echo "=== EXCHANGE ALTERNATE ENDPOINTS ==="
+          for url in \
+            'https://api1.binance.com/api/v3/time' \
+            'https://api2.binance.com/api/v3/time' \
+            'https://api3.binance.com/api/v3/time' \
+            'https://api4.binance.com/api/v3/time' \
+            'https://api-gcp.binance.com/api/v3/time' \
+            'https://data-api.binance.vision/api/v3/time' \
+            'https://data-api.binance.vision/api/v3/klines?symbol=BTCUSDT&interval=15m&limit=2' \
+            'https://api.bytick.com/v5/market/time' \
+            'https://api.bybit.tr/v5/market/time'
+          do
+            echo "--- $url"
+            /usr/bin/curl --noproxy '*' -sS -o /tmp/crypto-netdiag-alt-body \
+              -w 'http_code=%{http_code} remote_ip=%{remote_ip} ssl_verify=%{ssl_verify_result} time_total=%{time_total}\n' \
+              --connect-timeout 8 --max-time 12 "$url"
+            rc=$?
+            echo "curl_rc=$rc"
+            head -c 500 /tmp/crypto-netdiag-alt-body 2>/dev/null; echo
+          done
+
+          echo "=== BYBIT WEBSOCKET DOMAIN COMPARISON ==="
+          PY="/Volumes/Crypto-504/Crypto-Signal/Development/.venv/bin/python"
+          "$PY" - <<'PY'
+          import asyncio
+          import json
+          from websockets.asyncio.client import connect
+
+          URLS = (
+              "wss://stream.bybit.com/v5/public/spot",
+              "wss://stream.bybit.tr/v5/public/spot",
+          )
+
+          async def probe(url: str) -> None:
+              try:
+                  async with connect(
+                      url,
+                      open_timeout=8,
+                      close_timeout=3,
+                      ping_interval=None,
+                      proxy=None,
+                  ) as websocket:
+                      await websocket.send(json.dumps({
+                          "op": "subscribe",
+                          "args": ["publicTrade.BTCUSDT"],
+                      }))
+                      raw = await asyncio.wait_for(websocket.recv(), timeout=8)
+                      print(
+                          "BYBIT_WS "
+                          f"url={url} "
+                          f"status=CONNECTED "
+                          f"bytes={len(raw)}"
+                      )
+              except Exception as exc:
+                  print(
+                      "BYBIT_WS "
+                      f"url={url} "
+                      f"error={type(exc).__name__}:{exc}"
+                  )
+
+          async def main():
+              for url in URLS:
+                  await probe(url)
+
+          asyncio.run(main())
+          PY
+
           echo "=== HTTPX TRUST_ENV COMPARISON ==="
           PY="/Volumes/Crypto-504/Crypto-Signal/Development/.venv/bin/python"
           "$PY" - <<'PY'
