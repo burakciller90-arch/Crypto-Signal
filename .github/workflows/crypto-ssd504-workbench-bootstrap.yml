@@ -1,0 +1,193 @@
+name: Crypto SSD504 Workbench Bootstrap
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/crypto-ssd504-workbench-bootstrap.yml"
+      - "docs/CRYPTO_SIGNAL_SSD504_WORKBENCH.md"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  bootstrap:
+    name: Bootstrap stable Crypto Signal workbench on SSD504
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 10
+    steps:
+      - name: Checkout exact repository state
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Create and verify SSD504 workbench
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          ROOT="/Volumes/Crypto-504/Crypto-Signal-Workbench"
+          REPO="$ROOT/repo"
+
+          echo "USER=$(id -un)"
+          echo "UID=$(id -u)"
+          echo "RUNNER_NAME=$RUNNER_NAME"
+          echo "GITHUB_SHA=$GITHUB_SHA"
+
+          test "$(id -u)" = "504"
+          test -d /Volumes/Crypto-504
+          test -w /Volumes/Crypto-504
+
+          mkdir -p "$ROOT"
+          chmod 700 "$ROOT"
+
+          for dir in             00_INBOX             00_CONTEXT             01_EVIDENCE_DEPTH             02_PAPER_CAPITAL             03_PRODUCT_UI             04_SHARED_CONTRACTS             05_ACCEPTANCE             99_ARCHIVE
+          do
+            mkdir -p "$ROOT/$dir"
+          done
+
+          if [ ! -d "$REPO/.git" ]; then
+            mkdir -p "$REPO"
+            /usr/bin/rsync -a               --exclude ".venv"               --exclude "__pycache__"               --exclude ".pytest_cache"               --exclude ".mypy_cache"               "$GITHUB_WORKSPACE/" "$REPO/"
+            echo "WORKBENCH_REPO_SEEDED=YES"
+          else
+            test "$(git -C "$REPO" rev-parse --is-inside-work-tree)" = "true"
+            ORIGIN="$(git -C "$REPO" remote get-url origin || true)"
+            case "$ORIGIN" in
+              *burakciller90-arch/Crypto-Signal*) ;;
+              *)
+                echo "Refusing to touch unexpected repository at $REPO (origin=$ORIGIN)" >&2
+                exit 1
+                ;;
+            esac
+            echo "WORKBENCH_REPO_ALREADY_PRESENT=YES"
+            echo "WORKBENCH_REPO_HEAD=$(git -C "$REPO" rev-parse HEAD)"
+            echo "WORKBENCH_REPO_BRANCH=$(git -C "$REPO" branch --show-current || true)"
+            if [ -n "$(git -C "$REPO" status --porcelain)" ]; then
+              echo "WORKBENCH_REPO_DIRTY=YES"
+              git -C "$REPO" status --short
+            else
+              echo "WORKBENCH_REPO_DIRTY=NO"
+            fi
+          fi
+
+          cat > "$ROOT/WORKSPACE_READ_FIRST.md" <<'EOF'
+          # Crypto Signal Workbench — READ FIRST
+
+          Canonical physical root:
+
+          `/Volumes/Crypto-504/Crypto-Signal-Workbench`
+
+          ## Rules
+
+          - Work inside `repo/` for code. Use a feature branch + PR; GitHub remains canonical history.
+          - Read `00_CONTEXT/READ_FIRST_CRYPTO_SIGNAL.md`, `CURRENT_STATUS.md`, and `PROJECT_CHRONICLE.md` before changing state.
+          - Put new user-supplied planning files into `00_INBOX/` first, then triage them into the relevant workstream.
+          - `01_EVIDENCE_DEPTH/`, `02_PAPER_CAPITAL/`, and `03_PRODUCT_UI/` are the three primary development tracks.
+          - `04_SHARED_CONTRACTS/` is for cross-track contracts only.
+          - `05_ACCEPTANCE/` is for acceptance/audit notes and artifact pointers.
+          - Do not relocate the live Product/runtime, databases or services into this workbench.
+          - Do not copy secrets or credentials here.
+          - Do not touch Durdurulmaz or Quantum Capital.
+          - REAL_CAPITAL=0.
+
+          Current sequencing is intentionally not encoded here beyond the active canonical repo status; the user will explicitly choose the next implementation work.
+          EOF
+
+          cat > "$ROOT/00_INBOX/README.md" <<'EOF'
+          # Inbox
+
+          Landing zone for new user-supplied roadmap/spec files before they are assigned to Evidence, Paper Capital, Product UI or Shared Contracts.
+
+          Do not implement directly from an untriaged file if it conflicts with canonical repo authority.
+          EOF
+
+          cat > "$ROOT/01_EVIDENCE_DEPTH/README.md" <<'EOF'
+          # 01 — Evidence Depth
+
+          Scope: five-family exact/frozen evidence, proof payloads, visual renderers, source completeness and evidence UX contracts.
+
+          Canonical active evidence authority is linked from `00_CONTEXT/EVIDENCE_DEPTH_FRONTIER.md`.
+          EOF
+
+          cat > "$ROOT/02_PAPER_CAPITAL/README.md" <<'EOF'
+          # 02 — Paper Capital / Portfolio
+
+          Scope: paper-only capital allocation, execution simulation, immutable trade lifecycle, portfolio accounting, frozen trade archive and customer portfolio contracts.
+
+          REAL_CAPITAL=0. No real exchange-order authority is created by this directory.
+          EOF
+
+          cat > "$ROOT/03_PRODUCT_UI/README.md" <<'EOF'
+          # 03 — Product UI
+
+          Scope: Command Center, progressive disclosure, market pulse, portfolio surface, signal/asset workspaces, evidence presentation, markets/events/history and browser acceptance.
+
+          Product UI must consume real backend contracts and must not fabricate unavailable evidence.
+          EOF
+
+          cat > "$ROOT/04_SHARED_CONTRACTS/README.md" <<'EOF'
+          # 04 — Shared Contracts
+
+          Cross-workstream API/data contracts only. Keep implementation ownership in the relevant primary workstream.
+          EOF
+
+          cat > "$ROOT/05_ACCEPTANCE/README.md" <<'EOF'
+          # 05 — Acceptance
+
+          Store human-readable acceptance packets, browser-audit notes and GitHub Actions artifact/run pointers. Do not duplicate large runtime databases or raw secrets.
+          EOF
+
+          cat > "$ROOT/99_ARCHIVE/README.md" <<'EOF'
+          # 99 — Archive
+
+          Superseded local planning artifacts only. Canonical Git history remains in GitHub.
+          EOF
+
+          ln -sfn ../repo/READ_FIRST_CRYPTO_SIGNAL.md "$ROOT/00_CONTEXT/READ_FIRST_CRYPTO_SIGNAL.md"
+          ln -sfn ../repo/CURRENT_STATUS.md "$ROOT/00_CONTEXT/CURRENT_STATUS.md"
+          ln -sfn ../repo/PROJECT_CHRONICLE.md "$ROOT/00_CONTEXT/PROJECT_CHRONICLE.md"
+          ln -sfn ../repo/docs/CRYPTO_SIGNAL_EVIDENCE_DEPTH_VISUAL_PROOF_FRONTIER_V1.md "$ROOT/00_CONTEXT/EVIDENCE_DEPTH_FRONTIER.md"
+          ln -sfn ../repo/docs/PAPER_FUND_EPOCH2_V1_SPEC.md "$ROOT/00_CONTEXT/PAPER_FUND_EPOCH2_V1_SPEC.md"
+          ln -sfn ../repo/docs/CRYPTO_SIGNAL_INTELLIGENCE_STREAM_V1_MASTER_ROADMAP.md "$ROOT/00_CONTEXT/STREAM_MASTER_ROADMAP.md"
+          ln -sfn ../repo/docs/CRYPTO_SIGNAL_INTELLIGENCE_STREAM_V1_FINAL_COMPLETION_ROADMAP.md "$ROOT/00_CONTEXT/STREAM_FINAL_COMPLETION_ROADMAP.md"
+          ln -sfn ../repo/docs/V1_1_LOCKED_MASTER_ROADMAP_20260922.md "$ROOT/00_CONTEXT/V1_1_LOCKED_MASTER_ROADMAP.md"
+
+          cp "$GITHUB_WORKSPACE/docs/CRYPTO_SIGNAL_SSD504_WORKBENCH.md" "$ROOT/00_CONTEXT/WORKBENCH_AUTHORITY.md"
+
+          REPO_HEAD="$(git -C "$REPO" rev-parse HEAD)"
+          REPO_BRANCH="$(git -C "$REPO" branch --show-current || true)"
+          DIRTY_COUNT="$(git -C "$REPO" status --porcelain | wc -l | tr -d ' ')"
+
+          cat > "$RUNNER_TEMP/ssd504-workbench-report.txt" <<EOF
+          SSD504_WORKBENCH_PASS=YES
+          ROOT=$ROOT
+          OWNER_UID=$(stat -f '%u' "$ROOT")
+          OWNER_USER=$(stat -f '%Su' "$ROOT")
+          REPO=$REPO
+          REPO_HEAD=$REPO_HEAD
+          REPO_BRANCH=$REPO_BRANCH
+          REPO_DIRTY_COUNT=$DIRTY_COUNT
+          BOOTSTRAP_SHA=$GITHUB_SHA
+          REAL_CAPITAL=0
+          EOF
+
+          cat "$RUNNER_TEMP/ssd504-workbench-report.txt"
+
+          test -f "$ROOT/WORKSPACE_READ_FIRST.md"
+          test -d "$ROOT/01_EVIDENCE_DEPTH"
+          test -d "$ROOT/02_PAPER_CAPITAL"
+          test -d "$ROOT/03_PRODUCT_UI"
+          test -L "$ROOT/00_CONTEXT/READ_FIRST_CRYPTO_SIGNAL.md"
+          test -L "$ROOT/00_CONTEXT/CURRENT_STATUS.md"
+          test -L "$ROOT/00_CONTEXT/EVIDENCE_DEPTH_FRONTIER.md"
+
+      - name: Upload bootstrap report
+        uses: actions/upload-artifact@v4
+        with:
+          name: crypto-ssd504-workbench-${{ github.run_id }}
+          path: ${{ runner.temp }}/ssd504-workbench-report.txt
+          if-no-files-found: error
+          retention-days: 14
