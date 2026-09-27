@@ -44,7 +44,6 @@ from crypto_signal.product.intelligence_stream_narrative import (
     STREAM_NARRATIVE_MESSAGE_SCHEMA_VERSION,
 )
 from crypto_signal.product.intelligence_stream_system_view import (
-    STREAM_SYSTEM_VIEW_SCHEMA_VERSION,
     verified_system_view_record,
 )
 
