@@ -186,26 +186,26 @@ def test_direct_15m_cache_conflict_fails_before_new_freeze(
     items = _candles()
     cache = CandleStore(tmp_path / "cache.sqlite3")
     ledger = ImmutableSignalLedger(tmp_path / "ledger.sqlite3")
-    first = items[0]
+    original = items[60]
     conflicting = Candle(
-        exchange=first.exchange,
-        market_type=first.market_type,
-        symbol=first.symbol,
-        timeframe=first.timeframe,
-        open_time_ms=first.open_time_ms,
-        close_time_ms=first.close_time_ms,
-        open=first.open,
-        high=first.high + Decimal(10),
-        low=first.low,
-        close=first.close,
-        volume=first.volume,
-        quote_volume=first.quote_volume,
-        trade_count=first.trade_count,
+        exchange=original.exchange,
+        market_type=original.market_type,
+        symbol=original.symbol,
+        timeframe=original.timeframe,
+        open_time_ms=original.open_time_ms,
+        close_time_ms=original.close_time_ms,
+        open=original.open,
+        high=original.high + Decimal(10),
+        low=original.low,
+        close=original.close,
+        volume=original.volume,
+        quote_volume=original.quote_volume,
+        trade_count=original.trade_count,
         is_closed=True,
-        source=first.source,
-        source_timestamp_ms=first.source_timestamp_ms + 1,
-        ingested_at_ms=first.ingested_at_ms + 1,
-        adapter_version=first.adapter_version,
+        source=original.source,
+        source_timestamp_ms=original.source_timestamp_ms + 1,
+        ingested_at_ms=original.ingested_at_ms + 1,
+        adapter_version=original.adapter_version,
     )
     cache.upsert(conflicting)
 
