@@ -174,8 +174,8 @@ Execute exactly in this order:
 → **F6 Exact Frozen Evidence Closure — PASS**  
 → **F7 Guarded Local LLM/Ollama Activation — PASS**  
 → **F8 Real Production Multi-Category E2E Acceptance — PASS**  
-→ **F9 Final Real-UI Product Acceptance — ACTIVE**  
-→ **F10 Authority Freeze / Closeout**
+→ **F9 Final Real-UI Product Acceptance — PASS**  
+→ **F10 Authority Freeze / Closeout — ACTIVE**
 
 Do not jump ahead across accepted frontend stages. F5 is accepted only under the revised frontend scope: its implementation and physical activation are complete, while natural live Portfolio/Capital behavior is explicitly deferred to a later dedicated workstream. Do not represent the deferred Capital proof as observed or tested.
 
@@ -899,6 +899,26 @@ A normal collapsed message should let a trader quickly answer:
 The live Product — not only fixture screenshots — feels like:
 
 **a calm Telegram intelligence channel on the surface, a professional evidence workstation underneath.**
+
+
+### F9 final closure — 2026-09-27
+
+F9 is fully accepted for the current claimed frontend scope.
+
+- canonical acceptance: `docs/CRYPTO_SIGNAL_STREAM_FINAL_F9_REAL_UI_ACCEPTANCE.md`;
+- isolated acceptance tooling merged through PR #1392 to main `758b3e3c56f35e08bf9a62e367e3e5bf585f817d`;
+- final UID504 run `36315704622` completed SUCCESS;
+- genuine production desktop and exact-mobile browser acceptance passed;
+- current live MARKET/INTELLIGENCE and RISK/SYSTEM message groups were present;
+- all six 10-second comprehension checks passed;
+- canonical SSE incoming/unread UI semantics were proven without server mutation or fabricated activity;
+- deterministic same-code expansion, evidence-window, notification, discovery and 10k long-session mechanics passed;
+- Development and Product remained unchanged;
+- Decision/Outcome operational-evidence deferrals and the Capital/Portfolio dedicated-workstream deferral remain explicit;
+- no historical rich-message backfill, synthetic activity or scientific-policy relaxation;
+- `REAL_CAPITAL=0`.
+
+The active final-completion frontier is now **F10 — Authority Freeze / Final Closeout**.
 
 ---
 
