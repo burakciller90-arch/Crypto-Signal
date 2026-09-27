@@ -1,0 +1,116 @@
+name: RDP1 Runtime Lock Diagnostic UID504
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/crypto-rdp1-runtime-lock-diag-uid504.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          clean: true
+          fetch-depth: 1
+
+      - name: Inspect live Market Tape ownership and SQLite state
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          DEV="$ROOT/Development"
+          RT="$DEV/runtime/market_tape"
+          PY="$DEV/.venv/bin/python"
+
+          test "$(id -u)" = "504"
+          echo "RDP1_LOCK_DIAG_HEAD=$(git -C "$DEV" rev-parse HEAD 2>/dev/null || true)"
+          echo "=== SUPERVISOR / MARKET TAPE PROCESSES ==="
+          ps -axo pid=,ppid=,uid=,etime=,state=,command=             | grep -E '[s]sd_runtime_supervisor.sh|[r]un_market_tape_stream.py' || true
+
+          echo "=== PID FILE ==="
+          cat "$ROOT/market-tape-stream.pid" 2>/dev/null || echo "MISSING"
+
+          echo "=== LSOF LOCK + DBS ==="
+          for p in             "$RT/market_tape_stream.lock"             "$RT/market_tape.sqlite3"             "$RT/raw_market_tape.sqlite3"             "$RT/collector_runtime.sqlite3"             "$RT/market_data_gaps.sqlite3"
+          do
+            echo "--- $p ---"
+            /usr/sbin/lsof "$p" 2>/dev/null || true
+          done
+
+          echo "=== READ-ONLY SQLITE SNAPSHOT ==="
+          "$PY" - "$RT" <<'PY'
+          import json
+          import sqlite3
+          import sys
+          import time
+          from pathlib import Path
+
+          rt = Path(sys.argv[1])
+          now = time.time_ns() // 1_000_000
+
+          def ro(path: Path):
+              return sqlite3.connect(f"{path.resolve().as_uri()}?mode=ro", uri=True, timeout=5.0)
+
+          market = rt / "market_tape.sqlite3"
+          if market.is_file():
+              with ro(market) as db:
+                  db.execute("PRAGMA query_only=ON")
+                  print("MARKET_JOURNAL_MODE=" + str(db.execute("PRAGMA journal_mode").fetchone()[0]))
+                  for table, col in [
+                      ("market_tape_orderbooks", "event_at_ms"),
+                      ("market_tape_trades", "event_at_ms"),
+                  ]:
+                      count, max_ms = db.execute(f"SELECT COUNT(*), MAX({col}) FROM {table}").fetchone()
+                      age = None if max_ms is None else now - int(max_ms)
+                      print(f"{table.upper()}_COUNT={count} MAX_MS={max_ms} AGE_MS={age}")
+
+          runtime = rt / "collector_runtime.sqlite3"
+          if runtime.is_file():
+              with ro(runtime) as db:
+                  db.row_factory = sqlite3.Row
+                  db.execute("PRAGMA query_only=ON")
+                  print("COLLECTOR_JOURNAL_MODE=" + str(db.execute("PRAGMA journal_mode").fetchone()[0]))
+                  inst = db.execute(
+                      "SELECT instance_identity, process_id, started_at_ms, payload_json "
+                      "FROM collector_instances ORDER BY started_at_ms DESC, instance_identity DESC LIMIT 1"
+                  ).fetchone()
+                  if inst is None:
+                      print("COLLECTOR_INSTANCE=NONE")
+                  else:
+                      print(f"COLLECTOR_INSTANCE_ID={inst['instance_identity']}")
+                      print(f"COLLECTOR_PROCESS_ID={inst['process_id']}")
+                      print(f"COLLECTOR_STARTED_AT_MS={inst['started_at_ms']}")
+                      hb = db.execute(
+                          "SELECT sequence_no, observed_at_ms, last_successful_ingestion_ms, payload_json "
+                          "FROM collector_heartbeats WHERE instance_identity=? ORDER BY sequence_no DESC LIMIT 1",
+                          (str(inst["instance_identity"]),),
+                      ).fetchone()
+                      if hb is None:
+                          print("COLLECTOR_HEARTBEAT=NONE")
+                      else:
+                          print(f"COLLECTOR_HEARTBEAT_SEQ={hb['sequence_no']}")
+                          print(f"COLLECTOR_HEARTBEAT_AGE_MS={now-int(hb['observed_at_ms'])}")
+                          ingest = hb["last_successful_ingestion_ms"]
+                          print(f"COLLECTOR_INGESTION_AGE_MS={None if ingest is None else now-int(ingest)}")
+
+          for name in ("market_tape.sqlite3", "raw_market_tape.sqlite3", "collector_runtime.sqlite3", "market_data_gaps.sqlite3"):
+              path = rt / name
+              print(f"FILE_{name}_EXISTS={path.is_file()}")
+              if path.exists():
+                  print(f"FILE_{name}_SIZE={path.stat().st_size}")
+          PY
+
+          echo "=== RECENT MARKET TAPE LOG TAIL ==="
+          tail -n 160 "$ROOT/ServiceLogs/market-tape.err.log" 2>/dev/null || true
+          tail -n 120 "$ROOT/ServiceLogs/market-tape.out.log" 2>/dev/null || true
+
+          echo "RDP1_RUNTIME_LOCK_DIAG_PASS=YES"
+          echo "REAL_CAPITAL=0"
