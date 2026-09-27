@@ -3,6 +3,21 @@
 This repository originates from the user's **CRYPTO SIGNAL PLATFORM — MASTER HANDOFF v1.0 (2026-09-19)**.
 Its foundational project-isolation, scientific-truth and REAL_CAPITAL safety boundaries remain binding. Later **explicit user-approved canonical documents and state updates may supersede scoped product/frontend/roadmap decisions where they say so**. Never use older handoff or roadmap wording to undo a newer explicit supersession. Current execution state is established by `CURRENT_STATUS.md`, the newest Chronicle entry and mechanically observed Git/runtime truth.
 
+## Intelligence Stream V1 final completion — 2026-09-27
+
+**INTELLIGENCE_STREAM_V1_FINAL_COMPLETION_ACCEPTED**
+
+- F0-F9 canonical acceptance evidence is complete.
+- F10 final authority freeze is accepted by `docs/CRYPTO_SIGNAL_STREAM_V1_FINAL_ACCEPTANCE.md`.
+- Final production/source truth is frozen in `docs/CRYPTO_SIGNAL_STREAM_V1_FINAL_SOURCE_TO_MESSAGE_LEDGER.md`.
+- The original one-panel Intelligence Stream V1 deficiency-closure program has no remaining implementation frontier.
+- Decision/Outcome zero-current-event evidence remains explicit; it was not fabricated for acceptance.
+- Natural Portfolio/Capital live proof remains deferred to its dedicated later workstream.
+- Unsupported standalone On-chain/provider-gated research sources remain unavailable/research-only rather than implied live.
+- Any new main screen or new source activation is new scope and requires a new explicit authority.
+- No historical rich-message backfill, scientific-policy loosening or execution-authority expansion was used.
+- **REAL_CAPITAL=0**.
+
 ## Hard boundaries
 - This project is separate from Durdurulmaz and Quantum Capital.
 - Do not share repos, runtime state, DBs, credentials, ports, launchd labels, supervisors, brokers, chat state, or roadmaps.
@@ -26,7 +41,7 @@ Its foundational project-isolation, scientific-truth and REAL_CAPITAL safety bou
 - The user explicitly opened one final deficiency-closure scope for Intelligence Stream V1.
 - Read the Stream authorities in this order:
   1. `docs/CRYPTO_SIGNAL_INTELLIGENCE_STREAM_V1_MASTER_ROADMAP.md` — canonical product thesis, one-screen IA, interaction model and historical S0-S16 acceptance record.
-  2. `docs/CRYPTO_SIGNAL_INTELLIGENCE_STREAM_V1_FINAL_COMPLETION_ROADMAP.md` — **sole active Stream V1 completion execution authority**. It closes only deficiencies of the original Stream roadmap; it does not authorize new main screens or unrelated scope.
+  2. `docs/CRYPTO_SIGNAL_INTELLIGENCE_STREAM_V1_FINAL_COMPLETION_ROADMAP.md` — **accepted final Stream V1 deficiency-closure record**. F0-F10 are closed; it does not authorize new main screens or unrelated scope.
 - The previous multi-screen frontend authority chain is **SUPERSEDED / HISTORICAL**:
   - `docs/CRYPTO_SIGNAL_FRONTEND_MASTER_ROADMAP_V1.md`;
   - `docs/CRYPTO_SIGNAL_FRONTEND_M0_CONSTITUTION.md`;
@@ -46,7 +61,7 @@ The user's 2026-09-20 Full Version direction supersedes the earlier deliberately
 Before planning new product work, read **in this order**:
 - `docs/V1_1_LOCKED_MASTER_ROADMAP_20260922.md` — **LOCKED user-approved v1.1 global product/science/capital contract (2026-09-22)**. Its program-level Product rail remains valid, while current frontend-specific IA/brand/visual/execution details are governed by the canonical frontend documents below.
 - `docs/CRYPTO_SIGNAL_INTELLIGENCE_STREAM_V1_MASTER_ROADMAP.md` — canonical Intelligence Stream V1 product vision and historical S0-S16 acceptance record.
-- `docs/CRYPTO_SIGNAL_INTELLIGENCE_STREAM_V1_FINAL_COMPLETION_ROADMAP.md` — **sole active Stream V1 completion execution authority** for closing the original roadmap's remaining production deficiencies.
+- `docs/CRYPTO_SIGNAL_INTELLIGENCE_STREAM_V1_FINAL_COMPLETION_ROADMAP.md` — **accepted final Stream V1 completion record**; the deficiency-closure execution frontier is closed.
 - `docs/CRYPTO_SIGNAL_FRONTEND_MASTER_ROADMAP_V1.md` — **SUPERSEDED historical frontend roadmap**; do not execute it.
 - `docs/CRYPTO_SIGNAL_FRONTEND_M0_CONSTITUTION.md` — **SUPERSEDED historical frontend decision record**; only reuse principles explicitly re-adopted by the Stream roadmap/global contracts.
 - `docs/CRYPTO_SIGNAL_FRONTEND_M1_CAPABILITY_GAP_LEDGER.md` — **historical discovery evidence**; useful for capability facts, not current product execution authority.
@@ -61,7 +76,7 @@ Before planning new product work, read **in this order**:
 The project should stay faithful to these documents. Scope may be refined only by preserving their intent and hard invariants; do not silently regress to a narrower historical roadmap.
 
 ## Operating rule
-Read this file, then `CURRENT_STATUS.md`, then the newest `PROJECT_CHRONICLE.md` entry before changing project state. For Stream work, read `docs/CRYPTO_SIGNAL_INTELLIGENCE_STREAM_V1_MASTER_ROADMAP.md` for the locked product vision and then `docs/CRYPTO_SIGNAL_INTELLIGENCE_STREAM_V1_FINAL_COMPLETION_ROADMAP.md` for active execution. Older frontend roadmaps may be consulted as history/discovery evidence but must not drive scope or sequencing.
+Read this file, then `CURRENT_STATUS.md`, then the newest `PROJECT_CHRONICLE.md` entry before changing project state. For Stream work, read `docs/CRYPTO_SIGNAL_INTELLIGENCE_STREAM_V1_MASTER_ROADMAP.md` for the locked product vision and then `docs/CRYPTO_SIGNAL_INTELLIGENCE_STREAM_V1_FINAL_COMPLETION_ROADMAP.md` for the accepted final closure record. Older frontend roadmaps may be consulted as history/discovery evidence but must not drive scope or sequencing.
 
 ## 2026-09-24 state-first authority update
 
