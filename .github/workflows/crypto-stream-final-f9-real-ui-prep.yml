@@ -194,7 +194,7 @@ jobs:
 
           "$PY" "$GITHUB_WORKSPACE/ops/capture_chromium_viewport.py"             --browser "$BROWSER"             --url "$BASE_URL/?fixture=sound"             --output "$OUT/desktop-sound.png"             --metrics-out "$OUT/desktop-sound.json"             --width 1440 --height 1000             --require-no-horizontal-overflow             --probe-notifications
 
-          "$PY" "$GITHUB_WORKSPACE/ops/capture_chromium_viewport.py"             --browser "$BROWSER"             --url "$BASE_URL/?fixture=filters"             --output "$OUT/desktop-discovery.png"             --metrics-out "$OUT/desktop-discovery.json"             --width 1440 --height 1000             --require-no-horizontal-overflow             --probe-discovery
+          "$PY" "$GITHUB_WORKSPACE/ops/capture_chromium_viewport.py"             --browser "$BROWSER"             --url "$BASE_URL/?fixture=filters&message=0000000000000000000000000000000000000000000000000000000000000002"             --output "$OUT/desktop-discovery.png"             --metrics-out "$OUT/desktop-discovery.json"             --width 1440 --height 1000             --require-no-horizontal-overflow             --probe-discovery
 
           "$PY" "$GITHUB_WORKSPACE/ops/capture_chromium_viewport.py"             --browser "$BROWSER"             --url "$BASE_URL/?fixture=long10k"             --output "$OUT/desktop-long10k.png"             --metrics-out "$OUT/desktop-long10k.json"             --width 1440 --height 1100             --require-no-horizontal-overflow             --probe-long-session
 
