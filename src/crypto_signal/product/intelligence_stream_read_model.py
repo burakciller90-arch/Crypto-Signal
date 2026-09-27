@@ -157,14 +157,14 @@ class IntelligenceStreamReadModel:
         if query.primary_surface:
             placeholders = ", ".join("?" for _ in _PRIMARY_HIDDEN_FAMILIES)
             clauses.append(
-                "("
-                "json_extract(n.payload_json, '$.schema_version') != ? "
-                "OR json_extract(n.payload_json, '$.family') NOT IN ("
+                "COALESCE("
+                "json_extract(n.payload_json, '$.family'), "
+                "json_extract(f.payload_json, '$.family'), "
+                "''"
+                ") NOT IN ("
                 + placeholders
                 + ")"
-                ")"
             )
-            params.append(STREAM_FAMILY_NARRATIVE_MESSAGE_SCHEMA_VERSION)
             params.extend(_PRIMARY_HIDDEN_FAMILIES)
 
         if query.before is not None:
