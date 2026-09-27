@@ -22,6 +22,11 @@ def test_ssd_supervisor_owns_market_tape_stream_once() -> None:
     assert 'exec "$py" "$runner"' in text
     assert '--runtime-status-db "$collector_runtime"' in text
     assert '--gap-ledger-db "$gaps"' in text
+    assert (
+        'BYBIT_WS_URL="${CRYPTO_SIGNAL_BYBIT_WS_URL:-'
+        'wss://stream.bybit.tr/v5/public/spot}"'
+    ) in text
+    assert '--bybit-ws-url "$BYBIT_WS_URL"' in text
     assert "--heartbeat-interval-ms 10000" in text
     assert "--max-ingestion-silence-ms 60000" in text
     assert "--max-events 0" in text
