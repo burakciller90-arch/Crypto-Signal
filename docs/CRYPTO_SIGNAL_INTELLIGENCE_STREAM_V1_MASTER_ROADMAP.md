@@ -1,6 +1,6 @@
 # Crypto Signal — Intelligence Stream V1 Master Roadmap
 
-Status: **CANONICAL PRODUCT VISION / HISTORICAL S0-S16 ACCEPTANCE RECORD**  
+Status: **CANONICAL PRODUCT VISION / HISTORICAL S0-S16 / FINAL COMPLETION ACCEPTED**  
 Final completion execution authority: `docs/CRYPTO_SIGNAL_INTELLIGENCE_STREAM_V1_FINAL_COMPLETION_ROADMAP.md`  
 Company: GALACTECH  
 Product: Crypto Signal  
@@ -9,6 +9,8 @@ Safety: REAL_CAPITAL=0
 Supersession date: 2026-09-25
 
 > **2026-09-26 completion-authority update:** S0-S16 remain valid historical acceptance records for the components and isolated/live scenarios they actually proved. Later real-production evidence showed that not every source family promised by this document had a complete 24/7 production source→message hook, and that WC2 forward issuance had stopped advancing while fresh signal freezes continued. The user explicitly opened one final deficiency-closure scope. Execute `docs/CRYPTO_SIGNAL_INTELLIGENCE_STREAM_V1_FINAL_COMPLETION_ROADMAP.md` for all remaining Stream V1 completion work. This document remains authoritative for product thesis, one-screen IA, interaction design and original Definition of Done.
+
+> **2026-09-27 final-completion update:** The deficiency-closure roadmap F0-F10 is now accepted. Binding status: `INTELLIGENCE_STREAM_V1_FINAL_COMPLETION_ACCEPTED`. Final truth is recorded in `docs/CRYPTO_SIGNAL_STREAM_V1_FINAL_SOURCE_TO_MESSAGE_LEDGER.md` and `docs/CRYPTO_SIGNAL_STREAM_V1_FINAL_ACCEPTANCE.md`. This does not promote deferred Decision/Outcome event evidence, natural Portfolio/Capital proof or unsupported On-chain/provider-gated sources. `REAL_CAPITAL=0`.
 
 ---
 
@@ -71,9 +73,12 @@ These decisions are already made and must not be re-opened during ordinary imple
 - **S14 Performance, Accessibility and Long-Session Stability: PASS**.
 - **S15 End-to-End Product Acceptance: PASS**.
 - **S16 Controlled Cutover: PASS**.
-- **Intelligence Stream V1: COMPLETE / ACCEPTED (S0-S16)**.
+- **Intelligence Stream V1: COMPLETE / ACCEPTED (S0-S16 historical acceptance retained)**.
+- **Final deficiency closure F0-F10: ACCEPTED — `INTELLIGENCE_STREAM_V1_FINAL_COMPLETION_ACCEPTED`.**
 - Intelligence Stream is the deployed Product root. GALACTECH V2 remains the explicit rollback/fallback surface at `/galactech`.
-- There is no active Stream V1 implementation frontier after S16; future frontend scope requires a new explicit user-approved roadmap.
+- There is no active Stream V1 implementation frontier. Future frontend scope requires a new explicit user-approved roadmap.
+- Decision/Outcome zero-current-event evidence and the natural Portfolio/Capital proof deferral remain explicit.
+- `REAL_CAPITAL=0`.
 
 ---
 
