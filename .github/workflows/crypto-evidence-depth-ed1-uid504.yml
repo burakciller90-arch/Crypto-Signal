@@ -1,0 +1,224 @@
+name: Crypto Evidence Depth ED1 UID504
+
+on:
+  push:
+    branches:
+      - 'feat/evidence-depth-ed1-*'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'src/crypto_signal/product/intelligence_stream_exact_evidence.py'
+      - 'src/crypto_signal/product/stream/app.js'
+      - 'src/crypto_signal/product/stream/evidence.js'
+      - 'src/crypto_signal/product/stream/visual_proof.js'
+      - 'src/crypto_signal/product/stream/app.css'
+      - 'tests/test_intelligence_stream_exact_evidence.py'
+      - '.github/workflows/crypto-evidence-depth-ed1-uid504.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: crypto-evidence-depth-ed1-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ed1-exact-family-payload:
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+
+      - name: Verify exact source and preserve canonical checkouts
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          DEV="$ROOT/Development"
+          PRODUCT="$ROOT/Product"
+          BASE_PY="$DEV/.venv/bin/python"
+          VENV="$RUNNER_TEMP/ed1-venv"
+
+          test "$(id -u)" = "504"
+          test -x "$BASE_PY"
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test -z "$(git -C "$DEV" status --porcelain)"
+          test -z "$(git -C "$PRODUCT" status --porcelain)"
+          {
+            echo "DEV_HEAD_BEFORE=$(git -C "$DEV" rev-parse HEAD)"
+            echo "PRODUCT_HEAD_BEFORE=$(git -C "$PRODUCT" rev-parse HEAD)"
+          } > "$RUNNER_TEMP/ed1-checkout-state"
+
+          rm -rf "$VENV"
+          "$BASE_PY" -m venv "$VENV"
+          "$VENV/bin/python" -m pip install --upgrade pip
+          "$VENV/bin/python" -m pip install -e "$GITHUB_WORKSPACE"
+          "$VENV/bin/python" -m pip install "pytest>=8.4" "ruff>=0.13"
+          echo "ED1_PY=$VENV/bin/python" >> "$GITHUB_ENV"
+          echo "ED1_EXACT_SOURCE_PASS=YES"
+          echo "REAL_CAPITAL=0"
+
+      - name: Focused exact-evidence and frontend contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          "$ED1_PY" -m pytest -q tests/test_intelligence_stream_exact_evidence.py
+          "$ED1_PY" -m ruff check             tests/test_intelligence_stream_exact_evidence.py             src/crypto_signal/product/intelligence_stream_exact_evidence.py
+          node --check src/crypto_signal/product/stream/app.js
+          node --check src/crypto_signal/product/stream/evidence.js
+          node --check src/crypto_signal/product/stream/visual_proof.js
+          echo "ED1_FOCUSED_CONTRACT_PASS=YES"
+          echo "REAL_CAPITAL=0"
+
+      - name: Prove real live family payload resolution
+        shell: bash
+        run: |
+          set -euo pipefail
+          "$ED1_PY" - <<'PY'
+          import json
+          import urllib.parse
+          import urllib.request
+
+          BASE = "http://127.0.0.1:48700"
+
+          def get(path, params=None):
+              url = BASE + path
+              if params:
+                  url += "?" + urllib.parse.urlencode(params)
+              with urllib.request.urlopen(url, timeout=10) as response:
+                  return json.loads(response.read().decode("utf-8"))
+
+          page = get("/api/stream/messages", {"surface": "all", "limit": 200})
+          items = page.get("page", {}).get("items", [])
+          required = {
+              "liquidity": {"domains": ("liquidity", "order_book"), "shape": "book"},
+              "order_flow_absorption": {
+                  "domains": ("order_flow", "public_trades"),
+                  "shape": "trade",
+              },
+          }
+          found = {}
+          for item in items:
+              family = item.get("family")
+              if family in required and family not in found:
+                  found[family] = item
+
+          missing = sorted(set(required) - set(found))
+          if missing:
+              raise SystemExit("live_family_message_missing:" + ",".join(missing))
+
+          for family, item in found.items():
+              identity = item["narrative_identity"]
+              payload = get(f"/api/stream/messages/{identity}/evidence")
+              evidence = payload.get("evidence")
+              if not isinstance(evidence, dict):
+                  raise SystemExit(f"{family}:exact_evidence_missing")
+              resolutions = {
+                  row.get("domain"): row
+                  for row in evidence.get("resolutions", [])
+                  if isinstance(row, dict)
+              }
+              rows = [
+                  resolutions[domain]
+                  for domain in required[family]["domains"]
+                  if domain in resolutions
+              ]
+              if not rows or not any(
+                  row.get("resolution_state") == "READY_EXACT" for row in rows
+              ):
+                  raise SystemExit(f"{family}:ready_exact_missing")
+
+              objects = []
+              for row in rows:
+                  projection = row.get("customer_projection")
+                  if not isinstance(projection, dict):
+                      continue
+                  candidates = projection.get("exact_source_objects")
+                  if isinstance(candidates, list):
+                      objects.extend(
+                          candidate
+                          for candidate in candidates
+                          if isinstance(candidate, dict)
+                      )
+
+              shape = required[family]["shape"]
+              if shape == "book" and not any(
+                  isinstance(obj.get("bids"), list)
+                  and isinstance(obj.get("asks"), list)
+                  and obj["bids"]
+                  and obj["asks"]
+                  for obj in objects
+              ):
+                  raise SystemExit("liquidity:exact_orderbook_payload_missing")
+              if shape == "trade" and not any(
+                  obj.get("aggressor_side") in {"buy", "sell"}
+                  and obj.get("price") is not None
+                  and obj.get("size") is not None
+                  for obj in objects
+              ):
+                  raise SystemExit("order_flow:exact_trade_payload_missing")
+
+              print(
+                  "ED1_LIVE_FAMILY_PAYLOAD="
+                  + json.dumps(
+                      {
+                          "family": family,
+                          "narrative_identity": identity,
+                          "event_at_ms": item.get("event_at_ms"),
+                          "resolved_object_count": len(objects),
+                          "current_data_substitution": evidence.get(
+                              "current_data_substitution"
+                          ),
+                      },
+                      sort_keys=True,
+                  )
+              )
+              if evidence.get("current_data_substitution") is not False:
+                  raise SystemExit(f"{family}:current_data_substitution_not_false")
+
+          print("ED1_LIVE_EXACT_PAYLOAD_PASS=YES")
+          print("ED1_DERIVATIVES_LIVE_FRESHNESS=DEFERRED_STALE_SOURCE")
+          print("ED1_ONCHAIN_LIVE_SOURCE=DEFERRED_SOURCE")
+          print("REAL_CAPITAL=0")
+          PY
+
+      - name: Prove canonical checkouts remained untouched
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          DEV="$ROOT/Development"
+          PRODUCT="$ROOT/Product"
+          STATE="$RUNNER_TEMP/ed1-checkout-state"
+          DEV_BEFORE="$(sed -n 's/^DEV_HEAD_BEFORE=//p' "$STATE")"
+          PRODUCT_BEFORE="$(sed -n 's/^PRODUCT_HEAD_BEFORE=//p' "$STATE")"
+          test -z "$(git -C "$DEV" status --porcelain)"
+          test -z "$(git -C "$PRODUCT" status --porcelain)"
+          test "$(git -C "$DEV" rev-parse HEAD)" = "$DEV_BEFORE"
+          test "$(git -C "$PRODUCT" rev-parse HEAD)" = "$PRODUCT_BEFORE"
+          echo "ED1_NON_MUTATING_PASS=YES"
+
+      - name: Guard project isolation
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE_SHA="${{ github.event.pull_request.base.sha || github.event.before }}"
+          ZERO_SHA="0000000000000000000000000000000000000000"
+          if [[ -n "$BASE_SHA" && "$BASE_SHA" != "$ZERO_SHA" ]]; then
+            git fetch --no-tags origin "$BASE_SHA"
+            CHANGED="$(git diff --name-only "$BASE_SHA"...HEAD)"
+          else
+            CHANGED="$(git show --format= --name-only "$GITHUB_SHA")"
+          fi
+          printf '%s\n' "$CHANGED"
+          if printf '%s\n' "$CHANGED" | grep -Eiq 'durdurulmaz|quantum-capital'; then
+            exit 1
+          fi
+          echo "ED1_PROJECT_ISOLATION_PASS=YES"
+          echo "REAL_CAPITAL=0"
