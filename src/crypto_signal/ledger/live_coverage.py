@@ -11,7 +11,6 @@ from crypto_signal.ledger.higher_timeframe import prepare_higher_timeframe_histo
 from crypto_signal.ledger.live_clock import (
     LiveFreezeResult,
     freeze_live_candles,
-    freeze_live_provider,
 )
 from crypto_signal.ledger.store import ImmutableSignalLedger
 
@@ -54,12 +53,26 @@ async def freeze_coverage_context(
         context.source_strategy
         is LiveCoverageSourceStrategy.DIRECT_CANONICAL_15M
     ):
-        return await freeze_live_provider(
-            adapter=adapter,
+        candles = tuple(
+            await adapter.fetch_candles(
+                symbol=context.symbol,
+                timeframe=context.timeframe,
+                limit=context.freeze_limit,
+            )
+        )
+        for candle in candles:
+            if candle.exchange is not context.exchange:
+                raise ValueError("direct candle exchange mismatch")
+            if candle.market_type is not context.market_type:
+                raise ValueError("direct candle market type mismatch")
+            if candle.symbol != context.symbol:
+                raise ValueError("direct candle symbol mismatch")
+            if candle.timeframe != context.timeframe:
+                raise ValueError("direct candle timeframe mismatch")
+        candle_store.upsert_many(candles)
+        return freeze_live_candles(
+            candles=candles,
             ledger=ledger,
-            symbol=context.symbol,
-            timeframe=context.timeframe,
-            limit=context.freeze_limit,
             minimum_closed_candles=context.minimum_closed_candles,
         )
 
