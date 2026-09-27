@@ -1,0 +1,36 @@
+name: Crypto Stream Final F8 UI Search State Diagnosis
+on:
+  push:
+    branches:
+      - 'accept/f8-ui-search-state-diagnosis'
+permissions:
+  contents: read
+jobs:
+  diagnose:
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          clean: true
+      - name: Run real browser search diagnosis
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
+          PY="$DEV/.venv/bin/python"
+          OUT="$RUNNER_TEMP/f8-search-diag"
+          mkdir -p "$OUT"
+          BROWSER="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+          test -x "$BROWSER"
+          export PYTHONPATH="$GITHUB_WORKSPACE/ops:$GITHUB_WORKSPACE/src:$GITHUB_WORKSPACE"
+          "$PY" "$GITHUB_WORKSPACE/ops/probe_stream_f8_browser.py" \
+            --browser "$BROWSER" \
+            --base-url http://127.0.0.1:48700 \
+            --narrative-identity 292fff32aef2df8a30eea66069f2a36c9c8ccfcd8042d1518f0b7e7526271d74 \
+            --category market \
+            --search-text "SOLUSDT 4h: Market/Geometry için ilk forward state kaydedildi — watch:bullish:no_geometry. Yön: bullish." \
+            --output "$OUT/browser.json" \
+            --screenshot "$OUT/browser.png" \
+            --width 1440 --height 1000
