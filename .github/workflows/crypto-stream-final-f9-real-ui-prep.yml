@@ -1,9 +1,6 @@
 name: Crypto Stream Final F9 Real UI Acceptance
 
 on:
-  push:
-    branches:
-      - 'stream/final-f9-*'
   pull_request:
     branches:
       - main
