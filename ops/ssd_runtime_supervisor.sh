@@ -10,6 +10,23 @@ ALERTS="$ROOT/Alerts"
 PAPER="$ROOT/Paper"
 WRAPPER="$ROOT/ssd-clock-wrapper.py"
 LOGDIR="$ROOT/ServiceLogs"
+BYBIT_REST_BASE_URL="${CRYPTO_SIGNAL_BYBIT_REST_BASE_URL:-https://api.bybit.tr}"
+BYBIT_WS_URL="${CRYPTO_SIGNAL_BYBIT_WS_URL:-wss://stream.bybit.tr/v5/public/spot}"
+
+case "$BYBIT_REST_BASE_URL" in
+  https://*) ;;
+  *)
+    echo "RUNTIME_INVALID_BYBIT_REST_URL=YES FAIL_CLOSED=YES REAL_CAPITAL=0" >&2
+    exit 75
+    ;;
+esac
+case "$BYBIT_WS_URL" in
+  wss://*) ;;
+  *)
+    echo "RUNTIME_INVALID_BYBIT_WS_URL=YES FAIL_CLOSED=YES REAL_CAPITAL=0" >&2
+    exit 75
+    ;;
+esac
 
 for required in "$DEV" "$LIVE" "$PRODUCT" "$ALERTS" "$PAPER"; do
   if [ ! -d "$required" ]; then
@@ -27,7 +44,7 @@ done
 mkdir -p "$LOGDIR"
 exec >>"$LOGDIR/supervisor.log" 2>&1
 
-echo "$(date '+%Y-%m-%d %H:%M:%S %z') supervisor_r11_start pid=$$ root=$ROOT"
+echo "$(date '+%Y-%m-%d %H:%M:%S %z') supervisor_r11_start pid=$ root=$ROOT bybit_rest=$BYBIT_REST_BASE_URL bybit_ws=$BYBIT_WS_URL"
 
 dashboard_pid_is_expected() {
   local pid="$1"
@@ -156,6 +173,7 @@ start_market_tape_stream() {
       --lock-path "$lock" \
       --runtime-status-db "$collector_runtime" \
       --gap-ledger-db "$gaps" \
+      --bybit-ws-url "$BYBIT_WS_URL" \
       --symbols BTCUSDT ETHUSDT SOLUSDT \
       --depth 50 \
       --orderbook-snapshot-interval-ms 1000 \
@@ -235,6 +253,7 @@ run_wc2_live_clock() {
       --db "$ledger" \
       --candle-cache "$candle" \
       --provider-divergence "$divergence" \
+      --bybit-base-url "$BYBIT_REST_BASE_URL" \
       --stream-enabled \
       --stream-ledger "$stream" \
       --stream-market-tape "$market_tape" \
