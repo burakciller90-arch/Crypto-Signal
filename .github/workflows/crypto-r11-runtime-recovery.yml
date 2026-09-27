@@ -25,13 +25,13 @@ jobs:
           set -euo pipefail
           mode="$(printf '%s\n' "$ISSUE_BODY" | awk -F: 'tolower($1)=="mode" {gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2); print tolower($2); exit}')"
           case "$mode" in
-            runtime|runner-arm|runner-verify) ;;
+            runtime|runtime-restart|runner-arm|runner-verify) ;;
             *) echo "Unsupported R11 mode: $mode"; exit 2 ;;
           esac
           echo "mode=$mode" >> "$GITHUB_OUTPUT"
 
       - name: Sync canonical Development for R11
-        if: steps.parse.outputs.mode == 'runtime'
+        if: steps.parse.outputs.mode == 'runtime' || steps.parse.outputs.mode == 'runtime-restart'
         shell: bash
         env:
           GH_JOB_TOKEN: ${{ github.token }}
@@ -47,6 +47,116 @@ jobs:
           git -C "$DEV" merge --ff-only "${{ github.sha }}"
           test "$(git -C "$DEV" rev-parse HEAD)" = "${{ github.sha }}"
           echo "R11_DEVELOPMENT_SYNC_PASS=YES"
+
+      - name: Runtime restart only
+        if: steps.parse.outputs.mode == 'runtime-restart'
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          DEV="$ROOT/Development"
+          LOCAL_ROOT="$HOME/Library/Application Support/CryptoSignalRuntime"
+          START="$LOCAL_ROOT/start-ssd-runtime.command"
+          test "$(id -u)" = "504"
+          test -z "$(git -C "$DEV" status --porcelain)"
+
+          echo "=== INSTALL LATEST WATCHDOG/SUPERVISOR ==="
+          bash "$GITHUB_WORKSPACE/ops/r11/install_runtime_watchdog.sh"
+
+          old_sup="$(ps -axo pid=,comm=,args= | awk -v needle="$ROOT/ssd-service-supervisor.sh" '($2 == "bash" || $2 == "/bin/bash") && index($0, needle) > 0 {print $1; exit}')"
+          echo "OLD_SUPERVISOR_PID=${old_sup:-NONE}"
+          if [ -n "$old_sup" ] && kill -0 "$old_sup" >/dev/null 2>&1; then
+            kill "$old_sup"
+            for _ in {1..30}; do
+              if ! kill -0 "$old_sup" >/dev/null 2>&1; then break; fi
+              sleep 1
+            done
+            if kill -0 "$old_sup" >/dev/null 2>&1; then
+              kill -KILL "$old_sup"
+            fi
+          fi
+
+          rm -f "$ROOT/ssd-service-supervisor.pid"
+          "$START"
+
+          new_sup=""
+          for _ in {1..60}; do
+            new_sup="$(ps -axo pid=,comm=,args= | awk -v needle="$ROOT/ssd-service-supervisor.sh" '($2 == "bash" || $2 == "/bin/bash") && index($0, needle) > 0 {print $1; exit}')"
+            if [ -n "$new_sup" ] && kill -0 "$new_sup" >/dev/null 2>&1; then
+              break
+            fi
+            sleep 1
+          done
+          test -n "$new_sup"
+          if [ -n "$old_sup" ]; then
+            test "$new_sup" != "$old_sup"
+          fi
+          echo "NEW_SUPERVISOR_PID=$new_sup"
+
+          echo "=== PRODUCT HEALTH ==="
+          ready=0
+          for _ in {1..60}; do
+            if curl -fsS --max-time 3 http://127.0.0.1:48700/api/health >/tmp/crypto-runtime-restart-health.json 2>/dev/null; then
+              ready=1
+              break
+            fi
+            sleep 1
+          done
+          test "$ready" = "1"
+          cat /tmp/crypto-runtime-restart-health.json
+          /usr/bin/python3 - <<'PY'
+          import json
+          d=json.load(open("/tmp/crypto-runtime-restart-health.json"))
+          assert d["status"]=="ok"
+          assert d["read_only"] is True
+          assert d["real_capital"]==0
+          PY
+
+          echo "=== MARKET TAPE PROCESS ==="
+          tape_pid=""
+          for _ in {1..60}; do
+            tape_pid="$(ps -axo pid=,args= | awk '/run_market_tape_stream.py/ && /stream.bybit.tr\/v5\/public\/spot/ {print $1; exit}')"
+            if [ -n "$tape_pid" ] && kill -0 "$tape_pid" >/dev/null 2>&1; then
+              break
+            fi
+            sleep 1
+          done
+          test -n "$tape_pid"
+          ps -p "$tape_pid" -o pid=,ppid=,etime=,command=
+          echo "MARKET_TAPE_BYBIT_TR_PROCESS_PASS=YES"
+
+          echo "=== FRESH INGESTION ==="
+          PY="$DEV/.venv/bin/python"
+          fresh=0
+          for _ in {1..90}; do
+            if "$PY" - <<'PY'
+          import sqlite3, time
+          from pathlib import Path
+          p=Path("/Volumes/Crypto-504/Crypto-Signal/Development/runtime/market_tape/collector_runtime.sqlite3")
+          if not p.is_file():
+              raise SystemExit(1)
+          with sqlite3.connect(f"file:{p}?mode=ro", uri=True) as db:
+              row=db.execute(
+                  "SELECT last_successful_ingestion_ms FROM collector_heartbeats "
+                  "WHERE last_successful_ingestion_ms IS NOT NULL "
+                  "ORDER BY observed_at_ms DESC LIMIT 1"
+              ).fetchone()
+          if row is None:
+              raise SystemExit(1)
+          age=(time.time_ns()//1_000_000)-int(row[0])
+          print(f"INGESTION_AGE_MS={age}")
+          raise SystemExit(0 if age <= 120000 else 1)
+          PY
+            then
+              fresh=1
+              break
+            fi
+            sleep 1
+          done
+          test "$fresh" = "1"
+          echo "R11_RUNTIME_RESTART_FRESH_INGESTION_PASS=YES"
+          echo "R11_RUNTIME_RESTART_ONLY_PASS=YES"
+          echo "REAL_CAPITAL=0"
 
       - name: Runtime watchdog and recovery acceptance
         if: steps.parse.outputs.mode == 'runtime'
