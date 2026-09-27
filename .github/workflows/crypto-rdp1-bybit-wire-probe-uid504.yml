@@ -1,0 +1,51 @@
+name: RDP1 Bybit TR Wire Probe UID504
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "ops/rdp1_bybit_wire_probe.py"
+      - ".github/workflows/crypto-rdp1-bybit-wire-probe-uid504.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  wire-probe:
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          clean: true
+          fetch-depth: 1
+
+      - name: Verify exact source
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(id -u)" = "504"
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+          fi
+          echo "RDP1_WIRE_PROBE_EXACT_SOURCE_PASS=YES"
+
+      - name: Probe real Bybit TR wire events
+        shell: bash
+        run: |
+          set -euo pipefail
+          PY="/Volumes/Crypto-504/Crypto-Signal/Development/.venv/bin/python"
+          export PYTHONPATH="$GITHUB_WORKSPACE/src:$GITHUB_WORKSPACE"
+          "$PY" -m py_compile "$GITHUB_WORKSPACE/ops/rdp1_bybit_wire_probe.py"
+          "$PY" "$GITHUB_WORKSPACE/ops/rdp1_bybit_wire_probe.py"             --url wss://stream.bybit.tr/v5/public/spot             --timeout-seconds 60             --depth 50             | tee "$RUNNER_TEMP/rdp1-bybit-wire-probe.log"
+
+      - name: Upload probe log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rdp1-bybit-wire-probe-${{ github.run_id }}
+          path: ${{ runner.temp }}/rdp1-bybit-wire-probe.log
+          if-no-files-found: warn
+          retention-days: 14
