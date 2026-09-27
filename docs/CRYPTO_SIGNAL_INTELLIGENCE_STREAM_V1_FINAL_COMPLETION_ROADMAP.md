@@ -174,8 +174,8 @@ Execute exactly in this order:
 → **F6 Exact Frozen Evidence Closure — PASS**  
 → **F7 Guarded Local LLM/Ollama Activation — PASS**  
 → **F8 Real Production Multi-Category E2E Acceptance — PASS**  
-→ **F9 Final Real-UI Product Acceptance — ACTIVE**  
-→ **F10 Authority Freeze / Closeout**
+→ **F9 Final Real-UI Product Acceptance — PASS**  
+→ **F10 Authority Freeze / Closeout — ACTIVE**
 
 Do not jump ahead across accepted frontend stages. F5 is accepted only under the revised frontend scope: its implementation and physical activation are complete, while natural live Portfolio/Capital behavior is explicitly deferred to a later dedicated workstream. Do not represent the deferred Capital proof as observed or tested.
 
