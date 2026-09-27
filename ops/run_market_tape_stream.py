@@ -344,7 +344,6 @@ async def run(args: argparse.Namespace) -> int:
     heartbeat_task = asyncio.create_task(heartbeat_loop())
     stream = BybitSpotMicrostructureStream(
         url=args.bybit_ws_url,
-        proxy=None,
     )
     try:
         result = await persist_bybit_wire_stream(
