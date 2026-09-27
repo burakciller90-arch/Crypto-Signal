@@ -2067,7 +2067,7 @@ jobs:
         shell: bash
         run: |
           set +e
-          for f in             /Volumes/Crypto-504/Crypto-Signal/Development/runtime/dashboard/dashboard.err.log             /Volumes/Crypto-504/Crypto-Signal/Development/runtime/dashboard/dashboard.out.log             /Volumes/Crypto-504/Crypto-Signal/Development/runtime/ledger/live_clock.err.log             /Volumes/Crypto-504/Crypto-Signal/Development/runtime/ledger/live_clock.out.log             /Volumes/Crypto-504/Crypto-Signal/Development/runtime/alerts/alert_clock.err.log             /Volumes/Crypto-504/Crypto-Signal/Development/runtime/alerts/alert_clock.out.log
+          for f in             /Volumes/Crypto-504/Crypto-Signal/Development/runtime/dashboard/dashboard.err.log             /Volumes/Crypto-504/Crypto-Signal/Development/runtime/dashboard/dashboard.out.log             /Volumes/Crypto-504/Crypto-Signal/Development/runtime/ledger/live_clock.err.log             /Volumes/Crypto-504/Crypto-Signal/Development/runtime/ledger/live_clock.out.log             /Volumes/Crypto-504/Crypto-Signal/Development/runtime/alerts/alert_clock.err.log             /Volumes/Crypto-504/Crypto-Signal/Development/runtime/alerts/alert_clock.out.log             /Volumes/Crypto-504/Crypto-Signal/ServiceLogs/supervisor.log             /Volumes/Crypto-504/Crypto-Signal/ServiceLogs/market-tape.err.log             /Volumes/Crypto-504/Crypto-Signal/ServiceLogs/market-tape.out.log
           do
             echo "=== $f ==="
             if [ -f "$f" ]; then tail -80 "$f"; else echo "MISSING"; fi
