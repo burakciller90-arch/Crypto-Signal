@@ -1,0 +1,142 @@
+name: Crypto Message Intelligence MI3 UID504
+
+on:
+  push:
+    branches:
+      - 'feat/message-intelligence-mi3-*'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'src/crypto_signal/product/stream/app.js'
+      - 'src/crypto_signal/product/stream/app.css'
+      - 'tests/test_intelligence_stream_ui.py'
+      - '.github/workflows/crypto-message-intelligence-mi3-uid504.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: crypto-message-intelligence-mi3-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  mi3-family-summary:
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+
+      - name: Verify exact source and isolated environment
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          DEV="$ROOT/Development"
+          PRODUCT="$ROOT/Product"
+          BASE_PY="$DEV/.venv/bin/python"
+          TEST_VENV="$RUNNER_TEMP/message-intelligence-mi3-venv"
+
+          test "$(id -u)" = "504"
+          test -x "$BASE_PY"
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test -z "$(git -C "$DEV" status --porcelain)"
+          test -z "$(git -C "$PRODUCT" status --porcelain)"
+          {
+            echo "DEV_HEAD_BEFORE=$(git -C "$DEV" rev-parse HEAD)"
+            echo "PRODUCT_HEAD_BEFORE=$(git -C "$PRODUCT" rev-parse HEAD)"
+          } > "$RUNNER_TEMP/mi3-checkout-state"
+
+          rm -rf "$TEST_VENV"
+          "$BASE_PY" -m venv "$TEST_VENV"
+          "$TEST_VENV/bin/python" -m pip install --upgrade pip
+          "$TEST_VENV/bin/python" -m pip install -e "$GITHUB_WORKSPACE"
+          "$TEST_VENV/bin/python" -m pip install "pytest>=8.4" "ruff>=0.13"
+
+          echo "TEST_PY=$TEST_VENV/bin/python" >> "$GITHUB_ENV"
+          echo "MESSAGE_INTELLIGENCE_MI3_EXACT_SOURCE_PASS=YES"
+          echo "REAL_CAPITAL=0"
+
+      - name: MI3 five-family UI contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          "$TEST_PY" -m pytest -q \
+            tests/test_intelligence_stream_ui.py \
+            tests/test_intelligence_stream_read_model.py \
+            2>&1 | tee "$RUNNER_TEMP/mi3-pytest.log"
+
+          "$TEST_PY" -m ruff check \
+            tests/test_intelligence_stream_ui.py \
+            2>&1 | tee "$RUNNER_TEMP/mi3-ruff.log"
+
+          node --check src/crypto_signal/product/stream/app.js \
+            2>&1 | tee "$RUNNER_TEMP/mi3-node.log"
+
+          grep -q 'family: "geometry_pa_elliott_harmonic"' src/crypto_signal/product/stream/app.js
+          grep -q 'family: "order_flow_absorption"' src/crypto_signal/product/stream/app.js
+          grep -q 'family: "onchain_smart_money"' src/crypto_signal/product/stream/app.js
+          grep -q 'kazanma olasılığı değildir' src/crypto_signal/product/stream/app.js
+          ! sed -n '/function buildExpandedContent(record, detail)/,/function detailPlaceholder/p' \
+            src/crypto_signal/product/stream/app.js | grep -q 'evidenceWindowLauncher(record, detail)'
+
+          echo "MESSAGE_INTELLIGENCE_MI3_FAMILY_SUMMARY_PASS=YES"
+          echo "REAL_CAPITAL=0"
+
+      - name: Upload MI3 diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: message-intelligence-mi3-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/mi3-pytest.log
+            ${{ runner.temp }}/mi3-ruff.log
+            ${{ runner.temp }}/mi3-node.log
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Prove canonical checkouts remained untouched
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          DEV="$ROOT/Development"
+          PRODUCT="$ROOT/Product"
+          STATE="$RUNNER_TEMP/mi3-checkout-state"
+          DEV_BEFORE="$(sed -n 's/^DEV_HEAD_BEFORE=//p' "$STATE")"
+          PRODUCT_BEFORE="$(sed -n 's/^PRODUCT_HEAD_BEFORE=//p' "$STATE")"
+
+          test -z "$(git -C "$DEV" status --porcelain)"
+          test -z "$(git -C "$PRODUCT" status --porcelain)"
+          test "$(git -C "$DEV" rev-parse HEAD)" = "$DEV_BEFORE"
+          test "$(git -C "$PRODUCT" rev-parse HEAD)" = "$PRODUCT_BEFORE"
+          echo "MESSAGE_INTELLIGENCE_MI3_NON_MUTATING_PASS=YES"
+
+      - name: Guard project and authority boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --exit-code
+          git diff --cached --exit-code
+
+          BASE_SHA="${{ github.event.pull_request.base.sha || github.event.before }}"
+          ZERO_SHA="0000000000000000000000000000000000000000"
+          if [[ -n "$BASE_SHA" && "$BASE_SHA" != "$ZERO_SHA" ]]; then
+            git fetch --no-tags origin "$BASE_SHA"
+            git merge-base "$BASE_SHA" HEAD >/dev/null
+            CHANGED_FILES="$(git diff --name-only "$BASE_SHA"...HEAD)"
+          else
+            CHANGED_FILES="$(git show --format= --name-only "$GITHUB_SHA")"
+          fi
+          printf '%s\n' "$CHANGED_FILES"
+          if printf '%s\n' "$CHANGED_FILES" | grep -Eiq 'durdurulmaz|quantum-capital'; then
+            echo "PROJECT_ISOLATION_PASS=NO"
+            exit 1
+          fi
+          echo "PROJECT_ISOLATION_PASS=YES"
+          echo "REAL_CAPITAL=0"
