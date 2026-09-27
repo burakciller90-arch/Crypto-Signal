@@ -24,9 +24,11 @@ chmod 700   "$ROOT/ssd-service-supervisor.sh"   "$LOCAL_ROOT/start-ssd-runtime.c
 
 existing_sup="$(
   /bin/ps -axo pid=,comm=,args= 2>/dev/null     | /usr/bin/awk -v needle="$ROOT/ssd-service-supervisor.sh" '
-        ($2 == "bash" || $2 == "/bin/bash") && index($0, needle) > 0 {
-          print $1
-          exit
+        ($2 == "bash" || $2 == "/bin/bash") && index($0, needle) > 0 && first == "" {
+          first=$1
+        }
+        END {
+          if (first != "") print first
         }
       '
 )"
