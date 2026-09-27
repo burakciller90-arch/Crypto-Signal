@@ -1,5 +1,29 @@
 # PROJECT CHRONICLE
 
+## 2026-09-27 — User opens Evidence Depth & Visual Proof V1 after live proof audit
+
+The accepted MI0-MI6 interaction contract remains valid, but the user correctly identified that a family-owned proof window is not product-complete when the customer mainly sees SHA256 identities instead of the frozen measurement itself.
+
+A live state-first audit established the new frontier rather than reopening MI work.
+
+Read-only UID504 freshness run `36339584811` proved fresh Bybit SPOT order books/trades, but derivatives were ~22h stale and liquidation / liquidation-coverage tables contained no rows. Read-only Event Source run `36339587758` proved persisted Fed/FRED evidence but only `PERSISTED_EVIDENCE_ONLY` runtime truth, with online/process state not asserted/measured and the latest successful fetch roughly one day old.
+
+Repository audit then separated code capability from live Product wiring:
+- current live Liquidity uses bounded order-book dynamics;
+- current live Order Flow uses book pressure + taker flow;
+- current live Derivatives uses bounded funding/OI/basis context;
+- richer Liquidity Structure/Sweep, CVD divergence/Absorption and Derivatives Dynamics/Crowding engines exist but are not current live family inputs;
+- observed Liquidation Heatmap code exists but no live liquidation coverage currently authorizes a heatmap;
+- standalone On-chain/Smart Money remains deferred and wallet-cohort code does not activate a live provider;
+- Event Risk engines exist but fresh continuous source operation is not currently proven.
+
+The visual layer audit also found that `visual_proof.js` marks only Geometry as visual. Liquidity, Order Flow, Derivatives and On-chain currently do not have dedicated deterministic visual renderers. SHA lineage is therefore accepted only as provenance, not as the final customer proof UX.
+
+Canonical new authority: `docs/CRYPTO_SIGNAL_EVIDENCE_DEPTH_VISUAL_PROOF_FRONTIER_V1.md`.
+
+ED0 is PASS. ED1 is active: resolve the exact persisted family source payload end-to-end before rendering it. No current-data substitution, no historical backfill, no probability claim, no production threshold promotion, no Durdurulmaz changes, `REAL_CAPITAL=0`.
+
+
 
 ## 2026-09-27 — Message Intelligence & Family Evidence UX V1 accepted; MI frontier closed
 

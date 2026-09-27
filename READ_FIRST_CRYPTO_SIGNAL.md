@@ -1,5 +1,28 @@
 # READ FIRST — Crypto Signal
 
+## ACTIVE FRONTIER — Evidence Depth & Visual Proof V1 — 2026-09-27
+
+The user has explicitly opened a new post-MI6 evidence-depth scope after live Product review.
+
+Canonical authority:
+
+**`docs/CRYPTO_SIGNAL_EVIDENCE_DEPTH_VISUAL_PROOF_FRONTIER_V1.md`**
+
+Read this before changing the accepted proof/evidence pipeline.
+
+Locked reason:
+- MI0-MI6 remains accepted and is not replayed;
+- SHA256/identity lineage is provenance, not sufficient end-user proof;
+- Liquidity / Order Flow / Derivatives proof must expose the strongest exact frozen payload actually available;
+- richer existing intelligence engines may be wired only where real PIT source evidence supports them;
+- stale/missing Derivatives, Liquidation, On-chain or Event Risk evidence must remain explicit;
+- the 20/25/25/15/15 matrix remains evidence support, not calibrated probability;
+- 70/75/80/85 remain research thresholds, not automatic production activation;
+- Durdurulmaz and Quantum Capital remain untouched;
+- **REAL_CAPITAL=0**.
+
+Exact implementation frontier: **ED1 — Exact family payload resolution**. ED0 authority/live audit is recorded by UID504 runs `36339584811` and `36339587758`.
+
 This repository originates from the user's **CRYPTO SIGNAL PLATFORM — MASTER HANDOFF v1.0 (2026-09-19)**.
 Its foundational project-isolation, scientific-truth and REAL_CAPITAL safety boundaries remain binding. Later **explicit user-approved canonical documents and state updates may supersede scoped product/frontend/roadmap decisions where they say so**. Never use older handoff or roadmap wording to undo a newer explicit supersession. Current execution state is established by `CURRENT_STATUS.md`, the newest Chronicle entry and mechanically observed Git/runtime truth.
 
