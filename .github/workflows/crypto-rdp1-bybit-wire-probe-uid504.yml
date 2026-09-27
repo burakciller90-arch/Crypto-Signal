@@ -1,6 +1,13 @@
 name: RDP1 Bybit TR Wire Probe UID504
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - "ops/rdp1_bybit_wire_probe.py"
+      - "ops/rdp1_market_tape_temp_probe.py"
+      - "ops/rdp1_production_state_probe.py"
+      - ".github/workflows/crypto-rdp1-bybit-wire-probe-uid504.yml"
   pull_request:
     branches: [main]
     paths:
