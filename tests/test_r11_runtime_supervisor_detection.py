@@ -66,3 +66,43 @@ def test_supervisor_requires_real_dashboard_health_before_reuse() -> None:
     assert "dashboard_unhealthy pid=$pid action=restart" in text
     assert 'curl -fsS --max-time 3 http://127.0.0.1:48700/api/health' in text
     assert 'stop_dashboard_pid "$pid"' in text
+
+
+def test_runtime_restart_bypasses_launchagent_installer() -> None:
+    text = Path(".github/workflows/crypto-r11-runtime-recovery.yml").read_text(
+        encoding="utf-8"
+    )
+    start = text.index("      - name: Runtime restart only")
+    end = text.index("      - name: Runtime watchdog and recovery acceptance", start)
+    block = text[start:end]
+
+    assert 'START="$DEV/ops/r11/start_ssd_runtime.command"' in block
+    assert 'cp "$DEV/ops/ssd_runtime_supervisor.sh" "$ROOT/ssd-service-supervisor.sh"' in block
+    assert "install_runtime_watchdog.sh" not in block
+
+
+def test_freshnessdiag_reads_canonical_product_page_items() -> None:
+    text = Path(".github/workflows/crypto-mac-command.yml").read_text(
+        encoding="utf-8"
+    )
+    start = text.index("      - name: FRESHNESS DIAG")
+    end = text.index("      - name: SERVICES", start)
+    block = text[start:end]
+
+    assert 'page = payload.get("page", {})' in block
+    assert 'items = page.get("items", []) if isinstance(page, dict) else []' in block
+    assert 'payload.get("messages", [])' not in block
+
+
+def test_runtime_restart_normalizes_duplicate_product_dashboard_owners() -> None:
+    text = Path(".github/workflows/crypto-r11-runtime-recovery.yml").read_text(
+        encoding="utf-8"
+    )
+    start = text.index("      - name: Runtime restart only")
+    end = text.index("      - name: Runtime watchdog and recovery acceptance", start)
+    block = text[start:end]
+
+    assert "=== NORMALIZE DASHBOARD OWNERSHIP ===" in block
+    assert '$ROOT/Product/ops/run_dashboard.py' in block
+    assert 'index($0, "--port 48700") > 0' in block
+    assert 'rm -f "$ROOT/dashboard.pid"' in block

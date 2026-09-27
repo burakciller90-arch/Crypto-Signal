@@ -2026,7 +2026,13 @@ jobs:
               ) as response:
                   payload=json.loads(response.read().decode("utf-8"))
               print("PRODUCT_STREAM_HTTP=200")
-              items = payload if isinstance(payload, list) else payload.get("messages", [])
+              if isinstance(payload, list):
+                  items = payload
+              elif isinstance(payload, dict):
+                  page = payload.get("page", {})
+                  items = page.get("items", []) if isinstance(page, dict) else []
+              else:
+                  items = []
               print(f"PRODUCT_STREAM_COUNT={len(items) if isinstance(items,list) else -1}")
               if isinstance(items,list):
                   for idx,item in enumerate(items[:5]):

@@ -55,13 +55,15 @@ jobs:
           set -euo pipefail
           ROOT="/Volumes/Crypto-504/Crypto-Signal"
           DEV="$ROOT/Development"
-          LOCAL_ROOT="$HOME/Library/Application Support/CryptoSignalRuntime"
-          START="$LOCAL_ROOT/start-ssd-runtime.command"
+          START="$DEV/ops/r11/start_ssd_runtime.command"
           test "$(id -u)" = "504"
           test -z "$(git -C "$DEV" status --porcelain)"
+          test -x "$START"
+          test -f "$DEV/ops/ssd_runtime_supervisor.sh"
 
-          echo "=== INSTALL LATEST WATCHDOG/SUPERVISOR ==="
-          bash "$GITHUB_WORKSPACE/ops/r11/install_runtime_watchdog.sh"
+          echo "=== INSTALL EXACT SUPERVISOR SOURCE ==="
+          cp "$DEV/ops/ssd_runtime_supervisor.sh" "$ROOT/ssd-service-supervisor.sh"
+          chmod 700 "$ROOT/ssd-service-supervisor.sh"
 
           old_sup="$(ps -axo pid=,comm=,args= | awk -v needle="$ROOT/ssd-service-supervisor.sh" '($2 == "bash" || $2 == "/bin/bash") && index($0, needle) > 0 && first == "" {first=$1} END {if (first != "") print first}')"
           echo "OLD_SUPERVISOR_PID=${old_sup:-NONE}"
@@ -77,6 +79,42 @@ jobs:
           fi
 
           rm -f "$ROOT/ssd-service-supervisor.pid"
+
+          echo "=== NORMALIZE DASHBOARD OWNERSHIP ==="
+          dashboard_pids="$(
+            ps -axo pid=,args= \
+              | awk -v needle="$ROOT/Product/ops/run_dashboard.py" '
+                  index($0, needle) > 0 && index($0, "--port 48700") > 0 {
+                    print $1
+                  }
+                '
+          )"
+          if [ -n "$dashboard_pids" ]; then
+            while read -r pid; do
+              [ -n "$pid" ] || continue
+              kill "$pid" >/dev/null 2>&1 || true
+            done <<<"$dashboard_pids"
+            for _ in {1..20}; do
+              remaining="$(
+                ps -axo pid=,args= \
+                  | awk -v needle="$ROOT/Product/ops/run_dashboard.py" '
+                      index($0, needle) > 0 && index($0, "--port 48700") > 0 {
+                        print $1
+                      }
+                    '
+              )"
+              [ -z "$remaining" ] && break
+              sleep 0.25
+            done
+            if [ -n "$remaining" ]; then
+              while read -r pid; do
+                [ -n "$pid" ] || continue
+                kill -KILL "$pid" >/dev/null 2>&1 || true
+              done <<<"$remaining"
+            fi
+          fi
+          rm -f "$ROOT/dashboard.pid"
+
           "$START"
 
           new_sup=""
