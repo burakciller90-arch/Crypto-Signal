@@ -464,6 +464,7 @@ def _insert_family_surface_fixture(
     source_narrative_identity: str,
     family: str = "order_flow",
     state_label: str = "mixed",
+    preserve_narrative_schema: bool = False,
 ) -> str:
     with sqlite3.connect(path) as connection:
         row = connection.execute(
@@ -485,7 +486,8 @@ def _insert_family_surface_fixture(
         payload = json.loads(str(row[6]))
         assert isinstance(payload, dict)
         payload.pop("narrative_identity", None)
-        payload["schema_version"] = STREAM_FAMILY_NARRATIVE_MESSAGE_SCHEMA_VERSION
+        if not preserve_narrative_schema:
+            payload["schema_version"] = STREAM_FAMILY_NARRATIVE_MESSAGE_SCHEMA_VERSION
         payload["source_kind"] = "deterministic"
         payload["family"] = family
         payload["state_label"] = state_label
@@ -835,6 +837,36 @@ def test_stream_primary_surface_hides_family_telemetry_without_deleting_it(
         family_record["schema_version"]
         == STREAM_FAMILY_NARRATIVE_MESSAGE_SCHEMA_VERSION
     )
+
+
+def test_stream_primary_surface_hides_family_even_with_legacy_narrative_schema(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / "stream.sqlite3"
+    identities = _create_read_fixture(path)
+    family_identity = _insert_family_surface_fixture(
+        path,
+        source_narrative_identity=identities["btc-flow"],
+        family="order_flow_absorption",
+        state_label="sell_pressure",
+        preserve_narrative_schema=True,
+    )
+    reader = IntelligenceStreamReadModel(path)
+
+    all_ids = {
+        item["narrative_identity"]
+        for item in reader.read_messages(StreamMessageQuery(limit=20)).items
+    }
+    assert family_identity in all_ids
+
+    primary_ids = {
+        item["narrative_identity"]
+        for item in reader.read_messages(
+            StreamMessageQuery(limit=20, primary_surface=True)
+        ).items
+    }
+    assert family_identity not in primary_ids
+    assert identities["btc-flow"] in primary_ids
 
 
 def test_stream_primary_surface_hides_canonical_production_family_values(
