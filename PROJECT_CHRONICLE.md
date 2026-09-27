@@ -1,5 +1,34 @@
 # PROJECT CHRONICLE
 
+## 2026-09-27 — Message Intelligence MI5 accepted; MI6 authority freeze closes the frontier
+
+The user-approved Message Intelligence & Family Evidence UX V1 refinement is mechanically complete.
+
+PR #1467 merged the forward-only system-view/read-model/UI implementation to main `93d9b1edfaf0267b6873f3aaaa2eb9e6dd455af0`. Allowlisted Product deploy run `36337341847` fast-forwarded Development and Product to that exact main, restarted the dashboard through the existing SSD supervisor, passed Product health plus the R11 topology/SQLite audit, did not roll back and emitted `PRODUCT_DEPLOY_PASS=YES`. `REAL_CAPITAL=0`.
+
+Natural post-deploy live cycles then produced immutable `system_view_updated` rows for BTCUSDT, ETHUSDT and SOLUSDT. These messages are deterministic five-family presentation views; they are not new forecast issuance, calibrated probability, trade authority or capital authority. The canonical R20/R20.5/R25 Decision Evidence rail remains separate.
+
+Final real-browser MI5 acceptance was UID504 run `36338496994`, result SUCCESS. It selected genuine live system-view `d431e69795de658066d7951158e4aca52322889bcef2cede43219b14e2785a1f` for ETHUSDT and proved both desktop 1440×950 and exact mobile 430×860:
+- `KARAR ÖZETİ` + `5 KANIT AİLESİ` hierarchy;
+- exact Geometry / Liquidity / Order Flow / Derivatives / On-chain order;
+- five individually clickable proof rows;
+- no legacy global proof CTA;
+- no raw family state-machine vocabulary in the primary message;
+- search, filter, sound, settings and load-older controls intact;
+- no horizontal overflow;
+- no current-data substitution;
+- proof states: Geometry `UNAVAILABLE_EXPLICIT`, Liquidity `IDENTITY_ONLY_EXACT`, Order Flow `IDENTITY_ONLY_EXACT`, Derivatives `IDENTITY_ONLY_EXACT`, On-chain `UNAVAILABLE_EXPLICIT`;
+- no non-Geometry chart authority;
+- `REAL_CAPITAL=0`.
+
+Acceptance artifact: `message-intelligence-mi5-probe-36338496994`, id `10937913509`, digest `sha256:a783e1d2cd479066c25fb2786de518824d4286f82e61e2aeca26a1439a7e285a`.
+
+The first post-deploy attempt exposed only a Chromium harness flake after two redundant screenshot launches; Product/API regression and live system-view selection had already passed. The accepted diagnostic removed the redundant launches and reused the stronger interactive proof capture itself for desktop/mobile evidence. Product/runtime semantics were unchanged.
+
+MI6 now freezes the authority in `docs/CRYPTO_SIGNAL_MESSAGE_INTELLIGENCE_V1_FINAL_ACCEPTANCE.md`. MI1-MI6 are PASS. There is no remaining Message Intelligence implementation frontier; future frontend/message refinements are new scope and must reconcile live Git/runtime truth rather than replay this program.
+
+
+
 
 ## 2026-09-27 — MI4 family-owned exact proof accepted; MI5 becomes active
 
