@@ -399,6 +399,47 @@ def test_market_tape_endpoint_exposes_heartbeat_without_online_claim(
     assert body["real_capital"] == 0
 
 
+def test_market_tape_collector_scope_skips_full_market_tape_scan(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    market_path = tmp_path / "market_tape.sqlite3"
+    collector_path = tmp_path / "collector_runtime.sqlite3"
+    _seed_market_tape(market_path)
+    _seed_collector_runtime(collector_path)
+
+    def fail_if_full_scan(*args, **kwargs):
+        raise AssertionError("collector scope must not read full Market Tape")
+
+    monkeypatch.setattr(
+        "crypto_signal.product.web.read_market_tape_runtime_truth",
+        fail_if_full_scan,
+    )
+    client = TestClient(
+        create_app(
+            tmp_path / "missing-signals.sqlite3",
+            market_tape_path=market_path,
+            market_tape_collector_runtime_path=collector_path,
+        )
+    )
+
+    response = client.get(
+        "/api/market-tape-runtime/status"
+        "?scope=collector&observed_at_ms=2000"
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "ready"
+    assert body["scope"] == "collector"
+    assert body["collection_process_status"] == "HEARTBEAT_FRESH"
+    assert body["collector_runtime"]["heartbeat_age_ms"] == 100
+    assert body["collector_runtime"]["ingestion_age_ms"] == 150
+    assert body["online_status"] == "NOT_ASSERTED"
+    assert body["read_only"] is True
+    assert body["real_capital"] == 0
+
+
 def test_market_tape_endpoint_marks_missing_collector_evidence_without_online_claim(
     tmp_path: Path,
 ) -> None:
