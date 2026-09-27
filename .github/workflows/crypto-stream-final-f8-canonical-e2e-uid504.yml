@@ -1,0 +1,122 @@
+name: Crypto Stream Final F8 Canonical E2E UID504
+
+on:
+  push:
+    branches:
+      - 'accept/f8-canonical-e2e'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: crypto-stream-final-f8-canonical-e2e
+  cancel-in-progress: true
+
+jobs:
+  accept:
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          clean: true
+          fetch-depth: 0
+
+      - name: Verify exact canonical F8 main
+        shell: bash
+        run: |
+          set -euo pipefail
+          EXPECTED_MAIN="f0f7af0707fe7faecba654543200fc8c6e1092f8"
+          test "$(id -u)" = "504"
+          test "$(git merge-base HEAD "$EXPECTED_MAIN")" = "$EXPECTED_MAIN"
+          git diff --quiet "$EXPECTED_MAIN"...HEAD -- .             ':(exclude).github/workflows/crypto-stream-final-f8-canonical-e2e-uid504.yml'
+          DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
+          PRODUCT="/Volumes/Crypto-504/Crypto-Signal/Product"
+          test -z "$(git -C "$DEV" status --porcelain)"
+          test -z "$(git -C "$PRODUCT" status --porcelain)"
+          echo "F8_CANONICAL_EXACT_MAIN_PASS=YES"
+          echo "REAL_CAPITAL=0"
+
+      - name: Run corrected genuine production inventory
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
+          PY="$DEV/.venv/bin/python"
+          OUT="$RUNNER_TEMP/stream-final-f8-canonical"
+          mkdir -p "$OUT"
+          export PYTHONPATH="$GITHUB_WORKSPACE:$GITHUB_WORKSPACE/src:$GITHUB_WORKSPACE/ops"
+
+          "$PY" "$GITHUB_WORKSPACE/ops/audit_stream_f8_production_e2e.py"             --base-url http://127.0.0.1:48700             --output "$OUT/audit.json"             --stream-ledger "$DEV/runtime/stream/intelligence_stream.sqlite3"
+
+          "$PY" - "$OUT/audit.json" "$OUT/browser.env" <<'PY'
+          import json
+          import shlex
+          import sys
+          from pathlib import Path
+
+          audit=json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+          print("F8_CANONICAL_STATUS="+str(audit.get("status")))
+          print("F8_CANONICAL_OPEN="+",".join(audit.get("open_requirements",[])))
+          accepted=[]
+          for group in audit.get("groups",[]):
+              rep=group.get("representative")
+              print("F8_CANONICAL_GROUP="+json.dumps(group,sort_keys=True,ensure_ascii=False))
+              if group.get("status")=="ACCEPTED_CANDIDATE" and isinstance(rep,dict):
+                  accepted.append((group.get("name"),rep))
+
+          values={"F8_ACCEPTED_COUNT":str(len(accepted))}
+          if accepted:
+              name,rep=accepted[0]
+              values.update({
+                  "F8_BROWSER_GROUP":name,
+                  "F8_BROWSER_ID":rep["narrative_identity"],
+                  "F8_BROWSER_CATEGORY":rep["category"],
+                  "F8_BROWSER_SEARCH":rep["search_text"],
+              })
+          Path(sys.argv[2]).write_text(
+              "".join(f"{k}={shlex.quote(str(v))}\n" for k,v in values.items()),
+              encoding="utf-8",
+          )
+          PY
+          cat "$OUT/browser.env" >> "$GITHUB_ENV"
+          echo "HISTORICAL_BACKFILL=NO"
+          echo "SYNTHETIC_ACTIVITY=NO"
+          echo "REAL_CAPITAL=0"
+
+      - name: Probe genuine accepted message in Chromium
+        if: env.F8_ACCEPTED_COUNT != '0'
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
+          PY="$DEV/.venv/bin/python"
+          OUT="$RUNNER_TEMP/stream-final-f8-canonical"
+          BROWSER=""
+          for candidate in             "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"             "/Applications/Chromium.app/Contents/MacOS/Chromium"             "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge"             "/Applications/Google Chrome Canary.app/Contents/MacOS/Google Chrome Canary"; do
+            if [ -x "$candidate" ]; then BROWSER="$candidate"; break; fi
+          done
+          test -n "$BROWSER"
+          export PYTHONPATH="$GITHUB_WORKSPACE:$GITHUB_WORKSPACE/src:$GITHUB_WORKSPACE/ops"
+          "$PY" "$GITHUB_WORKSPACE/ops/probe_stream_f8_browser.py"             --browser "$BROWSER"             --base-url http://127.0.0.1:48700             --narrative-identity "$F8_BROWSER_ID"             --category "$F8_BROWSER_CATEGORY"             --search-text "$F8_BROWSER_SEARCH"             --output "$OUT/browser.json"             --screenshot "$OUT/browser.png"             --width 1440             --height 1000
+          echo "F8_CANONICAL_REAL_BROWSER_PASS=YES"
+
+      - name: Verify non-mutation
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
+          PRODUCT="/Volumes/Crypto-504/Crypto-Signal/Product"
+          test -z "$(git -C "$DEV" status --porcelain)"
+          test -z "$(git -C "$PRODUCT" status --porcelain)"
+          echo "F8_CANONICAL_NON_MUTATING_PASS=YES"
+
+      - name: Upload canonical F8 evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stream-final-f8-canonical-e2e-${{ github.run_id }}
+          path: ${{ runner.temp }}/stream-final-f8-canonical
+          if-no-files-found: warn
+          retention-days: 14
