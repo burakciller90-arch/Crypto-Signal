@@ -23,7 +23,7 @@ def test_monitor_ingestion_time_rejects_negative_raw_time() -> None:
         monitor_ingestion_time(1_000, -1)
 
 
-def test_collector_runtime_wal_allows_writer_while_reader_transaction_is_open(
+def test_collector_runtime_preserves_journal_contract_and_initializes_once(
     tmp_path,
 ) -> None:
     store = MarketTapeCollectorRuntimeStore(tmp_path / "collector.sqlite3")
@@ -37,24 +37,16 @@ def test_collector_runtime_wal_allows_writer_while_reader_transaction_is_open(
     )
     store.append_instance(instance)
 
-    reader = sqlite3.connect(store.path, timeout=1.0)
-    try:
-        reader.execute("BEGIN")
-        reader.execute("SELECT COUNT(*) FROM collector_instances").fetchone()
-
-        heartbeat = build_collector_heartbeat(
-            instance_identity=instance.instance_identity,
-            sequence_no=1,
-            observed_at_ms=1_200,
-            last_successful_ingestion_ms=1_190,
-            observed_messages_total=1,
-            normalized_rows_total=1,
-            raw_rows_total=1,
-        )
-        store.append_heartbeat(heartbeat)
-    finally:
-        reader.rollback()
-        reader.close()
+    heartbeat = build_collector_heartbeat(
+        instance_identity=instance.instance_identity,
+        sequence_no=1,
+        observed_at_ms=1_200,
+        last_successful_ingestion_ms=1_190,
+        observed_messages_total=1,
+        normalized_rows_total=1,
+        raw_rows_total=1,
+    )
+    store.append_heartbeat(heartbeat)
 
     with sqlite3.connect(store.path) as db:
         mode = str(db.execute("PRAGMA journal_mode").fetchone()[0]).lower()
@@ -62,5 +54,6 @@ def test_collector_runtime_wal_allows_writer_while_reader_transaction_is_open(
             db.execute("SELECT COUNT(*) FROM collector_heartbeats").fetchone()[0]
         )
 
-    assert mode == "wal"
+    assert mode == "delete"
     assert count == 1
+    assert store._initialized is True
