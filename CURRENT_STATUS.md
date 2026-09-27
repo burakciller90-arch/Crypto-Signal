@@ -4,56 +4,58 @@ Updated: 2026-09-27
 Project: Crypto Signal
 Baseline: crypto-signal-full-version-v1.0.0 (immutable)
 Active post-v1.0 program: v1.1 world-class product + market intelligence + Crypto Signal Intelligence Stream V1
-State: WC0_LIVE_PRODUCT_PARITY_ACCEPTED / WC1_24_7_DATA_RELIABILITY_ACCEPTED / WC2_ENGINEERING_FROZEN_EVIDENCE_ACCUMULATION_ACTIVE / WC4_CHAMPION_CHALLENGER_ENGINEERING_ACCEPTED_RESEARCH_ONLY / WC5_ENGINEERING_ACCEPTED_PRODUCT_DEPLOYED_HUMAN_USABILITY_NOT_MEASURED / WC6_SANDBOX_BOUNDARY_ACCEPTED_VENUE_EVIDENCE_EXTERNAL_DEPENDENCY / WC7_CURRENT_FRONTIER_PACKET_ACCEPTED_CURRENT_INSUFFICIENT_EVIDENCE / INTELLIGENCE_STREAM_V1_S0_S16_HISTORICAL_ACCEPTANCE_RETAINED / INTELLIGENCE_STREAM_V1_FINAL_F0_PASS_F1_PASS_F2_PASS_F3_PASS_F4_PASS_F5_PASS_CURRENT_SCOPE_F6_PASS_F7_PASS_F8_PASS_F9_PASS_F10_PASS / INTELLIGENCE_STREAM_V1_FINAL_COMPLETION_ACCEPTED / MESSAGE_INTELLIGENCE_FAMILY_EVIDENCE_UX_V1_MI1_PASS_MI2_PASS_MI3_PASS_MI4_PASS_MI5_ACTIVE / CONTINUITY_PAUSED_BY_USER
+State: WC0_LIVE_PRODUCT_PARITY_ACCEPTED / WC1_24_7_DATA_RELIABILITY_ACCEPTED / WC2_ENGINEERING_FROZEN_EVIDENCE_ACCUMULATION_ACTIVE / WC4_CHAMPION_CHALLENGER_ENGINEERING_ACCEPTED_RESEARCH_ONLY / WC5_ENGINEERING_ACCEPTED_PRODUCT_DEPLOYED_HUMAN_USABILITY_NOT_MEASURED / WC6_SANDBOX_BOUNDARY_ACCEPTED_VENUE_EVIDENCE_EXTERNAL_DEPENDENCY / WC7_CURRENT_FRONTIER_PACKET_ACCEPTED_CURRENT_INSUFFICIENT_EVIDENCE / INTELLIGENCE_STREAM_V1_S0_S16_HISTORICAL_ACCEPTANCE_RETAINED / INTELLIGENCE_STREAM_V1_FINAL_F0_PASS_F1_PASS_F2_PASS_F3_PASS_F4_PASS_F5_PASS_CURRENT_SCOPE_F6_PASS_F7_PASS_F8_PASS_F9_PASS_F10_PASS / INTELLIGENCE_STREAM_V1_FINAL_COMPLETION_ACCEPTED / MESSAGE_INTELLIGENCE_FAMILY_EVIDENCE_UX_V1_ACCEPTED_MI1_MI2_MI3_MI4_MI5_MI6_PASS / CONTINUITY_PAUSED_BY_USER
 REAL_CAPITAL: 0
 
 ## Active v1.1 frontier — read before historical sections
 
-## ACTIVE FRONTEND/MESSAGE FRONTIER — 2026-09-27
+## MESSAGE INTELLIGENCE & FAMILY EVIDENCE UX V1 — ACCEPTED / CLOSED — 2026-09-27
 
 Canonical authority:
+- `docs/CRYPTO_SIGNAL_MESSAGE_INTELLIGENCE_FRONTIER_V1.md`;
+- `docs/CRYPTO_SIGNAL_MESSAGE_INTELLIGENCE_V1_FINAL_ACCEPTANCE.md`.
 
-**`docs/CRYPTO_SIGNAL_MESSAGE_INTELLIGENCE_FRONTIER_V1.md`**
+Canonical status:
 
-User-approved state:
+**MESSAGE_INTELLIGENCE_FAMILY_EVIDENCE_UX_V1_ACCEPTED — MI1 / MI2 / MI3 / MI4 / MI5 / MI6 PASS**
 
-**MESSAGE_INTELLIGENCE_FAMILY_EVIDENCE_UX_V1 — MI1 PASS / MI2 PASS / MI3 PASS / MI4 PASS / MI5 ACTIVE**
+This post-F10 refinement is complete and does not reopen F0-F10.
 
-This is a new post-F10 refinement scope. It does not reopen F0-F10.
+Final accepted Product behavior:
+- default Stream presentation is a concise deterministic Turkish system view, not raw family telemetry;
+- five-family weights remain Geometry 20 / Liquidity 25 / Order Flow 25 / Derivatives 15 / On-chain 15;
+- Event Risk and Provider Quality remain separate context/trust layers;
+- the family support score is not calibrated probability;
+- each family row owns its family-specific exact/frozen proof interaction;
+- only Geometry may render an exact bound frozen chart;
+- missing evidence fails closed and current evidence is never substituted;
+- local Ollama remains presentation-only;
+- historical messages remain immutable;
+- dedicated Capital/Portfolio remains outside this scope;
+- `REAL_CAPITAL=0`.
 
-Locked outcome:
-- one natural Turkish system-view sentence is the default Stream message;
-- low-level family state-machine prose is not default customer copy;
-- expanded detail centers on current stance, support/coverage, exact trigger/target/invalidation where available, main contradiction, and the five-family evidence table;
-- Geometry / Liquidity / Order Flow / Derivatives / On-chain rows are each individually clickable;
-- clicking a row opens that family's own concise explanation and exact/frozen proof;
-- **no generic global proof button is part of the target expanded message**;
-- missing family evidence is shown explicitly as unavailable, never as fabricated zero support;
-- Ollama remains guarded presentation-only polish;
-- historical messages are not rewritten/backfilled;
-- Capital/Portfolio remains deferred dedicated scope;
-- Durdurulmaz and all other projects remain isolated and untouched;
-- **REAL_CAPITAL=0**.
+Final implementation/deploy evidence:
+- PR #1467 merged the live system-view/read-model/UI implementation;
+- deployed main: `93d9b1edfaf0267b6873f3aaaa2eb9e6dd455af0`;
+- allowlisted Product deploy run: `36337341847` — `PRODUCT_DEPLOY_PASS=YES`, supervisor-managed dashboard restart, R11 topology/SQLite audit PASS, no rollback;
+- natural forward live cycles then produced immutable `system_view_updated` rows for BTCUSDT / ETHUSDT / SOLUSDT.
 
-MI1 accepted evidence:
-- customer-copy merge `a2c317bbee1b325500b909bbe970750370a17eda`;
-- primary-system-view merge `28fa1c208e9e66173214a8bdfaa33cea4bbfe935`;
-- exact UID504 acceptance run `36330349505`: 99 focused tests PASS, Ruff PASS, mypy PASS, Node syntax PASS, Development/Product non-mutating PASS, project-isolation PASS, REAL_CAPITAL=0.
+Final MI5 real-browser evidence:
+- UID504 run: `36338496994` — SUCCESS;
+- artifact: `message-intelligence-mi5-probe-36338496994`;
+- artifact id: `10937913509`;
+- digest: `sha256:a783e1d2cd479066c25fb2786de518824d4286f82e61e2aeca26a1439a7e285a`;
+- selected genuine live view: `d431e69795de658066d7951158e4aca52322889bcef2cede43219b14e2785a1f`, ETHUSDT, event time 2026-09-27 20:51:44.130 +0300, stance `watch`;
+- desktop 1440×950 and exact mobile 430×860 passed without horizontal overflow;
+- exact five-row order and hierarchy passed;
+- raw primary telemetry leak count was zero;
+- search/filter/sound/settings/load-older controls remained present;
+- all five proof windows opened;
+- accepted proof states were Geometry `UNAVAILABLE_EXPLICIT`, Liquidity `IDENTITY_ONLY_EXACT`, Order Flow `IDENTITY_ONLY_EXACT`, Derivatives `IDENTITY_ONLY_EXACT`, On-chain `UNAVAILABLE_EXPLICIT`;
+- no current-data substitution and no non-Geometry chart authority;
+- `REAL_CAPITAL=0`.
 
-MI2 accepted evidence:
-- merge `20c1c18c3253254555708e0cbcc0c52cc04ae784`;
-- exact UID504 acceptance run `36331471395`: fact-lock tests PASS, Ruff PASS, mypy PASS, real loopback `qwen2.5:3b-instruct` smoke PASS, Development/Product non-mutating PASS, project-isolation PASS, REAL_CAPITAL=0;
-- the analyst brief is reference-only and cannot authorize a new score, family claim, market fact, stance reversal or visible numeric change.
-
-MI3 accepted evidence:
-- merge `4dc3c2a4ebdda513f2150313f74f0f06a3a47ec6`;
-- exact UID504 acceptance run `36332071137`: compact decision summary contract PASS, canonical five-family weights PASS, explicit unavailable-evidence state PASS, Node syntax PASS, Development/Product non-mutating PASS, project-isolation PASS, REAL_CAPITAL=0.
-
-MI4 accepted evidence:
-- merge `caeaf41256fe9f5d878d78f08374224e571798e4` via PR #1463;
-- exact UID504 acceptance run `36332851225`: family-row interaction PASS, family-scoped proof renderer PASS, only Geometry frozen-chart authority PASS, READY_EXACT / IDENTITY_ONLY_EXACT / UNAVAILABLE_EXPLICIT fail-closed semantics PASS, Node syntax PASS, Development/Product non-mutating PASS, project-isolation PASS, REAL_CAPITAL=0.
-
-Exact next implementation frontier: **MI5 — Real desktop/mobile acceptance**.
+There is no remaining Message Intelligence implementation phase. Any later frontend/message refinement is new scope and must be reconciled against live main/runtime truth first.
 
 
 ### 2026-09-27 — INTELLIGENCE STREAM V1 FINAL COMPLETION ACCEPTED
