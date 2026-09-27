@@ -1,3 +1,13 @@
+# SSD-504 DEVELOPMENT WORKBENCH — 2026-09-27
+
+Canonical physical development root for new Crypto Signal work:
+
+**`/Volumes/Crypto-504/Crypto-Signal-Workbench`**
+
+Read `docs/CRYPTO_SIGNAL_SSD504_WORKBENCH.md` before starting new implementation work. The live Product/runtime is not relocated by this rule. GitHub remains canonical history; code work occurs under the workbench `repo/` on feature branches. The three primary workstreams are Evidence Depth, Paper Capital/Portfolio, and Product UI. Durdurulmaz and Quantum Capital remain isolated. **REAL_CAPITAL=0**.
+
+---
+
 # READ FIRST — Crypto Signal
 
 ## ACTIVE FRONTIER — Evidence Depth & Visual Proof V1 — 2026-09-27
