@@ -1,6 +1,6 @@
 # Crypto Signal — Message Intelligence & Family Evidence UX Frontier V1
 
-Status: **ACTIVE USER-APPROVED FRONTIER**
+Status: **ACCEPTED / CLOSED — MI1-MI6 COMPLETE**
 Date opened: 2026-09-27
 Company: GALACTECH
 Product: Crypto Signal
@@ -416,7 +416,7 @@ PASS:
 
 ### MI5 — Real desktop/mobile acceptance
 
-Status: **ACTIVE FRONTIER**
+Status: **PASS — deployed main `93d9b1edfaf0267b6873f3aaaa2eb9e6dd455af0`; post-deploy UID504 Chromium acceptance run `36338496994`; artifact digest `sha256:a783e1d2cd479066c25fb2786de518824d4286f82e61e2aeca26a1439a7e285a`.**
 
 Goal:
 - verify live Product behavior with real new Stream messages.
@@ -430,6 +430,8 @@ PASS:
 - REAL_CAPITAL=0.
 
 ### MI6 — Authority freeze
+
+Status: **PASS — final acceptance recorded in `docs/CRYPTO_SIGNAL_MESSAGE_INTELLIGENCE_V1_FINAL_ACCEPTANCE.md`.**
 
 Goal:
 - record exact accepted behavior and close this refinement frontier.
@@ -482,37 +484,29 @@ The same project-isolation rules continue to apply to all other repositories.
 
 ---
 
-## 14. Immediate frontier
+## 14. Closed frontier
 
-MI1 is accepted. Its exact accepted behavior is:
-- the normal Product feed is a primary customer surface;
-- five market-family telemetry narratives remain persisted/auditable but are not default customer bubbles;
-- Event Risk/provider-quality trust alerts remain visible;
-- deterministic collapsed decision copy is one fact-bound Turkish system view;
-- historical rows were not rewritten;
+MI1-MI6 are accepted.
+
+Final accepted behavior:
+- the normal Product feed is a primary customer surface rather than raw family telemetry;
+- one deterministic Turkish system-view message composes the current five-family evidence balance without claiming probability or Decision issuance;
+- the five locked family weights remain Geometry 20 / Liquidity 25 / Order Flow 25 / Derivatives 15 / On-chain 15;
+- Event Risk and Provider Quality remain separate trust/context layers;
+- each family row owns its exact/fail-closed proof interaction;
+- only Geometry may render an exact bound frozen chart;
+- missing evidence is explicit and current data is never substituted;
+- desktop and exact-mobile Chromium acceptance is complete on real forward live Product data;
+- historical messages remain immutable;
+- local Ollama remains presentation-only;
+- dedicated Capital/Portfolio remains outside this scope;
 - `REAL_CAPITAL=0`.
 
-MI2 is accepted. The local model remains presentation-only and is now constrained by a deterministic fact-locked analyst brief plus deterministic post-rewrite guards.
+Canonical final acceptance:
+- `docs/CRYPTO_SIGNAL_MESSAGE_INTELLIGENCE_V1_FINAL_ACCEPTANCE.md`;
+- implementation/deployed main `93d9b1edfaf0267b6873f3aaaa2eb9e6dd455af0`;
+- Product deploy run `36337341847`;
+- post-deploy real-browser acceptance run `36338496994`;
+- artifact `message-intelligence-mi5-probe-36338496994`, digest `sha256:a783e1d2cd479066c25fb2786de518824d4286f82e61e2aeca26a1439a7e285a`.
 
-MI3 is accepted. Canonical five-family decision messages now use the compact evidence-first expanded hierarchy with exact 20/25/25/15/15 weights and fail-closed unavailable states.
-
-MI4 is accepted. Each canonical family row now owns its exact/frozen proof interaction; family proof is fail-closed and only Geometry may draw the bound frozen chart.
-
-The exact next implementation frontier is:
-
-**MI5 — Real desktop/mobile acceptance**
-
-Before coding MI4, mechanically re-check current `main`, open PRs, runtime state and any newer authority update.
-
-Reuse the existing:
-
-- five-family confluence matrix;
-- analytical view/story system;
-- exact evidence contracts;
-- visual proof framework;
-- local guarded Ollama adapter;
-- Stream transport and UI.
-
-Do not create a parallel intelligence engine.
-
-**REAL_CAPITAL=0**
+There is no remaining Message Intelligence implementation frontier. Any later refinement is new scope and must be reconciled against current Git/runtime truth before execution.
