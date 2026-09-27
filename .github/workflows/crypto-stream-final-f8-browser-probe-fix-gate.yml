@@ -1,0 +1,50 @@
+name: Crypto Stream Final F8 Browser Probe Fix Gate
+
+on:
+  push:
+    branches:
+      - 'stream/final-f8-browser-probe-fix'
+
+permissions:
+  contents: read
+
+jobs:
+  gate:
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          clean: true
+
+      - name: Static probe gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
+          PY="$DEV/.venv/bin/python"
+          export PYTHONPATH="$GITHUB_WORKSPACE/ops:$GITHUB_WORKSPACE/src:$GITHUB_WORKSPACE"
+          "$PY" -m py_compile ops/probe_stream_f8_browser.py
+          "$PY" -m ruff check ops/probe_stream_f8_browser.py
+          echo "F8_BROWSER_PROBE_STATIC_PASS=YES"
+
+      - name: Focused Stream UI race regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
+          PY="$DEV/.venv/bin/python"
+          "$PY" -m pytest -q tests/test_intelligence_stream_ui.py tests/test_stream_f8_production_e2e_audit.py
+          node --check src/crypto_signal/product/stream/app.js
+          echo "F8_STREAM_DETAIL_RACE_FOCUSED_PASS=YES"
+          echo "REAL_CAPITAL=0"
+
+      - name: Upload browser smoke
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stream-final-f8-browser-probe-fix-${{ github.run_id }}
+          path: ${{ runner.temp }}/f8-browser-probe-fix
+          if-no-files-found: warn
+          retention-days: 14

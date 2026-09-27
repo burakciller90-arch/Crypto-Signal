@@ -78,6 +78,8 @@ def test_stream_s8_expands_supported_depth_inline_and_preserves_anchor() -> None
     assert "buildExpandedContent" in script
     assert "preserveMessageAnchor" in script
     assert "toggleMessageExpansion" in script
+    assert "currentRenderedMessage" in script
+    assert "renderExpandedPanel(target, record, payload.detail)" in script
     assert "SIMPLE" in script
     assert "PRO" in script
     assert "INTELLIGENCE" in script

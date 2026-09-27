@@ -62,7 +62,7 @@ def _snapshot_expression(identity: str) -> str:
     return (
         "(()=>{"
         f"const identity={encoded};"
-        "const node=document.querySelector('.message[data-identity="'+identity+'"]');"
+        "const node=[...document.querySelectorAll('.message')].find(n=>n.dataset.identity===identity)||null;"
         "const notification=window.CryptoSignalNotifications?.snapshot?.()||null;"
         "return {"
         "href:location.href,"
@@ -89,18 +89,23 @@ def _interaction_expression(identity: str, search_text: str, category: str) -> s
         f"const identity={identity_js};"
         f"const searchText={search_js};"
         f"const category={category_js};"
-        "const find=()=>document.querySelector('.message[data-identity="'+identity+'"]');"
+        "const find=()=>[...document.querySelectorAll('.message')].find(n=>n.dataset.identity===identity)||null;"
         "let node=find();"
         "if(!node)return {error:'message_missing_before_interaction'};"
-        "node.querySelector('.message-summary')?.click();"
-        "for(let i=0;i<30;i++){"
-        "const detail=node.querySelector('.message-detail');"
-        "if(detail&&!detail.hidden&&detail.textContent.trim())break;"
+        "let summary=node.querySelector('.message-summary');"
+        "let detail=node.querySelector('.message-detail');"
+        "if(summary?.getAttribute('aria-expanded')!=='true'||!detail||detail.hidden){"
+        "summary?.click();"
+        "}"
+        "let evidenceButtons=[];"
+        "for(let i=0;i<50;i++){"
+        "node=find();"
+        "detail=node?.querySelector('.message-detail')||null;"
+        "evidenceButtons=node?[...node.querySelectorAll('[data-evidence-kind]')]:[];"
+        "if(detail&&!detail.hidden&&evidenceButtons.length)break;"
         "await new Promise(r=>setTimeout(r,120));"
         "}"
-        "const detail=node.querySelector('.message-detail');"
         "const expanded=Boolean(detail&&!detail.hidden);"
-        "const evidenceButtons=[...node.querySelectorAll('[data-evidence-kind]')];"
         "if(evidenceButtons.length)evidenceButtons[0].click();"
         "await new Promise(r=>setTimeout(r,450));"
         "const evidenceWindowCount=document.querySelectorAll('.evidence-window').length;"
@@ -120,6 +125,8 @@ def _interaction_expression(identity: str, search_text: str, category: str) -> s
         "expanded,"
         "evidenceButtonCount:evidenceButtons.length,"
         "evidenceWindowCount,"
+        "detailText:(detail?.textContent||'').trim().slice(0,1000),"
+        "detailHtml:(detail?.innerHTML||'').slice(0,3000),"
         "searchRetainedExact:Boolean(node),"
         "searchResultCount:document.querySelectorAll('.message').length,"
         "notification:window.CryptoSignalNotifications?.snapshot?.()||null"
@@ -239,6 +246,10 @@ def run_probe(args: argparse.Namespace) -> dict[str, object]:
             raise TypeError("browser interaction result must be object")
         if interaction.get("error"):
             raise RuntimeError(str(interaction["error"]))
+        print(
+            "F8_BROWSER_INTERACTION_DEBUG="
+            + json.dumps(interaction, ensure_ascii=False, sort_keys=True)
+        )
         if interaction.get("expanded") is not True:
             raise RuntimeError("real production message did not expand")
         if int(interaction.get("evidenceButtonCount", 0)) < 1:
