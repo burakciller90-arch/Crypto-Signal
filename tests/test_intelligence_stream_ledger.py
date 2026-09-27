@@ -2074,6 +2074,28 @@ class _NumericDroppingNarrativeRewriter(_NarrativeTestRewriter):
         )
 
 
+class _CanonicalScoreInjectingNarrativeRewriter(_NarrativeTestRewriter):
+    def rewrite(self, request):
+        return replace(
+            request.deterministic_text,
+            collapsed_text=(
+                request.deterministic_text.collapsed_text
+                + " Karar desteği 82/100."
+            ),
+        )
+
+
+class _BriefFamilyInjectingNarrativeRewriter(_NarrativeTestRewriter):
+    def rewrite(self, request):
+        return replace(
+            request.deterministic_text,
+            collapsed_text=(
+                request.deterministic_text.collapsed_text
+                + " Likidite bu görüşü destekliyor."
+            ),
+        )
+
+
 class _UnbriefedFamilyNarrativeRewriter(_NarrativeTestRewriter):
     def rewrite(self, request):
         return replace(
@@ -2476,6 +2498,82 @@ def test_stream_narrative_rejects_dropped_surface_number_rewrite(tmp_path) -> No
     )
     assert narrative.text == deterministic.text
     assert "$95" in narrative.text.collapsed_text
+
+
+def test_stream_narrative_rejects_canonical_but_new_surface_number(
+    tmp_path,
+) -> None:
+    (
+        _,
+        _,
+        _,
+        _,
+        _,
+        issuance,
+        state,
+        view,
+        plan,
+        deterministic,
+    ) = _persist_narrative_fixture(
+        tmp_path,
+        seed="narrative-canonical-score-injection",
+        as_of_ms=19_625_000,
+        issued_at_ms=19_625_100,
+    )
+    assert issuance.fact_bundle.confluence_support_score_0_100 == Decimal(82)
+    narrative = render_stream_narrative(
+        plan,
+        view,
+        issuance.fact_bundle,
+        build_change_set(state),
+        rewriter=_CanonicalScoreInjectingNarrativeRewriter(),
+    )
+
+    assert narrative.source_kind is StreamNarrativeSourceKind.DETERMINISTIC_FALLBACK
+    assert narrative.fallback_reason_codes == (
+        "rewriter_numeric_preservation_rejected",
+    )
+    assert narrative.text == deterministic.text
+    assert "82/100" not in narrative.text.collapsed_text
+
+
+def test_stream_narrative_brief_does_not_authorize_new_family_claim(
+    tmp_path,
+) -> None:
+    (
+        _,
+        _,
+        _,
+        _,
+        _,
+        issuance,
+        state,
+        view,
+        plan,
+        deterministic,
+    ) = _persist_narrative_fixture(
+        tmp_path,
+        seed="narrative-brief-family-injection",
+        as_of_ms=19_627_000,
+        issued_at_ms=19_627_100,
+    )
+    assert view.dominant_support is not None
+    assert view.dominant_support.family in {
+        ConfluenceFamily.LIQUIDITY,
+        ConfluenceFamily.ORDER_FLOW,
+    }
+    narrative = render_stream_narrative(
+        plan,
+        view,
+        issuance.fact_bundle,
+        build_change_set(state),
+        rewriter=_BriefFamilyInjectingNarrativeRewriter(),
+    )
+
+    assert narrative.source_kind is StreamNarrativeSourceKind.DETERMINISTIC_FALLBACK
+    assert narrative.fallback_reason_codes == ("rewriter_family_guard_rejected",)
+    assert narrative.text == deterministic.text
+    assert "Likidite bu görüşü destekliyor" not in narrative.text.collapsed_text
 
 
 def test_stream_narrative_rejects_new_family_claim_rewrite(tmp_path) -> None:
