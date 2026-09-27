@@ -79,6 +79,42 @@ jobs:
           fi
 
           rm -f "$ROOT/ssd-service-supervisor.pid"
+
+          echo "=== NORMALIZE DASHBOARD OWNERSHIP ==="
+          dashboard_pids="$(
+            ps -axo pid=,args= \
+              | awk -v needle="$ROOT/Product/ops/run_dashboard.py" '
+                  index($0, needle) > 0 && index($0, "--port 48700") > 0 {
+                    print $1
+                  }
+                '
+          )"
+          if [ -n "$dashboard_pids" ]; then
+            while read -r pid; do
+              [ -n "$pid" ] || continue
+              kill "$pid" >/dev/null 2>&1 || true
+            done <<<"$dashboard_pids"
+            for _ in {1..20}; do
+              remaining="$(
+                ps -axo pid=,args= \
+                  | awk -v needle="$ROOT/Product/ops/run_dashboard.py" '
+                      index($0, needle) > 0 && index($0, "--port 48700") > 0 {
+                        print $1
+                      }
+                    '
+              )"
+              [ -z "$remaining" ] && break
+              sleep 0.25
+            done
+            if [ -n "$remaining" ]; then
+              while read -r pid; do
+                [ -n "$pid" ] || continue
+                kill -KILL "$pid" >/dev/null 2>&1 || true
+              done <<<"$remaining"
+            fi
+          fi
+          rm -f "$ROOT/dashboard.pid"
+
           "$START"
 
           new_sup=""
