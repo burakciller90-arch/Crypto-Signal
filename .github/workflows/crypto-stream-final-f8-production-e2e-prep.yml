@@ -3,7 +3,7 @@ name: Crypto Stream Final F8 Production E2E Prep
 on:
   push:
     branches:
-      - 'stream/final-f8-production-e2e-current'
+      - 'accept/f8-production-audit'
   workflow_dispatch:
     inputs:
       run_production:
@@ -90,7 +90,7 @@ jobs:
           echo "F8_CONTRACT_UID504_NON_MUTATING_PASS=YES"
 
   production-read-only:
-    if: inputs.run_production == true
+    if: github.event_name == 'push' || inputs.run_production == true
     needs: contract
     runs-on: [self-hosted, crypto-signal, uid504]
     timeout-minutes: 25
@@ -129,6 +129,7 @@ jobs:
             --stream-ledger "/Volumes/Crypto-504/Crypto-Signal/Development/runtime/stream/intelligence_stream.sqlite3"
           )
           OBSERVATION_START_MS="${{ inputs.observation_start_ms }}"
+          if [ -z "$OBSERVATION_START_MS" ]; then OBSERVATION_START_MS=0; fi
           case "$OBSERVATION_START_MS" in
             ''|*[!0-9]*)
               echo "observation_start_ms must be a non-negative integer" >&2
