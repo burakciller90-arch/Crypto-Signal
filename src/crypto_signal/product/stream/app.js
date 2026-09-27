@@ -394,37 +394,207 @@ function depthSection(label, body, { className = "", content = null } = {}) {
   return section;
 }
 
-function evidenceFamilyGrid(fact) {
-  const grid = document.createElement("div");
-  grid.className = "family-grid";
+function decisionEvidenceContribution(fact, config) {
   const families = Array.isArray(fact?.family_contributions)
     ? fact.family_contributions
     : [];
-  for (const family of families) {
-    const card = document.createElement("div");
-    card.className = "family-card";
-    const label = document.createElement("span");
-    label.textContent = familyLabel(family?.family);
-    const score = document.createElement("strong");
-    score.textContent = `+${displayNumber(family?.support_points, "0")} / -${displayNumber(
-      family?.opposition_points,
-      "0"
-    )}`;
-    const note = document.createElement("small");
-    const quality = Number(family?.evidence_quality_0_1);
-    note.textContent = Number.isFinite(quality)
-      ? `kanıt kalitesi %${Math.round(quality * 100)}`
-      : text(family?.state, "ölçülmedi");
-    card.append(label, score, note);
-    grid.append(card);
+  return (
+    families.find((item) => {
+      const family = text(item?.family, "").toLowerCase();
+      return config.aliases.includes(family);
+    }) || null
+  );
+}
+
+function hasDecisionEvidenceMatrix(fact) {
+  return DECISION_EVIDENCE_FAMILIES.every(
+    (config) => decisionEvidenceContribution(fact, config) !== null
+  );
+}
+
+function familyWeightPoints(contribution, config) {
+  const prior = Number(contribution?.prior_weight);
+  if (Number.isFinite(prior) && prior > 0) {
+    return Math.round(prior * 10000) / 100;
   }
-  if (!families.length) {
-    const note = document.createElement("p");
-    note.className = "depth-muted";
-    note.textContent = "Beş-aile katkısı bu kayıtta mevcut değil.";
-    grid.append(note);
+  return config.weight;
+}
+
+function familyEvidencePresentation(contribution, config) {
+  const maximum = familyWeightPoints(contribution, config);
+  const stateValue = text(contribution?.state, "").toLowerCase();
+  if (!contribution || ["no_evidence", "not_evaluable"].includes(stateValue)) {
+    return {
+      score: `— / ${displayNumber(maximum)}`,
+      status: "VERİ YOK",
+      state: "unavailable",
+      covered: false,
+    };
   }
-  return grid;
+  if (stateValue === "abstain") {
+    return {
+      score: `0 / ${displayNumber(maximum)}`,
+      status: "NÖTR / ÇEKİMSER",
+      state: "neutral",
+      covered: true,
+    };
+  }
+
+  const support = Number(contribution?.support_points);
+  const opposition = Number(contribution?.opposition_points);
+  const safeSupport = Number.isFinite(support) ? support : 0;
+  const safeOpposition = Number.isFinite(opposition) ? opposition : 0;
+  const conflicts = Number(contribution?.material_conflict_count);
+  let score = `0 / ${displayNumber(maximum)}`;
+  let status = "NÖTR";
+  let state = "neutral";
+
+  if (safeSupport > safeOpposition && safeSupport > 0) {
+    score = `${displayNumber(safeSupport)} / ${displayNumber(maximum)}`;
+    status = "DESTEKLİYOR";
+    state = "support";
+  } else if (safeOpposition > safeSupport && safeOpposition > 0) {
+    score = `${displayNumber(safeOpposition)} / ${displayNumber(maximum)}`;
+    status = "KARŞI AĞIRLIK";
+    state = "opposition";
+  }
+  if (Number.isFinite(conflicts) && conflicts > 0) {
+    status += " · ÇELİŞKİ";
+    state = "conflict";
+  }
+  return { score, status, state, covered: true };
+}
+
+function evidenceCoveragePoints(fact) {
+  let total = 0;
+  for (const config of DECISION_EVIDENCE_FAMILIES) {
+    const contribution = decisionEvidenceContribution(fact, config);
+    const presentation = familyEvidencePresentation(contribution, config);
+    if (presentation.covered) {
+      total += familyWeightPoints(contribution, config);
+    }
+  }
+  return Math.round(total * 100) / 100;
+}
+
+function customerStanceLabel(value) {
+  const labels = {
+    bullish: "YÜKSELİŞ BEKLENTİSİ",
+    bearish: "DÜŞÜŞ BEKLENTİSİ",
+    watch: "NÖTR / BEKLİYORUM",
+    blocked: "RİSK NEDENİYLE BLOKLU",
+    resolved: "BEKLENTİ SONUÇLANDI",
+  };
+  const key = text(value, "").toLowerCase();
+  return labels[key] || text(value, "BEKLENTİ YOK").replaceAll("_", " ").toUpperCase();
+}
+
+function decisionZoneLabel(zone) {
+  if (!zone || typeof zone !== "object") return "—";
+  const low = Number(zone.low);
+  const high = Number(zone.high);
+  if (!Number.isFinite(low) || !Number.isFinite(high)) return "—";
+  return low === high
+    ? displayNumber(low)
+    : `${displayNumber(low)} – ${displayNumber(high)}`;
+}
+
+function decisionMetric(labelText, valueText, { className = "" } = {}) {
+  const metric = document.createElement("div");
+  metric.className = `decision-summary-metric ${className}`.trim();
+  const label = document.createElement("span");
+  label.textContent = labelText;
+  const value = document.createElement("strong");
+  value.textContent = text(valueText);
+  metric.append(label, value);
+  return metric;
+}
+
+function currentViewSummary(analytical, fact) {
+  const wrap = document.createElement("div");
+  wrap.className = "decision-summary";
+
+  const stance = document.createElement("div");
+  stance.className = "decision-summary-stance";
+  const stanceLabel = document.createElement("span");
+  stanceLabel.textContent = "BEKLENTİ";
+  const stanceValue = document.createElement("strong");
+  stanceValue.textContent = customerStanceLabel(analytical?.stance?.effective_stance);
+  stance.append(stanceLabel, stanceValue);
+
+  const metrics = document.createElement("div");
+  metrics.className = "decision-summary-grid";
+  const support =
+    fact?.confluence_support_score_0_100
+    ?? analytical?.stance?.support_score_0_100;
+  const contradiction = analytical?.main_contradiction?.family
+    ? familyLabel(analytical.main_contradiction.family)
+    : "Belirgin karşı ağırlık yok";
+  metrics.append(
+    decisionMetric("Karar desteği", `${displayNumber(support)} / 100`),
+    decisionMetric("Kanıt kapsamı", `${displayNumber(evidenceCoveragePoints(fact))} / 100`),
+    decisionMetric("Tetik", decisionZoneLabel(fact?.trigger_zone)),
+    decisionMetric("Hedef", decisionZoneLabel(fact?.target_zone)),
+    decisionMetric("Geçersizlik", displayNumber(fact?.invalidation_price)),
+    decisionMetric("Ana çekince", contradiction, { className: "decision-summary-reservation" })
+  );
+
+  const note = document.createElement("p");
+  note.className = "decision-summary-note";
+  note.textContent = "Karar desteği ve kanıt kapsamı puandır; yükseliş/düşüş olasılığı değildir.";
+
+  wrap.append(stance, metrics, note);
+  return wrap;
+}
+
+function familyEvidenceSummaryTable(fact) {
+  const table = document.createElement("div");
+  table.className = "family-evidence-table";
+  table.setAttribute("role", "table");
+  table.setAttribute("aria-label", "Beş kanıt ailesi");
+
+  const header = document.createElement("div");
+  header.className = "family-evidence-row family-evidence-header";
+  header.setAttribute("role", "row");
+  for (const headingText of ["KANIT", "KATKI", "DURUM"]) {
+    const heading = document.createElement("span");
+    heading.setAttribute("role", "columnheader");
+    heading.textContent = headingText;
+    header.append(heading);
+  }
+  table.append(header);
+
+  for (const config of DECISION_EVIDENCE_FAMILIES) {
+    const contribution = decisionEvidenceContribution(fact, config);
+    const presentation = familyEvidencePresentation(contribution, config);
+    const row = document.createElement("div");
+    row.className = "family-evidence-row";
+    row.dataset.family = config.evidenceKind;
+    row.dataset.evidenceState = presentation.state;
+    row.setAttribute("role", "row");
+
+    const label = document.createElement("strong");
+    label.setAttribute("role", "cell");
+    label.textContent = config.label;
+
+    const score = document.createElement("span");
+    score.className = "family-evidence-score";
+    score.setAttribute("role", "cell");
+    score.textContent = presentation.score;
+
+    const status = document.createElement("span");
+    status.className = "family-evidence-status";
+    status.setAttribute("role", "cell");
+    status.textContent = presentation.status;
+
+    row.append(label, score, status);
+    table.append(row);
+  }
+  return table;
+}
+
+function evidenceFamilyGrid(fact) {
+  return familyEvidenceSummaryTable(fact);
 }
 
 function geometryGrid(fact) {
