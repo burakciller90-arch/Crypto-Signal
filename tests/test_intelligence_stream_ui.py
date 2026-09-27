@@ -144,6 +144,60 @@ def test_mi3_default_decision_detail_is_compact_five_family_summary() -> None:
     assert '[data-evidence-state="unavailable"]' in css
 
 
+def test_mi4_family_rows_open_only_their_exact_fail_closed_proof() -> None:
+    script = (STREAM_DIR / "app.js").read_text(encoding="utf-8")
+    css = (STREAM_DIR / "app.css").read_text(encoding="utf-8")
+
+    assert "family-evidence-open" in script
+    assert 'row.type = "button"' in script
+    assert "openEvidenceWindow(record, detail, config.evidenceKind)" in script
+    assert "API.exactEvidence" in script
+    assert "API.evidenceReference" in script
+    assert "loadExactEvidenceForWindow" in script
+    assert "familyExactEvidencePanel" in script
+    assert "familyExactResolutions" in script
+    assert "strongestExactEvidenceState" in script
+
+    for state in (
+        "READY_EXACT",
+        "IDENTITY_ONLY_EXACT",
+        "UNAVAILABLE_EXPLICIT",
+    ):
+        assert state in script
+
+    for domain in (
+        "frozen_chart",
+        "consumed_candles",
+        "liquidity_map",
+        "order_book",
+        "order_flow_cvd",
+        "public_trades",
+        "derivatives",
+        "onchain",
+    ):
+        assert domain in script
+
+    assert "KANIT MEVCUT DEĞİL" in script
+    assert "current data ile ikame yapılmadı" in script
+    assert "Grafik veya kanıt uydurulmadı" in script
+    assert "CVD / emir akışı" in script
+    assert "Dondurulmuş Order Book" in script
+    assert ".family-evidence-open" in css
+    assert ".family-exact-resolution" in css
+    assert '[data-resolution-state="READY_EXACT"]' in css
+    assert '[data-resolution-state="UNAVAILABLE_EXPLICIT"]' in css
+
+    decision_start = script.index("if (hasDecisionEvidenceMatrix(fact))")
+    decision_return = script.index("return decisionGrid;", decision_start)
+    standard_decision = script[decision_start:decision_return]
+    assert "evidenceWindowLauncher(record, detail)" not in standard_decision
+
+    geometry_guard = script.index('model.kind === "geometry"')
+    geometry_visual = script.index("hydrateFrozenVisualProof(model)")
+    assert geometry_guard < geometry_visual
+
+
+
 def test_stream_s9_evidence_window_manager_contract() -> None:
     html = (STREAM_DIR / "index.html").read_text(encoding="utf-8")
     script = (STREAM_DIR / "app.js").read_text(encoding="utf-8")
