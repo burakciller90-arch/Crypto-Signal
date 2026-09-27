@@ -1,0 +1,78 @@
+name: RDP1 Live Clock Runtime Diagnostic UID504
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/crypto-rdp1-live-clock-runtime-diag-uid504.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          clean: true
+          fetch-depth: 1
+      - name: Inspect live clock runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          DEV="$ROOT/Development"
+          LOGDIR="$ROOT/ServiceLogs"
+          LOCK="$DEV/runtime/ledger/live_clock.lock"
+          CACHE="$DEV/runtime/data/live_base_15m_cache.sqlite3"
+          PY="$DEV/.venv/bin/python"
+          test "$(id -u)" = "504"
+          echo "RDP1_LIVE_RUNTIME_DIAG_HEAD=$(git -C "$DEV" rev-parse HEAD)"
+          echo "RDP1_LIVE_RUNTIME_DIAG_NOW=$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
+          echo "=== SUPERVISOR / LIVE CLOCK ==="
+          ps -axo pid=,ppid=,uid=,etime=,state=,command= | grep -E '[s]sd_runtime_supervisor.sh|[r]un_live_evidence_clock.py' || true
+          echo "=== LIVE LOCK OWNER ==="
+          if [ -e "$LOCK" ]; then
+            /usr/sbin/lsof "$LOCK" 2>/dev/null || true
+            stat -f 'LIVE_LOCK_MTIME_EPOCH=%m LIVE_LOCK_SIZE=%z' "$LOCK"
+          else
+            echo "LIVE_LOCK_MISSING=YES"
+          fi
+          echo "=== CORRECT LIVE ERR LOG ==="
+          tail -n 280 "$LOGDIR/live.err.log" 2>/dev/null || echo "LIVE_ERR_LOG_MISSING=YES"
+          echo "=== CORRECT LIVE OUT LOG ==="
+          tail -n 360 "$LOGDIR/live.out.log" 2>/dev/null || echo "LIVE_OUT_LOG_MISSING=YES"
+          echo "=== RECENT SUPERVISOR CLOCK EVENTS ==="
+          tail -n 500 "$LOGDIR/supervisor.log" 2>/dev/null | grep -E 'supervisor_r11_|clock_|wc2_live|market_tape_snapshot|dashboard_|market_tape_' | tail -n 260 || true
+          echo "=== CACHE CONTEXT ==="
+          "$PY" - "$CACHE" <<'PY'
+          import sqlite3, sys, time
+          from pathlib import Path
+          path = Path(sys.argv[1]); now_ms = time.time_ns() // 1_000_000
+          uri = f"{path.resolve().as_uri()}?mode=ro"
+          with sqlite3.connect(uri, uri=True, timeout=5.0) as db:
+              db.row_factory = sqlite3.Row; db.execute("PRAGMA query_only=ON")
+              rows = db.execute("""
+                  SELECT exchange, symbol, timeframe, COUNT(*) AS n,
+                         MAX(close_time_ms) AS close_ms,
+                         MAX(source_timestamp_ms) AS source_ms,
+                         MAX(ingested_at_ms) AS ingested_ms
+                  FROM candles
+                  GROUP BY exchange, symbol, timeframe
+                  ORDER BY exchange, symbol, timeframe
+              """).fetchall()
+          for row in rows:
+              close_ms=row["close_ms"]; source_ms=row["source_ms"]; ingested_ms=row["ingested_ms"]
+              print("RDP1_LIVE_CACHE "
+                    f"exchange={row['exchange']} symbol={row['symbol']} timeframe={row['timeframe']} "
+                    f"rows={row['n']} "
+                    f"close_age_ms={None if close_ms is None else now_ms-int(close_ms)} "
+                    f"source_age_ms={None if source_ms is None else now_ms-int(source_ms)} "
+                    f"ingested_age_ms={None if ingested_ms is None else now_ms-int(ingested_ms)}")
+          PY
+          echo "RDP1_LIVE_CLOCK_RUNTIME_DIAG_PASS=YES"
+          echo "REAL_CAPITAL=0"
