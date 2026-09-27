@@ -1,6 +1,6 @@
 # Crypto Signal — Message Intelligence & Family Evidence UX Frontier V1
 
-Status: **ACTIVE USER-APPROVED FRONTIER**
+Status: **ACTIVE USER-APPROVED FRONTIER — MI1 PASS / MI2 ACTIVE**
 Date opened: 2026-09-27
 Company: GALACTECH
 Product: Crypto Signal
@@ -361,16 +361,25 @@ PASS:
 - a new agent cannot reasonably mistake F0-F10 for active work;
 - no other repository/project is touched.
 
-### MI1 — User-facing message composer
+### MI1 — User-facing message composer — **PASS**
 
-Goal:
-- stop low-level family telemetry from being the default customer sentence;
-- compose one deterministic system-view message from canonical analytical/confluence facts.
+Accepted implementation:
+- PR #1453 -> main `a2c317bbee1b325500b909bbe970750370a17eda`;
+- PR #1454 -> main `28fa1c208e9e66173214a8bdfaa33cea4bbfe935`;
+- final UID504 gate `36330349505` -> PASS.
 
-PASS:
-- raw `mixed -> sell_pressure` style prose is absent from normal new user-facing messages;
-- direction/trigger/target/invalidation only appear when exact;
-- missing evidence remains explicit.
+Accepted behavior:
+- low-level five-family telemetry remains immutable/auditable but is excluded from the default Product surface;
+- Product history, SSE and polling request `surface=primary`;
+- `surface=all` and exact lookup retain raw family evidence for developer/debug use;
+- Event Risk and Provider/Data Quality trust alerts stay visible on the primary surface;
+- normal combined Decision/Forecast collapsed copy is one concise Turkish system-view sentence;
+- raw state-machine labels/arrows are rejected from collapsed customer copy;
+- direction/trigger/target/invalidation only appear from canonical persisted facts;
+- historical messages were not rewritten or backfilled;
+- Development/Product checkouts remained untouched;
+- Durdurulmaz/Quantum Capital were not touched;
+- REAL_CAPITAL=0.
 
 ### MI2 — Guarded natural Turkish layer
 
@@ -476,9 +485,11 @@ The same project-isolation rules continue to apply to all other repositories.
 
 The exact next implementation frontier is:
 
-**MI1 — User-facing message composer**
+**MI2 — Guarded natural Turkish layer**
 
-Before coding MI1, mechanically re-check current `main`, open PRs, runtime state and any newer authority update.
+Before coding MI2, mechanically re-check current `main`, open PRs, runtime state and any newer authority update.
+
+MI2 starts from the accepted MI1 customer-surface contract. It must not reintroduce raw family telemetry into the primary feed.
 
 Reuse the existing:
 
