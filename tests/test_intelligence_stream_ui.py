@@ -104,6 +104,46 @@ def test_stream_s8_expands_supported_depth_inline_and_preserves_anchor() -> None
     assert "/api/decision-proof/forecast/" in script
 
 
+def test_mi3_default_decision_detail_is_compact_five_family_summary() -> None:
+    script = (STREAM_DIR / "app.js").read_text(encoding="utf-8")
+    css = (STREAM_DIR / "app.css").read_text(encoding="utf-8")
+
+    assert "DECISION_EVIDENCE_FAMILIES" in script
+    for family, weight in (
+        ("geometry_pa_elliott_harmonic", 20),
+        ("liquidity", 25),
+        ("order_flow_absorption", 25),
+        ("derivatives", 15),
+        ("onchain_smart_money", 15),
+    ):
+        assert family in script
+        assert f"weight: {weight}" in script
+
+    assert "currentViewSummary" in script
+    assert "familyEvidenceSummaryTable" in script
+    assert "hasDecisionEvidenceMatrix" in script
+    assert 'depthSection("KARAR ÖZETİ"' in script
+    assert 'depthSection("5 KANIT AİLESİ"' in script
+    assert '"Karar desteği"' in script
+    assert '"Kanıt kapsamı"' in script
+    assert "yükseliş/düşüş olasılığı değildir" in script
+    assert '"DESTEKLİYOR"' in script
+    assert '"KARŞI AĞIRLIK"' in script
+    assert '"NÖTR / ÇEKİMSER"' in script
+    assert '"VERİ YOK"' in script
+
+    decision_start = script.index("if (hasDecisionEvidenceMatrix(fact))")
+    decision_return = script.index("return decisionGrid;", decision_start)
+    legacy_simple = script.index('depthSection("SIMPLE"', decision_start)
+    assert decision_return < legacy_simple
+
+    assert ".decision-summary" in css
+    assert ".decision-summary-grid" in css
+    assert ".family-evidence-table" in css
+    assert ".family-evidence-row" in css
+    assert '[data-evidence-state="unavailable"]' in css
+
+
 def test_stream_s9_evidence_window_manager_contract() -> None:
     html = (STREAM_DIR / "index.html").read_text(encoding="utf-8")
     script = (STREAM_DIR / "app.js").read_text(encoding="utf-8")
