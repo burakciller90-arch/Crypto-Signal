@@ -837,6 +837,59 @@ def test_stream_primary_surface_hides_family_telemetry_without_deleting_it(
     )
 
 
+def test_stream_primary_surface_hides_canonical_production_family_values(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / "stream.sqlite3"
+    identities = _create_read_fixture(path)
+    canonical_families = (
+        "geometry_pa_elliott_harmonic",
+        "liquidity",
+        "order_flow_absorption",
+        "derivatives",
+        "onchain_smart_money",
+    )
+    family_ids = {
+        _insert_family_surface_fixture(
+            path,
+            source_narrative_identity=identities["btc-flow"],
+            family=family,
+            state_label="mixed",
+        )
+        for family in canonical_families
+    }
+
+    reader = IntelligenceStreamReadModel(path)
+    all_ids = {
+        item["narrative_identity"]
+        for item in reader.read_messages(StreamMessageQuery(limit=20)).items
+    }
+    assert family_ids <= all_ids
+
+    primary_ids = {
+        item["narrative_identity"]
+        for item in reader.read_messages(
+            StreamMessageQuery(limit=20, primary_surface=True)
+        ).items
+    }
+    assert family_ids.isdisjoint(primary_ids)
+
+    trust_id = _insert_family_surface_fixture(
+        path,
+        source_narrative_identity=identities["eth-outcome"],
+        family="provider_quality",
+        state_label="degraded_provider_stale",
+    )
+    primary_with_trust = {
+        item["narrative_identity"]
+        for item in reader.read_messages(
+            StreamMessageQuery(limit=20, primary_surface=True)
+        ).items
+    }
+    assert trust_id in primary_with_trust
+
+
+
 def test_stream_read_model_is_read_only_and_missing_db_is_not_initialized(tmp_path) -> None:
     missing = tmp_path / "missing.sqlite3"
     reader = IntelligenceStreamReadModel(missing)
