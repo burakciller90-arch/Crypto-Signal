@@ -214,8 +214,7 @@ async def freeze_live_provider(
         )
     )
     if candle_store is not None:
-        for candle in raw:
-            candle_store.upsert(candle)
+        candle_store.upsert_many(raw)
     return freeze_live_candles(
         candles=raw,
         ledger=ledger,
