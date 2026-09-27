@@ -448,20 +448,25 @@ shutdown() {
 }
 trap shutdown TERM INT
 
-last_clock=0
+last_data_clock=0
+last_aux_clock=0
 last_rotation=0
 while true; do
   start_dashboard
   start_market_tape_stream
   now="$(date +%s)"
 
-  if [ $((now-last_clock)) -ge 120 ]; then
+  if [ $((now-last_data_clock)) -ge 60 ]; then
     run_market_tape_snapshot_clock
     run_wc2_live_clock
+    last_data_clock="$now"
+  fi
+
+  if [ $((now-last_aux_clock)) -ge 120 ]; then
     run_clock alert "$ALERTS/.venv/bin/python" "$ALERTS/src"
     run_clock paper "$PAPER/.venv/bin/python" "$PAPER/src"
     run_clock dry "$PAPER/.venv/bin/python" "$PAPER/src"
-    last_clock="$now"
+    last_aux_clock="$now"
   fi
 
   if [ $((now-last_rotation)) -ge 300 ]; then
