@@ -486,10 +486,9 @@ jobs:
           echo "MI5_BROWSER=$BROWSER"
 
           if [[ -z "${MI5_SYSTEM_VIEW_ID:-}" ]]; then
-            echo "MI5_BROWSER_ACCEPTANCE_DEFERRED=system_view_not_deployed"
-            echo "MI5_PREDEPLOY_ACCEPTANCE_PASS=YES"
+            echo "MI5_POSTDEPLOY_ACCEPTANCE_FAIL=system_view_not_live"
             echo "REAL_CAPITAL=0"
-            exit 0
+            exit 78
           fi
           URL="http://127.0.0.1:$MI5_PROBE_PORT/?message=$MI5_SYSTEM_VIEW_ID"
 
