@@ -33,6 +33,32 @@ def _proof_payload(
     }
 
 
+def _exact_evidence_payload(
+    *states: str,
+    current_data_substitution: bool = False,
+) -> dict[str, object]:
+    return {
+        "status": "ready",
+        "evidence": {
+            "status": "ready",
+            "resolutions": [
+                {
+                    "resolution_state": state,
+                    "current_data_substitution": False,
+                }
+                for state in states
+            ],
+            "reference_resolutions": [],
+            "current_data_substitution": current_data_substitution,
+            "read_only": True,
+            "production_authority": False,
+            "real_capital": 0,
+        },
+        "read_only": True,
+        "real_capital": 0,
+    }
+
+
 def test_require_read_only_accepts_exact_safety_boundary() -> None:
     payload = {
         "read_only": True,
@@ -77,6 +103,37 @@ def test_proof_result_accepts_exact_f6_style_statuses(status: str) -> None:
     result = audit._proof_result(_proof_payload(status=status))
     assert result["status"] == status
     assert result["accepted_fail_closed"] is True
+
+
+@pytest.mark.parametrize(
+    "state",
+    ["READY_EXACT", "IDENTITY_ONLY_EXACT", "UNAVAILABLE_EXPLICIT"],
+)
+def test_exact_evidence_result_accepts_f6_resolution_states(state: str) -> None:
+    result = audit._exact_evidence_result(_exact_evidence_payload(state))
+    assert result["status"] == "ready"
+    assert result["accepted_fail_closed"] is True
+    assert result["resolution_states"] == [state]
+
+
+def test_exact_evidence_result_rejects_current_data_substitution() -> None:
+    with pytest.raises(audit.AuditError, match="substituted current data"):
+        audit._exact_evidence_result(
+            _exact_evidence_payload(
+                "READY_EXACT",
+                current_data_substitution=True,
+            )
+        )
+
+
+def test_exact_evidence_result_rejects_unknown_resolution_state() -> None:
+    with pytest.raises(audit.AuditError, match="unsupported resolution state"):
+        audit._exact_evidence_result(_exact_evidence_payload("ILLUSTRATIVE"))
+
+
+def test_exact_evidence_result_requires_at_least_one_exact_resolution() -> None:
+    result = audit._exact_evidence_result(_exact_evidence_payload())
+    assert result["accepted_fail_closed"] is False
 
 
 def test_proof_result_accepts_legacy_unavailable_only_when_reason_is_explicit() -> None:
