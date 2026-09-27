@@ -214,8 +214,14 @@ jobs:
           )
 
           allowed_numbers={"0","82"}
+          numeric_re = re.compile(
+              r"(?<![A-Za-z0-9_])\\$?(-?\\d[\\d,]*(?:\\.\\d+)?)(?:%)?(?![A-Za-z_])"
+          )
           for value in (candidate.collapsed_text, candidate.simple_text):
-              found=set(re.findall(r"(?<![A-Za-z])\d+(?:\.\d+)?", value))
+              found={
+                  match.replace(",", "")
+                  for match in numeric_re.findall(value)
+              }
               assert found <= allowed_numbers, (found,value)
 
           report={
@@ -228,6 +234,8 @@ jobs:
               "max_tokens": config.max_tokens,
               "protected_sections_unchanged": True,
               "candidate_differs_from_baseline": candidate != baseline,
+              "candidate_collapsed_text": candidate.collapsed_text,
+              "candidate_simple_text": candidate.simple_text,
               "production_mutation": False,
               "real_capital": 0,
           }
