@@ -81,8 +81,9 @@ def test_stream_fixture_mode_is_explicitly_non_live_truth() -> None:
     assert "applyFixture(state.fixture)" in script
 
 
-def test_stream_s8_expands_supported_depth_inline_and_preserves_anchor() -> None:
+def test_mi3_market_message_depth_is_decision_summary_and_five_family_evidence() -> None:
     script = (STREAM_DIR / "app.js").read_text(encoding="utf-8")
+    css = (STREAM_DIR / "app.css").read_text(encoding="utf-8")
 
     assert "/detail" in script
     assert "buildExpandedContent" in script
@@ -90,18 +91,51 @@ def test_stream_s8_expands_supported_depth_inline_and_preserves_anchor() -> None
     assert "toggleMessageExpansion" in script
     assert "currentRenderedMessage" in script
     assert "renderExpandedPanel(target, record, payload.detail)" in script
-    assert "SIMPLE" in script
-    assert "PRO" in script
-    assert "INTELLIGENCE" in script
-    assert "DECISION" in script
-    assert "TRADE GEOMETRY" in script
-    assert "CAPITAL" in script
-    assert "PROOF" in script
-    assert "family_contributions" in script
-    assert "trigger_zone" in script
-    assert "target_zone" in script
-    assert "invalidation_price" in script
-    assert "/api/decision-proof/forecast/" in script
+
+    market_start = script.index("function buildExpandedContent(record, detail)")
+    market_end = script.index("function detailPlaceholder", market_start)
+    market_depth = script[market_start:market_end]
+
+    assert 'depthSection("SİSTEM GÖRÜŞÜ"' in market_depth
+    assert 'depthSection("5 KANIT AİLESİ"' in market_depth
+    assert "decisionSummaryPanel(detail)" in market_depth
+    assert "evidenceFamilyGrid(record, detail)" in market_depth
+    assert "evidenceWindowLauncher(record, detail)" not in market_depth
+    for legacy_section in (
+        'depthSection("SIMPLE"',
+        'depthSection("PRO"',
+        'depthSection("INTELLIGENCE"',
+        'depthSection("DECISION"',
+        'depthSection("TRADE GEOMETRY"',
+        'depthSection("CAPITAL"',
+        'depthSection("PROOF"',
+    ):
+        assert legacy_section not in market_depth
+
+    assert "FAMILY_EVIDENCE_SUMMARY" in script
+    assert 'family: "geometry_pa_elliott_harmonic"' in script
+    assert 'family: "liquidity"' in script
+    assert 'family: "order_flow_absorption"' in script
+    assert 'family: "derivatives"' in script
+    assert 'family: "onchain_smart_money"' in script
+    assert 'maxPoints: 20' in script
+    assert script.count('maxPoints: 25') >= 2
+    assert script.count('maxPoints: 15') >= 2
+
+    assert "normalizeFamilyKind" in script
+    assert "evidenceCoverage0To100" in script
+    assert "familySummaryState" in script
+    assert "Karar desteği" in script
+    assert "Kanıt kapsamı" in script
+    assert "Ana çekince" in script
+    assert "kazanma olasılığı değildir" in script
+    assert "kalibre edilmiş yükselme/düşme olasılığı değildir" in script
+    assert "VERİ YOK" in script
+
+    assert ".family-evidence-row" in css
+    assert ".decision-summary-metrics" in css
+    assert '[data-evidence-state="unavailable"]' in css
+    assert "openEvidenceWindow(record, detail, spec.kind)" in script
 
 
 def test_stream_s9_evidence_window_manager_contract() -> None:
