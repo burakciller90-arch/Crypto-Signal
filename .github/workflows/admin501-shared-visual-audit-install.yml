@@ -51,7 +51,7 @@ jobs:
             /usr/bin/python3 -m venv "$ROOT/venv"
           fi
           "$ROOT/venv/bin/python" -m pip install --disable-pip-version-check --quiet --upgrade pip
-          "$ROOT/venv/bin/python" -m pip install --disable-pip-version-check --quiet "websockets>=14,<16"
+          "$ROOT/venv/bin/python" -m pip install --disable-pip-version-check --quiet "websockets>=14,<16" "imageio-ffmpeg>=0.5,<0.7"
 
           cat > "$BIN/galactech-visual-audit" <<'EOF'
           #!/bin/bash
