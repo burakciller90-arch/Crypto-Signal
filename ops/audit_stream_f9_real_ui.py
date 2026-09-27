@@ -159,6 +159,23 @@ def _wait_identity(identity: str) -> str:
     )
 
 
+def _wait_live_root() -> str:
+    return (
+        "(async()=>{for(let i=0;i<120;i++){"
+        "const params=new URLSearchParams(location.search);"
+        "const count=document.querySelectorAll('.message').length;"
+        "const transport=(document.getElementById('transportMode')?.textContent||'').trim();"
+        "const label=(document.getElementById('connectionLabel')?.textContent||'').trim();"
+        "if(location.pathname==='/'&&!params.get('message')&&!params.get('fixture')"
+        "&&count>0&&transport==='SSE CANLI'&&label==='CANLI')"
+        "return {ready:true,count,transport,label};"
+        "await new Promise(r=>setTimeout(r,100));}"
+        "return {ready:false,count:document.querySelectorAll('.message').length,"
+        "transport:(document.getElementById('transportMode')?.textContent||'').trim(),"
+        "label:(document.getElementById('connectionLabel')?.textContent||'').trim()};})()"
+    )
+
+
 def _snapshot(identity: str) -> str:
     encoded = json.dumps(identity)
     return (
@@ -258,17 +275,28 @@ def _observe_incoming(
     baseline = _eval(
         session,
         (
-            "(()=>{"
+            "(async()=>{"
             "const viewport=document.getElementById('streamViewport');"
-            "if(viewport)viewport.scrollTop=0;"
-            "return [...document.querySelectorAll('.message')]"
-            ".map(n=>n.dataset.identity||'').filter(Boolean);"
+            "if(viewport){viewport.scrollTop=viewport.scrollHeight;"
+            "await new Promise(r=>setTimeout(r,120));"
+            "viewport.scrollTop=0;await new Promise(r=>setTimeout(r,120));}"
+            "const button=document.getElementById('newMessageButton');"
+            "return {ids:[...document.querySelectorAll('.message')]"
+            ".map(n=>n.dataset.identity||'').filter(Boolean),"
+            "unreadAffordance:button?.hidden===false,"
+            "count:document.getElementById('newMessageCount')?.textContent||''};"
             "})()"
         ),
+        await_promise=True,
     )
+    if not isinstance(baseline, dict):
+        raise F9AuditError("live-root incoming baseline unavailable")
+    if baseline.get("unreadAffordance") is True:
+        raise F9AuditError("live-root unread affordance was already active at baseline")
+    raw_before = baseline.get("ids")
     before = (
-        {str(value) for value in baseline}
-        if isinstance(baseline, list)
+        {str(value) for value in raw_before}
+        if isinstance(raw_before, list)
         else set()
     )
     deadline = time.monotonic() + wait_seconds
@@ -282,7 +310,9 @@ def _observe_incoming(
                 ".map(n=>n.dataset.identity||'').filter(Boolean);"
                 "const button=document.getElementById('newMessageButton');"
                 "return {ids,unreadAffordance:button?.hidden===false,"
-                "count:document.getElementById('newMessageCount')?.textContent||''};"
+                "count:document.getElementById('newMessageCount')?.textContent||'',"
+                "transport:(document.getElementById('transportMode')?.textContent||'').trim(),"
+                "label:(document.getElementById('connectionLabel')?.textContent||'').trim()};"
                 "})()"
             ),
         )
@@ -303,6 +333,8 @@ def _observe_incoming(
                 "unread_affordance": unread,
                 "fresh_identities": fresh,
                 "unread_count": current.get("count", ""),
+                "transport": current.get("transport", ""),
+                "connection_label": current.get("label", ""),
             }
     return {
         "required": True,
@@ -310,6 +342,8 @@ def _observe_incoming(
         "unread_affordance": False,
         "fresh_identities": [],
         "unread_count": "",
+        "transport": "SSE CANLI",
+        "connection_label": "CANLI",
     }
 
 
@@ -324,6 +358,91 @@ def _screenshot(session: CdpSession, path: Path) -> None:
     path.write_bytes(base64.b64decode(data))
 
 
+def incoming_live_probe(
+    *,
+    browser: Path,
+    base_url: str,
+    width: int,
+    height: int,
+    wait_seconds: int,
+    screenshot: Path,
+) -> dict[str, object]:
+    port = _free_port()
+    profile = screenshot.parent / f".f9-live-profile-{os.getpid()}"
+    log_path = screenshot.parent / "f9-chrome-live.log"
+    url = base_url.rstrip("/") + "/"
+    command = [
+        str(browser),
+        "--headless=new",
+        "--disable-gpu",
+        "--disable-extensions",
+        "--disable-background-networking",
+        "--disable-component-update",
+        "--disable-sync",
+        "--no-default-browser-check",
+        "--no-first-run",
+        "--renderer-process-limit=2",
+        "--remote-allow-origins=*",
+        f"--remote-debugging-port={port}",
+        f"--user-data-dir={profile}",
+        "about:blank",
+    ]
+    process: subprocess.Popen[bytes] | None = None
+    session: CdpSession | None = None
+    try:
+        with log_path.open("wb") as handle:
+            process = subprocess.Popen(
+                command,
+                stdout=handle,
+                stderr=subprocess.STDOUT,
+                start_new_session=True,
+            )
+        target = _wait_target(port, url)
+        ws = target.get("webSocketDebuggerUrl")
+        if not isinstance(ws, str):
+            raise F9AuditError("live-root Chromium websocket unavailable")
+        session = CdpSession(ws)
+        session.command("Page.enable")
+        session.command("Runtime.enable")
+        session.command(
+            "Emulation.setDeviceMetricsOverride",
+            {
+                "width": width,
+                "height": height,
+                "deviceScaleFactor": 1,
+                "mobile": False,
+                "screenWidth": width,
+                "screenHeight": height,
+            },
+        )
+        session.command("Page.navigate", {"url": url})
+        ready = _eval(session, _wait_live_root(), await_promise=True)
+        if not isinstance(ready, dict) or ready.get("ready") is not True:
+            raise F9AuditError(f"live mixed Stream did not reach SSE ready state: {ready!r}")
+        incoming = _observe_incoming(session, wait_seconds)
+        _screenshot(session, screenshot)
+        return {
+            "path": "/",
+            "fixture": False,
+            "deep_link": False,
+            "sse_ready": True,
+            "initial_message_count": int(ready.get("count", 0)),
+            "transport": ready.get("transport", ""),
+            "connection_label": ready.get("label", ""),
+            **incoming,
+        }
+    finally:
+        if session is not None:
+            session.close()
+        if process is not None and process.poll() is None:
+            os.killpg(process.pid, signal.SIGTERM)
+            try:
+                process.wait(timeout=3)
+            except subprocess.TimeoutExpired:
+                os.killpg(process.pid, signal.SIGKILL)
+                process.wait(timeout=3)
+
+
 def browser_probe(
     *,
     browser: Path,
@@ -333,7 +452,6 @@ def browser_probe(
     height: int,
     mobile: bool,
     screenshot: Path,
-    incoming_wait_seconds: int = 0,
 ) -> dict[str, object]:
     identity = _identity(item)
     category = str(
@@ -404,14 +522,6 @@ def browser_probe(
         initial = _eval(session, _snapshot(identity))
         if not isinstance(initial, dict):
             raise F9AuditError("browser snapshot invalid")
-
-        incoming: dict[str, object] = {
-            "required": incoming_wait_seconds > 0,
-            "observed": False,
-            "unread_affordance": False,
-        }
-        if incoming_wait_seconds > 0:
-            incoming = _observe_incoming(session, incoming_wait_seconds)
 
         interaction = _eval(
             session,
@@ -489,7 +599,6 @@ def browser_probe(
             "mobile": mobile,
             "initial": initial,
             "interaction": interaction,
-            "incoming": incoming,
             "comprehension": comprehension,
             "checks": checks,
         }
@@ -519,7 +628,7 @@ def run(args: argparse.Namespace) -> dict[str, object]:
     primary = inv.get("primary")
     if not isinstance(primary, dict):
         return {
-            "schema_version": "stream-final-f9-real-ui-v1/2",
+            "schema_version": "stream-final-f9-real-ui-v1/3",
             "status": "OPEN_NO_REAL_MESSAGES",
             "inventory": inv,
             "open_requirements": ["real_mixed_message_stream"],
@@ -538,9 +647,6 @@ def run(args: argparse.Namespace) -> dict[str, object]:
         height=1000,
         mobile=False,
         screenshot=args.output.parent / "f9-desktop.png",
-        incoming_wait_seconds=(
-            args.incoming_wait_seconds if args.require_incoming else 0
-        ),
     )
     mobile = browser_probe(
         browser=args.browser,
@@ -551,6 +657,20 @@ def run(args: argparse.Namespace) -> dict[str, object]:
         mobile=True,
         screenshot=args.output.parent / "f9-mobile.png",
     )
+    incoming_live: dict[str, object] = {
+        "required": args.require_incoming,
+        "observed": False,
+        "unread_affordance": False,
+    }
+    if args.require_incoming:
+        incoming_live = incoming_live_probe(
+            browser=args.browser,
+            base_url=args.base_url,
+            width=1440,
+            height=1000,
+            wait_seconds=args.incoming_wait_seconds,
+            screenshot=args.output.parent / "f9-live-incoming.png",
+        )
 
     open_requirements: list[str] = []
     for name, probe in (("desktop", desktop), ("mobile", mobile)):
@@ -573,10 +693,11 @@ def run(args: argparse.Namespace) -> dict[str, object]:
         open_requirements.append("capital_message")
 
     if args.require_incoming:
-        incoming = desktop.get("incoming")
-        if not isinstance(incoming, dict) or incoming.get("observed") is not True:
+        if incoming_live.get("sse_ready") is not True:
+            open_requirements.append("live_root_sse")
+        if incoming_live.get("observed") is not True:
             open_requirements.append("incoming_live_message")
-        elif incoming.get("unread_affordance") is not True:
+        elif incoming_live.get("unread_affordance") is not True:
             open_requirements.append("unread_new_message_affordance")
 
     report: dict[str, object] = {
@@ -585,6 +706,7 @@ def run(args: argparse.Namespace) -> dict[str, object]:
         "inventory": inv,
         "desktop": desktop,
         "mobile": mobile,
+        "incoming_live": incoming_live,
         "open_requirements": sorted(set(open_requirements)),
         "scope": {
             "physically_required": ["market_or_intelligence", "risk_or_system"],
