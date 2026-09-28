@@ -1,5 +1,15 @@
 # PROJECT CHRONICLE
 
+## 2026-09-28 — RDP4-A rich Liquidity / Order Flow family wiring accepted
+
+PR #1566 merged as main `0356f6c1024935bfeffbcc7e61b2a7d95bd9ecc5`. RDP4 remains ACTIVE.
+
+The forward Market Tape family path now promotes existing PIT-safe Liquidity Structure, Liquidity Sweep and Temporal Order Flow freezes into the same existing Liquidity and Order Flow family slots. No new confluence family or weight was added. Composite source-event identities make rich-only evidence changes material; family evidence carries exact rich freeze/analysis/raw identities and uncertainty. Future/late Market Tape rows cannot rewrite the as-of family snapshot. Missing trade evidence no longer fabricates public-trade/temporal/CVD evidence domains. Temporal CVD is context only and cannot invent direction.
+
+UID504 latest-head acceptance `36387736662` passed exact Workbench/source, focused rich-family and engine regression tests, Ruff, mypy and py_compile with REAL_CAPITAL=0. Workbench bootstrap `36387822607` then advanced clean repo/main to exact `0356f6c1024935bfeffbcc7e61b2a7d95bd9ecc5`.
+
+RDP4-B dependency audit found a real source-resolution mismatch: production price truth is canonical 15m CandleStore data while Temporal Order Flow defaults to a 2-minute window. Therefore price/CVD divergence must not be forced to a measured state by fabricating a lower-timeframe price rail. Exact next frontier: **RDP4-B — wire Absorption and Price/CVD Divergence freezes with exact flow/structure/candle dependency lineage; divergence remains explicit unresolved whenever compatible closed-candle coverage is insufficient.**
+
 ## 2026-09-28 — RDP3 PASS; RDP4 rich Liquidity/Order Flow activated
 
 RDP3-A merged via PR #1563 as main `abf1dfdc64c8dc51fe49487129a17a6a2432d74f`. Its deterministic Frozen Geometry Proof is generated only from immutable DecisionFreezeBundle truth: exact consumed candles, Price Action, Harmonic, Elliott, confluence selections/conflicts and selected SignalDecision geometry. The proof is SHA-addressed, candle-scoped and fails closed on frozen evidence-lineage drift. UID504 acceptance `36385612839` passed exact Workbench/source, focused proof tests, Ruff, mypy and py_compile with REAL_CAPITAL=0.
