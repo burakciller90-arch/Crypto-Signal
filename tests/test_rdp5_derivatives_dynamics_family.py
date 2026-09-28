@@ -17,6 +17,7 @@ from crypto_signal.intelligence.derivatives_dynamics import (
     build_derivatives_dynamics_evidence_freeze,
 )
 from crypto_signal.ledger.serialization import canonical_sha256
+from crypto_signal.product.frozen_proof_store import FrozenProofStore
 from crypto_signal.product.intelligence_stream_family_sources import (
     build_market_tape_family_snapshots,
 )
@@ -80,11 +81,12 @@ def _history():
     )
 
 
-def _derivatives_snapshot(path):
+def _derivatives_snapshot(path, *, proof_path=None):
     snapshots = build_market_tape_family_snapshots(
         path,
         symbols=("BTCUSDT",),
         as_of_ms=AS_OF_MS,
+        frozen_proof_store_path=proof_path,
     )
     matches = [
         item
@@ -103,7 +105,8 @@ def test_live_derivatives_family_includes_exact_dynamics_freeze(
     for item in _history():
         store.append_derivatives(item)
 
-    snapshot = _derivatives_snapshot(path)
+    proof_path = tmp_path / "frozen_proofs.sqlite3"
+    snapshot = _derivatives_snapshot(path, proof_path=proof_path)
     observations = store.recent_derivatives(
         exchange=Exchange.BYBIT,
         instrument_type=DerivativesInstrumentType.LINEAR_PERPETUAL,
@@ -152,6 +155,33 @@ def test_live_derivatives_family_includes_exact_dynamics_freeze(
     assert Decimal(components["mark_price_change_fraction"]) == Decimal("0.03")
     assert snapshot.direction is None
     assert snapshot.source_quality == "measured"
+
+    proof_store = FrozenProofStore(proof_path)
+    context_proof = proof_store.read_exact(context.freeze_identity)
+    dynamics_proof = proof_store.read_exact(dynamics.freeze_identity)
+    assert context_proof is not None
+    assert dynamics_proof is not None
+    assert proof_store.count() == 2
+    assert context_proof.object_kind == "derivatives_context_freeze"
+    assert dynamics_proof.object_kind == "derivatives_dynamics_freeze"
+    assert context_proof.analysis_identity == context.analysis.evidence_identity
+    assert dynamics_proof.analysis_identity == dynamics.analysis.evidence_identity
+    assert {
+        item.observation_identity for item in context.observations
+    } == set(context_proof.source_object_identities)
+    assert {
+        item.observation_identity for item in dynamics.observations
+    } == set(dynamics_proof.source_object_identities)
+    assert context_proof.market_available_at_ms == max(
+        max(
+            item.event_at_ms,
+            item.source_timestamp_ms,
+            item.ingested_at_ms,
+        )
+        for item in context.observations
+    )
+    assert context_proof.production_authority is False
+    assert dynamics_proof.real_capital == 0
 
 
 def test_future_and_late_derivatives_do_not_rewrite_family_pit(
