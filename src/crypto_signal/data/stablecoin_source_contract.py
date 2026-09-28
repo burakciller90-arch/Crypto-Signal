@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from crypto_signal.data.adapters.defillama_stablecoins import (
     DefiLlamaStablecoinAssetSnapshot,
     DefiLlamaStablecoinSourceSnapshot,
+    DefiLlamaStablecoinsAdapter,
 )
 from crypto_signal.data.models import DataSource
 from crypto_signal.data.onchain_capital_flow import (
@@ -107,7 +108,7 @@ def _persist_asset(
         source_timestamp_ms=snapshot.observed_at_ms,
         observed_at_ms=snapshot.observed_at_ms,
         ingested_at_ms=snapshot.observed_at_ms,
-        adapter_version="defillama-stablecoins-public-rest/1",
+        adapter_version=DefiLlamaStablecoinsAdapter.ADAPTER_VERSION,
         raw_identity=raw.raw_identity,
         source_timestamp_semantic=(
             StablecoinSourceTimestampSemantic.COLLECTOR_RECEIPT
