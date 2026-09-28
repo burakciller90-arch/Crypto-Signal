@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import time
+from dataclasses import dataclass
 from decimal import Decimal
 from typing import cast
 
@@ -16,6 +17,21 @@ from crypto_signal.data.microstructure import (
     build_public_trade_observation,
 )
 from crypto_signal.data.models import DataSource, Exchange, MarketType
+
+
+@dataclass(frozen=True, slots=True)
+class BybitSpotMicrostructureSourceSnapshot:
+    orderbook_payload: dict[str, object]
+    trade_payload: dict[str, object]
+    orderbook: OrderBookSnapshot
+    trades: tuple[PublicTradeObservation, ...]
+    observed_at_ms: int
+
+    def __post_init__(self) -> None:
+        if self.observed_at_ms < 0:
+            raise ValueError(
+                "Bybit microstructure source observation cannot be negative"
+            )
 
 
 class BybitSpotMicrostructureAdapter:
@@ -41,12 +57,32 @@ class BybitSpotMicrostructureAdapter:
         book_depth: int = 25,
         trade_limit: int = 60,
     ) -> tuple[OrderBookSnapshot, tuple[PublicTradeObservation, ...]]:
+        source_snapshot = await self.fetch_source_snapshot(
+            symbol=symbol,
+            book_depth=book_depth,
+            trade_limit=trade_limit,
+        )
+        return source_snapshot.orderbook, source_snapshot.trades
+
+    async def fetch_source_snapshot(
+        self,
+        *,
+        symbol: str,
+        book_depth: int = 25,
+        trade_limit: int = 60,
+    ) -> BybitSpotMicrostructureSourceSnapshot:
         if not symbol or symbol != symbol.upper():
-            raise ValueError("Bybit microstructure symbol must be non-empty uppercase")
+            raise ValueError(
+                "Bybit microstructure symbol must be non-empty uppercase"
+            )
         if not 1 <= book_depth <= 1000:
-            raise ValueError("Bybit spot orderbook depth must be inside [1,1000]")
+            raise ValueError(
+                "Bybit spot orderbook depth must be inside [1,1000]"
+            )
         if not 1 <= trade_limit <= 60:
-            raise ValueError("Bybit spot recent-trade limit must be inside [1,60]")
+            raise ValueError(
+                "Bybit spot recent-trade limit must be inside [1,60]"
+            )
 
         book_params: dict[str, str | int] = {
             "category": "spot",
@@ -78,7 +114,7 @@ class BybitSpotMicrostructureAdapter:
             trade_response.raise_for_status()
             book_payload = cast(dict[str, object], book_response.json())
             trade_payload = cast(dict[str, object], trade_response.json())
-            ingested_at_ms = time.time_ns() // 1_000_000
+            observed_at_ms = time.time_ns() // 1_000_000
         finally:
             if owns_client:
                 await client.aclose()
@@ -88,14 +124,20 @@ class BybitSpotMicrostructureAdapter:
         book = self._normalize_book(
             payload=book_payload,
             symbol=symbol,
-            ingested_at_ms=ingested_at_ms,
+            ingested_at_ms=observed_at_ms,
         )
         trades = self._normalize_trades(
             payload=trade_payload,
             symbol=symbol,
-            ingested_at_ms=ingested_at_ms,
+            ingested_at_ms=observed_at_ms,
         )
-        return book, trades
+        return BybitSpotMicrostructureSourceSnapshot(
+            orderbook_payload=book_payload,
+            trade_payload=trade_payload,
+            orderbook=book,
+            trades=trades,
+            observed_at_ms=observed_at_ms,
+        )
 
     def _normalize_book(
         self,

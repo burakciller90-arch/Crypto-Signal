@@ -4,6 +4,12 @@ from collections.abc import AsyncIterable
 from dataclasses import dataclass
 from typing import Protocol
 
+from crypto_signal.data.adapters.bybit_derivatives import (
+    BybitLinearDerivativesSourceSnapshot,
+)
+from crypto_signal.data.adapters.bybit_microstructure import (
+    BybitSpotMicrostructureSourceSnapshot,
+)
 from crypto_signal.data.derivatives import DerivativesObservation
 from crypto_signal.data.liquidations import (
     LiquidationFeedCoverage,
@@ -13,10 +19,16 @@ from crypto_signal.data.market_tape import (
     MarketTapeStore,
     MarketTapeWriteDisposition,
 )
+from crypto_signal.data.market_tape_rest_source_contract import (
+    BybitRestMarketTapeCapabilities,
+    BybitRestMarketTapeWriteResult,
+    persist_bybit_rest_market_tape_snapshot,
+)
 from crypto_signal.data.microstructure import (
     OrderBookSnapshot,
     PublicTradeObservation,
 )
+from crypto_signal.data.source_contract import SourceContractStore
 
 
 class MicrostructureSnapshotAdapter(Protocol):
@@ -27,6 +39,27 @@ class MicrostructureSnapshotAdapter(Protocol):
         book_depth: int = 25,
         trade_limit: int = 60,
     ) -> tuple[OrderBookSnapshot, tuple[PublicTradeObservation, ...]]: ...
+
+
+class MicrostructureSourceSnapshotAdapter(Protocol):
+    async def fetch_source_snapshot(
+        self,
+        *,
+        symbol: str,
+        book_depth: int = 25,
+        trade_limit: int = 60,
+    ) -> BybitSpotMicrostructureSourceSnapshot: ...
+
+
+class DerivativesSourceSnapshotAdapter(Protocol):
+    async def fetch_source_snapshot(
+        self,
+        *,
+        symbol: str,
+        oi_interval: str = "15min",
+        oi_limit: int = 8,
+        end_ms: int | None = None,
+    ) -> BybitLinearDerivativesSourceSnapshot: ...
 
 
 class DerivativesSnapshotAdapter(Protocol):
@@ -108,6 +141,42 @@ async def collect_bybit_market_tape_snapshot(
             item is MarketTapeWriteDisposition.UNCHANGED
             for item in derivative_results
         ),
+    )
+
+
+async def collect_bybit_market_tape_snapshot_with_source_contract(
+    *,
+    store: MarketTapeStore,
+    source_store: SourceContractStore,
+    source_capabilities: BybitRestMarketTapeCapabilities,
+    microstructure_adapter: MicrostructureSourceSnapshotAdapter,
+    derivatives_adapter: DerivativesSourceSnapshotAdapter,
+    symbol: str,
+    book_depth: int = 25,
+    trade_limit: int = 60,
+    oi_interval: str = "15min",
+    oi_limit: int = 16,
+) -> BybitRestMarketTapeWriteResult:
+    if not symbol or symbol != symbol.upper():
+        raise ValueError("market tape symbol must be non-empty uppercase")
+
+    microstructure = await microstructure_adapter.fetch_source_snapshot(
+        symbol=symbol,
+        book_depth=book_depth,
+        trade_limit=trade_limit,
+    )
+    derivatives = await derivatives_adapter.fetch_source_snapshot(
+        symbol=symbol,
+        oi_interval=oi_interval,
+        oi_limit=oi_limit,
+    )
+    return persist_bybit_rest_market_tape_snapshot(
+        market_store=store,
+        source_store=source_store,
+        capabilities=source_capabilities,
+        microstructure=microstructure,
+        derivatives=derivatives,
+        symbol=symbol,
     )
 
 

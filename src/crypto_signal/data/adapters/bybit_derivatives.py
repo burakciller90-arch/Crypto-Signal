@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import time
+from dataclasses import dataclass
 from decimal import Decimal
 from typing import cast
 
@@ -13,6 +14,36 @@ from crypto_signal.data.derivatives import (
     build_derivatives_observation,
 )
 from crypto_signal.data.models import DataSource, Exchange
+
+
+@dataclass(frozen=True, slots=True)
+class BybitLinearDerivativesSourceSnapshot:
+    open_interest_payload: dict[str, object]
+    ticker_payload: dict[str, object]
+    open_interest_observations: tuple[DerivativesObservation, ...]
+    ticker_observation: DerivativesObservation
+    observed_at_ms: int
+
+    def __post_init__(self) -> None:
+        if self.observed_at_ms < 0:
+            raise ValueError(
+                "Bybit derivatives source observation cannot be negative"
+            )
+
+    @property
+    def observations(self) -> tuple[DerivativesObservation, ...]:
+        return tuple(
+            sorted(
+                (
+                    *self.open_interest_observations,
+                    self.ticker_observation,
+                ),
+                key=lambda item: (
+                    item.event_at_ms,
+                    item.observation_identity,
+                ),
+            )
+        )
 
 
 class BybitLinearDerivativesAdapter:
@@ -40,12 +71,32 @@ class BybitLinearDerivativesAdapter:
         oi_limit: int = 8,
         end_ms: int | None = None,
     ) -> tuple[DerivativesObservation, ...]:
+        source_snapshot = await self.fetch_source_snapshot(
+            symbol=symbol,
+            oi_interval=oi_interval,
+            oi_limit=oi_limit,
+            end_ms=end_ms,
+        )
+        return source_snapshot.observations
+
+    async def fetch_source_snapshot(
+        self,
+        *,
+        symbol: str,
+        oi_interval: str = "15min",
+        oi_limit: int = 8,
+        end_ms: int | None = None,
+    ) -> BybitLinearDerivativesSourceSnapshot:
         if not symbol or symbol != symbol.upper():
-            raise ValueError("Bybit derivatives symbol must be non-empty uppercase")
+            raise ValueError(
+                "Bybit derivatives symbol must be non-empty uppercase"
+            )
         if oi_interval not in self._OI_INTERVALS:
             raise ValueError("unsupported Bybit open-interest interval")
         if not 2 <= oi_limit <= 200:
-            raise ValueError("Bybit open-interest limit must be between 2 and 200")
+            raise ValueError(
+                "Bybit open-interest limit must be between 2 and 200"
+            )
         if end_ms is not None and end_ms < 0:
             raise ValueError("end_ms must be non-negative")
 
@@ -82,7 +133,7 @@ class BybitLinearDerivativesAdapter:
             ticker_response.raise_for_status()
             oi_payload = cast(dict[str, object], oi_response.json())
             ticker_payload = cast(dict[str, object], ticker_response.json())
-            ingested_at_ms = time.time_ns() // 1_000_000
+            observed_at_ms = time.time_ns() // 1_000_000
         finally:
             if owns_client:
                 await client.aclose()
@@ -90,22 +141,23 @@ class BybitLinearDerivativesAdapter:
         _require_bybit_success(oi_payload, "open-interest")
         _require_bybit_success(ticker_payload, "tickers")
 
-        observations = [
-            *self._normalize_open_interest(
-                payload=oi_payload,
-                symbol=symbol,
-                ingested_at_ms=ingested_at_ms,
-            ),
-            self._normalize_ticker(
-                payload=ticker_payload,
-                symbol=symbol,
-                ingested_at_ms=ingested_at_ms,
-            ),
-        ]
-        observations.sort(
-            key=lambda item: (item.event_at_ms, item.observation_identity)
+        open_interest = self._normalize_open_interest(
+            payload=oi_payload,
+            symbol=symbol,
+            ingested_at_ms=observed_at_ms,
         )
-        return tuple(observations)
+        ticker = self._normalize_ticker(
+            payload=ticker_payload,
+            symbol=symbol,
+            ingested_at_ms=observed_at_ms,
+        )
+        return BybitLinearDerivativesSourceSnapshot(
+            open_interest_payload=oi_payload,
+            ticker_payload=ticker_payload,
+            open_interest_observations=open_interest,
+            ticker_observation=ticker,
+            observed_at_ms=observed_at_ms,
+        )
 
     def _normalize_open_interest(
         self,
