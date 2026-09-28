@@ -189,6 +189,15 @@ class IntelligenceStreamExactEvidenceReadModel:
             fact.get("available_evidence_domains"),
             "family exact evidence domain",
         )
+        if "geometry" in domains:
+            linked_geometry_proofs = tuple(
+                identity
+                for identity, item in raw_index.items()
+                if item.get("object_kind") == "geometry_proof"
+            )
+            evidence_identities = tuple(
+                sorted({*evidence_identities, *linked_geometry_proofs})
+            )
         resolutions = tuple(
             self._family_domain_resolution(
                 domain=domain,
@@ -239,26 +248,46 @@ class IntelligenceStreamExactEvidenceReadModel:
                 "entry_zone_high",
                 "invalidation_price",
             }
-            if coordinate_keys.issubset(components):
+            full_proof_state = (
+                StreamEvidenceResolutionState.READY_EXACT
+                if "geometry_proof" in selected_kinds
+                else StreamEvidenceResolutionState.UNAVAILABLE_EXPLICIT
+            )
+            if full_proof_state is StreamEvidenceResolutionState.READY_EXACT:
+                state = StreamEvidenceResolutionState.READY_EXACT
+                reason = "exact_persisted_geometry_proof_resolved"
+            elif coordinate_keys.issubset(components):
                 state = StreamEvidenceResolutionState.READY_EXACT
                 reason = "exact_geometry_coordinates_frozen_in_stream_fact"
-                capabilities = {
-                    "trigger_or_entry_zone": state.value,
-                    "invalidation": state.value,
-                    "targets": (
-                        StreamEvidenceResolutionState.READY_EXACT.value
-                        if any(
-                            key.startswith("target_") and key.endswith("_price")
-                            for key in components
-                        )
-                        else StreamEvidenceResolutionState.UNAVAILABLE_EXPLICIT.value
-                    ),
-                    "structure_level": (
-                        StreamEvidenceResolutionState.READY_EXACT.value
-                        if "structure_level" in components
-                        else StreamEvidenceResolutionState.UNAVAILABLE_EXPLICIT.value
-                    ),
-                }
+            capabilities = {
+                "full_geometry_proof": full_proof_state.value,
+                "methodology_states": full_proof_state.value,
+                "annotations": full_proof_state.value,
+                "conflict_flags": full_proof_state.value,
+                "trigger_or_entry_zone": (
+                    StreamEvidenceResolutionState.READY_EXACT.value
+                    if {"entry_zone_low", "entry_zone_high"}.issubset(components)
+                    else StreamEvidenceResolutionState.UNAVAILABLE_EXPLICIT.value
+                ),
+                "invalidation": (
+                    StreamEvidenceResolutionState.READY_EXACT.value
+                    if "invalidation_price" in components
+                    else StreamEvidenceResolutionState.UNAVAILABLE_EXPLICIT.value
+                ),
+                "targets": (
+                    StreamEvidenceResolutionState.READY_EXACT.value
+                    if any(
+                        key.startswith("target_") and key.endswith("_price")
+                        for key in components
+                    )
+                    else StreamEvidenceResolutionState.UNAVAILABLE_EXPLICIT.value
+                ),
+                "structure_level": (
+                    StreamEvidenceResolutionState.READY_EXACT.value
+                    if "structure_level" in components
+                    else StreamEvidenceResolutionState.UNAVAILABLE_EXPLICIT.value
+                ),
+            }
         elif domain == "frozen_chart":
             if "decision_freeze_bundle" in selected_kinds:
                 state = StreamEvidenceResolutionState.READY_EXACT
@@ -716,7 +745,11 @@ def _objects_for_domain(
     raw_index: dict[str, dict[str, Any]],
 ) -> tuple[dict[str, Any], ...]:
     allowed = {
-        "geometry": {"signal_freeze", "decision_freeze_bundle"},
+        "geometry": {
+            "signal_freeze",
+            "decision_freeze_bundle",
+            "geometry_proof",
+        },
         "frozen_chart": {"signal_freeze", "decision_freeze_bundle"},
         "signal_lifecycle": {"signal_freeze", "decision_freeze_bundle"},
         "order_book": {"market_tape_orderbook"},
@@ -835,6 +868,79 @@ def _resolve_signal_objects(
                     "object_kind": "decision_freeze_bundle",
                     "payload": freeze_projection,
                 }
+
+        geometry_table = connection.execute(
+            """
+            SELECT 1
+            FROM sqlite_master
+            WHERE type='table' AND name='geometry_proofs'
+            """
+        ).fetchone()
+        if geometry_table is not None:
+            for batch in _batches(evidence_identities, size=300):
+                placeholders = ",".join("?" for _ in batch)
+                rows = connection.execute(
+                    f"""
+                    SELECT
+                        proof_identity,
+                        bundle_identity,
+                        signal_freeze_identity,
+                        as_of_ms,
+                        source_cutoff_open_time_ms,
+                        proof_json,
+                        persisted_at_ms
+                    FROM geometry_proofs
+                    WHERE proof_identity IN ({placeholders})
+                       OR bundle_identity IN ({placeholders})
+                       OR signal_freeze_identity IN ({placeholders})
+                    """,
+                    (*batch, *batch, *batch),
+                ).fetchall()
+                for row in rows:
+                    proof_identity = str(row["proof_identity"])
+                    bundle_identity = str(row["bundle_identity"])
+                    signal_identity = str(row["signal_freeze_identity"])
+                    proof_json = str(row["proof_json"])
+                    if sha256_text(proof_json) != proof_identity:
+                        raise StreamExactEvidenceError(
+                            "exact evidence Geometry Proof digest mismatch"
+                        )
+                    as_of_ms = int(row["as_of_ms"])
+                    if (
+                        source_as_of_ms is not None
+                        and as_of_ms > source_as_of_ms
+                    ):
+                        raise StreamExactEvidenceError(
+                            "exact evidence Geometry Proof is future evidence"
+                        )
+                    proof = _json_object(
+                        proof_json,
+                        "exact evidence Geometry Proof",
+                    )
+                    expected_parent = (
+                        bundle_identity,
+                        signal_identity,
+                        as_of_ms,
+                        int(row["source_cutoff_open_time_ms"]),
+                    )
+                    observed_parent = (
+                        proof.get("bundle_identity"),
+                        proof.get("signal_freeze_identity"),
+                        proof.get("as_of_ms"),
+                        proof.get("source_cutoff_open_time_ms"),
+                    )
+                    if observed_parent != expected_parent:
+                        raise StreamExactEvidenceError(
+                            "exact evidence Geometry Proof parent mismatch"
+                        )
+                    resolved[proof_identity] = {
+                        "object_kind": "geometry_proof",
+                        "payload": {
+                            "proof_identity": proof_identity,
+                            "persisted_at_ms": int(row["persisted_at_ms"]),
+                            **proof,
+                        },
+                    }
         return resolved
     except sqlite3.DatabaseError as exc:
         raise StreamExactEvidenceError(str(exc)) from exc
