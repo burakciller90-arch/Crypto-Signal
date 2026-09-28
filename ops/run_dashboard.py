@@ -123,6 +123,12 @@ def resolve_runtime_paths(args: argparse.Namespace) -> dict[str, Path]:
         "options_surface_path": (
             runtime_root / "market_tape" / "options_surface.sqlite3"
         ),
+        "onchain_capital_flow_path": (
+            runtime_root / "onchain" / "onchain_capital_flow.sqlite3"
+        ),
+        "onchain_source_contract_path": (
+            runtime_root / "onchain" / "source_contract.sqlite3"
+        ),
     }
 
 
