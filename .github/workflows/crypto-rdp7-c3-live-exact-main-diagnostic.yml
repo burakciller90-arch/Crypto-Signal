@@ -1,0 +1,229 @@
+name: RDP7-C3 Exact Main Live Runtime Diagnostic UID504
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/crypto-rdp7-c3-live-exact-main-diagnostic.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  live-diagnostic:
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          clean: true
+          fetch-depth: 1
+
+      - name: Verify exact canonical deployment
+        shell: bash
+        run: |
+          set -euo pipefail
+          WB="/Volumes/Crypto-504/Crypto-Signal-Workbench/repo"
+          DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
+          test "$(id -u)" = "504"
+          test "$(git -C "$WB" branch --show-current)" = "main"
+          test -z "$(git -C "$WB" status --porcelain)"
+          test "$(git -C "$WB" rev-parse HEAD)" = "${{ github.event.pull_request.base.sha }}"
+          test "$(git -C "$DEV" rev-parse HEAD)" = "${{ github.event.pull_request.base.sha }}"
+          echo "RDP7_C3_LIVE_WORKBENCH_EXACT_MAIN_PASS=YES"
+          echo "RDP7_C3_LIVE_DEVELOPMENT_EXACT_MAIN_PASS=YES"
+
+      - name: Read-only stablecoin runtime lineage proof
+        shell: bash
+        run: |
+          set -euo pipefail
+          PY="/Volumes/Crypto-504/Crypto-Signal/Development/.venv/bin/python"
+          ONCHAIN="/Volumes/Crypto-504/Crypto-Signal/Development/runtime/onchain/onchain_capital_flow.sqlite3"
+          SOURCE="/Volumes/Crypto-504/Crypto-Signal/Development/runtime/onchain/source_contract.sqlite3"
+          export RDP7_ONCHAIN="$ONCHAIN"
+          export RDP7_SOURCE="$SOURCE"
+
+          "$PY" - <<'PY'
+          from __future__ import annotations
+
+          import json
+          import os
+          import sqlite3
+          import time
+          from pathlib import Path
+
+          onchain_path = Path(os.environ["RDP7_ONCHAIN"])
+          source_path = Path(os.environ["RDP7_SOURCE"])
+
+          def ro(path: Path) -> sqlite3.Connection:
+              if not path.is_file():
+                  raise AssertionError(f"missing live database: {path}")
+              db = sqlite3.connect(
+                  f"{path.resolve().as_uri()}?mode=ro",
+                  uri=True,
+                  timeout=5.0,
+              )
+              db.row_factory = sqlite3.Row
+              db.execute("PRAGMA query_only=ON")
+              return db
+
+          deadline = time.monotonic() + 180
+          last_error: Exception | None = None
+          while time.monotonic() < deadline:
+              try:
+                  now_ms = time.time_ns() // 1_000_000
+                  with ro(onchain_path) as db:
+                      assert db.execute("PRAGMA quick_check").fetchone()[0] == "ok"
+                      observations = {}
+                      for symbol in ("USDT", "USDC"):
+                          row = db.execute(
+                              """
+                              SELECT payload_json
+                              FROM stablecoin_supply_observations
+                              WHERE asset=?
+                                AND provider='defillama'
+                                AND network_scope='all_chains'
+                              ORDER BY ingested_at_ms DESC,
+                                       observation_identity DESC
+                              LIMIT 1
+                              """,
+                              (symbol,),
+                          ).fetchone()
+                          assert row is not None, f"missing stablecoin {symbol}"
+                          payload = json.loads(str(row["payload_json"]))
+                          assert payload["asset"] == symbol
+                          assert payload["provider"] == "defillama"
+                          assert payload["network_scope"] == "all_chains"
+                          assert (
+                              payload["source_timestamp_semantic"]
+                              == "collector_receipt_time_provider_timestamp_unavailable"
+                          )
+                          assert payload["production_authority"] is False
+                          assert int(payload["real_capital"]) == 0
+                          age_ms = now_ms - int(payload["ingested_at_ms"])
+                          assert 0 <= age_ms <= 420_000, (symbol, age_ms)
+                          observations[symbol] = (payload, age_ms)
+
+                      exchange_flow_rows = int(
+                          db.execute(
+                              "SELECT COUNT(*) "
+                              "FROM onchain_exchange_flow_observations"
+                          ).fetchone()[0]
+                      )
+
+                  with ro(source_path) as db:
+                      assert db.execute("PRAGMA quick_check").fetchone()[0] == "ok"
+                      lineage = {}
+                      for symbol, (observation, _) in observations.items():
+                          envelope_row = db.execute(
+                              """
+                              SELECT payload_json
+                              FROM source_envelopes
+                              WHERE provider='defillama'
+                                AND source='defillama_public_api'
+                                AND channel='stablecoin_supply_snapshot'
+                                AND symbol=?
+                              ORDER BY ingested_at_ms DESC,
+                                       envelope_identity DESC
+                              LIMIT 1
+                              """,
+                              (symbol,),
+                          ).fetchone()
+                          assert envelope_row is not None
+                          envelope = json.loads(
+                              str(envelope_row["payload_json"])
+                          )
+                          assert (
+                              envelope["normalized_identity"]
+                              == observation["observation_identity"]
+                          )
+                          assert (
+                              envelope["raw_identity"]
+                              == observation["raw_identity"]
+                          )
+                          assert int(envelope["ingested_at_ms"]) <= now_ms
+
+                          raw_row = db.execute(
+                              """
+                              SELECT payload_json
+                              FROM source_raw_payloads
+                              WHERE raw_identity=?
+                              """,
+                              (observation["raw_identity"],),
+                          ).fetchone()
+                          assert raw_row is not None
+                          raw_payload = json.loads(str(raw_row["payload_json"]))
+                          assert str(raw_payload["symbol"]).upper() == symbol
+
+                          coverage_row = db.execute(
+                              """
+                              SELECT payload_json
+                              FROM source_coverage_events
+                              WHERE provider='defillama'
+                                AND source='defillama_public_api'
+                                AND channel='stablecoin_supply_snapshot'
+                                AND symbol=?
+                              ORDER BY observed_at_ms DESC,
+                                       sequence_id DESC
+                              LIMIT 1
+                              """,
+                              (symbol,),
+                          ).fetchone()
+                          assert coverage_row is not None
+                          coverage = json.loads(
+                              str(coverage_row["payload_json"])
+                          )
+                          assert coverage["state"] == "observed"
+                          assert (
+                              coverage["source_envelope_identity"]
+                              == envelope["envelope_identity"]
+                          )
+                          coverage_age_ms = (
+                              now_ms - int(coverage["observed_at_ms"])
+                          )
+                          assert 0 <= coverage_age_ms <= 420_000
+                          lineage[symbol] = (
+                              envelope,
+                              coverage,
+                              coverage_age_ms,
+                          )
+
+                  for symbol, (payload, age_ms) in observations.items():
+                      print(
+                          "RDP7_C3_LIVE_STABLECOIN_OBSERVATION_PASS "
+                          f"symbol={symbol} "
+                          f"age_ms={age_ms} "
+                          f"amount={payload['circulating_amount']}",
+                          flush=True,
+                      )
+                  for symbol, (_, _, age_ms) in lineage.items():
+                      print(
+                          "RDP7_C3_LIVE_SOURCE_LINEAGE_PASS "
+                          f"symbol={symbol} coverage_age_ms={age_ms}",
+                          flush=True,
+                      )
+                  print(
+                      "RDP7_C3_EXCHANGE_FLOW_ROWS="
+                      f"{exchange_flow_rows} "
+                      "EXCHANGE_FLOW_PROVIDER=UNAVAILABLE_EXPLICIT",
+                      flush=True,
+                  )
+                  print("RDP7_C3_EXACT_MAIN_LIVE_RUNTIME_PASS=YES", flush=True)
+                  print("SECRET_REQUIRED=NO", flush=True)
+                  print("REAL_CAPITAL=0", flush=True)
+                  break
+              except (
+                  AssertionError,
+                  KeyError,
+                  sqlite3.Error,
+                  TypeError,
+                  ValueError,
+              ) as exc:
+                  last_error = exc
+                  time.sleep(10)
+          else:
+              raise AssertionError(
+                  f"live RDP7-C3 proof not ready: {last_error}"
+              )
+          PY
