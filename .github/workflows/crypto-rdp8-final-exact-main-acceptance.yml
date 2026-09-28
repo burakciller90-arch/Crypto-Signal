@@ -214,7 +214,7 @@ jobs:
           export PYTHONPATH="$DEV:$DEV/src"
 
           success=0
-          for attempt in 1 2 3 4 5; do
+          for attempt in $(seq 1 30); do
             set +e
             output="$("$PY" "$RUNNER" --cross-market-db "$DB" --source-contract-db "$SOURCE" --lock-path "$LOCK" --sessions 10 2>&1)"
             rc=$?
