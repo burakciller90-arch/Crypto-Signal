@@ -1248,20 +1248,20 @@ async def run(
             f"{key}:{value}"
             for key, value in sorted(family_dispositions.items())
         ) or "-"
+        onchain_standalone = (
+            "ACTIVE_NEUTRAL_CONTEXT"
+            if selected_stream.onchain_capital_flow_path is not None
+            else "DEFERRED_SOURCE"
+        )
         print(
             "stream_family status=SUMMARY "
             f"snapshots={len(family_snapshots)} "
             f"projectors={projector_summary} "
             f"dispositions={disposition_summary} "
-            (
-                "ONCHAIN_STANDALONE=ACTIVE_NEUTRAL_CONTEXT "
-                if selected_stream.onchain_capital_flow_path is not None
-                else "ONCHAIN_STANDALONE=DEFERRED_SOURCE "
-            )
-            + "HISTORICAL_BACKFILL=NO REAL_CAPITAL=0",
+            f"ONCHAIN_STANDALONE={onchain_standalone} "
+            "HISTORICAL_BACKFILL=NO REAL_CAPITAL=0",
             flush=True,
         )
-
 
     if (
         stream_family_projector is not None
@@ -1328,7 +1328,6 @@ async def run(
             "DIRECTIONAL_VOTE=NO REAL_CAPITAL=0",
             flush=True,
         )
-
 
     if stream_system_view_runtime is not None and system_view_family_snapshots:
         system_view_event_at_ms = time.time_ns() // 1_000_000
