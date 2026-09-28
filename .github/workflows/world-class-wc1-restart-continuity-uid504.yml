@@ -88,3 +88,4 @@ jobs:
           test -z "$(git -C "$DEV" status --porcelain)"
           echo "WC1_MARKET_TAPE_SINGLE_OWNER_NON_MUTATING_PASS=YES"
           echo "REAL_CAPITAL=0"
+# Ephemeral RDP5-A3 owner-gate trigger; validation branch must not merge.
