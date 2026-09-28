@@ -4,6 +4,7 @@ import time
 from collections.abc import Callable
 from dataclasses import dataclass
 from enum import StrEnum
+from typing import cast
 
 from crypto_signal.confluence.adapters import (
     elliott_result_evidence,
@@ -11,8 +12,6 @@ from crypto_signal.confluence.adapters import (
     price_action_structure_evidence,
 )
 from crypto_signal.confluence.agreement import analyze_confluence
-from typing import cast
-
 from crypto_signal.data.adapters.base import (
     MarketDataAdapter,
     SourceAwareMarketDataAdapter,
