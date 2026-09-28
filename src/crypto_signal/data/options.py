@@ -117,7 +117,7 @@ class OptionContractQuote:
             ("theta", self.theta),
         ):
             _require_finite_decimal_or_none(value, label)
-        if self.delta is not None and not Decimal("-1") <= self.delta <= Decimal("1"):
+        if self.delta is not None and not Decimal(-1) <= self.delta <= Decimal(1):
             raise ValueError("option delta must be inside [-1, 1]")
 
         if self.quote_identity != canonical_sha256(option_contract_quote_payload(self)):
