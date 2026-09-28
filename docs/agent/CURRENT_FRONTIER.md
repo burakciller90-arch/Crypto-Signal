@@ -873,3 +873,64 @@ Safety:
 - `HISTORICAL_BACKFILL=NO`
 - Durdurulmaz touched: NO
 - Quantum Capital touched: NO
+
+
+
+## LIVE ACTIVE CHECKPOINT — 2026-09-29 — RDP11 continuous soak STARTED
+
+This checkpoint is written before any RDP11 production-code or workflow change.
+
+- canonical main at task start: `5f07a8954f87e237258f1d3eb448a5ede6106fbd`
+- previous gate: **RDP10 PASS**
+- RDP10 top-level docs closeout PR: #1655
+- active branch: `rdp11/continuous-soak-anchor`
+- duplicate RDP11 open PRs before branch creation: NONE
+- duplicate RDP11/soak branches before branch creation: NONE
+- session-local `/Volumes` worktree: NONE
+- canonical SSD504 Workbench is authoritative
+- `REAL_CAPITAL=0`
+- `HISTORICAL_BACKFILL=NO`
+- Durdurulmaz touched: NO
+- Quantum Capital touched: NO
+
+Exact-main prerequisite evidence:
+- Crypto SSD504 Workbench Bootstrap run `36483321012` / job `109134044398`: SUCCESS
+  - `GITHUB_SHA=5f07a8954f87e237258f1d3eb448a5ede6106fbd`
+  - `WORKBENCH_REPO_SYNCED_TO_MAIN=YES`
+  - final `REPO_HEAD=5f07a8954f87e237258f1d3eb448a5ede6106fbd`
+  - `REPO_BRANCH=main`
+  - `REPO_DIRTY_COUNT=0`
+  - `SSD504_WORKBENCH_PASS=YES`
+  - `REAL_CAPITAL=0`
+- Crypto Signal Agent Memory Bootstrap run `36483321062` / job `109134045566`: SUCCESS
+  - `RDP9_BOOTSTRAP_FOCUSED_TESTS=PASS`
+  - `RDP9_BOOTSTRAP_LIVE_READ_ONLY=PASS`
+  - `PRODUCTION_RUNTIME_MUTATED=NO`
+  - `REAL_CAPITAL=0`
+
+### RDP11 bounded goal
+
+Establish a mechanically attributable, read-only UID504 observation contract for a real minimum 72-hour engineering soak.
+
+The soak must observe at least:
+- service/runtime uptime and restart continuity;
+- source freshness and explicit stale/unavailable states;
+- source/data gaps and sequence/gap behavior;
+- transport reconnect / heartbeat state where available;
+- SQLite quick-check / lock-read behavior without write mutation;
+- frozen-proof integrity and no-current/no-future contract health;
+- Stream/Product continuity and customer-proof inspectability;
+- explicit source limitations;
+- `REAL_CAPITAL=0`.
+
+Hard rule:
+- RDP11 cannot PASS before the real 72-hour observation window elapses.
+- Portfolio/frontend work may proceed only in isolated branch/worktree/runtime and cannot mutate the soaked evidence runtime or frozen/historical evidence.
+
+### Current blocker
+
+The RDP11 observer/anchor contract has not yet been audited or installed. Existing continuity/recovery tooling predates the RDP11 acceptance contract and must not be assumed sufficient.
+
+### Exact nextAction
+
+Audit current UID504 supervisor/runtime health surfaces, continuity workflows, existing recovery/soak utilities, canonical runtime DBs and exact-proof read models. Record a pre-implementation audit checkpoint before changing any workflow/script. Then implement only the minimal read-only observation/anchor machinery required to accumulate real 72-hour evidence.
