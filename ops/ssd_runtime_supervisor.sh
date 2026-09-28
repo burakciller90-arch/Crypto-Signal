@@ -587,6 +587,33 @@ run_event_source_snapshot_clock() {
   ) >>"$LOGDIR/event-source-snapshot.out.log" 2>>"$LOGDIR/event-source-snapshot.err.log" < /dev/null &
 }
 
+run_cross_market_snapshot_clock() {
+  local py="$DEV/.venv/bin/python"
+  local runner="$DEV/ops/run_cross_market_snapshot.py"
+  local runtime="$DEV/runtime/cross_market"
+  local db="$runtime/cross_market.sqlite3"
+  local source_contract="$runtime/source_contract.sqlite3"
+  local lock="$runtime/cross_market_snapshot.lock"
+
+  for required in "$py" "$runner"; do
+    if [ ! -e "$required" ]; then
+      echo "$(date '+%Y-%m-%d %H:%M:%S %z') cross_market_snapshot_not_ready missing=$required FAIL_CLOSED=YES REAL_CAPITAL=0"
+      return 0
+    fi
+  done
+
+  (
+    unset RUNNER_TRACKING_ID
+    export PYTHONPATH="$DEV:$DEV/src"
+    cd "$DEV" || exit 75
+    exec "$py" "$runner" \
+      --cross-market-db "$db" \
+      --source-contract-db "$source_contract" \
+      --lock-path "$lock" \
+      --sessions 10
+  ) >>"$LOGDIR/cross-market-snapshot.out.log" 2>>"$LOGDIR/cross-market-snapshot.err.log" < /dev/null &
+}
+
 run_onchain_capital_flow_snapshot_clock() {
   local py="$DEV/.venv/bin/python"
   local runner="$DEV/ops/run_onchain_capital_flow_snapshot.py"
@@ -734,6 +761,7 @@ trap shutdown TERM INT
 
 last_data_clock=0
 last_event_source_clock=0
+last_cross_market_clock=0
 last_onchain_clock=0
 last_aux_clock=0
 last_rotation=0
@@ -752,6 +780,11 @@ while true; do
   if [ $((now-last_event_source_clock)) -ge 900 ]; then
     run_event_source_snapshot_clock
     last_event_source_clock="$now"
+  fi
+
+  if [ $((now-last_cross_market_clock)) -ge 3600 ]; then
+    run_cross_market_snapshot_clock
+    last_cross_market_clock="$now"
   fi
 
   if [ $((now-last_onchain_clock)) -ge 300 ]; then
