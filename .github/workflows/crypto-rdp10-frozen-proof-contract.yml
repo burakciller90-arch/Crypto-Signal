@@ -10,6 +10,7 @@ on:
     paths:
       - 'src/crypto_signal/product/intelligence_stream_exact_evidence.py'
       - 'src/crypto_signal/product/intelligence_stream_family_sources.py'
+      - 'src/crypto_signal/product/intelligence_stream_onchain_family.py'
       - 'src/crypto_signal/product/frozen_proof_store.py'
       - 'src/crypto_signal/product/web.py'
       - 'ops/run_live_evidence_clock.py'
@@ -20,6 +21,8 @@ on:
       - 'tests/test_rdp5_derivatives_dynamics_family.py'
       - 'tests/test_rdp5_liquidation_heatmap_crowding_family.py'
       - 'tests/test_rdp6_options_derivatives_family.py'
+      - 'tests/test_rdp7_onchain_family.py'
+      - 'tests/test_rdp7_stablecoin_capital_flow.py'
       - '.github/workflows/crypto-rdp10-frozen-proof-contract.yml'
   workflow_dispatch:
 
@@ -80,10 +83,13 @@ jobs:
             tests/test_rdp4_order_flow_pattern_dependencies.py \
             tests/test_rdp5_derivatives_dynamics_family.py \
             tests/test_rdp5_liquidation_heatmap_crowding_family.py \
-            tests/test_rdp6_options_derivatives_family.py
+            tests/test_rdp6_options_derivatives_family.py \
+            tests/test_rdp7_onchain_family.py \
+            tests/test_rdp7_stablecoin_capital_flow.py
           "$PY" -m ruff check \
             src/crypto_signal/product/intelligence_stream_exact_evidence.py \
             src/crypto_signal/product/intelligence_stream_family_sources.py \
+            src/crypto_signal/product/intelligence_stream_onchain_family.py \
             src/crypto_signal/product/frozen_proof_store.py \
             src/crypto_signal/product/web.py \
             ops/run_live_evidence_clock.py \
@@ -93,16 +99,19 @@ jobs:
             tests/test_rdp4_order_flow_pattern_dependencies.py \
             tests/test_rdp5_derivatives_dynamics_family.py \
             tests/test_rdp5_liquidation_heatmap_crowding_family.py \
-            tests/test_rdp6_options_derivatives_family.py
+            tests/test_rdp6_options_derivatives_family.py \
+            tests/test_rdp7_onchain_family.py
           "$PY" -m mypy --strict \
             src/crypto_signal/product/intelligence_stream_exact_evidence.py \
             src/crypto_signal/product/frozen_proof_store.py
           "$PY" -m mypy \
             src/crypto_signal/product/intelligence_stream_family_sources.py \
+            src/crypto_signal/product/intelligence_stream_onchain_family.py \
             ops/run_live_evidence_clock.py
           "$PY" -m py_compile \
             src/crypto_signal/product/intelligence_stream_exact_evidence.py \
             src/crypto_signal/product/intelligence_stream_family_sources.py \
+            src/crypto_signal/product/intelligence_stream_onchain_family.py \
             src/crypto_signal/product/frozen_proof_store.py \
             src/crypto_signal/product/web.py \
             ops/run_live_evidence_clock.py
@@ -145,6 +154,8 @@ jobs:
               provider_divergence_path=runtime / "data/provider_divergence.sqlite3",
               frozen_proof_store_path=runtime / "stream/frozen_proofs.sqlite3",
               options_surface_path=runtime / "market_tape/options_surface.sqlite3",
+              onchain_capital_flow_path=runtime / "onchain/onchain_capital_flow.sqlite3",
+              onchain_source_contract_path=runtime / "onchain/source_contract.sqlite3",
           )
           read_model = IntelligenceStreamReadModel(stream)
           registered = {
@@ -170,6 +181,12 @@ jobs:
               "derivatives_crowding",
               "options_surface",
               "options_volatility",
+              "onchain",
+              "stablecoin_capital_flow",
+              "stablecoin_supply",
+              "source_raw_payload",
+              "source_envelope",
+              "source_coverage",
               "event_calendar",
               "event_risk",
               "provider_divergence",
@@ -212,6 +229,7 @@ jobs:
               "liquidity_change",
               "order_flow_change",
               "derivatives_change",
+              "onchain_change",
               "provider_quality_change",
           }
           missing = required - set(selected)
