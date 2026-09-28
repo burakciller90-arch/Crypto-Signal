@@ -18,6 +18,7 @@ on:
       - 'tests/test_rdp4_rich_market_tape_family.py'
       - 'tests/test_rdp4_order_flow_pattern_dependencies.py'
       - 'tests/test_rdp5_derivatives_dynamics_family.py'
+      - 'tests/test_rdp5_liquidation_heatmap_crowding_family.py'
       - '.github/workflows/crypto-rdp10-frozen-proof-contract.yml'
   workflow_dispatch:
 
@@ -76,7 +77,8 @@ jobs:
             tests/test_frozen_proof_store.py \
             tests/test_rdp4_rich_market_tape_family.py \
             tests/test_rdp4_order_flow_pattern_dependencies.py \
-            tests/test_rdp5_derivatives_dynamics_family.py
+            tests/test_rdp5_derivatives_dynamics_family.py \
+            tests/test_rdp5_liquidation_heatmap_crowding_family.py
           "$PY" -m ruff check \
             src/crypto_signal/product/intelligence_stream_exact_evidence.py \
             src/crypto_signal/product/intelligence_stream_family_sources.py \
@@ -87,7 +89,8 @@ jobs:
             tests/test_frozen_proof_store.py \
             tests/test_rdp4_rich_market_tape_family.py \
             tests/test_rdp4_order_flow_pattern_dependencies.py \
-            tests/test_rdp5_derivatives_dynamics_family.py
+            tests/test_rdp5_derivatives_dynamics_family.py \
+            tests/test_rdp5_liquidation_heatmap_crowding_family.py
           "$PY" -m mypy --strict \
             src/crypto_signal/product/intelligence_stream_exact_evidence.py \
             src/crypto_signal/product/frozen_proof_store.py
@@ -137,6 +140,7 @@ jobs:
               market_tape_path=runtime / "market_tape/market_tape.sqlite3",
               event_source_runtime_path=runtime / "events/event_source.sqlite3",
               provider_divergence_path=runtime / "data/provider_divergence.sqlite3",
+              frozen_proof_store_path=runtime / "stream/frozen_proofs.sqlite3",
           )
           read_model = IntelligenceStreamReadModel(stream)
           registered = {
@@ -146,8 +150,20 @@ jobs:
               "order_book",
               "public_trades",
               "liquidity",
+              "liquidity_structure",
+              "liquidity_sweep",
               "order_flow",
+              "temporal_order_flow",
+              "window_local_cvd",
+              "absorption",
+              "price_cvd_divergence",
               "derivatives",
+              "derivatives_context",
+              "derivatives_dynamics",
+              "observed_liquidation_events",
+              "liquidation_event_coverage",
+              "observed_liquidation_heatmap",
+              "derivatives_crowding",
               "event_calendar",
               "event_risk",
               "provider_divergence",
