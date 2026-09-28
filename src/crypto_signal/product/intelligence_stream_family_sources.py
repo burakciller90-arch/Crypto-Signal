@@ -688,6 +688,10 @@ def build_market_tape_family_snapshots(
                 temporal_analysis is not None
                 and temporal_analysis.status is TemporalFlowStatus.MEASURED
             )
+            absorption_measured = (
+                absorption is None
+                or absorption.analysis.status is PatternStatus.MEASURED
+            )
             snapshots.append(
                 build_family_snapshot(
                     projector_id="order_flow_change",
@@ -721,7 +725,11 @@ def build_market_tape_family_snapshots(
                     direction=order_flow_direction,
                     source_quality=(
                         "measured"
-                        if microstructure_measured and temporal_measured
+                        if (
+                            microstructure_measured
+                            and temporal_measured
+                            and absorption_measured
+                        )
                         else "unresolved"
                     ),
                     uncertainty_flags=tuple(
