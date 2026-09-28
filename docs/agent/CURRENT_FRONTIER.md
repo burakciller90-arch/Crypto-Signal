@@ -72,6 +72,26 @@ Semantics:
 
 Exact nextAction: run full RDP10 Frozen Proof Contract UID504 acceptance on the final checkpoint head; inspect focused tests/lint/type, live fail-closed audit, canonical non-mutation, `HISTORICAL_BACKFILL=NO`, and `REAL_CAPITAL=0` before any PR/merge.
 
+### Retry checkpoint — first F1 acceptance failed only on test proof-store wiring
+
+Failed exact-head run:
+
+- run `36471468285`
+- job `109094583884`
+- canonical checkout verification PASS
+- focused gate failed in `test_fresh_btc_options_enrich_existing_derivatives_family`
+- exact failure: test referenced `proof_path` without defining/passing it
+- live audit correctly skipped because focused gate failed
+- canonical non-mutating cleanup remained PASS
+
+Repair:
+
+- `5e15e87d9c13b83fe34ddb7d1d93eef0b3bfad6f`
+- defines the test proof-store path and passes it into the existing family builder
+- no production code or acceptance criterion changed
+
+Exact nextAction: rerun the full RDP10 UID504 contract on the final retry-checkpoint head; merge only if focused + live + non-mutating all PASS.
+
 
 Conversation memory is non-authoritative. Rebuild from this file, HANDOFF_LOG, the canonical roadmap, and live Git/GitHub/runtime evidence.
 
