@@ -14,6 +14,7 @@ from crypto_signal.data.liquidations import (
 from crypto_signal.data.market_tape import MarketTapeStore
 from crypto_signal.data.models import DataSource, Exchange
 from crypto_signal.intelligence.confluence_matrix_v2 import ConfluenceFamily
+from crypto_signal.product.frozen_proof_store import FrozenProofStore
 from crypto_signal.product.intelligence_stream_family_sources import (
     build_market_tape_family_snapshots,
 )
@@ -100,11 +101,12 @@ def _liquidation(*, event_at_ms: int = AS_OF_MS - 30_000):
     )
 
 
-def _snapshot(path):
+def _snapshot(path, *, proof_path=None):
     snapshots = build_market_tape_family_snapshots(
         path,
         symbols=(SYMBOL,),
         as_of_ms=AS_OF_MS,
+        frozen_proof_store_path=proof_path,
     )
     return next(
         item
@@ -283,6 +285,7 @@ def test_complete_coverage_with_observed_event_never_becomes_zero_claim(
     tmp_path,
 ) -> None:
     path = tmp_path / "market_tape.sqlite3"
+    proof_path = tmp_path / "frozen_proofs.sqlite3"
     store = MarketTapeStore(path)
     _seed_derivatives(store)
     event = _liquidation()
@@ -290,7 +293,7 @@ def test_complete_coverage_with_observed_event_never_becomes_zero_claim(
     store.append_liquidation(event)
     store.append_liquidation_coverage(coverage)
 
-    snapshot = _snapshot(path)
+    snapshot = _snapshot(path, proof_path=proof_path)
     components = _components(snapshot)
 
     assert components["liquidation_heatmap_status"] == "measured"
@@ -304,6 +307,40 @@ def test_complete_coverage_with_observed_event_never_becomes_zero_claim(
     assert components["crowding_label"] == "mixed"
     assert event.liquidation_identity in snapshot.evidence_identities
     assert snapshot.direction is None
+
+    proof_store = FrozenProofStore(proof_path)
+    heatmap_identity = next(
+        identity
+        for identity in snapshot.evidence_identities
+        if (
+            (proof := proof_store.read_exact(identity)) is not None
+            and proof.object_kind == "liquidation_heatmap_freeze"
+        )
+    )
+    crowding_identity = next(
+        identity
+        for identity in snapshot.evidence_identities
+        if (
+            (proof := proof_store.read_exact(identity)) is not None
+            and proof.object_kind == "derivatives_crowding_freeze"
+        )
+    )
+    heatmap_proof = proof_store.read_exact(heatmap_identity)
+    crowding_proof = proof_store.read_exact(crowding_identity)
+    assert heatmap_proof is not None
+    assert crowding_proof is not None
+    assert heatmap_proof.market_available_at_ms == coverage.observed_at_ms
+    assert coverage.coverage_identity in heatmap_proof.source_object_identities
+    assert event.liquidation_identity in heatmap_proof.source_object_identities
+    assert heatmap_proof.renderer_contract_version == (
+        "liquidation-heatmap-observed-bins-v1/1"
+    )
+    assert crowding_proof.renderer_contract_version == (
+        "derivatives-crowding-context-v1/1"
+    )
+    assert heatmap_identity in crowding_proof.depends_on_evidence_identities
+    assert crowding_proof.production_authority is False
+    assert crowding_proof.real_capital == 0
 
 
 def test_future_or_late_liquidation_event_is_not_presented_as_observed(
