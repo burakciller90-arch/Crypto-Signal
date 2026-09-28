@@ -216,7 +216,7 @@ def test_event_risk_source_scoped_transition_uses_canonical_story(
     )
     assert detail is not None
     text = detail["narrative"]["text"]
-    assert "blok durumunda" in text["intelligence_text"]
+    assert "blokluyorum" in text["intelligence_text"]
     assert "normal" in text["intelligence_text"].lower()
     assert "yön" in text["decision_text"].lower()
 
@@ -356,8 +356,8 @@ def test_live_trust_policy_silences_initial_healthy_baseline_then_recovers(
 
     degraded_text = degraded_detail["narrative"]["text"]
     recovered_text = recovered_detail["narrative"]["text"]
-    assert "Cross-provider veri güveni degraded" in degraded_text["intelligence_text"]
-    assert "full-overlap" in degraded_text["intelligence_text"]
-    assert "healthy" in recovered_text["collapsed_text"]
+    assert "yeterince güvenilir değil" in degraded_text["intelligence_text"]
+    assert "teyit gücünü düşürüyorum" in degraded_text["intelligence_text"]
+    assert "Piyasa verisi sağlıklı" in recovered_text["collapsed_text"]
     assert "normal" in recovered_text["intelligence_text"].lower()
     assert "REAL_CAPITAL=0" in recovered_text["capital_text"]
