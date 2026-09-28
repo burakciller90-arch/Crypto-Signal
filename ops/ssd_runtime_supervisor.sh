@@ -373,56 +373,29 @@ liquidation_pid_is_owned() {
 liquidation_pid_is_expected() {
   local pid="$1"
   local runner="$DEV/ops/run_liquidation_market_tape_stream.py"
+  local uid=""
+  local command=""
   [ -n "$pid" ] || return 1
   kill -0 "$pid" >/dev/null 2>&1 || return 1
-  /bin/ps -ww -p "$pid" -o uid=,args= 2>/dev/null \
-    | /usr/bin/awk \
-        -v runner="$runner" \
-        -v ws="$BYBIT_LIQUIDATION_WS_URL" '
-        {
-          if ($1 != 504) {
-            exit 1
-          }
-          runner_ok = 0
-          ws_ok = 0
-          continuous_ok = 0
-          heartbeat_ok = 0
-          silence_ok = 0
-          for (i = 2; i <= NF; i++) {
-            if ($i == runner) {
-              runner_ok = 1
-            }
-            if ($i == "--bybit-ws-url" && i < NF && $(i + 1) == ws) {
-              ws_ok = 1
-            }
-            if ($i == "--max-messages" && i < NF && $(i + 1) == "0") {
-              continuous_ok = 1
-            }
-            if (
-              $i == "--heartbeat-interval-ms"
-              && i < NF
-              && $(i + 1) == "10000"
-            ) {
-              heartbeat_ok = 1
-            }
-            if (
-              $i == "--max-transport-silence-ms"
-              && i < NF
-              && $(i + 1) == "45000"
-            ) {
-              silence_ok = 1
-            }
-          }
-          exit(
-            runner_ok
-            && ws_ok
-            && continuous_ok
-            && heartbeat_ok
-            && silence_ok
-            ? 0 : 1
-          )
-        }
-      '
+
+  uid="$(/bin/ps -p "$pid" -o uid= 2>/dev/null | /usr/bin/tr -d ' ')"
+  [ "$uid" = "504" ] || return 1
+  command="$(/bin/ps -ww -p "$pid" -o command= 2>/dev/null || true)"
+  [ -n "$command" ] || return 1
+
+  printf '%s\n' "$command" \
+    | /usr/bin/grep -F "$runner" >/dev/null 2>&1 || return 1
+  printf '%s\n' "$command" \
+    | /usr/bin/grep -F -- "--bybit-ws-url $BYBIT_LIQUIDATION_WS_URL" \
+      >/dev/null 2>&1 || return 1
+  printf '%s\n' "$command" \
+    | /usr/bin/grep -F -- "--max-messages 0" >/dev/null 2>&1 || return 1
+  printf '%s\n' "$command" \
+    | /usr/bin/grep -F -- "--heartbeat-interval-ms 10000" \
+      >/dev/null 2>&1 || return 1
+  printf '%s\n' "$command" \
+    | /usr/bin/grep -F -- "--max-transport-silence-ms 45000" \
+      >/dev/null 2>&1 || return 1
 }
 
 liquidation_pid_is_healthy() {

@@ -377,6 +377,26 @@ def test_supervisor_owns_exact_continuous_liquidation_runtime() -> None:
     assert "liquidation_started pid=$pid REAL_CAPITAL=0" in source
 
 
+def test_supervisor_liquidation_owner_check_avoids_bsd_awk_parser() -> None:
+    source = (
+        Path(__file__).resolve().parents[1]
+        / "ops"
+        / "ssd_runtime_supervisor.sh"
+    ).read_text(encoding="utf-8")
+
+    start = source.index("liquidation_pid_is_expected()")
+    end = source.index("liquidation_pid_is_healthy()", start)
+    owner_check = source[start:end]
+
+    assert "/usr/bin/awk" not in owner_check
+    assert "/bin/ps -p" in owner_check
+    assert "/usr/bin/grep -F" in owner_check
+    assert "--bybit-ws-url $BYBIT_LIQUIDATION_WS_URL" in owner_check
+    assert "--max-messages 0" in owner_check
+    assert "--heartbeat-interval-ms 10000" in owner_check
+    assert "--max-transport-silence-ms 45000" in owner_check
+
+
 def test_supervisor_health_does_not_require_liquidation_event_ingestion() -> None:
     source = (
         Path(__file__).resolve().parents[1]
