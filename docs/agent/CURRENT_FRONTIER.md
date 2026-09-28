@@ -1,5 +1,34 @@
 # Crypto Signal Current Frontier
 
+## LIVE RECONCILIATION CHECKPOINT — raw Options source / derived proof split
+
+This checkpoint is written before the next F1 code change.
+
+- current branch head before this checkpoint: `6b6b3f9df756ea2212023bf8edc1df5beab76380`
+- open PR: #1650
+- canonical main remains `f665fee6aba0309d7fd5ef7ff88abfdc10ef1511`
+- duplicate F1 implementation will not be repeated
+- `REAL_CAPITAL=0`
+- historical backfill: FORBIDDEN
+
+Mechanical audit result:
+
+- raw `OptionSurfaceObservation` already has an immutable canonical source store: `OptionsSurfaceStore`;
+- re-wrapping the same `surface_identity` in `FrozenProofStore` with consumer evaluation-time metadata can conflict when one immutable surface is reused at another family `as_of_ms`;
+- therefore raw Options surface / metadata / contract quote evidence must resolve read-only from the canonical Options source store;
+- `FrozenProofStore` should persist only the derived `options_volatility_freeze`, whose identity legitimately depends on the evaluation analysis;
+- existing Stream evidence already binds surface identity, metadata identity, quote identities, volatility freeze identity and analysis identity.
+
+Current blocker:
+
+- `IntelligenceStreamExactEvidenceReadModel` has no `options_surface_path` source resolver yet;
+- API/live acceptance wiring does not pass the canonical Options DB into the resolver;
+- current RDP6 persistence test still contains stale assertions expecting an `options_surface_snapshot` wrapper inside `FrozenProofStore`.
+
+Exact nextAction:
+
+Implement canonical read-only Options source resolution + resolver/API/live wiring, update F1 tests to assert raw source from OptionsSurfaceStore and derived volatility from FrozenProofStore, then write a fresh acceptance-phase checkpoint before rerunning UID504.
+
 ## LIVE ACTIVE CHECKPOINT — 2026-09-28 — RDP10-F1 STARTED
 
 This checkpoint was written before any RDP10-F1 production code change.
