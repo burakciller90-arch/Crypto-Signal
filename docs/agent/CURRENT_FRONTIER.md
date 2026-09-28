@@ -465,3 +465,35 @@ Production implementation must not begin until the exact-main Workbench state is
 ### Exact nextAction
 
 Inspect run `36477116448`; after exact-main Workbench PASS, audit the existing RDP7 stablecoin source/freeze schemas, family projector, FrozenProofStore usage and exact-evidence resolver, then implement only the missing F2 persistence/resolution path without duplicating accepted immutable source truth.
+
+
+## LIVE AUDIT CHECKPOINT — 2026-09-28 — RDP10-F2 existing truth mapped before implementation
+
+- canonical main: `b224a9f466767b39c051dd35096d414f2bf1495b`
+- branch before production change: `d1e4f63a89054809ea5e4af0166d06d856b8d53e`
+- exact-main SSD504 bootstrap: run `36477116448` / job `109113488100` SUCCESS
+  - `WORKBENCH_REPO_SYNCED_TO_MAIN=YES`
+  - `REPO_HEAD=b224a9f466767b39c051dd35096d414f2bf1495b`
+  - `REPO_DIRTY_COUNT=0`
+  - `SSD504_WORKBENCH_PASS=YES`
+  - `REAL_CAPITAL=0`
+
+Audit findings:
+- RDP7 already has canonical append-only `OnchainCapitalFlowStore` for normalized stablecoin observations and canonical `SourceContractStore` for source envelope/coverage/raw lineage.
+- `build_onchain_family_snapshots` already builds exact PIT-bounded `StablecoinCapitalFlowEvidenceFreeze` for USDC/USDT and binds freeze identity, analysis identity, normalized observation identity, raw identity, source envelope identity and source coverage identity into Stream evidence.
+- accepted unsupported rails are already explicit: exchange flow, large transfer, wallet cohort and stablecoin bridge are unavailable; family direction is always `None`.
+- the On-chain family currently does **not** persist the derived stablecoin freeze into `FrozenProofStore`.
+- `IntelligenceStreamExactEvidenceReadModel` currently has no On-chain/source-contract paths, no On-chain object resolver, no stablecoin derived-proof domain mapping, and therefore these identities remain identity-only customer references.
+
+Implementation rule:
+- do not duplicate raw/envelope/coverage/normalized source truth into FrozenProofStore;
+- persist only the derived `stablecoin_capital_flow_freeze`;
+- resolve raw/envelope/coverage/normalized source truth read-only from the two canonical RDP7 stores;
+- require complete accepted lineage for `stablecoin_supply` / `stablecoin_capital_flow` READY_EXACT;
+- preserve explicit unavailable provider rails and direction=None.
+
+Current blocker:
+- F2 persistence/resolver/API/live-wiring/tests are mechanically missing.
+
+Exact nextAction:
+Implement the minimum derived-proof persistence plus read-only On-chain/source-contract exact resolver and wiring; then run focused RDP10 + RDP7 acceptance on the exact final head before any merge.
