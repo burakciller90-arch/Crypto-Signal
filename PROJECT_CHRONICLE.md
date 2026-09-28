@@ -1,5 +1,15 @@
 # PROJECT CHRONICLE
 
+## 2026-09-28 — RDP4 PASS; RDP5 liquidation/derivatives restoration activated
+
+RDP4-B merged via PR #1568 as main `1e2ad0540d3c1c2b7d40b98abbd88126f8ce01a9`. Absorption and Price/CVD Divergence are now dependency proofs inside the existing Order Flow family rather than new score families. Absorption reuses the exact Temporal Flow + Liquidity Structure freezes. Production divergence reads canonical 15m CandleStore data read-only and remains explicit UNRESOLVED when the default 2-minute flow window lacks five compatible closed candles; no synthetic lower-timeframe price series is invented. Pattern context cannot create family direction.
+
+UID504 latest-head run `36392872215` passed exact Workbench/source, focused pattern dependency acceptance, RDP4-A regression, candle/live-clock regression, Ruff, mypy and py_compile with REAL_CAPITAL=0. Separate RDP4-A regression `36392872158` and RDP2 candle-source regression `36392872168` passed. Workbench bootstrap `36393163025` advanced clean repo/main to exact `1e2ad0540d3c1c2b7d40b98abbd88126f8ce01a9`.
+
+**RDP4 PASS**: exact PIT freezes, dependency/overlap lineage, rich family proof, no actor-intent claims and no context-only direction invention are all locked.
+
+RDP5 audit found that the derivatives side is substantially built already: the 60-second Bybit REST snapshot carries mark/index/OI/funding through canonical source provenance, and Derivatives Context/Dynamics/Crowding plus Liquidation Heatmap engines already exist. The real runtime gap is liquidation collection: `ops/run_liquidation_market_tape_stream.py` is bounded development-only, default-disabled and absent from SSD504 supervisor ownership even though the Bybit allLiquidation WebSocket parser, raw/normalized persistence and LiquidationFeedCoverage model exist. Exact next frontier: **RDP5-A — continuous supervisor-owned liquidation runtime with explicit connected/silence/stale coverage and fail-closed freshness, reusing the existing path.**
+
 ## 2026-09-28 — RDP4-A rich Liquidity / Order Flow family wiring accepted
 
 PR #1566 merged as main `0356f6c1024935bfeffbcc7e61b2a7d95bd9ecc5`. RDP4 remains ACTIVE.
