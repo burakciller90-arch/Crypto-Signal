@@ -1,5 +1,111 @@
 # Crypto Signal Current Frontier
 
+## LIVE ACTIVE CHECKPOINT — 2026-09-28 — RDP10-E1 STARTED
+
+This checkpoint was written before any RDP10-E code change.
+
+- canonical main at task start: `12aa063aad1fa93ccea6185bc7480539c88abf6b`
+- main commit: `Docs: close RDP10-D and advance frontier to RDP10-E (#1645)`
+- active branch: `rdp10/derivatives-proof-e1`
+- session-local /Volumes worktree: NONE
+- duplicate RDP10-E PRs: NONE
+- duplicate RDP10-E branches: NONE
+- `REAL_CAPITAL=0`
+- historical/frozen backfill: FORBIDDEN
+- Durdurulmaz touched: NO
+- Quantum Capital touched: NO
+
+### Bounded goal
+
+RDP10-E1 will handle only Derivatives Context + Derivatives Dynamics exact proof persistence/resolution.
+
+It will not yet close liquidation coverage/heatmap/crowding; those remain the next bounded E slice.
+
+Required E1 behavior:
+
+- persist the already-existing immutable Derivatives Context freeze before Stream publish;
+- persist the already-existing immutable Derivatives Dynamics freeze before Stream publish;
+- preserve exact mark/index/OI/funding/basis and PIT source lineage;
+- resolver must expose full frozen context/dynamics payloads only from the proof store;
+- no current DB fallback for missing derived proof;
+- no historical Stream rewrite/backfill;
+- no direction or production authority invented.
+
+### Current blocker
+
+Exact-main Workbench bootstrap for `12aa063...` is still pending at task start:
+
+- run `36466070553`
+- acceptance must verify clean canonical Workbench before code implementation proceeds.
+
+### Exact nextAction
+
+Read exact-main Workbench bootstrap `36466070553`; once PASS, audit the current Derivatives Context/Dynamics freeze schemas and implement E1 persistence + resolver integration.
+
+### Phase checkpoint — E1 implementation complete, acceptance pending
+
+Exact-main Workbench prerequisite is now mechanically PASS:
+
+- run `36466070553`
+- job `109076351338`
+- `GITHUB_SHA=12aa063aad1fa93ccea6185bc7480539c88abf6b`
+- final canonical repo branch `main`
+- final canonical repo head exact main
+- final dirty count `0`
+- `SSD504_WORKBENCH_PASS=YES`
+- `REAL_CAPITAL=0`
+
+Implemented on `rdp10/derivatives-proof-e1`:
+
+- `ec746eef3efe92f381061a85c4e7d5eb32e7b72d` — persist immutable Derivatives Context + Dynamics proof objects before Stream publication;
+- `da7838dcfe79d231d32474d676bf84a3f3b5239e` — resolve exact derivatives_context / derivatives_dynamics proof domains and top-level capabilities;
+- `7742c159350f45e43947a83181ac47c07a27abc7` — focused persistence tests;
+- `86fc36fead84312de067f8010c97096cab8080d9` — exact-evidence resolver test;
+- `3a4f088eadfbf4d94ab27d4ad32091502f057fcc` — RDP10 UID504 gate coverage.
+
+E1 still excludes liquidation observation/coverage/heatmap/crowding.
+
+Exact nextAction: run the RDP10 Frozen Proof Contract UID504 acceptance on the final checkpoint head after this documentation phase; inspect focused tests/lint/type output, live fail-closed audit, non-mutating proof, `HISTORICAL_BACKFILL=NO`, and `REAL_CAPITAL=0` before any PR/merge.
+
+### Retry checkpoint — first E1 acceptance failed only on test Decimal formatting
+
+Failed exact-head run:
+
+- run `36466632195`
+- job `109078756884`
+- canonical checkouts clean
+- focused test failure only: expected `"0.10"` while canonical Decimal JSON is `"0.1"`
+- product persistence/resolver path was not the failing condition
+- live audit correctly skipped because focused gate failed
+- non-mutating cleanup still reported PASS
+
+Repair:
+
+- `39796c88bf0b484fb4c494214150709069fe5f81` changes only the incorrect test literal from `"0.10"` to canonical `"0.1"`.
+
+Exact nextAction: rerun the full RDP10 UID504 acceptance on the final retry-checkpoint head; do not merge unless the complete focused + live + non-mutating contract passes.
+
+### Retry checkpoint 2 — tests PASS, Ruff import grouping fixed
+
+Second failed run:
+
+- run `36466937115`
+- job `109079272480`
+- 27 focused tests PASS
+- canonical checkouts clean
+- Ruff alone failed with `I001 Import block is un-sorted or un-formatted`
+- live audit correctly skipped because focused gate failed
+- non-mutating cleanup PASS
+
+Repair:
+
+- `0513a6e9720a25ce34dbdebd17ed316ff94c382c`
+- only reorganizes the test import block exactly as Ruff requested
+- no production code or acceptance criterion changed
+
+Exact nextAction: run the full RDP10 UID504 contract again on the final head after this retry checkpoint; merge only if focused + live + non-mutating all PASS.
+
+
 This file is the replaceable current checkpoint. Conversation memory is non-authoritative.
 
 Checkpoint assembled: 2026-09-28

@@ -446,12 +446,56 @@ class IntelligenceStreamExactEvidenceReadModel:
                 "candle_flow_relationship": state.value,
             }
         elif domain == "derivatives":
-            if "market_tape_derivatives" in selected_kinds:
+            raw_state = (
+                StreamEvidenceResolutionState.READY_EXACT
+                if "market_tape_derivatives" in selected_kinds
+                else StreamEvidenceResolutionState.UNAVAILABLE_EXPLICIT
+            )
+            context_state = (
+                StreamEvidenceResolutionState.READY_EXACT
+                if "derivatives_context_freeze" in selected_kinds
+                else StreamEvidenceResolutionState.UNAVAILABLE_EXPLICIT
+            )
+            dynamics_state = (
+                StreamEvidenceResolutionState.READY_EXACT
+                if "derivatives_dynamics_freeze" in selected_kinds
+                else StreamEvidenceResolutionState.UNAVAILABLE_EXPLICIT
+            )
+            if (
+                context_state is StreamEvidenceResolutionState.READY_EXACT
+                or dynamics_state is StreamEvidenceResolutionState.READY_EXACT
+            ):
+                state = StreamEvidenceResolutionState.READY_EXACT
+                reason = "exact_persisted_derivatives_derived_proof_resolved"
+            elif raw_state is StreamEvidenceResolutionState.READY_EXACT:
                 state = StreamEvidenceResolutionState.READY_EXACT
                 reason = "exact_persisted_derivatives_observations_resolved"
             capabilities = {
-                "funding_open_interest_basis": state.value,
-                "source_snapshot": state.value,
+                "raw_mark_index_open_interest_funding": raw_state.value,
+                "context_measurement": context_state.value,
+                "price_oi_funding_dynamics": dynamics_state.value,
+                "funding_open_interest_basis": context_state.value,
+                "source_snapshot": raw_state.value,
+            }
+        elif domain == "derivatives_context":
+            if "derivatives_context_freeze" in selected_kinds:
+                state = StreamEvidenceResolutionState.READY_EXACT
+                reason = "exact_persisted_derivatives_context_proof_resolved"
+            capabilities = {
+                "funding_state": state.value,
+                "open_interest_state": state.value,
+                "basis_state": state.value,
+                "context_metrics": state.value,
+            }
+        elif domain == "derivatives_dynamics":
+            if "derivatives_dynamics_freeze" in selected_kinds:
+                state = StreamEvidenceResolutionState.READY_EXACT
+                reason = "exact_persisted_derivatives_dynamics_proof_resolved"
+            capabilities = {
+                "price_oi_state": state.value,
+                "funding_percentile": state.value,
+                "funding_acceleration": state.value,
+                "basis_change": state.value,
             }
         elif domain == "event_calendar":
             if selected_kinds.intersection(
@@ -880,7 +924,13 @@ def _objects_for_domain(
         "window_local_cvd": {"temporal_order_flow_freeze"},
         "absorption": {"absorption_freeze"},
         "price_cvd_divergence": {"price_cvd_divergence_freeze"},
-        "derivatives": {"market_tape_derivatives"},
+        "derivatives": {
+            "market_tape_derivatives",
+            "derivatives_context_freeze",
+            "derivatives_dynamics_freeze",
+        },
+        "derivatives_context": {"derivatives_context_freeze"},
+        "derivatives_dynamics": {"derivatives_dynamics_freeze"},
         "event_calendar": {
             "event_calendar_coverage",
             "structured_event_observation",

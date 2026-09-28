@@ -328,3 +328,131 @@ blocker:
 nextAction:
 - Before any RDP10-E code change, re-check main/open PRs and write the mandatory RDP10-E task-start checkpoint on its active branch.
 
+---
+
+## 2026-09-28 — RDP10-E1 start checkpoint
+
+status: ACTIVE
+canonicalMainAtStart: 12aa063aad1fa93ccea6185bc7480539c88abf6b
+branch: rdp10/derivatives-proof-e1
+worktree: no session-local /Volumes worktree; GitHub branch only, canonical Workbench verification comes from UID504 bootstrap/acceptance
+roadmapGate: RDP10-E1 Derivatives Context + Dynamics exact proof persistence/resolution
+duplicateRelevantPRs: NONE
+duplicateRelevantBranches: NONE
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+boundedGoal:
+- persist immutable Derivatives Context freeze before Stream publication;
+- persist immutable Derivatives Dynamics freeze before Stream publication;
+- resolve both exact proof payloads through the RDP10 evidence contract;
+- preserve mark/index/OI/funding/basis and PIT lineage;
+- no current-data substitution, no invented direction/authority.
+
+notInThisSlice:
+- liquidation observations/coverage;
+- liquidation heatmap;
+- derivatives crowding;
+- options/on-chain/event/cross-venue RDP10-F work.
+
+blocker:
+- exact-main SSD504 Workbench bootstrap run 36466070553 is pending at task start.
+
+nextAction:
+- read run 36466070553; once exact-main Workbench is clean/PASS, audit current Derivatives Context/Dynamics freeze schemas and then implement E1.
+
+---
+
+## 2026-09-28 — RDP10-E1 implementation complete; acceptance phase started
+
+status: ACCEPTANCE_PENDING
+canonicalMainAtPhaseStart: 12aa063aad1fa93ccea6185bc7480539c88abf6b
+branch: rdp10/derivatives-proof-e1
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+workbenchPrerequisite:
+- run 36466070553 / job 109076351338: SUCCESS.
+- GITHUB_SHA=12aa063aad1fa93ccea6185bc7480539c88abf6b.
+- final canonical Workbench repo main, exact head, dirty count 0.
+- SSD504_WORKBENCH_PASS=YES.
+
+implemented:
+- ec746eef3efe92f381061a85c4e7d5eb32e7b72d — persist Derivatives Context/Dynamics proof objects before Stream publication.
+- da7838dcfe79d231d32474d676bf84a3f3b5239e — resolver support for derivatives_context and derivatives_dynamics.
+- 7742c159350f45e43947a83181ac47c07a27abc7 — proof persistence tests.
+- 86fc36fead84312de067f8010c97096cab8080d9 — exact resolver test.
+- 3a4f088eadfbf4d94ab27d4ad32091502f057fcc — RDP10 UID504 gate coverage.
+- a61bed2de0f89d43cbe82b7d698bcd7a1401a752 — acceptance-phase frontier checkpoint.
+
+sliceBoundary:
+- this E1 slice does NOT include liquidation observations, liquidation coverage, liquidation heatmap or derivatives crowding.
+- those remain the next bounded RDP10-E slice.
+
+blocker:
+- exact-head UID504 RDP10 acceptance for the final branch head has not completed yet.
+
+nextAction:
+- inspect the exact-head RDP10 Frozen Proof Contract UID504 run; if PASS, re-check current main/open PRs and merge E1; if FAIL, repair only the demonstrated acceptance issue and checkpoint before retry.
+
+---
+
+## 2026-09-28 — RDP10-E1 acceptance retry checkpoint
+
+status: ACCEPTANCE_RETRY_PENDING
+canonicalMain: 12aa063aad1fa93ccea6185bc7480539c88abf6b
+branch: rdp10/derivatives-proof-e1
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+failedRun:
+- run 36466632195 / job 109078756884.
+- canonical checkout verification PASS.
+- focused gate failed only at test_derivatives_core_proofs_resolve_exact_from_frozen_store.
+- exact failure: canonical Decimal JSON emitted "0.1"; test incorrectly expected "0.10".
+- live audit skipped because focused gate failed.
+- non-mutating cleanup still PASS.
+
+repair:
+- commit 39796c88bf0b484fb4c494214150709069fe5f81.
+- only changes the incorrect test literal to canonical "0.1".
+- no production code or acceptance criterion weakened.
+
+nextAction:
+- run full exact-head RDP10 UID504 acceptance again and inspect focused, live fail-closed, non-mutating, HISTORICAL_BACKFILL=NO and REAL_CAPITAL=0 outputs before any PR/merge.
+
+---
+
+## 2026-09-28 — RDP10-E1 second acceptance retry checkpoint
+
+status: ACCEPTANCE_RETRY_2_PENDING
+canonicalMain: 12aa063aad1fa93ccea6185bc7480539c88abf6b
+branch: rdp10/derivatives-proof-e1
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+failedRun:
+- run 36466937115 / job 109079272480.
+- 27 focused tests PASS.
+- canonical checkout verification PASS.
+- Ruff alone failed with I001 import grouping in tests/test_intelligence_stream_exact_evidence.py.
+- live audit skipped because focused gate failed.
+- non-mutating cleanup PASS.
+
+repair:
+- commit 0513a6e9720a25ce34dbdebd17ed316ff94c382c.
+- only reorganizes the test import block exactly as Ruff requested.
+- no production code and no acceptance criteria changed.
+- frontier retry checkpoint commit 4f3d9cc01f463d84e0359ab67f3963897d8917ea.
+
+nextAction:
+- run the full exact-head RDP10 UID504 contract again; merge only if focused, live fail-closed and non-mutating checks all PASS with HISTORICAL_BACKFILL=NO and REAL_CAPITAL=0.
+

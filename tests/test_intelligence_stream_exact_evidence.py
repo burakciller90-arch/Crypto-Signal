@@ -7,6 +7,12 @@ from pathlib import Path
 from fastapi.testclient import TestClient
 from test_immutable_ledger import build_bundle, candles
 from test_rdp4_rich_market_tape_family import AS_OF_MS, _seed
+from test_rdp5_derivatives_dynamics_family import (
+    AS_OF_MS as DERIVATIVES_AS_OF_MS,
+)
+from test_rdp5_derivatives_dynamics_family import (
+    _history as derivatives_history,
+)
 
 from crypto_signal.data.event_risk import (
     EventCategory,
@@ -835,4 +841,93 @@ def test_order_flow_derived_proofs_resolve_exact_from_frozen_store(
     assert divergence_payload["timeframe"] == "15m"
     assert divergence_object["depends_on_evidence_identities"]
     assert exact_divergence["current_data_substitution"] is False
+
+def test_derivatives_core_proofs_resolve_exact_from_frozen_store(
+    tmp_path: Path,
+) -> None:
+    market_tape_path = tmp_path / "market_tape.sqlite3"
+    proof_path = tmp_path / "frozen_proofs.sqlite3"
+    stream_path = tmp_path / "stream.sqlite3"
+
+    store = MarketTapeStore(market_tape_path)
+    for observation in derivatives_history():
+        store.append_derivatives(observation)
+
+    snapshots = build_market_tape_family_snapshots(
+        market_tape_path,
+        symbols=("BTCUSDT",),
+        as_of_ms=DERIVATIVES_AS_OF_MS,
+        frozen_proof_store_path=proof_path,
+    )
+    derivatives = next(
+        item
+        for item in snapshots
+        if item.family is ConfluenceFamily.DERIVATIVES
+    )
+    narrative_identity = _project_family(
+        stream_path,
+        projector_id="derivatives_change",
+        snapshot=derivatives,
+    )
+
+    resolver = IntelligenceStreamExactEvidenceReadModel(
+        stream_ledger_path=stream_path,
+        market_tape_path=market_tape_path,
+        frozen_proof_store_path=proof_path,
+    )
+    payload = resolver.read_for_narrative(narrative_identity)
+    assert payload is not None
+
+    derivatives_resolution = _resolution(payload, "derivatives")
+    assert derivatives_resolution["resolution_state"] == "READY_EXACT"
+    capabilities = derivatives_resolution["capabilities"]
+    assert isinstance(capabilities, dict)
+    assert capabilities["raw_mark_index_open_interest_funding"] == "READY_EXACT"
+    assert capabilities["context_measurement"] == "READY_EXACT"
+    assert capabilities["price_oi_funding_dynamics"] == "READY_EXACT"
+    assert capabilities["funding_open_interest_basis"] == "READY_EXACT"
+
+    context = _resolution(payload, "derivatives_context")
+    dynamics = _resolution(payload, "derivatives_dynamics")
+    assert context["resolution_state"] == "READY_EXACT"
+    assert dynamics["resolution_state"] == "READY_EXACT"
+    assert context["current_data_substitution"] is False
+    assert dynamics["current_data_substitution"] is False
+
+    references = tuple(
+        item
+        for item in payload["reference_resolutions"]
+        if isinstance(item, dict)
+    )
+    context_ref = next(
+        item
+        for item in references
+        if item.get("object_kind") == "derivatives_context_freeze"
+    )
+    dynamics_ref = next(
+        item
+        for item in references
+        if item.get("object_kind") == "derivatives_dynamics_freeze"
+    )
+    assert context_ref["resolution_state"] == "READY_EXACT"
+    assert dynamics_ref["resolution_state"] == "READY_EXACT"
+
+    exact_dynamics = resolver.read_reference(
+        narrative_identity=narrative_identity,
+        evidence_identity=str(dynamics_ref["evidence_identity"]),
+    )
+    assert exact_dynamics is not None
+    assert exact_dynamics["object_kind"] == "derivatives_dynamics_freeze"
+    exact_object = exact_dynamics["exact_object"]
+    assert isinstance(exact_object, dict)
+    assert exact_object["object_identity"] == dynamics_ref["evidence_identity"]
+    derived_payload = exact_object["payload"]
+    assert isinstance(derived_payload, dict)
+    assert derived_payload["status"] == "measured"
+    metrics = derived_payload["metrics"]
+    assert isinstance(metrics, dict)
+    assert metrics["open_interest_change_fraction"] == "0.1"
+    assert metrics["mark_price_change_fraction"] == "0.03"
+    assert exact_object["source_object_identities"]
+    assert exact_dynamics["current_data_substitution"] is False
 
