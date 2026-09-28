@@ -852,11 +852,15 @@ def build_market_tape_family_snapshots(
                 0,
                 as_of_ms - liquidation_lookback_ms,
             )
+            liquidation_history_limit = 1000
             liquidation_history = store.recent_liquidations(
                 exchange=Exchange.BYBIT,
                 instrument_type=DerivativesInstrumentType.LINEAR_PERPETUAL,
                 symbol=symbol,
-                limit=1000,
+                limit=liquidation_history_limit,
+            )
+            liquidation_history_truncated = (
+                len(liquidation_history) >= liquidation_history_limit
             )
             recent_liquidations = tuple(
                 item
@@ -932,7 +936,18 @@ def build_market_tape_family_snapshots(
             liquidation_status = "unavailable"
             crowding_label = "unavailable"
 
-            if not eligible_coverages:
+            if liquidation_history_truncated:
+                derivatives_components.extend(
+                    (
+                        ("crowding_status", "unavailable"),
+                        ("liquidation_heatmap_status", "unavailable"),
+                        ("liquidation_zero_event_claim", "unavailable"),
+                    )
+                )
+                derivatives_uncertainty.add(
+                    "liquidation_history_limit_reached"
+                )
+            elif not eligible_coverages:
                 derivatives_components.extend(
                     (
                         ("crowding_status", "unavailable"),
