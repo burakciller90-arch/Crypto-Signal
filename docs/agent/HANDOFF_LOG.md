@@ -363,3 +363,39 @@ blocker:
 nextAction:
 - read run 36466070553; once exact-main Workbench is clean/PASS, audit current Derivatives Context/Dynamics freeze schemas and then implement E1.
 
+---
+
+## 2026-09-28 — RDP10-E1 implementation complete; acceptance phase started
+
+status: ACCEPTANCE_PENDING
+canonicalMainAtPhaseStart: 12aa063aad1fa93ccea6185bc7480539c88abf6b
+branch: rdp10/derivatives-proof-e1
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+workbenchPrerequisite:
+- run 36466070553 / job 109076351338: SUCCESS.
+- GITHUB_SHA=12aa063aad1fa93ccea6185bc7480539c88abf6b.
+- final canonical Workbench repo main, exact head, dirty count 0.
+- SSD504_WORKBENCH_PASS=YES.
+
+implemented:
+- ec746eef3efe92f381061a85c4e7d5eb32e7b72d — persist Derivatives Context/Dynamics proof objects before Stream publication.
+- da7838dcfe79d231d32474d676bf84a3f3b5239e — resolver support for derivatives_context and derivatives_dynamics.
+- 7742c159350f45e43947a83181ac47c07a27abc7 — proof persistence tests.
+- 86fc36fead84312de067f8010c97096cab8080d9 — exact resolver test.
+- 3a4f088eadfbf4d94ab27d4ad32091502f057fcc — RDP10 UID504 gate coverage.
+- a61bed2de0f89d43cbe82b7d698bcd7a1401a752 — acceptance-phase frontier checkpoint.
+
+sliceBoundary:
+- this E1 slice does NOT include liquidation observations, liquidation coverage, liquidation heatmap or derivatives crowding.
+- those remain the next bounded RDP10-E slice.
+
+blocker:
+- exact-head UID504 RDP10 acceptance for the final branch head has not completed yet.
+
+nextAction:
+- inspect the exact-head RDP10 Frozen Proof Contract UID504 run; if PASS, re-check current main/open PRs and merge E1; if FAIL, repair only the demonstrated acceptance issue and checkpoint before retry.
+
