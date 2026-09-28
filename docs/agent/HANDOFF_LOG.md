@@ -610,3 +610,54 @@ repair:
 nextAction:
 - run full exact-head RDP10 UID504 acceptance again; merge only if focused, live fail-closed and non-mutating checks all PASS with HISTORICAL_BACKFILL=NO and REAL_CAPITAL=0.
 
+---
+
+## 2026-09-28 — RDP10-E2 complete; frontier advanced to F
+
+status: PASS
+canonicalMain: da8abd2d10a5bc157b6aad2ef37074d2732e103d
+roadmapGate: RDP10 ACTIVE
+completedSlice: RDP10-E2 liquidation observations/coverage/heatmap/crowding
+nextSlice: RDP10-F Options + On-chain strongest exact proof cutover
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+rdp10E2:
+- branch: rdp10/liquidation-proof-e2
+- PR #1648
+- accepted head: 7879814ce99ea8b97f35e4761ff32be41c443e0f
+- merge SHA: da8abd2d10a5bc157b6aad2ef37074d2732e103d
+- final exact-head UID504 acceptance run 36469778696 / job 109088902172: SUCCESS
+- focused tests/Ruff/mypy/py_compile PASS
+- RDP10_LIVE_MESSAGES_AUDITED=6
+- RDP10_UNREGISTERED_DOMAINS_OBSERVED=9
+- RDP10_UNREGISTERED_READY_COUNT=0
+- RDP10_LIVE_FAIL_CLOSED_PASS=YES
+- RDP10_NON_MUTATING_PASS=YES
+- HISTORICAL_BACKFILL=NO
+- REAL_CAPITAL=0
+- raw liquidation observation rows and provider coverage resolve exact from Market Tape.
+- coverage knowledge-time uses observed_at_ms; provider silence is never treated as zero-liquidation evidence.
+- immutable Liquidation Heatmap and Derivatives Crowding proof objects persist before Stream publication.
+- crowding binds exact historical Derivatives Dynamics + Heatmap parents.
+- no current-data substitution or future-risk/leverage fabrication.
+
+exactMainWorkbench:
+- Crypto SSD504 Workbench Bootstrap run 36470043887 / job 109089702244: SUCCESS
+- GITHUB_SHA=da8abd2d10a5bc157b6aad2ef37074d2732e103d
+- final canonical Workbench branch main
+- final canonical Workbench head exact main
+- dirty count 0
+- SSD504_WORKBENCH_PASS=YES
+- REAL_CAPITAL=0
+
+blocker:
+- RDP10 itself is not PASS.
+- first mechanically unclosed slice is RDP10-F Options + On-chain strongest exact proof cutover.
+- Event Risk source records and provider-divergence are already exact-resolvable and should be re-audited rather than duplicated.
+
+nextAction:
+- before any RDP10-F production code change, re-check exact main/open PRs/branches and write the mandatory RDP10-F task-start checkpoint.
+
