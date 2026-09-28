@@ -12,6 +12,7 @@ WRAPPER="$ROOT/ssd-clock-wrapper.py"
 LOGDIR="$ROOT/ServiceLogs"
 BYBIT_REST_BASE_URL="${CRYPTO_SIGNAL_BYBIT_REST_BASE_URL:-https://api.bybit.tr}"
 BYBIT_WS_URL="${CRYPTO_SIGNAL_BYBIT_WS_URL:-wss://stream.bybit.tr/v5/public/spot}"
+BYBIT_LIQUIDATION_WS_URL="${CRYPTO_SIGNAL_BYBIT_LIQUIDATION_WS_URL:-wss://stream.bybit.com/v5/public/linear}"
 BINANCE_REST_BASE_URL="${CRYPTO_SIGNAL_BINANCE_REST_BASE_URL:-https://api.binance.me}"
 BINANCE_API_VARIANT="${CRYPTO_SIGNAL_BINANCE_API_VARIANT:-tr_main}"
 
@@ -26,6 +27,13 @@ case "$BYBIT_WS_URL" in
   wss://*) ;;
   *)
     echo "RUNTIME_INVALID_BYBIT_WS_URL=YES FAIL_CLOSED=YES REAL_CAPITAL=0" >&2
+    exit 75
+    ;;
+esac
+case "$BYBIT_LIQUIDATION_WS_URL" in
+  wss://*) ;;
+  *)
+    echo "RUNTIME_INVALID_BYBIT_LIQUIDATION_WS_URL=YES FAIL_CLOSED=YES REAL_CAPITAL=0" >&2
     exit 75
     ;;
 esac
@@ -341,6 +349,238 @@ start_market_tape_stream() {
   echo "$(date '+%Y-%m-%d %H:%M:%S %z') market_tape_started pid=$pid REAL_CAPITAL=0"
 }
 
+liquidation_pid_is_owned() {
+  local pid="$1"
+  local runner="$DEV/ops/run_liquidation_market_tape_stream.py"
+  [ -n "$pid" ] || return 1
+  kill -0 "$pid" >/dev/null 2>&1 || return 1
+  /bin/ps -ww -p "$pid" -o uid=,args= 2>/dev/null \
+    | /usr/bin/awk -v runner="$runner" '
+        {
+          if ($1 != 504) {
+            exit 1
+          }
+          for (i = 2; i <= NF; i++) {
+            if ($i == runner) {
+              exit 0
+            }
+          }
+          exit 1
+        }
+      '
+}
+
+liquidation_pid_is_expected() {
+  local pid="$1"
+  local runner="$DEV/ops/run_liquidation_market_tape_stream.py"
+  [ -n "$pid" ] || return 1
+  kill -0 "$pid" >/dev/null 2>&1 || return 1
+  /bin/ps -ww -p "$pid" -o uid=,args= 2>/dev/null \
+    | /usr/bin/awk \
+        -v runner="$runner" \
+        -v ws="$BYBIT_LIQUIDATION_WS_URL" '
+        {
+          if ($1 != 504) {
+            exit 1
+          }
+          runner_ok = 0
+          ws_ok = 0
+          continuous_ok = 0
+          heartbeat_ok = 0
+          silence_ok = 0
+          for (i = 2; i <= NF; i++) {
+            if ($i == runner) {
+              runner_ok = 1
+            }
+            if ($i == "--bybit-ws-url" && i < NF && $(i + 1) == ws) {
+              ws_ok = 1
+            }
+            if ($i == "--max-messages" && i < NF && $(i + 1) == "0") {
+              continuous_ok = 1
+            }
+            if (
+              $i == "--heartbeat-interval-ms"
+              && i < NF
+              && $(i + 1) == "10000"
+            ) {
+              heartbeat_ok = 1
+            }
+            if (
+              $i == "--max-transport-silence-ms"
+              && i < NF
+              && $(i + 1) == "45000"
+            ) {
+              silence_ok = 1
+            }
+          }
+          exit(
+            runner_ok
+            && ws_ok
+            && continuous_ok
+            && heartbeat_ok
+            && silence_ok
+            ? 0 : 1
+          )
+        }
+      '
+}
+
+liquidation_pid_is_healthy() {
+  local pid="$1"
+  local py="$DEV/.venv/bin/python"
+  local runtime_db="$DEV/runtime/market_tape/liquidation_collector_runtime.sqlite3"
+  [ -x "$py" ] || return 1
+  [ -f "$runtime_db" ] || return 1
+  "$py" - "$runtime_db" "$pid" <<'PY' >/dev/null 2>&1
+import json
+import sqlite3
+import sys
+import time
+from pathlib import Path
+
+path = Path(sys.argv[1])
+pid = int(sys.argv[2])
+now_ms = time.time_ns() // 1_000_000
+uri = f"{path.resolve().as_uri()}?mode=ro"
+with sqlite3.connect(uri, uri=True, timeout=5.0) as db:
+    db.row_factory = sqlite3.Row
+    db.execute("PRAGMA query_only=ON")
+    instance = db.execute(
+        """
+        SELECT instance_identity, process_id
+        FROM collector_instances
+        WHERE provider='bybit' AND source='liquidation_stream'
+        ORDER BY started_at_ms DESC, instance_identity DESC
+        LIMIT 1
+        """
+    ).fetchone()
+    if instance is None or int(instance["process_id"]) != pid:
+        raise SystemExit(1)
+    heartbeat = db.execute(
+        """
+        SELECT payload_json
+        FROM collector_heartbeats
+        WHERE instance_identity=?
+        ORDER BY sequence_no DESC
+        LIMIT 1
+        """,
+        (str(instance["instance_identity"]),),
+    ).fetchone()
+    coverage = db.execute(
+        """
+        SELECT payload_json
+        FROM liquidation_connection_coverage
+        WHERE instance_identity=?
+        ORDER BY sequence_no DESC
+        LIMIT 1
+        """,
+        (str(instance["instance_identity"]),),
+    ).fetchone()
+    if heartbeat is None or coverage is None:
+        raise SystemExit(1)
+heartbeat_payload = json.loads(str(heartbeat["payload_json"]))
+coverage_payload = json.loads(str(coverage["payload_json"]))
+for payload in (heartbeat_payload, coverage_payload):
+    observed_at_ms = int(payload["observed_at_ms"])
+    if observed_at_ms > now_ms or now_ms - observed_at_ms > 30_000:
+        raise SystemExit(1)
+if str(coverage_payload["state"]) != "connected":
+    raise SystemExit(1)
+raise SystemExit(0)
+PY
+}
+
+stop_liquidation_pid() {
+  local pid="$1"
+  liquidation_pid_is_owned "$pid" || return 0
+  kill "$pid" >/dev/null 2>&1 || true
+  for _ in {1..20}; do
+    kill -0 "$pid" >/dev/null 2>&1 || return 0
+    sleep 0.1
+  done
+  kill -KILL "$pid" >/dev/null 2>&1 || true
+}
+
+adopt_liquidation_stream() {
+  local lock="$DEV/runtime/market_tape/liquidation_stream.lock"
+  local pid=""
+  [ -f "$lock" ] || return 1
+  pid="$(/usr/sbin/lsof -t "$lock" 2>/dev/null | head -1 || true)"
+  if ! liquidation_pid_is_expected "$pid"; then
+    if liquidation_pid_is_owned "$pid"; then
+      echo "$(date '+%Y-%m-%d %H:%M:%S %z') liquidation_stale_config pid=$pid action=restart"
+      stop_liquidation_pid "$pid"
+    fi
+    return 1
+  fi
+  echo "$pid" > "$ROOT/liquidation-stream.pid"
+  echo "$(date '+%Y-%m-%d %H:%M:%S %z') liquidation_adopted pid=$pid"
+  return 0
+}
+
+start_liquidation_stream() {
+  local pid=""
+  local age=""
+  local pidfile="$ROOT/liquidation-stream.pid"
+  local py="$DEV/.venv/bin/python"
+  local runner="$DEV/ops/run_liquidation_market_tape_stream.py"
+  local runtime="$DEV/runtime/market_tape"
+  local db="$runtime/market_tape.sqlite3"
+  local raw="$runtime/raw_market_tape.sqlite3"
+  local lock="$runtime/liquidation_stream.lock"
+  local collector_runtime="$runtime/liquidation_collector_runtime.sqlite3"
+
+  if [ -f "$pidfile" ]; then
+    pid="$(cat "$pidfile" 2>/dev/null || true)"
+    if liquidation_pid_is_expected "$pid"; then
+      if liquidation_pid_is_healthy "$pid"; then
+        return 0
+      fi
+      age="$(market_tape_pidfile_age_seconds "$pidfile" || echo 999999)"
+      if [ "$age" -le 60 ]; then
+        echo "$(date '+%Y-%m-%d %H:%M:%S %z') liquidation_startup_grace pid=$pid age_s=$age"
+        return 0
+      fi
+      echo "$(date '+%Y-%m-%d %H:%M:%S %z') liquidation_unhealthy pid=$pid age_s=$age action=restart"
+      stop_liquidation_pid "$pid"
+    elif liquidation_pid_is_owned "$pid"; then
+      echo "$(date '+%Y-%m-%d %H:%M:%S %z') liquidation_stale_config pid=$pid action=restart"
+      stop_liquidation_pid "$pid"
+    fi
+    rm -f "$pidfile"
+  fi
+
+  if adopt_liquidation_stream; then
+    return 0
+  fi
+
+  for required in "$py" "$runner" "$db" "$raw"; do
+    if [ ! -e "$required" ]; then
+      echo "$(date '+%Y-%m-%d %H:%M:%S %z') liquidation_not_ready missing=$required FAIL_CLOSED=YES REAL_CAPITAL=0"
+      return 0
+    fi
+  done
+
+  (
+    unset RUNNER_TRACKING_ID
+    export PYTHONPATH="$DEV:$DEV/src"
+    cd "$DEV" || exit 75
+    exec "$py" "$runner" \
+      --db "$db" \
+      --raw-db "$raw" \
+      --lock-path "$lock" \
+      --runtime-status-db "$collector_runtime" \
+      --bybit-ws-url "$BYBIT_LIQUIDATION_WS_URL" \
+      --symbols BTCUSDT ETHUSDT SOLUSDT \
+      --heartbeat-interval-ms 10000 \
+      --max-transport-silence-ms 45000 \
+      --max-messages 0
+  ) >>"$LOGDIR/liquidation.out.log" 2>>"$LOGDIR/liquidation.err.log" < /dev/null &
+  pid="$!"
+  echo "$pid" > "$pidfile"
+  echo "$(date '+%Y-%m-%d %H:%M:%S %z') liquidation_started pid=$pid REAL_CAPITAL=0"
+}
+
 run_market_tape_snapshot_clock() {
   local py="$DEV/.venv/bin/python"
   local runner="$DEV/ops/run_market_tape_snapshot.py"
@@ -453,6 +693,7 @@ last_aux_clock=0
 last_rotation=0
 while true; do
   start_dashboard
+  start_liquidation_stream
   start_market_tape_stream
   now="$(date +%s)"
 
