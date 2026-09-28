@@ -1,0 +1,64 @@
+name: RDP5 Rich Derivatives Family UID504
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/crypto_signal/product/intelligence_stream_family_sources.py"
+      - "tests/test_rdp5_rich_derivatives_family.py"
+      - ".github/workflows/crypto-rdp5-rich-derivatives-family-uid504.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  focused:
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          clean: true
+          fetch-depth: 1
+
+      - name: Verify exact Workbench baseline and PR source
+        shell: bash
+        run: |
+          set -euo pipefail
+          WB="/Volumes/Crypto-504/Crypto-Signal-Workbench/repo"
+          test "$(id -u)" = "504"
+          test -d "$WB/.git"
+          test "$(git -C "$WB" branch --show-current)" = "main"
+          test -z "$(git -C "$WB" status --porcelain)"
+          test "$(git -C "$WB" rev-parse HEAD)" = "${{ github.event.pull_request.base.sha }}"
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+          echo "RDP5_B_WORKBENCH_BASELINE_PASS=YES"
+          echo "RDP5_B_EXACT_PR_SOURCE_PASS=YES"
+
+      - name: Focused rich derivatives acceptance
+        shell: bash
+        run: |
+          set -euo pipefail
+          PY="/Volumes/Crypto-504/Crypto-Signal/Development/.venv/bin/python"
+          export PYTHONPATH="$GITHUB_WORKSPACE/src:$GITHUB_WORKSPACE"
+          "$PY" -m pytest -q \
+            tests/test_rdp5_rich_derivatives_family.py \
+            tests/test_derivatives_context_engine.py \
+            tests/test_derivatives_dynamics_engine.py \
+            tests/test_derivatives_crowding_engine.py \
+            tests/test_liquidation_heatmap_engine.py \
+            tests/test_rdp5_liquidation_runtime.py \
+            tests/test_rdp4_rich_market_tape_family.py \
+            tests/test_intelligence_stream_family.py
+          "$PY" -m ruff check \
+            src/crypto_signal/product/intelligence_stream_family_sources.py \
+            tests/test_rdp5_rich_derivatives_family.py
+          "$PY" -m mypy \
+            src/crypto_signal/product/intelligence_stream_family_sources.py
+          "$PY" -m py_compile \
+            src/crypto_signal/product/intelligence_stream_family_sources.py \
+            tests/test_rdp5_rich_derivatives_family.py
+          echo "RDP5_B_RICH_DERIVATIVES_FAMILY_PASS=YES"
+          echo "ZERO_EVENT_MARKET_TAPE_COVERAGE_WRITES=0"
+          echo "REAL_CAPITAL=0"
