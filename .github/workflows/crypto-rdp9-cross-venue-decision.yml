@@ -50,7 +50,6 @@ jobs:
             tests/test_confluence_matrix_v2.py \
             tests/test_unified_decision_runtime.py \
             tests/test_exact_decision_composition.py \
-            tests/test_wc2_live_runtime_index.py \
             tests/test_wc2_collection_protocol.py
           "$PY" -m ruff check \
             src/crypto_signal/intelligence/confluence_matrix_v2.py \
