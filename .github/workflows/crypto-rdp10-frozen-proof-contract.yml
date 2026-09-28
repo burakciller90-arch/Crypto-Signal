@@ -1,0 +1,223 @@
+name: RDP10 Frozen Proof Contract UID504
+
+on:
+  push:
+    branches:
+      - 'rdp10/**'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'src/crypto_signal/product/intelligence_stream_exact_evidence.py'
+      - 'tests/test_intelligence_stream_exact_evidence.py'
+      - '.github/workflows/crypto-rdp10-frozen-proof-contract.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: crypto-rdp10-frozen-proof-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  focused:
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          clean: true
+          fetch-depth: 0
+
+      - name: Verify exact source and canonical checkouts
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          WB="/Volumes/Crypto-504/Crypto-Signal-Workbench/repo"
+          DEV="$ROOT/Development"
+          PRODUCT="$ROOT/Product"
+          PY="$DEV/.venv/bin/python"
+          test "$(id -u)" = "504"
+          test -x "$PY"
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test -d "$WB/.git"
+          test "$(git -C "$WB" branch --show-current)" = "main"
+          test -z "$(git -C "$WB" status --porcelain)"
+          test -z "$(git -C "$DEV" status --porcelain)"
+          test -z "$(git -C "$PRODUCT" status --porcelain)"
+          {
+            echo "WORKBENCH_HEAD=$(git -C "$WB" rev-parse HEAD)"
+            echo "DEV_HEAD=$(git -C "$DEV" rev-parse HEAD)"
+            echo "PRODUCT_HEAD=$(git -C "$PRODUCT" rev-parse HEAD)"
+          } | tee "$RUNNER_TEMP/rdp10-checkouts"
+          echo "RDP10_EXACT_SOURCE_PASS=YES"
+          echo "RDP10_CANONICAL_CHECKOUTS_CLEAN=YES"
+          echo "REAL_CAPITAL=0"
+
+      - name: Focused fail-closed proof contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          PY="/Volumes/Crypto-504/Crypto-Signal/Development/.venv/bin/python"
+          export PYTHONPATH="$GITHUB_WORKSPACE/src"
+          "$PY" -m pytest -q tests/test_intelligence_stream_exact_evidence.py
+          "$PY" -m ruff check \
+            src/crypto_signal/product/intelligence_stream_exact_evidence.py \
+            tests/test_intelligence_stream_exact_evidence.py
+          "$PY" -m mypy --strict \
+            src/crypto_signal/product/intelligence_stream_exact_evidence.py
+          "$PY" -m py_compile \
+            src/crypto_signal/product/intelligence_stream_exact_evidence.py
+          echo "RDP10_FAIL_CLOSED_FOCUSED_PASS=YES"
+          echo "UNREGISTERED_DOMAIN_READY_AUTHORITY=NO"
+          echo "REAL_CAPITAL=0"
+
+      - name: Read-only live proof-state audit
+        shell: bash
+        run: |
+          set -euo pipefail
+          PY="/Volumes/Crypto-504/Crypto-Signal/Development/.venv/bin/python"
+          DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
+          export PYTHONPATH="$GITHUB_WORKSPACE/src"
+          export DEV
+          "$PY" - <<'PY'
+          from __future__ import annotations
+
+          import os
+          import sqlite3
+          from pathlib import Path
+
+          from crypto_signal.product.intelligence_stream_exact_evidence import (
+              IntelligenceStreamExactEvidenceReadModel,
+          )
+          from crypto_signal.product.intelligence_stream_read_model import (
+              IntelligenceStreamReadModel,
+          )
+
+          dev = Path(os.environ["DEV"])
+          runtime = dev / "runtime"
+          stream = runtime / "stream/intelligence_stream.sqlite3"
+          resolver = IntelligenceStreamExactEvidenceReadModel(
+              stream_ledger_path=stream,
+              signal_ledger_path=runtime / "ledger/live_signal_ledger.sqlite3",
+              decision_evidence_path=runtime / "decision/decision_evidence.sqlite3",
+              market_tape_path=runtime / "market_tape/market_tape.sqlite3",
+              event_source_runtime_path=runtime / "events/event_source.sqlite3",
+              provider_divergence_path=runtime / "data/provider_divergence.sqlite3",
+          )
+          read_model = IntelligenceStreamReadModel(stream)
+          registered = {
+              "geometry",
+              "frozen_chart",
+              "signal_lifecycle",
+              "order_book",
+              "public_trades",
+              "liquidity",
+              "order_flow",
+              "derivatives",
+              "event_calendar",
+              "event_risk",
+              "provider_divergence",
+              "data_quality",
+          }
+
+          uri = f"{stream.resolve().as_uri()}?mode=ro"
+          with sqlite3.connect(uri, uri=True, timeout=10.0) as db:
+              db.row_factory = sqlite3.Row
+              db.execute("PRAGMA query_only=ON")
+              rows = db.execute(
+                  """
+                  SELECT n.narrative_identity
+                  FROM stream_narrative_messages AS n
+                  JOIN stream_narrative_plans AS p
+                    ON p.plan_identity = n.plan_identity
+                  JOIN stream_fact_bundles AS f
+                    ON f.fact_bundle_identity = p.fact_bundle_identity
+                  WHERE f.payload_json LIKE '%"projector_id"%'
+                  ORDER BY n.event_at_ms DESC, n.narrative_identity DESC
+                  LIMIT 300
+                  """
+              ).fetchall()
+
+          selected: dict[str, str] = {}
+          for row in rows:
+              identity = str(row["narrative_identity"])
+              detail = read_model.read_message_detail(identity)
+              if detail is None:
+                  continue
+              fact = detail.get("fact_bundle")
+              if not isinstance(fact, dict):
+                  continue
+              projector = fact.get("projector_id")
+              if isinstance(projector, str):
+                  selected.setdefault(projector, identity)
+
+          required = {
+              "market_geometry_change",
+              "liquidity_change",
+              "order_flow_change",
+              "derivatives_change",
+              "provider_quality_change",
+          }
+          missing = required - set(selected)
+          if missing:
+              raise SystemExit(
+                  "RDP10_LIVE_PROJECTOR_MISSING:" + ",".join(sorted(missing))
+              )
+
+          unregistered_seen = 0
+          audited = 0
+          for _, identity in sorted(selected.items()):
+              payload = resolver.read_for_narrative(identity)
+              if payload is None:
+                  raise SystemExit("RDP10_LIVE_EVIDENCE_DISAPPEARED")
+              if payload.get("current_data_substitution") is not False:
+                  raise SystemExit("RDP10_CURRENT_DATA_SUBSTITUTION_FORBIDDEN")
+              audited += 1
+              for resolution in payload.get("resolutions", ()):
+                  if not isinstance(resolution, dict):
+                      raise SystemExit("RDP10_INVALID_RESOLUTION")
+                  domain = str(resolution.get("domain"))
+                  state = str(resolution.get("resolution_state"))
+                  if resolution.get("current_data_substitution") is not False:
+                      raise SystemExit("RDP10_DOMAIN_CURRENT_DATA_SUBSTITUTION")
+                  if domain not in registered:
+                      unregistered_seen += 1
+                      if state == "READY_EXACT":
+                          raise SystemExit(
+                              "RDP10_UNREGISTERED_DOMAIN_READY:" + domain
+                          )
+
+          print(f"RDP10_LIVE_MESSAGES_AUDITED={audited}")
+          print(f"RDP10_UNREGISTERED_DOMAINS_OBSERVED={unregistered_seen}")
+          print("RDP10_UNREGISTERED_READY_COUNT=0")
+          print("RDP10_LIVE_FAIL_CLOSED_PASS=YES")
+          print("HISTORICAL_BACKFILL=NO")
+          print("REAL_CAPITAL=0")
+          PY
+
+      - name: Verify canonical checkouts remained untouched
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          WB="/Volumes/Crypto-504/Crypto-Signal-Workbench/repo"
+          DEV="$ROOT/Development"
+          PRODUCT="$ROOT/Product"
+          STATE="$RUNNER_TEMP/rdp10-checkouts"
+          WB_BEFORE="$(sed -n 's/^WORKBENCH_HEAD=//p' "$STATE")"
+          DEV_BEFORE="$(sed -n 's/^DEV_HEAD=//p' "$STATE")"
+          PRODUCT_BEFORE="$(sed -n 's/^PRODUCT_HEAD=//p' "$STATE")"
+          test -z "$(git -C "$WB" status --porcelain)"
+          test -z "$(git -C "$DEV" status --porcelain)"
+          test -z "$(git -C "$PRODUCT" status --porcelain)"
+          test "$(git -C "$WB" rev-parse HEAD)" = "$WB_BEFORE"
+          test "$(git -C "$DEV" rev-parse HEAD)" = "$DEV_BEFORE"
+          test "$(git -C "$PRODUCT" rev-parse HEAD)" = "$PRODUCT_BEFORE"
+          echo "RDP10_NON_MUTATING_PASS=YES"
+          echo "HISTORICAL_BACKFILL=NO"
+          echo "REAL_CAPITAL=0"

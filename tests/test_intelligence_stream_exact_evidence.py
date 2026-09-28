@@ -421,3 +421,92 @@ def test_exact_evidence_api_and_ui_contract(
         assert state in visual_js
     assert "/evidence" in evidence_js
     assert "current data ile ikame yapılmadı" in evidence_js.lower()
+
+def test_unregistered_derived_domain_cannot_become_ready_from_raw_source(
+    tmp_path: Path,
+) -> None:
+    market_tape_path = tmp_path / "market_tape.sqlite3"
+    stream_path = tmp_path / "stream.sqlite3"
+    event_at_ms = 30_000
+    snapshot = build_orderbook_snapshot(
+        exchange=Exchange.BYBIT,
+        market_type=MarketType.SPOT,
+        symbol="BTCUSDT",
+        event_at_ms=event_at_ms,
+        source_timestamp_ms=event_at_ms,
+        response_time_ms=event_at_ms,
+        ingested_at_ms=event_at_ms,
+        update_id=17,
+        sequence=21,
+        bids=(OrderBookLevel(price=Decimal(100), size=Decimal(2)),),
+        asks=(OrderBookLevel(price=Decimal(101), size=Decimal(3)),),
+        source=DataSource.REST,
+        adapter_version="rdp10-fail-closed/1",
+    )
+    store = MarketTapeStore(market_tape_path)
+    store.initialize()
+    store.append_orderbook(snapshot)
+
+    derived_identity = canonical_sha256(
+        {"evidence": "liquidity-structure-freeze"}
+    )
+    source_identity = canonical_sha256(
+        {"source": "rdp10-liquidity-structure"}
+    )
+    family = build_family_snapshot(
+        projector_id="liquidity_change",
+        family=ConfluenceFamily.LIQUIDITY,
+        category=StreamCategory.INTELLIGENCE,
+        subtype="liquidity_material_change",
+        importance=StreamImportance.IMPORTANT,
+        source_event_identity=source_identity,
+        source_scope="bybit:spot:market_tape_liquidity",
+        asset="BTC",
+        symbol="BTCUSDT",
+        market="BTCUSDT",
+        timeframe="microstructure",
+        event_at_ms=event_at_ms,
+        source_as_of_ms=event_at_ms,
+        evidence_identities=tuple(
+            sorted((derived_identity, snapshot.snapshot_identity))
+        ),
+        evidence_domains=("liquidity_structure",),
+        state_label="measured:none",
+        state_components=(("persistent_pool_count", "1"),),
+        direction=None,
+        source_quality="measured",
+    )
+    narrative_identity = _project_family(
+        stream_path,
+        projector_id="liquidity_change",
+        snapshot=family,
+    )
+
+    payload = IntelligenceStreamExactEvidenceReadModel(
+        stream_ledger_path=stream_path,
+        market_tape_path=market_tape_path,
+    ).read_for_narrative(narrative_identity)
+    assert payload is not None
+
+    resolution = _resolution(payload, "liquidity_structure")
+    assert resolution["resolution_state"] == "IDENTITY_ONLY_EXACT"
+    projection = resolution["customer_projection"]
+    assert isinstance(projection, dict)
+    assert projection["exact_source_objects"] == ()
+    assert projection["exact_source_object_count"] == 0
+    assert resolution["current_data_substitution"] is False
+
+    references = {
+        item["evidence_identity"]: item
+        for item in payload["reference_resolutions"]
+    }
+    assert (
+        references[snapshot.snapshot_identity]["resolution_state"]
+        == "READY_EXACT"
+    )
+    assert (
+        references[derived_identity]["resolution_state"]
+        == "IDENTITY_ONLY_EXACT"
+    )
+    assert payload["current_data_substitution"] is False
+
