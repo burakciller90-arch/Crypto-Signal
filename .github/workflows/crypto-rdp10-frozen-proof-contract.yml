@@ -144,6 +144,7 @@ jobs:
               event_source_runtime_path=runtime / "events/event_source.sqlite3",
               provider_divergence_path=runtime / "data/provider_divergence.sqlite3",
               frozen_proof_store_path=runtime / "stream/frozen_proofs.sqlite3",
+              options_surface_path=runtime / "market_tape/options_surface.sqlite3",
           )
           read_model = IntelligenceStreamReadModel(stream)
           registered = {
