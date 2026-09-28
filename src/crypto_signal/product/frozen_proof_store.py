@@ -151,6 +151,7 @@ class FrozenProofStore:
     The store never computes historical evidence and intentionally exposes no
     "latest proof" API. Resolution requires an exact object or analysis
     identity, which keeps historical callers from substituting current truth.
+    Callers must persist the exact proof before publishing READY_EXACT.
     """
 
     def __init__(self, path: Path) -> None:
