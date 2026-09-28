@@ -652,13 +652,17 @@ PASS:
 
 ## RDP5 — Derivatives + liquidation restoration
 
-Status: **ACTIVE**
+Status: **PASS**
 
 Progress:
-- 60-second Bybit REST derivatives snapshot already persists mark/index/OI/funding truth through the canonical RDP2 source contract;
-- PIT-safe Derivatives Context, Derivatives Dynamics, Liquidation Heatmap and Derivatives Crowding engines already exist;
-- Bybit allLiquidation WebSocket parser, raw/normalized persistence and LiquidationFeedCoverage already exist, but the current runner is explicitly bounded development-only, disabled by default and not owned by the runtime supervisor;
-- exact next frontier: **RDP5-A — production-safe continuous liquidation collection under SSD504 supervisor ownership with explicit connection/silence/stale coverage and fail-closed freshness; reuse existing collector/model instead of creating a parallel liquidation path.**
+- continuous Bybit `allLiquidation` collection is supervisor-owned on SSD504 under `REAL_CAPITAL=0`, with explicit heartbeat and transport connected/stale/disconnected coverage;
+- transport liveness is stored separately from provider liquidation-event coverage; silence is never converted into zero-event evidence;
+- Derivatives Context + Dynamics are live inside the existing Derivatives family, with mark/index/OI/funding/basis preserved through canonical source provenance;
+- observed Liquidation Heatmap + Derivatives Crowding are wired into the same Derivatives family with no new score family and no direction invention;
+- provider coverage is consumed PIT-safely at `observed_at_ms`; incomplete event-batch coverage remains unresolved rather than becoming a zero-event claim;
+- PR #1590 established RDP5-C on main `19cc65f9b5dbcbf8ee05ba57368145c3f12f6722`; live-discovered PIT fix PR #1594 merged as main `b2d687e903f9b2fa3eaa66f8e6abf6d51db5747d`;
+- exact-head focused acceptance: RDP5-C `36411477120` PASS (61 tests + Ruff + mypy + py_compile), RDP5 Dynamics `36411477020` PASS, RDP4 Rich Market Tape `36411477034` PASS, RDP4 Order Flow dependencies `36411477037` PASS;
+- final read-only UID504 exact-main diagnostic #1596 run `36411983878` PASS: stable collector, heartbeat/connection age 6082ms, transport age 0ms, 116 liquidation rows, 69 provider coverage rows, every coverage row backed by a non-empty Bybit provider event batch; BTC/ETH preserved no-coverage backward compatibility and SOL with real event+coverage remained fail-closed `coverage_present_unresolved`, direction `None`.
 
 Goal:
 - make M4 continuously fresh.
@@ -675,9 +679,12 @@ Work:
 PASS:
 - derivatives inside freshness budget;
 - liquidation feed has explicit connected coverage;
-- stale or missing feed fails closed.
+- stale or missing provider event coverage fails closed;
+- no fabricated zero-liquidation or future-liquidation-risk claim.
 
 ## RDP6 — Options / volatility intelligence
+
+Status: **ACTIVE**
 
 Goal:
 - add the most important missing BTC/ETH derivatives context.
@@ -690,7 +697,8 @@ Work:
 - volume;
 - volatility index where available;
 - expiry concentration;
-- exact freezes.
+- exact PIT-safe freezes;
+- enrich the existing Derivatives family only.
 
 PASS:
 - data-source semantics documented;
@@ -892,7 +900,7 @@ Every new agent working on this program must read, in order:
 
 Current exact frontier:
 
-**RDP2 — Canonical source envelope + coverage ledger**
+**RDP6 — BTC/ETH Options / volatility intelligence**
 
 Do not skip forward to Portfolio or frontend implementation while RDP1–RDP11 remain open unless the user explicitly authorizes parallel preparatory work.
 
