@@ -73,6 +73,26 @@ Semantics preserved:
 
 Exact nextAction: run the complete RDP10 Frozen Proof Contract UID504 acceptance on the final checkpoint head; inspect focused tests/lint/type output, live fail-closed audit, canonical non-mutation, `HISTORICAL_BACKFILL=NO`, and `REAL_CAPITAL=0` before any PR/merge.
 
+### Retry checkpoint — E2 tests passed; Ruff import order fixed
+
+First exact-head E2 acceptance:
+
+- run `36469577166`
+- job `109088179016`
+- canonical checkout verification PASS
+- focused pytest suite reached warnings summary with no product-test failure
+- Ruff alone failed with `I001 Import block is un-sorted or un-formatted`
+- live audit correctly skipped because focused gate failed
+- non-mutating cleanup PASS
+
+Repair:
+
+- `5a41cf4083401aa7148004f92c17578a3abe6a88`
+- only moves the local liquidation-family test module import to the Ruff-required position
+- no production code or acceptance criterion changed
+
+Exact nextAction: rerun the full RDP10 UID504 contract on the final retry-checkpoint head; merge only if focused + live + non-mutating all PASS.
+
 
 Conversation memory is non-authoritative. Rebuild from this file, HANDOFF_LOG, canonical roadmap, and live Git/GitHub/runtime evidence.
 
