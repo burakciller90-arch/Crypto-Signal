@@ -1,0 +1,619 @@
+name: RDP5-C Live Exact-Main Diagnostic UID504
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/crypto-rdp5-c-live-exact-main-diagnostic.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  diagnostic:
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          clean: true
+          fetch-depth: 1
+
+      - name: Prove live RDP5-C semantics read-only
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          WB="/Volumes/Crypto-504/Crypto-Signal-Workbench/repo"
+          DEV="$ROOT/Development"
+          RUNTIME="$DEV/runtime/market_tape/liquidation_collector_runtime.sqlite3"
+          MARKET="$DEV/runtime/market_tape/market_tape.sqlite3"
+          PY="$DEV/.venv/bin/python"
+          BASE="${{ github.event.pull_request.base.sha }}"
+
+          test "$(id -u)" = "504"
+          test "$(git -C "$WB" branch --show-current)" = "main"
+          test -z "$(git -C "$WB" status --porcelain)"
+          test "$(git -C "$WB" rev-parse HEAD)" = "$BASE"
+          test -z "$(git -C "$DEV" status --porcelain)"
+          test "$(git -C "$DEV" rev-parse HEAD)" = "$BASE"
+          test -f "$RUNTIME"
+          test -f "$MARKET"
+          test -x "$PY"
+          echo "RDP5_C_LIVE_WORKBENCH_EXACT_MAIN_PASS=YES"
+          echo "RDP5_C_LIVE_DEVELOPMENT_EXACT_MAIN_PASS=YES"
+
+          pid="$(cat "$ROOT/liquidation-stream.pid" 2>/dev/null || true)"
+          test -n "$pid"
+          kill -0 "$pid"
+          cmd="$(ps -p "$pid" -o command=)"
+          printf '%s\n' "$cmd"
+          printf '%s' "$cmd" | grep -F "$DEV/ops/run_liquidation_market_tape_stream.py" >/dev/null
+          printf '%s' "$cmd" | grep -F -- "--max-messages 0" >/dev/null
+          printf '%s' "$cmd" | grep -F -- "--heartbeat-interval-ms 10000" >/dev/null
+          printf '%s' "$cmd" | grep -F -- "--max-transport-silence-ms 45000" >/dev/null
+
+          for _ in {1..8}; do
+            sleep 2
+            current="$(cat "$ROOT/liquidation-stream.pid" 2>/dev/null || true)"
+            test "$current" = "$pid"
+            kill -0 "$pid"
+          done
+          echo "RDP5_C_LIQUIDATION_PID_STABLE_PASS=YES pid=$pid"
+
+          export PYTHONPATH="$DEV/src:$DEV"
+          "$PY" - "$RUNTIME" "$MARKET" "$pid" <<'PY'
+          from __future__ import annotations
+
+          import json
+          import sqlite3
+          import sys
+          import time
+          from pathlib import Path
+
+          import crypto_signal.product.intelligence_stream_family_sources as family_sources
+          from crypto_signal.data.adapters.bybit_liquidations import (
+              BYBIT_ALL_LIQUIDATION_ADAPTER_VERSION,
+          )
+          from crypto_signal.data.derivatives import DerivativesInstrumentType
+          from crypto_signal.data.market_tape import (
+              MarketTapeLiquidationReplay,
+              _derivatives_from_payload,
+              _liquidation_coverage_from_payload,
+              _liquidation_from_payload,
+          )
+          from crypto_signal.data.models import Exchange
+          from crypto_signal.intelligence.confluence_matrix_v2 import ConfluenceFamily
+          from crypto_signal.intelligence.derivatives_context import (
+              DerivativesContextLabel,
+              build_derivatives_context_evidence_freeze,
+          )
+          from crypto_signal.intelligence.derivatives_dynamics import (
+              DerivativesDynamicsStatus,
+              build_derivatives_dynamics_evidence_freeze,
+          )
+          from crypto_signal.intelligence.liquidation_heatmap import (
+              DEFAULT_LIQUIDATION_HEATMAP_CONFIG,
+          )
+          from crypto_signal.ledger.serialization import canonical_sha256
+
+          runtime = Path(sys.argv[1])
+          market = Path(sys.argv[2])
+          pid = int(sys.argv[3])
+          now_ms = time.time_ns() // 1_000_000
+          symbols = ("BTCUSDT", "ETHUSDT", "SOLUSDT")
+          instrument = DerivativesInstrumentType.LINEAR_PERPETUAL
+          lookback_ms = DEFAULT_LIQUIDATION_HEATMAP_CONFIG.lookback_ms
+
+          def ro_connect(path: Path) -> sqlite3.Connection:
+              uri = f"{path.resolve().as_uri()}?mode=ro"
+              db = sqlite3.connect(uri, uri=True, timeout=5.0)
+              db.row_factory = sqlite3.Row
+              db.execute("PRAGMA query_only=ON")
+              return db
+
+          with ro_connect(runtime) as db:
+              instance = db.execute(
+                  """
+                  SELECT instance_identity, process_id, payload_json
+                  FROM collector_instances
+                  WHERE provider='bybit' AND source='liquidation_stream'
+                  ORDER BY started_at_ms DESC, instance_identity DESC
+                  LIMIT 1
+                  """
+              ).fetchone()
+              assert instance is not None
+              assert int(instance["process_id"]) == pid
+              heartbeat = db.execute(
+                  """
+                  SELECT sequence_no, observed_at_ms, payload_json
+                  FROM collector_heartbeats
+                  WHERE instance_identity=?
+                  ORDER BY sequence_no DESC LIMIT 1
+                  """,
+                  (str(instance["instance_identity"]),),
+              ).fetchone()
+              connection = db.execute(
+                  """
+                  SELECT sequence_no, state, observed_at_ms, payload_json
+                  FROM liquidation_connection_coverage
+                  WHERE instance_identity=?
+                  ORDER BY sequence_no DESC LIMIT 1
+                  """,
+                  (str(instance["instance_identity"]),),
+              ).fetchone()
+              assert heartbeat is not None
+              assert connection is not None
+
+          hb = json.loads(str(heartbeat["payload_json"]))
+          cv = json.loads(str(connection["payload_json"]))
+          hb_age = now_ms - int(hb["observed_at_ms"])
+          cv_age = now_ms - int(cv["observed_at_ms"])
+          transport_age = int(cv["observed_at_ms"]) - int(
+              cv["last_transport_activity_ms"]
+          )
+          assert 0 <= hb_age <= 30_000, hb_age
+          assert 0 <= cv_age <= 30_000, cv_age
+          assert cv["state"] == "connected", cv
+          assert tuple(cv["symbols"]) == symbols
+          assert set(cv["reason_codes"]) == {
+              "subscription_confirmed",
+              "transport_activity_fresh",
+          }
+          assert 0 <= transport_age <= 45_000, transport_age
+          assert cv["production_authority"] is False
+          assert int(cv["real_capital"]) == 0
+
+          with ro_connect(market) as db:
+              total_liquidations = int(
+                  db.execute(
+                      "SELECT COUNT(*) FROM market_tape_liquidations"
+                  ).fetchone()[0]
+              )
+              coverage_rows = db.execute(
+                  """
+                  SELECT
+                      coverage_identity,
+                      exchange,
+                      instrument_type,
+                      symbol,
+                      coverage_start_ms,
+                      coverage_end_ms,
+                      observed_at_ms,
+                      source,
+                      adapter_version,
+                      payload_json
+                  FROM market_tape_liquidation_coverage
+                  ORDER BY coverage_end_ms ASC, coverage_identity ASC
+                  """
+              ).fetchall()
+
+              # Provider event coverage is allowed to exist, but every persisted
+              # row must be provably backed by a non-empty Bybit allLiquidation
+              # provider batch. Transport liveness lives in the separate runtime
+              # DB and can never satisfy these joins.
+              for coverage_row in coverage_rows:
+                  coverage = _liquidation_coverage_from_payload(
+                      str(coverage_row["payload_json"])
+                  )
+                  assert coverage.coverage_identity == str(
+                      coverage_row["coverage_identity"]
+                  )
+                  assert coverage.exchange is Exchange.BYBIT
+                  assert (
+                      coverage.instrument_type
+                      is DerivativesInstrumentType.LINEAR_PERPETUAL
+                  )
+                  assert coverage.source.value == "websocket"
+                  assert (
+                      coverage.adapter_version
+                      == BYBIT_ALL_LIQUIDATION_ADAPTER_VERSION
+                  )
+                  assert coverage.coverage_start_ms == int(
+                      coverage_row["coverage_start_ms"]
+                  )
+                  assert coverage.coverage_end_ms == int(
+                      coverage_row["coverage_end_ms"]
+                  )
+                  assert coverage.observed_at_ms == int(
+                      coverage_row["observed_at_ms"]
+                  )
+
+                  batch_rows = db.execute(
+                      """
+                      SELECT
+                          event_at_ms,
+                          source_timestamp_ms,
+                          ingested_at_ms,
+                          source_row_index,
+                          source,
+                          adapter_version,
+                          payload_json
+                      FROM market_tape_liquidations
+                      WHERE exchange=?
+                        AND instrument_type=?
+                        AND symbol=?
+                        AND source_timestamp_ms=?
+                        AND ingested_at_ms=?
+                        AND source=?
+                        AND adapter_version=?
+                      ORDER BY source_row_index ASC, liquidation_identity ASC
+                      """,
+                      (
+                          coverage.exchange.value,
+                          coverage.instrument_type.value,
+                          coverage.symbol,
+                          coverage.coverage_end_ms,
+                          coverage.observed_at_ms,
+                          coverage.source.value,
+                          coverage.adapter_version,
+                      ),
+                  ).fetchall()
+                  assert batch_rows, coverage.coverage_identity
+                  batch_events = tuple(
+                      _liquidation_from_payload(str(row["payload_json"]))
+                      for row in batch_rows
+                  )
+                  assert tuple(
+                      item.source_row_index for item in batch_events
+                  ) == tuple(range(len(batch_events)))
+                  assert min(
+                      item.event_at_ms for item in batch_events
+                  ) == coverage.coverage_start_ms
+                  assert all(
+                      item.event_at_ms <= coverage.coverage_end_ms
+                      and item.source_timestamp_ms
+                      == coverage.coverage_end_ms
+                      and item.ingested_at_ms
+                      == coverage.observed_at_ms
+                      and item.source == coverage.source
+                      and item.adapter_version == coverage.adapter_version
+                      for item in batch_events
+                  )
+
+              provider_coverages = len(coverage_rows)
+
+          class ReadOnlyLiveStore:
+              def __init__(self, path: Path) -> None:
+                  self.path = path
+
+              def recent_orderbooks(self, **_kwargs):
+                  return ()
+
+              def recent_trades(self, **_kwargs):
+                  return ()
+
+              def recent_derivatives(
+                  self,
+                  *,
+                  exchange,
+                  instrument_type,
+                  symbol,
+                  limit=1000,
+              ):
+                  with ro_connect(self.path) as db:
+                      rows = db.execute(
+                          """
+                          SELECT payload_json
+                          FROM market_tape_derivatives
+                          WHERE exchange=? AND instrument_type=? AND symbol=?
+                          ORDER BY event_at_ms DESC, rowid DESC
+                          LIMIT ?
+                          """,
+                          (
+                              exchange.value,
+                              instrument_type.value,
+                              symbol,
+                              limit,
+                          ),
+                      ).fetchall()
+                  return tuple(
+                      reversed(
+                          tuple(
+                              _derivatives_from_payload(
+                                  str(row["payload_json"])
+                              )
+                              for row in rows
+                          )
+                      )
+                  )
+
+              def recent_liquidations(
+                  self,
+                  *,
+                  exchange,
+                  instrument_type,
+                  symbol,
+                  limit=1000,
+              ):
+                  with ro_connect(self.path) as db:
+                      rows = db.execute(
+                          """
+                          SELECT payload_json
+                          FROM market_tape_liquidations
+                          WHERE exchange=? AND instrument_type=? AND symbol=?
+                          ORDER BY event_at_ms DESC, rowid DESC
+                          LIMIT ?
+                          """,
+                          (
+                              exchange.value,
+                              instrument_type.value,
+                              symbol,
+                              limit,
+                          ),
+                      ).fetchall()
+                  return tuple(
+                      reversed(
+                          tuple(
+                              _liquidation_from_payload(
+                                  str(row["payload_json"])
+                              )
+                              for row in rows
+                          )
+                      )
+                  )
+
+              def recent_liquidation_coverage(
+                  self,
+                  *,
+                  exchange,
+                  instrument_type,
+                  symbol,
+                  limit=100,
+              ):
+                  with ro_connect(self.path) as db:
+                      rows = db.execute(
+                          """
+                          SELECT payload_json
+                          FROM market_tape_liquidation_coverage
+                          WHERE exchange=? AND instrument_type=? AND symbol=?
+                          ORDER BY coverage_end_ms DESC,
+                                   coverage_start_ms DESC,
+                                   rowid DESC
+                          LIMIT ?
+                          """,
+                          (
+                              exchange.value,
+                              instrument_type.value,
+                              symbol,
+                              limit,
+                          ),
+                      ).fetchall()
+                  return tuple(
+                      reversed(
+                          tuple(
+                              _liquidation_coverage_from_payload(
+                                  str(row["payload_json"])
+                              )
+                              for row in rows
+                          )
+                      )
+                  )
+
+              def liquidation_replay(self, *, coverage_identity, as_of_ms):
+                  with ro_connect(self.path) as db:
+                      coverage_row = db.execute(
+                          """
+                          SELECT payload_json
+                          FROM market_tape_liquidation_coverage
+                          WHERE coverage_identity=?
+                          """,
+                          (coverage_identity,),
+                      ).fetchone()
+                      assert coverage_row is not None
+                      coverage = _liquidation_coverage_from_payload(
+                          str(coverage_row["payload_json"])
+                      )
+                      assert coverage.observed_at_ms <= as_of_ms
+                      rows = db.execute(
+                          """
+                          SELECT payload_json
+                          FROM market_tape_liquidations
+                          WHERE exchange=?
+                            AND instrument_type=?
+                            AND symbol=?
+                            AND event_at_ms >= ?
+                            AND event_at_ms <= ?
+                            AND event_at_ms <= ?
+                            AND source_timestamp_ms <= ?
+                            AND ingested_at_ms <= ?
+                          ORDER BY event_at_ms ASC,
+                                   source_timestamp_ms ASC,
+                                   source_row_index ASC,
+                                   liquidation_identity ASC
+                          """,
+                          (
+                              coverage.exchange.value,
+                              coverage.instrument_type.value,
+                              coverage.symbol,
+                              coverage.coverage_start_ms,
+                              coverage.coverage_end_ms,
+                              as_of_ms,
+                              as_of_ms,
+                              as_of_ms,
+                          ),
+                      ).fetchall()
+                  return MarketTapeLiquidationReplay(
+                      coverage=coverage,
+                      events=tuple(
+                          _liquidation_from_payload(str(row["payload_json"]))
+                          for row in rows
+                      ),
+                      as_of_ms=as_of_ms,
+                  )
+
+          live_store = ReadOnlyLiveStore(market)
+          recent_by_symbol = {}
+          coverages_by_symbol = {}
+          derivatives_by_symbol = {}
+          for symbol in symbols:
+              derivatives_by_symbol[symbol] = live_store.recent_derivatives(
+                  exchange=Exchange.BYBIT,
+                  instrument_type=instrument,
+                  symbol=symbol,
+                  limit=64,
+              )
+              assert len(derivatives_by_symbol[symbol]) >= 3
+              history = live_store.recent_liquidations(
+                  exchange=Exchange.BYBIT,
+                  instrument_type=instrument,
+                  symbol=symbol,
+                  limit=1000,
+              )
+              recent_by_symbol[symbol] = tuple(
+                  item
+                  for item in history
+                  if (
+                      max(
+                          item.event_at_ms,
+                          item.source_timestamp_ms,
+                          item.ingested_at_ms,
+                      )
+                      <= now_ms
+                      and item.event_at_ms >= now_ms - lookback_ms
+                  )
+              )
+              coverages_by_symbol[symbol] = tuple(
+                  item
+                  for item in live_store.recent_liquidation_coverage(
+                      exchange=Exchange.BYBIT,
+                      instrument_type=instrument,
+                      symbol=symbol,
+                      limit=100,
+                  )
+                  if (
+                      item.observed_at_ms <= now_ms
+                      and item.coverage_end_ms <= now_ms
+                      and now_ms - item.coverage_end_ms <= lookback_ms
+                  )
+              )
+
+          original_store = family_sources.MarketTapeStore
+          family_sources.MarketTapeStore = ReadOnlyLiveStore
+          try:
+              snapshots = family_sources.build_market_tape_family_snapshots(
+                  market,
+                  symbols=symbols,
+                  as_of_ms=now_ms,
+              )
+          finally:
+              family_sources.MarketTapeStore = original_store
+
+          derivative_snapshots = {
+              item.symbol: item
+              for item in snapshots
+              if item.family is ConfluenceFamily.DERIVATIVES
+          }
+          assert set(derivative_snapshots) == set(symbols)
+
+          for symbol in symbols:
+              observations = derivatives_by_symbol[symbol]
+              context = build_derivatives_context_evidence_freeze(
+                  observations,
+                  as_of_ms=now_ms,
+              )
+              dynamics = build_derivatives_dynamics_evidence_freeze(
+                  observations,
+                  as_of_ms=now_ms,
+              )
+              assert (
+                  context.analysis.label
+                  is not DerivativesContextLabel.UNRESOLVED
+              ), (symbol, context.analysis.uncertainty_flags)
+              assert (
+                  dynamics.analysis.status
+                  is DerivativesDynamicsStatus.MEASURED
+              ), (symbol, dynamics.analysis.uncertainty_flags)
+              assert dynamics.analysis.latest_observation_age_ms <= 180_000
+
+              snapshot = derivative_snapshots[symbol]
+              assert snapshot.direction is None
+              assert snapshot.source_quality == "measured"
+              components = {
+                  item.name: item.value
+                  for item in snapshot.state_components
+              }
+              assert components["dynamics_status"] == "measured"
+
+              recent = recent_by_symbol[symbol]
+              eligible = coverages_by_symbol[symbol]
+              if not recent and not eligible:
+                  assert "observed_liquidation_events" not in snapshot.evidence_domains
+                  assert "observed_liquidation_heatmap" not in snapshot.evidence_domains
+                  assert "derivatives_crowding" not in snapshot.evidence_domains
+                  assert "liquidation_heatmap_status" not in components
+                  assert "crowding_status" not in components
+                  assert "liquidation_zero_event_claim" not in components
+                  expected_source = canonical_sha256(
+                      {
+                          "as_of_ms": now_ms,
+                          "context_freeze_identity": context.freeze_identity,
+                          "dynamics_freeze_identity": dynamics.freeze_identity,
+                          "symbol": symbol,
+                          "version": "rdp5-derivatives-dynamics-family-v1/1",
+                      }
+                  )
+                  assert snapshot.source_event_identity == expected_source
+                  mode = "rdp5_b_backward_compatible"
+              elif recent and not eligible:
+                  assert "observed_liquidation_events" in snapshot.evidence_domains
+                  assert "observed_liquidation_heatmap" not in snapshot.evidence_domains
+                  assert "derivatives_crowding" not in snapshot.evidence_domains
+                  assert components["observed_liquidation_event_count"] == str(
+                      len(recent)
+                  )
+                  assert components["liquidation_heatmap_status"] == "unavailable"
+                  assert components["crowding_status"] == "unavailable"
+                  assert components["liquidation_zero_event_claim"] == "unavailable"
+                  assert (
+                      "liquidation_event_coverage_unavailable_or_stale"
+                      in snapshot.uncertainty_flags
+                  )
+                  mode = "observed_only_fail_closed"
+              else:
+                  assert "liquidation_heatmap_status" in components
+                  status = components["liquidation_heatmap_status"]
+                  claim = components["liquidation_zero_event_claim"]
+                  assert status in {"measured", "unresolved", "unavailable"}
+                  if status == "measured":
+                      assert claim in {
+                          "verified_complete_coverage",
+                          "not_applicable_observed_events",
+                      }
+                      assert (
+                          components["estimated_leverage_concentration_status"]
+                          == "not_estimated"
+                      )
+                      assert (
+                          components["liquidation_risk_zone_status"]
+                          == "not_estimated"
+                      )
+                  else:
+                      assert claim in {
+                          "unavailable",
+                          "unavailable_incomplete_coverage",
+                      }
+                  mode = f"coverage_present_{status}"
+
+              print(
+                  "RDP5_C_LIVE_SYMBOL_PASS "
+                  f"symbol={symbol} "
+                  f"derivatives_age_ms={dynamics.analysis.latest_observation_age_ms} "
+                  f"recent_liquidations={len(recent)} "
+                  f"eligible_provider_coverages={len(eligible)} "
+                  f"mode={mode} "
+                  f"direction={snapshot.direction}"
+              )
+
+          print(f"LIQUIDATION_HEARTBEAT_AGE_MS={hb_age}")
+          print(f"LIQUIDATION_CONNECTION_COVERAGE_AGE_MS={cv_age}")
+          print(f"LIQUIDATION_TRANSPORT_AGE_MS={transport_age}")
+          print(f"LIQUIDATION_EVENT_ROWS={total_liquidations}")
+          print(f"LIQUIDATION_PROVIDER_COVERAGE_ROWS={provider_coverages}")
+          print("PROVIDER_EVENT_COVERAGE_FROM_TRANSPORT=NO")
+          print("LIVE_DB_OPEN_MODE=READ_ONLY")
+          print("RDP5_C_LIVE_FAMILY_PASS=YES")
+          print("NO_NEW_FAMILY_OR_DIRECTION=YES")
+          print("REAL_CAPITAL=0")
+          PY
