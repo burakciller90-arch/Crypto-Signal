@@ -59,6 +59,24 @@ Current branch is 2 commits ahead / 0 behind the task-start main.
 
 RDP10 is still ACTIVE and not PASS.
 
+### Phase checkpoint — implementation complete, acceptance pending
+
+Exact branch state entering acceptance:
+
+- active branch: `rdp10/order-flow-derived-proof-d2`
+- implementation commits include:
+  - `1c3bd9975735ab815ab9aba7a7659856a1ffe244` — Order Flow proof persistence
+  - `69f85d6cd73aa21239e4a969339a2387fb58992b` — resolver integration
+  - `24879d0e81970761773a24f9d11a69c2deed035f` — micro/temporal/absorption persistence tests
+  - `81f8e02c140961d07ccc5a6c5d23e0464d6eda66` — divergence persistence test
+  - `c8005d42ebf3da5192aafda7fe0d487153c93e67` — resolver exactness test
+  - `3dbe214934ee3bcb7ed488ee7648872d5a51f951` — UID504 gate coverage
+  - `4670ca8f6c1e4f621c8d7f7a208ab2ca14b40205` — mandatory durable task-start checkpoint operating rule
+- no D2 PR has been opened yet.
+- no D2 merge has occurred.
+- acceptance must run on the final checkpoint head after this documentation commit.
+- exact nextAction: inspect exact-head UID504 RDP10 acceptance output; if PASS, re-check main/open PRs and merge; if FAIL, fix only the failing acceptance issue and write the next phase checkpoint before retry.
+
 
 This is a replaceable current checkpoint. It is not permission to skip re-measurement.
 
