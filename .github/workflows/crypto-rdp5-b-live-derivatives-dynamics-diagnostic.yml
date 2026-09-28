@@ -1,0 +1,115 @@
+name: RDP5-B Live Derivatives Dynamics Diagnostic UID504
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/crypto-rdp5-b-live-derivatives-dynamics-diagnostic.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  diagnostic:
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          clean: true
+          fetch-depth: 1
+
+      - name: Verify exact-main live derivatives dynamics fact
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          DEV="$ROOT/Development"
+          STREAM="$DEV/runtime/stream/intelligence_stream.sqlite3"
+          PY="$DEV/.venv/bin/python"
+
+          test "$(id -u)" = "504"
+          test "$(git -C "$DEV" rev-parse HEAD)" = "${{ github.event.pull_request.base.sha }}"
+          test -z "$(git -C "$DEV" status --porcelain)"
+          test -f "$STREAM"
+          echo "RDP5_B_LIVE_EXACT_MAIN_PASS=YES head=$(git -C "$DEV" rev-parse HEAD)"
+
+          ready=0
+          for _ in {1..90}; do
+            if "$PY" - "$STREAM" <<'PY'
+          import json
+          import sqlite3
+          import sys
+          from pathlib import Path
+
+          path = Path(sys.argv[1])
+          r11_started_ms = 1790587400000
+          uri = f"{path.resolve().as_uri()}?mode=ro"
+          with sqlite3.connect(uri, uri=True, timeout=5.0) as db:
+              db.execute("PRAGMA query_only=ON")
+              rows = db.execute(
+                  "SELECT payload_json FROM stream_fact_bundles "
+                  "ORDER BY rowid DESC LIMIT 500"
+              ).fetchall()
+
+          match = None
+          for row in rows:
+              payload = json.loads(str(row[0]))
+              if payload.get("projector_id") != "derivatives_change":
+                  continue
+              if int(payload.get("event_at_ms", 0)) < r11_started_ms:
+                  continue
+              domains = set(payload.get("available_evidence_domains", ()))
+              if "derivatives_dynamics" not in domains:
+                  continue
+              match = payload
+              break
+
+          if match is None:
+              raise SystemExit(1)
+
+          domains = set(match["available_evidence_domains"])
+          assert {
+              "derivatives",
+              "derivatives_context",
+              "derivatives_dynamics",
+          }.issubset(domains), domains
+          components = {
+              str(item["name"]): str(item["value"])
+              for item in match["state_components"]
+          }
+          assert components["dynamics_status"] == "measured", components
+          assert components["dynamics_oi_price_state"] != "unavailable", components
+          assert match["direction"] is None
+          assert match["source_quality"] == "measured"
+          assert match["read_only"] is True
+          assert match["production_authority"] is False
+          assert int(match["real_capital"]) == 0
+          assert len(match["evidence_identities"]) >= 4
+          assert int(match["source_as_of_ms"]) <= int(match["event_at_ms"])
+
+          print(f"DERIVATIVES_SYMBOL={match['symbol']}")
+          print(f"DERIVATIVES_EVENT_AT_MS={match['event_at_ms']}")
+          print(f"DERIVATIVES_SOURCE_AS_OF_MS={match['source_as_of_ms']}")
+          print(f"DERIVATIVES_STATE_LABEL={match['state_label']}")
+          print(f"DERIVATIVES_DYNAMICS_STATUS={components['dynamics_status']}")
+          print(
+              "DERIVATIVES_OI_PRICE_STATE="
+              f"{components['dynamics_oi_price_state']}"
+          )
+          print(
+              "DERIVATIVES_EVIDENCE_DOMAINS="
+              + ",".join(sorted(domains))
+          )
+          print("RDP5_B_LIVE_DERIVATIVES_DYNAMICS_PASS=YES")
+          print("NO_NEW_FAMILY_OR_DIRECTION=YES")
+          print("REAL_CAPITAL=0")
+          PY
+            then
+              ready=1
+              break
+            fi
+            sleep 2
+          done
+          test "$ready" = "1"
