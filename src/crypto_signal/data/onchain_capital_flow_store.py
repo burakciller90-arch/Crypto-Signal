@@ -78,6 +78,7 @@ class OnchainCapitalFlowStore:
         db = sqlite3.connect(self.path, timeout=10.0)
         db.row_factory = sqlite3.Row
         db.execute("PRAGMA busy_timeout=10000")
+        db.execute("PRAGMA foreign_keys=ON")
         return db
 
     def _connect_ro(self) -> sqlite3.Connection:
@@ -374,6 +375,32 @@ class OnchainCapitalFlowStore:
         self,
         observation: WalletCohortForwardObservation,
     ) -> bool:
+        self.initialize()
+        admission = self.wallet_cohort_admission(
+            observation.admission_identity
+        )
+        if admission is None:
+            raise ValueError(
+                "wallet cohort forward observation requires stored admission"
+            )
+        if (
+            observation.cohort_id,
+            observation.cluster_id,
+            observation.asset,
+            observation.network,
+        ) != (
+            admission.cohort_id,
+            admission.cluster_id,
+            admission.asset,
+            admission.network,
+        ):
+            raise ValueError(
+                "wallet cohort forward observation/admission context mismatch"
+            )
+        if observation.measurement_start_ms < admission.admitted_at_ms:
+            raise ValueError(
+                "wallet cohort forward measurement cannot predate admission"
+            )
         payload = canonical_json(observation)
         return self._append(
             table="onchain_wallet_cohort_forward_observations",
