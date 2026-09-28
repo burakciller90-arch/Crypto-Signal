@@ -584,8 +584,11 @@ run_market_tape_snapshot_clock() {
     cd "$DEV" || exit 75
     exec "$py" "$runner" \
       --db "$db" \
+      --source-contract-db "$source_contract" \
+      --options-db "$options" \
       --lock-path "$lock" \
       --bybit-base-url "$BYBIT_REST_BASE_URL" \
+      --bybit-options-base-url "$BYBIT_OPTIONS_REST_BASE_URL" \
       --symbols BTCUSDT ETHUSDT SOLUSDT \
       --book-depth 50 \
       --trade-limit 60 \
@@ -639,6 +642,7 @@ run_wc2_live_clock() {
       --stream-enabled \
       --stream-ledger "$stream" \
       --stream-market-tape "$market_tape" \
+      --stream-options-surface "$options_surface" \
       --stream-event-source "$event_source" \
       --stream-family-symbols BTCUSDT ETHUSDT SOLUSDT \
       --wc2-enabled \
