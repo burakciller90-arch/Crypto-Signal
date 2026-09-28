@@ -562,6 +562,33 @@ start_liquidation_stream() {
   echo "$(date '+%Y-%m-%d %H:%M:%S %z') liquidation_started pid=$pid REAL_CAPITAL=0"
 }
 
+run_onchain_capital_flow_snapshot_clock() {
+  local py="$DEV/.venv/bin/python"
+  local runner="$DEV/ops/run_onchain_capital_flow_snapshot.py"
+  local runtime="$DEV/runtime/onchain"
+  local db="$runtime/onchain_capital_flow.sqlite3"
+  local source_contract="$runtime/source_contract.sqlite3"
+  local lock="$runtime/onchain_capital_flow_snapshot.lock"
+
+  for required in "$py" "$runner"; do
+    if [ ! -e "$required" ]; then
+      echo "$(date '+%Y-%m-%d %H:%M:%S %z') onchain_snapshot_not_ready missing=$required FAIL_CLOSED=YES REAL_CAPITAL=0"
+      return 0
+    fi
+  done
+
+  (
+    unset RUNNER_TRACKING_ID
+    export PYTHONPATH="$DEV:$DEV/src"
+    cd "$DEV" || exit 75
+    exec "$py" "$runner" \
+      --onchain-db "$db" \
+      --source-contract-db "$source_contract" \
+      --lock-path "$lock" \
+      --defillama-base-url "https://stablecoins.llama.fi"
+  ) >>"$LOGDIR/onchain-snapshot.out.log" 2>>"$LOGDIR/onchain-snapshot.err.log" < /dev/null &
+}
+
 run_market_tape_snapshot_clock() {
   local py="$DEV/.venv/bin/python"
   local runner="$DEV/ops/run_market_tape_snapshot.py"
@@ -677,6 +704,7 @@ shutdown() {
 trap shutdown TERM INT
 
 last_data_clock=0
+last_onchain_clock=0
 last_aux_clock=0
 last_rotation=0
 while true; do
@@ -689,6 +717,11 @@ while true; do
     run_market_tape_snapshot_clock
     run_wc2_live_clock
     last_data_clock="$now"
+  fi
+
+  if [ $((now-last_onchain_clock)) -ge 300 ]; then
+    run_onchain_capital_flow_snapshot_clock
+    last_onchain_clock="$now"
   fi
 
   if [ $((now-last_aux_clock)) -ge 120 ]; then
