@@ -1,0 +1,51 @@
+{
+  "retCode": 0,
+  "retMsg": "OK",
+  "result": {
+    "category": "option",
+    "list": [
+      {
+        "symbol": "ETH-27MAR26-4000-C-USDT",
+        "bid1Iv": "0.61",
+        "ask1Iv": "0.63",
+        "markIv": "0.62",
+        "markPrice": "315",
+        "indexPrice": "4012",
+        "underlyingPrice": "4015",
+        "openInterest": "820.4",
+        "turnover24h": "910000",
+        "volume24h": "242.7",
+        "totalVolume": "2200.8",
+        "totalTurnover": "8600000",
+        "delta": "0.52",
+        "gamma": "0.0012",
+        "vega": "19.2",
+        "theta": "-2.8",
+        "predictedDeliveryPrice": "",
+        "change24h": "0.05"
+      },
+      {
+        "symbol": "ETH-27MAR26-4000-P-USDT",
+        "bid1Iv": "",
+        "ask1Iv": "0.66",
+        "markIv": "0.65",
+        "markPrice": "298",
+        "indexPrice": "4012",
+        "underlyingPrice": "4015",
+        "openInterest": "791.2",
+        "turnover24h": "870000",
+        "volume24h": "231.4",
+        "totalVolume": "2140.1",
+        "totalTurnover": "8300000",
+        "delta": "-0.48",
+        "gamma": "0.0012",
+        "vega": "18.9",
+        "theta": "-2.6",
+        "predictedDeliveryPrice": "",
+        "change24h": "0.04"
+      }
+    ]
+  },
+  "retExtInfo": {},
+  "time": 1760000000300
+}
