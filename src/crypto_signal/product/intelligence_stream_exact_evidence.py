@@ -461,9 +461,21 @@ class IntelligenceStreamExactEvidenceReadModel:
                 if "derivatives_dynamics_freeze" in selected_kinds
                 else StreamEvidenceResolutionState.UNAVAILABLE_EXPLICIT
             )
+            heatmap_state = (
+                StreamEvidenceResolutionState.READY_EXACT
+                if "liquidation_heatmap_freeze" in selected_kinds
+                else StreamEvidenceResolutionState.UNAVAILABLE_EXPLICIT
+            )
+            crowding_state = (
+                StreamEvidenceResolutionState.READY_EXACT
+                if "derivatives_crowding_freeze" in selected_kinds
+                else StreamEvidenceResolutionState.UNAVAILABLE_EXPLICIT
+            )
             if (
                 context_state is StreamEvidenceResolutionState.READY_EXACT
                 or dynamics_state is StreamEvidenceResolutionState.READY_EXACT
+                or heatmap_state is StreamEvidenceResolutionState.READY_EXACT
+                or crowding_state is StreamEvidenceResolutionState.READY_EXACT
             ):
                 state = StreamEvidenceResolutionState.READY_EXACT
                 reason = "exact_persisted_derivatives_derived_proof_resolved"
@@ -475,6 +487,8 @@ class IntelligenceStreamExactEvidenceReadModel:
                 "context_measurement": context_state.value,
                 "price_oi_funding_dynamics": dynamics_state.value,
                 "funding_open_interest_basis": context_state.value,
+                "observed_liquidation_heatmap": heatmap_state.value,
+                "crowding_context": crowding_state.value,
                 "source_snapshot": raw_state.value,
             }
         elif domain == "derivatives_context":
@@ -496,6 +510,44 @@ class IntelligenceStreamExactEvidenceReadModel:
                 "funding_percentile": state.value,
                 "funding_acceleration": state.value,
                 "basis_change": state.value,
+            }
+        elif domain == "observed_liquidation_events":
+            if "market_tape_liquidation" in selected_kinds:
+                state = StreamEvidenceResolutionState.READY_EXACT
+                reason = "exact_persisted_liquidation_events_resolved"
+            capabilities = {
+                "liquidation_event_rows": state.value,
+            }
+        elif domain == "liquidation_event_coverage":
+            if "market_tape_liquidation_coverage" in selected_kinds:
+                state = StreamEvidenceResolutionState.READY_EXACT
+                reason = "exact_persisted_liquidation_coverage_resolved"
+            capabilities = {
+                "coverage_interval": state.value,
+                "coverage_observed_at_knowledge_time": state.value,
+            }
+        elif domain == "observed_liquidation_heatmap":
+            if "liquidation_heatmap_freeze" in selected_kinds:
+                state = StreamEvidenceResolutionState.READY_EXACT
+                reason = "exact_persisted_liquidation_heatmap_proof_resolved"
+            capabilities = {
+                "observed_bins": state.value,
+                "observed_cluster_count": state.value,
+                "zero_event_state": state.value,
+                "mark_reference": state.value,
+                "future_liquidation_risk_estimate": (
+                    StreamEvidenceResolutionState.UNAVAILABLE_EXPLICIT.value
+                ),
+            }
+        elif domain == "derivatives_crowding":
+            if "derivatives_crowding_freeze" in selected_kinds:
+                state = StreamEvidenceResolutionState.READY_EXACT
+                reason = "exact_persisted_derivatives_crowding_proof_resolved"
+            capabilities = {
+                "crowding_context": state.value,
+                "crowded_side": state.value,
+                "squeeze_context": state.value,
+                "upstream_dependency_lineage": state.value,
             }
         elif domain == "event_calendar":
             if selected_kinds.intersection(
@@ -928,9 +980,17 @@ def _objects_for_domain(
             "market_tape_derivatives",
             "derivatives_context_freeze",
             "derivatives_dynamics_freeze",
+            "liquidation_heatmap_freeze",
+            "derivatives_crowding_freeze",
         },
         "derivatives_context": {"derivatives_context_freeze"},
         "derivatives_dynamics": {"derivatives_dynamics_freeze"},
+        "observed_liquidation_events": {"market_tape_liquidation"},
+        "liquidation_event_coverage": {
+            "market_tape_liquidation_coverage",
+        },
+        "observed_liquidation_heatmap": {"liquidation_heatmap_freeze"},
+        "derivatives_crowding": {"derivatives_crowding_freeze"},
         "event_calendar": {
             "event_calendar_coverage",
             "structured_event_observation",
@@ -1208,6 +1268,16 @@ def _resolve_market_tape_objects(
             "observation_identity",
             "market_tape_derivatives",
         ),
+        (
+            "market_tape_liquidations",
+            "liquidation_identity",
+            "market_tape_liquidation",
+        ),
+        (
+            "market_tape_liquidation_coverage",
+            "coverage_identity",
+            "market_tape_liquidation_coverage",
+        ),
     )
     return _resolve_sqlite_payload_objects(
         path,
@@ -1218,6 +1288,8 @@ def _resolve_market_tape_objects(
             "market_tape_orderbook": "snapshot_identity",
             "market_tape_trade": "trade_identity",
             "market_tape_derivatives": "observation_identity",
+            "market_tape_liquidation": "liquidation_identity",
+            "market_tape_liquidation_coverage": "coverage_identity",
         },
     )
 
