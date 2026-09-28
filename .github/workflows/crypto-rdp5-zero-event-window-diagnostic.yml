@@ -161,7 +161,9 @@ jobs:
           assert liquidation_rows == 0, liquidation_rows
           assert feed_coverage_rows == 0, feed_coverage_rows
 
-          print(f"CURRENT_LIQUIDATION_PID={pid}")\n          print(f"ZERO_EVENT_EVIDENCE_PID={evidence_pid}")\n          print(f"ZERO_EVENT_INSTANCE_ID={instance_id}")
+          print(f"CURRENT_LIQUIDATION_PID={pid}")
+          print(f"ZERO_EVENT_EVIDENCE_PID={evidence_pid}")
+          print(f"ZERO_EVENT_INSTANCE_ID={instance_id}")
           print(f"ZERO_EVENT_INSTANCE_STARTED_AT_MS={started_at_ms}")
           print(
               "ZERO_EVENT_CONNECTED_SEQUENCES="
