@@ -43,7 +43,12 @@ RDP3 — **PASS**.
 - every new forward signal freeze now persists its Geometry Proof atomically in the same immutable ledger transaction; SQLite enforces the exact bundle+signal parent pair, read-only replay is available by signal or bundle, and historical freezes are not backfilled;
 - Workbench bootstrap `36386287130` advanced clean `repo/main` to exact `656c19fc6f4a39634e0594c51d021c741c288750`.
 
-RDP4 — **ACTIVE**. Exact implementation frontier: **RDP4-A — promote existing rich Liquidity Structure/Sweep and Temporal Order Flow freezes into the forward-only Market Tape family path, preserving exact PIT lineage and candidate-only/no-actor-intent semantics; divergence/absorption follow in the next bounded step because they add candle/structure dependency overlap.**
+RDP4 — **ACTIVE**.
+- RDP4-A rich Market Tape family wiring merged via PR #1566 as `0356f6c1024935bfeffbcc7e61b2a7d95bd9ecc5`; UID504 latest-head run `36387736662` passed exact Workbench/source, focused rich-family/regression tests, Ruff, mypy and py_compile with REAL_CAPITAL=0;
+- existing Liquidity and Order Flow family slots now carry Liquidity Structure/Sweep + Temporal Order Flow identities/components without adding a new family or score weight; source-event identities are composites of the rich component freezes;
+- PIT is fail-closed against future/late Market Tape rows, trade-unavailable domains stay absent, CVD cannot invent direction, and candidate/no-actor-intent semantics are retained;
+- Workbench bootstrap `36387822607` advanced clean `repo/main` to exact `0356f6c1024935bfeffbcc7e61b2a7d95bd9ecc5`.
+Exact implementation frontier: **RDP4-B — wire Absorption and Price/CVD Divergence dependency freezes into Order Flow family proof using canonical 15m candle cache read-only; Absorption may be measured from overlapping rich rails, while Divergence must remain explicit unresolved when the 2m flow window has insufficient compatible closed-candle coverage.**
 
 Locked execution sequence:
 `RDP1 runtime reliability → RDP2 source envelope/coverage → RDP3 Geometry → RDP4 rich Liquidity/Order Flow → RDP5 Derivatives/Liquidations → RDP6 BTC/ETH Options → RDP7 real On-chain/stablecoin capital flows → RDP8 Event/Cross-market → RDP9 cross-venue + overlap control → RDP10 frozen proof contract → RDP11 soak/acceptance → Paper Portfolio → new frontend`.
