@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import sqlite3
 from collections.abc import AsyncIterator
 from pathlib import Path
 
@@ -187,6 +188,77 @@ def _persist_source_contract(
         coverage_observed_at_ms=coverage_observed_at_ms,
     )
 
+
+
+def test_source_contract_migrates_legacy_envelope_event_time(tmp_path) -> None:
+    path = tmp_path / "source.sqlite3"
+    with sqlite3.connect(path) as db:
+        db.executescript(
+            """
+            CREATE TABLE source_contract_meta (
+                key TEXT PRIMARY KEY,
+                value TEXT NOT NULL
+            );
+            INSERT INTO source_contract_meta(key, value)
+            VALUES ('schema_version', 'source-contract-v1/1');
+
+            CREATE TABLE source_envelopes (
+                envelope_identity TEXT PRIMARY KEY,
+                capability_identity TEXT NOT NULL,
+                provider TEXT NOT NULL,
+                source TEXT NOT NULL,
+                channel TEXT NOT NULL,
+                symbol TEXT NOT NULL,
+                source_timestamp_ms INTEGER NOT NULL,
+                observed_at_ms INTEGER NOT NULL,
+                ingested_at_ms INTEGER NOT NULL,
+                payload_json TEXT NOT NULL
+            );
+            """
+        )
+        db.execute(
+            """
+            INSERT INTO source_envelopes(
+                envelope_identity, capability_identity,
+                provider, source, channel, symbol,
+                source_timestamp_ms, observed_at_ms,
+                ingested_at_ms, payload_json
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                "a" * 64,
+                "b" * 64,
+                "bybit",
+                "market_tape_stream",
+                "publicTrade",
+                "BTCUSDT",
+                1_010,
+                1_020,
+                1_030,
+                '{"event_at_ms":1009}',
+            ),
+        )
+
+    store = SourceContractStore(path)
+    store.initialize()
+
+    with sqlite3.connect(path) as db:
+        columns = {
+            str(row[1])
+            for row in db.execute(
+                "PRAGMA table_info(source_envelopes)"
+            ).fetchall()
+        }
+        migrated = db.execute(
+            "SELECT event_at_ms FROM source_envelopes "
+            "WHERE envelope_identity=?",
+            ("a" * 64,),
+        ).fetchone()
+
+    assert "event_at_ms" in columns
+    assert migrated is not None
+    assert int(migrated[0]) == 1_009
+    assert store.quick_check() is True
 
 def test_bybit_source_capabilities_lock_live_microstructure_contract(tmp_path) -> None:
     store = SourceContractStore(tmp_path / "source_contract.sqlite3")
