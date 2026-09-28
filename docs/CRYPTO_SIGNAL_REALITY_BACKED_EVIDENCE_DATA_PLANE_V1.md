@@ -684,7 +684,12 @@ PASS:
 
 ## RDP6 — Options / volatility intelligence
 
-Status: **ACTIVE**
+Status: **PASS**
+
+Progress:
+- immutable BTC/ETH options contracts, Bybit source lineage/PIT store, options-volatility evidence and existing Derivatives-family wiring accepted;
+- canonical live options collection/runtime merged through main `b88121a8ab897c9b63a74107790af1f1eddcc427`;
+- exact-main diagnostic PR #1606 remained unmerged; UID504 run `36419310127` PASS with fresh BTC/ETH surfaces + source coverage, no unsupported dealer-gamma/max-pain claim, no new score family/direction, `REAL_CAPITAL=0`.
 
 Goal:
 - add the most important missing BTC/ETH derivatives context.
@@ -707,6 +712,15 @@ PASS:
 
 ## RDP7 — Real On-chain / capital-flow rail
 
+Status: **PASS**
+
+Progress:
+- RDP7-A/A1 accepted canonical source coverage plus append-only On-chain capital-flow PIT storage and removed circular stablecoin lineage;
+- RDP7-C/C3 accepted real public DefiLlama USDT/USDC stablecoin-supply truth and supervisor-owned 300s collection; canonical float-token boundary fix merged as `3fda58d6b30f5b671cd7797f6529e33b0a2e72bb`;
+- exchange-flow entitlement is `UNAVAILABLE_EXPLICIT` because no accepted Glassnode/CryptoQuant credential exists; large-transfer and wallet-cohort rails remain explicit unavailable because defensible transfer/cluster identity + coverage is absent. No whale/institution identity is fabricated;
+- RDP7-F PR #1619 merged as main `0c23165e831d9aa8b8d41050354dfd45abc995d7`; UID504 run `36431658023` PASS. Accepted fresh stablecoin context now projects into the existing `ConfluenceFamily.ONCHAIN` only, with `direction=None` and exact RDP10-resolvable source/freeze lineage;
+- RDP7-G diagnostic PR #1620 remained unmerged. Exact-main UID504 run `36433299821`, rerun job `108966224227`, PASS after canonical R11 recovery issue #1621: Workbench/Development exact main, real DefiLlama snapshot, raw → envelope → coverage → normalized observation → PIT freeze/analysis → BTC/ETH/SOL ONCHAIN family identity resolution, stale/gap/PIT fail-closed regressions, supervisor alive, `RDP10_EXACT_PROOF_LINEAGE=RESOLVABLE`, `REAL_CAPITAL=0`.
+
 Goal:
 - remove `ONCHAIN_STANDALONE=DEFERRED_SOURCE` only when justified.
 
@@ -727,6 +741,8 @@ PASS:
 If no acceptable provider is available, On-chain remains explicitly unavailable and the project does not fabricate a replacement.
 
 ## RDP8 — Event Risk + cross-market runtime
+
+Status: **ACTIVE**
 
 Goal:
 - make score-external risk/context continuously trustworthy.
@@ -900,7 +916,7 @@ Every new agent working on this program must read, in order:
 
 Current exact frontier:
 
-**RDP6 — BTC/ETH Options / volatility intelligence**
+**RDP8 — Event Risk + cross-market runtime**
 
 Do not skip forward to Portfolio or frontend implementation while RDP1–RDP11 remain open unless the user explicitly authorizes parallel preparatory work.
 
