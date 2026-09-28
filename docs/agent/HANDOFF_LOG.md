@@ -230,3 +230,39 @@ nextAction:
 - re-check main/open PRs before merge;
 - after merge, write completion checkpoint before starting the next slice.
 
+---
+
+## 2026-09-28 — RDP10-D2 implementation complete; acceptance phase started
+
+status: ACCEPTANCE_PENDING
+canonicalMainAtPhaseStart: 188075b20e853f956462a90c6faa3f44ea4117f6
+branch: rdp10/order-flow-derived-proof-d2
+branchHeadBeforeThisCheckpoint: a62ae6205c6b22ff63a8112ff0a7af02e23cb439
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+implemented:
+- immutable proof persistence for order_flow_microstructure_freeze.
+- immutable proof persistence for temporal_order_flow_freeze.
+- immutable proof persistence for absorption_freeze.
+- immutable proof persistence for price_cvd_divergence_freeze.
+- exact-evidence resolver support for order_flow, temporal_order_flow, window_local_cvd, absorption and price_cvd_divergence.
+- focused persistence tests for microstructure/temporal/absorption.
+- focused divergence persistence test.
+- exact resolver test proving the four Order Flow proof kinds resolve READY_EXACT without current-data substitution.
+- RDP10 workflow expanded to cover the D2 dependency test.
+- AGENTS.md now requires durable task-start checkpoints before implementation.
+
+acceptanceRule:
+- do not accept older queued/cancelled runs from pre-checkpoint heads.
+- only the final exact branch head after this checkpoint may satisfy D2 acceptance.
+- workflow SUCCESS alone is insufficient; inspect focused test/lint/type output, live fail-closed audit, non-mutating checkout proof, HISTORICAL_BACKFILL=NO and REAL_CAPITAL=0.
+
+blocker:
+- exact-head UID504 RDP10 acceptance has not completed yet.
+
+nextAction:
+- read the exact-head RDP10 Frozen Proof Contract UID504 run; if mechanically PASS, re-check current main/open PRs immediately before creating/merging the D2 PR.
+
