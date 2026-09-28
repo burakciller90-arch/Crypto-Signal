@@ -821,3 +821,30 @@ repair:
 nextAction:
 - run the full exact-head RDP10 UID504 contract again; merge only if focused, live fail-closed and non-mutating checks all PASS with HISTORICAL_BACKFILL=NO and REAL_CAPITAL=0.
 
+---
+
+## 2026-09-28 — RDP10-F1 reconciliation checkpoint
+
+status: ACCEPTANCE_RETRY_AFTER_RECONCILIATION
+canonicalMain: f665fee6aba0309d7fd5ef7ff88abfdc10ef1511
+branch: rdp10/options-proof-f1
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+parallelAudit:
+- branch advanced while being audited; duplicate implementation was not repeated.
+- prior retry state covered only proof_path test wiring and is not sufficient as final acceptance after later semantic changes.
+
+reconciledChanges:
+- 92237d168be29f5b4d5cbb92303d78f4992cd905 — Options source proof separates source market_available_at_ms from family as_of/persisted_at time; freshness_age_ms reflects the true source age.
+- a27ffa1e8e4fb2da23987d4734dfab84d85dab19 — fresh/stale Options proof tests verify separated timing and explicit stale persisted proof.
+- cb72a9dc41393ba932f8e344e0b15cba3a520977 — durable frontier reconciliation checkpoint.
+
+blocker:
+- no final exact-head acceptance exists after the semantic timing change.
+
+nextAction:
+- run/inspect the full exact-head RDP10 UID504 contract; merge F1 only if focused, live fail-closed and non-mutating checks all PASS with HISTORICAL_BACKFILL=NO and REAL_CAPITAL=0.
+
