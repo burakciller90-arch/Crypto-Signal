@@ -146,8 +146,8 @@ def test_live_derivatives_family_includes_exact_dynamics_freeze(
     }
     assert components["dynamics_status"] == "measured"
     assert components["dynamics_oi_price_state"] == "price_up_oi_up"
-    assert Decimal(components["funding_percentile_0_1"]) == Decimal("1")
-    assert Decimal(components["funding_acceleration_bps"]) == Decimal("4")
+    assert Decimal(components["funding_percentile_0_1"]) == Decimal(1)
+    assert Decimal(components["funding_acceleration_bps"]) == Decimal(4)
     assert Decimal(components["open_interest_change_fraction"]) == Decimal("0.10")
     assert Decimal(components["mark_price_change_fraction"]) == Decimal("0.03")
     assert snapshot.direction is None
