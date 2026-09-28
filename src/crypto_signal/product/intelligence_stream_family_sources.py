@@ -26,13 +26,16 @@ from crypto_signal.intelligence.liquidation_heatmap import (
     build_liquidation_heatmap_evidence_freeze,
 )
 from crypto_signal.intelligence.liquidity_dynamics import (
+    LiquidityDynamicsEvidenceFreeze,
     build_liquidity_dynamics_evidence_freeze,
 )
 from crypto_signal.intelligence.liquidity_structure import (
     LiquidityLevelCandidate,
+    LiquidityStructureEvidenceFreeze,
     build_liquidity_structure_evidence_freeze,
 )
 from crypto_signal.intelligence.liquidity_sweep import (
+    LiquiditySweepEvidenceFreeze,
     build_liquidity_sweep_evidence_freeze,
 )
 from crypto_signal.intelligence.options_volatility import (
@@ -56,11 +59,15 @@ from crypto_signal.ledger.deserialization import (
     parse_lifecycle_evaluation,
     parse_signal_decision,
 )
-from crypto_signal.ledger.serialization import canonical_sha256
+from crypto_signal.ledger.serialization import canonical_json, canonical_sha256
 from crypto_signal.ledger.store import (
     FreezeRecord,
     LifecycleRecord,
     lifecycle_evaluation_identity,
+)
+from crypto_signal.product.frozen_proof_store import (
+    FrozenProofObject,
+    FrozenProofStore,
 )
 from crypto_signal.product.intelligence_stream_family import (
     StreamFamilySnapshot,
@@ -296,8 +303,14 @@ def build_market_tape_family_snapshots(
     as_of_ms: int,
     candle_cache_path: Path | None = None,
     options_surface_path: Path | None = None,
+    frozen_proof_store_path: Path | None = None,
 ) -> tuple[StreamFamilySnapshot, ...]:
     store = MarketTapeStore(market_tape_path)
+    frozen_proof_store = (
+        None
+        if frozen_proof_store_path is None
+        else FrozenProofStore(frozen_proof_store_path)
+    )
     options_store = (
         None
         if options_surface_path is None
@@ -338,6 +351,13 @@ def build_market_tape_family_snapshots(
                 trades,
                 as_of_ms=as_of_ms,
             )
+            if frozen_proof_store is not None:
+                _persist_liquidity_proofs(
+                    frozen_proof_store,
+                    dynamics=liquidity,
+                    structure=structure,
+                    sweep=sweep,
+                )
             liquidity_analysis = liquidity.analysis
             structure_analysis = structure.analysis
             sweep_analysis = sweep.analysis
@@ -1489,6 +1509,177 @@ def build_market_tape_family_snapshots(
             ),
         )
     )
+
+
+def _persist_liquidity_proofs(
+    store: FrozenProofStore,
+    *,
+    dynamics: LiquidityDynamicsEvidenceFreeze,
+    structure: LiquidityStructureEvidenceFreeze,
+    sweep: LiquiditySweepEvidenceFreeze,
+) -> None:
+    if (
+        sweep.analysis.structure_freeze_identity is not None
+        and sweep.analysis.structure_freeze_identity != structure.freeze_identity
+    ):
+        raise ValueError(
+            "Stream Liquidity sweep/structure freeze identity mismatch"
+        )
+    if (
+        sweep.analysis.structure_evidence_identity is not None
+        and sweep.analysis.structure_evidence_identity
+        != structure.analysis.evidence_identity
+    ):
+        raise ValueError(
+            "Stream Liquidity sweep/structure evidence identity mismatch"
+        )
+
+    provider = (
+        f"{dynamics.analysis.exchange.value}:"
+        f"{dynamics.analysis.market_type.value}:market_tape"
+    )
+    base_kwargs = {
+        "family": ConfluenceFamily.LIQUIDITY.value,
+        "asset": _base_asset(dynamics.analysis.symbol),
+        "symbol": dynamics.analysis.symbol,
+        "network": None,
+        "timeframe": "microstructure",
+        "as_of_ms": dynamics.analysis.as_of_ms,
+        "source_provider": provider,
+        "freshness_state": "exact_pit_bounded",
+        "persisted_at_ms": dynamics.analysis.as_of_ms,
+        "production_authority": False,
+        "real_capital": 0,
+    }
+
+    dynamics_sources = tuple(
+        sorted(item.snapshot_identity for item in dynamics.snapshots)
+    )
+    store.append(
+        FrozenProofObject(
+            object_identity=dynamics.freeze_identity,
+            analysis_identity=dynamics.analysis.evidence_identity,
+            object_kind="liquidity_dynamics_freeze",
+            domains=("liquidity",),
+            market_available_at_ms=_orderbook_available_at(dynamics.snapshots),
+            observed_at_ms=dynamics.analysis.observed_at_ms,
+            source_quality=dynamics.analysis.source_quality.value,
+            freshness_age_ms=dynamics.analysis.latest_snapshot_age_ms,
+            uncertainty_flags=tuple(sorted(dynamics.analysis.uncertainty_flags)),
+            source_object_identities=dynamics_sources,
+            depends_on_evidence_identities=(),
+            payload_json=canonical_json(dynamics.analysis),
+            visualization_json=canonical_json(dynamics.analysis),
+            renderer_contract_version="liquidity-dynamics-v1/1",
+            **base_kwargs,
+        )
+    )
+
+    structure_sources = tuple(
+        sorted(item.snapshot_identity for item in structure.snapshots)
+    )
+    store.append(
+        FrozenProofObject(
+            object_identity=structure.freeze_identity,
+            analysis_identity=structure.analysis.evidence_identity,
+            object_kind="liquidity_structure_freeze",
+            domains=("liquidity", "liquidity_structure"),
+            market_available_at_ms=_orderbook_available_at(structure.snapshots),
+            observed_at_ms=structure.analysis.observed_at_ms,
+            source_quality=structure.analysis.source_quality.value,
+            freshness_age_ms=structure.analysis.latest_snapshot_age_ms,
+            uncertainty_flags=tuple(sorted(structure.analysis.uncertainty_flags)),
+            source_object_identities=structure_sources,
+            depends_on_evidence_identities=(),
+            payload_json=canonical_json(structure.analysis),
+            visualization_json=canonical_json(structure.analysis),
+            renderer_contract_version="liquidity-structure-levels-v1/1",
+            **base_kwargs,
+        )
+    )
+
+    sweep_sources = tuple(
+        sorted(
+            {
+                *(item.snapshot_identity for item in sweep.snapshots),
+                *(item.trade_identity for item in sweep.trades),
+            }
+        )
+    )
+    sweep_dependencies = tuple(
+        sorted(
+            identity
+            for identity in (
+                sweep.analysis.structure_evidence_identity,
+                sweep.analysis.structure_freeze_identity,
+            )
+            if identity is not None
+        )
+    )
+    sweep_age_candidates = tuple(
+        value
+        for value in (
+            sweep.analysis.latest_snapshot_age_ms,
+            sweep.analysis.latest_trade_age_ms,
+        )
+        if value is not None
+    )
+    store.append(
+        FrozenProofObject(
+            object_identity=sweep.freeze_identity,
+            analysis_identity=sweep.analysis.evidence_identity,
+            object_kind="liquidity_sweep_freeze",
+            domains=("liquidity", "liquidity_sweep"),
+            market_available_at_ms=_liquidity_sweep_available_at(sweep),
+            observed_at_ms=sweep.analysis.observed_at_ms,
+            source_quality=sweep.analysis.source_quality.value,
+            freshness_age_ms=(
+                None if not sweep_age_candidates else max(sweep_age_candidates)
+            ),
+            uncertainty_flags=tuple(sorted(sweep.analysis.uncertainty_flags)),
+            source_object_identities=sweep_sources,
+            depends_on_evidence_identities=sweep_dependencies,
+            payload_json=canonical_json(sweep.analysis),
+            visualization_json=canonical_json(sweep.analysis),
+            renderer_contract_version="liquidity-sweep-candidates-v1/1",
+            **base_kwargs,
+        )
+    )
+
+
+def _orderbook_available_at(
+    snapshots: tuple[object, ...],
+) -> int:
+    return max(
+        (
+            max(
+                int(getattr(item, "event_at_ms")),
+                int(getattr(item, "source_timestamp_ms")),
+                int(getattr(item, "response_time_ms")),
+                int(getattr(item, "ingested_at_ms")),
+            )
+            for item in snapshots
+        ),
+        default=0,
+    )
+
+
+def _liquidity_sweep_available_at(
+    sweep: LiquiditySweepEvidenceFreeze,
+) -> int:
+    snapshot_available = _orderbook_available_at(sweep.snapshots)
+    trade_available = max(
+        (
+            max(
+                item.event_at_ms,
+                item.source_timestamp_ms,
+                item.ingested_at_ms,
+            )
+            for item in sweep.trades
+        ),
+        default=0,
+    )
+    return max(snapshot_available, trade_available)
 
 
 def _rich_liquidity_quality(*qualities: str) -> str:
