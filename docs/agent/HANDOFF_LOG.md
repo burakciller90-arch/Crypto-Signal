@@ -661,3 +661,59 @@ blocker:
 nextAction:
 - before any RDP10-F production code change, re-check exact main/open PRs/branches and write the mandatory RDP10-F task-start checkpoint.
 
+---
+
+## 2026-09-28 — RDP10-E2 complete; frontier advanced to F1
+
+status: PASS
+canonicalMain: da8abd2d10a5bc157b6aad2ef37074d2732e103d
+roadmapGate: RDP10 ACTIVE
+completedSlice: RDP10-E2 liquidation observations/coverage/heatmap/crowding
+nextSlice: RDP10-F1 Options / volatility exact proof cutover
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+rdp10E2:
+- branch: rdp10/liquidation-proof-e2
+- PR #1648
+- accepted head: 7879814ce99ea8b97f35e4761ff32be41c443e0f
+- merge SHA: da8abd2d10a5bc157b6aad2ef37074d2732e103d
+- final UID504 acceptance run 36469778696 / job 109088902172: SUCCESS
+- focused tests/Ruff/mypy/py_compile PASS
+- RDP10_LIVE_MESSAGES_AUDITED=6
+- RDP10_UNREGISTERED_DOMAINS_OBSERVED=9
+- RDP10_UNREGISTERED_READY_COUNT=0
+- RDP10_LIVE_FAIL_CLOSED_PASS=YES
+- RDP10_NON_MUTATING_PASS=YES
+- HISTORICAL_BACKFILL=NO
+- REAL_CAPITAL=0
+- raw liquidation events resolve exact from immutable Market Tape.
+- provider coverage preserves observed_at_ms knowledge time.
+- heatmap + crowding proofs persist before Stream publication.
+- crowding binds exact historical derivatives dynamics + heatmap parents.
+- zero-event claims require real coverage.
+- future liquidation risk/leverage estimates remain unavailable.
+
+exactMainWorkbench:
+- Crypto SSD504 Workbench Bootstrap run 36470043887 / job 109089702244: SUCCESS
+- GITHUB_SHA=da8abd2d10a5bc157b6aad2ef37074d2732e103d
+- final canonical Workbench repo branch main
+- final canonical Workbench repo head exact main
+- dirty count 0
+- SSD504_WORKBENCH_PASS=YES
+- REAL_CAPITAL=0
+
+remainingRDP10:
+- F1 Options/volatility strongest exact proof cutover.
+- F2 On-chain/stablecoin strongest exact proof cutover.
+- F3 final customer-proof contract closure audit including Event Risk/context and provider-divergence/data-quality exact records.
+
+blocker:
+- RDP10 is not PASS until F1/F2/F3 are mechanically accepted.
+- RDP11 also remains open and has a hard minimum 72-hour UID504 observation requirement.
+
+nextAction:
+- before F1 code changes, re-check exact main/open PRs/branches and write mandatory F1 task-start checkpoint.
+
