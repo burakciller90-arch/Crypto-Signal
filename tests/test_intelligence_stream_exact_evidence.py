@@ -1,14 +1,17 @@
 from __future__ import annotations
 
 import sqlite3
+from dataclasses import replace
 from decimal import Decimal
 from pathlib import Path
 
+import pytest
 import test_rdp5_liquidation_heatmap_crowding_family as liquidation_family
 import test_rdp6_options_derivatives_family as options_family
 import test_rdp7_onchain_family as onchain_family
 from fastapi.testclient import TestClient
 from test_immutable_ledger import build_bundle, candles
+from test_provider_divergence import _candle as provider_candle
 from test_rdp4_rich_market_tape_family import AS_OF_MS, _seed
 from test_rdp5_derivatives_dynamics_family import (
     AS_OF_MS as DERIVATIVES_AS_OF_MS,
@@ -28,12 +31,17 @@ from crypto_signal.data.event_risk import (
 from crypto_signal.data.market_tape import MarketTapeStore
 from crypto_signal.data.microstructure import OrderBookLevel, build_orderbook_snapshot
 from crypto_signal.data.models import Candle, DataSource, Exchange, MarketType
+from crypto_signal.data.provider_divergence import (
+    ProviderDivergenceStore,
+    build_provider_divergence_snapshot,
+)
 from crypto_signal.data.store import CandleStore
 from crypto_signal.intelligence.confluence_matrix_v2 import ConfluenceFamily
 from crypto_signal.ledger.serialization import canonical_json, canonical_sha256
 from crypto_signal.ledger.store import ImmutableSignalLedger
 from crypto_signal.product.intelligence_stream_exact_evidence import (
     IntelligenceStreamExactEvidenceReadModel,
+    StreamExactEvidenceError,
 )
 from crypto_signal.product.intelligence_stream_family import (
     StreamFamilySnapshot,
@@ -56,6 +64,9 @@ from crypto_signal.product.intelligence_stream_onchain_family import (
 )
 from crypto_signal.product.intelligence_stream_production_projector import (
     IntelligenceStreamProductionProjector,
+)
+from crypto_signal.product.intelligence_stream_trust_sources import (
+    build_provider_quality_stream_snapshots,
 )
 from crypto_signal.product.web import create_app
 
@@ -1390,4 +1401,107 @@ def test_onchain_stablecoin_proofs_resolve_exact_from_canonical_sources(
     assert isinstance(coverage_object, dict)
     assert coverage_object["state"] == "observed"
     assert snapshot.direction is None
+
+def test_provider_quality_resolves_exact_divergence_and_rejects_future_source(
+    tmp_path: Path,
+) -> None:
+    divergence_path = tmp_path / "provider_divergence.sqlite3"
+    stream_path = tmp_path / "stream.sqlite3"
+
+    binance = (
+        provider_candle(Exchange.BINANCE, 0, "100.1"),
+        provider_candle(Exchange.BINANCE, 900_000, "100.8"),
+        provider_candle(Exchange.BINANCE, 1_800_000, "102.2"),
+    )
+    bybit = (
+        provider_candle(Exchange.BYBIT, 0, "100"),
+        provider_candle(Exchange.BYBIT, 900_000, "101"),
+        provider_candle(Exchange.BYBIT, 1_800_000, "102"),
+    )
+    divergence = build_provider_divergence_snapshot(
+        market_type=MarketType.SPOT,
+        symbol="BTCUSDT",
+        timeframe="15m",
+        observed_at_ms=2_800_000,
+        left_exchange=Exchange.BINANCE,
+        right_exchange=Exchange.BYBIT,
+        left_candles=binance,
+        right_candles=bybit,
+        lookback_limit=96,
+    )
+    ProviderDivergenceStore(divergence_path).append(divergence)
+
+    family = build_provider_quality_stream_snapshots(
+        divergence_path,
+        evaluated_at_ms=2_900_000,
+    )[0]
+    narrative_identity = _project_family(
+        stream_path,
+        projector_id="provider_quality_change",
+        snapshot=family,
+    )
+    resolver = IntelligenceStreamExactEvidenceReadModel(
+        stream_ledger_path=stream_path,
+        provider_divergence_path=divergence_path,
+    )
+    payload = resolver.read_for_narrative(narrative_identity)
+    assert payload is not None
+    assert payload["current_data_substitution"] is False
+
+    for domain in ("provider_divergence", "data_quality"):
+        resolution = _resolution(payload, domain)
+        assert resolution["resolution_state"] == "READY_EXACT"
+        assert resolution["current_data_substitution"] is False
+        projection = resolution["customer_projection"]
+        assert isinstance(projection, dict)
+        assert projection["source_scope"] == family.source_scope
+        assert projection["source_as_of_ms"] == divergence.observed_at_ms
+        assert projection["source_quality"] == family.source_quality
+        assert tuple(projection["uncertainty_flags"]) == family.uncertainty_flags
+
+    references = {
+        item["evidence_identity"]: item
+        for item in payload["reference_resolutions"]
+    }
+    assert (
+        references[divergence.snapshot_identity]["resolution_state"]
+        == "READY_EXACT"
+    )
+    assert (
+        references[divergence.snapshot_identity]["object_kind"]
+        == "provider_divergence_snapshot"
+    )
+
+    exact = resolver.read_reference(
+        narrative_identity=narrative_identity,
+        evidence_identity=divergence.snapshot_identity,
+    )
+    assert exact is not None
+    assert exact["object_kind"] == "provider_divergence_snapshot"
+    exact_object = exact["exact_object"]
+    assert isinstance(exact_object, dict)
+    assert exact_object["observed_at_ms"] == divergence.observed_at_ms
+    assert exact_object["left_exchange"] == Exchange.BINANCE.value
+    assert exact_object["right_exchange"] == Exchange.BYBIT.value
+    assert exact_object["grid_state"] == divergence.grid_state.value
+    assert exact["current_data_substitution"] is False
+
+    future_bound_family = replace(
+        family,
+        source_as_of_ms=divergence.observed_at_ms - 1,
+    )
+    future_stream_path = tmp_path / "future_stream.sqlite3"
+    future_narrative_identity = _project_family(
+        future_stream_path,
+        projector_id="provider_quality_change",
+        snapshot=future_bound_family,
+    )
+    with pytest.raises(
+        StreamExactEvidenceError,
+        match="provider_divergence_snapshot contains future evidence: observed_at_ms",
+    ):
+        IntelligenceStreamExactEvidenceReadModel(
+            stream_ledger_path=future_stream_path,
+            provider_divergence_path=divergence_path,
+        ).read_for_narrative(future_narrative_identity)
 

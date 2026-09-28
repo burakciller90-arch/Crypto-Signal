@@ -611,3 +611,173 @@ Safety:
 - `HISTORICAL_BACKFILL=NO`
 - Durdurulmaz touched: NO
 - Quantum Capital touched: NO
+
+
+
+## LIVE ACTIVE CHECKPOINT — 2026-09-28 — RDP10-F3 final contract closure audit STARTED
+
+This checkpoint is written before any RDP10-F3 production code change.
+
+- canonical main at task start: `3b555bb97ff8f43038a854e7c66a6ae9f505bbb7`
+- previous gate: RDP10-F2 PASS
+- F2 docs closeout PR: #1653
+- F2 docs closeout merge SHA: `3b555bb97ff8f43038a854e7c66a6ae9f505bbb7`
+- active branch: `rdp10/final-contract-closure-f3`
+- session-local /Volumes worktree: NONE
+- duplicate RDP10-F3 open PRs: NONE
+- duplicate exact RDP10-F3 branches before creation: NONE
+- historical `stream/final-f3-*` branches are unrelated Stream work and are not reused
+- `prep/rdp10-proof-contract` exists as prep/audit history only; duplicate implementation is forbidden
+- `REAL_CAPITAL=0`
+- `HISTORICAL_BACKFILL=NO`
+- Durdurulmaz touched: NO
+- Quantum Capital touched: NO
+
+Exact-main Workbench prerequisite:
+- Crypto SSD504 Workbench Bootstrap run `36480861694` / job `109125861177`: SUCCESS
+- `GITHUB_SHA=3b555bb97ff8f43038a854e7c66a6ae9f505bbb7`
+- `WORKBENCH_REPO_SYNCED_TO_MAIN=YES`
+- final `REPO_HEAD=3b555bb97ff8f43038a854e7c66a6ae9f505bbb7`
+- `REPO_BRANCH=main`
+- `REPO_DIRTY_COUNT=0`
+- `SSD504_WORKBENCH_PASS=YES`
+- `REAL_CAPITAL=0`
+
+Post-closeout exact-main runs already created:
+- Agent Memory Bootstrap `36480861707`: in progress at task start
+- RDP10 Frozen Proof Contract `36480905700`: queued at task start
+- generic Stage10/WC0 failures are not treated as F3 acceptance unless the canonical RDP10 contract demonstrates relevance
+
+### Bounded goal
+
+RDP10-F3 is the final top-level RDP10 contract closure audit.
+
+Required:
+- mechanically prove Geometry exposes its strongest accepted immutable proof;
+- mechanically prove Liquidity exposes its strongest accepted exact derived + canonical raw proof;
+- mechanically prove Order Flow exposes its strongest accepted exact derived + canonical raw proof;
+- mechanically prove Derivatives exposes Context/Dynamics/Liquidation/Options strongest accepted proof without unsupported claims;
+- mechanically prove On-chain exposes accepted stablecoin proof plus canonical source lineage while unsupported rails remain explicit;
+- mechanically prove Event Risk/context exact source records are customer-inspectable;
+- mechanically prove RDP9 provider-divergence/data-quality source context is customer-inspectable where required by the accepted contract;
+- mechanically prove historical evidence never resolves through current live data;
+- verify source time, as-of time, freshness, uncertainty, provider/source label and explicit stale/unavailable state wherever the accepted source schema supports them;
+- implement only demonstrated missing closure paths; do not recreate already accepted stores, collectors or proof objects.
+
+RDP10-F3 does not authorize:
+- historical proof backfill/rewrite;
+- new score families or direction authority;
+- real-money/exchange write authority;
+- fabricated provider truth;
+- RDP11 soak closure before a real 72-hour UID504 observation window exists.
+
+### Current blocker
+
+The full exact-main F3 baseline audit has not yet been inspected. The exact-main RDP10 run and Agent Memory run are still pending/in progress, and Event Risk/provider-divergence customer-proof exposure must be mapped against the current resolver before deciding whether any production change is necessary.
+
+### Exact nextAction
+
+Inspect exact-main runs `36480905700` and `36480861707`, then audit the current exact-evidence resolver/domain registry plus Event Risk/provider-divergence source stores against the top-level RDP10 PASS contract. Record an audit checkpoint before any production implementation.
+
+
+
+## RDP10-F3 pre-implementation audit checkpoint — 2026-09-28
+
+Audit completed before any F3 production-code change.
+
+Exact F3 task-start head:
+- branch `rdp10/final-contract-closure-f3`
+- head before this audit checkpoint: `d78262ade1f2bf758371d1c035bd43f55c8ef671`
+- production main remains `3b555bb97ff8f43038a854e7c66a6ae9f505bbb7`
+
+Exact branch baseline acceptance:
+- RDP10 Frozen Proof Contract run `36481004403` / job `109126434036`: SUCCESS
+- `WORKBENCH_HEAD=3b555bb97ff8f43038a854e7c66a6ae9f505bbb7`
+- `RDP10_EXACT_SOURCE_PASS=YES`
+- `RDP10_CANONICAL_CHECKOUTS_CLEAN=YES`
+- `RDP10_FAIL_CLOSED_FOCUSED_PASS=YES`
+- `RDP10_DERIVED_PROOF_STORE_PASS=YES`
+- `RDP10_LIVE_MESSAGES_AUDITED=6`
+- `RDP10_UNREGISTERED_READY_COUNT=0`
+- `RDP10_LIVE_FAIL_CLOSED_PASS=YES`
+- `RDP10_NON_MUTATING_PASS=YES`
+- `HISTORICAL_BACKFILL=NO`
+- `REAL_CAPITAL=0`
+- the earlier exact-main run `36480905700` completed every proof step successfully but was superseded/cancelled by concurrency; it is not used as acceptance because its run conclusion is not SUCCESS.
+
+Audit result:
+- Geometry, Liquidity, Order Flow, Derivatives, Options and On-chain already have typed exact domain resolution and accepted focused proof coverage.
+- Event Risk already resolves `event_calendar_coverage` and `structured_event_observation` read-only from the canonical event-source DB, canonical-SHA verifies them, enforces PIT/no-future, and has focused exact-event/temporal-record acceptance.
+- provider-quality Stream truth already binds the immutable `provider_divergence_snapshot` identity under `data_quality` + `provider_divergence`; live RDP10 requires `provider_quality_change` and exact resolver support already exists.
+- provider-divergence storage is append-only and the exact resolver opens it `mode=ro`, `query_only=ON`, verifies canonical payload identity and applies no-future checks.
+- there is no focused RDP10 exact-reference regression proving `provider_divergence` + `data_quality` READY_EXACT from the canonical snapshot and rejecting a snapshot newer than the family `source_as_of_ms`.
+- the family fact already persists an exact `source_scope` provider/source label, but the RDP10 customer projection currently does not surface that label directly even though the roadmap requires source/provider label when available.
+- no new collector, proof store, score family, direction authority or source is required.
+
+Minimal F3 implementation authorized by this audit:
+1. expose immutable family `source_scope` in the customer proof projection (plus the already-frozen asset/symbol/market/timeframe context, without inference);
+2. add focused provider-divergence/data-quality exact-reference regression and explicit no-future rejection;
+3. include that regression in the RDP10 focused acceptance and add final closure markers/assertions only where they mechanically prove the top-level contract;
+4. do not alter upstream provider truth, historical data or production authority.
+
+Safety:
+- `REAL_CAPITAL=0`
+- `HISTORICAL_BACKFILL=NO`
+- Durdurulmaz touched: NO
+- Quantum Capital touched: NO
+
+Exact nextAction:
+Implement only the two demonstrated contract gaps above, run exact-head RDP10 acceptance, inspect live domain behavior and merge only if the final head remains based on current canonical main with no duplicate F3 work.
+
+
+
+## RDP10-F3 implementation acceptance checkpoint — 2026-09-28
+
+Bounded implementation completed on `rdp10/final-contract-closure-f3`.
+
+Accepted implementation head before this docs checkpoint:
+- `50c3b2ae748ea6f0f553d6e3d2ef4d2a17ac73cc`
+
+Changes:
+- RDP10 customer projection now surfaces the already-immutable family `source_scope` and frozen asset/symbol/market/timeframe context; no provider label is inferred or rewritten.
+- provider-divergence/data-quality focused regression proves:
+  - canonical append-only `provider_divergence_snapshot` resolves as `READY_EXACT`;
+  - both `provider_divergence` and `data_quality` domains bind the exact snapshot;
+  - exact source object is customer-readable without current-data substitution;
+  - snapshot source time is bounded by the family `source_as_of_ms`;
+  - a provider snapshot newer than the historical family cutoff raises fail-closed future-evidence error.
+- RDP10 workflow now emits explicit F3 closure markers only after focused tests, live read-only audit and canonical-checkout non-mutation all succeed.
+
+Exact accepted run:
+- RDP10 Frozen Proof Contract run `36482028160` / job `109129741160`: SUCCESS on exact head `50c3b2ae748ea6f0f553d6e3d2ef4d2a17ac73cc`
+- `RDP10_EXACT_SOURCE_PASS=YES`
+- `RDP10_CANONICAL_CHECKOUTS_CLEAN=YES`
+- `RDP10_FAIL_CLOSED_FOCUSED_PASS=YES`
+- `RDP10_DERIVED_PROOF_STORE_PASS=YES`
+- `RDP10_LIVE_MESSAGES_AUDITED=6`
+- `RDP10_UNREGISTERED_READY_COUNT=0`
+- `RDP10_LIVE_FAIL_CLOSED_PASS=YES`
+- `RDP10_NON_MUTATING_PASS=YES`
+- `RDP10_F3_FINAL_CONTRACT_PASS=YES`
+- `RDP10_CUSTOMER_SOURCE_LABEL_PASS=YES`
+- `RDP10_PROVIDER_DIVERGENCE_EXACT_PASS=YES`
+- `RDP10_EVENT_SOURCE_EXACT_PASS=YES`
+- `RDP10_HISTORICAL_CURRENT_SUBSTITUTION=NO`
+- `HISTORICAL_BACKFILL=NO`
+- `REAL_CAPITAL=0`
+
+Fail-closed development evidence:
+- run `36481823314` correctly failed because the new serialized uncertainty assertion compared JSON list vs Python tuple; fixed without changing production semantics.
+- run `36481908539` then passed all pytest cases but correctly failed Ruff import ordering; import order fixed.
+- neither failed run is acceptance.
+
+Main/duplicate guard at checkpoint:
+- canonical main remains `3b555bb97ff8f43038a854e7c66a6ae9f505bbb7`
+- no duplicate open RDP10-F3 PR exists.
+- Durdurulmaz touched: NO
+- Quantum Capital touched: NO
+- `REAL_CAPITAL=0`
+- `HISTORICAL_BACKFILL=NO`
+
+Exact nextAction:
+This checkpoint changes the branch head only through docs. Require one final exact-head RDP10 SUCCESS on the resulting docs-complete head, then open the F3 PR, re-check main/head/duplicate/mergeability, merge with expected-head guard, prove merged-main SSD504/Agent Memory + RDP10 acceptance, and only then mark top-level RDP10 PASS and begin the real RDP11 72-hour UID504 soak.

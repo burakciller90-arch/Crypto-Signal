@@ -1131,3 +1131,146 @@ blocker:
 
 nextAction:
 - merge this docs-only closeout after exact main/head recheck; then branch from exact current main, checkpoint RDP10-F3 start before production changes, audit the complete top-level RDP10 PASS contract, and implement only mechanically demonstrated gaps.
+
+
+
+---
+
+## 2026-09-28 — RDP10-F3 task-start checkpoint
+
+status: ACTIVE
+repository: burakciller90-arch/Crypto-Signal
+canonicalMainAtStart: 3b555bb97ff8f43038a854e7c66a6ae9f505bbb7
+previousGate: RDP10-F2 PASS
+previousCloseoutPR: 1653
+previousCloseoutMergeSha: 3b555bb97ff8f43038a854e7c66a6ae9f505bbb7
+branch: rdp10/final-contract-closure-f3
+worktree: no session-local /Volumes worktree; canonical SSD504 Workbench exact-main verified
+roadmapGate: RDP10-F3 final contract closure audit
+duplicateRelevantPRs: NONE
+duplicateExactF3BranchesBeforeCreation: NONE
+prepBranchObserved: prep/rdp10-proof-contract
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+workbenchPrerequisite:
+- Crypto SSD504 Workbench Bootstrap run 36480861694 / job 109125861177: SUCCESS.
+- GITHUB_SHA=3b555bb97ff8f43038a854e7c66a6ae9f505bbb7.
+- WORKBENCH_REPO_SYNCED_TO_MAIN=YES.
+- final REPO_HEAD=3b555bb97ff8f43038a854e7c66a6ae9f505bbb7.
+- REPO_BRANCH=main; REPO_DIRTY_COUNT=0.
+- SSD504_WORKBENCH_PASS=YES; REAL_CAPITAL=0.
+
+baselineRuns:
+- Agent Memory Bootstrap 36480861707: in progress at start.
+- RDP10 Frozen Proof Contract 36480905700: queued at start.
+
+boundedGoal:
+- audit and mechanically close only the remaining top-level RDP10 proof-contract gaps across Geometry, Liquidity, Order Flow, Derivatives, On-chain, Event Risk/context and RDP9 provider-divergence/data-quality context.
+- preserve immutable/PIT/no-current-substitution truth and explicit unavailable/stale states.
+- do not duplicate accepted stores/proofs or create unsupported direction/provider claims.
+
+blocker:
+- exact-main baseline acceptance and resolver/source-contract coverage audit are not yet complete.
+
+nextAction:
+- inspect runs 36480905700 and 36480861707, then map current exact-evidence domains/resolvers to Event Risk and provider-divergence source truth and record the pre-implementation audit checkpoint before any code change.
+
+
+
+---
+
+## 2026-09-28 — RDP10-F3 pre-implementation audit checkpoint
+
+status: ACTIVE_AUDITED
+branch: rdp10/final-contract-closure-f3
+canonicalMain: 3b555bb97ff8f43038a854e7c66a6ae9f505bbb7
+preAuditHead: d78262ade1f2bf758371d1c035bd43f55c8ef671
+productionChangesBeforeAudit: NONE
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+exactBaseline:
+- RDP10 run 36481004403 / job 109126434036: SUCCESS.
+- RDP10_EXACT_SOURCE_PASS=YES.
+- RDP10_CANONICAL_CHECKOUTS_CLEAN=YES.
+- RDP10_FAIL_CLOSED_FOCUSED_PASS=YES.
+- RDP10_DERIVED_PROOF_STORE_PASS=YES.
+- RDP10_LIVE_MESSAGES_AUDITED=6.
+- RDP10_UNREGISTERED_READY_COUNT=0.
+- RDP10_LIVE_FAIL_CLOSED_PASS=YES.
+- RDP10_NON_MUTATING_PASS=YES.
+- HISTORICAL_BACKFILL=NO; REAL_CAPITAL=0.
+- run 36480905700 is not acceptance because concurrency left the workflow conclusion CANCELLED despite its individual proof steps succeeding.
+
+auditFindings:
+- typed exact proof/resolution already exists for the five top-level evidence families plus accepted Options/On-chain enrichments.
+- Event Risk exact canonical event records are already read-only, identity-checked, PIT-bounded and focused-tested.
+- provider_quality_change already binds provider_divergence_snapshot under data_quality/provider_divergence and is required by live RDP10.
+- provider-divergence exact resolver already exists and is read-only/PIT checked, but focused customer-proof + no-future regression is missing.
+- family source_scope is already immutable in the fact bundle but is not surfaced directly in customer_projection.
+- no collector/store/scoring/directional implementation gap was found.
+
+minimalImplementation:
+- surface source_scope and frozen family context in customer_projection.
+- add provider-divergence/data-quality exact-reference + no-future regression.
+- wire the regression into RDP10 acceptance; avoid unrelated changes.
+
+nextAction:
+- implement those bounded changes, then exact-head acceptance + merge guard.
+
+
+
+---
+
+## 2026-09-28 — RDP10-F3 implementation acceptance checkpoint
+
+status: ACCEPTED_PRE_MERGE
+branch: rdp10/final-contract-closure-f3
+canonicalMainAtCheckpoint: 3b555bb97ff8f43038a854e7c66a6ae9f505bbb7
+acceptedImplementationHead: 50c3b2ae748ea6f0f553d6e3d2ef4d2a17ac73cc
+acceptanceRun: 36482028160
+acceptanceJob: 109129741160
+acceptanceConclusion: SUCCESS
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+implementation:
+- customer exact proof surfaces immutable source_scope + frozen family context.
+- provider_divergence/data_quality exact regression resolves the canonical snapshot and rejects future evidence beyond source_as_of_ms.
+- workflow emits RDP10_F3_FINAL_CONTRACT_PASS only after focused/live/non-mutating gates all pass.
+- no collector, provider store, source truth, score family, direction authority or historical evidence was mutated.
+
+acceptedMarkers:
+- RDP10_EXACT_SOURCE_PASS=YES
+- RDP10_CANONICAL_CHECKOUTS_CLEAN=YES
+- RDP10_FAIL_CLOSED_FOCUSED_PASS=YES
+- RDP10_DERIVED_PROOF_STORE_PASS=YES
+- RDP10_LIVE_MESSAGES_AUDITED=6
+- RDP10_UNREGISTERED_READY_COUNT=0
+- RDP10_LIVE_FAIL_CLOSED_PASS=YES
+- RDP10_NON_MUTATING_PASS=YES
+- RDP10_F3_FINAL_CONTRACT_PASS=YES
+- RDP10_CUSTOMER_SOURCE_LABEL_PASS=YES
+- RDP10_PROVIDER_DIVERGENCE_EXACT_PASS=YES
+- RDP10_EVENT_SOURCE_EXACT_PASS=YES
+- RDP10_HISTORICAL_CURRENT_SUBSTITUTION=NO
+- HISTORICAL_BACKFILL=NO
+- REAL_CAPITAL=0
+
+failedRunsNotAccepted:
+- 36481823314: focused regression caught list-vs-tuple serialized assertion mismatch.
+- 36481908539: pytest passed; Ruff correctly rejected import ordering.
+- both were repaired; neither is counted as acceptance.
+
+blocker:
+- none in implementation; docs checkpoint itself advances head and therefore requires final exact-head acceptance before PR/merge.
+
+nextAction:
+- require final docs-complete exact-head RDP10 SUCCESS; then PR, guarded merge, merged-main proof, durable top-level RDP10 PASS, and RDP11 soak start.

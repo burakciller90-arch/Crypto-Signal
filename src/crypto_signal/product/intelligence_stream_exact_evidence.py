@@ -827,6 +827,11 @@ class IntelligenceStreamExactEvidenceReadModel:
         customer_projection = {
             "projector_id": fact.get("projector_id"),
             "family": fact.get("family"),
+            "source_scope": fact.get("source_scope"),
+            "asset": fact.get("asset"),
+            "symbol": fact.get("symbol"),
+            "market": fact.get("market"),
+            "timeframe": fact.get("timeframe"),
             "state_label": fact.get("state_label"),
             "state_components": components,
             "direction": fact.get("direction"),
