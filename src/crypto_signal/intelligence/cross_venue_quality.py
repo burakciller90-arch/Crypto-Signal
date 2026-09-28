@@ -32,7 +32,7 @@ class CrossVenueQualityState(StrEnum):
 
 @dataclass(frozen=True, slots=True)
 class CrossVenueQualityConfig:
-    material_spread_bps: Decimal = Decimal("40")
+    material_spread_bps: Decimal = Decimal(40)
 
     def __post_init__(self) -> None:
         if (
@@ -44,6 +44,9 @@ class CrossVenueQualityConfig:
 
 
 @dataclass(frozen=True, slots=True)
+DEFAULT_CROSS_VENUE_QUALITY_CONFIG = CrossVenueQualityConfig()
+
+
 class CrossVenueQualityAssessment:
     assessment_identity: str
     engine_version: str
@@ -131,7 +134,7 @@ class CrossVenueQualityAssessment:
 def assess_cross_venue_quality(
     snapshot: ProviderDivergenceSnapshot,
     *,
-    config: CrossVenueQualityConfig = CrossVenueQualityConfig(),
+    config: CrossVenueQualityConfig = DEFAULT_CROSS_VENUE_QUALITY_CONFIG,
 ) -> CrossVenueQualityAssessment:
     source_ids = tuple(
         sorted(
