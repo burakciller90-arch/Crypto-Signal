@@ -120,6 +120,16 @@ DEFAULT_OPTIONS_SURFACE_PATH = (
     / "market_tape"
     / "options_surface.sqlite3"
 )
+DEFAULT_ONCHAIN_CAPITAL_FLOW_PATH = (
+    DEFAULT_STREAM_LEDGER_PATH.parent.parent
+    / "onchain"
+    / "onchain_capital_flow.sqlite3"
+)
+DEFAULT_ONCHAIN_SOURCE_CONTRACT_PATH = (
+    DEFAULT_STREAM_LEDGER_PATH.parent.parent
+    / "onchain"
+    / "source_contract.sqlite3"
+)
 DEFAULT_CANDLE_CACHE_PATH = (
     Path("/Users/crypto-signal-agent/Crypto-Signal")
     / "runtime"
@@ -232,6 +242,8 @@ def create_app(
     frozen_proof_store_path: Path | None = None,
     product_root: str | None = None,
     options_surface_path: Path | None = None,
+    onchain_capital_flow_path: Path | None = None,
+    onchain_source_contract_path: Path | None = None,
 ) -> FastAPI:
     selected_path = ledger_path or Path(
         os.environ.get("CRYPTO_SIGNAL_LEDGER_PATH", str(DEFAULT_LEDGER_PATH))
@@ -354,6 +366,38 @@ def create_app(
         )
     else:
         selected_options_surface_path = None
+
+    if onchain_capital_flow_path is not None:
+        selected_onchain_capital_flow_path: Path | None = (
+            onchain_capital_flow_path
+        )
+    elif ledger_path is None:
+        onchain_flow_env = os.environ.get(
+            "CRYPTO_SIGNAL_ONCHAIN_CAPITAL_FLOW_PATH"
+        )
+        selected_onchain_capital_flow_path = (
+            Path(onchain_flow_env)
+            if onchain_flow_env
+            else DEFAULT_ONCHAIN_CAPITAL_FLOW_PATH
+        )
+    else:
+        selected_onchain_capital_flow_path = None
+
+    if onchain_source_contract_path is not None:
+        selected_onchain_source_contract_path: Path | None = (
+            onchain_source_contract_path
+        )
+    elif ledger_path is None:
+        onchain_source_env = os.environ.get(
+            "CRYPTO_SIGNAL_ONCHAIN_SOURCE_CONTRACT_PATH"
+        )
+        selected_onchain_source_contract_path = (
+            Path(onchain_source_env)
+            if onchain_source_env
+            else DEFAULT_ONCHAIN_SOURCE_CONTRACT_PATH
+        )
+    else:
+        selected_onchain_source_contract_path = None
 
     if shadow_intent_journal_path is not None:
         selected_shadow_intent_path: Path | None = shadow_intent_journal_path
@@ -974,6 +1018,10 @@ def create_app(
                 provider_divergence_path=selected_provider_divergence_path,
                 frozen_proof_store_path=selected_frozen_proof_store_path,
                 options_surface_path=selected_options_surface_path,
+                onchain_capital_flow_path=selected_onchain_capital_flow_path,
+                onchain_source_contract_path=(
+                    selected_onchain_source_contract_path
+                ),
             ).read_for_narrative(narrative_identity)
         except StreamExactEvidenceError as exc:
             raise HTTPException(status_code=500, detail=str(exc)) from exc
@@ -1044,6 +1092,10 @@ def create_app(
                 provider_divergence_path=selected_provider_divergence_path,
                 frozen_proof_store_path=selected_frozen_proof_store_path,
                 options_surface_path=selected_options_surface_path,
+                onchain_capital_flow_path=selected_onchain_capital_flow_path,
+                onchain_source_contract_path=(
+                    selected_onchain_source_contract_path
+                ),
             ).read_reference(
                 narrative_identity=narrative_identity,
                 evidence_identity=evidence_identity,
