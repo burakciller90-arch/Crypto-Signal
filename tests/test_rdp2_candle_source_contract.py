@@ -84,7 +84,7 @@ def _snapshot(
         raw_payload={
             "response": {
                 "provider": provider,
-                "rows": [candle.close] if candle is not None else [],
+                "rows": [str(candle.close)] if candle is not None else [],
                 "time": source_timestamp_ms,
             }
         },
