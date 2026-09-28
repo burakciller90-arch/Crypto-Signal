@@ -23,6 +23,9 @@ from crypto_signal.intelligence.confluence_matrix_v2 import (
     evaluate_confluence_matrix,
 )
 from crypto_signal.intelligence.event_risk_circuit_breaker import CircuitBreakerAnalysis
+from crypto_signal.intelligence.evidence_overlap import (
+    analyze_confluence_evidence_overlap,
+)
 from crypto_signal.intelligence.meta_intelligence import MetaDirection
 from crypto_signal.product.decision_proof import (
     DecisionProofEvidenceSlice,
@@ -138,6 +141,16 @@ def issue_unified_decision(
 
     direction = _meta_direction(signal.direction)
     policy = m6_policy or build_locked_m6_policy()
+    overlap_analysis = analyze_confluence_evidence_overlap(family_evidence)
+    overlap_lineage = overlap_analysis.lineage_identities
+    decision_lineage = tuple(
+        sorted(
+            {
+                *forecast_source_evidence_identities,
+                *overlap_lineage,
+            }
+        )
+    )
     confluence = evaluate_confluence_matrix(
         policy,
         family_evidence,
@@ -158,15 +171,13 @@ def issue_unified_decision(
         calibrated_probability=calibrated_probability,
         calibration_scope=calibration_scope,
         extra_version_refs=forecast_version_refs,
-        extra_source_evidence_identities=(
-            forecast_source_evidence_identities
-        ),
+        extra_source_evidence_identities=decision_lineage,
     )
 
     methodology = _methodology_slice(
         signal,
         confluence,
-        extra_lineage_identities=forecast_source_evidence_identities,
+        extra_lineage_identities=decision_lineage,
     )
     proof = build_decision_proof_snapshot(
         forecast,
