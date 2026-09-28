@@ -25,7 +25,6 @@ from crypto_signal.data.market_tape_collector_runtime import (
     build_collector_instance,
 )
 from crypto_signal.data.market_tape_source_contract import (
-    BybitMarketTapeCapabilities,
     persist_bybit_wire_source_contract,
     persist_open_gap_coverage,
     register_bybit_market_tape_capabilities,
@@ -525,6 +524,7 @@ async def run(args: argparse.Namespace) -> int:
             wire_event=event,
             raw_event=raw_event,
             orderbook_normalized_persisted=orderbook_normalized_persisted,
+            coverage_observed_at_ms=runtime_now_ms(),
         )
         source_contract_envelopes_total += write.envelope_count
         if write.coverage_event is not None:
