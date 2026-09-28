@@ -20,6 +20,7 @@ from crypto_signal.data.models import DataSource
 from crypto_signal.data.onchain_capital_flow import (
     OnchainEventCoverage,
     OnchainEventCoverageState,
+    StablecoinSourceTimestampSemantic,
     StablecoinSupplyObservation,
     build_onchain_event_coverage,
     build_stablecoin_supply_observation,
@@ -865,6 +866,9 @@ def _stablecoin_supply_from_payload(
         ingested_at_ms=int(payload["ingested_at_ms"]),
         adapter_version=str(payload["adapter_version"]),
         raw_identity=str(payload["raw_identity"]),
+        source_timestamp_semantic=StablecoinSourceTimestampSemantic(
+            str(payload["source_timestamp_semantic"])
+        ),
     )
     if value.observation_identity != str(payload["observation_identity"]):
         raise ValueError("stored stablecoin supply identity mismatch")
