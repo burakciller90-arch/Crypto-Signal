@@ -184,7 +184,7 @@ async def run(args: argparse.Namespace) -> int:
         f"cycle_derivatives_unchanged={cycle_derivatives_unchanged} "
         f"cycle_source_envelopes={cycle_source_envelopes} "
         f"cycle_source_coverage={cycle_source_coverage} "
-        f"source_contract_quick_check={'YES' if source_store.quick_check() else 'NO'} "
+        "SOURCE_CONTRACT_INTEGRITY_DELEGATED=YES "
         "FULL_DB_INTEGRITY_DELEGATED=YES "
         "REAL_CAPITAL=0",
         flush=True,
