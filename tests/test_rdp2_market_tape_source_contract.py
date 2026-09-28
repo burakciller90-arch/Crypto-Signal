@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import AsyncIterator
+from pathlib import Path
 
 import pytest
 
@@ -631,3 +632,20 @@ async def test_wire_collection_callback_runs_after_raw_and_normalized_persistenc
         ).state
         is SourceCoverageState.OBSERVED
     )
+
+
+def test_market_tape_runtime_wires_source_contract_and_existing_gap_ledger() -> None:
+    runner = (
+        Path(__file__).resolve().parents[1]
+        / "ops"
+        / "run_market_tape_stream.py"
+    ).read_text(encoding="utf-8")
+
+    assert "DEFAULT_SOURCE_CONTRACT_DB" in runner
+    assert "--source-contract-db" in runner
+    assert "register_bybit_market_tape_capabilities(" in runner
+    assert "persisted_wire_callback=persist_source_contract" in runner
+    assert "persist_open_gap_coverage(" in runner
+    assert "gap_ledger.open_gaps(" in runner
+    assert "source_contract_quick_check=" in runner
+    assert "REAL_CAPITAL=0" in runner
