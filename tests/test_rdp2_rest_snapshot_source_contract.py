@@ -607,7 +607,8 @@ def test_snapshot_runner_wires_canonical_source_contract() -> None:
     assert "register_bybit_rest_market_tape_capabilities(" in runner
     assert "cycle_source_envelopes=" in runner
     assert "cycle_source_coverage=" in runner
-    assert "source_contract_quick_check=" in runner
+    assert "SOURCE_CONTRACT_INTEGRITY_DELEGATED=YES" in runner
+    assert "source_store.quick_check()" not in runner
     assert "FULL_DB_INTEGRITY_DELEGATED=YES" in runner
     assert "REAL_CAPITAL=0" in runner
 
