@@ -89,7 +89,7 @@ jobs:
           ## Rules
 
           - Work inside `repo/` for code. Use a feature branch + PR; GitHub remains canonical history.
-          - Read `00_CONTEXT/READ_FIRST_CRYPTO_SIGNAL.md`, `CURRENT_STATUS.md`, and `PROJECT_CHRONICLE.md` before changing state.
+          - Read `00_CONTEXT/AGENTS.md`, `00_CONTEXT/CURRENT_FRONTIER.md`, the tail of `00_CONTEXT/HANDOFF_LOG.md`, then `00_CONTEXT/READ_FIRST_CRYPTO_SIGNAL.md`, `CURRENT_STATUS.md`, and `PROJECT_CHRONICLE.md` before changing state.
           - Put new user-supplied planning files into `00_INBOX/` first, then triage them into the relevant workstream.
           - `01_EVIDENCE_DEPTH/`, `02_PAPER_CAPITAL/`, and `03_PRODUCT_UI/` are the three primary development tracks.
           - `04_SHARED_CONTRACTS/` is for cross-track contracts only.
@@ -153,6 +153,10 @@ jobs:
           Superseded local planning artifacts only. Canonical Git history remains in GitHub.
           EOF
 
+          ln -sfn ../repo/AGENTS.md "$ROOT/00_CONTEXT/AGENTS.md"
+          ln -sfn ../repo/docs/agent/CURRENT_FRONTIER.md "$ROOT/00_CONTEXT/CURRENT_FRONTIER.md"
+          ln -sfn ../repo/docs/agent/HANDOFF_LOG.md "$ROOT/00_CONTEXT/HANDOFF_LOG.md"
+          ln -sfn ../repo/docs/agent/PROMPT_SUFFIX.md "$ROOT/00_CONTEXT/PROMPT_SUFFIX.md"
           ln -sfn ../repo/READ_FIRST_CRYPTO_SIGNAL.md "$ROOT/00_CONTEXT/READ_FIRST_CRYPTO_SIGNAL.md"
           ln -sfn ../repo/CURRENT_STATUS.md "$ROOT/00_CONTEXT/CURRENT_STATUS.md"
           ln -sfn ../repo/PROJECT_CHRONICLE.md "$ROOT/00_CONTEXT/PROJECT_CHRONICLE.md"
@@ -188,6 +192,10 @@ jobs:
           test -d "$ROOT/01_EVIDENCE_DEPTH"
           test -d "$ROOT/02_PAPER_CAPITAL"
           test -d "$ROOT/03_PRODUCT_UI"
+          test -L "$ROOT/00_CONTEXT/AGENTS.md"
+          test -L "$ROOT/00_CONTEXT/CURRENT_FRONTIER.md"
+          test -L "$ROOT/00_CONTEXT/HANDOFF_LOG.md"
+          test -L "$ROOT/00_CONTEXT/PROMPT_SUFFIX.md"
           test -L "$ROOT/00_CONTEXT/READ_FIRST_CRYPTO_SIGNAL.md"
           test -L "$ROOT/00_CONTEXT/CURRENT_STATUS.md"
           test -L "$ROOT/00_CONTEXT/EVIDENCE_DEPTH_FRONTIER.md"
