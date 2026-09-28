@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - "src/crypto_signal/data/source_contract.py"
+      - "src/crypto_signal/data/market_tape.py"
       - "src/crypto_signal/data/market_tape_source_contract.py"
       - "src/crypto_signal/data/market_tape_wire_collection.py"
       - "ops/run_market_tape_stream.py"
@@ -54,12 +55,14 @@ jobs:
             tests/test_rdp1_runtime_reliability.py
           "$PY" -m ruff check \
             src/crypto_signal/data/source_contract.py \
+            src/crypto_signal/data/market_tape.py \
             src/crypto_signal/data/market_tape_source_contract.py \
             src/crypto_signal/data/market_tape_wire_collection.py \
             ops/run_market_tape_stream.py \
             tests/test_rdp2_market_tape_source_contract.py
           "$PY" -m mypy \
             src/crypto_signal/data/source_contract.py \
+            src/crypto_signal/data/market_tape.py \
             src/crypto_signal/data/market_tape_source_contract.py \
             src/crypto_signal/data/market_tape_wire_collection.py
           "$PY" -m py_compile ops/run_market_tape_stream.py
