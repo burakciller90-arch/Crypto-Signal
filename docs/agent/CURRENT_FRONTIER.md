@@ -92,6 +92,19 @@ Repair:
 
 Exact nextAction: rerun the full RDP10 UID504 contract on the final retry-checkpoint head; merge only if focused + live + non-mutating all PASS.
 
+### Reconciliation checkpoint — Options source availability separated from proof persistence
+
+Parallel branch audit after the first retry found the implementation/test set had advanced while this agent was reading it. Duplicate work was not repeated.
+
+Additional accepted-intent changes now on the branch:
+
+- `92237d168be29f5b4d5cbb92303d78f4992cd905` — source snapshot proof now uses family analysis `as_of_ms` / persistence boundary while preserving the earlier source availability separately in `market_available_at_ms`; source freshness age is the real surface age rather than zero.
+- `a27ffa1e8e4fb2da23987d4734dfab84d85dab19` — fresh/stale Options proof tests now verify the separated availability/persistence times and that stale Options still persist exact proof with explicit stale status.
+
+The previous retry run/head must not be used as final F1 acceptance because production semantics and tests changed after it.
+
+Exact nextAction: run the full RDP10 Frozen Proof Contract UID504 acceptance on the final head after this reconciliation checkpoint; only focused + live + non-mutating PASS may authorize PR/merge.
+
 
 Conversation memory is non-authoritative. Rebuild from this file, HANDOFF_LOG, the canonical roadmap, and live Git/GitHub/runtime evidence.
 
