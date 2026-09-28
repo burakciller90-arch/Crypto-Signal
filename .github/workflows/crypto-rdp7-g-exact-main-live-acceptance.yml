@@ -265,8 +265,15 @@ jobs:
           set -euo pipefail
           ROOT="/Volumes/Crypto-504/Crypto-Signal"
           SUP="$ROOT/ssd-service-supervisor.sh"
-          pid="$(ps -axo pid=,command= | awk -v needle="$SUP" 'index($0, needle) > 0 && first == "" {first=$1} END {if (first != "") print first}')"
-          test -n "$pid"
-          kill -0 "$pid"
-          echo "RDP7_G_SUPERVISOR_ALIVE_PASS=YES pid=$pid"
+          alive_pid=""
+          for _ in 1 2 3 4 5; do
+            pid="$(ps -axo pid=,command= | awk -v needle="$SUP" 'index($0, needle) > 0 && first == "" {first=$1} END {if (first != "") print first}')"
+            if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
+              alive_pid="$pid"
+              break
+            fi
+            sleep 1
+          done
+          test -n "$alive_pid"
+          echo "RDP7_G_SUPERVISOR_ALIVE_PASS=YES pid=$alive_pid"
           echo "REAL_CAPITAL=0"
