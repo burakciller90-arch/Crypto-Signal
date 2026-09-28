@@ -359,5 +359,5 @@ def test_live_trust_policy_silences_initial_healthy_baseline_then_recovers(
     assert "yeterince güvenilir değil" in degraded_text["intelligence_text"]
     assert "teyit gücünü düşürüyorum" in degraded_text["intelligence_text"]
     assert "Piyasa verisi sağlıklı" in recovered_text["collapsed_text"]
-    assert "normal" in recovered_text["intelligence_text"].lower()
+    assert "yeterince doğruluyor" in recovered_text["intelligence_text"].lower()
     assert "REAL_CAPITAL=0" in recovered_text["capital_text"]
