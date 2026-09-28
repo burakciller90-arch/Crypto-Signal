@@ -1386,3 +1386,39 @@ blocker:
 
 nextAction:
 - audit existing supervisor/runtime health, continuity/recovery utilities and evidence DB/read-model surfaces; checkpoint audit before implementation.
+
+
+
+---
+
+## 2026-09-29 — RDP11 pre-deploy audit checkpoint
+
+status: ACTIVE_AUDITED
+branch: rdp11/continuous-soak-anchor
+canonicalMain: 5f07a8954f87e237258f1d3eb448a5ede6106fbd
+realCapital: 0
+historicalBackfill: NO
+
+runtimeGap:
+- Development observed head b343e3bf20677df2caa4d4de5d7a47ee3e1ff01c.
+- Product observed head 403cb552dd398ea5c81ab97cb5df8114b0716ad2.
+- accepted RDP10/current main is newer; a soak on the old Product would not satisfy real Product proof inspectability.
+
+acceptedDeploymentContract:
+- use allowlisted UID504 Mac command workflow only.
+- sequence: sync, producttest, fulltest, exact-target productdeploy, productstate.
+- productdeploy must target exact origin/main and rollback Product automatically on any health failure.
+- do not hand-edit Product.
+- do not start RDP11 elapsed clock until exact-target runtime + Product verification passes.
+
+existingObservationSurfaces:
+- supervisor/dashboard health.
+- market-tape collector heartbeat/ingestion.
+- liquidation heartbeat/connection coverage.
+- source-contract/provider-divergence SQLite quick checks.
+- frozen-proof read-only store.
+- restart/watchdog continuity acceptance.
+- Stream/Product read-only APIs.
+
+nextAction:
+- execute exact UID504 deployment sequence to canonical main; capture issue/run/job evidence; then install/read-only-observer only after successful deployment.
