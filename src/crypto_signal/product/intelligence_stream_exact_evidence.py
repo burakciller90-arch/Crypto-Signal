@@ -379,22 +379,71 @@ class IntelligenceStreamExactEvidenceReadModel:
                 "persistent_pool_dependency": state.value,
             }
         elif domain == "order_flow":
-            if selected_kinds.intersection(
+            micro_state = (
+                StreamEvidenceResolutionState.READY_EXACT
+                if "order_flow_microstructure_freeze" in selected_kinds
+                else StreamEvidenceResolutionState.UNAVAILABLE_EXPLICIT
+            )
+            temporal_state = (
+                StreamEvidenceResolutionState.READY_EXACT
+                if "temporal_order_flow_freeze" in selected_kinds
+                else StreamEvidenceResolutionState.UNAVAILABLE_EXPLICIT
+            )
+            absorption_state = (
+                StreamEvidenceResolutionState.READY_EXACT
+                if "absorption_freeze" in selected_kinds
+                else StreamEvidenceResolutionState.UNAVAILABLE_EXPLICIT
+            )
+            divergence_state = (
+                StreamEvidenceResolutionState.READY_EXACT
+                if "price_cvd_divergence_freeze" in selected_kinds
+                else StreamEvidenceResolutionState.UNAVAILABLE_EXPLICIT
+            )
+            if (
+                micro_state is StreamEvidenceResolutionState.READY_EXACT
+                or temporal_state is StreamEvidenceResolutionState.READY_EXACT
+                or absorption_state is StreamEvidenceResolutionState.READY_EXACT
+                or divergence_state is StreamEvidenceResolutionState.READY_EXACT
+            ):
+                state = StreamEvidenceResolutionState.READY_EXACT
+                reason = "exact_persisted_order_flow_derived_proof_resolved"
+            elif selected_kinds.intersection(
                 {"market_tape_orderbook", "market_tape_trade"}
             ) and {"book_pressure", "taker_flow"}.intersection(components):
                 state = StreamEvidenceResolutionState.READY_EXACT
                 reason = "exact_microstructure_state_and_sources_resolved"
+                micro_state = state
             capabilities = {
-                "microstructure_measurement": state.value,
-                "cvd_series": (
-                    StreamEvidenceResolutionState.UNAVAILABLE_EXPLICIT.value
-                ),
-                "divergence_relation": (
-                    StreamEvidenceResolutionState.UNAVAILABLE_EXPLICIT.value
-                ),
-                "absorption_evidence": (
-                    StreamEvidenceResolutionState.UNAVAILABLE_EXPLICIT.value
-                ),
+                "microstructure_measurement": micro_state.value,
+                "cvd_series": temporal_state.value,
+                "divergence_relation": divergence_state.value,
+                "absorption_evidence": absorption_state.value,
+            }
+        elif domain in {"temporal_order_flow", "window_local_cvd"}:
+            if "temporal_order_flow_freeze" in selected_kinds:
+                state = StreamEvidenceResolutionState.READY_EXACT
+                reason = "exact_persisted_temporal_order_flow_proof_resolved"
+            capabilities = {
+                "window_metrics": state.value,
+                "cvd_series": state.value,
+                "trade_velocity": state.value,
+                "large_trade_candidates": state.value,
+            }
+        elif domain == "absorption":
+            if "absorption_freeze" in selected_kinds:
+                state = StreamEvidenceResolutionState.READY_EXACT
+                reason = "exact_persisted_absorption_proof_resolved"
+            capabilities = {
+                "absorption_candidates": state.value,
+                "flow_structure_dependency": state.value,
+            }
+        elif domain == "price_cvd_divergence":
+            if "price_cvd_divergence_freeze" in selected_kinds:
+                state = StreamEvidenceResolutionState.READY_EXACT
+                reason = "exact_persisted_price_cvd_divergence_proof_resolved"
+            capabilities = {
+                "divergence_candidates": state.value,
+                "candle_flow_relationship": state.value,
             }
         elif domain == "derivatives":
             if "market_tape_derivatives" in selected_kinds:
@@ -819,7 +868,18 @@ def _objects_for_domain(
         },
         "liquidity_structure": {"liquidity_structure_freeze"},
         "liquidity_sweep": {"liquidity_sweep_freeze"},
-        "order_flow": {"market_tape_orderbook", "market_tape_trade"},
+        "order_flow": {
+            "market_tape_orderbook",
+            "market_tape_trade",
+            "order_flow_microstructure_freeze",
+            "temporal_order_flow_freeze",
+            "absorption_freeze",
+            "price_cvd_divergence_freeze",
+        },
+        "temporal_order_flow": {"temporal_order_flow_freeze"},
+        "window_local_cvd": {"temporal_order_flow_freeze"},
+        "absorption": {"absorption_freeze"},
+        "price_cvd_divergence": {"price_cvd_divergence_freeze"},
         "derivatives": {"market_tape_derivatives"},
         "event_calendar": {
             "event_calendar_coverage",

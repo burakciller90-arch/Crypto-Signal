@@ -6,8 +6,11 @@ from pathlib import Path
 from crypto_signal.data.derivatives import DerivativesInstrumentType
 from crypto_signal.data.liquidations import LiquidatedPositionSide
 from crypto_signal.data.market_tape import MarketTapeStore
-from crypto_signal.data.microstructure import OrderBookSnapshot
-from crypto_signal.data.models import Exchange, MarketType
+from crypto_signal.data.microstructure import (
+    OrderBookSnapshot,
+    PublicTradeObservation,
+)
+from crypto_signal.data.models import Candle, Exchange, MarketType
 from crypto_signal.data.options_surface_store import OptionsSurfaceStore
 from crypto_signal.data.store import CandleStore
 from crypto_signal.intelligence.confluence_matrix_v2 import ConfluenceFamily
@@ -43,15 +46,19 @@ from crypto_signal.intelligence.options_volatility import (
     build_options_volatility_evidence_freeze,
 )
 from crypto_signal.intelligence.order_flow_microstructure import (
+    OrderFlowMicrostructureEvidenceFreeze,
     OrderFlowMicrostructureLabel,
     build_order_flow_microstructure_evidence_freeze,
 )
 from crypto_signal.intelligence.order_flow_patterns import (
+    AbsorptionEvidenceFreeze,
+    DivergenceEvidenceFreeze,
     PatternStatus,
     build_absorption_freeze,
     build_price_cvd_divergence_freeze,
 )
 from crypto_signal.intelligence.temporal_order_flow import (
+    TemporalFlowEvidenceFreeze,
     TemporalFlowStatus,
     build_temporal_order_flow_freeze,
 )
@@ -671,6 +678,15 @@ def build_market_tape_family_snapshots(
                                 ),
                             )
                         )
+
+            if frozen_proof_store is not None:
+                _persist_order_flow_proofs(
+                    frozen_proof_store,
+                    microstructure=order_flow,
+                    temporal=temporal,
+                    absorption=absorption,
+                    divergence=divergence,
+                )
 
             order_flow_direction = None
             if (
@@ -1698,6 +1714,320 @@ def _liquidity_sweep_available_at(
         default=0,
     )
     return max(snapshot_available, trade_available)
+
+
+def _persist_order_flow_proofs(
+    store: FrozenProofStore,
+    *,
+    microstructure: OrderFlowMicrostructureEvidenceFreeze,
+    temporal: TemporalFlowEvidenceFreeze | None,
+    absorption: AbsorptionEvidenceFreeze | None,
+    divergence: DivergenceEvidenceFreeze | None,
+) -> None:
+    analysis = microstructure.analysis
+    provider = (
+        f"{analysis.exchange.value}:"
+        f"{analysis.market_type.value}:market_tape"
+    )
+    asset = _base_asset(analysis.symbol)
+    micro_sources = {
+        *(item.trade_identity for item in microstructure.trades),
+    }
+    if microstructure.orderbook is not None:
+        micro_sources.add(microstructure.orderbook.snapshot_identity)
+    micro_age_candidates = tuple(
+        analysis.as_of_ms - event_ms
+        for event_ms in (
+            analysis.book_event_at_ms,
+            analysis.latest_trade_event_at_ms,
+        )
+        if event_ms is not None
+    )
+    store.append(
+        FrozenProofObject(
+            object_identity=microstructure.freeze_identity,
+            analysis_identity=analysis.evidence_identity,
+            object_kind="order_flow_microstructure_freeze",
+            family=ConfluenceFamily.ORDER_FLOW.value,
+            domains=("order_flow",),
+            asset=asset,
+            symbol=analysis.symbol,
+            network=None,
+            timeframe="microstructure",
+            as_of_ms=analysis.as_of_ms,
+            market_available_at_ms=_microstructure_available_at(
+                microstructure
+            ),
+            observed_at_ms=analysis.observed_at_ms,
+            source_provider=provider,
+            source_quality=(
+                "measured"
+                if analysis.label
+                is not OrderFlowMicrostructureLabel.UNRESOLVED
+                else "unresolved"
+            ),
+            freshness_state="exact_pit_bounded",
+            freshness_age_ms=(
+                None if not micro_age_candidates else max(micro_age_candidates)
+            ),
+            uncertainty_flags=tuple(sorted(analysis.uncertainty_flags)),
+            source_object_identities=tuple(sorted(micro_sources)),
+            depends_on_evidence_identities=(),
+            payload_json=canonical_json(analysis),
+            visualization_json=canonical_json(analysis),
+            renderer_contract_version="order-flow-microstructure-v1/1",
+            persisted_at_ms=analysis.as_of_ms,
+            production_authority=False,
+            real_capital=0,
+        )
+    )
+
+    if temporal is not None:
+        temporal_analysis = temporal.analysis
+        store.append(
+            FrozenProofObject(
+                object_identity=temporal.freeze_identity,
+                analysis_identity=temporal_analysis.evidence_identity,
+                object_kind="temporal_order_flow_freeze",
+                family=ConfluenceFamily.ORDER_FLOW.value,
+                domains=(
+                    "order_flow",
+                    "temporal_order_flow",
+                    "window_local_cvd",
+                ),
+                asset=asset,
+                symbol=temporal_analysis.symbol,
+                network=None,
+                timeframe="microstructure",
+                as_of_ms=temporal_analysis.as_of_ms,
+                market_available_at_ms=_trade_available_at(temporal.trades),
+                observed_at_ms=temporal_analysis.observed_at_ms,
+                source_provider=provider,
+                source_quality=temporal_analysis.quality.value,
+                freshness_state="exact_pit_bounded",
+                freshness_age_ms=(
+                    temporal_analysis.latest_eligible_trade_age_ms
+                ),
+                uncertainty_flags=tuple(
+                    sorted(temporal_analysis.uncertainty_flags)
+                ),
+                source_object_identities=tuple(
+                    sorted(item.trade_identity for item in temporal.trades)
+                ),
+                depends_on_evidence_identities=(),
+                payload_json=canonical_json(temporal_analysis),
+                visualization_json=canonical_json(temporal_analysis),
+                renderer_contract_version="temporal-order-flow-cvd-v1/1",
+                persisted_at_ms=temporal_analysis.as_of_ms,
+                production_authority=False,
+                real_capital=0,
+            )
+        )
+
+    if absorption is not None:
+        absorption_analysis = absorption.analysis
+        absorption_sources = tuple(
+            sorted(
+                {
+                    *(
+                        item.trade_identity
+                        for item in absorption.flow_freeze.trades
+                    ),
+                    *(
+                        item.snapshot_identity
+                        for item in absorption.structure_freeze.snapshots
+                    ),
+                }
+            )
+        )
+        absorption_available_at = max(
+            _trade_available_at(absorption.flow_freeze.trades),
+            _orderbook_available_at(absorption.structure_freeze.snapshots),
+        )
+        store.append(
+            FrozenProofObject(
+                object_identity=absorption.freeze_identity,
+                analysis_identity=absorption_analysis.evidence_identity,
+                object_kind="absorption_freeze",
+                family=ConfluenceFamily.ORDER_FLOW.value,
+                domains=("absorption", "order_flow"),
+                asset=asset,
+                symbol=absorption_analysis.symbol,
+                network=None,
+                timeframe="microstructure",
+                as_of_ms=absorption_analysis.as_of_ms,
+                market_available_at_ms=absorption_available_at,
+                observed_at_ms=absorption_analysis.observed_at_ms,
+                source_provider=provider,
+                source_quality=absorption_analysis.status.value,
+                freshness_state="exact_pit_bounded",
+                freshness_age_ms=(
+                    absorption_analysis.as_of_ms - absorption_available_at
+                ),
+                uncertainty_flags=tuple(
+                    sorted(absorption_analysis.uncertainty_flags)
+                ),
+                source_object_identities=absorption_sources,
+                depends_on_evidence_identities=tuple(
+                    sorted(
+                        (
+                            absorption_analysis.flow_evidence_identity,
+                            absorption_analysis.flow_freeze_identity,
+                            absorption_analysis.structure_evidence_identity,
+                            absorption_analysis.structure_freeze_identity,
+                        )
+                    )
+                ),
+                payload_json=canonical_json(absorption_analysis),
+                visualization_json=canonical_json(absorption_analysis),
+                renderer_contract_version="order-flow-absorption-v1/1",
+                persisted_at_ms=absorption_analysis.as_of_ms,
+                production_authority=False,
+                real_capital=0,
+            )
+        )
+
+    if divergence is not None:
+        divergence_analysis = divergence.analysis
+        divergence_sources = tuple(
+            sorted(
+                {
+                    *(
+                        item.trade_identity
+                        for item in divergence.flow_freeze.trades
+                    ),
+                    *(
+                        _stream_candle_identity(item)
+                        for item in divergence.candles
+                    ),
+                }
+            )
+        )
+        candle_available_at = max(
+            (
+                max(
+                    item.close_time_ms,
+                    item.source_timestamp_ms,
+                    item.ingested_at_ms,
+                )
+                for item in divergence.candles
+            ),
+            default=0,
+        )
+        divergence_available_at = max(
+            _trade_available_at(divergence.flow_freeze.trades),
+            candle_available_at,
+        )
+        divergence_age_candidates = tuple(
+            value
+            for value in (
+                divergence_analysis.latest_candle_age_ms,
+                divergence.flow_freeze.analysis.latest_eligible_trade_age_ms,
+            )
+            if value is not None
+        )
+        store.append(
+            FrozenProofObject(
+                object_identity=divergence.freeze_identity,
+                analysis_identity=divergence_analysis.evidence_identity,
+                object_kind="price_cvd_divergence_freeze",
+                family=ConfluenceFamily.ORDER_FLOW.value,
+                domains=("order_flow", "price_cvd_divergence"),
+                asset=asset,
+                symbol=divergence_analysis.symbol,
+                network=None,
+                timeframe=divergence_analysis.timeframe,
+                as_of_ms=divergence_analysis.as_of_ms,
+                market_available_at_ms=divergence_available_at,
+                observed_at_ms=divergence_analysis.observed_at_ms,
+                source_provider=provider,
+                source_quality=divergence_analysis.status.value,
+                freshness_state="exact_pit_bounded",
+                freshness_age_ms=(
+                    None
+                    if not divergence_age_candidates
+                    else max(divergence_age_candidates)
+                ),
+                uncertainty_flags=tuple(
+                    sorted(divergence_analysis.uncertainty_flags)
+                ),
+                source_object_identities=divergence_sources,
+                depends_on_evidence_identities=tuple(
+                    sorted(
+                        (
+                            divergence_analysis.flow_evidence_identity,
+                            divergence_analysis.flow_freeze_identity,
+                        )
+                    )
+                ),
+                payload_json=canonical_json(divergence_analysis),
+                visualization_json=canonical_json(divergence_analysis),
+                renderer_contract_version="price-cvd-divergence-v1/1",
+                persisted_at_ms=divergence_analysis.as_of_ms,
+                production_authority=False,
+                real_capital=0,
+            )
+        )
+
+
+def _microstructure_available_at(
+    freeze: OrderFlowMicrostructureEvidenceFreeze,
+) -> int:
+    orderbook_available = (
+        0
+        if freeze.orderbook is None
+        else max(
+            freeze.orderbook.event_at_ms,
+            freeze.orderbook.source_timestamp_ms,
+            freeze.orderbook.response_time_ms,
+            freeze.orderbook.ingested_at_ms,
+        )
+    )
+    return max(
+        orderbook_available,
+        _trade_available_at(freeze.trades),
+    )
+
+
+def _trade_available_at(
+    trades: tuple[PublicTradeObservation, ...],
+) -> int:
+    return max(
+        (
+            max(
+                item.event_at_ms,
+                item.source_timestamp_ms,
+                item.ingested_at_ms,
+            )
+            for item in trades
+        ),
+        default=0,
+    )
+
+
+def _stream_candle_identity(candle: Candle) -> str:
+    return canonical_sha256(
+        {
+            "adapter_version": candle.adapter_version,
+            "close": candle.close,
+            "close_time_ms": candle.close_time_ms,
+            "exchange": candle.exchange,
+            "high": candle.high,
+            "ingested_at_ms": candle.ingested_at_ms,
+            "is_closed": candle.is_closed,
+            "low": candle.low,
+            "market_type": candle.market_type,
+            "open": candle.open,
+            "open_time_ms": candle.open_time_ms,
+            "quote_volume": candle.quote_volume,
+            "source": candle.source,
+            "source_timestamp_ms": candle.source_timestamp_ms,
+            "symbol": candle.symbol,
+            "timeframe": candle.timeframe,
+            "trade_count": candle.trade_count,
+            "volume": candle.volume,
+        }
+    )
 
 
 def _rich_liquidity_quality(*qualities: str) -> str:

@@ -186,3 +186,83 @@ immutability:
 - DurdurulmazTouched: NO
 - QuantumCapitalTouched: NO
 
+---
+
+## 2026-09-28 — RDP10-D2 start checkpoint
+
+status: ACTIVE
+canonicalMainAtStart: 188075b20e853f956462a90c6faa3f44ea4117f6
+branch: rdp10/order-flow-derived-proof-d2
+branchHeadAtCheckpoint: 21f573ece12539ad8107b592a34ab01a7cd39793
+worktree: no session-local /Volumes worktree; GitHub branch only, canonical Workbench validation must come from UID504 acceptance
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+previousSlice:
+- RDP10-D1 merged via PR #1643.
+- accepted head 46eef9e8fe6bae3aa1dd518dc4a872caa8de1267.
+- merge SHA 188075b20e853f956462a90c6faa3f44ea4117f6.
+- UID504 run 36464174709 / job 109070009401 SUCCESS.
+- Liquidity dynamics/structure/sweep proofs persist before Stream publish and resolve exact from frozen_proofs.sqlite3.
+
+activeGoal:
+- RDP10-D2 Order Flow exact derived-proof persistence + resolver integration.
+- Persist existing immutable RDP4 microstructure, temporal CVD, absorption and price/CVD divergence freezes before Stream publication.
+- Do not reconstruct these proofs from capped source previews.
+- Keep shared Liquidity/Order Flow lineage explicit.
+
+alreadyDoneOnBranch:
+- 1c3bd9975735ab815ab9aba7a7659856a1ffe244 — persistence path for four Order Flow proof kinds with PIT/source/dependency lineage.
+- 69f85d6cd73aa21239e4a969339a2387fb58992b — resolver domains/capabilities for persisted Order Flow proofs.
+- 21f573ece12539ad8107b592a34ab01a7cd39793 — task-start durable checkpoint.
+
+blocker:
+- D2 focused tests and UID504 acceptance have not run yet.
+- D2 must not be merged until exact-head acceptance output proves persistence, exact resolution, fail-closed behavior, no historical backfill and clean canonical checkouts.
+
+nextAction:
+- add focused D2 persistence/resolver/API tests;
+- confirm RDP10 workflow covers changed files;
+- run UID504 acceptance;
+- inspect exact acceptance output;
+- re-check main/open PRs before merge;
+- after merge, write completion checkpoint before starting the next slice.
+
+---
+
+## 2026-09-28 — RDP10-D2 implementation complete; acceptance phase started
+
+status: ACCEPTANCE_PENDING
+canonicalMainAtPhaseStart: 188075b20e853f956462a90c6faa3f44ea4117f6
+branch: rdp10/order-flow-derived-proof-d2
+branchHeadBeforeThisCheckpoint: a62ae6205c6b22ff63a8112ff0a7af02e23cb439
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+implemented:
+- immutable proof persistence for order_flow_microstructure_freeze.
+- immutable proof persistence for temporal_order_flow_freeze.
+- immutable proof persistence for absorption_freeze.
+- immutable proof persistence for price_cvd_divergence_freeze.
+- exact-evidence resolver support for order_flow, temporal_order_flow, window_local_cvd, absorption and price_cvd_divergence.
+- focused persistence tests for microstructure/temporal/absorption.
+- focused divergence persistence test.
+- exact resolver test proving the four Order Flow proof kinds resolve READY_EXACT without current-data substitution.
+- RDP10 workflow expanded to cover the D2 dependency test.
+- AGENTS.md now requires durable task-start checkpoints before implementation.
+
+acceptanceRule:
+- do not accept older queued/cancelled runs from pre-checkpoint heads.
+- only the final exact branch head after this checkpoint may satisfy D2 acceptance.
+- workflow SUCCESS alone is insufficient; inspect focused test/lint/type output, live fail-closed audit, non-mutating checkout proof, HISTORICAL_BACKFILL=NO and REAL_CAPITAL=0.
+
+blocker:
+- exact-head UID504 RDP10 acceptance has not completed yet.
+
+nextAction:
+- read the exact-head RDP10 Frozen Proof Contract UID504 run; if mechanically PASS, re-check current main/open PRs immediately before creating/merging the D2 PR.
+

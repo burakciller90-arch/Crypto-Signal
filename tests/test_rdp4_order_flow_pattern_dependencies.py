@@ -36,6 +36,7 @@ from crypto_signal.intelligence.temporal_order_flow import (
     build_temporal_order_flow_freeze,
 )
 from crypto_signal.ledger.serialization import canonical_sha256
+from crypto_signal.product.frozen_proof_store import FrozenProofStore
 from crypto_signal.product.intelligence_stream_family_sources import (
     build_market_tape_family_snapshots,
 )
@@ -158,12 +159,13 @@ def _seed_market_tape(store: MarketTapeStore) -> None:
         )
 
 
-def _order_flow_family(market_path, candle_path):
+def _order_flow_family(market_path, candle_path, proof_path=None):
     snapshots = build_market_tape_family_snapshots(
         market_path,
         symbols=("BTCUSDT",),
         as_of_ms=AS_OF_MS,
         candle_cache_path=candle_path,
+        frozen_proof_store_path=proof_path,
     )
     matches = tuple(
         item
@@ -184,12 +186,14 @@ def test_absorption_and_divergence_are_dependency_proofs_not_new_families(
     _seed_market_tape(market_store)
     candle_store.upsert(_candle())
 
-    family = _order_flow_family(market_path, candle_path)
+    proof_path = tmp_path / "frozen_proofs.sqlite3"
+    family = _order_flow_family(market_path, candle_path, proof_path)
     all_families = build_market_tape_family_snapshots(
         market_path,
         symbols=("BTCUSDT",),
         as_of_ms=AS_OF_MS,
         candle_cache_path=candle_path,
+        frozen_proof_store_path=proof_path,
     )
     assert sum(
         item.family is ConfluenceFamily.ORDER_FLOW
@@ -286,6 +290,24 @@ def test_absorption_and_divergence_are_dependency_proofs_not_new_families(
             "version": "rdp4-rich-order-flow-family-v2/1",
         }
     )
+
+    proof_store = FrozenProofStore(proof_path)
+    divergence_proof = proof_store.read_exact(divergence.freeze_identity)
+    absorption_proof = proof_store.read_exact(absorption.freeze_identity)
+    assert divergence_proof is not None
+    assert absorption_proof is not None
+    assert divergence_proof.object_kind == "price_cvd_divergence_freeze"
+    assert absorption_proof.object_kind == "absorption_freeze"
+    assert divergence_proof.analysis_identity == divergence.analysis.evidence_identity
+    assert {
+        temporal.freeze_identity,
+        temporal.analysis.evidence_identity,
+    }.issubset(set(divergence_proof.depends_on_evidence_identities))
+    assert divergence_proof.renderer_contract_version == (
+        "price-cvd-divergence-v1/1"
+    )
+    assert divergence_proof.production_authority is False
+    assert divergence_proof.real_capital == 0
 
 
 def test_pattern_context_cannot_invent_order_flow_direction(tmp_path) -> None:

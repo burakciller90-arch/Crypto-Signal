@@ -245,7 +245,7 @@ def test_rich_liquidity_and_order_flow_share_existing_family_slots(
     assert dynamics_proof is not None
     assert structure_proof is not None
     assert sweep_proof is not None
-    assert proof_store.count() == 3
+    assert proof_store.count() == 6
     assert dynamics_proof.object_kind == "liquidity_dynamics_freeze"
     assert structure_proof.object_kind == "liquidity_structure_freeze"
     assert sweep_proof.object_kind == "liquidity_sweep_freeze"
@@ -317,6 +317,25 @@ def test_rich_liquidity_and_order_flow_share_existing_family_slots(
     assert "trade_velocity_per_second" in order_flow_components
     assert order_flow.direction is None
     assert order_flow_components["label"] == "mixed"
+
+    micro_proof = proof_store.read_exact(micro.freeze_identity)
+    temporal_proof = proof_store.read_exact(temporal.freeze_identity)
+    absorption_proof = proof_store.read_exact(absorption.freeze_identity)
+    assert micro_proof is not None
+    assert temporal_proof is not None
+    assert absorption_proof is not None
+    assert micro_proof.object_kind == "order_flow_microstructure_freeze"
+    assert temporal_proof.object_kind == "temporal_order_flow_freeze"
+    assert absorption_proof.object_kind == "absorption_freeze"
+    assert temporal_proof.analysis_identity == temporal.analysis.evidence_identity
+    assert {
+        temporal.freeze_identity,
+        temporal.analysis.evidence_identity,
+        structure.freeze_identity,
+        structure.analysis.evidence_identity,
+    }.issubset(set(absorption_proof.depends_on_evidence_identities))
+    assert micro_proof.production_authority is False
+    assert temporal_proof.real_capital == 0
 
 
 def test_missing_trade_tape_does_not_fabricate_rich_order_flow_domains(
