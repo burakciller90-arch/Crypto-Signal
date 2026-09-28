@@ -142,7 +142,7 @@ jobs:
               for symbol, observation in observations.items():
                   envelope_row = db.execute(
                       """
-                      SELECT payload_json
+                      SELECT envelope_identity, payload_json
                       FROM source_envelopes
                       WHERE provider='defillama'
                         AND source='defillama_public_api'
@@ -155,6 +155,7 @@ jobs:
                       (symbol,),
                   ).fetchone()
                   assert envelope_row is not None
+                  envelope_identity = str(envelope_row["envelope_identity"])
                   envelope = json.loads(str(envelope_row["payload_json"]))
                   assert (
                       envelope["normalized_identity"]
@@ -177,7 +178,7 @@ jobs:
 
                   coverage_row = db.execute(
                       """
-                      SELECT payload_json
+                      SELECT coverage_event_identity, payload_json
                       FROM source_coverage_events
                       WHERE provider='defillama'
                         AND source='defillama_public_api'
@@ -190,11 +191,14 @@ jobs:
                       (symbol,),
                   ).fetchone()
                   assert coverage_row is not None
+                  coverage_identity = str(
+                      coverage_row["coverage_event_identity"]
+                  )
                   coverage = json.loads(str(coverage_row["payload_json"]))
                   assert coverage["state"] == "observed"
                   assert (
                       coverage["source_envelope_identity"]
-                      == envelope["envelope_identity"]
+                      == envelope_identity
                   )
                   coverage_age_ms = (
                       now_ms - int(coverage["observed_at_ms"])
@@ -204,8 +208,8 @@ jobs:
                       "RDP7_C3_V2_LINEAGE_PASS "
                       f"symbol={symbol} "
                       f"raw={observation['raw_identity']} "
-                      f"envelope={envelope['envelope_identity']} "
-                      f"coverage={coverage['coverage_event_identity']} "
+                      f"envelope={envelope_identity} "
+                      f"coverage={coverage_identity} "
                       f"observation={observation['observation_identity']}",
                       flush=True,
                   )
