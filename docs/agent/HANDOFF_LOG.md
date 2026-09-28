@@ -983,3 +983,36 @@ blocker:
 
 nextAction:
 - after this docs-only closeout is merged, branch from exact current main, checkpoint F2 start before production changes, then audit and cut over only the mechanically missing StablecoinCapitalFlow exact customer-proof path.
+
+
+---
+
+## 2026-09-28 — RDP10-F2 task-start checkpoint
+
+status: ACTIVE
+repository: burakciller90-arch/Crypto-Signal
+canonicalMainAtStart: b224a9f466767b39c051dd35096d414f2bf1495b
+previousGate: RDP10-F1 PASS
+previousCloseoutPR: 1651
+previousCloseoutMergeSha: b224a9f466767b39c051dd35096d414f2bf1495b
+branch: rdp10/onchain-proof-f2
+worktree: no session-local /Volumes worktree; canonical SSD504 Workbench verification pending run 36477116448
+roadmapGate: RDP10-F2 On-chain / stablecoin exact proof cutover
+duplicateRelevantPRs: NONE
+duplicateRelevantBranchesBeforeCreation: NONE
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+boundedGoal:
+- reuse accepted RDP7 stablecoin raw/envelope/coverage/normalized/PIT truth;
+- persist or expose only mechanically missing exact derived proof;
+- customer-facing exact onchain/stablecoin domains must bind accepted source lineage and explicit unavailable rails;
+- no stablecoin-supply direction inference and no fabricated exchange/whale/wallet/bridge truth.
+
+blocker:
+- exact-current-main SSD504 Workbench bootstrap run 36477116448 has not yet been inspected to PASS.
+
+nextAction:
+- verify run 36477116448 exact main/clean Workbench; then audit current RDP7 stores/freezes/projector/resolver before production changes.
