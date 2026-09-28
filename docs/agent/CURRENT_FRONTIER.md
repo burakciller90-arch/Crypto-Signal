@@ -1,5 +1,48 @@
 # Crypto Signal Current Frontier
 
+## LIVE ACTIVE CHECKPOINT — 2026-09-28 — RDP10-E1 STARTED
+
+This checkpoint was written before any RDP10-E code change.
+
+- canonical main at task start: `12aa063aad1fa93ccea6185bc7480539c88abf6b`
+- main commit: `Docs: close RDP10-D and advance frontier to RDP10-E (#1645)`
+- active branch: `rdp10/derivatives-proof-e1`
+- session-local /Volumes worktree: NONE
+- duplicate RDP10-E PRs: NONE
+- duplicate RDP10-E branches: NONE
+- `REAL_CAPITAL=0`
+- historical/frozen backfill: FORBIDDEN
+- Durdurulmaz touched: NO
+- Quantum Capital touched: NO
+
+### Bounded goal
+
+RDP10-E1 will handle only Derivatives Context + Derivatives Dynamics exact proof persistence/resolution.
+
+It will not yet close liquidation coverage/heatmap/crowding; those remain the next bounded E slice.
+
+Required E1 behavior:
+
+- persist the already-existing immutable Derivatives Context freeze before Stream publish;
+- persist the already-existing immutable Derivatives Dynamics freeze before Stream publish;
+- preserve exact mark/index/OI/funding/basis and PIT source lineage;
+- resolver must expose full frozen context/dynamics payloads only from the proof store;
+- no current DB fallback for missing derived proof;
+- no historical Stream rewrite/backfill;
+- no direction or production authority invented.
+
+### Current blocker
+
+Exact-main Workbench bootstrap for `12aa063...` is still pending at task start:
+
+- run `36466070553`
+- acceptance must verify clean canonical Workbench before code implementation proceeds.
+
+### Exact nextAction
+
+Read exact-main Workbench bootstrap `36466070553`; once PASS, audit the current Derivatives Context/Dynamics freeze schemas and implement E1 persistence + resolver integration.
+
+
 This file is the replaceable current checkpoint. Conversation memory is non-authoritative.
 
 Checkpoint assembled: 2026-09-28
