@@ -19,6 +19,7 @@ on:
       - 'tests/test_rdp4_order_flow_pattern_dependencies.py'
       - 'tests/test_rdp5_derivatives_dynamics_family.py'
       - 'tests/test_rdp5_liquidation_heatmap_crowding_family.py'
+      - 'tests/test_rdp6_options_derivatives_family.py'
       - '.github/workflows/crypto-rdp10-frozen-proof-contract.yml'
   workflow_dispatch:
 
@@ -78,7 +79,8 @@ jobs:
             tests/test_rdp4_rich_market_tape_family.py \
             tests/test_rdp4_order_flow_pattern_dependencies.py \
             tests/test_rdp5_derivatives_dynamics_family.py \
-            tests/test_rdp5_liquidation_heatmap_crowding_family.py
+            tests/test_rdp5_liquidation_heatmap_crowding_family.py \
+            tests/test_rdp6_options_derivatives_family.py
           "$PY" -m ruff check \
             src/crypto_signal/product/intelligence_stream_exact_evidence.py \
             src/crypto_signal/product/intelligence_stream_family_sources.py \
@@ -90,7 +92,8 @@ jobs:
             tests/test_rdp4_rich_market_tape_family.py \
             tests/test_rdp4_order_flow_pattern_dependencies.py \
             tests/test_rdp5_derivatives_dynamics_family.py \
-            tests/test_rdp5_liquidation_heatmap_crowding_family.py
+            tests/test_rdp5_liquidation_heatmap_crowding_family.py \
+            tests/test_rdp6_options_derivatives_family.py
           "$PY" -m mypy --strict \
             src/crypto_signal/product/intelligence_stream_exact_evidence.py \
             src/crypto_signal/product/frozen_proof_store.py
@@ -164,6 +167,8 @@ jobs:
               "liquidation_event_coverage",
               "observed_liquidation_heatmap",
               "derivatives_crowding",
+              "options_surface",
+              "options_volatility",
               "event_calendar",
               "event_risk",
               "provider_divergence",
