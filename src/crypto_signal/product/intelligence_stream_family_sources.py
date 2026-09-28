@@ -378,6 +378,14 @@ def build_market_tape_family_snapshots(
                     }
                 )
             )
+            liquidity_domains = {
+                "liquidity",
+                "liquidity_structure",
+                "liquidity_sweep",
+                "order_book",
+            }
+            if sweep.trades:
+                liquidity_domains.add("public_trades")
             snapshots.append(
                 build_family_snapshot(
                     projector_id="liquidity_change",
@@ -394,13 +402,7 @@ def build_market_tape_family_snapshots(
                     event_at_ms=as_of_ms,
                     source_as_of_ms=as_of_ms,
                     evidence_identities=tuple(sorted(liquidity_evidence)),
-                    evidence_domains=(
-                        "liquidity",
-                        "liquidity_structure",
-                        "liquidity_sweep",
-                        "order_book",
-                        "public_trades",
-                    ),
+                    evidence_domains=tuple(sorted(liquidity_domains)),
                     state_label=(
                         f"{liquidity_analysis.status.value}:"
                         f"{liquidity_analysis.liquidity_take_candidate.value}:"
@@ -525,6 +527,16 @@ def build_market_tape_family_snapshots(
             ):
                 order_flow_direction = "sell_pressure"
 
+            order_flow_domains = {"order_flow"}
+            if order_flow.orderbook is not None:
+                order_flow_domains.add("order_book")
+            if order_flow.trades:
+                order_flow_domains.add("public_trades")
+            if temporal is not None:
+                order_flow_domains.update(
+                    {"temporal_order_flow", "window_local_cvd"}
+                )
+
             order_flow_source_event_identity = canonical_sha256(
                 {
                     "as_of_ms": as_of_ms,
@@ -562,13 +574,7 @@ def build_market_tape_family_snapshots(
                     event_at_ms=as_of_ms,
                     source_as_of_ms=as_of_ms,
                     evidence_identities=tuple(sorted(order_flow_evidence)),
-                    evidence_domains=(
-                        "order_book",
-                        "order_flow",
-                        "public_trades",
-                        "temporal_order_flow",
-                        "window_local_cvd",
-                    ),
+                    evidence_domains=tuple(sorted(order_flow_domains)),
                     state_label=(
                         f"{order_flow_analysis.label.value}:"
                         f"{temporal_status}"
