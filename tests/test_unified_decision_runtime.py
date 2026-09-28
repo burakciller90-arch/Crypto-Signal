@@ -24,6 +24,9 @@ from crypto_signal.intelligence.confluence_matrix_v2 import (
     build_confluence_family_evidence,
 )
 from crypto_signal.intelligence.event_risk_circuit_breaker import CircuitBreakerState
+from crypto_signal.intelligence.evidence_overlap import (
+    analyze_confluence_evidence_overlap,
+)
 from crypto_signal.intelligence.meta_intelligence import (
     MetaDirection,
     MetaEvidenceState,
@@ -427,3 +430,68 @@ def test_unified_runtime_fails_closed_on_market_context_mismatch(tmp_path) -> No
             target_label="target_1",
             ledger=ImmutableDecisionEvidenceLedger(tmp_path / "decision.sqlite3"),
         )
+
+
+def test_unified_runtime_freezes_exact_overlap_lineage_and_adjusted_score(
+    tmp_path,
+) -> None:
+    signal = _signal()
+    original = list(_family_evidence())
+    shared = _sha("rdp9-shared-family-source")
+
+    for index, item in enumerate(original):
+        if item.family not in {
+            ConfluenceFamily.LIQUIDITY,
+            ConfluenceFamily.ORDER_FLOW,
+        }:
+            continue
+        original[index] = build_confluence_family_evidence(
+            family=item.family,
+            asset=item.asset,
+            timeframe=item.timeframe,
+            regime=item.regime,
+            as_of_ms=item.as_of_ms,
+            state=item.state,
+            direction=item.direction,
+            directional_strength_0_1=item.directional_strength_0_1,
+            evidence_quality_0_1=item.evidence_quality_0_1,
+            freshness_0_1=item.freshness_0_1,
+            market_available_at_ms=item.market_available_at_ms,
+            observed_at_ms=item.observed_at_ms,
+            source_engine_ids=item.source_engine_ids,
+            source_evidence_identities=(shared,),
+            material_conflict_identities=item.material_conflict_identities,
+            uncertainty_flags=item.uncertainty_flags,
+        )
+
+    family = tuple(original)
+    event = _event_context()
+    overlap = analyze_confluence_evidence_overlap(family)
+    result = issue_unified_decision(
+        signal=signal,
+        base_asset="BTC",
+        regime="trend_up",
+        family_evidence=family,
+        event_context=event,
+        preflight_proof_slices=_preflight(family, event),
+        issued_at_ms=ISSUED_AT,
+        horizon_bars=HORIZON,
+        target_label="target_1",
+        ledger=ImmutableDecisionEvidenceLedger(tmp_path / "decision.sqlite3"),
+    )
+
+    assert overlap.has_overlap
+    assert result.confluence.support_score_0_100 == Decimal("60.00")
+    assert set(overlap.lineage_identities).issubset(
+        set(result.forecast.source_evidence_identities)
+    )
+    methodology = next(
+        item
+        for item in result.proof.evidence_slices
+        if item.domain is ProofEvidenceDomain.METHODOLOGY
+    )
+    assert set(overlap.lineage_identities).issubset(
+        set(methodology.evidence_identities)
+    )
+    assert result.production_authority is False
+    assert result.real_capital == 0
