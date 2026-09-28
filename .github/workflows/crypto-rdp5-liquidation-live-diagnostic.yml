@@ -33,6 +33,24 @@ jobs:
           PIDFILE="$ROOT/liquidation-stream.pid"
           PY="$DEV/.venv/bin/python"
 
+          echo "UID=$(id -u)"
+          echo "WB_HEAD=$(git -C "$WB" rev-parse HEAD 2>/dev/null || true)"
+          echo "WB_BRANCH=$(git -C "$WB" branch --show-current 2>/dev/null || true)"
+          echo "WB_DIRTY_BEGIN"
+          git -C "$WB" status --porcelain || true
+          echo "WB_DIRTY_END"
+          echo "DEV_HEAD=$(git -C "$DEV" rev-parse HEAD 2>/dev/null || true)"
+          echo "DEV_DIRTY_BEGIN"
+          git -C "$DEV" status --porcelain || true
+          echo "DEV_DIRTY_END"
+          echo "DIAG_HEAD=$(git rev-parse HEAD)"
+          echo "EXPECTED_BASE=${{ github.event.pull_request.base.sha }}"
+          echo "EXPECTED_HEAD=${{ github.event.pull_request.head.sha }}"
+          echo "PIDFILE_PRESENT=$([ -f "$PIDFILE" ] && echo YES || echo NO)"
+          if [ -f "$PIDFILE" ]; then
+            echo "PIDFILE_VALUE=$(cat "$PIDFILE" 2>/dev/null || true)"
+          fi
+
           test "$(id -u)" = "504"
           test -x "$PY"
           test -d "$WB/.git"
@@ -51,7 +69,7 @@ jobs:
           test -n "$LIQ_PID"
           kill -0 "$LIQ_PID"
           LIQ_CMD="$(ps -p "$LIQ_PID" -o command=)"
-          printf '%s\n' "$LIQ_CMD"
+          echo "LIQ_CMD=$LIQ_CMD"
           printf '%s\n' "$LIQ_CMD" | grep -F "$DEV/ops/run_liquidation_market_tape_stream.py" >/dev/null
           printf '%s\n' "$LIQ_CMD" | grep -F -- "--runtime-status-db $STATUS_DB" >/dev/null
           printf '%s\n' "$LIQ_CMD" | grep -F -- "--max-transport-silence-ms 45000" >/dev/null
