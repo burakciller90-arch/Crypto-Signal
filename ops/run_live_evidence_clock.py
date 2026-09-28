@@ -1155,6 +1155,7 @@ async def run(
                 market_tape_path,
                 symbols=selected_stream.family_symbols,
                 as_of_ms=family_observed_at_ms,
+                candle_cache_path=candle_cache_path,
             )
             system_view_family_snapshots.extend(family_snapshots)
             family_dispositions: Counter[str] = Counter()
