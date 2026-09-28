@@ -881,11 +881,19 @@ def build_market_tape_family_snapshots(
                     item.liquidation_identity
                     for item in recent_liquidations
                 )
+                if liquidation_history_truncated:
+                    derivatives_uncertainty.add(
+                        "observed_liquidation_event_history_truncated"
+                    )
                 derivatives_components.extend(
                     (
                         (
                             "observed_liquidation_event_count",
                             str(len(recent_liquidations)),
+                        ),
+                        (
+                            "observed_liquidation_event_count_exact",
+                            str(not liquidation_history_truncated).lower(),
                         ),
                         (
                             "observed_long_liquidation_count",
@@ -936,18 +944,7 @@ def build_market_tape_family_snapshots(
             liquidation_status = "unavailable"
             crowding_label = "unavailable"
 
-            if liquidation_history_truncated:
-                derivatives_components.extend(
-                    (
-                        ("crowding_status", "unavailable"),
-                        ("liquidation_heatmap_status", "unavailable"),
-                        ("liquidation_zero_event_claim", "unavailable"),
-                    )
-                )
-                derivatives_uncertainty.add(
-                    "liquidation_history_limit_reached"
-                )
-            elif not eligible_coverages:
+            if not eligible_coverages:
                 derivatives_components.extend(
                     (
                         ("crowding_status", "unavailable"),
@@ -1038,10 +1035,14 @@ def build_market_tape_family_snapshots(
                         "liquidation_mark_reference_unavailable"
                     )
                 else:
+                    liquidation_replay = store.liquidation_replay(
+                        coverage_identity=selected_coverage.coverage_identity,
+                        as_of_ms=liquidation_as_of_ms,
+                    )
                     heatmap_freeze = (
                         build_liquidation_heatmap_evidence_freeze(
-                            liquidation_history,
-                            coverage=selected_coverage,
+                            liquidation_replay.events,
+                            coverage=liquidation_replay.coverage,
                             mark_reference=mark_reference,
                             as_of_ms=liquidation_as_of_ms,
                         )
