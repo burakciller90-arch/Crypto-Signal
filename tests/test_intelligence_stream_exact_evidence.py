@@ -6,6 +6,7 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 from test_immutable_ledger import build_bundle, candles
+from test_rdp4_rich_market_tape_family import AS_OF_MS, _seed
 
 from crypto_signal.data.event_risk import (
     EventCategory,
@@ -31,6 +32,7 @@ from crypto_signal.product.intelligence_stream_family import (
 )
 from crypto_signal.product.intelligence_stream_family_sources import (
     build_geometry_family_snapshot,
+    build_market_tape_family_snapshots,
 )
 from crypto_signal.product.intelligence_stream_forward_runtime import (
     IntelligenceStreamForwardRuntime,
@@ -601,4 +603,114 @@ def test_geometry_family_resolves_exact_persisted_full_geometry_proof(
     assert exact_object["methodology_states"]
     assert isinstance(exact_object["annotations"], list)
     assert exact["current_data_substitution"] is False
+
+def test_liquidity_derived_proofs_resolve_exact_from_frozen_store(
+    tmp_path: Path,
+) -> None:
+    market_tape_path = tmp_path / "market_tape.sqlite3"
+    proof_path = tmp_path / "frozen_proofs.sqlite3"
+    stream_path = tmp_path / "stream.sqlite3"
+    market_store = MarketTapeStore(market_tape_path)
+    _seed(market_store)
+
+    snapshots = build_market_tape_family_snapshots(
+        market_tape_path,
+        symbols=("BTCUSDT",),
+        as_of_ms=AS_OF_MS,
+        frozen_proof_store_path=proof_path,
+    )
+    liquidity = next(
+        item
+        for item in snapshots
+        if item.family is ConfluenceFamily.LIQUIDITY
+    )
+    narrative_identity = _project_family(
+        stream_path,
+        projector_id="liquidity_change",
+        snapshot=liquidity,
+    )
+
+    resolver = IntelligenceStreamExactEvidenceReadModel(
+        stream_ledger_path=stream_path,
+        market_tape_path=market_tape_path,
+        frozen_proof_store_path=proof_path,
+    )
+    payload = resolver.read_for_narrative(narrative_identity)
+    assert payload is not None
+
+    liquidity_resolution = _resolution(payload, "liquidity")
+    assert liquidity_resolution["resolution_state"] == "READY_EXACT"
+    liquidity_capabilities = liquidity_resolution["capabilities"]
+    assert isinstance(liquidity_capabilities, dict)
+    assert liquidity_capabilities["dynamics_measurement"] == "READY_EXACT"
+    assert (
+        liquidity_capabilities["canonical_liquidity_zone_coordinates"]
+        == "READY_EXACT"
+    )
+    assert liquidity_capabilities["sweep_point"] == "READY_EXACT"
+
+    structure = _resolution(payload, "liquidity_structure")
+    sweep = _resolution(payload, "liquidity_sweep")
+    assert structure["resolution_state"] == "READY_EXACT"
+    assert sweep["resolution_state"] == "READY_EXACT"
+    assert structure["current_data_substitution"] is False
+    assert sweep["current_data_substitution"] is False
+
+    references = tuple(
+        item
+        for item in payload["reference_resolutions"]
+        if isinstance(item, dict)
+    )
+    structure_ref = next(
+        item
+        for item in references
+        if item.get("object_kind") == "liquidity_structure_freeze"
+    )
+    sweep_ref = next(
+        item
+        for item in references
+        if item.get("object_kind") == "liquidity_sweep_freeze"
+    )
+    assert structure_ref["resolution_state"] == "READY_EXACT"
+    assert sweep_ref["resolution_state"] == "READY_EXACT"
+
+    exact_structure = resolver.read_reference(
+        narrative_identity=narrative_identity,
+        evidence_identity=str(structure_ref["evidence_identity"]),
+    )
+    assert exact_structure is not None
+    assert exact_structure["object_kind"] == "liquidity_structure_freeze"
+    structure_object = exact_structure["exact_object"]
+    assert isinstance(structure_object, dict)
+    assert structure_object["object_identity"] == structure_ref["evidence_identity"]
+    derived_payload = structure_object["payload"]
+    assert isinstance(derived_payload, dict)
+    assert derived_payload["bid_levels"]
+    assert derived_payload["ask_levels"]
+    assert structure_object["renderer_contract_version"] == (
+        "liquidity-structure-levels-v1/1"
+    )
+    assert exact_structure["current_data_substitution"] is False
+
+    client = TestClient(
+        create_app(
+            ledger_path=tmp_path / "missing-ledger.sqlite3",
+            stream_ledger_path=stream_path,
+            market_tape_path=market_tape_path,
+            frozen_proof_store_path=proof_path,
+            product_root="stream",
+        )
+    )
+    response = client.get(
+        f"/api/stream/messages/{narrative_identity}/evidence"
+    )
+    assert response.status_code == 200
+    api_payload = response.json()["evidence"]
+    api_structure = next(
+        item
+        for item in api_payload["resolutions"]
+        if item["domain"] == "liquidity_structure"
+    )
+    assert api_structure["resolution_state"] == "READY_EXACT"
+    assert api_payload["current_data_substitution"] is False
 
