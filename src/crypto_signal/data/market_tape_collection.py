@@ -24,12 +24,11 @@ from crypto_signal.data.market_tape_rest_source_contract import (
     BybitRestMarketTapeWriteResult,
     persist_bybit_rest_market_tape_snapshot,
 )
-from crypto_signal.data.source_contract import SourceContractStore
-
 from crypto_signal.data.microstructure import (
     OrderBookSnapshot,
     PublicTradeObservation,
 )
+from crypto_signal.data.source_contract import SourceContractStore
 
 
 class MicrostructureSnapshotAdapter(Protocol):
