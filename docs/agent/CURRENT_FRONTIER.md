@@ -1,5 +1,45 @@
 # Crypto Signal Current Frontier
 
+## LIVE ACTIVE CHECKPOINT — 2026-09-28 — RDP10-E2 STARTED
+
+This checkpoint was written before any RDP10-E2 production code change.
+
+- canonical main at task start: `212d0428244d65caeb8c5646add9a7ebffc5fccb`
+- main commit: `Docs: close RDP10-E1 and advance to E2 (#1647)`
+- active branch: `rdp10/liquidation-proof-e2`
+- session-local /Volumes worktree: NONE
+- duplicate RDP10-E2 PRs: NONE
+- duplicate E2 branch at start: NONE
+- `REAL_CAPITAL=0`
+- historical/frozen backfill: FORBIDDEN
+- Durdurulmaz touched: NO
+- Quantum Capital touched: NO
+
+### Bounded goal
+
+RDP10-E2 will close the remaining Derivatives liquidation proof gap:
+
+- exact raw liquidation observations remain source records;
+- exact provider coverage proof with knowledge time `observed_at_ms`;
+- exact immutable Liquidation Heatmap proof persisted before Stream publication;
+- exact immutable Derivatives Crowding proof persisted before Stream publication;
+- exact parent/dependency lineage to derivatives dynamics, mark reference, coverage and liquidation events;
+- explicit zero-event semantics only when provider coverage proves the interval.
+
+No options/on-chain/event/cross-venue work belongs to E2.
+
+### Current blocker
+
+Exact-main Workbench bootstrap for `212d042...` is pending:
+
+- run `36468609152`
+- E2 production implementation must not begin until this exact-main Workbench verification is PASS.
+
+### Exact nextAction
+
+Read run `36468609152`; once clean/PASS, audit current liquidation observation/coverage/heatmap/crowding freeze schemas and implement E2 persistence + resolver integration without historical backfill.
+
+
 Conversation memory is non-authoritative. Rebuild from this file, HANDOFF_LOG, canonical roadmap, and live Git/GitHub/runtime evidence.
 
 Checkpoint assembled: 2026-09-28
