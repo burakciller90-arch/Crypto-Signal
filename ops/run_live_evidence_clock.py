@@ -23,6 +23,7 @@ from crypto_signal.data.provider_divergence import (
     ProviderDivergenceCycleResult,
     collect_provider_divergence_cycle,
 )
+from crypto_signal.data.source_contract import SourceContractStore
 from crypto_signal.data.store import CandleStore
 from crypto_signal.decision_ledger import ImmutableDecisionEvidenceLedger
 from crypto_signal.evaluation.untouched_forward_collection_protocol import (
@@ -94,6 +95,7 @@ from crypto_signal.unified_decision_runtime import UnifiedDecisionIssuance
 BASE = Path("/Users/crypto-signal-agent/Crypto-Signal")
 DEFAULT_DB = BASE / "runtime" / "ledger" / "live_signal_ledger.sqlite3"
 DEFAULT_CANDLE_CACHE = BASE / "runtime" / "data" / "live_base_15m_cache.sqlite3"
+DEFAULT_SOURCE_CONTRACT = BASE / "runtime" / "data" / "source_contract.sqlite3"
 PROVIDER_DIVERGENCE_LOOKBACK = 96
 STREAM_LOCAL_REWRITE_ENABLED_ENV = "CRYPTO_SIGNAL_STREAM_LOCAL_REWRITE_ENABLED"
 STREAM_LOCAL_REWRITE_MODEL_ENV = "CRYPTO_SIGNAL_STREAM_LOCAL_REWRITE_MODEL"
@@ -225,6 +227,12 @@ def parse_args() -> argparse.Namespace:
         type=Path,
         default=DEFAULT_CANDLE_CACHE,
         help="canonical 15m cache used for higher-timeframe preparation",
+    )
+    parser.add_argument(
+        "--source-contract",
+        type=Path,
+        default=DEFAULT_SOURCE_CONTRACT,
+        help="canonical candle source envelope/coverage SQLite path",
     )
     parser.add_argument(
         "--provider-divergence",
@@ -531,6 +539,7 @@ async def run(
     *,
     plan: LiveCoveragePlan | None = None,
     candle_cache_path: Path = DEFAULT_CANDLE_CACHE,
+    source_contract_path: Path | None = None,
     provider_divergence_path: Path | None = None,
     wc2_config: WC2ClockConfig | None = None,
     stream_config: StreamClockConfig | None = None,
@@ -540,6 +549,11 @@ async def run(
 ) -> int:
     ledger = ImmutableSignalLedger(db_path)
     candle_store = CandleStore(candle_cache_path)
+    source_store = (
+        None
+        if source_contract_path is None
+        else SourceContractStore(source_contract_path)
+    )
     failures = 0
     selected_wc2 = wc2_config or WC2ClockConfig()
     selected_stream = stream_config or StreamClockConfig()
@@ -753,10 +767,12 @@ async def run(
                 adapter=adapter,
                 ledger=ledger,
                 candle_store=candle_store,
+                source_store=source_store,
             )
         except (
             LedgerConflictError,
             OSError,
+            TypeError,
             ValueError,
             httpx.HTTPError,
             sqlite3.Error,
@@ -1350,6 +1366,7 @@ def main() -> int:
             run(
                 args.db,
                 candle_cache_path=args.candle_cache,
+                source_contract_path=args.source_contract,
                 provider_divergence_path=args.provider_divergence,
                 wc2_config=wc2_config,
                 stream_config=stream_config,

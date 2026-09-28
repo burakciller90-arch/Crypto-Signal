@@ -4,6 +4,7 @@ import time
 from collections.abc import Callable
 from dataclasses import dataclass
 from enum import StrEnum
+from typing import cast
 
 from crypto_signal.confluence.adapters import (
     elliott_result_evidence,
@@ -11,9 +12,16 @@ from crypto_signal.confluence.adapters import (
     price_action_structure_evidence,
 )
 from crypto_signal.confluence.agreement import analyze_confluence
-from crypto_signal.data.adapters.base import MarketDataAdapter
+from crypto_signal.data.adapters.base import (
+    MarketDataAdapter,
+    SourceAwareMarketDataAdapter,
+)
+from crypto_signal.data.candle_source_contract import (
+    persist_candle_source_snapshot,
+)
 from crypto_signal.data.health import detect_gaps
 from crypto_signal.data.models import Candle
+from crypto_signal.data.source_contract import SourceContractStore
 from crypto_signal.data.store import CandleStore
 from crypto_signal.ledger.bundle import DecisionFreezeBundle, build_decision_freeze_bundle
 from crypto_signal.ledger.store import (
@@ -200,22 +208,47 @@ async def freeze_live_provider(
     adapter: MarketDataAdapter,
     ledger: ImmutableSignalLedger,
     candle_store: CandleStore | None = None,
+    source_store: SourceContractStore | None = None,
     symbol: str = "BTCUSDT",
     timeframe: str = "15m",
     limit: int = 500,
     minimum_closed_candles: int = 100,
     now_ms: Callable[[], int] = utc_now_ms,
 ) -> LiveFreezeResult:
-    raw = tuple(
-        await adapter.fetch_candles(
+    if source_store is not None:
+        if candle_store is None:
+            raise ValueError(
+                "source-aware live freeze requires candle store"
+            )
+        if not hasattr(adapter, "fetch_source_candles"):
+            raise TypeError(
+                "source-aware live freeze requires source-aware adapter"
+            )
+        snapshot = await cast(
+            SourceAwareMarketDataAdapter,
+            adapter,
+        ).fetch_source_candles(
             symbol=symbol,
             timeframe=timeframe,
             limit=limit,
         )
-    )
-    if candle_store is not None:
-        for candle in raw:
-            candle_store.upsert(candle)
+        persist_candle_source_snapshot(
+            candle_store=candle_store,
+            source_store=source_store,
+            snapshot=snapshot,
+        )
+        raw = snapshot.candles
+    else:
+        raw = tuple(
+            await adapter.fetch_candles(
+                symbol=symbol,
+                timeframe=timeframe,
+                limit=limit,
+            )
+        )
+        if candle_store is not None:
+            for candle in raw:
+                candle_store.upsert(candle)
     return freeze_live_candles(
         candles=raw,
         ledger=ledger,

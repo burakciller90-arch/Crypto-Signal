@@ -1,10 +1,19 @@
 from __future__ import annotations
 
 from collections import Counter
+from collections.abc import Sequence
 from dataclasses import dataclass
+from typing import cast
 
-from crypto_signal.data.adapters.base import MarketDataAdapter
+from crypto_signal.data.adapters.base import (
+    MarketDataAdapter,
+    SourceAwareMarketDataAdapter,
+)
+from crypto_signal.data.candle_source_contract import (
+    persist_candle_source_snapshot,
+)
 from crypto_signal.data.models import Candle
+from crypto_signal.data.source_contract import SourceContractStore
 from crypto_signal.data.store import CandleStore, WriteDisposition
 from crypto_signal.data.timeframes import is_aligned_open, spec
 
@@ -38,6 +47,7 @@ async def backfill_range(
     end_open_ms: int,
     page_limit: int = 1000,
     require_closed: bool = True,
+    source_store: SourceContractStore | None = None,
 ) -> BackfillReport:
     tf = spec(timeframe)
     duration_ms = tf.duration_ms
@@ -54,6 +64,7 @@ async def backfill_range(
         range(start_open_ms, end_open_ms + duration_ms, duration_ms)
     )
     collected: dict[int, Candle] = {}
+    counts: Counter[WriteDisposition] = Counter()
 
     current_open_ms = start_open_ms
     while current_open_ms <= end_open_ms:
@@ -62,13 +73,32 @@ async def backfill_range(
         page_last_open_ms = current_open_ms + (limit - 1) * duration_ms
         page_end_ms = page_last_open_ms + duration_ms - 1
 
-        page = await adapter.fetch_candles(
-            symbol=symbol,
-            timeframe=timeframe,
-            limit=limit,
-            start_ms=current_open_ms,
-            end_ms=page_end_ms,
-        )
+        source_snapshot = None
+        page: Sequence[Candle]
+        if source_store is not None:
+            if not hasattr(adapter, "fetch_source_candles"):
+                raise TypeError(
+                    "source-aware backfill requires source-aware adapter"
+                )
+            source_snapshot = await cast(
+                SourceAwareMarketDataAdapter,
+                adapter,
+            ).fetch_source_candles(
+                symbol=symbol,
+                timeframe=timeframe,
+                limit=limit,
+                start_ms=current_open_ms,
+                end_ms=page_end_ms,
+            )
+            page = source_snapshot.candles
+        else:
+            page = await adapter.fetch_candles(
+                symbol=symbol,
+                timeframe=timeframe,
+                limit=limit,
+                start_ms=current_open_ms,
+                end_ms=page_end_ms,
+            )
         for candle in page:
             if candle.symbol != symbol or candle.timeframe != timeframe:
                 raise ValueError("adapter returned mismatched candle semantics")
@@ -84,12 +114,22 @@ async def backfill_range(
                 raise ValueError("adapter returned conflicting duplicate candle")
             collected[candle.open_time_ms] = candle
 
+        if source_snapshot is not None:
+            assert source_store is not None
+            persistence = persist_candle_source_snapshot(
+                candle_store=store,
+                source_store=source_store,
+                snapshot=source_snapshot,
+            )
+            for disposition, count in persistence.dispositions:
+                counts[disposition] += count
+
         current_open_ms = page_last_open_ms + duration_ms
 
     missing = tuple(open_ms for open_ms in expected_opens if open_ms not in collected)
-    counts: Counter[WriteDisposition] = Counter()
-    for open_ms in sorted(collected):
-        counts[store.upsert(collected[open_ms])] += 1
+    if source_store is None:
+        for open_ms in sorted(collected):
+            counts[store.upsert(collected[open_ms])] += 1
 
     dispositions = tuple(sorted(counts.items(), key=lambda item: item[0].value))
     return BackfillReport(
