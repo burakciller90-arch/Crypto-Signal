@@ -1457,7 +1457,7 @@ def test_provider_quality_resolves_exact_divergence_and_rejects_future_source(
         assert projection["source_scope"] == family.source_scope
         assert projection["source_as_of_ms"] == divergence.observed_at_ms
         assert projection["source_quality"] == family.source_quality
-        assert projection["uncertainty_flags"] == family.uncertainty_flags
+        assert tuple(projection["uncertainty_flags"]) == family.uncertainty_flags
 
     references = {
         item["evidence_identity"]: item
