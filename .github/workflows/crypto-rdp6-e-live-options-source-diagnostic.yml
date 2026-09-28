@@ -1,0 +1,238 @@
+name: RDP6-E Live Options Source Diagnostic UID504
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/crypto-rdp6-e-live-options-source-diagnostic.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  live-diagnostic:
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          clean: true
+          fetch-depth: 1
+
+      - name: Verify exact Workbench baseline and source
+        shell: bash
+        run: |
+          set -euo pipefail
+          WB="/Volumes/Crypto-504/Crypto-Signal-Workbench/repo"
+          test "$(id -u)" = "504"
+          test "$(git -C "$WB" branch --show-current)" = "main"
+          test -z "$(git -C "$WB" status --porcelain)"
+          test "$(git -C "$WB" rev-parse HEAD)" = "${{ github.event.pull_request.base.sha }}"
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+          echo "RDP6_E_WORKBENCH_EXACT_MAIN_PASS=YES"
+          echo "RDP6_E_EXACT_DIAGNOSTIC_SOURCE_PASS=YES"
+
+      - name: Probe real BTC ETH options source and exact family chain
+        shell: bash
+        run: |
+          set -euo pipefail
+          PY="/Volumes/Crypto-504/Crypto-Signal/Development/.venv/bin/python"
+          MARKET="/Volumes/Crypto-504/Crypto-Signal/Development/runtime/market_tape/market_tape.sqlite3"
+          test -x "$PY"
+          test -f "$MARKET"
+          export PYTHONPATH="$GITHUB_WORKSPACE/src:$GITHUB_WORKSPACE"
+          export RDP6_DIAG_TMP="$RUNNER_TEMP/rdp6-e-${{ github.run_id }}"
+          export RDP6_MARKET_TAPE="$MARKET"
+          rm -rf "$RDP6_DIAG_TMP"
+          mkdir -p "$RDP6_DIAG_TMP"
+
+          "$PY" - <<'PY'
+          from __future__ import annotations
+
+          import asyncio
+          import os
+          import time
+          from pathlib import Path
+
+          import httpx
+
+          from crypto_signal.data.adapters.bybit_options import BybitOptionsAdapter
+          from crypto_signal.data.models import Exchange
+          from crypto_signal.data.options_source_contract import (
+              BYBIT_OPTIONS_CHANNEL,
+              BYBIT_OPTIONS_PROVIDER,
+              BYBIT_OPTIONS_SOURCE,
+              persist_bybit_option_surface_snapshot,
+          )
+          from crypto_signal.data.options_surface_store import OptionsSurfaceStore
+          from crypto_signal.data.source_contract import (
+              SourceContractStore,
+              SourceCoverageState,
+          )
+          from crypto_signal.intelligence.confluence_matrix_v2 import ConfluenceFamily
+          from crypto_signal.intelligence.options_volatility import (
+              OptionsVolatilityStatus,
+              build_options_volatility_evidence_freeze,
+          )
+          from crypto_signal.product.intelligence_stream_family_sources import (
+              build_market_tape_family_snapshots,
+          )
+
+          tmp = Path(os.environ["RDP6_DIAG_TMP"])
+          market_tape = Path(os.environ["RDP6_MARKET_TAPE"])
+          options_path = tmp / "options_surface.sqlite3"
+          source_path = tmp / "source_contract.sqlite3"
+          options_store = OptionsSurfaceStore(options_path)
+          source_store = SourceContractStore(source_path)
+
+          async def fetch_pair(base_url: str):
+              adapter = BybitOptionsAdapter(base_url=base_url)
+              result = {}
+              for base_coin in ("BTC", "ETH"):
+                  result[base_coin] = await adapter.fetch_source_snapshot(
+                      base_coin=base_coin
+                  )
+              return result
+
+          async def main():
+              selected_url = None
+              snapshots = None
+              failures = {}
+              for base_url in (
+                  "https://api.bybit.tr",
+                  "https://api.bybit.com",
+              ):
+                  try:
+                      pair = await fetch_pair(base_url)
+                  except (httpx.HTTPError, OSError, ValueError) as exc:
+                      failures[base_url] = f"{type(exc).__name__}:{exc}"
+                      print(
+                          "RDP6_E_OPTIONS_SOURCE_CANDIDATE_FAIL "
+                          f"base_url={base_url} error={failures[base_url]}",
+                          flush=True,
+                      )
+                      continue
+                  selected_url = base_url
+                  snapshots = pair
+                  print(
+                      "RDP6_E_OPTIONS_SOURCE_CANDIDATE_PASS "
+                      f"base_url={base_url}",
+                      flush=True,
+                  )
+                  break
+
+              assert selected_url is not None, failures
+              assert snapshots is not None
+              now_ms = time.time_ns() // 1_000_000
+              statuses = {}
+              for base_coin in ("BTC", "ETH"):
+                  snapshot = snapshots[base_coin]
+                  surface = snapshot.surface
+                  assert surface.base_coin == base_coin
+                  assert surface.exchange is Exchange.BYBIT
+                  assert surface.contracts
+                  assert surface.source_timestamp_ms <= now_ms
+                  age_ms = now_ms - surface.source_timestamp_ms
+                  assert age_ms <= 120_000, (base_coin, age_ms)
+                  assert max(
+                      surface.source_timestamp_ms,
+                      surface.observed_at_ms,
+                      surface.ingested_at_ms,
+                  ) <= now_ms
+
+                  persisted = persist_bybit_option_surface_snapshot(
+                      snapshot=snapshot,
+                      options_store=options_store,
+                      source_store=source_store,
+                  )
+                  replay = options_store.latest_surface_as_of(
+                      exchange=Exchange.BYBIT,
+                      base_coin=base_coin,
+                      as_of_ms=now_ms,
+                  )
+                  assert replay == surface
+                  coverage = source_store.latest_coverage(
+                      provider=BYBIT_OPTIONS_PROVIDER,
+                      source=BYBIT_OPTIONS_SOURCE,
+                      channel=BYBIT_OPTIONS_CHANNEL,
+                      symbol=base_coin,
+                  )
+                  assert coverage is not None
+                  assert coverage.state is SourceCoverageState.OBSERVED
+                  assert (
+                      coverage.source_envelope_identity
+                      == persisted.envelope_identity
+                  )
+
+                  freeze = build_options_volatility_evidence_freeze(
+                      surface,
+                      as_of_ms=now_ms,
+                  )
+                  assert freeze.analysis.status in {
+                      OptionsVolatilityStatus.MEASURED,
+                      OptionsVolatilityStatus.PARTIAL,
+                  }
+                  assert freeze.analysis.metrics is not None
+                  statuses[base_coin] = freeze.analysis.status.value
+                  mark_iv_count = sum(
+                      item.mark_iv is not None
+                      for item in surface.contracts
+                  )
+                  oi_count = sum(
+                      item.open_interest is not None
+                      for item in surface.contracts
+                  )
+                  print(
+                      "RDP6_E_OPTIONS_SURFACE_PASS "
+                      f"base_coin={base_coin} "
+                      f"contracts={len(surface.contracts)} "
+                      f"mark_iv={mark_iv_count} "
+                      f"open_interest={oi_count} "
+                      f"age_ms={age_ms} "
+                      f"status={freeze.analysis.status.value}",
+                      flush=True,
+                  )
+
+              family_as_of_ms = time.time_ns() // 1_000_000
+              family = build_market_tape_family_snapshots(
+                  market_tape,
+                  symbols=("BTCUSDT", "ETHUSDT"),
+                  as_of_ms=family_as_of_ms,
+                  options_surface_path=options_path,
+              )
+              derivatives = {
+                  item.symbol: item
+                  for item in family
+                  if item.family is ConfluenceFamily.DERIVATIVES
+              }
+              assert set(derivatives) == {"BTCUSDT", "ETHUSDT"}
+              for symbol, base_coin in (
+                  ("BTCUSDT", "BTC"),
+                  ("ETHUSDT", "ETH"),
+              ):
+                  item = derivatives[symbol]
+                  components = {
+                      value.name: value.value
+                      for value in item.state_components
+                  }
+                  assert components["options_status"] == statuses[base_coin]
+                  assert "options_surface" in item.evidence_domains
+                  assert "options_volatility" in item.evidence_domains
+                  assert item.direction is None
+                  print(
+                      "RDP6_E_DERIVATIVES_FAMILY_PASS "
+                      f"symbol={symbol} "
+                      f"options_status={components['options_status']}",
+                      flush=True,
+                  )
+
+              assert options_store.quick_check()
+              assert source_store.quick_check()
+              print(f"RDP6_E_SELECTED_BASE_URL={selected_url}", flush=True)
+              print("RDP6_E_REAL_PROVIDER_CHAIN_PASS=YES", flush=True)
+              print("NO_NEW_FAMILY_OR_DIRECTION=YES", flush=True)
+              print("REAL_CAPITAL=0", flush=True)
+
+          asyncio.run(main())
+          PY
