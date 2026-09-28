@@ -582,3 +582,31 @@ blocker:
 nextAction:
 - inspect the exact-head RDP10 Frozen Proof Contract run; if focused + live fail-closed + non-mutating all PASS, re-check main/open PRs and merge E2. Otherwise repair only the demonstrated acceptance issue and checkpoint before retry.
 
+---
+
+## 2026-09-28 — RDP10-E2 acceptance retry checkpoint
+
+status: ACCEPTANCE_RETRY_PENDING
+canonicalMain: 212d0428244d65caeb8c5646add9a7ebffc5fccb
+branch: rdp10/liquidation-proof-e2
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+failedRun:
+- run 36469577166 / job 109088179016.
+- canonical checkout verification PASS.
+- focused pytest suite had no product-test failure; Ruff alone failed with I001 import ordering.
+- live audit skipped because focused gate failed.
+- non-mutating cleanup PASS.
+
+repair:
+- commit 5a41cf4083401aa7148004f92c17578a3abe6a88.
+- only fixes Ruff-required test import ordering.
+- no production code and no acceptance criteria changed.
+- frontier retry checkpoint commit 5eee297ee0c24202ef87da4a977f1c1a99cd4747.
+
+nextAction:
+- run full exact-head RDP10 UID504 acceptance again; merge only if focused, live fail-closed and non-mutating checks all PASS with HISTORICAL_BACKFILL=NO and REAL_CAPITAL=0.
+
