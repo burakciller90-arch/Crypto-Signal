@@ -972,7 +972,13 @@ def build_market_tape_family_snapshots(
                 liquidation_coverage_identity = (
                     selected_coverage.coverage_identity
                 )
-                liquidation_as_of_ms = selected_coverage.coverage_end_ms
+                # Provider coverage is only PIT-visible once its provider
+                # batch has been observed locally. In live WS traffic,
+                # observed_at_ms can be a few milliseconds after coverage_end_ms;
+                # analyzing at coverage_end_ms would make the coverage itself
+                # future evidence and cause liquidation_replay() to fail closed
+                # with an exception instead of returning an unresolved analysis.
+                liquidation_as_of_ms = selected_coverage.observed_at_ms
                 historical_derivatives = tuple(
                     item
                     for item in derivatives
