@@ -216,15 +216,11 @@ jobs:
           success=0
           for attempt in 1 2 3 4 5; do
             set +e
-            output="$("$PY" "$RUNNER"               --cross-market-db "$DB"               --source-contract-db "$SOURCE"               --lock-path "$LOCK"               --sessions 10 2>&1)"
+            output="$("$PY" "$RUNNER" --cross-market-db "$DB" --source-contract-db "$SOURCE" --lock-path "$LOCK" --sessions 10 2>&1)"
             rc=$?
             set -e
-            printf '%s
-' "$output"
-            if [ "$rc" = "0" ]               && printf '%s
-' "$output" | grep -F "RDP8_CROSS_MARKET_SNAPSHOT_COMPLETE" >/dev/null               && printf '%s
-' "$output" | grep -F "failures=0" >/dev/null               && printf '%s
-' "$output" | grep -F "quick_check=YES" >/dev/null; then
+            echo "$output"
+            if [ "$rc" = "0" ] && grep -Fq "RDP8_CROSS_MARKET_SNAPSHOT_COMPLETE" <<<"$output" && grep -Fq "failures=0" <<<"$output" && grep -Fq "quick_check=YES" <<<"$output"; then
               success=1
               break
             fi
