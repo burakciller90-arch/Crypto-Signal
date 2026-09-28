@@ -1,0 +1,234 @@
+name: RDP5-B Live Exact-Main Diagnostic UID504
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/crypto-rdp5-b-live-exact-main-diagnostic.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  diagnostic:
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          clean: true
+          fetch-depth: 1
+
+      - name: Prove exact-main live derivatives dynamics family read-only
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          WB="/Volumes/Crypto-504/Crypto-Signal-Workbench/repo"
+          DEV="$ROOT/Development"
+          MARKET="$DEV/runtime/market_tape/market_tape.sqlite3"
+          PY="$DEV/.venv/bin/python"
+          BASE="${{ github.event.pull_request.base.sha }}"
+
+          test "$(id -u)" = "504"
+          test "$(git -C "$WB" branch --show-current)" = "main"
+          test -z "$(git -C "$WB" status --porcelain)"
+          test "$(git -C "$WB" rev-parse HEAD)" = "$BASE"
+          test -z "$(git -C "$DEV" status --porcelain)"
+          test "$(git -C "$DEV" rev-parse HEAD)" = "$BASE"
+          test -f "$MARKET"
+          test -x "$PY"
+          echo "RDP5_B_LIVE_WORKBENCH_EXACT_MAIN_PASS=YES"
+          echo "RDP5_B_LIVE_DEVELOPMENT_EXACT_MAIN_PASS=YES"
+
+          export PYTHONPATH="$DEV/src:$DEV"
+          "$PY" - "$MARKET" <<'PY'
+          from __future__ import annotations
+
+          import sqlite3
+          import sys
+          import time
+          from pathlib import Path
+
+          import crypto_signal.product.intelligence_stream_family_sources as family_sources
+          from crypto_signal.data.derivatives import DerivativesInstrumentType
+          from crypto_signal.data.market_tape import _derivatives_from_payload
+          from crypto_signal.data.models import Exchange
+          from crypto_signal.intelligence.confluence_matrix_v2 import ConfluenceFamily
+          from crypto_signal.intelligence.derivatives_context import (
+              DerivativesContextLabel,
+              build_derivatives_context_evidence_freeze,
+          )
+          from crypto_signal.intelligence.derivatives_dynamics import (
+              DerivativesDynamicsStatus,
+              build_derivatives_dynamics_evidence_freeze,
+          )
+          from crypto_signal.ledger.serialization import canonical_sha256
+
+          market = Path(sys.argv[1])
+          now_ms = time.time_ns() // 1_000_000
+          symbols = ("BTCUSDT", "ETHUSDT", "SOLUSDT")
+          by_symbol = {}
+
+          uri = f"{market.resolve().as_uri()}?mode=ro"
+          with sqlite3.connect(uri, uri=True, timeout=5.0) as db:
+              db.row_factory = sqlite3.Row
+              db.execute("PRAGMA query_only=ON")
+              for symbol in symbols:
+                  rows = db.execute(
+                      """
+                      SELECT payload_json
+                      FROM market_tape_derivatives
+                      WHERE exchange=?
+                        AND instrument_type=?
+                        AND symbol=?
+                        AND event_at_ms <= ?
+                        AND source_timestamp_ms <= ?
+                        AND ingested_at_ms <= ?
+                      ORDER BY event_at_ms DESC, rowid DESC
+                      LIMIT 64
+                      """,
+                      (
+                          Exchange.BYBIT.value,
+                          DerivativesInstrumentType.LINEAR_PERPETUAL.value,
+                          symbol,
+                          now_ms,
+                          now_ms,
+                          now_ms,
+                      ),
+                  ).fetchall()
+                  assert len(rows) >= 3, (symbol, len(rows))
+                  by_symbol[symbol] = tuple(
+                      _derivatives_from_payload(str(row["payload_json"]))
+                      for row in rows
+                  )
+
+          class ReadOnlyLiveStore:
+              def __init__(self, _path: Path) -> None:
+                  pass
+
+              def recent_orderbooks(self, **_kwargs):
+                  return ()
+
+              def recent_trades(self, **_kwargs):
+                  return ()
+
+              def recent_derivatives(
+                  self,
+                  *,
+                  exchange,
+                  instrument_type,
+                  symbol,
+                  limit=1000,
+              ):
+                  assert exchange is Exchange.BYBIT
+                  assert (
+                      instrument_type
+                      is DerivativesInstrumentType.LINEAR_PERPETUAL
+                  )
+                  return by_symbol[symbol][:limit]
+
+          original_store = family_sources.MarketTapeStore
+          family_sources.MarketTapeStore = ReadOnlyLiveStore
+          try:
+              snapshots = family_sources.build_market_tape_family_snapshots(
+                  market,
+                  symbols=symbols,
+                  as_of_ms=now_ms,
+              )
+          finally:
+              family_sources.MarketTapeStore = original_store
+
+          derivatives_snapshots = {
+              item.symbol: item
+              for item in snapshots
+              if item.family is ConfluenceFamily.DERIVATIVES
+          }
+          assert set(derivatives_snapshots) == set(symbols)
+
+          for symbol in symbols:
+              observations = by_symbol[symbol]
+              context = build_derivatives_context_evidence_freeze(
+                  observations,
+                  as_of_ms=now_ms,
+              )
+              dynamics = build_derivatives_dynamics_evidence_freeze(
+                  observations,
+                  as_of_ms=now_ms,
+              )
+              assert (
+                  context.analysis.label
+                  is not DerivativesContextLabel.UNRESOLVED
+              ), (symbol, context.analysis.uncertainty_flags)
+              assert (
+                  dynamics.analysis.status
+                  is DerivativesDynamicsStatus.MEASURED
+              ), (symbol, dynamics.analysis.uncertainty_flags)
+              assert dynamics.analysis.latest_observation_age_ms <= 180_000, (
+                  symbol,
+                  dynamics.analysis.latest_observation_age_ms,
+              )
+
+              snapshot = derivatives_snapshots[symbol]
+              assert snapshot.direction is None
+              assert snapshot.source_quality == "measured"
+              assert {
+                  "derivatives",
+                  "derivatives_context",
+                  "derivatives_dynamics",
+              }.issubset(set(snapshot.evidence_domains))
+              assert {
+                  context.freeze_identity,
+                  context.analysis.evidence_identity,
+                  dynamics.freeze_identity,
+                  dynamics.analysis.evidence_identity,
+              }.issubset(set(snapshot.evidence_identities))
+              expected_source = canonical_sha256(
+                  {
+                      "as_of_ms": now_ms,
+                      "context_freeze_identity": context.freeze_identity,
+                      "dynamics_freeze_identity": dynamics.freeze_identity,
+                      "symbol": symbol,
+                      "version": "rdp5-derivatives-dynamics-family-v1/1",
+                  }
+              )
+              assert snapshot.source_event_identity == expected_source
+
+              components = {
+                  item.name: item.value
+                  for item in snapshot.state_components
+              }
+              assert components["dynamics_status"] == "measured"
+              assert (
+                  components["dynamics_oi_price_state"]
+                  == dynamics.analysis.oi_price_state.value
+              )
+              assert (
+                  int(components["dynamics_latest_observation_age_ms"])
+                  == dynamics.analysis.latest_observation_age_ms
+              )
+
+              metrics = dynamics.analysis.metrics
+              assert metrics is not None
+              print(
+                  "RDP5_B_LIVE_SYMBOL_PASS "
+                  f"symbol={symbol} "
+                  f"rows={len(observations)} "
+                  f"age_ms={dynamics.analysis.latest_observation_age_ms} "
+                  f"context={context.analysis.label.value} "
+                  f"dynamics={dynamics.analysis.status.value} "
+                  f"oi_price={dynamics.analysis.oi_price_state.value} "
+                  f"funding_pct={metrics.funding_percentile_0_1} "
+                  f"funding_accel_bps={metrics.funding_acceleration_bps} "
+                  f"oi_change={metrics.open_interest_change_fraction} "
+                  f"basis_bps={metrics.latest_basis_bps} "
+                  f"source_quality={snapshot.source_quality} "
+                  f"direction={snapshot.direction}"
+              )
+
+          print("RDP5_B_LIVE_DERIVATIVES_DYNAMICS_PASS=YES")
+          print("LIVE_DB_OPEN_MODE=READ_ONLY")
+          print("NO_NEW_FAMILY_OR_DIRECTION=YES")
+          print("REAL_CAPITAL=0")
+          PY
