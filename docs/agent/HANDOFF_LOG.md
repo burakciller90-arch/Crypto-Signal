@@ -328,3 +328,38 @@ blocker:
 nextAction:
 - Before any RDP10-E code change, re-check main/open PRs and write the mandatory RDP10-E task-start checkpoint on its active branch.
 
+---
+
+## 2026-09-28 — RDP10-E1 start checkpoint
+
+status: ACTIVE
+canonicalMainAtStart: 12aa063aad1fa93ccea6185bc7480539c88abf6b
+branch: rdp10/derivatives-proof-e1
+worktree: no session-local /Volumes worktree; GitHub branch only, canonical Workbench verification comes from UID504 bootstrap/acceptance
+roadmapGate: RDP10-E1 Derivatives Context + Dynamics exact proof persistence/resolution
+duplicateRelevantPRs: NONE
+duplicateRelevantBranches: NONE
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+boundedGoal:
+- persist immutable Derivatives Context freeze before Stream publication;
+- persist immutable Derivatives Dynamics freeze before Stream publication;
+- resolve both exact proof payloads through the RDP10 evidence contract;
+- preserve mark/index/OI/funding/basis and PIT lineage;
+- no current-data substitution, no invented direction/authority.
+
+notInThisSlice:
+- liquidation observations/coverage;
+- liquidation heatmap;
+- derivatives crowding;
+- options/on-chain/event/cross-venue RDP10-F work.
+
+blocker:
+- exact-main SSD504 Workbench bootstrap run 36466070553 is pending at task start.
+
+nextAction:
+- read run 36466070553; once exact-main Workbench is clean/PASS, audit current Derivatives Context/Dynamics freeze schemas and then implement E1.
+
