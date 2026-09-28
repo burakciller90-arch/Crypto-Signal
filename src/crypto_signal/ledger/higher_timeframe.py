@@ -6,6 +6,7 @@ from crypto_signal.data.adapters.base import MarketDataAdapter
 from crypto_signal.data.aggregation import AggregationResult, aggregate_closed_15m
 from crypto_signal.data.models import Candle
 from crypto_signal.data.recovery import BackfillReport, backfill_range
+from crypto_signal.data.source_contract import SourceContractStore
 from crypto_signal.data.store import CandleStore
 from crypto_signal.data.timeframes import (
     bucket_open_ms,
@@ -174,6 +175,7 @@ async def prepare_higher_timeframe_history(
     *,
     base_source_cutoff_open_ms: int,
     page_limit: int = 1000,
+    source_store: SourceContractStore | None = None,
 ) -> HigherTimeframePreparation:
     plan = plan_higher_timeframe_history(
         context,
@@ -201,6 +203,7 @@ async def prepare_higher_timeframe_history(
                 end_open_ms=end_open_ms,
                 page_limit=page_limit,
                 require_closed=True,
+                source_store=source_store,
             )
         )
 
