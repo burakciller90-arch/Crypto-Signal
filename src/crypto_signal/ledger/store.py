@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import sqlite3
 import time
 from dataclasses import dataclass
@@ -10,6 +11,10 @@ from crypto_signal.ledger.bundle import (
     DecisionFreezeBundle,
     bundle_json,
     verify_bundle_identity,
+)
+from crypto_signal.ledger.geometry_proof import (
+    build_frozen_geometry_proof,
+    geometry_proof_json,
 )
 from crypto_signal.ledger.serialization import canonical_json, sha256_text
 from crypto_signal.outcomes.evaluator import verify_outcome_identity
@@ -40,6 +45,17 @@ class FreezeRecord:
     direction: str
     frozen_at_ms: int
     bundle_json: str
+
+
+@dataclass(frozen=True, slots=True)
+class GeometryProofRecord:
+    proof_identity: str
+    bundle_identity: str
+    signal_freeze_identity: str
+    as_of_ms: int
+    source_cutoff_open_time_ms: int
+    persisted_at_ms: int
+    proof_json: str
 
 
 @dataclass(frozen=True, slots=True)
@@ -119,6 +135,23 @@ class ImmutableSignalLedger:
             )
             connection.execute(
                 """
+                CREATE TABLE IF NOT EXISTS geometry_proofs (
+                    proof_identity TEXT PRIMARY KEY,
+                    bundle_identity TEXT NOT NULL UNIQUE,
+                    signal_freeze_identity TEXT NOT NULL UNIQUE,
+                    as_of_ms INTEGER NOT NULL,
+                    source_cutoff_open_time_ms INTEGER NOT NULL,
+                    proof_json TEXT NOT NULL,
+                    persisted_at_ms INTEGER NOT NULL,
+                    FOREIGN KEY (bundle_identity)
+                        REFERENCES signal_freezes(bundle_identity),
+                    FOREIGN KEY (signal_freeze_identity)
+                        REFERENCES signal_freezes(signal_freeze_identity)
+                )
+                """
+            )
+            connection.execute(
+                """
                 CREATE TABLE IF NOT EXISTS lifecycle_evaluations (
                     evaluation_identity TEXT PRIMARY KEY,
                     signal_freeze_identity TEXT NOT NULL,
@@ -166,6 +199,8 @@ class ImmutableSignalLedger:
     ) -> LedgerWriteDisposition:
         verify_bundle_identity(bundle)
         canonical_bundle = bundle_json(bundle)
+        geometry_proof = build_frozen_geometry_proof(bundle)
+        canonical_geometry_proof = geometry_proof_json(geometry_proof)
         decision = bundle.signal_decision
         inserted_at = (
             int(time.time() * 1000)
@@ -225,6 +260,28 @@ class ImmutableSignalLedger:
                     decision.state.value,
                     decision.direction.value,
                     canonical_bundle,
+                    inserted_at,
+                ),
+            )
+            connection.execute(
+                """
+                INSERT INTO geometry_proofs (
+                    proof_identity,
+                    bundle_identity,
+                    signal_freeze_identity,
+                    as_of_ms,
+                    source_cutoff_open_time_ms,
+                    proof_json,
+                    persisted_at_ms
+                ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    geometry_proof.proof_identity,
+                    bundle.bundle_identity,
+                    decision.freeze_identity,
+                    decision.as_of_ms,
+                    bundle.source_cutoff_open_time_ms,
+                    canonical_geometry_proof,
                     inserted_at,
                 ),
             )
@@ -484,6 +541,26 @@ class ImmutableSignalLedger:
             )
         return self._row_to_freeze(rows[0])
 
+    def read_geometry_proof_by_signal(
+        self,
+        signal_freeze_identity: str,
+    ) -> GeometryProofRecord | None:
+        """Read an immutable Geometry Proof without mutating the ledger."""
+        return self._read_geometry_proof(
+            "signal_freeze_identity",
+            signal_freeze_identity,
+        )
+
+    def read_geometry_proof_by_bundle(
+        self,
+        bundle_identity: str,
+    ) -> GeometryProofRecord | None:
+        """Read an immutable Geometry Proof by exact frozen bundle."""
+        return self._read_geometry_proof(
+            "bundle_identity",
+            bundle_identity,
+        )
+
     def read_freeze_by_signal(
         self,
         signal_freeze_identity: str,
@@ -561,6 +638,17 @@ class ImmutableSignalLedger:
             ).fetchone()
         return None if row is None else self._row_to_freeze(row)
 
+    def list_geometry_proofs(self) -> tuple[GeometryProofRecord, ...]:
+        self.initialize()
+        with self._connect() as connection:
+            rows = connection.execute(
+                """
+                SELECT * FROM geometry_proofs
+                ORDER BY persisted_at_ms ASC, proof_identity ASC
+                """
+            ).fetchall()
+        return tuple(self._row_to_geometry_proof(row) for row in rows)
+
     def list_freezes(self) -> tuple[FreezeRecord, ...]:
         self.initialize()
         with self._connect() as connection:
@@ -620,6 +708,14 @@ class ImmutableSignalLedger:
                 ).fetchall()
         return tuple(self._row_to_outcome(row) for row in rows)
 
+    def count_geometry_proofs(self) -> int:
+        self.initialize()
+        with self._connect() as connection:
+            row = connection.execute(
+                "SELECT COUNT(*) AS count FROM geometry_proofs"
+            ).fetchone()
+        return 0 if row is None else int(row["count"])
+
     def count_freezes(self) -> int:
         self.initialize()
         with self._connect() as connection:
@@ -655,6 +751,7 @@ class ImmutableSignalLedger:
     ) -> None:
         for table in (
             "signal_freezes",
+            "geometry_proofs",
             "lifecycle_evaluations",
             "outcome_evaluations",
         ):
@@ -709,6 +806,90 @@ class ImmutableSignalLedger:
             ),
         ).fetchone()
         return None if row is None else self._row_to_freeze(row)
+
+    def _read_geometry_proof(
+        self,
+        field: str,
+        identity: str,
+    ) -> GeometryProofRecord | None:
+        if field not in {"signal_freeze_identity", "bundle_identity"}:
+            raise ValueError("unsupported Geometry Proof lookup field")
+        if not self.path.is_file():
+            return None
+        uri = f"{self.path.resolve().as_uri()}?mode=ro"
+        connection = sqlite3.connect(uri, uri=True, timeout=5.0)
+        connection.row_factory = sqlite3.Row
+        connection.execute("PRAGMA query_only=ON")
+        try:
+            table = connection.execute(
+                """
+                SELECT 1 FROM sqlite_master
+                WHERE type='table' AND name='geometry_proofs'
+                """
+            ).fetchone()
+            if table is None:
+                return None
+            row = connection.execute(
+                f"SELECT * FROM geometry_proofs WHERE {field} = ?",
+                (identity,),
+            ).fetchone()
+        finally:
+            connection.close()
+        return None if row is None else self._row_to_geometry_proof(row)
+
+    @staticmethod
+    def _row_to_geometry_proof(
+        row: sqlite3.Row,
+    ) -> GeometryProofRecord:
+        proof_identity = str(row["proof_identity"])
+        bundle_identity = str(row["bundle_identity"])
+        signal_freeze_identity = str(row["signal_freeze_identity"])
+        proof_json = str(row["proof_json"])
+        if sha256_text(proof_json) != proof_identity:
+            raise LedgerConflictError(
+                "immutable Geometry Proof identity mismatch"
+            )
+        try:
+            payload = json.loads(proof_json)
+        except json.JSONDecodeError as exc:
+            raise LedgerConflictError(
+                "immutable Geometry Proof JSON is invalid"
+            ) from exc
+        if not isinstance(payload, dict):
+            raise LedgerConflictError(
+                "immutable Geometry Proof payload must be an object"
+            )
+        if canonical_json(payload) != proof_json:
+            raise LedgerConflictError(
+                "immutable Geometry Proof JSON is non-canonical"
+            )
+        expected = (
+            bundle_identity,
+            signal_freeze_identity,
+            int(row["as_of_ms"]),
+            int(row["source_cutoff_open_time_ms"]),
+        )
+        observed = (
+            str(payload.get("bundle_identity")),
+            str(payload.get("signal_freeze_identity")),
+            int(payload.get("as_of_ms", -1)),
+            int(payload.get("source_cutoff_open_time_ms", -1)),
+        )
+        if observed != expected:
+            raise LedgerConflictError(
+                "immutable Geometry Proof parent metadata mismatch"
+            )
+        return GeometryProofRecord(
+            proof_identity=proof_identity,
+            bundle_identity=bundle_identity,
+            signal_freeze_identity=signal_freeze_identity,
+            as_of_ms=int(row["as_of_ms"]),
+            source_cutoff_open_time_ms=int(
+                row["source_cutoff_open_time_ms"]
+            ),
+            persisted_at_ms=int(row["persisted_at_ms"]),
+            proof_json=proof_json,
+        )
 
     @staticmethod
     def _row_to_freeze(row: sqlite3.Row) -> FreezeRecord:
