@@ -40,6 +40,51 @@ class SourceCoverageState(StrEnum):
 
 
 @dataclass(frozen=True, slots=True)
+class SourceRawPayload:
+    raw_identity: str
+    provider: str
+    source: str
+    channel: str
+    symbol: str
+    payload_json: str
+    schema_version: str = SOURCE_CONTRACT_SCHEMA_VERSION
+    production_authority: bool = False
+    real_capital: int = REAL_CAPITAL
+
+    def __post_init__(self) -> None:
+        _require_sha256(self.raw_identity, "source raw payload identity")
+        if self.schema_version != SOURCE_CONTRACT_SCHEMA_VERSION:
+            raise ValueError("unsupported source contract schema")
+        if not all(
+            value.strip() for value in (self.provider, self.source, self.channel)
+        ):
+            raise ValueError(
+                "source raw payload provider/source/channel must be non-empty"
+            )
+        if not self.symbol or self.symbol != self.symbol.upper():
+            raise ValueError("source raw payload symbol must be uppercase")
+        decoded = json.loads(self.payload_json)
+        if not isinstance(decoded, dict):
+            raise TypeError("source raw payload must be a JSON object")
+        if canonical_json(decoded) != self.payload_json:
+            raise ValueError("source raw payload JSON must be canonical")
+        if self.production_authority or self.real_capital != REAL_CAPITAL:
+            raise ValueError("source raw payload cannot grant production authority")
+        if self.raw_identity != canonical_sha256(
+            _raw_payload_identity_values(
+                provider=self.provider,
+                source=self.source,
+                channel=self.channel,
+                symbol=self.symbol,
+                payload_json=self.payload_json,
+                production_authority=self.production_authority,
+                real_capital=self.real_capital,
+            )
+        ):
+            raise ValueError("source raw payload identity mismatch")
+
+
+@dataclass(frozen=True, slots=True)
 class SourceCapability:
     capability_identity: str
     provider: str
@@ -295,6 +340,34 @@ class SourceCoverageEvent:
             )
         ):
             raise ValueError("source coverage identity mismatch")
+
+
+def build_source_raw_payload(
+    *,
+    provider: str,
+    source: str,
+    channel: str,
+    symbol: str,
+    payload: dict[str, object],
+) -> SourceRawPayload:
+    payload_json = canonical_json(payload)
+    values = _raw_payload_identity_values(
+        provider=provider,
+        source=source,
+        channel=channel,
+        symbol=symbol,
+        payload_json=payload_json,
+        production_authority=False,
+        real_capital=REAL_CAPITAL,
+    )
+    return SourceRawPayload(
+        raw_identity=canonical_sha256(values),
+        provider=provider,
+        source=source,
+        channel=channel,
+        symbol=symbol,
+        payload_json=payload_json,
+    )
 
 
 def build_source_capability(
@@ -567,6 +640,18 @@ class SourceContractStore:
                     key TEXT PRIMARY KEY,
                     value TEXT NOT NULL
                 );
+                CREATE TABLE IF NOT EXISTS source_raw_payloads (
+                    raw_identity TEXT PRIMARY KEY,
+                    provider TEXT NOT NULL,
+                    source TEXT NOT NULL,
+                    channel TEXT NOT NULL,
+                    symbol TEXT NOT NULL,
+                    payload_json TEXT NOT NULL
+                );
+                CREATE INDEX IF NOT EXISTS source_raw_payloads_context
+                    ON source_raw_payloads(
+                        provider, source, channel, symbol
+                    );
                 CREATE TABLE IF NOT EXISTS source_capabilities (
                     capability_identity TEXT PRIMARY KEY,
                     provider TEXT NOT NULL,
@@ -677,6 +762,71 @@ class SourceContractStore:
             elif str(row["value"]) != SOURCE_CONTRACT_SCHEMA_VERSION:
                 raise ValueError("source contract schema mismatch")
         self._initialized = True
+
+    def append_raw_payload(self, raw: SourceRawPayload) -> None:
+        self.initialize()
+        with self._connect() as db:
+            db.execute("BEGIN IMMEDIATE")
+            existing = db.execute(
+                "SELECT provider, source, channel, symbol, payload_json "
+                "FROM source_raw_payloads WHERE raw_identity=?",
+                (raw.raw_identity,),
+            ).fetchone()
+            if existing is not None:
+                if (
+                    str(existing["provider"]),
+                    str(existing["source"]),
+                    str(existing["channel"]),
+                    str(existing["symbol"]),
+                    str(existing["payload_json"]),
+                ) != (
+                    raw.provider,
+                    raw.source,
+                    raw.channel,
+                    raw.symbol,
+                    raw.payload_json,
+                ):
+                    raise ValueError("source raw payload identity conflict")
+                return
+            db.execute(
+                """
+                INSERT INTO source_raw_payloads(
+                    raw_identity, provider, source, channel, symbol, payload_json
+                ) VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    raw.raw_identity,
+                    raw.provider,
+                    raw.source,
+                    raw.channel,
+                    raw.symbol,
+                    raw.payload_json,
+                ),
+            )
+
+    def raw_payload(self, raw_identity: str) -> SourceRawPayload | None:
+        _require_sha256(raw_identity, "source raw payload identity")
+        if not self.path.is_file():
+            return None
+        with self._connect() as db:
+            row = db.execute(
+                """
+                SELECT provider, source, channel, symbol, payload_json
+                FROM source_raw_payloads
+                WHERE raw_identity=?
+                """,
+                (raw_identity,),
+            ).fetchone()
+        if row is None:
+            return None
+        return SourceRawPayload(
+            raw_identity=raw_identity,
+            provider=str(row["provider"]),
+            source=str(row["source"]),
+            channel=str(row["channel"]),
+            symbol=str(row["symbol"]),
+            payload_json=str(row["payload_json"]),
+        )
 
     def append_capability(self, capability: SourceCapability) -> None:
         self.initialize()
@@ -905,6 +1055,31 @@ class SourceContractStore:
             str(row["payload_json"])
         )
 
+    def latest_coverage(
+        self,
+        *,
+        provider: str,
+        source: str,
+        channel: str,
+        symbol: str,
+    ) -> SourceCoverageEvent | None:
+        if not self.path.is_file():
+            return None
+        with self._connect() as db:
+            row = db.execute(
+                """
+                SELECT payload_json
+                FROM source_coverage_events
+                WHERE provider=? AND source=? AND channel=? AND symbol=?
+                ORDER BY sequence_id DESC
+                LIMIT 1
+                """,
+                (provider, source, channel, symbol),
+            ).fetchone()
+        return None if row is None else _coverage_from_payload(
+            str(row["payload_json"])
+        )
+
     def coverage_at(
         self,
         *,
@@ -956,6 +1131,28 @@ class SourceContractStore:
         with self._connect() as db:
             row = db.execute("PRAGMA quick_check").fetchone()
         return row is not None and str(row[0]).lower() == "ok"
+
+
+def _raw_payload_identity_values(
+    *,
+    provider: str,
+    source: str,
+    channel: str,
+    symbol: str,
+    payload_json: str,
+    production_authority: bool,
+    real_capital: int,
+) -> dict[str, object]:
+    return {
+        "schema_version": SOURCE_CONTRACT_SCHEMA_VERSION,
+        "provider": provider,
+        "source": source,
+        "channel": channel,
+        "symbol": symbol,
+        "payload_json": payload_json,
+        "production_authority": production_authority,
+        "real_capital": real_capital,
+    }
 
 
 def _capability_payload(capability: SourceCapability) -> dict[str, object]:
