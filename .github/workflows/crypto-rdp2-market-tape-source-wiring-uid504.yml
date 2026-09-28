@@ -1,0 +1,67 @@
+name: RDP2 Market Tape Source Wiring UID504
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/crypto_signal/data/source_contract.py"
+      - "src/crypto_signal/data/market_tape_source_contract.py"
+      - "src/crypto_signal/data/market_tape_wire_collection.py"
+      - "ops/run_market_tape_stream.py"
+      - "tests/test_rdp2_market_tape_source_contract.py"
+      - ".github/workflows/crypto-rdp2-market-tape-source-wiring-uid504.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  focused:
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          clean: true
+          fetch-depth: 1
+
+      - name: Verify exact Workbench baseline and PR source
+        shell: bash
+        run: |
+          set -euo pipefail
+          WB="/Volumes/Crypto-504/Crypto-Signal-Workbench/repo"
+          test "$(id -u)" = "504"
+          test -d "$WB/.git"
+          test "$(git -C "$WB" branch --show-current)" = "main"
+          test -z "$(git -C "$WB" status --porcelain)"
+          test "$(git -C "$WB" rev-parse HEAD)" = "${{ github.event.pull_request.base.sha }}"
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+          echo "RDP2_B_WORKBENCH_BASELINE_PASS=YES"
+          echo "RDP2_B_EXACT_PR_SOURCE_PASS=YES"
+
+      - name: Focused live-wiring acceptance
+        shell: bash
+        run: |
+          set -euo pipefail
+          PY="/Volumes/Crypto-504/Crypto-Signal/Development/.venv/bin/python"
+          export PYTHONPATH="$GITHUB_WORKSPACE/src:$GITHUB_WORKSPACE"
+          "$PY" -m pytest -q \
+            tests/test_rdp2_market_tape_source_contract.py \
+            tests/test_rdp2_source_contract.py \
+            tests/test_market_tape_wire_collection.py \
+            tests/test_market_data_gap_ledger.py \
+            tests/test_market_tape_store.py \
+            tests/test_rdp1_runtime_reliability.py
+          "$PY" -m ruff check \
+            src/crypto_signal/data/source_contract.py \
+            src/crypto_signal/data/market_tape_source_contract.py \
+            src/crypto_signal/data/market_tape_wire_collection.py \
+            ops/run_market_tape_stream.py \
+            tests/test_rdp2_market_tape_source_contract.py
+          "$PY" -m mypy \
+            src/crypto_signal/data/source_contract.py \
+            src/crypto_signal/data/market_tape_source_contract.py \
+            src/crypto_signal/data/market_tape_wire_collection.py
+          "$PY" -m py_compile ops/run_market_tape_stream.py
+          echo "RDP2_B_MARKET_TAPE_SOURCE_WIRING_PASS=YES"
+          echo "REAL_CAPITAL=0"
