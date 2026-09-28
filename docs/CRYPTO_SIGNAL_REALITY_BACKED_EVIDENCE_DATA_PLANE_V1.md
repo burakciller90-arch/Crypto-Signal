@@ -574,6 +574,14 @@ Work:
 - source capability registry;
 - explicit freshness state.
 
+Progress:
+- **RDP2-A source-contract foundation ACCEPTED** on main `585378dc32753d2e31894bd666eb1e084802e6ab` via PR #1555;
+- UID504 run `36373922309`: Workbench exact-base PASS, exact PR source PASS, 27 tests PASS, Ruff PASS, mypy PASS, REAL_CAPITAL=0;
+- canonical capability, envelope, freshness and coverage types are now immutable and SHA-addressed;
+- envelope truth carries event/source/observed/ingested timestamps, provider-native ID/sequence semantics and raw/normalized identities;
+- as-of reads refuse future ingestion; coverage is append-only and can reference existing gap-event identities instead of creating a second gap ledger;
+- next: **RDP2-B — live Market Tape source-contract wiring + persisted coverage emission/readback**.
+
 PASS:
 - every family can explain what data existed and what data did not exist at an as-of time.
 
