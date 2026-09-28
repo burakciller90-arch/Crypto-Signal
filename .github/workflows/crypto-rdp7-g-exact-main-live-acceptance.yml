@@ -267,7 +267,7 @@ jobs:
           echo "RDP7_G_STALE_GAP_PIT_FAIL_CLOSED_REGRESSION_PASS=YES"
           echo "REAL_CAPITAL=0"
 
-      - name: Restart canonical R11 supervisor from exact-main Development
+      - name: Ensure running R11 supervisor is exact-main and healthy
         shell: bash
         run: |
           set -euo pipefail
@@ -276,27 +276,64 @@ jobs:
           PY="$DEV/.venv/bin/python"
           LOCAL_ROOT="$HOME/Library/Application Support/CryptoSignalRuntime"
           START="$LOCAL_ROOT/start-ssd-runtime.command"
+          ROOT_SUP="$ROOT/ssd-service-supervisor.sh"
+          DEV_SUP="$DEV/ops/ssd_runtime_supervisor.sh"
           test "$(id -u)" = "504"
           test "$(git -C "$DEV" branch --show-current)" = "main"
           test "$(git -C "$DEV" rev-parse HEAD)" = "$RDP7_G_EXPECTED_MAIN_SHA"
           test -z "$(git -C "$DEV" status --porcelain)"
 
-          restart_at_ms="$("$PY" -c 'import time; print(time.time_ns() // 1_000_000)')"
-          old_sup="$(ps -axo pid=,comm=,args= | awk -v needle="$ROOT/ssd-service-supervisor.sh" '($2 == "bash" || $2 == "/bin/bash") && index($0, needle) > 0 && first == "" {first=$1} END {if (first != "") print first}')"
+          runtime_check_at_ms="$("$PY" -c 'import time; print(time.time_ns() // 1_000_000)')"
+          old_sup="$(ps -axo pid=,comm=,args= | awk -v needle="$ROOT_SUP" '($2 == "bash" || $2 == "/bin/bash") && index($0, needle) > 0 && first == "" {first=$1} END {if (first != "") print first}')"
           echo "RDP7_G_OLD_SUPERVISOR_PID=${old_sup:-NONE}"
 
-          bash "$DEV/ops/r11/install_runtime_watchdog.sh"
+          mkdir -p "$LOCAL_ROOT" "$ROOT/ServiceLogs"
+          cp "$DEV/ops/r11/start_ssd_runtime.command" "$START"
+          chmod 700 "$START"
+
+          need_restart=0
+          if [ ! -f "$ROOT_SUP" ] || ! cmp -s "$ROOT_SUP" "$DEV_SUP"; then
+            need_restart=1
+          fi
+          if [ -z "$old_sup" ] || ! kill -0 "$old_sup" >/dev/null 2>&1; then
+            need_restart=1
+          fi
+
+          if [ "$need_restart" = "1" ]; then
+            cp "$DEV_SUP" "$ROOT_SUP"
+            chmod 700 "$ROOT_SUP"
+            if [ -n "$old_sup" ] && kill -0 "$old_sup" >/dev/null 2>&1; then
+              kill "$old_sup" >/dev/null 2>&1 || true
+              for _ in {1..30}; do
+                kill -0 "$old_sup" >/dev/null 2>&1 || break
+                sleep 1
+              done
+              if kill -0 "$old_sup" >/dev/null 2>&1; then
+                kill -KILL "$old_sup" >/dev/null 2>&1 || true
+              fi
+            fi
+            rm -f "$ROOT/ssd-service-supervisor.pid"
+            "$START"
+            echo "RDP7_G_SUPERVISOR_REFRESHED=YES"
+          else
+            echo "RDP7_G_SUPERVISOR_ALREADY_EXACT=YES"
+          fi
+
+          cmp -s "$ROOT_SUP" "$DEV_SUP"
+          root_sha="$(shasum -a 256 "$ROOT_SUP" | awk '{print $1}')"
+          dev_sha="$(shasum -a 256 "$DEV_SUP" | awk '{print $1}')"
+          test "$root_sha" = "$dev_sha"
 
           new_sup=""
           for _ in {1..60}; do
-            new_sup="$(ps -axo pid=,comm=,args= | awk -v needle="$ROOT/ssd-service-supervisor.sh" '($2 == "bash" || $2 == "/bin/bash") && index($0, needle) > 0 && first == "" {first=$1} END {if (first != "") print first}')"
+            new_sup="$(ps -axo pid=,comm=,args= | awk -v needle="$ROOT_SUP" '($2 == "bash" || $2 == "/bin/bash") && index($0, needle) > 0 && first == "" {first=$1} END {if (first != "") print first}')"
             if [ -n "$new_sup" ] && kill -0 "$new_sup" >/dev/null 2>&1; then
               break
             fi
             sleep 1
           done
           test -n "$new_sup"
-          if [ -n "$old_sup" ]; then
+          if [ "$need_restart" = "1" ] && [ -n "$old_sup" ]; then
             test "$new_sup" != "$old_sup"
           fi
 
@@ -347,13 +384,12 @@ jobs:
           done
           test "$fresh" = "1"
 
-          echo "RDP7_G_RESTART_AT_MS=$restart_at_ms" >> "$GITHUB_ENV"
+          echo "RDP7_G_RUNTIME_CHECK_AT_MS=$runtime_check_at_ms" >> "$GITHUB_ENV"
           echo "RDP7_G_SUPERVISOR_PID=$new_sup" >> "$GITHUB_ENV"
-          echo "RDP7_G_R11_SUPERVISOR_RESTART_PASS=YES pid=$new_sup"
+          echo "RDP7_G_SUPERVISOR_EXACT_MAIN_PASS=YES sha=$root_sha pid=$new_sup"
           echo "RDP7_G_PRODUCT_HEALTH_PASS=YES"
           echo "RDP7_G_MARKET_TAPE_FRESH_PASS=YES"
           echo "REAL_CAPITAL=0"
-
       - name: Verify canonical Stream persisted exact ONCHAIN projection
         shell: bash
         run: |
@@ -382,7 +418,7 @@ jobs:
           stream_path = Path(os.environ['RDP7_STREAM'])
           onchain_path = Path(os.environ['RDP7_ONCHAIN'])
           source_path = Path(os.environ['RDP7_SOURCE'])
-          restart_at_ms = int(os.environ['RDP7_G_RESTART_AT_MS'])
+          runtime_check_at_ms = int(os.environ['RDP7_G_RUNTIME_CHECK_AT_MS'])
           deadline = time.monotonic() + 120
           boundary = None
           fact_payload = None
@@ -415,7 +451,7 @@ jobs:
                               ORDER BY event_at_ms DESC, fact_bundle_identity DESC
                               LIMIT 100
                               ''',
-                              (restart_at_ms,),
+                              (runtime_check_at_ms,),
                           ).fetchall()
                           for row in rows:
                               payload = json.loads(str(row['payload_json']))
@@ -443,16 +479,11 @@ jobs:
                   boundary is not None
                   and fact_payload is not None
                   and source_payload is not None
-                  and int(boundary['activated_at_ms']) >= restart_at_ms
               ):
                   break
               time.sleep(2)
 
           assert boundary is not None, 'missing onchain_change activation boundary'
-          assert int(boundary['activated_at_ms']) >= restart_at_ms, (
-              int(boundary['activated_at_ms']),
-              restart_at_ms,
-          )
           assert fact_payload is not None, 'missing post-restart onchain family fact'
           assert source_payload is not None, 'missing post-restart onchain source event'
           assert fact_payload['family'] == ConfluenceFamily.ONCHAIN.value
