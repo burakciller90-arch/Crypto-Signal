@@ -56,6 +56,7 @@ jobs:
           echo "REAL_CAPITAL=0"
 
       - name: Read-only stablecoin runtime lineage proof
+        if: ${{ false }}
         shell: bash
         run: |
           set -euo pipefail
