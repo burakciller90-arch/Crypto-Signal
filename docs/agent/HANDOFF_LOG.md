@@ -1044,3 +1044,43 @@ blocker:
 
 nextAction:
 - persist only stablecoin_capital_flow_freeze in FrozenProofStore; add read-only canonical source resolvers and exact domain capabilities; wire live/API acceptance and tests; then prove exact-head RDP10 and RDP7 gates before merge.
+
+
+---
+
+## 2026-09-28 — RDP10-F2 implementation handoff / acceptance pending
+
+status: ACCEPTANCE_PENDING
+repository: burakciller90-arch/Crypto-Signal
+canonicalMainAtAcceptanceStart: b224a9f466767b39c051dd35096d414f2bf1495b
+branch: rdp10/onchain-proof-f2
+productionImplementationHead: 082b087ab64cd82c44661f145e2fdc304f509933
+worktree: no session-local /Volumes worktree; UID504 exact-main prerequisite passed
+roadmapGate: RDP10-F2 On-chain / stablecoin exact proof cutover
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+implemented:
+- derived StablecoinCapitalFlowEvidenceFreeze persistence only; no raw source duplication.
+- exact read-only stablecoin observation/raw/envelope/coverage resolution with identity and PIT validation.
+- exact onchain/stablecoin/source domains and explicit unavailable provider rails.
+- API/dashboard/live-clock wiring to canonical RDP7 stores.
+- focused RDP10 + RDP7 regression/acceptance coverage.
+
+productionCommits:
+- d84421063b966c551b67ce49b9ddf156d6abb6cb
+- ea073fa2cd7ce2818ab88cd3b941d2eb320af84e
+- 336d0519b814fa57c7fc95b3e1c7e3e40f67eb3e
+- f598657e45856ee8ab4c6d39585dffc160cb0c1d
+- 0ddcdf0aa500db209d6973b8e449227a54bc34f0
+- abf51c678e8ad9ef1265682bb9872dbab1e9d43d
+- 3d2d2529596b5d481ece968b4dd92b948f01b677
+- 082b087ab64cd82c44661f145e2fdc304f509933
+
+blocker:
+- exact-final-head RDP10/RDP7 UID504 acceptance not yet inspected.
+
+nextAction:
+- inspect exact final head workflows; repair only proven failures; if PASS, re-check main/head/duplicate state, open PR and merge only after acceptance evidence is recorded.
