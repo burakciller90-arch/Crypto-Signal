@@ -42,6 +42,31 @@ Exact-main Workbench bootstrap for `12aa063...` is still pending at task start:
 
 Read exact-main Workbench bootstrap `36466070553`; once PASS, audit the current Derivatives Context/Dynamics freeze schemas and implement E1 persistence + resolver integration.
 
+### Phase checkpoint — E1 implementation complete, acceptance pending
+
+Exact-main Workbench prerequisite is now mechanically PASS:
+
+- run `36466070553`
+- job `109076351338`
+- `GITHUB_SHA=12aa063aad1fa93ccea6185bc7480539c88abf6b`
+- final canonical repo branch `main`
+- final canonical repo head exact main
+- final dirty count `0`
+- `SSD504_WORKBENCH_PASS=YES`
+- `REAL_CAPITAL=0`
+
+Implemented on `rdp10/derivatives-proof-e1`:
+
+- `ec746eef3efe92f381061a85c4e7d5eb32e7b72d` — persist immutable Derivatives Context + Dynamics proof objects before Stream publication;
+- `da7838dcfe79d231d32474d676bf84a3f3b5239e` — resolve exact derivatives_context / derivatives_dynamics proof domains and top-level capabilities;
+- `7742c159350f45e43947a83181ac47c07a27abc7` — focused persistence tests;
+- `86fc36fead84312de067f8010c97096cab8080d9` — exact-evidence resolver test;
+- `3a4f088eadfbf4d94ab27d4ad32091502f057fcc` — RDP10 UID504 gate coverage.
+
+E1 still excludes liquidation observation/coverage/heatmap/crowding.
+
+Exact nextAction: run the RDP10 Frozen Proof Contract UID504 acceptance on the final checkpoint head after this documentation phase; inspect focused tests/lint/type output, live fail-closed audit, non-mutating proof, `HISTORICAL_BACKFILL=NO`, and `REAL_CAPITAL=0` before any PR/merge.
+
 
 This file is the replaceable current checkpoint. Conversation memory is non-authoritative.
 
