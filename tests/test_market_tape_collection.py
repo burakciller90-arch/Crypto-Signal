@@ -99,7 +99,7 @@ class FakeDerivativesAdapter:
         )
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_market_tape_collection_persists_existing_engine_inputs(tmp_path) -> None:
     store = MarketTapeStore(tmp_path / "market_tape.sqlite3")
 
@@ -121,7 +121,7 @@ async def test_market_tape_collection_persists_existing_engine_inputs(tmp_path) 
     assert store.counts().total == 3
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_market_tape_collection_is_idempotent_on_replay(tmp_path) -> None:
     store = MarketTapeStore(tmp_path / "market_tape.sqlite3")
     kwargs = {
