@@ -338,6 +338,35 @@ def build_option_contract_quote(
     )
 
 
+def build_option_instrument_metadata_identity(
+    *,
+    exchange: Exchange,
+    base_coin: str,
+    instrument_specs: tuple[OptionInstrumentSpec, ...],
+) -> str:
+    _require_uppercase(base_coin, "option metadata base coin")
+    if not instrument_specs:
+        raise ValueError("option metadata requires at least one instrument")
+
+    identities: list[str] = []
+    for instrument in instrument_specs:
+        if instrument.exchange is not exchange or instrument.base_coin != base_coin:
+            raise ValueError("option metadata instrument context mismatch")
+        identities.append(instrument.instrument_identity)
+
+    canonical_identities = tuple(sorted(set(identities)))
+    if len(canonical_identities) != len(identities):
+        raise ValueError("option metadata cannot contain duplicate instruments")
+    return canonical_sha256(
+        {
+            "base_coin": base_coin,
+            "exchange": exchange,
+            "instrument_identities": canonical_identities,
+            "version": "options-instrument-metadata-v1/1",
+        }
+    )
+
+
 def build_option_surface_observation(
     *,
     exchange: Exchange,
