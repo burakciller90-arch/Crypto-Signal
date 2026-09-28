@@ -934,3 +934,60 @@ The RDP11 observer/anchor contract has not yet been audited or installed. Existi
 ### Exact nextAction
 
 Audit current UID504 supervisor/runtime health surfaces, continuity workflows, existing recovery/soak utilities, canonical runtime DBs and exact-proof read models. Record a pre-implementation audit checkpoint before changing any workflow/script. Then implement only the minimal read-only observation/anchor machinery required to accumulate real 72-hour evidence.
+
+
+
+## RDP11 pre-deploy audit checkpoint — 2026-09-29
+
+Audit completed before any RDP11 runtime deployment or soak-observer implementation.
+
+Canonical accepted main:
+- `5f07a8954f87e237258f1d3eb448a5ede6106fbd`
+
+Observed runtime checkout state from the final RDP10 UID504 acceptance:
+- Workbench was on accepted base/main.
+- Development head: `b343e3bf20677df2caa4d4de5d7a47ee3e1ff01c` (RDP8-B-era code).
+- Product head: `403cb552dd398ea5c81ab97cb5df8114b0716ad2` (RDP1-era Product code).
+- current main is 24 commits ahead of that Development head and 67 commits ahead of that Product head.
+- therefore RDP11 must not start the 72-hour clock yet: the roadmap requires **real Product proof inspectability**, not only Workbench/source acceptance.
+
+Repository/runbook audit:
+- `ENVIRONMENT_REGISTRY.md` confirms SSD `Development` is runtime data/code owner and `Product` is accepted live dashboard checkout.
+- `docs/OPERATOR_RUNBOOK_FULL_VERSION_V1.md` explicitly forbids hand-editing Product and requires:
+  1. merge to main;
+  2. hosted Stage10 full regression;
+  3. UID504 `sync`;
+  4. UID504 `producttest`;
+  5. UID504 `fulltest`;
+  6. rollback-safe exact-target `productdeploy`;
+  7. post-deploy `productstate` + health checks.
+- `.github/workflows/crypto-mac-command.yml` provides allowlisted UID504 implementations of those commands and exact-target Product rollback on failure.
+- existing `crypto-r11-runtime-recovery.yml` can sync/restart Development runtime but does not promote Product; it is not sufficient by itself for the RDP11 Product-inspectability prerequisite.
+- generic Stage10 on docs-only main currently reports failure, but its job logs are unavailable from the connector; RDP11 will not treat that generic status as proof. The exact UID504 `producttest` + `fulltest` + deployment health sequence must mechanically pass before the soak clock begins.
+
+Existing observation surfaces already available:
+- supervisor-owned dashboard health at `127.0.0.1:48700/api/health`;
+- Market Tape collector heartbeat / ingestion runtime DB;
+- liquidation heartbeat + connection coverage;
+- source-contract SQLite `quick_check`;
+- provider-divergence SQLite `quick_check`;
+- immutable FrozenProofStore read-only path;
+- existing restart/watchdog/recovery acceptance;
+- Stream and Product read-only runtime APIs.
+
+Minimal RDP11 plan:
+1. use the existing allowlisted UID504 deployment sequence to move Development and Product to exact accepted main, with rollback protection;
+2. verify restarted supervisor/dashboard and real Product exact proof surface;
+3. only then install a dedicated **read-only RDP11 observer** plus separate observation sidecar/anchor (never writing canonical evidence DBs);
+4. anchor the 72-hour clock to the deployed exact main SHA and first successful UID504 observation;
+5. run recurring UID504 observations; any anchor drift or mandatory fail-closed violation invalidates/restarts the soak clock.
+
+Safety:
+- `REAL_CAPITAL=0`
+- `HISTORICAL_BACKFILL=NO`
+- canonical evidence DB writes by observer: FORBIDDEN
+- Durdurulmaz touched: NO
+- Quantum Capital touched: NO
+
+Exact nextAction:
+Execute the accepted UID504 `sync → producttest → fulltest → productdeploy target=5f07a895... → productstate` sequence. Record every issue/run/job and do not start the 72-hour clock unless the exact-target deployment and real Product health/proof checks pass.
