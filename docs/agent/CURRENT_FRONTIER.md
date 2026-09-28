@@ -1,123 +1,37 @@
 # Crypto Signal Current Frontier
 
-## LIVE ACTIVE CHECKPOINT — 2026-09-28 — RDP10-D2 STARTED
-
-This section is written at task start so another agent can resume without chat memory.
-
-- canonical main at task start: `188075b20e853f956462a90c6faa3f44ea4117f6`
-- main commit: `RDP10-D1: persist and resolve exact Liquidity proofs (#1643)`
-- active branch: `rdp10/order-flow-derived-proof-d2`
-- local /Volumes worktree in this ChatGPT session: NONE; GitHub branch changes are validated on UID504 self-hosted runner against canonical Workbench.
-- safety: `REAL_CAPITAL=0`
-- historical/frozen backfill: FORBIDDEN
-- Durdurulmaz touched: NO
-- Quantum Capital touched: NO
-- duplicate RDP10-D2 PR at start: NONE
-
-### Previous accepted slice
-
-RDP10-D1 Liquidity exact derived-proof persistence/resolution is merged on main.
-
-- PR #1643
-- accepted head: `46eef9e8fe6bae3aa1dd518dc4a872caa8de1267`
-- merge SHA: `188075b20e853f956462a90c6faa3f44ea4117f6`
-- acceptance run: `36464174709`
-- job: `109070009401`
-- focused tests/Ruff/mypy/py_compile: PASS
-- live audit: 6 messages, 0 false unregistered READY
-- `RDP10_NON_MUTATING_PASS=YES`
-- `HISTORICAL_BACKFILL=NO`
-- `REAL_CAPITAL=0`
-
-### Active work: RDP10-D2 Order Flow
-
-Goal: persist and resolve the strongest already-existing immutable RDP4 Order Flow freezes before Stream publication:
-
-- `order_flow_microstructure_freeze`
-- `temporal_order_flow_freeze`
-- `absorption_freeze`
-- `price_cvd_divergence_freeze`
-
-Already implemented on active branch before this checkpoint was written:
-
-- commit `1c3bd9975735ab815ab9aba7a7659856a1ffe244`
-  - adds publication-before-publish persistence for Order Flow proof objects and explicit raw/dependency lineage.
-- commit `69f85d6cd73aa21239e4a969339a2387fb58992b`
-  - teaches exact-evidence resolver to expose the four persisted Order Flow proof kinds and derived domains.
-
-Current branch is 2 commits ahead / 0 behind the task-start main.
-
-### Exact nextAction
-
-1. add focused persistence + resolver/API tests for microstructure, temporal CVD, absorption and divergence;
-2. ensure shared Liquidity/Order Flow source lineage remains explicit and never treated as independent confirmation;
-3. extend/confirm RDP10 UID504 gate covers all D2 files;
-4. run exact-head UID504 acceptance;
-5. inspect acceptance output, not workflow conclusion alone;
-6. re-check main/open PRs immediately before merge;
-7. only after PASS, merge D2 and write completion checkpoint/handoff.
-
-RDP10 is still ACTIVE and not PASS.
-
-### Phase checkpoint — implementation complete, acceptance pending
-
-Exact branch state entering acceptance:
-
-- active branch: `rdp10/order-flow-derived-proof-d2`
-- implementation commits include:
-  - `1c3bd9975735ab815ab9aba7a7659856a1ffe244` — Order Flow proof persistence
-  - `69f85d6cd73aa21239e4a969339a2387fb58992b` — resolver integration
-  - `24879d0e81970761773a24f9d11a69c2deed035f` — micro/temporal/absorption persistence tests
-  - `81f8e02c140961d07ccc5a6c5d23e0464d6eda66` — divergence persistence test
-  - `c8005d42ebf3da5192aafda7fe0d487153c93e67` — resolver exactness test
-  - `3dbe214934ee3bcb7ed488ee7648872d5a51f951` — UID504 gate coverage
-  - `4670ca8f6c1e4f621c8d7f7a208ab2ca14b40205` — mandatory durable task-start checkpoint operating rule
-- no D2 PR has been opened yet.
-- no D2 merge has occurred.
-- acceptance must run on the final checkpoint head after this documentation commit.
-- exact nextAction: inspect exact-head UID504 RDP10 acceptance output; if PASS, re-check main/open PRs and merge; if FAIL, fix only the failing acceptance issue and write the next phase checkpoint before retry.
-
-
-This is a replaceable current checkpoint. It is not permission to skip re-measurement.
+This file is the replaceable current checkpoint. Conversation memory is non-authoritative.
 
 Checkpoint assembled: 2026-09-28
-Safety: `REAL_CAPITAL=0`
 Repository: `burakciller90-arch/Crypto-Signal`
-Workbench: `/Volumes/Crypto-504/Crypto-Signal-Workbench`
-Canonical repo: `/Volumes/Crypto-504/Crypto-Signal-Workbench/repo`
-Runtime Development: `/Volumes/Crypto-504/Crypto-Signal/Development`
+Canonical Workbench repo: `/Volumes/Crypto-504/Crypto-Signal-Workbench/repo`
+Development runtime: `/Volumes/Crypto-504/Crypto-Signal/Development`
+Safety: `REAL_CAPITAL=0`
 
-## Verified Git baseline
+## Exact verified Git baseline
 
-Current exact `main` at checkpoint:
+Current exact `main`:
 
-`da7f4299870c6db91dec7feeb7a206226d2750ab`
+`95c444f75fb0c9580a76d53eac21e4760a849822`
 
 Commit:
 
-`RDP10-C: add immutable derived proof store (#1641)`
+`RDP10-D2: persist and resolve exact Order Flow proofs (#1644)`
 
-Current accepted sequence at/after RDP9 closure:
-
-- PR #1638 — RDP9 roadmap closure; merge `e3a6035b7e7a55ea1d7b8c6de46d0898663da341`.
-- PR #1639 — RDP10-A fail closed on unregistered proof domains; merge `709354d52ab2040794879d60944587beb44d4ba2`.
-- PR #1640 — RDP10-B expose immutable full Geometry Proof; merge `53d27b1686b7cf74aa310fb69873eb1c28363603`.
-- PR #1641 — RDP10-C immutable derived-proof store foundation; merge `da7f4299870c6db91dec7feeb7a206226d2750ab`.
-
-Latest exact-main SSD504 Workbench verification:
+Exact-main SSD504 Workbench verification:
 
 - workflow: `Crypto SSD504 Workbench Bootstrap`
-- run ID: `36462131203`
-- job ID: `109063054163`
-- conclusion: `success`
-- exact SHA: `da7f4299870c6db91dec7feeb7a206226d2750ab`
-- final Workbench repo: branch `main`, head exact SHA, dirty count `0`
+- run ID: `36465662536`
+- job ID: `109074980379`
+- conclusion: SUCCESS
+- `GITHUB_SHA=95c444f75fb0c9580a76d53eac21e4760a849822`
+- final canonical repo head: exact main
+- final canonical repo branch: `main`
+- final dirty count: `0`
 - `SSD504_WORKBENCH_PASS=YES`
 - `REAL_CAPITAL=0`
 
 ## Canonical roadmap state
-
-Verified roadmap sequence:
 
 - RDP0 PASS
 - RDP1 PASS
@@ -132,87 +46,120 @@ Verified roadmap sequence:
 - **RDP10 ACTIVE**
 - RDP11 not yet closed
 
-RDP9 closure was mechanically proven; do not repeat RDP9 A/B/C.
+Do not reopen PASS phases without contrary mechanical evidence.
 
-Key acceptance:
-
-- RDP9 overlap run `36447590945`: SUCCESS; duplicate-evidence weight inflation blocked.
-- RDP9 cross-venue decision run `36447590574`: SUCCESS; material venue disagreement is visible while cross-venue retains no score/directional authority.
-- Agent Memory Bootstrap `36451104263`: SUCCESS on exact then-main; BTC/ETH/SOL live read-only provider-divergence classifications healthy.
-- Workbench bootstrap `36451104302`: SUCCESS and clean.
-
-## Active gate
-
-**RDP10 — Exact frozen customer-proof contract**
-
-Accepted bounded slices:
+## RDP10 accepted slices
 
 ### RDP10-A — fail-closed domain resolution — PASS
 
-- branch: `rdp10/fail-closed-domain-resolution-a`
 - PR #1639
-- accepted head: `868cc84d9202bdda410075a914744b60f898e616`
-- merge: `709354d52ab2040794879d60944587beb44d4ba2`
+- merge `709354d52ab2040794879d60944587beb44d4ba2`
+- accepted head `868cc84d9202bdda410075a914744b60f898e616`
 - UID504 run `36459816795` / job `109055278087`: SUCCESS
-- live audit observed 17 unregistered domains and 0 false `READY_EXACT`
-- historical backfill: NO
+- unknown/unregistered derived domains cannot become false `READY_EXACT`
 
 ### RDP10-B — strongest Geometry Proof resolution — PASS
 
-- branch: `rdp10/geometry-proof-linkage-b`
 - PR #1640
-- accepted head: `543aff9877f0e47c2ab4d882b7990b8cbc8d63e1`
-- merge: `53d27b1686b7cf74aa310fb69873eb1c28363603`
+- merge `53d27b1686b7cf74aa310fb69873eb1c28363603`
+- accepted head `543aff9877f0e47c2ab4d882b7990b8cbc8d63e1`
 - UID504 run `36460862691` / job `109058752043`: SUCCESS
-- persisted RDP3 `geometry_proofs` now resolve through exact-evidence by exact immutable parent linkage
-- proof SHA/parent metadata/PIT checks fail closed
-- full methodology states, annotations and conflict flags are exposed from the persisted proof
+- immutable RDP3 Geometry Proof resolves by exact parent linkage
+- methodology states, annotations and conflict flags exposed
 - current-data substitution: NO
-- historical backfill: NO
 
-### RDP10-C — immutable derived-proof store foundation — PASS
+### RDP10-C — immutable derived-proof store — PASS
 
-- branch: `rdp10/immutable-derived-proof-store-c`
 - PR #1641
-- accepted head: `45d35c058d6a1a040b750a97a43f5884a549c153`
-- merge: `da7f4299870c6db91dec7feeb7a206226d2750ab`
+- merge `da7f4299870c6db91dec7feeb7a206226d2750ab`
+- accepted head `45d35c058d6a1a040b750a97a43f5884a549c153`
 - UID504 run `36461989856` / job `109062573004`: SUCCESS
-- append-only exact derived-proof registry exists
-- exact idempotent replay only; same identity + different content fails closed
+- append-only/idempotent exact derived-proof store
+- same identity + different payload fails closed
 - SQL UPDATE/DELETE rejected
-- canonical payload/visualization JSON and PIT metadata validated
-- no generic `latest proof` API
+- no latest-proof substitution API
 - no historical recomputation/backfill
-- `production_authority=false`, `REAL_CAPITAL=0`
 
-RDP10 is **not PASS yet**. A/B/C are accepted foundations/slices only.
+### RDP10-D1 — Liquidity persistence/resolution — PASS
+
+- PR #1643
+- merge `188075b20e853f956462a90c6faa3f44ea4117f6`
+- accepted head `46eef9e8fe6bae3aa1dd518dc4a872caa8de1267`
+- UID504 run `36464174709` / job `109070009401`: SUCCESS
+- exact immutable dynamics/structure/sweep proof objects persist before Stream publish
+- Liquidity zones/structure/sweep proof payloads resolve through exact evidence
+- no current-data substitution/backfill
+
+### RDP10-D2 — Order Flow persistence/resolution — PASS
+
+- branch: `rdp10/order-flow-derived-proof-d2`
+- PR #1644
+- accepted head: `70997dac11cbe92b95ee094c1e2874a3b056edce`
+- merge: `95c444f75fb0c9580a76d53eac21e4760a849822`
+- UID504 run `36465438253` / job `109074338349`: SUCCESS
+- focused tests/Ruff/mypy/py_compile PASS
+- `RDP10_LIVE_MESSAGES_AUDITED=6`
+- `RDP10_UNREGISTERED_DOMAINS_OBSERVED=17`
+- `RDP10_UNREGISTERED_READY_COUNT=0`
+- `RDP10_LIVE_FAIL_CLOSED_PASS=YES`
+- `RDP10_NON_MUTATING_PASS=YES`
+- `HISTORICAL_BACKFILL=NO`
+- `REAL_CAPITAL=0`
+- exact immutable microstructure / temporal flow / absorption / price-CVD divergence proof objects persist before Stream publish
+- shared Liquidity/Order Flow source/dependency lineage remains explicit
+- exact derived payloads resolve without computing canonical CVD/relations from capped source previews
+
+RDP10-D is mechanically complete. RDP10 itself is **not PASS yet**.
 
 ## First mechanically unclosed RDP10 slice
 
-**RDP10-D — Liquidity + Order Flow exact derived-proof persistence and resolver integration**
+**RDP10-E — Derivatives exact proof persistence/resolution**
 
-Required next work:
+Canonical RDP10 prep requires persistence/resolution for:
 
-1. persist exact immutable derived payloads for Liquidity dynamics/structure/sweep;
-2. persist exact immutable derived payloads for Order Flow microstructure/temporal flow/absorption/price-CVD divergence;
-3. bind proof identities before any corresponding derived domain can claim `READY_EXACT`;
-4. resolver must return the complete frozen derived proof, not infer canonical CVD/zones from the capped source preview;
-5. keep shared source lineage explicit so Liquidity and Order Flow do not imply independent confirmation;
-6. preserve PIT timestamps and reject any future nested source;
-7. do not rewrite or recompute historical Stream rows.
+- Derivatives Context;
+- Derivatives Dynamics;
+- raw liquidation observations;
+- liquidation provider coverage;
+- observed liquidation heatmap;
+- Derivatives Crowding.
 
-After RDP10-D, continue mechanically to RDP10-E/F/G and only declare RDP10 PASS when the full roadmap acceptance contract is satisfied.
+Required semantic constraints:
 
-## Stale/duplicate guard
+1. preserve RDP5 observation-cutoff PIT semantics;
+2. provider coverage becomes usable only at its actual `observed_at_ms`, not merely `coverage_end_ms`;
+3. never fabricate zero-liquidation evidence from provider silence;
+4. preserve exact mark/index/OI/funding/basis and dynamics;
+5. heatmap/crowding must expose dependency lineage to their derivatives/liquidation parents;
+6. missing exact frozen proof remains IDENTITY_ONLY/UNAVAILABLE;
+7. no historical Stream rewrite/backfill;
+8. no direction or production authority invented by context-only engines.
 
-Open PR #1478, `ED1: resolve exact family payloads for human proof`, is stale frontend-first work. Do not merge/revive it blindly. It predates the corrected RDP10 backend contract and does not replace RDP10-D/E/F.
+RDP10-F follows only after RDP10-E acceptance. RDP10-G API/UI cutover follows backend truth.
 
-Parallel agents may advance `main`. Always re-check current `main`, open PRs, branches and exact acceptance output immediately before changing or merging anything.
+## Mandatory task-start checkpoint rule
+
+`AGENTS.md` now requires every new resumable task/slice to write a durable start checkpoint before implementation.
+
+Before RDP10-E code changes:
+
+- verify current main/open PRs/branches;
+- update this file on the active RDP10-E branch;
+- append a start entry to `HANDOFF_LOG.md`;
+- record exact main, branch/worktree, duplicate guard, bounded goal, blocker and one nextAction.
+
+For longer slices, checkpoint implementation -> acceptance and acceptance -> merge when needed.
+
+## Stale / duplicate guard
+
+PR #1478, `ED1: resolve exact family payloads for human proof`, remains stale frontend-first work. Do not merge/revive blindly. Reuse only safe pieces after backend RDP10 truth is complete.
+
+Parallel agents may move `main`. Re-check immediately before implementation and immediately before merge.
 
 ## Safety
 
-- REAL_CAPITAL=0.
-- Real exchange/broker authority added: NO.
-- Historical/frozen evidence mutation: NO.
-- Durdurulmaz touched: NO.
-- Quantum Capital touched: NO.
+- `REAL_CAPITAL=0`
+- real exchange/broker authority added: NO
+- frozen/historical evidence mutation: NO
+- Durdurulmaz touched: NO
+- Quantum Capital touched: NO
