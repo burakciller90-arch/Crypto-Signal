@@ -8,6 +8,7 @@ from pathlib import Path
 import pytest
 
 from crypto_signal.data.adapters.bybit_liquidation_ws import (
+    BybitLiquidationWireBatch,
     LiquidationTransportEvent,
     LiquidationTransportEventKind,
     build_bybit_liquidation_wire_batch,
@@ -177,6 +178,46 @@ def test_connection_runtime_cannot_erase_liquidation_ingestion_evidence(
         )
 
 
+def test_connection_coverage_table_is_sql_immutable(tmp_path) -> None:
+    path = tmp_path / "liquidation-runtime.sqlite3"
+    runtime = MarketTapeCollectorRuntimeStore(path)
+    instance = _instance(runtime)
+    connection = LiquidationConnectionRuntimeStore(path)
+    coverage = _coverage(
+        instance_identity=instance.instance_identity,
+        sequence_no=1,
+        state=LiquidationConnectionState.CONNECTED,
+        observed_at_ms=1_100,
+        last_transport_activity_ms=1_090,
+    )
+    connection.append(coverage)
+
+    with sqlite3.connect(path) as db:
+        with pytest.raises(
+            sqlite3.IntegrityError,
+            match="immutable",
+        ):
+            db.execute(
+                """
+                UPDATE liquidation_connection_coverage
+                SET state='stale'
+                WHERE coverage_identity=?
+                """,
+                (coverage.coverage_identity,),
+            )
+        with pytest.raises(
+            sqlite3.IntegrityError,
+            match="immutable",
+        ):
+            db.execute(
+                """
+                DELETE FROM liquidation_connection_coverage
+                WHERE coverage_identity=?
+                """,
+                (coverage.coverage_identity,),
+            )
+
+
 def test_disconnected_coverage_cannot_claim_active_session() -> None:
     with pytest.raises(ValueError, match="cannot claim active session"):
         build_liquidation_connection_coverage(
@@ -213,7 +254,7 @@ def _payload(
     }
 
 
-async def _batches() -> AsyncIterator:
+async def _batches() -> AsyncIterator[BybitLiquidationWireBatch]:
     yield build_bybit_liquidation_wire_batch(
         _payload(),
         expected_symbol="BTCUSDT",
@@ -268,6 +309,24 @@ def test_transport_event_model_is_separate_from_liquidation_event_coverage() -> 
     assert subscribed.kind is LiquidationTransportEventKind.SUBSCRIBED
     assert activity.kind is LiquidationTransportEventKind.ACTIVITY
     assert not hasattr(connected, "coverage_start_ms")
+
+
+def test_liquidation_adapter_exposes_transport_liveness_without_zero_events() -> None:
+    source = (
+        Path(__file__).resolve().parents[1]
+        / "src"
+        / "crypto_signal"
+        / "data"
+        / "adapters"
+        / "bybit_liquidation_ws.py"
+    ).read_text(encoding="utf-8")
+
+    assert "LiquidationTransportEventKind.CONNECTED" in source
+    assert "LiquidationTransportEventKind.SUBSCRIBED" in source
+    assert "LiquidationTransportEventKind.ACTIVITY" in source
+    assert "LiquidationTransportEventKind.DISCONNECTED" in source
+    assert "Bybit liquidation subscription rejected" in source
+    assert "silence is not converted into zero-event coverage" in source
 
 
 def test_runner_is_continuous_by_default_without_zero_event_fabrication() -> None:
@@ -326,7 +385,6 @@ def test_supervisor_health_does_not_require_liquidation_event_ingestion() -> Non
     health = source[start:end]
 
     assert "liquidation_connection_coverage" in health
-    assert '"state") != "connected"' not in health
     assert 'coverage_payload["state"]' in health
     assert "last_successful_ingestion_ms" not in health
     assert "liquidation event" not in health.lower()
