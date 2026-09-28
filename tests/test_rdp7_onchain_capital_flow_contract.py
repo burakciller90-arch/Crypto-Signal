@@ -186,7 +186,6 @@ def test_stablecoin_supply_is_deterministic_descriptive_source_truth() -> None:
         ingested_at_ms=10_200,
         adapter_version="rdp7-test/1",
         raw_identity=_sha("1"),
-        source_envelope_identity=_sha("2"),
     )
     replay = build_stablecoin_supply_observation(
         asset="USDT",
@@ -201,7 +200,6 @@ def test_stablecoin_supply_is_deterministic_descriptive_source_truth() -> None:
         ingested_at_ms=10_200,
         adapter_version="rdp7-test/1",
         raw_identity=_sha("1"),
-        source_envelope_identity=_sha("2"),
     )
 
     assert replay == observation
@@ -223,7 +221,6 @@ def test_stablecoin_supply_accepts_measured_zero_but_not_missing_or_negative() -
         ingested_at_ms=20_200,
         adapter_version="rdp7-test/1",
         raw_identity=_sha("3"),
-        source_envelope_identity=_sha("4"),
     )
     assert zero.circulating_amount == Decimal(0)
 
@@ -241,7 +238,6 @@ def test_stablecoin_supply_accepts_measured_zero_but_not_missing_or_negative() -
             ingested_at_ms=20_200,
             adapter_version="rdp7-test/1",
             raw_identity=_sha("3"),
-            source_envelope_identity=_sha("4"),
         )
 
 
@@ -260,5 +256,4 @@ def test_stablecoin_supply_requires_pit_timestamp_order() -> None:
             ingested_at_ms=10_100,
             adapter_version="rdp7-test/1",
             raw_identity=_sha("5"),
-            source_envelope_identity=_sha("6"),
         )
