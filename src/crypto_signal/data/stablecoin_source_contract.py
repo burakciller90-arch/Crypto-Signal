@@ -4,8 +4,8 @@ from dataclasses import dataclass
 
 from crypto_signal.data.adapters.defillama_stablecoins import (
     DefiLlamaStablecoinAssetSnapshot,
-    DefiLlamaStablecoinSourceSnapshot,
     DefiLlamaStablecoinsAdapter,
+    DefiLlamaStablecoinSourceSnapshot,
 )
 from crypto_signal.data.models import DataSource
 from crypto_signal.data.onchain_capital_flow import (
