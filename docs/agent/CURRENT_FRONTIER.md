@@ -39,6 +39,40 @@ Exact-main Workbench bootstrap for `212d042...` is pending:
 
 Read run `36468609152`; once clean/PASS, audit current liquidation observation/coverage/heatmap/crowding freeze schemas and implement E2 persistence + resolver integration without historical backfill.
 
+### Phase checkpoint — E2 implementation complete, acceptance pending
+
+Exact-main Workbench prerequisite is PASS:
+
+- run `36468609152`
+- job `109084863561`
+- `GITHUB_SHA=212d0428244d65caeb8c5646add9a7ebffc5fccb`
+- final canonical Workbench repo branch `main`
+- final canonical Workbench repo head exact main
+- final dirty count `0`
+- `SSD504_WORKBENCH_PASS=YES`
+- `REAL_CAPITAL=0`
+
+Implemented on `rdp10/liquidation-proof-e2`:
+
+- `0d9e99c0234f9dc59d2e603a522cf63960d3e532` — persist exact historical Derivatives Dynamics dependency plus Liquidation Heatmap and Derivatives Crowding proof objects before Stream publication;
+- `5db6f3976d1769b63e6d1198d3fbe4c76615baa5` — resolve raw liquidation rows, provider coverage, heatmap and crowding exact domains;
+- `b5b6c0345df7ebabb5ac09f5eee3528723cffa51` — persistence/lineage tests on complete provider coverage with observed liquidation;
+- `d4a44c712f06a48482a1622608be281c17456028` — exact-evidence test for raw event/coverage + heatmap/crowding proof resolution;
+- `6bb8e45e0280089513a068bf4e41cb9fee59c0cd` — RDP10 UID504 gate expanded for E2 and live resolver proof-store path;
+- `b7bb162e7fdb4f3dc13d462b538d69cc54c879bc` — static cleanup.
+
+Semantics preserved:
+
+- provider coverage knowledge time is `observed_at_ms`;
+- zero-event evidence is never inferred from provider silence;
+- Heatmap exposes observed bins only and keeps future leverage/risk estimation explicitly unavailable;
+- Crowding dependency lineage binds exact dynamics + heatmap parents;
+- no historical Stream rewrite/backfill;
+- no current-data substitution;
+- `REAL_CAPITAL=0`.
+
+Exact nextAction: run the complete RDP10 Frozen Proof Contract UID504 acceptance on the final checkpoint head; inspect focused tests/lint/type output, live fail-closed audit, canonical non-mutation, `HISTORICAL_BACKFILL=NO`, and `REAL_CAPITAL=0` before any PR/merge.
+
 
 Conversation memory is non-authoritative. Rebuild from this file, HANDOFF_LOG, canonical roadmap, and live Git/GitHub/runtime evidence.
 
