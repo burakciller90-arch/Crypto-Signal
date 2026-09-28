@@ -20,7 +20,7 @@ jobs:
           clean: true
           fetch-depth: 1
 
-      - name: Verify Workbench and Development exact canonical main
+      - name: Fast-forward Workbench and Development to exact canonical main
         shell: bash
         run: |
           set -euo pipefail
@@ -31,10 +31,157 @@ jobs:
           for TARGET in "$WB" "$DEV"; do
             test "$(git -C "$TARGET" branch --show-current)" = "main"
             test -z "$(git -C "$TARGET" status --porcelain)"
+            git -C "$TARGET" fetch origin main
+            test "$(git -C "$TARGET" rev-parse FETCH_HEAD)" = "$EXPECTED"
+            git -C "$TARGET" merge --ff-only FETCH_HEAD
             test "$(git -C "$TARGET" rev-parse HEAD)" = "$EXPECTED"
+            test -z "$(git -C "$TARGET" status --porcelain)"
           done
           echo "RDP8_FINAL_WORKBENCH_EXACT_MAIN_PASS=YES"
           echo "RDP8_FINAL_DEVELOPMENT_EXACT_MAIN_PASS=YES"
+          echo "REAL_CAPITAL=0"
+
+      - name: Restart runtime through canonical R11 path
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          DEV="$ROOT/Development"
+          START="$DEV/ops/r11/start_ssd_runtime.command"
+          test "$(id -u)" = "504"
+          test -z "$(git -C "$DEV" status --porcelain)"
+          test -f "$START"
+          test -f "$DEV/ops/ssd_runtime_supervisor.sh"
+
+          echo "=== INSTALL EXACT SUPERVISOR SOURCE ==="
+          cp "$DEV/ops/ssd_runtime_supervisor.sh" "$ROOT/ssd-service-supervisor.sh"
+          chmod 700 "$ROOT/ssd-service-supervisor.sh"
+
+          old_sup="$(ps -axo pid=,comm=,args= | awk -v needle="$ROOT/ssd-service-supervisor.sh" '($2 == "bash" || $2 == "/bin/bash") && index($0, needle) > 0 && first == "" {first=$1} END {if (first != "") print first}')"
+          echo "OLD_SUPERVISOR_PID=${old_sup:-NONE}"
+          if [ -n "$old_sup" ] && kill -0 "$old_sup" >/dev/null 2>&1; then
+            kill "$old_sup"
+            for _ in {1..30}; do
+              if ! kill -0 "$old_sup" >/dev/null 2>&1; then break; fi
+              sleep 1
+            done
+            if kill -0 "$old_sup" >/dev/null 2>&1; then
+              kill -KILL "$old_sup"
+            fi
+          fi
+
+          rm -f "$ROOT/ssd-service-supervisor.pid"
+
+          echo "=== NORMALIZE DASHBOARD OWNERSHIP ==="
+          dashboard_pids="$(
+            ps -axo pid=,args= \
+              | awk -v needle="$ROOT/Product/ops/run_dashboard.py" '
+                  index($0, needle) > 0 && index($0, "--port 48700") > 0 {
+                    print $1
+                  }
+                '
+          )"
+          if [ -n "$dashboard_pids" ]; then
+            while read -r pid; do
+              [ -n "$pid" ] || continue
+              kill "$pid" >/dev/null 2>&1 || true
+            done <<<"$dashboard_pids"
+            remaining=""
+            for _ in {1..20}; do
+              remaining="$(
+                ps -axo pid=,args= \
+                  | awk -v needle="$ROOT/Product/ops/run_dashboard.py" '
+                      index($0, needle) > 0 && index($0, "--port 48700") > 0 {
+                        print $1
+                      }
+                    '
+              )"
+              [ -z "$remaining" ] && break
+              sleep 0.25
+            done
+            if [ -n "$remaining" ]; then
+              while read -r pid; do
+                [ -n "$pid" ] || continue
+                kill -KILL "$pid" >/dev/null 2>&1 || true
+              done <<<"$remaining"
+            fi
+          fi
+          rm -f "$ROOT/dashboard.pid"
+
+          bash "$START"
+
+          new_sup=""
+          for _ in {1..60}; do
+            new_sup="$(ps -axo pid=,comm=,args= | awk -v needle="$ROOT/ssd-service-supervisor.sh" '($2 == "bash" || $2 == "/bin/bash") && index($0, needle) > 0 && first == "" {first=$1} END {if (first != "") print first}')"
+            if [ -n "$new_sup" ] && kill -0 "$new_sup" >/dev/null 2>&1; then
+              break
+            fi
+            sleep 1
+          done
+          test -n "$new_sup"
+          if [ -n "$old_sup" ]; then
+            test "$new_sup" != "$old_sup"
+          fi
+          echo "NEW_SUPERVISOR_PID=$new_sup"
+
+          ready=0
+          for _ in {1..60}; do
+            if curl -fsS --max-time 3 http://127.0.0.1:48700/api/health >/tmp/rdp8-final-health.json 2>/dev/null; then
+              ready=1
+              break
+            fi
+            sleep 1
+          done
+          test "$ready" = "1"
+          /usr/bin/python3 - <<'PY'
+          import json
+          d=json.load(open("/tmp/rdp8-final-health.json"))
+          assert d["status"]=="ok"
+          assert d["read_only"] is True
+          assert d["real_capital"]==0
+          PY
+
+          tape_pid=""
+          for _ in {1..60}; do
+            tape_pid="$(ps -axo pid=,args= | awk '/run_market_tape_stream.py/ && /stream.bybit.tr\/v5\/public\/spot/ && first == "" {first=$1} END {if (first != "") print first}')"
+            if [ -n "$tape_pid" ] && kill -0 "$tape_pid" >/dev/null 2>&1; then
+              break
+            fi
+            sleep 1
+          done
+          test -n "$tape_pid"
+          echo "MARKET_TAPE_BYBIT_TR_PROCESS_PASS=YES pid=$tape_pid"
+
+          PY="$DEV/.venv/bin/python"
+          fresh=0
+          for _ in {1..90}; do
+            if "$PY" - <<'PY'
+          import sqlite3, time
+          from pathlib import Path
+          p=Path("/Volumes/Crypto-504/Crypto-Signal/Development/runtime/market_tape/collector_runtime.sqlite3")
+          if not p.is_file():
+              raise SystemExit(1)
+          with sqlite3.connect(f"file:{p}?mode=ro", uri=True) as db:
+              row=db.execute(
+                  "SELECT last_successful_ingestion_ms FROM collector_heartbeats "
+                  "WHERE last_successful_ingestion_ms IS NOT NULL "
+                  "ORDER BY observed_at_ms DESC LIMIT 1"
+              ).fetchone()
+          if row is None:
+              raise SystemExit(1)
+          age=(time.time_ns()//1_000_000)-int(row[0])
+          print(f"INGESTION_AGE_MS={age}")
+          raise SystemExit(0 if age <= 120000 else 1)
+          PY
+            then
+              fresh=1
+              break
+            fi
+            sleep 1
+          done
+          test "$fresh" = "1"
+          echo "R11_RUNTIME_RESTART_FRESH_INGESTION_PASS=YES"
+          echo "R11_RUNTIME_RESTART_ONLY_PASS=YES"
           echo "REAL_CAPITAL=0"
 
       - name: Verify supervisor Event Source and cross-market clocks
