@@ -5,6 +5,7 @@ import sqlite3
 from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
+from typing import Any
 
 from crypto_signal.ledger.serialization import canonical_json, canonical_sha256
 
@@ -1230,7 +1231,7 @@ def _require_envelope_matches_capability(
         raise ValueError("source envelope symbol outside capability")
 
 
-def _json_object(payload_json: str, label: str) -> dict[str, object]:
+def _json_object(payload_json: str, label: str) -> dict[str, Any]:
     value = json.loads(payload_json)
     if not isinstance(value, dict):
         raise TypeError(f"{label} payload must be object")
