@@ -36,6 +36,7 @@ def test_complete_event_coverage_requires_exact_lineage_and_allows_zero_claim() 
         observed_at_ms=2_100,
         ingested_at_ms=2_200,
         state=OnchainEventCoverageState.COMPLETE,
+        source_envelope_identity=_sha("a"),
         raw_identity=_sha("b"),
         reason_codes=("provider_window_complete",),
     )
@@ -52,6 +53,7 @@ def test_complete_event_coverage_requires_exact_lineage_and_allows_zero_claim() 
         observed_at_ms=2_100,
         ingested_at_ms=2_200,
         state=OnchainEventCoverageState.COMPLETE,
+        source_envelope_identity=_sha("a"),
         raw_identity=_sha("b"),
         reason_codes=("provider_window_complete",),
     )
@@ -75,6 +77,7 @@ def test_partial_gap_and_unavailable_coverage_never_claim_zero_events() -> None:
         observed_at_ms=2_100,
         ingested_at_ms=2_200,
         state=OnchainEventCoverageState.PARTIAL,
+        source_envelope_identity=_sha("c"),
         raw_identity=_sha("d"),
         reason_codes=("provider_window_partial",),
     )
@@ -150,7 +153,8 @@ def test_gap_coverage_rejects_source_data_substitution() -> None:
             observed_at_ms=2_100,
             ingested_at_ms=2_200,
             state=OnchainEventCoverageState.GAP,
-                raw_identity=_sha("f"),
+            source_envelope_identity=_sha("e"),
+            raw_identity=_sha("f"),
             reason_codes=("provider_request_failed",),
         )
 
@@ -210,7 +214,6 @@ def test_stablecoin_supply_is_deterministic_descriptive_source_truth() -> None:
     assert observation.real_capital == 0
 
 
-
 def test_stablecoin_normalized_identity_can_bind_non_circular_source_envelope() -> None:
     raw = build_source_raw_payload(
         provider="defillama",
@@ -260,6 +263,7 @@ def test_stablecoin_normalized_identity_can_bind_non_circular_source_envelope() 
     assert observation.raw_identity == raw.raw_identity
     assert envelope.raw_identity == raw.raw_identity
 
+
 def test_stablecoin_supply_accepts_measured_zero_but_not_missing_or_negative() -> None:
     zero = build_stablecoin_supply_observation(
         asset="USDC",
@@ -291,7 +295,7 @@ def test_stablecoin_supply_accepts_measured_zero_but_not_missing_or_negative() -
             ingested_at_ms=20_200,
             adapter_version="rdp7-test/1",
             raw_identity=_sha("3"),
-            )
+        )
 
 
 def test_stablecoin_supply_requires_pit_timestamp_order() -> None:
@@ -309,4 +313,4 @@ def test_stablecoin_supply_requires_pit_timestamp_order() -> None:
             ingested_at_ms=10_100,
             adapter_version="rdp7-test/1",
             raw_identity=_sha("5"),
-            )
+        )
