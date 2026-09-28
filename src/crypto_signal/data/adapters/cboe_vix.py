@@ -15,12 +15,19 @@ from crypto_signal.data.cross_market import (
     build_cross_market_daily_record,
     build_cross_market_window_observation,
 )
+from crypto_signal.data.cross_market_source_contract import (
+    CBOE_VIX_CHANNEL,
+    CBOE_VIX_PROVIDER,
+    CBOE_VIX_SOURCE,
+    CBOE_VIX_SYMBOL,
+    CrossMarketSourceSnapshot,
+)
 from crypto_signal.data.models import DataSource
 
 
 class CboeVixDailyAdapter:
     URL = "https://cdn.cboe.com/api/global/us_indices/daily_prices/VIX_History.csv"
-    ADAPTER_VERSION = "cboe-vix-daily/1"
+    ADAPTER_VERSION = "cboe-vix-daily/2"
     USER_AGENT = (
         "Crypto-Signal/1.0 "
         "(public market intelligence; github.com/burakciller90-arch/Crypto-Signal)"
@@ -35,6 +42,18 @@ class CboeVixDailyAdapter:
         sessions: int = 10,
         end_date: date | None = None,
     ) -> CrossMarketWindowObservation:
+        snapshot = await self.fetch_source_snapshot(
+            sessions=sessions,
+            end_date=end_date,
+        )
+        return snapshot.observation
+
+    async def fetch_source_snapshot(
+        self,
+        *,
+        sessions: int = 10,
+        end_date: date | None = None,
+    ) -> CrossMarketSourceSnapshot:
         if not 3 <= sessions <= 64:
             raise ValueError("Cboe VIX sessions must be between 3 and 64")
 
@@ -47,8 +66,10 @@ class CboeVixDailyAdapter:
                     "Accept": "text/csv,*/*",
                     "User-Agent": self.USER_AGENT,
                 },
+                follow_redirects=True,
             )
             response.raise_for_status()
+            payload_bytes = response.content
             text = response.text.lstrip("\ufeff")
             observed_at_ms = time.time_ns() // 1_000_000
         finally:
@@ -81,13 +102,25 @@ class CboeVixDailyAdapter:
             )
             for day, value in parsed[-sessions:]
         )
-        return build_cross_market_window_observation(
+        observation = build_cross_market_window_observation(
             series=CrossMarketSeries.CBOE_VIX_CLOSE,
             unit=CrossMarketUnit.INDEX_POINTS,
             observed_at_ms=observed_at_ms,
             records=records,
             source=DataSource.REST,
             adapter_version=self.ADAPTER_VERSION,
+        )
+        return CrossMarketSourceSnapshot(
+            provider=CBOE_VIX_PROVIDER,
+            source=CBOE_VIX_SOURCE,
+            channel=CBOE_VIX_CHANNEL,
+            symbol=CBOE_VIX_SYMBOL,
+            requested_url=self.URL,
+            response_url=str(response.url),
+            http_status=response.status_code,
+            content_type=response.headers.get("content-type", "text/csv"),
+            payload_bytes=payload_bytes,
+            observation=observation,
         )
 
 
