@@ -427,3 +427,32 @@ repair:
 nextAction:
 - run full exact-head RDP10 UID504 acceptance again and inspect focused, live fail-closed, non-mutating, HISTORICAL_BACKFILL=NO and REAL_CAPITAL=0 outputs before any PR/merge.
 
+---
+
+## 2026-09-28 — RDP10-E1 second acceptance retry checkpoint
+
+status: ACCEPTANCE_RETRY_2_PENDING
+canonicalMain: 12aa063aad1fa93ccea6185bc7480539c88abf6b
+branch: rdp10/derivatives-proof-e1
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+failedRun:
+- run 36466937115 / job 109079272480.
+- 27 focused tests PASS.
+- canonical checkout verification PASS.
+- Ruff alone failed with I001 import grouping in tests/test_intelligence_stream_exact_evidence.py.
+- live audit skipped because focused gate failed.
+- non-mutating cleanup PASS.
+
+repair:
+- commit 0513a6e9720a25ce34dbdebd17ed316ff94c382c.
+- only reorganizes the test import block exactly as Ruff requested.
+- no production code and no acceptance criteria changed.
+- frontier retry checkpoint commit 4f3d9cc01f463d84e0359ab67f3963897d8917ea.
+
+nextAction:
+- run the full exact-head RDP10 UID504 contract again; merge only if focused, live fail-closed and non-mutating checks all PASS with HISTORICAL_BACKFILL=NO and REAL_CAPITAL=0.
+
