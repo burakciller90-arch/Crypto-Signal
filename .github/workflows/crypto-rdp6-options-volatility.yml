@@ -1,0 +1,63 @@
+name: RDP6 Options Volatility UID504
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/crypto_signal/intelligence/options_volatility.py"
+      - "tests/test_rdp6_options_volatility.py"
+      - ".github/workflows/crypto-rdp6-options-volatility.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  focused:
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          clean: true
+          fetch-depth: 1
+
+      - name: Verify exact Workbench baseline and PR source
+        shell: bash
+        run: |
+          set -euo pipefail
+          WB="/Volumes/Crypto-504/Crypto-Signal-Workbench/repo"
+          test "$(id -u)" = "504"
+          test "$(git -C "$WB" branch --show-current)" = "main"
+          test -z "$(git -C "$WB" status --porcelain)"
+          test "$(git -C "$WB" rev-parse HEAD)" = "${{ github.event.pull_request.base.sha }}"
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+          echo "RDP6_C_WORKBENCH_BASELINE_PASS=YES"
+          echo "RDP6_C_EXACT_PR_SOURCE_PASS=YES"
+
+      - name: Focused options-volatility acceptance
+        shell: bash
+        run: |
+          set -euo pipefail
+          PY="/Volumes/Crypto-504/Crypto-Signal/Development/.venv/bin/python"
+          export PYTHONPATH="$GITHUB_WORKSPACE/src:$GITHUB_WORKSPACE"
+          "$PY" -m pytest -q \
+            tests/test_rdp6_options_volatility.py \
+            tests/test_rdp6_options_contract.py \
+            tests/test_rdp5_liquidation_heatmap_crowding_family.py \
+            tests/test_rdp5_derivatives_dynamics_family.py
+          "$PY" -m ruff check \
+            src/crypto_signal/intelligence/options_volatility.py \
+            tests/test_rdp6_options_volatility.py
+          "$PY" -m mypy \
+            src/crypto_signal/intelligence/options_volatility.py
+          "$PY" -m py_compile \
+            src/crypto_signal/intelligence/options_volatility.py \
+            tests/test_rdp6_options_volatility.py
+          echo "RDP6_C_OPTIONS_VOLATILITY_PASS=YES"
+          echo "RISK_REVERSAL_25D=CALL_IV_MINUS_PUT_IV"
+          echo "MISSING_OPTIONS_MEASUREMENTS_AS_ZERO=FORBIDDEN"
+          echo "VOLATILITY_INDEX_WITHOUT_PROVIDER_SOURCE=UNAVAILABLE"
+          echo "DEALER_GAMMA_MAX_PAIN_DIRECTIONAL_CLAIMS=FORBIDDEN"
+          echo "NO_NEW_FAMILY_OR_DIRECTION=YES"
+          echo "REAL_CAPITAL=0"
