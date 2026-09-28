@@ -163,7 +163,7 @@ async def _wire_events() -> AsyncIterator[BybitMicrostructureWireEvent]:
     )
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_wire_collection_keeps_raw_deltas_and_bounds_snapshots(tmp_path) -> None:
     store = MarketTapeStore(tmp_path / "market_tape.sqlite3")
     raw_store = RawMarketTapeStore(tmp_path / "raw_market_tape.sqlite3")
@@ -189,7 +189,7 @@ async def test_wire_collection_keeps_raw_deltas_and_bounds_snapshots(tmp_path) -
     assert store.quick_check() is True
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_wire_collection_can_bound_wire_messages(tmp_path) -> None:
     store = MarketTapeStore(tmp_path / "market_tape.sqlite3")
     raw_store = RawMarketTapeStore(tmp_path / "raw_market_tape.sqlite3")
@@ -209,7 +209,7 @@ async def test_wire_collection_can_bound_wire_messages(tmp_path) -> None:
 
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_wire_collection_reports_progress_only_after_persistence(tmp_path) -> None:
     store = MarketTapeStore(tmp_path / "market_tape.sqlite3")
     raw_store = RawMarketTapeStore(tmp_path / "raw_market_tape.sqlite3")
@@ -241,7 +241,7 @@ async def test_wire_collection_reports_progress_only_after_persistence(tmp_path)
     assert tuple(item[1] for item in progress) == (1, 2, 3, 4, 5)
     assert progress[-1][2] == store.counts().total == 4
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_wire_collection_exposes_exact_in_memory_progress_counters(
     tmp_path,
 ) -> None:
@@ -280,7 +280,7 @@ async def test_wire_collection_exposes_exact_in_memory_progress_counters(
     )
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_wire_collection_exposes_exact_persisted_raw_identity(tmp_path) -> None:
     store = MarketTapeStore(tmp_path / "market_tape.sqlite3")
     raw_store = RawMarketTapeStore(tmp_path / "raw_market_tape.sqlite3")
@@ -320,7 +320,7 @@ async def test_wire_collection_exposes_exact_persisted_raw_identity(tmp_path) ->
     assert len({item[0] for item in persisted}) == 5
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_wire_collection_rejects_non_positive_cadence(tmp_path) -> None:
     store = MarketTapeStore(tmp_path / "market_tape.sqlite3")
     raw_store = RawMarketTapeStore(tmp_path / "raw_market_tape.sqlite3")
