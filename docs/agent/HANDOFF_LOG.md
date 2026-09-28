@@ -1274,3 +1274,69 @@ blocker:
 
 nextAction:
 - require final docs-complete exact-head RDP10 SUCCESS; then PR, guarded merge, merged-main proof, durable top-level RDP10 PASS, and RDP11 soak start.
+
+
+
+---
+
+## 2026-09-28 — RDP10 PASS / RDP11 frontier handoff
+
+status: PASS
+repository: burakciller90-arch/Crypto-Signal
+roadmapGateClosed: RDP10 Exact frozen customer-proof contract
+nextRoadmapGate: RDP11 Continuous soak + final Evidence PASS
+implementationBranch: rdp10/final-contract-closure-f3
+implementationPR: 1654
+acceptedImplementationHead: 50c3b2ae748ea6f0f553d6e3d2ef4d2a17ac73cc
+acceptedDocsCompleteHead: 0c9cd59229e5eea3e8f7c7f4c7c0db74db9db3ed
+implementationMergeSha: 5f4ab98f2741e8317d0463996c4e7fd23a54bbd0
+canonicalMainAtRDP10Close: 5f4ab98f2741e8317d0463996c4e7fd23a54bbd0
+closeoutBranch: docs/rdp10-top-level-completion
+worktree: no session-local /Volumes worktree; canonical SSD504 Workbench verified by UID504
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+exactAcceptance:
+- final push RDP10: run 36482196028 / job 109132227595 / SUCCESS / exact head 0c9cd59229e5eea3e8f7c7f4c7c0db74db9db3ed.
+- final PR RDP10: run 36482393451 / job 109130950284 / SUCCESS / exact same head.
+- exact source, canonical checkout cleanliness, focused fail-closed proof, derived-proof store, six-message live audit, unregistered-domain fail-closed, non-mutation and F3 final closure all PASS.
+- RDP10_F3_FINAL_CONTRACT_PASS=YES.
+- RDP10_CUSTOMER_SOURCE_LABEL_PASS=YES.
+- RDP10_PROVIDER_DIVERGENCE_EXACT_PASS=YES.
+- RDP10_EVENT_SOURCE_EXACT_PASS=YES.
+- RDP10_HISTORICAL_CURRENT_SUBSTITUTION=NO.
+- HISTORICAL_BACKFILL=NO.
+- REAL_CAPITAL=0.
+
+mergedMainEvidence:
+- SSD504 Workbench Bootstrap run 36483022957 / job 109133056142 / SUCCESS.
+- GITHUB_SHA=5f4ab98f2741e8317d0463996c4e7fd23a54bbd0.
+- WORKBENCH_REPO_SYNCED_TO_MAIN=YES.
+- final REPO_HEAD=5f4ab98f2741e8317d0463996c4e7fd23a54bbd0.
+- REPO_BRANCH=main; REPO_DIRTY_COUNT=0.
+- SSD504_WORKBENCH_PASS=YES; REAL_CAPITAL=0.
+- Agent Memory Bootstrap run 36483023010 / job 109133057144 / SUCCESS.
+- RDP9_BOOTSTRAP_FOCUSED_TESTS=PASS.
+- RDP9_BOOTSTRAP_LIVE_READ_ONLY=PASS.
+- PRODUCTION_RUNTIME_MUTATED=NO.
+- REAL_CAPITAL=0.
+
+acceptedTopLevelContract:
+- strongest exact accepted proof is customer-inspectable for Geometry, Liquidity, Order Flow, Derivatives and On-chain;
+- Event Risk/context canonical records are exact and no-future bounded;
+- provider-divergence/data-quality exact source context and provider/source label are exposed;
+- historical proof never substitutes current live data;
+- unavailable/stale truth stays explicit rather than fabricated.
+
+RDP11Rule:
+- minimum 72h UID504 engineering observation is mandatory; do not mark Evidence Data Plane V1 complete earlier.
+- anchor exact accepted SHA + UTC start and monitor runtime/source/proof/continuity integrity.
+- during the soak, Paper Capital / Portfolio and then the frontend may proceed only in isolated branch/worktree/runtime and must not mutate the soaked evidence runtime.
+
+blocker:
+- only the canonical RDP11 elapsed observation requirement; RDP10 has no remaining blocker.
+
+nextAction:
+- merge this docs-only RDP10 closeout with expected-head guard after rechecking main/head; create isolated RDP11 task branch; write task-start checkpoint before code; mechanically anchor the soak; then start isolated Paper Capital / Portfolio work while soak continues.
