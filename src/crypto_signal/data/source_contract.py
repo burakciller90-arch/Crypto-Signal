@@ -422,10 +422,15 @@ def build_source_envelope(
 ) -> SourceEnvelope:
     if symbol not in capability.symbols:
         raise ValueError("source envelope symbol is outside capability registry")
-    if capability.supports_provider_event_id and provider_event_id is None:
+    if (
+        normalized_identity is not None
+        and capability.supports_provider_event_id
+        and provider_event_id is None
+    ):
         raise ValueError("source capability requires provider event id")
     if (
-        capability.sequence_semantics
+        normalized_identity is not None
+        and capability.sequence_semantics
         in {
             SourceSequenceSemantics.MONOTONIC,
             SourceSequenceSemantics.PROVIDER_UPDATE_ID,
@@ -1477,10 +1482,15 @@ def _require_envelope_matches_capability(
         raise ValueError("source envelope capability context mismatch")
     if envelope.symbol not in capability.symbols:
         raise ValueError("source envelope symbol outside capability")
-    if capability.supports_provider_event_id and envelope.provider_event_id is None:
+    if (
+        envelope.normalized_identity is not None
+        and capability.supports_provider_event_id
+        and envelope.provider_event_id is None
+    ):
         raise ValueError("source envelope missing required provider event id")
     if (
-        capability.sequence_semantics
+        envelope.normalized_identity is not None
+        and capability.sequence_semantics
         in {
             SourceSequenceSemantics.MONOTONIC,
             SourceSequenceSemantics.PROVIDER_UPDATE_ID,
