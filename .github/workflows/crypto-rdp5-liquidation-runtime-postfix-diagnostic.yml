@@ -53,6 +53,19 @@ jobs:
           done
           echo "RDP5_LIQUIDATION_PID_STABLE_PASS=YES pid=$pid"
 
+          echo "=== RDP5 LIVE PROCESS SNAPSHOT ==="
+          ps -ww -p "$pid" -o pid=,ppid=,uid=,state=,etime=,command= || true
+          echo "=== RDP5 RUNTIME DIRECTORY ==="
+          ls -la "$DEV/runtime/market_tape" || true
+          echo "=== RDP5 LIQUIDATION OUT LOG ==="
+          tail -200 "$ROOT/ServiceLogs/liquidation.out.log" 2>/dev/null || true
+          echo "=== RDP5 LIQUIDATION ERR LOG ==="
+          tail -200 "$ROOT/ServiceLogs/liquidation.err.log" 2>/dev/null || true
+          echo "=== RDP5 PROCESS OPEN FILES ==="
+          /usr/sbin/lsof -p "$pid" 2>/dev/null | tail -200 || true
+          echo "=== RDP5 PROCESS SAMPLE ==="
+          /usr/bin/sample "$pid" 1 1 2>/dev/null | sed -n '1,220p' || true
+
           ready=0
           for _ in {1..30}; do
             if [ -f "$RUNTIME" ]; then
