@@ -40,6 +40,38 @@ Exact-main Workbench bootstrap for `f665fee6...` is pending:
 
 Read run `36470815516`; once exact-main Workbench is clean/PASS, audit current options surface + Options Volatility freeze schemas and implement F1 persistence/resolver integration.
 
+### Phase checkpoint — F1 implementation complete, acceptance pending
+
+Exact-main Workbench prerequisite is PASS:
+
+- run `36470815516`
+- job `109092324039`
+- exact main `f665fee6aba0309d7fd5ef7ff88abfdc10ef1511`
+- final canonical Workbench repo branch `main`
+- final canonical Workbench head exact main
+- dirty count `0`
+- `SSD504_WORKBENCH_PASS=YES`
+- `REAL_CAPITAL=0`
+
+Implemented on `rdp10/options-proof-f1`:
+
+- `f6bde7cfd43f28303b010fa6f15581affc0dd4c8` — persist exact Options surface snapshot + Options Volatility proof before Stream publication;
+- `32ff80d122a67dbbc5186bfe26e79aae6e91a2f2` — resolve `options_surface` / `options_volatility` and Derivatives options capability only from persisted proof;
+- `fd211392b8c56bb8105ef1e0be8a81cc6a4c0e47` — persistence/lineage test;
+- `335a2fc156a213b7a579757610a20e9ff50a9c7e` — exact customer-proof resolver test;
+- `9636194e89e22bef8391bb40acb844ba9c9f90e5` — RDP10 UID504 gate coverage + live registered-domain update.
+
+Semantics:
+- full exact surface payload contains contract quote measurements and source/observed/ingested timestamps;
+- volatility proof contains frozen analysis + exact surface;
+- surface identity is stable independently of family evaluation as-of;
+- stale/not-evaluable options states remain explicit;
+- dealer-gamma/max-pain remain explicit unavailable;
+- no new score family or direction authority;
+- no historical backfill/current-data substitution.
+
+Exact nextAction: run full RDP10 Frozen Proof Contract UID504 acceptance on the final checkpoint head; inspect focused tests/lint/type, live fail-closed audit, canonical non-mutation, `HISTORICAL_BACKFILL=NO`, and `REAL_CAPITAL=0` before any PR/merge.
+
 
 Conversation memory is non-authoritative. Rebuild from this file, HANDOFF_LOG, the canonical roadmap, and live Git/GitHub/runtime evidence.
 
