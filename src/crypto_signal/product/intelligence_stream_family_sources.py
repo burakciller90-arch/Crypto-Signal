@@ -6,6 +6,7 @@ from pathlib import Path
 from crypto_signal.data.derivatives import DerivativesInstrumentType
 from crypto_signal.data.market_tape import MarketTapeStore
 from crypto_signal.data.models import Exchange, MarketType
+from crypto_signal.data.store import CandleStore
 from crypto_signal.intelligence.confluence_matrix_v2 import ConfluenceFamily
 from crypto_signal.intelligence.derivatives_context import (
     DerivativesContextLabel,
@@ -24,6 +25,11 @@ from crypto_signal.intelligence.liquidity_sweep import (
 from crypto_signal.intelligence.order_flow_microstructure import (
     OrderFlowMicrostructureLabel,
     build_order_flow_microstructure_evidence_freeze,
+)
+from crypto_signal.intelligence.order_flow_patterns import (
+    PatternStatus,
+    build_absorption_freeze,
+    build_price_cvd_divergence_freeze,
 )
 from crypto_signal.intelligence.temporal_order_flow import (
     TemporalFlowStatus,
@@ -272,8 +278,14 @@ def build_market_tape_family_snapshots(
     *,
     symbols: tuple[str, ...],
     as_of_ms: int,
+    candle_cache_path: Path | None = None,
 ) -> tuple[StreamFamilySnapshot, ...]:
     store = MarketTapeStore(market_tape_path)
+    candle_store = (
+        None
+        if candle_cache_path is None
+        else CandleStore(candle_cache_path)
+    )
     snapshots: list[StreamFamilySnapshot] = []
     for symbol in tuple(sorted({value.upper() for value in symbols})):
         orderbooks = store.recent_orderbooks(
@@ -515,6 +527,113 @@ def build_market_tape_family_snapshots(
                         )
                     )
 
+            pattern_components: list[tuple[str, str]] = []
+            pattern_uncertainty: set[str] = set()
+            absorption = None
+            divergence = None
+            if temporal is not None and orderbooks:
+                structure_for_order_flow = (
+                    build_liquidity_structure_evidence_freeze(
+                        orderbooks,
+                        as_of_ms=as_of_ms,
+                    )
+                )
+                absorption = build_absorption_freeze(
+                    temporal,
+                    structure_for_order_flow,
+                    as_of_ms=as_of_ms,
+                )
+                absorption_analysis = absorption.analysis
+                order_flow_evidence.update(
+                    {
+                        absorption.freeze_identity,
+                        absorption_analysis.evidence_identity,
+                        structure_for_order_flow.freeze_identity,
+                        structure_for_order_flow.analysis.evidence_identity,
+                    }
+                )
+                pattern_uncertainty.update(
+                    absorption_analysis.uncertainty_flags
+                )
+                pattern_components.extend(
+                    (
+                        (
+                            "absorption_candidate_count",
+                            str(len(absorption_analysis.candidates)),
+                        ),
+                        (
+                            "absorption_overlap_end_ms",
+                            (
+                                "-"
+                                if absorption_analysis.overlap_end_ms is None
+                                else str(absorption_analysis.overlap_end_ms)
+                            ),
+                        ),
+                        (
+                            "absorption_overlap_start_ms",
+                            (
+                                "-"
+                                if absorption_analysis.overlap_start_ms is None
+                                else str(absorption_analysis.overlap_start_ms)
+                            ),
+                        ),
+                        (
+                            "absorption_status",
+                            absorption_analysis.status.value,
+                        ),
+                    )
+                )
+
+                if candle_store is not None:
+                    candles = candle_store.list_candles_read_only(
+                        exchange=Exchange.BYBIT,
+                        market_type=MarketType.SPOT,
+                        symbol=symbol,
+                        timeframe="15m",
+                    )
+                    if candles:
+                        divergence = build_price_cvd_divergence_freeze(
+                            candles,
+                            temporal,
+                            as_of_ms=as_of_ms,
+                        )
+                        divergence_analysis = divergence.analysis
+                        order_flow_evidence.update(
+                            {
+                                divergence.freeze_identity,
+                                divergence_analysis.evidence_identity,
+                            }
+                        )
+                        pattern_uncertainty.update(
+                            divergence_analysis.uncertainty_flags
+                        )
+                        pattern_components.extend(
+                            (
+                                (
+                                    "price_cvd_divergence_candidate_count",
+                                    str(
+                                        len(
+                                            divergence_analysis.candidates
+                                        )
+                                    ),
+                                ),
+                                (
+                                    "price_cvd_divergence_consumed_candle_count",
+                                    str(
+                                        divergence_analysis.consumed_candle_count
+                                    ),
+                                ),
+                                (
+                                    "price_cvd_divergence_status",
+                                    divergence_analysis.status.value,
+                                ),
+                                (
+                                    "price_cvd_divergence_timeframe",
+                                    divergence_analysis.timeframe,
+                                ),
+                            )
+                        )
+
             order_flow_direction = None
             if (
                 order_flow_analysis.label
@@ -536,18 +655,34 @@ def build_market_tape_family_snapshots(
                 order_flow_domains.update(
                     {"temporal_order_flow", "window_local_cvd"}
                 )
+            if absorption is not None:
+                order_flow_domains.add("absorption")
+            if divergence is not None:
+                order_flow_domains.update(
+                    {"candle_15m", "price_cvd_divergence"}
+                )
 
             order_flow_source_event_identity = canonical_sha256(
                 {
+                    "absorption_freeze_identity": (
+                        None
+                        if absorption is None
+                        else absorption.freeze_identity
+                    ),
                     "as_of_ms": as_of_ms,
                     "microstructure_freeze_identity": (
                         order_flow.freeze_identity
+                    ),
+                    "price_cvd_divergence_freeze_identity": (
+                        None
+                        if divergence is None
+                        else divergence.freeze_identity
                     ),
                     "symbol": symbol,
                     "temporal_flow_freeze_identity": (
                         temporal_freeze_identity
                     ),
-                    "version": "rdp4-rich-order-flow-family-v1/1",
+                    "version": "rdp4-rich-order-flow-family-v2/1",
                 }
             )
             microstructure_measured = (
@@ -586,6 +721,7 @@ def build_market_tape_family_snapshots(
                         ("temporal_quality", temporal_quality),
                         ("temporal_status", temporal_status),
                         *temporal_components,
+                        *pattern_components,
                     ),
                     direction=order_flow_direction,
                     source_quality=(
@@ -598,6 +734,7 @@ def build_market_tape_family_snapshots(
                             {
                                 *order_flow_analysis.uncertainty_flags,
                                 *temporal_uncertainty,
+                                *pattern_uncertainty,
                             }
                         )
                     ),
