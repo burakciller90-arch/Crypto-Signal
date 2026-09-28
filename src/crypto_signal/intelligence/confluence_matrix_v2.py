@@ -457,6 +457,11 @@ def evaluate_confluence_matrix(
     ):
         raise ValueError("M6 family evidence must share exact context")
 
+    from crypto_signal.intelligence.evidence_overlap import (
+        analyze_confluence_evidence_overlap,
+    )
+
+    overlap_analysis = analyze_confluence_evidence_overlap(ordered)
     priors = {item.family: item.weight for item in policy.priors}
     opposite = (
         MetaDirection.BEARISH
@@ -486,10 +491,21 @@ def evaluate_confluence_matrix(
             measured_weight += prior
         if item.state is MetaEvidenceState.OBSERVED:
             assert item.directional_strength_0_1 is not None
+            attribution = overlap_analysis.attribution_factor(item.family)
             if item.direction is candidate_direction:
-                support_points = prior * item.directional_strength_0_1 * Decimal(100)
+                support_points = (
+                    prior
+                    * item.directional_strength_0_1
+                    * Decimal(100)
+                    * attribution
+                )
             elif item.direction is opposite:
-                opposition_points = prior * item.directional_strength_0_1 * Decimal(100)
+                opposition_points = (
+                    prior
+                    * item.directional_strength_0_1
+                    * Decimal(100)
+                    * attribution
+                )
         support_total += support_points
         opposition_total += opposition_points
         conflict_ids.update(item.material_conflict_identities)
