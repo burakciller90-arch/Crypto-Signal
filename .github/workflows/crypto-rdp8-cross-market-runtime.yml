@@ -1,0 +1,188 @@
+name: RDP8 Cross-Market Runtime UID504
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/crypto_signal/data/adapters/cboe_vix.py"
+      - "src/crypto_signal/data/adapters/treasury_yields.py"
+      - "src/crypto_signal/data/cross_market_runtime_store.py"
+      - "src/crypto_signal/data/cross_market_source_contract.py"
+      - "ops/run_cross_market_snapshot.py"
+      - "ops/ssd_runtime_supervisor.sh"
+      - "tests/test_cross_market_adapters.py"
+      - "tests/test_cross_market_context_engine.py"
+      - "tests/test_cross_market_observation.py"
+      - "tests/test_rdp8_cross_market_runtime.py"
+      - ".github/workflows/crypto-rdp8-cross-market-runtime.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  focused:
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          clean: true
+          fetch-depth: 1
+
+      - name: Verify exact Workbench baseline and PR source
+        shell: bash
+        run: |
+          set -euo pipefail
+          WB="/Volumes/Crypto-504/Crypto-Signal-Workbench/repo"
+          test "$(id -u)" = "504"
+          test "$(git -C "$WB" branch --show-current)" = "main"
+          test -z "$(git -C "$WB" status --porcelain)"
+          test "$(git -C "$WB" rev-parse HEAD)" = "${{ github.event.pull_request.base.sha }}"
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+          echo "RDP8_B_WORKBENCH_BASELINE_PASS=YES"
+          echo "RDP8_B_EXACT_PR_SOURCE_PASS=YES"
+
+      - name: Focused cross-market runtime acceptance
+        shell: bash
+        run: |
+          set -euo pipefail
+          PY="/Volumes/Crypto-504/Crypto-Signal/Development/.venv/bin/python"
+          export PYTHONPATH="$GITHUB_WORKSPACE/src:$GITHUB_WORKSPACE"
+          "$PY" -m pytest -q \
+            tests/test_cross_market_adapters.py \
+            tests/test_cross_market_observation.py \
+            tests/test_cross_market_context_engine.py \
+            tests/test_rdp8_cross_market_runtime.py
+          "$PY" -m ruff check \
+            src/crypto_signal/data/adapters/cboe_vix.py \
+            src/crypto_signal/data/adapters/treasury_yields.py \
+            src/crypto_signal/data/cross_market_runtime_store.py \
+            src/crypto_signal/data/cross_market_source_contract.py \
+            ops/run_cross_market_snapshot.py \
+            tests/test_rdp8_cross_market_runtime.py
+          "$PY" -m mypy \
+            src/crypto_signal/data/adapters/cboe_vix.py \
+            src/crypto_signal/data/adapters/treasury_yields.py \
+            src/crypto_signal/data/cross_market_runtime_store.py \
+            src/crypto_signal/data/cross_market_source_contract.py \
+            ops/run_cross_market_snapshot.py
+          "$PY" -m py_compile \
+            src/crypto_signal/data/adapters/cboe_vix.py \
+            src/crypto_signal/data/adapters/treasury_yields.py \
+            src/crypto_signal/data/cross_market_runtime_store.py \
+            src/crypto_signal/data/cross_market_source_contract.py \
+            ops/run_cross_market_snapshot.py
+          bash -n ops/ssd_runtime_supervisor.sh
+          echo "RDP8_B_FOCUSED_PASS=YES"
+          echo "CROSS_MARKET_SINGLE_WRITER_LOCK=YES"
+          echo "CROSS_MARKET_CADENCE_SECONDS=3600"
+          echo "REAL_CAPITAL=0"
+
+      - name: Live official-source lineage probe without production writes
+        shell: bash
+        run: |
+          set -euo pipefail
+          PY="/Volumes/Crypto-504/Crypto-Signal/Development/.venv/bin/python"
+          export PYTHONPATH="$GITHUB_WORKSPACE/src:$GITHUB_WORKSPACE"
+          "$PY" - <<'PY'
+          from __future__ import annotations
+
+          import asyncio
+          import os
+          import time
+          from pathlib import Path
+
+          from crypto_signal.data.adapters.cboe_vix import CboeVixDailyAdapter
+          from crypto_signal.data.adapters.treasury_yields import (
+              Treasury10YDailyAdapter,
+          )
+          from crypto_signal.data.cross_market_runtime_store import (
+              CrossMarketRuntimeStore,
+          )
+          from crypto_signal.data.cross_market_source_contract import (
+              persist_cross_market_source_snapshot,
+          )
+          from crypto_signal.data.source_contract import (
+              SourceContractStore,
+              SourceCoverageState,
+          )
+
+          stamp = f"{os.getpid()}-{time.time_ns()}"
+          root = Path(f"/private/tmp/rdp8-cross-market-{stamp}")
+          runtime_path = root / "cross-market.sqlite3"
+          source_path = root / "source-contract.sqlite3"
+          root.mkdir(parents=True, exist_ok=True)
+
+          async def collect() -> None:
+              runtime = CrossMarketRuntimeStore(runtime_path)
+              source = SourceContractStore(source_path)
+              snapshots = await asyncio.gather(
+                  CboeVixDailyAdapter().fetch_source_snapshot(sessions=10),
+                  Treasury10YDailyAdapter().fetch_source_snapshot(sessions=10),
+              )
+              for snapshot in snapshots:
+                  persisted = persist_cross_market_source_snapshot(
+                      snapshot=snapshot,
+                      runtime_store=runtime,
+                      source_store=source,
+                  )
+                  envelope = source.latest_envelope_at(
+                      provider=snapshot.provider,
+                      source=snapshot.source,
+                      channel=snapshot.channel,
+                      symbol=snapshot.symbol,
+                      as_of_ms=snapshot.observation.observed_at_ms,
+                  )
+                  coverage = source.coverage_at(
+                      provider=snapshot.provider,
+                      source=snapshot.source,
+                      channel=snapshot.channel,
+                      symbol=snapshot.symbol,
+                      as_of_ms=snapshot.observation.observed_at_ms,
+                  )
+                  assert envelope is not None
+                  assert coverage is not None
+                  assert coverage.state is SourceCoverageState.OBSERVED
+                  assert envelope.raw_identity == persisted.raw_identity
+                  assert (
+                      envelope.normalized_identity
+                      == snapshot.observation.observation_identity
+                  )
+                  assert (
+                      coverage.source_envelope_identity
+                      == envelope.envelope_identity
+                  )
+                  assert source.raw_payload(envelope.raw_identity) is not None
+                  print(
+                      "RDP8_B_LIVE_SOURCE_PASS "
+                      f"series={snapshot.observation.series.value} "
+                      f"response_url={snapshot.response_url} "
+                      f"raw={persisted.raw_identity} "
+                      f"envelope={persisted.envelope_identity} "
+                      f"coverage={persisted.coverage_event_identity} "
+                      f"observation={persisted.observation_identity}",
+                      flush=True,
+                  )
+              assert runtime.quick_check()
+              assert source.quick_check()
+              counts = runtime.counts()
+              assert counts.vix_observations == 1
+              assert counts.treasury_10y_observations == 1
+
+          try:
+              asyncio.run(collect())
+              print("RDP8_B_LIVE_OFFICIAL_LINEAGE_PASS=YES", flush=True)
+              print("PRODUCTION_RUNTIME_MUTATED=NO", flush=True)
+              print("REAL_CAPITAL=0", flush=True)
+          finally:
+              for path in sorted(root.glob("*"), reverse=True):
+                  try:
+                      path.unlink()
+                  except FileNotFoundError:
+                      pass
+              try:
+                  root.rmdir()
+              except OSError:
+                  pass
+          PY
