@@ -1863,9 +1863,27 @@ def _family_customer_summary(
         return _order_flow_customer_summary(snapshot, change)
     if snapshot.family is ConfluenceFamily.DERIVATIVES:
         return _derivatives_customer_summary(snapshot)
+    return _onchain_customer_summary(snapshot)
+
+
+def _onchain_customer_summary(snapshot: StreamFamilySnapshot) -> str:
+    components = _snapshot_components(snapshot)
+    stablecoin_status = components.get("stablecoin_status")
+    if stablecoin_status not in {"measured", "partial"}:
+        return (
+            "On-chain tarafında kabul edilmiş taze kanıt bulunmuyor; "
+            "bu katmanı yön görüşüne eklemiyorum."
+        )
+    context_label = (
+        "ölçülüyor"
+        if stablecoin_status == "measured"
+        else "kısmi geçmişle ölçülüyor"
+    )
     return (
-        "On-chain tarafında kullanıcıya yön gösterecek kabul edilmiş canlı kanıt "
-        "bulunmuyor; bu katmanı yön görüşüne eklemiyorum."
+        "On-chain katmanında doğrulanmış USDT/USDC arz bağlamı "
+        f"{context_label}; bu veri tek başına yükseliş veya düşüş oyu değildir. "
+        "Kabul edilmiş exchange-flow, büyük-transfer, cüzdan kohortu veya "
+        "bridge sağlayıcısı olmadığı için bu kanıtları varmış gibi kullanmıyorum."
     )
 
 
