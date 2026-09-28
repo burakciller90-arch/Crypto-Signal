@@ -5,7 +5,7 @@ from decimal import Decimal
 from pathlib import Path
 
 from fastapi.testclient import TestClient
-from test_wc2_live_source_adapter import _bundle
+from test_immutable_ledger import build_bundle, candles
 
 from crypto_signal.data.event_risk import (
     EventCategory,
@@ -520,7 +520,7 @@ def test_geometry_family_resolves_exact_persisted_full_geometry_proof(
 ) -> None:
     signal_path = tmp_path / "signal.sqlite3"
     stream_path = tmp_path / "stream.sqlite3"
-    bundle = _bundle()
+    bundle = build_bundle(candles())
     ledger = ImmutableSignalLedger(signal_path)
     disposition = ledger.freeze(
         bundle,
