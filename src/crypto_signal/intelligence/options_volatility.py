@@ -325,11 +325,12 @@ def analyze_options_volatility(
     if not rr_expiries:
         flags.append("risk_reversal_25d_unavailable")
 
-    if any(
+    atm_one_sided = any(
         (item.atm_call_iv is None) != (item.atm_put_iv is None)
         for item in expiries
         if item.atm_iv is not None
-    ):
+    )
+    if atm_one_sided:
         flags.append("atm_iv_one_sided_for_some_expiries")
 
     all_oi_complete = all(item.open_interest is not None for item in active)
@@ -422,7 +423,9 @@ def analyze_options_volatility(
         OptionsVolatilityStatus.MEASURED
         if (
             len(atm_expiries) >= config.minimum_term_expiries
-            and bool(rr_expiries)
+            and len(atm_expiries) == len(expiries)
+            and len(rr_expiries) == len(expiries)
+            and not atm_one_sided
             and all_oi_complete
             and all_volume_complete
             and put_call_oi_ratio is not None
