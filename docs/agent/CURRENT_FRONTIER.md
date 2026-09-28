@@ -67,6 +67,24 @@ E1 still excludes liquidation observation/coverage/heatmap/crowding.
 
 Exact nextAction: run the RDP10 Frozen Proof Contract UID504 acceptance on the final checkpoint head after this documentation phase; inspect focused tests/lint/type output, live fail-closed audit, non-mutating proof, `HISTORICAL_BACKFILL=NO`, and `REAL_CAPITAL=0` before any PR/merge.
 
+### Retry checkpoint — first E1 acceptance failed only on test Decimal formatting
+
+Failed exact-head run:
+
+- run `36466632195`
+- job `109078756884`
+- canonical checkouts clean
+- focused test failure only: expected `"0.10"` while canonical Decimal JSON is `"0.1"`
+- product persistence/resolver path was not the failing condition
+- live audit correctly skipped because focused gate failed
+- non-mutating cleanup still reported PASS
+
+Repair:
+
+- `39796c88bf0b484fb4c494214150709069fe5f81` changes only the incorrect test literal from `"0.10"` to canonical `"0.1"`.
+
+Exact nextAction: rerun the full RDP10 UID504 acceptance on the final retry-checkpoint head; do not merge unless the complete focused + live + non-mutating contract passes.
+
 
 This file is the replaceable current checkpoint. Conversation memory is non-authoritative.
 
