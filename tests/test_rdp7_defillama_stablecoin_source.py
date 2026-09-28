@@ -133,6 +133,53 @@ def test_defillama_adapter_normalizes_public_usdt_usdc_snapshot(
     assert usdt.raw_payload["id"] == 1
 
 
+
+def test_defillama_adapter_preserves_json_float_tokens_as_canonical_strings(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    payload = _payload()
+    assets = payload["peggedAssets"]
+    assert isinstance(assets, list)
+    usdt = next(
+        item
+        for item in assets
+        if isinstance(item, dict) and item.get("symbol") == "USDT"
+    )
+    usdt["price"] = 1.0001
+    usdt["circulating"] = {"peggedUSD": 180000000000.5}
+    usdt["circulatingPrevDay"] = {"peggedUSD": 180000000000.5}
+    usdt["chainCirculating"] = {
+        "Ethereum": {
+            "current": {"peggedUSD": 180000000000.5},
+        }
+    }
+
+    snapshot = _fetch(monkeypatch, payload=payload)
+    normalized = next(
+        item for item in snapshot.assets if item.symbol == "USDT"
+    )
+    assert normalized.raw_payload["price"] == "1.0001"
+    circulating = normalized.raw_payload["circulating"]
+    assert isinstance(circulating, dict)
+    assert circulating["peggedUSD"] == "180000000000.5"
+
+    onchain_store = OnchainCapitalFlowStore(tmp_path / "onchain.sqlite3")
+    source_store = SourceContractStore(tmp_path / "source.sqlite3")
+    persisted = persist_defillama_stablecoin_snapshot(
+        snapshot=snapshot,
+        onchain_store=onchain_store,
+        source_store=source_store,
+    )
+    usdt_result = next(item for item in persisted if item.symbol == "USDT")
+    raw = source_store.raw_payload(usdt_result.raw_identity)
+    assert raw is not None
+    decoded = json.loads(raw.payload_json)
+    assert decoded["price"] == "1.0001"
+    assert decoded["circulating"]["peggedUSD"] == "180000000000.5"
+    assert onchain_store.quick_check()
+    assert source_store.quick_check()
+
 def test_defillama_adapter_rejects_missing_tracked_asset(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
