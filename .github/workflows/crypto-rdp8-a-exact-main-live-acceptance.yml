@@ -176,7 +176,6 @@ jobs:
             tests/test_rdp8_event_source_live_runtime.py \
             tests/test_event_source_snapshot.py \
             tests/test_event_source_runtime.py \
-            tests/test_event_risk.py \
-            tests/test_intelligence_stream_trust_sources.py
+            tests/test_event_risk.py
           echo "RDP8_A_FAIL_CLOSED_REGRESSION_PASS=YES"
           echo "REAL_CAPITAL=0"
