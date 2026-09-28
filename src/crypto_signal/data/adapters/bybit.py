@@ -6,6 +6,7 @@ from typing import cast
 
 import httpx
 
+from crypto_signal.data.adapters.base import CandleSourceSnapshot
 from crypto_signal.data.models import Candle, DataSource, Exchange, MarketType
 from crypto_signal.data.timeframes import spec
 
@@ -35,6 +36,24 @@ class BybitSpotAdapter:
         start_ms: int | None = None,
         end_ms: int | None = None,
     ) -> tuple[Candle, ...]:
+        snapshot = await self.fetch_source_candles(
+            symbol=symbol,
+            timeframe=timeframe,
+            limit=limit,
+            start_ms=start_ms,
+            end_ms=end_ms,
+        )
+        return snapshot.candles
+
+    async def fetch_source_candles(
+        self,
+        *,
+        symbol: str,
+        timeframe: str,
+        limit: int,
+        start_ms: int | None = None,
+        end_ms: int | None = None,
+    ) -> CandleSourceSnapshot:
         if symbol != symbol.upper() or not symbol:
             raise ValueError("Bybit symbol must be non-empty uppercase")
         if not 1 <= limit <= 1000:
@@ -61,6 +80,7 @@ class BybitSpotAdapter:
             )
             response.raise_for_status()
             payload = cast(dict[str, object], response.json())
+            observed_at_ms = time.time_ns() // 1_000_000
         finally:
             if owns_client:
                 await client.aclose()
@@ -71,7 +91,6 @@ class BybitSpotAdapter:
         result = cast(dict[str, object], payload["result"])
         raw_rows = cast(list[list[str]], result["list"])
         server_time_ms = int(cast(int, payload["time"]))
-        ingested_at_ms = time.time_ns() // 1_000_000
 
         candles = [
             self._normalize_row(
@@ -80,12 +99,22 @@ class BybitSpotAdapter:
                 timeframe=timeframe,
                 duration_ms=tf.duration_ms,
                 server_time_ms=server_time_ms,
-                ingested_at_ms=ingested_at_ms,
+                ingested_at_ms=observed_at_ms,
             )
             for row in raw_rows
         ]
         candles.sort(key=lambda candle: candle.open_time_ms)
-        return tuple(candles)
+        return CandleSourceSnapshot(
+            provider=Exchange.BYBIT.value,
+            source="spot_kline_rest",
+            channel=f"rest.kline.{timeframe}",
+            symbol=symbol,
+            timeframe=timeframe,
+            raw_payload={"response": payload},
+            candles=tuple(candles),
+            observed_at_ms=observed_at_ms,
+        )
+
     def _normalize_row(
         self,
         *,
