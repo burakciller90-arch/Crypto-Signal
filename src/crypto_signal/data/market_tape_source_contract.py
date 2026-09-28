@@ -104,9 +104,19 @@ def persist_bybit_wire_source_contract(
     wire_event: BybitMicrostructureWireEvent,
     raw_event: RawMarketEvent,
     orderbook_normalized_persisted: bool,
+    coverage_observed_at_ms: int | None = None,
 ) -> MarketTapeSourceContractWrite:
     _require_raw_wire_match(wire_event=wire_event, raw_event=raw_event)
     capability = capabilities.for_channel(wire_event.channel)
+    coverage_time_ms = (
+        wire_event.ingested_at_ms
+        if coverage_observed_at_ms is None
+        else coverage_observed_at_ms
+    )
+    if coverage_time_ms < wire_event.ingested_at_ms:
+        raise ValueError(
+            "source-contract coverage cannot predate persisted ingestion"
+        )
 
     envelopes: list[SourceEnvelope] = []
     if wire_event.orderbook is not None:
@@ -170,7 +180,7 @@ def persist_bybit_wire_source_contract(
         source=capability.source,
         channel=capability.channel,
         symbol=wire_event.symbol,
-        as_of_ms=wire_event.ingested_at_ms,
+        as_of_ms=coverage_time_ms,
     )
     if (
         previous is not None
@@ -191,7 +201,7 @@ def persist_bybit_wire_source_contract(
         capability=capability,
         symbol=wire_event.symbol,
         state=SourceCoverageState.OBSERVED,
-        observed_at_ms=wire_event.ingested_at_ms,
+        observed_at_ms=coverage_time_ms,
         previous=previous,
         source_envelope_identity=latest.envelope_identity,
         reason_codes=reason_codes,
