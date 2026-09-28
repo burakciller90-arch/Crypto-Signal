@@ -37,7 +37,6 @@ from crypto_signal.product.intelligence_stream_family_sources import (
     build_market_tape_family_snapshots,
 )
 
-
 AS_OF_MS = 200_000
 
 
