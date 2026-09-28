@@ -557,23 +557,20 @@ class IntelligenceStreamExactEvidenceReadModel:
                 "upstream_dependency_lineage": state.value,
             }
         elif domain == "options_surface":
-            surface_state = (
-                StreamEvidenceResolutionState.READY_EXACT
-                if "options_surface_snapshot" in selected_kinds
-                else StreamEvidenceResolutionState.UNAVAILABLE_EXPLICIT
-            )
             volatility_state = (
                 StreamEvidenceResolutionState.READY_EXACT
                 if "options_volatility_freeze" in selected_kinds
                 else StreamEvidenceResolutionState.UNAVAILABLE_EXPLICIT
             )
-            if surface_state is StreamEvidenceResolutionState.READY_EXACT:
+            if volatility_state is StreamEvidenceResolutionState.READY_EXACT:
                 state = StreamEvidenceResolutionState.READY_EXACT
-                reason = "exact_persisted_options_surface_resolved"
+                reason = (
+                    "exact_options_surface_embedded_in_volatility_proof_resolved"
+                )
             capabilities = {
-                "surface_snapshot": surface_state.value,
-                "instrument_metadata_lineage": surface_state.value,
-                "contract_quote_lineage": surface_state.value,
+                "surface_snapshot": volatility_state.value,
+                "instrument_metadata_lineage": volatility_state.value,
+                "contract_quote_lineage": volatility_state.value,
                 "volatility_freeze_link": volatility_state.value,
             }
         elif domain == "options_volatility":
@@ -1039,10 +1036,7 @@ def _objects_for_domain(
         },
         "observed_liquidation_heatmap": {"liquidation_heatmap_freeze"},
         "derivatives_crowding": {"derivatives_crowding_freeze"},
-        "options_surface": {
-            "options_surface_snapshot",
-            "options_volatility_freeze",
-        },
+        "options_surface": {"options_volatility_freeze"},
         "options_volatility": {"options_volatility_freeze"},
         "event_calendar": {
             "event_calendar_coverage",
