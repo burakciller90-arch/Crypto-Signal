@@ -369,7 +369,11 @@ def test_supervisor_owns_exact_continuous_liquidation_runtime() -> None:
     assert "--max-messages 0" in source
     assert 'echo "$pid" > "$ROOT/liquidation-stream.pid"' in source
     assert 'str(coverage_payload["state"]) != "connected"' in source
-    assert "start_liquidation_stream\n  now=" in source
+    assert (
+        "start_liquidation_stream\n"
+        "  start_market_tape_stream\n"
+        "  now="
+    ) in source
     assert "liquidation_started pid=$pid REAL_CAPITAL=0" in source
 
 
