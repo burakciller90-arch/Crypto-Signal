@@ -793,3 +793,31 @@ blocker:
 nextAction:
 - inspect the exact-head RDP10 Frozen Proof Contract run; if focused + live fail-closed + non-mutating all PASS, re-check main/open PRs and merge F1. Otherwise repair only the demonstrated issue and checkpoint before retry.
 
+---
+
+## 2026-09-28 — RDP10-F1 acceptance retry checkpoint
+
+status: ACCEPTANCE_RETRY_PENDING
+canonicalMain: f665fee6aba0309d7fd5ef7ff88abfdc10ef1511
+branch: rdp10/options-proof-f1
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+failedRun:
+- run 36471468285 / job 109094583884.
+- canonical checkout verification PASS.
+- focused gate failed only because the fresh Options family test referenced proof_path without defining/passing it.
+- live audit skipped because focused gate failed.
+- canonical non-mutating cleanup PASS.
+
+repair:
+- commit 5e15e87d9c13b83fe34ddb7d1d93eef0b3bfad6f.
+- defines the proof-store test path and passes it into the existing family builder.
+- no production code and no acceptance criteria changed.
+- frontier retry checkpoint commit e50c1711a8249aa65fb137e84253231fa4671874.
+
+nextAction:
+- run the full exact-head RDP10 UID504 contract again; merge only if focused, live fail-closed and non-mutating checks all PASS with HISTORICAL_BACKFILL=NO and REAL_CAPITAL=0.
+
