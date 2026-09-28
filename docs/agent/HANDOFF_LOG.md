@@ -912,3 +912,34 @@ blocker:
 
 nextAction:
 - align those tests to OptionsSurfaceStore + options_surface_path while retaining derived options_volatility_freeze checks in FrozenProofStore, then rerun exact-head RDP10 and RDP6 acceptance before merge.
+
+
+---
+
+## 2026-09-28 — RDP10-F1 canonical Options source resolver implementation checkpoint
+
+verifiedAt: 2026-09-28
+repository: burakciller90-arch/Crypto-Signal
+mainSha: f665fee6aba0309d7fd5ef7ff88abfdc10ef1511
+branch: rdp10/options-proof-f1
+branchHead: 036fde3af3c94c8a453a2d3c928c997399fc4af2
+worktree: no session-local /Volumes worktree; UID504 self-hosted workflow is canonical Workbench/runtime evidence
+roadmapGate: RDP10-F1 Options / volatility exact proof cutover
+pr: 1650
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+implemented:
+- canonical Options raw source is resolved read-only by exact evidence instead of being duplicated into FrozenProofStore.
+- source surface, instrument metadata and all bound quotes are identity/PIT validated.
+- options_surface READY_EXACT requires the raw source lineage; options_volatility remains the immutable derived freeze.
+- web/dashboard and RDP10 live audit are wired to runtime/market_tape/options_surface.sqlite3.
+- stale family/exact-evidence tests now assert the raw-source / derived-proof split.
+
+blocker:
+- exact-head UID504 acceptance for 036fde3af3c94c8a453a2d3c928c997399fc4af2 is pending; no gate PASS and no merge yet.
+
+nextAction:
+- inspect exact-head RDP10 and RDP6 workflow acceptance outputs; repair only a demonstrated mechanical failure, or merge #1650 after rechecking main/head if all required acceptance markers pass.
