@@ -7,6 +7,10 @@ from pathlib import Path
 from typing import Any
 
 from crypto_signal.ledger.serialization import canonical_sha256, sha256_text
+from crypto_signal.product.frozen_proof_store import (
+    FrozenProofConflictError,
+    FrozenProofStore,
+)
 from crypto_signal.product.intelligence_stream_evidence_contract import (
     StreamEvidenceResolutionState,
     resolution_state_for_visual_state,
@@ -41,6 +45,7 @@ class IntelligenceStreamExactEvidenceReadModel:
         market_tape_path: Path | None = None,
         event_source_runtime_path: Path | None = None,
         provider_divergence_path: Path | None = None,
+        frozen_proof_store_path: Path | None = None,
     ) -> None:
         self.stream_ledger_path = stream_ledger_path
         self.signal_ledger_path = signal_ledger_path
@@ -48,6 +53,7 @@ class IntelligenceStreamExactEvidenceReadModel:
         self.market_tape_path = market_tape_path
         self.event_source_runtime_path = event_source_runtime_path
         self.provider_divergence_path = provider_divergence_path
+        self.frozen_proof_store_path = frozen_proof_store_path
 
     def read_for_narrative(
         self,
@@ -320,17 +326,57 @@ class IntelligenceStreamExactEvidenceReadModel:
                 state = StreamEvidenceResolutionState.READY_EXACT
                 reason = "exact_persisted_public_trades_resolved"
         elif domain == "liquidity":
-            if "market_tape_orderbook" in selected_kinds:
+            dynamics_state = (
+                StreamEvidenceResolutionState.READY_EXACT
+                if "liquidity_dynamics_freeze" in selected_kinds
+                else StreamEvidenceResolutionState.UNAVAILABLE_EXPLICIT
+            )
+            structure_state = (
+                StreamEvidenceResolutionState.READY_EXACT
+                if "liquidity_structure_freeze" in selected_kinds
+                else StreamEvidenceResolutionState.UNAVAILABLE_EXPLICIT
+            )
+            sweep_state = (
+                StreamEvidenceResolutionState.READY_EXACT
+                if "liquidity_sweep_freeze" in selected_kinds
+                else StreamEvidenceResolutionState.UNAVAILABLE_EXPLICIT
+            )
+            source_state = (
+                StreamEvidenceResolutionState.READY_EXACT
+                if "market_tape_orderbook" in selected_kinds
+                else StreamEvidenceResolutionState.UNAVAILABLE_EXPLICIT
+            )
+            if (
+                dynamics_state is StreamEvidenceResolutionState.READY_EXACT
+                or structure_state is StreamEvidenceResolutionState.READY_EXACT
+                or sweep_state is StreamEvidenceResolutionState.READY_EXACT
+            ):
+                state = StreamEvidenceResolutionState.READY_EXACT
+                reason = "exact_persisted_liquidity_derived_proof_resolved"
+            elif source_state is StreamEvidenceResolutionState.READY_EXACT:
                 state = StreamEvidenceResolutionState.READY_EXACT
                 reason = "exact_liquidity_state_and_source_orderbooks_resolved"
             capabilities = {
-                "source_orderbook_levels": state.value,
-                "canonical_liquidity_zone_coordinates": (
-                    StreamEvidenceResolutionState.UNAVAILABLE_EXPLICIT.value
-                ),
-                "sweep_point": (
-                    StreamEvidenceResolutionState.UNAVAILABLE_EXPLICIT.value
-                ),
+                "source_orderbook_levels": source_state.value,
+                "dynamics_measurement": dynamics_state.value,
+                "canonical_liquidity_zone_coordinates": structure_state.value,
+                "sweep_point": sweep_state.value,
+            }
+        elif domain == "liquidity_structure":
+            if "liquidity_structure_freeze" in selected_kinds:
+                state = StreamEvidenceResolutionState.READY_EXACT
+                reason = "exact_persisted_liquidity_structure_proof_resolved"
+            capabilities = {
+                "levels_and_candidate_labels": state.value,
+                "appearance_cancellation_rates": state.value,
+            }
+        elif domain == "liquidity_sweep":
+            if "liquidity_sweep_freeze" in selected_kinds:
+                state = StreamEvidenceResolutionState.READY_EXACT
+                reason = "exact_persisted_liquidity_sweep_proof_resolved"
+            capabilities = {
+                "sweep_candidates": state.value,
+                "persistent_pool_dependency": state.value,
             }
         elif domain == "order_flow":
             if selected_kinds.intersection(
@@ -652,6 +698,17 @@ class IntelligenceStreamExactEvidenceReadModel:
                 )
             )
         if (
+            self.frozen_proof_store_path is not None
+            and self.frozen_proof_store_path.exists()
+        ):
+            resolved.update(
+                _resolve_frozen_proof_objects(
+                    self.frozen_proof_store_path,
+                    evidence_identities,
+                    source_as_of_ms=source_as_of_ms,
+                )
+            )
+        if (
             self.event_source_runtime_path is not None
             and self.event_source_runtime_path.exists()
         ):
@@ -754,7 +811,14 @@ def _objects_for_domain(
         "signal_lifecycle": {"signal_freeze", "decision_freeze_bundle"},
         "order_book": {"market_tape_orderbook"},
         "public_trades": {"market_tape_trade"},
-        "liquidity": {"market_tape_orderbook"},
+        "liquidity": {
+            "market_tape_orderbook",
+            "liquidity_dynamics_freeze",
+            "liquidity_structure_freeze",
+            "liquidity_sweep_freeze",
+        },
+        "liquidity_structure": {"liquidity_structure_freeze"},
+        "liquidity_sweep": {"liquidity_sweep_freeze"},
         "order_flow": {"market_tape_orderbook", "market_tape_trade"},
         "derivatives": {"market_tape_derivatives"},
         "event_calendar": {
@@ -779,6 +843,71 @@ def _objects_for_domain(
             continue
         rows.append(item)
     return tuple(rows)
+
+
+def _resolve_frozen_proof_objects(
+    path: Path,
+    evidence_identities: tuple[str, ...],
+    *,
+    source_as_of_ms: int | None,
+) -> dict[str, dict[str, Any]]:
+    store = FrozenProofStore(path)
+    resolved: dict[str, dict[str, Any]] = {}
+    for identity in evidence_identities:
+        try:
+            proof = store.read_exact(identity)
+        except FrozenProofConflictError as exc:
+            raise StreamExactEvidenceError(str(exc)) from exc
+        if proof is None:
+            continue
+        if source_as_of_ms is not None and proof.as_of_ms > source_as_of_ms:
+            raise StreamExactEvidenceError(
+                "exact frozen derived proof is future evidence"
+            )
+        payload = _json_object(
+            proof.payload_json,
+            "exact frozen derived proof payload",
+        )
+        visualization = (
+            None
+            if proof.visualization_json is None
+            else _json_object(
+                proof.visualization_json,
+                "exact frozen derived proof visualization",
+            )
+        )
+        resolved[identity] = {
+            "object_kind": proof.object_kind,
+            "payload": {
+                "object_identity": proof.object_identity,
+                "analysis_identity": proof.analysis_identity,
+                "object_kind": proof.object_kind,
+                "family": proof.family,
+                "domains": proof.domains,
+                "asset": proof.asset,
+                "symbol": proof.symbol,
+                "network": proof.network,
+                "timeframe": proof.timeframe,
+                "as_of_ms": proof.as_of_ms,
+                "market_available_at_ms": proof.market_available_at_ms,
+                "observed_at_ms": proof.observed_at_ms,
+                "source_provider": proof.source_provider,
+                "source_quality": proof.source_quality,
+                "freshness_state": proof.freshness_state,
+                "freshness_age_ms": proof.freshness_age_ms,
+                "uncertainty_flags": proof.uncertainty_flags,
+                "source_object_identities": proof.source_object_identities,
+                "depends_on_evidence_identities": (
+                    proof.depends_on_evidence_identities
+                ),
+                "payload": payload,
+                "visualization": visualization,
+                "renderer_contract_version": proof.renderer_contract_version,
+                "persisted_at_ms": proof.persisted_at_ms,
+                "schema_version": proof.schema_version,
+            },
+        }
+    return resolved
 
 
 def _resolve_signal_objects(
