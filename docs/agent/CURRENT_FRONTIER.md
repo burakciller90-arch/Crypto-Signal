@@ -1,5 +1,65 @@
 # Crypto Signal Current Frontier
 
+## LIVE ACTIVE CHECKPOINT — 2026-09-28 — RDP10-D2 STARTED
+
+This section is written at task start so another agent can resume without chat memory.
+
+- canonical main at task start: `188075b20e853f956462a90c6faa3f44ea4117f6`
+- main commit: `RDP10-D1: persist and resolve exact Liquidity proofs (#1643)`
+- active branch: `rdp10/order-flow-derived-proof-d2`
+- local /Volumes worktree in this ChatGPT session: NONE; GitHub branch changes are validated on UID504 self-hosted runner against canonical Workbench.
+- safety: `REAL_CAPITAL=0`
+- historical/frozen backfill: FORBIDDEN
+- Durdurulmaz touched: NO
+- Quantum Capital touched: NO
+- duplicate RDP10-D2 PR at start: NONE
+
+### Previous accepted slice
+
+RDP10-D1 Liquidity exact derived-proof persistence/resolution is merged on main.
+
+- PR #1643
+- accepted head: `46eef9e8fe6bae3aa1dd518dc4a872caa8de1267`
+- merge SHA: `188075b20e853f956462a90c6faa3f44ea4117f6`
+- acceptance run: `36464174709`
+- job: `109070009401`
+- focused tests/Ruff/mypy/py_compile: PASS
+- live audit: 6 messages, 0 false unregistered READY
+- `RDP10_NON_MUTATING_PASS=YES`
+- `HISTORICAL_BACKFILL=NO`
+- `REAL_CAPITAL=0`
+
+### Active work: RDP10-D2 Order Flow
+
+Goal: persist and resolve the strongest already-existing immutable RDP4 Order Flow freezes before Stream publication:
+
+- `order_flow_microstructure_freeze`
+- `temporal_order_flow_freeze`
+- `absorption_freeze`
+- `price_cvd_divergence_freeze`
+
+Already implemented on active branch before this checkpoint was written:
+
+- commit `1c3bd9975735ab815ab9aba7a7659856a1ffe244`
+  - adds publication-before-publish persistence for Order Flow proof objects and explicit raw/dependency lineage.
+- commit `69f85d6cd73aa21239e4a969339a2387fb58992b`
+  - teaches exact-evidence resolver to expose the four persisted Order Flow proof kinds and derived domains.
+
+Current branch is 2 commits ahead / 0 behind the task-start main.
+
+### Exact nextAction
+
+1. add focused persistence + resolver/API tests for microstructure, temporal CVD, absorption and divergence;
+2. ensure shared Liquidity/Order Flow source lineage remains explicit and never treated as independent confirmation;
+3. extend/confirm RDP10 UID504 gate covers all D2 files;
+4. run exact-head UID504 acceptance;
+5. inspect acceptance output, not workflow conclusion alone;
+6. re-check main/open PRs immediately before merge;
+7. only after PASS, merge D2 and write completion checkpoint/handoff.
+
+RDP10 is still ACTIVE and not PASS.
+
+
 This is a replaceable current checkpoint. It is not permission to skip re-measurement.
 
 Checkpoint assembled: 2026-09-28
