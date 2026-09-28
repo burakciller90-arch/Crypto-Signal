@@ -439,6 +439,7 @@ def evaluate_confluence_matrix(
     evidence: tuple[ConfluenceFamilyEvidence, ...],
     *,
     candidate_direction: MetaDirection,
+    external_material_conflict_identities: tuple[str, ...] = (),
 ) -> ConfluenceMatrixSnapshot:
     if candidate_direction not in {MetaDirection.BULLISH, MetaDirection.BEARISH}:
         raise ValueError("M6 candidate direction must be bullish or bearish")
@@ -462,6 +463,11 @@ def evaluate_confluence_matrix(
     )
 
     overlap_analysis = analyze_confluence_evidence_overlap(ordered)
+    external_conflicts = tuple(
+        sorted(set(external_material_conflict_identities))
+    )
+    for identity in external_conflicts:
+        _require_sha256(identity, "M6 external material conflict")
     priors = {item.family: item.weight for item in policy.priors}
     opposite = (
         MetaDirection.BEARISH
@@ -476,7 +482,7 @@ def evaluate_confluence_matrix(
     quality_weighted = Decimal(0)
     freshness_weighted = Decimal(0)
     measured_weight = Decimal(0)
-    conflict_ids: set[str] = set()
+    conflict_ids: set[str] = set(external_conflicts)
 
     for item in ordered:
         prior = priors[item.family]

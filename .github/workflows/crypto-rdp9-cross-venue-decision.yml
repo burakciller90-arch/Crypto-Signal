@@ -1,0 +1,131 @@
+name: RDP9 Cross-Venue Decision UID504
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/crypto_signal/intelligence/confluence_matrix_v2.py"
+      - "src/crypto_signal/unified_decision_runtime.py"
+      - "src/crypto_signal/exact_decision_composition.py"
+      - "tests/test_rdp9_cross_venue_decision.py"
+      - ".github/workflows/crypto-rdp9-cross-venue-decision.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  focused:
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          clean: true
+          fetch-depth: 1
+
+      - name: Verify exact Workbench baseline and PR source
+        shell: bash
+        run: |
+          set -euo pipefail
+          WB="/Volumes/Crypto-504/Crypto-Signal-Workbench/repo"
+          test "$(id -u)" = "504"
+          test "$(git -C "$WB" branch --show-current)" = "main"
+          test -z "$(git -C "$WB" status --porcelain)"
+          test "$(git -C "$WB" rev-parse HEAD)" = "${{ github.event.pull_request.base.sha }}"
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+          echo "RDP9_C_WORKBENCH_BASELINE_PASS=YES"
+          echo "RDP9_C_EXACT_PR_SOURCE_PASS=YES"
+
+      - name: Focused decision-layer acceptance
+        shell: bash
+        run: |
+          set -euo pipefail
+          PY="/Volumes/Crypto-504/Crypto-Signal/Development/.venv/bin/python"
+          export PYTHONPATH="$GITHUB_WORKSPACE/src:$GITHUB_WORKSPACE"
+          "$PY" -m pytest -q \
+            tests/test_rdp9_cross_venue_decision.py \
+            tests/test_rdp9_cross_venue_quality.py \
+            tests/test_rdp9_evidence_overlap.py \
+            tests/test_confluence_matrix_v2.py \
+            tests/test_unified_decision_runtime.py \
+            tests/test_exact_decision_composition.py \
+            tests/test_wc2_collection_protocol.py
+          "$PY" -m ruff check \
+            src/crypto_signal/intelligence/confluence_matrix_v2.py \
+            src/crypto_signal/unified_decision_runtime.py \
+            src/crypto_signal/exact_decision_composition.py \
+            tests/test_rdp9_cross_venue_decision.py
+          "$PY" -m mypy \
+            src/crypto_signal/intelligence/confluence_matrix_v2.py \
+            src/crypto_signal/unified_decision_runtime.py \
+            src/crypto_signal/exact_decision_composition.py
+          "$PY" -m py_compile \
+            src/crypto_signal/intelligence/confluence_matrix_v2.py \
+            src/crypto_signal/unified_decision_runtime.py \
+            src/crypto_signal/exact_decision_composition.py \
+            tests/test_rdp9_cross_venue_decision.py
+          echo "RDP9_C_DECISION_LAYER_PASS=YES"
+          echo "MATERIAL_VENUE_DISAGREEMENT_VISIBLE=YES"
+          echo "CROSS_VENUE_SCORE_AUTHORITY=NO"
+          echo "CROSS_VENUE_DIRECTIONAL_AUTHORITY=NO"
+          echo "REAL_CAPITAL=0"
+
+      - name: Read-only live cross-venue state
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
+          PY="$DEV/.venv/bin/python"
+          DB="$DEV/runtime/data/provider_divergence.sqlite3"
+          export PYTHONPATH="$GITHUB_WORKSPACE/src:$GITHUB_WORKSPACE"
+          export RDP9_DIVERGENCE_DB="$DB"
+          "$PY" - <<'PY'
+          from __future__ import annotations
+
+          import os
+          from pathlib import Path
+
+          from crypto_signal.data.models import MarketType
+          from crypto_signal.data.provider_divergence import (
+              ProviderDivergenceStore,
+          )
+          from crypto_signal.intelligence.cross_venue_quality import (
+              CrossVenueQualityState,
+              CrossVenueScope,
+              assess_cross_venue_quality,
+          )
+
+          path = Path(os.environ["RDP9_DIVERGENCE_DB"])
+          assert path.is_file(), path
+          store = ProviderDivergenceStore(path)
+          assert store.quick_check()
+          for symbol in ("BTCUSDT", "ETHUSDT", "SOLUSDT"):
+              snapshot = store.latest(
+                  market_type=MarketType.SPOT,
+                  symbol=symbol,
+                  timeframe="15m",
+              )
+              assert snapshot is not None, symbol
+              assessment = assess_cross_venue_quality(snapshot)
+              assert assessment.score_authority is False
+              assert assessment.directional_authority is False
+              assert assessment.production_authority is False
+              if (
+                  assessment.state
+                  is CrossVenueQualityState.MATERIAL_PRICE_DISAGREEMENT
+              ):
+                  assert assessment.scope is CrossVenueScope.VENUE_LOCAL
+                  assert assessment.material_conflict_identities
+              print(
+                  "RDP9_C_LIVE_CROSS_VENUE "
+                  f"symbol={symbol} scope={assessment.scope.value} "
+                  f"state={assessment.state.value} "
+                  f"assessment={assessment.assessment_identity} "
+                  f"conflicts={len(assessment.material_conflict_identities)}",
+                  flush=True,
+              )
+          print("RDP9_C_LIVE_READ_ONLY_PASS=YES", flush=True)
+          print("PRODUCTION_RUNTIME_MUTATED=NO", flush=True)
+          print("REAL_CAPITAL=0", flush=True)
+          PY

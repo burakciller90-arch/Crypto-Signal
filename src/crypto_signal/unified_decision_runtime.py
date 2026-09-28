@@ -22,6 +22,9 @@ from crypto_signal.intelligence.confluence_matrix_v2 import (
     build_locked_m6_policy,
     evaluate_confluence_matrix,
 )
+from crypto_signal.intelligence.cross_venue_quality import (
+    CrossVenueQualityAssessment,
+)
 from crypto_signal.intelligence.event_risk_circuit_breaker import CircuitBreakerAnalysis
 from crypto_signal.intelligence.evidence_overlap import (
     analyze_confluence_evidence_overlap,
@@ -114,6 +117,7 @@ def issue_unified_decision(
     calibration_scope: CalibrationScope | None = None,
     forecast_version_refs: tuple[ForecastVersionRef, ...] = (),
     forecast_source_evidence_identities: tuple[str, ...] = (),
+    cross_venue_quality: CrossVenueQualityAssessment | None = None,
 ) -> UnifiedDecisionIssuance:
     """Compose one exact-PIT shadow/research decision and persist it atomically.
 
@@ -127,6 +131,10 @@ def issue_unified_decision(
         regime=regime,
         family_evidence=family_evidence,
         event_context=event_context,
+    )
+    _validate_cross_venue_quality(
+        signal=signal,
+        assessment=cross_venue_quality,
     )
     _validate_preflight_slices(
         signal=signal,
@@ -143,11 +151,18 @@ def issue_unified_decision(
     policy = m6_policy or build_locked_m6_policy()
     overlap_analysis = analyze_confluence_evidence_overlap(family_evidence)
     overlap_lineage = overlap_analysis.lineage_identities
+    cross_venue_lineage = _cross_venue_lineage(cross_venue_quality)
+    cross_venue_conflicts = (
+        ()
+        if cross_venue_quality is None
+        else cross_venue_quality.material_conflict_identities
+    )
     decision_lineage = tuple(
         sorted(
             {
                 *forecast_source_evidence_identities,
                 *overlap_lineage,
+                *cross_venue_lineage,
             }
         )
     )
@@ -155,6 +170,7 @@ def issue_unified_decision(
         policy,
         family_evidence,
         candidate_direction=direction,
+        external_material_conflict_identities=cross_venue_conflicts,
     )
     if confluence.regime != regime:
         raise ValueError("unified runtime M6 regime mismatch")
@@ -224,6 +240,45 @@ def _validate_market_identity(
         actual = (item.asset, item.timeframe, item.regime, item.as_of_ms)
         if actual != expected:
             raise ValueError("unified runtime family evidence context mismatch")
+
+
+def _validate_cross_venue_quality(
+    *,
+    signal: SignalDecision,
+    assessment: CrossVenueQualityAssessment | None,
+) -> None:
+    if assessment is None:
+        return
+    if assessment.symbol != signal.symbol:
+        raise ValueError("unified runtime cross-venue/signal symbol mismatch")
+    if assessment.as_of_ms > signal.as_of_ms:
+        raise ValueError(
+            "unified runtime cross-venue assessment is future evidence"
+        )
+    if (
+        assessment.directional_authority
+        or assessment.score_authority
+        or assessment.production_authority
+        or assessment.real_capital != REAL_CAPITAL
+    ):
+        raise ValueError("unified runtime cross-venue context cannot grant authority")
+
+
+def _cross_venue_lineage(
+    assessment: CrossVenueQualityAssessment | None,
+) -> tuple[str, ...]:
+    if assessment is None:
+        return ()
+    return tuple(
+        sorted(
+            {
+                assessment.assessment_identity,
+                assessment.provider_divergence_identity,
+                *assessment.source_evidence_identities,
+                *assessment.material_conflict_identities,
+            }
+        )
+    )
 
 
 def _validate_preflight_slices(
