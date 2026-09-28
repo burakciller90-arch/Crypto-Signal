@@ -3,8 +3,6 @@ from __future__ import annotations
 from decimal import Decimal
 from pathlib import Path
 
-import pytest
-
 from crypto_signal.data.adapters.defillama_stablecoins import (
     DefiLlamaStablecoinAssetSnapshot,
     DefiLlamaStablecoinSourceSnapshot,
@@ -49,7 +47,7 @@ def _asset(
         symbol=symbol,
         provider_asset_id=f"{symbol.lower()}-id",
         circulating_pegged_usd=value,
-        price_usd=Decimal("1"),
+        price_usd=Decimal(1),
         chain_count=2,
         raw_payload={
             "circulating": {"peggedUSD": amount},
@@ -270,6 +268,31 @@ def test_onchain_family_is_pit_safe_and_ignores_future_snapshot(
     }
     assert accepted_latest.issubset(set(snapshot.evidence_identities))
     assert future_ids.isdisjoint(set(snapshot.evidence_identities))
+
+
+def test_onchain_family_clock_progress_does_not_create_material_state_change(
+    tmp_path: Path,
+) -> None:
+    onchain_path, source_path, _ = _seed_two_snapshots(tmp_path)
+
+    first = build_onchain_family_snapshots(
+        onchain_path,
+        source_path,
+        symbols=("BTCUSDT",),
+        as_of_ms=1_300_100,
+    )[0]
+    later = build_onchain_family_snapshots(
+        onchain_path,
+        source_path,
+        symbols=("BTCUSDT",),
+        as_of_ms=1_360_100,
+    )[0]
+
+    assert later.state_components == first.state_components
+    assert later.state_label == first.state_label
+    assert later.source_quality == first.source_quality
+    assert later.direction is None
+    assert first.source_event_identity != later.source_event_identity
 
 
 def test_onchain_family_missing_stores_do_not_create_truth(
