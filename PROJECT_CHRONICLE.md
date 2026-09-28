@@ -1,5 +1,17 @@
 # PROJECT CHRONICLE
 
+## 2026-09-28 — RDP2-C Bybit REST Market Tape provenance accepted
+
+PR #1559 merged as main `199cf203a41d403d14a38ce73acb226fd271cd16`. RDP2 remains ACTIVE.
+
+The existing 60-second Bybit REST Market Tape snapshot collector now preserves canonical raw JSON for spot orderbook, recent trades, open interest and ticker responses and links each source observation to the normalized identity actually persisted in Market Tape. Multi-row recent-trade and OI responses preserve one-to-many lineage. OI/ticker do not invent provider-native event IDs, and successful empty responses remain explicit raw-only evidence rather than fabricated normalized rows.
+
+The snapshot hot path still avoids full-database integrity scans; source-contract integrity is delegated just like Market Tape integrity so RDP1 runtime guarantees remain intact.
+
+UID504 final C acceptance `36379731893` passed exact Workbench/source, focused REST provenance tests, Ruff, mypy and py_compile with REAL_CAPITAL=0. RDP2-A/B regression runs `36379731889` and `36379732197` also passed. Workbench bootstrap `36379861546` fast-forwarded clean `/Volumes/Crypto-504/Crypto-Signal-Workbench/repo/main` to exact `199cf203a41d403d14a38ce73acb226fd271cd16`.
+
+Repository re-audit shows the remaining pre-RDP3 source-contract gap is the Geometry candle rail: Bybit/Binance kline adapters normalize directly into CandleStore/live freeze without canonical raw payload identity and source coverage. Exact next frontier: **RDP2-D — candle source provenance + coverage before Geometry production truth.**
+
 ## 2026-09-28 — RDP2-B live Bybit Market Tape source-contract wiring accepted
 
 PR #1557 merged as main `b2f6bdc64e4830de7a021250155c3cea6f587922`. RDP2 remains ACTIVE.
