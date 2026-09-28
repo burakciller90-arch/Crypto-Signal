@@ -4,13 +4,38 @@ import json
 from pathlib import Path
 
 from crypto_signal.data.derivatives import DerivativesInstrumentType
+from crypto_signal.data.liquidation_runtime import (
+    LiquidationConnectionCoverage,
+    LiquidationConnectionRuntimeStore,
+    LiquidationConnectionState,
+)
+from crypto_signal.data.liquidations import (
+    LiquidationFeedCoverage,
+    build_liquidation_feed_coverage,
+)
 from crypto_signal.data.market_tape import MarketTapeStore
-from crypto_signal.data.models import Exchange, MarketType
+from crypto_signal.data.market_tape_collector_runtime import (
+    MarketTapeCollectorRuntimeStore,
+)
+from crypto_signal.data.models import DataSource, Exchange, MarketType
 from crypto_signal.data.store import CandleStore
 from crypto_signal.intelligence.confluence_matrix_v2 import ConfluenceFamily
 from crypto_signal.intelligence.derivatives_context import (
     DerivativesContextLabel,
     build_derivatives_context_evidence_freeze,
+)
+from crypto_signal.intelligence.derivatives_crowding import (
+    DerivativesCrowdingStatus,
+    build_derivatives_crowding_evidence_freeze,
+)
+from crypto_signal.intelligence.derivatives_dynamics import (
+    DerivativesDynamicsStatus,
+    build_derivatives_dynamics_evidence_freeze,
+)
+from crypto_signal.intelligence.liquidation_heatmap import (
+    DEFAULT_LIQUIDATION_HEATMAP_CONFIG,
+    LiquidationHeatmapStatus,
+    build_liquidation_heatmap_evidence_freeze,
 )
 from crypto_signal.intelligence.liquidity_dynamics import (
     build_liquidity_dynamics_evidence_freeze,
@@ -279,6 +304,7 @@ def build_market_tape_family_snapshots(
     symbols: tuple[str, ...],
     as_of_ms: int,
     candle_cache_path: Path | None = None,
+    liquidation_runtime_path: Path | None = None,
 ) -> tuple[StreamFamilySnapshot, ...]:
     store = MarketTapeStore(market_tape_path)
     candle_store = (
@@ -751,19 +777,239 @@ def build_market_tape_family_snapshots(
             limit=64,
         )
         if derivatives:
-            derivatives_freeze = build_derivatives_context_evidence_freeze(
-                derivatives,
-                as_of_ms=as_of_ms,
+            selected_runtime_path = (
+                market_tape_path.with_name(
+                    "liquidation_collector_runtime.sqlite3"
+                )
+                if liquidation_runtime_path is None
+                else liquidation_runtime_path
             )
-            derivatives_analysis = derivatives_freeze.analysis
+            connection, transport_coverage = (
+                _verified_liquidation_transport_window(
+                    selected_runtime_path,
+                    symbol=symbol,
+                    caller_as_of_ms=as_of_ms,
+                )
+            )
+            derivatives_as_of_ms = (
+                as_of_ms
+                if transport_coverage is None
+                else transport_coverage.coverage_end_ms
+            )
+            context_freeze = build_derivatives_context_evidence_freeze(
+                derivatives,
+                as_of_ms=derivatives_as_of_ms,
+            )
+            context_analysis = context_freeze.analysis
+            dynamics_freeze = build_derivatives_dynamics_evidence_freeze(
+                derivatives,
+                as_of_ms=derivatives_as_of_ms,
+            )
+            dynamics_analysis = dynamics_freeze.analysis
             derivatives_evidence = {
-                derivatives_freeze.freeze_identity,
-                derivatives_analysis.evidence_identity,
+                context_freeze.freeze_identity,
+                context_analysis.evidence_identity,
+                dynamics_freeze.freeze_identity,
+                dynamics_analysis.evidence_identity,
                 *(
                     item.observation_identity
-                    for item in derivatives_freeze.observations
+                    for item in dynamics_freeze.observations
                 ),
             }
+            derivatives_domains = {
+                "derivatives",
+                "derivatives_context",
+                "derivatives_dynamics",
+            }
+            derivatives_uncertainty = {
+                *context_analysis.uncertainty_flags,
+                *dynamics_analysis.uncertainty_flags,
+            }
+            derivatives_components: list[tuple[str, str]] = [
+                ("basis_state", context_analysis.basis_state.value),
+                ("funding_state", context_analysis.funding_state.value),
+                ("label", context_analysis.label.value),
+                (
+                    "open_interest_state",
+                    context_analysis.open_interest_state.value,
+                ),
+                (
+                    "dynamics_status",
+                    dynamics_analysis.status.value,
+                ),
+                (
+                    "oi_price_state",
+                    dynamics_analysis.oi_price_state.value,
+                ),
+            ]
+
+            heatmap_freeze = None
+            crowding_freeze = None
+            if connection is not None:
+                derivatives_evidence.add(connection.coverage_identity)
+                derivatives_domains.add("liquidation_transport_coverage")
+                derivatives_components.extend(
+                    (
+                        (
+                            "liquidation_connection_state",
+                            connection.state.value,
+                        ),
+                        (
+                            "liquidation_connection_reasons",
+                            ",".join(connection.reason_codes),
+                        ),
+                    )
+                )
+
+            if transport_coverage is None:
+                derivatives_uncertainty.add(
+                    "liquidation_transport_window_unavailable"
+                )
+            else:
+                mark_reference = next(
+                    (
+                        item
+                        for item in reversed(dynamics_freeze.observations)
+                        if item.mark_price is not None
+                    ),
+                    None,
+                )
+                if mark_reference is None:
+                    derivatives_uncertainty.add(
+                        "liquidation_mark_reference_unavailable"
+                    )
+                else:
+                    liquidation_events = store.recent_liquidations(
+                        exchange=Exchange.BYBIT,
+                        instrument_type=(
+                            DerivativesInstrumentType.LINEAR_PERPETUAL
+                        ),
+                        symbol=symbol,
+                        limit=1000,
+                    )
+                    heatmap_freeze = (
+                        build_liquidation_heatmap_evidence_freeze(
+                            liquidation_events,
+                            coverage=transport_coverage,
+                            mark_reference=mark_reference,
+                            as_of_ms=derivatives_as_of_ms,
+                        )
+                    )
+                    heatmap_analysis = heatmap_freeze.analysis
+                    derivatives_evidence.update(
+                        {
+                            transport_coverage.coverage_identity,
+                            heatmap_freeze.freeze_identity,
+                            heatmap_analysis.evidence_identity,
+                            mark_reference.observation_identity,
+                            *(
+                                item.liquidation_identity
+                                for item in heatmap_freeze.events
+                            ),
+                        }
+                    )
+                    derivatives_domains.add("observed_liquidation_heatmap")
+                    derivatives_uncertainty.update(
+                        heatmap_analysis.uncertainty_flags
+                    )
+                    derivatives_components.extend(
+                        (
+                            (
+                                "liquidation_heatmap_status",
+                                heatmap_analysis.status.value,
+                            ),
+                            (
+                                "liquidation_observed_state",
+                                heatmap_analysis.observed_state.value,
+                            ),
+                            (
+                                "liquidation_event_count",
+                                str(heatmap_analysis.consumed_event_count),
+                            ),
+                            (
+                                "liquidation_cluster_count",
+                                str(heatmap_analysis.observed_cluster_count),
+                            ),
+                            (
+                                "liquidation_risk_zone_status",
+                                (
+                                    heatmap_analysis
+                                    .liquidation_risk_zone_status.value
+                                ),
+                            ),
+                        )
+                    )
+
+                    crowding_freeze = (
+                        build_derivatives_crowding_evidence_freeze(
+                            dynamics_freeze,
+                            heatmap_freeze,
+                        )
+                    )
+                    crowding_analysis = crowding_freeze.analysis
+                    derivatives_evidence.update(
+                        {
+                            crowding_freeze.freeze_identity,
+                            crowding_analysis.evidence_identity,
+                        }
+                    )
+                    derivatives_domains.add("derivatives_crowding")
+                    derivatives_uncertainty.update(
+                        crowding_analysis.uncertainty_flags
+                    )
+                    derivatives_components.extend(
+                        (
+                            (
+                                "crowding_status",
+                                crowding_analysis.status.value,
+                            ),
+                            (
+                                "crowding_label",
+                                crowding_analysis.label.value,
+                            ),
+                            (
+                                "crowded_side",
+                                crowding_analysis.crowded_side.value,
+                            ),
+                            (
+                                "squeeze_risk_side",
+                                crowding_analysis.squeeze_risk_side.value,
+                            ),
+                        )
+                    )
+
+            heatmap_identity = (
+                None
+                if heatmap_freeze is None
+                else heatmap_freeze.freeze_identity
+            )
+            crowding_identity = (
+                None
+                if crowding_freeze is None
+                else crowding_freeze.freeze_identity
+            )
+            connection_identity = (
+                None
+                if connection is None
+                else connection.coverage_identity
+            )
+            source_event_identity = canonical_sha256(
+                {
+                    "as_of_ms": derivatives_as_of_ms,
+                    "context_freeze_identity": context_freeze.freeze_identity,
+                    "crowding_freeze_identity": crowding_identity,
+                    "dynamics_freeze_identity": dynamics_freeze.freeze_identity,
+                    "heatmap_freeze_identity": heatmap_identity,
+                    "liquidation_connection_identity": connection_identity,
+                    "symbol": symbol,
+                    "version": "rdp5-rich-derivatives-family-v1/1",
+                }
+            )
+            crowding_label = (
+                "unavailable"
+                if crowding_freeze is None
+                else crowding_freeze.analysis.label.value
+            )
             snapshots.append(
                 build_family_snapshot(
                     projector_id="derivatives_change",
@@ -771,7 +1017,7 @@ def build_market_tape_family_snapshots(
                     category=StreamCategory.INTELLIGENCE,
                     subtype="derivatives_material_change",
                     importance=StreamImportance.IMPORTANT,
-                    source_event_identity=derivatives_freeze.freeze_identity,
+                    source_event_identity=source_event_identity,
                     source_scope=(
                         "bybit:linear_perpetual:market_tape_derivatives"
                     ),
@@ -780,30 +1026,29 @@ def build_market_tape_family_snapshots(
                     market=symbol,
                     timeframe="15m",
                     event_at_ms=as_of_ms,
-                    source_as_of_ms=as_of_ms,
+                    source_as_of_ms=derivatives_as_of_ms,
                     evidence_identities=tuple(sorted(derivatives_evidence)),
-                    evidence_domains=("derivatives",),
-                    state_label=derivatives_analysis.label.value,
-                    state_components=(
-                        ("basis_state", derivatives_analysis.basis_state.value),
-                        (
-                            "funding_state",
-                            derivatives_analysis.funding_state.value,
-                        ),
-                        ("label", derivatives_analysis.label.value),
-                        (
-                            "open_interest_state",
-                            derivatives_analysis.open_interest_state.value,
-                        ),
+                    evidence_domains=tuple(sorted(derivatives_domains)),
+                    state_label=(
+                        f"{context_analysis.label.value}:"
+                        f"{dynamics_analysis.oi_price_state.value}:"
+                        f"{crowding_label}"
                     ),
+                    state_components=tuple(derivatives_components),
                     direction=None,
                     source_quality=(
                         "unresolved"
-                        if derivatives_analysis.label
-                        is DerivativesContextLabel.UNRESOLVED
+                        if (
+                            context_analysis.label
+                            is DerivativesContextLabel.UNRESOLVED
+                            or dynamics_analysis.status
+                            is DerivativesDynamicsStatus.UNRESOLVED
+                        )
                         else "measured"
                     ),
-                    uncertainty_flags=derivatives_analysis.uncertainty_flags,
+                    uncertainty_flags=tuple(
+                        sorted(derivatives_uncertainty)
+                    ),
                 )
             )
 
@@ -818,6 +1063,83 @@ def build_market_tape_family_snapshots(
             ),
         )
     )
+
+
+RDP5_TRANSPORT_FEED_COVERAGE_ADAPTER_VERSION = (
+    "bybit-all-liquidation-verified-transport-window-v1/1"
+)
+_RDP5_CONNECTION_MAX_AGE_MS = 30_000
+_RDP5_TRANSPORT_MAX_AGE_MS = 45_000
+
+
+def _verified_liquidation_transport_window(
+    runtime_path: Path,
+    *,
+    symbol: str,
+    caller_as_of_ms: int,
+) -> tuple[
+    LiquidationConnectionCoverage | None,
+    LiquidationFeedCoverage | None,
+]:
+    if not runtime_path.is_file():
+        return None, None
+
+    runtime_store = MarketTapeCollectorRuntimeStore(runtime_path)
+    instance = runtime_store.latest_instance(
+        provider="bybit",
+        source="liquidation_stream",
+    )
+    if instance is None:
+        return None, None
+
+    connection = LiquidationConnectionRuntimeStore(runtime_path).latest(
+        instance.instance_identity
+    )
+    if connection is None:
+        return None, None
+    if symbol not in connection.symbols:
+        return connection, None
+    if connection.observed_at_ms > caller_as_of_ms:
+        return connection, None
+    if (
+        caller_as_of_ms - connection.observed_at_ms
+        > _RDP5_CONNECTION_MAX_AGE_MS
+    ):
+        return connection, None
+    if connection.state is not LiquidationConnectionState.CONNECTED:
+        return connection, None
+    if set(connection.reason_codes) != {
+        "subscription_confirmed",
+        "transport_activity_fresh",
+    }:
+        return connection, None
+    if (
+        connection.connected_since_ms is None
+        or connection.last_transport_activity_ms is None
+    ):
+        return connection, None
+    if (
+        connection.observed_at_ms - connection.last_transport_activity_ms
+        > _RDP5_TRANSPORT_MAX_AGE_MS
+    ):
+        return connection, None
+
+    lookback_ms = DEFAULT_LIQUIDATION_HEATMAP_CONFIG.lookback_ms
+    window_start_ms = connection.observed_at_ms - lookback_ms
+    if connection.connected_since_ms > window_start_ms:
+        return connection, None
+
+    coverage = build_liquidation_feed_coverage(
+        exchange=Exchange.BYBIT,
+        instrument_type=DerivativesInstrumentType.LINEAR_PERPETUAL,
+        symbol=symbol,
+        coverage_start_ms=connection.connected_since_ms,
+        coverage_end_ms=connection.observed_at_ms,
+        observed_at_ms=connection.observed_at_ms,
+        source=DataSource.WEBSOCKET,
+        adapter_version=RDP5_TRANSPORT_FEED_COVERAGE_ADAPTER_VERSION,
+    )
+    return connection, coverage
 
 
 def _rich_liquidity_quality(*qualities: str) -> str:
