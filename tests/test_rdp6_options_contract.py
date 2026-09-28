@@ -153,7 +153,7 @@ def test_option_contract_rejects_invalid_context_and_measurements() -> None:
             gamma=None,
             vega=None,
             theta=None,
-            open_interest=Decimal("-1"),
+            open_interest=Decimal(-1),
             volume_24h=None,
             turnover_24h=None,
             source=DataSource.REST,
