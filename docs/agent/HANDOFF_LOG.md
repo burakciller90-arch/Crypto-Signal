@@ -1456,3 +1456,44 @@ blocker:
 
 nextAction:
 - repair only stale regression fixtures/harness configuration; preserve accepted proof/source semantics; rerun focused tests and canonical fulltest; then exact-target deploy + productstate if green.
+
+
+
+---
+
+## 2026-09-29 — RDP11 fulltest blocker checkpoint
+
+status: BLOCKED_REPAIRING
+branch: rdp11/continuous-soak-anchor
+canonicalMain: 5f07a8954f87e237258f1d3eb448a5ede6106fbd
+syncIssue: 1656
+syncRun: 36489311982
+syncJob: 109153796258
+syncConclusion: SUCCESS
+producttestIssue: 1657
+producttestRun: 36489373492
+producttestJob: 109153999931
+producttestConclusion: SUCCESS
+fulltestIssue: 1658
+fulltestRun: 36489428770
+fulltestJob: 109154187159
+fulltestConclusion: FAILURE
+productDeployAttempted: NO
+soakClockStarted: NO
+realCapital: 0
+historicalBackfill: NO
+
+failureGroups:
+- 12 async tests: undeclared pytest-asyncio test harness.
+- 20 WC2 tests: stale directional fixture violates strengthened Frozen Geometry Proof selected-evidence lineage.
+- 2 trust narration assertions: stale strings vs accepted human-readable Turkish output.
+- 1 S15 search assertion: free-text ticker assumption stale; structured symbol query exists.
+- 2 WC0 path assertions: missing accepted RDP10 Options/On-chain runtime paths.
+
+repairPolicy:
+- preserve strict proof validation and current production semantics;
+- update only test harness/fixtures/contract expectations;
+- focused UID504 acceptance before merge; exact-main fulltest after merge before Product deploy.
+
+nextAction:
+- implement focused repairs + branch acceptance workflow; merge only if exact focused acceptance passes; sync Development and rerun fulltest.
