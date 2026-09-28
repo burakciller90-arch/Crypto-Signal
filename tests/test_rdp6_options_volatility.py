@@ -287,6 +287,7 @@ def test_missing_oi_and_volume_never_become_zero_or_partial_ratios() -> None:
     ).analysis
     metrics = analysis.metrics
 
+    assert analysis.status is OptionsVolatilityStatus.PARTIAL
     assert metrics is not None
     assert metrics.total_open_interest is None
     assert metrics.total_volume_24h is None
