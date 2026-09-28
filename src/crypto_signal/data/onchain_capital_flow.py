@@ -24,6 +24,13 @@ class OnchainEventCoverageState(StrEnum):
     UNAVAILABLE = "unavailable"
 
 
+class StablecoinSourceTimestampSemantic(StrEnum):
+    PROVIDER_TIMESTAMP = "provider_timestamp"
+    COLLECTOR_RECEIPT = (
+        "collector_receipt_time_provider_timestamp_unavailable"
+    )
+
+
 @dataclass(frozen=True, slots=True)
 class OnchainEventCoverage:
     coverage_identity: str
@@ -136,6 +143,7 @@ class StablecoinSupplyObservation:
     ingested_at_ms: int
     adapter_version: str
     raw_identity: str
+    source_timestamp_semantic: StablecoinSourceTimestampSemantic
     temporal_semantic: str = STABLECOIN_SUPPLY_TEMPORAL_SEMANTIC
     schema_version: str = STABLECOIN_SUPPLY_OBSERVATION_SCHEMA_VERSION
     production_authority: bool = False
@@ -259,6 +267,9 @@ def build_stablecoin_supply_observation(
     ingested_at_ms: int,
     adapter_version: str,
     raw_identity: str,
+    source_timestamp_semantic: StablecoinSourceTimestampSemantic = (
+        StablecoinSourceTimestampSemantic.PROVIDER_TIMESTAMP
+    ),
 ) -> StablecoinSupplyObservation:
     values = {
         "adapter_version": adapter_version,
@@ -275,6 +286,7 @@ def build_stablecoin_supply_observation(
         "schema_version": STABLECOIN_SUPPLY_OBSERVATION_SCHEMA_VERSION,
         "source": source,
         "source_timestamp_ms": source_timestamp_ms,
+        "source_timestamp_semantic": source_timestamp_semantic,
         "temporal_semantic": STABLECOIN_SUPPLY_TEMPORAL_SEMANTIC,
         "usd_amount": usd_amount,
     }
@@ -292,6 +304,7 @@ def build_stablecoin_supply_observation(
         ingested_at_ms=ingested_at_ms,
         adapter_version=adapter_version,
         raw_identity=raw_identity,
+        source_timestamp_semantic=source_timestamp_semantic,
     )
 
 
@@ -337,6 +350,7 @@ def stablecoin_supply_observation_payload(
         "schema_version": observation.schema_version,
         "source": observation.source,
         "source_timestamp_ms": observation.source_timestamp_ms,
+        "source_timestamp_semantic": observation.source_timestamp_semantic,
         "temporal_semantic": observation.temporal_semantic,
         "usd_amount": observation.usd_amount,
     }
