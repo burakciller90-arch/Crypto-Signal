@@ -25,19 +25,26 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          EXPECTED="${{ github.event.pull_request.base.sha }}"
           WB="/Volumes/Crypto-504/Crypto-Signal-Workbench/repo"
           DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
           test "$(id -u)" = "504"
+          EXPECTED=""
           for TARGET in "$WB" "$DEV"; do
             test "$(git -C "$TARGET" branch --show-current)" = "main"
             test -z "$(git -C "$TARGET" status --porcelain)"
             git -C "$TARGET" fetch origin main
-            test "$(git -C "$TARGET" rev-parse FETCH_HEAD)" = "$EXPECTED"
+            FETCHED="$(git -C "$TARGET" rev-parse FETCH_HEAD)"
+            if [ -z "$EXPECTED" ]; then
+              EXPECTED="$FETCHED"
+            else
+              test "$FETCHED" = "$EXPECTED"
+            fi
             git -C "$TARGET" merge --ff-only FETCH_HEAD
             test "$(git -C "$TARGET" rev-parse HEAD)" = "$EXPECTED"
             test -z "$(git -C "$TARGET" status --porcelain)"
           done
+          echo "RDP7_G_EXPECTED_MAIN_SHA=$EXPECTED" >> "$GITHUB_ENV"
+          echo "RDP7_G_CANONICAL_MAIN_SHA=$EXPECTED"
           echo "RDP7_G_WORKBENCH_EXACT_MAIN_PASS=YES"
           echo "RDP7_G_DEVELOPMENT_EXACT_MAIN_PASS=YES"
           echo "REAL_CAPITAL=0"
@@ -271,7 +278,7 @@ jobs:
           START="$LOCAL_ROOT/start-ssd-runtime.command"
           test "$(id -u)" = "504"
           test "$(git -C "$DEV" branch --show-current)" = "main"
-          test "$(git -C "$DEV" rev-parse HEAD)" = "${{ github.event.pull_request.base.sha }}"
+          test "$(git -C "$DEV" rev-parse HEAD)" = "$RDP7_G_EXPECTED_MAIN_SHA"
           test -z "$(git -C "$DEV" status --porcelain)"
 
           restart_at_ms="$("$PY" -c 'import time; print(time.time_ns() // 1_000_000)')"
