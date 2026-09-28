@@ -73,15 +73,15 @@ from crypto_signal.product.intelligence_stream_family_sources import (
     build_geometry_lifecycle_family_snapshot,
     build_market_tape_family_snapshots,
 )
-from crypto_signal.product.intelligence_stream_onchain_family import (
-    build_onchain_family_snapshots,
-)
 from crypto_signal.product.intelligence_stream_forward_runtime import (
     IntelligenceStreamForwardRuntime,
 )
 from crypto_signal.product.intelligence_stream_local_rewriter import (
     LocalNarrativeRewriteConfig,
     OpenAICompatibleLocalNarrativeRewriter,
+)
+from crypto_signal.product.intelligence_stream_onchain_family import (
+    build_onchain_family_snapshots,
 )
 from crypto_signal.product.intelligence_stream_production_projector import (
     IntelligenceStreamProductionProjector,
@@ -703,6 +703,8 @@ async def run(
                         "derivatives_change",
                     )
                 )
+            if selected_stream.onchain_capital_flow_path is not None:
+                family_projector_ids.append("onchain_change")
             family_projector_ids.append("provider_quality_change")
             if selected_stream.event_source_path is not None:
                 family_projector_ids.append("event_risk_change")
