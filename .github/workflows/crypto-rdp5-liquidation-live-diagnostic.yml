@@ -26,7 +26,7 @@ jobs:
           set -euo pipefail
           ROOT="/Volumes/Crypto-504/Crypto-Signal"
           DEV="$ROOT/Development"
-          WB="$ROOT/Crypto-Signal-Workbench/repo"
+          WB="/Volumes/Crypto-504/Crypto-Signal-Workbench/repo"
           RUNTIME="$DEV/runtime/market_tape"
           STATUS_DB="$RUNTIME/liquidation_collector_runtime.sqlite3"
           MARKET_DB="$RUNTIME/market_tape.sqlite3"
