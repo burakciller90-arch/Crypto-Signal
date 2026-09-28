@@ -781,3 +781,95 @@ Main/duplicate guard at checkpoint:
 
 Exact nextAction:
 This checkpoint changes the branch head only through docs. Require one final exact-head RDP10 SUCCESS on the resulting docs-complete head, then open the F3 PR, re-check main/head/duplicate/mergeability, merge with expected-head guard, prove merged-main SSD504/Agent Memory + RDP10 acceptance, and only then mark top-level RDP10 PASS and begin the real RDP11 72-hour UID504 soak.
+
+
+
+## RDP10 — PASS; first mechanically unclosed gate is RDP11 continuous soak + final Evidence PASS
+
+RDP10 Exact frozen customer-proof contract is mechanically closed.
+
+Final F3:
+- implementation branch: `rdp10/final-contract-closure-f3`
+- implementation PR: #1654
+- accepted implementation head before docs checkpoint: `50c3b2ae748ea6f0f553d6e3d2ef4d2a17ac73cc`
+- exact docs-complete accepted head: `0c9cd59229e5eea3e8f7c7f4c7c0db74db9db3ed`
+- production squash merge / canonical main at RDP10 close: `5f4ab98f2741e8317d0463996c4e7fd23a54bbd0`
+- top-level closeout branch: `docs/rdp10-top-level-completion`
+
+Exact F3 acceptance:
+- final exact-head push RDP10 run `36482196028` / job `109132227595`: SUCCESS
+- final exact-head PR RDP10 run `36482393451` / job `109130950284`: SUCCESS
+- both runs were on exact head `0c9cd59229e5eea3e8f7c7f4c7c0db74db9db3ed`
+- both proved:
+  - `RDP10_EXACT_SOURCE_PASS=YES`
+  - `RDP10_CANONICAL_CHECKOUTS_CLEAN=YES`
+  - `RDP10_FAIL_CLOSED_FOCUSED_PASS=YES`
+  - `RDP10_DERIVED_PROOF_STORE_PASS=YES`
+  - `RDP10_LIVE_MESSAGES_AUDITED=6`
+  - `RDP10_UNREGISTERED_READY_COUNT=0`
+  - `RDP10_LIVE_FAIL_CLOSED_PASS=YES`
+  - `RDP10_NON_MUTATING_PASS=YES`
+  - `RDP10_F3_FINAL_CONTRACT_PASS=YES`
+  - `RDP10_CUSTOMER_SOURCE_LABEL_PASS=YES`
+  - `RDP10_PROVIDER_DIVERGENCE_EXACT_PASS=YES`
+  - `RDP10_EVENT_SOURCE_EXACT_PASS=YES`
+  - `RDP10_HISTORICAL_CURRENT_SUBSTITUTION=NO`
+  - `HISTORICAL_BACKFILL=NO`
+  - `REAL_CAPITAL=0`
+
+Merged-main proof:
+- Crypto SSD504 Workbench Bootstrap run `36483022957` / job `109133056142`: SUCCESS
+  - `GITHUB_SHA=5f4ab98f2741e8317d0463996c4e7fd23a54bbd0`
+  - `WORKBENCH_REPO_SYNCED_TO_MAIN=YES`
+  - final `REPO_HEAD=5f4ab98f2741e8317d0463996c4e7fd23a54bbd0`
+  - `REPO_BRANCH=main`
+  - `REPO_DIRTY_COUNT=0`
+  - `SSD504_WORKBENCH_PASS=YES`
+  - `REAL_CAPITAL=0`
+- Crypto Signal Agent Memory Bootstrap run `36483023010` / job `109133057144`: SUCCESS
+  - durable context rebuild PASS
+  - exact-main RDP9 focused acceptance PASS
+  - live BTC/ETH/SOL cross-venue classification remained read-only
+  - `RDP9_BOOTSTRAP_LIVE_READ_ONLY=PASS`
+  - `PRODUCTION_RUNTIME_MUTATED=NO`
+  - `REAL_CAPITAL=0`
+
+Top-level RDP10 accepted contract:
+- Geometry exposes the strongest accepted exact immutable proof without reconstructing from current data.
+- Liquidity exposes exact accepted derived proof plus canonical source orderbook truth where available.
+- Order Flow exposes exact accepted derived proof plus canonical public-trade/orderbook truth where available.
+- Derivatives exposes exact accepted Context/Dynamics/Liquidation/Options proof while unsupported claims remain unavailable.
+- On-chain exposes exact accepted stablecoin proof plus canonical raw/source-envelope/coverage lineage; unsupported rails remain explicit.
+- Event Risk/context exposes exact canonical event source records with identity and no-future enforcement.
+- RDP9 provider-divergence/data-quality context exposes the exact immutable provider snapshot and provider/source label.
+- historical proof never substitutes current live data.
+- hashes remain provenance/debug identity; customer proof is typed exact evidence, not SHA-only display.
+
+### First mechanically unclosed gate — RDP11 Continuous soak + final Evidence PASS
+
+Canonical RDP11 rule:
+- a real minimum **72-hour UID504 engineering observation** is mandatory before Evidence Data Plane V1 may be marked complete;
+- the soak must observe uptime, freshness, source gaps, reconnections, DB lock behavior, sequence/gap behavior, service restarts, frozen-proof integrity, no-future violations and Stream/Product continuity;
+- accepted mandatory rails must stay inside accepted SLO or fail closed explicitly;
+- source limitations must remain documented;
+- rich engines must continue consuming accepted truth;
+- real Product proof must remain inspectable;
+- `REAL_CAPITAL=0`.
+
+Important parallel-development rule:
+- the RDP11 soak anchor/runtime must remain frozen and mechanically attributable to its exact accepted main SHA;
+- Paper Capital / Portfolio and then the new frontend may be developed in parallel in isolated branch/worktree/runtime;
+- parallel Portfolio/frontend work must not mutate the soaked evidence runtime or historical/frozen evidence and must not be used to claim RDP11 PASS early.
+
+Current blocker:
+- no RDP10 blocker remains;
+- RDP11 cannot mechanically PASS until a real 72-hour UID504 observation window has completed.
+
+Exact nextAction:
+Merge this docs-only RDP10 closeout after exact main/head recheck. Then create an isolated RDP11 branch from exact current main, write the mandatory task-start checkpoint before any production change, establish the exact soak anchor/start evidence and observation contract, and begin the 72-hour UID504 soak. Once the soak is durably anchored, continue Paper Capital / Portfolio in a separate isolated branch/worktree while soak observation continues.
+
+Safety:
+- `REAL_CAPITAL=0`
+- `HISTORICAL_BACKFILL=NO`
+- Durdurulmaz touched: NO
+- Quantum Capital touched: NO
