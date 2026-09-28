@@ -533,7 +533,7 @@ def _require_canonical_object_json(value: str, label: str) -> None:
     except json.JSONDecodeError as exc:
         raise ValueError(f"{label} must be valid JSON") from exc
     if not isinstance(raw, dict):
-        raise ValueError(f"{label} must decode to object")
+        raise TypeError(f"{label} must decode to object")
     if canonical_json(raw) != value:
         raise ValueError(f"{label} must be canonical JSON")
 
