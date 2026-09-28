@@ -753,3 +753,43 @@ blocker:
 nextAction:
 - read run 36470815516; after exact-main Workbench PASS, audit options surface + volatility freeze schemas and implement F1.
 
+---
+
+## 2026-09-28 — RDP10-F1 implementation complete; acceptance phase started
+
+status: ACCEPTANCE_PENDING
+canonicalMainAtPhaseStart: f665fee6aba0309d7fd5ef7ff88abfdc10ef1511
+branch: rdp10/options-proof-f1
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+workbenchPrerequisite:
+- run 36470815516 / job 109092324039: SUCCESS.
+- exact main f665fee6aba0309d7fd5ef7ff88abfdc10ef1511.
+- final canonical Workbench repo main, exact head, dirty count 0.
+- SSD504_WORKBENCH_PASS=YES.
+
+implemented:
+- f6bde7cfd43f28303b010fa6f15581affc0dd4c8 — persist exact options surface + volatility proof objects.
+- 32ff80d122a67dbbc5186bfe26e79aae6e91a2f2 — exact resolver domains/capabilities.
+- fd211392b8c56bb8105ef1e0be8a81cc6a4c0e47 — persistence/lineage test.
+- 335a2fc156a213b7a579757610a20e9ff50a9c7e — exact resolver/customer-proof test.
+- 9636194e89e22bef8391bb40acb844ba9c9f90e5 — UID504 gate + live registered-domain coverage.
+- ccd93cb860fdc05dab8f71ea5bd68d714963a3bc — acceptance-phase frontier checkpoint.
+
+semanticGuards:
+- surface identity stays stable and carries exact contract quote timestamps.
+- volatility proof binds full frozen surface + analysis.
+- stale/not-evaluable remains explicit.
+- dealer-gamma/max-pain remain unavailable.
+- no new family/direction authority.
+- no historical backfill/current-data substitution.
+
+blocker:
+- exact-head full RDP10 UID504 acceptance has not completed yet.
+
+nextAction:
+- inspect the exact-head RDP10 Frozen Proof Contract run; if focused + live fail-closed + non-mutating all PASS, re-check main/open PRs and merge F1. Otherwise repair only the demonstrated issue and checkpoint before retry.
+
