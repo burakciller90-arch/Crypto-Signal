@@ -1,9 +1,9 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 from decimal import Decimal
 from enum import StrEnum
-from typing import Sequence
 
 from crypto_signal.data.onchain_capital_flow import (
     StablecoinSupplyObservation,
@@ -118,9 +118,11 @@ class StablecoinCapitalFlowAnalysis:
                 raise ValueError("stablecoin analysis context cannot be empty")
         if self.as_of_ms < 0:
             raise ValueError("stablecoin analysis as-of cannot be negative")
-        if self.observed_at_ms is not None:
-            if not 0 <= self.observed_at_ms <= self.as_of_ms:
-                raise ValueError("stablecoin observed_at outside PIT bounds")
+        if (
+            self.observed_at_ms is not None
+            and not 0 <= self.observed_at_ms <= self.as_of_ms
+        ):
+            raise ValueError("stablecoin observed_at outside PIT bounds")
         if (
             self.latest_observation_age_ms is not None
             and self.latest_observation_age_ms < 0
