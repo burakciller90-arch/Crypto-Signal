@@ -36,6 +36,7 @@ from crypto_signal.intelligence.temporal_order_flow import (
     build_temporal_order_flow_freeze,
 )
 from crypto_signal.ledger.serialization import canonical_sha256
+from crypto_signal.product.frozen_proof_store import FrozenProofStore
 from crypto_signal.product.intelligence_stream_family_sources import (
     build_market_tape_family_snapshots,
 )
@@ -139,11 +140,12 @@ def _seed(store: MarketTapeStore) -> None:
         )
 
 
-def _families(path):
+def _families(path, *, proof_path: Path | None = None):
     snapshots = build_market_tape_family_snapshots(
         path,
         symbols=("BTCUSDT",),
         as_of_ms=AS_OF_MS,
+        frozen_proof_store_path=proof_path,
     )
     return {
         item.family: item
@@ -163,7 +165,8 @@ def test_rich_liquidity_and_order_flow_share_existing_family_slots(
     store = MarketTapeStore(path)
     _seed(store)
 
-    families = _families(path)
+    proof_path = tmp_path / "frozen_proofs.sqlite3"
+    families = _families(path, proof_path=proof_path)
     assert set(families) == {
         ConfluenceFamily.LIQUIDITY,
         ConfluenceFamily.ORDER_FLOW,
@@ -234,6 +237,28 @@ def test_rich_liquidity_and_order_flow_share_existing_family_slots(
     assert "spoofing_candidate_count" in liquidity_components
     assert "hidden_liquidity_candidate_count" in liquidity_components
     assert liquidity.direction is None
+
+    proof_store = FrozenProofStore(proof_path)
+    dynamics_proof = proof_store.read_exact(dynamics.freeze_identity)
+    structure_proof = proof_store.read_exact(structure.freeze_identity)
+    sweep_proof = proof_store.read_exact(sweep.freeze_identity)
+    assert dynamics_proof is not None
+    assert structure_proof is not None
+    assert sweep_proof is not None
+    assert proof_store.count() == 3
+    assert dynamics_proof.object_kind == "liquidity_dynamics_freeze"
+    assert structure_proof.object_kind == "liquidity_structure_freeze"
+    assert sweep_proof.object_kind == "liquidity_sweep_freeze"
+    assert structure_proof.analysis_identity == structure.analysis.evidence_identity
+    assert {
+        item.snapshot_identity for item in structure.snapshots
+    } == set(structure_proof.source_object_identities)
+    assert {
+        structure.freeze_identity,
+        structure.analysis.evidence_identity,
+    }.issubset(set(sweep_proof.depends_on_evidence_identities))
+    assert dynamics_proof.production_authority is False
+    assert dynamics_proof.real_capital == 0
 
     micro = build_order_flow_microstructure_evidence_freeze(
         books,
