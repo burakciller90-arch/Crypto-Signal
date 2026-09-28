@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import sqlite3
 from dataclasses import dataclass
 from enum import StrEnum
@@ -370,25 +371,7 @@ def _coverage_from_payload(payload_json: str) -> LiquidationConnectionCoverage:
             "liquidation connection coverage payload must be object"
         )
     return LiquidationConnectionCoverage(
-        coverage_identity=canonical_sha256(
-            {
-                key: payload[key]
-                for key in (
-                    "schema_version",
-                    "instance_identity",
-                    "sequence_no",
-                    "state",
-                    "observed_at_ms",
-                    "connected_since_ms",
-                    "last_transport_activity_ms",
-                    "last_liquidation_ingestion_ms",
-                    "symbols",
-                    "reason_codes",
-                    "production_authority",
-                    "real_capital",
-                )
-            }
-        ),
+        coverage_identity=canonical_sha256(payload),
         instance_identity=str(payload["instance_identity"]),
         sequence_no=int(payload["sequence_no"]),
         state=LiquidationConnectionState(str(payload["state"])),
