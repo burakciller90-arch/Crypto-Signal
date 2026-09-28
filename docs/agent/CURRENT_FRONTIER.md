@@ -336,3 +336,88 @@ Current blocker:
 Exact nextAction:
 
 Inspect the workflows triggered for the exact branch head. If any focused test/type/runtime check fails, repair only that mechanical blocker; otherwise verify acceptance markers and live non-mutation output, re-check main/PR head, then merge #1650.
+
+
+## LIVE CLOSEOUT CHECKPOINT — 2026-09-28 — RDP10-F1 merge complete; canonical-main proof pending
+
+This checkpoint is written before F1 closeout documentation is finalized.
+
+- canonical main at closeout start: `218c11f433a1aaddc80afeccf79f6c17f9a8845f`
+- merged implementation PR: #1650
+- merge SHA: `218c11f433a1aaddc80afeccf79f6c17f9a8845f`
+- accepted branch head: `c86eb13f8a5a233d39b901aaa0d50016a2fe689b`
+- exact-head RDP10 run: `36473825587` / job `109102443442` SUCCESS with focused + live fail-closed + non-mutating acceptance
+- exact-head RDP6 cross-check: `36473830427` / job `109102454914` SUCCESS
+- closeout branch: `docs/rdp10-f1-completion`
+- session-local /Volumes worktree: NONE; UID504 workflows remain canonical SSD evidence
+- `REAL_CAPITAL=0`; `HISTORICAL_BACKFILL=NO`
+- Durdurulmaz touched: NO
+- Quantum Capital touched: NO
+
+Current blocker:
+
+- merged-main SSD504 Workbench bootstrap run `36474722859` has been created for exact merge SHA but has not yet been inspected to PASS;
+- F1 must not be marked closed until that exact-main Workbench output is verified.
+
+Exact nextAction:
+
+Inspect run `36474722859`; if exact-main/clean Workbench acceptance passes, finalize F1 as PASS, set the first mechanically unclosed frontier to RDP10-F2 On-chain/stablecoin exact proof cutover, update HANDOFF_LOG with exact merge/main/workflow evidence, and merge the docs-only closeout without changing F1 production semantics.
+
+
+## RDP10-F1 — PASS; first mechanically unclosed gate is RDP10-F2
+
+RDP10-F1 Options / volatility exact proof cutover is mechanically closed.
+
+Accepted implementation:
+- implementation PR: #1650
+- accepted branch head: `c86eb13f8a5a233d39b901aaa0d50016a2fe689b`
+- production squash merge / canonical main at F1 close: `218c11f433a1aaddc80afeccf79f6c17f9a8845f`
+
+Acceptance evidence:
+- RDP10 exact-head run `36473825587` / job `109102443442`: SUCCESS
+  - exact source + canonical checkout PASS
+  - focused pytest/Ruff/mypy/py_compile PASS
+  - `RDP10_FAIL_CLOSED_FOCUSED_PASS=YES`
+  - `RDP10_DERIVED_PROOF_STORE_PASS=YES`
+  - `RDP10_LIVE_MESSAGES_AUDITED=6`
+  - `RDP10_UNREGISTERED_READY_COUNT=0`
+  - `RDP10_LIVE_FAIL_CLOSED_PASS=YES`
+  - `RDP10_NON_MUTATING_PASS=YES`
+  - `HISTORICAL_BACKFILL=NO`
+  - `REAL_CAPITAL=0`
+- RDP6 exact-head cross-check run `36473830427` / job `109102454914`: SUCCESS
+  - exact Workbench baseline + PR source PASS
+  - Options family pytest/Ruff/mypy/py_compile PASS
+  - `RDP6_D_OPTIONS_DERIVATIVES_FAMILY_PASS=YES`
+  - `RDP5_WITHOUT_OPTIONS_BACKWARD_COMPATIBLE=YES`
+  - missing Options measurements-as-zero FORBIDDEN
+  - unsupported volatility-index/dealer-gamma/max-pain claims remain unavailable/forbidden
+  - `REAL_CAPITAL=0`
+- merged-main Agent Memory Bootstrap `36474722753` / job `109105421079`: SUCCESS on exact `218c11f...`
+- merged-main SSD504 Workbench Bootstrap `36474722859` / job `109105421512`: SUCCESS
+  - canonical Workbench `repo/main` clean before sync
+  - `WORKBENCH_REPO_SYNCED_TO_MAIN=YES`
+  - final `REPO_HEAD=218c11f433a1aaddc80afeccf79f6c17f9a8845f`
+  - `SSD504_WORKBENCH_PASS=YES`
+  - `REAL_CAPITAL=0`
+
+Accepted F1 semantics:
+- raw Options surface, instrument metadata and contract quote truth remain canonical/immutable in `OptionsSurfaceStore` and resolve read-only;
+- derived `options_volatility_freeze` persists in `FrozenProofStore`;
+- `options_surface` only reaches `READY_EXACT` with complete raw source lineage;
+- current live data is never substituted into historical proof;
+- no historical rewrite/backfill occurred.
+
+### First mechanically unclosed gate — RDP10-F2
+
+Bounded goal:
+- persist and resolve the strongest accepted exact On-chain / stablecoin proof already justified by RDP7;
+- expose full `StablecoinCapitalFlowEvidenceFreeze` and its exact source envelope/coverage/observation lineage;
+- keep exchange-flow, large-transfer, wallet-cohort and bridge rails explicitly unavailable where accepted provider truth does not exist;
+- do not infer direction from stablecoin supply.
+
+Current blocker:
+- F2 implementation has not started from the post-F1 canonical main; exact existing On-chain store/freeze/resolver surface must be audited first so duplicate persistence is not created.
+
+Exact nextAction:
+Create an isolated RDP10-F2 branch from exact canonical main after this docs closeout, write the mandatory task-start checkpoint before production changes, audit the existing RDP7 stablecoin source/freeze lineage and RDP10 resolver, then implement only the mechanically missing exact-proof cutover.
