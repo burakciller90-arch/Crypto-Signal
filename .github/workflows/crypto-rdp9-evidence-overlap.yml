@@ -20,7 +20,7 @@ permissions:
 jobs:
   focused:
     runs-on: [self-hosted, crypto-signal, uid504]
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
         with:
@@ -38,8 +38,8 @@ jobs:
           test -z "$(git -C "$WB" status --porcelain)"
           test "$(git -C "$WB" rev-parse HEAD)" = "${{ github.event.pull_request.base.sha }}"
           test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
-          echo "RDP9_A_WORKBENCH_BASELINE_PASS=YES"
-          echo "RDP9_A_EXACT_PR_SOURCE_PASS=YES"
+          echo "RDP9_B_WORKBENCH_BASELINE_PASS=YES"
+          echo "RDP9_B_EXACT_PR_SOURCE_PASS=YES"
 
       - name: Focused overlap and decision-lineage acceptance
         shell: bash
@@ -70,8 +70,28 @@ jobs:
             src/crypto_signal/intelligence/confluence_matrix_v2.py \
             src/crypto_signal/intelligence/family_proof_adapters.py \
             src/crypto_signal/unified_decision_runtime.py
-          echo "RDP9_A_EXACT_OVERLAP_PASS=YES"
+          echo "RDP9_B_EXACT_OVERLAP_PASS=YES"
           echo "DUPLICATE_EVIDENCE_WEIGHT_INFLATION=BLOCKED"
           echo "UNIQUE_EVIDENCE_SCORE_REGRESSION=NONE"
           echo "OVERLAP_LINEAGE_IN_DECISION_PROOF=YES"
+          echo "REAL_CAPITAL=0"
+
+      - name: UID504 WC2 decision-runtime parity
+        shell: bash
+        run: |
+          set -euo pipefail
+          PY="/Volumes/Crypto-504/Crypto-Signal/Development/.venv/bin/python"
+          export PYTHONPATH="$GITHUB_WORKSPACE/src:$GITHUB_WORKSPACE"
+          "$PY" -m pytest -q \
+            tests/test_wc2_live_runtime_index.py \
+            tests/test_wc2_live_source_adapter.py \
+            tests/test_wc2_untouched_forward_journal.py \
+            tests/test_wc2_prepared_cycle.py \
+            tests/test_wc2_prepared_live_runtime.py \
+            tests/test_wc2_live_clock_wiring.py \
+            tests/test_wc2_collection_protocol.py \
+            tests/test_immutable_forecast_stream.py \
+            tests/test_unified_decision_runtime.py \
+            tests/test_decision_ledger.py
+          echo "RDP9_B_WC2_PARITY_PASS=YES"
           echo "REAL_CAPITAL=0"
