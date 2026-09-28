@@ -85,6 +85,26 @@ Repair:
 
 Exact nextAction: rerun the full RDP10 UID504 acceptance on the final retry-checkpoint head; do not merge unless the complete focused + live + non-mutating contract passes.
 
+### Retry checkpoint 2 — tests PASS, Ruff import grouping fixed
+
+Second failed run:
+
+- run `36466937115`
+- job `109079272480`
+- 27 focused tests PASS
+- canonical checkouts clean
+- Ruff alone failed with `I001 Import block is un-sorted or un-formatted`
+- live audit correctly skipped because focused gate failed
+- non-mutating cleanup PASS
+
+Repair:
+
+- `0513a6e9720a25ce34dbdebd17ed316ff94c382c`
+- only reorganizes the test import block exactly as Ruff requested
+- no production code or acceptance criterion changed
+
+Exact nextAction: run the full RDP10 UID504 contract again on the final head after this retry checkpoint; merge only if focused + live + non-mutating all PASS.
+
 
 This file is the replaceable current checkpoint. Conversation memory is non-authoritative.
 
