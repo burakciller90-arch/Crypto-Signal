@@ -365,7 +365,11 @@ jobs:
                   timeframe="1D",
                   limit=20,
               )
-              as_of_ms = time.time_ns() // 1_000_000
+              as_of_ms = max(
+                  time.time_ns() // 1_000_000,
+                  *(item.source_timestamp_ms for item in btc),
+                  *(item.ingested_at_ms for item in btc),
+              )
               vix = store.latest_observation_as_of(
                   series=CrossMarketSeries.CBOE_VIX_CLOSE,
                   as_of_ms=as_of_ms,
@@ -381,6 +385,15 @@ jobs:
                   (vix,),
                   (treasury,),
                   as_of_ms=as_of_ms,
+              )
+              print(
+                  "RDP8_FINAL_CROSS_MARKET_FREEZE_STATE "
+                  f"label={freeze.analysis.label.value} "
+                  f"flags={','.join(freeze.analysis.uncertainty_flags) or '-'} "
+                  f"btc_count={len(freeze.btc_candles)} "
+                  f"as_of_ms={as_of_ms} "
+                  f"max_btc_source_ms={max(item.source_timestamp_ms for item in btc)}",
+                  flush=True,
               )
               assert freeze.analysis.label is not CrossMarketLabel.UNRESOLVED
               assert freeze.analysis.metrics is not None
