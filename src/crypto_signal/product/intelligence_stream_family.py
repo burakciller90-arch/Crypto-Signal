@@ -1863,9 +1863,32 @@ def _family_customer_summary(
         return _order_flow_customer_summary(snapshot, change)
     if snapshot.family is ConfluenceFamily.DERIVATIVES:
         return _derivatives_customer_summary(snapshot)
+    if snapshot.family is ConfluenceFamily.ONCHAIN:
+        return _onchain_customer_summary(snapshot)
+    raise ValueError("unsupported Stream family narrative domain")
+
+
+def _onchain_customer_summary(snapshot: StreamFamilySnapshot) -> str:
+    components = _snapshot_components(snapshot)
+    status = components.get("onchain_status", snapshot.state_label)
+    if (
+        snapshot.source_quality.lower() == "unavailable"
+        or status == "unavailable"
+    ):
+        return (
+            "On-chain tarafında kabul edilmiş güncel canlı sermaye akışı "
+            "bağlamı yok; bu katmanı yön görüşüne eklemiyorum."
+        )
+    if status == "stablecoin_context_partial":
+        return (
+            "Stablecoin dolaşım arzı bağlamının bir bölümü canlı ve exact "
+            "kaynak zinciriyle ölçülüyor; bunu doğrudan yükseliş veya düşüş "
+            "sinyali saymıyorum."
+        )
     return (
-        "On-chain tarafında kullanıcıya yön gösterecek kabul edilmiş canlı kanıt "
-        "bulunmuyor; bu katmanı yön görüşüne eklemiyorum."
+        "USDT ve USDC dolaşım arzı bağlamı canlı ve exact kaynak zinciriyle "
+        "ölçülüyor; arz değişimini tek başına yükseliş veya düşüş sinyali "
+        "saymıyorum."
     )
 
 
