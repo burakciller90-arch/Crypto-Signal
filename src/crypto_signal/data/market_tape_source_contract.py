@@ -103,7 +103,8 @@ def persist_bybit_wire_source_contract(
     capabilities: BybitMarketTapeCapabilities,
     wire_event: BybitMicrostructureWireEvent,
     raw_event: RawMarketEvent,
-    orderbook_normalized_persisted: bool,
+    orderbook_normalized_identity: str | None,
+    trade_normalized_identities: tuple[str, ...],
     coverage_observed_at_ms: int | None = None,
 ) -> MarketTapeSourceContractWrite:
     _require_raw_wire_match(wire_event=wire_event, raw_event=raw_event)
@@ -120,12 +121,10 @@ def persist_bybit_wire_source_contract(
 
     envelopes: list[SourceEnvelope] = []
     if wire_event.orderbook is not None:
-        snapshot = wire_event.orderbook
-        normalized_identity = (
-            snapshot.snapshot_identity
-            if orderbook_normalized_persisted
-            else None
-        )
+        if trade_normalized_identities:
+            raise ValueError(
+                "orderbook source-contract event cannot carry trade identities"
+            )
         envelope = build_source_envelope(
             capability=capability,
             symbol=wire_event.symbol,
@@ -136,14 +135,26 @@ def persist_bybit_wire_source_contract(
             observed_at_ms=wire_event.ingested_at_ms,
             ingested_at_ms=coverage_time_ms,
             raw_identity=raw_event.event_identity,
-            normalized_identity=normalized_identity,
+            normalized_identity=orderbook_normalized_identity,
         )
         store.append_envelope(envelope)
         envelopes.append(envelope)
     else:
+        if orderbook_normalized_identity is not None:
+            raise ValueError(
+                "trade source-contract event cannot carry orderbook identity"
+            )
         if not wire_event.trades:
             raise ValueError("Bybit source-contract event has no normalized evidence")
-        for trade in wire_event.trades:
+        if len(trade_normalized_identities) != len(wire_event.trades):
+            raise ValueError(
+                "trade source-contract normalized identity count mismatch"
+            )
+        for trade, normalized_identity in zip(
+            wire_event.trades,
+            trade_normalized_identities,
+            strict=True,
+        ):
             if (
                 trade.symbol != wire_event.symbol
                 or trade.source_timestamp_ms != wire_event.source_timestamp_ms
@@ -162,7 +173,7 @@ def persist_bybit_wire_source_contract(
                 observed_at_ms=wire_event.ingested_at_ms,
                 ingested_at_ms=coverage_time_ms,
                 raw_identity=raw_event.event_identity,
-                normalized_identity=trade.trade_identity,
+                normalized_identity=normalized_identity,
             )
             store.append_envelope(envelope)
             envelopes.append(envelope)
