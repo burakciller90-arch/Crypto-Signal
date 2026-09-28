@@ -46,8 +46,6 @@ class CandleSourceSnapshot:
                 raise ValueError("candle source snapshot timeframe mismatch")
 
 
-
-
 class MarketDataAdapter(Protocol):
     async def fetch_candles(
         self,
