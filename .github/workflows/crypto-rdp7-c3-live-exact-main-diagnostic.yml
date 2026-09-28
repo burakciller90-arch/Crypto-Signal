@@ -34,6 +34,27 @@ jobs:
           echo "RDP7_C3_LIVE_WORKBENCH_EXACT_MAIN_PASS=YES"
           echo "RDP7_C3_LIVE_DEVELOPMENT_EXACT_MAIN_PASS=YES"
 
+      - name: Inspect onchain scheduler state
+        shell: bash
+        run: |
+          set -u
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          DEV="$ROOT/Development"
+          LOGDIR="$ROOT/ServiceLogs"
+          echo "=== ONCHAIN RUNTIME DIRECTORY ==="
+          /bin/ls -la "$DEV/runtime/onchain" 2>&1 || true
+          echo "=== ONCHAIN RUNNER ==="
+          /bin/ls -l "$DEV/ops/run_onchain_capital_flow_snapshot.py" 2>&1 || true
+          echo "=== SUPERVISOR PROCESS ==="
+          /bin/ps -axo pid=,ppid=,etime=,command= | /usr/bin/grep -F "$ROOT/ssd-service-supervisor.sh" | /usr/bin/grep -v grep || true
+          echo "=== SUPERVISOR ONCHAIN LOG LINES ==="
+          /usr/bin/tail -n 240 "$LOGDIR/supervisor.log" 2>/dev/null | /usr/bin/grep -E "supervisor_r11_(start|stop)|onchain_snapshot" || true
+          echo "=== ONCHAIN STDOUT ==="
+          /usr/bin/tail -n 160 "$LOGDIR/onchain-snapshot.out.log" 2>/dev/null || true
+          echo "=== ONCHAIN STDERR ==="
+          /usr/bin/tail -n 160 "$LOGDIR/onchain-snapshot.err.log" 2>/dev/null || true
+          echo "REAL_CAPITAL=0"
+
       - name: Read-only stablecoin runtime lineage proof
         shell: bash
         run: |
