@@ -1,6 +1,6 @@
 # Crypto Signal Current Frontier
 
-Conversation memory is non-authoritative. Rebuild from this file, HANDOFF_LOG, canonical roadmap, and live Git/GitHub/runtime evidence.
+Conversation memory is non-authoritative. Rebuild from this file, HANDOFF_LOG, the canonical roadmap, and live Git/GitHub/runtime evidence.
 
 Checkpoint assembled: 2026-09-28
 Repository: `burakciller90-arch/Crypto-Signal`
@@ -46,23 +46,23 @@ Exact-main SSD504 Workbench verification:
 - **RDP10 ACTIVE**
 - RDP11 not yet closed
 
-## RDP10 accepted slices
+## RDP10 accepted backend slices
 
-- RDP10-A fail-closed domain resolution — PASS
-- RDP10-B strongest Geometry Proof resolution — PASS
-- RDP10-C immutable derived-proof store — PASS
-- RDP10-D1 Liquidity exact proof persistence/resolution — PASS
-- RDP10-D2 Order Flow exact proof persistence/resolution — PASS
-- RDP10-E1 Derivatives Context + Dynamics — PASS
+- RDP10-A — fail-closed unregistered derived domains — PASS
+- RDP10-B — strongest immutable Geometry Proof — PASS
+- RDP10-C — immutable derived-proof store foundation — PASS
+- RDP10-D1 — Liquidity exact proof persistence/resolution — PASS
+- RDP10-D2 — Order Flow exact proof persistence/resolution — PASS
+- RDP10-E1 — Derivatives Context + Dynamics exact proof persistence/resolution — PASS
 
-### RDP10-E2 — liquidation coverage / heatmap / crowding — PASS
+### RDP10-E2 — Liquidation coverage + Heatmap + Crowding — PASS
 
 - branch: `rdp10/liquidation-proof-e2`
 - PR #1648
 - accepted head: `7879814ce99ea8b97f35e4761ff32be41c443e0f`
 - merge SHA: `da8abd2d10a5bc157b6aad2ef37074d2732e103d`
-- final exact-head acceptance: run `36469778696` / job `109088902172`: SUCCESS
-- focused tests/Ruff/mypy/py_compile: PASS
+- final acceptance: run `36469778696` / job `109088902172`: SUCCESS
+- focused tests/Ruff/mypy/py_compile PASS
 - `RDP10_LIVE_MESSAGES_AUDITED=6`
 - `RDP10_UNREGISTERED_DOMAINS_OBSERVED=9`
 - `RDP10_UNREGISTERED_READY_COUNT=0`
@@ -70,66 +70,76 @@ Exact-main SSD504 Workbench verification:
 - `RDP10_NON_MUTATING_PASS=YES`
 - `HISTORICAL_BACKFILL=NO`
 - `REAL_CAPITAL=0`
-- raw liquidation observations and exact provider coverage resolve read-only from Market Tape
-- provider knowledge time remains `observed_at_ms`; coverage-end alone never becomes evidence availability
-- immutable observed Liquidation Heatmap and Derivatives Crowding proofs persist before Stream publication
-- zero-event claim remains allowed only under exact complete coverage
-- observed heatmap does not invent future leverage/risk zones
-- crowding binds exact Derivatives Dynamics + Heatmap parents
-- no current-data substitution or historical rewrite/backfill
+- raw liquidation observations resolve from immutable Market Tape
+- provider coverage exposes actual `observed_at_ms` knowledge time
+- exact historical Derivatives Dynamics parent is persisted when used by crowding
+- Liquidation Heatmap and Derivatives Crowding proofs persist before Stream publication
+- heatmap lineage binds exact provider coverage, mark reference and liquidation events
+- crowding lineage binds exact dynamics + heatmap parents
+- zero-event claims still require exact provider coverage
+- future leverage/risk-zone estimation remains explicitly unavailable
 
-RDP10-E is mechanically complete. RDP10 itself is **not PASS yet**.
+RDP10-E is mechanically complete.
 
-## First mechanically unclosed RDP10 slice
+## First mechanically unclosed RDP10 work
 
-**RDP10-F — Options + On-chain strongest exact proof cutover**
+Canonical RDP10 PASS still requires the strongest exact proof actually available for every accepted family.
 
-Canonical RDP10 PASS still requires the strongest exact proof actually available for the accepted provider-dependent rails.
+Audit after E2 shows:
 
-### Options / volatility
+### RDP10-F1 — Options / volatility exact proof cutover
 
-RDP6 is already PASS and belongs to the existing Derivatives family. RDP10-F must ensure:
+Existing RDP6 truth is already accepted and immutable, but the current RDP10 customer-proof resolver does not yet expose the full `OptionsVolatilityEvidenceFreeze`.
 
-- exact options surface and its source/provider timestamps are resolvable;
-- exact immutable options-volatility freeze is persisted before Stream publication;
-- ATM IV term structure, skew, OI/volume by expiry and expiry concentration come from the frozen proof;
-- unsupported dealer-gamma/max-pain claims remain explicitly unavailable;
-- Options never creates a new score family or direction.
+Required:
+- persist full exact Options Volatility freeze before Derivatives Stream publication;
+- include exact surface, metadata and quote lineage;
+- expose `options_surface` and `options_volatility` as exact proof domains;
+- preserve stale/not-evaluable states;
+- no max-pain/dealer-gamma invention and no direction authority.
 
-### On-chain / stablecoin capital flow
+### RDP10-F2 — On-chain / stablecoin exact proof cutover
 
-RDP7 is already PASS. RDP10-F must ensure:
+Existing RDP7 stablecoin capital-flow truth is accepted and PIT-frozen, but the current RDP10 customer-proof resolver does not yet expose the full `StablecoinCapitalFlowEvidenceFreeze`.
 
-- accepted real stablecoin-capital-flow source/freeze lineage resolves through the customer proof contract;
-- provider/source/coverage/PIT timestamps are visible;
-- no synthetic whale/institution identity is invented;
-- exchange-flow, large-transfer and wallet-cohort rails remain explicit unavailable where accepted provider truth does not exist;
-- On-chain remains the existing `ConfluenceFamily.ONCHAIN`, with no direction invented from context alone.
+Required:
+- persist each exact stablecoin rail freeze before On-chain Stream publication;
+- include exact stablecoin observations plus accepted source envelope/coverage lineage;
+- expose `onchain`, `stablecoin_capital_flow`, `stablecoin_supply` and exact source lineage;
+- keep exchange-flow, large-transfer, wallet-cohort and bridge rails explicit unavailable where real provider truth is absent;
+- no directional inference from stablecoin supply.
 
-### Already exact / re-audit only
+### RDP10-F3 — final contract closure audit
 
-- Event Risk/context source records are already exact-resolvable from Event Source runtime.
-- Provider divergence / data quality is already exact-resolvable and score-external.
-- Re-test these in final RDP10 acceptance; do not build duplicate proof stores unless current evidence disproves exactness.
+After F1/F2:
+- mechanically prove Geometry, Liquidity, Order Flow, Derivatives and On-chain each expose their strongest accepted exact proof;
+- mechanically prove Event Risk/context exact source records;
+- mechanically prove provider-divergence/data-quality exact source context;
+- prove historical evidence never substitutes current data;
+- only then mark RDP10 PASS.
 
-After RDP10-F acceptance, perform **RDP10-G final customer-proof/API acceptance** against all five score families + Event Risk/context + score-external data quality. Only then may RDP10 be marked PASS.
+## RDP11
+
+RDP11 requires a **minimum 72-hour UID504 engineering observation soak before final closure**.
+
+Do not fabricate this gate. After RDP10 PASS:
+- audit existing soak/continuity evidence to determine whether an already-running observation window legitimately satisfies all RDP11 requirements;
+- if not, RDP11 remains OPEN until the real minimum observation window exists.
 
 ## Mandatory checkpoint rule
 
-Before any new slice/sub-slice implementation:
-
-- verify exact main/open PRs/branches;
-- write a durable task-start checkpoint to this file on the active branch;
-- append the same handoff to `HANDOFF_LOG.md`;
-- record exact main, branch/worktree, duplicate guard, safety state, bounded goal, blocker and exactly one nextAction.
-
-For long slices, checkpoint implementation -> acceptance and acceptance -> merge.
+Before any new resumable slice:
+- re-check exact main/open PRs/branches;
+- write task-start checkpoint to this file on the active branch before production code;
+- append matching HANDOFF_LOG entry;
+- include exact main, branch/worktree, duplicate guard, safety state, bounded goal, blocker, and exactly one nextAction.
+For long slices, also checkpoint implementation -> acceptance and acceptance -> merge.
 
 ## Stale / duplicate guard
 
 Open PR #1478 (`ED1: resolve exact family payloads for human proof`) remains stale frontend-first work. Do not merge/revive blindly.
 
-Parallel agents may move `main`; re-check immediately before implementation and merge.
+Parallel agents may advance `main`; always re-check immediately before implementation and merge.
 
 ## Safety
 
