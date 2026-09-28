@@ -112,6 +112,9 @@ DEFAULT_STREAM_LEDGER_PATH = (
     / "stream"
     / "intelligence_stream.sqlite3"
 )
+DEFAULT_FROZEN_PROOF_STORE_PATH = DEFAULT_STREAM_LEDGER_PATH.with_name(
+    "frozen_proofs.sqlite3"
+)
 DEFAULT_CANDLE_CACHE_PATH = (
     Path("/Users/crypto-signal-agent/Crypto-Signal")
     / "runtime"
@@ -221,6 +224,7 @@ def create_app(
     event_source_runtime_path: Path | None = None,
     wc2_cohort_path: Path | None = None,
     stream_ledger_path: Path | None = None,
+    frozen_proof_store_path: Path | None = None,
     product_root: str | None = None,
 ) -> FastAPI:
     selected_path = ledger_path or Path(
@@ -310,6 +314,26 @@ def create_app(
         )
     else:
         selected_stream_path = None
+
+    if frozen_proof_store_path is not None:
+        selected_frozen_proof_store_path: Path | None = (
+            frozen_proof_store_path
+        )
+    elif stream_ledger_path is not None:
+        selected_frozen_proof_store_path = stream_ledger_path.with_name(
+            "frozen_proofs.sqlite3"
+        )
+    elif ledger_path is None:
+        frozen_proof_env = os.environ.get(
+            "CRYPTO_SIGNAL_FROZEN_PROOF_STORE_PATH"
+        )
+        selected_frozen_proof_store_path = (
+            Path(frozen_proof_env)
+            if frozen_proof_env
+            else DEFAULT_FROZEN_PROOF_STORE_PATH
+        )
+    else:
+        selected_frozen_proof_store_path = None
 
     if shadow_intent_journal_path is not None:
         selected_shadow_intent_path: Path | None = shadow_intent_journal_path
@@ -460,6 +484,7 @@ def create_app(
     app.state.cold_archive_path = selected_cold_archive_path
     app.state.provider_divergence_path = selected_provider_divergence_path
     app.state.event_source_runtime_path = selected_event_source_runtime_path
+    app.state.frozen_proof_store_path = selected_frozen_proof_store_path
     app.state.wc2_cohort_path = selected_wc2_cohort_path
     app.state.product_root = selected_product_root
     app.state.reader = reader
@@ -927,6 +952,7 @@ def create_app(
                 market_tape_path=selected_market_tape_path,
                 event_source_runtime_path=selected_event_source_runtime_path,
                 provider_divergence_path=selected_provider_divergence_path,
+                frozen_proof_store_path=selected_frozen_proof_store_path,
             ).read_for_narrative(narrative_identity)
         except StreamExactEvidenceError as exc:
             raise HTTPException(status_code=500, detail=str(exc)) from exc
@@ -995,6 +1021,7 @@ def create_app(
                 market_tape_path=selected_market_tape_path,
                 event_source_runtime_path=selected_event_source_runtime_path,
                 provider_divergence_path=selected_provider_divergence_path,
+                frozen_proof_store_path=selected_frozen_proof_store_path,
             ).read_reference(
                 narrative_identity=narrative_identity,
                 evidence_identity=evidence_identity,
