@@ -7,7 +7,11 @@ from crypto_signal.data.derivatives import (
     DerivativesInstrumentType,
     DerivativesObservation,
 )
-from crypto_signal.data.liquidations import LiquidatedPositionSide
+from crypto_signal.data.liquidations import (
+    LiquidatedPositionSide,
+    LiquidationFeedCoverage,
+    LiquidationObservation,
+)
 from crypto_signal.data.market_tape import MarketTapeStore
 from crypto_signal.data.microstructure import (
     OrderBookSnapshot,
@@ -23,6 +27,7 @@ from crypto_signal.intelligence.derivatives_context import (
     build_derivatives_context_evidence_freeze,
 )
 from crypto_signal.intelligence.derivatives_crowding import (
+    DerivativesCrowdingEvidenceFreeze,
     build_derivatives_crowding_evidence_freeze,
 )
 from crypto_signal.intelligence.derivatives_dynamics import (
@@ -32,6 +37,7 @@ from crypto_signal.intelligence.derivatives_dynamics import (
 )
 from crypto_signal.intelligence.liquidation_heatmap import (
     DEFAULT_LIQUIDATION_HEATMAP_CONFIG,
+    LiquidationHeatmapEvidenceFreeze,
     build_liquidation_heatmap_evidence_freeze,
 )
 from crypto_signal.intelligence.liquidity_dynamics import (
@@ -1123,6 +1129,13 @@ def build_market_tape_family_snapshots(
                             heatmap_freeze,
                         )
                     )
+                    if frozen_proof_store is not None:
+                        _persist_liquidation_proofs(
+                            frozen_proof_store,
+                            dynamics=historical_dynamics,
+                            heatmap=heatmap_freeze,
+                            crowding=crowding_freeze,
+                        )
                     crowding_analysis = crowding_freeze.analysis
                     liquidation_status = heatmap_analysis.status.value
                     crowding_label = crowding_analysis.label.value
@@ -2107,6 +2120,17 @@ def _persist_derivatives_core_proofs(
         )
     )
 
+    _persist_derivatives_dynamics_proof(store, dynamics)
+
+
+def _persist_derivatives_dynamics_proof(
+    store: FrozenProofStore,
+    dynamics: DerivativesDynamicsEvidenceFreeze,
+) -> None:
+    provider = (
+        f"{dynamics.analysis.exchange.value}:"
+        f"{dynamics.analysis.instrument_type.value}:market_tape"
+    )
     dynamics_sources = tuple(
         sorted(item.observation_identity for item in dynamics.observations)
     )
@@ -2117,7 +2141,7 @@ def _persist_derivatives_core_proofs(
             object_kind="derivatives_dynamics_freeze",
             family=ConfluenceFamily.DERIVATIVES.value,
             domains=("derivatives", "derivatives_dynamics"),
-            asset=asset,
+            asset=_base_asset(dynamics.analysis.symbol),
             symbol=dynamics.analysis.symbol,
             network=None,
             timeframe="15m",
@@ -2142,6 +2166,140 @@ def _persist_derivatives_core_proofs(
             production_authority=False,
             real_capital=0,
         )
+    )
+
+
+def _persist_liquidation_proofs(
+    store: FrozenProofStore,
+    *,
+    dynamics: DerivativesDynamicsEvidenceFreeze,
+    heatmap: LiquidationHeatmapEvidenceFreeze,
+    crowding: DerivativesCrowdingEvidenceFreeze,
+) -> None:
+    if (
+        crowding.derivatives_freeze.freeze_identity != dynamics.freeze_identity
+        or crowding.liquidation_freeze.freeze_identity != heatmap.freeze_identity
+    ):
+        raise ValueError(
+            "Stream liquidation proof dependency identity mismatch"
+        )
+    _persist_derivatives_dynamics_proof(store, dynamics)
+
+    heatmap_analysis = heatmap.analysis
+    provider = (
+        f"{heatmap.coverage.exchange.value}:"
+        f"{heatmap.coverage.instrument_type.value}:market_tape_liquidations"
+    )
+    heatmap_sources = tuple(
+        sorted(
+            {
+                heatmap.coverage.coverage_identity,
+                heatmap.mark_reference.observation_identity,
+                *(item.liquidation_identity for item in heatmap.events),
+            }
+        )
+    )
+    heatmap_available_at = _liquidation_heatmap_available_at(heatmap)
+    store.append(
+        FrozenProofObject(
+            object_identity=heatmap.freeze_identity,
+            analysis_identity=heatmap_analysis.evidence_identity,
+            object_kind="liquidation_heatmap_freeze",
+            family=ConfluenceFamily.DERIVATIVES.value,
+            domains=(
+                "derivatives",
+                "liquidation_event_coverage",
+                "observed_liquidation_heatmap",
+            ),
+            asset=_base_asset(heatmap_analysis.symbol),
+            symbol=heatmap_analysis.symbol,
+            network=None,
+            timeframe="15m",
+            as_of_ms=heatmap_analysis.as_of_ms,
+            market_available_at_ms=heatmap_available_at,
+            observed_at_ms=heatmap_available_at,
+            source_provider=provider,
+            source_quality=heatmap_analysis.source_quality.value,
+            freshness_state="exact_pit_bounded",
+            freshness_age_ms=heatmap_analysis.latest_mark_age_ms,
+            uncertainty_flags=tuple(
+                sorted(heatmap_analysis.uncertainty_flags)
+            ),
+            source_object_identities=heatmap_sources,
+            depends_on_evidence_identities=(),
+            payload_json=canonical_json(heatmap_analysis),
+            visualization_json=canonical_json(heatmap_analysis),
+            renderer_contract_version="liquidation-heatmap-observed-bins-v1/1",
+            persisted_at_ms=heatmap_analysis.as_of_ms,
+            production_authority=False,
+            real_capital=0,
+        )
+    )
+
+    crowding_analysis = crowding.analysis
+    crowding_dependencies = tuple(
+        sorted(
+            (
+                dynamics.freeze_identity,
+                dynamics.analysis.evidence_identity,
+                heatmap.freeze_identity,
+                heatmap.analysis.evidence_identity,
+            )
+        )
+    )
+    store.append(
+        FrozenProofObject(
+            object_identity=crowding.freeze_identity,
+            analysis_identity=crowding_analysis.evidence_identity,
+            object_kind="derivatives_crowding_freeze",
+            family=ConfluenceFamily.DERIVATIVES.value,
+            domains=("derivatives", "derivatives_crowding"),
+            asset=_base_asset(crowding_analysis.symbol),
+            symbol=crowding_analysis.symbol,
+            network=None,
+            timeframe="15m",
+            as_of_ms=crowding_analysis.as_of_ms,
+            market_available_at_ms=max(
+                crowding_analysis.observed_at_ms,
+                heatmap_available_at,
+                _derivatives_available_at(dynamics.observations),
+            ),
+            observed_at_ms=crowding_analysis.observed_at_ms,
+            source_provider=provider,
+            source_quality=crowding_analysis.status.value,
+            freshness_state="exact_pit_bounded",
+            freshness_age_ms=None,
+            uncertainty_flags=tuple(
+                sorted(crowding_analysis.uncertainty_flags)
+            ),
+            source_object_identities=(),
+            depends_on_evidence_identities=crowding_dependencies,
+            payload_json=canonical_json(crowding_analysis),
+            visualization_json=canonical_json(crowding_analysis),
+            renderer_contract_version="derivatives-crowding-context-v1/1",
+            persisted_at_ms=crowding_analysis.as_of_ms,
+            production_authority=False,
+            real_capital=0,
+        )
+    )
+
+
+def _liquidation_heatmap_available_at(
+    heatmap: LiquidationHeatmapEvidenceFreeze,
+) -> int:
+    return max(
+        heatmap.coverage.observed_at_ms,
+        heatmap.mark_reference.event_at_ms,
+        heatmap.mark_reference.source_timestamp_ms,
+        heatmap.mark_reference.ingested_at_ms,
+        *(
+            max(
+                item.event_at_ms,
+                item.source_timestamp_ms,
+                item.ingested_at_ms,
+            )
+            for item in heatmap.events
+        ),
     )
 
 
