@@ -115,40 +115,46 @@ def build_bybit_rest_market_tape_capabilities(
             "Bybit REST source-contract symbols must be uppercase"
         )
 
-    common = {
-        "provider": "bybit",
-        "source": REST_SNAPSHOT_SOURCE,
-        "transport": SourceTransport.REST,
-        "symbols": canonical_symbols,
-    }
     return BybitRestMarketTapeCapabilities(
         orderbook=build_source_capability(
-            **common,
+            provider="bybit",
+            source=REST_SNAPSHOT_SOURCE,
             channel=REST_ORDERBOOK_CHANNEL,
+            transport=SourceTransport.REST,
             sequence_semantics=SourceSequenceSemantics.PROVIDER_UPDATE_ID,
             supports_provider_event_id=True,
             freshness_budget_ms=REST_MICROSTRUCTURE_FRESHNESS_BUDGET_MS,
+            symbols=canonical_symbols,
         ),
         recent_trade=build_source_capability(
-            **common,
+            provider="bybit",
+            source=REST_SNAPSHOT_SOURCE,
             channel=REST_RECENT_TRADE_CHANNEL,
+            transport=SourceTransport.REST,
             sequence_semantics=SourceSequenceSemantics.PROVIDER_EVENT_ID,
             supports_provider_event_id=True,
             freshness_budget_ms=REST_MICROSTRUCTURE_FRESHNESS_BUDGET_MS,
+            symbols=canonical_symbols,
         ),
         open_interest=build_source_capability(
-            **common,
+            provider="bybit",
+            source=REST_SNAPSHOT_SOURCE,
             channel=REST_OPEN_INTEREST_CHANNEL,
+            transport=SourceTransport.REST,
             sequence_semantics=SourceSequenceSemantics.NONE,
             supports_provider_event_id=False,
             freshness_budget_ms=REST_DERIVATIVES_FRESHNESS_BUDGET_MS,
+            symbols=canonical_symbols,
         ),
         ticker=build_source_capability(
-            **common,
+            provider="bybit",
+            source=REST_SNAPSHOT_SOURCE,
             channel=REST_TICKER_CHANNEL,
+            transport=SourceTransport.REST,
             sequence_semantics=SourceSequenceSemantics.NONE,
             supports_provider_event_id=False,
             freshness_budget_ms=REST_DERIVATIVES_FRESHNESS_BUDGET_MS,
+            symbols=canonical_symbols,
         ),
     )
 
