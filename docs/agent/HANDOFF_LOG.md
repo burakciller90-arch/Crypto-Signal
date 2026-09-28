@@ -399,3 +399,31 @@ blocker:
 nextAction:
 - inspect the exact-head RDP10 Frozen Proof Contract UID504 run; if PASS, re-check current main/open PRs and merge E1; if FAIL, repair only the demonstrated acceptance issue and checkpoint before retry.
 
+---
+
+## 2026-09-28 — RDP10-E1 acceptance retry checkpoint
+
+status: ACCEPTANCE_RETRY_PENDING
+canonicalMain: 12aa063aad1fa93ccea6185bc7480539c88abf6b
+branch: rdp10/derivatives-proof-e1
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+failedRun:
+- run 36466632195 / job 109078756884.
+- canonical checkout verification PASS.
+- focused gate failed only at test_derivatives_core_proofs_resolve_exact_from_frozen_store.
+- exact failure: canonical Decimal JSON emitted "0.1"; test incorrectly expected "0.10".
+- live audit skipped because focused gate failed.
+- non-mutating cleanup still PASS.
+
+repair:
+- commit 39796c88bf0b484fb4c494214150709069fe5f81.
+- only changes the incorrect test literal to canonical "0.1".
+- no production code or acceptance criterion weakened.
+
+nextAction:
+- run full exact-head RDP10 UID504 acceptance again and inspect focused, live fail-closed, non-mutating, HISTORICAL_BACKFILL=NO and REAL_CAPITAL=0 outputs before any PR/merge.
+
