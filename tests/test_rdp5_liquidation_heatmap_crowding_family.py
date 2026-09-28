@@ -53,7 +53,7 @@ def _seed_derivatives(store: MarketTapeStore) -> None:
         (AS_OF_MS - 180_000, "0.00010", "100", "100.00"),
         (AS_OF_MS - 120_000, "0.00011", "100.2", "100.02"),
         (AS_OF_MS - 60_000, "0.00009", "100.1", "99.99"),
-        (AS_OF_MS - 10_000, "0.00010", "100.3", "100.01"),
+        (AS_OF_MS - 1_000, "0.00010", "100.3", "100.01"),
     )
     for event_at_ms, funding, oi, mark in rows:
         store.append_derivatives(
