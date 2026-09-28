@@ -52,7 +52,7 @@ def _candle(
         open_time_ms=open_time_ms,
         close_time_ms=open_time_ms + 899_999,
         open=Decimal(100),
-        high=Decimal(102),
+        high=Decimal(110),
         low=Decimal(99),
         close=Decimal(close),
         volume=Decimal(10),
