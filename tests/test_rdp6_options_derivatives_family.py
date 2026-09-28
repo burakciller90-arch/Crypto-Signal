@@ -20,6 +20,7 @@ from crypto_signal.data.options import (
 )
 from crypto_signal.data.options_surface_store import OptionsSurfaceStore
 from crypto_signal.intelligence.confluence_matrix_v2 import ConfluenceFamily
+from crypto_signal.product.frozen_proof_store import FrozenProofStore
 from crypto_signal.product.intelligence_stream_family_sources import (
     build_market_tape_family_snapshots,
 )
@@ -186,12 +187,14 @@ def _derivatives_snapshot(
     *,
     symbol: str,
     options_path: Path | None = None,
+    proof_path: Path | None = None,
 ):
     snapshots = build_market_tape_family_snapshots(
         market_path,
         symbols=(symbol,),
         as_of_ms=AS_OF_MS,
         options_surface_path=options_path,
+        frozen_proof_store_path=proof_path,
     )
     return next(
         item
@@ -244,10 +247,12 @@ def test_configured_missing_options_surface_is_explicitly_unavailable(
     _seed_derivatives(market_path, symbol=BTC_SYMBOL)
 
     baseline = _derivatives_snapshot(market_path, symbol=BTC_SYMBOL)
+    proof_path = tmp_path / "frozen_proofs.sqlite3"
     snapshot = _derivatives_snapshot(
         market_path,
         symbol=BTC_SYMBOL,
         options_path=options_path,
+        proof_path=proof_path,
     )
     components = _components(snapshot)
 
@@ -295,6 +300,37 @@ def test_fresh_btc_options_enrich_existing_derivatives_family(
     )
     assert "dealer_gamma_position_not_inferred" in snapshot.uncertainty_flags
     assert "max_pain_not_estimated" in snapshot.uncertainty_flags
+
+    surface_identity = next(
+        identity
+        for identity in snapshot.evidence_identities
+        if (
+            FrozenProofStore(proof_path).read_exact(identity) is not None
+            and FrozenProofStore(proof_path).read_exact(identity).object_kind
+            == "options_surface_snapshot"
+        )
+    )
+    proof_store = FrozenProofStore(proof_path)
+    surface_proof = proof_store.read_exact(surface_identity)
+    assert surface_proof is not None
+    volatility_proof = next(
+        proof_store.read_exact(identity)
+        for identity in snapshot.evidence_identities
+        if (
+            proof_store.read_exact(identity) is not None
+            and proof_store.read_exact(identity).object_kind
+            == "options_volatility_freeze"
+        )
+    )
+    assert volatility_proof is not None
+    assert surface_proof.object_kind == "options_surface_snapshot"
+    assert volatility_proof.object_kind == "options_volatility_freeze"
+    assert surface_proof.market_available_at_ms == surface_proof.as_of_ms
+    assert surface_proof.source_object_identities
+    assert surface_identity in volatility_proof.depends_on_evidence_identities
+    assert volatility_proof.analysis_identity is not None
+    assert volatility_proof.production_authority is False
+    assert volatility_proof.real_capital == 0
 
 
 def test_stale_options_surface_fails_closed_inside_derivatives_family(
