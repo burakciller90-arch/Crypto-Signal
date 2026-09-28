@@ -259,21 +259,244 @@ jobs:
           echo "RDP7_G_STALE_GAP_PIT_FAIL_CLOSED_REGRESSION_PASS=YES"
           echo "REAL_CAPITAL=0"
 
-      - name: Verify supervisor remains active
+      - name: Restart canonical R11 supervisor from exact-main Development
         shell: bash
         run: |
           set -euo pipefail
           ROOT="/Volumes/Crypto-504/Crypto-Signal"
-          SUP="$ROOT/ssd-service-supervisor.sh"
-          alive_pid=""
-          for _ in 1 2 3 4 5; do
-            pid="$(ps -axo pid=,command= | awk -v needle="$SUP" 'index($0, needle) > 0 && first == "" {first=$1} END {if (first != "") print first}')"
-            if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
-              alive_pid="$pid"
+          DEV="$ROOT/Development"
+          PY="$DEV/.venv/bin/python"
+          LOCAL_ROOT="$HOME/Library/Application Support/CryptoSignalRuntime"
+          START="$LOCAL_ROOT/start-ssd-runtime.command"
+          test "$(id -u)" = "504"
+          test "$(git -C "$DEV" branch --show-current)" = "main"
+          test "$(git -C "$DEV" rev-parse HEAD)" = "${{ github.event.pull_request.base.sha }}"
+          test -z "$(git -C "$DEV" status --porcelain)"
+
+          restart_at_ms="$("$PY" -c 'import time; print(time.time_ns() // 1_000_000)')"
+          old_sup="$(ps -axo pid=,comm=,args= | awk -v needle="$ROOT/ssd-service-supervisor.sh" '($2 == "bash" || $2 == "/bin/bash") && index($0, needle) > 0 {print $1; exit}')"
+          echo "RDP7_G_OLD_SUPERVISOR_PID=${old_sup:-NONE}"
+
+          bash "$DEV/ops/r11/install_runtime_watchdog.sh"
+
+          new_sup=""
+          for _ in {1..60}; do
+            new_sup="$(ps -axo pid=,comm=,args= | awk -v needle="$ROOT/ssd-service-supervisor.sh" '($2 == "bash" || $2 == "/bin/bash") && index($0, needle) > 0 {print $1; exit}')"
+            if [ -n "$new_sup" ] && kill -0 "$new_sup" >/dev/null 2>&1; then
               break
             fi
             sleep 1
           done
-          test -n "$alive_pid"
-          echo "RDP7_G_SUPERVISOR_ALIVE_PASS=YES pid=$alive_pid"
+          test -n "$new_sup"
+          if [ -n "$old_sup" ]; then
+            test "$new_sup" != "$old_sup"
+          fi
+
+          ready=0
+          for _ in {1..60}; do
+            if curl -fsS --max-time 3 http://127.0.0.1:48700/api/health > /tmp/rdp7-g-health.json 2>/dev/null; then
+              ready=1
+              break
+            fi
+            sleep 1
+          done
+          test "$ready" = "1"
+          "$PY" - <<'PY'
+          import json
+          from pathlib import Path
+          payload = json.loads(Path('/tmp/rdp7-g-health.json').read_text())
+          assert payload['status'] == 'ok'
+          assert payload['read_only'] is True
+          assert int(payload['real_capital']) == 0
+          PY
+
+          fresh=0
+          for _ in {1..90}; do
+            if "$PY" - <<'PY'
+          import sqlite3
+          import time
+          from pathlib import Path
+          path = Path('/Volumes/Crypto-504/Crypto-Signal/Development/runtime/market_tape/collector_runtime.sqlite3')
+          if not path.is_file():
+              raise SystemExit(1)
+          with sqlite3.connect(f'file:{path}?mode=ro', uri=True) as db:
+              row = db.execute(
+                  'SELECT last_successful_ingestion_ms FROM collector_heartbeats '
+                  'WHERE last_successful_ingestion_ms IS NOT NULL '
+                  'ORDER BY observed_at_ms DESC LIMIT 1'
+              ).fetchone()
+          if row is None:
+              raise SystemExit(1)
+          age = (time.time_ns() // 1_000_000) - int(row[0])
+          print(f'RDP7_G_MARKET_TAPE_INGESTION_AGE_MS={age}')
+          raise SystemExit(0 if 0 <= age <= 120_000 else 1)
+          PY
+            then
+              fresh=1
+              break
+            fi
+            sleep 1
+          done
+          test "$fresh" = "1"
+
+          echo "RDP7_G_RESTART_AT_MS=$restart_at_ms" >> "$GITHUB_ENV"
+          echo "RDP7_G_SUPERVISOR_PID=$new_sup" >> "$GITHUB_ENV"
+          echo "RDP7_G_R11_SUPERVISOR_RESTART_PASS=YES pid=$new_sup"
+          echo "RDP7_G_PRODUCT_HEALTH_PASS=YES"
+          echo "RDP7_G_MARKET_TAPE_FRESH_PASS=YES"
+          echo "REAL_CAPITAL=0"
+
+      - name: Verify canonical Stream persisted exact ONCHAIN projection
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
+          PY="$DEV/.venv/bin/python"
+          export PYTHONPATH="$DEV:$DEV/src"
+          export RDP7_STREAM="$DEV/runtime/stream/intelligence_stream.sqlite3"
+          export RDP7_ONCHAIN="$DEV/runtime/onchain/onchain_capital_flow.sqlite3"
+          export RDP7_SOURCE="$DEV/runtime/onchain/source_contract.sqlite3"
+
+          "$PY" - <<'PY'
+          from __future__ import annotations
+
+          import json
+          import os
+          import sqlite3
+          import time
+          from pathlib import Path
+
+          from crypto_signal.intelligence.confluence_matrix_v2 import ConfluenceFamily
+          from crypto_signal.product.intelligence_stream_onchain_family import (
+              build_onchain_family_snapshots,
+          )
+
+          stream_path = Path(os.environ['RDP7_STREAM'])
+          onchain_path = Path(os.environ['RDP7_ONCHAIN'])
+          source_path = Path(os.environ['RDP7_SOURCE'])
+          restart_at_ms = int(os.environ['RDP7_G_RESTART_AT_MS'])
+          deadline = time.monotonic() + 120
+          boundary = None
+          fact_payload = None
+          source_payload = None
+
+          while time.monotonic() < deadline:
+              if stream_path.is_file():
+                  try:
+                      with sqlite3.connect(
+                          f'{stream_path.resolve().as_uri()}?mode=ro',
+                          uri=True,
+                          timeout=5.0,
+                      ) as db:
+                          db.row_factory = sqlite3.Row
+                          db.execute('PRAGMA query_only=ON')
+                          assert db.execute('PRAGMA quick_check').fetchone()[0] == 'ok'
+                          boundary = db.execute(
+                              '''
+                              SELECT activation_identity, activated_at_ms, payload_json
+                              FROM stream_family_projection_boundaries
+                              WHERE projector_id='onchain_change'
+                              '''
+                          ).fetchone()
+                          rows = db.execute(
+                              '''
+                              SELECT fact_bundle_identity, source_event_identity,
+                                     event_at_ms, payload_json
+                              FROM stream_fact_bundles
+                              WHERE event_at_ms>=?
+                              ORDER BY event_at_ms DESC, fact_bundle_identity DESC
+                              LIMIT 100
+                              ''',
+                              (restart_at_ms,),
+                          ).fetchall()
+                          for row in rows:
+                              payload = json.loads(str(row['payload_json']))
+                              if payload.get('projector_id') != 'onchain_change':
+                                  continue
+                              fact_payload = payload
+                              source_row = db.execute(
+                                  '''
+                                  SELECT payload_json
+                                  FROM stream_source_events
+                                  WHERE source_event_identity=?
+                                  ORDER BY event_at_ms DESC, stream_event_identity DESC
+                                  LIMIT 1
+                                  ''',
+                                  (str(row['source_event_identity']),),
+                              ).fetchone()
+                              if source_row is not None:
+                                  source_payload = json.loads(str(source_row['payload_json']))
+                              break
+                  except sqlite3.Error:
+                      boundary = None
+                      fact_payload = None
+                      source_payload = None
+              if (
+                  boundary is not None
+                  and fact_payload is not None
+                  and source_payload is not None
+                  and int(boundary['activated_at_ms']) >= restart_at_ms
+              ):
+                  break
+              time.sleep(2)
+
+          assert boundary is not None, 'missing onchain_change activation boundary'
+          assert int(boundary['activated_at_ms']) >= restart_at_ms, (
+              int(boundary['activated_at_ms']),
+              restart_at_ms,
+          )
+          assert fact_payload is not None, 'missing post-restart onchain family fact'
+          assert source_payload is not None, 'missing post-restart onchain source event'
+          assert fact_payload['family'] == ConfluenceFamily.ONCHAIN.value
+          assert fact_payload['projector_id'] == 'onchain_change'
+          assert fact_payload['direction'] is None
+          assert fact_payload['production_authority'] is False
+          assert fact_payload['read_only'] is True
+          assert int(fact_payload['real_capital']) == 0
+          assert source_payload['production_authority'] is False
+          assert source_payload['read_only'] is True
+          assert int(source_payload['real_capital']) == 0
+
+          as_of_ms = int(fact_payload['source_as_of_ms'])
+          symbol = str(fact_payload['symbol'])
+          recomputed = build_onchain_family_snapshots(
+              onchain_path,
+              source_path,
+              symbols=(symbol,),
+              as_of_ms=as_of_ms,
+          )
+          assert len(recomputed) == 1
+          snapshot = recomputed[0]
+          assert snapshot.source_event_identity == fact_payload['source_event_identity']
+          assert tuple(fact_payload['evidence_identities']) == snapshot.evidence_identities
+          assert tuple(source_payload['evidence_identities']) == snapshot.evidence_identities
+          assert snapshot.family is ConfluenceFamily.ONCHAIN
+          assert snapshot.direction is None
+          assert snapshot.source_quality in {'measured', 'partial'}
+
+          components = {item.name: item.value for item in snapshot.state_components}
+          assert components['exchange_flow_status'] == 'unavailable'
+          assert components['large_transfer_status'] == 'unavailable'
+          assert components['wallet_cohort_status'] == 'unavailable'
+          assert components['stablecoin_bridge_status'] == 'unavailable'
+
+          print(
+              'RDP7_G_STREAM_ONCHAIN_PERSISTENCE_PASS '
+              f"symbol={symbol} activation={boundary['activation_identity']} "
+              f"activated_at_ms={boundary['activated_at_ms']} "
+              f"source={snapshot.source_event_identity} "
+              f"evidence_count={len(snapshot.evidence_identities)}",
+              flush=True,
+          )
+          print('RDP7_G_RUNTIME_EXACT_FAMILY_RECOMPUTE_PASS=YES', flush=True)
+          print('RDP7_G_SUPERVISOR_WIRING_LOADED_PASS=YES', flush=True)
+          print('RDP10_EXACT_PROOF_LINEAGE=RESOLVABLE', flush=True)
+          print('STABLECOIN_DIRECTION=NONE', flush=True)
+          print('REAL_CAPITAL=0', flush=True)
+          PY
+
+          grep -F "stream_onchain status=SUMMARY" \
+            "/Volumes/Crypto-504/Crypto-Signal/ServiceLogs/live.out.log" \
+            | tail -1
+          echo "RDP7_G_EXACT_MAIN_RUNTIME_PASS=YES"
           echo "REAL_CAPITAL=0"
