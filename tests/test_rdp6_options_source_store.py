@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import asyncio
 import json
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable
 
 import httpx
 import pytest
