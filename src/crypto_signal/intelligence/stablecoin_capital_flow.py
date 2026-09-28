@@ -261,16 +261,16 @@ def build_stablecoin_capital_flow_evidence_freeze(
         )
 
     previous = window[-2] if len(window) >= 2 else None
-    delta = (
-        None
-        if previous is None
-        else latest.circulating_amount - previous.circulating_amount
-    )
-    delta_ratio = (
-        None
-        if previous is None or previous.circulating_amount == Decimal(0)
-        else delta / previous.circulating_amount
-    )
+    if previous is None:
+        delta: Decimal | None = None
+        delta_ratio: Decimal | None = None
+    else:
+        delta = latest.circulating_amount - previous.circulating_amount
+        delta_ratio = (
+            None
+            if previous.circulating_amount == Decimal(0)
+            else delta / previous.circulating_amount
+        )
     flags = list(boundary_flags)
     if previous is None:
         flags.append("stablecoin_supply_history_insufficient_for_delta")
