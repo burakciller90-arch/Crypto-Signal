@@ -1,0 +1,134 @@
+name: RDP9 Cross-Venue Quality UID504
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/crypto_signal/intelligence/cross_venue_quality.py"
+      - "tests/test_rdp9_cross_venue_quality.py"
+      - ".github/workflows/crypto-rdp9-cross-venue-quality.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  focused:
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          clean: true
+          fetch-depth: 1
+
+      - name: Verify exact Workbench baseline and PR source
+        shell: bash
+        run: |
+          set -euo pipefail
+          WB="/Volumes/Crypto-504/Crypto-Signal-Workbench/repo"
+          test "$(id -u)" = "504"
+          test "$(git -C "$WB" branch --show-current)" = "main"
+          test -z "$(git -C "$WB" status --porcelain)"
+          test "$(git -C "$WB" rev-parse HEAD)" = "${{ github.event.pull_request.base.sha }}"
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+          echo "RDP9_A_WORKBENCH_BASELINE_PASS=YES"
+          echo "RDP9_A_EXACT_PR_SOURCE_PASS=YES"
+
+      - name: Focused cross-venue quality acceptance
+        shell: bash
+        run: |
+          set -euo pipefail
+          PY="/Volumes/Crypto-504/Crypto-Signal/Development/.venv/bin/python"
+          export PYTHONPATH="$GITHUB_WORKSPACE/src:$GITHUB_WORKSPACE"
+          "$PY" -m pytest -q \
+            tests/test_rdp9_cross_venue_quality.py \
+            tests/test_provider_divergence.py \
+            tests/test_provider_divergence_runtime.py
+          "$PY" -m ruff check \
+            src/crypto_signal/intelligence/cross_venue_quality.py \
+            tests/test_rdp9_cross_venue_quality.py
+          "$PY" -m mypy \
+            src/crypto_signal/intelligence/cross_venue_quality.py
+          "$PY" -m py_compile \
+            src/crypto_signal/intelligence/cross_venue_quality.py \
+            tests/test_rdp9_cross_venue_quality.py
+          echo "RDP9_A_FOCUSED_PASS=YES"
+          echo "CROSS_VENUE_DIRECTIONAL_AUTHORITY=NO"
+          echo "CROSS_VENUE_SCORE_AUTHORITY=NO"
+          echo "REAL_CAPITAL=0"
+
+      - name: Read-only live provider-divergence classification
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
+          PY="$DEV/.venv/bin/python"
+          DB="$DEV/runtime/data/provider_divergence.sqlite3"
+          export PYTHONPATH="$GITHUB_WORKSPACE/src:$GITHUB_WORKSPACE"
+          export RDP9_DIVERGENCE_DB="$DB"
+          "$PY" - <<'PY'
+          from __future__ import annotations
+
+          import os
+          from pathlib import Path
+
+          from crypto_signal.data.models import MarketType
+          from crypto_signal.data.provider_divergence import (
+              ProviderDivergenceStore,
+          )
+          from crypto_signal.intelligence.cross_venue_quality import (
+              CrossVenueQualityState,
+              CrossVenueScope,
+              assess_cross_venue_quality,
+          )
+
+          path = Path(os.environ["RDP9_DIVERGENCE_DB"])
+          assert path.is_file(), path
+          store = ProviderDivergenceStore(path)
+          assert store.quick_check()
+
+          for symbol in ("BTCUSDT", "ETHUSDT", "SOLUSDT"):
+              snapshot = store.latest(
+                  market_type=MarketType.SPOT,
+                  symbol=symbol,
+                  timeframe="15m",
+              )
+              assert snapshot is not None, symbol
+              assessment = assess_cross_venue_quality(snapshot)
+              assert assessment.provider_divergence_identity == snapshot.snapshot_identity
+              assert assessment.directional_authority is False
+              assert assessment.score_authority is False
+              assert assessment.production_authority is False
+              assert assessment.real_capital == 0
+              assert set(assessment.source_evidence_identities) == (
+                  set(snapshot.left_source_evidence_identities)
+                  | set(snapshot.right_source_evidence_identities)
+              )
+              if (
+                  assessment.state
+                  is CrossVenueQualityState.MATERIAL_PRICE_DISAGREEMENT
+              ):
+                  assert assessment.scope is CrossVenueScope.VENUE_LOCAL
+                  assert assessment.material_conflict_identities
+              if assessment.scope is CrossVenueScope.BROAD_TWO_VENUE:
+                  assert (
+                      assessment.state
+                      is CrossVenueQualityState.TWO_VENUE_CONFIRMED
+                  )
+                  assert not assessment.material_conflict_identities
+              print(
+                  "RDP9_A_LIVE_CLASSIFICATION "
+                  f"symbol={symbol} "
+                  f"scope={assessment.scope.value} "
+                  f"state={assessment.state.value} "
+                  f"latest_abs_spread_bps={assessment.latest_absolute_spread_bps} "
+                  f"median_abs_spread_bps={assessment.median_absolute_spread_bps} "
+                  f"assessment={assessment.assessment_identity}",
+                  flush=True,
+              )
+
+          print("RDP9_A_LIVE_READ_ONLY_PASS=YES", flush=True)
+          print("PRODUCTION_RUNTIME_MUTATED=NO", flush=True)
+          print("REAL_CAPITAL=0", flush=True)
+          PY
