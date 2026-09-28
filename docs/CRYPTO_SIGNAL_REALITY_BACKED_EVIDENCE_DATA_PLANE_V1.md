@@ -590,28 +590,34 @@ PASS:
 
 ## RDP3 — Geometry production truth
 
-Status: **ACTIVE**
+Status: **PASS**
 
 Progress:
-- repo audit confirms DecisionFreezeBundle already freezes exact consumed gap-free candles, Price Action, Harmonic, Elliott, confluence selections/conflicts and SignalDecision geometry under one bundle SHA;
-- methodology no-candidate states are preserved as empty frozen candidate/match tuples rather than inferred later;
-- missing production layer is deterministic chart-proof/annotation output that is derived only from the frozen bundle and can be replayed without reading current candles or current methodology engines;
-- exact next frontier: **RDP3-A — frozen Geometry Proof contract + annotations for PA, Harmonic, Elliott and selected signal geometry.**
+- **RDP3-A frozen Geometry Proof ACCEPTED** on main `abf1dfdc64c8dc51fe49487129a17a6a2432d74f` via PR #1563;
+- UID504 `36385612839`: exact Workbench/source PASS, focused Geometry Proof acceptance PASS, Ruff PASS, mypy PASS, py_compile PASS, REAL_CAPITAL=0;
+- proof annotations for Price Action, Harmonic, Elliott and selected signal geometry are deterministic, SHA-addressed, consumed-candle scoped and derived only from immutable DecisionFreezeBundle data; current CandleStore/Market Tape/methodology-engine reads are forbidden;
+- exact selected-evidence lineage across frozen methodology results, confluence selections and SignalDecision is fail-closed;
+- **RDP3-B immutable Geometry Proof replay ACCEPTED** on main `656c19fc6f4a39634e0594c51d021c741c288750` via PR #1564;
+- UID504 `36386203825`: exact Workbench/source PASS, atomic replay/ledger acceptance PASS, Ruff PASS, mypy PASS, py_compile PASS, REAL_CAPITAL=0;
+- every new forward signal freeze atomically writes one immutable Geometry Proof in the same ledger transaction; proof rows are read-only replayable by signal or bundle and SQLite enforces the exact bundle+signal parent pair;
+- historical freezes are deliberately not proof-backfilled; forward-only truth is preserved;
+- clean Workbench bootstrap `36386287130` = exact `656c19fc6f4a39634e0594c51d021c741c288750`;
+- **RDP3 PASS**. Next: **RDP4-A — rich Liquidity Structure/Sweep + Temporal Order Flow live family wiring.**
 
 Goal:
 - make PA + Elliott + Harmonic jointly inspectable as Geometry.
-
-Work:
-- restore/prove candle continuity;
-- exact consumed candles;
-- freeze each methodology result, including no-candidate state;
-- preserve methodology conflicts;
-- generate exact geometry annotations from the frozen decision.
 
 PASS:
 - new forward signal can replay its exact Geometry evidence with no current-data substitution.
 
 ## RDP4 — Rich Liquidity + Order Flow live wiring
+
+Status: **ACTIVE**
+
+Progress:
+- existing live family path currently uses bounded Liquidity Dynamics and Order Flow Microstructure only;
+- richer PIT-safe freeze engines already exist for Liquidity Structure, Liquidity Sweep, Temporal Order Flow, price/CVD divergence and absorption;
+- exact next frontier: **RDP4-A — wire Liquidity Structure/Sweep and Temporal Order Flow into forward Market Tape family proof without changing score-family weights or making actor-intent claims; keep divergence/absorption for the next bounded dependency step.**
 
 Goal:
 - promote existing rich M2/M3 engines into the forward-only family path.

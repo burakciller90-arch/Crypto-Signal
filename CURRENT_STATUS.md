@@ -36,7 +36,14 @@ RDP2 — **PASS**:
 - Market Tape and Geometry candle rails now share canonical raw/normalized identity, timestamp, capability and coverage semantics; unsupported/deferred liquidation/on-chain/capital rails remain explicit instead of fabricated;
 - Workbench bootstrap `36384319438` advanced clean `repo/main` to exact `823dfe1df0dddcf24cc2f26e58a0301ed31702cd`.
 
-RDP3 — **ACTIVE**. Exact implementation frontier: **RDP3-A — deterministic frozen Geometry Proof contract/annotations generated only from immutable DecisionFreezeBundle data (consumed candles + Price Action + Harmonic + Elliott + confluence + selected signal geometry), with no current-data substitution.**
+RDP3 — **PASS**.
+- RDP3-A frozen Geometry Proof merged via PR #1563 as `abf1dfdc64c8dc51fe49487129a17a6a2432d74f`; UID504 run `36385612839` passed exact Workbench/source, focused proof tests, Ruff, mypy and py_compile with REAL_CAPITAL=0;
+- deterministic SHA-addressed PA/Harmonic/Elliott/signal annotations are derived only from immutable DecisionFreezeBundle truth; selected-evidence lineage drift and out-of-consumed-candle geometry fail closed;
+- RDP3-B immutable proof replay merged via PR #1564 as `656c19fc6f4a39634e0594c51d021c741c288750`; UID504 run `36386203825` passed exact Workbench/source, replay/ledger tests, Ruff, mypy and py_compile with REAL_CAPITAL=0;
+- every new forward signal freeze now persists its Geometry Proof atomically in the same immutable ledger transaction; SQLite enforces the exact bundle+signal parent pair, read-only replay is available by signal or bundle, and historical freezes are not backfilled;
+- Workbench bootstrap `36386287130` advanced clean `repo/main` to exact `656c19fc6f4a39634e0594c51d021c741c288750`.
+
+RDP4 — **ACTIVE**. Exact implementation frontier: **RDP4-A — promote existing rich Liquidity Structure/Sweep and Temporal Order Flow freezes into the forward-only Market Tape family path, preserving exact PIT lineage and candidate-only/no-actor-intent semantics; divergence/absorption follow in the next bounded step because they add candle/structure dependency overlap.**
 
 Locked execution sequence:
 `RDP1 runtime reliability → RDP2 source envelope/coverage → RDP3 Geometry → RDP4 rich Liquidity/Order Flow → RDP5 Derivatives/Liquidations → RDP6 BTC/ETH Options → RDP7 real On-chain/stablecoin capital flows → RDP8 Event/Cross-market → RDP9 cross-venue + overlap control → RDP10 frozen proof contract → RDP11 soak/acceptance → Paper Portfolio → new frontend`.
