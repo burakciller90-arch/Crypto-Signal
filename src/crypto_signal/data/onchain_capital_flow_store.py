@@ -865,7 +865,6 @@ def _stablecoin_supply_from_payload(
         ingested_at_ms=int(payload["ingested_at_ms"]),
         adapter_version=str(payload["adapter_version"]),
         raw_identity=str(payload["raw_identity"]),
-        source_envelope_identity=str(payload["source_envelope_identity"]),
     )
     if value.observation_identity != str(payload["observation_identity"]):
         raise ValueError("stored stablecoin supply identity mismatch")

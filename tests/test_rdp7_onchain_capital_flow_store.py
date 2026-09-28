@@ -50,7 +50,6 @@ def _stablecoin(
         ingested_at_ms=ingested_at_ms,
         adapter_version="rdp7-store-test/1",
         raw_identity=_sha("1"),
-        source_envelope_identity=_sha("2"),
     )
 
 
