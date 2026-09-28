@@ -24,6 +24,11 @@ from crypto_signal.data.market_tape_collector_runtime import (
     build_collector_heartbeat,
     build_collector_instance,
 )
+from crypto_signal.data.market_tape_source_contract import (
+    persist_bybit_wire_source_contract,
+    persist_open_gap_coverage,
+    register_bybit_market_tape_capabilities,
+)
 from crypto_signal.data.market_tape_wire_collection import (
     MarketTapeWireCollectionResult,
     persist_bybit_wire_stream,
@@ -33,6 +38,7 @@ from crypto_signal.data.raw_market_tape import (
     RawMarketEvent,
     RawMarketTapeStore,
 )
+from crypto_signal.data.source_contract import SourceContractStore
 
 DEFAULT_DB = Path(
     "/Volumes/Crypto-504/Crypto-Signal/Development/runtime/"
@@ -53,6 +59,10 @@ DEFAULT_RUNTIME_STATUS_DB = Path(
 DEFAULT_GAP_LEDGER_DB = Path(
     "/Volumes/Crypto-504/Crypto-Signal/Development/runtime/"
     "market_tape/market_data_gaps.sqlite3"
+)
+DEFAULT_SOURCE_CONTRACT_DB = Path(
+    "/Volumes/Crypto-504/Crypto-Signal/Development/runtime/"
+    "market_tape/source_contract.sqlite3"
 )
 DEFAULT_MAX_INGESTION_SILENCE_MS = 60_000
 DEFAULT_SYMBOLS = ("BTCUSDT", "ETHUSDT", "SOLUSDT")
@@ -142,6 +152,11 @@ def parse_args() -> argparse.Namespace:
         default=DEFAULT_GAP_LEDGER_DB,
     )
     parser.add_argument(
+        "--source-contract-db",
+        type=Path,
+        default=DEFAULT_SOURCE_CONTRACT_DB,
+    )
+    parser.add_argument(
         "--symbols",
         nargs="+",
         default=list(DEFAULT_SYMBOLS),
@@ -185,6 +200,7 @@ async def run(args: argparse.Namespace) -> int:
         ("raw_db", args.raw_db),
         ("runtime_status_db", args.runtime_status_db),
         ("gap_ledger_db", args.gap_ledger_db),
+        ("source_contract_db", args.source_contract_db),
     ):
         if not str(path).startswith("/Volumes/Crypto-504/"):
             print(
@@ -246,6 +262,12 @@ async def run(args: argparse.Namespace) -> int:
     store = MarketTapeStore(args.db)
     raw_store = RawMarketTapeStore(args.raw_db)
     runtime_store = MarketTapeCollectorRuntimeStore(args.runtime_status_db)
+    source_contract_store = SourceContractStore(args.source_contract_db)
+    source_capabilities = register_bybit_market_tape_capabilities(
+        store=source_contract_store,
+        symbols=tuple(sorted(symbols)),
+        depth=args.depth,
+    )
 
     previous = runtime_store.latest_instance(
         provider="bybit",
@@ -328,6 +350,9 @@ async def run(args: argparse.Namespace) -> int:
     heartbeat_db_retries = 0
     heartbeat_db_deferrals = 0
     gap_heartbeat_db_deferrals = 0
+    source_contract_envelopes_total = 0
+    source_contract_coverage_events_total = 0
+    source_contract_gap_events_total = 0
 
     def runtime_now_ms() -> int:
         nonlocal runtime_clock_floor_ms
@@ -343,6 +368,8 @@ async def run(args: argparse.Namespace) -> int:
         nonlocal heartbeat_db_retries
         nonlocal heartbeat_db_deferrals
         nonlocal gap_heartbeat_db_deferrals
+        nonlocal source_contract_coverage_events_total
+        nonlocal source_contract_gap_events_total
 
         observed_at_ms = runtime_now_ms()
         heartbeat_sequence += 1
@@ -397,6 +424,17 @@ async def run(args: argparse.Namespace) -> int:
                 observed_at_ms=observed_at_ms,
                 source_evidence_identities=(heartbeat.heartbeat_identity,),
             )
+            gap_coverage = persist_open_gap_coverage(
+                store=source_contract_store,
+                capabilities=source_capabilities,
+                gaps=gap_ledger.open_gaps(
+                    provider="bybit",
+                    source="market_tape_stream",
+                ),
+                observed_at_ms=observed_at_ms,
+            )
+            source_contract_coverage_events_total += len(gap_coverage)
+            source_contract_gap_events_total += len(gap_coverage)
         except sqlite3.OperationalError as exc:
             if not _is_transient_sqlite_lock(exc):
                 raise
@@ -473,6 +511,27 @@ async def run(args: argparse.Namespace) -> int:
             source_evidence_identities=(raw_event.event_identity,),
         )
 
+    def persist_source_contract(
+        event: BybitMicrostructureWireEvent,
+        raw_event: RawMarketEvent,
+        orderbook_normalized_identity: str | None,
+        trade_normalized_identities: tuple[str, ...],
+    ) -> None:
+        nonlocal source_contract_envelopes_total
+        nonlocal source_contract_coverage_events_total
+        write = persist_bybit_wire_source_contract(
+            store=source_contract_store,
+            capabilities=source_capabilities,
+            wire_event=event,
+            raw_event=raw_event,
+            orderbook_normalized_identity=orderbook_normalized_identity,
+            trade_normalized_identities=trade_normalized_identities,
+            coverage_observed_at_ms=runtime_now_ms(),
+        )
+        source_contract_envelopes_total += write.envelope_count
+        if write.coverage_event is not None:
+            source_contract_coverage_events_total += 1
+
     await emit_heartbeat()
     heartbeat_task = asyncio.create_task(heartbeat_loop())
     stream = BybitSpotMicrostructureStream(
@@ -492,6 +551,7 @@ async def run(args: argparse.Namespace) -> int:
             max_messages=(None if args.max_events == 0 else args.max_events),
             progress_callback=persist_progress,
             persisted_event_callback=persist_raw_event,
+            persisted_wire_callback=persist_source_contract,
             collection_progress_callback=persist_collection_progress,
         )
         await emit_heartbeat()
@@ -535,6 +595,10 @@ async def run(args: argparse.Namespace) -> int:
         f"heartbeat_db_retries={heartbeat_db_retries} "
         f"heartbeat_db_deferrals={heartbeat_db_deferrals} "
         f"gap_heartbeat_db_deferrals={gap_heartbeat_db_deferrals} "
+        f"source_contract_envelopes={source_contract_envelopes_total} "
+        f"source_contract_coverage_events={source_contract_coverage_events_total} "
+        f"source_contract_gap_events={source_contract_gap_events_total} "
+        f"source_contract_quick_check={'YES' if source_contract_store.quick_check() else 'NO'} "
         "REAL_CAPITAL=0",
         flush=True,
     )

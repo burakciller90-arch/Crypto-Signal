@@ -373,6 +373,46 @@ class MarketTapeStore:
             ),
         )
 
+    def orderbook_identity_for_provider_update(
+        self,
+        *,
+        exchange: Exchange,
+        market_type: MarketType,
+        symbol: str,
+        update_id: int,
+        sequence: int,
+    ) -> str | None:
+        row = self._find_by_fields(
+            table="market_tape_orderbooks",
+            fields={
+                "exchange": exchange.value,
+                "market_type": market_type.value,
+                "symbol": symbol,
+                "update_id": update_id,
+                "sequence": sequence,
+            },
+        )
+        return None if row is None else str(row["snapshot_identity"])
+
+    def trade_identity_for_exec_id(
+        self,
+        *,
+        exchange: Exchange,
+        market_type: MarketType,
+        symbol: str,
+        exec_id: str,
+    ) -> str | None:
+        row = self._find_by_fields(
+            table="market_tape_trades",
+            fields={
+                "exchange": exchange.value,
+                "market_type": market_type.value,
+                "symbol": symbol,
+                "exec_id": exec_id,
+            },
+        )
+        return None if row is None else str(row["trade_identity"])
+
     def append_derivatives(
         self,
         observation: DerivativesObservation,

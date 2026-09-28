@@ -583,6 +583,7 @@ class SourceContractStore:
                     source TEXT NOT NULL,
                     channel TEXT NOT NULL,
                     symbol TEXT NOT NULL,
+                    event_at_ms INTEGER NOT NULL,
                     source_timestamp_ms INTEGER NOT NULL,
                     observed_at_ms INTEGER NOT NULL,
                     ingested_at_ms INTEGER NOT NULL,
@@ -615,6 +616,55 @@ class SourceContractStore:
                     );
                 """
             )
+            envelope_columns = {
+                str(row["name"])
+                for row in db.execute(
+                    "PRAGMA table_info(source_envelopes)"
+                ).fetchall()
+            }
+            if "event_at_ms" not in envelope_columns:
+                db.execute(
+                    "ALTER TABLE source_envelopes "
+                    "ADD COLUMN event_at_ms INTEGER"
+                )
+                legacy_rows = db.execute(
+                    "SELECT envelope_identity, payload_json "
+                    "FROM source_envelopes"
+                ).fetchall()
+                for legacy_row in legacy_rows:
+                    payload = _json_object(
+                        str(legacy_row["payload_json"]),
+                        "source envelope",
+                    )
+                    db.execute(
+                        "UPDATE source_envelopes SET event_at_ms=? "
+                        "WHERE envelope_identity=?",
+                        (
+                            int(payload["event_at_ms"]),
+                            str(legacy_row["envelope_identity"]),
+                        ),
+                    )
+            db.execute(
+                """
+                CREATE INDEX IF NOT EXISTS source_envelopes_context_pit
+                ON source_envelopes(
+                    provider, source, channel, symbol,
+                    ingested_at_ms, event_at_ms
+                )
+                """
+            )
+            missing_event_time = db.execute(
+                "SELECT COUNT(*) FROM source_envelopes "
+                "WHERE event_at_ms IS NULL"
+            ).fetchone()
+            if (
+                missing_event_time is not None
+                and int(missing_event_time[0]) != 0
+            ):
+                raise ValueError(
+                    "source envelope PIT event-time migration incomplete"
+                )
+
             row = db.execute(
                 "SELECT value FROM source_contract_meta "
                 "WHERE key='schema_version'"
@@ -687,9 +737,9 @@ class SourceContractStore:
                 INSERT INTO source_envelopes(
                     envelope_identity, capability_identity,
                     provider, source, channel, symbol,
-                    source_timestamp_ms, observed_at_ms, ingested_at_ms,
-                    payload_json
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    event_at_ms, source_timestamp_ms,
+                    observed_at_ms, ingested_at_ms, payload_json
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     envelope.envelope_identity,
@@ -698,6 +748,7 @@ class SourceContractStore:
                     envelope.source,
                     envelope.channel,
                     envelope.symbol,
+                    envelope.event_at_ms,
                     envelope.source_timestamp_ms,
                     envelope.observed_at_ms,
                     envelope.ingested_at_ms,
@@ -844,8 +895,8 @@ class SourceContractStore:
                 FROM source_envelopes
                 WHERE provider=? AND source=? AND channel=? AND symbol=?
                   AND ingested_at_ms<=?
-                ORDER BY ingested_at_ms DESC, source_timestamp_ms DESC,
-                         envelope_identity DESC
+                ORDER BY ingested_at_ms DESC, event_at_ms DESC,
+                         source_timestamp_ms DESC, envelope_identity DESC
                 LIMIT 1
                 """,
                 (provider, source, channel, symbol, as_of_ms),
@@ -1229,6 +1280,17 @@ def _require_envelope_matches_capability(
         raise ValueError("source envelope capability context mismatch")
     if envelope.symbol not in capability.symbols:
         raise ValueError("source envelope symbol outside capability")
+    if capability.supports_provider_event_id and envelope.provider_event_id is None:
+        raise ValueError("source envelope missing required provider event id")
+    if (
+        capability.sequence_semantics
+        in {
+            SourceSequenceSemantics.MONOTONIC,
+            SourceSequenceSemantics.PROVIDER_UPDATE_ID,
+        }
+        and envelope.provider_sequence is None
+    ):
+        raise ValueError("source envelope missing required provider sequence")
 
 
 def _json_object(payload_json: str, label: str) -> dict[str, Any]:
