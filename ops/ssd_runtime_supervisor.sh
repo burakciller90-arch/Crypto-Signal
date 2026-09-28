@@ -693,8 +693,8 @@ last_aux_clock=0
 last_rotation=0
 while true; do
   start_dashboard
-  start_market_tape_stream
   start_liquidation_stream
+  start_market_tape_stream
   now="$(date +%s)"
 
   if [ $((now-last_data_clock)) -ge 60 ]; then
