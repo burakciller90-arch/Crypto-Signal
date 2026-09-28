@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 
 from crypto_signal.data.derivatives import DerivativesInstrumentType
+from crypto_signal.data.liquidations import LiquidatedPositionSide
 from crypto_signal.data.market_tape import MarketTapeStore
 from crypto_signal.data.models import Exchange, MarketType
 from crypto_signal.data.store import CandleStore
@@ -12,9 +13,16 @@ from crypto_signal.intelligence.derivatives_context import (
     DerivativesContextLabel,
     build_derivatives_context_evidence_freeze,
 )
+from crypto_signal.intelligence.derivatives_crowding import (
+    build_derivatives_crowding_evidence_freeze,
+)
 from crypto_signal.intelligence.derivatives_dynamics import (
     DerivativesDynamicsStatus,
     build_derivatives_dynamics_evidence_freeze,
+)
+from crypto_signal.intelligence.liquidation_heatmap import (
+    DEFAULT_LIQUIDATION_HEATMAP_CONFIG,
+    build_liquidation_heatmap_evidence_freeze,
 )
 from crypto_signal.intelligence.liquidity_dynamics import (
     build_liquidity_dynamics_evidence_freeze,
@@ -779,7 +787,17 @@ def build_market_tape_family_snapshots(
                     for item in dynamics_freeze.observations
                 ),
             }
-            dynamics_components: list[tuple[str, str]] = [
+            derivatives_domains = {
+                "derivatives",
+                "derivatives_context",
+                "derivatives_dynamics",
+            }
+            derivatives_uncertainty = {
+                *derivatives_analysis.uncertainty_flags,
+                *dynamics_analysis.uncertainty_flags,
+            }
+            derivatives_components: list[tuple[str, str]] = [
+                ("basis_state", derivatives_analysis.basis_state.value),
                 (
                     "dynamics_latest_observation_age_ms",
                     str(dynamics_analysis.latest_observation_age_ms),
@@ -789,6 +807,12 @@ def build_market_tape_family_snapshots(
                     dynamics_analysis.oi_price_state.value,
                 ),
                 ("dynamics_status", dynamics_analysis.status.value),
+                ("funding_state", derivatives_analysis.funding_state.value),
+                ("label", derivatives_analysis.label.value),
+                (
+                    "open_interest_state",
+                    derivatives_analysis.open_interest_state.value,
+                ),
             ]
             dynamics_metrics = dynamics_analysis.metrics
             if dynamics_metrics is not None:
@@ -819,19 +843,391 @@ def build_market_tape_family_snapshots(
                     ),
                 ):
                     if value is not None:
-                        dynamics_components.append((name, str(value)))
+                        derivatives_components.append((name, str(value)))
 
-            derivatives_source_event_identity = canonical_sha256(
-                {
-                    "as_of_ms": as_of_ms,
-                    "context_freeze_identity": (
-                        derivatives_freeze.freeze_identity
-                    ),
-                    "dynamics_freeze_identity": dynamics_freeze.freeze_identity,
-                    "symbol": symbol,
-                    "version": "rdp5-derivatives-dynamics-family-v1/1",
-                }
+            liquidation_lookback_ms = (
+                DEFAULT_LIQUIDATION_HEATMAP_CONFIG.lookback_ms
             )
+            liquidation_window_start_ms = max(
+                0,
+                as_of_ms - liquidation_lookback_ms,
+            )
+            liquidation_history_limit = 1000
+            liquidation_history = store.recent_liquidations(
+                exchange=Exchange.BYBIT,
+                instrument_type=DerivativesInstrumentType.LINEAR_PERPETUAL,
+                symbol=symbol,
+                limit=liquidation_history_limit,
+            )
+            liquidation_history_truncated = (
+                len(liquidation_history) >= liquidation_history_limit
+            )
+            recent_liquidations = tuple(
+                item
+                for item in liquidation_history
+                if (
+                    max(
+                        item.event_at_ms,
+                        item.source_timestamp_ms,
+                        item.ingested_at_ms,
+                    )
+                    <= as_of_ms
+                    and item.event_at_ms >= liquidation_window_start_ms
+                )
+            )
+            if recent_liquidations:
+                derivatives_domains.add("observed_liquidation_events")
+                derivatives_evidence.update(
+                    item.liquidation_identity
+                    for item in recent_liquidations
+                )
+                if liquidation_history_truncated:
+                    derivatives_uncertainty.add(
+                        "observed_liquidation_event_history_truncated"
+                    )
+                derivatives_components.extend(
+                    (
+                        (
+                            "observed_liquidation_event_count",
+                            str(len(recent_liquidations)),
+                        ),
+                        (
+                            "observed_liquidation_event_count_exact",
+                            str(not liquidation_history_truncated).lower(),
+                        ),
+                        (
+                            "observed_long_liquidation_count",
+                            str(
+                                sum(
+                                    item.liquidated_position_side
+                                    is LiquidatedPositionSide.LONG
+                                    for item in recent_liquidations
+                                )
+                            ),
+                        ),
+                        (
+                            "observed_short_liquidation_count",
+                            str(
+                                sum(
+                                    item.liquidated_position_side
+                                    is LiquidatedPositionSide.SHORT
+                                    for item in recent_liquidations
+                                )
+                            ),
+                        ),
+                    )
+                )
+
+            eligible_coverages = tuple(
+                coverage
+                for coverage in store.recent_liquidation_coverage(
+                    exchange=Exchange.BYBIT,
+                    instrument_type=(
+                        DerivativesInstrumentType.LINEAR_PERPETUAL
+                    ),
+                    symbol=symbol,
+                    limit=100,
+                )
+                if (
+                    coverage.observed_at_ms <= as_of_ms
+                    and coverage.coverage_end_ms <= as_of_ms
+                    and (
+                        as_of_ms - coverage.coverage_end_ms
+                        <= liquidation_lookback_ms
+                    )
+                )
+            )
+
+            heatmap_freeze = None
+            crowding_freeze = None
+            liquidation_coverage_identity = None
+            liquidation_status = "unavailable"
+            crowding_label = "unavailable"
+            has_liquidation_extension = bool(
+                recent_liquidations or eligible_coverages
+            )
+
+            if not has_liquidation_extension:
+                pass
+            elif not eligible_coverages:
+                derivatives_components.extend(
+                    (
+                        ("crowding_status", "unavailable"),
+                        ("liquidation_heatmap_status", "unavailable"),
+                        ("liquidation_zero_event_claim", "unavailable"),
+                    )
+                )
+                derivatives_uncertainty.add(
+                    "liquidation_event_coverage_unavailable_or_stale"
+                )
+            else:
+                selected_coverage = max(
+                    eligible_coverages,
+                    key=lambda item: (
+                        item.coverage_end_ms,
+                        -item.coverage_start_ms,
+                        item.coverage_identity,
+                    ),
+                )
+                liquidation_coverage_identity = (
+                    selected_coverage.coverage_identity
+                )
+                liquidation_as_of_ms = selected_coverage.coverage_end_ms
+                historical_derivatives = tuple(
+                    item
+                    for item in derivatives
+                    if max(
+                        item.event_at_ms,
+                        item.source_timestamp_ms,
+                        item.ingested_at_ms,
+                    )
+                    <= liquidation_as_of_ms
+                )
+                historical_dynamics = (
+                    None
+                    if not historical_derivatives
+                    else build_derivatives_dynamics_evidence_freeze(
+                        historical_derivatives,
+                        as_of_ms=liquidation_as_of_ms,
+                    )
+                )
+                mark_reference = (
+                    None
+                    if historical_dynamics is None
+                    else next(
+                    (
+                        item
+                        for item in reversed(
+                            historical_dynamics.observations
+                        )
+                        if item.mark_price is not None
+                        ),
+                        None,
+                    )
+                )
+                if historical_dynamics is None:
+                    derivatives_components.extend(
+                        (
+                            ("crowding_status", "unavailable"),
+                            (
+                                "liquidation_heatmap_status",
+                                "unavailable",
+                            ),
+                            (
+                                "liquidation_zero_event_claim",
+                                "unavailable",
+                            ),
+                        )
+                    )
+                    derivatives_uncertainty.add(
+                        "liquidation_historical_derivatives_unavailable"
+                    )
+                elif mark_reference is None:
+                    derivatives_components.extend(
+                        (
+                            ("crowding_status", "unavailable"),
+                            (
+                                "liquidation_heatmap_status",
+                                "unavailable",
+                            ),
+                            (
+                                "liquidation_zero_event_claim",
+                                "unavailable",
+                            ),
+                        )
+                    )
+                    derivatives_uncertainty.add(
+                        "liquidation_mark_reference_unavailable"
+                    )
+                else:
+                    liquidation_replay = store.liquidation_replay(
+                        coverage_identity=selected_coverage.coverage_identity,
+                        as_of_ms=liquidation_as_of_ms,
+                    )
+                    heatmap_freeze = (
+                        build_liquidation_heatmap_evidence_freeze(
+                            liquidation_replay.events,
+                            coverage=liquidation_replay.coverage,
+                            mark_reference=mark_reference,
+                            as_of_ms=liquidation_as_of_ms,
+                        )
+                    )
+                    heatmap_analysis = heatmap_freeze.analysis
+                    crowding_freeze = (
+                        build_derivatives_crowding_evidence_freeze(
+                            historical_dynamics,
+                            heatmap_freeze,
+                        )
+                    )
+                    crowding_analysis = crowding_freeze.analysis
+                    liquidation_status = heatmap_analysis.status.value
+                    crowding_label = crowding_analysis.label.value
+
+                    derivatives_domains.update(
+                        {
+                            "derivatives_crowding",
+                            "liquidation_event_coverage",
+                            "observed_liquidation_heatmap",
+                        }
+                    )
+                    derivatives_evidence.update(
+                        {
+                            selected_coverage.coverage_identity,
+                            historical_dynamics.freeze_identity,
+                            historical_dynamics.analysis.evidence_identity,
+                            heatmap_freeze.freeze_identity,
+                            heatmap_analysis.evidence_identity,
+                            mark_reference.observation_identity,
+                            crowding_freeze.freeze_identity,
+                            crowding_analysis.evidence_identity,
+                        }
+                    )
+                    derivatives_uncertainty.update(
+                        heatmap_analysis.uncertainty_flags
+                    )
+                    derivatives_uncertainty.update(
+                        crowding_analysis.uncertainty_flags
+                    )
+
+                    zero_event_claim = (
+                        "verified_complete_coverage"
+                        if (
+                            heatmap_analysis.status.value == "measured"
+                            and heatmap_analysis.observed_state.value
+                            == "none_observed"
+                        )
+                        else (
+                            "not_applicable_observed_events"
+                            if (
+                                heatmap_analysis.status.value == "measured"
+                                and heatmap_analysis.observed_state.value
+                                == "observed"
+                            )
+                            else "unavailable_incomplete_coverage"
+                        )
+                    )
+                    derivatives_components.extend(
+                        (
+                            (
+                                "crowded_side",
+                                crowding_analysis.crowded_side.value,
+                            ),
+                            (
+                                "crowding_label",
+                                crowding_analysis.label.value,
+                            ),
+                            (
+                                "crowding_status",
+                                crowding_analysis.status.value,
+                            ),
+                            (
+                                "liquidation_analysis_as_of_ms",
+                                str(liquidation_as_of_ms),
+                            ),
+                            (
+                                "liquidation_cluster_count",
+                                str(
+                                    heatmap_analysis.observed_cluster_count
+                                ),
+                            ),
+                            (
+                                "liquidation_coverage_end_ms",
+                                str(selected_coverage.coverage_end_ms),
+                            ),
+                            (
+                                "liquidation_coverage_start_ms",
+                                str(selected_coverage.coverage_start_ms),
+                            ),
+                            (
+                                "liquidation_heatmap_status",
+                                heatmap_analysis.status.value,
+                            ),
+                            (
+                                "liquidation_observed_state",
+                                heatmap_analysis.observed_state.value,
+                            ),
+                            (
+                                "estimated_leverage_concentration_status",
+                                (
+                                    heatmap_analysis
+                                    .estimated_leverage_concentration_status
+                                    .value
+                                ),
+                            ),
+                            (
+                                "liquidation_risk_zone_status",
+                                (
+                                    heatmap_analysis
+                                    .liquidation_risk_zone_status.value
+                                ),
+                            ),
+                            (
+                                "liquidation_zero_event_claim",
+                                zero_event_claim,
+                            ),
+                            (
+                                "squeeze_risk_side",
+                                crowding_analysis.squeeze_risk_side.value,
+                            ),
+                        )
+                    )
+
+            if has_liquidation_extension:
+                derivatives_source_event_identity = canonical_sha256(
+                    {
+                        "as_of_ms": as_of_ms,
+                        "context_freeze_identity": (
+                            derivatives_freeze.freeze_identity
+                        ),
+                        "crowding_freeze_identity": (
+                            None
+                            if crowding_freeze is None
+                            else crowding_freeze.freeze_identity
+                        ),
+                        "dynamics_freeze_identity": (
+                            dynamics_freeze.freeze_identity
+                        ),
+                        "heatmap_freeze_identity": (
+                            None
+                            if heatmap_freeze is None
+                            else heatmap_freeze.freeze_identity
+                        ),
+                        "liquidation_coverage_identity": (
+                            liquidation_coverage_identity
+                        ),
+                        "observed_liquidation_identities": tuple(
+                            item.liquidation_identity
+                            for item in recent_liquidations
+                        ),
+                        "symbol": symbol,
+                        "version": "rdp5-rich-derivatives-family-v2/1",
+                    }
+                )
+                derivatives_state_label = (
+                    f"{derivatives_analysis.label.value}:"
+                    f"{dynamics_analysis.status.value}:"
+                    f"{dynamics_analysis.oi_price_state.value}:"
+                    f"{liquidation_status}:{crowding_label}"
+                )
+            else:
+                derivatives_source_event_identity = canonical_sha256(
+                    {
+                        "as_of_ms": as_of_ms,
+                        "context_freeze_identity": (
+                            derivatives_freeze.freeze_identity
+                        ),
+                        "dynamics_freeze_identity": (
+                            dynamics_freeze.freeze_identity
+                        ),
+                        "symbol": symbol,
+                        "version": "rdp5-derivatives-dynamics-family-v1/1",
+                    }
+                )
+                derivatives_state_label = (
+                    f"{derivatives_analysis.label.value}:"
+                    f"{dynamics_analysis.status.value}:"
+                    f"{dynamics_analysis.oi_price_state.value}"
+                )
             snapshots.append(
                 build_family_snapshot(
                     projector_id="derivatives_change",
@@ -850,29 +1246,9 @@ def build_market_tape_family_snapshots(
                     event_at_ms=as_of_ms,
                     source_as_of_ms=as_of_ms,
                     evidence_identities=tuple(sorted(derivatives_evidence)),
-                    evidence_domains=(
-                        "derivatives",
-                        "derivatives_context",
-                        "derivatives_dynamics",
-                    ),
-                    state_label=(
-                        f"{derivatives_analysis.label.value}:"
-                        f"{dynamics_analysis.status.value}:"
-                        f"{dynamics_analysis.oi_price_state.value}"
-                    ),
-                    state_components=(
-                        ("basis_state", derivatives_analysis.basis_state.value),
-                        (
-                            "funding_state",
-                            derivatives_analysis.funding_state.value,
-                        ),
-                        ("label", derivatives_analysis.label.value),
-                        (
-                            "open_interest_state",
-                            derivatives_analysis.open_interest_state.value,
-                        ),
-                        *dynamics_components,
-                    ),
+                    evidence_domains=tuple(sorted(derivatives_domains)),
+                    state_label=derivatives_state_label,
+                    state_components=tuple(derivatives_components),
                     direction=None,
                     source_quality=(
                         "measured"
@@ -885,12 +1261,7 @@ def build_market_tape_family_snapshots(
                         else "unresolved"
                     ),
                     uncertainty_flags=tuple(
-                        sorted(
-                            {
-                                *derivatives_analysis.uncertainty_flags,
-                                *dynamics_analysis.uncertainty_flags,
-                            }
-                        )
+                        sorted(derivatives_uncertainty)
                     ),
                 )
             )
