@@ -1110,6 +1110,7 @@ def test_options_proofs_resolve_exact_from_frozen_store(
         stream_ledger_path=stream_path,
         market_tape_path=market_path,
         frozen_proof_store_path=proof_path,
+        options_surface_path=options_path,
     )
     payload = resolver.read_for_narrative(narrative_identity)
     assert payload is not None
@@ -1150,7 +1151,17 @@ def test_options_proofs_resolve_exact_from_frozen_store(
     surface_ref = next(
         item
         for item in references
-        if item.get("object_kind") == "options_surface_snapshot"
+        if item.get("object_kind") == "options_surface_observation"
+    )
+    metadata_ref = next(
+        item
+        for item in references
+        if item.get("object_kind") == "options_instrument_metadata"
+    )
+    quote_refs = tuple(
+        item
+        for item in references
+        if item.get("object_kind") == "options_contract_quote"
     )
     volatility_ref = next(
         item
@@ -1158,6 +1169,12 @@ def test_options_proofs_resolve_exact_from_frozen_store(
         if item.get("object_kind") == "options_volatility_freeze"
     )
     assert surface_ref["resolution_state"] == "READY_EXACT"
+    assert metadata_ref["resolution_state"] == "READY_EXACT"
+    assert len(quote_refs) == 8
+    assert all(
+        item["resolution_state"] == "READY_EXACT"
+        for item in quote_refs
+    )
     assert volatility_ref["resolution_state"] == "READY_EXACT"
 
     exact_surface = resolver.read_reference(
@@ -1165,9 +1182,7 @@ def test_options_proofs_resolve_exact_from_frozen_store(
         evidence_identity=str(surface_ref["evidence_identity"]),
     )
     assert exact_surface is not None
-    surface_object = exact_surface["exact_object"]
-    assert isinstance(surface_object, dict)
-    surface_payload = surface_object["payload"]
+    surface_payload = exact_surface["exact_object"]
     assert isinstance(surface_payload, dict)
     contracts = surface_payload["contracts"]
     assert isinstance(contracts, list)
@@ -1178,6 +1193,30 @@ def test_options_proofs_resolve_exact_from_frozen_store(
     assert surface_payload["observed_at_ms"] == (
         options_family.AS_OF_MS - 80
     )
+
+    exact_metadata = resolver.read_reference(
+        narrative_identity=narrative_identity,
+        evidence_identity=str(metadata_ref["evidence_identity"]),
+    )
+    assert exact_metadata is not None
+    metadata_payload = exact_metadata["exact_object"]
+    assert isinstance(metadata_payload, dict)
+    assert metadata_payload["metadata_identity"] == (
+        surface_payload["instrument_metadata_identity"]
+    )
+    instrument_specs = metadata_payload["instrument_specs"]
+    assert isinstance(instrument_specs, list)
+    assert len(instrument_specs) == 8
+
+    exact_quote = resolver.read_reference(
+        narrative_identity=narrative_identity,
+        evidence_identity=str(quote_refs[0]["evidence_identity"]),
+    )
+    assert exact_quote is not None
+    quote_payload = exact_quote["exact_object"]
+    assert isinstance(quote_payload, dict)
+    assert quote_payload["quote_identity"] == quote_refs[0]["evidence_identity"]
+    assert exact_quote["current_data_substitution"] is False
 
     exact_volatility = resolver.read_reference(
         narrative_identity=narrative_identity,
