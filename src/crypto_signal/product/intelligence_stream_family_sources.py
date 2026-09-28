@@ -6,6 +6,7 @@ from pathlib import Path
 from crypto_signal.data.derivatives import DerivativesInstrumentType
 from crypto_signal.data.liquidations import LiquidatedPositionSide
 from crypto_signal.data.market_tape import MarketTapeStore
+from crypto_signal.data.microstructure import OrderBookSnapshot
 from crypto_signal.data.models import Exchange, MarketType
 from crypto_signal.data.options_surface_store import OptionsSurfaceStore
 from crypto_signal.data.store import CandleStore
@@ -1538,20 +1539,7 @@ def _persist_liquidity_proofs(
         f"{dynamics.analysis.exchange.value}:"
         f"{dynamics.analysis.market_type.value}:market_tape"
     )
-    base_kwargs = {
-        "family": ConfluenceFamily.LIQUIDITY.value,
-        "asset": _base_asset(dynamics.analysis.symbol),
-        "symbol": dynamics.analysis.symbol,
-        "network": None,
-        "timeframe": "microstructure",
-        "as_of_ms": dynamics.analysis.as_of_ms,
-        "source_provider": provider,
-        "freshness_state": "exact_pit_bounded",
-        "persisted_at_ms": dynamics.analysis.as_of_ms,
-        "production_authority": False,
-        "real_capital": 0,
-    }
-
+    asset = _base_asset(dynamics.analysis.symbol)
     dynamics_sources = tuple(
         sorted(item.snapshot_identity for item in dynamics.snapshots)
     )
@@ -1560,10 +1548,18 @@ def _persist_liquidity_proofs(
             object_identity=dynamics.freeze_identity,
             analysis_identity=dynamics.analysis.evidence_identity,
             object_kind="liquidity_dynamics_freeze",
+            family=ConfluenceFamily.LIQUIDITY.value,
             domains=("liquidity",),
+            asset=asset,
+            symbol=dynamics.analysis.symbol,
+            network=None,
+            timeframe="microstructure",
+            as_of_ms=dynamics.analysis.as_of_ms,
             market_available_at_ms=_orderbook_available_at(dynamics.snapshots),
             observed_at_ms=dynamics.analysis.observed_at_ms,
+            source_provider=provider,
             source_quality=dynamics.analysis.source_quality.value,
+            freshness_state="exact_pit_bounded",
             freshness_age_ms=dynamics.analysis.latest_snapshot_age_ms,
             uncertainty_flags=tuple(sorted(dynamics.analysis.uncertainty_flags)),
             source_object_identities=dynamics_sources,
@@ -1571,7 +1567,9 @@ def _persist_liquidity_proofs(
             payload_json=canonical_json(dynamics.analysis),
             visualization_json=canonical_json(dynamics.analysis),
             renderer_contract_version="liquidity-dynamics-v1/1",
-            **base_kwargs,
+            persisted_at_ms=dynamics.analysis.as_of_ms,
+            production_authority=False,
+            real_capital=0,
         )
     )
 
@@ -1583,10 +1581,18 @@ def _persist_liquidity_proofs(
             object_identity=structure.freeze_identity,
             analysis_identity=structure.analysis.evidence_identity,
             object_kind="liquidity_structure_freeze",
+            family=ConfluenceFamily.LIQUIDITY.value,
             domains=("liquidity", "liquidity_structure"),
+            asset=asset,
+            symbol=structure.analysis.symbol,
+            network=None,
+            timeframe="microstructure",
+            as_of_ms=structure.analysis.as_of_ms,
             market_available_at_ms=_orderbook_available_at(structure.snapshots),
             observed_at_ms=structure.analysis.observed_at_ms,
+            source_provider=provider,
             source_quality=structure.analysis.source_quality.value,
+            freshness_state="exact_pit_bounded",
             freshness_age_ms=structure.analysis.latest_snapshot_age_ms,
             uncertainty_flags=tuple(sorted(structure.analysis.uncertainty_flags)),
             source_object_identities=structure_sources,
@@ -1594,7 +1600,9 @@ def _persist_liquidity_proofs(
             payload_json=canonical_json(structure.analysis),
             visualization_json=canonical_json(structure.analysis),
             renderer_contract_version="liquidity-structure-levels-v1/1",
-            **base_kwargs,
+            persisted_at_ms=structure.analysis.as_of_ms,
+            production_authority=False,
+            real_capital=0,
         )
     )
 
@@ -1629,10 +1637,18 @@ def _persist_liquidity_proofs(
             object_identity=sweep.freeze_identity,
             analysis_identity=sweep.analysis.evidence_identity,
             object_kind="liquidity_sweep_freeze",
+            family=ConfluenceFamily.LIQUIDITY.value,
             domains=("liquidity", "liquidity_sweep"),
+            asset=asset,
+            symbol=sweep.analysis.symbol,
+            network=None,
+            timeframe="microstructure",
+            as_of_ms=sweep.analysis.as_of_ms,
             market_available_at_ms=_liquidity_sweep_available_at(sweep),
             observed_at_ms=sweep.analysis.observed_at_ms,
+            source_provider=provider,
             source_quality=sweep.analysis.source_quality.value,
+            freshness_state="exact_pit_bounded",
             freshness_age_ms=(
                 None if not sweep_age_candidates else max(sweep_age_candidates)
             ),
@@ -1642,21 +1658,23 @@ def _persist_liquidity_proofs(
             payload_json=canonical_json(sweep.analysis),
             visualization_json=canonical_json(sweep.analysis),
             renderer_contract_version="liquidity-sweep-candidates-v1/1",
-            **base_kwargs,
+            persisted_at_ms=sweep.analysis.as_of_ms,
+            production_authority=False,
+            real_capital=0,
         )
     )
 
 
 def _orderbook_available_at(
-    snapshots: tuple[object, ...],
+    snapshots: tuple[OrderBookSnapshot, ...],
 ) -> int:
     return max(
         (
             max(
-                int(getattr(item, "event_at_ms")),
-                int(getattr(item, "source_timestamp_ms")),
-                int(getattr(item, "response_time_ms")),
-                int(getattr(item, "ingested_at_ms")),
+                item.event_at_ms,
+                item.source_timestamp_ms,
+                item.response_time_ms,
+                item.ingested_at_ms,
             )
             for item in snapshots
         ),
