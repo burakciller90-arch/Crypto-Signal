@@ -47,6 +47,8 @@ class IntelligenceStreamExactEvidenceReadModel:
         provider_divergence_path: Path | None = None,
         frozen_proof_store_path: Path | None = None,
         options_surface_path: Path | None = None,
+        onchain_capital_flow_path: Path | None = None,
+        onchain_source_contract_path: Path | None = None,
     ) -> None:
         self.stream_ledger_path = stream_ledger_path
         self.signal_ledger_path = signal_ledger_path
@@ -56,6 +58,8 @@ class IntelligenceStreamExactEvidenceReadModel:
         self.provider_divergence_path = provider_divergence_path
         self.frozen_proof_store_path = frozen_proof_store_path
         self.options_surface_path = options_surface_path
+        self.onchain_capital_flow_path = onchain_capital_flow_path
+        self.onchain_source_contract_path = onchain_source_contract_path
 
     def read_for_narrative(
         self,
@@ -636,6 +640,166 @@ class IntelligenceStreamExactEvidenceReadModel:
                     StreamEvidenceResolutionState.UNAVAILABLE_EXPLICIT.value
                 ),
             }
+        elif domain in {"onchain", "stablecoin_capital_flow"}:
+            freeze_objects = tuple(
+                item
+                for item in selected_objects
+                if item.get("object_kind") == "stablecoin_capital_flow_freeze"
+            )
+            normalized_objects = tuple(
+                item
+                for item in selected_objects
+                if item.get("object_kind") == "stablecoin_supply_observation"
+            )
+            raw_objects = tuple(
+                item
+                for item in selected_objects
+                if item.get("object_kind") == "source_raw_payload"
+            )
+            envelope_objects = tuple(
+                item
+                for item in selected_objects
+                if item.get("object_kind") == "source_envelope"
+            )
+            coverage_objects = tuple(
+                item
+                for item in selected_objects
+                if item.get("object_kind") == "source_coverage"
+            )
+            required_source_ids: set[str] = set()
+            for item in freeze_objects:
+                proof = item.get("payload")
+                if not isinstance(proof, dict):
+                    continue
+                source_ids = proof.get("source_object_identities")
+                if not isinstance(source_ids, (list, tuple)):
+                    continue
+                required_source_ids.update(
+                    str(value)
+                    for value in source_ids
+                    if isinstance(value, str)
+                )
+            lineage_state = (
+                StreamEvidenceResolutionState.READY_EXACT
+                if required_source_ids
+                and all(
+                    identity in raw_index
+                    for identity in required_source_ids
+                )
+                else StreamEvidenceResolutionState.UNAVAILABLE_EXPLICIT
+            )
+            freeze_state = (
+                StreamEvidenceResolutionState.READY_EXACT
+                if freeze_objects
+                else StreamEvidenceResolutionState.UNAVAILABLE_EXPLICIT
+            )
+            normalized_state = (
+                StreamEvidenceResolutionState.READY_EXACT
+                if normalized_objects
+                else StreamEvidenceResolutionState.UNAVAILABLE_EXPLICIT
+            )
+            if (
+                freeze_state is StreamEvidenceResolutionState.READY_EXACT
+                and lineage_state is StreamEvidenceResolutionState.READY_EXACT
+            ):
+                state = StreamEvidenceResolutionState.READY_EXACT
+                reason = (
+                    "exact_persisted_stablecoin_proof_and_lineage_resolved"
+                )
+            explicit_unavailable = (
+                StreamEvidenceResolutionState.UNAVAILABLE_EXPLICIT.value
+            )
+            capabilities = {
+                "stablecoin_capital_flow_freeze": freeze_state.value,
+                "normalized_supply_observations": normalized_state.value,
+                "source_lineage": lineage_state.value,
+                "source_raw_payloads": (
+                    StreamEvidenceResolutionState.READY_EXACT.value
+                    if raw_objects
+                    else explicit_unavailable
+                ),
+                "source_envelopes": (
+                    StreamEvidenceResolutionState.READY_EXACT.value
+                    if envelope_objects
+                    else explicit_unavailable
+                ),
+                "source_coverage": (
+                    StreamEvidenceResolutionState.READY_EXACT.value
+                    if coverage_objects
+                    else explicit_unavailable
+                ),
+                "exchange_flow": (
+                    explicit_unavailable
+                    if components.get("exchange_flow_status") == "unavailable"
+                    else StreamEvidenceResolutionState.IDENTITY_ONLY_EXACT.value
+                ),
+                "large_transfer": (
+                    explicit_unavailable
+                    if components.get("large_transfer_status") == "unavailable"
+                    else StreamEvidenceResolutionState.IDENTITY_ONLY_EXACT.value
+                ),
+                "wallet_cohort": (
+                    explicit_unavailable
+                    if components.get("wallet_cohort_status") == "unavailable"
+                    else StreamEvidenceResolutionState.IDENTITY_ONLY_EXACT.value
+                ),
+                "stablecoin_bridge": (
+                    explicit_unavailable
+                    if (
+                        components.get("stablecoin_bridge_status")
+                        == "unavailable"
+                    )
+                    else StreamEvidenceResolutionState.IDENTITY_ONLY_EXACT.value
+                ),
+                "directional_inference": explicit_unavailable,
+            }
+        elif domain == "stablecoin_supply":
+            has_freeze = "stablecoin_capital_flow_freeze" in selected_kinds
+            has_observation = "stablecoin_supply_observation" in selected_kinds
+            has_raw = "source_raw_payload" in selected_kinds
+            has_envelope = "source_envelope" in selected_kinds
+            has_coverage = "source_coverage" in selected_kinds
+            if (
+                has_freeze
+                and has_observation
+                and has_raw
+                and has_envelope
+                and has_coverage
+            ):
+                state = StreamEvidenceResolutionState.READY_EXACT
+                reason = "exact_stablecoin_supply_and_source_lineage_resolved"
+            capabilities = {
+                "supply_measurement": (
+                    StreamEvidenceResolutionState.READY_EXACT.value
+                    if has_observation
+                    else StreamEvidenceResolutionState.UNAVAILABLE_EXPLICIT.value
+                ),
+                "derived_supply_change": (
+                    StreamEvidenceResolutionState.READY_EXACT.value
+                    if has_freeze
+                    else StreamEvidenceResolutionState.UNAVAILABLE_EXPLICIT.value
+                ),
+                "source_lineage": (
+                    StreamEvidenceResolutionState.READY_EXACT.value
+                    if has_raw and has_envelope and has_coverage
+                    else StreamEvidenceResolutionState.UNAVAILABLE_EXPLICIT.value
+                ),
+                "directional_inference": (
+                    StreamEvidenceResolutionState.UNAVAILABLE_EXPLICIT.value
+                ),
+            }
+        elif domain == "source_raw_payload":
+            if "source_raw_payload" in selected_kinds:
+                state = StreamEvidenceResolutionState.READY_EXACT
+                reason = "exact_canonical_source_raw_payload_resolved"
+        elif domain == "source_envelope":
+            if "source_envelope" in selected_kinds:
+                state = StreamEvidenceResolutionState.READY_EXACT
+                reason = "exact_canonical_source_envelope_resolved"
+        elif domain == "source_coverage":
+            if "source_coverage" in selected_kinds:
+                state = StreamEvidenceResolutionState.READY_EXACT
+                reason = "exact_canonical_source_coverage_resolved"
         elif domain == "event_calendar":
             if selected_kinds.intersection(
                 {"event_calendar_coverage", "structured_event_observation"}
@@ -952,6 +1116,28 @@ class IntelligenceStreamExactEvidenceReadModel:
                 )
             )
         if (
+            self.onchain_capital_flow_path is not None
+            and self.onchain_capital_flow_path.exists()
+        ):
+            resolved.update(
+                _resolve_onchain_capital_flow_objects(
+                    self.onchain_capital_flow_path,
+                    evidence_identities,
+                    source_as_of_ms=source_as_of_ms,
+                )
+            )
+        if (
+            self.onchain_source_contract_path is not None
+            and self.onchain_source_contract_path.exists()
+        ):
+            resolved.update(
+                _resolve_source_contract_objects(
+                    self.onchain_source_contract_path,
+                    evidence_identities,
+                    source_as_of_ms=source_as_of_ms,
+                )
+            )
+        if (
             self.event_source_runtime_path is not None
             and self.event_source_runtime_path.exists()
         ):
@@ -1097,6 +1283,30 @@ def _objects_for_domain(
             "options_volatility_freeze",
         },
         "options_volatility": {"options_volatility_freeze"},
+        "onchain": {
+            "stablecoin_capital_flow_freeze",
+            "stablecoin_supply_observation",
+            "source_raw_payload",
+            "source_envelope",
+            "source_coverage",
+        },
+        "stablecoin_capital_flow": {
+            "stablecoin_capital_flow_freeze",
+            "stablecoin_supply_observation",
+            "source_raw_payload",
+            "source_envelope",
+            "source_coverage",
+        },
+        "stablecoin_supply": {
+            "stablecoin_capital_flow_freeze",
+            "stablecoin_supply_observation",
+            "source_raw_payload",
+            "source_envelope",
+            "source_coverage",
+        },
+        "source_raw_payload": {"source_raw_payload"},
+        "source_envelope": {"source_envelope"},
+        "source_coverage": {"source_coverage"},
         "event_calendar": {
             "event_calendar_coverage",
             "structured_event_observation",
@@ -1609,6 +1819,216 @@ def _resolve_options_surface_objects(
                     "instrument_specs": specs,
                 },
             }
+        return resolved
+    except sqlite3.DatabaseError as exc:
+        raise StreamExactEvidenceError(str(exc)) from exc
+    finally:
+        connection.close()
+
+
+def _resolve_onchain_capital_flow_objects(
+    path: Path,
+    evidence_identities: tuple[str, ...],
+    *,
+    source_as_of_ms: int | None,
+) -> dict[str, dict[str, Any]]:
+    if not path.is_file():
+        return {}
+    uri = f"{path.resolve().as_uri()}?mode=ro"
+    try:
+        connection = sqlite3.connect(uri, uri=True)
+    except sqlite3.DatabaseError as exc:
+        raise StreamExactEvidenceError(str(exc)) from exc
+    try:
+        connection.row_factory = sqlite3.Row
+        connection.execute("PRAGMA query_only=ON")
+        table = connection.execute(
+            """
+            SELECT 1
+            FROM sqlite_master
+            WHERE type='table' AND name='stablecoin_supply_observations'
+            """
+        ).fetchone()
+        if table is None:
+            return {}
+        resolved: dict[str, dict[str, Any]] = {}
+        for batch in _batches(evidence_identities, size=400):
+            placeholders = ",".join("?" for _ in batch)
+            rows = connection.execute(
+                f"""
+                SELECT observation_identity, payload_json
+                FROM stablecoin_supply_observations
+                WHERE observation_identity IN ({placeholders})
+                """,
+                batch,
+            ).fetchall()
+            for row in rows:
+                identity = str(row["observation_identity"])
+                payload = _json_object(
+                    str(row["payload_json"]),
+                    "stablecoin supply exact payload",
+                )
+                if payload.get("observation_identity") != identity:
+                    raise StreamExactEvidenceError(
+                        "stablecoin supply row/payload identity mismatch"
+                    )
+                identity_payload = {
+                    key: value
+                    for key, value in payload.items()
+                    if key != "observation_identity"
+                }
+                if canonical_sha256(identity_payload) != identity:
+                    raise StreamExactEvidenceError(
+                        "stablecoin supply exact identity mismatch"
+                    )
+                _verify_not_future(
+                    payload,
+                    source_as_of_ms=source_as_of_ms,
+                    label="stablecoin_supply_observation",
+                )
+                resolved[identity] = {
+                    "object_kind": "stablecoin_supply_observation",
+                    "payload": payload,
+                }
+        return resolved
+    except sqlite3.DatabaseError as exc:
+        raise StreamExactEvidenceError(str(exc)) from exc
+    finally:
+        connection.close()
+
+
+def _resolve_source_contract_objects(
+    path: Path,
+    evidence_identities: tuple[str, ...],
+    *,
+    source_as_of_ms: int | None,
+) -> dict[str, dict[str, Any]]:
+    if not path.is_file():
+        return {}
+    uri = f"{path.resolve().as_uri()}?mode=ro"
+    try:
+        connection = sqlite3.connect(uri, uri=True)
+    except sqlite3.DatabaseError as exc:
+        raise StreamExactEvidenceError(str(exc)) from exc
+    try:
+        connection.row_factory = sqlite3.Row
+        connection.execute("PRAGMA query_only=ON")
+        tables = {
+            str(row[0])
+            for row in connection.execute(
+                "SELECT name FROM sqlite_master WHERE type='table'"
+            ).fetchall()
+        }
+        resolved: dict[str, dict[str, Any]] = {}
+        for batch in _batches(evidence_identities, size=300):
+            placeholders = ",".join("?" for _ in batch)
+            if "source_raw_payloads" in tables:
+                rows = connection.execute(
+                    f"""
+                    SELECT raw_identity, provider, source, channel,
+                           symbol, payload_json
+                    FROM source_raw_payloads
+                    WHERE raw_identity IN ({placeholders})
+                    """,
+                    batch,
+                ).fetchall()
+                for row in rows:
+                    identity = str(row["raw_identity"])
+                    payload_json = str(row["payload_json"])
+                    expected_identity = canonical_sha256(
+                        {
+                            "schema_version": "source-contract-v1/1",
+                            "provider": str(row["provider"]),
+                            "source": str(row["source"]),
+                            "channel": str(row["channel"]),
+                            "symbol": str(row["symbol"]),
+                            "payload_json": payload_json,
+                            "production_authority": False,
+                            "real_capital": 0,
+                        }
+                    )
+                    if expected_identity != identity:
+                        raise StreamExactEvidenceError(
+                            "source raw payload exact identity mismatch"
+                        )
+                    resolved[identity] = {
+                        "object_kind": "source_raw_payload",
+                        "payload": {
+                            "raw_identity": identity,
+                            "provider": str(row["provider"]),
+                            "source": str(row["source"]),
+                            "channel": str(row["channel"]),
+                            "symbol": str(row["symbol"]),
+                            "payload": _json_object(
+                                payload_json,
+                                "source raw exact payload",
+                            ),
+                        },
+                    }
+
+            if "source_envelopes" in tables:
+                rows = connection.execute(
+                    f"""
+                    SELECT envelope_identity, payload_json
+                    FROM source_envelopes
+                    WHERE envelope_identity IN ({placeholders})
+                    """,
+                    batch,
+                ).fetchall()
+                for row in rows:
+                    identity = str(row["envelope_identity"])
+                    payload = _json_object(
+                        str(row["payload_json"]),
+                        "source envelope exact payload",
+                    )
+                    if canonical_sha256(payload) != identity:
+                        raise StreamExactEvidenceError(
+                            "source envelope exact identity mismatch"
+                        )
+                    _verify_not_future(
+                        payload,
+                        source_as_of_ms=source_as_of_ms,
+                        label="source_envelope",
+                    )
+                    resolved[identity] = {
+                        "object_kind": "source_envelope",
+                        "payload": {
+                            "envelope_identity": identity,
+                            **payload,
+                        },
+                    }
+
+            if "source_coverage_events" in tables:
+                rows = connection.execute(
+                    f"""
+                    SELECT coverage_event_identity, payload_json
+                    FROM source_coverage_events
+                    WHERE coverage_event_identity IN ({placeholders})
+                    """,
+                    batch,
+                ).fetchall()
+                for row in rows:
+                    identity = str(row["coverage_event_identity"])
+                    payload = _json_object(
+                        str(row["payload_json"]),
+                        "source coverage exact payload",
+                    )
+                    if canonical_sha256(payload) != identity:
+                        raise StreamExactEvidenceError(
+                            "source coverage exact identity mismatch"
+                        )
+                    _verify_not_future(
+                        payload,
+                        source_as_of_ms=source_as_of_ms,
+                        label="source_coverage",
+                    )
+                    resolved[identity] = {
+                        "object_kind": "source_coverage",
+                        "payload": {
+                            "coverage_event_identity": identity,
+                            **payload,
+                        },
+                    }
         return resolved
     except sqlite3.DatabaseError as exc:
         raise StreamExactEvidenceError(str(exc)) from exc

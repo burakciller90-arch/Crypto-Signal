@@ -1273,11 +1273,16 @@ async def run(
     ):
         onchain_observed_at_ms = time.time_ns() // 1_000_000
         try:
+            assert selected_stream.ledger_path is not None
             onchain_snapshots = build_onchain_family_snapshots(
                 selected_stream.onchain_capital_flow_path,
                 selected_stream.onchain_source_contract_path,
                 symbols=selected_stream.family_symbols,
                 as_of_ms=onchain_observed_at_ms,
+                frozen_proof_store_path=(
+                    selected_stream.ledger_path.parent
+                    / "frozen_proofs.sqlite3"
+                ),
             )
             system_view_family_snapshots.extend(onchain_snapshots)
             onchain_dispositions: Counter[str] = Counter()

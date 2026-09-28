@@ -983,3 +983,104 @@ blocker:
 
 nextAction:
 - after this docs-only closeout is merged, branch from exact current main, checkpoint F2 start before production changes, then audit and cut over only the mechanically missing StablecoinCapitalFlow exact customer-proof path.
+
+
+---
+
+## 2026-09-28 — RDP10-F2 task-start checkpoint
+
+status: ACTIVE
+repository: burakciller90-arch/Crypto-Signal
+canonicalMainAtStart: b224a9f466767b39c051dd35096d414f2bf1495b
+previousGate: RDP10-F1 PASS
+previousCloseoutPR: 1651
+previousCloseoutMergeSha: b224a9f466767b39c051dd35096d414f2bf1495b
+branch: rdp10/onchain-proof-f2
+worktree: no session-local /Volumes worktree; canonical SSD504 Workbench verification pending run 36477116448
+roadmapGate: RDP10-F2 On-chain / stablecoin exact proof cutover
+duplicateRelevantPRs: NONE
+duplicateRelevantBranchesBeforeCreation: NONE
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+boundedGoal:
+- reuse accepted RDP7 stablecoin raw/envelope/coverage/normalized/PIT truth;
+- persist or expose only mechanically missing exact derived proof;
+- customer-facing exact onchain/stablecoin domains must bind accepted source lineage and explicit unavailable rails;
+- no stablecoin-supply direction inference and no fabricated exchange/whale/wallet/bridge truth.
+
+blocker:
+- exact-current-main SSD504 Workbench bootstrap run 36477116448 has not yet been inspected to PASS.
+
+nextAction:
+- verify run 36477116448 exact main/clean Workbench; then audit current RDP7 stores/freezes/projector/resolver before production changes.
+
+
+---
+
+## 2026-09-28 — RDP10-F2 pre-implementation audit checkpoint
+
+status: IMPLEMENTATION_READY
+canonicalMain: b224a9f466767b39c051dd35096d414f2bf1495b
+branch: rdp10/onchain-proof-f2
+branchHeadBeforeProduction: d1e4f63a89054809ea5e4af0166d06d856b8d53e
+worktree: no session-local /Volumes worktree; exact-main Workbench verified by run 36477116448 / job 109113488100
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+audit:
+- canonical normalized stablecoin truth already lives append-only in OnchainCapitalFlowStore.
+- source raw/envelope/coverage truth already lives in SourceContractStore.
+- family already builds PIT-safe StablecoinCapitalFlowEvidenceFreeze and binds all relevant identities.
+- missing layer is derived freeze persistence + exact customer resolver/wiring, not a new collector/store.
+- unsupported exchange-flow/large-transfer/wallet-cohort/bridge rails stay unavailable and direction stays None.
+
+blocker:
+- stablecoin derived proof is not persisted and RDP10 has no canonical On-chain/source-contract resolver paths.
+
+nextAction:
+- persist only stablecoin_capital_flow_freeze in FrozenProofStore; add read-only canonical source resolvers and exact domain capabilities; wire live/API acceptance and tests; then prove exact-head RDP10 and RDP7 gates before merge.
+
+
+---
+
+## 2026-09-28 — RDP10-F2 implementation handoff / acceptance pending
+
+status: ACCEPTANCE_PENDING
+repository: burakciller90-arch/Crypto-Signal
+canonicalMainAtAcceptanceStart: b224a9f466767b39c051dd35096d414f2bf1495b
+branch: rdp10/onchain-proof-f2
+productionImplementationHead: 082b087ab64cd82c44661f145e2fdc304f509933
+worktree: no session-local /Volumes worktree; UID504 exact-main prerequisite passed
+roadmapGate: RDP10-F2 On-chain / stablecoin exact proof cutover
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+implemented:
+- derived StablecoinCapitalFlowEvidenceFreeze persistence only; no raw source duplication.
+- exact read-only stablecoin observation/raw/envelope/coverage resolution with identity and PIT validation.
+- exact onchain/stablecoin/source domains and explicit unavailable provider rails.
+- API/dashboard/live-clock wiring to canonical RDP7 stores.
+- focused RDP10 + RDP7 regression/acceptance coverage.
+
+productionCommits:
+- d84421063b966c551b67ce49b9ddf156d6abb6cb
+- ea073fa2cd7ce2818ab88cd3b941d2eb320af84e
+- 336d0519b814fa57c7fc95b3e1c7e3e40f67eb3e
+- f598657e45856ee8ab4c6d39585dffc160cb0c1d
+- 0ddcdf0aa500db209d6973b8e449227a54bc34f0
+- abf51c678e8ad9ef1265682bb9872dbab1e9d43d
+- 3d2d2529596b5d481ece968b4dd92b948f01b677
+- 082b087ab64cd82c44661f145e2fdc304f509933
+
+blocker:
+- exact-final-head RDP10/RDP7 UID504 acceptance not yet inspected.
+
+nextAction:
+- inspect exact final head workflows; repair only proven failures; if PASS, re-check main/head/duplicate state, open PR and merge only after acceptance evidence is recorded.

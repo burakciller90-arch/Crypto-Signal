@@ -21,6 +21,7 @@ from crypto_signal.data.stablecoin_source_contract import (
     persist_defillama_stablecoin_snapshot,
 )
 from crypto_signal.intelligence.confluence_matrix_v2 import ConfluenceFamily
+from crypto_signal.product.frozen_proof_store import FrozenProofStore
 from crypto_signal.product.intelligence_stream_forward_runtime import (
     IntelligenceStreamForwardRuntime,
 )
@@ -166,6 +167,54 @@ def test_onchain_family_binds_exact_stablecoin_lineage_without_direction(
         ).lower()
         assert "bullish" not in encoded
         assert "bearish" not in encoded
+
+
+def test_onchain_family_persists_only_derived_stablecoin_proofs(
+    tmp_path: Path,
+) -> None:
+    onchain_path, source_path, latest = _seed_two_snapshots(tmp_path)
+    proof_path = tmp_path / "frozen_proofs.sqlite3"
+
+    snapshot = build_onchain_family_snapshots(
+        onchain_path,
+        source_path,
+        symbols=("BTCUSDT",),
+        as_of_ms=1_300_100,
+        frozen_proof_store_path=proof_path,
+    )[0]
+
+    store = FrozenProofStore(proof_path)
+    proofs = tuple(
+        proof
+        for identity in snapshot.evidence_identities
+        for proof in (store.read_exact(identity),)
+        if proof is not None
+    )
+    assert len(proofs) == 2
+    assert {proof.object_kind for proof in proofs} == {
+        "stablecoin_capital_flow_freeze"
+    }
+    assert {proof.asset for proof in proofs} == {"USDC", "USDT"}
+    assert all(proof.real_capital == 0 for proof in proofs)
+    assert all(proof.production_authority is False for proof in proofs)
+
+    source_ids = {
+        value
+        for item in latest
+        for value in (
+            item.raw_identity,
+            item.envelope_identity,
+            item.coverage_event_identity,
+            item.observation_identity,
+        )
+    }
+    assert source_ids.issubset(set(snapshot.evidence_identities))
+    assert all(store.read_exact(identity) is None for identity in source_ids)
+    assert all(
+        source_ids.intersection(proof.source_object_identities)
+        for proof in proofs
+    )
+    assert snapshot.direction is None
 
 
 def test_onchain_family_fails_closed_when_coverage_becomes_unavailable(

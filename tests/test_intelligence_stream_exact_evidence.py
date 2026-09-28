@@ -6,6 +6,7 @@ from pathlib import Path
 
 import test_rdp5_liquidation_heatmap_crowding_family as liquidation_family
 import test_rdp6_options_derivatives_family as options_family
+import test_rdp7_onchain_family as onchain_family
 from fastapi.testclient import TestClient
 from test_immutable_ledger import build_bundle, candles
 from test_rdp4_rich_market_tape_family import AS_OF_MS, _seed
@@ -49,6 +50,9 @@ from crypto_signal.product.intelligence_stream_forward_runtime import (
 from crypto_signal.product.intelligence_stream_models import (
     StreamCategory,
     StreamImportance,
+)
+from crypto_signal.product.intelligence_stream_onchain_family import (
+    build_onchain_family_snapshots,
 )
 from crypto_signal.product.intelligence_stream_production_projector import (
     IntelligenceStreamProductionProjector,
@@ -1236,4 +1240,154 @@ def test_options_proofs_resolve_exact_from_frozen_store(
     assert metrics["next_atm_iv"] == "0.56"
     assert volatility_object["depends_on_evidence_identities"]
     assert exact_volatility["current_data_substitution"] is False
+
+def test_onchain_stablecoin_proofs_resolve_exact_from_canonical_sources(
+    tmp_path: Path,
+) -> None:
+    onchain_path, source_path, latest = onchain_family._seed_two_snapshots(
+        tmp_path
+    )
+    proof_path = tmp_path / "frozen_proofs.sqlite3"
+    stream_path = tmp_path / "stream.sqlite3"
+
+    snapshot = build_onchain_family_snapshots(
+        onchain_path,
+        source_path,
+        symbols=("BTCUSDT",),
+        as_of_ms=1_300_100,
+        frozen_proof_store_path=proof_path,
+    )[0]
+    narrative_identity = _project_family(
+        stream_path,
+        projector_id="onchain_change",
+        snapshot=snapshot,
+    )
+
+    resolver = IntelligenceStreamExactEvidenceReadModel(
+        stream_ledger_path=stream_path,
+        frozen_proof_store_path=proof_path,
+        onchain_capital_flow_path=onchain_path,
+        onchain_source_contract_path=source_path,
+    )
+    payload = resolver.read_for_narrative(narrative_identity)
+    assert payload is not None
+    assert payload["current_data_substitution"] is False
+
+    for domain in (
+        "onchain",
+        "stablecoin_capital_flow",
+        "stablecoin_supply",
+        "source_raw_payload",
+        "source_envelope",
+        "source_coverage",
+    ):
+        resolution = _resolution(payload, domain)
+        assert resolution["resolution_state"] == "READY_EXACT"
+        assert resolution["current_data_substitution"] is False
+
+    onchain = _resolution(payload, "onchain")
+    capabilities = onchain["capabilities"]
+    assert isinstance(capabilities, dict)
+    assert capabilities["stablecoin_capital_flow_freeze"] == "READY_EXACT"
+    assert capabilities["normalized_supply_observations"] == "READY_EXACT"
+    assert capabilities["source_lineage"] == "READY_EXACT"
+    assert capabilities["exchange_flow"] == "UNAVAILABLE_EXPLICIT"
+    assert capabilities["large_transfer"] == "UNAVAILABLE_EXPLICIT"
+    assert capabilities["wallet_cohort"] == "UNAVAILABLE_EXPLICIT"
+    assert capabilities["stablecoin_bridge"] == "UNAVAILABLE_EXPLICIT"
+    assert capabilities["directional_inference"] == "UNAVAILABLE_EXPLICIT"
+
+    references = tuple(
+        item
+        for item in payload["reference_resolutions"]
+        if isinstance(item, dict)
+    )
+    kinds = {
+        str(item.get("object_kind"))
+        for item in references
+        if item.get("object_kind") is not None
+    }
+    assert "stablecoin_capital_flow_freeze" in kinds
+    assert "stablecoin_supply_observation" in kinds
+    assert "source_raw_payload" in kinds
+    assert "source_envelope" in kinds
+    assert "source_coverage" in kinds
+
+    freeze_ref = next(
+        item
+        for item in references
+        if item.get("object_kind") == "stablecoin_capital_flow_freeze"
+    )
+    exact_freeze = resolver.read_reference(
+        narrative_identity=narrative_identity,
+        evidence_identity=str(freeze_ref["evidence_identity"]),
+    )
+    assert exact_freeze is not None
+    freeze_object = exact_freeze["exact_object"]
+    assert isinstance(freeze_object, dict)
+    freeze_payload = freeze_object["payload"]
+    assert isinstance(freeze_payload, dict)
+    assert freeze_payload["analysis"]["status"] == "measured"
+    assert freeze_payload["observations"]
+    assert exact_freeze["current_data_substitution"] is False
+
+    latest_ids = {
+        value
+        for item in latest
+        for value in (
+            item.raw_identity,
+            item.envelope_identity,
+            item.coverage_event_identity,
+            item.observation_identity,
+        )
+    }
+    ready_ids = {
+        str(item["evidence_identity"])
+        for item in references
+        if item.get("resolution_state") == "READY_EXACT"
+    }
+    assert latest_ids.issubset(ready_ids)
+
+    raw_ref = next(
+        item
+        for item in references
+        if item.get("object_kind") == "source_raw_payload"
+    )
+    exact_raw = resolver.read_reference(
+        narrative_identity=narrative_identity,
+        evidence_identity=str(raw_ref["evidence_identity"]),
+    )
+    assert exact_raw is not None
+    raw_object = exact_raw["exact_object"]
+    assert isinstance(raw_object, dict)
+    assert isinstance(raw_object["payload"], dict)
+
+    envelope_ref = next(
+        item
+        for item in references
+        if item.get("object_kind") == "source_envelope"
+    )
+    exact_envelope = resolver.read_reference(
+        narrative_identity=narrative_identity,
+        evidence_identity=str(envelope_ref["evidence_identity"]),
+    )
+    assert exact_envelope is not None
+    envelope_object = exact_envelope["exact_object"]
+    assert isinstance(envelope_object, dict)
+    assert envelope_object["normalized_identity"] in ready_ids
+
+    coverage_ref = next(
+        item
+        for item in references
+        if item.get("object_kind") == "source_coverage"
+    )
+    exact_coverage = resolver.read_reference(
+        narrative_identity=narrative_identity,
+        evidence_identity=str(coverage_ref["evidence_identity"]),
+    )
+    assert exact_coverage is not None
+    coverage_object = exact_coverage["exact_object"]
+    assert isinstance(coverage_object, dict)
+    assert coverage_object["state"] == "observed"
+    assert snapshot.direction is None
 
