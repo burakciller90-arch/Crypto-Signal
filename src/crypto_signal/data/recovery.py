@@ -113,6 +113,7 @@ async def backfill_range(
             collected[candle.open_time_ms] = candle
 
         if source_snapshot is not None:
+            assert source_store is not None
             persistence = persist_candle_source_snapshot(
                 candle_store=store,
                 source_store=source_store,
