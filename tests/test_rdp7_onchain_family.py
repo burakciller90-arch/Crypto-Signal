@@ -19,6 +19,7 @@ from crypto_signal.data.stablecoin_source_contract import (
     DEFILLAMA_STABLECOIN_CHANNEL,
     DEFILLAMA_STABLECOIN_PROVIDER,
     DEFILLAMA_STABLECOIN_SOURCE,
+    StablecoinSupplySourcePersistence,
     persist_defillama_stablecoin_snapshot,
 )
 from crypto_signal.intelligence.confluence_matrix_v2 import ConfluenceFamily
@@ -65,7 +66,7 @@ def _persist_snapshot(
     observed_at_ms: int,
     usdc: str,
     usdt: str,
-):
+) -> tuple[StablecoinSupplySourcePersistence, ...]:
     return persist_defillama_stablecoin_snapshot(
         snapshot=DefiLlamaStablecoinSourceSnapshot(
             assets=(
@@ -84,7 +85,7 @@ def _seed_two_snapshots(
 ) -> tuple[
     Path,
     Path,
-    tuple[object, ...],
+    tuple[StablecoinSupplySourcePersistence, ...],
 ]:
     onchain_path = tmp_path / "onchain.sqlite3"
     source_path = tmp_path / "source.sqlite3"
@@ -174,15 +175,15 @@ def test_onchain_family_fails_closed_when_coverage_becomes_unavailable(
 ) -> None:
     onchain_path, source_path, _ = _seed_two_snapshots(tmp_path)
     source = SourceContractStore(source_path)
-    capability = source.capability(
-        source.latest_envelope_at(
-            provider=DEFILLAMA_STABLECOIN_PROVIDER,
-            source=DEFILLAMA_STABLECOIN_SOURCE,
-            channel=DEFILLAMA_STABLECOIN_CHANNEL,
-            symbol="USDT",
-            as_of_ms=1_300_100,
-        ).capability_identity
+    envelope = source.latest_envelope_at(
+        provider=DEFILLAMA_STABLECOIN_PROVIDER,
+        source=DEFILLAMA_STABLECOIN_SOURCE,
+        channel=DEFILLAMA_STABLECOIN_CHANNEL,
+        symbol="USDT",
+        as_of_ms=1_300_100,
     )
+    assert envelope is not None
+    capability = source.capability(envelope.capability_identity)
     assert capability is not None
     previous = source.latest_coverage(
         provider=DEFILLAMA_STABLECOIN_PROVIDER,
