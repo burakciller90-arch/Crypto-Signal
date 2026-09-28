@@ -7,11 +7,7 @@ from crypto_signal.data.derivatives import (
     DerivativesInstrumentType,
     DerivativesObservation,
 )
-from crypto_signal.data.liquidations import (
-    LiquidatedPositionSide,
-    LiquidationFeedCoverage,
-    LiquidationObservation,
-)
+from crypto_signal.data.liquidations import LiquidatedPositionSide
 from crypto_signal.data.market_tape import MarketTapeStore
 from crypto_signal.data.microstructure import (
     OrderBookSnapshot,
