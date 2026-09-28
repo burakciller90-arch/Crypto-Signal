@@ -1016,3 +1016,31 @@ blocker:
 
 nextAction:
 - verify run 36477116448 exact main/clean Workbench; then audit current RDP7 stores/freezes/projector/resolver before production changes.
+
+
+---
+
+## 2026-09-28 — RDP10-F2 pre-implementation audit checkpoint
+
+status: IMPLEMENTATION_READY
+canonicalMain: b224a9f466767b39c051dd35096d414f2bf1495b
+branch: rdp10/onchain-proof-f2
+branchHeadBeforeProduction: d1e4f63a89054809ea5e4af0166d06d856b8d53e
+worktree: no session-local /Volumes worktree; exact-main Workbench verified by run 36477116448 / job 109113488100
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+audit:
+- canonical normalized stablecoin truth already lives append-only in OnchainCapitalFlowStore.
+- source raw/envelope/coverage truth already lives in SourceContractStore.
+- family already builds PIT-safe StablecoinCapitalFlowEvidenceFreeze and binds all relevant identities.
+- missing layer is derived freeze persistence + exact customer resolver/wiring, not a new collector/store.
+- unsupported exchange-flow/large-transfer/wallet-cohort/bridge rails stay unavailable and direction stays None.
+
+blocker:
+- stablecoin derived proof is not persisted and RDP10 has no canonical On-chain/source-contract resolver paths.
+
+nextAction:
+- persist only stablecoin_capital_flow_freeze in FrozenProofStore; add read-only canonical source resolvers and exact domain capabilities; wire live/API acceptance and tests; then prove exact-head RDP10 and RDP7 gates before merge.
