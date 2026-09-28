@@ -27,13 +27,13 @@ Latest RDP1 closure evidence:
 - liquidation rows/coverage remain 0 and are an explicit unsupported/deferred rail, not an RDP1 blocker; Capital/Portfolio and standalone On-chain remain deferred; REAL_CAPITAL=0.
 
 RDP2 progress:
-- RDP2-A source-contract foundation merged via PR #1555 as `585378dc32753d2e31894bd666eb1e084802e6ab`; UID504 run `36373922309` passed exact Workbench/source, focused tests, Ruff and mypy;
-- RDP2-B live Bybit WebSocket Market Tape source-contract wiring merged via PR #1557 as `b2f6bdc64e4830de7a021250155c3cea6f587922`;
-- UID504 final RDP2-B run `36378394811`: exact Workbench baseline PASS, exact PR source PASS, focused live-wiring tests PASS, Ruff PASS, mypy PASS, py_compile PASS, REAL_CAPITAL=0; foundation regression run `36378394713` also PASS;
-- accepted live wiring now preserves exact raw SHA -> actually persisted normalized orderbook/trade SHA lineage, one envelope per trade, explicit raw-only cadence skips, PIT-safe event ordering, OBSERVED/GAP coverage and exact reuse of the existing MarketDataGapLedger;
-- WC1 restart focused safety and Development non-mutation passed; its whole-repository failure remained limited to three unrelated historical Intelligence Stream text/search assertions and was not treated as an RDP2-B failure;
-- Workbench bootstrap `36378462863` fast-forwarded clean `repo/main` to exact `b2f6bdc64e4830de7a021250155c3cea6f587922`;
-- RDP2 remains ACTIVE. Exact next implementation frontier: **RDP2-C — canonical raw -> normalized provenance for the 60s Bybit REST Market Tape snapshot, especially derivatives OI/mark/index/funding plus REST orderbook/recent-trade responses, without creating a second collector.**
+- RDP2-A source-contract foundation merged via PR #1555 as `585378dc32753d2e31894bd666eb1e084802e6ab`; UID504 `36373922309` PASS;
+- RDP2-B live Bybit WebSocket Market Tape wiring merged via PR #1557 as `b2f6bdc64e4830de7a021250155c3cea6f587922`; UID504 `36378394811` PASS;
+- RDP2-C 60s Bybit REST Market Tape provenance merged via PR #1559 as `199cf203a41d403d14a38ce73acb226fd271cd16`;
+- UID504 final C run `36379731893`: exact Workbench/source PASS, REST provenance tests PASS, Ruff PASS, mypy PASS, py_compile PASS, REAL_CAPITAL=0; A regression `36379731889` PASS and B regression `36379732197` PASS;
+- REST orderbook/recent-trade/open-interest/ticker responses now retain inspectable canonical raw payloads and map to the normalized identity actually persisted in Market Tape; OI/ticker do not invent provider event IDs; successful empty responses remain explicit raw-only evidence;
+- snapshot hot-path integrity scans remain delegated, preserving RDP1 runtime guarantees; Workbench bootstrap `36379861546` advanced clean `repo/main` to exact `199cf203a41d403d14a38ce73acb226fd271cd16`;
+- RDP2 remains ACTIVE because the Geometry candle rail still has normalized CandleStore persistence without canonical raw kline envelope/coverage. Exact next implementation frontier: **RDP2-D — candle source provenance + coverage for the live Bybit/Binance candle rail before RDP3 Geometry production truth.**
 
 Locked execution sequence:
 `RDP1 runtime reliability → RDP2 source envelope/coverage → RDP3 Geometry → RDP4 rich Liquidity/Order Flow → RDP5 Derivatives/Liquidations → RDP6 BTC/ETH Options → RDP7 real On-chain/stablecoin capital flows → RDP8 Event/Cross-market → RDP9 cross-venue + overlap control → RDP10 frozen proof contract → RDP11 soak/acceptance → Paper Portfolio → new frontend`.
