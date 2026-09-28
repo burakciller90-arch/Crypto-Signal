@@ -7,6 +7,7 @@ from crypto_signal.data.derivatives import DerivativesInstrumentType
 from crypto_signal.data.liquidations import LiquidatedPositionSide
 from crypto_signal.data.market_tape import MarketTapeStore
 from crypto_signal.data.models import Exchange, MarketType
+from crypto_signal.data.options_surface_store import OptionsSurfaceStore
 from crypto_signal.data.store import CandleStore
 from crypto_signal.intelligence.confluence_matrix_v2 import ConfluenceFamily
 from crypto_signal.intelligence.derivatives_context import (
@@ -33,6 +34,9 @@ from crypto_signal.intelligence.liquidity_structure import (
 )
 from crypto_signal.intelligence.liquidity_sweep import (
     build_liquidity_sweep_evidence_freeze,
+)
+from crypto_signal.intelligence.options_volatility import (
+    build_options_volatility_evidence_freeze,
 )
 from crypto_signal.intelligence.order_flow_microstructure import (
     OrderFlowMicrostructureLabel,
@@ -291,8 +295,14 @@ def build_market_tape_family_snapshots(
     symbols: tuple[str, ...],
     as_of_ms: int,
     candle_cache_path: Path | None = None,
+    options_surface_path: Path | None = None,
 ) -> tuple[StreamFamilySnapshot, ...]:
     store = MarketTapeStore(market_tape_path)
+    options_store = (
+        None
+        if options_surface_path is None
+        else OptionsSurfaceStore(options_surface_path)
+    )
     candle_store = (
         None
         if candle_cache_path is None
@@ -1178,7 +1188,201 @@ def build_market_tape_family_snapshots(
                         )
                     )
 
-            if has_liquidation_extension:
+            options_status = "not_configured"
+            options_freeze = None
+            options_surface = None
+            base_asset = _base_asset(symbol)
+            has_options_extension = (
+                options_store is not None and base_asset in {"BTC", "ETH"}
+            )
+            if has_options_extension:
+                assert options_store is not None
+                options_surface = options_store.latest_surface_as_of(
+                    exchange=Exchange.BYBIT,
+                    base_coin=base_asset,
+                    as_of_ms=as_of_ms,
+                )
+                if options_surface is None:
+                    options_status = "unavailable"
+                    derivatives_components.extend(
+                        (
+                            ("options_status", options_status),
+                            (
+                                "options_volatility_index_status",
+                                "unavailable",
+                            ),
+                        )
+                    )
+                    derivatives_uncertainty.add(
+                        "options_surface_unavailable"
+                    )
+                else:
+                    options_freeze = (
+                        build_options_volatility_evidence_freeze(
+                            options_surface,
+                            as_of_ms=as_of_ms,
+                        )
+                    )
+                    options_analysis = options_freeze.analysis
+                    options_status = options_analysis.status.value
+                    derivatives_domains.update(
+                        {"options_surface", "options_volatility"}
+                    )
+                    derivatives_evidence.update(
+                        {
+                            options_surface.surface_identity,
+                            options_surface.instrument_metadata_identity,
+                            options_freeze.freeze_identity,
+                            options_analysis.evidence_identity,
+                            *(
+                                item.quote_identity
+                                for item in options_surface.contracts
+                            ),
+                        }
+                    )
+                    derivatives_uncertainty.update(
+                        options_analysis.uncertainty_flags
+                    )
+                    derivatives_components.extend(
+                        (
+                            ("options_status", options_status),
+                            (
+                                "options_surface_age_ms",
+                                str(options_analysis.surface_age_ms),
+                            ),
+                            (
+                                "options_contract_count",
+                                str(options_analysis.consumed_contract_count),
+                            ),
+                        )
+                    )
+                    options_metrics = options_analysis.metrics
+                    if options_metrics is not None:
+                        derivatives_components.extend(
+                            (
+                                (
+                                    "options_measured_atm_expiry_count",
+                                    str(
+                                        options_metrics
+                                        .measured_atm_expiry_count
+                                    ),
+                                ),
+                                (
+                                    "options_measured_rr_expiry_count",
+                                    str(
+                                        options_metrics
+                                        .measured_rr_expiry_count
+                                    ),
+                                ),
+                                (
+                                    "options_term_structure_shape",
+                                    options_metrics
+                                    .term_structure_shape.value,
+                                ),
+                                (
+                                    "options_volatility_index_status",
+                                    options_metrics
+                                    .volatility_index_status.value,
+                                ),
+                            )
+                        )
+                        for name, value in (
+                            (
+                                "options_front_atm_iv",
+                                options_metrics.front_atm_iv,
+                            ),
+                            (
+                                "options_next_atm_iv",
+                                options_metrics.next_atm_iv,
+                            ),
+                            (
+                                "options_term_structure_iv_change",
+                                options_metrics.term_structure_iv_change,
+                            ),
+                            (
+                                "options_put_call_open_interest_ratio",
+                                options_metrics
+                                .put_call_open_interest_ratio,
+                            ),
+                            (
+                                "options_put_call_volume_ratio",
+                                options_metrics.put_call_volume_ratio,
+                            ),
+                            (
+                                "options_top_expiry_open_interest_share",
+                                options_metrics
+                                .top_expiry_open_interest_share,
+                            ),
+                        ):
+                            if value is not None:
+                                derivatives_components.append(
+                                    (name, str(value))
+                                )
+                        if options_metrics.top_expiry_at_ms is not None:
+                            derivatives_components.append(
+                                (
+                                    "options_top_expiry_at_ms",
+                                    str(options_metrics.top_expiry_at_ms),
+                                )
+                            )
+                    else:
+                        derivatives_components.append(
+                            (
+                                "options_volatility_index_status",
+                                "unavailable",
+                            )
+                        )
+
+            if has_options_extension:
+                derivatives_source_event_identity = canonical_sha256(
+                    {
+                        "as_of_ms": as_of_ms,
+                        "context_freeze_identity": (
+                            derivatives_freeze.freeze_identity
+                        ),
+                        "crowding_freeze_identity": (
+                            None
+                            if crowding_freeze is None
+                            else crowding_freeze.freeze_identity
+                        ),
+                        "dynamics_freeze_identity": (
+                            dynamics_freeze.freeze_identity
+                        ),
+                        "heatmap_freeze_identity": (
+                            None
+                            if heatmap_freeze is None
+                            else heatmap_freeze.freeze_identity
+                        ),
+                        "liquidation_coverage_identity": (
+                            liquidation_coverage_identity
+                        ),
+                        "observed_liquidation_identities": tuple(
+                            item.liquidation_identity
+                            for item in recent_liquidations
+                        ),
+                        "options_freeze_identity": (
+                            None
+                            if options_freeze is None
+                            else options_freeze.freeze_identity
+                        ),
+                        "options_status": options_status,
+                        "options_surface_identity": (
+                            None
+                            if options_surface is None
+                            else options_surface.surface_identity
+                        ),
+                        "symbol": symbol,
+                        "version": "rdp6-options-derivatives-family-v1/1",
+                    }
+                )
+                derivatives_state_label = (
+                    f"{derivatives_analysis.label.value}:"
+                    f"{dynamics_analysis.status.value}:"
+                    f"{dynamics_analysis.oi_price_state.value}:"
+                    f"{liquidation_status}:{crowding_label}:"
+                    f"{options_status}"
+                )
+            elif has_liquidation_extension:
                 derivatives_source_event_identity = canonical_sha256(
                     {
                         "as_of_ms": as_of_ms,
@@ -1243,7 +1447,9 @@ def build_market_tape_family_snapshots(
                     importance=StreamImportance.IMPORTANT,
                     source_event_identity=derivatives_source_event_identity,
                     source_scope=(
-                        "bybit:linear_perpetual:market_tape_derivatives"
+                        "bybit:linear_perpetual_plus_options:derivatives"
+                        if has_options_extension
+                        else "bybit:linear_perpetual:market_tape_derivatives"
                     ),
                     asset=_base_asset(symbol),
                     symbol=symbol,
