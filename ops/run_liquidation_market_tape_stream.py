@@ -168,18 +168,11 @@ async def run(args: argparse.Namespace) -> int:
         else runtime_store.latest_heartbeat(previous.instance_identity)
     )
     if previous_heartbeat is None:
-        if not store.quick_check() or not raw_store.quick_check():
-            print(
-                "LIQUIDATION_COLLECTOR_ERROR=SQLITE_QUICK_CHECK_FAIL",
-                file=sys.stderr,
-                flush=True,
-            )
-            return 3
-        counts = store.counts()
-        baseline_normalized_rows_total = (
-            counts.liquidations + counts.liquidation_coverage
-        )
-        baseline_raw_rows_total = raw_store.count()
+        # Runtime counters belong to this continuous collector. Existing rows in
+        # the shared multi-GB tape predate it and must not force a full startup
+        # quick_check()/COUNT(*) scan before runtime liveness is initialized.
+        baseline_normalized_rows_total = 0
+        baseline_raw_rows_total = 0
     else:
         baseline_normalized_rows_total = (
             previous_heartbeat.normalized_rows_total
