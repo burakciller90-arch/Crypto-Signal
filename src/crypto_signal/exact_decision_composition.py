@@ -13,6 +13,9 @@ from crypto_signal.intelligence.confluence_matrix_v2 import (
     ConfluenceFamily,
     ConfluenceFamilyEvidence,
 )
+from crypto_signal.intelligence.cross_venue_quality import (
+    CrossVenueQualityAssessment,
+)
 from crypto_signal.intelligence.event_risk_circuit_breaker import (
     CircuitBreakerAnalysis,
 )
@@ -61,6 +64,7 @@ def compose_exact_decision(
     calibration_scope: CalibrationScope | None = None,
     forecast_version_refs: tuple[ForecastVersionRef, ...] = (),
     forecast_source_evidence_identities: tuple[str, ...] = (),
+    cross_venue_quality: CrossVenueQualityAssessment | None = None,
 ) -> UnifiedDecisionIssuance:
     """Compose exact accepted sources; no surrogate or hidden evidence creation."""
     if geometry_family.family is not ConfluenceFamily.GEOMETRY:
@@ -131,6 +135,7 @@ def compose_exact_decision(
         forecast_source_evidence_identities=(
             forecast_source_evidence_identities
         ),
+        cross_venue_quality=cross_venue_quality,
     )
 
 
