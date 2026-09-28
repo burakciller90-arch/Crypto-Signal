@@ -1131,3 +1131,49 @@ blocker:
 
 nextAction:
 - merge this docs-only closeout after exact main/head recheck; then branch from exact current main, checkpoint RDP10-F3 start before production changes, audit the complete top-level RDP10 PASS contract, and implement only mechanically demonstrated gaps.
+
+
+
+---
+
+## 2026-09-28 — RDP10-F3 task-start checkpoint
+
+status: ACTIVE
+repository: burakciller90-arch/Crypto-Signal
+canonicalMainAtStart: 3b555bb97ff8f43038a854e7c66a6ae9f505bbb7
+previousGate: RDP10-F2 PASS
+previousCloseoutPR: 1653
+previousCloseoutMergeSha: 3b555bb97ff8f43038a854e7c66a6ae9f505bbb7
+branch: rdp10/final-contract-closure-f3
+worktree: no session-local /Volumes worktree; canonical SSD504 Workbench exact-main verified
+roadmapGate: RDP10-F3 final contract closure audit
+duplicateRelevantPRs: NONE
+duplicateExactF3BranchesBeforeCreation: NONE
+prepBranchObserved: prep/rdp10-proof-contract
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+workbenchPrerequisite:
+- Crypto SSD504 Workbench Bootstrap run 36480861694 / job 109125861177: SUCCESS.
+- GITHUB_SHA=3b555bb97ff8f43038a854e7c66a6ae9f505bbb7.
+- WORKBENCH_REPO_SYNCED_TO_MAIN=YES.
+- final REPO_HEAD=3b555bb97ff8f43038a854e7c66a6ae9f505bbb7.
+- REPO_BRANCH=main; REPO_DIRTY_COUNT=0.
+- SSD504_WORKBENCH_PASS=YES; REAL_CAPITAL=0.
+
+baselineRuns:
+- Agent Memory Bootstrap 36480861707: in progress at start.
+- RDP10 Frozen Proof Contract 36480905700: queued at start.
+
+boundedGoal:
+- audit and mechanically close only the remaining top-level RDP10 proof-contract gaps across Geometry, Liquidity, Order Flow, Derivatives, On-chain, Event Risk/context and RDP9 provider-divergence/data-quality context.
+- preserve immutable/PIT/no-current-substitution truth and explicit unavailable/stale states.
+- do not duplicate accepted stores/proofs or create unsupported direction/provider claims.
+
+blocker:
+- exact-main baseline acceptance and resolver/source-contract coverage audit are not yet complete.
+
+nextAction:
+- inspect runs 36480905700 and 36480861707, then map current exact-evidence domains/resolvers to Event Risk and provider-divergence source truth and record the pre-implementation audit checkpoint before any code change.
