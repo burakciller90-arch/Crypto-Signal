@@ -615,9 +615,11 @@ PASS:
 Status: **ACTIVE**
 
 Progress:
-- existing live family path currently uses bounded Liquidity Dynamics and Order Flow Microstructure only;
-- richer PIT-safe freeze engines already exist for Liquidity Structure, Liquidity Sweep, Temporal Order Flow, price/CVD divergence and absorption;
-- exact next frontier: **RDP4-A — wire Liquidity Structure/Sweep and Temporal Order Flow into forward Market Tape family proof without changing score-family weights or making actor-intent claims; keep divergence/absorption for the next bounded dependency step.**
+- **RDP4-A rich Market Tape family wiring ACCEPTED** on main `0356f6c1024935bfeffbcc7e61b2a7d95bd9ecc5` via PR #1566;
+- UID504 `36387736662`: exact Workbench/source PASS, rich family + engine regressions PASS, Ruff PASS, mypy PASS, py_compile PASS, REAL_CAPITAL=0;
+- Liquidity Structure/Sweep and Temporal Order Flow are now promoted into the existing Liquidity/Order Flow family snapshots with composite source-event identities, rich evidence domains/components and uncertainty lineage; no new family or score weight was added;
+- future/late rows cannot rewrite PIT family truth; missing trades do not fabricate public-trade/temporal/CVD domains; temporal CVD never invents family direction;
+- next: **RDP4-B — add Absorption + Price/CVD Divergence dependency/overlap freezes. Production divergence consumes canonical read-only 15m candles and is allowed to remain explicit UNRESOLVED when the default 2m flow window cannot provide five compatible closed candles; no synthetic lower-timeframe price rail will be invented.**
 
 Goal:
 - promote existing rich M2/M3 engines into the forward-only family path.
