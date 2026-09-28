@@ -387,6 +387,19 @@ def accepted_stream_projector_registry() -> tuple[StreamProjectorSpec, ...]:
             customer_stream_scope="material derivatives context change only",
         ),
         StreamProjectorSpec(
+            projector_id="onchain_change",
+            source_system="On-chain Capital Flow / DefiLlama stablecoin evidence",
+            category=StreamCategory.INTELLIGENCE,
+            subtypes=("onchain_material_change",),
+            implementation_state=(
+                StreamProjectorImplementationState.IMPLEMENTED
+            ),
+            target_phase="RDP7",
+            customer_stream_scope=(
+                "accepted neutral stablecoin capital context only"
+            ),
+        ),
+        StreamProjectorSpec(
             projector_id="event_risk_change",
             source_system="Event Source / Event Risk circuit breaker",
             category=StreamCategory.RISK,
