@@ -44,6 +44,7 @@ jobs:
           "$PY" -m pytest -q \
             tests/test_rdp6_options_volatility.py \
             tests/test_rdp6_options_contract.py \
+            tests/test_rdp6_options_source_store.py \
             tests/test_rdp5_liquidation_heatmap_crowding_family.py \
             tests/test_rdp5_derivatives_dynamics_family.py
           "$PY" -m ruff check \
