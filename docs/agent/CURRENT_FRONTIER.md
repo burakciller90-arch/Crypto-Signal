@@ -1,99 +1,5 @@
 # Crypto Signal Current Frontier
 
-## LIVE ACTIVE CHECKPOINT — 2026-09-28 — RDP10-E2 STARTED
-
-This checkpoint was written before any RDP10-E2 production code change.
-
-- canonical main at task start: `212d0428244d65caeb8c5646add9a7ebffc5fccb`
-- main commit: `Docs: close RDP10-E1 and advance to E2 (#1647)`
-- active branch: `rdp10/liquidation-proof-e2`
-- session-local /Volumes worktree: NONE
-- duplicate RDP10-E2 PRs: NONE
-- duplicate E2 branch at start: NONE
-- `REAL_CAPITAL=0`
-- historical/frozen backfill: FORBIDDEN
-- Durdurulmaz touched: NO
-- Quantum Capital touched: NO
-
-### Bounded goal
-
-RDP10-E2 will close the remaining Derivatives liquidation proof gap:
-
-- exact raw liquidation observations remain source records;
-- exact provider coverage proof with knowledge time `observed_at_ms`;
-- exact immutable Liquidation Heatmap proof persisted before Stream publication;
-- exact immutable Derivatives Crowding proof persisted before Stream publication;
-- exact parent/dependency lineage to derivatives dynamics, mark reference, coverage and liquidation events;
-- explicit zero-event semantics only when provider coverage proves the interval.
-
-No options/on-chain/event/cross-venue work belongs to E2.
-
-### Current blocker
-
-Exact-main Workbench bootstrap for `212d042...` is pending:
-
-- run `36468609152`
-- E2 production implementation must not begin until this exact-main Workbench verification is PASS.
-
-### Exact nextAction
-
-Read run `36468609152`; once clean/PASS, audit current liquidation observation/coverage/heatmap/crowding freeze schemas and implement E2 persistence + resolver integration without historical backfill.
-
-### Phase checkpoint — E2 implementation complete, acceptance pending
-
-Exact-main Workbench prerequisite is PASS:
-
-- run `36468609152`
-- job `109084863561`
-- `GITHUB_SHA=212d0428244d65caeb8c5646add9a7ebffc5fccb`
-- final canonical Workbench repo branch `main`
-- final canonical Workbench repo head exact main
-- final dirty count `0`
-- `SSD504_WORKBENCH_PASS=YES`
-- `REAL_CAPITAL=0`
-
-Implemented on `rdp10/liquidation-proof-e2`:
-
-- `0d9e99c0234f9dc59d2e603a522cf63960d3e532` — persist exact historical Derivatives Dynamics dependency plus Liquidation Heatmap and Derivatives Crowding proof objects before Stream publication;
-- `5db6f3976d1769b63e6d1198d3fbe4c76615baa5` — resolve raw liquidation rows, provider coverage, heatmap and crowding exact domains;
-- `b5b6c0345df7ebabb5ac09f5eee3528723cffa51` — persistence/lineage tests on complete provider coverage with observed liquidation;
-- `d4a44c712f06a48482a1622608be281c17456028` — exact-evidence test for raw event/coverage + heatmap/crowding proof resolution;
-- `6bb8e45e0280089513a068bf4e41cb9fee59c0cd` — RDP10 UID504 gate expanded for E2 and live resolver proof-store path;
-- `b7bb162e7fdb4f3dc13d462b538d69cc54c879bc` — static cleanup.
-
-Semantics preserved:
-
-- provider coverage knowledge time is `observed_at_ms`;
-- zero-event evidence is never inferred from provider silence;
-- Heatmap exposes observed bins only and keeps future leverage/risk estimation explicitly unavailable;
-- Crowding dependency lineage binds exact dynamics + heatmap parents;
-- no historical Stream rewrite/backfill;
-- no current-data substitution;
-- `REAL_CAPITAL=0`.
-
-Exact nextAction: run the complete RDP10 Frozen Proof Contract UID504 acceptance on the final checkpoint head; inspect focused tests/lint/type output, live fail-closed audit, canonical non-mutation, `HISTORICAL_BACKFILL=NO`, and `REAL_CAPITAL=0` before any PR/merge.
-
-### Retry checkpoint — E2 tests passed; Ruff import order fixed
-
-First exact-head E2 acceptance:
-
-- run `36469577166`
-- job `109088179016`
-- canonical checkout verification PASS
-- focused pytest suite reached warnings summary with no product-test failure
-- Ruff alone failed with `I001 Import block is un-sorted or un-formatted`
-- live audit correctly skipped because focused gate failed
-- non-mutating cleanup PASS
-
-Repair:
-
-- `5a41cf4083401aa7148004f92c17578a3abe6a88`
-- only moves the local liquidation-family test module import to the Ruff-required position
-- no production code or acceptance criterion changed
-
-Exact nextAction: rerun the full RDP10 UID504 contract on the final retry-checkpoint head; merge only if focused + live + non-mutating all PASS.
-
-
 Conversation memory is non-authoritative. Rebuild from this file, HANDOFF_LOG, canonical roadmap, and live Git/GitHub/runtime evidence.
 
 Checkpoint assembled: 2026-09-28
@@ -106,19 +12,19 @@ Safety: `REAL_CAPITAL=0`
 
 Current exact `main`:
 
-`a8b10135ed35094a44ae8dba3e24c2a5f6a6b124`
+`da8abd2d10a5bc157b6aad2ef37074d2732e103d`
 
 Commit:
 
-`RDP10-E1: persist and resolve exact Derivatives core proofs (#1646)`
+`RDP10-E2: persist and resolve exact liquidation proofs (#1648)`
 
 Exact-main SSD504 Workbench verification:
 
 - workflow: `Crypto SSD504 Workbench Bootstrap`
-- run ID: `36467376773`
-- job ID: `109080736498`
+- run ID: `36470043887`
+- job ID: `109089702244`
 - conclusion: SUCCESS
-- exact SHA: `a8b10135ed35094a44ae8dba3e24c2a5f6a6b124`
+- exact SHA: `da8abd2d10a5bc157b6aad2ef37074d2732e103d`
 - final canonical repo branch: `main`
 - final canonical repo head: exact main
 - final dirty count: `0`
@@ -147,48 +53,66 @@ Exact-main SSD504 Workbench verification:
 - RDP10-C immutable derived-proof store — PASS
 - RDP10-D1 Liquidity exact proof persistence/resolution — PASS
 - RDP10-D2 Order Flow exact proof persistence/resolution — PASS
+- RDP10-E1 Derivatives Context + Dynamics — PASS
 
-### RDP10-E1 — Derivatives Context + Dynamics — PASS
+### RDP10-E2 — liquidation coverage / heatmap / crowding — PASS
 
-- branch: `rdp10/derivatives-proof-e1`
-- PR #1646
-- accepted head: `7f1aec8d0790a735a1dc7a5d57f7e2baf84f4924`
-- merge SHA: `a8b10135ed35094a44ae8dba3e24c2a5f6a6b124`
-- final exact-head acceptance: run `36467103637` / job `109079839634`: SUCCESS
+- branch: `rdp10/liquidation-proof-e2`
+- PR #1648
+- accepted head: `7879814ce99ea8b97f35e4761ff32be41c443e0f`
+- merge SHA: `da8abd2d10a5bc157b6aad2ef37074d2732e103d`
+- final exact-head acceptance: run `36469778696` / job `109088902172`: SUCCESS
 - focused tests/Ruff/mypy/py_compile: PASS
 - `RDP10_LIVE_MESSAGES_AUDITED=6`
-- `RDP10_UNREGISTERED_DOMAINS_OBSERVED=17`
+- `RDP10_UNREGISTERED_DOMAINS_OBSERVED=9`
 - `RDP10_UNREGISTERED_READY_COUNT=0`
 - `RDP10_LIVE_FAIL_CLOSED_PASS=YES`
 - `RDP10_NON_MUTATING_PASS=YES`
 - `HISTORICAL_BACKFILL=NO`
 - `REAL_CAPITAL=0`
-- immutable Derivatives Context and Dynamics proof objects persist before Stream publication
-- exact consumed derivatives observation lineage is preserved
-- exact context/dynamics payloads resolve through RDP10 customer evidence
-- top-level Derivatives capabilities distinguish raw source vs context vs dynamics proof
-- no current-data substitution, direction invention, or production authority
+- raw liquidation observations and exact provider coverage resolve read-only from Market Tape
+- provider knowledge time remains `observed_at_ms`; coverage-end alone never becomes evidence availability
+- immutable observed Liquidation Heatmap and Derivatives Crowding proofs persist before Stream publication
+- zero-event claim remains allowed only under exact complete coverage
+- observed heatmap does not invent future leverage/risk zones
+- crowding binds exact Derivatives Dynamics + Heatmap parents
+- no current-data substitution or historical rewrite/backfill
 
-RDP10-E is **not complete yet** because liquidation coverage/heatmap/crowding remain open.
+RDP10-E is mechanically complete. RDP10 itself is **not PASS yet**.
 
-## First mechanically unclosed slice
+## First mechanically unclosed RDP10 slice
 
-**RDP10-E2 — Liquidation observations + provider coverage + heatmap + crowding exact proof persistence/resolution**
+**RDP10-F — Options + On-chain strongest exact proof cutover**
 
-Required behavior:
+Canonical RDP10 PASS still requires the strongest exact proof actually available for the accepted provider-dependent rails.
 
-1. raw liquidation observations remain exact source records;
-2. provider coverage proof must preserve `observed_at_ms` knowledge time, not only `coverage_end_ms`;
-3. zero-liquidation claims are allowed only when exact provider coverage proves the interval;
-4. persist exact immutable Liquidation Heatmap proof before Stream publication;
-5. persist exact immutable Derivatives Crowding proof before Stream publication;
-6. expose exact source/dependency lineage to liquidation observations, provider coverage, mark reference and derivatives dynamics parents;
-7. missing exact proof must remain IDENTITY_ONLY/UNAVAILABLE;
-8. do not backfill/rewrite historical Stream messages;
-9. no current-data substitution, no invented leverage/risk-zone claims beyond engine contract;
-10. `REAL_CAPITAL=0`.
+### Options / volatility
 
-After E2 acceptance, re-audit the remaining RDP10-F/G requirements from the canonical roadmap before declaring RDP10 PASS.
+RDP6 is already PASS and belongs to the existing Derivatives family. RDP10-F must ensure:
+
+- exact options surface and its source/provider timestamps are resolvable;
+- exact immutable options-volatility freeze is persisted before Stream publication;
+- ATM IV term structure, skew, OI/volume by expiry and expiry concentration come from the frozen proof;
+- unsupported dealer-gamma/max-pain claims remain explicitly unavailable;
+- Options never creates a new score family or direction.
+
+### On-chain / stablecoin capital flow
+
+RDP7 is already PASS. RDP10-F must ensure:
+
+- accepted real stablecoin-capital-flow source/freeze lineage resolves through the customer proof contract;
+- provider/source/coverage/PIT timestamps are visible;
+- no synthetic whale/institution identity is invented;
+- exchange-flow, large-transfer and wallet-cohort rails remain explicit unavailable where accepted provider truth does not exist;
+- On-chain remains the existing `ConfluenceFamily.ONCHAIN`, with no direction invented from context alone.
+
+### Already exact / re-audit only
+
+- Event Risk/context source records are already exact-resolvable from Event Source runtime.
+- Provider divergence / data quality is already exact-resolvable and score-external.
+- Re-test these in final RDP10 acceptance; do not build duplicate proof stores unless current evidence disproves exactness.
+
+After RDP10-F acceptance, perform **RDP10-G final customer-proof/API acceptance** against all five score families + Event Risk/context + score-external data quality. Only then may RDP10 be marked PASS.
 
 ## Mandatory checkpoint rule
 
