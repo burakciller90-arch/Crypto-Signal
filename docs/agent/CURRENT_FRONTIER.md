@@ -336,3 +336,29 @@ Current blocker:
 Exact nextAction:
 
 Inspect the workflows triggered for the exact branch head. If any focused test/type/runtime check fails, repair only that mechanical blocker; otherwise verify acceptance markers and live non-mutation output, re-check main/PR head, then merge #1650.
+
+
+## LIVE CLOSEOUT CHECKPOINT — 2026-09-28 — RDP10-F1 merge complete; canonical-main proof pending
+
+This checkpoint is written before F1 closeout documentation is finalized.
+
+- canonical main at closeout start: `218c11f433a1aaddc80afeccf79f6c17f9a8845f`
+- merged implementation PR: #1650
+- merge SHA: `218c11f433a1aaddc80afeccf79f6c17f9a8845f`
+- accepted branch head: `c86eb13f8a5a233d39b901aaa0d50016a2fe689b`
+- exact-head RDP10 run: `36473825587` / job `109102443442` SUCCESS with focused + live fail-closed + non-mutating acceptance
+- exact-head RDP6 cross-check: `36473830427` / job `109102454914` SUCCESS
+- closeout branch: `docs/rdp10-f1-completion`
+- session-local /Volumes worktree: NONE; UID504 workflows remain canonical SSD evidence
+- `REAL_CAPITAL=0`; `HISTORICAL_BACKFILL=NO`
+- Durdurulmaz touched: NO
+- Quantum Capital touched: NO
+
+Current blocker:
+
+- merged-main SSD504 Workbench bootstrap run `36474722859` has been created for exact merge SHA but has not yet been inspected to PASS;
+- F1 must not be marked closed until that exact-main Workbench output is verified.
+
+Exact nextAction:
+
+Inspect run `36474722859`; if exact-main/clean Workbench acceptance passes, finalize F1 as PASS, set the first mechanically unclosed frontier to RDP10-F2 On-chain/stablecoin exact proof cutover, update HANDOFF_LOG with exact merge/main/workflow evidence, and merge the docs-only closeout without changing F1 production semantics.
