@@ -4,7 +4,7 @@ Updated: 2026-09-28
 Project: Crypto Signal
 Baseline: crypto-signal-full-version-v1.0.0 (immutable)
 Active post-v1.0 program: v1.1 world-class product + market intelligence + Crypto Signal Intelligence Stream V1
-State: WC0_LIVE_PRODUCT_PARITY_ACCEPTED / WC1_24_7_DATA_RELIABILITY_ACCEPTED / WC2_ENGINEERING_FROZEN_EVIDENCE_ACCUMULATION_ACTIVE / WC4_CHAMPION_CHALLENGER_ENGINEERING_ACCEPTED_RESEARCH_ONLY / WC5_ENGINEERING_ACCEPTED_PRODUCT_DEPLOYED_HUMAN_USABILITY_NOT_MEASURED / WC6_SANDBOX_BOUNDARY_ACCEPTED_VENUE_EVIDENCE_EXTERNAL_DEPENDENCY / WC7_CURRENT_FRONTIER_PACKET_ACCEPTED_CURRENT_INSUFFICIENT_EVIDENCE / INTELLIGENCE_STREAM_V1_S0_S16_HISTORICAL_ACCEPTANCE_RETAINED / INTELLIGENCE_STREAM_V1_FINAL_F0_PASS_F1_PASS_F2_PASS_F3_PASS_F4_PASS_F5_PASS_CURRENT_SCOPE_F6_PASS_F7_PASS_F8_PASS_F9_PASS_F10_PASS / INTELLIGENCE_STREAM_V1_FINAL_COMPLETION_ACCEPTED / MESSAGE_INTELLIGENCE_FAMILY_EVIDENCE_UX_V1_ACCEPTED / EVIDENCE_DEPTH_VISUAL_PROOF_V1_ED0_PASS_ED1_ACTIVE / REALITY_BACKED_EVIDENCE_DATA_PLANE_V1_RDP0_PASS_RDP1_PASS_RDP2_PASS_RDP3_PASS_RDP4_PASS_RDP5_PASS_RDP6_ACTIVE / CONTINUITY_PAUSED_BY_USER
+State: WC0_LIVE_PRODUCT_PARITY_ACCEPTED / WC1_24_7_DATA_RELIABILITY_ACCEPTED / WC2_ENGINEERING_FROZEN_EVIDENCE_ACCUMULATION_ACTIVE / WC4_CHAMPION_CHALLENGER_ENGINEERING_ACCEPTED_RESEARCH_ONLY / WC5_ENGINEERING_ACCEPTED_PRODUCT_DEPLOYED_HUMAN_USABILITY_NOT_MEASURED / WC6_SANDBOX_BOUNDARY_ACCEPTED_VENUE_EVIDENCE_EXTERNAL_DEPENDENCY / WC7_CURRENT_FRONTIER_PACKET_ACCEPTED_CURRENT_INSUFFICIENT_EVIDENCE / INTELLIGENCE_STREAM_V1_S0_S16_HISTORICAL_ACCEPTANCE_RETAINED / INTELLIGENCE_STREAM_V1_FINAL_F0_PASS_F1_PASS_F2_PASS_F3_PASS_F4_PASS_F5_PASS_CURRENT_SCOPE_F6_PASS_F7_PASS_F8_PASS_F9_PASS_F10_PASS / INTELLIGENCE_STREAM_V1_FINAL_COMPLETION_ACCEPTED / MESSAGE_INTELLIGENCE_FAMILY_EVIDENCE_UX_V1_ACCEPTED / EVIDENCE_DEPTH_VISUAL_PROOF_V1_ED0_PASS_ED1_ACTIVE / REALITY_BACKED_EVIDENCE_DATA_PLANE_V1_RDP0_PASS_RDP1_PASS_RDP2_PASS_RDP3_PASS_RDP4_PASS_RDP5_PASS_RDP6_PASS_RDP7_PASS_RDP8_ACTIVE / CONTINUITY_PAUSED_BY_USER
 REAL_CAPITAL: 0
 
 ## Active v1.1 frontier — read before historical sections
@@ -17,7 +17,7 @@ Canonical execution authority:
 
 Current state:
 
-**RDP0 PASS / RDP1 PASS / RDP2 PASS / RDP3 PASS / RDP4 PASS / RDP5 PASS / RDP6 ACTIVE — BTC/ETH Options / volatility intelligence**
+**RDP0 PASS / RDP1 PASS / RDP2 PASS / RDP3 PASS / RDP4 PASS / RDP5 PASS / RDP6 PASS / RDP7 PASS / RDP8 ACTIVE — Event Risk + cross-market runtime**
 
 Latest RDP1 closure evidence:
 - PR #1548 merged as exact main `fabaa8830bd599e564bf76c1e0adbee89ec9b5f3`: Market Tape snapshot + WC2 live clock cadence tightened to 60s; focused ownership acceptance passed; unrelated legacy Stream whole-repo text/hash failures were not treated as cadence failures;
@@ -62,7 +62,18 @@ Accepted evidence:
 - final read-only live exact-main diagnostic #1596 run `36411983878` PASS: Workbench + Development exact-main, stable collector PID, heartbeat/connection age 6082ms, transport age 0ms, 116 observed liquidation rows and 69 provider coverage rows; every coverage row was validated against a non-empty Bybit provider event batch; BTC/ETH correctly preserved the exact RDP5-B no-coverage path, while SOL with recent event + eligible coverage remained `coverage_present_unresolved`, direction `None`, with no fabricated zero-event or future-risk claim;
 - **RDP5 PASS**. Derivatives are inside the accepted freshness budget, the liquidation transport has explicit connected coverage, and missing/incomplete provider event coverage fails closed.
 
-RDP6 — **ACTIVE**. Exact implementation frontier: **BTC/ETH Options / volatility intelligence — accepted provider/source contract, IV + term structure + skew + expiry/strike OI/volume + volatility index where defensible, exact PIT freezes, and Derivatives-family enrichment without a new score family or unsupported dealer-gamma/max-pain claims.**
+RDP6 — **PASS**.
+- BTC/ETH options contracts, Bybit source lineage/PIT store, volatility evidence, Derivatives-family wiring and canonical live clocks are accepted on main through `b88121a8ab897c9b63a74107790af1f1eddcc427`;
+- exact-main live runtime diagnostic PR #1606 remained unmerged and UID504 run `36419310127` PASS: fresh BTC/ETH option surfaces/source coverage, Derivatives-family options evidence, no new family/direction and `REAL_CAPITAL=0`.
+
+RDP7 — **PASS**.
+- RDP7-A/A1 established source coverage + append-only On-chain capital-flow PIT storage with non-circular stablecoin lineage;
+- RDP7-C/C3 activated the public DefiLlama USDT/USDC stablecoin-supply rail and canonical 300s collector; live float-token canonicalization fix merged as `3fda58d6b30f5b671cd7797f6529e33b0a2e72bb`;
+- exchange-flow entitlement remains `UNAVAILABLE_EXPLICIT` because no accepted Glassnode/CryptoQuant credential exists; large-transfer and wallet-cohort rails remain explicitly unavailable without defensible provider transfer/cluster identity and coverage rather than being fabricated;
+- RDP7-F PR #1619 merged as canonical main `0c23165e831d9aa8b8d41050354dfd45abc995d7`; UID504 focused run `36431658023` PASS. Accepted fresh stablecoin capital context now projects only into the existing `ConfluenceFamily.ONCHAIN`, remains neutral `direction=None`, and preserves exact source/freeze evidence for RDP10;
+- RDP7-G diagnostic PR #1620 was closed unmerged. Exact-main UID504 run `36433299821`, rerun job `108966224227`, PASS after canonical R11 runtime recovery issue #1621: Workbench + Development exact main, real DefiLlama snapshot, USDC/USDT raw → envelope → coverage → normalized observation → PIT freeze/analysis lineage, BTC/ETH/SOL ONCHAIN family evidence, stale/gap/PIT fail-closed regressions, supervisor alive, `RDP10_EXACT_PROOF_LINEAGE=RESOLVABLE`, `REAL_CAPITAL=0`.
+
+RDP8 — **ACTIVE**. Exact implementation frontier: **Event Risk + cross-market runtime — fresh official event-source scheduling, explicit process/online truth, Fed/FRED/BLS failure handling, VIX/Treasury cross-market refresh, and fail-closed circuit-breaker behavior without treating stale context as current.**
 
 Locked execution sequence:
 `RDP1 runtime reliability → RDP2 source envelope/coverage → RDP3 Geometry → RDP4 rich Liquidity/Order Flow → RDP5 Derivatives/Liquidations → RDP6 BTC/ETH Options → RDP7 real On-chain/stablecoin capital flows → RDP8 Event/Cross-market → RDP9 cross-venue + overlap control → RDP10 frozen proof contract → RDP11 soak/acceptance → Paper Portfolio → new frontend`.
