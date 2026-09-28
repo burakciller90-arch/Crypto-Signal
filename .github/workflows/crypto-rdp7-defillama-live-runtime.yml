@@ -1,0 +1,67 @@
+name: RDP7 DefiLlama Live Runtime UID504
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "ops/run_onchain_capital_flow_snapshot.py"
+      - "ops/ssd_runtime_supervisor.sh"
+      - "tests/test_rdp7_defillama_live_runtime.py"
+      - ".github/workflows/crypto-rdp7-defillama-live-runtime.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  focused:
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          clean: true
+          fetch-depth: 1
+
+      - name: Verify exact Workbench baseline and PR source
+        shell: bash
+        run: |
+          set -euo pipefail
+          WB="/Volumes/Crypto-504/Crypto-Signal-Workbench/repo"
+          test "$(id -u)" = "504"
+          test "$(git -C "$WB" branch --show-current)" = "main"
+          test -z "$(git -C "$WB" status --porcelain)"
+          test "$(git -C "$WB" rev-parse HEAD)" = "${{ github.event.pull_request.base.sha }}"
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+          echo "RDP7_C3_WORKBENCH_BASELINE_PASS=YES"
+          echo "RDP7_C3_EXACT_PR_SOURCE_PASS=YES"
+
+      - name: Focused live stablecoin collector acceptance
+        shell: bash
+        run: |
+          set -euo pipefail
+          PY="/Volumes/Crypto-504/Crypto-Signal/Development/.venv/bin/python"
+          export PYTHONPATH="$GITHUB_WORKSPACE/src:$GITHUB_WORKSPACE"
+          "$PY" -m pytest -q \
+            tests/test_rdp7_defillama_live_runtime.py \
+            tests/test_rdp7_defillama_stablecoin_source.py \
+            tests/test_rdp7_stablecoin_capital_flow.py \
+            tests/test_rdp7_onchain_capital_flow_contract.py \
+            tests/test_rdp7_onchain_capital_flow_store.py \
+            tests/test_rdp6_options_live_runtime_wiring.py \
+            tests/test_wc1_ssd_supervisor_market_tape_single_owner.py
+          "$PY" -m ruff check \
+            ops/run_onchain_capital_flow_snapshot.py \
+            tests/test_rdp7_defillama_live_runtime.py
+          "$PY" -m mypy \
+            ops/run_onchain_capital_flow_snapshot.py
+          "$PY" -m py_compile \
+            ops/run_onchain_capital_flow_snapshot.py \
+            tests/test_rdp7_defillama_live_runtime.py
+          bash -n ops/ssd_runtime_supervisor.sh
+          echo "RDP7_C3_DEFILLAMA_LIVE_RUNTIME_PASS=YES"
+          echo "ONCHAIN_RUNTIME_STORE=SEPARATE_APPEND_ONLY"
+          echo "DEFILLAMA_REFRESH_CADENCE_SECONDS=300"
+          echo "EXCHANGE_FLOW_PROVIDER=UNAVAILABLE_EXPLICIT"
+          echo "NO_NEW_FAMILY_OR_DIRECTION=YES"
+          echo "REAL_CAPITAL=0"
