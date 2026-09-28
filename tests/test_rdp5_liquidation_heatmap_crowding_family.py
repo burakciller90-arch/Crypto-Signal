@@ -131,15 +131,15 @@ def test_no_provider_event_coverage_never_claims_zero_liquidations(
     components = _components(snapshot)
 
     assert components["dynamics_status"] == "measured"
-    assert components["liquidation_heatmap_status"] == "unavailable"
-    assert components["crowding_status"] == "unavailable"
-    assert components["liquidation_zero_event_claim"] == "unavailable"
+    assert "liquidation_heatmap_status" not in components
+    assert "crowding_status" not in components
+    assert "liquidation_zero_event_claim" not in components
     assert "observed_liquidation_events" not in snapshot.evidence_domains
     assert "observed_liquidation_heatmap" not in snapshot.evidence_domains
     assert "derivatives_crowding" not in snapshot.evidence_domains
     assert (
         "liquidation_event_coverage_unavailable_or_stale"
-        in snapshot.uncertainty_flags
+        not in snapshot.uncertainty_flags
     )
     assert snapshot.direction is None
 
