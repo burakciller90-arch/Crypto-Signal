@@ -1,0 +1,87 @@
+name: RDP2 Candle Source Provenance UID504
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/crypto_signal/data/adapters/base.py"
+      - "src/crypto_signal/data/adapters/bybit.py"
+      - "src/crypto_signal/data/adapters/binance.py"
+      - "src/crypto_signal/data/candle_source_contract.py"
+      - "src/crypto_signal/data/recovery.py"
+      - "src/crypto_signal/data/store.py"
+      - "src/crypto_signal/ledger/live_clock.py"
+      - "src/crypto_signal/ledger/live_coverage.py"
+      - "src/crypto_signal/ledger/higher_timeframe.py"
+      - "ops/run_live_evidence_clock.py"
+      - "tests/test_rdp2_candle_source_contract.py"
+      - ".github/workflows/crypto-rdp2-candle-source-provenance-uid504.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  focused:
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          clean: true
+          fetch-depth: 1
+
+      - name: Verify exact Workbench baseline and PR source
+        shell: bash
+        run: |
+          set -euo pipefail
+          WB="/Volumes/Crypto-504/Crypto-Signal-Workbench/repo"
+          test "$(id -u)" = "504"
+          test -d "$WB/.git"
+          test "$(git -C "$WB" branch --show-current)" = "main"
+          test -z "$(git -C "$WB" status --porcelain)"
+          test "$(git -C "$WB" rev-parse HEAD)" = "${{ github.event.pull_request.base.sha }}"
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+          echo "RDP2_D_WORKBENCH_BASELINE_PASS=YES"
+          echo "RDP2_D_EXACT_PR_SOURCE_PASS=YES"
+
+      - name: Focused candle provenance acceptance
+        shell: bash
+        run: |
+          set -euo pipefail
+          PY="/Volumes/Crypto-504/Crypto-Signal/Development/.venv/bin/python"
+          export PYTHONPATH="$GITHUB_WORKSPACE/src:$GITHUB_WORKSPACE"
+          "$PY" -m pytest -q \
+            tests/test_rdp2_candle_source_contract.py \
+            tests/test_bybit_adapter.py \
+            tests/test_binance_adapter.py \
+            tests/test_candle_store.py \
+            tests/test_recovery.py \
+            tests/test_rdp1_candle_cache_persistence.py \
+            tests/test_live_coverage.py \
+            tests/test_rdp2_source_contract.py
+          "$PY" -m ruff check \
+            src/crypto_signal/data/adapters/base.py \
+            src/crypto_signal/data/adapters/bybit.py \
+            src/crypto_signal/data/adapters/binance.py \
+            src/crypto_signal/data/candle_source_contract.py \
+            src/crypto_signal/data/recovery.py \
+            src/crypto_signal/data/store.py \
+            src/crypto_signal/ledger/live_clock.py \
+            src/crypto_signal/ledger/live_coverage.py \
+            src/crypto_signal/ledger/higher_timeframe.py \
+            ops/run_live_evidence_clock.py \
+            tests/test_rdp2_candle_source_contract.py
+          "$PY" -m mypy \
+            src/crypto_signal/data/adapters/base.py \
+            src/crypto_signal/data/adapters/bybit.py \
+            src/crypto_signal/data/adapters/binance.py \
+            src/crypto_signal/data/candle_source_contract.py \
+            src/crypto_signal/data/recovery.py \
+            src/crypto_signal/data/store.py \
+            src/crypto_signal/ledger/live_clock.py \
+            src/crypto_signal/ledger/live_coverage.py \
+            src/crypto_signal/ledger/higher_timeframe.py
+          "$PY" -m py_compile ops/run_live_evidence_clock.py
+          echo "RDP2_D_CANDLE_SOURCE_PROVENANCE_PASS=YES"
+          echo "REAL_CAPITAL=0"
