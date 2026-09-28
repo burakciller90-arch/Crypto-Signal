@@ -924,7 +924,7 @@ def test_derivatives_core_proofs_resolve_exact_from_frozen_store(
     assert derived_payload["status"] == "measured"
     metrics = derived_payload["metrics"]
     assert isinstance(metrics, dict)
-    assert metrics["open_interest_change_fraction"] == "0.10"
+    assert metrics["open_interest_change_fraction"] == "0.1"
     assert metrics["mark_price_change_fraction"] == "0.03"
     assert exact_object["source_object_identities"]
     assert exact_dynamics["current_data_substitution"] is False
