@@ -112,6 +112,7 @@ class BybitSpotAdapter:
             timeframe=timeframe,
             raw_payload={"response": payload},
             candles=tuple(candles),
+            source_timestamp_ms=server_time_ms,
             observed_at_ms=observed_at_ms,
         )
 
