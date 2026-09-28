@@ -52,12 +52,20 @@ from crypto_signal.signals.semantics import build_signal_decision
 
 
 def _bundle():
+    offset_ms = 7 * 86_400_000
     source = tuple(
-        [
+        replace(
+            candle,
+            open_time_ms=candle.open_time_ms + offset_ms,
+            close_time_ms=candle.close_time_ms + offset_ms,
+            source_timestamp_ms=candle.source_timestamp_ms + offset_ms,
+            ingested_at_ms=candle.ingested_at_ms + offset_ms,
+        )
+        for candle in (
             *harmonic_series(),
             harmonic_candle(16, 1050),
             harmonic_candle(17, 1090),
-        ]
+        )
     )
     as_of_ms = max(candle.ingested_at_ms for candle in source)
 
