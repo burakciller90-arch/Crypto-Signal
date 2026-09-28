@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from decimal import Decimal
+from pathlib import Path
 
 from crypto_signal.data.market_tape import MarketTapeStore
 from crypto_signal.data.microstructure import (
@@ -314,13 +315,13 @@ def test_future_and_late_market_tape_cannot_rewrite_rich_family_pit(
 
 def test_rdp4_family_wiring_uses_candidate_semantics_not_actor_claims() -> None:
     source = (
-        __import__(
-            "crypto_signal.product.intelligence_stream_family_sources",
-            fromlist=["__file__"],
-        ).__file__
+        Path(__file__).resolve().parents[1]
+        / "src"
+        / "crypto_signal"
+        / "product"
+        / "intelligence_stream_family_sources.py"
     )
-    assert source is not None
-    text = open(source, encoding="utf-8").read().lower()
+    text = source.read_text(encoding="utf-8").lower()
     assert "institutional actor confirmed" not in text
     assert "market maker manipulation proven" not in text
     assert "stop hunt proven" not in text
