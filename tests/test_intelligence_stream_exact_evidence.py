@@ -18,7 +18,8 @@ from crypto_signal.data.event_risk import (
 )
 from crypto_signal.data.market_tape import MarketTapeStore
 from crypto_signal.data.microstructure import OrderBookLevel, build_orderbook_snapshot
-from crypto_signal.data.models import DataSource, Exchange, MarketType
+from crypto_signal.data.models import Candle, DataSource, Exchange, MarketType
+from crypto_signal.data.store import CandleStore
 from crypto_signal.intelligence.confluence_matrix_v2 import ConfluenceFamily
 from crypto_signal.ledger.serialization import canonical_json, canonical_sha256
 from crypto_signal.ledger.store import ImmutableSignalLedger
@@ -713,4 +714,125 @@ def test_liquidity_derived_proofs_resolve_exact_from_frozen_store(
     )
     assert api_structure["resolution_state"] == "READY_EXACT"
     assert api_payload["current_data_substitution"] is False
+
+def test_order_flow_derived_proofs_resolve_exact_from_frozen_store(
+    tmp_path: Path,
+) -> None:
+    market_tape_path = tmp_path / "market_tape.sqlite3"
+    candle_path = tmp_path / "candles.sqlite3"
+    proof_path = tmp_path / "frozen_proofs.sqlite3"
+    stream_path = tmp_path / "stream.sqlite3"
+
+    market_store = MarketTapeStore(market_tape_path)
+    _seed(market_store)
+
+    candle_store = CandleStore(candle_path)
+    candle_store.upsert(
+        Candle(
+            exchange=Exchange.BYBIT,
+            market_type=MarketType.SPOT,
+            symbol="BTCUSDT",
+            timeframe="15m",
+            open_time_ms=80_000,
+            close_time_ms=170_000,
+            open=Decimal(100),
+            high=Decimal(103),
+            low=Decimal(97),
+            close=Decimal(101),
+            volume=Decimal(10),
+            quote_volume=Decimal(1_000),
+            trade_count=10,
+            is_closed=True,
+            source=DataSource.REST,
+            source_timestamp_ms=170_001,
+            ingested_at_ms=170_002,
+            adapter_version="rdp10-d2-test/1",
+        )
+    )
+
+    snapshots = build_market_tape_family_snapshots(
+        market_tape_path,
+        symbols=("BTCUSDT",),
+        as_of_ms=AS_OF_MS,
+        candle_cache_path=candle_path,
+        frozen_proof_store_path=proof_path,
+    )
+    order_flow = next(
+        item
+        for item in snapshots
+        if item.family is ConfluenceFamily.ORDER_FLOW
+    )
+    narrative_identity = _project_family(
+        stream_path,
+        projector_id="order_flow_change",
+        snapshot=order_flow,
+    )
+
+    resolver = IntelligenceStreamExactEvidenceReadModel(
+        stream_ledger_path=stream_path,
+        market_tape_path=market_tape_path,
+        frozen_proof_store_path=proof_path,
+    )
+    payload = resolver.read_for_narrative(narrative_identity)
+    assert payload is not None
+
+    order_flow_resolution = _resolution(payload, "order_flow")
+    assert order_flow_resolution["resolution_state"] == "READY_EXACT"
+    capabilities = order_flow_resolution["capabilities"]
+    assert isinstance(capabilities, dict)
+    assert capabilities["microstructure_measurement"] == "READY_EXACT"
+    assert capabilities["cvd_series"] == "READY_EXACT"
+    assert capabilities["absorption_evidence"] == "READY_EXACT"
+    assert capabilities["divergence_relation"] == "READY_EXACT"
+
+    for domain in (
+        "temporal_order_flow",
+        "window_local_cvd",
+        "absorption",
+        "price_cvd_divergence",
+    ):
+        resolution = _resolution(payload, domain)
+        assert resolution["resolution_state"] == "READY_EXACT"
+        assert resolution["current_data_substitution"] is False
+
+    references = tuple(
+        item
+        for item in payload["reference_resolutions"]
+        if isinstance(item, dict)
+    )
+    expected_kinds = {
+        "order_flow_microstructure_freeze",
+        "temporal_order_flow_freeze",
+        "absorption_freeze",
+        "price_cvd_divergence_freeze",
+    }
+    ready_kinds = {
+        str(item.get("object_kind"))
+        for item in references
+        if item.get("resolution_state") == "READY_EXACT"
+    }
+    assert expected_kinds.issubset(ready_kinds)
+
+    divergence_ref = next(
+        item
+        for item in references
+        if item.get("object_kind") == "price_cvd_divergence_freeze"
+    )
+    exact_divergence = resolver.read_reference(
+        narrative_identity=narrative_identity,
+        evidence_identity=str(divergence_ref["evidence_identity"]),
+    )
+    assert exact_divergence is not None
+    assert exact_divergence["object_kind"] == "price_cvd_divergence_freeze"
+    divergence_object = exact_divergence["exact_object"]
+    assert isinstance(divergence_object, dict)
+    assert (
+        divergence_object["object_identity"]
+        == divergence_ref["evidence_identity"]
+    )
+    divergence_payload = divergence_object["payload"]
+    assert isinstance(divergence_payload, dict)
+    assert divergence_payload["timeframe"] == "15m"
+    assert divergence_object["depends_on_evidence_identities"]
+    assert exact_divergence["current_data_substitution"] is False
 
