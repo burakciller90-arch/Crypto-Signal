@@ -223,7 +223,7 @@ def test_selected_evidence_lineage_drift_fails_closed(tmp_path: Path) -> None:
 
     with pytest.raises(
         ValueError,
-        match="selected evidence is absent",
+        match="selected evidence lineage is inconsistent",
     ):
         build_frozen_geometry_proof(inconsistent)
 
