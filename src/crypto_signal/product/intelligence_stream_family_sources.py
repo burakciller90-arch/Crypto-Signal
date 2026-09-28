@@ -12,6 +12,10 @@ from crypto_signal.intelligence.derivatives_context import (
     DerivativesContextLabel,
     build_derivatives_context_evidence_freeze,
 )
+from crypto_signal.intelligence.derivatives_dynamics import (
+    DerivativesDynamicsStatus,
+    build_derivatives_dynamics_evidence_freeze,
+)
 from crypto_signal.intelligence.liquidity_dynamics import (
     build_liquidity_dynamics_evidence_freeze,
 )
@@ -756,14 +760,78 @@ def build_market_tape_family_snapshots(
                 as_of_ms=as_of_ms,
             )
             derivatives_analysis = derivatives_freeze.analysis
+            dynamics_freeze = build_derivatives_dynamics_evidence_freeze(
+                derivatives,
+                as_of_ms=as_of_ms,
+            )
+            dynamics_analysis = dynamics_freeze.analysis
             derivatives_evidence = {
                 derivatives_freeze.freeze_identity,
                 derivatives_analysis.evidence_identity,
+                dynamics_freeze.freeze_identity,
+                dynamics_analysis.evidence_identity,
                 *(
                     item.observation_identity
                     for item in derivatives_freeze.observations
                 ),
+                *(
+                    item.observation_identity
+                    for item in dynamics_freeze.observations
+                ),
             }
+            dynamics_components: list[tuple[str, str]] = [
+                (
+                    "dynamics_latest_observation_age_ms",
+                    str(dynamics_analysis.latest_observation_age_ms),
+                ),
+                (
+                    "dynamics_oi_price_state",
+                    dynamics_analysis.oi_price_state.value,
+                ),
+                ("dynamics_status", dynamics_analysis.status.value),
+            ]
+            dynamics_metrics = dynamics_analysis.metrics
+            if dynamics_metrics is not None:
+                for name, value in (
+                    (
+                        "basis_change_bps",
+                        dynamics_metrics.basis_change_bps,
+                    ),
+                    (
+                        "funding_acceleration_bps",
+                        dynamics_metrics.funding_acceleration_bps,
+                    ),
+                    (
+                        "funding_percentile_0_1",
+                        dynamics_metrics.funding_percentile_0_1,
+                    ),
+                    (
+                        "latest_basis_bps",
+                        dynamics_metrics.latest_basis_bps,
+                    ),
+                    (
+                        "mark_price_change_fraction",
+                        dynamics_metrics.mark_price_change_fraction,
+                    ),
+                    (
+                        "open_interest_change_fraction",
+                        dynamics_metrics.open_interest_change_fraction,
+                    ),
+                ):
+                    if value is not None:
+                        dynamics_components.append((name, str(value)))
+
+            derivatives_source_event_identity = canonical_sha256(
+                {
+                    "as_of_ms": as_of_ms,
+                    "context_freeze_identity": (
+                        derivatives_freeze.freeze_identity
+                    ),
+                    "dynamics_freeze_identity": dynamics_freeze.freeze_identity,
+                    "symbol": symbol,
+                    "version": "rdp5-derivatives-dynamics-family-v1/1",
+                }
+            )
             snapshots.append(
                 build_family_snapshot(
                     projector_id="derivatives_change",
@@ -771,7 +839,7 @@ def build_market_tape_family_snapshots(
                     category=StreamCategory.INTELLIGENCE,
                     subtype="derivatives_material_change",
                     importance=StreamImportance.IMPORTANT,
-                    source_event_identity=derivatives_freeze.freeze_identity,
+                    source_event_identity=derivatives_source_event_identity,
                     source_scope=(
                         "bybit:linear_perpetual:market_tape_derivatives"
                     ),
@@ -782,8 +850,16 @@ def build_market_tape_family_snapshots(
                     event_at_ms=as_of_ms,
                     source_as_of_ms=as_of_ms,
                     evidence_identities=tuple(sorted(derivatives_evidence)),
-                    evidence_domains=("derivatives",),
-                    state_label=derivatives_analysis.label.value,
+                    evidence_domains=(
+                        "derivatives",
+                        "derivatives_context",
+                        "derivatives_dynamics",
+                    ),
+                    state_label=(
+                        f"{derivatives_analysis.label.value}:"
+                        f"{dynamics_analysis.status.value}:"
+                        f"{dynamics_analysis.oi_price_state.value}"
+                    ),
                     state_components=(
                         ("basis_state", derivatives_analysis.basis_state.value),
                         (
@@ -795,15 +871,27 @@ def build_market_tape_family_snapshots(
                             "open_interest_state",
                             derivatives_analysis.open_interest_state.value,
                         ),
+                        *dynamics_components,
                     ),
                     direction=None,
                     source_quality=(
-                        "unresolved"
-                        if derivatives_analysis.label
-                        is DerivativesContextLabel.UNRESOLVED
-                        else "measured"
+                        "measured"
+                        if (
+                            derivatives_analysis.label
+                            is not DerivativesContextLabel.UNRESOLVED
+                            and dynamics_analysis.status
+                            is DerivativesDynamicsStatus.MEASURED
+                        )
+                        else "unresolved"
                     ),
-                    uncertainty_flags=derivatives_analysis.uncertainty_flags,
+                    uncertainty_flags=tuple(
+                        sorted(
+                            {
+                                *derivatives_analysis.uncertainty_flags,
+                                *dynamics_analysis.uncertainty_flags,
+                            }
+                        )
+                    ),
                 )
             )
 
