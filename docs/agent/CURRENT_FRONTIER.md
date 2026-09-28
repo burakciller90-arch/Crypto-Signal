@@ -497,3 +497,39 @@ Current blocker:
 
 Exact nextAction:
 Implement the minimum derived-proof persistence plus read-only On-chain/source-contract exact resolver and wiring; then run focused RDP10 + RDP7 acceptance on the exact final head before any merge.
+
+
+## LIVE IMPLEMENTATION CHECKPOINT — 2026-09-28 — RDP10-F2 implementation complete; acceptance pending
+
+- canonical main at acceptance start: `b224a9f466767b39c051dd35096d414f2bf1495b`
+- active branch: `rdp10/onchain-proof-f2`
+- production implementation head before this checkpoint: `082b087ab64cd82c44661f145e2fdc304f509933`
+- exact-main SSD504 prerequisite: run `36477116448` / job `109113488100` SUCCESS
+- `REAL_CAPITAL=0`; `HISTORICAL_BACKFILL=NO`
+- Durdurulmaz touched: NO
+- Quantum Capital touched: NO
+
+Implemented:
+- `intelligence_stream_onchain_family.py` persists only derived `stablecoin_capital_flow_freeze` objects into the immutable `FrozenProofStore`; canonical raw/envelope/coverage/normalized truth remains in RDP7 source stores.
+- `IntelligenceStreamExactEvidenceReadModel` now accepts canonical On-chain and source-contract paths and resolves stablecoin observations, raw payloads, source envelopes and source coverage strictly read-only with identity/PIT validation.
+- exact domain contract now covers `onchain`, `stablecoin_capital_flow`, `stablecoin_supply`, `source_raw_payload`, `source_envelope`, and `source_coverage`.
+- accepted unsupported rails remain `UNAVAILABLE_EXPLICIT`: exchange flow, large transfer, wallet cohort, stablecoin bridge, and directional inference.
+- product API/dashboard runtime wiring passes `runtime/onchain/onchain_capital_flow.sqlite3` and `runtime/onchain/source_contract.sqlite3`.
+- live evidence clock persists the derived stablecoin proofs before future On-chain Stream publication.
+- RDP10 gate now exercises RDP7 On-chain/stablecoin tests and registers the exact On-chain domains; RDP7 family gate remains the backward-compatibility cross-check.
+
+Implementation commits:
+- `d84421063b966c551b67ce49b9ddf156d6abb6cb` — derived stablecoin proof persistence.
+- `ea073fa2cd7ce2818ab88cd3b941d2eb320af84e` — canonical On-chain/source exact resolver.
+- `336d0519b814fa57c7fc95b3e1c7e3e40f67eb3e` — API resolver wiring.
+- `f598657e45856ee8ab4c6d39585dffc160cb0c1d` — dashboard runtime paths.
+- `0ddcdf0aa500db209d6973b8e449227a54bc34f0` — live clock proof-store wiring.
+- `abf51c678e8ad9ef1265682bb9872dbab1e9d43d` — derived-only persistence acceptance.
+- `3d2d2529596b5d481ece968b4dd92b948f01b677` — exact customer-proof acceptance.
+- `082b087ab64cd82c44661f145e2fdc304f509933` — RDP10 gate/live audit coverage.
+
+Current blocker:
+- no exact-final-head UID504 acceptance has been inspected yet; intermediate workflow results are non-authoritative.
+
+Exact nextAction:
+Run/inspect RDP10 Frozen Proof Contract and RDP7 Onchain Family acceptance on the final checkpoint head. Repair only demonstrated mechanical failures. Before merge, re-check canonical main, open PRs and branch head, and require focused + exact-source + non-mutating evidence with `REAL_CAPITAL=0`.
