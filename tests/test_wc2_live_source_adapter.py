@@ -52,7 +52,7 @@ from crypto_signal.signals.semantics import build_signal_decision
 
 
 def _bundle():
-    offset_ms = 7 * 86_400_000
+    offset_ms = 400 * 86_400_000
     source = tuple(
         replace(
             candle,
