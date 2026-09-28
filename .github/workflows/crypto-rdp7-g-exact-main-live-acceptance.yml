@@ -1,4 +1,5 @@
 name: RDP7-G Exact Main Live Acceptance UID504
+# Re-trigger against current canonical main after docs-only RDP7 closeout.
 
 on:
   pull_request:
