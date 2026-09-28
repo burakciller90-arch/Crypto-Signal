@@ -885,10 +885,14 @@ def build_market_tape_family_snapshots(
                     derivatives_uncertainty.add(
                         "observed_liquidation_event_history_truncated"
                     )
+                if len(liquidation_history) >= liquidation_sample_limit:
+                    derivatives_uncertainty.add(
+                        "observed_liquidation_sample_may_be_truncated"
+                    )
                 derivatives_components.extend(
                     (
                         (
-                            "observed_liquidation_event_count",
+                            "observed_liquidation_sample_count",
                             str(len(recent_liquidations)),
                         ),
                         (
@@ -896,7 +900,7 @@ def build_market_tape_family_snapshots(
                             str(not liquidation_history_truncated).lower(),
                         ),
                         (
-                            "observed_long_liquidation_count",
+                            "observed_long_liquidation_sample_count",
                             str(
                                 sum(
                                     item.liquidated_position_side
@@ -906,7 +910,7 @@ def build_market_tape_family_snapshots(
                             ),
                         ),
                         (
-                            "observed_short_liquidation_count",
+                            "observed_short_liquidation_sample_count",
                             str(
                                 sum(
                                     item.liquidated_position_side
@@ -1194,6 +1198,10 @@ def build_market_tape_family_snapshots(
                         ),
                         "liquidation_coverage_identity": (
                             liquidation_coverage_identity
+                        ),
+                        "observed_liquidation_identities": tuple(
+                            item.liquidation_identity
+                            for item in recent_liquidations
                         ),
                         "symbol": symbol,
                         "version": "rdp5-rich-derivatives-family-v2/1",
