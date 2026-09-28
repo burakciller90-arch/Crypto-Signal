@@ -421,3 +421,47 @@ Current blocker:
 
 Exact nextAction:
 Create an isolated RDP10-F2 branch from exact canonical main after this docs closeout, write the mandatory task-start checkpoint before production changes, audit the existing RDP7 stablecoin source/freeze lineage and RDP10 resolver, then implement only the mechanically missing exact-proof cutover.
+
+
+## LIVE ACTIVE CHECKPOINT — 2026-09-28 — RDP10-F2 STARTED
+
+This checkpoint is written before any RDP10-F2 production code change.
+
+- canonical main at task start: `b224a9f466767b39c051dd35096d414f2bf1495b`
+- F1 closeout docs PR: #1651
+- F1 closeout docs merge SHA: `b224a9f466767b39c051dd35096d414f2bf1495b`
+- active branch: `rdp10/onchain-proof-f2`
+- session-local /Volumes worktree: NONE
+- duplicate RDP10-F2 PRs: NONE
+- duplicate RDP10-F2 branches: NONE before this branch was created
+- `REAL_CAPITAL=0`
+- historical/frozen backfill: FORBIDDEN
+- Durdurulmaz touched: NO
+- Quantum Capital touched: NO
+
+### Bounded goal
+
+RDP10-F2 handles only the On-chain / stablecoin strongest exact customer-proof cutover already justified by accepted RDP7 truth.
+
+Required:
+- audit existing immutable RDP7 raw source envelope, coverage, normalized observation and `StablecoinCapitalFlowEvidenceFreeze` persistence;
+- do not duplicate raw source truth if a canonical append-only source store already exists;
+- persist/resolve only the mechanically missing derived proof layer needed for exact customer inspection;
+- expose exact `onchain`, `stablecoin_capital_flow`, `stablecoin_supply` and accepted source lineage;
+- preserve source/observed/ingested/as-of/freshness/coverage truth;
+- keep exchange-flow, large-transfer, wallet-cohort and bridge rails explicit unavailable where provider truth is absent;
+- no direction authority and no bullish/bearish inference from stablecoin supply.
+
+F2 does not include the final RDP10-F3 contract closure audit or RDP11 soak.
+
+### Current blocker
+
+Exact-main post-F1-closeout SSD504 bootstrap has not yet been proven on `b224a9f466767b39c051dd35096d414f2bf1495b`:
+- Agent Memory Bootstrap run `36477116427`
+- SSD504 Workbench Bootstrap run `36477116448`
+
+Production implementation must not begin until the exact-main Workbench state is verified clean/synced.
+
+### Exact nextAction
+
+Inspect run `36477116448`; after exact-main Workbench PASS, audit the existing RDP7 stablecoin source/freeze schemas, family projector, FrozenProofStore usage and exact-evidence resolver, then implement only the missing F2 persistence/resolution path without duplicating accepted immutable source truth.
