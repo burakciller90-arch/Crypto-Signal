@@ -1309,10 +1309,6 @@ def build_market_tape_family_snapshots(
                                 options_metrics.put_call_volume_ratio,
                             ),
                             (
-                                "options_top_expiry_at_ms",
-                                options_metrics.top_expiry_at_ms,
-                            ),
-                            (
                                 "options_top_expiry_open_interest_share",
                                 options_metrics
                                 .top_expiry_open_interest_share,
@@ -1322,6 +1318,13 @@ def build_market_tape_family_snapshots(
                                 derivatives_components.append(
                                     (name, str(value))
                                 )
+                        if options_metrics.top_expiry_at_ms is not None:
+                            derivatives_components.append(
+                                (
+                                    "options_top_expiry_at_ms",
+                                    str(options_metrics.top_expiry_at_ms),
+                                )
+                            )
                     else:
                         derivatives_components.append(
                             (
