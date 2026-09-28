@@ -1,5 +1,17 @@
 # PROJECT CHRONICLE
 
+## 2026-09-28 — RDP2 PASS; RDP3-A frozen Geometry Proof activated
+
+RDP2-D merged via PR #1561 as main `823dfe1df0dddcf24cc2f26e58a0301ed31702cd`. RDP2 is now PASS and RDP3 is ACTIVE.
+
+The live Bybit/Binance candle rail now uses the canonical source contract across direct 15m collection, latest-closed cutoff probes and higher-timeframe recovery. Exact provider raw payloads are retained; Binance global keeps both kline and /time responses, Binance TR direct-array mode keeps the HTTP Date proof used for source time, and each source envelope resolves to the CandleStore row actually persisted. Stale/replay delivery therefore points to persisted truth rather than the incoming stale object.
+
+UID504 D acceptance `36384253135` passed exact Workbench/source, 44 focused/regression tests, Ruff, mypy across 9 source files and py_compile with REAL_CAPITAL=0. RDP1 candle regression `36384253098` also passed. Workbench bootstrap `36384319438` fast-forwarded clean `repo/main` to exact `823dfe1df0dddcf24cc2f26e58a0301ed31702cd`.
+
+RDP2 PASS rationale: current Geometry, Liquidity, Order Flow and Derivatives live rails now have canonical source identity/coverage semantics; unsupported/deferred liquidation/on-chain/capital rails remain explicit instead of fabricated.
+
+RDP3 repo audit: DecisionFreezeBundle already freezes gap-free consumed candles plus complete Price Action, Harmonic and Elliott results, confluence selections/conflicts and SignalDecision geometry under one immutable bundle identity. Therefore RDP3-A will not rewrite methodology engines. Exact next frontier: **deterministic frozen Geometry Proof/annotation output derived only from DecisionFreezeBundle, with no current-data substitution.**
+
 ## 2026-09-28 — RDP2-C Bybit REST Market Tape provenance accepted
 
 PR #1559 merged as main `199cf203a41d403d14a38ce73acb226fd271cd16`. RDP2 remains ACTIVE.
