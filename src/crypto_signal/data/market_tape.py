@@ -457,6 +457,20 @@ class MarketTapeStore:
             ),
         )
 
+    def derivatives_identity_for_semantic_observation(
+        self,
+        observation: DerivativesObservation,
+    ) -> str | None:
+        row = self._find_by_fields(
+            table="market_tape_derivatives",
+            fields={
+                "semantic_identity": _derivatives_semantic_identity(
+                    observation
+                )
+            },
+        )
+        return None if row is None else str(row["observation_identity"])
+
     def append_liquidation(
         self,
         observation: LiquidationObservation,
