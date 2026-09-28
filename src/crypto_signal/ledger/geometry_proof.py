@@ -402,6 +402,19 @@ def _validate_selected_evidence_lineage(
     selected = {
         item.evidence_id for item in bundle.selected_evidence
     }
+    confluence_selected = {
+        item.evidence_id
+        for selection in bundle.confluence.selections
+        for item in selection.selected
+    }
+    decision_selected = set(
+        bundle.signal_decision.selected_evidence_ids
+    )
+    if selected != confluence_selected or selected != decision_selected:
+        raise ValueError(
+            "frozen Geometry Proof selected evidence lineage is inconsistent"
+        )
+
     missing = tuple(sorted(selected - available))
     if missing:
         raise ValueError(
