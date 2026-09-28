@@ -153,6 +153,39 @@ def _append_raw(
     return raw
 
 
+def _persist_source_contract(
+    *,
+    store: SourceContractStore,
+    capabilities,
+    wire: BybitMicrostructureWireEvent,
+    raw: RawMarketEvent,
+    orderbook_persisted: bool,
+    coverage_observed_at_ms: int,
+    trade_normalized_identities: tuple[str, ...] | None = None,
+):
+    if wire.orderbook is not None:
+        orderbook_identity = (
+            wire.orderbook.snapshot_identity if orderbook_persisted else None
+        )
+        trade_identities: tuple[str, ...] = ()
+    else:
+        orderbook_identity = None
+        trade_identities = (
+            tuple(trade.trade_identity for trade in wire.trades)
+            if trade_normalized_identities is None
+            else trade_normalized_identities
+        )
+    return persist_bybit_wire_source_contract(
+        store=store,
+        capabilities=capabilities,
+        wire_event=wire,
+        raw_event=raw,
+        orderbook_normalized_identity=orderbook_identity,
+        trade_normalized_identities=trade_identities,
+        coverage_observed_at_ms=coverage_observed_at_ms,
+    )
+
+
 def test_bybit_source_capabilities_lock_live_microstructure_contract(tmp_path) -> None:
     store = SourceContractStore(tmp_path / "source_contract.sqlite3")
     capabilities = register_bybit_market_tape_capabilities(
@@ -207,12 +240,12 @@ def test_orderbook_source_contract_preserves_raw_to_normalized_lineage(
     )
     raw = _append_raw(raw_store, wire)
 
-    write = persist_bybit_wire_source_contract(
+    write = _persist_source_contract(
         store=source_store,
         capabilities=capabilities,
-        wire_event=wire,
-        raw_event=raw,
-        orderbook_normalized_persisted=True,
+        wire=wire,
+        raw=raw,
+        orderbook_persisted=True,
         coverage_observed_at_ms=1_025,
     )
 
@@ -268,12 +301,12 @@ def test_orderbook_cadence_skip_is_explicit_not_fake_normalized_truth(
         ingested_at_ms=1_020,
     )
     first_raw = _append_raw(raw_store, first)
-    persist_bybit_wire_source_contract(
+    _persist_source_contract(
         store=source_store,
         capabilities=capabilities,
-        wire_event=first,
-        raw_event=first_raw,
-        orderbook_normalized_persisted=True,
+        wire=first,
+        raw=first_raw,
+        orderbook_persisted=True,
         coverage_observed_at_ms=1_025,
     )
 
@@ -291,12 +324,12 @@ def test_orderbook_cadence_skip_is_explicit_not_fake_normalized_truth(
         ingested_at_ms=1_220,
     )
     skipped_raw = _append_raw(raw_store, skipped)
-    write = persist_bybit_wire_source_contract(
+    write = _persist_source_contract(
         store=source_store,
         capabilities=capabilities,
-        wire_event=skipped,
-        raw_event=skipped_raw,
-        orderbook_normalized_persisted=False,
+        wire=skipped,
+        raw=skipped_raw,
+        orderbook_persisted=False,
         coverage_observed_at_ms=1_230,
     )
 
@@ -321,12 +354,12 @@ def test_trade_batch_maps_one_raw_event_to_each_exact_normalized_trade(
     wire = _trade_wire_event()
     raw = _append_raw(raw_store, wire)
 
-    write = persist_bybit_wire_source_contract(
+    write = _persist_source_contract(
         store=source_store,
         capabilities=capabilities,
-        wire_event=wire,
-        raw_event=raw,
-        orderbook_normalized_persisted=False,
+        wire=wire,
+        raw=raw,
+        orderbook_persisted=False,
         coverage_observed_at_ms=2_530,
     )
 
@@ -358,23 +391,23 @@ def test_reobserved_raw_payload_keeps_same_raw_sha_but_new_pit_envelope(
     )
     first_wire = _trade_wire_event(ingested_at_ms=2_520)
     first_raw = _append_raw(raw_store, first_wire)
-    first = persist_bybit_wire_source_contract(
+    first = _persist_source_contract(
         store=source_store,
         capabilities=capabilities,
-        wire_event=first_wire,
-        raw_event=first_raw,
-        orderbook_normalized_persisted=False,
+        wire=first_wire,
+        raw=first_raw,
+        orderbook_persisted=False,
         coverage_observed_at_ms=2_530,
     )
 
     replay_wire = _trade_wire_event(ingested_at_ms=3_520)
     replay_raw = _append_raw(raw_store, replay_wire)
-    replay = persist_bybit_wire_source_contract(
+    replay = _persist_source_contract(
         store=source_store,
         capabilities=capabilities,
-        wire_event=replay_wire,
-        raw_event=replay_raw,
-        orderbook_normalized_persisted=False,
+        wire=replay_wire,
+        raw=replay_raw,
+        orderbook_persisted=False,
         coverage_observed_at_ms=3_530,
     )
 
@@ -422,12 +455,12 @@ def test_coverage_uses_monotonic_persistence_time_when_receipt_clock_regresses(
         ingested_at_ms=2_020,
     )
     first_raw = _append_raw(raw_store, first)
-    first_write = persist_bybit_wire_source_contract(
+    first_write = _persist_source_contract(
         store=source_store,
         capabilities=capabilities,
-        wire_event=first,
-        raw_event=first_raw,
-        orderbook_normalized_persisted=True,
+        wire=first,
+        raw=first_raw,
+        orderbook_persisted=True,
         coverage_observed_at_ms=3_000,
     )
     assert first_write.envelopes[0].ingested_at_ms == 3_000
@@ -446,12 +479,12 @@ def test_coverage_uses_monotonic_persistence_time_when_receipt_clock_regresses(
         ingested_at_ms=2_015,
     )
     regressed_raw = _append_raw(raw_store, regressed)
-    write = persist_bybit_wire_source_contract(
+    write = _persist_source_contract(
         store=source_store,
         capabilities=capabilities,
-        wire_event=regressed,
-        raw_event=regressed_raw,
-        orderbook_normalized_persisted=False,
+        wire=regressed,
+        raw=regressed_raw,
+        orderbook_persisted=False,
         coverage_observed_at_ms=3_100,
     )
 
@@ -485,12 +518,12 @@ def test_gap_coverage_reuses_exact_gap_ledger_identity_and_recovers_to_observed(
     )
     wire = _trade_wire_event(ingested_at_ms=2_520)
     raw = _append_raw(raw_store, wire)
-    observed = persist_bybit_wire_source_contract(
+    observed = _persist_source_contract(
         store=source_store,
         capabilities=capabilities,
-        wire_event=wire,
-        raw_event=raw,
-        orderbook_normalized_persisted=False,
+        wire=wire,
+        raw=raw,
+        orderbook_persisted=False,
         coverage_observed_at_ms=2_530,
     )
     assert observed.coverage_event is not None
@@ -525,12 +558,12 @@ def test_gap_coverage_reuses_exact_gap_ledger_identity_and_recovers_to_observed(
 
     replay_wire = _trade_wire_event(ingested_at_ms=3_100)
     replay_raw = _append_raw(raw_store, replay_wire)
-    recovered = persist_bybit_wire_source_contract(
+    recovered = _persist_source_contract(
         store=source_store,
         capabilities=capabilities,
-        wire_event=replay_wire,
-        raw_event=replay_raw,
-        orderbook_normalized_persisted=False,
+        wire=replay_wire,
+        raw=replay_raw,
+        orderbook_persisted=False,
         coverage_observed_at_ms=3_110,
     )
     assert recovered.coverage_event is not None
@@ -595,7 +628,8 @@ async def test_wire_collection_callback_runs_after_raw_and_normalized_persistenc
     def source_callback(
         event: BybitMicrostructureWireEvent,
         raw_event: RawMarketEvent,
-        orderbook_normalized_persisted: bool,
+        orderbook_normalized_identity: str | None,
+        trade_normalized_identities: tuple[str, ...],
     ) -> None:
         assert raw_store.count() > 0
         write = persist_bybit_wire_source_contract(
@@ -603,7 +637,8 @@ async def test_wire_collection_callback_runs_after_raw_and_normalized_persistenc
             capabilities=capabilities,
             wire_event=event,
             raw_event=raw_event,
-            orderbook_normalized_persisted=orderbook_normalized_persisted,
+            orderbook_normalized_identity=orderbook_normalized_identity,
+            trade_normalized_identities=trade_normalized_identities,
             coverage_observed_at_ms=event.ingested_at_ms,
         )
         writes.append(write.envelope_count)
