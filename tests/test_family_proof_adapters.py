@@ -105,8 +105,11 @@ def test_m3_direction_requires_agreement_of_book_taker_and_window_local_cvd():
     assert flow.state is MetaEvidenceState.OBSERVED
     assert flow.direction is MetaDirection.BULLISH
     assert Decimal(0) < flow.directional_strength_0_1 <= Decimal(1)
+    assert micro.orderbook is not None
     assert set(flow.source_evidence_identities) == {
-        micro.freeze_identity, temporal.freeze_identity,
+        micro.freeze_identity,
+        micro.orderbook.snapshot_identity,
+        temporal.freeze_identity,
     }
     assert micro.freeze_identity in _domain(
         bundle, ProofEvidenceDomain.ORDER_BOOK
