@@ -40,7 +40,6 @@ from crypto_signal.intelligence.order_flow_microstructure import (
     build_order_flow_microstructure_evidence_freeze,
 )
 from crypto_signal.intelligence.options_volatility import (
-    OptionsVolatilityStatus,
     build_options_volatility_evidence_freeze,
 )
 from crypto_signal.intelligence.order_flow_patterns import (
