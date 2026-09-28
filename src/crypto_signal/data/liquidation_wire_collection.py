@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections.abc import AsyncIterable
 from dataclasses import dataclass
+from typing import Callable
 
 from crypto_signal.data.adapters.bybit_liquidation_ws import (
     BybitLiquidationWireBatch,
@@ -39,6 +40,16 @@ async def persist_bybit_liquidation_wire_stream(
     raw_store: RawMarketTapeStore,
     batches: AsyncIterable[BybitLiquidationWireBatch],
     max_messages: int | None = None,
+    collection_progress_callback: (
+        Callable[
+            [
+                BybitLiquidationWireBatch,
+                LiquidationWireCollectionResult,
+            ],
+            None,
+        ]
+        | None
+    ) = None,
 ) -> LiquidationWireCollectionResult:
     if max_messages is not None and max_messages <= 0:
         raise ValueError(
@@ -86,6 +97,17 @@ async def persist_bybit_liquidation_wire_stream(
             coverage_unchanged += 1
 
         observed_messages += 1
+        progress = LiquidationWireCollectionResult(
+            observed_messages=observed_messages,
+            raw_inserted=raw_inserted,
+            raw_unchanged=raw_unchanged,
+            liquidation_inserted=liquidation_inserted,
+            liquidation_unchanged=liquidation_unchanged,
+            coverage_inserted=coverage_inserted,
+            coverage_unchanged=coverage_unchanged,
+        )
+        if collection_progress_callback is not None:
+            collection_progress_callback(batch, progress)
         if max_messages is not None and observed_messages >= max_messages:
             break
 
