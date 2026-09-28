@@ -1,0 +1,396 @@
+name: RDP8 Final Exact Main Acceptance UID504
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/crypto-rdp8-final-exact-main-acceptance.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  exact-main:
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          clean: true
+          fetch-depth: 1
+
+      - name: Verify Workbench and Development exact canonical main
+        shell: bash
+        run: |
+          set -euo pipefail
+          EXPECTED="${{ github.event.pull_request.base.sha }}"
+          WB="/Volumes/Crypto-504/Crypto-Signal-Workbench/repo"
+          DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
+          test "$(id -u)" = "504"
+          for TARGET in "$WB" "$DEV"; do
+            test "$(git -C "$TARGET" branch --show-current)" = "main"
+            test -z "$(git -C "$TARGET" status --porcelain)"
+            test "$(git -C "$TARGET" rev-parse HEAD)" = "$EXPECTED"
+          done
+          echo "RDP8_FINAL_WORKBENCH_EXACT_MAIN_PASS=YES"
+          echo "RDP8_FINAL_DEVELOPMENT_EXACT_MAIN_PASS=YES"
+          echo "REAL_CAPITAL=0"
+
+      - name: Verify supervisor Event Source and cross-market clocks
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          SUP="$DEV/ops/ssd_runtime_supervisor.sh"
+          grep -F 'if [ $((now-last_event_source_clock)) -ge 900 ]; then' "$SUP" >/dev/null
+          grep -F 'if [ $((now-last_cross_market_clock)) -ge 3600 ]; then' "$SUP" >/dev/null
+          pid="$(ps -axo pid=,command= | awk -v needle="$ROOT/ssd-service-supervisor.sh" 'index($0, needle) > 0 && first == "" {first=$1} END {if (first != "") print first}')"
+          test -n "$pid"
+          kill -0 "$pid"
+          echo "RDP8_FINAL_SUPERVISOR_ALIVE_PASS=YES pid=$pid"
+          echo "RDP8_EVENT_CLOCK_SECONDS=900"
+          echo "RDP8_CROSS_MARKET_CLOCK_SECONDS=3600"
+          echo "REAL_CAPITAL=0"
+
+      - name: Verify live cross-market source lineage and freshness
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
+          PY="$DEV/.venv/bin/python"
+          export PYTHONPATH="$DEV:$DEV/src"
+          export RDP8_CM_DB="$DEV/runtime/cross_market/cross_market.sqlite3"
+          export RDP8_CM_SOURCE="$DEV/runtime/cross_market/source_contract.sqlite3"
+          export RDP8_CM_LOG="/Volumes/Crypto-504/Crypto-Signal/ServiceLogs/cross-market-snapshot.out.log"
+
+          "$PY" - <<'PY'
+          from __future__ import annotations
+
+          import json
+          import os
+          import time
+          from pathlib import Path
+
+          from crypto_signal.data.cross_market import CrossMarketSeries
+          from crypto_signal.data.cross_market_runtime_store import (
+              CrossMarketRuntimeStore,
+          )
+          from crypto_signal.data.cross_market_source_contract import (
+              CBOE_VIX_CHANNEL,
+              CBOE_VIX_PROVIDER,
+              CBOE_VIX_SOURCE,
+              CBOE_VIX_SYMBOL,
+              TREASURY_10Y_CHANNEL,
+              TREASURY_10Y_PROVIDER,
+              TREASURY_10Y_SOURCE,
+              TREASURY_10Y_SYMBOL,
+          )
+          from crypto_signal.data.source_contract import (
+              SourceContractStore,
+              SourceCoverageState,
+          )
+
+          now_ms = time.time_ns() // 1_000_000
+          runtime_path = Path(os.environ["RDP8_CM_DB"])
+          source_path = Path(os.environ["RDP8_CM_SOURCE"])
+          log_path = Path(os.environ["RDP8_CM_LOG"])
+          assert runtime_path.is_file(), runtime_path
+          assert source_path.is_file(), source_path
+          assert log_path.is_file(), log_path
+          log_age_ms = now_ms - int(log_path.stat().st_mtime * 1000)
+          assert 0 <= log_age_ms <= 20 * 60_000, log_age_ms
+          log_text = log_path.read_text(encoding="utf-8", errors="replace")
+          assert "RDP8_CROSS_MARKET_SNAPSHOT_COMPLETE" in log_text
+          latest_complete = [
+              line
+              for line in log_text.splitlines()
+              if "RDP8_CROSS_MARKET_SNAPSHOT_COMPLETE" in line
+          ][-1]
+          assert "failures=0" in latest_complete
+          assert "quick_check=YES" in latest_complete
+
+          runtime = CrossMarketRuntimeStore(runtime_path)
+          source = SourceContractStore(source_path)
+          assert runtime.quick_check()
+          assert source.quick_check()
+
+          contexts = (
+              (
+                  CrossMarketSeries.CBOE_VIX_CLOSE,
+                  CBOE_VIX_PROVIDER,
+                  CBOE_VIX_SOURCE,
+                  CBOE_VIX_CHANNEL,
+                  CBOE_VIX_SYMBOL,
+              ),
+              (
+                  CrossMarketSeries.US_TREASURY_10Y_YIELD,
+                  TREASURY_10Y_PROVIDER,
+                  TREASURY_10Y_SOURCE,
+                  TREASURY_10Y_CHANNEL,
+                  TREASURY_10Y_SYMBOL,
+              ),
+          )
+          for series, provider, source_name, channel, symbol in contexts:
+              observation = runtime.latest_observation_as_of(
+                  series=series,
+                  as_of_ms=now_ms,
+              )
+              assert observation is not None, series
+              age_ms = now_ms - observation.observed_at_ms
+              assert 0 <= age_ms <= 20 * 60_000, (series, age_ms)
+              envelope = source.latest_envelope_at(
+                  provider=provider,
+                  source=source_name,
+                  channel=channel,
+                  symbol=symbol,
+                  as_of_ms=now_ms,
+              )
+              coverage = source.coverage_at(
+                  provider=provider,
+                  source=source_name,
+                  channel=channel,
+                  symbol=symbol,
+                  as_of_ms=now_ms,
+              )
+              assert envelope is not None
+              assert coverage is not None
+              assert coverage.state is SourceCoverageState.OBSERVED
+              assert envelope.normalized_identity == observation.observation_identity
+              assert coverage.source_envelope_identity == envelope.envelope_identity
+              raw = source.raw_payload(envelope.raw_identity)
+              assert raw is not None
+              raw_payload = json.loads(raw.payload_json)
+              if series is CrossMarketSeries.CBOE_VIX_CLOSE:
+                  assert "cdn-api.cboe.com" in str(raw_payload["response_url"])
+              print(
+                  "RDP8_FINAL_CROSS_MARKET_LINEAGE_PASS "
+                  f"series={series.value} age_ms={age_ms} "
+                  f"raw={envelope.raw_identity} "
+                  f"envelope={envelope.envelope_identity} "
+                  f"coverage={coverage.coverage_event_identity} "
+                  f"observation={observation.observation_identity}",
+                  flush=True,
+              )
+
+          print(
+              "RDP8_FINAL_CROSS_MARKET_RUNTIME_PASS=YES "
+              f"log_age_ms={log_age_ms}",
+              flush=True,
+          )
+          print("REAL_CAPITAL=0", flush=True)
+          PY
+
+      - name: Build live score-external cross-market freeze
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
+          PY="$DEV/.venv/bin/python"
+          export PYTHONPATH="$DEV:$DEV/src"
+          export RDP8_CM_DB="$DEV/runtime/cross_market/cross_market.sqlite3"
+
+          "$PY" - <<'PY'
+          from __future__ import annotations
+
+          import asyncio
+          import os
+          import time
+          from pathlib import Path
+
+          from crypto_signal.data.adapters.bybit import BybitSpotAdapter
+          from crypto_signal.data.cross_market import CrossMarketSeries
+          from crypto_signal.data.cross_market_runtime_store import (
+              CrossMarketRuntimeStore,
+          )
+          from crypto_signal.intelligence.cross_market_context import (
+              CrossMarketLabel,
+              build_cross_market_evidence_freeze,
+          )
+
+          async def main() -> None:
+              now_ms = time.time_ns() // 1_000_000
+              store = CrossMarketRuntimeStore(Path(os.environ["RDP8_CM_DB"]))
+              vix = store.latest_observation_as_of(
+                  series=CrossMarketSeries.CBOE_VIX_CLOSE,
+                  as_of_ms=now_ms,
+              )
+              treasury = store.latest_observation_as_of(
+                  series=CrossMarketSeries.US_TREASURY_10Y_YIELD,
+                  as_of_ms=now_ms,
+              )
+              assert vix is not None
+              assert treasury is not None
+              btc = await BybitSpotAdapter(
+                  base_url="https://api.bybit.tr"
+              ).fetch_candles(
+                  symbol="BTCUSDT",
+                  timeframe="1D",
+                  limit=20,
+              )
+              freeze = build_cross_market_evidence_freeze(
+                  btc,
+                  (vix,),
+                  (treasury,),
+                  as_of_ms=now_ms,
+              )
+              assert freeze.analysis.label is not CrossMarketLabel.UNRESOLVED
+              assert freeze.analysis.metrics is not None
+              print(
+                  "RDP8_FINAL_CROSS_MARKET_FREEZE_PASS "
+                  f"label={freeze.analysis.label.value} "
+                  f"freeze={freeze.freeze_identity} "
+                  f"analysis={freeze.analysis.evidence_identity} "
+                  f"vix={vix.observation_identity} "
+                  f"treasury={treasury.observation_identity} "
+                  "SCORE_EXTERNAL=YES DIRECTIONAL_AUTHORITY=NO",
+                  flush=True,
+              )
+
+          asyncio.run(main())
+          print("RDP8_FINAL_LIVE_CONTEXT_PASS=YES", flush=True)
+          print("REAL_CAPITAL=0", flush=True)
+          PY
+
+      - name: Prove stale event coverage fails closed through circuit breaker
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
+          PY="$DEV/.venv/bin/python"
+          export PYTHONPATH="$DEV:$DEV/src"
+
+          "$PY" - <<'PY'
+          from __future__ import annotations
+
+          from decimal import Decimal
+
+          from crypto_signal.data.event_risk import (
+              EventSourceQuality,
+              build_event_calendar_coverage,
+          )
+          from crypto_signal.data.market_quality_risk import (
+              build_market_quality_risk_observation,
+          )
+          from crypto_signal.data.models import DataSource
+          from crypto_signal.data.news_events import build_news_event_observation
+          from crypto_signal.intelligence.event_risk import (
+              DEFAULT_REQUIRED_EVENT_CATEGORIES,
+              EventRiskState,
+              build_event_risk_evidence_freeze,
+          )
+          from crypto_signal.intelligence.event_risk_circuit_breaker import (
+              CircuitBreakerConfig,
+              CircuitBreakerState,
+              evaluate_circuit_breaker,
+          )
+          from crypto_signal.intelligence.news_event_risk import (
+              build_news_evidence_freeze,
+          )
+          from crypto_signal.ledger.serialization import canonical_sha256
+
+          AS_OF = 1_000_000_000
+          HOUR = 60 * 60_000
+          coverage = build_event_calendar_coverage(
+              coverage_start_ms=AS_OF - HOUR,
+              coverage_end_ms=AS_OF + HOUR,
+              categories=DEFAULT_REQUIRED_EVENT_CATEGORIES,
+              source_provider="rdp8-stale-calendar",
+              source_quality=EventSourceQuality.OFFICIAL,
+              source=DataSource.AGGREGATED,
+              observed_at_ms=AS_OF - 7 * HOUR,
+              adapter_version="rdp8-final/1",
+          )
+          event_risk = build_event_risk_evidence_freeze(
+              (),
+              coverage=coverage,
+              asset="BTC",
+              as_of_ms=AS_OF,
+          ).analysis
+          assert event_risk.state is EventRiskState.DEGRADED_DATA
+          assert "stale_event_calendar_coverage" in event_risk.uncertainty_flags
+
+          news_rows = tuple(
+              build_news_event_observation(
+                  provider_article_id=f"article-{provider}",
+                  event_cluster_key="rdp8-cluster",
+                  headline=f"Provider {provider}",
+                  category=DEFAULT_REQUIRED_EVENT_CATEGORIES[0],
+                  affected_assets=("BTC",),
+                  published_at_ms=AS_OF - 60_000,
+                  source_provider=provider,
+                  source_quality=EventSourceQuality.PRIMARY_PROVIDER,
+                  source=DataSource.AGGREGATED,
+                  source_timestamp_ms=AS_OF - 59_000,
+                  ingested_at_ms=AS_OF - 58_000,
+                  extraction_method="provider-metadata-plus-nlp",
+                  extraction_version="rdp8-final/1",
+                  relevance_confidence_0_1=Decimal("0.90"),
+                  adapter_version="rdp8-final/1",
+              )
+              for provider in ("provider-a", "provider-b")
+          )
+          news = build_news_evidence_freeze(
+              news_rows,
+              asset="BTC",
+              as_of_ms=AS_OF,
+          ).analysis
+          quality = build_market_quality_risk_observation(
+              asset="BTC",
+              observed_at_ms=AS_OF - 1_000,
+              spread_bps=Decimal("5"),
+              depth_loss_fraction=Decimal("0.10"),
+              feed_delay_ms=1_000,
+              price_gap_fraction=Decimal("0.01"),
+              provider_disagreement_bps=Decimal("10"),
+              source_evidence_identities=(
+                  canonical_sha256({"rdp8": "quality"}),
+              ),
+              measurement_version="rdp8-final/1",
+          )
+          config = CircuitBreakerConfig(
+              policy_version="rdp8-final-policy/1",
+              max_market_quality_age_ms=120_000,
+              max_spread_bps=Decimal("20"),
+              max_depth_loss_fraction=Decimal("0.40"),
+              max_feed_delay_ms=5_000,
+              max_price_gap_fraction=Decimal("0.05"),
+              max_provider_disagreement_bps=Decimal("40"),
+          )
+          result = evaluate_circuit_breaker(
+              event_risk,
+              news,
+              quality,
+              config=config,
+          )
+          assert result.state is CircuitBreakerState.DEGRADED_DATA
+          assert "event_risk_degraded_data" in result.triggers
+          assert "structured_event_block" not in result.triggers
+          print(
+              "RDP8_FINAL_STALE_EVENT_FAIL_CLOSED_PASS=YES "
+              f"state={result.state.value} "
+              f"triggers={','.join(result.triggers)}",
+              flush=True,
+          )
+          print("STALE_EVENT_TREATED_AS_FRESH_VETO=NO", flush=True)
+          print("REAL_CAPITAL=0", flush=True)
+          PY
+
+      - name: Focused exact-main regressions
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
+          PY="$DEV/.venv/bin/python"
+          export PYTHONPATH="$DEV:$DEV/src"
+          cd "$DEV"
+          "$PY" -m pytest -q \
+            tests/test_rdp8_event_source_live_runtime.py \
+            tests/test_rdp8_cross_market_runtime.py \
+            tests/test_cross_market_context_engine.py \
+            tests/test_event_risk.py \
+            tests/test_event_risk_circuit_breaker.py
+          echo "RDP8_FINAL_REGRESSION_PASS=YES"
+          echo "RDP8_FINAL_EXACT_MAIN_ACCEPTANCE_PASS=YES"
+          echo "REAL_CAPITAL=0"
