@@ -848,3 +848,32 @@ blocker:
 nextAction:
 - run/inspect the full exact-head RDP10 UID504 contract; merge F1 only if focused, live fail-closed and non-mutating checks all PASS with HISTORICAL_BACKFILL=NO and REAL_CAPITAL=0.
 
+---
+
+## 2026-09-28 — RDP10-F1 raw-source reconciliation checkpoint
+
+status: IMPLEMENTATION_RECONCILIATION
+canonicalMain: f665fee6aba0309d7fd5ef7ff88abfdc10ef1511
+branch: rdp10/options-proof-f1
+openPR: 1650
+branchHeadBeforeCheckpoint: 6b6b3f9df756ea2212023bf8edc1df5beab76380
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+auditFinding:
+- OptionSurfaceObservation already has canonical immutable persistence in OptionsSurfaceStore.
+- Wrapping the same surface_identity in FrozenProofStore with family evaluation-time metadata can make the same source identity conflict across later evaluations.
+- Raw options surface/metadata/quote evidence therefore belongs to the canonical Options source resolver.
+- FrozenProofStore should contain only the derived options_volatility_freeze.
+- Stream already binds surface, metadata, quote, volatility freeze and analysis identities.
+
+blocker:
+- exact-evidence read model has no options_surface_path resolver yet.
+- web/live audit resolver wiring does not pass the canonical Options DB.
+- current RDP6 test still expects a raw surface wrapper in FrozenProofStore.
+
+nextAction:
+- implement read-only canonical Options source resolution plus API/live wiring; update tests to separate raw Options source truth from derived volatility proof; checkpoint again before UID504 acceptance.
+
