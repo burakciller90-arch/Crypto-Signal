@@ -303,18 +303,27 @@ def test_fresh_btc_options_enrich_existing_derivatives_family(
     assert "dealer_gamma_position_not_inferred" in snapshot.uncertainty_flags
     assert "max_pain_not_estimated" in snapshot.uncertainty_flags
 
+    surface_store = OptionsSurfaceStore(options_path)
     surface_identity = next(
         identity
         for identity in snapshot.evidence_identities
-        if (
-            FrozenProofStore(proof_path).read_exact(identity) is not None
-            and FrozenProofStore(proof_path).read_exact(identity).object_kind
-            == "options_surface_snapshot"
-        )
+        if surface_store.surface(identity) is not None
     )
+    surface = surface_store.surface(surface_identity)
+    assert surface is not None
+    assert surface.surface_identity == surface_identity
+    assert surface.source_timestamp_ms == AS_OF_MS - 100
+    assert surface.observed_at_ms == AS_OF_MS - 80
+    assert surface.ingested_at_ms == AS_OF_MS - 60
+    assert len(surface.contracts) == 8
+    assert surface.instrument_metadata_identity in snapshot.evidence_identities
+    assert all(
+        item.quote_identity in snapshot.evidence_identities
+        for item in surface.contracts
+    )
+
     proof_store = FrozenProofStore(proof_path)
-    surface_proof = proof_store.read_exact(surface_identity)
-    assert surface_proof is not None
+    assert proof_store.read_exact(surface_identity) is None
     volatility_proof = next(
         proof_store.read_exact(identity)
         for identity in snapshot.evidence_identities
@@ -325,15 +334,21 @@ def test_fresh_btc_options_enrich_existing_derivatives_family(
         )
     )
     assert volatility_proof is not None
-    assert surface_proof.object_kind == "options_surface_snapshot"
     assert volatility_proof.object_kind == "options_volatility_freeze"
-    assert surface_proof.as_of_ms == AS_OF_MS
-    assert surface_proof.persisted_at_ms == AS_OF_MS
-    assert surface_proof.market_available_at_ms == AS_OF_MS - 60
-    assert surface_proof.market_available_at_ms < surface_proof.as_of_ms
-    assert surface_proof.freshness_age_ms == 100
-    assert surface_proof.source_object_identities
+    assert volatility_proof.as_of_ms == AS_OF_MS
+    assert volatility_proof.persisted_at_ms == AS_OF_MS
+    assert volatility_proof.market_available_at_ms == AS_OF_MS - 60
+    assert volatility_proof.market_available_at_ms < volatility_proof.as_of_ms
+    assert volatility_proof.freshness_age_ms == 100
+    assert volatility_proof.source_object_identities == (surface_identity,)
     assert surface_identity in volatility_proof.depends_on_evidence_identities
+    assert surface.instrument_metadata_identity in (
+        volatility_proof.depends_on_evidence_identities
+    )
+    assert all(
+        item.quote_identity in volatility_proof.depends_on_evidence_identities
+        for item in surface.contracts
+    )
     assert volatility_proof.analysis_identity is not None
     assert volatility_proof.production_authority is False
     assert volatility_proof.real_capital == 0
