@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import time
 from dataclasses import dataclass
 from decimal import Decimal
@@ -83,7 +84,7 @@ class DefiLlamaStablecoinsAdapter:
                 },
             )
             response.raise_for_status()
-            payload = cast(dict[str, object], response.json())
+            payload = _parse_json_object(response.text)
             observed_at_ms = time.time_ns() // 1_000_000
         finally:
             if owns_client:
@@ -119,6 +120,26 @@ class DefiLlamaStablecoinsAdapter:
             observed_at_ms=observed_at_ms,
         )
 
+
+
+def _parse_json_object(text: str) -> dict[str, object]:
+    try:
+        parsed = json.loads(
+            text,
+            parse_float=str,
+            parse_constant=_reject_json_constant,
+        )
+    except json.JSONDecodeError as exc:
+        raise ValueError("invalid DefiLlama stablecoin JSON response") from exc
+    if not isinstance(parsed, dict):
+        raise TypeError("DefiLlama stablecoin response must be a JSON object")
+    return cast(dict[str, object], parsed)
+
+
+def _reject_json_constant(value: str) -> object:
+    raise ValueError(
+        f"unsupported DefiLlama non-finite JSON number: {value}"
+    )
 
 def _normalize_asset(
     payload: dict[str, object],
