@@ -717,3 +717,39 @@ blocker:
 nextAction:
 - before F1 code changes, re-check exact main/open PRs/branches and write mandatory F1 task-start checkpoint.
 
+---
+
+## 2026-09-28 — RDP10-F1 start checkpoint
+
+status: ACTIVE
+canonicalMainAtStart: f665fee6aba0309d7fd5ef7ff88abfdc10ef1511
+branch: rdp10/options-proof-f1
+worktree: no session-local /Volumes worktree; GitHub branch only, canonical Workbench verification comes from UID504 bootstrap/acceptance
+roadmapGate: RDP10-F1 Options / volatility strongest exact proof cutover
+duplicateRelevantPRs: NONE
+duplicateRelevantBranches: NONE
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+boundedGoal:
+- persist full immutable OptionsVolatilityEvidenceFreeze before Derivatives Stream publication;
+- preserve exact options surface/metadata/quote lineage;
+- expose options_surface and options_volatility exact customer-proof domains;
+- preserve source/provider timestamps and stale/not-evaluable states;
+- no dealer-gamma/max-pain invention;
+- no new score family or direction authority.
+
+notInThisSlice:
+- On-chain/stablecoin proof cutover;
+- Event Risk/provider-divergence changes unless audit proves a real gap;
+- final RDP10 closure audit;
+- RDP11 soak.
+
+blocker:
+- exact-main SSD504 Workbench bootstrap run 36470815516 is pending at task start.
+
+nextAction:
+- read run 36470815516; after exact-main Workbench PASS, audit options surface + volatility freeze schemas and implement F1.
+
