@@ -120,6 +120,9 @@ def resolve_runtime_paths(args: argparse.Namespace) -> dict[str, Path]:
             getattr(args, "stream_ledger", None)
             or runtime_root / "stream" / "intelligence_stream.sqlite3"
         ),
+        "options_surface_path": (
+            runtime_root / "market_tape" / "options_surface.sqlite3"
+        ),
     }
 
 
