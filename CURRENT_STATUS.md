@@ -43,12 +43,15 @@ RDP3 — **PASS**.
 - every new forward signal freeze now persists its Geometry Proof atomically in the same immutable ledger transaction; SQLite enforces the exact bundle+signal parent pair, read-only replay is available by signal or bundle, and historical freezes are not backfilled;
 - Workbench bootstrap `36386287130` advanced clean `repo/main` to exact `656c19fc6f4a39634e0594c51d021c741c288750`.
 
-RDP4 — **ACTIVE**.
-- RDP4-A rich Market Tape family wiring merged via PR #1566 as `0356f6c1024935bfeffbcc7e61b2a7d95bd9ecc5`; UID504 latest-head run `36387736662` passed exact Workbench/source, focused rich-family/regression tests, Ruff, mypy and py_compile with REAL_CAPITAL=0;
-- existing Liquidity and Order Flow family slots now carry Liquidity Structure/Sweep + Temporal Order Flow identities/components without adding a new family or score weight; source-event identities are composites of the rich component freezes;
-- PIT is fail-closed against future/late Market Tape rows, trade-unavailable domains stay absent, CVD cannot invent direction, and candidate/no-actor-intent semantics are retained;
-- Workbench bootstrap `36387822607` advanced clean `repo/main` to exact `0356f6c1024935bfeffbcc7e61b2a7d95bd9ecc5`.
-Exact implementation frontier: **RDP4-B — wire Absorption and Price/CVD Divergence dependency freezes into Order Flow family proof using canonical 15m candle cache read-only; Absorption may be measured from overlapping rich rails, while Divergence must remain explicit unresolved when the 2m flow window has insufficient compatible closed-candle coverage.**
+RDP4 — **PASS**.
+- RDP4-A rich Market Tape family wiring merged via PR #1566 as `0356f6c1024935bfeffbcc7e61b2a7d95bd9ecc5`; UID504 `36387736662` PASS;
+- RDP4-B Absorption + Price/CVD dependency wiring merged via PR #1568 as `1e2ad0540d3c1c2b7d40b98abbd88126f8ce01a9`;
+- UID504 latest-head RDP4-B run `36392872215`: exact Workbench/source PASS, focused pattern + RDP4-A + candle/live-clock regressions PASS, Ruff PASS, mypy PASS, py_compile PASS, REAL_CAPITAL=0; separate RDP4-A regression `36392872158` PASS and RDP2 candle-source regression `36392872168` PASS;
+- Absorption reuses exact Temporal Flow + Liquidity Structure dependencies inside the existing Order Flow family; Price/CVD Divergence reads canonical 15m candle cache read-only and remains explicit UNRESOLVED when the 2m flow window lacks compatible closed-candle coverage;
+- no new family/weight, no actor-intent claim, no context-only direction invention, no synthetic lower-timeframe price rail; missing candle cache fails without initialization;
+- Workbench bootstrap `36393163025` advanced clean `repo/main` to exact `1e2ad0540d3c1c2b7d40b98abbd88126f8ce01a9`.
+
+RDP5 — **ACTIVE**. Exact implementation frontier: **RDP5-A — promote the existing Bybit allLiquidation collector from bounded development-only/default-disabled mode into a supervisor-owned continuous REAL_CAPITAL=0 runtime with explicit connected/silence/stale coverage and fail-closed freshness; do not duplicate the existing liquidation parser/store/coverage model.**
 
 Locked execution sequence:
 `RDP1 runtime reliability → RDP2 source envelope/coverage → RDP3 Geometry → RDP4 rich Liquidity/Order Flow → RDP5 Derivatives/Liquidations → RDP6 BTC/ETH Options → RDP7 real On-chain/stablecoin capital flows → RDP8 Event/Cross-market → RDP9 cross-venue + overlap control → RDP10 frozen proof contract → RDP11 soak/acceptance → Paper Portfolio → new frontend`.
