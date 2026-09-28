@@ -316,14 +316,14 @@ def build_option_surface_observation(
         specs_by_identity[spec.instrument_identity] = spec
 
     for quote in quotes:
-        spec = specs_by_identity.get(quote.instrument_identity)
-        if spec is None:
+        matched_spec = specs_by_identity.get(quote.instrument_identity)
+        if matched_spec is None:
             raise ValueError("option quote is missing exact instrument metadata")
         if (
-            quote.symbol != spec.symbol
-            or quote.option_type is not spec.option_type
-            or quote.strike != spec.strike
-            or quote.expiry_at_ms != spec.expiry_at_ms
+            quote.symbol != matched_spec.symbol
+            or quote.option_type is not matched_spec.option_type
+            or quote.strike != matched_spec.strike
+            or quote.expiry_at_ms != matched_spec.expiry_at_ms
         ):
             raise ValueError("option quote conflicts with instrument metadata")
 
