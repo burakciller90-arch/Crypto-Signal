@@ -301,6 +301,7 @@ def build_market_tape_family_snapshots(
             limit=1200,
         )
 
+        structure = None
         if orderbooks:
             liquidity = build_liquidity_dynamics_evidence_freeze(
                 orderbooks,
@@ -531,16 +532,10 @@ def build_market_tape_family_snapshots(
             pattern_uncertainty: set[str] = set()
             absorption = None
             divergence = None
-            if temporal is not None and orderbooks:
-                structure_for_order_flow = (
-                    build_liquidity_structure_evidence_freeze(
-                        orderbooks,
-                        as_of_ms=as_of_ms,
-                    )
-                )
+            if temporal is not None and structure is not None:
                 absorption = build_absorption_freeze(
                     temporal,
-                    structure_for_order_flow,
+                    structure,
                     as_of_ms=as_of_ms,
                 )
                 absorption_analysis = absorption.analysis
@@ -548,8 +543,8 @@ def build_market_tape_family_snapshots(
                     {
                         absorption.freeze_identity,
                         absorption_analysis.evidence_identity,
-                        structure_for_order_flow.freeze_identity,
-                        structure_for_order_flow.analysis.evidence_identity,
+                        structure.freeze_identity,
+                        structure.analysis.evidence_identity,
                     }
                 )
                 pattern_uncertainty.update(
