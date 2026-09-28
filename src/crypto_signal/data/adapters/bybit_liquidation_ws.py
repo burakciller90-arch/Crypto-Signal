@@ -4,10 +4,11 @@ import asyncio
 import json
 import time
 from collections.abc import AsyncGenerator
+from collections.abc import Callable
 from contextlib import suppress
 from dataclasses import dataclass
 from enum import StrEnum
-from typing import Callable, Literal, cast
+from typing import Literal, cast
 
 from websockets.asyncio.client import ClientConnection, connect
 from websockets.exceptions import ConnectionClosed
