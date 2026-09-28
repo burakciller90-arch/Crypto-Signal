@@ -16,6 +16,7 @@ class CandleSourceSnapshot:
     timeframe: str
     raw_payload: dict[str, object]
     candles: tuple[Candle, ...]
+    source_timestamp_ms: int
     observed_at_ms: int
 
     def __post_init__(self) -> None:
@@ -34,9 +35,9 @@ class CandleSourceSnapshot:
             )
         if self.symbol != self.symbol.upper():
             raise ValueError("candle source snapshot symbol must be uppercase")
-        if self.observed_at_ms < 0:
+        if min(self.source_timestamp_ms, self.observed_at_ms) < 0:
             raise ValueError(
-                "candle source snapshot observation cannot be negative"
+                "candle source snapshot timestamps cannot be negative"
             )
         for candle in self.candles:
             if candle.symbol != self.symbol:
