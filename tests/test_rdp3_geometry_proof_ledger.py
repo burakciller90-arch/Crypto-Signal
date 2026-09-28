@@ -83,6 +83,86 @@ def test_geometry_proof_freeze_replay_is_idempotent(tmp_path: Path) -> None:
     ) == original
 
 
+def test_geometry_proof_parent_pair_is_enforced_by_sqlite(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / "parent-pair.sqlite3"
+    ledger = ImmutableSignalLedger(path)
+    ledger.initialize()
+
+    with sqlite3.connect(path) as connection:
+        connection.execute("PRAGMA foreign_keys=ON")
+        for index, (
+            bundle_identity,
+            signal_identity,
+        ) in enumerate(
+            (
+                ("a" * 64, "b" * 64),
+                ("c" * 64, "d" * 64),
+            ),
+            start=1,
+        ):
+            connection.execute(
+                """
+                INSERT INTO signal_freezes (
+                    bundle_identity,
+                    signal_freeze_identity,
+                    exchange,
+                    market_type,
+                    symbol,
+                    timeframe,
+                    as_of_ms,
+                    source_cutoff_open_time_ms,
+                    signal_state,
+                    direction,
+                    bundle_json,
+                    frozen_at_ms
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    bundle_identity,
+                    signal_identity,
+                    "bybit",
+                    "spot",
+                    "BTCUSDT",
+                    "15m",
+                    index,
+                    index,
+                    "watch",
+                    "neutral",
+                    "{}",
+                    index,
+                ),
+            )
+
+        with pytest.raises(
+            sqlite3.IntegrityError,
+            match="FOREIGN KEY",
+        ):
+            connection.execute(
+                """
+                INSERT INTO geometry_proofs (
+                    proof_identity,
+                    bundle_identity,
+                    signal_freeze_identity,
+                    as_of_ms,
+                    source_cutoff_open_time_ms,
+                    proof_json,
+                    persisted_at_ms
+                ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    "e" * 64,
+                    "a" * 64,
+                    "d" * 64,
+                    1,
+                    1,
+                    "{}",
+                    1,
+                ),
+            )
+
+
 def test_geometry_proof_table_is_sql_immutable(tmp_path: Path) -> None:
     bundle = build_bundle(candles())
     path = tmp_path / "ledger.sqlite3"
