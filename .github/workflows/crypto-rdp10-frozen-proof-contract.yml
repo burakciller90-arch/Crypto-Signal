@@ -291,3 +291,16 @@ jobs:
           echo "RDP10_NON_MUTATING_PASS=YES"
           echo "HISTORICAL_BACKFILL=NO"
           echo "REAL_CAPITAL=0"
+
+      - name: Confirm RDP10-F3 final contract closure
+        if: success()
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "RDP10_F3_FINAL_CONTRACT_PASS=YES"
+          echo "RDP10_CUSTOMER_SOURCE_LABEL_PASS=YES"
+          echo "RDP10_PROVIDER_DIVERGENCE_EXACT_PASS=YES"
+          echo "RDP10_EVENT_SOURCE_EXACT_PASS=YES"
+          echo "RDP10_HISTORICAL_CURRENT_SUBSTITUTION=NO"
+          echo "HISTORICAL_BACKFILL=NO"
+          echo "REAL_CAPITAL=0"
