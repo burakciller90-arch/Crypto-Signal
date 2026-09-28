@@ -87,7 +87,7 @@ def test_cross_venue_quality_marks_two_fresh_venues_as_broad() -> None:
     assert assessment.scope is CrossVenueScope.BROAD_TWO_VENUE
     assert assessment.state is CrossVenueQualityState.TWO_VENUE_CONFIRMED
     assert assessment.latest_absolute_spread_bps is not None
-    assert assessment.latest_absolute_spread_bps < Decimal("40")
+    assert assessment.latest_absolute_spread_bps < Decimal(40)
     assert assessment.material_conflict_identities == ()
     assert assessment.source_evidence_identities == tuple(
         sorted(
@@ -106,7 +106,7 @@ def test_cross_venue_quality_exposes_material_price_disagreement() -> None:
         binance_closes=("101.00", "102.00", "103.00"),
         bybit_closes=("100.00", "100.00", "100.00"),
     )
-    config = CrossVenueQualityConfig(material_spread_bps=Decimal("40"))
+    config = CrossVenueQualityConfig(material_spread_bps=Decimal(40))
 
     assessment = assess_cross_venue_quality(snapshot, config=config)
 
@@ -116,7 +116,7 @@ def test_cross_venue_quality_exposes_material_price_disagreement() -> None:
         is CrossVenueQualityState.MATERIAL_PRICE_DISAGREEMENT
     )
     assert assessment.latest_absolute_spread_bps is not None
-    assert assessment.latest_absolute_spread_bps > Decimal("40")
+    assert assessment.latest_absolute_spread_bps > Decimal(40)
     assert len(assessment.material_conflict_identities) == 1
     assert (
         "material_cross_venue_price_disagreement"
@@ -177,13 +177,13 @@ def test_cross_venue_materiality_threshold_is_explicit_policy_input() -> None:
     narrow = assess_cross_venue_quality(
         snapshot,
         config=CrossVenueQualityConfig(
-            material_spread_bps=Decimal("20"),
+            material_spread_bps=Decimal(20),
         ),
     )
     wide = assess_cross_venue_quality(
         snapshot,
         config=CrossVenueQualityConfig(
-            material_spread_bps=Decimal("40"),
+            material_spread_bps=Decimal(40),
         ),
     )
 
