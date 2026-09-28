@@ -26,6 +26,12 @@ Latest RDP1 closure evidence:
 - UID504 six-context read-only diagnostic `36357353548`: Bybit BTC 8.958s / ETH 11.406s / SOL 13.663s; Binance BTC 16.163s / ETH 20.413s / SOL 24.332s availability lag; failures=0; temporary diagnostic PR #1552 was closed unmerged after evidence capture;
 - liquidation rows/coverage remain 0 and are an explicit unsupported/deferred rail, not an RDP1 blocker; Capital/Portfolio and standalone On-chain remain deferred; REAL_CAPITAL=0.
 
+RDP2 progress:
+- RDP2-A source-contract foundation merged via PR #1555 as `585378dc32753d2e31894bd666eb1e084802e6ab`;
+- UID504 focused run `36373922309`: exact Workbench baseline PASS, exact PR source PASS, 27 focused/related tests PASS, Ruff PASS, mypy PASS, REAL_CAPITAL=0;
+- accepted foundation now provides immutable source capability identities, canonical source envelopes with provider-native ID/sequence semantics, source/event/observed/ingested timestamps, raw/normalized lineage, explicit FRESH/STALE/GAP/UNAVAILABLE states, append-only coverage state, and PIT-safe no-future reads;
+- RDP2 remains ACTIVE. Exact next implementation frontier: wire real Market Tape raw/normalized evidence into the source contract and emit/query coverage without duplicating the existing gap/recovery ledger.
+
 Locked execution sequence:
 `RDP1 runtime reliability → RDP2 source envelope/coverage → RDP3 Geometry → RDP4 rich Liquidity/Order Flow → RDP5 Derivatives/Liquidations → RDP6 BTC/ETH Options → RDP7 real On-chain/stablecoin capital flows → RDP8 Event/Cross-market → RDP9 cross-venue + overlap control → RDP10 frozen proof contract → RDP11 soak/acceptance → Paper Portfolio → new frontend`.
 
