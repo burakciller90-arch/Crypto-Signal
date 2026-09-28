@@ -943,3 +943,43 @@ blocker:
 
 nextAction:
 - inspect exact-head RDP10 and RDP6 workflow acceptance outputs; repair only a demonstrated mechanical failure, or merge #1650 after rechecking main/head if all required acceptance markers pass.
+
+
+---
+
+## 2026-09-28 — RDP10-F1 PASS / F2 frontier handoff
+
+verifiedAt: 2026-09-28
+repository: burakciller90-arch/Crypto-Signal
+exactMainShaAtF1Close: 218c11f433a1aaddc80afeccf79f6c17f9a8845f
+implementationBranch: rdp10/options-proof-f1
+implementationHead: c86eb13f8a5a233d39b901aaa0d50016a2fe689b
+worktree: no session-local /Volumes worktree; canonical SSD504 Workbench verified by UID504
+implementationPR: 1650
+implementationMergeSha: 218c11f433a1aaddc80afeccf79f6c17f9a8845f
+closeoutBranch: docs/rdp10-f1-completion
+roadmapGateClosed: RDP10-F1 Options / volatility exact proof cutover
+nextRoadmapGate: RDP10-F2 On-chain / stablecoin exact proof cutover
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+workflowEvidence:
+- RDP10 exact-head acceptance: run 36473825587 / job 109102443442 / SUCCESS.
+- RDP6 Options family cross-check: run 36473830427 / job 109102454914 / SUCCESS.
+- merged-main Agent Memory Bootstrap: run 36474722753 / job 109105421079 / SUCCESS.
+- merged-main SSD504 Workbench Bootstrap: run 36474722859 / job 109105421512 / SUCCESS.
+- Workbench synchronized to exact 218c11f433a1aaddc80afeccf79f6c17f9a8845f with SSD504_WORKBENCH_PASS=YES.
+
+acceptedSemantics:
+- canonical raw Options surface/metadata/quotes stay in OptionsSurfaceStore and are resolved read-only.
+- only derived options_volatility_freeze is persisted in FrozenProofStore.
+- exact source lineage + PIT/future-evidence validation is fail-closed.
+- unsupported directional claims remain unavailable; no new family/direction authority.
+
+blocker:
+- RDP10-F2 has not started; existing RDP7 stablecoin raw/envelope/coverage/freeze persistence and current exact-evidence resolver must be audited before any code to avoid duplicate proof storage.
+
+nextAction:
+- after this docs-only closeout is merged, branch from exact current main, checkpoint F2 start before production changes, then audit and cut over only the mechanically missing StablecoinCapitalFlow exact customer-proof path.
