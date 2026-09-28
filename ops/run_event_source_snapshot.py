@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import argparse
 import email.utils
+import fcntl
+import sqlite3
 import sys
 import time
 from dataclasses import dataclass
@@ -39,6 +41,10 @@ from crypto_signal.data.event_source_runtime import (
 DEFAULT_EVENT_SOURCE_DB = Path(
     "/Volumes/Crypto-504/Crypto-Signal/Development/runtime/events/"
     "event_source.sqlite3"
+)
+DEFAULT_EVENT_SOURCE_LOCK = Path(
+    "/Volumes/Crypto-504/Crypto-Signal/Development/runtime/events/"
+    "event_source_snapshot.lock"
 )
 DEFAULT_TIMEOUT_SECONDS = 20.0
 USER_AGENT = "Crypto-Signal/1.1 EventSourceRuntime (+https://github.com/burakciller90-arch)"
@@ -98,6 +104,12 @@ def parse_args() -> argparse.Namespace:
         type=Path,
         default=DEFAULT_EVENT_SOURCE_DB,
         help="append-only Event Source runtime SQLite path",
+    )
+    parser.add_argument(
+        "--lock-path",
+        type=Path,
+        default=DEFAULT_EVENT_SOURCE_LOCK,
+        help="single-writer lock for the canonical Event Source snapshot clock",
     )
     parser.add_argument(
         "--timeout-seconds",
@@ -566,10 +578,18 @@ def _failure_fetch(
     )
 
 
+def _require_canonical_path(path: Path, *, label: str) -> None:
+    if not str(path).startswith("/Volumes/Crypto-504/"):
+        raise ValueError(f"{label} must use canonical SSD path")
+
+
 def run(args: argparse.Namespace) -> int:
-    if not str(args.db).startswith("/Volumes/Crypto-504/"):
+    try:
+        _require_canonical_path(args.db, label="event source db")
+        _require_canonical_path(args.lock_path, label="event source lock")
+    except ValueError as exc:
         print(
-            "EVENT_SOURCE_ERROR=NON_CANONICAL_DB_PATH",
+            f"EVENT_SOURCE_ERROR={exc}",
             file=sys.stderr,
             flush=True,
         )
@@ -582,31 +602,47 @@ def run(args: argparse.Namespace) -> int:
         )
         return 2
 
-    store = EventSourceRuntimeStore(args.db)
-    with httpx.Client(
-        timeout=args.timeout_seconds,
-        follow_redirects=True,
-        headers={
-            "User-Agent": USER_AGENT,
-            "Accept": (
-                "text/calendar, text/html, application/xhtml+xml, "
-                "application/rss+xml, application/xml, text/xml"
-            ),
-        },
-    ) as client:
+    args.lock_path.parent.mkdir(parents=True, exist_ok=True)
+    with args.lock_path.open("a+", encoding="utf-8") as lock_file:
         try:
-            result = collect_event_source_cycle(
-                store=store,
-                client=client,
+            fcntl.flock(
+                lock_file.fileno(),
+                fcntl.LOCK_EX | fcntl.LOCK_NB,
             )
-        except (OSError, ValueError) as exc:
+        except BlockingIOError:
             print(
-                "EVENT_SOURCE_ERROR "
-                f"error={type(exc).__name__}:{exc}",
-                file=sys.stderr,
+                "RDP8_EVENT_SOURCE_SNAPSHOT_SKIPPED=LOCK_HELD "
+                "REAL_CAPITAL=0",
                 flush=True,
             )
-            return 3
+            return 0
+
+        store = EventSourceRuntimeStore(args.db)
+        with httpx.Client(
+            timeout=args.timeout_seconds,
+            follow_redirects=True,
+            headers={
+                "User-Agent": USER_AGENT,
+                "Accept": (
+                    "text/calendar, text/html, application/xhtml+xml, "
+                    "application/rss+xml, application/xml, text/xml"
+                ),
+            },
+        ) as client:
+            try:
+                result = collect_event_source_cycle(
+                    store=store,
+                    client=client,
+                )
+            except (OSError, sqlite3.Error, ValueError) as exc:
+                print(
+                    "EVENT_SOURCE_ERROR "
+                    f"error={type(exc).__name__}:{exc} "
+                    "FAIL_CLOSED=YES REAL_CAPITAL=0",
+                    file=sys.stderr,
+                    flush=True,
+                )
+                return 3
 
     for fetch in result.fetches:
         print(
