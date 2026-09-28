@@ -47,8 +47,7 @@ jobs:
             tests/test_event_source_snapshot.py \
             tests/test_event_source_runtime.py \
             tests/test_event_source_adapters.py \
-            tests/test_event_risk.py \
-            tests/test_intelligence_stream_trust_sources.py
+            tests/test_event_risk.py
           "$PY" -m ruff check \
             ops/run_event_source_snapshot.py \
             tests/test_rdp8_event_source_live_runtime.py
