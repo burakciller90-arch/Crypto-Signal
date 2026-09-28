@@ -1,0 +1,305 @@
+name: RDP8 Event Cross-Market Audit UID504
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/crypto-rdp8-event-cross-market-audit.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          clean: true
+          fetch-depth: 1
+
+      - name: Verify exact canonical main on Workbench and Development
+        shell: bash
+        run: |
+          set -euo pipefail
+          EXPECTED="${{ github.event.pull_request.base.sha }}"
+          WB="/Volumes/Crypto-504/Crypto-Signal-Workbench/repo"
+          DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
+          test "$(id -u)" = "504"
+          for TARGET in "$WB" "$DEV"; do
+            test "$(git -C "$TARGET" branch --show-current)" = "main"
+            test -z "$(git -C "$TARGET" status --porcelain)"
+            git -C "$TARGET" fetch origin main
+            test "$(git -C "$TARGET" rev-parse FETCH_HEAD)" = "$EXPECTED"
+            git -C "$TARGET" merge --ff-only FETCH_HEAD
+            test "$(git -C "$TARGET" rev-parse HEAD)" = "$EXPECTED"
+            test -z "$(git -C "$TARGET" status --porcelain)"
+          done
+          echo "RDP8_AUDIT_EXACT_MAIN_PASS=YES"
+          echo "REAL_CAPITAL=0"
+
+      - name: Read current Event Source runtime truth
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
+          PY="$DEV/.venv/bin/python"
+          DB="$DEV/runtime/events/event_source.sqlite3"
+          export PYTHONPATH="$DEV:$DEV/src"
+          export RDP8_EVENT_DB="$DB"
+          "$PY" - <<'PY'
+          from __future__ import annotations
+
+          import json
+          import os
+          import sqlite3
+          import time
+          from pathlib import Path
+
+          from crypto_signal.product.intelligence_stream_trust_sources import (
+              build_event_risk_stream_snapshots,
+          )
+
+          path = Path(os.environ["RDP8_EVENT_DB"])
+          now_ms = time.time_ns() // 1_000_000
+          print(f"RDP8_EVENT_DB_EXISTS={'YES' if path.is_file() else 'NO'}")
+          if not path.is_file():
+              print("RDP8_EVENT_RUNTIME_STATE=MISSING")
+              print("REAL_CAPITAL=0")
+              raise SystemExit(0)
+
+          uri = f"{path.resolve().as_uri()}?mode=ro"
+          with sqlite3.connect(uri, uri=True, timeout=5.0) as db:
+              db.row_factory = sqlite3.Row
+              db.execute("PRAGMA query_only=ON")
+              quick = db.execute("PRAGMA quick_check").fetchone()
+              assert quick is not None and str(quick[0]).lower() == "ok"
+              counts = {}
+              for table in (
+                  "event_source_fetches",
+                  "event_calendar_coverages",
+                  "structured_event_observations",
+                  "news_event_observations",
+                  "event_source_raw_payloads",
+              ):
+                  counts[table] = int(
+                      db.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
+                  )
+              rows = db.execute(
+                  """
+                  SELECT source_provider, source_kind, fetched_at_ms,
+                         outcome, payload_json
+                  FROM event_source_fetches
+                  ORDER BY fetched_at_ms DESC, sequence_id DESC
+                  """
+              ).fetchall()
+              latest = {}
+              for row in rows:
+                  key = (str(row["source_provider"]), str(row["source_kind"]))
+                  latest.setdefault(key, row)
+
+              coverage_rows = db.execute(
+                  """
+                  SELECT source_provider, observed_at_ms, payload_json
+                  FROM event_calendar_coverages
+                  ORDER BY observed_at_ms DESC, rowid DESC
+                  """
+              ).fetchall()
+              latest_coverage = {}
+              for row in coverage_rows:
+                  latest_coverage.setdefault(str(row["source_provider"]), row)
+
+          print("RDP8_EVENT_COUNTS " + " ".join(
+              f"{key}={value}" for key, value in sorted(counts.items())
+          ))
+          for (provider, kind), row in sorted(latest.items()):
+              age_ms = now_ms - int(row["fetched_at_ms"])
+              payload = json.loads(str(row["payload_json"]))
+              reason = payload.get("reason_code") or "none"
+              http_status = payload.get("http_status")
+              print(
+                  "RDP8_EVENT_LATEST_FETCH "
+                  f"provider={provider} kind={kind} outcome={row['outcome']} "
+                  f"age_ms={age_ms} http_status={http_status} reason={reason}"
+              )
+          for provider, row in sorted(latest_coverage.items()):
+              age_ms = now_ms - int(row["observed_at_ms"])
+              payload = json.loads(str(row["payload_json"]))
+              print(
+                  "RDP8_EVENT_LATEST_COVERAGE "
+                  f"provider={provider} age_ms={age_ms} "
+                  f"quality={payload.get('source_quality')} "
+                  f"coverage_end_ms={payload.get('coverage_end_ms')}"
+              )
+
+          try:
+              snapshots = build_event_risk_stream_snapshots(
+                  path,
+                  evaluated_at_ms=now_ms,
+              )
+          except Exception as exc:
+              print(
+                  "RDP8_EVENT_RISK_CURRENT_ERROR "
+                  f"error={type(exc).__name__}:{exc}"
+              )
+          else:
+              print(f"RDP8_EVENT_RISK_SNAPSHOT_COUNT={len(snapshots)}")
+              for item in snapshots:
+                  print(
+                      "RDP8_EVENT_RISK_CURRENT "
+                      f"scope={item.source_scope} state={item.state_label} "
+                      f"quality={item.source_quality} direction={item.direction} "
+                      f"uncertainty={','.join(item.uncertainty_flags) or '-'}"
+                  )
+          print("RDP8_EVENT_RUNTIME_READ_ONLY_AUDIT_PASS=YES")
+          print("REAL_CAPITAL=0")
+          PY
+
+      - name: Probe current official Event Source endpoints without production writes
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
+          PY="$DEV/.venv/bin/python"
+          export PYTHONPATH="$DEV:$DEV/src"
+          "$PY" - <<'PY'
+          from __future__ import annotations
+
+          import os
+          import time
+          from pathlib import Path
+
+          import httpx
+
+          from ops.run_event_source_snapshot import (
+              USER_AGENT,
+              collect_event_source_cycle,
+          )
+          from crypto_signal.data.event_source_runtime import EventSourceRuntimeStore
+
+          stamp = f"{os.getpid()}-{time.time_ns()}"
+          path = Path(f"/private/tmp/rdp8-event-audit-{stamp}.sqlite3")
+          try:
+              store = EventSourceRuntimeStore(path)
+              with httpx.Client(
+                  timeout=20.0,
+                  follow_redirects=True,
+                  headers={
+                      "User-Agent": USER_AGENT,
+                      "Accept": (
+                          "text/calendar, text/html, application/xhtml+xml, "
+                          "application/rss+xml, application/xml, text/xml"
+                      ),
+                  },
+              ) as client:
+                  result = collect_event_source_cycle(
+                      store=store,
+                      client=client,
+                  )
+              for fetch in result.fetches:
+                  print(
+                      "RDP8_EVENT_ONLINE_PROBE "
+                      f"provider={fetch.source_provider} "
+                      f"kind={fetch.source_kind.value} "
+                      f"outcome={fetch.outcome.value} "
+                      f"http_status={fetch.http_status} "
+                      f"items={len(fetch.item_identities)} "
+                      f"reason={fetch.reason_code or 'none'}"
+                  )
+              print(
+                  "RDP8_EVENT_ONLINE_REQUIRED "
+                  f"calendar={'YES' if result.required_calendar_coverage_satisfied else 'NO'} "
+                  f"news={'YES' if result.required_news_coverage_satisfied else 'NO'} "
+                  f"overall={'YES' if result.required_coverage_satisfied else 'NO'}"
+              )
+          finally:
+              for suffix in ("", "-wal", "-shm"):
+                  try:
+                      Path(str(path) + suffix).unlink()
+                  except FileNotFoundError:
+                      pass
+          print("RDP8_EVENT_ONLINE_PROBE_COMPLETE=YES")
+          print("REAL_CAPITAL=0")
+          PY
+
+      - name: Probe live Cboe VIX and Treasury 10Y sources
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
+          PY="$DEV/.venv/bin/python"
+          export PYTHONPATH="$DEV:$DEV/src"
+          "$PY" - <<'PY'
+          from __future__ import annotations
+
+          import asyncio
+          import time
+
+          from crypto_signal.data.adapters.cboe_vix import CboeVixDailyAdapter
+          from crypto_signal.data.adapters.treasury_yields import Treasury10YDailyAdapter
+
+          DAY_MS = 24 * 60 * 60 * 1000
+
+          async def main() -> None:
+              now_ms = time.time_ns() // 1_000_000
+              results = await asyncio.gather(
+                  CboeVixDailyAdapter().fetch_window(sessions=10),
+                  Treasury10YDailyAdapter().fetch_window(sessions=10),
+                  return_exceptions=True,
+              )
+              labels = ("vix", "treasury_10y")
+              for label, value in zip(labels, results, strict=True):
+                  if isinstance(value, BaseException):
+                      print(
+                          "RDP8_CROSS_MARKET_PROBE "
+                          f"series={label} status=UNAVAILABLE "
+                          f"error={type(value).__name__}:{value}"
+                      )
+                      continue
+                  latest = value.records[-1]
+                  source_lag_ms = max(
+                      0,
+                      now_ms - (latest.day_start_ms + DAY_MS),
+                  )
+                  print(
+                      "RDP8_CROSS_MARKET_PROBE "
+                      f"series={label} status=OBSERVED "
+                      f"observation={value.observation_identity} "
+                      f"observed_age_ms={now_ms - value.observed_at_ms} "
+                      f"latest_day_start_ms={latest.day_start_ms} "
+                      f"source_lag_ms={source_lag_ms} "
+                      f"value={latest.value}"
+                  )
+
+          asyncio.run(main())
+          print("RDP8_CROSS_MARKET_ONLINE_PROBE_COMPLETE=YES")
+          print("REAL_CAPITAL=0")
+          PY
+
+      - name: Confirm current scheduler gap and supervisor health
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
+          SUP="$DEV/ops/ssd_runtime_supervisor.sh"
+          test -f "$SUP"
+          grep -F -- '--stream-event-source "$event_source"' "$SUP" >/dev/null
+          if grep -F "run_event_source_snapshot" "$SUP" >/dev/null; then
+            echo "RDP8_EVENT_SCHEDULER_PRESENT=YES"
+          else
+            echo "RDP8_EVENT_SCHEDULER_PRESENT=NO"
+          fi
+          if ps -axo pid=,command= | grep -F "$DEV/ops/run_event_source_snapshot.py" | grep -v grep >/dev/null; then
+            echo "RDP8_EVENT_SNAPSHOT_PROCESS_NOW=YES"
+          else
+            echo "RDP8_EVENT_SNAPSHOT_PROCESS_NOW=NO"
+          fi
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          if ps -axo pid=,comm=,args= | awk -v needle="$ROOT/ssd-service-supervisor.sh" '($2 == "bash" || $2 == "/bin/bash") && index($0, needle) > 0 {ok=1} END {exit(ok?0:1)}'; then
+            echo "RDP8_SUPERVISOR_ALIVE=YES"
+          else
+            echo "RDP8_SUPERVISOR_ALIVE=NO"
+          fi
+          echo "REAL_CAPITAL=0"
