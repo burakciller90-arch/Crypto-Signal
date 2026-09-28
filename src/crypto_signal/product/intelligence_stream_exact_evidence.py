@@ -471,11 +471,17 @@ class IntelligenceStreamExactEvidenceReadModel:
                 if "derivatives_crowding_freeze" in selected_kinds
                 else StreamEvidenceResolutionState.UNAVAILABLE_EXPLICIT
             )
+            options_state = (
+                StreamEvidenceResolutionState.READY_EXACT
+                if "options_volatility_freeze" in selected_kinds
+                else StreamEvidenceResolutionState.UNAVAILABLE_EXPLICIT
+            )
             if (
                 context_state is StreamEvidenceResolutionState.READY_EXACT
                 or dynamics_state is StreamEvidenceResolutionState.READY_EXACT
                 or heatmap_state is StreamEvidenceResolutionState.READY_EXACT
                 or crowding_state is StreamEvidenceResolutionState.READY_EXACT
+                or options_state is StreamEvidenceResolutionState.READY_EXACT
             ):
                 state = StreamEvidenceResolutionState.READY_EXACT
                 reason = "exact_persisted_derivatives_derived_proof_resolved"
@@ -489,6 +495,7 @@ class IntelligenceStreamExactEvidenceReadModel:
                 "funding_open_interest_basis": context_state.value,
                 "observed_liquidation_heatmap": heatmap_state.value,
                 "crowding_context": crowding_state.value,
+                "options_volatility_context": options_state.value,
                 "source_snapshot": raw_state.value,
             }
         elif domain == "derivatives_context":
@@ -548,6 +555,46 @@ class IntelligenceStreamExactEvidenceReadModel:
                 "crowded_side": state.value,
                 "squeeze_context": state.value,
                 "upstream_dependency_lineage": state.value,
+            }
+        elif domain == "options_surface":
+            surface_state = (
+                StreamEvidenceResolutionState.READY_EXACT
+                if "options_surface_snapshot" in selected_kinds
+                else StreamEvidenceResolutionState.UNAVAILABLE_EXPLICIT
+            )
+            volatility_state = (
+                StreamEvidenceResolutionState.READY_EXACT
+                if "options_volatility_freeze" in selected_kinds
+                else StreamEvidenceResolutionState.UNAVAILABLE_EXPLICIT
+            )
+            if surface_state is StreamEvidenceResolutionState.READY_EXACT:
+                state = StreamEvidenceResolutionState.READY_EXACT
+                reason = "exact_persisted_options_surface_resolved"
+            capabilities = {
+                "surface_snapshot": surface_state.value,
+                "instrument_metadata_lineage": surface_state.value,
+                "contract_quote_lineage": surface_state.value,
+                "volatility_freeze_link": volatility_state.value,
+            }
+        elif domain == "options_volatility":
+            if "options_volatility_freeze" in selected_kinds:
+                state = StreamEvidenceResolutionState.READY_EXACT
+                reason = "exact_persisted_options_volatility_proof_resolved"
+            capabilities = {
+                "atm_iv_term_structure": state.value,
+                "risk_reversal_25d": state.value,
+                "open_interest_by_expiry": state.value,
+                "volume_by_expiry": state.value,
+                "expiry_concentration": state.value,
+                "volatility_index": (
+                    StreamEvidenceResolutionState.UNAVAILABLE_EXPLICIT.value
+                ),
+                "dealer_gamma_position": (
+                    StreamEvidenceResolutionState.UNAVAILABLE_EXPLICIT.value
+                ),
+                "max_pain": (
+                    StreamEvidenceResolutionState.UNAVAILABLE_EXPLICIT.value
+                ),
             }
         elif domain == "event_calendar":
             if selected_kinds.intersection(
@@ -982,6 +1029,7 @@ def _objects_for_domain(
             "derivatives_dynamics_freeze",
             "liquidation_heatmap_freeze",
             "derivatives_crowding_freeze",
+            "options_volatility_freeze",
         },
         "derivatives_context": {"derivatives_context_freeze"},
         "derivatives_dynamics": {"derivatives_dynamics_freeze"},
@@ -991,6 +1039,11 @@ def _objects_for_domain(
         },
         "observed_liquidation_heatmap": {"liquidation_heatmap_freeze"},
         "derivatives_crowding": {"derivatives_crowding_freeze"},
+        "options_surface": {
+            "options_surface_snapshot",
+            "options_volatility_freeze",
+        },
+        "options_volatility": {"options_volatility_freeze"},
         "event_calendar": {
             "event_calendar_coverage",
             "structured_event_observation",
