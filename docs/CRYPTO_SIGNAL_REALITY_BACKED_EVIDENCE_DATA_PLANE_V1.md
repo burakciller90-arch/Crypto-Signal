@@ -560,7 +560,7 @@ Acceptance evidence:
 
 ## RDP2 — Canonical source envelope + coverage ledger
 
-Status: **ACTIVE**
+Status: **PASS**
 
 Goal:
 - enforce one professional contract across every evidence rail.
@@ -578,16 +578,25 @@ Progress:
 - **RDP2-A source-contract foundation ACCEPTED** on main `585378dc32753d2e31894bd666eb1e084802e6ab` via PR #1555;
 - **RDP2-B live Bybit WebSocket Market Tape wiring ACCEPTED** on main `b2f6bdc64e4830de7a021250155c3cea6f587922` via PR #1557;
 - **RDP2-C Bybit REST Market Tape snapshot provenance ACCEPTED** on main `199cf203a41d403d14a38ce73acb226fd271cd16` via PR #1559;
-- UID504 `36379731893`: exact Workbench/source PASS, focused REST provenance PASS, Ruff PASS, mypy PASS, py_compile PASS, REAL_CAPITAL=0; A/B regressions `36379731889` / `36379732197` PASS;
-- REST orderbook/recent-trade/open-interest/ticker JSON is retained as inspectable canonical raw evidence and linked to the normalized identity actually persisted in Market Tape; successful empty row sets remain raw-only evidence and OI/ticker do not fabricate provider IDs;
-- the 60-second snapshot path remains a single collector and keeps full integrity scans off the hot path;
-- RDP2 remains ACTIVE because Geometry consumes CandleStore data whose provider kline payload/coverage is not yet represented by the canonical source contract;
-- next: **RDP2-D — live candle source envelope/coverage for Bybit/Binance kline fetches and exact persisted CandleStore lineage, before RDP3.**
+- **RDP2-D live Bybit/Binance candle provenance ACCEPTED** on main `823dfe1df0dddcf24cc2f26e58a0301ed31702cd` via PR #1561;
+- UID504 `36384253135`: exact Workbench/source PASS, 44 tests PASS, Ruff PASS, mypy 9 source files PASS, py_compile PASS, REAL_CAPITAL=0; RDP1 candle regression `36384253098` PASS;
+- Geometry candle fetches now preserve exact provider source proof across direct fetch, cutoff probe and historical recovery and resolve each envelope to the CandleStore truth actually persisted;
+- Market Tape and candle rails can answer PIT source existence/absence through canonical envelope/coverage semantics; unsupported/deferred rails remain explicit rather than fabricated;
+- clean Workbench bootstrap `36384319438` = exact `823dfe1df0dddcf24cc2f26e58a0301ed31702cd`;
+- **RDP2 PASS**. Next: **RDP3-A — deterministic frozen Geometry Proof/annotation contract from immutable DecisionFreezeBundle only.**
 
 PASS:
 - every family can explain what data existed and what data did not exist at an as-of time.
 
 ## RDP3 — Geometry production truth
+
+Status: **ACTIVE**
+
+Progress:
+- repo audit confirms DecisionFreezeBundle already freezes exact consumed gap-free candles, Price Action, Harmonic, Elliott, confluence selections/conflicts and SignalDecision geometry under one bundle SHA;
+- methodology no-candidate states are preserved as empty frozen candidate/match tuples rather than inferred later;
+- missing production layer is deterministic chart-proof/annotation output that is derived only from the frozen bundle and can be replayed without reading current candles or current methodology engines;
+- exact next frontier: **RDP3-A — frozen Geometry Proof contract + annotations for PA, Harmonic, Elliott and selected signal geometry.**
 
 Goal:
 - make PA + Elliott + Harmonic jointly inspectable as Geometry.

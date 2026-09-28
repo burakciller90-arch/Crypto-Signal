@@ -26,14 +26,17 @@ Latest RDP1 closure evidence:
 - UID504 six-context read-only diagnostic `36357353548`: Bybit BTC 8.958s / ETH 11.406s / SOL 13.663s; Binance BTC 16.163s / ETH 20.413s / SOL 24.332s availability lag; failures=0; temporary diagnostic PR #1552 was closed unmerged after evidence capture;
 - liquidation rows/coverage remain 0 and are an explicit unsupported/deferred rail, not an RDP1 blocker; Capital/Portfolio and standalone On-chain remain deferred; REAL_CAPITAL=0.
 
-RDP2 progress:
+RDP2 — **PASS**:
 - RDP2-A source-contract foundation merged via PR #1555 as `585378dc32753d2e31894bd666eb1e084802e6ab`; UID504 `36373922309` PASS;
 - RDP2-B live Bybit WebSocket Market Tape wiring merged via PR #1557 as `b2f6bdc64e4830de7a021250155c3cea6f587922`; UID504 `36378394811` PASS;
-- RDP2-C 60s Bybit REST Market Tape provenance merged via PR #1559 as `199cf203a41d403d14a38ce73acb226fd271cd16`;
-- UID504 final C run `36379731893`: exact Workbench/source PASS, REST provenance tests PASS, Ruff PASS, mypy PASS, py_compile PASS, REAL_CAPITAL=0; A regression `36379731889` PASS and B regression `36379732197` PASS;
-- REST orderbook/recent-trade/open-interest/ticker responses now retain inspectable canonical raw payloads and map to the normalized identity actually persisted in Market Tape; OI/ticker do not invent provider event IDs; successful empty responses remain explicit raw-only evidence;
-- snapshot hot-path integrity scans remain delegated, preserving RDP1 runtime guarantees; Workbench bootstrap `36379861546` advanced clean `repo/main` to exact `199cf203a41d403d14a38ce73acb226fd271cd16`;
-- RDP2 remains ACTIVE because the Geometry candle rail still has normalized CandleStore persistence without canonical raw kline envelope/coverage. Exact next implementation frontier: **RDP2-D — candle source provenance + coverage for the live Bybit/Binance candle rail before RDP3 Geometry production truth.**
+- RDP2-C 60s Bybit REST Market Tape provenance merged via PR #1559 as `199cf203a41d403d14a38ce73acb226fd271cd16`; UID504 `36379731893` PASS;
+- RDP2-D live Bybit/Binance candle provenance merged via PR #1561 as `823dfe1df0dddcf24cc2f26e58a0301ed31702cd`;
+- UID504 final D run `36384253135`: exact Workbench/source PASS, 44 focused/regression tests PASS, Ruff PASS, mypy across 9 source files PASS, py_compile PASS, REAL_CAPITAL=0; latest RDP1 candle regression `36384253098` PASS;
+- direct 15m fetches, latest-closed probes and higher-timeframe backfill pages now retain provider raw payloads and append source coverage; every envelope resolves to the CandleStore row actually persisted, including stale/replay semantics; Binance global preserves kline + /time responses and Binance TR direct-array mode preserves the HTTP Date proof used for source time;
+- Market Tape and Geometry candle rails now share canonical raw/normalized identity, timestamp, capability and coverage semantics; unsupported/deferred liquidation/on-chain/capital rails remain explicit instead of fabricated;
+- Workbench bootstrap `36384319438` advanced clean `repo/main` to exact `823dfe1df0dddcf24cc2f26e58a0301ed31702cd`.
+
+RDP3 — **ACTIVE**. Exact implementation frontier: **RDP3-A — deterministic frozen Geometry Proof contract/annotations generated only from immutable DecisionFreezeBundle data (consumed candles + Price Action + Harmonic + Elliott + confluence + selected signal geometry), with no current-data substitution.**
 
 Locked execution sequence:
 `RDP1 runtime reliability → RDP2 source envelope/coverage → RDP3 Geometry → RDP4 rich Liquidity/Order Flow → RDP5 Derivatives/Liquidations → RDP6 BTC/ETH Options → RDP7 real On-chain/stablecoin capital flows → RDP8 Event/Cross-market → RDP9 cross-venue + overlap control → RDP10 frozen proof contract → RDP11 soak/acceptance → Paper Portfolio → new frontend`.
