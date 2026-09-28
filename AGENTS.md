@@ -83,6 +83,26 @@ Before changing code or telling the user where the project is:
 9. Continue from the **first mechanically unclosed roadmap gate**.
 10. Never ask the user to reconstruct where the project was left if the repository can answer it.
 
+## Mandatory durable start checkpoint
+
+Before implementing any new roadmap slice, sub-slice, bugfix, runtime gate, or other task that can outlive the current turn:
+
+1. Update `docs/agent/CURRENT_FRONTIER.md` on the active task branch **before code changes**.
+2. Append a start entry to `docs/agent/HANDOFF_LOG.md`.
+3. Record at minimum:
+   - exact task-start `main` SHA;
+   - active branch and worktree path, or explicitly state that no session-local worktree exists;
+   - active roadmap gate/slice;
+   - duplicate/stale-work check result;
+   - safety state (`REAL_CAPITAL=0`, historical backfill policy, Durdurulmaz/Quantum untouched);
+   - the exact bounded goal;
+   - current blocker;
+   - exactly one concrete `nextAction`.
+4. If implementation already began before this checkpoint was written, stop and repair the checkpoint immediately before continuing.
+5. Treat this start checkpoint as the minimum resumable state: another agent must be able to continue from repository evidence without reading chat history.
+
+For longer slices, add another durable checkpoint before a materially different phase (for example implementation -> acceptance, acceptance -> merge) when losing the current turn would otherwise make the next action ambiguous.
+
 ## Duplicate-work guard
 
 Before implementing:
