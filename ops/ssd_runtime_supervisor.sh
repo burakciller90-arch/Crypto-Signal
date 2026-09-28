@@ -11,6 +11,7 @@ PAPER="$ROOT/Paper"
 WRAPPER="$ROOT/ssd-clock-wrapper.py"
 LOGDIR="$ROOT/ServiceLogs"
 BYBIT_REST_BASE_URL="${CRYPTO_SIGNAL_BYBIT_REST_BASE_URL:-https://api.bybit.tr}"
+BYBIT_OPTIONS_REST_BASE_URL="${CRYPTO_SIGNAL_BYBIT_OPTIONS_REST_BASE_URL:-$BYBIT_REST_BASE_URL}"
 BYBIT_WS_URL="${CRYPTO_SIGNAL_BYBIT_WS_URL:-wss://stream.bybit.tr/v5/public/spot}"
 BYBIT_LIQUIDATION_WS_URL="${CRYPTO_SIGNAL_BYBIT_LIQUIDATION_WS_URL:-wss://stream.bybit.com/v5/public/linear}"
 BINANCE_REST_BASE_URL="${CRYPTO_SIGNAL_BINANCE_REST_BASE_URL:-https://api.binance.me}"
@@ -20,6 +21,13 @@ case "$BYBIT_REST_BASE_URL" in
   https://*) ;;
   *)
     echo "RUNTIME_INVALID_BYBIT_REST_URL=YES FAIL_CLOSED=YES REAL_CAPITAL=0" >&2
+    exit 75
+    ;;
+esac
+case "$BYBIT_OPTIONS_REST_BASE_URL" in
+  https://*) ;;
+  *)
+    echo "RUNTIME_INVALID_BYBIT_OPTIONS_REST_URL=YES FAIL_CLOSED=YES REAL_CAPITAL=0" >&2
     exit 75
     ;;
 esac
@@ -559,6 +567,8 @@ run_market_tape_snapshot_clock() {
   local runner="$DEV/ops/run_market_tape_snapshot.py"
   local runtime="$DEV/runtime/market_tape"
   local db="$runtime/market_tape.sqlite3"
+  local source_contract="$runtime/source_contract.sqlite3"
+  local options="$runtime/options_surface.sqlite3"
   local lock="$runtime/market_tape_snapshot.lock"
 
   for required in "$py" "$runner" "$db"; do
@@ -574,8 +584,11 @@ run_market_tape_snapshot_clock() {
     cd "$DEV" || exit 75
     exec "$py" "$runner" \
       --db "$db" \
+      --source-contract-db "$source_contract" \
+      --options-db "$options" \
       --lock-path "$lock" \
       --bybit-base-url "$BYBIT_REST_BASE_URL" \
+      --bybit-options-base-url "$BYBIT_OPTIONS_REST_BASE_URL" \
       --symbols BTCUSDT ETHUSDT SOLUSDT \
       --book-depth 50 \
       --trade-limit 60 \
@@ -598,6 +611,7 @@ run_wc2_live_clock() {
   local decision="$runtime/decision/decision_evidence.sqlite3"
   local stream="$runtime/stream/intelligence_stream.sqlite3"
   local market_tape="$runtime/market_tape/market_tape.sqlite3"
+  local options_surface="$runtime/market_tape/options_surface.sqlite3"
   local event_source="$runtime/events/event_source.sqlite3"
   local cohort="$runtime/wc2/wc2_untouched_forward.sqlite3"
   local shadow_intent="$runtime/wc2/wc2.shadow-intent.sqlite3"
@@ -628,6 +642,7 @@ run_wc2_live_clock() {
       --stream-enabled \
       --stream-ledger "$stream" \
       --stream-market-tape "$market_tape" \
+      --stream-options-surface "$options_surface" \
       --stream-event-source "$event_source" \
       --stream-family-symbols BTCUSDT ETHUSDT SOLUSDT \
       --wc2-enabled \

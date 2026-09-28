@@ -15,6 +15,7 @@ from crypto_signal.data.adapters.bybit_derivatives import (
 from crypto_signal.data.adapters.bybit_microstructure import (
     BybitSpotMicrostructureAdapter,
 )
+from crypto_signal.data.adapters.bybit_options import BybitOptionsAdapter
 from crypto_signal.data.market_tape import MarketTapeStore
 from crypto_signal.data.market_tape_collection import (
     collect_bybit_market_tape_snapshot_with_source_contract,
@@ -22,6 +23,10 @@ from crypto_signal.data.market_tape_collection import (
 from crypto_signal.data.market_tape_rest_source_contract import (
     register_bybit_rest_market_tape_capabilities,
 )
+from crypto_signal.data.options_source_contract import (
+    persist_bybit_option_surface_snapshot,
+)
+from crypto_signal.data.options_surface_store import OptionsSurfaceStore
 from crypto_signal.data.source_contract import SourceContractStore
 
 DEFAULT_DB = Path(
@@ -36,7 +41,12 @@ DEFAULT_LOCK = Path(
     "/Volumes/Crypto-504/Crypto-Signal/Development/runtime/"
     "market_tape/market_tape_snapshot.lock"
 )
+DEFAULT_OPTIONS_DB = Path(
+    "/Volumes/Crypto-504/Crypto-Signal/Development/runtime/"
+    "market_tape/options_surface.sqlite3"
+)
 DEFAULT_SYMBOLS = ("BTCUSDT", "ETHUSDT", "SOLUSDT")
+DEFAULT_OPTION_BASE_COINS = ("BTC", "ETH")
 
 
 def parse_args() -> argparse.Namespace:
@@ -48,6 +58,7 @@ def parse_args() -> argparse.Namespace:
         default=DEFAULT_SOURCE_CONTRACT_DB,
     )
     parser.add_argument("--lock-path", type=Path, default=DEFAULT_LOCK)
+    parser.add_argument("--options-db", type=Path, default=DEFAULT_OPTIONS_DB)
     parser.add_argument(
         "--bybit-base-url",
         default="https://api.bybit.tr",
@@ -57,6 +68,19 @@ def parse_args() -> argparse.Namespace:
         "--symbols",
         nargs="+",
         default=list(DEFAULT_SYMBOLS),
+    )
+    parser.add_argument(
+        "--option-base-coins",
+        nargs="+",
+        default=list(DEFAULT_OPTION_BASE_COINS),
+    )
+    parser.add_argument(
+        "--bybit-options-base-url",
+        default=None,
+        help=(
+            "explicit Bybit Options REST base URL; defaults to "
+            "--bybit-base-url"
+        ),
     )
     parser.add_argument("--book-depth", type=int, default=50)
     parser.add_argument("--trade-limit", type=int, default=60)
@@ -69,6 +93,7 @@ async def run(args: argparse.Namespace) -> int:
     for label, path in (
         ("db", args.db),
         ("source_contract_db", args.source_contract_db),
+        ("options_db", args.options_db),
     ):
         if not str(path).startswith("/Volumes/Crypto-504/"):
             print(
@@ -82,6 +107,11 @@ async def run(args: argparse.Namespace) -> int:
     symbols = tuple(
         dict.fromkeys(str(value).upper() for value in args.symbols)
     )
+    option_base_coins = tuple(
+        dict.fromkeys(
+            str(value).upper() for value in args.option_base_coins
+        )
+    )
     if not symbols or any(not symbol for symbol in symbols):
         print(
             "MARKET_TAPE_ERROR=INVALID_SYMBOLS",
@@ -89,17 +119,38 @@ async def run(args: argparse.Namespace) -> int:
             flush=True,
         )
         return 2
+    if (
+        not option_base_coins
+        or any(base_coin not in {"BTC", "ETH"} for base_coin in option_base_coins)
+    ):
+        print(
+            "MARKET_TAPE_ERROR=INVALID_OPTION_BASE_COINS",
+            file=sys.stderr,
+            flush=True,
+        )
+        return 2
 
     store = MarketTapeStore(args.db)
     source_store = SourceContractStore(args.source_contract_db)
+    options_store = OptionsSurfaceStore(args.options_db)
+    options_store.initialize()
     source_capabilities = register_bybit_rest_market_tape_capabilities(
         store=source_store,
         symbols=tuple(sorted(symbols)),
     )
     failures = 0
+    options_base_url = args.bybit_options_base_url or args.bybit_base_url
     if not str(args.bybit_base_url).startswith("https://"):
         print(
             "MARKET_TAPE_ERROR=INVALID_BYBIT_REST_URL",
+            file=sys.stderr,
+            flush=True,
+        )
+        return 2
+
+    if not str(options_base_url).startswith("https://"):
+        print(
+            "MARKET_TAPE_ERROR=INVALID_BYBIT_OPTIONS_REST_URL",
             file=sys.stderr,
             flush=True,
         )
@@ -111,6 +162,7 @@ async def run(args: argparse.Namespace) -> int:
     derivatives = BybitLinearDerivativesAdapter(
         base_url=args.bybit_base_url,
     )
+    options = BybitOptionsAdapter(base_url=options_base_url)
     cycle_orderbook_inserted = 0
     cycle_trade_inserted = 0
     cycle_trade_unchanged = 0
@@ -119,6 +171,8 @@ async def run(args: argparse.Namespace) -> int:
     cycle_source_envelopes = 0
     cycle_source_coverage = 0
     successful_symbols = 0
+    successful_option_base_coins = 0
+    option_contracts = 0
 
     for symbol in symbols:
         try:
@@ -173,6 +227,43 @@ async def run(args: argparse.Namespace) -> int:
             flush=True,
         )
 
+    for base_coin in option_base_coins:
+        try:
+            snapshot = await options.fetch_source_snapshot(
+                base_coin=base_coin
+            )
+            persisted = persist_bybit_option_surface_snapshot(
+                snapshot=snapshot,
+                options_store=options_store,
+                source_store=source_store,
+            )
+        except (
+            httpx.HTTPError,
+            sqlite3.Error,
+            OSError,
+            ValueError,
+        ) as exc:
+            failures += 1
+            print(
+                "MARKET_TAPE_OPTIONS_ERROR "
+                f"base_coin={base_coin} "
+                f"error={type(exc).__name__}:{exc}",
+                file=sys.stderr,
+                flush=True,
+            )
+            continue
+        successful_option_base_coins += 1
+        option_contracts += len(snapshot.surface.contracts)
+        print(
+            "MARKET_TAPE_OPTIONS_OK "
+            f"base_coin={base_coin} "
+            f"contracts={len(snapshot.surface.contracts)} "
+            f"surface={persisted.surface_identity} "
+            f"envelope={persisted.envelope_identity} "
+            f"coverage={persisted.coverage_event_identity}",
+            flush=True,
+        )
+
     print(
         "MARKET_TAPE_SNAPSHOT_COMPLETE "
         f"successful_symbols={successful_symbols} "
@@ -184,6 +275,9 @@ async def run(args: argparse.Namespace) -> int:
         f"cycle_derivatives_unchanged={cycle_derivatives_unchanged} "
         f"cycle_source_envelopes={cycle_source_envelopes} "
         f"cycle_source_coverage={cycle_source_coverage} "
+        f"successful_option_base_coins={successful_option_base_coins} "
+        f"option_contracts={option_contracts} "
+        "OPTIONS_SOURCE_CONTRACT=OBSERVED_OR_FAIL_CLOSED "
         "SOURCE_CONTRACT_INTEGRITY_DELEGATED=YES "
         "FULL_DB_INTEGRITY_DELEGATED=YES "
         "REAL_CAPITAL=0",
