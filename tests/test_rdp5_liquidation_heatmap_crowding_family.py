@@ -210,6 +210,50 @@ def test_positive_event_is_visible_but_incomplete_coverage_fails_closed(
     assert snapshot.direction is None
 
 
+
+def test_provider_coverage_observed_after_source_end_is_pit_safe(
+    tmp_path,
+) -> None:
+    path = tmp_path / "market_tape.sqlite3"
+    store = MarketTapeStore(path)
+    _seed_derivatives(store)
+    coverage = build_liquidation_feed_coverage(
+        exchange=Exchange.BYBIT,
+        instrument_type=DerivativesInstrumentType.LINEAR_PERPETUAL,
+        symbol=SYMBOL,
+        coverage_start_ms=AS_OF_MS - LOOKBACK_MS,
+        coverage_end_ms=AS_OF_MS,
+        observed_at_ms=AS_OF_MS + 20,
+        source=DataSource.WEBSOCKET,
+        adapter_version="rdp5-c-family-test/1",
+    )
+    store.append_liquidation_coverage(coverage)
+
+    snapshots = build_market_tape_family_snapshots(
+        path,
+        symbols=(SYMBOL,),
+        as_of_ms=AS_OF_MS + 20,
+    )
+    snapshot = next(
+        item
+        for item in snapshots
+        if item.family is ConfluenceFamily.DERIVATIVES
+    )
+    components = _components(snapshot)
+
+    assert components["liquidation_analysis_as_of_ms"] == str(
+        coverage.observed_at_ms
+    )
+    assert components["liquidation_heatmap_status"] == "unresolved"
+    assert (
+        components["liquidation_zero_event_claim"]
+        == "unavailable_incomplete_coverage"
+    )
+    assert "incomplete_feed_coverage_end" in snapshot.uncertainty_flags
+    assert coverage.coverage_identity in snapshot.evidence_identities
+    assert snapshot.direction is None
+
+
 def test_complete_zero_event_coverage_can_measure_balanced_context(
     tmp_path,
 ) -> None:
