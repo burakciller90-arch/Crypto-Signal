@@ -309,3 +309,30 @@ Current blocker:
 Exact nextAction:
 
 Update only the stale Options tests/resolver test wiring to read raw surface lineage from `OptionsSurfaceStore` via `options_surface_path`, keep derived volatility assertions on `FrozenProofStore`, then rerun exact-head RDP10 and RDP6 UID504 acceptance before any merge.
+
+
+## LIVE REPAIR CHECKPOINT — 2026-09-28 — RDP10-F1 canonical Options source resolver implemented
+
+- canonical main before acceptance: `f665fee6aba0309d7fd5ef7ff88abfdc10ef1511`
+- active PR: #1650
+- branch: `rdp10/options-proof-f1`
+- exact branch head at checkpoint: `036fde3af3c94c8a453a2d3c928c997399fc4af2`
+- worktree: no session-local /Volumes worktree; UID504 workflow is the runtime/Workbench authority
+- safety: `REAL_CAPITAL=0`; historical/frozen evidence not rewritten; Durdurulmaz untouched; Quantum Capital untouched
+
+Implemented repair:
+
+- `IntelligenceStreamExactEvidenceReadModel` now accepts an explicit canonical `options_surface_path` and resolves the immutable raw Options source store read-only.
+- surface, instrument-metadata lineage and individual quote identities are resolved as exact source objects; row/payload/identity and PIT timestamps are fail-closed.
+- `options_surface` can be `READY_EXACT` only when surface + metadata + full quote lineage resolve; the derived `options_volatility_freeze` remains in `FrozenProofStore`.
+- product exact-evidence API and dashboard runtime wiring now pass `runtime/market_tape/options_surface.sqlite3`.
+- RDP10 live proof-state audit uses the same canonical Options source.
+- stale RDP6/RDP10 tests were aligned to the raw-source / derived-proof split and now require raw source identity lineage rather than a duplicated raw FrozenProof object.
+
+Current blocker:
+
+- exact-head UID504 RDP10 and RDP6 acceptance has not yet been proven on `036fde3af3c94c8a453a2d3c928c997399fc4af2`; no merge is allowed until both relevant gate outputs are inspected.
+
+Exact nextAction:
+
+Inspect the workflows triggered for the exact branch head. If any focused test/type/runtime check fails, repair only that mechanical blocker; otherwise verify acceptance markers and live non-mutation output, re-check main/PR head, then merge #1650.
