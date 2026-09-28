@@ -273,10 +273,12 @@ def test_fresh_btc_options_enrich_existing_derivatives_family(
     _seed_derivatives(market_path, symbol=BTC_SYMBOL)
     _seed_options(options_path)
 
+    proof_path = tmp_path / "frozen_proofs.sqlite3"
     snapshot = _derivatives_snapshot(
         market_path,
         symbol=BTC_SYMBOL,
         options_path=options_path,
+        proof_path=proof_path,
     )
     components = _components(snapshot)
 
