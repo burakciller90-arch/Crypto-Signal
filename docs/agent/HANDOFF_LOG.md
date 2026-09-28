@@ -1340,3 +1340,49 @@ blocker:
 
 nextAction:
 - merge this docs-only RDP10 closeout with expected-head guard after rechecking main/head; create isolated RDP11 task branch; write task-start checkpoint before code; mechanically anchor the soak; then start isolated Paper Capital / Portfolio work while soak continues.
+
+
+
+---
+
+## 2026-09-29 — RDP11 task-start checkpoint
+
+status: ACTIVE
+repository: burakciller90-arch/Crypto-Signal
+roadmapGate: RDP11 Continuous soak + final Evidence PASS
+canonicalMainAtStart: 5f07a8954f87e237258f1d3eb448a5ede6106fbd
+previousGate: RDP10 PASS
+previousCloseoutPR: 1655
+branch: rdp11/continuous-soak-anchor
+worktree: no session-local /Volumes worktree; canonical SSD504 Workbench verified by UID504
+duplicateRelevantPRsBeforeStart: NONE
+duplicateRelevantBranchesBeforeStart: NONE
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+exactMainEvidence:
+- SSD504 Workbench Bootstrap run 36483321012 / job 109134044398 / SUCCESS.
+- GITHUB_SHA=5f07a8954f87e237258f1d3eb448a5ede6106fbd.
+- WORKBENCH_REPO_SYNCED_TO_MAIN=YES.
+- final REPO_HEAD=5f07a8954f87e237258f1d3eb448a5ede6106fbd.
+- REPO_BRANCH=main; REPO_DIRTY_COUNT=0.
+- SSD504_WORKBENCH_PASS=YES; REAL_CAPITAL=0.
+- Agent Memory Bootstrap run 36483321062 / job 109134045566 / SUCCESS.
+- RDP9_BOOTSTRAP_FOCUSED_TESTS=PASS.
+- RDP9_BOOTSTRAP_LIVE_READ_ONLY=PASS.
+- PRODUCTION_RUNTIME_MUTATED=NO.
+- REAL_CAPITAL=0.
+
+boundedGoal:
+- anchor a real 72h UID504 observation window to an exact accepted evidence SHA;
+- observe runtime/source/proof/Stream/Product health read-only and fail closed;
+- preserve accepted source truth and immutable frozen evidence;
+- do not claim PASS from unit tests or elapsed wall-clock alone.
+
+blocker:
+- current RDP11 observation contract is not yet audited/installed.
+
+nextAction:
+- audit existing supervisor/runtime health, continuity/recovery utilities and evidence DB/read-model surfaces; checkpoint audit before implementation.
