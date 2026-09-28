@@ -9,9 +9,13 @@ on:
       - main
     paths:
       - 'src/crypto_signal/product/intelligence_stream_exact_evidence.py'
+      - 'src/crypto_signal/product/intelligence_stream_family_sources.py'
       - 'src/crypto_signal/product/frozen_proof_store.py'
+      - 'src/crypto_signal/product/web.py'
+      - 'ops/run_live_evidence_clock.py'
       - 'tests/test_intelligence_stream_exact_evidence.py'
       - 'tests/test_frozen_proof_store.py'
+      - 'tests/test_rdp4_rich_market_tape_family.py'
       - '.github/workflows/crypto-rdp10-frozen-proof-contract.yml'
   workflow_dispatch:
 
@@ -67,18 +71,29 @@ jobs:
           export PYTHONPATH="$GITHUB_WORKSPACE/src"
           "$PY" -m pytest -q \
             tests/test_intelligence_stream_exact_evidence.py \
-            tests/test_frozen_proof_store.py
+            tests/test_frozen_proof_store.py \
+            tests/test_rdp4_rich_market_tape_family.py
           "$PY" -m ruff check \
             src/crypto_signal/product/intelligence_stream_exact_evidence.py \
+            src/crypto_signal/product/intelligence_stream_family_sources.py \
             src/crypto_signal/product/frozen_proof_store.py \
+            src/crypto_signal/product/web.py \
+            ops/run_live_evidence_clock.py \
             tests/test_intelligence_stream_exact_evidence.py \
-            tests/test_frozen_proof_store.py
+            tests/test_frozen_proof_store.py \
+            tests/test_rdp4_rich_market_tape_family.py
           "$PY" -m mypy --strict \
             src/crypto_signal/product/intelligence_stream_exact_evidence.py \
             src/crypto_signal/product/frozen_proof_store.py
+          "$PY" -m mypy \
+            src/crypto_signal/product/intelligence_stream_family_sources.py \
+            ops/run_live_evidence_clock.py
           "$PY" -m py_compile \
             src/crypto_signal/product/intelligence_stream_exact_evidence.py \
-            src/crypto_signal/product/frozen_proof_store.py
+            src/crypto_signal/product/intelligence_stream_family_sources.py \
+            src/crypto_signal/product/frozen_proof_store.py \
+            src/crypto_signal/product/web.py \
+            ops/run_live_evidence_clock.py
           echo "RDP10_FAIL_CLOSED_FOCUSED_PASS=YES"
           echo "RDP10_DERIVED_PROOF_STORE_PASS=YES"
           echo "UNREGISTERED_DOMAIN_READY_AUTHORITY=NO"
