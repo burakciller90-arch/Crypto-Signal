@@ -5,7 +5,6 @@ import sqlite3
 from collections.abc import AsyncIterator
 from pathlib import Path
 
-
 from crypto_signal.data.adapters.bybit_microstructure_ws import (
     BybitMicrostructureWireEvent,
     BybitSpotMicrostructureStream,
