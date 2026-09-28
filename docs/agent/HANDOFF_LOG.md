@@ -877,3 +877,38 @@ blocker:
 nextAction:
 - implement read-only canonical Options source resolution plus API/live wiring; update tests to separate raw Options source truth from derived volatility proof; checkpoint again before UID504 acceptance.
 
+
+
+---
+
+## 2026-09-28 — RDP10-F1 stale-test alignment repair start
+
+verifiedAt: 2026-09-28
+repository: burakciller90-arch/Crypto-Signal
+mainSha: f665fee6aba0309d7fd5ef7ff88abfdc10ef1511
+branch: rdp10/options-proof-f1
+branchHeadAtStart: 07b0229d303cf1fdf74d4995bf8546c31263a3f2
+worktree: no session-local /Volumes worktree; canonical Workbench/runtime evidence comes from UID504 self-hosted workflow checks
+roadmapGate: RDP10-F1 Options / volatility exact proof cutover
+pr: 1650
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+duplicateCheck:
+- PR #1650 is the active F1 implementation; no duplicate branch/implementation will be created.
+- main remains f665fee6aba0309d7fd5ef7ff88abfdc10ef1511.
+
+mechanicalEvidence:
+- RDP10 current-head push run 36472389441 / job 109097601979: FAIL focused gate.
+- RDP10 current-head PR run 36472396277 / job 109097627846: FAIL focused gate.
+- exact source/canonical checkout verification PASS.
+- canonical non-mutating verification PASS with HISTORICAL_BACKFILL=NO and REAL_CAPITAL=0.
+- failures are stale tests expecting options_surface_snapshot in FrozenProofStore after the accepted-intent reconciliation moved raw Options source truth to OptionsSurfaceStore.
+
+blocker:
+- stale Options acceptance tests/resolver test setup do not match the canonical raw-source / derived-proof split.
+
+nextAction:
+- align those tests to OptionsSurfaceStore + options_surface_path while retaining derived options_volatility_freeze checks in FrozenProofStore, then rerun exact-head RDP10 and RDP6 acceptance before merge.
