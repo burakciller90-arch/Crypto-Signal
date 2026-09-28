@@ -1177,3 +1177,48 @@ blocker:
 
 nextAction:
 - inspect runs 36480905700 and 36480861707, then map current exact-evidence domains/resolvers to Event Risk and provider-divergence source truth and record the pre-implementation audit checkpoint before any code change.
+
+
+
+---
+
+## 2026-09-28 — RDP10-F3 pre-implementation audit checkpoint
+
+status: ACTIVE_AUDITED
+branch: rdp10/final-contract-closure-f3
+canonicalMain: 3b555bb97ff8f43038a854e7c66a6ae9f505bbb7
+preAuditHead: d78262ade1f2bf758371d1c035bd43f55c8ef671
+productionChangesBeforeAudit: NONE
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+exactBaseline:
+- RDP10 run 36481004403 / job 109126434036: SUCCESS.
+- RDP10_EXACT_SOURCE_PASS=YES.
+- RDP10_CANONICAL_CHECKOUTS_CLEAN=YES.
+- RDP10_FAIL_CLOSED_FOCUSED_PASS=YES.
+- RDP10_DERIVED_PROOF_STORE_PASS=YES.
+- RDP10_LIVE_MESSAGES_AUDITED=6.
+- RDP10_UNREGISTERED_READY_COUNT=0.
+- RDP10_LIVE_FAIL_CLOSED_PASS=YES.
+- RDP10_NON_MUTATING_PASS=YES.
+- HISTORICAL_BACKFILL=NO; REAL_CAPITAL=0.
+- run 36480905700 is not acceptance because concurrency left the workflow conclusion CANCELLED despite its individual proof steps succeeding.
+
+auditFindings:
+- typed exact proof/resolution already exists for the five top-level evidence families plus accepted Options/On-chain enrichments.
+- Event Risk exact canonical event records are already read-only, identity-checked, PIT-bounded and focused-tested.
+- provider_quality_change already binds provider_divergence_snapshot under data_quality/provider_divergence and is required by live RDP10.
+- provider-divergence exact resolver already exists and is read-only/PIT checked, but focused customer-proof + no-future regression is missing.
+- family source_scope is already immutable in the fact bundle but is not surfaced directly in customer_projection.
+- no collector/store/scoring/directional implementation gap was found.
+
+minimalImplementation:
+- surface source_scope and frozen family context in customer_projection.
+- add provider-divergence/data-quality exact-reference + no-future regression.
+- wire the regression into RDP10 acceptance; avoid unrelated changes.
+
+nextAction:
+- implement those bounded changes, then exact-head acceptance + merge guard.
