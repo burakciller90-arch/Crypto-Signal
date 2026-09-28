@@ -1,5 +1,19 @@
 # PROJECT CHRONICLE
 
+## 2026-09-28 — RDP2-B live Bybit Market Tape source-contract wiring accepted
+
+PR #1557 merged as main `b2f6bdc64e4830de7a021250155c3cea6f587922`. RDP2 remains ACTIVE.
+
+The existing Bybit WebSocket Market Tape collector now writes the canonical RDP2 source contract after raw and normalized persistence. Order-book and public-trade evidence preserve exact raw SHA -> actually persisted normalized SHA lineage; trade batches emit one envelope per normalized trade; cadence-skipped order-book deltas stay explicit raw-only evidence instead of inventing a normalized row. Replayed provider events resolve to the normalized identity already persisted in Market Tape.
+
+Coverage transitions are append-only and PIT-safe. Canonical persistence time is monotonic even when the host receipt clock regresses, while the original observed time is retained. Open-gap coverage references the exact existing MarketDataGapLedger event identity rather than creating a second gap mechanism. Source-envelope PIT reads now order equal-ingest batches by exact event time, with a backward-compatible physical DB migration.
+
+UID504 final focused run `36378394811` passed exact Workbench baseline, exact PR source, focused live-wiring tests, Ruff, mypy and py_compile with REAL_CAPITAL=0. RDP2-A regression run `36378394713` passed. WC1 restart focused safety and Development non-mutation also passed; its whole-repository failure was limited to three unrelated historical Intelligence Stream text/search assertions.
+
+Workbench bootstrap `36378462863` then fast-forwarded clean `/Volumes/Crypto-504/Crypto-Signal-Workbench/repo/main` to exact `b2f6bdc64e4830de7a021250155c3cea6f587922`.
+
+Exact next frontier: **RDP2-C — canonical raw-to-normalized provenance for the 60-second Bybit REST Market Tape snapshot, especially derivatives OI/mark/index/funding plus REST orderbook/recent-trade responses.**
+
 ## 2026-09-28 — RDP2-A canonical source-contract foundation accepted
 
 PR #1555 merged as main `585378dc32753d2e31894bd666eb1e084802e6ab`. This is a foundation milestone only; RDP2 remains ACTIVE.
