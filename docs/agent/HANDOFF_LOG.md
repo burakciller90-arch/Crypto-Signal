@@ -456,3 +456,52 @@ repair:
 nextAction:
 - run the full exact-head RDP10 UID504 contract again; merge only if focused, live fail-closed and non-mutating checks all PASS with HISTORICAL_BACKFILL=NO and REAL_CAPITAL=0.
 
+---
+
+## 2026-09-28 — RDP10-E1 complete; frontier advanced to E2
+
+status: PASS
+canonicalMain: a8b10135ed35094a44ae8dba3e24c2a5f6a6b124
+roadmapGate: RDP10 ACTIVE
+completedSlice: RDP10-E1 Derivatives Context + Dynamics
+nextSlice: RDP10-E2 Liquidation coverage/heatmap/crowding
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+rdp10E1:
+- branch: rdp10/derivatives-proof-e1
+- PR #1646
+- accepted head: 7f1aec8d0790a735a1dc7a5d57f7e2baf84f4924
+- merge SHA: a8b10135ed35094a44ae8dba3e24c2a5f6a6b124
+- final exact-head UID504 acceptance run 36467103637 / job 109079839634: SUCCESS
+- focused tests/Ruff/mypy/py_compile PASS
+- RDP10_LIVE_MESSAGES_AUDITED=6
+- RDP10_UNREGISTERED_DOMAINS_OBSERVED=17
+- RDP10_UNREGISTERED_READY_COUNT=0
+- RDP10_LIVE_FAIL_CLOSED_PASS=YES
+- RDP10_NON_MUTATING_PASS=YES
+- HISTORICAL_BACKFILL=NO
+- REAL_CAPITAL=0
+- Derivatives Context and Dynamics exact proof objects persist before Stream publish and resolve from FrozenProofStore.
+- exact derivatives observation lineage is preserved.
+- no current-data substitution or production authority.
+
+exactMainWorkbench:
+- Crypto SSD504 Workbench Bootstrap run 36467376773 / job 109080736498: SUCCESS
+- exact main a8b10135ed35094a44ae8dba3e24c2a5f6a6b124
+- final canonical Workbench repo branch main
+- final canonical Workbench repo head exact main
+- dirty count 0
+- SSD504_WORKBENCH_PASS=YES
+- REAL_CAPITAL=0
+
+blocker:
+- RDP10 itself is not PASS.
+- RDP10-E2 is the first mechanically unclosed slice.
+- Liquidation observations/provider coverage/heatmap/crowding still need complete immutable customer-proof persistence/resolution.
+
+nextAction:
+- before any E2 production code change, re-check exact main/open PRs/branches and write the mandatory E2 task-start checkpoint on the E2 branch.
+
