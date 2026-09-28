@@ -1,0 +1,272 @@
+name: RDP7-G Exact Main Live Acceptance UID504
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/crypto-rdp7-g-exact-main-live-acceptance.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  exact-main-live:
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          clean: true
+          fetch-depth: 1
+
+      - name: Fast-forward canonical Workbench and Development to exact main
+        shell: bash
+        run: |
+          set -euo pipefail
+          EXPECTED="${{ github.event.pull_request.base.sha }}"
+          WB="/Volumes/Crypto-504/Crypto-Signal-Workbench/repo"
+          DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
+          test "$(id -u)" = "504"
+          for TARGET in "$WB" "$DEV"; do
+            test "$(git -C "$TARGET" branch --show-current)" = "main"
+            test -z "$(git -C "$TARGET" status --porcelain)"
+            git -C "$TARGET" fetch origin main
+            test "$(git -C "$TARGET" rev-parse FETCH_HEAD)" = "$EXPECTED"
+            git -C "$TARGET" merge --ff-only FETCH_HEAD
+            test "$(git -C "$TARGET" rev-parse HEAD)" = "$EXPECTED"
+            test -z "$(git -C "$TARGET" status --porcelain)"
+          done
+          echo "RDP7_G_WORKBENCH_EXACT_MAIN_PASS=YES"
+          echo "RDP7_G_DEVELOPMENT_EXACT_MAIN_PASS=YES"
+          echo "REAL_CAPITAL=0"
+
+      - name: Run canonical DefiLlama snapshot once
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
+          PY="$DEV/.venv/bin/python"
+          RUNTIME="$DEV/runtime/onchain"
+          export PYTHONPATH="$DEV:$DEV/src"
+          "$PY" "$DEV/ops/run_onchain_capital_flow_snapshot.py" \
+            --onchain-db "$RUNTIME/onchain_capital_flow.sqlite3" \
+            --source-contract-db "$RUNTIME/source_contract.sqlite3" \
+            --lock-path "$RUNTIME/onchain_capital_flow_snapshot.lock" \
+            --defillama-base-url "https://stablecoins.llama.fi"
+          echo "RDP7_G_CANONICAL_STABLECOIN_SNAPSHOT_PASS=YES"
+          echo "REAL_CAPITAL=0"
+
+      - name: Exact live raw to ONCHAIN family lineage acceptance
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
+          PY="$DEV/.venv/bin/python"
+          export PYTHONPATH="$DEV:$DEV/src"
+          export RDP7_ONCHAIN="$DEV/runtime/onchain/onchain_capital_flow.sqlite3"
+          export RDP7_SOURCE="$DEV/runtime/onchain/source_contract.sqlite3"
+
+          "$PY" - <<'PY'
+          from __future__ import annotations
+
+          import os
+          import time
+          from pathlib import Path
+
+          from crypto_signal.data.onchain_capital_flow_store import OnchainCapitalFlowStore
+          from crypto_signal.data.source_contract import SourceContractStore, SourceCoverageState
+          from crypto_signal.data.stablecoin_source_contract import (
+              DEFILLAMA_STABLECOIN_CHANNEL,
+              DEFILLAMA_STABLECOIN_NETWORK_SCOPE,
+              DEFILLAMA_STABLECOIN_PROVIDER,
+              DEFILLAMA_STABLECOIN_SOURCE,
+          )
+          from crypto_signal.intelligence.confluence_matrix_v2 import ConfluenceFamily
+          from crypto_signal.intelligence.stablecoin_capital_flow import (
+              DEFAULT_STABLECOIN_CAPITAL_FLOW_CONFIG,
+              StablecoinCapitalFlowStatus,
+              build_stablecoin_capital_flow_evidence_freeze,
+          )
+          from crypto_signal.product.intelligence_stream_onchain_family import (
+              build_onchain_family_snapshots,
+          )
+
+          now_ms = time.time_ns() // 1_000_000
+          onchain_path = Path(os.environ["RDP7_ONCHAIN"])
+          source_path = Path(os.environ["RDP7_SOURCE"])
+          assert onchain_path.is_file(), onchain_path
+          assert source_path.is_file(), source_path
+
+          onchain = OnchainCapitalFlowStore(onchain_path)
+          source = SourceContractStore(source_path)
+          assert onchain.quick_check()
+          assert source.quick_check()
+
+          family = build_onchain_family_snapshots(
+              onchain_path,
+              source_path,
+              symbols=("BTCUSDT", "ETHUSDT", "SOLUSDT"),
+              as_of_ms=now_ms,
+          )
+          assert tuple(item.symbol for item in family) == (
+              "BTCUSDT",
+              "ETHUSDT",
+              "SOLUSDT",
+          )
+
+          all_family_evidence = set().union(
+              *(set(item.evidence_identities) for item in family)
+          )
+          expected_latest_lineage: set[str] = set()
+          expected_freeze_lineage: set[str] = set()
+
+          for asset in ("USDC", "USDT"):
+              history = onchain.stablecoin_supply_history_as_of(
+                  asset=asset,
+                  network_scope=DEFILLAMA_STABLECOIN_NETWORK_SCOPE,
+                  provider=DEFILLAMA_STABLECOIN_PROVIDER,
+                  as_of_ms=now_ms,
+                  limit=DEFAULT_STABLECOIN_CAPITAL_FLOW_CONFIG.lookback_observations,
+              )
+              assert history, f"missing live history for {asset}"
+              latest = history[-1]
+              age_ms = now_ms - latest.ingested_at_ms
+              assert 0 <= age_ms <= 420_000, (asset, age_ms)
+
+              freeze = build_stablecoin_capital_flow_evidence_freeze(
+                  history,
+                  as_of_ms=now_ms,
+              )
+              assert freeze.analysis.status in {
+                  StablecoinCapitalFlowStatus.MEASURED,
+                  StablecoinCapitalFlowStatus.PARTIAL,
+              }
+              assert freeze.freeze_identity in all_family_evidence
+              assert freeze.analysis.evidence_identity in all_family_evidence
+              expected_freeze_lineage.update(
+                  (
+                      freeze.freeze_identity,
+                      freeze.analysis.evidence_identity,
+                  )
+              )
+              for observation in freeze.observations:
+                  assert observation.observation_identity in all_family_evidence
+                  assert observation.raw_identity in all_family_evidence
+                  assert source.raw_payload(observation.raw_identity) is not None
+
+              envelope = source.latest_envelope_at(
+                  provider=DEFILLAMA_STABLECOIN_PROVIDER,
+                  source=DEFILLAMA_STABLECOIN_SOURCE,
+                  channel=DEFILLAMA_STABLECOIN_CHANNEL,
+                  symbol=asset,
+                  as_of_ms=now_ms,
+              )
+              assert envelope is not None
+              assert envelope.normalized_identity == latest.observation_identity
+              assert envelope.raw_identity == latest.raw_identity
+              assert source.raw_payload(envelope.raw_identity) is not None
+              assert source.capability(envelope.capability_identity) is not None
+
+              coverage = source.coverage_at(
+                  provider=DEFILLAMA_STABLECOIN_PROVIDER,
+                  source=DEFILLAMA_STABLECOIN_SOURCE,
+                  channel=DEFILLAMA_STABLECOIN_CHANNEL,
+                  symbol=asset,
+                  as_of_ms=now_ms,
+              )
+              assert coverage is not None
+              assert coverage.state is SourceCoverageState.OBSERVED
+              assert coverage.source_envelope_identity == envelope.envelope_identity
+              assert coverage.capability_identity == envelope.capability_identity
+              assert envelope.envelope_identity in all_family_evidence
+              assert coverage.coverage_event_identity in all_family_evidence
+              expected_latest_lineage.update(
+                  (
+                      latest.raw_identity,
+                      latest.observation_identity,
+                      envelope.envelope_identity,
+                      coverage.coverage_event_identity,
+                  )
+              )
+              print(
+                  "RDP7_G_ASSET_LINEAGE_PASS "
+                  f"asset={asset} age_ms={age_ms} "
+                  f"raw={latest.raw_identity} "
+                  f"envelope={envelope.envelope_identity} "
+                  f"coverage={coverage.coverage_event_identity} "
+                  f"observation={latest.observation_identity} "
+                  f"freeze={freeze.freeze_identity} "
+                  f"analysis={freeze.analysis.evidence_identity}",
+                  flush=True,
+              )
+
+          assert expected_latest_lineage.issubset(all_family_evidence)
+          assert expected_freeze_lineage.issubset(all_family_evidence)
+
+          for snapshot in family:
+              assert snapshot.family is ConfluenceFamily.ONCHAIN
+              assert snapshot.projector_id == "onchain_change"
+              assert snapshot.direction is None
+              assert snapshot.source_quality in {"measured", "partial"}
+              components = {
+                  item.name: item.value
+                  for item in snapshot.state_components
+              }
+              assert components["exchange_flow_status"] == "unavailable"
+              assert components["large_transfer_status"] == "unavailable"
+              assert components["wallet_cohort_status"] == "unavailable"
+              assert components["stablecoin_bridge_status"] == "unavailable"
+              assert "bullish" not in " ".join(components.values()).lower()
+              assert "bearish" not in " ".join(components.values()).lower()
+              print(
+                  "RDP7_G_ONCHAIN_FAMILY_PASS "
+                  f"symbol={snapshot.symbol} "
+                  f"state={snapshot.state_label} "
+                  f"quality={snapshot.source_quality} "
+                  f"source={snapshot.source_event_identity} "
+                  f"evidence_count={len(snapshot.evidence_identities)}",
+                  flush=True,
+              )
+
+          counts = onchain.counts()
+          print(
+              "RDP7_G_STORE_PASS "
+              f"stablecoin_observations={counts.stablecoin_supply_observations} "
+              "EXCHANGE_FLOW_PROVIDER=UNAVAILABLE_EXPLICIT "
+              "LARGE_TRANSFER_PROVIDER=UNAVAILABLE_EXPLICIT "
+              "WALLET_COHORT_PROVIDER=UNAVAILABLE_EXPLICIT",
+              flush=True,
+          )
+          print("RDP7_G_EXACT_MAIN_LIVE_ACCEPTANCE_PASS=YES", flush=True)
+          print("RDP10_EXACT_PROOF_LINEAGE=RESOLVABLE", flush=True)
+          print("STABLECOIN_DIRECTION=NONE", flush=True)
+          print("REAL_CAPITAL=0", flush=True)
+          PY
+
+      - name: Verify focused fail-closed regressions on exact main
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
+          PY="$DEV/.venv/bin/python"
+          export PYTHONPATH="$DEV:$DEV/src"
+          cd "$DEV"
+          "$PY" -m pytest -q \
+            tests/test_rdp7_onchain_family.py \
+            tests/test_rdp7_stablecoin_capital_flow.py \
+            tests/test_rdp7_defillama_stablecoin_source.py
+          echo "RDP7_G_STALE_GAP_PIT_FAIL_CLOSED_REGRESSION_PASS=YES"
+          echo "REAL_CAPITAL=0"
+
+      - name: Verify supervisor remains active
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          SUP="$ROOT/ssd-service-supervisor.sh"
+          pid="$(ps -axo pid=,command= | awk -v needle="$SUP" 'index($0, needle) > 0 && first == "" {first=$1} END {if (first != "") print first}')"
+          test -n "$pid"
+          kill -0 "$pid"
+          echo "RDP7_G_SUPERVISOR_ALIVE_PASS=YES pid=$pid"
+          echo "REAL_CAPITAL=0"
