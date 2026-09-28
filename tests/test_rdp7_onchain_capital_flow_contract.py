@@ -10,6 +10,13 @@ from crypto_signal.data.onchain_capital_flow import (
     build_onchain_event_coverage,
     build_stablecoin_supply_observation,
 )
+from crypto_signal.data.source_contract import (
+    SourceSequenceSemantics,
+    SourceTransport,
+    build_source_capability,
+    build_source_envelope,
+    build_source_raw_payload,
+)
 
 
 def _sha(character: str) -> str:
@@ -29,7 +36,6 @@ def test_complete_event_coverage_requires_exact_lineage_and_allows_zero_claim() 
         observed_at_ms=2_100,
         ingested_at_ms=2_200,
         state=OnchainEventCoverageState.COMPLETE,
-        source_envelope_identity=_sha("a"),
         raw_identity=_sha("b"),
         reason_codes=("provider_window_complete",),
     )
@@ -46,7 +52,6 @@ def test_complete_event_coverage_requires_exact_lineage_and_allows_zero_claim() 
         observed_at_ms=2_100,
         ingested_at_ms=2_200,
         state=OnchainEventCoverageState.COMPLETE,
-        source_envelope_identity=_sha("a"),
         raw_identity=_sha("b"),
         reason_codes=("provider_window_complete",),
     )
@@ -70,7 +75,6 @@ def test_partial_gap_and_unavailable_coverage_never_claim_zero_events() -> None:
         observed_at_ms=2_100,
         ingested_at_ms=2_200,
         state=OnchainEventCoverageState.PARTIAL,
-        source_envelope_identity=_sha("c"),
         raw_identity=_sha("d"),
         reason_codes=("provider_window_partial",),
     )
@@ -146,8 +150,7 @@ def test_gap_coverage_rejects_source_data_substitution() -> None:
             observed_at_ms=2_100,
             ingested_at_ms=2_200,
             state=OnchainEventCoverageState.GAP,
-            source_envelope_identity=_sha("e"),
-            raw_identity=_sha("f"),
+                raw_identity=_sha("f"),
             reason_codes=("provider_request_failed",),
         )
 
@@ -186,7 +189,6 @@ def test_stablecoin_supply_is_deterministic_descriptive_source_truth() -> None:
         ingested_at_ms=10_200,
         adapter_version="rdp7-test/1",
         raw_identity=_sha("1"),
-        source_envelope_identity=_sha("2"),
     )
     replay = build_stablecoin_supply_observation(
         asset="USDT",
@@ -201,13 +203,62 @@ def test_stablecoin_supply_is_deterministic_descriptive_source_truth() -> None:
         ingested_at_ms=10_200,
         adapter_version="rdp7-test/1",
         raw_identity=_sha("1"),
-        source_envelope_identity=_sha("2"),
     )
 
     assert replay == observation
     assert observation.production_authority is False
     assert observation.real_capital == 0
 
+
+
+def test_stablecoin_normalized_identity_can_bind_non_circular_source_envelope() -> None:
+    raw = build_source_raw_payload(
+        provider="defillama",
+        source="defillama_public_api",
+        channel="stablecoin_supply_snapshot",
+        symbol="USDT",
+        payload={"circulating": {"peggedUSD": 100}},
+    )
+    observation = build_stablecoin_supply_observation(
+        asset="USDT",
+        network_scope="all_chains",
+        provider="defillama",
+        provider_metric_identity="stablecoins/circulating",
+        circulating_amount=Decimal(100),
+        usd_amount=Decimal(100),
+        source=DataSource.REST,
+        source_timestamp_ms=10_000,
+        observed_at_ms=10_100,
+        ingested_at_ms=10_200,
+        adapter_version="rdp7-test/1",
+        raw_identity=raw.raw_identity,
+    )
+    capability = build_source_capability(
+        provider="defillama",
+        source="defillama_public_api",
+        channel="stablecoin_supply_snapshot",
+        transport=SourceTransport.REST,
+        sequence_semantics=SourceSequenceSemantics.NONE,
+        supports_provider_event_id=False,
+        freshness_budget_ms=3_600_000,
+        symbols=("USDT", "USDC"),
+    )
+    envelope = build_source_envelope(
+        capability=capability,
+        symbol="USDT",
+        provider_event_id=None,
+        provider_sequence=None,
+        event_at_ms=observation.source_timestamp_ms,
+        source_timestamp_ms=observation.source_timestamp_ms,
+        observed_at_ms=observation.observed_at_ms,
+        ingested_at_ms=observation.ingested_at_ms,
+        raw_identity=raw.raw_identity,
+        normalized_identity=observation.observation_identity,
+    )
+
+    assert envelope.normalized_identity == observation.observation_identity
+    assert observation.raw_identity == raw.raw_identity
+    assert envelope.raw_identity == raw.raw_identity
 
 def test_stablecoin_supply_accepts_measured_zero_but_not_missing_or_negative() -> None:
     zero = build_stablecoin_supply_observation(
@@ -223,7 +274,6 @@ def test_stablecoin_supply_accepts_measured_zero_but_not_missing_or_negative() -
         ingested_at_ms=20_200,
         adapter_version="rdp7-test/1",
         raw_identity=_sha("3"),
-        source_envelope_identity=_sha("4"),
     )
     assert zero.circulating_amount == Decimal(0)
 
@@ -241,8 +291,7 @@ def test_stablecoin_supply_accepts_measured_zero_but_not_missing_or_negative() -
             ingested_at_ms=20_200,
             adapter_version="rdp7-test/1",
             raw_identity=_sha("3"),
-            source_envelope_identity=_sha("4"),
-        )
+            )
 
 
 def test_stablecoin_supply_requires_pit_timestamp_order() -> None:
@@ -260,5 +309,4 @@ def test_stablecoin_supply_requires_pit_timestamp_order() -> None:
             ingested_at_ms=10_100,
             adapter_version="rdp7-test/1",
             raw_identity=_sha("5"),
-            source_envelope_identity=_sha("6"),
-        )
+            )
