@@ -12,6 +12,7 @@ from pathlib import Path
 
 from crypto_signal.data.adapters.bybit_liquidation_ws import (
     BybitLinearLiquidationStream,
+    BybitLiquidationWireBatch,
     LiquidationTransportEvent,
     LiquidationTransportEventKind,
 )
@@ -269,7 +270,7 @@ async def run(args: argparse.Namespace) -> int:
         heartbeat_kick.set()
 
     def persist_collection_progress(
-        batch,
+        batch: BybitLiquidationWireBatch,
         progress: LiquidationWireCollectionResult,
     ) -> None:
         nonlocal last_ingestion_ms
@@ -407,7 +408,7 @@ async def run(args: argparse.Namespace) -> int:
             ),
             collection_progress_callback=persist_collection_progress,
         )
-    except (OSError, sqlite3.Error, ValueError) as exc:
+    except (OSError, sqlite3.Error, TypeError, ValueError) as exc:
         print(
             "LIQUIDATION_COLLECTOR_ERROR "
             f"error={type(exc).__name__}:{exc}",
@@ -418,7 +419,15 @@ async def run(args: argparse.Namespace) -> int:
     finally:
         heartbeat_stop.set()
         heartbeat_kick.set()
-        await heartbeat_task
+        try:
+            await heartbeat_task
+        except (sqlite3.Error, ValueError) as heartbeat_exc:
+            print(
+                "LIQUIDATION_HEARTBEAT_ERROR "
+                f"error={type(heartbeat_exc).__name__}:{heartbeat_exc}",
+                file=sys.stderr,
+                flush=True,
+            )
 
     counts = store.counts()
     print(
