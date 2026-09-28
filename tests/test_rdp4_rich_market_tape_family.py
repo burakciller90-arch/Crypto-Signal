@@ -280,6 +280,39 @@ def test_rich_liquidity_and_order_flow_share_existing_family_slots(
     assert order_flow_components["label"] == "mixed"
 
 
+def test_missing_trade_tape_does_not_fabricate_rich_order_flow_domains(
+    tmp_path,
+) -> None:
+    path = tmp_path / "book_only.sqlite3"
+    store = MarketTapeStore(path)
+    for index, event_at_ms in enumerate(
+        (175_000, 180_000, 185_000, 190_000, 195_000),
+        start=1,
+    ):
+        store.append_orderbook(
+            _book(index=index, event_at_ms=event_at_ms)
+        )
+
+    families = _families(path)
+    liquidity = families[ConfluenceFamily.LIQUIDITY]
+    order_flow = families[ConfluenceFamily.ORDER_FLOW]
+
+    assert "public_trades" not in liquidity.evidence_domains
+    assert "public_trades" not in order_flow.evidence_domains
+    assert "temporal_order_flow" not in order_flow.evidence_domains
+    assert "window_local_cvd" not in order_flow.evidence_domains
+
+    components = {
+        item.name: item.value for item in order_flow.state_components
+    }
+    assert components["temporal_status"] == "unavailable"
+    assert components["temporal_quality"] == "unavailable"
+    assert "delta_notional" not in components
+    assert "cvd_window_end_notional" not in components
+    assert order_flow.source_quality == "unresolved"
+    assert order_flow.direction is None
+
+
 def test_future_and_late_market_tape_cannot_rewrite_rich_family_pit(
     tmp_path,
 ) -> None:
