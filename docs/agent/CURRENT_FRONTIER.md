@@ -13,11 +13,11 @@ Runtime Development: `/Volumes/Crypto-504/Crypto-Signal/Development`
 
 Current `main` at checkpoint:
 
-`371bc013337e2e304fac465c4ab284d37539efc9`
+`26e85ff835833ecd14b95089d03eeb09e8e6c243`
 
 Commit:
 
-`RDP9-C: surface material venue disagreement in unified decisions`
+`chore: add durable Crypto Signal agent memory bootstrap`
 
 Recent accepted implementation sequence:
 
@@ -104,3 +104,28 @@ Crypto Signal uses multiple agents. Always inspect current `main`, open PRs and 
 - Historical/frozen evidence mutation by this checkpoint: NO.
 - Durdurulmaz touched: NO.
 - Quantum Capital touched: NO.
+
+
+## Agent-memory bootstrap installation verification — 2026-09-28
+
+Merged installation:
+- PR #1636
+- merge SHA: `26e85ff835833ecd14b95089d03eeb09e8e6c243`
+
+Mechanical verification:
+- Agent Memory Bootstrap run `36450804976`: PASS.
+- Context rebuild: PASS.
+- Exact-main RDP9 focused acceptance: PASS.
+- Live read-only BTC/ETH/SOL cross-venue classification: PASS.
+- BTCUSDT: `broad_two_venue / two_venue_confirmed`.
+- ETHUSDT: `broad_two_venue / two_venue_confirmed`.
+- SOLUSDT: `broad_two_venue / two_venue_confirmed`.
+- Provider-divergence DB `quick_check=ok`.
+- SSD504 Workbench Bootstrap run `36450805160`: PASS.
+- Workbench `repo/main` advanced cleanly to exact `26e85ff835833ecd14b95089d03eeb09e8e6c243`.
+- Workbench dirty state after sync: 0.
+- New `00_CONTEXT` links for AGENTS / CURRENT_FRONTIER / HANDOFF_LOG / PROMPT_SUFFIX are installed by the accepted Workbench bootstrap.
+
+Important:
+- This bootstrap verification proves the durable memory/bootstrap system is installed and the current RDP9 A/B/C focused/live checks are healthy.
+- It does not by itself rewrite the canonical RDP9 roadmap state. RDP9 remains governed by `CURRENT_STATUS.md` and the active roadmap until a dedicated roadmap closure updates that authority.
