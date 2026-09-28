@@ -346,8 +346,11 @@ def build_frozen_geometry_proof(
             }
         ),
     }
-    draft = FrozenGeometryProof(
-        proof_identity="0" * 64,
+    consumed_candle_identities = tuple(
+        candle.identity for candle in bundle.candles
+    )
+    conflict_flags = tuple(sorted(conflicts))
+    values = _proof_payload_values(
         schema_version=GEOMETRY_PROOF_SCHEMA_VERSION,
         bundle_identity=bundle.bundle_identity,
         signal_freeze_identity=decision.freeze_identity,
@@ -357,28 +360,26 @@ def build_frozen_geometry_proof(
         timeframe=decision.timeframe,
         as_of_ms=decision.as_of_ms,
         source_cutoff_open_time_ms=bundle.source_cutoff_open_time_ms,
-        consumed_candle_identities=tuple(
-            candle.identity for candle in bundle.candles
-        ),
+        consumed_candle_identities=consumed_candle_identities,
         methodology_states=states,
         annotations=ordered_annotations,
-        conflict_flags=tuple(sorted(conflicts)),
+        conflict_flags=conflict_flags,
     )
     return FrozenGeometryProof(
-        proof_identity=canonical_sha256(_proof_payload(draft)),
-        schema_version=draft.schema_version,
-        bundle_identity=draft.bundle_identity,
-        signal_freeze_identity=draft.signal_freeze_identity,
-        exchange=draft.exchange,
-        market_type=draft.market_type,
-        symbol=draft.symbol,
-        timeframe=draft.timeframe,
-        as_of_ms=draft.as_of_ms,
-        source_cutoff_open_time_ms=draft.source_cutoff_open_time_ms,
-        consumed_candle_identities=draft.consumed_candle_identities,
-        methodology_states=draft.methodology_states,
-        annotations=draft.annotations,
-        conflict_flags=draft.conflict_flags,
+        proof_identity=canonical_sha256(values),
+        schema_version=GEOMETRY_PROOF_SCHEMA_VERSION,
+        bundle_identity=bundle.bundle_identity,
+        signal_freeze_identity=decision.freeze_identity,
+        exchange=decision.exchange.value,
+        market_type=decision.market_type.value,
+        symbol=decision.symbol,
+        timeframe=decision.timeframe,
+        as_of_ms=decision.as_of_ms,
+        source_cutoff_open_time_ms=bundle.source_cutoff_open_time_ms,
+        consumed_candle_identities=consumed_candle_identities,
+        methodology_states=states,
+        annotations=ordered_annotations,
+        conflict_flags=conflict_flags,
     )
 
 
@@ -997,8 +998,7 @@ def _annotation(
     metadata: tuple[tuple[str, str], ...],
 ) -> FrozenGeometryAnnotation:
     canonical_metadata = tuple(sorted(set(metadata)))
-    draft = FrozenGeometryAnnotation(
-        annotation_identity="0" * 64,
+    values = _annotation_payload_values(
         layer=layer,
         primitive=primitive,
         label=label,
@@ -1013,56 +1013,122 @@ def _annotation(
         metadata=canonical_metadata,
     )
     return FrozenGeometryAnnotation(
-        annotation_identity=canonical_sha256(_annotation_payload(draft)),
-        layer=draft.layer,
-        primitive=draft.primitive,
-        label=draft.label,
-        source_reference=draft.source_reference,
-        points=draft.points,
-        start_open_time_ms=draft.start_open_time_ms,
-        end_open_time_ms=draft.end_open_time_ms,
-        price_low=draft.price_low,
-        price_high=draft.price_high,
-        direction=draft.direction,
-        status=draft.status,
-        metadata=draft.metadata,
+        annotation_identity=canonical_sha256(values),
+        layer=layer,
+        primitive=primitive,
+        label=label,
+        source_reference=source_reference,
+        points=points,
+        start_open_time_ms=start,
+        end_open_time_ms=end,
+        price_low=low,
+        price_high=high,
+        direction=direction,
+        status=status,
+        metadata=canonical_metadata,
     )
 
 
 def _annotation_payload(
     annotation: FrozenGeometryAnnotation,
 ) -> dict[str, object]:
+    return _annotation_payload_values(
+        layer=annotation.layer,
+        primitive=annotation.primitive,
+        label=annotation.label,
+        source_reference=annotation.source_reference,
+        points=annotation.points,
+        start_open_time_ms=annotation.start_open_time_ms,
+        end_open_time_ms=annotation.end_open_time_ms,
+        price_low=annotation.price_low,
+        price_high=annotation.price_high,
+        direction=annotation.direction,
+        status=annotation.status,
+        metadata=annotation.metadata,
+    )
+
+
+def _annotation_payload_values(
+    *,
+    layer: GeometryLayer,
+    primitive: GeometryPrimitive,
+    label: str,
+    source_reference: str,
+    points: tuple[GeometryPoint, ...],
+    start_open_time_ms: int | None,
+    end_open_time_ms: int | None,
+    price_low: Decimal | None,
+    price_high: Decimal | None,
+    direction: str | None,
+    status: str,
+    metadata: tuple[tuple[str, str], ...],
+) -> dict[str, object]:
     return {
-        "layer": annotation.layer,
-        "primitive": annotation.primitive,
-        "label": annotation.label,
-        "source_reference": annotation.source_reference,
-        "points": annotation.points,
-        "start_open_time_ms": annotation.start_open_time_ms,
-        "end_open_time_ms": annotation.end_open_time_ms,
-        "price_low": annotation.price_low,
-        "price_high": annotation.price_high,
-        "direction": annotation.direction,
-        "status": annotation.status,
-        "metadata": annotation.metadata,
+        "layer": layer,
+        "primitive": primitive,
+        "label": label,
+        "source_reference": source_reference,
+        "points": points,
+        "start_open_time_ms": start_open_time_ms,
+        "end_open_time_ms": end_open_time_ms,
+        "price_low": price_low,
+        "price_high": price_high,
+        "direction": direction,
+        "status": status,
+        "metadata": metadata,
     }
 
 
 def _proof_payload(proof: FrozenGeometryProof) -> dict[str, object]:
+    return _proof_payload_values(
+        schema_version=proof.schema_version,
+        bundle_identity=proof.bundle_identity,
+        signal_freeze_identity=proof.signal_freeze_identity,
+        exchange=proof.exchange,
+        market_type=proof.market_type,
+        symbol=proof.symbol,
+        timeframe=proof.timeframe,
+        as_of_ms=proof.as_of_ms,
+        source_cutoff_open_time_ms=proof.source_cutoff_open_time_ms,
+        consumed_candle_identities=proof.consumed_candle_identities,
+        methodology_states=proof.methodology_states,
+        annotations=proof.annotations,
+        conflict_flags=proof.conflict_flags,
+    )
+
+
+def _proof_payload_values(
+    *,
+    schema_version: str,
+    bundle_identity: str,
+    signal_freeze_identity: str,
+    exchange: str,
+    market_type: str,
+    symbol: str,
+    timeframe: str,
+    as_of_ms: int,
+    source_cutoff_open_time_ms: int,
+    consumed_candle_identities: tuple[
+        tuple[str, str, str, str, int], ...
+    ],
+    methodology_states: tuple[GeometryMethodologyState, ...],
+    annotations: tuple[FrozenGeometryAnnotation, ...],
+    conflict_flags: tuple[str, ...],
+) -> dict[str, object]:
     return {
-        "schema_version": proof.schema_version,
-        "bundle_identity": proof.bundle_identity,
-        "signal_freeze_identity": proof.signal_freeze_identity,
-        "exchange": proof.exchange,
-        "market_type": proof.market_type,
-        "symbol": proof.symbol,
-        "timeframe": proof.timeframe,
-        "as_of_ms": proof.as_of_ms,
-        "source_cutoff_open_time_ms": proof.source_cutoff_open_time_ms,
-        "consumed_candle_identities": proof.consumed_candle_identities,
-        "methodology_states": proof.methodology_states,
-        "annotations": proof.annotations,
-        "conflict_flags": proof.conflict_flags,
+        "schema_version": schema_version,
+        "bundle_identity": bundle_identity,
+        "signal_freeze_identity": signal_freeze_identity,
+        "exchange": exchange,
+        "market_type": market_type,
+        "symbol": symbol,
+        "timeframe": timeframe,
+        "as_of_ms": as_of_ms,
+        "source_cutoff_open_time_ms": source_cutoff_open_time_ms,
+        "consumed_candle_identities": consumed_candle_identities,
+        "methodology_states": methodology_states,
+        "annotations": annotations,
+        "conflict_flags": conflict_flags,
     }
 
 
