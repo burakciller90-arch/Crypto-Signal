@@ -201,6 +201,39 @@ jobs:
           echo "RDP8_CROSS_MARKET_CLOCK_SECONDS=3600"
           echo "REAL_CAPITAL=0"
 
+      - name: Run canonical cross-market snapshot once
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
+          PY="$DEV/.venv/bin/python"
+          RUNNER="$DEV/ops/run_cross_market_snapshot.py"
+          DB="$DEV/runtime/cross_market/cross_market.sqlite3"
+          SOURCE="$DEV/runtime/cross_market/source_contract.sqlite3"
+          LOCK="$DEV/runtime/cross_market/cross_market_snapshot.lock"
+          export PYTHONPATH="$DEV:$DEV/src"
+
+          success=0
+          for attempt in 1 2 3 4 5; do
+            set +e
+            output="$("$PY" "$RUNNER"               --cross-market-db "$DB"               --source-contract-db "$SOURCE"               --lock-path "$LOCK"               --sessions 10 2>&1)"
+            rc=$?
+            set -e
+            printf '%s
+' "$output"
+            if [ "$rc" = "0" ]               && printf '%s
+' "$output" | grep -F "RDP8_CROSS_MARKET_SNAPSHOT_COMPLETE" >/dev/null               && printf '%s
+' "$output" | grep -F "failures=0" >/dev/null               && printf '%s
+' "$output" | grep -F "quick_check=YES" >/dev/null; then
+              success=1
+              break
+            fi
+            sleep 2
+          done
+          test "$success" = "1"
+          echo "RDP8_FINAL_CANONICAL_CROSS_MARKET_SNAPSHOT_PASS=YES"
+          echo "REAL_CAPITAL=0"
+
       - name: Verify live cross-market source lineage and freshness
         shell: bash
         run: |
