@@ -1222,3 +1222,55 @@ minimalImplementation:
 
 nextAction:
 - implement those bounded changes, then exact-head acceptance + merge guard.
+
+
+
+---
+
+## 2026-09-28 — RDP10-F3 implementation acceptance checkpoint
+
+status: ACCEPTED_PRE_MERGE
+branch: rdp10/final-contract-closure-f3
+canonicalMainAtCheckpoint: 3b555bb97ff8f43038a854e7c66a6ae9f505bbb7
+acceptedImplementationHead: 50c3b2ae748ea6f0f553d6e3d2ef4d2a17ac73cc
+acceptanceRun: 36482028160
+acceptanceJob: 109129741160
+acceptanceConclusion: SUCCESS
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+implementation:
+- customer exact proof surfaces immutable source_scope + frozen family context.
+- provider_divergence/data_quality exact regression resolves the canonical snapshot and rejects future evidence beyond source_as_of_ms.
+- workflow emits RDP10_F3_FINAL_CONTRACT_PASS only after focused/live/non-mutating gates all pass.
+- no collector, provider store, source truth, score family, direction authority or historical evidence was mutated.
+
+acceptedMarkers:
+- RDP10_EXACT_SOURCE_PASS=YES
+- RDP10_CANONICAL_CHECKOUTS_CLEAN=YES
+- RDP10_FAIL_CLOSED_FOCUSED_PASS=YES
+- RDP10_DERIVED_PROOF_STORE_PASS=YES
+- RDP10_LIVE_MESSAGES_AUDITED=6
+- RDP10_UNREGISTERED_READY_COUNT=0
+- RDP10_LIVE_FAIL_CLOSED_PASS=YES
+- RDP10_NON_MUTATING_PASS=YES
+- RDP10_F3_FINAL_CONTRACT_PASS=YES
+- RDP10_CUSTOMER_SOURCE_LABEL_PASS=YES
+- RDP10_PROVIDER_DIVERGENCE_EXACT_PASS=YES
+- RDP10_EVENT_SOURCE_EXACT_PASS=YES
+- RDP10_HISTORICAL_CURRENT_SUBSTITUTION=NO
+- HISTORICAL_BACKFILL=NO
+- REAL_CAPITAL=0
+
+failedRunsNotAccepted:
+- 36481823314: focused regression caught list-vs-tuple serialized assertion mismatch.
+- 36481908539: pytest passed; Ruff correctly rejected import ordering.
+- both were repaired; neither is counted as acceptance.
+
+blocker:
+- none in implementation; docs checkpoint itself advances head and therefore requires final exact-head acceptance before PR/merge.
+
+nextAction:
+- require final docs-complete exact-head RDP10 SUCCESS; then PR, guarded merge, merged-main proof, durable top-level RDP10 PASS, and RDP11 soak start.
