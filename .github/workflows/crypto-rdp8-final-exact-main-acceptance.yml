@@ -357,18 +357,7 @@ jobs:
           )
 
           async def main() -> None:
-              now_ms = time.time_ns() // 1_000_000
               store = CrossMarketRuntimeStore(Path(os.environ["RDP8_CM_DB"]))
-              vix = store.latest_observation_as_of(
-                  series=CrossMarketSeries.CBOE_VIX_CLOSE,
-                  as_of_ms=now_ms,
-              )
-              treasury = store.latest_observation_as_of(
-                  series=CrossMarketSeries.US_TREASURY_10Y_YIELD,
-                  as_of_ms=now_ms,
-              )
-              assert vix is not None
-              assert treasury is not None
               btc = await BybitSpotAdapter(
                   base_url="https://api.bybit.tr"
               ).fetch_candles(
@@ -376,11 +365,22 @@ jobs:
                   timeframe="1D",
                   limit=20,
               )
+              as_of_ms = time.time_ns() // 1_000_000
+              vix = store.latest_observation_as_of(
+                  series=CrossMarketSeries.CBOE_VIX_CLOSE,
+                  as_of_ms=as_of_ms,
+              )
+              treasury = store.latest_observation_as_of(
+                  series=CrossMarketSeries.US_TREASURY_10Y_YIELD,
+                  as_of_ms=as_of_ms,
+              )
+              assert vix is not None
+              assert treasury is not None
               freeze = build_cross_market_evidence_freeze(
                   btc,
                   (vix,),
                   (treasury,),
-                  as_of_ms=now_ms,
+                  as_of_ms=as_of_ms,
               )
               assert freeze.analysis.label is not CrossMarketLabel.UNRESOLVED
               assert freeze.analysis.metrics is not None
