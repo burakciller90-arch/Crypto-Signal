@@ -187,6 +187,7 @@ class StreamClockConfig:
     enabled: bool = False
     ledger_path: Path | None = None
     market_tape_path: Path | None = None
+    options_surface_path: Path | None = None
     event_source_path: Path | None = None
     family_symbols: tuple[str, ...] = ()
     local_rewrite_config: LocalNarrativeRewriteConfig | None = None
@@ -197,12 +198,17 @@ class StreamClockConfig:
         if not self.enabled and (
             self.ledger_path is not None
             or self.market_tape_path is not None
+            or self.options_surface_path is not None
             or self.event_source_path is not None
             or self.family_symbols
             or self.local_rewrite_config is not None
         ):
             raise ValueError(
                 "Stream options require explicit --stream-enabled"
+            )
+        if self.options_surface_path is not None and self.market_tape_path is None:
+            raise ValueError(
+                "Stream options surface requires --stream-market-tape"
             )
         if self.market_tape_path is None and self.family_symbols:
             raise ValueError(
@@ -281,6 +287,12 @@ def parse_args() -> argparse.Namespace:
         type=Path,
         default=None,
         help="persisted Market Tape source for live Stream intelligence families",
+    )
+    parser.add_argument(
+        "--stream-options-surface",
+        type=Path,
+        default=None,
+        help="persisted BTC/ETH options surface store for Derivatives family",
     )
     parser.add_argument(
         "--stream-family-symbols",
@@ -407,6 +419,7 @@ def build_stream_clock_config(
         enabled=bool(getattr(args, "stream_enabled", False)),
         ledger_path=getattr(args, "stream_ledger", None),
         market_tape_path=getattr(args, "stream_market_tape", None),
+        options_surface_path=getattr(args, "stream_options_surface", None),
         event_source_path=getattr(args, "stream_event_source", None),
         family_symbols=family_symbols,
         local_rewrite_config=local_rewrite_config,
@@ -1156,6 +1169,7 @@ async def run(
                 symbols=selected_stream.family_symbols,
                 as_of_ms=family_observed_at_ms,
                 candle_cache_path=candle_cache_path,
+                options_surface_path=selected_stream.options_surface_path,
             )
             system_view_family_snapshots.extend(family_snapshots)
             family_dispositions: Counter[str] = Counter()
