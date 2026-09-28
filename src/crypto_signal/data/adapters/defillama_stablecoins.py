@@ -127,7 +127,7 @@ def _normalize_asset(
 ) -> DefiLlamaStablecoinAssetSnapshot:
     circulating = payload.get("circulating")
     if not isinstance(circulating, dict):
-        raise ValueError(
+        raise TypeError(
             "DefiLlama stablecoin circulating value must be an object"
         )
     raw_amount = circulating.get("peggedUSD")
