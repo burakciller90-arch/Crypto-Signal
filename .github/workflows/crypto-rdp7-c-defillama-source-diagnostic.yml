@@ -1,0 +1,144 @@
+name: RDP7-C DefiLlama Stablecoin Source Diagnostic UID504
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/crypto-rdp7-c-defillama-source-diagnostic.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  live-diagnostic:
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          clean: true
+          fetch-depth: 1
+
+      - name: Verify exact Workbench baseline and source
+        shell: bash
+        run: |
+          set -euo pipefail
+          WB="/Volumes/Crypto-504/Crypto-Signal-Workbench/repo"
+          test "$(id -u)" = "504"
+          test "$(git -C "$WB" branch --show-current)" = "main"
+          test -z "$(git -C "$WB" status --porcelain)"
+          test "$(git -C "$WB" rev-parse HEAD)" = "${{ github.event.pull_request.base.sha }}"
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+          echo "RDP7_C_DEFILLAMA_WORKBENCH_EXACT_MAIN_PASS=YES"
+          echo "RDP7_C_DEFILLAMA_EXACT_DIAGNOSTIC_SOURCE_PASS=YES"
+
+      - name: Probe public stablecoin source contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          PY="/Volumes/Crypto-504/Crypto-Signal/Development/.venv/bin/python"
+          export PYTHONPATH="$GITHUB_WORKSPACE/src:$GITHUB_WORKSPACE"
+          "$PY" - <<'PY'
+          from __future__ import annotations
+
+          import asyncio
+          import time
+
+          import httpx
+
+          URL = "https://stablecoins.llama.fi/stablecoins?includePrices=true"
+
+          def summarize_amount(value: object) -> tuple[str, tuple[str, ...]]:
+              if isinstance(value, dict):
+                  return "dict", tuple(sorted(str(key) for key in value))
+              return type(value).__name__, ()
+
+          async def main() -> None:
+              started_ms = time.time_ns() // 1_000_000
+              async with httpx.AsyncClient(
+                  timeout=20.0,
+                  follow_redirects=False,
+                  headers={"User-Agent": "Crypto-Signal-RDP7-Diagnostic/1"},
+              ) as client:
+                  response = await client.get(URL)
+              observed_ms = time.time_ns() // 1_000_000
+              response.raise_for_status()
+              payload = response.json()
+              assert isinstance(payload, dict), type(payload)
+              assets = payload.get("peggedAssets")
+              assert isinstance(assets, list) and assets
+              print(
+                  "RDP7_C_DEFILLAMA_HTTP_PASS "
+                  f"status={response.status_code} "
+                  f"elapsed_ms={observed_ms-started_ms} "
+                  f"top_keys={','.join(sorted(str(k) for k in payload))}",
+                  flush=True,
+              )
+              selected = {}
+              for item in assets:
+                  if not isinstance(item, dict):
+                      continue
+                  symbol = str(item.get("symbol", "")).upper()
+                  if symbol in {"USDT", "USDC"} and symbol not in selected:
+                      selected[symbol] = item
+              assert set(selected) == {"USDT", "USDC"}, selected.keys()
+
+              for symbol in ("USDT", "USDC"):
+                  item = selected[symbol]
+                  circulating = item.get("circulating")
+                  prev_day = item.get("circulatingPrevDay")
+                  chain_circulating = item.get("chainCirculating")
+                  c_type, c_keys = summarize_amount(circulating)
+                  d_type, d_keys = summarize_amount(prev_day)
+                  assert isinstance(chain_circulating, dict)
+                  chain_names = tuple(sorted(str(k) for k in chain_circulating))
+                  item_keys = tuple(sorted(str(k) for k in item))
+                  print(
+                      "RDP7_C_DEFILLAMA_ASSET_SHAPE "
+                      f"symbol={symbol} id={item.get('id')} "
+                      f"circulating_type={c_type} "
+                      f"circulating_keys={','.join(c_keys) or '-'} "
+                      f"prev_day_type={d_type} "
+                      f"prev_day_keys={','.join(d_keys) or '-'} "
+                      f"chain_count={len(chain_names)} "
+                      f"sample_chains={','.join(chain_names[:8]) or '-'} "
+                      f"keys={','.join(item_keys)}",
+                      flush=True,
+                  )
+                  if isinstance(circulating, dict):
+                      pegged_usd = circulating.get("peggedUSD")
+                      print(
+                          "RDP7_C_DEFILLAMA_ASSET_VALUE "
+                          f"symbol={symbol} "
+                          f"peggedUSD_present={pegged_usd is not None} "
+                          f"price_present={item.get('price') is not None}",
+                          flush=True,
+                      )
+
+              date_like = tuple(
+                  sorted(
+                      key
+                      for key in payload
+                      if "date" in str(key).lower()
+                      or "time" in str(key).lower()
+                  )
+              )
+              assert not date_like, (
+                  "top-level provider timestamp unexpectedly present",
+                  date_like,
+              )
+              print(
+                  "RDP7_C_PROVIDER_TIMESTAMP_SEMANTIC="
+                  "NO_PROVIDER_TIMESTAMP_IN_CURRENT_LIST_RESPONSE",
+                  flush=True,
+              )
+              print(
+                  "RDP7_C_OBSERVED_AT_MUST_BE_COLLECTOR_RECEIPT_TIME=YES",
+                  flush=True,
+              )
+              print("RDP7_C_PUBLIC_NO_AUTH_SOURCE_PASS=YES", flush=True)
+              print("REAL_CAPITAL=0", flush=True)
+
+          asyncio.run(main())
+          PY
