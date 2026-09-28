@@ -575,12 +575,13 @@ Work:
 - explicit freshness state.
 
 Progress:
-- **RDP2-A source-contract foundation ACCEPTED** on main `585378dc32753d2e31894bd666eb1e084802e6ab` via PR #1555;
-- UID504 run `36373922309`: Workbench exact-base PASS, exact PR source PASS, 27 tests PASS, Ruff PASS, mypy PASS, REAL_CAPITAL=0;
-- canonical capability, envelope, freshness and coverage types are now immutable and SHA-addressed;
-- envelope truth carries event/source/observed/ingested timestamps, provider-native ID/sequence semantics and raw/normalized identities;
-- as-of reads refuse future ingestion; coverage is append-only and can reference existing gap-event identities instead of creating a second gap ledger;
-- next: **RDP2-B — live Market Tape source-contract wiring + persisted coverage emission/readback**.
+- **RDP2-A source-contract foundation ACCEPTED** on main `585378dc32753d2e31894bd666eb1e084802e6ab` via PR #1555; UID504 `36373922309` passed Workbench/source, focused tests, Ruff and mypy;
+- **RDP2-B live Bybit WebSocket Market Tape wiring ACCEPTED** on main `b2f6bdc64e4830de7a021250155c3cea6f587922` via PR #1557;
+- UID504 `36378394811`: exact Workbench/source PASS, focused live-wiring acceptance PASS, Ruff PASS, mypy PASS, py_compile PASS, REAL_CAPITAL=0; source-contract regression `36378394713` PASS;
+- WebSocket orderbook/publicTrade evidence now carries exact raw-to-persisted-normalized lineage, provider IDs/sequences, monotonic persistence time, PIT-safe event-time ordering and append-only OBSERVED/GAP coverage referencing the existing gap ledger;
+- cadence-skipped orderbook updates remain explicit raw evidence with no fabricated normalized identity; replayed trades resolve to the identity actually persisted in Market Tape;
+- RDP2 remains ACTIVE because the 60s REST snapshot and other evidence rails are not yet under the same contract;
+- next: **RDP2-C — Bybit REST Market Tape snapshot provenance: exact raw orderbook/recent-trade/open-interest/ticker payload identity -> persisted normalized Market Tape identity, with derivatives freshness/coverage semantics.**
 
 PASS:
 - every family can explain what data existed and what data did not exist at an as-of time.
