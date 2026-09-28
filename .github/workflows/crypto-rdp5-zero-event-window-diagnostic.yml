@@ -1,0 +1,154 @@
+name: RDP5 Zero-Event Window Diagnostic UID504
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/crypto-rdp5-zero-event-window-diagnostic.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  diagnostic:
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          clean: true
+          fetch-depth: 1
+
+      - name: Prove zero-event window did not fabricate liquidation coverage
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          DEV="$ROOT/Development"
+          RUNTIME="$DEV/runtime/market_tape/liquidation_collector_runtime.sqlite3"
+          MARKET="$DEV/runtime/market_tape/market_tape.sqlite3"
+
+          test "$(id -u)" = "504"
+          test "$(git -C "$DEV" rev-parse HEAD)" = "${{ github.event.pull_request.base.sha }}"
+          test -z "$(git -C "$DEV" status --porcelain)"
+          test -f "$RUNTIME"
+          test -f "$MARKET"
+
+          pid="$(cat "$ROOT/liquidation-stream.pid")"
+          kill -0 "$pid"
+
+          "$DEV/.venv/bin/python" - "$RUNTIME" "$MARKET" "$pid" <<'PY'
+          import json
+          import sqlite3
+          import sys
+          from pathlib import Path
+
+          runtime = Path(sys.argv[1])
+          market = Path(sys.argv[2])
+          pid = int(sys.argv[3])
+
+          with sqlite3.connect(
+              f"{runtime.resolve().as_uri()}?mode=ro",
+              uri=True,
+              timeout=5.0,
+          ) as db:
+              db.row_factory = sqlite3.Row
+              db.execute("PRAGMA query_only=ON")
+              instance = db.execute(
+                  """
+                  SELECT instance_identity, process_id, started_at_ms
+                  FROM collector_instances
+                  WHERE provider='bybit' AND source='liquidation_stream'
+                  ORDER BY started_at_ms DESC, instance_identity DESC
+                  LIMIT 1
+                  """
+              ).fetchone()
+              assert instance is not None
+              assert int(instance["process_id"]) == pid
+              instance_id = str(instance["instance_identity"])
+              started_at_ms = int(instance["started_at_ms"])
+
+              rows = db.execute(
+                  """
+                  SELECT sequence_no, state, observed_at_ms, payload_json
+                  FROM liquidation_connection_coverage
+                  WHERE instance_identity=?
+                  ORDER BY sequence_no ASC
+                  """,
+                  (instance_id,),
+              ).fetchall()
+              assert rows
+
+          zero_connected = []
+          first_real_ingestion_ms = None
+          for row in rows:
+              payload = json.loads(str(row["payload_json"]))
+              ingestion = payload["last_liquidation_ingestion_ms"]
+              if (
+                  ingestion is None
+                  and str(row["state"]) == "connected"
+                  and set(payload["reason_codes"])
+                  == {"subscription_confirmed", "transport_activity_fresh"}
+              ):
+                  zero_connected.append(
+                      (int(row["sequence_no"]), int(row["observed_at_ms"]))
+                  )
+              if ingestion is not None and first_real_ingestion_ms is None:
+                  first_real_ingestion_ms = int(ingestion)
+
+          assert zero_connected, "no connected zero-event transport window observed"
+          assert first_real_ingestion_ms is not None, (
+              "need one later real liquidation to close the observed zero-event window"
+          )
+          zero_window_end_ms = max(
+              observed
+              for _, observed in zero_connected
+              if observed < first_real_ingestion_ms
+          )
+          assert started_at_ms <= zero_window_end_ms < first_real_ingestion_ms
+
+          with sqlite3.connect(
+              f"{market.resolve().as_uri()}?mode=ro",
+              uri=True,
+              timeout=5.0,
+          ) as db:
+              db.execute("PRAGMA query_only=ON")
+              liquidation_rows = int(
+                  db.execute(
+                      """
+                      SELECT COUNT(*)
+                      FROM market_tape_liquidations
+                      WHERE ingested_at_ms >= ? AND ingested_at_ms <= ?
+                      """,
+                      (started_at_ms, zero_window_end_ms),
+                  ).fetchone()[0]
+              )
+              feed_coverage_rows = int(
+                  db.execute(
+                      """
+                      SELECT COUNT(*)
+                      FROM market_tape_liquidation_coverage
+                      WHERE observed_at_ms >= ? AND observed_at_ms <= ?
+                      """,
+                      (started_at_ms, zero_window_end_ms),
+                  ).fetchone()[0]
+              )
+
+          assert liquidation_rows == 0, liquidation_rows
+          assert feed_coverage_rows == 0, feed_coverage_rows
+
+          print(f"LIQUIDATION_PID={pid}")
+          print(f"ZERO_EVENT_INSTANCE_STARTED_AT_MS={started_at_ms}")
+          print(
+              "ZERO_EVENT_CONNECTED_SEQUENCES="
+              + ",".join(str(seq) for seq, _ in zero_connected)
+          )
+          print(f"ZERO_EVENT_WINDOW_END_MS={zero_window_end_ms}")
+          print(f"FIRST_REAL_LIQUIDATION_INGESTION_MS={first_real_ingestion_ms}")
+          print(f"ZERO_EVENT_LIQUIDATION_ROWS={liquidation_rows}")
+          print(f"ZERO_EVENT_FEED_COVERAGE_ROWS={feed_coverage_rows}")
+          print("ZERO_EVENT_COVERAGE_INVENTED=NO")
+          print("RDP5_ZERO_EVENT_WINDOW_LIVE_PASS=YES")
+          print("REAL_CAPITAL=0")
+          PY
