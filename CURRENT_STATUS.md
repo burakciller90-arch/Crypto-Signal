@@ -4,7 +4,7 @@ Updated: 2026-09-28
 Project: Crypto Signal
 Baseline: crypto-signal-full-version-v1.0.0 (immutable)
 Active post-v1.0 program: v1.1 world-class product + market intelligence + Crypto Signal Intelligence Stream V1
-State: WC0_LIVE_PRODUCT_PARITY_ACCEPTED / WC1_24_7_DATA_RELIABILITY_ACCEPTED / WC2_ENGINEERING_FROZEN_EVIDENCE_ACCUMULATION_ACTIVE / WC4_CHAMPION_CHALLENGER_ENGINEERING_ACCEPTED_RESEARCH_ONLY / WC5_ENGINEERING_ACCEPTED_PRODUCT_DEPLOYED_HUMAN_USABILITY_NOT_MEASURED / WC6_SANDBOX_BOUNDARY_ACCEPTED_VENUE_EVIDENCE_EXTERNAL_DEPENDENCY / WC7_CURRENT_FRONTIER_PACKET_ACCEPTED_CURRENT_INSUFFICIENT_EVIDENCE / INTELLIGENCE_STREAM_V1_S0_S16_HISTORICAL_ACCEPTANCE_RETAINED / INTELLIGENCE_STREAM_V1_FINAL_F0_PASS_F1_PASS_F2_PASS_F3_PASS_F4_PASS_F5_PASS_CURRENT_SCOPE_F6_PASS_F7_PASS_F8_PASS_F9_PASS_F10_PASS / INTELLIGENCE_STREAM_V1_FINAL_COMPLETION_ACCEPTED / MESSAGE_INTELLIGENCE_FAMILY_EVIDENCE_UX_V1_ACCEPTED / EVIDENCE_DEPTH_VISUAL_PROOF_V1_ED0_PASS_ED1_ACTIVE / REALITY_BACKED_EVIDENCE_DATA_PLANE_V1_RDP0_PASS_RDP1_PASS_RDP2_PASS_RDP3_PASS_RDP4_PASS_RDP5_PASS_RDP6_PASS_RDP7_PASS_RDP8_PASS_RDP9_ACTIVE / CONTINUITY_PAUSED_BY_USER
+State: WC0_LIVE_PRODUCT_PARITY_ACCEPTED / WC1_24_7_DATA_RELIABILITY_ACCEPTED / WC2_ENGINEERING_FROZEN_EVIDENCE_ACCUMULATION_ACTIVE / WC4_CHAMPION_CHALLENGER_ENGINEERING_ACCEPTED_RESEARCH_ONLY / WC5_ENGINEERING_ACCEPTED_PRODUCT_DEPLOYED_HUMAN_USABILITY_NOT_MEASURED / WC6_SANDBOX_BOUNDARY_ACCEPTED_VENUE_EVIDENCE_EXTERNAL_DEPENDENCY / WC7_CURRENT_FRONTIER_PACKET_ACCEPTED_CURRENT_INSUFFICIENT_EVIDENCE / INTELLIGENCE_STREAM_V1_S0_S16_HISTORICAL_ACCEPTANCE_RETAINED / INTELLIGENCE_STREAM_V1_FINAL_F0_PASS_F1_PASS_F2_PASS_F3_PASS_F4_PASS_F5_PASS_CURRENT_SCOPE_F6_PASS_F7_PASS_F8_PASS_F9_PASS_F10_PASS / INTELLIGENCE_STREAM_V1_FINAL_COMPLETION_ACCEPTED / MESSAGE_INTELLIGENCE_FAMILY_EVIDENCE_UX_V1_ACCEPTED / EVIDENCE_DEPTH_VISUAL_PROOF_V1_ED0_PASS_ED1_ACTIVE / REALITY_BACKED_EVIDENCE_DATA_PLANE_V1_RDP0_PASS_RDP1_PASS_RDP2_PASS_RDP3_PASS_RDP4_PASS_RDP5_PASS_RDP6_PASS_RDP7_PASS_RDP8_PASS_RDP9_PASS_RDP10_ACTIVE / CONTINUITY_PAUSED_BY_USER
 REAL_CAPITAL: 0
 
 ## Active v1.1 frontier — read before historical sections
@@ -17,7 +17,7 @@ Canonical execution authority:
 
 Current state:
 
-**RDP0 PASS / RDP1 PASS / RDP2 PASS / RDP3 PASS / RDP4 PASS / RDP5 PASS / RDP6 PASS / RDP7 PASS / RDP8 PASS / RDP9 ACTIVE — Cross-venue quality + evidence-overlap engine**
+**RDP0 PASS / RDP1 PASS / RDP2 PASS / RDP3 PASS / RDP4 PASS / RDP5 PASS / RDP6 PASS / RDP7 PASS / RDP8 PASS / RDP9 PASS / RDP10 ACTIVE — Exact frozen customer-proof contract**
 
 Latest RDP1 closure evidence:
 - PR #1548 merged as exact main `fabaa8830bd599e564bf76c1e0adbee89ec9b5f3`: Market Tape snapshot + WC2 live clock cadence tightened to 60s; focused ownership acceptance passed; unrelated legacy Stream whole-repo text/hash failures were not treated as cadence failures;
@@ -79,7 +79,17 @@ RDP8 — **PASS**.
 - focused RDP8-B UID504 run `36440855017` PASS proved real Cboe + U.S. Treasury lineage without production mutation;
 - final diagnostic PR #1630 remained unmerged. Exact-main UID504 run `36442983256`, job `108997967133`, PASS: Workbench + Development exact main, canonical R11 runtime restart, one successful canonical VIX/Treasury cycle, fresh exact source lineage, live score-external cross-market freeze, stale Event Risk → circuit-breaker `DEGRADED_DATA` with `STALE_EVENT_TREATED_AS_FRESH_VETO=NO`, focused regressions, `REAL_CAPITAL=0`.
 
-RDP9 — **ACTIVE**. Exact implementation frontier: **Cross-venue quality + evidence-overlap engine — expand provider divergence, classify venue-local vs broad conditions, freeze family dependency lineage, detect raw/evidence overlap, surface material venue disagreement, and prevent duplicate evidence from silently inflating confluence.**
+RDP9 — **PASS**.
+- RDP9-A merged via PR #1633 as main `4763bb27ad432a761e3abcee4aceb75e588cb6eb`; cross-venue quality classifies venue-local vs broad conditions without score or directional authority.
+- RDP9-B merged via PR #1634 as main `2fcbefabec0360a58424a177048828d49d16c7d7`; exact family dependency/raw-evidence overlap is frozen into decision lineage and duplicate evidence cannot silently add family confidence.
+- RDP9-C merged via PR #1635 as main `371bc013337e2e304fac465c4ab284d37539efc9`; material venue disagreement is surfaced to the unified decision layer as score-external conflict context.
+- UID504 overlap acceptance run `36447590945`, job `109013794664`: `DUPLICATE_EVIDENCE_WEIGHT_INFLATION=BLOCKED`, `OVERLAP_LINEAGE_IN_DECISION_PROOF=YES`, `REAL_CAPITAL=0`.
+- UID504 decision acceptance run `36447590574`, job `109013790085`: `MATERIAL_VENUE_DISAGREEMENT_VISIBLE=YES`, `CROSS_VENUE_SCORE_AUTHORITY=NO`, `CROSS_VENUE_DIRECTIONAL_AUTHORITY=NO`, `REAL_CAPITAL=0`.
+- Exact-current-main bootstrap run `36451104263`, job `109025778311`, on `e8fd12f2b3e56f2feb2050d938b4ef0883accfb5`: focused RDP9 acceptance PASS, provider-divergence DB `quick_check=ok`, and live read-only BTC/ETH/SOL each classified `broad_two_venue / two_venue_confirmed`.
+- Workbench bootstrap run `36451104302`, job `109025778585`: `/Volumes/Crypto-504/Crypto-Signal-Workbench/repo` synchronized cleanly to exact `e8fd12f2b3e56f2feb2050d938b4ef0883accfb5`, branch `main`, dirty count 0.
+- **RDP9 PASS**: both roadmap conditions are mechanically proven. The current live observation happens to be broad confirmation; disagreement visibility is proven by the deterministic decision-layer acceptance and is not fabricated as a live conflict.
+
+RDP10 — **ACTIVE**. Exact implementation frontier: **Exact frozen customer-proof contract — every evidence family must expose the strongest exact frozen customer-proof actually available, preserve stale/unavailable truth, expose exact Event Risk/context source records, and never substitute current live data for historical proof.**
 
 Locked execution sequence:
 `RDP1 runtime reliability → RDP2 source envelope/coverage → RDP3 Geometry → RDP4 rich Liquidity/Order Flow → RDP5 Derivatives/Liquidations → RDP6 BTC/ETH Options → RDP7 real On-chain/stablecoin capital flows → RDP8 Event/Cross-market → RDP9 cross-venue + overlap control → RDP10 frozen proof contract → RDP11 soak/acceptance → Paper Portfolio → new frontend`.
