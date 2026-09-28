@@ -1166,30 +1166,58 @@ def build_market_tape_family_snapshots(
                         )
                     )
 
-            derivatives_source_event_identity = canonical_sha256(
-                {
-                    "as_of_ms": as_of_ms,
-                    "context_freeze_identity": (
-                        derivatives_freeze.freeze_identity
-                    ),
-                    "crowding_freeze_identity": (
-                        None
-                        if crowding_freeze is None
-                        else crowding_freeze.freeze_identity
-                    ),
-                    "dynamics_freeze_identity": dynamics_freeze.freeze_identity,
-                    "heatmap_freeze_identity": (
-                        None
-                        if heatmap_freeze is None
-                        else heatmap_freeze.freeze_identity
-                    ),
-                    "liquidation_coverage_identity": (
-                        liquidation_coverage_identity
-                    ),
-                    "symbol": symbol,
-                    "version": "rdp5-rich-derivatives-family-v2/1",
-                }
-            )
+            if has_liquidation_extension:
+                derivatives_source_event_identity = canonical_sha256(
+                    {
+                        "as_of_ms": as_of_ms,
+                        "context_freeze_identity": (
+                            derivatives_freeze.freeze_identity
+                        ),
+                        "crowding_freeze_identity": (
+                            None
+                            if crowding_freeze is None
+                            else crowding_freeze.freeze_identity
+                        ),
+                        "dynamics_freeze_identity": (
+                            dynamics_freeze.freeze_identity
+                        ),
+                        "heatmap_freeze_identity": (
+                            None
+                            if heatmap_freeze is None
+                            else heatmap_freeze.freeze_identity
+                        ),
+                        "liquidation_coverage_identity": (
+                            liquidation_coverage_identity
+                        ),
+                        "symbol": symbol,
+                        "version": "rdp5-rich-derivatives-family-v2/1",
+                    }
+                )
+                derivatives_state_label = (
+                    f"{derivatives_analysis.label.value}:"
+                    f"{dynamics_analysis.status.value}:"
+                    f"{dynamics_analysis.oi_price_state.value}:"
+                    f"{liquidation_status}:{crowding_label}"
+                )
+            else:
+                derivatives_source_event_identity = canonical_sha256(
+                    {
+                        "as_of_ms": as_of_ms,
+                        "context_freeze_identity": (
+                            derivatives_freeze.freeze_identity
+                        ),
+                        "dynamics_freeze_identity": (
+                            dynamics_freeze.freeze_identity
+                        ),
+                        "symbol": symbol,
+                        "version": "rdp5-derivatives-dynamics-family-v1/1",
+                    }
+                )
+                derivatives_state_label = (
+                    f"{derivatives_analysis.label.value}:"
+                    f"{dynamics_analysis.status.value}:"
+                    f"{dynamics_analysis.oi_price_state.value}"
+                )
             snapshots.append(
                 build_family_snapshot(
                     projector_id="derivatives_change",
@@ -1209,12 +1237,7 @@ def build_market_tape_family_snapshots(
                     source_as_of_ms=as_of_ms,
                     evidence_identities=tuple(sorted(derivatives_evidence)),
                     evidence_domains=tuple(sorted(derivatives_domains)),
-                    state_label=(
-                        f"{derivatives_analysis.label.value}:"
-                        f"{dynamics_analysis.status.value}:"
-                        f"{dynamics_analysis.oi_price_state.value}:"
-                        f"{liquidation_status}:{crowding_label}"
-                    ),
+                    state_label=derivatives_state_label,
                     state_components=tuple(derivatives_components),
                     direction=None,
                     source_quality=(
