@@ -8,6 +8,7 @@ from typing import cast
 
 import httpx
 
+from crypto_signal.data.adapters.base import CandleSourceSnapshot
 from crypto_signal.data.models import Candle, DataSource, Exchange, MarketType
 from crypto_signal.data.timeframes import spec
 
@@ -43,6 +44,24 @@ class BinanceSpotAdapter:
         start_ms: int | None = None,
         end_ms: int | None = None,
     ) -> tuple[Candle, ...]:
+        snapshot = await self.fetch_source_candles(
+            symbol=symbol,
+            timeframe=timeframe,
+            limit=limit,
+            start_ms=start_ms,
+            end_ms=end_ms,
+        )
+        return snapshot.candles
+
+    async def fetch_source_candles(
+        self,
+        *,
+        symbol: str,
+        timeframe: str,
+        limit: int,
+        start_ms: int | None = None,
+        end_ms: int | None = None,
+    ) -> CandleSourceSnapshot:
         if not symbol or symbol != symbol.upper():
             raise ValueError("Binance symbol must be non-empty uppercase")
         if not 1 <= limit <= 1000:
@@ -61,6 +80,7 @@ class BinanceSpotAdapter:
 
         owns_client = self._client is None
         client = self._client or httpx.AsyncClient(timeout=10.0)
+        raw_payload: dict[str, object]
         try:
             if self._api_variant == "tr_main":
                 response = await client.get(
@@ -69,7 +89,7 @@ class BinanceSpotAdapter:
                 )
                 response.raise_for_status()
                 payload = response.json()
-                ingested_at_ms = time.time_ns() // 1_000_000
+                observed_at_ms = time.time_ns() // 1_000_000
                 if isinstance(payload, dict):
                     if int(cast(int | str, payload.get("code", -1))) != 0:
                         raise ValueError(
@@ -82,12 +102,17 @@ class BinanceSpotAdapter:
                     server_time_ms = int(
                         cast(int | str, payload["timestamp"])
                     )
+                    raw_payload = {"response": payload}
                 elif isinstance(payload, list):
                     raw_rows = cast(list[list[object]], payload)
                     server_time_ms = self._http_source_time_ms(
                         response,
-                        fallback_ms=ingested_at_ms,
+                        fallback_ms=observed_at_ms,
                     )
+                    raw_payload = {
+                        "response": payload,
+                        "http_date": response.headers.get("date"),
+                    }
                 else:
                     raise TypeError(
                         "Binance TR kline response must be object or array"
@@ -104,13 +129,19 @@ class BinanceSpotAdapter:
                 )
                 klines_response.raise_for_status()
                 time_response.raise_for_status()
-                raw_rows = cast(list[list[object]], klines_response.json())
-                server_time_raw = cast(
-                    dict[str, object], time_response.json()
-                )["serverTime"]
+                klines_payload = klines_response.json()
+                time_payload = cast(
+                    dict[str, object],
+                    time_response.json(),
+                )
+                raw_rows = cast(list[list[object]], klines_payload)
+                server_time_raw = time_payload["serverTime"]
                 server_time_ms = int(cast(int | str, server_time_raw))
-            if self._api_variant != "tr_main":
-                ingested_at_ms = time.time_ns() // 1_000_000
+                observed_at_ms = time.time_ns() // 1_000_000
+                raw_payload = {
+                    "klines_response": klines_payload,
+                    "time_response": time_payload,
+                }
         finally:
             if owns_client:
                 await client.aclose()
@@ -121,12 +152,25 @@ class BinanceSpotAdapter:
                 symbol=symbol,
                 timeframe=timeframe,
                 server_time_ms=server_time_ms,
-                ingested_at_ms=ingested_at_ms,
+                ingested_at_ms=observed_at_ms,
             )
             for row in raw_rows
         ]
         candles.sort(key=lambda candle: candle.open_time_ms)
-        return tuple(candles)
+        return CandleSourceSnapshot(
+            provider=Exchange.BINANCE.value,
+            source=(
+                "spot_kline_rest_tr_main"
+                if self._api_variant == "tr_main"
+                else "spot_kline_rest_global"
+            ),
+            channel=f"rest.kline.{timeframe}",
+            symbol=symbol,
+            timeframe=timeframe,
+            raw_payload=raw_payload,
+            candles=tuple(candles),
+            observed_at_ms=observed_at_ms,
+        )
 
     @staticmethod
     def _http_source_time_ms(
