@@ -272,7 +272,6 @@ def _require_raw_wire_match(
         raw_event.event_kind,
         raw_event.source_timestamp_ms,
         raw_event.event_at_ms,
-        raw_event.ingested_at_ms,
         raw_event.sequence,
         raw_event.update_id,
     ) != (
@@ -281,7 +280,6 @@ def _require_raw_wire_match(
         wire_event.event_kind,
         wire_event.source_timestamp_ms,
         wire_event.event_at_ms,
-        wire_event.ingested_at_ms,
         wire_event.sequence,
         wire_event.update_id,
     ):
