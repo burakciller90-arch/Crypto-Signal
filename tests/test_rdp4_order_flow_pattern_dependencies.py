@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from decimal import Decimal
+from pathlib import Path
 
 import pytest
 
@@ -319,7 +320,7 @@ def test_missing_candle_cache_fails_without_initializing_a_new_database(
 
 def test_live_clock_passes_canonical_candle_cache_to_family_projection() -> None:
     source = (
-        __import__("pathlib").Path(__file__).resolve().parents[1]
+        Path(__file__).resolve().parents[1]
         / "ops"
         / "run_live_evidence_clock.py"
     ).read_text(encoding="utf-8")
