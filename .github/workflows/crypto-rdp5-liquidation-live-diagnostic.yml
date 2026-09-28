@@ -1,0 +1,196 @@
+name: RDP5 Liquidation Live Diagnostic UID504
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/crypto-rdp5-liquidation-live-diagnostic.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  diagnostic:
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          clean: true
+          fetch-depth: 1
+
+      - name: Exact deployed main and live liquidation acceptance
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          DEV="$ROOT/Development"
+          WB="$ROOT/Crypto-Signal-Workbench/repo"
+          RUNTIME="$DEV/runtime/market_tape"
+          STATUS_DB="$RUNTIME/liquidation_collector_runtime.sqlite3"
+          MARKET_DB="$RUNTIME/market_tape.sqlite3"
+          PIDFILE="$ROOT/liquidation-stream.pid"
+          PY="$DEV/.venv/bin/python"
+
+          test "$(id -u)" = "504"
+          test -x "$PY"
+          test -d "$WB/.git"
+          test -z "$(git -C "$WB" status --porcelain)"
+          test "$(git -C "$WB" branch --show-current)" = "main"
+          test "$(git -C "$WB" rev-parse HEAD)" = "${{ github.event.pull_request.base.sha }}"
+          test -z "$(git -C "$DEV" status --porcelain)"
+          test "$(git -C "$DEV" rev-parse HEAD)" = "${{ github.event.pull_request.base.sha }}"
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+          echo "RDP5_LIVE_WORKBENCH_BASELINE_PASS=YES"
+          echo "RDP5_LIVE_DEVELOPMENT_BASELINE_PASS=YES"
+          echo "RDP5_LIVE_EXACT_DIAGNOSTIC_SOURCE_PASS=YES"
+
+          test -f "$PIDFILE"
+          LIQ_PID="$(cat "$PIDFILE")"
+          test -n "$LIQ_PID"
+          kill -0 "$LIQ_PID"
+          LIQ_CMD="$(ps -p "$LIQ_PID" -o command=)"
+          printf '%s\n' "$LIQ_CMD"
+          printf '%s\n' "$LIQ_CMD" | grep -F "$DEV/ops/run_liquidation_market_tape_stream.py" >/dev/null
+          printf '%s\n' "$LIQ_CMD" | grep -F -- "--runtime-status-db $STATUS_DB" >/dev/null
+          printf '%s\n' "$LIQ_CMD" | grep -F -- "--max-transport-silence-ms 45000" >/dev/null
+          printf '%s\n' "$LIQ_CMD" | grep -F -- "--max-messages 0" >/dev/null
+          echo "RDP5_LIVE_LIQUIDATION_PROCESS_PASS=YES"
+
+          "$PY" - "$STATUS_DB" "$MARKET_DB" "$LIQ_PID" <<'PY'
+          import json
+          import sqlite3
+          import sys
+          import time
+          from pathlib import Path
+
+          status_path = Path(sys.argv[1])
+          market_path = Path(sys.argv[2])
+          expected_pid = int(sys.argv[3])
+
+          def ro(path: Path) -> sqlite3.Connection:
+              db = sqlite3.connect(
+                  f"{path.resolve().as_uri()}?mode=ro",
+                  uri=True,
+                  timeout=5.0,
+              )
+              db.row_factory = sqlite3.Row
+              db.execute("PRAGMA query_only=ON")
+              return db
+
+          def sample(label: str) -> tuple[int, int]:
+              now_ms = time.time_ns() // 1_000_000
+              if not status_path.is_file():
+                  raise SystemExit("LIQUIDATION_RUNTIME_DB_MISSING")
+              with ro(status_path) as db:
+                  instance = db.execute(
+                      """
+                      SELECT instance_identity, process_id, started_at_ms
+                      FROM collector_instances
+                      WHERE provider='bybit' AND source='liquidation_stream'
+                      ORDER BY started_at_ms DESC, instance_identity DESC
+                      LIMIT 1
+                      """
+                  ).fetchone()
+                  if instance is None:
+                      raise SystemExit("LIQUIDATION_INSTANCE_MISSING")
+                  if int(instance["process_id"]) != expected_pid:
+                      raise SystemExit("LIQUIDATION_PROCESS_IDENTITY_MISMATCH")
+                  identity = str(instance["instance_identity"])
+                  hb = db.execute(
+                      """
+                      SELECT sequence_no, observed_at_ms,
+                             last_successful_ingestion_ms, payload_json
+                      FROM collector_heartbeats
+                      WHERE instance_identity=?
+                      ORDER BY sequence_no DESC
+                      LIMIT 1
+                      """,
+                      (identity,),
+                  ).fetchone()
+                  cv = db.execute(
+                      """
+                      SELECT sequence_no, observed_at_ms, state, payload_json
+                      FROM liquidation_connection_coverage
+                      WHERE instance_identity=?
+                      ORDER BY sequence_no DESC
+                      LIMIT 1
+                      """,
+                      (identity,),
+                  ).fetchone()
+              if hb is None or cv is None:
+                  raise SystemExit("LIQUIDATION_RUNTIME_EVIDENCE_MISSING")
+              hb_payload = json.loads(str(hb["payload_json"]))
+              cv_payload = json.loads(str(cv["payload_json"]))
+              hb_age = now_ms - int(hb["observed_at_ms"])
+              cv_age = now_ms - int(cv["observed_at_ms"])
+              activity = cv_payload.get("last_transport_activity_ms")
+              activity_age = (
+                  None if activity is None else now_ms - int(activity)
+              )
+              print(
+                  f"{label} instance={identity} pid={expected_pid} "
+                  f"heartbeat_seq={int(hb['sequence_no'])} "
+                  f"heartbeat_age_ms={hb_age} "
+                  f"coverage_seq={int(cv['sequence_no'])} "
+                  f"coverage_age_ms={cv_age} "
+                  f"state={cv_payload.get('state')} "
+                  f"activity_age_ms={activity_age} "
+                  f"last_liquidation_ingestion_ms="
+                  f"{cv_payload.get('last_liquidation_ingestion_ms')} "
+                  f"observed_messages_total="
+                  f"{hb_payload.get('observed_messages_total')} "
+                  f"normalized_rows_total="
+                  f"{hb_payload.get('normalized_rows_total')} "
+                  f"real_capital={cv_payload.get('real_capital')} "
+                  f"production_authority="
+                  f"{cv_payload.get('production_authority')}"
+              )
+              if hb_age < 0 or hb_age > 30_000:
+                  raise SystemExit("LIQUIDATION_HEARTBEAT_STALE")
+              if cv_age < 0 or cv_age > 30_000:
+                  raise SystemExit("LIQUIDATION_CONNECTION_COVERAGE_STALE")
+              if cv_payload.get("state") != "connected":
+                  raise SystemExit(
+                      "LIQUIDATION_CONNECTION_NOT_CONNECTED:"
+                      + str(cv_payload.get("state"))
+                  )
+              if activity_age is None or activity_age < 0 or activity_age > 45_000:
+                  raise SystemExit("LIQUIDATION_TRANSPORT_ACTIVITY_STALE")
+              if cv_payload.get("real_capital") != 0:
+                  raise SystemExit("LIQUIDATION_REAL_CAPITAL_MISMATCH")
+              if cv_payload.get("production_authority") is not False:
+                  raise SystemExit("LIQUIDATION_AUTHORITY_MISMATCH")
+              return int(hb["sequence_no"]), int(cv["sequence_no"])
+
+          first_hb, first_cv = sample("LIQUIDATION_SAMPLE_1")
+          time.sleep(12)
+          second_hb, second_cv = sample("LIQUIDATION_SAMPLE_2")
+          if second_hb <= first_hb or second_cv <= first_cv:
+              raise SystemExit("LIQUIDATION_RUNTIME_NOT_PROGRESSING")
+
+          if not market_path.is_file():
+              raise SystemExit("MARKET_TAPE_DB_MISSING")
+          with ro(market_path) as db:
+              liq = db.execute(
+                  "SELECT COUNT(*), MAX(event_at_ms) "
+                  "FROM market_tape_liquidations"
+              ).fetchone()
+              cov = db.execute(
+                  "SELECT COUNT(*), MAX(coverage_end_ms) "
+                  "FROM market_tape_liquidation_coverage"
+              ).fetchone()
+          print(
+              "LIQUIDATION_MARKET_TAPE "
+              f"liquidation_rows={int(liq[0])} "
+              f"latest_liquidation_event_ms={liq[1]} "
+              f"event_coverage_rows={int(cov[0])} "
+              f"latest_event_coverage_end_ms={cov[1]}"
+          )
+          print("RDP5_LIVE_CONNECTION_PROGRESS_PASS=YES")
+          print("ZERO_EVENT_COVERAGE_INVENTED=NO")
+          print("REAL_CAPITAL=0")
+          PY
+
+          echo "RDP5_LIVE_DIAGNOSTIC_PASS=YES"
