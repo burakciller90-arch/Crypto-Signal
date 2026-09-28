@@ -211,6 +211,14 @@ def build_stream_materiality_policy() -> StreamMaterialityPolicy:
                     reason_code="material_derivatives_state_transition",
                 ),
                 StreamMaterialityRule(
+                    category=StreamCategory.INTELLIGENCE,
+                    subtype="onchain_material_change",
+                    importance=StreamImportance.IMPORTANT,
+                    disposition=StreamPublicationDisposition.PUBLISH,
+                    materiality=StreamMateriality.MATERIAL,
+                    reason_code="material_onchain_state_transition",
+                ),
+                StreamMaterialityRule(
                     category=StreamCategory.RISK,
                     subtype="event_risk_block",
                     importance=StreamImportance.IMPORTANT,
@@ -385,6 +393,19 @@ def accepted_stream_projector_registry() -> tuple[StreamProjectorSpec, ...]:
             ),
             target_phase="S3-S4",
             customer_stream_scope="material derivatives context change only",
+        ),
+        StreamProjectorSpec(
+            projector_id="onchain_change",
+            source_system="Onchain Capital Flow / DefiLlama stablecoin evidence",
+            category=StreamCategory.INTELLIGENCE,
+            subtypes=("onchain_material_change",),
+            implementation_state=(
+                StreamProjectorImplementationState.IMPLEMENTED
+            ),
+            target_phase="RDP7-F",
+            customer_stream_scope=(
+                "neutral accepted stablecoin capital context changes only"
+            ),
         ),
         StreamProjectorSpec(
             projector_id="event_risk_change",
