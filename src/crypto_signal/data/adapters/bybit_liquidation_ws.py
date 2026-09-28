@@ -6,7 +6,8 @@ import time
 from collections.abc import AsyncGenerator
 from contextlib import suppress
 from dataclasses import dataclass
-from typing import Literal, cast
+from enum import StrEnum
+from typing import Callable, Literal, cast
 
 from websockets.asyncio.client import ClientConnection, connect
 from websockets.exceptions import ConnectionClosed
@@ -25,6 +26,25 @@ from crypto_signal.data.models import DataSource, Exchange
 
 BYBIT_LINEAR_PUBLIC_WS_URL = "wss://stream.bybit.com/v5/public/linear"
 BYBIT_LIQUIDATION_STREAM_VERSION = "bybit-v5-all-liquidation-ws/1"
+
+
+class LiquidationTransportEventKind(StrEnum):
+    CONNECTED = "connected"
+    SUBSCRIBED = "subscribed"
+    ACTIVITY = "activity"
+    DISCONNECTED = "disconnected"
+
+
+@dataclass(frozen=True, slots=True)
+class LiquidationTransportEvent:
+    kind: LiquidationTransportEventKind
+    observed_at_ms: int
+
+    def __post_init__(self) -> None:
+        if self.observed_at_ms < 0:
+            raise ValueError(
+                "liquidation transport observation cannot be negative"
+            )
 
 
 @dataclass(frozen=True, slots=True)
@@ -161,6 +181,9 @@ class BybitLinearLiquidationStream:
         self,
         *,
         symbols: tuple[str, ...],
+        transport_event_callback: (
+            Callable[[LiquidationTransportEvent], None] | None
+        ) = None,
     ) -> AsyncGenerator[BybitLiquidationWireBatch, None]:
         normalized_symbols = _normalize_symbols(symbols)
         subscription = bybit_liquidation_subscription(normalized_symbols)
@@ -173,17 +196,50 @@ class BybitLinearLiquidationStream:
             proxy=self.proxy,
         ):
             heartbeat = asyncio.create_task(self._heartbeat(websocket))
+            subscription_confirmed = False
+            disconnected_reported = False
             try:
+                connected_at_ms = time.time_ns() // 1_000_000
+                _emit_transport_event(
+                    transport_event_callback,
+                    LiquidationTransportEventKind.CONNECTED,
+                    connected_at_ms,
+                )
                 await websocket.send(subscription)
                 async for raw_message in websocket:
+                    observed_at_ms = time.time_ns() // 1_000_000
+                    _emit_transport_event(
+                        transport_event_callback,
+                        LiquidationTransportEventKind.ACTIVITY,
+                        observed_at_ms,
+                    )
                     payload = _json_object(raw_message)
                     topic = payload.get("topic")
                     if topic is None:
+                        if str(payload.get("op", "")) == "subscribe":
+                            if payload.get("success") is not True:
+                                raise ValueError(
+                                    "Bybit liquidation subscription rejected"
+                                )
+                            if not subscription_confirmed:
+                                subscription_confirmed = True
+                                _emit_transport_event(
+                                    transport_event_callback,
+                                    LiquidationTransportEventKind.SUBSCRIBED,
+                                    observed_at_ms,
+                                )
                         continue
                     topic_text = str(topic)
                     if not topic_text.startswith("allLiquidation."):
                         raise ValueError(
                             "unexpected topic on Bybit liquidation stream"
+                        )
+                    if not subscription_confirmed:
+                        subscription_confirmed = True
+                        _emit_transport_event(
+                            transport_event_callback,
+                            LiquidationTransportEventKind.SUBSCRIBED,
+                            observed_at_ms,
                         )
                     symbol = _topic_symbol(
                         topic_text,
@@ -192,13 +248,25 @@ class BybitLinearLiquidationStream:
                     yield build_bybit_liquidation_wire_batch(
                         payload,
                         expected_symbol=symbol,
-                        ingested_at_ms=time.time_ns() // 1_000_000,
+                        ingested_at_ms=observed_at_ms,
                     )
             except ConnectionClosed:
+                _emit_transport_event(
+                    transport_event_callback,
+                    LiquidationTransportEventKind.DISCONNECTED,
+                    time.time_ns() // 1_000_000,
+                )
+                disconnected_reported = True
                 continue
             finally:
+                if not disconnected_reported:
+                    _emit_transport_event(
+                        transport_event_callback,
+                        LiquidationTransportEventKind.DISCONNECTED,
+                        time.time_ns() // 1_000_000,
+                    )
                 heartbeat.cancel()
-                with suppress(asyncio.CancelledError):
+                with suppress(asyncio.CancelledError, ConnectionClosed):
                     await heartbeat
 
     @staticmethod
@@ -206,6 +274,21 @@ class BybitLinearLiquidationStream:
         while True:
             await asyncio.sleep(20)
             await websocket.send(json.dumps({"op": "ping"}))
+
+
+def _emit_transport_event(
+    callback: Callable[[LiquidationTransportEvent], None] | None,
+    kind: LiquidationTransportEventKind,
+    observed_at_ms: int,
+) -> None:
+    if callback is None:
+        return
+    callback(
+        LiquidationTransportEvent(
+            kind=kind,
+            observed_at_ms=observed_at_ms,
+        )
+    )
 
 
 def _normalize_symbols(symbols: tuple[str, ...]) -> tuple[str, ...]:
