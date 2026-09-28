@@ -15,12 +15,19 @@ from crypto_signal.data.cross_market import (
     build_cross_market_daily_record,
     build_cross_market_window_observation,
 )
+from crypto_signal.data.cross_market_source_contract import (
+    TREASURY_10Y_CHANNEL,
+    TREASURY_10Y_PROVIDER,
+    TREASURY_10Y_SOURCE,
+    TREASURY_10Y_SYMBOL,
+    CrossMarketSourceSnapshot,
+)
 from crypto_signal.data.models import DataSource
 
 
 class Treasury10YDailyAdapter:
     URL = "https://home.treasury.gov/sites/default/files/interest-rates/yield.xml"
-    ADAPTER_VERSION = "us-treasury-10y-daily/1"
+    ADAPTER_VERSION = "us-treasury-10y-daily/2"
     USER_AGENT = (
         "Crypto-Signal/1.0 "
         "(public market intelligence; github.com/burakciller90-arch/Crypto-Signal)"
@@ -35,6 +42,18 @@ class Treasury10YDailyAdapter:
         sessions: int = 10,
         end_date: date | None = None,
     ) -> CrossMarketWindowObservation:
+        snapshot = await self.fetch_source_snapshot(
+            sessions=sessions,
+            end_date=end_date,
+        )
+        return snapshot.observation
+
+    async def fetch_source_snapshot(
+        self,
+        *,
+        sessions: int = 10,
+        end_date: date | None = None,
+    ) -> CrossMarketSourceSnapshot:
         if not 3 <= sessions <= 64:
             raise ValueError("Treasury 10Y sessions must be between 3 and 64")
 
@@ -47,9 +66,11 @@ class Treasury10YDailyAdapter:
                     "Accept": "application/xml,text/xml,*/*",
                     "User-Agent": self.USER_AGENT,
                 },
+                follow_redirects=True,
             )
             response.raise_for_status()
-            root = ET.fromstring(response.content)
+            payload_bytes = response.content
+            root = ET.fromstring(payload_bytes)
             observed_at_ms = time.time_ns() // 1_000_000
         finally:
             if owns_client:
@@ -89,13 +110,28 @@ class Treasury10YDailyAdapter:
             )
             for day, value in parsed[-sessions:]
         )
-        return build_cross_market_window_observation(
+        observation = build_cross_market_window_observation(
             series=CrossMarketSeries.US_TREASURY_10Y_YIELD,
             unit=CrossMarketUnit.PERCENT,
             observed_at_ms=observed_at_ms,
             records=records,
             source=DataSource.REST,
             adapter_version=self.ADAPTER_VERSION,
+        )
+        return CrossMarketSourceSnapshot(
+            provider=TREASURY_10Y_PROVIDER,
+            source=TREASURY_10Y_SOURCE,
+            channel=TREASURY_10Y_CHANNEL,
+            symbol=TREASURY_10Y_SYMBOL,
+            requested_url=self.URL,
+            response_url=str(response.url),
+            http_status=response.status_code,
+            content_type=response.headers.get(
+                "content-type",
+                "application/xml",
+            ),
+            payload_bytes=payload_bytes,
+            observation=observation,
         )
 
 
