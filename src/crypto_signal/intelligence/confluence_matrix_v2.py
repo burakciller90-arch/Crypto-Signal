@@ -4,6 +4,12 @@ from dataclasses import dataclass
 from decimal import ROUND_HALF_UP, Decimal
 from enum import StrEnum
 
+from crypto_signal.intelligence.evidence_overlap import (
+    EvidenceOverlapNode,
+    EvidenceOverlapRelation,
+    EvidenceOverlapReport,
+    build_evidence_overlap_report,
+)
 from crypto_signal.intelligence.meta_intelligence import (
     MetaDirection,
     MetaEvidenceState,
@@ -434,21 +440,43 @@ def build_confluence_family_evidence(
     )
 
 
+def build_confluence_evidence_overlap_report(
+    evidence: tuple[ConfluenceFamilyEvidence, ...],
+) -> tuple[EvidenceOverlapReport, tuple[EvidenceOverlapRelation, ...]]:
+    nodes = tuple(
+        EvidenceOverlapNode(
+            node_id=item.family.value,
+            source_engine_ids=item.source_engine_ids,
+            source_evidence_identities=item.source_evidence_identities,
+        )
+        for item in evidence
+    )
+    return build_evidence_overlap_report(nodes)
+
+
 def evaluate_confluence_matrix(
     policy: ConfluenceMatrixPolicy,
     evidence: tuple[ConfluenceFamilyEvidence, ...],
     *,
     candidate_direction: MetaDirection,
+    additional_material_conflict_identities: tuple[str, ...] = (),
 ) -> ConfluenceMatrixSnapshot:
     if candidate_direction not in {MetaDirection.BULLISH, MetaDirection.BEARISH}:
         raise ValueError("M6 candidate direction must be bullish or bearish")
     if len(evidence) != len(ConfluenceFamily):
         raise ValueError("M6 evaluation requires exactly five family evidence objects")
     by_family = {item.family: item for item in evidence}
-    if len(by_family) != len(ConfluenceFamily) or set(by_family) != set(ConfluenceFamily):
-        raise ValueError("M6 evaluation requires exactly one evidence object per family")
+    if len(by_family) != len(ConfluenceFamily) or set(by_family) != set(
+        ConfluenceFamily
+    ):
+        raise ValueError(
+            "M6 evaluation requires exactly one evidence object per family"
+        )
 
-    ordered = tuple(by_family[family] for family in sorted(ConfluenceFamily, key=lambda x: x.value))
+    ordered = tuple(
+        by_family[family]
+        for family in sorted(ConfluenceFamily, key=lambda x: x.value)
+    )
     first = ordered[0]
     context = (first.asset, first.timeframe, first.regime, first.as_of_ms)
     if any(
@@ -457,6 +485,15 @@ def evaluate_confluence_matrix(
     ):
         raise ValueError("M6 family evidence must share exact context")
 
+    extra_conflicts = tuple(
+        sorted(set(additional_material_conflict_identities))
+    )
+    _require_identity_tuple(
+        extra_conflicts,
+        "M6 additional material conflict identity",
+    )
+    overlap_report, _ = build_confluence_evidence_overlap_report(ordered)
+
     priors = {item.family: item.weight for item in policy.priors}
     opposite = (
         MetaDirection.BEARISH
@@ -464,20 +501,22 @@ def evaluate_confluence_matrix(
         else MetaDirection.BULLISH
     )
 
-    contributions: list[ConfluenceFamilyContribution] = []
-    support_total = Decimal(0)
-    opposition_total = Decimal(0)
+    raw_support: dict[ConfluenceFamily, Decimal] = {}
+    raw_opposition: dict[ConfluenceFamily, Decimal] = {}
     coverage_weight = Decimal(0)
     quality_weighted = Decimal(0)
     freshness_weighted = Decimal(0)
     measured_weight = Decimal(0)
-    conflict_ids: set[str] = set()
+    conflict_ids: set[str] = set(extra_conflicts)
 
     for item in ordered:
         prior = priors[item.family]
         support_points = Decimal(0)
         opposition_points = Decimal(0)
-        if item.state in {MetaEvidenceState.OBSERVED, MetaEvidenceState.ABSTAIN}:
+        if item.state in {
+            MetaEvidenceState.OBSERVED,
+            MetaEvidenceState.ABSTAIN,
+        }:
             coverage_weight += prior
             assert item.evidence_quality_0_1 is not None
             assert item.freshness_0_1 is not None
@@ -487,25 +526,54 @@ def evaluate_confluence_matrix(
         if item.state is MetaEvidenceState.OBSERVED:
             assert item.directional_strength_0_1 is not None
             if item.direction is candidate_direction:
-                support_points = prior * item.directional_strength_0_1 * Decimal(100)
+                support_points = (
+                    prior
+                    * item.directional_strength_0_1
+                    * Decimal(100)
+                )
             elif item.direction is opposite:
-                opposition_points = prior * item.directional_strength_0_1 * Decimal(100)
+                opposition_points = (
+                    prior
+                    * item.directional_strength_0_1
+                    * Decimal(100)
+                )
+        raw_support[item.family] = support_points
+        raw_opposition[item.family] = opposition_points
+        conflict_ids.update(item.material_conflict_identities)
+
+    adjusted_support = dict(raw_support)
+    adjusted_opposition = dict(raw_opposition)
+    family_by_value = {item.value: item for item in ConfluenceFamily}
+    for component in overlap_report.exact_overlap_components:
+        members = tuple(family_by_value[value] for value in component)
+        _cap_overlap_component(adjusted_support, members)
+        _cap_overlap_component(adjusted_opposition, members)
+
+    contributions: list[ConfluenceFamilyContribution] = []
+    support_total = Decimal(0)
+    opposition_total = Decimal(0)
+    for item in ordered:
+        support_points = adjusted_support[item.family]
+        opposition_points = adjusted_opposition[item.family]
         support_total += support_points
         opposition_total += opposition_points
-        conflict_ids.update(item.material_conflict_identities)
         contributions.append(
             ConfluenceFamilyContribution(
                 family=item.family,
                 state=item.state,
                 direction=item.direction,
-                prior_weight=prior,
+                prior_weight=priors[item.family],
                 directional_strength_0_1=item.directional_strength_0_1,
                 support_points=_q(support_points),
                 opposition_points=_q(opposition_points),
                 evidence_quality_0_1=item.evidence_quality_0_1,
                 freshness_0_1=item.freshness_0_1,
-                material_conflict_count=len(item.material_conflict_identities),
-                source_evidence_identities=item.source_evidence_identities,
+                material_conflict_count=len(
+                    item.material_conflict_identities
+                ),
+                source_evidence_identities=(
+                    item.source_evidence_identities
+                ),
             )
         )
 
@@ -513,7 +581,9 @@ def evaluate_confluence_matrix(
         resolution = ConfluenceMatrixResolution.ABSTAIN
     elif conflict_ids:
         resolution = ConfluenceMatrixResolution.CONFLICT
-    elif any(item.state is MetaEvidenceState.NOT_EVALUABLE for item in ordered):
+    elif any(
+        item.state is MetaEvidenceState.NOT_EVALUABLE for item in ordered
+    ):
         resolution = ConfluenceMatrixResolution.NOT_EVALUABLE
     elif any(item.state is MetaEvidenceState.NO_EVIDENCE for item in ordered):
         resolution = ConfluenceMatrixResolution.PARTIAL
@@ -581,6 +651,24 @@ def evaluate_confluence_matrix(
         resolution=resolution,
         threshold_hypotheses=policy.threshold_hypotheses,
     )
+
+
+def _cap_overlap_component(
+    values: dict[ConfluenceFamily, Decimal],
+    members: tuple[ConfluenceFamily, ...],
+) -> None:
+    active = tuple(
+        member for member in members if values[member] > Decimal(0)
+    )
+    if len(active) < 2:
+        return
+    total = sum((values[member] for member in active), start=Decimal(0))
+    cap = max(values[member] for member in active)
+    if total <= cap or total == 0:
+        return
+    factor = cap / total
+    for member in active:
+        values[member] *= factor
 
 
 def _policy_payload(policy: ConfluenceMatrixPolicy) -> dict[str, object]:
