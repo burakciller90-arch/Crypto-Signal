@@ -1229,6 +1229,17 @@ def _require_envelope_matches_capability(
         raise ValueError("source envelope capability context mismatch")
     if envelope.symbol not in capability.symbols:
         raise ValueError("source envelope symbol outside capability")
+    if capability.supports_provider_event_id and envelope.provider_event_id is None:
+        raise ValueError("source envelope missing required provider event id")
+    if (
+        capability.sequence_semantics
+        in {
+            SourceSequenceSemantics.MONOTONIC,
+            SourceSequenceSemantics.PROVIDER_UPDATE_ID,
+        }
+        and envelope.provider_sequence is None
+    ):
+        raise ValueError("source envelope missing required provider sequence")
 
 
 def _json_object(payload_json: str, label: str) -> dict[str, Any]:
