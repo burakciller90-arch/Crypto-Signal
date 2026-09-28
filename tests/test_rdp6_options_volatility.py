@@ -8,6 +8,7 @@ import pytest
 from crypto_signal.data.models import DataSource, Exchange
 from crypto_signal.data.options import (
     OptionContractQuote,
+    OptionInstrumentSpec,
     OptionType,
     build_option_contract_quote,
     build_option_instrument_metadata_identity,
@@ -35,7 +36,7 @@ def _instrument(
     expiry: int,
     strike: int,
     side: OptionType,
-) -> object:
+) -> OptionInstrumentSpec:
     code = "C" if side is OptionType.CALL else "P"
     symbol = f"BTC-{expiry}-{strike}-{code}-USDT"
     return build_option_instrument_spec(
