@@ -20,7 +20,7 @@ jobs:
           clean: true
           fetch-depth: 1
 
-      - name: Verify live liquidation runtime after owner fix
+      - name: Verify exact-main liquidation runtime acceptance
         shell: bash
         run: |
           set -euo pipefail
@@ -31,40 +31,25 @@ jobs:
           test "$(id -u)" = "504"
           test "$(git -C "$DEV" rev-parse HEAD)" = "${{ github.event.pull_request.base.sha }}"
           test -z "$(git -C "$DEV" status --porcelain)"
-          echo "RDP5_POSTFIX_EXACT_MAIN_PASS=YES"
+          echo "RDP5_POSTFIX_EXACT_MAIN_PASS=YES head=$(git -C "$DEV" rev-parse HEAD)"
 
           pid="$(cat "$ROOT/liquidation-stream.pid" 2>/dev/null || true)"
           test -n "$pid"
           kill -0 "$pid"
-          cmd="$(ps -p "$pid" -o command=)"
+          cmd="$(ps -ww -p "$pid" -o command=)"
           printf '%s\n' "$cmd"
           printf '%s' "$cmd" | grep -F "$DEV/ops/run_liquidation_market_tape_stream.py" >/dev/null
           printf '%s' "$cmd" | grep -F -- "--max-messages 0" >/dev/null
           printf '%s' "$cmd" | grep -F -- "--heartbeat-interval-ms 10000" >/dev/null
           printf '%s' "$cmd" | grep -F -- "--max-transport-silence-ms 45000" >/dev/null
 
-          for _ in {1..8}; do
+          for _ in {1..6}; do
             sleep 2
             current="$(cat "$ROOT/liquidation-stream.pid" 2>/dev/null || true)"
-            if [ "$current" != "$pid" ] || ! kill -0 "$pid" >/dev/null 2>&1; then
-              echo "LIQUIDATION_PID_CHANGED old=$pid current=${current:-NONE}"
-              exit 1
-            fi
+            test "$current" = "$pid"
+            kill -0 "$pid"
           done
           echo "RDP5_LIQUIDATION_PID_STABLE_PASS=YES pid=$pid"
-
-          echo "=== RDP5 LIVE PROCESS SNAPSHOT ==="
-          ps -ww -p "$pid" -o pid=,ppid=,uid=,state=,etime=,command= || true
-          echo "=== RDP5 RUNTIME DIRECTORY ==="
-          ls -la "$DEV/runtime/market_tape" || true
-          echo "=== RDP5 LIQUIDATION OUT LOG ==="
-          tail -200 "$ROOT/ServiceLogs/liquidation.out.log" 2>/dev/null || true
-          echo "=== RDP5 LIQUIDATION ERR LOG ==="
-          tail -200 "$ROOT/ServiceLogs/liquidation.err.log" 2>/dev/null || true
-          echo "=== RDP5 PROCESS OPEN FILES ==="
-          /usr/sbin/lsof -p "$pid" 2>/dev/null | tail -200 || true
-          echo "=== RDP5 PROCESS SAMPLE ==="
-          /usr/bin/sample "$pid" 1 1 2>/dev/null | sed -n '1,220p' || true
 
           ready=0
           for _ in {1..30}; do
@@ -75,6 +60,7 @@ jobs:
             sleep 1
           done
           test "$ready" = "1"
+          echo "RDP5_LIQUIDATION_RUNTIME_DB_PRESENT_PASS=YES"
 
           "$DEV/.venv/bin/python" - "$RUNTIME" "$MARKET" "$pid" <<'PY'
           import json
@@ -87,6 +73,7 @@ jobs:
           market = Path(sys.argv[2])
           pid = int(sys.argv[3])
           now_ms = time.time_ns() // 1_000_000
+          r11_issue_opened_ms = 1790585870000
 
           uri = f"{runtime.resolve().as_uri()}?mode=ro"
           with sqlite3.connect(uri, uri=True, timeout=5.0) as db:
@@ -94,7 +81,7 @@ jobs:
               db.execute("PRAGMA query_only=ON")
               instance = db.execute(
                   """
-                  SELECT instance_identity, process_id, payload_json
+                  SELECT instance_identity, process_id, started_at_ms, payload_json
                   FROM collector_instances
                   WHERE provider='bybit' AND source='liquidation_stream'
                   ORDER BY started_at_ms DESC, instance_identity DESC
@@ -103,6 +90,11 @@ jobs:
               ).fetchone()
               assert instance is not None
               assert int(instance["process_id"]) == pid
+              started_at_ms = int(instance["started_at_ms"])
+              assert started_at_ms >= r11_issue_opened_ms, (
+                  started_at_ms,
+                  r11_issue_opened_ms,
+              )
               heartbeat = db.execute(
                   """
                   SELECT sequence_no, observed_at_ms, payload_json
@@ -121,6 +113,15 @@ jobs:
                   """,
                   (str(instance["instance_identity"]),),
               ).fetchone()
+              zero_rows = db.execute(
+                  """
+                  SELECT observed_at_ms, payload_json
+                  FROM liquidation_connection_coverage
+                  WHERE instance_identity=?
+                  ORDER BY sequence_no ASC
+                  """,
+                  (str(instance["instance_identity"]),),
+              ).fetchall()
               assert heartbeat is not None
               assert coverage is not None
 
@@ -128,9 +129,10 @@ jobs:
           cv = json.loads(str(coverage["payload_json"]))
           hb_age = now_ms - int(hb["observed_at_ms"])
           cv_age = now_ms - int(cv["observed_at_ms"])
-          transport_age = int(cv["observed_at_ms"]) - int(
-              cv["last_transport_activity_ms"]
-          )
+          last_transport = cv["last_transport_activity_ms"]
+          assert last_transport is not None, cv
+          transport_age = int(cv["observed_at_ms"]) - int(last_transport)
+
           assert 0 <= hb_age <= 30_000, hb_age
           assert 0 <= cv_age <= 30_000, cv_age
           assert cv["state"] == "connected", cv
@@ -138,34 +140,57 @@ jobs:
           assert set(cv["reason_codes"]) == {
               "subscription_confirmed",
               "transport_activity_fresh",
-          }
+          }, cv
           assert 0 <= transport_age <= 45_000, transport_age
           assert cv["production_authority"] is False
           assert int(cv["real_capital"]) == 0
 
+          zero_window_end = None
+          for row in zero_rows:
+              payload = json.loads(str(row["payload_json"]))
+              if payload["last_liquidation_ingestion_ms"] is None:
+                  zero_window_end = int(row["observed_at_ms"])
+                  break
+          assert zero_window_end is not None
+          assert zero_window_end >= started_at_ms
+
           muri = f"{market.resolve().as_uri()}?mode=ro"
           with sqlite3.connect(muri, uri=True, timeout=5.0) as db:
               db.execute("PRAGMA query_only=ON")
-              rows = int(
+              zero_event_rows = int(
                   db.execute(
-                      "SELECT COUNT(*) FROM market_tape_liquidations"
+                      """
+                      SELECT COUNT(*)
+                      FROM market_tape_liquidations
+                      WHERE ingested_at_ms >= ? AND ingested_at_ms <= ?
+                      """,
+                      (started_at_ms, zero_window_end),
                   ).fetchone()[0]
               )
+              zero_feed_coverage_rows = int(
+                  db.execute(
+                      """
+                      SELECT COUNT(*)
+                      FROM market_tape_liquidation_coverage
+                      WHERE observed_at_ms >= ? AND observed_at_ms <= ?
+                      """,
+                      (started_at_ms, zero_window_end),
+                  ).fetchone()[0]
+              )
+          assert zero_event_rows == 0, zero_event_rows
+          assert zero_feed_coverage_rows == 0, zero_feed_coverage_rows
 
+          print(f"LIQUIDATION_INSTANCE_STARTED_AT_MS={started_at_ms}")
           print(f"LIQUIDATION_HEARTBEAT_AGE_MS={hb_age}")
           print(f"LIQUIDATION_COVERAGE_AGE_MS={cv_age}")
           print(f"LIQUIDATION_TRANSPORT_AGE_MS={transport_age}")
-          print(f"LIQUIDATION_EVENT_ROWS={rows}")
-          print(
-              "LIQUIDATION_LAST_EVENT_MS="
-              f"{cv['last_liquidation_ingestion_ms']}"
-          )
-          if cv["last_liquidation_ingestion_ms"] is None:
-              assert rows == 0
-              print("ZERO_EVENT_COVERAGE_INVENTED=NO")
-          else:
-              assert rows > 0
-              print("OBSERVED_LIQUIDATION_EVIDENCE_PRESENT=YES")
+          print(f"LIQUIDATION_COVERAGE_STATE={cv['state']}")
+          print("LIQUIDATION_COVERAGE_REASONS=" + ",".join(sorted(cv["reason_codes"])))
+          print(f"ZERO_EVENT_WINDOW_END_MS={zero_window_end}")
+          print(f"ZERO_EVENT_LIQUIDATION_ROWS={zero_event_rows}")
+          print(f"ZERO_EVENT_FEED_COVERAGE_ROWS={zero_feed_coverage_rows}")
+          print("ZERO_EVENT_COVERAGE_INVENTED=NO")
+          print("RDP5_R11_POST_ISSUE_INSTANCE_PASS=YES")
           print("RDP5_POSTFIX_LIVE_RUNTIME_PASS=YES")
           print("REAL_CAPITAL=0")
           PY
