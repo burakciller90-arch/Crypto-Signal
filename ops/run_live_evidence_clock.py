@@ -1203,12 +1203,17 @@ async def run(
             return 1
         family_observed_at_ms = time.time_ns() // 1_000_000
         try:
+            assert selected_stream.ledger_path is not None
             family_snapshots = build_market_tape_family_snapshots(
                 market_tape_path,
                 symbols=selected_stream.family_symbols,
                 as_of_ms=family_observed_at_ms,
                 candle_cache_path=candle_cache_path,
                 options_surface_path=selected_stream.options_surface_path,
+                frozen_proof_store_path=(
+                    selected_stream.ledger_path.parent
+                    / "frozen_proofs.sqlite3"
+                ),
             )
             system_view_family_snapshots.extend(family_snapshots)
             family_dispositions: Counter[str] = Counter()
