@@ -7,6 +7,7 @@ from crypto_signal.data.adapters.bybit_options import (
 )
 from crypto_signal.data.options_surface_store import OptionsSurfaceStore
 from crypto_signal.data.source_contract import (
+    SourceCapability,
     SourceContractStore,
     SourceCoverageState,
     SourceSequenceSemantics,
@@ -32,7 +33,7 @@ class OptionSurfaceSourcePersistence:
     surface_identity: str
 
 
-def build_bybit_options_capability():
+def build_bybit_options_capability() -> SourceCapability:
     return build_source_capability(
         provider=BYBIT_OPTIONS_PROVIDER,
         source=BYBIT_OPTIONS_SOURCE,
@@ -92,6 +93,20 @@ def persist_bybit_option_surface_snapshot(
         channel=capability.channel,
         symbol=snapshot.base_coin,
     )
+    if (
+        previous is not None
+        and previous.state is SourceCoverageState.OBSERVED
+        and previous.source_envelope_identity == envelope.envelope_identity
+        and previous.observed_at_ms == snapshot.surface.ingested_at_ms
+    ):
+        return OptionSurfaceSourcePersistence(
+            raw_identity=raw.raw_identity,
+            capability_identity=capability.capability_identity,
+            envelope_identity=envelope.envelope_identity,
+            coverage_event_identity=previous.coverage_event_identity,
+            surface_identity=snapshot.surface.surface_identity,
+        )
+
     coverage = build_source_coverage_event(
         capability=capability,
         symbol=snapshot.base_coin,
