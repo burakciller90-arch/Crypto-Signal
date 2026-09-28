@@ -459,136 +459,144 @@ def _price_action_annotations(
     first_open: int,
     last_open: int,
 ) -> tuple[FrozenGeometryAnnotation, ...]:
+    del first_open
     result = bundle.price_action
     output: list[FrozenGeometryAnnotation] = []
 
-    for item in result.structure.structure_breaks:
+    for break_event in result.structure.structure_breaks:
         output.append(
             _level(
                 layer=GeometryLayer.PRICE_ACTION,
-                label=f"structure_{item.kind.value}",
-                source=item,
-                start=item.broken_pivot.open_time_ms,
-                end=item.break_candle_identity[-1],
-                price=item.level_price,
-                direction=item.direction.value,
+                label=f"structure_{break_event.kind.value}",
+                source=break_event,
+                start=break_event.broken_pivot.open_time_ms,
+                end=break_event.break_candle_identity[-1],
+                price=break_event.level_price,
+                direction=break_event.direction.value,
                 status="confirmed",
                 metadata=(
-                    ("break_close", str(item.break_close)),
-                    ("distance_bps", str(item.distance_bps)),
+                    ("break_close", str(break_event.break_close)),
+                    ("distance_bps", str(break_event.distance_bps)),
                 ),
             )
         )
         output.append(
             _marker(
                 layer=GeometryLayer.PRICE_ACTION,
-                label=f"structure_break_{item.kind.value}",
-                source=item,
-                open_time_ms=item.break_candle_identity[-1],
-                price=item.break_close,
-                direction=item.direction.value,
+                label=f"structure_break_{break_event.kind.value}",
+                source=break_event,
+                open_time_ms=break_event.break_candle_identity[-1],
+                price=break_event.break_close,
+                direction=break_event.direction.value,
                 status="confirmed",
             )
         )
 
-    for item in result.imbalances.fair_value_gaps:
+    for fvg in result.imbalances.fair_value_gaps:
         output.append(
             _zone(
                 layer=GeometryLayer.PRICE_ACTION,
-                label=f"fvg_{item.direction.value}",
-                source=item,
-                start=item.confirmation_candle_identity[-1],
+                label=f"fvg_{fvg.direction.value}",
+                source=fvg,
+                start=fvg.confirmation_candle_identity[-1],
                 end=last_open,
-                low=item.zone_low,
-                high=item.zone_high,
-                direction=item.direction.value,
-                status=item.status.value,
+                low=fvg.zone_low,
+                high=fvg.zone_high,
+                direction=fvg.direction.value,
+                status=fvg.status.value,
                 metadata=(
-                    ("max_fill_fraction", str(item.max_fill_fraction)),
-                    ("size_bps", str(item.size_bps)),
+                    ("max_fill_fraction", str(fvg.max_fill_fraction)),
+                    ("size_bps", str(fvg.size_bps)),
                 ),
             )
         )
 
-    for item in result.imbalances.balanced_price_ranges:
-        start = bundle.candles[item.later_confirmation_index].open_time_ms
+    for bpr in result.imbalances.balanced_price_ranges:
+        bpr_start = bundle.candles[
+            bpr.later_confirmation_index
+        ].open_time_ms
         output.append(
             _zone(
                 layer=GeometryLayer.PRICE_ACTION,
                 label="balanced_price_range",
-                source=item,
-                start=start,
+                source=bpr,
+                start=bpr_start,
                 end=last_open,
-                low=item.zone_low,
-                high=item.zone_high,
+                low=bpr.zone_low,
+                high=bpr.zone_high,
                 direction=None,
-                status=item.status.value,
-                metadata=(("size_bps", str(item.size_bps)),),
+                status=bpr.status.value,
+                metadata=(("size_bps", str(bpr.size_bps)),),
             )
         )
 
-    for item in result.liquidity.pools:
+    for pool in result.liquidity.pools:
         output.append(
             _zone(
                 layer=GeometryLayer.PRICE_ACTION,
-                label=f"liquidity_{item.kind.value}",
-                source=item,
-                start=item.second_anchor.open_time_ms,
+                label=f"liquidity_{pool.kind.value}",
+                source=pool,
+                start=pool.second_anchor.open_time_ms,
                 end=last_open,
-                low=item.zone_low,
-                high=item.zone_high,
+                low=pool.zone_low,
+                high=pool.zone_high,
                 direction=None,
-                status=item.status.value,
+                status=pool.status.value,
                 metadata=(
-                    ("level_price", str(item.level_price)),
-                    ("pair_distance_bps", str(item.pair_distance_bps)),
+                    ("level_price", str(pool.level_price)),
+                    ("pair_distance_bps", str(pool.pair_distance_bps)),
                 ),
             )
         )
-        if item.event is not None:
+        if pool.event is not None:
             output.append(
                 _marker(
                     layer=GeometryLayer.PRICE_ACTION,
-                    label=f"liquidity_{item.event.kind.value}",
-                    source=item.event,
-                    open_time_ms=item.event.candle_identity[-1],
-                    price=item.event.extreme_price,
-                    direction=item.event.implication_direction.value,
+                    label=f"liquidity_{pool.event.kind.value}",
+                    source=pool.event,
+                    open_time_ms=pool.event.candle_identity[-1],
+                    price=pool.event.extreme_price,
+                    direction=pool.event.implication_direction.value,
                     status="confirmed",
                 )
             )
 
-    for item in result.reference_levels:
+    for level in result.reference_levels:
         output.append(
             _level(
                 layer=GeometryLayer.PRICE_ACTION,
-                label=f"reference_{item.label}",
-                source=item,
-                start=_open_at_or_after(bundle, item.available_at_market_ms),
+                label=f"reference_{level.label}",
+                source=level,
+                start=_open_at_or_after(
+                    bundle,
+                    level.available_at_market_ms,
+                ),
                 end=last_open,
-                price=item.price,
+                price=level.price,
                 direction=None,
                 status="available",
-                metadata=(("source", item.source_description),),
+                metadata=(("source", level.source_description),),
             )
         )
 
-    for item in result.level_interactions.events:
+    for interaction in result.level_interactions.events:
         output.append(
             _marker(
                 layer=GeometryLayer.PRICE_ACTION,
-                label=f"level_{item.kind.value}",
-                source=item,
-                open_time_ms=item.candle_identity[-1],
-                price=item.level.price,
-                direction=item.implication_direction.value,
+                label=f"level_{interaction.kind.value}",
+                source=interaction,
+                open_time_ms=interaction.candle_identity[-1],
+                price=interaction.level.price,
+                direction=interaction.implication_direction.value,
                 status="confirmed",
             )
         )
 
-    candle_by_open = {candle.open_time_ms: candle for candle in bundle.candles}
-    for item in result.displacement.events:
-        candle = candle_by_open.get(item.candle_identity[-1])
+    candle_by_open = {
+        candle.open_time_ms: candle for candle in bundle.candles
+    }
+    for displacement in result.displacement.events:
+        candle = candle_by_open.get(displacement.candle_identity[-1])
         if candle is None:
             raise ValueError(
                 "frozen PA displacement references missing consumed candle"
@@ -597,16 +605,15 @@ def _price_action_annotations(
             _marker(
                 layer=GeometryLayer.PRICE_ACTION,
                 label="displacement",
-                source=item,
+                source=displacement,
                 open_time_ms=candle.open_time_ms,
                 price=candle.close,
-                direction=item.direction.value,
+                direction=displacement.direction.value,
                 status="confirmed",
             )
         )
 
     return tuple(output)
-
 
 def _harmonic_annotations(
     bundle: DecisionFreezeBundle,
@@ -682,31 +689,31 @@ def _elliott_annotations(
     last_open: int,
 ) -> tuple[FrozenGeometryAnnotation, ...]:
     output: list[FrozenGeometryAnnotation] = []
-    for candidate in bundle.elliott.impulse_candidates:
-        if not candidate.valid_so_far:
+    for impulse in bundle.elliott.impulse_candidates:
+        if not impulse.valid_so_far:
             continue
         labels = tuple(
-            str(index) for index in range(len(candidate.points))
+            str(index) for index in range(len(impulse.points))
         )
         output.append(
             _polyline(
                 layer=GeometryLayer.ELLIOTT,
-                label=f"elliott_impulse_wave_{candidate.current_wave}",
-                source=candidate,
-                pivots=candidate.points,
+                label=f"elliott_impulse_wave_{impulse.current_wave}",
+                source=impulse,
+                pivots=impulse.points,
                 labels=labels,
-                direction=candidate.direction.value,
+                direction=impulse.direction.value,
                 status=(
-                    "complete" if candidate.complete else "valid_so_far"
+                    "complete" if impulse.complete else "valid_so_far"
                 ),
                 metadata=(
                     (
                         "competing_valid_count",
-                        str(candidate.competing_valid_count),
+                        str(impulse.competing_valid_count),
                     ),
                     (
                         "rule_support_fraction",
-                        str(candidate.rule_support_fraction),
+                        str(impulse.rule_support_fraction),
                     ),
                 ),
             )
@@ -715,74 +722,73 @@ def _elliott_annotations(
             _level(
                 layer=GeometryLayer.ELLIOTT,
                 label="elliott_structural_invalidation",
-                source=candidate,
-                start=candidate.end.open_time_ms,
+                source=impulse,
+                start=impulse.end.open_time_ms,
                 end=last_open,
-                price=candidate.structural_invalidation_price,
-                direction=candidate.direction.value,
+                price=impulse.structural_invalidation_price,
+                direction=impulse.direction.value,
                 status=(
-                    "complete" if candidate.complete else "valid_so_far"
+                    "complete" if impulse.complete else "valid_so_far"
                 ),
             )
         )
-        for projection in candidate.projections:
+        for projection in impulse.projections:
             if projection.price <= 0:
                 continue
             output.append(
                 _level(
                     layer=GeometryLayer.ELLIOTT,
                     label=f"elliott_projection_{projection.name}",
-                    source=candidate,
-                    start=candidate.end.open_time_ms,
+                    source=impulse,
+                    start=impulse.end.open_time_ms,
                     end=last_open,
                     price=projection.price,
-                    direction=candidate.direction.value,
+                    direction=impulse.direction.value,
                     status="projection",
                 )
             )
 
-    for candidate in bundle.elliott.abc_candidates:
+    for abc in bundle.elliott.abc_candidates:
         output.append(
             _polyline(
                 layer=GeometryLayer.ELLIOTT,
                 label="elliott_abc",
-                source=candidate,
+                source=abc,
                 pivots=(
-                    candidate.start,
-                    candidate.a,
-                    candidate.b,
-                    candidate.c,
+                    abc.start,
+                    abc.a,
+                    abc.b,
+                    abc.c,
                 ),
                 labels=("S", "A", "B", "C"),
-                direction=candidate.direction.value,
+                direction=abc.direction.value,
                 status=(
                     "zigzag_compatible"
-                    if candidate.zigzag_compatible
+                    if abc.zigzag_compatible
                     else "candidate"
                 ),
                 metadata=(
                     (
                         "rule_support_fraction",
-                        str(candidate.rule_support_fraction),
+                        str(abc.rule_support_fraction),
                     ),
                 ),
             )
         )
-        if candidate.c_equality_projection.price > 0:
+        if abc.c_equality_projection.price > 0:
             output.append(
                 _level(
                     layer=GeometryLayer.ELLIOTT,
                     label="elliott_abc_c_equality",
-                    source=candidate,
-                    start=candidate.c.open_time_ms,
+                    source=abc,
+                    start=abc.c.open_time_ms,
                     end=last_open,
-                    price=candidate.c_equality_projection.price,
-                    direction=candidate.direction.value,
+                    price=abc.c_equality_projection.price,
+                    direction=abc.direction.value,
                     status="projection",
                 )
             )
     return tuple(output)
-
 
 def _signal_annotations(
     bundle: DecisionFreezeBundle,
