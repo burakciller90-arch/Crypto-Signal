@@ -1,0 +1,182 @@
+name: RDP8-A Exact Main Live Acceptance UID504
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/crypto-rdp8-a-exact-main-live-acceptance.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  exact-main-live:
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          clean: true
+          fetch-depth: 1
+
+      - name: Verify Workbench and Development exact canonical main
+        shell: bash
+        run: |
+          set -euo pipefail
+          EXPECTED="${{ github.event.pull_request.base.sha }}"
+          WB="/Volumes/Crypto-504/Crypto-Signal-Workbench/repo"
+          DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
+          test "$(id -u)" = "504"
+          for TARGET in "$WB" "$DEV"; do
+            test "$(git -C "$TARGET" branch --show-current)" = "main"
+            test -z "$(git -C "$TARGET" status --porcelain)"
+            test "$(git -C "$TARGET" rev-parse HEAD)" = "$EXPECTED"
+          done
+          echo "RDP8_A_WORKBENCH_EXACT_MAIN_PASS=YES"
+          echo "RDP8_A_DEVELOPMENT_EXACT_MAIN_PASS=YES"
+          echo "REAL_CAPITAL=0"
+
+      - name: Verify supervisor loaded canonical Event Source clock
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          SUP_SRC="$DEV/ops/ssd_runtime_supervisor.sh"
+          grep -F 'run_event_source_snapshot_clock() {' "$SUP_SRC" >/dev/null
+          grep -F 'if [ $((now-last_event_source_clock)) -ge 900 ]; then' "$SUP_SRC" >/dev/null
+          grep -F 'run_event_source_snapshot_clock' "$SUP_SRC" >/dev/null
+          pid="$(ps -axo pid=,command= | awk -v needle="$ROOT/ssd-service-supervisor.sh" 'index($0, needle) > 0 && first == "" {first=$1} END {if (first != "") print first}')"
+          test -n "$pid"
+          kill -0 "$pid"
+          echo "RDP8_A_SUPERVISOR_ALIVE_PASS=YES pid=$pid"
+          echo "RDP8_A_EVENT_SOURCE_CLOCK_SECONDS=900"
+          echo "REAL_CAPITAL=0"
+
+      - name: Verify supervisor-owned Event Source snapshot freshness
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
+          PY="$DEV/.venv/bin/python"
+          DB="$DEV/runtime/events/event_source.sqlite3"
+          LOG="/Volumes/Crypto-504/Crypto-Signal/ServiceLogs/event-source-snapshot.out.log"
+          export PYTHONPATH="$DEV:$DEV/src"
+          export RDP8_EVENT_DB="$DB"
+          export RDP8_EVENT_LOG="$LOG"
+          "$PY" - <<'PY'
+          from __future__ import annotations
+
+          import json
+          import os
+          import sqlite3
+          import time
+          from pathlib import Path
+
+          from crypto_signal.product.intelligence_stream_trust_sources import (
+              build_event_risk_stream_snapshots,
+          )
+
+          now_ms = time.time_ns() // 1_000_000
+          db_path = Path(os.environ["RDP8_EVENT_DB"])
+          log_path = Path(os.environ["RDP8_EVENT_LOG"])
+          assert db_path.is_file(), db_path
+          assert log_path.is_file(), log_path
+          log_age_ms = now_ms - int(log_path.stat().st_mtime * 1000)
+          assert 0 <= log_age_ms <= 20 * 60_000, log_age_ms
+          log_text = log_path.read_text(encoding="utf-8", errors="replace")
+          assert "EVENT_SOURCE_CYCLE_COMPLETE" in log_text
+
+          uri = f"{db_path.resolve().as_uri()}?mode=ro"
+          with sqlite3.connect(uri, uri=True, timeout=5.0) as db:
+              db.row_factory = sqlite3.Row
+              db.execute("PRAGMA query_only=ON")
+              quick = db.execute("PRAGMA quick_check").fetchone()
+              assert quick is not None and str(quick[0]).lower() == "ok"
+              rows = db.execute(
+                  """
+                  SELECT source_provider, source_kind, fetched_at_ms,
+                         outcome, payload_json
+                  FROM event_source_fetches
+                  ORDER BY fetched_at_ms DESC, sequence_id DESC
+                  """
+              ).fetchall()
+
+          latest: dict[tuple[str, str], sqlite3.Row] = {}
+          for row in rows:
+              key = (str(row["source_provider"]), str(row["source_kind"]))
+              latest.setdefault(key, row)
+
+          required = (
+              ("fred.stlouisfed.org:cpi", "calendar"),
+              ("fred.stlouisfed.org:employment-situation", "calendar"),
+              ("federalreserve.gov", "news"),
+          )
+          for key in required:
+              row = latest.get(key)
+              assert row is not None, key
+              age_ms = now_ms - int(row["fetched_at_ms"])
+              assert 0 <= age_ms <= 20 * 60_000, (key, age_ms)
+              assert str(row["outcome"]) == "success", (key, row["outcome"])
+              payload = json.loads(str(row["payload_json"]))
+              assert payload.get("http_status") == 200
+              print(
+                  "RDP8_A_LIVE_SOURCE_PASS "
+                  f"provider={key[0]} kind={key[1]} age_ms={age_ms}",
+                  flush=True,
+              )
+
+          bls = latest.get(("bls.gov", "calendar"))
+          assert bls is not None
+          bls_age_ms = now_ms - int(bls["fetched_at_ms"])
+          assert 0 <= bls_age_ms <= 20 * 60_000
+          assert str(bls["outcome"]) == "failure"
+          bls_payload = json.loads(str(bls["payload_json"]))
+          assert bls_payload.get("reason_code") == "http_status_403"
+          print(
+              "RDP8_A_BLS_FAIL_CLOSED_PASS "
+              f"age_ms={bls_age_ms} reason=http_status_403",
+              flush=True,
+          )
+
+          snapshots = build_event_risk_stream_snapshots(
+              db_path,
+              evaluated_at_ms=now_ms,
+          )
+          assert snapshots
+          for item in snapshots:
+              assert item.direction is None
+              assert "stale_event_calendar_coverage" not in item.uncertainty_flags
+              assert item.state_label != "degraded_data"
+              print(
+                  "RDP8_A_EVENT_RISK_FRESH_PASS "
+                  f"scope={item.source_scope} state={item.state_label} "
+                  f"quality={item.source_quality}",
+                  flush=True,
+              )
+
+          print(
+              "RDP8_A_EVENT_SOURCE_SUPERVISOR_FRESHNESS_PASS=YES "
+              f"log_age_ms={log_age_ms}",
+              flush=True,
+          )
+          print("REAL_CAPITAL=0", flush=True)
+          PY
+
+      - name: Verify focused fail-closed regressions
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
+          PY="$DEV/.venv/bin/python"
+          export PYTHONPATH="$DEV:$DEV/src"
+          cd "$DEV"
+          "$PY" -m pytest -q \
+            tests/test_rdp8_event_source_live_runtime.py \
+            tests/test_event_source_snapshot.py \
+            tests/test_event_source_runtime.py \
+            tests/test_event_risk.py \
+            tests/test_intelligence_stream_trust_sources.py
+          echo "RDP8_A_FAIL_CLOSED_REGRESSION_PASS=YES"
+          echo "REAL_CAPITAL=0"
