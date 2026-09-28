@@ -15,6 +15,8 @@ from crypto_signal.data.market_data_gap_ledger import build_gap_observed
 from crypto_signal.data.market_tape import MarketTapeStore
 from crypto_signal.data.market_tape_source_contract import (
     MARKET_TAPE_FRESHNESS_BUDGET_MS,
+    BybitMarketTapeCapabilities,
+    MarketTapeSourceContractWrite,
     persist_bybit_wire_source_contract,
     persist_open_gap_coverage,
     register_bybit_market_tape_capabilities,
@@ -156,13 +158,13 @@ def _append_raw(
 def _persist_source_contract(
     *,
     store: SourceContractStore,
-    capabilities,
+    capabilities: BybitMarketTapeCapabilities,
     wire: BybitMicrostructureWireEvent,
     raw: RawMarketEvent,
     orderbook_persisted: bool,
     coverage_observed_at_ms: int,
     trade_normalized_identities: tuple[str, ...] | None = None,
-):
+) -> MarketTapeSourceContractWrite:
     if wire.orderbook is not None:
         orderbook_identity = (
             wire.orderbook.snapshot_identity if orderbook_persisted else None
@@ -402,6 +404,11 @@ def test_reobserved_raw_payload_keeps_same_raw_sha_but_new_pit_envelope(
 
     replay_wire = _trade_wire_event(ingested_at_ms=3_520)
     replay_raw = _append_raw(raw_store, replay_wire)
+    persisted_trade_identities = tuple(
+        item.normalized_identity
+        for item in first.envelopes
+        if item.normalized_identity is not None
+    )
     replay = _persist_source_contract(
         store=source_store,
         capabilities=capabilities,
@@ -409,10 +416,14 @@ def test_reobserved_raw_payload_keeps_same_raw_sha_but_new_pit_envelope(
         raw=replay_raw,
         orderbook_persisted=False,
         coverage_observed_at_ms=3_530,
+        trade_normalized_identities=persisted_trade_identities,
     )
 
     assert replay_raw.event_identity == first_raw.event_identity
     assert replay.envelopes[0].raw_identity == first.envelopes[0].raw_identity
+    assert tuple(item.normalized_identity for item in replay.envelopes) == (
+        persisted_trade_identities
+    )
     assert replay.envelopes[0].envelope_identity != first.envelopes[0].envelope_identity
     assert (
         source_store.latest_envelope_at(
@@ -609,6 +620,7 @@ async def _integration_events() -> AsyncIterator[BybitMicrostructureWireEvent]:
             ingested_at_ms=ingested,
         )
     yield _trade_wire_event(ingested_at_ms=2_520)
+    yield _trade_wire_event(ingested_at_ms=3_520)
 
 
 @pytest.mark.asyncio
@@ -624,6 +636,7 @@ async def test_wire_collection_callback_runs_after_raw_and_normalized_persistenc
         depth=50,
     )
     writes: list[int] = []
+    normalized_lineage: list[tuple[str | None, tuple[str, ...]]] = []
 
     def source_callback(
         event: BybitMicrostructureWireEvent,
@@ -642,6 +655,12 @@ async def test_wire_collection_callback_runs_after_raw_and_normalized_persistenc
             coverage_observed_at_ms=event.ingested_at_ms,
         )
         writes.append(write.envelope_count)
+        normalized_lineage.append(
+            (
+                orderbook_normalized_identity,
+                trade_normalized_identities,
+            )
+        )
 
     result = await persist_bybit_wire_stream(
         store=market_store,
@@ -651,8 +670,9 @@ async def test_wire_collection_callback_runs_after_raw_and_normalized_persistenc
         persisted_wire_callback=source_callback,
     )
 
-    assert result.observed_messages == 3
-    assert writes == [1, 1, 2]
+    assert result.observed_messages == 4
+    assert writes == [1, 1, 2, 2]
+    assert normalized_lineage[2][1] == normalized_lineage[3][1]
     assert market_store.counts().orderbooks == 1
     assert market_store.counts().trades == 2
     assert raw_store.count() == 3
