@@ -201,7 +201,7 @@ jobs:
           echo "RDP8_CROSS_MARKET_CLOCK_SECONDS=3600"
           echo "REAL_CAPITAL=0"
 
-      - name: Run canonical cross-market snapshot once
+      - name: Require one successful canonical cross-market cycle
         shell: bash
         run: |
           set -euo pipefail
@@ -211,21 +211,40 @@ jobs:
           DB="$DEV/runtime/cross_market/cross_market.sqlite3"
           SOURCE="$DEV/runtime/cross_market/source_contract.sqlite3"
           LOCK="$DEV/runtime/cross_market/cross_market_snapshot.lock"
+          LOG="/Volumes/Crypto-504/Crypto-Signal/ServiceLogs/cross-market-snapshot.out.log"
           export PYTHONPATH="$DEV:$DEV/src"
 
+          started_epoch="$(date +%s)"
           success=0
-          for attempt in $(seq 1 30); do
-            set +e
-            output="$("$PY" "$RUNNER" --cross-market-db "$DB" --source-contract-db "$SOURCE" --lock-path "$LOCK" --sessions 10 2>&1)"
-            rc=$?
-            set -e
-            echo "$output"
-            if [ "$rc" = "0" ] && grep -Fq "RDP8_CROSS_MARKET_SNAPSHOT_COMPLETE" <<<"$output" && grep -Fq "failures=0" <<<"$output" && grep -Fq "quick_check=YES" <<<"$output"; then
-              success=1
-              break
+
+          for _ in {1..30}; do
+            if [ -f "$LOG" ]; then
+              mtime="$(stat -f %m "$LOG")"
+              latest="$(grep -F "RDP8_CROSS_MARKET_SNAPSHOT_COMPLETE" "$LOG" | tail -1 || true)"
+              if [ "$mtime" -ge "$started_epoch" ] && printf '%s' "$latest" | grep -Fq "failures=0" && printf '%s' "$latest" | grep -Fq "quick_check=YES"; then
+                echo "$latest"
+                success=1
+                break
+              fi
             fi
             sleep 2
           done
+
+          if [ "$success" != "1" ]; then
+            for attempt in 1 2 3; do
+              set +e
+              output="$("$PY" "$RUNNER" --cross-market-db "$DB" --source-contract-db "$SOURCE" --lock-path "$LOCK" --sessions 10 2>&1)"
+              rc=$?
+              set -e
+              echo "$output"
+              if [ "$rc" = "0" ] && grep -Fq "RDP8_CROSS_MARKET_SNAPSHOT_COMPLETE" <<<"$output" && grep -Fq "failures=0" <<<"$output" && grep -Fq "quick_check=YES" <<<"$output"; then
+                success=1
+                break
+              fi
+              sleep 3
+            done
+          fi
+
           test "$success" = "1"
           echo "RDP8_FINAL_CANONICAL_CROSS_MARKET_SNAPSHOT_PASS=YES"
           echo "REAL_CAPITAL=0"
