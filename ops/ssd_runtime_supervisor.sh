@@ -639,6 +639,8 @@ run_wc2_live_clock() {
   local stream="$runtime/stream/intelligence_stream.sqlite3"
   local market_tape="$runtime/market_tape/market_tape.sqlite3"
   local options_surface="$runtime/market_tape/options_surface.sqlite3"
+  local onchain_capital_flow="$runtime/onchain/onchain_capital_flow.sqlite3"
+  local onchain_source_contract="$runtime/onchain/source_contract.sqlite3"
   local event_source="$runtime/events/event_source.sqlite3"
   local cohort="$runtime/wc2/wc2_untouched_forward.sqlite3"
   local shadow_intent="$runtime/wc2/wc2.shadow-intent.sqlite3"
@@ -670,6 +672,8 @@ run_wc2_live_clock() {
       --stream-ledger "$stream" \
       --stream-market-tape "$market_tape" \
       --stream-options-surface "$options_surface" \
+      --stream-onchain-capital-flow "$onchain_capital_flow" \
+      --stream-onchain-source-contract "$onchain_source_contract" \
       --stream-event-source "$event_source" \
       --stream-family-symbols BTCUSDT ETHUSDT SOLUSDT \
       --wc2-enabled \
