@@ -283,3 +283,29 @@ Parallel agents may advance `main`; always re-check immediately before implement
 - historical/frozen evidence mutation: NO
 - Durdurulmaz touched: NO
 - Quantum Capital touched: NO
+
+
+## LIVE REPAIR CHECKPOINT — 2026-09-28 — RDP10-F1 stale-test alignment repair start
+
+- canonical main at repair start: `f665fee6aba0309d7fd5ef7ff88abfdc10ef1511`
+- active branch: `rdp10/options-proof-f1`
+- branch head before checkpoint: `07b0229d303cf1fdf74d4995bf8546c31263a3f2`
+- open PR: #1650
+- session-local /Volumes worktree: NONE; UID504 workflow evidence verifies canonical SSD state
+- duplicate guard: F1 already implemented on PR #1650; no duplicate implementation will be created
+- safety: `REAL_CAPITAL=0`; `HISTORICAL_BACKFILL=NO`; Durdurulmaz untouched; Quantum Capital untouched
+
+Mechanical failure evidence:
+
+- current-head RDP10 runs `36472389441` / job `109097601979` and `36472396277` / job `109097627846` FAIL only in the focused gate before live audit;
+- exact checkout and canonical non-mutation checks PASS;
+- stale tests still search `FrozenProofStore` for `options_surface_snapshot`, but the reconciled F1 contract keeps raw `OptionSurfaceObservation` in canonical immutable `OptionsSurfaceStore` and persists only the derived `options_volatility_freeze` in `FrozenProofStore`;
+- the same stale expectation also causes RDP6 Options acceptance failure.
+
+Current blocker:
+
+- acceptance tests and exact-evidence test resolver setup are not aligned with the reconciled raw-source / derived-proof split.
+
+Exact nextAction:
+
+Update only the stale Options tests/resolver test wiring to read raw surface lineage from `OptionsSurfaceStore` via `options_surface_path`, keep derived volatility assertions on `FrozenProofStore`, then rerun exact-head RDP10 and RDP6 UID504 acceptance before any merge.
