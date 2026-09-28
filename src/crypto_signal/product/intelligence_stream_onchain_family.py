@@ -284,13 +284,6 @@ def _state_components(
         if rail.freeze is None:
             continue
         analysis = rail.freeze.analysis
-        if analysis.latest_observation_age_ms is not None:
-            components.append(
-                (
-                    f"{prefix}_stablecoin_latest_age_ms",
-                    str(analysis.latest_observation_age_ms),
-                )
-            )
         if not rail.accepted_fresh_context or analysis.metrics is None:
             continue
         metrics = analysis.metrics
