@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from decimal import Decimal
+from pathlib import Path
 
 from crypto_signal.data.derivatives import (
     DerivativesInstrumentType,
@@ -246,16 +247,7 @@ def test_disconnected_runtime_fails_closed_without_heatmap_or_crowding(
 
 
 def test_rdp5_rich_derivatives_source_never_claims_future_liquidation_map(
-    tmp_path,
 ) -> None:
-    source = (
-        tmp_path.parents[0]
-        if False
-        else None
-    )
-    del source
-    from pathlib import Path
-
     text = (
         Path(__file__).resolve().parents[1]
         / "src"
