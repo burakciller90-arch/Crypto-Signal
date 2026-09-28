@@ -533,3 +533,81 @@ Current blocker:
 
 Exact nextAction:
 Run/inspect RDP10 Frozen Proof Contract and RDP7 Onchain Family acceptance on the final checkpoint head. Repair only demonstrated mechanical failures. Before merge, re-check canonical main, open PRs and branch head, and require focused + exact-source + non-mutating evidence with `REAL_CAPITAL=0`.
+
+
+
+## RDP10-F2 — PASS; first mechanically unclosed gate is RDP10-F3
+
+RDP10-F2 On-chain / stablecoin exact proof cutover is mechanically closed.
+
+Accepted implementation:
+- implementation branch: `rdp10/onchain-proof-f2`
+- implementation PR: #1652
+- exact accepted branch head: `6e173471efb08528432ac1d5c5faf4516ebab728`
+- production squash merge / canonical main at F2 close: `b356e754fff5eeeec292ade6af7f23d2cdaf39c4`
+- closeout branch: `docs/rdp10-f2-completion`
+
+Acceptance evidence:
+- RDP7 Onchain Family Wiring run `36478925391` / job `109119482761`: SUCCESS
+  - exact PR source / Workbench baseline PASS
+  - `RDP7_F_ONCHAIN_FAMILY_PASS=YES`
+  - `STABLECOIN_DIRECTION=NONE`
+  - exchange-flow / large-transfer / wallet-cohort providers remain `UNAVAILABLE_EXPLICIT`
+  - `RDP10_EXACT_PROOF_LINEAGE=PRESERVED`
+  - `REAL_CAPITAL=0`
+- RDP10 Frozen Proof Contract push run `36478885637` / job `109121080544`: SUCCESS
+  - `RDP10_EXACT_SOURCE_PASS=YES`
+  - `RDP10_CANONICAL_CHECKOUTS_CLEAN=YES`
+  - `RDP10_FAIL_CLOSED_FOCUSED_PASS=YES`
+  - `RDP10_DERIVED_PROOF_STORE_PASS=YES`
+  - `RDP10_LIVE_MESSAGES_AUDITED=6`
+  - `RDP10_UNREGISTERED_READY_COUNT=0`
+  - `RDP10_LIVE_FAIL_CLOSED_PASS=YES`
+  - `RDP10_NON_MUTATING_PASS=YES`
+  - `HISTORICAL_BACKFILL=NO`
+  - `REAL_CAPITAL=0`
+- RDP10 Frozen Proof Contract PR run `36478925445` / job `109119484278`: SUCCESS on the same exact accepted head.
+- merged-main SSD504 Workbench Bootstrap run `36480086265` / job `109123295575`: SUCCESS
+  - `WORKBENCH_REPO_SYNCED_TO_MAIN=YES`
+  - final `REPO_HEAD=b356e754fff5eeeec292ade6af7f23d2cdaf39c4`
+  - `REPO_BRANCH=main`
+  - `REPO_DIRTY_COUNT=0`
+  - `SSD504_WORKBENCH_PASS=YES`
+  - `REAL_CAPITAL=0`
+- merged-main Agent Memory Bootstrap run `36480086312` / job `109123296181`: SUCCESS
+  - durable context rebuild PASS
+  - exact-main RDP9 focused acceptance PASS
+  - current cross-venue classification read-only PASS
+  - `PRODUCTION_RUNTIME_MUTATED=NO`
+  - `REAL_CAPITAL=0`
+
+Accepted F2 semantics:
+- canonical normalized stablecoin observations remain append-only in `OnchainCapitalFlowStore`;
+- raw payload / source envelope / source coverage truth remains canonical in `SourceContractStore`;
+- only derived `stablecoin_capital_flow_freeze` objects are persisted in `FrozenProofStore`;
+- exact On-chain/stablecoin/source lineage resolves read-only with identity and PIT/no-future validation;
+- exchange-flow, large-transfer, wallet-cohort and bridge rails remain explicit unavailable where accepted source truth is absent;
+- stablecoin supply does not create directional authority;
+- no historical proof rewrite/backfill or current-data substitution occurred.
+
+### First mechanically unclosed gate — RDP10-F3 final contract closure audit
+
+Bounded goal:
+- mechanically prove Geometry, Liquidity, Order Flow, Derivatives and On-chain each expose the strongest accepted exact proof actually available;
+- mechanically prove Event Risk/context exact source records;
+- mechanically prove provider-divergence/data-quality exact source context required by the accepted RDP9 contract;
+- prove historical evidence never substitutes current live data;
+- close only real gaps found by the audit; do not duplicate already-accepted proof stores/resolvers;
+- only after this audit and exact acceptance may top-level RDP10 become PASS.
+
+Current blocker:
+- none for F2; RDP10-F3 has not started from the post-F2-closeout canonical main.
+
+Exact nextAction:
+Merge this docs-only F2 closeout after re-checking exact current main/head. Then create an isolated RDP10-F3 branch from exact current main, write the mandatory task-start checkpoint before any production change, audit the full top-level RDP10 PASS contract, and implement only demonstrated missing closure paths.
+
+Safety:
+- `REAL_CAPITAL=0`
+- `HISTORICAL_BACKFILL=NO`
+- Durdurulmaz touched: NO
+- Quantum Capital touched: NO
