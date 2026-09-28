@@ -412,3 +412,22 @@ def test_supervisor_health_does_not_require_liquidation_event_ingestion() -> Non
     assert 'coverage_payload["state"]' in health
     assert "last_successful_ingestion_ms" not in health
     assert "liquidation event" not in health.lower()
+
+def test_runner_first_start_does_not_full_scan_shared_tape_before_runtime() -> None:
+    source = (
+        Path(__file__).resolve().parents[1]
+        / "ops"
+        / "run_liquidation_market_tape_stream.py"
+    ).read_text(encoding="utf-8")
+
+    start = source.index("if previous_heartbeat is None:")
+    end = source.index("instance = build_collector_instance(", start)
+    first_start = source[start:end]
+
+    assert "store.quick_check()" not in first_start
+    assert "raw_store.quick_check()" not in first_start
+    assert "store.counts()" not in first_start
+    assert "raw_store.count()" not in first_start
+    assert "baseline_normalized_rows_total = 0" in first_start
+    assert "baseline_raw_rows_total = 0" in first_start
+
