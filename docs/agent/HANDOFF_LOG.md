@@ -505,3 +505,108 @@ blocker:
 nextAction:
 - before any E2 production code change, re-check exact main/open PRs/branches and write the mandatory E2 task-start checkpoint on the E2 branch.
 
+---
+
+## 2026-09-28 — RDP10-E2 start checkpoint
+
+status: ACTIVE
+canonicalMainAtStart: 212d0428244d65caeb8c5646add9a7ebffc5fccb
+branch: rdp10/liquidation-proof-e2
+worktree: no session-local /Volumes worktree; GitHub branch only, canonical Workbench verification comes from UID504 bootstrap/acceptance
+roadmapGate: RDP10-E2 liquidation observations/coverage/heatmap/crowding exact proof persistence/resolution
+duplicateRelevantPRs: NONE
+duplicateRelevantBranches: NONE
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+boundedGoal:
+- preserve raw liquidation observations as exact source records;
+- expose provider coverage with actual observed_at_ms knowledge time;
+- persist immutable Liquidation Heatmap proof before Stream publication;
+- persist immutable Derivatives Crowding proof before Stream publication;
+- preserve exact dependency lineage to liquidation events/coverage/mark reference/derivatives dynamics;
+- allow zero-event claims only when exact provider coverage proves the interval.
+
+notInThisSlice:
+- Options proof cutover;
+- On-chain/stablecoin proof cutover;
+- Event/Cross-market proof cutover;
+- provider-divergence/RDP9 presentation cutover;
+- RDP11 soak.
+
+blocker:
+- exact-main SSD504 Workbench bootstrap run 36468609152 is pending at task start.
+
+nextAction:
+- read run 36468609152; after exact-main Workbench PASS, audit current liquidation observation/coverage/heatmap/crowding schemas and implement E2.
+
+---
+
+## 2026-09-28 — RDP10-E2 implementation complete; acceptance phase started
+
+status: ACCEPTANCE_PENDING
+canonicalMainAtPhaseStart: 212d0428244d65caeb8c5646add9a7ebffc5fccb
+branch: rdp10/liquidation-proof-e2
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+workbenchPrerequisite:
+- run 36468609152 / job 109084863561: SUCCESS.
+- exact main 212d0428244d65caeb8c5646add9a7ebffc5fccb.
+- final canonical Workbench repo main, exact head, dirty count 0.
+- SSD504_WORKBENCH_PASS=YES.
+
+implemented:
+- 0d9e99c0234f9dc59d2e603a522cf63960d3e532 — persist historical dynamics dependency plus liquidation heatmap and crowding proofs before Stream publication.
+- 5db6f3976d1769b63e6d1198d3fbe4c76615baa5 — resolve raw liquidation event, provider coverage, heatmap and crowding exact domains.
+- b5b6c0345df7ebabb5ac09f5eee3528723cffa51 — persistence/lineage tests.
+- d4a44c712f06a48482a1622608be281c17456028 — exact resolver test.
+- 6bb8e45e0280089513a068bf4e41cb9fee59c0cd — UID504 gate coverage and live proof-store path.
+- b7bb162e7fdb4f3dc13d462b538d69cc54c879bc — static cleanup.
+- 2224cff71226f4e1aed8e4fd3ec0a8c716f5d80f — acceptance-phase frontier checkpoint.
+
+semanticGuards:
+- liquidation coverage is usable at observed_at_ms knowledge time, not merely coverage_end_ms.
+- zero-event claims require exact coverage.
+- no future leverage/risk-zone estimation is invented.
+- crowding depends on exact historical dynamics + heatmap proof parents.
+- no historical Stream backfill or current-data substitution.
+
+blocker:
+- exact-head full RDP10 UID504 acceptance has not completed yet.
+
+nextAction:
+- inspect the exact-head RDP10 Frozen Proof Contract run; if focused + live fail-closed + non-mutating all PASS, re-check main/open PRs and merge E2. Otherwise repair only the demonstrated acceptance issue and checkpoint before retry.
+
+---
+
+## 2026-09-28 — RDP10-E2 acceptance retry checkpoint
+
+status: ACCEPTANCE_RETRY_PENDING
+canonicalMain: 212d0428244d65caeb8c5646add9a7ebffc5fccb
+branch: rdp10/liquidation-proof-e2
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+failedRun:
+- run 36469577166 / job 109088179016.
+- canonical checkout verification PASS.
+- focused pytest suite had no product-test failure; Ruff alone failed with I001 import ordering.
+- live audit skipped because focused gate failed.
+- non-mutating cleanup PASS.
+
+repair:
+- commit 5a41cf4083401aa7148004f92c17578a3abe6a88.
+- only fixes Ruff-required test import ordering.
+- no production code and no acceptance criteria changed.
+- frontier retry checkpoint commit 5eee297ee0c24202ef87da4a977f1c1a99cd4747.
+
+nextAction:
+- run full exact-head RDP10 UID504 acceptance again; merge only if focused, live fail-closed and non-mutating checks all PASS with HISTORICAL_BACKFILL=NO and REAL_CAPITAL=0.
+

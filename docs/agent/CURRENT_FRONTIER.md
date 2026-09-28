@@ -1,5 +1,99 @@
 # Crypto Signal Current Frontier
 
+## LIVE ACTIVE CHECKPOINT — 2026-09-28 — RDP10-E2 STARTED
+
+This checkpoint was written before any RDP10-E2 production code change.
+
+- canonical main at task start: `212d0428244d65caeb8c5646add9a7ebffc5fccb`
+- main commit: `Docs: close RDP10-E1 and advance to E2 (#1647)`
+- active branch: `rdp10/liquidation-proof-e2`
+- session-local /Volumes worktree: NONE
+- duplicate RDP10-E2 PRs: NONE
+- duplicate E2 branch at start: NONE
+- `REAL_CAPITAL=0`
+- historical/frozen backfill: FORBIDDEN
+- Durdurulmaz touched: NO
+- Quantum Capital touched: NO
+
+### Bounded goal
+
+RDP10-E2 will close the remaining Derivatives liquidation proof gap:
+
+- exact raw liquidation observations remain source records;
+- exact provider coverage proof with knowledge time `observed_at_ms`;
+- exact immutable Liquidation Heatmap proof persisted before Stream publication;
+- exact immutable Derivatives Crowding proof persisted before Stream publication;
+- exact parent/dependency lineage to derivatives dynamics, mark reference, coverage and liquidation events;
+- explicit zero-event semantics only when provider coverage proves the interval.
+
+No options/on-chain/event/cross-venue work belongs to E2.
+
+### Current blocker
+
+Exact-main Workbench bootstrap for `212d042...` is pending:
+
+- run `36468609152`
+- E2 production implementation must not begin until this exact-main Workbench verification is PASS.
+
+### Exact nextAction
+
+Read run `36468609152`; once clean/PASS, audit current liquidation observation/coverage/heatmap/crowding freeze schemas and implement E2 persistence + resolver integration without historical backfill.
+
+### Phase checkpoint — E2 implementation complete, acceptance pending
+
+Exact-main Workbench prerequisite is PASS:
+
+- run `36468609152`
+- job `109084863561`
+- `GITHUB_SHA=212d0428244d65caeb8c5646add9a7ebffc5fccb`
+- final canonical Workbench repo branch `main`
+- final canonical Workbench repo head exact main
+- final dirty count `0`
+- `SSD504_WORKBENCH_PASS=YES`
+- `REAL_CAPITAL=0`
+
+Implemented on `rdp10/liquidation-proof-e2`:
+
+- `0d9e99c0234f9dc59d2e603a522cf63960d3e532` — persist exact historical Derivatives Dynamics dependency plus Liquidation Heatmap and Derivatives Crowding proof objects before Stream publication;
+- `5db6f3976d1769b63e6d1198d3fbe4c76615baa5` — resolve raw liquidation rows, provider coverage, heatmap and crowding exact domains;
+- `b5b6c0345df7ebabb5ac09f5eee3528723cffa51` — persistence/lineage tests on complete provider coverage with observed liquidation;
+- `d4a44c712f06a48482a1622608be281c17456028` — exact-evidence test for raw event/coverage + heatmap/crowding proof resolution;
+- `6bb8e45e0280089513a068bf4e41cb9fee59c0cd` — RDP10 UID504 gate expanded for E2 and live resolver proof-store path;
+- `b7bb162e7fdb4f3dc13d462b538d69cc54c879bc` — static cleanup.
+
+Semantics preserved:
+
+- provider coverage knowledge time is `observed_at_ms`;
+- zero-event evidence is never inferred from provider silence;
+- Heatmap exposes observed bins only and keeps future leverage/risk estimation explicitly unavailable;
+- Crowding dependency lineage binds exact dynamics + heatmap parents;
+- no historical Stream rewrite/backfill;
+- no current-data substitution;
+- `REAL_CAPITAL=0`.
+
+Exact nextAction: run the complete RDP10 Frozen Proof Contract UID504 acceptance on the final checkpoint head; inspect focused tests/lint/type output, live fail-closed audit, canonical non-mutation, `HISTORICAL_BACKFILL=NO`, and `REAL_CAPITAL=0` before any PR/merge.
+
+### Retry checkpoint — E2 tests passed; Ruff import order fixed
+
+First exact-head E2 acceptance:
+
+- run `36469577166`
+- job `109088179016`
+- canonical checkout verification PASS
+- focused pytest suite reached warnings summary with no product-test failure
+- Ruff alone failed with `I001 Import block is un-sorted or un-formatted`
+- live audit correctly skipped because focused gate failed
+- non-mutating cleanup PASS
+
+Repair:
+
+- `5a41cf4083401aa7148004f92c17578a3abe6a88`
+- only moves the local liquidation-family test module import to the Ruff-required position
+- no production code or acceptance criterion changed
+
+Exact nextAction: rerun the full RDP10 UID504 contract on the final retry-checkpoint head; merge only if focused + live + non-mutating all PASS.
+
+
 Conversation memory is non-authoritative. Rebuild from this file, HANDOFF_LOG, canonical roadmap, and live Git/GitHub/runtime evidence.
 
 Checkpoint assembled: 2026-09-28

@@ -4,6 +4,7 @@ import sqlite3
 from decimal import Decimal
 from pathlib import Path
 
+import test_rdp5_liquidation_heatmap_crowding_family as liquidation_family
 from fastapi.testclient import TestClient
 from test_immutable_ledger import build_bundle, candles
 from test_rdp4_rich_market_tape_family import AS_OF_MS, _seed
@@ -930,4 +931,145 @@ def test_derivatives_core_proofs_resolve_exact_from_frozen_store(
     assert metrics["mark_price_change_fraction"] == "0.03"
     assert exact_object["source_object_identities"]
     assert exact_dynamics["current_data_substitution"] is False
+
+def test_liquidation_heatmap_and_crowding_resolve_exact_from_frozen_store(
+    tmp_path: Path,
+) -> None:
+    market_tape_path = tmp_path / "market_tape.sqlite3"
+    proof_path = tmp_path / "frozen_proofs.sqlite3"
+    stream_path = tmp_path / "stream.sqlite3"
+
+    store = MarketTapeStore(market_tape_path)
+    liquidation_family._seed_derivatives(store)
+    event = liquidation_family._liquidation()
+    coverage = liquidation_family._coverage(
+        start_ms=(
+            liquidation_family.AS_OF_MS
+            - liquidation_family.LOOKBACK_MS
+        )
+    )
+    store.append_liquidation(event)
+    store.append_liquidation_coverage(coverage)
+
+    snapshots = build_market_tape_family_snapshots(
+        market_tape_path,
+        symbols=(liquidation_family.SYMBOL,),
+        as_of_ms=liquidation_family.AS_OF_MS,
+        frozen_proof_store_path=proof_path,
+    )
+    derivatives = next(
+        item
+        for item in snapshots
+        if item.family is ConfluenceFamily.DERIVATIVES
+    )
+    narrative_identity = _project_family(
+        stream_path,
+        projector_id="derivatives_change",
+        snapshot=derivatives,
+    )
+
+    resolver = IntelligenceStreamExactEvidenceReadModel(
+        stream_ledger_path=stream_path,
+        market_tape_path=market_tape_path,
+        frozen_proof_store_path=proof_path,
+    )
+    payload = resolver.read_for_narrative(narrative_identity)
+    assert payload is not None
+
+    top = _resolution(payload, "derivatives")
+    assert top["resolution_state"] == "READY_EXACT"
+    top_capabilities = top["capabilities"]
+    assert isinstance(top_capabilities, dict)
+    assert top_capabilities["observed_liquidation_heatmap"] == "READY_EXACT"
+    assert top_capabilities["crowding_context"] == "READY_EXACT"
+
+    for domain in (
+        "observed_liquidation_events",
+        "liquidation_event_coverage",
+        "observed_liquidation_heatmap",
+        "derivatives_crowding",
+    ):
+        resolution = _resolution(payload, domain)
+        assert resolution["resolution_state"] == "READY_EXACT"
+        assert resolution["current_data_substitution"] is False
+
+    refs = tuple(
+        item
+        for item in payload["reference_resolutions"]
+        if isinstance(item, dict)
+    )
+    by_kind = {
+        str(item.get("object_kind")): item
+        for item in refs
+        if item.get("object_kind") is not None
+    }
+    for kind in (
+        "market_tape_liquidation",
+        "market_tape_liquidation_coverage",
+        "liquidation_heatmap_freeze",
+        "derivatives_crowding_freeze",
+    ):
+        assert by_kind[kind]["resolution_state"] == "READY_EXACT"
+
+    coverage_exact = resolver.read_reference(
+        narrative_identity=narrative_identity,
+        evidence_identity=coverage.coverage_identity,
+    )
+    assert coverage_exact is not None
+    assert (
+        coverage_exact["object_kind"]
+        == "market_tape_liquidation_coverage"
+    )
+    coverage_object = coverage_exact["exact_object"]
+    assert isinstance(coverage_object, dict)
+    assert (
+        coverage_object["observed_at_ms"]
+        == liquidation_family.AS_OF_MS
+    )
+    assert coverage_object["coverage_end_ms"] == liquidation_family.AS_OF_MS
+
+    event_exact = resolver.read_reference(
+        narrative_identity=narrative_identity,
+        evidence_identity=event.liquidation_identity,
+    )
+    assert event_exact is not None
+    assert event_exact["object_kind"] == "market_tape_liquidation"
+
+    heatmap_ref = by_kind["liquidation_heatmap_freeze"]
+    heatmap_exact = resolver.read_reference(
+        narrative_identity=narrative_identity,
+        evidence_identity=str(heatmap_ref["evidence_identity"]),
+    )
+    assert heatmap_exact is not None
+    heatmap_object = heatmap_exact["exact_object"]
+    assert isinstance(heatmap_object, dict)
+    heatmap_payload = heatmap_object["payload"]
+    assert isinstance(heatmap_payload, dict)
+    assert heatmap_payload["status"] == "measured"
+    assert heatmap_payload["observed_state"] == "observed"
+    assert (
+        heatmap_payload["estimated_leverage_concentration_status"]
+        == "not_estimated"
+    )
+    assert heatmap_payload["liquidation_risk_zone_status"] == "not_estimated"
+    assert coverage.coverage_identity in heatmap_object[
+        "source_object_identities"
+    ]
+    assert event.liquidation_identity in heatmap_object[
+        "source_object_identities"
+    ]
+
+    crowding_ref = by_kind["derivatives_crowding_freeze"]
+    crowding_exact = resolver.read_reference(
+        narrative_identity=narrative_identity,
+        evidence_identity=str(crowding_ref["evidence_identity"]),
+    )
+    assert crowding_exact is not None
+    crowding_object = crowding_exact["exact_object"]
+    assert isinstance(crowding_object, dict)
+    assert heatmap_ref["evidence_identity"] in crowding_object[
+        "depends_on_evidence_identities"
+    ]
+    assert crowding_exact["current_data_substitution"] is False
+    assert payload["current_data_substitution"] is False
 
