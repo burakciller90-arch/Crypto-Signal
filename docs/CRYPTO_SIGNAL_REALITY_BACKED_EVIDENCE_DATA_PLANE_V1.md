@@ -742,7 +742,14 @@ If no acceptable provider is available, On-chain remains explicitly unavailable 
 
 ## RDP8 — Event Risk + cross-market runtime
 
-Status: **ACTIVE**
+Status: **PASS**
+
+Progress:
+- RDP8-A canonical Event Source scheduler merged as `34eb9c55614afa3e822f760c91ebf0a8caca076c`; 900s supervisor clock, single-writer lock, FRED CPI + Employment fallback and Fed RSS accepted while BLS HTTP 403 remains explicit fail-closed;
+- exact-main RDP8-A UID504 run `36439676631` PASS with fresh official/accepted event truth and no stale Event Risk masquerading as current;
+- RDP8-B official VIX/Treasury runtime merged as `b343e3bf20677df2caa4d4de5d7a47ee3e1ff01c`; exact raw response → source envelope → coverage → normalized observation lineage persists in append-only PIT storage and the canonical supervisor owns an hourly single-writer snapshot clock;
+- focused UID504 run `36440855017` PASS proved real Cboe redirect + U.S. Treasury source lineage without production mutation;
+- final diagnostic PR #1630 remained unmerged. Exact-main UID504 run `36442983256`, job `108997967133`, PASS: exact Workbench/Development main, R11 restart, successful canonical cross-market cycle, live VIX/Treasury lineage, score-external cross-market freeze, stale Event Risk → circuit-breaker `DEGRADED_DATA`, `STALE_EVENT_TREATED_AS_FRESH_VETO=NO`, focused regressions and `REAL_CAPITAL=0`.
 
 Goal:
 - make score-external risk/context continuously trustworthy.
@@ -761,6 +768,8 @@ PASS:
 - stale event data cannot gate a trade as if fresh.
 
 ## RDP9 — Cross-venue quality + evidence-overlap engine
+
+Status: **ACTIVE**
 
 Goal:
 - stop local anomalies and duplicate evidence from masquerading as broad confirmation.
@@ -916,7 +925,7 @@ Every new agent working on this program must read, in order:
 
 Current exact frontier:
 
-**RDP8 — Event Risk + cross-market runtime**
+**RDP9 — Cross-venue quality + evidence-overlap engine**
 
 Do not skip forward to Portfolio or frontend implementation while RDP1–RDP11 remain open unless the user explicitly authorizes parallel preparatory work.
 

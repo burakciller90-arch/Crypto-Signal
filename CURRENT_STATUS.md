@@ -4,7 +4,7 @@ Updated: 2026-09-28
 Project: Crypto Signal
 Baseline: crypto-signal-full-version-v1.0.0 (immutable)
 Active post-v1.0 program: v1.1 world-class product + market intelligence + Crypto Signal Intelligence Stream V1
-State: WC0_LIVE_PRODUCT_PARITY_ACCEPTED / WC1_24_7_DATA_RELIABILITY_ACCEPTED / WC2_ENGINEERING_FROZEN_EVIDENCE_ACCUMULATION_ACTIVE / WC4_CHAMPION_CHALLENGER_ENGINEERING_ACCEPTED_RESEARCH_ONLY / WC5_ENGINEERING_ACCEPTED_PRODUCT_DEPLOYED_HUMAN_USABILITY_NOT_MEASURED / WC6_SANDBOX_BOUNDARY_ACCEPTED_VENUE_EVIDENCE_EXTERNAL_DEPENDENCY / WC7_CURRENT_FRONTIER_PACKET_ACCEPTED_CURRENT_INSUFFICIENT_EVIDENCE / INTELLIGENCE_STREAM_V1_S0_S16_HISTORICAL_ACCEPTANCE_RETAINED / INTELLIGENCE_STREAM_V1_FINAL_F0_PASS_F1_PASS_F2_PASS_F3_PASS_F4_PASS_F5_PASS_CURRENT_SCOPE_F6_PASS_F7_PASS_F8_PASS_F9_PASS_F10_PASS / INTELLIGENCE_STREAM_V1_FINAL_COMPLETION_ACCEPTED / MESSAGE_INTELLIGENCE_FAMILY_EVIDENCE_UX_V1_ACCEPTED / EVIDENCE_DEPTH_VISUAL_PROOF_V1_ED0_PASS_ED1_ACTIVE / REALITY_BACKED_EVIDENCE_DATA_PLANE_V1_RDP0_PASS_RDP1_PASS_RDP2_PASS_RDP3_PASS_RDP4_PASS_RDP5_PASS_RDP6_PASS_RDP7_PASS_RDP8_ACTIVE / CONTINUITY_PAUSED_BY_USER
+State: WC0_LIVE_PRODUCT_PARITY_ACCEPTED / WC1_24_7_DATA_RELIABILITY_ACCEPTED / WC2_ENGINEERING_FROZEN_EVIDENCE_ACCUMULATION_ACTIVE / WC4_CHAMPION_CHALLENGER_ENGINEERING_ACCEPTED_RESEARCH_ONLY / WC5_ENGINEERING_ACCEPTED_PRODUCT_DEPLOYED_HUMAN_USABILITY_NOT_MEASURED / WC6_SANDBOX_BOUNDARY_ACCEPTED_VENUE_EVIDENCE_EXTERNAL_DEPENDENCY / WC7_CURRENT_FRONTIER_PACKET_ACCEPTED_CURRENT_INSUFFICIENT_EVIDENCE / INTELLIGENCE_STREAM_V1_S0_S16_HISTORICAL_ACCEPTANCE_RETAINED / INTELLIGENCE_STREAM_V1_FINAL_F0_PASS_F1_PASS_F2_PASS_F3_PASS_F4_PASS_F5_PASS_CURRENT_SCOPE_F6_PASS_F7_PASS_F8_PASS_F9_PASS_F10_PASS / INTELLIGENCE_STREAM_V1_FINAL_COMPLETION_ACCEPTED / MESSAGE_INTELLIGENCE_FAMILY_EVIDENCE_UX_V1_ACCEPTED / EVIDENCE_DEPTH_VISUAL_PROOF_V1_ED0_PASS_ED1_ACTIVE / REALITY_BACKED_EVIDENCE_DATA_PLANE_V1_RDP0_PASS_RDP1_PASS_RDP2_PASS_RDP3_PASS_RDP4_PASS_RDP5_PASS_RDP6_PASS_RDP7_PASS_RDP8_PASS_RDP9_ACTIVE / CONTINUITY_PAUSED_BY_USER
 REAL_CAPITAL: 0
 
 ## Active v1.1 frontier — read before historical sections
@@ -17,7 +17,7 @@ Canonical execution authority:
 
 Current state:
 
-**RDP0 PASS / RDP1 PASS / RDP2 PASS / RDP3 PASS / RDP4 PASS / RDP5 PASS / RDP6 PASS / RDP7 PASS / RDP8 ACTIVE — Event Risk + cross-market runtime**
+**RDP0 PASS / RDP1 PASS / RDP2 PASS / RDP3 PASS / RDP4 PASS / RDP5 PASS / RDP6 PASS / RDP7 PASS / RDP8 PASS / RDP9 ACTIVE — Cross-venue quality + evidence-overlap engine**
 
 Latest RDP1 closure evidence:
 - PR #1548 merged as exact main `fabaa8830bd599e564bf76c1e0adbee89ec9b5f3`: Market Tape snapshot + WC2 live clock cadence tightened to 60s; focused ownership acceptance passed; unrelated legacy Stream whole-repo text/hash failures were not treated as cadence failures;
@@ -73,7 +73,13 @@ RDP7 — **PASS**.
 - RDP7-F PR #1619 merged as canonical main `0c23165e831d9aa8b8d41050354dfd45abc995d7`; UID504 focused run `36431658023` PASS. Accepted fresh stablecoin capital context now projects only into the existing `ConfluenceFamily.ONCHAIN`, remains neutral `direction=None`, and preserves exact source/freeze evidence for RDP10;
 - RDP7-G diagnostic PR #1620 was closed unmerged. Exact-main UID504 run `36433299821`, rerun job `108966224227`, PASS after canonical R11 runtime recovery issue #1621: Workbench + Development exact main, real DefiLlama snapshot, USDC/USDT raw → envelope → coverage → normalized observation → PIT freeze/analysis lineage, BTC/ETH/SOL ONCHAIN family evidence, stale/gap/PIT fail-closed regressions, supervisor alive, `RDP10_EXACT_PROOF_LINEAGE=RESOLVABLE`, `REAL_CAPITAL=0`.
 
-RDP8 — **ACTIVE**. Exact implementation frontier: **Event Risk + cross-market runtime — fresh official event-source scheduling, explicit process/online truth, Fed/FRED/BLS failure handling, VIX/Treasury cross-market refresh, and fail-closed circuit-breaker behavior without treating stale context as current.**
+RDP8 — **PASS**.
+- RDP8-A merged as canonical main `34eb9c55614afa3e822f760c91ebf0a8caca076c`: Event Source now runs on the canonical UID504 supervisor every 900s with a non-blocking single-writer lock; exact-main UID504 run `36439676631` PASS proved fresh FRED CPI + Employment + Federal Reserve RSS, explicit BLS HTTP 403 fail-closed behavior, fresh non-degraded Event Risk snapshots and `REAL_CAPITAL=0`;
+- RDP8-B merged as canonical main `b343e3bf20677df2caa4d4de5d7a47ee3e1ff01c`: official Cboe VIX redirect is followed, VIX/Treasury raw responses retain SourceRawPayload → SourceEnvelope → SourceCoverage → normalized observation lineage, observations persist in append-only PIT storage, and an hourly single-writer cross-market snapshot clock is supervisor-owned;
+- focused RDP8-B UID504 run `36440855017` PASS proved real Cboe + U.S. Treasury lineage without production mutation;
+- final diagnostic PR #1630 remained unmerged. Exact-main UID504 run `36442983256`, job `108997967133`, PASS: Workbench + Development exact main, canonical R11 runtime restart, one successful canonical VIX/Treasury cycle, fresh exact source lineage, live score-external cross-market freeze, stale Event Risk → circuit-breaker `DEGRADED_DATA` with `STALE_EVENT_TREATED_AS_FRESH_VETO=NO`, focused regressions, `REAL_CAPITAL=0`.
+
+RDP9 — **ACTIVE**. Exact implementation frontier: **Cross-venue quality + evidence-overlap engine — expand provider divergence, classify venue-local vs broad conditions, freeze family dependency lineage, detect raw/evidence overlap, surface material venue disagreement, and prevent duplicate evidence from silently inflating confluence.**
 
 Locked execution sequence:
 `RDP1 runtime reliability → RDP2 source envelope/coverage → RDP3 Geometry → RDP4 rich Liquidity/Order Flow → RDP5 Derivatives/Liquidations → RDP6 BTC/ETH Options → RDP7 real On-chain/stablecoin capital flows → RDP8 Event/Cross-market → RDP9 cross-venue + overlap control → RDP10 frozen proof contract → RDP11 soak/acceptance → Paper Portfolio → new frontend`.
