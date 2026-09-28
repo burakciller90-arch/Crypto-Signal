@@ -1,0 +1,34 @@
+{
+  "retCode": 0,
+  "retMsg": "OK",
+  "result": {
+    "category": "option",
+    "nextPageCursor": "",
+    "list": [
+      {
+        "symbol": "ETH-27MAR26-4000-C-USDT",
+        "status": "Trading",
+        "baseCoin": "ETH",
+        "quoteCoin": "USDT",
+        "settleCoin": "USDT",
+        "optionsType": "Call",
+        "launchTime": "1743669649256",
+        "deliveryTime": "1774598400000",
+        "deliveryFeeRate": "0.00015"
+      },
+      {
+        "symbol": "ETH-27MAR26-4000-P-USDT",
+        "status": "Trading",
+        "baseCoin": "ETH",
+        "quoteCoin": "USDT",
+        "settleCoin": "USDT",
+        "optionsType": "Put",
+        "launchTime": "1743669649256",
+        "deliveryTime": "1774598400000",
+        "deliveryFeeRate": "0.00015"
+      }
+    ]
+  },
+  "retExtInfo": {},
+  "time": 1760000000100
+}
