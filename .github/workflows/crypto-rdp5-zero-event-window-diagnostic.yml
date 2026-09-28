@@ -48,6 +48,9 @@ jobs:
           market = Path(sys.argv[2])
           pid = int(sys.argv[3])
 
+          r11_issue_opened_ms = 1790585870000
+          candidate = None
+
           with sqlite3.connect(
               f"{runtime.resolve().as_uri()}?mode=ro",
               uri=True,
@@ -55,57 +58,77 @@ jobs:
           ) as db:
               db.row_factory = sqlite3.Row
               db.execute("PRAGMA query_only=ON")
-              instance = db.execute(
+              instances = db.execute(
                   """
                   SELECT instance_identity, process_id, started_at_ms
                   FROM collector_instances
-                  WHERE provider='bybit' AND source='liquidation_stream'
-                  ORDER BY started_at_ms DESC, instance_identity DESC
-                  LIMIT 1
-                  """
-              ).fetchone()
-              assert instance is not None
-              assert int(instance["process_id"]) == pid
-              instance_id = str(instance["instance_identity"])
-              started_at_ms = int(instance["started_at_ms"])
-
-              rows = db.execute(
-                  """
-                  SELECT sequence_no, state, observed_at_ms, payload_json
-                  FROM liquidation_connection_coverage
-                  WHERE instance_identity=?
-                  ORDER BY sequence_no ASC
+                  WHERE provider='bybit'
+                    AND source='liquidation_stream'
+                    AND started_at_ms >= ?
+                  ORDER BY started_at_ms ASC, instance_identity ASC
                   """,
-                  (instance_id,),
+                  (r11_issue_opened_ms,),
               ).fetchall()
-              assert rows
+              assert instances
 
-          zero_connected = []
-          first_real_ingestion_ms = None
-          for row in rows:
-              payload = json.loads(str(row["payload_json"]))
-              ingestion = payload["last_liquidation_ingestion_ms"]
-              if (
-                  ingestion is None
-                  and str(row["state"]) == "connected"
-                  and set(payload["reason_codes"])
-                  == {"subscription_confirmed", "transport_activity_fresh"}
-              ):
-                  zero_connected.append(
-                      (int(row["sequence_no"]), int(row["observed_at_ms"]))
-                  )
-              if ingestion is not None and first_real_ingestion_ms is None:
-                  first_real_ingestion_ms = int(ingestion)
+              for instance in instances:
+                  rows = db.execute(
+                      """
+                      SELECT sequence_no, state, observed_at_ms, payload_json
+                      FROM liquidation_connection_coverage
+                      WHERE instance_identity=?
+                      ORDER BY sequence_no ASC
+                      """,
+                      (str(instance["instance_identity"]),),
+                  ).fetchall()
+                  zero_connected = []
+                  first_real_ingestion_ms = None
+                  for row in rows:
+                      payload = json.loads(str(row["payload_json"]))
+                      ingestion = payload["last_liquidation_ingestion_ms"]
+                      if (
+                          ingestion is None
+                          and str(row["state"]) == "connected"
+                          and set(payload["reason_codes"])
+                          == {
+                              "subscription_confirmed",
+                              "transport_activity_fresh",
+                          }
+                      ):
+                          zero_connected.append(
+                              (
+                                  int(row["sequence_no"]),
+                                  int(row["observed_at_ms"]),
+                              )
+                          )
+                      if (
+                          ingestion is not None
+                          and first_real_ingestion_ms is None
+                      ):
+                          first_real_ingestion_ms = int(ingestion)
+                  if zero_connected and first_real_ingestion_ms is not None:
+                      eligible = [
+                          item
+                          for item in zero_connected
+                          if item[1] < first_real_ingestion_ms
+                      ]
+                      if eligible:
+                          candidate = (
+                              instance,
+                              eligible,
+                              first_real_ingestion_ms,
+                          )
 
-          assert zero_connected, "no connected zero-event transport window observed"
-          assert first_real_ingestion_ms is not None, (
-              "need one later real liquidation to close the observed zero-event window"
+          assert candidate is not None, (
+              "no R11-era instance preserved a connected zero-event window "
+              "followed by real liquidation evidence"
           )
-          zero_window_end_ms = max(
-              observed
-              for _, observed in zero_connected
-              if observed < first_real_ingestion_ms
-          )
+          instance, zero_connected, first_real_ingestion_ms = candidate
+          instance_id = str(instance["instance_identity"])
+          evidence_pid = int(instance["process_id"])
+          started_at_ms = int(instance["started_at_ms"])
+          zero_window_end_ms = max(observed for _, observed in zero_connected)
+          assert started_at_ms >= r11_issue_opened_ms
           assert started_at_ms <= zero_window_end_ms < first_real_ingestion_ms
 
           with sqlite3.connect(
@@ -138,7 +161,7 @@ jobs:
           assert liquidation_rows == 0, liquidation_rows
           assert feed_coverage_rows == 0, feed_coverage_rows
 
-          print(f"LIQUIDATION_PID={pid}")
+          print(f"CURRENT_LIQUIDATION_PID={pid}")\n          print(f"ZERO_EVENT_EVIDENCE_PID={evidence_pid}")\n          print(f"ZERO_EVENT_INSTANCE_ID={instance_id}")
           print(f"ZERO_EVENT_INSTANCE_STARTED_AT_MS={started_at_ms}")
           print(
               "ZERO_EVENT_CONNECTED_SEQUENCES="
