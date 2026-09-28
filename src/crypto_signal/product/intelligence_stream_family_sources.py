@@ -2187,56 +2187,18 @@ def _persist_options_proofs(
     ):
         raise ValueError("Stream Options proof surface linkage mismatch")
 
+    analysis = volatility.analysis
     provider = (
         f"{surface.exchange.value}:options:{surface.source.value}"
     )
     quote_identities = tuple(
         sorted(item.quote_identity for item in surface.contracts)
     )
-    source_identities = tuple(
-        sorted(
-            {
-                surface.instrument_metadata_identity,
-                *quote_identities,
-            }
-        )
-    )
     surface_available_at = max(
         surface.source_timestamp_ms,
         surface.observed_at_ms,
         surface.ingested_at_ms,
     )
-    store.append(
-        FrozenProofObject(
-            object_identity=surface.surface_identity,
-            analysis_identity=None,
-            object_kind="options_surface_snapshot",
-            family=ConfluenceFamily.DERIVATIVES.value,
-            domains=("options_surface",),
-            asset=surface.base_coin,
-            symbol=None,
-            network=None,
-            timeframe="options_surface",
-            as_of_ms=volatility.analysis.as_of_ms,
-            market_available_at_ms=surface_available_at,
-            observed_at_ms=surface.observed_at_ms,
-            source_provider=provider,
-            source_quality="exact_persisted",
-            freshness_state="exact_source_snapshot",
-            freshness_age_ms=volatility.analysis.surface_age_ms,
-            uncertainty_flags=(),
-            source_object_identities=source_identities,
-            depends_on_evidence_identities=(),
-            payload_json=canonical_json(surface),
-            visualization_json=canonical_json(surface),
-            renderer_contract_version="options-surface-v1/1",
-            persisted_at_ms=volatility.analysis.as_of_ms,
-            production_authority=False,
-            real_capital=0,
-        )
-    )
-
-    analysis = volatility.analysis
     freeze_dependencies = tuple(
         sorted(
             {
@@ -2265,9 +2227,7 @@ def _persist_options_proofs(
             freshness_state="exact_pit_bounded",
             freshness_age_ms=analysis.surface_age_ms,
             uncertainty_flags=tuple(sorted(analysis.uncertainty_flags)),
-            source_object_identities=(
-                surface.surface_identity,
-            ),
+            source_object_identities=(surface.surface_identity,),
             depends_on_evidence_identities=freeze_dependencies,
             payload_json=canonical_json(
                 {
