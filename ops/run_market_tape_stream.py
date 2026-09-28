@@ -514,7 +514,8 @@ async def run(args: argparse.Namespace) -> int:
     def persist_source_contract(
         event: BybitMicrostructureWireEvent,
         raw_event: RawMarketEvent,
-        orderbook_normalized_persisted: bool,
+        orderbook_normalized_identity: str | None,
+        trade_normalized_identities: tuple[str, ...],
     ) -> None:
         nonlocal source_contract_envelopes_total
         nonlocal source_contract_coverage_events_total
@@ -523,7 +524,8 @@ async def run(args: argparse.Namespace) -> int:
             capabilities=source_capabilities,
             wire_event=event,
             raw_event=raw_event,
-            orderbook_normalized_persisted=orderbook_normalized_persisted,
+            orderbook_normalized_identity=orderbook_normalized_identity,
+            trade_normalized_identities=trade_normalized_identities,
             coverage_observed_at_ms=runtime_now_ms(),
         )
         source_contract_envelopes_total += write.envelope_count
