@@ -728,3 +728,56 @@ Safety:
 
 Exact nextAction:
 Implement only the two demonstrated contract gaps above, run exact-head RDP10 acceptance, inspect live domain behavior and merge only if the final head remains based on current canonical main with no duplicate F3 work.
+
+
+
+## RDP10-F3 implementation acceptance checkpoint — 2026-09-28
+
+Bounded implementation completed on `rdp10/final-contract-closure-f3`.
+
+Accepted implementation head before this docs checkpoint:
+- `50c3b2ae748ea6f0f553d6e3d2ef4d2a17ac73cc`
+
+Changes:
+- RDP10 customer projection now surfaces the already-immutable family `source_scope` and frozen asset/symbol/market/timeframe context; no provider label is inferred or rewritten.
+- provider-divergence/data-quality focused regression proves:
+  - canonical append-only `provider_divergence_snapshot` resolves as `READY_EXACT`;
+  - both `provider_divergence` and `data_quality` domains bind the exact snapshot;
+  - exact source object is customer-readable without current-data substitution;
+  - snapshot source time is bounded by the family `source_as_of_ms`;
+  - a provider snapshot newer than the historical family cutoff raises fail-closed future-evidence error.
+- RDP10 workflow now emits explicit F3 closure markers only after focused tests, live read-only audit and canonical-checkout non-mutation all succeed.
+
+Exact accepted run:
+- RDP10 Frozen Proof Contract run `36482028160` / job `109129741160`: SUCCESS on exact head `50c3b2ae748ea6f0f553d6e3d2ef4d2a17ac73cc`
+- `RDP10_EXACT_SOURCE_PASS=YES`
+- `RDP10_CANONICAL_CHECKOUTS_CLEAN=YES`
+- `RDP10_FAIL_CLOSED_FOCUSED_PASS=YES`
+- `RDP10_DERIVED_PROOF_STORE_PASS=YES`
+- `RDP10_LIVE_MESSAGES_AUDITED=6`
+- `RDP10_UNREGISTERED_READY_COUNT=0`
+- `RDP10_LIVE_FAIL_CLOSED_PASS=YES`
+- `RDP10_NON_MUTATING_PASS=YES`
+- `RDP10_F3_FINAL_CONTRACT_PASS=YES`
+- `RDP10_CUSTOMER_SOURCE_LABEL_PASS=YES`
+- `RDP10_PROVIDER_DIVERGENCE_EXACT_PASS=YES`
+- `RDP10_EVENT_SOURCE_EXACT_PASS=YES`
+- `RDP10_HISTORICAL_CURRENT_SUBSTITUTION=NO`
+- `HISTORICAL_BACKFILL=NO`
+- `REAL_CAPITAL=0`
+
+Fail-closed development evidence:
+- run `36481823314` correctly failed because the new serialized uncertainty assertion compared JSON list vs Python tuple; fixed without changing production semantics.
+- run `36481908539` then passed all pytest cases but correctly failed Ruff import ordering; import order fixed.
+- neither failed run is acceptance.
+
+Main/duplicate guard at checkpoint:
+- canonical main remains `3b555bb97ff8f43038a854e7c66a6ae9f505bbb7`
+- no duplicate open RDP10-F3 PR exists.
+- Durdurulmaz touched: NO
+- Quantum Capital touched: NO
+- `REAL_CAPITAL=0`
+- `HISTORICAL_BACKFILL=NO`
+
+Exact nextAction:
+This checkpoint changes the branch head only through docs. Require one final exact-head RDP10 SUCCESS on the resulting docs-complete head, then open the F3 PR, re-check main/head/duplicate/mergeability, merge with expected-head guard, prove merged-main SSD504/Agent Memory + RDP10 acceptance, and only then mark top-level RDP10 PASS and begin the real RDP11 72-hour UID504 soak.
