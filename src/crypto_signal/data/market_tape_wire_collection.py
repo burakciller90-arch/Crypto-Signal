@@ -48,7 +48,15 @@ async def persist_bybit_wire_stream(
         Callable[[RawMarketEvent, int], None] | None
     ) = None,
     persisted_wire_callback: (
-        Callable[[BybitMicrostructureWireEvent, RawMarketEvent, bool], None]
+        Callable[
+            [
+                BybitMicrostructureWireEvent,
+                RawMarketEvent,
+                str | None,
+                tuple[str, ...],
+            ],
+            None,
+        ]
         | None
     ) = None,
     collection_progress_callback: (
@@ -100,7 +108,8 @@ async def persist_bybit_wire_stream(
         else:
             raw_unchanged += 1
 
-        orderbook_normalized_persisted = False
+        orderbook_normalized_identity: str | None = None
+        trade_normalized_identities: list[str] = []
         if event.orderbook is not None:
             bucket = event.event_at_ms // orderbook_snapshot_interval_ms
             previous_bucket = last_orderbook_bucket.get(event.symbol)
@@ -111,7 +120,21 @@ async def persist_bybit_wire_stream(
             )
             if persist_snapshot:
                 disposition = store.append_orderbook(event.orderbook)
-                orderbook_normalized_persisted = True
+                orderbook_normalized_identity = (
+                    event.orderbook.snapshot_identity
+                    if disposition is MarketTapeWriteDisposition.INSERTED
+                    else store.orderbook_identity_for_provider_update(
+                        exchange=event.orderbook.exchange,
+                        market_type=event.orderbook.market_type,
+                        symbol=event.orderbook.symbol,
+                        update_id=event.orderbook.update_id,
+                        sequence=event.orderbook.sequence,
+                    )
+                )
+                if orderbook_normalized_identity is None:
+                    raise AssertionError(
+                        "persisted orderbook identity was not resolvable"
+                    )
                 if disposition is MarketTapeWriteDisposition.INSERTED:
                     orderbooks_inserted += 1
                 else:
@@ -125,6 +148,21 @@ async def persist_bybit_wire_stream(
 
         for trade in event.trades:
             disposition = store.append_trade(trade)
+            normalized_identity = (
+                trade.trade_identity
+                if disposition is MarketTapeWriteDisposition.INSERTED
+                else store.trade_identity_for_exec_id(
+                    exchange=trade.exchange,
+                    market_type=trade.market_type,
+                    symbol=trade.symbol,
+                    exec_id=trade.exec_id,
+                )
+            )
+            if normalized_identity is None:
+                raise AssertionError(
+                    "persisted trade identity was not resolvable"
+                )
+            trade_normalized_identities.append(normalized_identity)
             if disposition is MarketTapeWriteDisposition.INSERTED:
                 trades_inserted += 1
             else:
@@ -139,7 +177,8 @@ async def persist_bybit_wire_stream(
             persisted_wire_callback(
                 event,
                 raw_event,
-                orderbook_normalized_persisted,
+                orderbook_normalized_identity,
+                tuple(trade_normalized_identities),
             )
         if collection_progress_callback is not None:
             collection_progress_callback(result_snapshot())
