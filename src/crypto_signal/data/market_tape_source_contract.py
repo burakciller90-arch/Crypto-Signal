@@ -134,7 +134,7 @@ def persist_bybit_wire_source_contract(
             event_at_ms=wire_event.event_at_ms,
             source_timestamp_ms=wire_event.source_timestamp_ms,
             observed_at_ms=wire_event.ingested_at_ms,
-            ingested_at_ms=wire_event.ingested_at_ms,
+            ingested_at_ms=coverage_time_ms,
             raw_identity=raw_event.event_identity,
             normalized_identity=normalized_identity,
         )
@@ -160,7 +160,7 @@ def persist_bybit_wire_source_contract(
                 event_at_ms=trade.event_at_ms,
                 source_timestamp_ms=trade.source_timestamp_ms,
                 observed_at_ms=wire_event.ingested_at_ms,
-                ingested_at_ms=wire_event.ingested_at_ms,
+                ingested_at_ms=coverage_time_ms,
                 raw_identity=raw_event.event_identity,
                 normalized_identity=trade.trade_identity,
             )
@@ -272,6 +272,7 @@ def _require_raw_wire_match(
         raw_event.event_kind,
         raw_event.source_timestamp_ms,
         raw_event.event_at_ms,
+        raw_event.ingested_at_ms,
         raw_event.sequence,
         raw_event.update_id,
     ) != (
@@ -280,6 +281,7 @@ def _require_raw_wire_match(
         wire_event.event_kind,
         wire_event.source_timestamp_ms,
         wire_event.event_at_ms,
+        wire_event.ingested_at_ms,
         wire_event.sequence,
         wire_event.update_id,
     ):
