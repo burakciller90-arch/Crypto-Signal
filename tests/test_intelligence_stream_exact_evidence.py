@@ -5,6 +5,7 @@ from decimal import Decimal
 from pathlib import Path
 
 from fastapi.testclient import TestClient
+from test_wc2_live_source_adapter import _bundle
 
 from crypto_signal.data.event_risk import (
     EventCategory,
@@ -19,6 +20,7 @@ from crypto_signal.data.microstructure import OrderBookLevel, build_orderbook_sn
 from crypto_signal.data.models import DataSource, Exchange, MarketType
 from crypto_signal.intelligence.confluence_matrix_v2 import ConfluenceFamily
 from crypto_signal.ledger.serialization import canonical_json, canonical_sha256
+from crypto_signal.ledger.store import ImmutableSignalLedger
 from crypto_signal.product.intelligence_stream_exact_evidence import (
     IntelligenceStreamExactEvidenceReadModel,
 )
@@ -26,6 +28,9 @@ from crypto_signal.product.intelligence_stream_family import (
     StreamFamilySnapshot,
     StreamTrustDomain,
     build_family_snapshot,
+)
+from crypto_signal.product.intelligence_stream_family_sources import (
+    build_geometry_family_snapshot,
 )
 from crypto_signal.product.intelligence_stream_forward_runtime import (
     IntelligenceStreamForwardRuntime,
@@ -509,4 +514,91 @@ def test_unregistered_derived_domain_cannot_become_ready_from_raw_source(
         == "IDENTITY_ONLY_EXACT"
     )
     assert payload["current_data_substitution"] is False
+
+def test_geometry_family_resolves_exact_persisted_full_geometry_proof(
+    tmp_path: Path,
+) -> None:
+    signal_path = tmp_path / "signal.sqlite3"
+    stream_path = tmp_path / "stream.sqlite3"
+    bundle = _bundle()
+    ledger = ImmutableSignalLedger(signal_path)
+    disposition = ledger.freeze(
+        bundle,
+        frozen_at_ms=bundle.signal_decision.as_of_ms + 1,
+    )
+    assert disposition.value == "inserted"
+
+    freeze = ledger.read_freeze_by_signal(
+        bundle.signal_decision.freeze_identity
+    )
+    assert freeze is not None
+    proof = ledger.read_geometry_proof_by_signal(
+        bundle.signal_decision.freeze_identity
+    )
+    assert proof is not None
+
+    snapshot = build_geometry_family_snapshot(freeze)
+    narrative_identity = _project_family(
+        stream_path,
+        projector_id="market_geometry_change",
+        snapshot=snapshot,
+    )
+
+    resolver = IntelligenceStreamExactEvidenceReadModel(
+        stream_ledger_path=stream_path,
+        signal_ledger_path=signal_path,
+    )
+    payload = resolver.read_for_narrative(narrative_identity)
+    assert payload is not None
+
+    geometry = _resolution(payload, "geometry")
+    assert geometry["resolution_state"] == "READY_EXACT"
+    assert geometry["reason"] == "exact_persisted_geometry_proof_resolved"
+    capabilities = geometry["capabilities"]
+    assert isinstance(capabilities, dict)
+    assert capabilities["full_geometry_proof"] == "READY_EXACT"
+    assert capabilities["methodology_states"] == "READY_EXACT"
+    assert capabilities["annotations"] == "READY_EXACT"
+    assert capabilities["conflict_flags"] == "READY_EXACT"
+
+    projection = geometry["customer_projection"]
+    assert isinstance(projection, dict)
+    objects = projection["exact_source_objects"]
+    assert isinstance(objects, (list, tuple))
+    full = next(
+        item
+        for item in objects
+        if isinstance(item, dict)
+        and item.get("proof_identity") == proof.proof_identity
+    )
+    assert full["bundle_identity"] == bundle.bundle_identity
+    assert (
+        full["signal_freeze_identity"]
+        == bundle.signal_decision.freeze_identity
+    )
+    assert full["methodology_states"]
+    assert isinstance(full["annotations"], list)
+    assert "conflict_flags" in full
+
+    references = {
+        item["evidence_identity"]: item
+        for item in payload["reference_resolutions"]
+    }
+    assert references[proof.proof_identity]["resolution_state"] == "READY_EXACT"
+    assert references[proof.proof_identity]["object_kind"] == "geometry_proof"
+    assert payload["current_data_substitution"] is False
+
+    exact = resolver.read_reference(
+        narrative_identity=narrative_identity,
+        evidence_identity=proof.proof_identity,
+    )
+    assert exact is not None
+    assert exact["resolution_state"] == "READY_EXACT"
+    assert exact["object_kind"] == "geometry_proof"
+    exact_object = exact["exact_object"]
+    assert isinstance(exact_object, dict)
+    assert exact_object["proof_identity"] == proof.proof_identity
+    assert exact_object["methodology_states"]
+    assert isinstance(exact_object["annotations"], list)
+    assert exact["current_data_substitution"] is False
 
