@@ -197,6 +197,24 @@ class LiquidationConnectionRuntimeStore:
                     instance_identity,
                     observed_at_ms
                 );
+                CREATE TRIGGER IF NOT EXISTS
+                    liquidation_connection_coverage_no_update
+                BEFORE UPDATE ON liquidation_connection_coverage
+                BEGIN
+                    SELECT RAISE(
+                        ABORT,
+                        'liquidation connection coverage is immutable'
+                    );
+                END;
+                CREATE TRIGGER IF NOT EXISTS
+                    liquidation_connection_coverage_no_delete
+                BEFORE DELETE ON liquidation_connection_coverage
+                BEGIN
+                    SELECT RAISE(
+                        ABORT,
+                        'liquidation connection coverage is immutable'
+                    );
+                END;
                 """
             )
         self._initialized = True
