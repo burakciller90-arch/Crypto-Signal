@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections import Counter
+from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import cast
 
@@ -73,6 +74,7 @@ async def backfill_range(
         page_end_ms = page_last_open_ms + duration_ms - 1
 
         source_snapshot = None
+        page: Sequence[Candle]
         if source_store is not None:
             if not hasattr(adapter, "fetch_source_candles"):
                 raise TypeError(
