@@ -324,6 +324,49 @@ class LiquidationConnectionRuntimeStore:
             else _coverage_from_payload(str(row["payload_json"]))
         )
 
+    def observation_window(
+        self,
+        instance_identity: str,
+        *,
+        window_start_ms: int,
+        as_of_ms: int,
+    ) -> tuple[LiquidationConnectionCoverage, ...]:
+        if window_start_ms < 0 or as_of_ms < window_start_ms:
+            raise ValueError("invalid liquidation observation window")
+        if not self.path.is_file():
+            return ()
+        with self._connect() as db:
+            anchor = db.execute(
+                """
+                SELECT payload_json
+                FROM liquidation_connection_coverage
+                WHERE instance_identity=?
+                  AND observed_at_ms <= ?
+                ORDER BY observed_at_ms DESC, sequence_no DESC
+                LIMIT 1
+                """,
+                (instance_identity, window_start_ms),
+            ).fetchone()
+            rows = db.execute(
+                """
+                SELECT payload_json
+                FROM liquidation_connection_coverage
+                WHERE instance_identity=?
+                  AND observed_at_ms > ?
+                  AND observed_at_ms <= ?
+                ORDER BY sequence_no ASC, observed_at_ms ASC
+                """,
+                (instance_identity, window_start_ms, as_of_ms),
+            ).fetchall()
+        values: list[LiquidationConnectionCoverage] = []
+        if anchor is not None:
+            values.append(_coverage_from_payload(str(anchor["payload_json"])))
+        values.extend(
+            _coverage_from_payload(str(row["payload_json"]))
+            for row in rows
+        )
+        return tuple(values)
+
     def quick_check(self) -> bool:
         if not self.path.is_file():
             return False
