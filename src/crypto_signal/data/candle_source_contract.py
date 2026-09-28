@@ -107,7 +107,10 @@ def persist_candle_source_snapshot(
             )
             for candle in snapshot.candles
         ),
-        default=snapshot.observed_at_ms,
+        default=min(
+            snapshot.source_timestamp_ms,
+            snapshot.observed_at_ms,
+        ),
     )
     persistence_time = max(
         snapshot.observed_at_ms,
@@ -148,8 +151,11 @@ def persist_candle_source_snapshot(
                 symbol=snapshot.symbol,
                 provider_event_id=None,
                 provider_sequence=None,
-                event_at_ms=snapshot.observed_at_ms,
-                source_timestamp_ms=snapshot.observed_at_ms,
+                event_at_ms=min(
+                    snapshot.source_timestamp_ms,
+                    snapshot.observed_at_ms,
+                ),
+                source_timestamp_ms=snapshot.source_timestamp_ms,
                 observed_at_ms=snapshot.observed_at_ms,
                 ingested_at_ms=persistence_time,
                 raw_identity=raw.raw_identity,
