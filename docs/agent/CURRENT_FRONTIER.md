@@ -1034,3 +1034,33 @@ Safety:
 - RDP11 soak clock: NOT STARTED
 - Durdurulmaz touched: NO
 - Quantum Capital touched: NO
+
+
+
+## RDP11 exact-main fulltest blocker checkpoint — 2026-09-29
+
+The accepted deployment sequence stopped correctly at fulltest. Product was NOT deployed.
+
+UID504 deployment evidence:
+- issue #1656 / Crypto Mac Command run `36489311982` / job `109153796258`: SUCCESS
+  - Development fast-forwarded from `b343e3bf20677df2caa4d4de5d7a47ee3e1ff01c` to exact main `5f07a8954f87e237258f1d3eb448a5ede6106fbd`.
+- issue #1657 / run `36489373492` / job `109153999931`: PRODUCT TEST SUCCESS.
+- issue #1658 / run `36489428770` / job `109154187159`: FULL TEST FAILURE.
+- Product deploy was not attempted and the 72-hour soak clock has NOT started.
+
+Full-suite failure classification: 37 tests.
+- 12 async collection tests fail because the repository marks them `pytest.mark.asyncio` but the declared dev environment does not include `pytest-asyncio`; this is a test-harness dependency drift, not a live collector failure.
+- 20 WC2 tests share one stale fixture root: `tests/test_wc2_live_source_adapter.py::_bundle()` selects synthetic `wc2-pa-directional` / `wc2-harmonic-geometry` evidence in confluence but freezes the older base methodology results. The strengthened Frozen Geometry Proof invariant correctly rejects that mismatched lineage.
+- 2 trust-source tests assert obsolete internal/English-heavy narration strings while production now emits the accepted Turkish human-readable trust/event-risk wording.
+- 1 S15 end-to-end test uses text search for `BTCUSDT` even though symbol is now a first-class structured query field and the root human narrative is no longer required to repeat the ticker in free text.
+- 2 WC0 runtime-wiring tests predate accepted RDP10 Options + On-chain runtime paths and therefore omit `options_surface_path`, `onchain_capital_flow_path`, and `onchain_source_contract_path` from their expected contract.
+
+Repair policy:
+- do not weaken Frozen Geometry Proof validation;
+- do not remove RDP10 runtime paths;
+- do not revert human-readable Turkish narration;
+- do not fabricate async success;
+- repair test harness/fixtures so they exercise the current accepted contracts exactly.
+
+Exact nextAction:
+Apply only the five mechanically demonstrated integration repairs on the RDP11 branch, add a focused UID504 integration-repair acceptance workflow, require focused PASS, then merge/re-sync and rerun the exact-main fulltest before any Product deployment.
