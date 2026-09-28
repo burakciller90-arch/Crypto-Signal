@@ -769,7 +769,18 @@ PASS:
 
 ## RDP9 — Cross-venue quality + evidence-overlap engine
 
-Status: **ACTIVE**
+Status: **PASS**
+
+Closure evidence:
+- RDP9-A PR #1633 / main `4763bb27ad432a761e3abcee4aceb75e588cb6eb` established score-external venue-local/broad quality classification.
+- RDP9-B PR #1634 / main `2fcbefabec0360a58424a177048828d49d16c7d7` bound exact family dependency/raw-evidence overlap into immutable decision lineage.
+- RDP9-C PR #1635 / main `371bc013337e2e304fac465c4ab284d37539efc9` made material venue disagreement visible to the unified decision layer without adding score or directional authority.
+- UID504 overlap acceptance `36447590945` / job `109013794664`: `DUPLICATE_EVIDENCE_WEIGHT_INFLATION=BLOCKED`, `OVERLAP_LINEAGE_IN_DECISION_PROOF=YES`.
+- UID504 decision acceptance `36447590574` / job `109013790085`: `MATERIAL_VENUE_DISAGREEMENT_VISIBLE=YES`, score authority NO, directional authority NO.
+- Exact-current-main bootstrap `36451104263` / job `109025778311` on `e8fd12f2b3e56f2feb2050d938b4ef0883accfb5`: focused RDP9 acceptance PASS, provider-divergence DB quick-check OK, live BTC/ETH/SOL read-only classification PASS.
+- Workbench bootstrap `36451104302` / job `109025778585`: canonical Workbench `repo/main` exact `e8fd12f2b3e56f2feb2050d938b4ef0883accfb5`, dirty count 0.
+- Both RDP9 PASS conditions are therefore mechanically satisfied. The live observation was broad confirmation; no live venue conflict was fabricated.
+- `REAL_CAPITAL=0`.
 
 Goal:
 - stop local anomalies and duplicate evidence from masquerading as broad confirmation.
@@ -786,6 +797,8 @@ PASS:
 - material venue disagreement is visible to the decision layer.
 
 ## RDP10 — Exact frozen customer-proof contract
+
+Status: **ACTIVE**
 
 Goal:
 - finish the backend contract required by the later frontend.
@@ -925,7 +938,7 @@ Every new agent working on this program must read, in order:
 
 Current exact frontier:
 
-**RDP9 — Cross-venue quality + evidence-overlap engine**
+**RDP10 — Exact frozen customer-proof contract**
 
 Do not skip forward to Portfolio or frontend implementation while RDP1–RDP11 remain open unless the user explicitly authorizes parallel preparatory work.
 
