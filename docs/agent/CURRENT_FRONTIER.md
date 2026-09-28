@@ -11,36 +11,35 @@ Runtime Development: `/Volumes/Crypto-504/Crypto-Signal/Development`
 
 ## Verified Git baseline
 
-Current `main` at checkpoint:
+Current exact `main` at checkpoint:
 
-`26e85ff835833ecd14b95089d03eeb09e8e6c243`
+`da7f4299870c6db91dec7feeb7a206226d2750ab`
 
 Commit:
 
-`chore: add durable Crypto Signal agent memory bootstrap`
+`RDP10-C: add immutable derived proof store (#1641)`
 
-Recent accepted implementation sequence:
+Current accepted sequence at/after RDP9 closure:
 
-- `4763bb27ad432a761e3abcee4aceb75e588cb6eb` — RDP9-A: classify cross-venue quality without score authority.
-- `2fcbefabec0360a58424a177048828d49d16c7d7` — RDP9-B: prevent exact evidence overlap from inflating confluence.
-- `371bc013337e2e304fac465c4ab284d37539efc9` — RDP9-C: surface material venue disagreement in unified decisions.
+- PR #1638 — RDP9 roadmap closure; merge `e3a6035b7e7a55ea1d7b8c6de46d0898663da341`.
+- PR #1639 — RDP10-A fail closed on unregistered proof domains; merge `709354d52ab2040794879d60944587beb44d4ba2`.
+- PR #1640 — RDP10-B expose immutable full Geometry Proof; merge `53d27b1686b7cf74aa310fb69873eb1c28363603`.
+- PR #1641 — RDP10-C immutable derived-proof store foundation; merge `da7f4299870c6db91dec7feeb7a206226d2750ab`.
 
-Associated PRs:
-
-- #1633 — RDP9-A
-- #1634 — RDP9-B
-- #1635 — RDP9-C
-
-Latest observed Workbench bootstrap on exact checkpoint main:
+Latest exact-main SSD504 Workbench verification:
 
 - workflow: `Crypto SSD504 Workbench Bootstrap`
-- run ID: `36447774024`
+- run ID: `36462131203`
+- job ID: `109063054163`
 - conclusion: `success`
-- SHA: `371bc013337e2e304fac465c4ab284d37539efc9`
+- exact SHA: `da7f4299870c6db91dec7feeb7a206226d2750ab`
+- final Workbench repo: branch `main`, head exact SHA, dirty count `0`
+- `SSD504_WORKBENCH_PASS=YES`
+- `REAL_CAPITAL=0`
 
 ## Canonical roadmap state
 
-`CURRENT_STATUS.md` and `docs/CRYPTO_SIGNAL_REALITY_BACKED_EVIDENCE_DATA_PLANE_V1.md` identify:
+Verified roadmap sequence:
 
 - RDP0 PASS
 - RDP1 PASS
@@ -51,81 +50,91 @@ Latest observed Workbench bootstrap on exact checkpoint main:
 - RDP6 PASS
 - RDP7 PASS
 - RDP8 PASS
-- **RDP9 ACTIVE**
+- RDP9 PASS
+- **RDP10 ACTIVE**
+- RDP11 not yet closed
 
-Active gate:
+RDP9 closure was mechanically proven; do not repeat RDP9 A/B/C.
 
-**RDP9 — Cross-venue quality + evidence-overlap engine**
+Key acceptance:
 
-Roadmap PASS conditions:
+- RDP9 overlap run `36447590945`: SUCCESS; duplicate-evidence weight inflation blocked.
+- RDP9 cross-venue decision run `36447590574`: SUCCESS; material venue disagreement is visible while cross-venue retains no score/directional authority.
+- Agent Memory Bootstrap `36451104263`: SUCCESS on exact then-main; BTC/ETH/SOL live read-only provider-divergence classifications healthy.
+- Workbench bootstrap `36451104302`: SUCCESS and clean.
 
-1. the same raw truth cannot silently create duplicate confidence;
-2. material venue disagreement is visible to the decision layer.
+## Active gate
 
-## Important interpretation
+**RDP10 — Exact frozen customer-proof contract**
 
-RDP9-A/B/C implementation is present on `main`.
+Accepted bounded slices:
 
-That does **not** automatically mean RDP9 is PASS.
+### RDP10-A — fail-closed domain resolution — PASS
 
-Before advancing to RDP10, the next agent must:
+- branch: `rdp10/fail-closed-domain-resolution-a`
+- PR #1639
+- accepted head: `868cc84d9202bdda410075a914744b60f898e616`
+- merge: `709354d52ab2040794879d60944587beb44d4ba2`
+- UID504 run `36459816795` / job `109055278087`: SUCCESS
+- live audit observed 17 unregistered domains and 0 false `READY_EXACT`
+- historical backfill: NO
 
-1. verify latest `main` has not advanced beyond this checkpoint;
-2. inspect the exact RDP9 A/B/C acceptance runs/outputs;
-3. re-check live read-only BTC/ETH/SOL provider-divergence classification on current exact main;
-4. verify overlap suppression and decision conflict lineage satisfy both roadmap PASS conditions;
-5. update `CURRENT_STATUS.md`, the active roadmap, and Chronicle only if closure is mechanically proven.
+### RDP10-B — strongest Geometry Proof resolution — PASS
 
-If another agent has already completed this after the checkpoint, verify that evidence and continue from the next unclosed gate instead of repeating RDP9 work.
+- branch: `rdp10/geometry-proof-linkage-b`
+- PR #1640
+- accepted head: `543aff9877f0e47c2ab4d882b7990b8cbc8d63e1`
+- merge: `53d27b1686b7cf74aa310fb69873eb1c28363603`
+- UID504 run `36460862691` / job `109058752043`: SUCCESS
+- persisted RDP3 `geometry_proofs` now resolve through exact-evidence by exact immutable parent linkage
+- proof SHA/parent metadata/PIT checks fail closed
+- full methodology states, annotations and conflict flags are exposed from the persisted proof
+- current-data substitution: NO
+- historical backfill: NO
 
-## Next roadmap sequence
+### RDP10-C — immutable derived-proof store foundation — PASS
 
-After genuine RDP9 PASS:
+- branch: `rdp10/immutable-derived-proof-store-c`
+- PR #1641
+- accepted head: `45d35c058d6a1a040b750a97a43f5884a549c153`
+- merge: `da7f4299870c6db91dec7feeb7a206226d2750ab`
+- UID504 run `36461989856` / job `109062573004`: SUCCESS
+- append-only exact derived-proof registry exists
+- exact idempotent replay only; same identity + different content fails closed
+- SQL UPDATE/DELETE rejected
+- canonical payload/visualization JSON and PIT metadata validated
+- no generic `latest proof` API
+- no historical recomputation/backfill
+- `production_authority=false`, `REAL_CAPITAL=0`
 
-- RDP10 — Exact frozen customer-proof contract.
-- RDP11 — Continuous soak + final Evidence PASS.
-- Paper Capital / Portfolio.
-- New Command Center frontend.
+RDP10 is **not PASS yet**. A/B/C are accepted foundations/slices only.
 
-Do not jump ahead merely because downstream prep branches/files exist.
+## First mechanically unclosed RDP10 slice
 
-## Known concurrent-work warning
+**RDP10-D — Liquidity + Order Flow exact derived-proof persistence and resolver integration**
 
-Crypto Signal uses multiple agents. Always inspect current `main`, open PRs and recent workflow activity immediately before changing or merging anything.
+Required next work:
 
-## Required next action
+1. persist exact immutable derived payloads for Liquidity dynamics/structure/sweep;
+2. persist exact immutable derived payloads for Order Flow microstructure/temporal flow/absorption/price-CVD divergence;
+3. bind proof identities before any corresponding derived domain can claim `READY_EXACT`;
+4. resolver must return the complete frozen derived proof, not infer canonical CVD/zones from the capped source preview;
+5. keep shared source lineage explicit so Liquidity and Order Flow do not imply independent confirmation;
+6. preserve PIT timestamps and reject any future nested source;
+7. do not rewrite or recompute historical Stream rows.
 
-**Re-measure exact current RDP9 closure evidence and either mechanically close RDP9 or identify the one remaining acceptance gap.**
+After RDP10-D, continue mechanically to RDP10-E/F/G and only declare RDP10 PASS when the full roadmap acceptance contract is satisfied.
+
+## Stale/duplicate guard
+
+Open PR #1478, `ED1: resolve exact family payloads for human proof`, is stale frontend-first work. Do not merge/revive it blindly. It predates the corrected RDP10 backend contract and does not replace RDP10-D/E/F.
+
+Parallel agents may advance `main`. Always re-check current `main`, open PRs, branches and exact acceptance output immediately before changing or merging anything.
 
 ## Safety
 
 - REAL_CAPITAL=0.
 - Real exchange/broker authority added: NO.
-- Historical/frozen evidence mutation by this checkpoint: NO.
+- Historical/frozen evidence mutation: NO.
 - Durdurulmaz touched: NO.
 - Quantum Capital touched: NO.
-
-
-## Agent-memory bootstrap installation verification — 2026-09-28
-
-Merged installation:
-- PR #1636
-- merge SHA: `26e85ff835833ecd14b95089d03eeb09e8e6c243`
-
-Mechanical verification:
-- Agent Memory Bootstrap run `36450804976`: PASS.
-- Context rebuild: PASS.
-- Exact-main RDP9 focused acceptance: PASS.
-- Live read-only BTC/ETH/SOL cross-venue classification: PASS.
-- BTCUSDT: `broad_two_venue / two_venue_confirmed`.
-- ETHUSDT: `broad_two_venue / two_venue_confirmed`.
-- SOLUSDT: `broad_two_venue / two_venue_confirmed`.
-- Provider-divergence DB `quick_check=ok`.
-- SSD504 Workbench Bootstrap run `36450805160`: PASS.
-- Workbench `repo/main` advanced cleanly to exact `26e85ff835833ecd14b95089d03eeb09e8e6c243`.
-- Workbench dirty state after sync: 0.
-- New `00_CONTEXT` links for AGENTS / CURRENT_FRONTIER / HANDOFF_LOG / PROMPT_SUFFIX are installed by the accepted Workbench bootstrap.
-
-Important:
-- This bootstrap verification proves the durable memory/bootstrap system is installed and the current RDP9 A/B/C focused/live checks are healthy.
-- It does not by itself rewrite the canonical RDP9 roadmap state. RDP9 remains governed by `CURRENT_STATUS.md` and the active roadmap until a dedicated roadmap closure updates that authority.
