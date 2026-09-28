@@ -47,6 +47,10 @@ async def persist_bybit_wire_stream(
     persisted_event_callback: (
         Callable[[RawMarketEvent, int], None] | None
     ) = None,
+    persisted_wire_callback: (
+        Callable[[BybitMicrostructureWireEvent, RawMarketEvent, bool], None]
+        | None
+    ) = None,
     collection_progress_callback: (
         Callable[[MarketTapeWireCollectionResult], None] | None
     ) = None,
@@ -96,6 +100,7 @@ async def persist_bybit_wire_stream(
         else:
             raw_unchanged += 1
 
+        orderbook_normalized_persisted = False
         if event.orderbook is not None:
             bucket = event.event_at_ms // orderbook_snapshot_interval_ms
             previous_bucket = last_orderbook_bucket.get(event.symbol)
@@ -106,6 +111,7 @@ async def persist_bybit_wire_stream(
             )
             if persist_snapshot:
                 disposition = store.append_orderbook(event.orderbook)
+                orderbook_normalized_persisted = True
                 if disposition is MarketTapeWriteDisposition.INSERTED:
                     orderbooks_inserted += 1
                 else:
@@ -129,6 +135,12 @@ async def persist_bybit_wire_stream(
             progress_callback(event, observed_messages)
         if persisted_event_callback is not None:
             persisted_event_callback(raw_event, observed_messages)
+        if persisted_wire_callback is not None:
+            persisted_wire_callback(
+                event,
+                raw_event,
+                orderbook_normalized_persisted,
+            )
         if collection_progress_callback is not None:
             collection_progress_callback(result_snapshot())
         if max_messages is not None and observed_messages >= max_messages:
