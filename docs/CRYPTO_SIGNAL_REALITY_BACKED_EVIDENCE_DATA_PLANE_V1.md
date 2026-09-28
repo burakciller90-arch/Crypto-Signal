@@ -612,14 +612,18 @@ PASS:
 
 ## RDP4 — Rich Liquidity + Order Flow live wiring
 
-Status: **ACTIVE**
+Status: **PASS**
 
 Progress:
-- **RDP4-A rich Market Tape family wiring ACCEPTED** on main `0356f6c1024935bfeffbcc7e61b2a7d95bd9ecc5` via PR #1566;
-- UID504 `36387736662`: exact Workbench/source PASS, rich family + engine regressions PASS, Ruff PASS, mypy PASS, py_compile PASS, REAL_CAPITAL=0;
-- Liquidity Structure/Sweep and Temporal Order Flow are now promoted into the existing Liquidity/Order Flow family snapshots with composite source-event identities, rich evidence domains/components and uncertainty lineage; no new family or score weight was added;
-- future/late rows cannot rewrite PIT family truth; missing trades do not fabricate public-trade/temporal/CVD domains; temporal CVD never invents family direction;
-- next: **RDP4-B — add Absorption + Price/CVD Divergence dependency/overlap freezes. Production divergence consumes canonical read-only 15m candles and is allowed to remain explicit UNRESOLVED when the default 2m flow window cannot provide five compatible closed candles; no synthetic lower-timeframe price rail will be invented.**
+- **RDP4-A rich Market Tape family wiring ACCEPTED** on main `0356f6c1024935bfeffbcc7e61b2a7d95bd9ecc5` via PR #1566; UID504 `36387736662` PASS;
+- **RDP4-B Absorption + Price/CVD dependency wiring ACCEPTED** on main `1e2ad0540d3c1c2b7d40b98abbd88126f8ce01a9` via PR #1568;
+- UID504 `36392872215`: exact Workbench/source PASS, focused pattern-dependency + RDP4-A + live-clock/candle regressions PASS, Ruff PASS, mypy PASS, py_compile PASS, REAL_CAPITAL=0;
+- separate RDP4-A regression `36392872158` PASS and RDP2 candle-source regression `36392872168` PASS;
+- Liquidity Structure/Sweep, Temporal Order Flow, Absorption and Price/CVD Divergence now appear inside the existing Liquidity/Order Flow family proof without new family weights;
+- exact PIT/dependency/overlap lineage is preserved; Absorption reuses the exact existing structure/flow freezes; divergence reads canonical 15m CandleStore data read-only and remains explicit UNRESOLVED when the 2m flow window lacks compatible closed-candle coverage;
+- no actor-intent claims, no synthetic lower-timeframe price rail, no context-only direction invention, and missing candle cache fails without initialization;
+- clean Workbench bootstrap `36393163025` = exact `1e2ad0540d3c1c2b7d40b98abbd88126f8ce01a9`;
+- **RDP4 PASS**. Next: **RDP5-A — continuous liquidation runtime + explicit connected/silence/stale coverage/fail-closed freshness, reusing the existing Bybit allLiquidation parser/persistence/coverage model.**
 
 Goal:
 - promote existing rich M2/M3 engines into the forward-only family path.
@@ -647,6 +651,14 @@ PASS:
 - no direction invented from context-only engines.
 
 ## RDP5 — Derivatives + liquidation restoration
+
+Status: **ACTIVE**
+
+Progress:
+- 60-second Bybit REST derivatives snapshot already persists mark/index/OI/funding truth through the canonical RDP2 source contract;
+- PIT-safe Derivatives Context, Derivatives Dynamics, Liquidation Heatmap and Derivatives Crowding engines already exist;
+- Bybit allLiquidation WebSocket parser, raw/normalized persistence and LiquidationFeedCoverage already exist, but the current runner is explicitly bounded development-only, disabled by default and not owned by the runtime supervisor;
+- exact next frontier: **RDP5-A — production-safe continuous liquidation collection under SSD504 supervisor ownership with explicit connection/silence/stale coverage and fail-closed freshness; reuse existing collector/model instead of creating a parallel liquidation path.**
 
 Goal:
 - make M4 continuously fresh.
