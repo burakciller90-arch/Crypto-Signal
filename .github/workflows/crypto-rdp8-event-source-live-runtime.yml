@@ -1,0 +1,131 @@
+name: RDP8 Event Source Live Runtime UID504
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "ops/run_event_source_snapshot.py"
+      - "ops/ssd_runtime_supervisor.sh"
+      - "tests/test_rdp8_event_source_live_runtime.py"
+      - ".github/workflows/crypto-rdp8-event-source-live-runtime.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  focused:
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          clean: true
+          fetch-depth: 1
+
+      - name: Verify exact Workbench baseline and PR source
+        shell: bash
+        run: |
+          set -euo pipefail
+          WB="/Volumes/Crypto-504/Crypto-Signal-Workbench/repo"
+          test "$(id -u)" = "504"
+          test "$(git -C "$WB" branch --show-current)" = "main"
+          test -z "$(git -C "$WB" status --porcelain)"
+          test "$(git -C "$WB" rev-parse HEAD)" = "${{ github.event.pull_request.base.sha }}"
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+          echo "RDP8_A_WORKBENCH_BASELINE_PASS=YES"
+          echo "RDP8_A_EXACT_PR_SOURCE_PASS=YES"
+
+      - name: Focused Event Source scheduler acceptance
+        shell: bash
+        run: |
+          set -euo pipefail
+          PY="/Volumes/Crypto-504/Crypto-Signal/Development/.venv/bin/python"
+          export PYTHONPATH="$GITHUB_WORKSPACE/src:$GITHUB_WORKSPACE"
+          "$PY" -m pytest -q \
+            tests/test_rdp8_event_source_live_runtime.py \
+            tests/test_event_source_snapshot.py \
+            tests/test_event_source_runtime.py \
+            tests/test_event_source_adapters.py \
+            tests/test_event_risk.py
+          "$PY" -m ruff check \
+            ops/run_event_source_snapshot.py \
+            tests/test_rdp8_event_source_live_runtime.py
+          "$PY" -m mypy ops/run_event_source_snapshot.py
+          "$PY" -m py_compile \
+            ops/run_event_source_snapshot.py \
+            tests/test_rdp8_event_source_live_runtime.py
+          bash -n ops/ssd_runtime_supervisor.sh
+          echo "RDP8_A_EVENT_SOURCE_SCHEDULER_PASS=YES"
+          echo "EVENT_SOURCE_CADENCE_SECONDS=900"
+          echo "EVENT_SOURCE_SINGLE_WRITER_LOCK=YES"
+          echo "BLS_FAILURE_FRED_FALLBACK=PRESERVED"
+          echo "REAL_CAPITAL=0"
+
+      - name: Real official-source probe without production writes
+        shell: bash
+        run: |
+          set -euo pipefail
+          PY="/Volumes/Crypto-504/Crypto-Signal/Development/.venv/bin/python"
+          export PYTHONPATH="$GITHUB_WORKSPACE/src:$GITHUB_WORKSPACE"
+          "$PY" - <<'PY'
+          from __future__ import annotations
+
+          import os
+          import time
+          from pathlib import Path
+
+          import httpx
+
+          from ops.run_event_source_snapshot import (
+              USER_AGENT,
+              collect_event_source_cycle,
+          )
+          from crypto_signal.data.event_source_runtime import EventSourceRuntimeStore
+
+          path = Path(
+              f"/private/tmp/rdp8-a-event-source-{os.getpid()}-{time.time_ns()}.sqlite3"
+          )
+          try:
+              store = EventSourceRuntimeStore(path)
+              with httpx.Client(
+                  timeout=20.0,
+                  follow_redirects=True,
+                  headers={
+                      "User-Agent": USER_AGENT,
+                      "Accept": (
+                          "text/calendar, text/html, application/xhtml+xml, "
+                          "application/rss+xml, application/xml, text/xml"
+                      ),
+                  },
+              ) as client:
+                  result = collect_event_source_cycle(
+                      store=store,
+                      client=client,
+                  )
+
+              for fetch in result.fetches:
+                  print(
+                      "RDP8_A_SOURCE "
+                      f"provider={fetch.source_provider} "
+                      f"kind={fetch.source_kind.value} "
+                      f"outcome={fetch.outcome.value} "
+                      f"http_status={fetch.http_status} "
+                      f"items={len(fetch.item_identities)} "
+                      f"reason={fetch.reason_code or 'none'}"
+                  )
+              assert result.required_calendar_coverage_satisfied
+              assert result.required_news_coverage_satisfied
+              assert result.required_coverage_satisfied
+              assert store.quick_check()
+              print("RDP8_A_OFFICIAL_SOURCE_COVERAGE_PASS=YES")
+          finally:
+              for suffix in ("", "-wal", "-shm"):
+                  try:
+                      Path(str(path) + suffix).unlink()
+                  except FileNotFoundError:
+                      pass
+
+          print("PRODUCTION_RUNTIME_MUTATED=NO")
+          print("REAL_CAPITAL=0")
+          PY
