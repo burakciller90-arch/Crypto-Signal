@@ -7,19 +7,19 @@
     geometry: Object.freeze({
       label: "Geometri",
       aliases: Object.freeze(["geometry", "geometry_pa_elliott_harmonic"]),
-      domains: Object.freeze(["frozen_chart", "consumed_candles"]),
+      domains: Object.freeze(["geometry", "frozen_chart", "consumed_candles"]),
       visual: true,
     }),
     liquidity: Object.freeze({
       label: "Likidite",
       aliases: Object.freeze(["liquidity"]),
-      domains: Object.freeze(["liquidity_map", "liquidation_map"]),
+      domains: Object.freeze(["liquidity", "order_book", "liquidity_map", "liquidation_map"]),
       visual: false,
     }),
     order_flow: Object.freeze({
       label: "Emir Akışı",
       aliases: Object.freeze(["order_flow", "order_flow_absorption"]),
-      domains: Object.freeze(["order_book", "order_flow_cvd"]),
+      domains: Object.freeze(["order_flow", "order_book", "public_trades", "order_flow_cvd"]),
       visual: false,
     }),
     derivatives: Object.freeze({
@@ -473,6 +473,259 @@
     return section;
   }
 
+  function exactFamilyResolutions(payload, config) {
+    const items = Array.isArray(payload?.resolutions) ? payload.resolutions : [];
+    return items.filter((item) => config.domains.includes(text(item?.domain, "")));
+  }
+
+  function exactFamilyObjects(payload, config) {
+    const objects = [];
+    const seen = new Set();
+    for (const resolution of exactFamilyResolutions(payload, config)) {
+      const projection = resolution?.customer_projection || {};
+      const candidates = Array.isArray(projection.exact_source_objects)
+        ? projection.exact_source_objects
+        : [];
+      for (const candidate of candidates) {
+        if (!candidate || typeof candidate !== "object") continue;
+        const key = text(
+          candidate.snapshot_identity || candidate.trade_identity ||
+            candidate.observation_identity || candidate.signal_freeze_identity ||
+            candidate.decision_freeze_bundle_identity,
+          JSON.stringify(candidate)
+        );
+        if (seen.has(key)) continue;
+        seen.add(key);
+        objects.push(candidate);
+      }
+    }
+    return objects.sort((left, right) =>
+      number(right?.event_at_ms ?? right?.as_of_ms, 0) -
+      number(left?.event_at_ms ?? left?.as_of_ms, 0)
+    );
+  }
+
+  function exactFamilyComponents(payload, config) {
+    for (const resolution of exactFamilyResolutions(payload, config)) {
+      const components = resolution?.customer_projection?.state_components;
+      if (components && typeof components === "object") return components;
+    }
+    return {};
+  }
+
+  function exactFamilyResolution(payload, config, contribution) {
+    const states = exactFamilyResolutions(payload, config).map((item) =>
+      text(item?.resolution_state, "UNAVAILABLE_EXPLICIT")
+    );
+    if (states.includes("READY_EXACT")) return "READY_EXACT";
+    const refs = Array.isArray(contribution?.source_evidence_identities)
+      ? contribution.source_evidence_identities
+      : [];
+    if (states.includes("IDENTITY_ONLY_EXACT") || refs.length) {
+      return "IDENTITY_ONLY_EXACT";
+    }
+    return "UNAVAILABLE_EXPLICIT";
+  }
+
+  function renderExactOrderBook(objects) {
+    const snapshot = objects.find((item) => Array.isArray(item?.bids) && Array.isArray(item?.asks));
+    if (!snapshot) return null;
+    const bids = snapshot.bids.slice(0, 8);
+    const asks = snapshot.asks.slice(0, 8);
+    const sizes = bids.concat(asks).map((item) => number(item?.size, 0));
+    const maxSize = Math.max.apply(null, sizes.concat([1]));
+    const section = proofSection(
+      "DONDURULMUŞ EMİR TAHTASI",
+      "Exact order-book snapshot · " + formatTime(snapshot.event_at_ms)
+    );
+    const book = document.createElement("div");
+    book.className = "exact-orderbook";
+    for (const pair of [["BID", bids], ["ASK", asks]]) {
+      const side = pair[0];
+      const levels = pair[1];
+      const column = document.createElement("div");
+      column.className = "exact-orderbook-side is-" + side.toLowerCase();
+      const title = document.createElement("strong");
+      title.textContent = side;
+      column.append(title);
+      for (const level of levels) {
+        const row = document.createElement("div");
+        row.className = "exact-orderbook-level";
+        const price = document.createElement("span");
+        price.textContent = formatNumber(level?.price);
+        const barShell = document.createElement("span");
+        barShell.className = "exact-orderbook-bar-shell";
+        const bar = document.createElement("i");
+        bar.className = "exact-orderbook-bar";
+        bar.style.width = String(Math.max(2, number(level?.size, 0) / maxSize * 100)) + "%";
+        barShell.append(bar);
+        const size = document.createElement("span");
+        size.textContent = formatNumber(level?.size);
+        row.append(price, barShell, size);
+        column.append(row);
+      }
+      book.append(column);
+    }
+    section.append(book);
+    return section;
+  }
+
+  function renderExactOrderFlow(objects, components) {
+    const trades = objects.filter((item) =>
+      ["buy", "sell"].includes(text(item?.aggressor_side, "").toLowerCase())
+    ).slice(0, 12);
+    if (!trades.length && !Object.keys(components).length) return null;
+    let buyNotional = 0;
+    let sellNotional = 0;
+    for (const trade of trades) {
+      const notional = number(trade?.price, 0) * number(trade?.size, 0);
+      if (text(trade?.aggressor_side, "").toLowerCase() === "buy") buyNotional += notional;
+      else sellNotional += notional;
+    }
+    const section = proofSection(
+      "DONDURULMUŞ EMİR AKIŞI",
+      "Exact bağlı public-trade örneklemi. Bu görünüm CVD veya absorption iddiası üretmez."
+    );
+    const metrics = document.createElement("div");
+    metrics.className = "exact-proof-metrics";
+    for (const pair of [
+      ["Book pressure", text(components.book_pressure)],
+      ["Taker flow", text(components.taker_flow)],
+      ["Alış notional", formatNumber(buyNotional)],
+      ["Satış notional", formatNumber(sellNotional)]
+    ]) {
+      const item = document.createElement("div");
+      const label = document.createElement("span");
+      label.textContent = pair[0];
+      const value = document.createElement("strong");
+      value.textContent = pair[1];
+      item.append(label, value);
+      metrics.append(item);
+    }
+    section.append(metrics);
+    return section;
+  }
+
+  function renderExactDerivatives(objects, components) {
+    const observations = objects.filter((item) =>
+      Object.prototype.hasOwnProperty.call(item, "funding_rate") ||
+      Object.prototype.hasOwnProperty.call(item, "open_interest")
+    );
+    if (!observations.length && !Object.keys(components).length) return null;
+    const latest = observations[0] || {};
+    const section = proofSection(
+      "DONDURULMUŞ TÜREV GÖZLEMİ",
+      observations.length ? "Exact observation · " + formatTime(latest.event_at_ms) :
+        "Exact derivatives source payload çözülemedi."
+    );
+    const metrics = document.createElement("div");
+    metrics.className = "exact-proof-metrics";
+    for (const pair of [
+      ["Open Interest", latest.open_interest == null ? "—" : formatNumber(latest.open_interest)],
+      ["Funding", latest.funding_rate == null ? "—" : formatNumber(latest.funding_rate)],
+      ["Mark", latest.mark_price == null ? "—" : formatNumber(latest.mark_price)],
+      ["Index", latest.index_price == null ? "—" : formatNumber(latest.index_price)],
+      ["OI state", text(components.open_interest_state)],
+      ["Funding state", text(components.funding_state)],
+      ["Basis state", text(components.basis_state)]
+    ]) {
+      const item = document.createElement("div");
+      const label = document.createElement("span");
+      label.textContent = pair[0];
+      const value = document.createElement("strong");
+      value.textContent = pair[1];
+      item.append(label, value);
+      metrics.append(item);
+    }
+    section.append(metrics);
+    return section;
+  }
+
+  function renderExactGeometry(objects) {
+    const freeze = objects.find((item) => item?.bundle && Array.isArray(item.bundle.candles));
+    if (!freeze || !freeze.bundle.candles.length) return null;
+    const geometry = freeze.bundle?.signal_decision?.geometry || {};
+    const annotations = [];
+    if (geometry.entry_zone) annotations.push({
+      kind: "entry_zone", label: "Tetik bölgesi",
+      low: geometry.entry_zone.low, high: geometry.entry_zone.high
+    });
+    if (geometry.invalidation_price) annotations.push({
+      kind: "invalidation", label: "Geçersizleşme", price: geometry.invalidation_price
+    });
+    for (const target of Array.isArray(geometry.targets) ? geometry.targets : []) {
+      annotations.push({kind: "target", label: text(target?.label, "Hedef"), price: target?.target_price});
+    }
+    const section = proofSection("DONDURULMUŞ GEOMETRİ", "Exact signal freeze · " + formatTime(freeze.as_of_ms));
+    section.append(renderChart({candles: freeze.bundle.candles, annotations}));
+    return section;
+  }
+
+  function renderFamilyExactEvidence(payload, { kind, contribution = null } = {}) {
+    const config = FAMILY_PROOF_CONFIG[kind];
+    if (!config) return renderFrozenVisualProof(payload);
+    const familyContribution = familyContributionForProof(payload, config, contribution);
+    const resolution = exactFamilyResolution(payload, config, familyContribution);
+    const root = document.createElement("article");
+    root.className = "frozen-visual-proof family-frozen-proof exact-family-proof";
+    root.dataset.visualProofStatus = resolution === "READY_EXACT" ? "ready" : "unavailable";
+    root.dataset.familyKind = kind;
+    root.dataset.resolutionState = resolution;
+    root.dataset.narrativeIdentity = text(payload?.narrative_identity, "");
+    const head = document.createElement("header");
+    head.className = "frozen-proof-head";
+    const copy = document.createElement("div");
+    const eyebrow = document.createElement("span");
+    eyebrow.textContent = "AİLEYE ÖZGÜ EXACT KANIT · POINT-IN-TIME";
+    const title = document.createElement("strong");
+    title.textContent = config.label + " · Frozen source proof";
+    copy.append(eyebrow, title);
+    const badge = document.createElement("span");
+    badge.className = "frozen-proof-badge";
+    badge.textContent = resolution;
+    head.append(copy, badge);
+    root.append(head);
+    const objects = exactFamilyObjects(payload, config);
+    const components = exactFamilyComponents(payload, config);
+    let visual = null;
+    if (kind === "geometry") visual = renderExactGeometry(objects);
+    else if (kind === "liquidity") visual = renderExactOrderBook(objects);
+    else if (kind === "order_flow") visual = renderExactOrderFlow(objects, components);
+    else if (kind === "derivatives") visual = renderExactDerivatives(objects, components);
+    if (visual) root.append(visual);
+    else root.append(proofSection(
+      "KANIT DURUMU",
+      resolution === "IDENTITY_ONLY_EXACT"
+        ? "Exact kimlik var; persisted source payload çözülemedi. Current data ile yeniden çizilmedi."
+        : "Bu aile için exact source payload yok; kanıt uydurulmadı."
+    ));
+    const technical = document.createElement("details");
+    technical.className = "frozen-proof-provenance-disclosure";
+    const summary = document.createElement("summary");
+    summary.textContent = "Provenance / teknik kimlikler";
+    const ids = document.createElement("div");
+    ids.className = "frozen-proof-identities";
+    const identities = new Set(
+      Array.isArray(familyContribution?.source_evidence_identities)
+        ? familyContribution.source_evidence_identities
+        : []
+    );
+    for (const resolutionItem of exactFamilyResolutions(payload, config)) {
+      for (const identity of Array.isArray(resolutionItem?.evidence_identities)
+        ? resolutionItem.evidence_identities
+        : []) {
+        identities.add(identity);
+      }
+    }
+    for (const identity of [...identities].slice(0, 16)) {
+      const code = document.createElement("code");
+      code.textContent = identity;
+      ids.append(code);
+    }
+    technical.append(summary, ids);
+    root.append(technical);
+    return root;
+  }
   function renderFamilyFrozenProof(
     payload,
     { kind, contribution = null } = {}
@@ -719,6 +972,7 @@
   window.CryptoSignalVisualProof = Object.freeze({
     renderFrozenVisualProof,
     renderFamilyFrozenProof,
+    renderFamilyExactEvidence,
     fixtureVisualProof,
   });
 })();

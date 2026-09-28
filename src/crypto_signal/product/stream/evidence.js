@@ -461,6 +461,46 @@ async function renderDetachedExactEvidence() {
   content.append(renderExactEvidenceManifest(exactEvidence));
 }
 
+async function renderDetachedFamilyExactProof(detail) {
+  if (!content) return;
+  const config = KIND_CONFIG[kind];
+  if (!config?.family) return;
+  const renderer = window.CryptoSignalVisualProof?.renderFamilyExactEvidence;
+  if (typeof renderer !== "function") return;
+
+  let exactEvidence;
+  try {
+    const payload = await fetchJson(
+      `/api/stream/messages/${encodeURIComponent(narrativeIdentity)}/evidence`
+    );
+    exactEvidence =
+      payload?.evidence && typeof payload.evidence === "object"
+        ? payload.evidence
+        : null;
+  } catch {
+    exactEvidence = null;
+  }
+
+  content.querySelector(".frozen-visual-proof")?.remove();
+  if (!exactEvidence) {
+    const unavailable = document.createElement("section");
+    unavailable.className = "frozen-visual-proof family-frozen-proof";
+    unavailable.dataset.familyKind = kind;
+    unavailable.dataset.resolutionState = "UNAVAILABLE_EXPLICIT";
+    unavailable.textContent =
+      "UNAVAILABLE_EXPLICIT · exact family source payload okunamadı; current data ile kanıt üretilmedi.";
+    content.prepend(unavailable);
+    return;
+  }
+
+  content.prepend(
+    renderer(exactEvidence, {
+      kind,
+      contribution: familyContribution(detail?.fact_bundle || {}, config),
+    })
+  );
+}
+
 async function renderDetachedFrozenVisualProof(detail) {
   if (!content) return;
   const config = KIND_CONFIG[kind];
@@ -534,10 +574,12 @@ async function init() {
     }
     if (content) content.replaceChildren();
     renderCore(config, payload.detail);
-    if (!config.family) {
+    if (config.family) {
+      await renderDetachedFamilyExactProof(payload.detail);
+    } else {
       await renderDetachedExactEvidence();
+      await renderDetachedFrozenVisualProof(payload.detail);
     }
-    await renderDetachedFrozenVisualProof(payload.detail);
   } catch {
     if (content) {
       content.replaceChildren();
