@@ -353,10 +353,6 @@ class IntelligenceStreamExactEvidenceReadModel:
             if "provider_divergence_snapshot" in selected_kinds:
                 state = StreamEvidenceResolutionState.READY_EXACT
                 reason = "exact_provider_divergence_snapshot_resolved"
-        elif selected_objects and components:
-            state = StreamEvidenceResolutionState.READY_EXACT
-            reason = "exact_persisted_source_object_and_stream_state_resolved"
-
         customer_projection = {
             "projector_id": fact.get("projector_id"),
             "family": fact.get("family"),
@@ -739,6 +735,8 @@ def _objects_for_domain(
         "provider_divergence": {"provider_divergence_snapshot"},
         "data_quality": {"provider_divergence_snapshot"},
     }.get(domain)
+    if allowed is None:
+        return ()
     rows = []
     for identity in evidence_identities:
         item = raw_index.get(identity)
