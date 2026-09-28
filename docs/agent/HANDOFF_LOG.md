@@ -1422,3 +1422,37 @@ existingObservationSurfaces:
 
 nextAction:
 - execute exact UID504 deployment sequence to canonical main; capture issue/run/job evidence; then install/read-only-observer only after successful deployment.
+
+
+
+---
+
+## 2026-09-29 — RDP11 full-suite failure handoff
+
+status: PRE_DEPLOY_BLOCKED
+branch: rdp11/continuous-soak-anchor
+canonicalMain: 5f07a8954f87e237258f1d3eb448a5ede6106fbd
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+deploymentEvidence:
+- sync #1656 -> run 36489311982 / job 109153796258 / SUCCESS; Development exact main.
+- producttest #1657 -> run 36489373492 / job 109153999931 / SUCCESS.
+- canonical fulltest #1658 -> run 36489428770 / job 109154187159 / FAILURE.
+- duplicate later fulltest #1659 is non-canonical and must not be counted as acceptance.
+
+fulltestFailureClasses:
+- stale WC0 runtime-path expected dictionaries missing accepted Options/On-chain paths.
+- stale trust-source exact prose assertions.
+- stale S15 evidence identity assertion after accepted exact-proof lineage changes.
+- generic full-suite async adapter/plugin gap causing async tests to be rejected by pytest.
+- WC2 fixtures select geometry evidence not present in frozen methodology results; strict accepted Geometry proof validator fails closed as designed.
+
+blocker:
+- full-suite regression/harness contract must pass before Product deployment.
+- Product remains old checkout; 72h soak clock has NOT started.
+
+nextAction:
+- repair only stale regression fixtures/harness configuration; preserve accepted proof/source semantics; rerun focused tests and canonical fulltest; then exact-target deploy + productstate if green.
