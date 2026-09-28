@@ -77,15 +77,17 @@ class FrozenProofObject:
             "frozen proof domain",
             allow_empty=False,
         )
-        for value, label in (
+        for optional_value, optional_label in (
             (self.asset, "frozen proof asset"),
             (self.symbol, "frozen proof symbol"),
             (self.network, "frozen proof network"),
             (self.timeframe, "frozen proof timeframe"),
         ):
-            if value is not None and not value.strip():
-                raise ValueError(f"{label} must be non-empty when present")
-        for value, label in (
+            if optional_value is not None and not optional_value.strip():
+                raise ValueError(
+                    f"{optional_label} must be non-empty when present"
+                )
+        for time_value, time_label in (
             (self.as_of_ms, "frozen proof as-of"),
             (
                 self.market_available_at_ms,
@@ -94,7 +96,7 @@ class FrozenProofObject:
             (self.observed_at_ms, "frozen proof observed-at"),
             (self.persisted_at_ms, "frozen proof persisted-at"),
         ):
-            _require_non_negative_int(value, label)
+            _require_non_negative_int(time_value, time_label)
         if self.market_available_at_ms > self.as_of_ms:
             raise ValueError("frozen proof market availability is future evidence")
         if self.observed_at_ms > self.as_of_ms:
