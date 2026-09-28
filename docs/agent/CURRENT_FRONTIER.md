@@ -991,3 +991,46 @@ Safety:
 
 Exact nextAction:
 Execute the accepted UID504 `sync → producttest → fulltest → productdeploy target=5f07a895... → productstate` sequence. Record every issue/run/job and do not start the 72-hour clock unless the exact-target deployment and real Product health/proof checks pass.
+
+
+
+## RDP11 pre-deploy full-suite checkpoint — 2026-09-29
+
+Deployment remains blocked; the 72-hour soak clock has **not** started.
+
+Completed prerequisite evidence:
+- UID504 sync issue #1656 / Crypto Mac Command run `36489311982` / job `109153796258`: SUCCESS.
+  - canonical Development fast-forwarded from `b343e3bf20677df2caa4d4de5d7a47ee3e1ff01c` to exact main `5f07a8954f87e237258f1d3eb448a5ede6106fbd`.
+- UID504 producttest issue #1657 / Crypto Mac Command run `36489373492` / job `109153999931`: SUCCESS.
+  - focused dashboard/product tests and product lint/type checks passed.
+
+Canonical full-suite attempt:
+- issue #1658 / Crypto Mac Command run `36489428770` / job `109154187159`: **FAILURE**.
+- a later duplicate fulltest issue #1659 was created after #1658 had already started; it is not canonical acceptance and must not be used to override #1658.
+
+Failure audit from #1658:
+1. **stale test expectations after accepted RDP10 wiring**
+   - `tests/test_wc0_runtime_wiring.py` does not include the accepted Options + On-chain runtime paths now passed by `run_dashboard.py`.
+   - trust-source tests assert obsolete exact prose strings although the canonical story semantics are still fail-closed.
+   - `tests/test_stream_s15_end_to_end.py` assumes an evidence identity set that changed under accepted exact-proof lineage.
+2. **async full-suite harness gap**
+   - several async Market Tape / liquidation tests fail with “async def functions are not natively supported”; focused RDP acceptance previously executed those paths successfully, so the generic `pytest -q` environment lacks the expected async test adapter/plugin contract.
+3. **WC2 fixture drift exposed by stricter accepted Geometry proof validation**
+   - WC2 runtime tests construct selected geometry evidence identities `wc2-harmonic-geometry` / `wc2-pa-directional` without corresponding frozen methodology results; the accepted RDP3/RDP10 proof validator correctly fails closed.
+4. deploy was correctly skipped; Product remains unpromoted and RDP11 soak clock remains unstarted.
+
+This is a pre-deploy regression/harness cleanup gate, not a reopening of RDP10 scientific acceptance. Repairs must preserve accepted fail-closed proof behavior; do not weaken Geometry validation or remove accepted Options/On-chain paths merely to make stale tests pass.
+
+Exact nextAction:
+- audit the failing fixtures/tests and project test dependencies/config;
+- repair stale regression expectations/fixtures and the generic async-suite execution contract without changing accepted evidence semantics;
+- run focused repairs, then rerun canonical UID504 `fulltest`;
+- only after fulltest PASS may exact-target `productdeploy` and `productstate` proceed.
+
+Safety:
+- `REAL_CAPITAL=0`
+- `HISTORICAL_BACKFILL=NO`
+- Product deploy: NOT YET
+- RDP11 soak clock: NOT STARTED
+- Durdurulmaz touched: NO
+- Quantum Capital touched: NO
