@@ -505,3 +505,40 @@ blocker:
 nextAction:
 - before any E2 production code change, re-check exact main/open PRs/branches and write the mandatory E2 task-start checkpoint on the E2 branch.
 
+---
+
+## 2026-09-28 — RDP10-E2 start checkpoint
+
+status: ACTIVE
+canonicalMainAtStart: 212d0428244d65caeb8c5646add9a7ebffc5fccb
+branch: rdp10/liquidation-proof-e2
+worktree: no session-local /Volumes worktree; GitHub branch only, canonical Workbench verification comes from UID504 bootstrap/acceptance
+roadmapGate: RDP10-E2 liquidation observations/coverage/heatmap/crowding exact proof persistence/resolution
+duplicateRelevantPRs: NONE
+duplicateRelevantBranches: NONE
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+boundedGoal:
+- preserve raw liquidation observations as exact source records;
+- expose provider coverage with actual observed_at_ms knowledge time;
+- persist immutable Liquidation Heatmap proof before Stream publication;
+- persist immutable Derivatives Crowding proof before Stream publication;
+- preserve exact dependency lineage to liquidation events/coverage/mark reference/derivatives dynamics;
+- allow zero-event claims only when exact provider coverage proves the interval.
+
+notInThisSlice:
+- Options proof cutover;
+- On-chain/stablecoin proof cutover;
+- Event/Cross-market proof cutover;
+- provider-divergence/RDP9 presentation cutover;
+- RDP11 soak.
+
+blocker:
+- exact-main SSD504 Workbench bootstrap run 36468609152 is pending at task start.
+
+nextAction:
+- read run 36468609152; after exact-main Workbench PASS, audit current liquidation observation/coverage/heatmap/crowding schemas and implement E2.
+
