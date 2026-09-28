@@ -73,6 +73,9 @@ jobs:
           from pathlib import Path
 
           import crypto_signal.product.intelligence_stream_family_sources as family_sources
+          from crypto_signal.data.adapters.bybit_liquidations import (
+              BYBIT_ALL_LIQUIDATION_ADAPTER_VERSION,
+          )
           from crypto_signal.data.derivatives import DerivativesInstrumentType
           from crypto_signal.data.market_tape import (
               MarketTapeLiquidationReplay,
@@ -168,15 +171,108 @@ jobs:
                       "SELECT COUNT(*) FROM market_tape_liquidations"
                   ).fetchone()[0]
               )
-              provider_coverages = int(
-                  db.execute(
-                      "SELECT COUNT(*) FROM market_tape_liquidation_coverage"
-                  ).fetchone()[0]
-              )
-          # RDP5-A deliberately never converts transport liveness into provider
-          # liquidation-event coverage. RDP5-C consumes such coverage if a real
-          # provider-backed bridge is ever accepted; it does not manufacture it.
-          assert provider_coverages == 0, provider_coverages
+              coverage_rows = db.execute(
+                  """
+                  SELECT
+                      coverage_identity,
+                      exchange,
+                      instrument_type,
+                      symbol,
+                      coverage_start_ms,
+                      coverage_end_ms,
+                      observed_at_ms,
+                      source,
+                      adapter_version,
+                      payload_json
+                  FROM market_tape_liquidation_coverage
+                  ORDER BY coverage_end_ms ASC, coverage_identity ASC
+                  """
+              ).fetchall()
+
+              # Provider event coverage is allowed to exist, but every persisted
+              # row must be provably backed by a non-empty Bybit allLiquidation
+              # provider batch. Transport liveness lives in the separate runtime
+              # DB and can never satisfy these joins.
+              for coverage_row in coverage_rows:
+                  coverage = _liquidation_coverage_from_payload(
+                      str(coverage_row["payload_json"])
+                  )
+                  assert coverage.coverage_identity == str(
+                      coverage_row["coverage_identity"]
+                  )
+                  assert coverage.exchange is Exchange.BYBIT
+                  assert (
+                      coverage.instrument_type
+                      is DerivativesInstrumentType.LINEAR_PERPETUAL
+                  )
+                  assert coverage.source.value == "websocket"
+                  assert (
+                      coverage.adapter_version
+                      == BYBIT_ALL_LIQUIDATION_ADAPTER_VERSION
+                  )
+                  assert coverage.coverage_start_ms == int(
+                      coverage_row["coverage_start_ms"]
+                  )
+                  assert coverage.coverage_end_ms == int(
+                      coverage_row["coverage_end_ms"]
+                  )
+                  assert coverage.observed_at_ms == int(
+                      coverage_row["observed_at_ms"]
+                  )
+
+                  batch_rows = db.execute(
+                      """
+                      SELECT
+                          event_at_ms,
+                          source_timestamp_ms,
+                          ingested_at_ms,
+                          source_row_index,
+                          source,
+                          adapter_version,
+                          payload_json
+                      FROM market_tape_liquidations
+                      WHERE exchange=?
+                        AND instrument_type=?
+                        AND symbol=?
+                        AND source_timestamp_ms=?
+                        AND ingested_at_ms=?
+                        AND source=?
+                        AND adapter_version=?
+                      ORDER BY source_row_index ASC, liquidation_identity ASC
+                      """,
+                      (
+                          coverage.exchange.value,
+                          coverage.instrument_type.value,
+                          coverage.symbol,
+                          coverage.coverage_end_ms,
+                          coverage.observed_at_ms,
+                          coverage.source.value,
+                          coverage.adapter_version,
+                      ),
+                  ).fetchall()
+                  assert batch_rows, coverage.coverage_identity
+                  batch_events = tuple(
+                      _liquidation_from_payload(str(row["payload_json"]))
+                      for row in batch_rows
+                  )
+                  assert tuple(
+                      item.source_row_index for item in batch_events
+                  ) == tuple(range(len(batch_events)))
+                  assert min(
+                      item.event_at_ms for item in batch_events
+                  ) == coverage.coverage_start_ms
+                  assert all(
+                      item.event_at_ms <= coverage.coverage_end_ms
+                      and item.source_timestamp_ms
+                      == coverage.coverage_end_ms
+                      and item.ingested_at_ms
+                      == coverage.observed_at_ms
+                      and item.source == coverage.source
+                      and item.adapter_version == coverage.adapter_version
+                      for item in batch_events
+                  )
+
+              provider_coverages = len(coverage_rows)
 
           class ReadOnlyLiveStore:
               def __init__(self, path: Path) -> None:
