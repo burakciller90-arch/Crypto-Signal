@@ -80,6 +80,9 @@ from crypto_signal.product.intelligence_stream_local_rewriter import (
     LocalNarrativeRewriteConfig,
     OpenAICompatibleLocalNarrativeRewriter,
 )
+from crypto_signal.product.intelligence_stream_onchain_sources import (
+    build_onchain_family_snapshots,
+)
 from crypto_signal.product.intelligence_stream_production_projector import (
     IntelligenceStreamProductionProjector,
 )
@@ -188,6 +191,8 @@ class StreamClockConfig:
     ledger_path: Path | None = None
     market_tape_path: Path | None = None
     options_surface_path: Path | None = None
+    onchain_capital_flow_path: Path | None = None
+    onchain_source_contract_path: Path | None = None
     event_source_path: Path | None = None
     family_symbols: tuple[str, ...] = ()
     local_rewrite_config: LocalNarrativeRewriteConfig | None = None
@@ -199,6 +204,8 @@ class StreamClockConfig:
             self.ledger_path is not None
             or self.market_tape_path is not None
             or self.options_surface_path is not None
+            or self.onchain_capital_flow_path is not None
+            or self.onchain_source_contract_path is not None
             or self.event_source_path is not None
             or self.family_symbols
             or self.local_rewrite_config is not None
@@ -209,6 +216,12 @@ class StreamClockConfig:
         if self.options_surface_path is not None and self.market_tape_path is None:
             raise ValueError(
                 "Stream options surface requires --stream-market-tape"
+            )
+        if (self.onchain_capital_flow_path is None) != (
+            self.onchain_source_contract_path is None
+        ):
+            raise ValueError(
+                "Stream On-chain projection requires both On-chain stores"
             )
         if self.market_tape_path is None and self.family_symbols:
             raise ValueError(
@@ -295,10 +308,22 @@ def parse_args() -> argparse.Namespace:
         help="persisted BTC/ETH options surface store for Derivatives family",
     )
     parser.add_argument(
+        "--stream-onchain-capital-flow",
+        type=Path,
+        default=None,
+        help="append-only On-chain capital-flow store for Stream context",
+    )
+    parser.add_argument(
+        "--stream-onchain-source-contract",
+        type=Path,
+        default=None,
+        help="On-chain raw/envelope/coverage source-contract store",
+    )
+    parser.add_argument(
         "--stream-family-symbols",
         nargs="+",
         default=None,
-        help="symbols projected from persisted Market Tape into Stream",
+        help="symbols projected from accepted evidence into Stream",
     )
     parser.add_argument(
         "--stream-event-source",
@@ -420,6 +445,16 @@ def build_stream_clock_config(
         ledger_path=getattr(args, "stream_ledger", None),
         market_tape_path=getattr(args, "stream_market_tape", None),
         options_surface_path=getattr(args, "stream_options_surface", None),
+        onchain_capital_flow_path=getattr(
+            args,
+            "stream_onchain_capital_flow",
+            None,
+        ),
+        onchain_source_contract_path=getattr(
+            args,
+            "stream_onchain_source_contract",
+            None,
+        ),
         event_source_path=getattr(args, "stream_event_source", None),
         family_symbols=family_symbols,
         local_rewrite_config=local_rewrite_config,
@@ -666,6 +701,8 @@ async def run(
                         "derivatives_change",
                     )
                 )
+            if selected_stream.onchain_capital_flow_path is not None:
+                family_projector_ids.append("onchain_change")
             family_projector_ids.append("provider_quality_change")
             if selected_stream.event_source_path is not None:
                 family_projector_ids.append("event_risk_change")
@@ -1216,8 +1253,79 @@ async def run(
             f"snapshots={len(family_snapshots)} "
             f"projectors={projector_summary} "
             f"dispositions={disposition_summary} "
-            "ONCHAIN_STANDALONE=DEFERRED_SOURCE "
-            "HISTORICAL_BACKFILL=NO REAL_CAPITAL=0",
+            (
+                "ONCHAIN_STANDALONE=ACTIVE_NEUTRAL_CONTEXT "
+                if selected_stream.onchain_capital_flow_path is not None
+                else "ONCHAIN_STANDALONE=DEFERRED_SOURCE "
+            )
+            + "HISTORICAL_BACKFILL=NO REAL_CAPITAL=0",
+            flush=True,
+        )
+
+
+    if (
+        stream_family_projector is not None
+        and selected_stream.onchain_capital_flow_path is not None
+        and selected_stream.onchain_source_contract_path is not None
+    ):
+        onchain_observed_at_ms = time.time_ns() // 1_000_000
+        try:
+            onchain_snapshots = build_onchain_family_snapshots(
+                selected_stream.onchain_capital_flow_path,
+                selected_stream.onchain_source_contract_path,
+                symbols=selected_stream.family_symbols,
+                as_of_ms=onchain_observed_at_ms,
+            )
+            system_view_family_snapshots.extend(onchain_snapshots)
+            onchain_dispositions: Counter[str] = Counter()
+            for onchain_snapshot in onchain_snapshots:
+                onchain_projection = stream_family_projector.project_family(
+                    onchain_snapshot,
+                    activated_at_ms=onchain_observed_at_ms,
+                )
+                onchain_dispositions[
+                    onchain_projection.disposition.value
+                ] += 1
+                print(
+                    "stream_family projector=onchain_change "
+                    f"symbol={onchain_snapshot.symbol} "
+                    f"timeframe={onchain_snapshot.timeframe} "
+                    f"state={onchain_snapshot.state_label} "
+                    f"status={onchain_projection.disposition.value} "
+                    f"source={onchain_projection.source_event_identity} "
+                    f"narrative={onchain_projection.narrative_identity or '-'} "
+                    "DIRECTIONAL_VOTE=NO "
+                    "HISTORICAL_BACKFILL=NO REAL_CAPITAL=0",
+                    flush=True,
+                )
+        except (OSError, TypeError, ValueError, sqlite3.Error) as exc:
+            onchain_snapshots = ()
+            onchain_dispositions = Counter()
+            print(
+                "stream_family projector=onchain_change status=ERROR "
+                f"error={type(exc).__name__}:{exc} "
+                "ONCHAIN_FAIL_CLOSED=YES DIRECTIONAL_VOTE=NO "
+                "REAL_CAPITAL=0",
+                file=sys.stderr,
+                flush=True,
+            )
+        onchain_disposition_summary = ",".join(
+            f"{key}:{value}"
+            for key, value in sorted(onchain_dispositions.items())
+        ) or "-"
+        print(
+            "stream_family projector=onchain_change status=SUMMARY "
+            f"snapshots={len(onchain_snapshots)} "
+            f"dispositions={onchain_disposition_summary} "
+            + (
+                "ONCHAIN_CONTEXT=ACTIVE_NEUTRAL_STABLECOIN_SUPPLY "
+                if onchain_snapshots
+                else "ONCHAIN_CONTEXT=UNAVAILABLE_EXPLICIT "
+            )
+            + "EXCHANGE_FLOW_PROVIDER=UNAVAILABLE_EXPLICIT "
+            "LARGE_TRANSFER_PROVIDER=UNAVAILABLE_EXPLICIT "
+            "WALLET_CLUSTER_PROVIDER=UNAVAILABLE_EXPLICIT "
+            "DIRECTIONAL_VOTE=NO REAL_CAPITAL=0",
             flush=True,
         )
 
