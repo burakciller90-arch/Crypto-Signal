@@ -135,6 +135,16 @@ class ImmutableSignalLedger:
             )
             connection.execute(
                 """
+                CREATE UNIQUE INDEX IF NOT EXISTS
+                    signal_freezes_bundle_signal_pair
+                ON signal_freezes(
+                    bundle_identity,
+                    signal_freeze_identity
+                )
+                """
+            )
+            connection.execute(
+                """
                 CREATE TABLE IF NOT EXISTS geometry_proofs (
                     proof_identity TEXT PRIMARY KEY,
                     bundle_identity TEXT NOT NULL UNIQUE,
@@ -143,10 +153,13 @@ class ImmutableSignalLedger:
                     source_cutoff_open_time_ms INTEGER NOT NULL,
                     proof_json TEXT NOT NULL,
                     persisted_at_ms INTEGER NOT NULL,
-                    FOREIGN KEY (bundle_identity)
-                        REFERENCES signal_freezes(bundle_identity),
-                    FOREIGN KEY (signal_freeze_identity)
-                        REFERENCES signal_freezes(signal_freeze_identity)
+                    FOREIGN KEY (
+                        bundle_identity,
+                        signal_freeze_identity
+                    ) REFERENCES signal_freezes(
+                        bundle_identity,
+                        signal_freeze_identity
+                    )
                 )
                 """
             )
