@@ -173,6 +173,34 @@ def test_positive_event_without_provider_coverage_is_visible_but_unresolved(
     assert snapshot.direction is None
 
 
+def test_positive_event_without_coverage_remains_observed_only(
+    tmp_path,
+) -> None:
+    path = tmp_path / "market_tape.sqlite3"
+    store = MarketTapeStore(path)
+    _seed_derivatives(store)
+    event = _liquidation()
+    store.append_liquidation(event)
+
+    snapshot = _snapshot(path)
+    components = _components(snapshot)
+
+    assert components["observed_liquidation_event_count"] == "1"
+    assert components["observed_long_liquidation_count"] == "1"
+    assert components["liquidation_heatmap_status"] == "unavailable"
+    assert components["crowding_status"] == "unavailable"
+    assert components["liquidation_zero_event_claim"] == "unavailable"
+    assert "observed_liquidation_events" in snapshot.evidence_domains
+    assert "observed_liquidation_heatmap" not in snapshot.evidence_domains
+    assert "derivatives_crowding" not in snapshot.evidence_domains
+    assert event.liquidation_identity in snapshot.evidence_identities
+    assert (
+        "liquidation_event_coverage_unavailable_or_stale"
+        in snapshot.uncertainty_flags
+    )
+    assert snapshot.direction is None
+
+
 def test_positive_event_is_visible_but_incomplete_coverage_fails_closed(
     tmp_path,
 ) -> None:
