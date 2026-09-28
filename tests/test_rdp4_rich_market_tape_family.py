@@ -28,6 +28,9 @@ from crypto_signal.intelligence.order_flow_microstructure import (
     OrderFlowMicrostructureLabel,
     build_order_flow_microstructure_evidence_freeze,
 )
+from crypto_signal.intelligence.order_flow_patterns import (
+    build_absorption_freeze,
+)
 from crypto_signal.intelligence.temporal_order_flow import (
     TemporalFlowStatus,
     build_temporal_order_flow_freeze,
@@ -241,6 +244,11 @@ def test_rich_liquidity_and_order_flow_share_existing_family_slots(
         trades,
         as_of_ms=AS_OF_MS,
     )
+    absorption = build_absorption_freeze(
+        temporal,
+        structure,
+        as_of_ms=AS_OF_MS,
+    )
     assert temporal.analysis.status is TemporalFlowStatus.MEASURED
     assert temporal.analysis.metrics is not None
     assert temporal.analysis.metrics.delta_notional > 0
@@ -252,19 +260,24 @@ def test_rich_liquidity_and_order_flow_share_existing_family_slots(
         micro.analysis.evidence_identity,
         temporal.freeze_identity,
         temporal.analysis.evidence_identity,
+        absorption.freeze_identity,
+        absorption.analysis.evidence_identity,
     }.issubset(set(order_flow.evidence_identities))
     assert {
+        "absorption",
         "temporal_order_flow",
         "window_local_cvd",
         "public_trades",
     }.issubset(set(order_flow.evidence_domains))
     assert order_flow.source_event_identity == canonical_sha256(
         {
+            "absorption_freeze_identity": absorption.freeze_identity,
             "as_of_ms": AS_OF_MS,
             "microstructure_freeze_identity": micro.freeze_identity,
+            "price_cvd_divergence_freeze_identity": None,
             "symbol": "BTCUSDT",
             "temporal_flow_freeze_identity": temporal.freeze_identity,
-            "version": "rdp4-rich-order-flow-family-v1/1",
+            "version": "rdp4-rich-order-flow-family-v2/1",
         }
     )
     order_flow_components = {
@@ -272,6 +285,8 @@ def test_rich_liquidity_and_order_flow_share_existing_family_slots(
     }
     assert order_flow_components["temporal_status"] == "measured"
     assert order_flow_components["temporal_quality"] == "good"
+    assert order_flow_components["absorption_status"] == "measured"
+    assert "absorption_candidate_count" in order_flow_components
     assert Decimal(order_flow_components["delta_notional"]) > 0
     assert "cvd_window_end_notional" in order_flow_components
     assert "trade_velocity_per_second" in order_flow_components
