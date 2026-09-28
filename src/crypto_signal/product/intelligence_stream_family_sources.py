@@ -14,15 +14,27 @@ from crypto_signal.intelligence.derivatives_context import (
 from crypto_signal.intelligence.liquidity_dynamics import (
     build_liquidity_dynamics_evidence_freeze,
 )
+from crypto_signal.intelligence.liquidity_structure import (
+    LiquidityLevelCandidate,
+    build_liquidity_structure_evidence_freeze,
+)
+from crypto_signal.intelligence.liquidity_sweep import (
+    build_liquidity_sweep_evidence_freeze,
+)
 from crypto_signal.intelligence.order_flow_microstructure import (
     OrderFlowMicrostructureLabel,
     build_order_flow_microstructure_evidence_freeze,
+)
+from crypto_signal.intelligence.temporal_order_flow import (
+    TemporalFlowStatus,
+    build_temporal_order_flow_freeze,
 )
 from crypto_signal.ledger.bundle import DecisionFreezeBundle
 from crypto_signal.ledger.deserialization import (
     parse_lifecycle_evaluation,
     parse_signal_decision,
 )
+from crypto_signal.ledger.serialization import canonical_sha256
 from crypto_signal.ledger.store import (
     FreezeRecord,
     LifecycleRecord,
@@ -282,12 +294,90 @@ def build_market_tape_family_snapshots(
                 orderbooks,
                 as_of_ms=as_of_ms,
             )
+            structure = build_liquidity_structure_evidence_freeze(
+                orderbooks,
+                as_of_ms=as_of_ms,
+            )
+            sweep = build_liquidity_sweep_evidence_freeze(
+                orderbooks,
+                trades,
+                as_of_ms=as_of_ms,
+            )
             liquidity_analysis = liquidity.analysis
+            structure_analysis = structure.analysis
+            sweep_analysis = sweep.analysis
             liquidity_evidence = {
                 liquidity.freeze_identity,
                 liquidity_analysis.evidence_identity,
+                structure.freeze_identity,
+                structure_analysis.evidence_identity,
+                sweep.freeze_identity,
+                sweep_analysis.evidence_identity,
                 *(item.snapshot_identity for item in liquidity.snapshots),
+                *(item.snapshot_identity for item in structure.snapshots),
+                *(item.snapshot_identity for item in sweep.snapshots),
+                *(item.trade_identity for item in sweep.trades),
             }
+            if sweep_analysis.structure_evidence_identity is not None:
+                liquidity_evidence.add(
+                    sweep_analysis.structure_evidence_identity
+                )
+            if sweep_analysis.structure_freeze_identity is not None:
+                liquidity_evidence.add(
+                    sweep_analysis.structure_freeze_identity
+                )
+
+            rich_levels = (
+                *structure_analysis.bid_levels,
+                *structure_analysis.ask_levels,
+            )
+            persistent_pool_count = sum(
+                LiquidityLevelCandidate.PERSISTENT_POOL in item.candidates
+                for item in rich_levels
+            )
+            spoofing_candidate_count = sum(
+                LiquidityLevelCandidate.SPOOFING in item.candidates
+                for item in rich_levels
+            )
+            hidden_liquidity_candidate_count = sum(
+                LiquidityLevelCandidate.HIDDEN_LIQUIDITY
+                in item.candidates
+                for item in rich_levels
+            )
+            liquidity_source_event_identity = canonical_sha256(
+                {
+                    "as_of_ms": as_of_ms,
+                    "dynamics_freeze_identity": liquidity.freeze_identity,
+                    "structure_freeze_identity": structure.freeze_identity,
+                    "sweep_freeze_identity": sweep.freeze_identity,
+                    "symbol": symbol,
+                    "version": "rdp4-rich-liquidity-family-v1/1",
+                }
+            )
+            liquidity_quality = _rich_liquidity_quality(
+                liquidity_analysis.source_quality.value,
+                structure_analysis.source_quality.value,
+                sweep_analysis.source_quality.value,
+            )
+            liquidity_uncertainty = tuple(
+                sorted(
+                    {
+                        *liquidity_analysis.uncertainty_flags,
+                        *structure_analysis.uncertainty_flags,
+                        *sweep_analysis.uncertainty_flags,
+                        *(
+                            flag
+                            for level in rich_levels
+                            for flag in level.uncertainty_flags
+                        ),
+                        *(
+                            flag
+                            for candidate in sweep_analysis.candidates
+                            for flag in candidate.uncertainty_flags
+                        ),
+                    }
+                )
+            )
             snapshots.append(
                 build_family_snapshot(
                     projector_id="liquidity_change",
@@ -295,7 +385,7 @@ def build_market_tape_family_snapshots(
                     category=StreamCategory.INTELLIGENCE,
                     subtype="liquidity_material_change",
                     importance=StreamImportance.IMPORTANT,
-                    source_event_identity=liquidity.freeze_identity,
+                    source_event_identity=liquidity_source_event_identity,
                     source_scope="bybit:spot:market_tape_liquidity",
                     asset=_base_asset(symbol),
                     symbol=symbol,
@@ -304,22 +394,51 @@ def build_market_tape_family_snapshots(
                     event_at_ms=as_of_ms,
                     source_as_of_ms=as_of_ms,
                     evidence_identities=tuple(sorted(liquidity_evidence)),
-                    evidence_domains=("liquidity", "order_book"),
+                    evidence_domains=(
+                        "liquidity",
+                        "liquidity_structure",
+                        "liquidity_sweep",
+                        "order_book",
+                        "public_trades",
+                    ),
                     state_label=(
                         f"{liquidity_analysis.status.value}:"
-                        f"{liquidity_analysis.liquidity_take_candidate.value}"
+                        f"{liquidity_analysis.liquidity_take_candidate.value}:"
+                        f"{structure_analysis.status.value}:"
+                        f"{sweep_analysis.sweep_state.value}"
                     ),
                     state_components=(
+                        (
+                            "hidden_liquidity_candidate_count",
+                            str(hidden_liquidity_candidate_count),
+                        ),
                         (
                             "liquidity_take_candidate",
                             liquidity_analysis.liquidity_take_candidate.value,
                         ),
-                        ("source_quality", liquidity_analysis.source_quality.value),
+                        (
+                            "persistent_pool_candidate_count",
+                            str(persistent_pool_count),
+                        ),
+                        (
+                            "spoofing_candidate_count",
+                            str(spoofing_candidate_count),
+                        ),
+                        (
+                            "structure_status",
+                            structure_analysis.status.value,
+                        ),
+                        (
+                            "sweep_candidate_count",
+                            str(len(sweep_analysis.candidates)),
+                        ),
+                        ("sweep_state", sweep_analysis.sweep_state.value),
+                        ("sweep_status", sweep_analysis.status.value),
                         ("status", liquidity_analysis.status.value),
                     ),
                     direction=None,
-                    source_quality=liquidity_analysis.source_quality.value,
-                    uncertainty_flags=liquidity_analysis.uncertainty_flags,
+                    source_quality=liquidity_quality,
+                    uncertainty_flags=liquidity_uncertainty,
                 )
             )
 
@@ -330,19 +449,103 @@ def build_market_tape_family_snapshots(
                 as_of_ms=as_of_ms,
             )
             order_flow_analysis = order_flow.analysis
+            temporal = (
+                None
+                if not trades
+                else build_temporal_order_flow_freeze(
+                    trades,
+                    as_of_ms=as_of_ms,
+                )
+            )
+            temporal_analysis = None if temporal is None else temporal.analysis
             order_flow_evidence = {
                 order_flow.freeze_identity,
                 order_flow_analysis.evidence_identity,
                 *(item.trade_identity for item in order_flow.trades),
             }
             if order_flow.orderbook is not None:
-                order_flow_evidence.add(order_flow.orderbook.snapshot_identity)
+                order_flow_evidence.add(
+                    order_flow.orderbook.snapshot_identity
+                )
+            temporal_components: list[tuple[str, str]] = []
+            temporal_uncertainty: tuple[str, ...] = ()
+            temporal_freeze_identity: str | None = None
+            temporal_status = "unavailable"
+            temporal_quality = "unavailable"
+            if temporal is not None:
+                temporal_freeze_identity = temporal.freeze_identity
+                temporal_analysis = temporal.analysis
+                temporal_status = temporal_analysis.status.value
+                temporal_quality = temporal_analysis.quality.value
+                order_flow_evidence.update(
+                    {
+                        temporal.freeze_identity,
+                        temporal_analysis.evidence_identity,
+                        *(item.trade_identity for item in temporal.trades),
+                    }
+                )
+                temporal_uncertainty = temporal_analysis.uncertainty_flags
+                metrics = temporal_analysis.metrics
+                if metrics is not None:
+                    temporal_components.extend(
+                        (
+                            (
+                                "cvd_window_end_notional",
+                                str(metrics.cvd_window_end_notional),
+                            ),
+                            ("delta_notional", str(metrics.delta_notional)),
+                            (
+                                "large_buy_candidate_count",
+                                str(metrics.large_buy_count),
+                            ),
+                            (
+                                "large_sell_candidate_count",
+                                str(metrics.large_sell_count),
+                            ),
+                            (
+                                "taker_imbalance",
+                                str(metrics.taker_imbalance),
+                            ),
+                            (
+                                "trade_velocity_per_second",
+                                str(metrics.trade_velocity_per_second),
+                            ),
+                        )
+                    )
+
             order_flow_direction = None
-            if order_flow_analysis.label is OrderFlowMicrostructureLabel.BUY_PRESSURE:
+            if (
+                order_flow_analysis.label
+                is OrderFlowMicrostructureLabel.BUY_PRESSURE
+            ):
                 order_flow_direction = "buy_pressure"
-            elif order_flow_analysis.label is OrderFlowMicrostructureLabel.SELL_PRESSURE:
+            elif (
+                order_flow_analysis.label
+                is OrderFlowMicrostructureLabel.SELL_PRESSURE
+            ):
                 order_flow_direction = "sell_pressure"
 
+            order_flow_source_event_identity = canonical_sha256(
+                {
+                    "as_of_ms": as_of_ms,
+                    "microstructure_freeze_identity": (
+                        order_flow.freeze_identity
+                    ),
+                    "symbol": symbol,
+                    "temporal_flow_freeze_identity": (
+                        temporal_freeze_identity
+                    ),
+                    "version": "rdp4-rich-order-flow-family-v1/1",
+                }
+            )
+            microstructure_measured = (
+                order_flow_analysis.label
+                is not OrderFlowMicrostructureLabel.UNRESOLVED
+            )
+            temporal_measured = (
+                temporal_analysis is not None
+                and temporal_analysis.status is TemporalFlowStatus.MEASURED
+            )
             snapshots.append(
                 build_family_snapshot(
                     projector_id="order_flow_change",
@@ -350,7 +553,7 @@ def build_market_tape_family_snapshots(
                     category=StreamCategory.INTELLIGENCE,
                     subtype="order_flow_material_change",
                     importance=StreamImportance.IMPORTANT,
-                    source_event_identity=order_flow.freeze_identity,
+                    source_event_identity=order_flow_source_event_identity,
                     source_scope="bybit:spot:market_tape_order_flow",
                     asset=_base_asset(symbol),
                     symbol=symbol,
@@ -363,21 +566,35 @@ def build_market_tape_family_snapshots(
                         "order_book",
                         "order_flow",
                         "public_trades",
+                        "temporal_order_flow",
+                        "window_local_cvd",
                     ),
-                    state_label=order_flow_analysis.label.value,
+                    state_label=(
+                        f"{order_flow_analysis.label.value}:"
+                        f"{temporal_status}"
+                    ),
                     state_components=(
                         ("book_pressure", order_flow_analysis.book_pressure.value),
                         ("label", order_flow_analysis.label.value),
                         ("taker_flow", order_flow_analysis.taker_flow.value),
+                        ("temporal_quality", temporal_quality),
+                        ("temporal_status", temporal_status),
+                        *temporal_components,
                     ),
                     direction=order_flow_direction,
                     source_quality=(
-                        "unresolved"
-                        if order_flow_analysis.label
-                        is OrderFlowMicrostructureLabel.UNRESOLVED
-                        else "measured"
+                        "measured"
+                        if microstructure_measured and temporal_measured
+                        else "unresolved"
                     ),
-                    uncertainty_flags=order_flow_analysis.uncertainty_flags,
+                    uncertainty_flags=tuple(
+                        sorted(
+                            {
+                                *order_flow_analysis.uncertainty_flags,
+                                *temporal_uncertainty,
+                            }
+                        )
+                    ),
                 )
             )
 
@@ -455,6 +672,14 @@ def build_market_tape_family_snapshots(
             ),
         )
     )
+
+
+def _rich_liquidity_quality(*qualities: str) -> str:
+    if "unavailable" in qualities:
+        return "unavailable"
+    if "degraded" in qualities:
+        return "degraded"
+    return "good"
 
 
 def _is_sha256(value: str) -> bool:
