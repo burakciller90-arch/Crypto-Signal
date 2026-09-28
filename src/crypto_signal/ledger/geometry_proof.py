@@ -4,12 +4,17 @@ from dataclasses import dataclass
 from decimal import Decimal
 from enum import StrEnum
 
+from crypto_signal.confluence.adapters import (
+    elliott_result_evidence,
+    harmonic_result_evidence,
+    price_action_structure_evidence,
+)
 from crypto_signal.confluence.models import PairRelation
 from crypto_signal.ledger.bundle import (
     DecisionFreezeBundle,
     verify_bundle_identity,
 )
-from crypto_signal.ledger.serialization import canonical_sha256
+from crypto_signal.ledger.serialization import canonical_json, canonical_sha256
 from crypto_signal.methodologies.price_action.models import (
     StructureDirection,
 )
@@ -193,6 +198,7 @@ def build_frozen_geometry_proof(
     bundle: DecisionFreezeBundle,
 ) -> FrozenGeometryProof:
     verify_bundle_identity(bundle)
+    _validate_selected_evidence_lineage(bundle)
     decision = bundle.signal_decision
     first_open = bundle.candles[0].open_time_ms
     last_open = bundle.candles[-1].open_time_ms
@@ -246,6 +252,27 @@ def build_frozen_geometry_proof(
         + len(bundle.elliott.abc_candidates)
     )
 
+    pa_flags: list[str] = []
+    if bundle.price_action.structure.ambiguous_swing_source_indices:
+        pa_flags.append("ambiguous_swing_source")
+    if bundle.price_action.liquidity.ambiguous_swing_source_indices:
+        pa_flags.append("liquidity_ambiguous_swing_source")
+
+    harmonic_flags: list[str] = []
+    if bundle.harmonic.ambiguous_swing_source_indices:
+        harmonic_flags.append("ambiguous_swing_source")
+    if _has_duplicate_harmonic_geometry(bundle):
+        harmonic_flags.append("multiple_valid_patterns_same_xabcd")
+
+    elliott_flags: list[str] = []
+    if bundle.elliott.ambiguous_swing_source_indices:
+        elliott_flags.append("ambiguous_swing_source")
+    if any(
+        item.competing_valid_count > 1
+        for item in bundle.elliott.impulse_candidates
+    ):
+        elliott_flags.append("competing_valid_impulse_counts")
+
     states = (
         GeometryMethodologyState(
             layer=GeometryLayer.PRICE_ACTION,
@@ -260,24 +287,7 @@ def build_frozen_geometry_proof(
                 ordered_annotations,
                 GeometryLayer.PRICE_ACTION,
             ),
-            ambiguity_flags=tuple(
-                sorted(
-                    {
-                        *(
-                            "ambiguous_swing_source",
-                        )
-                        if bundle.price_action.structure
-                        .ambiguous_swing_source_indices
-                        else (),
-                        *(
-                            "liquidity_ambiguous_swing_source",
-                        )
-                        if bundle.price_action.liquidity
-                        .ambiguous_swing_source_indices
-                        else (),
-                    }
-                )
-            ),
+            ambiguity_flags=tuple(sorted(set(pa_flags))),
         ),
         GeometryMethodologyState(
             layer=GeometryLayer.HARMONIC,
@@ -287,22 +297,7 @@ def build_frozen_geometry_proof(
                 ordered_annotations,
                 GeometryLayer.HARMONIC,
             ),
-            ambiguity_flags=tuple(
-                sorted(
-                    {
-                        *(
-                            "ambiguous_swing_source",
-                        )
-                        if bundle.harmonic.ambiguous_swing_source_indices
-                        else (),
-                        *(
-                            "multiple_valid_patterns_same_xabcd",
-                        )
-                        if _has_duplicate_harmonic_geometry(bundle)
-                        else (),
-                    }
-                )
-            ),
+            ambiguity_flags=tuple(sorted(set(harmonic_flags))),
         ),
         GeometryMethodologyState(
             layer=GeometryLayer.ELLIOTT,
@@ -312,25 +307,7 @@ def build_frozen_geometry_proof(
                 ordered_annotations,
                 GeometryLayer.ELLIOTT,
             ),
-            ambiguity_flags=tuple(
-                sorted(
-                    {
-                        *(
-                            "ambiguous_swing_source",
-                        )
-                        if bundle.elliott.ambiguous_swing_source_indices
-                        else (),
-                        *(
-                            "competing_valid_impulse_counts",
-                        )
-                        if any(
-                            item.competing_valid_count > 1
-                            for item in bundle.elliott.impulse_candidates
-                        )
-                        else (),
-                    }
-                )
-            ),
+            ambiguity_flags=tuple(sorted(set(elliott_flags))),
         ),
         GeometryMethodologyState(
             layer=GeometryLayer.SIGNAL,
@@ -353,6 +330,8 @@ def build_frozen_geometry_proof(
             ),
         ),
     )
+
+    _validate_annotation_candle_scope(bundle, ordered_annotations)
 
     conflicts = {
         *bundle.confluence.flags,
@@ -401,6 +380,63 @@ def build_frozen_geometry_proof(
         annotations=draft.annotations,
         conflict_flags=draft.conflict_flags,
     )
+
+
+def geometry_proof_json(proof: FrozenGeometryProof) -> str:
+    return canonical_json(_proof_payload(proof))
+
+
+def _validate_selected_evidence_lineage(
+    bundle: DecisionFreezeBundle,
+) -> None:
+    available: set[str] = set()
+    pa = price_action_structure_evidence(bundle.price_action)
+    if pa is not None:
+        available.add(pa.evidence_id)
+    available.update(
+        item.evidence_id for item in harmonic_result_evidence(bundle.harmonic)
+    )
+    available.update(
+        item.evidence_id for item in elliott_result_evidence(bundle.elliott)
+    )
+    selected = {
+        item.evidence_id for item in bundle.selected_evidence
+    }
+    missing = tuple(sorted(selected - available))
+    if missing:
+        raise ValueError(
+            "frozen Geometry Proof selected evidence is absent from "
+            f"frozen methodology results: {missing!r}"
+        )
+    geometry = bundle.signal_decision.geometry
+    if (
+        geometry is not None
+        and geometry.source_evidence_id not in selected
+    ):
+        raise ValueError(
+            "frozen Geometry Proof signal geometry source is not selected"
+        )
+
+
+def _validate_annotation_candle_scope(
+    bundle: DecisionFreezeBundle,
+    annotations: tuple[FrozenGeometryAnnotation, ...],
+) -> None:
+    allowed = {candle.open_time_ms for candle in bundle.candles}
+    for annotation in annotations:
+        for point in annotation.points:
+            if point.open_time_ms not in allowed:
+                raise ValueError(
+                    "frozen Geometry Proof point is outside consumed candles"
+                )
+        for boundary in (
+            annotation.start_open_time_ms,
+            annotation.end_open_time_ms,
+        ):
+            if boundary is not None and boundary not in allowed:
+                raise ValueError(
+                    "frozen Geometry Proof range is outside consumed candles"
+                )
 
 
 def _price_action_annotations(
