@@ -3,13 +3,6 @@ name: Crypto SSD504 Workbench Bootstrap
 on:
   push:
     branches: [main]
-    paths:
-      - ".github/workflows/crypto-ssd504-workbench-bootstrap.yml"
-      - "docs/CRYPTO_SIGNAL_SSD504_WORKBENCH.md"
-      - "docs/CRYPTO_SIGNAL_REALITY_BACKED_EVIDENCE_DATA_PLANE_V1.md"
-      - "READ_FIRST_CRYPTO_SIGNAL.md"
-      - "CURRENT_STATUS.md"
-      - "PROJECT_CHRONICLE.md"
   workflow_dispatch:
 
 permissions:
