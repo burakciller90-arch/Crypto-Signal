@@ -23,7 +23,11 @@ from crypto_signal.intelligence.stablecoin_capital_flow import (
     StablecoinCapitalFlowStatus,
     build_stablecoin_capital_flow_evidence_freeze,
 )
-from crypto_signal.ledger.serialization import canonical_sha256
+from crypto_signal.ledger.serialization import canonical_json, canonical_sha256
+from crypto_signal.product.frozen_proof_store import (
+    FrozenProofObject,
+    FrozenProofStore,
+)
 from crypto_signal.product.intelligence_stream_family import (
     StreamFamilySnapshot,
     build_family_snapshot,
@@ -73,6 +77,7 @@ def build_onchain_family_snapshots(
     *,
     symbols: tuple[str, ...],
     as_of_ms: int,
+    frozen_proof_store_path: Path | None = None,
 ) -> tuple[StreamFamilySnapshot, ...]:
     if as_of_ms < 0:
         raise ValueError("On-chain family as-of must be non-negative")
@@ -103,6 +108,12 @@ def build_onchain_family_snapshots(
     )
     if not any(item.freeze is not None for item in rails):
         return ()
+
+    if frozen_proof_store_path is not None:
+        _persist_stablecoin_proofs(
+            FrozenProofStore(frozen_proof_store_path),
+            rails=rails,
+        )
 
     evidence = _evidence_identities(rails)
     if not evidence:
@@ -155,6 +166,85 @@ def build_onchain_family_snapshots(
             ),
         )
     )
+
+
+def _persist_stablecoin_proofs(
+    store: FrozenProofStore,
+    *,
+    rails: tuple[_StablecoinRail, ...],
+) -> None:
+    for rail in rails:
+        freeze = rail.freeze
+        if freeze is None:
+            continue
+        analysis = freeze.analysis
+        source_ids = {
+            identity
+            for observation in freeze.observations
+            for identity in (
+                observation.observation_identity,
+                observation.raw_identity,
+            )
+        }
+        available_times = [
+            max(
+                observation.source_timestamp_ms,
+                observation.observed_at_ms,
+                observation.ingested_at_ms,
+            )
+            for observation in freeze.observations
+        ]
+        if rail.envelope is not None:
+            source_ids.add(rail.envelope.envelope_identity)
+            available_times.append(
+                max(
+                    rail.envelope.event_at_ms,
+                    rail.envelope.source_timestamp_ms,
+                    rail.envelope.observed_at_ms,
+                    rail.envelope.ingested_at_ms,
+                )
+            )
+        if rail.coverage is not None:
+            source_ids.add(rail.coverage.coverage_event_identity)
+            available_times.append(rail.coverage.observed_at_ms)
+
+        market_available_at_ms = max(
+            available_times,
+            default=analysis.as_of_ms,
+        )
+        store.append(
+            FrozenProofObject(
+                object_identity=freeze.freeze_identity,
+                analysis_identity=analysis.evidence_identity,
+                object_kind="stablecoin_capital_flow_freeze",
+                family=ConfluenceFamily.ONCHAIN.value,
+                domains=(
+                    "onchain",
+                    "stablecoin_capital_flow",
+                    "stablecoin_supply",
+                ),
+                asset=analysis.asset,
+                symbol=None,
+                network=analysis.network_scope,
+                timeframe=RDP7_ONCHAIN_TIMEFRAME,
+                as_of_ms=analysis.as_of_ms,
+                market_available_at_ms=market_available_at_ms,
+                observed_at_ms=market_available_at_ms,
+                source_provider=analysis.provider,
+                source_quality=analysis.status.value,
+                freshness_state="exact_pit_bounded",
+                freshness_age_ms=analysis.latest_observation_age_ms,
+                uncertainty_flags=analysis.uncertainty_flags,
+                source_object_identities=tuple(sorted(source_ids)),
+                depends_on_evidence_identities=(),
+                payload_json=canonical_json(freeze),
+                visualization_json=canonical_json(analysis),
+                renderer_contract_version="stablecoin-capital-flow-v1/1",
+                persisted_at_ms=analysis.as_of_ms,
+                production_authority=False,
+                real_capital=0,
+            )
+        )
 
 
 def _stablecoin_rail(
