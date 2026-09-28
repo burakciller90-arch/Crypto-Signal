@@ -1,5 +1,17 @@
 # PROJECT CHRONICLE
 
+## 2026-09-28 — RDP2-A canonical source-contract foundation accepted
+
+PR #1555 merged as main `585378dc32753d2e31894bd666eb1e084802e6ab`. This is a foundation milestone only; RDP2 remains ACTIVE.
+
+The new source contract establishes immutable source capability identities, canonical source envelopes, explicit provider-native ID/sequence semantics, source/event/observed/ingested timestamps, raw-to-normalized lineage, explicit FRESH / STALE / GAP / UNAVAILABLE states and append-only source coverage. Point-in-time reads are ingestion-bounded, so evidence observed later cannot be substituted into an earlier as-of view. GAP coverage references the existing market-data gap ledger by exact event identity rather than creating a competing gap system.
+
+UID504 focused acceptance run `36373922309` proved the exact Workbench base and exact PR source, then passed 27 RDP2/raw-tape/gap-ledger/Market-Tape/data-health tests, Ruff and mypy. REAL_CAPITAL=0.
+
+Duplicate hygiene was also completed before RDP2 implementation: stale RDP1 PRs #1504, #1505, #1524, #1540, #1542 and duplicate #1547 were closed unmerged; ED1 #1478 remains untouched as a separate frontier.
+
+Exact next frontier: **RDP2-B — wire real Market Tape raw/normalized evidence into the source contract and persist/query coverage while reusing the existing gap/recovery ledger.**
+
 ## 2026-09-28 — RDP1 accepted; RDP2 source envelope & coverage activated
 
 RDP1 Collector and runtime reliability is mechanically accepted. PR #1548 merged the 60-second Market Tape snapshot + WC2 live-clock cadence as main `fabaa8830bd599e564bf76c1e0adbee89ec9b5f3`; the focused ownership gate passed, while unrelated historical Stream text/hash regressions were kept out of the cadence verdict.
