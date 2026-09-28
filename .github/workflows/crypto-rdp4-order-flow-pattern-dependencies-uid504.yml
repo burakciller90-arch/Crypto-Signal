@@ -1,0 +1,66 @@
+name: RDP4 Order Flow Pattern Dependencies UID504
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/crypto_signal/product/intelligence_stream_family_sources.py"
+      - "ops/run_live_evidence_clock.py"
+      - "tests/test_rdp4_order_flow_pattern_dependencies.py"
+      - "tests/test_rdp4_rich_market_tape_family.py"
+      - ".github/workflows/crypto-rdp4-order-flow-pattern-dependencies-uid504.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  focused:
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          clean: true
+          fetch-depth: 1
+
+      - name: Verify exact Workbench baseline and PR source
+        shell: bash
+        run: |
+          set -euo pipefail
+          WB="/Volumes/Crypto-504/Crypto-Signal-Workbench/repo"
+          test "$(id -u)" = "504"
+          test -d "$WB/.git"
+          test "$(git -C "$WB" branch --show-current)" = "main"
+          test -z "$(git -C "$WB" status --porcelain)"
+          test "$(git -C "$WB" rev-parse HEAD)" = "${{ github.event.pull_request.base.sha }}"
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+          echo "RDP4_B_WORKBENCH_BASELINE_PASS=YES"
+          echo "RDP4_B_EXACT_PR_SOURCE_PASS=YES"
+
+      - name: Focused pattern dependency acceptance
+        shell: bash
+        run: |
+          set -euo pipefail
+          PY="/Volumes/Crypto-504/Crypto-Signal/Development/.venv/bin/python"
+          export PYTHONPATH="$GITHUB_WORKSPACE/src:$GITHUB_WORKSPACE"
+          "$PY" -m pytest -q \
+            tests/test_rdp4_order_flow_pattern_dependencies.py \
+            tests/test_rdp4_rich_market_tape_family.py \
+            tests/test_order_flow_patterns.py \
+            tests/test_liquidity_structure_engine.py \
+            tests/test_temporal_order_flow.py \
+            tests/test_wc2_live_clock_wiring.py \
+            tests/test_rdp1_candle_cache_persistence.py
+          "$PY" -m ruff check \
+            src/crypto_signal/product/intelligence_stream_family_sources.py \
+            ops/run_live_evidence_clock.py \
+            tests/test_rdp4_order_flow_pattern_dependencies.py \
+            tests/test_rdp4_rich_market_tape_family.py
+          "$PY" -m mypy \
+            src/crypto_signal/product/intelligence_stream_family_sources.py
+          "$PY" -m py_compile \
+            src/crypto_signal/product/intelligence_stream_family_sources.py \
+            ops/run_live_evidence_clock.py
+          echo "RDP4_B_PATTERN_DEPENDENCY_PASS=YES"
+          echo "REAL_CAPITAL=0"
