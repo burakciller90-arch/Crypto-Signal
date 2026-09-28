@@ -852,16 +852,15 @@ def build_market_tape_family_snapshots(
                 0,
                 as_of_ms - liquidation_lookback_ms,
             )
+            liquidation_history = store.recent_liquidations(
+                exchange=Exchange.BYBIT,
+                instrument_type=DerivativesInstrumentType.LINEAR_PERPETUAL,
+                symbol=symbol,
+                limit=1000,
+            )
             recent_liquidations = tuple(
                 item
-                for item in store.recent_liquidations(
-                    exchange=Exchange.BYBIT,
-                    instrument_type=(
-                        DerivativesInstrumentType.LINEAR_PERPETUAL
-                    ),
-                    symbol=symbol,
-                    limit=1000,
-                )
+                for item in liquidation_history
                 if (
                     max(
                         item.event_at_ms,
@@ -957,23 +956,56 @@ def build_market_tape_family_snapshots(
                     selected_coverage.coverage_identity
                 )
                 liquidation_as_of_ms = selected_coverage.coverage_end_ms
+                historical_derivatives = tuple(
+                    item
+                    for item in derivatives
+                    if max(
+                        item.event_at_ms,
+                        item.source_timestamp_ms,
+                        item.ingested_at_ms,
+                    )
+                    <= liquidation_as_of_ms
+                )
                 historical_dynamics = (
-                    build_derivatives_dynamics_evidence_freeze(
-                        derivatives,
+                    None
+                    if not historical_derivatives
+                    else build_derivatives_dynamics_evidence_freeze(
+                        historical_derivatives,
                         as_of_ms=liquidation_as_of_ms,
                     )
                 )
-                mark_reference = next(
+                mark_reference = (
+                    None
+                    if historical_dynamics is None
+                    else next(
                     (
                         item
                         for item in reversed(
                             historical_dynamics.observations
                         )
                         if item.mark_price is not None
-                    ),
-                    None,
+                        ),
+                        None,
+                    )
                 )
-                if mark_reference is None:
+                if historical_dynamics is None:
+                    derivatives_components.extend(
+                        (
+                            ("crowding_status", "unavailable"),
+                            (
+                                "liquidation_heatmap_status",
+                                "unavailable",
+                            ),
+                            (
+                                "liquidation_zero_event_claim",
+                                "unavailable",
+                            ),
+                        )
+                    )
+                    derivatives_uncertainty.add(
+                        "liquidation_historical_derivatives_unavailable"
+                    )
+                elif mark_reference is None:
                     derivatives_components.extend(
                         (
                             ("crowding_status", "unavailable"),
@@ -993,7 +1025,7 @@ def build_market_tape_family_snapshots(
                 else:
                     heatmap_freeze = (
                         build_liquidation_heatmap_evidence_freeze(
-                            recent_liquidations,
+                            liquidation_history,
                             coverage=selected_coverage,
                             mark_reference=mark_reference,
                             as_of_ms=liquidation_as_of_ms,
@@ -1092,6 +1124,14 @@ def build_market_tape_family_snapshots(
                             (
                                 "liquidation_observed_state",
                                 heatmap_analysis.observed_state.value,
+                            ),
+                            (
+                                "estimated_leverage_concentration_status",
+                                (
+                                    heatmap_analysis
+                                    .estimated_leverage_concentration_status
+                                    .value
+                                ),
                             ),
                             (
                                 "liquidation_risk_zone_status",
