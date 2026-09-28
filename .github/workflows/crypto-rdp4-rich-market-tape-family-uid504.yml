@@ -50,6 +50,8 @@ jobs:
             tests/test_order_flow_microstructure_engine.py \
             tests/test_temporal_order_flow.py \
             tests/test_intelligence_stream_family.py
+          "$PY" -m ruff check --diff \
+            tests/test_rdp4_rich_market_tape_family.py || true
           "$PY" -m ruff check \
             src/crypto_signal/product/intelligence_stream_family_sources.py \
             tests/test_rdp4_rich_market_tape_family.py
