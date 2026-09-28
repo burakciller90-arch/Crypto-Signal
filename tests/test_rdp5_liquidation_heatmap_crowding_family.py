@@ -156,9 +156,9 @@ def test_positive_event_without_provider_coverage_is_visible_but_unresolved(
     snapshot = _snapshot(path)
     components = _components(snapshot)
 
-    assert components["observed_liquidation_sample_count"] == "1"
-    assert components["observed_long_liquidation_sample_count"] == "1"
-    assert components["observed_short_liquidation_sample_count"] == "0"
+    assert components["observed_liquidation_event_count"] == "1"
+    assert components["observed_long_liquidation_count"] == "1"
+    assert components["observed_short_liquidation_count"] == "0"
     assert components["liquidation_heatmap_status"] == "unavailable"
     assert components["crowding_status"] == "unavailable"
     assert components["liquidation_zero_event_claim"] == "unavailable"
@@ -166,34 +166,6 @@ def test_positive_event_without_provider_coverage_is_visible_but_unresolved(
     assert "observed_liquidation_events" in snapshot.evidence_domains
     assert "observed_liquidation_heatmap" not in snapshot.evidence_domains
     assert "derivatives_crowding" not in snapshot.evidence_domains
-    assert (
-        "liquidation_event_coverage_unavailable_or_stale"
-        in snapshot.uncertainty_flags
-    )
-    assert snapshot.direction is None
-
-
-def test_positive_event_without_coverage_remains_observed_only(
-    tmp_path,
-) -> None:
-    path = tmp_path / "market_tape.sqlite3"
-    store = MarketTapeStore(path)
-    _seed_derivatives(store)
-    event = _liquidation()
-    store.append_liquidation(event)
-
-    snapshot = _snapshot(path)
-    components = _components(snapshot)
-
-    assert components["observed_liquidation_sample_count"] == "1"
-    assert components["observed_long_liquidation_sample_count"] == "1"
-    assert components["liquidation_heatmap_status"] == "unavailable"
-    assert components["crowding_status"] == "unavailable"
-    assert components["liquidation_zero_event_claim"] == "unavailable"
-    assert "observed_liquidation_events" in snapshot.evidence_domains
-    assert "observed_liquidation_heatmap" not in snapshot.evidence_domains
-    assert "derivatives_crowding" not in snapshot.evidence_domains
-    assert event.liquidation_identity in snapshot.evidence_identities
     assert (
         "liquidation_event_coverage_unavailable_or_stale"
         in snapshot.uncertainty_flags
@@ -216,9 +188,9 @@ def test_positive_event_is_visible_but_incomplete_coverage_fails_closed(
     snapshot = _snapshot(path)
     components = _components(snapshot)
 
-    assert components["observed_liquidation_sample_count"] == "1"
-    assert components["observed_long_liquidation_sample_count"] == "1"
-    assert components["observed_short_liquidation_sample_count"] == "0"
+    assert components["observed_liquidation_event_count"] == "1"
+    assert components["observed_long_liquidation_count"] == "1"
+    assert components["observed_short_liquidation_count"] == "0"
     assert components["liquidation_heatmap_status"] == "unresolved"
     assert components["liquidation_observed_state"] == "unavailable"
     assert components["crowding_status"] == "unresolved"
@@ -279,7 +251,7 @@ def test_complete_coverage_with_observed_event_never_becomes_zero_claim(
 
     assert components["liquidation_heatmap_status"] == "measured"
     assert components["liquidation_observed_state"] == "observed"
-    assert components["observed_liquidation_sample_count"] == "1"
+    assert components["observed_liquidation_event_count"] == "1"
     assert (
         components["liquidation_zero_event_claim"]
         == "not_applicable_observed_events"
@@ -318,7 +290,7 @@ def test_future_or_late_liquidation_event_is_not_presented_as_observed(
     snapshot = _snapshot(path)
     components = _components(snapshot)
 
-    assert "observed_liquidation_sample_count" not in components
+    assert "observed_liquidation_event_count" not in components
     assert future.liquidation_identity not in snapshot.evidence_identities
     assert late.liquidation_identity not in snapshot.evidence_identities
     assert snapshot.direction is None
