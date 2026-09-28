@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from collections.abc import AsyncIterator
 from pathlib import Path
 
@@ -623,8 +624,7 @@ async def _integration_events() -> AsyncIterator[BybitMicrostructureWireEvent]:
     yield _trade_wire_event(ingested_at_ms=3_520)
 
 
-@pytest.mark.asyncio
-async def test_wire_collection_callback_runs_after_raw_and_normalized_persistence(
+def test_wire_collection_callback_runs_after_raw_and_normalized_persistence(
     tmp_path,
 ) -> None:
     market_store = MarketTapeStore(tmp_path / "market.sqlite3")
@@ -662,12 +662,14 @@ async def test_wire_collection_callback_runs_after_raw_and_normalized_persistenc
             )
         )
 
-    result = await persist_bybit_wire_stream(
-        store=market_store,
-        raw_store=raw_store,
-        events=_integration_events(),
-        orderbook_snapshot_interval_ms=1_000,
-        persisted_wire_callback=source_callback,
+    result = asyncio.run(
+        persist_bybit_wire_stream(
+            store=market_store,
+            raw_store=raw_store,
+            events=_integration_events(),
+            orderbook_snapshot_interval_ms=1_000,
+            persisted_wire_callback=source_callback,
+        )
     )
 
     assert result.observed_messages == 4
