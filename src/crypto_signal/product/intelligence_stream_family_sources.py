@@ -3,7 +3,10 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from crypto_signal.data.derivatives import DerivativesInstrumentType
+from crypto_signal.data.derivatives import (
+    DerivativesInstrumentType,
+    DerivativesObservation,
+)
 from crypto_signal.data.liquidations import LiquidatedPositionSide
 from crypto_signal.data.market_tape import MarketTapeStore
 from crypto_signal.data.microstructure import (
@@ -15,6 +18,7 @@ from crypto_signal.data.options_surface_store import OptionsSurfaceStore
 from crypto_signal.data.store import CandleStore
 from crypto_signal.intelligence.confluence_matrix_v2 import ConfluenceFamily
 from crypto_signal.intelligence.derivatives_context import (
+    DerivativesContextEvidenceFreeze,
     DerivativesContextLabel,
     build_derivatives_context_evidence_freeze,
 )
@@ -22,6 +26,7 @@ from crypto_signal.intelligence.derivatives_crowding import (
     build_derivatives_crowding_evidence_freeze,
 )
 from crypto_signal.intelligence.derivatives_dynamics import (
+    DerivativesDynamicsEvidenceFreeze,
     DerivativesDynamicsStatus,
     build_derivatives_dynamics_evidence_freeze,
 )
@@ -819,6 +824,12 @@ def build_market_tape_family_snapshots(
                 derivatives,
                 as_of_ms=as_of_ms,
             )
+            if frozen_proof_store is not None:
+                _persist_derivatives_core_proofs(
+                    frozen_proof_store,
+                    context=derivatives_freeze,
+                    dynamics=dynamics_freeze,
+                )
             dynamics_analysis = dynamics_freeze.analysis
             derivatives_evidence = {
                 derivatives_freeze.freeze_identity,
@@ -2027,6 +2038,123 @@ def _stream_candle_identity(candle: Candle) -> str:
             "trade_count": candle.trade_count,
             "volume": candle.volume,
         }
+    )
+
+
+def _persist_derivatives_core_proofs(
+    store: FrozenProofStore,
+    *,
+    context: DerivativesContextEvidenceFreeze,
+    dynamics: DerivativesDynamicsEvidenceFreeze,
+) -> None:
+    if (
+        context.analysis.exchange is not dynamics.analysis.exchange
+        or context.analysis.instrument_type is not dynamics.analysis.instrument_type
+        or context.analysis.symbol != dynamics.analysis.symbol
+        or context.analysis.as_of_ms != dynamics.analysis.as_of_ms
+    ):
+        raise ValueError(
+            "Stream Derivatives Context/Dynamics proof context mismatch"
+        )
+
+    provider = (
+        f"{context.analysis.exchange.value}:"
+        f"{context.analysis.instrument_type.value}:market_tape"
+    )
+    asset = _base_asset(context.analysis.symbol)
+    context_sources = tuple(
+        sorted(item.observation_identity for item in context.observations)
+    )
+    store.append(
+        FrozenProofObject(
+            object_identity=context.freeze_identity,
+            analysis_identity=context.analysis.evidence_identity,
+            object_kind="derivatives_context_freeze",
+            family=ConfluenceFamily.DERIVATIVES.value,
+            domains=("derivatives", "derivatives_context"),
+            asset=asset,
+            symbol=context.analysis.symbol,
+            network=None,
+            timeframe="15m",
+            as_of_ms=context.analysis.as_of_ms,
+            market_available_at_ms=_derivatives_available_at(
+                context.observations
+            ),
+            observed_at_ms=context.analysis.observed_at_ms,
+            source_provider=provider,
+            source_quality=(
+                "measured"
+                if context.analysis.label
+                is not DerivativesContextLabel.UNRESOLVED
+                else "unresolved"
+            ),
+            freshness_state="exact_pit_bounded",
+            freshness_age_ms=(
+                context.analysis.as_of_ms
+                - context.analysis.source_cutoff_event_at_ms
+            ),
+            uncertainty_flags=tuple(
+                sorted(context.analysis.uncertainty_flags)
+            ),
+            source_object_identities=context_sources,
+            depends_on_evidence_identities=(),
+            payload_json=canonical_json(context.analysis),
+            visualization_json=canonical_json(context.analysis),
+            renderer_contract_version="derivatives-context-v1/1",
+            persisted_at_ms=context.analysis.as_of_ms,
+            production_authority=False,
+            real_capital=0,
+        )
+    )
+
+    dynamics_sources = tuple(
+        sorted(item.observation_identity for item in dynamics.observations)
+    )
+    store.append(
+        FrozenProofObject(
+            object_identity=dynamics.freeze_identity,
+            analysis_identity=dynamics.analysis.evidence_identity,
+            object_kind="derivatives_dynamics_freeze",
+            family=ConfluenceFamily.DERIVATIVES.value,
+            domains=("derivatives", "derivatives_dynamics"),
+            asset=asset,
+            symbol=dynamics.analysis.symbol,
+            network=None,
+            timeframe="15m",
+            as_of_ms=dynamics.analysis.as_of_ms,
+            market_available_at_ms=_derivatives_available_at(
+                dynamics.observations
+            ),
+            observed_at_ms=dynamics.analysis.observed_at_ms,
+            source_provider=provider,
+            source_quality=dynamics.analysis.status.value,
+            freshness_state="exact_pit_bounded",
+            freshness_age_ms=dynamics.analysis.latest_observation_age_ms,
+            uncertainty_flags=tuple(
+                sorted(dynamics.analysis.uncertainty_flags)
+            ),
+            source_object_identities=dynamics_sources,
+            depends_on_evidence_identities=(),
+            payload_json=canonical_json(dynamics.analysis),
+            visualization_json=canonical_json(dynamics.analysis),
+            renderer_contract_version="derivatives-dynamics-v1/1",
+            persisted_at_ms=dynamics.analysis.as_of_ms,
+            production_authority=False,
+            real_capital=0,
+        )
+    )
+
+
+def _derivatives_available_at(
+    observations: tuple[DerivativesObservation, ...],
+) -> int:
+    return max(
+        max(
+            item.event_at_ms,
+            item.source_timestamp_ms,
+            item.ingested_at_ms,
+        )
+        for item in observations
     )
 
 
