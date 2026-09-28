@@ -1,5 +1,15 @@
 # PROJECT CHRONICLE
 
+## 2026-09-28 — RDP3 PASS; RDP4 rich Liquidity/Order Flow activated
+
+RDP3-A merged via PR #1563 as main `abf1dfdc64c8dc51fe49487129a17a6a2432d74f`. Its deterministic Frozen Geometry Proof is generated only from immutable DecisionFreezeBundle truth: exact consumed candles, Price Action, Harmonic, Elliott, confluence selections/conflicts and selected SignalDecision geometry. The proof is SHA-addressed, candle-scoped and fails closed on frozen evidence-lineage drift. UID504 acceptance `36385612839` passed exact Workbench/source, focused proof tests, Ruff, mypy and py_compile with REAL_CAPITAL=0.
+
+RDP3-B merged via PR #1564 as main `656c19fc6f4a39634e0594c51d021c741c288750`. Each new forward signal freeze now writes exactly one Geometry Proof atomically in the same immutable signal-ledger transaction. Proof replay is read-only by signal or bundle; the proof table rejects UPDATE/DELETE; SQLite enforces that bundle_identity + signal_freeze_identity are the exact same parent freeze pair. Historical freezes are intentionally not backfilled. UID504 `36386203825` passed exact Workbench/source, replay/ledger acceptance, Ruff, mypy and py_compile. Workbench bootstrap `36386287130` advanced clean repo/main to the exact RDP3-B main.
+
+**RDP3 PASS**: a new forward signal can replay its exact Geometry evidence without current-data substitution.
+
+Repository audit for RDP4 confirms the rich engines already exist but are not yet in the live family path. Current Stream family wiring uses Liquidity Dynamics and Order Flow Microstructure only. Exact next frontier: **RDP4-A — promote PIT-safe Liquidity Structure, Liquidity Sweep and Temporal Order Flow freezes into forward Market Tape family proof, preserving candidate-only/no-actor-intent semantics. Price/CVD divergence and absorption follow as the next bounded dependency step because they add candle/structure overlap.**
+
 ## 2026-09-28 — RDP2 PASS; RDP3-A frozen Geometry Proof activated
 
 RDP2-D merged via PR #1561 as main `823dfe1df0dddcf24cc2f26e58a0301ed31702cd`. RDP2 is now PASS and RDP3 is ACTIVE.
