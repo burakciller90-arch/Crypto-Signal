@@ -327,7 +327,11 @@ def test_fresh_btc_options_enrich_existing_derivatives_family(
     assert volatility_proof is not None
     assert surface_proof.object_kind == "options_surface_snapshot"
     assert volatility_proof.object_kind == "options_volatility_freeze"
-    assert surface_proof.market_available_at_ms == surface_proof.as_of_ms
+    assert surface_proof.as_of_ms == AS_OF_MS
+    assert surface_proof.persisted_at_ms == AS_OF_MS
+    assert surface_proof.market_available_at_ms == AS_OF_MS - 60
+    assert surface_proof.market_available_at_ms < surface_proof.as_of_ms
+    assert surface_proof.freshness_age_ms == 100
     assert surface_proof.source_object_identities
     assert surface_identity in volatility_proof.depends_on_evidence_identities
     assert volatility_proof.analysis_identity is not None
@@ -348,10 +352,12 @@ def test_stale_options_surface_fails_closed_inside_derivatives_family(
         ingested_at_ms=AS_OF_MS - 119_999,
     )
 
+    proof_path = tmp_path / "frozen_proofs.sqlite3"
     snapshot = _derivatives_snapshot(
         market_path,
         symbol=BTC_SYMBOL,
         options_path=options_path,
+        proof_path=proof_path,
     )
     components = _components(snapshot)
 
@@ -362,6 +368,21 @@ def test_stale_options_surface_fails_closed_inside_derivatives_family(
     assert "options_surface" in snapshot.evidence_domains
     assert "options_volatility" in snapshot.evidence_domains
     assert snapshot.direction is None
+
+    proof_store = FrozenProofStore(proof_path)
+    stale_proof = next(
+        proof_store.read_exact(identity)
+        for identity in snapshot.evidence_identities
+        if (
+            proof_store.read_exact(identity) is not None
+            and proof_store.read_exact(identity).object_kind
+            == "options_volatility_freeze"
+        )
+    )
+    assert stale_proof is not None
+    assert stale_proof.source_quality == "stale"
+    assert stale_proof.freshness_age_ms == 120_001
+    assert "stale_options_surface" in stale_proof.uncertainty_flags
 
 
 def test_non_btc_eth_symbol_preserves_rdp5_behavior_with_options_store(
