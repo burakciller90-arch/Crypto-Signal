@@ -137,8 +137,8 @@ def _bundle():
     return build_decision_freeze_bundle(
         decision=decision,
         confluence=confluence,
-        price_action=base.price_action,
-        harmonic=base.harmonic,
+        price_action=evidence[0],
+        harmonic=evidence[1],
         elliott=base.elliott,
         candles=base.candles,
     )
