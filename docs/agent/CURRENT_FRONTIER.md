@@ -1,5 +1,46 @@
 # Crypto Signal Current Frontier
 
+## LIVE ACTIVE CHECKPOINT — 2026-09-28 — RDP10-F1 STARTED
+
+This checkpoint was written before any RDP10-F1 production code change.
+
+- canonical main at task start: `f665fee6aba0309d7fd5ef7ff88abfdc10ef1511`
+- main commit: `Docs: close RDP10-E2 and advance to F (#1649)`
+- active branch: `rdp10/options-proof-f1`
+- session-local /Volumes worktree: NONE
+- duplicate RDP10-F1 PRs: NONE
+- duplicate F1 branches: NONE
+- `REAL_CAPITAL=0`
+- historical/frozen backfill: FORBIDDEN
+- Durdurulmaz touched: NO
+- Quantum Capital touched: NO
+
+### Bounded goal
+
+RDP10-F1 handles only Options / volatility strongest exact proof cutover inside the existing Derivatives family.
+
+Required:
+- persist full exact `OptionsVolatilityEvidenceFreeze` before Derivatives Stream publication;
+- preserve exact options surface, metadata and contract quote lineage;
+- expose `options_surface` and `options_volatility` as exact customer-proof domains;
+- preserve source/provider timestamps and stale/not-evaluable states;
+- do not invent dealer-gamma/max-pain claims;
+- do not add a new score family or direction authority.
+
+F1 does not include On-chain/stablecoin proof cutover or final RDP10 closure audit.
+
+### Current blocker
+
+Exact-main Workbench bootstrap for `f665fee6...` is pending:
+
+- run `36470815516`
+- F1 production implementation must not begin until this exact-main Workbench verification is PASS.
+
+### Exact nextAction
+
+Read run `36470815516`; once exact-main Workbench is clean/PASS, audit current options surface + Options Volatility freeze schemas and implement F1 persistence/resolver integration.
+
+
 Conversation memory is non-authoritative. Rebuild from this file, HANDOFF_LOG, the canonical roadmap, and live Git/GitHub/runtime evidence.
 
 Checkpoint assembled: 2026-09-28
