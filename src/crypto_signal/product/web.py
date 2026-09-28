@@ -115,6 +115,11 @@ DEFAULT_STREAM_LEDGER_PATH = (
 DEFAULT_FROZEN_PROOF_STORE_PATH = DEFAULT_STREAM_LEDGER_PATH.with_name(
     "frozen_proofs.sqlite3"
 )
+DEFAULT_OPTIONS_SURFACE_PATH = (
+    DEFAULT_STREAM_LEDGER_PATH.parent.parent
+    / "market_tape"
+    / "options_surface.sqlite3"
+)
 DEFAULT_CANDLE_CACHE_PATH = (
     Path("/Users/crypto-signal-agent/Crypto-Signal")
     / "runtime"
@@ -226,6 +231,7 @@ def create_app(
     stream_ledger_path: Path | None = None,
     frozen_proof_store_path: Path | None = None,
     product_root: str | None = None,
+    options_surface_path: Path | None = None,
 ) -> FastAPI:
     selected_path = ledger_path or Path(
         os.environ.get("CRYPTO_SIGNAL_LEDGER_PATH", str(DEFAULT_LEDGER_PATH))
@@ -334,6 +340,20 @@ def create_app(
         )
     else:
         selected_frozen_proof_store_path = None
+
+    if options_surface_path is not None:
+        selected_options_surface_path: Path | None = options_surface_path
+    elif ledger_path is None:
+        options_surface_env = os.environ.get(
+            "CRYPTO_SIGNAL_OPTIONS_SURFACE_PATH"
+        )
+        selected_options_surface_path = (
+            Path(options_surface_env)
+            if options_surface_env
+            else DEFAULT_OPTIONS_SURFACE_PATH
+        )
+    else:
+        selected_options_surface_path = None
 
     if shadow_intent_journal_path is not None:
         selected_shadow_intent_path: Path | None = shadow_intent_journal_path
@@ -953,6 +973,7 @@ def create_app(
                 event_source_runtime_path=selected_event_source_runtime_path,
                 provider_divergence_path=selected_provider_divergence_path,
                 frozen_proof_store_path=selected_frozen_proof_store_path,
+                options_surface_path=selected_options_surface_path,
             ).read_for_narrative(narrative_identity)
         except StreamExactEvidenceError as exc:
             raise HTTPException(status_code=500, detail=str(exc)) from exc
@@ -1022,6 +1043,7 @@ def create_app(
                 event_source_runtime_path=selected_event_source_runtime_path,
                 provider_divergence_path=selected_provider_divergence_path,
                 frozen_proof_store_path=selected_frozen_proof_store_path,
+                options_surface_path=selected_options_surface_path,
             ).read_reference(
                 narrative_identity=narrative_identity,
                 evidence_identity=evidence_identity,

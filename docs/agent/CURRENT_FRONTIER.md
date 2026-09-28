@@ -1,5 +1,140 @@
 # Crypto Signal Current Frontier
 
+## LIVE RECONCILIATION CHECKPOINT — raw Options source / derived proof split
+
+This checkpoint is written before the next F1 code change.
+
+- current branch head before this checkpoint: `6b6b3f9df756ea2212023bf8edc1df5beab76380`
+- open PR: #1650
+- canonical main remains `f665fee6aba0309d7fd5ef7ff88abfdc10ef1511`
+- duplicate F1 implementation will not be repeated
+- `REAL_CAPITAL=0`
+- historical backfill: FORBIDDEN
+
+Mechanical audit result:
+
+- raw `OptionSurfaceObservation` already has an immutable canonical source store: `OptionsSurfaceStore`;
+- re-wrapping the same `surface_identity` in `FrozenProofStore` with consumer evaluation-time metadata can conflict when one immutable surface is reused at another family `as_of_ms`;
+- therefore raw Options surface / metadata / contract quote evidence must resolve read-only from the canonical Options source store;
+- `FrozenProofStore` should persist only the derived `options_volatility_freeze`, whose identity legitimately depends on the evaluation analysis;
+- existing Stream evidence already binds surface identity, metadata identity, quote identities, volatility freeze identity and analysis identity.
+
+Current blocker:
+
+- `IntelligenceStreamExactEvidenceReadModel` has no `options_surface_path` source resolver yet;
+- API/live acceptance wiring does not pass the canonical Options DB into the resolver;
+- current RDP6 persistence test still contains stale assertions expecting an `options_surface_snapshot` wrapper inside `FrozenProofStore`.
+
+Exact nextAction:
+
+Implement canonical read-only Options source resolution + resolver/API/live wiring, update F1 tests to assert raw source from OptionsSurfaceStore and derived volatility from FrozenProofStore, then write a fresh acceptance-phase checkpoint before rerunning UID504.
+
+## LIVE ACTIVE CHECKPOINT — 2026-09-28 — RDP10-F1 STARTED
+
+This checkpoint was written before any RDP10-F1 production code change.
+
+- canonical main at task start: `f665fee6aba0309d7fd5ef7ff88abfdc10ef1511`
+- main commit: `Docs: close RDP10-E2 and advance to F (#1649)`
+- active branch: `rdp10/options-proof-f1`
+- session-local /Volumes worktree: NONE
+- duplicate RDP10-F1 PRs: NONE
+- duplicate F1 branches: NONE
+- `REAL_CAPITAL=0`
+- historical/frozen backfill: FORBIDDEN
+- Durdurulmaz touched: NO
+- Quantum Capital touched: NO
+
+### Bounded goal
+
+RDP10-F1 handles only Options / volatility strongest exact proof cutover inside the existing Derivatives family.
+
+Required:
+- persist full exact `OptionsVolatilityEvidenceFreeze` before Derivatives Stream publication;
+- preserve exact options surface, metadata and contract quote lineage;
+- expose `options_surface` and `options_volatility` as exact customer-proof domains;
+- preserve source/provider timestamps and stale/not-evaluable states;
+- do not invent dealer-gamma/max-pain claims;
+- do not add a new score family or direction authority.
+
+F1 does not include On-chain/stablecoin proof cutover or final RDP10 closure audit.
+
+### Current blocker
+
+Exact-main Workbench bootstrap for `f665fee6...` is pending:
+
+- run `36470815516`
+- F1 production implementation must not begin until this exact-main Workbench verification is PASS.
+
+### Exact nextAction
+
+Read run `36470815516`; once exact-main Workbench is clean/PASS, audit current options surface + Options Volatility freeze schemas and implement F1 persistence/resolver integration.
+
+### Phase checkpoint — F1 implementation complete, acceptance pending
+
+Exact-main Workbench prerequisite is PASS:
+
+- run `36470815516`
+- job `109092324039`
+- exact main `f665fee6aba0309d7fd5ef7ff88abfdc10ef1511`
+- final canonical Workbench repo branch `main`
+- final canonical Workbench head exact main
+- dirty count `0`
+- `SSD504_WORKBENCH_PASS=YES`
+- `REAL_CAPITAL=0`
+
+Implemented on `rdp10/options-proof-f1`:
+
+- `f6bde7cfd43f28303b010fa6f15581affc0dd4c8` — persist exact Options surface snapshot + Options Volatility proof before Stream publication;
+- `32ff80d122a67dbbc5186bfe26e79aae6e91a2f2` — resolve `options_surface` / `options_volatility` and Derivatives options capability only from persisted proof;
+- `fd211392b8c56bb8105ef1e0be8a81cc6a4c0e47` — persistence/lineage test;
+- `335a2fc156a213b7a579757610a20e9ff50a9c7e` — exact customer-proof resolver test;
+- `9636194e89e22bef8391bb40acb844ba9c9f90e5` — RDP10 UID504 gate coverage + live registered-domain update.
+
+Semantics:
+- full exact surface payload contains contract quote measurements and source/observed/ingested timestamps;
+- volatility proof contains frozen analysis + exact surface;
+- surface identity is stable independently of family evaluation as-of;
+- stale/not-evaluable options states remain explicit;
+- dealer-gamma/max-pain remain explicit unavailable;
+- no new score family or direction authority;
+- no historical backfill/current-data substitution.
+
+Exact nextAction: run full RDP10 Frozen Proof Contract UID504 acceptance on the final checkpoint head; inspect focused tests/lint/type, live fail-closed audit, canonical non-mutation, `HISTORICAL_BACKFILL=NO`, and `REAL_CAPITAL=0` before any PR/merge.
+
+### Retry checkpoint — first F1 acceptance failed only on test proof-store wiring
+
+Failed exact-head run:
+
+- run `36471468285`
+- job `109094583884`
+- canonical checkout verification PASS
+- focused gate failed in `test_fresh_btc_options_enrich_existing_derivatives_family`
+- exact failure: test referenced `proof_path` without defining/passing it
+- live audit correctly skipped because focused gate failed
+- canonical non-mutating cleanup remained PASS
+
+Repair:
+
+- `5e15e87d9c13b83fe34ddb7d1d93eef0b3bfad6f`
+- defines the test proof-store path and passes it into the existing family builder
+- no production code or acceptance criterion changed
+
+Exact nextAction: rerun the full RDP10 UID504 contract on the final retry-checkpoint head; merge only if focused + live + non-mutating all PASS.
+
+### Reconciliation checkpoint — Options source availability separated from proof persistence
+
+Parallel branch audit after the first retry found the implementation/test set had advanced while this agent was reading it. Duplicate work was not repeated.
+
+Additional accepted-intent changes now on the branch:
+
+- `92237d168be29f5b4d5cbb92303d78f4992cd905` — source snapshot proof now uses family analysis `as_of_ms` / persistence boundary while preserving the earlier source availability separately in `market_available_at_ms`; source freshness age is the real surface age rather than zero.
+- `a27ffa1e8e4fb2da23987d4734dfab84d85dab19` — fresh/stale Options proof tests now verify the separated availability/persistence times and that stale Options still persist exact proof with explicit stale status.
+
+The previous retry run/head must not be used as final F1 acceptance because production semantics and tests changed after it.
+
+Exact nextAction: run the full RDP10 Frozen Proof Contract UID504 acceptance on the final head after this reconciliation checkpoint; only focused + live + non-mutating PASS may authorize PR/merge.
+
+
 Conversation memory is non-authoritative. Rebuild from this file, HANDOFF_LOG, the canonical roadmap, and live Git/GitHub/runtime evidence.
 
 Checkpoint assembled: 2026-09-28
@@ -148,3 +283,56 @@ Parallel agents may advance `main`; always re-check immediately before implement
 - historical/frozen evidence mutation: NO
 - Durdurulmaz touched: NO
 - Quantum Capital touched: NO
+
+
+## LIVE REPAIR CHECKPOINT — 2026-09-28 — RDP10-F1 stale-test alignment repair start
+
+- canonical main at repair start: `f665fee6aba0309d7fd5ef7ff88abfdc10ef1511`
+- active branch: `rdp10/options-proof-f1`
+- branch head before checkpoint: `07b0229d303cf1fdf74d4995bf8546c31263a3f2`
+- open PR: #1650
+- session-local /Volumes worktree: NONE; UID504 workflow evidence verifies canonical SSD state
+- duplicate guard: F1 already implemented on PR #1650; no duplicate implementation will be created
+- safety: `REAL_CAPITAL=0`; `HISTORICAL_BACKFILL=NO`; Durdurulmaz untouched; Quantum Capital untouched
+
+Mechanical failure evidence:
+
+- current-head RDP10 runs `36472389441` / job `109097601979` and `36472396277` / job `109097627846` FAIL only in the focused gate before live audit;
+- exact checkout and canonical non-mutation checks PASS;
+- stale tests still search `FrozenProofStore` for `options_surface_snapshot`, but the reconciled F1 contract keeps raw `OptionSurfaceObservation` in canonical immutable `OptionsSurfaceStore` and persists only the derived `options_volatility_freeze` in `FrozenProofStore`;
+- the same stale expectation also causes RDP6 Options acceptance failure.
+
+Current blocker:
+
+- acceptance tests and exact-evidence test resolver setup are not aligned with the reconciled raw-source / derived-proof split.
+
+Exact nextAction:
+
+Update only the stale Options tests/resolver test wiring to read raw surface lineage from `OptionsSurfaceStore` via `options_surface_path`, keep derived volatility assertions on `FrozenProofStore`, then rerun exact-head RDP10 and RDP6 UID504 acceptance before any merge.
+
+
+## LIVE REPAIR CHECKPOINT — 2026-09-28 — RDP10-F1 canonical Options source resolver implemented
+
+- canonical main before acceptance: `f665fee6aba0309d7fd5ef7ff88abfdc10ef1511`
+- active PR: #1650
+- branch: `rdp10/options-proof-f1`
+- exact branch head at checkpoint: `036fde3af3c94c8a453a2d3c928c997399fc4af2`
+- worktree: no session-local /Volumes worktree; UID504 workflow is the runtime/Workbench authority
+- safety: `REAL_CAPITAL=0`; historical/frozen evidence not rewritten; Durdurulmaz untouched; Quantum Capital untouched
+
+Implemented repair:
+
+- `IntelligenceStreamExactEvidenceReadModel` now accepts an explicit canonical `options_surface_path` and resolves the immutable raw Options source store read-only.
+- surface, instrument-metadata lineage and individual quote identities are resolved as exact source objects; row/payload/identity and PIT timestamps are fail-closed.
+- `options_surface` can be `READY_EXACT` only when surface + metadata + full quote lineage resolve; the derived `options_volatility_freeze` remains in `FrozenProofStore`.
+- product exact-evidence API and dashboard runtime wiring now pass `runtime/market_tape/options_surface.sqlite3`.
+- RDP10 live proof-state audit uses the same canonical Options source.
+- stale RDP6/RDP10 tests were aligned to the raw-source / derived-proof split and now require raw source identity lineage rather than a duplicated raw FrozenProof object.
+
+Current blocker:
+
+- exact-head UID504 RDP10 and RDP6 acceptance has not yet been proven on `036fde3af3c94c8a453a2d3c928c997399fc4af2`; no merge is allowed until both relevant gate outputs are inspected.
+
+Exact nextAction:
+
+Inspect the workflows triggered for the exact branch head. If any focused test/type/runtime check fails, repair only that mechanical blocker; otherwise verify acceptance markers and live non-mutation output, re-check main/PR head, then merge #1650.

@@ -717,3 +717,229 @@ blocker:
 nextAction:
 - before F1 code changes, re-check exact main/open PRs/branches and write mandatory F1 task-start checkpoint.
 
+---
+
+## 2026-09-28 — RDP10-F1 start checkpoint
+
+status: ACTIVE
+canonicalMainAtStart: f665fee6aba0309d7fd5ef7ff88abfdc10ef1511
+branch: rdp10/options-proof-f1
+worktree: no session-local /Volumes worktree; GitHub branch only, canonical Workbench verification comes from UID504 bootstrap/acceptance
+roadmapGate: RDP10-F1 Options / volatility strongest exact proof cutover
+duplicateRelevantPRs: NONE
+duplicateRelevantBranches: NONE
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+boundedGoal:
+- persist full immutable OptionsVolatilityEvidenceFreeze before Derivatives Stream publication;
+- preserve exact options surface/metadata/quote lineage;
+- expose options_surface and options_volatility exact customer-proof domains;
+- preserve source/provider timestamps and stale/not-evaluable states;
+- no dealer-gamma/max-pain invention;
+- no new score family or direction authority.
+
+notInThisSlice:
+- On-chain/stablecoin proof cutover;
+- Event Risk/provider-divergence changes unless audit proves a real gap;
+- final RDP10 closure audit;
+- RDP11 soak.
+
+blocker:
+- exact-main SSD504 Workbench bootstrap run 36470815516 is pending at task start.
+
+nextAction:
+- read run 36470815516; after exact-main Workbench PASS, audit options surface + volatility freeze schemas and implement F1.
+
+---
+
+## 2026-09-28 — RDP10-F1 implementation complete; acceptance phase started
+
+status: ACCEPTANCE_PENDING
+canonicalMainAtPhaseStart: f665fee6aba0309d7fd5ef7ff88abfdc10ef1511
+branch: rdp10/options-proof-f1
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+workbenchPrerequisite:
+- run 36470815516 / job 109092324039: SUCCESS.
+- exact main f665fee6aba0309d7fd5ef7ff88abfdc10ef1511.
+- final canonical Workbench repo main, exact head, dirty count 0.
+- SSD504_WORKBENCH_PASS=YES.
+
+implemented:
+- f6bde7cfd43f28303b010fa6f15581affc0dd4c8 — persist exact options surface + volatility proof objects.
+- 32ff80d122a67dbbc5186bfe26e79aae6e91a2f2 — exact resolver domains/capabilities.
+- fd211392b8c56bb8105ef1e0be8a81cc6a4c0e47 — persistence/lineage test.
+- 335a2fc156a213b7a579757610a20e9ff50a9c7e — exact resolver/customer-proof test.
+- 9636194e89e22bef8391bb40acb844ba9c9f90e5 — UID504 gate + live registered-domain coverage.
+- ccd93cb860fdc05dab8f71ea5bd68d714963a3bc — acceptance-phase frontier checkpoint.
+
+semanticGuards:
+- surface identity stays stable and carries exact contract quote timestamps.
+- volatility proof binds full frozen surface + analysis.
+- stale/not-evaluable remains explicit.
+- dealer-gamma/max-pain remain unavailable.
+- no new family/direction authority.
+- no historical backfill/current-data substitution.
+
+blocker:
+- exact-head full RDP10 UID504 acceptance has not completed yet.
+
+nextAction:
+- inspect the exact-head RDP10 Frozen Proof Contract run; if focused + live fail-closed + non-mutating all PASS, re-check main/open PRs and merge F1. Otherwise repair only the demonstrated issue and checkpoint before retry.
+
+---
+
+## 2026-09-28 — RDP10-F1 acceptance retry checkpoint
+
+status: ACCEPTANCE_RETRY_PENDING
+canonicalMain: f665fee6aba0309d7fd5ef7ff88abfdc10ef1511
+branch: rdp10/options-proof-f1
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+failedRun:
+- run 36471468285 / job 109094583884.
+- canonical checkout verification PASS.
+- focused gate failed only because the fresh Options family test referenced proof_path without defining/passing it.
+- live audit skipped because focused gate failed.
+- canonical non-mutating cleanup PASS.
+
+repair:
+- commit 5e15e87d9c13b83fe34ddb7d1d93eef0b3bfad6f.
+- defines the proof-store test path and passes it into the existing family builder.
+- no production code and no acceptance criteria changed.
+- frontier retry checkpoint commit e50c1711a8249aa65fb137e84253231fa4671874.
+
+nextAction:
+- run the full exact-head RDP10 UID504 contract again; merge only if focused, live fail-closed and non-mutating checks all PASS with HISTORICAL_BACKFILL=NO and REAL_CAPITAL=0.
+
+---
+
+## 2026-09-28 — RDP10-F1 reconciliation checkpoint
+
+status: ACCEPTANCE_RETRY_AFTER_RECONCILIATION
+canonicalMain: f665fee6aba0309d7fd5ef7ff88abfdc10ef1511
+branch: rdp10/options-proof-f1
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+parallelAudit:
+- branch advanced while being audited; duplicate implementation was not repeated.
+- prior retry state covered only proof_path test wiring and is not sufficient as final acceptance after later semantic changes.
+
+reconciledChanges:
+- 92237d168be29f5b4d5cbb92303d78f4992cd905 — Options source proof separates source market_available_at_ms from family as_of/persisted_at time; freshness_age_ms reflects the true source age.
+- a27ffa1e8e4fb2da23987d4734dfab84d85dab19 — fresh/stale Options proof tests verify separated timing and explicit stale persisted proof.
+- cb72a9dc41393ba932f8e344e0b15cba3a520977 — durable frontier reconciliation checkpoint.
+
+blocker:
+- no final exact-head acceptance exists after the semantic timing change.
+
+nextAction:
+- run/inspect the full exact-head RDP10 UID504 contract; merge F1 only if focused, live fail-closed and non-mutating checks all PASS with HISTORICAL_BACKFILL=NO and REAL_CAPITAL=0.
+
+---
+
+## 2026-09-28 — RDP10-F1 raw-source reconciliation checkpoint
+
+status: IMPLEMENTATION_RECONCILIATION
+canonicalMain: f665fee6aba0309d7fd5ef7ff88abfdc10ef1511
+branch: rdp10/options-proof-f1
+openPR: 1650
+branchHeadBeforeCheckpoint: 6b6b3f9df756ea2212023bf8edc1df5beab76380
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+auditFinding:
+- OptionSurfaceObservation already has canonical immutable persistence in OptionsSurfaceStore.
+- Wrapping the same surface_identity in FrozenProofStore with family evaluation-time metadata can make the same source identity conflict across later evaluations.
+- Raw options surface/metadata/quote evidence therefore belongs to the canonical Options source resolver.
+- FrozenProofStore should contain only the derived options_volatility_freeze.
+- Stream already binds surface, metadata, quote, volatility freeze and analysis identities.
+
+blocker:
+- exact-evidence read model has no options_surface_path resolver yet.
+- web/live audit resolver wiring does not pass the canonical Options DB.
+- current RDP6 test still expects a raw surface wrapper in FrozenProofStore.
+
+nextAction:
+- implement read-only canonical Options source resolution plus API/live wiring; update tests to separate raw Options source truth from derived volatility proof; checkpoint again before UID504 acceptance.
+
+
+
+---
+
+## 2026-09-28 — RDP10-F1 stale-test alignment repair start
+
+verifiedAt: 2026-09-28
+repository: burakciller90-arch/Crypto-Signal
+mainSha: f665fee6aba0309d7fd5ef7ff88abfdc10ef1511
+branch: rdp10/options-proof-f1
+branchHeadAtStart: 07b0229d303cf1fdf74d4995bf8546c31263a3f2
+worktree: no session-local /Volumes worktree; canonical Workbench/runtime evidence comes from UID504 self-hosted workflow checks
+roadmapGate: RDP10-F1 Options / volatility exact proof cutover
+pr: 1650
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+duplicateCheck:
+- PR #1650 is the active F1 implementation; no duplicate branch/implementation will be created.
+- main remains f665fee6aba0309d7fd5ef7ff88abfdc10ef1511.
+
+mechanicalEvidence:
+- RDP10 current-head push run 36472389441 / job 109097601979: FAIL focused gate.
+- RDP10 current-head PR run 36472396277 / job 109097627846: FAIL focused gate.
+- exact source/canonical checkout verification PASS.
+- canonical non-mutating verification PASS with HISTORICAL_BACKFILL=NO and REAL_CAPITAL=0.
+- failures are stale tests expecting options_surface_snapshot in FrozenProofStore after the accepted-intent reconciliation moved raw Options source truth to OptionsSurfaceStore.
+
+blocker:
+- stale Options acceptance tests/resolver test setup do not match the canonical raw-source / derived-proof split.
+
+nextAction:
+- align those tests to OptionsSurfaceStore + options_surface_path while retaining derived options_volatility_freeze checks in FrozenProofStore, then rerun exact-head RDP10 and RDP6 acceptance before merge.
+
+
+---
+
+## 2026-09-28 — RDP10-F1 canonical Options source resolver implementation checkpoint
+
+verifiedAt: 2026-09-28
+repository: burakciller90-arch/Crypto-Signal
+mainSha: f665fee6aba0309d7fd5ef7ff88abfdc10ef1511
+branch: rdp10/options-proof-f1
+branchHead: 036fde3af3c94c8a453a2d3c928c997399fc4af2
+worktree: no session-local /Volumes worktree; UID504 self-hosted workflow is canonical Workbench/runtime evidence
+roadmapGate: RDP10-F1 Options / volatility exact proof cutover
+pr: 1650
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+implemented:
+- canonical Options raw source is resolved read-only by exact evidence instead of being duplicated into FrozenProofStore.
+- source surface, instrument metadata and all bound quotes are identity/PIT validated.
+- options_surface READY_EXACT requires the raw source lineage; options_volatility remains the immutable derived freeze.
+- web/dashboard and RDP10 live audit are wired to runtime/market_tape/options_surface.sqlite3.
+- stale family/exact-evidence tests now assert the raw-source / derived-proof split.
+
+blocker:
+- exact-head UID504 acceptance for 036fde3af3c94c8a453a2d3c928c997399fc4af2 is pending; no gate PASS and no merge yet.
+
+nextAction:
+- inspect exact-head RDP10 and RDP6 workflow acceptance outputs; repair only a demonstrated mechanical failure, or merge #1650 after rechecking main/head if all required acceptance markers pass.

@@ -14,6 +14,7 @@ from crypto_signal.data.microstructure import (
     PublicTradeObservation,
 )
 from crypto_signal.data.models import Candle, Exchange, MarketType
+from crypto_signal.data.options import OptionSurfaceObservation
 from crypto_signal.data.options_surface_store import OptionsSurfaceStore
 from crypto_signal.data.store import CandleStore
 from crypto_signal.intelligence.confluence_matrix_v2 import ConfluenceFamily
@@ -50,6 +51,7 @@ from crypto_signal.intelligence.liquidity_sweep import (
     build_liquidity_sweep_evidence_freeze,
 )
 from crypto_signal.intelligence.options_volatility import (
+    OptionsVolatilityEvidenceFreeze,
     build_options_volatility_evidence_freeze,
 )
 from crypto_signal.intelligence.order_flow_microstructure import (
@@ -1280,6 +1282,12 @@ def build_market_tape_family_snapshots(
                             as_of_ms=as_of_ms,
                         )
                     )
+                    if frozen_proof_store is not None:
+                        _persist_options_proofs(
+                            frozen_proof_store,
+                            surface=options_surface,
+                            volatility=options_freeze,
+                        )
                     options_analysis = options_freeze.analysis
                     options_status = options_analysis.status.value
                     derivatives_domains.update(
@@ -2159,6 +2167,77 @@ def _persist_derivatives_dynamics_proof(
             visualization_json=canonical_json(dynamics.analysis),
             renderer_contract_version="derivatives-dynamics-v1/1",
             persisted_at_ms=dynamics.analysis.as_of_ms,
+            production_authority=False,
+            real_capital=0,
+        )
+    )
+
+
+def _persist_options_proofs(
+    store: FrozenProofStore,
+    *,
+    surface: OptionSurfaceObservation,
+    volatility: OptionsVolatilityEvidenceFreeze,
+) -> None:
+    if (
+        volatility.surface.surface_identity != surface.surface_identity
+        or volatility.analysis.surface_identity != surface.surface_identity
+        or volatility.analysis.instrument_metadata_identity
+        != surface.instrument_metadata_identity
+    ):
+        raise ValueError("Stream Options proof surface linkage mismatch")
+
+    analysis = volatility.analysis
+    provider = (
+        f"{surface.exchange.value}:options:{surface.source.value}"
+    )
+    quote_identities = tuple(
+        sorted(item.quote_identity for item in surface.contracts)
+    )
+    surface_available_at = max(
+        surface.source_timestamp_ms,
+        surface.observed_at_ms,
+        surface.ingested_at_ms,
+    )
+    freeze_dependencies = tuple(
+        sorted(
+            {
+                surface.surface_identity,
+                surface.instrument_metadata_identity,
+                *quote_identities,
+            }
+        )
+    )
+    store.append(
+        FrozenProofObject(
+            object_identity=volatility.freeze_identity,
+            analysis_identity=analysis.evidence_identity,
+            object_kind="options_volatility_freeze",
+            family=ConfluenceFamily.DERIVATIVES.value,
+            domains=("derivatives", "options_surface", "options_volatility"),
+            asset=analysis.base_coin,
+            symbol=None,
+            network=None,
+            timeframe="options_surface",
+            as_of_ms=analysis.as_of_ms,
+            market_available_at_ms=surface_available_at,
+            observed_at_ms=analysis.observed_at_ms,
+            source_provider=provider,
+            source_quality=analysis.status.value,
+            freshness_state="exact_pit_bounded",
+            freshness_age_ms=analysis.surface_age_ms,
+            uncertainty_flags=tuple(sorted(analysis.uncertainty_flags)),
+            source_object_identities=(surface.surface_identity,),
+            depends_on_evidence_identities=freeze_dependencies,
+            payload_json=canonical_json(
+                {
+                    "analysis": analysis,
+                    "surface": surface,
+                }
+            ),
+            visualization_json=canonical_json(analysis),
+            renderer_contract_version="options-volatility-v1/1",
+            persisted_at_ms=analysis.as_of_ms,
             production_authority=False,
             real_capital=0,
         )

@@ -46,6 +46,7 @@ class IntelligenceStreamExactEvidenceReadModel:
         event_source_runtime_path: Path | None = None,
         provider_divergence_path: Path | None = None,
         frozen_proof_store_path: Path | None = None,
+        options_surface_path: Path | None = None,
     ) -> None:
         self.stream_ledger_path = stream_ledger_path
         self.signal_ledger_path = signal_ledger_path
@@ -54,6 +55,7 @@ class IntelligenceStreamExactEvidenceReadModel:
         self.event_source_runtime_path = event_source_runtime_path
         self.provider_divergence_path = provider_divergence_path
         self.frozen_proof_store_path = frozen_proof_store_path
+        self.options_surface_path = options_surface_path
 
     def read_for_narrative(
         self,
@@ -471,11 +473,17 @@ class IntelligenceStreamExactEvidenceReadModel:
                 if "derivatives_crowding_freeze" in selected_kinds
                 else StreamEvidenceResolutionState.UNAVAILABLE_EXPLICIT
             )
+            options_state = (
+                StreamEvidenceResolutionState.READY_EXACT
+                if "options_volatility_freeze" in selected_kinds
+                else StreamEvidenceResolutionState.UNAVAILABLE_EXPLICIT
+            )
             if (
                 context_state is StreamEvidenceResolutionState.READY_EXACT
                 or dynamics_state is StreamEvidenceResolutionState.READY_EXACT
                 or heatmap_state is StreamEvidenceResolutionState.READY_EXACT
                 or crowding_state is StreamEvidenceResolutionState.READY_EXACT
+                or options_state is StreamEvidenceResolutionState.READY_EXACT
             ):
                 state = StreamEvidenceResolutionState.READY_EXACT
                 reason = "exact_persisted_derivatives_derived_proof_resolved"
@@ -489,6 +497,7 @@ class IntelligenceStreamExactEvidenceReadModel:
                 "funding_open_interest_basis": context_state.value,
                 "observed_liquidation_heatmap": heatmap_state.value,
                 "crowding_context": crowding_state.value,
+                "options_volatility_context": options_state.value,
                 "source_snapshot": raw_state.value,
             }
         elif domain == "derivatives_context":
@@ -548,6 +557,84 @@ class IntelligenceStreamExactEvidenceReadModel:
                 "crowded_side": state.value,
                 "squeeze_context": state.value,
                 "upstream_dependency_lineage": state.value,
+            }
+        elif domain == "options_surface":
+            surface_objects = tuple(
+                item
+                for item in selected_objects
+                if item.get("object_kind") == "options_surface_observation"
+            )
+            metadata_objects = tuple(
+                item
+                for item in selected_objects
+                if item.get("object_kind") == "options_instrument_metadata"
+            )
+            quote_objects = tuple(
+                item
+                for item in selected_objects
+                if item.get("object_kind") == "options_contract_quote"
+            )
+            expected_quote_count = sum(
+                len(contracts)
+                for item in surface_objects
+                if isinstance(item.get("payload"), dict)
+                for contracts in (item["payload"].get("contracts"),)
+                if isinstance(contracts, list)
+            )
+            surface_state = (
+                StreamEvidenceResolutionState.READY_EXACT
+                if surface_objects
+                else StreamEvidenceResolutionState.UNAVAILABLE_EXPLICIT
+            )
+            metadata_state = (
+                StreamEvidenceResolutionState.READY_EXACT
+                if surface_objects
+                and len(metadata_objects) == len(surface_objects)
+                else StreamEvidenceResolutionState.UNAVAILABLE_EXPLICIT
+            )
+            quote_state = (
+                StreamEvidenceResolutionState.READY_EXACT
+                if expected_quote_count > 0
+                and len(quote_objects) == expected_quote_count
+                else StreamEvidenceResolutionState.UNAVAILABLE_EXPLICIT
+            )
+            volatility_state = (
+                StreamEvidenceResolutionState.READY_EXACT
+                if "options_volatility_freeze" in selected_kinds
+                else StreamEvidenceResolutionState.UNAVAILABLE_EXPLICIT
+            )
+            if (
+                surface_state is StreamEvidenceResolutionState.READY_EXACT
+                and metadata_state is StreamEvidenceResolutionState.READY_EXACT
+                and quote_state is StreamEvidenceResolutionState.READY_EXACT
+            ):
+                state = StreamEvidenceResolutionState.READY_EXACT
+                reason = "exact_canonical_options_surface_lineage_resolved"
+            capabilities = {
+                "surface_snapshot": surface_state.value,
+                "instrument_metadata_lineage": metadata_state.value,
+                "contract_quote_lineage": quote_state.value,
+                "volatility_freeze_link": volatility_state.value,
+            }
+        elif domain == "options_volatility":
+            if "options_volatility_freeze" in selected_kinds:
+                state = StreamEvidenceResolutionState.READY_EXACT
+                reason = "exact_persisted_options_volatility_proof_resolved"
+            capabilities = {
+                "atm_iv_term_structure": state.value,
+                "risk_reversal_25d": state.value,
+                "open_interest_by_expiry": state.value,
+                "volume_by_expiry": state.value,
+                "expiry_concentration": state.value,
+                "volatility_index": (
+                    StreamEvidenceResolutionState.UNAVAILABLE_EXPLICIT.value
+                ),
+                "dealer_gamma_position": (
+                    StreamEvidenceResolutionState.UNAVAILABLE_EXPLICIT.value
+                ),
+                "max_pain": (
+                    StreamEvidenceResolutionState.UNAVAILABLE_EXPLICIT.value
+                ),
             }
         elif domain == "event_calendar":
             if selected_kinds.intersection(
@@ -854,6 +941,17 @@ class IntelligenceStreamExactEvidenceReadModel:
                 )
             )
         if (
+            self.options_surface_path is not None
+            and self.options_surface_path.exists()
+        ):
+            resolved.update(
+                _resolve_options_surface_objects(
+                    self.options_surface_path,
+                    evidence_identities,
+                    source_as_of_ms=source_as_of_ms,
+                )
+            )
+        if (
             self.event_source_runtime_path is not None
             and self.event_source_runtime_path.exists()
         ):
@@ -982,6 +1080,7 @@ def _objects_for_domain(
             "derivatives_dynamics_freeze",
             "liquidation_heatmap_freeze",
             "derivatives_crowding_freeze",
+            "options_volatility_freeze",
         },
         "derivatives_context": {"derivatives_context_freeze"},
         "derivatives_dynamics": {"derivatives_dynamics_freeze"},
@@ -991,6 +1090,13 @@ def _objects_for_domain(
         },
         "observed_liquidation_heatmap": {"liquidation_heatmap_freeze"},
         "derivatives_crowding": {"derivatives_crowding_freeze"},
+        "options_surface": {
+            "options_surface_observation",
+            "options_instrument_metadata",
+            "options_contract_quote",
+            "options_volatility_freeze",
+        },
+        "options_volatility": {"options_volatility_freeze"},
         "event_calendar": {
             "event_calendar_coverage",
             "structured_event_observation",
@@ -1292,6 +1398,222 @@ def _resolve_market_tape_objects(
             "market_tape_liquidation_coverage": "coverage_identity",
         },
     )
+
+
+def _resolve_options_surface_objects(
+    path: Path,
+    evidence_identities: tuple[str, ...],
+    *,
+    source_as_of_ms: int | None,
+) -> dict[str, dict[str, Any]]:
+    if not path.is_file():
+        return {}
+    uri = f"{path.resolve().as_uri()}?mode=ro"
+    requested = set(evidence_identities)
+    try:
+        connection = sqlite3.connect(uri, uri=True)
+    except sqlite3.DatabaseError as exc:
+        raise StreamExactEvidenceError(str(exc)) from exc
+    try:
+        connection.row_factory = sqlite3.Row
+        connection.execute("PRAGMA query_only=ON")
+        tables = {
+            str(row[0])
+            for row in connection.execute(
+                "SELECT name FROM sqlite_master WHERE type='table'"
+            ).fetchall()
+        }
+        required_tables = {
+            "option_surface_snapshots",
+            "option_instrument_metadata",
+            "option_instrument_specs",
+        }
+        if not required_tables.issubset(tables):
+            return {}
+
+        resolved: dict[str, dict[str, Any]] = {}
+        surface_payloads: list[dict[str, Any]] = []
+        for batch in _batches(evidence_identities, size=400):
+            placeholders = ",".join("?" for _ in batch)
+            rows = connection.execute(
+                f"""
+                SELECT surface_identity, payload_json
+                FROM option_surface_snapshots
+                WHERE surface_identity IN ({placeholders})
+                """,
+                batch,
+            ).fetchall()
+            for row in rows:
+                surface_identity = str(row["surface_identity"])
+                payload = _json_object(
+                    str(row["payload_json"]),
+                    "options surface exact payload",
+                )
+                if payload.get("surface_identity") != surface_identity:
+                    raise StreamExactEvidenceError(
+                        "options surface row/payload identity mismatch"
+                    )
+                contracts = payload.get("contracts")
+                if not isinstance(contracts, list) or not contracts:
+                    raise StreamExactEvidenceError(
+                        "options surface exact payload has no contracts"
+                    )
+                contract_quote_identities: list[str] = []
+                for contract_raw in contracts:
+                    contract = _mapping(
+                        contract_raw,
+                        "options contract quote exact payload",
+                    )
+                    quote_identity = contract.get("quote_identity")
+                    if not isinstance(quote_identity, str):
+                        raise StreamExactEvidenceError(
+                            "options contract quote identity is invalid"
+                        )
+                    quote_payload = {
+                        key: value
+                        for key, value in contract.items()
+                        if key != "quote_identity"
+                    }
+                    if canonical_sha256(quote_payload) != quote_identity:
+                        raise StreamExactEvidenceError(
+                            "options contract quote identity mismatch"
+                        )
+                    _verify_not_future(
+                        contract,
+                        source_as_of_ms=source_as_of_ms,
+                        label="options_contract_quote",
+                    )
+                    contract_quote_identities.append(quote_identity)
+                    if quote_identity in requested:
+                        resolved[quote_identity] = {
+                            "object_kind": "options_contract_quote",
+                            "payload": contract,
+                        }
+
+                identity_payload = {
+                    "adapter_version": payload.get("adapter_version"),
+                    "base_coin": payload.get("base_coin"),
+                    "contract_quote_identities": tuple(
+                        contract_quote_identities
+                    ),
+                    "exchange": payload.get("exchange"),
+                    "ingested_at_ms": payload.get("ingested_at_ms"),
+                    "instrument_metadata_identity": payload.get(
+                        "instrument_metadata_identity"
+                    ),
+                    "observed_at_ms": payload.get("observed_at_ms"),
+                    "source": payload.get("source"),
+                    "source_timestamp_ms": payload.get(
+                        "source_timestamp_ms"
+                    ),
+                }
+                if canonical_sha256(identity_payload) != surface_identity:
+                    raise StreamExactEvidenceError(
+                        "options surface exact identity mismatch"
+                    )
+                _verify_not_future(
+                    payload,
+                    source_as_of_ms=source_as_of_ms,
+                    label="options_surface_observation",
+                )
+                resolved[surface_identity] = {
+                    "object_kind": "options_surface_observation",
+                    "payload": payload,
+                }
+                surface_payloads.append(payload)
+
+        metadata_identities = {
+            str(payload["instrument_metadata_identity"])
+            for payload in surface_payloads
+            if isinstance(payload.get("instrument_metadata_identity"), str)
+            and payload["instrument_metadata_identity"] in requested
+        }
+        for metadata_identity in sorted(metadata_identities):
+            row = connection.execute(
+                """
+                SELECT payload_json
+                FROM option_instrument_metadata
+                WHERE metadata_identity=?
+                """,
+                (metadata_identity,),
+            ).fetchone()
+            if row is None:
+                continue
+            metadata = _json_object(
+                str(row["payload_json"]),
+                "options instrument metadata exact payload",
+            )
+            instrument_identities = metadata.get("instrument_identities")
+            if not isinstance(instrument_identities, list):
+                raise StreamExactEvidenceError(
+                    "options instrument metadata identities are invalid"
+                )
+            expected_metadata_identity = canonical_sha256(
+                {
+                    "base_coin": metadata.get("base_coin"),
+                    "exchange": metadata.get("exchange"),
+                    "instrument_identities": tuple(
+                        str(value) for value in instrument_identities
+                    ),
+                    "version": "options-instrument-metadata-v1/1",
+                }
+            )
+            if expected_metadata_identity != metadata_identity:
+                raise StreamExactEvidenceError(
+                    "options instrument metadata identity mismatch"
+                )
+
+            specs: list[dict[str, Any]] = []
+            for instrument_identity_raw in instrument_identities:
+                instrument_identity = str(instrument_identity_raw)
+                spec_row = connection.execute(
+                    """
+                    SELECT payload_json
+                    FROM option_instrument_specs
+                    WHERE instrument_identity=?
+                    """,
+                    (instrument_identity,),
+                ).fetchone()
+                if spec_row is None:
+                    raise StreamExactEvidenceError(
+                        "options instrument metadata references missing instrument"
+                    )
+                spec = _json_object(
+                    str(spec_row["payload_json"]),
+                    "options instrument exact payload",
+                )
+                if spec.get("instrument_identity") != instrument_identity:
+                    raise StreamExactEvidenceError(
+                        "options instrument row/payload identity mismatch"
+                    )
+                spec_identity_payload = {
+                    key: value
+                    for key, value in spec.items()
+                    if key != "instrument_identity"
+                }
+                if canonical_sha256(spec_identity_payload) != instrument_identity:
+                    raise StreamExactEvidenceError(
+                        "options instrument identity mismatch"
+                    )
+                _verify_not_future(
+                    spec,
+                    source_as_of_ms=source_as_of_ms,
+                    label="options_instrument_spec",
+                )
+                specs.append(spec)
+            resolved[metadata_identity] = {
+                "object_kind": "options_instrument_metadata",
+                "payload": {
+                    "metadata_identity": metadata_identity,
+                    **metadata,
+                    "instrument_specs": specs,
+                },
+            }
+        return resolved
+    except sqlite3.DatabaseError as exc:
+        raise StreamExactEvidenceError(str(exc)) from exc
+    finally:
+        connection.close()
 
 
 def _resolve_event_source_objects(

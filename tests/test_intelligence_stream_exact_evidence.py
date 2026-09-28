@@ -5,6 +5,7 @@ from decimal import Decimal
 from pathlib import Path
 
 import test_rdp5_liquidation_heatmap_crowding_family as liquidation_family
+import test_rdp6_options_derivatives_family as options_family
 from fastapi.testclient import TestClient
 from test_immutable_ledger import build_bundle, candles
 from test_rdp4_rich_market_tape_family import AS_OF_MS, _seed
@@ -1072,4 +1073,167 @@ def test_liquidation_heatmap_and_crowding_resolve_exact_from_frozen_store(
     ]
     assert crowding_exact["current_data_substitution"] is False
     assert payload["current_data_substitution"] is False
+
+def test_options_proofs_resolve_exact_from_frozen_store(
+    tmp_path: Path,
+) -> None:
+    market_path = tmp_path / "market.sqlite3"
+    options_path = tmp_path / "options.sqlite3"
+    proof_path = tmp_path / "frozen_proofs.sqlite3"
+    stream_path = tmp_path / "stream.sqlite3"
+
+    options_family._seed_derivatives(
+        market_path,
+        symbol=options_family.BTC_SYMBOL,
+    )
+    options_family._seed_options(options_path)
+
+    snapshots = build_market_tape_family_snapshots(
+        market_path,
+        symbols=(options_family.BTC_SYMBOL,),
+        as_of_ms=options_family.AS_OF_MS,
+        options_surface_path=options_path,
+        frozen_proof_store_path=proof_path,
+    )
+    derivatives = next(
+        item
+        for item in snapshots
+        if item.family is ConfluenceFamily.DERIVATIVES
+    )
+    narrative_identity = _project_family(
+        stream_path,
+        projector_id="derivatives_change",
+        snapshot=derivatives,
+    )
+
+    resolver = IntelligenceStreamExactEvidenceReadModel(
+        stream_ledger_path=stream_path,
+        market_tape_path=market_path,
+        frozen_proof_store_path=proof_path,
+        options_surface_path=options_path,
+    )
+    payload = resolver.read_for_narrative(narrative_identity)
+    assert payload is not None
+
+    options_surface = _resolution(payload, "options_surface")
+    options_volatility = _resolution(payload, "options_volatility")
+    assert options_surface["resolution_state"] == "READY_EXACT"
+    assert options_volatility["resolution_state"] == "READY_EXACT"
+    assert options_surface["current_data_substitution"] is False
+    assert options_volatility["current_data_substitution"] is False
+
+    surface_capabilities = options_surface["capabilities"]
+    assert isinstance(surface_capabilities, dict)
+    assert surface_capabilities["surface_snapshot"] == "READY_EXACT"
+    assert (
+        surface_capabilities["instrument_metadata_lineage"]
+        == "READY_EXACT"
+    )
+    assert surface_capabilities["contract_quote_lineage"] == "READY_EXACT"
+
+    volatility_capabilities = options_volatility["capabilities"]
+    assert isinstance(volatility_capabilities, dict)
+    assert volatility_capabilities["atm_iv_term_structure"] == "READY_EXACT"
+    assert volatility_capabilities["risk_reversal_25d"] == "READY_EXACT"
+    assert volatility_capabilities["open_interest_by_expiry"] == "READY_EXACT"
+    assert volatility_capabilities["volume_by_expiry"] == "READY_EXACT"
+    assert volatility_capabilities["expiry_concentration"] == "READY_EXACT"
+    assert volatility_capabilities["dealer_gamma_position"] == (
+        "UNAVAILABLE_EXPLICIT"
+    )
+    assert volatility_capabilities["max_pain"] == "UNAVAILABLE_EXPLICIT"
+
+    references = tuple(
+        item
+        for item in payload["reference_resolutions"]
+        if isinstance(item, dict)
+    )
+    surface_ref = next(
+        item
+        for item in references
+        if item.get("object_kind") == "options_surface_observation"
+    )
+    metadata_ref = next(
+        item
+        for item in references
+        if item.get("object_kind") == "options_instrument_metadata"
+    )
+    quote_refs = tuple(
+        item
+        for item in references
+        if item.get("object_kind") == "options_contract_quote"
+    )
+    volatility_ref = next(
+        item
+        for item in references
+        if item.get("object_kind") == "options_volatility_freeze"
+    )
+    assert surface_ref["resolution_state"] == "READY_EXACT"
+    assert metadata_ref["resolution_state"] == "READY_EXACT"
+    assert len(quote_refs) == 8
+    assert all(
+        item["resolution_state"] == "READY_EXACT"
+        for item in quote_refs
+    )
+    assert volatility_ref["resolution_state"] == "READY_EXACT"
+
+    exact_surface = resolver.read_reference(
+        narrative_identity=narrative_identity,
+        evidence_identity=str(surface_ref["evidence_identity"]),
+    )
+    assert exact_surface is not None
+    surface_payload = exact_surface["exact_object"]
+    assert isinstance(surface_payload, dict)
+    contracts = surface_payload["contracts"]
+    assert isinstance(contracts, list)
+    assert len(contracts) == 8
+    assert surface_payload["source_timestamp_ms"] == (
+        options_family.AS_OF_MS - 100
+    )
+    assert surface_payload["observed_at_ms"] == (
+        options_family.AS_OF_MS - 80
+    )
+
+    exact_metadata = resolver.read_reference(
+        narrative_identity=narrative_identity,
+        evidence_identity=str(metadata_ref["evidence_identity"]),
+    )
+    assert exact_metadata is not None
+    metadata_payload = exact_metadata["exact_object"]
+    assert isinstance(metadata_payload, dict)
+    assert metadata_payload["metadata_identity"] == (
+        surface_payload["instrument_metadata_identity"]
+    )
+    instrument_specs = metadata_payload["instrument_specs"]
+    assert isinstance(instrument_specs, list)
+    assert len(instrument_specs) == 8
+
+    exact_quote = resolver.read_reference(
+        narrative_identity=narrative_identity,
+        evidence_identity=str(quote_refs[0]["evidence_identity"]),
+    )
+    assert exact_quote is not None
+    quote_payload = exact_quote["exact_object"]
+    assert isinstance(quote_payload, dict)
+    assert quote_payload["quote_identity"] == quote_refs[0]["evidence_identity"]
+    assert exact_quote["current_data_substitution"] is False
+
+    exact_volatility = resolver.read_reference(
+        narrative_identity=narrative_identity,
+        evidence_identity=str(volatility_ref["evidence_identity"]),
+    )
+    assert exact_volatility is not None
+    volatility_object = exact_volatility["exact_object"]
+    assert isinstance(volatility_object, dict)
+    proof_payload = volatility_object["payload"]
+    assert isinstance(proof_payload, dict)
+    analysis = proof_payload["analysis"]
+    assert isinstance(analysis, dict)
+    assert analysis["status"] == "measured"
+    metrics = analysis["metrics"]
+    assert isinstance(metrics, dict)
+    assert metrics["front_atm_iv"] == "0.51"
+    assert metrics["next_atm_iv"] == "0.56"
+    assert volatility_object["depends_on_evidence_identities"]
+    assert exact_volatility["current_data_substitution"] is False
 
