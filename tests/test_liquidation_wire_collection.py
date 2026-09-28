@@ -109,7 +109,7 @@ async def _batches() -> AsyncIterator[BybitLiquidationWireBatch]:
     )
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_wire_collection_persists_raw_before_normalized_batch(
     tmp_path,
 ) -> None:
@@ -138,7 +138,7 @@ async def test_wire_collection_persists_raw_before_normalized_batch(
     assert store.quick_check() is True
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_wire_collection_retry_is_append_only_and_idempotent(tmp_path) -> None:
     store = MarketTapeStore(tmp_path / "market_tape.sqlite3")
     raw_store = RawMarketTapeStore(tmp_path / "raw_market_tape.sqlite3")
@@ -168,7 +168,7 @@ async def test_wire_collection_retry_is_append_only_and_idempotent(tmp_path) -> 
     assert store.counts().liquidation_coverage == 1
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_wire_collection_requires_positive_bound_when_provided(
     tmp_path,
 ) -> None:
