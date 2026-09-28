@@ -1084,3 +1084,50 @@ blocker:
 
 nextAction:
 - inspect exact final head workflows; repair only proven failures; if PASS, re-check main/head/duplicate state, open PR and merge only after acceptance evidence is recorded.
+
+
+
+---
+
+## 2026-09-28 — RDP10-F2 PASS / F3 frontier handoff
+
+status: PASS
+repository: burakciller90-arch/Crypto-Signal
+exactMainShaAtF2Close: b356e754fff5eeeec292ade6af7f23d2cdaf39c4
+implementationBranch: rdp10/onchain-proof-f2
+implementationHead: 6e173471efb08528432ac1d5c5faf4516ebab728
+implementationPR: 1652
+implementationMergeSha: b356e754fff5eeeec292ade6af7f23d2cdaf39c4
+closeoutBranch: docs/rdp10-f2-completion
+roadmapGateClosed: RDP10-F2 On-chain / stablecoin exact proof cutover
+nextRoadmapGate: RDP10-F3 final contract closure audit
+worktree: no session-local /Volumes worktree; canonical SSD504 Workbench verified by UID504
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+workflowEvidence:
+- RDP7 Onchain Family Wiring: run 36478925391 / job 109119482761 / SUCCESS.
+- RDP10 exact-head push acceptance: run 36478885637 / job 109121080544 / SUCCESS.
+- RDP10 exact-head PR acceptance: run 36478925445 / job 109119484278 / SUCCESS.
+- merged-main SSD504 Workbench Bootstrap: run 36480086265 / job 109123295575 / SUCCESS.
+- merged-main Agent Memory Bootstrap: run 36480086312 / job 109123296181 / SUCCESS.
+- Workbench synchronized cleanly to exact main b356e754fff5eeeec292ade6af7f23d2cdaf39c4.
+- WORKBENCH_REPO_SYNCED_TO_MAIN=YES; REPO_DIRTY_COUNT=0; SSD504_WORKBENCH_PASS=YES.
+- Agent Memory live cross-venue check remained read-only: PRODUCTION_RUNTIME_MUTATED=NO.
+- REAL_CAPITAL=0.
+
+acceptedSemantics:
+- raw/normalized stablecoin source truth stays in canonical RDP7 append-only stores.
+- only derived stablecoin_capital_flow_freeze is persisted in FrozenProofStore.
+- exact onchain/stablecoin/raw/envelope/coverage lineage is read-only, identity-validated and PIT/no-future bounded.
+- unsupported exchange-flow/large-transfer/wallet-cohort/bridge rails remain UNAVAILABLE_EXPLICIT.
+- direction remains None; no stablecoin-supply directional inference.
+- no historical rewrite/backfill/current-data substitution.
+
+blocker:
+- none for F2; RDP10-F3 has not started.
+
+nextAction:
+- merge this docs-only closeout after exact main/head recheck; then branch from exact current main, checkpoint RDP10-F3 start before production changes, audit the complete top-level RDP10 PASS contract, and implement only mechanically demonstrated gaps.
