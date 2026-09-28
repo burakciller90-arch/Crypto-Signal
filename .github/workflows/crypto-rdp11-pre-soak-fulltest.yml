@@ -1,0 +1,68 @@
+name: RDP11 Pre-Soak Fulltest UID504
+
+on:
+  push:
+    branches:
+      - 'rdp11/**'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'tests/**'
+      - 'src/**'
+      - 'ops/**'
+      - '.github/workflows/crypto-rdp11-pre-soak-fulltest.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: crypto-rdp11-pre-soak-fulltest-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  fulltest:
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify exact branch source and canonical runtime boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
+          test "$(id -u)" = "504"
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test -z "$(git -C "$DEV" status --porcelain)"
+          test -x "$DEV/.venv/bin/python"
+          echo "RDP11_REPAIR_EXACT_SOURCE_PASS=YES"
+          echo "RDP11_CANONICAL_DEVELOPMENT_CLEAN=YES"
+          echo "REAL_CAPITAL=0"
+
+      - name: Exact full-suite integration repair acceptance
+        shell: bash
+        run: |
+          set -euo pipefail
+          PY="/Volumes/Crypto-504/Crypto-Signal/Development/.venv/bin/python"
+          export PYTHONPATH="$GITHUB_WORKSPACE/src"
+          "$PY" -m pytest -q
+          "$PY" -m ruff check src tests
+          "$PY" -m mypy src
+          node --check src/crypto_signal/product/static/freshness.js
+          node --check src/crypto_signal/product/static/app.js
+          node tests/js/test_product_freshness.js
+          echo "RDP11_PRE_SOAK_FULLTEST_PASS=YES"
+          echo "REAL_CAPITAL=0"
+
+      - name: Verify canonical Development remained untouched
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
+          test -z "$(git -C "$DEV" status --porcelain)"
+          echo "RDP11_REPAIR_NON_MUTATING_PASS=YES"
+          echo "HISTORICAL_BACKFILL=NO"
+          echo "REAL_CAPITAL=0"
