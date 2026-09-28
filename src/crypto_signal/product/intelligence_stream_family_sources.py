@@ -943,8 +943,13 @@ def build_market_tape_family_snapshots(
             liquidation_coverage_identity = None
             liquidation_status = "unavailable"
             crowding_label = "unavailable"
+            has_liquidation_extension = bool(
+                recent_liquidations or eligible_coverages
+            )
 
-            if not eligible_coverages:
+            if not has_liquidation_extension:
+                pass
+            elif not eligible_coverages:
                 derivatives_components.extend(
                     (
                         ("crowding_status", "unavailable"),
