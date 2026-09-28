@@ -63,15 +63,15 @@ def _quote(
         bid_iv=Decimal("0.54") if mark_iv is not None else None,
         ask_iv=Decimal("0.56") if mark_iv is not None else None,
         mark_price=Decimal("0.031"),
-        index_price=Decimal("70000"),
-        underlying_price=Decimal("70100"),
+        index_price=Decimal(70000),
+        underlying_price=Decimal(70100),
         delta=dec(delta),
         gamma=Decimal("0.00001"),
         vega=Decimal("41.2"),
         theta=Decimal("-18.7"),
         open_interest=dec(open_interest),
         volume_24h=Decimal("12.5"),
-        turnover_24h=Decimal("271500"),
+        turnover_24h=Decimal(271500),
     )
 
 
@@ -299,7 +299,7 @@ def test_contract_rejects_invalid_numeric_and_timestamp_truth() -> None:
             quote_asset="USDT",
             settle_asset="USDT",
             option_type=OptionType.CALL,
-            strike=Decimal("70000"),
+            strike=Decimal(70000),
             expiry_at_ms=EXPIRY_MS,
             status="Trading",
             source_timestamp_ms=SOURCE_MS,
