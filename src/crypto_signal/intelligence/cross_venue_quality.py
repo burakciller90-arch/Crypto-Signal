@@ -43,10 +43,10 @@ class CrossVenueQualityConfig:
             raise ValueError("cross-venue material spread must be finite and positive")
 
 
-@dataclass(frozen=True, slots=True)
 DEFAULT_CROSS_VENUE_QUALITY_CONFIG = CrossVenueQualityConfig()
 
 
+@dataclass(frozen=True, slots=True)
 class CrossVenueQualityAssessment:
     assessment_identity: str
     engine_version: str
