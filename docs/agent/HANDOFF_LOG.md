@@ -266,3 +266,65 @@ blocker:
 nextAction:
 - read the exact-head RDP10 Frozen Proof Contract UID504 run; if mechanically PASS, re-check current main/open PRs immediately before creating/merging the D2 PR.
 
+---
+
+## 2026-09-28 — RDP10-D complete; frontier advanced to RDP10-E
+
+status: PASS
+canonicalMain: 95c444f75fb0c9580a76d53eac21e4760a849822
+roadmapGate: RDP10 ACTIVE
+completedSlice: RDP10-D1 + RDP10-D2
+nextSlice: RDP10-E Derivatives exact proof persistence/resolution
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+rdp10D1:
+- branch: rdp10/liquidity-derived-proof-d1
+- PR #1643
+- accepted head: 46eef9e8fe6bae3aa1dd518dc4a872caa8de1267
+- merge SHA: 188075b20e853f956462a90c6faa3f44ea4117f6
+- UID504 run 36464174709 / job 109070009401: SUCCESS
+- Liquidity dynamics/structure/sweep exact proof objects persist before Stream publication and resolve through the exact-evidence contract.
+
+rdp10D2:
+- branch: rdp10/order-flow-derived-proof-d2
+- worktree: no session-local /Volumes worktree; GitHub branch validated on UID504 self-hosted runner against canonical Workbench.
+- PR #1644
+- accepted head: 70997dac11cbe92b95ee094c1e2874a3b056edce
+- merge SHA: 95c444f75fb0c9580a76d53eac21e4760a849822
+- UID504 run 36465438253 / job 109074338349: SUCCESS
+- focused tests/Ruff/mypy/py_compile PASS
+- RDP10_LIVE_MESSAGES_AUDITED=6
+- RDP10_UNREGISTERED_DOMAINS_OBSERVED=17
+- RDP10_UNREGISTERED_READY_COUNT=0
+- RDP10_LIVE_FAIL_CLOSED_PASS=YES
+- RDP10_NON_MUTATING_PASS=YES
+- HISTORICAL_BACKFILL=NO
+- REAL_CAPITAL=0
+- exact microstructure/temporal CVD/absorption/price-CVD divergence proof objects persist before Stream publication and resolve exact from the immutable proof store.
+- shared raw/dependency lineage remains explicit; capped raw previews are not treated as canonical derived proof.
+
+exactMainWorkbench:
+- Crypto SSD504 Workbench Bootstrap run 36465662536 / job 109074980379: SUCCESS
+- GITHUB_SHA=95c444f75fb0c9580a76d53eac21e4760a849822
+- final REPO_HEAD exact main
+- REPO_BRANCH=main
+- REPO_DIRTY_COUNT=0
+- SSD504_WORKBENCH_PASS=YES
+- REAL_CAPITAL=0
+
+processRule:
+- AGENTS.md now requires a durable task-start checkpoint before implementation for every resumable task/slice.
+- Each start checkpoint must include exact main, active branch/worktree, roadmap slice, duplicate guard, safety state, bounded goal, blocker and exactly one nextAction.
+- Longer slices should add implementation->acceptance and acceptance->merge phase checkpoints when losing the turn would make continuation ambiguous.
+
+blocker:
+- RDP10 itself is not PASS.
+- First mechanically unclosed slice is RDP10-E Derivatives exact proof persistence/resolution.
+- Derivatives context/dynamics, liquidation observations/coverage, heatmap and crowding are currently rich in family state but not yet fully persisted/resolved through the RDP10 derived-proof store.
+
+nextAction:
+- Before any RDP10-E code change, re-check main/open PRs and write the mandatory RDP10-E task-start checkpoint on its active branch.
+
