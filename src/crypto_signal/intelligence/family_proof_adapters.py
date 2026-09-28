@@ -149,7 +149,22 @@ def adapt_accepted_m2_m5(
         and liq.latest_snapshot_age_ms is not None
         and liq.latest_snapshot_age_ms <= _MAX_AGE_MS[ConfluenceFamily.LIQUIDITY]
     )
-    liq_ids = (liquidity.freeze_identity,) if liq_ok and liquidity is not None else ()
+    liq_ids = (
+        tuple(
+            sorted(
+                {
+                    liquidity.freeze_identity,
+                    *(
+                        (liquidity.snapshots[-1].snapshot_identity,)
+                        if liquidity.snapshots
+                        else ()
+                    ),
+                }
+            )
+        )
+        if liq_ok and liquidity is not None
+        else ()
+    )
     liq_age = liq.latest_snapshot_age_ms if liq_ok and liq is not None else None
     families.append(
         _family(
@@ -187,8 +202,20 @@ def adapt_accepted_m2_m5(
         and micro_age <= _MAX_AGE_MS[ConfluenceFamily.ORDER_FLOW]
     )
     micro_ids = (
-        (microstructure.freeze_identity,)
-        if micro_ok and microstructure is not None else ()
+        tuple(
+            sorted(
+                {
+                    microstructure.freeze_identity,
+                    *(
+                        (microstructure.orderbook.snapshot_identity,)
+                        if microstructure.orderbook is not None
+                        else ()
+                    ),
+                }
+            )
+        )
+        if micro_ok and microstructure is not None
+        else ()
     )
     flow = temporal_flow.analysis if temporal_flow is not None else None
     flow_ok = (
@@ -219,8 +246,7 @@ def adapt_accepted_m2_m5(
                 ),
                 *(
                     (
-                        microstructure.freeze_identity,
-                        microstructure.orderbook.snapshot_identity,
+                        *micro_ids,
                     )
                     if micro_ok and microstructure is not None
                     and microstructure.orderbook is not None else ()
