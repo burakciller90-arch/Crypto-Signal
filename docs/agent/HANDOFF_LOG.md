@@ -6419,3 +6419,13 @@ QuantumCapitalTouched: NO
 - only import separation + deferred annotation syntax changed
 - V1/V2 behavior, identities, cap formula and safety semantics unchanged
 - require fresh exact-head dedicated/WC6/RDP11/F10; prior runs stale
+
+
+
+## 2026-09-30 — FP5-B focused behavioral PASS / test-Ruff-only blocker
+
+- head `f47cec13fa98bd18526f10273b1159d1559a750f`; dedicated `36640264065/109650629848`
+- exact source/frozen runtime PASS; 16 focused behavioral tests PASS; non-mutation PASS
+- sole blocker FURB157 in test assertion: `Decimal("12")` -> `Decimal(12)`
+- source behavior/identity/lineage untouched; no merge PASS claimed
+- nextAction: one-line test-style repair, then all four exact-head lanes again
