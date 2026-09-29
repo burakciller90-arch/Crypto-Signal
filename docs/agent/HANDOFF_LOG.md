@@ -5418,3 +5418,33 @@ Bounded test fix:
 Exact nextAction:
 Apply the Stream-context preflight + accepted fixture projection, rerun exact-head UID504 acceptance, then inspect later Ruff/mypy failures separately.
 
+
+
+## FP3-C1 ACCEPTANCE ATTEMPT 2 — PYTEST PASS / RUFF STYLE FIX START — 2026-09-29
+
+status: FP3_C1_ACCEPTANCE_FIX_2_STYLE_ONLY
+acceptanceRun: 36599502583
+acceptanceJob: 109512952466
+attemptedHead: 4c5c48d756b440b357baf3234aee54911adde87d
+realCapital: 0
+historicalBackfill: NO
+RDP11RuntimeMutation: NO
+
+Mechanical evidence:
+- exact-source checkout PASS;
+- prior Stream decision-context prerequisite failure is closed;
+- focused/regression pytest gate PASS; workflow advanced to Ruff;
+- Product/Development non-mutation PASS;
+- Ruff blocked the gate with exactly two style findings.
+
+Exact Ruff findings:
+1. SIM102 in autopilot_forward_actions.py: combine the PARTIAL_TAKE_PROFIT nested quantity validation into one conditional;
+2. I001 in test_autopilot_forward_actions.py: organize imports so autopilot_forward_actions precedes autopilot_forward_runtime.
+
+Bounded fix:
+- style/refactor only;
+- no action policy, replay, R21/R22 mutation, Stream projection, receipt or persistence semantic change.
+
+Exact nextAction:
+Apply exactly the two Ruff fixes, rerun exact-head UID504 acceptance, then inspect strict mypy separately if it becomes the next blocker.
+
