@@ -1,0 +1,130 @@
+name: RDP11 Soak Observer UID504
+
+on:
+  push:
+    branches:
+      - main
+      - 'rdp11/**'
+    paths:
+      - 'ops/rdp11_soak_observer.py'
+      - '.github/workflows/crypto-rdp11-soak-observer.yml'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'ops/rdp11_soak_observer.py'
+      - '.github/workflows/crypto-rdp11-soak-observer.yml'
+  schedule:
+    - cron: '3,23,43 * * * *'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: crypto-rdp11-soak-observer
+  cancel-in-progress: false
+
+jobs:
+  observe:
+    name: UID504 read-only RDP11 observation
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 15
+    env:
+      ROOT: /Volumes/Crypto-504/Crypto-Signal
+      DEV: /Volumes/Crypto-504/Crypto-Signal/Development
+      PRODUCT: /Volumes/Crypto-504/Crypto-Signal/Product
+      TARGET_SHA: 3d9f33db3f1189571d40566125fbeabd00c04930
+      SOAK_EPOCH: rdp11-3d9f33db-20260929
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify frozen runtime target and exact observer source
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(id -u)" = "504"
+          test -f "$GITHUB_WORKSPACE/ops/rdp11_soak_observer.py"
+          test -x "$DEV/.venv/bin/python"
+          test "$(git -C "$DEV" rev-parse HEAD)" = "$TARGET_SHA"
+          test "$(git -C "$PRODUCT" rev-parse HEAD)" = "$TARGET_SHA"
+          test -z "$(git -C "$DEV" status --porcelain)"
+          test -z "$(git -C "$PRODUCT" status --porcelain)"
+          echo "RDP11_RUNTIME_TARGET_EXACT=YES"
+          echo "RDP11_RUNTIME_TARGET=$TARGET_SHA"
+          echo "REAL_CAPITAL=0"
+
+      - name: Static observer contract checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          PY="$DEV/.venv/bin/python"
+          "$PY" -m py_compile "$GITHUB_WORKSPACE/ops/rdp11_soak_observer.py"
+          "$PY" -m ruff check "$GITHUB_WORKSPACE/ops/rdp11_soak_observer.py"
+          echo "RDP11_OBSERVER_STATIC_PASS=YES"
+
+      - name: Measure read-only Product endpoint latency
+        shell: bash
+        run: |
+          set -euo pipefail
+          probe() {
+            name="$1"
+            url="$2"
+            max_time="$3"
+            out="/tmp/rdp11-${name}.out"
+            meta="$(curl -sS --max-time "$max_time" -o "$out" -w '%{http_code} %{time_total}' "$url")"
+            code="${meta%% *}"
+            total="${meta#* }"
+            echo "RDP11_ENDPOINT_${name}_HTTP=$code"
+            echo "RDP11_ENDPOINT_${name}_SECONDS=$total"
+            test "$code" = "200"
+          }
+          probe HEALTH http://127.0.0.1:48700/api/health 15
+          probe MESSAGES 'http://127.0.0.1:48700/api/stream/messages?limit=5' 60
+          probe SSE 'http://127.0.0.1:48700/api/stream/live?batch_limit=5&follow=false' 60
+          probe INTELLIGENCE http://127.0.0.1:48700/api/intelligence-center 60
+          grep -F 'retry:' /tmp/rdp11-SSE.out >/dev/null
+          echo "RDP11_PRODUCT_ENDPOINT_TIMING_PROBE=PASS"
+      - name: Branch and PR live dry-run acceptance
+        if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref != 'refs/heads/main')
+        shell: bash
+        run: |
+          set -euo pipefail
+          PY="$DEV/.venv/bin/python"
+          DRY_EPOCH="acceptance-${GITHUB_SHA}"
+          DRY_DIR="$ROOT/RDP11Soak/$DRY_EPOCH"
+          test ! -e "$DRY_DIR"
+          "$PY" "$GITHUB_WORKSPACE/ops/rdp11_soak_observer.py" \
+            --root "$ROOT" \
+            --expected-runtime-sha "$TARGET_SHA" \
+            --epoch-id "$DRY_EPOCH" \
+            --dry-run | tee /tmp/rdp11-observer-dry-run.log
+          grep -F 'RDP11_SOAK_OBSERVER_DRY_RUN_PASS=YES' /tmp/rdp11-observer-dry-run.log
+          grep -F "RDP11_RUNTIME_TARGET=$TARGET_SHA" /tmp/rdp11-observer-dry-run.log
+          grep -F 'HISTORICAL_BACKFILL=NO' /tmp/rdp11-observer-dry-run.log
+          grep -F 'REAL_CAPITAL=0' /tmp/rdp11-observer-dry-run.log
+          test ! -e "$DRY_DIR"
+          test -z "$(git -C "$DEV" status --porcelain)"
+          test -z "$(git -C "$PRODUCT" status --porcelain)"
+          echo "RDP11_OBSERVER_DRY_RUN_SIDECAR_MUTATED=NO"
+          echo "RDP11_OBSERVER_LIVE_DRY_RUN_ACCEPTANCE=PASS"
+
+      - name: Main and scheduled immutable soak observation
+        if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'schedule'
+        shell: bash
+        run: |
+          set -euo pipefail
+          PY="$DEV/.venv/bin/python"
+          mkdir -p "$ROOT/RDP11Soak"
+          "$PY" "$GITHUB_WORKSPACE/ops/rdp11_soak_observer.py" \
+            --root "$ROOT" \
+            --expected-runtime-sha "$TARGET_SHA" \
+            --epoch-id "$SOAK_EPOCH" \
+            --initialize-if-missing | tee /tmp/rdp11-observer-live.log
+          grep -F 'RDP11_SOAK_OBSERVATION_PASS=YES' /tmp/rdp11-observer-live.log
+          grep -F 'RDP11_SOAK_SIDE_CAR_ONLY=YES' /tmp/rdp11-observer-live.log
+          grep -F 'HISTORICAL_BACKFILL=NO' /tmp/rdp11-observer-live.log
+          grep -F 'REAL_CAPITAL=0' /tmp/rdp11-observer-live.log
+          test -f "$ROOT/RDP11Soak/$SOAK_EPOCH/anchor.json"
+          test -z "$(git -C "$DEV" status --porcelain)"
+          test -z "$(git -C "$PRODUCT" status --porcelain)"
+          echo "RDP11_CANONICAL_RUNTIME_MUTATED=NO"

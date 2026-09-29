@@ -1556,3 +1556,589 @@ minimalRepair:
 
 nextAction:
 - fix import order; rerun exact-head pre-soak workflow; require complete PASS before PR/merge.
+
+
+
+---
+
+## 2026-09-29 — RDP11 exact-main deployment task-start handoff
+
+status: DEPLOYMENT_ACTIVE
+branch: rdp11/deploy-soak-anchor
+canonicalMainTarget: 3d9f33db3f1189571d40566125fbeabd00c04930
+mergedRepairPR: 1660
+acceptedRepairHead: 94c640b8c5d3c7a05f17b9f56a0388a8c78fc326
+pushAcceptanceRun: 36538322648
+pushAcceptanceJob: 109307809244
+prAcceptanceRun: 36538473225
+prAcceptanceJob: 109307968366
+ssdBootstrapRun: 36538809494
+ssdBootstrapJob: 109309045273
+agentMemoryRun: 36538809268
+agentMemoryJob: 109309048414
+realCapital: 0
+historicalBackfill: NO
+productDeployAttempted: NO
+soakClockStarted: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+deploymentContract:
+- sync -> producttest -> fulltest -> exact-target productdeploy -> productstate.
+- every step must use canonical UID504 allowlisted command workflow.
+- Product target must equal current origin/main exact SHA.
+- no soak clock until Product exact target + health/proof inspection succeeds.
+
+nextAction:
+- trigger sync to exact main and continue only on SUCCESS.
+
+
+
+---
+
+## 2026-09-29 — RDP11 pre-Product-deploy handoff
+
+status: READY_FOR_PRODUCT_DEPLOY
+canonicalTarget: 3d9f33db3f1189571d40566125fbeabd00c04930
+syncIssue: 1661
+syncRun: 36539056907
+syncJob: 109309839626
+syncConclusion: SUCCESS
+producttestIssue: 1662
+producttestRun: 36539209124
+producttestJob: 109310325314
+producttestConclusion: SUCCESS
+fulltestIssue: 1663
+fulltestRun: 36539290984
+fulltestJob: 109310585130
+fulltestConclusion: SUCCESS
+fullTestPassMarker: YES
+productDeployAttempted: NO
+soakClockStarted: NO
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+nextAction:
+- exact-target rollback-safe productdeploy to 3d9f33db3f1189571d40566125fbeabd00c04930;
+- then productstate + real health/proof inspection;
+- do not start soak before both pass.
+
+
+
+---
+
+## 2026-09-29 — RDP11 Product deploy task-start handoff
+
+status: PRODUCT_DEPLOY_STARTING
+branch: rdp11/deploy-soak-anchor
+canonicalMainTarget: 3d9f33db3f1189571d40566125fbeabd00c04930
+syncIssue: 1661
+syncRun: 36539056907
+syncJob: 109309839626
+producttestIssue: 1662
+producttestRun: 36539209124
+producttestJob: 109310325314
+fulltestIssue: 1663
+fulltestRun: 36539290984
+fulltestJob: 109310585130
+fulltestConclusion: SUCCESS
+productDeployAttempted: NO
+soakClockStarted: NO
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+boundedGoal:
+- exact-target rollback-safe Product deploy to 3d9f33db3f1189571d40566125fbeabd00c04930 only.
+
+nextAction:
+- trigger productdeploy once; inspect exact Product SHA, rollback marker and dashboard health; then productstate.
+
+
+
+---
+
+## 2026-09-29 — RDP11 post-deploy Product-state task-start handoff
+
+status: PRODUCT_DEPLOY_PASS_PRODUCTSTATE_STARTING
+branch: rdp11/deploy-soak-anchor
+canonicalMainTarget: 3d9f33db3f1189571d40566125fbeabd00c04930
+productDeployIssue: 1664
+productDeployRun: 36539480592
+productDeployJob: 109311197291
+productDeployConclusion: SUCCESS
+productPreviousSha: 403cb552dd398ea5c81ab97cb5df8114b0716ad2
+productTargetSha: 3d9f33db3f1189571d40566125fbeabd00c04930
+productDeployPassMarker: YES
+dashboardHealthAtDeploy: PASS
+rollbackInvoked: NO
+realCapital: 0
+historicalBackfill: NO
+soakClockStarted: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+nextAction:
+- one productstate/health inspection; verify Product exact SHA/clean/service health;
+- then dedicated RDP11 observer/anchor task-start checkpoint before any observer implementation or first soak observation.
+
+
+
+---
+
+## 2026-09-29 — RDP11 observer/anchor task-start handoff
+
+status: OBSERVER_AUDIT_STARTING
+branch: rdp11/deploy-soak-anchor
+canonicalMainTarget: 3d9f33db3f1189571d40566125fbeabd00c04930
+productDeployIssue: 1664
+productDeployRun: 36539480592
+productDeployJob: 109311197291
+productDeployConclusion: SUCCESS
+productstateIssue: 1665
+productstateRun: 36541990619
+productstateJob: 109319365654
+productstateConclusion: SUCCESS
+productHead: 3d9f33db3f1189571d40566125fbeabd00c04930
+productHealth: OK
+productReadOnly: YES
+realCapital: 0
+historicalBackfill: NO
+soakClockStarted: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+boundedGoal:
+- minimum read-only RDP11 observer + exact-SHA soak anchor;
+- separate sidecar/report only; no canonical DB writes.
+
+nextAction:
+- audit existing continuity/recovery/runtime-audit assets and record reuse plan before code/workflow changes.
+
+
+
+---
+
+## 2026-09-29 — RDP11 observer audit complete handoff
+
+status: OBSERVER_IMPLEMENTATION_STARTING
+branch: rdp11/deploy-soak-anchor
+runtimeTarget: 3d9f33db3f1189571d40566125fbeabd00c04930
+sidecarRoot: /Volumes/Crypto-504/Crypto-Signal/RDP11Soak
+epochDesign: immutable anchor + immutable observations + immutable invalidation marker
+observerCanonicalDbWrites: NONE
+observerSidecarWritesOnly: YES
+canonicalSymbols: BTCUSDT,ETHUSDT,SOLUSDT
+canonicalRawChannels: orderbook.50,publicTrade
+gapSilencePolicyMs: 60000
+realCapital: 0
+historicalBackfill: NO
+soakClockStarted: NO
+
+reuse:
+- R11 runtime health/topology semantics
+- Stream post-R11 read-only/no-backfill semantics
+- RDP1 collector/gap schemas
+- Frozen proof immutable/no-future semantics
+
+nextAction:
+- add ops/rdp11_soak_observer.py + tests + UID504 observer workflow;
+- branch run is dry-run/non-mutating;
+- merge only on exact-head acceptance.
+
+
+## LIVE TASK-START CHECKPOINT — 2026-09-29 — RDP11 observer live acceptance
+
+This checkpoint is written before any acceptance-workflow/code change on this task branch.
+
+- canonical main at task start: `3d9f33db3f1189571d40566125fbeabd00c04930`
+- inherited observer candidate head: `9cda0aa6173a4f831ca6449d85119c7ba072f900`
+- active branch: `rdp11/observer-live-acceptance`
+- session-local /Volumes worktree: NONE
+- duplicate open observer/soak-acceptance PRs: NONE
+- parallel branch `rdp11/deploy-soak-anchor` is treated as read-only upstream input; this agent will not mutate it
+- `REAL_CAPITAL=0`
+- `HISTORICAL_BACKFILL=NO`
+- frozen/historical evidence mutation: FORBIDDEN
+- Durdurulmaz touched: NO
+- Quantum Capital touched: NO
+
+### Duplicate/stale-work audit
+
+The inherited observer implementation already exists at `9cda0aa6173a4f831ca6449d85119c7ba072f900` and will not be reimplemented.
+
+The existing successful RDP11 Pre-Soak Fulltest run `36543524550` / job `109324346599` does **not** mechanically accept the observer itself:
+- it runs whole-repository pytest/Ruff/mypy/JS;
+- it never invokes `ops/rdp11_soak_observer.py`;
+- it therefore does not prove the real UID504 Product/Development/runtime read-only observation contract, dry-run sidecar non-mutation, or the exact observer PASS markers.
+
+### Bounded goal
+
+Close only the missing observer-acceptance gap:
+1. add a dedicated UID504 workflow that executes the candidate observer against the already deployed exact runtime target `3d9f33db3f1189571d40566125fbeabd00c04930`;
+2. branch/PR acceptance must run `--dry-run` only and must not create RDP11 soak sidecar state;
+3. require exact Product + Development SHA/clean state, live Product/Stream/frozen-proof/source checks, explicit `HISTORICAL_BACKFILL=NO`, and `REAL_CAPITAL=0`;
+4. after exact-head branch + PR acceptance, merge only after rechecking current main;
+5. only merged-main non-dry-run observation may create the immutable 72-hour soak anchor.
+
+### Current blocker
+
+The observer candidate has no dedicated real-runtime execution proof. Workflow SUCCESS from the generic full-suite is insufficient.
+
+### Exact nextAction
+
+Add the focused RDP11 observer UID504 workflow without changing the observer semantics; push-trigger it on this isolated branch and require the explicit dry-run PASS markers plus sidecar non-mutation before opening a PR.
+
+
+## RDP11 observer first live dry-run failure checkpoint — 2026-09-29
+
+Exact acceptance candidate:
+- branch: `rdp11/observer-live-acceptance`
+- workflow commit: `2365c58292b33edac67bf5dc985d4d4dddc5b378`
+- run: `36545066719`
+- job: `109329364649`
+- conclusion: FAILURE
+- soak anchor created: NO
+- sidecar acceptance epoch created: NO
+
+What mechanically passed before failure:
+- UID504 identity;
+- Development exact runtime target `3d9f33db3f1189571d40566125fbeabd00c04930`;
+- Product exact runtime target `3d9f33db3f1189571d40566125fbeabd00c04930`;
+- both runtime checkouts clean;
+- observer py_compile/Ruff static gate;
+- `REAL_CAPITAL=0`.
+
+Failure:
+- real observer execution timed out in `_inspect_product` during an HTTP JSON read;
+- the stack points into the Product/Stream continuity section before Market Tape/FrozenProof checks;
+- no acceptance PASS marker was emitted;
+- therefore the observer is NOT accepted and the 72-hour clock remains NOT STARTED.
+
+Interpretation:
+- do not increase timeout blindly and do not claim Product continuity from the earlier deploy health alone;
+- first measure the individual read-only Product endpoints with bounded timing to distinguish a slow-but-healthy endpoint from an actual continuity failure.
+
+Safety:
+- canonical evidence/runtime mutation by observer: NONE observed;
+- `HISTORICAL_BACKFILL=NO`;
+- `REAL_CAPITAL=0`;
+- Durdurulmaz touched: NO;
+- Quantum Capital touched: NO.
+
+Exact nextAction:
+Add read-only endpoint timing diagnostics to the focused UID504 acceptance workflow for `/api/health`, `/api/stream/messages?limit=5`, finite Stream SSE and `/api/intelligence-center`; rerun against the same frozen runtime target, then repair only the proven timeout/endpoint contract.
+
+
+## RDP11 observer second live dry-run failure / root-cause checkpoint — 2026-09-29
+
+Exact run:
+- candidate head: `cda39de115c8495f390309184ca5de6509498a21`
+- workflow: RDP11 Soak Observer UID504
+- run: `36545250707`
+- job: `109329971641`
+- conclusion: FAILURE
+- soak anchor created: NO
+- acceptance sidecar created: NO
+
+Product endpoint timing evidence:
+- `/api/health`: HTTP 200 / 0.001689s
+- `/api/stream/messages?limit=5`: HTTP 200 / 3.731577s
+- finite Stream SSE: HTTP 200 / 1.808475s
+- `/api/intelligence-center`: HTTP 200 / 0.015752s
+- endpoint timing probe: PASS
+
+Observed failure:
+- observer entered `_inspect_collector` after the Product checks;
+- it failed with `ObservationFailure: collector evidence timestamp is from the future`;
+- the observer captures `now_ms` once at process start, then performs potentially long read-only SQLite checks before reading the continuously advancing collector heartbeat/raw rows;
+- by the time the live heartbeat was read, its valid observed timestamp could be later than the stale process-start `now_ms`, causing a false future-data violation;
+- runtime/source semantics are not authorized to change to satisfy this check.
+
+Timing implication:
+- observer start to collector failure was roughly 326 seconds;
+- endpoint probe accounts for only ~5.6 seconds;
+- therefore the pre-heartbeat SQLite integrity work is materially long and the freshness reference must be sampled at the actual read boundary, not process start.
+
+Authorized repair:
+- retain strict no-future rejection;
+- sample wall-clock immediately after each live heartbeat/raw-row read and compare that row to its own read boundary;
+- expose the collector freshness sample time in the observation;
+- add elapsed timing metadata to SQLite quick-check results for diagnosis;
+- do not add future tolerance, backfill, source mutation or score/trading authority.
+
+Safety:
+- `REAL_CAPITAL=0`
+- `HISTORICAL_BACKFILL=NO`
+- frozen/historical evidence immutable
+- canonical runtime mutation: NONE
+- Durdurulmaz touched: NO
+- Quantum Capital touched: NO
+- RDP11 72h clock: NOT STARTED
+
+Exact nextAction:
+Repair the observer time-sampling boundary only, rerun the exact live dry-run acceptance, and inspect the next mechanically exposed blocker rather than skipping ahead.
+
+
+## RDP11 observer collector TOCTOU/performance repair checkpoint — 2026-09-29
+
+Acceptance run:
+- run: `36545250707`
+- job: `109329971641`
+- exact workflow head: `cda39de115c8495f390309184ca5de6509498a21`
+- conclusion: FAILURE
+- soak anchor: NOT CREATED
+
+Product endpoint timing evidence from the same UID504 run:
+- `/api/health`: HTTP 200 / 0.001689s
+- `/api/stream/messages?limit=5`: HTTP 200 / 3.731577s
+- finite SSE: HTTP 200 / 1.808475s
+- `/api/intelligence-center`: HTTP 200 / 0.015752s
+- Product endpoint timing probe: PASS
+
+Deterministic remaining failure:
+- `ObservationFailure: collector evidence timestamp is from the future`.
+- `main()` freezes `now_ms` once before the whole observation.
+- `_inspect_collector()` performs three SQLite checks before reading the newest live heartbeat, including a full `PRAGMA quick_check` on the large live `market_tape.sqlite3`.
+- the branch acceptance step entered observer execution at about 08:50:43Z and reached the collector timestamp comparison at about 08:56:09Z.
+- a live collector is expected to write newer heartbeat/ingestion timestamps during that interval, so comparing the latest heartbeat to the observation-start timestamp is a TOCTOU false-positive, not proof of future data.
+- the same path also makes a 20-minute recurring observer spend minutes performing a whole live market DB quick-check before freshness evaluation.
+
+Repair boundary:
+- do NOT weaken the 120s heartbeat/raw freshness threshold.
+- do NOT allow genuinely future timestamps.
+- retain read-only SQLite quick-checks on bounded/smaller control/evidence databases.
+- replace the recurring whole large `market_tape.sqlite3` integrity scan with a bounded read/lock/schema probe; deep integrity is not required on every 20-minute sample.
+- sample wall-clock time at the point the live heartbeat/raw rows are read.
+- stamp the top-level successful observation at completion so its as-observed time cannot predate live rows read during the observation.
+
+Safety:
+- canonical runtime/evidence writes: NONE
+- `HISTORICAL_BACKFILL=NO`
+- `REAL_CAPITAL=0`
+- Durdurulmaz touched: NO
+- Quantum Capital touched: NO
+
+Exact nextAction:
+Apply only the collector sampling-time + bounded-large-DB-probe repair, keep the accepted 8s Stream endpoint contract and all fail-closed freshness/no-future rules, then rerun exact-head UID504 live dry-run acceptance.
+
+
+## LIVE TASK-START CHECKPOINT — 2026-09-29 — RDP11 observer bounded-probe repair
+
+This checkpoint is written before code changes on the new isolated repair branch.
+
+- canonical main at task start: `3d9f33db3f1189571d40566125fbeabd00c04930`
+- inherited reconciled head: `2a59d638832283d2ea73295ea8049a577f43b816`
+- active branch: `rdp11/observer-live-acceptance-b`
+- previous branch `rdp11/observer-live-acceptance` is now read-only upstream evidence for this agent
+- duplicate open RDP11 observer PRs: NONE
+- `REAL_CAPITAL=0`
+- `HISTORICAL_BACKFILL=NO`
+- frozen/historical evidence mutation: FORBIDDEN
+- Durdurulmaz touched: NO
+- Quantum Capital touched: NO
+
+### Mechanically proven blocker
+
+Run `36545250707` / job `109329971641` proved Product endpoints healthy but the observer failed after a multi-minute collector pre-read window because:
+- one process-start `now_ms` was reused after live collector timestamps advanced;
+- the recurring observer performs a whole `PRAGMA quick_check` on the large live `market_tape.sqlite3` before reading freshness.
+
+### Bounded repair
+
+Only:
+1. preserve strict no-future/freshness thresholds while sampling time at each live row read boundary;
+2. replace recurring full large Market Tape quick-check with bounded read/lock/schema verification;
+3. keep quick-checks for smaller control/evidence DBs;
+4. stamp successful top-level observation time at completion;
+5. retain branch/PR dry-run sidecar non-mutation and exact frozen runtime SHA.
+
+No evidence/source/trading semantics may change.
+
+### Exact nextAction
+
+Implement the bounded large-DB probe and completion-time observation semantics, then rerun the dedicated UID504 dry-run gate and whole-repository pre-soak regression on the exact final head.
+
+
+## RDP11 observer exact-head branch acceptance checkpoint — 2026-09-29
+
+Accepted code head:
+- `7d84dd558eecae5e1357f822b226f60c38b15d2d`
+
+Dedicated real UID504 observer acceptance:
+- workflow: RDP11 Soak Observer UID504
+- run: `36546432974`
+- job: `109333830960`
+- conclusion: SUCCESS
+- exact runtime target: `3d9f33db3f1189571d40566125fbeabd00c04930`
+- Product/Development exact target + clean check: PASS
+- observer py_compile/Ruff: PASS
+- Product endpoint timing probe: PASS
+  - health HTTP 200 / 0.003638s
+  - messages HTTP 200 / 4.223819s
+  - finite SSE HTTP 200 / 2.106748s
+  - intelligence center HTTP 200 / 0.013568s
+- `RDP11_SOAK_OBSERVER_DRY_RUN_PASS=YES`
+- observer contract SHA256: `4e8a0b87236d84abf00aafe02e35b4e7c0cef39ba8182282ee8f9d5b9b4afeff`
+- `RDP11_OBSERVER_DRY_RUN_SIDECAR_MUTATED=NO`
+- `RDP11_OBSERVER_LIVE_DRY_RUN_ACCEPTANCE=PASS`
+- `HISTORICAL_BACKFILL=NO`
+- `REAL_CAPITAL=0`
+
+Whole-repository regression on same code head:
+- workflow: RDP11 Pre-Soak Fulltest UID504
+- run: `36546433066`
+- job: `109334016913`
+- conclusion: SUCCESS
+- pytest PASS
+- Ruff: All checks passed
+- mypy: no issues in 267 source files
+- `PRODUCT_FRESHNESS_CONTRACT_PASS=YES`
+- `RDP11_PRE_SOAK_FULLTEST_PASS=YES`
+- `RDP11_REPAIR_NON_MUTATING_PASS=YES`
+- `HISTORICAL_BACKFILL=NO`
+- `REAL_CAPITAL=0`
+
+Accepted observer semantics:
+- recurring large live Market Tape verification is bounded read/lock/schema inspection rather than a multi-minute full DB scan;
+- smaller control/evidence databases retain read-only quick-check validation;
+- heartbeat/raw freshness uses the wall-clock at each live read boundary;
+- strict future timestamp rejection remains;
+- 120s collector freshness threshold remains;
+- successful observation timestamp is completion-time, so it cannot predate evidence sampled during the observation;
+- branch/PR acceptance never creates a soak anchor or acceptance sidecar.
+
+Soak status:
+- immutable 72h anchor: NOT CREATED
+- RDP11 clock: NOT STARTED
+- RDP11 PASS: NO
+
+Current blocker:
+- final PR-head acceptance and merge are still required;
+- only merged-main non-dry-run observation may create/reuse the immutable soak anchor.
+
+Exact nextAction:
+Recheck canonical main and duplicate PRs, open one PR from this isolated branch, require both dedicated observer PR acceptance and pre-soak fulltest on the final PR head, then merge with expected-head guard only if main has not advanced incompatibly.
+
+
+## RDP11 observer exact-head branch acceptance PASS — 2026-09-29
+
+Canonical main during acceptance:
+- `3d9f33db3f1189571d40566125fbeabd00c04930`
+
+Accepted branch/code head:
+- `7d84dd558eecae5e1357f822b226f60c38b15d2d`
+- branch: `rdp11/observer-live-acceptance-b`
+- duplicate open observer PRs before PR creation: NONE
+
+Dedicated live observer acceptance:
+- workflow: RDP11 Soak Observer UID504
+- run: `36546432974`
+- job: `109333830960`
+- conclusion: SUCCESS
+- exact runtime target: `3d9f33db3f1189571d40566125fbeabd00c04930`
+- Development exact target + clean: PASS
+- Product exact target + clean: PASS
+- observer py_compile/Ruff: PASS
+- Product endpoint timing probe: PASS
+  - health: HTTP 200 / 0.003638s
+  - messages: HTTP 200 / 4.223819s
+  - finite SSE: HTTP 200 / 2.106748s
+  - intelligence-center: HTTP 200 / 0.013568s
+- `RDP11_SOAK_OBSERVER_DRY_RUN_PASS=YES`
+- observer contract SHA256: `4e8a0b87236d84abf00aafe02e35b4e7c0cef39ba8182282ee8f9d5b9b4afeff`
+- `RDP11_OBSERVER_DRY_RUN_SIDECAR_MUTATED=NO`
+- `RDP11_OBSERVER_LIVE_DRY_RUN_ACCEPTANCE=PASS`
+- `HISTORICAL_BACKFILL=NO`
+- `REAL_CAPITAL=0`
+
+Exact-head regression acceptance:
+- workflow: RDP11 Pre-Soak Fulltest UID504
+- run: `36546433066`
+- job: `109334016913`
+- conclusion: SUCCESS
+- pytest: PASS
+- Ruff: `All checks passed!`
+- mypy: `Success: no issues found in 267 source files`
+- JS/product freshness: PASS
+- `RDP11_PRE_SOAK_FULLTEST_PASS=YES`
+- `RDP11_REPAIR_NON_MUTATING_PASS=YES`
+- `HISTORICAL_BACKFILL=NO`
+- `REAL_CAPITAL=0`
+
+Accepted repair semantics:
+- live collector freshness timestamps are compared to wall-clock sampled at the actual live-row read boundary;
+- strict no-future and freshness thresholds remain intact;
+- recurring whole-file `PRAGMA quick_check` on large live `market_tape.sqlite3` is replaced by bounded read/lock/schema verification;
+- smaller control/evidence SQLite stores retain quick-check coverage;
+- successful top-level observation timestamp is stamped at completion;
+- branch/PR runs remain dry-run and may not create soak anchor/sidecar state.
+
+Safety:
+- canonical runtime/evidence mutation: NONE
+- frozen/historical evidence mutation: NONE
+- soak clock: NOT STARTED
+- Durdurulmaz touched: NO
+- Quantum Capital touched: NO
+
+Current blocker:
+- observer code/workflow has branch acceptance only; PR acceptance and merged-main anchor creation are still unproven.
+
+Exact nextAction:
+Open one PR from `rdp11/observer-live-acceptance-b` to main. Require dedicated observer PR dry-run PASS plus RDP11 pre-soak full-suite PASS on the exact PR head. Recheck main/head before merge. Only after merge may the main-push non-dry-run observer create the immutable 72-hour anchor.
+
+
+## RDP11 observer exact-head branch acceptance PASS — 2026-09-29
+
+Accepted implementation head before this documentation-only checkpoint:
+- `7d84dd558eecae5e1357f822b226f60c38b15d2d`
+- branch: `rdp11/observer-live-acceptance-b`
+- canonical main/runtime target remains `3d9f33db3f1189571d40566125fbeabd00c04930`
+- RDP11 overall gate: **NOT PASS**; 72-hour real soak has not started yet.
+
+Dedicated live observer acceptance:
+- run `36546432974`
+- job `109333830960`
+- conclusion: SUCCESS
+- exact Development/Product runtime target: PASS
+- observer py_compile/Ruff: PASS
+- Product endpoint timing probe: PASS
+  - health 0.003638s
+  - Stream messages 4.223819s
+  - finite SSE 2.106748s
+  - intelligence center 0.013568s
+- `RDP11_SOAK_OBSERVER_DRY_RUN_PASS=YES`
+- observer contract SHA256: `4e8a0b87236d84abf00aafe02e35b4e7c0cef39ba8182282ee8f9d5b9b4afeff`
+- `RDP11_OBSERVER_DRY_RUN_SIDECAR_MUTATED=NO`
+- `RDP11_OBSERVER_LIVE_DRY_RUN_ACCEPTANCE=PASS`
+- `HISTORICAL_BACKFILL=NO`
+- `REAL_CAPITAL=0`
+
+Whole-repository regression acceptance:
+- run `36546433066`
+- job `109334016913`
+- conclusion: SUCCESS
+- Ruff: all checks passed
+- mypy: no issues in 267 source files
+- `PRODUCT_FRESHNESS_CONTRACT_PASS=YES`
+- `RDP11_PRE_SOAK_FULLTEST_PASS=YES`
+- `RDP11_REPAIR_NON_MUTATING_PASS=YES`
+- `HISTORICAL_BACKFILL=NO`
+- `REAL_CAPITAL=0`
+
+Accepted repair semantics:
+- live collector freshness is sampled at the actual read boundary with strict no-future rejection preserved;
+- recurring large Market Tape integrity work uses bounded read/lock/schema evidence instead of a whole-tree quick-check on every 20-minute sample;
+- smaller control/evidence DB quick-checks remain;
+- successful observation timestamp is stamped at completion;
+- no canonical runtime/evidence mutation, historical backfill, score/trading authority or source semantics were introduced.
+
+Current blocker:
+- none for branch implementation acceptance.
+- soak clock is still NOT STARTED because only a merged-main non-dry-run observation may create the immutable anchor.
+
+Exact nextAction:
+Open one PR from `rdp11/observer-live-acceptance-b` to current main, require exact PR-head dedicated observer + pre-soak regression acceptance, recheck main immediately before merge, then merge and accept the first merged-main non-dry-run observation only if it creates the exact immutable anchor without mutating canonical runtime.
