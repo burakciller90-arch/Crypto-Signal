@@ -710,7 +710,7 @@ class FP3EligibleFixedFractionalSizingBridge:
                 vault_id=vault_id,
                 policy=policy,
             )
-            selection = promote_portfolio_risk_bounded_sizing(
+            portfolio_selection = promote_portfolio_risk_bounded_sizing(
                 assessment,
                 current_vault=current_vault,
                 current_portfolio=epoch2.consolidated_snapshot,
@@ -719,7 +719,7 @@ class FP3EligibleFixedFractionalSizingBridge:
                 risk_input_identity=portfolio_assessment.risk_input_identity,
                 selected_at_ms=selected_at_ms,
             )
-            if selection is None:
+            if portfolio_selection is None:
                 expected = _build_portfolio_hold_receipt(
                     front_receipt=front_receipt,
                     issuance=issuance,
@@ -757,6 +757,7 @@ class FP3EligibleFixedFractionalSizingBridge:
                     vault_id=vault_id,
                     receipt=expected,
                 )
+            selection = portfolio_selection
         sizing_event = build_canonical_sizing_event(selection, eligibility)
 
         if existing is not None:
