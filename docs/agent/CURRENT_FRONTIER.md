@@ -5694,3 +5694,33 @@ Bounded repair:
 
 Exact nextAction:
 Patch only the second-cycle test fixture (later as_of + rebuilt bullish family/event evidence), rerun exact PR full acceptance, and fix only the next evidenced failure if any.
+
+
+## FP3-C2 ACCEPTANCE RETRY 4 START — 2026-09-29
+
+status: FP3_C2_ACCEPTANCE_RETRY_4
+pr: 1683
+head: f5a415ac754fb494b4f25eff857800a4c51ac7e9
+baseMain: 1260d6096900107eeb9839ea9a094bb5ce9f028e
+rdp11FulltestRun: 36605648432
+wc6Run: 36605648281
+f10Run: 36605648280
+realCapital: 0
+historicalBackfill: NO
+RDP11RuntimeMutation: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Repair applied:
+- second test entry is now a genuinely later market cycle;
+- source as_of advances by 10s;
+- bullish family evidence is rebuilt at the later as_of with distinct exact source identities;
+- Event Risk and frozen signal are rebuilt at the same later as_of;
+- valid frozen geometry target remains target_1;
+- immutable Stream and Smart Capital identity rules remain unchanged.
+
+Current blocker:
+- retry 4 exact PR full acceptance is still queued/pending.
+
+Exact nextAction:
+Inspect retry-4 UID504 WC6 + RDP11 fulltest outputs; if both mechanically pass pytest/Ruff/mypy/non-mutation, recheck main/PR duplicate state immediately before merge. Otherwise record and repair only the exact next failure.
