@@ -10,6 +10,12 @@ from crypto_signal.decision_ledger import (
     DecisionLedgerConflictError,
     ImmutableDecisionEvidenceLedger,
 )
+from crypto_signal.paper.epoch2_accounting import (
+    Epoch2MetricsStatus,
+    Epoch2VaultAccountingSnapshot,
+    read_epoch2_state_read_only,
+)
+from crypto_signal.paper.epochs import PaperVaultId
 from crypto_signal.product.event_source_runtime import (
     EventSourceCalendarCoverageTruth,
     EventSourceCalendarEventTruth,
@@ -28,12 +34,6 @@ from crypto_signal.product.intelligence_stream_read_model import (
 from crypto_signal.product.intelligence_stream_system_view import (
     verified_system_view_record,
 )
-from crypto_signal.paper.epoch2_accounting import (
-    Epoch2MetricsStatus,
-    Epoch2VaultAccountingSnapshot,
-    read_epoch2_state_read_only,
-)
-from crypto_signal.paper.epochs import PaperVaultId
 
 FINAL_PRODUCT_READ_MODEL_SCHEMA_VERSION = "final-product-read-model-v1/1"
 DEFAULT_MARKET_PULSE_STALE_AFTER_MS = 15 * 60 * 1000
