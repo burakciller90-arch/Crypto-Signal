@@ -2705,3 +2705,36 @@ Temporary acceptance harness changes are NOT product scope and must be removed b
 
 Exact nextAction:
 Re-read current main and restore both temporarily modified workflow files on this FP1 branch to their exact current-main contents. Then verify the branch diff contains only FP1-A production/test/docs/handoff changes before opening the implementation PR.
+
+
+## FP1-A PRE-PR CLEANUP COMPLETE CHECKPOINT — 2026-09-29
+
+status: FP1_A_REVIEW_READY
+activeBranch: fp1/human-read-model-contract
+currentBranchHead: aa98e9bc54554adabf3f791d636376c4c391b909
+acceptedImplementationHead: ae5b1f4ed13f57f783cd36963116bd3324210deb
+acceptedUid504Run: 36554409727
+baseMain: 4df55fdf85b34ded60f23a3d3e3e346dd7505160
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Cleanup completed:
+- temporary FP1 trigger was removed from .github/workflows/crypto-stage10-hosted-branch-gate.yml by restoring exact current-main content;
+- temporary FP1 trigger/test wiring was removed from .github/workflows/crypto-message-intelligence-mi1-hosted.yml by restoring exact current-main content;
+- acceptance harness commits remain only in branch history; their final tree content equals main and must not appear in the PR diff.
+
+Accepted implementation:
+- FP1 duplicate/capability matrix;
+- customer-safe final_product_read_model.py;
+- focused Market Pulse tests;
+- durable CURRENT_FRONTIER/HANDOFF checkpoints;
+- no Product API route;
+- no frontend;
+- no deploy;
+- no canonical runtime writer;
+- REAL_CAPITAL=0.
+
+Exact nextAction:
+Open an FP1-A implementation PR against main, inspect its actual changed-file diff, and fail closed if either temporary workflow file appears or any unrelated project/runtime file is present.
