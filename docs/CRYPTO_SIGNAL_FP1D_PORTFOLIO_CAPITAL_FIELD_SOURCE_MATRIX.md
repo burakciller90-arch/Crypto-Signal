@@ -317,7 +317,7 @@ After D1 acceptance:
 7. unmeasured expectancy remains unavailable;
 8. normal payload hides SHA/raw metrics enum/database vocabulary;
 9. audit preserves exact identities;
-10. DB and sidecars unchanged;
+10. canonical Epoch 2 DB bytes unchanged; missing DB is never initialized;
 11. REAL_CAPITAL=0.
 
 ### D2
