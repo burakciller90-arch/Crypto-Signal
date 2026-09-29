@@ -5580,3 +5580,33 @@ Current blocker:
 
 Exact nextAction:
 Add a genuine two-issuance FP3-A/B fixture and prove OPEN -> SCALE_IN -> REDUCE/EXIT plus exact replay/non-duplication; then run PR/full UID504 acceptance and fix only evidenced failures.
+
+
+## FP3-C2 IMPLEMENTATION COMPLETE / ACCEPTANCE START — 2026-09-29
+
+status: FP3_C2_ACCEPTANCE_START
+baseMain: 1260d6096900107eeb9839ea9a094bb5ce9f028e
+activeBranch: fp3c2/multi-entry-lineage
+activeHeadBeforeAcceptanceDocs: 71cc33157097941ce14a9d9a973335d273fed8c0
+realCapital: 0
+historicalBackfill: NO
+RDP11RuntimeMutation: NO
+ProductDevelopmentDeploy: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Implemented:
+- immutable read-only CanonicalActiveBuyEntry representation over verified R22 BUY intent/fill truth;
+- full active-entry set validation with latest-entry sell anchor;
+- every active entry's intent/fill/forecast/proof/sizing/allocator/decision evidence carried into canonical sell evidence;
+- weighted-average cost-basis engine reused unchanged;
+- FP3 action policy/engine v2 maps SCALE_IN -> BUY while v1 remains readable;
+- SCALE_IN requires positive current position, exact FP3-A/B lineage and forecast/proof/sizing identities distinct from every active BUY;
+- STOP_UPDATE remains unavailable;
+- focused test uses a genuinely distinct second unified-decision issuance and proves second BUY, duplicate-lineage rejection, two-entry cost-basis reconstruction, EXIT and exact replay/non-duplication.
+
+Acceptance blocker:
+- no PR/full UID504 acceptance result exists for this head yet.
+
+Exact nextAction:
+Open one isolated FP3-C2 PR, run full PR UID504 gates, inspect exact pytest/Ruff/mypy/non-mutation failures, fix only evidenced C2 defects, then restore/recheck main before merge.
