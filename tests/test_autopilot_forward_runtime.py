@@ -16,7 +16,6 @@ from crypto_signal.paper.autopilot_forward_runtime import (
     FP3AutopilotStore,
 )
 from crypto_signal.paper.canonical_vault_decisions import CanonicalVaultDecisionLedger
-from crypto_signal.paper.epochs import PaperVaultId
 from crypto_signal.paper.transaction_tape_atomic import R22Epoch2AtomicTape
 from crypto_signal.product.intelligence_stream_capital_forward_runtime import (
     IntelligenceStreamCapitalForwardRuntime,
