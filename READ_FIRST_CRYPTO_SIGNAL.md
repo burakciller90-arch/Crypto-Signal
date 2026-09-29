@@ -1,3 +1,29 @@
+# ACTIVE FINAL PRODUCT PROGRAM — 2026-09-29
+
+**FIRST READ:** `ACTIVE_ROADMAP.md`
+
+Canonical final-product umbrella roadmap:
+
+**`docs/CRYPTO_SIGNAL_FINAL_PRODUCT_MASTER_ROADMAP_V1.md`**
+
+Current first mechanically unclosed gate:
+
+**FP0 / RDP11 — Continuous soak + final Evidence PASS — ACTIVE / NOT PASS**
+
+- RDP0–RDP10: PASS.
+- anchored RDP11 soak start: `2026-09-29T09:13:21.134000Z`.
+- earliest 72h eligibility: `2026-10-02T09:13:21.134000Z`.
+- elapsed time alone cannot close RDP11.
+- while FP0 is active, the exact mechanical gate remains governed by `docs/CRYPTO_SIGNAL_REALITY_BACKED_EVIDENCE_DATA_PLANE_V1.md`.
+- after FP0 PASS, continue from the first mechanically unclosed FP phase in the Final Product Master Roadmap.
+- accepted Intelligence Stream S0-S16/F0-F10/MI1-MI6, R21, R22, R24 and other accepted foundations are REUSE inputs and must not be rebuilt.
+- normal product UX target is now the user-authorized Final Product program: Command Center + progressive exact evidence + Paper Capital Autopilot/Portfolio/Trade Passport, under immutable history and REAL_CAPITAL=0.
+- Durdurulmaz and Quantum Capital remain isolated and untouched.
+
+**Authority rule:** older sections in this file that say an earlier RDP/ED/Stream/frontend phase is “ACTIVE” are historical records unless the current `ACTIVE_ROADMAP.md`, `CURRENT_FRONTIER.md`, latest main/runtime evidence and Final Product roadmap agree with them.
+
+---
+
 # SSD-504 DEVELOPMENT WORKBENCH — 2026-09-27
 
 Canonical physical development root for new Crypto Signal work:
@@ -14,7 +40,7 @@ Canonical execution authority for the five-family source/runtime completion:
 
 **`docs/CRYPTO_SIGNAL_REALITY_BACKED_EVIDENCE_DATA_PLANE_V1.md`**
 
-Current state: **RDP0 PASS / RDP1 PASS / RDP2 ACTIVE — Canonical source envelope + coverage ledger**.
+Current state: **RDP0–RDP10 PASS / RDP11 ACTIVE — continuous real-time soak + final Evidence PASS**.
 
 This execution roadmap sits under the accepted Evidence Depth & Visual Proof frontier. It adds the concrete data-plane completion order: collector reliability, source envelopes/coverage, Geometry truth, rich Liquidity/Order Flow wiring, fresh Derivatives/Liquidations, BTC/ETH Options inside Derivatives, real On-chain/stablecoin capital-flow sources, Event/Cross-market runtime, cross-venue quality + overlap protection, exact frozen proof, then a continuous soak. The five-family 20/25/25/15/15 matrix remains unchanged; no new family is created. Portfolio implementation follows Evidence Data Plane PASS unless the user explicitly authorizes parallel preparatory work. **REAL_CAPITAL=0**.
 
@@ -43,7 +69,7 @@ Locked reason:
 - Durdurulmaz and Quantum Capital remain untouched;
 - **REAL_CAPITAL=0**.
 
-Exact implementation frontier: **ED1 — Exact family payload resolution**. ED0 authority/live audit is recorded by UID504 runs `36339584811` and `36339587758`.
+Historical note: ED1 was the exact implementation frontier when this section was written. Evidence-depth work has since advanced through RDP10 PASS; current execution is resolved only through `ACTIVE_ROADMAP.md` and the Final Product Master Roadmap.
 
 This repository originates from the user's **CRYPTO SIGNAL PLATFORM — MASTER HANDOFF v1.0 (2026-09-19)**.
 Its foundational project-isolation, scientific-truth and REAL_CAPITAL safety boundaries remain binding. Later **explicit user-approved canonical documents and state updates may supersede scoped product/frontend/roadmap decisions where they say so**. Never use older handoff or roadmap wording to undo a newer explicit supersession. Current execution state is established by `CURRENT_STATUS.md`, the newest Chronicle entry and mechanically observed Git/runtime truth.
