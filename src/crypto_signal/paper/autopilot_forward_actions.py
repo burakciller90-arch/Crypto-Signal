@@ -20,8 +20,12 @@ from pathlib import Path
 from typing import cast
 
 from crypto_signal.ledger.serialization import canonical_json, canonical_sha256, sha256_text
-from crypto_signal.paper.autopilot_forward_runtime import FP3AutopilotStore
+from crypto_signal.paper.autopilot_forward_runtime import (
+    FP3AutopilotReceipt,
+    FP3AutopilotStore,
+)
 from crypto_signal.paper.autopilot_forward_sizing import (
+    FP3SizingStageReceipt,
     FP3SizingStageStatus,
     FP3SizingStageStore,
 )
@@ -700,7 +704,7 @@ class FP3PreregisteredActionBridge:
         *,
         issuance: UnifiedDecisionIssuance,
         sizing_assessment: PositionSizingAssessment,
-    ):
+    ) -> tuple[FP3AutopilotReceipt, FP3SizingStageReceipt]:
         front = self.autopilot_store.read_receipt_for_forecast(intent.forecast_identity)
         if front is None:
             raise ValueError("FP3-C requires accepted FP3-A receipt")
@@ -830,7 +834,10 @@ class FP3PreregisteredActionBridge:
         )
 
 
-def _validate_front_intent(front, intent: FP3PreregisteredActionIntent) -> None:
+def _validate_front_intent(
+    front: FP3AutopilotReceipt,
+    intent: FP3PreregisteredActionIntent,
+) -> None:
     if front.receipt_identity != intent.front_receipt_identity:
         raise ValueError("FP3-C front receipt identity mismatch")
     if front.forecast_identity != intent.forecast_identity:
