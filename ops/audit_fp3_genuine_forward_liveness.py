@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """FP3-D genuine-forward liveness acceptance over live immutable source truth.
 
 Live Development SQLite files are opened only in read-only/query-only mode.
@@ -77,9 +76,11 @@ def snapshot_sqlite_read_only(source: Path, destination: Path) -> None:
     destination.parent.mkdir(parents=True, exist_ok=True)
     if destination.exists():
         destination.unlink()
-    with closing(_connect_ro(source)) as source_db:
-        with closing(sqlite3.connect(destination)) as destination_db:
-            source_db.backup(destination_db)
+    with (
+        closing(_connect_ro(source)) as source_db,
+        closing(sqlite3.connect(destination)) as destination_db,
+    ):
+        source_db.backup(destination_db)
     with closing(sqlite3.connect(destination)) as copied:
         row = copied.execute("PRAGMA quick_check").fetchone()
         if row is None or str(row[0]).lower() != "ok":
