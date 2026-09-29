@@ -5658,3 +5658,13 @@ Current blocker:
 Exact nextAction:
 Implement C2 in canonical_capital_runtime.py + autopilot_forward_actions.py only, then add focused SCALE_IN -> REDUCE/EXIT weighted-average/replay tests. Do not begin FP3-D before C2 mechanical PASS.
 
+
+
+## 2026-09-29 — FP3-C2 source audit complete / tests next
+
+- branch: \`fp3c2/multi-entry-lineage\`
+- source changes: \`c49537eb7baa3893dcd069fa3072ab3c4de6e804\` (active-entry lineage), \`c8c5ceaafc871381af2c897aaec3259652793e6e\` (SCALE_IN bridge)
+- preserved: R22 weighted-average cost-basis engine, canonical BUY/SELL mutation owners, REAL_CAPITAL=0, RDP11 frozen runtime
+- compatibility: action policy/engine v1 remains readable; current policy/engine v2 marks SCALE_IN as BUY only with distinct accepted lineage
+- blocker: no mechanical two-entry REDUCE/EXIT/replay proof yet
+- nextAction: add two-issuance FP3-A/B multi-entry tests and run exact branch acceptance
