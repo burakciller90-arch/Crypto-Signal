@@ -516,6 +516,329 @@ class FinalProductReadModel:
             ) from exc
 
 
+def _attention_candidate(
+    detail: dict[str, Any],
+    *,
+    observed_at_ms: int,
+    stale_after_ms: int,
+    include_audit: bool,
+) -> _AttentionCandidate | None:
+    narrative = _required_mapping(detail, "narrative")
+    narrative_identity = _required_sha(narrative, "narrative_identity")
+    text = _required_mapping(narrative, "text")
+    headline = _required_text(text, "collapsed_text")
+    simple_text = _required_text(text, "simple_text")
+    event_at_ms = _required_int(narrative, "event_at_ms")
+    if event_at_ms > observed_at_ms:
+        raise FinalProductReadError("attention source is from the future")
+
+    if "system_view" in detail:
+        importance = _required_text(narrative, "importance")
+        if importance not in _IMPORTANCE_LABELS:
+            return None
+        symbol = _required_text(narrative, "symbol")
+        timeframe = _required_text(narrative, "timeframe")
+        subtype = _required_text(narrative, "subtype")
+        analytical = _required_mapping(detail, "analytical_view")
+        uncertainty = _required_mapping(analytical, "uncertainty")
+        raw_stance = _required_text(narrative, "state")
+        audit = (
+            AttentionAudit(
+                narrative_identity=narrative_identity,
+                story_identity=None,
+                source_event_identity=None,
+                message_identity=None,
+                materiality_decision_identity=None,
+                materiality_policy_identity=None,
+            )
+            if include_audit
+            else None
+        )
+        return _AttentionCandidate(
+            dedupe_key=("system_view", symbol, timeframe, subtype),
+            importance_rank=_attention_importance_rank(importance),
+            event_at_ms=event_at_ms,
+            narrative_identity=narrative_identity,
+            view=AttentionSituationView(
+                symbol=symbol,
+                timeframe=timeframe,
+                updated_at_ms=event_at_ms,
+                freshness_label=_freshness_label(
+                    observed_at_ms=observed_at_ms,
+                    source_as_of_ms=event_at_ms,
+                    stale_after_ms=stale_after_ms,
+                ),
+                category_label=_CATEGORY_LABELS["intelligence"],
+                importance_label=_IMPORTANCE_LABELS[importance],
+                state_label=_STANCE_LABELS.get(raw_stance, "Karışık / izle"),
+                headline=headline,
+                detail=simple_text,
+                materiality_label="Güncel sistem görünümü",
+                risk_label=_event_risk_label(
+                    uncertainty.get("event_risk_state")
+                ),
+                source_label="System View",
+                audit=audit,
+            ),
+        )
+
+    message_input_raw = detail.get("message_input")
+    if not isinstance(message_input_raw, dict):
+        return None
+    message_input = message_input_raw
+    if (
+        message_input.get("materiality") != "material"
+        or message_input.get("publication_disposition") != "publish"
+    ):
+        return None
+
+    importance = _required_text(message_input, "importance")
+    if importance not in _IMPORTANCE_LABELS:
+        return None
+    category = _required_text(message_input, "category")
+    symbol = _required_text(narrative, "symbol")
+    timeframe = _required_text(narrative, "timeframe")
+    story_identity = _required_sha(narrative, "story_identity")
+    source_as_of_ms = _required_int(message_input, "source_as_of_ms")
+    analytical = _required_mapping(detail, "analytical_view")
+    fact = _required_mapping(detail, "fact_bundle")
+    risk_label = (
+        _event_risk_label(fact.get("event_context_state"))
+        if fact.get("event_context_state") is not None
+        else None
+    )
+    audit = None
+    if include_audit:
+        audit = AttentionAudit(
+            narrative_identity=narrative_identity,
+            story_identity=story_identity,
+            source_event_identity=_required_sha(
+                message_input,
+                "source_event_identity",
+            ),
+            message_identity=_required_sha(message_input, "message_identity"),
+            materiality_decision_identity=_required_sha(
+                message_input,
+                "materiality_decision_identity",
+            ),
+            materiality_policy_identity=_required_sha(
+                message_input,
+                "materiality_policy_identity",
+            ),
+        )
+    return _AttentionCandidate(
+        dedupe_key=("story", story_identity),
+        importance_rank=_attention_importance_rank(importance),
+        event_at_ms=event_at_ms,
+        narrative_identity=narrative_identity,
+        view=AttentionSituationView(
+            symbol=symbol,
+            timeframe=timeframe,
+            updated_at_ms=event_at_ms,
+            freshness_label=_freshness_label(
+                observed_at_ms=observed_at_ms,
+                source_as_of_ms=source_as_of_ms,
+                stale_after_ms=stale_after_ms,
+            ),
+            category_label=_CATEGORY_LABELS.get(category, "İstihbarat"),
+            importance_label=_IMPORTANCE_LABELS[importance],
+            state_label=_attention_state_label(analytical, fact),
+            headline=headline,
+            detail=simple_text,
+            materiality_label="Önemli değişim",
+            risk_label=risk_label,
+            source_label="Intelligence Stream",
+            audit=audit,
+        ),
+    )
+
+
+def _attention_importance_rank(value: str) -> int:
+    return 2 if value == "critical" else 1
+
+
+def _attention_state_label(
+    analytical: dict[str, Any],
+    fact: dict[str, Any],
+) -> str | None:
+    stance = analytical.get("stance")
+    if isinstance(stance, dict):
+        raw = stance.get("effective_stance")
+        if isinstance(raw, str):
+            return _STANCE_LABELS.get(raw, "Karışık / izle")
+    family_state = analytical.get("family_state_label")
+    if isinstance(family_state, str):
+        if str(fact.get("source_quality", "")).lower() in {
+            "unavailable",
+            "missing",
+        }:
+            return "Veri eksik"
+        direction = fact.get("direction")
+        if isinstance(direction, str) and direction in _DIRECTION_LABELS:
+            return f"{_DIRECTION_LABELS[direction]} yönlü aile değişimi"
+        return "Aile durumu güncellendi"
+    return None
+
+
+def _latest_verified_system_view(
+    path: Path,
+    *,
+    symbol: str,
+    observed_at_ms: int,
+) -> dict[str, Any] | None:
+    uri = f"{path.resolve().as_uri()}?mode=ro"
+    with sqlite3.connect(uri, uri=True) as connection:
+        connection.execute("PRAGMA query_only=ON")
+        if not _table_exists(connection, "stream_system_view_messages"):
+            return None
+        row = _latest_system_view_row(
+            connection,
+            symbol=symbol,
+            observed_at_ms=observed_at_ms,
+        )
+    if row is None:
+        return None
+    return verified_system_view_record(
+        narrative_identity=str(row[0]),
+        event_at_ms=_row_non_negative_int(row[1], "system-view event time"),
+        payload_json=str(row[2]),
+        expected_digest=str(row[3]),
+    )
+
+
+def _enriched_family_summary(
+    row: dict[str, Any],
+    *,
+    raw_stance: str,
+    reader: IntelligenceStreamReadModel,
+    observed_at_ms: int,
+    stale_after_ms: int,
+    include_audit: bool,
+) -> FamilySummaryItem:
+    base = _family_view(
+        row,
+        raw_stance=raw_stance,
+        include_audit=False,
+    )
+    source_narrative = row.get("source_narrative_identity")
+    if source_narrative is None:
+        return FamilySummaryItem(
+            family_label=base.family_label,
+            state_label=base.state_label,
+            direction_label=base.direction_label,
+            relationship_label=base.relationship_label,
+            source_quality_label=base.source_quality_label,
+            source_as_of_ms=None,
+            freshness_label="Veri eksik",
+            evidence_domain_labels=(),
+            uncertainty_label="Kaynak kanıtı yok",
+            changed_label="Değişim bilgisi yok",
+            timeframe=base.timeframe,
+            audit=None,
+        )
+
+    narrative_identity = _sha_text(
+        source_narrative,
+        "family source narrative",
+    )
+    detail = reader.read_message_detail(narrative_identity)
+    if detail is None:
+        raise FinalProductReadError("family source narrative is missing")
+    fact = _required_mapping(detail, "fact_bundle")
+    analytical = _required_mapping(detail, "analytical_view")
+    source_as_of_ms = _required_int(fact, "source_as_of_ms")
+    if source_as_of_ms > observed_at_ms:
+        raise FinalProductReadError("family source is from the future")
+    domains = _text_sequence(
+        fact.get("available_evidence_domains"),
+        "family evidence domains",
+    )
+    uncertainty_flags = _text_sequence(
+        fact.get("uncertainty_flags"),
+        "family uncertainty flags",
+    )
+    changed_components = _text_sequence(
+        analytical.get("changed_components"),
+        "family changed components",
+    )
+    previous_state = analytical.get("previous_family_state_label")
+    changed_label = (
+        "İlk kayıt"
+        if previous_state is None
+        else f"{len(changed_components)} bileşen değişti"
+    )
+    uncertainty_label = (
+        "Belirgin belirsizlik işareti yok"
+        if not uncertainty_flags
+        else f"{len(uncertainty_flags)} belirsizlik işareti"
+    )
+
+    audit = None
+    if include_audit:
+        audit = FamilySummaryAudit(
+            source_narrative_identity=narrative_identity,
+            fact_bundle_identity=_required_sha(fact, "fact_bundle_identity"),
+            analytical_view_identity=_required_sha(
+                analytical,
+                "analytical_view_identity",
+            ),
+            source_evidence_identities=tuple(
+                _sha_text(value, "family evidence identity")
+                for value in _required_sequence(fact, "evidence_identities")
+            ),
+            raw_state_label=_required_text(fact, "state_label"),
+            uncertainty_flags=uncertainty_flags,
+        )
+    return FamilySummaryItem(
+        family_label=base.family_label,
+        state_label=base.state_label,
+        direction_label=base.direction_label,
+        relationship_label=base.relationship_label,
+        source_quality_label=base.source_quality_label,
+        source_as_of_ms=source_as_of_ms,
+        freshness_label=_freshness_label(
+            observed_at_ms=observed_at_ms,
+            source_as_of_ms=source_as_of_ms,
+            stale_after_ms=stale_after_ms,
+        ),
+        evidence_domain_labels=tuple(
+            _EVIDENCE_DOMAIN_LABELS.get(
+                value,
+                "Diğer doğrulanmış kanıt",
+            )
+            for value in domains
+        ),
+        uncertainty_label=uncertainty_label,
+        changed_label=changed_label,
+        timeframe=base.timeframe,
+        audit=audit,
+    )
+
+
+def _freshness_label(
+    *,
+    observed_at_ms: int,
+    source_as_of_ms: int,
+    stale_after_ms: int,
+) -> str:
+    if source_as_of_ms > observed_at_ms:
+        raise ValueError("source as-of cannot be in the future")
+    return (
+        "Güncel"
+        if observed_at_ms - source_as_of_ms <= stale_after_ms
+        else "Güncel değil"
+    )
+
+
+def _text_sequence(value: object, label: str) -> tuple[str, ...]:
+    if not isinstance(value, (list, tuple)):
+        raise TypeError(f"{label} must be a sequence")
+    result = tuple(str(item) for item in value)
+    if any(not item.strip() for item in result):
+        raise ValueError(f"{label} cannot contain blank text")
+    return result
+
+
 def _normalize_symbols(symbols: tuple[str, ...]) -> tuple[str, ...]:
     if not symbols:
         raise ValueError("market pulse requires at least one symbol")
