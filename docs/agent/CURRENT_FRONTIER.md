@@ -6900,3 +6900,19 @@ Focused proof set rewritten against real accepted owners:
 Important acceptance rule:
 - all runs on earlier heads, including `62239a6808bccda8c741aa12cb21ab6b7d47326c`, are stale for merge evidence;
 - require fresh dedicated FP5-A + WC6 + RDP11 + F10 on the final exact PR head after this checkpoint.
+
+
+### FP5-A OWNER-BOUND ACCEPTANCE ATTEMPT / MYPY-ONLY REPAIR — 2026-09-29
+
+- code-equivalent tested head: `919f91347166c6ab9280b023d915027187c3d884`
+- RDP11 run/job: `36630561758/109618412662`
+- exact source + frozen Development boundary PASS
+- full pytest completed before static type failure; no behavioral test failure reported
+- exact sole blocker:
+  - `portfolio_risk_v2.py:296` mypy loop-variable type reuse
+  - `portfolio_risk_v2.py:312` same Optional Decimal narrowing consequence
+- frozen Development non-mutation PASS
+- repair commit: `9b0caf475ecb263fb1ff7599dbe57baa2212ed5d`
+- repair classification: typing-only variable rename/narrowing; no allocation formula, identity, evidence gate or safety semantics changed
+- all prior runs remain stale for merge acceptance
+- nextAction: require fresh exact-head dedicated FP5-A + WC6 + RDP11 + F10 PASS after this checkpoint.
