@@ -5737,3 +5737,16 @@ Implement C2 in canonical_capital_runtime.py + autopilot_forward_actions.py only
 - cleanup: Development non-mutating PASS; REAL_CAPITAL=0
 - repair scope: fixture helper only — derive Event Risk from the issuance forecast's exact \`source_as_of_ms\`
 - nextAction: patch helper and rerun exact-head acceptance
+
+
+## 2026-09-29 — FP3-C2 acceptance attempt 5 found real guard bug
+
+- PR: #1683
+- tested head: \`6af18ab22da8a9e49b6db2d90f2ae5edfd31fa1b\`
+- RDP11 fulltest: \`36606670456\` / job \`109537345063\`
+- F10: \`36606670385\` PASS
+- failure: genuine second-cycle SCALE_IN rejected because fixed-fractional \`SizingMethodResult.result_identity\` repeated
+- source contract: method-result identity is intentionally context-free; assessment identity carries the market/allocator/risk lineage
+- repair: distinct forecast + proof + sizing assessment remain mandatory; deterministic result identity may repeat; same-assessment reuse still fails closed
+- safety: non-mutation PASS; REAL_CAPITAL=0
+- nextAction: patch guard + regression assertion, rerun full acceptance
