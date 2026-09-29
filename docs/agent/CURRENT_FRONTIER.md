@@ -7514,3 +7514,27 @@ Recheck current main and duplicate ownership. If branch is based on current main
 - pre-sync FP5-C commit SHAs recorded above are historical staging references and are superseded by the post-sync linear branch commits;
 - no FP5-C behavior was intentionally changed during this reconciliation;
 - exact nextAction: verify branch ahead/behind and duplicate state, then open the sole FP5-C PR.
+
+
+### FP5-C ACCEPTANCE ATTEMPT 1 — MYPY NARROWING BLOCKER — 2026-09-30
+
+testedHead: 8d551faf84008767fdbc9094e407e1d5aafd6b6f
+pr: #1703
+wc6RunJob: 36642984912 / 109659347750
+wc6ExactSource: PASS
+wc6FocusedRecovery: PASS
+wc6PaperPytest: PASS
+wc6PaperRuff: PASS
+wc6PaperMypy: FAIL_ONE_TYPE_NARROWING
+developmentNonMutation: PASS
+
+Mechanical blocker:
+- `autopilot_forward_sizing.py:713`: V1 branch inferred local `selection` as non-optional, while FP5-B V2 promotion returns `CanonicalPaperSizingSelection | None` before the explicit hold branch narrows it;
+- all paper behavioral tests completed successfully before this mypy error;
+- no runtime/identity/lineage behavior failure observed.
+
+Repair boundary:
+Introduce a separate `portfolio_selection` local, branch on `None`, then assign the narrowed non-null value to `selection`. No formula, status, reason-code, replay or authority behavior change.
+
+Acceptance rule:
+All merge-gate results from `8d551faf...` are stale after repair. Require FP5-C + WC6 + RDP11 Pre-Soak + F10 again on the new exact head.
