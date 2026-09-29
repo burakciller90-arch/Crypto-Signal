@@ -3450,3 +3450,39 @@ Temporary acceptance harness:
 
 Exact nextAction:
 Restore MI1 workflow to exact current-main content, update the FP1 capability matrix current-state/nextAction so agents do not re-run A/B/C, verify current main and branch diff, then open the FP1-C PR only if no duplicate or unrelated change exists.
+
+
+## FP1-C PRE-PR CLEANUP COMPLETE CHECKPOINT — 2026-09-29
+
+status: FP1_C_REVIEW_READY
+activeBranch: fp1c/event-rail-read-model
+currentBranchHeadBeforeCheckpoint: b41b8d2f255aabf7c0cd9beb3ea34a84483bb89a
+baseMain: bb083c062154dd804e087777310c43d4710d29c0
+acceptedC1Head: 5bb6783c4b7189cc9d934840aae76702b1c95da6
+acceptedC1Uid504Run: 36565167503
+acceptedC2Head: dee12bad640915401f49938217b0d3375900135c
+acceptedC2Uid504Run: 36565945747
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Cleanup verification:
+- current main remains bb083c062154dd804e087777310c43d4710d29c0;
+- branch is ahead of main and not behind;
+- no duplicate open FP1-C/Event Rail PR found;
+- .github/workflows/crypto-message-intelligence-mi1-hosted.yml branch content equals exact current-main content;
+- temporary C1/C2 acceptance trigger/test wiring is absent from final branch diff;
+- final changed-file set is exactly:
+  - docs/CRYPTO_SIGNAL_FP1C_EVENT_RAIL_FIELD_SOURCE_MATRIX.md
+  - docs/CRYPTO_SIGNAL_FP1_HUMAN_READ_MODEL_CAPABILITY_MATRIX.md
+  - docs/agent/CURRENT_FRONTIER.md
+  - docs/agent/HANDOFF_LOG.md
+  - src/crypto_signal/product/event_source_runtime.py
+  - src/crypto_signal/product/final_product_read_model.py
+  - tests/test_event_source_product.py
+  - tests/test_final_product_read_model.py
+- no Product route/frontend/deploy/runtime config change is present.
+
+Exact nextAction:
+Open the FP1-C PR against current main, inspect the actual PR changed-file set again, run PR-triggered repository gates, and merge only if no workflow/runtime/unrelated file or mechanical blocker appears.
