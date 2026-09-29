@@ -2085,7 +2085,10 @@ def _ordered_search_items(
 ) -> tuple[GlobalSearchItem, ...]:
     seen: set[tuple[str, str]] = set()
     ordered: list[GlobalSearchItem] = []
-    for _, _, _, _, _, source_key, item in sorted(candidates):
+    for _, _, _, _, _, source_key, item in sorted(
+        candidates,
+        key=lambda row: row[:-1],
+    ):
         if source_key in seen:
             continue
         seen.add(source_key)
