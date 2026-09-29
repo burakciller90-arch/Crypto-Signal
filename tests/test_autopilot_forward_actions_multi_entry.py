@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from dataclasses import replace
 from decimal import Decimal
 from pathlib import Path
 
@@ -17,10 +16,11 @@ from test_autopilot_forward_sizing import (
     _sha,
 )
 from test_canonical_capital_runtime import _execution_snapshot
-from test_immutable_forecast_stream import HORIZON, ISSUED_AT, _event_context, _signal
+from test_immutable_forecast_stream import AS_OF, HORIZON, ISSUED_AT, _event_context, _signal
 from test_unified_decision_runtime import _family_evidence, _preflight
 
 from crypto_signal.decision_ledger import ImmutableDecisionEvidenceLedger
+from crypto_signal.intelligence.confluence_matrix_v2 import build_confluence_family_evidence
 from crypto_signal.paper.autopilot_forward_actions import (
     FP3ActionProcessDisposition,
     FP3ActionReason,
@@ -56,13 +56,37 @@ from crypto_signal.product.intelligence_stream_forward_runtime import (
 from crypto_signal.unified_decision_runtime import issue_unified_decision
 
 
-def _second_issuance(tmp_path: Path):
-    family = _family_evidence()
-    event = _event_context()
-    signal = replace(
-        _signal(),
-        freeze_identity=_sha("fp3c2-second-frozen-signal"),
+def _second_family_evidence(*, as_of_ms: int):
+    return tuple(
+        build_confluence_family_evidence(
+            family=item.family,
+            asset=item.asset,
+            timeframe=item.timeframe,
+            regime=item.regime,
+            as_of_ms=as_of_ms,
+            state=item.state,
+            direction=item.direction,
+            directional_strength_0_1=item.directional_strength_0_1,
+            evidence_quality_0_1=item.evidence_quality_0_1,
+            freshness_0_1=item.freshness_0_1,
+            market_available_at_ms=as_of_ms - 20,
+            observed_at_ms=as_of_ms - 10,
+            source_engine_ids=item.source_engine_ids,
+            source_evidence_identities=(
+                _sha(f"fp3c2-second-{item.family.value}-source"),
+            ),
+            material_conflict_identities=item.material_conflict_identities,
+            uncertainty_flags=item.uncertainty_flags,
+        )
+        for item in _family_evidence()
     )
+
+
+def _second_issuance(tmp_path: Path):
+    second_as_of_ms = AS_OF + 10_000
+    family = _second_family_evidence(as_of_ms=second_as_of_ms)
+    event = _event_context(as_of_ms=second_as_of_ms)
+    signal = _signal(as_of_ms=second_as_of_ms)
     return issue_unified_decision(
         signal=signal,
         base_asset="BTC",
