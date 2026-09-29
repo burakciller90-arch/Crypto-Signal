@@ -3261,3 +3261,37 @@ Temporary acceptance harness:
 
 Exact nextAction:
 Restore MI1 workflow to exact current-main content, verify workflow blob equality, verify FP1-B branch diff contains only B1/B2 production/tests/docs/agent checkpoints, then open the FP1-B implementation PR against current main.
+
+
+## FP1-B PRE-PR CLEANUP COMPLETE CHECKPOINT — 2026-09-29
+
+status: FP1_B_REVIEW_READY
+activeBranch: fp1b/attention-workspace-family-summary
+currentBranchHead: 73ebfbbc29de8f779fc7148822c7063893ca900e
+baseMain: a67f7192dd4b6a36a33d7aacf2b7e304cafdf509
+acceptedB1Head: 0ae99b1538c8adf9485938a1774f457238c689d3
+acceptedB1Uid504Run: 36558367315
+acceptedB2Head: 8e8caa9862e4e78d2762dcaf9d8760cebe5cc444
+acceptedB2Uid504Run: 36561360292
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Cleanup verification:
+- current main remains a67f7192dd4b6a36a33d7aacf2b7e304cafdf509;
+- no duplicate open FP1-B PR found;
+- .github/workflows/crypto-message-intelligence-mi1-hosted.yml branch blob equals exact current-main blob 394051a78c665d84cf78830cedc8799a13474baa;
+- temporary B1/B2 acceptance trigger/test wiring is absent from final branch tree;
+- no Product API route/frontend/deploy/runtime config change was authorized.
+
+FP1-B accepted product scope:
+- docs/CRYPTO_SIGNAL_FP1B_FIELD_SOURCE_MATRIX.md;
+- docs/CRYPTO_SIGNAL_FP1B2_WORKSPACE_MESSAGE_KIND_MATRIX.md;
+- src/crypto_signal/product/final_product_read_model.py:
+  Attention Situations + enriched Five-Family Summary + Workspace Summary;
+- tests/test_final_product_read_model.py;
+- durable agent frontier/handoff checkpoints.
+
+Exact nextAction:
+Open FP1-B implementation PR against current main, inspect its actual changed-file set, fail closed if any workflow/runtime/deploy/unrelated project file appears, then run PR-triggered repository gates before merge.
