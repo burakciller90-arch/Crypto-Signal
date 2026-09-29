@@ -5,7 +5,6 @@ on:
     branches:
       - 'feat/message-intelligence-mi1'
       - 'feat/message-intelligence-mi1-primary-surface'
-      - 'fp3b/eligible-fixed-fractional-sizing'
   pull_request:
     branches:
       - main
@@ -81,26 +80,22 @@ jobs:
             tests/test_intelligence_stream_local_rewriter.py \
             tests/test_intelligence_stream_production_projector.py \
             tests/test_intelligence_stream_ui.py \
-            tests/test_autopilot_forward_sizing.py \
             2>&1 | tee "$RUNNER_TEMP/mi1-pytest.log"
           "$TEST_PY" -m ruff check \
             src/crypto_signal/product/intelligence_stream_family.py \
             src/crypto_signal/product/intelligence_stream_read_model.py \
             src/crypto_signal/product/intelligence_stream_narrative.py \
             src/crypto_signal/product/web.py \
-            src/crypto_signal/paper/autopilot_forward_sizing.py \
             tests/test_intelligence_stream_family.py \
             tests/test_intelligence_stream_read_model.py \
             tests/test_intelligence_stream_ledger.py \
             tests/test_intelligence_stream_ui.py \
-            tests/test_autopilot_forward_sizing.py \
             2>&1 | tee "$RUNNER_TEMP/mi1-ruff.log"
           "$TEST_PY" -m mypy \
             src/crypto_signal/product/intelligence_stream_family.py \
             src/crypto_signal/product/intelligence_stream_read_model.py \
             src/crypto_signal/product/intelligence_stream_narrative.py \
             src/crypto_signal/product/web.py \
-            src/crypto_signal/paper/autopilot_forward_sizing.py \
             2>&1 | tee "$RUNNER_TEMP/mi1-mypy.log"
           node --check src/crypto_signal/product/stream/app.js \
             2>&1 | tee "$RUNNER_TEMP/mi1-node.log"
