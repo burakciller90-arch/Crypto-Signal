@@ -2824,3 +2824,60 @@ B2 PASS:
 
 Exact nextAction:
 Implement Workspace Summary contracts and message-kind branching in final_product_read_model.py first. Then add deterministic tests using existing accepted Stream fixtures before any acceptance harness change.
+
+
+## FP1-B2 IMPLEMENTATION-COMPLETE / ACCEPTANCE-START CHECKPOINT — 2026-09-29
+
+status: FP1_B2_ACCEPTANCE_START
+activeBranch: fp1b/attention-workspace-family-summary
+implementationHead: 451254963f37dd965a9c923e7731fa6d349223c4
+baseMain: a67f7192dd4b6a36a33d7aacf2b7e304cafdf509
+prerequisiteB1: PASS
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Implemented B2 production scope:
+- WorkspaceSummary customer/audit contracts;
+- optional read-only decision_evidence_path and signal_ledger_path constructor inputs;
+- workspace_summary(narrative_identity, observed_at_ms, ...);
+- verified message-kind branching:
+  - System View supported;
+  - Family narrative supported;
+  - Decision/Outcome supported;
+  - capital story/decision/sizing/lifecycle explicitly deferred to Portföy/Sermaye view;
+- family/decision Exact Evidence availability summarized from existing resolver only;
+- optional Decision Evidence proof join only when configured path exists;
+- configured proof forecast/proof lineage mismatch fails closed;
+- no confluence-to-probability conversion;
+- no signal-detail dependency required for B2 core;
+- no route/frontend/new DB/schema/writer/deploy.
+
+Implemented B2 tests:
+- missing Stream DB explicit/non-creating;
+- unknown narrative explicit;
+- System View reuses exact trigger/target/invalidation and not-calibrated probability wording;
+- Family Workspace keeps decision conditions unavailable and summarizes existing exact-evidence state;
+- Decision Workspace reuses exact Stream fact and does not create a missing optional Decision Evidence DB;
+- conflicting configured Decision Proof fails closed;
+- default Workspace customer projections hide SHA/raw evidence-resolution/materiality/probability/capital enum vocabulary;
+- read-side source byte/WAL stability where applicable.
+
+Acceptance required:
+- exact-source UID504 checkout;
+- focused tests/test_final_product_read_model.py plus relevant Stream family/read-model/system-view/UI regressions;
+- Ruff changed module/test;
+- strict mypy final_product_read_model.py;
+- Product/Development non-mutation;
+- project isolation;
+- REAL_CAPITAL=0;
+- no RDP11 soak runtime mutation.
+
+Acceptance harness rule:
+- temporary MI1 trigger/test wiring is branch-only acceptance infrastructure;
+- restore it to exact current-main content before PR;
+- do not treat harness edits as product scope.
+
+Exact nextAction:
+Temporarily wire the existing MI1 UID504 harness to the FP1-B branch, run exact head acceptance, record the exact first mechanical failure before any repair, and do not claim B2 PASS until pytest/Ruff/mypy/non-mutation/project-isolation are all green.
