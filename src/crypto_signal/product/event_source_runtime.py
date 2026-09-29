@@ -36,6 +36,30 @@ _REQUIRED_FETCH_COLUMNS = frozenset(
     }
 )
 
+_STRUCTURED_EVENT_SCHEMA = "structured-event-v1/1"
+_EVENT_CALENDAR_COVERAGE_SCHEMA = "event-calendar-coverage-v1/1"
+_EVENT_CATEGORIES = frozenset(
+    {
+        "inflation",
+        "central_bank",
+        "employment",
+        "regulatory",
+        "exchange_security",
+        "listing",
+        "delisting",
+        "other",
+    }
+)
+_EVENT_SOURCE_QUALITIES = frozenset(
+    {
+        "official",
+        "primary_provider",
+        "secondary_aggregator",
+        "unverified",
+    }
+)
+_MAX_EVENT_RAIL_LIMIT = 200
+
 
 @dataclass(frozen=True, slots=True)
 class EventSourceProviderRuntimeTruth:
@@ -181,6 +205,139 @@ class EventSourceRuntimeTruth:
             raise ValueError("event source Product Truth must be read-only")
         if self.production_authority or self.real_capital != 0:
             raise ValueError("event source Product Truth cannot grant authority")
+
+
+@dataclass(frozen=True, slots=True)
+class EventSourceCalendarCoverageTruth:
+    coverage_identity: str
+    source_provider: str
+    coverage_start_ms: int
+    coverage_end_ms: int
+    categories: tuple[str, ...]
+    source_quality: str
+    source: str
+    observed_at_ms: int
+    adapter_version: str
+
+    def __post_init__(self) -> None:
+        _require_sha256(self.coverage_identity, "calendar coverage identity")
+        if not self.source_provider.strip() or not self.adapter_version.strip():
+            raise ValueError("calendar coverage provider/adapter missing")
+        if min(
+            self.coverage_start_ms,
+            self.coverage_end_ms,
+            self.observed_at_ms,
+        ) < 0:
+            raise ValueError("calendar coverage time invalid")
+        if self.coverage_end_ms < self.coverage_start_ms:
+            raise ValueError("calendar coverage window invalid")
+        if self.categories != tuple(sorted(set(self.categories))):
+            raise ValueError("calendar coverage categories not canonical")
+        if not self.categories or not set(self.categories).issubset(
+            _EVENT_CATEGORIES
+        ):
+            raise ValueError("calendar coverage categories invalid")
+        if self.source_quality not in _EVENT_SOURCE_QUALITIES:
+            raise ValueError("calendar coverage source quality invalid")
+        if not self.source.strip():
+            raise ValueError("calendar coverage source missing")
+
+
+@dataclass(frozen=True, slots=True)
+class EventSourceCalendarEventTruth:
+    event_identity: str
+    provider_event_id: str
+    title: str
+    category: str
+    scheduled_at_ms: int
+    affected_assets: tuple[str, ...]
+    source_provider: str
+    source_quality: str
+    source: str
+    source_timestamp_ms: int
+    ingested_at_ms: int
+    adapter_version: str
+
+    def __post_init__(self) -> None:
+        _require_sha256(self.event_identity, "calendar event identity")
+        for value, label in (
+            (self.provider_event_id, "calendar provider event id"),
+            (self.title, "calendar event title"),
+            (self.source_provider, "calendar event provider"),
+            (self.source, "calendar event source"),
+            (self.adapter_version, "calendar event adapter"),
+        ):
+            if not value.strip():
+                raise ValueError(f"{label} missing")
+        if self.category not in _EVENT_CATEGORIES:
+            raise ValueError("calendar event category invalid")
+        if self.source_quality not in _EVENT_SOURCE_QUALITIES:
+            raise ValueError("calendar event source quality invalid")
+        if min(
+            self.scheduled_at_ms,
+            self.source_timestamp_ms,
+            self.ingested_at_ms,
+        ) < 0:
+            raise ValueError("calendar event time invalid")
+        if self.ingested_at_ms < self.source_timestamp_ms:
+            raise ValueError("calendar event ingestion precedes source")
+        if self.affected_assets != tuple(sorted(set(self.affected_assets))):
+            raise ValueError("calendar event assets not canonical")
+        if any(not value or value != value.upper() for value in self.affected_assets):
+            raise ValueError("calendar event asset invalid")
+
+
+@dataclass(frozen=True, slots=True)
+class EventSourceCalendarRailTruth:
+    observed_at_ms: int
+    window_start_ms: int
+    window_end_ms: int
+    asset: str | None
+    categories: tuple[str, ...]
+    events: tuple[EventSourceCalendarEventTruth, ...]
+    total_matching_events: int
+    coverages: tuple[EventSourceCalendarCoverageTruth, ...]
+    coverage_status: str
+    latest_calendar_fetches: tuple[EventSourceProviderRuntimeTruth, ...]
+    read_only_verified: bool = True
+    production_authority: bool = False
+    real_capital: int = 0
+
+    def __post_init__(self) -> None:
+        if min(
+            self.observed_at_ms,
+            self.window_start_ms,
+            self.window_end_ms,
+        ) < 0:
+            raise ValueError("calendar rail time invalid")
+        if self.window_end_ms < self.window_start_ms:
+            raise ValueError("calendar rail window invalid")
+        if self.asset is not None and (
+            not self.asset or self.asset != self.asset.upper()
+        ):
+            raise ValueError("calendar rail asset invalid")
+        if self.categories != tuple(sorted(set(self.categories))):
+            raise ValueError("calendar rail categories not canonical")
+        if not set(self.categories).issubset(_EVENT_CATEGORIES):
+            raise ValueError("calendar rail category invalid")
+        if self.total_matching_events < len(self.events):
+            raise ValueError("calendar rail total count invalid")
+        if self.coverage_status not in {
+            "COMPLETE",
+            "INCOMPLETE",
+            "UNAVAILABLE",
+            "SOURCE_SCOPED_ONLY",
+        }:
+            raise ValueError("calendar rail coverage status invalid")
+        event_keys = tuple(
+            (item.scheduled_at_ms, item.event_identity) for item in self.events
+        )
+        if event_keys != tuple(sorted(event_keys)):
+            raise ValueError("calendar rail events not canonical")
+        if not self.read_only_verified:
+            raise ValueError("calendar rail must be read-only verified")
+        if self.production_authority or self.real_capital != 0:
+            raise ValueError("calendar rail cannot grant authority")
 
 
 def read_event_source_runtime_truth(
