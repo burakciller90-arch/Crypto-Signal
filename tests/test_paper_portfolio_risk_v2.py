@@ -278,3 +278,16 @@ def test_snapshot_requires_sorted_unique_asset_exposures() -> None:
 def test_combined_stop_and_cost_fraction_cannot_exceed_one() -> None:
     with pytest.raises(ValueError, match="combined stop"):
         _assess(_snapshot(), cost="0.60", stop="0.50")
+
+
+def test_risk_gate_flags_must_be_real_booleans() -> None:
+    with pytest.raises(TypeError, match="event_risk_clear"):
+        assess_portfolio_allocation(
+            snapshot=_snapshot(),
+            candidate_asset="BTCUSDT",
+            transaction_cost_fraction=Decimal("0.001"),
+            stop_invalidation_fraction=Decimal("0.05"),
+            event_risk_clear=1,  # type: ignore[arg-type]
+            liquidity_eligible=True,
+            conflict_clear=True,
+        )
