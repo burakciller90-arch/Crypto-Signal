@@ -524,6 +524,8 @@ def test_attention_reuses_materiality_and_prioritizes_newer_system_view(
     path = tmp_path / "stream-b1.sqlite3"
     seeded = _seed_b1_stream(path)
     before = path.read_bytes()
+    wal_path = Path(f"{path}-wal")
+    wal_before = wal_path.read_bytes() if wal_path.exists() else None
 
     view = FinalProductReadModel(stream_ledger_path=path).attention_situations(
         observed_at_ms=3_000,
@@ -545,7 +547,7 @@ def test_attention_reuses_materiality_and_prioritizes_newer_system_view(
     assert view.items[0].audit is not None
     assert view.items[0].audit.narrative_identity == seeded["system"].narrative_identity
     assert path.read_bytes() == before
-    assert not Path(f"{path}-wal").exists()
+    assert (wal_path.read_bytes() if wal_path.exists() else None) == wal_before
 
 
 def test_attention_does_not_promote_routine_system_view(tmp_path: Path) -> None:
@@ -572,6 +574,8 @@ def test_five_family_summary_enriches_exact_family_sources_and_keeps_missing_exp
     path = tmp_path / "stream-family.sqlite3"
     seeded = _seed_b1_stream(path)
     before = path.read_bytes()
+    wal_path = Path(f"{path}-wal")
+    wal_before = wal_path.read_bytes() if wal_path.exists() else None
 
     view = FinalProductReadModel(stream_ledger_path=path).five_family_summary(
         symbol="BTCUSDT",
@@ -613,7 +617,7 @@ def test_five_family_summary_enriches_exact_family_sources_and_keeps_missing_exp
     assert onchain.audit is None
 
     assert path.read_bytes() == before
-    assert not Path(f"{path}-wal").exists()
+    assert (wal_path.read_bytes() if wal_path.exists() else None) == wal_before
 
 
 def test_b1_customer_projections_hide_sha_and_internal_materiality_codes(
