@@ -1,6 +1,6 @@
 # Crypto Signal — FP2 Paper Vault V3 Constitution Matrix
 
-Status: **AUDIT COMPLETE / IMPLEMENTATION AUTHORIZED**
+Status: **ACCEPTED / REVIEW READY**
 Date: 2026-09-29
 Base main: `3b7cd1bc63446d818a6c5fff852b9ff10c7797b3`
 Active branch: `fp2/paper-vault-v3-constitution`
@@ -209,3 +209,41 @@ FP2 PASS requires:
 Implement a new isolated `src/crypto_signal/paper/vault_v3.py` module plus focused `tests/test_paper_vault_v3.py`.
 
 Do not edit Epoch 1/2 accounting/tape/allocator implementations, Product routes/frontend, runtime/deploy configuration or the RDP11 observer.
+
+
+## 10. UID504 acceptance
+
+Status: **PASS**
+
+Accepted exact-head:
+- head SHA: `7d98300ffbd3b0e32b9f4aac7f3eb44514c224cf`;
+- run: `36587124704`;
+- job: `109470381739`;
+- conclusion: **SUCCESS**.
+
+Mechanical markers:
+- exact-source checkout PASS;
+- focused/regression pytest 100% PASS;
+- Ruff: **All checks passed!**;
+- strict mypy: **Success: no issues found in 5 source files**;
+- Product/Development non-mutation PASS;
+- project isolation PASS;
+- `REAL_CAPITAL=0`.
+
+Cleanup:
+- temporary UID504 workflow restored in `cd6a714523e032496809d33d8edf9875b77e2eda`;
+- branch workflow blob equals current-main workflow blob `394051a78c665d84cf78830cedc8799a13474baa`.
+
+Accepted FP2 result:
+- Epoch 1/2 implementations remain untouched;
+- Paper Vault V3 has a separate immutable constitution/store namespace;
+- constitution identity freezes starting capital, policy versions, instruments, allocation policy and evidence-policy refs;
+- default 10,000 USDT is per-constitution truth, not a resettable global balance;
+- allocation policy freezes minimum exposure 0, maximum exposure exactly 1, 100% cash valid, borrowing=false and forced-deployment=false;
+- STOP/ARCHIVE lifecycle is append-only and cannot reactivate/reset;
+- exact duplicate appends are idempotent;
+- UPDATE/DELETE are trigger-blocked;
+- missing-store reads are non-creating/read-only;
+- corrupted persisted payloads fail closed;
+- legacy Epoch1/Epoch2 sentinel bytes remain unchanged;
+- no runtime/deploy/RDP11 mutation occurred.
