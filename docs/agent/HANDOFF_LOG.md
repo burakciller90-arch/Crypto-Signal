@@ -5801,3 +5801,18 @@ Implement C2 in canonical_capital_runtime.py + autopilot_forward_actions.py only
 - blocker: Ruff only, 14 x FURB157 in new multi-entry test
 - cleanup: Development non-mutating PASS; REAL_CAPITAL=0
 - nextAction: mechanical Decimal lint cleanup and rerun exact acceptance
+
+
+## 2026-09-29 — FP3-C2 PASS / FP3-D genuine-forward liveness audit start
+
+- exact current main: \`d3f40b52629d4f67a07a0ac32ce0326e7a66dfdd\`
+- C2 merge: PR #1683, accepted head \`7ab66c7e1d27899bd48414a087f29db3f1426e48\`, merge SHA \`d3f40b52629d4f67a07a0ac32ce0326e7a66dfdd\`
+- C2 acceptance: WC6 \`36612810152\` / \`109558250167\`, RDP11 fulltest \`36612810246\` / \`109558250148\`, F10 \`36612810257\` / \`109558359209\` all mechanically PASS
+- active branch: \`fp3d/genuine-forward-liveness\`
+- worktree: no session-local worktree; stable Workbench main verified by \`36613594563\` / \`109560885562\` -> HEAD \`d3f40b526...\`, branch main, dirty 0
+- duplicate audit: no prior fp3d branch / FP3-D PR
+- FP3-D rule: fixtures cannot satisfy; genuine post-activation candidate + replay/restart evidence required
+- soak safety: frozen target remains \`3d9f33db...\`; observer \`36611618152\` proved target exact before an endpoint connection-reset failure
+- safety: REAL_CAPITAL=0; HISTORICAL_BACKFILL=NO; no Product/Development deploy; Durdurulmaz/Quantum untouched
+- blocker: genuine candidate source + isolated persistent FP3 observation store not yet identified
+- nextAction: audit live Stream/Capital Forward persistence and WC2 liveness patterns; freeze exact non-mutating FP3-D observation contract before implementation
