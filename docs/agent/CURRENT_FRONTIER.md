@@ -1192,3 +1192,34 @@ Hard soak rule:
 
 Exact nextAction:
 Trigger UID504 `sync`; record issue/run/job and verify Development exact head/clean state. Continue automatically through producttest/fulltest only when each previous step succeeds.
+
+
+
+## RDP11 exact-main pre-deploy checkpoint — 2026-09-29
+
+Product deployment has **not** yet been attempted. Canonical target remains:
+- `3d9f33db3f1189571d40566125fbeabd00c04930`
+
+UID504 deployment prerequisites:
+- sync issue #1661 / Crypto Mac Command run `36539056907` / job `109309839626`: SUCCESS
+  - Development before: `5f07a8954f87e237258f1d3eb448a5ede6106fbd`
+  - Development after: `3d9f33db3f1189571d40566125fbeabd00c04930`
+  - Development branch: main / clean
+- producttest issue #1662 / run `36539209124` / job `109310325314`: SUCCESS
+- fulltest issue #1663 / run `36539290984` / job `109310585130`: SUCCESS
+  - pytest PASS
+  - Ruff: `All checks passed!`
+  - mypy: `Success: no issues found in 267 source files`
+  - `PRODUCT_FRESHNESS_CONTRACT_PASS=YES`
+  - `FULL_TEST_PASS=YES`
+
+Safety before deploy:
+- Product deploy attempted: NO
+- 72-hour soak clock started: NO
+- `REAL_CAPITAL=0`
+- `HISTORICAL_BACKFILL=NO`
+- Durdurulmaz touched: NO
+- Quantum Capital touched: NO
+
+Exact nextAction:
+Run rollback-safe UID504 `productdeploy` with exact target `3d9f33db3f1189571d40566125fbeabd00c04930`. Accept it only if target equals current `origin/main`, Product moves to that exact SHA, dashboard/service health succeeds and rollback is not invoked. Then run `productstate` and inspect real Product health/proof before starting the 72-hour clock.
