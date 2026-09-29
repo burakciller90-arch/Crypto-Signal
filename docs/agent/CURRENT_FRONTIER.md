@@ -1514,3 +1514,53 @@ Safety:
 
 Exact nextAction:
 Add read-only endpoint timing diagnostics to the focused UID504 acceptance workflow for `/api/health`, `/api/stream/messages?limit=5`, finite Stream SSE and `/api/intelligence-center`; rerun against the same frozen runtime target, then repair only the proven timeout/endpoint contract.
+
+
+## RDP11 observer second live dry-run failure / root-cause checkpoint — 2026-09-29
+
+Exact run:
+- candidate head: `cda39de115c8495f390309184ca5de6509498a21`
+- workflow: RDP11 Soak Observer UID504
+- run: `36545250707`
+- job: `109329971641`
+- conclusion: FAILURE
+- soak anchor created: NO
+- acceptance sidecar created: NO
+
+Product endpoint timing evidence:
+- `/api/health`: HTTP 200 / 0.001689s
+- `/api/stream/messages?limit=5`: HTTP 200 / 3.731577s
+- finite Stream SSE: HTTP 200 / 1.808475s
+- `/api/intelligence-center`: HTTP 200 / 0.015752s
+- endpoint timing probe: PASS
+
+Observed failure:
+- observer entered `_inspect_collector` after the Product checks;
+- it failed with `ObservationFailure: collector evidence timestamp is from the future`;
+- the observer captures `now_ms` once at process start, then performs potentially long read-only SQLite checks before reading the continuously advancing collector heartbeat/raw rows;
+- by the time the live heartbeat was read, its valid observed timestamp could be later than the stale process-start `now_ms`, causing a false future-data violation;
+- runtime/source semantics are not authorized to change to satisfy this check.
+
+Timing implication:
+- observer start to collector failure was roughly 326 seconds;
+- endpoint probe accounts for only ~5.6 seconds;
+- therefore the pre-heartbeat SQLite integrity work is materially long and the freshness reference must be sampled at the actual read boundary, not process start.
+
+Authorized repair:
+- retain strict no-future rejection;
+- sample wall-clock immediately after each live heartbeat/raw-row read and compare that row to its own read boundary;
+- expose the collector freshness sample time in the observation;
+- add elapsed timing metadata to SQLite quick-check results for diagnosis;
+- do not add future tolerance, backfill, source mutation or score/trading authority.
+
+Safety:
+- `REAL_CAPITAL=0`
+- `HISTORICAL_BACKFILL=NO`
+- frozen/historical evidence immutable
+- canonical runtime mutation: NONE
+- Durdurulmaz touched: NO
+- Quantum Capital touched: NO
+- RDP11 72h clock: NOT STARTED
+
+Exact nextAction:
+Repair the observer time-sampling boundary only, rerun the exact live dry-run acceptance, and inspect the next mechanically exposed blocker rather than skipping ahead.
