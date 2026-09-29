@@ -4672,3 +4672,43 @@ Current blocker:
 Exact nextAction:
 Implement autopilot_forward_runtime.py FP3-A activation + receipt store + front-half composition and focused tests; do not enter FP3-B/C in this commit.
 
+
+
+## FP3-A IMPLEMENTATION COMPLETE / ACCEPTANCE START — 2026-09-29
+
+status: FP3_A_ACCEPTANCE_START
+verifiedMain: 439f304d423a643597b089653bbf53f030981a45
+activeBranch: fp3/canonical-paper-autopilot-forward-runtime
+implementationHead: 5a33d6293349d18f32b01635320d998dc4086c76
+realCapital: 0
+historicalBackfill: NO
+RDP11RuntimeMutation: NO
+ProductDevelopmentDeploy: NO
+
+Implemented FP3-A:
+- isolated .fp3-paper-autopilot.sqlite3 activation/receipt store;
+- immutable future-bound activation referencing accepted Stream Capital and Epoch2 activation identities;
+- canonical owner over existing IntelligenceStreamCapitalForwardRuntime;
+- first process commits/reuses candidate + three vault decisions + HOLD/BLOCK R22 intents through accepted front-half only;
+- receipt stores exact forecast/proof/candidate/assessment/decision identities and canonical vault dispositions;
+- same forecast replay returns receipt without touching canonical ledgers again;
+- crash-style recovery: when canonical front-half truth exists but receipt is absent, rerun front-half idempotently and append only missing receipt;
+- pre-activation issuance skips without receipt/backfill;
+- receipt/activation UPDATE/DELETE forbidden;
+- no sizing/trade execution implemented in FP3-A.
+
+Focused tests:
+- first process + exact replay byte stability;
+- crash recovery after front-half commit;
+- pre-activation skip/no receipt;
+- immutable future-bound activation;
+- receipt/activation SQL immutability;
+- missing store read non-creating;
+- autopilot DB cannot alias Epoch2/Stream path.
+
+Acceptance blocker:
+- exact-head UID504 pytest/Ruff/strict-mypy/non-mutation/project-isolation has not run yet.
+
+Exact nextAction:
+Temporarily wire MI1 UID504 acceptance to include autopilot_forward_runtime.py and test_autopilot_forward_runtime.py; inspect exact logs and fix only evidenced failures, then restore workflow to current-main blob after PASS.
+
