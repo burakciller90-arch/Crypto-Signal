@@ -2178,3 +2178,86 @@ Current blocker:
 
 Exact nextAction:
 - update durable docs and roadmap only; then merge this docs-only closeout after rechecking main/head.
+
+
+## RDP11 ACTIVE SOAK handoff — 2026-09-29
+
+status: ACTIVE_SOAK_RUNNING
+roadmapGate: RDP11 Continuous soak + final Evidence PASS
+rdp11Pass: NO
+operationalMainAtSoakStart: 02793adde16d18b681e869bbb560e736cc933ec5
+frozenRuntimeTarget: 3d9f33db3f1189571d40566125fbeabd00c04930
+implementationBranch: rdp11/observer-live-acceptance-b
+implementationWorktree: NONE (GitHub branch; canonical SSD504 runtime/workbench verified by UID504)
+docsCloseoutBranch: rdp11/soak-active-closeout
+canonicalWorkbench: /Volumes/Crypto-504/Crypto-Signal-Workbench/repo
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+observerAcceptance:
+- branch observer run: 36546432974
+- branch observer job: 109333830960
+- branch observer conclusion: SUCCESS
+- branch full-suite run: 36546433066
+- branch full-suite job: 109334016913
+- branch full-suite conclusion: SUCCESS
+- accepted implementation code head: 7d84dd558eecae5e1357f822b226f60c38b15d2d
+- final PR head: cdb87e8261175d391eb4f91cd00ee57856d4644d
+- PR: 1666
+- PR observer run: 36546937900
+- PR observer job: 109335477359
+- PR observer conclusion: SUCCESS
+- PR full-suite run: 36546938031
+- PR full-suite job: 109335477778
+- PR full-suite conclusion: SUCCESS
+- PR merge SHA: 02793adde16d18b681e869bbb560e736cc933ec5
+
+mergedMainBootstrap:
+- SSD504 Workbench Bootstrap run: 36547457282
+- SSD504 Workbench Bootstrap job: 109337163342
+- conclusion: SUCCESS
+- GITHUB_SHA: 02793adde16d18b681e869bbb560e736cc933ec5
+- final Workbench REPO_HEAD: 02793adde16d18b681e869bbb560e736cc933ec5
+- Workbench REPO_BRANCH: main
+- Workbench REPO_DIRTY_COUNT: 0
+- SSD504_WORKBENCH_PASS: YES
+- Agent Memory Bootstrap run: 36547457840
+- Agent Memory Bootstrap job: 109337165396
+- conclusion: SUCCESS
+- RDP9_BOOTSTRAP_FOCUSED_TESTS: PASS
+- RDP9_BOOTSTRAP_LIVE_READ_ONLY: PASS
+- PRODUCTION_RUNTIME_MUTATED: NO
+
+soakAnchor:
+- merged-main observer run: 36547457482
+- merged-main observer job: 109337164207
+- conclusion: SUCCESS
+- RDP11_RUNTIME_TARGET_EXACT: YES
+- RDP11_RUNTIME_TARGET: 3d9f33db3f1189571d40566125fbeabd00c04930
+- RDP11_SOAK_ANCHOR_CREATED: YES
+- RDP11_SOAK_START_UTC: 2026-09-29T09:13:21.134000Z
+- earliest72hEligibilityUTC: 2026-10-02T09:13:21.134000Z
+- earliest72hEligibilityEuropeIstanbul: 2026-10-02T12:13:21.134000+03:00
+- RDP11_SOAK_ELAPSED_MS: 0 at anchor creation
+- RDP11_SOAK_72H_ELIGIBLE: NO
+- RDP11_SOAK_SIDE_CAR_ONLY: YES
+- RDP11_CANONICAL_RUNTIME_MUTATED: NO
+- HISTORICAL_BACKFILL: NO
+- REAL_CAPITAL: 0
+- scheduled observer cadence: every 20 minutes via minutes 03/23/43 UTC
+- observer epoch: rdp11-3d9f33db-20260929
+- observer contract SHA256: 4e8a0b87236d84abf00aafe02e35b4e7c0cef39ba8182282ee8f9d5b9b4afeff
+
+blocker:
+- the real minimum 72-hour observation window has not elapsed.
+- RDP11 cannot PASS before 2026-10-02T09:13:21.134000Z UTC.
+- any mandatory observer violation or anchor/observer-contract/runtime-target drift invalidates the epoch; do not hide or bypass it.
+- do not mutate Product/Development frozen runtime target or ops/rdp11_soak_observer.py during this epoch unless deliberately accepting a soak restart.
+
+nextAction:
+- let the merged scheduled UID504 observer continue every 20 minutes against frozen runtime target 3d9f33db3f1189571d40566125fbeabd00c04930.
+- do not claim RDP11 PASS from elapsed time alone.
+- at or after earliest72hEligibilityUTC, inspect the immutable sidecar for anchor continuity, no invalidated.json, successful observations across the window, mandatory rail SLO/fail-closed behavior, unresolved source limitations, frozen-proof integrity/no-future state, Stream/Product continuity and REAL_CAPITAL=0.
+- only if final Evidence PASS is mechanically demonstrated may RDP11 and Reality-Backed Evidence Data Plane V1 be marked complete.
