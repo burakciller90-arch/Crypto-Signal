@@ -25,6 +25,7 @@ from crypto_signal.paper.canonical_sizing_events import (
     CanonicalSizingEventLedger,
     build_canonical_sizing_event,
 )
+from crypto_signal.paper.canonical_vault_decisions import CanonicalVaultDecisionLedger
 from crypto_signal.paper.canonical_vault_eligibility import promote_vault_eligibility
 from crypto_signal.paper.capital_science_bridge import assess_unified_decision_capital
 from crypto_signal.paper.epoch2_accounting import Epoch2CanonicalLedger
@@ -108,6 +109,19 @@ def _risk(
     )
 
 
+def _selected_at_ms(
+    *,
+    epoch2_path: Path,
+    front,
+    risk,
+) -> int:
+    decisions = CanonicalVaultDecisionLedger(
+        epoch2_path
+    ).read_assessment_decisions(front.allocator_assessment_identity)
+    latest_decision_at_ms = max(int(item["decided_at_ms"]) for item in decisions)
+    return max(risk.as_of_ms, latest_decision_at_ms) + 1
+
+
 def test_fp3_b_eligible_core_promotes_only_fixed_fractional_and_replays(
     tmp_path: Path,
 ) -> None:
@@ -116,7 +130,11 @@ def test_fp3_b_eligible_core_promotes_only_fixed_fractional_and_replays(
         epoch2_path=epoch2_path,
         front_assessed_at_ms=front.assessed_at_ms,
     )
-    selected_at_ms = risk.as_of_ms + 1
+    selected_at_ms = _selected_at_ms(
+        epoch2_path=epoch2_path,
+        front=front,
+        risk=risk,
+    )
     bridge = FP3EligibleFixedFractionalSizingBridge(
         epoch2_path=epoch2_path,
         stream_path=stream_path,
@@ -184,7 +202,11 @@ def test_fp3_b_risk_gate_holds_without_canonical_sizing_or_r22_trade(
         front_assessed_at_ms=front.assessed_at_ms,
         correlation=Decimal("0.95"),
     )
-    selected_at_ms = risk.as_of_ms + 1
+    selected_at_ms = _selected_at_ms(
+        epoch2_path=epoch2_path,
+        front=front,
+        risk=risk,
+    )
     bridge = FP3EligibleFixedFractionalSizingBridge(
         epoch2_path=epoch2_path,
         stream_path=stream_path,
@@ -218,7 +240,7 @@ def test_fp3_b_risk_gate_holds_without_canonical_sizing_or_r22_trade(
     assert held.receipt.stage_status is FP3SizingStageStatus.HELD_RISK_GATE
     assert held.receipt.selection_identity is None
     assert held.receipt.sizing_event_identity is None
-    assert "correlation_cap_exceeded" in held.receipt.reason_codes
+    assert "correlation_limit_breached" in held.receipt.reason_codes
     assert replay.disposition is FP3SizingProcessDisposition.REPLAYED
     assert replay.receipt == held.receipt
     assert R22Epoch2AtomicTape(epoch2_path).audit_all_read_only() == before_r22
@@ -315,7 +337,11 @@ def test_fp3_b_recovers_when_canonical_event_exists_but_stage_receipt_is_missing
         epoch2_path=epoch2_path,
         front_assessed_at_ms=front.assessed_at_ms,
     )
-    selected_at_ms = risk.as_of_ms + 1
+    selected_at_ms = _selected_at_ms(
+        epoch2_path=epoch2_path,
+        front=front,
+        risk=risk,
+    )
     event_context = _event_context()
 
     auxiliary = build_capital_forward_auxiliary_evidence(
@@ -415,7 +441,11 @@ def test_fp3_b_sizing_stage_receipt_is_physically_immutable(
         epoch2_path=epoch2_path,
         front_assessed_at_ms=front.assessed_at_ms,
     )
-    selected_at_ms = risk.as_of_ms + 1
+    selected_at_ms = _selected_at_ms(
+        epoch2_path=epoch2_path,
+        front=front,
+        risk=risk,
+    )
     result = FP3EligibleFixedFractionalSizingBridge(
         epoch2_path=epoch2_path,
         stream_path=stream_path,
@@ -450,3 +480,34 @@ def test_fp3_b_sizing_stage_receipt_is_physically_immutable(
         vault_id=PaperVaultId.CORE,
     )
     assert persisted == result.receipt
+
+
+def test_fp3_b_rejects_selection_before_front_decision_chronology(
+    tmp_path: Path,
+) -> None:
+    epoch2_path, stream_path, autopilot_path, issuance, front = _front(tmp_path)
+    risk = _risk(
+        epoch2_path=epoch2_path,
+        front_assessed_at_ms=front.assessed_at_ms,
+    )
+    decisions = CanonicalVaultDecisionLedger(
+        epoch2_path
+    ).read_assessment_decisions(front.allocator_assessment_identity)
+    latest_decision_at_ms = max(int(item["decided_at_ms"]) for item in decisions)
+    bridge = FP3EligibleFixedFractionalSizingBridge(
+        epoch2_path=epoch2_path,
+        stream_path=stream_path,
+        autopilot_path=autopilot_path,
+    )
+
+    with pytest.raises(ValueError, match="follow latest canonical vault decision"):
+        bridge.process(
+            issuance,
+            event_context=_event_context(),
+            base_asset="BTC",
+            vault_id=PaperVaultId.CORE,
+            policy=_policy(),
+            risk_inputs=risk,
+            selected_at_ms=latest_decision_at_ms,
+            processed_at_ms=latest_decision_at_ms + 1,
+        )
