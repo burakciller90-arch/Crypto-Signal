@@ -538,7 +538,7 @@ Open and merge FP3-C1 as an isolated PR after current-main/overlap checks. Then 
 
 ## 15. FP3-C2 frozen multi-entry lineage contract
 
-Status: **AUDIT COMPLETE / IMPLEMENTATION AUTHORIZED**
+Status: **PASS — MERGED / MECHANICALLY ACCEPTED**
 
 Canonical facts:
 - R21 positions already accumulate multiple BUY quantities.
@@ -552,8 +552,8 @@ C2 rules:
 - SCALE_IN requires a distinct forecast identity and distinct accepted FP3-B sizing selection/receipt versus every currently active BUY entry.
 - exact replay preflight remains mandatory.
 - canonical BUY commit remains the only mutation owner.
-- sell keeps one original/open anchor forecast+proof+sizing assessment for scalar R22 sell-intent fields.
-- sell validation requires exactly one active BUY matching that anchor.
+- sell scalar forecast/proof/sizing fields bind the latest active accepted BUY lineage;
+- sell validation verifies the complete active BUY set and requires the supplied scalar anchor to match that latest active entry.
 - all active BUY intents/fills are verified immutable R22 truth; their intent/fill identities form the complete active-entry evidence set.
 - that full active-entry evidence set is added to sell R22 source evidence and outcome evidence.
 - weighted-average basis remains owned solely by `reconstruct_open_cost_basis`.
@@ -572,12 +572,12 @@ PASS:
 - REAL_CAPITAL=0 and RDP11 soaked target remains untouched.
 
 Exact next action:
-Implement the minimal C2 validator/action changes and focused tests; no FP3-D work before C2 PASS.
+FP3-C2 is mechanically PASS. Start FP3-D genuine-forward liveness on a fresh isolated task checkpoint; fixtures cannot satisfy FP3-D.
 
 
 ## 15. FP3-C2 implementation / acceptance
 
-Status: **IMPLEMENTED / ACCEPTANCE PENDING**
+Status: **PASS — PR #1683 MERGED AS d3f40b52629d4f67a07a0ac32ce0326e7a66dfdd**
 
 Base main:
 \`1260d6096900107eeb9839ea9a094bb5ce9f028e\`
@@ -602,4 +602,15 @@ Focused mechanical proof added:
 - action replay leaves Epoch2 and Stream bytes unchanged;
 - flattened position leaves no active BUY entry set.
 
-PASS is not claimed until exact PR/full UID504 acceptance succeeds.
+Mechanical acceptance:
+- accepted PR head: `7ab66c7e1d27899bd48414a087f29db3f1426e48`;
+- WC6 PR run `36612810152` / job `109558250167`: PASS including whole-repository regression and Development non-mutation;
+- RDP11 pre-soak fulltest `36612810246` / job `109558250148`: PASS including pytest/Ruff/mypy/JS and non-mutation;
+- F10 run `36612810257`: PASS;
+- post-merge main WC6 `36613594700` / job `109560887152`: PASS;
+- SSD504 Workbench run `36613594563` / job `109560885562`: main `d3f40b52629d4f67a07a0ac32ce0326e7a66dfdd`, dirty=0;
+- REDUCE replay + remaining-basis reconciliation + subsequent EXIT are covered;
+- full-position EXIT removes exact remaining cost basis rather than relying on a lossy Decimal multiply-back;
+- REAL_CAPITAL=0; historical backfill NO; frozen RDP11 Product/Development target unchanged.
+
+FP3-C2 PASS is mechanical. Next gate: **FP3-D genuine forward liveness acceptance**; fixture-only evidence is insufficient.
