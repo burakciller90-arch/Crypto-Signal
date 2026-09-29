@@ -4277,3 +4277,36 @@ Bounded fix:
 Exact nextAction:
 Apply exactly the three Ruff changes, rerun exact-head UID504 acceptance, require pytest + Ruff + strict mypy + non-mutation + isolation PASS, then restore the temporary workflow to exact current-main content.
 
+
+
+## FP1-F ACCEPTANCE ATTEMPT 3 — PYTEST PASS / RUFF STYLE FIX START — 2026-09-29
+
+status: FP1_F_RUFF_FIX
+acceptanceRun: 36582841674
+acceptanceJob: 109457334434
+attemptedHead: c474c1ebd7c3015bb946c05b253b69acd584fa48
+realCapital: 0
+historicalBackfill: NO
+
+Mechanical evidence:
+- exact-source checkout PASS;
+- focused/regression pytest reached 100% PASS;
+- canonical non-mutation PASS;
+- Ruff blocked the gate before mypy with exactly three style findings;
+- no semantic/product assertion failure remains in this run.
+
+Exact Ruff findings:
+1. I001 import order: DashboardReader must precede DashboardReadError;
+2. FURB188: use str.removesuffix("USDT") for base-asset projection;
+3. SIM102: combine exact-identity signal path nested if statements.
+
+Bounded fix:
+- style/import only;
+- no query/ranking/source/field/persistence contract change.
+
+Workflow state:
+- temporary UID504 branch wiring restored to exact current-main blob before editing, preventing intermediate acceptance spam.
+
+Exact nextAction:
+Apply exactly the three Ruff edits, then re-wire one final exact-head UID504 acceptance and require pytest + Ruff + strict mypy + non-mutation + isolation PASS.
+
