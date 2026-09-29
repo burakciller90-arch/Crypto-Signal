@@ -6085,3 +6085,24 @@ Implement C2 in canonical_capital_runtime.py + autopilot_forward_actions.py only
 - REAL_CAPITAL=0; no backfill/deploy; frozen RDP11 runtime untouched; Durdurulmaz/Quantum untouched
 - blocker: rebase + exact-head acceptance pending
 - nextAction: merge docs handoff #1694, replay FP4-D files onto latest main, then open PR and run dedicated/WC6/RDP11/F10 acceptance
+
+
+## 2026-09-29 — FP4-E canonical execution receipt implementation checkpoint
+
+- parent FP4-D accepted head `17b80ba114123defc1af5a4ccc84a997f31ab907`; merged main `767cfdd52a816054899165cfb65727199619dc88`
+- branch `fp4e/execution-receipt-v2` replayed cleanly onto exact FP4-D main
+- duplicate audit: branch existed only as a start checkpoint; no competing implementation/PR
+- implemented immutable `ExecutionReceiptV2` binding authoritative venue/pretrade + exactly one FP4-A depth or FP4-B passive-limit outcome + FP4-D fee projection
+- depth executions require TAKER fee; passive limit executions require MAKER fee
+- FULL/PARTIAL require exact PROVEN fee with matching symbol/action/fill notional
+- NOT_FILLED/FILL_NOT_PROVEN forbid fee/cost invention
+- actual average fill is authoritative; v1 spread/slippage rates are not re-applied
+- analytical immediate cost = non-negative adverse price impact + exact fee; favorable improvement is never a negative credit
+- FP4-C funding remains separate settlement accounting and is explicitly not folded into receipt cost
+- receipt binds venue-rule snapshot, pretrade, plan, execution snapshot, outcome, market evidence, fee projection and fee schedule identities
+- no R21/R22 schema mutation, no runtime deploy/backfill
+- focused tests cover depth full/partial, passive full, not-filled, fill-not-proven, wrong fee role/notional, nonfilled fee rejection and replay identity
+- dedicated workflow `.github/workflows/fp4e-execution-receipt-uid504.yml`
+- REAL_CAPITAL=0; frozen RDP11 target untouched; Durdurulmaz/Quantum untouched
+- blocker: exact-head acceptance not run yet
+- nextAction: open isolated PR and require dedicated FP4-E + WC6 + RDP11 + F10 PASS before merge; then post-merge Workbench proof and FP4 closeout
