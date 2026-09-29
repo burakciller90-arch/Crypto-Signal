@@ -6,6 +6,7 @@ from pathlib import Path
 import pytest
 from test_autopilot_forward_actions import (
     _action_bridge,
+    _half_quantity,
     _sized_chain,
 )
 from test_autopilot_forward_sizing import (
@@ -381,7 +382,98 @@ def test_fp3_c2_scale_in_then_exit_preserves_multi_entry_lineage_and_replays(
             processed_at_ms=scale_at + 70,
         )
 
-    exit_at = scale_at + 80
+    reduce_at = scale_at + 80
+    reduce_quantity = _half_quantity(epoch2_path)
+    reduce_intent = build_fp3_action_intent(
+        front_receipt_identity=second_front.receipt_identity,
+        sizing_receipt_identity=second_sizing.receipt_identity,
+        forecast_identity=second_issuance.forecast.forecast_identity,
+        proof_identity=second_issuance.proof.proof_identity,
+        vault_id=PaperVaultId.CORE,
+        symbol=PaperSymbol.BTCUSDT,
+        reason=FP3ActionReason.PARTIAL_TAKE_PROFIT,
+        action_evidence_identity=_sha("fp3c2-reduce-evidence"),
+        requested_at_ms=reduce_at,
+        quantity=reduce_quantity,
+    )
+    reduced = bridge.process_sell(
+        reduce_intent,
+        second_issuance,
+        sizing_assessment=second_assessment,
+        reference_price=Decimal("106"),
+        reference_price_evidence_identity=_sha("fp3c2-reduce-reference"),
+        mark_prices={PaperSymbol.BTCUSDT: Decimal("106")},
+        mark_evidence_identity=_sha("fp3c2-reduce-mark"),
+        execution_snapshot=_execution_snapshot(),
+        filled_at_ms=reduce_at + 10,
+        mutated_at_ms=reduce_at + 11,
+        snapshot_at_ms=reduce_at + 20,
+        processed_at_ms=reduce_at + 30,
+    )
+    epoch_after_reduce = epoch2_path.read_bytes()
+    stream_after_reduce = stream_path.read_bytes()
+    reduce_replay = bridge.process_sell(
+        reduce_intent,
+        second_issuance,
+        sizing_assessment=second_assessment,
+        reference_price=Decimal("106"),
+        reference_price_evidence_identity=_sha("fp3c2-reduce-reference"),
+        mark_prices={PaperSymbol.BTCUSDT: Decimal("106")},
+        mark_evidence_identity=_sha("fp3c2-reduce-mark"),
+        execution_snapshot=_execution_snapshot(),
+        filled_at_ms=reduce_at + 10,
+        mutated_at_ms=reduce_at + 11,
+        snapshot_at_ms=reduce_at + 20,
+        processed_at_ms=reduce_at + 90,
+    )
+    assert reduced.disposition is FP3ActionProcessDisposition.INSERTED
+    assert reduced.receipt.canonical_action is PaperAction.REDUCE
+    assert reduced.receipt.outcome_identity is not None
+    assert reduce_replay.disposition is FP3ActionProcessDisposition.REPLAYED
+    assert reduce_replay.receipt == reduced.receipt
+    assert epoch2_path.read_bytes() == epoch_after_reduce
+    assert stream_path.read_bytes() == stream_after_reduce
+
+    history_after_reduce = R22Epoch2AtomicTape(epoch2_path).read_trade_history(
+        PaperVaultId.CORE,
+        PaperSymbol.BTCUSDT,
+    )
+    basis_after_reduce = reconstruct_open_cost_basis(
+        history_after_reduce,
+        vault_id=PaperVaultId.CORE,
+        symbol=PaperSymbol.BTCUSDT,
+    )
+    current_after_reduce = _current_vault(epoch2_path, PaperVaultId.CORE)
+    held_after_reduce = next(
+        item.quantity
+        for item in current_after_reduce.positions
+        if item.symbol is PaperSymbol.BTCUSDT
+    )
+    assert basis_after_reduce.open_quantity == held_after_reduce
+    assert basis_after_reduce.open_quantity == held - reduce_quantity
+    assert (
+        basis_after_reduce.average_cost_per_unit_usdt
+        == basis.average_cost_per_unit_usdt
+    )
+    active_after_reduce = read_canonical_active_buy_entries(
+        epoch2_path=epoch2_path,
+        vault_id=PaperVaultId.CORE,
+        symbol=PaperSymbol.BTCUSDT,
+    )
+    assert len(active_after_reduce) == 2
+
+    complete_entry_evidence = {
+        identity
+        for entry in active_entries
+        for identity in (entry.intent_identity, entry.fill_identity)
+    }
+    reduce_intent_raw = history_after_reduce[-1]["intent"]
+    assert isinstance(reduce_intent_raw, dict)
+    reduce_sources_raw = reduce_intent_raw["source_evidence_identities"]
+    assert isinstance(reduce_sources_raw, list)
+    assert complete_entry_evidence.issubset(set(reduce_sources_raw))
+
+    exit_at = reduce_at + 120
     exit_intent = build_fp3_action_intent(
         front_receipt_identity=second_front.receipt_identity,
         sizing_receipt_identity=second_sizing.receipt_identity,
@@ -452,5 +544,6 @@ def test_fp3_c2_scale_in_then_exit_preserves_multi_entry_lineage_and_replays(
     assert [item["fill"]["action"] for item in trade_history] == [
         PaperAction.BUY.value,
         PaperAction.BUY.value,
+        PaperAction.REDUCE.value,
         PaperAction.EXIT.value,
     ]
