@@ -641,8 +641,6 @@ class FP3PreregisteredActionBridge:
                     or entry.proof_identity == intent.proof_identity
                     or entry.sizing_assessment_identity
                     == sizing_assessment.assessment_identity
-                    or entry.sizing_decision_identity
-                    == sizing.fixed_fractional_result_identity
                 ):
                     raise ValueError(
                         "FP3-C SCALE_IN requires distinct forecast/proof/sizing lineage"
