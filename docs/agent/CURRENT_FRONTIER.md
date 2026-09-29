@@ -1564,3 +1564,46 @@ Safety:
 
 Exact nextAction:
 Repair the observer time-sampling boundary only, rerun the exact live dry-run acceptance, and inspect the next mechanically exposed blocker rather than skipping ahead.
+
+
+## RDP11 observer collector TOCTOU/performance repair checkpoint — 2026-09-29
+
+Acceptance run:
+- run: `36545250707`
+- job: `109329971641`
+- exact workflow head: `cda39de115c8495f390309184ca5de6509498a21`
+- conclusion: FAILURE
+- soak anchor: NOT CREATED
+
+Product endpoint timing evidence from the same UID504 run:
+- `/api/health`: HTTP 200 / 0.001689s
+- `/api/stream/messages?limit=5`: HTTP 200 / 3.731577s
+- finite SSE: HTTP 200 / 1.808475s
+- `/api/intelligence-center`: HTTP 200 / 0.015752s
+- Product endpoint timing probe: PASS
+
+Deterministic remaining failure:
+- `ObservationFailure: collector evidence timestamp is from the future`.
+- `main()` freezes `now_ms` once before the whole observation.
+- `_inspect_collector()` performs three SQLite checks before reading the newest live heartbeat, including a full `PRAGMA quick_check` on the large live `market_tape.sqlite3`.
+- the branch acceptance step entered observer execution at about 08:50:43Z and reached the collector timestamp comparison at about 08:56:09Z.
+- a live collector is expected to write newer heartbeat/ingestion timestamps during that interval, so comparing the latest heartbeat to the observation-start timestamp is a TOCTOU false-positive, not proof of future data.
+- the same path also makes a 20-minute recurring observer spend minutes performing a whole live market DB quick-check before freshness evaluation.
+
+Repair boundary:
+- do NOT weaken the 120s heartbeat/raw freshness threshold.
+- do NOT allow genuinely future timestamps.
+- retain read-only SQLite quick-checks on bounded/smaller control/evidence databases.
+- replace the recurring whole large `market_tape.sqlite3` integrity scan with a bounded read/lock/schema probe; deep integrity is not required on every 20-minute sample.
+- sample wall-clock time at the point the live heartbeat/raw rows are read.
+- stamp the top-level successful observation at completion so its as-observed time cannot predate live rows read during the observation.
+
+Safety:
+- canonical runtime/evidence writes: NONE
+- `HISTORICAL_BACKFILL=NO`
+- `REAL_CAPITAL=0`
+- Durdurulmaz touched: NO
+- Quantum Capital touched: NO
+
+Exact nextAction:
+Apply only the collector sampling-time + bounded-large-DB-probe repair, keep the accepted 8s Stream endpoint contract and all fail-closed freshness/no-future rules, then rerun exact-head UID504 live dry-run acceptance.
