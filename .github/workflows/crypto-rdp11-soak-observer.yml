@@ -84,6 +84,52 @@ jobs:
           probe INTELLIGENCE http://127.0.0.1:48700/api/intelligence-center 60
           grep -F 'retry:' /tmp/rdp11-SSE.out >/dev/null
           echo "RDP11_PRODUCT_ENDPOINT_TIMING_PROBE=PASS"
+      - name: Diagnostic only - collector clock delta
+        if: github.event_name == 'push' && github.ref != 'refs/heads/main'
+        shell: bash
+        run: |
+          set -euo pipefail
+          /usr/bin/python3 - <<'PY'
+          import sqlite3
+          import time
+          from pathlib import Path
+
+          path = Path('/Volumes/Crypto-504/Crypto-Signal/Development/runtime/market_tape/collector_runtime.sqlite3')
+          uri = f'{path.resolve().as_uri()}?mode=ro'
+          db = sqlite3.connect(uri, uri=True, timeout=5.0)
+          db.row_factory = sqlite3.Row
+          db.execute('PRAGMA query_only=ON')
+          instance = db.execute(
+              "SELECT instance_identity, started_at_ms, process_id "
+              "FROM collector_instances "
+              "WHERE provider='bybit' AND source='market_tape_stream' "
+              "ORDER BY started_at_ms DESC, instance_identity DESC LIMIT 1"
+          ).fetchone()
+          if instance is None:
+              raise SystemExit('COLLECTOR_INSTANCE_MISSING')
+          heartbeat = db.execute(
+              "SELECT heartbeat_identity, sequence_no, observed_at_ms, last_successful_ingestion_ms "
+              "FROM collector_heartbeats WHERE instance_identity=? "
+              "ORDER BY sequence_no DESC LIMIT 1",
+              (str(instance['instance_identity']),),
+          ).fetchone()
+          read_at_ms = time.time_ns() // 1_000_000
+          if heartbeat is None:
+              raise SystemExit('COLLECTOR_HEARTBEAT_MISSING')
+          observed = int(heartbeat['observed_at_ms'])
+          ingested = int(heartbeat['last_successful_ingestion_ms'])
+          print(f'RDP11_COLLECTOR_READ_AT_MS={read_at_ms}')
+          print(f'RDP11_COLLECTOR_HEARTBEAT_MS={observed}')
+          print(f'RDP11_COLLECTOR_INGESTION_MS={ingested}')
+          print(f'RDP11_COLLECTOR_HEARTBEAT_AGE_MS={read_at_ms-observed}')
+          print(f'RDP11_COLLECTOR_INGESTION_AGE_MS={read_at_ms-ingested}')
+          print(f"RDP11_COLLECTOR_SEQUENCE={int(heartbeat['sequence_no'])}")
+          print(f"RDP11_COLLECTOR_PROCESS_ID={int(instance['process_id'])}")
+          print('RDP11_COLLECTOR_CLOCK_DIAGNOSTIC=COMPLETE')
+          db.close()
+          PY
+          echo 'RDP11_DIAGNOSTIC_ONLY_STOP=YES'
+          exit 42
       - name: Branch and PR live dry-run acceptance
         if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref != 'refs/heads/main')
         shell: bash
