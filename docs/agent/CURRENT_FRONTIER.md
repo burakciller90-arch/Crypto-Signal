@@ -7184,3 +7184,22 @@ Repair boundary:
 
 Exact nextAction:
 Apply only the circular-import repair, append the repair handoff, and require all exact-head acceptance lanes again. No result from `fecdeb9d...` can close the gate.
+
+
+
+### FP5-B CIRCULAR-IMPORT REPAIR APPLIED — 2026-09-30
+
+repairCommit: 7afbee135c89a897888636699d2799f0bdc6c6f1
+repairType: DEPENDENCY_ONLY
+behaviorChange: NO
+identityFormulaChange: NO
+v1SemanticChange: NO
+
+Repair:
+- removed runtime `portfolio_risk_v2` import from `canonical_sizing.py`;
+- `PortfolioAllocationAssessmentV2` is now TYPE_CHECKING-only;
+- runtime status dispatch reads the accepted FP5 status enum value (`deployable`, `hold_cash`, `not_proven`) from the supplied immutable assessment;
+- V2 cap formula, exact R21/FP5 lineage checks, V1 payload compatibility and authority boundaries are unchanged.
+
+Acceptance rule:
+All results from prior head `fecdeb9d...` are stale. Require dedicated FP5-B + WC6 + RDP11 Pre-Soak + F10 again on the final exact head after this checkpoint.
