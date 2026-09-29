@@ -6187,3 +6187,16 @@ Implement C2 in canonical_capital_runtime.py + autopilot_forward_actions.py only
 - repair required: bind accepted FP3 risk/sizing + Event/Confluence identities, classify every exposure uniquely, reconcile cash+gross to NAV, fix 100% cash proof
 - REAL_CAPITAL=0; no deploy/backfill; frozen RDP11 runtime untouched; Durdurulmaz/Quantum untouched
 - nextAction: patch existing FP5-A in place and only then open acceptance PR
+
+
+## 2026-09-29 — FP5-A semantic hardening checkpoint
+
+- after first WC6 mypy-only repair, static audit found a portfolio-risk gap before acceptance
+- previous snapshot allowed an existing exposure asset to belong to zero or multiple correlation clusters
+- that could make cluster exposure incomplete/ambiguous even though portfolio gross exposure remained counted
+- hardened snapshot invariant: every asset with current gross exposure must belong to exactly one correlation cluster
+- added focused tests for unclustered and multiply-clustered existing exposures
+- candidate asset still requires exactly one cluster; missing/ambiguous candidate remains NOT_PROVEN
+- no allocation formula, FP3 sizing owner, Smart Capital owner, R21/R22 or runtime state changed
+- REAL_CAPITAL=0; no deploy/backfill; frozen RDP11 runtime untouched; Durdurulmaz/Quantum untouched
+- nextAction: require fresh exact-head FP5-A + WC6 + RDP11 + F10 PASS before merge
