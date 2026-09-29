@@ -5942,3 +5942,26 @@ Implement C2 in canonical_capital_runtime.py + autopilot_forward_actions.py only
 - REAL_CAPITAL=0; Durdurulmaz untouched; Quantum Capital untouched
 - blocker: none for FP4-A
 - nextAction: merge after final main/duplicate recheck, verify SSD504 Workbench, then start isolated FP4-B
+
+
+## 2026-09-29 — FP4-A merged PASS / Workbench exact-main verified
+
+- exact main: `918e269e70f1e87df492fd0db00f8b21b397d3e1`
+- source branch / PR: `fp4a/depth-aware-execution-v2` / #1688
+- accepted code head: `cd8e6af5f0e25d6f104268e684b63d25d9e9aabb`
+- accepted PR head with handoff docs: `4c24613a8cab36f225af1e463095e7c6ea18e39d`
+- merge SHA: `918e269e70f1e87df492fd0db00f8b21b397d3e1`
+- session-local worktree: not created in connector session
+- Workbench run/job: `36619632691` / `109581427237`
+- Workbench exact state: `/Volumes/Crypto-504/Crypto-Signal-Workbench/repo`, HEAD `918e269e70f1e87df492fd0db00f8b21b397d3e1`, branch `main`, dirty `0`, `SSD504_WORKBENCH_PASS=YES`
+- dedicated FP4-A run/job: `36618938401` / `109579075252` PASS
+- WC6 run/job: `36618938375` / `109579064102` PASS
+- RDP11 pre-soak run/job: `36618938277` / `109579069996` PASS
+- F10 run: `36618938385` PASS
+- post-merge WC6 run `36619632751` queued at checkpoint
+- post-merge Stage10 run `36619632673` failed; log blob unavailable, cause unclassified
+- FP4-A depth/VWAP/full-partial-not-filled-not-proven/PIT/replay contract accepted; v1 unchanged
+- FP4 whole phase remains open
+- REAL_CAPITAL=0; HISTORICAL_BACKFILL=NO; no Product/Development deploy; Durdurulmaz/Quantum untouched
+- blocker: none for FP4-A; FP3-D and RDP11 remain independent waiting gates
+- nextAction: start isolated FP4-B latency/queue/timeout contract from exact current main

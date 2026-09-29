@@ -6285,3 +6285,57 @@ Current blocker:
 
 Exact nextAction:
 Before merge, recheck current main and open FP4 branches for parallel-agent drift. If unchanged/mergeable, merge PR #1688 as the isolated FP4-A slice, verify post-merge SSD504 Workbench exact-main sync, then start FP4-B from the new main without changing the frozen RDP11 runtime.
+
+
+## FP4-A DEPTH-AWARE EXECUTION V2 MERGED / POST-MERGE VERIFIED — 2026-09-29
+
+status: FP4A_PASS_MERGED
+verifiedMain: 918e269e70f1e87df492fd0db00f8b21b397d3e1
+sourceBranch: fp4a/depth-aware-execution-v2
+sourcePr: 1688
+acceptedCodeHead: cd8e6af5f0e25d6f104268e684b63d25d9e9aabb
+acceptedPrHeadWithDocs: 4c24613a8cab36f225af1e463095e7c6ea18e39d
+mergeSha: 918e269e70f1e87df492fd0db00f8b21b397d3e1
+handoffBranch: handoff/fp4a-pass-20260929
+sessionLocalWorktree: NOT_CREATED_IN_CONNECTOR_SESSION
+canonicalWorkbenchRepo: /Volumes/Crypto-504/Crypto-Signal-Workbench/repo
+workbenchRun: 36619632691
+workbenchJob: 109581427237
+workbenchHead: 918e269e70f1e87df492fd0db00f8b21b397d3e1
+workbenchBranch: main
+workbenchDirtyCount: 0
+fp4aAcceptanceRun: 36618938401
+fp4aAcceptanceJob: 109579075252
+wc6AcceptanceRun: 36618938375
+wc6AcceptanceJob: 109579064102
+rdp11PreSoakRun: 36618938277
+rdp11PreSoakJob: 109579069996
+f10AcceptanceRun: 36618938385
+postMergeWc6Run: 36619632751
+postMergeStage10Run: 36619632673
+realCapital: 0
+historicalBackfill: NO
+RDP11RuntimeMutation: NO
+ProductDevelopmentDeploy: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Post-merge proof:
+- SSD504 Workbench bootstrap PASS;
+- canonical Workbench repo ff-synced from prior main to exact merge SHA;
+- Workbench branch `main`, dirty count 0;
+- frozen Product/Development runtime was not deployed or mutated by FP4-A;
+- post-merge WC6 is queued at this checkpoint and is not needed to manufacture FP4-A acceptance because the exact accepted code head already passed dedicated FP4-A, WC6, RDP11 pre-soak and F10 gates before merge;
+- post-merge Stage10 run `36619632673` reports FAILURE, but its GitHub job-log blob is unavailable at this checkpoint; cause remains unclassified and is not invented or used as FP4-A evidence.
+
+FP4 phase state:
+- FP4-A is PASS and merged;
+- FP4 as a whole is NOT PASS yet;
+- remaining isolated work includes latency/queue/limit uncertainty + timeout/cancel semantics, perpetual funding costs, instrument-specific cost/rule integration and later canonical bridge/acceptance.
+
+Current blocker:
+- none for FP4-A.
+- FP3-D remains independently WAITING for genuine post-activation issuance; RDP11 remains ACTIVE / NOT PASS.
+
+Exact nextAction:
+Start isolated FP4-B from current exact main. Audit duplicate latency/queue/timeout owners, then build only the missing fail-closed execution-timing/queue contract over immutable Market Tape truth without mutating the frozen RDP11 runtime.
