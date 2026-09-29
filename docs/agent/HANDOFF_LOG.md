@@ -5030,3 +5030,44 @@ Frozen implementation boundary:
 Exact nextAction:
 Implement FP3-B helper/store contract and focused tests over merged FP3-A; then run exact-head UID504 acceptance.
 
+
+
+## FP3-B IMPLEMENTATION COMPLETE / ACCEPTANCE START — 2026-09-29
+
+status: FP3_B_ACCEPTANCE_START
+verifiedMain: 1347ee8550e04a8491c20227bad50d9aeb3fba4e
+activeBranch: fp3b/eligible-fixed-fractional-sizing
+implementationHead: 5564a0f7d57b07c0ca07acb10dca6b59e2ce2e5e
+realCapital: 0
+historicalBackfill: NO
+RDP11RuntimeMutation: NO
+ProductDevelopmentDeploy: NO
+
+Implemented FP3-B:
+- isolated FP3 sizing-risk input contract with exact evidence identities;
+- exact FP3-A candidate/allocation identity reconciliation before sizing;
+- ELIGIBLE-only promotion via existing canonical eligibility proof;
+- exact R21 current-drawdown equality check;
+- existing Position Sizing Intelligence reuse;
+- fixed-fractional-only canonical promotion;
+- risk-gated HOLD produces no canonical sizing event/trade;
+- accepted CanonicalSizingEvent + Stream sizing projection reuse;
+- append-only sizing-stage receipt unique per forecast+vault;
+- exact replay and crash-style missing-receipt recovery;
+- HOLD/BLOCK vaults never enter sizing;
+- R22 trade/fill/accounting remains untouched.
+
+Focused tests:
+- eligible Core sizing + exact replay;
+- risk gate HOLD without event/R22 trade;
+- HOLD vault skip;
+- R21 drawdown mismatch rejection;
+- canonical event/Stream projection recovery when stage receipt is missing;
+- physical sizing receipt immutability.
+
+Acceptance blocker:
+- exact-head UID504 pytest/Ruff/strict-mypy/non-mutation/project-isolation has not run yet.
+
+Exact nextAction:
+Temporarily wire MI1 UID504 acceptance for autopilot_forward_sizing.py + test_autopilot_forward_sizing.py; fix only evidenced failures, restore workflow after PASS.
+
