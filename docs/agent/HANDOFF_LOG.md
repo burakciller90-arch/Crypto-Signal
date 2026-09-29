@@ -4728,3 +4728,52 @@ Current blocker:
 Exact nextAction:
 Recheck current main and duplicate PR state, open one FP2 PR, inspect exact changed-file set and PR checks, then merge only if isolated and no RDP11 soaked-runtime conflict exists.
 
+
+
+## FP3 CANONICAL PAPER CAPITAL AUTOPILOT FORWARD RUNTIME TASK START — 2026-09-29
+
+status: FP3_FORWARD_RUNTIME_AUDIT_START
+taskStartMain: 439f304d423a643597b089653bbf53f030981a45
+activeBranch: fp3/canonical-paper-autopilot-forward-runtime
+sessionLocalWorktree: NONE
+canonicalWorkbench: /Volumes/Crypto-504/Crypto-Signal-Workbench/repo
+canonicalRoadmap: docs/CRYPTO_SIGNAL_FINAL_PRODUCT_MASTER_ROADMAP_V1.md
+activePointer: ACTIVE_ROADMAP.md
+mechanicalGate: FP0 / RDP11 Continuous soak + final Evidence PASS remains ACTIVE / NOT PASS
+classification: REUSE S11/R21/R22/Smart Capital/fixed-fractional truth + EXTEND isolated forward orchestrator only
+duplicateCheck: no open FP3 PR, no fp3 branch and no FP3 commit existed on current main at task start
+realCapital: 0
+historicalBackfill: NO
+RDP11RuntimeMutation: FORBIDDEN
+ProductDevelopmentDeploy: FORBIDDEN
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+FP2 closure:
+- FP2 Paper Vault V3 merged via PR #1679;
+- merge SHA: 439f304d423a643597b089653bbf53f030981a45;
+- accepted UID504 run 36587124704 / job 109470381739 PASS;
+- PR RDP11 pre-soak fulltest PASS;
+- PR F10 closeout PASS;
+- WC6 Paper Recovery Reconciliation PASS;
+- Epoch 1/2 and soaked runtime were not mutated.
+
+Bounded FP3 goal:
+- make accepted S11/R21/R22 machinery operate as one canonical forward paper-capital runtime;
+- reuse exact Smart Capital Allocator, fixed-fractional sizing, canonical vault decisions/lifecycle, R21 accounting, R22 tape, Decision Proof lineage and Capital Stream projectors;
+- support HOLD_CASH plus canonical trade lifecycle actions only when preregistered exact policy permits;
+- every accepted event remains append-only and freezes exact decision/proof/evidence/action/quantity/notional/execution-policy/cost/accounting/reason/time lineage;
+- restart/replay must be idempotent;
+- all three sleeves must independently HOLD/BLOCK/ELIGIBLE under exact rules;
+- genuine forward liveness evidence is mandatory; fixtures cannot satisfy the final liveness requirement;
+- no discretionary fear veto after all preregistered gates pass;
+- no gate weakening merely to generate a trade;
+- no runtime/deploy/main behavior change that can invalidate the active RDP11 soak.
+
+Current blocker:
+- existing forward-runtime pieces are numerous and historically layered; exact overlap among paper write tick, same-cycle runtime, S11 canonical capital, R21/R22 and activation/watermark/replay paths has not yet been re-audited on current main.
+- production implementation is forbidden until one canonical owner/orchestration boundary and idempotence contract are frozen.
+
+Exact nextAction:
+Audit paper write-tick/orchestration/same-cycle/shadow/runtime modules, S11 canonical decision+sizing+lifecycle, R21/R22 append APIs, activation/watermark/replay semantics and existing forward-evidence policies; freeze FP3 reuse/extend/build and forward-runtime persistence contract before production code.
+
