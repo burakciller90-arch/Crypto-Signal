@@ -10,6 +10,7 @@ from fastapi.testclient import TestClient
 from crypto_signal.data.event_risk import (
     EventCategory,
     EventSourceQuality,
+    StructuredEventObservation,
     build_event_calendar_coverage,
     build_structured_event_observation,
 )
@@ -405,7 +406,7 @@ def _append_calendar_snapshot(
     coverage_start_ms: int,
     coverage_end_ms: int,
     coverage_categories: tuple[EventCategory, ...],
-    events: tuple[object, ...],
+    events: tuple[StructuredEventObservation, ...],
     suffix: str,
 ) -> None:
     store = EventSourceRuntimeStore(path)
@@ -425,7 +426,7 @@ def _append_calendar_snapshot(
         adapter_version=f"calendar-{suffix}/1",
     )
     identities = tuple(
-        sorted(str(getattr(item, "event_identity")) for item in events)
+        sorted(item.event_identity for item in events)
     )
     fetch = build_event_source_fetch_observation(
         source_provider=provider,
