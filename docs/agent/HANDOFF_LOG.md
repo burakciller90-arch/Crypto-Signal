@@ -3607,3 +3607,58 @@ C2 PASS:
 
 Exact nextAction:
 Inspect the accepted C1 dataclass/function surface, then implement the smallest Event Rail customer projection plus focused final_product_read_model tests. Do not edit web.py/frontend.
+
+
+## FP1-C2 IMPLEMENTATION-COMPLETE / ACCEPTANCE-START CHECKPOINT — 2026-09-29
+
+status: FP1_C2_ACCEPTANCE_START
+activeBranch: fp1c/event-rail-read-model
+implementationHead: 86da1f637d90450d75412732f580319ac56d6f6b
+baseMain: bb083c062154dd804e087777310c43d4710d29c0
+prerequisiteC1: PASS
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Implemented C2 production scope:
+- src/crypto_signal/product/final_product_read_model.py;
+- optional event_source_runtime_path;
+- EventRailView / EventRailItem / EventRailCoverageView;
+- audit-only event/coverage/fetch identities;
+- event_rail(...) delegates truth selection to accepted read_event_source_calendar_rail(...);
+- customer-safe category/source-quality/temporal/scope/freshness/coverage labels;
+- covered empty interval distinct from uncovered empty interval;
+- no news rows;
+- no Event Risk scoring/window copy;
+- no directional/safe/block/severity inference;
+- no route/frontend/new DB/writer/deploy.
+
+Implemented C2 tests:
+- missing event DB explicit/non-creating;
+- verified scheduled calendar event projection;
+- global scope / official source / upcoming-event labels;
+- covered-empty vs uncovered-empty;
+- audit exact identities;
+- default customer payload hides SHA/raw coverage/source/category/database vocabulary;
+- event source DB byte non-mutation.
+
+Acceptance required:
+- exact-source UID504 checkout;
+- tests/test_event_source_product.py;
+- tests/test_event_source_runtime.py;
+- tests/test_final_product_read_model.py;
+- existing Stream final-product regressions as required by harness;
+- Ruff changed modules/tests;
+- strict mypy changed Product modules;
+- Product/Development non-mutation;
+- project isolation;
+- REAL_CAPITAL=0;
+- no RDP11 mutation.
+
+Acceptance harness rule:
+- temporary MI1 fp1c trigger/test wiring is branch-only infrastructure;
+- restore workflow to exact current-main content before PR.
+
+Exact nextAction:
+Wire the existing UID504 harness to C1+C2 changed files, run exact-head acceptance, record the first mechanical failure before repair, and do not claim C2 PASS until pytest/Ruff/mypy/non-mutation/project-isolation are all green.
