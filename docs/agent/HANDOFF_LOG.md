@@ -5902,3 +5902,43 @@ Implement C2 in canonical_capital_runtime.py + autopilot_forward_actions.py only
 - REAL_CAPITAL=0; Durdurulmaz untouched; Quantum Capital untouched
 - blocker: genuine post-activation issuance absent; RDP11 soak time/continuity acceptance incomplete
 - nextAction: rerun FP3-D only on genuine forward issuance; preserve scheduled RDP11 observations until final 72h evidence eligibility
+
+
+## 2026-09-29 — FP4-A depth-aware execution implementation checkpoint
+
+- task-start main: `07c813cb7128e4748ca48aaf6a7e1ca584d1c7b2`
+- branch: `fp4a/depth-aware-execution-v2`
+- session-local worktree: not created in connector session; canonical Workbench remains `/Volumes/Crypto-504/Crypto-Signal-Workbench/repo`
+- classification: EXTEND; preserve v1 full-fill execution unchanged
+- implemented isolated `execution_depth_v2.py` over accepted immutable `OrderBookSnapshot`
+- explicit statuses: FULL / PARTIAL / NOT_FILLED / FILL_NOT_PROVEN
+- BUY consumes asks best-first; REDUCE/EXIT consumes bids best-first
+- exact consumed-level notional and VWAP reconciliation; deterministic outcome identity
+- execution cutoff rejects future-ingested depth; missing/uncertain execution never invents liquidity
+- no R21/R22 mutation, no Product/Development deploy, no historical backfill
+- dedicated UID504 workflow: `.github/workflows/fp4a-depth-execution-uid504.yml`
+- REAL_CAPITAL=0; Durdurulmaz/Quantum untouched
+- blocker: exact-head acceptance not run yet
+- nextAction: open isolated PR and require focused/v1/full regression plus frozen runtime non-mutation PASS before merging
+
+
+## 2026-09-29 — FP4-A depth-aware execution mechanical PASS
+
+- task-start main: `07c813cb7128e4748ca48aaf6a7e1ca584d1c7b2`
+- branch / PR: `fp4a/depth-aware-execution-v2` / #1688
+- accepted head: `cd8e6af5f0e25d6f104268e684b63d25d9e9aabb`
+- session-local worktree: not created in connector session
+- first WC6 run `36618789268` exposed Ruff SIM102 only after functional paper tests passed; lint-only repair applied
+- accepted FP4-A run/job: `36618938401` / `109579075252`
+- WC6 run/job: `36618938375` / `109579064102` PASS
+- RDP11 pre-soak run/job: `36618938277` / `109579069996` PASS
+- F10 run `36618938385` PASS
+- exact markers: FP4A_EXACT_SOURCE_PASS=YES, FP4A_FOCUSED_PASS=YES, FP4A_V1_COMPATIBILITY_PASS=YES, FP4A_FULL_REGRESSION_PASS=YES
+- Product/Development non-mutation + frozen RDP11 target unchanged PASS
+- V2 outcome set: FULL / PARTIAL / NOT_FILLED / FILL_NOT_PROVEN
+- exact immutable depth consumption/VWAP + PIT cutoff + replay identity accepted
+- v1 full-fill engine unchanged; no R21/R22 mutation; no deployment/backfill
+- FP4 itself is NOT fully complete; latency/queue/funding/instrument-cost integration remains
+- REAL_CAPITAL=0; Durdurulmaz untouched; Quantum Capital untouched
+- blocker: none for FP4-A
+- nextAction: merge after final main/duplicate recheck, verify SSD504 Workbench, then start isolated FP4-B

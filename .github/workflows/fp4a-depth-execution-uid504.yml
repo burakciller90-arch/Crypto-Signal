@@ -1,0 +1,98 @@
+name: FP4-A Depth Execution V2 UID504
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/crypto_signal/paper/execution_depth_v2.py"
+      - "tests/test_paper_execution_depth_v2.py"
+      - ".github/workflows/fp4a-depth-execution-uid504.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fp4a-depth-execution-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  acceptance:
+    name: FP4-A exact-head depth execution acceptance
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          clean: true
+          fetch-depth: 1
+
+      - name: Verify exact source and frozen runtime boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          DEV="$ROOT/Development"
+          PRODUCT="$ROOT/Product"
+          TARGET="3d9f33db3f1189571d40566125fbeabd00c04930"
+          test "$(id -u)" = "504"
+          test "$(git -C "$GITHUB_WORKSPACE" rev-parse HEAD)" = "${{ github.event.pull_request.head.sha || github.sha }}"
+          test -z "$(git -C "$DEV" status --porcelain)"
+          test -z "$(git -C "$PRODUCT" status --porcelain)"
+          test "$(git -C "$DEV" rev-parse HEAD)" = "$TARGET"
+          test "$(git -C "$PRODUCT" rev-parse HEAD)" = "$TARGET"
+          echo "FP4A_EXACT_SOURCE_PASS=YES"
+          echo "FP4A_RDP11_FROZEN_TARGET_EXACT=YES"
+          echo "REAL_CAPITAL=0"
+
+      - name: Focused FP4-A and v1 compatibility
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
+          PY="$DEV/.venv/bin/python"
+          export PYTHONPATH="$GITHUB_WORKSPACE/src:$GITHUB_WORKSPACE"
+          cd "$GITHUB_WORKSPACE"
+          "$PY" -m pytest -q tests/test_paper_execution_depth_v2.py tests/test_paper_execution.py
+          "$PY" -m ruff check src/crypto_signal/paper/execution_depth_v2.py tests/test_paper_execution_depth_v2.py
+          "$PY" -m mypy src/crypto_signal/paper/execution_depth_v2.py
+          echo "FP4A_FOCUSED_PASS=YES"
+          echo "FP4A_V1_COMPATIBILITY_PASS=YES"
+          echo "REAL_CAPITAL=0"
+
+      - name: Whole repository regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
+          PY="$DEV/.venv/bin/python"
+          export PYTHONPATH="$GITHUB_WORKSPACE/src:$GITHUB_WORKSPACE"
+          cd "$GITHUB_WORKSPACE"
+          "$PY" -m pytest -q
+          "$PY" -m ruff check src tests ops/verify_stage10_integrated.py
+          "$PY" -m mypy src ops/verify_stage10_integrated.py
+          node --check src/crypto_signal/product/static/freshness.js
+          node --check src/crypto_signal/product/static/app.js
+          node tests/js/test_product_freshness.js
+          echo "FP4A_FULL_REGRESSION_PASS=YES"
+          echo "REAL_CAPITAL=0"
+
+      - name: Prove frozen runtime remained untouched
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          DEV="$ROOT/Development"
+          PRODUCT="$ROOT/Product"
+          TARGET="3d9f33db3f1189571d40566125fbeabd00c04930"
+          test "$(git -C "$DEV" rev-parse HEAD)" = "$TARGET"
+          test "$(git -C "$PRODUCT" rev-parse HEAD)" = "$TARGET"
+          test -z "$(git -C "$DEV" status --porcelain)"
+          test -z "$(git -C "$PRODUCT" status --porcelain)"
+          echo "FP4A_DEVELOPMENT_NON_MUTATING_PASS=YES"
+          echo "FP4A_PRODUCT_NON_MUTATING_PASS=YES"
+          echo "FP4A_RDP11_TARGET_UNCHANGED_PASS=YES"
+          echo "HISTORICAL_BACKFILL=NO"
+          echo "REAL_CAPITAL=0"
