@@ -1096,3 +1096,39 @@ Soak/deploy state:
 
 Exact nextAction:
 Extend the WC2 synthetic source to >=20 contiguous bars, require exact-head pre-soak fulltest PASS, then PR/merge the integration repairs, sync Development, rerun canonical fulltest, and only then proceed to exact Product deployment.
+
+
+
+## RDP11 pre-soak third-failure audit checkpoint — 2026-09-29
+
+Exact tested branch head:
+- `d0520641b94d20ba7d539ebf8a798d1e4fba5c4e`
+
+Focused workflow:
+- RDP11 Pre-Soak Fulltest UID504 run `36538027413` / job `109306720103`: FAILURE.
+
+What passed before failure:
+- exact branch checkout matched the requested head;
+- canonical Development remained clean/read-only;
+- full repository pytest reached `[100%]`;
+- previous async/WC0/trust/S15/WC2 Geometry/PIT-regime failures are no longer present.
+
+Single remaining blocker observed in this run:
+- whole-repo Ruff reports one fixable `I001` import-order violation in `tests/test_rdp1_runtime_reliability.py`.
+- this file is an older RDP1 regression test and is not a production-runtime semantic change.
+- mypy/JS stages did not run because the workflow correctly stopped at Ruff under `set -euo pipefail`.
+
+Authorized minimal repair:
+- reorder only the existing imports in `tests/test_rdp1_runtime_reliability.py` to the canonical Ruff/isort order;
+- do not alter RDP1 runtime behavior, source code, evidence contracts or production authority.
+
+Deploy/soak:
+- Product deploy: NOT ATTEMPTED
+- RDP11 72h clock: NOT STARTED
+- REAL_CAPITAL=0
+- HISTORICAL_BACKFILL=NO
+- Durdurulmaz touched: NO
+- Quantum Capital touched: NO
+
+Exact nextAction:
+Apply the import-only regression cleanup, require the resulting exact-head pre-soak fulltest to pass pytest + Ruff + mypy + JS acceptance, then proceed to PR/merge and canonical Development fulltest before any Product deployment.
