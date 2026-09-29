@@ -5071,3 +5071,37 @@ Acceptance blocker:
 Exact nextAction:
 Temporarily wire MI1 UID504 acceptance for autopilot_forward_sizing.py + test_autopilot_forward_sizing.py; fix only evidenced failures, restore workflow after PASS.
 
+
+
+## FP3-B ACCEPTANCE ATTEMPT 1 FAIL / CHRONOLOGY FIX START — 2026-09-29
+
+status: FP3_B_ACCEPTANCE_FIX_1_CHRONOLOGY
+acceptanceRun: 36594304203
+acceptanceJob: 109495132265
+attemptedHead: 82a122b311b949cb31e1dc56ce97b564a1e89b43
+realCapital: 0
+historicalBackfill: NO
+RDP11RuntimeMutation: NO
+
+Mechanical evidence:
+- exact-source checkout PASS;
+- Product/Development non-mutation PASS;
+- focused pytest reached FP3-B tests and exposed four failures;
+- three failures share one canonical chronology defect:
+  sizing Stream source event attempted to append before the latest FP3-A vault-decision Stream event, causing StreamLedgerConflictError backfill/fork rejection;
+- one failure is test-only reason-code drift:
+  accepted sizing engine emits correlation_limit_breached, while the new test incorrectly expected correlation_cap_exceeded.
+
+Bounded production fix:
+- read exact canonical vault decisions for the FP3-A allocator assessment;
+- require selected_at_ms strictly after the latest canonical decision decided_at_ms before canonical sizing/event projection;
+- do not auto-invent or bump timestamps.
+
+Bounded test fix:
+- derive valid sizing selection time after max(front decision time, risk as-of);
+- expect accepted reason code correlation_limit_breached;
+- add one focused assertion that pre-decision selection time fails closed.
+
+Exact nextAction:
+Apply only the chronology guard + canonical test expectation, rerun exact-head UID504 acceptance, then address any later Ruff/mypy findings separately.
+
