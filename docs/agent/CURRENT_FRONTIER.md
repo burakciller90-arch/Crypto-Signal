@@ -1825,3 +1825,76 @@ Current blocker:
 
 Exact nextAction:
 Open one PR from `rdp11/observer-live-acceptance-b` to current main, require exact PR-head dedicated observer + pre-soak regression acceptance, recheck main immediately before merge, then merge and accept the first merged-main non-dry-run observation only if it creates the exact immutable anchor without mutating canonical runtime.
+
+
+## RDP11 immutable 72-hour soak anchor STARTED — 2026-09-29
+
+Canonical repository state at handoff start:
+- exact main: `02793adde16d18b681e869bbb560e736cc933ec5`
+- main commit: `RDP11: add read-only soak observer acceptance (#1666)`
+- documentation branch: `rdp11/soak-anchor-handoff`
+- session-local /Volumes worktree: NONE
+- canonical Workbench repo remains `/Volumes/Crypto-504/Crypto-Signal-Workbench/repo`
+- frozen Development/Product runtime subject: `3d9f33db3f1189571d40566125fbeabd00c04930`
+- `REAL_CAPITAL=0`
+- `HISTORICAL_BACKFILL=NO`
+- Durdurulmaz touched: NO
+- Quantum Capital touched: NO
+
+Observer implementation acceptance:
+- PR: #1666
+- accepted PR head: `cdb87e8261175d391eb4f91cd00ee57856d4644d`
+- merge SHA: `02793adde16d18b681e869bbb560e736cc933ec5`
+- branch live observer acceptance: run `36546432974` / job `109333830960`: SUCCESS
+- branch full-suite acceptance: run `36546433066` / job `109334016913`: SUCCESS
+- PR-head live observer acceptance: run `36546937900` / job `109335477359`: SUCCESS
+- PR-head full-suite acceptance: run `36546938031` / job `109335477778`: SUCCESS
+- observer contract SHA256: `4e8a0b87236d84abf00aafe02e35b4e7c0cef39ba8182282ee8f9d5b9b4afeff`
+
+Exact-main/Workbench proof after merge:
+- Crypto SSD504 Workbench Bootstrap run `36547457282` / job `109337163342`: SUCCESS
+  - `GITHUB_SHA=02793adde16d18b681e869bbb560e736cc933ec5`
+  - Workbench repo synchronized to exact main
+  - `REPO_HEAD=02793adde16d18b681e869bbb560e736cc933ec5`
+  - `REPO_BRANCH=main`
+  - `REPO_DIRTY_COUNT=0`
+  - `SSD504_WORKBENCH_PASS=YES`
+  - `REAL_CAPITAL=0`
+- Crypto Signal Agent Memory Bootstrap run `36547457840` / job `109337165396`: SUCCESS
+
+Real merged-main soak anchor:
+- workflow: RDP11 Soak Observer UID504
+- run: `36547457482`
+- job: `109337164207`
+- conclusion: SUCCESS
+- exact frozen runtime target: `3d9f33db3f1189571d40566125fbeabd00c04930`
+- `RDP11_SOAK_ANCHOR_CREATED=YES`
+- epoch: `rdp11-3d9f33db-20260929`
+- start UTC: `2026-09-29T09:13:21.134000Z`
+- earliest mechanical 72h eligibility: `2026-10-02T09:13:21.134000Z`
+- `RDP11_SOAK_OBSERVATION_PASS=YES`
+- `RDP11_SOAK_ELAPSED_MS=0`
+- `RDP11_SOAK_72H_ELIGIBLE=NO`
+- `RDP11_SOAK_SIDE_CAR_ONLY=YES`
+- `RDP11_CANONICAL_RUNTIME_MUTATED=NO`
+- `HISTORICAL_BACKFILL=NO`
+- `REAL_CAPITAL=0`
+
+Recurring observation contract:
+- GitHub Actions schedule: every 20 minutes at minute 03/23/43;
+- observations write only under `/Volumes/Crypto-504/Crypto-Signal/RDP11Soak/rdp11-3d9f33db-20260929/`;
+- canonical evidence/runtime DB writes by observer: NONE;
+- runtime SHA drift, observer-contract drift, mandatory source/proof/continuity violation, or fail-closed contract violation invalidates the epoch rather than silently continuing;
+- branch/PR runs remain dry-run and never create soak state.
+
+Active gate:
+- **RDP11 — Continuous soak + final Evidence PASS**
+- RDP10 remains PASS.
+- RDP11 is NOT PASS yet.
+
+Current blocker:
+- the real minimum 72-hour observation window has not elapsed;
+- final closure also requires that the epoch remains non-invalidated and that accumulated observations show mandatory rails either meeting accepted SLO or failing closed explicitly.
+
+Exact nextAction:
+Do not restart/re-anchor the epoch unless a mandatory violation invalidates it. Let the installed UID504 scheduled observer accumulate immutable sidecar observations against runtime target `3d9f33db...`. At/after `2026-10-02T09:13:21.134000Z`, audit the full epoch for continuity, source freshness/gaps/reconnects, DB/read behavior, frozen-proof integrity/no-future boundaries, Stream/Product inspectability and explicit source limitations; only then may RDP11 be marked PASS. Until then, any parallel Paper Capital/Portfolio work must remain isolated and must not mutate the soaked runtime or historical/frozen evidence.
