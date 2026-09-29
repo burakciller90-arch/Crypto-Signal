@@ -167,6 +167,91 @@ class MarketPulseView:
     schema_version: str = FINAL_PRODUCT_READ_MODEL_SCHEMA_VERSION
 
 
+@dataclass(frozen=True, slots=True)
+class AttentionAudit:
+    narrative_identity: str
+    story_identity: str | None
+    source_event_identity: str | None
+    message_identity: str | None
+    materiality_decision_identity: str | None
+    materiality_policy_identity: str | None
+
+
+@dataclass(frozen=True, slots=True)
+class AttentionSituationView:
+    symbol: str
+    timeframe: str
+    updated_at_ms: int
+    freshness_label: str
+    category_label: str
+    importance_label: str
+    state_label: str | None
+    headline: str
+    detail: str
+    materiality_label: str
+    risk_label: str | None
+    source_label: str
+    audit: AttentionAudit | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class AttentionSituationsView:
+    availability_label: str
+    observed_at_ms: int
+    items: tuple[AttentionSituationView, ...]
+    read_only: bool = True
+    real_capital: int = REAL_CAPITAL
+    schema_version: str = FINAL_PRODUCT_READ_MODEL_SCHEMA_VERSION
+
+
+@dataclass(frozen=True, slots=True)
+class FamilySummaryAudit:
+    source_narrative_identity: str
+    fact_bundle_identity: str
+    analytical_view_identity: str
+    source_evidence_identities: tuple[str, ...]
+    raw_state_label: str
+    uncertainty_flags: tuple[str, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class FamilySummaryItem:
+    family_label: str
+    state_label: str
+    direction_label: str | None
+    relationship_label: str
+    source_quality_label: str
+    source_as_of_ms: int | None
+    freshness_label: str
+    evidence_domain_labels: tuple[str, ...]
+    uncertainty_label: str
+    changed_label: str
+    timeframe: str | None
+    audit: FamilySummaryAudit | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class FiveFamilySummaryView:
+    availability_label: str
+    symbol: str
+    timeframe: str | None
+    updated_at_ms: int | None
+    stance_label: str | None
+    families: tuple[FamilySummaryItem, ...]
+    read_only: bool = True
+    real_capital: int = REAL_CAPITAL
+    schema_version: str = FINAL_PRODUCT_READ_MODEL_SCHEMA_VERSION
+
+
+@dataclass(frozen=True, slots=True)
+class _AttentionCandidate:
+    dedupe_key: tuple[str, ...]
+    importance_rank: int
+    event_at_ms: int
+    narrative_identity: str
+    view: AttentionSituationView
+
+
 class FinalProductReadModel:
     """Customer-safe, read-only projections over already accepted Product truth."""
 
