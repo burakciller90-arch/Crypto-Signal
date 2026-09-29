@@ -2772,3 +2772,56 @@ Guard result:
 
 Exact nextAction:
 Read PR #1671 mergeability/check state and current main. If the PR remains based on the verified main with no mechanical blocker, merge FP1-A without deploying Product/Development, then bootstrap from the new main and checkpoint FP1-B before changing any further production code.
+
+
+## FP1-B TASK-START CHECKPOINT — 2026-09-29
+
+status: FP1_B_ACTIVE_DUPLICATE_AUDIT
+taskStartMain: a67f7192dd4b6a36a33d7aacf2b7e304cafdf509
+activeBranch: fp1b/attention-workspace-family-summary
+sessionLocalWorktree: NONE
+canonicalWorkbench: /Volumes/Crypto-504/Crypto-Signal-Workbench/repo
+mechanicalGate: FP0 / RDP11 Continuous soak + final Evidence PASS remains ACTIVE / NOT PASS
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Completed prerequisite:
+- FP1-A merged via PR #1671 at main commit a67f7192dd4b6a36a33d7aacf2b7e304cafdf509;
+- customer-safe Market Pulse read model accepted on UID504;
+- no Product/Development deployment or soak runtime mutation.
+
+Duplicate/stale check before branch creation:
+- current main verified at a67f7192dd4b6a36a33d7aacf2b7e304cafdf509;
+- no open PR matching FP1-B attention/workspace/five-family summary;
+- no related fp1b/attention/workspace/family-summary branch exists;
+- existing Stream system-view, signal detail, exact evidence and Decision Proof remain canonical REUSE targets;
+- FP1-B must not create a second evidence engine, second Stream ledger or duplicate signal truth store.
+
+Bounded FP1-B goal:
+- Attention Situations: deterministic top material situations composed from accepted persisted Stream/system-view/signal truth;
+- Workspace Summary: one customer-safe summary binding current view, trigger/invalidation/targets, uncertainty/contradiction and exact source context where available;
+- Five-Family Summary: human-facing projection of accepted Geometry / Liquidity / Order Flow / Derivatives / On-chain states without leaking internal enum/SHA vocabulary by default;
+- preserve exact identities only in optional audit provenance;
+- explicit unavailable/stale/unsupported states; no fabricated zeros or neutral evidence;
+- read-only only;
+- no Product route;
+- no frontend;
+- no deploy;
+- no RDP11 observer/soak mutation.
+
+Mandatory pre-code audit:
+- inspect final_product_read_model.py from FP1-A;
+- inspect IntelligenceStreamReadModel query/detail payloads;
+- inspect IntelligenceStreamSystemView persisted family rows;
+- inspect IntelligenceStreamExactEvidenceReadModel capabilities;
+- inspect DashboardReader signal_detail rich projection;
+- inspect Decision Proof customer-relevant fields;
+- decide exact ranking/materiality source for Attention Situations without inventing a new score.
+
+Current blocker:
+- no implementation blocker yet; production code changes are forbidden until exact existing payloads and deterministic ranking inputs are classified REUSE / EXTEND / BUILD / EXPLICITLY_UNAVAILABLE for FP1-B.
+
+Exact nextAction:
+Audit the accepted Stream/system-view/signal-detail/exact-evidence/Decision-Proof payloads specifically for FP1-B, record a bounded FP1-B field/source matrix, then implement the smallest read-only slice only after that audit is durable.
