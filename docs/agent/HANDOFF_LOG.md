@@ -2089,3 +2089,56 @@ Current blocker:
 
 Exact nextAction:
 Open one PR from `rdp11/observer-live-acceptance-b` to main. Require dedicated observer PR dry-run PASS plus RDP11 pre-soak full-suite PASS on the exact PR head. Recheck main/head before merge. Only after merge may the main-push non-dry-run observer create the immutable 72-hour anchor.
+
+
+## RDP11 observer exact-head branch acceptance PASS — 2026-09-29
+
+Accepted implementation head before this documentation-only checkpoint:
+- `7d84dd558eecae5e1357f822b226f60c38b15d2d`
+- branch: `rdp11/observer-live-acceptance-b`
+- canonical main/runtime target remains `3d9f33db3f1189571d40566125fbeabd00c04930`
+- RDP11 overall gate: **NOT PASS**; 72-hour real soak has not started yet.
+
+Dedicated live observer acceptance:
+- run `36546432974`
+- job `109333830960`
+- conclusion: SUCCESS
+- exact Development/Product runtime target: PASS
+- observer py_compile/Ruff: PASS
+- Product endpoint timing probe: PASS
+  - health 0.003638s
+  - Stream messages 4.223819s
+  - finite SSE 2.106748s
+  - intelligence center 0.013568s
+- `RDP11_SOAK_OBSERVER_DRY_RUN_PASS=YES`
+- observer contract SHA256: `4e8a0b87236d84abf00aafe02e35b4e7c0cef39ba8182282ee8f9d5b9b4afeff`
+- `RDP11_OBSERVER_DRY_RUN_SIDECAR_MUTATED=NO`
+- `RDP11_OBSERVER_LIVE_DRY_RUN_ACCEPTANCE=PASS`
+- `HISTORICAL_BACKFILL=NO`
+- `REAL_CAPITAL=0`
+
+Whole-repository regression acceptance:
+- run `36546433066`
+- job `109334016913`
+- conclusion: SUCCESS
+- Ruff: all checks passed
+- mypy: no issues in 267 source files
+- `PRODUCT_FRESHNESS_CONTRACT_PASS=YES`
+- `RDP11_PRE_SOAK_FULLTEST_PASS=YES`
+- `RDP11_REPAIR_NON_MUTATING_PASS=YES`
+- `HISTORICAL_BACKFILL=NO`
+- `REAL_CAPITAL=0`
+
+Accepted repair semantics:
+- live collector freshness is sampled at the actual read boundary with strict no-future rejection preserved;
+- recurring large Market Tape integrity work uses bounded read/lock/schema evidence instead of a whole-tree quick-check on every 20-minute sample;
+- smaller control/evidence DB quick-checks remain;
+- successful observation timestamp is stamped at completion;
+- no canonical runtime/evidence mutation, historical backfill, score/trading authority or source semantics were introduced.
+
+Current blocker:
+- none for branch implementation acceptance.
+- soak clock is still NOT STARTED because only a merged-main non-dry-run observation may create the immutable anchor.
+
+Exact nextAction:
+Open one PR from `rdp11/observer-live-acceptance-b` to current main, require exact PR-head dedicated observer + pre-soak regression acceptance, recheck main immediately before merge, then merge and accept the first merged-main non-dry-run observation only if it creates the exact immutable anchor without mutating canonical runtime.
