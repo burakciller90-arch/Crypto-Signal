@@ -314,3 +314,17 @@ Exact next action:
 4. use canonical Epoch 2 / R22 / R24 / Stream Capital only and keep Epoch 1 strictly separate.
 
 Do not rebuild FP1-A, FP1-B or accepted FP1-C source/query semantics.
+
+
+## 10.1 Progress update — 2026-09-29
+
+- FP1-A merged.
+- FP1-B merged.
+- FP1-C merged/accepted.
+- FP1-D Portfolio Summary + Daily Capital Movements merged via PR #1676 at main `5490bc184eb51f3507ede93bc72b488ea38cd5dd`.
+- Current slice: **FP1-E — Trade Passport**.
+- Duplicate check: no open FP1-E PR and no existing `fp1e/*` branch at task start.
+- FP1-F remains later; do not start Screener/global search until FP1-E source contract is accepted or explicitly blocked.
+
+Exact next action:
+Audit and freeze the Trade Passport field/source contract over canonical R22/R21/RDP10 truth before implementation.

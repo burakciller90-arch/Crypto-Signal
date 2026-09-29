@@ -3916,3 +3916,162 @@ Cleanup verification:
 Exact nextAction:
 Recheck current main and duplicate PR state, open one FP1-D PR, inspect the actual changed-file set and PR checks, then merge only if the diff remains isolated and main has not advanced with overlapping FP1-D work.
 
+
+
+## FP1-E TRADE PASSPORT TASK START — 2026-09-29
+
+status: FP1_E_TRADE_PASSPORT_AUDIT_START
+taskStartMain: 5490bc184eb51f3507ede93bc72b488ea38cd5dd
+activeBranch: fp1e/trade-passport-read-model
+sessionLocalWorktree: NONE
+canonicalWorkbench: /Volumes/Crypto-504/Crypto-Signal-Workbench/repo
+canonicalRoadmap: docs/CRYPTO_SIGNAL_FINAL_PRODUCT_MASTER_ROADMAP_V1.md
+activePointer: ACTIVE_ROADMAP.md
+mechanicalGate: FP0 / RDP11 Continuous soak + final Evidence PASS remains ACTIVE / NOT PASS
+classification: REUSE canonical R21/R22/RDP10 truth + EXTEND one customer read model
+duplicateCheck: no open FP1-E / Trade Passport PR and no fp1e branch exists on current main
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Predecessor closure:
+- FP1-D merged via PR #1676;
+- merge SHA: 5490bc184eb51f3507ede93bc72b488ea38cd5dd;
+- D1 Portfolio Summary PASS;
+- D2 Daily Capital Movements PASS;
+- RDP11 soaked Product/Development target was not mutated.
+
+Bounded FP1-E goal:
+- add one customer-safe Trade Passport read model over already accepted immutable paper-capital/evidence truth;
+- reuse R22 trade history / bundle story context and R21 before-after accounting;
+- reuse canonical S11 outcome evidence for realized result;
+- reuse exact Decision Proof / RDP10 evidence linkage where available;
+- expose human-readable entry/exit, size, cost, accounting effect, decision context, proof availability and outcome without leaking raw identity plumbing by default;
+- preserve exact SHA/R21/R22/proof lineage in optional audit payload only;
+- do not create a new trade ledger, accounting engine, PnL calculator, evidence engine, historical backfill, route/frontend/deploy or runtime writer;
+- missing proof/outcome/optional source truth remains explicit rather than reconstructed from current data.
+
+Current blocker:
+- exact canonical R22/R21/RDP10 source precedence and query contract for one Trade Passport has not yet been re-audited on current main; production implementation is forbidden until field/source mapping is frozen.
+
+Exact nextAction:
+Audit R22Epoch2AtomicTape trade-history/story-context reads, R21 accounting snapshots, canonical capital outcome evidence and existing Decision Proof/RDP10 exact-evidence readers; freeze an FP1-E field-source matrix before production code changes.
+
+
+
+## FP1-E SOURCE AUDIT COMPLETE / IMPLEMENTATION START — 2026-09-29
+
+status: FP1_E_IMPLEMENTATION_START
+baseMain: 5490bc184eb51f3507ede93bc72b488ea38cd5dd
+activeBranch: fp1e/trade-passport-read-model
+auditDocument: docs/CRYPTO_SIGNAL_FP1E_TRADE_PASSPORT_FIELD_SOURCE_MATRIX.md
+classification: REUSE R22/R21/S11/Decision Proof truth + EXTEND customer projection
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Frozen source contract:
+- passport lookup key is immutable R22 bundle identity;
+- canonical trade/accounting read is R22Epoch2AtomicTape.read_bundle_story_context(bundle_identity);
+- no Final Product direct SQL and no second trade/accounting ledger;
+- R21 before/after values are copied exactly, not recomputed;
+- S11 outcome remains canonical for REDUCE/EXIT;
+- optional Decision Proof is resolved by forecast identity and must match R22 proof + signal-freeze lineage;
+- missing proof source does not erase an otherwise valid passport;
+- R22 source evidence identities carry exact RDP10 lineage into audit only;
+- no current-data substitution or historical backfill.
+
+Current blocker:
+- none for implementation; mechanical acceptance remains pending.
+
+Exact nextAction:
+Implement TradePassport customer/audit dataclasses and trade_passport(...) in final_product_read_model.py, then add focused immutable-source tests before UID504 acceptance.
+
+
+
+## FP1-E IMPLEMENTATION COMPLETE / ACCEPTANCE START — 2026-09-29
+
+status: FP1_E_ACCEPTANCE_START
+verifiedMain: 5490bc184eb51f3507ede93bc72b488ea38cd5dd
+activeBranch: fp1e/trade-passport-read-model
+branchAheadMain: 8
+branchBehindMain: 0
+implementationHead: ef2c4983dee92fcd6d5f75cc3546d3fabe37afbe
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Implemented scope:
+- TradePassportAudit and TradePassportView customer contracts;
+- trade_passport(bundle_identity, include_audit=False);
+- exact R22 bundle-story-context reuse;
+- exact R21 before/after vault + consolidated values copied without recomputation;
+- exact S11/R22 outcome semantics;
+- optional Decision Proof binding by forecast/proof/signal-freeze lineage;
+- explicit missing proof source / proof missing labels;
+- proof mismatch fails closed;
+- audit-only R22/R21/RDP10 identities and raw reason/action/outcome metadata;
+- missing canonical DB is non-creating;
+- no Product route/frontend/deploy/runtime writer.
+
+Focused tests:
+- missing Epoch 2 explicit/non-creating;
+- unknown bundle explicit;
+- exact R22/R21 BUY passport projection;
+- verified Decision Proof context;
+- proof lineage mismatch fail-closed;
+- customer payload hides SHA/raw enum/database vocabulary;
+- canonical Epoch 2 and Decision Evidence DB bytes unchanged by reads.
+
+Acceptance blocker:
+- UID504 exact-head pytest/Ruff/strict-mypy/non-mutation/project-isolation has not run yet.
+
+Exact nextAction:
+Temporarily wire the existing MI1 UID504 acceptance workflow to fp1e/trade-passport-read-model and include final_product_read_model.py plus test_final_product_read_model.py; inspect exact logs, fix only mechanical failures, then restore the workflow to exact current-main content.
+
+
+
+## FP1-E UID504 ACCEPTANCE PASS / REVIEW READY — 2026-09-29
+
+status: FP1_E_REVIEW_READY
+verifiedMain: 5490bc184eb51f3507ede93bc72b488ea38cd5dd
+activeBranch: fp1e/trade-passport-read-model
+acceptedHead: 587b6dfa29f707901a48f1ece399c7f001567edb
+acceptedRun: 36577967469
+acceptedJob: 109438394874
+cleanupHead: e8958fb1b58b3576ee7d776f99dcba761def5977
+branchAheadMain: 12
+branchBehindMain: 0
+workflowRestoredToMain: YES
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Mechanical PASS:
+- exact-source UID504 checkout PASS;
+- focused Final Product + Stream regression acceptance PASS;
+- Ruff: All checks passed!;
+- strict mypy: Success: no issues found in 5 source files;
+- canonical Product/Development non-mutation PASS;
+- project isolation PASS;
+- REAL_CAPITAL=0.
+
+Accepted FP1-E truth:
+- immutable R22 bundle identity is the passport key;
+- R22 story context verifies intent/fill/R21 before-after/S11 outcome;
+- Decision Proof is optional but exact lineage is enforced when connected;
+- missing proof is explicit, not fabricated;
+- customer payload hides SHA/raw enums/reason/database vocabulary;
+- audit retains exact R22/R21/RDP10 lineage;
+- no current-data substitution, no historical backfill, no new ledger.
+
+Current blocker:
+- none inside FP1-E implementation; PR review/merge gate remains.
+
+Exact nextAction:
+Recheck current main and duplicate PR state, open one FP1-E PR with only docs/read-model/tests changes, inspect PR checks and merge only if no overlap/runtime conflict exists.
+

@@ -8,10 +8,13 @@ from decimal import Decimal
 from pathlib import Path
 
 import pytest
+from test_decision_proof_live_feed import AS_OF, _forecast, _slices
 from test_epoch2_accounting import _activate as _activate_epoch2
 from test_event_source_product import _seed_successes as _seed_event_source_successes
 from test_intelligence_stream_read_model import _create_read_fixture
+from test_transaction_tape_atomic import _trade_bundle
 
+from crypto_signal.decision_ledger import ImmutableDecisionEvidenceLedger
 from crypto_signal.intelligence.confluence_matrix_v2 import ConfluenceFamily
 from crypto_signal.ledger.serialization import (
     canonical_json,
@@ -25,6 +28,8 @@ from crypto_signal.paper.epoch2_accounting import (
 )
 from crypto_signal.paper.epochs import EPOCH_2_SPEC, PaperVaultId
 from crypto_signal.paper.models import PaperPosition, PaperSymbol
+from crypto_signal.paper.transaction_tape_atomic import R22Epoch2AtomicTape
+from crypto_signal.product.decision_proof import build_decision_proof_snapshot
 from crypto_signal.product.final_product_read_model import (
     FinalProductReadError,
     FinalProductReadModel,
@@ -1871,3 +1876,216 @@ def test_capital_movements_customer_payload_hides_raw_identity_vocabulary(
     assert eligible.audit.reason_codes == ("all_clear",)
     assert len(eligible.audit.narrative_identity) == 64
     assert all(len(value) == 64 for value in eligible.audit.lineage_identities)
+
+
+def _seed_trade_passport_bundle(tmp_path: Path):
+    (
+        epoch2_path,
+        before,
+        intent,
+        fill,
+        after_vaults,
+        parent,
+        bundle,
+    ) = _trade_bundle(tmp_path)
+    tape = R22Epoch2AtomicTape(epoch2_path)
+    assert tape.append_accounting_bundle(
+        before,
+        intent=intent,
+        fill=fill,
+        after_vaults=after_vaults,
+        after_consolidated=parent,
+        bundle=bundle,
+    )
+    return epoch2_path, intent, fill, bundle
+
+
+def _seed_trade_passport_decision_proof(tmp_path: Path) -> Path:
+    forecast = _forecast()
+    proof = build_decision_proof_snapshot(forecast, _slices(forecast))
+    path = tmp_path / "trade-passport-decision-evidence.sqlite3"
+    ledger = ImmutableDecisionEvidenceLedger(path)
+    ledger.append_forecast(forecast)
+    ledger.append_proof(proof)
+    return path
+
+
+def test_trade_passport_missing_epoch2_is_explicit_and_noncreating(
+    tmp_path: Path,
+) -> None:
+    epoch2_path = tmp_path / "missing-trade-passport.sqlite3"
+    view = FinalProductReadModel(
+        stream_ledger_path=tmp_path / "missing-stream.sqlite3",
+        epoch2_path=epoch2_path,
+    ).trade_passport(bundle_identity=_sha("missing-passport"))
+
+    assert view.availability_label == "Trade Passport verisi kullanılamıyor"
+    assert view.program_label == "Paper Capital · Epoch 2"
+    assert view.audit is None
+    assert view.real_capital == 0
+    assert not epoch2_path.exists()
+
+
+def test_trade_passport_unknown_bundle_is_explicit(
+    tmp_path: Path,
+) -> None:
+    epoch2_path, _, _, _ = _seed_trade_passport_bundle(tmp_path)
+    view = FinalProductReadModel(
+        stream_ledger_path=tmp_path / "missing-stream.sqlite3",
+        epoch2_path=epoch2_path,
+    ).trade_passport(bundle_identity=_sha("unknown-passport-bundle"))
+
+    assert view.availability_label == "Trade Passport bulunamadı"
+    assert view.action_label is None
+    assert view.outcome_label is None
+
+
+def test_trade_passport_projects_exact_r22_r21_truth_read_only(
+    tmp_path: Path,
+) -> None:
+    epoch2_path, intent, fill, bundle = _seed_trade_passport_bundle(tmp_path)
+    before = epoch2_path.read_bytes()
+
+    view = FinalProductReadModel(
+        stream_ledger_path=tmp_path / "missing-stream.sqlite3",
+        epoch2_path=epoch2_path,
+    ).trade_passport(
+        bundle_identity=bundle.bundle_identity,
+        include_audit=True,
+    )
+
+    assert view.availability_label == "Doğrulanmış veri"
+    assert view.program_label == "Paper Capital · Epoch 2"
+    assert view.action_label == "Pozisyon açıldı / artırıldı"
+    assert view.outcome_label == "Pozisyon açık"
+    assert view.vault_label == "Core"
+    assert view.symbol == "BTCUSDT"
+    assert view.timeframe is None
+    assert view.decided_at_ms == intent.decided_at_ms
+    assert view.filled_at_ms == fill.filled_at_ms
+    assert view.snapshot_at_ms == fill.snapshot_at_ms
+    assert view.proof_availability_label == "Karar kanıtı kaynağı bağlı değil"
+    assert view.quantity == "1.00"
+    assert view.reference_price == "100.00"
+    assert view.simulated_fill_price == "101.00"
+    assert view.notional_usdt == "101.00"
+    assert view.fee_usdt == "1.00"
+    assert view.spread_usdt == "0.40"
+    assert view.slippage_usdt == "0.60"
+    assert view.cash_before_usdt == "600.00"
+    assert view.cash_after_usdt == "498.00"
+    assert view.position_quantity_before == "0"
+    assert view.position_quantity_after == "1"
+    assert view.realized_pnl_delta_usdt == "+0.00"
+    assert view.unrealized_pnl_delta_usdt == "-2.00"
+    assert view.audit is not None
+    assert view.audit.bundle_identity == bundle.bundle_identity
+    assert view.audit.intent_identity == intent.intent_identity
+    assert view.audit.fill_identity == fill.fill_identity
+    assert view.audit.raw_action == "BUY"
+    assert view.audit.raw_outcome == "OPEN"
+    assert view.audit.reason_codes == ("forecast_active",)
+    assert intent.proof_identity in view.audit.source_evidence_identities
+    assert epoch2_path.read_bytes() == before
+
+
+def test_trade_passport_adds_verified_decision_proof_context(
+    tmp_path: Path,
+) -> None:
+    epoch2_path, intent, _, bundle = _seed_trade_passport_bundle(tmp_path)
+    proof_path = _seed_trade_passport_decision_proof(tmp_path)
+    epoch_before = epoch2_path.read_bytes()
+    proof_before = proof_path.read_bytes()
+
+    view = FinalProductReadModel(
+        stream_ledger_path=tmp_path / "missing-stream.sqlite3",
+        epoch2_path=epoch2_path,
+        decision_evidence_path=proof_path,
+    ).trade_passport(bundle_identity=bundle.bundle_identity)
+
+    assert view.proof_availability_label == "Karar kanıtı doğrulandı"
+    assert view.timeframe == "4h"
+    assert view.proof_source_as_of_ms == AS_OF
+    assert view.decision_thesis
+    assert view.direction_label == "Yukarı yönlü"
+    assert view.trigger_zone_label == "100.00 – 102.00"
+    assert view.target_zone_label == "108.00"
+    assert view.invalidation_price == "95.00"
+    assert view.uncertainty_label == "1 belirsizlik işareti mevcut"
+    assert intent.forecast_identity is not None
+    assert epoch2_path.read_bytes() == epoch_before
+    assert proof_path.read_bytes() == proof_before
+
+
+def test_trade_passport_proof_lineage_mismatch_fails_closed(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    epoch2_path, _, _, bundle = _seed_trade_passport_bundle(tmp_path)
+    proof_path = _seed_trade_passport_decision_proof(tmp_path)
+    original = ImmutableDecisionEvidenceLedger.read_proof_for_forecast
+
+    def _mismatched(
+        ledger: ImmutableDecisionEvidenceLedger,
+        forecast_identity: str,
+    ) -> dict[str, object] | None:
+        raw = original(ledger, forecast_identity)
+        assert raw is not None
+        changed = dict(raw)
+        changed["proof_identity"] = _sha("wrong-trade-passport-proof")
+        return changed
+
+    monkeypatch.setattr(
+        ImmutableDecisionEvidenceLedger,
+        "read_proof_for_forecast",
+        _mismatched,
+    )
+
+    with pytest.raises(
+        FinalProductReadError,
+        match="karar kanıtı lineage uyuşmuyor",
+    ):
+        FinalProductReadModel(
+            stream_ledger_path=tmp_path / "missing-stream.sqlite3",
+            epoch2_path=epoch2_path,
+            decision_evidence_path=proof_path,
+        ).trade_passport(bundle_identity=bundle.bundle_identity)
+
+
+def test_trade_passport_customer_payload_hides_identity_and_raw_enum_vocabulary(
+    tmp_path: Path,
+) -> None:
+    epoch2_path, _, _, bundle = _seed_trade_passport_bundle(tmp_path)
+    proof_path = _seed_trade_passport_decision_proof(tmp_path)
+    model = FinalProductReadModel(
+        stream_ledger_path=tmp_path / "missing-stream.sqlite3",
+        epoch2_path=epoch2_path,
+        decision_evidence_path=proof_path,
+    )
+
+    customer = asdict(
+        model.trade_passport(
+            bundle_identity=bundle.bundle_identity,
+            include_audit=False,
+        )
+    )
+    texts = _all_text(customer)
+    assert not any(re.fullmatch(r"[0-9a-f]{64}", value) for value in texts)
+    forbidden = {
+        "BUY",
+        "OPEN",
+        "forecast_active",
+        "r22_epoch2_bundles",
+        "r21_vault_snapshots",
+        "r20_5_decision_proofs",
+    }
+    assert forbidden.isdisjoint(texts)
+
+    audited = model.trade_passport(
+        bundle_identity=bundle.bundle_identity,
+        include_audit=True,
+    )
+    assert audited.audit is not None
+    assert len(audited.audit.bundle_identity) == 64
+    assert audited.audit.raw_action == "BUY"
+    assert audited.audit.raw_outcome == "OPEN"
