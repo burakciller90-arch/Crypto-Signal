@@ -4862,3 +4862,32 @@ Current blocker:
 Exact nextAction:
 Audit the accepted eligibility/sizing APIs and current FP3-A receipt model, freeze the minimal FP3-B input/result contract, then implement only the eligible fixed-fractional sizing bridge with focused replay/idempotence tests.
 
+
+
+## FP3-B SOURCE AUDIT COMPLETE / IMPLEMENTATION START — 2026-09-29
+
+status: FP3_B_IMPLEMENTATION_START
+baseMain: 1347ee8550e04a8491c20227bad50d9aeb3fba4e
+activeBranch: fp3b/eligible-fixed-fractional-sizing
+contract: docs/CRYPTO_SIGNAL_FP3_CANONICAL_PAPER_AUTOPILOT_FORWARD_RUNTIME_MATRIX.md#10
+realCapital: 0
+historicalBackfill: NO
+RDP11RuntimeMutation: NO
+ProductDevelopmentDeploy: NO
+
+Frozen implementation boundary:
+- FP3-A receipt remains immutable;
+- new sizing-stage receipt is append-only and unique per forecast+vault;
+- exact Capital Science recomputation must match A receipt identities;
+- only ELIGIBLE vault enters sizing;
+- exact R21 drawdown must match supplied risk context;
+- risk observation cannot predate allocator assessment;
+- fixed-fractional only;
+- risk-gated HOLD writes no canonical sizing event;
+- available fixed-fractional reuses canonical selection/event + Stream sizing projection;
+- replay/recovery idempotent;
+- no trade commit in FP3-B.
+
+Exact nextAction:
+Implement FP3-B helper/store contract and focused tests over merged FP3-A; then run exact-head UID504 acceptance.
+
