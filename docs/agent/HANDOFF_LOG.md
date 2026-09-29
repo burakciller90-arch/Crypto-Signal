@@ -6410,3 +6410,12 @@ QuantumCapitalTouched: NO
 - no functional failure and no whole-repo PASS claimed because the static step stopped
 - repair is formatting/type-syntax only; all prior head results stale after repair
 - REAL_CAPITAL=0; RDP11 R2 untouched
+
+
+
+## 2026-09-30 — FP5-B Ruff-only repair applied
+
+- repair commit `02bf03930ca43b41fa4d8496bfcaa2746f0633e3`
+- only import separation + deferred annotation syntax changed
+- V1/V2 behavior, identities, cap formula and safety semantics unchanged
+- require fresh exact-head dedicated/WC6/RDP11/F10; prior runs stale
