@@ -1307,3 +1307,63 @@ Safety:
 
 Exact nextAction:
 Reuse an existing non-stale RDP11 productstate issue if one already exists; otherwise trigger one UID504 allowlisted `productstate` command. Record exact run/job/HEAD/health before moving to observer-anchor implementation.
+
+
+
+## LIVE TASK-START CHECKPOINT — 2026-09-29 — RDP11 read-only observer + soak anchor
+
+This checkpoint is written before any observer/anchor implementation.
+
+Post-deploy Product inspection:
+- issue #1665
+- Crypto Mac Command run `36541990619`
+- job `109319365654`
+- conclusion: SUCCESS
+- Product HEAD: `3d9f33db3f1189571d40566125fbeabd00c04930`
+- Product checkout reported clean detached exact target.
+- dashboard health:
+  - `status=ok`
+  - `product_version=full-version-contextual-evidence/1`
+  - `product_root=stream`
+  - `stream_root_active=true`
+  - `real_capital=0`
+  - `ledger_present=true`
+  - `alert_outbox_present=true`
+  - `decision_evidence_present=true`
+  - `read_only=true`
+
+Active roadmap gate:
+- RDP11 — Continuous soak + final Evidence PASS.
+
+Bounded goal:
+- add the minimum dedicated **read-only** UID504 observation/anchor machinery required to establish an attributable 72-hour soak;
+- observer must never write canonical evidence/runtime DBs;
+- observations must be stored only in a separate RDP11 sidecar/report location;
+- anchor must bind exact Product/main SHA `3d9f33db3f1189571d40566125fbeabd00c04930`, UTC start, and first successful observation;
+- later observations must detect anchor drift and mandatory fail-closed violations.
+
+Minimum monitored surfaces:
+- uptime/service health;
+- source freshness and explicit stale/unavailable states;
+- source/data gaps and sequence/gap behavior where available;
+- reconnect/heartbeat state where available;
+- SQLite quick-check/lock-read health without mutation;
+- frozen-proof integrity/no-future checks available from accepted runtime audits;
+- Stream/Product continuity and proof inspectability;
+- `REAL_CAPITAL=0`.
+
+Duplicate/stale-work guard:
+- no accepted RDP11 dedicated observer/anchor implementation has been established in durable frontier;
+- existing 20m continuity wake and R11 recovery jobs are not the RDP11 72h acceptance clock.
+
+Safety:
+- `REAL_CAPITAL=0`
+- `HISTORICAL_BACKFILL=NO`
+- canonical evidence/runtime DB writes by observer: FORBIDDEN
+- Product/Development frozen/historical evidence mutation: FORBIDDEN
+- Durdurulmaz touched: NO
+- Quantum Capital touched: NO
+- soak clock: NOT STARTED until observer implementation is accepted and first exact successful observation is anchored.
+
+Exact nextAction:
+Audit existing continuity workflows/scripts/runtime audit surfaces and choose the smallest reuse-oriented observer design. Record the audit result before implementation.
