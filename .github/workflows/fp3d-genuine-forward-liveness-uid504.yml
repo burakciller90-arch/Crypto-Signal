@@ -1,0 +1,158 @@
+name: FP3-D Genuine Forward Liveness UID504
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "ops/audit_fp3_genuine_forward_liveness.py"
+      - "tests/test_fp3d_genuine_forward_liveness.py"
+      - ".github/workflows/fp3d-genuine-forward-liveness-uid504.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fp3d-genuine-forward-liveness-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  acceptance:
+    name: FP3-D exact-head genuine-forward acceptance
+    runs-on: [self-hosted, crypto-signal, uid504]
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          clean: true
+          fetch-depth: 1
+
+      - name: Verify exact source and frozen runtime boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          DEV="$ROOT/Development"
+          PRODUCT="$ROOT/Product"
+          TARGET="3d9f33db3f1189571d40566125fbeabd00c04930"
+          test "$(id -u)" = "504"
+          test "$(git -C "$GITHUB_WORKSPACE" rev-parse HEAD)" = "${{ github.event.pull_request.head.sha || github.sha }}"
+          test -z "$(git -C "$DEV" status --porcelain)"
+          test -z "$(git -C "$PRODUCT" status --porcelain)"
+          test "$(git -C "$DEV" rev-parse HEAD)" = "$TARGET"
+          test "$(git -C "$PRODUCT" rev-parse HEAD)" = "$TARGET"
+          mkdir -p "$RUNNER_TEMP/fp3d-genuine-forward"
+          {
+            echo "DEV_HEAD_BEFORE=$(git -C "$DEV" rev-parse HEAD)"
+            echo "PRODUCT_HEAD_BEFORE=$(git -C "$PRODUCT" rev-parse HEAD)"
+          } > "$RUNNER_TEMP/fp3d-genuine-forward/prestate"
+          for path in             "$DEV/runtime/ledger/live_signal_ledger.sqlite3"             "$DEV/runtime/wc2/wc2.wc2-prepared.sqlite3"             "$DEV/runtime/decision/decision_evidence.sqlite3"             "$DEV/runtime/paper/paper_fund_epoch2.sqlite3"             "$DEV/runtime/stream/intelligence_stream.sqlite3"; do
+            test -s "$path"
+          done
+          echo "FP3D_EXACT_SOURCE_PASS=YES"
+          echo "FP3D_RDP11_FROZEN_TARGET_EXACT=YES"
+          echo "REAL_CAPITAL=0"
+
+      - name: Focused harness contract acceptance
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
+          PY="$DEV/.venv/bin/python"
+          export PYTHONPATH="$GITHUB_WORKSPACE/src:$GITHUB_WORKSPACE"
+          cd "$GITHUB_WORKSPACE"
+          "$PY" -m pytest -q tests/test_fp3d_genuine_forward_liveness.py
+          "$PY" -m ruff check             ops/audit_fp3_genuine_forward_liveness.py             tests/test_fp3d_genuine_forward_liveness.py
+          "$PY" -m mypy ops/audit_fp3_genuine_forward_liveness.py
+          echo "FP3D_HARNESS_CONTRACT_PASS=YES"
+          echo "FP3D_FIXTURE_CAN_CLOSE_GATE=NO"
+          echo "REAL_CAPITAL=0"
+
+      - name: Live genuine-forward snapshot probe
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          DEV="$ROOT/Development"
+          PY="$DEV/.venv/bin/python"
+          OUT="$RUNNER_TEMP/fp3d-genuine-forward"
+          export PYTHONPATH="$GITHUB_WORKSPACE/src:$GITHUB_WORKSPACE"
+          cd "$GITHUB_WORKSPACE"
+          "$PY" ops/audit_fp3_genuine_forward_liveness.py             --signal "$DEV/runtime/ledger/live_signal_ledger.sqlite3"             --prepared "$DEV/runtime/wc2/wc2.wc2-prepared.sqlite3"             --decision "$DEV/runtime/decision/decision_evidence.sqlite3"             --epoch2 "$DEV/runtime/paper/paper_fund_epoch2.sqlite3"             --stream "$DEV/runtime/stream/intelligence_stream.sqlite3"             --output-dir "$OUT" | tee "$OUT/probe.log"
+          status="$("$PY" - "$OUT/fp3d-genuine-forward-report.json" <<'PY'
+          import json
+          import sys
+          from pathlib import Path
+          report = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+          print(report["status"])
+          PY
+          )"
+          if [ "$status" = "PASS" ]; then
+            grep -q '^FP3D_GENUINE_POST_ACTIVATION_CANDIDATE=YES$' "$OUT/probe.log"
+            grep -q '^FP3D_REPLAY_IDEMPOTENCE_PASS=YES$' "$OUT/probe.log"
+            grep -q '^FP3D_ACTIVATION_IMMUTABLE_PASS=YES$' "$OUT/probe.log"
+            echo "FP3D_GENUINE_FORWARD_GATE_PASS=YES"
+          elif [ "$status" = "WAITING_NO_POST_ACTIVATION_ISSUANCE" ]; then
+            echo "FP3D_GENUINE_FORWARD_GATE_PASS=NO"
+            echo "FP3D_GENUINE_FORWARD_WAITING=YES"
+          else
+            echo "unexpected FP3-D status: $status" >&2
+            exit 1
+          fi
+          echo "FP3D_LIVE_SOURCE_READONLY_PASS=YES"
+          echo "HISTORICAL_BACKFILL=NO"
+          echo "REAL_CAPITAL=0"
+
+      - name: Whole-repository regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEV="/Volumes/Crypto-504/Crypto-Signal/Development"
+          PY="$DEV/.venv/bin/python"
+          export PYTHONPATH="$GITHUB_WORKSPACE/src:$GITHUB_WORKSPACE"
+          cd "$GITHUB_WORKSPACE"
+          "$PY" -m pytest -q
+          "$PY" -m ruff check src tests ops/verify_stage10_integrated.py ops/audit_fp3_genuine_forward_liveness.py
+          "$PY" -m mypy src ops/verify_stage10_integrated.py ops/audit_fp3_genuine_forward_liveness.py
+          node --check src/crypto_signal/product/static/freshness.js
+          node --check src/crypto_signal/product/static/app.js
+          node tests/js/test_product_freshness.js
+          echo "FP3D_FULL_REGRESSION_PASS=YES"
+          echo "REAL_CAPITAL=0"
+
+      - name: Prove frozen runtime remained untouched
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="/Volumes/Crypto-504/Crypto-Signal"
+          DEV="$ROOT/Development"
+          PRODUCT="$ROOT/Product"
+          TARGET="3d9f33db3f1189571d40566125fbeabd00c04930"
+          BEFORE_DEV="$(sed -n 's/^DEV_HEAD_BEFORE=//p' "$RUNNER_TEMP/fp3d-genuine-forward/prestate")"
+          BEFORE_PRODUCT="$(sed -n 's/^PRODUCT_HEAD_BEFORE=//p' "$RUNNER_TEMP/fp3d-genuine-forward/prestate")"
+          AFTER_DEV="$(git -C "$DEV" rev-parse HEAD)"
+          AFTER_PRODUCT="$(git -C "$PRODUCT" rev-parse HEAD)"
+          test "$BEFORE_DEV" = "$AFTER_DEV"
+          test "$BEFORE_PRODUCT" = "$AFTER_PRODUCT"
+          test "$AFTER_DEV" = "$TARGET"
+          test "$AFTER_PRODUCT" = "$TARGET"
+          test -z "$(git -C "$DEV" status --porcelain)"
+          test -z "$(git -C "$PRODUCT" status --porcelain)"
+          echo "FP3D_DEVELOPMENT_NON_MUTATING_PASS=YES"
+          echo "FP3D_PRODUCT_NON_MUTATING_PASS=YES"
+          echo "FP3D_RDP11_TARGET_UNCHANGED_PASS=YES"
+          echo "HISTORICAL_BACKFILL=NO"
+          echo "REAL_CAPITAL=0"
+
+      - name: Upload FP3-D observation report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fp3d-genuine-forward-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/fp3d-genuine-forward/fp3d-genuine-forward-report.json
+            ${{ runner.temp }}/fp3d-genuine-forward/probe.log
+          if-no-files-found: ignore
+          retention-days: 7

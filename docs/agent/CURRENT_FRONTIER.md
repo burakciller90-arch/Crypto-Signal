@@ -5974,3 +5974,119 @@ Current blocker:
 
 Exact nextAction:
 Start a fresh isolated FP3-D task checkpoint from current main; audit duplicate branches/PRs plus the accepted FP3 activation/liveness watermark and genuine-forward observation surfaces, then define the minimal real forward acceptance path before any implementation.
+
+
+## FP3-D SOURCE AUDIT COMPLETE / IMPLEMENTATION START — 2026-09-29
+
+status: FP3_D_GENUINE_FORWARD_HARNESS_IMPLEMENTATION_START
+taskStartMain: 4490e3a32eabbd21e84fe32ba70aa2324151a168
+activeBranch: fp3d/genuine-forward-liveness-v2
+supersededSessionBranch: fp3d/genuine-forward-liveness
+activeWorktree: NOT_CREATED_IN_CONNECTOR_SESSION
+canonicalWorkbenchRepo: /Volumes/Crypto-504/Crypto-Signal-Workbench/repo
+classification: REUSE live WC2/Decision/Stream/Epoch2 truth + BUILD isolated read-only/snapshot acceptance harness
+realCapital: 0
+historicalBackfill: NO
+RDP11RuntimeMutation: NO
+ProductDevelopmentDeploy: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Branch reconciliation:
+- main advanced after the first FP3-D checkpoint via docs-only PR #1684;
+- current main is \`4490e3a32eabbd21e84fe32ba70aa2324151a168\`;
+- the earlier connector-session branch \`fp3d/genuine-forward-liveness\` is stale-base and MUST NOT be merged;
+- this v2 branch is the sole active FP3-D implementation branch.
+
+Verified live source contract:
+- signal ledger: \`/Volumes/Crypto-504/Crypto-Signal/Development/runtime/ledger/live_signal_ledger.sqlite3\`;
+- WC2 policy: \`.../runtime/wc2/wc2_forward_policy.sqlite3\`;
+- Epoch2: \`.../runtime/paper/paper_fund_epoch2.sqlite3\`;
+- collection protocol: \`.../runtime/wc2/wc2_collection_protocol.wc2-collection-protocol.sqlite3\`;
+- prepared receipt journal: \`.../runtime/wc2/wc2.wc2-prepared.sqlite3\`;
+- decision evidence: \`.../runtime/decision/decision_evidence.sqlite3\`;
+- canonical Stream: \`.../runtime/stream/intelligence_stream.sqlite3\`;
+- cohort/shadow journals are the accepted WC2 runtime paths from \`ops/ssd_runtime_supervisor.sh\`.
+
+Accepted recovery facts:
+- \`WC2PreparedCycleJournal.read_for_signal\` reconstructs an exact immutable prepared receipt query-only;
+- \`complete_wc2_prepared_cycle\` reconstructs the exact \`UnifiedDecisionIssuance\` from that prepared receipt without a new historical market read and exposes an \`issuance_hook\`;
+- \`ImmutableDecisionEvidenceLedger.read_issuance_for_signal\` independently verifies persisted R20/R20.5 lineage query-only;
+- FP3-A \`process_issuance\` writes canonical capital decisions/Stream state, therefore it MUST NOT run against live Development stores during FP0/RDP11 soak.
+
+Frozen FP3-D observation design:
+1. open all live source DBs query-only and capture SHA256/quick-check + current Git heads;
+2. select only a real persisted WC2 prepared receipt whose exact R20 forecast exists and whose issuance is at/after the existing Stream Capital Forward activation;
+3. take SQLite-consistent snapshots of required DBs into \`$RUNNER_TEMP\` using SQLite backup from read-only sources;
+4. reconstruct the genuine issuance only from copied immutable prepared/decision truth; no fixture, no new market read;
+5. run FP3-A owner only on copied Epoch2/Stream + isolated temp \`.fp3-paper-autopilot.sqlite3\`;
+6. policy-correct HOLD/BLOCK is accepted liveness; do not weaken gates to manufacture BUY;
+7. restart runtime on the same temp stores and replay the same issuance, proving no duplicate decision/HOLD/Stream/FP3 receipt mutation;
+8. compare live DB SHA256 + Product/Development heads/status after the probe to prove non-mutation.
+9. if no genuine post-activation issuance exists, report WAITING/CORRECT_SILENCE explicitly; never synthesize one.
+
+Current blocker:
+- the harness and UID504 workflow do not yet exist, so no genuine FP3-D observation has been executed.
+
+Exact nextAction:
+Implement the isolated FP3-D genuine-forward audit helper, focused harness tests, and an exact-head UID504 workflow that executes the live read-only/snapshot probe and emits mechanical PASS/WAITING markers without mutating live stores.
+
+
+## FP3-D IMPLEMENTATION COMPLETE / LIVE ACCEPTANCE START — 2026-09-29
+
+status: FP3_D_LIVE_ACCEPTANCE_START
+baseMain: 4490e3a32eabbd21e84fe32ba70aa2324151a168
+activeBranch: fp3d/genuine-forward-liveness-v2
+implementationHeadBeforeAcceptanceDocs: b7211ee79db619d69b8501abe02741e5bfc7d559
+realCapital: 0
+historicalBackfill: NO
+RDP11RuntimeMutation: NO
+ProductDevelopmentDeploy: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Implemented:
+- \`ops/audit_fp3_genuine_forward_liveness.py\`: live sources query-only; SQLite-consistent snapshots into runner-temp; no fixture acceptance;
+- candidate requires immutable prepared receipt + persisted R20/R20.5 + exact live signal-ledger bundle/frozen-at lineage + issuance after existing Stream Capital activation;
+- genuine issuance is recovered from copied immutable prepared truth and copied Decision Ledger;
+- FP3-A executes only on copied Epoch2/Stream + isolated temp FP3 store;
+- runtime restart replays the exact FP3 receipt and compares copied SQLite file-set fingerprints for no duplicate mutation;
+- activation exact replay is stable and a changed activation watermark must fail closed;
+- WAITING_NO_POST_ACTIVATION_ISSUANCE is explicit and never reported as PASS;
+- focused harness tests cover SQLite snapshot isolation, post-activation ordering and live signal lineage verification;
+- UID504 workflow checks exact PR head, frozen RDP11 Product/Development target, focused tests, live genuine probe, full regression and final runtime non-mutation.
+
+Current blocker:
+- no exact UID504 live probe result exists for this implementation head yet.
+
+Exact nextAction:
+Open one isolated FP3-D PR from this branch, inspect the dedicated UID504 workflow's live status and mechanical markers; claim FP3-D PASS only if it reports a genuine post-activation candidate plus replay/activation/non-mutation PASS, otherwise record WAITING or the exact failure without inventing evidence.
+
+
+## FP3-D ACCEPTANCE ATTEMPT 1 FAIL / LINT-ONLY HARNESS REPAIR — 2026-09-29
+
+status: FP3_D_ACCEPTANCE_FIX_1_LINT
+pr: 1685
+testedHead: 5fc02afb5040bf64d2b37ef165efee7730050bdd
+fp3dRun: 36615647603
+fp3dJob: 109567828795
+realCapital: 0
+historicalBackfill: NO
+RDP11RuntimeMutation: NO
+
+Observed mechanical result:
+- exact PR source PASS;
+- Product + Development both exact frozen RDP11 target \`3d9f33db3f1189571d40566125fbeabd00c04930\`;
+- focused FP3-D pytest PASS;
+- focused gate stopped in Ruff before live probe;
+- Ruff only: EXE001 because Contents-API-created Python file carries a shebang without executable mode; SIM117 for nested context-manager syntax;
+- final Development/Product non-mutation PASS and frozen target unchanged PASS;
+- live genuine-forward probe was SKIPPED, so no liveness claim exists yet.
+
+Bounded repair:
+- remove shebang;
+- combine nested SQLite context managers;
+- no behavior/runtime/source contract change.
+
+Exact nextAction:
+Apply only the two Ruff cleanups and rerun the dedicated exact-head FP3-D UID504 gate to reach the live genuine-forward probe.

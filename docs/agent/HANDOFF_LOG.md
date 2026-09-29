@@ -5822,3 +5822,43 @@ Implement C2 in canonical_capital_runtime.py + autopilot_forward_actions.py only
 - Durdurulmaz untouched; Quantum Capital untouched
 - blocker: FP3-D genuine-forward liveness requires real post-activation evidence; fixture proof cannot close it
 - nextAction: start isolated FP3-D checkpoint from current main and audit activation/liveness/observer truth before implementation
+
+
+## 2026-09-29 — FP3-D source audit complete / snapshot harness implementation start
+
+- exact task-start main: \`4490e3a32eabbd21e84fe32ba70aa2324151a168\`
+- active branch: \`fp3d/genuine-forward-liveness-v2\`; earlier \`fp3d/genuine-forward-liveness\` is stale-base and must not merge
+- source truth: live WC2 prepared + Decision Ledger + Epoch2 + Stream paths are taken from current \`ops/ssd_runtime_supervisor.sh\`, not guessed
+- recovery: exact genuine \`UnifiedDecisionIssuance\` can be reconstructed from immutable prepared receipt with no new market read
+- safety design: live SQLite sources query-only + hashed, SQLite backup to runner-temp, all FP3 mutations confined to temp copies/temp FP3 store
+- liveness semantics: HOLD/BLOCK/correct silence is healthy; no gate weakening; no fixture can close FP3-D
+- live non-mutation proof required before/after: DB hashes + Product/Development heads/clean state
+- safety: REAL_CAPITAL=0; HISTORICAL_BACKFILL=NO; frozen RDP11 runtime untouched; Durdurulmaz/Quantum untouched
+- blocker: harness/workflow not implemented
+- nextAction: implement helper + focused tests + UID504 live snapshot probe
+
+
+## 2026-09-29 — FP3-D implementation complete / dedicated live acceptance next
+
+- base main: \`4490e3a32eabbd21e84fe32ba70aa2324151a168\`
+- active branch: \`fp3d/genuine-forward-liveness-v2\`
+- implementation head before acceptance docs: \`b7211ee79db619d69b8501abe02741e5bfc7d559\`
+- helper: live DBs query-only -> runner-temp SQLite backups -> genuine prepared/R20 recovery -> FP3 only on copied Epoch2/Stream/temp FP3 store
+- candidate provenance: prepared receipt + persisted R20/R20.5 + exact live signal freeze/bundle/frozen-at + post-Stream-Capital activation
+- restart proof: exact FP3 receipt replay + copied SQLite fingerprints unchanged
+- WAITING remains explicit if no genuine post-activation issuance exists; fixtures cannot close the gate
+- dedicated workflow: \`.github/workflows/fp3d-genuine-forward-liveness-uid504.yml\`
+- safety: REAL_CAPITAL=0; HISTORICAL_BACKFILL=NO; frozen Product/Development target protected; Durdurulmaz/Quantum untouched
+- blocker: live UID504 result not yet observed
+- nextAction: open isolated PR and inspect exact live workflow markers
+
+
+## 2026-09-29 — FP3-D acceptance attempt 1 lint-only failure
+
+- PR #1685; run/job \`36615647603\` / \`109567828795\`; tested head \`5fc02afb5040bf64d2b37ef165efee7730050bdd\`
+- exact source + frozen RDP11 target PASS
+- focused pytest PASS
+- Ruff blockers only: EXE001 shebang/non-executable mismatch and SIM117 nested with
+- live probe skipped; no FP3-D liveness claim
+- Development/Product non-mutation + target unchanged PASS; REAL_CAPITAL=0
+- nextAction: two lint-only harness cleanups, then rerun dedicated live gate
