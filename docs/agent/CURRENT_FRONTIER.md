@@ -2632,3 +2632,39 @@ Acceptance harness rule:
 
 Exact nextAction:
 Temporarily wire the already-registered MI1 UID504 acceptance harness to fp1b/attention-workspace-family-summary and include the B1 module/test in pytest/Ruff/mypy; run against the exact resulting head, record exact failures before repair, and do not claim PASS until all mechanical markers are green.
+
+
+## FP1-B1 FIRST UID504 ACCEPTANCE FAILURE CHECKPOINT — 2026-09-29
+
+status: FP1_B1_ACCEPTANCE_TEST_REPAIR_REQUIRED
+activeBranch: fp1b/attention-workspace-family-summary
+acceptanceHead: 368c41581944f64a1cfc9d0af49746296cffa048
+uid504Run: 36558165417
+uid504Job: 109372266580
+artifactId: 11028466029
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Mechanical result:
+- exact-source UID504 checkout PASS;
+- focused suite reached 100%;
+- all production semantics/assertions passed;
+- exactly two assertions failed, both test-only WAL-presence assumptions:
+  - test_attention_reuses_materiality_and_prioritizes_newer_system_view
+  - test_five_family_summary_enriches_exact_family_sources_and_keeps_missing_explicit
+- both failures asserted that path-wal must not exist after read;
+- the accepted FamilyRuntime/SystemViewRuntime seed already leaves a WAL sidecar before FinalProductReadModel reads;
+- main SQLite DB bytes were proven unchanged by the B1 reads;
+- Product/Development checkout non-mutation PASS:
+  MESSAGE_INTELLIGENCE_MI1_NON_MUTATING_PASS=YES;
+- Ruff/mypy did not execute because pytest fail-fast stopped the command chain.
+
+Repair classification:
+- TEST FIX ONLY;
+- do not change production read-model semantics;
+- replace the incorrect no-WAL-exists assertion with a before/after WAL byte snapshot equality assertion so pre-existing canonical WAL evidence must remain unchanged by the read.
+
+Exact nextAction:
+Update only tests/test_final_product_read_model.py to snapshot any pre-existing WAL bytes immediately after seeding and assert the same bytes after Attention/Family reads. Then rerun the same UID504 pytest/Ruff/mypy/non-mutation harness.
