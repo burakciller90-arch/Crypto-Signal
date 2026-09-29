@@ -192,6 +192,12 @@ class PortfolioAllocationAssessmentV2:
             _require_unit_interval(value, label)
         if self.stop_invalidation_fraction == Decimal(0):
             raise ValueError("stop/invalidation fraction must be positive")
+        for value, label in (
+            (self.event_risk_clear, "event_risk_clear"),
+            (self.liquidity_eligible, "liquidity_eligible"),
+            (self.conflict_clear, "conflict_clear"),
+        ):
+            _require_bool(value, label)
         if self.reason_codes != tuple(sorted(set(self.reason_codes))):
             raise ValueError("reason codes must be sorted unique")
         _require_non_negative_decimal(
@@ -344,6 +350,12 @@ def assess_portfolio_allocation(
     _require_asset(candidate_asset, "candidate_asset")
     _require_unit_interval(transaction_cost_fraction, "transaction_cost_fraction")
     _require_unit_interval(stop_invalidation_fraction, "stop_invalidation_fraction")
+    for value, label in (
+        (event_risk_clear, "event_risk_clear"),
+        (liquidity_eligible, "liquidity_eligible"),
+        (conflict_clear, "conflict_clear"),
+    ):
+        _require_bool(value, label)
     if stop_invalidation_fraction == Decimal(0):
         raise ValueError("stop/invalidation fraction must be positive")
 
@@ -655,6 +667,11 @@ def _build_assessment(
         forced_deployment=False,
         real_capital=REAL_CAPITAL,
     )
+
+
+def _require_bool(value: object, label: str) -> None:
+    if not isinstance(value, bool):
+        raise TypeError(f"{label} must be bool")
 
 
 def _require_asset(value: str, label: str) -> None:
