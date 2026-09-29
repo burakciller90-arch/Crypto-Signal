@@ -1,9 +1,9 @@
 # Crypto Signal — FP1-D Portfolio + Capital Movements Field-Source Matrix
 
-Status: **AUDIT COMPLETE / IMPLEMENTATION NOT YET STARTED**
+Status: **D1 ACCEPTED / D2 AUDIT COMPLETE / D2 IMPLEMENTATION NEXT**
 Date: 2026-09-29
-Base main: `e7fc9044f18b9a5c5006e498c4b68e6c15828758`
-Active branch: `fp1d/portfolio-capital-movements`
+Base main: `e16bf10e6cd6a653cb9ab96616cea88d1df5e242`
+Active branch: `fp1d/portfolio-capital-movements-current`
 Safety: **REAL_CAPITAL=0**
 Historical backfill: **FORBIDDEN**
 
@@ -232,6 +232,59 @@ FP1-D must not create a second R22 event ledger.
 
 Trade-level deep reconstruction stays FP1-E Trade Passport.
 
+
+### 4.3 Exact D2 read/query contract
+
+**Frozen before D2 production code.**
+
+Canonical reader:
+`IntelligenceStreamReadModel(stream_ledger_path)`
+
+Canonical query:
+`StreamMessageQuery(category="capital", limit=..., vault=..., from_ms=..., to_ms=...)`
+
+Rules:
+- `primary_surface=False`; D2 is a dedicated Capital projection, not the primary-message suppression view;
+- no default `state` filter; all accepted Capital subtypes may appear;
+- no direct SQLite query is added in Final Product;
+- no direct R22/R21 table scan is added for the timeline;
+- `read_messages` verifies stored payload digest, canonical identity, schema/engine, read-only authority and `REAL_CAPITAL=0` before D2 sees a record;
+- default ordering is newest-first by `event_at_ms` then `narrative_identity`;
+- `vault`, `from_ms` and `to_ms` are delegated to the accepted Stream query semantics;
+- R22/R21 remain lineage/accounting authorities; their identities are surfaced only in audit.
+
+Verified message classes admitted by D2:
+- `capital_eligible`, `capital_hold`, `capital_blocked`;
+- `capital_sized`;
+- `capital_executed`, `capital_reduced`, `capital_exited`;
+- `capital_candidate`;
+- `capital_accounting_updated`;
+- `capital_outcome`.
+
+Field precedence:
+- action label comes only from exact `subtype` plus exact persisted `action` when the subtype requires it;
+- customer text comes from persisted `text.capital_text`; no generated market claim is added;
+- `source_as_of_ms` is exposed only when present in the accepted payload; execution/story records that do not persist it remain unavailable;
+- decision starting budget is labelled budget, never executed notional;
+- sizing notional/cash/NAV comes only from sizing payload;
+- execution quantity/notional/fill/cost and before/after accounting come only from execution payload;
+- accounting lifecycle before/after cash/NAV comes only from `capital_accounting_updated`;
+- realized PnL / position before-after comes only from exact execution/outcome payload where present;
+- absent optional numeric fields remain `None`, never zero-filled.
+
+Customer action labels:
+- `capital_eligible` -> **İşleme uygun bulundu**;
+- `capital_hold` -> **Nakit korunuyor / işlem yapılmadı**;
+- `capital_blocked` -> **İşlem engellendi**;
+- `capital_sized` -> **Pozisyon boyutu belirlendi**;
+- BUY execution -> **Pozisyon açıldı / artırıldı**;
+- REDUCE execution -> **Pozisyon azaltıldı**;
+- EXIT execution -> **Pozisyon kapatıldı**;
+- `capital_candidate` -> **Aday sermaye değerlendirmesi**;
+- `capital_accounting_updated` -> **Portföy hesabı güncellendi**;
+- `capital_outcome` -> **İşlem sonucu kaydedildi**.
+
+
 ## 5. Daily Capital Movements customer semantics
 
 The customer timeline is a projection, not a new ledger.
@@ -342,9 +395,12 @@ All slices also require:
 
 ## 9. Exact next action
 
-Record FP1-D1 implementation-start checkpoint, then implement only Portfolio Summary over `read_epoch2_state_read_only` in `final_product_read_model.py` plus focused temporary Epoch 2 ledger tests.
+Implement **FP1-D2 only** in `final_product_read_model.py` plus focused tests:
+- add customer-safe Daily Capital Movements view over the frozen `StreamMessageQuery(category="capital", ...)` contract;
+- preserve exact optionality and audit lineage;
+- do not edit `web.py`, frontend files, legacy Mission Control, R22/R21 writers or runtime/deploy configuration.
 
-Do not edit `web.py`, frontend files or legacy Mission Control.
+D1 Portfolio Summary is already mechanically accepted and must not be rebuilt.
 
 
 ## 10. FP1-D2 exact verified Stream Capital source contract — 2026-09-29 audit
