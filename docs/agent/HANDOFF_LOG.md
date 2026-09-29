@@ -5714,3 +5714,14 @@ Implement C2 in canonical_capital_runtime.py + autopilot_forward_actions.py only
 - cleanup: Development non-mutating PASS; REAL_CAPITAL=0
 - repair scope: fixture only — generate a genuinely later bullish market cycle with rebuilt confluence/Event Risk evidence
 - nextAction: patch second market cycle and rerun exact acceptance
+
+
+## 2026-09-29 — FP3-C2 acceptance retry 4 started
+
+- PR: #1683
+- head: \`f5a415ac754fb494b4f25eff857800a4c51ac7e9\`
+- base main: \`1260d6096900107eeb9839ea9a094bb5ce9f028e\`
+- repair: second entry fixture is now a later market cycle with rebuilt bullish family evidence + Event Risk + frozen signal
+- retry runs: RDP11 fulltest \`36605648432\`, WC6 \`36605648281\`, F10 \`36605648280\`
+- safety unchanged: REAL_CAPITAL=0; no historical backfill/runtime deploy; Durdurulmaz/Quantum untouched
+- nextAction: inspect exact acceptance outputs, then recheck main immediately before any merge
