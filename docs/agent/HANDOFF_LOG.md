@@ -1717,3 +1717,34 @@ boundedGoal:
 
 nextAction:
 - audit existing continuity/recovery/runtime-audit assets and record reuse plan before code/workflow changes.
+
+
+
+---
+
+## 2026-09-29 — RDP11 observer audit complete handoff
+
+status: OBSERVER_IMPLEMENTATION_STARTING
+branch: rdp11/deploy-soak-anchor
+runtimeTarget: 3d9f33db3f1189571d40566125fbeabd00c04930
+sidecarRoot: /Volumes/Crypto-504/Crypto-Signal/RDP11Soak
+epochDesign: immutable anchor + immutable observations + immutable invalidation marker
+observerCanonicalDbWrites: NONE
+observerSidecarWritesOnly: YES
+canonicalSymbols: BTCUSDT,ETHUSDT,SOLUSDT
+canonicalRawChannels: orderbook.50,publicTrade
+gapSilencePolicyMs: 60000
+realCapital: 0
+historicalBackfill: NO
+soakClockStarted: NO
+
+reuse:
+- R11 runtime health/topology semantics
+- Stream post-R11 read-only/no-backfill semantics
+- RDP1 collector/gap schemas
+- Frozen proof immutable/no-future semantics
+
+nextAction:
+- add ops/rdp11_soak_observer.py + tests + UID504 observer workflow;
+- branch run is dry-run/non-mutating;
+- merge only on exact-head acceptance.
