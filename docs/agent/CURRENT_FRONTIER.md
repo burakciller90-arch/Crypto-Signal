@@ -3872,3 +3872,47 @@ Acceptance blocker:
 Exact nextAction:
 Temporarily wire the existing MI1 UID504 acceptance workflow to this branch and add final_product_read_model.py/tests/test_final_product_read_model.py to the focused pytest/Ruff/mypy gate; run exact-head acceptance, inspect logs mechanically, then restore the workflow to exact current-main content before any PR.
 
+
+
+## FP1-D2 UID504 ACCEPTANCE PASS / FP1-D REVIEW READY — 2026-09-29
+
+status: FP1_D_REVIEW_READY
+activeBranch: fp1d/portfolio-capital-movements-current
+baseMain: e16bf10e6cd6a653cb9ab96616cea88d1df5e242
+acceptedD1Head: f49ba2913654dd46b99c65842e9fa0603195c8df
+acceptedD1Run: 36571535907
+acceptedD2Head: ec70ba3daa367c73f67d04c14cbeeb8ff797a276
+acceptedD2Run: 36574415360
+acceptedD2Job: 109426221692
+cleanupHead: 30cad29c4b30cfc664d33945d88d5ef8bdf4dd01
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Mechanical D2 PASS:
+- exact-source UID504 checkout PASS;
+- final-product/Stream regression pytest chain PASS;
+- Ruff marker: All checks passed!;
+- strict mypy marker: Success: no issues found in 5 source files;
+- MESSAGE_INTELLIGENCE_MI1_NON_MUTATING_PASS=YES;
+- PROJECT_ISOLATION_PASS=YES;
+- REAL_CAPITAL=0.
+
+Accepted FP1-D customer truth:
+- Portfolio Summary reads canonical Epoch 2 accounting only;
+- Capital Movements reads only verified Stream Capital messages;
+- deterministic newest-first order and accepted time/vault query semantics are reused;
+- missing/optional amounts remain unavailable rather than zero;
+- execution records without separate source-as-of do not invent one;
+- raw subtype/reason/R21/R22/SHA lineage is audit-only;
+- no second capital ledger, no new accounting math, no legacy Epoch 1 merge.
+
+Cleanup verification:
+- temporary MI1 acceptance wiring was restored after PASS;
+- branch workflow blob equals exact current-main workflow blob;
+- no Product/Development deploy or RDP11 soaked-runtime mutation occurred.
+
+Exact nextAction:
+Recheck current main and duplicate PR state, open one FP1-D PR, inspect the actual changed-file set and PR checks, then merge only if the diff remains isolated and main has not advanced with overlapping FP1-D work.
+
