@@ -269,16 +269,23 @@ def evaluate_timed_execution(
             "evaluation cutoff cannot precede submission"
         )
 
+    evidence_cutoff_ms = min(evaluation_cutoff_ms, request.deadline_at_ms)
+    if (
+        request.cancel_at_ms is not None
+        and request.cancel_at_ms <= evaluation_cutoff_ms
+    ):
+        evidence_cutoff_ms = min(evidence_cutoff_ms, request.cancel_at_ms)
+
     eligible_books = tuple(
         sorted(
             (
                 book
                 for book in orderbooks
                 if _matches_request(book, request)
-                and book.ingested_at_ms <= evaluation_cutoff_ms
+                and book.ingested_at_ms <= evidence_cutoff_ms
                 and request.eligible_at_ms
                 <= book.source_timestamp_ms
-                <= request.deadline_at_ms
+                <= evidence_cutoff_ms
             ),
             key=lambda book: (
                 book.source_timestamp_ms,
