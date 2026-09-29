@@ -4224,3 +4224,28 @@ Bounded fix:
 Exact nextAction:
 Apply only these two changes, rerun exact-head UID504 acceptance, and inspect pytest/Ruff/mypy/non-mutation/isolation markers.
 
+
+
+## FP1-F ACCEPTANCE ATTEMPT 2 FAIL / BOUNDED FIX START — 2026-09-29
+
+status: FP1_F_ACCEPTANCE_FIX_2
+acceptanceRun: 36582659170
+acceptanceJob: 109454598842
+attemptedHead: 54434756aff265b8f7c619434bcb9fe34f16c6ba
+runStatusObserved: completed
+runConclusionObserved: failure
+realCapital: 0
+historicalBackfill: NO
+
+Exact remaining failure:
+- global_search(...) still normalizes configured_symbols with _normalize_symbols(...) before the empty-universe branch guard.
+- configured_symbols=() is valid for federated event/trade/proof-only search and must not invoke the Market Pulse non-empty-symbol contract.
+
+Bounded fix:
+- set normalized screener symbols to () when configured_symbols is empty;
+- keep _normalize_symbols unchanged for actual Screener/Market Pulse callers;
+- no query/ranking/source/persistence semantics change.
+
+Exact nextAction:
+Apply the one-line empty-universe normalization fix and rerun exact-head UID504 acceptance.
+
