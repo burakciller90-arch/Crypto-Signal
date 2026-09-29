@@ -6200,3 +6200,17 @@ Implement C2 in canonical_capital_runtime.py + autopilot_forward_actions.py only
 - no allocation formula, FP3 sizing owner, Smart Capital owner, R21/R22 or runtime state changed
 - REAL_CAPITAL=0; no deploy/backfill; frozen RDP11 runtime untouched; Durdurulmaz/Quantum untouched
 - nextAction: require fresh exact-head FP5-A + WC6 + RDP11 + F10 PASS before merge
+
+
+## 2026-09-29 — FP5-A owner-bound repair acceptance-ready checkpoint
+
+- source semantic repair: `1e7a2bc14d915e4411225804acf66ed9a4d62a89`
+- focused owner-bound tests: `919f91347166c6ab9280b023d915027187c3d884`
+- PR #1698 is the sole FP5-A PR; no duplicate owner created
+- FP3 sizing/risk + PositionSizingPolicy + Event Risk + M6 Confluence are now reused by identity/type rather than replaced with raw booleans/duplicate thresholds
+- portfolio snapshot now proves cash/NAV/gross reconciliation and explicit cluster coverage truth
+- unclassified current exposure and missing candidate cluster fail closed as NOT_PROVEN
+- genuine 100% cash proof fixed to cash == NAV, zero exposure
+- all pre-repair workflow runs are stale and MUST NOT close the gate
+- REAL_CAPITAL=0; no R21/R22 mutation, deploy or backfill; frozen RDP11 runtime untouched; Durdurulmaz/Quantum untouched
+- nextAction: run fresh exact-head FP5-A + WC6 + RDP11 + F10; repair only mechanically observed failures before any merge
