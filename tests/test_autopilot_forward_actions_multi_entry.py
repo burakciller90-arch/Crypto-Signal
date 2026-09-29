@@ -67,7 +67,7 @@ def _second_issuance(tmp_path: Path):
         preflight_proof_slices=_preflight(family, event),
         issued_at_ms=ISSUED_AT + 10_000,
         horizon_bars=HORIZON,
-        target_label="target_scale_in",
+        target_label="target_1",
         ledger=ImmutableDecisionEvidenceLedger(tmp_path / "decision-scale-in.sqlite3"),
     )
 
