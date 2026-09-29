@@ -3646,3 +3646,67 @@ Bounded transfer:
 
 Exact nextAction:
 Copy the three accepted D1 files from the cleaned acceptance branch into this current-main branch, verify no other file changed, then append a D1-transferred / D2-task-start checkpoint before any D2 production code.
+
+
+## FP1-D1 TRANSFER COMPLETE / FP1-D2 TASK-START CHECKPOINT — 2026-09-29
+
+status: FP1_D2_IMPLEMENTATION_AUDIT_START
+activeBranch: fp1d/portfolio-capital-movements-current
+currentMainBase: e16bf10e6cd6a653cb9ab96616cea88d1df5e242
+branchVsMain: ahead 5 / behind 0
+acceptedD1SourceHead: f49ba2913654dd46b99c65842e9fa0603195c8df
+acceptedD1Uid504Run: 36571535907
+acceptedD1Uid504Job: 109416495617
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+D1 transfer verification:
+- accepted D1 content was transplanted onto current authority-lock main;
+- branch changed-file set is exactly:
+  - docs/CRYPTO_SIGNAL_FP1D_PORTFOLIO_CAPITAL_FIELD_SOURCE_MATRIX.md
+  - docs/agent/CURRENT_FRONTIER.md
+  - docs/agent/HANDOFF_LOG.md
+  - src/crypto_signal/product/final_product_read_model.py
+  - tests/test_final_product_read_model.py
+- no workflow, runtime, deploy, frontend, ACTIVE_ROADMAP or AGENTS file changed;
+- branch is not behind current main at this checkpoint.
+
+D2 bounded goal:
+- add read-only Daily Capital Movements customer projection;
+- source only verified Stream Capital messages already merged by IntelligenceStreamReadModel;
+- query category=capital with exact from/to and optional vault filters;
+- do not create a second capital event ledger;
+- do not query/merge legacy Epoch 1 Mission Control;
+- do not reconstruct Trade Passport here; deep R22 history remains FP1-E;
+- expose amounts only when exact source message carries them;
+- exact identities/reason codes/subtypes remain audit-only;
+- no Product route/frontend/deploy/new DB/schema/writer.
+
+D2 message classes to audit before code:
+1. capital_decision
+2. capital_sizing
+3. capital execution/story
+4. capital_lifecycle candidate
+5. capital_lifecycle accounting_updated
+6. capital_lifecycle outcome
+
+D2 PASS:
+- missing Stream DB explicit and non-creating;
+- only category=capital messages admitted;
+- from/to and optional vault filters reuse accepted Stream query semantics;
+- deterministic newest-first ordering;
+- customer action labels derived from exact subtype/action only;
+- optional amounts remain unavailable rather than zero;
+- audit preserves narrative/story/R21/R22/allocator identities;
+- default customer payload hides SHA/raw subtype/reason/database vocabulary;
+- source DB bytes unchanged;
+- focused pytest/Ruff/mypy;
+- Product/Development non-mutation;
+- project isolation;
+- no RDP11 mutation;
+- REAL_CAPITAL=0.
+
+Exact nextAction:
+Inspect verified capital record/detail payloads and existing capital tests, freeze the D2 field mapping in the existing FP1-D matrix if needed, then implement only CapitalMovements read models in final_product_read_model.py plus focused tests.
