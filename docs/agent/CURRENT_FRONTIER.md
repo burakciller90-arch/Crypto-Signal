@@ -1,5 +1,42 @@
 # Crypto Signal Current Frontier
 
+## FINAL PRODUCT ROADMAP AUTHORITY LOCK — MERGED / HANDOFF — 2026-09-29T12:47:21Z
+
+status: ROADMAP_AUTHORITY_ANTI_DRIFT_PASS
+exactCurrentMain: 8079b7dcb9d19df65903b9d8f4b26c24232dc623
+mergedPR: 1674
+mergeSHA: 8079b7dcb9d19df65903b9d8f4b26c24232dc623
+implementationBranch: docs/final-roadmap-authority-lock-20260929
+handoffBranch: docs/final-roadmap-authority-lock-handoff-20260929
+worktree: NONE
+workflowRunIds: NONE_REQUIRED_FOR_DOCS_AUTHORITY_ACCEPTANCE
+canonicalRoadmap: docs/CRYPTO_SIGNAL_FINAL_PRODUCT_MASTER_ROADMAP_V1.md
+activePointer: ACTIVE_ROADMAP.md
+mechanicalGate: FP0 / RDP11 Continuous soak + final Evidence PASS remains ACTIVE / NOT PASS
+parallelProductProgress: FP1-A / FP1-B / FP1-C merged; do not rebuild
+realCapital: 0
+historicalFrozenMutation: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+PASS evidence:
+- current main contains the 2026-09-29 Final Product Master Roadmap;
+- ACTIVE_ROADMAP is now explicitly the sole product-roadmap selector;
+- AGENTS now hard-stops roadmap drift;
+- conflicting older "active" labels are stale/historical unless ACTIVE_ROADMAP on current main changes explicitly;
+- CURRENT_FRONTIER now places current Final Product authority first and quarantines old RDP10/F1 checkpoints as historical;
+- PR #1674 changed only ACTIVE_ROADMAP.md, AGENTS.md, CURRENT_FRONTIER.md and HANDOFF_LOG.md;
+- no runtime/Product/Development deploy, RDP11 observer change, historical backfill or frozen-evidence mutation occurred.
+
+Remaining blocker:
+- authority-lock task has no blocker;
+- FP0/RDP11 remains time/evidence gated and cannot be declared PASS before its mechanical acceptance;
+- isolated FP1+ engineering may continue without mutating the soak target.
+
+Exact nextAction:
+Bootstrap from current main, verify no parallel agent has already advanced FP1-D, then continue the first mechanically unclosed Final Product slice (currently FP1-D Portfolio + capital movements) in an isolated branch/worktree while preserving the active RDP11 soak.
+
+
 ## FINAL PRODUCT ROADMAP AUTHORITY LOCK — ACCEPTANCE / MERGE CHECKPOINT — 2026-09-29
 
 status: ROADMAP_AUTHORITY_ANTI_DRIFT_IMPLEMENTED
