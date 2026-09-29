@@ -5339,3 +5339,35 @@ Bounded fix:
 Exact nextAction:
 Combine the final nested action/quantity guard, rerun exact-head UID504 acceptance and require pytest + Ruff + strict mypy + non-mutation + isolation PASS.
 
+
+
+## FP3-C1 ACCEPTANCE ATTEMPT 4 — PYTEST/RUFF PASS / MYPY FIX START — 2026-09-29
+
+status: FP3_C1_ACCEPTANCE_FIX_4_TYPING_ONLY
+acceptanceRun: 36600488031
+acceptanceJob: 109516473477
+attemptedHead: bf0583eae76618b9724b431e30110d5c69242dec
+realCapital: 0
+historicalBackfill: NO
+RDP11RuntimeMutation: NO
+
+Mechanical evidence:
+- exact-source checkout PASS;
+- focused/regression pytest PASS;
+- Ruff: All checks passed!;
+- Product/Development non-mutation PASS;
+- strict mypy blocked the gate with exactly two missing annotation diagnostics.
+
+Exact mypy findings:
+1. _validate_trade_inputs is missing an explicit return type;
+2. _validate_front_intent is missing the FP3AutopilotReceipt parameter annotation.
+
+Bounded fix:
+- import FP3AutopilotReceipt and FP3SizingStageReceipt types;
+- annotate _validate_trade_inputs -> tuple[FP3AutopilotReceipt, FP3SizingStageReceipt];
+- annotate _validate_front_intent(front: FP3AutopilotReceipt, ...);
+- no action, replay, R21/R22, Stream, sizing or persistence semantic change.
+
+Exact nextAction:
+Apply only the typing annotations, rerun exact-head UID504 acceptance and require all mechanical gates PASS.
+
