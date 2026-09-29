@@ -2089,3 +2089,278 @@ def test_trade_passport_customer_payload_hides_identity_and_raw_enum_vocabulary(
     assert len(audited.audit.bundle_identity) == 64
     assert audited.audit.raw_action == "BUY"
     assert audited.audit.raw_outcome == "OPEN"
+
+
+def test_screener_reuses_market_pulse_current_truth_and_is_read_only(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / "fp1f-screener.sqlite3"
+    _seed_b1_stream(path)
+    before = path.read_bytes()
+
+    view = FinalProductReadModel(
+        stream_ledger_path=path,
+    ).screener(
+        symbols=("BTCUSDT", "ETHUSDT"),
+        observed_at_ms=3_100,
+        include_audit=True,
+    )
+
+    assert view.availability_label == "Kısmi veri"
+    assert view.missing_symbols == ("ETHUSDT",)
+    assert len(view.items) == 1
+    row = view.items[0]
+    assert row.symbol == "BTCUSDT"
+    assert row.timeframe == "system"
+    assert row.stance_label
+    assert row.support_score_0_100
+    assert row.evidence_coverage_0_100
+    assert row.summary
+    assert len(row.family_state_labels) >= 4
+    assert row.audit is not None
+    assert len(row.audit.narrative_identity) == 64
+    assert path.read_bytes() == before
+
+
+def test_screener_customer_payload_hides_hash_and_internal_state(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / "fp1f-screener-customer.sqlite3"
+    _seed_b1_stream(path)
+    payload = asdict(
+        FinalProductReadModel(stream_ledger_path=path).screener(
+            symbols=("BTCUSDT",),
+            observed_at_ms=3_100,
+            include_audit=False,
+        )
+    )
+    texts = _all_text(payload)
+    assert not any(re.fullmatch(r"[0-9a-f]{64}", value) for value in texts)
+    forbidden = {
+        "system_view_updated",
+        "not_calibrated",
+        "measured:bullish",
+        "funding_crowded",
+    }
+    assert forbidden.isdisjoint(texts)
+
+
+def test_global_search_missing_sources_are_explicit_and_noncreating(
+    tmp_path: Path,
+) -> None:
+    stream_path = tmp_path / "missing-search-stream.sqlite3"
+    event_path = tmp_path / "missing-search-events.sqlite3"
+    epoch2_path = tmp_path / "missing-search-epoch2.sqlite3"
+    proof_path = tmp_path / "missing-search-proof.sqlite3"
+
+    view = FinalProductReadModel(
+        stream_ledger_path=stream_path,
+        event_source_runtime_path=event_path,
+        epoch2_path=epoch2_path,
+        decision_evidence_path=proof_path,
+    ).global_search(
+        query="BTC",
+        configured_symbols=("BTCUSDT",),
+        observed_at_ms=10_000,
+        event_window_start_ms=1_000,
+        event_window_end_ms=9_000,
+    )
+
+    assert view.items == ()
+    assert view.stream_coverage_label == "Stream araması kullanılamıyor"
+    assert view.event_coverage_label == "Olay araması kullanılamıyor"
+    assert view.trade_coverage_label == "Trade Passport araması kullanılamıyor"
+    assert view.proof_coverage_label == "Karar kanıtı araması kullanılamıyor"
+    assert view.direct_proof_identity_label == "Ham proof kimliği doğrudan aranamaz"
+    assert not stream_path.exists()
+    assert not event_path.exists()
+    assert not epoch2_path.exists()
+    assert not proof_path.exists()
+
+
+def test_global_search_exact_asset_precedes_stream_matches_and_dedupes(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / "fp1f-search-stream.sqlite3"
+    _seed_b1_stream(path)
+    before = path.read_bytes()
+
+    view = FinalProductReadModel(
+        stream_ledger_path=path,
+    ).global_search(
+        query="BTCUSDT",
+        configured_symbols=("BTCUSDT",),
+        observed_at_ms=3_100,
+        event_window_start_ms=1_000,
+        event_window_end_ms=3_100,
+        include_audit=True,
+    )
+
+    assert len(view.items) >= 2
+    assert view.items[0].kind_label == "Varlık"
+    assert view.items[0].symbol == "BTCUSDT"
+    assert any(item.kind_label == "Akış" for item in view.items[1:])
+    keys = [
+        (
+            item.kind_label,
+            None if item.audit is None else item.audit.source_identity,
+        )
+        for item in view.items
+    ]
+    assert len(keys) == len(set(keys))
+    assert view.stream_coverage_label == "Stream araması kullanılabilir"
+    assert path.read_bytes() == before
+
+
+def test_global_search_matches_bounded_verified_event_window(
+    tmp_path: Path,
+) -> None:
+    event_path = tmp_path / "fp1f-search-events.sqlite3"
+    _seed_event_source_successes(event_path, fetched_at_ms=900)
+    before = event_path.read_bytes()
+
+    view = FinalProductReadModel(
+        stream_ledger_path=tmp_path / "missing-stream.sqlite3",
+        event_source_runtime_path=event_path,
+    ).global_search(
+        query="Consumer",
+        configured_symbols=(),
+        observed_at_ms=1_000,
+        event_window_start_ms=1_000,
+        event_window_end_ms=3_000,
+        include_audit=True,
+    )
+
+    assert len(view.items) == 1
+    item = view.items[0]
+    assert item.kind_label == "Olay"
+    assert item.title == "Consumer Price Index"
+    assert item.source_label == "bls.gov"
+    assert item.audit is not None
+    assert item.audit.event_identity is not None
+    assert len(item.audit.event_identity) == 64
+    assert view.event_coverage_label == "Olay araması kullanılabilir"
+    assert event_path.read_bytes() == before
+
+
+def test_global_search_exact_r22_bundle_opens_trade_passport(
+    tmp_path: Path,
+) -> None:
+    epoch2_path, _, fill, bundle = _seed_trade_passport_bundle(tmp_path)
+    before = epoch2_path.read_bytes()
+
+    view = FinalProductReadModel(
+        stream_ledger_path=tmp_path / "missing-stream.sqlite3",
+        epoch2_path=epoch2_path,
+    ).global_search(
+        query=bundle.bundle_identity,
+        configured_symbols=(),
+        observed_at_ms=fill.snapshot_at_ms + 1,
+        event_window_start_ms=0,
+        event_window_end_ms=fill.snapshot_at_ms + 1,
+        include_audit=True,
+    )
+
+    assert len(view.items) == 1
+    item = view.items[0]
+    assert item.kind_label == "İşlem"
+    assert item.symbol == "BTCUSDT"
+    assert item.audit is not None
+    assert item.audit.bundle_identity == bundle.bundle_identity
+    assert view.trade_coverage_label == "Trade Passport araması kullanılabilir"
+    assert epoch2_path.read_bytes() == before
+
+
+def test_global_search_exact_signal_or_forecast_reuses_decision_evidence(
+    tmp_path: Path,
+) -> None:
+    forecast = _forecast()
+    proof = build_decision_proof_snapshot(forecast, _slices(forecast))
+    proof_path = tmp_path / "fp1f-search-proof.sqlite3"
+    ledger = ImmutableDecisionEvidenceLedger(proof_path)
+    ledger.append_forecast(forecast)
+    ledger.append_proof(proof)
+    before = proof_path.read_bytes()
+    model = FinalProductReadModel(
+        stream_ledger_path=tmp_path / "missing-stream.sqlite3",
+        decision_evidence_path=proof_path,
+    )
+
+    by_signal = model.global_search(
+        query=forecast.signal_freeze_identity,
+        configured_symbols=(),
+        observed_at_ms=forecast.issued_at_ms + 1,
+        event_window_start_ms=0,
+        event_window_end_ms=forecast.issued_at_ms + 1,
+        include_audit=True,
+    )
+    assert len(by_signal.items) == 1
+    assert by_signal.items[0].kind_label == "Kanıt"
+    assert by_signal.items[0].audit is not None
+    assert by_signal.items[0].audit.proof_identity == proof.proof_identity
+
+    by_forecast = model.global_search(
+        query=forecast.forecast_identity,
+        configured_symbols=(),
+        observed_at_ms=forecast.issued_at_ms + 1,
+        event_window_start_ms=0,
+        event_window_end_ms=forecast.issued_at_ms + 1,
+        include_audit=True,
+    )
+    assert len(by_forecast.items) == 1
+    assert by_forecast.items[0].audit is not None
+    assert by_forecast.items[0].audit.forecast_identity == forecast.forecast_identity
+    assert proof_path.read_bytes() == before
+
+
+def test_global_search_raw_proof_identity_remains_explicitly_unavailable(
+    tmp_path: Path,
+) -> None:
+    forecast = _forecast()
+    proof = build_decision_proof_snapshot(forecast, _slices(forecast))
+    proof_path = tmp_path / "fp1f-raw-proof.sqlite3"
+    ledger = ImmutableDecisionEvidenceLedger(proof_path)
+    ledger.append_forecast(forecast)
+    ledger.append_proof(proof)
+
+    view = FinalProductReadModel(
+        stream_ledger_path=tmp_path / "missing-stream.sqlite3",
+        decision_evidence_path=proof_path,
+    ).global_search(
+        query=proof.proof_identity,
+        configured_symbols=(),
+        observed_at_ms=forecast.issued_at_ms + 1,
+        event_window_start_ms=0,
+        event_window_end_ms=forecast.issued_at_ms + 1,
+    )
+
+    assert view.items == ()
+    assert view.direct_proof_identity_label == "Ham proof kimliği doğrudan aranamaz"
+    assert view.proof_coverage_label == "Karar kanıtı araması kullanılabilir"
+
+
+def test_global_search_customer_payload_hides_internal_identities_for_text_query(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / "fp1f-search-customer.sqlite3"
+    _seed_b1_stream(path)
+
+    payload = asdict(
+        FinalProductReadModel(stream_ledger_path=path).global_search(
+            query="BTCUSDT",
+            configured_symbols=("BTCUSDT",),
+            observed_at_ms=3_100,
+            event_window_start_ms=0,
+            event_window_end_ms=3_100,
+            include_audit=False,
+        )
+    )
+    texts = _all_text(payload)
+    assert not any(re.fullmatch(r"[0-9a-f]{64}", value) for value in texts)
+    forbidden = {
+        "system_view_updated",
+        "intelligence",
+        "material",
+        "publish",
+    }
+    assert forbidden.isdisjoint(texts)
