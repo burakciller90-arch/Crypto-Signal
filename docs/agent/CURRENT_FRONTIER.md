@@ -3290,3 +3290,63 @@ Temporary acceptance harness:
 
 Exact nextAction:
 Restore .github/workflows/crypto-message-intelligence-mi1-hosted.yml to exact current-main content, verify blob equality, then start FP1-C2 customer Event Rail projection in final_product_read_model.py only after recording a C2 task-start checkpoint.
+
+
+## FP1-C2 IMPLEMENTATION-START CHECKPOINT — 2026-09-29
+
+status: FP1_C2_FINAL_EVENT_RAIL_PROJECTION_START
+taskStartMain: bb083c062154dd804e087777310c43d4710d29c0
+activeBranch: fp1c/event-rail-read-model
+prerequisiteC1: PASS
+acceptedC1Head: 5bb6783c4b7189cc9d934840aae76702b1c95da6
+acceptedC1Uid504Run: 36565167503
+auditDocument: docs/CRYPTO_SIGNAL_FP1C_EVENT_RAIL_FIELD_SOURCE_MATRIX.md
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+C2 bounded goal:
+- extend src/crypto_signal/product/final_product_read_model.py only;
+- add optional event_source_runtime_path constructor input;
+- add customer-safe EventRailView / EventRailItem / audit provenance contracts;
+- event_rail(...) delegates all event/coverage truth selection to accepted read_event_source_calendar_rail(...);
+- customer labels only:
+  source quality, temporal relation, scope, freshness, coverage, empty-state;
+- no news rows;
+- no Event Risk window/scoring logic;
+- no bullish/bearish/safe/block/severity inference;
+- no second event database;
+- no Product route/frontend/deploy/runtime mutation.
+
+C2 customer semantics:
+- official -> Resmî kaynak;
+- primary_provider -> Birincil sağlayıcı;
+- secondary_aggregator -> İkincil toplayıcı;
+- unverified -> Doğrulanmamış kaynak;
+- scheduled > observed -> Yaklaşan olay;
+- scheduled == observed -> Şimdi;
+- scheduled < observed -> Yakın geçmiş olayı;
+- empty affected_assets -> Global;
+- otherwise asset-scoped;
+- display freshness threshold affects label only, never Event Risk state;
+- covered empty interval -> Bu kapsamda planlı olay yok;
+- uncovered empty interval -> Planlı olay verisi doğrulanamadı;
+- exact identities audit-only.
+
+C2 PASS:
+- missing event DB explicit/non-creating;
+- C1 adapter errors fail closed;
+- covered/uncovered empty states remain distinct;
+- customer payload contains no SHA/raw enum/database vocabulary;
+- audit preserves event/coverage identities;
+- deterministic ordering inherited without reinterpretation;
+- source DB/sidecars unchanged;
+- focused pytest/Ruff/mypy;
+- Product/Development non-mutation;
+- project isolation;
+- no RDP11 mutation;
+- REAL_CAPITAL=0.
+
+Exact nextAction:
+Inspect the accepted C1 dataclass/function surface, then implement the smallest Event Rail customer projection plus focused final_product_read_model tests. Do not edit web.py/frontend.
