@@ -7283,3 +7283,46 @@ Change:
 
 Acceptance rule:
 Fresh exact-head dedicated FP5-B + WC6 + RDP11 Pre-Soak + F10 are required again after this checkpoint; all earlier results are stale.
+
+
+
+## FP5-B MERGED / POST-MERGE WORKBENCH PENDING — 2026-09-30
+
+status: FP5B_MERGED_PENDING_WORKBENCH_PROOF
+technicalMergeMain: a14bc9e4a407a8a5e602f816c7959008928ee7c3
+sourceBranch: fp5b/portfolio-risk-sizing-promotion-v2
+sourcePR: #1701
+acceptedHead: afc7194b22f9ded7c7791beb41e49a1aa188610c
+mergeSha: a14bc9e4a407a8a5e602f816c7959008928ee7c3
+closeoutBranch: handoff/fp5b-merged-20260930
+worktree: no session-local /Volumes worktree
+realCapital: 0
+historicalBackfill: NO
+RDP11RuntimeMutation: NO
+ProductDevelopmentDeploy: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Exact-head acceptance on `afc7194b22f9ded7c7791beb41e49a1aa188610c`:
+- FP5-B dedicated run/job `36640403843/109651071050` SUCCESS;
+- WC6 run/job `36640403610/109651207380` SUCCESS;
+- RDP11 Pre-Soak run/job `36640403492/109651071475` SUCCESS;
+- F10 run/job `36640403643/109651071910` SUCCESS.
+- Dedicated markers: exact source/frozen runtime, focused V2, V1 compatibility, whole-repo and non-mutation all PASS.
+- RDP11 R2 scheduled observer `36640379159/109650997040` also SUCCESS during acceptance: anchor reused, elapsed 1,540,177ms, 72h eligible NO, sidecar-only, no runtime mutation.
+
+Mechanical result:
+- accepted V1 S11 canonical sizing behavior remains backward compatible;
+- V2 canonical sizing binds exact FP5 portfolio-risk assessment + canonical R21 consolidated portfolio source + risk cap;
+- DEPLOYABLE notional is bounded by fixed-fractional sizing, current vault cash and FP5 max capacity;
+- HOLD_CASH / NOT_PROVEN cannot promote a positive sizing selection;
+- exact FP5 lineage reaches the canonical S11 sizing event source evidence.
+- This closes the isolated FP5-B mechanic only; it does NOT by itself prove the existing FP3 forward sizing bridge automatically consumes V2. Do not mark full FP5 PASS yet.
+
+Current blocker:
+- post-merge SSD504 Workbench bootstrap `36641195576` queued/pending at checkpoint.
+- post-merge WC6 `36641195475` in progress; useful regression evidence but not a substitute for Workbench exact-main proof.
+- hosted Stage10 failure `36641195528` is not classified as FP5 acceptance evidence; do not invent cause.
+
+Exact nextAction:
+Capture post-merge Workbench exact main/branch/dirty0/SSD504 markers. Then finalize FP5-B handoff and start duplicate/owner audit for the remaining FP5-C forward-bridge integration; full FP5 stays OPEN until the canonical forward runtime mechanically consumes the V2 portfolio-risk result.
