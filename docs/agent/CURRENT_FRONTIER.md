@@ -6339,3 +6339,49 @@ Current blocker:
 
 Exact nextAction:
 Start isolated FP4-B from current exact main. Audit duplicate latency/queue/timeout owners, then build only the missing fail-closed execution-timing/queue contract over immutable Market Tape truth without mutating the frozen RDP11 runtime.
+
+
+## FP4-C EXACT SETTLED FUNDING EVIDENCE START — 2026-09-29
+
+status: FP4C_IMPLEMENTATION_START
+taskStartMain: 10af3c32f3c83e17aa66b5d8e12503e006e33550
+activeBranch: fp4c/settled-funding-evidence-v2
+activeWorktree: NOT_CREATED_IN_CONNECTOR_SESSION
+classification: BUILD exact settled-funding evidence adapter and deterministic paper funding-cost contract
+realCapital: 0
+historicalBackfill: NO
+RDP11RuntimeMutation: NO
+ProductDevelopmentDeploy: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Duplicate/source audit:
+- no FP4-C branch/PR exists;
+- current normalized derivatives ticker exposes funding_rate + interval but not exact settlement timestamp;
+- current repo has no settled-funding history model or paper funding cost engine;
+- official Bybit V5 funding-history surface exposes historical fundingRate + fundingRateTimestamp for perpetual instruments;
+- therefore settled funding can be reality-backed instead of inferred from ticker cadence.
+
+Bounded scope:
+- add immutable settled funding observation model with source timestamp/ingest identity;
+- add Bybit funding-history normalization/fetch adapter in isolated source code;
+- add deterministic paper funding-cost projection from exact settled observation, position quantity and exact mark price at settlement;
+- positive rate: long pays / short receives; negative rate reverses sign;
+- observation after evaluation cutoff is rejected;
+- missing exact settlement observation yields NOT_PROVEN rather than estimated cost;
+- no R21/R22 schema mutation in this slice;
+- no runtime deployment/backfill while RDP11 soak remains active.
+
+PASS gate:
+- raw settled funding payload normalization is deterministic and identity-checked;
+- exact settlement timestamp preserved;
+- funding debit/credit sign is deterministic for long/short;
+- replay identity stable;
+- missing/future settlement evidence cannot create a funding charge;
+- full regression + frozen Product/Development non-mutation PASS.
+
+Current blocker:
+- implementation and acceptance do not yet exist.
+
+Exact nextAction:
+Implement settled funding observation + Bybit history adapter + isolated paper funding-cost projection and focused tests, then run exact-head UID504 acceptance.

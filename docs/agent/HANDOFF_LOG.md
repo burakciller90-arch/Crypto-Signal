@@ -5965,3 +5965,23 @@ Implement C2 in canonical_capital_runtime.py + autopilot_forward_actions.py only
 - REAL_CAPITAL=0; HISTORICAL_BACKFILL=NO; no Product/Development deploy; Durdurulmaz/Quantum untouched
 - blocker: none for FP4-A; FP3-D and RDP11 remain independent waiting gates
 - nextAction: start isolated FP4-B latency/queue/timeout contract from exact current main
+
+
+## 2026-09-29 — FP4-C exact settled funding implementation checkpoint
+
+- task-start main: `10af3c32f3c83e17aa66b5d8e12503e006e33550`
+- branch: `fp4c/settled-funding-evidence-v2`
+- session-local worktree: not created in connector session
+- duplicate audit: no FP4-C branch/PR and no settled-funding history model/cost engine on main
+- source gap: ticker funding rate/interval existed, exact settlement timestamp did not
+- exact source selected: Bybit V5 public funding-history, preserving `fundingRateTimestamp` + settled `fundingRate`
+- implemented immutable `FundingSettlementObservation`
+- implemented isolated `BybitFundingHistoryAdapter`
+- implemented funding cash-flow projection requiring exact settlement evidence plus exact mark evidence at the same settlement timestamp
+- positive funding: LONG debit / SHORT credit; negative funding reverses; missing exact evidence => NOT_PROVEN with no cash-flow invention
+- future-ingested settlement evidence rejected for historical evaluation
+- no R21/R22 schema mutation, runtime deployment or backfill
+- dedicated workflow: `.github/workflows/fp4c-settled-funding-uid504.yml`
+- REAL_CAPITAL=0; frozen RDP11 target untouched; Durdurulmaz/Quantum untouched
+- blocker: exact-head FP4-C acceptance not yet run
+- nextAction: open isolated PR and require focused adapter/cost + derivatives compatibility + full regression + non-mutation PASS
