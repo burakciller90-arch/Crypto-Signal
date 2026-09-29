@@ -6980,3 +6980,29 @@ Safety:
 
 Exact nextAction:
 Advance only the RDP11 workflow epoch id to `rdp11-3d9f33db-20260930-r2`, run exact-head dry-run/pre-soak acceptance, recheck main/duplicates immediately before merge, then accept the new 72h clock only from the first successful merged-main non-dry-run anchor.
+
+
+## LIVE TASK-START CHECKPOINT — 2026-09-30 — RDP11 R2 anchor closeout
+
+status: RDP11_R2_ANCHOR_CLOSEOUT
+canonicalMainAtTaskStart: `62540a3746c101530cd843353507a6746579bf15`
+activeBranch: `rdp11/r2-anchor-closeout`
+sessionLocalVolumesWorktree: NONE
+canonicalWorkbench: `/Volumes/Crypto-504/Crypto-Signal-Workbench/repo`
+frozenRuntimeTarget: `3d9f33db3f1189571d40566125fbeabd00c04930`
+r2Epoch: `rdp11-3d9f33db-20260930-r2`
+r2AnchorRunAttemptJob: `36637452090 / attempt 2 / 109642444475`
+r2AnchorStartUtc: `2026-09-29T22:10:09.650000Z`
+earliest72hUtc: `2026-10-02T22:10:09.650000Z`
+earliest72hEuropeIstanbul: `2026-10-03T01:10:09.650000+03:00`
+
+Duplicate/stale-work audit:
+- current main remains the R2 re-anchor merge `62540a3746c101530cd843353507a6746579bf15`
+- competing open RDP11/soak/anchor/handoff PR: NONE at task start
+- prior epoch remains immutable INVALIDATED evidence and is not rewritten
+- R2 first merged-main attempt `36637452090 / attempt 1 / 109641453750` failed before observer invocation/anchor creation on finite SSE curl error 18; it is preserved as evidence
+- one controlled rerun only was used; attempt 2 passed and created the first R2 anchor
+- this closeout is documentation/authority-only; observer/runtime/frozen evidence are not modified
+
+Exact nextAction:
+Record the successful R2 anchor and new 72-hour boundary in canonical authority docs, CURRENT_FRONTIER and HANDOFF_LOG; then merge only after exact diff/main recheck. RDP11 remains ACTIVE / NOT PASS until the new epoch survives its full real-time window and final audit.
