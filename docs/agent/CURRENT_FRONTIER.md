@@ -6601,3 +6601,17 @@ Current blocker:
 
 Exact nextAction:
 Implement isolated immutable Binance Spot commission snapshot + deterministic fee projection and focused tests. After FP4-B merges, rebase this branch onto the new main before any acceptance/merge decision.
+
+
+### FP4-D ACCEPTANCE ATTEMPT 1 / LINT-ONLY REPAIR — 2026-09-29
+
+- PR: #1695
+- tested head: `df8eba646f1780a88383010d7f312a2e106024ee`
+- dedicated run/job: `36625198921` / `109600265949`
+- exact source + frozen RDP11 target PASS
+- focused pytest: 11/11 PASS
+- sole blocker: Ruff UP035 — `Mapping` must import from `collections.abc`
+- mypy/compatibility/full regression skipped after lint failure
+- frozen Product/Development non-mutation PASS
+- bounded repair: import-only; no fee behavior or identities changed
+- nextAction: rerun exact-head dedicated + WC6 + RDP11 + F10 acceptance and inspect the first remaining mechanical failure, if any
