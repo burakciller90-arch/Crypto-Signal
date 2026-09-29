@@ -7084,7 +7084,7 @@ canonicalMainAtTaskStart: b7cadf0b49fb6b57ec804040cab73702eb5d0a56
 activeBranch: fp5b/portfolio-risk-sizing-promotion-v2
 sessionLocalVolumesWorktree: NONE
 canonicalWorkbench: /Volumes/Crypto-504/Crypto-Signal-Workbench/repo
-canonicalWorkbenchProof: 36638966631 / 109648 (run SUCCESS; exact main/branch/dirty markers verified in job log)
+canonicalWorkbenchProof: 36638966631 / 109646424658 (run SUCCESS; exact main/branch/dirty markers verified in job log)
 realCapital: 0
 historicalBackfill: NO
 RDP11RuntimeMutation: NO
