@@ -1924,3 +1924,23 @@ Safety:
 
 Exact nextAction:
 Apply only the collector sampling-time + bounded-large-DB-probe repair, keep the accepted 8s Stream endpoint contract and all fail-closed freshness/no-future rules, then rerun exact-head UID504 live dry-run acceptance.
+
+
+## RDP11 diagnosis correction checkpoint — 2026-09-29
+
+Correction to the immediately preceding TOCTOU hypothesis after re-reading the exact branch source:
+
+- exact branch source already samples `heartbeat_read_at_ms = time.time_ns() // 1_000_000` immediately after reading the latest heartbeat;
+- raw Market Tape rows likewise use `context_read_at_ms` at read time;
+- therefore the observed `collector evidence timestamp is from the future` failure cannot be attributed to comparing the heartbeat against the top-level observation-start `now_ms`;
+- no observer semantic change has been made from that rejected hypothesis.
+
+One performance observation remains valid and separate:
+- the collector path still performs a whole `PRAGMA quick_check` on live `market_tape.sqlite3` before heartbeat evaluation and the failing observer invocation spent roughly five minutes before reaching that comparison;
+- whether that full scan should remain on every 20-minute sample will be decided only after the timestamp delta is measured.
+
+Current blocker:
+- exact heartbeat/last-successful-ingestion values and their delta versus UID504 wall clock are not yet mechanically exposed in the acceptance log.
+
+Exact nextAction:
+Run a bounded read-only collector clock diagnostic against `collector_runtime.sqlite3`, print the latest heartbeat/ingestion timestamps and read-time deltas, and do not alter the freshness/future-data contract until that evidence is known.
