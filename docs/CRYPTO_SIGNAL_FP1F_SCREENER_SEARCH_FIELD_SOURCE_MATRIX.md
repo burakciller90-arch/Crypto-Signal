@@ -1,6 +1,6 @@
 # Crypto Signal — FP1-F Screener + Federated Global Search Field-Source Matrix
 
-Status: **AUDIT COMPLETE / IMPLEMENTATION AUTHORIZED**
+Status: **ACCEPTED / REVIEW READY**
 Date: 2026-09-29
 Base main: `ef408ee105e1f226b199b7b1a185a1fdb990159f`
 Active branch: `fp1f/screener-federated-search`
@@ -220,3 +220,40 @@ FP1-F PASS requires:
 Implement `ScreenerRow/View`, `GlobalSearchItem/View`, `screener(...)` and `global_search(...)` inside `final_product_read_model.py` plus focused tests.
 
 Do not edit Product routes/frontend, Stream persistence/query semantics, Event Source persistence, R21/R22 writers, Decision Evidence writers, runtime or deploy configuration.
+
+
+## 9. UID504 acceptance
+
+Status: **PASS**
+
+Accepted exact-head:
+- head SHA: `e1137086c5044f6e52b50950073947d7b2c146b3`;
+- run: `36583882210`;
+- job: `109458903547`;
+- conclusion: **SUCCESS**.
+
+Mechanical markers:
+- `MESSAGE_INTELLIGENCE_MI1_EXACT_SOURCE_PASS=YES`;
+- focused/regression pytest reached **100% PASS**;
+- Ruff: **All checks passed!**;
+- strict mypy: **Success: no issues found in 5 source files**;
+- `MESSAGE_INTELLIGENCE_MI1_NON_MUTATING_PASS=YES`;
+- `PROJECT_ISOLATION_PASS=YES`;
+- `REAL_CAPITAL=0`.
+
+Cleanup:
+- temporary acceptance workflow restored in `09200a11130de9b24c57d034ea3e5bfab1460f73`;
+- branch workflow blob equals current-main workflow blob `394051a78c665d84cf78830cedc8799a13474baa`.
+
+Accepted FP1-F result:
+- Screener reuses accepted Market Pulse current truth;
+- global search is read-only federation with no persistent search index;
+- Stream full-text/history identity remains unchanged;
+- bounded verified Event Rail search works;
+- exact R22 bundle opens Trade Passport;
+- exact frozen signal and Decision Evidence signal/forecast lookup work;
+- raw proof-id direct lookup remains explicitly unavailable;
+- deterministic ordering/dedupe is tested;
+- missing sources remain explicit;
+- customer payload hides exact identities by default;
+- canonical sources remain unmodified.
