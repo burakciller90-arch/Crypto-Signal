@@ -3743,3 +3743,38 @@ Cleanup verification:
 
 Exact nextAction:
 Open the FP1-C PR against current main, inspect the actual PR changed-file set again, run PR-triggered repository gates, and merge only if no workflow/runtime/unrelated file or mechanical blocker appears.
+
+
+## 2026-09-29 — FINAL PRODUCT ROADMAP AUTHORITY LOCK START
+
+- exact task-start main SHA: `e7fc9044f18b9a5c5006e498c4b68e6c15828758`
+- branch: `docs/final-roadmap-authority-lock-20260929`
+- worktree: NONE
+- canonical roadmap: `docs/CRYPTO_SIGNAL_FINAL_PRODUCT_MASTER_ROADMAP_V1.md`
+- active pointer: `ACTIVE_ROADMAP.md`
+- active mechanical gate: FP0 / RDP11 Continuous soak + final Evidence PASS — ACTIVE / NOT PASS
+- parallel main progress observed: FP1-A/B/C already merged; do not rebuild
+- duplicate/stale check: no open PR and no branch found for this exact authority-lock repair
+- bounded goal: documentation-only anti-drift repair so every fresh agent resolves the 2026-09-29 Final Product Master Roadmap before historical roadmaps; repair stale CURRENT_FRONTIER leading state
+- blocker: CURRENT_FRONTIER currently begins with obsolete RDP10-F1 checkpoint text
+- REAL_CAPITAL=0
+- historical/frozen evidence mutation: NO
+- Durdurulmaz touched: NO
+- Quantum Capital touched: NO
+- nextAction: add explicit anti-drift precedence to ACTIVE_ROADMAP/AGENTS and reconcile CURRENT_FRONTIER leading state, then open a docs-only PR after rechecking latest main
+
+
+## 2026-09-29 — FINAL PRODUCT ROADMAP AUTHORITY LOCK ACCEPTANCE START
+
+- verified main SHA: `e7fc9044f18b9a5c5006e498c4b68e6c15828758`
+- branch: `docs/final-roadmap-authority-lock-20260929`
+- branch vs main: ahead 5 / behind 0
+- changed files: ACTIVE_ROADMAP.md; AGENTS.md; docs/agent/CURRENT_FRONTIER.md; docs/agent/HANDOFF_LOG.md
+- acceptance: roadmap selector lock present; AGENTS anti-drift hard stop present; stale RDP10/F1 frontier text quarantined as historical
+- runtime/Product/Development/RDP11 observer mutation: NO
+- historical/frozen evidence mutation: NO
+- REAL_CAPITAL=0
+- Durdurulmaz touched: NO
+- Quantum Capital touched: NO
+- blocker: none for docs repair; FP0/RDP11 remains ACTIVE / NOT PASS independently
+- nextAction: open docs-only PR, inspect exact patch and mergeability, recheck current main, then merge if still isolated
