@@ -6342,3 +6342,18 @@ nextAction:
 
 DurdurulmazTouched: NO
 QuantumCapitalTouched: NO
+
+
+
+## 2026-09-30 — FP5-B portfolio-risk bounded sizing task start
+
+- exact main: `b7cadf0b49fb6b57ec804040cab73702eb5d0a56`
+- branch: `fp5b/portfolio-risk-sizing-promotion-v2`
+- session-local /Volumes worktree: none; connector session only
+- Workbench post-RDP11 closeout run `36638966631` SUCCESS: exact main, branch main, dirty0, SSD504_WORKBENCH_PASS=YES
+- duplicate audit: FP5-A already merged; no competing FP5 integration PR/branch
+- REUSE FP5-A + FP3 risk/sizing + S11 canonical sizing/event/action owners
+- EXTEND only the missing binding from FP5 max deployable/status into canonical paper sizing lineage
+- preserve V1 identities/behavior; HOLD_CASH/NOT_PROVEN fail closed; no Kelly/leverage/borrowing/forced deployment
+- REAL_CAPITAL=0; no deploy/backfill; frozen RDP11 R2 runtime/sidecar untouched; Durdurulmaz/Quantum untouched
+- nextAction: implement backward-compatible V2 promotion + focused acceptance, then exact-head UID504 gates
