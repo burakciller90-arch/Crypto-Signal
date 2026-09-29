@@ -5884,3 +5884,21 @@ Implement C2 in canonical_capital_runtime.py + autopilot_forward_actions.py only
 - Durdurulmaz untouched; Quantum Capital untouched
 - blocker: no genuine persisted post-activation issuance exists yet; fixture/backfill cannot satisfy FP3-D
 - nextAction: on the first genuine post-activation WC2 prepared + Decision issuance, rerun the merged FP3-D UID504 workflow and close only on genuine candidate + replay-idempotence + activation-immutability + regression + non-mutation PASS
+
+
+## 2026-09-29 — FP3-D WAITING final closeout checkpoint
+
+- exact main at closeout start: `3378b0da55beb87dea00f49ebf8774b609047ad3`
+- handoff PR / merge SHA: #1686 / `3378b0da55beb87dea00f49ebf8774b609047ad3`
+- checkpoint branch: `handoff/fp3d-waiting-final-20260929`
+- session-local worktree: not created in connector session
+- final Workbench run/job: `36617207163` / `109573180808`
+- Workbench exact state: `/Volumes/Crypto-504/Crypto-Signal-Workbench/repo`, HEAD `3378b0da55beb87dea00f49ebf8774b609047ad3`, branch `main`, dirty `0`, `SSD504_WORKBENCH_PASS=YES`
+- latest RDP11 observer run/job: `36614081401` / `109562521976`
+- observer #33: frozen target exact + static PASS; HEALTH 200 (0.600080s), MESSAGES 200 (10.771706s), SSE 200 (13.434192s), then INTELLIGENCE curl 56 connection reset; immutable observation step therefore skipped
+- preserve observer #33 as continuity-gap evidence; do not rewrite it and do not call RDP11 PASS
+- FP3-D remains WAITING_NO_POST_ACTIVATION_ISSUANCE; no fixture/backfill/gate weakening
+- RDP11 remains ACTIVE / NOT PASS; 72h final gate not eligible before 2026-10-02T09:13:21.134000Z
+- REAL_CAPITAL=0; Durdurulmaz untouched; Quantum Capital untouched
+- blocker: genuine post-activation issuance absent; RDP11 soak time/continuity acceptance incomplete
+- nextAction: rerun FP3-D only on genuine forward issuance; preserve scheduled RDP11 observations until final 72h evidence eligibility

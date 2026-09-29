@@ -6150,3 +6150,34 @@ Current blocker:
 
 Exact nextAction:
 When the first genuine post-activation WC2 prepared + Decision issuance is persisted, rerun the merged FP3-D UID504 genuine-forward workflow and require genuine candidate YES, replay idempotence PASS, activation immutability PASS, full regression PASS and Product/Development non-mutation PASS before marking FP3-D complete. Do not backfill, fabricate a fixture, weaken gates or mutate the frozen RDP11 runtime.
+
+
+### FP3-D WAITING CLOSEOUT / POST-HANDOFF VERIFY — 2026-09-29
+
+exactMainAtCloseoutStart: 3378b0da55beb87dea00f49ebf8774b609047ad3
+handoffPr: 1686
+handoffMergeSha: 3378b0da55beb87dea00f49ebf8774b609047ad3
+finalCheckpointBranch: handoff/fp3d-waiting-final-20260929
+sessionLocalWorktree: NOT_CREATED_IN_CONNECTOR_SESSION
+finalWorkbenchRun: 36617207163
+finalWorkbenchJob: 109573180808
+finalWorkbenchHead: 3378b0da55beb87dea00f49ebf8774b609047ad3
+finalWorkbenchBranch: main
+finalWorkbenchDirtyCount: 0
+latestRdp11ObserverRun: 36614081401
+latestRdp11ObserverJob: 109562521976
+
+Post-handoff verification:
+- `CURRENT_FRONTIER.md` and `HANDOFF_LOG.md` WAITING checkpoint are present on main;
+- SSD504 Workbench bootstrap PASS and ff-synced `/Volumes/Crypto-504/Crypto-Signal-Workbench/repo` to exact main `3378b0da55beb87dea00f49ebf8774b609047ad3`, branch `main`, dirty count 0;
+- latest scheduled RDP11 observer #33 proved frozen target exact and static observer PASS;
+- observer #33 endpoint evidence: HEALTH 200 / 0.600080s, MESSAGES 200 / 10.771706s, SSE 200 / 13.434192s, then INTELLIGENCE connection reset (`curl: (56) Recv failure: Connection reset by peer`);
+- therefore observer #33 is another continuity-gap observation, not RDP11 PASS and not evidence of target drift;
+- REAL_CAPITAL=0; no historical backfill; Durdurulmaz/Quantum untouched.
+
+Blocker remains unchanged:
+- FP3-D awaits the first genuine persisted post-activation issuance;
+- global FP0/RDP11 remains ACTIVE / NOT PASS and is not eligible for final 72h acceptance before 2026-10-02T09:13:21.134000Z (12:13:21.134 +03:00).
+
+Exact nextAction remains:
+Do not manufacture forward evidence. On a genuine post-activation issuance, rerun FP3-D UID504 and require all liveness/replay/non-mutation markers. Continue preserving every scheduled RDP11 observer result, including curl/reset gaps, until the 72h final evidence gate becomes eligible.
