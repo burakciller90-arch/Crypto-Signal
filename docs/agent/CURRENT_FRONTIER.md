@@ -6615,3 +6615,48 @@ Implement isolated immutable Binance Spot commission snapshot + deterministic fe
 - frozen Product/Development non-mutation PASS
 - bounded repair: import-only; no fee behavior or identities changed
 - nextAction: rerun exact-head dedicated + WC6 + RDP11 + F10 acceptance and inspect the first remaining mechanical failure, if any
+
+
+## FP4-E CANONICAL EXECUTION RECEIPT V2 START — 2026-09-29
+
+status: FP4E_IMPLEMENTATION_START
+taskStartParentHead: `17b80ba114123defc1af5a4ccc84a997f31ab907`
+parentBranch: `fp4d/instrument-fee-schedule-v2`
+activeBranch: `fp4e/execution-receipt-v2`
+classification: BUILD final FP4 immutable receipt/bridge; depends on FP4-D acceptance/merge
+realCapital: 0
+historicalBackfill: NO
+RDP11RuntimeMutation: NO
+ProductDevelopmentDeploy: NO
+
+Duplicate/integration audit:
+- no FP4-E branch/PR exists;
+- existing authoritative `PaperVenueBoundPretrade` already binds exact venue precision/min/max quantity/min-notional rules; REUSE it, do not duplicate venue validation;
+- v1 `SimulatedFillRecord` hardcodes partial_fills_supported=False and cannot safely represent FP4 V2 partial/unproven semantics;
+- R22 `PaperTapeFill` remains v1-shaped fee/spread/slippage storage and must not be silently overloaded during active RDP11 soak;
+- FP4-A depth outcome, FP4-B passive-limit outcome and FP4-D fee projection need one immutable accepted receipt identity before later archive/passport work;
+- FP4-C funding settlement remains a separate lifecycle cash-flow event and is referenced separately rather than double-counted into fill execution cost.
+
+Bounded scope:
+- create versioned immutable `ExecutionReceiptV2` over accepted authoritative pretrade + exactly one execution outcome (depth or passive-limit);
+- FULL/PARTIAL receipts require exact proven fee projection with matching symbol/action/fill notional and correct role: depth=TAKER, passive=MAKER;
+- NOT_FILLED/FILL_NOT_PROVEN receipts must not contain fee/cost invention;
+- book/limit average fill price is authoritative; v1 spread/slippage rates are NOT reapplied;
+- derive non-negative adverse price impact vs pretrade reference price only for reporting; favorable improvement never becomes a negative cost credit;
+- total immediate execution cost = adverse price impact + exact fee only; funding remains separate settlement event;
+- bind venue-rule snapshot identity, pretrade identity, execution outcome identity and fee projection identity into deterministic receipt identity;
+- no R21/R22 schema mutation or runtime deployment in this slice.
+
+PASS gate:
+- depth and passive full/partial receipts reconcile quantity/notional exactly;
+- wrong fee role/action/symbol/notional is rejected;
+- not-filled/not-proven cannot create fees or costs;
+- no spread/slippage double counting;
+- exact replay identity stable;
+- FP4 A/B/C/D compatibility + full regression + frozen runtime non-mutation PASS after FP4-D merges.
+
+Current blocker:
+- implementation pending; parent FP4-D is not yet accepted/merged.
+
+Exact nextAction:
+Implement isolated receipt + focused tests on child branch. Do not open/merge acceptance PR until FP4-D is mechanically PASS and merged; then replay/rebase onto latest main.
