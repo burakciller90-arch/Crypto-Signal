@@ -139,6 +139,11 @@ def test_v3_allocation_policy_allows_full_cash_and_forbids_forced_exposure() -> 
             policy,
             minimum_market_exposure_fraction=Decimal("0.01"),
         )
+    with pytest.raises(ValueError, match="maximum market exposure"):
+        replace(
+            policy,
+            maximum_market_exposure_fraction=Decimal("0.50"),
+        )
     with pytest.raises(ValueError, match="borrowing"):
         replace(policy, cross_vault_borrowing_allowed=True)
     with pytest.raises(ValueError, match="forced deployment"):
