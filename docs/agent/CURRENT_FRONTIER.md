@@ -6814,3 +6814,27 @@ Current blocker:
 
 Exact nextAction:
 Implement isolated FP5-A immutable portfolio-risk envelope + focused tests, preserving existing FP3 sizing and Smart Capital owners; then run UID504 acceptance.
+
+
+### FP5-A OWNER-BINDING AUDIT — 2026-09-29
+
+status: FP5A_SEMANTIC_REPAIR_REQUIRED
+auditedBranchHead: 62239a6808bccda8c741aa12cb21ab6b7d47326c
+
+Audit findings before acceptance:
+- implementation correctly adds deterministic portfolio/cluster/cash capacity and keeps Kelly/leverage/borrowing/forced deployment disabled;
+- however event/liquidity/conflict are currently accepted as raw booleans rather than bound accepted evidence identities/types;
+- fixed-fractional and drawdown thresholds are currently duplicated inside FP5 snapshot instead of binding the accepted FP3 sizing/risk policy owner;
+- current asset exposures are not required to have unique correlation-cluster classification; only the candidate cluster is checked;
+- the existing “100% cash” test uses cash=100/nav=1000 with zero exposures, which is internally inconsistent and does not prove a genuine 100% cash portfolio.
+
+Required repair before PR:
+- bind FP5-A assessment to existing FP3 risk inputs + PositionSizingPolicy rather than duplicating their risk gates;
+- bind Event Risk and Confluence through accepted identities/state, not untraceable booleans;
+- require every non-zero current exposure to resolve to exactly one cluster, otherwise NOT_PROVEN;
+- require gross exposure + cash to reconcile to NAV for this long-only/no-leverage slice;
+- repair cash-only test to cash=nav and prove it is valid;
+- preserve isolated/read-only/no-runtime behavior.
+
+Exact nextAction:
+Patch existing FP5-A implementation/tests in place; do not create a second allocator. Then open PR and run fresh exact-head UID504 acceptance.
