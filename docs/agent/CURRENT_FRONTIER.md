@@ -1265,3 +1265,45 @@ Current blocker:
 
 Exact nextAction:
 Trigger one UID504 allowlisted `productdeploy` command with exact target `3d9f33db3f1189571d40566125fbeabd00c04930`; record issue/run/job and inspect rollback/health markers before proceeding to productstate.
+
+
+
+## RDP11 Product deploy acceptance + productstate task-start — 2026-09-29
+
+Accepted deployment:
+- issue #1664
+- Crypto Mac Command run `36539480592`
+- job `109311197291`
+- conclusion: SUCCESS
+- previous Product SHA: `403cb552dd398ea5c81ab97cb5df8114b0716ad2`
+- exact target/current main: `3d9f33db3f1189571d40566125fbeabd00c04930`
+- Product checkout moved to exact target and remained clean.
+- supervisor-managed dashboard restart succeeded.
+- dashboard health returned `status=ok`, `real_capital=0`, `read_only=true`.
+- `INTELLIGENCE_CENTER_LIVE_PASS=YES`
+- `STREAM_ROOT_CUTOVER_LIVE_PASS=YES`
+- `GALACTECH_FALLBACK_LIVE_PASS=YES`
+- `R25_OPERATIONAL_TRUTH_LIVE_PASS=YES`
+- `R11_RUNTIME_AUDIT_PASS=YES`
+- `WC0_RUNTIME_TOPOLOGY_SQLITE_PASS=YES`
+- `PRODUCT_DEPLOY_PASS=YES`
+- rollback marker was not invoked.
+
+Product deployment prerequisite is now mechanically PASS.
+
+Next bounded goal:
+- independently inspect deployed Product state after deployment;
+- require Product HEAD exact target, clean checkout, dashboard process/service healthy and `/api/health` success;
+- inspect real Product proof/decision surface sufficiently to justify installing/starting the RDP11 observation anchor;
+- do not claim the 72-hour soak has started before the first successful dedicated RDP11 observation is anchored.
+
+Safety:
+- `REAL_CAPITAL=0`
+- `HISTORICAL_BACKFILL=NO`
+- frozen/historical evidence immutable
+- Durdurulmaz touched: NO
+- Quantum Capital touched: NO
+- soak clock: NOT STARTED
+
+Exact nextAction:
+Reuse an existing non-stale RDP11 productstate issue if one already exists; otherwise trigger one UID504 allowlisted `productstate` command. Record exact run/job/HEAD/health before moving to observer-anchor implementation.
