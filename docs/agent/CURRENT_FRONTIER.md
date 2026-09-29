@@ -2668,3 +2668,48 @@ Repair classification:
 
 Exact nextAction:
 Update only tests/test_final_product_read_model.py to snapshot any pre-existing WAL bytes immediately after seeding and assert the same bytes after Attention/Family reads. Then rerun the same UID504 pytest/Ruff/mypy/non-mutation harness.
+
+
+## FP1-B1 UID504 ACCEPTANCE PASS CHECKPOINT — 2026-09-29
+
+status: FP1_B1_ACCEPTANCE_PASS
+activeBranch: fp1b/attention-workspace-family-summary
+acceptedHead: 0ae99b1538c8adf9485938a1774f457238c689d3
+uid504Run: 36558367315
+uid504Job: 109372952680
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Mechanical PASS:
+- exact-source isolated UID504 checkout PASS;
+- focused Stream family/read-model/system-view/UI + final product B1 pytest chain PASS;
+- Ruff marker: All checks passed!;
+- strict mypy marker: Success: no issues found in 5 source files;
+- MESSAGE_INTELLIGENCE_MI1_PRIMARY_SURFACE_PASS=YES;
+- MESSAGE_INTELLIGENCE_MI1_NON_MUTATING_PASS=YES;
+- PROJECT_ISOLATION_PASS=YES;
+- REAL_CAPITAL=0;
+- no Product/Development deployment;
+- no RDP11 soak runtime mutation.
+
+Accepted B1 semantics:
+- Attention uses persisted canonical MATERIAL/PUBLISH for normal Stream narratives;
+- important System View is admitted only as a distinct presentation source;
+- routine/watch System View remains excluded;
+- no new materiality/confidence/predictive score exists;
+- priority is deterministic importance + recency + immutable identity only;
+- Five-Family enrichment uses verified source family narrative detail;
+- source_as_of/evidence domains/uncertainty remain source-backed;
+- missing On-chain/source evidence remains explicit unavailable;
+- default customer payload hides SHA/raw materiality/state/uncertainty codes;
+- audit mode preserves exact provenance;
+- canonical seeded DB and pre-existing WAL evidence remain byte-stable under B1 reads.
+
+Temporary acceptance harness:
+- .github/workflows/crypto-message-intelligence-mi1-hosted.yml currently contains branch-only FP1-B1 trigger/test wiring;
+- this is acceptance infrastructure only and is NOT product scope.
+
+Exact nextAction:
+Restore .github/workflows/crypto-message-intelligence-mi1-hosted.yml on the FP1-B branch to exact current-main content. Then verify the branch diff excludes workflow files, checkpoint cleanup, and proceed to FP1-B2 Workspace Summary on the same isolated branch only after a new B2 task-start checkpoint.
