@@ -7245,3 +7245,26 @@ Changes:
 
 Acceptance rule:
 All earlier lane results are stale. Require dedicated FP5-B + WC6 + RDP11 Pre-Soak + F10 on the final exact head after this durable checkpoint.
+
+
+
+### FP5-B ACCEPTANCE ATTEMPT 3 — TEST RUFF-ONLY BLOCKER — 2026-09-30
+
+testedHead: f47cec13fa98bd18526f10273b1159d1559a750f
+pr: #1701
+dedicatedRunJob: 36640264065 / 109650629848
+exactSourceAndFrozenRuntime: PASS
+focusedPytest: PASS
+focusedRuff: FAIL_TEST_STYLE_ONLY
+developmentProductNonMutation: PASS
+
+Exact blocker:
+- `tests/test_canonical_paper_sizing.py:282` FURB157: `Decimal("12")` should be `Decimal(12)`.
+- All 16 focused behavioral tests passed before Ruff.
+- No source behavior, identity or lineage failure observed on this head.
+
+Repair boundary:
+Change the test literal only; no source code or acceptance semantics.
+
+Exact nextAction:
+Apply one-line test style repair and rerun every required lane on the new exact head. `f47cec13...` remains stale for merge.
