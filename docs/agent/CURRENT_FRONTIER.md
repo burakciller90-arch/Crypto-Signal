@@ -2285,3 +2285,34 @@ Next acceptance path:
 
 Exact nextAction:
 Modify the registered MI1 UID504 workflow on this branch only, run it on the exact resulting head, and inspect focused pytest/Ruff/mypy plus Product/Development non-mutation markers.
+
+
+## FP1-A FIRST UID504 ACCEPTANCE FAILURE CHECKPOINT — 2026-09-29
+
+status: FP1_A_ACCEPTANCE_REPAIR_REQUIRED
+activeBranch: fp1/human-read-model-contract
+acceptanceHead: 057178ece31c997ce20050d0295c39369421feff
+uid504Run: 36554022688
+uid504Job: 109358745742
+artifactId: 11027380075
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Mechanical result:
+- exact-source isolated UID504 environment PASS;
+- focused existing Stream + new FP1-A pytest suite PASS to 100%;
+- first failing command was Ruff;
+- exact Ruff defect: F401 unused json import at tests/test_final_product_read_model.py:3;
+- mypy did not execute because the shell is fail-fast after Ruff;
+- Product and Development checkout non-mutation PASS:
+  MESSAGE_INTELLIGENCE_MI1_NON_MUTATING_PASS=YES;
+- no runtime deploy, Product mutation or RDP11 epoch mutation occurred.
+
+Repair scope:
+- remove only the demonstrated unused json import;
+- do not alter Market Pulse semantics or acceptance criteria.
+
+Exact nextAction:
+Delete the unused test import, rerun the same UID504 exact-source pytest/Ruff/mypy harness, and require all focused + non-mutation/project-isolation markers before advancing.
