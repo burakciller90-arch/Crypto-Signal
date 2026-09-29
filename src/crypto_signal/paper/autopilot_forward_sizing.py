@@ -15,7 +15,7 @@ from dataclasses import dataclass
 from decimal import Decimal
 from enum import StrEnum
 from pathlib import Path
-from typing import cast
+from typing import TYPE_CHECKING, cast
 
 from crypto_signal.intelligence.event_risk_circuit_breaker import (
     CircuitBreakerAnalysis,
@@ -32,6 +32,7 @@ from crypto_signal.paper.autopilot_forward_runtime import (
 from crypto_signal.paper.canonical_sizing import (
     CanonicalPaperSizingSelection,
     promote_fixed_fractional_sizing,
+    promote_portfolio_risk_bounded_sizing,
 )
 from crypto_signal.paper.canonical_sizing_events import (
     CanonicalSizingEventLedger,
@@ -68,6 +69,9 @@ from crypto_signal.product.intelligence_stream_capital_sizing import (
 )
 from crypto_signal.unified_decision_runtime import UnifiedDecisionIssuance
 
+if TYPE_CHECKING:
+    from crypto_signal.paper.portfolio_risk_v2 import PortfolioAllocationAssessmentV2
+
 FP3_SIZING_SCHEMA_VERSION = "fp3-paper-autopilot-sizing-v1/1"
 FP3_SIZING_ENGINE_VERSION = "fp3-paper-autopilot-sizing-bridge-v1/1"
 
@@ -77,6 +81,7 @@ _SIZING_RECEIPT_TABLE = "fp3_paper_autopilot_sizing_receipts"
 class FP3SizingStageStatus(StrEnum):
     SIZED = "sized"
     HELD_RISK_GATE = "held_risk_gate"
+    HELD_PORTFOLIO_RISK = "held_portfolio_risk"
 
 
 class FP3SizingProcessDisposition(StrEnum):
@@ -84,6 +89,7 @@ class FP3SizingProcessDisposition(StrEnum):
     RECOVERED = "recovered"
     REPLAYED = "replayed"
     HELD_RISK_GATE = "held_risk_gate"
+    HELD_PORTFOLIO_RISK = "held_portfolio_risk"
     SKIPPED_NOT_ELIGIBLE = "skipped_not_eligible"
 
 
@@ -251,8 +257,38 @@ class FP3SizingStageReceipt:
                 raise ValueError("FP3 held sizing receipt cannot invent canonical event")
             if self.fixed_fractional_status == SizingMethodStatus.AVAILABLE_SHADOW.value:
                 raise ValueError("FP3 held sizing receipt cannot carry available result")
+        elif self.stage_status is FP3SizingStageStatus.HELD_PORTFOLIO_RISK:
+            if any(
+                value is not None
+                for value in (
+                    self.selection_identity,
+                    self.sizing_event_identity,
+                    self.stream_source_event_identity,
+                    self.stream_event_identity,
+                    self.narrative_identity,
+                )
+            ):
+                raise ValueError(
+                    "FP3 portfolio-risk hold cannot invent canonical event"
+                )
+            if self.fixed_fractional_status != SizingMethodStatus.AVAILABLE_SHADOW.value:
+                raise ValueError(
+                    "FP3 portfolio-risk hold requires available fixed fractional"
+                )
+            _validate_portfolio_receipt_reason_lineage(
+                self.reason_codes,
+                held=True,
+            )
         else:
             raise ValueError("unsupported FP3 sizing stage status")
+        if (
+            self.stage_status is FP3SizingStageStatus.SIZED
+            and "portfolio_risk_v2_bound" in self.reason_codes
+        ):
+            _validate_portfolio_receipt_reason_lineage(
+                self.reason_codes,
+                held=False,
+            )
         _require_authority_boundary(
             production_authority=self.production_authority,
             real_capital=self.real_capital,
@@ -480,6 +516,7 @@ class FP3EligibleFixedFractionalSizingBridge:
         risk_inputs: FP3SizingRiskInputs,
         selected_at_ms: int,
         processed_at_ms: int,
+        portfolio_assessment: PortfolioAllocationAssessmentV2 | None = None,
     ) -> FP3SizingProcessResult:
         front_receipt = self.autopilot_store.read_receipt_for_forecast(
             issuance.forecast.forecast_identity
@@ -659,11 +696,68 @@ class FP3EligibleFixedFractionalSizingBridge:
                 receipt=expected,
             )
 
-        selection = promote_fixed_fractional_sizing(
-            assessment,
-            current_vault=current_vault,
-            selected_at_ms=selected_at_ms,
-        )
+        if portfolio_assessment is None:
+            selection = promote_fixed_fractional_sizing(
+                assessment,
+                current_vault=current_vault,
+                selected_at_ms=selected_at_ms,
+            )
+        else:
+            _validate_portfolio_assessment_lineage(
+                portfolio_assessment,
+                issuance=issuance,
+                event_context=event_context,
+                vault_id=vault_id,
+                policy=policy,
+            )
+            portfolio_selection = promote_portfolio_risk_bounded_sizing(
+                assessment,
+                current_vault=current_vault,
+                current_portfolio=epoch2.consolidated_snapshot,
+                portfolio_assessment=portfolio_assessment,
+                candidate_asset=risk_inputs.asset,
+                risk_input_identity=portfolio_assessment.risk_input_identity,
+                selected_at_ms=selected_at_ms,
+            )
+            if portfolio_selection is None:
+                expected = _build_portfolio_hold_receipt(
+                    front_receipt=front_receipt,
+                    issuance=issuance,
+                    vault_id=vault_id,
+                    eligibility=eligibility,
+                    current_vault=current_vault,
+                    risk_inputs=risk_inputs,
+                    context_identity=context.context_identity,
+                    policy=policy,
+                    assessment=assessment,
+                    fixed=fixed,
+                    portfolio_assessment=portfolio_assessment,
+                    selected_at_ms=selected_at_ms,
+                    processed_at_ms=(
+                        existing.processed_at_ms
+                        if existing is not None
+                        else processed_at_ms
+                    ),
+                )
+                if existing is not None:
+                    if existing != expected:
+                        raise ValueError(
+                            "FP3-B replay inputs conflict with portfolio-risk hold"
+                        )
+                    return FP3SizingProcessResult(
+                        disposition=FP3SizingProcessDisposition.REPLAYED,
+                        forecast_identity=issuance.forecast.forecast_identity,
+                        vault_id=vault_id,
+                        receipt=existing,
+                    )
+                self.sizing_store.append(expected)
+                return FP3SizingProcessResult(
+                    disposition=FP3SizingProcessDisposition.HELD_PORTFOLIO_RISK,
+                    forecast_identity=issuance.forecast.forecast_identity,
+                    vault_id=vault_id,
+                    receipt=expected,
+                )
+            selection = portfolio_selection
         sizing_event = build_canonical_sizing_event(selection, eligibility)
 
         if existing is not None:
@@ -677,6 +771,7 @@ class FP3EligibleFixedFractionalSizingBridge:
                 fixed=fixed,
                 selection=selection,
                 sizing_event_identity=sizing_event.event_identity,
+                portfolio_assessment=portfolio_assessment,
             )
             return FP3SizingProcessResult(
                 disposition=FP3SizingProcessDisposition.REPLAYED,
@@ -711,6 +806,7 @@ class FP3EligibleFixedFractionalSizingBridge:
             narrative_identity=projection.narrative_identity,
             selected_at_ms=selected_at_ms,
             processed_at_ms=processed_at_ms,
+            portfolio_assessment=portfolio_assessment,
         )
         self.sizing_store.append(receipt)
         return FP3SizingProcessResult(
@@ -847,6 +943,84 @@ def _build_hold_receipt(
     )
 
 
+def _build_portfolio_hold_receipt(
+    *,
+    front_receipt: FP3AutopilotReceipt,
+    issuance: UnifiedDecisionIssuance,
+    vault_id: PaperVaultId,
+    eligibility: CanonicalVaultEligibilityProof,
+    current_vault: Epoch2VaultAccountingSnapshot,
+    risk_inputs: FP3SizingRiskInputs,
+    context_identity: str,
+    policy: PositionSizingPolicy,
+    assessment: PositionSizingAssessment,
+    fixed: SizingMethodResult,
+    portfolio_assessment: PortfolioAllocationAssessmentV2,
+    selected_at_ms: int,
+    processed_at_ms: int,
+) -> FP3SizingStageReceipt:
+    reasons = tuple(
+        sorted(
+            {
+                *portfolio_assessment.reason_codes,
+                *_portfolio_lineage_reason_codes(
+                    portfolio_assessment,
+                    held=True,
+                ),
+            }
+        )
+    )
+    values = _base_receipt_values(
+        front_receipt=front_receipt,
+        issuance=issuance,
+        vault_id=vault_id,
+        eligibility=eligibility,
+        current_vault=current_vault,
+        risk_inputs=risk_inputs,
+        context_identity=context_identity,
+        policy=policy,
+        assessment=assessment,
+        fixed=fixed,
+        stage_status=FP3SizingStageStatus.HELD_PORTFOLIO_RISK,
+        reason_codes=reasons,
+        selection_identity=None,
+        sizing_event_identity=None,
+        stream_source_event_identity=None,
+        stream_event_identity=None,
+        narrative_identity=None,
+        selected_at_ms=selected_at_ms,
+        processed_at_ms=processed_at_ms,
+    )
+    return FP3SizingStageReceipt(
+        receipt_identity=canonical_sha256(values),
+        front_receipt_identity=front_receipt.receipt_identity,
+        activation_identity=front_receipt.activation_identity,
+        forecast_identity=issuance.forecast.forecast_identity,
+        proof_identity=issuance.proof.proof_identity,
+        vault_id=vault_id,
+        allocator_candidate_identity=front_receipt.allocator_candidate_identity,
+        allocator_assessment_identity=front_receipt.allocator_assessment_identity,
+        eligibility_proof_identity=eligibility.proof_identity,
+        current_vault_snapshot_identity=current_vault.snapshot_identity,
+        risk_input_identity=risk_inputs.risk_input_identity,
+        sizing_context_identity=context_identity,
+        sizing_policy_identity=policy.policy_identity,
+        sizing_policy_version=policy.policy_version,
+        sizing_assessment_identity=assessment.assessment_identity,
+        fixed_fractional_result_identity=fixed.result_identity,
+        fixed_fractional_status=fixed.status.value,
+        reason_codes=reasons,
+        stage_status=FP3SizingStageStatus.HELD_PORTFOLIO_RISK,
+        selection_identity=None,
+        sizing_event_identity=None,
+        stream_source_event_identity=None,
+        stream_event_identity=None,
+        narrative_identity=None,
+        selected_at_ms=selected_at_ms,
+        processed_at_ms=processed_at_ms,
+    )
+
+
 def _build_sized_receipt(
     *,
     front_receipt: FP3AutopilotReceipt,
@@ -866,7 +1040,23 @@ def _build_sized_receipt(
     narrative_identity: str,
     selected_at_ms: int,
     processed_at_ms: int,
+    portfolio_assessment: PortfolioAllocationAssessmentV2 | None = None,
 ) -> FP3SizingStageReceipt:
+    reasons = tuple(
+        sorted(
+            {
+                *selection.reason_codes,
+                *(
+                    ()
+                    if portfolio_assessment is None
+                    else _portfolio_lineage_reason_codes(
+                        portfolio_assessment,
+                        held=False,
+                    )
+                ),
+            }
+        )
+    )
     values = _base_receipt_values(
         front_receipt=front_receipt,
         issuance=issuance,
@@ -879,7 +1069,7 @@ def _build_sized_receipt(
         assessment=assessment,
         fixed=fixed,
         stage_status=FP3SizingStageStatus.SIZED,
-        reason_codes=selection.reason_codes,
+        reason_codes=reasons,
         selection_identity=selection.selection_identity,
         sizing_event_identity=sizing_event_identity,
         stream_source_event_identity=stream_source_event_identity,
@@ -906,7 +1096,7 @@ def _build_sized_receipt(
         sizing_assessment_identity=assessment.assessment_identity,
         fixed_fractional_result_identity=fixed.result_identity,
         fixed_fractional_status=fixed.status.value,
-        reason_codes=selection.reason_codes,
+        reason_codes=reasons,
         stage_status=FP3SizingStageStatus.SIZED,
         selection_identity=selection.selection_identity,
         sizing_event_identity=sizing_event_identity,
@@ -916,7 +1106,6 @@ def _build_sized_receipt(
         selected_at_ms=selected_at_ms,
         processed_at_ms=processed_at_ms,
     )
-
 
 def _base_receipt_values(
     *,
@@ -984,7 +1173,23 @@ def _verify_existing_sized_receipt(
     fixed: SizingMethodResult,
     selection: CanonicalPaperSizingSelection,
     sizing_event_identity: str,
+    portfolio_assessment: PortfolioAllocationAssessmentV2 | None = None,
 ) -> None:
+    reasons = tuple(
+        sorted(
+            {
+                *selection.reason_codes,
+                *(
+                    ()
+                    if portfolio_assessment is None
+                    else _portfolio_lineage_reason_codes(
+                        portfolio_assessment,
+                        held=False,
+                    )
+                ),
+            }
+        )
+    )
     expected = (
         receipt.front_receipt_identity == front_receipt.receipt_identity
         and receipt.activation_identity == front_receipt.activation_identity
@@ -999,10 +1204,132 @@ def _verify_existing_sized_receipt(
         and receipt.fixed_fractional_result_identity == fixed.result_identity
         and receipt.selection_identity == selection.selection_identity
         and receipt.sizing_event_identity == sizing_event_identity
+        and receipt.reason_codes == reasons
         and receipt.stage_status is FP3SizingStageStatus.SIZED
     )
     if not expected:
         raise ValueError("FP3-B replay inputs conflict with sized receipt")
+
+def _validate_portfolio_assessment_lineage(
+    assessment: PortfolioAllocationAssessmentV2,
+    *,
+    issuance: UnifiedDecisionIssuance,
+    event_context: CircuitBreakerAnalysis,
+    vault_id: PaperVaultId,
+    policy: PositionSizingPolicy,
+) -> None:
+    if assessment.vault_id is not vault_id:
+        raise ValueError("FP3-B FP5 assessment vault mismatch")
+    if assessment.candidate_asset != issuance.forecast.symbol:
+        raise ValueError("FP3-B FP5 assessment asset mismatch")
+    if assessment.sizing_policy_identity != policy.policy_identity:
+        raise ValueError("FP3-B FP5 sizing policy mismatch")
+    if assessment.event_risk_identity != event_context.evidence_identity:
+        raise ValueError("FP3-B FP5 Event Risk identity mismatch")
+    if assessment.confluence_identity != issuance.confluence.snapshot_identity:
+        raise ValueError("FP3-B FP5 confluence identity mismatch")
+    if assessment.as_of_ms != event_context.as_of_ms:
+        raise ValueError("FP3-B FP5 Event Risk as-of mismatch")
+    if assessment.as_of_ms != issuance.confluence.as_of_ms:
+        raise ValueError("FP3-B FP5 confluence as-of mismatch")
+    if assessment.real_capital != REAL_CAPITAL or assessment.production_authority:
+        raise ValueError("FP3-B FP5 assessment crossed authority boundary")
+    if (
+        assessment.kelly_enabled
+        or assessment.leverage_allowed
+        or assessment.borrowing_allowed
+        or assessment.forced_deployment
+    ):
+        raise ValueError("FP3-B FP5 assessment enabled forbidden capital authority")
+
+
+def _portfolio_lineage_reason_codes(
+    assessment: PortfolioAllocationAssessmentV2,
+    *,
+    held: bool,
+) -> tuple[str, ...]:
+    snapshot_identity = (
+        "not_proven"
+        if assessment.snapshot_identity is None
+        else assessment.snapshot_identity
+    )
+    source_identity = (
+        "not_proven"
+        if assessment.source_portfolio_identity is None
+        else assessment.source_portfolio_identity
+    )
+    reasons = {
+        "portfolio_risk_v2_bound",
+        f"fp5_portfolio_assessment:{assessment.assessment_identity}",
+        f"fp5_portfolio_risk_input:{assessment.risk_input_identity}",
+        f"fp5_portfolio_snapshot:{snapshot_identity}",
+        f"fp5_portfolio_source:{source_identity}",
+        f"fp5_portfolio_status:{assessment.status.value}",
+    }
+    if held:
+        reasons.add("portfolio_risk_v2_hold")
+    return tuple(sorted(reasons))
+
+
+def _validate_portfolio_receipt_reason_lineage(
+    reason_codes: tuple[str, ...],
+    *,
+    held: bool,
+) -> None:
+    if "portfolio_risk_v2_bound" not in reason_codes:
+        raise ValueError("FP3 portfolio-risk receipt lost V2 binding marker")
+    if held and "portfolio_risk_v2_hold" not in reason_codes:
+        raise ValueError("FP3 portfolio-risk hold lost hold marker")
+    if not held and "portfolio_risk_v2_hold" in reason_codes:
+        raise ValueError("FP3 sized portfolio-risk receipt cannot carry hold marker")
+
+    assessment_identity = _single_reason_value(
+        reason_codes,
+        "fp5_portfolio_assessment:",
+    )
+    risk_input_identity = _single_reason_value(
+        reason_codes,
+        "fp5_portfolio_risk_input:",
+    )
+    snapshot_identity = _single_reason_value(
+        reason_codes,
+        "fp5_portfolio_snapshot:",
+    )
+    source_identity = _single_reason_value(
+        reason_codes,
+        "fp5_portfolio_source:",
+    )
+    status = _single_reason_value(
+        reason_codes,
+        "fp5_portfolio_status:",
+    )
+    _require_sha256(assessment_identity, "FP3 FP5 assessment reason")
+    _require_sha256(risk_input_identity, "FP3 FP5 risk-input reason")
+
+    allowed_status = {"hold_cash", "not_proven"} if held else {"deployable"}
+    if status not in allowed_status:
+        raise ValueError("FP3 portfolio-risk receipt status marker mismatch")
+
+    if snapshot_identity == "not_proven" or source_identity == "not_proven":
+        if snapshot_identity != "not_proven" or source_identity != "not_proven":
+            raise ValueError("FP3 portfolio-risk receipt has partial portfolio source")
+    else:
+        _require_sha256(snapshot_identity, "FP3 FP5 snapshot reason")
+        _require_sha256(source_identity, "FP3 FP5 portfolio source reason")
+
+
+def _single_reason_value(
+    reason_codes: tuple[str, ...],
+    prefix: str,
+) -> str:
+    matches = tuple(
+        reason[len(prefix):]
+        for reason in reason_codes
+        if reason.startswith(prefix)
+    )
+    if len(matches) != 1 or not matches[0]:
+        raise ValueError(f"FP3 sizing receipt requires one {prefix} reason")
+    return matches[0]
 
 
 def _risk_input_payload(value: FP3SizingRiskInputs) -> dict[str, object]:

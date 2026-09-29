@@ -7360,3 +7360,199 @@ Global state:
 
 Exact nextAction:
 Merge this docs-only closeout after F10. Then start FP5-C from resulting exact main: extend the existing FP3 forward sizing bridge/receipt in a backward-compatible way so an exact caller-supplied FP5 portfolio assessment is replay-bound, HOLD_CASH/NOT_PROVEN remain normal fail-closed outcomes, and a DEPLOYABLE assessment invokes the accepted V2 canonical promotion. Do not create a second runtime/allocator.
+
+
+## FP5-B MERGED / FP5-C LIVE TASK-START CHECKPOINT — 2026-09-30
+
+status: FP5C_FORWARD_PORTFOLIO_RISK_INTEGRATION_START
+canonicalMainAtTaskStart: a14bc9e4a407a8a5e602f816c7959008928ee7c3
+activeBranch: fp5c/forward-portfolio-risk-lineage
+sessionLocalVolumesWorktree: NONE
+canonicalWorkbench: /Volumes/Crypto-504/Crypto-Signal-Workbench/repo
+postMergeWorkbenchRunJob: 36641195576 / 109653613793
+postMergeWorkbenchProof:
+- REPO_HEAD=a14bc9e4a407a8a5e602f816c7959008928ee7c3
+- REPO_BRANCH=main
+- REPO_DIRTY_COUNT=0
+- SSD504_WORKBENCH_PASS=YES
+postMergeMainWC6: 36641195475 / SUCCESS
+realCapital: 0
+historicalBackfill: NO
+RDP11RuntimeMutation: NO
+ProductDevelopmentDeploy: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+FP5-B canonical closeout:
+- PR #1701 merged as `a14bc9e4a407a8a5e602f816c7959008928ee7c3`;
+- accepted PR head `afc7194b22f9ded7c7791beb41e49a1aa188610c`;
+- dedicated FP5-B `36640403843/109651071050` SUCCESS;
+- RDP11 Pre-Soak `36640403492/109651071475` SUCCESS;
+- F10 `36640403643/109651071910` SUCCESS;
+- WC6 `36640403610/109651207380` SUCCESS;
+- V1 sizing identity semantics preserved;
+- V2 canonical sizing binds exact FP5 assessment + canonical R21 consolidated portfolio source + FP5 cap;
+- HOLD_CASH / NOT_PROVEN cannot produce a positive V2 canonical sizing selection.
+
+Duplicate / ownership audit for FP5-C:
+- open competing FP5/portfolio/sizing PR: NONE at task start;
+- open FP5/portfolio/sizing branch: NONE before this branch;
+- unrelated open ED1 PR #1478 is outside this owner/scope;
+- FP5-A risk policy/snapshot/assessment owner: REUSE;
+- FP5-B V2 canonical promotion owner: REUSE;
+- FP3-A allocator decision owner: REUSE;
+- FP3-B sizing receipt/store + S11 sizing event projection: EXTEND;
+- FP3-C action bridge + S11/R22/R21 commit path: REUSE and prove compatibility, do not fork;
+- no new allocator, no new R21/R22 schema, no duplicate sizing engine.
+
+Mechanical gap:
+- canonical `FP3EligibleFixedFractionalSizingBridge.process()` still calls V1 `promote_fixed_fractional_sizing()`;
+- therefore accepted FP5 portfolio-risk assessment is not yet consumed by the normal FP3 forward sizing receipt/event path;
+- R21 consolidated truth cannot safely reconstruct arbitrary multi-asset marked exposure by itself, so FP5-C MUST NOT invent per-asset exposure;
+- V2 forward path will accept an already-proven immutable `PortfolioAllocationAssessmentV2` as input and verify it against exact current R21 consolidated state, FP3 risk input, Event Risk, M6 confluence, vault, candidate asset and sizing policy;
+- because FP5 may HOLD while fixed-fractional remains AVAILABLE_SHADOW, existing FP3 `HELD_RISK_GATE` semantics are insufficient; add an explicit backward-compatible `HELD_PORTFOLIO_RISK` stage/disposition without changing old receipt payload structure.
+
+Bounded implementation target:
+- keep existing FP3 process call behavior byte/identity compatible when no FP5 assessment is supplied;
+- optional V2 path consumes immutable FP5 assessment without importing `portfolio_risk_v2` at runtime (avoid circular dependency);
+- DEPLOYABLE -> use accepted FP5-B `promote_portfolio_risk_bounded_sizing()`, append canonical S11 sizing event and normal Stream projection/receipt;
+- HOLD_CASH / NOT_PROVEN -> append deterministic FP3 sizing-stage hold receipt with no selection/event/action authority and explicit FP5 assessment/source lineage encoded in the existing receipt reason evidence surface;
+- validate FP5 event-risk identity == supplied Event Risk, confluence identity == issuance M6 confluence, risk-input identity == exact FP3 risk input, vault/asset/policy/current R21 portfolio source all exact;
+- replay with changed FP5 assessment must conflict rather than silently reuse;
+- FP3-C BUY must accept the V2 selection only when its exact selection/event identities match the accepted FP3-B receipt;
+- REAL_CAPITAL=0; Kelly/leverage/borrowing/forced deployment remain unavailable.
+
+RDP11 isolation:
+- active epoch `rdp11-3d9f33db-20260930-r2` remains ACTIVE / NOT PASS;
+- latest scheduled observation `36640379159/109650997040` SUCCESS, anchor reused, sidecar-only, canonical runtime mutation NO;
+- FP5-C branch must not touch Product/Development frozen target, observer workflow/contract, R2 sidecar or historical evidence.
+
+Exact nextAction:
+Implement the smallest backward-compatible FP3-B V2 consumption path and explicit portfolio-risk hold state; add focused tests for V1 identity/replay, V2 deployable cap/event lineage, HOLD_CASH/NOT_PROVEN persistence/replay, stale/mismatched FP5 lineage rejection and FP3-C BUY compatibility; then add isolated UID504 acceptance and require exact-head FP5-C + WC6 + RDP11 Pre-Soak + F10 before merge.
+
+
+### FP5-C CONTRACT RESOLUTION — dual risk-input lineage, no timing-gate weakening
+
+Discovery:
+- accepted FP5-A assessment requires its own Event Risk, M6 confluence and FP5 risk-input observation to share exact `as_of_ms`;
+- accepted FP3-B sizing risk observation is intentionally later than FP3-A allocator assessment in the forward path;
+- therefore requiring `portfolio_assessment.risk_input_identity == FP3SizingRiskInputs.risk_input_identity` would make the two accepted timing contracts mutually impossible in the natural forward fixture.
+
+Resolution:
+- DO NOT weaken either timing contract;
+- the supplied immutable `PortfolioAllocationAssessmentV2` keeps its own exact FP5 risk-input identity and decision-source-time Event/M6 lineage;
+- FP3-B keeps its separate current sizing-risk input/context identity and existing chronology rule unchanged;
+- FP5-C validates FP5 assessment Event Risk identity == the issuance-bound Event Risk, confluence identity == issuance M6 identity, assessment as-of == issuance Event/M6 source as-of, vault/asset/sizing-policy exact;
+- FP5-B promotion is called with the FP5 assessment's own `risk_input_identity`, while the canonical sizing selection simultaneously carries the independent current FP3 sizing-assessment/result identity;
+- current canonical R21 portfolio identity must still match the FP5 assessment source at selection time; a changed portfolio fails closed as stale;
+- result is conservative composition: current FP3 sizing gate can HOLD independently, FP5 HOLD/NOT_PROVEN can HOLD independently, and DEPLOYABLE notional is capped by both.
+
+Checkpoint correction:
+The earlier task-start phrase saying FP5 assessment must match the exact current FP3 risk-input identity is superseded by this dual-lineage rule. No accepted gate is relaxed.
+
+
+### FP5-C IMPLEMENTATION READY / PRE-PR CHECKPOINT — 2026-09-30
+
+status: FP5C_ACCEPTANCE_READY
+baseMainAtTaskStart: a14bc9e4a407a8a5e602f816c7959008928ee7c3
+branch: fp5c/forward-portfolio-risk-lineage
+sourceImplementationCommits:
+- `6ce2c8342ec5daf79c1e6ac86e769e84f3344489` type-only V2 integration surface + additive hold enums
+- `5176d22c51dd05b5ea2849ed5cf9618585c2ab69` explicit portfolio-risk receipt semantics
+- `1599ba4847d32127c759f24e098952f96ec5835e` optional immutable portfolio-assessment process input
+- `3fffd77759bd49f30bafe78ad1d9937096001720` V1/V2 promotion branch + fail-closed HOLD/NOT_PROVEN
+- `d65ae74a8ecb45654ba03a601680732b386dbf9b` V2 replay/receipt lineage plumbing
+- `13421532af8957b34a89f2a579de8d8b970b393e` portfolio hold receipt + sized receipt exact lineage reasons
+- `8233db05ea6a8a8005a14a8d75f463f41133a769` FP5 assessment/reason-lineage validators
+- `05c69a6daa21c67615935faa604c24f61ed1fdeb` preserve proven source for NOT_PROVEN-with-snapshot cases
+focusedTestCommit: `286aad87758c480b41a3d700600e3f967b2d8369`
+acceptanceWorkflowCommit: `15d4a931fd92a643efc41635d9a9ff1fb062da55`
+
+Implemented contract:
+- no new FP3 receipt fields, table columns or schema version; legacy dataclass canonical serialization remains structurally unchanged;
+- V1 call without `portfolio_assessment` still executes the original `promote_fixed_fractional_sizing()` branch;
+- V2 takes a caller-supplied immutable `PortfolioAllocationAssessmentV2` through TYPE_CHECKING only, avoiding the prior circular import class;
+- exact FP5 vault/asset/sizing-policy/Event-Risk/M6/as-of/authority lineage is validated before promotion;
+- FP5 and FP3 sizing risk inputs remain separate exact immutable lineages; neither accepted timing contract is weakened;
+- DEPLOYABLE uses accepted FP5-B `promote_portfolio_risk_bounded_sizing()`;
+- HOLD_CASH / NOT_PROVEN produce additive `HELD_PORTFOLIO_RISK` stage/disposition, no canonical selection/event/action;
+- FP5 assessment/risk/snapshot/source/status lineage is encoded deterministically in existing receipt `reason_codes`, preserving old payload structure;
+- proven NOT_PROVEN cases retain exact snapshot/source SHA; genuinely absent snapshot/source uses explicit `not_proven` sentinel;
+- V2 SIZED receipts require deployable FP5 lineage markers; portfolio holds require hold markers and available fixed fractional;
+- replay with changed FP5 truth fails closed;
+- normal FP3-C action owner remains unchanged and is tested to accept only the exact V2 selection/event already stored by FP3-B;
+- R22/R21 lineage remains transitive through immutable S11 sizing selection/event; no R21/R22 schema mutation.
+
+Focused tests added in `tests/test_fp5c_forward_portfolio_risk.py`:
+- natural forward DEPLOYABLE path applies an actually-limiting FP5 risk cap and preserves dual risk-input lineage;
+- exact replay of V2 sized receipt;
+- HOLD_CASH persists explicit portfolio hold with AVAILABLE_SHADOW fixed sizing but no S11 event/R22 trade;
+- NOT_PROVEN persists without inventing a portfolio source;
+- stale portfolio source and sizing-policy mismatch rejected;
+- changed portfolio truth on replay rejected;
+- V2 selection reaches FP3-C BUY only through exact accepted sizing receipt/event and commits R22/R21 with resolvable FP5 sizing-event lineage.
+
+Dedicated workflow:
+- `.github/workflows/fp5c-forward-portfolio-risk-uid504.yml`
+- exact-head + frozen runtime proof;
+- focused FP5-C + legacy FP3 sizing/actions + FP5-A + FP5-B regressions;
+- Ruff/mypy;
+- whole repository regression;
+- Product/Development non-mutation.
+
+Current blocker:
+- no PR/exact-head acceptance has run yet.
+
+Exact nextAction:
+Recheck current main and duplicate ownership. If branch is based on current main with no competing FP5-C work, open the sole FP5-C PR. Require exact-head FP5-C dedicated + WC6 + RDP11 Pre-Soak + F10 mechanical SUCCESS before merge. Do not claim FP5 PASS yet; after FP5-C merge, audit the master FP5 PASS clauses and any remaining natural-forward/portfolio-risk gap.
+
+
+### FP5-C CURRENT-MAIN REBASE RECONCILIATION — 2026-09-30
+
+- main advanced docs-only to `6ff063db246ea044d80c5b4fa1bbe1407e3b0292` via FP5-B closeout #1702 while FP5-C was being prepared;
+- the active branch ref was intentionally reset to that exact main before any PR existed, then FP5-C source/tests/workflow were reapplied;
+- pre-sync FP5-C commit SHAs recorded above are historical staging references and are superseded by the post-sync linear branch commits;
+- no FP5-C behavior was intentionally changed during this reconciliation;
+- exact nextAction: verify branch ahead/behind and duplicate state, then open the sole FP5-C PR.
+
+
+### FP5-C ACCEPTANCE ATTEMPT 1 — MYPY NARROWING BLOCKER — 2026-09-30
+
+testedHead: 8d551faf84008767fdbc9094e407e1d5aafd6b6f
+pr: #1703
+wc6RunJob: 36642984912 / 109659347750
+wc6ExactSource: PASS
+wc6FocusedRecovery: PASS
+wc6PaperPytest: PASS
+wc6PaperRuff: PASS
+wc6PaperMypy: FAIL_ONE_TYPE_NARROWING
+developmentNonMutation: PASS
+
+Mechanical blocker:
+- `autopilot_forward_sizing.py:713`: V1 branch inferred local `selection` as non-optional, while FP5-B V2 promotion returns `CanonicalPaperSizingSelection | None` before the explicit hold branch narrows it;
+- all paper behavioral tests completed successfully before this mypy error;
+- no runtime/identity/lineage behavior failure observed.
+
+Repair boundary:
+Introduce a separate `portfolio_selection` local, branch on `None`, then assign the narrowed non-null value to `selection`. No formula, status, reason-code, replay or authority behavior change.
+
+Acceptance rule:
+All merge-gate results from `8d551faf...` are stale after repair. Require FP5-C + WC6 + RDP11 Pre-Soak + F10 again on the new exact head.
+
+
+### FP5-C MYPY-NARROWING REPAIR APPLIED — 2026-09-30
+
+repairCommit: `f6257a86aee129ae728c8597b233ab5036a85253`
+repairType: TYPE_NARROWING_ONLY
+behaviorChange: NO
+identityFormulaChange: NO
+receiptSchemaChange: NO
+
+Repair:
+- V2 promotion result is first assigned to `portfolio_selection: CanonicalPaperSizingSelection | None`;
+- the existing HOLD/NOT_PROVEN branch handles `None`;
+- only after that branch returns is the narrowed value assigned to non-optional `selection`;
+- no cap, status, lineage, replay, event or authority logic changed.
+
+Acceptance rule:
+Prior head `8d551faf...` is stale. Require fresh exact-head FP5-C + WC6 + RDP11 Pre-Soak + F10 after the durable repair checkpoint.
