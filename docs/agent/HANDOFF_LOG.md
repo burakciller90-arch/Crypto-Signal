@@ -1556,3 +1556,38 @@ minimalRepair:
 
 nextAction:
 - fix import order; rerun exact-head pre-soak workflow; require complete PASS before PR/merge.
+
+
+
+---
+
+## 2026-09-29 — RDP11 exact-main deployment task-start handoff
+
+status: DEPLOYMENT_ACTIVE
+branch: rdp11/deploy-soak-anchor
+canonicalMainTarget: 3d9f33db3f1189571d40566125fbeabd00c04930
+mergedRepairPR: 1660
+acceptedRepairHead: 94c640b8c5d3c7a05f17b9f56a0388a8c78fc326
+pushAcceptanceRun: 36538322648
+pushAcceptanceJob: 109307809244
+prAcceptanceRun: 36538473225
+prAcceptanceJob: 109307968366
+ssdBootstrapRun: 36538809494
+ssdBootstrapJob: 109309045273
+agentMemoryRun: 36538809268
+agentMemoryJob: 109309048414
+realCapital: 0
+historicalBackfill: NO
+productDeployAttempted: NO
+soakClockStarted: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+deploymentContract:
+- sync -> producttest -> fulltest -> exact-target productdeploy -> productstate.
+- every step must use canonical UID504 allowlisted command workflow.
+- Product target must equal current origin/main exact SHA.
+- no soak clock until Product exact target + health/proof inspection succeeds.
+
+nextAction:
+- trigger sync to exact main and continue only on SUCCESS.
