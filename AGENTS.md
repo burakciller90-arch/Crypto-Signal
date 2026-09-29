@@ -58,6 +58,21 @@ Read these as current project authority before implementation:
 
 Historical roadmaps/acceptance documents remain useful evidence, but they do not override the current active frontier.
 
+### Roadmap anti-drift hard stop
+
+`ACTIVE_ROADMAP.md` is the sole roadmap selector.
+
+Before executing any roadmap task:
+- resolve the active umbrella roadmap from current `main:ACTIVE_ROADMAP.md`;
+- if another file claims a different roadmap is active, classify that claim as **STALE / HISTORICAL** unless `ACTIVE_ROADMAP.md` itself changed on current main;
+- do not switch roadmaps based on chat memory, branch names, old CURRENT_FRONTIER entries, timestamps, commit titles or historical "active" labels;
+- phase-specific roadmap files only govern the acceptance mechanics of the phase selected by the active umbrella roadmap;
+- if a real conflict remains after reading current main, stop implementation and repair the authority pointer/state rather than guessing.
+
+Current locked umbrella roadmap:
+`docs/CRYPTO_SIGNAL_FINAL_PRODUCT_MASTER_ROADMAP_V1.md`
+
+
 When documents conflict:
 
 1. current machine-readable/live evidence wins for current runtime state;
