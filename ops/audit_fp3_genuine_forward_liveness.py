@@ -97,10 +97,9 @@ def candidate_signal_identities(
             SELECT signal_freeze_identity
             FROM {_PREPARED_TABLE}
             WHERE issued_at_ms >= ?
-              AND capital_assessed_at_ms >= ?
             ORDER BY issued_at_ms DESC, sequence_id DESC
             """,
-            (activated_at_ms, activated_at_ms),
+            (activated_at_ms,),
         ).fetchall()
     return tuple(str(row[0]) for row in rows)
 
@@ -177,6 +176,8 @@ def _choose_genuine_candidate(
         receipt = prepared.read_for_signal(signal_identity)
         if receipt is None:
             raise ValueError("FP3-D selected prepared signal lost its receipt")
+        if receipt.capital_assessed_at_ms < activated_at_ms:
+            continue
         forecast, proof = persisted
         if int(forecast["issued_at_ms"]) != receipt.issued_at_ms:
             raise ValueError("FP3-D prepared/persisted issuance time mismatch")
