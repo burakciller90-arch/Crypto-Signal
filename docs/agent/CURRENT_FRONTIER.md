@@ -7074,3 +7074,46 @@ Safety:
 - frozen/historical mutation: NO
 - Durdurulmaz touched: NO
 - Quantum Capital touched: NO
+
+
+
+## LIVE TASK-START CHECKPOINT — 2026-09-30 — FP5-B portfolio-risk bounded canonical sizing
+
+status: FP5B_IMPLEMENTATION_START
+canonicalMainAtTaskStart: b7cadf0b49fb6b57ec804040cab73702eb5d0a56
+activeBranch: fp5b/portfolio-risk-sizing-promotion-v2
+sessionLocalVolumesWorktree: NONE
+canonicalWorkbench: /Volumes/Crypto-504/Crypto-Signal-Workbench/repo
+canonicalWorkbenchProof: 36638966631 / 109648 (run SUCCESS; exact main/branch/dirty markers verified in job log)
+realCapital: 0
+historicalBackfill: NO
+RDP11RuntimeMutation: NO
+ProductDevelopmentDeploy: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Duplicate / ownership audit:
+- FP5-A portfolio risk envelope is already accepted and merged as d98db8d7cbc020eb8c90471ae089aa810f5810bb; REUSE, do not rebuild.
+- accepted FP3 sizing risk inputs + PositionSizingPolicy own drawdown/correlation/volatility/liquidity/transaction-cost gates; REUSE.
+- accepted S11 canonical fixed-fractional sizing selection/event and FP3 action bridge own paper sizing/event/action lineage; EXTEND, do not fork a second capital runtime.
+- current gap: FP5-A max_deployable_notional/status is not yet bound into the canonical sizing selection consumed by S11/FP3 action lineage.
+- no open FP5/portfolio-risk integration PR or competing FP5 branch existed at task start.
+
+Bounded scope:
+- add a backward-compatible V2 canonical sizing promotion that preserves V1 identities/behavior;
+- V2 must bind exact FP5 portfolio-risk assessment identity and cap into selection identity/source lineage;
+- only DEPLOYABLE FP5 assessment may promote positive notional;
+- promoted notional = min(existing accepted fixed-fractional notional, current vault cash, FP5 max deployable notional);
+- HOLD_CASH / NOT_PROVEN must fail closed and cannot create a canonical BUY sizing selection;
+- Kelly/leverage/borrowing/forced deployment remain disabled;
+- no R21/R22 schema rewrite, no historical mutation, no runtime deployment.
+
+Acceptance target:
+- V1 exact behavior/regressions unchanged;
+- V2 cap deterministic and replay-stable;
+- FP5 assessment/vault/sizing policy/asset lineage mismatch rejected;
+- FP5 assessment identity survives into canonical sizing event/source evidence and later paper BUY lineage;
+- full paper + whole-repo regression and frozen Product/Development non-mutation PASS.
+
+Exact nextAction:
+Inspect exact PositionSizingAssessment/current-vault semantics, implement the smallest backward-compatible V2 promotion and focused tests, then add an isolated UID504 acceptance workflow. Do not merge until exact-head acceptance and main/duplicate recheck.
