@@ -1474,3 +1474,43 @@ The observer candidate has no dedicated real-runtime execution proof. Workflow S
 ### Exact nextAction
 
 Add the focused RDP11 observer UID504 workflow without changing the observer semantics; push-trigger it on this isolated branch and require the explicit dry-run PASS markers plus sidecar non-mutation before opening a PR.
+
+
+## RDP11 observer first live dry-run failure checkpoint — 2026-09-29
+
+Exact acceptance candidate:
+- branch: `rdp11/observer-live-acceptance`
+- workflow commit: `2365c58292b33edac67bf5dc985d4d4dddc5b378`
+- run: `36545066719`
+- job: `109329364649`
+- conclusion: FAILURE
+- soak anchor created: NO
+- sidecar acceptance epoch created: NO
+
+What mechanically passed before failure:
+- UID504 identity;
+- Development exact runtime target `3d9f33db3f1189571d40566125fbeabd00c04930`;
+- Product exact runtime target `3d9f33db3f1189571d40566125fbeabd00c04930`;
+- both runtime checkouts clean;
+- observer py_compile/Ruff static gate;
+- `REAL_CAPITAL=0`.
+
+Failure:
+- real observer execution timed out in `_inspect_product` during an HTTP JSON read;
+- the stack points into the Product/Stream continuity section before Market Tape/FrozenProof checks;
+- no acceptance PASS marker was emitted;
+- therefore the observer is NOT accepted and the 72-hour clock remains NOT STARTED.
+
+Interpretation:
+- do not increase timeout blindly and do not claim Product continuity from the earlier deploy health alone;
+- first measure the individual read-only Product endpoints with bounded timing to distinguish a slow-but-healthy endpoint from an actual continuity failure.
+
+Safety:
+- canonical evidence/runtime mutation by observer: NONE observed;
+- `HISTORICAL_BACKFILL=NO`;
+- `REAL_CAPITAL=0`;
+- Durdurulmaz touched: NO;
+- Quantum Capital touched: NO.
+
+Exact nextAction:
+Add read-only endpoint timing diagnostics to the focused UID504 acceptance workflow for `/api/health`, `/api/stream/messages?limit=5`, finite Stream SSE and `/api/intelligence-center`; rerun against the same frozen runtime target, then repair only the proven timeout/endpoint contract.
