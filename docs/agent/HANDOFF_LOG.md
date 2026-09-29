@@ -5750,3 +5750,16 @@ Implement C2 in canonical_capital_runtime.py + autopilot_forward_actions.py only
 - repair: distinct forecast + proof + sizing assessment remain mandatory; deterministic result identity may repeat; same-assessment reuse still fails closed
 - safety: non-mutation PASS; REAL_CAPITAL=0
 - nextAction: patch guard + regression assertion, rerun full acceptance
+
+
+## 2026-09-29 — FP3-C2 acceptance attempt 6 hit exact trigger-zone guard
+
+- PR: #1683
+- tested head: \`871d81202a164457ef99a25bd0a193342e74e882\`
+- RDP11 fulltest: \`36607251651\` / job \`109539306982\`
+- F10: \`36607252037\` PASS
+- genuine SCALE_IN reached S11 BUY; fixture reference price 103 was outside frozen trigger 100–102
+- S11 validation remains unchanged
+- cleanup: non-mutation PASS; REAL_CAPITAL=0
+- repair: use reference/mark 102 for the genuine SCALE_IN fixture
+- nextAction: patch price and rerun exact acceptance
