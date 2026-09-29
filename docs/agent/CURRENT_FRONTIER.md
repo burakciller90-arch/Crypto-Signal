@@ -3916,3 +3916,45 @@ Cleanup verification:
 Exact nextAction:
 Recheck current main and duplicate PR state, open one FP1-D PR, inspect the actual changed-file set and PR checks, then merge only if the diff remains isolated and main has not advanced with overlapping FP1-D work.
 
+
+
+## FP1-E TRADE PASSPORT TASK START — 2026-09-29
+
+status: FP1_E_TRADE_PASSPORT_AUDIT_START
+taskStartMain: 5490bc184eb51f3507ede93bc72b488ea38cd5dd
+activeBranch: fp1e/trade-passport-read-model
+sessionLocalWorktree: NONE
+canonicalWorkbench: /Volumes/Crypto-504/Crypto-Signal-Workbench/repo
+canonicalRoadmap: docs/CRYPTO_SIGNAL_FINAL_PRODUCT_MASTER_ROADMAP_V1.md
+activePointer: ACTIVE_ROADMAP.md
+mechanicalGate: FP0 / RDP11 Continuous soak + final Evidence PASS remains ACTIVE / NOT PASS
+classification: REUSE canonical R21/R22/RDP10 truth + EXTEND one customer read model
+duplicateCheck: no open FP1-E / Trade Passport PR and no fp1e branch exists on current main
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Predecessor closure:
+- FP1-D merged via PR #1676;
+- merge SHA: 5490bc184eb51f3507ede93bc72b488ea38cd5dd;
+- D1 Portfolio Summary PASS;
+- D2 Daily Capital Movements PASS;
+- RDP11 soaked Product/Development target was not mutated.
+
+Bounded FP1-E goal:
+- add one customer-safe Trade Passport read model over already accepted immutable paper-capital/evidence truth;
+- reuse R22 trade history / bundle story context and R21 before-after accounting;
+- reuse canonical S11 outcome evidence for realized result;
+- reuse exact Decision Proof / RDP10 evidence linkage where available;
+- expose human-readable entry/exit, size, cost, accounting effect, decision context, proof availability and outcome without leaking raw identity plumbing by default;
+- preserve exact SHA/R21/R22/proof lineage in optional audit payload only;
+- do not create a new trade ledger, accounting engine, PnL calculator, evidence engine, historical backfill, route/frontend/deploy or runtime writer;
+- missing proof/outcome/optional source truth remains explicit rather than reconstructed from current data.
+
+Current blocker:
+- exact canonical R22/R21/RDP10 source precedence and query contract for one Trade Passport has not yet been re-audited on current main; production implementation is forbidden until field/source mapping is frozen.
+
+Exact nextAction:
+Audit R22Epoch2AtomicTape trade-history/story-context reads, R21 accounting snapshots, canonical capital outcome evidence and existing Decision Proof/RDP10 exact-evidence readers; freeze an FP1-E field-source matrix before production code changes.
+
