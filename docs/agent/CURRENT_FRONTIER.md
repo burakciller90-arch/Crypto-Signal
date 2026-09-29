@@ -3684,3 +3684,45 @@ Repair classification:
 
 Exact nextAction:
 Patch only the D1 acceptance documentation/test to require canonical DB byte stability rather than WAL sidecar identity, rerun the identical UID504 pytest/Ruff/mypy/non-mutation/project-isolation harness, and claim no PASS until all steps are green.
+
+
+## FP1-D1 SECOND UID504 ACCEPTANCE FAILURE CHECKPOINT — 2026-09-29
+
+status: FP1_D1_ACCEPTANCE_TEST_STYLE_REPAIR
+activeBranch: fp1d/portfolio-capital-movements
+acceptanceHead: c741788066885d98aac9ae58955ddd5f672f2946
+uid504Run: 36570550176
+uid504Job: 109413232990
+artifactId: 11033967042
+currentParallelMainObserved: 8079b7dcb9d19df65903b9d8f4b26c24232dc623
+parallelMainChange: PR #1674 docs-only Final Product roadmap authority lock
+realCapital: 0
+historicalBackfill: NO
+DurdurulmazTouched: NO
+QuantumCapitalTouched: NO
+
+Mechanical result:
+- exact-source UID504 checkout PASS;
+- D1 pytest suite PASS; the test command completed and Ruff began;
+- Ruff found exactly 21 style errors in tests/test_final_product_read_model.py:
+  - I001 import block sorting/formatting;
+  - FURB157 verbose Decimal constructors for integer literals;
+- strict mypy did not execute because Ruff is fail-fast;
+- Product/Development checkout non-mutation PASS:
+  MESSAGE_INTELLIGENCE_MI1_NON_MUTATING_PASS=YES;
+- no Product/Development deploy and no RDP11 runtime mutation.
+
+Repair classification:
+- TEST STYLE ONLY;
+- do not change Portfolio production semantics;
+- sort imports according to repository/Ruff order;
+- replace only integer-string Decimal constructors such as Decimal("500") with exact integer Decimal constructors such as Decimal(500);
+- preserve fractional Decimal strings such as Decimal("1.25"), Decimal("0.5"), Decimal("0.4"), Decimal("0.3") so no float representation is introduced.
+
+Authority/rebase guard:
+- current main advanced via docs-only PR #1674 while this old-base branch was under acceptance;
+- do NOT directly merge this branch because its CURRENT_FRONTIER/HANDOFF history predates the authority-lock main;
+- after D1 acceptance, restore temporary workflow wiring and create a fresh review branch from current main, carrying only accepted D1 code/test/matrix plus new current-main checkpoints.
+
+Exact nextAction:
+Patch only tests/test_final_product_read_model.py import order and integer Decimal constructor style, rerun the identical UID504 harness on the resulting exact branch head, and require pytest + Ruff + mypy + non-mutation + project-isolation PASS before cleanup/rebase.
